@@ -19,7 +19,7 @@ sig
   val transfer_mrbnf: theory -> mrbnf -> mrbnf
   val mrbnf_of: Proof.context -> string -> mrbnf option
   val mrbnf_of_global: theory -> string -> mrbnf option
-  val mrbnf_of_bnf: BNF_Def.bnf -> mrbnf
+  val mrbnf_of_bnf: BNF_Def.bnf -> thm -> mrbnf
   val mrbnf_interpretation: string -> (mrbnf -> local_theory -> local_theory) -> theory -> theory
   val interpret_mrbnf: (string -> bool) -> mrbnf -> local_theory -> local_theory
   val register_mrbnf_raw: string -> mrbnf -> local_theory -> local_theory
@@ -963,7 +963,7 @@ fun mrbnf_of_generic context =
 val mrbnf_of = mrbnf_of_generic o Context.Proof;
 val mrbnf_of_global = mrbnf_of_generic o Context.Theory;
 
-fun mrbnf_of_bnf bnf = MRBNF {
+fun mrbnf_of_bnf bnf bd_infinite_regular_card_order = MRBNF {
     name = BNF_Def.name_of_bnf bnf,
     T = BNF_Def.T_of_bnf bnf,
     var_types = map (K Live_Var) (BNF_Def.lives_of_bnf bnf) @ map (K Dead_Var) (BNF_Def.deads_of_bnf bnf), (* TODO: Check if necessary *)
@@ -973,7 +973,7 @@ fun mrbnf_of_bnf bnf = MRBNF {
     bounds = [],
     live = BNF_Def.live_of_bnf bnf,
     lives = BNF_Def.lives_of_bnf bnf,
-    lives' = BNF_Def.lives_of_bnf bnf, (* TODO: This is wrong, needs to be two new vars *)
+    lives' = error "lives'", (* TODO: This is wrong, needs to be two new vars *)
     dead = BNF_Def.dead_of_bnf bnf,
     deads = BNF_Def.deads_of_bnf bnf,
     map = BNF_Def.map_of_bnf bnf,
@@ -986,7 +986,7 @@ fun mrbnf_of_bnf bnf = MRBNF {
       map_comp0 = BNF_Def.map_comp0_of_bnf bnf,
       map_cong0 = BNF_Def.map_cong0_of_bnf bnf,
       set_map0 = BNF_Def.set_map0_of_bnf bnf,
-      bd_infinite_regular_card_order = error "", (* TODO: Probably with bd_card_order and bd_cinfinite *)
+      bd_infinite_regular_card_order = bd_infinite_regular_card_order,
       set_bd = error "set_bd", (* TODO: BNF_Def.set_bd_of_bnf bnf uses <= not < *)
       le_rel_OO = BNF_Def.le_rel_OO_of_bnf bnf,
       rel_OO_Grp = BNF_Def.rel_OO_Grp_of_bnf bnf,
@@ -1000,9 +1000,9 @@ fun mrbnf_of_bnf bnf = MRBNF {
       pred_def = BNF_Def.pred_def_of_bnf bnf
     },
     facts = {
-      bd_card_order = error "foo",
-      bd_cinfinite = error "foo",
-      bd_regularCard = error "foo",
+      bd_card_order = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.card_order},
+      bd_cinfinite = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.cinfinite},
+      bd_regularCard = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.regularCard},
       rel_OO_Grp_id = error "rel_OO_Grp_id",
       bd_Card_order = BNF_Def.bd_Card_order_of_bnf bnf,
       bd_Cinfinite = BNF_Def.bd_Cinfinite_of_bnf bnf,
@@ -1054,7 +1054,32 @@ fun mrbnf_of_bnf bnf = MRBNF {
       pred_cong = Lazy.lazy (fn () => BNF_Def.pred_cong_of_bnf bnf),
       pred_cong_simp = Lazy.lazy (fn () => BNF_Def.pred_cong_simp_of_bnf bnf)
     },
-    mr_facts = error "mr_facts",
+    mr_facts = {
+      var_large = error "foo",
+      var_regular = error "foo",
+      natLeq_bound = error "foo",
+      UNIV_cinfinite = error "foo",
+      supp_comp_bound = error "foo",
+      Un_bound = error "foo",
+      UNION_bound = error "foo",
+      mr_rel_cong0 = error "foo lazy",
+      mr_in_rel = error "foo lazy",
+      mr_le_rel_OO = error "foo lazy",
+      mr_map_transfer = error "foo lazy",
+      mr_rel_eq = error "foo lazy",
+      mr_rel_flip = error "foo lazy",
+      mr_rel_map = error "foo lazy",
+      mr_rel_mono = error "foo lazy",
+      mr_rel_mono_strong0 = error "foo lazy",
+      mr_rel_mono_strong = error "foo lazy",
+      mr_set_transfer = error "foo lazy",
+      mr_rel_Grp = error "foo lazy",
+      mr_rel_conversep = error "foo lazy",
+      mr_rel_OO = error "foo lazy",
+      mr_rel_OO_Grp = error "foo lazy",
+      mr_rel_transfer = error "foo lazy",
+      mr_rel_id = error "foo lazy"
+    },
     nwits = BNF_Def.nwits_of_bnf bnf,
     wits = BNF_Def.wits_of_bnf bnf,
     rel = BNF_Def.rel_of_bnf bnf,

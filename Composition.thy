@@ -26,8 +26,7 @@ print_bnfs
 
 ML \<open>
 
-
-val y = MRBNF_Def.mrbnf_of_bnf (* x *)
+val y = fn x => MRBNF_Def.mrbnf_of_bnf x @{thm infinite_regular_card_order_natLeq}
 \<close>
 declare [[bnf_internals]]
 datatype ('a, 'b) sum2 = L 'a | R 'b
@@ -54,6 +53,7 @@ ML \<open>
 val SOME x = BNF_Def.bnf_of @{context} "Sum_Type.sum"
 val SOME b = MRBNF_Def.mrbnf_of @{context} "Composition.sum2_mr"
 
+val c = MRBNF_Def.rel_OO_of_mrbnf b
 val z = MRBNF_Def.rel_OO_Grp_id_of_mrbnf b
 \<close>
 

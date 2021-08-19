@@ -2681,9 +2681,9 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             val goal = fold_rev Logic.all (x :: x_copy :: fs @ lfs_copy)
               (Logic.list_implies ([prem0, prem], eq) |> prems_fs);
           in
-            Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} => print_tac ctxt "foo0" THEN
-              ([unfold_thms_tac ctxt [#pred_set axioms |> @{print}] |> K, K (print_tac ctxt "foo1"), REPEAT_DETERM o etac ctxt conjE, K (print_tac ctxt "foo"),
-                Lazy.force map_cong |> Drule.rotate_prems (2*num_prems) |> etac ctxt, K (print_tac ctxt "bar")] @
+            Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
+              ([unfold_thms_tac ctxt [#pred_set axioms] |> K, REPEAT_DETERM o etac ctxt conjE,
+                Lazy.force map_cong |> Drule.rotate_prems (2*num_prems) |> etac ctxt] @
                 subs_VT (etac ctxt @{thm bspec} THEN' assume_tac ctxt) (rtac ctxt refl) @
                 [REPEAT_DETERM_N (2*num_prems) o assume_tac ctxt] |> EVERY1))
             |> Thm.close_derivation \<^here>

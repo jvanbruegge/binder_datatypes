@@ -1,5 +1,5 @@
 theory Composition
-  imports "thys/Prelim" "HOL-Cardinals.Bounded_Set"
+  imports "thys/Prelim"
   keywords
     "print_mrbnfs" :: diag and
     "mrbnf" :: thy_goal
@@ -22,8 +22,18 @@ typedef ('tyvar, 'btyvar, 'c, 'd) pre_\<tau> = "{ x. x \<in> (UNIV :: ('tyvar + 
   | TyForall 'btyvar \<kappa> 'c
 *)
 
+datatype ('a, 'b) sum2 = L 'a | R 'b
+datatype ('a, 'b) dead = Test 'b "'a set"
+
 ML \<open>
-val SOME x = BNF_Def.bnf_of @{context} "BNF_Composition.ID"
+val SOME sum2 = BNF_Def.bnf_of @{context} \<^type_name>\<open>sum2\<close>
+val SOME dead = BNF_Def.bnf_of @{context} \<^type_name>\<open>dead\<close>
 \<close>
+
+local_setup \<open>MRBNF_Def.register_bnf_as_mrbnf sum2\<close>
+local_setup \<open>MRBNF_Def.register_bnf_as_mrbnf dead\<close>
+
+print_mrbnfs
+print_bnfs
 
 end

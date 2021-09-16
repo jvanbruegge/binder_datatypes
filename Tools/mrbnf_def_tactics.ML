@@ -219,13 +219,18 @@ fun mk_mr_rel_conversep_tac ctxt assms mr_rel_OO_Grp_alt supp_comp_bound map_com
   end;
 
 fun mk_mr_le_rel_OO_tac ctxt num_prems assms rmbnf_rel_def mk_mr_map_comp le_rel_OO rel_map =
-  unfold_tac ctxt [rmbnf_rel_def, @{thm id_hid_o_hid}] THEN
-  unfold_tac ctxt [@{thm hidden_id_def}, mk_mr_map_comp assms] THEN
-  unfold_tac ctxt @{thms id_o} THEN
-  ([rtac ctxt @{thm predicate2I}, rtac ctxt (@{thm predicate2D} OF [le_rel_OO]),
-    [etac ctxt @{thm relcomppE}, rtac ctxt @{thm relcomppI},
-      etac ctxt (Drule.rotate_prems ~1 rel_map)] @
-    map (rtac ctxt) (drop num_prems assms) |> TRY oo EVERY', assume_tac ctxt] |> EVERY1);
+  let
+    val map_comp = mk_mr_map_comp assms;
+  in
+    unfold_tac ctxt [rmbnf_rel_def, map_comp] THEN
+    unfold_tac ctxt [@{thm id_hid_o_hid}] THEN
+    unfold_tac ctxt [@{thm hidden_id_def}, map_comp] THEN
+    unfold_tac ctxt @{thms id_o} THEN
+    ([rtac ctxt @{thm predicate2I}, rtac ctxt (@{thm predicate2D} OF [le_rel_OO]),
+      [etac ctxt @{thm relcomppE}, rtac ctxt @{thm relcomppI},
+        etac ctxt (Drule.rotate_prems ~1 rel_map)] @
+      map (rtac ctxt) (drop num_prems assms) |> TRY oo EVERY', assume_tac ctxt] |> EVERY1)
+  end;
 
 fun mk_mr_rel_OO_tac ctxt assms mr_le_rel_OO mr_rel_OO_Grp_alt supp_comp_bound mk_mr_exIs set_map
   map_comp someI2_exs map_cong0 =

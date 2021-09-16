@@ -523,4 +523,54 @@ lemma infinite_regular_card_order_natLeq:
   unfolding infinite_regular_card_order_def
   by (simp add: natLeq_card_order natLeq_cinfinite regularCard_natLeq)
 
+typedef 'a suc = "Field (cardSuc |UNIV :: 'a set| )"
+  using Field_cardSuc_not_empty by auto
+
+setup_lifting type_definition_suc
+
+lift_definition card_suc :: "'a rel \<Rightarrow> 'a suc rel" is "\<lambda>_. cardSuc |UNIV :: 'a set|"
+  by (auto simp: Field_def Range.simps Domain.simps)
+
+lemma Field_card_suc: "Field (card_suc r) = UNIV"
+  unfolding Field_def Range.simps Domain.simps set_eq_iff Un_iff eqTrueI[OF UNIV_I] ex_simps simp_thms
+  by transfer (auto simp: Field_def Range.simps Domain.simps)
+
+lemma card_suc_alt: "card_suc r = dir_image (cardSuc |UNIV :: 'a set| ) Abs_suc"
+  unfolding card_suc_def dir_image_def by auto
+
+lemma cardSuc_ordIso_card_suc:
+  assumes "card_order r"
+  shows "cardSuc r =o card_suc (r :: 'a rel)"
+proof -
+  have "cardSuc (r :: 'a rel) =o cardSuc |UNIV :: 'a set|"
+    using cardSuc_invar_ordIso card_of_unique assms
+    by (simp add: card_order_on_Card_order)
+  also have "cardSuc |UNIV :: 'a set| =o card_suc (r :: 'a rel)"
+    unfolding card_suc_alt
+    by (rule dir_image_ordIso) (simp_all add: inj_on_def Abs_suc_inject)
+  finally show ?thesis .
+qed
+
+lemma Card_order_card_suc: "card_order r \<Longrightarrow> Card_order (card_suc r)"
+  using cardSuc_ordIso_card_suc
+  by (metis Card_order_ordIso2 cardSuc_Card_order card_order_on_Card_order)
+
+lemma card_order_card_suc: "card_order r \<Longrightarrow> card_order (card_suc r)"
+  using Field_card_suc Card_order_card_suc by metis
+
+lemma regular_card_suc: "card_order r \<Longrightarrow> Cinfinite r \<Longrightarrow> regularCard (card_suc r)"
+  using cardSuc_ordIso_card_suc Cinfinite_cardSuc regularCard_cardSuc regularCard_ordIso
+  by blast
+
+lemma infinite_regular_card_order_card_suc:
+  "card_order r \<Longrightarrow> Cinfinite r \<Longrightarrow> infinite_regular_card_order (card_suc r)"
+  unfolding infinite_regular_card_order_def
+  by (meson Cinfinite_cardSuc Cinfinite_cong cardSuc_ordIso_card_suc card_order_card_suc regular_card_suc)
+
+lemma card_suc_greater: "card_order r \<Longrightarrow> r <o card_suc r"
+  by (metis Field_card_order cardSuc_greater cardSuc_ordIso_card_suc ordLess_ordIso_trans)
+
+lemma card_suc_greater_set: "\<lbrakk> card_order r ; A \<le>o r \<rbrakk> \<Longrightarrow> A <o card_suc r"
+  using card_suc_greater ordLeq_ordLess_trans by blast
+
 end

@@ -31,11 +31,12 @@ sig
   val transfer_mrbnf: theory -> mrbnf -> mrbnf
   val mrbnf_of: Proof.context -> string -> mrbnf option
   val mrbnf_of_global: theory -> string -> mrbnf option
-  val mrbnf_of_bnf: BNF_Def.bnf -> thm -> mrbnf
+  val mrbnf_of_bnf: BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
   val mrbnf_interpretation: string -> (mrbnf -> local_theory -> local_theory) -> theory -> theory
   val interpret_mrbnf: (string -> bool) -> mrbnf -> local_theory -> local_theory
   val register_mrbnf_raw: string -> mrbnf -> local_theory -> local_theory
   val register_mrbnf: (string -> bool) -> string -> mrbnf -> local_theory -> local_theory
+  val register_bnf_as_mrbnf: BNF_Def.bnf -> local_theory -> local_theory
 
   datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var; (*Added Dead_Var for kill function*)
 
@@ -974,130 +975,6 @@ fun mrbnf_of_generic context =
 
 val mrbnf_of = mrbnf_of_generic o Context.Proof;
 val mrbnf_of_global = mrbnf_of_generic o Context.Theory;
-
-fun mrbnf_of_bnf bnf bd_infinite_regular_card_order = MRBNF {
-    name = BNF_Def.name_of_bnf bnf,
-    T = BNF_Def.T_of_bnf bnf,
-    var_types = map (K Live_Var) (BNF_Def.lives_of_bnf bnf) @ map (K Dead_Var) (BNF_Def.deads_of_bnf bnf), (* TODO: Check if necessary *)
-    free = 0,
-    frees = [],
-    bound = 0,
-    bounds = [],
-    live = BNF_Def.live_of_bnf bnf,
-    lives = BNF_Def.lives_of_bnf bnf,
-    lives' = error "lives'", (* TODO: This is wrong, needs to be two new vars *)
-    dead = BNF_Def.dead_of_bnf bnf,
-    deads = BNF_Def.deads_of_bnf bnf,
-    map = BNF_Def.map_of_bnf bnf,
-    sets = BNF_Def.sets_of_bnf bnf,
-    bd = BNF_Def.bd_of_bnf bnf,
-    class = [],
-    coclass = [],
-    axioms = {
-      map_id0 = BNF_Def.map_id0_of_bnf bnf,
-      map_comp0 = BNF_Def.map_comp0_of_bnf bnf,
-      map_cong0 = BNF_Def.map_cong0_of_bnf bnf,
-      set_map0 = BNF_Def.set_map0_of_bnf bnf,
-      bd_infinite_regular_card_order = bd_infinite_regular_card_order,
-      set_bd = error "set_bd", (* TODO: BNF_Def.set_bd_of_bnf bnf uses <= not < *)
-      le_rel_OO = BNF_Def.le_rel_OO_of_bnf bnf,
-      rel_OO_Grp = BNF_Def.rel_OO_Grp_of_bnf bnf,
-      pred_set = BNF_Def.pred_set_of_bnf bnf
-    },
-    defs = {
-      map_def = BNF_Def.map_def_of_bnf bnf,
-      set_defs = BNF_Def.set_defs_of_bnf bnf,
-      rel_def = BNF_Def.rel_def_of_bnf bnf,
-      mr_rel_def = error "mr_rel_def",
-      pred_def = BNF_Def.pred_def_of_bnf bnf
-    },
-    facts = {
-      bd_card_order = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.card_order},
-      bd_cinfinite = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.cinfinite},
-      bd_regularCard = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.regularCard},
-      rel_OO_Grp_id = error "rel_OO_Grp_id",
-      bd_Card_order = BNF_Def.bd_Card_order_of_bnf bnf,
-      bd_Cinfinite = BNF_Def.bd_Cinfinite_of_bnf bnf,
-      bd_Cnotzero = BNF_Def.bd_Cnotzero_of_bnf bnf,
-      collect_set_map = Lazy.lazy (fn () => BNF_Def.collect_set_map_of_bnf bnf),
-      in_bd = Lazy.lazy (fn () => BNF_Def.in_bd_of_bnf bnf),
-      in_cong = Lazy.lazy (fn () => BNF_Def.in_cong_of_bnf bnf),
-      in_mono = Lazy.lazy (fn () => BNF_Def.in_mono_of_bnf bnf),
-      in_rel = Lazy.lazy (fn () => BNF_Def.in_rel_of_bnf bnf),
-      inj_map = Lazy.lazy (fn () => BNF_Def.inj_map_of_bnf bnf),
-      inj_map_strong = Lazy.lazy (fn () => BNF_Def.inj_map_strong_of_bnf bnf),
-      map_comp = Lazy.lazy (fn () => BNF_Def.map_comp_of_bnf bnf),
-      map_cong = Lazy.lazy (fn () => BNF_Def.map_cong_of_bnf bnf),
-      map_cong_simp = Lazy.lazy (fn () => BNF_Def.map_cong_simp_of_bnf bnf),
-      map_cong_pred = Lazy.lazy (fn () => BNF_Def.map_cong_pred_of_bnf bnf),
-      map_id = Lazy.lazy (fn () => BNF_Def.map_id_of_bnf bnf),
-      map_ident0 = Lazy.lazy (fn () => BNF_Def.map_ident0_of_bnf bnf),
-      map_ident = Lazy.lazy (fn () => BNF_Def.map_ident_of_bnf bnf),
-      map_transfer = Lazy.lazy (fn () => BNF_Def.map_transfer_of_bnf bnf),
-      rel_eq = Lazy.lazy (fn () => BNF_Def.rel_eq_of_bnf bnf),
-      rel_flip = Lazy.lazy (fn () => BNF_Def.rel_flip_of_bnf bnf),
-      set_map = map (fn x => Lazy.lazy (K x)) (BNF_Def.set_map_of_bnf bnf),
-      rel_cong0 = Lazy.lazy (fn () => BNF_Def.rel_cong0_of_bnf bnf),
-      rel_cong = Lazy.lazy (fn () => BNF_Def.rel_cong_of_bnf bnf),
-      rel_cong_simp = Lazy.lazy (fn () => BNF_Def.rel_cong_simp_of_bnf bnf),
-      rel_map = Lazy.lazy (fn () => BNF_Def.rel_map_of_bnf bnf),
-      rel_mono = Lazy.lazy (fn () => BNF_Def.rel_mono_of_bnf bnf),
-      rel_mono_strong0 = Lazy.lazy (fn () => BNF_Def.rel_mono_strong0_of_bnf bnf),
-      rel_mono_strong = Lazy.lazy (fn () => BNF_Def.rel_mono_strong_of_bnf bnf),
-      set_transfer = Lazy.lazy (fn () => BNF_Def.set_transfer_of_bnf bnf),
-      rel_Grp = Lazy.lazy (fn () => BNF_Def.rel_Grp_of_bnf bnf),
-      rel_conversep = Lazy.lazy (fn () => BNF_Def.rel_conversep_of_bnf bnf),
-      rel_OO = Lazy.lazy (fn () => BNF_Def.rel_OO_of_bnf bnf),
-      rel_refl = Lazy.lazy (fn () => BNF_Def.rel_refl_of_bnf bnf),
-      rel_refl_strong = Lazy.lazy (fn () => BNF_Def.rel_refl_strong_of_bnf bnf),
-      rel_reflp = Lazy.lazy (fn () => BNF_Def.rel_reflp_of_bnf bnf),
-      rel_symp = Lazy.lazy (fn () => BNF_Def.rel_symp_of_bnf bnf),
-      rel_transp = Lazy.lazy (fn () => BNF_Def.rel_transp_of_bnf bnf),
-      rel_transfer = Lazy.lazy (fn () => BNF_Def.rel_transfer_of_bnf bnf),
-      rel_eq_onp = Lazy.lazy (fn () => BNF_Def.rel_eq_onp_of_bnf bnf),
-      pred_transfer = Lazy.lazy (fn () => BNF_Def.pred_transfer_of_bnf bnf),
-      pred_True = Lazy.lazy (fn () => BNF_Def.pred_True_of_bnf bnf),
-      pred_map = Lazy.lazy (fn () => BNF_Def.pred_map_of_bnf bnf),
-      pred_rel = Lazy.lazy (fn () => BNF_Def.pred_rel_of_bnf bnf),
-      pred_mono_strong0 = Lazy.lazy (fn () => BNF_Def.pred_mono_strong0_of_bnf bnf),
-      pred_mono_strong = Lazy.lazy (fn () => BNF_Def.pred_mono_strong_of_bnf bnf),
-      pred_mono = Lazy.lazy (fn () => BNF_Def.pred_mono_of_bnf bnf),
-      pred_cong0 = Lazy.lazy (fn () => BNF_Def.pred_cong0_of_bnf bnf),
-      pred_cong = Lazy.lazy (fn () => BNF_Def.pred_cong_of_bnf bnf),
-      pred_cong_simp = Lazy.lazy (fn () => BNF_Def.pred_cong_simp_of_bnf bnf)
-    },
-    mr_facts = {
-      var_large = error "foo",
-      var_regular = error "foo",
-      natLeq_bound = error "foo",
-      UNIV_cinfinite = error "foo",
-      supp_comp_bound = error "foo",
-      Un_bound = error "foo",
-      UNION_bound = error "foo",
-      mr_rel_cong0 = error "foo lazy",
-      mr_in_rel = error "foo lazy",
-      mr_le_rel_OO = error "foo lazy",
-      mr_map_transfer = error "foo lazy",
-      mr_rel_eq = error "foo lazy",
-      mr_rel_flip = error "foo lazy",
-      mr_rel_map = error "foo lazy",
-      mr_rel_mono = error "foo lazy",
-      mr_rel_mono_strong0 = error "foo lazy",
-      mr_rel_mono_strong = error "foo lazy",
-      mr_set_transfer = error "foo lazy",
-      mr_rel_Grp = error "foo lazy",
-      mr_rel_conversep = error "foo lazy",
-      mr_rel_OO = error "foo lazy",
-      mr_rel_OO_Grp = error "foo lazy",
-      mr_rel_transfer = error "foo lazy",
-      mr_rel_id = error "foo lazy"
-    },
-    nwits = BNF_Def.nwits_of_bnf bnf,
-    wits = BNF_Def.wits_of_bnf bnf,
-    rel = BNF_Def.rel_of_bnf bnf,
-    mr_rel = error "mr_rel",
-    pred = BNF_Def.pred_of_bnf bnf
-  }
 
 (* Utilities *)
 
@@ -3539,15 +3416,52 @@ fun mrbnf_def const_policy fact_policy internal qualify tacs Ds classes
         |> Conjunction.elim_balanced (length wit_goals)
         |> map2 (Conjunction.elim_balanced o length) wit_goalss
         |> (map o map) (Thm.forall_elim_vars 0);
-     fun mrbnf_def_tactics_to_list tacs = [#map_id0 tacs, #map_comp0 tacs, #map_cong0 tacs] @ #set_map0 tacs @
-            [#infinite_regular_card_order tacs] @ #set_bd tacs @ [#le_rel_OO tacs, #in_rel tacs, #pred_set tacs]
+    val tac_list = [#map_id0 tacs, #map_comp0 tacs, #map_cong0 tacs]
+      @ #set_map0 tacs @ [#infinite_regular_card_order tacs] @ #set_bd tacs
+      @ [#le_rel_OO tacs, #in_rel tacs, #pred_set tacs]
   in
     map2 (Thm.close_derivation \<^here> oo Goal.prove_sorry lthy [] [])
       goals (map (fn tac => fn {context = ctxt, prems = _} =>
-        unfold_thms_tac ctxt one_step_defs THEN tac ctxt) (mrbnf_def_tactics_to_list tacs))
+        unfold_thms_tac ctxt one_step_defs THEN tac ctxt) tac_list)
     |> (fn thms => after_qed mk_wit_thms (map single thms) lthy)
   end) o prepare_def const_policy fact_policy internal qualify (K I) (K I) Ds classes
     map_b rel_b pred_b set_bs raw_csts;
+
+fun mrbnf_of_bnf bnf lthy =
+  let val mrbnf_tactics = {
+    map_id0 = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.map_id0_of_bnf bnf]),
+    map_comp0 = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.map_comp0_of_bnf bnf]),
+    map_cong0 = fn ctxt => HEADGOAL (SUBGOAL (K (HEADGOAL (resolve_tac ctxt [BNF_Def.map_cong0_of_bnf bnf]) THEN REPEAT (Goal.assume_rule_tac ctxt 1)))),
+    set_map0 = map (fn thm => fn ctxt => HEADGOAL (resolve_tac ctxt [thm])) (BNF_Def.set_map0_of_bnf bnf),
+    infinite_regular_card_order = fn ctxt => EVERY (map (HEADGOAL o resolve_tac ctxt o single) [@{thm infinite_regular_card_order_card_suc}, BNF_Def.bd_card_order_of_bnf bnf, BNF_Def.bd_Cinfinite_of_bnf bnf]),
+    set_bd = map (fn thm => fn ctxt => EVERY (map (HEADGOAL o resolve_tac ctxt o single) [@{thm card_suc_greater_set}, BNF_Def.bd_card_order_of_bnf bnf, thm])) (BNF_Def.set_bd_of_bnf bnf),
+    le_rel_OO = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.le_rel_OO_of_bnf bnf]),
+    in_rel = fn ctxt => Local_Defs.unfold_tac ctxt [@{thm OO_Grp_alt}, BNF_Def.map_id_of_bnf bnf, BNF_Def.in_rel_of_bnf bnf, @{thm Set.mem_Collect_eq}] THEN HEADGOAL (resolve_tac ctxt [@{thm refl}]),
+    pred_set = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.pred_set_of_bnf bnf]),
+    wit = fn ctxt => EVERY (map (HEADGOAL o eresolve_tac ctxt o single) (BNF_Def.wit_thms_of_bnf bnf))
+  }
+  fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
+  fun mk_card_suc r =
+    let val T = fst (BNF_Util.dest_relT (fastype_of r));
+    in Const (\<^const_name>\<open>card_suc\<close>, BNF_Util.mk_relT (T, T) --> BNF_Util.mk_relT (mk_sucT T, mk_sucT T)) $ r end;
+  val n = BNF_Def.live_of_bnf bnf
+  val nwits = BNF_Def.nwits_of_bnf bnf
+  val (((lives, lives'), deads), lthy') = lthy
+    |> Ctr_Sugar_Util.mk_TFrees n
+    ||>> Ctr_Sugar_Util.mk_TFrees n
+    ||>> Ctr_Sugar_Util.mk_TFrees' (map Type.sort_of_atyp (BNF_Def.deads_of_bnf bnf))
+  in mrbnf_def Do_Inline (K Dont_Note) false I mrbnf_tactics (SOME deads) NONE
+      Binding.empty Binding.empty Binding.empty []
+    (((((((BNF_Def.name_of_bnf bnf, BNF_Def.mk_T_of_bnf deads lives bnf), BNF_Def.mk_map_of_bnf deads lives lives' bnf),
+    map (fn x => (Live_Var, x)) (BNF_Def.mk_sets_of_bnf (replicate n deads) (replicate n lives) bnf)),
+    mk_card_suc (BNF_Def.mk_bd_of_bnf deads lives bnf)),
+    map snd (BNF_Def.mk_wits_of_bnf (replicate nwits deads) (replicate nwits lives) bnf)),
+    SOME (BNF_Def.mk_rel_of_bnf deads lives lives' bnf)),
+    SOME (BNF_Def.mk_pred_of_bnf deads lives bnf))
+    lthy'
+  end;
+
+fun register_bnf_as_mrbnf bnf = mrbnf_of_bnf bnf #> uncurry (register_mrbnf_raw (Binding.name_of (BNF_Def.name_of_bnf bnf)))
 
 fun mrbnf_cmd (raw_csts, raw_plugins) =
   (fn (key, goals, (triv_tac_opt, wit_goalss), after_qed, lthy, defs) =>

@@ -12,6 +12,18 @@ signature MRBNF_DEF =
 sig
   type mrbnf
   type nonemptiness_witness = {I: int list, wit: term, prop: thm list}
+  type mrbnf_def_tactics = {
+    map_id0: Proof.context -> tactic,
+    map_comp0: Proof.context -> tactic,
+    map_cong0: Proof.context -> tactic,
+    set_map0: (Proof.context -> tactic) list,
+    infinite_regular_card_order: Proof.context -> tactic,
+    set_bd: (Proof.context -> tactic) list,
+    le_rel_OO: Proof.context -> tactic,
+    in_rel: Proof.context -> tactic,
+    pred_set: Proof.context -> tactic,
+    wit: Proof.context -> tactic
+  }
 
   val morph_mrbnf: morphism -> mrbnf -> mrbnf
   val morph_mrbnf_defs: morphism -> mrbnf -> mrbnf
@@ -225,7 +237,7 @@ sig
         (typ list -> typ list -> term))) * local_theory
 
   val mrbnf_def: inline_policy -> (Proof.context -> fact_policy) -> bool -> (binding -> binding) ->
-    (Proof.context -> tactic) list -> (Proof.context -> tactic) -> typ list option ->
+    mrbnf_def_tactics -> typ list option ->
     (sort * sort) option -> binding -> binding -> binding -> binding list ->
     ((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option) * term option ->
     local_theory -> mrbnf * local_theory
@@ -1771,6 +1783,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
         val (betas, alphas) = fold_map_VT (fold_fun I) (K class |> fold_fun) alphas_raw lthy
           ||> fst o fold_map_VT (fold_fun I) pair betas_raw
           ||> zip_map_VT fst snd |> `op |> ||> fst;
+
         val map_fun = typ_subst_atomic (alphas_raw @ betas_raw ~~ alphas @ betas);
         val mrbnf_map = subst_atomic_types (alphas_raw @ betas_raw ~~ alphas @ betas) mrbnf_map_raw;
       in
@@ -3496,8 +3509,20 @@ fun register_mrbnf_raw key mrbnf =
 fun register_mrbnf plugins key mrbnf =
   register_mrbnf_raw key mrbnf #> interpret_mrbnf plugins mrbnf;
 
+type mrbnf_def_tactics = {
+  map_id0: Proof.context -> tactic,
+  map_comp0: Proof.context -> tactic,
+  map_cong0: Proof.context -> tactic,
+  set_map0: (Proof.context -> tactic) list,
+  infinite_regular_card_order: Proof.context -> tactic,
+  set_bd: (Proof.context -> tactic) list,
+  le_rel_OO: Proof.context -> tactic,
+  in_rel: Proof.context -> tactic,
+  pred_set: Proof.context -> tactic,
+  wit: Proof.context -> tactic
+}
 
-fun mrbnf_def const_policy fact_policy internal qualify tacs wit_tac Ds classes
+fun mrbnf_def const_policy fact_policy internal qualify tacs Ds classes
     map_b rel_b pred_b set_bs raw_csts =
   (fn (_, goals, (triv_tac_opt, wit_goalss), after_qed, lthy, one_step_defs) =>
   let
@@ -3505,7 +3530,7 @@ fun mrbnf_def const_policy fact_policy internal qualify tacs wit_tac Ds classes
       TRYALL Goal.conjunction_tac THEN
       (case triv_tac_opt of
         SOME tac => tac ctxt set_maps
-      | NONE => unfold_thms_tac ctxt one_step_defs THEN wit_tac ctxt);
+      | NONE => unfold_thms_tac ctxt one_step_defs THEN (#wit tacs) ctxt);
     val wit_goals = map Logic.mk_conjunction_balanced wit_goalss;
     fun mk_wit_thms set_maps =
       Goal.prove_sorry lthy [] [] (Logic.mk_conjunction_balanced wit_goals)
@@ -3514,10 +3539,12 @@ fun mrbnf_def const_policy fact_policy internal qualify tacs wit_tac Ds classes
         |> Conjunction.elim_balanced (length wit_goals)
         |> map2 (Conjunction.elim_balanced o length) wit_goalss
         |> (map o map) (Thm.forall_elim_vars 0);
+     fun mrbnf_def_tactics_to_list tacs = [#map_id0 tacs, #map_comp0 tacs, #map_cong0 tacs] @ #set_map0 tacs @
+            [#infinite_regular_card_order tacs] @ #set_bd tacs @ [#le_rel_OO tacs, #in_rel tacs, #pred_set tacs]
   in
     map2 (Thm.close_derivation \<^here> oo Goal.prove_sorry lthy [] [])
       goals (map (fn tac => fn {context = ctxt, prems = _} =>
-        unfold_thms_tac ctxt one_step_defs THEN tac ctxt) tacs)
+        unfold_thms_tac ctxt one_step_defs THEN tac ctxt) (mrbnf_def_tactics_to_list tacs))
     |> (fn thms => after_qed mk_wit_thms (map single thms) lthy)
   end) o prepare_def const_policy fact_policy internal qualify (K I) (K I) Ds classes
     map_b rel_b pred_b set_bs raw_csts;
@@ -3577,7 +3604,7 @@ fun print_mrbnfs ctxt =
           [Pretty.block [Pretty.str (bdN ^ ":"), Pretty.brk 1,
             Pretty.quote (Syntax.pretty_term ctxt bd)]]);
   in
-    Pretty.big_list "Registered bounded natural functors:"
+    Pretty.big_list "Registered map restricted bounded natural functors:"
       (map pretty_mrbnf (sort_by fst (Symtab.dest (Data.get (Context.Proof ctxt)))))
     |> Pretty.writeln
   end;

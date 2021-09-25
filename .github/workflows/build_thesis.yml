@@ -23,3 +23,13 @@ jobs:
         with:
           name: thesis_pdf
           path: thesis/build/main.pdf
+
+      - name: Upload new pdf to release
+        uses: shogo82148/actions-upload-release-asset@v1
+        if: github.ref == 'refs/heads/master'
+        with:
+          upload_url: https://uploads.github.com/repos/jvanbruegge/master-thesis/releases/50249021/assets
+          asset_path: thesis/build/main.pdf
+          asset_name: thesis.pdf
+          asset_content_type: application/pdf
+          overwrite: true

@@ -1,0 +1,25 @@
+name: Thesis
+on:
+  push:
+    paths:
+      - 'thesis/**'
+      - '.github/workflows/build_thesis.yml'
+jobs:
+  thesis:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Build thesis
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: main.tex
+          working_directory: thesis
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -outdir=build
+
+      - name: Upload pdf artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: thesis_pdf
+          path: thesis/build/main.pdf

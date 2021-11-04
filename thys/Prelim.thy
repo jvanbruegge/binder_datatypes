@@ -573,4 +573,7 @@ lemma card_suc_greater: "card_order r \<Longrightarrow> r <o card_suc r"
 lemma card_suc_greater_set: "\<lbrakk> card_order r ; A \<le>o r \<rbrakk> \<Longrightarrow> A <o card_suc r"
   using card_suc_greater ordLeq_ordLess_trans by blast
 
+lemma exists_univ_eq: "\<And>x y. (x = y) = (\<exists>z. z \<in> UNIV \<and> z = x \<and> z = y)"
+  by simp
+
 end

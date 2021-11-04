@@ -36,7 +36,7 @@ sig
   val interpret_mrbnf: (string -> bool) -> mrbnf -> local_theory -> local_theory
   val register_mrbnf_raw: string -> mrbnf -> local_theory -> local_theory
   val register_mrbnf: (string -> bool) -> string -> mrbnf -> local_theory -> local_theory
-  val register_bnf_as_mrbnf: BNF_Def.bnf -> local_theory -> local_theory
+  val register_bnf_as_mrbnf: string option -> BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
 
   datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var; (*Added Dead_Var for kill function*)
 
@@ -2822,7 +2822,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           in
             Goal.prove_sorry lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} =>
               mk_mr_rel_map_non_lives_tac ctxt live assms id_thms rel_OO_Grp
-                (Lazy.force rel_OO_Grp_id) (Lazy.force map_comp) exI_z)
+                (Lazy.force rel_OO_Grp_id) (Lazy.force map_id) exI_z)
             |> Thm.close_derivation \<^here>
           end;
 
@@ -3436,9 +3436,15 @@ fun mrbnf_of_bnf bnf lthy =
     infinite_regular_card_order = fn ctxt => EVERY (map (HEADGOAL o resolve_tac ctxt o single) [@{thm infinite_regular_card_order_card_suc}, BNF_Def.bd_card_order_of_bnf bnf, BNF_Def.bd_Cinfinite_of_bnf bnf]),
     set_bd = map (fn thm => fn ctxt => EVERY (map (HEADGOAL o resolve_tac ctxt o single) [@{thm card_suc_greater_set}, BNF_Def.bd_card_order_of_bnf bnf, thm])) (BNF_Def.set_bd_of_bnf bnf),
     le_rel_OO = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.le_rel_OO_of_bnf bnf]),
-    in_rel = fn ctxt => Local_Defs.unfold_tac ctxt [@{thm OO_Grp_alt}, BNF_Def.map_id_of_bnf bnf, BNF_Def.in_rel_of_bnf bnf, @{thm Set.mem_Collect_eq}] THEN HEADGOAL (resolve_tac ctxt [@{thm refl}]),
+    in_rel = fn ctxt => Local_Defs.unfold_tac ctxt [@{thm OO_Grp_alt}, BNF_Def.map_id_of_bnf bnf] THEN FIRST [
+        HEADGOAL (resolve_tac ctxt [@{thm exists_univ_eq}]),
+        Local_Defs.unfold_tac ctxt [BNF_Def.in_rel_of_bnf bnf, @{thm Set.mem_Collect_eq}] THEN HEADGOAL (resolve_tac ctxt [@{thm refl}])
+      ],
     pred_set = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.pred_set_of_bnf bnf]),
-    wit = fn ctxt => EVERY (map (HEADGOAL o eresolve_tac ctxt o single) (BNF_Def.wit_thms_of_bnf bnf))
+    wit = fn ctxt => FIRST [
+        HEADGOAL (assume_tac ctxt),
+        EVERY (map (HEADGOAL o eresolve_tac ctxt o single) (BNF_Def.wit_thms_of_bnf bnf))
+      ]
   }
   fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
   fun mk_card_suc r =
@@ -3461,7 +3467,15 @@ fun mrbnf_of_bnf bnf lthy =
     lthy'
   end;
 
-fun register_bnf_as_mrbnf bnf = mrbnf_of_bnf bnf #> uncurry (register_mrbnf_raw (Binding.name_of (BNF_Def.name_of_bnf bnf)))
+fun register_bnf_as_mrbnf key bnf lthy =
+  let val (mrbnf, lthy') = mrbnf_of_bnf bnf lthy
+      val name = (case key of
+        SOME name => name
+        | NONE => fst (dest_Type (BNF_Def.T_of_bnf bnf))
+      )
+      val lthy'' = register_mrbnf_raw name mrbnf lthy'
+  in (mrbnf, lthy'')
+  end;
 
 fun mrbnf_cmd (raw_csts, raw_plugins) =
   (fn (key, goals, (triv_tac_opt, wit_goalss), after_qed, lthy, defs) =>

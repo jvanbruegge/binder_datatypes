@@ -156,13 +156,24 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           | interlace_maps (i::ids) maps (_::ts) = i :: interlace_maps ids maps ts
         val body = Term.list_comb (mk_map_of_mrbnf oDs iTs iTs' Bs Fs outer, interlace_maps fn_bounds_frees_ids innermaps (var_types_of_mrbnf outer))
 
-      in (fold_rev Term.abs fn_vars body, lthy)
-      end;
+      in (fold_rev Term.abs fn_vars body, lthy) end;
 
-    (* TODO: Create real map, sets, rel, pred, bd, wits *)
+    (* The relator for the composed MRBNF just instantiates the variables of the outer relator with the relators of the inners
+     * \<forall>Q1 ... Qn. outer.rel (inner1.rel Q1 ... Qn) ... (innerm.rel Q1 ... Qn)
+     * The same happens for the predicator *)
+    val (rel, pred, rel_lthy) =
+      let
+        (* Invent new variable names for relator and predicator prop variables *)
+        val ((Qs, Ps), lthy') = map_lthy
+          |> apfst snd o BNF_Util.mk_Frees' "Q" (map2 BNF_Util.mk_pred2T As As')
+          ||>> apfst snd o BNF_Util.mk_Frees' "P" (map BNF_Util.mk_pred1T As);
+        (* Contrary to "map" the relator/predicator only works over the live variables, so no interlacing needed here *)
+        fun mk_innerf f Ds inner = Term.list_comb (f Ds As As' Bs Fs inner, map Bound (num_ilives - 1 downto 0));
+        fun mk_f f vars = fold_rev Term.abs vars (Term.list_comb (f oDs iTs iTs' Bs Fs outer, map2 (mk_innerf f) iDss inners))
+      in (mk_f mk_rel_of_mrbnf Qs, mk_f (fn Ds => fn Ts => K (mk_pred_of_mrbnf Ds Ts)) Ps, lthy') end;
+
+    (* TODO: Create sets and wits *)
     val sets = []
-    val rel = @{term "()"}
-    val pred = @{term "()"}
     val wits = []
 
     (* TODO: Use real tacs here *)
@@ -180,7 +191,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     };
 
     val (mrbnf, lthy') = mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME (sort, cosort))
-              Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), sets), bd'), wits), SOME rel), SOME pred) map_lthy
+              Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), sets), bd'), wits), SOME rel), SOME pred) rel_lthy
 
   in (mrbnf, (unfold_set, lthy'))
   end;

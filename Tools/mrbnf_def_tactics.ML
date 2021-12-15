@@ -31,7 +31,7 @@ sig
   val mk_mr_rel_conversep_tac: Proof.context -> thm list -> thm -> thm -> thm -> thm list ->
     thm -> (cterm -> thm) -> (cterm -> thm) -> tactic
   val mk_mr_rel_map0_tac: Proof.context -> int -> thm -> thm -> thm -> thm -> tactic
-  val mk_mr_rel_map_non_lives_tac: Proof.context -> int -> thm list -> thm list -> thm -> thm -> thm ->
+  val mk_mr_rel_map_non_lives_tac: Proof.context -> int -> thm list -> thm list -> thm -> thm -> thm -> thm ->
     (cterm -> thm) -> tactic
   val mk_mr_rel_map_left_tac: Proof.context -> thm list -> thm -> thm -> tactic
   val mk_mr_rel_map_right_tac: Proof.context -> thm list -> thm -> thm -> tactic
@@ -157,18 +157,32 @@ fun mk_mr_rel_map0_tac ctxt live rel_compp rel_conversep rel_Grp map_id =
         dtac ctxt (trans OF [sym, map_id]), hyp_subst_tac ctxt, assume_tac ctxt])
     end;
 
-fun mk_mr_rel_map_non_lives_tac ctxt live assms id_thms rel_OO_Grp rel_OO_Grp_id map_id exI_z =
+fun mk_mr_rel_map_non_lives_tac ctxt live assms id_thms rel_OO_Grp rel_OO_Grp_id map_id map_comp exI_z =
   let
     fun subgoal_tac focus = hd (#params focus) |> snd |> exI_z |> rtac ctxt |> HEADGOAL;
-  in
-    EVERY1 [rtac ctxt ((rel_OO_Grp OF assms) RS iffD2), dtac ctxt (mk_unabs_def 2 rel_OO_Grp_id RS iffD1)]
+  in EVERY1 [
+      rtac ctxt ((rel_OO_Grp OF assms) RS iffD2),
+      dtac ctxt (mk_unabs_def 2 rel_OO_Grp_id RS iffD1)
+    ]
     THEN unfold_tac ctxt [@{thm OO_Grp_alt}, @{thm id_def[symmetric]}]
     THEN (REPEAT_DETERM (HEADGOAL (eresolve_tac ctxt [exE, CollectE, conjE])))
-    THEN EVERY1 ([Subgoal.FOCUS_PARAMS subgoal_tac ctxt, rtac ctxt conjI,
-      if live > 0 then rtac ctxt (mem_Collect_eq RS iffD2) THEN'
-        CONJ_WRAP' (K (assume_tac ctxt)) (replicate live ()) else rtac ctxt UNIV_I,
-      rtac ctxt conjI, assume_tac ctxt, K (unfold_tac ctxt [map_id])
-    ])
+    THEN EVERY1 [
+      Subgoal.FOCUS_PARAMS subgoal_tac ctxt,
+      rtac ctxt conjI,
+      if live > 0 then
+        rtac ctxt (mem_Collect_eq RS iffD2)
+        THEN' CONJ_WRAP' (K (assume_tac ctxt)) (replicate live ())
+      else
+        rtac ctxt UNIV_I,
+      rtac ctxt conjI,
+      assume_tac ctxt
+    ]
+    THEN unfold_tac ctxt [map_id]
+    THEN IF_UNSOLVED ([
+        safe_tac ctxt,
+        HEADGOAL (rtac ctxt (trans OF [@{thm _}, map_comp RS sym])),
+        unfold_tac ctxt @{thms o_id id_o}
+      ] @ (id_thms @ assms |> map (HEADGOAL o rtac ctxt)) |> EVERY)
   end;
 
 fun mk_mr_rel_map_left_tac ctxt assms mr_rel_OO mr_rel_Grp =

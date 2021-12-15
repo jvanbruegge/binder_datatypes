@@ -32,6 +32,7 @@ sig
   val mrbnf_of: Proof.context -> string -> mrbnf option
   val mrbnf_of_global: theory -> string -> mrbnf option
   val mrbnf_of_bnf: BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
+  val as_mrbnf: string -> local_theory -> (mrbnf * local_theory) option
   val mrbnf_interpretation: string -> (mrbnf -> local_theory -> local_theory) -> theory -> theory
   val interpret_mrbnf: (string -> bool) -> mrbnf -> local_theory -> local_theory
   val register_mrbnf_raw: string -> mrbnf -> local_theory -> local_theory
@@ -2822,7 +2823,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           in
             Goal.prove_sorry lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} =>
               mk_mr_rel_map_non_lives_tac ctxt live assms id_thms rel_OO_Grp
-                (Lazy.force rel_OO_Grp_id) (Lazy.force map_id) exI_z)
+                (Lazy.force rel_OO_Grp_id) (Lazy.force map_id) (Lazy.force map_comp) exI_z)
             |> Thm.close_derivation \<^here>
           end;
 
@@ -3476,6 +3477,16 @@ fun register_bnf_as_mrbnf key bnf lthy =
       val lthy'' = register_mrbnf_raw name mrbnf lthy'
   in (mrbnf, lthy'')
   end;
+
+fun as_mrbnf name lthy' =
+  (case mrbnf_of lthy' name of
+    SOME mrbnf => SOME (mrbnf, lthy')
+    | NONE =>
+      (case BNF_Def.bnf_of lthy' name of
+        SOME bnf => SOME (register_bnf_as_mrbnf NONE bnf lthy')
+        | NONE => NONE
+      )
+  )
 
 fun mrbnf_cmd (raw_csts, raw_plugins) =
   (fn (key, goals, (triv_tac_opt, wit_goalss), after_qed, lthy, defs) =>

@@ -1,7 +1,7 @@
 theory Prelim
   imports Card_Prelim
 begin
-  
+
 abbreviation (input) "any \<equiv> undefined"
 
 declare bij_imp_bij_inv[simp]
@@ -17,13 +17,13 @@ lemma bij_imp_bij_betw: "bij f \<Longrightarrow> bij_betw f A (f ` A)"
 lemma bij_bij_betw_inv: "bij u \<Longrightarrow> bij_betw u A B \<Longrightarrow> bij_betw (inv u) B A"
   by (metis bij_betw_imp_inj_on bij_betw_imp_surj_on bij_imp_bij_betw bij_imp_bij_inv image_inv_f_f)
 
-lemma conversep_def: 
+lemma conversep_def:
 "conversep r = (\<lambda> a b. r b a)" by auto
 
 
 lemma bij_comp2: "bij u \<Longrightarrow> bij v \<Longrightarrow> bij (\<lambda>a. v (u a))"
   unfolding o_def[symmetric] using bij_comp by blast
-  
+
 lemma snd_o_is_snd:"snd \<circ> (\<lambda>(x, y). (f0 (x, y), y)) = snd"
   by fastforce
 
@@ -44,7 +44,7 @@ lemma inv_simp2[simp]: "bij u \<Longrightarrow> u (inv u x) = x"
 
 lemma inv_o_simp2[simp]: "bij u \<Longrightarrow> u o inv u = id"
   unfolding o_def by auto
-    
+
 lemma bij_inv_rev: "bij f \<Longrightarrow> a = inv f b \<longleftrightarrow> b = f a"
   by auto
 
@@ -93,10 +93,10 @@ definition imsupp :: "('a \<Rightarrow> 'a) => 'a set" where
 
 lemma supp_id: "supp id = {}"
   unfolding supp_def by auto
- 
+
 lemma imsupp_id: "imsupp id = {}"
   unfolding imsupp_def supp_id by auto
- 
+
 lemma imsupp_id_fun_upd: "imsupp (id(a:=b)) = (if a = b then {} else {a, b})"
   unfolding imsupp_def supp_def by auto
 
@@ -235,36 +235,36 @@ lemmas imsupp_inv_betw_extU = extU[THEN conjunct2, THEN conjunct2,
 
 lemma ex_bij_betw_supp:
   fixes A B C :: "'a set"
-  assumes i: "infinite (UNIV :: 'a set)" and 
+  assumes i: "infinite (UNIV :: 'a set)" and
   bound: "|A| <o |UNIV :: 'a set|"
   and AB: "bij_betw uu A B" and emp: "A \<inter> B = {}" "A \<inter> C = {}" "B \<inter> C = {}"
-shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} \<and> 
+shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} \<and>
              eq_on A u uu"
 proof-
-  have abo: "|A| =o |B|" using AB 
+  have abo: "|A| =o |B|" using AB
     using card_of_ordIso by blast
-  hence b2: "|B| <o |UNIV :: 'a set|" using bound   
+  hence b2: "|B| <o |UNIV :: 'a set|" using bound
     using ordIso_ordLess_trans ordIso_symmetric by blast
   define u where "u \<equiv> extU A B uu"
   show ?thesis apply(rule exI[of _ u])
-    using extU[OF AB emp(1), unfolded u_def[symmetric]] apply auto  
-    apply (metis abo bound card_of_Un_infinite card_of_mono1 finite_Un 
+    using extU[OF AB emp(1), unfolded u_def[symmetric]] apply auto
+    apply (metis abo bound card_of_Un_infinite card_of_mono1 finite_Un
 finite_ordLess_infinite2 i ordIso_iff_ordLeq ordLeq_ordLess_trans)
-  using assms by auto 
+  using assms by auto
 qed
 
 lemma ordIso_ex_bij_betw_supp:
   fixes A B C :: "'a set"
-  assumes i: "infinite (UNIV :: 'a set)" and 
+  assumes i: "infinite (UNIV :: 'a set)" and
   bound: "|A| <o |UNIV :: 'a set|"
   and AB: "|A| =o |B|" and emp: "A \<inter> B = {}" "A \<inter> C = {}" "B \<inter> C = {}"
 shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}"
-proof-   
-  obtain uu where AB: "bij_betw uu A B" 
+proof-
+  obtain uu where AB: "bij_betw uu A B"
     using AB unfolding card_of_ordIso[symmetric] by blast
-  have "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} 
+  have "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}
     \<and> eq_on A u uu"
-  apply(rule ex_bij_betw_supp) using assms AB by auto 
+  apply(rule ex_bij_betw_supp) using assms AB by auto
   thus ?thesis by auto
 qed
 
@@ -394,9 +394,9 @@ proof -
     by auto
 qed
 
-lemma bij_imsupp_supp_ne: 
+lemma bij_imsupp_supp_ne:
 assumes "bij f" and "supp f \<inter> A = {}"
-shows "imsupp f \<inter> A = {}" 
+shows "imsupp f \<inter> A = {}"
 using assms unfolding imsupp_def apply auto
   by (smt CollectI disjoint_iff_not_equal inv_simp1 supp_def)
 

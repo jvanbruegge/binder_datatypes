@@ -40,12 +40,12 @@ assumes "Card_order r" "cinfinite r" "regularCard r"
 and "|I| <o r" "\<And>i. i \<in> I \<Longrightarrow> |A i| <o r"
 shows "|\<Union>i\<in>I. A i| <o r"
   using assms cinfinite_def regularCard_stable stable_UNION by blast
- 
+
 lemma cardSuc_ordLeq_pow:
-  assumes "Card_order (k:: 'b rel)"  
+  assumes "Card_order (k:: 'b rel)"
   shows "cardSuc k \<le>o |UNIV:: 'b set set|"
 by (intro cardSuc_least) (auto simp : assms cardSuc_ordLess_ordLeq)
-    
+
 lemma regularCard_ordIso:
 assumes  "k =o k'" and "Cinfinite k" and "regularCard k"
 shows "regularCard k'"
@@ -59,7 +59,7 @@ qed
 lemma regularCard_cardSuc: "Cinfinite k \<Longrightarrow> regularCard (cardSuc k)"
   by (rule infinite_cardSuc_regularCard) (auto simp: cinfinite_def)
 
-lemma bij_card_of_ordIso: 
+lemma bij_card_of_ordIso:
   assumes "bij f" shows "|f ` A| =o |A|"
 proof-
   have "bij_betw f A (f ` A)" using assms unfolding bij_def bij_betw_def inj_on_def surj_def by auto

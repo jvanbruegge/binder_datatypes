@@ -330,7 +330,7 @@ fun mk_mr_map_transfer_tac ctxt non_dead num_prems rel_mono in_rel set_maps map_
     val in_tac =
       if live = 0 then rtac ctxt @{thm UNIV_I}
       else
-        rtac ctxt @{thm CollectI} THEN' CONJ_WRAP' (fn thm => 
+        rtac ctxt @{thm CollectI} THEN' CONJ_WRAP' (fn thm =>
           etac ctxt ((thm RS
             @{thm ord_eq_le_trans[OF _ subset_trans[OF image_mono convol_image_vimage2p]]})
             |> Drule.rotate_prems num_prems) THEN'

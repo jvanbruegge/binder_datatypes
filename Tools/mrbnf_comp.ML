@@ -339,8 +339,8 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           |> (fn thms => cond_automap (fn thm => thm RS fun_cong) thms is_ilive);
 
     fun map_cong0_tac ctxt =
-      mr_mk_comp_map_cong0_tac ctxt set'_eq_sets set_alt_thms (map_cong0_of_mrbnf outer)
-        (map map_cong0_of_mrbnf inners)
+      mr_mk_comp_map_cong0_tac ctxt set'_eq_sets set_alt_thms (map map_cong0_of_mrbnf inners)
+        outer ivar_types
 
     val set_bd_tacs =
       if Config.get lthy quick_and_dirty then
@@ -512,13 +512,13 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       map_id0 = map_id0_tac,
       map_comp0 = map_comp0_tac,
       map_cong0 = map_cong0_tac,
-      set_map0 = set_map0_tacs,
-      infinite_regular_card_order = bd_infinite_regular_card_order_tac,
-      set_bd = set_bd_tacs,
-      le_rel_OO = le_rel_OO_tac,
-      in_rel = rel_OO_Grp_tac,
-      pred_set = pred_set_tac,
-      wit = wit_tac
+      set_map0 = replicate num_inondead (K all_tac) (*set_map0_tacs*),
+      infinite_regular_card_order = K all_tac (*bd_infinite_regular_card_order_tac*),
+      set_bd = replicate num_inondead (K all_tac) (*set_bd_tacs*),
+      le_rel_OO = K all_tac (*le_rel_OO_tac*),
+      in_rel = K all_tac (*rel_OO_Grp_tac*),
+      pred_set = K all_tac (*pred_set_tac*),
+      wit = K all_tac (*wit_tac*)
     };
 
     val (mrbnf, lthy') = mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME (sort, cosort))

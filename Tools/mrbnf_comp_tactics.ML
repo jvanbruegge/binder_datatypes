@@ -12,7 +12,8 @@ sig
  (* val mk_comp_bd_cinfinite_tac: Proof.context -> thm -> thm -> tactic
   val mk_comp_in_alt_tac: Proof.context -> thm list -> tactic
  *) val mr_mk_comp_map_comp0_tac: Proof.context -> thm -> thm -> thm list -> MRBNF_Def.mrbnf -> tactic
-  val mr_mk_comp_map_cong0_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
+  val mr_mk_comp_map_cong0_tac: Proof.context -> thm list -> thm list
+      -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.var_type list -> tactic
   val mr_mk_comp_map_id0_tac: Proof.context -> thm -> thm -> thm list -> tactic
  (* val mk_comp_set_alt_tac: Proof.context -> thm -> tactic
   val mk_comp_set_bd_tac: Proof.context -> thm -> thm option -> thm -> thm list -> tactic
@@ -60,67 +61,42 @@ fun mr_mk_comp_bd_card_order_tac ctxt Fbd_card_orders Gbd_card_order =
     rtac ctxt Gbd_card_order) 1
   end;
 
-fun mr_mk_comp_map_cong0_tac ctxt set'_eq_sets comp_set_alts map_cong0 map_cong0s =
-  let
-     val _ = @{print} comp_set_alts
-     val n = length comp_set_alts |> @{print warning};
-     val arg_cong_Union = @{thm arg_cong[of _ _ Union]};
-     val trans_o_apply = @{thm trans[OF o_apply]};
-     fun finner i (k, set_alt) =  EVERY' [sprint_tac ctxt "f",
-            select_prem_tac ctxt n (dtac ctxt (@{thm meta_spec} (* |> @{print warning} *)))
-            (k + 1),
-            sprint_tac ctxt "of",
-            etac ctxt meta_mp,
-            sprint_tac ctxt "oof",
-            rtac ctxt ((equalityD2 RS set_mp |> @{print warning})|> @{print tracing}),
-            sprint_tac ctxt "oooof"
-            (*sprint_tac ctxt "ooooof",
-            rtac ctxt ((set_alt RS trans) |> @{print}),
-            rtac ctxt trans_o_apply,
-            rtac ctxt (@{thm collect_def} RS arg_cong_Union),
-            rtac ctxt @{thm UnionI}, SELECT_GOAL (print_tac ctxt "aaaa"),
-            rtac ctxt @{thm UN_I},
-            REPEAT_DETERM_N i o rtac ctxt @{thm insertI2},
-            rtac ctxt @{thm insertI1},
-            rtac ctxt (o_apply RS equalityD2 RS set_mp),
-            etac ctxt @{thm imageI}, assume_tac ctxt*)]
-     (*fun fouter (i, map_cong0) =  SELECT_GOAL (print_tac ctxt "a0")
-        THEN' (rtac ctxt (map_cong0)
-        THEN_ALL_NEW  (assume_tac ctxt ORELSE'
-            SELECT_GOAL all_tac))
-        THEN' SELECT_GOAL (print_tac ctxt "a1") THEN'
-        EVERY' (map_index (finner i) comp_set_alts)*)
-     fun fouter (i,j) = EVERY' (map_index (finner i) comp_set_alts) j;
-     fun finner' n k =  EVERY' [sprint_tac ctxt "f",
-            select_prem_tac ctxt n (dtac ctxt @{thm meta_spec})
-            (k + 1),
-            sprint_tac ctxt "of",
-            etac ctxt meta_mp,
-            sprint_tac ctxt "oof",
-            rtac ctxt @{thm Set.UnI1},
-            assume_tac ctxt,
-            sprint_tac ctxt "ooof"]
+fun mr_mk_comp_map_cong0_tac ctxt set'_eq_sets comp_set_alts map_cong0s outer ivar_types =
+  unfold_thms_tac ctxt (set'_eq_sets @ comp_set_alts) THEN
+    HEADGOAL (SUBPROOF (fn {prems,context,...} =>
+      let
+        val (supp_prems, set_prems) = chop ((free_of_mrbnf outer + bound_of_mrbnf outer * 2) * 2) prems
+        val map_cong0' = map_cong0_of_mrbnf outer OF supp_prems
+        val map_cong0s' = map (fn thm => thm OF supp_prems) map_cong0s
+        val unfold = Local_Defs.unfold0 context
+        val cong_prems = flat (Ctr_Sugar_Util.transpose (
+          map_index (fn (i, thm) =>
+            let
+              fun nth_members 1 = (@{thm insertI1}, [@{thm insertI1}])
+                | nth_members n =
+                  let val (thm, thms) = nth_members (n - 1)
+                      val thm' = thm RS @{thm insertI2}
+                  in (thm', thm'::thms) end
+              val member_thms = rev (snd (nth_members (length map_cong0s)))
+              val thm0 = case nth ivar_types i of MRBNF_Def.Live_Var => thm | _ => @{thm Set.UnI2} RS thm;
+              val thm1 = @{thm UnionI} RS unfold [@{thm comp_apply}] thm0;
+              val thm2 = @{thm UN_I} RS unfold [@{thm collect_def}] thm1;
+            in map (fn thm => @{thm imageI} RS unfold [@{thm comp_apply}] (thm RS thm2)) member_thms
+            end
+          ) set_prems
+        ))
+      in
+        HEADGOAL (rtac context map_cong0')
+        THEN ALLGOALS (fn i => case nth (var_types_of_mrbnf outer) (i - 1) of
+          MRBNF_Def.Live_Var => all_tac
+          | _ => rtac context (@{thm Set.UnI1} RS nth set_prems (i - 1)) i THEN assume_tac context i
+        )
+        THEN RANGE (map (rtac context) map_cong0s') 1
+        THEN RANGE (map (fn thm => etac context thm THEN' assume_tac context) cong_prems) 1
+      end
+    ) ctxt);
 
-     fun tryAssTac ctxt = assume_tac ctxt ORELSE' SELECT_GOAL all_tac
-     fun rtacify ctxt thms = map (fn thm => rtac ctxt thm THEN_ALL_NEW tryAssTac ctxt) thms;
-
-  in print_tac ctxt "mr_mk_comp_map_cong0_tac" THEN
-    unfold_thms_tac ctxt (set'_eq_sets) THEN print_tac ctxt "foo0" THEN
-    (if n = 0 then rtac ctxt refl 1 THEN print_tac ctxt "foo1"
-    else (rtac ctxt (map_cong0) THEN_ALL_NEW   (K (print_tac ctxt "foo2") THEN'
-      assume_tac ctxt ORELSE' FIRST' (rtacify ctxt map_cong0s)  ORELSE' SELECT_GOAL  all_tac)) 1 THEN print_tac ctxt "foo2" THEN
-      (*TRYALL (FIRST' (map (fn thm => rtac ctxt thm) map_cong0s) )*)
-
-      finner 0 (0, hd comp_set_alts) 1 THEN
-      print_tac' ctxt "yee" THEN all_tac THEN
-      (*finner' 8 0 1 THEN*)
-      REPEAT_DETERM (Skip_Proof.cheat_tac ctxt 1)  THEN
-      (*TRYALL (FIRST' (map_index fouter map_cong0s)))*)(*TODO: change back to EVERY'*)
-      print_tac' ctxt "fin")
-    end;
-
-
-fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G = print_tac ctxt "mr_mk_comp_map_comp0_tac" THEN
+fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G =
   EVERY' (map (rtac ctxt) [@{thm ext}, sym, @{thm trans[OF o_apply]},
       Gmap_comp0 RS sym RS @{thm comp_eq_dest_lhs} RS trans]) 1 THEN
   REPEAT_DETERM_N (2 * (free_of_mrbnf G  + 2 * bound_of_mrbnf G)) (assume_tac ctxt 1) THEN
@@ -131,7 +107,7 @@ fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G = print_tac
     EVERY' (map  (fn thm => (rtac ctxt (thm RS fun_cong RS sym)) THEN_ALL_NEW assume_tac ctxt) map_comp0s) 1
 
 
-fun mr_mk_comp_map_id0_tac ctxt Gmap_id0 Gmap_cong0 map_id0s = print_tac ctxt "mr_mk_comp_map_id0_tac" THEN
+fun mr_mk_comp_map_id0_tac ctxt Gmap_id0 Gmap_cong0 map_id0s =
   (*EVERY' ([rtac ctxt @{thm ext}, rtac ctxt (Gmap_cong0 RS trans)] @
     map (fn thm => rtac ctxt (thm RS fun_cong)) map_id0s @ [rtac ctxt (Gmap_id0 RS fun_cong)]) 1*)
   rtac ctxt @{thm ext} 1 THEN

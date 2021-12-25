@@ -17,7 +17,7 @@ sig
   val mr_mk_comp_map_id0_tac: Proof.context -> thm -> thm -> thm list -> tactic
  (* val mk_comp_set_alt_tac: Proof.context -> thm -> tactic
   val mk_comp_set_bd_tac: Proof.context -> thm -> thm option -> thm -> thm list -> tactic
- *) val mr_mk_comp_set_map0_tac: Proof.context -> thm -> thm -> thm -> thm -> thm list -> tactic
+ *) val mr_mk_comp_set_map0_tac: Proof.context -> int -> thm -> thm -> thm list -> thm list -> MRBNF_Def.var_type list -> MRBNF_Def.var_type list -> tactic
  (* val mk_comp_wit_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
 
   val kill_in_alt_tac: Proof.context -> tactic
@@ -115,43 +115,40 @@ fun mr_mk_comp_map_id0_tac ctxt Gmap_id0 Gmap_cong0 map_id0s =
     (FIRST' ([rtac ctxt @{thm bij_id}, rtac ctxt @{thm supp_id_bound}, rtac ctxt refl,
     rtac ctxt (Gmap_id0 RS fun_cong)] @ map (fn thm => rtac ctxt (thm RS  fun_cong)) map_id0s))) 1;
 
-
-fun mr_mk_comp_set_map0_tac ctxt set'_eq_set Gmap_comp0 Gmap_cong0 Gset_map0 set_map0s =
-  let val trans_o_apply = @{thm trans[OF o_apply]};
-      val arg_cong2_union = @{thm arg_cong2[of _ _ _ _ "(\<union>)"]};
-      val arg_cong_Union = @{thm arg_cong[of _ _ Union]};
-      val comp_eq_dest_lhs = @{thm comp_eq_dest_lhs};
-      val trans_image_cong_o_apply = @{thm trans[OF image_cong[OF o_apply refl]]};
-  in print_tac ctxt "mr_mk_comp_set_map0_tac" THEN
-  unfold_thms_tac ctxt [set'_eq_set] THEN print_tac ctxt "foo1" THEN
-  EVERY' ([rtac ctxt @{thm ext},
-    SELECT_GOAL (unfold_thms_tac ctxt (o_apply ::
-      @{thms image_Un image_Union collect_def image_insert image_empty
-         Union_insert Union_empty Un_empty_right})) THEN'
-    REPEAT_ALL_NEW (resolve_tac ctxt [arg_cong2_union, arg_cong_Union]), K (print_tac ctxt "f"),
-    rtac ctxt (Gset_map0 |> @{print}) THEN_ALL_NEW assume_tac ctxt] @
-    [K (print_tac ctxt "of"),
-     Skip_Proof.cheat_tac ctxt(*,
-     rtac ctxt ((arg_cong_Union RS trans) |> @{print}),
-     sprint_tac ctxt "oof",
-     rtac ctxt (@{thm arg_cong2[of _ _ _ _ collect, OF refl]} |> @{print warning} RS trans),
-     rtac ctxt (Gmap_comp0 RS sym RS comp_eq_dest_lhs RS trans),
-     rtac ctxt Gmap_cong0] @
-     map (fn thm => rtac ctxt (thm RS fun_cong)) set_map0s @
-     [rtac ctxt (Gset_map0 RS comp_eq_dest_lhs), rtac ctxt sym, rtac ctxt trans_o_apply,
-     rtac ctxt trans_image_cong_o_apply, rtac ctxt trans_image_cong_o_apply,
-     rtac ctxt (@{thm image_cong} OF [Gset_map0 RS comp_eq_dest_lhs (*RS arg_cong_Union*),prinsert  refl]
-       RS trans),
-     rtac ctxt @{thm trans[OF comp_eq_dest[OF Union_natural[symmetric]]]}, rtac ctxt arg_cong_Union,
-     rtac ctxt @{thm trans[OF comp_eq_dest_lhs[OF image_o_collect[symmetric]]]},
-     rtac ctxt @{thm fun_cong[OF arg_cong[of _ _ collect]]}] @
-     [REPEAT_DETERM_N (length set_map0s) o EVERY' [rtac ctxt @{thm trans[OF image_insert]},
-        rtac ctxt @{thm arg_cong2[of _ _ _ _ insert]}, rtac ctxt @{thm ext},
-        rtac ctxt trans_o_apply, rtac ctxt trans_image_cong_o_apply,
-        rtac ctxt @{thm trans[OF image_image]}, rtac ctxt @{thm sym[OF trans[OF o_apply]]},
-        rtac ctxt @{thm image_cong[OF refl o_apply]}],
-     rtac ctxt @{thm image_empty}*)]) 1 end;
-
+fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s ovar_types ivar_types =
+  unfold_thms_tac ctxt [set'_eq_set] THEN
+    HEADGOAL (rtac ctxt @{thm ext}) THEN
+    unfold_thms_tac ctxt @{thms comp_apply image_Un image_Union collect_def image_insert image_empty Union_insert Union_empty Un_empty_right} THEN
+    HEADGOAL (SUBPROOF (fn {prems, context, ...} =>
+      let
+        val unfold = Local_Defs.unfold0 context
+        val arg_cong2 = @{thm arg_cong2[of _ _ _ _ "(\<union>)"]}
+        fun filter_Gset_map0s var_type = map snd (
+          filter (equal var_type o fst) (ovar_types ~~ Gset_map0s)
+        )
+        val id_prems = flat (map (fn var_type => case var_type of
+          MRBNF_Def.Free_Var => [@{thm supp_id_bound}]
+          | MRBNF_Def.Bound_Var => [@{thm bij_id}, @{thm supp_id_bound}]
+          | _ => []
+        ) ovar_types)
+        fun mk_Gset_map0s ps = map (fn thm => @{thm comp_eq_dest_lhs} OF [thm OF ps]) (filter_Gset_map0s MRBNF_Def.Live_Var)
+        val map_comp0' = unfold @{thms id_o} (@{thm sym[THEN comp_eq_dest_lhs]} OF [Gmap_comp0 OF (prems @ id_prems)]);
+        val set_map0s' = map (fn thm => thm OF prems) set_map0s;
+      in
+        HEADGOAL (EVERY' [
+          (case nth ivar_types i of
+            MRBNF_Def.Live_Var => K all_tac
+            | _ => rtac context arg_cong2 THEN'
+              rtac context (@{thm comp_eq_dest} OF [(nth Gset_map0s i) OF prems])
+          ),
+          rtac context @{thm arg_cong[of _ _ Union]},
+          rtac context arg_cong2
+        ]) THEN
+        unfold_thms_tac context (map_comp0' :: set_map0s' @ mk_Gset_map0s prems @ mk_Gset_map0s id_prems) THEN
+        unfold_thms_tac context @{thms comp_def image_image} THEN
+        ALLGOALS (rtac context @{thm refl})
+      end
+    ) ctxt);
 
 (*
 val arg_cong_Union = @{thm arg_cong[of _ _ Union]};

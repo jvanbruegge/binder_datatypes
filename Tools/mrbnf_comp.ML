@@ -199,8 +199,9 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     val num_inondead = num_ilives + num_free + num_bound;
     val num_onondead = live_of_mrbnf outer + num_free + num_bound;
     val ivar_types = var_types_of_mrbnf (hd inners);
+    val ovar_types = var_types_of_mrbnf outer;
     val is_ilive = map (equal Live_Var) ivar_types;
-    val is_olive = map (equal Live_Var) (var_types_of_mrbnf outer);
+    val is_olive = map (equal Live_Var) ovar_types;
 
     fun interlace _ _ _ [] = []
       | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
@@ -265,7 +266,6 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       iDss inners;
     val (sets, sets_alt) =
       let
-        val ovar_types = var_types_of_mrbnf outer;
         val ivars = ivar_types ~~ interlace As Bs Fs ivar_types;
 
         fun mk_set (i, (var_type, T)) =
@@ -314,9 +314,9 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       ||> Proof_Context.export names_lthy lthy;
 
     fun mk_single_set_map0_tac i ctxt =
-      mr_mk_comp_set_map0_tac ctxt (nth set'_eq_sets i) (map_comp0_of_mrbnf outer)
-        (map_cong0_of_mrbnf outer) (collect_set_map_of_mrbnf outer)
-        (map ((fn thms => nth thms i) o set_map0_of_mrbnf) inners);
+      mr_mk_comp_set_map0_tac ctxt i (nth set'_eq_sets i) (map_comp0_of_mrbnf outer)
+        (set_map0_of_mrbnf outer) (map ((fn thms => nth thms i) o set_map0_of_mrbnf) inners)
+        ovar_types ivar_types
 
     val set_map0_tacs = map mk_single_set_map0_tac (0 upto num_inondead - 1);
 
@@ -490,7 +490,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         fun interlace_maps _ _ [] = []
           | interlace_maps ids (f::maps) (Live_Var::ts) = f :: interlace_maps ids maps ts
           | interlace_maps (i::ids) maps (_::ts) = i :: interlace_maps ids maps ts
-        val body = Term.list_comb (mk_map_of_mrbnf oDs iTs iTs' Bs Fs outer, interlace_maps fn_bounds_frees_ids innermaps (var_types_of_mrbnf outer))
+        val body = Term.list_comb (mk_map_of_mrbnf oDs iTs iTs' Bs Fs outer, interlace_maps fn_bounds_frees_ids innermaps ovar_types)
 
       in (fold_rev Term.abs fn_vars body, lthy) end;
 
@@ -512,7 +512,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       map_id0 = map_id0_tac,
       map_comp0 = map_comp0_tac,
       map_cong0 = map_cong0_tac,
-      set_map0 = replicate num_inondead (K all_tac) (*set_map0_tacs*),
+      set_map0 = set_map0_tacs,
       infinite_regular_card_order = K all_tac (*bd_infinite_regular_card_order_tac*),
       set_bd = replicate num_inondead (K all_tac) (*set_bd_tacs*),
       le_rel_OO = K all_tac (*le_rel_OO_tac*),

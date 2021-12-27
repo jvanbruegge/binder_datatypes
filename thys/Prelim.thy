@@ -523,6 +523,42 @@ lemma infinite_regular_card_order_natLeq:
   unfolding infinite_regular_card_order_def
   by (simp add: natLeq_card_order natLeq_cinfinite regularCard_natLeq)
 
+lemma infinite_regular_card_order_Un: "infinite_regular_card_order r \<Longrightarrow> |A| <o r \<Longrightarrow> |B| <o r \<Longrightarrow> |A \<union> B| <o r"
+  using infinite_regular_card_order.Card_order regularCard_Un infinite_regular_card_order_def
+  by blast
+
+lemma infinite_regular_card_order_ordLess_cprod: "infinite_regular_card_order r \<Longrightarrow> infinite_regular_card_order p \<Longrightarrow> |x| <o r \<Longrightarrow> |x| <o p *c r"
+  using ordLess_ordLeq_trans[OF _ ordLeq_cprod2[OF infinite_regular_card_order.Cnotzero]] infinite_regular_card_order.Card_order
+  by blast
+
+lemma infinite_regular_card_order_Un_csum:
+  assumes irco: "infinite_regular_card_order r"
+                "infinite_regular_card_order r1"
+                "infinite_regular_card_order r2"
+       and lhs: "|x1| <o r *c r1"
+       and rhs: "|x2| <o r *c r2"
+  shows "|x1 \<union> x2| <o r *c (r1 +c r2)"
+proof -
+  have co_lhs: "infinite_regular_card_order (r *c r1)"
+    by (rule infinite_regular_card_order_cprod[OF irco(1,2)])
+  have lhs': "|x1| <o r *c r1 +c r *c r2"
+    by (rule ordLess_ordLeq_trans[OF lhs ordLeq_csum1[OF infinite_regular_card_order.Card_order[OF co_lhs]]])
+  have lhs_dis: "|x1| <o r *c (r1 +c r2)"
+    by (rule ordLess_ordIso_trans[OF lhs' cprod_csum_distrib1])
+
+  have co_rhs: "infinite_regular_card_order (r *c r2)"
+    by (rule infinite_regular_card_order_cprod[OF irco(1,3)])
+  have rhs': "|x2| <o r *c r1 +c r *c r2"
+    by (rule ordLess_ordLeq_trans[OF rhs ordLeq_csum2[OF infinite_regular_card_order.Card_order[OF co_rhs]]])
+  have rhs_dis: "|x2| <o r *c (r1 +c r2)"
+    by (rule ordLess_ordIso_trans[OF rhs' cprod_csum_distrib1])
+
+  have co: "infinite_regular_card_order (r *c (r1 +c r2))"
+    by (rule infinite_regular_card_order_cprod[OF irco(1) infinite_regular_card_order_csum[OF irco(2,3)]])
+  show ?thesis
+    by (rule infinite_regular_card_order_Un[OF co lhs_dis rhs_dis])
+qed
+
 typedef 'a suc = "Field (cardSuc |UNIV :: 'a set| )"
   using Field_cardSuc_not_empty by auto
 

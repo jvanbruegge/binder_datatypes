@@ -10,24 +10,10 @@ proof(rule card_of_ordIsoI)
     using assms unfolding bij_betw_def inj_on_def by auto
 qed
 
-lemma infinite_card_of_minus:
-  assumes i: "infinite A" and b: "|B| <o |A|" and bi: "B \<subseteq> A"
-  shows "|A - B| =o |A|"
-proof-
-  {assume "|A - B| <o |A|"
-    hence "|(A - B) <+> B| <o |A|" using b card_of_Plus_ordLess_infinite[OF i] by auto
-    moreover have "|A| \<le>o |(A - B) <+> B|"
-      using card_of_Un_Plus_ordLeq[of "A - B" B] bi by (metis Diff_partition Un_commute)
-    ultimately have False using not_ordLess_ordLeq by blast
-  }
-  moreover have  "|A - B| \<le>o |A|" by (simp add: Diff_subset)
-  ultimately show ?thesis using ordLeq_iff_ordLess_or_ordIso by blast
-qed
-
 lemma infinite_UNIV_card_of_minus:
   assumes i: "infinite (UNIV::'a set)" and b: "|B::'a set| <o |UNIV::'a set|"
   shows "|UNIV - B| =o |UNIV::'a set|"
-  using infinite_card_of_minus[OF assms] by auto
+  using card_of_Un_diff_infinite[OF assms] by auto
 
 lemma regularCard_Un:
 assumes "Card_order r" and "cinfinite r" and "regularCard r"

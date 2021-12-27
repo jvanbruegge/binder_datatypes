@@ -8,12 +8,13 @@ Tactics for composition of bounded natural functors.
 
 signature MRBNF_COMP_TACTICS =
 sig
-  val mr_mk_comp_bd_card_order_tac: Proof.context -> thm list -> thm -> tactic
+  val mr_mk_comp_bd_card_order_tac: Proof.context -> thm list -> thm option -> tactic
  (* val mk_comp_bd_cinfinite_tac: Proof.context -> thm -> thm -> tactic
   val mk_comp_in_alt_tac: Proof.context -> thm list -> tactic
  *) val mr_mk_comp_map_comp0_tac: Proof.context -> thm -> thm -> thm list -> MRBNF_Def.mrbnf -> tactic
   val mr_mk_comp_map_cong0_tac: Proof.context -> thm list -> thm list
       -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.var_type list -> tactic
+  val mr_mk_comp_set_bd_tac: Proof.context -> int -> thm -> thm option -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
   val mr_mk_comp_map_id0_tac: Proof.context -> thm -> thm -> thm list -> tactic
  (* val mk_comp_set_alt_tac: Proof.context -> thm -> tactic
   val mk_comp_set_bd_tac: Proof.context -> thm -> thm option -> thm -> thm list -> tactic
@@ -50,15 +51,19 @@ fun sprint_tac' ctxt str = SELECT_GOAL all_tac
 val prinsert  =(fn x => let val _ = @{print} "progress" in x end)
 
 
-fun mr_mk_comp_bd_card_order_tac ctxt Fbd_card_orders Gbd_card_order =
+fun mr_mk_comp_bd_card_order_tac ctxt Fbd_card_orders Gbd_card_order_opt =
   rtac ctxt @{thm infinite_regular_card_order_natLeq} 1 ORELSE
   let
     val (card_orders, last_card_order) = split_last Fbd_card_orders;
     fun gen_before thm = rtac ctxt @{thm infinite_regular_card_order_csum} THEN' rtac ctxt thm;
-  in
-    (rtac ctxt @{thm infinite_regular_card_order_cprod} THEN'
-    WRAP' gen_before (K (K all_tac)) card_orders (rtac ctxt last_card_order) THEN'
-    rtac ctxt Gbd_card_order) 1
+    val wrap = WRAP' gen_before (K (K all_tac)) card_orders (rtac ctxt last_card_order)
+  in case Gbd_card_order_opt of
+    NONE => wrap 1
+    | SOME thm => EVERY' [
+      rtac ctxt @{thm infinite_regular_card_order_cprod},
+      wrap,
+      rtac ctxt thm
+    ] 1
   end;
 
 fun mr_mk_comp_map_cong0_tac ctxt set'_eq_sets comp_set_alts map_cong0s outer ivar_types =
@@ -108,12 +113,77 @@ fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G =
 
 
 fun mr_mk_comp_map_id0_tac ctxt Gmap_id0 Gmap_cong0 map_id0s =
-  (*EVERY' ([rtac ctxt @{thm ext}, rtac ctxt (Gmap_cong0 RS trans)] @
-    map (fn thm => rtac ctxt (thm RS fun_cong)) map_id0s @ [rtac ctxt (Gmap_id0 RS fun_cong)]) 1*)
   rtac ctxt @{thm ext} 1 THEN
   (rtac ctxt (Gmap_cong0 RS trans) THEN_ALL_NEW
     (FIRST' ([rtac ctxt @{thm bij_id}, rtac ctxt @{thm supp_id_bound}, rtac ctxt refl,
     rtac ctxt (Gmap_id0 RS fun_cong)] @ map (fn thm => rtac ctxt (thm RS  fun_cong)) map_id0s))) 1;
+
+fun mr_mk_comp_set_bd_tac ctxt i set'_eq_set bd_ordIso_natLeq_opt outer inners =
+  let
+    val ovar_types = var_types_of_mrbnf outer
+    val ivar_types = var_types_of_mrbnf (hd inners)
+    val G_irco = bd_infinite_regular_card_order_of_mrbnf outer
+    val F_ircos = map bd_infinite_regular_card_order_of_mrbnf inners
+    val Gset_bds = set_bd_of_mrbnf outer
+    val Gset_map0s = set_map0_of_mrbnf outer
+    val Gset_bds_live = map snd (filter (equal Live_Var o fst) (ovar_types ~~ Gset_bds))
+    val Fset_bds = map (fn mrbnf => nth (set_bd_of_mrbnf mrbnf) i) inners
+    val num_olive = live_of_mrbnf outer;
+
+    fun mk_F_ircoss [] = []
+      | mk_F_ircoss (x::xs) = (x, xs)::mk_F_ircoss xs
+    val id_prems = flat (map (fn var_type => case var_type of
+        Free_Var => [@{thm supp_id_bound}]
+        | Bound_Var => [@{thm bij_id}, @{thm supp_id_bound}]
+        | _ => []
+      ) ovar_types)
+    val Gset_map0s' = map_filter (fn (var_type, thm) => case var_type of
+      Live_Var => SOME (@{thm comp_eq_dest} OF [thm OF id_prems])
+      | _ => NONE
+    ) (ovar_types ~~ Gset_map0s)
+  in
+    (case bd_ordIso_natLeq_opt of
+      SOME thm => rtac ctxt (thm RSN (2, @{thm ordLess_ordIso_trans})) 1
+      | _ => all_tac
+    ) THEN
+    unfold_thms_tac ctxt [set'_eq_set] THEN
+    (case nth ivar_types i of
+    Live_Var => all_tac
+    | _ =>
+      let
+        fun get_Gset_bd n (Live_Var::var_types) thms = get_Gset_bd (n - 1) var_types thms
+          | get_Gset_bd 0 _ (thm::_) = thm
+          | get_Gset_bd n (_::var_types) (_::thms) = get_Gset_bd (n - 1) var_types thms
+      in
+        HEADGOAL (rtac ctxt @{thm infinite_regular_card_order_Un}) THEN
+        mr_mk_comp_bd_card_order_tac ctxt F_ircos (SOME G_irco) THEN
+        HEADGOAL (
+          rtac ctxt @{thm infinite_regular_card_order_ordLess_cprod} THEN'
+          rtac ctxt G_irco
+        ) THEN
+        mr_mk_comp_bd_card_order_tac ctxt F_ircos NONE THEN
+        HEADGOAL (rtac ctxt (get_Gset_bd i ivar_types (
+          map snd (filter (not o equal Live_Var o fst) (ovar_types ~~ Gset_bds))
+        )))
+      end
+    ) THEN
+    unfold_thms_tac ctxt (@{thms collect_def Union_image_insert Union_image_empty Union_Un_distrib} @ Gset_map0s') THEN
+    HEADGOAL (rtac ctxt @{thm ordLess_ordIso_trans[OF _ cprod_com]}) THEN
+    EVERY (map (fn (f_irco, f_ircos) => case f_ircos of
+      [] => defer_tac 1
+      | _ =>
+        EVERY' [
+          rtac ctxt @{thm infinite_regular_card_order_Un_csum},
+          rtac ctxt G_irco,
+          rtac ctxt f_irco,
+          K (mr_mk_comp_bd_card_order_tac ctxt f_ircos NONE),
+          defer_tac
+        ] 1
+    ) (mk_F_ircoss F_ircos)) THEN
+    RANGE (map (fn n => rtac ctxt (
+      @{thm comp_single_regular_set_bd} OF [nth F_ircos n, G_irco, nth Fset_bds n, nth Gset_bds_live n]
+    )) (0 upto num_olive - 1)) 1
+  end;
 
 fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s ovar_types ivar_types =
   unfold_thms_tac ctxt [set'_eq_set] THEN

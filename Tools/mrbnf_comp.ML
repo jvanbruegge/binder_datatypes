@@ -194,6 +194,7 @@ fun is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.csum}, _) $ 
 fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, lthy) =
   let
     val num_ilives = live_of_mrbnf (hd inners);
+    val num_olives = live_of_mrbnf outer;
     val num_free = free_of_mrbnf outer;
     val num_bound = bound_of_mrbnf outer;
     val num_inondead = num_ilives + num_free + num_bound;
@@ -257,7 +258,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       mr_mk_comp_map_comp0_tac ctxt (map_comp0_of_mrbnf outer) (map_cong0_of_mrbnf outer) (map map_comp0_of_mrbnf inners) outer;
 
     fun bd_infinite_regular_card_order_tac ctxt =
-      mr_mk_comp_bd_card_order_tac ctxt (map bd_card_order_of_mrbnf inners) (bd_card_order_of_mrbnf outer);
+      mr_mk_comp_bd_card_order_tac ctxt (map bd_infinite_regular_card_order_of_mrbnf inners) (SOME (bd_infinite_regular_card_order_of_mrbnf outer));
 
     val outer_sets = mk_sets_of_mrbnf (replicate num_onondead oDs) (replicate num_onondead iTs)
       (replicate num_onondead Bs) (replicate num_onondead Fs) outer;
@@ -342,34 +343,9 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       mr_mk_comp_map_cong0_tac ctxt set'_eq_sets set_alt_thms (map map_cong0_of_mrbnf inners)
         outer ivar_types
 
-    val set_bd_tacs =
-      if Config.get lthy quick_and_dirty then
-        replicate num_ilives (K all_tac)
-      else
-        let
-          val outer_set_bds = set_bd_of_mrbnf outer;
-          val inner_set_bdss = map set_bd_of_mrbnf inners;
-         (* val inner_bd_Card_orders = map bd_Card_order_of_mrbnf inners;
-          val _ = var_regular_of_mrbnf outer
-          fun single_set_bd_thm i j =  @{thm comp_single_regular_set_bd}
-            OF [bd_Cinfinite_of_mrbnf (nth inners j), bd_card_order_of_mrbnf (nth inners j),@{thm _}(* var_regular_of_mrbnf (nth inners j)*),
-              bd_Cinfinite_of_mrbnf outer, bd_card_order_of_mrbnf outer, @{thm _}(*var_regular_of_mrbnf outer*), nth (nth inner_set_bdss j) i,
-              nth outer_set_bds j]
-           val _ = bd_Cinfinite_of_mrbnf outer
-          val _ = var_regular_of_mrbnf outer *)
-          fun single_set_bd_thm i j =  @{thm comp_single_regular_set_bd}
-            OF [bd_infinite_regular_card_order_of_mrbnf (nth inners j),
-              bd_infinite_regular_card_order_of_mrbnf outer, nth (nth inner_set_bdss j) i,
-              nth outer_set_bds j]
-           val single_set_bd_thmss = let val ssbdthm = map single_set_bd_thm (0 upto num_ilives - 1)
-            in map (fn f => map f (0 upto (live_of_mrbnf outer) - 1)) ssbdthm end
-            (*map ((fn f => map f (0 upto olive - 1)) o single_set_bd_thm) (0 upto ilive - 1);*)
-        in
-          @{map 3} (fn set'_eq_set => fn set_alt => fn single_set_bds => fn ctxt =>
-            mk_comp_set_bd_tac ctxt set'_eq_set bd_ordIso_natLeq_thm_opt set_alt single_set_bds)
-          (cond_keep set'_eq_sets is_ilive) (cond_keep set_alt_thms is_ilive)
-          single_set_bd_thmss
-        end;
+    val set_bd_tacs = map (fn i => fn ctxt =>
+      mr_mk_comp_set_bd_tac ctxt i (nth set'_eq_sets i) bd_ordIso_natLeq_thm_opt outer inners
+    ) (0 upto num_inondead - 1);
 
     (*copied from BNF_Comp_Tactics*)
     val comp_in_alt_thms = @{thms o_apply collect_def image_insert image_empty Union_insert UN_insert
@@ -513,8 +489,8 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       map_comp0 = map_comp0_tac,
       map_cong0 = map_cong0_tac,
       set_map0 = set_map0_tacs,
-      infinite_regular_card_order = K all_tac (*bd_infinite_regular_card_order_tac*),
-      set_bd = replicate num_inondead (K all_tac) (*set_bd_tacs*),
+      infinite_regular_card_order = bd_infinite_regular_card_order_tac,
+      set_bd = set_bd_tacs,
       le_rel_OO = K all_tac (*le_rel_OO_tac*),
       in_rel = K all_tac (*rel_OO_Grp_tac*),
       pred_set = K all_tac (*pred_set_tac*),

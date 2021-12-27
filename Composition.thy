@@ -32,10 +32,10 @@ datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setB5_F': 'b'
   for map: map_F' rel: rel_F'
 type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F' = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw'"
 
-datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g) G_raw =
-  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g"
+datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g, setL7_G: 'h) G_raw =
+  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g * 'h"
   for map: map_G rel: rel_G
-type_synonym ('a, 'a', 'y, 'b, 'b', 'g) G = "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
+type_synonym ('a, 'a', 'y, 'b, 'b', 'g, 'h) G = "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
 
 print_mrbnfs
 print_bnfs
@@ -74,13 +74,13 @@ mrbnf F': "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F'"
    live: "setL7_F' :: _ \<Rightarrow> 'd set"
    live: "setL8_F' :: _ \<Rightarrow> 'e set"
    live: "setL9_F' :: _ \<Rightarrow> 'f set"
-  bd: "natLeq"
+  bd: "card_suc natLeq"
   wits: "F_raw'.E o Inl"
   rel: "\<lambda>X. rel_F' (=) (=) X (=) (=)"
   pred: "\<lambda>X. pred_F_raw' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 
-mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
+mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
   map: "map_G"
   sets:
     free: "setF1_G :: _ \<Rightarrow> 'a set"
@@ -89,6 +89,7 @@ mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
     bound: "setB4_G :: _ \<Rightarrow> 'b set"
     bound: "setB5_G :: _ \<Rightarrow> 'b' set"
     live: "setL6_G :: _ \<Rightarrow> 'g set"
+    live: "setL7_G :: _ \<Rightarrow> 'h set"
   bd: "natLeq"
   wits: "G_raw.E o Inl"
   rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
@@ -112,13 +113,12 @@ Multithreading.parallel_proofs := 0;
 declare [[goals_limit = 50]]
 declare [[ML_print_depth=10000]]
 
-
 ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>./Tools/mrbnf_comp.ML\<close>
 
 local_setup \<open>fn lthy => let
   val (_, (_, lthy')) = MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
-                              g [f, f'] ({map_unfolds = [], set_unfoldss = [], rel_unfolds = []}, lthy)
+                              g [f, f', f] ({map_unfolds = [], set_unfoldss = [], rel_unfolds = []}, lthy)
   in lthy' end
 \<close>
 

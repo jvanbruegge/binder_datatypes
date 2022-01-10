@@ -22,6 +22,7 @@ val systemf_type_vars = {
 }
 \<close>
 
+declare [[bnf_internals]]
 datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F_raw =
   E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
   for map: map_F rel: rel_F
@@ -106,19 +107,19 @@ val f' = the (MRBNF_Def.mrbnf_of @{context} "Composition.F'")
 val g = the (MRBNF_Def.mrbnf_of @{context} "Composition.G")
 \<close>
 
-ML \<open>
-Multithreading.parallel_proofs := 0;
-\<close>
-
 declare [[goals_limit = 50]]
 declare [[ML_print_depth=10000]]
 
 ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>./Tools/mrbnf_comp.ML\<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0;
+\<close>
+
 local_setup \<open>fn lthy => let
-  val (_, (_, lthy')) = MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
-                              g [f, f', f] ({map_unfolds = [], set_unfoldss = [], rel_unfolds = []}, lthy)
+  val (_, (_, lthy')) = Runtime.exn_debugger (fn _ => MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
+                              g [f, f', f] (MRBNF_Comp.empty_unfolds, lthy))
   in lthy' end
 \<close>
 

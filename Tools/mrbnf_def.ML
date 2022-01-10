@@ -1436,7 +1436,9 @@ fun get_class_assumption class assN lthy =
       `Context.Theory ##> Proof_Context.init_global) lthy ||> Proof_Context.facts_of;
   in
     Facts.intern facts thmN
+      |> @{print}
       |> Facts.lookup context facts
+      |> @{print}
       |> the
       |> #thms
       |> the_single

@@ -9,16 +9,14 @@ Tactics for composition of bounded natural functors.
 signature MRBNF_COMP_TACTICS =
 sig
   val mr_mk_comp_bd_card_order_tac: Proof.context -> thm list -> thm option -> tactic
- (* val mk_comp_bd_cinfinite_tac: Proof.context -> thm -> thm -> tactic
-  val mk_comp_in_alt_tac: Proof.context -> thm list -> tactic
- *) val mr_mk_comp_map_comp0_tac: Proof.context -> thm -> thm -> thm list -> MRBNF_Def.mrbnf -> tactic
-  val mr_mk_comp_map_cong0_tac: Proof.context -> thm list -> thm list
-      -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.var_type list -> tactic
+  val mr_mk_comp_map_comp0_tac: Proof.context -> thm -> thm -> thm list -> MRBNF_Def.mrbnf -> tactic
+  val mr_mk_comp_map_cong0_tac: Proof.context -> thm list -> thm list -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.var_type list -> tactic
   val mr_mk_comp_set_bd_tac: Proof.context -> int -> thm -> thm option -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
   val mr_mk_comp_map_id0_tac: Proof.context -> thm -> thm -> thm list -> tactic
- (* val mk_comp_set_alt_tac: Proof.context -> thm -> tactic
-  val mk_comp_set_bd_tac: Proof.context -> thm -> thm option -> thm -> thm list -> tactic
- *) val mr_mk_comp_set_map0_tac: Proof.context -> int -> thm -> thm -> thm list -> thm list -> MRBNF_Def.var_type list -> MRBNF_Def.var_type list -> tactic
+  val mr_mk_comp_set_map0_tac: Proof.context -> int -> thm -> thm -> thm list -> thm list -> MRBNF_Def.var_type list -> MRBNF_Def.var_type list -> tactic
+
+  val mr_mk_rel_OO_Grp_tac: Proof.context -> thm list -> thm -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
+
  (* val mk_comp_wit_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
 
   val kill_in_alt_tac: Proof.context -> tactic
@@ -44,11 +42,6 @@ struct
 open MRBNF_Util
 open MRBNF_Def
 open Ctr_Sugar_Tactics
-
-fun print_tac' ctxt str = if false then print_tac ctxt str else all_tac;
-fun sprint_tac ctxt str = SELECT_GOAL (print_tac ctxt str)
-fun sprint_tac' ctxt str = SELECT_GOAL all_tac
-val prinsert  =(fn x => let val _ = @{print} "progress" in x end)
 
 
 fun mr_mk_comp_bd_card_order_tac ctxt Fbd_card_orders Gbd_card_order_opt =
@@ -219,6 +212,68 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
         ALLGOALS (rtac context @{thm refl})
       end
     ) ctxt);
+
+fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
+  unfold_thms_tac ctxt set'_eq_sets THEN
+  HEADGOAL (SUBPROOF (fn {context, prems, concl, ...} =>
+    let
+      val unfold = Local_Defs.unfold0 context;
+      val ovar_types = MRBNF_Def.var_types_of_mrbnf outer;
+      val num_onondead = MRBNF_Def.free_of_mrbnf outer + MRBNF_Def.bound_of_mrbnf outer + MRBNF_Def.live_of_mrbnf outer;
+      val G_mr_rel_Grp = MRBNF_Def.mr_rel_Grp_of_mrbnf outer;
+
+      val [f, x, y] = map (fn g => g (Thm.dest_arg (Thm.dest_arg concl))) [Thm.dest_fun o Thm.dest_fun, Thm.dest_arg o Thm.dest_fun, Thm.dest_arg]
+      val fun_cong' = infer_instantiate' context [SOME f, NONE, SOME x, SOME y] @{thm fun_cong[THEN fun_cong]}
+
+      fun mk_id_prems thms_free thms_bound = flat (map (fn var_type => case var_type of
+        MRBNF_Def.Free_Var => thms_free
+        | MRBNF_Def.Bound_Var => thms_bound
+        | _ => []
+      ) ovar_types);
+
+      val map_cterm = (Thm.dest_arg o Thm.dest_fun o Thm.dest_arg1 o Thm.dest_arg) concl
+      val F_map_cterms = snd (fold_rev (fn var_type => fn (cterm, cterms) => (Thm.dest_fun cterm, case var_type of
+        MRBNF_Def.Live_Var => Thm.dest_arg cterm::cterms
+        | _ => cterms)) ovar_types (Thm.dest_fun map_cterm, []))
+      fun mk_id T = Const ("Fun.id", T)
+      val id_prems = mk_id_prems @{thms supp_id_bound} @{thms bij_id supp_id_bound}
+      val ids = map (Thm.cterm_of context o mk_id o fastype_of o Thm.term_of) F_map_cterms
+      val G_map_comp' = sym OF [unfold @{thms id_o o_id} (
+        infer_instantiate' context (map SOME (F_map_cterms @ ids)) (MRBNF_Def.map_comp_of_mrbnf outer OF (prems @ id_prems))
+      )];
+
+      val id_prems2 = mk_id_prems @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
+    in
+
+      unfold_thms_tac context [G_map_comp', hd (MRBNF_Def.rel_map_of_mrbnf outer)] THEN
+      HEADGOAL (
+        rtac context (fun_cong' RS trans RS sym) THEN'
+        rtac context (trans OF [@{thm OO_Grp_cong} OF [in_alt]]) THEN'
+        rtac context @{thm arg_cong2[of _ _ _ _ "(OO)"]} THEN'
+        rtac context @{thm trans[OF arg_cong[of _ _ "conversep"]]} THEN'
+        rtac context (G_mr_rel_Grp OF id_prems RS sym) THEN'
+        rtac context (MRBNF_Def.mr_rel_conversep_of_mrbnf outer OF id_prems2 RS sym) THEN'
+        rtac context (G_mr_rel_Grp OF prems RS sym)
+      ) THEN
+      unfold_thms_tac context @{thms inv_id eq_alt[symmetric] conversep_eq} THEN
+      HEADGOAL (
+        CSUBGOAL (fn (goal, i) =>
+          let
+            val f = (Thm.dest_fun o Thm.dest_fun o Thm.dest_arg1 o Thm.dest_arg) goal;
+            val thm = infer_instantiate' context [SOME f, NONE, SOME x, SOME y] @{thm fun_cong[THEN fun_cong]}
+          in rtac context (thm RS trans) i end
+        ) THEN'
+        rtac context (MRBNF_Def.mr_rel_OO_of_mrbnf outer OF (id_prems @ prems) RS sym)
+      ) THEN
+      unfold_thms_tac context @{thms id_o o_id Grp_fst_snd eq_OO} THEN
+      HEADGOAL (
+        rtac context trans THEN'
+        rtac context (MRBNF_Def.mr_rel_def_of_mrbnf outer RS meta_eq_to_obj_eq |> BNF_Util.mk_unabs_def (num_onondead + 2)) THEN'
+        rtac context (MRBNF_Def.rel_cong_of_mrbnf outer OF [refl, refl]) THEN'
+        RANGE (map (fn inner => rtac context (MRBNF_Def.rel_OO_Grp_of_mrbnf inner OF prems RS sym)) inners)
+      )
+    end
+  ) ctxt);
 
 (*
 val arg_cong_Union = @{thm arg_cong[of _ _ Union]};

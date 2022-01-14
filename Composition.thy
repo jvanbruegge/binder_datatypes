@@ -117,6 +117,9 @@ ML \<open>
 Multithreading.parallel_proofs := 0;
 \<close>
 
+local_setup \<open>fn lthy => (snd o snd) (MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding bar}
+        sum [list, MRBNF_Comp.ID_mrbnf] (MRBNF_Comp.empty_unfolds, lthy))\<close>
+
 local_setup \<open>fn lthy => let
   val (_, (_, lthy')) = Runtime.exn_debugger (fn _ => MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
                               g [f, f', f] (MRBNF_Comp.empty_unfolds, lthy))

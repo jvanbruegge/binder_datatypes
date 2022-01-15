@@ -37,7 +37,7 @@ sig
   val default_comp_sort: (string * sort) list list -> (string * sort) list*)
   val clean_compose_mrbnf: MRBNF_Def.inline_policy -> (binding -> binding) -> binding -> MRBNF_Def.mrbnf ->
     MRBNF_Def.mrbnf list -> unfold_set * local_theory -> MRBNF_Def.mrbnf * (unfold_set * local_theory)
-  val multi_kill_mrbnf: (binding -> binding) -> MRBNF_Def.var_type list -> MRBNF_Def.mrbnf ->
+  (*val multi_kill_mrbnf: (binding -> binding) -> MRBNF_Def.var_type list -> MRBNF_Def.mrbnf ->
     (comp_cache * unfold_set) * local_theory ->
     MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
   val multilift_mrbnf: (binding -> binding) -> int -> int -> int -> MRBNF_Def.mrbnf ->
@@ -45,7 +45,7 @@ sig
     MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
   val permute_mrbnf: (binding -> binding) -> int list -> int list -> MRBNF_Def.mrbnf ->
     (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
+    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)*)
 (*  val permute_and_kill_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
     (comp_cache * unfold_set) * local_theory ->
     MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
@@ -496,7 +496,32 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       wit = wit_tac
     };
 
-    val (mrbnf, lthy') = mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME (class, coclass))
+    val class_opt =
+      let
+        val ifco = bd_infinite_regular_card_order_of_mrbnf
+
+        val var_goal = HOLogic.mk_UNIV (TFree (Name.aT, class))
+          |> mk_card_of
+          |> mk_ordLeq (mk_card_of (mk_Field bd'))
+          |> HOLogic.mk_Trueprop;
+        val large = #var_large o class_thms_of_mrbnf
+        val var_thm = Goal.prove_sorry lthy [] [] var_goal (fn {context,...} =>
+          mr_mk_bd_card_leq_UNIV_tac context (ifco outer) (map ifco inners) (large outer) (map large inners)
+        );
+
+        fun mk_covar_thm (coclass, lthy) =
+          let
+            val covar_goal = HOLogic.mk_UNIV (TFree (Name.aT, coclass))
+              |> mk_card_of
+              |> mk_ordLeq (BNF_LFP_Util.mk_cardSuc bd')
+              |> HOLogic.mk_Trueprop;
+            val large = #covar_large  o class_thms_of_mrbnf
+          in Goal.prove_sorry lthy [] [] covar_goal (fn {context,...} =>
+            mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners) (large outer) (map large inners)
+          ) end;
+      in SOME ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
+
+    val (mrbnf, lthy') = mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) class_opt
               Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) rel_lthy
 
     val phi =
@@ -508,7 +533,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     (mrbnf', (add_mrbnf_to_unfolds mrbnf' unfold_set, lthy'))
   end;
 
-fun raw_multi_kill_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
+(*fun raw_multi_kill_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
  (* if n = 0 then (mrbnf, accum) else*)
   let
     val n = 0
@@ -1084,7 +1109,7 @@ fun permute_mrbnf qualify src dest mrbnf (accum as ((cache, unfold_set), lthy)) 
       SOME (mrbnf, _) => (mrbnf, accum)
     | NONE => cache_comp_simple key cache (raw_permute_mrbnf qualify src dest mrbnf (unfold_set, lthy)))
   end;
-
+*)
 (* Composition pipeline *)
 (*
 fun permute_and_kill_mrbnf qualify n src dest mrbnf =

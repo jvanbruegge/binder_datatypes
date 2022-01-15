@@ -14,8 +14,10 @@ sig
   val mr_mk_comp_set_bd_tac: Proof.context -> int -> thm -> thm option -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
   val mr_mk_comp_map_id0_tac: Proof.context -> thm -> thm -> thm list -> tactic
   val mr_mk_comp_set_map0_tac: Proof.context -> int -> thm -> thm -> thm list -> thm list -> MRBNF_Def.var_type list -> MRBNF_Def.var_type list -> tactic
-
   val mr_mk_rel_OO_Grp_tac: Proof.context -> thm list -> thm -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
+
+  val mr_mk_bd_card_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> tactic
+  val mr_mk_bd_cardSuc_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> tactic
 
  (* val mk_comp_wit_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
 
@@ -278,6 +280,67 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
       ])
     end
   ) ctxt);
+
+fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges =
+  let
+    val remove_Field = @{thm ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF infinite_regular_card_order.Card_order]]]}
+    val inner_larges' = map2 (fn thm1 => fn thm2 => remove_Field OF [thm1, thm2]) inner_ifcos inner_larges
+    val outer_large' = remove_Field OF [outer_ifco, outer_large]
+    val Cinfinite_UNIV = @{thm Cinfinite_card_trans[OF infinite_regular_card_order.Cinfinite]} OF [outer_ifco, outer_large']
+    val ifco_Card_order = @{thm infinite_regular_card_order.Card_order}
+    val inner_Card_orders = map (fn ifco => ifco_Card_order OF [ifco]) inner_ifcos
+
+    val (first_ifco::inner_ifcos') = inner_ifcos
+    val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
+      let
+        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
+      in (thm, thm::sum_ifcos) end
+    ) inner_ifcos' (first_ifco, []) |> snd
+    val ifco = @{thm infinite_regular_card_order_cprod} OF [sum_ifco, outer_ifco]
+    val (inits_larges, last_large) = split_last inner_larges'
+  in
+    HEADGOAL (EVERY' ([
+      rtac ctxt (@{thm ordIso_ordLeq_trans[OF card_of_Field_ordIso[OF infinite_regular_card_order.Card_order]]} OF [ifco]),
+      rtac ctxt (@{thm cprod_cinfinite_bound} OF [@{thm _}, outer_large', ifco_Card_order OF [sum_ifco], ifco_Card_order OF [outer_ifco], Cinfinite_UNIV])
+      ] @ (
+        @{map 3} (fn large => fn Co => fn ifco =>
+          rtac ctxt (@{thm csum_cinfinite_bound} OF [large, @{thm _}, Co, ifco_Card_order OF [ifco], Cinfinite_UNIV])
+        ) inits_larges (fst (split_last inner_Card_orders)) (sum_ifcos @ [snd (split_last inner_ifcos)])
+      ) @ [
+        rtac ctxt last_large
+      ]
+    ))
+  end;
+
+fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges =
+  let
+    val ifco_Card_order = @{thm infinite_regular_card_order.Card_order}
+    val cardSuc_Co_ifco = ifco_Card_order RS @{thm cardSuc_Card_order}
+    val Cinfinite_UNIV = @{thm Cinfinite_card_trans} OF [
+      @{thm Cinfinite_cardSuc[OF infinite_regular_card_order.Cinfinite]} OF [outer_ifco], outer_large
+   ]
+
+    val (first_ifco::inner_ifcos') = inner_ifcos
+    val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
+      let
+        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
+      in (thm, thm::sum_ifcos) end
+    ) inner_ifcos' (first_ifco, []) |> snd
+    val (inits_larges, last_large) = split_last inner_larges
+    val (inits_ifcos, last_ifco) = split_last inner_ifcos
+  in
+    HEADGOAL (EVERY' ([
+      rtac ctxt (@{thm ordLeq_transitive[OF cardSuc_leq_cprod_ifco]} OF [sum_ifco, outer_ifco]),
+      rtac ctxt (@{thm cprod_cinfinite_bound} OF [@{thm _}, outer_large, cardSuc_Co_ifco OF [sum_ifco], cardSuc_Co_ifco OF [outer_ifco], Cinfinite_UNIV])
+    ] @ (
+      @{map 3} (fn large => fn ifco => fn sum_ifco =>
+        rtac ctxt (@{thm ordLeq_transitive[OF cardSuc_leq_csum_ifco]} OF [ifco, sum_ifco]) THEN'
+        rtac ctxt (@{thm csum_cinfinite_bound} OF [large, @{thm _}, cardSuc_Co_ifco OF [ifco], cardSuc_Co_ifco OF [sum_ifco], Cinfinite_UNIV])
+      ) inits_larges inits_ifcos (sum_ifcos @ [last_ifco])
+    ) @ [
+      rtac ctxt last_large
+    ]))
+  end;
 
 (*
 val arg_cong_Union = @{thm arg_cong[of _ _ Union]};

@@ -531,6 +531,95 @@ lemma infinite_regular_card_order_ordLess_cprod: "infinite_regular_card_order r 
   using ordLess_ordLeq_trans[OF _ ordLeq_cprod2[OF infinite_regular_card_order.Cnotzero]] infinite_regular_card_order.Card_order
   by blast
 
+lemma csum_less_mono:
+  assumes Cinfinite: "Cinfinite r" "Cinfinite q"
+  and Card_order: "Card_order r'" "Card_order q'"
+  and less: "r <o r'" "q <o q'"
+shows "r +c q <o r' +c q'"
+proof (cases "r \<le>o q")
+  case True
+  have 1: "r +c q =o q" by (rule csum_absorb2[OF Cinfinite(2) True])
+  have 2: "Cinfinite r'" using cinfinite_mono[OF ordLess_imp_ordLeq[OF less(1)]] Cinfinite(1) Card_order(1) by blast
+  have 3: "q' \<le>o r' +c q'" by (rule ordLeq_csum2[OF Card_order(2)])
+  show ?thesis
+    apply (rule ordIso_ordLess_trans[OF 1])
+    apply (rule ordLess_ordLeq_trans[OF less(2) 3])
+    done
+next
+  case False
+  then have 1: "q \<le>o r" by (simp add: Cinfinite ordLeq_iff_ordLess_or_ordIso)
+  have 2: "r +c q =o r" by (rule csum_absorb1[OF Cinfinite(1) 1])
+  have 3: "Cinfinite q'" using cinfinite_mono[OF ordLess_imp_ordLeq[OF less(2)]] Cinfinite(2) Card_order(2) by blast
+  have 4: "r' \<le>o r' +c q'" by (rule ordLeq_csum1[OF Card_order(1)])
+  show ?thesis
+    apply (rule ordIso_ordLess_trans[OF 2])
+    apply (rule ordLess_ordLeq_trans[OF less(1) 4])
+    done
+qed
+
+corollary cardSuc_leq_csum:
+  assumes Cinfinite: "Cinfinite r" "Cinfinite q"
+  and Card_order: "Card_order r" "Card_order q"
+shows "cardSuc (r +c q) \<le>o cardSuc r +c cardSuc q"
+  unfolding csum_def
+  apply (rule cardSuc_least[OF card_of_Card_order card_of_Card_order])
+  unfolding csum_def[symmetric]
+  by (rule csum_less_mono[OF Cinfinite cardSuc_Card_order[OF Card_order(1)] cardSuc_Card_order[OF Card_order(2)]
+      cardSuc_greater[OF Card_order(1)] cardSuc_greater[OF Card_order(2)]])
+
+corollary cardSuc_leq_csum_ifco:
+  assumes "infinite_regular_card_order r" "infinite_regular_card_order q"
+  shows "cardSuc (r +c q) \<le>o cardSuc r +c cardSuc q"
+  by (rule cardSuc_leq_csum[OF
+    infinite_regular_card_order.Cinfinite[OF assms(1)] infinite_regular_card_order.Cinfinite[OF assms(2)]
+    infinite_regular_card_order.Card_order[OF assms(1)] infinite_regular_card_order.Card_order[OF assms(2)]
+  ])
+
+lemma cprod_less_mono:
+  assumes Cinfinite: "Cinfinite r" "Cinfinite q"
+  and Card_order: "Card_order r" "Card_order q" "Card_order r'" "Card_order q'"
+  and less: "r <o r'" "q <o q'"
+shows "r *c q <o r' *c q'"
+proof (cases "r \<le>o q")
+  case True
+  have 1: "r *c q =o q" by (rule cprod_infinite2'[OF Cinfinite_Cnotzero[OF Cinfinite(1)] Cinfinite(2) True])
+  have 2: "Cinfinite r'" using cinfinite_mono[OF ordLess_imp_ordLeq[OF less(1)]] Cinfinite(1) Card_order(3) by blast
+  have 3: "q' \<le>o r' *c q'" by (rule ordLeq_cprod2[OF Cinfinite_Cnotzero[OF 2] Card_order(4)])
+  show ?thesis
+    apply (rule ordIso_ordLess_trans[OF 1])
+    apply (rule ordLess_ordLeq_trans[OF less(2) 3])
+    done
+next
+  case False
+  then have 1: "q \<le>o r" by (simp add: Cinfinite ordLeq_iff_ordLess_or_ordIso)
+  have 2: "r *c q =o r" by (rule cprod_infinite1'[OF Cinfinite(1) Cinfinite_Cnotzero[OF Cinfinite(2)] 1])
+  have 3: "Cinfinite q'" using cinfinite_mono[OF ordLess_imp_ordLeq[OF less(2)]] Cinfinite(2) Card_order(4) by blast
+  have 4: "r' \<le>o r' *c q'" by (rule ordLeq_cprod1[OF Card_order(3) Cinfinite_Cnotzero[OF 3]])
+  show ?thesis
+    apply (rule ordIso_ordLess_trans[OF 2])
+    apply (rule ordLess_ordLeq_trans[OF less(1) 4])
+    done
+qed
+
+corollary cardSuc_leq_cprod:
+  assumes Cinfinite: "Cinfinite r" "Cinfinite q"
+  and Card_order: "Card_order r" "Card_order q"
+shows "cardSuc (r *c q) \<le>o cardSuc r *c cardSuc q"
+  unfolding cprod_def
+  apply (rule cardSuc_least[OF card_of_Card_order card_of_Card_order])
+  unfolding cprod_def[symmetric]
+  by (rule cprod_less_mono[OF Cinfinite Card_order
+      cardSuc_Card_order[OF Card_order(1)] cardSuc_Card_order[OF Card_order(2)]
+      cardSuc_greater[OF Card_order(1)] cardSuc_greater[OF Card_order(2)]])
+
+corollary cardSuc_leq_cprod_ifco:
+  assumes "infinite_regular_card_order r" "infinite_regular_card_order q"
+  shows "cardSuc (r *c q) \<le>o cardSuc r *c cardSuc q"
+  by (rule cardSuc_leq_cprod[OF
+    infinite_regular_card_order.Cinfinite[OF assms(1)] infinite_regular_card_order.Cinfinite[OF assms(2)]
+    infinite_regular_card_order.Card_order[OF assms(1)] infinite_regular_card_order.Card_order[OF assms(2)]
+  ])
+
 lemma infinite_regular_card_order_Un_csum:
   assumes irco: "infinite_regular_card_order r"
                 "infinite_regular_card_order r1"

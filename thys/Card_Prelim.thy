@@ -65,4 +65,7 @@ lemma type_definition_card_UNIV:
   shows " |A| =o |UNIV :: 'a set|"
   by (rule card_of_ordIsoI[OF type_definition_bij_betw_Abs[OF assms]])
 
+lemma Cinfinite_card_trans: "Cinfinite r \<Longrightarrow> r \<le>o |q| \<Longrightarrow> Cinfinite |q|"
+  using cinfinite_mono card_of_Card_order by blast
+
 end

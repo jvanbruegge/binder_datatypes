@@ -16,8 +16,9 @@ sig
   val mr_mk_comp_set_map0_tac: Proof.context -> int -> thm -> thm -> thm list -> thm list -> MRBNF_Def.var_type list -> MRBNF_Def.var_type list -> tactic
   val mr_mk_rel_OO_Grp_tac: Proof.context -> thm list -> thm -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
 
-  val mr_mk_bd_card_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> tactic
-  val mr_mk_bd_cardSuc_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> tactic
+  val mr_mk_bd_card_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> thm option -> tactic
+  val mr_mk_bd_cardSuc_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> thm option -> tactic
+  val mr_mk_comp_wit_tac: Proof.context -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
 
  (* val mk_comp_wit_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
 
@@ -281,7 +282,7 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
     end
   ) ctxt);
 
-fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges =
+fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges bd_thm_opt =
   let
     val remove_Field = @{thm ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF infinite_regular_card_order.Card_order]]]}
     val inner_larges' = map2 (fn thm1 => fn thm2 => remove_Field OF [thm1, thm2]) inner_ifcos inner_larges
@@ -300,7 +301,12 @@ fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_lar
     val (inits_larges, last_large) = split_last inner_larges'
   in
     HEADGOAL (EVERY' ([
-      rtac ctxt (@{thm ordIso_ordLeq_trans[OF card_of_Field_ordIso[OF infinite_regular_card_order.Card_order]]} OF [ifco]),
+      rtac ctxt (@{thm ordIso_ordLeq_trans[OF card_of_Field_ordIso[OF infinite_regular_card_order.Card_order]]}),
+      rtac ctxt @{thm infinite_regular_card_order_natLeq} ORELSE' rtac ctxt ifco,
+      (case bd_thm_opt of
+        SOME x => rtac ctxt (@{thm ordIso_symmetric} RS @{thm ordIso_ordLeq_trans} OF [x])
+        | _ => K all_tac
+      ),
       rtac ctxt (@{thm cprod_cinfinite_bound} OF [@{thm _}, outer_large', ifco_Card_order OF [sum_ifco], ifco_Card_order OF [outer_ifco], Cinfinite_UNIV])
       ] @ (
         @{map 3} (fn large => fn Co => fn ifco =>
@@ -312,7 +318,7 @@ fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_lar
     ))
   end;
 
-fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges =
+fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges bd_thm_opt =
   let
     val ifco_Card_order = @{thm infinite_regular_card_order.Card_order}
     val cardSuc_Co_ifco = ifco_Card_order RS @{thm cardSuc_Card_order}
@@ -328,8 +334,21 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
     ) inner_ifcos' (first_ifco, []) |> snd
     val (inits_larges, last_large) = split_last inner_larges
     val (inits_ifcos, last_ifco) = split_last inner_ifcos
+    val bd_thm_opt' = (case bd_thm_opt of
+      SOME x => SOME (Local_Defs.unfold0 ctxt [sym OF [
+        @{thm cardSuc_invar_ordIso} OF [
+          ifco_Card_order OF [
+            @{thm infinite_regular_card_order_cprod} OF [sum_ifco, outer_ifco]
+          ],
+          ifco_Card_order OF [@{thm infinite_regular_card_order_natLeq}]
+        ]
+      ]] x)
+      | _ => NONE)
   in
     HEADGOAL (EVERY' ([
+      (case bd_thm_opt' of
+        SOME x => rtac ctxt (@{thm ordIso_symmetric} RS @{thm ordIso_ordLeq_trans} OF [x])
+        | _ => K all_tac),
       rtac ctxt (@{thm ordLeq_transitive[OF cardSuc_leq_cprod_ifco]} OF [sum_ifco, outer_ifco]),
       rtac ctxt (@{thm cprod_cinfinite_bound} OF [@{thm _}, outer_large, cardSuc_Co_ifco OF [sum_ifco], cardSuc_Co_ifco OF [outer_ifco], Cinfinite_UNIV])
     ] @ (
@@ -341,6 +360,41 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
       rtac ctxt last_large
     ]))
   end;
+
+fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
+  let
+      val unfold = Local_Defs.unfold0
+      val num_olive = MRBNF_Def.live_of_mrbnf outer
+      val ovar_types = MRBNF_Def.var_types_of_mrbnf outer
+      val G_wit_thms = wit_thms_of_mrbnf outer
+      val F_wit_thms = maps wit_thms_of_mrbnf inners
+      val id_prems = maps (fn var_type => case var_type of
+        MRBNF_Def.Free_Var => @{thms supp_id_bound}
+        | MRBNF_Def.Bound_Var => @{thms bij_id supp_id_bound}
+        | _ => []
+      ) ovar_types
+      val set_maps = map (fn thm => thm OF id_prems) (MRBNF_Def.set_map_of_mrbnf outer)
+    in
+      unfold_thms_tac ctxt set'_eq_sets THEN
+      unfold_thms_tac ctxt @{thms collect_def UN_insert Union_image_empty} THEN
+      unfold_thms_tac ctxt set_maps THEN
+      unfold_thms_tac ctxt @{thms Union_Un_distrib} THEN
+      REPEAT_DETERM (
+        EVERY (map (etac ctxt @{thm UnE}) (1 upto num_olive - 1)) THEN
+        EVERY (replicate num_olive (HEADGOAL (
+          etac ctxt @{thm UN_E} THEN'
+          dresolve_tac ctxt G_wit_thms THEN'
+          SUBPROOF (fn {context, prems = [p1, p2], ...} =>
+            if HOLogic.dest_Trueprop (Thm.prop_of p2) = @{term False} then
+              rtac ctxt @{thm FalseE} 1 THEN
+              rtac ctxt p2 1
+            else
+              resolve_tac ctxt F_wit_thms 1 THEN
+              rtac ctxt (unfold context [p2] p1) 1
+          ) ctxt)
+        ))
+      )
+    end
 
 (*
 val arg_cong_Union = @{thm arg_cong[of _ _ Union]};

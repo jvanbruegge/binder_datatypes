@@ -428,9 +428,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           |> minimize_wits
           |> map (fn (frees, t) => fold absfree frees t);
 
-        fun wit_tac ctxt =
-          mk_comp_wit_tac ctxt set'_eq_sets (wit_thms_of_mrbnf outer) (collect_set_map_of_mrbnf outer)
-            (maps wit_thms_of_mrbnf inners);
+        fun wit_tac ctxt = mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners;
       in (wits, wit_tac, lthy') end;
 
     (* Define the map function of the composed MRBNF. It instantiates the map function of outer with the map functions of the inners:
@@ -506,7 +504,8 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           |> HOLogic.mk_Trueprop;
         val large = #var_large o class_thms_of_mrbnf
         val var_thm = Goal.prove_sorry lthy [] [] var_goal (fn {context,...} =>
-          mr_mk_bd_card_leq_UNIV_tac context (ifco outer) (map ifco inners) (large outer) (map large inners)
+          mr_mk_bd_card_leq_UNIV_tac context (ifco outer) (map ifco inners)
+            (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
         );
 
         fun mk_covar_thm (coclass, lthy) =
@@ -517,7 +516,8 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
               |> HOLogic.mk_Trueprop;
             val large = #covar_large  o class_thms_of_mrbnf
           in Goal.prove_sorry lthy [] [] covar_goal (fn {context,...} =>
-            mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners) (large outer) (map large inners)
+            mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners)
+              (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
           ) end;
       in SOME ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
 

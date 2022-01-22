@@ -2,6 +2,10 @@ theory Composition
   imports "thys/MRBNF_Composition"
 begin
 
+ML \<open>
+Multithreading.parallel_proofs := 1;
+\<close>
+
 datatype \<kappa> =
   Star ("\<star>")
   | KArrow \<kappa> \<kappa> (infixr "\<rightarrow>" 50)
@@ -121,10 +125,8 @@ Multithreading.parallel_proofs := 0;
 local_setup \<open>fn lthy => (snd o snd) (MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding bar}
         sum [list, MRBNF_Comp.ID_mrbnf] (MRBNF_Comp.empty_unfolds, lthy))\<close>
 
-local_setup \<open>fn lthy => let
-  val (_, (_, lthy')) = MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
-                              g [f, f', f] (MRBNF_Comp.empty_unfolds, lthy)
-  in lthy' end
+local_setup \<open>fn lthy => (snd o snd) (MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
+                              g [f, f', f] (MRBNF_Comp.empty_unfolds, lthy))
 \<close>
 
 ML \<open>

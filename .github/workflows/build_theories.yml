@@ -1,0 +1,20 @@
+name: Theories
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'thys/**'
+      - '*.thy'
+      - 'Tools/**'
+      - 'ROOT'
+      - '.github/workflows/build_theories.yml'
+jobs:
+  thesis:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Build theories
+        run: docker run -v "$(pwd)":/work makarius/isabelle:Isabelle2021-1 build -D /work

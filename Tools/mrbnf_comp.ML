@@ -332,12 +332,6 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
 
     val set_map0_tacs = map mk_single_set_map0_tac (0 upto num_inondead - 1);
 
-    fun mr_mk_comp_set_alt_tac ctxt collect_set_map =
-      rtac ctxt (fun_cong) 1 THEN
-      unfold_thms_tac ctxt (@{thms comp_assoc}) THEN
-      unfold_thms_tac ctxt [(collect_set_map RS sym)] THEN
-      Skip_Proof.cheat_tac ctxt 1;
-
     val set_alt_thms =
       if Config.get lthy quick_and_dirty then
         []
@@ -345,7 +339,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         map (fn goal =>
           Goal.prove_sorry lthy [] [] goal
             (fn {context = ctxt, prems = _} =>
-              mr_mk_comp_set_alt_tac ctxt (collect_set_map_of_mrbnf outer))
+              mr_mk_comp_set_alt_tac ctxt (set_map_of_mrbnf outer) (var_types_of_mrbnf outer))
           |> Thm.close_derivation \<^here> )
         (map2 (curry mk_Trueprop_eq) sets sets_alt)
           |> (fn thms => cond_automap (fn thm => thm RS fun_cong) thms is_ilive);

@@ -16,6 +16,8 @@ sig
   val mr_mk_comp_set_map0_tac: Proof.context -> int -> thm -> thm -> thm list -> thm list -> MRBNF_Def.var_type list -> MRBNF_Def.var_type list -> tactic
   val mr_mk_rel_OO_Grp_tac: Proof.context -> thm list -> thm -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
 
+  val mr_mk_comp_set_alt_tac: Proof.context -> thm list -> MRBNF_Def.var_type list -> tactic
+
   val mr_mk_bd_card_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> thm option -> tactic
   val mr_mk_bd_cardSuc_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> thm option -> tactic
   val mr_mk_comp_wit_tac: Proof.context -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
@@ -107,7 +109,6 @@ fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G =
     (rtac ctxt @{thm bij_comp} THEN_ALL_NEW assume_tac ctxt) ORELSE' rtac ctxt refl ORELSE'
     SELECT_GOAL all_tac)) 1  THEN
     EVERY' (map  (fn thm => (rtac ctxt (thm RS fun_cong RS sym)) THEN_ALL_NEW assume_tac ctxt) map_comp0s) 1
-
 
 fun mr_mk_comp_map_id0_tac ctxt Gmap_id0 Gmap_cong0 map_id0s =
   rtac ctxt @{thm ext} 1 THEN
@@ -283,6 +284,31 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
     end
   ) ctxt);
 
+fun mr_mk_comp_set_alt_tac ctxt set_maps ovar_types =
+  let
+    val id_prems = maps (fn var_type => case var_type of
+      MRBNF_Def.Free_Var => @{thms supp_id_bound}
+      | MRBNF_Def.Bound_Var => @{thms bij_id supp_id_bound}
+      | _ => []
+    ) ovar_types
+  in
+    unfold_thms_tac ctxt @{thms o_apply collect_def UN_insert UN_empty Un_empty_right} THEN
+    unfold_thms_tac ctxt (map (ap_OF id_prems) set_maps) THEN
+    HEADGOAL (rtac ctxt refl)
+  end;
+
+fun mk_sum_ifcos ifcos =
+  let
+    val (first_ifco::ifcos') = ifcos
+    val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
+      let
+        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
+      in (thm, thm::sum_ifcos) end
+    ) ifcos' (first_ifco, []) |> snd
+  in
+    (sum_ifco, sum_ifcos)
+  end;
+
 fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_larges bd_thm_opt =
   let
     val remove_Field = @{thm ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF infinite_regular_card_order.Card_order]]]}
@@ -292,12 +318,7 @@ fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_lar
     val ifco_Card_order = @{thm infinite_regular_card_order.Card_order}
     val inner_Card_orders = map (fn ifco => ifco_Card_order OF [ifco]) inner_ifcos
 
-    val (first_ifco::inner_ifcos') = inner_ifcos
-    val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
-      let
-        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
-      in (thm, thm::sum_ifcos) end
-    ) inner_ifcos' (first_ifco, []) |> snd
+    val (sum_ifco, sum_ifcos) = mk_sum_ifcos inner_ifcos
     val ifco = @{thm infinite_regular_card_order_cprod} OF [sum_ifco, outer_ifco]
     val (inits_larges, last_large) = split_last inner_larges'
   in
@@ -325,14 +346,8 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
     val cardSuc_Co_ifco = ifco_Card_order RS @{thm cardSuc_Card_order}
     val Cinfinite_UNIV = @{thm Cinfinite_card_trans} OF [
       @{thm Cinfinite_cardSuc[OF infinite_regular_card_order.Cinfinite]} OF [outer_ifco], outer_large
-   ]
-
-    val (first_ifco::inner_ifcos') = inner_ifcos
-    val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
-      let
-        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
-      in (thm, thm::sum_ifcos) end
-    ) inner_ifcos' (first_ifco, []) |> snd
+    ]
+    val (sum_ifco, sum_ifcos) = mk_sum_ifcos inner_ifcos
     val (inits_larges, last_large) = split_last inner_larges
     val (inits_ifcos, last_ifco) = split_last inner_ifcos
     val bd_thm_opt' = (case bd_thm_opt of
@@ -394,7 +409,7 @@ fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
           ])
         ])))
       )
-    end
+    end;
 
 (*
 val arg_cong_Union = @{thm arg_cong[of _ _ Union]};

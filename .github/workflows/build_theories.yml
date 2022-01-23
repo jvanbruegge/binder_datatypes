@@ -10,7 +10,7 @@ on:
       - 'ROOT'
       - '.github/workflows/build_theories.yml'
 jobs:
-  thesis:
+  theories:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out repository code

@@ -46,6 +46,7 @@ open MRBNF_Util
 open MRBNF_Def
 open Ctr_Sugar_Tactics
 
+fun ap_OF thms thm = thm OF thms
 
 fun mr_mk_comp_bd_card_order_tac ctxt Fbd_card_orders Gbd_card_order_opt =
   rtac ctxt @{thm infinite_regular_card_order_natLeq} 1 ORELSE
@@ -68,7 +69,7 @@ fun mr_mk_comp_map_cong0_tac ctxt set'_eq_sets comp_set_alts map_cong0s outer iv
       let
         val (supp_prems, set_prems) = chop ((free_of_mrbnf outer + bound_of_mrbnf outer * 2) * 2) prems
         val map_cong0' = map_cong0_of_mrbnf outer OF supp_prems
-        val map_cong0s' = map (fn thm => thm OF supp_prems) map_cong0s
+        val map_cong0s' = map (ap_OF supp_prems) map_cong0s
         val unfold = Local_Defs.unfold0 context
         val cong_prems = flat (Ctr_Sugar_Util.transpose (
           map_index (fn (i, thm) =>
@@ -199,7 +200,7 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
         ) ovar_types)
         fun mk_Gset_map0s ps = map (fn thm => @{thm comp_eq_dest_lhs} OF [thm OF ps]) (filter_Gset_map0s MRBNF_Def.Live_Var)
         val map_comp0' = unfold @{thms id_o} (@{thm sym[THEN comp_eq_dest_lhs]} OF [Gmap_comp0 OF (prems @ id_prems)]);
-        val set_map0s' = map (fn thm => thm OF prems) set_map0s;
+        val set_map0s' = map (ap_OF prems) set_map0s;
       in
         HEADGOAL (EVERY' [
           (case nth ivar_types i of
@@ -363,7 +364,6 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
 
 fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
   let
-      val unfold = Local_Defs.unfold0
       val num_olive = MRBNF_Def.live_of_mrbnf outer
       val ovar_types = MRBNF_Def.var_types_of_mrbnf outer
       val G_wit_thms = wit_thms_of_mrbnf outer
@@ -373,7 +373,7 @@ fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
         | MRBNF_Def.Bound_Var => @{thms bij_id supp_id_bound}
         | _ => []
       ) ovar_types
-      val set_maps = map (fn thm => thm OF id_prems) (MRBNF_Def.set_map_of_mrbnf outer)
+      val set_maps = map (ap_OF id_prems) (MRBNF_Def.set_map_of_mrbnf outer)
     in
       unfold_thms_tac ctxt set'_eq_sets THEN
       unfold_thms_tac ctxt @{thms collect_def UN_insert Union_image_empty} THEN
@@ -381,18 +381,18 @@ fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
       unfold_thms_tac ctxt @{thms Union_Un_distrib} THEN
       REPEAT_DETERM (
         EVERY (map (etac ctxt @{thm UnE}) (1 upto num_olive - 1)) THEN
-        EVERY (replicate num_olive (HEADGOAL (
-          etac ctxt @{thm UN_E} THEN'
-          dresolve_tac ctxt G_wit_thms THEN'
-          SUBPROOF (fn {context, prems = [p1, p2], ...} =>
-            if HOLogic.dest_Trueprop (Thm.prop_of p2) = @{term False} then
-              rtac ctxt @{thm FalseE} 1 THEN
-              rtac ctxt p2 1
-            else
-              resolve_tac ctxt F_wit_thms 1 THEN
-              rtac ctxt (unfold context [p2] p1) 1
-          ) ctxt)
-        ))
+        EVERY (replicate num_olive (HEADGOAL (EVERY' [
+          etac ctxt @{thm UN_E},
+          dresolve_tac ctxt G_wit_thms,
+          (
+            K (unfold_thms_tac ctxt @{thms False_implies_equals}) THEN'
+            rtac ctxt @{thm TrueI}
+          ) ORELSE' (EVERY' [
+            hyp_subst_tac ctxt,
+            dresolve_tac ctxt F_wit_thms,
+            assume_tac ctxt
+          ])
+        ])))
       )
     end
 

@@ -49,6 +49,7 @@ local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "Sum_Type.sum"\<close>
 local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "List.list"\<close>
 print_mrbnfs
 
+declare [[quick_and_dirty=true]]
 mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
   map: "map_F"
   sets:
@@ -100,6 +101,7 @@ mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
   rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
   pred: "\<lambda>X. pred_G_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
+declare [[quick_and_dirty=false]]
 
 print_mrbnfs
 

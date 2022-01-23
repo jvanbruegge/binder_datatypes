@@ -370,8 +370,8 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
          REPEAT_DETERM (CHANGED ((
            (rtac ctxt conjI THEN' (assume_tac ctxt ORELSE' rtac ctxt subset_UNIV)) ORELSE'
            assume_tac ctxt ORELSE'
-           (rtac ctxt subset_UNIV)) 1)) ORELSE rtac ctxt subset_UNIV 1))
-      THEN TRYALL (Skip_Proof.cheat_tac ctxt)
+           (rtac ctxt subset_UNIV)) 1)) ORELSE rtac ctxt subset_UNIV 1)
+      );
 
     val (in_alt_thm, in_alt_lthy) =
       let
@@ -500,7 +500,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         val var_thm = Goal.prove_sorry lthy [] [] var_goal (fn {context,...} =>
           mr_mk_bd_card_leq_UNIV_tac context (ifco outer) (map ifco inners)
             (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
-        );
+        ) |> Thm.close_derivation \<^here>;
 
         fun mk_covar_thm (coclass, lthy) =
           let
@@ -512,7 +512,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           in Goal.prove_sorry lthy [] [] covar_goal (fn {context,...} =>
             mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners)
               (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
-          ) end;
+          ) |> Thm.close_derivation \<^here> end;
       in SOME ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
 
     val (mrbnf, lthy') = mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) class_opt

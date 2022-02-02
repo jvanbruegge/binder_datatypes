@@ -22,9 +22,9 @@ sig
   val mr_mk_bd_cardSuc_leq_UNIV_tac: Proof.context -> thm -> thm list -> thm -> thm list -> thm option -> tactic
   val mr_mk_comp_wit_tac: Proof.context -> thm list -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list -> tactic
 
- (* val mk_comp_wit_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
+  val mr_mk_simple_pred_set_tac: Proof.context -> thm -> thm option -> tactic
 
-  val kill_in_alt_tac: Proof.context -> tactic
+  (*val kill_in_alt_tac: Proof.context -> tactic
   val mk_kill_map_cong0_tac: Proof.context -> int -> int -> thm -> tactic
 
   val empty_natural_tac: Proof.context -> tactic
@@ -379,37 +379,45 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
 
 fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
   let
-      val num_olive = MRBNF_Def.live_of_mrbnf outer
-      val ovar_types = MRBNF_Def.var_types_of_mrbnf outer
-      val G_wit_thms = wit_thms_of_mrbnf outer
-      val F_wit_thms = maps wit_thms_of_mrbnf inners
-      val id_prems = maps (fn var_type => case var_type of
-        MRBNF_Def.Free_Var => @{thms supp_id_bound}
-        | MRBNF_Def.Bound_Var => @{thms bij_id supp_id_bound}
-        | _ => []
-      ) ovar_types
-      val set_maps = map (ap_OF id_prems) (MRBNF_Def.set_map_of_mrbnf outer)
-    in
-      unfold_thms_tac ctxt set'_eq_sets THEN
-      unfold_thms_tac ctxt @{thms collect_def UN_insert Union_image_empty} THEN
-      unfold_thms_tac ctxt set_maps THEN
-      unfold_thms_tac ctxt @{thms Union_Un_distrib} THEN
-      REPEAT_DETERM (
-        EVERY (map (etac ctxt @{thm UnE}) (1 upto num_olive - 1)) THEN
-        EVERY (replicate num_olive (HEADGOAL (EVERY' [
-          etac ctxt @{thm UN_E},
-          dresolve_tac ctxt G_wit_thms,
-          (
-            K (unfold_thms_tac ctxt @{thms False_implies_equals}) THEN'
-            rtac ctxt @{thm TrueI}
-          ) ORELSE' (EVERY' [
-            hyp_subst_tac ctxt,
-            dresolve_tac ctxt F_wit_thms,
-            assume_tac ctxt
-          ])
-        ])))
-      )
-    end;
+    val num_olive = MRBNF_Def.live_of_mrbnf outer
+    val ovar_types = MRBNF_Def.var_types_of_mrbnf outer
+    val G_wit_thms = wit_thms_of_mrbnf outer
+    val F_wit_thms = maps wit_thms_of_mrbnf inners
+    val id_prems = maps (fn var_type => case var_type of
+      MRBNF_Def.Free_Var => @{thms supp_id_bound}
+      | MRBNF_Def.Bound_Var => @{thms bij_id supp_id_bound}
+      | _ => []
+    ) ovar_types
+    val set_maps = map (ap_OF id_prems) (MRBNF_Def.set_map_of_mrbnf outer)
+  in
+    unfold_thms_tac ctxt set'_eq_sets THEN
+    unfold_thms_tac ctxt @{thms collect_def UN_insert Union_image_empty} THEN
+    unfold_thms_tac ctxt set_maps THEN
+    unfold_thms_tac ctxt @{thms Union_Un_distrib} THEN
+    REPEAT_DETERM (
+      EVERY (map (etac ctxt @{thm UnE}) (1 upto num_olive - 1)) THEN
+      EVERY (replicate num_olive (HEADGOAL (EVERY' [
+        etac ctxt @{thm UN_E},
+        dresolve_tac ctxt G_wit_thms,
+        (
+          K (unfold_thms_tac ctxt @{thms False_implies_equals}) THEN'
+          rtac ctxt @{thm TrueI}
+        ) ORELSE' (EVERY' [
+          hyp_subst_tac ctxt,
+          dresolve_tac ctxt F_wit_thms,
+          assume_tac ctxt
+        ])
+      ])))
+    )
+  end;
+
+fun mr_mk_simple_pred_set_tac ctxt pred_set in_alt_thm_opt =
+  HEADGOAL (rtac ctxt (pred_set RS trans)) THEN
+  unfold_thms_tac ctxt @{thms Ball_Collect UNIV_def} THEN
+  HEADGOAL (rtac ctxt (case in_alt_thm_opt of
+    SOME in_alt_thm => unfold_thms ctxt @{thms UNIV_def} in_alt_thm RS @{thm Collect_inj} RS sym
+    | NONE => refl
+  ));
 
 (*
 val arg_cong_Union = @{thm arg_cong[of _ _ Union]};

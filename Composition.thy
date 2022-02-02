@@ -71,11 +71,11 @@ mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
 mrbnf F': "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F'"
   map: "map_F'"
   sets:
-   free: "setF1_F' :: _ \<Rightarrow> 'a set"
-   free: "setF2_F' :: _ \<Rightarrow> 'a' set"
+   bound: "setF1_F' :: _ \<Rightarrow> 'a set"
+   bound: "setF2_F' :: _ \<Rightarrow> 'a' set"
    live: "setL3_F' :: _ \<Rightarrow> 'x set"
-   bound: "setB4_F' :: _ \<Rightarrow> 'b set"
-   bound: "setB5_F' :: _ \<Rightarrow> 'b' set"
+   free: "setB4_F' :: _ \<Rightarrow> 'b set"
+   free: "setB5_F' :: _ \<Rightarrow> 'b' set"
    live: "setL6_F' :: _ \<Rightarrow> 'c set"
    live: "setL7_F' :: _ \<Rightarrow> 'd set"
    live: "setL8_F' :: _ \<Rightarrow> 'e set"
@@ -124,12 +124,41 @@ ML \<open>
 Multithreading.parallel_proofs := 0;
 \<close>
 
-local_setup \<open>fn lthy => (snd o snd) (MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding bar}
-        sum [list, MRBNF_Comp.ID_mrbnf] (MRBNF_Comp.empty_unfolds, lthy))\<close>
+local_setup \<open>fn lthy =>
+  let
+    val name = Long_Name.base_name \<^type_name>\<open>sum\<close>
+    fun qualify i =
+              let val namei = name ^ BNF_Util.nonzero_string_of_int i;
+              in Binding.qualify true namei end
+    val Xs = []
+    val resBs = [dest_TFree @{typ 'a}]
+    fun flatten_tyargs Ass =
+      subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
+  val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
+        sum [list, MRBNF_Comp.ID_mrbnf] [] [[], []] [[@{typ 'a}], [@{typ 'a}]] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
+  val _ = @{print} mrbnf
+  val _ = @{print} tys
+  in lthy'
+  end\<close>
 
-local_setup \<open>fn lthy => (snd o snd) (MRBNF_Comp.clean_compose_mrbnf MRBNF_Def.Do_Inline I @{binding foo}
-                              g [f, f', f] (MRBNF_Comp.empty_unfolds, lthy))
-\<close>
+local_setup \<open>fn lthy =>
+  let
+    val name = Long_Name.base_name "Composition.G"
+    fun qualify i =
+              let val namei = name ^ BNF_Util.nonzero_string_of_int i;
+              in Binding.qualify true namei end
+    val Xs = []
+    val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
+    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'b}, @{typ 'a}, @{typ 'f}, @{typ 'g}, @{typ 'i}, @{typ 'h}]
+    val resBs = map dest_TFree Ts
+    fun flatten_tyargs Ass =
+      subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
+  val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
+        g [f, f', f] [] [[], [], []] [Ts, Ts', Ts] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
+  val _ = @{print} tys
+  val _ = @{print} mrbnf
+  in lthy'
+  end\<close>
 
 ML \<open>
 val test = @{typ "unit + unit + 'a list"}

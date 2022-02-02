@@ -37,21 +37,8 @@ sig
   val default_comp_sort: (string * sort) list list -> (string * sort) list*)
   val clean_compose_mrbnf: MRBNF_Def.inline_policy -> (binding -> binding) -> binding -> MRBNF_Def.mrbnf ->
     MRBNF_Def.mrbnf list -> unfold_set * local_theory -> MRBNF_Def.mrbnf * (unfold_set * local_theory)
-  (*val multi_kill_mrbnf: (binding -> binding) -> MRBNF_Def.var_type list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  val multilift_mrbnf: (binding -> binding) -> int -> int -> int -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
   val permute_mrbnf: (binding -> binding) -> int list -> int list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)*)
-(*  val permute_and_kill_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  val lift_and_permute_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
+    (comp_cache * unfold_set) * local_theory -> MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
   val normalize_mrbnfs: (int -> binding -> binding) -> ''a list list -> ''a list ->
     (''a list list -> ''a list) -> MRBNF_Def.mrbnf list -> (comp_cache * unfold_set) * local_theory ->
     (int list list * ''a list) * (MRBNF_Def.mrbnf list * ((comp_cache * unfold_set) * local_theory))
@@ -59,6 +46,20 @@ sig
     ((string * sort) list list -> (string * sort) list) -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list ->
     typ list -> typ list list -> typ list list -> (comp_cache * unfold_set) * local_theory ->
     (MRBNF_Def.mrbnf * (typ list * typ list)) * ((comp_cache * unfold_set) * local_theory)
+  (*val multi_kill_mrbnf: (binding -> binding) -> MRBNF_Def.var_type list -> MRBNF_Def.mrbnf ->
+    (comp_cache * unfold_set) * local_theory ->
+    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
+  val multilift_mrbnf: (binding -> binding) -> int -> int -> int -> MRBNF_Def.mrbnf ->
+    (comp_cache * unfold_set) * local_theory ->
+    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
+  *)
+(*  val permute_and_kill_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
+    (comp_cache * unfold_set) * local_theory ->
+    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
+  val lift_and_permute_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
+    (comp_cache * unfold_set) * local_theory ->
+    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
+
   type absT_info =
     {absT: typ,
      repT: typ,
@@ -527,6 +528,224 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     (mrbnf', (add_mrbnf_to_unfolds mrbnf' unfold_set, lthy'))
   end;
 
+(* Changing the order of live, free and bound variables *)
+fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
+  if src = dest then (mrbnf, accum) else
+  let
+    (*Update binding's name to indicate permutation happened?*)
+    val b = Binding.suffix_name (mk_permuteN src dest) (name_of_mrbnf mrbnf);
+    (*Read out various attributes via accessor functions*)
+    val live = live_of_mrbnf mrbnf;
+    val free = free_of_mrbnf mrbnf;
+    val bound = bound_of_mrbnf mrbnf;
+    val count = live + free + bound;
+    val deads = deads_of_mrbnf mrbnf;
+    val bounds = bounds_of_mrbnf mrbnf;
+    val frees = frees_of_mrbnf mrbnf;
+    val var_types = var_types_of_mrbnf mrbnf;
+    val nwits = nwits_of_mrbnf mrbnf;
+    val (class, coclass) = (class_of_mrbnf mrbnf, coclass_of_mrbnf mrbnf)
+
+    (*create permutation shorthands*)
+    fun permute xs = permute_like_unique (op =) src dest xs;
+    fun unpermute xs = permute_like_unique (op =) dest src xs;
+
+    (*create shorthands for permutations of only live variables*)
+    val is_live = map (equal Live_Var) var_types;
+    val src_live = cond_keep src is_live;
+    val dest_live = filter (fn x => exists (fn y => y = x ) src_live) dest;
+    val is_live_perm = permute is_live;
+
+    fun permute_live xs = permute_like_unique (op =) src_live dest_live xs;
+    fun unpermute_live xs = permute_like_unique (op =) dest_live src_live xs;
+
+    val (Ds, lthy1) = apfst (map TFree)
+      (Variable.invent_types (map Type.sort_of_atyp deads) lthy);
+    val (As, lthy2) = apfst (map TFree)
+      (Variable.invent_types (replicate live @{sort type}) lthy1);
+    val (As', lthy3) = apfst (map TFree)
+      (Variable.invent_types (replicate live @{sort type}) lthy2);
+    val (Fs, lthy4) = apfst (map TFree)
+      (Variable.invent_types (map Type.sort_of_atyp frees) lthy3);
+    val (Bs, _(*lthy5*)) = apfst (map TFree)
+      (Variable.invent_types (map Type.sort_of_atyp bounds) lthy4);
+
+    val T = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
+
+    val count = live + bound + free;
+
+    (*Construct mrbnf's set functions*)
+    val mrbnf_sets = mk_sets_of_mrbnf (replicate count Ds) (replicate count As)
+      (replicate count Bs) (replicate count Fs) mrbnf;
+
+    val sets = permute mrbnf_sets;
+    val var_type_sets = permute (var_types_of_mrbnf mrbnf) ~~ sets;
+
+    (*Get types of lives, bounds and frees via image of set functions (not permuted)*)
+    val ABF_types = map (HOLogic.dest_setT o range_type o fastype_of) mrbnf_sets;
+    val A'BF_types = map  (HOLogic.dest_setT o range_type o fastype_of) (mk_sets_of_mrbnf
+      (replicate count Ds) (replicate count As') (replicate count Bs) (replicate count Fs) mrbnf);
+
+    (*Create term list of permuted sets*)
+    val (ABFsets, _(*names_lthy*)) = lthy
+      |> mk_Frees "A" (map HOLogic.mk_setT (permute ABF_types));
+
+
+    (*Create map functions permutation as lambda term*)
+    (*%f(1) ... f(n). mrbnf.map f\<sigma>(1) ... f\<sigma>(n)*)
+    val mapx = fold_rev Term.absdummy (permute (map2 (curry op -->) ABF_types A'BF_types))
+      (Term.list_comb (mk_map_of_mrbnf Ds As As' Bs Fs  mrbnf, unpermute (map Bound (count - 1 downto 0))));
+
+    (*Create relator permutation as lambda term*)
+    (*%Q(1) ... Q(n). mrbnf.rel Q\<sigma>(1) ... Q\<sigma>(n)*)
+    val rel = fold_rev Term.absdummy (permute_live (map2 mk_pred2T As As'))
+      (Term.list_comb (mk_rel_of_mrbnf Ds As As' Bs Fs mrbnf, unpermute_live (*shorter permutation*) (map Bound (live - 1 downto 0))));
+
+
+    (*%P(1) ... P(n). mrbnf.pred P\<sigma>(1) ... P\<sigma>(n)*)
+    val pred = fold_rev Term.absdummy (permute_live (map mk_pred1T As)) (*As or ABFs?, short or long permuation*)
+      (Term.list_comb (mk_pred_of_mrbnf Ds As Bs Fs mrbnf, unpermute_live (map Bound (live - 1 downto 0))))
+      |> Syntax.check_term lthy (*temporary*);
+      (*use shorter permutation*)
+
+    val bd = mk_bd_of_mrbnf Ds Bs Fs mrbnf;
+    fun prnttc label ctxt tac = print_tac ctxt (label ^ " begin") THEN tac THEN print_tac ctxt (label ^ " end")
+
+    (*Proof obligations*)
+    fun map_id0_tac ctxt = rtac ctxt (map_id0_of_mrbnf mrbnf) 1;
+    fun map_comp0_tac ctxt = rtac ctxt (map_comp0_of_mrbnf mrbnf) 1
+      THEN REPEAT_DETERM_N (live + 2*(free + bound)) (assume_tac ctxt 1);
+    fun map_cong0_tac ctxt = rtac ctxt (map_cong0_of_mrbnf mrbnf) 1
+      THEN REPEAT_DETERM_N (live  + 2*(free + bound)) (assume_tac ctxt 1)
+      THEN REPEAT_DETERM_N count (Goal.assume_rule_tac ctxt 1);
+    val set_map0_tacs = permute (map (fn thm => fn ctxt => rtac ctxt thm 1
+      THEN REPEAT_DETERM_N count (assume_tac ctxt 1)) (set_map0_of_mrbnf mrbnf));
+    fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt (bd_infinite_regular_card_order_of_mrbnf mrbnf) 1;
+    val set_bd_tacs = permute (map (fn thm => fn ctxt => rtac ctxt thm 1) (set_bd_of_mrbnf mrbnf));
+
+    val in_alt_thm_opt =
+      let
+        val Asets = cond_keep ABFsets is_live_perm (*ABFsets are already permuted*)
+        val inx = mk_in Asets (cond_keep sets is_live_perm) T;
+        val in_alt = mk_in (unpermute_live Asets) (cond_keep mrbnf_sets is_live) T;
+        val goal = fold_rev Logic.all Asets (mk_Trueprop_eq (inx, in_alt));
+      in
+        if inx = in_alt then
+          NONE
+        else
+          Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
+            mk_permute_in_alt_tac ctxt src_live dest_live)
+          |> Thm.close_derivation \<^here> |> SOME
+      end;
+    fun le_rel_OO_tac ctxt = rtac ctxt (le_rel_OO_of_mrbnf mrbnf) 1;
+
+    fun rel_OO_Grp_tac ctxt =
+      unfold_thms_tac ctxt (the_list in_alt_thm_opt) THEN
+      rtac ctxt (rel_OO_Grp_of_mrbnf mrbnf) 1 THEN
+      TRYALL (assume_tac ctxt)
+    fun pred_set_tac ctxt = mr_mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm_opt
+
+    (*Nonemptiness witnesses*)
+    val wits = map snd (mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As)
+        (replicate nwits Bs) (replicate nwits Fs) mrbnf);
+
+    fun wit_tac ctxt = mk_simple_wit_tac ctxt (wit_thms_of_mrbnf mrbnf) (*|> prnttc "wit" ctxt*);
+
+    val tacs = {
+      map_id0 = map_id0_tac,
+      map_comp0 = map_comp0_tac,
+      map_cong0 = map_cong0_tac,
+      set_map0 = set_map0_tacs,
+      infinite_regular_card_order = bd_infinite_regular_card_order_tac,
+      set_bd = set_bd_tacs,
+      le_rel_OO = le_rel_OO_tac,
+      in_rel = rel_OO_Grp_tac,
+      pred_set = pred_set_tac,
+      wit = wit_tac
+    };
+
+    val class_opt =
+      let
+        val class_thms = class_thms_of_mrbnf mrbnf
+      in
+        SOME (
+          (class, #var_large class_thms, #var_regular class_thms),
+          (coclass, K (#covar_large class_thms))
+        )
+      end;
+
+    val (mrbnf', lthy') =
+      mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME Ds) class_opt
+        Binding.empty Binding.empty Binding.empty []
+        (((((((b, T), mapx), var_type_sets), bd), wits), SOME rel), SOME pred) lthy;
+  in
+    (mrbnf', (add_mrbnf_to_unfolds mrbnf' unfold_set, lthy'))
+  end;
+
+fun permute_mrbnf qualify src dest mrbnf (accum as ((cache, unfold_set), lthy)) =
+  let val key = key_of_permute src dest mrbnf in
+    (case Typtab.lookup cache key of
+      SOME (mrbnf, _) => (mrbnf, accum)
+    | NONE => cache_comp_simple key cache (raw_permute_mrbnf qualify src dest mrbnf (unfold_set, lthy)))
+  end;
+
+(* Composition pipeline *)
+fun permute_and_kill_mrbnf qualify n src dest mrbnf x = (mrbnf, x)
+  (*permute_mrbnf qualify src dest mrbnf*)
+  (*#> uncurry (kill_mrbnf qualify n);*)
+fun lift_and_permute_mrbnf qualify n src dest mrbnf =
+  (*lift_mrbnf qualify n mrbnf
+  #> uncurry ( *) permute_mrbnf qualify src dest mrbnf (* ); *)
+fun normalize_mrbnfs qualify Ass Ds flatten_tyargs mrbnfs accum =
+  let
+    val before_kill_src = map (fn As => 0 upto (length As - 1)) Ass;
+    val kill_poss = map (find_indices op = Ds) Ass;
+    val live_poss = map2 (subtract op =) kill_poss before_kill_src;
+    val before_kill_dest = map2 append kill_poss live_poss;
+    val kill_ns = map length kill_poss;
+    val (inners', accum') =
+      @{fold_map 5} (permute_and_kill_mrbnf o qualify)
+        (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
+        kill_ns before_kill_src before_kill_dest mrbnfs accum;
+    val Ass' = map2 (map o nth) Ass live_poss;
+    val As = flatten_tyargs Ass';
+    val after_lift_dest = replicate (length Ass') (0 upto (length As - 1));
+    val old_poss = map (map (fn x => find_index (fn y => x = y) As)) Ass';
+    val new_poss = map2 (subtract op =) old_poss after_lift_dest;
+    val after_lift_src = map2 append new_poss old_poss;
+    val lift_ns = map (fn xs => length As - length xs) Ass';
+  in
+    ((kill_poss, As), @{fold_map 5} (lift_and_permute_mrbnf o qualify)
+      (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
+      lift_ns after_lift_src after_lift_dest inners' accum')
+  end;
+
+fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss tfreess accum =
+  let
+    val b = name_of_mrbnf outer;
+    val Ass = map (map Term.dest_TFree) tfreess;
+    val Ds = fold (fold Term.add_tfreesT) (oDs :: Dss) [];
+    val ((kill_poss, As), (inners', ((cache', unfold_set'), lthy'))) =
+      normalize_mrbnfs qualify Ass Ds flatten_tyargs inners accum;
+    val Ds =
+      oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
+    val As = map TFree As;
+  in
+    apfst (rpair (Ds, As))
+      (apsnd (apfst (pair cache'))
+        (clean_compose_mrbnf const_policy (qualify 0) b outer inners' (unfold_set', lthy')))
+  end;
+
+fun compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss tfreess
+    (accum as ((cache, _), _)) =
+  let val key = key_of_compose oDs Dss tfreess outer inners in
+    (case Typtab.lookup cache key of
+      SOME mrbnf_Ds_As => (mrbnf_Ds_As, accum)
+    | NONE =>
+      cache_comp key
+        (raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss tfreess accum))
+  end;
+
 (*fun raw_multi_kill_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
  (* if n = 0 then (mrbnf, accum) else*)
   let
@@ -957,210 +1176,11 @@ fun multilift_mrbnf qualify n m l mrbnf (accum as ((cache, unfold_set), lthy)) =
     | NONE => cache_comp_simple key cache (raw_multilift_mrbnf qualify n m l mrbnf (unfold_set, lthy)))
   end;
 
-(* Changing the order of live, free and bound variables *)
-fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
-  if src = dest then (mrbnf, accum) else
-  let
-    (*Update binding's name to indicate permutation happened?*)
-    val b = Binding.suffix_name (mk_permuteN src dest) (name_of_mrbnf mrbnf);
-    (*Read out various attributes via accessor functions*)
-    val live = live_of_mrbnf mrbnf;
-    val free = free_of_mrbnf mrbnf;
-    val bound = bound_of_mrbnf mrbnf;
-    val count = live + free + bound;
-    val deads = deads_of_mrbnf mrbnf;
-    val bounds = bounds_of_mrbnf mrbnf;
-    val frees = frees_of_mrbnf mrbnf;
-    val var_types = var_types_of_mrbnf mrbnf;
-    val nwits = nwits_of_mrbnf mrbnf;
-    val (class, coclass) = (class_of_mrbnf mrbnf, coclass_of_mrbnf mrbnf)
 
-    (*create permutation shorthands*)
-    fun permute xs = permute_like_unique (op =) src dest xs;
-    fun unpermute xs = permute_like_unique (op =) dest src xs;
-
-    (*create shorthands for permutations of only live variables*)
-    val is_live = map (equal Live_Var) var_types;
-    val src_live = cond_keep src is_live;
-    val dest_live = filter (fn x => exists (fn y => y = x ) src_live) dest;
-    val is_live_perm = permute is_live;
-
-    fun permute_live xs = permute_like_unique (op =) src_live dest_live xs;
-    fun unpermute_live xs = permute_like_unique (op =) dest_live src_live xs;
-
-    val (Ds, lthy1) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp deads) lthy);
-    val (As, lthy2) = apfst (map TFree)
-      (Variable.invent_types (replicate live @{sort type}) lthy1);
-    val (As', lthy3) = apfst (map TFree)
-      (Variable.invent_types (replicate live @{sort type}) lthy2);
-    val (Fs, lthy4) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp frees) lthy3);
-    val (Bs, _(*lthy5*)) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp bounds) lthy4);
-
-    val T = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
-
-    val count = live + bound + free;
-
-    (*Construct mrbnf's set functions*)
-    val mrbnf_sets = mk_sets_of_mrbnf (replicate count Ds) (replicate count As)
-      (replicate count Bs) (replicate count Fs) mrbnf;
-
-    val sets = permute mrbnf_sets;
-    val var_type_sets = permute (var_types_of_mrbnf mrbnf) ~~ sets;
-
-    (*Get types of lives, bounds and frees via image of set functions (not permuted)*)
-    val ABF_types = map (HOLogic.dest_setT o range_type o fastype_of) mrbnf_sets;
-    val A'BF_types = map  (HOLogic.dest_setT o range_type o fastype_of) (mk_sets_of_mrbnf
-      (replicate count Ds) (replicate count As') (replicate count Bs) (replicate count Fs) mrbnf);
-
-    (*Create term list of permuted sets*)
-    val (ABFsets, _(*names_lthy*)) = lthy
-      |> mk_Frees "A" (map HOLogic.mk_setT (permute ABF_types));
-
-
-    (*Create map functions permutation as lambda term*)
-    (*%f(1) ... f(n). mrbnf.map f\<sigma>(1) ... f\<sigma>(n)*)
-    val mapx = fold_rev Term.absdummy (permute (map2 (curry op -->) ABF_types A'BF_types))
-      (Term.list_comb (mk_map_of_mrbnf Ds As As' Bs Fs  mrbnf, unpermute (map Bound (count - 1 downto 0))));
-
-    (*Create relator permutation as lambda term*)
-    (*%Q(1) ... Q(n). mrbnf.rel Q\<sigma>(1) ... Q\<sigma>(n)*)
-    val rel = fold_rev Term.absdummy (permute_live (map2 mk_pred2T As As'))
-      (Term.list_comb (mk_rel_of_mrbnf Ds As As' Bs Fs mrbnf, unpermute_live (*shorter permutation*) (map Bound (live - 1 downto 0))));
-
-
-    (*%P(1) ... P(n). mrbnf.pred P\<sigma>(1) ... P\<sigma>(n)*)
-    val pred = fold_rev Term.absdummy (permute_live (map mk_pred1T As)) (*As or ABFs?, short or long permuation*)
-      (Term.list_comb (mk_pred_of_mrbnf Ds As Bs Fs mrbnf, unpermute_live (map Bound (live - 1 downto 0))))
-      |> Syntax.check_term lthy (*temporary*);
-      (*use shorter permutation*)
-
-    val bd = mk_bd_of_mrbnf Ds Bs Fs mrbnf;
-    fun prnttc label ctxt tac = print_tac ctxt (label ^ " begin") THEN tac THEN print_tac ctxt (label ^ " end")
-
-    (*Proof obligations*)
-    fun map_id0_tac ctxt = rtac ctxt (map_id0_of_mrbnf mrbnf) 1;
-    fun map_comp0_tac ctxt = rtac ctxt (map_comp0_of_mrbnf mrbnf) 1
-      THEN REPEAT_DETERM_N (live + 2*(free + bound)) (assume_tac ctxt 1);
-    fun map_cong0_tac ctxt = rtac ctxt (map_cong0_of_mrbnf mrbnf) 1
-      THEN REPEAT_DETERM_N (live  + 2*(free + bound)) (assume_tac ctxt 1)
-      THEN REPEAT_DETERM_N count (Goal.assume_rule_tac ctxt 1);
-    val set_map0_tacs = permute (map (fn thm => fn ctxt => rtac ctxt thm 1
-      THEN REPEAT_DETERM_N count (assume_tac ctxt 1)) (set_map0_of_mrbnf mrbnf));
-    fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt (bd_infinite_regular_card_order_of_mrbnf mrbnf) 1;
-    val set_bd_tacs = permute (map (fn thm => fn ctxt => rtac ctxt thm 1) (set_bd_of_mrbnf mrbnf));
-
-    val in_alt_thm =
-      let
-        val Asets = cond_keep ABFsets is_live_perm (*ABFsets are already permuted*)
-        val inx = mk_in Asets (cond_keep sets is_live_perm) T;
-        val in_alt = mk_in (unpermute_live Asets) (cond_keep mrbnf_sets is_live) T;
-        val goal = fold_rev Logic.all Asets (mk_Trueprop_eq (inx, in_alt));
-      in
-        Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
-          mk_permute_in_alt_tac ctxt src_live dest_live)
-        |> Thm.close_derivation \<^here>
-      end;
-    fun le_rel_OO_tac ctxt = rtac ctxt (le_rel_OO_of_mrbnf mrbnf) 1 |> prnttc "le_rel_OO" ctxt;
-
-    fun rel_OO_Grp_tac ctxt = (unfold_thms_tac ctxt [in_alt_thm]) THEN (rtac ctxt (rel_OO_Grp_of_mrbnf mrbnf) 1)
-      THEN TRYALL (assume_tac ctxt)
-      |> prnttc "rel_OO_Grp" ctxt;
-    fun pred_set_tac ctxt = mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm (*|> prnttc "pred_set" ctxt*);
-
-    (*Nonemptiness witnesses*)
-    val wits = map snd (mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As)
-        (replicate nwits Bs) (replicate nwits Fs) mrbnf);
-
-    fun wit_tac ctxt = mk_simple_wit_tac ctxt (wit_thms_of_mrbnf mrbnf) (*|> prnttc "wit" ctxt*);
-
-    val tacs = {
-      map_id0 = map_id0_tac,
-      map_comp0 = map_comp0_tac,
-      map_cong0 = map_cong0_tac,
-      set_map0 = set_map0_tacs,
-      infinite_regular_card_order = bd_infinite_regular_card_order_tac,
-      set_bd = set_bd_tacs,
-      le_rel_OO = le_rel_OO_tac,
-      in_rel = rel_OO_Grp_tac,
-      pred_set = pred_set_tac,
-      wit = wit_tac
-    };
-
-    val (mrbnf', lthy') =
-      mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME Ds) (SOME(class, coclass)) Binding.empty
-        Binding.empty Binding.empty []
-        (((((((b, T), mapx), var_type_sets), bd), wits), SOME rel), SOME pred) lthy;
-  in
-    (mrbnf', (add_mrbnf_to_unfolds mrbnf' unfold_set, lthy'))
-  end;
-
-fun permute_mrbnf qualify src dest mrbnf (accum as ((cache, unfold_set), lthy)) =
-  let val key = key_of_permute src dest mrbnf in
-    (case Typtab.lookup cache key of
-      SOME (mrbnf, _) => (mrbnf, accum)
-    | NONE => cache_comp_simple key cache (raw_permute_mrbnf qualify src dest mrbnf (unfold_set, lthy)))
-  end;
 *)
 (* Composition pipeline *)
 (*
-fun permute_and_kill_mrbnf qualify n src dest mrbnf =
-  permute_mrbnf qualify src dest mrbnf
-  #> uncurry (kill_mrbnf qualify n);
-fun lift_and_permute_mrbnf qualify n src dest mrbnf =
-  lift_mrbnf qualify n mrbnf
-  #> uncurry (permute_mrbnf qualify src dest);
-fun normalize_mrbnfs qualify Ass Ds flatten_tyargs mrbnfs accum =
-  let
-    val before_kill_src = map (fn As => 0 upto (length As - 1)) Ass;
-    val kill_poss = map (find_indices op = Ds) Ass;
-    val live_poss = map2 (subtract op =) kill_poss before_kill_src;
-    val before_kill_dest = map2 append kill_poss live_poss;
-    val kill_ns = map length kill_poss;
-    val (inners', accum') =
-      @{fold_map 5} (permute_and_kill_mrbnf o qualify)
-        (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
-        kill_ns before_kill_src before_kill_dest mrbnfs accum;
-    val Ass' = map2 (map o nth) Ass live_poss;
-    val As = flatten_tyargs Ass';
-    val after_lift_dest = replicate (length Ass') (0 upto (length As - 1));
-    val old_poss = map (map (fn x => find_index (fn y => x = y) As)) Ass';
-    val new_poss = map2 (subtract op =) old_poss after_lift_dest;
-    val after_lift_src = map2 append new_poss old_poss;
-    val lift_ns = map (fn xs => length As - length xs) Ass';
-  in
-    ((kill_poss, As), @{fold_map 5} (lift_and_permute_mrbnf o qualify)
-      (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
-      lift_ns after_lift_src after_lift_dest inners' accum')
-  end;
-fun default_comp_sort Ass =
-  Library.sort (Term_Ord.typ_ord o apply2 TFree) (fold (fold (insert (op =))) Ass []);
-fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss tfreess accum =
-  let
-    val b = name_of_mrbnf outer;
-    val Ass = map (map Term.dest_TFree) tfreess;
-    val Ds = fold (fold Term.add_tfreesT) (oDs :: Dss) [];
-    val ((kill_poss, As), (inners', ((cache', unfold_set'), lthy'))) =
-      normalize_mrbnfs qualify Ass Ds flatten_tyargs inners accum;
-    val Ds =
-      oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
-    val As = map TFree As;
-  in
-    apfst (rpair (Ds, As))
-      (apsnd (apfst (pair cache'))
-        (clean_compose_mrbnf const_policy (qualify 0) b outer inners' (unfold_set', lthy')))
-  end;
-fun compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss tfreess
-    (accum as ((cache, _), _)) =
-  let val key = key_of_compose oDs Dss tfreess outer inners in
-    (case Typtab.lookup cache key of
-      SOME mrbnf_Ds_As => (mrbnf_Ds_As, accum)
-    | NONE =>
-      cache_comp key
-        (raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss tfreess accum))
-  end;
+
 (* Hide the type of the bound (optimization) and unfold the definitions (nicer to the user) *)
 type absT_info =
   {absT: typ,

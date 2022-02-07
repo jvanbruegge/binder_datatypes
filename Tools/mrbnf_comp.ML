@@ -694,7 +694,7 @@ fun permute_mrbnf qualify src dest mrbnf (accum as ((cache, unfold_set), lthy)) 
   end;
 
 fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
-  if targetTs = [] then (mrbnf, accum) else
+  if targetTs = var_types_of_mrbnf mrbnf then (mrbnf, accum) else
   let
     val n = 0
     val b = Binding.suffix_name (mk_killN n) (name_of_mrbnf mrbnf);
@@ -744,23 +744,21 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
     val (Ds, lthy1) = apfst (map TFree)
       (Variable.invent_types (map Type.sort_of_atyp deads) lthy);
 
-   (* val ((killedAs, As), lthy2) = apfst (`(take (live - new_live)) o map TFree)
-      (Variable.invent_types (replicate live @{sort type}) lthy1);*)
-    val ( As, lthy2) = apfst (map TFree)
-        (Variable.invent_types (cond_interlace (replicate live @{sort type}) (replicate live class)
-          (map (fn x => x= Live_Var orelse x= Dead_Var) Atargets) ) lthy1)
+    val (As, lthy2) = apfst (map TFree)
+        (Variable.invent_types (map (fn x =>
+          if x = Live_Var orelse x = Dead_Var then @{sort type} else class
+        ) Atargets) lthy1)
     val demotedAs = cond_keep As isdemot_A
 
     val (As', lthy3) = let
       val (sAs', tlthy) = apfst (map TFree)
         (Variable.invent_types (replicate new_live @{sort type}) lthy2);
     in (cond_interlace demotedAs sAs' isdemot_A, tlthy) end
-    (*val (As', lthy3) = apfst (map TFree) (Variable.invent_types (replicate live @{sort type}) lthy2);*)
 
     val (Fs, lthy4) = apfst (map TFree)
       (Variable.invent_types (replicate free class) lthy3);
     val (Bs, _(*lthy5*)) = apfst (map TFree)
-      (Variable.invent_types (replicate free class) lthy4);
+      (Variable.invent_types (replicate bound class) lthy4);
 
     val T = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
 
@@ -920,7 +918,7 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
         unfold_thms_tac ctxt @{thms id_o o_id Grp_fst_snd eq_OO} THEN
         HEADGOAL (EVERY' [
           rtac ctxt trans,
-          rtac ctxt (mr_rel_def_of_mrbnf mrbnf RS meta_eq_to_obj_eq |> BNF_Util.mk_unabs_def (new_free + new_bound + free + bound + 2)),
+          rtac ctxt (mr_rel_def_of_mrbnf mrbnf RS meta_eq_to_obj_eq |> BNF_Util.mk_unabs_def (live + free + bound + 2)),
           Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
             let
               val t = concl |> Thm.term_of |> Logic.strip_imp_concl |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> snd
@@ -934,7 +932,7 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
           ) ctxt,
           rtac ctxt (rel_cong0 RS fun_cong RS fun_cong) THEN_ALL_NEW
             (SELECT_GOAL (unfold_thms_tac ctxt @{thms id_apply Grp_UNIV_def}) THEN_ALL_NEW rtac ctxt refl),
-          rtac ctxt (rel_cong0 RS @{thm cong} RS fun_cong OF (replicate 5 refl)),
+          rtac ctxt (rel_cong0 RS @{thm cong} RS fun_cong OF (replicate live refl)),
           rtac ctxt (map_comp_of_mrbnf mrbnf RS trans)
         ]) THEN
         TRYALL supp_bij_ass_tac THEN

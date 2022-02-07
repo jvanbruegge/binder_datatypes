@@ -32,15 +32,15 @@ datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', set
   for map: map_F rel: rel_F
 type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw"
 
-datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setB5_F': 'b', setL6_F': 'c, setL7_F': 'd, setL8_F': 'e, setL9_F': 'f) F_raw' =
-  E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
+datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F_raw' =
+  E "'x + 'a + ('a' * 'b) * 'c * 'd + 'a"
   for map: map_F' rel: rel_F'
-type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F' = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw'"
+type_synonym ('a, 'a', 'x, 'b, 'c, 'd) F' = "('a, 'a', 'x, 'b, 'c, 'd) F_raw'"
 
-datatype (setF1_G: 'a, setF2_G: 'a', setF3_G: 'a'', setL4_G: 'y, setB5_G: 'b, setB6_G: 'b', setL7_G: 'g, setL8_G: 'h) G_raw =
-  E "'y + 'a + 'a'' + ('a' * 'b') * 'y * 'g + 'a' * 'g * 'h"
+datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g, setL7_G: 'h) G_raw =
+  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g * 'h"
   for map: map_G rel: rel_G
-type_synonym ('a, 'a', 'a'', 'y, 'b, 'b', 'g, 'h) G = "('a, 'a', 'a'', 'y, 'b, 'b', 'g, 'h) G_raw"
+type_synonym ('a, 'a', 'y, 'b, 'b', 'g, 'h) G = "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
 
 print_mrbnfs
 print_bnfs
@@ -68,39 +68,35 @@ mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
   pred: "\<lambda>X. pred_F_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 
-mrbnf F': "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F'"
+mrbnf F': "('a, 'a', 'x, 'b, 'c, 'd) F'"
   map: "map_F'"
   sets:
    bound: "setF1_F' :: _ \<Rightarrow> 'a set"
    bound: "setF2_F' :: _ \<Rightarrow> 'a' set"
    live: "setL3_F' :: _ \<Rightarrow> 'x set"
    free: "setB4_F' :: _ \<Rightarrow> 'b set"
-   free: "setB5_F' :: _ \<Rightarrow> 'b' set"
-   live: "setL6_F' :: _ \<Rightarrow> 'c set"
-   live: "setL7_F' :: _ \<Rightarrow> 'd set"
-   live: "setL8_F' :: _ \<Rightarrow> 'e set"
-   live: "setL9_F' :: _ \<Rightarrow> 'f set"
+   live: "setL5_F' :: _ \<Rightarrow> 'c set"
+   live: "setL6_F' :: _ \<Rightarrow> 'd set"
   bd: "card_suc natLeq"
   wits: "F_raw'.E o Inl"
-  rel: "\<lambda>X. rel_F' (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_F_raw' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
+  rel: "\<lambda>X. rel_F' (=) (=) X (=)"
+  pred: "\<lambda>X. pred_F_raw' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True)"
   sorry
 
-mrbnf G: "('a, 'a', 'a'', 'y, 'b, 'b', 'g, 'h) G_raw"
+mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
   map: "map_G"
   sets:
     free: "setF1_G :: _ \<Rightarrow> 'a set"
     free: "setF2_G :: _ \<Rightarrow> 'a' set"
-    free: "setF3_G :: _ \<Rightarrow> 'a'' set"
-    live: "setL4_G :: _ \<Rightarrow> 'y set"
-    bound: "setB5_G :: _ \<Rightarrow> 'b set"
-    bound: "setB6_G :: _ \<Rightarrow> 'b' set"
-    live: "setL7_G :: _ \<Rightarrow> 'g set"
-    live: "setL8_G :: _ \<Rightarrow> 'h set"
+    live: "setL3_G :: _ \<Rightarrow> 'y set"
+    bound: "setB4_G :: _ \<Rightarrow> 'b set"
+    bound: "setB5_G :: _ \<Rightarrow> 'b' set"
+    live: "setL6_G :: _ \<Rightarrow> 'g set"
+    live: "setL7_G :: _ \<Rightarrow> 'h set"
   bd: "natLeq"
   wits: "G_raw.E o Inl"
-  rel: "\<lambda>X. rel_G (=) (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_G_raw (\<lambda>_. True) (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
+  rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
+  pred: "\<lambda>X. pred_G_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 declare [[quick_and_dirty=false]]
 
@@ -150,9 +146,9 @@ local_setup \<open>fn lthy =>
               in Binding.qualify true namei end
     val Xs = map dest_TFree [(*@{typ 'x}*)]
     val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
-    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'b}, @{typ 'a}, @{typ 'g}, @{typ 'i}, @{typ 'h}]
-    val oTs = [SOME @{typ 'a}, SOME @{typ 'b}, SOME @{typ 'f}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE, NONE]
-    val resBs = map dest_TFree (Ts (*@ [@{typ 'j}]*))
+    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'g}, @{typ 'i}]
+    val oTs = [SOME @{typ 'j}, SOME @{typ 'c}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE, NONE]
+    val resBs = map dest_TFree (Ts @ [@{typ 'j}])
     fun flatten_tyargs Ass =
       subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs

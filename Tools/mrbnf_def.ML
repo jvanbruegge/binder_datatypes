@@ -45,6 +45,7 @@ sig
   val register_bnf_as_mrbnf: string option -> BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
 
   datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var; (*Added Dead_Var for kill function*)
+  val var_type_ord: var_type ord
 
   val name_of_mrbnf: mrbnf -> binding
   val T_of_mrbnf: mrbnf -> typ
@@ -697,6 +698,16 @@ fun map_witness f g {I, wit, prop} = {I = I, wit = f wit, prop = map g prop};
 fun morph_witness phi = map_witness (Morphism.term phi) (Morphism.thm phi);
 
 datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var;
+fun var_type_ord (Live_Var, Live_Var) = EQUAL
+  | var_type_ord (Live_Var, _) = GREATER
+  | var_type_ord (_, Live_Var) = LESS
+  | var_type_ord (Free_Var, Free_Var) = EQUAL
+  | var_type_ord (Free_Var, _) = GREATER
+  | var_type_ord (_, Free_Var) = LESS
+  | var_type_ord (Bound_Var, Bound_Var) = EQUAL
+  | var_type_ord (Bound_Var, _) = GREATER
+  | var_type_ord (_, Bound_Var) = LESS
+  | var_type_ord (Dead_Var, Dead_Var) = EQUAL
 
 datatype mrbnf = MRBNF of {
   name: binding,

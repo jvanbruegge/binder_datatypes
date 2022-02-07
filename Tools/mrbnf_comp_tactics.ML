@@ -222,7 +222,6 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
   unfold_thms_tac ctxt set'_eq_sets THEN
   HEADGOAL (SUBPROOF (fn {context, prems, concl, ...} =>
     let
-      val unfold = Local_Defs.unfold0 context;
       val ovar_types = MRBNF_Def.var_types_of_mrbnf outer;
       val num_live = MRBNF_Def.live_of_mrbnf outer;
       val num_onondead = MRBNF_Def.free_of_mrbnf outer + MRBNF_Def.bound_of_mrbnf outer + num_live;
@@ -237,33 +236,29 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
         | _ => []
       ) ovar_types);
 
-      val map_cterm = (Thm.dest_arg o Thm.dest_fun o Thm.dest_arg1 o Thm.dest_arg) concl
-      val F_map_cterms = snd (fold_rev (fn var_type => fn (cterm, cterms) => (Thm.dest_fun cterm, case var_type of
-        MRBNF_Def.Live_Var => Thm.dest_arg cterm::cterms
-        | _ => cterms)) ovar_types (Thm.dest_fun map_cterm, []))
-      fun mk_id T = Const ("Fun.id", T)
       val id_prems = mk_id_prems @{thms supp_id_bound} @{thms bij_id supp_id_bound}
-      val ids = map (Thm.cterm_of context o mk_id o fastype_of o Thm.term_of) F_map_cterms
 
-      val G_map_comp' = sym OF [unfold @{thms id_o o_id} (
-        infer_instantiate' context (map SOME (F_map_cterms @ ids @ [x])) (MRBNF_Def.map_comp_of_mrbnf outer OF (prems @ id_prems))
-      )];
-      val G_rel_map' = infer_instantiate' context (replicate num_live NONE @ map SOME F_map_cterms) (
-        hd (MRBNF_Def.rel_map_of_mrbnf outer)
+      val G_map_comp' = MRBNF_Def.map_comp_of_mrbnf outer OF (prems @ id_prems)
+      val ids = map (Thm.cterm_of context o HOLogic.id_const o fst o dest_funT o snd) (
+        rev (take (live_of_mrbnf outer) (tl (Term.add_vars (Thm.prop_of G_map_comp') [])))
+      )
+      val G_map_comp'' = Local_Defs.unfold0 context @{thms id_o o_id} (
+        sym OF [infer_instantiate' context (replicate num_live NONE @ map SOME ids @ [SOME x]) G_map_comp']
       );
 
       val id_prems2 = mk_id_prems @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
     in
-      unfold_thms_tac context [G_map_comp', G_rel_map'] THEN
-      HEADGOAL (EVERY' [
-        rtac context (fun_cong' RS trans RS sym),
-        rtac context (trans OF [@{thm OO_Grp_cong} OF [in_alt]]),
-        rtac context @{thm arg_cong2[of _ _ _ _ "(OO)"]},
-        rtac context @{thm trans[OF arg_cong[of _ _ "conversep"]]},
-        rtac context (G_mr_rel_Grp OF id_prems RS sym),
-        rtac context (MRBNF_Def.mr_rel_conversep_of_mrbnf outer OF id_prems2 RS sym),
-        rtac context (G_mr_rel_Grp OF prems RS sym)
-      ]) THEN
+      HEADGOAL (EVERY' (map (rtac context) [
+        trans OF [rel_cong_of_mrbnf outer OF (G_map_comp''::replicate (num_live + 1) refl)],
+        trans OF [hd (MRBNF_Def.rel_map_of_mrbnf outer)],
+        fun_cong' RS trans RS sym,
+        trans OF [@{thm OO_Grp_cong} OF [in_alt]],
+        @{thm arg_cong2[of _ _ _ _ "(OO)"]},
+        @{thm trans[OF arg_cong[of _ _ "conversep"]]},
+        G_mr_rel_Grp OF id_prems RS sym,
+        MRBNF_Def.mr_rel_conversep_of_mrbnf outer OF id_prems2 RS sym,
+        G_mr_rel_Grp OF prems RS sym
+      ])) THEN
       unfold_thms_tac context @{thms inv_id eq_alt[symmetric] conversep_eq} THEN
       HEADGOAL (
         CSUBGOAL (fn (goal, i) =>

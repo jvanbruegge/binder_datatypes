@@ -37,10 +37,10 @@ datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setB5_F': 'b'
   for map: map_F' rel: rel_F'
 type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F' = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw'"
 
-datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g, setL7_G: 'h) G_raw =
-  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g * 'h"
+datatype (setF1_G: 'a, setF2_G: 'a', setF3_G: 'a'', setL4_G: 'y, setB5_G: 'b, setB6_G: 'b', setL7_G: 'g, setL8_G: 'h) G_raw =
+  E "'y + 'a + 'a'' + ('a' * 'b') * 'y * 'g + 'a' * 'g * 'h"
   for map: map_G rel: rel_G
-type_synonym ('a, 'a', 'y, 'b, 'b', 'g, 'h) G = "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
+type_synonym ('a, 'a', 'a'', 'y, 'b, 'b', 'g, 'h) G = "('a, 'a', 'a'', 'y, 'b, 'b', 'g, 'h) G_raw"
 
 print_mrbnfs
 print_bnfs
@@ -86,20 +86,21 @@ mrbnf F': "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F'"
   pred: "\<lambda>X. pred_F_raw' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 
-mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
+mrbnf G: "('a, 'a', 'a'', 'y, 'b, 'b', 'g, 'h) G_raw"
   map: "map_G"
   sets:
     free: "setF1_G :: _ \<Rightarrow> 'a set"
     free: "setF2_G :: _ \<Rightarrow> 'a' set"
-    live: "setL3_G :: _ \<Rightarrow> 'y set"
-    bound: "setB4_G :: _ \<Rightarrow> 'b set"
-    bound: "setB5_G :: _ \<Rightarrow> 'b' set"
-    live: "setL6_G :: _ \<Rightarrow> 'g set"
-    live: "setL7_G :: _ \<Rightarrow> 'h set"
+    free: "setF3_G :: _ \<Rightarrow> 'a'' set"
+    live: "setL4_G :: _ \<Rightarrow> 'y set"
+    bound: "setB5_G :: _ \<Rightarrow> 'b set"
+    bound: "setB6_G :: _ \<Rightarrow> 'b' set"
+    live: "setL7_G :: _ \<Rightarrow> 'g set"
+    live: "setL8_G :: _ \<Rightarrow> 'h set"
   bd: "natLeq"
   wits: "G_raw.E o Inl"
-  rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_G_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
+  rel: "\<lambda>X. rel_G (=) (=) (=) X (=) (=)"
+  pred: "\<lambda>X. pred_G_raw (\<lambda>_. True) (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 declare [[quick_and_dirty=false]]
 
@@ -135,7 +136,7 @@ local_setup \<open>fn lthy =>
     fun flatten_tyargs Ass =
       subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
-        sum [list, MRBNF_Comp.ID_mrbnf] [] [[], []] [[@{typ 'a}], [@{typ 'a}]] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
+        sum [list, MRBNF_Comp.ID_mrbnf] [] [[], []] [NONE, NONE] [[@{typ 'a}], [@{typ 'a}]] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
   val _ = @{print} mrbnf
   val _ = @{print} tys
   in lthy'
@@ -147,14 +148,15 @@ local_setup \<open>fn lthy =>
     fun qualify i =
               let val namei = name ^ BNF_Util.nonzero_string_of_int i;
               in Binding.qualify true namei end
-    val Xs = []
+    val Xs = map dest_TFree [(*@{typ 'x}*)]
     val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
-    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'b}, @{typ 'a}, @{typ 'f}, @{typ 'g}, @{typ 'i}, @{typ 'h}]
-    val resBs = map dest_TFree Ts
+    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'b}, @{typ 'a}, @{typ 'g}, @{typ 'i}, @{typ 'h}]
+    val oTs = [SOME @{typ 'a}, SOME @{typ 'b}, SOME @{typ 'f}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE, NONE]
+    val resBs = map dest_TFree (Ts (*@ [@{typ 'j}]*))
     fun flatten_tyargs Ass =
       subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
-        g [f, f', f] [] [[], [], []] [Ts, Ts', Ts] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
+        g [f, f', f] [] [[], [], []] oTs [Ts, Ts', Ts] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
   val _ = @{print} tys
   val _ = @{print} mrbnf
   in lthy'

@@ -89,11 +89,15 @@ fun mr_mk_comp_map_cong0_tac ctxt set'_eq_sets comp_set_alts map_cong0s outer iv
             end
           ) set_prems
         ))
+        val set_prems' = map_filter (fn (thm, var_type) => case var_type of
+          MRBNF_Def.Live_Var => NONE
+          | _ => SOME (@{thm Set.UnI1} RS thm)
+        ) (set_prems ~~ ivar_types)
       in
         HEADGOAL (rtac context map_cong0')
         THEN ALLGOALS (fn i => case nth (var_types_of_mrbnf outer) (i - 1) of
           MRBNF_Def.Live_Var => all_tac
-          | _ => rtac context (@{thm Set.UnI1} RS nth set_prems (i - 1)) i THEN assume_tac context i
+          | _ => eresolve_tac ctxt set_prems' i
         )
         THEN RANGE (map (rtac context) map_cong0s') 1
         THEN RANGE (map (fn thm => etac context thm THEN' assume_tac context) cong_prems) 1
@@ -207,7 +211,8 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
           (case nth ivar_types i of
             MRBNF_Def.Live_Var => K all_tac
             | _ => rtac context arg_cong2 THEN'
-              rtac context (@{thm comp_eq_dest} OF [(nth Gset_map0s i) OF prems])
+              (rtac context refl ORELSE'
+                resolve_tac context (map (fn thm => @{thm comp_eq_dest} OF [thm OF prems]) Gset_map0s))
           ),
           rtac context @{thm arg_cong[of _ _ Union]}
         ]) THEN
@@ -226,9 +231,12 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
       val num_live = MRBNF_Def.live_of_mrbnf outer;
       val num_onondead = MRBNF_Def.free_of_mrbnf outer + MRBNF_Def.bound_of_mrbnf outer + num_live;
       val G_mr_rel_Grp = MRBNF_Def.mr_rel_Grp_of_mrbnf outer;
+      val _ = @{print} "ok?"
 
       val [f, x, y] = map (fn g => g (Thm.dest_arg (Thm.dest_arg concl))) [Thm.dest_fun o Thm.dest_fun, Thm.dest_arg o Thm.dest_fun, Thm.dest_arg]
+      val _ = @{print} (f, x, y)
       val fun_cong' = infer_instantiate' context [SOME f, NONE, SOME x, SOME y] @{thm fun_cong[THEN fun_cong]}
+      val _ = @{print} fun_cong'
 
       fun mk_id_prems thms_free thms_bound = flat (map (fn var_type => case var_type of
         MRBNF_Def.Free_Var => thms_free
@@ -248,6 +256,7 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
 
       val id_prems2 = mk_id_prems @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
     in
+      print_tac ctxt "foo" THEN no_tac THEN
       HEADGOAL (EVERY' (map (rtac context) [
         trans OF [rel_cong_of_mrbnf outer OF (G_map_comp''::replicate (num_live + 1) refl)],
         trans OF [hd (MRBNF_Def.rel_map_of_mrbnf outer)],
@@ -286,9 +295,13 @@ fun mr_mk_comp_set_alt_tac ctxt set_maps ovar_types =
       | MRBNF_Def.Bound_Var => @{thms bij_id supp_id_bound}
       | _ => []
     ) ovar_types
+    val set_maps' = filter (fn thm => case (fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o Thm.prop_of) thm of
+      Const (\<^const_name>\<open>Orderings.bot_class.bot\<close>, _) => false
+      | _ => true
+    ) (map (ap_OF id_prems) set_maps)
   in
     unfold_thms_tac ctxt @{thms o_apply collect_def UN_insert UN_empty Un_empty_right} THEN
-    unfold_thms_tac ctxt (map (ap_OF id_prems) set_maps) THEN
+    unfold_thms_tac ctxt set_maps' THEN
     HEADGOAL (rtac ctxt refl)
   end;
 
@@ -297,7 +310,7 @@ fun mk_sum_ifcos ifcos =
     val (first_ifco::ifcos') = ifcos
     val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
       let
-        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
+        val thm = @{thm infinite_regular_card_order_csum} OF [sum_ifco, ifco]
       in (thm, thm::sum_ifcos) end
     ) ifcos' (first_ifco, []) |> snd
   in

@@ -26,28 +26,12 @@ val systemf_type_vars = {
 }
 \<close>
 
-declare [[bnf_internals]]
-datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F_raw =
-  E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
-  for map: map_F rel: rel_F
-type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw"
-
-datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F_raw' =
-  E "'x + 'a + ('a' * 'b) * 'c * 'd + 'a"
-  for map: map_F' rel: rel_F'
-type_synonym ('a, 'a', 'x, 'b, 'c, 'd) F' = "('a, 'a', 'x, 'b, 'c, 'd) F_raw'"
-
-datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g, setL7_G: 'h) G_raw =
-  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g * 'h"
-  for map: map_G rel: rel_G
-type_synonym ('a, 'a', 'y, 'b, 'b', 'g, 'h) G = "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
-
 print_mrbnfs
 print_bnfs
 
-local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "Sum_Type.sum"\<close>
+(*local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "Sum_Type.sum"\<close>
 local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "List.list"\<close>
-print_mrbnfs
+print_mrbnfs*)
 
 declare [[quick_and_dirty=true]]
 mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
@@ -83,7 +67,7 @@ mrbnf F': "('a, 'a', 'x, 'b, 'c, 'd) F'"
   pred: "\<lambda>X. pred_F_raw' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True)"
   sorry
 
-mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
+mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
   map: "map_G"
   sets:
     free: "setF1_G :: _ \<Rightarrow> 'a set"
@@ -92,7 +76,6 @@ mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g, 'h) G_raw"
     bound: "setB4_G :: _ \<Rightarrow> 'b set"
     bound: "setB5_G :: _ \<Rightarrow> 'b' set"
     live: "setL6_G :: _ \<Rightarrow> 'g set"
-    live: "setL7_G :: _ \<Rightarrow> 'h set"
   bd: "natLeq"
   wits: "G_raw.E o Inl"
   rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
@@ -103,8 +86,8 @@ declare [[quick_and_dirty=false]]
 print_mrbnfs
 
 ML \<open>
-val sum = the (MRBNF_Def.mrbnf_of @{context} \<^type_name>\<open>sum\<close>)
-val list = the (MRBNF_Def.mrbnf_of @{context} \<^type_name>\<open>list\<close>)
+(*val sum = the (MRBNF_Def.mrbnf_of @{context} \<^type_name>\<open>sum\<close>)
+val list = the (MRBNF_Def.mrbnf_of @{context} \<^type_name>\<open>list\<close>)*)
 val f = the (MRBNF_Def.mrbnf_of @{context} "Composition.F")
 val f' = the (MRBNF_Def.mrbnf_of @{context} "Composition.F'")
 val g = the (MRBNF_Def.mrbnf_of @{context} "Composition.G")
@@ -113,7 +96,6 @@ val g = the (MRBNF_Def.mrbnf_of @{context} "Composition.G")
 declare [[goals_limit = 50]]
 declare [[ML_print_depth=10000]]
 
-
 ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>./Tools/mrbnf_comp.ML\<close>
 
@@ -121,7 +103,7 @@ ML \<open>
 Multithreading.parallel_proofs := 0;
 \<close>
 
-local_setup \<open>fn lthy =>
+(*local_setup \<open>fn lthy =>
   let
     val name = Long_Name.base_name \<^type_name>\<open>sum\<close>
     fun qualify i =
@@ -136,7 +118,9 @@ local_setup \<open>fn lthy =>
   val _ = @{print} mrbnf
   val _ = @{print} tys
   in lthy'
-  end\<close>
+  end\<close> *)
+
+(* append c (map (nth a) b) *)
 
 local_setup \<open>fn lthy =>
   let
@@ -147,12 +131,12 @@ local_setup \<open>fn lthy =>
     val Xs = map dest_TFree [(*@{typ 'x}*)]
     val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
     val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'g}, @{typ 'i}]
-    val oTs = [SOME @{typ 'j}, SOME @{typ 'c}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE, NONE]
+    val oTs = [SOME @{typ 'j}, SOME @{typ 'c}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE]
     val resBs = map dest_TFree (Ts @ [@{typ 'j}])
     fun flatten_tyargs Ass =
       subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
-        g [f, f', f] [] [[], [], []] oTs [Ts, Ts', Ts] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
+        g [f, f'] [] [[], []] oTs [Ts, Ts'] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
   val _ = @{print} tys
   val _ = @{print} mrbnf
   in lthy'

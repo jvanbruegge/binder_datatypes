@@ -22,7 +22,7 @@ sig
   val mk_mr_map_cong_tac: Proof.context -> int -> thm -> tactic
 
   val mk_mr_rel_Grp_tac: Proof.context -> thm list -> thm -> thm -> thm list -> thm -> thm ->
-    thm -> tactic
+    thm -> thm list -> tactic
   val mk_mr_rel_eq_tac: Proof.context -> int -> thm -> thm -> thm -> tactic
   val mk_mr_le_rel_OO_tac: Proof.context -> int -> thm list -> thm -> (thm list -> thm) ->
     thm -> thm -> tactic
@@ -87,7 +87,7 @@ fun mk_mr_instance_proof_tac wit_covar_def bd_Card_order_opt ctxt = Class.intro_
 fun mk_mr_map_cong_tac ctxt num_prems cong0 =
   (hyp_subst_tac ctxt THEN' rtac ctxt cong0 THEN'
    REPEAT_DETERM_N (2 * num_prems) o assume_tac ctxt THEN'
-   REPEAT_DETERM o (dtac ctxt meta_spec THEN' etac ctxt meta_mp THEN' assume_tac ctxt)) 1;
+   REPEAT_DETERM o (etac ctxt @{thm emptyE} ORELSE' dtac ctxt meta_spec THEN' etac ctxt meta_mp THEN' assume_tac ctxt)) 1;
 
 fun mk_mr_inj_map_tac ctxt n the_inv_thms the_inv_o_thms id_thms map_id map_comp map_cong0 map_cong =
   let
@@ -118,14 +118,76 @@ fun mk_mr_collect_set_map_tac ctxt num_prems set_map0s =
     REPEAT_DETERM_N num_prems o assume_tac ctxt) set_map0s) THEN'
   rtac ctxt @{thm image_empty}) 1;
 
-fun mk_mr_rel_Grp_tac ctxt assms mr_rel_OO_Grp_alt map_comp set_map map_cong0 map_id0 exI_inst =
-  simp_only_plus ctxt (mr_rel_OO_Grp_alt :: map_comp :: set_map @ assms @
-      @{thms fun_eq_iff Grp_def supp_id_bound bij_id o_id o_apply fst_conv snd_conv id_apply})
-    [eresolve_tac ctxt [exE, conjE, CollectE, @{thm case_prodE}],
-      hyp_subst_tac ctxt, dtac ctxt set_mp THEN' assume_tac ctxt,
-      resolve_tac ctxt [allI, iffI, conjI, ballI, UNIV_I, @{thm image_subsetI}, CollectI,
-      @{thm case_prodI}, map_cong0, trans OF [map_cong0, fun_cong OF [map_id0]] RS
-        (trans OF [@{thm _}, id_apply]), exI_inst]] |> HEADGOAL;
+fun mk_mr_rel_Grp_tac ctxt assms mr_rel_OO_Grp_alt map_comp set_map map_cong0 map_id0 exI_inst id_prems =
+  let
+    val map_comp' = map_comp OF (id_prems @ assms)
+    val map_comp_id = map_comp OF (id_prems @ id_prems)
+    val set_map_id = map (fn thm => thm OF id_prems) set_map
+    val mr_rel_OO_Grp_alt' = mr_rel_OO_Grp_alt OF assms
+    val map_cong0' = map_cong0 OF (assms @ assms)
+  in
+    unfold_thms_tac ctxt @{thms fun_eq_iff} THEN
+    HEADGOAL (rtac ctxt @{thm allI} THEN' rtac ctxt @{thm allI}) THEN
+    unfold_thms_tac ctxt [mr_rel_OO_Grp_alt', @{thm Grp_def}, @{thm mem_Collect_eq}] THEN
+    EVERY1 [
+      rtac ctxt @{thm iffI},
+      etac ctxt @{thm exE},
+      REPEAT_DETERM o etac ctxt @{thm conjE},
+      hyp_subst_tac ctxt,
+      rtac ctxt @{thm conjI}
+    ] THEN
+    unfold_thms_tac ctxt [map_comp', @{thm o_id}] THEN
+    HEADGOAL (
+      rtac ctxt map_cong0' THEN_ALL_NEW (
+        etac ctxt @{thm emptyE} ORELSE'
+        rtac ctxt refl ORELSE'
+        (EVERY' [
+          dtac ctxt set_mp,
+          assume_tac ctxt,
+          SELECT_GOAL (unfold_thms_tac ctxt @{thms mem_Collect_eq o_apply}),
+          etac ctxt @{thm case_prodE},
+          etac ctxt @{thm conjE},
+          hyp_subst_tac ctxt,
+          SELECT_GOAL (unfold_thms_tac ctxt @{thms fst_conv snd_conv}),
+          rtac ctxt refl
+        ])
+      )
+    ) THEN
+    unfold_thms_tac ctxt set_map_id THEN
+    REPEAT_DETERM (EVERY1 [
+      TRY o rtac ctxt conjI,
+      rtac ctxt @{thm image_subsetI},
+      dtac ctxt set_mp,
+      assume_tac ctxt,
+      etac ctxt @{thm CollectE},
+      etac ctxt @{thm case_prodE},
+      etac ctxt @{thm conjE},
+      hyp_subst_tac ctxt,
+      SELECT_GOAL (unfold_thms_tac ctxt @{thms fst_conv}),
+      assume_tac ctxt
+    ]) THEN
+    EVERY1 [
+      REPEAT_DETERM o etac ctxt @{thm conjE},
+      hyp_subst_tac ctxt,
+      rtac ctxt exI_inst
+    ] THEN
+    unfold_thms_tac ctxt ([map_comp_id, @{thm o_id}] @ set_map_id) THEN
+    REPEAT_DETERM (
+      EVERY1 (
+        map (rtac ctxt) @{thms conjI image_subsetI CollectI case_prodI conjI refl}
+        @ [dtac ctxt set_mp, assume_tac ctxt, assume_tac ctxt]
+      )
+    ) THEN
+    HEADGOAL (rtac ctxt conjI) THEN
+    unfold_thms_tac ctxt (map_id0 :: @{thms comp_def fst_conv id_def[symmetric]}) THEN
+    HEADGOAL (
+      SELECT_GOAL (unfold_thms_tac ctxt @{thms id_def}) THEN'
+      rtac ctxt refl
+    ) THEN
+    unfold_thms_tac ctxt [map_comp', @{thm o_id}] THEN
+    unfold_thms_tac ctxt @{thms comp_def snd_conv} THEN
+    HEADGOAL (rtac ctxt refl)
+  end;
 
 fun mk_mr_rel_eq_tac ctxt n rel_Grp rel_cong map_id0 =
   (EVERY' (rtac ctxt (rel_cong RS trans) :: replicate n (rtac ctxt @{thm eq_alt})) THEN'

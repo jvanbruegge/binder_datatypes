@@ -210,6 +210,7 @@ sig
   datatype inline_policy = Dont_Inline | Hardly_Inline | Smart_Inline | Do_Inline
   datatype fact_policy = Dont_Note | Note_Some | Note_All
 
+  val force_mrbnf: mrbnf -> string
   val mrbnf_internals: bool Config.T
   val mrbnf_timing: bool Config.T
   val user_policy: fact_policy -> Proof.context -> fact_policy
@@ -973,6 +974,33 @@ fun map_mrbnf f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 f17 f18 f19
        map = f12 map, sets = f13 sets, bd = f14 bd, class = f15 class, class_thms = f16 class_thms, coclass = f17 coclass,
        axioms = f18 axioms, defs = f19 defs, facts = f20 facts, mr_facts = f21 mr_facts,
        nwits = f22 nwits, wits = f23 wits, rel = f24 rel, mr_rel = f25 mr_rel, pred = f26 pred};
+
+fun force_mrbnf mrbnf =
+  let
+    fun force_facts x = map Lazy.force [
+      #collect_set_map x, #in_bd x, #in_cong x, #in_mono x, #in_rel x, #inj_map x, #inj_map_strong x,
+      #map_comp x, #map_cong x, #map_cong_simp x, #map_cong_pred x, #map_id x, #map_ident0 x,
+      #map_ident x, #map_transfer x, #rel_eq x, #rel_flip x] @ map Lazy.force (#set_map x) @
+      map Lazy.force [#rel_cong0 x, #rel_cong x, #rel_cong_simp x] @ Lazy.force (#rel_map x) @
+      map Lazy.force [#rel_mono x, #rel_mono_strong0 x, #rel_mono_strong x] @ Lazy.force (#set_transfer x)
+      @ map Lazy.force [#rel_Grp x, #rel_conversep x, #rel_OO x, #rel_OO_Grp_id x, #rel_refl x,
+      #rel_refl_strong x, #rel_reflp x, #rel_symp x, #rel_transp x, #rel_transfer x, #rel_eq_onp x,
+      #pred_transfer x, #pred_True x, #pred_map x, #pred_rel x, #pred_mono_strong0 x, #pred_mono_strong x,
+      #pred_mono x, #pred_cong0 x, #pred_cong x, #pred_cong_simp x]
+    fun force_mr_facts x = map Lazy.force [
+      #mr_rel_cong0 x, #mr_in_rel x, #mr_map_transfer x, #mr_rel_eq x, #mr_rel_flip x] @ Lazy.force (#mr_rel_map x)
+      @ map Lazy.force [#mr_rel_mono x, #mr_rel_mono_strong0 x, #mr_rel_mono_strong x] @
+      Lazy.force (#mr_set_transfer x) @ map Lazy.force [#mr_rel_Grp x, #mr_rel_conversep x, #mr_rel_OO x,
+      #mr_rel_OO_Grp x, #mr_rel_transfer x, #mr_rel_id x]
+
+    val name = Binding.name_of (name_of_mrbnf mrbnf)
+    val _ = @{print} ("Trying to force facts for " ^ name)
+    val _ = force_facts (facts_of_mrbnf mrbnf)
+    val _ = @{print} ("Trying to force mr_facts for " ^ name)
+    val _ = force_mr_facts (mr_facts_of_mrbnf mrbnf)
+  in
+    @{print} ("successfully forced mrbnf thms for " ^ name)
+  end;
 
 fun morph_mrbnf phi =
   let
@@ -3049,10 +3077,16 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
             val vars = map (fst o dest_Free) (lAs @ fs);
             val goal = mk_Trueprop_eq (lhs, rhs);
+
+            val id_prems = maps (fn var_type => case var_type of
+              Free_Var => @{thms supp_id_bound}
+              | Bound_Var => @{thms bij_id supp_id_bound}
+              | _ => []
+            ) var_types
           in
             Goal.prove_sorry lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} =>
               mk_mr_rel_Grp_tac ctxt assms (Lazy.force mr_in_rel) (Lazy.force map_comp)
-                (map Lazy.force set_map) (#map_cong0 axioms) (#map_id0 axioms) exI_inst)
+                (map Lazy.force set_map) (#map_cong0 axioms) (#map_id0 axioms) exI_inst id_prems)
             |> Thm.close_derivation \<^here>
           end;
 
@@ -3082,6 +3116,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
               |> mk_mrbnf_terms_map;
             fun exI_t_z lAs' lBs' fs z = thm_instantiate_dummy_terms lthy
               [NONE, SOME (add_swap_terms lAs' lBs' fs $ Thm.term_of z)] exI;
+
             val exI_z1 = exI_t_z lAs' lBs' fs;
             val exI_z2 = map mk_inv fs |> exI_t_z lBs' lAs';
           in

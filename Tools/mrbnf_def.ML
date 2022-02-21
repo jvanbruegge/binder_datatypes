@@ -2971,9 +2971,10 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             val goal = mk_Trueprop_eq (lhs, rhs);
           in
             Goal.prove_sorry lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} =>
-              unfold_tac ctxt [mrbnf_rel_def, rel_OO_Grp OF assms, @{thm OO_Grp_alt},
-                @{thm mem_Collect_eq}, @{thm conj_assoc}])
-            |> Thm.close_derivation \<^here>
+              unfold_thms_tac ctxt [mrbnf_rel_def] THEN
+              HEADGOAL (rtac ctxt (trans OF [rel_OO_Grp OF assms])) THEN
+              unfold_tac ctxt [rel_OO_Grp OF assms, @{thm OO_Grp_alt}, @{thm mem_Collect_eq}, @{thm conj_assoc}]
+            ) |> Thm.close_derivation \<^here>
           end;
 
         val mr_in_rel = Lazy.lazy mk_mr_in_rel;
@@ -3119,10 +3120,31 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
             val exI_z1 = exI_t_z lAs' lBs' fs;
             val exI_z2 = map mk_inv fs |> exI_t_z lBs' lAs';
+
+            val id_prems = maps (fn var_type => case var_type of
+              Free_Var => @{thms supp_id_bound}
+              | Bound_Var => @{thms bij_id supp_id_bound}
+              | _ => []
+            ) var_types
           in
             Goal.prove_sorry lthy vars bij_prems goal (fn {context = ctxt, prems = assms} =>
-              mk_mr_rel_conversep_tac ctxt assms (Lazy.force mr_in_rel) supp_comp_bound
-                (Lazy.force map_comp) (map Lazy.force set_map) (#map_cong0 axioms) exI_z1 exI_z2)
+              let
+                val prems = fold (fn var_type => fn (xs, ys) => case var_type of
+                  Free_Var => (drop 2 xs, nth xs 1::ys)
+                  | Bound_Var => (drop 2 xs, nth xs 1::nth xs 0::ys)
+                  | _ => (xs, ys)
+                ) var_types (assms, []) |> snd |> rev
+                val inv_prems = fold (fn var_type => fn (xs, ys) => case var_type of
+                  Free_Var => (drop 2 xs, (@{thm supp_inv_bound} OF (take 2 xs))::ys)
+                  | Bound_Var => let val (bij::supp::xs') = xs
+                    in (xs', (@{thm supp_inv_bound} OF [bij, supp])::(@{thm bij_imp_bij_inv} OF [bij])::ys) end
+                  | _ => (xs, ys)
+                ) var_types (assms, []) |> snd |> rev
+              in
+                mk_mr_rel_conversep_tac ctxt assms prems id_prems inv_prems (Lazy.force mr_in_rel) supp_comp_bound
+                  (Lazy.force map_comp) (map Lazy.force set_map) (#map_cong0 axioms) exI_z1 exI_z2
+              end
+            )
             |> Thm.close_derivation \<^here>
           end;
 

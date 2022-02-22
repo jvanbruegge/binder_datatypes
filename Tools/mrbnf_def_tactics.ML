@@ -26,7 +26,7 @@ sig
   val mk_mr_rel_eq_tac: Proof.context -> int -> thm -> thm -> thm -> tactic
   val mk_mr_le_rel_OO_tac: Proof.context -> int -> thm list -> thm -> (thm list -> thm) ->
     thm -> thm -> tactic
-  val mk_mr_rel_OO_tac: Proof.context -> thm list -> thm -> thm -> thm -> (cterm -> thm list) ->
+  val mk_mr_rel_OO_tac: Proof.context -> thm list -> thm list -> thm -> thm -> thm -> (cterm -> thm list) ->
     thm list -> thm -> thm list -> thm -> tactic
   val mk_mr_rel_conversep_tac: Proof.context -> thm list -> thm list -> thm list -> thm list -> thm -> thm -> thm -> thm list ->
     thm -> (cterm -> thm) -> (cterm -> thm) -> tactic
@@ -351,24 +351,65 @@ fun mk_mr_le_rel_OO_tac ctxt num_prems assms rmbnf_rel_def mk_mr_map_comp le_rel
       map (rtac ctxt) (drop num_prems assms) |> TRY oo EVERY', assume_tac ctxt] |> EVERY1)
   end;
 
-fun mk_mr_rel_OO_tac ctxt assms mr_le_rel_OO mr_rel_OO_Grp_alt supp_comp_bound mk_mr_exIs set_map
+fun mk_mr_rel_OO_tac ctxt assms id_prems mr_le_rel_OO mr_rel_OO_Grp_alt supp_comp_bound mk_mr_exIs set_map
   map_comp someI2_exs map_cong0 =
   let
+    val (f_prems, g_prems) = chop (length assms div 2) assms
+    val comp_prems = map2 (fn f => fn g => case HOLogic.dest_Trueprop (Thm.prop_of f) of
+      Const (\<^const_name>\<open>bij_betw\<close>, _) $ _ $ _ $ _ => @{thm bij_comp} OF [f, g]
+      | _ => supp_comp_bound OF [f, g]
+    ) f_prems g_prems
     fun subgoal_tac focus = rtac ctxt (conjI OF #params focus |> hd |> snd |> mk_mr_exIs) |> HEADGOAL;
-   in
-     EVERY1 [rtac ctxt (@{thm antisym} OF [@{thm predicate2I}, mr_le_rel_OO OF assms]),
-       simp_only_plus ctxt (mr_rel_OO_Grp_alt :: supp_comp_bound :: assms @
-           @{thms bij_comp relcompp_apply triv_forall_equality meta_spec})
-         [eresolve_tac ctxt [exE, conjE], hyp_subst_tac ctxt],
-       rtac ctxt exI,
-       Subgoal.FOCUS_PARAMS subgoal_tac ctxt,
-       simp_only_plus ctxt (set_map @ [supp_comp_bound, map_comp] @ assms @ @{thms supp_id_bound
-           bij_id o_id id_o o_apply fst_conv snd_conv bij_comp prod.case relcompp_apply[symmetric]})
-         [resolve_tac ctxt (map_cong0 :: someI2_exs),
-           eresolve_tac ctxt [CollectE, @{thm case_prodE}, exE, conjE],
-           dtac ctxt @{thm set_mp} THEN' assume_tac ctxt,
-           resolve_tac ctxt (@{thms conjI image_subsetI CollectI ballI UNIV_I}),
-           hyp_subst_tac ctxt]]
+    fun cong_tac ps = HEADGOAL (
+      rtac ctxt (map_cong0 OF (ps @ ps)) THEN'
+      (REPEAT_DETERM o (rtac ctxt refl ORELSE' (
+        SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def split_paired_all prod.case fst_conv snd_conv}) THEN'
+        rtac ctxt refl
+      ))));
+    fun map_tac ps comp_prems =
+      unfold_thms_tac ctxt (map (fn thm => thm OF ps) set_map) THEN
+      REPEAT_DETERM (
+        EVERY1 [
+          rtac ctxt conjI,
+          rtac ctxt @{thm image_subsetI},
+          dtac ctxt set_mp,
+          assume_tac ctxt,
+          etac ctxt @{thm CollectE},
+          rtac ctxt @{thm CollectI}
+        ] THEN
+        unfold_thms_tac ctxt @{thms split_paired_all prod.case} THEN
+        EVERY1 [
+          etac ctxt @{thm relcomppE},
+          resolve_tac ctxt someI2_exs,
+          rtac ctxt exI,
+          rtac ctxt conjI,
+          assume_tac ctxt,
+          assume_tac ctxt,
+          etac ctxt conjE,
+          assume_tac ctxt
+        ]
+      ) THEN
+      unfold_thms_tac ctxt [@{thm id_o}, @{thm o_id}, map_comp OF (ps @ id_prems), map_comp OF comp_prems] THEN
+      HEADGOAL (rtac ctxt conjI) THEN
+      cong_tac ps;
+  in
+    HEADGOAL (
+      rtac ctxt (@{thm antisym} OF [@{thm predicate2I}, mr_le_rel_OO OF assms])
+    ) THEN
+    unfold_thms_tac ctxt (@{thm relcompp_apply} :: map (fn ps => mr_rel_OO_Grp_alt OF ps) [f_prems, g_prems, comp_prems]) THEN
+    EVERY1 [
+      etac ctxt exE,
+      REPEAT_DETERM o etac ctxt conjE,
+      hyp_subst_tac ctxt
+    ] THEN
+    unfold_thms_tac ctxt @{thms triv_forall_equality empty_subset_conj} THEN
+    EVERY1 [
+      rtac ctxt exI,
+      Subgoal.FOCUS_PARAMS subgoal_tac ctxt
+    ] THEN
+    map_tac id_prems (id_prems @ f_prems) THEN
+    map_tac f_prems assms THEN
+    cong_tac comp_prems
   end;
 
 fun mk_mr_rel_mono_strong0_tac ctxt assms set_map map_cong mr_rel_OO_Grp_alt =

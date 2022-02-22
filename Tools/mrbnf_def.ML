@@ -3022,9 +3022,14 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
             val vars = map (fst o dest_Free) (fsRs @ gsSs);
             val goal = mk_Trueprop_eq (rel_OO_lhs, rel_OO_rhs);
+            val id_prems = maps (fn var_type => case var_type of
+              Free_Var => @{thms supp_id_bound}
+              | Bound_Var => @{thms bij_id supp_id_bound}
+              | _ => []
+            ) var_types
           in
             Goal.prove_sorry lthy vars prem_terms_fsgs goal (fn {context = ctxt, prems = assms} =>
-              mk_mr_rel_OO_tac ctxt assms (Lazy.force mr_le_rel_OO) (Lazy.force mr_in_rel)
+              mk_mr_rel_OO_tac ctxt assms id_prems (Lazy.force mr_le_rel_OO) (Lazy.force mr_in_rel)
                 supp_comp_bound mk_exIs (map Lazy.force set_map) (Lazy.force map_comp) someI2_exs
                 (#map_cong0 axioms))
             |> Thm.close_derivation \<^here>

@@ -700,5 +700,7 @@ lemma card_suc_greater_set: "\<lbrakk> card_order r ; A \<le>o r \<rbrakk> \<Lon
 
 lemma exists_univ_eq: "\<And>x y. (x = y) = (\<exists>z. z \<in> UNIV \<and> z = x \<and> z = y)"
   by simp
+lemma empty_subset_conj: "{} \<subseteq> A \<and> P \<longleftrightarrow> P"
+  by simp
 
 end

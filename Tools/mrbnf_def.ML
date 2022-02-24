@@ -3022,14 +3022,9 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
             val vars = map (fst o dest_Free) (fsRs @ gsSs);
             val goal = mk_Trueprop_eq (rel_OO_lhs, rel_OO_rhs);
-            val id_prems = maps (fn var_type => case var_type of
-              Free_Var => @{thms supp_id_bound}
-              | Bound_Var => @{thms bij_id supp_id_bound}
-              | _ => []
-            ) var_types
           in
             Goal.prove_sorry lthy vars prem_terms_fsgs goal (fn {context = ctxt, prems = assms} =>
-              mk_mr_rel_OO_tac ctxt assms id_prems (Lazy.force mr_le_rel_OO) (Lazy.force mr_in_rel)
+              mk_mr_rel_OO_tac ctxt assms id_thms (Lazy.force mr_le_rel_OO) (Lazy.force mr_in_rel)
                 supp_comp_bound mk_exIs (map Lazy.force set_map) (Lazy.force map_comp) someI2_exs
                 (#map_cong0 axioms))
             |> Thm.close_derivation \<^here>
@@ -3083,16 +3078,10 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
             val vars = map (fst o dest_Free) (lAs @ fs);
             val goal = mk_Trueprop_eq (lhs, rhs);
-
-            val id_prems = maps (fn var_type => case var_type of
-              Free_Var => @{thms supp_id_bound}
-              | Bound_Var => @{thms bij_id supp_id_bound}
-              | _ => []
-            ) var_types
           in
             Goal.prove_sorry lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} =>
               mk_mr_rel_Grp_tac ctxt assms (Lazy.force mr_in_rel) (Lazy.force map_comp)
-                (map Lazy.force set_map) (#map_cong0 axioms) (#map_id0 axioms) exI_inst id_prems)
+                (map Lazy.force set_map) (#map_cong0 axioms) (#map_id0 axioms) exI_inst id_thms)
             |> Thm.close_derivation \<^here>
           end;
 
@@ -3125,12 +3114,6 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
             val exI_z1 = exI_t_z lAs' lBs' fs;
             val exI_z2 = map mk_inv fs |> exI_t_z lBs' lAs';
-
-            val id_prems = maps (fn var_type => case var_type of
-              Free_Var => @{thms supp_id_bound}
-              | Bound_Var => @{thms bij_id supp_id_bound}
-              | _ => []
-            ) var_types
           in
             Goal.prove_sorry lthy vars bij_prems goal (fn {context = ctxt, prems = assms} =>
               let
@@ -3146,7 +3129,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
                   | _ => (xs, ys)
                 ) var_types (assms, []) |> snd |> rev
               in
-                mk_mr_rel_conversep_tac ctxt assms prems id_prems inv_prems (Lazy.force mr_in_rel) supp_comp_bound
+                mk_mr_rel_conversep_tac ctxt assms prems id_thms inv_prems (Lazy.force mr_in_rel) supp_comp_bound
                   (Lazy.force map_comp) (map Lazy.force set_map) (#map_cong0 axioms) exI_z1 exI_z2
               end
             )
@@ -3343,7 +3326,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
            goals
             |> map (fn goal => Goal.prove_sorry lthy vars prem_terms_fs goal
               (fn {context = ctxt, prems = assms} =>
-                mk_mr_set_transfer_tac ctxt assms (Lazy.force mr_in_rel) (map Lazy.force set_map)))
+                mk_mr_set_transfer_tac ctxt assms id_thms (Lazy.force mr_in_rel) (map Lazy.force set_map)))
             |> map (Thm.close_derivation \<^here>)
           end;
 
@@ -3366,15 +3349,10 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             val vars = map (fst o dest_Free) (x :: y :: fsRs @ fs_copyRs_copy);
             val goal = Logic.list_implies (prems,
               HOLogic.mk_Trueprop (Term.list_comb (mrrelAsBs, fs_copyRs_copy) $ x $ y));
-            val id_prems = maps (fn var_type => case var_type of
-              Free_Var => @{thms supp_id_bound}
-              | Bound_Var => @{thms bij_id supp_id_bound}
-              | _ => []
-            ) var_types;
           in
             Goal.prove_sorry lthy vars prem_terms_fsfs_copy goal
               (fn {context = ctxt, prems = assms} =>
-                mk_mr_rel_mono_strong0_tac ctxt assms id_prems (map Lazy.force set_map) (Lazy.force map_cong)
+                mk_mr_rel_mono_strong0_tac ctxt assms id_thms (map Lazy.force set_map) (Lazy.force map_cong)
                   (Lazy.force mr_in_rel))
             |> Thm.close_derivation \<^here>
           end;

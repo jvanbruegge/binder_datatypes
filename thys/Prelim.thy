@@ -704,5 +704,11 @@ lemma empty_subset_conj: "{} \<subseteq> A \<and> P \<longleftrightarrow> P"
   by simp
 lemma rel_subset_imp: "\<lbrakk> \<forall>z6\<in>fst ` s. \<forall>y6\<in>snd ` s. R1 z6 y6 \<longrightarrow> R2 z6 y6 ; s \<subseteq> {(x, y). R1 x y} \<rbrakk> \<Longrightarrow> s \<subseteq> {(x, y). R2 x y}"
   by fastforce
+lemma rel_ex_fst: "\<lbrakk> s \<subseteq> {(x, y). R1 x y} ; y \<in> snd ` s \<rbrakk> \<Longrightarrow> \<exists>x. x \<in> fst ` s \<and> R1 x y"
+  by fastforce
+lemma rel_ex_snd: "\<lbrakk> s \<subseteq> {(x, y). R1 x y} ; x \<in> fst ` s \<rbrakk> \<Longrightarrow> \<exists>y. y \<in> snd ` s \<and> R1 x y"
+  by fastforce
+lemma image_id: "id ` A = A"
+  by simp
 
 end

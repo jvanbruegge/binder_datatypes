@@ -41,7 +41,7 @@ sig
 
   val mk_mr_map_transfer_tac: Proof.context -> int -> int -> thm -> thm -> thm list -> thm -> tactic
   val mk_mr_rel_transfer_tac: Proof.context -> int -> (bool -> thm list) -> tactic
-  val mk_mr_set_transfer_tac: Proof.context -> thm list -> thm -> thm list -> tactic
+  val mk_mr_set_transfer_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
 end;
 
 structure MRBNF_Def_Tactics : MRBNF_DEF_TACTICS =
@@ -518,12 +518,44 @@ fun mk_mr_map_transfer_tac ctxt non_dead num_prems rel_mono in_rel set_maps map_
           REPEAT_DETERM_N (4*num_prems) o assume_tac ctxt) @{thms fst_convol snd_convol})])
   end;
 
-fun mk_mr_set_transfer_tac ctxt assms mr_rel_OO_Grp_alt set_map =
-  unfold_tac ctxt ((mr_rel_OO_Grp_alt OF assms) :: @{thms rel_fun_def rel_set_def Bex_def Grp_def})
-  THEN (simp_only_plus ctxt
-    (set_map @ assms @ @{thms supp_id_bound bij_id id_apply image_id fst_conv snd_conv})
-    [resolve_tac ctxt @{thms impI ballI UNIV_I allI conjI conjunctionI imageI},
-      eresolve_tac ctxt @{thms exE conjE imageE CollectE case_prodE}, hyp_subst_tac ctxt,
-      dtac ctxt @{thm set_mp} THEN' assume_tac ctxt, rtac ctxt exI] |> HEADGOAL);
-
+fun mk_mr_set_transfer_tac ctxt assms id_prems mr_rel_OO_Grp_alt set_map =
+  let
+    val set_map' = maps (fn thm => [thm OF assms, thm OF id_prems]) set_map
+  in
+    unfold_thms_tac ctxt ((mr_rel_OO_Grp_alt OF assms) :: @{thms rel_fun_def rel_set_def Bex_def Grp_def}) THEN
+    EVERY1 [
+      REPEAT_DETERM o rtac ctxt allI,
+      rtac ctxt impI,
+      etac ctxt exE,
+      REPEAT_DETERM o etac ctxt conjE,
+      rtac ctxt conjI,
+      FIRST' [
+        rtac ctxt @{thm image_empty[symmetric]},
+        EVERY' [
+          K (unfold_thms_tac ctxt @{thms ball_empty}),
+          rtac ctxt @{thm TrueI},
+          rtac ctxt @{thm TrueI}
+        ],
+        EVERY' [
+          hyp_subst_tac ctxt,
+          SELECT_GOAL (unfold_thms_tac ctxt (@{thm image_id}::set_map')),
+          rtac ctxt refl ORELSE' (EVERY' [
+            rtac ctxt ballI,
+            rtac ctxt @{thm rel_ex_snd},
+            assume_tac ctxt,
+            assume_tac ctxt
+          ])
+        ]
+      ],
+      TRY o rtac ctxt @{thm UNIV_I},
+      IF_UNSOLVED o EVERY' [
+        rtac ctxt ballI,
+        hyp_subst_tac ctxt,
+        SELECT_GOAL (unfold_thms_tac ctxt (@{thm image_id}::set_map')),
+        rtac ctxt @{thm rel_ex_fst},
+        assume_tac ctxt,
+        assume_tac ctxt
+      ]
+    ]
+  end
 end;

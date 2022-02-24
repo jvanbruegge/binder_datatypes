@@ -3366,10 +3366,15 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             val vars = map (fst o dest_Free) (x :: y :: fsRs @ fs_copyRs_copy);
             val goal = Logic.list_implies (prems,
               HOLogic.mk_Trueprop (Term.list_comb (mrrelAsBs, fs_copyRs_copy) $ x $ y));
+            val id_prems = maps (fn var_type => case var_type of
+              Free_Var => @{thms supp_id_bound}
+              | Bound_Var => @{thms bij_id supp_id_bound}
+              | _ => []
+            ) var_types;
           in
             Goal.prove_sorry lthy vars prem_terms_fsfs_copy goal
               (fn {context = ctxt, prems = assms} =>
-                mk_mr_rel_mono_strong0_tac ctxt assms (map Lazy.force set_map) (Lazy.force map_cong)
+                mk_mr_rel_mono_strong0_tac ctxt assms id_prems (map Lazy.force set_map) (Lazy.force map_cong)
                   (Lazy.force mr_in_rel))
             |> Thm.close_derivation \<^here>
           end;

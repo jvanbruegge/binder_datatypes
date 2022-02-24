@@ -1125,7 +1125,7 @@ fun lift_mrbnf qualify ns mrbnf (accum as ((cache, unfold_set), lthy)) =
 fun lift_and_permute_mrbnf qualify ns src dest mrbnf x =
   let val a as (mrbnf', _) = lift_mrbnf qualify ns mrbnf x
     val _ = @{print} "HA"
-    val _ = @{print} (MRBNF_Def.mr_rel_OO_of_mrbnf mrbnf')
+    val _ = @{print} (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf')
     (*val _ = MRBNF_Def.force_mrbnf mrbnf'*)
     (*val _ = MRBNF_Def.mr_rel_Grp_of_mrbnf mrbnf'*)
 

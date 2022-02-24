@@ -702,5 +702,7 @@ lemma exists_univ_eq: "\<And>x y. (x = y) = (\<exists>z. z \<in> UNIV \<and> z =
   by simp
 lemma empty_subset_conj: "{} \<subseteq> A \<and> P \<longleftrightarrow> P"
   by simp
+lemma rel_subset_imp: "\<lbrakk> \<forall>z6\<in>fst ` s. \<forall>y6\<in>snd ` s. R1 z6 y6 \<longrightarrow> R2 z6 y6 ; s \<subseteq> {(x, y). R1 x y} \<rbrakk> \<Longrightarrow> s \<subseteq> {(x, y). R2 x y}"
+  by fastforce
 
 end

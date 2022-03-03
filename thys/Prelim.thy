@@ -710,5 +710,9 @@ lemma rel_ex_snd: "\<lbrakk> s \<subseteq> {(x, y). R1 x y} ; x \<in> fst ` s \<
   by fastforce
 lemma image_id: "id ` A = A"
   by simp
+lemma OO_cong: "a = b \<Longrightarrow> c = d \<Longrightarrow> a OO c = b OO d"
+  by simp
+lemma conversep_cong: "a = b \<Longrightarrow> a\<inverse>\<inverse> = b\<inverse>\<inverse>"
+  by simp
 
 end

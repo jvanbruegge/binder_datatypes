@@ -231,12 +231,9 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
       val num_live = MRBNF_Def.live_of_mrbnf outer;
       val num_onondead = MRBNF_Def.free_of_mrbnf outer + MRBNF_Def.bound_of_mrbnf outer + num_live;
       val G_mr_rel_Grp = MRBNF_Def.mr_rel_Grp_of_mrbnf outer;
-      val _ = @{print} "ok?"
 
       val [f, x, y] = map (fn g => g (Thm.dest_arg (Thm.dest_arg concl))) [Thm.dest_fun o Thm.dest_fun, Thm.dest_arg o Thm.dest_fun, Thm.dest_arg]
-      val _ = @{print} (f, x, y)
       val fun_cong' = infer_instantiate' context [SOME f, NONE, SOME x, SOME y] @{thm fun_cong[THEN fun_cong]}
-      val _ = @{print} fun_cong'
 
       fun mk_id_prems thms_free thms_bound = flat (map (fn var_type => case var_type of
         MRBNF_Def.Free_Var => thms_free
@@ -256,7 +253,6 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
 
       val id_prems2 = mk_id_prems @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
     in
-      print_tac ctxt "foo" THEN no_tac THEN
       HEADGOAL (EVERY' (map (rtac context) [
         trans OF [rel_cong_of_mrbnf outer OF (G_map_comp''::replicate (num_live + 1) refl)],
         trans OF [hd (MRBNF_Def.rel_map_of_mrbnf outer)],

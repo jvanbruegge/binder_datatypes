@@ -208,15 +208,39 @@ fun mk_mr_rel_map0_tac ctxt live rel_compp rel_conversep rel_Grp map_id =
       val ks = 1 upto live;
     in
       Goal.conjunction_tac 1 THEN
-      unfold_thms_tac ctxt [rel_compp, rel_conversep, rel_Grp, @{thm vimage2p_Grp}] THEN
-      TRYALL (EVERY' [rtac ctxt iffI, rtac ctxt @{thm relcomppI}, rtac ctxt @{thm GrpI},
-        resolve_tac ctxt [map_id, refl], rtac ctxt @{thm CollectI},
-        CONJ_WRAP' (K (rtac ctxt @{thm subset_UNIV})) ks, rtac ctxt @{thm relcomppI},
-        assume_tac ctxt, rtac ctxt @{thm conversepI}, rtac ctxt @{thm GrpI},
-        resolve_tac ctxt [map_id, refl], rtac ctxt @{thm CollectI},
+      unfold_thms_tac ctxt [rel_compp, rel_conversep, @{thm vimage2p_Grp}] THEN
+      (* For some reason unfolding rel_Grp fails for some MRBNFS, so we do it manually *)
+      EVERY1 [
+        rtac ctxt sym,
+        rtac ctxt @{thm trans[OF fun_cong[OF fun_cong[OF OO_cong]]]},
+        REPEAT_DETERM o FIRST' [
+          rtac ctxt @{thm OO_cong},
+          rtac ctxt @{thm trans[OF OO_cong]},
+          rtac ctxt rel_Grp,
+          rtac ctxt (@{thm conversep_cong} OF [rel_Grp]),
+          rtac ctxt refl
+        ],
+        rtac ctxt sym
+      ] THEN
+      TRYALL (EVERY' [
+        rtac ctxt iffI,
+        rtac ctxt @{thm relcomppI},
+        rtac ctxt @{thm GrpI},
+        resolve_tac ctxt [map_id, refl],
+        rtac ctxt @{thm CollectI},
+        CONJ_WRAP' (K (rtac ctxt @{thm subset_UNIV})) ks,
+        rtac ctxt @{thm relcomppI},
+        assume_tac ctxt,
+        rtac ctxt @{thm conversepI},
+        rtac ctxt @{thm GrpI},
+        resolve_tac ctxt [map_id, refl],
+        rtac ctxt @{thm CollectI},
         CONJ_WRAP' (K (rtac ctxt @{thm subset_UNIV})) ks,
         REPEAT_DETERM o eresolve_tac ctxt @{thms relcomppE conversepE GrpE},
-        dtac ctxt (trans OF [sym, map_id]), hyp_subst_tac ctxt, assume_tac ctxt])
+        dtac ctxt (trans OF [sym, map_id]),
+        hyp_subst_tac ctxt,
+        assume_tac ctxt
+      ])
     end;
 
 fun mk_mr_rel_map_non_lives_tac ctxt live assms id_thms rel_OO_Grp rel_OO_Grp_id map_id map_comp exI_z =

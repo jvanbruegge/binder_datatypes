@@ -977,29 +977,84 @@ fun map_mrbnf f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 f17 f18 f19
 
 fun force_mrbnf mrbnf =
   let
-    fun force_facts x = map Lazy.force [
-      #collect_set_map x, #in_bd x, #in_cong x, #in_mono x, #in_rel x, #inj_map x, #inj_map_strong x,
-      #map_comp x, #map_cong x, #map_cong_simp x, #map_cong_pred x, #map_id x, #map_ident0 x,
-      #map_ident x, #map_transfer x, #rel_eq x, #rel_flip x] @ map Lazy.force (#set_map x) @
-      map Lazy.force [#rel_cong0 x, #rel_cong x, #rel_cong_simp x] @ Lazy.force (#rel_map x) @
-      map Lazy.force [#rel_mono x, #rel_mono_strong0 x, #rel_mono_strong x] @ Lazy.force (#set_transfer x)
-      @ map Lazy.force [#rel_Grp x, #rel_conversep x, #rel_OO x, #rel_OO_Grp_id x, #rel_refl x,
-      #rel_refl_strong x, #rel_reflp x, #rel_symp x, #rel_transp x, #rel_transfer x, #rel_eq_onp x,
-      #pred_transfer x, #pred_True x, #pred_map x, #pred_rel x, #pred_mono_strong0 x, #pred_mono_strong x,
-      #pred_mono x, #pred_cong0 x, #pred_cong x, #pred_cong_simp x]
-    fun force_mr_facts x = map Lazy.force [
-      #mr_rel_cong0 x, #mr_in_rel x, #mr_map_transfer x, #mr_rel_eq x, #mr_rel_flip x] @ Lazy.force (#mr_rel_map x)
-      @ map Lazy.force [#mr_rel_mono x, #mr_rel_mono_strong0 x, #mr_rel_mono_strong x] @
-      Lazy.force (#mr_set_transfer x) @ map Lazy.force [#mr_rel_Grp x, #mr_rel_conversep x, #mr_rel_OO x,
-      #mr_rel_OO_Grp x, #mr_rel_transfer x, #mr_rel_id x]
+    (* Later tactics use earlier tactics, so the order of these matter *)
+    fun force_facts x = [
+        Lazy.force (@{print} "collect_set_map" ; #collect_set_map x),
+        Lazy.force (@{print} "in_mono" ; #in_mono x),
+        Lazy.force (@{print} "in_cong" ; #in_cong x),
+        Lazy.force (@{print} "map_id" ; #map_id x),
+        Lazy.force (@{print} "map_ident0" ; #map_ident0 x),
+        Lazy.force (@{print} "map_ident" ; #map_ident x),
+        Lazy.force (@{print} "map_comp" ; #map_comp x),
+        Lazy.force (@{print} "map_cong" ; #map_cong x),
+        Lazy.force (@{print} "map_cong_simp" ; #map_cong_simp x),
+        Lazy.force (@{print} "inj_map" ; #inj_map x)
+      ] @ map Lazy.force (@{print} "set_map" ; #set_map x) @ [
+        Lazy.force (@{print} "in_bd" ; #in_bd x),
+        Lazy.force (@{print} "rel_OO_Grp_id" ; #rel_OO_Grp_id x),
+        Lazy.force (@{print} "rel_Grp" ; #rel_Grp x),
+        Lazy.force (@{print} "rel_mono" ; #rel_mono x),
+        Lazy.force (@{print} "rel_cong0" ; #rel_cong0 x),
+        Lazy.force (@{print} "rel_eq" ; #rel_eq x),
+        Lazy.force (@{print} "rel_conversep" ; #rel_conversep x),
+        Lazy.force (@{print} "rel_OO" ; #rel_OO x),
+        Lazy.force (@{print} "in_rel" ; #in_rel x),
+        Lazy.force (@{print} "rel_flip" ; #rel_flip x),
+        Lazy.force (@{print} "rel_mono_strong0" ; #rel_mono_strong0 x),
+        Lazy.force (@{print} "rel_mono_strong" ; #rel_mono_strong x),
+        Lazy.force (@{print} "rel_cong" ; #rel_cong x),
+        Lazy.force (@{print} "rel_cong_simp" ; #rel_cong_simp x),
+        Lazy.force (@{print} "pred_cong0" ; #pred_cong0 x),
+        Lazy.force (@{print} "rel_eq_onp" ; #rel_eq_onp x),
+        Lazy.force (@{print} "pred_rel" ; #pred_rel x),
+        Lazy.force (@{print} "pred_mono_strong0" ; #pred_mono_strong0 x),
+        Lazy.force (@{print} "pred_mono_strong" ; #pred_mono_strong x),
+        Lazy.force (@{print} "pred_mono" ; #pred_mono x),
+        Lazy.force (@{print} "pred_cong" ; #pred_cong x),
+        Lazy.force (@{print} "pred_cong_simp" ; #pred_cong_simp x),
+        Lazy.force (@{print} "map_cong_pred" ; #map_cong_pred x)
+      ] @ Lazy.force (@{print} "rel_map" ; #rel_map x) @ [
+        Lazy.force (@{print} "rel_refl" ; #rel_refl x),
+        Lazy.force (@{print} "rel_refl_strong" ; #rel_refl_strong x),
+        Lazy.force (@{print} "rel_reflp" ; #rel_reflp x),
+        Lazy.force (@{print} "rel_symp" ; #rel_symp x),
+        Lazy.force (@{print} "rel_transp" ; #rel_transp x),
+        Lazy.force (@{print} "pred_True" ; #pred_True x),
+        Lazy.force (@{print} "pred_map" ; #pred_map x),
+        Lazy.force (@{print} "map_transfer" ; #map_transfer x),
+        Lazy.force (@{print} "pred_transfer" ; #pred_transfer x),
+        Lazy.force (@{print} "rel_transfer" ; #rel_transfer x)
+      ] @ Lazy.force (@{print} "set_transfer" ; #set_transfer x) @ [
+        Lazy.force (@{print} "inj_map_strong" ; #inj_map_strong x)
+      ]
+    fun force_mr_facts x = [
+        Lazy.force (@{print} "mr_rel_eq" ; #mr_rel_eq x),
+        Lazy.force (@{print} "mr_in_rel" ; #mr_in_rel x),
+        Lazy.force (@{print} "mr_rel_OO" ; #mr_rel_OO x),
+        Lazy.force (@{print} "mr_rel_mono" ; #mr_rel_mono x),
+        Lazy.force (@{print} "mr_rel_cong0" ; #mr_rel_cong0 x),
+        Lazy.force (@{print} "mr_rel_Grp" ; #mr_rel_Grp x),
+        Lazy.force (@{print} "mr_rel_conversep" ; #mr_rel_conversep x)
+      ] @ Lazy.force (@{print} "mr_rel_map" ; #mr_rel_map x) @ [
+        Lazy.force (@{print} "mr_map_transfer" ; #mr_map_transfer x),
+        Lazy.force (@{print} "mr_rel_transfer" ; #mr_rel_transfer x),
+        Lazy.force (@{print} "mr_rel_OO_Grp" ; #mr_rel_OO_Grp x),
+        Lazy.force (@{print} "mr_rel_flip" ; #mr_rel_flip x)
+      ] @ Lazy.force (@{print} "mr_set_transfer" ; #mr_set_transfer x) @ [
+        Lazy.force (@{print} "mr_rel_mono_strong0" ; #mr_rel_mono_strong0 x),
+        Lazy.force (@{print} "mr_rel_mono_strong" ; #mr_rel_mono_strong x),
+        Lazy.force (@{print} "mr_rel_id" ; #mr_rel_id x)
+      ]
 
     val name = Binding.name_of (name_of_mrbnf mrbnf)
+    val _ = @{print} "----------------------------------------------"
     val _ = @{print} ("Trying to force facts for " ^ name)
     val _ = force_facts (facts_of_mrbnf mrbnf)
     val _ = @{print} ("Trying to force mr_facts for " ^ name)
     val _ = force_mr_facts (mr_facts_of_mrbnf mrbnf)
   in
-    @{print} ("successfully forced mrbnf thms for " ^ name)
+    @{print} ("successfully forced mrbnf thms for " ^ name) ;
+    @{print} "----------------------------------------------"
   end;
 
 fun morph_mrbnf phi =
@@ -2502,8 +2557,17 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           in
             Goal.prove_sorry lthy [] []
               (fold_rev Logic.all (x :: y :: Rs @ Rs_copy) (Logic.list_implies (prems, concl)))
-              (fn {context = ctxt, prems = _} => mk_rel_mono_strong0_tac ctxt (Lazy.force in_rel_id)
-                set_map_id)
+              (fn {context = ctxt, prems = _} =>
+                let
+                  val in_rel = Lazy.force in_rel_id
+                in
+                  HEADGOAL (
+                    dtac ctxt (@{thm iffD1} OF [in_rel]) THEN'
+                    rtac ctxt (@{thm iffD2} OF [in_rel])
+                  ) THEN
+                  mk_rel_mono_strong0_tac ctxt in_rel set_map_id
+                end
+              )
             |> Thm.close_derivation \<^here>
           end;
 

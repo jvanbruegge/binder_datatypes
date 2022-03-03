@@ -1122,16 +1122,9 @@ fun lift_mrbnf qualify ns mrbnf (accum as ((cache, unfold_set), lthy)) =
   end;
 
 (* Composition pipeline *)
-fun lift_and_permute_mrbnf qualify ns src dest mrbnf x =
-  let val a as (mrbnf', _) = lift_mrbnf qualify ns mrbnf x
-    val _ = @{print} "HA"
-    val _ = @{print} (MRBNF_Def.force_mrbnf mrbnf')
-    (*val _ = MRBNF_Def.force_mrbnf mrbnf'*)
-    (*val _ = MRBNF_Def.mr_rel_Grp_of_mrbnf mrbnf'*)
-
-  (*lift_mrbnf qualify ns mrbnf
-  #> uncurry (permute_mrbnf qualify src dest);*)
-  in uncurry (permute_mrbnf qualify src dest) a end;
+fun lift_and_permute_mrbnf qualify ns src dest mrbnf =
+  lift_mrbnf qualify ns mrbnf
+  #> uncurry (permute_mrbnf qualify src dest);
 
 fun tfree_ord ((a, S), (b, S')) = case fast_string_ord (a, b) of
   EQUAL => Term_Ord.sort_ord (S, S')

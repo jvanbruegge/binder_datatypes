@@ -51,6 +51,7 @@ mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
   rel: "\<lambda>X. rel_F (=) (=) X (=) (=)"
   pred: "\<lambda>X. pred_F_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
+print_theorems
 
 mrbnf F': "('a, 'a', 'x, 'b, 'c, 'd) F'"
   map: "map_F'"
@@ -122,7 +123,7 @@ Multithreading.parallel_proofs := 0;
 
 (* append c (map (nth a) b) *)
 
-local_setup \<open>fn lthy =>
+(*local_setup \<open>fn lthy =>
   let
     val name = Long_Name.base_name "Composition.G"
     fun qualify i =
@@ -140,6 +141,27 @@ local_setup \<open>fn lthy =>
   val _ = @{print} tys
   val _ = @{print} mrbnf
   in lthy'
+  end\<close>*)
+
+local_setup \<open>fn lthy =>
+  let
+    val name = Long_Name.base_name "Composition.G"
+    fun qualify i =
+              let val namei = name ^ BNF_Util.nonzero_string_of_int i;
+              in Binding.qualify true namei end
+    val Xs = map dest_TFree [@{typ 'x}]
+    val gTs = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'x}, @{typ 'e}, @{typ 'i}]
+    val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
+    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'g}, @{typ 'i}]
+    val oTs = [SOME @{typ 'j}, SOME @{typ 'c}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE, NONE, NONE, NONE]
+    val resBs = map dest_TFree (Ts @ [@{typ 'j}])
+    fun flatten_tyargs Ass =
+      subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
+  val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
+        f [f, g, f', g, f'] [] [[], [], [], [], []] oTs [Ts, gTs, Ts', gTs, Ts'] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
+  val _ = @{print} tys
+  val _ = @{print} mrbnf
+  in lthy'
   end\<close>
 
 ML \<open>
@@ -149,5 +171,21 @@ val test = @{typ "unit + unit + 'a list"}
 (*local_setup \<open>snd o MRBNF_Comp.mrbnf_of_typ { lives = [("'a", @{sort type})], frees = [], bounds = [], deads = [] } test\<close>
 
 print_mrbnfs*)
+
+lemma le_rel_OO: "BNF_Composition.id_bnf R OO BNF_Composition.id_bnf S \<le> BNF_Composition.id_bnf (R OO S)"
+  sorry
+lemma rel_map: "BNF_Composition.id_bnf R x y \<Longrightarrow>
+ BNF_Composition.id_bnf R (BNF_Composition.id_bnf id x) (BNF_Composition.id_bnf id y)"
+  sorry
+
+lemma goal: "(\<lambda>x. BNF_Composition.id_bnf R (BNF_Composition.id_bnf id x)) OO (\<lambda>x. BNF_Composition.id_bnf S (BNF_Composition.id_bnf id x))
+    \<le> (\<lambda>x. BNF_Composition.id_bnf (R OO S) (BNF_Composition.id_bnf id x))"
+  apply (rule predicate2I)
+  apply (rule predicate2D[OF le_rel_OO])
+  apply (erule relcomppE)
+  apply (rule relcomppI)
+   apply assumption
+  apply (drule rel_map)
+
 
 end

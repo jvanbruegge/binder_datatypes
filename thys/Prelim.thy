@@ -714,5 +714,9 @@ lemma OO_cong: "a = b \<Longrightarrow> c = d \<Longrightarrow> a OO c = b OO d"
   by simp
 lemma conversep_cong: "a = b \<Longrightarrow> a\<inverse>\<inverse> = b\<inverse>\<inverse>"
   by simp
+lemma ex_UNIV_id: "x \<in> UNIV \<Longrightarrow> \<exists>z. z \<in> UNIV \<and> id z = x \<and> f z = f x"
+  by simp
+lemma in_alt_top: "(\<lambda>x. f x \<subseteq> {_. True}) = (\<lambda>_. True)"
+  by simp
 
 end

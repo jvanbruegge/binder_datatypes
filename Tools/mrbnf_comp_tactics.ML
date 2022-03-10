@@ -303,12 +303,12 @@ fun mr_mk_comp_set_alt_tac ctxt set_maps ovar_types =
 
 fun mk_sum_ifcos ifcos =
   let
-    val (first_ifco::ifcos') = ifcos
-    val (sum_ifco::sum_ifcos) = fold (fn ifco => fn (sum_ifco, sum_ifcos) =>
+    val (ifcos', last_ifco) = split_last ifcos
+    val (sum_ifco::sum_ifcos) = fold_rev (fn ifco => fn (sum_ifco, sum_ifcos) =>
       let
-        val thm = @{thm infinite_regular_card_order_csum} OF [sum_ifco, ifco]
+        val thm = @{thm infinite_regular_card_order_csum} OF [ifco, sum_ifco]
       in (thm, thm::sum_ifcos) end
-    ) ifcos' (first_ifco, []) |> snd
+    ) ifcos' (last_ifco, [last_ifco]) |> snd
   in
     (sum_ifco, sum_ifcos)
   end;
@@ -337,7 +337,7 @@ fun mr_mk_bd_card_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_lar
       ] @ (
         @{map 3} (fn large => fn Co => fn ifco =>
           rtac ctxt (@{thm csum_cinfinite_bound} OF [large, @{thm _}, Co, ifco_Card_order OF [ifco], Cinfinite_UNIV])
-        ) inits_larges (fst (split_last inner_Card_orders)) (sum_ifcos @ [snd (split_last inner_ifcos)])
+        ) inits_larges (fst (split_last inner_Card_orders)) sum_ifcos
       ) @ [
         rtac ctxt last_large
       ]
@@ -353,7 +353,7 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
     ]
     val (sum_ifco, sum_ifcos) = mk_sum_ifcos inner_ifcos
     val (inits_larges, last_large) = split_last inner_larges
-    val (inits_ifcos, last_ifco) = split_last inner_ifcos
+    val (inits_ifcos, _) = split_last inner_ifcos
     val bd_thm_opt' = (case bd_thm_opt of
       SOME x => SOME (Local_Defs.unfold0 ctxt [sym OF [
         @{thm cardSuc_invar_ordIso} OF [
@@ -375,7 +375,7 @@ fun mr_mk_bd_cardSuc_leq_UNIV_tac ctxt outer_ifco inner_ifcos outer_large inner_
       @{map 3} (fn large => fn ifco => fn sum_ifco =>
         rtac ctxt (@{thm ordLeq_transitive[OF cardSuc_leq_csum_ifco]} OF [ifco, sum_ifco]) THEN'
         rtac ctxt (@{thm csum_cinfinite_bound} OF [large, @{thm _}, cardSuc_Co_ifco OF [ifco], cardSuc_Co_ifco OF [sum_ifco], Cinfinite_UNIV])
-      ) inits_larges inits_ifcos (sum_ifcos @ [last_ifco])
+      ) inits_larges inits_ifcos sum_ifcos
     ) @ [
       rtac ctxt last_large
     ]))

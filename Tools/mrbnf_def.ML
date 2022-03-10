@@ -3003,7 +3003,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           in
             Goal.prove_sorry lthy vars prem_terms_fsgs goal (fn {context = ctxt, prems = assms} =>
               mk_mr_le_rel_OO_tac ctxt num_prems assms mrbnf_rel_def mk_map_comp (#le_rel_OO axioms)
-                (Lazy.force rel_map_non_lives))
+                (Lazy.force rel_map_non_lives) (#map_id0 axioms))
             |> Thm.close_derivation \<^here>
           end;
 
@@ -3546,10 +3546,11 @@ fun mrbnf_def const_policy fact_policy internal qualify tacs Ds classes
   (fn (_, goals, (triv_tac_opt, wit_goalss), after_qed, lthy, one_step_defs) =>
   let
     fun mk_wits_tac ctxt set_maps =
-      TRYALL Goal.conjunction_tac THEN
+      assume_tac ctxt 1 ORELSE
+      (TRYALL Goal.conjunction_tac THEN
       (case triv_tac_opt of
         SOME tac => tac ctxt set_maps
-      | NONE => unfold_thms_tac ctxt one_step_defs THEN (#wit tacs) ctxt);
+      | NONE => unfold_thms_tac ctxt one_step_defs THEN (#wit tacs) ctxt));
     val wit_goals = map Logic.mk_conjunction_balanced wit_goalss;
     fun mk_wit_thms set_maps =
       Goal.prove_sorry lthy [] [] (Logic.mk_conjunction_balanced wit_goals)

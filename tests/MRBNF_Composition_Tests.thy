@@ -222,9 +222,6 @@ Multithreading.parallel_proofs := 0;
 (*local_setup \<open>void (run_testcase 226345496.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 2105919395.0 1)\<close>*)
 
-(* clean_compose: tactic failure *)
-(*local_setup \<open>void (run_testcase 276693098.0 1)\<close>*)
-
 (***********)
 (* passing *)
 (*local_setup \<open>void (run_testcase 1123455898.0 1)\<close>*)
@@ -233,5 +230,6 @@ Multithreading.parallel_proofs := 0;
 (*local_setup \<open>void (run_testcase 18657239.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 39603411.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1968651577.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 276693098.0 1)\<close>*)
 
 end

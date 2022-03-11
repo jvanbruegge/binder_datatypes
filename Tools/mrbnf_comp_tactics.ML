@@ -218,7 +218,7 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
         ]) THEN
         TRY (HEADGOAL (rtac context arg_cong2)) THEN
         unfold_thms_tac context (map_comp0' :: set_map0s' @ mk_Gset_map0s prems @ mk_Gset_map0s id_prems) THEN
-        unfold_thms_tac context @{thms comp_def image_image} THEN
+        unfold_thms_tac context @{thms comp_def image_image image_empty} THEN
         ALLGOALS (rtac context @{thm refl})
       end
     ) ctxt);

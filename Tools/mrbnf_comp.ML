@@ -494,7 +494,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       set_map0 = set_map0_tacs,
       infinite_regular_card_order = bd_infinite_regular_card_order_tac,
       set_bd = set_bd_tacs,
-      le_rel_OO =  le_rel_OO_tac,
+      le_rel_OO = le_rel_OO_tac,
       in_rel = rel_OO_Grp_tac,
       pred_set = pred_set_tac,
       wit = wit_tac

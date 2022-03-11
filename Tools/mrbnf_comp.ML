@@ -819,7 +819,6 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
       in map2 mk_pred2T (filter_lives As) (filter_lives As') end;
     val rel = fold_rev Term.absdummy rs  (Term.list_comb (mk_rel_of_mrbnf Ds As As' Bs Fs mrbnf, cond_interlace (map HOLogic.eq_const demotedAs)
         (map Bound (new_live - 1 downto 0)) isdemot_A));
-   (* val rel = Term.list_comb (mk_rel_of_mrbnf Ds As As' Bs Fs  mrbnf, map HOLogic.eq_const killedAs) |> @{print} |> Syntax.check_term lthy;*)
 
     (*mrbnf.pred (%_. True) ... (%_ True)*)
     val ps =

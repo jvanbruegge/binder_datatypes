@@ -205,10 +205,12 @@ Multithreading.parallel_proofs := 0;
 
 (* failing *)
 
-(* demote: bad relator *)
+(* permute.cond_keep: unequal lengths *)
+(*local_setup \<open>void (run_testcase 1675467569.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 803435212.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 235821654.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1931263361.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1192521015.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 235821654.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1347210063.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1791380479.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 10979613.0 1)\<close>*)
@@ -216,35 +218,20 @@ Multithreading.parallel_proofs := 0;
 (*local_setup \<open>void (run_testcase 1392378882.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 846505310.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 135583795.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 276693098.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1078802331.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 226345496.0 1)\<close>*)
-
-(* clean_compose: bad relator *)
-(*local_setup \<open>void (run_testcase 18657239.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1968651577.0 1)\<close>*)
-
-(* lift: bad relator *)
-(*local_setup \<open>void (run_testcase 39603411.0 1)\<close>*)
-
-(* demote: type error at map application *)
-(*local_setup \<open>void (run_testcase 1675467569.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 803435212.0 1)\<close>*)
-
-(* lift: type error at \<in> application *)
 (*local_setup \<open>void (run_testcase 2105919395.0 1)\<close>*)
 
-(* testing code setup failure *)
-(*local_setup \<open>void (run_testcase 582568415.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1613125615.0 1)\<close>*)
+(* clean_compose: tactic failure *)
+(*local_setup \<open>void (run_testcase 276693098.0 1)\<close>*)
 
 (***********)
 (* passing *)
 (*local_setup \<open>void (run_testcase 1123455898.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1509285558.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 849404232.0 1)\<close>*)
-
-
-
+(*local_setup \<open>void (run_testcase 18657239.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 39603411.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1968651577.0 1)\<close>*)
 
 end

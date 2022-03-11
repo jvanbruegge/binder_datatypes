@@ -1765,31 +1765,36 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
           ((class, var_large, var_regular), (mk_covar_type_class, mk_covar_large), lthy)
         end;
 
-    val (alphas, betas, Calpha, Calpha_params, mrbnf_map) =
+    val (alphas, betas, deads, Calpha, Calpha_params, mrbnf_map) =
       let
         fun fold_fun f T lthy = case T of
           Type (s, Ts) => fold_map (fold_fun f) Ts lthy |>> Type o pair s
           | TFree (_, S) => yield_singleton mk_TFrees' (f S) lthy
           | TVar ((_, i), S) => yield_singleton Variable.invent_types (f S) lthy
             |>> TVar o apfst (rpair i);
-        val (betas, alphas) = fold_map_VT (fold_fun I) (K class |> fold_fun) alphas_raw lthy
-          ||> fst o fold_map_VT (fold_fun I) pair betas_raw
-          ||> zip_map_VT fst snd |> `op |> ||> fst;
+        val (alphas', (betas', lthy')) = fold_map_VT (fold_fun I) (K class |> fold_fun) alphas_raw lthy
+          ||> fold_map_VT (fold_fun I) pair betas_raw
+        val (betas, alphas) = (alphas', betas')
+          ||> zip_map_VT fst snd |> `op |>
+          ||> fst;
 
-        val map_fun = typ_subst_atomic (alphas_raw @ betas_raw ~~ alphas @ betas);
-        val mrbnf_map = subst_atomic_types (alphas_raw @ betas_raw ~~ alphas @ betas) mrbnf_map_raw;
+        val mrbnf_map' = subst_atomic_types (alphas_raw @ betas_raw ~~ alphas @ betas) mrbnf_map_raw;
+
+        (*TODO: assert Ds = (TVars of mrbnf_map) \ (alphas' @ betas') as sets*)
+        val (deads_raw, deads) = (case Ds_opt of
+          NONE => let val Ds = subtract (op =) (alphas @ betas) (map TVar (Term.add_tvars mrbnf_map' []))
+                  in (Ds, Ds) end
+        | SOME Ds => let val Ds' = map (Morphism.typ phi) Ds
+                     in (Ds', fst (fold_map (fold_fun I) Ds' lthy')) end);
+        val map_fun = typ_subst_atomic (alphas_raw @ betas_raw @ deads_raw ~~ alphas @ betas @ deads);
+        val mrbnf_map = subst_atomic_types (alphas_raw @ betas_raw @ deads_raw ~~ alphas @ betas @ deads) mrbnf_map_raw;
       in
-        (alphas, betas, map_fun Calpha_raw, map map_fun Calpha_params_raw, mrbnf_map)
+        (alphas, betas, deads, map_fun Calpha_raw, map map_fun Calpha_params_raw, mrbnf_map)
       end;
 
     val mrbnf_sets =
       map2 (normalize_set Calpha_params) alphas (map (Morphism.term phi) mrbnf_set_terms);
     val mrbnf_bd = mk_mrbnf_bd Calpha_params;
-
-    (*TODO: assert Ds = (TVars of mrbnf_map) \ (alphas' @ betas') as sets*)
-    val deads = (case Ds_opt of
-      NONE => subtract (op =) (alphas @ betas) (map TVar (Term.add_tvars mrbnf_map []))
-    | SOME Ds => map (Morphism.typ phi) Ds);
 
     (*TODO: further checks of type of mrbnf_map*)
     (*TODO: check types of mrbnf_sets*)

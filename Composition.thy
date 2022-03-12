@@ -2,10 +2,6 @@ theory Composition
   imports "thys/MRBNF_Composition"
 begin
 
-ML \<open>
-Multithreading.parallel_proofs := 1;
-\<close>
-
 datatype \<kappa> =
   Star ("\<star>")
   | KArrow \<kappa> \<kappa> (infixr "\<rightarrow>" 50)
@@ -26,12 +22,21 @@ val systemf_type_vars = {
 }
 \<close>
 
-print_mrbnfs
-print_bnfs
+declare [[bnf_internals]]
+datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F_raw =
+  E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
+  for map: map_F rel: rel_F
+type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw"
 
-(*local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "Sum_Type.sum"\<close>
-local_setup \<open>snd o the o MRBNF_Def.as_mrbnf "List.list"\<close>
-print_mrbnfs*)
+datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F_raw' =
+  E "'x + 'a + ('a' * 'b) * 'c * 'd + 'a"
+  for map: map_F' rel: rel_F'
+type_synonym ('a, 'a', 'x, 'b, 'c, 'd) F' = "('a, 'a', 'x, 'b, 'c, 'd) F_raw'"
+
+datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g) G_raw =
+  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g"
+  for map: map_G rel: rel_G
+type_synonym ('a, 'a', 'y, 'b, 'b', 'g) G = "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
 
 declare [[quick_and_dirty=true]]
 mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
@@ -87,61 +92,10 @@ declare [[quick_and_dirty=false]]
 print_mrbnfs
 
 ML \<open>
-(*val sum = the (MRBNF_Def.mrbnf_of @{context} \<^type_name>\<open>sum\<close>)
-val list = the (MRBNF_Def.mrbnf_of @{context} \<^type_name>\<open>list\<close>)*)
 val f = the (MRBNF_Def.mrbnf_of @{context} "Composition.F")
 val f' = the (MRBNF_Def.mrbnf_of @{context} "Composition.F'")
 val g = the (MRBNF_Def.mrbnf_of @{context} "Composition.G")
 \<close>
-
-declare [[goals_limit = 50]]
-declare [[ML_print_depth=10000]]
-
-ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
-ML_file \<open>./Tools/mrbnf_comp.ML\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0;
-\<close>
-
-(*local_setup \<open>fn lthy =>
-  let
-    val name = Long_Name.base_name \<^type_name>\<open>sum\<close>
-    fun qualify i =
-              let val namei = name ^ BNF_Util.nonzero_string_of_int i;
-              in Binding.qualify true namei end
-    val Xs = []
-    val resBs = [dest_TFree @{typ 'a}]
-    fun flatten_tyargs Ass =
-      subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
-        sum [list, MRBNF_Comp.ID_mrbnf] [] [[], []] [NONE, NONE] [[@{typ 'a}], [@{typ 'a}]] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
-  val _ = @{print} mrbnf
-  val _ = @{print} tys
-  in lthy'
-  end\<close> *)
-
-(* append c (map (nth a) b) *)
-
-(*local_setup \<open>fn lthy =>
-  let
-    val name = Long_Name.base_name "Composition.G"
-    fun qualify i =
-              let val namei = name ^ BNF_Util.nonzero_string_of_int i;
-              in Binding.qualify true namei end
-    val Xs = map dest_TFree [(*@{typ 'x}*)]
-    val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
-    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'g}, @{typ 'i}]
-    val oTs = [SOME @{typ 'j}, SOME @{typ 'c}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE]
-    val resBs = map dest_TFree (Ts @ [@{typ 'j}])
-    fun flatten_tyargs Ass =
-      subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
-        g [f, f'] [] [[], []] oTs [Ts, Ts'] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
-  val _ = @{print} tys
-  val _ = @{print} mrbnf
-  in lthy'
-  end\<close>*)
 
 local_setup \<open>fn lthy =>
   let
@@ -165,27 +119,8 @@ local_setup \<open>fn lthy =>
   end\<close>
 
 ML \<open>
-val test = @{typ "unit + unit + 'a list"}
+val x = MRBNF_Def.T_of_mrbnf g
+val y = MRBNF_Def.lives_of_mrbnf g
 \<close>
-
-(*local_setup \<open>snd o MRBNF_Comp.mrbnf_of_typ { lives = [("'a", @{sort type})], frees = [], bounds = [], deads = [] } test\<close>
-
-print_mrbnfs*)
-
-lemma le_rel_OO: "BNF_Composition.id_bnf R OO BNF_Composition.id_bnf S \<le> BNF_Composition.id_bnf (R OO S)"
-  sorry
-lemma rel_map: "BNF_Composition.id_bnf R x y \<Longrightarrow>
- BNF_Composition.id_bnf R (BNF_Composition.id_bnf id x) (BNF_Composition.id_bnf id y)"
-  sorry
-
-lemma goal: "(\<lambda>x. BNF_Composition.id_bnf R (BNF_Composition.id_bnf id x)) OO (\<lambda>x. BNF_Composition.id_bnf S (BNF_Composition.id_bnf id x))
-    \<le> (\<lambda>x. BNF_Composition.id_bnf (R OO S) (BNF_Composition.id_bnf id x))"
-  apply (rule predicate2I)
-  apply (rule predicate2D[OF le_rel_OO])
-  apply (erule relcomppE)
-  apply (rule relcomppI)
-   apply assumption
-  apply (drule rel_map)
-
 
 end

@@ -1179,6 +1179,14 @@ fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer mrbnfs accum =
     ) As (0, 0, 0)
 
     val Ass' = map (map_filter_killed K) Ass
+    val kill_poss = map (map_filter I o map_index (fn (i, A) => case the (Vars.lookup var_map A) of
+      Dead_Var => SOME i | _ => NONE
+    )) Ass
+    val new_oDs = map_filter I (map_index (fn (i, x) => case x of
+      SOME y => (case the (Vars.lookup var_map y) of
+        Dead_Var => SOME i | _ => NONE)
+      | _ => NONE
+    ) oAs)
     val need_liftss = map get_lifts Ass'
     val lift_ns = map count_lifts need_liftss
     val dests = replicate (length Ass') (0 upto length As - 1)
@@ -1200,12 +1208,12 @@ fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer mrbnfs accum =
       in fold_rev (fn x => fn (xs, ys) => case x of
         SOME var => (find_index (equal var) As'::xs, ys)
         | NONE => (hd ys::xs, tl ys)
-      ) vars ([], length As' upto length vars - 1) |> fst
+      ) vars ([], length vars - 1 downto length As') |> fst
       end
 
     val (outer'', accum''') = lift_and_permute_mrbnf (qualify (length mrbnfs)) olift_ns osrc odest outer' accum''
   in
-    ((replicate (length Ass) [], map fst As),
+    ((kill_poss, map fst As),
       outer'',
       @{fold_map 5} (lift_and_permute_mrbnf o qualify)
         (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
@@ -1223,7 +1231,6 @@ fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss o
     val Ds =
       oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
     val As = map TFree As;
-
   in
     apfst (rpair (Ds, As))
       (apsnd (apfst (pair cache'))

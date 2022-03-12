@@ -5,22 +5,6 @@ theory MRBNF_Composition
     "mrbnf" :: thy_goal
 begin
 
-declare [[bnf_internals]]
-datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F_raw =
-  E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
-  for map: map_F rel: rel_F
-type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw"
-
-datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F_raw' =
-  E "'x + 'a + ('a' * 'b) * 'c * 'd + 'a"
-  for map: map_F' rel: rel_F'
-type_synonym ('a, 'a', 'x, 'b, 'c, 'd) F' = "('a, 'a', 'x, 'b, 'c, 'd) F_raw'"
-
-datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g) G_raw =
-  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g"
-  for map: map_G rel: rel_G
-type_synonym ('a, 'a', 'y, 'b, 'b', 'g) G = "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
-
 ML_file \<open>../Tools/mrbnf_util.ML\<close>
 ML_file \<open>../Tools/mrbnf_def_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_def.ML\<close>
@@ -68,5 +52,8 @@ next
     using \<open>gbd \<le>o fbd\<close> assms(1,2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.Cnotzero
     by (auto elim!: ordLess_ordIso_trans intro!: cprod_infinite2'[THEN ordIso_symmetric])
 qed
+
+ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_comp.ML\<close>
 
 end

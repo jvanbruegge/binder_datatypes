@@ -169,7 +169,7 @@ fun run_testcase seed i lthy =
       G Fs (map fst G_deads) (map (map fst o snd o seperate_deads) F_varss) G_Ts (map (map fst o fst o seperate_deads) F_varss)
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy2))
   in
-    (mrbnf, lthy3)
+    ((mrbnf, tys), lthy3)
   end
 
 fun void f lthy = (f lthy ; lthy)
@@ -178,7 +178,7 @@ fun void f lthy = (f lthy ; lthy)
 (*ML \<open>
 Multithreading.parallel_proofs := 1;
 \<close>*)
-local_setup \<open>fn lthy =>
+(*local_setup \<open>fn lthy =>
 let
   val xs = map (fn i =>
     let
@@ -196,7 +196,7 @@ let
 in
   lthy
 end
-\<close>
+\<close>*)
 
 (********************)
 (* regression tests *)

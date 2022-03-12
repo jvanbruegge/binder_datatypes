@@ -203,19 +203,6 @@ Multithreading.parallel_proofs := 0;
 (* regression tests *)
 (********************)
 
-(* failing *)
-
-(* endless loop *)
-(*local_setup \<open>void (run_testcase 1675467569.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 803435212.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1347210063.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1998245696.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1392378882.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 846505310.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 135583795.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 226345496.0 1)\<close>*)
-
-(***********)
 (* passing *)
 (*local_setup \<open>void (run_testcase 1123455898.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1509285558.0 1)\<close>*)
@@ -231,5 +218,13 @@ Multithreading.parallel_proofs := 0;
 (*local_setup \<open>void (run_testcase 1791380479.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 10979613.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1078802331.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1675467569.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 803435212.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1347210063.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1998245696.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1392378882.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 846505310.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 135583795.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 226345496.0 1)\<close>*)
 
 end

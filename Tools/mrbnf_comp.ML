@@ -638,7 +638,12 @@ fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
       THEN ALLGOALS (assume_tac ctxt)
 
     fun map_cong0_tac ctxt = rtac ctxt (map_cong0_of_mrbnf mrbnf) 1
-      THEN ALLGOALS (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
+      THEN ALLGOALS (FIRST' [
+        resolve_tac ctxt @{thms supp_id_bound bij_id},
+        etac ctxt @{thm emptyE},
+        assume_tac ctxt,
+        Goal.assume_rule_tac ctxt
+      ])
     val set_map0_tacs = permute (map (fn thm => fn ctxt =>
       HEADGOAL (rtac ctxt thm THEN_ALL_NEW assume_tac ctxt)) (set_map0_of_mrbnf mrbnf));
     fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt (bd_infinite_regular_card_order_of_mrbnf mrbnf) 1;

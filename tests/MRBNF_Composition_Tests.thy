@@ -3,7 +3,7 @@ theory MRBNF_Composition_Tests
 begin
 
 ML \<open>
-  val num_tests = 5
+  val num_tests = 1
   val num_max_vars = 14
 \<close>
 
@@ -36,11 +36,11 @@ fun mk_vars random_range force_live =
       ) (1 upto random_range 1 num_max_vars) []
     val idx = random_range 0 (length vars - 1)
     val vars' =
-      if force_live andalso not (member (op=) (map snd vars) Live_Var) then
+      if not (member (op=) (map snd vars) Live_Var) then
         take idx vars @ [(fst (nth vars idx), Live_Var)] @ drop (idx+1) vars
       else
         vars
-    val _ = \<^assert> (not force_live orelse member (op=) (map snd vars') Live_Var)
+    val _ = \<^assert> (member (op=) (map snd vars') Live_Var)
   in
     vars'
   end;
@@ -178,27 +178,26 @@ fun void f lthy = (f lthy ; lthy)
 (*ML \<open>
 Multithreading.parallel_proofs := 1;
 \<close>*)
-(*local_setup \<open>fn lthy =>
+local_setup \<open>fn lthy =>
 let
   val xs = map (fn i =>
     let
       val seed = Random.random ()
       val lthy'_opt = try (run_testcase seed i) lthy
-    in (case lthy'_opt of
-      NONE => "failure: "
-      | SOME x => "success: ")
-     ^ "run with local_setup \\" ^ "<open>void (run_testcase " ^ string_of_real seed ^ " 1)\\" ^ "<close>"
+      val str = (case lthy'_opt of
+        NONE => "failure: "
+        | SOME x => "success: ")
+       ^ "run with local_setup \\" ^ "<open>void (run_testcase " ^ string_of_real seed ^ " 1)\\" ^ "<close>"
+      val _ = Output.system_message str
+    in str
   end
   ) (1 upto num_tests)
   val _ = @{print} xs
 in
   lthy
 end
-\<close>*)
-
-ML \<open>
-Multithreading.parallel_proofs := 0;
 \<close>
+
 (********************)
 (* regression tests *)
 (********************)

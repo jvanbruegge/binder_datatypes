@@ -1155,7 +1155,16 @@ fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer mrbnfs accum =
     val (inners', accum'') = @{fold_map 3} (demote_mrbnf o qualify)
       (1 upto length mrbnfs) demote_target_types mrbnfs accum'
 
-    val As = map (fn A => (A, the (Vars.lookup var_map A))) (flatten_tyargs (map fst oAs' :: Ass))
+    val oAs2 = filter (fn SOME A =>
+      let val var_type = the (Vars.lookup var_map A)
+      in case var_type of
+        Dead_Var => false | _ => true
+      end
+    | NONE => true) oAs
+    fun map_filter_killed f = map_filter (fn A => case the (Vars.lookup var_map A) of
+      Dead_Var => NONE | x => SOME (f A x)
+    );
+    val As = map_filter_killed pair (flatten_tyargs (map fst oAs' :: Ass))
     fun get_lifts vars = sort (fn (a, b) => var_type_ord (snd b, snd a)) (subtract (fn (a, b) => a = fst b) vars As)
     fun count_lifts As = fold (fn (_, var_type) => fn (n1, n2, n3) => case var_type of
       MRBNF_Def.Live_Var => (n1 + 1, n2, n3)
@@ -1163,18 +1172,20 @@ fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer mrbnfs accum =
       | MRBNF_Def.Bound_Var => (n1, n2, n3 + 1)
       | MRBNF_Def.Dead_Var => (n1, n2, n3)
     ) As (0, 0, 0)
-    val need_liftss = map get_lifts Ass
+
+    val Ass' = map (map_filter_killed K) Ass
+    val need_liftss = map get_lifts Ass'
     val lift_ns = map count_lifts need_liftss
-    val dests = replicate (length Ass) (0 upto length As - 1)
+    val dests = replicate (length Ass') (0 upto length As - 1)
     val find_indices' = map (fn x => find_index (equal x) (map fst As))
-    val srcs = map find_indices' (map2 (append o map fst) need_liftss Ass)
+    val srcs = map find_indices' (map2 (append o map fst) need_liftss Ass')
 
     val oneed_lifts = filter (fn (_, var_type) => var_type <> MRBNF_Def.Live_Var) (get_lifts (map fst oAs'))
     val olift_ns = count_lifts oneed_lifts
-    val odest = 0 upto length oAs + length oneed_lifts - 1
+    val odest = 0 upto length oAs2 + length oneed_lifts - 1
     val osrc =
       let
-        val vars = map (SOME o fst) oneed_lifts @ oAs
+        val vars = map (SOME o fst) oneed_lifts @ oAs2
         val As' = map_filter (fn (var, var_type) =>
           if var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var then
             SOME var

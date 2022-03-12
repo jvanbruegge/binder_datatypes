@@ -205,22 +205,15 @@ Multithreading.parallel_proofs := 0;
 
 (* failing *)
 
-(* permute.cond_keep: unequal lengths *)
+(* endless loop *)
 (*local_setup \<open>void (run_testcase 1675467569.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 803435212.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 235821654.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1931263361.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1192521015.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1347210063.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1791380479.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 10979613.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1998245696.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1392378882.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 846505310.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 135583795.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 1078802331.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 226345496.0 1)\<close>*)
-(*local_setup \<open>void (run_testcase 2105919395.0 1)\<close>*)
 
 (***********)
 (* passing *)
@@ -231,5 +224,12 @@ Multithreading.parallel_proofs := 0;
 (*local_setup \<open>void (run_testcase 39603411.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 1968651577.0 1)\<close>*)
 (*local_setup \<open>void (run_testcase 276693098.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 235821654.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 2105919395.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1931263361.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1192521015.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1791380479.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 10979613.0 1)\<close>*)
+(*local_setup \<open>void (run_testcase 1078802331.0 1)\<close>*)
 
 end

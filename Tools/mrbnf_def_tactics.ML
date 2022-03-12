@@ -375,7 +375,9 @@ fun mk_mr_rel_conversep_tac ctxt assms prems id_prems inv_prems mr_rel_OO_Grp_al
 
 fun mk_mr_le_rel_OO_tac ctxt num_prems assms mrbnf_rel_def mk_mr_map_comp le_rel_OO rel_map map_id0 =
   let
-    val map_comp = mk_mr_map_comp assms;
+    val map_comp = Local_Defs.unfold0 ctxt @{thms hidden_id_def} (
+      Local_Defs.unfold0 ctxt @{thms id_hid_o_hid} (mk_mr_map_comp assms)
+    );
   in
     unfold_thms_tac ctxt [mrbnf_rel_def] THEN
     EVERY1 [

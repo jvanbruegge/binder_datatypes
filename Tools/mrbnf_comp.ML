@@ -47,19 +47,6 @@ sig
     ((string * sort) list list -> (string * sort) list) -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list ->
     typ list -> typ list list -> typ option list -> typ list list -> (comp_cache * unfold_set) * local_theory ->
     (MRBNF_Def.mrbnf * (typ list * typ list)) * ((comp_cache * unfold_set) * local_theory)
-  (*val multi_kill_mrbnf: (binding -> binding) -> MRBNF_Def.var_type list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  val multilift_mrbnf: (binding -> binding) -> int -> int -> int -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  *)
-(*  val permute_and_kill_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  val lift_and_permute_mrbnf: (binding -> binding) -> int -> int list -> int list -> MRBNF_Def.mrbnf ->
-    (comp_cache * unfold_set) * local_theory ->
-    MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
 
   type absT_info =
     {absT: typ,
@@ -75,7 +62,7 @@ sig
   val mk_abs: typ -> term -> term
   val mk_rep: typ -> term -> term
   val seal_mrbnf: (binding -> binding) -> unfold_set -> binding -> bool -> typ list -> typ list ->
-    MRBNF_Def.mrbnf -> local_theory -> (MRBNF_Def.mrbnf * (typ list * absT_info)) * local_theory*)
+    MRBNF_Def.mrbnf -> local_theory -> (MRBNF_Def.mrbnf * (typ list * absT_info)) * local_theory
 end;
 
 structure MRBNF_Comp : MRBNF_COMP =
@@ -185,6 +172,11 @@ fun is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.csum}, _) $ 
   | is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.cprod}, _) $ t $ u) = forall is_sum_prod_natLeq [t, u]
   | is_sum_prod_natLeq t = t aconv @{term natLeq};
 
+fun interlace _ _ _ [] = []
+      | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
+      | interlace als (b::bs) fs (Bound_Var::ts) = b :: interlace als bs fs ts
+      | interlace als bs (f::fs) (Free_Var::ts) = f :: interlace als bs fs ts
+
 (*
  * Instantiates the live variables of an outer MRBNF with several inner MRBNFs and returns a composed MRBNF.
  * The composed MRBNF will have:
@@ -209,11 +201,6 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     val ovar_types = var_types_of_mrbnf outer;
     val is_ilive = map (equal Live_Var) ivar_types;
     val is_olive = map (equal Live_Var) ovar_types;
-
-    fun interlace _ _ _ [] = []
-      | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
-      | interlace als (b::bs) fs (Bound_Var::ts) = b :: interlace als bs fs ts
-      | interlace als bs (f::fs) (Free_Var::ts) = f :: interlace als bs fs ts
 
     (* Combine variable type classes of outer and inners into a single sort *)
     val sort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map class_of_mrbnf inners) (class_of_mrbnf outer);
@@ -1306,29 +1293,36 @@ fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
          @{thm type_definition.Abs_inject[OF BNF_Composition.type_definition_id_bnf_UNIV]},
          @{thm type_definition.Abs_cases[OF BNF_Composition.type_definition_id_bnf_UNIV]})), lthy)
   end;
-(*fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds mrbnf lthy =
+
+fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds mrbnf lthy =
   let
     val live = live_of_mrbnf mrbnf;
+    val frees = frees_of_mrbnf mrbnf;
+    val bounds = bounds_of_mrbnf mrbnf;
     val nwits = nwits_of_mrbnf mrbnf;
+    val nondead = live + length bounds + length frees;
+    val var_types = var_types_of_mrbnf mrbnf;
     val ((As, As'), lthy1) = apfst (`(map TFree))
       (Variable.invent_types (replicate live @{sort type}) (fold Variable.declare_typ all_Ds lthy));
-    val (Bs, _) = apfst (map TFree) (Variable.invent_types (replicate live @{sort type}) lthy1);
+    val (Xs, lthy2) = apfst (map TFree) (Variable.invent_types (replicate live @{sort type}) lthy1);
+    val (Bs, lthy3) = apfst (map TFree) (Variable.invent_types (map (snd o Term.dest_TVar) bounds) lthy2);
+    val (Fs, lthy4) = apfst (map TFree) (Variable.invent_types (map (snd o Term.dest_TVar) frees) lthy3);
     val ((((fs, fs'), (Rs, Rs')), (Ps, Ps')), _(*names_lthy*)) = lthy
-      |> mk_Frees' "f" (map2 (curry op -->) As Bs)
-      ||>> mk_Frees' "R" (map2 mk_pred2T As Bs)
+      |> mk_Frees' "f" (map2 (curry op -->) (interlace As Bs Fs var_types) (interlace Xs Bs Fs var_types))
+      ||>> mk_Frees' "R" (map2 mk_pred2T As Xs)
       ||>> mk_Frees' "P" (map mk_pred1T As);
-    val repTA = mk_T_of_mrbnf Ds As mrbnf;
+    val repTA = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
     val T_bind = qualify b;
     val repTA_tfrees = Term.add_tfreesT repTA [];
-    val all_TA_params_in_order = fold_rev Term.add_tfreesT all_Ds As';
+    val all_TA_params_in_order = fold_rev Term.add_tfreesT all_Ds (As' @ map dest_TFree (Bs @ Fs));
     val TA_params =
       (if force_out_of_line then all_TA_params_in_order
        else inter (op =) repTA_tfrees all_TA_params_in_order);
     val ((TA, (Rep_name, Abs_name, type_definition, Abs_inverse, Abs_inject, _)), lthy) =
       maybe_typedef force_out_of_line (T_bind, TA_params, NoSyn) (HOLogic.mk_UNIV repTA) NONE
         (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt UNIV_I] 1) lthy;
-    val repTB = mk_T_of_mrbnf Ds Bs mrbnf;
-    val TB = Term.typ_subst_atomic (As ~~ Bs) TA;
+    val repTB = mk_T_of_mrbnf Ds Xs Bs Fs mrbnf;
+    val TB = Term.typ_subst_atomic (As ~~ Xs) TA;
     val RepA = Const (Rep_name, TA --> repTA);
     val RepB = Const (Rep_name, TB --> repTB);
     val AbsA = Const (Abs_name, repTA --> TA);
@@ -1338,25 +1332,25 @@ fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
     val absT_info = {absT = TA, repT = repTA, abs = AbsA, rep = RepA, abs_inject = Abs_inject',
       abs_inverse = Abs_inverse', type_definition = type_definition};
     val mrbnf_map = fold_rev Term.absfree fs' (HOLogic.mk_comp (HOLogic.mk_comp (AbsB,
-      Term.list_comb (mk_map_of_mrbnf Ds As Bs mrbnf, fs)), RepA));
-    val mrbnf_sets = map ((fn t => HOLogic.mk_comp (t, RepA)))
-      (mk_sets_of_mrbnf (replicate live Ds) (replicate live As) mrbnf);
-    val mrbnf_bd = mk_bd_of_mrbnf Ds As mrbnf;
+      Term.list_comb (mk_map_of_mrbnf Ds As Xs Bs Fs mrbnf, fs)), RepA));
+    val mrbnf_sets = (var_types_of_mrbnf mrbnf ~~ map ((fn t => HOLogic.mk_comp (t, RepA)))
+      (mk_sets_of_mrbnf (replicate nondead Ds) (replicate nondead As) (replicate nondead Bs) (replicate nondead Fs) mrbnf));
+    val mrbnf_bd = mk_bd_of_mrbnf Ds Bs Fs mrbnf;
     val mrbnf_rel = fold_rev Term.absfree Rs' (mk_vimage2p RepA RepB $
-      (Term.list_comb (mk_rel_of_mrbnf Ds As Bs mrbnf, Rs)));
+      (Term.list_comb (mk_rel_of_mrbnf Ds As Xs Bs Fs mrbnf, Rs)));
     val mrbnf_pred = fold_rev Term.absfree Ps' (HOLogic.mk_comp
-      (Term.list_comb (mk_pred_of_mrbnf Ds As mrbnf, Ps), RepA));
+      (Term.list_comb (mk_pred_of_mrbnf Ds As Bs Fs mrbnf, Ps), RepA));
     (*bd may depend only on dead type variables*)
     val bd_repT = fst (dest_relT (fastype_of mrbnf_bd));
     val bdT_bind = qualify (Binding.suffix_name ("_" ^ bdTN) b);
-    val params = Term.add_tfreesT bd_repT [];
+    val params = Term.add_tfreesT bd_repT [] @ map dest_TFree (Bs @ Fs);
     val all_deads = map TFree (fold_rev Term.add_tfreesT all_Ds []);
     val ((bdT, (_, Abs_bd_name, _, _, Abs_bdT_inject, Abs_bdT_cases)), lthy) =
       maybe_typedef false (bdT_bind, params, NoSyn) (HOLogic.mk_UNIV bd_repT) NONE
         (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt UNIV_I] 1) lthy;
-    val (mrbnf_bd', bd_ordIso, bd_card_order, bd_cinfinite) =
+    val (mrbnf_bd', bd_ordIso, bd_infinite_regular_card_order) =
       if bdT = bd_repT then (mrbnf_bd, bd_Card_order_of_mrbnf mrbnf RS @{thm ordIso_refl},
-        bd_card_order_of_mrbnf mrbnf, bd_cinfinite_of_mrbnf mrbnf)
+        bd_infinite_regular_card_order_of_mrbnf mrbnf)
       else
         let
           val mrbnf_bd' = mk_dir_image mrbnf_bd (Const (Abs_bd_name, bd_repT --> bdT));
@@ -1364,56 +1358,116 @@ fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
           val Abs_bdT_bij = mk_Abs_bij_thm lthy Abs_bdT_inj Abs_bdT_cases;
           val bd_ordIso = @{thm dir_image} OF [Abs_bdT_inj, bd_Card_order_of_mrbnf mrbnf];
           val bd_card_order =
-            @{thm card_order_dir_image} OF [Abs_bdT_bij, bd_card_order_of_mrbnf mrbnf];
+            @{thm card_order_dir_image} OF [Abs_bdT_bij, bd_card_order_of_mrbnf mrbnf];          
           val bd_cinfinite =
             (@{thm Cinfinite_cong} OF [bd_ordIso, bd_Cinfinite_of_mrbnf mrbnf]) RS conjunct1;
+          val bd_regularCard = @{thm regularCard_ordIso} OF [bd_ordIso, bd_Cinfinite_of_mrbnf mrbnf, bd_regularCard_of_mrbnf mrbnf]
+          val bd_infinite_regular_card_order = @{thm infinite_regular_card_order.intro} OF [
+            bd_card_order, bd_cinfinite, bd_regularCard
+          ]
         in
-          (mrbnf_bd', bd_ordIso, bd_card_order, bd_cinfinite)
+          (mrbnf_bd', bd_ordIso, bd_infinite_regular_card_order)
         end;
     fun map_id0_tac ctxt =
       rtac ctxt (@{thm type_copy_map_id0} OF [type_definition, map_id0_of_mrbnf mrbnf]) 1;
-    fun map_comp0_tac ctxt =
-      rtac ctxt (@{thm type_copy_map_comp0} OF [type_definition, map_comp0_of_mrbnf mrbnf]) 1;
+    fun map_comp0_tac ctxt = HEADGOAL (
+      rtac ctxt (@{thm type_copy_map_comp0} OF [type_definition, map_comp0_of_mrbnf mrbnf])
+      THEN_ALL_NEW (assume_tac ctxt));
     fun map_cong0_tac ctxt =
-      EVERY' (rtac ctxt @{thm type_copy_map_cong0} :: rtac ctxt (map_cong0_of_mrbnf mrbnf) ::
-        map (fn i => EVERY' [select_prem_tac ctxt live (dtac ctxt meta_spec) i, etac ctxt meta_mp,
-          etac ctxt (o_apply RS equalityD2 RS set_mp)]) (1 upto live)) 1;
-    fun set_map0_tac thm ctxt =
-      rtac ctxt (@{thm type_copy_set_map0} OF [type_definition, thm]) 1;
-    val set_bd_tacs = map (fn thm => fn ctxt => rtac ctxt (@{thm ordLeq_ordIso_trans} OF
-        [thm, bd_ordIso] RS @{thm type_copy_set_bd}) 1) (set_bd_of_mrbnf mrbnf);
+      EVERY1 [
+        rtac ctxt @{thm type_copy_map_cong0},
+        rtac ctxt (map_cong0_of_mrbnf mrbnf),
+        K (unfold_thms_tac ctxt @{thms o_apply})
+      ] THEN ALLGOALS (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt);
+    fun set_map0_tac thm ctxt = HEADGOAL (
+      rtac ctxt (@{thm type_copy_set_map0} OF [type_definition, thm]) THEN_ALL_NEW
+        (assume_tac ctxt));
+    val set_bd_tacs = map (fn thm => fn ctxt =>
+      rtac ctxt (@{thm ordLess_ordIso_trans} OF [thm, bd_ordIso] RS @{thm mrbnf_type_copy_set_bd}) 1
+    ) (set_bd_of_mrbnf mrbnf);
     fun le_rel_OO_tac ctxt =
       rtac ctxt (le_rel_OO_of_mrbnf mrbnf RS @{thm vimage2p_relcompp_mono}) 1;
     fun rel_OO_Grp_tac ctxt =
-      (rtac ctxt (rel_OO_Grp_of_mrbnf mrbnf RS @{thm vimage2p_cong} RS trans) THEN'
-       (if force_out_of_line then subst_tac ctxt NONE else SELECT_GOAL o unfold_thms_tac ctxt)
-         [type_definition RS @{thm vimage2p_relcompp_converse}] THEN'
-       SELECT_GOAL (unfold_thms_tac ctxt [o_apply,
-         type_definition RS @{thm type_copy_vimage2p_Grp_Rep},
-         type_definition RS @{thm vimage2p_relcompp_converse}]) THEN'
-       rtac ctxt refl) 1;
+      unfold_thms_tac ctxt (Abs_inverse' :: @{thms vimage2p_def o_apply}) THEN
+      EVERY1 [
+        rtac ctxt (trans OF [rel_OO_Grp_of_mrbnf mrbnf]),
+        REPEAT_DETERM o assume_tac ctxt,
+        rtac ctxt (trans OF [@{thm Grp_Rep} OF [type_definition, type_definition]]),
+        Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
+          let
+            val (params', (_, y)) = split_last params
+            val (_, (_, x)) = split_last params'
+            val thm = infer_instantiate' context [NONE, NONE, SOME x, SOME y] (fun_cong RS fun_cong)
+          in rtac context thm 1 end
+        ) ctxt,
+        rtac ctxt (trans OF @{thms OO_cong}),
+        rtac ctxt @{thm conversep_cong},
+        rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep_id} OF [type_definition] RS sym),
+        rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep_id} OF [type_definition] RS sym),
+        rtac ctxt (trans OF [@{thm vimage2p_relcompp_converse} OF @{thms type_definition_id} RS sym]),
+        rtac ctxt sym,
+        rtac ctxt (trans OF @{thms OO_cong}),
+        rtac ctxt @{thm conversep_cong},
+        rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep} OF [type_definition] RS sym),
+        rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep} OF [type_definition] RS sym),
+        rtac ctxt (trans OF [@{thm vimage2p_relcompp_converse} OF [type_definition] RS sym]),
+        rtac ctxt refl
+      ];
     fun pred_set_tac ctxt =
       HEADGOAL (EVERY'
         [rtac ctxt (pred_set_of_mrbnf mrbnf RS @{thm arg_cong[of _ _ "\<lambda>f. f \<circ> _"]} RS trans),
         SELECT_GOAL (unfold_thms_tac ctxt (@{thms Ball_comp_iff conj_comp_iff})), rtac ctxt refl]);
-    val tacs = zip_axioms map_id0_tac map_comp0_tac map_cong0_tac
-      (map set_map0_tac (set_map0_of_mrbnf mrbnf))
-      (fn ctxt => rtac ctxt bd_card_order 1) (fn ctxt => rtac ctxt bd_cinfinite 1)
-      set_bd_tacs le_rel_OO_tac rel_OO_Grp_tac pred_set_tac;
     val mrbnf_wits = map (fn (I, t) =>
-        fold Term.absdummy (map (nth As) I)
-          (AbsA $ Term.list_comb (t, map Bound (0 upto length I - 1))))
-      (mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As) mrbnf);
+      fold Term.absdummy (map (nth As) I)
+        (AbsA $ Term.list_comb (t, map Bound (0 upto length I - 1))))
+      (mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As) (replicate nwits Bs) (replicate nwits Fs) mrbnf);
+    fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt bd_infinite_regular_card_order 1
     fun wit_tac ctxt =
       ALLGOALS (dtac ctxt (type_definition RS @{thm type_copy_wit})) THEN
       mk_simple_wit_tac ctxt (wit_thms_of_mrbnf mrbnf);
+
+    val tacs = {
+      map_id0 = map_id0_tac,
+      map_comp0 = map_comp0_tac,
+      map_cong0 = map_cong0_tac,
+      set_map0 = map set_map0_tac (set_map0_of_mrbnf mrbnf),
+      infinite_regular_card_order = bd_infinite_regular_card_order_tac,
+      set_bd = set_bd_tacs,
+      le_rel_OO = le_rel_OO_tac,
+      in_rel = rel_OO_Grp_tac,
+      pred_set = pred_set_tac,
+      wit = wit_tac
+    };
+
+    val class_thms =
+      let
+        val class_thms = class_thms_of_mrbnf mrbnf
+        val var_large' = @{thm ordIso_ordLeq_trans} OF [
+          @{thm card_of_cong} OF [@{thm ordIso_symmetric} OF [bd_ordIso]],
+          #var_large class_thms
+        ]
+        val covar_large' = @{thm ordIso_ordLeq_trans} OF [
+          @{thm cardSuc_invar_ordIso[THEN iffD2]} OF [
+            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order],
+            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf],
+            @{thm ordIso_symmetric} OF [bd_ordIso]
+          ],
+          #covar_large class_thms
+        ]
+      in
+        SOME (
+          (class_of_mrbnf mrbnf, var_large', #var_regular class_thms),
+          (coclass_of_mrbnf mrbnf, K covar_large')
+        )
+      end
+
     val (mrbnf', lthy') =
-      mrbnf_def Hardly_Inline (user_policy Dont_Note) true qualify tacs wit_tac (SOME all_deads)
+      mrbnf_def Hardly_Inline (user_policy Dont_Note) true qualify tacs (SOME all_deads) class_thms
         Binding.empty Binding.empty Binding.empty []
         (((((((b, TA), mrbnf_map), mrbnf_sets), mrbnf_bd'), mrbnf_wits), SOME mrbnf_rel), SOME mrbnf_pred) lthy;
     val unfolds = @{thm id_bnf_apply} ::
       (#map_unfolds unfold_set @ flat (#set_unfoldss unfold_set) @ #rel_unfolds unfold_set);
-    val mrbnf'' = mrbnf' |> morph_mrbnf_defs (Morphism.thm_morphism "BNF" (unfold_thms lthy' unfolds));
+    val mrbnf'' = mrbnf' |> morph_mrbnf_defs (Morphism.thm_morphism "MRBNF" (unfold_thms lthy' unfolds));
     val map_def = map_def_of_mrbnf mrbnf'';
     val set_defs = set_defs_of_mrbnf mrbnf'';
     val rel_def = rel_def_of_mrbnf mrbnf'';
@@ -1423,8 +1477,8 @@ fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
     fun mk_prefix_binding pre = Binding.prefix_name (pre ^ "_") mrbnf_b;
     val map_b = def_qualify (mk_prefix_binding mapN);
     val rel_b = def_qualify (mk_prefix_binding relN);
-    val set_bs = if live = 1 then [def_qualify (mk_prefix_binding setN)]
-      else map (def_qualify o mk_prefix_binding o mk_setN) (1 upto live);
+    val set_bs = if nondead = 1 then [def_qualify (mk_prefix_binding setN)]
+      else map (def_qualify o mk_prefix_binding o mk_setN) (1 upto nondead);
     val notes = (map_b, map_def) :: (rel_b, rel_def) :: (set_bs ~~ set_defs)
       |> map (fn (b, def) => ((b, []), [([def], [])]))
     val (noted, lthy'') = lthy'
@@ -1433,7 +1487,8 @@ fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
   in
     ((morph_mrbnf (substitute_noted_thm noted) mrbnf'', (all_deads, absT_info)), lthy'')
   end;
-exception BAD_DEAD of typ * typ;
+
+(*exception BAD_DEAD of typ * typ;
 fun mrbnf_of_typ _ _ _ _ _ Ds0 (T as TFree T') accum =
     (if member (op =) Ds0 T' then (DEADID_mrbnf, ([T], [])) else (ID_mrbnf, ([], [T])), accum)
   | mrbnf_of_typ _ _ _ _ _ _ (TVar _) _ = error "Unexpected schematic variable"

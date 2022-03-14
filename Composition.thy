@@ -97,6 +97,12 @@ val f' = the (MRBNF_Def.mrbnf_of @{context} "Composition.F'")
 val g = the (MRBNF_Def.mrbnf_of @{context} "Composition.G")
 \<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0;
+\<close>
+
+ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
+ML_file \<open>./Tools/mrbnf_comp.ML\<close>
 local_setup \<open>fn lthy =>
   let
     val name = Long_Name.base_name "Composition.G"
@@ -111,16 +117,15 @@ local_setup \<open>fn lthy =>
     val resBs = map dest_TFree (Ts @ [@{typ 'j}])
     fun flatten_tyargs Ass =
       subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val ((mrbnf, tys), (_, lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
+  val ((mrbnf, tys), ((_, unfold_set), lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
         f [f, g, f', g, f'] [] [[], [], [], [], []] oTs [Ts, gTs, Ts', gTs, Ts'] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
   val _ = @{print} tys
-  val _ = @{print} mrbnf
+  (*val _ = @{print} unfold_set
+  val _ = @{print} mrbnf*)
+  val b = MRBNF_Comp.seal_mrbnf I unfold_set @{binding foo} false
+    [] (fst tys) mrbnf lthy'
+  val _ = @{print} b
   in lthy'
   end\<close>
-
-ML \<open>
-val x = MRBNF_Def.T_of_mrbnf g
-val y = MRBNF_Def.lives_of_mrbnf g
-\<close>
 
 end

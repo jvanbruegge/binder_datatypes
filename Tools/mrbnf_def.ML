@@ -1727,8 +1727,12 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
         (Morphism.term phi mrbnf_bd_term);
     val mrbnf_bd_raw =  mk_mrbnf_bd Calpha_params_raw;
 
+    val unfold_bd_def = Local_Defs.unfold0 lthy (
+      (map (fn thm => @{thm symmetric} OF [thm]) (no_reflexive [mrbnf_bd_def]))
+    )
     val ((class, var_large, var_regular), (mk_covar_type_class, mk_covar_large), lthy) = case classes_opt of
-        SOME (x, (coclass, mk_covar_large)) => (x, (K (pair coclass), mk_covar_large), lthy)
+        SOME ((class, var_large, var_regular), (coclass, mk_covar_large)) =>
+          ((class, unfold_bd_def var_large, var_regular), (K (pair coclass), unfold_bd_def o mk_covar_large), lthy)
       | NONE =>
         let
           val (class, lthy) = define_var_type_class (mk_prefix_binding var_typeN) mrbnf_bd_raw lthy;
@@ -2127,7 +2131,9 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
       end;
 
     val infinite_regular_card_order_bd_goal =
-      HOLogic.mk_Trueprop (mk_infinite_regular_card_order mrbnf_bd_As);
+      fold_rev Logic.all (filter_frees zs @ filter_bounds zs) (
+      HOLogic.mk_Trueprop (mk_infinite_regular_card_order mrbnf_bd_As)
+    );
 
     val set_bds_goal =
       let
@@ -2204,17 +2210,14 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         val bd_Cnotzero = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.Cnotzero};
         val (coclass, lthy) = mk_covar_type_class bd_Card_order lthy;
 
-        val unfold_bd_def = Local_Defs.unfold0 lthy (
-          (map (fn thm => @{thm symmetric} OF [thm]) (no_reflexive [mrbnf_bd_def]))
-        )
         val var_large =
             @{thm ordIso_ordLeq_trans} OF [@{thm ordIso_symmetric} OF
-              [@{thm card_of_Field_ordIso} OF [bd_Card_order]], unfold_bd_def var_large_raw];
+              [@{thm card_of_Field_ordIso} OF [bd_Card_order]], var_large_raw];
 
         val covar_large = mk_covar_large (coclass, lthy)
         val natLeq_bound = @{thm ordLeq_ordLess_trans} OF [@{thm natLeq_ordLeq_cinfinite} OF
           [conjI OF [bd_cinfinite, bd_Card_order]]] OF [@{thm ordLess_ordLeq_trans} OF
-          [@{thm cardSuc_greater} OF [bd_Card_order], unfold_bd_def covar_large]];
+          [@{thm cardSuc_greater} OF [bd_Card_order], covar_large]];
 
         val class_thms = {
           var_large = var_large_raw,

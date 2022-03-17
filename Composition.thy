@@ -23,20 +23,17 @@ val systemf_type_vars = {
 \<close>
 
 declare [[bnf_internals]]
-datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F_raw =
+datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F =
   E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
   for map: map_F rel: rel_F
-type_synonym ('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F = "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F_raw"
 
-datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F_raw' =
+datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F' =
   E "'x + 'a + ('a' * 'b) * 'c * 'd + 'a"
   for map: map_F' rel: rel_F'
-type_synonym ('a, 'a', 'x, 'b, 'c, 'd) F' = "('a, 'a', 'x, 'b, 'c, 'd) F_raw'"
 
-datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g) G_raw =
+datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g) G =
   E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g"
   for map: map_G rel: rel_G
-type_synonym ('a, 'a', 'y, 'b, 'b', 'g) G = "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
 
 declare [[quick_and_dirty=true]]
 mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
@@ -52,9 +49,9 @@ mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
    live: "setL8_F :: _ \<Rightarrow> 'e set"
    live: "setL9_F :: _ \<Rightarrow> 'f set"
   bd: "natLeq"
-  wits: "F_raw.E o Inl"
+  wits: "F.E o Inl"
   rel: "\<lambda>X. rel_F (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_F_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
+  pred: "\<lambda>X. pred_F (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 print_theorems
 
@@ -68,12 +65,12 @@ mrbnf F': "('a, 'a', 'x, 'b, 'c, 'd) F'"
    live: "setL5_F' :: _ \<Rightarrow> 'c set"
    live: "setL6_F' :: _ \<Rightarrow> 'd set"
   bd: "card_suc natLeq"
-  wits: "F_raw'.E o Inl"
+  wits: "F'.E o Inl"
   rel: "\<lambda>X. rel_F' (=) (=) X (=)"
-  pred: "\<lambda>X. pred_F_raw' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True)"
+  pred: "\<lambda>X. pred_F' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True)"
   sorry
 
-mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
+mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G"
   map: "map_G"
   sets:
     free: "setF1_G :: _ \<Rightarrow> 'a set"
@@ -83,9 +80,9 @@ mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G_raw"
     bound: "setB5_G :: _ \<Rightarrow> 'b' set"
     live: "setL6_G :: _ \<Rightarrow> 'g set"
   bd: "natLeq"
-  wits: "G_raw.E o Inl"
+  wits: "G.E o Inl"
   rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_G_raw (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
+  pred: "\<lambda>X. pred_G (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
   sorry
 declare [[quick_and_dirty=false]]
 
@@ -105,27 +102,26 @@ ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>./Tools/mrbnf_comp.ML\<close>
 local_setup \<open>fn lthy =>
   let
-    val name = Long_Name.base_name "Composition.G"
-    fun qualify i =
-              let val namei = name ^ BNF_Util.nonzero_string_of_int i;
-              in Binding.qualify true namei end
     val Xs = map dest_TFree [@{typ 'x}]
-    val gTs = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'x}, @{typ 'e}, @{typ 'i}]
     val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
-    val Ts' = [@{typ 'd}, @{typ 'e}, @{typ 'c}, @{typ 'f}, @{typ 'g}, @{typ 'i}]
-    val oTs = [SOME @{typ 'j}, SOME @{typ 'c}, NONE, SOME @{typ 'e}, SOME @{typ 'd}, NONE, NONE, NONE, NONE]
     val resBs = map dest_TFree (Ts @ [@{typ 'j}])
     fun flatten_tyargs Ass =
       subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val ((mrbnf, tys), ((_, unfold_set), lthy')) = (MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline qualify flatten_tyargs
-        f [f, g, f', g, f'] [] [[], [], [], [], []] oTs [Ts, gTs, Ts', gTs, Ts'] ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy))
-  val _ = @{print} tys
-  (*val _ = @{print} unfold_set
-  val _ = @{print} mrbnf*)
-  val b = MRBNF_Comp.seal_mrbnf I unfold_set @{binding foo} false
+  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline I flatten_tyargs Xs []
+    @{typ "('j, 'c,
+            ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i) F,
+            'e, 'd,
+            ('a, 'b, 'c, 'x, 'e, 'i) G,
+            ('d, 'e, 'c, 'f, 'g, 'i) F',
+            ('a, 'b, 'c, 'x, 'e, 'i) G,
+            ('d, 'e, 'c, 'f, 'g, 'i) F'
+          ) F
+            "}
+    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
+  val b = MRBNF_Comp.seal_mrbnf I (snd accum) @{binding foo} false
     [] (fst tys) mrbnf lthy'
   val _ = @{print} b
-  in lthy'
+  in snd b
   end\<close>
-
+print_mrbnfs
 end

@@ -182,8 +182,8 @@ fun mr_mk_comp_set_bd_tac ctxt i set'_eq_set bd_ordIso_natLeq_opt outer inners =
           defer_tac
         ] 1
     ) (mk_F_ircoss F_ircos)) THEN
-    RANGE (map (fn n => rtac ctxt (
-      @{thm comp_single_regular_set_bd} OF [nth F_ircos n, G_irco, nth Fset_bds n, nth Gset_bds_live n]
+    RANGE (map (fn n => rtac ctxt (Local_Defs.unfold0 ctxt Gset_map0s' (
+      @{thm comp_single_regular_set_bd} OF [nth F_ircos n, G_irco, nth Fset_bds n, nth Gset_bds_live n])
     )) (0 upto num_olive - 1)) 1
   end;
 
@@ -217,8 +217,9 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
           rtac context @{thm arg_cong[of _ _ Union]}
         ]) THEN
         TRY (HEADGOAL (rtac context arg_cong2)) THEN
+        unfold_thms_tac context (map (unfold @{thms comp_def}) set_map0s') THEN
         unfold_thms_tac context (map_comp0' :: set_map0s' @ mk_Gset_map0s prems @ mk_Gset_map0s id_prems) THEN
-        unfold_thms_tac context @{thms comp_def image_image image_empty} THEN
+        unfold_thms_tac context (@{thms comp_def image_image image_empty UN_empty2 Un_empty_left image_Union image_single} @ mk_Gset_map0s prems) THEN
         ALLGOALS (rtac context @{thm refl})
       end
     ) ctxt);
@@ -397,20 +398,24 @@ fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
     unfold_thms_tac ctxt set'_eq_sets THEN
     unfold_thms_tac ctxt @{thms collect_def UN_insert Union_image_empty} THEN
     unfold_thms_tac ctxt set_maps THEN
-    unfold_thms_tac ctxt @{thms Union_Un_distrib} THEN
+    unfold_thms_tac ctxt @{thms Union_Un_distrib id_def} THEN
     REPEAT_DETERM (
       EVERY (map (etac ctxt @{thm UnE}) (1 upto num_olive - 1)) THEN
       EVERY (replicate num_olive (HEADGOAL (EVERY' [
         etac ctxt @{thm UN_E},
-        dresolve_tac ctxt G_wit_thms,
-        (
-          K (unfold_thms_tac ctxt @{thms False_implies_equals}) THEN'
-          rtac ctxt @{thm TrueI}
-        ) ORELSE' (EVERY' [
-          hyp_subst_tac ctxt,
-          dresolve_tac ctxt F_wit_thms,
-          assume_tac ctxt
-        ])
+        dresolve_tac ctxt (G_wit_thms @ map (Local_Defs.unfold0 ctxt set_maps) G_wit_thms),
+        FIRST' [
+          K (unfold_thms_tac ctxt @{thms False_implies_equals}) THEN' rtac ctxt @{thm TrueI},
+          etac ctxt @{thm emptyE},
+          EVERY' [
+            hyp_subst_tac ctxt,
+            dresolve_tac ctxt F_wit_thms ORELSE' (
+              SELECT_GOAL (unfold_thms_tac ctxt set_maps) THEN'
+              dresolve_tac ctxt (map (Local_Defs.unfold0 ctxt (@{thm id_def}::set_maps)) F_wit_thms)
+            ),
+            assume_tac ctxt
+          ]
+        ]
       ])))
     )
   end;

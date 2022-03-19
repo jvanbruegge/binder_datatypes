@@ -31,7 +31,7 @@ sig
 
   val mrbnf_of_typ: bool -> MRBNF_Def.inline_policy -> (binding -> binding) ->
     ((string * sort) list list -> (string * sort) list) -> (string * sort) list ->
-    (string * sort) list -> typ -> (comp_cache * unfold_set) * local_theory ->
+    (string * sort) list -> ((string * sort) * MRBNF_Def.var_type) list -> typ -> (comp_cache * unfold_set) * local_theory ->
     (MRBNF_Def.mrbnf * (typ list * typ list)) * ((comp_cache * unfold_set) * local_theory)
 
   val clean_compose_mrbnf: MRBNF_Def.inline_policy -> (binding -> binding) -> binding -> MRBNF_Def.mrbnf ->
@@ -208,9 +208,16 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     fun try_unprefix prfx s = case try (unprefix prfx) s of
       SOME x => x
       | NONE => s
-    fun mk_class prfx xs =
-      let val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs)
-      in Class_Declaration.class (Binding.name name) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result end;
+    fun mk_class prfx xs lthy =
+      let
+        val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs)
+        val thy = Proof_Context.theory_of lthy
+        val full_name = Sign.full_name thy (Binding.name name)
+      in if Class.is_class thy full_name then
+        ([full_name], lthy)
+      else
+        (Class_Declaration.class (Binding.name name) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+      end;
     val (class, lthy3) = mk_class "var_" sort lthy
     val (coclass, lthy) = mk_class "covar_" cosort lthy3
 
@@ -1494,10 +1501,20 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
   end;
 
 exception BAD_DEAD of typ * typ;
-fun mrbnf_of_typ _ _ _ _ _ Ds0 (T as TFree T') accum =
-    (if member (op =) Ds0 T' then (DEADID_mrbnf, ([T], [])) else (ID_mrbnf, ([], [T])), accum)
-  | mrbnf_of_typ _ _ _ _ _ _ (TVar _) _ = error "Unexpected schematic variable"
-  | mrbnf_of_typ optim const_policy qualify' flatten_tyargs Xs Ds0 (T as Type (C, Ts))
+fun mrbnf_of_typ _ _ _ _ _ Ds0 var_types (T as TFree T') accum =
+    (if member (op =) Ds0 T' then ((DEADID_mrbnf, ([T], [])), accum) else
+      (case map_filter (fn a => if fst a = T' then SOME (snd a) else NONE) var_types of
+        [] => ((ID_mrbnf, ([], [T])), accum)
+        | [Dead_Var] => error "var_types may only be Live, Free or Bound, use Ds0 for deads"
+        | [var_type] => let
+                          val qualify = Binding.suffix_name ("_" ^ fst T')
+                          val (ID', accum') = demote_mrbnf qualify [var_type] ID_mrbnf accum
+                        in ((ID', ([], [T])), accum') end
+        | _ => error "Same variable appears twice in var_types"
+      )
+    )
+  | mrbnf_of_typ _ _ _ _ _ _ _ (TVar _) _ = error "Unexpected schematic variable"
+  | mrbnf_of_typ optim const_policy qualify' flatten_tyargs Xs Ds0 var_types (T as Type (C, Ts))
       (accum as (x, lthy)) =
     let
       fun check_bad_dead ((_, (deads, _)), _) =
@@ -1550,7 +1567,7 @@ fun mrbnf_of_typ _ _ _ _ _ Ds0 (T as TFree T') accum =
             val Ts' = map (nth Ts) (subtract (op =) (oDs_pos @ ofree_bound_pos) (0 upto length Ts - 1));
             val ((inners, (Dss, Ass)), (accum', lthy'')) =
               apfst (apsnd split_list o split_list) (@{fold_map 2}
-                (fn i => mrbnf_of_typ optim Smart_Inline (qualify i) flatten_tyargs Xs Ds0)
+                (fn i => mrbnf_of_typ optim Smart_Inline (qualify i) flatten_tyargs Xs Ds0 var_types)
                 (if length Ts' = 1 then [0] else 1 upto length Ts') Ts' (x, lthy'));
           in
             compose_mrbnf const_policy qualify flatten_tyargs mrbnf inners oDs Dss oAs Ass (accum', lthy'')

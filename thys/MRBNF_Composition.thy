@@ -66,6 +66,10 @@ lemma type_copy_vimage2p_Grp_Rep_id: "type_definition Rep Abs UNIV \<Longrightar
 lemma type_definition_id: "type_definition id id top"
   unfolding type_definition_def
   by simp
+
+lemma image_single: "{f x} = f ` {x}"
+  by simp
+
 (*ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_comp.ML\<close>*)
 

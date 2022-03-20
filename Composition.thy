@@ -7,121 +7,76 @@ datatype \<kappa> =
   | KArrow \<kappa> \<kappa> (infixr "\<rightarrow>" 50)
 
 (*
-  TyVar 'tyvar
+binder_datatype 'var \<tau> =
+  | TyVar 'var
   | TyArrow
-  | TyApp 'd 'd
-  | TyForall 'btyvar \<kappa> 'c
+  | TyApp "'var \<tau>" "'var \<tau>"
+  | TyForall a::"'var" \<kappa> t::"'var \<tau>" binds a in t
+
+  \<down>
+
+binder_datatype ('tyvar, 'btyvar, 'rec, 'body) \<tau>_pre =
+    TyVar 'tyvar
+  | TyArrow
+  | TyApp 'rec 'rec
+  | TyForall 'btyvar \<kappa> 'body
 *)
-ML \<open>
-val systemf_type = @{typ "'tyvar + unit + 'd * 'd + 'btyvar * \<kappa> * 'c"}
-val systemf_type_vars = {
-  lives = [("''d", @{sort type}), ("'c", @{sort type})],
-  frees = [("'tyvar", @{sort type})],
-  bounds = [("'btyvar", @{sort type})],
-  deads = []
-}
-\<close>
-
-declare [[bnf_internals]]
-datatype (setF1_F: 'a, setF2_F: 'a', setL3_F: 'x, setB4_F: 'b, setB5_F: 'b', setL6_F: 'c, setL7_F: 'd, setL8_F: 'e, setL9_F: 'f) F =
-  E "'x + 'a + ('a' * 'b') * 'c * 'd + 'a' * 'f"
-  for map: map_F rel: rel_F
-
-datatype (setF1_F': 'a, setF2_F': 'a', setL3_F': 'x, setB4_F': 'b, setL5_F': 'c, setL6_F': 'd) F' =
-  E "'x + 'a + ('a' * 'b) * 'c * 'd + 'a"
-  for map: map_F' rel: rel_F'
-
-datatype (setF1_G: 'a, setF2_G: 'a', setL3_G: 'y, setB4_G: 'b, setB5_G: 'b', setL6_G: 'g) G =
-  E "'y + 'a + ('a' * 'b') * 'y * 'g + 'a' * 'g"
-  for map: map_G rel: rel_G
-
-declare [[quick_and_dirty=true]]
-mrbnf F: "('a, 'a', 'x, 'b, 'b', 'c, 'd, 'e, 'f) F"
-  map: "map_F"
-  sets:
-   free: "setF1_F :: _ \<Rightarrow> 'a set"
-   free: "setF2_F :: _ \<Rightarrow> 'a' set"
-   live: "setL3_F :: _ \<Rightarrow> 'x set"
-   bound: "setB4_F :: _ \<Rightarrow> 'b set"
-   bound: "setB5_F :: _ \<Rightarrow> 'b' set"
-   live: "setL6_F :: _ \<Rightarrow> 'c set"
-   live: "setL7_F :: _ \<Rightarrow> 'd set"
-   live: "setL8_F :: _ \<Rightarrow> 'e set"
-   live: "setL9_F :: _ \<Rightarrow> 'f set"
-  bd: "natLeq"
-  wits: "F.E o Inl"
-  rel: "\<lambda>X. rel_F (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_F (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
-  sorry
-print_theorems
-
-mrbnf F': "('a, 'a', 'x, 'b, 'c, 'd) F'"
-  map: "map_F'"
-  sets:
-   bound: "setF1_F' :: _ \<Rightarrow> 'a set"
-   bound: "setF2_F' :: _ \<Rightarrow> 'a' set"
-   live: "setL3_F' :: _ \<Rightarrow> 'x set"
-   free: "setB4_F' :: _ \<Rightarrow> 'b set"
-   live: "setL5_F' :: _ \<Rightarrow> 'c set"
-   live: "setL6_F' :: _ \<Rightarrow> 'd set"
-  bd: "card_suc natLeq"
-  wits: "F'.E o Inl"
-  rel: "\<lambda>X. rel_F' (=) (=) X (=)"
-  pred: "\<lambda>X. pred_F' (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True)"
-  sorry
-
-mrbnf G: "('a, 'a', 'y, 'b, 'b', 'g) G"
-  map: "map_G"
-  sets:
-    free: "setF1_G :: _ \<Rightarrow> 'a set"
-    free: "setF2_G :: _ \<Rightarrow> 'a' set"
-    live: "setL3_G :: _ \<Rightarrow> 'y set"
-    bound: "setB4_G :: _ \<Rightarrow> 'b set"
-    bound: "setB5_G :: _ \<Rightarrow> 'b' set"
-    live: "setL6_G :: _ \<Rightarrow> 'g set"
-  bd: "natLeq"
-  wits: "G.E o Inl"
-  rel: "\<lambda>X. rel_G (=) (=) X (=) (=)"
-  pred: "\<lambda>X. pred_G (\<lambda>_. True) (\<lambda>_. True) X (\<lambda>_. True) (\<lambda>_. True)"
-  sorry
-declare [[quick_and_dirty=false]]
-
-print_mrbnfs
-
-ML \<open>
-val f = the (MRBNF_Def.mrbnf_of @{context} "Composition.F")
-val f' = the (MRBNF_Def.mrbnf_of @{context} "Composition.F'")
-val g = the (MRBNF_Def.mrbnf_of @{context} "Composition.G")
-\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0;
-\<close>
-
-ML_file \<open>./Tools/mrbnf_comp_tactics.ML\<close>
-ML_file \<open>./Tools/mrbnf_comp.ML\<close>
 local_setup \<open>fn lthy =>
-  let
-    val Xs = map dest_TFree [@{typ 'x}]
-    val Ts = [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}, @{typ 'i}]
-    val resBs = map dest_TFree (Ts @ [@{typ 'j}])
-    fun flatten_tyargs Ass =
-      subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline I flatten_tyargs Xs []
-    @{typ "('j, 'c,
-            ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i) F,
-            'e, 'd,
-            ('a, 'b, 'c, 'x, 'e, 'i) G,
-            ('d, 'e, 'c, 'f, 'g, 'i) F',
-            ('a, 'b, 'c, 'x, 'e, 'i) G,
-            ('d, 'e, 'c, 'f, 'g, 'i) F'
-          ) F
-            "}
+let
+  val systemf_type_name = "\<tau>_pre"
+  val systemf_type = @{typ "'tyvar + unit + 'rec * 'rec + 'btyvar * \<kappa> * 'body"}
+  val Xs = []
+  val resBs = map dest_TFree [@{typ 'tyvar}, @{typ 'btyvar}, @{typ 'body}, @{typ 'rec}]
+  fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
+  val qualify = Binding.prefix_name (systemf_type_name ^ "_")
+
+  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
+    [(dest_TFree @{typ 'tyvar}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'btyvar}, MRBNF_Def.Bound_Var)] systemf_type
     ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-  val b = MRBNF_Comp.seal_mrbnf I (snd accum) @{binding foo} false
-    [] (fst tys) mrbnf lthy'
-  val _ = @{print} b
-  in snd b
-  end\<close>
-print_mrbnfs
+  val ((mrbnf, (Ds, info)), lthy'') = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_type_name) true (fst tys) [] mrbnf lthy'
+in lthy'' end
+\<close>
+(*
+binder_datatype ('var, 'tyvar) "term" =
+    Var 'var
+  | App "('var, 'tyvar) term" "('var, 'tyvar) term"
+  | TApp "('var, 'tyvar) term" "'tyvar \<tau>"
+  | Lam x::"'var" "'tyvar \<tau>" t::"('var, 'tyvar) term" binds x in t
+  | TyLam a::"'btyvar" \<kappa> t::"('var, 'tyvar) term" binds a in t
+  | Let "(xs::'var * 'tyvar \<tau> * ('var, 'tyvar) term) list" t::"('var, 'tyvar) term" binds xs in t
+  | LetRec "(xs::'var * 'tyvar \<tau> * ts::('var, 'tyvar) term) list" t::"('var, 'tyvar) term" binds xs in t ts
+
+  \<down>*                  (normally the \<tau> type would not be expanded, would be recursive already)
+
+binder_datatype ('var, 'bvar, 'rec, 'body, 'tyvar, 'btyvar, 'trec, 'tbody) "term_pre" =
+    Var 'var
+  | App 'rec 'rec
+  | TApp 'rec "('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre"
+  | Lam 'bvar "('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre" 'body
+  | TyLam 'btyvar \<kappa> 'body
+  | Let "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list" 'body
+  | LetRec "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list" 'body
+*)
+local_setup \<open>fn lthy =>
+let
+  val systemf_term_name = "term_pre"
+  val systemf_term = @{typ "'var + 'rec * 'rec + 'rec * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre +
+    'bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body + 'btyvar * \<kappa> * 'body +
+    ('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list * 'body +
+    ('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list * 'body"}
+  val Xs = []
+  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'body}, @{typ 'rec}, @{typ 'tyvar}, @{typ 'btyvar}, @{typ 'trec}, @{typ 'tbody}]
+  fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
+  val qualify = Binding.prefix_name (systemf_term_name ^ "_")
+
+  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
+    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var)] systemf_term
+    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
+  val ((mrbnf, (Ds, info)), lthy'') = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_term_name) true (fst tys) [] mrbnf lthy'
+  val _ = @{print} tys
+  val _ = @{print} info
+  val _ = @{print} mrbnf
+in lthy'' end
+\<close>
+
 end

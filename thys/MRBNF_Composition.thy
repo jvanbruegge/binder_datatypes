@@ -70,7 +70,7 @@ lemma type_definition_id: "type_definition id id top"
 lemma image_single: "{f x} = f ` {x}"
   by simp
 
-(*ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_comp.ML\<close>*)
+ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_comp.ML\<close>
 
 end

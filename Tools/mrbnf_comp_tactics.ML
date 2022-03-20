@@ -219,18 +219,18 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
         unfold_thms_tac context [map_comp0'] THEN
         unfold_thms_tac context @{thms comp_def} THEN
         TRY (rtac context @{thm arg_cong[of _ _ Union]} 1) THEN
-        EVERY1 (map (fn thm => EVERY' [
+        EVERY1 (map (fn (thm1, thm2) => EVERY' [
           TRY o rtac context arg_cong2,
-          rtac context (trans OF [thm]),
+          rtac context (trans OF [thm1]),
           rtac context sym,
-          rtac context (trans OF [@{thm arg_cong2[OF refl, of _ _ "(`)"]} OF [thm]]),
+          rtac context (trans OF [@{thm arg_cong2[OF refl, of _ _ "(`)"]} OF [thm2]]),
           SELECT_GOAL (unfold_thms_tac context @{thms comp_def}),
           rtac context sym,
           rtac context (trans OF [@{thm arg_cong2[OF _ refl, of _ _ "(`)"]}]),
           resolve_tac context (map (unfold @{thms comp_def}) set_map0s'),
           SELECT_GOAL (unfold_thms_tac context @{thms image_image}),
           rtac context refl
-        ]) (mk_Gset_map0s prems))
+        ]) (mk_Gset_map0s prems ~~ mk_Gset_map0s id_prems))
       end
     ) ctxt);
 
@@ -423,7 +423,7 @@ fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
               SELECT_GOAL (unfold_thms_tac ctxt set_maps) THEN'
               dresolve_tac ctxt (map (Local_Defs.unfold0 ctxt (@{thm id_def}::set_maps)) F_wit_thms)
             ),
-            assume_tac ctxt
+            assume_tac ctxt ORELSE' etac ctxt @{thm FalseE}
           ]
         ]
       ])))

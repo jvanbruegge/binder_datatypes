@@ -521,7 +521,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           ) |> Thm.close_derivation \<^here> end;
       in SOME ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
 
-    val (mrbnf, lthy') = mrbnf_def Smart_Inline (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) class_opt
+    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) class_opt
               Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) rel_lthy
 
     val phi =
@@ -886,45 +886,41 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
       let
         val mr_rel_Grp = mr_rel_Grp_of_mrbnf mrbnf RS sym;
         val rel_cong0 = rel_cong0_of_mrbnf mrbnf;
-        fun repeat f n acc = if n = 0 then acc else repeat f (n - 1) (f acc);
-        fun get_comb t = [
-          SOME (Thm.dest_fun (Thm.dest_fun t)),
-          NONE,
-          SOME (Thm.dest_arg (Thm.dest_fun t)),
-          SOME (Thm.dest_arg t)
-        ];
+        val rel_map = hd (rel_map_of_mrbnf mrbnf);
         val supp_bij_ass_tac = FIRST' [
           rtac ctxt @{thm supp_id_bound},
           rtac ctxt @{thm bij_id},
           assume_tac ctxt
         ];
+        val fun_cong2_tac =
+          Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+            let
+              val (x, y) = split_last (map snd params) |>> (snd o split_last)
+              val thm = infer_instantiate' ctxt [NONE, NONE, SOME x, SOME y] @{thm fun_cong[OF fun_cong]}
+            in rtac ctxt (thm RS trans) 1 end
+          ) ctxt
       in
-        HEADGOAL (Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
-          let
-            val t = repeat Thm.dest_arg (new_free + new_bound*2 + 2) concl
-            val thm = infer_instantiate' context (get_comb t) @{thm fun_cong[OF fun_cong]}
-          in rtac context (thm RS trans RS sym) 1 end
-        ) ctxt THEN' EVERY' [
-          rtac ctxt ((in_alt_thm RS @{thm OO_Grp_cong}) RS trans),
+        EVERY1 [
+          rtac ctxt sym,
+          fun_cong2_tac,
+          rtac ctxt (in_alt_thm RS @{thm OO_Grp_cong} RS trans),
           rtac ctxt @{thm arg_cong2[of _ _ _ _ "(OO)"]},
           rtac ctxt (@{thm arg_cong[of _ _ "conversep"]} RS trans),
           rtac ctxt mr_rel_Grp THEN_ALL_NEW supp_bij_ass_tac,
           rtac ctxt (mr_rel_conversep_of_mrbnf mrbnf RS sym) THEN_ALL_NEW supp_bij_ass_tac,
-          rtac ctxt mr_rel_Grp THEN_ALL_NEW supp_bij_ass_tac
-        ]) THEN
-        unfold_thms_tac ctxt @{thms inv_id eq_alt[symmetric] conversep_eq} THEN
-        Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
-          let
-            val t = (Thm.dest_arg o Thm.dest_fun o repeat Thm.dest_arg (new_free + new_bound*2 + 1)) concl
-            val thm = infer_instantiate' context (get_comb t) @{thm fun_cong[OF fun_cong]}
-          in rtac context (thm RS trans) 1 end
-        ) ctxt 1 THEN
-        HEADGOAL (rtac ctxt (mr_rel_OO_of_mrbnf mrbnf RS sym) THEN_ALL_NEW supp_bij_ass_tac) THEN
-        unfold_thms_tac ctxt @{thms id_o o_id Grp_fst_snd eq_OO} THEN
-        HEADGOAL (EVERY' [
+          rtac ctxt mr_rel_Grp THEN_ALL_NEW supp_bij_ass_tac,
+          fun_cong2_tac,
+          K (unfold_thms_tac ctxt @{thms inv_id}),
+          rtac ctxt (mr_rel_OO_of_mrbnf mrbnf RS sym) THEN_ALL_NEW supp_bij_ass_tac,
+          K (unfold_thms_tac ctxt @{thms o_id id_o Grp_fst_snd eq_alt[symmetric] conversep_eq eq_OO}),
+
           rtac ctxt trans,
           rtac ctxt (mr_rel_def_of_mrbnf mrbnf RS meta_eq_to_obj_eq |> BNF_Util.mk_unabs_def (live + free + bound + 2)),
-          Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
+          EVERY' [
+            rtac ctxt (trans OF [rel_map]),
+            rtac ctxt sym,
+            rtac ctxt (trans OF [rel_map])
+          ] ORELSE' Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
             let
               val t = concl |> Thm.term_of |> Logic.strip_imp_concl |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> snd
               val (tr $ (tm $ _) $ _) = t
@@ -940,14 +936,18 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
               |> (fn thm => (thm RS box_equals RS sym) |> Drule.rotate_prems 1)
             in rtac context thm 1 end
           ) ctxt,
-          rtac ctxt (rel_cong0 RS fun_cong RS fun_cong) THEN_ALL_NEW
-            (SELECT_GOAL (unfold_thms_tac ctxt @{thms id_apply Grp_UNIV_def}) THEN_ALL_NEW rtac ctxt refl),
-          rtac ctxt (rel_cong0 RS @{thm cong} RS fun_cong OF (replicate live refl)),
-          rtac ctxt (map_comp_of_mrbnf mrbnf RS trans)
-        ]) THEN
-        TRYALL supp_bij_ass_tac THEN
-        unfold_thms_tac ctxt @{thms id_o o_id} THEN
-        HEADGOAL (rtac ctxt refl) end;
+          rtac ctxt (rel_cong0 RS fun_cong RS fun_cong),
+          K (unfold_thms_tac ctxt @{thms id_apply Grp_UNIV_def}),
+          REPEAT_DETERM o rtac ctxt refl,
+          IF_UNSOLVED o EVERY' [
+            rtac ctxt (rel_cong0 RS @{thm cong} RS fun_cong OF (replicate live refl)),
+            rtac ctxt (map_comp_of_mrbnf mrbnf RS trans),
+            REPEAT_DETERM o supp_bij_ass_tac,
+            K (unfold_thms_tac ctxt @{thms id_o o_id}),
+            rtac ctxt refl
+          ]
+        ]
+      end;
 
     fun pred_set_tac ctxt = mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm (*|> print_that_tac "pred_set" ctxt*);
 
@@ -1326,7 +1326,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val repTA = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
     val T_bind = qualify b;
     val repTA_tfrees = Term.add_tfreesT repTA [];
-    val all_TA_params_in_order = fold_rev Term.add_tfreesT all_Ds (As' @ map dest_TFree (Bs @ Fs));
+    val all_TA_params_in_order = fold_rev Term.add_tfreesT all_Ds (interlace As' (map dest_TFree Bs) (map dest_TFree Fs) var_types);
     val TA_params =
       (if force_out_of_line then all_TA_params_in_order
        else inter (op =) repTA_tfrees all_TA_params_in_order);
@@ -1355,7 +1355,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     (*bd may depend only on dead type variables*)
     val bd_repT = fst (dest_relT (fastype_of mrbnf_bd));
     val bdT_bind = qualify (Binding.suffix_name ("_" ^ bdTN) b);
-    val params = Term.add_tfreesT bd_repT [] @ map dest_TFree (Bs @ Fs);
+    val params = Term.add_tfreesT bd_repT [];
     val all_deads = map TFree (fold_rev Term.add_tfreesT all_Ds []);
     val ((bdT, (_, Abs_bd_name, _, _, Abs_bdT_inject, Abs_bdT_cases)), lthy) =
       maybe_typedef false (bdT_bind, params, NoSyn) (HOLogic.mk_UNIV bd_repT) NONE

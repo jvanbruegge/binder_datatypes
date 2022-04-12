@@ -852,7 +852,7 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
         THEN TRYALL (rtac ctxt @{thm Fun.bij_id}))
           (cond_keep (set_map0_of_mrbnf mrbnf) not_dead );
 
-    fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt (bd_infinite_regular_card_order_of_mrbnf mrbnf) 1  (*|> print_that_tac "bd_card_order" ctxt*);
+    fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt (bd_infinite_regular_card_order_of_mrbnf mrbnf) 1;
     val set_bd_tacs = map (fn thm => fn ctxt => rtac ctxt thm 1)
       (cond_keep (set_bd_of_mrbnf mrbnf) not_dead);
 
@@ -949,7 +949,7 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
         ]
       end;
 
-    fun pred_set_tac ctxt = mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm (*|> print_that_tac "pred_set" ctxt*);
+    fun pred_set_tac ctxt = mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm;
 
     val mrbnf_wits = mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As)
       (replicate nwits Bs) (replicate nwits Fs) mrbnf;
@@ -1089,12 +1089,12 @@ fun raw_lift_mrbnf qualify (n1, n2, n3) mrbnf (accum as (unfold_set, lthy)) =
       THEN rtac ctxt (rel_OO_Grp_of_mrbnf mrbnf) 1
         THEN TRYALL (assume_tac ctxt);
 
-    fun pred_set_tac ctxt = mr_mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm_opt (*|> print_that_tac "pred_set" ctxt*);
+    fun pred_set_tac ctxt = mr_mk_simple_pred_set_tac ctxt (pred_set_of_mrbnf mrbnf) in_alt_thm_opt;
 
     val wits = map snd (mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As)
       (replicate nwits Bs) (replicate nwits Fs) mrbnf);
 
-    fun wit_tac ctxt = mk_simple_wit_tac ctxt (wit_thms_of_mrbnf mrbnf) (*|> print_that_tac "wit" ctxt*);
+    fun wit_tac ctxt = mk_simple_wit_tac ctxt (wit_thms_of_mrbnf mrbnf);
 
     val tacs = {
       map_id0 = map_id0_tac,

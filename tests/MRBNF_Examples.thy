@@ -96,9 +96,4 @@ local_setup \<open>fn lthy =>
   in snd b
   end\<close>
 
-term "True"
-
-term "\<Union> (setL3_G (map_G id id setF1_F' id id setF1_F' x))"
-term "\<Union> (image setF1_F' (setL3_G x)) \<union> \<Union> (image setF1_F' (setL6_G x))"
-
 end

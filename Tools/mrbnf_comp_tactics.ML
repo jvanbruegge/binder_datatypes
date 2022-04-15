@@ -206,7 +206,7 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
         fun mk_Gset_map0s ps = map (fn thm => @{thm comp_eq_dest_lhs} OF [thm OF ps]) (filter_Gset_map0s MRBNF_Def.Live_Var)
         val map_comp0' = unfold @{thms id_o} (@{thm sym[THEN comp_eq_dest_lhs]} OF [Gmap_comp0 OF (prems @ id_prems)]);
         val set_map0s' = map (ap_OF prems) set_map0s;
-      in print_tac ctxt "foo" THEN
+      in
         HEADGOAL (EVERY' [
           (case nth ivar_types i of
             MRBNF_Def.Live_Var => K all_tac

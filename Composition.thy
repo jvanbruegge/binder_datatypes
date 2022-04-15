@@ -79,4 +79,6 @@ let
 in lthy'' end
 \<close>
 
+print_theorems
+
 end

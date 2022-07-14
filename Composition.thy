@@ -24,6 +24,7 @@ binder_datatype 'var \<tau> =
 + 'rec * 'rec
 + 'btyvar * \<kappa> * 'body
 *)
+
 declare [[ML_print_depth=10000000]]
 local_setup \<open>fn lthy =>
 let
@@ -42,6 +43,29 @@ let
 in lthy''' end
 \<close>
 print_bnfs
+
+ML \<open>
+val tau = the (MRBNF_Def.mrbnf_of @{context} "Composition.\<tau>_pre")
+\<close>
+
+ML_file \<open>Tools/mrbnf_fp_tactics.ML\<close>
+ML_file \<open>Tools/mrbnf_fp.ML\<close>
+
+local_setup \<open>fn lthy =>
+let
+  val lthy' = MRBNF_Fp.construct_binder_fp MRBNF_Util.Least_FP
+    [(("\<tau>", tau), 2)] [[0]] lthy
+in
+  lthy'
+end
+\<close>
+
+
+
+
+
+
+
 (*
 binder_datatype ('var, 'tyvar) "term" =
     Var 'var

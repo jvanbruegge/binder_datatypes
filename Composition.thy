@@ -2,6 +2,10 @@ theory Composition
   imports "thys/MRBNF_Composition"
 begin
 
+ML \<open>
+Multithreading.parallel_proofs := 0;
+\<close>
+
 datatype \<kappa> =
   Star ("\<star>")
   | KArrow \<kappa> \<kappa> (infixr "\<rightarrow>" 50)
@@ -15,12 +19,12 @@ binder_datatype 'var \<tau> =
 
   \<down>
 
-binder_datatype ('tyvar, 'btyvar, 'rec, 'body) \<tau>_pre =
-    TyVar 'tyvar
-  | TyArrow
-  | TyApp 'rec 'rec
-  | TyForall 'btyvar \<kappa> 'body
+  'tyvar
++ unit
++ 'rec * 'rec
++ 'btyvar * \<kappa> * 'body
 *)
+declare [[ML_print_depth=10000000]]
 local_setup \<open>fn lthy =>
 let
   val systemf_type_name = "\<tau>_pre"
@@ -34,8 +38,10 @@ let
     [(dest_TFree @{typ 'tyvar}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'btyvar}, MRBNF_Def.Bound_Var)] systemf_type
     ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
   val ((mrbnf, (Ds, info)), lthy'') = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_type_name) true (fst tys) [] mrbnf lthy'
-in lthy'' end
+  val (bnf, lthy''') = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy''
+in lthy''' end
 \<close>
+print_bnfs
 (*
 binder_datatype ('var, 'tyvar) "term" =
     Var 'var
@@ -57,7 +63,7 @@ binder_datatype ('var, 'bvar, 'rec, 'body, 'tyvar, 'btyvar, 'trec, 'tbody) "term
   | Let "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list" 'body
   | LetRec "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list" 'body
 *)
-local_setup \<open>fn lthy =>
+(*local_setup \<open>fn lthy =>
 let
   val systemf_term_name = "term_pre"
   val systemf_term = @{typ "'var + 'rec * 'rec + 'rec * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre +
@@ -77,8 +83,6 @@ let
   val _ = @{print} info
   val _ = @{print} mrbnf
 in lthy'' end
-\<close>
-
-print_theorems
+\<close>*)
 
 end

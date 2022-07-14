@@ -37,12 +37,14 @@ sig
   val mrbnf_of: Proof.context -> string -> mrbnf option
   val mrbnf_of_global: theory -> string -> mrbnf option
   val mrbnf_of_bnf: BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
+  val bnf_of_mrbnf: mrbnf -> local_theory -> (BNF_Def.bnf * local_theory)
   val as_mrbnf: string -> local_theory -> (mrbnf * local_theory) option
   val mrbnf_interpretation: string -> (mrbnf -> local_theory -> local_theory) -> theory -> theory
   val interpret_mrbnf: (string -> bool) -> mrbnf -> local_theory -> local_theory
   val register_mrbnf_raw: string -> mrbnf -> local_theory -> local_theory
   val register_mrbnf: (string -> bool) -> string -> mrbnf -> local_theory -> local_theory
   val register_bnf_as_mrbnf: string option -> BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
+  val register_mrbnf_as_bnf: mrbnf -> local_theory -> (BNF_Def.bnf * local_theory)
 
   datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var; (*Added Dead_Var for kill function*)
   val var_type_ord: var_type ord
@@ -1695,7 +1697,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
         |> Local_Theory.begin_nested |> snd
         |> maybe_define true map_bind_def
         ||>> apfst split_list o fold_map (maybe_define true) set_binds_defs
-        ||>> maybe_define true bd_bind_def
+        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy))(* maybe_define true bd_bind_def *)
         ||> `Local_Theory.end_nested;
 
     val phi = Proof_Context.export_morphism lthy_old lthy;
@@ -2131,7 +2133,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
       end;
 
     val infinite_regular_card_order_bd_goal =
-      fold_rev Logic.all (filter_frees zs @ filter_bounds zs) (
+      (*fold_rev Logic.all (filter_frees zs @ filter_bounds zs)*) (
       HOLogic.mk_Trueprop (mk_infinite_regular_card_order mrbnf_bd_As)
     );
 
@@ -3629,6 +3631,76 @@ fun register_bnf_as_mrbnf key bnf lthy =
       )
       val lthy'' = register_mrbnf_raw name mrbnf lthy'
   in (mrbnf, lthy'')
+  end;
+
+fun bnf_of_mrbnf mrbnf lthy =
+  let
+    val var_types = var_types_of_mrbnf mrbnf;
+    fun map_filter_live f xs = map_filter (fn (Live_Var, x) => SOME (f x) | (_, _) => NONE) (var_types ~~ xs);
+
+    val n = live_of_mrbnf mrbnf
+    val free = free_of_mrbnf mrbnf;
+    val bound = bound_of_mrbnf mrbnf;
+    val id_prems = maps (fn Bound_Var => @{thms bij_id supp_id_bound} | Free_Var => @{thms supp_id_bound} | _ => []) var_types
+    val o_id = Local_Defs.unfold0 lthy @{thms o_id}
+
+    fun map_id0_tac ctxt = rtac ctxt (map_id0_of_mrbnf mrbnf) 1;
+    fun map_comp0_tac ctxt = rtac ctxt (o_id (map_comp0_of_mrbnf mrbnf OF (id_prems @ id_prems))) 1;
+    fun map_cong0_tac ctxt = rtac ctxt (map_cong0_of_mrbnf mrbnf OF (id_prems @ id_prems)) 1 THEN
+      REPEAT_DETERM (HEADGOAL (rtac ctxt refl ORELSE' Goal.assume_rule_tac ctxt));
+    val set_map0_tacs = map_filter_live (fn thm => fn ctxt => rtac ctxt (thm OF id_prems) 1) (
+      set_map0_of_mrbnf mrbnf
+    );
+    fun bd_card_order_tac ctxt = rtac ctxt (@{thm infinite_regular_card_order.card_order} OF [
+      bd_infinite_regular_card_order_of_mrbnf mrbnf
+    ]) 1;
+    fun bd_cinfinite_tac ctxt = rtac ctxt (@{thm infinite_regular_card_order.cinfinite} OF [
+      bd_infinite_regular_card_order_of_mrbnf mrbnf
+    ]) 1;
+    val set_bd_tacs = map_filter_live (fn thm => fn ctxt => rtac ctxt (@{thm ordLess_imp_ordLeq} OF [thm]) 1) (
+      set_bd_of_mrbnf mrbnf
+    );
+    fun le_rel_OO_tac ctxt = rtac ctxt (le_rel_OO_of_mrbnf mrbnf) 1;
+    fun rel_OO_Grp_tac ctxt = rtac ctxt (Ctr_Sugar_Util.mk_unabs_def n @{thm meta_eq_to_obj_eq} OF
+      [Local_Defs.abs_def_rule lthy (Local_Defs.unfold0 lthy [map_id_of_mrbnf mrbnf] (rel_OO_Grp_of_mrbnf mrbnf OF id_prems))]) 1;
+    fun pred_set_tac ctxt = rtac ctxt (pred_set_of_mrbnf mrbnf) 1;
+
+    val tacs = BNF_Def.zip_axioms map_id0_tac map_comp0_tac map_cong0_tac set_map0_tacs bd_card_order_tac
+      bd_cinfinite_tac set_bd_tacs le_rel_OO_tac rel_OO_Grp_tac pred_set_tac;
+    fun wit_tac ctxt = EVERY1 (map (fn thm => rtac ctxt thm THEN' assume_tac ctxt) (wit_thms_of_mrbnf mrbnf));
+
+    val nwits = nwits_of_mrbnf mrbnf
+    val (((((lives, lives'), frees), bounds), deads), lthy') = lthy
+      |> Ctr_Sugar_Util.mk_TFrees n
+      ||>> Ctr_Sugar_Util.mk_TFrees n
+      ||>> Ctr_Sugar_Util.mk_TFrees' (map Type.sort_of_atyp (frees_of_mrbnf mrbnf))
+      ||>> Ctr_Sugar_Util.mk_TFrees' (map Type.sort_of_atyp (bounds_of_mrbnf mrbnf))
+      ||>> Ctr_Sugar_Util.mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf mrbnf))
+
+    val count = n + free + bound;
+    val is_live = map (fn Live_Var => true | _ => false) var_types
+    val sets = mk_sets_of_mrbnf (replicate count deads) (replicate count lives)
+      (replicate count bounds) (replicate count frees)  mrbnf
+    val live_sets = cond_keep sets is_live
+    val ABF_types = map (HOLogic.dest_setT o range_type o fastype_of) sets;
+    val ids = map HOLogic.id_const (cond_keep ABF_types (map not is_live));
+    val mapx = fold_rev Term.absdummy (map2 (curry op-->) lives lives') (Term.list_comb (
+      mk_map_of_mrbnf deads lives lives' bounds frees mrbnf, cond_interlace (map Bound (n - 1 downto 0)) ids is_live
+    ));
+  in
+    BNF_Def.bnf_def BNF_Def.Do_Inline (K BNF_Def.Dont_Note) false I tacs wit_tac (SOME (frees @ bounds @ deads)) Binding.empty
+      Binding.empty Binding.empty [] (((((((name_of_mrbnf mrbnf, mk_T_of_mrbnf deads lives bounds frees mrbnf),
+      mapx), live_sets), mk_bd_of_mrbnf deads bounds frees mrbnf), map snd (
+        mk_wits_of_mrbnf (replicate nwits deads) (replicate nwits lives) (replicate nwits bounds) (replicate nwits frees) mrbnf)),
+      SOME (mk_rel_of_mrbnf deads lives lives' bounds frees mrbnf)),
+      SOME (mk_pred_of_mrbnf deads lives bounds frees mrbnf)) lthy'
+  end;
+
+fun register_mrbnf_as_bnf mrbnf lthy =
+  let val (bnf, lthy') = bnf_of_mrbnf mrbnf lthy
+      val name = fst (dest_Type (T_of_mrbnf mrbnf))
+      val lthy'' = BNF_Def.register_bnf_raw name bnf lthy'
+  in (bnf, lthy'')
   end;
 
 fun as_mrbnf name lthy' =

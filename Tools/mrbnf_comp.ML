@@ -212,11 +212,11 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       let
         val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs)
         val thy = Proof_Context.theory_of lthy
-        val full_name = Sign.full_name thy (Binding.name name)
+        val full_name = Sign.full_name thy (qualify (Binding.name name))
       in if Class.is_class thy full_name then
         ([full_name], lthy)
       else
-        (Class_Declaration.class (Binding.name name) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+        (Class_Declaration.class (qualify (Binding.name name)) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
       end;
     val (class, lthy3) = mk_class "var_" sort lthy
     val (coclass, lthy) = mk_class "covar_" cosort lthy3

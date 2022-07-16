@@ -48,8 +48,15 @@ ML \<open>
 val tau = the (MRBNF_Def.mrbnf_of @{context} "Composition.\<tau>_pre")
 \<close>
 
+lemma image_in_bij_eq: "bij f \<Longrightarrow> (a \<in> f ` A) = (inv f a \<in> A)"
+  by force
+
 ML_file \<open>Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>Tools/mrbnf_fp.ML\<close>
+
+ML \<open>
+Multithreading.parallel_proofs := 0;
+\<close>
 
 local_setup \<open>fn lthy =>
 let

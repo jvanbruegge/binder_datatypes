@@ -481,6 +481,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           |> prove_no_prems lthy ys goal
           |> split_conjs
       end;
+    val rename_id0s = map (fn thm => @{thm meta_eq_to_obj_eq} OF [
+      Local_Defs.unfold0 lthy @{thms id_def[symmetric]} (Local_Defs.abs_def_rule lthy thm)
+    ]) rename_ids
 
     val rename_comps =
       let
@@ -497,6 +500,24 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           |> split_conjs
           |> map (fn thm => thm RS sym)
       end;
+    val rename_comp0s = map2 (fn thm => fn rename_t =>
+      let
+        val goal = mk_Trueprop_eq (
+          HOLogic.mk_comp (Term.list_comb (rename_t, fgs), Term.list_comb (rename_t, ffs)),
+          Term.list_comb (rename_t, map2 (curry HOLogic.mk_comp) fgs ffs)
+        );
+        val comp_apply' = infer_instantiate' lthy [
+          SOME (Thm.cterm_of lthy (Term.list_comb (rename_t, fgs))),
+          SOME (Thm.cterm_of lthy (Term.list_comb (rename_t, ffs)))
+        ] @{thm comp_apply[symmetric]}
+       in prove lthy (ffs @ fgs) prem_terms_ffs_fgs goal (fn ctxt => fn prems =>
+         let
+          val thm' = @{thm meta_eq_to_obj_eq} OF [Local_Defs.abs_def_rule lthy (
+            Local_Defs.unfold0 lthy [comp_apply'] (thm OF prems)
+          )];
+         in rtac ctxt thm' 1 end
+       ) end
+    ) rename_comps renamesAs
 
     (* Define inductive predicate free *)
     fun mk_inductive i A z b_vec free_sets bound_sets lthy =
@@ -2102,6 +2123,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       end;
     val rrename_ids = @{map 5} mk_rrename_ids rrenamesAs ws rrename_defs rename_ids
       Quotient_abs_reps;
+    val rrename_id0s = map (fn thm => @{thm meta_eq_to_obj_eq} OF [
+      Local_Defs.unfold0 lthy @{thms id_def[symmetric]} (Local_Defs.abs_def_rule lthy thm)
+    ]) rrename_ids;
 
     fun mk_rrename_cong_id w rrename_t FFVars_ts FFVars_defs rrename_def Quotient_abs_rep
       Quotient_total_abs_eq_iff alpha_bij rename_id alpha_refl =
@@ -2124,20 +2148,61 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val cctor_eq_intro_rrenames = map (fn thm => (thm RS iffD2)
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
 
-    (* Print all the theorems *)
-    val _ = map @{print} ([rename_simps, rename_ids, rename_comps, flat FVars_ctorss,
-      flat FVars_rename_less, flat FVars_renamess, flat card_of_FVars_boundss, alpha_refls,
-      alpha_bijs, alpha_bij_eqs, alpha_bij_eq_invs, flat alpha_FVarsss, alpha_syms, alpha_transs,
-      flat card_of_FVarsB_boundss, refresh_sets, refreshs, flat avoid_freshss, alpha_avoids,
-      equivp_alphas, TT_Quotients, TT_abs_ctors, TT_nchotomys, rrename_cctors,
-      flat card_of_FFVars_boundss, flat FFVars_cctorss, flat FFVars_intross, flat FFVars_elimss,
-      FFVars_inducts, TT_injects0, flat aavoid_freshss, alpha_aavoids, TT_fresh_nchotomys,
-      TT_fresh_cases, single TT_existential_co_induct, single TT_fresh_co_induct_param,
-      Option.map single TT_fresh_induct_param_no_clash_opt |> the_default [],
-      single TT_fresh_co_induct, single TT_plain_co_induct, rrename_ids, rrename_cong_ids,
-      cctor_eq_intro_rrenames]);
+    val notes =
+      [("rename_simps", rename_simps),
+       ("rename_id0s", rename_id0s),
+       ("rename_ids", rename_ids),
+       ("rename_comp0s", rename_comp0s),
+       ("rename_comps", rename_comps),
+       ("FVars_ctors", flat FVars_ctorss),
+       ("FVars_rename_less", flat FVars_rename_less),
+       ("FVars_renames", flat FVars_renamess),
+       ("card_of_FVars_bounds", flat card_of_FVars_boundss),
+       ("alpha_refls", alpha_refls),
+       ("alpha_bijs", alpha_bijs),
+       ("alpha_bij_eqs", alpha_bij_eqs),
+       ("alpha_bij_eq_invs", alpha_bij_eq_invs),
+       ("alpha_FVarss", flat alpha_FVarsss),
+       ("alpha_syms", alpha_syms),
+       ("alpha_transs", alpha_transs),
+       ("card_of_FVarsB_bounds", flat card_of_FVarsB_boundss),
+       ("refresh_sets", refresh_sets),
+       ("refreshs", refreshs),
+       ("avoid_freshs", flat avoid_freshss),
+       ("alpha_avoids", alpha_avoids),
+       ("equivp_alphas", equivp_alphas),
+       ("TT_Quotients", TT_Quotients),
+       ("TT_abs_ctors", TT_abs_ctors),
+       ("TT_nchotomys", TT_nchotomys),
+       ("rrename_cctors", rrename_cctors),
+       ("card_of_FFVars_bounds", flat card_of_FFVars_boundss),
+       ("FFVars_cctors", flat FFVars_cctorss),
+       ("FFVars_intros", flat FFVars_intross),
+       ("FFVars_elims", flat FFVars_elimss),
+       ("FFVars_inducts", FFVars_inducts),
+       ("TT_injects0", TT_injects0),
+       ("aavoid_freshs", flat aavoid_freshss),
+       ("alpha_aavoids", alpha_aavoids),
+       ("TT_fresh_nchotomys", TT_fresh_nchotomys),
+       ("TT_fresh_cases", TT_fresh_cases),
+       ("TT_existential_co_induct", [TT_existential_co_induct]),
+       ("TT_fresh_co_induct_param", [TT_fresh_co_induct_param]),
+       ("TT_fresh_co_induct", [TT_fresh_co_induct]),
+       ("TT_plain_co_induct", [TT_plain_co_induct]),
+       ("rrename_id0s", rrename_id0s),
+       ("rrename_ids", rrename_ids),
+       ("rrename_cong_ids", rrename_cong_ids),
+       ("cctor_eq_intro_rrenames", cctor_eq_intro_rrenames)
+      ] @ (the_default [] (
+        Option.map (single o pair "TT_fresh_induct_param_no_clash" o single)
+        TT_fresh_induct_param_no_clash_opt
+      )) |> (map (fn (thmN, thms) =>
+        ((Binding.qualify true (hd names) (Binding.name thmN), []), [(thms, [])])
+      ));
+
+    val (noted, lthy') = Local_Theory.notes notes lthy
   in
-    lthy
+    lthy'
   end;
 
 end;

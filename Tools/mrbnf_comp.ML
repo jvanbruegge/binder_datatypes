@@ -1451,6 +1451,11 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       wit = wit_tac
     };
 
+    fun mk_class prfx xs lthy =
+      (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+    val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) lthy
+    val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) lthy3
+
     val class_thms =
       let
         val class_thms = class_thms_of_mrbnf mrbnf
@@ -1468,8 +1473,8 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
         ]
       in
         SOME (
-          (class_of_mrbnf mrbnf, var_large', #var_regular class_thms),
-          (coclass_of_mrbnf mrbnf, K covar_large')
+          (class, var_large', #var_regular class_thms),
+          (coclass, K covar_large')
         )
       end
 

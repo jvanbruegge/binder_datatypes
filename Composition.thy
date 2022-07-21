@@ -51,6 +51,16 @@ val tau = the (MRBNF_Def.mrbnf_of @{context} "Composition.\<tau>_pre")
 lemma image_in_bij_eq: "bij f \<Longrightarrow> (a \<in> f ` A) = (inv f a \<in> A)"
   by force
 
+lemma supp_comp_bound:
+  assumes bound: "|supp f| <o |UNIV::'a set|" "|supp g| <o |UNIV::'a set|"
+  and inf: "infinite (UNIV::'a set)"
+  shows "|supp (g \<circ> f)| <o |UNIV::'a set|"
+proof -
+  from inf bound(2,1) have "|supp g \<union> supp f| <o |UNIV::'a set|" by (rule card_of_Un_ordLess_infinite)
+  then show ?thesis using supp_o
+    by (metis card_of_mono1 ordLeq_ordLess_trans)
+qed
+
 ML_file \<open>Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>Tools/mrbnf_fp.ML\<close>
 
@@ -67,53 +77,29 @@ in
 end
 \<close>
 
+print_theorems
 
+ML_file \<open>Tools/mrbnf_recursor.ML\<close>
 
-
-
-
-
-(*
-binder_datatype ('var, 'tyvar) "term" =
-    Var 'var
-  | App "('var, 'tyvar) term" "('var, 'tyvar) term"
-  | TApp "('var, 'tyvar) term" "'tyvar \<tau>"
-  | Lam x::"'var" "'tyvar \<tau>" t::"('var, 'tyvar) term" binds x in t
-  | TyLam a::"'btyvar" \<kappa> t::"('var, 'tyvar) term" binds a in t
-  | Let "(xs::'var * 'tyvar \<tau> * ('var, 'tyvar) term) list" t::"('var, 'tyvar) term" binds xs in t
-  | LetRec "(xs::'var * 'tyvar \<tau> * ts::('var, 'tyvar) term) list" t::"('var, 'tyvar) term" binds xs in t ts
-
-  \<down>*                  (normally the \<tau> type would not be expanded, would be recursive already)
-
-binder_datatype ('var, 'bvar, 'rec, 'body, 'tyvar, 'btyvar, 'trec, 'tbody) "term_pre" =
-    Var 'var
-  | App 'rec 'rec
-  | TApp 'rec "('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre"
-  | Lam 'bvar "('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre" 'body
-  | TyLam 'btyvar \<kappa> 'body
-  | Let "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list" 'body
-  | LetRec "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list" 'body
-*)
-(*local_setup \<open>fn lthy =>
+local_setup \<open>fn lthy =>
 let
-  val systemf_term_name = "term_pre"
-  val systemf_term = @{typ "'var + 'rec * 'rec + 'rec * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre +
-    'bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body + 'btyvar * \<kappa> * 'body +
-    ('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list * 'body +
-    ('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list * 'body"}
-  val Xs = []
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'body}, @{typ 'rec}, @{typ 'tyvar}, @{typ 'btyvar}, @{typ 'trec}, @{typ 'tbody}]
-  fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val qualify = Binding.prefix_name (systemf_term_name ^ "_")
-
-  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
-    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var)] systemf_term
-    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-  val ((mrbnf, (Ds, info)), lthy'') = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_term_name) true (fst tys) [] mrbnf lthy'
-  val _ = @{print} tys
-  val _ = @{print} info
-  val _ = @{print} mrbnf
-in lthy'' end
-\<close>*)
+  val tacs = {
+    map_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
+    map_comp0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
+    map_id_on_FVars = map (fn thm => fn ctxt => EVERY1 [
+      resolve_tac ctxt [thm],
+      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
+    ]) @{thms \<tau>.rrename_cong_ids},
+    map_inv_FVars = [fn ctxt => Skip_Proof.cheat_tac ctxt 1]
+  };
+  val D = {
+    T = @{typ "'a::var_\<tau>_pre \<tau>"},
+    FVars = [@{term FFVars_\<tau>}],
+    map = @{term rrename_\<tau>},
+    axioms = tacs
+    };
+  val lthy' = MRBNF_Recursor.create_binding_recursor D lthy
+in lthy' end
+\<close>
 
 end

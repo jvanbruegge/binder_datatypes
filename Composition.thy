@@ -78,27 +78,65 @@ end
 \<close>
 
 print_theorems
+term "\<tau>_ctor"
 
 ML_file \<open>Tools/mrbnf_recursor.ML\<close>
 
+definition FFVars_\<tau>' :: "'a::var_\<tau>_pre \<tau> \<Rightarrow> 'a \<tau> \<Rightarrow> 'a set"
+  where "FFVars_\<tau>' \<equiv> undefined"
+definition rrename_\<tau>' :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a::var_\<tau>_pre \<tau> \<Rightarrow> 'a \<tau> \<Rightarrow> 'a \<tau>"
+  where "rrename_\<tau>' \<equiv> undefined"
+
 local_setup \<open>fn lthy =>
 let
-  val tacs = {
-    map_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
-    map_comp0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
-    map_id_on_FVars = map (fn thm => fn ctxt => EVERY1 [
+  val model_tacs = {
+    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
+    Umap_comp0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
+    Umap_cong_ids = map (fn thm => fn ctxt => EVERY1 [
       resolve_tac ctxt [thm],
       REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
     ]) @{thms \<tau>.rrename_cong_ids},
-    map_inv_FVars = [fn ctxt => Skip_Proof.cheat_tac ctxt 1]
+    in_UFVars_Umap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1]
   };
-  val D = {
-    T = @{typ "'a::var_\<tau>_pre \<tau>"},
-    FVars = [@{term FFVars_\<tau>}],
-    map = @{term rrename_\<tau>},
-    axioms = tacs
-    };
-  val lthy' = MRBNF_Recursor.create_binding_recursor D lthy
+  val parameter_tacs = {
+    Pmap_id0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
+    Pmap_comp0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
+    Pmap_cong_ids = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
+    in_PFVars_Pmap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
+    small_PFVars = [fn ctxt => Skip_Proof.cheat_tac ctxt 1]
+  };
+  val model_ext = {
+    U = @{typ "'a::var_\<tau>_pre \<tau>"},
+    term_quotient = SOME {
+      qT = @{typ "'a::var_\<tau>_pre \<tau>"},
+      qmap = @{term rrename_\<tau>}
+    },
+    UFVars = [@{term "FFVars_\<tau>'"}],
+    Umap = @{term "rrename_\<tau>'"},
+    Uctor = @{term \<tau>_ctor},
+    parameters = {
+      P = @{typ "unit"},
+      PFVars = [@{term "\<lambda>_. {}"}],
+      Pmap = @{term "id :: ('a => 'a) => 'a => 'a"},
+      axioms = parameter_tacs
+    },
+    axioms = model_tacs
+  };
+  val model = {
+    U = @{typ "'a::var_\<tau>_pre \<tau>"},
+    term_quotient = NONE,
+    UFVars = [@{term "FFVars_\<tau>"}],
+    Umap = @{term "rrename_\<tau>"},
+    Uctor = @{term \<tau>_ctor},
+    parameters = {
+      P = @{typ "unit"},
+      PFVars = [@{term "\<lambda>_. {}"}],
+      Pmap = @{term "id :: ('a => 'a) => 'a => 'a"},
+      axioms = parameter_tacs
+    },
+    axioms = model_tacs
+  };
+  val lthy' = MRBNF_Recursor.create_binding_recursor model lthy
 in lthy' end
 \<close>
 

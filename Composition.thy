@@ -42,6 +42,7 @@ let
   val (bnf, lthy''') = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy''
 in lthy''' end
 \<close>
+print_theorems
 print_bnfs
 
 ML \<open>
@@ -69,6 +70,15 @@ term "\<tau>_ctor"
 
 lemma infinite_var_\<tau>_pre: "infinite (UNIV :: 'a::var_\<tau>_pre set)"
   using card_of_ordLeq_finite cinfinite_def infinite_regular_card_order.Cinfinite infinite_regular_card_order_card_suc natLeq_Card_order natLeq_card_order natLeq_cinfinite var_DEADID_class.large by blast
+
+lemma Un_bound:
+  assumes inf: "infinite (UNIV :: 'a set)"
+    and "|A1| <o |UNIV::'a set|" and "|A2| <o |UNIV::'a set|"
+  shows "|A1 \<union> A2| <o |UNIV::'a set|"
+  using assms card_of_Un_ordLess_infinite by blast
+
+lemma imsupp_supp_bound: "infinite (UNIV::'a set) \<Longrightarrow> |imsupp g| <o |UNIV::'a set| \<longleftrightarrow> |supp g| <o |UNIV::'a set|"
+  by (metis Un_bound card_of_image imsupp_def ordLeq_ordLess_trans supp_ordleq_imsupp)
 
 (******************** Definitions for variable-for-variable substitution ***********)
 typedef 'a :: var_\<tau>_pre ssfun = "{f :: 'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set|}"
@@ -161,6 +171,39 @@ lemma Umap_cong_id:
   using assms unfolding Umap_def UFVars_def
   by (rule \<tau>.rrename_cong_ids)
 
+lemma UFVars_subset: "set2_\<tau>_pre y \<inter> (imsupp (Rep_ssfun p) \<union> {}) = {} \<Longrightarrow>
+       (\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<Longrightarrow> UFVars t (pu p) - set2_\<tau>_pre y \<subseteq> FFVars_\<tau> t - set2_\<tau>_pre y \<union> imsupp (Rep_ssfun p) \<union> {}) \<Longrightarrow>
+       (\<And>t pu p. (t, pu) \<in> set4_\<tau>_pre y \<Longrightarrow> UFVars t (pu p) \<subseteq> FFVars_\<tau> t \<union> imsupp (Rep_ssfun p) \<union> {}) \<Longrightarrow> UFVars t (CCTOR y p) \<subseteq> FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst y)) \<union> set1_\<tau>_pre y \<union> imsupp (Rep_ssfun p) \<union> {}"
+  unfolding Un_empty_right CCTOR_def UFVars_def
+  apply (auto simp: imsupp_supp_bound[OF infinite_var_\<tau>_pre] \<tau>.FFVars_cctors \<tau>_pre.set_map supp_id_bound emp_bound Rep_ssfun[simplified])
+  using imsupp_def supp_def apply fastforce
+  using imsupp_def supp_def apply fastforce
+  by fastforce+
+lemma UFVars_subset': "set2_\<tau>_pre y \<inter> (imsupp (Rep_ssfun p) \<union> {}) = {} \<Longrightarrow>
+   (\<And>pu p. pu \<in> set3_\<tau>_pre y \<Longrightarrow> FFVars_\<tau> (pu p) - set2_\<tau>_pre y \<subseteq> imsupp (Rep_ssfun p) \<union> {}) \<Longrightarrow>
+   (\<And>pu p. pu \<in> set4_\<tau>_pre y \<Longrightarrow> FFVars_\<tau> (pu p) \<subseteq> imsupp (Rep_ssfun p) \<union> {}) \<Longrightarrow> FFVars_\<tau> (CCTOR' y p) \<subseteq> set1_\<tau>_pre y \<union> imsupp (Rep_ssfun p) \<union> {}"
+  unfolding Un_empty_right CCTOR'_def
+  apply (auto simp: imsupp_supp_bound[OF infinite_var_\<tau>_pre] \<tau>.FFVars_cctors \<tau>_pre.set_map supp_id_bound emp_bound Rep_ssfun[simplified])
+  using imsupp_def supp_def apply fastforce
+  by fastforce
+
+lemma Umap_Uctor: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow>
+       |supp f| <o |UNIV::'a set| \<Longrightarrow>
+       Umap f (\<tau>_ctor (map_\<tau>_pre id id fst fst y)) (CCTOR y p) =
+       CCTOR (map_\<tau>_pre f f (\<lambda>(t, pu). (rrename_\<tau> f t, \<lambda>p. Umap f t (pu (compSS (inv f) p)))) (\<lambda>(t, pu). (rrename_\<tau> f t, \<lambda>p. Umap f t (pu (compSS (inv f) p)))) y) (compSS f p)"
+  unfolding Umap_def CCTOR_def
+  by (auto simp: \<tau>.rrename_id0s \<tau>.rrename_cctors \<tau>_pre.map_comp compSS.rep_eq Rep_ssfun[simplified]
+      supp_comp_bound infinite_var_\<tau>_pre supp_inv_bound supp_id_bound inv_o_simp1[THEN rewriteR_comp_comp]
+      fun_cong[OF compSS_comp[unfolded comp_def], symmetric] compSS_id[unfolded id_def]
+      intro!: \<tau>.cctor_eq_intro_rrenames[of id] \<tau>_pre.map_cong)
+lemma Umap_Uctor': "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_\<tau> f (CCTOR' y p) = CCTOR' (map_\<tau>_pre f f (\<lambda>pu p. rrename_\<tau> f (pu (compSS (inv f) p))) (\<lambda>pu p. rrename_\<tau> f (pu (compSS (inv f) p))) y) (compSS f p)"
+  unfolding CCTOR'_def
+  by (auto simp: \<tau>.rrename_id0s \<tau>.rrename_cctors \<tau>_pre.map_comp compSS.rep_eq Rep_ssfun[simplified]
+      supp_comp_bound infinite_var_\<tau>_pre supp_inv_bound supp_id_bound inv_o_simp1[THEN rewriteR_comp_comp]
+      fun_cong[OF compSS_comp[unfolded comp_def], symmetric] compSS_id[unfolded id_def]
+      intro!: \<tau>.cctor_eq_intro_rrenames[of id] \<tau>_pre.map_cong)
+
+
 (***************************************************************************************)
 
 
@@ -191,7 +234,11 @@ let
       REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
     ]) @{thms Umap_cong_id},
     in_UFVars_Umap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
-    Umap_Uctor = fn ctxt => Skip_Proof.cheat_tac ctxt 1
+    Umap_Uctor = fn ctxt => EVERY1 [rtac ctxt @{thm Umap_Uctor}, REPEAT_DETERM o assume_tac ctxt],
+    UFVars_subsets = [fn ctxt => EVERY1 [
+      rtac ctxt @{thm UFVars_subset},
+      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
+    ]]
   };
   val model_tacs = {
     small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
@@ -202,7 +249,11 @@ let
       REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
     ]) @{thms \<tau>.rrename_cong_ids},
     in_UFVars_Umap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
-    Umap_Uctor = fn ctxt => Skip_Proof.cheat_tac ctxt 1
+    Umap_Uctor = fn ctxt => EVERY1 [rtac ctxt @{thm Umap_Uctor'}, REPEAT_DETERM o assume_tac ctxt],
+    UFVars_subsets = [fn ctxt => EVERY1 [
+      rtac ctxt @{thm UFVars_subset'},
+      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
+    ]]
   };
   val parameter_tacs = {
     Pmap_id0 = fn ctxt => rtac ctxt @{thm compSS_id} 1,
@@ -219,13 +270,15 @@ let
     term_quotient = SOME {
       qT = @{typ "'a::var_\<tau>_pre \<tau>"},
       qmap = @{term rrename_\<tau>},
-      qctor = @{term \<tau>_ctor}
+      qctor = @{term \<tau>_ctor},
+      qFVars = [@{term FFVars_\<tau>}]
     },
     UFVars = [@{term "UFVars"}],
     Umap = @{term "Umap"},
     Uctor = @{term CCTOR},
     avoiding_sets = [@{term "{} :: 'a::var_\<tau>_pre set"}],
     mrbnf = tau,
+    binding_dispatcher = [[0]],
     parameters = {
       P = @{typ "'a::var_\<tau>_pre ssfun"},
       PFVars = [@{term "\<lambda>p. imsupp (Rep_ssfun p)"}],
@@ -242,6 +295,7 @@ let
     Uctor = @{term CCTOR'},
     avoiding_sets = [@{term "{} :: 'a::var_\<tau>_pre set"}],
     mrbnf = tau,
+    binding_dispatcher = [[0]],
     parameters = {
       P = @{typ "'a::var_\<tau>_pre ssfun"},
       PFVars = [@{term "\<lambda>p. imsupp (Rep_ssfun p)"}],
@@ -250,7 +304,7 @@ let
     },
     axioms = model_tacs
   };
-  val lthy' = MRBNF_Recursor.create_binding_recursor model_ext lthy
+  val lthy' = MRBNF_Recursor.create_binding_recursor model lthy
 in lthy' end
 \<close>
 

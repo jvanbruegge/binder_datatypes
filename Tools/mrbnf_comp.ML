@@ -1474,7 +1474,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       end
 
     val (mrbnf', lthy') =
-      mrbnf_def Hardly_Inline (user_policy Dont_Note) true qualify tacs (SOME all_deads) class_thms
+      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) class_thms
         Binding.empty Binding.empty Binding.empty []
         (((((((b, TA), mrbnf_map), mrbnf_sets), mrbnf_bd'), mrbnf_wits), SOME mrbnf_rel), SOME mrbnf_pred) lthy;
     val unfolds = @{thm id_bnf_apply} ::

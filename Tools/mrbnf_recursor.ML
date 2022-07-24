@@ -21,17 +21,19 @@ sig
     Umap_comp0: 'a,
     Umap_cong_ids: 'a list,
     in_UFVars_Umap: 'a list,
-    Umap_Uctor: 'a
+    Umap_Uctor: 'a,
+    UFVars_subsets: 'a list
   };
 
   type 'a model = {
     U: typ,
-    term_quotient: { qT: typ, qmap: term, qctor: term } option,
+    term_quotient: { qT: typ, qmap: term, qctor: term, qFVars: term list } option,
     UFVars: term list,
     Umap: term,
     Uctor: term,
     avoiding_sets: term list,
     mrbnf: MRBNF_Def.mrbnf,
+    binding_dispatcher: int list list,
     parameters: 'a parameter,
     axioms: 'a model_axioms
   };
@@ -66,17 +68,19 @@ type 'a model_axioms = {
   Umap_comp0: 'a,
   Umap_cong_ids: 'a list,
   in_UFVars_Umap: 'a list,
-  Umap_Uctor: 'a
+  Umap_Uctor: 'a,
+  UFVars_subsets: 'a list
 };
 
 type 'a model = {
   U: typ,
-  term_quotient: { qT: typ, qmap: term, qctor: term } option,
+  term_quotient: { qT: typ, qmap: term, qctor: term, qFVars: term list } option,
   UFVars: term list,
   Umap: term,
   Uctor: term,
   avoiding_sets: term list,
   mrbnf: MRBNF_Def.mrbnf,
+  binding_dispatcher: int list list,
   parameters: 'a parameter,
   axioms: 'a model_axioms
 };
@@ -163,18 +167,22 @@ fun prove_model_axioms model lthy =
     val ptacs = #axioms params;
     val pgoals = mk_termlike_goals NONE (#P params) (#Pmap params) (#PFVars params) lthy;
 
-    val vars = get_vars (is_some (#term_quotient model)) (#Umap model);
     val live = MRBNF_Def.live_of_mrbnf (#mrbnf model);
+    val free = MRBNF_Def.free_of_mrbnf (#mrbnf model);
+    val bound = MRBNF_Def.bound_of_mrbnf (#mrbnf model);
+
+    val vars = get_vars (is_some (#term_quotient model)) (#Umap model);
     val deads = MRBNF_Def.deads_of_mrbnf (#mrbnf model);
     val As = case #term_quotient model of
       SOME { qT, ...} => replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model])
       | NONE => replicate live (#P params --> #U model);
 
-    val ((((fs, y), p), t), lthy') =
+    val (((((fs, y), p), pu), t), lthy') =
       lthy
       |> mk_Frees "f" (map2 (curry op -->) vars vars)
       ||>> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads As vars vars (#mrbnf model)]
       ||>> apfst hd o mk_Frees "p" [#P params]
+      ||>> apfst hd o mk_Frees "pu" [#P params --> #U model]
       ||>> mk_Frees "t" (the_default [] (Option.map (single o #qT) (#term_quotient model)));
 
     val small_PFVars_goals = map (fn FVars =>
@@ -205,6 +213,19 @@ fun prove_model_axioms model lthy =
       (mk_card_of (HOLogic.mk_UNIV (nth vars i)))
     )) (0 upto length vars - 1);
 
+    val mapF_ap = Option.map (fn { qT, ... } =>
+        let
+          val As' = replicate live qT;
+          val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' vars vars (#mrbnf model);
+          val funs = map (fst o dest_funT) (fst (strip_fun_type (fastype_of mapF)));
+          val ids = map HOLogic.id_const (filter is_TFree funs);
+          val fsts = map (fn T => Const ("Product_Type.prod.fst", T --> qT)) As;
+          val gs = cond_interlace ids fsts (map (fn var_type =>
+            var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var
+          ) (MRBNF_Def.var_types_of_mrbnf (#mrbnf model)));
+        in Term.list_comb (mapF, gs) end
+      ) (#term_quotient model);
+
     val Umap = #Umap model;
     val Umap_Uctor_goal =
       let
@@ -217,22 +238,12 @@ fun prove_model_axioms model lthy =
         )));
         val (ctor_map, pair_map) = case #term_quotient model of
           NONE => ([], PUmap)
-          | SOME { qctor, qT, qmap, ...} =>
-            let
-              val As' = replicate live qT;
-              val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' vars vars (#mrbnf model);
-              val funs = map (fst o dest_funT) (fst (strip_fun_type (fastype_of mapF)));
-              val ids = map HOLogic.id_const (filter is_TFree funs);
-              val fsts = map (fn T => Const ("Product_Type.prod.fst", T --> qT)) As;
-              val gs = cond_interlace ids fsts (map (fn var_type =>
-                var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var
-              ) (MRBNF_Def.var_types_of_mrbnf (#mrbnf model)));
-            in (
-              [qctor $ Term.list_comb (mapF, gs @ [y])],
-              HOLogic.mk_case_prod (Term.abs ("t", qT) (Term.abs ("pu", PU) (HOLogic.mk_tuple [
-                Term.list_comb (qmap, fs @ [Bound 1]), Term.list_comb (PUmap, [Bound 1, Bound 0])
-              ])))
-            ) end;
+          | SOME { qctor, qT, qmap, ...} => (
+            [qctor $ (the mapF_ap $ y)],
+            HOLogic.mk_case_prod (Term.abs ("t", qT) (Term.abs ("pu", PU) (HOLogic.mk_tuple [
+              Term.list_comb (qmap, fs @ [Bound 1]), Term.list_comb (PUmap, [Bound 1, Bound 0])
+            ])))
+          );
         val mapF = Term.list_comb (
           MRBNF_Def.mk_map_of_mrbnf deads As As vars vars (#mrbnf model),
           MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf (#mrbnf model))
@@ -244,13 +255,63 @@ fun prove_model_axioms model lthy =
         )))
       end;
 
+    val UFVars_subset_goals =
+      let
+        val mk_inter = HOLogic.mk_binop @{const_name inf};
+        val mk_Un = HOLogic.mk_binop @{const_name sup};
+        val count = live + free + bound;
+        val mrbnf_sets = (
+          MRBNF_Def.var_types_of_mrbnf (#mrbnf model)
+          ~~
+          MRBNF_Def.mk_sets_of_mrbnf (replicate count deads)
+            (replicate count As) (replicate count vars) (replicate count vars) (#mrbnf model)
+        );
+
+        fun topBind i = nth (map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) mrbnf_sets) i;
+        fun topFree i = nth (map_filter (fn (MRBNF_Def.Free_Var, x) => SOME x | _ => NONE) mrbnf_sets) i;
+        fun mk_maybe_pair [] pu = pu
+          | mk_maybe_pair [t] pu = HOLogic.mk_tuple [t, pu]
+        val disp = #binding_dispatcher model;
+
+        fun mk_goal i =
+          let
+            val A = nth (#avoiding_sets model) i
+            fun minus_topBind j t = if i < length disp andalso member (op=) (nth disp i) j then
+              HOLogic.mk_binop @{const_name minus} (t, topBind i $ y) else t;
+            val recSets = map_filter (fn (MRBNF_Def.Live_Var, x) => SOME x | _ => NONE) mrbnf_sets;
+            fun maybe_Un j t' = case #term_quotient model of
+              NONE => t'
+              | SOME { qFVars, ... } => mk_Un (minus_topBind j (Term.list_comb (nth qFVars i, t)), t');
+            fun maybe_Un2 t' = case #term_quotient model of
+              NONE => t'
+              | SOME { qFVars, qctor, ... } => mk_Un (nth qFVars i $ (qctor $ (the mapF_ap $ y)), t');
+          in fold_rev Logic.all (fs @ t @ [y, p]) (fold_rev (fn a => fn b => Logic.implies $ a $ b)
+            (mk_Trueprop_eq (
+              mk_inter (topBind i $ y, HOLogic.mk_binop @{const_name sup} (nth (#PFVars params) i $ p, A)),
+              Const (@{const_name bot}, HOLogic.mk_setT (nth vars i))
+            )::map (fn j => fold_rev Logic.all (t @ [pu, p]) (Logic.implies $
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (mk_maybe_pair t pu, nth recSets j $ y)) $
+              HOLogic.mk_Trueprop (mk_leq
+                (minus_topBind j (Term.list_comb (nth (#UFVars model) i, t @ [pu $ p])))
+                (mk_Un (maybe_Un j (nth (#PFVars params) i $ p), A))
+              )
+            )) (0 upto live - 1)) (HOLogic.mk_Trueprop (mk_leq
+              (Term.list_comb (nth (#UFVars model) i, t @ [#Uctor model $ y $ p]))
+              (mk_Un (mk_Un (maybe_Un2 (topFree i $ y), nth (#PFVars params) i $ p), A))
+            )))
+          end;
+      in
+        map mk_goal (0 upto length vars - 1)
+      end;
+
     val model_thms = {
       small_avoiding_sets = map2 prove small_avoiding_set_goals (#small_avoiding_sets tacs),
       Umap_id0 = prove (#map_id0 goals) (#Umap_id0 tacs),
       Umap_comp0 = prove (#map_comp0 goals) (#Umap_comp0 tacs),
       Umap_cong_ids = map2 prove (#map_cong_ids goals) (#Umap_cong_ids tacs),
       in_UFVars_Umap = map2 prove (#in_FVars_map goals) (#in_UFVars_Umap tacs),
-      Umap_Uctor = prove Umap_Uctor_goal (#Umap_Uctor tacs)
+      Umap_Uctor = prove Umap_Uctor_goal (#Umap_Uctor tacs),
+      UFVars_subsets = map2 prove UFVars_subset_goals (#UFVars_subsets tacs)
     };
   in {
     U = #U model,
@@ -260,6 +321,7 @@ fun prove_model_axioms model lthy =
     Uctor = #Uctor model,
     avoiding_sets = #avoiding_sets model,
     mrbnf = #mrbnf model,
+    binding_dispatcher = #binding_dispatcher model,
     parameters = params',
     axioms = model_thms
   } : thm model end;

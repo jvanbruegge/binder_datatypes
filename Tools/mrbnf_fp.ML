@@ -500,7 +500,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           |> split_conjs
           |> map (fn thm => thm RS sym)
       end;
-    val rename_comp0s = map2 (fn thm => fn rename_t =>
+    fun mk_rename_comp0s lthy = map2 (fn thm => fn rename_t =>
       let
         val goal = mk_Trueprop_eq (
           HOLogic.mk_comp (Term.list_comb (rename_t, fgs), Term.list_comb (rename_t, ffs)),
@@ -517,7 +517,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           )];
          in rtac ctxt thm' 1 end
        ) end
-    ) rename_comps renamesAs
+    );
+    val rename_comp0s = mk_rename_comp0s lthy rename_comps renamesAs;
 
     (* Define inductive predicate free *)
     fun mk_inductive i A z b_vec free_sets bound_sets lthy =
@@ -2127,6 +2128,23 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       Local_Defs.unfold0 lthy @{thms id_def[symmetric]} (Local_Defs.abs_def_rule lthy thm)
     ]) rrename_ids;
 
+    fun mk_rrename_comps rrename_t w rrename_def Quotient_total_abs_eq_iff alpha_refl alpha_sym alpha_trans
+      alpha_bij_eq alpha_quotient_sym rename_comp =
+      let
+        val goal = mk_Trueprop_eq (
+          list_comb (rrename_t, fgs) $ (list_comb (rrename_t, ffs) $ w),
+          list_comb (rrename_t, map2 (curry HOLogic.mk_comp) fgs ffs) $ w
+        );
+      in
+        prove lthy (ffs @ fgs @ [w]) prem_terms_ffs_fgs goal (
+          mk_rrename_comp_tac rrename_def Quotient_total_abs_eq_iff alpha_refl alpha_sym alpha_trans
+            alpha_bij_eq alpha_quotient_sym rename_comp
+        )
+      end;
+    val rrename_comps = @{map 10} mk_rrename_comps rrenamesAs ws rrename_defs Quotient_total_abs_eq_iffs
+      alpha_refls alpha_syms alpha_transs alpha_bij_eqs alpha_quotient_syms rename_comps;
+    val rrename_comp0s = mk_rename_comp0s lthy rrename_comps rrenamesAs;
+
     fun mk_rrename_cong_id w rrename_t FFVars_ts FFVars_defs rrename_def Quotient_abs_rep
       Quotient_total_abs_eq_iff alpha_bij rename_id alpha_refl =
       let
@@ -2144,6 +2162,27 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val rrename_cong_ids = @{map 10} mk_rrename_cong_id ws rrenamesAs (transpose FFVarsssAs)
       (transpose FFVars_defss) rrename_defs Quotient_abs_reps Quotient_total_abs_eq_iffs alpha_bijs
       rename_ids alpha_refls;
+
+    fun mk_FFVars_rrename f w rrename_t rrename_def alpha_sym alpha_quotient_sym FVars_rename FFVars_t FFVars_def alpha_FVars =
+      let
+        val goal = mk_Trueprop_eq (
+          FFVars_t $ (list_comb (rrename_t, ffs) $ w), mk_image f $ (FFVars_t $ w)
+        );
+      in
+        prove lthy (ffs @ [w]) prem_terms_ffs goal (fn ctxt => fn prems =>
+          Ctr_Sugar_Tactics.unfold_thms_tac ctxt [rrename_def, FFVars_def] THEN
+          EVERY1 [
+            rtac ctxt trans,
+            rtac ctxt alpha_FVars,
+            rtac ctxt alpha_sym,
+            rtac ctxt alpha_quotient_sym,
+            rtac ctxt FVars_rename,
+            REPEAT_DETERM o resolve_tac ctxt prems
+          ]
+        )
+      end;
+    val FFVars_rrenamess = @{map 5} (fn f => @{map 9} (mk_FFVars_rrename f) ws rrenamesAs rrename_defs alpha_syms alpha_quotient_syms)
+      ffs FVars_renamess FFVarsssAs FFVars_defss alpha_FVarsss
 
     val cctor_eq_intro_rrenames = map (fn thm => (thm RS iffD2)
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
@@ -2180,6 +2219,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("FFVars_intros", flat FFVars_intross),
        ("FFVars_elims", flat FFVars_elimss),
        ("FFVars_inducts", FFVars_inducts),
+       ("FFVars_rrenames", flat FFVars_rrenamess),
        ("TT_injects0", TT_injects0),
        ("aavoid_freshs", flat aavoid_freshss),
        ("alpha_aavoids", alpha_aavoids),
@@ -2191,6 +2231,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("TT_plain_co_induct", [TT_plain_co_induct]),
        ("rrename_id0s", rrename_id0s),
        ("rrename_ids", rrename_ids),
+       ("rrename_comps", rrename_comps),
+       ("rrename_comp0s", rrename_comp0s),
        ("rrename_cong_ids", rrename_cong_ids),
        ("cctor_eq_intro_rrenames", cctor_eq_intro_rrenames)
       ] @ (the_default [] (

@@ -106,6 +106,8 @@ sig
   val mk_TT_fresh_coinduct_param_tac: int -> thm -> thm list -> Proof.context -> thm list -> tactic
 
   val mk_rrename_id_tac: thm -> thm -> thm -> Proof.context -> tactic
+  val mk_rrename_comp_tac: thm -> thm -> thm -> thm -> thm -> thm -> thm -> thm -> Proof.context -> 
+    thm list -> tactic
   val mk_rrename_cong_id_tac: thm list -> thm -> thm -> thm -> thm -> thm -> Proof.context ->
     thm list -> tactic
 end;
@@ -1196,6 +1198,20 @@ fun mk_TT_fresh_coinduct_param_tac fbound TT_existential_coinduct TT_fresh_cases
 
 fun mk_rrename_id_tac rrename_def rename_id Quotient_abs_rep ctxt =
   simp_only ctxt [rrename_def, rename_id, Quotient_abs_rep] |> HEADGOAL;
+
+fun mk_rrename_comp_tac rrename_def Quotient_total_abs_eq_iff alpha_refl alpha_sym alpha_trans alpha_bij_eq
+  alpha_quotient_sym rename_comp ctxt prems =
+  unfold_thms_tac ctxt [rrename_def] THEN
+  EVERY1 [
+    rtac ctxt (iffD2 OF [Quotient_total_abs_eq_iff]),
+    rtac ctxt alpha_trans,
+    rtac ctxt (iffD2 OF [alpha_bij_eq]),
+    REPEAT_DETERM o resolve_tac ctxt prems,
+    rtac ctxt alpha_sym,
+    rtac ctxt alpha_quotient_sym,
+    K (unfold_thms_tac ctxt [rename_comp OF prems]),
+    rtac ctxt alpha_refl
+  ];
 
 fun mk_rrename_cong_id_tac FFVars_defs rrename_def Quotient_abs_rep Quotient_total_abs_eq_iff
   alpha_bij alpha_refl ctxt assms =

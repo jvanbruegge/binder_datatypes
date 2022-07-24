@@ -161,9 +161,16 @@ definition Umap :: "('a::var_\<tau>_pre \<Rightarrow> 'a) \<Rightarrow> 'a \<tau
   "Umap f t \<equiv> rrename_\<tau> f"
 definition UFVars :: "'a::var_\<tau>_pre \<tau> \<Rightarrow> 'a \<tau> \<Rightarrow> 'a set" where
   "UFVars t \<equiv> FFVars_\<tau>"
+
 lemma Umap_id0: "Umap id t = id"
   unfolding Umap_def
   by (rule \<tau>.rrename_id0s)
+lemma Umap_comp0:
+  fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a" and g :: "'a \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
+  shows "Umap (g \<circ> f) t = Umap g t \<circ> Umap f t"
+  unfolding Umap_def
+  using assms by (rule \<tau>.rrename_comp0s[symmetric])
 lemma Umap_cong_id:
   fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "\<And>z. z \<in> UFVars t w \<Longrightarrow> f z = z"
@@ -186,6 +193,12 @@ lemma UFVars_subset': "set2_\<tau>_pre y \<inter> (imsupp (Rep_ssfun p) \<union>
   apply (auto simp: imsupp_supp_bound[OF infinite_var_\<tau>_pre] \<tau>.FFVars_cctors \<tau>_pre.set_map supp_id_bound emp_bound Rep_ssfun[simplified])
   using imsupp_def supp_def apply fastforce
   by fastforce
+lemma in_UFVars_Umap: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> (a \<in> UFVars (rrename_\<tau> f t) (Umap f t d)) = (inv f a \<in> UFVars t d)"
+  unfolding Umap_def UFVars_def
+  apply (rule trans[OF _ image_in_bij_eq])
+   apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+   apply (rule \<tau>.FFVars_rrenames)
+  by assumption+
 
 lemma Umap_Uctor: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow>
        |supp f| <o |UNIV::'a set| \<Longrightarrow>
@@ -206,20 +219,6 @@ lemma Umap_Uctor': "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarro
 
 (***************************************************************************************)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ML_file \<open>Tools/mrbnf_recursor.ML\<close>
 
 local_setup \<open>fn lthy =>
@@ -228,12 +227,12 @@ let
   val model_ext_tacs = {
     small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
     Umap_id0 = fn ctxt => resolve_tac ctxt @{thms Umap_id0} 1,
-    Umap_comp0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
+    Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt @{thm Umap_comp0}, REPEAT_DETERM o assume_tac ctxt],
     Umap_cong_ids = map (fn thm => fn ctxt => EVERY1 [
       resolve_tac ctxt [thm],
       REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
     ]) @{thms Umap_cong_id},
-    in_UFVars_Umap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
+    in_UFVars_Umap = [fn ctxt => EVERY1 [rtac ctxt @{thm in_UFVars_Umap}, REPEAT_DETERM o assume_tac ctxt]],
     Umap_Uctor = fn ctxt => EVERY1 [rtac ctxt @{thm Umap_Uctor}, REPEAT_DETERM o assume_tac ctxt],
     UFVars_subsets = [fn ctxt => EVERY1 [
       rtac ctxt @{thm UFVars_subset},
@@ -243,12 +242,21 @@ let
   val model_tacs = {
     small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
     Umap_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => Skip_Proof.cheat_tac ctxt 1,
+    Umap_comp0 = fn ctxt => EVERY1 [
+      rtac ctxt sym,
+      rtac ctxt @{thm \<tau>.rrename_comp0s},
+      REPEAT_DETERM o assume_tac ctxt
+    ],
     Umap_cong_ids = map (fn thm => fn ctxt => EVERY1 [
       resolve_tac ctxt [thm],
       REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
     ]) @{thms \<tau>.rrename_cong_ids},
-    in_UFVars_Umap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
+    in_UFVars_Umap = [fn ctxt => EVERY1 [
+      rtac ctxt @{thm trans[OF _ image_in_bij_eq]},
+      rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<in>)"]},
+      rtac ctxt @{thm \<tau>.FFVars_rrenames},
+      REPEAT_DETERM o assume_tac ctxt
+    ]],
     Umap_Uctor = fn ctxt => EVERY1 [rtac ctxt @{thm Umap_Uctor'}, REPEAT_DETERM o assume_tac ctxt],
     UFVars_subsets = [fn ctxt => EVERY1 [
       rtac ctxt @{thm UFVars_subset'},

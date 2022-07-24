@@ -49,6 +49,8 @@ sig
   datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var; (*Added Dead_Var for kill function*)
   val var_type_ord: var_type ord
 
+  val interlace: 'a list -> 'a list -> 'a list -> var_type list -> 'a list
+
   val name_of_mrbnf: mrbnf -> binding
   val T_of_mrbnf: mrbnf -> typ
   val var_types_of_mrbnf: mrbnf -> var_type list
@@ -780,6 +782,11 @@ fun flatten_type_args_of_mrbnf mrbnf dead_x live_xs bound_xs free_xs =
     permute_like_unique (op =) (deads @ lives @ bounds @ frees) Ts
       (replicate (length deads) dead_x @ live_xs @ bound_xs @ free_xs)
   end;
+
+fun interlace _ _ _ [] = []
+  | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
+  | interlace als (b::bs) fs (Bound_Var::ts) = b :: interlace als bs fs ts
+  | interlace als bs (f::fs) (Free_Var::ts) = f :: interlace als bs fs ts
 
 (*terms*)
 val map_of_mrbnf = #map o rep_mrbnf;

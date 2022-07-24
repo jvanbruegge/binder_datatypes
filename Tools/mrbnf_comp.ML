@@ -171,11 +171,6 @@ fun is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.csum}, _) $ 
   | is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.cprod}, _) $ t $ u) = forall is_sum_prod_natLeq [t, u]
   | is_sum_prod_natLeq t = t aconv @{term natLeq};
 
-fun interlace _ _ _ [] = []
-      | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
-      | interlace als (b::bs) fs (Bound_Var::ts) = b :: interlace als bs fs ts
-      | interlace als bs (f::fs) (Free_Var::ts) = f :: interlace als bs fs ts
-
 (*
  * Instantiates the live variables of an outer MRBNF with several inner MRBNFs and returns a composed MRBNF.
  * The composed MRBNF will have:

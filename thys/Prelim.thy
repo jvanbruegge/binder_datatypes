@@ -719,4 +719,17 @@ lemma ex_UNIV_id: "x \<in> UNIV \<Longrightarrow> \<exists>z. z \<in> UNIV \<and
 lemma in_alt_top: "(\<lambda>x. f x \<subseteq> {_. True}) = (\<lambda>_. True)"
   by simp
 
+lemma image_in_bij_eq: "bij f \<Longrightarrow> (a \<in> f ` A) = (inv f a \<in> A)"
+  by force
+
+lemma supp_comp_bound:
+  assumes bound: "|supp f| <o |UNIV::'a set|" "|supp g| <o |UNIV::'a set|"
+  and inf: "infinite (UNIV::'a set)"
+  shows "|supp (g \<circ> f)| <o |UNIV::'a set|"
+proof -
+  from inf bound(2,1) have "|supp g \<union> supp f| <o |UNIV::'a set|" by (rule card_of_Un_ordLess_infinite)
+  then show ?thesis using supp_o
+    by (metis card_of_mono1 ordLeq_ordLess_trans)
+qed
+
 end

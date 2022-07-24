@@ -16,18 +16,22 @@ sig
   };
 
   type 'a model_axioms = {
+    small_avoiding_sets: 'a list,
     Umap_id0: 'a,
     Umap_comp0: 'a,
     Umap_cong_ids: 'a list,
-    in_UFVars_Umap: 'a list
+    in_UFVars_Umap: 'a list,
+    Umap_Uctor: 'a
   };
 
   type 'a model = {
     U: typ,
-    term_quotient: { qT: typ, qmap: term } option,
+    term_quotient: { qT: typ, qmap: term, qctor: term } option,
     UFVars: term list,
     Umap: term,
     Uctor: term,
+    avoiding_sets: term list,
+    mrbnf: MRBNF_Def.mrbnf,
     parameters: 'a parameter,
     axioms: 'a model_axioms
   };
@@ -57,18 +61,22 @@ type 'a parameter = {
 };
 
 type 'a model_axioms = {
+  small_avoiding_sets: 'a list,
   Umap_id0: 'a,
   Umap_comp0: 'a,
   Umap_cong_ids: 'a list,
-  in_UFVars_Umap: 'a list
+  in_UFVars_Umap: 'a list,
+  Umap_Uctor: 'a
 };
 
 type 'a model = {
   U: typ,
-  term_quotient: { qT: typ, qmap: term } option,
+  term_quotient: { qT: typ, qmap: term, qctor: term } option,
   UFVars: term list,
   Umap: term,
   Uctor: term,
+  avoiding_sets: term list,
+  mrbnf: MRBNF_Def.mrbnf,
   parameters: 'a parameter,
   axioms: 'a model_axioms
 };
@@ -79,10 +87,13 @@ fun mk_bij t = t
   |> apply2 HOLogic.mk_UNIV
   |-> BNF_LFP_Util.mk_bij_betw t;
 
+fun get_vars with_quotient mapx =
+  let val maybe_strip_last = if with_quotient then fst o split_last else I;
+  in map (fst o dest_funT) (maybe_strip_last (fst (strip_fun_type (fastype_of mapx)))) end;
+
 fun mk_termlike_goals quotient_opt T mapx FVars lthy =
   let
-    val maybe_strip_last = if is_some quotient_opt then fst o split_last else I;
-    val vars = map (fst o dest_funT) (maybe_strip_last (fst (strip_fun_type (fastype_of mapx))));
+    val vars = get_vars (is_some quotient_opt) mapx;
     val n = length vars;
 
     val (((((fs, gs), d), t), xs), lthy') =
@@ -141,14 +152,121 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
   }
 end;
 
-fun create_binding_recursor model lthy =
+fun prove_model_axioms model lthy =
   let
     fun prove goal tac = Goal.prove_sorry lthy [] [] goal (fn {context,...} => tac context);
 
+    val params = #parameters model;
+    val ptacs = #axioms params;
+    val pgoals = mk_termlike_goals NONE (#P params) (#Pmap params) (#PFVars params) lthy;
+
+    val vars = get_vars (is_some (#term_quotient model)) (#Umap model);
+    val live = MRBNF_Def.live_of_mrbnf (#mrbnf model);
+    val deads = MRBNF_Def.deads_of_mrbnf (#mrbnf model);
+    val As = case #term_quotient model of
+      SOME { qT, ...} => replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model])
+      | NONE => replicate live (#P params --> #U model);
+
+    val ((((fs, y), p), t), lthy') =
+      lthy
+      |> mk_Frees "f" (map2 (curry op -->) vars vars)
+      ||>> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads As vars vars (#mrbnf model)]
+      ||>> apfst hd o mk_Frees "p" [#P params]
+      ||>> mk_Frees "t" (the_default [] (Option.map (single o #qT) (#term_quotient model)));
+
+    val small_PFVars_goals = map (fn FVars =>
+      let val a = HOLogic.dest_setT (snd (dest_funT (fastype_of FVars)));
+      in Logic.all p (HOLogic.mk_Trueprop (mk_ordLess
+        (mk_card_of (FVars $ p)) (mk_card_of (HOLogic.mk_UNIV a))
+      )) end) (#PFVars params);
+
+    val param_thms = {
+      Pmap_id0 = prove (#map_id0 pgoals) (#Pmap_id0 ptacs),
+      Pmap_comp0 = prove (#map_comp0 pgoals) (#Pmap_comp0 ptacs),
+      Pmap_cong_ids = map2 prove (#map_cong_ids pgoals) (#Pmap_cong_ids ptacs),
+      in_PFVars_Pmap = map2 prove (#in_FVars_map pgoals) (#in_PFVars_Pmap ptacs),
+      small_PFVars = map2 prove small_PFVars_goals (#small_PFVars ptacs)
+    };
+    val params' = {
+      P = #P params,
+      PFVars = #PFVars params,
+      Pmap = #Pmap params,
+      axioms = param_thms
+    };
+
+    val tacs = #axioms model;
     val goals = mk_termlike_goals (#term_quotient model) (#U model) (#Umap model) (#UFVars model) lthy;
 
-    val print_lthy = Config.put eta_contract false lthy
-    val _ = @{print} (map (Thm.cterm_of print_lthy) (#in_FVars_map goals))
+    val small_avoiding_set_goals = map (fn i => HOLogic.mk_Trueprop (mk_ordLess
+      (mk_card_of (nth (#avoiding_sets model) i))
+      (mk_card_of (HOLogic.mk_UNIV (nth vars i)))
+    )) (0 upto length vars - 1);
+
+    val Umap = #Umap model;
+    val Umap_Uctor_goal =
+      let
+        val Uctor = #Uctor model;
+        val PU = #P params --> #U model;
+        val PUmap = fold_rev Term.abs (map dest_Free t) (Term.abs ("pu", PU) (
+          Term.abs ("p", #P params) (Term.list_comb (Umap, fs @ map (K (Bound 2)) t) $ (
+            Bound 1 $ (Term.list_comb (#Pmap params, map mk_inv fs) $ Bound 0)
+          )
+        )));
+        val (ctor_map, pair_map) = case #term_quotient model of
+          NONE => ([], PUmap)
+          | SOME { qctor, qT, qmap, ...} =>
+            let
+              val As' = replicate live qT;
+              val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' vars vars (#mrbnf model);
+              val funs = map (fst o dest_funT) (fst (strip_fun_type (fastype_of mapF)));
+              val ids = map HOLogic.id_const (filter is_TFree funs);
+              val fsts = map (fn T => Const ("Product_Type.prod.fst", T --> qT)) As;
+              val gs = cond_interlace ids fsts (map (fn var_type =>
+                var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var
+              ) (MRBNF_Def.var_types_of_mrbnf (#mrbnf model)));
+            in (
+              [qctor $ Term.list_comb (mapF, gs @ [y])],
+              HOLogic.mk_case_prod (Term.abs ("t", qT) (Term.abs ("pu", PU) (HOLogic.mk_tuple [
+                Term.list_comb (qmap, fs @ [Bound 1]), Term.list_comb (PUmap, [Bound 1, Bound 0])
+              ])))
+            ) end;
+        val mapF = Term.list_comb (
+          MRBNF_Def.mk_map_of_mrbnf deads As As vars vars (#mrbnf model),
+          MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf (#mrbnf model))
+        );
+      in
+        fold_rev Logic.all (fs @ [y, p]) (mk_Trueprop_eq (
+          Term.list_comb (Umap, fs @ ctor_map) $ (Uctor $ y $ p),
+          Uctor $ (mapF $ y) $ Term.list_comb (#Pmap params, fs @ [p])
+        ))
+      end;
+
+    val model_thms = {
+      small_avoiding_sets = map2 prove small_avoiding_set_goals (#small_avoiding_sets tacs),
+      Umap_id0 = prove (#map_id0 goals) (#Umap_id0 tacs),
+      Umap_comp0 = prove (#map_comp0 goals) (#Umap_comp0 tacs),
+      Umap_cong_ids = map2 prove (#map_cong_ids goals) (#Umap_cong_ids tacs),
+      in_UFVars_Umap = map2 prove (#in_FVars_map goals) (#in_UFVars_Umap tacs),
+      Umap_Uctor = prove Umap_Uctor_goal (#Umap_Uctor tacs)
+    };
+  in {
+    U = #U model,
+    term_quotient = #term_quotient model,
+    UFVars = #UFVars model,
+    Umap = #Umap model,
+    Uctor = #Uctor model,
+    avoiding_sets = #avoiding_sets model,
+    mrbnf = #mrbnf model,
+    parameters = params',
+    axioms = model_thms
+  } : thm model end;
+
+fun create_binding_recursor model lthy =
+  let
+    val goals = mk_termlike_goals (#term_quotient model) (#U model) (#Umap model) (#UFVars model) lthy;
+    val model_thms = prove_model_axioms model lthy;
+    val _ = @{print} (#axioms model_thms)
+    val _ = @{print} (#axioms (#parameters model_thms))
   in
     lthy
   end;

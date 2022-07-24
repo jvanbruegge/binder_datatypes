@@ -100,13 +100,18 @@ lemma compSS_comp:
   by (rule ext, transfer) (auto simp: fun_eq_iff assms o_inv_distrib)
 lemma compSS_cong_id:
   fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a" and d :: "'a ssfun"
-  assumes "bij f" "|supp f| <o |UNIV|" "\<And>a. a \<in> imsupp (Rep_ssfun d) \<Longrightarrow> f a = a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|" "\<And>a. a \<in> imsupp (Rep_ssfun d) \<Longrightarrow> f a = a"
   shows "compSS f d = d"
   supply assms(1,2)[transfer_rule]
   using assms(3)
-  apply (transfer fixing: f)
-  oops
-
+  apply transfer
+  subgoal for d
+    unfolding fun_eq_iff o_apply
+    apply (subst imsupp_commute[of f d, unfolded fun_eq_iff o_apply, rule_format])
+    apply (auto simp: assms(1) image_iff imsupp_def supp_def)
+    apply (meson assms(1) bij_implies_inject)
+    by (metis assms(1) bij_pointE)
+  done
 lemma imsupp_ssfun_bound:
   fixes p :: "'a::var_\<tau>_pre ssfun"
   shows "|imsupp (Rep_ssfun p)| <o |UNIV::'a set|"
@@ -115,13 +120,33 @@ lemma imsupp_ssfun_bound:
     apply (rule infinite_var_\<tau>_pre)
   using Rep_ssfun apply blast
   by (metis Rep_ssfun card_of_image mem_Collect_eq ordLeq_ordLess_trans)
+lemma in_PFVars_Pmap':
+  fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "f a \<in> imsupp (Rep_ssfun (compSS f d)) \<longleftrightarrow> a \<in> imsupp (Rep_ssfun d)"
+proof
+  assume a: "f a \<in> imsupp (Rep_ssfun (compSS f d))"
+  show "a \<in> imsupp (Rep_ssfun d)"
+    supply assms[transfer_rule]
+    using a apply transfer
+    by (auto simp: supp_def imsupp_def image_iff assms(1) bij_inv_eq_iff[of f, symmetric])
+next
+  assume a: "a \<in> imsupp (Rep_ssfun d)"
+  show "f a \<in> imsupp (Rep_ssfun (compSS f d))"
+    supply assms[transfer_rule]
+    using a apply transfer
+    by (auto simp: supp_def imsupp_def image_iff assms(1) intro: exI[of _ "f _"])
+qed
+corollary in_PFVars_Pmap:
+  fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "a \<in> imsupp (Rep_ssfun (compSS f d)) \<longleftrightarrow> inv f a \<in> imsupp (Rep_ssfun d)"
+  using in_PFVars_Pmap' assms inv_simp2 by metis
 
 definition CCTOR' :: "('a::var_\<tau>_pre, 'a, 'a ssfun \<Rightarrow> 'a \<tau>, 'a ssfun \<Rightarrow> 'a \<tau>) \<tau>_pre \<Rightarrow> 'a ssfun \<Rightarrow> 'a \<tau>" where
   "CCTOR' \<equiv> \<lambda>F p. \<tau>_ctor (map_\<tau>_pre (Rep_ssfun p) id (\<lambda>R. R p) (\<lambda>R. R p) F)"
 definition CCTOR :: "('a::var_\<tau>_pre, 'a, 'a \<tau> \<times> ('a ssfun \<Rightarrow> 'a \<tau>), 'a \<tau> \<times> ('a ssfun \<Rightarrow> 'a \<tau>)) \<tau>_pre \<Rightarrow> 'a ssfun \<Rightarrow> 'a \<tau>" where
   "CCTOR = (\<lambda>F p. \<tau>_ctor (map_\<tau>_pre (Rep_ssfun p) id ((\<lambda>R. R p) o snd) ((\<lambda>R. R p) o snd) F))"
-(*definition Umap :: "('a::var_\<tau>_pre \<Rightarrow> 'a) \<Rightarrow> 'a \<tau> \<Rightarrow> ('a ssfun \<Rightarrow> 'a \<tau>) \<Rightarrow> ('a ssfun \<Rightarrow> 'a \<tau>)" where
-  "Umap f t pu \<equiv> \<lambda>c. rrename_\<tau> f (pu (compSS (inv f) c))"*)
 definition Umap :: "('a::var_\<tau>_pre \<Rightarrow> 'a) \<Rightarrow> 'a \<tau> \<Rightarrow> 'a \<tau> \<Rightarrow> 'a \<tau>" where
   "Umap f t \<equiv> rrename_\<tau> f"
 definition UFVars :: "'a::var_\<tau>_pre \<tau> \<Rightarrow> 'a \<tau> \<Rightarrow> 'a set" where
@@ -182,8 +207,11 @@ let
   val parameter_tacs = {
     Pmap_id0 = fn ctxt => rtac ctxt @{thm compSS_id} 1,
     Pmap_comp0 = fn ctxt => EVERY1 [rtac ctxt @{thm compSS_comp}, REPEAT_DETERM o assume_tac ctxt],
-    Pmap_cong_ids = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
-    in_PFVars_Pmap = [fn ctxt => Skip_Proof.cheat_tac ctxt 1],
+    Pmap_cong_ids = [fn ctxt => EVERY1 [
+      rtac ctxt @{thm compSS_cong_id},
+      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
+    ]],
+    in_PFVars_Pmap = [fn ctxt => EVERY1 [rtac ctxt @{thm in_PFVars_Pmap}, REPEAT_DETERM o assume_tac ctxt]],
     small_PFVars = [fn ctxt => rtac ctxt @{thm imsupp_ssfun_bound} 1]
   };
   val model_ext = {

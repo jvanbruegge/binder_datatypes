@@ -91,6 +91,19 @@ fun get_vars with_quotient mapx =
   let val maybe_strip_last = if with_quotient then fst o split_last else I;
   in map (fst o dest_funT) (maybe_strip_last (fst (strip_fun_type (fastype_of mapx)))) end;
 
+fun add_f_prems hs =
+  let
+    fun interlace [] [] = []
+      | interlace (x::xs) (y::ys) = x::y::interlace xs ys
+    fun mk_supp_bound h = HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (mk_supp h)) (
+      mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of h))))
+    ));
+  in
+    fold_rev (fn a => fn b => Logic.implies $ a $ b) (
+      interlace (map (HOLogic.mk_Trueprop o mk_bij) hs) (map mk_supp_bound hs)
+    )
+  end;
+
 fun mk_termlike_goals quotient_opt T mapx FVars lthy =
   let
     val vars = get_vars (is_some quotient_opt) mapx;
@@ -103,16 +116,6 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
       ||>> apfst hd o mk_Frees "d" [T]
       ||>> mk_Frees "t" (the_default [] (Option.map (single o #qT) quotient_opt))
       ||>> mk_Frees "a" vars;
-
-    fun mk_supp_bound h = HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (mk_supp h)) (
-      mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of h))))
-    ));
-    fun interlace [] [] = []
-      | interlace (x::xs) (y::ys) = x::y::interlace xs ys
-
-    fun add_f_prems hs = fold_rev (fn a => fn b => Logic.implies $ a $ b) (
-      interlace (map (HOLogic.mk_Trueprop o mk_bij) hs) (map mk_supp_bound hs)
-    )
   in {
     map_id0 = fold_rev Logic.all t (HOLogic.mk_Trueprop (
       HOLogic.eq_const (T --> T) $
@@ -235,10 +238,10 @@ fun prove_model_axioms model lthy =
           MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf (#mrbnf model))
         );
       in
-        fold_rev Logic.all (fs @ [y, p]) (mk_Trueprop_eq (
+        fold_rev Logic.all (fs @ [y, p]) (add_f_prems fs (mk_Trueprop_eq (
           Term.list_comb (Umap, fs @ ctor_map) $ (Uctor $ y $ p),
           Uctor $ (mapF $ y) $ Term.list_comb (#Pmap params, fs @ [p])
-        ))
+        )))
       end;
 
     val model_thms = {

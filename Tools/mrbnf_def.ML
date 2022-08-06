@@ -1398,8 +1398,6 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (rel_mono_strong0N, [Lazy.force (#rel_mono_strong0 facts)]),
            (pred_mono_strong0N, [Lazy.force (#pred_mono_strong0 facts)]),
            (set_map0N, #set_map0 axioms),
-           (set_bdN, #set_bd axioms),
-
            (mr_in_relN, [Lazy.force (#mr_in_rel mr_facts)]),
            (mr_rel_eqN, [Lazy.force (#mr_rel_eq mr_facts)]),
            (mr_rel_mono_strongN, [Lazy.force (#mr_rel_mono_strong mr_facts)]),
@@ -1407,7 +1405,6 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (mr_rel_OON, [Lazy.force (#mr_rel_OO mr_facts)]),
            (mr_rel_OO_GrpN, [Lazy.force (#mr_rel_OO_Grp mr_facts)]),
            (mr_rel_transferN, [Lazy.force (#mr_rel_transfer mr_facts)]),
-           (mr_rel_idN, [Lazy.force (#mr_rel_id mr_facts)]),
            (var_largeN, [#var_large mr_facts]),
            (var_regularN, [#var_regular mr_facts])] @
           (witNs ~~ wit_thmss_of_mrbnf mrbnf)
@@ -1426,7 +1423,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (inj_map_strongN, [Lazy.force (#inj_map_strong facts)], []),
            (map_compN, [Lazy.force (#map_comp facts)], []),
            (map_cong0N, [#map_cong0 axioms], []),
-           (map_congN, [Lazy.force (#map_cong facts)], fundefcong_attrs),
+           (map_congN, [Lazy.force (#map_cong facts)], []),
            (map_cong_simpN, [Lazy.force (#map_cong_simp facts)], []),
            (map_cong_predN, [Lazy.force (#map_cong_pred facts)], []),
            (map_idN, [Lazy.force (#map_id facts)], []),
@@ -1462,7 +1459,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (rel_transferN, [Lazy.force (#rel_transfer facts)], []),
            (set_mapN, map Lazy.force (#set_map facts), []),
            (set_transferN, Lazy.force (#set_transfer facts), []),
-
+           (set_bdN, #set_bd axioms, []),
            (natLeq_boundN, [#natLeq_bound mr_facts], []),
            (UNIV_cinfiniteN, [#UNIV_cinfinite mr_facts], []),
            (supp_comp_boundN, [#supp_comp_bound mr_facts], []),
@@ -1474,6 +1471,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (mr_rel_mapN, Lazy.force (#mr_rel_map mr_facts), []),
            (mr_rel_monoN, [Lazy.force (#mr_rel_mono mr_facts)], []),
            (mr_rel_mono_strong0N, [Lazy.force (#mr_rel_mono_strong0 mr_facts)], []),
+           (mr_rel_idN, [Lazy.force (#mr_rel_id mr_facts)], []),
            (mr_map_transferN, [Lazy.force (#mr_map_transfer mr_facts)], []),
            (mr_set_transferN, Lazy.force (#mr_set_transfer mr_facts), [])]
           |> filter_out (null o #2)
@@ -1704,7 +1702,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
         |> Local_Theory.begin_nested |> snd
         |> maybe_define true map_bind_def
         ||>> apfst split_list o fold_map (maybe_define true) set_binds_defs
-        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy))(* maybe_define true bd_bind_def *)
+        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy)) (*maybe_define true bd_bind_def*)
         ||> `Local_Theory.end_nested;
 
     val phi = Proof_Context.export_morphism lthy_old lthy;

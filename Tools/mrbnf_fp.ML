@@ -520,6 +520,18 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     );
     val rename_comp0s = mk_rename_comp0s lthy rename_comps renamesAs;
 
+    fun mk_rename_bij rename_t rename_comp0 rename_id0 =
+      let val goal = HOLogic.mk_Trueprop (mk_bij (Term.list_comb (rename_t, ffs)));
+      in prove lthy ffs prem_terms_ffs goal (mk_rename_bij_tac rename_comp0 rename_id0) end;
+    val rename_bijs = @{map 3} mk_rename_bij renamesAs rename_comp0s rename_id0s;
+
+    fun mk_rename_inv_simp rename_t rename_comp0 rename_id0 =
+      let val goal = mk_Trueprop_eq (
+        mk_inv (Term.list_comb (rename_t, ffs)),
+        Term.list_comb (rename_t, map mk_inv ffs)
+      ) in prove lthy ffs prem_terms_ffs goal (mk_rename_inv_simp_tac rename_comp0 rename_id0) end;
+    val rename_inv_simps = @{map 3} mk_rename_inv_simp renamesAs rename_comp0s rename_id0s;
+
     (* Define inductive predicate free *)
     fun mk_inductive i A z b_vec free_sets bound_sets lthy =
       let
@@ -1067,7 +1079,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       end;
 
     fun mk_avoid_term x x' alpha_t ctor bound_sets =
-      let 
+      let
         fun mk_eq set_t fset = HOLogic.mk_eq (mk_inter (set_t $ x', fset),
           Const (@{const_name bot}, fastype_of fset));
       in
@@ -1105,7 +1117,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val ((avoid_terms, avoid_defs), lthy) =
       let
         fun mk_rhs x x' alpha_t ctor bound_sets =
-          let 
+          let
             val (x'T, x'Free) = dest_Free x' |> `snd;
           in
             mk_avoid_term x x' alpha_t ctor bound_sets |> absfree x'Free |>
@@ -1442,7 +1454,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val ((aavoid_terms, aavoid_defs), lthy) =
       let
         fun mk_rhs v avoid_t mrbnf_map_AsBs mrbnf_map_BsAs =
-          let 
+          let
             val ids = map HOLogic.id_const As;
             val abs_map = comb_mrbnf_term ids TT_abss mrbnf_map_AsBs;
             val rep_map = comb_mrbnf_term ids TT_reps mrbnf_map_BsAs;
@@ -1458,7 +1470,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val aavoidsAs = subst_terms As aavoid_terms;
 
     fun mk_aavoid_term f v v' cctor bound_sets =
-      let 
+      let
         fun mk_eq set_t fset = HOLogic.mk_eq (mk_inter (set_t $ v, fset),
           Const (@{const_name bot}, fastype_of fset));
       in
@@ -1499,7 +1511,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       bound_setss_Bs TT_nchotomys alpha_aavoids aavoid_freshss |> split_list;
 
     val (TT_existential_co_induct, TT_fresh_co_induct_param, TT_fresh_induct_param_no_clash_opt,
-      TT_fresh_co_induct, TT_plain_co_induct, lthy) = if co
+      wf_subshapess_opt, set_subshape_imagesss_opt, set_subshapesss_opt, TT_fresh_co_induct,
+      TT_plain_co_induct, lthy) = if co
       then let
           (* Define coinductive predicate alpha' *)
           val (alpha's_invar_result, (alpha'sAs, _ (*alpha's*)), lthy) =
@@ -1795,8 +1808,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           fun after_qed thm = if mutual then thm else
             Drule.rotate_prems ~1 (thm RS @{thm spec2} RS mp);
         in
-          (after_qed TT_existential_coinduct, after_qed TT_fresh_coinduct_param, NONE,
-            after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
+          (after_qed TT_existential_coinduct, after_qed TT_fresh_coinduct_param, NONE, NONE, NONE,
+            NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
         end
       else let
           (* Define inductive predicate subshape *)
@@ -1807,7 +1820,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               val inductive_flags = {quiet_mode = true, verbose = false, alt_name = Binding.empty,
                 coind = false, no_elim = false, no_ind = false, skip_mono = false};
               val subshape_t = Free (Binding.name_of b, T);
-      
+
               val concl = subshape_t $ y $ (ctor $ x);
               val prem1 = alpha_t $ (list_comb (rename_t, ffs) $ y) $ y';
               val prem2 = HOLogic.mk_mem (y', if length sets = 0
@@ -1815,13 +1828,13 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 else map (fn t => t $ x) sets |> foldl1 mk_union);
               val term = prem_terms_ffs @ map HOLogic.mk_Trueprop [prem1, prem2, concl]
                 |> foldr1 Logic.mk_implies;
-      
+
               val (invar_result_raw, (new_lthy, lthy)) = lthy
                 |> Local_Theory.begin_nested |> snd
                 |> Inductive.add_inductive inductive_flags [((b, T), NoSyn)] []
                   (map (pair Binding.empty_atts) [term]) []
                 ||> `Local_Theory.end_nested;
-      
+
               val phi = Proof_Context.export_morphism lthy new_lthy;
               val invar_result = Inductive.transform_result phi invar_result_raw;
               val subshape_subshapeAs = Morphism.term phi subshape_t
@@ -1834,10 +1847,10 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           val ((subshape_invar_resultss, (subshapessAs, _ (*subshapess*))), lthy) =
             @{fold_map 5} define_subshapes names CAs ctorsAs xs (map dest_rec_lives rec_setss_As)
               lthy |>> apsnd split_list o split_list;
-      
+
           val subshape_elimss = (the_single o #elims |> map o map) subshape_invar_resultss;
           val subshape_intross = (the_single o #intrs |> map o map) subshape_invar_resultss;
-      
+
           val subshape_induct_raw =
             let
               val Ps = mk_Frees "P" (map (fn T => T --> HOLogic.boolT) CAs) frees_lthy |> fst;
@@ -1846,14 +1859,14 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               fun mk_hyp P y subshape_ts = @{map 3} (mk_hyp_prem y) ys' Ps subshape_ts @
                 [P $ y |> HOLogic.mk_Trueprop] |> foldr1 Logic.mk_implies |> Logic.all y;
               val hyps = @{map 3} mk_hyp Ps ys subshapessAs;
-      
+
               fun mk_eq P y y' alpha_t rename_t = map HOLogic.dest_Trueprop prem_terms_ffs @
                 [alpha_t $ (list_comb (rename_t, ffs) $ y) $ y', P $ y'] |> foldr1 HOLogic.mk_imp
                 |> list_all_free (ffs @ [y']);
               val eqs = @{map 5} mk_eq Ps ys ys' alphasAs renamesAs;
               val common_co_induct_inst = mk_common_co_induct_inst frees_lthy CAs lthy eqs ys;
               val goal = mk_conjs eqs |> HOLogic.mk_Trueprop;
-      
+
               fun mk_prem ctxt fs hs g_opts prem = thm_instantiate_terms lthy (NONE :: @{map 3}
                   (fn f => fn g_opt => fn h => HOLogic.mk_comp (mk_inv h, case g_opt of NONE => f
                     | SOME g => HOLogic.mk_comp (g, f)) |> SOME) fs g_opts hs)
@@ -1863,7 +1876,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                   |-> transpose oo map_binding_matrix) prems |> dest_rec_lives
                   |> (fn xs => nth xs i);
               val mk_prem_funs = map mk_prems (0 upto n-1);
-      
+
               fun mk_rename_comp fs gs rename_comp = thm_instantiate_terms lthy (map SOME (fs @ gs))
                 (rename_comp RS sym) |> unfold_thms lthy @{thms id_o};
               fun map_all_no_binding xs = all_bindings ~~ no_bindings ~~ xs |> dest_rec_lives
@@ -1873,11 +1886,11 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                   |-> transpose oo map_binding_matrix) (mk_rec_lives rename_comps)
                 |> map_all_no_binding |> (fn xs => nth xs i);
               val mk_rename_comp_funs = map mk_rename_comps (0 upto n-1);
-      
+
               fun mk_sett sett = Drule.rotate_prems ~1 (sett RS rel_funD);
               val settsss = map (dest_rec_lives o map mk_sett o take rec_live o drop
                 (2*fbound+passive)) settss;
-      
+
               fun mk_alpha_bij_eq_inv alpha_bij_eq_inv = alpha_bij_eq_inv OF (replicate fbound
                 @{thms bij_imp_bij_inv supp_inv_bound} |> flat);
               val alpha_bij_eq_invs = map mk_alpha_bij_eq_inv alpha_bij_eq_invs;
@@ -1888,7 +1901,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 settsss
                 |> prove lthy (Ps @ ys) hyps goal
             end;
-      
+
           val subshape_induct =
             let
               val Ps = mk_Frees "P" (map (fn T => T --> HOLogic.boolT) CAs) frees_lthy |> fst;
@@ -1897,7 +1910,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               fun mk_hyp P y subshape_ts = @{map 3} (mk_hyp_prem y) ys' Ps subshape_ts @
                 [P $ y |> HOLogic.mk_Trueprop] |> foldr1 Logic.mk_implies |> Logic.all y;
               val hyps = @{map 3} mk_hyp Ps ys subshapessAs;
-      
+
               val goal = map2 (curry op $) Ps ys |> HOLogic.mk_Trueprop o mk_conjs;
               val subshape_induct_raw_inst = thm_instantiate_terms lthy (map SOME Ps)
                 subshape_induct_raw;
@@ -1909,7 +1922,53 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 alpha_refls
                 |> prove lthy (Ps @ ys) hyps goal
             end;
-      
+
+          fun mk_wf_subshape CA1 CA2 subshape_t =
+            let
+              val T = HOLogic.mk_prodT (CA1, CA2)
+              val goal = HOLogic.mk_Trueprop (Const (@{const_name wf}, HOLogic.mk_setT T --> @{typ bool}) $ (
+                HOLogic.Collect_const T $ HOLogic.mk_case_prod (Term.abs ("t", CA1) (Term.abs ("t'", CA2) (
+                  subshape_t $ Bound 1 $ Bound 0
+              )))));
+            in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt,...} =>
+              Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms wf_def prod_in_Collect_iff} THEN
+              EVERY1 [
+                REPEAT_DETERM o resolve_tac ctxt [allI, impI],
+                rtac ctxt subshape_induct,
+                etac ctxt allE,
+                etac ctxt impE,
+                defer_tac,
+                assume_tac ctxt,
+                rtac ctxt allI,
+                rtac ctxt impI,
+                Goal.assume_rule_tac ctxt
+              ])
+            end;
+          val wf_subshapess = map2 (fn CA => map2 (mk_wf_subshape CA) CAs) CAs subshapessAs
+
+          fun mk_set_subshape_images set_ts CA ctor_t x subshape_t rename_t subshape_intro alpha_refl rename_inv_simp rename_bij =
+            let
+              val n = length set_ts;
+              fun mk_set_subshape_image i set_t =
+                let
+                  val (t, _) = apfst hd (mk_Frees "t" [CA] lthy);
+                  val prem = HOLogic.mk_Trueprop (HOLogic.mk_mem (t,
+                    mk_image (Term.list_comb (rename_t, ffs)) $ (set_t $ x)
+                  ));
+                  val goal = HOLogic.mk_Trueprop (subshape_t $ t $ (ctor_t $ x));
+                in prove lthy (ffs @ [t, x]) (prem_terms_ffs @ [prem]) goal (
+                  mk_set_subshape_image_tac i n subshape_intro alpha_refl rename_inv_simp rename_bij
+                ) end;
+            in map2 mk_set_subshape_image (1 upto n) set_ts end;
+          val set_subshape_imagesss = map2 (fn subshapes => fn intros =>
+              @{map 10} mk_set_subshape_images rec_setss_As CAs ctorsAs xs subshapes renamesAs intros alpha_refls rename_inv_simps rename_bijs
+            ) subshapessAs subshape_intross
+          val set_subshapesss = map (map (map (fn thm =>
+            Local_Defs.unfold0 lthy (@{thm image_id}::rename_id0s) (thm OF (
+              maps (K @{thms bij_id supp_id_bound}) ffs
+            ))
+          ))) set_subshape_imagesss;
+
           fun mk_alpha_subshape supp_comp_bound alpha_t alpha_elim CA1 CA2 alpha_trans rename_comp
             mk_subshape_intros mk_alpha_bij_eqs subshape_t subshape_elim setts =
             let
@@ -1934,7 +1993,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                   |-> transpose oo map_binding_matrix) (mk_rec_lives subshape_intros)
                 |> dest_rec_lives |> (fn xs => nth xs i);
               val mk_subshape_intro_funs = map mk_subshape_intros (0 upto n-1);
-      
+
               fun mk_alpha_bij_eq alpha_bij_eq = Option.map (fn fs => Drule.rotate_prems ~1
                 (iffD2 OF [thm_instantiate_terms lthy (map SOME fs) alpha_bij_eq]));
               fun some_bindings xs = map2 (fn b => if b then K NONE else SOME) no_bindings xs;
@@ -1943,14 +2002,14 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                   fs) |-> transpose oo map_binding_matrix |> some_bindings) |> dest_rec_lives
                 |> (fn xs => nth xs i);
               val mk_alpha_bij_eq_funs = map mk_alpha_bij_eqs (0 upto n-1);
-      
+
               val alpha_transs = map (Drule.rotate_prems 1) alpha_transs;
             in
               @{map 8} (mk_alpha_subshape supp_comp_bound alpha_t alpha_elim CA) CAs alpha_transs
                 rename_comps mk_subshape_intro_funs mk_alpha_bij_eq_funs
             end;
           val alpha_subshapess =
-            let 
+            let
               fun mk_sett sett = Drule.rotate_prems ~1 (sett RS rel_funD);
               val settsss = map (dest_rec_lives o map mk_sett o take rec_live o drop
                 (2*fbound+passive)) settss;
@@ -1958,10 +2017,10 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               @{map 8} mk_alpha_subshapes supp_comp_bounds alphasAs alpha_elims CAs subshape_intross
                 subshapessAs subshape_elimss settsss
             end;
-      
+
           val (Ps, frees_lthy) = mk_Frees "P" (map (fn CB => CB --> paramT --> HOLogic.boolT) CBs)
             frees_lthy;
-      
+
           val TT_existential_induct =
             let
               val ball_rho_param = absfree (dest_Free rho) #> mk_Ball param;
@@ -1973,11 +2032,11 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                   HOLogic.mk_imp (map2 (mk_prem_imp v') (ws ~~ Ps |> mk_rec_lives) sets |> mk_conjs,
                     P $ (cctor $ v') $ rho))
                 |> list_exists_free [v']) |> Logic.mk_implies |> fold_rev Logic.all [v, rho];
-      
+
               val prems = @{map 5} mk_prem vs vs' rec_setss_Bs cctorsAs Ps;
               val goal = map2 (op $ o rpair rho oo curry op $) Ps ws |> mk_conjs |> ball_rho_param
                 |> HOLogic.mk_Trueprop;
-      
+
               val Pws = map2 mk_ball_Pw Ps ws;
               val conj_Pws = let val dummies = Term.dummy_pattern HOLogic.boolT |> replicate n;
                 in map2 (fn i => fn t => nth_map i (K t) dummies |> mk_conjs) (0 upto n-1) Pws end;
@@ -1985,14 +2044,14 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 absfree (dest_Free w) t |> SOME] arg_cong RS iffD1;
               val conj_arg_congs = map2 mk_arg_cong conj_Pws ws ~~ TT_Quotients;
               val arg_congs = map2 mk_arg_cong Pws ws |> mk_rec_lives;
-      
+
               val subshape_induct_inst = thm_instantiate_terms lthy ((map2 (curry op $) TT_abss ys
                 |> map2 mk_ball_Pw Ps |> map2 (absfree o dest_Free) ys) @ map2 (curry op $)
                 TT_reps ws |> map SOME) subshape_induct;
               fun mk_exE mrbnf_map_AsBs assm rho x = exE OF [thm_instantiate_terms lthy (map SOME
                 [rho, comb_mrbnf_term (map HOLogic.id_const As) TT_abss mrbnf_map_AsBs $ x]) assm];
               val mk_exE_funs = map mk_exE mrbnf_maps_AsBs;
-      
+
               val alpha_subshapess = map2 (fn thm => mk_rec_lives o map (op OF o rpair [thm]))
                 alpha_syms alpha_subshapess;
               fun mk_alpha_trans mrbnf_map_AsAs alpha_trans alpha_sym alpha_intro_id x =
@@ -2001,7 +2060,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 (Drule.rotate_prems 1 alpha_trans OF [@{thm _}, alpha_sym OF [alpha_intro_id]]);
               val mk_alpha_trans_funs = @{map 4} mk_alpha_trans mrbnf_maps_AsAs alpha_transs
                 alpha_syms alpha_intros_id;
-      
+
               fun mk_subshape_intro_id (k, i) subhsape_intro = (subhsape_intro OF replicate fbound
                 @{thms bij_id supp_id_bound} |> flat) |> Drule.rotate_prems ~1 OF [mk_UnIN k i];
               val subshape_intross_id = map (map2 mk_subshape_intro_id k_ranges o mk_rec_lives)
@@ -2014,12 +2073,12 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 subshape_intross_id
                 |> prove lthy (param :: Ps @ ws) prems goal
             end;
-      
+
           val TT_fresh_induct_param =
             let
               fun mk_prem1 varsOf = [HOLogic.mk_mem (rho, param), varsOf $ rho |> mk_bound]
                 |> foldr1 Logic.mk_implies o map HOLogic.mk_Trueprop |> Logic.all rho;
-      
+
               fun mk_prem_imp v (w, P) set =
                 [HOLogic.mk_mem (w, set $ v), HOLogic.mk_mem (rho, param), P $ w $ rho]
                 |> foldr1 Logic.mk_implies o map HOLogic.mk_Trueprop |> fold_rev Logic.all [w, rho];
@@ -2030,13 +2089,13 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 sets @ @{map 3} (mk_varsOf_imp v) zs bsets varsOfs @ map HOLogic.mk_Trueprop
                   [HOLogic.mk_mem (rho, param), P $ (cctor $ v) $ rho]
                 |> foldr1 Logic.mk_implies |> fold_rev Logic.all [v, rho];
-      
+
               val ball_rho_param = absfree (dest_Free rho) #> mk_Ball param;
               val prems = map mk_prem1 varsOfs @
                 @{map 5} mk_prem2 vs bound_setss_Bs rec_setss_Bs cctorsAs Ps;
               val goal = map2 (op $ o rpair rho oo curry op $) Ps ws |> mk_conjs |> ball_rho_param
                 |> HOLogic.mk_Trueprop;
-      
+
               val aavoid_freshss = (map o map)
                 (fn thm => Drule.rotate_prems ~1 (@{thm Int_emptyD} OF [thm])) aavoid_freshss;
               fun mk_exI aavoid_t x rho = thm_instantiate_terms lthy
@@ -2047,12 +2106,12 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 aavoid_freshss
                 |> prove lthy (param :: Ps @ ws @ varsOfs) prems goal
             end;
-      
+
           val TT_fresh_induct_param_no_clash =
             let
               fun mk_prem1 varsOf = [HOLogic.mk_mem (rho, param), varsOf $ rho |> mk_bound]
                 |> foldr1 Logic.mk_implies o map HOLogic.mk_Trueprop |> Logic.all rho;
-      
+
               fun mk_varsOf_imp v z set varsOf =
                 [HOLogic.mk_mem (z, set $ v), HOLogic.mk_mem (z, varsOf $ rho) |> HOLogic.mk_not]
                 |> foldr1 Logic.mk_implies o map HOLogic.mk_Trueprop |> Logic.all z;
@@ -2065,7 +2124,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               fun mk_imps v sets z fset bset bvec FFVars_ts varsOf = [mk_varsOf_imp v z bset varsOf,
                 mk_free_set_imp z v bset fset] @ (map2 (mk_non_clash_imp z v bset)
                 (ws ~~ FFVars_ts |> mk_rec_lives) sets |> filter_like bvec not);
-      
+
               fun mk_prem_imp v (w, P) set =
                 [HOLogic.mk_mem (w, set $ v), HOLogic.mk_mem (rho, param), P $ w $ rho]
                 |> foldr1 Logic.mk_implies o map HOLogic.mk_Trueprop |> fold_rev Logic.all [w, rho];
@@ -2074,13 +2133,13 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                   binding_matrix FFVarsssAs varsOfs) @ map HOLogic.mk_Trueprop
                   [HOLogic.mk_mem (rho, param), P $ (cctor $ v) $ rho]
                 |> foldr1 Logic.mk_implies |> fold_rev Logic.all [v, rho];
-      
+
               val ball_rho_param = absfree (dest_Free rho) #> mk_Ball param;
               val prems = map mk_prem1 varsOfs @
                 @{map 6} mk_prem2 vs free_setss_Bs bound_setss_Bs rec_setss_Bs cctorsAs Ps;
               val goal = map2 (op $ o rpair rho oo curry op $) Ps ws |> mk_conjs |> ball_rho_param
                 |> HOLogic.mk_Trueprop;
-      
+
               val Sprod_t = foldr1 mk_Sigma_prod (param :: map HOLogic.mk_UNIV CBs);
               fun mk_union_t varsOf FFVars_ts = varsOf $ rho :: map2 (curry op $) FFVars_ts ws
                 |> foldl1 mk_union |> fold_case_prod (rho :: ws);
@@ -2090,14 +2149,14 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               val imp_ts = @{map 3} mk_imp_t ws ws' Ps;
               val meta_mp_inst = meta_mp OF [@{thm _}, thm_instantiate_terms lthy
                 (Sprod_t :: union_ts @ imp_ts @ ws |> map SOME) TT_fresh_induct_param];
-      
+
               val UNIV_Is = map (fn w => thm_instantiate_terms lthy [SOME w] UNIV_I) (rev ws);
             in
               mk_TT_fresh_induct_param_no_clash_tac fbound n meta_mp_inst UNIV_Is
                 (flat card_of_FFVars_boundss) Un_bounds (flat FFVars_cctorss)
                 |> prove lthy (param :: Ps @ ws @ varsOfs) prems goal
             end;
-      
+
           val TT_fresh_induct =
             let
               val Qs = mk_Frees "Q" (map (fn CB => CB --> HOLogic.boolT) CBs) frees_lthy |> fst;
@@ -2112,7 +2171,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             (replicate fbound @{thm supp_id_bound[unfolded supp_id]})) |> full_simplify lthy;
         in
           (TT_existential_induct, TT_fresh_induct_param, SOME TT_fresh_induct_param_no_clash,
-            TT_fresh_induct, TT_plain_induct, lthy)
+            SOME wf_subshapess, SOME set_subshape_imagesss, SOME set_subshapesss, TT_fresh_induct,
+            TT_plain_induct, lthy)
         end;
 
     fun mk_rrename_ids rrename_t w rrename_def rename_id Quotient_abs_rep =
@@ -2193,6 +2253,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("rename_ids", rename_ids),
        ("rename_comp0s", rename_comp0s),
        ("rename_comps", rename_comps),
+       ("rename_bijs", rename_bijs),
+       ("rename_inv_simps", rename_inv_simps),
        ("FVars_ctors", flat FVars_ctorss),
        ("FVars_rename_less", flat FVars_rename_less),
        ("FVars_renames", flat FVars_renamess),
@@ -2211,6 +2273,10 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("alpha_avoids", alpha_avoids),
        ("equivp_alphas", equivp_alphas),
        ("TT_Quotients", TT_Quotients),
+       ("TT_alpha_quotient_syms", alpha_quotient_syms),
+       ("TT_Quotient_total_abs_eq_iffs", Quotient_total_abs_eq_iffs),
+       ("TT_Quotient_abs_reps", Quotient_abs_reps),
+       ("TT_Quotient_rep_abss", Quotient_rep_abss),
        ("TT_abs_ctors", TT_abs_ctors),
        ("TT_nchotomys", TT_nchotomys),
        ("rrename_cctors", rrename_cctors),
@@ -2238,6 +2304,15 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       ] @ (the_default [] (
         Option.map (single o pair "TT_fresh_induct_param_no_clash" o single)
         TT_fresh_induct_param_no_clash_opt
+      )) @ (the_default [] (
+        Option.map (single o pair "wf_subshapes" o flat)
+        wf_subshapess_opt
+      )) @ (the_default [] (
+        Option.map (single o pair "set_subshape_images" o flat o flat)
+        set_subshape_imagesss_opt
+      ))  @ (the_default [] (
+        Option.map (single o pair "set_subshapes" o flat o flat)
+        set_subshapesss_opt
       )) |> (map (fn (thmN, thms) =>
         ((Binding.qualify true (hd names) (Binding.name thmN), []), [(thms, [])])
       ));

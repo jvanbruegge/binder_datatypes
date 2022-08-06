@@ -7,6 +7,8 @@ sig
     thm list -> Proof.context -> tactic
   val mk_rename_comps_tac: bool -> thm -> thm list -> thm list -> thm list -> thm list ->
     thm list -> thm list -> thm list -> thm list -> Proof.context -> thm list -> tactic
+  val mk_rename_bij_tac: thm -> thm -> Proof.context -> thm list -> tactic
+  val mk_rename_inv_simp_tac: thm -> thm -> Proof.context -> thm list -> tactic
 
   val mk_FVars_ctorss_Tac: thm list -> thm list -> thm -> Proof.context -> tactic
   val mk_FVars_rename_les_tac: bool -> thm -> thm list -> thm list -> thm list -> Proof.context ->
@@ -76,6 +78,7 @@ sig
     Proof.context -> thm list -> tactic
   val mk_alpha_subshape_tac: int -> thm -> thm -> thm -> (term list -> term list -> thm list) ->
     (term list -> thm option list) -> thm list -> thm -> thm -> thm list -> Proof.context -> tactic
+  val mk_set_subshape_image_tac: int -> int -> thm -> thm -> thm -> thm -> Proof.context -> thm list -> tactic
 
   val mk_TT_existential_induct_tac: thm list -> thm list -> thm -> (thm * thm) list -> thm list ->
     thm list -> thm list -> thm list -> thm list -> (thm -> term -> term -> thm) list -> thm list ->
@@ -106,7 +109,7 @@ sig
   val mk_TT_fresh_coinduct_param_tac: int -> thm -> thm list -> Proof.context -> thm list -> tactic
 
   val mk_rrename_id_tac: thm -> thm -> thm -> Proof.context -> tactic
-  val mk_rrename_comp_tac: thm -> thm -> thm -> thm -> thm -> thm -> thm -> thm -> Proof.context -> 
+  val mk_rrename_comp_tac: thm -> thm -> thm -> thm -> thm -> thm -> thm -> thm -> Proof.context ->
     thm list -> tactic
   val mk_rrename_cong_id_tac: thm list -> thm -> thm -> thm -> thm -> thm -> Proof.context ->
     thm list -> tactic
@@ -159,6 +162,52 @@ fun mk_rename_comps_tac co common_co_induct_inst raw_injects rename_simps supp_c
       (assms @ raw_injects @ rename_simps @ map_comps @
         @{thms bij_comp o_apply o_def[of v u,symmetric] id_apply id_o} @ supp_comp_bounds)
       [resolve_tac ctxt map_congs, Goal.assume_rule_tac ctxt]];
+
+fun mk_rename_bij_tac rename_comp0 rename_id0 ctxt prems =
+  EVERY1 [
+    rtac ctxt @{thm iffD2[OF Prelim.bij_iff]},
+    rtac ctxt exI,
+    rtac ctxt conjI,
+    rtac ctxt trans,
+    rtac ctxt rename_comp0,
+    resolve_tac ctxt prems,
+    resolve_tac ctxt prems,
+    rtac ctxt @{thm bij_imp_bij_inv},
+    resolve_tac ctxt prems,
+    rtac ctxt @{thm supp_inv_bound},
+    resolve_tac ctxt prems,
+    resolve_tac ctxt prems,
+    rtac ctxt trans,
+    rtac ctxt @{thm arg_cong[OF inv_o_simp1]},
+    resolve_tac ctxt prems,
+    rtac ctxt rename_id0,
+    rtac ctxt trans,
+    rtac ctxt rename_comp0,
+    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
+    rtac ctxt trans,
+    rtac ctxt @{thm arg_cong[OF inv_o_simp2]},
+    resolve_tac ctxt prems,
+    rtac ctxt rename_id0
+  ];
+
+fun mk_rename_inv_simp_tac rename_comp0 rename_id0 ctxt prems =
+  EVERY1 [
+    rtac ctxt @{thm inv_unique_comp},
+    rtac ctxt trans,
+    rtac ctxt rename_comp0,
+    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
+    rtac ctxt trans,
+    rtac ctxt @{thm arg_cong[OF inv_o_simp2]},
+    resolve_tac ctxt prems,
+    rtac ctxt rename_id0,
+    rtac ctxt trans,
+    rtac ctxt rename_comp0,
+    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
+    rtac ctxt trans,
+    rtac ctxt @{thm arg_cong[OF inv_o_simp1]},
+    resolve_tac ctxt prems,
+    rtac ctxt rename_id0
+  ];
 
 fun mk_FVars_ctorss_Tac raw_injects FVars_intros FVars_elim ctxt =
   EVERY1 [rtac ctxt @{thm subset_antisym}, rtac ctxt subsetI, REPEAT_DETERM o rtac ctxt @{thm UnCI},
@@ -834,6 +883,23 @@ fun mk_alpha_subshape_tac fbound supp_comp_bound alpha_trans rename_comp mk_subs
       unfold_tac ctxt raw_injects |> K, hyp_subst_tac_thin true ctxt,
       Subgoal.FOCUS_PARAMS subgoal_tac ctxt]
   end;
+
+fun mk_set_subshape_image_tac i n subshape_intro alpha_refl rename_inv_simp rename_bij ctxt prems =
+  EVERY1 [
+    rtac ctxt subshape_intro,
+    rtac ctxt @{thm bij_imp_bij_inv},
+    resolve_tac ctxt prems,
+    rtac ctxt @{thm supp_inv_bound},
+    REPEAT_DETERM_N 2 o resolve_tac ctxt prems,
+    rtac ctxt alpha_refl,
+    rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
+    rtac ctxt (fun_cong OF [rename_inv_simp RS sym]),
+    REPEAT_DETERM_N 2 o resolve_tac ctxt prems,
+    rtac ctxt (BNF_Util.mk_UnIN n i),
+    rtac ctxt @{thm iffD1[OF image_in_bij_eq]},
+    rtac ctxt rename_bij,
+    REPEAT_DETERM_N 3 o resolve_tac ctxt prems
+  ];
 
 fun mk_TT_existential_induct_tac rename_ids Quotient_rep_abss subshape_induct_inst conj_arg_congs
   arg_congs TT_Quotients alpha_refls raw_exhausts TT_abs_ctors mk_exE_funs cctor_defs map_comps

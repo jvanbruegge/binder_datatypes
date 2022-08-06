@@ -732,4 +732,6 @@ proof -
     by (metis card_of_mono1 ordLeq_ordLess_trans)
 qed
 
+lemma prod_in_Collect_iff: "(a, b) \<in> {(x, y). A x y} \<longleftrightarrow> A a b" by blast
+
 end

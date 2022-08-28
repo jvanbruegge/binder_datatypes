@@ -1406,7 +1406,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       (take fbound As) zs binding_matrix free_setss_Bst bound_setss_Bst FFVarsssAs FVars_intross
       alpha_FVarsss FFVars_defss FVars_inducts |> split_list |>> split_list;
 
-
     fun mk_TT_inject0 v v' cctor mrbnf_map_BsBs bound_sets rec_sets mr_rel_eq mr_rel_map cctor_def
       abs_eq_iff alpha_elim set_map mr_rel_mono_strong0 alpha_intro =
       let
@@ -1511,8 +1510,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       bound_setss_Bs TT_nchotomys alpha_aavoids aavoid_freshss |> split_list;
 
     val (TT_existential_co_induct, TT_fresh_co_induct_param, TT_fresh_induct_param_no_clash_opt,
-      wf_subshapess_opt, set_subshape_imagesss_opt, set_subshapesss_opt, TT_fresh_co_induct,
-      TT_plain_co_induct, lthy) = if co
+      TT_subshape_induct_opt, wf_subshapess_opt, set_subshape_imagesss_opt, set_subshapesss_opt,
+      TT_fresh_co_induct, TT_plain_co_induct, lthy) = if co
       then let
           (* Define coinductive predicate alpha' *)
           val (alpha's_invar_result, (alpha'sAs, _ (*alpha's*)), lthy) =
@@ -1809,7 +1808,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             Drule.rotate_prems ~1 (thm RS @{thm spec2} RS mp);
         in
           (after_qed TT_existential_coinduct, after_qed TT_fresh_coinduct_param, NONE, NONE, NONE,
-            NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
+            NONE, NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
         end
       else let
           (* Define inductive predicate subshape *)
@@ -2171,8 +2170,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             (replicate fbound @{thm supp_id_bound[unfolded supp_id]})) |> full_simplify lthy;
         in
           (TT_existential_induct, TT_fresh_induct_param, SOME TT_fresh_induct_param_no_clash,
-            SOME wf_subshapess, SOME set_subshape_imagesss, SOME set_subshapesss, TT_fresh_induct,
-            TT_plain_induct, lthy)
+            SOME subshape_induct, SOME wf_subshapess, SOME set_subshape_imagesss, SOME set_subshapesss,
+            TT_fresh_induct, TT_plain_induct, lthy)
         end;
 
     fun mk_rrename_ids rrename_t w rrename_def rename_id Quotient_abs_rep =
@@ -2304,6 +2303,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       ] @ (the_default [] (
         Option.map (single o pair "TT_fresh_induct_param_no_clash" o single)
         TT_fresh_induct_param_no_clash_opt
+      )) @ (the_default [] (
+        Option.map (single o pair "TT_subshape_induct" o single)
+        TT_subshape_induct_opt
       )) @ (the_default [] (
         Option.map (single o pair "wf_subshapes" o flat)
         wf_subshapess_opt

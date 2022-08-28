@@ -14,7 +14,7 @@ declare inv_inv_eq[simp]
 lemma bij_imp_bij_betw: "bij f \<Longrightarrow> bij_betw f A (f ` A)"
   apply(rule inj_on_imp_bij_betw) unfolding bij_def inj_def inj_on_def by auto
 
-lemma bij_bij_betw_inv: "bij u \<Longrightarrow> bij_betw u A B \<Longrightarrow> bij_betw (inv u) B A"
+lemma bij_bij_betw_inv: "bij u \<Longrightarrow> bij_betw u A B = bij_betw (inv u) B A"
   by (metis bij_betw_imp_inj_on bij_betw_imp_surj_on bij_imp_bij_betw bij_imp_bij_inv image_inv_f_f)
 
 lemma conversep_def:

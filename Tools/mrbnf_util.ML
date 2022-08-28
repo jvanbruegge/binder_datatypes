@@ -11,6 +11,8 @@ sig
   val mk_supp: term -> term
   val mk_inv: term -> term
   val mk_bij: term -> term
+  val mk_Un: term * term -> term
+  val mk_Int: term * term -> term
   val mk_infinite_regular_card_order: term -> term
 
   val new_typedef: binding -> term -> (Proof.context -> tactic) -> local_theory ->
@@ -65,6 +67,9 @@ fun mk_inv t =
   in
     Const (@{const_name inv_into}, HOLogic.mk_setT T --> fT --> finvT) $ HOLogic.mk_UNIV T $ t
   end;
+
+val mk_Un = HOLogic.mk_binop @{const_name sup};
+val mk_Int = HOLogic.mk_binop @{const_name inf};
 
 fun mk_bij t = t
   |> fastype_of

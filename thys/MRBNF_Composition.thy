@@ -12,9 +12,6 @@ ML_file \<open>../Tools/mrbnf_def.ML\<close>
 local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.ID") (BNF_Comp.ID_bnf)\<close>
 local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.DEADID") (BNF_Comp.DEADID_bnf)\<close>
 
-lemma Grp_UNIV_def: "Grp f = (\<lambda>x. (=) (f x))"
-  unfolding Grp_def by auto
-
 lemma Cinfinite_gt_empty: "Cinfinite r \<Longrightarrow> |{}| <o r"
   by (simp add: cinfinite_def finite_ordLess_infinite)
 

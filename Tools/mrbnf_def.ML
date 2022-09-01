@@ -188,6 +188,7 @@ sig
   val mr_rel_transfer_of_mrbnf: mrbnf -> thm
   val mr_set_transfer_of_mrbnf: mrbnf -> thm list
   val mr_rel_id_of_mrbnf: mrbnf -> thm
+  val mr_rel_set_of_mrbnf: mrbnf -> thm list
 
   val mk_map: int -> int -> int -> typ list -> typ list -> term -> term
   val mk_pred: typ list -> term -> term
@@ -214,7 +215,6 @@ sig
   datatype inline_policy = Dont_Inline | Hardly_Inline | Smart_Inline | Do_Inline
   datatype fact_policy = Dont_Note | Note_Some | Note_All
 
-  val force_mrbnf: mrbnf -> string
   val mrbnf_internals: bool Config.T
   val mrbnf_timing: bool Config.T
   val user_policy: fact_policy -> Proof.context -> fact_policy
@@ -608,13 +608,14 @@ type mr_facts = {
   mr_rel_OO: thm lazy,
   mr_rel_OO_Grp: thm lazy,
   mr_rel_transfer: thm lazy,
-  mr_rel_id: thm lazy
+  mr_rel_id: thm lazy,
+  mr_rel_set: thm list lazy
 };
 
 fun mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_bound Un_bound
     UNION_bound mr_rel_cong0 mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip mr_rel_map mr_rel_mono
     mr_rel_mono_strong0 mr_rel_mono_strong mr_set_transfer mr_rel_Grp mr_rel_conversep mr_rel_OO
-    mr_rel_OO_Grp mr_rel_transfer mr_rel_id = {
+    mr_rel_OO_Grp mr_rel_transfer mr_rel_id mr_rel_set = {
   var_large = var_large,
   var_regular = var_regular,
   natLeq_bound = natLeq_bound,
@@ -638,7 +639,8 @@ fun mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_boun
   mr_rel_OO = mr_rel_OO,
   mr_rel_OO_Grp = mr_rel_OO_Grp,
   mr_rel_transfer = mr_rel_transfer,
-  mr_rel_id = mr_rel_id};
+  mr_rel_id = mr_rel_id,
+  mr_rel_set = mr_rel_set};
 
 fun map_mr_facts f {
   var_large,
@@ -664,7 +666,8 @@ fun map_mr_facts f {
   mr_rel_OO,
   mr_rel_OO_Grp,
   mr_rel_transfer,
-  mr_rel_id} =
+  mr_rel_id,
+  mr_rel_set} =
   {var_large = f var_large,
   var_regular = f var_regular,
   natLeq_bound = f natLeq_bound,
@@ -688,7 +691,8 @@ fun map_mr_facts f {
   mr_rel_OO = Lazy.map f mr_rel_OO,
   mr_rel_OO_Grp = Lazy.map f mr_rel_OO_Grp,
   mr_rel_transfer = Lazy.map f mr_rel_transfer,
-  mr_rel_id = Lazy.map f mr_rel_id};
+  mr_rel_id = Lazy.map f mr_rel_id,
+  mr_rel_set = Lazy.map (map f) mr_rel_set};
 
 val morph_mr_facts = map_mr_facts o Morphism.thm;
 
@@ -962,6 +966,7 @@ val mr_rel_mono_strong_of_mrbnf = Lazy.force o #mr_rel_mono_strong o #mr_facts o
 val mr_rel_transfer_of_mrbnf = Lazy.force o #mr_rel_transfer o #mr_facts o rep_mrbnf;
 val mr_set_transfer_of_mrbnf = Lazy.force o #mr_set_transfer o #mr_facts o rep_mrbnf;
 val mr_rel_id_of_mrbnf = Lazy.force o #mr_rel_id o #mr_facts o rep_mrbnf;
+val mr_rel_set_of_mrbnf = Lazy.force o #mr_rel_set o #mr_facts o rep_mrbnf;
 
 fun mk_mrbnf name T var_types free frees bound bounds live lives lives' dead deads map sets bd class class_thms coclass axioms
   defs facts mr_facts wits rel mr_rel pred = MRBNF {name = name, T = T, var_types = var_types,
@@ -983,88 +988,6 @@ fun map_mrbnf f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 f17 f18 f19
        map = f12 map, sets = f13 sets, bd = f14 bd, class = f15 class, class_thms = f16 class_thms, coclass = f17 coclass,
        axioms = f18 axioms, defs = f19 defs, facts = f20 facts, mr_facts = f21 mr_facts,
        nwits = f22 nwits, wits = f23 wits, rel = f24 rel, mr_rel = f25 mr_rel, pred = f26 pred};
-
-fun force_mrbnf mrbnf =
-  let
-    (* Later tactics use earlier tactics, so the order of these matter *)
-    fun force_facts x = [
-        Lazy.force (@{print} "collect_set_map" ; #collect_set_map x),
-        Lazy.force (@{print} "in_mono" ; #in_mono x),
-        Lazy.force (@{print} "in_cong" ; #in_cong x),
-        Lazy.force (@{print} "map_id" ; #map_id x),
-        Lazy.force (@{print} "map_ident0" ; #map_ident0 x),
-        Lazy.force (@{print} "map_ident" ; #map_ident x),
-        Lazy.force (@{print} "map_comp" ; #map_comp x),
-        Lazy.force (@{print} "map_cong" ; #map_cong x),
-        Lazy.force (@{print} "map_cong_simp" ; #map_cong_simp x),
-        Lazy.force (@{print} "inj_map" ; #inj_map x)
-      ] @ map Lazy.force (@{print} "set_map" ; #set_map x) @ [
-        Lazy.force (@{print} "in_bd" ; #in_bd x),
-        Lazy.force (@{print} "rel_OO_Grp_id" ; #rel_OO_Grp_id x),
-        Lazy.force (@{print} "rel_Grp" ; #rel_Grp x),
-        Lazy.force (@{print} "rel_mono" ; #rel_mono x),
-        Lazy.force (@{print} "rel_cong0" ; #rel_cong0 x),
-        Lazy.force (@{print} "rel_eq" ; #rel_eq x),
-        Lazy.force (@{print} "rel_conversep" ; #rel_conversep x),
-        Lazy.force (@{print} "rel_OO" ; #rel_OO x),
-        Lazy.force (@{print} "in_rel" ; #in_rel x),
-        Lazy.force (@{print} "rel_flip" ; #rel_flip x),
-        Lazy.force (@{print} "rel_mono_strong0" ; #rel_mono_strong0 x),
-        Lazy.force (@{print} "rel_mono_strong" ; #rel_mono_strong x),
-        Lazy.force (@{print} "rel_cong" ; #rel_cong x),
-        Lazy.force (@{print} "rel_cong_simp" ; #rel_cong_simp x),
-        Lazy.force (@{print} "pred_cong0" ; #pred_cong0 x),
-        Lazy.force (@{print} "rel_eq_onp" ; #rel_eq_onp x),
-        Lazy.force (@{print} "pred_rel" ; #pred_rel x),
-        Lazy.force (@{print} "pred_mono_strong0" ; #pred_mono_strong0 x),
-        Lazy.force (@{print} "pred_mono_strong" ; #pred_mono_strong x),
-        Lazy.force (@{print} "pred_mono" ; #pred_mono x),
-        Lazy.force (@{print} "pred_cong" ; #pred_cong x),
-        Lazy.force (@{print} "pred_cong_simp" ; #pred_cong_simp x),
-        Lazy.force (@{print} "map_cong_pred" ; #map_cong_pred x)
-      ] @ Lazy.force (@{print} "rel_map" ; #rel_map x) @ [
-        Lazy.force (@{print} "rel_refl" ; #rel_refl x),
-        Lazy.force (@{print} "rel_refl_strong" ; #rel_refl_strong x),
-        Lazy.force (@{print} "rel_reflp" ; #rel_reflp x),
-        Lazy.force (@{print} "rel_symp" ; #rel_symp x),
-        Lazy.force (@{print} "rel_transp" ; #rel_transp x),
-        Lazy.force (@{print} "pred_True" ; #pred_True x),
-        Lazy.force (@{print} "pred_map" ; #pred_map x),
-        Lazy.force (@{print} "map_transfer" ; #map_transfer x),
-        Lazy.force (@{print} "pred_transfer" ; #pred_transfer x),
-        Lazy.force (@{print} "rel_transfer" ; #rel_transfer x)
-      ] @ Lazy.force (@{print} "set_transfer" ; #set_transfer x) @ [
-        Lazy.force (@{print} "inj_map_strong" ; #inj_map_strong x)
-      ]
-    fun force_mr_facts x = [
-        Lazy.force (@{print} "mr_rel_eq" ; #mr_rel_eq x),
-        Lazy.force (@{print} "mr_in_rel" ; #mr_in_rel x),
-        Lazy.force (@{print} "mr_rel_OO" ; #mr_rel_OO x),
-        Lazy.force (@{print} "mr_rel_mono" ; #mr_rel_mono x),
-        Lazy.force (@{print} "mr_rel_cong0" ; #mr_rel_cong0 x),
-        Lazy.force (@{print} "mr_rel_Grp" ; #mr_rel_Grp x),
-        Lazy.force (@{print} "mr_rel_conversep" ; #mr_rel_conversep x)
-      ] @ Lazy.force (@{print} "mr_rel_map" ; #mr_rel_map x) @ [
-        Lazy.force (@{print} "mr_map_transfer" ; #mr_map_transfer x),
-        Lazy.force (@{print} "mr_rel_transfer" ; #mr_rel_transfer x),
-        Lazy.force (@{print} "mr_rel_OO_Grp" ; #mr_rel_OO_Grp x),
-        Lazy.force (@{print} "mr_rel_flip" ; #mr_rel_flip x)
-      ] @ Lazy.force (@{print} "mr_set_transfer" ; #mr_set_transfer x) @ [
-        Lazy.force (@{print} "mr_rel_mono_strong0" ; #mr_rel_mono_strong0 x),
-        Lazy.force (@{print} "mr_rel_mono_strong" ; #mr_rel_mono_strong x),
-        Lazy.force (@{print} "mr_rel_id" ; #mr_rel_id x)
-      ]
-
-    val name = Binding.name_of (name_of_mrbnf mrbnf)
-    val _ = @{print} "----------------------------------------------"
-    val _ = @{print} ("Trying to force facts for " ^ name)
-    val _ = force_facts (facts_of_mrbnf mrbnf)
-    val _ = @{print} ("Trying to force mr_facts for " ^ name)
-    val _ = force_mr_facts (mr_facts_of_mrbnf mrbnf)
-  in
-    @{print} ("successfully forced mrbnf thms for " ^ name) ;
-    @{print} "----------------------------------------------"
-  end;
 
 fun morph_mrbnf phi =
   let
@@ -1358,6 +1281,7 @@ val mr_rel_OON = "mr_rel_OO";
 val mr_rel_OO_GrpN = "mr_rel_OO_Grp";
 val mr_rel_transferN = "mr_rel_transfer";
 val mr_rel_idN = "mr_rel_id";
+val mr_rel_setN = "mr_rel_set";
 
 datatype inline_policy = Dont_Inline | Hardly_Inline | Smart_Inline | Do_Inline;
 
@@ -1405,6 +1329,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (mr_rel_OON, [Lazy.force (#mr_rel_OO mr_facts)]),
            (mr_rel_OO_GrpN, [Lazy.force (#mr_rel_OO_Grp mr_facts)]),
            (mr_rel_transferN, [Lazy.force (#mr_rel_transfer mr_facts)]),
+           (mr_rel_setN, Lazy.force (#mr_rel_set mr_facts)),
            (var_largeN, [#var_large mr_facts]),
            (var_regularN, [#var_regular mr_facts])] @
           (witNs ~~ wit_thmss_of_mrbnf mrbnf)
@@ -3476,6 +3401,24 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
         val mr_rel_id = Lazy.lazy mk_mr_rel_id;
 
+        fun mk_mr_rel_set () =
+          let
+            val mr_prem = Logic.implies $ HOLogic.mk_Trueprop (Term.list_comb (mrrelAsBs, fsRs @ [x, y]))
+            fun mk_var_goal setA setB i = mr_prem $ mk_Trueprop_eq (setB $ y, mk_image (nth fsRs i) $ (setA $ x))
+            fun mk_live_goal setA setB B i = mr_prem $ (Logic.implies $
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (nth zs i, setA $ x)) $
+              HOLogic.mk_Trueprop (mk_Bex (setB $ y) (Term.abs ("z'", B) (nth fsRs i $ nth zs i $ Bound 0)))
+            );
+            val vars = map (fst o dest_Free) (fsRs @ [x, y])
+          in @{map 6} (fn setA => fn setB => fn B => fn var_type => fn set_transfer => fn i =>
+            Goal.prove_sorry lthy (vars @ [fst (dest_Free (nth zs i))]) prem_terms_fs
+              (if var_type = Live_Var then mk_live_goal setA setB B i else mk_var_goal setA setB i) (fn {context, prems} =>
+              mk_mr_rel_set_tac context (var_type = Live_Var) set_transfer prems
+            ) |> Thm.close_derivation \<^here>) mrbnf_sets_As mrbnf_sets_Bs Bs' var_types (Lazy.force mr_set_transfer) (0 upto non_dead - 1)
+          end;
+
+        val mr_rel_set = Lazy.lazy mk_mr_rel_set;
+
         val defs = mk_defs mrbnf_map_def mrbnf_set_defs mrbnf_rel_def mrbnf_rel_def mrbnf_pred_def;
 
         val facts = mk_facts bd_card_order bd_cinfinite bd_regularCard bd_Card_order bd_Cinfinite
@@ -3490,7 +3433,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         val mr_facts = mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_bound
           Un_bound UNION_bound mr_rel_cong0 mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip
           mr_rel_map mr_rel_mono mr_rel_mono_strong0 mr_rel_mono_strong mr_set_transfer mr_rel_Grp
-          mr_rel_conversep mr_rel_OO mr_rel_OO_Grp mr_rel_transfer mr_rel_id;
+          mr_rel_conversep mr_rel_OO mr_rel_OO_Grp mr_rel_transfer mr_rel_id mr_rel_set;
 
         val wits = map2 mk_witness mrbnf_wits wit_thms;
 

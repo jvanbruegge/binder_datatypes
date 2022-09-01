@@ -734,4 +734,7 @@ qed
 
 lemma prod_in_Collect_iff: "(a, b) \<in> {(x, y). A x y} \<longleftrightarrow> A a b" by blast
 
+lemma Grp_UNIV_def: "Grp f = (\<lambda>x. (=) (f x))"
+  unfolding Grp_def by auto
+
 end

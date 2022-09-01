@@ -42,6 +42,8 @@ sig
   val mk_mr_map_transfer_tac: Proof.context -> int -> int -> thm -> thm -> thm list -> thm -> tactic
   val mk_mr_rel_transfer_tac: Proof.context -> int -> (bool -> thm list) -> tactic
   val mk_mr_set_transfer_tac: Proof.context -> thm list -> thm list -> thm -> thm list -> tactic
+
+  val mk_mr_rel_set_tac: Proof.context -> bool -> thm -> thm list -> tactic
 end;
 
 structure MRBNF_Def_Tactics : MRBNF_DEF_TACTICS =
@@ -615,4 +617,20 @@ fun mk_mr_set_transfer_tac ctxt assms id_prems mr_rel_OO_Grp_alt set_map =
       ]
     ]
   end
+
+fun mk_mr_rel_set_tac ctxt live set_transfer prems =
+  EVERY1 [
+    rtac ctxt (allE OF [
+      Local_Defs.unfold0 ctxt @{thms rel_fun_def Grp_UNIV_def} (set_transfer OF prems)
+    ]),
+    etac ctxt allE,
+    etac ctxt impE,
+    assume_tac ctxt,
+    if live then EVERY' [
+      dtac ctxt @{thm rel_setD1},
+      assume_tac ctxt
+    ] else rtac ctxt sym,
+    assume_tac ctxt
+  ];
+
 end;

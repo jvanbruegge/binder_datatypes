@@ -42,6 +42,7 @@ in lthy''' end
 \<close>
 print_theorems
 print_bnfs
+print_mrbnfs
 
 ML \<open>
 val tau = the (MRBNF_Def.mrbnf_of @{context} "Composition.\<tau>_pre")
@@ -327,8 +328,7 @@ lemma rrename_\<tau>_simps: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Long
   done
 lemma FVars_\<tau>_def2: "FVars_\<tau> t = FFVars_\<tau> (quot_type.abs alpha_\<tau> Abs_\<tau> t)"
   unfolding FFVars_\<tau>_def
-  apply (rule \<tau>.alpha_FVarss)
-  apply (rule \<tau>.TT_alpha_quotient_syms)
+  apply (rule \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms])
   done
 
 lemma exists_middle: "x = w (g y) \<longleftrightarrow> (\<exists>z. z = g y \<and> w z = x)" by blast
@@ -339,52 +339,6 @@ fun etac ctxt = eresolve_tac ctxt o single
 fun dtac ctxt = dresolve_tac ctxt o single
 val unfold_thms_tac = Ctr_Sugar_Tactics.unfold_thms_tac
 \<close>
-
-(* TODO: Add to MRBNF_Def *)
-lemma mr_rel_\<tau>_pre_elims:
-  fixes f1::"'a::var_\<tau>_pre \<Rightarrow> 'a" and f2::"'b::var_\<tau>_pre \<Rightarrow> 'b"
-  assumes ps: "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
-    and rel: "mr_rel_\<tau>_pre f1 f2 R1 R2 x x'"
-  shows "set1_\<tau>_pre x' = f1 ` set1_\<tau>_pre x"
-    "set2_\<tau>_pre x' = f2 ` set2_\<tau>_pre x"
-    "z \<in> set3_\<tau>_pre x \<Longrightarrow> \<exists>z'\<in>set3_\<tau>_pre x'. R1 z z'"
-    "w \<in> set4_\<tau>_pre x \<Longrightarrow> \<exists>w'\<in>set4_\<tau>_pre x'. R2 w w'"
-  by (raw_tactic \<open>
-    let
-      val mrbnf = tau
-      val prems = @{thms assms}
-      val ctxt = @{context}
-
-      val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf
-      val mr_set_transfers = MRBNF_Def.mr_set_transfer_of_mrbnf mrbnf
-      val (ps, rel) = split_last prems
-
-      fun common_tac thm = EVERY' [
-        rtac ctxt (allE OF [Local_Defs.unfold0 ctxt @{thms rel_fun_def Grp_UNIV_def} (thm OF ps)]),
-        etac ctxt allE,
-        etac ctxt impE,
-        rtac ctxt rel
-      ];
-
-      fun mk_var_tac thm = EVERY' [
-        common_tac thm,
-        rtac ctxt sym,
-        assume_tac ctxt
-      ];
-      fun mk_live_tac thm = EVERY' [
-        common_tac thm,
-        rtac ctxt impI,
-        dtac ctxt @{thm rel_setD1},
-        assume_tac ctxt,
-        assume_tac ctxt
-      ];
-
-    in unfold_thms_tac ctxt @{thms atomize_imp atomize_conj} THEN
-      rtac ctxt conjI 1 THEN rtac ctxt conjI 1 THEN rtac ctxt conjI 3 THEN
-      ALLGOALS (fn i => case nth var_types (i - 1) of
-        MRBNF_Def.Live_Var => mk_live_tac (nth mr_set_transfers (i - 1)) i
-        | _ => mk_var_tac (nth mr_set_transfers (i - 1)) i
-      ) end\<close>)
 
 definition suitable :: "(('a::var_\<tau>_pre, 'a, 'a raw_\<tau>, 'a raw_\<tau>) \<tau>_pre \<Rightarrow> 'a ssfun \<Rightarrow> ('a \<Rightarrow> 'a)) \<Rightarrow> bool" where
   "suitable \<equiv> \<lambda>pick. \<forall>x p. bij (pick x p) \<and> |supp (pick x p)| <o |UNIV::'a set| \<and>
@@ -509,11 +463,9 @@ lemma Umap'_CTOR: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow
    apply (rule iffD2[OF prod.inject], rule conjI, rule rrename_\<tau>_simps, assumption+, rule refl)+
   done
 
-
 lemmas id_prems = supp_id_bound bij_id supp_id_bound
 
 lemma exists_map_prod_id: "(a, b) \<in> map_prod f id ` A \<Longrightarrow> \<exists>c. (c, b) \<in> A \<and> a = f c" by auto
-
 
 lemma UFVars'_CTOR: "set2_\<tau>_pre y \<inter> (PFVars1_ff0 p \<union> avoiding_set1_ff0) = {} \<Longrightarrow>
 (\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<union> set4_\<tau>_pre y \<Longrightarrow> UFVars' t (pu p) \<subseteq> FVars_\<tau> t \<union> PFVars1_ff0 p \<union> avoiding_set1_ff0) \<Longrightarrow>
@@ -1574,7 +1526,7 @@ lemma f_swap_alpha:
              apply (rule pick_prems[OF prems(2)])
               apply (rule pick_prems[OF prems(3)])
             apply (rule prems)
-           apply (rule mr_rel_\<tau>_pre_elims(2)[OF supp_id_bound prems(8,9,11)])
+           apply (rule \<tau>_pre.mr_rel_set(2)[OF supp_id_bound prems(8,9,11)])
           apply (raw_tactic \<open>Skip_Proof.cheat_tac @{context} 1\<close>) (* Trivial *)
          prefer 3
          apply (raw_tactic \<open>Skip_Proof.cheat_tac @{context} 1\<close>) (* Trivial *)
@@ -1766,7 +1718,7 @@ apply (raw_tactic \<open>Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
     apply (rotate_tac 2)
           apply assumption
          apply (rotate_tac -1)
-    unfolding arg_cong2[OF refl arg_cong[OF mr_rel_\<tau>_pre_elims(2)[OF supp_id_bound prems(8,9,11)], of "(`) (inv w)", unfolded image_comp inv_o_simp1[OF prems(8)] image_id, symmetric], of "(\<in>)"]
+    unfolding arg_cong2[OF refl arg_cong[OF \<tau>_pre.mr_rel_set(2)[OF supp_id_bound prems(8,9,11)], of "(`) (inv w)", unfolded image_comp inv_o_simp1[OF prems(8)] image_id, symmetric], of "(\<in>)"]
       image_in_bij_eq[OF bij_imp_bij_inv[OF prems(8)], unfolded inv_inv_eq[OF prems(8)]]
        apply (drule DiffI)
           apply assumption
@@ -1908,7 +1860,7 @@ apply (raw_tactic \<open>Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
     apply (rotate_tac 2)
           apply assumption
          apply (rotate_tac -1)
-    unfolding arg_cong2[OF refl arg_cong[OF mr_rel_\<tau>_pre_elims(2)[OF supp_id_bound prems(8,9,11)], of "(`) (inv w)", unfolded image_comp inv_o_simp1[OF prems(8)] image_id, symmetric], of "(\<in>)"]
+    unfolding arg_cong2[OF refl arg_cong[OF \<tau>_pre.mr_rel_set(2)[OF supp_id_bound prems(8,9,11)], of "(`) (inv w)", unfolded image_comp inv_o_simp1[OF prems(8)] image_id, symmetric], of "(\<in>)"]
       image_in_bij_eq[OF bij_imp_bij_inv[OF prems(8)], unfolded inv_inv_eq[OF prems(8)]]
        apply (drule DiffI)
           apply assumption

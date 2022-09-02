@@ -54,15 +54,13 @@ Multithreading.parallel_proofs := 1;
 
 local_setup \<open>fn lthy =>
 let
-  val lthy' = MRBNF_Fp.construct_binder_fp MRBNF_Util.Least_FP
+  val (_, lthy') = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP
     [(("\<tau>", tau), 2)] [[0]] lthy
 in
   lthy'
 end
 \<close>
 print_theorems
-
-term "\<tau>_ctor"
 
 lemma infinite_var_\<tau>_pre: "infinite (UNIV :: 'a::var_\<tau>_pre set)"
   using card_of_ordLeq_finite cinfinite_def infinite_regular_card_order.Cinfinite infinite_regular_card_order_card_suc natLeq_Card_order natLeq_card_order natLeq_cinfinite var_DEADID_class.large by blast

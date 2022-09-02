@@ -3,6 +3,7 @@ theory MRBNF_Recursor
 begin
 
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"

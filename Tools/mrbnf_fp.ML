@@ -1,15 +1,16 @@
 signature MRBNF_FP =
 sig
-  val construct_binder_fp: MRBNF_Util.fp_kind -> ((string * MRBNF_Def.mrbnf) * int) list ->
-    int list list -> local_theory -> local_theory
+  val construct_binder_fp: BNF_Util.fp_kind -> ((string * MRBNF_Def.mrbnf) * int) list ->
+    int list list -> local_theory -> MRBNF_FP_Def_Sugar.fp_result list * local_theory
 end;
 
-structure MRBNF_Fp : MRBNF_FP =
+structure MRBNF_FP : MRBNF_FP =
 struct
 
 open MRBNF_Util
 open MRBNF_Def
 open MRBNF_Fp_Tactics
+open MRBNF_FP_Def_Sugar
 
 val mk_TN = prefix "raw_";
 val mk_ctorN = suffix "_ctor" o prefix "raw_";
@@ -520,17 +521,17 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     );
     val rename_comp0s = mk_rename_comp0s lthy rename_comps renamesAs;
 
-    fun mk_rename_bij rename_t rename_comp0 rename_id0 =
+    fun mk_rename_bij lthy rename_t rename_comp0 rename_id0 =
       let val goal = HOLogic.mk_Trueprop (mk_bij (Term.list_comb (rename_t, ffs)));
       in prove lthy ffs prem_terms_ffs goal (mk_rename_bij_tac rename_comp0 rename_id0) end;
-    val rename_bijs = @{map 3} mk_rename_bij renamesAs rename_comp0s rename_id0s;
+    val rename_bijs = @{map 3} (mk_rename_bij lthy) renamesAs rename_comp0s rename_id0s;
 
-    fun mk_rename_inv_simp rename_t rename_comp0 rename_id0 =
+    fun mk_rename_inv_simp lthy rename_t rename_comp0 rename_id0 =
       let val goal = mk_Trueprop_eq (
         mk_inv (Term.list_comb (rename_t, ffs)),
         Term.list_comb (rename_t, map mk_inv ffs)
       ) in prove lthy ffs prem_terms_ffs goal (mk_rename_inv_simp_tac rename_comp0 rename_id0) end;
-    val rename_inv_simps = @{map 3} mk_rename_inv_simp renamesAs rename_comp0s rename_id0s;
+    val rename_inv_simps = @{map 3} (mk_rename_inv_simp lthy) renamesAs rename_comp0s rename_id0s;
 
     (* Define inductive predicate free *)
     fun mk_inductive i A z b_vec free_sets bound_sets lthy =
@@ -2222,6 +2223,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       (transpose FFVars_defss) rrename_defs Quotient_abs_reps Quotient_total_abs_eq_iffs alpha_bijs
       rename_ids alpha_refls;
 
+    val rrename_bijs = @{map 3} (mk_rename_bij lthy) rrenamesAs rrename_comp0s rrename_id0s;
+    val rrename_inv_simps = @{map 3} (mk_rename_inv_simp lthy) rrenamesAs rrename_comp0s rrename_id0s;
+
     fun mk_FFVars_rrename f w rrename_t rrename_def alpha_sym alpha_quotient_sym FVars_rename FFVars_t FFVars_def alpha_FVars =
       let
         val goal = mk_Trueprop_eq (
@@ -2245,6 +2249,77 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val cctor_eq_intro_rrenames = map (fn thm => (thm RS iffD2)
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
+
+    (* TODO: use giant map instead of x times (nth ... i) *)
+    val ress = map (fn i =>
+      let
+        fun nth_opt xs_opt i = Option.map (fn xs => nth xs i) xs_opt
+        val raw_fp_res = {
+          T = nth CAs i,
+          ctor = nth ctorsAs i,
+          rename = nth renamesAs i,
+          FVars = nth FVarsssAs i,
+
+          rename_id0 = nth rename_id0s i,
+          rename_id = nth rename_ids i,
+          rename_comp0 = nth rename_comp0s i,
+          rename_comp = nth rename_comps i,
+          rename_bij = nth rename_bijs i,
+          rename_inv_simp = nth rename_inv_simps i,
+          FVars_ctors = nth FVars_ctorss i,
+          FVars_renames = nth FVars_renamess i,
+          card_of_FVars_bounds = nth card_of_FVars_boundss i,
+          inner = {
+            alpha = nth alphasAs i,
+
+            alpha_refl = nth alpha_refls i,
+            alpha_sym = nth alpha_syms i,
+            alpha_trans = nth alpha_transs i,
+            alpha_bij = nth alpha_bijs i,
+            alpha_bij_eq = nth alpha_bij_eqs i,
+            alpha_FVarss = nth alpha_FVarsss i,
+
+            wf_subshape = nth_opt wf_subshapess_opt i,
+            set_subshapes = nth_opt set_subshapesss_opt i,
+            set_subshape_images = nth_opt set_subshape_imagesss_opt i,
+            subshape_induct = TT_subshape_induct_opt
+          }
+        } : raw_result fp_result_T;
+        val quotient_fp_res = {
+          T = nth CBs i,
+          ctor = nth cctorsAs i,
+          rename = nth rrenamesAs i,
+          FVars = nth FFVarsssAs i,
+
+          rename_id0 = nth rrename_id0s i,
+          rename_id = nth rrename_ids i,
+          rename_comp0 = nth rrename_comp0s i,
+          rename_comp = nth rrename_comps i,
+          rename_bij = nth rrename_bijs i,
+          rename_inv_simp = nth rrename_inv_simps i,
+          FVars_ctors = nth FFVars_cctorss i,
+          FVars_renames = nth FFVars_rrenamess i,
+          card_of_FVars_bounds = nth card_of_FFVars_boundss i,
+          inner = {
+            abs = nth TT_abss i,
+            rep = nth TT_reps i,
+
+            alpha_quotient_sym = nth alpha_quotient_syms i,
+            total_abs_eq_iff = nth Quotient_total_abs_eq_iffs i,
+            abs_rep = nth Quotient_abs_reps i,
+            rep_abs = nth Quotient_rep_abss i
+          }
+        } : quotient_result fp_result_T;
+      in {
+        fp = fp,
+        bound_vars = fAs,
+        raw_fp = raw_fp_res,
+        quotient_fp = quotient_fp_res,
+        pre_mrbnf = nth mrbnfs i
+      } : fp_result end
+    ) (0 upto n - 1);
+
+    val lthy = register_fp_results ress lthy
 
     val notes =
       [("rename_simps", rename_simps),
@@ -2321,7 +2396,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val (noted, lthy') = Local_Theory.notes notes lthy
   in
-    lthy'
+    (ress, lthy')
   end;
 
 end;

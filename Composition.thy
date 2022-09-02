@@ -189,17 +189,11 @@ let
   };
   val model = {
     U = @{typ "'a::var_\<tau>_pre \<tau>"},
-    term_quotient = {
-      qT = @{typ "'a::var_\<tau>_pre \<tau>"},
-      qmap = @{term rrename_\<tau>},
-      qctor = @{term \<tau>_ctor},
-      qFVars = [@{term FFVars_\<tau>}]
-    },
+    fp_result = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Composition.\<tau>"),
     UFVars = [@{term "\<lambda>(_::'a::var_\<tau>_pre \<tau>) (x::'a::var_\<tau>_pre \<tau>). FFVars_\<tau> x"}],
     Umap = @{term "\<lambda>f (_::'a::var_\<tau>_pre \<tau>) (x::'a::var_\<tau>_pre \<tau>). rrename_\<tau> f x"},
     Uctor = @{term CCTOR},
     avoiding_sets = [@{term "{}::'a::var_\<tau>_pre set"}],
-    mrbnf = tau,
     binding_dispatcher = [[0]],
     parameters = {
       P = @{typ "'a::var_\<tau>_pre ssfun"},

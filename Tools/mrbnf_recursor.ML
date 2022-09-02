@@ -26,13 +26,12 @@ sig
   };
 
   type 'a model = {
+    fp_result: MRBNF_FP_Def_Sugar.fp_result,
     U: typ,
-    term_quotient: { qT: typ, qmap: term, qctor: term, qFVars: term list },
     UFVars: term list,
     Umap: term,
     Uctor: term,
     avoiding_sets: term list,
-    mrbnf: MRBNF_Def.mrbnf,
     binding_dispatcher: int list list,
     parameters: 'a parameter,
     axioms: 'a model_axioms
@@ -73,13 +72,12 @@ type 'a model_axioms = {
 };
 
 type 'a model = {
+  fp_result: MRBNF_FP_Def_Sugar.fp_result,
   U: typ,
-  term_quotient: { qT: typ, qmap: term, qctor: term, qFVars: term list },
   UFVars: term list,
   Umap: term,
   Uctor: term,
   avoiding_sets: term list,
-  mrbnf: MRBNF_Def.mrbnf,
   binding_dispatcher: int list list,
   parameters: 'a parameter,
   axioms: 'a model_axioms
@@ -113,7 +111,7 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
       |> mk_Frees "f" (map2 (curry op -->) vars vars)
       ||>> mk_Frees "g" (map2 (curry op -->) vars vars)
       ||>> apfst hd o mk_Frees "d" [T]
-      ||>> mk_Frees "t" (the_default [] (Option.map (single o #qT) quotient_opt))
+      ||>> mk_Frees "t" (the_default [] (Option.map (single o #T) quotient_opt))
       ||>> mk_Frees "a" vars;
   in {
     map_id0 = fold_rev Logic.all t (HOLogic.mk_Trueprop (
@@ -144,7 +142,7 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
         val FVars = nth FVars i;
       in
         fold_rev Logic.all (d::t @ fs) (add_f_prems fs (mk_Trueprop_eq (
-          Term.list_comb (FVars, map (fn t => Term.list_comb (#qmap (the quotient_opt), fs @ [t])) t @ [Term.list_comb (mapx, fs @ t) $ d]),
+          Term.list_comb (FVars, map (fn t => Term.list_comb (#rename (the quotient_opt), fs @ [t])) t @ [Term.list_comb (mapx, fs @ t) $ d]),
           mk_image (nth fs i) $ Term.list_comb (FVars, t @ [d])
         )))
       end
@@ -157,14 +155,23 @@ fun prove_model_axioms b model lthy =
     val params = #parameters model;
     val ptacs = #axioms params;
 
-    val live = MRBNF_Def.live_of_mrbnf (#mrbnf model);
-    val free = MRBNF_Def.free_of_mrbnf (#mrbnf model);
-    val bound = MRBNF_Def.bound_of_mrbnf (#mrbnf model);
+    val mrbnf = #pre_mrbnf (#fp_result model);
+    val live = MRBNF_Def.live_of_mrbnf mrbnf;
+    val free = MRBNF_Def.free_of_mrbnf mrbnf;
+    val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
 
     val vars = get_vars true (#Umap model);
-    val deads = MRBNF_Def.deads_of_mrbnf (#mrbnf model);
-    val quotient = #term_quotient model;
-    val qT = #qT quotient;
+    val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
+
+    val replacement = (#bound_vars (#fp_result model) ~~ vars);
+    val phi = Morphism.morphism "instantiate vars" {
+      binding = [], fact = [],
+      typ = [Term.typ_subst_atomic replacement],
+      term = [Term.subst_atomic_types replacement]
+    };
+    val fp_res = MRBNF_FP_Def_Sugar.morph_fp_result phi (#fp_result model);
+    val quotient_fp = #quotient_fp fp_res
+    val qT = #T quotient_fp
     val As = replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model]);
 
     fun mk_def_t name rhs =
@@ -189,7 +196,7 @@ fun prove_model_axioms b model lthy =
     val (((((fs, y), p), pu), t), _) =
       lthy'
       |> mk_Frees "f" (map2 (curry op -->) vars vars)
-      ||>> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads As vars vars (#mrbnf model)]
+      ||>> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads As vars vars mrbnf]
       ||>> apfst hd o mk_Frees "p" [#P params]
       ||>> apfst hd o mk_Frees "pu" [#P params --> #U model]
       ||>> apfst hd o mk_Frees "t" [qT];
@@ -216,7 +223,7 @@ fun prove_model_axioms b model lthy =
     };
 
     val tacs = #axioms model;
-    val goals = mk_termlike_goals (SOME (#term_quotient model)) (#U model) (fst Umap) (map fst UFVars) lthy;
+    val goals = mk_termlike_goals (SOME quotient_fp) (#U model) (fst Umap) (map fst UFVars) lthy;
 
     val small_avoiding_set_goals = map (fn (i, A) => HOLogic.mk_Trueprop (mk_ordLess
       (mk_card_of A) (mk_card_of (HOLogic.mk_UNIV (nth vars i)))
@@ -225,13 +232,13 @@ fun prove_model_axioms b model lthy =
     val mapF_ap =
       let
         val As' = replicate live qT;
-        val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' vars vars (#mrbnf model);
+        val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' vars vars mrbnf;
         val funs = map (fst o dest_funT) (fst (strip_fun_type (fastype_of mapF)));
         val ids = map HOLogic.id_const (filter is_TFree funs);
         val fsts = map (fn T => Const (@{const_name fst}, T --> qT)) As;
         val gs = cond_interlace ids fsts (map (fn var_type =>
           var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var
-        ) (MRBNF_Def.var_types_of_mrbnf (#mrbnf model)));
+        ) (MRBNF_Def.var_types_of_mrbnf mrbnf));
       in Term.list_comb (mapF, gs) end;
 
     val Umap_Uctor_goal =
@@ -243,14 +250,14 @@ fun prove_model_axioms b model lthy =
           )
         )));
         val (ctor_map, pair_map) = (
-            [#qctor quotient $ (mapF_ap $ y)],
+            [#ctor quotient_fp $ (mapF_ap $ y)],
             HOLogic.mk_case_prod (Term.abs ("t", qT) (Term.abs ("pu", PU) (HOLogic.mk_tuple [
-              Term.list_comb (#qmap quotient, fs @ [Bound 1]), Term.list_comb (PUmap, [Bound 1, Bound 0])
+              Term.list_comb (#rename quotient_fp, fs @ [Bound 1]), Term.list_comb (PUmap, [Bound 1, Bound 0])
             ])))
           );
         val mapF = Term.list_comb (
-          MRBNF_Def.mk_map_of_mrbnf deads As As vars vars (#mrbnf model),
-          MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf (#mrbnf model))
+          MRBNF_Def.mk_map_of_mrbnf deads As As vars vars mrbnf,
+          MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf mrbnf)
         );
       in
         fold_rev Logic.all (fs @ [y, p]) (add_f_prems fs (mk_Trueprop_eq (
@@ -263,10 +270,10 @@ fun prove_model_axioms b model lthy =
       let
         val count = live + free + bound;
         val mrbnf_sets = (
-          MRBNF_Def.var_types_of_mrbnf (#mrbnf model)
+          MRBNF_Def.var_types_of_mrbnf mrbnf
           ~~
           MRBNF_Def.mk_sets_of_mrbnf (replicate count deads)
-            (replicate count As) (replicate count vars) (replicate count vars) (#mrbnf model)
+            (replicate count As) (replicate count vars) (replicate count vars) mrbnf
         );
 
         fun topBind i = nth (map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) mrbnf_sets) i;
@@ -285,13 +292,13 @@ fun prove_model_axioms b model lthy =
                 HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_tuple [t, pu], recSets_Un)) $
                 HOLogic.mk_Trueprop (mk_leq
                   (Term.list_comb (nth (map fst UFVars) i, [t, pu $ p]))
-                  (mk_Un (mk_Un (nth (#qFVars quotient) i $ t, nth (map fst PFVars) i $ p), A))
+                  (mk_Un (mk_Un (nth (#FVars quotient_fp) i $ t, nth (map fst PFVars) i $ p), A))
                 )
               )
             ]
             (HOLogic.mk_Trueprop (mk_leq
               (Term.list_comb (nth (map fst UFVars) i, [t, fst Uctor $ y $ p]))
-              (mk_Un (mk_Un (nth (#qFVars quotient) i $ (#qctor quotient $ (mapF_ap $ y)), nth (map fst PFVars) i $ p), A))
+              (mk_Un (mk_Un (nth (#FVars quotient_fp) i $ (#ctor quotient_fp $ (mapF_ap $ y)), nth (map fst PFVars) i $ p), A))
             )))
           end;
       in
@@ -309,12 +316,11 @@ fun prove_model_axioms b model lthy =
     };
     val model' = {
       U = #U model,
-      term_quotient = #term_quotient model,
+      fp_result = fp_res,
       UFVars = map fst UFVars,
       Umap = fst Umap,
       Uctor = fst Uctor,
       avoiding_sets = map fst avoiding_sets,
-      mrbnf = #mrbnf model,
       binding_dispatcher = #binding_dispatcher model,
       parameters = params',
       axioms = model_thms

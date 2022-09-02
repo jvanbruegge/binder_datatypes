@@ -218,19 +218,6 @@ print_theorems
 
 (************************************************************************************)
 
-(* TODO add as rrename_rename and FVars_FFVars on quotient *)
-lemma rrename_\<tau>_simps: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> rrename_\<tau> u (quot_type.abs alpha_\<tau> Abs_\<tau> x) = quot_type.abs alpha_\<tau> Abs_\<tau> (rename_\<tau> u x)"
-  unfolding rrename_\<tau>_def
-  apply (rule iffD2[OF \<tau>.TT_Quotient_total_abs_eq_iffs])
-  apply (rule iffD2[OF \<tau>.alpha_bij_eqs])
-    apply assumption+
-  apply (rule \<tau>.TT_Quotient_rep_abss)
-  done
-lemma FVars_\<tau>_def2: "FVars_\<tau> t = FFVars_\<tau> (quot_type.abs alpha_\<tau> Abs_\<tau> t)"
-  unfolding FFVars_\<tau>_def
-  apply (rule \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms])
-  done
-
 definition suitable :: "(('a::var_\<tau>_pre, 'a, 'a raw_\<tau>, 'a raw_\<tau>) \<tau>_pre \<Rightarrow> 'a ssfun \<Rightarrow> ('a \<Rightarrow> 'a)) \<Rightarrow> bool" where
   "suitable \<equiv> \<lambda>pick. \<forall>x p. bij (pick x p) \<and> |supp (pick x p)| <o |UNIV::'a set| \<and>
     imsupp (pick x p) \<inter> (FVars_\<tau> (raw_\<tau>_ctor x) \<union> PFVars1_ff0 p \<union> avoiding_set1_ff0 - set2_\<tau>_pre x) = {} \<and>
@@ -347,13 +334,19 @@ lemma Umap'_CTOR: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow
             apply assumption+
       apply (rule refl)+
   unfolding comp_def case_prod_map_prod split_beta fst_map_prod snd_map_prod map_prod_simp id_apply PUmap'_def Umap'_def
-   apply (rule iffD2[OF prod.inject], rule conjI, rule rrename_\<tau>_simps, assumption+, rule refl)+
+  apply (rule iffD2[OF prod.inject], rule conjI,
+      raw_tactic \<open>SELECT_GOAL (unfold_thms_tac @{context} @{thms rrename_\<tau>_def}) 1\<close>,
+      rule iffD2[OF \<tau>.TT_Quotient_total_abs_eq_iffs],
+      rule iffD2[OF \<tau>.alpha_bij_eqs],
+      assumption+,
+      rule \<tau>.TT_Quotient_rep_abss,
+      rule refl)+
   done
 
 lemma UFVars'_CTOR: "set2_\<tau>_pre y \<inter> (PFVars1_ff0 p \<union> avoiding_set1_ff0) = {} \<Longrightarrow>
 (\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<union> set4_\<tau>_pre y \<Longrightarrow> UFVars' t (pu p) \<subseteq> FVars_\<tau> t \<union> PFVars1_ff0 p \<union> avoiding_set1_ff0) \<Longrightarrow>
 UFVars' t (CTOR y p) \<subseteq> FVars_\<tau> (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst y)) \<union> PFVars1_ff0 p \<union> avoiding_set1_ff0"
-  unfolding UFVars'_def CTOR_def FVars_\<tau>_def2 \<tau>.TT_abs_ctors \<tau>_pre.map_comp[OF id_prems id_prems] fst_comp_map_prod
+  unfolding UFVars'_def CTOR_def \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms, unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_\<tau>_def], symmetric]] \<tau>.TT_abs_ctors \<tau>_pre.map_comp[OF id_prems id_prems] fst_comp_map_prod
   unfolding \<tau>_pre.map_comp[OF id_prems id_prems, symmetric]
   apply (rule ff0.UFVars_subsets)
   unfolding \<tau>_pre.set_map[OF id_prems] image_id image_Un[symmetric]
@@ -470,7 +463,7 @@ lemma CTOR_cong: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow>
            apply assumption
           apply (rotate_tac 2)
           apply assumption+
-  unfolding \<tau>_pre.set_map[OF id_prems] image_Un[symmetric] forall_imp_map_prod_id UFVars'_def[symmetric] FVars_\<tau>_def2[symmetric]
+  unfolding \<tau>_pre.set_map[OF id_prems] image_Un[symmetric] forall_imp_map_prod_id UFVars'_def[symmetric] \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms, unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_\<tau>_def], symmetric], symmetric]
   apply assumption
        apply assumption
   apply (raw_tactic \<open>

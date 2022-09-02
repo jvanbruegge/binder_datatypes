@@ -154,6 +154,7 @@ sig
   val rel_transfer_of_mrbnf: mrbnf -> thm
   val rel_transp_of_mrbnf: mrbnf -> thm
   val set_bd_of_mrbnf: mrbnf -> thm list
+  val set_bd_UNIV_of_mrbnf: mrbnf -> thm list
   val set_defs_of_mrbnf: mrbnf -> thm list
   val set_map0_of_mrbnf: mrbnf -> thm list
   val set_map_of_mrbnf: mrbnf -> thm list
@@ -381,6 +382,7 @@ type facts = {
   rel_eq: thm lazy,
   rel_flip: thm lazy,
   set_map: thm lazy list,
+  set_bd_UNIV: thm lazy list,
   rel_cong0: thm lazy,
   rel_cong: thm lazy,
   rel_cong_simp: thm lazy,
@@ -415,7 +417,7 @@ type facts = {
 fun mk_facts bd_card_order bd_cinfinite bd_regularCard bd_Card_order bd_Cinfinite bd_Cnotzero
     collect_set_map in_bd in_cong in_mono in_rel inj_map inj_map_strong map_comp map_cong
     map_cong_simp map_cong_pred map_id map_ident0 map_ident map_transfer
-    rel_eq rel_flip set_map rel_cong0 rel_cong rel_cong_simp rel_map rel_mono rel_mono_strong0
+    rel_eq rel_flip set_map set_bd_UNIV rel_cong0 rel_cong rel_cong_simp rel_map rel_mono rel_mono_strong0
     rel_mono_strong set_transfer rel_Grp rel_conversep rel_OO rel_OO_Grp_id rel_refl
     rel_refl_strong rel_reflp rel_symp rel_transp rel_transfer rel_eq_onp pred_transfer pred_True
     pred_map pred_rel pred_mono_strong0 pred_mono_strong pred_mono pred_cong0 pred_cong
@@ -444,6 +446,7 @@ fun mk_facts bd_card_order bd_cinfinite bd_regularCard bd_Card_order bd_Cinfinit
   rel_eq = rel_eq,
   rel_flip = rel_flip,
   set_map = set_map,
+  set_bd_UNIV = set_bd_UNIV,
   rel_cong0 = rel_cong0,
   rel_cong = rel_cong,
   rel_cong_simp = rel_cong_simp,
@@ -499,6 +502,7 @@ fun map_facts f {
   rel_eq,
   rel_flip,
   set_map,
+  set_bd_UNIV,
   rel_cong0,
   rel_cong,
   rel_cong_simp,
@@ -552,6 +556,7 @@ fun map_facts f {
     rel_eq = Lazy.map f rel_eq,
     rel_flip = Lazy.map f rel_flip,
     set_map = map (Lazy.map f) set_map,
+    set_bd_UNIV = map (Lazy.map f) set_bd_UNIV,
     rel_cong0 = Lazy.map f rel_cong0,
     rel_cong = Lazy.map f rel_cong,
     rel_cong_simp = Lazy.map f rel_cong_simp,
@@ -937,6 +942,7 @@ val set_bd_of_mrbnf = #set_bd o #axioms o rep_mrbnf;
 val set_defs_of_mrbnf = #set_defs o #defs o rep_mrbnf;
 val set_map0_of_mrbnf = #set_map0 o #axioms o rep_mrbnf;
 val set_map_of_mrbnf = map Lazy.force o #set_map o #facts o rep_mrbnf;
+val set_bd_UNIV_of_mrbnf = map Lazy.force o #set_map o #facts o rep_mrbnf;
 val set_transfer_of_mrbnf = Lazy.force o #set_transfer o #facts o rep_mrbnf;
 val wit_thms_of_mrbnf = maps #prop o wits_of_mrbnf;
 val wit_thmss_of_mrbnf = map #prop o wits_of_mrbnf;
@@ -1256,6 +1262,7 @@ val rel_transpN = "rel_transp";
 val set_bdN = "set_bd";
 val set_map0N = "set_map0";
 val set_mapN = "set_map";
+val set_bd_UNIVN = "set_bd_UNIV";
 val set_transferN = "set_transfer";
 
 val var_largeN = var_typeN ^ "_" ^ var_type_class_ass1N;
@@ -1322,6 +1329,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (rel_mono_strong0N, [Lazy.force (#rel_mono_strong0 facts)]),
            (pred_mono_strong0N, [Lazy.force (#pred_mono_strong0 facts)]),
            (set_map0N, #set_map0 axioms),
+           (set_bd_UNIVN, map Lazy.force (#set_bd_UNIV facts)),
            (mr_in_relN, [Lazy.force (#mr_in_rel mr_facts)]),
            (mr_rel_eqN, [Lazy.force (#mr_rel_eq mr_facts)]),
            (mr_rel_mono_strongN, [Lazy.force (#mr_rel_mono_strong mr_facts)]),
@@ -2338,6 +2346,12 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
         val set_map = map (fn thm => Lazy.lazy (fn () => mk_set_map thm)) (#set_map0 axioms);
         val set_map_id = set_map |> filter_lives |> map (id_prems o Lazy.force);
+
+        val set_bd_UNIV = map_filter (fn (Live_Var, _) => NONE | (_, set_bd) => SOME (Lazy.lazy (fn () =>
+          @{thm ordLess_ordLeq_trans[OF _ ordIso_ordLeq_trans[OF
+            iffD1[OF Card_order_iff_ordIso_card_of infinite_regular_card_order.Card_order]]
+          ]} OF [set_bd, bd_infinite_regular_card_order, #var_large class_thms]
+        ))) (var_types ~~ #set_bd axioms);
 
         val wit_thms =
           if null nontriv_wit_thms then set_map_id |> mk_wit_thms else nontriv_wit_thms;
@@ -3424,7 +3438,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         val facts = mk_facts bd_card_order bd_cinfinite bd_regularCard bd_Card_order bd_Cinfinite
           bd_Cnotzero collect_set_map in_bd in_cong in_mono in_rel inj_map inj_map_strong map_comp
           map_cong map_cong_simp map_cong_pred map_id map_ident0 map_ident map_transfer rel_eq
-          rel_flip set_map rel_cong0 rel_cong rel_cong_simp rel_map rel_mono rel_mono_strong0
+          rel_flip set_map set_bd_UNIV rel_cong0 rel_cong rel_cong_simp rel_map rel_mono rel_mono_strong0
           rel_mono_strong set_transfer rel_Grp rel_conversep rel_OO rel_OO_Grp_id rel_refl
           rel_refl_strong rel_reflp rel_symp rel_transp rel_transfer rel_eq_onp pred_transfer
           pred_True pred_map pred_rel pred_mono_strong0 pred_mono_strong pred_mono pred_cong0

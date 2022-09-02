@@ -218,17 +218,6 @@ print_theorems
 
 (************************************************************************************)
 
-(* TODO: add to MRBNF_Def *)
-lemma set2_\<tau>_pre_bound: "|set2_\<tau>_pre (x::('a, 'a, _, _) \<tau>_pre)| <o |UNIV::'a::var_\<tau>_pre set|"
-  apply (rule ordLess_ordLeq_trans)
-   apply (raw_tactic \<open>resolve_tac @{context} (MRBNF_Def.set_bd_of_mrbnf tau) 1\<close>)
-  apply (rule ordIso_ordLeq_trans)
-   apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
-   apply (rule infinite_regular_card_order.Card_order)
-   apply (raw_tactic \<open>resolve_tac @{context} [MRBNF_Def.bd_infinite_regular_card_order_of_mrbnf tau] 1\<close>)
-  apply (raw_tactic \<open>resolve_tac @{context} [#var_large (MRBNF_Def.class_thms_of_mrbnf tau)] 1\<close>)
-  done
-
 (* TODO add as rrename_rename and FVars_FFVars on quotient *)
 lemma rrename_\<tau>_simps: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> rrename_\<tau> u (quot_type.abs alpha_\<tau> Abs_\<tau> x) = quot_type.abs alpha_\<tau> Abs_\<tau> (rename_\<tau> u x)"
   unfolding rrename_\<tau>_def
@@ -1096,7 +1085,7 @@ lemma f_swap_alpha:
           rtac ctxt (exE OF [Drule.rotate_prems 2 exists_bij_betw]),
           REPEAT_DETERM_N 2 o EVERY' [
             rtac ctxt @{thm \<tau>_pre.Un_bound},
-            rtac ctxt @{thm set2_\<tau>_pre_bound},
+            resolve_tac ctxt @{thms \<tau>_pre.set_bd_UNIV},
             rtac ctxt @{thm \<tau>_pre.Un_bound},
             rtac ctxt @{thm \<tau>_pre.Un_bound},
             rtac ctxt @{thm \<tau>.card_of_FVars_bounds},
@@ -1960,7 +1949,7 @@ lemma exists_suitable: "\<exists>pick. suitable pick"
   apply (rule exists_suitable_aux)
    apply (rule infinite_var_\<tau>_pre)
   apply (rule \<tau>_pre.Un_bound)
-   apply (rule set2_\<tau>_pre_bound)
+   apply (rule \<tau>_pre.set_bd_UNIV)
   apply (rule card_of_minus_bound)
   apply (rule \<tau>_pre.Un_bound)
    apply (rule \<tau>_pre.Un_bound)

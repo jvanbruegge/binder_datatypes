@@ -1511,6 +1511,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       bound_setss_Bs TT_nchotomys alpha_aavoids aavoid_freshss |> split_list;
 
     val (TT_existential_co_induct, TT_fresh_co_induct_param, TT_fresh_induct_param_no_clash_opt,
+      subshapess_opt,
       TT_subshape_induct_opt, wf_subshapess_opt, set_subshape_imagesss_opt, set_subshapesss_opt,
       TT_fresh_co_induct, TT_plain_co_induct, lthy) = if co
       then let
@@ -1809,7 +1810,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             Drule.rotate_prems ~1 (thm RS @{thm spec2} RS mp);
         in
           (after_qed TT_existential_coinduct, after_qed TT_fresh_coinduct_param, NONE, NONE, NONE,
-            NONE, NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
+            NONE, NONE, NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
         end
       else let
           (* Define inductive predicate subshape *)
@@ -2171,6 +2172,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             (replicate fbound @{thm supp_id_bound[unfolded supp_id]})) |> full_simplify lthy;
         in
           (TT_existential_induct, TT_fresh_induct_param, SOME TT_fresh_induct_param_no_clash,
+            SOME subshapessAs,
             SOME subshape_induct, SOME wf_subshapess, SOME set_subshape_imagesss, SOME set_subshapesss,
             TT_fresh_induct, TT_plain_induct, lthy)
         end;
@@ -2260,6 +2262,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename = nth renamesAs i,
           FVars = nth FVarsssAs i,
 
+          inject = nth raw_injects i,
           rename_id0 = nth rename_id0s i,
           rename_id = nth rename_ids i,
           rename_comp0 = nth rename_comp0s i,
@@ -2279,9 +2282,10 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha_bij_eq = nth alpha_bij_eqs i,
             alpha_FVarss = nth alpha_FVarsss i,
 
-            wf_subshape = nth_opt wf_subshapess_opt i,
-            set_subshapes = nth_opt set_subshapesss_opt i,
-            set_subshape_images = nth_opt set_subshape_imagesss_opt i,
+            subshapes = nth_opt subshapess_opt i,
+            wf_subshapes = nth_opt wf_subshapess_opt i,
+            set_subshapess = nth_opt set_subshapesss_opt i,
+            set_subshape_imagess = nth_opt set_subshape_imagesss_opt i,
             subshape_induct = TT_subshape_induct_opt
           }
         } : raw_result fp_result_T;
@@ -2291,6 +2295,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename = nth rrenamesAs i,
           FVars = nth FFVarsssAs i,
 
+          inject = nth TT_injects0 i,
           rename_id0 = nth rrename_id0s i,
           rename_id = nth rrename_ids i,
           rename_comp0 = nth rrename_comp0s i,
@@ -2312,6 +2317,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         } : quotient_result fp_result_T;
       in {
         fp = fp,
+        binding_relation = nth binding_relation i,
         bound_vars = fAs,
         raw_fp = raw_fp_res,
         quotient_fp = quotient_fp_res,

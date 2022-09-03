@@ -379,6 +379,7 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
     val live = live_of_mrbnf mrbnf
     val bound = bound_of_mrbnf mrbnf
     val n = live + bound + free_of_mrbnf mrbnf
+    val var_types = var_types_of_mrbnf mrbnf
 
     val P = #P params
     val U = #U model
@@ -393,10 +394,15 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
     val abs = #abs (#inner quotient)
 
     val pre_T = mk_T_of_mrbnf deads (replicate live raw_T) vars vars mrbnf;
-    val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (replicate live raw_T))
-      (replicate n vars) (replicate n vars) mrbnf
-    val var_types = var_types_of_mrbnf mrbnf
-    val binding_sets = map_filter (fn (Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
+    fun mk_sets T =
+      let
+        val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (replicate live T))
+          (replicate n vars) (replicate n vars) mrbnf
+        val binding_sets = map_filter (fn (Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
+        val free_sets = map_filter (fn (Free_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
+        val live_sets = map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
+      in (live_sets, binding_sets, free_sets) end;
+    val (live_sets, binding_sets, free_sets) = mk_sets raw_T;
 
     fun mk_suitable_rhs var bset FVars PFVars avoiding_set =
       let
@@ -420,9 +426,11 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
       (@{map 5} mk_suitable_rhs vars binding_sets FVars PFVars (#avoiding_sets model))
       lthy
 
-    val fs = map (fn var => ("f", var --> var)) vars;
+    val fs = map (fn var => Free ("f", var --> var)) vars;
+    val x = Free ("x", pre_T)
+    val p = Free ("p", P)
 
-    val (Umap', lthy) = mk_def_t' ff0_b "Umap'" (nvars + 1) (fold_rev Term.abs (fs @ [("t", raw_T)]) (
+    val (Umap', lthy) = mk_def_t' ff0_b "Umap'" (nvars + 1) (fold_rev Term.abs (map dest_Free fs @ [("t", raw_T)]) (
       Term.list_comb (#Umap model, map Bound (nvars downto 1) @ [abs $ Bound 0])
     )) lthy;
 
@@ -430,9 +438,9 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
       Term.abs ("t", raw_T) (UFVars $ (abs $ Bound 0))
     ) (#UFVars model)) lthy
 
-    fun mk_PUmap_rhs Umap_t T = fold_rev Term.absfree (fs @ [("t", T), ("pu", PU), ("p", P)]) (
+    fun mk_PUmap_rhs Umap_t T = fold_rev Term.absfree (map dest_Free (fs @ [Free ("t", T), Free ("pu", PU), p])) (
       Term.list_comb (Umap_t, map Bound (nvars + 2 downto 2)) $ (Bound 1 $ Term.list_comb (#Pmap params,
-        map (mk_inv o Free) fs @ [Bound 0]
+        map mk_inv fs @ [Bound 0]
       ))
     );
     val (PUmap', lthy) = mk_def_t' ff0_b "PUmap'" (nvars + 2) (mk_PUmap_rhs (fst Umap') raw_T) lthy
@@ -456,21 +464,20 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
     val nbound = length (#binding_relation fp_result);
     val pick_Ts = map (fn var => pre_T --> P --> var --> var) (take nbound vars);
     val picks = fst (mk_Frees "pick" pick_Ts lthy);
+    fun mk_is_bound [] _ = []
+      | mk_is_bound xs [] = replicate (length xs) false
+      | mk_is_bound (x::xs) (y::ys) = if x = y
+            then true::mk_is_bound xs ys else mk_is_bound xs (y::ys);
+    val is_bound = mk_is_bound (0 upto live - 1) (#binding_relation fp_result);
+
     val (f, lthy) =
       let
         val f_name = "f_" ^ Binding.name_of ff0_b
         val f = Free (f_name, fold_rev (curry (op-->) o snd o dest_Free) picks (raw_T --> P --> U));
-        val x = Free ("x", pre_T)
-        val p = Free ("p", P)
         val t = Free ("t", raw_T)
         val rec_f = Term.absfree (dest_Free t) (HOLogic.mk_prod (t, Term.list_comb (f, picks @ [t])))
 
         val pick_x_ps = map (fn pick => pick $ x $ p) picks @ drop nbound ids;
-        fun mk_is_bound [] _ = []
-          | mk_is_bound xs [] = replicate (length xs) false
-          | mk_is_bound (x::xs) (y::ys) = if x = y
-              then true::mk_is_bound xs ys else mk_is_bound xs (y::ys);
-        val is_bound = mk_is_bound (0 upto live - 1) (#binding_relation fp_result);
         val live_fs = cond_interlace (replicate nbound (Term.list_comb (#rename raw, pick_x_ps)))
           (replicate (live - nbound) (HOLogic.id_const raw_T)) is_bound;
 
@@ -537,7 +544,69 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
         val (_, lthy') = Local_Theory.note ((f_simp_b, []), [f_simp]) lthy'
       in ((hd (#fs info), f_simp), lthy') end;
 
-  in (@{print}(suitables, Umap', UFVars', PUmap', PUmap, CTOR, f), lthy) end;
+    val (pick0s, lthy) = mk_defs_t ff0_b "pick0" (map (fn (suitable, _) =>
+      let val T = fst (dest_funT (fastype_of suitable));
+      in Const (@{const_name Eps}, (T --> @{typ bool}) --> T) $ suitable end
+    ) suitables) lthy;
+
+    val (f0, lthy) = mk_def_t ff0_b "f0" (Term.list_comb (fst f, map fst pick0s)) lthy;
+    val (ff0, lthy) = mk_def_t ff0_b "ff0" (Term.abs ("t", #T quotient) (
+      fst f0 $ (#rep (#inner quotient) $ Bound 0)
+    )) lthy;
+
+    fun mk_noclash_rhs (l, b, f) FVarss T = Term.abs ("x", T) (foldr1 HOLogic.mk_conj (map2 (fn set => fn FVars =>
+      mk_int_empty (set $ Bound 0, foldl1 mk_Un (map (fn s => s $ Bound 0) f @
+      map_filter (fn (i, s) =>
+        if member (op=) (#binding_relation fp_result) i then NONE else SOME (
+          mk_UNION (s $ Bound 0) FVars
+        )
+      ) (0 upto live - 1 ~~ l)))
+    ) (take nbound b) FVarss));
+    val (noclash, lthy) = mk_def_t' ff0_b "noclash" 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
+    val (nnoclash, lthy) = mk_def_t' ff0_b "nnoclash" 1 (mk_noclash_rhs (mk_sets (#T quotient)) (#FVars quotient) (
+      mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf
+    )) lthy;
+
+    val n_brec = length (#binding_relation fp_result);
+    fun mk_live_fs tbound tpassive = cond_interlace (replicate n_brec tbound)
+      (replicate (live - n_brec) tpassive) is_bound;
+    val raw_PU_T = HOLogic.mk_prodT (raw_T, PU);
+    val (XXl, lthy) =
+      let
+        val pick_ts = map2 (fn pick => fn f => pick $ x $ ((#Pmap params) $ mk_inv f $ p)) picks fs
+        val comp_ts = map2 (fn pick => fn f => HOLogic.mk_comp (f, pick)) pick_ts fs
+        fun mk_rec_t fs' t = Term.abs ("x", raw_T) (HOLogic.mk_prod (
+          Term.list_comb (#rename raw, fs' @ [Bound 0]),
+          Term.list_comb (fst PUmap', fs) $ (t $ Bound 0) $ (Term.list_comb (fst f, picks) $ (t $ Bound 0))
+        ));
+        val rec_t = mk_rec_t fs (Term.absdummy raw_T (Bound 0))
+        val brec_t = mk_rec_t comp_ts (Term.list_comb (#rename raw, pick_ts))
+
+        val rhs = fold_rev Term.absfree (map dest_Free (picks @ fs @ [p, x])) (Term.list_comb (
+          mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_PU_T)
+            vars vars mrbnf, interlace (mk_live_fs brec_t rec_t) comp_ts fs var_types
+        ) $ x);
+      in mk_def_t' ff0_b "XXl" (nbound + 3) rhs lthy end;
+
+    val (XXr, lthy) =
+      let
+        fun mk_map_t T = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live T) vars vars mrbnf
+        val map_comp_t = Term.list_comb (mk_map_t raw_T,
+          interlace (replicate live (Term.list_comb (#rename raw, fs))) fs fs var_types
+        ) $ x;
+        val comp_ts = map2 (fn pick => fn f => HOLogic.mk_comp (pick $ map_comp_t $ p, f)) picks fs;
+        fun mk_rec_t fs' = Term.abs ("x", raw_T) (HOLogic.mk_prod (
+          Term.list_comb (#rename raw, fs') $ Bound 0,
+          Term.list_comb (fst f, picks) $ (Term.list_comb (#rename raw, fs') $ Bound 0)
+        ));
+        val rhs = fold_rev Term.absfree (map dest_Free (picks @ fs @ [p, x])) (Term.list_comb (
+          mk_map_t raw_PU_T,
+          interlace (mk_live_fs (mk_rec_t comp_ts) (mk_rec_t fs)) comp_ts fs var_types
+        ) $ x);
+      in mk_def_t' ff0_b "XXr" (nbound + 3) rhs lthy end;
+
+  in (@{print}(suitables, Umap', UFVars', PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
+    XXl, XXr), lthy) end;
 
 fun create_binding_recursor model ff0_b lthy =
   let

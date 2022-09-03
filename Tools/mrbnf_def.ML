@@ -1224,6 +1224,7 @@ val map_comp0N = "map_comp0";
 val map_compN = "map_comp";
 val map_cong0N = "map_cong0";
 val map_congN = "map_cong";
+val map_cong_idN = "map_cong_id";
 val map_cong_simpN = "map_cong_simp";
 val map_cong_predN = "map_cong_pred";
 val map_id0N = "map_id0";
@@ -1307,6 +1308,10 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
     val facts = facts_of_mrbnf mrbnf;
     val mr_facts = mr_facts_of_mrbnf mrbnf;
     val wits = wits_of_mrbnf mrbnf;
+    val live = live_of_mrbnf mrbnf;
+    val bound = bound_of_mrbnf mrbnf;
+    val free = free_of_mrbnf mrbnf;
+    val var_types = var_types_of_mrbnf mrbnf;
     val qualify =
       let val qs = Binding.path_of mrbnf_b;
       in fold_rev (fn (s, mand) => Binding.qualify mand s) qs #> qualify0 end;
@@ -1350,6 +1355,10 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
 
     fun note_unless_dont_note (noted0, lthy0) =
       let
+        fun interlace' a b c = interlace (replicate live a) (replicate bound b) (replicate free c) var_types
+        val id_prems = flat (interlace' [] @{thms bij_id supp_id_bound} @{thms supp_id_bound});
+        val prems = id_prems @ id_prems @ @{thms _}
+          @ interlace' @{thm _} @{thm refl} @{thm refl};
         val notes =
           [(in_relN, [Lazy.force (#in_rel facts)], []),
            (inj_mapN, [Lazy.force (#inj_map facts)], []),
@@ -1357,6 +1366,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (map_compN, [Lazy.force (#map_comp facts)], []),
            (map_cong0N, [#map_cong0 axioms], []),
            (map_congN, [Lazy.force (#map_cong facts)], []),
+           (map_cong_idN, [Lazy.force (#map_cong facts) OF prems], fundefcong_attrs),
            (map_cong_simpN, [Lazy.force (#map_cong_simp facts)], []),
            (map_cong_predN, [Lazy.force (#map_cong_pred facts)], []),
            (map_idN, [Lazy.force (#map_id facts)], []),

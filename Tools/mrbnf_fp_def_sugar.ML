@@ -66,7 +66,7 @@ structure MRBNF_FP_Def_Sugar : MRBNF_FP_DEF_SUGAR =
 struct
 
 type 'a fp_result_T = {
-  T: typ, 
+  T: typ,
   ctor: term,
   rename: term,
   FVars: term list,

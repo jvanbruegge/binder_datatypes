@@ -2317,7 +2317,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         } : quotient_result fp_result_T;
       in {
         fp = fp,
-        binding_relation = nth binding_relation i,
+        binding_relation = binding_relation,
         bound_vars = fAs,
         raw_fp = raw_fp_res,
         quotient_fp = quotient_fp_res,

@@ -466,7 +466,7 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
     val picks = fst (mk_Frees "pick" pick_Ts lthy);
     fun mk_is_bound [] _ = []
       | mk_is_bound xs [] = replicate (length xs) false
-      | mk_is_bound (x::xs) (y::ys) = if x = y
+      | mk_is_bound (x::xs) (y::ys) = if member (op=) y x
             then true::mk_is_bound xs ys else mk_is_bound xs (y::ys);
     val is_bound = mk_is_bound (0 upto live - 1) (#binding_relation fp_result);
 
@@ -554,14 +554,14 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 
-    fun mk_noclash_rhs (l, b, f) FVarss T = Term.abs ("x", T) (foldr1 HOLogic.mk_conj (map2 (fn set => fn FVars =>
+    fun mk_noclash_rhs (l, b, f) FVarss T = Term.abs ("x", T) (foldr1 HOLogic.mk_conj (@{map 3} (fn set => fn FVars => fn rel =>
       mk_int_empty (set $ Bound 0, foldl1 mk_Un (map (fn s => s $ Bound 0) f @
       map_filter (fn (i, s) =>
-        if member (op=) (#binding_relation fp_result) i then NONE else SOME (
+        if member (op=) rel i then NONE else SOME (
           mk_UNION (s $ Bound 0) FVars
         )
       ) (0 upto live - 1 ~~ l)))
-    ) (take nbound b) FVarss));
+    ) (take nbound b) FVarss (#binding_relation fp_result)));
     val (noclash, lthy) = mk_def_t' ff0_b "noclash" 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
     val (nnoclash, lthy) = mk_def_t' ff0_b "nnoclash" 1 (mk_noclash_rhs (mk_sets (#T quotient)) (#FVars quotient) (
       mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf
@@ -605,16 +605,33 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
         ) $ x);
       in mk_def_t' ff0_b "XXr" (nbound + 3) rhs lthy end;
 
-  in (@{print}(suitables, Umap', UFVars', PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
+  in ((suitables, Umap', UFVars', PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
     XXl, XXr), lthy) end;
 
 fun create_binding_recursor model ff0_b lthy =
   let
     val ((model_thms, defs), lthy) = prove_model_axioms ff0_b model lthy;
-    val (consts, lthy) = define_recursor_consts model_thms ff0_b lthy
+    val ((suitables, Umap', UFVars', PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
+    XXl, XXr), lthy) = define_recursor_consts model_thms ff0_b lthy
 
     val axioms = #axioms model_thms;
     val paxioms = #axioms (#parameters model_thms);
+    val fp_result = #fp_result model;
+    val raw = #raw_fp fp_result;
+    val quotient = #quotient_fp fp_result;
+    val rel = #binding_relation fp_result;
+
+    val pick_premss' = map (fn (_, suitable) =>
+      let val thm = iffD1 OF [fun_cong OF [@{thm meta_eq_to_obj_eq} OF [suitable]]] RS spec RS spec;
+      in [thm RS conjunct1, thm RS conjunct2 RS conjunct1] end
+    ) suitables;
+    val mk_pick_prems = map2 (fn ps => fn thm => map (fn p => p OF [thm]) ps) pick_premss'
+
+    val pick_id_ons = map2 (fn (suitable, suitable_def) => fn is =>
+      let
+        val _ = ()
+      in () end
+    ) suitables rel
 
     val notes =
       [("small_PFVars", #small_PFVars paxioms),

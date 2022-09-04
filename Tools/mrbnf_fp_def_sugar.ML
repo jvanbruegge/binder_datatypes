@@ -49,7 +49,7 @@ sig
   type fp_result = {
     fp: BNF_Util.fp_kind,
     bound_vars: typ list,
-    binding_relation: int list,
+    binding_relation: int list list,
     raw_fp: raw_result fp_result_T,
     quotient_fp: quotient_result fp_result_T,
     pre_mrbnf: MRBNF_Def.mrbnf
@@ -161,7 +161,7 @@ fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, 
 type fp_result = {
   fp: BNF_Util.fp_kind,
   bound_vars: typ list,
-  binding_relation: int list,
+  binding_relation: int list list,
   raw_fp: raw_result fp_result_T,
   quotient_fp: quotient_result fp_result_T,
   pre_mrbnf: MRBNF_Def.mrbnf

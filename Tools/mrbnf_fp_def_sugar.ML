@@ -40,10 +40,14 @@ sig
     abs: term,
     rep: term,
 
+    rename_def: thm,
+    FVars_defs: thm list,
+
     alpha_quotient_sym: thm,
     total_abs_eq_iff: thm,
     abs_rep: thm,
-    rep_abs: thm
+    rep_abs: thm,
+    abs_ctor: thm
   };
 
   type fp_result = {
@@ -143,19 +147,27 @@ type quotient_result = {
   abs: term,
   rep: term,
 
+  rename_def: thm,
+  FVars_defs: thm list,
+
   alpha_quotient_sym: thm,
   total_abs_eq_iff: thm,
   abs_rep: thm,
-  rep_abs: thm
+  rep_abs: thm,
+  abs_ctor: thm
 };
 
-fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs } = {
+fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
+abs_ctor, rename_def, FVars_defs } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
+  rename_def = Morphism.thm phi rename_def,
+  FVars_defs = map (Morphism.thm phi) FVars_defs,
   alpha_quotient_sym = Morphism.thm phi alpha_quotient_sym,
   total_abs_eq_iff = Morphism.thm phi total_abs_eq_iff,
   abs_rep = Morphism.thm phi abs_rep,
-  rep_abs = Morphism.thm phi rep_abs
+  rep_abs = Morphism.thm phi rep_abs,
+  abs_ctor = Morphism.thm phi abs_ctor
 } : quotient_result;
 
 type fp_result = {

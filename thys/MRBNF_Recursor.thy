@@ -102,9 +102,6 @@ lemma in_UNIV_simp: "A \<and> x \<in> UNIV \<longleftrightarrow> A" by auto
 lemma prod_case_lam_simp: "(\<lambda>y x. (case x of (a, b) \<Rightarrow> f a b) = (case y of (a, b) \<Rightarrow> g a b))
   = (\<lambda>(a1, b1) (a2, b2). f a2 b2 = g a1 b1)" by auto
 
-lemma forall_imp_map_prod_id: "(\<forall>t pd p. (t, pd) \<in> map_prod f id ` A \<longrightarrow> g t pd p) = (\<forall>t pd p. (t, pd) \<in> A \<longrightarrow> g (f t) pd p)"
-  by fastforce
-
 lemma image_prod_f_g: "(a, b) \<in> (\<lambda>x. (u x, g (u x))) ` A \<longleftrightarrow> a \<in> u ` A \<and> b = g a" by blast
 lemma Int_Un_empty: "A \<inter> (B \<union> C \<union> D) = {} \<longleftrightarrow> A \<inter> B = {} \<and> A \<inter> (C \<union> D) = {}" by blast
 
@@ -125,5 +122,8 @@ lemma bij_if: "bij g \<Longrightarrow> bij (if P then id else g)" by simp
 lemma supp_if: "|supp (u::'a \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> |supp (if P then id else u)| <o |UNIV::'a set|" using supp_id_bound by auto
 lemma imsupp_if_empty: "imsupp u \<inter> A = {} \<Longrightarrow> imsupp (if P then id else u) \<inter> A = {}" unfolding imsupp_def supp_def by simp
 lemma image_if_empty: "u ` A \<inter> B = {} \<Longrightarrow> (P \<Longrightarrow> A \<inter> B = {}) \<Longrightarrow> (if P then id else u) ` A \<inter> B = {}" by simp
+
+lemma Int_Un_emptyI1: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inter> B = {}" by blast
+lemma Int_Un_emptyI2: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inter> C = {}" by blast
 
 end

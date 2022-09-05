@@ -232,162 +232,11 @@ fun swapped thm a b = [thm OF [a, b], thm OF [b, a]]
 fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bound_Var => bounds | _ => [])
 \<close>
 
-lemma pick_id_on: "suitable_ff0 pick \<Longrightarrow> id_on (\<Union> (FVars_\<tau> ` set3_\<tau>_pre x) - set2_\<tau>_pre x) (pick x p)"
-  unfolding suitable_ff0_def Int_Un_distrib Un_empty \<tau>.FVars_ctors Un_Diff Diff_idemp
-  apply (erule allE conjE)+
-  apply (rule imsupp_id_on)
-  apply assumption
-  done
-
-corollary pick_id_on_image: "\<And>pick u x p. suitable_ff0 pick \<Longrightarrow> bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> id_on (u ` (\<Union> (FVars_\<tau> ` set3_\<tau>_pre x) - set2_\<tau>_pre x)) (pick (map_\<tau>_pre u u (rename_\<tau> u) (rename_\<tau> u) x) p)"
-  by (raw_tactic \<open>Subgoal.FOCUS (fn {context, prems, params, ...} =>
-    let
-      val [suitable_ff0, bij, supp] = prems
-      val map_t = MRBNF_Def.mk_map_of_mrbnf [] [raw_T, raw_T] [raw_T, raw_T] vars vars tau
-      val [_, u, x, p] = map (Thm.term_of o snd) params
-      val map_ct = Thm.cterm_of context (map_t $ u $ u $ (rename_t $ u) $ (rename_t $ u) $ x)
-      val thm = infer_instantiate' context [SOME map_ct] (@{thm pick_id_on} OF [suitable_ff0])
-      val set_map = map (fn thm => thm OF [supp, bij, supp]) (MRBNF_Def.set_map_of_mrbnf tau)
-      val thm' = Local_Defs.unfold0 context (
-        @{thms image_comp[unfolded comp_def] image_UN[symmetric]} @ set_map
-        @ [@{thm \<tau>.FVars_renames} OF [bij, supp], @{thm bij_is_inj[THEN image_set_diff[symmetric]]} OF [bij]]
-      ) thm
-    in rtac context thm' 1 end
-  ) @{context} 1\<close>)
-
 lemmas id_prems = supp_id_bound bij_id supp_id_bound
-lemma pick_prems: "suitable_ff0 pick \<Longrightarrow> bij (pick (x::('a::var_\<tau>_pre, 'a, 'a raw_\<tau>, 'a raw_\<tau>) \<tau>_pre) p)" "suitable_ff0 pick \<Longrightarrow> |supp (pick x p)| <o |UNIV::'a set|"
-  unfolding suitable_ff0_def
-   apply ((erule allE conjE)+, assumption)+
-  done
-
-lemma Pmap_bij:
-  assumes "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a)" "|supp u| <o |UNIV::'a set|"
-  shows "bij (Pmap_ff0 u)"
-  by (raw_tactic \<open>MRBNF_Fp_Tactics.mk_rename_bij_tac @{thm ff0.Pmap_comp0[symmetric, rotated -2]} @{thm ff0.Pmap_id0} @{context} @{thms assms}\<close>)
-lemma Pmap_inv_simp:
-  assumes "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a)" "|supp u| <o |UNIV::'a set|"
-  shows "inv (Pmap_ff0 u) = Pmap_ff0 (inv u)"
-  by (raw_tactic \<open>MRBNF_Fp_Tactics.mk_rename_inv_simp_tac @{thm ff0.Pmap_comp0[symmetric, rotated -2]} @{thm ff0.Pmap_id0} @{context} @{thms assms}\<close>)
-
-lemma Pmap_imsupp_empty: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow>
-  imsupp u \<inter> PFVars_ff0 p = {} \<Longrightarrow> Pmap_ff0 u p = p"
-  apply (rule ff0.Pmap_cong_ids)
-    apply assumption
-  apply assumption
-  apply (drule imsupp_id_on)
-  unfolding id_on_def
-  apply (erule allE)
-  apply (erule impE)
-   apply assumption
-  apply assumption
-  done
-
-lemma Umap'_ff0_CTOR: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow>
-  Umap'_ff0 u (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst y)) (CTOR_ff0 y p) =
-  CTOR_ff0 (map_\<tau>_pre u u (\<lambda>(t, pu). (rename_\<tau> u t, PUmap'_ff0 u t pu)) (\<lambda>(t, pu). (rename_\<tau> u t, PUmap'_ff0 u t pu)) y) (Pmap_ff0 u p)"
-  unfolding Umap'_ff0_def CTOR_ff0_def \<tau>.TT_abs_ctors
-  apply (rule trans)
-   apply (rule arg_cong3[OF refl _ refl, of _ _ Umap_ff0])
-   apply (rule arg_cong[of _ _ \<tau>_ctor])
-   apply (rule trans)
-    apply (rule \<tau>_pre.map_comp)
-         apply (rule supp_id_bound bij_id)+
-  unfolding fst_comp_map_prod
-   apply (rule \<tau>_pre.map_comp[THEN sym])
-        apply (rule supp_id_bound bij_id)+
-  apply (rule trans)
-   apply (rule ff0.Umap_Uctor)
-    apply assumption+
-  apply (rule arg_cong2[OF _ refl, of _ _ Uctor_ff0])
-  apply (rule trans)
-   apply (rule \<tau>_pre.map_comp)
-        apply (rule supp_id_bound bij_id | assumption)+
-  apply (rule trans[rotated])
-   apply (rule sym)
-   apply (rule \<tau>_pre.map_comp)
-        apply (rule supp_id_bound bij_id | assumption)+
-  unfolding id_o o_id
-  apply (rule \<tau>_pre.map_cong)
-            apply assumption+
-      apply (rule refl)+
-  unfolding comp_def case_prod_map_prod split_beta fst_map_prod snd_map_prod map_prod_simp id_apply PUmap'_ff0_def Umap'_ff0_def
-  apply (rule iffD2[OF prod.inject], rule conjI,
-      raw_tactic \<open>SELECT_GOAL (unfold_thms_tac @{context} @{thms rrename_\<tau>_def}) 1\<close>,
-      rule iffD2[OF \<tau>.TT_Quotient_total_abs_eq_iffs],
-      rule iffD2[OF \<tau>.alpha_bij_eqs],
-      assumption+,
-      rule \<tau>.TT_Quotient_rep_abss,
-      rule refl)+
-  done
-
-lemma UFVars'_ff0_CTOR: "set2_\<tau>_pre y \<inter> (PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow>
-(\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<union> set4_\<tau>_pre y \<Longrightarrow> UFVars'_ff0 t (pu p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
-UFVars'_ff0 t (CTOR_ff0 y p) \<subseteq> FVars_\<tau> (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst y)) \<union> PFVars_ff0 p \<union> avoiding_set_ff0"
-  unfolding UFVars'_ff0_def CTOR_ff0_def \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms, unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_\<tau>_def], symmetric]] \<tau>.TT_abs_ctors \<tau>_pre.map_comp[OF id_prems id_prems] fst_comp_map_prod
-  unfolding \<tau>_pre.map_comp[OF id_prems id_prems, symmetric]
-  apply (rule ff0.UFVars_subsets)
-  unfolding \<tau>_pre.set_map[OF id_prems] image_id image_Un[symmetric]
-   apply assumption
-   apply (drule exists_map_prod_id, (erule exE conjE)+,
-      raw_tactic \<open>hyp_subst_tac @{context} 1 THEN Goal.assume_rule_tac @{context} 1\<close>)+
-  done
-
-lemma Umap'_ff0_cong_ids: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> (\<And>a. a \<in> UFVars'_ff0 t d \<Longrightarrow> f a = a) \<Longrightarrow> Umap'_ff0 f t d = d"
-  unfolding UFVars'_ff0_def Umap'_ff0_def
-  apply (rule ff0.Umap_cong_ids)
-    apply assumption
-   apply assumption
-  apply (raw_tactic \<open>Goal.assume_rule_tac @{context} 1\<close>)
-  done
-
-lemma Uctor_rename: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow>
-  \<forall>t pd p. (t, pd) \<in> set3_\<tau>_pre X \<union> set4_\<tau>_pre X \<longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0 \<Longrightarrow>
-  imsupp u \<inter> (FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst X)) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow>
-  u ` set2_\<tau>_pre X \<inter> set2_\<tau>_pre X = {} \<Longrightarrow>
-  Uctor_ff0 X p = Uctor_ff0 (map_\<tau>_pre u u (\<lambda>(t, pu). (rrename_\<tau> u t, PUmap_ff0 u t pu)) (\<lambda>(t, pu). (rrename_\<tau> u t, PUmap_ff0 u t pu)) X) p"
-  apply (rule sym[THEN trans[rotated]])
-  apply (rule trans)
-    apply (rule arg_cong2[OF refl, of _ _ Uctor_ff0])
-    apply (rule Pmap_imsupp_empty[symmetric])
-      apply assumption
-     apply assumption
-    apply (raw_tactic \<open>SELECT_GOAL (unfold_thms_tac @{context} @{thms Int_Un_distrib Un_empty}) 1\<close>)
-    apply (erule conjE)+
-    apply assumption
-  unfolding PUmap_ff0_def
-   apply (rule ff0.Umap_Uctor[symmetric])
-    apply assumption
-   apply assumption
-  apply (rule ff0.Umap_cong_ids[symmetric])
-    apply assumption
-   apply assumption
-  apply (rotate_tac -1)
-  apply (drule set_rev_mp)
-   apply (rule ff0.UFVars_subsets)
-    apply (drule imsupp_image_subset)
-    apply (rule Int_subset_empty1[rotated])
-     apply assumption
-    apply (rule Int_subset_empty2)
-     apply assumption
-    apply (rule subset_trans[rotated])
-     apply (rule equalityD2[OF Un_assoc])
-  apply (rule Un_upper2)
-    apply (erule allE impE)+
-     apply assumption
-    apply assumption
-   apply (drule imsupp_id_on)
-  unfolding id_on_def
-   apply (rotate_tac -1)
-   apply (erule allE)
-   apply (erule impE)
-    apply assumption
-  apply assumption
-  done
 
 lemma Uctor_cong: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> bij (u'::'a \<Rightarrow> 'a) \<Longrightarrow> |supp u'| <o |UNIV::'a set| \<Longrightarrow>
-  \<forall>t pd p. (t, pd) \<in> set3_\<tau>_pre x \<union> set4_\<tau>_pre x \<longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0 \<Longrightarrow>
-  \<forall>t pd p. (t, pd) \<in> set3_\<tau>_pre x' \<union> set4_\<tau>_pre x' \<longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0 \<Longrightarrow>
+  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x \<union> set4_\<tau>_pre x \<Longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
+  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x' \<union> set4_\<tau>_pre x' \<Longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
   imsupp u \<inter> (FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst x)) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u ` set2_\<tau>_pre x \<inter> set2_\<tau>_pre x = {} \<Longrightarrow>
   imsupp u' \<inter> (FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst x')) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u' ` set2_\<tau>_pre x' \<inter> set2_\<tau>_pre x' = {} \<Longrightarrow>
   mr_rel_\<tau>_pre (inv u' \<circ> u) (inv u' \<circ> u) (\<lambda>(t, pd) (t', pd'). rrename_\<tau> u t = rrename_\<tau> u' t' \<and> PUmap_ff0 u t pd = PUmap_ff0 u' t' pd') (\<lambda>(t, pd) (t', pd'). rrename_\<tau> u t = rrename_\<tau> u' t' \<and> PUmap_ff0 u t pd = PUmap_ff0 u' t' pd') x x' \<Longrightarrow>
@@ -428,8 +277,8 @@ apply (rule trans)
   done
 
 lemma CTOR_ff0_cong: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> bij (u'::'a \<Rightarrow> 'a) \<Longrightarrow> |supp u'| <o |UNIV::'a set| \<Longrightarrow>
-  \<forall>t pd p. (t, pd) \<in> set3_\<tau>_pre x \<union> set4_\<tau>_pre x \<longrightarrow> UFVars'_ff0 t (pd p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0 \<Longrightarrow>
-  \<forall>t pd p. (t, pd) \<in> set3_\<tau>_pre x' \<union> set4_\<tau>_pre x' \<longrightarrow> UFVars'_ff0 t (pd p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0 \<Longrightarrow>
+  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x \<union> set4_\<tau>_pre x \<Longrightarrow> UFVars'_ff0 t (pd p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
+  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x' \<union> set4_\<tau>_pre x' \<Longrightarrow> UFVars'_ff0 t (pd p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
   imsupp u \<inter> (FVars_\<tau> (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst x)) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u ` set2_\<tau>_pre x \<inter> set2_\<tau>_pre x = {} \<Longrightarrow>
   imsupp u' \<inter> (FVars_\<tau> (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst x')) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u' ` set2_\<tau>_pre x' \<inter> set2_\<tau>_pre x' = {} \<Longrightarrow>
   mr_rel_\<tau>_pre (inv u' \<circ> u) (inv u' \<circ> u) (\<lambda>(t, pd) (t', pd'). alpha_\<tau> (rename_\<tau> u t) (rename_\<tau> u' t') \<and> PUmap'_ff0 u t pd = PUmap'_ff0 u' t' pd') (\<lambda>(t, pd) (t', pd'). alpha_\<tau> (rename_\<tau> u t) (rename_\<tau> u' t') \<and> PUmap'_ff0 u t pd = PUmap'_ff0 u' t' pd') x x' \<Longrightarrow>
@@ -440,9 +289,10 @@ lemma CTOR_ff0_cong: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightar
            apply assumption
           apply (rotate_tac 2)
           apply assumption+
-  unfolding \<tau>_pre.set_map[OF id_prems] image_Un[symmetric] forall_imp_map_prod_id UFVars'_ff0_def[symmetric] \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms, unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_\<tau>_def], symmetric], symmetric]
-  apply assumption
-       apply assumption
+  unfolding \<tau>_pre.set_map[OF id_prems] image_Un[symmetric]
+        apply (drule exists_map_prod_id, erule exE, erule conjE,
+      raw_tactic \<open>hyp_subst_tac @{context} 1 THEN SELECT_GOAL (unfold_thms_tac @{context} @{thms UFVars'_ff0_def[symmetric] \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms, unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_\<tau>_def], symmetric], symmetric]}) 1\<close>,
+      assumption)+
   apply (raw_tactic \<open>
     let
       val ctxt = @{context}
@@ -691,7 +541,7 @@ lemma f_UFVars'_ff0:
       K (unfold_thms_tac ctxt ([map_comp] @ @{thms id_o o_id})),
       K (unfold_thms_tac ctxt @{thms comp_def}),
       rtac ctxt @{thm subset_trans},
-      rtac ctxt @{thm UFVars'_ff0_CTOR},
+      rtac ctxt @{thm UFVars'_CTOR},
       Method.insert_tac ctxt prems,
       K (unfold_thms_tac ctxt (map (fn thm => thm OF id_pick_prems) (MRBNF_Def.set_map_of_mrbnf mrbnf) @ @{thms suitable_ff0_def Int_Un_empty})),
       REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
@@ -1004,7 +854,7 @@ lemma f_swap_alpha:
           K (unfold_thms_tac ctxt [comp_rec]),
           rtac ctxt refl,
           rtac ctxt trans,
-          rtac ctxt (@{thm Umap'_ff0_CTOR} OF [bij, supp]),
+          rtac ctxt (@{thm Umap'_CTOR} OF [bij, supp]),
           K (unfold_thms_tac ctxt (@{thms id_def[symmetric] id_o o_id comp_pair XXl_ff0_def[symmetric] XXr_ff0_def[symmetric]} @ rename_comp0s @ [
             fun_cong OF [@{thm ff0.Pmap_comp0[unfolded comp_def]} OF [bij, supp, bij_inv, supp_inv]] RS sym, comp_rec,
             @{thm inv_simp2} OF [bij], @{thm fun_cong[OF ff0.Pmap_id0, unfolded id_def, unfolded id_def[symmetric]]}
@@ -1334,7 +1184,6 @@ lemma f_swap_alpha:
              apply assumption
             apply assumption
            apply assumption
-          apply (rule allI impI)+
     unfolding \<tau>_pre.set_map[OF supp_id_bound pick_prems[OF prems(2)]]
           apply (erule UnE)
     unfolding image_prod_f_g
@@ -1347,7 +1196,6 @@ lemma f_swap_alpha:
           apply (rule f_UFVars'_ff0[OF prems(2)])
 
       (* repeat but for pick' *)
-         apply (rule allI impI)+
     unfolding \<tau>_pre.set_map[OF supp_id_bound pick_prems[OF prems(3)]]
          apply (erule UnE)
     unfolding image_prod_f_g

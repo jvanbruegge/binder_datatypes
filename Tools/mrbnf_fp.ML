@@ -32,9 +32,6 @@ val mk_minus = HOLogic.mk_binop @{const_name minus} |> curry;
 
 val mk_inter = HOLogic.mk_binop @{const_name inf};
 
-fun mk_id_on t1 t2 = let val (T, ST) = fastype_of t1 |> `HOLogic.dest_setT;
-  in Const (@{const_name id_on}, ST --> (T --> T) --> HOLogic.boolT) $ t1 $ t2 end;
-
 fun mk_equivp t = Const (@{const_name equivp}, mk_predT [fastype_of t]) $ t;
 
 fun mk_Sigma (A, B) =
@@ -2309,10 +2306,14 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             abs = nth TT_abss i,
             rep = nth TT_reps i,
 
+            rename_def = nth rrename_defs i,
+            FVars_defs = nth FFVars_defss i,
+
             alpha_quotient_sym = nth alpha_quotient_syms i,
             total_abs_eq_iff = nth Quotient_total_abs_eq_iffs i,
             abs_rep = nth Quotient_abs_reps i,
-            rep_abs = nth Quotient_rep_abss i
+            rep_abs = nth Quotient_rep_abss i,
+            abs_ctor = nth TT_abs_ctors i
           }
         } : quotient_result fp_result_T;
       in {

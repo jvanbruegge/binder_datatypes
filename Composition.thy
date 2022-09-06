@@ -1862,7 +1862,7 @@ lemma nnoclash_noclash: "nnoclash_ff0 x \<longleftrightarrow> noclash_ff0 (map_\
   done
 
 (* FINAL RESULT !!! *)
-theorem ff0_cctor: "set2_\<tau>_pre x \<inter> (PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> nnoclash_ff0 x \<Longrightarrow>
+theorem ff0_cctor': "set2_\<tau>_pre x \<inter> (PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> nnoclash_ff0 x \<Longrightarrow>
   ff0_ff0 (\<tau>_ctor x) p = Uctor_ff0 (map_\<tau>_pre id id (\<lambda>t. (t, ff0_ff0 t)) (\<lambda>t. (t, ff0_ff0 t)) x) p"
   unfolding \<tau>_pre.set_map(2)[OF id_prems, of "quot_type.rep Rep_\<tau>" "quot_type.rep Rep_\<tau>" x, unfolded image_id, symmetric]
     ff0_ff0_def \<tau>_ctor_def
@@ -1879,7 +1879,11 @@ theorem ff0_cctor: "set2_\<tau>_pre x \<inter> (PFVars_ff0 p \<union> avoiding_s
   apply (rule refl)
   done
 
-theorem ff0_swap: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> imsupp u \<inter> avoiding_set_ff0 = {}
+theorem ff0_cctor: "set2_\<tau>_pre x \<inter> (PFVars p \<union> {}) = {} \<Longrightarrow> nnoclash_ff0 x \<Longrightarrow>
+  ff0_ff0 (\<tau>_ctor x) p = CCTOR (map_\<tau>_pre id id (\<lambda>t. (t, ff0_ff0 t)) (\<lambda>t. (t, ff0_ff0 t)) x) p"
+  by (rule ff0_cctor'[unfolded Uctor_ff0_def PFVars_ff0_def avoiding_set_ff0_def])
+
+theorem ff0_swap': "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> imsupp u \<inter> avoiding_set_ff0 = {}
   \<Longrightarrow> ff0_ff0 (rrename_\<tau> u t) p = Umap_ff0 u t (ff0_ff0 t (Pmap_ff0 (inv u) p))"
   unfolding ff0_ff0_def rrename_\<tau>_def
   apply (rule trans)
@@ -1892,10 +1896,19 @@ theorem ff0_swap: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow
   apply (rule refl)
   done
 
-theorem ff0_FFVars: "UFVars_ff0 t (ff0_ff0 t p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0"
+theorem ff0_swap: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> imsupp u \<inter> {} = {}
+  \<Longrightarrow> ff0_ff0 (rrename_\<tau> u t) p = rrename_\<tau> u (ff0_ff0 t (compSS (inv u) p))"
+  by (rule ff0_swap'[unfolded Pmap_ff0_def Umap_ff0_def avoiding_set_ff0_def])
+
+theorem ff0_FFVars': "UFVars_ff0 t (ff0_ff0 t p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0"
   unfolding ff0_ff0_def FFVars_\<tau>_def
   apply (rule f0_UFVars'_ff0[of "quot_type.rep Rep_\<tau> t", unfolded UFVars'_ff0_def \<tau>.TT_Quotient_abs_reps])
   done
+
+theorem ff0_FFVars: "FFVars_\<tau> (ff0_ff0 t p) \<subseteq> FFVars_\<tau> t \<union> PFVars p \<union> {}"
+  by (rule ff0_FFVars'[unfolded UFVars_ff0_def PFVars_ff0_def avoiding_set_ff0_def])
+
+hide_fact Uctor_ff0_def PFVars_ff0_def avoiding_set_ff0_def UFVars_ff0_def Umap_ff0_def Pmap_ff0_def
 
 (* Variable for variable substitution *)
 
@@ -1914,8 +1927,8 @@ lemma vvsubst_cctor:
   unfolding vvsubst_def
   apply (rule trans)
    apply (rule ff0_cctor)
-  unfolding Uctor_ff0_def CCTOR_def \<tau>_pre.map_comp[OF id_prems assms(1) bij_id supp_id_bound] id_o o_id ssfun_rep_eq[OF assms(1)]
-  unfolding comp_def snd_conv avoiding_set_ff0_def Un_empty_right PFVars_ff0_def PFVars_def ssfun_rep_eq[OF assms(1)]
+  unfolding CCTOR_def \<tau>_pre.map_comp[OF id_prems assms(1) bij_id supp_id_bound] id_o o_id ssfun_rep_eq[OF assms(1)]
+  unfolding comp_def snd_conv Un_empty_right PFVars_def ssfun_rep_eq[OF assms(1)]
     apply assumption+
   apply (rule refl)
   done
@@ -1924,6 +1937,6 @@ lemma FFVars_vvsubst_weak:
   assumes "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
   shows "FFVars_\<tau> (vvsubst f t) \<subseteq> FFVars_\<tau> t \<union> imsupp f"
   unfolding vvsubst_def
-  by (rule ff0_FFVars[of _ "Abs_ssfun f", unfolded avoiding_set_ff0_def Un_empty_right UFVars_ff0_def PFVars_ff0_def PFVars_def ssfun_rep_eq[OF assms(1)]])
+  by (rule ff0_FFVars[of _ "Abs_ssfun f", unfolded Un_empty_right PFVars_def ssfun_rep_eq[OF assms(1)]])
 
 end

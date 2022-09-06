@@ -126,4 +126,8 @@ lemma image_if_empty: "u ` A \<inter> B = {} \<Longrightarrow> (P \<Longrightarr
 lemma Int_Un_emptyI1: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inter> B = {}" by blast
 lemma Int_Un_emptyI2: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inter> C = {}" by blast
 
+lemma imsupp_comp_image: "bij f \<Longrightarrow> imsupp (f \<circ> g \<circ> inv f) = f ` imsupp g"
+  apply (auto simp: supp_def imsupp_def bij_inv_eq_iff image_in_bij_eq)
+  by (smt (verit, del_insts) imageI inv_simp1 mem_Collect_eq)
+
 end

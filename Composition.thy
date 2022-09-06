@@ -76,72 +76,125 @@ lemma imsupp_supp_bound: "infinite (UNIV::'a set) \<Longrightarrow> |imsupp g| <
 
 (******************** Definitions for variable-for-variable substitution ***********)
 typedef 'a :: var_\<tau>_pre ssfun = "{f :: 'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set|}"
-  by (auto intro!: exI[of _ id] simp: supp_id_bound)
+  apply (rule exI[of _ id])
+  apply (rule iffD2[OF mem_Collect_eq])
+  apply (rule supp_id_bound)
+  done
 
-setup_lifting type_definition_ssfun
+definition idSS where "idSS \<equiv> Abs_ssfun id"
+lemma idSS_rep_eq: "Rep_ssfun idSS = id"
+  unfolding idSS_def
+  apply (rule Abs_ssfun_inverse)
+  apply (rule iffD2[OF mem_Collect_eq])
+  apply (rule supp_id_bound)
+  done
 
-lift_definition idSS :: "'a ::var_\<tau>_pre ssfun" is id
-  by (simp add: supp_id_bound)
+definition compSS where "compSS u p \<equiv> Abs_ssfun (u \<circ> Rep_ssfun p \<circ> inv u)"
 
-lemma supp_comp_bound_var_\<tau>_pre: "\<lbrakk> |supp f| <o |UNIV::'a::var_\<tau>_pre set| ; |supp g| <o |UNIV::'a set| \<rbrakk> \<Longrightarrow> |supp (g \<circ> f)| <o |UNIV::'a set|"
-  using infinite_var_\<tau>_pre supp_comp_bound by blast
-
-context
-  fixes u :: "'a :: var_\<tau>_pre \<Rightarrow> 'a"
-  assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
-begin
-  lift_definition compSS :: "'a ::var_\<tau>_pre ssfun \<Rightarrow> 'a ssfun" is "\<lambda>p. u o p o inv u"
-    by (simp add: supp_comp_bound_var_\<tau>_pre supp_inv_bound u)
-end
+lemma compSS_rep_eq: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> Rep_ssfun (compSS u x) = u \<circ> Rep_ssfun x \<circ> inv u"
+  unfolding compSS_def
+  apply (rule Abs_ssfun_inverse)
+  apply (rule iffD2[OF mem_Collect_eq])
+  apply (rule supp_comp_bound)
+    apply (rule supp_inv_bound)
+     apply assumption+
+   apply (rule supp_comp_bound)
+     apply (rule iffD1[OF mem_Collect_eq Rep_ssfun])
+    apply assumption
+   apply (rule infinite_var_\<tau>_pre)+
+  done
 
 lemma compSS_id: "compSS id = id"
-  supply supp_id_bound[transfer_rule] bij_id[transfer_rule] by (rule ext, transfer) auto
+  unfolding compSS_def comp_def id_def inv_id[unfolded id_def] Rep_ssfun_inverse
+  apply (rule refl)
+  done
+
 lemma compSS_comp:
-  fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a" and g :: "'a \<Rightarrow> 'a"
+  fixes f g::"'a::var_\<tau>_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
   shows "compSS (f \<circ> g) = compSS f \<circ> compSS g"
-  supply assms[transfer_rule] bij_comp[transfer_rule] supp_comp_bound_var_\<tau>_pre[transfer_rule]
-  by (rule ext, transfer) (auto simp: fun_eq_iff assms o_inv_distrib)
-lemma compSS_cong_id:
-  fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a" and d :: "'a ssfun"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|" "\<And>a. a \<in> imsupp (Rep_ssfun d) \<Longrightarrow> f a = a"
-  shows "compSS f d = d"
-  supply assms(1,2)[transfer_rule]
-  using assms(3)
-  apply transfer
-  subgoal for d
-    unfolding fun_eq_iff o_apply
-    apply (subst imsupp_commute[of f d, unfolded fun_eq_iff o_apply, rule_format])
-    apply (auto simp: assms(1) image_iff imsupp_def supp_def)
-    apply (meson assms(1) bij_implies_inject)
-    by (metis assms(1) bij_pointE)
+  unfolding compSS_def comp_def
+  apply (rule ext)
+  apply (rule arg_cong[of _ _ Abs_ssfun])
+  apply (rule ext)
+  apply (rule arg_cong[of _ _ f])
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule fun_cong[of _ _ "inv _ _"])
+   apply (rule Abs_ssfun_inverse)
+   apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
+  apply (rule trans)
+     apply (rule comp_def[symmetric, of g])
+    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+    apply (rule comp_def[symmetric, of "Rep_ssfun _"])
+  unfolding comp_assoc[symmetric]
+   apply (rule iffD2[OF mem_Collect_eq])
+   apply (rule supp_comp_bound)
+     apply (rule supp_inv_bound)
+      apply (rule assms)+
+    apply (rule supp_comp_bound)
+      apply (rule iffD1[OF mem_Collect_eq Rep_ssfun])
+     apply (rule assms infinite_var_\<tau>_pre)+
+  apply (rule arg_cong[of _ _ "\<lambda>x. g (Rep_ssfun _ x)"])
+  apply (rule trans)
+   apply (rule comp_apply[symmetric, of "inv g" "inv f"])
+  apply (rule fun_cong[of "_ \<circ> _"])
+  apply (rule trans)
+   apply (rule o_inv_distrib[symmetric])
+    apply (rule assms)+
+  unfolding comp_def
+  apply (rule refl)
   done
-lemma imsupp_ssfun_bound:
-  fixes p :: "'a::var_\<tau>_pre ssfun"
-  shows "|imsupp (Rep_ssfun p)| <o |UNIV::'a set|"
-  unfolding imsupp_def
-  apply (rule card_of_Un_ordLess_infinite)
-    apply (rule infinite_var_\<tau>_pre)
-  using Rep_ssfun apply blast
-  by (metis Rep_ssfun card_of_image mem_Collect_eq ordLeq_ordLess_trans)
+
+definition PFVars where "PFVars \<equiv> \<lambda>p. imsupp (Rep_ssfun p)"
+
+lemma compSS_cong_id:
+  fixes f::"'a::var_\<tau>_pre \<Rightarrow> 'a" and d::"'a ssfun"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "(\<And>a. a \<in> PFVars d \<Longrightarrow> f a = a) \<Longrightarrow> compSS f d = d"
+  unfolding compSS_def PFVars_def comp_def
+  apply (rule trans)
+   apply (rule arg_cong[of _ _ Abs_ssfun])
+   apply (rule ext)
+   apply (rule imsupp_commute[of f "Rep_ssfun d", unfolded fun_eq_iff o_apply, rule_format])
+   apply (rule bij_imsupp_supp_ne[OF assms(1)])
+  apply (rule trans[OF Int_commute])
+   apply (rule iffD2[OF disjoint_iff])
+   apply (rule allI)
+   apply (rule impI)
+   apply (rule iffD2[OF not_in_supp_alt])
+   apply assumption
+  unfolding inv_simp2[OF assms(1)]
+  apply (rule Rep_ssfun_inverse)
+  done
+
+lemma small_PFVars: "|PFVars (p::'a::var_\<tau>_pre ssfun)| <o |UNIV::'a set|"
+  unfolding PFVars_def
+  apply (rule iffD2[OF imsupp_supp_bound])
+   apply (rule infinite_var_\<tau>_pre)
+  apply (rule iffD1[OF mem_Collect_eq Rep_ssfun])
+  done
 
 lemma PFVars_Pmap:
-  fixes f :: "'a::var_\<tau>_pre \<Rightarrow> 'a"
+  fixes f::"'a::var_\<tau>_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "imsupp (Rep_ssfun (compSS f d)) = f ` imsupp (Rep_ssfun d)"
-  supply assms[transfer_rule]
-  apply transfer
-  unfolding imsupp_def using supp_def assms
-  apply (auto simp: supp_def imsupp_def assms bij_inv_eq_iff image_in_bij_eq)
-  by (smt (verit, del_insts) assms(1) imageI inv_simp1 mem_Collect_eq)
+  shows "PFVars (compSS f d) = f ` PFVars d"
+  unfolding PFVars_def compSS_def comp_def
+  apply (rule trans)
+   apply (rule arg_cong[of _ _ imsupp])
+   apply (rule Abs_ssfun_inverse)
+  apply (rule iffD2[OF mem_Collect_eq])
+   apply (rule supp_comp_bound[OF supp_inv_bound[OF assms] supp_comp_bound[OF iffD1[OF mem_Collect_eq Rep_ssfun] assms(2) infinite_var_\<tau>_pre] infinite_var_\<tau>_pre, unfolded comp_def])
+  apply (rule imsupp_comp_image[unfolded comp_def, OF assms(1)])
+  done
 
 definition CCTOR :: "('a::var_\<tau>_pre, 'a, 'a \<tau> \<times> ('a ssfun \<Rightarrow> 'a \<tau>), 'a \<tau> \<times> ('a ssfun \<Rightarrow> 'a \<tau>)) \<tau>_pre \<Rightarrow> 'a ssfun \<Rightarrow> 'a \<tau>" where
   "CCTOR = (\<lambda>x p. \<tau>_ctor (map_\<tau>_pre (Rep_ssfun p) id ((\<lambda>R. R p) o snd) ((\<lambda>R. R p) o snd) x))"
 
-lemma UFVars_subset: "set2_\<tau>_pre y \<inter> (imsupp (Rep_ssfun p) \<union> {}) = {} \<Longrightarrow>
-       (\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<union> set4_\<tau>_pre y \<Longrightarrow> FFVars_\<tau> (pu p) \<subseteq> FFVars_\<tau> t \<union> imsupp (Rep_ssfun p) \<union> {}) \<Longrightarrow>
-       FFVars_\<tau> (CCTOR y p) \<subseteq> FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst y)) \<union> imsupp (Rep_ssfun p) \<union> {}"
-  unfolding Un_empty_right CCTOR_def
+lemma UFVars_subset: "set2_\<tau>_pre y \<inter> (PFVars p \<union> {}) = {} \<Longrightarrow>
+       (\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<union> set4_\<tau>_pre y \<Longrightarrow> FFVars_\<tau> (pu p) \<subseteq> FFVars_\<tau> t \<union> PFVars p \<union> {}) \<Longrightarrow>
+       FFVars_\<tau> (CCTOR y p) \<subseteq> FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst y)) \<union> PFVars p \<union> {}"
+  unfolding Un_empty_right CCTOR_def PFVars_def
   apply (auto simp: imsupp_supp_bound[OF infinite_var_\<tau>_pre] \<tau>.FFVars_cctors \<tau>_pre.set_map supp_id_bound emp_bound Rep_ssfun[simplified])
   using imsupp_def supp_def apply fastforce
   using imsupp_def supp_def apply fastforce
@@ -152,7 +205,7 @@ lemma Umap_Uctor: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow
        rrename_\<tau> f (CCTOR y p) =
        CCTOR (map_\<tau>_pre f f (\<lambda>(t, pu). (rrename_\<tau> f t, \<lambda>p. rrename_\<tau> f (pu (compSS (inv f) p)))) (\<lambda>(t, pu). (rrename_\<tau> f t, \<lambda>p. rrename_\<tau> f (pu (compSS (inv f) p)))) y) (compSS f p)"
   unfolding CCTOR_def
-  by (auto simp: \<tau>.rrename_id0s \<tau>.rrename_cctors \<tau>_pre.map_comp compSS.rep_eq Rep_ssfun[simplified]
+  by (auto simp: \<tau>.rrename_id0s \<tau>.rrename_cctors \<tau>_pre.map_comp compSS_rep_eq Rep_ssfun[simplified]
       supp_comp_bound infinite_var_\<tau>_pre supp_inv_bound supp_id_bound inv_o_simp1[THEN rewriteR_comp_comp]
       fun_cong[OF compSS_comp[unfolded comp_def], symmetric] compSS_id[unfolded id_def]
       intro!: \<tau>.cctor_eq_intro_rrenames[of id] \<tau>_pre.map_cong)
@@ -187,7 +240,7 @@ let
       REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
     ]],
     PFVars_Pmap = [fn ctxt => EVERY1 [rtac ctxt @{thm PFVars_Pmap}, REPEAT_DETERM o assume_tac ctxt]],
-    small_PFVars = [fn ctxt => rtac ctxt @{thm imsupp_ssfun_bound} 1]
+    small_PFVars = [fn ctxt => rtac ctxt @{thm small_PFVars} 1]
   };
   val model = {
     U = @{typ "'a::var_\<tau>_pre \<tau>"},
@@ -199,8 +252,8 @@ let
     binding_dispatcher = [[0]],
     parameters = {
       P = @{typ "'a::var_\<tau>_pre ssfun"},
-      PFVars = [@{term "\<lambda>p. imsupp (Rep_ssfun p)"}],
-      Pmap = @{term "compSS"},
+      PFVars = [@{term "PFVars"}],
+      Pmap = @{term "compSS:: ('a::var_\<tau>_pre \<Rightarrow> 'a) \<Rightarrow> _ \<Rightarrow> _"},
       axioms = parameter_tacs
     },
     axioms = model_tacs
@@ -1846,32 +1899,31 @@ theorem ff0_FFVars: "UFVars_ff0 t (ff0_ff0 t p) \<subseteq> FFVars_\<tau> t \<un
 
 (* Variable for variable substitution *)
 
-context
-  fixes f :: "'a :: var_\<tau>_pre \<Rightarrow> 'a"
-  assumes f: "|supp f| <o |UNIV::'a set|"
-begin
+definition vvsubst where "vvsubst f x \<equiv> ff0_ff0 x (Abs_ssfun f)"
 
-lift_definition fSS :: "'a ssfun" is f by (rule f)
+lemma ssfun_rep_eq: "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> Rep_ssfun (Abs_ssfun f) = f"
+  apply (rule Abs_ssfun_inverse)
+  apply (rule iffD2[OF mem_Collect_eq])
+  apply assumption
+  done
 
-definition vvsubst where "vvsubst x = ff0_ff0 x fSS"
-
-lemma vvsubst_cctor: "set2_\<tau>_pre x \<inter> (imsupp f) = {} \<Longrightarrow> nnoclash_ff0 x \<Longrightarrow>
-  vvsubst (\<tau>_ctor x) = \<tau>_ctor (map_\<tau>_pre f id vvsubst vvsubst x)"
+lemma vvsubst_cctor:
+  assumes "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
+  shows "set2_\<tau>_pre x \<inter> imsupp f = {} \<Longrightarrow> nnoclash_ff0 x \<Longrightarrow>
+  vvsubst f (\<tau>_ctor x) = \<tau>_ctor (map_\<tau>_pre f id (vvsubst f) (vvsubst f) x)"
   unfolding vvsubst_def
   apply (rule trans)
-  apply (rule ff0_cctor)
-  unfolding Uctor_ff0_def CCTOR_def fSS.rep_eq \<tau>_pre.map_comp[OF id_prems f bij_id supp_id_bound] id_o o_id
-  unfolding comp_def snd_conv avoiding_set_ff0_def Un_empty_right PFVars_ff0_def fSS.rep_eq
+   apply (rule ff0_cctor)
+  unfolding Uctor_ff0_def CCTOR_def \<tau>_pre.map_comp[OF id_prems assms(1) bij_id supp_id_bound] id_o o_id ssfun_rep_eq[OF assms(1)]
+  unfolding comp_def snd_conv avoiding_set_ff0_def Un_empty_right PFVars_ff0_def PFVars_def ssfun_rep_eq[OF assms(1)]
     apply assumption+
   apply (rule refl)
   done
 
-lemma FFVars_vvsubst_weak: "FFVars_\<tau> (vvsubst t) \<subseteq> FFVars_\<tau> t \<union> imsupp f"
+lemma FFVars_vvsubst_weak:
+  assumes "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
+  shows "FFVars_\<tau> (vvsubst f t) \<subseteq> FFVars_\<tau> t \<union> imsupp f"
   unfolding vvsubst_def
-  by (rule ff0_FFVars[of _ fSS, unfolded UFVars_ff0_def avoiding_set_ff0_def Un_empty_right PFVars_ff0_def fSS.rep_eq])
-
-end
-
-thm vvsubst_cctor FFVars_vvsubst_weak
+  by (rule ff0_FFVars[of _ "Abs_ssfun f", unfolded avoiding_set_ff0_def Un_empty_right UFVars_ff0_def PFVars_ff0_def PFVars_def ssfun_rep_eq[OF assms(1)]])
 
 end

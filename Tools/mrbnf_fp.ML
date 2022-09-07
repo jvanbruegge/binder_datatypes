@@ -2278,6 +2278,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha_bij = nth alpha_bijs i,
             alpha_bij_eq = nth alpha_bij_eqs i,
             alpha_FVarss = nth alpha_FVarsss i,
+            alpha_intro = nth alpha_intros i,
 
             subshapes = nth_opt subshapess_opt i,
             wf_subshapes = nth_opt wf_subshapess_opt i,
@@ -2306,6 +2307,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             abs = nth TT_abss i,
             rep = nth TT_reps i,
 
+            ctor_def = nth cctor_defs i,
             rename_def = nth rrename_defs i,
             FVars_defs = nth FFVars_defss i,
 

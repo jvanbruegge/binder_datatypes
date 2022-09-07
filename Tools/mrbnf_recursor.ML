@@ -649,13 +649,17 @@ fun create_binding_recursor model ff0_b lthy =
     val pre_map = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_T) vars vars mrbnf;
 
     val x = Free ("x", pre_T);
-    val y = Free ("y", PU_T);
+    val raw_y = Free ("y", PU_T);
+    val raw_y' = Free ("y'", PU_T);
+    val y = Free ("y", mk_PU_T (#T quotient));
+    val y' = Free ("y'", mk_PU_T (#T quotient));
     val p = Free ("p", P);
     val t = Free ("t", raw_T);
     val pu = Free ("pu", P --> U);
-    val ((fs, picks), _) =
+    val (((fs, gs), picks), _) =
       lthy
       |> mk_Frees "f" (map (fn var => var --> var) vars)
+      ||>> mk_Frees "g" (map (fn var => var --> var) vars)
       ||>> mk_Frees "pick" (map (fn (suitable, _) => fst (dest_funT (fastype_of suitable))) suitables);
 
     val names = map (fst o dest_Free);
@@ -685,6 +689,7 @@ fun create_binding_recursor model ff0_b lthy =
 
     fun mk_prems f = [mk_bij f, mk_supp_bound f];
     val f_prems = maps (map HOLogic.mk_Trueprop o mk_prems) fs;
+    val f_g_prems = f_prems @ maps (map HOLogic.mk_Trueprop o mk_prems) gs;
     val mk_diff = HOLogic.mk_binop @{const_name minus};
 
     fun mk_bound_sets FVars = foldr1 mk_Un o map (fn i => mk_UNION (nth raw_live_sets i $ x) FVars);
@@ -763,10 +768,10 @@ fun create_binding_recursor model ff0_b lthy =
           interlace (replicate live fun_t) fs fs var_types
         );
         val goal = mk_Trueprop_eq (
-          Term.list_comb (fst Umap', fs) $ (ctor $ (pre_map_id_fst $ y)) $ (fst CTOR $ y $ p),
-          fst CTOR $ (map_t $ y) $ (Term.list_comb (#Pmap params, fs @ [p]))
+          Term.list_comb (fst Umap', fs) $ (ctor $ (pre_map_id_fst $ raw_y)) $ (fst CTOR $ raw_y $ p),
+          fst CTOR $ (map_t $ raw_y) $ (Term.list_comb (#Pmap params, fs @ [p]))
         );
-      in Goal.prove_sorry lthy (names (fs @ [y, p])) f_prems goal (fn {context, prems} =>
+      in Goal.prove_sorry lthy (names (fs @ [raw_y, p])) f_prems goal (fn {context, prems} =>
         mk_Umap'_CTOR_tac mrbnf (snd Umap') (snd PUmap') (snd CTOR) (#rename_def (#inner quotient))
           (#abs_ctor (#inner quotient)) (#total_abs_eq_iff (#inner quotient)) (#alpha_bij_eq (#inner raw))
           (#rep_abs (#inner quotient)) (#Umap_Uctor axioms) (#Uctor model) context prems
@@ -776,29 +781,30 @@ fun create_binding_recursor model ff0_b lthy =
     fun mk_sub UFVars' FVars PFVars avoiding_set ctor t t' = HOLogic.mk_Trueprop (mk_leq (UFVars' $ t $ ctor) (mk_Un (mk_Un (
       FVars $ t', PFVars $ p), avoiding_set
     )));
-    fun mk_in_live_subset_prems live_sets = @{map 4} (fn PFVars => fn avoiding_set => fn UFVars => fn FVars =>
+    fun mk_in_live_subset_prems y live_sets = @{map 4} (fn PFVars => fn avoiding_set => fn UFVars => fn FVars =>
       let
         val T = fst (dest_funT (fastype_of FVars))
         val t = Free ("t", T);
-        val y = Free ("y", mk_PU_T T);
       in fold_rev Logic.all [t, pu, p] (Logic.implies $ (HOLogic.mk_Trueprop (HOLogic.mk_mem (
         HOLogic.mk_prod (t, pu),
         foldl1 mk_Un (map (fn s => s $ y) live_sets)
       ))) $ mk_sub UFVars FVars PFVars avoiding_set (pu $ p) t t) end)
       (#PFVars params) (#avoiding_sets model);
 
-    fun mk_UFVars'_CTOR UFVars' PFVars FVars FFVars_def alpha_FVars avoiding_set bset in_live_subset_prem =
+    val FVars_def2s = map2 (fn alpha_FVars => fn FFVars_def =>
+      Local_Defs.unfold0 lthy [
+        @{thm fun_cong[OF meta_eq_to_obj_eq]} OF [FFVars_def] RS sym
+      ] (alpha_FVars OF [#alpha_quotient_sym (#inner quotient)])
+    ) (#alpha_FVarss (#inner raw)) (#FVars_defs (#inner quotient));
+    fun mk_UFVars'_CTOR UFVars' PFVars FVars FVars_def2 avoiding_set bset in_live_subset_prem =
       let
         val mk_sub = mk_sub (fst UFVars') FVars PFVars avoiding_set;
         val goal = fold_rev (fn p => fn t => Logic.implies $ p $ t) [
-          HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars $ p, avoiding_set))),
+          HOLogic.mk_Trueprop (mk_int_empty (bset $ raw_y, mk_Un (PFVars $ p, avoiding_set))),
           in_live_subset_prem
-        ] (mk_sub (fst CTOR $ y $ p) t (ctor $ (pre_map_id_fst $ y)));
-      in Goal.prove_sorry lthy (names [t, p, y]) [] goal (fn {context=ctxt, ...} =>
+        ] (mk_sub (fst CTOR $ raw_y $ p) t (ctor $ (pre_map_id_fst $ raw_y)));
+      in Goal.prove_sorry lthy (names [t, p, raw_y]) [] goal (fn {context=ctxt, ...} =>
         let
-          val FVars_def2 = Local_Defs.unfold0 ctxt [
-            @{thm fun_cong[OF meta_eq_to_obj_eq]} OF [FFVars_def] RS sym
-          ] (alpha_FVars OF [#alpha_quotient_sym (#inner quotient)]);
           val map_comp = map_comp_of_mrbnf mrbnf;
           val id_prems = MRBNF_Comp_Tactics.mk_id_prems mrbnf;
           val map_comp_id = map_comp OF (id_prems @ id_prems);
@@ -815,8 +821,8 @@ fun create_binding_recursor model ff0_b lthy =
           Goal.assume_rule_tac ctxt
         ] end
       ) end
-    val UFVars'_CTORs = @{map 8} mk_UFVars'_CTOR UFVars' (#PFVars params) FVars (#FVars_defs (#inner quotient))
-      (#alpha_FVarss (#inner raw)) avoiding_sets prod_bound_sets (mk_in_live_subset_prems prod_live_sets (map fst UFVars') (#FVars raw));
+    val UFVars'_CTORs = @{map 7} mk_UFVars'_CTOR UFVars' (#PFVars params) FVars FVars_def2s
+      avoiding_sets prod_bound_sets (mk_in_live_subset_prems raw_y prod_live_sets (map fst UFVars') (#FVars raw));
 
     val Umap'_cong_id =
       let
@@ -837,20 +843,19 @@ fun create_binding_recursor model ff0_b lthy =
         Goal.assume_rule_tac ctxt
       ]) end;
 
+    fun mk_imsupp_prems res y fs = @{map 4} (fn f => fn FVars => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
+        mk_int_empty (mk_imsupp f, mk_Un (mk_Un (
+          FVars $ (#ctor res $ (mk_pre_map_id_fst (#T res) $ y)), PFVars $ p), avoiding_set
+        ))
+      )) fs (#FVars res) (#PFVars params) (#avoiding_sets model);
+    val (qprod_live_sets, qprod_bound_sets, _) = mk_sets (HOLogic.mk_prodT (#T quotient, P --> U));
+    fun mk_binding_set_prems y = map2 (fn bset => fn f => HOLogic.mk_Trueprop (
+        mk_int_empty (mk_image f $ (bset $ y), bset $ y)
+      ));
     val Uctor_rename =
       let
         val prodT = HOLogic.mk_prodT (#T quotient, P --> U);
-        val y = Free ("y", mk_PU_T (#T quotient));
-        val (prod_live_sets, prod_bound_sets, _) = mk_sets (HOLogic.mk_prodT (#T quotient, P --> U));
-        val in_live_subset_prems = mk_in_live_subset_prems prod_live_sets (#UFVars model) (#FVars quotient);
-        val imsupp_prems = @{map 4} (fn f => fn FFVars => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
-          mk_int_empty (mk_imsupp f, mk_Un (mk_Un (
-            FFVars $ (#ctor quotient $ (mk_pre_map_id_fst (#T quotient) $ y)), PFVars $ p), avoiding_set
-          ))
-        )) fs (#FVars quotient) (#PFVars params) (#avoiding_sets model);
-        val binding_set_prems = map2 (fn bset => fn f => HOLogic.mk_Trueprop (
-          mk_int_empty (mk_image f $ (bset $ y), bset $ y)
-        )) prod_bound_sets fs;
+        val in_live_subset_prems = mk_in_live_subset_prems y qprod_live_sets (#UFVars model) (#FVars quotient);
         val fun_t = HOLogic.mk_case_prod (Term.abs ("t", #T quotient) (Term.abs ("pu", P --> U) (HOLogic.mk_prod (
           Term.list_comb (#rename quotient, fs @ [Bound 1]),
           Term.list_comb (fst PUmap, fs @ [Bound 1, Bound 0])
@@ -860,10 +865,64 @@ fun create_binding_recursor model ff0_b lthy =
           interlace (replicate live fun_t) fs fs var_types
         ) $ y;
         val goal = mk_Trueprop_eq (#Uctor model $ y $ p, #Uctor model $ map_t $ p);
-      in Goal.prove_sorry lthy (names (fs @ [y, p])) (f_prems @ in_live_subset_prems @ imsupp_prems @ binding_set_prems) goal (fn {context, prems} =>
+      in Goal.prove_sorry lthy (names (fs @ [y, p]))
+        (f_prems @ in_live_subset_prems @ mk_imsupp_prems quotient y fs @ mk_binding_set_prems y qprod_bound_sets fs) goal (fn {context, prems} =>
         mk_Uctor_rename_tac nvars (#Uctor model) (snd PUmap) (#Umap_Uctor axioms) Pmap_imsupp_empty
           (#Umap_cong_ids axioms) (#UFVars_subsets axioms) context prems
       ) end;
+
+    fun mk_mr_rel_prem res rel PUmap y y' =
+      let
+        val T = #T res
+        val lives = replicate live (HOLogic.mk_prodT (T, P --> U));
+        val comps = map2 (fn f => fn g => HOLogic.mk_comp (mk_inv g, f)) fs gs
+        val rec_rel = HOLogic.mk_case_prod (Term.abs ("t", T) (Term.abs ("pu", P --> U) (
+          HOLogic.mk_case_prod (Term.abs ("t'", T) (Term.abs ("pu'", P --> U) (HOLogic.mk_conj (
+            rel (
+              Term.list_comb (#rename res, fs @ [Bound 3]),
+              Term.list_comb (#rename res, gs @ [Bound 1])
+            ),
+            HOLogic.mk_eq (
+              Term.list_comb (PUmap, fs @ [Bound 3, Bound 2]),
+              Term.list_comb (PUmap, gs @ [Bound 1, Bound 0])
+            )
+          ))))
+        )));
+      in HOLogic.mk_Trueprop (Term.list_comb (
+        mk_mr_rel_of_mrbnf deads lives lives vars vars mrbnf,
+        interlace (replicate live rec_rel) comps comps var_types
+      ) $ y $ y') end;
+
+    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
+    val Uctor_cong =
+      let
+        val imsupp_prems = mk_imsupp_prems quotient y fs @ mk_imsupp_prems quotient y' gs;
+        val in_live_subset_prems = mk_in_live_subset_prems y qprod_live_sets (#UFVars model) (#FVars quotient)
+          @ mk_in_live_subset_prems y' qprod_live_sets (#UFVars model) (#FVars quotient);
+        val goal = mk_Trueprop_eq (#Uctor model $ y $ p, #Uctor model $ y' $ p);
+      in Goal.prove_sorry lthy (names (fs @ gs @ [y, y', p]))
+        (f_g_prems @ in_live_subset_prems @ mk_binding_set_prems y qprod_bound_sets fs
+          @ mk_binding_set_prems y' qprod_bound_sets gs @ imsupp_prems
+          @ [mk_mr_rel_prem quotient HOLogic.mk_eq (fst PUmap) y y']) goal (fn {context, prems} =>
+        mk_Uctor_cong_tac nvars (#Uctor model) mrbnf Uctor_rename infinite_UNIV context prems
+      ) end;
+
+    val CTOR_cong =
+      let
+        val in_live_subset_prems = mk_in_live_subset_prems raw_y prod_live_sets (map fst UFVars') (#FVars raw)
+          @ mk_in_live_subset_prems raw_y' prod_live_sets (map fst UFVars') (#FVars raw);
+        val imsupp_prems = mk_imsupp_prems raw raw_y fs @ mk_imsupp_prems raw raw_y' gs;
+        val set_prems = mk_binding_set_prems raw_y prod_bound_sets fs @ mk_binding_set_prems raw_y' prod_bound_sets gs;
+        val mr_rel_prem = [mk_mr_rel_prem raw (fn (t1, t2) => #alpha (#inner raw) $ t1 $ t2) (fst PUmap') raw_y raw_y'];
+        val goal = mk_Trueprop_eq (fst CTOR $ raw_y $ p, fst CTOR $ raw_y' $ p);
+      in Goal.prove_sorry lthy (names (fs @ gs @ [raw_y, raw_y', p])) (f_g_prems @ in_live_subset_prems @ imsupp_prems @ set_prems @ mr_rel_prem)
+        goal (fn {context, prems} => mk_CTOR_cong_tac nvars mrbnf Uctor_cong (#rename_id raw) infinite_UNIV
+          (#alpha_FVarss (#inner raw)) (#alpha_sym (#inner raw)) (#alpha_trans (#inner raw)) (#rep_abs (#inner quotient))
+          (#alpha_intro (#inner raw)) (#total_abs_eq_iff (#inner quotient)) (#alpha_bij_eq (#inner raw))
+          FVars_def2s (snd CTOR) (#ctor_def (#inner quotient)) (#rename_def (#inner quotient)) (#FVars_defs (#inner quotient))
+          (map snd UFVars') (snd PUmap') (snd PUmap) (snd Umap') context prems
+        )
+      end;
 
     val notes =
       [("pick_id_on", pick_id_ons),
@@ -875,7 +934,7 @@ fun create_binding_recursor model ff0_b lthy =
        ("Umap'_CTOR", [Umap'_CTOR]),
        ("UFVars'_CTOR", UFVars'_CTORs),
        ("Umap'_cong_id", [Umap'_cong_id]),
-       ("Uctor_rename", [Uctor_rename])
+       ("CTOR_cong", [CTOR_cong])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])
       ));

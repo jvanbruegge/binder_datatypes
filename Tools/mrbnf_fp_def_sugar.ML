@@ -28,6 +28,7 @@ sig
     alpha_bij: thm,
     alpha_bij_eq: thm,
     alpha_FVarss: thm list,
+    alpha_intro: thm,
 
     subshapes: term list option,
     wf_subshapes: thm list option,
@@ -40,6 +41,7 @@ sig
     abs: term,
     rep: term,
 
+    ctor_def: thm,
     rename_def: thm,
     FVars_defs: thm list,
 
@@ -119,6 +121,7 @@ type raw_result = {
   alpha_bij: thm,
   alpha_bij_eq: thm,
   alpha_FVarss: thm list,
+  alpha_intro: thm,
 
   subshapes: term list option,
   wf_subshapes: thm list option,
@@ -128,7 +131,8 @@ type raw_result = {
 };
 
 fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij, alpha_bij_eq,
-  alpha_FVarss, subshapes, wf_subshapes, set_subshapess, set_subshape_imagess, subshape_induct } = {
+  alpha_FVarss, subshapes, wf_subshapes, set_subshapess, set_subshape_imagess, subshape_induct,
+  alpha_intro } = {
   alpha = Morphism.term phi alpha,
   alpha_refl = Morphism.thm phi alpha_refl,
   alpha_sym = Morphism.thm phi alpha_sym,
@@ -136,6 +140,7 @@ fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij,
   alpha_bij = Morphism.thm phi alpha_bij,
   alpha_bij_eq = Morphism.thm phi alpha_bij_eq,
   alpha_FVarss = map (Morphism.thm phi) alpha_FVarss,
+  alpha_intro = Morphism.thm phi alpha_intro,
   subshapes = Option.map (map (Morphism.term phi)) subshapes,
   wf_subshapes = Option.map (map (Morphism.thm phi)) wf_subshapes,
   set_subshapess = Option.map (map (map (Morphism.thm phi))) set_subshapess,
@@ -147,6 +152,7 @@ type quotient_result = {
   abs: term,
   rep: term,
 
+  ctor_def: thm,
   rename_def: thm,
   FVars_defs: thm list,
 
@@ -158,9 +164,10 @@ type quotient_result = {
 };
 
 fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
-abs_ctor, rename_def, FVars_defs } = {
+abs_ctor, rename_def, FVars_defs, ctor_def } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
+  ctor_def = Morphism.thm phi ctor_def,
   rename_def = Morphism.thm phi rename_def,
   FVars_defs = map (Morphism.thm phi) FVars_defs,
   alpha_quotient_sym = Morphism.thm phi alpha_quotient_sym,

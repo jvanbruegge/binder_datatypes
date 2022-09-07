@@ -63,7 +63,7 @@ end
 print_theorems
 
 lemma infinite_var_\<tau>_pre: "infinite (UNIV :: 'a::var_\<tau>_pre set)"
-  using card_of_ordLeq_finite cinfinite_def infinite_regular_card_order.Cinfinite infinite_regular_card_order_card_suc natLeq_Card_order natLeq_card_order natLeq_cinfinite var_DEADID_class.large by blast
+  by (rule cinfinite_imp_infinite[OF \<tau>_pre.UNIV_cinfinite])
 
 lemma Un_bound:
   assumes inf: "infinite (UNIV :: 'a set)"
@@ -286,143 +286,6 @@ fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bou
 \<close>
 
 lemmas id_prems = supp_id_bound bij_id supp_id_bound
-
-lemma Uctor_cong: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> bij (u'::'a \<Rightarrow> 'a) \<Longrightarrow> |supp u'| <o |UNIV::'a set| \<Longrightarrow>
-  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x \<union> set4_\<tau>_pre x \<Longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
-  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x' \<union> set4_\<tau>_pre x' \<Longrightarrow> UFVars_ff0 t (pd p) \<subseteq> FFVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
-  imsupp u \<inter> (FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst x)) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u ` set2_\<tau>_pre x \<inter> set2_\<tau>_pre x = {} \<Longrightarrow>
-  imsupp u' \<inter> (FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst x')) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u' ` set2_\<tau>_pre x' \<inter> set2_\<tau>_pre x' = {} \<Longrightarrow>
-  mr_rel_\<tau>_pre (inv u' \<circ> u) (inv u' \<circ> u) (\<lambda>(t, pd) (t', pd'). rrename_\<tau> u t = rrename_\<tau> u' t' \<and> PUmap_ff0 u t pd = PUmap_ff0 u' t' pd') (\<lambda>(t, pd) (t', pd'). rrename_\<tau> u t = rrename_\<tau> u' t' \<and> PUmap_ff0 u t pd = PUmap_ff0 u' t' pd') x x' \<Longrightarrow>
-  Uctor_ff0 x p = Uctor_ff0 x' p"
-apply (rule trans)
-   apply (rule Uctor_rename)
-       apply assumption+
-  apply (rule sym[THEN trans[rotated]])
-   apply (rule Uctor_rename)
-       apply (rotate_tac 2)
-       apply assumption+
-  apply (rule arg_cong2[OF _ refl, of _ _ Uctor_ff0])
-  apply (rule iffD2[OF fun_cong[OF fun_cong[OF \<tau>_pre.mr_rel_eq[symmetric]]]])
-  apply (rule iffD2[OF \<tau>_pre.mr_rel_map(1)])
-        apply (assumption | rule supp_id_bound bij_id)+
-  unfolding id_o OO_eq
-  apply (rule iffD2[OF \<tau>_pre.mr_rel_map(3)])
-         apply assumption+
-  unfolding relcompp_conversep_Grp
-  unfolding Grp_def in_UNIV_simp prod_case_lam_simp prod.inject
-  apply (rule \<tau>_pre.mr_rel_mono_strong)
-       apply (assumption | rule supp_comp_bound supp_inv_bound infinite_var_\<tau>_pre bij_comp bij_imp_bij_inv)+
-  apply (raw_tactic \<open>let val ctxt = @{context} in EVERY1 [
-    REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-    Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
-      let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
-      in rtac context thm1 1 THEN rtac context thm2 1 end
-    ) ctxt,
-    hyp_subst_tac ctxt,
-    K (unfold_thms_tac ctxt @{thms prod.case}),
-    etac ctxt conjE,
-    rtac ctxt conjI,
-    rtac ctxt sym,
-    assume_tac ctxt,
-    rtac ctxt sym,
-    assume_tac ctxt
-  ] end\<close>)+
-  done
-
-lemma CTOR_ff0_cong: "bij (u::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> bij (u'::'a \<Rightarrow> 'a) \<Longrightarrow> |supp u'| <o |UNIV::'a set| \<Longrightarrow>
-  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x \<union> set4_\<tau>_pre x \<Longrightarrow> UFVars'_ff0 t (pd p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
-  (\<And>t pd p. (t, pd) \<in> set3_\<tau>_pre x' \<union> set4_\<tau>_pre x' \<Longrightarrow> UFVars'_ff0 t (pd p) \<subseteq> FVars_\<tau> t \<union> PFVars_ff0 p \<union> avoiding_set_ff0) \<Longrightarrow>
-  imsupp u \<inter> (FVars_\<tau> (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst x)) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u ` set2_\<tau>_pre x \<inter> set2_\<tau>_pre x = {} \<Longrightarrow>
-  imsupp u' \<inter> (FVars_\<tau> (raw_\<tau>_ctor (map_\<tau>_pre id id fst fst x')) \<union> PFVars_ff0 p \<union> avoiding_set_ff0) = {} \<Longrightarrow> u' ` set2_\<tau>_pre x' \<inter> set2_\<tau>_pre x' = {} \<Longrightarrow>
-  mr_rel_\<tau>_pre (inv u' \<circ> u) (inv u' \<circ> u) (\<lambda>(t, pd) (t', pd'). alpha_\<tau> (rename_\<tau> u t) (rename_\<tau> u' t') \<and> PUmap'_ff0 u t pd = PUmap'_ff0 u' t' pd') (\<lambda>(t, pd) (t', pd'). alpha_\<tau> (rename_\<tau> u t) (rename_\<tau> u' t') \<and> PUmap'_ff0 u t pd = PUmap'_ff0 u' t' pd') x x' \<Longrightarrow>
-  CTOR_ff0 x p = CTOR_ff0 x' p"
-  unfolding CTOR_ff0_def
-  apply (rule Uctor_cong)
-            apply assumption
-           apply assumption
-          apply (rotate_tac 2)
-          apply assumption+
-  unfolding \<tau>_pre.set_map[OF id_prems] image_Un[symmetric]
-        apply (drule exists_map_prod_id, erule exE, erule conjE,
-      raw_tactic \<open>hyp_subst_tac @{context} 1 THEN SELECT_GOAL (unfold_thms_tac @{context} @{thms UFVars'_ff0_def[symmetric] \<tau>.alpha_FVarss[OF \<tau>.TT_alpha_quotient_syms, unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_\<tau>_def], symmetric], symmetric]}) 1\<close>,
-      assumption)+
-  apply (raw_tactic \<open>
-    let
-      val ctxt = @{context}
-      val common_tac = EVERY' [
-        REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-        rtac ctxt @{thm relcomppI},
-        rtac ctxt refl,
-        hyp_subst_tac ctxt,
-        SELECT_GOAL (unfold_thms_tac @{context} @{thms comp_def}),
-        rtac ctxt @{thm \<tau>.TT_Quotient_rep_abss}
-      ];
-    in EVERY1 [
-      rtac ctxt trans,
-      rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<inter>)"]},
-      REPEAT_DETERM o rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<union>)"]},
-      K (assume_tac ctxt 2),
-      K (unfold_thms_tac ctxt @{thms FFVars_\<tau>_def \<tau>_ctor_def}),
-      rtac ctxt @{thm \<tau>.alpha_FVarss},
-      rtac ctxt @{thm \<tau>.alpha_transs},
-      rtac ctxt @{thm \<tau>.TT_Quotient_rep_abss},
-      rtac ctxt @{thm alpha_\<tau>.intros},
-      rtac ctxt @{thm bij_id},
-      rtac ctxt @{thm supp_id_bound},
-      rtac ctxt @{thm id_on_id},
-      K (unfold_thms_tac ctxt @{thms \<tau>_pre.map_comp[OF id_prems id_prems] o_id comp_assoc[symmetric] fst_comp_map_prod[symmetric] \<tau>.rename_ids}),
-      rtac ctxt @{thm iffD2[OF \<tau>_pre.mr_rel_map(1)]},
-      REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
-      K (unfold_thms_tac ctxt @{thms id_o}),
-      rtac ctxt @{thm iffD2[OF \<tau>_pre.mr_rel_map(3)]},
-      REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
-      K (unfold_thms_tac ctxt @{thms inv_o_simp1[OF bij_id] relcompp_conversep_Grp}),
-      K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
-      rtac ctxt @{thm \<tau>_pre.mr_rel_mono_strong},
-      REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
-      rtac ctxt @{thm iffD2[OF fun_cong[OF fun_cong[OF \<tau>_pre.mr_rel_eq]]]},
-      rtac ctxt refl,
-      REPEAT_DETERM o common_tac,
-      K (unfold_thms_tac ctxt @{thms image_id}),
-      assume_tac ctxt
-    ] end\<close>)+
-  apply (rule iffD2[OF \<tau>_pre.mr_rel_map(1)])
-        apply (assumption | rule supp_id_bound bij_id supp_comp_bound supp_inv_bound infinite_var_\<tau>_pre bij_comp bij_imp_bij_inv)+
-  apply (rule iffD2[OF \<tau>_pre.mr_rel_map(3)])
-         apply (assumption | rule supp_id_bound bij_id supp_comp_bound supp_inv_bound infinite_var_\<tau>_pre bij_comp bij_imp_bij_inv)+
-  unfolding relcompp_conversep_Grp inv_id id_o o_id
-  unfolding Grp_UNIV_def
-  apply (rule \<tau>_pre.mr_rel_mono_strong)
-       apply (assumption | rule supp_comp_bound supp_inv_bound infinite_var_\<tau>_pre bij_comp bij_imp_bij_inv)+
-  apply (raw_tactic \<open>let val ctxt = @{context} in EVERY1 [
-    REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-    Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
-      let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
-      in rtac context thm1 1 THEN rtac context thm2 1 end
-    ) ctxt,
-    hyp_subst_tac ctxt,
-    K (unfold_thms_tac ctxt @{thms prod.case}),
-    rtac ctxt @{thm relcomppI},
-    resolve_tac ctxt @{thms fun_cong[OF map_prod_def] prod.case},
-    K (unfold_thms_tac ctxt @{thms prod.case map_prod_def}),
-    etac ctxt conjE,
-    rtac ctxt conjI,
-    K (unfold_thms_tac ctxt @{thms rrename_\<tau>_def}),
-    rtac ctxt @{thm iffD2[OF \<tau>.TT_Quotient_total_abs_eq_iffs]},
-    rtac ctxt @{thm \<tau>.alpha_transs},
-    rtac ctxt @{thm iffD2[OF \<tau>.alpha_bij_eqs]},
-    REPEAT_DETERM o assume_tac ctxt,
-    rtac ctxt @{thm \<tau>.TT_Quotient_rep_abss},
-    rtac ctxt @{thm \<tau>.alpha_transs[rotated]},
-    rtac ctxt @{thm \<tau>.alpha_syms},
-    rtac ctxt @{thm iffD2[OF \<tau>.alpha_bij_eqs]},
-    REPEAT_DETERM o assume_tac ctxt,
-    rtac ctxt @{thm \<tau>.TT_Quotient_rep_abss},
-    assume_tac ctxt,
-    SELECT_GOAL (unfold_thms_tac @{context} @{thms PUmap_ff0_def PUmap'_ff0_def id_def Umap'_ff0_def}),
-    assume_tac ctxt
-  ] end\<close>)+
-  done
 
 lemma Umap'_ff0_alpha: "alpha_\<tau> t t' \<Longrightarrow> Umap'_ff0 u t = Umap'_ff0 u t'"
   unfolding Umap'_ff0_def
@@ -927,7 +790,7 @@ lemma f_swap_alpha:
           ],
           REPEAT_DETERM o resolve_tac ctxt bij_comps,
           REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
-          rtac ctxt @{thm CTOR_ff0_cong},
+          rtac ctxt @{thm CTOR_cong},
           assume_tac ctxt,
           assume_tac ctxt,
           rotate_tac 4,
@@ -1231,7 +1094,7 @@ lemma f_swap_alpha:
       apply (rule allE[OF prems(2)[unfolded suitable_ff0_def]], (erule allE conjE)+, assumption)
      apply (rule refl)
     apply (erule exE conjE)+
-    apply (rule CTOR_ff0_cong)
+    apply (rule CTOR_cong)
             apply (rotate_tac 4)
               apply assumption
              apply assumption

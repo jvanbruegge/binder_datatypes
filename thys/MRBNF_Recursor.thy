@@ -98,10 +98,6 @@ lemma Int_subset_empty1: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> A \<
 lemma Int_subset_empty2: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> B \<Longrightarrow> A \<inter> C = {}" by blast
 lemma exists_map_prod_id: "(a, b) \<in> map_prod f id ` A \<Longrightarrow> \<exists>c. (c, b) \<in> A \<and> a = f c" by auto
 
-lemma in_UNIV_simp: "A \<and> x \<in> UNIV \<longleftrightarrow> A" by auto
-lemma prod_case_lam_simp: "(\<lambda>y x. (case x of (a, b) \<Rightarrow> f a b) = (case y of (a, b) \<Rightarrow> g a b))
-  = (\<lambda>(a1, b1) (a2, b2). f a2 b2 = g a1 b1)" by auto
-
 lemma image_prod_f_g: "(a, b) \<in> (\<lambda>x. (u x, g (u x))) ` A \<longleftrightarrow> a \<in> u ` A \<and> b = g a" by blast
 lemma Int_Un_empty: "A \<inter> (B \<union> C \<union> D) = {} \<longleftrightarrow> A \<inter> B = {} \<and> A \<inter> (C \<union> D) = {}" by blast
 
@@ -129,5 +125,8 @@ lemma Int_Un_emptyI2: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inte
 lemma imsupp_comp_image: "bij f \<Longrightarrow> imsupp (f \<circ> g \<circ> inv f) = f ` imsupp g"
   apply (auto simp: supp_def imsupp_def bij_inv_eq_iff image_in_bij_eq)
   by (smt (verit, del_insts) imageI inv_simp1 mem_Collect_eq)
+
+lemma cinfinite_imp_infinite: "cinfinite |A| \<Longrightarrow> infinite A"
+  by (simp add: cinfinite_def)
 
 end

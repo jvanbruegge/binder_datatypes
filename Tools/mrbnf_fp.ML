@@ -2272,6 +2272,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           inner = {
             alpha = nth alphasAs i,
 
+            exhaust = nth raw_exhausts i,
+
             alpha_refl = nth alpha_refls i,
             alpha_sym = nth alpha_syms i,
             alpha_trans = nth alpha_transs i,

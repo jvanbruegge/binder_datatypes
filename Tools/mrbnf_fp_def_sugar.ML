@@ -22,6 +22,8 @@ sig
   type raw_result = {
     alpha: term,
 
+    exhaust: thm,
+
     alpha_refl: thm,
     alpha_sym: thm,
     alpha_trans: thm,
@@ -115,6 +117,8 @@ fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_
 type raw_result = {
   alpha: term,
 
+  exhaust: thm,
+
   alpha_refl: thm,
   alpha_sym: thm,
   alpha_trans: thm,
@@ -132,8 +136,9 @@ type raw_result = {
 
 fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij, alpha_bij_eq,
   alpha_FVarss, subshapes, wf_subshapes, set_subshapess, set_subshape_imagess, subshape_induct,
-  alpha_intro } = {
+  alpha_intro, exhaust } = {
   alpha = Morphism.term phi alpha,
+  exhaust = Morphism.thm phi exhaust,
   alpha_refl = Morphism.thm phi alpha_refl,
   alpha_sym = Morphism.thm phi alpha_sym,
   alpha_trans = Morphism.thm phi alpha_trans,

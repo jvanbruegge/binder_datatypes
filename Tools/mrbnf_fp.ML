@@ -2273,6 +2273,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha = nth alphasAs i,
 
             exhaust = nth raw_exhausts i,
+            rename_simp = nth rename_simps i,
 
             alpha_refl = nth alpha_refls i,
             alpha_sym = nth alpha_syms i,
@@ -2281,6 +2282,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha_bij_eq = nth alpha_bij_eqs i,
             alpha_FVarss = nth alpha_FVarsss i,
             alpha_intro = nth alpha_intros i,
+            alpha_elim = nth alpha_elims i,
 
             subshapes = nth_opt subshapess_opt i,
             wf_subshapes = nth_opt wf_subshapess_opt i,

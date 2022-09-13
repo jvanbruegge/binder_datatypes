@@ -23,6 +23,7 @@ sig
     alpha: term,
 
     exhaust: thm,
+    rename_simp: thm,
 
     alpha_refl: thm,
     alpha_sym: thm,
@@ -31,6 +32,7 @@ sig
     alpha_bij_eq: thm,
     alpha_FVarss: thm list,
     alpha_intro: thm,
+    alpha_elim: thm,
 
     subshapes: term list option,
     wf_subshapes: thm list option,
@@ -118,6 +120,7 @@ type raw_result = {
   alpha: term,
 
   exhaust: thm,
+  rename_simp: thm,
 
   alpha_refl: thm,
   alpha_sym: thm,
@@ -126,6 +129,7 @@ type raw_result = {
   alpha_bij_eq: thm,
   alpha_FVarss: thm list,
   alpha_intro: thm,
+  alpha_elim: thm,
 
   subshapes: term list option,
   wf_subshapes: thm list option,
@@ -136,9 +140,10 @@ type raw_result = {
 
 fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij, alpha_bij_eq,
   alpha_FVarss, subshapes, wf_subshapes, set_subshapess, set_subshape_imagess, subshape_induct,
-  alpha_intro, exhaust } = {
+  alpha_intro, exhaust, rename_simp, alpha_elim } = {
   alpha = Morphism.term phi alpha,
   exhaust = Morphism.thm phi exhaust,
+  rename_simp = Morphism.thm phi rename_simp,
   alpha_refl = Morphism.thm phi alpha_refl,
   alpha_sym = Morphism.thm phi alpha_sym,
   alpha_trans = Morphism.thm phi alpha_trans,
@@ -146,6 +151,7 @@ fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij,
   alpha_bij_eq = Morphism.thm phi alpha_bij_eq,
   alpha_FVarss = map (Morphism.thm phi) alpha_FVarss,
   alpha_intro = Morphism.thm phi alpha_intro,
+  alpha_elim = Morphism.thm phi alpha_elim,
   subshapes = Option.map (map (Morphism.term phi)) subshapes,
   wf_subshapes = Option.map (map (Morphism.thm phi)) wf_subshapes,
   set_subshapess = Option.map (map (map (Morphism.thm phi))) set_subshapess,

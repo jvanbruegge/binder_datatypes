@@ -129,4 +129,11 @@ lemma imsupp_comp_image: "bij f \<Longrightarrow> imsupp (f \<circ> g \<circ> in
 lemma cinfinite_imp_infinite: "cinfinite |A| \<Longrightarrow> infinite A"
   by (simp add: cinfinite_def)
 
+lemma id_on_comp3: "c z = z \<Longrightarrow> b (c z) = c z \<Longrightarrow> a z = z \<Longrightarrow> (a \<circ> b \<circ> c) z = z"
+  by simp
+lemma id_on_comp2: "b z = z \<Longrightarrow> a z = z \<Longrightarrow> (a \<circ> b) z = z" by simp
+lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z" by simp
+
+lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by force
+
 end

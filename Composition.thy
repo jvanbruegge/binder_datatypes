@@ -54,8 +54,7 @@ Multithreading.parallel_proofs := 1;
 
 local_setup \<open>fn lthy =>
 let
-  val (_, lthy') = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP
-    [(("\<tau>", tau), 2)] [[0]] lthy
+  val (_, lthy') = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("\<tau>", tau), 2)] [[0]] lthy
 in
   lthy'
 end
@@ -448,5 +447,175 @@ lemma FFVars_vvsubst_weak:
   shows "FFVars_\<tau> (vvsubst f t) \<subseteq> FFVars_\<tau> t \<union> imsupp f"
   unfolding vvsubst_def
   by (rule ff0_FFVars[of _ "Abs_ssfun f", unfolded Un_empty_right PFVars_def ssfun_rep_eq[OF assms(1)]])
+
+lemma not_in_imsupp_same: "z \<notin> imsupp f \<Longrightarrow> f z = z"
+  unfolding imsupp_def supp_def by blast
+
+theorem vvsubst_rrename:
+  fixes t::"'a::var_\<tau>_pre \<tau>"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "vvsubst f t = rrename_\<tau> f t"
+  apply (rule \<tau>.TT_fresh_co_induct[OF iffD2[OF imsupp_supp_bound[OF infinite_var_\<tau>_pre] assms(2)], of _ t])
+  apply (rule trans)
+   apply (rule vvsubst_cctor)
+     apply (rule assms)
+    apply (rule iffD2[OF disjoint_iff])
+    apply (rule allI)
+    apply (rule impI)
+  apply assumption
+  unfolding nnoclash_ff0_def Int_Un_distrib Un_empty
+   apply (rule conjI)
+    apply (rule iffD2[OF disjoint_iff])
+    apply (rule allI)
+    apply (rule impI)
+    apply assumption
+  apply (rule iffD2[OF disjoint_iff])
+    apply (rule allI)
+   apply (rule impI)
+   apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
+   apply (rule iffD2[OF bex_simps(8)])
+   apply (rule ballI)
+   apply assumption
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule \<tau>.rrename_cctors)
+    apply (rule assms)
+   apply (rule assms)
+  apply (rule sym)
+  apply (rule iffD2[OF \<tau>.TT_injects0])
+  apply (rule exI)
+  apply (rule conjI, rule bij_id supp_id_bound id_on_id)+
+  unfolding \<tau>.rrename_id0s \<tau>_pre.map_id
+  apply (rule \<tau>_pre.map_cong)
+            apply (rule bij_id supp_id_bound assms refl)+
+    apply (rule trans[OF id_apply])
+  apply (rule sym)
+    apply (rule not_in_imsupp_same)
+    apply assumption+
+  done
+
+lemma vvsubst_id0: "vvsubst id = id"
+  apply (rule trans)
+  apply (rule ext)
+   apply (rule vvsubst_rrename)
+    apply (rule bij_id supp_id_bound)+
+  apply (rule \<tau>.rrename_id0s)
+  done
+
+ML \<open>
+fun Int_empty_tac ctxt = EVERY' [
+  resolve_tac ctxt @{thms iffD2[OF disjoint_iff]},
+  resolve_tac ctxt [allI],
+  resolve_tac ctxt [impI],
+  TRY o Goal.assume_rule_tac ctxt
+];
+
+fun helper_tac ctxt = EVERY1 [
+  Int_empty_tac ctxt,
+  K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms nnoclash_ff0_def Int_Un_distrib Un_empty}),
+  resolve_tac ctxt [conjI],
+  Int_empty_tac ctxt,
+  Int_empty_tac ctxt,
+  resolve_tac ctxt @{thms iffD2[OF arg_cong[OF UN_iff, of Not]]},
+  resolve_tac ctxt @{thms iffD2[OF bex_simps(8)]},
+  resolve_tac ctxt [ballI],
+  Goal.assume_rule_tac ctxt
+];
+\<close>
+
+lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> f ` A - B = f ` (A - B)"
+  unfolding supp_def imsupp_def by fastforce
+
+lemma FFVars_vvsubst:
+  fixes t::"'a::var_\<tau>_pre \<tau>"
+  assumes "|supp f| <o |UNIV::'a set|"
+  shows "FFVars_\<tau> (vvsubst f t) = f ` FFVars_\<tau> t"
+  apply (rule \<tau>.TT_fresh_co_induct[of _ _ t])
+   apply (rule iffD2[OF imsupp_supp_bound[OF infinite_var_\<tau>_pre] assms])
+  apply (rule trans)
+   apply (rule arg_cong[of _ _ FFVars_\<tau>])
+   apply (rule vvsubst_cctor)
+     apply (rule assms)
+    apply (tactic \<open>helper_tac @{context}\<close>)
+  apply (rule trans)
+   apply (rule \<tau>.FFVars_cctors)
+  unfolding \<tau>_pre.set_map[OF assms bij_id supp_id_bound] image_id image_comp comp_def[of FFVars_\<tau>]
+  apply (rule trans)
+    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+    apply (rule arg_cong2[OF refl, of _ _ "(\<union>)"])
+    apply (rule trans)
+     apply (rule arg_cong2[OF _ refl, of _ _ minus])
+     apply (rule rel_set_UN_D)
+     apply (rule rel_set_mono_strong[OF _ iffD2[OF fun_cong[OF fun_cong[OF rel_set_eq]] refl]])
+     apply (tactic \<open>hyp_subst_tac @{context} 1\<close>)
+     apply assumption
+  unfolding image_UN[symmetric]
+    apply (rule Diff_image_not_in_imsupp)
+  apply assumption
+    apply (rule rel_set_UN_D)
+    apply (rule rel_set_mono_strong[OF _ iffD2[OF fun_cong[OF fun_cong[OF rel_set_eq]] refl]])
+    apply (tactic \<open>hyp_subst_tac @{context} 1\<close>)
+    apply assumption
+  unfolding image_UN[symmetric] image_Un[symmetric] \<tau>.FFVars_cctors[symmetric]
+  apply (rule refl)
+  done
+
+lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
+  unfolding imsupp_def supp_def by fastforce
+
+lemma vvsubst_comp:
+  fixes f g:: "'a::var_\<tau>_pre \<Rightarrow> 'a"
+  assumes "|supp f| <o |UNIV::'a set|" "|supp g| <o |UNIV::'a set|"
+  shows "vvsubst (g \<circ> f) t = (vvsubst g \<circ> vvsubst f) t"
+  apply (rule \<tau>.TT_fresh_co_induct[of _ _ t])
+   apply (rule \<tau>_pre.Un_bound)
+    apply (rule iffD2[OF imsupp_supp_bound[OF infinite_var_\<tau>_pre] assms(2)])
+   apply (rule iffD2[OF imsupp_supp_bound[OF infinite_var_\<tau>_pre] assms(1)])
+  apply (rule trans)
+   apply (rule vvsubst_cctor)
+     apply (rule supp_comp_bound)
+       apply (rule assms infinite_var_\<tau>_pre)+
+    apply (rule Int_subset_empty2[rotated])
+     apply (rule imsupp_o)
+  apply (tactic \<open>helper_tac @{context}\<close>)
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule trans[OF comp_apply])
+   apply (rule arg_cong[of _ _ "vvsubst g"])
+   apply (rule vvsubst_cctor)
+     apply (rule assms)
+    apply (rule Int_subset_empty2[rotated])
+     apply (rule Un_upper2)
+    apply (tactic \<open>helper_tac @{context}\<close>)
+  apply (rule trans)
+   apply (rule vvsubst_cctor)
+     apply (rule assms)
+  unfolding \<tau>_pre.set_map[OF assms(1) bij_id supp_id_bound] image_id nnoclash_ff0_def
+    apply (rule Int_subset_empty2[rotated])
+     apply (rule Un_upper1)
+    apply (tactic \<open>Int_empty_tac @{context} 1\<close>)
+  unfolding image_comp comp_def[of FFVars_\<tau>] FFVars_vvsubst[OF assms(1)] image_UN[symmetric]
+   apply (tactic \<open>Int_empty_tac @{context} 1\<close>)
+  unfolding Un_iff de_Morgan_disj image_iff bex_simps(8)
+   apply (rule conjI)
+    apply (rule ball_not_eq_imsupp)
+      apply assumption+
+    apply (rule conjunct2)
+    apply assumption
+   apply (rule ball_not_eq_imsupp)
+     apply assumption
+  unfolding UN_iff bex_simps(8)
+    apply (rule ballI)
+    apply assumption
+   apply (rule conjunct2)
+   apply assumption
+  unfolding \<tau>_pre.map_comp[OF assms(1) bij_id supp_id_bound assms(2) bij_id supp_id_bound] id_o
+  apply (rule trans)
+   apply (rule arg_cong[of _ _ \<tau>_ctor])
+   apply (rule \<tau>_pre.map_cong[OF _ _ _ _ _ _ refl refl refl])
+          apply (rule assms infinite_var_\<tau>_pre supp_comp_bound bij_id supp_id_bound)+
+    apply (rule sym, assumption)+
+  apply (rule refl)
+  done
 
 end

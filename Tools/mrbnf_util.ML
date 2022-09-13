@@ -36,12 +36,28 @@ sig
   val asm_simp_only_all_new: Proof.context -> thm list -> (int -> tactic) list -> int -> tactic
 
   val mk_abs_def2: Proof.context -> thm -> thm
+  val mk_arg_cong: Proof.context -> int -> term -> thm
 end;
 
 structure MRBNF_Util : MRBNF_UTIL =
 struct
 
 open BNF_Util
+
+fun mk_arg_cong ctxt n t =
+  let
+    val Us = fastype_of t |> strip_typeN n |> fst;
+    val ((xs, ys), _) = ctxt
+      |> mk_Frees "x" Us
+      ||>> mk_Frees "y" Us;
+    val goal = Logic.list_implies (@{map 2} (curry mk_Trueprop_eq) xs ys,
+      mk_Trueprop_eq (list_comb (t, xs), list_comb (t, ys)));
+    val vars = Variable.add_free_names ctxt goal [];
+  in
+    Goal.prove_sorry ctxt vars [] goal (fn {context = ctxt, prems = _} =>
+      HEADGOAL (hyp_subst_tac ctxt THEN' rtac ctxt refl))
+    |> Thm.close_derivation \<^here>
+  end;
 
 fun filter_like xs P = map snd o filter (P o fst) o map2 pair xs;
 

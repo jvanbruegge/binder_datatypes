@@ -1606,7 +1606,7 @@ fun create_binding_recursor model ff0_b lthy =
               K (prefer_tac (2 * (free + 2 * bound) + 1)),
               rtac ctxt mr_rel_prem,
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_id_bound supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ [infinite_UNIV] @ raw_pick_prems @ raw_pick_prems' @ h_prems)),
-              REPEAT_DETERM_N 4 o FIRST' [
+              REPEAT_DETERM o FIRST' [
                 (* free var set *)
                 EVERY' [
                   rtac ctxt ballI,
@@ -1733,7 +1733,7 @@ fun create_binding_recursor model ff0_b lthy =
                   rtac ctxt (iffD2 OF [#alpha_bij_eq (#inner raw)]),
                   REPEAT_DETERM o resolve_tac ctxt raw_pick_prems',
                   assume_tac ctxt,
-                  rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst PUmap'))] @{thm arg_cong3[OF refl refl]}),
+                  rtac ctxt (mk_arg_cong lthy (nvars + 2) (fst PUmap') OF (replicate (nvars + 1) refl)),
                   rtac ctxt (IH RS conjunct2),
                   set_subshape_tac,
                   REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ raw_pick_prems' @ suitable_prems'),
@@ -1778,7 +1778,7 @@ fun create_binding_recursor model ff0_b lthy =
                   rtac ctxt trans,
                   rtac ctxt (fun_cong OF [PUmap'_alpha]),
                   assume_tac ctxt,
-                  rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst PUmap'))] @{thm arg_cong3[OF refl refl]}),
+                  rtac ctxt (mk_arg_cong lthy (nvars + 2) (fst PUmap') OF (replicate (nvars + 1) refl)),
                   rtac ctxt (IH RS conjunct2),
                   set_subshape_tac,
                   REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ suitable_prems'),

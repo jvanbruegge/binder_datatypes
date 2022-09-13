@@ -1793,23 +1793,8 @@ fun create_binding_recursor model ff0_b lthy =
       ) end;
 
     val notes =
-      [("pick_id_on", pick_id_ons),
-       ("pick_id_on_image", pick_id_on_images),
-       ("pick_prems", flat pick_premss),
-       ("Pmap_bij", [Pmap_bij]),
-       ("Pmap_inv_simp", [Pmap_inv_simp]),
-       ("Pmap_imsupp_empty", [Pmap_imsupp_empty]),
-       ("Umap'_CTOR", [Umap'_CTOR]),
-       ("UFVars'_CTOR", UFVars'_CTORs),
-       ("Umap'_cong_id", [Umap'_cong_id]),
-       ("CTOR_cong", [CTOR_cong]),
-       ("Umap'_alpha", [Umap'_alpha]),
-       ("PUmap'_alpha", [PUmap'_alpha]),
-       ("f_simp", [snd f]),
-       ("alpha_ctor_pick", [alpha_ctor_picks]),
+      [("pick_prems", flat pick_premss),
        ("f_UFVars'", f_UFVars's),
-       ("int_empty", flat int_empties),
-       ("imsupp_id_on_XX", flat imsupp_id_on_XX),
        ("f_swap_alpha", [f_swap_alpha])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])

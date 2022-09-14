@@ -136,4 +136,13 @@ lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z
 
 lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by force
 
+lemma Un_bound:
+  assumes inf: "infinite (UNIV :: 'a set)"
+    and "|A1| <o |UNIV::'a set|" and "|A2| <o |UNIV::'a set|"
+  shows "|A1 \<union> A2| <o |UNIV::'a set|"
+  using assms card_of_Un_ordLess_infinite by blast
+
+lemma imsupp_supp_bound: "infinite (UNIV::'a set) \<Longrightarrow> |imsupp g| <o |UNIV::'a set| \<longleftrightarrow> |supp g| <o |UNIV::'a set|"
+  by (metis Un_bound card_of_image imsupp_def ordLeq_ordLess_trans supp_ordleq_imsupp)
+
 end

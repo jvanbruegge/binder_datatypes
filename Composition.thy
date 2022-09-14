@@ -237,10 +237,19 @@ let
     },
     axioms = model_tacs
   };
-  val lthy' = MRBNF_Recursor.create_binding_recursor model @{binding ff0} lthy
-in lthy' end
+  val (res, lthy) = MRBNF_Recursor.create_binding_recursor I model @{binding ff0} lthy
+  val notes =
+    [("ff0_cctor", [#rec_Uctor res]),
+     ("ff0_swap", [#rec_swap res]),
+     ("ff0_UFVars", #rec_UFVarss res)
+    ] |> (map (fn (thmN, thms) =>
+      ((Binding.name thmN, []), [(thms, [])])
+    ));
+  val (_, lthy) = Local_Theory.notes notes lthy
+in lthy end
 \<close>
-print_theorems
+
+thm ff0_cctor ff0_swap ff0_UFVars
 
 (************************************************************************************)
 
@@ -256,7 +265,7 @@ lemma ssfun_rep_eq: "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'
 
 lemma vvsubst_cctor:
   assumes "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
-  shows "set2_\<tau>_pre x \<inter> imsupp f = {} \<Longrightarrow> nnoclash_ff0 x \<Longrightarrow>
+  shows "set2_\<tau>_pre x \<inter> imsupp f = {} \<Longrightarrow> noclash_\<tau> x \<Longrightarrow>
   vvsubst f (\<tau>_ctor x) = \<tau>_ctor (map_\<tau>_pre f id (vvsubst f) (vvsubst f) x)"
   unfolding vvsubst_def
   apply (rule trans)
@@ -288,7 +297,7 @@ theorem vvsubst_rrename:
     apply (rule allI)
     apply (rule impI)
   apply assumption
-  unfolding nnoclash_ff0_def Int_Un_distrib Un_empty
+  unfolding noclash_\<tau>_def Int_Un_distrib Un_empty
    apply (rule conjI)
     apply (rule iffD2[OF disjoint_iff])
     apply (rule allI)
@@ -337,7 +346,7 @@ fun Int_empty_tac ctxt = EVERY' [
 
 fun helper_tac ctxt = EVERY1 [
   Int_empty_tac ctxt,
-  K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms nnoclash_ff0_def Int_Un_distrib Un_empty}),
+  K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms noclash_\<tau>_def Int_Un_distrib Un_empty}),
   resolve_tac ctxt [conjI],
   Int_empty_tac ctxt,
   Int_empty_tac ctxt,
@@ -415,7 +424,7 @@ lemma vvsubst_comp:
   apply (rule trans)
    apply (rule vvsubst_cctor)
      apply (rule assms)
-  unfolding \<tau>_pre.set_map[OF assms(1) bij_id supp_id_bound] image_id nnoclash_ff0_def
+  unfolding \<tau>_pre.set_map[OF assms(1) bij_id supp_id_bound] image_id noclash_\<tau>_def
     apply (rule Int_subset_empty2[rotated])
      apply (rule Un_upper1)
     apply (tactic \<open>Int_empty_tac @{context} 1\<close>)

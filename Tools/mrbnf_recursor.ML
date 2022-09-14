@@ -37,7 +37,15 @@ sig
     axioms: 'a model_axioms
   };
 
-  val create_binding_recursor: (Proof.context -> tactic) model -> binding -> local_theory -> local_theory;
+  type recursor_result = {
+    rec_fun: term,
+    rec_Uctor: thm,
+    rec_swap: thm,
+    rec_UFVarss: thm list
+  };
+
+  val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
+    -> local_theory -> recursor_result * local_theory;
 end
 
 structure MRBNF_Recursor : MRBNF_RECURSOR =
@@ -84,6 +92,13 @@ type 'a model = {
   binding_dispatcher: int list list,
   parameters: 'a parameter,
   axioms: 'a model_axioms
+};
+
+type recursor_result = {
+  rec_fun: term,
+  rec_Uctor: thm,
+  rec_swap: thm,
+  rec_UFVarss: thm list
 };
 
 fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
@@ -154,31 +169,26 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
   }
 end;
 
-(* TODO: consolidate *)
-fun mk_defs_t_aux mk_def_t b name [x] = apfst single o mk_def_t b name x
-  | mk_defs_t_aux mk_def_t b name rhss = fold_map (fn (i, x) => mk_def_t b (name ^ string_of_int i) x) (1 upto length rhss ~~ rhss)
-
-fun mk_def_t b name rhs =
-  let val b' = Binding.prefix_name (name ^ "_") b
-  in apfst (apsnd snd) o Local_Theory.define (* _internal *) ((b', NoSyn), ((Binding.concealed (Thm.def_binding b'), []), rhs)) end;
-val mk_defs_t = mk_defs_t_aux mk_def_t
-
-fun mk_def_t' b name n rhs lthy =
+fun mk_def_t public b qualify name n rhs lthy =
   let
-    (* TODO: remove *)
-    fun mk_def_t b name rhs =
-      let val b' = Binding.prefix_name (name ^ "_") b
-      in apfst (apsnd snd) o Local_Theory.define_internal ((b', NoSyn), ((Binding.concealed (Thm.def_binding b'), []), rhs)) end;
+    val b' = qualify (Binding.name name);
+    val b' = if public then b' else Binding.prefix_name (Binding.name_of b' ^ "_") b
+    val ((t, thm), lthy) = apfst (apsnd snd) (Local_Theory.define_internal (
+      (b', NoSyn), ((Binding.concealed (Thm.def_binding b'), []), rhs)
+    ) lthy);
+    val thm' = if n > 0 then
+      @{thm eq_reflection} OF [Ctr_Sugar_Util.mk_unabs_def n (@{thm meta_eq_to_obj_eq} OF [thm])]
+    else thm;
+    val lthy = if public then
+      snd (Local_Theory.note ((Binding.concealed (Thm.def_binding b'), []), [thm']) lthy)
+    else lthy;
+  in ((t, thm'), lthy) end;
 
-    val ((t, thm), lthy') = mk_def_t b name rhs lthy
-    val thm' = @{thm eq_reflection} OF [Ctr_Sugar_Util.mk_unabs_def n (@{thm meta_eq_to_obj_eq} OF [thm])]
+fun mk_defs_t public b qualify name n [x] = apfst single o mk_def_t public b qualify name n x
+  | mk_defs_t public b qualify name n rhss = fold_map (fn (i, x) =>
+      mk_def_t public b qualify (name ^ string_of_int i) n x) (1 upto length rhss ~~ rhss)
 
-    (* TODO: remove *)
-    val (_, lthy'') = Local_Theory.note ((Binding.concealed (Thm.def_binding (Binding.prefix_name (name ^ "_") b)), []), [thm']) lthy'
-  in ((t, thm'), lthy'') end;
-fun mk_defs_t' b name n = mk_defs_t_aux (fn b => fn name => mk_def_t' b name n) b name
-
-fun prove_model_axioms b model lthy =
+fun prove_model_axioms b qualify model lthy =
   let
     val params = #parameters model;
     val ptacs = #axioms params;
@@ -202,14 +212,16 @@ fun prove_model_axioms b model lthy =
     val qT = #T quotient_fp
     val As = replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model]);
 
+    val defs_hidden = mk_defs_t false b qualify
+    val def_hidden = mk_def_t false b qualify
     val ((((((PFVars, Pmap), UFVars), Umap), Uctor), avoiding_sets), lthy') =
       lthy
-      |> mk_defs_t b "PFVars" (#PFVars params)
-      ||>> mk_def_t b "Pmap" (#Pmap params)
-      ||>> mk_defs_t b "UFVars" (#UFVars model)
-      ||>> mk_def_t b "Umap" (#Umap model)
-      ||>> mk_def_t b "Uctor" (#Uctor model)
-      ||>> mk_defs_t b "avoiding_set" (#avoiding_sets model);
+      |> defs_hidden "PFVars" 0 (#PFVars params)
+      ||>> def_hidden "Pmap" 0 (#Pmap params)
+      ||>> defs_hidden "UFVars" 0 (#UFVars model)
+      ||>> def_hidden "Umap" 0 (#Umap model)
+      ||>> def_hidden "Uctor" 0 (#Uctor model)
+      ||>> defs_hidden "avoiding_set" 0 (#avoiding_sets model);
 
     val defs = map snd PFVars @ map snd UFVars @ map snd avoiding_sets @ [snd Pmap, snd Umap, snd Uctor];
     fun prove goal tac = Goal.prove_sorry lthy' [] [] goal (fn {context,...} =>
@@ -369,7 +381,7 @@ fun mk_map_prod f g =
     f_T --> g_T --> HOLogic.mk_prodT (fa, ga) --> HOLogic.mk_prodT (fb, gb)
  ) $ f $ g end;
 
-fun define_recursor_consts (model : thm model) ff0_b lthy =
+fun define_recursor_consts qualify model ff0_b lthy =
   let
     val params = #parameters model
     val fp_result = #fp_result model
@@ -423,7 +435,7 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
         ]))))
       ) end;
 
-    val (suitables, lthy) = mk_defs_t ff0_b "suitable"
+    val (suitables, lthy) = mk_defs_t false ff0_b qualify "suitable" 0
       (@{map 5} mk_suitable_rhs vars binding_sets FVars PFVars (#avoiding_sets model))
       lthy
 
@@ -431,11 +443,11 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
     val x = Free ("x", pre_T)
     val p = Free ("p", P)
 
-    val (Umap', lthy) = mk_def_t' ff0_b "Umap'" (nvars + 1) (fold_rev Term.abs (map dest_Free fs @ [("t", raw_T)]) (
+    val (Umap', lthy) = mk_def_t false ff0_b qualify "Umap'" (nvars + 1) (fold_rev Term.abs (map dest_Free fs @ [("t", raw_T)]) (
       Term.list_comb (#Umap model, map Bound (nvars downto 1) @ [abs $ Bound 0])
     )) lthy;
 
-    val (UFVars', lthy) = mk_defs_t' ff0_b "UFVars'" 1 (map (fn UFVars =>
+    val (UFVars', lthy) = mk_defs_t false ff0_b qualify "UFVars'" 1 (map (fn UFVars =>
       Term.abs ("t", raw_T) (UFVars $ (abs $ Bound 0))
     ) (#UFVars model)) lthy
 
@@ -444,8 +456,8 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
         map mk_inv fs @ [Bound 0]
       ))
     );
-    val (PUmap', lthy) = mk_def_t' ff0_b "PUmap'" (nvars + 1) (mk_PUmap_rhs (fst Umap') raw_T) lthy
-    val (PUmap, lthy) = mk_def_t' ff0_b "PUmap" (nvars + 1) (mk_PUmap_rhs (#Umap model) (#T quotient)) lthy
+    val (PUmap', lthy) = mk_def_t false ff0_b qualify "PUmap'" (nvars + 1) (mk_PUmap_rhs (fst Umap') raw_T) lthy
+    val (PUmap, lthy) = mk_def_t false ff0_b qualify "PUmap" (nvars + 1) (mk_PUmap_rhs (#Umap model) (#T quotient)) lthy
 
     val ids = map HOLogic.id_const vars;
     fun mk_map_id fs =
@@ -460,7 +472,7 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
         val rhs = Term.abs ("x", CTOR_x_T) (#Uctor model $ (
           mk_map_id (replicate live (mk_map_prod abs (HOLogic.id_const PU))) $ Bound 0
         ));
-      in mk_def_t' ff0_b "CTOR" 1 rhs lthy end;
+      in mk_def_t false ff0_b qualify "CTOR" 1 rhs lthy end;
 
     val nbound = length (#binding_relation fp_result);
     val pick_Ts = map (fn var => pre_T --> P --> var --> var) (take nbound vars);
@@ -539,19 +551,15 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
             rtac context @{thm if_P},
             REPEAT_DETERM o (TRY o rtac context conjI THEN' resolve_tac context prems)
           ]);
-
-        (* TODO: remove *)
-        val f_simp_b = Binding.concealed (Binding.suffix_name "_simp" (Binding.prefix_name "f_" ff0_b))
-        val (_, lthy') = Local_Theory.note ((f_simp_b, []), [f_simp]) lthy'
       in ((hd (#fs info), f_simp), lthy') end;
 
-    val (pick0s, lthy) = mk_defs_t ff0_b "pick0" (map (fn (suitable, _) =>
+    val (pick0s, lthy) = mk_defs_t false ff0_b qualify "pick0" 0 (map (fn (suitable, _) =>
       let val T = fst (dest_funT (fastype_of suitable));
       in Const (@{const_name Eps}, (T --> @{typ bool}) --> T) $ suitable end
     ) suitables) lthy;
 
-    val (f0, lthy) = mk_def_t ff0_b "f0" (Term.list_comb (fst f, map fst pick0s)) lthy;
-    val (ff0, lthy) = mk_def_t' ff0_b "ff0" 1 (Term.abs ("t", #T quotient) (
+    val (f0, lthy) = mk_def_t false ff0_b qualify "f0" 0 (Term.list_comb (fst f, map fst pick0s)) lthy;
+    val (ff0, lthy) = mk_def_t false ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 
@@ -563,8 +571,10 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
         )
       ) (0 upto live - 1 ~~ l)))
     ) (take nbound b) FVarss (#binding_relation fp_result)));
-    val (noclash, lthy) = mk_def_t' ff0_b "noclash" 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
-    val (nnoclash, lthy) = mk_def_t' ff0_b "nnoclash" 1 (mk_noclash_rhs (mk_sets (#T quotient)) (#FVars quotient) (
+
+    fun mk_suffix T = List.last (String.tokens (fn c => c = #".") (fst (dest_Type T)));
+    val (noclash, lthy) = mk_def_t true ff0_b qualify ("noclash_" ^ mk_suffix raw_T) 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
+    val (nnoclash, lthy) = mk_def_t true ff0_b qualify ("noclash_" ^ mk_suffix (#T quotient)) 1 (mk_noclash_rhs (mk_sets (#T quotient)) (#FVars quotient) (
       mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf
     )) lthy;
 
@@ -587,7 +597,7 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
           mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_PU_T)
             vars vars mrbnf, interlace (mk_live_fs brec_t rec_t) comp_ts fs var_types
         ) $ x);
-      in mk_def_t' ff0_b "XXl" (nbound + 3) rhs lthy end;
+      in mk_def_t false ff0_b qualify "XXl" (nbound + 3) rhs lthy end;
 
     val (XXr, lthy) =
       let
@@ -604,16 +614,16 @@ fun define_recursor_consts (model : thm model) ff0_b lthy =
           mk_map_t raw_PU_T,
           interlace (mk_live_fs (mk_rec_t comp_ts) (mk_rec_t fs)) comp_ts fs var_types
         ) $ x);
-      in mk_def_t' ff0_b "XXr" (nbound + 3) rhs lthy end;
+      in mk_def_t false ff0_b qualify "XXr" (nbound + 3) rhs lthy end;
 
   in ((suitables, Umap', UFVars', PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
     XXl, XXr), lthy) end;
 
-fun create_binding_recursor model ff0_b lthy =
+fun create_binding_recursor qualify model ff0_b lthy =
   let
-    val ((model, defs), lthy) = prove_model_axioms ff0_b model lthy;
+    val ((model, defs), lthy) = prove_model_axioms ff0_b qualify model lthy;
     val ((suitables, Umap', UFVars's, PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
-    XXl, XXr), lthy) = define_recursor_consts model ff0_b lthy
+    XXl, XXr), lthy) = define_recursor_consts qualify model ff0_b lthy
 
     val params = #parameters model;
     val axioms = #axioms model;
@@ -1975,16 +1985,12 @@ fun create_binding_recursor model ff0_b lthy =
       (infer_instantiate' lthy [SOME (Thm.cterm_of lthy (#rep (#inner quotient) $ Var (("t", 0), #T quotient)))] f0_UFVars')
     ) UFVars's f0_UFVars's FVars_def2s;
 
-    val notes =
-      [("ff0_cctor", [Local_Defs.unfold0 lthy defs ff0_cctor]),
-       ("ff0_swap", [Local_Defs.unfold0 lthy defs ff0_swap]),
-       ("ff0_UFVars", map (Local_Defs.unfold0 lthy defs) ff0_UFVarss)
-      ] |> (map (fn (thmN, thms) =>
-        ((Binding.name thmN, []), [(thms, [])])
-      ));
-    val (noted, lthy) = Local_Theory.notes notes lthy
-  in
-    lthy
-  end;
+    val unfold_defs = Local_Defs.unfold0 lthy defs
+  in ({
+    rec_fun = fst ff0,
+    rec_Uctor = unfold_defs ff0_cctor,
+    rec_swap = unfold_defs ff0_swap,
+    rec_UFVarss = map unfold_defs ff0_UFVarss
+  }, lthy) end;
 
 end

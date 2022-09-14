@@ -618,4 +618,87 @@ lemma vvsubst_comp:
   apply (rule refl)
   done
 
+lemma vvsubst_cong:
+  fixes t::"'a::var_\<tau>_pre \<tau>"
+  assumes "|supp f| <o |UNIV::'a set|" "|supp g| <o |UNIV::'a set|" "(\<And>a. a \<in> FFVars_\<tau> t \<Longrightarrow> f a = g a)"
+  shows "vvsubst f t = vvsubst g t"
+  apply (rule \<tau>.TT_fresh_co_induct[of _ "\<lambda>t. (\<forall>a. a \<in> FFVars_\<tau> t \<longrightarrow> f a = g a) \<longrightarrow> vvsubst f t = vvsubst g t" t, THEN mp, unfolded atomize_all[symmetric] atomize_imp[symmetric]])
+    apply (rule \<tau>_pre.Un_bound)
+     apply (rule iffD2[OF imsupp_supp_bound[OF infinite_var_\<tau>_pre] assms(2)])
+    apply (rule iffD2[OF imsupp_supp_bound[OF infinite_var_\<tau>_pre] assms(1)])
+  subgoal premises prems for v
+    apply (rule trans)
+     apply (rule vvsubst_cctor)
+       apply (rule assms)
+      apply (rule Int_subset_empty2[rotated])
+       apply (rule Un_upper2)
+      apply (insert prems)
+      apply (tactic \<open>helper_tac @{context}\<close>)
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule vvsubst_cctor)
+       apply (rule assms)
+      apply (rule Int_subset_empty2[rotated])
+       apply (rule Un_upper1)
+      apply (tactic \<open>helper_tac @{context}\<close>)
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule arg_cong[of _ _ \<tau>_ctor])
+     apply (rule \<tau>_pre.map_cong0[rotated -4])
+              apply (drule UnI1)
+              apply (drule UnI1)
+    unfolding \<tau>.FFVars_cctors
+              apply assumption
+             apply (rule refl)
+            apply (rule prems(1))
+             apply assumption
+            apply (drule UN_I)
+             apply assumption
+    subgoal for z a
+      apply (rule bool.exhaust[of "a \<in> set2_\<tau>_pre v", unfolded eq_True eq_False])
+       apply (tactic \<open>SELECT_GOAL (Ctr_Sugar_Tactics.unfold_thms_tac @{context} @{thms Un_iff de_Morgan_disj}) 1\<close>)
+       apply (rule trans)
+        apply (rule not_in_imsupp_same[of a])
+        apply (rule conjunct2)
+        apply assumption
+       apply (rule sym)
+       apply (rule not_in_imsupp_same)
+       apply (rule conjunct1)
+       apply assumption
+      apply (rotate_tac -2)
+      apply (drule DiffI)
+       apply assumption
+      apply (rotate_tac -1)
+      apply (drule UnI2)
+      apply (rotate_tac -1)
+      apply (drule UnI1)
+      apply assumption
+      done
+           apply (rule prems(2))
+            apply assumption
+           apply (drule UN_I)
+            apply assumption
+           apply (rotate_tac -1)
+           apply (drule UnI2)
+           apply assumption
+          apply (rule assms bij_id supp_id_bound)+
+    apply (rule refl)
+    done
+  apply (rule assms)
+  apply assumption
+  done
+
+lemma TT_inject:
+  fixes t t'::"('a::var_\<tau>_pre, 'a, 'a \<tau>, 'a \<tau>) \<tau>_pre"
+  shows "\<tau>_ctor t = \<tau>_ctor t' \<longleftrightarrow> (\<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and> id_on (\<Union>(FFVars_\<tau> ` set3_\<tau>_pre t) - set2_\<tau>_pre t) f \<and> map_\<tau>_pre id f (vvsubst f) id t = t')"
+  unfolding \<tau>.TT_injects0 conj_assoc[symmetric]
+  apply (rule ex_cong)
+  apply (erule conjE)+
+  unfolding vvsubst_rrename
+  subgoal premises prems for f
+    unfolding vvsubst_rrename[OF prems(2,3)]
+    apply (rule refl)
+    done
+  done
+
 end

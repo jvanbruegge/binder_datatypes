@@ -739,15 +739,6 @@ fun create_binding_recursor model ff0_b lthy =
       ) end
     ) pick_id_ons picks suitables FVars raw_bound_sets rel fs;
 
-    val Pmap_comp0' = Drule.rotate_prems (2 * bound) (#Pmap_comp0 paxioms RS sym);
-    val Pmap_bij = Goal.prove_sorry lthy (names fs) f_prems
-      (HOLogic.mk_Trueprop (mk_bij (Term.list_comb (#Pmap params, fs)))) (fn {context, prems} =>
-        MRBNF_Fp_Tactics.mk_rename_bij_tac Pmap_comp0' (#Pmap_id0 paxioms) context prems
-      );
-    val Pmap_inv_simp = Goal.prove_sorry lthy (names fs) f_prems
-      (mk_Trueprop_eq (mk_inv (Term.list_comb (#Pmap params, fs)), Term.list_comb (#Pmap params, map mk_inv fs)))
-      (fn {context, prems} => MRBNF_Fp_Tactics.mk_rename_inv_simp_tac Pmap_comp0' (#Pmap_id0 paxioms) context prems);
-
     val Pmap_imsupp_empty =
       let
         val imsupp_prems = map2 (fn f => fn PFVars =>
@@ -830,25 +821,6 @@ fun create_binding_recursor model ff0_b lthy =
       ) end
     val UFVars'_CTORs = @{map 7} mk_UFVars'_CTOR UFVars's (#PFVars params) FVars FVars_def2s
       avoiding_sets prod_bound_sets (mk_in_live_subset_prems raw_y prod_live_sets (map fst UFVars's) (#FVars raw));
-
-    val Umap'_cong_id =
-      let
-        val d = Free ("d", U);
-        val id_prems = map2 (fn f => fn UFVars' =>
-          let val a = Free ("a", fst (dest_funT (fastype_of f)));
-          in Logic.all a (Logic.implies $ HOLogic.mk_Trueprop (HOLogic.mk_mem (
-            a, fst UFVars' $ t $ d
-          )) $ mk_Trueprop_eq (f $ a, a)) end
-        ) fs UFVars's;
-        val goal = fold_rev (fn p => fn t => Logic.implies $ p $ t) id_prems (mk_Trueprop_eq (
-          Term.list_comb (fst Umap', fs @ [t, d]), d
-        ));
-      in Goal.prove_sorry lthy (names (fs @ [t, d])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt (snd Umap'::map snd UFVars's)),
-        resolve_tac ctxt (#Umap_cong_ids axioms),
-        REPEAT_DETERM o resolve_tac ctxt prems,
-        Goal.assume_rule_tac ctxt
-      ]) end;
 
     fun mk_imsupp_prems res y fs = @{map 4} (fn f => fn FVars => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
         mk_int_empty (mk_imsupp f, mk_Un (mk_Un (
@@ -1809,7 +1781,6 @@ fun create_binding_recursor model ff0_b lthy =
         resolve_tac ctxt prems
       ]);
 
-    fun mk_exists (s, T) t = HOLogic.mk_exists (s, T, t)
     val exists_suitables = map2 (fn pick_T => fn (suitable, suitable_def) => Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (
         HOLogic.mk_exists ("pick", pick_T, suitable $ Bound 0)
       )) (fn {context=ctxt, ...} =>
@@ -1840,28 +1811,6 @@ fun create_binding_recursor model ff0_b lthy =
     val f0_UFVars's = map (fn f_UFVars' => Local_Defs.unfold0 lthy [@{thm symmetric} OF [snd f0]] (
       f_UFVars' OF suitable_pick0s
     )) f_UFVars's;
-
-    val f0_low_level_simp =
-      let
-        val pick0s' = map (fn (pick0, _) => pick0 $ x $ p) pick0s;
-        val rename_t = Term.list_comb (#rename raw, pick0s') $ t;
-        fun mk_rec_t t = Term.absfree ("t", raw_T) (HOLogic.mk_prod (t, fst f0 $ t));
-      in Goal.prove_sorry lthy (names [x, p]) [] (mk_Trueprop_eq (
-        fst f0 $ (ctor $ x) $ p,
-        fst CTOR $ (Term.list_comb (
-          MRBNF_Def.mk_map_of_mrbnf deads (replicate live raw_T) (replicate live prod_PU_T) vars vars mrbnf,
-          MRBNF_Def.interlace (map mk_rec_t [rename_t, t]) pick0s' (map HOLogic.id_const vars) var_types
-        ) $ x) $ p
-      )) (fn {context=ctxt, ...} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd f0, snd f OF suitable_pick0s]),
-        rtac ctxt trans,
-        rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst CTOR))] @{thm arg_cong2[OF _ refl]}),
-        rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ flat (mk_pick_prems suitable_pick0s)),
-        K (unfold_thms_tac ctxt @{thms id_o o_id}),
-        K (unfold_thms_tac ctxt @{thms comp_def}),
-        rtac ctxt refl
-      ]) end;
 
     val ids = map HOLogic.id_const vars;
     val f0_ctor =
@@ -1962,7 +1911,7 @@ fun create_binding_recursor model ff0_b lthy =
       ) end;
 
     val qt = Free ("t", #T quotient);
-    val (quot_live_sets, quot_bound_sets, quot_free_sets) = mk_sets (#T quotient)
+    val (_, quot_bound_sets, _) = mk_sets (#T quotient)
 
     (* Final result lemmas *)
     val ff0_cctor =

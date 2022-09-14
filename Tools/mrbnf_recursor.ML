@@ -559,7 +559,7 @@ fun define_recursor_consts qualify model ff0_b lthy =
     ) suitables) lthy;
 
     val (f0, lthy) = mk_def_t false ff0_b qualify "f0" 0 (Term.list_comb (fst f, map fst pick0s)) lthy;
-    val (ff0, lthy) = mk_def_t false ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
+    val (ff0, lthy) = mk_def_t true ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 

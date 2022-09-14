@@ -145,4 +145,11 @@ lemma Un_bound:
 lemma imsupp_supp_bound: "infinite (UNIV::'a set) \<Longrightarrow> |imsupp g| <o |UNIV::'a set| \<longleftrightarrow> |supp g| <o |UNIV::'a set|"
   by (metis Un_bound card_of_image imsupp_def ordLeq_ordLess_trans supp_ordleq_imsupp)
 
+lemma image_imsupp_subset: "f ` A \<subseteq> imsupp f \<union> A"
+  unfolding imsupp_def supp_def by auto
+
+lemma Un_mono': "A \<subseteq> C \<union> X \<Longrightarrow> B \<subseteq> D \<union> X \<Longrightarrow> A \<union> B \<subseteq> C \<union> D \<union> X" by blast
+lemma Diff_Un_disjunct: "B \<inter> C = {} \<Longrightarrow> A - B \<union> C = (A \<union> C) - B" by blast
+lemma UN_empty': "A = {} \<Longrightarrow> \<Union> (B ` A) = {}" by auto
+
 end

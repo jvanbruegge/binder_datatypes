@@ -216,9 +216,9 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
       K (unfold_thms_tac ctxt @{thms inv_id id_o relcompp_conversep_Grp}),
       K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
-      rtac ctxt @{thm \<tau>_pre.mr_rel_mono_strong},
+      rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
       REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
-      rtac ctxt @{thm iffD2[OF fun_cong[OF fun_cong[OF \<tau>_pre.mr_rel_eq]]]},
+      rtac ctxt (@{thm iffD2[OF fun_cong[OF fun_cong]]} OF [MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf]),
       rtac ctxt refl,
       REPEAT_DETERM o EVERY' [
         REPEAT_DETERM o resolve_tac ctxt [ballI, impI],

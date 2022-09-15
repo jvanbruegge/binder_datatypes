@@ -152,4 +152,7 @@ lemma Un_mono': "A \<subseteq> C \<union> X \<Longrightarrow> B \<subseteq> D \<
 lemma Diff_Un_disjunct: "B \<inter> C = {} \<Longrightarrow> A - B \<union> C = (A \<union> C) - B" by blast
 lemma UN_empty': "A = {} \<Longrightarrow> \<Union> (B ` A) = {}" by auto
 
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+
 end

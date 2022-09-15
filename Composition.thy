@@ -223,9 +223,6 @@ lemma Umap_Uctor: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow
 
 (***************************************************************************************)
 
-ML_file \<open>./Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>./Tools/mrbnf_recursor.ML\<close>
-
 local_setup \<open>fn lthy =>
 let
   fun rtac ctxt = resolve_tac ctxt o single

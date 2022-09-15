@@ -1117,7 +1117,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
               fun topBindSet T = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate 4 [])
                 (replicate 4 [T, T])
                 (replicate 4 vars) (replicate 4 vars)
-                 tau) 1;
+                 mrbnf) 1;
 
               val exists_bij_betw' = infer_instantiate' ctxt [
                 NONE, NONE, SOME (Thm.cterm_of ctxt (topBindSet prod_PU_T)), SOME (Thm.cterm_of ctxt fA_t),
@@ -1146,7 +1146,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                   let
                     val z = Thm.term_of (snd (snd (split_last params)));
                     (* TODO: fix for multiple variables *)
-                    val set = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate 4 deads) (replicate 4 [raw_T, raw_T]) (replicate 4 vars) (replicate 4 vars) tau) 1
+                    val set = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate 4 deads) (replicate 4 [raw_T, raw_T]) (replicate 4 vars) (replicate 4 vars) mrbnf) 1
                     val ct = Thm.cterm_of context (HOLogic.mk_mem (z, set $ t));
                     val thm = Local_Defs.unfold0 context @{thms eq_True eq_False} (
                       infer_instantiate' context [SOME ct] @{thm bool.exhaust}
@@ -1400,7 +1400,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
               REPEAT_DETERM o FIRST' [
                 resolve_tac ctxt @{thms supp_id_bound bij_id},
                 assume_tac ctxt,
-                resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound infinite_var_\<tau>_pre bij_comp bij_imp_bij_inv} @ flat (f_premss @ pick_premss))
+                resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ [infinite_UNIV] @ flat (f_premss @ pick_premss))
               ],
               REPEAT_DETERM o (EVERY' [
                 (* comp = id on free vars *)

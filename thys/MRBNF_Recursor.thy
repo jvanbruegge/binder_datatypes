@@ -152,6 +152,9 @@ lemma Un_mono': "A \<subseteq> C \<union> X \<Longrightarrow> B \<subseteq> D \<
 lemma Diff_Un_disjunct: "B \<inter> C = {} \<Longrightarrow> A - B \<union> C = (A \<union> C) - B" by blast
 lemma UN_empty': "A = {} \<Longrightarrow> \<Union> (B ` A) = {}" by auto
 
+lemma subset_If: "(P \<Longrightarrow> X \<subseteq> A) \<Longrightarrow> (\<not>P \<Longrightarrow> X \<subseteq> B) \<Longrightarrow> X \<subseteq> (if P then A else B)"
+  by simp
+
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 

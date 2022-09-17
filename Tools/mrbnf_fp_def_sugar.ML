@@ -53,7 +53,9 @@ sig
     total_abs_eq_iff: thm,
     abs_rep: thm,
     rep_abs: thm,
-    abs_ctor: thm
+    abs_ctor: thm,
+
+    rename_ctor: thm
   };
 
   type fp_result = {
@@ -173,11 +175,13 @@ type quotient_result = {
   total_abs_eq_iff: thm,
   abs_rep: thm,
   rep_abs: thm,
-  abs_ctor: thm
+  abs_ctor: thm,
+
+  rename_ctor: thm
 };
 
 fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
-abs_ctor, rename_def, FVars_defs, ctor_def } = {
+abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
@@ -187,7 +191,8 @@ abs_ctor, rename_def, FVars_defs, ctor_def } = {
   total_abs_eq_iff = Morphism.thm phi total_abs_eq_iff,
   abs_rep = Morphism.thm phi abs_rep,
   rep_abs = Morphism.thm phi rep_abs,
-  abs_ctor = Morphism.thm phi abs_ctor
+  abs_ctor = Morphism.thm phi abs_ctor,
+  rename_ctor = Morphism.thm phi rename_ctor
 } : quotient_result;
 
 type fp_result = {

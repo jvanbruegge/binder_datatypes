@@ -44,9 +44,11 @@ sig
   };
 
   val mk_def_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term
-    -> local_theory -> ((term * thm) * local_theory)
+    -> local_theory -> ((term * thm) * local_theory);
   val mk_defs_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term list
-    -> local_theory -> ((term * thm) list * local_theory)
+    -> local_theory -> ((term * thm) list * local_theory);
+
+  val mk_int_empty: term * term -> term;
 
   val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
     -> local_theory -> recursor_result * local_theory;
@@ -107,6 +109,9 @@ type recursor_result = {
 fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
   mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of h))))
 );
+
+fun chop_f_prems [] = []
+  | chop_f_prems (bij::supp::xs) = [bij, supp]::chop_f_prems xs;
 
 fun get_vars with_quotient mapx =
   let val maybe_strip_last = if with_quotient then fst o split_last else I;
@@ -175,7 +180,8 @@ end;
 fun mk_def_t public b qualify name n rhs lthy =
   let
     val b' = qualify (Binding.name name);
-    val b' = if public then b' else Binding.prefix_name (Binding.name_of b' ^ "_") b
+    val b'' = if Binding.is_empty b then b' else Binding.prefix_name (Binding.name_of b' ^ "_") b;
+    val b' = if public then b' else Binding.concealed b'';
     val ((t, thm), lthy) = apfst (apsnd snd) (Local_Theory.define_internal (
       (b', NoSyn), ((Binding.concealed (Thm.def_binding b'), []), rhs)
     ) lthy);
@@ -183,7 +189,7 @@ fun mk_def_t public b qualify name n rhs lthy =
       @{thm eq_reflection} OF [Ctr_Sugar_Util.mk_unabs_def n (@{thm meta_eq_to_obj_eq} OF [thm])]
     else thm;
     val lthy = if public then
-      snd (Local_Theory.note ((Binding.concealed (Thm.def_binding b'), []), [thm']) lthy)
+      snd (Local_Theory.note ((Thm.def_binding b', []), [thm']) lthy)
     else lthy;
   in ((t, thm'), lthy) end;
 
@@ -525,7 +531,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
           in [conj RS conjunct1, conj RS conjunct2 RS conjunct1] end
         ) o snd) suitables;
 
-        val lthy' = snd (Function.add_function [(Binding.name f_name, NONE, NoSyn)]
+        val lthy' = snd (Function.add_function [(Binding.concealed (Binding.name f_name), NONE, NoSyn)]
           [(((Binding.concealed Binding.empty, []), HOLogic.mk_Trueprop def), [], [])]
           Function_Common.default_config (mk_f_pat_complete_tac (#inject raw)) lthy
         );
@@ -553,7 +559,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     ) suitables) lthy;
 
     val (f0, lthy) = mk_def_t false ff0_b qualify "f0" 0 (Term.list_comb (fst f, map fst pick0s)) lthy;
-    val (ff0, lthy) = mk_def_t true ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
+    val (ff0, lthy) = mk_def_t false Binding.empty qualify "ff0" 1 (Term.abs ("t", #T quotient) (
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 
@@ -567,7 +573,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     ) (take nbound b) FVarss (#binding_relation fp_result)));
 
     fun mk_suffix T = List.last (String.tokens (fn c => c = #".") (fst (dest_Type T)));
-    val (noclash, lthy) = mk_def_t true ff0_b qualify ("noclash_" ^ mk_suffix raw_T) 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
+    val (noclash, lthy) = mk_def_t false ff0_b qualify ("noclash_" ^ mk_suffix raw_T) 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
     val (nnoclash, lthy) = mk_def_t true ff0_b qualify ("noclash_" ^ mk_suffix (#T quotient)) 1 (mk_noclash_rhs (mk_sets (#T quotient)) (#FVars quotient) (
       mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf
     )) lthy;
@@ -995,8 +1001,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
       ) end
     ) [XXl, XXr]) fs rel raw_bound_sets (#FVars raw) (#PFVarss params) (#avoiding_sets model) (#FVars_ctors raw) (#FVars_renames raw);
 
-    fun chop_f_prems [] = []
-      | chop_f_prems (bij::supp::xs) = [bij, supp]::chop_f_prems xs
     val f_swap_alpha =
       let
         val (pick's, _) = mk_Frees "pick'" (map (snd o dest_Free) picks) lthy;

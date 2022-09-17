@@ -2319,7 +2319,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             total_abs_eq_iff = nth Quotient_total_abs_eq_iffs i,
             abs_rep = nth Quotient_abs_reps i,
             rep_abs = nth Quotient_rep_abss i,
-            abs_ctor = nth TT_abs_ctors i
+            abs_ctor = nth TT_abs_ctors i,
+
+            rename_ctor = nth rrename_cctors i
           }
         } : quotient_result fp_result_T;
       in {

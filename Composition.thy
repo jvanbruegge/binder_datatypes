@@ -54,113 +54,8 @@ ML_file \<open>./Tools/mrbnf_vvsubst.ML\<close>
 
 local_setup \<open>fn lthy =>
 let
-  val (x, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint I
-    (the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Composition.\<tau>")) lthy
-in lthy end\<close>
-
-lemma infinite_var_\<tau>_pre: "infinite (UNIV :: 'a::var_\<tau>_pre set)"
-  by (rule cinfinite_imp_infinite[OF \<tau>_pre.UNIV_cinfinite])
-
-(******************** Definitions for variable-for-variable substitution ***********)
-
-lemma UFVars_subset: "set2_\<tau>_pre y \<inter> (PFVars p \<union> {}) = {} \<Longrightarrow>
-       (\<And>t pu p. (t, pu) \<in> set3_\<tau>_pre y \<union> set4_\<tau>_pre y \<Longrightarrow> FFVars_\<tau> (pu p) \<subseteq> FFVars_\<tau> t \<union> PFVars p \<union> {}) \<Longrightarrow>
-       FFVars_\<tau> (CCTOR y p) \<subseteq> FFVars_\<tau> (\<tau>_ctor (map_\<tau>_pre id id fst fst y)) \<union> PFVars p \<union> {}"
-  unfolding Un_empty_right CCTOR_def PFVars_def \<tau>.FFVars_cctors
-    \<tau>_pre.set_map[OF supp_id_bound bij_id supp_id_bound] image_id
-    \<tau>_pre.set_map[OF iffD1[OF mem_Collect_eq Rep_ssfun_\<tau>] bij_id supp_id_bound] image_comp comp_def
-  apply (rule Un_mono')+
-    apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-   apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-    apply (rule Diff_Un_disjunct)
-    apply assumption
-   apply (rule Diff_mono[OF _ subset_refl])
-   apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-    apply (rule UN_extend_simps(2))
-   apply (rule bool.exhaust[of "set3_\<tau>_pre y = {}", unfolded eq_True eq_False])
-  unfolding if_P if_not_P UN_empty'
-    apply (rule empty_subsetI)
-   apply (rule UN_mono[OF subset_refl])
-  subgoal for x
-    apply (rule prod.exhaust[of x])
-    apply (tactic \<open>hyp_subst_tac @{context} 1\<close>)
-    unfolding fst_conv snd_conv
-    apply (drule UnI1)
-    apply assumption
-    done
-  apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-   apply (rule UN_extend_simps(2))
-  apply (rule bool.exhaust[of "set4_\<tau>_pre y = {}", unfolded eq_True eq_False])
-  unfolding if_P if_not_P UN_empty'
-   apply (rule empty_subsetI)
-  apply (rule UN_mono[OF subset_refl])
-  subgoal for x
-    apply (rule prod.exhaust[of x])
-    apply (tactic \<open>hyp_subst_tac @{context} 1\<close>)
-    unfolding fst_conv snd_conv
-    apply (drule UnI2)
-    apply assumption
-    done
-  done
-
-lemma Umap_Uctor: "bij (f::'a::var_\<tau>_pre \<Rightarrow> 'a) \<Longrightarrow>
-       |supp f| <o |UNIV::'a set| \<Longrightarrow>
-       rrename_\<tau> f (CCTOR y p) =
-       CCTOR (map_\<tau>_pre f f (\<lambda>(t, pu). (rrename_\<tau> f t, \<lambda>p. rrename_\<tau> f (pu (compSS (inv f) p)))) (\<lambda>(t, pu). (rrename_\<tau> f t, \<lambda>p. rrename_\<tau> f (pu (compSS (inv f) p)))) y) (compSS f p)"
-  unfolding CCTOR_def \<tau>_pre.map_comp[OF iffD1[OF mem_Collect_eq Rep_ssfun_\<tau>] bij_id supp_id_bound] id_o o_id \<tau>.rrename_cctors
-    \<tau>_pre.map_comp[OF _ _ _ iffD1[OF mem_Collect_eq Rep_ssfun_\<tau>] bij_id supp_id_bound]
-  unfolding comp_def case_prod_beta snd_conv compSS_rep_eq inv_simp1
-    fun_cong[OF compSS_comp[OF bij_imp_bij_inv supp_inv_bound], unfolded comp_def, symmetric] id_def[symmetric] compSS_id
-  unfolding id_def
-  apply (rule refl)
-  done
-
-(***************************************************************************************)
-
-local_setup \<open>fn lthy =>
-let
-  fun rtac ctxt = resolve_tac ctxt o single
-  val model_tacs = {
-    small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
-    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt @{thm \<tau>.rrename_comp0s[symmetric]}, REPEAT_DETERM o assume_tac ctxt],
-    Umap_cong_ids = map (fn thm => fn ctxt => EVERY1 [
-      resolve_tac ctxt [thm],
-      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
-    ]) @{thms \<tau>.rrename_cong_ids},
-    UFVars_Umap = [fn ctxt => EVERY1 [rtac ctxt @{thm \<tau>.FFVars_rrenames}, REPEAT_DETERM o assume_tac ctxt]],
-    Umap_Uctor = fn ctxt => EVERY1 [rtac ctxt @{thm Umap_Uctor}, REPEAT_DETERM o assume_tac ctxt],
-    UFVars_subsets = [fn ctxt => EVERY1 [
-      rtac ctxt @{thm UFVars_subset},
-      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
-    ]]
-  };
-  val parameter_tacs = {
-    Pmap_id0 = fn ctxt => rtac ctxt @{thm compSS_id} 1,
-    Pmap_comp0 = fn ctxt => EVERY1 [rtac ctxt @{thm compSS_comp}, REPEAT_DETERM o assume_tac ctxt],
-    Pmap_cong_ids = [fn ctxt => EVERY1 [
-      rtac ctxt @{thm compSS_cong_id},
-      REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
-    ]],
-    PFVars_Pmaps = [fn ctxt => EVERY1 [rtac ctxt @{thm PFVars_Pmap}, REPEAT_DETERM o assume_tac ctxt]],
-    small_PFVarss = [fn ctxt => rtac ctxt @{thm small_PFVars} 1]
-  };
-  val model = {
-    U = @{typ "'a::var_\<tau>_pre \<tau>"},
-    fp_result = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Composition.\<tau>"),
-    UFVars = [@{term "\<lambda>(_::'a::var_\<tau>_pre \<tau>) (x::'a::var_\<tau>_pre \<tau>). FFVars_\<tau> x"}],
-    Umap = @{term "\<lambda>f (_::'a::var_\<tau>_pre \<tau>) (x::'a::var_\<tau>_pre \<tau>). rrename_\<tau> f x"},
-    Uctor = @{term CCTOR},
-    avoiding_sets = [@{term "{}::'a::var_\<tau>_pre set"}],
-    parameters = {
-      P = @{typ "'a::var_\<tau>_pre ssfun_\<tau>"},
-      PFVarss = [@{term "PFVars"}],
-      Pmap = @{term "compSS:: ('a::var_\<tau>_pre \<Rightarrow> 'a) \<Rightarrow> _ \<Rightarrow> _"},
-      axioms = parameter_tacs
-    },
-    axioms = model_tacs
-  };
-  val (res, lthy) = MRBNF_Recursor.create_binding_recursor I model @{binding ff0} lthy
+  val (res, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint I
+    (the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Composition.\<tau>")) lthy;
   val notes =
     [("ff0_cctor", [#rec_Uctor res]),
      ("ff0_swap", [#rec_swap res]),
@@ -169,20 +64,19 @@ let
       ((Binding.name thmN, []), [(thms, [])])
     ));
   val (_, lthy) = Local_Theory.notes notes lthy
-in lthy end
-\<close>
+in lthy end\<close>
 
-thm ff0_cctor ff0_swap ff0_UFVars
+print_theorems
 
 (************************************************************************************)
 
 lemmas id_prems = supp_id_bound bij_id supp_id_bound
 
-definition vvsubst where "vvsubst f x \<equiv> ff0 x (Abs_ssfun_\<tau> f)"
+definition vvsubst where "vvsubst f x \<equiv> ff0_vvsubst x (Abs_ssfun_\<tau> f)"
 
 lemma vvsubst_cctor:
   assumes "|supp (f::'a::var_\<tau>_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
-  shows "set2_\<tau>_pre x \<inter> imsupp f = {} \<Longrightarrow> noclash_\<tau> x \<Longrightarrow>
+  shows "set2_\<tau>_pre x \<inter> imsupp f = {} \<Longrightarrow> noclash_\<tau>_vvsubst x \<Longrightarrow>
   vvsubst f (\<tau>_ctor x) = \<tau>_ctor (map_\<tau>_pre f id (vvsubst f) (vvsubst f) x)"
   unfolding vvsubst_def
   apply (rule trans)
@@ -202,6 +96,9 @@ lemma FFVars_vvsubst_weak:
 lemma not_in_imsupp_same: "z \<notin> imsupp f \<Longrightarrow> f z = z"
   unfolding imsupp_def supp_def by blast
 
+lemma infinite_var_\<tau>_pre: "infinite (UNIV :: 'a::var_\<tau>_pre set)"
+  by (rule cinfinite_imp_infinite[OF \<tau>_pre.UNIV_cinfinite])
+
 theorem vvsubst_rrename:
   fixes t::"'a::var_\<tau>_pre \<tau>"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
@@ -214,7 +111,7 @@ theorem vvsubst_rrename:
     apply (rule allI)
     apply (rule impI)
   apply assumption
-  unfolding noclash_\<tau>_def Int_Un_distrib Un_empty
+  unfolding noclash_\<tau>_vvsubst_def Int_Un_distrib Un_empty
    apply (rule conjI)
     apply (rule iffD2[OF disjoint_iff])
     apply (rule allI)
@@ -263,7 +160,7 @@ fun Int_empty_tac ctxt = EVERY' [
 
 fun helper_tac ctxt = EVERY1 [
   Int_empty_tac ctxt,
-  K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms noclash_\<tau>_def Int_Un_distrib Un_empty}),
+  K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms noclash_\<tau>_vvsubst_def Int_Un_distrib Un_empty}),
   resolve_tac ctxt [conjI],
   Int_empty_tac ctxt,
   Int_empty_tac ctxt,
@@ -341,7 +238,7 @@ lemma vvsubst_comp:
   apply (rule trans)
    apply (rule vvsubst_cctor)
      apply (rule assms)
-  unfolding \<tau>_pre.set_map[OF assms(1) bij_id supp_id_bound] image_id noclash_\<tau>_def
+  unfolding \<tau>_pre.set_map[OF assms(1) bij_id supp_id_bound] image_id noclash_\<tau>_vvsubst_def
     apply (rule Int_subset_empty2[rotated])
      apply (rule Un_upper1)
     apply (tactic \<open>Int_empty_tac @{context} 1\<close>)

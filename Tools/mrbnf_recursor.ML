@@ -4,13 +4,13 @@ sig
     Pmap_id0: 'a,
     Pmap_comp0: 'a,
     Pmap_cong_ids: 'a list,
-    PFVars_Pmap: 'a list,
-    small_PFVars: 'a list
+    PFVars_Pmaps: 'a list,
+    small_PFVarss: 'a list
   };
 
   type 'a parameter = {
     P: typ,
-    PFVars: term list,
+    PFVarss: term list,
     Pmap: term,
     axioms: 'a parameter_axioms
   };
@@ -32,7 +32,6 @@ sig
     Umap: term,
     Uctor: term,
     avoiding_sets: term list,
-    binding_dispatcher: int list list,
     parameters: 'a parameter,
     axioms: 'a model_axioms
   };
@@ -43,6 +42,11 @@ sig
     rec_swap: thm,
     rec_UFVarss: thm list
   };
+
+  val mk_def_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term
+    -> local_theory -> ((term * thm) * local_theory)
+  val mk_defs_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term list
+    -> local_theory -> ((term * thm) list * local_theory)
 
   val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
     -> local_theory -> recursor_result * local_theory;
@@ -61,13 +65,13 @@ type 'a parameter_axioms = {
   Pmap_id0: 'a,
   Pmap_comp0: 'a,
   Pmap_cong_ids: 'a list,
-  PFVars_Pmap: 'a list,
-  small_PFVars: 'a list
+  PFVars_Pmaps: 'a list,
+  small_PFVarss: 'a list
 };
 
 type 'a parameter = {
   P: typ,
-  PFVars: term list,
+  PFVarss: term list,
   Pmap: term,
   axioms: 'a parameter_axioms
 };
@@ -89,7 +93,6 @@ type 'a model = {
   Umap: term,
   Uctor: term,
   avoiding_sets: term list,
-  binding_dispatcher: int list list,
   parameters: 'a parameter,
   axioms: 'a model_axioms
 };
@@ -188,7 +191,7 @@ fun mk_defs_t public b qualify name n [x] = apfst single o mk_def_t public b qua
   | mk_defs_t public b qualify name n rhss = fold_map (fn (i, x) =>
       mk_def_t public b qualify (name ^ string_of_int i) n x) (1 upto length rhss ~~ rhss)
 
-fun prove_model_axioms b qualify model lthy =
+fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy =
   let
     val params = #parameters model;
     val ptacs = #axioms params;
@@ -201,13 +204,7 @@ fun prove_model_axioms b qualify model lthy =
     val vars = get_vars true (#Umap model);
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
 
-    val replacement = (#bound_vars (#fp_result model) ~~ vars);
-    val phi = Morphism.morphism "instantiate vars" {
-      binding = [], fact = [],
-      typ = [Term.typ_subst_atomic replacement],
-      term = [Term.subst_atomic_types replacement]
-    };
-    val fp_res = MRBNF_FP_Def_Sugar.morph_fp_result phi (#fp_result model);
+    val fp_res = MRBNF_FP_Def_Sugar.substitute_vars vars (#fp_result model);
     val quotient_fp = #quotient_fp fp_res
     val qT = #T quotient_fp
     val As = replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model]);
@@ -216,7 +213,7 @@ fun prove_model_axioms b qualify model lthy =
     val def_hidden = mk_def_t false b qualify
     val ((((((PFVars, Pmap), UFVars), Umap), Uctor), avoiding_sets), lthy') =
       lthy
-      |> defs_hidden "PFVars" 0 (#PFVars params)
+      |> defs_hidden "PFVars" 0 (#PFVarss params)
       ||>> def_hidden "Pmap" 0 (#Pmap params)
       ||>> defs_hidden "UFVars" 0 (#UFVars model)
       ||>> def_hidden "Umap" 0 (#Umap model)
@@ -247,12 +244,12 @@ fun prove_model_axioms b qualify model lthy =
       Pmap_id0 = prove (#map_id0 pgoals) (#Pmap_id0 ptacs),
       Pmap_comp0 = prove (#map_comp0 pgoals) (#Pmap_comp0 ptacs),
       Pmap_cong_ids = map2 prove (#map_cong_ids pgoals) (#Pmap_cong_ids ptacs),
-      PFVars_Pmap = map2 prove (#FVars_map pgoals) (#PFVars_Pmap ptacs),
-      small_PFVars = map2 prove small_PFVars_goals (#small_PFVars ptacs)
+      PFVars_Pmaps = map2 prove (#FVars_map pgoals) (#PFVars_Pmaps ptacs),
+      small_PFVarss = map2 prove small_PFVars_goals (#small_PFVarss ptacs)
     };
     val params' = {
       P = #P params,
-      PFVars = map fst PFVars,
+      PFVarss = map fst PFVars,
       Pmap = fst Pmap,
       axioms = param_thms
     };
@@ -356,7 +353,6 @@ fun prove_model_axioms b qualify model lthy =
       Umap = fst Umap,
       Uctor = fst Uctor,
       avoiding_sets = map fst avoiding_sets,
-      binding_dispatcher = #binding_dispatcher model,
       parameters = params',
       axioms = model_thms
     } : thm model;
@@ -366,9 +362,7 @@ fun mk_int_empty sets = HOLogic.mk_eq (
   HOLogic.mk_binop @{const_name inf} sets,
   Const (@{const_name bot}, fastype_of (fst sets))
 );
-fun mk_imsupp u =
-  let val T = fastype_of u
-  in Const (@{const_name imsupp}, T --> HOLogic.mk_setT (fst (dest_funT T))) $ u end;
+
 val mk_minus = HOLogic.mk_binop @{const_name minus}
 
 fun mk_map_prod f g =
@@ -381,7 +375,7 @@ fun mk_map_prod f g =
     f_T --> g_T --> HOLogic.mk_prodT (fa, ga) --> HOLogic.mk_prodT (fb, gb)
  ) $ f $ g end;
 
-fun define_recursor_consts qualify model ff0_b lthy =
+fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
   let
     val params = #parameters model
     val fp_result = #fp_result model
@@ -397,7 +391,7 @@ fun define_recursor_consts qualify model ff0_b lthy =
     val P = #P params
     val U = #U model
     val PU = P --> U
-    val PFVars = #PFVars params
+    val PFVarss = #PFVarss params
     val raw_T = #T raw
     val vars = #bound_vars fp_result
     val nvars = length vars
@@ -436,7 +430,7 @@ fun define_recursor_consts qualify model ff0_b lthy =
       ) end;
 
     val (suitables, lthy) = mk_defs_t false ff0_b qualify "suitable" 0
-      (@{map 5} mk_suitable_rhs vars binding_sets FVars PFVars (#avoiding_sets model))
+      (@{map 5} mk_suitable_rhs vars binding_sets FVars PFVarss (#avoiding_sets model))
       lthy
 
     val fs = map (fn var => Free ("f", var --> var)) vars;
@@ -752,7 +746,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val Pmap_imsupp_empty =
       let
         val imsupp_prems = map2 (fn f => fn PFVars =>
-          HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, PFVars $ p))) fs (#PFVars params)
+          HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, PFVars $ p))) fs (#PFVarss params)
       in
         Goal.prove_sorry lthy (names (fs @ [p])) (f_prems @ imsupp_prems)
           (mk_Trueprop_eq (Term.list_comb (#Pmap params, fs @ [p]), p)) (fn {context=ctxt, prems} => EVERY1 [
@@ -797,7 +791,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
         HOLogic.mk_prod (t, pu),
         foldl1 mk_Un (map (fn s => s $ y) live_sets)
       ))) $ mk_sub UFVars FVars PFVars avoiding_set (pu $ p) t t) end)
-      (#PFVars params) (#avoiding_sets model);
+      (#PFVarss params) (#avoiding_sets model);
 
     val FVars_def2s = map2 (fn alpha_FVars => fn FFVars_def =>
       Local_Defs.unfold0 lthy [
@@ -829,14 +823,14 @@ fun create_binding_recursor qualify model ff0_b lthy =
           Goal.assume_rule_tac ctxt
         ] end
       ) end
-    val UFVars'_CTORs = @{map 7} mk_UFVars'_CTOR UFVars's (#PFVars params) FVars FVars_def2s
+    val UFVars'_CTORs = @{map 7} mk_UFVars'_CTOR UFVars's (#PFVarss params) FVars FVars_def2s
       avoiding_sets prod_bound_sets (mk_in_live_subset_prems raw_y prod_live_sets (map fst UFVars's) (#FVars raw));
 
     fun mk_imsupp_prems res y fs = @{map 4} (fn f => fn FVars => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
         mk_int_empty (mk_imsupp f, mk_Un (mk_Un (
           FVars $ (#ctor res $ (mk_pre_map_id_fst (#T res) $ y)), PFVars $ p), avoiding_set
         ))
-      )) fs (#FVars res) (#PFVars params) (#avoiding_sets model);
+      )) fs (#FVars res) (#PFVarss params) (#avoiding_sets model);
     val (qprod_live_sets, qprod_bound_sets, _) = mk_sets (HOLogic.mk_prodT (#T quotient, P --> U));
     fun mk_binding_set_prems y = map2 (fn bset => fn f => HOLogic.mk_Trueprop (
         mk_int_empty (mk_image f $ (bset $ y), bset $ y)
@@ -962,7 +956,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
           (#exhaust (#inner raw)) alpha_ctor_picks (#alpha_FVarss (#inner raw)) UFVars'_CTORs
           (snd f) (map snd suitables) context prems
         end
-      )) UFVars's picks (#FVars raw) (#PFVars params) (#avoiding_sets model);
+      )) UFVars's picks (#FVars raw) (#PFVarss params) (#avoiding_sets model);
 
     fun swapped thm a b = [thm OF [a, b], thm OF [b, a]];
     fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bound_Var => bounds | _ => [])
@@ -978,9 +972,9 @@ fun create_binding_recursor qualify model ff0_b lthy =
       in Goal.prove_sorry lthy (names (picks @ fs @ [p, x])) (suitable_pick_prems @ f_prems @ [imsupp_prem]) goal (fn {context, prems} =>
         mk_int_empty_tac inv nvars mrbnf FVars (#rename raw) fs live pre_T ctor XX
           (flat (mk_pick_prems (take nvars prems))) infinite_UNIV (#FVars_renames raw)
-          (#FVars_ctors raw) pick_id_ons pick_id_on_images (#PFVars_Pmap paxioms) (map snd suitables) context prems
+          (#FVars_ctors raw) pick_id_ons pick_id_on_images (#PFVars_Pmaps paxioms) (map snd suitables) context prems
       ) end
-    ) [XXl, XXr] [true, false]) (#PFVars params) (#FVars raw) fs prod_bound_sets (#avoiding_sets model);
+    ) [XXl, XXr] [true, false]) (#PFVarss params) (#FVars raw) fs prod_bound_sets (#avoiding_sets model);
 
     val imsupp_id_on_XX = @{map 8} (fn f => fn rel => fn bset => fn FVars => fn PFVars => fn avoiding_set => fn FVars_ctor => fn FVars_rename => map (fn XX =>
       let
@@ -999,7 +993,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
         mk_imsupp_id_on_XX_tac nvars mrbnf FVars FVars_rename FVars_ctor infinite_UNIV pick_id_ons
           pick_id_on_images (flat (mk_pick_prems (take nvars prems))) (snd XXl) (snd XXr) context prems
       ) end
-    ) [XXl, XXr]) fs rel raw_bound_sets (#FVars raw) (#PFVars params) (#avoiding_sets model) (#FVars_ctors raw) (#FVars_renames raw);
+    ) [XXl, XXr]) fs rel raw_bound_sets (#FVars raw) (#PFVarss params) (#avoiding_sets model) (#FVars_ctors raw) (#FVars_renames raw);
 
     fun chop_f_prems [] = []
       | chop_f_prems (bij::supp::xs) = [bij, supp]::chop_f_prems xs
@@ -1075,7 +1069,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                   FVars $ (ctor $ (pre_map_id_fst $ Bound 0)),
                   PFVars $ p),
                   avoiding_set)
-                )) (#FVars raw) (#PFVars params) (#avoiding_sets model);
+                )) (#FVars raw) (#PFVarss params) (#avoiding_sets model);
 
               val comp_rec = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt rec_t)] @{thm comp_def};
               val Pmap_comp0' = Local_Defs.unfold0 ctxt @{thms comp_def} (#Pmap_comp0 paxioms);
@@ -1134,7 +1128,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                 rtac ctxt Un_bound,
                 rtac ctxt Un_bound,
                 resolve_tac ctxt (#card_of_FVars_bounds raw),
-                resolve_tac ctxt (#small_PFVars paxioms),
+                resolve_tac ctxt (#small_PFVarss paxioms),
                 resolve_tac ctxt (#small_avoiding_sets axioms)
               ];
               val int_empties' = @{map 4} (fn fps => fn suitable => fn imsupp => map (fn thm =>
@@ -1548,7 +1542,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                       SOME (Thm.cterm_of ctxt (Term.abs ("x", pre_T) (mk_Un (mk_Un (FVars $ (ctor $ Bound 0), PFVars $ p), avoiding_set)))), NONE, NONE,
                       SOME (Thm.cterm_of ctxt (mk_map_t picks ap_picks))
                     ] (@{thm exists_bij_betw} OF [infinite_UNIV, hd pick_prems, hd pick_prems', hd h_prems])
-                  ) pick_premss pick_premss' raw_bound_sets (#FVars raw) (#PFVars params) (#avoiding_sets model);
+                  ) pick_premss pick_premss' raw_bound_sets (#FVars raw) (#PFVarss params) (#avoiding_sets model);
                 in EVERY1 (@{map 3} (fn thm => fn suitable => fn suitable' => EVERY' [
                   rtac ctxt (exE OF [thm]),
                   resolve_tac ctxt (MRBNF_Def.mr_rel_set_of_mrbnf mrbnf),
@@ -1806,7 +1800,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
         rtac ctxt Un_bound,
         rtac ctxt Un_bound,
         resolve_tac ctxt (#card_of_FVars_bounds raw),
-        resolve_tac ctxt (#small_PFVars paxioms),
+        resolve_tac ctxt (#small_PFVarss paxioms),
         resolve_tac ctxt (#small_avoiding_sets axioms)
       ] end)
     ) pick_Ts suitables;
@@ -1827,7 +1821,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
       let
         val int_empty_prems = @{map 3} (fn bset => fn PFVars => fn avoiding_set =>
           HOLogic.mk_Trueprop (mk_int_empty (bset $ x, mk_Un (PFVars $ p, avoiding_set)))
-        ) raw_bound_sets (#PFVars params) (#avoiding_sets model);
+        ) raw_bound_sets (#PFVarss params) (#avoiding_sets model);
         val noclash_prem = HOLogic.mk_Trueprop (fst noclash $ x);
         val goal = mk_Trueprop_eq (
           fst f0 $ (ctor $ x) $ p,
@@ -1928,7 +1922,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
       let
         val int_empty_prems = @{map 3} (fn bset => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
           mk_int_empty (bset $ qx, mk_Un (PFVars $ p, avoiding_set))
-        )) quot_bound_sets (#PFVars params) (#avoiding_sets model);
+        )) quot_bound_sets (#PFVarss params) (#avoiding_sets model);
         val nnoclash_prem = HOLogic.mk_Trueprop (fst nnoclash $ qx);
         val rec_t = Term.absfree (dest_Free qt) (HOLogic.mk_prod (qt, fst ff0 $ qt));
         val goal = mk_Trueprop_eq (

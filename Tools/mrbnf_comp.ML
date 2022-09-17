@@ -155,8 +155,6 @@ fun mk_liftN (n1, n2, n3) = "_lift" ^ string_of_int n1 ^ "_" ^ string_of_int n2 
 fun mk_permuteN src dest =
   "_permute_" ^ implode (map string_of_int src) ^ "_" ^ implode (map string_of_int dest);
 
-fun short_type_name full_name = String.tokens (fn c => c = #".") full_name |> List.last;
-
 (*copied from Envir.expand_term_free*)
 fun expand_term_const defs =
   let

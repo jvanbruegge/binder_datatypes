@@ -65,6 +65,8 @@ sig
     pre_mrbnf: MRBNF_Def.mrbnf
   };
 
+  val substitute_vars: typ list -> fp_result -> fp_result
+
   val morph_fp_result_T: (morphism -> 'a -> 'a) -> morphism -> 'a fp_result_T -> 'a fp_result_T
   val morph_raw_result: morphism -> raw_result -> raw_result
   val morph_quotient_result: morphism -> quotient_result -> quotient_result
@@ -204,6 +206,16 @@ fun morph_fp_result phi ({ fp, binding_relation, bound_vars, raw_fp, quotient_fp
   quotient_fp = morph_fp_result_T morph_quotient_result phi quotient_fp,
   pre_mrbnf = MRBNF_Def.morph_mrbnf phi pre_mrbnf
 } : fp_result;
+
+fun substitute_vars vars fp_result =
+  let
+    val replacement = (#bound_vars fp_result ~~ vars);
+    val phi = Morphism.morphism "instantiate vars" {
+      binding = [], fact = [],
+      typ = [Term.typ_subst_atomic replacement],
+      term = [Term.subst_atomic_types replacement]
+    };
+  in morph_fp_result phi fp_result end;
 
 structure Data = Generic_Data (
   type T = fp_result Symtab.table;

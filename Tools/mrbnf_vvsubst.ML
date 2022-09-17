@@ -1,0 +1,284 @@
+signature MRBNF_VVSUBST =
+sig
+  val mrbnf_of_quotient_fixpoint: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result -> local_theory ->
+    (MRBNF_Def.mrbnf * local_theory)
+end
+
+structure MRBNF_VVSubst : MRBNF_VVSUBST =
+struct
+
+open BNF_Util
+open MRBNF_Util
+open MRBNF_Def
+open MRBNF_Recursor
+open MRBNF_VVSubst_Tactics
+
+val unfold_thms_tac = Ctr_Sugar_Tactics.unfold_thms_tac
+
+fun mk_case_tuple [] t = t
+  | mk_case_tuple [(s, T)] t = Term.absfree (s, T) t
+  | mk_case_tuple ((s1, T1)::xs) t = HOLogic.mk_case_prod (Term.absfree (s1, T1) (mk_case_tuple xs t))
+
+fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
+  (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
+
+fun define_vvsubst_consts qualify name fp_result old_lthy =
+  let
+    val mk_def_t = mk_def_t true (Binding.name name) qualify
+
+    val (_, lthy) = Local_Theory.begin_nested old_lthy;
+    val (x, _) = apfst hd (mk_TFrees' [class_of_mrbnf (#pre_mrbnf fp_result)] lthy);
+
+    val (ssfun, lthy) =
+      let
+        val b = Binding.name ("ssfun_" ^ name);
+        val set = HOLogic.mk_Collect ("f", x --> x, mk_ordLess
+          (mk_card_of (mk_supp (Free ("f", x --> x))))
+          (mk_card_of (HOLogic.mk_UNIV x))
+        );
+      in apfst snd (typedef (b, [dest_TFree x], NoSyn) set NONE (fn ctxt => EVERY1 [
+        rtac ctxt exI, rtac ctxt @{thm iffD2[OF mem_Collect_eq]}, rtac ctxt @{thm supp_id_bound}
+      ]) lthy) end;
+
+    val abs = Const (#Abs_name (fst ssfun), #rep_type (fst ssfun) --> #abs_type (fst ssfun));
+    val rep = Const (#Rep_name (fst ssfun), #abs_type (fst ssfun) --> #rep_type (fst ssfun));
+
+    val (idSS, lthy) = mk_def_t "idSS" 0 (abs $ (HOLogic.id_const x)) lthy;
+
+    val (compSS, lthy) =
+      let
+        val u = Free ("u", x --> x);
+        val p = Free ("p", #abs_type (fst ssfun));
+        val rhs = Term.absfree (dest_Free u) (Term.absfree (dest_Free p) (
+          abs $ HOLogic.mk_comp (HOLogic.mk_comp (u, rep $ p), mk_inv u)
+        ));
+      in mk_def_t "compSS" 1 rhs lthy end;
+
+    val (PFVars, lthy) = mk_def_t "PFVars" 1
+      (Term.abs ("p", #abs_type (fst ssfun)) (mk_imsupp (rep $ Bound 0))) lthy;
+
+    val ssfun_rep_eq = #Abs_inverse (snd ssfun) OF [iffD2 OF @{thms mem_Collect_eq}];
+    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf (#pre_mrbnf fp_result)];
+
+    val compSS_rep_eq =
+      let val f = Free ("f", x --> x);
+      in Goal.prove_sorry lthy [fst (dest_Free f), "p"] (map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f])
+      (mk_Trueprop_eq (rep $ (fst compSS $ f $ Free ("p", #abs_type (fst ssfun))),
+        HOLogic.mk_comp (HOLogic.mk_comp (f, rep $ Free ("p", #abs_type (fst ssfun))), mk_inv f)
+      )) (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd compSS]),
+        rtac ctxt ssfun_rep_eq,
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound}
+          @ [infinite_UNIV, @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd ssfun)]] @ prems
+        )
+      ]) end;
+
+    val mrbnf = #pre_mrbnf fp_result;
+    val deads = deads_of_mrbnf mrbnf;
+    val live = live_of_mrbnf mrbnf;
+    val var_types = var_types_of_mrbnf mrbnf;
+    val quotient = #quotient_fp fp_result;
+
+    val nvars = length (#bound_vars fp_result);
+    val (vars, _) = mk_TFrees' (replicate nvars (class_of_mrbnf (#pre_mrbnf fp_result))) lthy;
+
+    val P_Ts = map (fn var => Term.typ_subst_atomic [(x, var)] (#abs_type (fst ssfun))) vars;
+    val P = HOLogic.mk_tupleT P_Ts;
+    val (ps, _) = mk_Frees "p" P_Ts lthy;
+
+    val T = Term.typ_subst_atomic (#bound_vars fp_result ~~ vars) (#T quotient);
+
+    fun mk_t t var = Term.subst_atomic_types [(x, var)] t;
+
+    val (CCTOR, lthy) =
+      let
+        val prod_T = HOLogic.mk_prodT (T, P --> T);
+        val prod_Ts = replicate live prod_T;
+        val pre_T = mk_T_of_mrbnf deads prod_Ts vars vars mrbnf;
+        val rec_t = HOLogic.mk_comp (Term.abs ("R", P --> T) (Bound 0 $ HOLogic.mk_tuple ps), snd_const prod_T)
+        val free_ts = map2 (fn i => fn var => mk_t rep var $ Bound i) (nvars - 1 downto 0) vars;
+        val rhs = Term.abs ("x", pre_T) (mk_case_tuple (map dest_Free ps) (
+          Term.subst_atomic_types (#bound_vars fp_result ~~ vars) (#ctor quotient) $ (Term.list_comb (
+            mk_map_of_mrbnf deads prod_Ts (replicate live T) vars vars mrbnf,
+            interlace (replicate live rec_t) (map HOLogic.id_const vars) free_ts var_types
+          ) $ Bound nvars)
+        ));
+      in mk_def_t "CCTOR" 2 rhs lthy end;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    fun morph (t, thm) =
+      let
+        val t' = Morphism.term phi t;
+        val svar = TVar (hd (Term.add_tvars t' []))
+      in (fn var => Term.subst_atomic_types [(svar, var)] t', Morphism.thm phi thm) end;
+    val mk_P_Ts = map (fn var => Term.typ_subst_atomic [(x, var)] (#abs_type (fst ssfun)));
+
+    val CCTOR' =
+      let
+        val t' = Morphism.term phi (fst CCTOR);
+        val svars = map TVar (Term.add_tvars t' []);
+        val thm' = Morphism.thm phi (snd CCTOR);
+      in (fn new_vars => Term.subst_atomic_types (svars ~~ new_vars) t', thm') end
+
+    val ssfun' = Typedef.transform_info phi ssfun;
+
+  in ((Morphism.thm phi ssfun_rep_eq, Morphism.thm phi compSS_rep_eq),
+    (mk_P_Ts, mk_t abs, mk_t rep, snd ssfun', morph idSS, morph compSS, morph PFVars, CCTOR'),
+    lthy
+  ) end;
+
+fun prove_axioms mk_P_Ts compSS PFVars mrbnf abs rep ssfun lthy =
+  let
+    val var = hd (fst (mk_TFrees' [class_of_mrbnf mrbnf] lthy));
+    val compSS_def = snd compSS;
+    val compSS = fst compSS var;
+    val T = hd (mk_P_Ts [var]);
+    val abs = abs var;
+    val rep = rep var;
+    val PFVars_def = snd PFVars;
+    val PFVars = fst PFVars var;
+
+    val lthy = snd (Local_Theory.begin_nested lthy);
+
+    val f = Free ("f", var --> var);
+    fun mk_prems t = map HOLogic.mk_Trueprop [mk_bij t, mk_supp_bound t]
+    val f_prems = mk_prems f;
+
+    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
+
+    val compSS_id0 = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (compSS $ HOLogic.id_const var, HOLogic.id_const T)) (fn {context=ctxt, ...} =>
+      unfold_thms_tac ctxt (@{thms comp_def id_def inv_id[unfolded id_def]} @ [compSS_def, #Rep_inverse ssfun])
+      THEN rtac ctxt refl 1
+    );
+
+    val compSS_comp0 =
+      let
+        val g = Free ("g", var --> var);
+        val g_prems = mk_prems g;
+        val goal = mk_Trueprop_eq (compSS $ HOLogic.mk_comp (f, g), HOLogic.mk_comp (compSS $ f, compSS $ g));
+      in Goal.prove_sorry lthy ["f", "g"] (f_prems @ g_prems) goal (fn {context, prems} =>
+        mk_compSS_comp0_tac abs rep f g compSS_def (#Rep ssfun) (#Abs_inverse ssfun) infinite_UNIV context prems
+      ) end;
+
+    val d = Free ("d", T);
+    val compSS_cong_id =
+      let
+        val a = Free ("a", var);
+        val goal = Logic.implies $ (Logic.all a (Logic.implies $
+          HOLogic.mk_Trueprop (HOLogic.mk_mem (a, PFVars $ d)) $
+          mk_Trueprop_eq (f $ a, a)
+        )) $ mk_Trueprop_eq (compSS $ f $ d, d);
+      in Goal.prove_sorry lthy ["f", "d"] f_prems goal (fn {context, prems} =>
+        mk_compSS_cong_id_tac f d abs rep compSS_def PFVars_def (#Rep_inverse ssfun) context prems
+      ) end;
+
+    val PFVars_compSS = Goal.prove_sorry lthy ["f", "d"] f_prems (mk_Trueprop_eq (
+      PFVars $ (compSS $ f $ d), mk_image f $ (PFVars $ d)
+    )) (fn {context=ctxt, prems} => EVERY1 [
+      K (unfold_thms_tac ctxt [PFVars_def, compSS_def]),
+      rtac ctxt trans,
+      rtac ctxt @{thm arg_cong[of _ _ imsupp]},
+      rtac ctxt (#Abs_inverse ssfun),
+      rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
+      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound} @ [infinite_UNIV, @{thm iffD1[OF mem_Collect_eq]} OF [#Rep ssfun]] @ prems),
+      rtac ctxt @{thm imsupp_comp_image},
+      resolve_tac ctxt prems
+    ]);
+
+    val small_PFVars = Goal.prove_sorry lthy ["p"] [] (HOLogic.mk_Trueprop (mk_ordLess
+      (mk_card_of (PFVars $ Free ("p", T))) (mk_card_of (HOLogic.mk_UNIV var))
+    )) (fn {context=ctxt, ...} => EVERY1 [
+      K (unfold_thms_tac ctxt [PFVars_def]),
+      rtac ctxt @{thm iffD2[OF imsupp_supp_bound]},
+      rtac ctxt infinite_UNIV,
+      rtac ctxt (@{thm iffD1[OF mem_Collect_eq]} OF [#Rep ssfun])
+    ]);
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val morph = Morphism.thm (Proof_Context.export_morphism old_lthy lthy);
+  in ((morph compSS_id0, morph compSS_comp0, morph compSS_cong_id, morph PFVars_compSS, morph small_PFVars), lthy) end;
+
+fun mrbnf_of_quotient_fixpoint qualify fp_result lthy =
+  let
+    val mrbnf = #pre_mrbnf fp_result;
+    val name = short_type_name (fst (dest_Type (#T (#quotient_fp fp_result))));
+    val nvars = length (#bound_vars fp_result);
+    val (vars, _) = mk_TFrees' (replicate nvars (class_of_mrbnf mrbnf)) lthy;
+    val fp_result = MRBNF_FP_Def_Sugar.substitute_vars vars fp_result;
+
+    val quotient = #quotient_fp fp_result;
+    val T = #T quotient;
+
+    val (
+      (ssfun_rep_eq, compSS_rep_eq),
+      (mk_P_Ts, abs, rep, ssfun, idSS, compSS, PFVars, CCTOR),
+      lthy
+    ) = define_vvsubst_consts qualify name fp_result lthy;
+
+    val (fs, _) = mk_Frees "f" (map (fn var => var --> var) vars) lthy;
+
+    val P_Ts = mk_P_Ts vars;
+    val (ps, _) = mk_Frees "p" P_Ts lthy;
+    val ssfun_map = fold_rev Term.absfree (map dest_Free fs) (mk_case_tuple (map dest_Free ps) (
+      HOLogic.mk_tuple (@{map 3} (fn f => fn p => fn var => fst compSS var $ f $ p) fs ps vars)
+    ));
+
+    val ((compSS_id0, compSS_comp0, compSS_cong_id, PFVars_compSS, small_PFVars), lthy) = prove_axioms mk_P_Ts compSS PFVars mrbnf abs rep ssfun lthy;
+
+    val parameters = {
+      P = HOLogic.mk_tupleT P_Ts,
+      PFVarss = map (fst PFVars) vars,
+      Pmap = ssfun_map,
+      axioms = {
+        Pmap_id0 = fn ctxt => print_tac ctxt "foo",
+        Pmap_comp0 = fn ctxt => print_tac ctxt "foo",
+        Pmap_cong_ids = replicate nvars (fn ctxt => print_tac ctxt "foo"),
+        PFVars_Pmaps = replicate nvars (fn ctxt => print_tac ctxt "foo"),
+        small_PFVarss = replicate nvars (fn ctxt => print_tac ctxt "foo")
+      }
+    };
+
+    val model_tacs = {
+      small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
+      Umap_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
+      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt @{thm \<tau>.rrename_comp0s[symmetric]}, REPEAT_DETERM o assume_tac ctxt],
+      Umap_cong_ids = map (fn thm => fn ctxt => EVERY1 [
+        resolve_tac ctxt [thm],
+        REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
+      ]) @{thms \<tau>.rrename_cong_ids},
+      UFVars_Umap = [fn ctxt => EVERY1 [rtac ctxt @{thm \<tau>.FFVars_rrenames}, REPEAT_DETERM o assume_tac ctxt]],
+      Umap_Uctor = fn ctxt => print_tac ctxt "Umap_Uctor",
+      UFVars_subsets = [fn ctxt => print_tac ctxt "UFVars_subsets"]
+    };
+
+    val model = {
+      U = T,
+      fp_result = fp_result,
+      UFVars = map (Term.abs ("t", T)) (#FVars quotient),
+      Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", T) (Term.list_comb (#rename quotient, fs))),
+      Uctor = fst CCTOR vars,
+      avoiding_sets = map (fn var => Const (@{const_name bot}, HOLogic.mk_setT var)) vars,
+      parameters = parameters,
+      axioms = model_tacs
+    };
+
+    (*val (res, lthy) = create_binding_recursor qualify model (Binding.name ("vvsubst_" ^ name)) lthy;
+    val _ = @{print} res*)
+
+    val notes =
+      [("ssfun_\<tau>_rep_eq", [ssfun_rep_eq]),
+       ("compSS_rep_eq", [compSS_rep_eq]),
+       ("compSS_id", [compSS_id0]),
+       ("compSS_comp", [compSS_comp0]),
+       ("compSS_cong_id", [compSS_cong_id]),
+       ("small_PFVars", [small_PFVars]),
+       ("PFVars_Pmap", [PFVars_compSS])
+      ] |> (map (fn (thmN, thms) =>
+        ((Binding.name thmN, []), [(thms, [])])
+      ));
+    val (_, lthy) = Local_Theory.notes notes lthy
+  in (mrbnf, lthy) end;
+
+end

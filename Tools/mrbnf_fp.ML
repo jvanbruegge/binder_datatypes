@@ -2321,7 +2321,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             rep_abs = nth Quotient_rep_abss i,
             abs_ctor = nth TT_abs_ctors i,
 
-            rename_ctor = nth rrename_cctors i
+            rename_ctor = nth rrename_cctors i,
+            fresh_co_induct = TT_fresh_co_induct
           }
         } : quotient_result fp_result_T;
       in {

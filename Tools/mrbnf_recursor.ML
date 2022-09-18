@@ -40,7 +40,8 @@ sig
     rec_fun: term,
     rec_Uctor: thm,
     rec_swap: thm,
-    rec_UFVarss: thm list
+    rec_UFVarss: thm list,
+    noclash: term * thm
   };
 
   val mk_def_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term
@@ -49,6 +50,7 @@ sig
     -> local_theory -> ((term * thm) list * local_theory);
 
   val mk_int_empty: term * term -> term;
+  val chop_f_prems: thm list -> thm list list;
 
   val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
     -> local_theory -> recursor_result * local_theory;
@@ -103,7 +105,8 @@ type recursor_result = {
   rec_fun: term,
   rec_Uctor: thm,
   rec_swap: thm,
-  rec_UFVarss: thm list
+  rec_UFVarss: thm list,
+  noclash: term * thm
 };
 
 fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
@@ -1988,7 +1991,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
     rec_fun = fst ff0,
     rec_Uctor = unfold_defs ff0_cctor,
     rec_swap = unfold_defs ff0_swap,
-    rec_UFVarss = map unfold_defs ff0_UFVarss
+    rec_UFVarss = map unfold_defs ff0_UFVarss,
+    noclash = nnoclash
   }, lthy) end;
 
 end

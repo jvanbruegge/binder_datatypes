@@ -155,7 +155,17 @@ lemma UN_empty': "A = {} \<Longrightarrow> \<Union> (B ` A) = {}" by auto
 lemma subset_If: "(P \<Longrightarrow> X \<subseteq> A) \<Longrightarrow> (\<not>P \<Longrightarrow> X \<subseteq> B) \<Longrightarrow> X \<subseteq> (if P then A else B)"
   by simp
 
+lemma not_in_imsupp_same: "z \<notin> imsupp f \<Longrightarrow> f z = z"
+  unfolding imsupp_def supp_def by blast
+lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> f ` A - B = f ` (A - B)"
+  unfolding supp_def imsupp_def by fastforce
+lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
+  unfolding imsupp_def supp_def by fastforce
+
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+
+typedef 'a ssfun = "{ f::'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set| }"
+  using supp_id_bound by blast
 
 end

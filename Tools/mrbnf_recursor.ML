@@ -1134,7 +1134,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                 resolve_tac ctxt (MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf),
                 rtac ctxt Un_bound,
                 rtac ctxt Un_bound,
-                resolve_tac ctxt (#card_of_FVars_bounds raw),
+                resolve_tac ctxt (#card_of_FVars_bound_UNIVs raw),
                 resolve_tac ctxt (#small_PFVarss paxioms),
                 resolve_tac ctxt (#small_avoiding_sets axioms)
               ];
@@ -1806,7 +1806,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
         rtac ctxt @{thm card_of_minus_bound},
         rtac ctxt Un_bound,
         rtac ctxt Un_bound,
-        resolve_tac ctxt (#card_of_FVars_bounds raw),
+        resolve_tac ctxt (#card_of_FVars_bound_UNIVs raw),
         resolve_tac ctxt (#small_PFVarss paxioms),
         resolve_tac ctxt (#small_avoiding_sets axioms)
       ] end)

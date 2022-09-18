@@ -17,6 +17,7 @@ sig
   val mk_Int: term * term -> term
   val mk_infinite_regular_card_order: term -> term
   val mk_id_on: term -> term -> term
+  val mk_card_suc: term -> term
 
   val new_typedef: binding -> term -> (Proof.context -> tactic) -> local_theory ->
     (string * Typedef.info) * local_theory
@@ -169,5 +170,10 @@ fun mk_abs_def2 ctxt thm = thm
   |> (fn goal => Goal.prove_sorry ctxt [] [] goal
     (fn {context=ctxt, prems=_} => rtac ctxt ext 1 THEN rtac ctxt ext 1 THEN rtac ctxt thm 1))
   |> Thm.close_derivation \<^here>;
+
+fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
+fun mk_card_suc r =
+  let val T = fst (BNF_Util.dest_relT (fastype_of r));
+  in Const (\<^const_name>\<open>card_suc\<close>, BNF_Util.mk_relT (T, T) --> BNF_Util.mk_relT (mk_sucT T, mk_sucT T)) $ r end;
 
 end;

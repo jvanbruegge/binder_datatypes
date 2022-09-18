@@ -3574,10 +3574,6 @@ fun mrbnf_of_bnf bnf lthy =
         EVERY (map (HEADGOAL o eresolve_tac ctxt o single) (BNF_Def.wit_thms_of_bnf bnf))
       ]
   }
-  fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
-  fun mk_card_suc r =
-    let val T = fst (BNF_Util.dest_relT (fastype_of r));
-    in Const (\<^const_name>\<open>card_suc\<close>, BNF_Util.mk_relT (T, T) --> BNF_Util.mk_relT (mk_sucT T, mk_sucT T)) $ r end;
   val n = BNF_Def.live_of_bnf bnf
   val nwits = BNF_Def.nwits_of_bnf bnf
   val (((lives, lives'), deads), lthy') = lthy

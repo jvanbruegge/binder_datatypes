@@ -723,9 +723,19 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             |> rpair lthy
         end
       else let
+          (* TODO: fix for mutual recursion *)
+          fun mk_bound t = mk_ordLess (mk_card_of t) (bd_of_mrbnf (hd mrbnfs));
           val eqs = map2 (mk_bound o op $ oo pair) FVarssAs ys;
           val common_co_induct_inst = mk_common_co_induct_inst frees_lthy CAs lthy eqs ys;
           val goal = mk_conjs eqs |> HOLogic.mk_Trueprop;
+          val Un_bounds = map (fn mrbnf => @{thm infinite_regular_card_order_Un} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf]) mrbnfs;
+          val UNION_bounds = map (fn mrbnf =>
+            let val ifco = bd_infinite_regular_card_order_of_mrbnf mrbnf;
+            in @{thm regularCard_UNION'} OF [
+              @{thm infinite_regular_card_order.Cinfinite} OF [ifco],
+              @{thm infinite_regular_card_order.regularCard} OF [ifco]
+            ] end
+          ) mrbnfs;
           val intross = [Un_bounds, UNION_bounds, free_set_bounds] @ rec_set_boundss
             |> transpose;
         in
@@ -734,13 +744,17 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             |> split_conjs
             |> rpair lthy
         end;
-    val (card_of_FVars_boundss, lthy) =
+    val (card_of_FVars_boundss', lthy) =
       let
+        val set_boundss = map (set_bd_of_mrbnf) mrbnfs;
         val (free_sboundss, rec_sboundss) = split_setss_transp set_boundss |>> fst;
       in
         @{fold_map 7} (mk_card_of_FVars_bounds rec_sboundss) free_sboundss free_setss_Ast
           (1 upto fbound) (take fbound As) zs FVarsssAs FVars_inducts lthy
       end;
+    val card_of_FVars_boundss = map2 (fn mrbnf => map (fn thm =>
+      @{thm ordLess_ordLeq_trans} OF [thm, var_large_of_mrbnf mrbnf]
+    )) mrbnfs card_of_FVars_boundss';
 
     (* Define alpha relation *)
     val (alphas_invar_result, (alphasAs, _ (*alphas*)), FVarsBssAs, lthy) =
@@ -1305,13 +1319,18 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     fun mk_card_of_FFVars_bound w FFVars_t FFVars_def card_of_FVars_bound =
       let
+        (* TODO: fix for mutual recursion *)
+        fun mk_bound t = mk_ordLess (mk_card_of t) (bd_of_mrbnf (hd mrbnfs));
         val goal = FFVars_t $ w |> mk_bound |> HOLogic.mk_Trueprop;
       in
         (fn ctxt => unfold_tac ctxt [FFVars_def] THEN HEADGOAL (rtac ctxt card_of_FVars_bound))
           |> prove_no_prems lthy [w] goal
       end;
-    val card_of_FFVars_boundss = @{map 3} (@{map 4} mk_card_of_FFVars_bound ws) FFVarsssAs
-      FFVars_defss card_of_FVars_boundss;
+    val card_of_FFVars_boundss' = @{map 3} (@{map 4} mk_card_of_FFVars_bound ws) FFVarsssAs
+      FFVars_defss card_of_FVars_boundss';
+    val card_of_FFVars_boundss = map2 (fn mrbnf => map (fn thm =>
+      @{thm ordLess_ordLeq_trans} OF [thm, var_large_of_mrbnf mrbnf]
+    )) mrbnfs card_of_FFVars_boundss';
 
     fun mk_FFVars_cctor FFVars_ts b_vec v cctor FFVars_t Quotient_rep_abs rec_sets free_set
       bound_set alpha_FVars =
@@ -2268,7 +2287,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_inv_simp = nth rename_inv_simps i,
           FVars_ctors = nth FVars_ctorss i,
           FVars_renames = nth FVars_renamess i,
-          card_of_FVars_bounds = nth card_of_FVars_boundss i,
+          card_of_FVars_bounds = nth card_of_FVars_boundss' i,
+          card_of_FVars_bound_UNIVs = nth card_of_FVars_boundss i,
           inner = {
             alpha = nth alphasAs i,
 
@@ -2306,7 +2326,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_inv_simp = nth rrename_inv_simps i,
           FVars_ctors = nth FFVars_cctorss i,
           FVars_renames = nth FFVars_rrenamess i,
-          card_of_FVars_bounds = nth card_of_FFVars_boundss i,
+          card_of_FVars_bounds = nth card_of_FFVars_boundss' i,
+          card_of_FVars_bound_UNIVs = nth card_of_FFVars_boundss i,
           inner = {
             abs = nth TT_abss i,
             rep = nth TT_reps i,

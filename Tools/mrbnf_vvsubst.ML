@@ -384,6 +384,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     val (res, lthy) = create_binding_recursor qualify model (Binding.name ("vvsubst_" ^ name)) lthy;
 
+    val (_, lthy) = Local_Theory.begin_nested lthy
     val (vvsubst, lthy) = mk_def_t false Binding.empty qualify (Binding.name_of vvsubst_b) nvars
       (fold_rev Term.absfree (map dest_Free fs) (Term.abs ("x", T) (
         #rec_fun res $ Bound 0 $ HOLogic.mk_tuple (map2 (fn var => fn f => abs var $ f) vars fs)
@@ -739,6 +740,59 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
           ]) ctxt
         ] end
       ) end;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    fun map_comp0_tac ctxt = EVERY1 [
+      rtac ctxt ext,
+      rtac ctxt (Morphism.thm phi vvsubst_comp),
+      REPEAT_DETERM o assume_tac ctxt
+    ];
+
+    fun map_cong0_tac ctxt = EVERY1 [
+      rtac ctxt (Morphism.thm phi vvsubst_cong),
+      REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
+    ];
+
+    fun mk_set_map0_tac FFVars_vvsubst ctxt = EVERY1 [
+      rtac ctxt ext,
+      K (unfold_thms_tac ctxt @{thms comp_def}),
+      rtac ctxt (Morphism.thm phi FFVars_vvsubst),
+      REPEAT_DETERM o assume_tac ctxt
+    ];
+
+    val ifco = bd_infinite_regular_card_order_of_mrbnf mrbnf;
+
+    val vvsubst_id0 = Morphism.thm phi vvsubst_id0;
+    fun unfold ctxt = unfold_thms_tac ctxt (@{thms Grp_UNIV_id OO_eq eq_OO conversep_eq} @ [vvsubst_id0])
+      THEN unfold_thms_tac ctxt @{thms Grp_UNIV_def};
+
+    val tacs = {
+      map_id0 = fn ctxt => rtac ctxt vvsubst_id0 1,
+      map_comp0 = map_comp0_tac,
+      map_cong0 = map_cong0_tac,
+      set_map0 = map mk_set_map0_tac FFVars_vvsubsts,
+      infinite_regular_card_order = fn ctxt => rtac ctxt ifco 1,
+      set_bd = map (fn thm => fn ctxt => rtac ctxt thm 1) (#card_of_FVars_bounds quotient),
+      le_rel_OO = fn ctxt => unfold ctxt THEN rtac ctxt @{thm order.refl} 1,
+      in_rel = fn ctxt => unfold ctxt THEN rtac ctxt refl 1,
+      pred_set = fn ctxt => rtac ctxt refl 1,
+      wit = fn ctxt => print_tac ctxt "foo"
+    };
+
+    val class_thms =
+      let
+        val thms = class_thms_of_mrbnf mrbnf;
+      in SOME (
+        (class_of_mrbnf mrbnf, #var_large thms, #var_regular thms),
+        (coclass_of_mrbnf mrbnf, K (#covar_large thms))
+      ) end;
+
+    val b = Binding.name name
+    val x = mrbnf_def Hardly_Inline (user_policy Note_Some) false qualify tacs (SOME deads)
+      class_thms Binding.empty Binding.empty Binding.empty []
+      (((((((b, Morphism.typ phi T), Morphism.term phi (fst vvsubst)), map (fn FVars => (Free_Var, Morphism.term phi FVars)) (#FVars quotient)), bd_of_mrbnf mrbnf), []), NONE), NONE) lthy;
 
     val notes =
       [("vvsubst_cctor", [vvsubst_cctor]),

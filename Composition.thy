@@ -52,6 +52,10 @@ val tau = the (MRBNF_Def.mrbnf_of @{context} "Composition.\<tau>_pre")
 ML_file \<open>./Tools/mrbnf_vvsubst_tactics.ML\<close>
 ML_file \<open>./Tools/mrbnf_vvsubst.ML\<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 local_setup \<open>fn lthy =>
 let
   val (res, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I

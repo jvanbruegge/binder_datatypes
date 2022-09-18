@@ -781,6 +781,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       wit = fn ctxt => print_tac ctxt "foo"
     };
 
+    val nwits = nwits_of_mrbnf mrbnf;
+    val wits = map (fn (_, t) => ctor $ t) (
+      mk_wits_of_mrbnf (replicate nwits deads) (replicate nwits (replicate live T))
+      (replicate nwits vars) (replicate nwits vars) mrbnf
+    );
     val class_thms =
       let
         val thms = class_thms_of_mrbnf mrbnf;
@@ -792,7 +797,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     val b = Binding.name name
     val x = mrbnf_def Hardly_Inline (user_policy Note_Some) false qualify tacs (SOME deads)
       class_thms Binding.empty Binding.empty Binding.empty []
-      (((((((b, Morphism.typ phi T), Morphism.term phi (fst vvsubst)), map (fn FVars => (Free_Var, Morphism.term phi FVars)) (#FVars quotient)), bd_of_mrbnf mrbnf), []), NONE), NONE) lthy;
+      (((((((b, Morphism.typ phi T), Morphism.term phi (fst vvsubst)), map (fn FVars => (Free_Var, Morphism.term phi FVars)) (#FVars quotient)), bd_of_mrbnf mrbnf), wits), NONE), NONE) lthy;
 
     val notes =
       [("vvsubst_cctor", [vvsubst_cctor]),

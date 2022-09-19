@@ -218,6 +218,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val qT = #T quotient_fp
     val As = replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model]);
 
+    val (_, lthy) = Local_Theory.begin_nested lthy
     val defs_hidden = mk_defs_t false b qualify
     val def_hidden = mk_def_t false b qualify
     val ((((((PFVars, Pmap), UFVars), Umap), Uctor), avoiding_sets), lthy') =
@@ -228,6 +229,18 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       ||>> def_hidden "Umap" 0 (#Umap model)
       ||>> def_hidden "Uctor" 0 (#Uctor model)
       ||>> defs_hidden "avoiding_set" 0 (#avoiding_sets model);
+    val (lthy', old_lthy) = `Local_Theory.end_nested lthy';
+    val phi = Proof_Context.export_morphism old_lthy lthy';
+
+    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst Pmap)) []);
+    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
+
+    val Pmap = morph Pmap;
+    val PFVars = map morph PFVars;
+    val UFVars = map morph UFVars;
+    val Umap = morph Umap;
+    val Uctor = morph Uctor;
+    val avoiding_sets = map morph avoiding_sets;
 
     val defs = map snd PFVars @ map snd UFVars @ map snd avoiding_sets @ [snd Pmap, snd Umap, snd Uctor];
     fun prove goal tac = Goal.prove_sorry lthy' [] [] goal (fn {context,...} =>
@@ -408,6 +421,8 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val ctor = #ctor raw
     val FVars = #FVars raw
     val abs = #abs (#inner quotient)
+
+    val (_, lthy) = Local_Theory.begin_nested lthy;
 
     val pre_T = mk_T_of_mrbnf deads (replicate live raw_T) vars vars mrbnf;
     fun mk_sets T =
@@ -619,8 +634,15 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
         ) $ x);
       in mk_def_t false ff0_b qualify "XXr" (nbound + 3) rhs lthy end;
 
-  in ((suitables, Umap', UFVars', PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
-    XXl, XXr), lthy) end;
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst Umap')) []);
+    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
+
+  in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,
+    morph f, map morph pick0s, morph f0, morph ff0, morph noclash, morph nnoclash, morph XXl,
+    morph XXr), lthy) end;
 
 fun create_binding_recursor qualify model ff0_b lthy =
   let

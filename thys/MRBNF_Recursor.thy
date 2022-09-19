@@ -162,10 +162,13 @@ lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin
 lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
   unfolding imsupp_def supp_def by fastforce
 
+typedef 'a ssfun = "{ f::'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set| }"
+  using supp_id_bound by blast
+
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-typedef 'a ssfun = "{ f::'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set| }"
-  using supp_id_bound by blast
+ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 end

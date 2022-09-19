@@ -38,31 +38,14 @@ let
     ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
   val ((mrbnf, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_type_name) true (fst tys) [] mrbnf lthy
   val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-  val (_, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("\<tau>", mrbnf), 2)] [[0]] lthy
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("\<tau>", mrbnf), 2)] [[0]] lthy;
+  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I (hd res) lthy;
+  val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 in lthy end
 \<close>
 print_theorems
 print_bnfs
 print_mrbnfs
-
-ML \<open>
-val tau = the (MRBNF_Def.mrbnf_of @{context} "Composition.\<tau>_pre")
-\<close>
-
-ML_file \<open>./Tools/mrbnf_vvsubst_tactics.ML\<close>
-ML_file \<open>./Tools/mrbnf_vvsubst.ML\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
-local_setup \<open>fn lthy =>
-let
-  val (res, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I
-    (the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Composition.\<tau>")) lthy;
-in lthy end\<close>
-
-print_theorems
 
 (************************************************************************************)
 

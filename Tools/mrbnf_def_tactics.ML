@@ -510,6 +510,7 @@ fun mk_mr_rel_mono_strong0_tac ctxt assms id_prems set_map map_cong mr_rel_OO_Gr
       ])
     ]) THEN
     EVERY1 [
+      TRY o (rtac ctxt conjI THEN' rtac ctxt @{thm UNIV_I}),
       rtac ctxt conjI,
       rtac ctxt refl,
       rtac ctxt (map_cong OF (g_prems @ f_prems)),

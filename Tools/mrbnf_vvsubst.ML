@@ -1,7 +1,7 @@
 signature MRBNF_VVSUBST =
 sig
   val mrbnf_of_quotient_fixpoint: binding -> (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
-    -> local_theory -> MRBNF_Recursor.recursor_result * local_theory
+    -> local_theory -> MRBNF_Def.mrbnf * local_theory
 end
 
 structure MRBNF_VVSubst : MRBNF_VVSUBST =
@@ -357,13 +357,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     val model_tacs = {
       small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
-      Umap_id0 = fn ctxt => resolve_tac ctxt @{thms \<tau>.rrename_id0s} 1,
-      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt @{thm \<tau>.rrename_comp0s[symmetric]}, REPEAT_DETERM o assume_tac ctxt],
-      Umap_cong_ids = map (fn thm => fn ctxt => EVERY1 [
-        resolve_tac ctxt [thm],
+      Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
+      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym), REPEAT_DETERM o assume_tac ctxt],
+      Umap_cong_ids = [fn ctxt => EVERY1 [
+        rtac ctxt (#rename_cong_id (#inner quotient)),
         REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
-      ]) @{thms \<tau>.rrename_cong_ids},
-      UFVars_Umap = [fn ctxt => EVERY1 [rtac ctxt @{thm \<tau>.FFVars_rrenames}, REPEAT_DETERM o assume_tac ctxt]],
+      ]],
+      UFVars_Umap = [fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]],
       Umap_Uctor = fn ctxt => rtac ctxt Umap_Uctor 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
       UFVars_subsets = map (fn UFVars_subset => fn ctxt => EVERY1 [
         rtac ctxt UFVars_subset,
@@ -384,11 +384,19 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     val (res, lthy) = create_binding_recursor qualify model (Binding.name ("vvsubst_" ^ name)) lthy;
 
-    val (_, lthy) = Local_Theory.begin_nested lthy
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+
     val (vvsubst, lthy) = mk_def_t false Binding.empty qualify (Binding.name_of vvsubst_b) nvars
       (fold_rev Term.absfree (map dest_Free fs) (Term.abs ("x", T) (
         #rec_fun res $ Bound 0 $ HOLogic.mk_tuple (map2 (fn var => fn f => abs var $ f) vars fs)
       ))) lthy;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst vvsubst)) []);
+    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
+    val vvsubst = morph vvsubst;
 
     val f_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) fs;
     val (_, bsets, _) = mk_sets T;
@@ -741,9 +749,6 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         ] end
       ) end;
 
-    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-    val phi = Proof_Context.export_morphism old_lthy lthy;
-
     fun map_comp0_tac ctxt = EVERY1 [
       rtac ctxt ext,
       rtac ctxt (Morphism.thm phi vvsubst_comp),
@@ -778,7 +783,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       le_rel_OO = fn ctxt => unfold ctxt THEN rtac ctxt @{thm order.refl} 1,
       in_rel = fn ctxt => unfold ctxt THEN rtac ctxt refl 1,
       pred_set = fn ctxt => rtac ctxt refl 1,
-      wit = fn ctxt => print_tac ctxt "foo"
+      wit = fn ctxt => print_tac ctxt "no wit_tac needed"
     };
 
     val nwits = nwits_of_mrbnf mrbnf;
@@ -795,9 +800,9 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       ) end;
 
     val b = Binding.name name
-    val x = mrbnf_def Hardly_Inline (user_policy Note_Some) false qualify tacs (SOME deads)
+    val (x, lthy) = mrbnf_def Hardly_Inline (user_policy Note_Some) false qualify tacs (SOME deads)
       class_thms Binding.empty Binding.empty Binding.empty []
-      (((((((b, Morphism.typ phi T), Morphism.term phi (fst vvsubst)), map (fn FVars => (Free_Var, Morphism.term phi FVars)) (#FVars quotient)), bd_of_mrbnf mrbnf), wits), NONE), NONE) lthy;
+      (((((((b, Morphism.typ phi T), fst vvsubst), map (fn FVars => (Free_Var, Morphism.term phi FVars)) (#FVars quotient)), bd_of_mrbnf mrbnf), wits), NONE), NONE) lthy;
 
     val notes =
       [("vvsubst_cctor", [vvsubst_cctor]),
@@ -811,6 +816,6 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         ((Binding.name thmN, []), [(thms, [])])
       ));
     val (_, lthy) = Local_Theory.notes notes lthy
-  in (res, lthy) end;
+  in (x, lthy) end;
 
 end

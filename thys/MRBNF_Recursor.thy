@@ -165,10 +165,10 @@ lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrighta
 typedef 'a ssfun = "{ f::'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set| }"
   using supp_id_bound by blast
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>*)
 
 end

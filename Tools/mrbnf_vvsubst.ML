@@ -678,6 +678,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
               )
             )
           );
+          val rel = #binding_relation fp_result;
+          val lset_bounds = map (fn i => (
+            map_filter (fn (bset, xs) =>
+              if member (op=) xs i then SOME bset else NONE
+            ) (bsets ~~ rel),
+            (replicate (live - i - 1) @{thm UnI1} @ @{thms UnI2})
+          )) (0 upto live - 1);
         in EVERY1 [
           rtac ctxt induct,
           REPEAT_DETERM o FIRST' (map (fn thm => rtac ctxt thm THEN' assume_tac ctxt) (drop (2*nvars) prems)),
@@ -712,12 +719,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
               ],
               defer_tac
             ],
-            EVERY' (map2 (fn (b, thms) => fn p => EVERY' [
+            EVERY' (map2 (fn (bsets, thms) => fn p => EVERY' [
               rtac ctxt sym,
               rtac ctxt p,
               assume_tac ctxt,
-              if b then Subgoal.FOCUS_PARAMS (fn {context=ctxt, params=params2, ...} =>
+              if length bsets > 0 then Subgoal.FOCUS_PARAMS (fn {context=ctxt, params=params2, ...} =>
                 let
+                  (* TODO: fix with more variables *)
                   val a = snd (snd (split_last params2));
                   val t = HOLogic.mk_mem (Thm.term_of a, hd bsets $ Thm.term_of (snd (hd params)));
                   val thm = Local_Defs.unfold0 ctxt @{thms eq_True eq_False} (
@@ -744,7 +752,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
               TRY o rtac ctxt @{thm DiffI},
               rtac ctxt @{thm UN_I},
               REPEAT_DETERM o assume_tac ctxt
-            ]) [(true, @{thms UnI1 UnI2}), (false, @{thms UnI2})] (take live prems2))
+            ]) lset_bounds (take live prems2))
           ]) ctxt
         ] end
       ) end;
@@ -804,14 +812,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       class_thms Binding.empty Binding.empty Binding.empty []
       (((((((b, Morphism.typ phi T), fst vvsubst), map (fn FVars => (Free_Var, Morphism.term phi FVars)) (#FVars quotient)), bd_of_mrbnf mrbnf), wits), NONE), NONE) lthy;
 
+    val vname = Binding.name_of b;
     val notes =
-      [("vvsubst_cctor", [vvsubst_cctor]),
-       ("FFVars_vvsubst_weak", FFVars_vvsubst_weaks),
-       ("vvsubst_rrename", [vvsubst_rrename]),
-       ("vvsubst_id0", [vvsubst_id0]),
-       ("FFVars_vvsubst", FFVars_vvsubsts),
-       ("vvsubst_comp", [vvsubst_comp]),
-       ("vvsubst_cong", [vvsubst_cong])
+      [(vname ^ "_cctor", [vvsubst_cctor]),
+       ("FFVars_" ^ vname ^ "_weak", FFVars_vvsubst_weaks),
+       (vname ^ "_rrename", [vvsubst_rrename])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])
       ));

@@ -1499,14 +1499,14 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
   end;
 
 exception BAD_DEAD of typ * typ;
-fun mrbnf_of_typ _ _ _ _ _ Ds0 var_types (T as TFree T') accum =
+fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
     (if member (op =) Ds0 T' then ((DEADID_mrbnf, ([T], [])), accum) else
       (case map_filter (fn a => if fst a = T' then SOME (snd a) else NONE) var_types of
         [] => ((ID_mrbnf, ([], [T])), accum)
         | [Dead_Var] => error "var_types may only be Live, Free or Bound, use Ds0 for deads"
         | [var_type] => let
-                          val qualify = Binding.suffix_name ("_" ^ fst T')
-                          val (ID', accum') = demote_mrbnf qualify [var_type] ID_mrbnf accum
+                          val qualify' = qualify o Binding.suffix_name ("_" ^ fst T')
+                          val (ID', accum') = demote_mrbnf qualify' [var_type] ID_mrbnf accum
                         in ((ID', ([], [T])), accum') end
         | _ => error "Same variable appears twice in var_types"
       )
@@ -1531,7 +1531,9 @@ fun mrbnf_of_typ _ _ _ _ _ Ds0 var_types (T as TFree T') accum =
       (case mrbnf_opt of
         NONE => ((DEADID_mrbnf, ([T], [])), accum)
       | SOME (mrbnf, lthy') =>
-        if optim andalso forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees then
+        if optim andalso forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
+          andalso Library.inter (op=) (map dest_TFree Ts) (map fst var_types) = []
+        then
           let
             val T' = T_of_mrbnf mrbnf;
             val deads = deads_of_mrbnf mrbnf;

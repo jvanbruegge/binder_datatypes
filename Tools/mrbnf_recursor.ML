@@ -498,7 +498,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     fun mk_is_bound [] _ = []
       | mk_is_bound xs [] = replicate (length xs) false
       | mk_is_bound (x::xs) (y::ys) = if member (op=) y x
-            then true::mk_is_bound xs ys else mk_is_bound xs (y::ys);
+            then true::mk_is_bound xs ys else false::mk_is_bound xs (y::ys);
     val is_bound = mk_is_bound (0 upto live - 1) (#binding_relation fp_result);
 
     val (f, lthy) =
@@ -577,7 +577,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     ) suitables) lthy;
 
     val (f0, lthy) = mk_def_t false ff0_b qualify "f0" 0 (Term.list_comb (fst f, map fst pick0s)) lthy;
-    val (ff0, lthy) = mk_def_t false Binding.empty qualify "ff0" 1 (Term.abs ("t", #T quotient) (
+    val (ff0, lthy) = mk_def_t false ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 

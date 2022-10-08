@@ -2,19 +2,24 @@ theory MRBNF_Recursor_Tests
   imports "../thys/MRBNF_Recursor"
 begin
 
+
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 (* Test 1: One free variable in the fixpoint, bound in first recursive component *)
 local_setup \<open>fn lthy =>
 let
   val name = "test1"
   val T = @{typ "'var + unit + 'rec * 'rec + 'bvar * 'brec"}
-  val Xs = map dest_TFree []
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
+  val Xs = map dest_TFree [@{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
+  val resBs = map dest_TFree [@{typ 'var}]
   val rel = [[0]]
 
   fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
@@ -43,12 +48,12 @@ in lthy end
 \<close>
 
 (* Test 2: One free variable in the fixpoint, bound in second recursive component *)
-local_setup \<open>fn lthy =>
+(*local_setup \<open>fn lthy =>
 let
   val name = "test2"
   val T = @{typ "'var + unit + 'rec * 'rec + 'bvar * 'brec"}
-  val Xs = map dest_TFree []
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]
+  val Xs = map dest_TFree [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]
+  val resBs = map dest_TFree [@{typ 'var}]
   val rel = [[1]]
 
   fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
@@ -74,17 +79,34 @@ let
   (* Step 6: Register fixpoint MRBNF *)
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 in lthy end
-\<close>
+\<close>*)
 
-print_mrbnfs
+declare [[ML_print_depth=100000]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (* Test 3: One free variable in the fixpoint, but also one passive variable *)
-(*local_setup \<open>fn lthy =>
+local_setup \<open>fn lthy =>
 let
-  val name = "\<tau>_passive"
+  val name = "test3"
   val T = @{typ "'var + unit + 'passive + 'rec * 'rec + 'bvar * 'brec"}
-  val Xs = map dest_TFree [@{typ 'passive}]
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
+  val Xs = map dest_TFree [@{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
+  val resBs = map dest_TFree [@{typ 'var}, @{typ 'passive}]
   val rel = [[0]]
 
   fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
@@ -101,8 +123,21 @@ let
   (* Step 3: Register the sealed MRBNF as BNF in its live variables *)
   val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
 
-  val _ = @{print} mrbnf
+  (* Step 4: Create fixpoint of pre-MRBNF *)
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
 in lthy end
-\<close>*)
+\<close>
+
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+
+ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
+
+local_setup \<open>fn lthy =>
+let
+  val mrbnf = the (MRBNF_Def.mrbnf_of lthy "MRBNF_Recursor_Tests.test3_pre");
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("test3", mrbnf), 2)] [[0]] lthy;
+in lthy end\<close>
 
 end

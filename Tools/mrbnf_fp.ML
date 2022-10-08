@@ -723,7 +723,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             |> rpair lthy
         end
       else let
-          (* TODO: fix for mutual recursion *)
+          (* TODO: fix for mutual recursion, also do in co branch *)
           fun mk_bound t = mk_ordLess (mk_card_of t) (bd_of_mrbnf (hd mrbnfs));
           val eqs = map2 (mk_bound o op $ oo pair) FVarssAs ys;
           val common_co_induct_inst = mk_common_co_induct_inst frees_lthy CAs lthy eqs ys;

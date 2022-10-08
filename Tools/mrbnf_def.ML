@@ -1640,19 +1640,26 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
 
     val ((((mrbnf_map_term, raw_map_def),
       (mrbnf_set_terms, raw_set_defs)),
-      (mrbnf_bd_term, raw_bd_def)), (lthy, lthy_old)) =
+      _ (* (mrbnf_bd_term, raw_bd_def) *)), (lthy, lthy_old)) =
         no_defs_lthy
         |> Local_Theory.begin_nested |> snd
         |> maybe_define true map_bind_def
         ||>> apfst split_list o fold_map (maybe_define true) set_binds_defs
-        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy)) (*maybe_define true bd_bind_def*)
+        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy)) (* maybe_define true bd_bind_def*)
         ||> `Local_Theory.end_nested;
 
     val phi = Proof_Context.export_morphism lthy_old lthy;
 
+    val ((mrbnf_bd_term, raw_bd_def), (lthy, lthy_old)) = snd (Local_Theory.begin_nested lthy)
+      |> maybe_define true bd_bind_def
+      ||> `Local_Theory.end_nested;
+
+    val phi' = Proof_Context.export_morphism lthy_old lthy;
+    val mrbnf_bd_def = Morphism.thm phi' raw_bd_def;
+
     val mrbnf_map_def = Morphism.thm phi raw_map_def;
     val mrbnf_set_defs = map (Morphism.thm phi) raw_set_defs;
-    val mrbnf_bd_def = Morphism.thm phi raw_bd_def;
+    (*val mrbnf_bd_def = Morphism.thm phi raw_bd_def;*)
 
     val mrbnf_map_raw = Morphism.term phi mrbnf_map_term;
 
@@ -1674,15 +1681,16 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
 
     fun mk_mrbnf_bd Calpha_params =
       Term.subst_TVars (Term.add_tvar_namesT mrbnf_T [] ~~ Calpha_params)
-        (Morphism.term phi mrbnf_bd_term);
+        (Morphism.term phi' mrbnf_bd_term);
     val mrbnf_bd_raw =  mk_mrbnf_bd Calpha_params_raw;
 
-    val unfold_bd_def = Local_Defs.unfold0 lthy (
+    fun unfold_bd_def' lthy = Local_Defs.unfold0 lthy (
       (map (fn thm => @{thm symmetric} OF [thm]) (no_reflexive [mrbnf_bd_def]))
-    )
+    );
+    val unfold_bd_def = unfold_bd_def' lthy;
     val ((class, var_large, var_regular), (mk_covar_type_class, mk_covar_large), lthy) = case classes_opt of
         SOME ((class, var_large, var_regular), (coclass, mk_covar_large)) =>
-          ((class, unfold_bd_def var_large, var_regular), (K (pair coclass), unfold_bd_def o mk_covar_large), lthy)
+          ((class, unfold_bd_def var_large, var_regular), (K (pair coclass), fn (sort, lthy) => unfold_bd_def' lthy (mk_covar_large (sort, lthy))), lthy)
       | NONE =>
         let
           val (class, lthy) = define_var_type_class (mk_prefix_binding var_typeN) mrbnf_bd_raw lthy;
@@ -2165,6 +2173,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
               [@{thm card_of_Field_ordIso} OF [bd_Card_order]], var_large_raw];
 
         val covar_large = mk_covar_large (coclass, lthy)
+
         val natLeq_bound = @{thm ordLeq_ordLess_trans} OF [@{thm natLeq_ordLeq_cinfinite} OF
           [conjI OF [bd_cinfinite, bd_Card_order]]] OF [@{thm ordLess_ordLeq_trans} OF
           [@{thm cardSuc_greater} OF [bd_Card_order], covar_large]];
@@ -3298,6 +3307,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
         val mr_rel_OO_Grp = Lazy.lazy mk_mr_rel_OO_Grp;
 
+        (* TODO: See if this really works *)
         fun register_bnf lthy =
           let
             val mrbnf_rel_b = Binding.name mrbnf_rel_name;
@@ -3576,7 +3586,7 @@ fun mrbnf_of_bnf bnf lthy =
   }
   val n = BNF_Def.live_of_bnf bnf
   val nwits = BNF_Def.nwits_of_bnf bnf
-  val (((lives, lives'), deads), lthy') = lthy
+  val (((lives, lives'), deads), _) = lthy
     |> Ctr_Sugar_Util.mk_TFrees n
     ||>> Ctr_Sugar_Util.mk_TFrees n
     ||>> Ctr_Sugar_Util.mk_TFrees' (map Type.sort_of_atyp (BNF_Def.deads_of_bnf bnf))
@@ -3588,7 +3598,7 @@ fun mrbnf_of_bnf bnf lthy =
     map snd (BNF_Def.mk_wits_of_bnf (replicate nwits deads) (replicate nwits lives) bnf)),
     SOME (BNF_Def.mk_rel_of_bnf deads lives lives' bnf)),
     SOME (BNF_Def.mk_pred_of_bnf deads lives bnf))
-    lthy'
+    lthy
   end;
 
 fun register_bnf_as_mrbnf key bnf lthy =

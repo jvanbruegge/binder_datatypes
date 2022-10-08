@@ -592,7 +592,7 @@ fun mk_refresh_set_tac fbound mrbnf_var_infinite Un_bound insert_thms mrbnf_set_
       EVERY' [Method.insert_tac ctxt [insert_thm], dtac ctxt meta_mp,
         rtac ctxt @{thm ordLess_ordIso_trans}, rtac ctxt @{thm ordLeq_ordLess_trans[OF
           card_of_mono1[OF Int_lower1]]}, rtac ctxt set_bound, rtac ctxt @{thm ordIso_symmetric},
-        rtac ctxt (@{thm infinite_UNIV_card_of_minus} OF [mrbnf_var_infinite]),
+        rtac ctxt (@{thm card_of_Un_diff_infinite} OF [mrbnf_var_infinite]),
         rtac ctxt (Un_bound OF [Un_bound OF [set_bound, card_of_FVarsB_bound], assm])];
 
     fun mk_insert_extU_tac ctxt extU = EVERY'

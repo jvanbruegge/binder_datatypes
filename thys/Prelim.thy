@@ -2,8 +2,6 @@ theory Prelim
   imports Card_Prelim
 begin
 
-abbreviation (input) "any \<equiv> undefined"
-
 declare bij_imp_bij_inv[simp]
 declare bij_comp[simp]
 declare bij_id[intro!]
@@ -36,20 +34,17 @@ lemma bij_implies_inject[simp]: "bij f \<Longrightarrow> f a = f a' \<longleftri
 lemma inv_simp1[simp]: "bij u \<Longrightarrow> inv u (u x) = x"
   by (simp add: bij_is_inj)
 
-lemma inv_o_simp1[simp]: "bij u \<Longrightarrow> inv u o u = id"
+lemma inv_o_simp1[simp]: "bij u \<Longrightarrow> inv u \<circ> u = id"
   unfolding o_def by auto
 
 lemma inv_simp2[simp]: "bij u \<Longrightarrow> u (inv u x) = x"
   by (simp add: bij_is_surj surj_f_inv_f)
 
-lemma inv_o_simp2[simp]: "bij u \<Longrightarrow> u o inv u = id"
+lemma inv_o_simp2[simp]: "bij u \<Longrightarrow> u \<circ> inv u = id"
   unfolding o_def by auto
 
 lemma bij_inv_rev: "bij f \<Longrightarrow> a = inv f b \<longleftrightarrow> b = f a"
   by auto
-
-(* Helps working with arbitrary BNFs: *)
-declare [[typedef_overloaded, bnf_internals]]
 
 lemma case_in[case_names L uL not]:
   assumes "a \<in> L \<Longrightarrow> P" and "a \<notin> L \<Longrightarrow> a \<in> u ` L \<Longrightarrow> P" and "a \<notin> L \<Longrightarrow> a \<notin> u ` L \<Longrightarrow> P"
@@ -57,11 +52,11 @@ lemma case_in[case_names L uL not]:
 
 (* Properties of bijections *)
 lemma bij_iff:
-  "bij u \<longleftrightarrow> (\<exists> v. v o u = id \<and> u o v = id)"
+  "bij u \<longleftrightarrow> (\<exists> v. v \<circ> u = id \<and> u \<circ> v = id)"
   by (meson bij_is_inj bij_is_surj inv_o_cancel o_bij surj_iff)
 
 lemma bij_iff1:
-  "bij u \<longleftrightarrow> (\<exists> v. bij v \<and> v o u = id \<and> u o v = id)"
+  "bij u \<longleftrightarrow> (\<exists> v. bij v \<and> v \<circ> u = id \<and> u \<circ> v = id)"
   by (meson bij_is_inj bij_is_surj inv_o_cancel o_bij surj_iff)
 
 (* Combinators: *)
@@ -114,10 +109,10 @@ lemma supp_inv:
   by (smt CollectI UNIV_I bij_betw_inv_into_right image_iff)
 
 lemma supp_o:
-  "supp (g o f) \<subseteq> supp g \<union> supp f"
+  "supp (g \<circ> f) \<subseteq> supp g \<union> supp f"
   unfolding supp_def by auto
 
-lemma finite_supp_comp: "finite (supp f) \<Longrightarrow> finite (supp g) \<Longrightarrow> finite (supp (g o f))"
+lemma finite_supp_comp: "finite (supp f) \<Longrightarrow> finite (supp g) \<Longrightarrow> finite (supp (g \<circ> f))"
   using supp_o by (metis finite_UnI finite_subset)
 
 declare card_of_Card_order[intro]
@@ -136,7 +131,7 @@ lemma supp_ordleq_imsupp:
   "|supp f| \<le>o |imsupp f|"
   using card_of_mono1[OF supp_incl_imsupp] .
 
-lemma imsupp_commute: "imsupp f \<inter> imsupp g = {} \<Longrightarrow> f o g = g o f"
+lemma imsupp_commute: "imsupp f \<inter> imsupp g = {} \<Longrightarrow> f \<circ> g = g \<circ> f"
 proof (rule ext, goal_cases ext)
   case (ext x)
   then show ?case by (cases "f x = x"; cases "g x = x") (auto simp: imsupp_def supp_def)
@@ -164,7 +159,7 @@ lemma imsupp_o: "imsupp (g \<circ> f) \<subseteq> imsupp g \<union> imsupp f"
 
 lemma imsupp_disj_comp:
   assumes "A \<inter> imsupp g1 = {}" and "A \<inter> imsupp g2 = {}"
-  shows "A \<inter> imsupp (g2 o g1) = {}"
+  shows "A \<inter> imsupp (g2 \<circ> g1) = {}"
   using assms by (smt UnE disjoint_iff_not_equal imsupp_o subsetCE)
 
 lemma infinite_imsupp_ordIso_supp:
@@ -328,7 +323,7 @@ proof -
   let ?P = "\<lambda>f. ?A f \<and> ?B f \<and> ?C f \<and> ?D f \<and> ?E f"
   have "|A| \<le>o |UNIV - (A \<union> imsupp f \<union> D \<union> I)|"
     by (rule ordLeq_ordIso_trans[OF ordLess_imp_ordLeq ordIso_symmetric])
-      (auto simp: imsupp_def intro!: infinite_UNIV_card_of_minus card_of_Un_ordLess_infinite assms
+      (auto simp: imsupp_def intro!: card_of_Un_diff_infinite card_of_Un_ordLess_infinite assms
         ordLeq_ordLess_trans[OF card_of_image])
   then obtain h where "inj_on h A" and hA: "h ` A \<subseteq> - (A \<union> imsupp f \<union> D \<union> I)"
     unfolding card_of_ordLeq[symmetric] by auto

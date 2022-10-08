@@ -2,19 +2,6 @@ theory Card_Prelim
   imports "HOL-Cardinals.Cardinals"
 begin
 
-lemma card_of_Un_eq_Plus:
-assumes "A \<inter> B = {}"
-shows "|A \<union> B| =o |A <+> B|"
-proof(rule card_of_ordIsoI)
-  show "bij_betw (\<lambda> a. if a \<in> A then Inl a else Inr a) (A \<union> B) (A <+> B)"
-    using assms unfolding bij_betw_def inj_on_def by auto
-qed
-
-lemma infinite_UNIV_card_of_minus:
-  assumes i: "infinite (UNIV::'a set)" and b: "|B::'a set| <o |UNIV::'a set|"
-  shows "|UNIV - B| =o |UNIV::'a set|"
-  using card_of_Un_diff_infinite[OF assms] by auto
-
 lemma regularCard_Un:
 assumes "Card_order r" and "cinfinite r" and "regularCard r"
  and "|A1| <o r" and "|A2| <o r"
@@ -31,19 +18,6 @@ lemma cardSuc_ordLeq_pow:
   assumes "Card_order (k:: 'b rel)"
   shows "cardSuc k \<le>o |UNIV:: 'b set set|"
 by (intro cardSuc_least) (auto simp : assms cardSuc_ordLess_ordLeq)
-
-lemma regularCard_ordIso:
-assumes  "k =o k'" and "Cinfinite k" and "regularCard k"
-shows "regularCard k'"
-proof-
-  have "stable k" using assms cinfinite_def regularCard_stable by blast
-  hence "stable k'" using assms stable_ordIso by blast
-  thus ?thesis using assms cinfinite_def stable_regularCard
-    using Cinfinite_cong by blast
-qed
-
-lemma regularCard_cardSuc: "Cinfinite k \<Longrightarrow> regularCard (cardSuc k)"
-  by (rule infinite_cardSuc_regularCard) (auto simp: cinfinite_def)
 
 lemma bij_card_of_ordIso:
   assumes "bij f" shows "|f ` A| =o |A|"

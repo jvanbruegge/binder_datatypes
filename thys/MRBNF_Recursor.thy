@@ -16,7 +16,7 @@ lemma exists_subset_compl:
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
 proof -
   have 1: "|U| <o |UNIV::'b set|" using assms(2) using card_of_Un1 ordLeq_ordLess_trans by blast
-  have "|-(U \<union> S)| =o |UNIV::'b set|" using infinite_UNIV_card_of_minus[OF assms(1,2)]
+  have "|-(U \<union> S)| =o |UNIV::'b set|" using card_of_Un_diff_infinite[OF assms(1,2)]
     by (simp add: Compl_eq_Diff_UNIV)
   then have "|U| <o |-(U \<union> S)|" using 1 ordIso_symmetric ordLess_ordIso_trans by blast
   then obtain B where 1: "B \<subseteq> -(U \<union> S)" "|U| =o |B|"
@@ -62,7 +62,7 @@ proof -
   have "|f1 (A x) \<union> g (A x) \<union> f1 (B y) \<union> g (B y)| <o |UNIV::'a set|" (is "|?A| <o _")
     using card_of_Un_ordLess_infinite[OF assms(1) u(1) w(1)] Un_assoc by metis
   then have "|-?A| =o |UNIV::'a set|"
-    by (rule infinite_UNIV_card_of_minus[OF assms(1) _, unfolded Compl_eq_Diff_UNIV[symmetric]])
+    by (rule card_of_Un_diff_infinite[OF assms(1) _, unfolded Compl_eq_Diff_UNIV[symmetric]])
   then have "|f1 (A x)| <o |-?A|" by (rule ordLess_ordIso_trans[OF 1(1) ordIso_symmetric])
 
   then obtain C where C: "C \<subseteq> -?A" "|f1 (A x)| =o |C|"

@@ -3308,7 +3308,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         val mr_rel_OO_Grp = Lazy.lazy mk_mr_rel_OO_Grp;
 
         (* TODO: See if this really works *)
-        fun register_bnf lthy =
+        (*fun register_bnf lthy =
           let
             val mrbnf_rel_b = Binding.name mrbnf_rel_name;
             val map_id_AsBs = Term.list_comb (mrbnf_map_AsBs, lfs_id)
@@ -3331,7 +3331,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
                 mrbnf_bd_As), map snd mrbnf_wit_As), SOME rel_id_AsBs), SOME pred) lthy
           end;
 
-        val lthy = if live > 0 andalso not internal then register_bnf lthy |> snd else lthy;
+        val lthy = if live > 0 andalso not internal then register_bnf lthy |> snd else lthy;*)
 
         fun mk_mr_rel_flip () =
           let
@@ -3571,8 +3571,12 @@ fun mrbnf_of_bnf bnf lthy =
     map_comp0 = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.map_comp0_of_bnf bnf]),
     map_cong0 = fn ctxt => HEADGOAL (SUBGOAL (K (HEADGOAL (resolve_tac ctxt [BNF_Def.map_cong0_of_bnf bnf]) THEN REPEAT (Goal.assume_rule_tac ctxt 1)))),
     set_map0 = map (fn thm => fn ctxt => HEADGOAL (resolve_tac ctxt [thm])) (BNF_Def.set_map0_of_bnf bnf),
-    infinite_regular_card_order = fn ctxt => EVERY (map (HEADGOAL o resolve_tac ctxt o single) [@{thm infinite_regular_card_order_card_suc}, BNF_Def.bd_card_order_of_bnf bnf, BNF_Def.bd_Cinfinite_of_bnf bnf]),
-    set_bd = map (fn thm => fn ctxt => EVERY (map (HEADGOAL o resolve_tac ctxt o single) [@{thm card_suc_greater_set}, BNF_Def.bd_card_order_of_bnf bnf, thm])) (BNF_Def.set_bd_of_bnf bnf),
+    infinite_regular_card_order = fn ctxt => rtac ctxt (@{thm infinite_regular_card_order.intro} OF [
+      BNF_Def.bd_card_order_of_bnf bnf,
+      BNF_Def.bd_cinfinite_of_bnf bnf,
+      BNF_Def.bd_regularCard_of_bnf bnf
+    ]) 1,
+    set_bd = map (fn thm => fn ctxt => rtac ctxt thm 1) (BNF_Def.set_bd_of_bnf bnf),
     le_rel_OO = fn ctxt => HEADGOAL (resolve_tac ctxt [BNF_Def.le_rel_OO_of_bnf bnf]),
     in_rel = fn ctxt => Local_Defs.unfold_tac ctxt [@{thm OO_Grp_alt}, BNF_Def.map_id_of_bnf bnf] THEN FIRST [
         HEADGOAL (resolve_tac ctxt [@{thm exists_univ_eq}]),
@@ -3594,7 +3598,7 @@ fun mrbnf_of_bnf bnf lthy =
       Binding.empty Binding.empty Binding.empty []
     (((((((BNF_Def.name_of_bnf bnf, BNF_Def.mk_T_of_bnf deads lives bnf), BNF_Def.mk_map_of_bnf deads lives lives' bnf),
     map (fn x => (Live_Var, x)) (BNF_Def.mk_sets_of_bnf (replicate n deads) (replicate n lives) bnf)),
-    mk_card_suc (BNF_Def.mk_bd_of_bnf deads lives bnf)),
+    BNF_Def.mk_bd_of_bnf deads lives bnf),
     map snd (BNF_Def.mk_wits_of_bnf (replicate nwits deads) (replicate nwits lives) bnf)),
     SOME (BNF_Def.mk_rel_of_bnf deads lives lives' bnf)),
     SOME (BNF_Def.mk_pred_of_bnf deads lives bnf))
@@ -3635,7 +3639,10 @@ fun bnf_of_mrbnf mrbnf lthy =
     fun bd_cinfinite_tac ctxt = rtac ctxt (@{thm infinite_regular_card_order.cinfinite} OF [
       bd_infinite_regular_card_order_of_mrbnf mrbnf
     ]) 1;
-    val set_bd_tacs = map_filter_live (fn thm => fn ctxt => rtac ctxt (@{thm ordLess_imp_ordLeq} OF [thm]) 1) (
+    fun bd_regular_tac ctxt = rtac ctxt (@{thm infinite_regular_card_order.regularCard} OF [
+      bd_infinite_regular_card_order_of_mrbnf mrbnf
+    ]) 1;
+    val set_bd_tacs = map_filter_live (fn thm => fn ctxt => rtac ctxt thm 1) (
       set_bd_of_mrbnf mrbnf
     );
     fun le_rel_OO_tac ctxt = rtac ctxt (le_rel_OO_of_mrbnf mrbnf) 1;
@@ -3644,7 +3651,7 @@ fun bnf_of_mrbnf mrbnf lthy =
     fun pred_set_tac ctxt = rtac ctxt (pred_set_of_mrbnf mrbnf) 1;
 
     val tacs = BNF_Def.zip_axioms map_id0_tac map_comp0_tac map_cong0_tac set_map0_tacs bd_card_order_tac
-      bd_cinfinite_tac set_bd_tacs le_rel_OO_tac rel_OO_Grp_tac pred_set_tac;
+      bd_cinfinite_tac bd_regular_tac set_bd_tacs le_rel_OO_tac rel_OO_Grp_tac pred_set_tac;
     fun wit_tac ctxt = EVERY1 (map (fn thm => rtac ctxt thm THEN' assume_tac ctxt) (wit_thms_of_mrbnf mrbnf));
 
     val nwits = nwits_of_mrbnf mrbnf

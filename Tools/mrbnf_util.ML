@@ -8,7 +8,6 @@ sig
   val cond_automap: ('a -> 'a) -> 'a list -> bool list -> 'a list
   val short_type_name: string -> string
 
-  val mk_ordLess: term -> term -> term
   val mk_supp: term -> term
   val mk_imsupp: term -> term
   val mk_inv: term -> term
@@ -75,9 +74,6 @@ fun  cond_interlace _ _ [] = []
 fun cond_keep xs bs = (map fst o filter snd) (xs ~~ bs)
 
 fun cond_automap f xs bs = map (fn (x, b) => if b then f x else x) (xs ~~ bs)
-
-fun mk_ordLess t1 t2 = HOLogic.mk_mem (HOLogic.mk_prod (t1, t2),
-  Const (@{const_name ordLess}, mk_relT (fastype_of t1, fastype_of t2)));
 
 fun mk_supp t = let val T = t |> fastype_of |> dest_funT |> fst
   in Const (@{const_name Prelim.supp}, (T --> T) --> HOLogic.mk_setT T) $ t end;

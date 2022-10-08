@@ -205,7 +205,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs)
       in
         Local_Theory.background_theory_result (fn thy =>
-          let val (class, lthy) = Class_Declaration.class (qualify (Binding.name name)) [] xs [] thy
+          let val (class, lthy) = Class_Declaration.class (Binding.concealed (qualify (Binding.name name))) [] xs [] thy
           in ([class], Local_Theory.exit_global lthy) end
         ) lthy
       end;

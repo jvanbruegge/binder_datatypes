@@ -504,16 +504,15 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           HOLogic.mk_comp (Term.list_comb (rename_t, fgs), Term.list_comb (rename_t, ffs)),
           Term.list_comb (rename_t, map2 (curry HOLogic.mk_comp) fgs ffs)
         );
-        val comp_apply' = infer_instantiate' lthy [
-          SOME (Thm.cterm_of lthy (Term.list_comb (rename_t, fgs))),
-          SOME (Thm.cterm_of lthy (Term.list_comb (rename_t, ffs)))
-        ] @{thm comp_apply[symmetric]}
        in prove lthy (ffs @ fgs) prem_terms_ffs_fgs goal (fn ctxt => fn prems =>
-         let
-          val thm' = @{thm meta_eq_to_obj_eq} OF [Local_Defs.abs_def_rule lthy (
-            Local_Defs.unfold0 lthy [comp_apply'] (thm OF prems)
-          )];
-         in rtac ctxt thm' 1 end
+         EVERY1 [
+           K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms comp_def}),
+           rtac ctxt ext,
+           rtac ctxt trans,
+           rtac ctxt (thm OF prems),
+           K (Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms comp_def}),
+           rtac ctxt refl
+         ]
        ) end
     );
     val rename_comp0s = mk_rename_comp0s lthy rename_comps renamesAs;
@@ -2351,6 +2350,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         fp = fp,
         binding_relation = binding_relation,
         bound_vars = fAs,
+        passive = passive,
         raw_fp = raw_fp_res,
         quotient_fp = quotient_fp_res,
         pre_mrbnf = nth mrbnfs i
@@ -2409,6 +2409,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("TT_plain_co_induct", [TT_plain_co_induct]),
        ("rrename_id0s", rrename_id0s),
        ("rrename_ids", rrename_ids),
+       ("rrename_bijs", rrename_bijs),
+       ("rrename_inv_simps", rrename_inv_simps),
        ("rrename_comps", rrename_comps),
        ("rrename_comp0s", rrename_comp0s),
        ("rrename_cong_ids", rrename_cong_ids),

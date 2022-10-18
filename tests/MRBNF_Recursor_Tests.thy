@@ -2,16 +2,12 @@ theory MRBNF_Recursor_Tests
   imports "../thys/MRBNF_Recursor"
 begin
 
-
+(*
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
 
 (* Test 1: One free variable in the fixpoint, bound in first recursive component *)
 local_setup \<open>fn lthy =>
@@ -48,7 +44,7 @@ in lthy end
 \<close>
 
 (* Test 2: One free variable in the fixpoint, bound in second recursive component *)
-(*local_setup \<open>fn lthy =>
+local_setup \<open>fn lthy =>
 let
   val name = "test2"
   val T = @{typ "'var + unit + 'rec * 'rec + 'bvar * 'brec"}
@@ -83,22 +79,9 @@ in lthy end
 
 declare [[ML_print_depth=100000]]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
 
 (* Test 3: One free variable in the fixpoint, but also one passive variable *)
 local_setup \<open>fn lthy =>
@@ -123,8 +106,8 @@ let
   (* Step 3: Register the sealed MRBNF as BNF in its live variables *)
   val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
 
-  (* Step 4: Create fixpoint of pre-MRBNF *)
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
+  (*(* Step 4: Create fixpoint of pre-MRBNF *)
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;*)
 in lthy end
 \<close>
 
@@ -138,6 +121,7 @@ local_setup \<open>fn lthy =>
 let
   val mrbnf = the (MRBNF_Def.mrbnf_of lthy "MRBNF_Recursor_Tests.test3_pre");
   val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("test3", mrbnf), 2)] [[0]] lthy;
+  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name ("test3" ^ "_") @{binding vvsubst}) I (hd res) lthy;
 in lthy end\<close>
 
 end

@@ -64,6 +64,7 @@ sig
   type fp_result = {
     fp: BNF_Util.fp_kind,
     bound_vars: typ list,
+    passive: int,
     binding_relation: int list list,
     raw_fp: raw_result fp_result_T,
     quotient_fp: quotient_result fp_result_T,
@@ -208,15 +209,17 @@ abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename
 type fp_result = {
   fp: BNF_Util.fp_kind,
   bound_vars: typ list,
+  passive: int,
   binding_relation: int list list,
   raw_fp: raw_result fp_result_T,
   quotient_fp: quotient_result fp_result_T,
   pre_mrbnf: MRBNF_Def.mrbnf
 };
 
-fun morph_fp_result phi ({ fp, binding_relation, bound_vars, raw_fp, quotient_fp, pre_mrbnf }) = {
+fun morph_fp_result phi ({ fp, binding_relation, bound_vars, raw_fp, quotient_fp, pre_mrbnf, passive }) = {
   fp = fp, binding_relation = binding_relation,
   bound_vars = map (Morphism.typ phi) bound_vars,
+  passive = passive,
   raw_fp = morph_fp_result_T morph_raw_result phi raw_fp,
   quotient_fp = morph_fp_result_T morph_quotient_result phi quotient_fp,
   pre_mrbnf = MRBNF_Def.morph_mrbnf phi pre_mrbnf

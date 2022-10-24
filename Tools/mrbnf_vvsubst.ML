@@ -11,7 +11,6 @@ open BNF_Util
 open MRBNF_Util
 open MRBNF_Def
 open MRBNF_Recursor
-open MRBNF_VVSubst_Tactics
 
 val unfold_thms_tac = Ctr_Sugar_Tactics.unfold_thms_tac
 
@@ -37,33 +36,16 @@ fun define_vvsubst_consts qualify name fp_result old_lthy =
     val abs = Const (#Abs_name (fst ssfun), rep_type --> abs_type);
     val rep = Const (#Rep_name (fst ssfun), abs_type --> rep_type);
 
-    val (compSS, lthy) =
-      let
-        val u = Free ("u", x --> x);
-        val p = Free ("p", abs_type);
-        val rhs = Term.absfree (dest_Free u) (Term.absfree (dest_Free p) (
-          abs $ HOLogic.mk_comp (HOLogic.mk_comp (u, rep $ p), mk_inv u)
-        ));
-      in mk_def_t "compSS" 1 rhs lthy end;
-
-    val (PFVars, lthy) = mk_def_t "PFVars" 1
-      (Term.abs ("p", abs_type) (mk_imsupp (rep $ Bound 0))) lthy;
-
-    val ssfun_rep_eq = #Abs_inverse (snd ssfun) OF [iffD2 OF @{thms mem_Collect_eq}];
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf (#pre_mrbnf fp_result)];
 
-    val compSS_rep_eq =
-      let val f = Free ("f", x --> x);
-      in Goal.prove_sorry lthy [fst (dest_Free f), "p"] (map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f])
-      (mk_Trueprop_eq (rep $ (fst compSS $ f $ Free ("p", abs_type)),
-        HOLogic.mk_comp (HOLogic.mk_comp (f, rep $ Free ("p", abs_type)), mk_inv f)
-      )) (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd compSS]),
-        rtac ctxt ssfun_rep_eq,
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound}
-          @ [infinite_UNIV, @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd ssfun)]] @ prems
-        )
-      ]) end;
+    val compSS = (
+      Const (@{const_name compSS}, (x --> x) --> abs_type --> abs_type),
+      @{thm compSS_def}
+    );
+    val PFVars = (
+      Const (@{const_name PFVars}, abs_type --> HOLogic.mk_setT x),
+      @{thm PFVars_def}
+    );
 
     val mrbnf = #pre_mrbnf fp_result;
     val deads = deads_of_mrbnf mrbnf;
@@ -102,9 +84,8 @@ fun define_vvsubst_consts qualify name fp_result old_lthy =
 
     fun morph (t, thm) =
       let
-        val t' = Morphism.term phi t;
-        val svar = TVar (hd (Term.add_tvars t' []))
-      in (fn var => Term.subst_atomic_types [(svar, var)] t', Morphism.thm phi thm) end;
+        val svar = TFree (hd (Term.add_tfrees t []))
+      in (fn var => Term.subst_atomic_types [(svar, var)] t, thm) end;
     val mk_P_Ts = map (fn var => Term.typ_subst_atomic [(x, var)] abs_type);
 
     val CCTOR' =
@@ -116,81 +97,10 @@ fun define_vvsubst_consts qualify name fp_result old_lthy =
 
     val ssfun' = Typedef.transform_info phi ssfun;
 
-  in ((Morphism.thm phi ssfun_rep_eq, Morphism.thm phi compSS_rep_eq),
+  in ((@{thm ssfun_rep_eq}, @{thm compSS_rep_eq} OF [infinite_UNIV]),
     (mk_P_Ts, mk_t abs, mk_t rep, snd ssfun', morph compSS, morph PFVars, CCTOR'),
     lthy
   ) end;
-
-fun prove_axioms mk_P_Ts compSS PFVars mrbnf abs rep ssfun lthy =
-  let
-    val var = hd (fst (mk_TFrees' [class_of_mrbnf mrbnf] lthy));
-    val compSS_def = snd compSS;
-    val compSS = fst compSS var;
-    val T = hd (mk_P_Ts [var]);
-    val abs = abs var;
-    val rep = rep var;
-    val PFVars_def = snd PFVars;
-    val PFVars = fst PFVars var;
-
-    val lthy = snd (Local_Theory.begin_nested lthy);
-
-    val f = Free ("f", var --> var);
-    fun mk_prems t = map HOLogic.mk_Trueprop [mk_bij t, mk_supp_bound t]
-    val f_prems = mk_prems f;
-
-    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
-
-    val compSS_id0 = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (compSS $ HOLogic.id_const var, HOLogic.id_const T)) (fn {context=ctxt, ...} =>
-      unfold_thms_tac ctxt (@{thms comp_def id_def inv_id[unfolded id_def]} @ [compSS_def, #Rep_inverse ssfun])
-      THEN rtac ctxt refl 1
-    );
-
-    val compSS_comp0 =
-      let
-        val g = Free ("g", var --> var);
-        val g_prems = mk_prems g;
-        val goal = mk_Trueprop_eq (compSS $ HOLogic.mk_comp (f, g), HOLogic.mk_comp (compSS $ f, compSS $ g));
-      in Goal.prove_sorry lthy ["f", "g"] (f_prems @ g_prems) goal (fn {context, prems} =>
-        mk_compSS_comp0_tac abs rep f g compSS_def (#Rep ssfun) (#Abs_inverse ssfun) infinite_UNIV context prems
-      ) end;
-
-    val d = Free ("d", T);
-    val compSS_cong_id =
-      let
-        val a = Free ("a", var);
-        val goal = Logic.implies $ (Logic.all a (Logic.implies $
-          HOLogic.mk_Trueprop (HOLogic.mk_mem (a, PFVars $ d)) $
-          mk_Trueprop_eq (f $ a, a)
-        )) $ mk_Trueprop_eq (compSS $ f $ d, d);
-      in Goal.prove_sorry lthy ["f", "d"] f_prems goal (fn {context, prems} =>
-        mk_compSS_cong_id_tac f d abs rep compSS_def PFVars_def (#Rep_inverse ssfun) context prems
-      ) end;
-
-    val PFVars_compSS = Goal.prove_sorry lthy ["f", "d"] f_prems (mk_Trueprop_eq (
-      PFVars $ (compSS $ f $ d), mk_image f $ (PFVars $ d)
-    )) (fn {context=ctxt, prems} => EVERY1 [
-      K (unfold_thms_tac ctxt [PFVars_def, compSS_def]),
-      rtac ctxt trans,
-      rtac ctxt @{thm arg_cong[of _ _ imsupp]},
-      rtac ctxt (#Abs_inverse ssfun),
-      rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
-      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound} @ [infinite_UNIV, @{thm iffD1[OF mem_Collect_eq]} OF [#Rep ssfun]] @ prems),
-      rtac ctxt @{thm imsupp_comp_image},
-      resolve_tac ctxt prems
-    ]);
-
-    val small_PFVars = Goal.prove_sorry lthy ["p"] [] (HOLogic.mk_Trueprop (mk_ordLess
-      (mk_card_of (PFVars $ Free ("p", T))) (mk_card_of (HOLogic.mk_UNIV var))
-    )) (fn {context=ctxt, ...} => EVERY1 [
-      K (unfold_thms_tac ctxt [PFVars_def]),
-      rtac ctxt @{thm iffD2[OF imsupp_supp_bound]},
-      rtac ctxt infinite_UNIV,
-      rtac ctxt (@{thm iffD1[OF mem_Collect_eq]} OF [#Rep ssfun])
-    ]);
-
-    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-    val morph = Morphism.thm (Proof_Context.export_morphism old_lthy lthy);
-  in ((morph compSS_id0, morph compSS_comp0, morph compSS_cong_id, morph PFVars_compSS, morph small_PFVars), lthy) end;
 
 fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
   let
@@ -222,7 +132,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       HOLogic.mk_tuple (@{map 3} (fn f => fn p => fn var => fst compSS var $ f $ p) fs ps vars)
     ));
 
-    val ((compSS_id0, compSS_comp0, compSS_cong_id, PFVars_compSS, small_PFVars), lthy) = prove_axioms mk_P_Ts compSS PFVars mrbnf abs rep ssfun lthy;
+    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
+
+    val compSS_id0 = @{thm compSS_id};
+    val compSS_comp0 = @{thm compSS_comp0} OF [infinite_UNIV];
+    val compSS_cong_id = @{thm compSS_cong_id};
+    val PFVars_compSS = @{thm PFVars_compSS} OF [infinite_UNIV];
+    val small_PFVars = @{thm small_PFVars} OF [infinite_UNIV];
 
     val P = HOLogic.mk_tupleT P_Ts;
     val PFVarss = map (fst PFVars) vars;
@@ -232,7 +148,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       Pmap = ssfun_map,
       axioms = {
         Pmap_id0 = fn ctxt => rtac ctxt compSS_id0 1,
-        Pmap_comp0 = fn ctxt => rtac ctxt compSS_comp0 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+        Pmap_comp0 = fn ctxt => rtac ctxt (compSS_comp0 RS sym) 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
         Pmap_cong_ids = replicate nvars (fn ctxt => EVERY1 [
           rtac ctxt compSS_cong_id,
           REPEAT_DETERM o assume_tac ctxt,
@@ -282,7 +198,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         in EVERY [
           unfold_thms_tac ctxt (@{thms id_o o_id} @ [snd CCTOR, #rename_ctor (#inner quotient)] @ map_comps),
           unfold_thms_tac ctxt (@{thms comp_def case_prod_beta snd_conv inv_simp1} @ [compSS_rep_eq]
-            @ [Local_Defs.unfold0 ctxt @{thms comp_def} (fun_cong OF [compSS_comp0] RS sym OF @{thms bij_imp_bij_inv supp_inv_bound})]
+            @ [Local_Defs.unfold0 ctxt @{thms comp_def} (fun_cong OF [compSS_comp0] OF @{thms bij_imp_bij_inv supp_inv_bound})]
           ),
           unfold_thms_tac ctxt (@{thms id_def[symmetric]} @ [compSS_id0]),
           unfold_thms_tac ctxt @{thms id_def},
@@ -487,7 +403,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
             Int_empty_tac ctxt,
             TRY o EVERY' [
               rtac ctxt @{thm iffD2[OF arg_cong[OF UN_iff, of Not]]},
-              rtac ctxt @{thm iffD2[OF bex_simps(8)]},
+              rtac ctxt @{thm iffD2[OF Set.bex_simps(8)]},
               rtac ctxt ballI,
               Goal.assume_rule_tac ctxt
             ]
@@ -534,7 +450,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       Int_empty_tac ctxt,
       Int_empty_tac ctxt,
       resolve_tac ctxt @{thms iffD2[OF arg_cong[OF UN_iff, of Not]]},
-      resolve_tac ctxt @{thms iffD2[OF bex_simps(8)]},
+      resolve_tac ctxt @{thms iffD2[OF Set.bex_simps(8)]},
       resolve_tac ctxt [ballI],
       Goal.assume_rule_tac ctxt
     ];
@@ -623,7 +539,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
           @ map2 (fn p => fn thm => thm OF [p]) (take nvars prems) FFVars_vvsubsts
         )),
         Int_empty_tac ctxt,
-        K (unfold_thms_tac ctxt @{thms Un_iff de_Morgan_disj image_iff bex_simps(8)}),
+        K (unfold_thms_tac ctxt @{thms Un_iff de_Morgan_disj image_iff Set.bex_simps(8)}),
         rtac ctxt conjI,
         rtac ctxt @{thm ball_not_eq_imsupp},
         assume_tac ctxt,
@@ -633,7 +549,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         Goal.assume_rule_tac ctxt,
         rtac ctxt @{thm ball_not_eq_imsupp},
         assume_tac ctxt,
-        K (unfold_thms_tac ctxt @{thms UN_iff bex_simps(8)}),
+        K (unfold_thms_tac ctxt @{thms UN_iff Set.bex_simps(8)}),
         rtac ctxt ballI,
         Goal.assume_rule_tac ctxt,
         rtac ctxt conjunct2,

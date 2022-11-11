@@ -225,7 +225,6 @@ lemma small_PFVars:
 (*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>*)
 
 end

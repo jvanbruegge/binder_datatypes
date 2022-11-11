@@ -2,11 +2,10 @@ theory MRBNF_Recursor_Tests
   imports "../thys/MRBNF_Recursor"
 begin
 
-(*
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+
+(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 (* Test 1: One free variable in the fixpoint, bound in first recursive component *)
@@ -42,6 +41,7 @@ let
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 in lthy end
 \<close>
+print_theorems
 
 (* Test 2: One free variable in the fixpoint, bound in second recursive component *)
 local_setup \<open>fn lthy =>
@@ -114,7 +114,6 @@ in lthy end
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_vvsubst_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 local_setup \<open>fn lthy =>

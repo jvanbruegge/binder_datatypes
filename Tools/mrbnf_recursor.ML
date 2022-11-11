@@ -136,7 +136,7 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
     val vars = get_vars (is_some quotient_opt) mapx;
     val n = length vars;
 
-    val (((((fs, gs), d), t), xs), lthy') =
+    val (((((fs, gs), d), t), xs), _) =
       lthy
       |> mk_Frees "f" (map2 (curry op -->) vars vars)
       ||>> mk_Frees "g" (map2 (curry op -->) vars vars)
@@ -206,7 +206,8 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val ptacs = #axioms params;
 
     val mrbnf = #pre_mrbnf (#fp_result model);
-    val live = MRBNF_Def.live_of_mrbnf mrbnf;
+    val passive = #passive (#fp_result model);
+    val live = MRBNF_Def.live_of_mrbnf mrbnf - passive;
     val free = MRBNF_Def.free_of_mrbnf mrbnf;
     val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
 

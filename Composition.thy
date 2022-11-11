@@ -1,6 +1,8 @@
 theory Composition
-  imports "thys/MRBNF_Composition"
+  imports "thys/MRBNF_Recursor"
 begin
+
+declare [[mrbnf_internals]]
 
 datatype \<kappa> =
   Star ("\<star>")
@@ -15,12 +17,13 @@ binder_datatype 'var \<tau> =
 
   \<down>
 
-binder_datatype ('tyvar, 'btyvar, 'rec, 'body) \<tau>_pre =
-    TyVar 'tyvar
-  | TyArrow
-  | TyApp 'rec 'rec
-  | TyForall 'btyvar \<kappa> 'body
+  'tyvar
++ unit
++ 'rec * 'rec
++ 'btyvar * \<kappa> * 'body
 *)
+
+declare [[ML_print_depth=10000000]]
 local_setup \<open>fn lthy =>
 let
   val systemf_type_name = "\<tau>_pre"
@@ -30,55 +33,33 @@ let
   fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val qualify = Binding.prefix_name (systemf_type_name ^ "_")
 
-  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
+  val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
     [(dest_TFree @{typ 'tyvar}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'btyvar}, MRBNF_Def.Bound_Var)] systemf_type
     ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-  val ((mrbnf, (Ds, info)), lthy'') = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_type_name) true (fst tys) [] mrbnf lthy'
-in lthy'' end
+  val ((mrbnf, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_type_name) true (fst tys) [] mrbnf lthy
+  val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("\<tau>", mrbnf), 2)] [[0]] lthy;
+  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I (hd res) lthy;
+  val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
+in lthy end
 \<close>
-(*
-binder_datatype ('var, 'tyvar) "term" =
-    Var 'var
-  | App "('var, 'tyvar) term" "('var, 'tyvar) term"
-  | TApp "('var, 'tyvar) term" "'tyvar \<tau>"
-  | Lam x::"'var" "'tyvar \<tau>" t::"('var, 'tyvar) term" binds x in t
-  | TyLam a::"'btyvar" \<kappa> t::"('var, 'tyvar) term" binds a in t
-  | Let "(xs::'var * 'tyvar \<tau> * ('var, 'tyvar) term) list" t::"('var, 'tyvar) term" binds xs in t
-  | LetRec "(xs::'var * 'tyvar \<tau> * ts::('var, 'tyvar) term) list" t::"('var, 'tyvar) term" binds xs in t ts
-
-  \<down>*                  (normally the \<tau> type would not be expanded, would be recursive already)
-
-binder_datatype ('var, 'bvar, 'rec, 'body, 'tyvar, 'btyvar, 'trec, 'tbody) "term_pre" =
-    Var 'var
-  | App 'rec 'rec
-  | TApp 'rec "('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre"
-  | Lam 'bvar "('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre" 'body
-  | TyLam 'btyvar \<kappa> 'body
-  | Let "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list" 'body
-  | LetRec "('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list" 'body
-*)
-local_setup \<open>fn lthy =>
-let
-  val systemf_term_name = "term_pre"
-  val systemf_term = @{typ "'var + 'rec * 'rec + 'rec * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre +
-    'bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body + 'btyvar * \<kappa> * 'body +
-    ('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'rec) list * 'body +
-    ('bvar * ('tyvar, 'btyvar, 'trec, 'tbody) \<tau>_pre * 'body) list * 'body"}
-  val Xs = []
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'body}, @{typ 'rec}, @{typ 'tyvar}, @{typ 'btyvar}, @{typ 'trec}, @{typ 'tbody}]
-  fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val qualify = Binding.prefix_name (systemf_term_name ^ "_")
-
-  val ((mrbnf, tys), (accum, lthy')) = MRBNF_Comp.mrbnf_of_typ false MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
-    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var)] systemf_term
-    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-  val ((mrbnf, (Ds, info)), lthy'') = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name systemf_term_name) true (fst tys) [] mrbnf lthy'
-  val _ = @{print} tys
-  val _ = @{print} info
-  val _ = @{print} mrbnf
-in lthy'' end
-\<close>
-
 print_theorems
+print_bnfs
+print_mrbnfs
+
+(************************************************************************************)
+
+lemma TT_inject:
+  fixes t t'::"('a::var_\<tau>_pre, 'a, 'a \<tau>, 'a \<tau>) \<tau>_pre"
+  shows "\<tau>_ctor t = \<tau>_ctor t' \<longleftrightarrow> (\<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and> id_on (\<Union>(FFVars_\<tau> ` set3_\<tau>_pre t) - set2_\<tau>_pre t) f \<and> map_\<tau>_pre id f (vvsubst f) id t = t')"
+  unfolding \<tau>.TT_injects0 conj_assoc[symmetric]
+  apply (rule ex_cong)
+  apply (erule conjE)+
+  unfolding vvsubst_rrename
+  subgoal premises prems for f
+    unfolding vvsubst_rrename[OF prems(2,3)]
+    apply (rule refl)
+    done
+  done
 
 end

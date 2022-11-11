@@ -24,6 +24,9 @@ sig
 
   val mr_mk_simple_pred_set_tac: Proof.context -> thm -> thm option -> tactic
 
+  val mk_prems: MRBNF_Def.mrbnf -> thm list -> thm list -> thm list
+  val mk_id_prems: MRBNF_Def.mrbnf -> thm list
+
   (*val kill_in_alt_tac: Proof.context -> tactic
   val mk_kill_map_cong0_tac: Proof.context -> int -> int -> thm -> tactic
 
@@ -234,6 +237,13 @@ fun mr_mk_comp_set_map0_tac ctxt i set'_eq_set Gmap_comp0 Gset_map0s set_map0s o
       end
     ) ctxt);
 
+fun mk_prems mrbnf thms_free thms_bound = maps (fn var_type => case var_type of
+    MRBNF_Def.Free_Var => thms_free
+    | MRBNF_Def.Bound_Var => thms_bound
+    | _ => []
+  ) (var_types_of_mrbnf mrbnf);
+fun mk_id_prems mrbnf = mk_prems mrbnf @{thms supp_id_bound} @{thms bij_id supp_id_bound}
+
 fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
   unfold_thms_tac ctxt set'_eq_sets THEN
   HEADGOAL (SUBPROOF (fn {context, prems, concl, ...} =>
@@ -246,13 +256,7 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
       val [f, x, y] = map (fn g => g (Thm.dest_arg (Thm.dest_arg concl))) [Thm.dest_fun o Thm.dest_fun, Thm.dest_arg o Thm.dest_fun, Thm.dest_arg]
       val fun_cong' = infer_instantiate' context [SOME f, NONE, SOME x, SOME y] @{thm fun_cong[THEN fun_cong]}
 
-      fun mk_id_prems thms_free thms_bound = flat (map (fn var_type => case var_type of
-        MRBNF_Def.Free_Var => thms_free
-        | MRBNF_Def.Bound_Var => thms_bound
-        | _ => []
-      ) ovar_types);
-
-      val id_prems = mk_id_prems @{thms supp_id_bound} @{thms bij_id supp_id_bound}
+      val id_prems = mk_id_prems outer
 
       val G_map_comp' = MRBNF_Def.map_comp_of_mrbnf outer OF (prems @ id_prems)
       val ids = map (Thm.cterm_of context o HOLogic.id_const o fst o dest_funT o snd) (
@@ -262,7 +266,7 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
         sym OF [infer_instantiate' context (replicate num_live NONE @ map SOME ids @ [SOME x]) G_map_comp']
       );
 
-      val id_prems2 = mk_id_prems @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
+      val id_prems2 = mk_prems outer @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
     in
       HEADGOAL (EVERY' (map (rtac context) [
         trans OF [rel_cong_of_mrbnf outer OF (G_map_comp''::replicate (num_live + 1) refl)],

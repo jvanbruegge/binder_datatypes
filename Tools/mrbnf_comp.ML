@@ -155,8 +155,6 @@ fun mk_liftN (n1, n2, n3) = "_lift" ^ string_of_int n1 ^ "_" ^ string_of_int n2 
 fun mk_permuteN src dest =
   "_permute_" ^ implode (map string_of_int src) ^ "_" ^ implode (map string_of_int dest);
 
-fun short_type_name full_name = String.tokens (fn c => c = #".") full_name |> List.last;
-
 (*copied from Envir.expand_term_free*)
 fun expand_term_const defs =
   let
@@ -170,11 +168,6 @@ val expand_id_mrbnf_def = expand_term_const [Thm.prop_of id_mrbnf_def |> Logic.d
 fun is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.csum}, _) $ t $ u) = forall is_sum_prod_natLeq [t, u]
   | is_sum_prod_natLeq (Const (@{const_name BNF_Cardinal_Arithmetic.cprod}, _) $ t $ u) = forall is_sum_prod_natLeq [t, u]
   | is_sum_prod_natLeq t = t aconv @{term natLeq};
-
-fun interlace _ _ _ [] = []
-      | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
-      | interlace als (b::bs) fs (Bound_Var::ts) = b :: interlace als bs fs ts
-      | interlace als bs (f::fs) (Free_Var::ts) = f :: interlace als bs fs ts
 
 (*
  * Instantiates the live variables of an outer MRBNF with several inner MRBNFs and returns a composed MRBNF.
@@ -201,7 +194,6 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     val is_ilive = map (equal Live_Var) ivar_types;
     val is_olive = map (equal Live_Var) ovar_types;
 
-    (* Combine variable type classes of outer and inners into a single sort *)
     val sort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map class_of_mrbnf inners) (class_of_mrbnf outer);
     val cosort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map coclass_of_mrbnf inners) (coclass_of_mrbnf outer);
 
@@ -211,30 +203,23 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     fun mk_class prfx xs lthy =
       let
         val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs)
-        val thy = Proof_Context.theory_of lthy
-        val full_name = Sign.full_name thy (Binding.name name)
-      in if Class.is_class thy full_name then
-        ([full_name], lthy)
-      else
-        (Class_Declaration.class (Binding.name name) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+      in
+        Local_Theory.background_theory_result (fn thy =>
+          let val (class, lthy) = Class_Declaration.class (Binding.concealed (qualify (Binding.name name))) [] xs [] thy
+          in ([class], Local_Theory.exit_global lthy) end
+        ) lthy
       end;
-    val (class, lthy3) = mk_class "var_" sort lthy
-    val (coclass, lthy) = mk_class "covar_" cosort lthy3
+    val ((class, coclass), lthy) = lthy
+      |> mk_class "var_" sort
+      ||>> mk_class "covar_" cosort;
 
-    (* Invent variable names for deads of outer and inner *)
-    val (oDs, lthy1) = apfst (map TFree) (Variable.invent_types (map Type.sort_of_atyp (deads_of_mrbnf outer)) lthy);
-    val (iDss, lthy4) = apfst (map (map TFree)) (fold_map Variable.invent_types (map (map Type.sort_of_atyp) (map deads_of_mrbnf inners)) lthy1);
-
-    (* Invent variable names for bounds and frees (by invariant the same on outer and all inners) *)
-    val (Fs, lthy5) = apfst (map TFree) (Variable.invent_types (map (K class) (frees_of_mrbnf outer)) lthy4);
-    val (Bs, lthy6) = apfst (map TFree) (Variable.invent_types (map (K class) (bounds_of_mrbnf outer)) lthy5);
-
-    (* Invent variable names for lives of inners (by invariant all inners have the same lives)
-     * Live variables of outer are instantiated by the composition, so no variables names are needed.
-     * The code invents two lists of names because of map: e.g. for "('a \<rightarrow> 'b) \<rightarrow> 'a F \<rightarrow> 'b F" As = ['a] and As' = ['b]
-     * names_lthy is the local context after new variable names have been invented *)
-    val (As, lthy7) = apfst (map TFree) (Variable.invent_types (replicate num_ilives @{sort type}) lthy6);
-    val (As', names_lthy) = apfst (map TFree) (Variable.invent_types (replicate num_ilives @{sort type}) lthy7);
+    val ((((((oDs, iDss), As), As'), Fs), Bs), names_lthy) = lthy
+      |> mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf outer))
+      ||>> fold_map mk_TFrees' (map (map Type.sort_of_atyp o deads_of_mrbnf) inners)
+      ||>> mk_TFrees num_ilives
+      ||>> mk_TFrees num_ilives
+      ||>> mk_TFrees' (replicate (free_of_mrbnf outer) class)
+      ||>> mk_TFrees' (replicate (bound_of_mrbnf outer) class);
 
     (* Create the types of the inners, the only thing that is not the same by invariant are the dead variables.
      * This is dones once for the As and once for the As' of the live variables *)
@@ -305,7 +290,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
             fun aux_mk_set u = Term.absdummy oT (case var_type of
               Live_Var => u
               | _ => mk_union (the (nth outer_sets' i) $ Bound 0, u)
-            ) |> Syntax.check_term names_lthy;
+            );
           in (aux_mk_set union_map, aux_mk_set union_compose) end;
       in map_split mk_set (0 upto num_inondead - 1 ~~ ivars) end;
 
@@ -376,9 +361,9 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
            (rtac ctxt subset_UNIV)) 1)) ORELSE rtac ctxt subset_UNIV 1)
       );
 
-    val (in_alt_thm, in_alt_lthy) =
+    val (in_alt_thm, names_lthy) =
       let
-        val (Asets, lthy') = mk_Frees "A" (map HOLogic.mk_setT As) names_lthy;
+        val (Asets, names_lthy) = mk_Frees "A" (map HOLogic.mk_setT As) names_lthy;
         val inx = mk_in Asets (cond_keep sets is_ilive) oT;
         val iterms = map2 (mk_in Asets) (map (fn xs => cond_keep xs is_ilive) inner_setss) iTs
         val in_alt = mk_in iterms (cond_keep outer_sets is_olive) oT;
@@ -387,7 +372,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         (Goal.prove_sorry lthy [] [] goal
           (fn {context = ctxt, prems = _} => mk_comp_in_alt_tac' ctxt set_alt_thms)
         |> Thm.close_derivation \<^here>,
-        lthy')
+        names_lthy)
       end;
 
     fun le_rel_OO_tac ctxt = mk_le_rel_OO_tac ctxt (le_rel_OO_of_mrbnf outer) (rel_mono_of_mrbnf outer)
@@ -407,10 +392,10 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         HEADGOAL (rtac ctxt (trans OF [pred_alt, in_alt]))
       end;
 
-    val (wits, wit_tac, wit_lthy) =
+    val (wits, wit_tac, names_lthy) =
       let
         val num_owits = nwits_of_mrbnf outer;
-        val (xs, lthy') = mk_Frees "x" As in_alt_lthy;
+        val (xs, names_lthy) = mk_Frees "x" As names_lthy;
 
         val outer_wits = mk_wits_of_mrbnf (replicate num_owits oDs) (replicate num_owits iTs) (replicate num_owits Bs) (replicate num_owits Fs) outer;
 
@@ -428,20 +413,20 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           |> map (fn (frees, t) => fold absfree frees t);
 
         fun wit_tac ctxt = mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners;
-      in (wits, wit_tac, lthy') end;
+      in (wits, wit_tac, names_lthy) end;
 
     (* Define the map function of the composed MRBNF. It instantiates the map function of outer with the map functions of the inners:
      * \<forall>f1 ... fn v1 ... vm u1 ... ul. outer.map (inner_1.map f1 ... fn v1 ... vm u1 ... ul) ... (inner_m.map f1 ... fn v1 ... vm u1 ... ul) v1 ... vm u1 ... ul
      * Although in the example above the map function first takes all of the live variable functions, then all the bound variable function and
      * lastly the free variable functions, this does NOT have to be the case. Lives, bounds and frees can be interleaved in any order.
      * Additionally, the inners are only instanciated as the live variables of the outer, so the map function retains the functions for bounds and frees *)
-    val (mapx, map_lthy) =
+    val (mapx, names_lthy) =
       let
         (* Create new variables for the different variable kinds and give them the types:
          *  - live: f1 ... fn : As\<^sub>i \<Rightarrow> As'\<^sub>i
          *  - bound: v1 ... vm : Bs\<^sub>j \<Rightarrow> Bs\<^sub>j
          *  - free: u1 ... ul : Fs\<^sub>k \<Rightarrow> Fs\<^sub>k *)
-        val (((fs, vs), us), lthy) = wit_lthy
+        val (((fs, vs), us), names_lthy) = names_lthy
           |> apfst snd o BNF_Util.mk_Frees' "f" (map2 (curry op -->) As As')
           ||>> apfst snd o BNF_Util.mk_Frees' "v" (map2 (curry op -->) Bs Bs)
           ||>> apfst snd o BNF_Util.mk_Frees' "u" (map2 (curry op -->) Fs Fs)
@@ -464,21 +449,21 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           | interlace_maps (i::ids) maps (_::ts) = i :: interlace_maps ids maps ts
         val body = Term.list_comb (mk_map_of_mrbnf oDs iTs iTs' Bs Fs outer, interlace_maps fn_bounds_frees_ids innermaps ovar_types)
 
-      in (fold_rev Term.abs fn_vars body, lthy) end;
+      in (fold_rev Term.abs fn_vars body, names_lthy) end;
 
     (* The relator for the composed MRBNF just instantiates the variables of the outer relator with the relators of the inners
      * \<forall>Q1 ... Qn. outer.rel (inner1.rel Q1 ... Qn) ... (innerm.rel Q1 ... Qn)
      * The same happens for the predicator *)
-    val (rel, pred, rel_lthy) =
+    val (rel, pred, names_lthy) =
       let
         (* Invent new variable names for relator and predicator prop variables *)
-        val ((Qs, Ps), lthy') = map_lthy
+        val ((Qs, Ps), names_lthy) = names_lthy
           |> apfst snd o BNF_Util.mk_Frees' "Q" (map2 BNF_Util.mk_pred2T As As')
           ||>> apfst snd o BNF_Util.mk_Frees' "P" (map BNF_Util.mk_pred1T As);
         (* Contrary to "map" the relator/predicator only works over the live variables, so no interlacing needed here *)
         fun mk_innerf f Ds inner = Term.list_comb (f Ds As As' Bs Fs inner, map Bound (num_ilives - 1 downto 0));
         fun mk_f f vars = fold_rev Term.abs vars (Term.list_comb (f oDs iTs iTs' Bs Fs outer, map2 (mk_innerf f) iDss inners))
-      in (mk_f mk_rel_of_mrbnf Qs, mk_f (fn Ds => fn Ts => K (mk_pred_of_mrbnf Ds Ts)) Ps, lthy') end;
+      in (mk_f mk_rel_of_mrbnf Qs, mk_f (fn Ds => fn Ts => K (mk_pred_of_mrbnf Ds Ts)) Ps, names_lthy) end;
 
     val tacs = {
       map_id0 = map_id0_tac,
@@ -506,7 +491,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           mr_mk_bd_card_leq_UNIV_tac context (ifco outer) (map ifco inners)
             (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
         ) |> Thm.close_derivation \<^here>;
-        val (zs, lthy') = mk_Frees "z" (Fs @ Bs) lthy
+        val (zs, _) = mk_Frees "z" (Fs @ Bs) lthy
 
         fun mk_covar_thm (coclass, lthy) =
           let
@@ -515,14 +500,14 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
               |> mk_ordLeq (BNF_LFP_Util.mk_cardSuc bd')
               |> HOLogic.mk_Trueprop;
             val large = #covar_large  o class_thms_of_mrbnf
-          in Goal.prove_sorry lthy' [] [] (fold_rev Logic.all zs covar_goal) (fn {context,...} =>
+          in Goal.prove_sorry lthy [] [] covar_goal (*(fold_rev Logic.all zs covar_goal)*) (fn {context,...} =>
             mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners)
               (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
           ) |> Thm.close_derivation \<^here> end;
       in SOME ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
 
     val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) class_opt
-              Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) rel_lthy
+              Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
 
     val phi =
       Morphism.thm_morphism "MRBNF" (unfold_thms lthy' [id_mrbnf_def])
@@ -547,9 +532,8 @@ fun mk_simple_class_opt mrbnf =
 fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
   if src = dest then (mrbnf, accum) else
   let
-    (*Update binding's name to indicate permutation happened?*)
     val b = Binding.suffix_name (mk_permuteN src dest) (name_of_mrbnf mrbnf);
-    (*Read out various attributes via accessor functions*)
+
     val live = live_of_mrbnf mrbnf;
     val free = free_of_mrbnf mrbnf;
     val bound = bound_of_mrbnf mrbnf;
@@ -574,16 +558,12 @@ fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
     fun permute_live xs = permute_like_unique (op =) src_live dest_live xs;
     fun unpermute_live xs = permute_like_unique (op =) dest_live src_live xs;
 
-    val (Ds, lthy1) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp deads) lthy);
-    val (As, lthy2) = apfst (map TFree)
-      (Variable.invent_types (replicate live @{sort type}) lthy1);
-    val (As', lthy3) = apfst (map TFree)
-      (Variable.invent_types (replicate live @{sort type}) lthy2);
-    val (Fs, lthy4) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp frees) lthy3);
-    val (Bs, _(*lthy5*)) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp bounds) lthy4);
+    val (((((Ds, As), As'), Fs), Bs), _) = lthy
+      |> mk_TFrees' (map Type.sort_of_atyp deads)
+      ||>> mk_TFrees live
+      ||>> mk_TFrees live
+      ||>> mk_TFrees' (map Type.sort_of_atyp frees)
+      ||>> mk_TFrees' (map Type.sort_of_atyp bounds);
 
     val T = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
 
@@ -602,7 +582,7 @@ fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
       (replicate count Ds) (replicate count As') (replicate count Bs) (replicate count Fs) mrbnf);
 
     (*Create term list of permuted sets*)
-    val (ABFsets, _(*names_lthy*)) = lthy
+    val (ABFsets, _) = lthy
       |> mk_Frees "A" (map HOLogic.mk_setT (permute ABF_types));
 
 
@@ -747,24 +727,19 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
 
     (* TODO: check 0 < n <= live *)
     (*`f = (f x, x)*)
-    val (Ds, lthy1) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp deads) lthy);
+    val ((Ds, As), names_lthy) = lthy
+      |> mk_TFrees' (map Type.sort_of_atyp deads)
+      ||>> mk_TFrees' (map (fn Live_Var => @{sort type} | Dead_Var => @{sort type} |_ => class) Atargets);
 
-    val (As, lthy2) = apfst (map TFree)
-        (Variable.invent_types (map (fn x =>
-          if x = Live_Var orelse x = Dead_Var then @{sort type} else class
-        ) Atargets) lthy1)
     val demotedAs = cond_keep As isdemot_A
 
-    val (As', lthy3) = let
-      val (sAs', tlthy) = apfst (map TFree)
-        (Variable.invent_types (replicate new_live @{sort type}) lthy2);
+    val (As', names_lthy) = let
+      val (sAs', tlthy) = mk_TFrees new_live names_lthy;
     in (cond_interlace demotedAs sAs' isdemot_A, tlthy) end
 
-    val (Fs, lthy4) = apfst (map TFree)
-      (Variable.invent_types (replicate free class) lthy3);
-    val (Bs, _(*lthy5*)) = apfst (map TFree)
-      (Variable.invent_types (replicate bound class) lthy4);
+    val ((Fs, Bs), names_lthy) = names_lthy
+      |> mk_TFrees' (replicate free class)
+      ||>> mk_TFrees' (replicate bound class);
 
     val T = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
 
@@ -779,8 +754,8 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
     val sets = cond_keep mrbnf_sets not_dead;
     val var_type_sets = cond_keep (targetTs ~~ mrbnf_sets) not_dead;
 
-    val ((Asets, lives), _(*names_lthy*)) =
-      let val still_lives = cond_keep As (map not isdemot_A) in lthy
+    val ((Asets, lives), _) =
+      let val still_lives = cond_keep As (map not isdemot_A) in names_lthy
       |> mk_Frees "A" (map HOLogic.mk_setT still_lives)
       ||>> mk_Frees "x" (still_lives) end;
 
@@ -1009,16 +984,12 @@ fun raw_lift_mrbnf qualify (n1, n2, n3) mrbnf (accum as (unfold_set, lthy)) =
 
     (* TODO: check 0 < n, m < 0, l < 0 *)
 
-    val (Ds, lthy1) = apfst (map TFree)
-      (Variable.invent_types (map Type.sort_of_atyp deads) lthy);
-    val ((newAs, As), lthy2) = apfst (chop n1 o map TFree)
-      (Variable.invent_types (replicate (n1 + live) @{sort type}) lthy1);
-    val ((newAs', As'), lthy3) = apfst (chop n1 o map TFree)
-      (Variable.invent_types (replicate (n1 + live) @{sort type}) lthy2);
-    val ((newFs, Fs), lthy4) = apfst (chop n2 o map TFree)
-      (Variable.invent_types (replicate n2 class @ map Type.sort_of_atyp frees) lthy3);
-    val ((newBs, Bs), _(*lthy5*)) = apfst (chop n3 o map TFree)
-      (Variable.invent_types (replicate n3 class @ map Type.sort_of_atyp bounds) lthy4);
+    val (((((Ds, (newAs, As)), (newAs', As')), (newFs, Fs)), (newBs, Bs)), _) = lthy
+      |> mk_TFrees' (map Type.sort_of_atyp deads)
+      ||>> apfst (chop n1) o mk_TFrees (n1 + live)
+      ||>> apfst (chop n1) o mk_TFrees (n1 + live)
+      ||>> apfst (chop n2) o mk_TFrees' (replicate n2 class @ map Type.sort_of_atyp frees)
+      ||>> apfst (chop n3) o mk_TFrees' (replicate n3 class @ map Type.sort_of_atyp bounds);
 
     val newVars = newAs @ newFs @ newBs
     val newVars' = newAs' @ newFs @ newBs
@@ -1031,7 +1002,7 @@ fun raw_lift_mrbnf qualify (n1, n2, n3) mrbnf (accum as (unfold_set, lthy)) =
     val var_type_sets = (replicate n1 Live_Var @ replicate n2 Free_Var @  replicate n3 Bound_Var
       @ var_types_of_mrbnf mrbnf) ~~ sets;
 
-    val (Asets, _(*names_lthy*)) = lthy
+    val (Asets, _) = lthy
       |> mk_Frees "A" (map (range_type o fastype_of) sets);
 
     (*%f1 ... fn. mrbnf.map*)
@@ -1451,6 +1422,11 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       wit = wit_tac
     };
 
+    fun mk_class prfx xs lthy =
+      (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+    val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) lthy
+    val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) lthy3
+
     val class_thms =
       let
         val class_thms = class_thms_of_mrbnf mrbnf
@@ -1468,13 +1444,13 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
         ]
       in
         SOME (
-          (class_of_mrbnf mrbnf, var_large', #var_regular class_thms),
-          (coclass_of_mrbnf mrbnf, K covar_large')
+          (class, var_large', #var_regular class_thms),
+          (coclass, K covar_large')
         )
       end
 
     val (mrbnf', lthy') =
-      mrbnf_def Hardly_Inline (user_policy Dont_Note) true qualify tacs (SOME all_deads) class_thms
+      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) class_thms
         Binding.empty Binding.empty Binding.empty []
         (((((((b, TA), mrbnf_map), mrbnf_sets), mrbnf_bd'), mrbnf_wits), SOME mrbnf_rel), SOME mrbnf_pred) lthy;
     val unfolds = @{thm id_bnf_apply} ::
@@ -1501,14 +1477,14 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
   end;
 
 exception BAD_DEAD of typ * typ;
-fun mrbnf_of_typ _ _ _ _ _ Ds0 var_types (T as TFree T') accum =
+fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
     (if member (op =) Ds0 T' then ((DEADID_mrbnf, ([T], [])), accum) else
       (case map_filter (fn a => if fst a = T' then SOME (snd a) else NONE) var_types of
         [] => ((ID_mrbnf, ([], [T])), accum)
         | [Dead_Var] => error "var_types may only be Live, Free or Bound, use Ds0 for deads"
         | [var_type] => let
-                          val qualify = Binding.suffix_name ("_" ^ fst T')
-                          val (ID', accum') = demote_mrbnf qualify [var_type] ID_mrbnf accum
+                          val qualify' = qualify o Binding.suffix_name ("_" ^ fst T')
+                          val (ID', accum') = demote_mrbnf qualify' [var_type] ID_mrbnf accum
                         in ((ID', ([], [T])), accum') end
         | _ => error "Same variable appears twice in var_types"
       )
@@ -1533,7 +1509,9 @@ fun mrbnf_of_typ _ _ _ _ _ Ds0 var_types (T as TFree T') accum =
       (case mrbnf_opt of
         NONE => ((DEADID_mrbnf, ([T], [])), accum)
       | SOME (mrbnf, lthy') =>
-        if optim andalso forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees then
+        if optim andalso forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
+          andalso Library.inter (op=) (map dest_TFree Ts) (map fst var_types) = []
+        then
           let
             val T' = T_of_mrbnf mrbnf;
             val deads = deads_of_mrbnf mrbnf;

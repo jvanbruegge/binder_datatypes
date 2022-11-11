@@ -6,11 +6,17 @@ sig
   val cond_keep: 'a list -> bool list -> 'a list
   val cond_interlace: 'a list -> 'a list -> bool list -> 'a list
   val cond_automap: ('a -> 'a) -> 'a list -> bool list -> 'a list
+  val short_type_name: string -> string
 
-  val mk_ordLess: term -> term -> term
   val mk_supp: term -> term
+  val mk_imsupp: term -> term
   val mk_inv: term -> term
+  val mk_bij: term -> term
+  val mk_Un: term * term -> term
+  val mk_Int: term * term -> term
   val mk_infinite_regular_card_order: term -> term
+  val mk_id_on: term -> term -> term
+  val mk_card_suc: term -> term
 
   val new_typedef: binding -> term -> (Proof.context -> tactic) -> local_theory ->
     (string * Typedef.info) * local_theory
@@ -32,12 +38,30 @@ sig
   val asm_simp_only_all_new: Proof.context -> thm list -> (int -> tactic) list -> int -> tactic
 
   val mk_abs_def2: Proof.context -> thm -> thm
+  val mk_arg_cong: Proof.context -> int -> term -> thm
 end;
 
 structure MRBNF_Util : MRBNF_UTIL =
 struct
 
 open BNF_Util
+
+fun mk_arg_cong ctxt n t =
+  let
+    val Us = fastype_of t |> strip_typeN n |> fst;
+    val ((xs, ys), _) = ctxt
+      |> mk_Frees "x" Us
+      ||>> mk_Frees "y" Us;
+    val goal = Logic.list_implies (@{map 2} (curry mk_Trueprop_eq) xs ys,
+      mk_Trueprop_eq (list_comb (t, xs), list_comb (t, ys)));
+    val vars = Variable.add_free_names ctxt goal [];
+  in
+    Goal.prove_sorry ctxt vars [] goal (fn {context = ctxt, prems = _} =>
+      HEADGOAL (hyp_subst_tac ctxt THEN' rtac ctxt refl))
+    |> Thm.close_derivation \<^here>
+  end;
+
+fun short_type_name full_name = String.tokens (fn c => c = #".") full_name |> List.last;
 
 fun filter_like xs P = map snd o filter (P o fst) o map2 pair xs;
 
@@ -51,11 +75,11 @@ fun cond_keep xs bs = (map fst o filter snd) (xs ~~ bs)
 
 fun cond_automap f xs bs = map (fn (x, b) => if b then f x else x) (xs ~~ bs)
 
-fun mk_ordLess t1 t2 = HOLogic.mk_mem (HOLogic.mk_prod (t1, t2),
-  Const (@{const_name ordLess}, mk_relT (fastype_of t1, fastype_of t2)));
-
 fun mk_supp t = let val T = t |> fastype_of |> dest_funT |> fst
   in Const (@{const_name Prelim.supp}, (T --> T) --> HOLogic.mk_setT T) $ t end;
+fun mk_imsupp u =
+  let val T = fastype_of u
+  in Const (@{const_name imsupp}, T --> HOLogic.mk_setT (fst (dest_funT T))) $ u end;
 
 fun mk_inv t =
   let
@@ -64,6 +88,18 @@ fun mk_inv t =
   in
     Const (@{const_name inv_into}, HOLogic.mk_setT T --> fT --> finvT) $ HOLogic.mk_UNIV T $ t
   end;
+
+val mk_Un = HOLogic.mk_binop @{const_name sup};
+val mk_Int = HOLogic.mk_binop @{const_name inf};
+
+fun mk_id_on t1 t2 = let val (T, ST) = fastype_of t1 |> `HOLogic.dest_setT;
+  in Const (@{const_name id_on}, ST --> (T --> T) --> HOLogic.boolT) $ t1 $ t2 end;
+
+fun mk_bij t = t
+  |> fastype_of
+  |> dest_funT
+  |> apply2 HOLogic.mk_UNIV
+  |-> BNF_LFP_Util.mk_bij_betw t;
 
 fun mk_infinite_regular_card_order bd =
   let
@@ -130,5 +166,10 @@ fun mk_abs_def2 ctxt thm = thm
   |> (fn goal => Goal.prove_sorry ctxt [] [] goal
     (fn {context=ctxt, prems=_} => rtac ctxt ext 1 THEN rtac ctxt ext 1 THEN rtac ctxt thm 1))
   |> Thm.close_derivation \<^here>;
+
+fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
+fun mk_card_suc r =
+  let val T = fst (BNF_Util.dest_relT (fastype_of r));
+  in Const (\<^const_name>\<open>card_suc\<close>, BNF_Util.mk_relT (T, T) --> BNF_Util.mk_relT (mk_sucT T, mk_sucT T)) $ r end;
 
 end;

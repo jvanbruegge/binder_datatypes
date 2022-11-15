@@ -264,7 +264,7 @@ lemma Abs_avoid: "|A::'a::var_terms_pre set| <o |UNIV::'a set| \<Longrightarrow>
   apply assumption
   done
 
-lemma TT_fresh_induct_param:
+lemma TT_fresh_induct_param[case_names Bound Var App Abs]:
   fixes x::"'a::var_terms_pre terms" and K::"'b \<Rightarrow> 'a set"
   assumes "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|"
 and Var: "\<And>a \<rho>. P (Var a) \<rho>"
@@ -2245,6 +2245,172 @@ apply (rule mp[OF spec[OF spec[OF spec[OF
    apply (rule refl)
   apply (rule conjI assms)+
   done
+
+
+
+
+ML \<open>
+fun unless_more_args scan = Scan.unless (Scan.lift
+  ((Args.$$$ "arbitrary" || Args.$$$ "taking" || Args.$$$ "avoiding" || Args.$$$ "rule") -- Args.colon)) scan;
+
+val inst = Scan.lift (Args.$$$ "_") >> K NONE || Args.term >> SOME;
+
+val free = Args.context -- Args.term >> (fn (_, Free v) => v | (ctxt, t) =>
+  error ("Bad free variable: " ^ Syntax.string_of_term ctxt t));
+
+val arbitrary = Scan.optional (Scan.lift (Args.$$$ "arbitrary" -- Args.colon) |--
+  Parse.and_list1' (Scan.repeat (unless_more_args free))) [];
+
+val avoiding = Scan.optional (Scan.lift (Args.$$$ "avoiding" -- Args.colon) |--
+  Parse.and_list1' (Scan.repeat (unless_more_args Args.term))) [];
+
+val taking = Scan.optional (Scan.lift (Args.$$$ "taking" -- Args.colon) |--
+  Scan.repeat1 (unless_more_args inst)) [];
+
+val rule = Scan.lift (Args.$$$ "rule" -- Args.colon) |-- Attrib.thms;
+
+val inst' = Scan.lift (Args.$$$ "_") >> K NONE ||
+  Args.term >> (SOME o rpair false) ||
+  Scan.lift (Args.$$$ "(") |-- (Args.term >> (SOME o rpair true)) --|
+    Scan.lift (Args.$$$ ")");
+
+val def_inst =
+  ((Scan.lift (Args.binding --| (Args.$$$ "\<equiv>" || Args.$$$ "==")) >> SOME)
+      -- (Args.term >> rpair false)) >> SOME ||
+    inst' >> Option.map (pair NONE);
+
+fun align_left msg xs ys =
+  let val m = length xs and n = length ys
+  in if m < n then error msg else (take n xs ~~ ys) end;
+
+fun align_right msg xs ys =
+  let val m = length xs and n = length ys
+  in if m < n then error msg else (drop (m - n) xs ~~ ys) end;
+
+fun prep_inst ctxt align tune (tm, ts) =
+  let
+    fun prep_var (Var (x, xT), SOME t) =
+          let
+            val ct = Thm.cterm_of ctxt (tune t);
+            val tT = Thm.typ_of_cterm ct;
+          in
+            if Type.could_unify (tT, xT) then SOME (x, ct)
+            else error (Pretty.string_of (Pretty.block
+             [Pretty.str "Ill-typed instantiation:", Pretty.fbrk,
+              Syntax.pretty_term ctxt (Thm.term_of ct), Pretty.str " ::", Pretty.brk 1,
+              Syntax.pretty_typ ctxt tT]))
+          end
+      | prep_var (_, NONE) = NONE;
+    val xs = Induct.vars_of tm;
+  in
+    align "Rule has fewer variables than instantiations given" xs ts
+    |> map_filter prep_var
+  end;
+\<close>
+
+local_setup \<open>fn lthy =>
+let
+  fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking opt_rule facts =
+  CONTEXT_SUBGOAL (fn (_, i) => fn (ctxt, st) =>
+    let
+      val ((insts, defs), defs_ctxt) = fold_map Induct.add_defs def_insts ctxt |>> split_list;
+      val atomized_defs = map (map (Conv.fconv_rule (Induct.atomize_cterm defs_ctxt))) defs;
+
+      val var = case fold Term.add_tfrees (map_filter I (hd insts)) [] of
+        [x] => x
+      | _ => error "Induction on datatypes with more than one variable is not supported yet";
+
+      fun inst_rule (concls, r) =
+        (if null insts then `Rule_Cases.get r
+         else (align_left "Rule has fewer conclusions than arguments given"
+            (map Logic.strip_imp_concl (Logic.dest_conjunctions (Thm.concl_of r))) insts
+          |> maps (prep_inst ctxt align_right (Induct.atomize_term ctxt))
+          |> infer_instantiate ctxt) r |> pair (Rule_Cases.get r))
+        |> mod_cases
+        |> (fn ((cases, consumes), th) => (((cases, concls), consumes), th));
+
+      val ruleq = (case opt_rule of
+        SOME rs => Seq.single (inst_rule (Rule_Cases.strict_mutual_rule ctxt rs))
+      | NONE => error "Automatic detection of induction rule is not supported yet, please specify with rule:"
+      );
+    in ruleq
+      |> Seq.maps (Rule_Cases.consume defs_ctxt (flat defs) facts)
+      |> Seq.maps (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
+        let
+          val avoiding_arbitraries = filter (member (op=) (hd avoiding)) (map Free (hd arbitrary));
+          val avoiding_arbitrary = HOLogic.mk_tuple avoiding_arbitraries;
+
+          fun extract_vars t =
+            let
+              val T = fastype_of t
+              fun extract_deep T t = if T = TFree var then t else
+                let
+                  val (name, Ts) = Term.dest_Type T
+                  val sets = case MRBNF_Def.mrbnf_of ctxt name of
+                    SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
+                    | NONE => (case BNF_Def.bnf_of ctxt name of
+                      SOME bnf => BNF_Def.sets_of_bnf bnf
+                      | NONE => error "Only single variables, sets of variables and variables in (MR)BNFs are supported"
+                    );
+                  val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts)
+                  val sets' = map_filter (fn (T, s) => if member (op=) (Term.add_tfreesT T []) var then
+                    SOME (T, subst s) else NONE) (Ts ~~ sets);
+                  val ts = map (fn (T, s) => extract_deep T (case fastype_of t of
+                    Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
+                    | _ => s $ t)) sets'
+                in foldl1 MRBNF_Util.mk_Un ts end;
+                
+            in if T = TFree var then HOLogic.mk_set T [t] else (
+              if T = HOLogic.mk_setT (TFree var) then t else extract_deep T t
+            ) end
+    
+          val HOL_implies = Const (@{const_name HOL.induct_implies}, @{typ bool} --> @{typ bool} --> @{typ bool})
+          val P = fold_rev Term.absfree
+            (map_filter (fn SOME (Free (a, b)) => SOME (a, b) | _ => NONE) (hd insts))
+            (Term.abs ("\<rho>", fastype_of avoiding_arbitrary) (
+              fold_rev (fn (x, T) => fn P => HOLogic.all_const T $ Term.absfree (x, T) P)
+                (hd arbitrary)
+                (HOL_implies $
+                 (HOLogic.eq_const (fastype_of avoiding_arbitrary) $ Bound (length (hd arbitrary)) $ avoiding_arbitrary) $
+                Induct.atomize_term ctxt ((hd o snd o Term.strip_comb) (Thm.concl_of st))
+              ))
+            );
+          val K = case hd avoiding of
+            [] => Term.abs ("\<rho>", HOLogic.unitT) (Const (@{const_name bot}, HOLogic.mk_setT (TFree var)))
+            | _ => MRBNF_Util.mk_case_tuple (map Term.dest_Free avoiding_arbitraries)
+              (foldl1 MRBNF_Util.mk_Un (map extract_vars (hd avoiding)));
+
+          val rule' = infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K, P]) rule
+
+          val _ = @{print} rule'
+          val _ = @{print} (Thm.cterm_of ctxt K)
+          val _ = @{print} (cases, concls, more_consumes, more_facts, rule)
+        in error "foo" end
+      )
+    end
+  )
+in Method.local_setup @{binding binder_induction} (
+  Scan.lift (Args.mode Induct.no_simpN) --
+    (Parse.and_list' (Scan.repeat (unless_more_args def_inst)) --
+      (arbitrary -- avoiding -- taking -- Scan.option rule)) >>
+  (fn (no_simp, (insts, (((arbitrary, avoiding), taking), opt_rule))) => fn _ => fn facts =>
+    Seq.DETERM (gen_binder_context_tactic I (not no_simp) insts arbitrary avoiding taking opt_rule facts 1)))
+ "induction on binder types" lthy end
+\<close>
+
+declare [[ML_print_depth=100000]]
+
+lemma substitution: "\<lbrakk> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x:=v)) e : \<tau>"
+proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v  rule: TT_fresh_induct_param)
+
+  oops
+
+
+
+
+
+
+
 
 
 

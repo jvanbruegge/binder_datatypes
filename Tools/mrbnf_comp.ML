@@ -478,7 +478,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       wit = wit_tac
     };
 
-    val class_opt =
+    val class_thms =
       let
         val ifco = bd_infinite_regular_card_order_of_mrbnf
 
@@ -504,9 +504,9 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
             mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners)
               (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
           ) |> Thm.close_derivation \<^here> end;
-      in SOME ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
+      in ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
 
-    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) class_opt
+    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME class_thms)
               Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
 
     val phi =
@@ -1443,14 +1443,14 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
           #covar_large class_thms
         ]
       in
-        SOME (
+        (
           (class, var_large', #var_regular class_thms),
           (coclass, K covar_large')
         )
       end
 
     val (mrbnf', lthy') =
-      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) class_thms
+      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) (SOME class_thms)
         Binding.empty Binding.empty Binding.empty []
         (((((((b, TA), mrbnf_map), mrbnf_sets), mrbnf_bd'), mrbnf_wits), SOME mrbnf_rel), SOME mrbnf_pred) lthy;
     val unfolds = @{thm id_bnf_apply} ::

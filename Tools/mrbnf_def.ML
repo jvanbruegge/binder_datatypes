@@ -1511,9 +1511,11 @@ fun as_subclass_of super_class subclass_tac ctxt =
   Class_Declaration.prove_subclass (subclass_tac ctxt) (the_single super_class) ctxt;
 
 fun define_var_type_class var_binding bd_term =
-  Class_Declaration.class var_binding [] [] [check_bd_termT bd_term |> mk_Field
-    |> mk_card_of |> var_assumpt_terms] #>> single
-  ##> Local_Theory.exit_global |> Local_Theory.background_theory_result;
+  Local_Theory.background_theory_result (
+    Class_Declaration.class var_binding [] [] [
+      check_bd_termT bd_term |> mk_Field |> mk_card_of |> var_assumpt_terms
+    ] #> apfst single #> apsnd Local_Theory.exit_global
+  )
 
 fun define_covar_type_class bd_term var_binding class subclass_tac =
   Class_Declaration.class var_binding [] [] [check_bd_termT bd_term |> BNF_LFP_Util.mk_cardSuc
@@ -2251,6 +2253,21 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
                 Goal.assume_rule_tac ctxt])
             |> Thm.close_derivation \<^here>
           end;
+
+        val lthy = Local_Theory.background_theory (fn thy =>
+          let
+            val lthy = Named_Target.init [] (hd class) thy;
+            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+              ("Un_bound", Un_bound),
+              ("UN_bound", UNION_bound),
+              ("cinfinite", UNIV_cinfinite)
+            ]) lthy) handle ERROR _ => lthy;
+            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+              ("large", var_large),
+              ("regular", var_regular)
+            ]) lthy) handle ERROR _ => lthy;
+          in Local_Theory.exit_global lthy end
+        ) lthy;
 
         val supp_comp_bound =
           let

@@ -18,6 +18,8 @@ sig
   val mk_id_on: term -> term -> term
   val mk_card_suc: term -> term
 
+  val mk_case_tuple: (string * typ) list -> term -> term
+
   val new_typedef: binding -> term -> (Proof.context -> tactic) -> local_theory ->
     (string * Typedef.info) * local_theory
   val thm_instantiate_terms: Proof.context -> term option list -> thm -> thm
@@ -60,6 +62,10 @@ fun mk_arg_cong ctxt n t =
       HEADGOAL (hyp_subst_tac ctxt THEN' rtac ctxt refl))
     |> Thm.close_derivation \<^here>
   end;
+
+fun mk_case_tuple [] t = t
+  | mk_case_tuple [(s, T)] t = Term.absfree (s, T) t
+  | mk_case_tuple ((s1, T1)::xs) t = HOLogic.mk_case_prod (Term.absfree (s1, T1) (mk_case_tuple xs t))
 
 fun short_type_name full_name = String.tokens (fn c => c = #".") full_name |> List.last;
 

@@ -14,10 +14,6 @@ open MRBNF_Recursor
 
 val unfold_thms_tac = Ctr_Sugar_Tactics.unfold_thms_tac
 
-fun mk_case_tuple [] t = t
-  | mk_case_tuple [(s, T)] t = Term.absfree (s, T) t
-  | mk_case_tuple ((s1, T1)::xs) t = HOLogic.mk_case_prod (Term.absfree (s1, T1) (mk_case_tuple xs t))
-
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
 

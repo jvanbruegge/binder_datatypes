@@ -26,6 +26,7 @@ structure Data = Generic_Data (
   val extend = I;
   fun merge data : T = Symtab.merge (K true) data;
 );
+Multithreading.parallel_proofs := 1
 \<close>
 
 declare [[mrbnf_internals]]
@@ -264,7 +265,7 @@ lemma Abs_avoid: "|A::'a::var_terms_pre set| <o |UNIV::'a set| \<Longrightarrow>
   apply assumption
   done
 
-lemma TT_fresh_induct_param:
+lemma TT_fresh_induct_param[case_names Bound Var App Abs]:
   fixes x::"'a::var_terms_pre terms" and K::"'b \<Rightarrow> 'a set"
   assumes "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|"
 and Var: "\<And>a \<rho>. P (Var a) \<rho>"
@@ -1554,9 +1555,9 @@ lemma id_on_empty: "id_on {} f"
 lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
   by simp
 
-lemma Ty_fresh_induct_param:
+lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
   fixes K::"'p \<Rightarrow> 'a::var_terms_pre set" and e::"'a terms"
-  assumes bound: "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|" and x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
+  assumes x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>" and bound: "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|"
     and Ty_Var: "\<And>x \<tau> \<Gamma> \<rho>. (x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> P \<Gamma> (Var x) \<tau> \<rho>"
     and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2 \<rho>. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<rho>
       \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> e2 \<tau>\<^sub>1 \<rho> \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2 \<rho>"
@@ -1886,11 +1887,11 @@ lemma Ty_fresh_induct:
   fixes A::"'a::var_terms_pre set" and e::"'a terms"
   assumes "|A| <o |UNIV::'a set|" and x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
     and Ty_Var: "\<And>x \<tau> \<Gamma>. (x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> P \<Gamma> (Var x) \<tau>"
-    and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1
-      \<Longrightarrow> P \<Gamma> e2 \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2"
+    and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> e2 \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2"
     and Ty_Abs: "\<And>x \<Gamma> \<tau> e \<tau>\<^sub>2. x \<notin> A \<union> fst ` fset \<Gamma> \<union> FFVars_terms (Abs x \<tau> e) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P (\<Gamma>,x:\<tau>) e \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> (Abs x \<tau> e) (\<tau> \<rightarrow> \<tau>\<^sub>2)"
   shows "P \<Gamma> e \<tau>"
-  apply (rule mp[OF spec[OF Ty_fresh_induct_param[of "\<lambda>\<rho>. case \<rho> of (\<Gamma>, e) \<Rightarrow> A \<union> fst ` fset \<Gamma> \<union> FFVars_terms e" _ _ _ "\<lambda>\<Gamma> e \<tau> \<rho>. \<rho> = (\<Gamma>, e) \<longrightarrow> P \<Gamma> e \<tau>"]]])
+  apply (rule mp[OF spec[OF Ty_fresh_induct_param[of _ _ _ "\<lambda>\<rho>. case \<rho> of (\<Gamma>, e) \<Rightarrow> A \<union> fst ` fset \<Gamma> \<union> FFVars_terms e" "\<lambda>\<Gamma> e \<tau> \<rho>. \<rho> = (\<Gamma>, e) \<longrightarrow> P \<Gamma> e \<tau>"]]])
+  apply (rule assms)+
        apply (rule allI)
   subgoal for x
     apply (rule prod.exhaust[of x])
@@ -1905,7 +1906,6 @@ lemma Ty_fresh_induct:
      apply (rule terms_pre.var_large)
     apply (rule terms.set_bd_UNIV)
     done
-      apply (rule x)
      apply (rule impI)
      apply (rule Ty_Var)
      apply assumption
@@ -2105,173 +2105,28 @@ apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
     done
   done
 
-(* TODO: automate with binder_induction method *)
-lemma context_invariance_induct[consumes 2, case_names Var App Abs]:
-  fixes e::"'a::var_terms_pre terms"
-  assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>" "\<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>'"
-and Var: "\<And>(x::'a) \<tau> \<Gamma> \<Gamma>'. \<lbrakk> (x, \<tau>) |\<in>| \<Gamma> ; \<forall>x\<in>FFVars_terms (Var x). \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y (Var x) : \<tau>"
-and App: "\<And>\<Gamma> \<Gamma>' (e1::'a terms) \<tau>\<^sub>1 \<tau>\<^sub>2 e2. \<lbrakk> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 ; \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 ; \<And>\<Gamma>'. \<forall>x\<in>FFVars_terms e1. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 ; \<And>\<Gamma>'. \<forall>x\<in>FFVars_terms e2. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 ; \<forall>x\<in>FFVars_terms (App e1 e2). \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y (App e1 e2) : \<tau>\<^sub>2"
-and Abs: "\<And>(x::'a) \<Gamma> \<Gamma>' \<tau> e \<tau>\<^sub>2. \<lbrakk> x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>) \<union> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>') \<union> FFVars_terms (Abs x \<tau> e) ; x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 ; \<And>\<Gamma>'. \<forall>y\<in>FFVars_terms e. \<forall>\<tau>'. (y, \<tau>') |\<in>| \<Gamma>,x:\<tau> \<longrightarrow> (y, \<tau>') |\<in>| \<Gamma>' \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 ; \<forall>y\<in>FFVars_terms (Abs x \<tau> e). \<forall>\<tau>. (y, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (y, \<tau>) |\<in>| \<Gamma>' \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y (Abs x \<tau> e) : (\<tau> \<rightarrow> \<tau>\<^sub>2)"
-shows "\<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
-  apply (rule mp[OF mp[OF spec[OF spec[OF
-          Ty_fresh_induct_param[of
-             "\<lambda>c. case c of (\<Gamma>, \<Gamma>', e) \<Rightarrow> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>) \<union> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>') \<union> FFVars_terms e" _ _ _
-             "\<lambda>\<Gamma> e \<tau> \<rho>. \<forall>\<Gamma>'. \<rho> = (\<Gamma>, \<Gamma>', e) \<longrightarrow> (\<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>') \<longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
-      ]]] refl]])
-       apply (rule allI)
-  subgoal for \<rho>
-    apply (rule prod.exhaust[of \<rho>])
-    apply hypsubst_thin
-    subgoal for \<Gamma> p
-      apply (rule prod.exhaust[of p])
-      apply hypsubst_thin
-      unfolding prod.case
-      apply (rule terms_pre.Un_bound)+
-        apply (rule terms_pre.UNION_bound, rule ordLess_ordLeq_trans, raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>, rule terms.var_large, rule ordLess_ordLeq_trans, raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>, rule terms.var_large)+
-      apply (rule terms.set_bd_UNIV)
-      done
-    done
-      apply (rule assms(1))
-     apply (rule allI impI)+
-     apply (rule Var)
-      apply assumption+
-    apply (rule allI impI)+
-    apply (rule App)
-        apply assumption+
-      apply (erule allE)+
-      apply (erule impE)
-       apply (rule refl)
-      apply (rotate_tac -1)
-      apply (erule impE)
-       apply assumption
-      apply assumption
-     apply (erule allE)+
-     apply (rotate_tac -1)
-     apply (erule impE)
-      apply (rule refl)
-     apply (rotate_tac -1)
-     apply (erule impE)
-      apply assumption
-     apply assumption
-    apply assumption
-   apply (rule allI impI)+
-   apply (rule Abs)
-  apply (raw_tactic \<open>Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
-    resolve_tac ctxt [infer_instantiate' ctxt [SOME (snd (nth params 5))] @{thm prod.exhaust}] 1
-  ) @{context} 1\<close>)
-    apply hypsubst_thin
-  unfolding prod.case
-       apply assumption+
-    apply (erule allE)+
-    apply (erule impE)
-     apply (rule refl)
-    apply (erule impE)
-     apply assumption+
-  apply (rule assms(2))
-  done
-(* TODO: automate with binder_induction method *)
-lemma substitution_induct[consumes 3, case_names Var App Abs]:
-  assumes "\<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>" "x \<sharp> \<Gamma>" "{||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>'"
-and Var: "\<And>a \<Gamma> \<tau>. \<lbrakk> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y Var a : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) (Var a) : \<tau>"
-and App: "\<And>e1 e2 \<Gamma> \<tau>. \<lbrakk>
-    \<And>\<Gamma> \<tau>. \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e1 : \<tau> \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e1 : \<tau> ;
-    \<And>\<Gamma> \<tau>. \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e2 : \<tau> \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e2 : \<tau> ;
-    \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y App e1 e2 : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>'
-  \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) (App e1 e2) : \<tau>"
-and Abs: "\<And>y \<tau>\<^sub>1 e \<Gamma> \<tau>. \<lbrakk>
-    y \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>) \<union> {x} \<union> FFVars_terms v ;
-    \<And>\<Gamma> \<tau>. \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e : \<tau> ;
-    \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y Abs y \<tau>\<^sub>1 e : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>'
-  \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) (Abs y \<tau>\<^sub>1 e) : \<tau>"
-shows "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x:=v)) e : \<tau>"
-apply (rule mp[OF spec[OF spec[OF spec[OF
-          TT_fresh_induct_param[of "\<lambda>\<rho>. \<Union>(Basic_BNFs.fsts ` fset \<rho>) \<union> {x} \<union> FFVars_terms v" "\<lambda>e \<rho>. \<forall>\<Gamma> \<tau>. (\<rho> = \<Gamma> \<and> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<and> x \<sharp> \<Gamma> \<longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x:=v)) e : \<tau>)"]
-  ]]]])
-      apply (rule allI)
-      apply (rule terms_pre.Un_bound)+
-        apply (rule terms_pre.UNION_bound, rule ordLess_ordLeq_trans, raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>, rule terms.var_large, rule ordLess_ordLeq_trans, raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>, rule terms.var_large)+
-       apply (rule singl_bound)
-      apply (rule terms.set_bd_UNIV)
-     apply (rule allI impI)+
-     apply (erule conjE)+
-     apply (rule Var)
-       apply assumption+
-     apply (rule assms(3))
-    apply (rule allI impI)+
-    apply (erule conjE)+
-    apply (rule App)
-        apply (erule allE)+
-        apply (erule impE)
-         prefer 2
-         apply assumption
-        apply (rule conjI)
-         apply (rule refl)
-        apply (rule conjI)
-         apply assumption
-        apply assumption
-       apply (erule allE)+
-       apply (rotate_tac -1)
-       apply (erule impE)
-        prefer 2
-        apply assumption
-       apply (rule conjI)
-        apply (rule refl)
-       apply (rule conjI)
-        apply assumption+
-    apply (rule assms(3))
-   apply (rule allI impI)+
-   apply (erule conjE)+
-   apply (rule Abs)
-       apply hypsubst
-       apply assumption
-      apply (erule allE)+
-      apply (erule impE)
-       prefer 2
-       apply assumption
-      apply (rule conjI)
-  apply (rule refl)
-      apply (rule conjI)
-       apply assumption+
-   apply (rule assms(3))
-  apply (rule conjI)
-   apply (rule refl)
-  apply (rule conjI assms)+
-  done
-
-
-
-
-
-
+context begin
+ML_file \<open>Tools/binder_induction.ML\<close>
+end
 
 lemma context_invariance: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<Longrightarrow> \<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
-(* proof (binder_induction \<Gamma> e \<tau>' avoiding: \<Gamma> arbitrary: \<Gamma> rule: Ty.fresh_induct_param) *)
-proof (induct rule: context_invariance_induct)
-  case (Var x \<tau> \<Gamma> \<Gamma>')
-  then show ?case by (auto intro: Ty_Var)
+proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_fresh_induct_param)
+  case (Ty_Var x \<tau> \<Gamma> \<Gamma>')
+  then show ?case by (auto intro: Ty.Ty_Var)
 next
-  case (App \<Gamma> \<Gamma>' e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2)
-  then show ?case unfolding FFVars_terms_simps by (meson Ty_App UnI1 UnI2)
+  case (Ty_App \<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2 \<Gamma>')
+  then show ?case unfolding FFVars_terms_simps by (meson Ty.Ty_App UnI1 UnI2)
 next
-  case (Abs x \<Gamma> \<Gamma>' \<tau> e \<tau>\<^sub>2)
+  case (Ty_Abs x \<Gamma> \<tau> e \<tau>\<^sub>2 \<Gamma>')
   then have "\<forall>y\<in>FFVars_terms e. \<forall>\<tau>'. (y, \<tau>') |\<in>| \<Gamma>,x:\<tau> \<longrightarrow> (y, \<tau>') |\<in>| \<Gamma>',x:\<tau>"
     by (metis DiffI FFVars_terms_simps(3) fimageI finsert_iff fresh_def fst_conv fsts.cases prod_set_simps(1))
-  moreover have "x \<sharp> \<Gamma>'" using Abs unfolding fresh_def
-    by (metis UN_I UnI1 UnI2 fimageE fmember_iff_member_fset fsts.intros)
-  ultimately show ?case using Abs by (auto intro: Ty_Abs)
+  moreover have "x \<sharp> \<Gamma>'" using Ty_Abs unfolding fresh_def
+    by (metis UN_I fimageE fmember_iff_member_fset fsts.intros)
+  ultimately show ?case using Ty_Abs by (auto intro: Ty.Ty_Abs)
 qed
 
 lemma substitution: "\<lbrakk> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x:=v)) e : \<tau>"
-(* proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v rule: terms.fresh_induct_param) *)
-proof (induct rule: substitution_induct)
+proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v rule: TT_fresh_induct_param)
   case (Var a \<Gamma> \<tau>)
   then have 2: "(a, \<tau>) |\<in>| \<Gamma>,x:\<tau>'" by blast
   from \<open>{||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>'\<close> have 3: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y v : \<tau>'" using context_invariance by blast
@@ -2297,15 +2152,13 @@ next
   then have 1: "y \<notin> IImsupp (VVr(x:=v))" by (simp add: IImsupp_def SSupp_def)
   have "y \<notin> \<Union>(Basic_BNFs.fsts ` fset (\<Gamma>,x:\<tau>'))" using Abs(1) unfolding fresh_def by auto
   then obtain \<tau>\<^sub>2 where 2: "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" "\<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2)" using Abs(3) Ty_AbsE' by metis
-  moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" using Abs(1) by blast
+  moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" by blast
   moreover have "x \<sharp> \<Gamma>,y:\<tau>\<^sub>1" using Abs(1,4) unfolding fresh_def by auto
-  ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e : \<tau>\<^sub>2" using Abs by auto
+  ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e : \<tau>\<^sub>2" using Abs(2,5) by metis
   moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def
     by (metis UN_I UnI1 fimageE fmember_iff_member_fset fsts.intros)
   ultimately show ?case unfolding tvsubst_simps(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
 qed
-
-
 
 theorem progress: "{||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> (\<exists>x \<tau> e'. e = Abs x \<tau> e') \<or> (\<exists>e'. e \<longrightarrow> e')"
 proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> rule: Ty.induct)

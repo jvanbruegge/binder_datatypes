@@ -730,7 +730,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           val Un_bounds = map (fn mrbnf => @{thm infinite_regular_card_order_Un} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf]) mrbnfs;
           val UNION_bounds = map (fn mrbnf =>
             let val ifco = bd_infinite_regular_card_order_of_mrbnf mrbnf;
-            in @{thm regularCard_UNION'} OF [
+            in @{thm regularCard_UNION_bound} OF [
               @{thm infinite_regular_card_order.Cinfinite} OF [ifco],
               @{thm infinite_regular_card_order.regularCard} OF [ifco]
             ] end

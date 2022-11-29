@@ -15,11 +15,6 @@ local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.
 lemma Cinfinite_gt_empty: "Cinfinite r \<Longrightarrow> |{}| <o r"
   by (simp add: cinfinite_def finite_ordLess_infinite)
 
-lemma regularCard_UNION':
-  assumes "Cinfinite r" "regularCard r" and "|I| <o r" "\<And>i. i \<in> I \<Longrightarrow> |A i| <o r"
-  shows "|\<Union>i\<in>I. A i| <o r"
-  using assms cinfinite_def regularCard_stable stable_UNION by blast
-
 lemma comp_single_regular_set_bd:
   fixes fbd :: "('a \<times> 'a) set" and gbd :: "('b \<times> 'b) set"
   assumes "infinite_regular_card_order fbd" "infinite_regular_card_order gbd" and
@@ -32,7 +27,7 @@ proof (cases "fbd \<le>o gbd")
     using fset_bd ordLess_ordLeq_trans by blast
   then have "|\<Union>(fset ` gset x)| <o gbd"
     using assms(2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.regularCard
-    by (auto intro!: regularCard_UNION'[OF _ _ gset_bd])
+    by (auto intro!: regularCard_UNION_bound[OF _ _ gset_bd])
   then show ?thesis
     using True assms(1,2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.Cnotzero
     by (auto elim!: ordLess_ordIso_trans intro!: cprod_infinite1'[THEN ordIso_symmetric])
@@ -44,7 +39,7 @@ next
     using gset_bd ordLess_ordLeq_trans by blast
   then have "|\<Union>(fset ` gset x)| <o fbd"
     using assms(1) infinite_regular_card_order.Cinfinite infinite_regular_card_order.regularCard
-    by (auto intro!: regularCard_UNION'[OF _ _ _ fset_bd])
+    by (auto intro!: regularCard_UNION_bound[OF _ _ _ fset_bd])
   then show ?thesis
     using \<open>gbd \<le>o fbd\<close> assms(1,2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.Cnotzero
     by (auto elim!: ordLess_ordIso_trans intro!: cprod_infinite2'[THEN ordIso_symmetric])

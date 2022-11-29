@@ -12,41 +12,6 @@ ML_file \<open>../Tools/mrbnf_def.ML\<close>
 local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.ID") (BNF_Comp.ID_bnf)\<close>
 local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.DEADID") (BNF_Comp.DEADID_bnf)\<close>
 
-lemma Cinfinite_gt_empty: "Cinfinite r \<Longrightarrow> |{}| <o r"
-  by (simp add: cinfinite_def finite_ordLess_infinite)
-
-lemma comp_single_regular_set_bd:
-  fixes fbd :: "('a \<times> 'a) set" and gbd :: "('b \<times> 'b) set"
-  assumes "infinite_regular_card_order fbd" "infinite_regular_card_order gbd" and
-    fset_bd: "\<And>x. |fset x| <o fbd" and
-    gset_bd: "\<And>x. |gset x| <o gbd"
-  shows "|\<Union>(fset ` gset x)| <o gbd *c fbd"
-proof (cases "fbd \<le>o gbd")
-  case True
-  then have "|fset x| <o gbd" for x
-    using fset_bd ordLess_ordLeq_trans by blast
-  then have "|\<Union>(fset ` gset x)| <o gbd"
-    using assms(2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.regularCard
-    by (auto intro!: regularCard_UNION_bound[OF _ _ gset_bd])
-  then show ?thesis
-    using True assms(1,2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.Cnotzero
-    by (auto elim!: ordLess_ordIso_trans intro!: cprod_infinite1'[THEN ordIso_symmetric])
-next
-  case False
-  then have "gbd \<le>o fbd"
-    by (meson fset_bd gset_bd ordLeq_Well_order_simp ordLess_imp_ordLeq ordLess_or_ordLeq)
-  then have "|gset x| <o fbd" for x
-    using gset_bd ordLess_ordLeq_trans by blast
-  then have "|\<Union>(fset ` gset x)| <o fbd"
-    using assms(1) infinite_regular_card_order.Cinfinite infinite_regular_card_order.regularCard
-    by (auto intro!: regularCard_UNION_bound[OF _ _ _ fset_bd])
-  then show ?thesis
-    using \<open>gbd \<le>o fbd\<close> assms(1,2) infinite_regular_card_order.Cinfinite infinite_regular_card_order.Cnotzero
-    by (auto elim!: ordLess_ordIso_trans intro!: cprod_infinite2'[THEN ordIso_symmetric])
-qed
-
-lemma mrbnf_type_copy_set_bd: "(\<And>y. |S y| <o bd) \<Longrightarrow> |(S \<circ> Rep) x| <o bd"
-  by auto
 lemma Grp_Rep: "type_definition Rep Abs top \<Longrightarrow> type_definition Rep2 Abs2 top \<Longrightarrow>
   ((BNF_Def.Grp (Collect P) f)\<inverse>\<inverse> OO BNF_Def.Grp (Collect P) g) (Rep x) (Rep2 y) =
   ((BNF_Def.Grp (Collect P) (Abs \<circ> f))\<inverse>\<inverse> OO BNF_Def.Grp (Collect P) (Abs2 \<circ> g)) x y"

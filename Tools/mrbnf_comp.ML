@@ -1366,7 +1366,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       rtac ctxt (@{thm type_copy_set_map0} OF [type_definition, thm]) THEN_ALL_NEW
         (assume_tac ctxt));
     val set_bd_tacs = map (fn thm => fn ctxt =>
-      rtac ctxt (@{thm ordLess_ordIso_trans} OF [thm, bd_ordIso] RS @{thm mrbnf_type_copy_set_bd}) 1
+      rtac ctxt (@{thm ordLess_ordIso_trans} OF [thm, bd_ordIso] RS @{thm type_copy_set_bd}) 1
     ) (set_bd_of_mrbnf mrbnf);
     fun le_rel_OO_tac ctxt =
       rtac ctxt (le_rel_OO_of_mrbnf mrbnf RS @{thm vimage2p_relcompp_mono}) 1;

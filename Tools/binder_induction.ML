@@ -187,7 +187,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val rule_inst = fold (fn thm => fn thm2 => thm OF [thm2]) (replicate (1 + n) spec @ [mp]) (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P2_t]) rule)
           fun rtac ctxt = resolve_tac ctxt o single
 
-          val class = hd (filter (fn s => take 4 (Symbol.explode (MRBNF_Util.short_type_name s)) = ["v", "a", "r", "_"]) (snd var));
+          val class = hd (filter (String.isPrefix "var_" o MRBNF_Util.short_type_name) (snd var));
           val bound_thms = map (fn s => Proof_Context.get_fact_single ctxt (Facts.named (class ^ "_class." ^ s))) ["Un_bound", "UN_bound", "cinfinite", "large"]
 
           fun get_set_bd Ts =

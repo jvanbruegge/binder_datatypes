@@ -873,19 +873,15 @@ fun mk_alpha_subshape_tac fbound supp_comp_bound alpha_trans rename_comp mk_subs
 
 fun mk_set_subshape_image_tac i n subshape_intro alpha_refl rename_inv_simp rename_bij ctxt prems =
   EVERY1 [
-    rtac ctxt subshape_intro,
-    rtac ctxt @{thm bij_imp_bij_inv},
-    resolve_tac ctxt prems,
-    rtac ctxt @{thm supp_inv_bound},
-    REPEAT_DETERM_N 2 o resolve_tac ctxt prems,
+    rtac ctxt (Drule.rotate_prems ~2 subshape_intro),
     rtac ctxt alpha_refl,
     rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
     rtac ctxt (fun_cong OF [rename_inv_simp RS sym]),
-    REPEAT_DETERM_N 2 o resolve_tac ctxt prems,
+    EVERY' (map (rtac ctxt) (fst (split_last prems))),
     rtac ctxt (BNF_Util.mk_UnIN n i),
     rtac ctxt @{thm iffD1[OF image_in_bij_eq]},
     rtac ctxt rename_bij,
-    REPEAT_DETERM_N 3 o resolve_tac ctxt prems
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems)
   ];
 
 fun mk_TT_existential_induct_tac rename_ids Quotient_rep_abss subshape_induct_inst conj_arg_congs

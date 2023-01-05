@@ -1039,7 +1039,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         fun mk_card_of_FVarsB_bound Un_bound UNION_bound b_rel_bounds set_bounds = b_rel_bounds
           |-> mk_b_bounds set_bounds |-> map2 (mk_UNION_bound UNION_bound) |> Un_bound_OF Un_bound;
         fun mk_card_of_FVarsB_bounds Un_bound UNION_bound = map2 (mk_card_of_FVarsB_bound Un_bound
-          UNION_bound) (binding_relation ~~ card_of_FVars_boundss);
+          UNION_bound) (binding_relation ~~ transpose card_of_FVars_boundss);
         val rec_set_boundsss = map (replicate fbound o take rec_live o drop (2*fbound+passive))
           set_boundss;
       in
@@ -1326,8 +1326,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         (fn ctxt => unfold_tac ctxt [FFVars_def] THEN HEADGOAL (rtac ctxt card_of_FVars_bound))
           |> prove_no_prems lthy [w] goal
       end;
-    val card_of_FFVars_boundss' = @{map 3} (@{map 4} mk_card_of_FFVars_bound ws) FFVarsssAs
-      FFVars_defss card_of_FVars_boundss';
+    val card_of_FFVars_boundss' = transpose (@{map 3} (@{map 4} mk_card_of_FFVars_bound ws) FFVarsssAs
+      FFVars_defss (transpose card_of_FVars_boundss'));
+
     val card_of_FFVars_boundss = map2 (fn mrbnf => map (fn thm =>
       @{thm ordLess_ordLeq_trans} OF [thm, var_large_of_mrbnf mrbnf]
     )) mrbnfs card_of_FFVars_boundss';

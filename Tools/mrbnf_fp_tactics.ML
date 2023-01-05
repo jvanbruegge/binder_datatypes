@@ -370,8 +370,7 @@ fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_ind
       let
         val UnI = BNF_Util.mk_UnIN num_unions i;
         val set_transfer_tac = EVERY' [
-          assume_tac ctxt,
-          assume_tac ctxt,
+          REPEAT_DETERM o assume_tac ctxt,
           SELECT_GOAL (unfold_thms_tac ctxt @{thms Grp_def image_id})
         ];
       in SELECT_GOAL (EVERY1 [
@@ -390,21 +389,14 @@ fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_ind
           assume_tac ctxt,
           assume_tac ctxt
         ] ORELSE' EVERY' [
-          dtac ctxt @{thm iffD1[OF fun_cong[OF fun_cong[OF rel_set_def]]]},
-          etac ctxt conjE,
-          dtac ctxt bspec,
+          dtac ctxt (if reverse then @{thm rel_setD2} else @{thm rel_setD1}),
           assume_tac ctxt,
           etac ctxt bexE,
-          dtac ctxt bspec,
-          assume_tac ctxt,
-          TRY o EVERY' [
-            dresolve_tac ctxt (map (fn thm =>
-              Drule.rotate_prems ~1 (iffD1 OF [thm]))
-            (if reverse then [@{thm Ball_neq}] else alpha_bij_eq_inv)),
-            assume_tac ctxt,
-            assume_tac ctxt
+          if reverse then K all_tac else TRY o EVERY' [
+            dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (iffD1 OF [thm])) alpha_bij_eq_inv),
+            REPEAT_DETERM o assume_tac ctxt
           ],
-          dtac ctxt spec,
+          etac ctxt allE,
           etac ctxt impE,
           assume_tac ctxt,
           EVERY' [
@@ -412,74 +404,69 @@ fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_ind
             assume_tac ctxt,
             assume_tac ctxt
           ] ORELSE' EVERY' [
-            dresolve_tac ctxt (map (fn thm =>
-              Drule.rotate_prems ~1 (iffD1 OF [in_cong2 OF [refl, thm]])
-            ) FVars_renames),
-            TRY o EVERY' [
-              rtac ctxt @{thm bij_imp_bij_inv},
-              assume_tac ctxt,
-              rtac ctxt @{thm supp_inv_bound}
-            ],
-            assume_tac ctxt,
-            assume_tac ctxt,
-            dtac ctxt @{thm id_onD},
-            rtac ctxt @{thm DiffI},
-            rtac ctxt @{thm UN_I},
-            assume_tac ctxt,
-            TRY o EVERY' [
-              rtac ctxt @{thm iffD1[OF image_in_bij_eq]},
-              assume_tac ctxt,
-              assume_tac ctxt,
-              rtac ctxt @{thm iffD1[OF arg_cong[of _ _ Not]]},
-              rtac ctxt @{thm image_in_bij_eq},
-              assume_tac ctxt,
-              rtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]]}
-            ],
-            assume_tac ctxt,
-            assume_tac ctxt,
-            TRY o EVERY' [
-              rotate_tac ~1,
-              dtac ctxt @{thm sym[THEN trans[OF _ inv_simp2]]},
-              assume_tac ctxt
-            ],
-            forward_tac ctxt [iffD2 OF @{thms bij_imp_inv}, iffD1 OF @{thms bij_imp_inv}],
-            assume_tac ctxt,
-            dtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)" "_ ` _"], rotated]},
             rotate_tac ~1,
-            assume_tac ctxt,
-            dtac ctxt @{thm bij_is_inj[THEN iffD1[OF inj_image_mem_iff], rotated]},
-            TRY o rtac ctxt @{thm bij_imp_bij_inv},
+            dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1]},
+            resolve_tac ctxt FVars_renames,
+            REPEAT_DETERM o (resolve_tac ctxt @{thms supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt),
+            etac ctxt imageE,
+            hyp_subst_tac ctxt,
+            FIRST' (map (fn i => EVERY' [
+              rotate_tac (~5 - i),
+              if not reverse then K all_tac else EVERY' [
+                dtac ctxt @{thm id_on_inv[rotated]},
+                assume_tac ctxt,
+                rotate_tac ~1
+              ],
+              dtac ctxt @{thm id_onD},
+              rtac ctxt @{thm DiffI},
+              rtac ctxt @{thm UN_I},
+              assume_tac ctxt,
+              assume_tac ctxt,
+              if not reverse then assume_tac ctxt else EVERY' [
+                rtac ctxt @{thm iffD2[OF arg_cong[of _ _ Not]]},
+                rtac ctxt @{thm inj_image_mem_iff[OF bij_is_inj, symmetric]},
+                K (prefer_tac 2),
+                rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]]},
+                rtac ctxt sym,
+                assume_tac ctxt,
+                assume_tac ctxt,
+                assume_tac ctxt,
+                dtac ctxt @{thm iffD1[OF bij_imp_inv, rotated]},
+                assume_tac ctxt,
+                rotate_tac ~1,
+                dtac ctxt sym
+              ],
+              K (unfold_thms_tac ctxt @{thms inv_simp2})
+            ]) (length FVars_renames - 1 downto 0)),
+            rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
+            rtac ctxt sym,
             assume_tac ctxt,
             rtac ctxt @{thm DiffI},
             rtac ctxt @{thm UN_I},
             assume_tac ctxt,
             assume_tac ctxt,
-            rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]]},
-            assume_tac ctxt ORELSE' EVERY' [
-              rtac ctxt @{thm bij_is_inj[THEN iffD1[OF inj_image_eq_iff]]},
-              assume_tac ctxt,
+            if reverse then EVERY' [
+              rtac ctxt @{thm iffD2[OF arg_cong[of _ _ Not]]},
+              rtac ctxt @{thm inj_image_mem_iff[OF bij_is_inj, symmetric]},
+              K (prefer_tac 2),
+              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]]},
               rtac ctxt sym,
-              dtac ctxt @{thm trans[OF image_f_inv_f, rotated]},
-              rtac ctxt @{thm bij_is_surj},
+              assume_tac ctxt,
               assume_tac ctxt,
               assume_tac ctxt
-            ],
-            rtac ctxt @{thm iffD1[OF arg_cong[of _ _ Not]]},
-            rtac ctxt (in_cong2 OF [@{thm _}, refl]),
-            assume_tac ctxt,
-            rtac ctxt @{thm iffD1[OF arg_cong[of _ _ Not]]},
-            rtac ctxt @{thm inj_image_mem_iff[symmetric]},
-            rtac ctxt @{thm bij_is_inj},
-            TRY o rtac ctxt @{thm bij_imp_bij_inv},
-            assume_tac ctxt,
-            assume_tac ctxt
+            ] else EVERY' [
+              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]]},
+              assume_tac ctxt,
+              K (unfold_thms_tac ctxt @{thms image_in_bij_eq}),
+              assume_tac ctxt
+            ]
           ]
         ]
       ]) end;
   in
     EVERY1 [
-      (if mutual then rtac ctxt FVars_induct else rtac ctxt impI THEN' etac ctxt FVars_induct) THEN_ALL_NEW
-      EVERY' [
+      (if mutual then rtac ctxt FVars_induct else rtac ctxt impI THEN' etac ctxt FVars_induct)
+      THEN_ALL_NEW EVERY' [
         rtac ctxt allI,
         rtac ctxt impI,
         eresolve_tac ctxt alpha_elims,

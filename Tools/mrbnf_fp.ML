@@ -750,6 +750,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       in
         @{fold_map 7} (mk_card_of_FVars_bounds rec_sboundss) free_sboundss free_setss_Ast
           (1 upto fbound) (take fbound As) zs FVarsssAs FVars_inducts lthy
+        |> apfst transpose
       end;
     val card_of_FVars_boundss = map2 (fn mrbnf => map (fn thm =>
       @{thm ordLess_ordLeq_trans} OF [thm, var_large_of_mrbnf mrbnf]

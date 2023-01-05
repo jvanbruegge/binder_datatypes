@@ -8,6 +8,7 @@ sig
     inner: 'a,
 
     inject: thm,
+    rename_simp: thm,
     rename_id0: thm,
     rename_id: thm,
     rename_comp0: thm,
@@ -24,7 +25,6 @@ sig
     alpha: term,
 
     exhaust: thm,
-    rename_simp: thm,
 
     alpha_refl: thm,
     alpha_sym: thm,
@@ -56,19 +56,26 @@ sig
     rep_abs: thm,
     abs_ctor: thm,
 
-    rename_ctor: thm,
     rename_cong_id: thm,
-    fresh_co_induct: thm
+    fresh_co_induct: thm,
+    fresh_co_induct_param: thm
   };
 
   type fp_result = {
     fp: BNF_Util.fp_kind,
     bound_vars: typ list,
-    passive: int,
+    passive: {
+      live: int,
+      free: int,
+      bound: int
+    },
     binding_relation: int list list,
     raw_fp: raw_result fp_result_T,
     quotient_fp: quotient_result fp_result_T,
-    pre_mrbnf: MRBNF_Def.mrbnf
+    pre_mrbnf: MRBNF_Def.mrbnf,
+    fp_bnf: BNF_Def.bnf,
+    fp_bnf_sugar: BNF_FP_Def_Sugar.fp_bnf_sugar,
+    fp_ctr_sugar: Ctr_Sugar.ctr_sugar
   };
 
   val substitute_vars: typ list -> fp_result -> fp_result
@@ -94,6 +101,7 @@ type 'a fp_result_T = {
   inner: 'a,
 
   inject: thm,
+  rename_simp: thm,
   rename_id0: thm,
   rename_id: thm,
   rename_comp0: thm,
@@ -108,13 +116,14 @@ type 'a fp_result_T = {
 
 fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_id0, rename_id,
   rename_comp0, rename_comp, rename_bij, rename_inv_simp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
-  card_of_FVars_bound_UNIVs } = {
+  card_of_FVars_bound_UNIVs, rename_simp } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
   rename = Morphism.term phi rename,
   FVars = map (Morphism.term phi) FVars,
   inner = morph phi inner,
   inject = Morphism.thm phi inject,
+  rename_simp = Morphism.thm phi rename_simp,
   rename_id0 = Morphism.thm phi rename_id0,
   rename_id = Morphism.thm phi rename_id,
   rename_comp0 = Morphism.thm phi rename_comp0,
@@ -131,7 +140,6 @@ type raw_result = {
   alpha: term,
 
   exhaust: thm,
-  rename_simp: thm,
 
   alpha_refl: thm,
   alpha_sym: thm,
@@ -151,10 +159,9 @@ type raw_result = {
 
 fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij, alpha_bij_eq,
   alpha_FVarss, subshapes, wf_subshapes, set_subshapess, set_subshape_imagess, subshape_induct,
-  alpha_intro, exhaust, rename_simp, alpha_elim } = {
+  alpha_intro, exhaust, alpha_elim } = {
   alpha = Morphism.term phi alpha,
   exhaust = Morphism.thm phi exhaust,
-  rename_simp = Morphism.thm phi rename_simp,
   alpha_refl = Morphism.thm phi alpha_refl,
   alpha_sym = Morphism.thm phi alpha_sym,
   alpha_trans = Morphism.thm phi alpha_trans,
@@ -184,13 +191,13 @@ type quotient_result = {
   rep_abs: thm,
   abs_ctor: thm,
 
-  rename_ctor: thm,
   rename_cong_id: thm,
-  fresh_co_induct: thm
+  fresh_co_induct: thm,
+  fresh_co_induct_param: thm
 };
 
 fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
-abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename_cong_id } = {
+abs_ctor, rename_def, FVars_defs, ctor_def, fresh_co_induct, fresh_co_induct_param, rename_cong_id } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
@@ -201,33 +208,45 @@ abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename
   abs_rep = Morphism.thm phi abs_rep,
   rep_abs = Morphism.thm phi rep_abs,
   abs_ctor = Morphism.thm phi abs_ctor,
-  rename_ctor = Morphism.thm phi rename_ctor,
   rename_cong_id = Morphism.thm phi rename_cong_id,
-  fresh_co_induct = Morphism.thm phi fresh_co_induct
+  fresh_co_induct = Morphism.thm phi fresh_co_induct,
+  fresh_co_induct_param = Morphism.thm phi fresh_co_induct_param
 } : quotient_result;
 
 type fp_result = {
   fp: BNF_Util.fp_kind,
   bound_vars: typ list,
-  passive: int,
+  passive: {
+    live: int,
+    free: int,
+    bound: int
+  },
   binding_relation: int list list,
   raw_fp: raw_result fp_result_T,
   quotient_fp: quotient_result fp_result_T,
-  pre_mrbnf: MRBNF_Def.mrbnf
+  pre_mrbnf: MRBNF_Def.mrbnf,
+  fp_bnf: BNF_Def.bnf,
+  fp_bnf_sugar: BNF_FP_Def_Sugar.fp_bnf_sugar,
+  fp_ctr_sugar: Ctr_Sugar.ctr_sugar
 };
 
-fun morph_fp_result phi ({ fp, binding_relation, bound_vars, raw_fp, quotient_fp, pre_mrbnf, passive }) = {
+fun morph_fp_result phi ({ fp, binding_relation, bound_vars, raw_fp, quotient_fp, pre_mrbnf, passive, fp_bnf, fp_bnf_sugar, fp_ctr_sugar }) = {
   fp = fp, binding_relation = binding_relation,
   bound_vars = map (Morphism.typ phi) bound_vars,
   passive = passive,
   raw_fp = morph_fp_result_T morph_raw_result phi raw_fp,
   quotient_fp = morph_fp_result_T morph_quotient_result phi quotient_fp,
-  pre_mrbnf = MRBNF_Def.morph_mrbnf phi pre_mrbnf
+  pre_mrbnf = MRBNF_Def.morph_mrbnf phi pre_mrbnf,
+  fp_bnf = BNF_Def.morph_bnf phi fp_bnf,
+  fp_bnf_sugar = BNF_FP_Def_Sugar.morph_fp_bnf_sugar phi fp_bnf_sugar,
+  fp_ctr_sugar = Ctr_Sugar.morph_ctr_sugar phi fp_ctr_sugar
 } : fp_result;
 
 fun substitute_vars vars fp_result =
   let
-    val replacement = (#bound_vars fp_result ~~ vars);
+    val old_vars = rev (map TFree (Term.add_tfreesT (#T (#raw_fp fp_result)) []))
+      @ rev (map TVar (Term.add_tvarsT (#T (#raw_fp fp_result)) []))
+    val replacement = (old_vars ~~ vars);
     val phi = Morphism.morphism "instantiate vars" {
       binding = [], fact = [],
       typ = [Term.typ_subst_atomic replacement],

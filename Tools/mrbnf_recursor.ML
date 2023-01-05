@@ -28,6 +28,8 @@ sig
   type 'a model = {
     fp_result: MRBNF_FP_Def_Sugar.fp_result,
     U: typ,
+    vars: typ list,
+    extra_vars: typ list,
     UFVars: term list,
     Umap: term,
     Uctor: term,
@@ -93,6 +95,8 @@ type 'a model_axioms = {
 type 'a model = {
   fp_result: MRBNF_FP_Def_Sugar.fp_result,
   U: typ,
+  vars: typ list,
+  extra_vars: typ list,
   UFVars: term list,
   Umap: term,
   Uctor: term,
@@ -131,9 +135,11 @@ fun add_f_prems hs =
     )
   end;
 
-fun mk_termlike_goals quotient_opt T mapx FVars lthy =
+fun mk_termlike_goals model quotient_opt T mapx FVars lthy =
   let
-    val vars = get_vars (is_some quotient_opt) mapx;
+    val passive = #passive (#fp_result model);
+    val num_passive = #live passive + #free passive + #bound passive;
+    val vars = take (length (#vars model) - num_passive) (#vars model);
     val n = length vars;
 
     val (((((fs, gs), d), t), xs), _) =
@@ -207,22 +213,27 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
 
     val mrbnf = #pre_mrbnf (#fp_result model);
     val passive = #passive (#fp_result model);
-    val live = MRBNF_Def.live_of_mrbnf mrbnf - passive;
-    val free = MRBNF_Def.free_of_mrbnf mrbnf;
-    val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
+    val live = MRBNF_Def.live_of_mrbnf mrbnf - #live passive;
+    val free = MRBNF_Def.free_of_mrbnf mrbnf - #free passive;
+    val bound = MRBNF_Def.bound_of_mrbnf mrbnf - #bound passive;
+    val num_passive = #live passive + #free passive + #bound passive;
 
-    val vars = get_vars true (#Umap model);
+    val (((vars, vars_plive), vars_pfree), vars_pbound) = #vars model
+      |> chop (length (#vars model) - num_passive)
+      ||>> chop (#live passive)
+      ||>> chop (#free passive);
+    val vars_passive = vars_plive @ vars_pfree @ vars_pbound;
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
 
-    val fp_res = MRBNF_FP_Def_Sugar.substitute_vars vars (#fp_result model);
+    val fp_res = MRBNF_FP_Def_Sugar.substitute_vars (vars @ vars_passive) (#fp_result model);
     val quotient_fp = #quotient_fp fp_res
     val qT = #T quotient_fp
-    val As = replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model]);
+    val As = vars_plive @ replicate live (HOLogic.mk_tupleT [qT, #P params --> #U model]);
 
     val (_, lthy) = Local_Theory.begin_nested lthy
     val defs_hidden = mk_defs_t false b qualify
     val def_hidden = mk_def_t false b qualify
-    val ((((((PFVars, Pmap), UFVars), Umap), Uctor), avoiding_sets), lthy') =
+    val ((((((PFVars, Pmap), UFVars), Umap), Uctor), avoiding_sets), lthy) =
       lthy
       |> defs_hidden "PFVars" 0 (#PFVarss params)
       ||>> def_hidden "Pmap" 0 (#Pmap params)
@@ -230,11 +241,11 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       ||>> def_hidden "Umap" 0 (#Umap model)
       ||>> def_hidden "Uctor" 0 (#Uctor model)
       ||>> defs_hidden "avoiding_set" 0 (#avoiding_sets model);
-    val (lthy', old_lthy) = `Local_Theory.end_nested lthy';
-    val phi = Proof_Context.export_morphism old_lthy lthy';
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
 
-    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst Pmap)) []);
-    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
+    val vars' = rev (map TVar (Term.add_tvars (Morphism.term phi (fst Umap)) []));
+    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ (vars @ vars_passive @ #extra_vars model)) (Morphism.term phi t), Morphism.thm phi thm);
 
     val Pmap = morph Pmap;
     val PFVars = map morph PFVars;
@@ -244,19 +255,28 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val avoiding_sets = map morph avoiding_sets;
 
     val defs = map snd PFVars @ map snd UFVars @ map snd avoiding_sets @ [snd Pmap, snd Umap, snd Uctor];
-    fun prove goal tac = Goal.prove_sorry lthy' [] [] goal (fn {context,...} =>
+    fun prove goal tac = Goal.prove_sorry lthy [] [] goal (fn {context,...} =>
       Ctr_Sugar_Tactics.unfold_thms_tac context defs THEN tac context
     );
 
+    val frees = vars_pfree @ vars;
+    val bounds = vars_pbound @ vars;
+    val frees_ids = map HOLogic.id_const frees;
+    val bounds_ids = map HOLogic.id_const bounds;
+
+    val plive_ids = map HOLogic.id_const vars_plive;
+    val pfree_ids = map HOLogic.id_const vars_pfree;
+    val pbound_ids = map HOLogic.id_const vars_pbound;
+
     val (((((fs, y), p), pu), t), _) =
-      lthy'
+      lthy
       |> mk_Frees "f" (map2 (curry op -->) vars vars)
-      ||>> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads As vars vars mrbnf]
+      ||>> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads As frees bounds mrbnf]
       ||>> apfst hd o mk_Frees "p" [#P params]
       ||>> apfst hd o mk_Frees "pu" [#P params --> #U model]
       ||>> apfst hd o mk_Frees "t" [qT];
 
-    val pgoals = mk_termlike_goals NONE (#P params) (fst Pmap) (map fst PFVars) lthy;
+    val pgoals = mk_termlike_goals model NONE (#P params) (fst Pmap) (map fst PFVars) lthy;
     val small_PFVars_goals = map (fn FVars =>
       let val a = HOLogic.dest_setT (snd (dest_funT (fastype_of FVars)));
       in Logic.all p (HOLogic.mk_Trueprop (mk_ordLess
@@ -278,7 +298,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     };
 
     val tacs = #axioms model;
-    val goals = mk_termlike_goals (SOME quotient_fp) (#U model) (fst Umap) (map fst UFVars) lthy;
+    val goals = mk_termlike_goals model (SOME quotient_fp) (#U model) (fst Umap) (map fst UFVars) lthy;
 
     val small_avoiding_set_goals = map (fn (i, A) => HOLogic.mk_Trueprop (mk_ordLess
       (mk_card_of A) (mk_card_of (HOLogic.mk_UNIV (nth vars i)))
@@ -286,14 +306,12 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
 
     val mapF_ap =
       let
-        val As' = replicate live qT;
-        val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' vars vars mrbnf;
-        val funs = map (fst o dest_funT) (fst (strip_fun_type (fastype_of mapF)));
-        val ids = map HOLogic.id_const (filter is_TFree funs);
+        val passive = #passive (#fp_result model)
+        val As' = vars_plive @ replicate live qT;
+        val mapF = MRBNF_Def.mk_map_of_mrbnf deads As As' frees bounds mrbnf;
         val fsts = map (fn T => Const (@{const_name fst}, T --> qT)) As;
-        val gs = cond_interlace ids fsts (map (fn var_type =>
-          var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var
-        ) (MRBNF_Def.var_types_of_mrbnf mrbnf));
+        val lives = plive_ids @ drop (#live passive) fsts;
+        val gs = MRBNF_Def.interlace lives frees_ids bounds_ids (MRBNF_Def.var_types_of_mrbnf mrbnf);
       in Term.list_comb (mapF, gs) end;
 
     val Umap_Uctor_goal =
@@ -311,8 +329,8 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
             ])))
           );
         val mapF = Term.list_comb (
-          MRBNF_Def.mk_map_of_mrbnf deads As As vars vars mrbnf,
-          MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf mrbnf)
+          MRBNF_Def.mk_map_of_mrbnf deads As As frees bounds mrbnf,
+          MRBNF_Def.interlace (plive_ids @ replicate live pair_map) (pfree_ids @ fs) (pbound_ids @ fs) (MRBNF_Def.var_types_of_mrbnf mrbnf)
         );
       in
         fold_rev Logic.all (fs @ [y, p]) (add_f_prems fs (mk_Trueprop_eq (
@@ -323,12 +341,12 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
 
     val UFVars_subset_goals =
       let
-        val count = live + free + bound;
+        val count = live + free + bound + num_passive;
         val mrbnf_sets = (
           MRBNF_Def.var_types_of_mrbnf mrbnf
           ~~
           MRBNF_Def.mk_sets_of_mrbnf (replicate count deads)
-            (replicate count As) (replicate count vars) (replicate count vars) mrbnf
+            (replicate count As) (replicate count frees) (replicate count bounds) mrbnf
         );
 
         fun topBind i = nth (map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) mrbnf_sets) i;
@@ -336,7 +354,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
         fun mk_goal i =
           let
             val A = nth (map fst avoiding_sets) i
-            val recSets = map_filter (fn (MRBNF_Def.Live_Var, x) => SOME (x $ y) | _ => NONE) mrbnf_sets;
+            val recSets = drop (#live passive) (map_filter (fn (MRBNF_Def.Live_Var, x) => SOME (x $ y) | _ => NONE) mrbnf_sets);
             val recSets_Un = fold (fn a => fn b => mk_Un (b, a)) (tl recSets) (hd recSets);
           in fold_rev Logic.all (fs @ [t, y, p]) (fold_rev (fn a => fn b => Logic.implies $ a $ b) [
               mk_Trueprop_eq (
@@ -371,6 +389,8 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     };
     val model' = {
       U = #U model,
+      vars = #vars model,
+      extra_vars = #extra_vars model,
       fp_result = fp_res,
       UFVars = map fst UFVars,
       Umap = fst Umap,
@@ -379,7 +399,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       parameters = params',
       axioms = model_thms
     } : thm model;
-  in ((model', defs), lthy') end;
+  in ((model', defs), lthy) end;
 
 fun mk_int_empty sets = HOLogic.mk_eq (
   HOLogic.mk_binop @{const_name inf} sets,
@@ -404,11 +424,13 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val fp_result = #fp_result model
     val raw = #raw_fp fp_result
     val quotient = #quotient_fp fp_result
+    val passive = #passive fp_result;
+    val num_passive = #live passive + #free passive + #bound passive;
     val mrbnf = #pre_mrbnf fp_result
     val deads = deads_of_mrbnf mrbnf
-    val live = live_of_mrbnf mrbnf
-    val bound = bound_of_mrbnf mrbnf
-    val n = live + bound + free_of_mrbnf mrbnf
+    val live = live_of_mrbnf mrbnf - #live passive;
+    val bound = bound_of_mrbnf mrbnf - #bound passive;
+    val n = live + bound + free_of_mrbnf mrbnf + num_passive;
     val var_types = var_types_of_mrbnf mrbnf
 
     val P = #P params
@@ -416,7 +438,13 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val PU = P --> U
     val PFVarss = #PFVarss params
     val raw_T = #T raw
-    val vars = #bound_vars fp_result
+    val (((vars, vars_plive), vars_pfree), vars_pbound) = #vars model
+      |> chop (length (#vars model) - num_passive)
+      ||>> chop (#live passive)
+      ||>> chop (#free passive);
+
+    val frees = vars_pfree @ vars;
+    val bounds = vars_pbound @ vars;
     val nvars = length vars
 
     val ctor = #ctor raw
@@ -425,14 +453,14 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
-    val pre_T = mk_T_of_mrbnf deads (replicate live raw_T) vars vars mrbnf;
+    val pre_T = mk_T_of_mrbnf deads (vars_plive @ replicate live raw_T) frees bounds mrbnf;
     fun mk_sets T =
       let
-        val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (replicate live T))
-          (replicate n vars) (replicate n vars) mrbnf
-        val binding_sets = map_filter (fn (Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
-        val free_sets = map_filter (fn (Free_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
-        val live_sets = map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
+        val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (vars_plive @ replicate live T))
+          (replicate n frees) (replicate n bounds) mrbnf
+        val binding_sets = drop (#bound passive) (map_filter (fn (Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets));
+        val free_sets = drop (#free passive) (map_filter (fn (Free_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets));
+        val live_sets = drop (#live passive) (map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets));
       in (live_sets, binding_sets, free_sets) end;
     val (live_sets, binding_sets, free_sets) = mk_sets raw_T;
 
@@ -478,18 +506,26 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val (PUmap', lthy) = mk_def_t false ff0_b qualify "PUmap'" (nvars + 1) (mk_PUmap_rhs (fst Umap') raw_T) lthy
     val (PUmap, lthy) = mk_def_t false ff0_b qualify "PUmap" (nvars + 1) (mk_PUmap_rhs (#Umap model) (#T quotient)) lthy
 
-    val ids = map HOLogic.id_const vars;
+    val frees_ids = map HOLogic.id_const frees;
+    val bounds_ids = map HOLogic.id_const bounds;
+    val plive_ids = map HOLogic.id_const vars_plive;
+    val pfree_ids = map HOLogic.id_const vars_pfree;
+    val pbound_ids = map HOLogic.id_const vars_pbound;
+
     fun mk_map_id fs =
       let val (As, Bs) = map_split (dest_funT o fastype_of) fs;
-      in Term.list_comb (mk_map_of_mrbnf deads As Bs vars vars mrbnf, interlace fs ids ids var_types) end;
+      in Term.list_comb (
+        mk_map_of_mrbnf deads As Bs frees bounds mrbnf,
+        interlace fs frees_ids bounds_ids var_types
+      ) end;
 
     val (CTOR, lthy) =
       let
-        fun mk_CTOR_lives_T T = replicate live (HOLogic.mk_prodT (T, PU))
-        val CTOR_x_T = mk_T_of_mrbnf deads (mk_CTOR_lives_T raw_T) vars vars mrbnf
+        fun mk_CTOR_lives_T T = vars_plive @ replicate live (HOLogic.mk_prodT (T, PU))
+        val CTOR_x_T = mk_T_of_mrbnf deads (mk_CTOR_lives_T raw_T) frees bounds mrbnf
 
         val rhs = Term.abs ("x", CTOR_x_T) (#Uctor model $ (
-          mk_map_id (replicate live (mk_map_prod abs (HOLogic.id_const PU))) $ Bound 0
+          mk_map_id (plive_ids @ replicate live (mk_map_prod abs (HOLogic.id_const PU))) $ Bound 0
         ));
       in mk_def_t false ff0_b qualify "CTOR" 1 rhs lthy end;
 
@@ -509,13 +545,13 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
         val t = Free ("t", raw_T)
         val rec_f = Term.absfree (dest_Free t) (HOLogic.mk_prod (t, Term.list_comb (f, picks @ [t])))
 
-        val pick_x_ps = map (fn pick => pick $ x $ p) picks @ drop nbound ids;
+        val pick_x_ps = map (fn pick => pick $ x $ p) picks;
         val live_fs = cond_interlace (replicate nbound (Term.list_comb (#rename raw, pick_x_ps)))
           (replicate (live - nbound) (HOLogic.id_const raw_T)) is_bound;
 
-        val map_t = mk_map_id (replicate live rec_f) $ (Term.list_comb (
-            mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_T) vars vars mrbnf,
-            interlace live_fs pick_x_ps ids var_types
+        val map_t = mk_map_id (plive_ids @ replicate live rec_f) $ (Term.list_comb (
+            mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live raw_T) frees bounds mrbnf,
+            interlace (plive_ids @ live_fs) (pfree_ids @ pick_x_ps) bounds_ids var_types
           ) $ x
         );
 
@@ -578,7 +614,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     ) suitables) lthy;
 
     val (f0, lthy) = mk_def_t false ff0_b qualify "f0" 0 (Term.list_comb (fst f, map fst pick0s)) lthy;
-    val (ff0, lthy) = mk_def_t false ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
+    val (ff0, lthy) = mk_def_t (*false*) true ff0_b qualify "ff0" 1 (Term.abs ("t", #T quotient) (
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 
@@ -594,7 +630,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     fun mk_suffix T = List.last (String.tokens (fn c => c = #".") (fst (dest_Type T)));
     val (noclash, lthy) = mk_def_t false ff0_b qualify ("noclash_" ^ mk_suffix raw_T) 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
     val (nnoclash, lthy) = mk_def_t true ff0_b qualify ("noclash_" ^ mk_suffix (#T quotient)) 1 (mk_noclash_rhs (mk_sets (#T quotient)) (#FVars quotient) (
-      mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf
+      mk_T_of_mrbnf deads (vars_plive @ replicate live (#T quotient)) frees bounds mrbnf
     )) lthy;
 
     val n_brec = length (#binding_relation fp_result);
@@ -613,16 +649,16 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
         val brec_t = mk_rec_t comp_ts (Term.list_comb (#rename raw, pick_ts))
 
         val rhs = fold_rev Term.absfree (map dest_Free (picks @ fs @ [p, x])) (Term.list_comb (
-          mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_PU_T)
-            vars vars mrbnf, interlace (mk_live_fs brec_t rec_t) comp_ts fs var_types
+          mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live raw_PU_T)
+            frees bounds mrbnf, interlace (plive_ids @ mk_live_fs brec_t rec_t) (pfree_ids @ comp_ts) (pbound_ids @ fs) var_types
         ) $ x);
       in mk_def_t false ff0_b qualify "XXl" (nbound + 3) rhs lthy end;
 
     val (XXr, lthy) =
       let
-        fun mk_map_t T = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live T) vars vars mrbnf
+        fun mk_map_t T = mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live T) frees bounds mrbnf
         val map_comp_t = Term.list_comb (mk_map_t raw_T,
-          interlace (replicate live (Term.list_comb (#rename raw, fs))) fs fs var_types
+          interlace (plive_ids @ replicate live (Term.list_comb (#rename raw, fs))) (pfree_ids @ fs) (pbound_ids @ fs) var_types
         ) $ x;
         val comp_ts = map2 (fn pick => fn f => HOLogic.mk_comp (pick $ map_comp_t $ p, f)) picks fs;
         fun mk_rec_t fs' = Term.abs ("x", raw_T) (HOLogic.mk_prod (
@@ -631,25 +667,26 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
         ));
         val rhs = fold_rev Term.absfree (map dest_Free (picks @ fs @ [p, x])) (Term.list_comb (
           mk_map_t raw_PU_T,
-          interlace (mk_live_fs (mk_rec_t comp_ts) (mk_rec_t fs)) comp_ts fs var_types
+          interlace (plive_ids @ mk_live_fs (mk_rec_t comp_ts) (mk_rec_t fs)) (pfree_ids @ comp_ts) (pbound_ids @ fs) var_types
         ) $ x);
       in mk_def_t false ff0_b qualify "XXr" (nbound + 3) rhs lthy end;
 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
 
-    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst Umap')) []);
-    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
+    val vars' = rev (map TVar (Term.add_tvars (Morphism.term phi (fst CTOR)) []));
+    val vars'' = vars @ vars_plive @ vars_pfree @ vars_pbound @ #extra_vars model;
+    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars'') (Morphism.term phi t), Morphism.thm phi thm);
 
   in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,
     morph f, map morph pick0s, morph f0, morph ff0, morph noclash, morph nnoclash, morph XXl,
-    morph XXr), lthy) end;
+    morph XXr, phi), lthy) end;
 
 fun create_binding_recursor qualify model ff0_b lthy =
   let
     val ((model, defs), lthy) = prove_model_axioms ff0_b qualify model lthy;
     val ((suitables, Umap', UFVars's, PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
-    XXl, XXr), lthy) = define_recursor_consts qualify model ff0_b lthy
+    XXl, XXr, phi), lthy) = define_recursor_consts qualify model ff0_b lthy
 
     val params = #parameters model;
     val axioms = #axioms model;
@@ -660,18 +697,26 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val avoiding_sets = #avoiding_sets model;
 
     val fp_result = #fp_result model;
-    val vars = #bound_vars fp_result;
     val raw = #raw_fp fp_result;
     val quotient = #quotient_fp fp_result;
     val rel = #binding_relation fp_result;
+    val passive = #passive fp_result;
 
     val mrbnf = #pre_mrbnf fp_result;
     val deads = deads_of_mrbnf mrbnf;
-    val live = live_of_mrbnf mrbnf;
-    val bound = bound_of_mrbnf mrbnf;
-    val free = free_of_mrbnf mrbnf;
-    val n = live + free + bound;
+    val live = live_of_mrbnf mrbnf - #live passive;
+    val bound = bound_of_mrbnf mrbnf - #bound passive;
+    val free = free_of_mrbnf mrbnf - #free passive;
+    val num_passive = #live passive + #bound passive + #free passive;
+    val n = live + free + bound + num_passive;
     val var_types = var_types_of_mrbnf mrbnf;
+
+    val (((vars, vars_plive), vars_pfree), vars_pbound) = #vars model
+      |> chop (length (#vars model) - num_passive)
+      ||>> chop (#live passive)
+      ||>> chop (#free passive);
+    val frees = vars @ vars_pfree;
+    val bounds = vars_pbound @ vars;
 
     val raw_T = #T raw;
     val nvars = length vars;
@@ -679,15 +724,15 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val ctor = #ctor raw;
     val prod_PU_T = HOLogic.mk_prodT (raw_T, P --> U);
 
-    val pre_T = mk_T_of_mrbnf deads (replicate live raw_T) vars vars mrbnf;
-    fun mk_PU_T T = mk_T_of_mrbnf deads (replicate live (HOLogic.mk_prodT (T, P --> U))) vars vars mrbnf;
+    val pre_T = mk_T_of_mrbnf deads (vars_plive @ replicate live raw_T) frees bounds mrbnf;
+    fun mk_PU_T T = mk_T_of_mrbnf deads (vars_plive @ replicate live (HOLogic.mk_prodT (T, P --> U))) frees bounds mrbnf;
     val PU_T = mk_PU_T raw_T;
-    val pre_map = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_T) vars vars mrbnf;
+    val pre_map = mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live raw_T) frees bounds mrbnf;
 
     val pick_Ts = map (fst o dest_funT o fastype_of o fst) suitables;
 
     val x = Free ("x", pre_T);
-    val qx = Free ("x", mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf);
+    val qx = Free ("x", mk_T_of_mrbnf deads (vars_plive @ replicate live (#T quotient)) frees bounds mrbnf);
     val raw_y = Free ("y", PU_T);
     val raw_y' = Free ("y'", PU_T);
     val y = Free ("y", mk_PU_T (#T quotient));
@@ -707,11 +752,17 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val suitable_pick_prems = map2 (fn (suitable, _) => fn pick => HOLogic.mk_Trueprop (suitable $ pick)) suitables picks;
     val suitable_pick'_prems = map2 (fn (suitable, _) => fn pick => HOLogic.mk_Trueprop (suitable $ pick)) suitables pick's;
 
+    val plive_ids = map HOLogic.id_const vars_plive;
+    val frees_ids = map HOLogic.id_const frees;
+    val bounds_ids = map HOLogic.id_const bounds;
+    val pfree_ids = map HOLogic.id_const vars_pfree;
+    val pbound_ids = map HOLogic.id_const vars_pbound;
+
     fun mk_pre_map_id_fst T =
       let val prodT = HOLogic.mk_prodT (T, P --> U)
       in Term.list_comb (
-        mk_map_of_mrbnf deads (replicate live prodT) (replicate live T) vars vars mrbnf,
-        interlace (replicate live (fst_const prodT)) (map HOLogic.id_const vars) (map HOLogic.id_const vars) var_types
+        mk_map_of_mrbnf deads (vars_plive @ replicate live prodT) (vars_plive @ replicate live T) frees bounds mrbnf,
+        interlace (plive_ids @ replicate live (fst_const prodT)) frees_ids bounds_ids var_types
       ) end;
     val pre_map_id_fst = mk_pre_map_id_fst raw_T;
 
@@ -722,13 +773,15 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val mk_pick_prems = map2 (fn ps => fn thm => map (fn p => p OF [thm]) ps) pick_premss;
 
     fun flip f b a = f a b;
-    fun mk_sets T = @{fold 2} (fn x => flip (fn (a, b, c) =>
-      fn Live_Var => (a @ [x], b, c) | Bound_Var => (a, b @ [x], c) | Free_Var => (a, b, c @ [x])
-    )) (mk_sets_of_mrbnf (replicate n deads) (replicate n (replicate live T))
-      (replicate n vars) (replicate n vars) mrbnf
-    ) var_types ([], [], []);
+    fun mk_sets T =
+      let val (a, b, c) = @{fold 2} (fn x => flip (fn (a, b, c) =>
+          fn Live_Var => (a @ [x], b, c) | Bound_Var => (a, b @ [x], c) | Free_Var => (a, b, c @ [x])
+        )) (mk_sets_of_mrbnf (replicate n deads) (replicate n (vars_plive @ replicate live T))
+          (replicate n frees) (replicate n bounds) mrbnf
+        ) var_types ([], [], [])
+      in (drop (#live passive) a, take nvars b, drop (#bound passive) c) end;
     val (raw_live_sets, raw_bound_sets, raw_free_sets) = mk_sets raw_T
-    val (prod_live_sets, prod_bound_sets, prod_free_sets) = mk_sets prod_PU_T
+    val (prod_live_sets, prod_bound_sets, prod_free_sets) = mk_sets prod_PU_T;
 
     fun prepare_prems f = [mk_bij f, mk_supp_bound f];
     val f_prems = maps (map HOLogic.mk_Trueprop o prepare_prems) fs;
@@ -748,8 +801,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
     ) suitables picks FVars raw_bound_sets rel;
     val pick_id_on_images = @{map 7} (fn pick_id_on => fn pick => fn (suitable, _) => fn FVars => fn bset => fn xs => fn f =>
       let
-        val map_t = Term.list_comb (pre_map, interlace (replicate live (Term.list_comb (#rename raw, fs)))
-          fs fs var_types
+        val map_t = Term.list_comb (pre_map, interlace
+          (plive_ids @ replicate live (Term.list_comb (#rename raw, fs))) (fs @ pfree_ids) (pbound_ids @ fs) var_types
         ) $ x;
         val goal = HOLogic.mk_Trueprop (
           mk_id_on (mk_image f $ (mk_diff (mk_bound_sets FVars xs, bset $ x))) (pick $ map_t $ p)
@@ -761,7 +814,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
             fun split_prems [] = []
               | split_prems (a::b::ps) = [a, b]::split_prems ps;
             val prems' = split_prems prems;
-            val prems'' = flat (interlace (replicate live []) prems' (map (single o flip nth 1) prems') var_types);
+            val prems'' = flat (interlace (replicate (live + #live passive) [])
+              (prems' @ replicate (#free passive) []) (replicate (#bound passive) [] @ map (single o flip nth 1) prems') var_types);
             val set_maps = map (fn thm => thm OF prems'') (set_map_of_mrbnf mrbnf)
             val comp_def = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt FVars)] @{thm comp_def}
             val FVars_renames = map (fn thm => thm OF prems) (#FVars_renames raw);
@@ -798,8 +852,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
           Term.list_comb (fst PUmap', fs @ [Bound 1, Bound 0])
         ))));
         val map_t = Term.list_comb (
-          mk_map_of_mrbnf deads (replicate live prod_PU_T) (replicate live prod_PU_T) vars vars mrbnf,
-          interlace (replicate live fun_t) fs fs var_types
+          mk_map_of_mrbnf deads (vars_plive @ replicate live prod_PU_T) (vars_plive @ replicate live prod_PU_T) frees bounds mrbnf,
+          interlace (plive_ids @ replicate live fun_t) (fs @ pfree_ids) (pbound_ids @ fs) var_types
         );
         val goal = mk_Trueprop_eq (
           Term.list_comb (fst Umap', fs) $ (ctor $ (pre_map_id_fst $ raw_y)) $ (fst CTOR $ raw_y $ p),
@@ -810,7 +864,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
           (#abs_ctor (#inner quotient)) (#total_abs_eq_iff (#inner quotient)) (#alpha_bij_eq (#inner raw))
           (#rep_abs (#inner quotient)) (#Umap_Uctor axioms) (#Uctor model) context prems
       ) end;
-
 
     fun mk_sub UFVars' FVars PFVars avoiding_set ctor t t' = HOLogic.mk_Trueprop (mk_leq (UFVars' $ t $ ctor) (mk_Un (mk_Un (
       FVars $ t', PFVars $ p), avoiding_set
@@ -864,6 +917,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
         ))
       )) fs (#FVars res) (#PFVarss params) (#avoiding_sets model);
     val (qprod_live_sets, qprod_bound_sets, _) = mk_sets (HOLogic.mk_prodT (#T quotient, P --> U));
+
     fun mk_binding_set_prems y = map2 (fn bset => fn f => HOLogic.mk_Trueprop (
         mk_int_empty (mk_image f $ (bset $ y), bset $ y)
       ));
@@ -876,8 +930,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
           Term.list_comb (fst PUmap, fs @ [Bound 1, Bound 0])
         ))));
         val map_t = Term.list_comb (
-          mk_map_of_mrbnf deads (replicate live prodT) (replicate live prodT) vars vars mrbnf,
-          interlace (replicate live fun_t) fs fs var_types
+          mk_map_of_mrbnf deads (vars_plive @ replicate live prodT) (vars_plive @ replicate live prodT) frees bounds mrbnf,
+          interlace (plive_ids @ replicate live fun_t) (fs @ pfree_ids) (pbound_ids @ fs) var_types
         ) $ y;
         val goal = mk_Trueprop_eq (#Uctor model $ y $ p, #Uctor model $ map_t $ p);
       in Goal.prove_sorry lthy (names (fs @ [y, p]))
@@ -904,8 +958,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
           ))))
         )));
       in HOLogic.mk_Trueprop (Term.list_comb (
-        mk_mr_rel_of_mrbnf deads lives lives vars vars mrbnf,
-        interlace (replicate live rec_rel) comps comps var_types
+        mk_mr_rel_of_mrbnf deads (vars_plive @ lives) (vars_plive @ lives) frees bounds mrbnf,
+        interlace (map HOLogic.eq_const vars_plive @ replicate live rec_rel) (comps @ pfree_ids) (pbound_ids @ comps) var_types
       ) $ y $ y') end;
 
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
@@ -967,8 +1021,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
         fun mk_rec_t t = Term.absfree ("t", raw_T) (HOLogic.mk_prod (t, Term.list_comb (fst f, picks) $ t))
         val brec_t = mk_rec_t (Term.list_comb (#rename raw, picks') $ t);
         val goal = HOLogic.mk_Trueprop (#alpha (#inner raw) $ (ctor $ x) $ (ctor $ (pre_map_id_fst $ (Term.list_comb (
-          mk_map_of_mrbnf deads (replicate live raw_T) (replicate live prod_PU_T) vars vars mrbnf,
-          interlace (map (fn b => if b then brec_t else mk_rec_t t) is_bound) picks' (map HOLogic.id_const vars) var_types
+          mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live prod_PU_T) frees bounds mrbnf,
+          interlace (plive_ids @ map (fn b => if b then brec_t else mk_rec_t t) is_bound) (picks' @ pfree_ids) bounds_ids var_types
         ) $ x))));
       in Goal.prove_sorry lthy (names (picks @ [x, p])) suitable_pick_prems goal (fn {context, prems} =>
         mk_alpha_ctor_picks_tac mrbnf (flat (mk_pick_prems prems)) (#alpha_intro (#inner raw)) (#alpha_refl (#inner raw))
@@ -1002,7 +1056,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
             PFVars $ p), avoiding_set)
         ));
       in Goal.prove_sorry lthy (names (picks @ fs @ [p, x])) (suitable_pick_prems @ f_prems @ [imsupp_prem]) goal (fn {context, prems} =>
-        mk_int_empty_tac inv nvars mrbnf FVars (#rename raw) fs live pre_T ctor XX
+        mk_int_empty_tac inv nvars mrbnf FVars (#rename raw) fs plive_ids live pre_T ctor XX
           (flat (mk_pick_prems (take nvars prems))) infinite_UNIV (#FVars_renames raw)
           (#FVars_ctors raw) pick_id_ons pick_id_on_images (#PFVars_Pmaps paxioms) (map snd suitables) context prems
       ) end
@@ -1138,10 +1192,10 @@ fun create_binding_recursor qualify model ff0_b lthy =
                 ) (#alpha_FVarss (#inner raw));
 
               (* TODO: fix for multiple variables *)
-              fun topBindSet T = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate 4 [])
-                (replicate 4 [T, T])
-                (replicate 4 vars) (replicate 4 vars)
-                 mrbnf) 1;
+              fun topBindSet T = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate n [])
+                (replicate n (vars_plive @ [T, T]))
+                (replicate n frees) (replicate n bounds)
+                 mrbnf) (#live passive + 1);
 
               val exists_bij_betw' = infer_instantiate' ctxt [
                 NONE, NONE, SOME (Thm.cterm_of ctxt (topBindSet prod_PU_T)), SOME (Thm.cterm_of ctxt fA_t),
@@ -1170,7 +1224,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                   let
                     val z = Thm.term_of (snd (snd (split_last params)));
                     (* TODO: fix for multiple variables *)
-                    val set = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate 4 deads) (replicate 4 [raw_T, raw_T]) (replicate 4 vars) (replicate 4 vars) mrbnf) 1
+                    val set = nth (MRBNF_Def.mk_sets_of_mrbnf (replicate n deads) (replicate n (vars_plive @ [raw_T, raw_T])) (replicate n frees) (replicate n bounds) mrbnf) (#live passive + 1)
                     val ct = Thm.cterm_of context (HOLogic.mk_mem (z, set $ t));
                     val thm = Local_Defs.unfold0 context @{thms eq_True eq_False} (
                       infer_instantiate' context [SOME ct] @{thm bool.exhaust}
@@ -1353,7 +1407,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
               rtac ctxt conjI,
               rtac ctxt trans,
               rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst f))] @{thm arg_cong3[OF refl _ refl]}),
-              resolve_tac ctxt (map (fn prems => #rename_simp (#inner raw) OF prems) f_premss),
+              resolve_tac ctxt (map (fn prems => #rename_simp raw OF prems) f_premss),
               rtac ctxt (trans OF [snd f OF suitable_prems]),
               rtac ctxt sym,
               rtac ctxt trans,
@@ -1418,6 +1472,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (raw_f_prems @ raw_comps @ flat f_inv_premss @ [infinite_UNIV] @ @{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv})),
               rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ flat (f_premss @ pick_premss) @ [infinite_UNIV])),
+              K (unfold_thms_tac ctxt @{thms Grp_UNIV_id conversep_eq OO_eq}),
               K (unfold_thms_tac ctxt (@{thms relcompp_conversep_Grp} @ [MRBNF_Def.mr_rel_def_of_mrbnf mrbnf])),
               rtac ctxt (iffD2 OF [MRBNF_Def.rel_cong_of_mrbnf mrbnf]),
               rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
@@ -1426,38 +1481,41 @@ fun create_binding_recursor qualify model ff0_b lthy =
                 assume_tac ctxt,
                 resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ [infinite_UNIV] @ flat (f_premss @ pick_premss))
               ],
-              REPEAT_DETERM o (EVERY' [
-                (* comp = id on free vars *)
-                rtac ctxt @{thm inv_id_middle},
-                resolve_tac ctxt raw_f_prems,
-                rotate_tac ~1,
-                dtac ctxt imageI,
-                rotate_tac ~1,
-                REPEAT_DETERM o dresolve_tac ctxt (flat (@{map 3} (fn s => fn ps => map (fn thm => thm OF (s::ps))) suitable_prems f_premss imsupp_id_on_XX)),
-                REPEAT_DETERM o etac ctxt conjE,
-                rtac ctxt trans,
-                rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
-                dtac ctxt @{thm id_onD[rotated]},
-                assume_tac ctxt,
-                assume_tac ctxt,
-                REPEAT_DETERM o (dtac ctxt @{thm id_on_inv[rotated]} THEN' assume_tac ctxt),
-                dtac ctxt @{thm id_onD[rotated]},
-                assume_tac ctxt,
-                assume_tac ctxt
-              ] ORELSE' EVERY' [
-                (* comp = id on bound vars *)
-                rtac ctxt @{thm inv_id_middle2},
-                resolve_tac ctxt (flat bij_compss),
-                assume_tac ctxt,
-                dtac ctxt @{thm eq_onD},
-                assume_tac ctxt,
-                rtac ctxt sym,
-                assume_tac ctxt
-              ]),
-              REPEAT_DETERM o rtac ctxt refl,
+              REPEAT_DETERM o FIRST' [
+                rtac ctxt refl,
+                EVERY' [
+                  (* comp = id on free vars *)
+                  rtac ctxt @{thm inv_id_middle},
+                  resolve_tac ctxt raw_f_prems,
+                  rotate_tac ~1,
+                  dtac ctxt imageI,
+                  rotate_tac ~1,
+                  REPEAT_DETERM o dresolve_tac ctxt (flat (@{map 3} (fn s => fn ps => map (fn thm => thm OF (s::ps))) suitable_prems f_premss imsupp_id_on_XX)),
+                  REPEAT_DETERM o etac ctxt conjE,
+                  rtac ctxt trans,
+                  rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
+                  dtac ctxt @{thm id_onD[rotated]},
+                  assume_tac ctxt,
+                  assume_tac ctxt,
+                  REPEAT_DETERM o (dtac ctxt @{thm id_on_inv[rotated]} THEN' assume_tac ctxt),
+                  dtac ctxt @{thm id_onD[rotated]},
+                  assume_tac ctxt,
+                  assume_tac ctxt
+                ],
+                EVERY' [
+                  (* comp = id on bound vars *)
+                  rtac ctxt @{thm inv_id_middle2},
+                  resolve_tac ctxt (flat bij_compss),
+                  assume_tac ctxt,
+                  dtac ctxt @{thm eq_onD},
+                  assume_tac ctxt,
+                  rtac ctxt sym,
+                  assume_tac ctxt
+                ]
+              ],
               K (unfold_thms_tac ctxt [MRBNF_Def.map_id_of_mrbnf mrbnf]),
               rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
-              REPEAT_DETERM_N 2 o EVERY' [
+              REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [
                 rtac ctxt @{thm relcomppI},
                 rtac ctxt @{thm iffD2[OF fun_cong[OF fun_cong[OF Grp_UNIV_def]]]},
                 rtac ctxt refl,
@@ -1538,7 +1596,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                     nonbinding_set_fun_eq_tac
                   ]
                 ]
-              ],
+              ]),
               (* f picks (ctor t) = f picks' (ctor t') *)
               rtac ctxt ext,
               K (unfold_thms_tac ctxt ([snd f OF suitable_prems, snd f OF suitable_prems']
@@ -1563,8 +1621,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
                       val rec_t = mk_rec_t picks;
                     in map (fn i => if member (op=) (flat rel) i then brec_t else rec_t) (0 upto live - 1) end;
                   fun mk_map_t picks ap_picks = Term.abs ("x", pre_T) (pre_map_id_fst $ (Term.list_comb (
-                    MRBNF_Def.mk_map_of_mrbnf deads (replicate live raw_T) (replicate live prod_PU_T) vars vars mrbnf,
-                    interlace (mk_lives picks ap_picks) ap_picks (map HOLogic.id_const vars) var_types
+                    MRBNF_Def.mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live prod_PU_T) frees bounds mrbnf,
+                    interlace (plive_ids @ mk_lives picks ap_picks) (ap_picks @ pfree_ids) bounds_ids var_types
                   ) $ Bound 0));
                   val exists_bij_betw2 = @{map 6} (fn pick_prems => fn pick_prems' => fn bset => fn FVars => fn PFVars => fn avoiding_set => infer_instantiate' ctxt [
                       SOME (Thm.cterm_of ctxt bset), NONE, NONE, SOME (Thm.cterm_of ctxt bset),
@@ -1612,12 +1670,18 @@ fun create_binding_recursor qualify model ff0_b lthy =
               K (unfold_thms_tac ctxt @{thms id_o o_id}),
               rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ [infinite_UNIV] @ raw_pick_prems @ raw_pick_prems')),
+              K (unfold_thms_tac ctxt @{thms Grp_UNIV_id conversep_eq OO_eq}),
               K (unfold_thms_tac ctxt @{thms inv_id id_o o_id relcompp_conversep_Grp}),
               rtac ctxt (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf),
               K (prefer_tac (2 * (free + 2 * bound) + 1)),
               rtac ctxt mr_rel_prem,
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_id_bound supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ [infinite_UNIV] @ raw_pick_prems @ raw_pick_prems' @ h_prems)),
               REPEAT_DETERM o FIRST' [
+                (* passive set *)
+                EVERY' [
+                  REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+                  assume_tac ctxt
+                ],
                 (* free var set *)
                 EVERY' [
                   rtac ctxt ballI,
@@ -1846,7 +1910,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
       f_UFVars' OF suitable_pick0s
     )) f_UFVars's;
 
-    val ids = map HOLogic.id_const vars;
     val f0_ctor =
       let
         val int_empty_prems = @{map 3} (fn bset => fn PFVars => fn avoiding_set =>
@@ -1856,10 +1919,10 @@ fun create_binding_recursor qualify model ff0_b lthy =
         val goal = mk_Trueprop_eq (
           fst f0 $ (ctor $ x) $ p,
           fst CTOR $ (Term.list_comb (
-            MRBNF_Def.mk_map_of_mrbnf deads (replicate live raw_T) (replicate live prod_PU_T) vars vars mrbnf,
-            MRBNF_Def.interlace (replicate live (
+            MRBNF_Def.mk_map_of_mrbnf deads (vars_plive @ replicate live raw_T) (vars_plive @ replicate live prod_PU_T) frees bounds mrbnf,
+            MRBNF_Def.interlace (plive_ids @ replicate live (
               Term.absfree (dest_Free t) (HOLogic.mk_prod (t, fst f0 $ t))
-            )) ids ids var_types
+            )) frees_ids bounds_ids var_types
           ) $ x) $ p
         );
         val x' = Free ("x'", pre_T);
@@ -1932,8 +1995,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
       in Goal.prove_sorry lthy (names [qx]) [] (mk_Trueprop_eq (
         fst nnoclash $ qx,
         fst noclash $ (Term.list_comb (
-          MRBNF_Def.mk_map_of_mrbnf deads (replicate live (#T quotient)) (replicate live raw_T) vars vars mrbnf,
-          MRBNF_Def.interlace (replicate live (#rep (#inner quotient))) ids ids var_types
+          MRBNF_Def.mk_map_of_mrbnf deads (vars_plive @ replicate live (#T quotient)) (vars_plive @ replicate live raw_T) frees bounds mrbnf,
+          MRBNF_Def.interlace (plive_ids @ replicate live (#rep (#inner quotient))) frees_ids bounds_ids var_types
         ) $ qx)
       )) (fn {context=ctxt, ...} =>
         unfold_thms_tac ctxt (@{thms image_id image_comp} @ comp_FVarss @ set_map_id
@@ -1958,14 +2021,14 @@ fun create_binding_recursor qualify model ff0_b lthy =
         val goal = mk_Trueprop_eq (
           fst ff0 $ (#ctor quotient $ qx) $ p,
           #Uctor model $ (Term.list_comb (
-            MRBNF_Def.mk_map_of_mrbnf deads (replicate live (#T quotient)) (replicate live (HOLogic.mk_prodT (#T quotient, P --> U)))
-              vars vars mrbnf,
-            MRBNF_Def.interlace (replicate live rec_t) ids ids var_types
+            MRBNF_Def.mk_map_of_mrbnf deads (vars_plive @ replicate live (#T quotient)) (vars_plive @ replicate live (HOLogic.mk_prodT (#T quotient, P --> U)))
+              frees bounds mrbnf,
+            MRBNF_Def.interlace (plive_ids @ replicate live rec_t) frees_ids bounds_ids var_types
           ) $ qx) $ p
         );
         val set_maps = map (fn thm => Local_Defs.unfold0 lthy @{thms image_id} (
           infer_instantiate' lthy (
-            replicate live (SOME (Thm.cterm_of lthy (#rep (#inner quotient))))
+            map (SOME o Thm.cterm_of lthy) plive_ids @ replicate live (SOME (Thm.cterm_of lthy (#rep (#inner quotient))))
           ) (thm OF id_prems)
         ) RS sym) (MRBNF_Def.set_map_of_mrbnf mrbnf);
       in Goal.prove_sorry lthy (names [x, p]) (int_empty_prems @ [nnoclash_prem]) goal (fn {context=ctxt, prems} => EVERY1 [
@@ -2014,7 +2077,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
     rec_fun = fst ff0,
     rec_Uctor = unfold_defs ff0_cctor,
     rec_swap = unfold_defs ff0_swap,
-    rec_UFVarss = map unfold_defs ff0_UFVarss,
+    rec_UFVarss = map (unfold_defs o Morphism.thm phi) ff0_UFVarss,
     noclash = nnoclash
   }, lthy) end;
 

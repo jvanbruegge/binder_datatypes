@@ -2,9 +2,9 @@ theory MRBNF_Recursor
   imports "./MRBNF_Composition"
 begin
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>*)
 
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
   using card_of_mono1 ordLeq_ordLess_trans by blast

@@ -92,6 +92,8 @@ sig
   val mk_wits_of_mrbnf: typ list list -> typ list list -> typ list list -> typ list list -> mrbnf ->
     (int list * term) list
 
+  val mk_map_comb_of_mrbnf: typ list -> term list -> term list -> term list -> mrbnf -> term;
+
   val bd_infinite_regular_card_order_of_mrbnf: mrbnf -> thm
   val bd_Card_order_of_mrbnf: mrbnf -> thm
   val bd_Cinfinite_of_mrbnf: mrbnf -> thm
@@ -875,6 +877,16 @@ fun mk_pred_of_mrbnf Ds Ts Bs Fs mrbnf =
       ((#deads mrbnf_rep ~~ Ds) @ (#lives mrbnf_rep ~~ Ts) @ (#bounds mrbnf_rep ~~ Bs) @
         (#frees mrbnf_rep ~~ Fs)) (#pred mrbnf_rep)
   end;
+
+(* comb terms *)
+fun mk_map_comb_of_mrbnf deads lives frees bounds mrbnf =
+  let
+    val funT = Term.dest_funT o fastype_of
+    val (As, Bs) = split_list (map funT lives);
+  in Term.list_comb (
+    mk_map_of_mrbnf deads As Bs (map (fst o funT) frees) (map (fst o funT) bounds) mrbnf,
+    interlace lives frees bounds (var_types_of_mrbnf mrbnf)
+  ) end;
 
 (*thms*)
 val bd_infinite_regular_card_order_of_mrbnf = #bd_infinite_regular_card_order o #axioms o rep_mrbnf;
@@ -3324,32 +3336,6 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
         val mr_rel_OO_Grp = Lazy.lazy mk_mr_rel_OO_Grp;
 
-        (* TODO: See if this really works *)
-        (*fun register_bnf lthy =
-          let
-            val mrbnf_rel_b = Binding.name mrbnf_rel_name;
-            val map_id_AsBs = Term.list_comb (mrbnf_map_AsBs, lfs_id)
-              |> fold_rev Term.absfree (map dest_Free lfs);
-            val rel_id_AsBs = Term.list_comb (mrrelAsBs, comb_frels lfs_id Rs)
-              |> fold_rev Term.absfree (map dest_Free Rs);
-            val tacs = map (fn thm => fn ctxt =>
-              rtac ctxt thm THEN_ALL_NEW Goal.assume_rule_tac ctxt |> HEADGOAL)
-              ([#map_id0 axioms, map_comp0_id, map_cong0_id] @
-                (#set_map0 axioms |> filter_lives |> map id_prems) @
-                [bd_card_order, bd_cinfinite] @ (filter_lives weak_set_bd) @
-                [Lazy.force mr_le_rel_OO |> simp_comp_thm lthy,
-                  Lazy.force mr_rel_OO_Grp |> id_prems, #pred_set axioms]);
-            fun wit_tac ctxt = flat wit_thms |> map
-              (fn thm => rtac ctxt thm THEN_ALL_NEW assume_tac ctxt) |> EVERY1;
-          in
-            BNF_Def.bnf_def BNF_Def.Do_Inline (K BNF_Def.Dont_Note) internal qualify tacs wit_tac
-              (SOME (Ds @ filter_non_lives As')) map_b mrbnf_rel_b pred_b set_bs
-              (((((((Binding.prefix false "Bnf" raw_mrbnf_b, CA'), map_id_AsBs), mrbnf_sets_lAs),
-                mrbnf_bd_As), map snd mrbnf_wit_As), SOME rel_id_AsBs), SOME pred) lthy
-          end;
-
-        val lthy = if live > 0 andalso not internal then register_bnf lthy |> snd else lthy;*)
-
         fun mk_mr_rel_flip () =
           let
             val lhs = Term.list_comb (mrrelBsAs, map_VT mk_conversep mk_inv fsRs) $ y $ x;
@@ -3454,18 +3440,25 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
         fun mk_mr_rel_set () =
           let
-            val mr_prem = Logic.implies $ HOLogic.mk_Trueprop (Term.list_comb (mrrelAsBs, fsRs @ [x, y]))
-            fun mk_var_goal setA setB i = mr_prem $ mk_Trueprop_eq (setB $ y, mk_image (nth fsRs i) $ (setA $ x))
-            fun mk_live_goal setA setB B i = mr_prem $ (Logic.implies $
-              HOLogic.mk_Trueprop (HOLogic.mk_mem (nth zs i, setA $ x)) $
-              HOLogic.mk_Trueprop (mk_Bex (setB $ y) (Term.abs ("z'", B) (nth fsRs i $ nth zs i $ Bound 0)))
-            );
+            fun mk_mr_prem i =
+              let
+                val (subst_opt, fsRs') = fold_rev (fn (j, x) => fn (b, xs) => if i = j then
+                    let val [T1, T2] = Term.binder_types (fastype_of x);
+                    in (SOME [(T2, T1)], HOLogic.eq_const T1 :: xs) end
+                  else (b, x::xs)
+                ) (0 upto length fsRs - 1 ~~ fsRs) (NONE, []);
+                val subst = Term.subst_atomic_types (the_default [] subst_opt);
+              in (subst, Logic.implies $ HOLogic.mk_Trueprop (Term.list_comb (subst mrrelAsBs, fsRs' @ [x, subst y]))) end;
+            fun mk_var_goal setA setB i = snd (mk_mr_prem ~1) $ mk_Trueprop_eq (setB $ y, mk_image (nth fsRs i) $ (setA $ x))
+            fun mk_live_goal setA setB i =
+              let val (subst, mr_prem) = mk_mr_prem i
+              in mr_prem $ mk_Trueprop_eq (setA $ x, subst setB $ subst y) end;
             val vars = map (fst o dest_Free) (fsRs @ [x, y])
-          in @{map 6} (fn setA => fn setB => fn B => fn var_type => fn set_transfer => fn i =>
+          in @{map 5} (fn setA => fn setB => fn var_type => fn set_transfer => fn i =>
             Goal.prove_sorry lthy (vars @ [fst (dest_Free (nth zs i))]) prem_terms_fs
-              (if var_type = Live_Var then mk_live_goal setA setB B i else mk_var_goal setA setB i) (fn {context, prems} =>
-              mk_mr_rel_set_tac context (var_type = Live_Var) set_transfer prems
-            ) |> Thm.close_derivation \<^here>) mrbnf_sets_As mrbnf_sets_Bs Bs' var_types (Lazy.force mr_set_transfer) (0 upto non_dead - 1)
+              (if var_type = Live_Var then mk_live_goal setA setB i else mk_var_goal setA setB i) (fn {context, prems} =>
+              mk_mr_rel_set_tac context set_transfer prems
+            ) |> Thm.close_derivation \<^here>) mrbnf_sets_As mrbnf_sets_Bs var_types (Lazy.force mr_set_transfer) (0 upto non_dead - 1)
           end;
 
         val mr_rel_set = Lazy.lazy mk_mr_rel_set;

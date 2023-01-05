@@ -17,7 +17,7 @@ sig
     -> Proof.context -> thm list -> tactic
   val mk_f_UFVars'_tac: MRBNF_Def.mrbnf -> term -> term -> thm list -> thm -> thm list -> thm list
     -> thm -> thm -> thm list -> thm list -> thm -> thm list -> Proof.context -> thm list -> tactic
-  val mk_int_empty_tac: bool -> int -> MRBNF_Def.mrbnf -> term -> term -> term list -> int -> typ
+  val mk_int_empty_tac: bool -> int -> MRBNF_Def.mrbnf -> term -> term -> term list -> term list -> int -> typ
     -> term -> term * thm -> thm list -> thm -> thm list -> thm list -> thm list -> thm list
     -> thm list -> thm list -> Proof.context -> thm list -> tactic
   val mk_imsupp_id_on_XX_tac: int -> MRBNF_Def.mrbnf -> term -> thm -> thm -> thm -> thm list
@@ -140,25 +140,28 @@ let
     rtac ctxt (@{thm iffD2[OF fun_cong[OF fun_cong]]} OF [MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf RS sym]),
     rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),
     REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ f_prems),
-    K (unfold_thms_tac ctxt @{thms id_o o_id OO_eq}),
+    K (unfold_thms_tac ctxt @{thms id_o o_id OO_eq Grp_UNIV_id}),
     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
     REPEAT_DETERM o resolve_tac ctxt (f_prems @ g_prems),
+    K (unfold_thms_tac ctxt @{thms Grp_UNIV_id conversep_eq OO_eq}),
     K (unfold_thms_tac ctxt @{thms relcompp_conversep_Grp}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV]),
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
       REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-      Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
-        let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
-        in rtac ctxt thm1 1 THEN rtac ctxt thm2 1 end
-      ) ctxt,
-      hyp_subst_tac ctxt,
-      K (unfold_thms_tac ctxt @{thms prod.case Grp_UNIV_def prod.inject}),
-      etac ctxt conjE,
-      rtac ctxt conjI,
-      assume_tac ctxt,
-      assume_tac ctxt
+      assume_tac ctxt ORELSE' EVERY' [
+        Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
+          let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
+          in rtac ctxt thm1 1 THEN rtac ctxt thm2 1 end
+        ) ctxt,
+        hyp_subst_tac ctxt,
+        K (unfold_thms_tac ctxt @{thms prod.case Grp_UNIV_def prod.inject}),
+        etac ctxt conjE,
+        rtac ctxt conjI,
+        assume_tac ctxt,
+        assume_tac ctxt
+      ]
     ]
   ] end;
 
@@ -211,9 +214,10 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       rtac ctxt @{thm id_on_id},
       K (unfold_thms_tac ctxt (@{thms o_id comp_assoc[symmetric] fst_comp_map_prod[symmetric]} @ [map_comp_id, rename_id])),
       rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) OF (id_prems @ id_prems)]),
-      K (unfold_thms_tac ctxt @{thms id_o}),
+      K (unfold_thms_tac ctxt @{thms id_o Grp_UNIV_id OO_eq}),
       rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
       REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
+      K (unfold_thms_tac ctxt @{thms Grp_UNIV_id conversep_eq OO_eq}),
       K (unfold_thms_tac ctxt @{thms inv_id id_o relcompp_conversep_Grp}),
       K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
       rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
@@ -222,18 +226,21 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       rtac ctxt refl,
       REPEAT_DETERM o EVERY' [
         REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-        rtac ctxt @{thm relcomppI},
-        rtac ctxt refl,
-        hyp_subst_tac ctxt,
-        SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
-        rtac ctxt rep_abs
+        assume_tac ctxt ORELSE' EVERY' [
+          rtac ctxt @{thm relcomppI},
+          rtac ctxt refl,
+          hyp_subst_tac ctxt,
+          SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
+          rtac ctxt rep_abs
+        ]
       ]
     ],
     rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) OF id_prems]),
     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV]),
-    K (unfold_thms_tac ctxt @{thms id_o o_id}),
+    K (unfold_thms_tac ctxt @{thms id_o o_id Grp_UNIV_id OO_eq}),
     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv supp_id_bound bij_id} @ f_prems @ g_prems @ [infinite_UNIV]),
+    K (unfold_thms_tac ctxt @{thms Grp_UNIV_id conversep_eq OO_eq}),
     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id relcompp_conversep_Grp}),
     K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
@@ -241,28 +248,30 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
       REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-      Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
-        let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
-        in rtac context thm1 1 THEN rtac context thm2 1 end
-      ) ctxt,
-      hyp_subst_tac ctxt,
-      K (unfold_thms_tac ctxt @{thms prod.case}),
-      rtac ctxt @{thm relcomppI},
-      resolve_tac ctxt @{thms fun_cong[OF map_prod_def] prod.case},
-      K (unfold_thms_tac ctxt (rrename_def :: @{thms prod.case map_prod_def})),
-      etac ctxt conjE,
-      rtac ctxt conjI,
-      rtac ctxt (iffD2 OF [total_abs_eq_iff]),
-      rtac ctxt alpha_trans,
-      rtac ctxt (iffD2 OF [alpha_bij_eq OF f_prems]),
-      rtac ctxt rep_abs,
-      rtac ctxt (Drule.rotate_prems 1 alpha_trans),
-      rtac ctxt alpha_sym,
-      rtac ctxt (iffD2 OF [alpha_bij_eq OF g_prems]),
-      rtac ctxt rep_abs,
-      assume_tac ctxt,
-      SELECT_GOAL (unfold_thms_tac ctxt [PUmap_def, PUmap'_def, Umap'_def, @{thm id_def}]),
-      assume_tac ctxt
+      assume_tac ctxt ORELSE' EVERY' [
+        Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
+          let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
+          in rtac context thm1 1 THEN rtac context thm2 1 end
+        ) ctxt,
+        hyp_subst_tac ctxt,
+        K (unfold_thms_tac ctxt @{thms prod.case}),
+        rtac ctxt @{thm relcomppI},
+        resolve_tac ctxt @{thms fun_cong[OF map_prod_def] prod.case},
+        K (unfold_thms_tac ctxt (rrename_def :: @{thms prod.case map_prod_def})),
+        etac ctxt conjE,
+        rtac ctxt conjI,
+        rtac ctxt (iffD2 OF [total_abs_eq_iff]),
+        rtac ctxt alpha_trans,
+        rtac ctxt (iffD2 OF [alpha_bij_eq OF f_prems]),
+        rtac ctxt rep_abs,
+        rtac ctxt (Drule.rotate_prems 1 alpha_trans),
+        rtac ctxt alpha_sym,
+        rtac ctxt (iffD2 OF [alpha_bij_eq OF g_prems]),
+        rtac ctxt rep_abs,
+        assume_tac ctxt,
+        SELECT_GOAL (unfold_thms_tac ctxt [PUmap_def, PUmap'_def, Umap'_def, @{thm id_def}]),
+        assume_tac ctxt
+      ]
     ]
   ] end;
 
@@ -279,9 +288,10 @@ fun mk_alpha_ctor_picks_tac mrbnf pick_prems alpha_intro alpha_refl infinite_UNI
   in EVERY1 [
     rtac ctxt (alpha_intro OF pick_prems),
     resolve_tac ctxt (map2 (fn a => fn b => a OF [b]) pick_id_ons prems),
-    SELECT_GOAL (unfold_thms_tac ctxt (@{thms inv_id id_o o_id comp_def[of fst] fst_conv relcompp_conversep_Grp} @ map_comps @ [
-      nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2 OF (id_pick_prems @ id_pick_prems')
-    ])),
+    K (unfold_thms_tac ctxt (@{thms id_o o_id} @ map_comps)),
+    rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2 OF (id_pick_prems @ id_pick_prems')]),
+    K (unfold_thms_tac ctxt @{thms inv_id id_o o_id Grp_UNIV_id conversep_eq OO_eq}),
+    K (unfold_thms_tac ctxt @{thms comp_def[of fst] fst_conv relcompp_conversep_Grp}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf OF id_prems),
     REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound supp_id_bound bij_imp_bij_inv supp_inv_bound} @ pick_prems @ [infinite_UNIV]),
     rtac ctxt (iffD2 OF [@{thm fun_cong[OF fun_cong]} OF [MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf], refl]),
@@ -336,7 +346,7 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
     rtac ctxt @{thm subset_refl}
   ] end;
 
-fun mk_int_empty_tac inv nvars mrbnf FVars rename fs live pre_T ctor XX pick_prems infinite_UNIV
+fun mk_int_empty_tac inv nvars mrbnf FVars rename fs plive_ids live pre_T ctor XX pick_prems infinite_UNIV
 FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_defs ctxt prems =
   let
     val ((suitable_prems, f_prems), imsupp_prem) = prems
@@ -354,7 +364,7 @@ FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_de
     val FVars_renames = maps (fn thm => map2 (fn a => fn b => thm OF [a, b]) (hd f_prems::bij_comps) (nth f_prems 1::supp_comps)) FVars_renames
     val diff_images = map (fn b => @{thm image_set_diff[OF bij_is_inj]} OF [b] RS sym) bij_comps;
     val rename_ct = Thm.cterm_of ctxt (Term.list_comb (rename, fs))
-    val set_map_syms = map (fn thm => infer_instantiate' ctxt (replicate live (SOME rename_ct)) (
+    val set_map_syms = map (fn thm => infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) plive_ids @ replicate live (SOME rename_ct)) (
       thm OF (mk_prems [nth f_prems 1] f_prems var_types)
     ) RS sym) (MRBNF_Def.set_map_of_mrbnf mrbnf);
   in EVERY1 [

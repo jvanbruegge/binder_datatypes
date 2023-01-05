@@ -131,12 +131,21 @@ fun define_raw_terms co names mrbnfs ks binding_relation lthy =
     val bs = map (Binding.name o mk_TN) names;
     val TNs = map (Local_Theory.full_name lthy) bs;
     val ctorNs = map mk_ctorN names;
-    val frees_lives = mk_TFrees' f_sorts lthy ||>> mk_TFrees (live - k_sum) |>> op @
+    val frees_lives = lthy
+      |> mk_TFrees' f_sorts
+      ||>> mk_TFrees (live - k_sum) |>> op @
       ||> fst o mk_TFrees' b_sorts |> op @;
     fun mk_T_group TN k = Type (TN, frees_lives) |> replicate k;
     val T_groups = frees_lives @ take bound_bounds frees_lives @
       List.concat (map2 mk_T_group TNs ks);
-    val T_Ts = map (`dest_TFree #>> snd #> swap #> pair NONE) frees_lives;
+    val T_Ts = map_index (fn (i, x) =>
+      let
+        val y = x |> `dest_TFree |>> snd |> swap
+      in if i < free then (NONE, y) else
+        (SOME ((*Binding.name ("set" ^ string_of_int (i - free + 1) ^ "_" ^ mk_TN (hd names)))*) Binding.empty), y)
+      end
+    ) frees_lives;
+    val T_Ts_passive = map dest_TFree (drop free frees_lives);
 
     (* Build spec *)
     fun mk_T_spec b = ((T_Ts, b), NoSyn);
@@ -2278,6 +2287,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           FVars = nth FVarsssAs i,
 
           inject = nth raw_injects i,
+          rename_simp = nth rename_simps i,
           rename_id0 = nth rename_id0s i,
           rename_id = nth rename_ids i,
           rename_comp0 = nth rename_comp0s i,
@@ -2292,7 +2302,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha = nth alphasAs i,
 
             exhaust = nth raw_exhausts i,
-            rename_simp = nth rename_simps i,
 
             alpha_refl = nth alpha_refls i,
             alpha_sym = nth alpha_syms i,
@@ -2317,6 +2326,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           FVars = nth FFVarsssAs i,
 
           inject = nth TT_injects0 i,
+          rename_simp = nth rrename_cctors i,
           rename_id0 = nth rrename_id0s i,
           rename_id = nth rrename_ids i,
           rename_comp0 = nth rrename_comp0s i,
@@ -2341,102 +2351,39 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             rep_abs = nth Quotient_rep_abss i,
             abs_ctor = nth TT_abs_ctors i,
 
-            rename_ctor = nth rrename_cctors i,
             rename_cong_id = nth rrename_cong_ids i,
-            fresh_co_induct = TT_fresh_co_induct
+            fresh_co_induct = TT_fresh_co_induct,
+            fresh_co_induct_param = TT_fresh_co_induct_param
           }
         } : quotient_result fp_result_T;
       in {
         fp = fp,
         binding_relation = binding_relation,
         bound_vars = fAs,
-        passive = passive,
+        passive = {
+          live = plive,
+          bound = pbound,
+          free = pfree
+        },
         raw_fp = raw_fp_res,
         quotient_fp = quotient_fp_res,
-        pre_mrbnf = nth mrbnfs i
+        pre_mrbnf = nth mrbnfs i,
+        fp_bnf = #fp_bnf (nth T_sugars i),
+        fp_bnf_sugar = #fp_bnf_sugar (nth T_sugars i),
+        fp_ctr_sugar = (#ctr_sugar (#fp_ctr_sugar (nth T_sugars i)))
       } : fp_result end
     ) (0 upto n - 1);
 
-    val lthy = register_fp_results ress lthy
+    val lthy = register_fp_results ress lthy;
 
-    val notes =
-      [("rename_simps", rename_simps),
-       ("rename_id0s", rename_id0s),
-       ("rename_ids", rename_ids),
-       ("rename_comp0s", rename_comp0s),
-       ("rename_comps", rename_comps),
-       ("rename_bijs", rename_bijs),
-       ("rename_inv_simps", rename_inv_simps),
-       ("FVars_ctors", flat FVars_ctorss),
-       ("FVars_rename_less", flat FVars_rename_less),
-       ("FVars_renames", flat FVars_renamess),
-       ("card_of_FVars_bounds", flat card_of_FVars_boundss),
-       ("alpha_refls", alpha_refls),
-       ("alpha_bijs", alpha_bijs),
-       ("alpha_bij_eqs", alpha_bij_eqs),
-       ("alpha_bij_eq_invs", alpha_bij_eq_invs),
-       ("alpha_FVarss", flat alpha_FVarsss),
-       ("alpha_syms", alpha_syms),
-       ("alpha_transs", alpha_transs),
-       ("card_of_FVarsB_bounds", flat card_of_FVarsB_boundss),
-       ("refresh_sets", refresh_sets),
-       ("refreshs", refreshs),
-       ("avoid_freshs", flat avoid_freshss),
-       ("alpha_avoids", alpha_avoids),
-       ("equivp_alphas", equivp_alphas),
-       ("TT_Quotients", TT_Quotients),
-       ("TT_alpha_quotient_syms", alpha_quotient_syms),
-       ("TT_Quotient_total_abs_eq_iffs", Quotient_total_abs_eq_iffs),
-       ("TT_Quotient_abs_reps", Quotient_abs_reps),
-       ("TT_Quotient_rep_abss", Quotient_rep_abss),
-       ("TT_abs_ctors", TT_abs_ctors),
-       ("TT_nchotomys", TT_nchotomys),
-       ("rrename_cctors", rrename_cctors),
-       ("card_of_FFVars_bounds", flat card_of_FFVars_boundss),
-       ("FFVars_cctors", flat FFVars_cctorss),
-       ("FFVars_intros", flat FFVars_intross),
-       ("FFVars_elims", flat FFVars_elimss),
-       ("FFVars_inducts", FFVars_inducts),
-       ("FFVars_rrenames", flat FFVars_rrenamess),
-       ("TT_injects0", TT_injects0),
-       ("aavoid_freshs", flat aavoid_freshss),
-       ("alpha_aavoids", alpha_aavoids),
-       ("TT_fresh_nchotomys", TT_fresh_nchotomys),
-       ("TT_fresh_cases", TT_fresh_cases),
-       ("TT_existential_co_induct", [TT_existential_co_induct]),
-       ("TT_fresh_co_induct_param", [TT_fresh_co_induct_param]),
-       ("TT_fresh_co_induct", [TT_fresh_co_induct]),
-       ("TT_plain_co_induct", [TT_plain_co_induct]),
-       ("rrename_id0s", rrename_id0s),
-       ("rrename_ids", rrename_ids),
-       ("rrename_bijs", rrename_bijs),
-       ("rrename_inv_simps", rrename_inv_simps),
-       ("rrename_comps", rrename_comps),
-       ("rrename_comp0s", rrename_comp0s),
-       ("rrename_cong_ids", rrename_cong_ids),
-       ("cctor_eq_intro_rrenames", cctor_eq_intro_rrenames)
-      ] @ (the_default [] (
-        Option.map (single o pair "TT_fresh_induct_param_no_clash" o single)
-        TT_fresh_induct_param_no_clash_opt
-      )) @ (the_default [] (
-        Option.map (single o pair "TT_subshape_induct" o single)
-        TT_subshape_induct_opt
-      )) @ (the_default [] (
-        Option.map (single o pair "wf_subshapes" o flat)
-        wf_subshapess_opt
-      )) @ (the_default [] (
-        Option.map (single o pair "set_subshape_images" o flat o flat)
-        set_subshape_imagesss_opt
-      ))  @ (the_default [] (
-        Option.map (single o pair "set_subshapes" o flat o flat)
-        set_subshapesss_opt
-      )) |> (map (fn (thmN, thms) =>
-        ((Binding.qualify true (hd names) (Binding.name thmN), []), [(thms, [])])
+    val notes = [
+    ("fresh_cases", TT_fresh_cases)
+  ] |> (map (fn (thmN, thms) =>
+      ((Binding.qualify true "tmp" (Binding.name thmN), []), [(thms, [])])
       ));
-
-    val (noted, lthy') = Local_Theory.notes notes lthy
+  val (_, lthy) = Local_Theory.notes notes lthy;
   in
-    (ress, lthy')
+    (ress, lthy)
   end;
 
 end;

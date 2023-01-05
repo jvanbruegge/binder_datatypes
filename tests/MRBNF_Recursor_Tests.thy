@@ -117,16 +117,16 @@ ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
-(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>*)
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 local_setup \<open>fn lthy =>
 let
   val mrbnf = the (MRBNF_Def.mrbnf_of lthy "MRBNF_Recursor_Tests.test3_pre");
   val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("test3", mrbnf), 2)] [[0], [0]] lthy;
-  (*val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name ("test3" ^ "_") @{binding vvsubst}) I (hd res) lthy;*)
+  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name ("test3" ^ "_") @{binding vvsubst}) I (hd res) lthy;
 in lthy end\<close>
 
 end

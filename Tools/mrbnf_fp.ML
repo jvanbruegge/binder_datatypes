@@ -2351,8 +2351,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       in {
         fp = fp,
         binding_relation = binding_relation,
-        bound_vars = fAs,
-        passive = passive,
         raw_fp = raw_fp_res,
         quotient_fp = quotient_fp_res,
         pre_mrbnf = nth mrbnfs i

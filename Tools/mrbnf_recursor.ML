@@ -206,8 +206,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val ptacs = #axioms params;
 
     val mrbnf = #pre_mrbnf (#fp_result model);
-    val passive = #passive (#fp_result model);
-    val live = MRBNF_Def.live_of_mrbnf mrbnf - passive;
+    val live = MRBNF_Def.live_of_mrbnf mrbnf;
     val free = MRBNF_Def.free_of_mrbnf mrbnf;
     val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
 
@@ -416,7 +415,8 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val PU = P --> U
     val PFVarss = #PFVarss params
     val raw_T = #T raw
-    val vars = #bound_vars fp_result
+    val vars = rev (map TFree (Term.add_tfreesT raw_T []))
+    val _ = @{print} vars
     val nvars = length vars
 
     val ctor = #ctor raw
@@ -660,7 +660,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val avoiding_sets = #avoiding_sets model;
 
     val fp_result = #fp_result model;
-    val vars = #bound_vars fp_result;
     val raw = #raw_fp fp_result;
     val quotient = #quotient_fp fp_result;
     val rel = #binding_relation fp_result;
@@ -674,6 +673,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val var_types = var_types_of_mrbnf mrbnf;
 
     val raw_T = #T raw;
+    val vars = rev (map TFree (Term.add_tfreesT raw_T []));
     val nvars = length vars;
     val FVars = #FVars raw;
     val ctor = #ctor raw;

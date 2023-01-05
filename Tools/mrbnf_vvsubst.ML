@@ -17,7 +17,7 @@ val unfold_thms_tac = Ctr_Sugar_Tactics.unfold_thms_tac
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
 
-fun define_vvsubst_consts qualify name fp_result old_lthy =
+fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result) vars old_lthy =
   let
     val mk_def_t = mk_def_t false (Binding.name name) qualify
 
@@ -44,25 +44,16 @@ fun define_vvsubst_consts qualify name fp_result old_lthy =
     );
 
     val mrbnf = #pre_mrbnf fp_result;
-    val passive = #passive fp_result;
     val deads = deads_of_mrbnf mrbnf;
-    val live = live_of_mrbnf mrbnf - passive;
+    val live = live_of_mrbnf mrbnf;
     val var_types = var_types_of_mrbnf mrbnf;
     val quotient = #quotient_fp fp_result;
-
-    val nvars = length (#bound_vars fp_result);
-    val ((vars, vars_passive), _) = lthy
-      |> mk_TFrees' (replicate nvars (class_of_mrbnf (#pre_mrbnf fp_result)))
-      ||>> mk_TFrees passive;
+    val T = #T quotient;
+    val nvars = length vars;
 
     val P_Ts = map (fn var => Term.typ_subst_atomic [(x, var)] abs_type) vars;
     val P = HOLogic.mk_tupleT P_Ts;
     val (ps, _) = mk_Frees "p" P_Ts lthy;
-
-    val passive_qvars = subtract (op=) (#bound_vars fp_result) (map TFree (Term.add_tfreesT (#T quotient) []))
-    val T = Term.typ_subst_atomic (
-      (#bound_vars fp_result ~~ vars) @ (passive_qvars ~~ vars_passive)
-    ) (#T quotient);
 
     fun mk_t t var = Term.subst_atomic_types [(x, var)] t;
 
@@ -70,13 +61,13 @@ fun define_vvsubst_consts qualify name fp_result old_lthy =
       let
         val prod_T = HOLogic.mk_prodT (T, P --> T);
         val prod_Ts = replicate live prod_T;
-        val pre_T = mk_T_of_mrbnf deads (vars_passive @ prod_Ts) vars vars mrbnf;
+        val pre_T = mk_T_of_mrbnf deads prod_Ts vars vars mrbnf;
         val rec_t = HOLogic.mk_comp (Term.abs ("R", P --> T) (Bound 0 $ HOLogic.mk_tuple ps), snd_const prod_T)
         val free_ts = map2 (fn i => fn var => mk_t rep var $ Bound i) (nvars - 1 downto 0) vars;
         val rhs = Term.abs ("x", pre_T) (mk_case_tuple (map dest_Free ps) (
-          Term.subst_atomic_types (#bound_vars fp_result ~~ vars) (#ctor quotient) $ (Term.list_comb (
-            mk_map_of_mrbnf deads (vars_passive @ prod_Ts) (vars_passive @ replicate live T) vars vars mrbnf,
-            interlace (map HOLogic.id_const vars_passive @ replicate live rec_t) (map HOLogic.id_const vars) free_ts var_types
+          #ctor quotient $ (Term.list_comb (
+            mk_map_of_mrbnf deads prod_Ts (replicate live T) vars vars mrbnf,
+            interlace (replicate live rec_t) (map HOLogic.id_const vars) free_ts var_types
           ) $ Bound nvars)
         ));
       in mk_def_t "CCTOR" 2 rhs lthy end;
@@ -107,17 +98,15 @@ fun define_vvsubst_consts qualify name fp_result old_lthy =
 fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
   let
     val mrbnf = #pre_mrbnf fp_result;
-    val passive = #passive fp_result;
-    val live = live_of_mrbnf mrbnf - passive;
+    val live = live_of_mrbnf mrbnf;
     val bound = bound_of_mrbnf mrbnf;
     val free = free_of_mrbnf mrbnf;
     val deads = deads_of_mrbnf mrbnf;
     val var_types = var_types_of_mrbnf mrbnf;
     val name = short_type_name (fst (dest_Type (#T (#quotient_fp fp_result))));
-    val nvars = length (#bound_vars fp_result);
-    val ((vars, vars_passive), _) = lthy
-      |> mk_TFrees' (replicate nvars (class_of_mrbnf mrbnf))
-      ||>> mk_TFrees passive;
+    val nvars = length (Term.add_tfreesT (#T (#quotient_fp fp_result)) []);
+    val (vars, _) = lthy
+      |> mk_TFrees' (replicate nvars (class_of_mrbnf mrbnf));
     val fp_result = MRBNF_FP_Def_Sugar.substitute_vars vars fp_result;
 
     val quotient = #quotient_fp fp_result;
@@ -127,7 +116,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       (ssfun_rep_eq, compSS_rep_eq),
       (mk_P_Ts, abs, _, ssfun, compSS, PFVars, CCTOR),
       lthy
-    ) = define_vvsubst_consts qualify name fp_result lthy;
+    ) = define_vvsubst_consts qualify name fp_result vars lthy;
 
     val (fs, _) = mk_Frees "f" (map (fn var => var --> var) vars) lthy;
 
@@ -172,9 +161,9 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       |> mk_Frees "f" (map (fn var => var --> var) vars)
       ||>> mk_Frees "g" (map (fn var => var --> var) vars)
       ||>> yield_singleton (mk_Frees "p") P
-      ||>> yield_singleton (mk_Frees "y") (mk_T_of_mrbnf deads (vars_passive @ replicate live prod_T) vars vars mrbnf);
+      ||>> yield_singleton (mk_Frees "y") (mk_T_of_mrbnf deads (replicate live prod_T) vars vars mrbnf);
 
-    val CCTOR' = fst CCTOR (vars_passive @ vars);
+    val CCTOR' = fst CCTOR vars;
     val rep_id_prems = mk_prems [@{thm iffD1[OF mem_Collect_eq]} OF [#Rep ssfun]] @{thms bij_id supp_id_bound} var_types;
 
     val Umap_Uctor =
@@ -189,8 +178,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         val goal = fold_rev (fn a => fn b => Logic.implies $ a $ b) f_prems (mk_Trueprop_eq (
           Term.list_comb (#rename quotient, fs) $ (CCTOR' $ y $ p),
           CCTOR' $ (Term.list_comb (
-            mk_map_of_mrbnf deads (vars_passive @ replicate live prod_T) (vars_passive @ replicate live prod_T) vars vars mrbnf,
-            interlace (map HOLogic.id_const vars_passive @ replicate live rec_t) fs fs var_types
+            mk_map_of_mrbnf deads (replicate live prod_T) (replicate live prod_T) vars vars mrbnf,
+            interlace (replicate live rec_t) fs fs var_types
           ) $ y) $ (Term.list_comb (ssfun_map, fs) $ p)
         ));
         val _ = @{print} (fastype_of (#rename quotient))
@@ -215,12 +204,12 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     fun mk_sets T =
       let
-        val n = live + passive + bound + free;
-        val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (vars_passive @ replicate live T))
+        val n = live + bound + free;
+        val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (replicate live T))
           (replicate n vars) (replicate n vars) mrbnf
         val binding_sets = map_filter (fn (Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
         val free_sets = map_filter (fn (Free_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
-        val live_sets = drop passive (map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets))
+        val live_sets = map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
       in (live_sets, binding_sets, free_sets) end;
     val (prod_lsets, prod_bsets, _) = mk_sets prod_T;
     val UFVars_subsets = @{map 4} (fn bset => fn FFVars => fn var => fn PFVars' =>
@@ -235,8 +224,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         );
         val ids = map HOLogic.id_const vars;
         val map_t = Term.list_comb (
-          mk_map_of_mrbnf deads (vars_passive @ replicate live prod_T) (vars_passive @ replicate live T) vars vars mrbnf,
-          interlace (map HOLogic.id_const vars_passive @ replicate live (fst_const prod_T)) ids ids var_types
+          mk_map_of_mrbnf deads (replicate live prod_T) (replicate live T) vars vars mrbnf,
+          interlace (replicate live (fst_const prod_T)) ids ids var_types
         );
         val goal = Logic.implies $ int_empty_prem $ (Logic.implies $ subset_prem $ HOLogic.mk_Trueprop (mk_leq
           (FFVars $ (CCTOR' $ y $ p)) (mk_Un (mk_Un (FFVars $ (#ctor quotient $ (map_t $ y)), PFVars' $ p), empty))

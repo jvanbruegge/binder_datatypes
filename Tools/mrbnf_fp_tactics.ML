@@ -197,17 +197,15 @@ fun mk_rename_inv_simp_tac rename_comp0 rename_id0 ctxt prems =
     rtac ctxt @{thm inv_unique_comp},
     rtac ctxt trans,
     rtac ctxt rename_comp0,
-    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
-    rtac ctxt trans,
-    rtac ctxt @{thm arg_cong[OF inv_o_simp2]},
-    resolve_tac ctxt prems,
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
+    Method.insert_tac ctxt prems,
+    K (unfold_thms_tac ctxt @{thms inv_o_simp2}),
     rtac ctxt rename_id0,
     rtac ctxt trans,
     rtac ctxt rename_comp0,
-    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
-    rtac ctxt trans,
-    rtac ctxt @{thm arg_cong[OF inv_o_simp1]},
-    resolve_tac ctxt prems,
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
+    Method.insert_tac ctxt prems,
+    K (unfold_thms_tac ctxt @{thms inv_o_simp1}),
     rtac ctxt rename_id0
   ];
 

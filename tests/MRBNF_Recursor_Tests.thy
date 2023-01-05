@@ -83,21 +83,23 @@ ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
 
-(* Test 3: One free variable in the fixpoint, but also one passive variable *)
+(* Test 3: Two free variable in the fixpoint *)
 local_setup \<open>fn lthy =>
 let
   val name = "test3"
-  val T = @{typ "'var + unit + 'passive + 'rec * 'rec + 'bvar * 'brec"}
-  val Xs = map dest_TFree [@{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'passive}]
-  val rel = [[0]]
+  val T = @{typ "'var + unit + 'tyvar + 'rec * 'rec + 'bvar * 'brec + 'btyvar * 'brec"}
+  val Xs = map dest_TFree [@{typ 'bvar}, @{typ 'btyvar}, @{typ 'brec}, @{typ 'rec}]
+  val resBs = map dest_TFree [@{typ 'var}, @{typ 'tyvar}]
+  val rel = [[0], [0]]
 
   fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val qualify = Binding.prefix_name (name ^ "_pre_")
 
   (* Step 1: Create pre-MRBNF *)
   val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
-    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var)] T
+    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
+      (dest_TFree @{typ 'tyvar}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'btyvar}, MRBNF_Def.Bound_Var)
+    ] T
     ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
 
   (* Step 2: Seal the pre-MRBNF with a typedef *)
@@ -111,16 +113,20 @@ let
 in lthy end
 \<close>
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+
+(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>*)
 
 local_setup \<open>fn lthy =>
 let
   val mrbnf = the (MRBNF_Def.mrbnf_of lthy "MRBNF_Recursor_Tests.test3_pre");
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("test3", mrbnf), 2)] [[0]] lthy;
-  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name ("test3" ^ "_") @{binding vvsubst}) I (hd res) lthy;
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("test3", mrbnf), 2)] [[0], [0]] lthy;
+  (*val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name ("test3" ^ "_") @{binding vvsubst}) I (hd res) lthy;*)
 in lthy end\<close>
 
 end

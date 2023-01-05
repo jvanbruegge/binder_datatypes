@@ -163,6 +163,9 @@ fun mk_rename_comps_tac co common_co_induct_inst raw_injects rename_simps supp_c
         @{thms bij_comp o_apply o_def[of v u,symmetric] id_apply id_o} @ supp_comp_bounds)
       [resolve_tac ctxt map_congs, Goal.assume_rule_tac ctxt]];
 
+fun split_prems [] = []
+  | split_prems (x::y::xs) = (x, y)::split_prems xs
+
 fun mk_rename_bij_tac rename_comp0 rename_id0 ctxt prems =
   EVERY1 [
     rtac ctxt @{thm iffD2[OF Prelim.bij_iff]},
@@ -170,23 +173,22 @@ fun mk_rename_bij_tac rename_comp0 rename_id0 ctxt prems =
     rtac ctxt conjI,
     rtac ctxt trans,
     rtac ctxt rename_comp0,
-    resolve_tac ctxt prems,
-    resolve_tac ctxt prems,
-    rtac ctxt @{thm bij_imp_bij_inv},
-    resolve_tac ctxt prems,
-    rtac ctxt @{thm supp_inv_bound},
-    resolve_tac ctxt prems,
-    resolve_tac ctxt prems,
-    rtac ctxt trans,
-    rtac ctxt @{thm arg_cong[OF inv_o_simp1]},
-    resolve_tac ctxt prems,
+    REPEAT_DETERM o match_tac ctxt prems,
+    REPEAT_DETERM o EVERY' (map (fn (bij, supp) => EVERY' [
+      rtac ctxt @{thm bij_imp_bij_inv},
+      rtac ctxt bij,
+      rtac ctxt @{thm supp_inv_bound},
+      rtac ctxt bij,
+      rtac ctxt supp
+    ]) (split_prems prems)),
+    Method.insert_tac ctxt prems,
+    K (unfold_thms_tac ctxt @{thms inv_o_simp1}),
     rtac ctxt rename_id0,
     rtac ctxt trans,
     rtac ctxt rename_comp0,
-    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms bij_imp_bij_inv supp_inv_bound}),
-    rtac ctxt trans,
-    rtac ctxt @{thm arg_cong[OF inv_o_simp2]},
-    resolve_tac ctxt prems,
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
+    Method.insert_tac ctxt prems,
+    K (unfold_thms_tac ctxt @{thms inv_o_simp2}),
     rtac ctxt rename_id0
   ];
 

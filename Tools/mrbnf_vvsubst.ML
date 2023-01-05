@@ -60,15 +60,14 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
     val (CCTOR, lthy) =
       let
         val prod_T = HOLogic.mk_prodT (T, P --> T);
-        val prod_Ts = replicate live prod_T;
+        val prod_Ts = replicate live (HOLogic.mk_prodT (T, P --> T));
         val pre_T = mk_T_of_mrbnf deads prod_Ts vars vars mrbnf;
         val rec_t = HOLogic.mk_comp (Term.abs ("R", P --> T) (Bound 0 $ HOLogic.mk_tuple ps), snd_const prod_T)
         val free_ts = map2 (fn i => fn var => mk_t rep var $ Bound i) (nvars - 1 downto 0) vars;
         val rhs = Term.abs ("x", pre_T) (mk_case_tuple (map dest_Free ps) (
-          #ctor quotient $ (Term.list_comb (
-            mk_map_of_mrbnf deads prod_Ts (replicate live T) vars vars mrbnf,
-            interlace (replicate live rec_t) (map HOLogic.id_const vars) free_ts var_types
-          ) $ Bound nvars)
+          #ctor quotient $ (mk_map_comb_of_mrbnf deads
+            (replicate live rec_t) (map HOLogic.id_const vars) free_ts mrbnf
+          $ Bound nvars)
         ));
       in mk_def_t "CCTOR" 2 rhs lthy end;
 
@@ -84,7 +83,7 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
     val CCTOR' =
       let
         val t' = Morphism.term phi (fst CCTOR);
-        val svars = map TVar (Term.add_tvars t' []);
+        val svars = rev (map TVar (Term.add_tvars t' []));
         val thm' = Morphism.thm phi (snd CCTOR);
       in (fn new_vars => Term.subst_atomic_types (svars ~~ new_vars) t', thm') end
 
@@ -182,8 +181,6 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
             interlace (replicate live rec_t) fs fs var_types
           ) $ y) $ (Term.list_comb (ssfun_map, fs) $ p)
         ));
-        val _ = @{print} (fastype_of (#rename quotient))
-        val _ = @{print} (Thm.cterm_of lthy goal)
       in Goal.prove_sorry lthy (names (fs @ [p, y])) [] goal (fn {context=ctxt, ...} =>
         let
           val map_comp = MRBNF_Def.map_comp_of_mrbnf mrbnf;
@@ -192,8 +189,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
             map_comp OF (replicate (2*bound + free) @{thm _} @ rep_id_prems)
           ];
         in EVERY [
-          unfold_thms_tac ctxt (@{thms id_o o_id} @ [snd CCTOR, #rename_ctor (#inner quotient)] @ map_comps),
-          unfold_thms_tac ctxt (@{thms comp_def case_prod_beta snd_conv inv_simp1} @ [compSS_rep_eq]
+          unfold_thms_tac ctxt (@{thms id_o o_id case_prod_beta} @ [snd CCTOR, #rename_ctor (#inner quotient)] @ map_comps),
+          unfold_thms_tac ctxt (@{thms comp_def case_prod_beta fst_conv snd_conv inv_simp1} @ [compSS_rep_eq]
             @ [Local_Defs.unfold0 ctxt @{thms comp_def} (fun_cong OF [compSS_comp0] OF @{thms bij_imp_bij_inv supp_inv_bound})]
           ),
           unfold_thms_tac ctxt (@{thms id_def[symmetric]} @ [compSS_id0]),

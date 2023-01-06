@@ -45,6 +45,7 @@ fun mk_f_termination_tac mk_relation wf_subshapes set_subshape_images set_subsha
   resolve_tac ctxt wf_subshapes,
   K (unfold_thms_tac ctxt @{thms in_inv_image prod_in_Collect_iff comp_def snd_conv fst_conv})
 ] THEN ALLGOALS (EVERY' [
+  REPEAT_DETERM o etac ctxt conjE,
   dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
   resolve_tac ctxt set_maps,
   REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems)),

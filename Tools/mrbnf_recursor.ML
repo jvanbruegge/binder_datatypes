@@ -526,9 +526,11 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
           let
             val T' = fst (dest_relT T);
             val prodT = HOLogic.mk_prodT (raw_T, raw_T);
-            val fst_snds = fst (fold (K (fn (t, T) => (HOLogic.mk_comp (t, snd_const T), snd (HOLogic.dest_prodT T))))
-              pick_x_ps (fst_const (HOLogic.mk_prodT (raw_T, P)), T')
-            );
+            fun mk_fst_snd T [] = fst_const T
+              | mk_fst_snd T (_::xs) = HOLogic.mk_comp (
+                  mk_fst_snd (snd (HOLogic.dest_prodT T)) xs, snd_const T
+                )
+            val fst_snds = mk_fst_snd T' pick_x_ps;
           in
             Const (@{const_name inv_image}, HOLogic.mk_setT prodT --> (T' --> raw_T) --> T) $
               (HOLogic.Collect_const prodT $ HOLogic.mk_case_prod (Term.abs ("s", raw_T) (Term.abs ("t", raw_T) (

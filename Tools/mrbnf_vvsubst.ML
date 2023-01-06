@@ -209,15 +209,17 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         val live_sets = map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
       in (live_sets, binding_sets, free_sets) end;
     val (prod_lsets, prod_bsets, _) = mk_sets prod_T;
-    val UFVars_subsets = @{map 4} (fn bset => fn FFVars => fn var => fn PFVars' =>
+
+    val UFVars_subsets = @{map 5} (fn i => fn bset => fn FFVars => fn var => fn PFVars' =>
       let
         val t = Free ("t", T);
         val pt = Free ("pt", P --> T);
+        val param = mk_case_tuple (map dest_Free ps) (Bound (nvars - i - 1)) $ p
         val empty = Const (@{const_name bot}, HOLogic.mk_setT var);
-        val int_empty_prem = HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars' $ p, empty)));
+        val int_empty_prem = HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars' $ param, empty)));
         val subset_prem = fold_rev Logic.all [t, pt, p] (Logic.implies $
           HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_prod (t, pt), foldl1 mk_Un (map (fn s => s $ y) prod_lsets))) $
-          HOLogic.mk_Trueprop (mk_leq (FFVars $ (pt $ p)) (mk_Un (mk_Un (FFVars $ t, PFVars' $ p), empty)))
+          HOLogic.mk_Trueprop (mk_leq (FFVars $ (pt $ p)) (mk_Un (mk_Un (FFVars $ t, PFVars' $ param), empty)))
         );
         val ids = map HOLogic.id_const vars;
         val map_t = Term.list_comb (
@@ -225,15 +227,16 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
           interlace (replicate live (fst_const prod_T)) ids ids var_types
         );
         val goal = Logic.implies $ int_empty_prem $ (Logic.implies $ subset_prem $ HOLogic.mk_Trueprop (mk_leq
-          (FFVars $ (CCTOR' $ y $ p)) (mk_Un (mk_Un (FFVars $ (#ctor quotient $ (map_t $ y)), PFVars' $ p), empty))
+          (FFVars $ (CCTOR' $ y $ p)) (mk_Un (mk_Un (FFVars $ (#ctor quotient $ (map_t $ y)), PFVars' $ param), empty))
         ));
-      in Goal.prove_sorry lthy ["y", "p"] [] goal (fn {context=ctxt, ...} =>
+      in Local_Defs.unfold0 lthy @{thms case_prod_beta} (
+        Goal.prove_sorry lthy ["y", "p"] [] goal (fn {context=ctxt, ...} =>
         let
           val set_maps = MRBNF_Def.set_map_of_mrbnf mrbnf;
           val id_prems = mk_prems @{thms supp_id_bound} @{thms bij_id supp_id_bound} var_types;
           val set_map_thms = maps (fn thm => [thm OF rep_id_prems, thm OF id_prems]) set_maps;
         in EVERY1 [
-          K (unfold_thms_tac ctxt (@{thms Un_empty_right image_id image_comp comp_def} @ [snd CCTOR, snd PFVars] @ #FVars_ctors quotient
+          K (unfold_thms_tac ctxt (@{thms Un_empty_right image_id image_comp comp_def case_prod_beta} @ [snd CCTOR, snd PFVars] @ #FVars_ctors quotient
             @ set_map_thms
           )),
           REPEAT_DETERM o rtac ctxt @{thm Un_mono'},
@@ -249,7 +252,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
               rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]]},
               rtac ctxt @{thm UN_extend_simps(2)},
               rtac ctxt @{thm subset_If},
-              K (unfold_thms_tac ctxt @{thms UN_empty'}),
+              K (unfold_thms_tac ctxt @{thms UN_empty' prod.collapse}),
               rtac ctxt @{thm empty_subsetI},
               rtac ctxt @{thm UN_mono[OF subset_refl]},
               Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
@@ -261,8 +264,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
             ]
           ]
         ] end
-      ) end
-    ) prod_bsets (#FVars quotient) vars PFVarss;
+      )) end
+    ) (0 upto nvars - 1) prod_bsets (#FVars quotient) vars PFVarss;
 
     val model_tacs = {
       small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],

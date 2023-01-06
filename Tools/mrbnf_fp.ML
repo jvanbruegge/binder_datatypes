@@ -2316,7 +2316,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           T = nth CBs i,
           ctor = nth cctorsAs i,
           rename = nth rrenamesAs i,
-          FVars = nth FFVarsssAs i,
+          FVars = nth (transpose FFVarsssAs) i,
 
           inject = nth TT_injects0 i,
           rename_id0 = nth rrename_id0s i,
@@ -2325,7 +2325,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_comp = nth rrename_comps i,
           rename_bij = nth rrename_bijs i,
           rename_inv_simp = nth rrename_inv_simps i,
-          FVars_ctors = nth FFVars_cctorss i,
+          FVars_ctors = nth (transpose FFVars_cctorss) i,
           FVars_renames = nth FFVars_rrenamess i,
           card_of_FVars_bounds = nth card_of_FFVars_boundss' i,
           card_of_FVars_bound_UNIVs = nth card_of_FFVars_boundss i,

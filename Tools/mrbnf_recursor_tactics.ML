@@ -181,14 +181,19 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
     rtac ctxt (Uctor_cong OF (f_prems @ g_prems)),
     K (unfold_thms_tac ctxt (@{thms image_Un[symmetric]} @ map (fn thm => thm OF id_prems) (MRBNF_Def.set_map_of_mrbnf mrbnf))),
     REPEAT_DETERM o EVERY' [
-      dtac ctxt @{thm exists_map_prod_id},
-      etac ctxt exE,
+      etac ctxt @{thm imageE},
+      K (unfold_thms_tac ctxt @{thms map_prod_def case_prod_beta prod.inject}),
       etac ctxt conjE,
       hyp_subst_tac ctxt,
-      SELECT_GOAL (unfold_thms_tac ctxt (
+      SELECT_GOAL (unfold_thms_tac ctxt (@{thms id_def} @
         map (fn thm => @{thm meta_eq_to_obj_eq} OF [thm] RS sym) UFVars'_defs
         @ map (fn thm => thm RS sym) FVars_def2s
       )),
+      Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+        rtac ctxt (infer_instantiate' ctxt [SOME (snd (snd (split_last params)))] @{thm prod.exhaust}) 1
+      ) ctxt,
+      hyp_subst_tac ctxt,
+      K (unfold_thms_tac ctxt @{thms snd_conv fst_conv}),
       resolve_tac ctxt subset_prems,
       assume_tac ctxt
     ],
@@ -204,10 +209,9 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       rtac ctxt alpha_trans,
       rtac ctxt rep_abs,
       rtac ctxt alpha_intro,
-      rtac ctxt @{thm bij_id},
-      rtac ctxt @{thm supp_id_bound},
-      rtac ctxt @{thm id_on_id},
-      K (unfold_thms_tac ctxt (@{thms o_id comp_assoc[symmetric] fst_comp_map_prod[symmetric]} @ [map_comp_id, rename_id])),
+      REPEAT_DETERM o (rtac ctxt @{thm bij_id} THEN' rtac ctxt @{thm supp_id_bound}),
+      REPEAT_DETERM o rtac ctxt @{thm id_on_id},
+      K (unfold_thms_tac ctxt (@{thms o_id comp_assoc[symmetric] fst_comp_map_prod[symmetric] map_prod_def[symmetric]} @ [map_comp_id, rename_id])),
       rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) OF (id_prems @ id_prems)]),
       K (unfold_thms_tac ctxt @{thms id_o}),
       rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),

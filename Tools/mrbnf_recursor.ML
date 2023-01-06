@@ -579,14 +579,17 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
       fst f0 $ (#rep (#inner quotient) $ Bound 0)
     )) lthy;
 
-    fun mk_noclash_rhs (l, b, f) FVarss T = Term.abs ("x", T) (foldr1 HOLogic.mk_conj (@{map 3} (fn set => fn FVars => fn rel =>
-      mk_int_empty (set $ Bound 0, foldl1 mk_Un (map (fn s => s $ Bound 0) f @
-      map_filter (fn (i, s) =>
-        if member (op=) rel i then NONE else SOME (
-          mk_UNION (s $ Bound 0) FVars
+    fun mk_noclash_rhs (live_sets, bound_sets, free_sets) FVarss T =
+      Term.abs ("x", T) (foldr1 HOLogic.mk_conj (@{map 4} (fn set => fn free_set => fn FVars => fn rel =>
+        mk_int_empty (set $ Bound 0,
+          foldl1 mk_Un ([free_set $ Bound 0] @
+            map_filter (fn (i, s) =>
+              if member (op=) rel i then NONE else SOME (
+                mk_UNION (s $ Bound 0) FVars
+              )
+            ) (0 upto live - 1 ~~ live_sets))
         )
-      ) (0 upto live - 1 ~~ l)))
-    ) (take nbound b) FVarss (#binding_relation fp_result)));
+      ) (take nbound bound_sets) (take nbound free_sets) FVarss (#binding_relation fp_result)));
 
     fun mk_suffix T = List.last (String.tokens (fn c => c = #".") (fst (dest_Type T)));
     val (noclash, lthy) = mk_def_t false ff0_b qualify ("noclash_" ^ mk_suffix raw_T) 1 (mk_noclash_rhs (live_sets, binding_sets, free_sets) (#FVars raw) pre_T) lthy
@@ -600,7 +603,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val raw_PU_T = HOLogic.mk_prodT (raw_T, PU);
     val (XXl, lthy) =
       let
-        val pick_ts = map2 (fn pick => fn f => pick $ x $ ((#Pmap params) $ mk_inv f $ p)) picks fs
+        val pick_ts = map (fn pick => pick $ x $ Term.list_comb (#Pmap params, map mk_inv fs @ [p])) picks
         val comp_ts = map2 (fn pick => fn f => HOLogic.mk_comp (f, pick)) pick_ts fs
         fun mk_rec_t fs' t = Term.abs ("x", raw_T) (HOLogic.mk_prod (
           Term.list_comb (#rename raw, fs' @ [Bound 0]),
@@ -614,7 +617,6 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
             vars vars mrbnf, interlace (mk_live_fs brec_t rec_t) comp_ts fs var_types
         ) $ x);
       in mk_def_t false ff0_b qualify "XXl" (nbound + 3) rhs lthy end;
-
     val (XXr, lthy) =
       let
         fun mk_map_t T = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live T) vars vars mrbnf
@@ -635,7 +637,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
 
-    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst Umap')) []);
+    val vars' = rev (map TVar (Term.add_tvars (Morphism.term phi (fst Umap')) []));
     fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
 
   in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,

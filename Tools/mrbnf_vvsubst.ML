@@ -296,16 +296,17 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     ) (0 upto nvars - 1) prod_bsets (#FVars quotient) vars PFVarss;
 
     val model_tacs = {
-      small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
+      small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1),
       Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
       Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym), REPEAT_DETERM o assume_tac ctxt],
       Umap_cong_id = fn ctxt => EVERY1 [
         rtac ctxt (#rename_cong_id (#inner quotient)),
         REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
       ],
-      UFVars_Umap = [fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]],
+      UFVars_Umap = replicate nvars (fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]),
       Umap_Uctor = fn ctxt => rtac ctxt Umap_Uctor 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
       UFVars_subsets = map (fn UFVars_subset => fn ctxt => EVERY1 [
+        K (unfold_thms_tac ctxt @{thms case_prod_beta}),
         rtac ctxt UFVars_subset,
         REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
       ]) UFVars_subsets

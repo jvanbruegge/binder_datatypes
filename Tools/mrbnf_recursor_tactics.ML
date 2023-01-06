@@ -104,17 +104,19 @@ fun mk_Uctor_rename_tac nvars Uctor PUmap_def Umap_Uctor Pmap_imsupp_empty Umap_
     rtac ctxt @{thm sym[THEN trans[rotated]]},
     rtac ctxt trans,
     rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt Uctor)] @{thm arg_cong2[OF refl]}),
+
     rtac ctxt (Pmap_imsupp_empty RS sym OF (f_prems @ imsupp_PFVars_empties)),
     K (unfold_thms_tac ctxt [PUmap_def]),
     rtac ctxt (Umap_Uctor RS sym OF f_prems),
-    rtac ctxt (Umap_cong_id RS sym),
-    REPEAT_DETERM o resolve_tac ctxt f_prems,
-    dtac ctxt @{thm set_rev_mp},
-    resolve_tac ctxt UFVars_subsets,
-    resolve_tac ctxt set_PFVars_AS_empties,
-    resolve_tac ctxt subset_prems,
-    assume_tac ctxt,
-    REPEAT_DETERM o (resolve_tac ctxt cong_ids THEN' assume_tac ctxt)
+    rtac ctxt (Umap_cong_id RS sym OF f_prems),
+    REPEAT_DETERM o EVERY' [
+      dtac ctxt @{thm set_rev_mp},
+      resolve_tac ctxt UFVars_subsets,
+      resolve_tac ctxt set_PFVars_AS_empties,
+      resolve_tac ctxt subset_prems,
+      assume_tac ctxt,
+      REPEAT_DETERM o (resolve_tac ctxt cong_ids THEN' assume_tac ctxt)
+    ]
   ] end;
 
 fun mk_Uctor_cong_tac nvars Uctor mrbnf Uctor_rename infinite_UNIV ctxt prems =
@@ -150,12 +152,7 @@ let
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
       REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-      Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
-        let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
-        in rtac ctxt thm1 1 THEN rtac ctxt thm2 1 end
-      ) ctxt,
-      hyp_subst_tac ctxt,
-      K (unfold_thms_tac ctxt @{thms prod.case Grp_UNIV_def prod.inject}),
+      K (unfold_thms_tac ctxt @{thms case_prod_beta Grp_UNIV_def prod.inject}),
       etac ctxt conjE,
       rtac ctxt conjI,
       assume_tac ctxt,

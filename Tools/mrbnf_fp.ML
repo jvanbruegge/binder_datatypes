@@ -2301,7 +2301,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha_trans = nth alpha_transs i,
             alpha_bij = nth alpha_bijs i,
             alpha_bij_eq = nth alpha_bij_eqs i,
-            alpha_FVarss = nth alpha_FVarsss i,
+            alpha_FVarss = nth (transpose alpha_FVarsss) i,
             alpha_intro = nth alpha_intros i,
             alpha_elim = nth alpha_elims i,
 
@@ -2335,7 +2335,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
             ctor_def = nth cctor_defs i,
             rename_def = nth rrename_defs i,
-            FVars_defs = nth FFVars_defss i,
+            FVars_defs = nth (transpose FFVars_defss) i,
 
             alpha_quotient_sym = nth alpha_quotient_syms i,
             total_abs_eq_iff = nth Quotient_total_abs_eq_iffs i,

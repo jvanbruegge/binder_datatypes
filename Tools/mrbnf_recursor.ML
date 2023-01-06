@@ -755,22 +755,16 @@ fun create_binding_recursor qualify model ff0_b lthy =
         );
       in Goal.prove_sorry lthy (names ([pick, x, p] @ fs))
         ([HOLogic.mk_Trueprop (suitable $ pick)] @ f_prems) goal (fn {context=ctxt, prems} =>
-          let
-            val (suitable::prems) = prems;
-            fun split_prems [] = []
-              | split_prems (a::b::ps) = [a, b]::split_prems ps;
-            val prems' = split_prems prems;
-            val prems'' = flat (interlace (replicate live []) prems' (map (single o flip nth 1) prems') var_types);
-            val set_maps = map (fn thm => thm OF prems'') (set_map_of_mrbnf mrbnf)
-            val comp_def = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt FVars)] @{thm comp_def}
-            val FVars_renames = map (fn thm => thm OF prems) (#FVars_renames raw);
-            (* TODO: fix for multiple variables *)
-            val image_diff = @{thm image_set_diff[OF bij_is_inj, symmetric]} OF [hd prems];
-            val thm = Local_Defs.unfold0 ctxt (@{thms image_comp image_UN[symmetric]}
-              @ set_maps @ FVars_renames @ [comp_def, image_diff]) (
-              infer_instantiate' lthy [SOME (Thm.cterm_of ctxt map_t)] (pick_id_on OF [suitable])
-            );
-          in rtac ctxt thm 1 end
+          EVERY1 [
+           rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated]},
+           rtac ctxt pick_id_on,
+           resolve_tac ctxt prems,
+           Method.insert_tac ctxt prems,
+           K (unfold_thms_tac ctxt (@{thms image_set_diff[OF bij_is_inj] image_comp comp_def image_UN}
+             @ set_map_of_mrbnf mrbnf @ #FVars_renames raw
+           )),
+           rtac ctxt refl
+          ]
       ) end
     ) pick_id_ons picks suitables FVars raw_bound_sets rel fs;
 
@@ -809,7 +803,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
           (#abs_ctor (#inner quotient)) (#total_abs_eq_iff (#inner quotient)) (#alpha_bij_eq (#inner raw))
           (#rep_abs (#inner quotient)) (#Umap_Uctor axioms) (#Uctor model) context prems
       ) end;
-
 
     fun mk_sub UFVars' FVars PFVars avoiding_set ctor t t' = HOLogic.mk_Trueprop (mk_leq (UFVars' $ t $ ctor) (mk_Un (mk_Un (
       FVars $ t', PFVars $ p), avoiding_set
@@ -856,7 +849,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
       ) end
     val UFVars'_CTORs = @{map 7} mk_UFVars'_CTOR UFVars's (#PFVarss params) FVars FVars_def2s
       avoiding_sets prod_bound_sets (mk_in_live_subset_prems raw_y prod_live_sets (map fst UFVars's) (#FVars raw));
-
     fun mk_imsupp_prems res y fs = @{map 4} (fn f => fn FVars => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
         mk_int_empty (mk_imsupp f, mk_Un (mk_Un (
           FVars $ (#ctor res $ (mk_pre_map_id_fst (#T res) $ y)), PFVars $ p), avoiding_set

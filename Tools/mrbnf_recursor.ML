@@ -116,11 +116,6 @@ fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
 fun chop_f_prems [] = []
   | chop_f_prems (bij::supp::xs) = [bij, supp]::chop_f_prems xs;
 
-fun get_vars with_quotient mapx =
-  let val maybe_strip_last = if with_quotient then fst o split_last else I;
-    fun f x = case try dest_funT x of SOME (x', _) => f x' | _ => x
-  in map f (maybe_strip_last (fst (strip_fun_type (fastype_of mapx)))) end;
-
 fun add_f_prems hs =
   let
     fun interlace [] [] = []
@@ -133,7 +128,7 @@ fun add_f_prems hs =
 
 fun mk_termlike_goals quotient_opt T mapx FVars lthy =
   let
-    val vars = get_vars (is_some quotient_opt) mapx;
+    val vars = rev (map TFree (Term.add_tfreesT T []));
     val n = length vars;
 
     val (((((fs, gs), d), t), xs), _) =
@@ -210,7 +205,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val free = MRBNF_Def.free_of_mrbnf mrbnf;
     val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
 
-    val vars = get_vars true (#Umap model);
+    val vars = rev (map TFree (Term.add_tfreesT (#U model) []));
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
 
     val fp_res = MRBNF_FP_Def_Sugar.substitute_vars vars (#fp_result model);
@@ -232,7 +227,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val (lthy', old_lthy) = `Local_Theory.end_nested lthy';
     val phi = Proof_Context.export_morphism old_lthy lthy';
 
-    val vars' = map TVar (Term.add_tvars (Morphism.term phi (fst Pmap)) []);
+    val vars' = rev (map TVar (Term.add_tvars (Morphism.term phi (fst Pmap)) []));
     fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
 
     val Pmap = morph Pmap;
@@ -416,7 +411,6 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
     val PFVarss = #PFVarss params
     val raw_T = #T raw
     val vars = rev (map TFree (Term.add_tfreesT raw_T []))
-    val _ = @{print} vars
     val nvars = length vars
 
     val ctor = #ctor raw

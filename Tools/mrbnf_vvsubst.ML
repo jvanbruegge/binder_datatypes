@@ -140,8 +140,16 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       PFVarss = PFVarss,
       Pmap = ssfun_map,
       axioms = {
-        Pmap_id0 = fn ctxt => rtac ctxt compSS_id0 1,
-        Pmap_comp0 = fn ctxt => rtac ctxt (compSS_comp0 RS sym) 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+        Pmap_id0 = fn ctxt => EVERY1 [
+          K (unfold_thms_tac ctxt [compSS_id0]),
+          K (unfold_thms_tac ctxt @{thms id_def case_prod_Pair}),
+          rtac ctxt refl
+        ],
+        Pmap_comp0 = fn ctxt => EVERY1 [
+          K (unfold_thms_tac ctxt [compSS_comp0 RS sym]),
+          K (unfold_thms_tac ctxt @{thms comp_def case_prod_beta fst_conv snd_conv case_prod_beta'}),
+          rtac ctxt refl
+        ],
         Pmap_cong_ids = replicate nvars (fn ctxt => EVERY1 [
           rtac ctxt compSS_cong_id,
           REPEAT_DETERM o assume_tac ctxt,

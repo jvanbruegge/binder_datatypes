@@ -3,7 +3,7 @@ sig
   type 'a parameter_axioms = {
     Pmap_id0: 'a,
     Pmap_comp0: 'a,
-    Pmap_cong_ids: 'a list,
+    Pmap_cong_id: 'a,
     PFVars_Pmaps: 'a list,
     small_PFVarss: 'a list
   };
@@ -19,7 +19,7 @@ sig
     small_avoiding_sets: 'a list,
     Umap_id0: 'a,
     Umap_comp0: 'a,
-    Umap_cong_ids: 'a list,
+    Umap_cong_id: 'a,
     UFVars_Umap: 'a list,
     Umap_Uctor: 'a,
     UFVars_subsets: 'a list
@@ -68,7 +68,7 @@ open BNF_Tactics
 type 'a parameter_axioms = {
   Pmap_id0: 'a,
   Pmap_comp0: 'a,
-  Pmap_cong_ids: 'a list,
+  Pmap_cong_id: 'a,
   PFVars_Pmaps: 'a list,
   small_PFVarss: 'a list
 };
@@ -84,7 +84,7 @@ type 'a model_axioms = {
   small_avoiding_sets: 'a list,
   Umap_id0: 'a,
   Umap_comp0: 'a,
-  Umap_cong_ids: 'a list,
+  Umap_cong_id: 'a,
   UFVars_Umap: 'a list,
   Umap_Uctor: 'a,
   UFVars_subsets: 'a list
@@ -152,16 +152,17 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
           Term.list_comb (mapx, gs @ t)
         ))
     ))),
-    map_cong_ids = map (fn i =>
-      let val a = nth xs i in
-        fold_rev Logic.all (d::t @ fs) (add_f_prems fs (
-          Logic.implies $ (Logic.all a (Logic.implies $
-            HOLogic.mk_Trueprop (HOLogic.mk_mem (a, Term.list_comb (nth FVars i, t @ [d]))) $
-            mk_Trueprop_eq (nth fs i $ a, a)
-          )) $
+    map_cong_id =
+      let
+        val prems = @{map 3} (fn FVars => fn a => fn f => Logic.all a (Logic.implies $
+          HOLogic.mk_Trueprop (HOLogic.mk_mem (a, Term.list_comb (FVars, t @ [d]))) $
+          mk_Trueprop_eq (f $ a, a)
+        )) FVars xs fs;
+      in
+        fold_rev Logic.all (d::t @ fs) (add_f_prems fs (fold_rev (curry Logic.mk_implies) prems (
           mk_Trueprop_eq (Term.list_comb (mapx, fs @ t) $ d, d)
-        ))
-      end) (0 upto n - 1),
+        )))
+      end,
     FVars_map = map (fn i =>
       let
         val FVars = nth FVars i;
@@ -260,7 +261,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     val param_thms = {
       Pmap_id0 = prove (#map_id0 pgoals) (#Pmap_id0 ptacs),
       Pmap_comp0 = prove (#map_comp0 pgoals) (#Pmap_comp0 ptacs),
-      Pmap_cong_ids = map2 prove (#map_cong_ids pgoals) (#Pmap_cong_ids ptacs),
+      Pmap_cong_id = prove (#map_cong_id pgoals) (#Pmap_cong_id ptacs),
       PFVars_Pmaps = map2 prove (#FVars_map pgoals) (#PFVars_Pmaps ptacs),
       small_PFVarss = map2 prove small_PFVars_goals (#small_PFVarss ptacs)
     };
@@ -358,7 +359,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       small_avoiding_sets = map2 prove small_avoiding_set_goals (#small_avoiding_sets tacs),
       Umap_id0 = prove (#map_id0 goals) (#Umap_id0 tacs),
       Umap_comp0 = prove (#map_comp0 goals) (#Umap_comp0 tacs),
-      Umap_cong_ids = map2 prove (#map_cong_ids goals) (#Umap_cong_ids tacs),
+      Umap_cong_id = prove (#map_cong_id goals) (#Umap_cong_id tacs),
       UFVars_Umap = map2 prove (#FVars_map goals) (#UFVars_Umap tacs),
       Umap_Uctor = prove Umap_Uctor_goal (#Umap_Uctor tacs),
       UFVars_subsets = map2 prove UFVars_subset_goals (#UFVars_subsets tacs)
@@ -776,7 +777,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
       in
         Goal.prove_sorry lthy (names (fs @ [p])) (f_prems @ imsupp_prems)
           (mk_Trueprop_eq (Term.list_comb (#Pmap params, fs @ [p]), p)) (fn {context=ctxt, prems} => EVERY1 [
-          resolve_tac ctxt (#Pmap_cong_ids paxioms),
+          rtac ctxt (#Pmap_cong_id paxioms),
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
             REPEAT_DETERM o dresolve_tac ctxt (map (fn thm => @{thm id_onD[OF imsupp_id_on]} OF [thm]) (drop (2*nvars) prems)),
@@ -877,7 +878,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
       in Goal.prove_sorry lthy (names (fs @ [y, p]))
         (f_prems @ in_live_subset_prems @ mk_imsupp_prems quotient y fs @ mk_binding_set_prems y qprod_bound_sets fs) goal (fn {context, prems} =>
         mk_Uctor_rename_tac nvars (#Uctor model) (snd PUmap) (#Umap_Uctor axioms) Pmap_imsupp_empty
-          (#Umap_cong_ids axioms) (#UFVars_subsets axioms) context prems
+          (#Umap_cong_id axioms) (#UFVars_subsets axioms) context prems
       ) end;
 
     fun mk_mr_rel_prem res rel PUmap y y' =

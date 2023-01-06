@@ -7,7 +7,7 @@ sig
 
   val mk_Umap'_CTOR_tac: MRBNF_Def.mrbnf -> thm -> thm -> thm -> thm -> thm -> thm -> thm -> thm
     -> thm -> term -> Proof.context -> thm list-> tactic
-  val mk_Uctor_rename_tac: int -> term -> thm -> thm -> thm -> thm list -> thm list
+  val mk_Uctor_rename_tac: int -> term -> thm -> thm -> thm -> thm -> thm list
     -> Proof.context -> thm list -> tactic
   val mk_Uctor_cong_tac: int -> term -> MRBNF_Def.mrbnf -> thm -> thm -> Proof.context -> thm list -> tactic
   val mk_CTOR_cong_tac: int -> MRBNF_Def.mrbnf -> thm -> thm -> thm -> thm list -> thm -> thm
@@ -87,7 +87,7 @@ fun mk_Umap'_CTOR_tac mrbnf Umap'_def PUmap'_def CTOR_def rename_def abs_ctor to
     ])
   ] end;
 
-fun mk_Uctor_rename_tac nvars Uctor PUmap_def Umap_Uctor Pmap_imsupp_empty Umap_cong_ids UFVars_subsets ctxt prems =
+fun mk_Uctor_rename_tac nvars Uctor PUmap_def Umap_Uctor Pmap_imsupp_empty Umap_cong_id UFVars_subsets ctxt prems =
   let
     val (((f_prems, subset_prems), imsupp_prems), set_prems) = prems
       |> chop (2*nvars)
@@ -106,7 +106,7 @@ fun mk_Uctor_rename_tac nvars Uctor PUmap_def Umap_Uctor Pmap_imsupp_empty Umap_
     rtac ctxt (Pmap_imsupp_empty RS sym OF (f_prems @ imsupp_PFVars_empties)),
     K (unfold_thms_tac ctxt [PUmap_def]),
     rtac ctxt (Umap_Uctor RS sym OF f_prems),
-    resolve_tac ctxt (map (fn thm => thm RS sym) Umap_cong_ids),
+    rtac ctxt (Umap_cong_id RS sym),
     REPEAT_DETERM o resolve_tac ctxt f_prems,
     dtac ctxt @{thm set_rev_mp},
     resolve_tac ctxt UFVars_subsets,

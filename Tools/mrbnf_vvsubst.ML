@@ -134,7 +134,9 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     val small_PFVars = @{thm small_PFVars} OF [infinite_UNIV];
 
     val P = HOLogic.mk_tupleT P_Ts;
-    val PFVarss = map (fst PFVars) vars;
+    val PFVarss = map_index (fn (i, t) =>
+      mk_case_tuple (map dest_Free ps) (t $ Bound (nvars - i - 1))
+    ) (map (fst PFVars) vars);
     val parameters = {
       P = P,
       PFVarss = PFVarss,
@@ -150,13 +152,32 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
           K (unfold_thms_tac ctxt @{thms comp_def case_prod_beta fst_conv snd_conv case_prod_beta'}),
           rtac ctxt refl
         ],
-        Pmap_cong_ids = replicate nvars (fn ctxt => EVERY1 [
-          rtac ctxt compSS_cong_id,
-          REPEAT_DETERM o assume_tac ctxt,
-          Goal.assume_rule_tac ctxt
+        Pmap_cong_id = fn ctxt => EVERY1 [
+          K (unfold_thms_tac ctxt @{thms case_prod_beta}),
+          REPEAT_DETERM o FIRST' [
+            EVERY' [
+              rtac ctxt compSS_cong_id,
+              assume_tac ctxt,
+              Goal.assume_rule_tac ctxt
+            ],
+            EVERY' [
+              rtac ctxt trans,
+              rtac ctxt @{thm iffD2[OF prod.inject]},
+              rtac ctxt conjI
+            ]
+          ],
+          REPEAT_DETERM o rtac ctxt refl,
+          K (unfold_tac ctxt @{thms prod.collapse})
+        ],
+        PFVars_Pmaps = replicate nvars (fn ctxt => EVERY1 [
+          K (unfold_thms_tac ctxt @{thms case_prod_beta fst_conv snd_conv}),
+          rtac ctxt PFVars_compSS,
+          REPEAT_DETERM o assume_tac ctxt
         ]),
-        PFVars_Pmaps = replicate nvars (fn ctxt => rtac ctxt PFVars_compSS 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-        small_PFVarss = replicate nvars (fn ctxt => rtac ctxt small_PFVars 1)
+        small_PFVarss = replicate nvars (fn ctxt => EVERY1 [
+          K (unfold_thms_tac ctxt @{thms case_prod_beta}),
+          rtac ctxt small_PFVars
+        ])
       }
     };
 
@@ -222,12 +243,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       let
         val t = Free ("t", T);
         val pt = Free ("pt", P --> T);
-        val param = mk_case_tuple (map dest_Free ps) (Bound (nvars - i - 1)) $ p
         val empty = Const (@{const_name bot}, HOLogic.mk_setT var);
-        val int_empty_prem = HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars' $ param, empty)));
+        val int_empty_prem = HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars' $ p, empty)));
         val subset_prem = fold_rev Logic.all [t, pt, p] (Logic.implies $
           HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_prod (t, pt), foldl1 mk_Un (map (fn s => s $ y) prod_lsets))) $
-          HOLogic.mk_Trueprop (mk_leq (FFVars $ (pt $ p)) (mk_Un (mk_Un (FFVars $ t, PFVars' $ param), empty)))
+          HOLogic.mk_Trueprop (mk_leq (FFVars $ (pt $ p)) (mk_Un (mk_Un (FFVars $ t, PFVars' $ p), empty)))
         );
         val ids = map HOLogic.id_const vars;
         val map_t = Term.list_comb (
@@ -235,7 +255,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
           interlace (replicate live (fst_const prod_T)) ids ids var_types
         );
         val goal = Logic.implies $ int_empty_prem $ (Logic.implies $ subset_prem $ HOLogic.mk_Trueprop (mk_leq
-          (FFVars $ (CCTOR' $ y $ p)) (mk_Un (mk_Un (FFVars $ (#ctor quotient $ (map_t $ y)), PFVars' $ param), empty))
+          (FFVars $ (CCTOR' $ y $ p)) (mk_Un (mk_Un (FFVars $ (#ctor quotient $ (map_t $ y)), PFVars' $ p), empty))
         ));
       in Local_Defs.unfold0 lthy @{thms case_prod_beta} (
         Goal.prove_sorry lthy ["y", "p"] [] goal (fn {context=ctxt, ...} =>
@@ -279,10 +299,10 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
       Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
       Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym), REPEAT_DETERM o assume_tac ctxt],
-      Umap_cong_ids = [fn ctxt => EVERY1 [
+      Umap_cong_id = fn ctxt => EVERY1 [
         rtac ctxt (#rename_cong_id (#inner quotient)),
         REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
-      ]],
+      ],
       UFVars_Umap = [fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]],
       Umap_Uctor = fn ctxt => rtac ctxt Umap_Uctor 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
       UFVars_subsets = map (fn UFVars_subset => fn ctxt => EVERY1 [

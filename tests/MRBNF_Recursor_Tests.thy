@@ -129,4 +129,6 @@ let
   val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst_test3} I (hd res) lthy;
 in lthy end\<close>
 
+print_theorems
+
 end

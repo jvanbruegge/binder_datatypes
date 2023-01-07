@@ -598,9 +598,9 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
       mk_T_of_mrbnf deads (replicate live (#T quotient)) vars vars mrbnf
     )) lthy;
 
-    val n_brec = length (#binding_relation fp_result);
-    fun mk_live_fs tbound tpassive = cond_interlace (replicate n_brec tbound)
-      (replicate (live - n_brec) tpassive) is_bound;
+    fun mk_live_fs tbound tpassive = map (fn i => if member (op=) (flat (#binding_relation fp_result)) i then
+      tbound else tpassive
+    ) (0 upto live - 1);
     val raw_PU_T = HOLogic.mk_prodT (raw_T, PU);
     val (XXl, lthy) =
       let
@@ -995,7 +995,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
             PFVars $ p), avoiding_set)
         ));
       in Goal.prove_sorry lthy (names (picks @ fs @ [p, x])) (suitable_pick_prems @ f_prems @ [imsupp_prem]) goal (fn {context, prems} =>
-        mk_int_empty_tac inv nvars mrbnf FVars (#rename raw) fs live pre_T ctor XX
+        mk_int_empty_tac inv nvars mrbnf FVars pre_T ctor XX
           (flat (mk_pick_prems (take nvars prems))) infinite_UNIV (#FVars_renames raw)
           (#FVars_ctors raw) pick_id_ons pick_id_on_images (#PFVars_Pmaps paxioms) (map snd suitables) context prems
       ) end

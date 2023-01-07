@@ -505,8 +505,9 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
         val rec_f = Term.absfree (dest_Free t) (HOLogic.mk_prod (t, Term.list_comb (f, picks @ [t])))
 
         val pick_x_ps = map (fn pick => pick $ x $ p) picks @ drop nbound ids;
-        val live_fs = cond_interlace (replicate nbound (Term.list_comb (#rename raw, pick_x_ps)))
-          (replicate (live - nbound) (HOLogic.id_const raw_T)) is_bound;
+        val live_fs = map (fn i => if member (op=) (flat (#binding_relation fp_result)) i then
+          Term.list_comb (#rename raw, pick_x_ps) else HOLogic.id_const raw_T
+        ) (0 upto live - 1);
 
         val map_t = mk_map_id (replicate live rec_f) $ (Term.list_comb (
             mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_T) vars vars mrbnf,
@@ -936,7 +937,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
       Term.list_comb (fst Umap', fs) $ t'
     )) (fn {context=ctxt, prems} => EVERY1 [
       K (unfold_thms_tac ctxt [snd Umap']),
-      rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (#Umap model))] @{thm arg_cong2[OF refl]}),
+      rtac ctxt (mk_arg_cong lthy (nvars + 1) (#Umap model) OF (replicate nvars refl)),
       rtac ctxt (iffD2 OF [#total_abs_eq_iff (#inner quotient)]),
       resolve_tac ctxt prems
     ]);
@@ -962,24 +963,25 @@ fun create_binding_recursor qualify model ff0_b lthy =
           interlace (map (fn b => if b then brec_t else mk_rec_t t) is_bound) picks' (map HOLogic.id_const vars) var_types
         ) $ x))));
       in Goal.prove_sorry lthy (names (picks @ [x, p])) suitable_pick_prems goal (fn {context, prems} =>
-        mk_alpha_ctor_picks_tac mrbnf (flat (mk_pick_prems prems)) (#alpha_intro (#inner raw)) (#alpha_refl (#inner raw))
-          infinite_UNIV pick_id_ons context prems
+        mk_alpha_ctor_picks_tac mrbnf
+          (map (infer_instantiate' lthy (map (SOME o Thm.cterm_of lthy) [x, p])) (flat (mk_pick_prems prems)))
+          (#alpha_intro (#inner raw)) (#alpha_refl (#inner raw)) pick_id_ons context prems
       ) end;
 
     fun mk_subset_t PFVars avoiding_set FVars lhs t = HOLogic.mk_Trueprop (mk_leq lhs (mk_Un (mk_Un (FVars $ t, PFVars $ p), avoiding_set)));
-    val f_UFVars's = @{map 5} (fn UFVars' => fn pick => fn FVars => fn PFVars => fn avoiding_set =>
+    val f_UFVars's = @{map 4} (fn UFVars' => fn FVars => fn PFVars => fn avoiding_set =>
       Goal.prove_sorry lthy (names (picks @ [t, p])) suitable_pick_prems
       (mk_subset_t PFVars avoiding_set FVars (fst UFVars' $ t $ (Term.list_comb (fst f, picks) $ t $ p)) t)
       (fn {context, prems} =>
         let val P_t = Term.abs ("t", raw_T) (HOLogic.mk_all ("p", P, BNF_Util.mk_leq
-          (fst UFVars' $ Bound 1 $ (fst f $ pick $ Bound 1 $ Bound 0))
+          (fst UFVars' $ Bound 1 $ Term.list_comb (fst f , picks @ [Bound 1, Bound 0]))
           (MRBNF_Util.mk_Un (MRBNF_Util.mk_Un (FVars $ Bound 1, PFVars $ Bound 0), avoiding_set))
         )) in mk_f_UFVars'_tac mrbnf P_t t (flat (mk_pick_prems prems)) (the (#subshape_induct (#inner raw)))
           (flat (the (#set_subshape_imagess (#inner raw)))) (flat (the (#set_subshapess (#inner raw))))
           (#exhaust (#inner raw)) alpha_ctor_picks (#alpha_FVarss (#inner raw)) UFVars'_CTORs
           (snd f) (map snd suitables) context prems
         end
-      )) UFVars's picks (#FVars raw) (#PFVarss params) (#avoiding_sets model);
+      )) UFVars's (#FVars raw) (#PFVarss params) (#avoiding_sets model);
 
     fun swapped thm a b = [thm OF [a, b], thm OF [b, a]];
     fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bound_Var => bounds | _ => [])

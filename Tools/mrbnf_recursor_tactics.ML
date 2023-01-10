@@ -451,34 +451,38 @@ FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_de
 fun mk_imsupp_id_on_XX_tac nvars mrbnf FVars FVars_rename FVars_ctor infinite_UNIV pick_id_ons pick_id_on_images pick_prems XXl_def XXr_def ctxt prems =
   let
     val (suitable_prems, f_prems) = chop nvars prems;
-    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
-    val bij = hd f_prems;
-    val supp = nth f_prems 1;
-    val id_prems = mk_prems @{thms supp_id_bound} @{thms bij_id supp_id_bound} var_types
-    val bij_comps = swapped @{thm bij_comp} (hd pick_prems) bij
-    val supp_comps = swapped (@{thm supp_comp_bound} OF [@{thm _}, @{thm _}, infinite_UNIV]) (nth pick_prems 1) supp
-    val map_comps = map2 (fn b => fn s => MRBNF_Def.map_comp_of_mrbnf mrbnf OF (mk_prems [supp] [b, s] var_types @ id_prems)) bij_comps supp_comps;
-    val set_maps = maps (fn thm => map2 (fn b => fn s => thm OF (mk_prems [supp] [b, s] var_types)) bij_comps supp_comps) (
-      MRBNF_Def.set_map_of_mrbnf mrbnf
-    );
-    val comp_FVars = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt FVars)] @{thm comp_def};
-    val FVars_renames = map2 (fn b => fn s => FVars_rename OF [b, s]) (bij::bij_comps) (supp::supp_comps);
-    val image_diffs = map (fn b => @{thm image_set_diff[OF bij_is_inj]} OF [b] RS sym) bij_comps;
-  in EVERY [
-    unfold_thms_tac ctxt (@{thms id_o comp_def[of fst] fst_conv image_comp}
-      @ map_comps @ set_maps @ [XXl_def, XXr_def, comp_FVars, FVars_ctor]
-    ),
-    unfold_thms_tac ctxt (@{thms image_UN[symmetric]} @ FVars_renames @ image_diffs),
-    unfold_thms_tac ctxt (@{thms image_comp[symmetric] Int_Un_distrib Un_empty}
-      @ map2 (fn t => fn p => @{thm id_on_image} OF [t OF [p]]) pick_id_ons suitable_prems
-      @ map2 (fn t => fn p => @{thm id_on_image} OF [t OF [p, bij, supp]]) pick_id_on_images suitable_prems
-    ),
-    REPEAT_DETERM (etac ctxt conjE 1),
-    REPEAT_DETERM (EVERY1 [
+  in EVERY1 [
+    K (unfold_thms_tac ctxt [XXl_def, XXr_def]),
+    EqSubst.eqsubst_asm_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound supp_id_bound bij_id} @ f_prems @ pick_prems @ [infinite_UNIV]),
+    K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv} @ [FVars_ctor])),
+    REPEAT_DETERM o EVERY' [
+      EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV])
+    ],
+    K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def]}),
+    REPEAT_DETERM o EVERY' [
+      EqSubst.eqsubst_asm_tac ctxt [0] [FVars_rename],
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV])
+    ],
+    K (unfold_thms_tac ctxt @{thms image_comp[symmetric] image_UN[symmetric]}),
+    REPEAT_DETERM o EVERY' [
+      EqSubst.eqsubst_asm_tac ctxt [0] @{thms image_set_diff[OF bij_is_inj, symmetric]},
+      resolve_tac ctxt (f_prems @ pick_prems)
+    ],
+    K (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
+    REPEAT_DETERM o etac ctxt conjE,
+    REPEAT_DETERM o EVERY' [
       TRY o rtac ctxt conjI,
       rtac ctxt @{thm imsupp_id_on},
-      assume_tac ctxt
-    ])
+      assume_tac ctxt ORELSE' EVERY' [
+        EqSubst.eqsubst_asm_tac ctxt [0] (map2 (fn thm => fn suitable =>
+          @{thm id_on_image} OF [thm OF [suitable]]
+        ) (pick_id_ons @ pick_id_on_images) (suitable_prems @ suitable_prems)),
+        REPEAT_DETERM o resolve_tac ctxt f_prems,
+        assume_tac ctxt
+      ]
+    ]
   ] end;
 
 end

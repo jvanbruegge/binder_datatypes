@@ -1001,14 +1001,14 @@ fun create_binding_recursor qualify model ff0_b lthy =
       ) end
     ) [XXl, XXr] [true, false]) (#PFVarss params) (#FVars raw) fs prod_bound_sets (#avoiding_sets model);
 
-    val imsupp_id_on_XX = @{map 8} (fn f => fn rel => fn bset => fn FVars => fn PFVars => fn avoiding_set => fn FVars_ctor => fn FVars_rename => map (fn XX =>
+    val imsupp_id_on_XX = @{map 9} (fn f => fn rel => fn bset => fn free_set => fn FVars => fn PFVars => fn avoiding_set => fn FVars_ctor => fn FVars_rename => map (fn XX =>
       let
         val w = Free ("w", fastype_of f)
         val goal = Logic.implies $ (HOLogic.mk_Trueprop (mk_int_empty (
           mk_imsupp w, mk_Un (mk_Un (FVars $ (ctor $ (pre_map_id_fst $ Term.list_comb (fst XX, picks @ fs @ [p, x]))),
             PFVars $ p), avoiding_set)
         ))) $ (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (
-          map (fn s => mk_id_on (mk_image f $ (s $ x)) w) raw_free_sets
+          [mk_id_on (mk_image f $ (free_set $ x)) w]
           @ map2 (fn i => fn s => mk_id_on (mk_image f $ (if member (op=) rel i then
             fn t => HOLogic.mk_binop @{const_name minus} (t, bset $ x) else I) (
             mk_UNION (s $ x) FVars)) w
@@ -1018,7 +1018,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
         mk_imsupp_id_on_XX_tac nvars mrbnf FVars FVars_rename FVars_ctor infinite_UNIV pick_id_ons
           pick_id_on_images (flat (mk_pick_prems (take nvars prems))) (snd XXl) (snd XXr) context prems
       ) end
-    ) [XXl, XXr]) fs rel raw_bound_sets (#FVars raw) (#PFVarss params) (#avoiding_sets model) (#FVars_ctors raw) (#FVars_renames raw);
+    ) [XXl, XXr]) fs rel raw_bound_sets raw_free_sets (#FVars raw) (#PFVarss params) (#avoiding_sets model) (#FVars_ctors raw) (#FVars_renames raw);
 
     val f_swap_alpha =
       let

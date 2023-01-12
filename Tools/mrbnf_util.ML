@@ -39,6 +39,8 @@ sig
   val asm_simp_only_subgoal: Proof.context -> thm list -> (int -> tactic) list -> int -> tactic
   val asm_simp_only_all_new: Proof.context -> thm list -> (int -> tactic) list -> int -> tactic
 
+  val unfold_thms_tac': Proof.context -> thm list -> (Proof.context -> tactic) -> tactic
+
   val mk_abs_def2: Proof.context -> thm -> thm
   val mk_arg_cong: Proof.context -> int -> term -> thm
 end;
@@ -163,6 +165,11 @@ fun asm_simp_only_subgoal ctxt thms tacs = asm_simp_only_plus ctxt thms tacs
   |> SELECT_GOAL o HEADGOAL;
 fun asm_simp_only_all_new ctxt thms tacs =
   REPEAT_ALL_NEW (DETERM o FIRST' (asm_simp_only ctxt thms :: tacs));
+
+fun unfold_thms_tac' ctxt thms tac = PRIMITIVE (
+  Conv.fconv_rule (Conv.prems_conv ~1 (Raw_Simplifier.rewrite_cterm (true, false, true) (SINGLE o tac)
+    (Raw_Simplifier.init_simpset (map (Local_Defs.meta_rewrite_rule ctxt) thms) ctxt)))
+  );
 
 (*transforms f x y = h x y into f = h using first order matches for f, h, x, y*)
 fun mk_abs_def2 ctxt thm = thm

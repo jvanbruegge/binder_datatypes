@@ -221,6 +221,8 @@ lemma small_PFVars:
   unfolding PFVars_def imsupp_supp_bound[OF assms]
   by (rule iffD1[OF mem_Collect_eq Rep_ssfun])
 
+lemma comp_middle: "f (h z) = h z \<Longrightarrow> g (h z) = h z \<Longrightarrow> (f \<circ> g \<circ> h) z = h z"
+  by simp
 
 (*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>

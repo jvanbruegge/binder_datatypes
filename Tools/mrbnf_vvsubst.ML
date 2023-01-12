@@ -325,6 +325,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     val (res, lthy) = create_binding_recursor qualify model (Binding.name ("vvsubst_" ^ name)) lthy;
 
+    val _ = @{print} res
+
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
     val (vvsubst, lthy) = mk_def_t false Binding.empty qualify (Binding.name_of vvsubst_b) nvars

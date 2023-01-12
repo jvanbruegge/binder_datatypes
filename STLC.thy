@@ -1411,7 +1411,7 @@ lemma provided:
   unfolding fresh_def
   apply (metis Product_Type.fst_comp_map_prod assms(1) bij_not_equal_iff fimageE fset.map_comp)
    apply simp
-  using fmember_iff_member_fset image_iff apply fastforce
+  using fmember.rep_eq image_iff apply fastforce
   done
 
 lemma rename_Ty_aux:
@@ -2121,7 +2121,7 @@ next
   then have "\<forall>y\<in>FFVars_terms e. \<forall>\<tau>'. (y, \<tau>') |\<in>| \<Gamma>,x:\<tau> \<longrightarrow> (y, \<tau>') |\<in>| \<Gamma>',x:\<tau>"
     by (metis DiffI FFVars_terms_simps(3) fimageI finsert_iff fresh_def fst_conv fsts.cases prod_set_simps(1))
   moreover have "x \<sharp> \<Gamma>'" using Ty_Abs unfolding fresh_def
-    by (metis UN_I fimageE fmember_iff_member_fset fsts.intros)
+    by (metis UN_I fimageE fmember.rep_eq fsts.intros)
   ultimately show ?case using Ty_Abs by (auto intro: Ty.Ty_Abs)
 qed
 
@@ -2156,7 +2156,7 @@ next
   moreover have "x \<sharp> \<Gamma>,y:\<tau>\<^sub>1" using Abs(1,4) unfolding fresh_def by auto
   ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e : \<tau>\<^sub>2" using Abs(2,5) by metis
   moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def
-    by (metis UN_I UnI1 fimageE fmember_iff_member_fset fsts.intros)
+    by (metis UN_I UnI1 fimageE fmember.rep_eq fsts.intros)
   ultimately show ?case unfolding tvsubst_simps(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
 qed
 

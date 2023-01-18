@@ -19,14 +19,6 @@ datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 40)
 ML \<open>
 val name = "terms"
 val T = @{typ "'var + 'rec * 'rec + 'bvar * \<tau> * 'brec"}
-
-structure Data = Generic_Data (
-  type T = MRBNF_FP_Def_Sugar.fp_result list Symtab.table;
-  val empty = Symtab.empty;
-  val extend = I;
-  fun merge data : T = Symtab.merge (K true) data;
-);
-Multithreading.parallel_proofs := 1
 \<close>
 
 declare [[mrbnf_internals]]
@@ -52,10 +44,6 @@ let
 
   (* Step 4: Create fixpoint of pre-MRBNF *)
   val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
-
-  (* Step 4.5: Save fp_result for later use *)
-  val lthy = Local_Theory.declaration {syntax=false, pervasive=true}
-    (fn phi => Data.map (Symtab.update (name, map (MRBNF_FP_Def_Sugar.morph_fp_result phi) res))) lthy
 
   (* Step 5: Create recursor and create fixpoint as MRBNF *)
   val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I (hd res) lthy;
@@ -899,7 +887,7 @@ lemma UFVars_Uctor:
 
 local_setup \<open>fn lthy =>
 let
-  val res = hd (the (Symtab.lookup (Data.get (Context.Proof lthy)) name))
+  val res = the (MRBNF_FP_Def_Sugar.fp_result_of lthy ("STLC." ^ name))
   fun rtac ctxt = resolve_tac ctxt o single
 
   val model_axioms = {

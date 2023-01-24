@@ -533,7 +533,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     fun mk_inductive i A z b_vec free_sets bound_sets lthy =
       let
         val i = if fbound > 1 then i else 0;
-        val bs = map (Binding.name o mk_freeN i) names;
+        val bs = map (Binding.concealed o Binding.name o mk_freeN i) names;
         val Ts = map (fn CA => A --> CA --> HOLogic.boolT) CAs;
         val inductive_flags = {quiet_mode = true, verbose = false, alt_name = Binding.empty,
           coind = false, no_elim = false, no_ind = false, skip_mono = false};
@@ -2359,7 +2359,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val lthy = register_fp_results ress lthy
 
-    val notes =
+    (*val notes =
       [("rename_simps", rename_simps),
        ("rename_id0s", rename_id0s),
        ("rename_ids", rename_ids),
@@ -2434,9 +2434,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         ((Binding.qualify true (hd names) (Binding.name thmN), []), [(thms, [])])
       ));
 
-    val (noted, lthy') = Local_Theory.notes notes lthy
+    val (noted, lthy') = Local_Theory.notes notes lthy*)
   in
-    (ress, lthy')
+    (ress, lthy)
   end;
 
 end;

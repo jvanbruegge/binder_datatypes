@@ -2,9 +2,9 @@ theory MRBNF_Recursor
   imports "./MRBNF_Composition"
 begin
 
-(*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>*)
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
   using card_of_mono1 ordLeq_ordLess_trans by blast
@@ -157,6 +157,8 @@ lemma subset_If: "(P \<Longrightarrow> X \<subseteq> A) \<Longrightarrow> (\<not
 
 lemma not_in_imsupp_same: "z \<notin> imsupp f \<Longrightarrow> f z = z"
   unfolding imsupp_def supp_def by blast
+lemma not_in_imsupp_same2: "z \<notin> imsupp f \<union> imsupp g \<Longrightarrow> f z = g z"
+  using not_in_imsupp_same by (metis UnCI)
 lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> f ` A - B = f ` (A - B)"
   unfolding supp_def imsupp_def by fastforce
 lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
@@ -224,9 +226,9 @@ lemma small_PFVars:
 lemma comp_middle: "f (h z) = h z \<Longrightarrow> g (h z) = h z \<Longrightarrow> (f \<circ> g \<circ> h) z = h z"
   by simp
 
-(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>*)
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 end

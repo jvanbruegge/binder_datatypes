@@ -2,12 +2,6 @@ theory MRBNF_Recursor_Tests
   imports "../thys/MRBNF_Recursor"
 begin
 
-
-(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
-
 (* Test 1: One free variable in the fixpoint, bound in first recursive component *)
 local_setup \<open>fn lthy =>
 let
@@ -75,15 +69,9 @@ let
   (* Step 6: Register fixpoint MRBNF *)
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 in lthy end
-\<close>*)
-
-declare [[ML_print_depth=100000]]
-
-ML \<open>
-Multithreading.parallel_proofs := 0
 \<close>
 
-(* Test 3: Two free variable in the fixpoint *)
+(* Test 3: Two free variable in the fixpoint, bound in first recursive term *)
 local_setup \<open>fn lthy =>
 let
   val name = "test3"
@@ -108,32 +96,17 @@ let
   (* Step 3: Register the sealed MRBNF as BNF in its live variables *)
   val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
 
-  (*(* Step 4: Create fixpoint of pre-MRBNF *)
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;*)
+  (* Step 4: Create fixpoint of pre-MRBNF *)
+  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
+
+  (* Step 5: Create recursor and create fixpoint as MRBNF *)
+  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name (name ^ "_") @{binding vvsubst}) I (hd res) lthy;
+
+  (* Step 6: Register fixpoint MRBNF *)
+  val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 in lthy end
 \<close>
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
-
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
-
-ML \<open>Multithreading.parallel_proofs := 0\<close>
-
-declare [[ML_print_depth=10000]]
-local_setup \<open>fn lthy =>
-let
-  val mrbnf = the (MRBNF_Def.mrbnf_of lthy "MRBNF_Recursor_Tests.test3_pre");
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [(("test3", mrbnf), 2)] [[0], [0]] lthy;
-  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst_test3} I (hd res) lthy;
-in lthy end\<close>
-
 print_theorems
-
-thm imsupp_id_on[THEN id_on_inv[rotated], THEN id_onD]
 
 end

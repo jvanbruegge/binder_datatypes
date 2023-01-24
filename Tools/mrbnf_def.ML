@@ -92,6 +92,8 @@ sig
   val mk_wits_of_mrbnf: typ list list -> typ list list -> typ list list -> typ list list -> mrbnf ->
     (int list * term) list
 
+  val mk_map_comb_of_mrbnf: typ list -> term list -> term list -> term list -> mrbnf -> term
+
   val bd_infinite_regular_card_order_of_mrbnf: mrbnf -> thm
   val bd_Card_order_of_mrbnf: mrbnf -> thm
   val bd_Cinfinite_of_mrbnf: mrbnf -> thm
@@ -875,6 +877,16 @@ fun mk_pred_of_mrbnf Ds Ts Bs Fs mrbnf =
       ((#deads mrbnf_rep ~~ Ds) @ (#lives mrbnf_rep ~~ Ts) @ (#bounds mrbnf_rep ~~ Bs) @
         (#frees mrbnf_rep ~~ Fs)) (#pred mrbnf_rep)
   end;
+
+fun mk_map_comb_of_mrbnf Ds fs gs hs mrbnf =
+  let
+    val (As, As') = split_list (map (dest_funT o fastype_of) fs)
+    val Fs = map (fst o dest_funT o fastype_of) gs
+    val Bs = map (fst o dest_funT o fastype_of) hs
+  in Term.list_comb (
+    mk_map_of_mrbnf Ds As As' Fs Bs mrbnf,
+    interlace fs gs hs (var_types_of_mrbnf mrbnf)
+  ) end;
 
 (*thms*)
 val bd_infinite_regular_card_order_of_mrbnf = #bd_infinite_regular_card_order o #axioms o rep_mrbnf;

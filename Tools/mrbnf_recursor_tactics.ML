@@ -433,7 +433,7 @@ FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_de
     if inv then K all_tac else REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_tac ctxt [0] (@{thms image_set_diff[OF bij_is_inj, symmetric]} @ MRBNF_Def.set_map_of_mrbnf mrbnf @ FVars_renames),
       REPEAT_DETERM o resolve_tac ctxt f_prems,
-      K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def] image_UN[symmetric]})
+      K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]})
     ],
     rtac ctxt refl,
     if not inv then rtac ctxt refl THEN' rtac ctxt refl else EVERY' [

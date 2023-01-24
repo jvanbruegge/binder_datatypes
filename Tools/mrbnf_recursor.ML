@@ -617,7 +617,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
           mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_PU_T)
             vars vars mrbnf, interlace (mk_live_fs brec_t rec_t) comp_ts fs var_types
         ) $ x);
-      in mk_def_t false ff0_b qualify "XXl" (nbound + 3) rhs lthy end;
+      in mk_def_t false ff0_b qualify "XXl" (2 * nbound + 2) rhs lthy end;
     val (XXr, lthy) =
       let
         fun mk_map_t T = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live T) vars vars mrbnf
@@ -633,7 +633,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
           mk_map_t raw_PU_T,
           interlace (mk_live_fs (mk_rec_t comp_ts) (mk_rec_t fs)) comp_ts fs var_types
         ) $ x);
-      in mk_def_t false ff0_b qualify "XXr" (nbound + 3) rhs lthy end;
+      in mk_def_t false ff0_b qualify "XXr" (2 * nbound + 2) rhs lthy end;
 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
@@ -983,7 +983,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
         end
       )) UFVars's (#FVars raw) (#PFVarss params) (#avoiding_sets model);
 
-    fun swapped thm a b = [thm OF [a, b], thm OF [b, a]];
     fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bound_Var => bounds | _ => [])
 
     val int_empties = @{map 5} (fn PFVars => fn FVars => fn f => fn bset => fn avoiding_set => map2 (fn XX => fn inv =>
@@ -1335,7 +1334,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
               ],
               K (unfold_thms_tac ctxt (@{thms comp_def} @
                 map (fn XX => Local_Defs.unfold0 ctxt @{thms comp_def} (
-                  fun_cong OF [@{thm meta_eq_to_obj_eq} OF [snd XX] RS sym]
+                  @{thm meta_eq_to_obj_eq} OF [snd XX] RS sym
                 )) [XXl, XXr]
               )),
               EqSubst.eqsubst_tac ctxt [0] [Pmap_comp],
@@ -1358,16 +1357,14 @@ fun create_binding_recursor qualify model ff0_b lthy =
                 ],
                 REPEAT_DETERM o eresolve_tac ctxt [exE, conjE]
               ]) exists_bij_betws),
-              rtac ctxt CTOR_cong,
-              REPEAT_DETERM_N (6 * nvars) o defer_tac,
+              rtac ctxt (Drule.rotate_prems (6 * nvars) CTOR_cong),
               REPEAT_DETERM o assume_tac ctxt,
               defer_tac,
-              defer_tac,
               REPEAT_DETERM o assume_tac ctxt,
-              EVERY' (map_index (fn (i, UFVars') => EVERY' [
+              EVERY' (map (fn (XX, UFVars') => EVERY' [
                 rotate_tac ~1,
                 REPEAT_DETERM_N live o EVERY' [
-                  EqSubst.eqsubst_asm_tac ctxt [0] [if i < live then snd XXl else snd XXr],
+                  EqSubst.eqsubst_asm_tac ctxt [0] [XX],
                   EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                   REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ raw_f_prems @ pick_prems @ [infinite_UNIV])
                 ],
@@ -1392,7 +1389,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
                   resolve_tac ctxt f_UFVars's,
                   REPEAT_DETERM o resolve_tac ctxt suitable_prems
                 ]
-              ]) (UFVars's @ UFVars's)),
+              ]) (map (pair (snd XXl)) UFVars's @ map (pair (snd XXr)) UFVars's)),
+              defer_tac,
               (* mr_rel goal *)
               rtac ctxt (@{thm iffD2[OF arg_cong2]} OF [@{thm meta_eq_to_obj_eq} OF [snd XXl], @{thm meta_eq_to_obj_eq} OF [snd XXr]]),
               rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),

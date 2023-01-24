@@ -563,7 +563,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         rtac ctxt vvsubst_cctor,
         REPEAT_DETERM o resolve_tac ctxt prems,
         K (unfold_thms_tac ctxt (@{thms image_id} @ set_maps @ [snd (#noclash res)])),
-        REPEAT_DETERM o EVERY' [
+        REPEAT_DETERM_N nvars o EVERY' [
           rtac ctxt @{thm Int_subset_empty2[rotated]},
           rtac ctxt @{thm Un_upper1},
           Int_empty_tac ctxt
@@ -623,44 +623,42 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         );
       in Goal.prove_sorry lthy (names (fs @ gs @ [t])) (f_prems @ g_prems @ FFVars_prems) (HOLogic.mk_Trueprop (mk_goal t)) (fn {context=ctxt, prems} =>
         let
-          val induct = Drule.rotate_prems 2 (
+          val induct = Drule.rotate_prems (nvars + 1) (
             Local_Defs.unfold0 ctxt @{thms atomize_all[symmetric] atomize_imp[symmetric]} (
               fold (K (fn thm => thm RS mp)) (0 upto nvars - 1) (
-                infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt P_t), SOME (Thm.cterm_of ctxt t)] (#fresh_co_induct (#inner quotient))
+                infer_instantiate' ctxt (replicate nvars NONE @ [SOME (Thm.cterm_of ctxt P_t), SOME (Thm.cterm_of ctxt t)]) (#fresh_co_induct (#inner quotient))
               )
             )
           );
           val rel = #binding_relation fp_result;
-          val lset_bounds = map (fn i => (
-            map_filter (fn (bset, xs) =>
-              if member (op=) xs i then SOME bset else NONE
-            ) (bsets ~~ rel),
-            (replicate (live - i - 1) @{thm UnI1} @ @{thms UnI2})
-          )) (0 upto live - 1);
         in EVERY1 [
           rtac ctxt induct,
           REPEAT_DETERM o FIRST' (map (fn thm => rtac ctxt thm THEN' assume_tac ctxt) (drop (2*nvars) prems)),
-          rtac ctxt (mk_imsupp_bound (take (2*nvars) prems)),
+          EVERY' (map (rtac ctxt o mk_imsupp_bound) (transpose [take nvars prems, take nvars (drop nvars prems)])),
           rtac ctxt trans,
           rtac ctxt vvsubst_cctor,
           REPEAT_DETERM o resolve_tac ctxt prems,
-          (* TODO: fix with more variables *)
-          rtac ctxt @{thm Int_subset_empty2[rotated]},
-          rtac ctxt @{thm Un_upper2},
+          REPEAT_DETERM o EVERY' [
+            rtac ctxt @{thm Int_subset_empty2[rotated]},
+            rtac ctxt @{thm Un_upper2},
+            SELECT_GOAL (helper_tac ctxt 1)
+          ],
           helper_tac ctxt,
           rtac ctxt sym,
           rtac ctxt trans,
           rtac ctxt vvsubst_cctor,
           REPEAT_DETERM o resolve_tac ctxt prems,
-          (* TODO: fix with more variables *)
-          rtac ctxt @{thm Int_subset_empty2[rotated]},
-          rtac ctxt @{thm Un_upper1},
+          REPEAT_DETERM o EVERY' [
+            rtac ctxt @{thm Int_subset_empty2[rotated]},
+            rtac ctxt @{thm Un_upper1},
+            SELECT_GOAL (helper_tac ctxt 1)
+          ],
           helper_tac ctxt,
           rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt ctor)] arg_cong),
-          Subgoal.FOCUS (fn {context=ctxt, prems=prems2, params, ...} => EVERY1 [
+          Subgoal.FOCUS (fn {context=ctxt, prems=prems2, ...} => EVERY1 [
             rtac ctxt (MRBNF_Def.map_cong_of_mrbnf mrbnf),
             REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ take (2*nvars) prems),
-            REPEAT_DETERM_N (bound + free + live + 1) o FIRST' [
+            REPEAT_DETERM_N (free + bound + live + 1) o FIRST' [
               rtac ctxt refl,
               EVERY' [
                 rtac ctxt sym,
@@ -671,40 +669,26 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
               ],
               defer_tac
             ],
-            EVERY' (map2 (fn (bsets, thms) => fn p => EVERY' [
+            EVERY' (map_index (fn (i, p) => EVERY' [
               rtac ctxt sym,
               rtac ctxt p,
               assume_tac ctxt,
-              if length bsets > 0 then Subgoal.FOCUS_PARAMS (fn {context=ctxt, params=params2, ...} =>
-                let
-                  (* TODO: fix with more variables *)
-                  val a = snd (snd (split_last params2));
-                  val t = HOLogic.mk_mem (Thm.term_of a, hd bsets $ Thm.term_of (snd (hd params)));
-                  val thm = Local_Defs.unfold0 ctxt @{thms eq_True eq_False} (
-                    infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt t)] @{thm bool.exhaust}
-                  );
-                  val prem' = conjE OF [
-                    Local_Defs.unfold0 ctxt @{thms Un_iff de_Morgan_disj} (nth prems2 live)
-                  ];
-                in EVERY1 [
-                  rtac ctxt thm,
-                  rtac ctxt prem',
-                  assume_tac ctxt,
-                  rtac ctxt trans,
-                  rtac ctxt (infer_instantiate' ctxt [SOME a] @{thm not_in_imsupp_same}),
-                  assume_tac ctxt,
-                  rtac ctxt sym,
-                  rtac ctxt @{thm not_in_imsupp_same},
-                  assume_tac ctxt
-                ] end
-              ) ctxt else K all_tac,
-              resolve_tac ctxt prems2,
-              SELECT_GOAL (unfold_thms_tac ctxt (#FVars_ctors quotient)),
-              EVERY' (map (rtac ctxt) thms),
-              TRY o rtac ctxt @{thm DiffI},
-              rtac ctxt @{thm UN_I},
-              REPEAT_DETERM o assume_tac ctxt
-            ]) lset_bounds (take live prems2))
+              EVERY' (map (fn j => EVERY' [
+                if member (op=) (nth rel j) i then
+                  EVERY' [
+                    rtac ctxt @{thm case_split[of "_ \<in> _"]},
+                    rtac ctxt sym,
+                    etac ctxt (nth prems2 (live + j * 3) RS @{thm not_in_imsupp_same2})
+                  ]
+                else K all_tac,
+                resolve_tac ctxt prems2,
+                SELECT_GOAL (unfold_thms_tac ctxt (#FVars_ctors quotient)),
+                rtac ctxt (mk_UnIN (live + 1) (i + 2)),
+                TRY o rtac ctxt @{thm DiffI},
+                rtac ctxt @{thm UN_I},
+                REPEAT_DETERM o assume_tac ctxt
+              ]) (0 upto nvars - 1))
+            ]) (take live prems2))
           ]) ctxt
         ] end
       ) end;

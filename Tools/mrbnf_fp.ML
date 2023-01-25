@@ -2359,7 +2359,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val lthy = register_fp_results ress lthy
 
-    (*val notes =
+    val notes =
       [("rename_simps", rename_simps),
        ("rename_id0s", rename_id0s),
        ("rename_ids", rename_ids),
@@ -2434,9 +2434,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         ((Binding.qualify true (hd names) (Binding.name thmN), []), [(thms, [])])
       ));
 
-    val (noted, lthy') = Local_Theory.notes notes lthy*)
+    val (noted, lthy') = Local_Theory.notes notes lthy
   in
-    (ress, lthy)
+    (ress, lthy')
   end;
 
 end;

@@ -894,16 +894,16 @@ let
    small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
    Umap_id0 = fn ctxt => rtac ctxt @{thm terms.rrename_id0s} 1,
    Umap_comp0 = fn ctxt => rtac ctxt @{thm terms.rrename_comp0s[symmetric]} 1 THEN ALLGOALS (assume_tac ctxt),
-    Umap_cong_ids = [fn ctxt => rtac ctxt @{thm terms.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1)],
-    UFVars_Umap = [fn ctxt => rtac ctxt @{thm terms.FFVars_rrenames} 1 THEN ALLGOALS (assume_tac ctxt)],
-    Umap_Uctor = fn ctxt => rtac ctxt @{thm Umap_Uctor[unfolded PUmap_def]} 1 THEN ALLGOALS (assume_tac ctxt),
-    UFVars_subsets = [fn ctxt => Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms Un_empty_right} THEN rtac ctxt @{thm UFVars_Uctor} 1 THEN Goal.assume_rule_tac ctxt 1 THEN assume_tac ctxt 1]
+   Umap_cong_id = fn ctxt => rtac ctxt @{thm terms.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+   UFVars_Umap = [fn ctxt => rtac ctxt @{thm terms.FFVars_rrenames} 1 THEN ALLGOALS (assume_tac ctxt)],
+   Umap_Uctor = fn ctxt => rtac ctxt @{thm Umap_Uctor[unfolded PUmap_def]} 1 THEN ALLGOALS (assume_tac ctxt),
+   UFVars_subsets = [fn ctxt => Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms Un_empty_right} THEN rtac ctxt @{thm UFVars_Uctor} 1 THEN Goal.assume_rule_tac ctxt 1 THEN assume_tac ctxt 1]
   };
 
   val parameter_axioms = {
     Pmap_id0 = fn ctxt => rtac ctxt @{thm compSS_id0} 1,
     Pmap_comp0 = fn ctxt => rtac ctxt @{thm compSS_comp0} 1 THEN ALLGOALS (assume_tac ctxt),
-    Pmap_cong_ids = [fn ctxt => rtac ctxt @{thm compSS_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1)],
+    Pmap_cong_id = fn ctxt => rtac ctxt @{thm compSS_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
     PFVars_Pmaps = [fn ctxt => rtac ctxt @{thm PFVars_compSS} 1 THEN ALLGOALS (assume_tac ctxt)],
     small_PFVarss = [fn ctxt => rtac ctxt @{thm small_PFVars} 1]
   };

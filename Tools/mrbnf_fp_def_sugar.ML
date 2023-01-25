@@ -221,7 +221,9 @@ fun morph_fp_result phi ({ fp, binding_relation, raw_fp, quotient_fp, pre_mrbnf 
 
 fun substitute_vars vars fp_result =
   let
-    val old_vars = rev (map TFree (Term.add_tfreesT (#T (#quotient_fp fp_result)) []));
+    val old_vars = rev (map TFree (Term.add_tfreesT (#T (#quotient_fp fp_result)) [])
+      @ map TVar (Term.add_tvarsT (#T (#quotient_fp fp_result)) [])
+    );
     val replacement = (old_vars ~~ vars);
     val phi = Morphism.morphism "instantiate vars" {
       binding = [], fact = [],

@@ -171,12 +171,6 @@ in lthy end
 \<close>
 
 (* tsubst theorems *)
-definition SSupp :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a set" where
-  "SSupp f \<equiv> { a. f a \<noteq> VVr a }"
-
-definition IImsupp :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a set" where
-  "IImsupp f \<equiv> SSupp f \<union> (\<Union>a\<in>SSupp f. FFVars_terms (f a))"
-
 lemma SSupp_VVr_empty: "SSupp VVr = {}"
   unfolding SSupp_def
   apply (rule iffD2[OF set_eq_iff])
@@ -237,7 +231,7 @@ lemma rrename_VVr:
   done
 
 lemma in_IImsupp: "f a \<noteq> VVr a \<Longrightarrow> z \<in> FFVars_terms (f a) \<Longrightarrow> z \<in> IImsupp f"
-  unfolding IImsupp_def SSupp_def
+  unfolding IImsupp_def SSupp_def comp_def
   apply (rule UnI2)
   apply (rule iffD2[OF UN_iff])
   apply (rule bexI)
@@ -493,7 +487,7 @@ lemma PFVars_compSS: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'
   done
 
 lemma small_PFVars: "|PFVars (p::'a::var_terms_pre SSfun)| <o |UNIV::'a set|"
-  unfolding PFVars_def IImsupp_def
+  unfolding PFVars_def IImsupp_def comp_def
   apply (rule terms_pre.Un_bound)
    apply (rule iffD1[OF mem_Collect_eq Rep_SSfun])
   apply (rule terms_pre.UNION_bound)
@@ -607,7 +601,7 @@ lemma UFVars_Uctor:
     apply (erule exE)
     subgoal premises prems for a
       apply (rule case_split[of "Rep_SSfun p a = VVr a"])
-      unfolding prems asVVr_VVr PFVars_def IImsupp_def SSupp_def
+      unfolding prems asVVr_VVr PFVars_def IImsupp_def SSupp_def comp_def
       subgoal premises prems2
         unfolding prems2
         apply (rule Un_upper1)
@@ -925,7 +919,7 @@ lemma FFVars_tvsubst:
   assumes "|SSupp f| <o |UNIV::'a set|"
   shows "FFVars_terms (tvsubst f t) = (\<Union>a\<in>FFVars_terms t. FFVars_terms (f a))"
   apply (rule terms.TT_fresh_co_induct[of "IImsupp f" _ t])
-  apply (unfold IImsupp_def)[1]
+  apply (unfold IImsupp_def comp_def)[1]
     apply (rule terms_pre.Un_bound)
      apply (rule assms)
     apply (rule terms_pre.UNION_bound)

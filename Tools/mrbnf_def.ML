@@ -881,10 +881,10 @@ fun mk_pred_of_mrbnf Ds Ts Bs Fs mrbnf =
 fun mk_map_comb_of_mrbnf Ds fs gs hs mrbnf =
   let
     val (As, As') = split_list (map (dest_funT o fastype_of) fs)
-    val Fs = map (fst o dest_funT o fastype_of) gs
-    val Bs = map (fst o dest_funT o fastype_of) hs
+    val Bs = map (fst o dest_funT o fastype_of) gs
+    val Fs = map (fst o dest_funT o fastype_of) hs
   in Term.list_comb (
-    mk_map_of_mrbnf Ds As As' Fs Bs mrbnf,
+    mk_map_of_mrbnf Ds As As' Bs Fs mrbnf,
     interlace fs gs hs (var_types_of_mrbnf mrbnf)
   ) end;
 

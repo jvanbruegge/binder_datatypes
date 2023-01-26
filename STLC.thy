@@ -2,12 +2,6 @@ theory STLC
   imports "thys/MRBNF_Recursor" "HOL-Library.FSet"
 begin
 
-(* TODO: Move into MRBNF_Recursor.thy *)
-ML_file \<open>./Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>./Tools/mrbnf_recursor.ML\<close>
-
-ML_file \<open>./Tools/mrbnf_vvsubst.ML\<close>
-
 datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 40)
 
 (* binder_datatype 'a terms =
@@ -147,6 +141,34 @@ lemma \<eta>_natural: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::
   unfolding comp_def map_terms_pre_def Abs_terms_pre_inverse[OF UNIV_I] map_sum.simps
   apply (rule refl)
   done
+
+ML_file \<open>Tools/mrbnf_tvsubst.ML\<close>
+
+declare [[ML_print_depth=1000]]
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+local_setup \<open>fn lthy =>
+let
+  val fp_result = the (MRBNF_FP_Def_Sugar.fp_result_of lthy "STLC.terms")
+
+  val axioms = {
+    eta_free = fn ctxt => resolve_tac ctxt @{thms \<eta>_free} 1,
+    eta_inj = fn ctxt => resolve_tac ctxt @{thms \<eta>_inj} 1 THEN assume_tac ctxt 1,
+    eta_compl_free = fn ctxt => resolve_tac ctxt @{thms \<eta>_compl_free} 1 THEN assume_tac ctxt 1,
+    eta_natural = fn ctxt => resolve_tac ctxt @{thms \<eta>_natural} 1 THEN ALLGOALS (assume_tac ctxt)
+  };
+
+  val model = {
+    fp_result = fp_result,
+    etas = [SOME (
+      @{term "\<eta>::'a::var_terms_pre \<Rightarrow> ('a, 'b::var_terms_pre, 'c, 'd) terms_pre"},
+      axioms
+    )]
+  };
+  val _ = MRBNF_TVSubst.create_tvsubst_of_mrbnf @{binding tvsubst} I model lthy
+in lthy end
+\<close>
 
 (* tsubst theorems *)
 definition "VVr a \<equiv> terms_ctor (\<eta> a)"

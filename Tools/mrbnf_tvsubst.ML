@@ -17,7 +17,7 @@ sig
   };
 
   val create_tvsubst_of_mrbnf: binding -> (binding -> binding) -> (Proof.context -> tactic) tvsubst_model
-    -> local_theory -> tvsubst_result * local_theory
+    -> local_theory -> (*tvsubst_result * *) local_theory
 end
 
 structure MRBNF_TVSubst : MRBNF_TVSUBST =
@@ -84,15 +84,16 @@ fun prove_model_axioms binding qualify model lthy =
         val (fs, _) = names_lthy
           |> mk_Frees "f" fTs;
 
-        val lthy = snd (Local_Theory.begin_nested lthy);
-        val (raw_eta, lthy) = mk_def_t false binding qualify "\<eta>" 0 eta lthy
+        (*val lthy = snd (Local_Theory.begin_nested lthy);
+        val (raw_eta, lthy) = mk_def_t true binding qualify "\<eta>" 0 eta lthy
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;
 
         val eta' = Morphism.term phi (fst raw_eta);
         val eta = (Term.subst_atomic_types (
           rev (map TVar (Term.add_tvarsT (snd (dest_funT (fastype_of eta'))) [])) ~~ args
-        ) eta', Morphism.thm phi (snd raw_eta));
+        ) eta', Morphism.thm phi (snd raw_eta));*)
+        val eta = (eta, @{thm TrueI})
 
         val eta_free = Goal.prove_sorry lthy (names [a]) []
           (mk_Trueprop_eq (set' $ (fst eta $ a), mk_singleton a))
@@ -141,16 +142,58 @@ fun prove_model_axioms binding qualify model lthy =
     ) eta_opt in (Option.map fst eta_opt', (i + 1, the_default lthy (Option.map snd eta_opt'))) end)
     (map_filter (fn (MRBNF_Def.Free_Var, set) => SOME set | _ => NONE) (
       var_types ~~ MRBNF_Def.sets_of_mrbnf mrbnf
-    )) (#etas model) (0, lthy)
+    )) (#etas model) (0, lthy);
+
+    val vars_opt = map (Option.map (fst o dest_funT o fastype_of o fst)) (#etas model);
+    val vars = map_filter (Option.map dest_TFree) vars_opt;
+    val names_lthy = fold (Variable.declare_constraints o Logic.mk_type o TFree) vars lthy;
+    val n = MRBNF_Def.free_of_mrbnf mrbnf - length vars;
+    val (Ts, _) = names_lthy
+      |> mk_TFrees' (replicate n (MRBNF_Def.class_of_mrbnf mrbnf));
+    val new_vars = fst (fold_map (fn SOME a => (fn xs => (a, xs)) | NONE => fn xs => (hd xs, tl xs)) vars_opt Ts);
+
   in (map_filter (Option.map (snd o fst)) etas, {
-    fp_result = #fp_result model,
+    fp_result = MRBNF_FP_Def_Sugar.substitute_vars new_vars (#fp_result model),
     etas = map (Option.map (apfst fst)) etas
   } : thm tvsubst_model, lthy) end;
 
+fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
+  let
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+    val mk_def_t = mk_def_t (*false*) true b qualify
+    val ctor = #ctor (#quotient_fp (#fp_result model));
+    val preT = fst (dest_funT (fastype_of ctor));
+
+    val (defs, lthy) = fold_map (fn eta_opt => fn lthy => let val opt = Option.map (fn (eta, _) =>
+      let
+        val (eta_name, etaT) = dest_Const eta
+        val eta' = Const (eta_name, fst (dest_funT etaT) --> preT);
+        val (VVr, lthy) = mk_def_t "VVr" 0 (HOLogic.mk_comp (ctor, eta')) lthy;
+
+      in ({
+        VVr = VVr
+      }, lthy) end
+    ) eta_opt in (Option.map fst opt, the_default lthy (Option.map snd opt)) end)
+    (#etas model) lthy;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    fun morph (t, thm) = (Morphism.term phi t, Morphism.thm phi thm);
+
+    val defs' = map (Option.map(fn def => {
+      VVr = morph (#VVr def)
+    })) defs;
+
+  in (defs', lthy) end;
+
 fun create_tvsubst_of_mrbnf b qualify model lthy =
   let
-    val (eta_defs, model, lthy) = prove_model_axioms b qualify model lthy
-    val _ = @{print} (#etas model)
-  in error "unimplemented" end;
+    val (eta_defs, model, lthy) = prove_model_axioms b qualify model lthy;
+    val (defs, lthy) = define_tvsubst_consts b qualify model lthy;
+
+    val _ = @{print} defs
+
+  in lthy end;
 
 end

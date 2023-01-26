@@ -162,19 +162,37 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
     val (_, lthy) = Local_Theory.begin_nested lthy;
     val mk_def_t = mk_def_t (*false*) true b qualify
     val ctor = #ctor (#quotient_fp (#fp_result model));
-    val preT = fst (dest_funT (fastype_of ctor));
+    val FVarss = #FVars (#quotient_fp (#fp_result model));
+    val (preT, qT) = dest_funT (fastype_of ctor);
 
-    val (defs, lthy) = fold_map (fn eta_opt => fn lthy => let val opt = Option.map (fn (eta, _) =>
+    val (defs, lthy) = @{fold_map 2} (fn eta_opt => fn FVars => fn lthy => let val opt = Option.map (fn (eta, _) =>
       let
         val (eta_name, etaT) = dest_Const eta
-        val eta' = Const (eta_name, fst (dest_funT etaT) --> preT);
+        val aT = fst (dest_funT etaT);
+        val eta' = Const (eta_name, aT --> preT);
         val (VVr, lthy) = mk_def_t "VVr" 0 (HOLogic.mk_comp (ctor, eta')) lthy;
 
+        val (f, _) = lthy
+          |> apfst hd o mk_Frees "f" [aT --> qT];
+
+        val (SSupp, lthy) = mk_def_t "SSupp" 1 (Term.absfree (dest_Free f) (
+          HOLogic.mk_Collect ("a", aT, HOLogic.mk_not (HOLogic.mk_eq (
+            f $ Bound 0, fst VVr $ Bound 0
+          )))
+        )) lthy;
+
+        val (IImsupp, lthy) = mk_def_t "IImsupp" 1 (Term.absfree (dest_Free f) (mk_Un (
+          fst SSupp $ f,
+          mk_UNION (fst SSupp $ f) (HOLogic.mk_comp (FVars, f))
+        ))) lthy;
+
       in ({
-        VVr = VVr
+        VVr = VVr,
+        SSupp = SSupp,
+        IImsupp = IImsupp
       }, lthy) end
     ) eta_opt in (Option.map fst opt, the_default lthy (Option.map snd opt)) end)
-    (#etas model) lthy;
+    (#etas model) FVarss lthy;
 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
@@ -182,7 +200,9 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
     fun morph (t, thm) = (Morphism.term phi t, Morphism.thm phi thm);
 
     val defs' = map (Option.map(fn def => {
-      VVr = morph (#VVr def)
+      VVr = morph (#VVr def),
+      SSupp = morph (#SSupp def),
+      IImsupp = morph (#IImsupp def)
     })) defs;
 
   in (defs', lthy) end;

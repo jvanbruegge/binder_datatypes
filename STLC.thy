@@ -171,15 +171,6 @@ in lthy end
 \<close>
 
 (* tsubst theorems *)
-
-definition CCTOR :: "('a::var_terms_pre, 'a, 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms), 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms)) terms_pre \<Rightarrow> 'a SSfun \<Rightarrow> 'a terms" where
-  "CCTOR = (\<lambda>F p. if isVVr (terms_ctor (map_terms_pre id id fst fst F)) then
-       Rep_SSfun p (asVVr (terms_ctor (map_terms_pre id id fst fst F)))
-     else
-       terms_ctor (map_terms_pre id id ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) F))"
-
-definition PUmap where "PUmap f t pu \<equiv> \<lambda>p. rrename_terms f (pu (compSS (inv f) p))"
-
 lemma VVr_inj: "VVr a = VVr b \<Longrightarrow> a = b"
   unfolding VVr_def comp_def
   apply (rule \<eta>_inj)
@@ -522,6 +513,7 @@ lemma asVVr_VVr: "asVVr (VVr a) = a"
   done
 
 (* CCTOR axioms *)
+abbreviation PUmap where "PUmap f t pu \<equiv> \<lambda>p. rrename_terms f (pu (compSS (inv f) p))"
 lemma Umap_Uctor:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
@@ -551,7 +543,7 @@ lemma Umap_Uctor:
      apply (rule terms.rrename_cctors)
       apply (rule assms)+
     unfolding terms_pre.map_comp[OF supp_id_bound bij_id supp_id_bound assms(2,1,2)]
-      o_id comp_assoc comp_def[of snd] case_lam_iff snd_conv PUmap_def
+      o_id comp_assoc comp_def[of snd] case_lam_iff snd_conv
     unfolding comp_def case_lam_iff case_lam_app_iff
       fun_cong[OF compSS_comp0[unfolded comp_def], symmetric, OF supp_inv_bound[OF assms] bij_imp_bij_inv[OF assms(1)] assms(2,1)]
       inv_simp1[OF assms(1)] id_def[symmetric] compSS_id0
@@ -630,7 +622,7 @@ let
    Umap_comp0 = fn ctxt => rtac ctxt @{thm terms.rrename_comp0s[symmetric]} 1 THEN ALLGOALS (assume_tac ctxt),
    Umap_cong_id = fn ctxt => rtac ctxt @{thm terms.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
    UFVars_Umap = [fn ctxt => rtac ctxt @{thm terms.FFVars_rrenames} 1 THEN ALLGOALS (assume_tac ctxt)],
-   Umap_Uctor = fn ctxt => rtac ctxt @{thm Umap_Uctor[unfolded PUmap_def]} 1 THEN ALLGOALS (assume_tac ctxt),
+   Umap_Uctor = fn ctxt => rtac ctxt @{thm Umap_Uctor} 1 THEN ALLGOALS (assume_tac ctxt),
    UFVars_subsets = [fn ctxt => Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms Un_empty_right} THEN rtac ctxt @{thm UFVars_Uctor} 1 THEN Goal.assume_rule_tac ctxt 1 THEN assume_tac ctxt 1]
   };
 

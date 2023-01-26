@@ -164,6 +164,8 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
     val quotient = #quotient_fp (#fp_result model)
     val ctor = #ctor quotient;
     val FVarss = #FVars quotient;
+    val rename = #rename quotient;
+    val vars = snd (dest_Type (body_type (fastype_of rename)));
     val (preT, qT) = dest_funT (fastype_of ctor);
 
     val (defs, lthy) = @{fold_map 2} (fn eta_opt => fn FVars => fn lthy => let val opt = Option.map (fn (eta, _) =>
@@ -279,8 +281,6 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
         val info = snd (#SSfun def);
         val Rep = Const (#Rep_name (fst info), #abs_type (fst info) --> #rep_type (fst info));
 
-        val rename = #rename quotient;
-        val vars = snd (dest_Type (body_type (fastype_of rename)));
         val fs = map_index (fn (j, x) => if i = j then Bound 1 else HOLogic.id_const x) vars;
 
         val inv_const = Const (@{const_name inv_into}, HOLogic.mk_setT aT --> (aT --> aT) --> (aT --> aT)) $ HOLogic.mk_UNIV aT;
@@ -305,6 +305,37 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
       }, lthy) end
     ) def_opt in (Option.map fst opt, (i + 1, the_default lthy (Option.map snd opt))) end) defs (0, lthy);
 
+    val (name, args) = (dest_Type o fst o dest_funT o fastype_of) ctor;
+    val mrbnf = #pre_mrbnf (#fp_result model);
+    val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
+    val live = MRBNF_Def.live_of_mrbnf mrbnf;
+    val P_Ts = map_filter (Option.map (#abs_type o fst o snd o #SSfun)) defs;
+    val P_T = HOLogic.mk_tupleT P_Ts;
+    val live_T = HOLogic.mk_prodT (#T quotient, P_T --> #T quotient);
+
+    val arg_types = (MRBNF_Def.var_types_of_mrbnf mrbnf ~~ args);
+    val new_args = map (fn (MRBNF_Def.Live_Var, _) => live_T | (_, arg) => arg) arg_types;
+    val ids = map HOLogic.id_const vars;
+    val map_id_fst = ctor $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
+      (replicate live (fst_const live_T)) ids ids mrbnf $ Bound (length P_Ts));
+
+    val (ps, _) = lthy
+      |> mk_Frees "p" P_Ts;
+
+    val (CCTOR, lthy) = mk_def_t "CCTOR" 0 (Term.abs ("F", Type (name, new_args)) (mk_case_tuple (map dest_Free ps) (
+      fold (fn (p, def) =>
+        let
+          val info = fst (snd (#SSfun def));
+          val Rep = Const (#Rep_name info, #abs_type info --> #rep_type info);
+        in BNF_FP_Util.mk_If (fst (#isVVr def) $ map_id_fst) (Rep $ p $ (fst (#asVVr def) $ map_id_fst)) end
+    ) (ps ~~ map_filter I defs) (ctor $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
+      (replicate live (HOLogic.mk_comp (
+        Term.abs ("R", P_T --> #T quotient) (Bound 0 $ HOLogic.mk_tuple ps),
+        snd_const live_T
+      )))
+      ids ids mrbnf $ Bound (length P_Ts))
+    )))) lthy;
+
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
 
@@ -328,12 +359,19 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
       PFVars = morph (#PFVars def) (#aT def)
     })) defs;
 
-  in (defs, lthy) end;
+    fun morph (t, thm) =
+      let val t' = Morphism.term phi t
+      in (
+        Term.subst_atomic_types (rev (map TVar (Term.add_tvars t' []) ~~ vars)) t',
+        Morphism.thm phi thm
+      ) end;
+
+  in (morph CCTOR, defs, lthy) end;
 
 fun create_tvsubst_of_mrbnf b qualify model lthy =
   let
     val (eta_defs, model, lthy) = prove_model_axioms b qualify model lthy;
-    val (defs, lthy) = define_tvsubst_consts b qualify model lthy;
+    val (CCTOR, defs, lthy) = define_tvsubst_consts b qualify model lthy;
 
     (* TODO: Remove *)
     val notes =
@@ -344,7 +382,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       ));
     val (_, lthy) = Local_Theory.notes notes lthy
 
-    val _ = @{print} defs
+    val _ = @{print} (CCTOR, defs)
 
   in lthy end;
 

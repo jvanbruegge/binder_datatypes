@@ -51,6 +51,7 @@ sig
 
   val mk_int_empty: term * term -> term;
   val chop_f_prems: thm list -> thm list list;
+  val mk_supp_bound: term -> term;
 
   val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
     -> local_theory -> recursor_result * local_theory;

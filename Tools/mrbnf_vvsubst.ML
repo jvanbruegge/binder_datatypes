@@ -7,12 +7,11 @@ end
 structure MRBNF_VVSubst : MRBNF_VVSUBST =
 struct
 
+open BNF_Tactics
 open BNF_Util
 open MRBNF_Util
 open MRBNF_Def
 open MRBNF_Recursor
-
-val unfold_thms_tac = Ctr_Sugar_Tactics.unfold_thms_tac
 
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));

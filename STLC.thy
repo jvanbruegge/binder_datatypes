@@ -171,11 +171,6 @@ in lthy end
 \<close>
 
 (* tsubst theorems *)
-definition compSS :: "('a::var_terms_pre \<Rightarrow> 'a) \<Rightarrow> 'a SSfun \<Rightarrow> 'a SSfun" where
-  "compSS f p \<equiv> Abs_SSfun (rrename_terms f \<circ> Rep_SSfun p \<circ> inv f)"
-
-definition PFVars :: "'a::var_terms_pre SSfun \<Rightarrow> 'a set" where
-  "PFVars p \<equiv> IImsupp (Rep_SSfun p)"
 
 definition CCTOR :: "('a::var_terms_pre, 'a, 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms), 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms)) terms_pre \<Rightarrow> 'a SSfun \<Rightarrow> 'a terms" where
   "CCTOR = (\<lambda>F p. if isVVr (terms_ctor (map_terms_pre id id fst fst F)) then

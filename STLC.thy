@@ -171,36 +171,11 @@ in lthy end
 \<close>
 
 (* tsubst theorems *)
-lemma SSupp_VVr_empty: "SSupp VVr = {}"
-  unfolding SSupp_def
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  unfolding mem_Collect_eq HOL.simp_thms(6) empty_iff
-  apply (rule not_True_eq_False)
-  done
-
-lemma SSupp_VVr_bound: "|SSupp VVr| <o |UNIV::'a set|"
-  unfolding SSupp_VVr_empty
-  apply (rule emp_bound)
-  done
-
-typedef 'a::var_terms_pre SSfun = "{ f::'a \<Rightarrow> 'a terms. |SSupp f| <o |UNIV::'a set| }"
-  apply (rule exI)
-  apply (rule iffD2[OF mem_Collect_eq])
-  apply (rule SSupp_VVr_bound)
-  done
-
 definition compSS :: "('a::var_terms_pre \<Rightarrow> 'a) \<Rightarrow> 'a SSfun \<Rightarrow> 'a SSfun" where
   "compSS f p \<equiv> Abs_SSfun (rrename_terms f \<circ> Rep_SSfun p \<circ> inv f)"
 
 definition PFVars :: "'a::var_terms_pre SSfun \<Rightarrow> 'a set" where
   "PFVars p \<equiv> IImsupp (Rep_SSfun p)"
-
-definition isVVr :: "'a::var_terms_pre terms \<Rightarrow> bool" where
-  "isVVr t \<equiv> (\<exists>a. t = VVr a)"
-
-definition asVVr :: "'a::var_terms_pre terms \<Rightarrow> 'a" where
-  "asVVr t \<equiv> if isVVr t then (SOME a. VVr a = t) else undefined"
 
 definition CCTOR :: "('a::var_terms_pre, 'a, 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms), 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms)) terms_pre \<Rightarrow> 'a SSfun \<Rightarrow> 'a terms" where
   "CCTOR = (\<lambda>F p. if isVVr (terms_ctor (map_terms_pre id id fst fst F)) then

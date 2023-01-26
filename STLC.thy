@@ -88,7 +88,7 @@ lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_terms_p
 
 (* Term for variable substitution *)
 (* TODO: Define with ML *)
-abbreviation \<eta> :: "'a::var_terms_pre \<Rightarrow> ('a, 'b::var_terms_pre, 'c, 'd) terms_pre" where
+definition \<eta> :: "'a::var_terms_pre \<Rightarrow> ('a, 'b::var_terms_pre, 'c, 'd) terms_pre" where
   "\<eta> a \<equiv> Abs_terms_pre (Inl a)"
 
 (* helpers *)
@@ -123,13 +123,13 @@ lemma swap_fresh: "y \<notin> A \<Longrightarrow> x \<in> id(x := y, y := x) ` A
 
 (* eta axioms *)
 lemma \<eta>_free: "set1_terms_pre (\<eta> a) = {a}"
-  unfolding set1_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I]
+  unfolding set1_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] \<eta>_def
   by auto
 lemma \<eta>_inj: "\<eta> a = \<eta> b \<Longrightarrow> a = b"
-  unfolding Abs_terms_pre_inject[OF UNIV_I UNIV_I] sum.inject
+  unfolding Abs_terms_pre_inject[OF UNIV_I UNIV_I] sum.inject  \<eta>_def
   by assumption
 lemma \<eta>_compl_free: "x \<notin> range \<eta> \<Longrightarrow> set1_terms_pre x = {}"
-  unfolding set1_terms_pre_def comp_def Un_empty sum.set_map UN_singleton UN_empty2
+  unfolding set1_terms_pre_def comp_def Un_empty sum.set_map UN_singleton UN_empty2  \<eta>_def
   apply (rule conjI)
    apply (rule Abs_terms_pre_cases[of x])
    apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
@@ -138,7 +138,7 @@ lemma \<eta>_compl_free: "x \<notin> range \<eta> \<Longrightarrow> set1_terms_p
   done
 lemma \<eta>_natural: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'b::var_terms_pre \<Rightarrow> 'b)| <o |UNIV::'b set|
   \<Longrightarrow> map_terms_pre f g h i \<circ> \<eta> = \<eta> \<circ> f"
-  unfolding comp_def map_terms_pre_def Abs_terms_pre_inverse[OF UNIV_I] map_sum.simps
+  unfolding comp_def map_terms_pre_def Abs_terms_pre_inverse[OF UNIV_I] map_sum.simps  \<eta>_def
   apply (rule refl)
   done
 
@@ -166,15 +166,58 @@ let
       axioms
     )]
   };
-  val _ = MRBNF_TVSubst.create_tvsubst_of_mrbnf @{binding tvsubst} I model lthy
+  val lthy = MRBNF_TVSubst.create_tvsubst_of_mrbnf @{binding tvsubst} I model lthy
 in lthy end
 \<close>
 
 (* tsubst theorems *)
-definition "VVr a \<equiv> terms_ctor (\<eta> a)"
+definition SSupp :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a set" where
+  "SSupp f \<equiv> { a. f a \<noteq> VVr a }"
+
+definition IImsupp :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a set" where
+  "IImsupp f \<equiv> SSupp f \<union> (\<Union>a\<in>SSupp f. FFVars_terms (f a))"
+
+lemma SSupp_VVr_empty: "SSupp VVr = {}"
+  unfolding SSupp_def
+  apply (rule iffD2[OF set_eq_iff])
+  apply (rule allI)
+  unfolding mem_Collect_eq HOL.simp_thms(6) empty_iff
+  apply (rule not_True_eq_False)
+  done
+
+lemma SSupp_VVr_bound: "|SSupp VVr| <o |UNIV::'a set|"
+  unfolding SSupp_VVr_empty
+  apply (rule emp_bound)
+  done
+
+typedef 'a::var_terms_pre SSfun = "{ f::'a \<Rightarrow> 'a terms. |SSupp f| <o |UNIV::'a set| }"
+  apply (rule exI)
+  apply (rule iffD2[OF mem_Collect_eq])
+  apply (rule SSupp_VVr_bound)
+  done
+
+definition compSS :: "('a::var_terms_pre \<Rightarrow> 'a) \<Rightarrow> 'a SSfun \<Rightarrow> 'a SSfun" where
+  "compSS f p \<equiv> Abs_SSfun (rrename_terms f \<circ> Rep_SSfun p \<circ> inv f)"
+
+definition PFVars :: "'a::var_terms_pre SSfun \<Rightarrow> 'a set" where
+  "PFVars p \<equiv> IImsupp (Rep_SSfun p)"
+
+definition isVVr :: "'a::var_terms_pre terms \<Rightarrow> bool" where
+  "isVVr t \<equiv> (\<exists>a. t = VVr a)"
+
+definition asVVr :: "'a::var_terms_pre terms \<Rightarrow> 'a" where
+  "asVVr t \<equiv> if isVVr t then (SOME a. VVr a = t) else undefined"
+
+definition CCTOR :: "('a::var_terms_pre, 'a, 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms), 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms)) terms_pre \<Rightarrow> 'a SSfun \<Rightarrow> 'a terms" where
+  "CCTOR = (\<lambda>F p. if isVVr (terms_ctor (map_terms_pre id id fst fst F)) then
+       Rep_SSfun p (asVVr (terms_ctor (map_terms_pre id id fst fst F)))
+     else
+       terms_ctor (map_terms_pre id id ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) F))"
+
+definition PUmap where "PUmap f t pu \<equiv> \<lambda>p. rrename_terms f (pu (compSS (inv f) p))"
 
 lemma VVr_inj: "VVr a = VVr b \<Longrightarrow> a = b"
-  unfolding VVr_def
+  unfolding VVr_def comp_def
   apply (rule \<eta>_inj)
   apply (drule iffD1[OF terms.TT_injects0])
   apply (erule exE)
@@ -187,17 +230,11 @@ lemma VVr_inj: "VVr a = VVr b \<Longrightarrow> a = b"
 lemma rrename_VVr:
   assumes "bij (f::'a::var_terms_pre \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a set|"
   shows "rrename_terms f (VVr a) = VVr (f a)"
-  unfolding VVr_def terms.rrename_cctors[OF assms]
+  unfolding VVr_def terms.rrename_cctors[OF assms] comp_def
   apply (rule arg_cong[of _ _ terms_ctor])
   apply (rule fun_cong[OF \<eta>_natural[unfolded comp_def]])
     apply (rule assms)+
   done
-
-definition SSupp :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a set" where
-  "SSupp f \<equiv> { a. f a \<noteq> VVr a }"
-
-definition IImsupp :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a set" where
-  "IImsupp f \<equiv> SSupp f \<union> (\<Union>a\<in>SSupp f. FFVars_terms (f a))"
 
 lemma in_IImsupp: "f a \<noteq> VVr a \<Longrightarrow> z \<in> FFVars_terms (f a) \<Longrightarrow> z \<in> IImsupp f"
   unfolding IImsupp_def SSupp_def
@@ -278,24 +315,6 @@ lemma IImsupp_imsupp_rrename_commute:
     done
   done
 
-lemma SSupp_VVr_empty: "SSupp VVr = {}"
-  unfolding SSupp_def
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  unfolding mem_Collect_eq HOL.simp_thms(6) empty_iff
-  apply (rule not_True_eq_False)
-  done
-
-lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
-  unfolding IImsupp_def SSupp_VVr_empty UN_empty Un_empty_left
-  apply (rule refl)
-  done
-
-lemma SSupp_VVr_bound: "|SSupp VVr| <o |UNIV::'a set|"
-  unfolding SSupp_VVr_empty
-  apply (rule emp_bound)
-  done
-
 lemma SSupp_comp_subset:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a terms" and g::"'a \<Rightarrow> 'a"
   assumes "|supp g| <o |UNIV::'a set|" "bij g"
@@ -350,12 +369,6 @@ lemma SSupp_comp_rename_bound:
   shows "|SSupp (rrename_terms g \<circ> f)| <o |UNIV::'a set|"
   apply (rule ordLeq_ordLess_trans[OF card_of_mono1[OF SSupp_comp_rename_subset]])
     apply (rule assms terms.Un_bound)+
-  done
-
-typedef 'a::var_terms_pre SSfun = "{ f::'a \<Rightarrow> 'a terms. |SSupp f| <o |UNIV::'a set| }"
-  apply (rule exI)
-  apply (rule iffD2[OF mem_Collect_eq])
-  apply (rule SSupp_VVr_bound)
   done
 
 lemma IImsupp_comp_image:
@@ -414,12 +427,6 @@ lemma IImsupp_comp_image:
   unfolding rrename_VVr[OF assms]
   apply assumption
   done
-
-definition compSS :: "('a::var_terms_pre \<Rightarrow> 'a) \<Rightarrow> 'a SSfun \<Rightarrow> 'a SSfun" where
-  "compSS f p \<equiv> Abs_SSfun (rrename_terms f \<circ> Rep_SSfun p \<circ> inv f)"
-
-definition PFVars :: "'a::var_terms_pre SSfun \<Rightarrow> 'a set" where
-  "PFVars p \<equiv> IImsupp (Rep_SSfun p)"
 
 (* Parameter axioms *)
 lemma compSS_id0: "compSS id = id"
@@ -494,20 +501,6 @@ lemma small_PFVars: "|PFVars (p::'a::var_terms_pre SSfun)| <o |UNIV::'a set|"
   apply (rule terms.card_of_FFVars_bounds)
   done
 
-definition isVVr :: "'a::var_terms_pre terms \<Rightarrow> bool" where
-  "isVVr t \<equiv> (\<exists>a. t = VVr a)"
-
-definition asVVr :: "'a::var_terms_pre terms \<Rightarrow> 'a" where
-  "asVVr t \<equiv> if isVVr t then (SOME a. VVr a = t) else undefined"
-
-definition CCTOR :: "('a::var_terms_pre, 'a, 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms), 'a terms \<times> ('a SSfun \<Rightarrow> 'a terms)) terms_pre \<Rightarrow> 'a SSfun \<Rightarrow> 'a terms" where
-  "CCTOR = (\<lambda>F p. if isVVr (terms_ctor (map_terms_pre id id fst fst F)) then
-       Rep_SSfun p (asVVr (terms_ctor (map_terms_pre id id fst fst F)))
-     else
-       terms_ctor (map_terms_pre id id ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) F))"
-
-definition PUmap where "PUmap f t pu \<equiv> \<lambda>p. rrename_terms f (pu (compSS (inv f) p))"
-
 lemma isVVr_rename:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
@@ -533,19 +526,19 @@ lemma asVVr_rename:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "isVVr x"
   shows "asVVr (rrename_terms f x) = f (asVVr x)"
-  unfolding asVVr_def isVVr_rename[OF assms(1,2)] if_P[OF assms(3)]
+  unfolding asVVr_def isVVr_rename[OF assms(1,2)] if_P[OF assms(3)] comp_def
     VVr_def bij_inv_rev[OF terms.rrename_bijs[OF assms(1,2)], symmetric]
     terms.rrename_inv_simps[OF assms(1,2)] terms.rrename_cctors[OF bij_imp_bij_inv[OF assms(1)] supp_inv_bound[OF assms(1,2)]]
     fun_cong[OF \<eta>_natural[OF supp_inv_bound[OF assms(1,2)] bij_imp_bij_inv[OF assms(1)] supp_inv_bound[OF assms(1,2)], unfolded comp_def]]
   apply (rule some_equality)
   unfolding inv_simp1[OF assms(1)]
    apply (rule sym)
-   apply (rule exE[OF assms(3)[unfolded isVVr_def VVr_def]])
+   apply (rule exE[OF assms(3)[unfolded isVVr_def VVr_def comp_def]])
    apply (rule someI)
    apply (rule sym)
    apply assumption
   apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-  unfolding VVr_def[symmetric]
+  unfolding fun_cong[OF meta_eq_to_obj_eq[OF VVr_def[unfolded comp_def, symmetric]]]
   apply (rule iffD1[OF bij_inv_rev[OF assms(1)]])
   apply (rule VVr_inj)
   apply (rule someI)
@@ -803,12 +796,12 @@ lemma \<eta>_set4: "set4_terms_pre (\<eta> (a::'a::var_terms_pre) :: ('a, 'b::va
   done
 
 lemma FVars_VVr: "FFVars_terms (VVr a) = {a}"
-  unfolding VVr_def terms.FFVars_cctors \<eta>_set2 \<eta>_set3 \<eta>_set4 UN_empty Diff_empty Un_empty_right
+  unfolding VVr_def terms.FFVars_cctors \<eta>_set2 \<eta>_set3 \<eta>_set4 UN_empty Diff_empty Un_empty_right comp_def
   apply (rule \<eta>_free)
   done
 
 lemma tvsubst_VVr: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> tvsubst f (VVr x) = f x"
-  unfolding tvsubst_def VVr_def
+  unfolding tvsubst_def VVr_def comp_def
   apply (rule trans)
    apply (rule tvsubst_Uctor)
     apply (rule trans[OF arg_cong2[OF \<eta>_set2 refl, of "(\<inter>)"]])
@@ -817,7 +810,7 @@ lemma tvsubst_VVr: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UN
    apply (rule trans[OF arg_cong2[OF \<eta>_set2 refl, of "(\<inter>)"]])
    apply (rule Int_empty_left)
   unfolding CCTOR_def terms_pre.map_comp[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound]
-    id_o comp_def[of fst] fst_conv id_def[symmetric] terms_pre.map_id VVr_def[symmetric] if_P[OF isVVr_VVr] asVVr_VVr
+    id_o comp_def[of fst] fst_conv id_def[symmetric] terms_pre.map_id fun_cong[OF meta_eq_to_obj_eq[OF VVr_def[unfolded comp_def, symmetric]]] if_P[OF isVVr_VVr] asVVr_VVr
   apply (rule fun_cong[OF Abs_SSfun_inverse])
   apply (rule iffD2[OF mem_Collect_eq])
   apply assumption
@@ -853,7 +846,7 @@ shows "FFVars_terms (tvsubst f t) \<subseteq> FFVars_terms t \<union> IImsupp f"
 
 lemma not_isVVr_free: "\<not>isVVr (terms_ctor x) \<Longrightarrow> set1_terms_pre x = {}"
   apply (rule \<eta>_compl_free)
-  unfolding isVVr_def VVr_def image_iff Set.bex_simps not_ex
+  unfolding isVVr_def VVr_def image_iff Set.bex_simps not_ex comp_def
   apply (rule allI)
   apply (erule allE)
   apply (rule not_fun_cong)
@@ -983,6 +976,11 @@ lemma FFVars_tvsubst:
     apply (rule UN_cong)
     apply assumption
     done
+  done
+
+lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
+  unfolding IImsupp_def SSupp_VVr_empty UN_empty Un_empty_left
+  apply (rule refl)
   done
 
 lemma tvsubst_VVr_func: "tvsubst VVr t = t"
@@ -1286,13 +1284,13 @@ shows "P x"
 lemmas TT_plain_induct = TT_fresh_induct[OF emp_bound, case_names Var App Abs]
 
 lemma tvsubst_Var: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> tvsubst f (Var x) = f x"
-  unfolding Var_def VVr_def[symmetric]
+  unfolding Var_def fun_cong[OF meta_eq_to_obj_eq[OF VVr_def[unfolded comp_def \<eta>_def, symmetric]]]
   apply (rule tvsubst_VVr)
   apply assumption
   done
 
 lemma VVr_eq_Var: "VVr a = Var a"
-  unfolding VVr_def Var_def
+  unfolding VVr_def Var_def comp_def \<eta>_def
   by (rule refl)
 
 lemma terms_isVVr:
@@ -1343,7 +1341,7 @@ lemma vvsubst_Var: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a 
   apply (rule trans)
    apply (rule terms_cctor)
      apply assumption
-  unfolding \<eta>_set2 noclash_terms_def fun_cong[OF \<eta>_natural[OF _ bij_id supp_id_bound], unfolded comp_def]
+  unfolding \<eta>_def[symmetric] \<eta>_set2 noclash_terms_def fun_cong[OF \<eta>_natural[OF _ bij_id supp_id_bound], unfolded comp_def]
     apply (rule Int_empty_left)+
   apply (rule refl)
   done

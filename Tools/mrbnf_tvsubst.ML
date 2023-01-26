@@ -160,9 +160,10 @@ fun prove_model_axioms binding qualify model lthy =
 fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
   let
     val (_, lthy) = Local_Theory.begin_nested lthy;
-    val mk_def_t = mk_def_t (*false*) true b qualify
-    val ctor = #ctor (#quotient_fp (#fp_result model));
-    val FVarss = #FVars (#quotient_fp (#fp_result model));
+    val mk_def_t = mk_def_t (*false*) true b qualify;
+    val quotient = #quotient_fp (#fp_result model)
+    val ctor = #ctor quotient;
+    val FVarss = #FVars quotient;
     val (preT, qT) = dest_funT (fastype_of ctor);
 
     val (defs, lthy) = @{fold_map 2} (fn eta_opt => fn FVars => fn lthy => let val opt = Option.map (fn (eta, _) =>
@@ -227,55 +228,94 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
       asVVr = morph (#asVVr def) (#aT def)
     })) defs;
 
-  val (defs, lthy) = fold_map (fn def_opt => fn lthy => let val opt = Option.map (fn def =>
-    let
-      val aT = #aT def;
-      fun mk_SSupp_bound f = mk_ordLess (mk_card_of (fst (#SSupp def) $ f)) (
-        mk_card_of (HOLogic.mk_UNIV aT)
-      );
-
-      val SSupp_VVr_empty = Goal.prove_sorry lthy [] []
-        (mk_Trueprop_eq (fst (#SSupp def) $ fst (#VVr def), mk_bot aT))
-        (fn {context=ctxt, ...} => EVERY1 [
-          K (unfold_thms_tac ctxt [snd (#SSupp def)]),
-          rtac ctxt @{thm iffD2[OF set_eq_iff]},
-          rtac ctxt allI,
-          K (unfold_thms_tac ctxt @{thms mem_Collect_eq HOL.simp_thms(6) empty_iff}),
-          rtac ctxt @{thm not_True_eq_False}
-        ]);
-
-      val SSupp_VVr_bound = Goal.prove_sorry lthy [] []
-        (HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (fst (#SSupp def) $ fst (#VVr def))) (
+    val (defs, lthy) = fold_map (fn def_opt => fn lthy => let val opt = Option.map (fn def =>
+      let
+        val aT = #aT def;
+        fun mk_SSupp_bound f = mk_ordLess (mk_card_of (fst (#SSupp def) $ f)) (
           mk_card_of (HOLogic.mk_UNIV aT)
-        )))
-        (fn {context=ctxt, ...} => unfold_thms_tac ctxt [SSupp_VVr_empty] THEN rtac ctxt @{thm emp_bound} 1);
+        );
 
-      val name = Binding.concealed ( (* qualify (Binding.prefix_name "SSupp_" b)) *) Binding.name "SSfun");
-      val (info, lthy) = new_typedef name (HOLogic.mk_Collect ("f", aT --> qT, mk_SSupp_bound (Bound 0)))
-        (fn ctxt => EVERY1 [
-          rtac ctxt exI,
-          rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
-          rtac ctxt SSupp_VVr_bound
-        ]) lthy;
-    in ({
-      aT = aT,
-      VVr = #VVr def,
-      SSupp = #SSupp def,
-      IImsupp = #IImsupp def,
-      isVVr = #isVVr def,
-      asVVr = #asVVr def,
-      SSupp_VVr_empty = SSupp_VVr_empty,
-      SSupp_VVr_bound = SSupp_VVr_bound,
-      SSfun = info
-    }, lthy) end
-  ) def_opt in (Option.map fst opt, the_default lthy (Option.map snd opt)) end) defs lthy;
+        val SSupp_VVr_empty = Goal.prove_sorry lthy [] []
+          (mk_Trueprop_eq (fst (#SSupp def) $ fst (#VVr def), mk_bot aT))
+          (fn {context=ctxt, ...} => EVERY1 [
+            K (unfold_thms_tac ctxt [snd (#SSupp def)]),
+            rtac ctxt @{thm iffD2[OF set_eq_iff]},
+            rtac ctxt allI,
+            K (unfold_thms_tac ctxt @{thms mem_Collect_eq HOL.simp_thms(6) empty_iff}),
+            rtac ctxt @{thm not_True_eq_False}
+          ]);
 
-  val (_, lthy) = Local_Theory.begin_nested lthy;
+        val SSupp_VVr_bound = Goal.prove_sorry lthy [] []
+          (HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (fst (#SSupp def) $ fst (#VVr def))) (
+            mk_card_of (HOLogic.mk_UNIV aT)
+          )))
+          (fn {context=ctxt, ...} => unfold_thms_tac ctxt [SSupp_VVr_empty] THEN rtac ctxt @{thm emp_bound} 1);
 
-  val (defs, lthy) = fold_map (fn def_opt => fn lthy => let val opt = Option.map (fn def =>
-    let
-      val info = snd (#SSfun def)
-    in ({
+        val name = Binding.concealed ( (* qualify (Binding.prefix_name "SSupp_" b)) *) Binding.name "SSfun");
+        val (info, lthy) = new_typedef name (HOLogic.mk_Collect ("f", aT --> qT, mk_SSupp_bound (Bound 0)))
+          (fn ctxt => EVERY1 [
+            rtac ctxt exI,
+            rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
+            rtac ctxt SSupp_VVr_bound
+          ]) lthy;
+      in ({
+        aT = aT,
+        VVr = #VVr def,
+        SSupp = #SSupp def,
+        IImsupp = #IImsupp def,
+        isVVr = #isVVr def,
+        asVVr = #asVVr def,
+        SSupp_VVr_empty = SSupp_VVr_empty,
+        SSupp_VVr_bound = SSupp_VVr_bound,
+        SSfun = info
+      }, lthy) end
+    ) def_opt in (Option.map fst opt, the_default lthy (Option.map snd opt)) end) defs lthy;
+
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+
+    val (defs, (_, lthy)) = fold_map (fn def_opt => fn (i, lthy) => let val opt = Option.map (fn def =>
+      let
+        val aT = #aT def;
+        val info = snd (#SSfun def);
+        val Rep = Const (#Rep_name (fst info), #abs_type (fst info) --> #rep_type (fst info));
+
+        val rename = #rename quotient;
+        val vars = snd (dest_Type (body_type (fastype_of rename)));
+        val fs = map_index (fn (j, x) => if i = j then Bound 1 else HOLogic.id_const x) vars;
+
+        val inv_const = Const (@{const_name inv_into}, HOLogic.mk_setT aT --> (aT --> aT) --> (aT --> aT)) $ HOLogic.mk_UNIV aT;
+        val (compSS, lthy) = mk_def_t "compSS" 2 (Term.abs ("f", aT --> aT) (Term.abs ("p", #abs_type (fst info)) (
+          Const (#Abs_name (fst info), #rep_type (fst info) --> #abs_type (fst info)) $
+            HOLogic.mk_comp (HOLogic.mk_comp (Term.list_comb (rename, fs), Rep $ Bound 0), inv_const $ Bound 1)
+        ))) lthy;
+
+        val (PFVars, lthy) = mk_def_t "PFVars" 1 (Term.abs ("p", #abs_type (fst info)) (fst (#IImsupp def) $ (Rep $ Bound 0))) lthy;
+      in ({
+        aT = aT,
+        VVr = #VVr def,
+        SSupp = #SSupp def,
+        IImsupp = #IImsupp def,
+        isVVr = #isVVr def,
+        asVVr = #asVVr def,
+        SSupp_VVr_empty = #SSupp_VVr_empty def,
+        SSupp_VVr_bound = #SSupp_VVr_bound def,
+        SSfun = #SSfun def,
+        compSS = compSS,
+        PFVars = PFVars
+      }, lthy) end
+    ) def_opt in (Option.map fst opt, (i + 1, the_default lthy (Option.map snd opt))) end) defs (0, lthy);
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    fun morph (t, thm) T =
+      let val t' = Morphism.term phi t
+      in (
+        Term.subst_atomic_types (map TVar (Term.add_tvars t' []) ~~ [T]) t',
+        Morphism.thm phi thm
+      ) end;
+
+    val defs = map (Option.map (fn def => {
       VVr = #VVr def,
       SSupp = #SSupp def,
       IImsupp = #IImsupp def,
@@ -283,12 +323,10 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
       asVVr = #asVVr def,
       SSupp_VVr_empty = #SSupp_VVr_empty def,
       SSupp_VVr_bound = #SSupp_VVr_bound def,
-      SSfun = #SSfun def
-    }, lthy) end
-  ) def_opt in (Option.map fst opt, the_default lthy (Option.map snd opt)) end) defs lthy;
-
-  val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-  val phi = Proof_Context.export_morphism old_lthy lthy;
+      SSfun = #SSfun def,
+      compSS = morph (#compSS def) (#aT def),
+      PFVars = morph (#PFVars def) (#aT def)
+    })) defs;
 
   in (defs, lthy) end;
 

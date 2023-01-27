@@ -707,6 +707,48 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       } end
     )) fs rrename_VVrs defs;
 
+    val model_axioms = {
+     small_avoiding_sets = replicate (length fs) (fn ctxt => rtac ctxt @{thm emp_bound} 1),
+     Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
+     Umap_comp0 = fn ctxt => rtac ctxt (#rename_comp0 quotient RS sym) 1 THEN ALLGOALS (assume_tac ctxt),
+     Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+     UFVars_Umap = map (fn thm => fn ctxt => rtac ctxt thm 1 THEN ALLGOALS (assume_tac ctxt)) (#FVars_renames quotient),
+     Umap_Uctor = fn ctxt => print_tac ctxt "Umap_Uctor",
+     UFVars_subsets = map (fn FVars => fn ctxt => print_tac ctxt "UFVars_subset") (#FVars quotient)
+    };
+
+    val parameter_axioms = {
+      Pmap_id0 = fn ctxt => print_tac ctxt "Pmap_id0",
+      Pmap_comp0 = fn ctxt => print_tac ctxt "Pmap_comp0",
+      Pmap_cong_id = fn ctxt => print_tac ctxt "Pmap_cong_id",
+      PFVars_Pmaps = [fn ctxt => print_tac ctxt "PFVars_Pmaps"],
+      small_PFVarss = [fn ctxt => print_tac ctxt "small_PFVarss"]
+    };
+
+    val some_defs = map_filter I defs;
+    val P_Ts = map (#abs_type o fst o #SSfun) some_defs;
+    val (ps, _) = lthy
+      |> mk_Frees "p" P_Ts;
+    val rec_model = {
+      fp_result = #fp_result model,
+      U = #T quotient,
+      UFVars = map (fn FVars => Term.abs ("t", #T quotient) FVars) (#FVars quotient),
+      Umap = fold_rev Term.absfree (map dest_Free fs) (Term.list_comb (#rename quotient, fs)),
+      Uctor = fst CCTOR,
+      avoiding_sets = map mk_bot vars,
+      parameters = {
+        P = HOLogic.mk_tupleT P_Ts,
+        PFVarss = map2 (fn p => fn def => mk_case_tuple (map dest_Free ps) (fst (#PFVars def) $ p)) ps some_defs,
+        Pmap = fold_rev Term.absfree (map dest_Free fs) (mk_case_tuple (map dest_Free ps) (
+          HOLogic.mk_tuple (@{map 3} (fn f => fn p => fn def => fst (#compSS def) $ f $ p) fs ps some_defs)
+        )),
+        axioms = parameter_axioms
+      },
+      axioms = model_axioms
+    } : (Proof.context -> tactic) MRBNF_Recursor.model;
+
+    val (rec_res, lthy) = MRBNF_Recursor.create_binding_recursor qualify rec_model b lthy;
+
     (* TODO: Remove *)
     val notes =
       [("SSupp_VVr_empty", map_filter (Option.map #SSupp_VVr_empty) defs),
@@ -720,7 +762,10 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
        ("SSupp_comp_bound", map_filter (Option.map #SSupp_comp_bound) SSupp_comps),
        ("SSupp_comp_rename_subset", map_filter (Option.map #SSupp_comp_rename_subset) SSupp_comps),
        ("SSupp_comp_rename_bound", map_filter (Option.map #SSupp_comp_rename_bound) SSupp_comps),
-       ("IImsupp_comp_image", map_filter (Option.map #IImsupp_comp_image) SSupp_comps)
+       ("IImsupp_comp_image", map_filter (Option.map #IImsupp_comp_image) SSupp_comps),
+       ("tvsubst_swap", [#rec_swap rec_res]),
+       ("tvsubst_UFVars", #rec_UFVarss rec_res),
+       ("tvsubst_Uctor", [#rec_Uctor rec_res])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])
       ));

@@ -50,7 +50,8 @@ sig
     -> local_theory -> ((term * thm) list * local_theory);
 
   val mk_int_empty: term * term -> term;
-  val chop_f_prems: thm list -> thm list list;
+  val chop_f_prems: 'a list -> 'a list list;
+  val every_other: 'a list -> 'a list;
   val mk_supp_bound: term -> term;
 
   val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
@@ -645,6 +646,10 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
   in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,
     morph f, map morph pick0s, morph f0, morph ff0, morph noclash, morph nnoclash, morph XXl,
     morph XXr), lthy) end;
+
+fun every_other [] = []
+  | every_other [x] = [x]
+  | every_other (x::_::xs) = x::every_other xs
 
 fun create_binding_recursor qualify model ff0_b lthy =
   let
@@ -1290,10 +1295,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
                   ]
                 ]
               ];
-
-              fun every_other [] = []
-                | every_other [x] = [x]
-                | every_other (x::_::xs) = x::every_other xs
 
               val imsupp_tac = EVERY' [
                 SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),

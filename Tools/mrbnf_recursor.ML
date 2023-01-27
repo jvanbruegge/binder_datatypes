@@ -497,7 +497,6 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
       | mk_is_bound xs [] = replicate (length xs) false
       | mk_is_bound (x::xs) (y::ys) = if member (op=) y x
             then true::mk_is_bound xs ys else false::mk_is_bound xs (y::ys);
-    val is_bound = mk_is_bound (0 upto live - 1) (#binding_relation fp_result);
 
     val (f, lthy) =
       let

@@ -171,63 +171,6 @@ in lthy end
 \<close>
 print_theorems
 
-(* Parameter axioms *)
-lemma isVVr_rename:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "isVVr (rrename_terms f x) \<longleftrightarrow> isVVr x"
-  unfolding isVVr_def
-  apply (rule iffI)
-   apply (erule exE)
-   apply (rule exI[of _ "inv f _"])
-  unfolding rrename_VVr[OF bij_imp_bij_inv[OF assms(1)] supp_inv_bound[OF assms], symmetric]
-   terms.rrename_inv_simps[OF assms, symmetric]
-   apply (rule iffD2[OF bij_inv_rev])
-    apply (rule terms.rrename_bijs[OF assms])
-   apply (rule sym)
-   apply assumption
-  apply (erule exE)
-  apply (rule exI[of _ "f _"])
-  unfolding rrename_VVr[OF assms, symmetric]
-  apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-  apply (rule refl)
-  done
-
-lemma asVVr_rename:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|" "isVVr x"
-  shows "asVVr (rrename_terms f x) = f (asVVr x)"
-  unfolding asVVr_def isVVr_rename[OF assms(1,2)] if_P[OF assms(3)] comp_def
-    VVr_def bij_inv_rev[OF terms.rrename_bijs[OF assms(1,2)], symmetric]
-    terms.rrename_inv_simps[OF assms(1,2)] terms.rrename_cctors[OF bij_imp_bij_inv[OF assms(1)] supp_inv_bound[OF assms(1,2)]]
-    fun_cong[OF \<eta>_natural[OF supp_inv_bound[OF assms(1,2)] bij_imp_bij_inv[OF assms(1)] supp_inv_bound[OF assms(1,2)], unfolded comp_def]]
-  apply (rule some_equality)
-  unfolding inv_simp1[OF assms(1)]
-   apply (rule sym)
-   apply (rule exE[OF assms(3)[unfolded isVVr_def VVr_def comp_def]])
-   apply (rule someI)
-   apply (rule sym)
-   apply assumption
-  apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-  unfolding fun_cong[OF meta_eq_to_obj_eq[OF VVr_def[unfolded comp_def, symmetric]]]
-  apply (rule iffD1[OF bij_inv_rev[OF assms(1)]])
-  apply (rule VVr_inj)
-  apply (rule someI)
-  apply (rule refl)
-  done
-
-lemma asVVr_VVr: "asVVr (VVr a) = a"
-  unfolding asVVr_def isVVr_def
-  apply (rule trans)
-   apply (rule if_P)
-   apply (rule exI)
-   apply (rule refl)
-  apply (rule some_equality)
-   apply (rule refl)
-  apply (rule VVr_inj)
-  apply assumption
-  done
-
 (* CCTOR axioms *)
 abbreviation PUmap where "PUmap f t pu \<equiv> \<lambda>p. rrename_terms f (pu (compSS (inv f) p))"
 lemma Umap_Uctor:

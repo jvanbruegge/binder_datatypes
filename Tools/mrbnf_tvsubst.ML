@@ -792,14 +792,93 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       small_PFVarss = replicate nvars small_PFVars_tac
     };
 
+    val VVr_thms = @{map 4} (fn rrename_VVr => fn VVr_inj => fn f => Option.map (fn def =>
+      let
+        val x = Free ("x", #T quotient);
+        val goal = mk_Trueprop_eq (
+          fst (#isVVr def) $ (Term.list_comb (#rename quotient, fs) $ x),
+          fst (#isVVr def) $ x
+        );
+        val isVVr_rename = Goal.prove_sorry lthy (names (fs @ [x])) (flat f_premss) goal (fn {context=ctxt, prems} => EVERY1 [
+          K (unfold_thms_tac ctxt [snd (#isVVr def)]),
+          rtac ctxt iffI,
+          etac ctxt exE,
+          dtac ctxt (mk_arg_cong ctxt (Term.list_comb (#rename quotient, map mk_inv fs))),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_asm_tac ctxt [0] [@{thm inv_o_simp1}, #rename_comp quotient, the rrename_VVr],
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems)
+          ],
+          K (unfold_thms_tac ctxt [#rename_id quotient]),
+          rtac ctxt exI,
+          assume_tac ctxt,
+          etac ctxt exE,
+          hyp_subst_tac ctxt,
+          EqSubst.eqsubst_tac ctxt [0] [the rrename_VVr],
+          REPEAT_DETERM o resolve_tac ctxt prems,
+          rtac ctxt exI,
+          rtac ctxt refl
+        ]);
+
+        val goal = Logic.mk_implies (
+          HOLogic.mk_Trueprop (fst (#isVVr def) $ x),
+          mk_Trueprop_eq (
+            fst (#asVVr def) $ (Term.list_comb (#rename quotient, fs) $ x),
+            f $ (fst (#asVVr def) $ x)
+          )
+        );
+        val asVVr_rename = Goal.prove_sorry lthy (names (fs @ [x])) (flat f_premss) goal (fn {context=ctxt, prems} => EVERY1 [
+          K (unfold_thms_tac ctxt (@{thms if_P} @ [snd (#asVVr def), isVVr_rename OF prems])),
+          K (unfold_thms_tac ctxt [snd (#isVVr def)]),
+          etac ctxt exE,
+          hyp_subst_tac ctxt,
+          EqSubst.eqsubst_tac ctxt [0] [the rrename_VVr],
+          REPEAT_DETERM o resolve_tac ctxt prems,
+          rtac ctxt trans,
+          rtac ctxt @{thm some_equality},
+          rtac ctxt refl,
+          rtac ctxt (the VVr_inj),
+          assume_tac ctxt,
+          rtac ctxt (mk_arg_cong ctxt f),
+          rtac ctxt sym,
+          rtac ctxt @{thm some_equality},
+          rtac ctxt refl,
+          rtac ctxt (the VVr_inj),
+          assume_tac ctxt
+        ]);
+
+        val a = Free ("a", #aT def)
+        val asVVr_VVr = Goal.prove_sorry lthy (names [a]) []
+          (mk_Trueprop_eq (fst (#asVVr def) $ (fst (#VVr def) $ a), a))
+          (fn {context=ctxt, ...} => EVERY1 [
+            K (unfold_thms_tac ctxt [snd (#asVVr def), snd (#isVVr def)]),
+            rtac ctxt trans,
+            rtac ctxt @{thm if_P},
+            rtac ctxt exI,
+            rtac ctxt refl,
+            rtac ctxt @{thm some_equality},
+            rtac ctxt refl,
+            rtac ctxt (the VVr_inj),
+            assume_tac ctxt
+          ]);
+      in {
+        isVVr_rename = isVVr_rename,
+        asVVr_rename = asVVr_rename,
+        asVVr_VVr = asVVr_VVr
+      } end
+    )) rrename_VVrs VVr_injs fs defs;
+
+    fun Umap_Uctor_tac ctxt = EVERY1 [
+      K (print_tac ctxt "Umap_Uctor")
+    ];
+
     val model_axioms = {
-     small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1),
-     Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
-     Umap_comp0 = fn ctxt => rtac ctxt (#rename_comp0 quotient RS sym) 1 THEN ALLGOALS (assume_tac ctxt),
-     Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-     UFVars_Umap = map (fn thm => fn ctxt => rtac ctxt thm 1 THEN ALLGOALS (assume_tac ctxt)) (#FVars_renames quotient),
-     Umap_Uctor = fn ctxt => print_tac ctxt "Umap_Uctor",
-     UFVars_subsets = map (fn FVars => fn ctxt => print_tac ctxt "UFVars_subset") (#FVars quotient)
+      small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1),
+      Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
+      Umap_comp0 = fn ctxt => rtac ctxt (#rename_comp0 quotient RS sym) 1 THEN ALLGOALS (assume_tac ctxt),
+      Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+      UFVars_Umap = map (fn thm => fn ctxt => rtac ctxt thm 1 THEN ALLGOALS (assume_tac ctxt)) (#FVars_renames quotient),
+      Umap_Uctor = Umap_Uctor_tac,
+      UFVars_subsets = map (fn FVars => fn ctxt => print_tac ctxt "UFVars_subset") (#FVars quotient)
     };
 
     val P_Ts = map (#abs_type o fst o #SSfun) some_defs;

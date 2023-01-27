@@ -377,25 +377,30 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val (eta_defs, model, lthy) = prove_model_axioms b qualify model lthy;
     val (CCTOR, defs, vars, lthy) = define_tvsubst_consts b qualify model lthy;
 
+    val nvars = length vars;
     val mrbnf = #pre_mrbnf (#fp_result model);
     val quotient = #quotient_fp (#fp_result model);
 
-    val defs = map2 (fn (SOME axiom) => (fn SOME def => SOME {
-      eta = fst axiom,
-      axioms = snd axiom,
-      aT = #aT def,
-      VVr = #VVr def,
-      SSupp = #SSupp def,
-      IImsupp = #IImsupp def,
-      isVVr = #isVVr def,
-      asVVr = #asVVr def,
-      SSupp_VVr_empty = #SSupp_VVr_empty def,
-      SSupp_VVr_bound = #SSupp_VVr_bound def,
-      SSfun = snd (#SSfun def),
-      compSS = #compSS def,
-      PFVars = #PFVars def,
-      mk_SSupp_bound = #mk_SSupp_bound def
-    } | NONE => NONE) | NONE => fn _ => NONE) (#etas model) defs;
+    val defs = map2 (fn (SOME axiom) => (fn SOME def =>
+      let val info = fst (snd (#SSfun def));
+      in SOME {
+        eta = fst axiom,
+        axioms = snd axiom,
+        aT = #aT def,
+        VVr = #VVr def,
+        SSupp = #SSupp def,
+        IImsupp = #IImsupp def,
+        isVVr = #isVVr def,
+        asVVr = #asVVr def,
+        SSupp_VVr_empty = #SSupp_VVr_empty def,
+        SSupp_VVr_bound = #SSupp_VVr_bound def,
+        SSfun = snd (#SSfun def),
+        compSS = #compSS def,
+        PFVars = #PFVars def,
+        mk_SSupp_bound = #mk_SSupp_bound def,
+        Abs = Const (#Abs_name info, #rep_type info --> #abs_type info),
+        Rep = Const (#Rep_name info, #abs_type info --> #rep_type info)
+      } end | NONE => NONE) | NONE => fn _ => NONE) (#etas model) defs;
 
     val VVr_injs = map (Option.map (fn def =>
       let
@@ -556,7 +561,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         assume_tac ctxt,
         resolve_tac ctxt prems
       ]) end
-    )) fs f_premss rrename_VVrs in_IImsupps IImsupp_VVrs (0 upto length fs - 1) defs;
+    )) fs f_premss rrename_VVrs in_IImsupps IImsupp_VVrs (0 upto nvars - 1) defs;
 
     val SSupp_comps = @{map 3} (fn f => fn rrename_VVr => Option.map (fn def =>
       let
@@ -627,12 +632,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
 
         val absT = #abs_type (fst (#SSfun def));
         val p = Free ("p", absT);
-        val Rep = Const (#Rep_name (fst (#SSfun def)), absT --> #rep_type (fst (#SSfun def)));
         val IImsupp_comp_image = Goal.prove_sorry lthy (names (fs @ [p])) (flat f_premss) (mk_Trueprop_eq (
           fst (#IImsupp def) $ HOLogic.mk_comp (HOLogic.mk_comp (
-            Term.list_comb (#rename quotient, fs), Rep $ p), mk_inv f
+            Term.list_comb (#rename quotient, fs), #Rep def $ p), mk_inv f
           ),
-          mk_image f $ (fst (#IImsupp def) $ (Rep $ p))
+          mk_image f $ (fst (#IImsupp def) $ (#Rep def $ p))
         )) (fn {context=ctxt, prems} => EVERY1 [
           K (unfold_thms_tac ctxt (@{thms image_Un image_UN comp_def}
             @ map (fn thm => thm OF prems RS sym) (#FVars_renames quotient)
@@ -707,8 +711,89 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       } end
     )) fs rrename_VVrs defs;
 
+    val some_defs = map_filter I defs;
+
+    fun Pmap_comp0_tac ctxt = EVERY1 [
+      K (unfold_thms_tac ctxt (map (snd o #compSS) some_defs)),
+      REPEAT_DETERM o EVERY' [
+        EqSubst.eqsubst_tac ctxt [0] (@{thms o_inv_distrib} @ [#rename_comp0 quotient RS sym]),
+        REPEAT_DETERM o assume_tac ctxt
+      ],
+      rtac ctxt ext,
+      rtac ctxt sym,
+      rtac ctxt @{thm trans[OF comp_apply]},
+      resolve_tac ctxt (map (mk_arg_cong ctxt o #Abs) some_defs),
+      K (unfold_thms_tac ctxt @{thms comp_assoc}),
+      rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<circ>)"]},
+      rtac ctxt trans,
+      rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
+      resolve_tac ctxt (map (#Abs_inverse o snd o #SSfun) some_defs),
+      rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
+      resolve_tac ctxt (map_filter (Option.map #SSupp_comp_rename_bound) SSupp_comps),
+      resolve_tac ctxt (map_filter (Option.map #SSupp_comp_bound) SSupp_comps),
+      resolve_tac ctxt (map (fn def => @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd (#SSfun def))]) some_defs),
+      REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm supp_inv_bound}),
+      K (unfold_thms_tac ctxt @{thms comp_assoc[symmetric]}),
+      rtac ctxt refl
+    ];
+
+    fun Pmap_cong_id_tac ctxt = EVERY1 [
+      K (unfold_thms_tac ctxt (map (snd o #compSS) some_defs @ map (snd o #PFVars) some_defs)),
+      rtac ctxt trans,
+      resolve_tac ctxt (map (mk_arg_cong ctxt o #Abs) some_defs),
+      rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
+      resolve_tac ctxt (map_filter I IImsupp_imsupp_rrename_commutes),
+      rtac ctxt @{thm iffD2[OF disjoint_iff]},
+      rtac ctxt allI,
+      rtac ctxt impI,
+      rtac ctxt @{thm bij_id_imsupp},
+      assume_tac ctxt,
+      Goal.assume_rule_tac ctxt,
+      REPEAT_DETERM o assume_tac ctxt,
+      K (unfold_thms_tac ctxt @{thms comp_assoc}),
+      EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp2},
+      assume_tac ctxt,
+      K (unfold_thms_tac ctxt @{thms o_id}),
+      resolve_tac ctxt (map (#Rep_inverse o snd o #SSfun) some_defs)
+    ];
+
+    fun PFVars_Pmap_tac ctxt = EVERY1 [
+      K (unfold_thms_tac ctxt (map (snd o #compSS) some_defs @ map (snd o #PFVars) some_defs)),
+      rtac ctxt trans,
+      resolve_tac ctxt (map (mk_arg_cong ctxt o fst o #IImsupp) some_defs),
+      resolve_tac ctxt (map (#Abs_inverse o snd o #SSfun) some_defs),
+      rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
+      resolve_tac ctxt (map_filter (Option.map #SSupp_comp_bound) SSupp_comps),
+      resolve_tac ctxt (map_filter (Option.map #SSupp_comp_rename_bound) SSupp_comps),
+      resolve_tac ctxt (map (fn def => @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd (#SSfun def))]) some_defs),
+      REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm supp_inv_bound}),
+      resolve_tac ctxt (map_filter (Option.map #IImsupp_comp_image) SSupp_comps),
+      REPEAT_DETERM o assume_tac ctxt
+    ];
+
+    fun small_PFVars_tac ctxt = EVERY1 [
+      K (unfold_thms_tac ctxt (@{thms comp_def} @ map (snd o #IImsupp) some_defs @ map (snd o #PFVars) some_defs)),
+      rtac ctxt (MRBNF_Def.Un_bound_of_mrbnf mrbnf),
+      resolve_tac ctxt (map (fn def => @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd (#SSfun def))]) some_defs),
+      rtac ctxt (MRBNF_Def.UNION_bound_of_mrbnf mrbnf),
+      resolve_tac ctxt (map (fn def => @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd (#SSfun def))]) some_defs),
+      resolve_tac ctxt (#card_of_FVars_bound_UNIVs quotient)
+    ];
+
+    val parameter_axioms = {
+      Pmap_id0 = fn ctxt => unfold_thms_tac ctxt (@{thms inv_id id_o o_id id_def[symmetric]}
+        @ map (snd o #compSS) some_defs
+        @ map (#Rep_inverse o snd o #SSfun) some_defs
+        @ [#rename_id0 quotient]
+      ) THEN rtac ctxt refl 1,
+      Pmap_comp0 = Pmap_comp0_tac,
+      Pmap_cong_id = Pmap_cong_id_tac,
+      PFVars_Pmaps = replicate nvars PFVars_Pmap_tac,
+      small_PFVarss = replicate nvars small_PFVars_tac
+    };
+
     val model_axioms = {
-     small_avoiding_sets = replicate (length fs) (fn ctxt => rtac ctxt @{thm emp_bound} 1),
+     small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1),
      Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
      Umap_comp0 = fn ctxt => rtac ctxt (#rename_comp0 quotient RS sym) 1 THEN ALLGOALS (assume_tac ctxt),
      Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
@@ -717,23 +802,15 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
      UFVars_subsets = map (fn FVars => fn ctxt => print_tac ctxt "UFVars_subset") (#FVars quotient)
     };
 
-    val parameter_axioms = {
-      Pmap_id0 = fn ctxt => print_tac ctxt "Pmap_id0",
-      Pmap_comp0 = fn ctxt => print_tac ctxt "Pmap_comp0",
-      Pmap_cong_id = fn ctxt => print_tac ctxt "Pmap_cong_id",
-      PFVars_Pmaps = [fn ctxt => print_tac ctxt "PFVars_Pmaps"],
-      small_PFVarss = [fn ctxt => print_tac ctxt "small_PFVarss"]
-    };
-
-    val some_defs = map_filter I defs;
     val P_Ts = map (#abs_type o fst o #SSfun) some_defs;
     val (ps, _) = lthy
       |> mk_Frees "p" P_Ts;
+
     val rec_model = {
       fp_result = #fp_result model,
       U = #T quotient,
       UFVars = map (fn FVars => Term.abs ("t", #T quotient) FVars) (#FVars quotient),
-      Umap = fold_rev Term.absfree (map dest_Free fs) (Term.list_comb (#rename quotient, fs)),
+      Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", #T quotient) (Term.list_comb (#rename quotient, fs))),
       Uctor = fst CCTOR,
       avoiding_sets = map mk_bot vars,
       parameters = {

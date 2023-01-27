@@ -399,59 +399,8 @@ lemma UFVars_Uctor:
     apply assumption
     done
 
-local_setup \<open>fn lthy =>
-let
-  val res = the (MRBNF_FP_Def_Sugar.fp_result_of lthy ("STLC." ^ name))
-  fun rtac ctxt = resolve_tac ctxt o single
 
-  val model_axioms = {
-   small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
-   Umap_id0 = fn ctxt => rtac ctxt @{thm terms.rrename_id0s} 1,
-   Umap_comp0 = fn ctxt => rtac ctxt @{thm terms.rrename_comp0s[symmetric]} 1 THEN ALLGOALS (assume_tac ctxt),
-   Umap_cong_id = fn ctxt => rtac ctxt @{thm terms.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-   UFVars_Umap = [fn ctxt => rtac ctxt @{thm terms.FFVars_rrenames} 1 THEN ALLGOALS (assume_tac ctxt)],
-   Umap_Uctor = fn ctxt => rtac ctxt @{thm Umap_Uctor} 1 THEN ALLGOALS (assume_tac ctxt),
-   UFVars_subsets = [fn ctxt => Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms Un_empty_right} THEN rtac ctxt @{thm UFVars_Uctor} 1 THEN Goal.assume_rule_tac ctxt 1 THEN assume_tac ctxt 1]
-  };
-
-  val parameter_axioms = {
-    Pmap_id0 = fn ctxt => rtac ctxt @{thm compSS_id0} 1,
-    Pmap_comp0 = fn ctxt => rtac ctxt @{thm compSS_comp0} 1 THEN ALLGOALS (assume_tac ctxt),
-    Pmap_cong_id = fn ctxt => rtac ctxt @{thm compSS_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    PFVars_Pmaps = [fn ctxt => rtac ctxt @{thm PFVars_compSS} 1 THEN ALLGOALS (assume_tac ctxt)],
-    small_PFVarss = [fn ctxt => rtac ctxt @{thm small_PFVars} 1]
-  };
-
-  val model = {
-    fp_result = res,
-    U = @{typ "'a::var_terms_pre terms"},
-    UFVars = [@{term "\<lambda>(_::'a terms). FFVars_terms :: _ \<Rightarrow> 'a::var_terms_pre set"}],
-    Umap = @{term "\<lambda>(f::'a::var_terms_pre \<Rightarrow> 'a) (_::'a terms). rrename_terms f"},
-    Uctor = @{term "CCTOR :: _ \<Rightarrow> _ \<Rightarrow> 'a::var_terms_pre terms"},
-    avoiding_sets = [@{term "{} :: 'a::var_terms_pre set"}],
-    parameters = {
-      P = @{typ "'a::var_terms_pre SSfun"},
-      PFVarss = [@{term "PFVars :: _ \<Rightarrow> 'a::var_terms_pre set"}],
-      Pmap = @{term "compSS :: _ \<Rightarrow> _ \<Rightarrow> 'a::var_terms_pre SSfun"},
-      axioms = parameter_axioms
-    },
-    axioms = model_axioms
-  } : (Proof.context -> tactic) MRBNF_Recursor.model;
-
-  val (rec_res, lthy) = MRBNF_Recursor.create_binding_recursor (Binding.prefix_name "tv") model @{binding tvsubst} lthy
-  val _ = @{print} rec_res
-  val notes =
-    [("tvsubst_swap", [#rec_swap rec_res]),
-     ("tvsubst_UFVars", #rec_UFVarss rec_res),
-     ("tvsubst_Uctor", [#rec_Uctor rec_res])
-    ] |> (map (fn (thmN, thms) =>
-      (((Binding.name thmN), []), [(thms, [])])
-    ));
-  val (noted, lthy) = Local_Theory.notes notes lthy
-in lthy end
-\<close>
-print_theorems
-
+(* after recursor *)
 definition tvsubst :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a terms \<Rightarrow> 'a terms" where
   "tvsubst f x \<equiv> tvff0_tvsubst x (Abs_SSfun f)"
 

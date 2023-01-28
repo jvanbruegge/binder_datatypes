@@ -335,7 +335,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
             val A = nth (map fst avoiding_sets) i
             val recSets = map_filter (fn (MRBNF_Def.Live_Var, x) => SOME (x $ y) | _ => NONE) mrbnf_sets;
             val recSets_Un = fold (fn a => fn b => mk_Un (b, a)) (tl recSets) (hd recSets);
-          in fold_rev Logic.all (fs @ [t, y, p]) (fold_rev (fn a => fn b => Logic.implies $ a $ b) [
+          in fold_rev Logic.all [t, y, p] (fold_rev (fn a => fn b => Logic.implies $ a $ b) [
               mk_Trueprop_eq (
                 mk_Int (topBind i $ y, HOLogic.mk_binop @{const_name sup} (nth (map fst PFVars) i $ p, A)),
                 Const (@{const_name bot}, HOLogic.mk_setT (nth vars i))

@@ -50,7 +50,9 @@ sig
     -> local_theory -> ((term * thm) list * local_theory);
 
   val mk_int_empty: term * term -> term;
-  val chop_f_prems: thm list -> thm list list;
+  val chop_f_prems: 'a list -> 'a list list;
+  val every_other: 'a list -> 'a list;
+  val mk_supp_bound: term -> term;
 
   val create_binding_recursor: (binding -> binding) -> (Proof.context -> tactic) model -> binding
     -> local_theory -> recursor_result * local_theory;
@@ -333,7 +335,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
             val A = nth (map fst avoiding_sets) i
             val recSets = map_filter (fn (MRBNF_Def.Live_Var, x) => SOME (x $ y) | _ => NONE) mrbnf_sets;
             val recSets_Un = fold (fn a => fn b => mk_Un (b, a)) (tl recSets) (hd recSets);
-          in fold_rev Logic.all (fs @ [t, y, p]) (fold_rev (fn a => fn b => Logic.implies $ a $ b) [
+          in fold_rev Logic.all [t, y, p] (fold_rev (fn a => fn b => Logic.implies $ a $ b) [
               mk_Trueprop_eq (
                 mk_Int (topBind i $ y, HOLogic.mk_binop @{const_name sup} (nth (map fst PFVars) i $ p, A)),
                 Const (@{const_name bot}, HOLogic.mk_setT (nth vars i))
@@ -495,7 +497,6 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
       | mk_is_bound xs [] = replicate (length xs) false
       | mk_is_bound (x::xs) (y::ys) = if member (op=) y x
             then true::mk_is_bound xs ys else false::mk_is_bound xs (y::ys);
-    val is_bound = mk_is_bound (0 upto live - 1) (#binding_relation fp_result);
 
     val (f, lthy) =
       let
@@ -644,6 +645,10 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
   in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,
     morph f, map morph pick0s, morph f0, morph ff0, morph noclash, morph nnoclash, morph XXl,
     morph XXr), lthy) end;
+
+fun every_other [] = []
+  | every_other [x] = [x]
+  | every_other (x::_::xs) = x::every_other xs
 
 fun create_binding_recursor qualify model ff0_b lthy =
   let
@@ -1289,10 +1294,6 @@ fun create_binding_recursor qualify model ff0_b lthy =
                   ]
                 ]
               ];
-
-              fun every_other [] = []
-                | every_other [x] = [x]
-                | every_other (x::_::xs) = x::every_other xs
 
               val imsupp_tac = EVERY' [
                 SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),

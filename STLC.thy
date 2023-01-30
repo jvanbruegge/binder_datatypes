@@ -176,55 +176,6 @@ in lthy end
 print_theorems
 
 (* after recursor *)
-definition tvsubst :: "('a::var_terms_pre \<Rightarrow> 'a terms) \<Rightarrow> 'a terms \<Rightarrow> 'a terms" where
-  "tvsubst f x \<equiv> tvff0_tvsubst x (Abs_SSfun f)"
-
-lemma isVVr_VVr: "isVVr (VVr x)"
-  unfolding isVVr_def
-  apply (rule exI)
-  apply (rule refl)
-  done
-
-lemma FVars_VVr: "FFVars_terms (VVr a) = {a}"
-  unfolding VVr_def terms.FFVars_cctors \<eta>_set2 \<eta>_set3 \<eta>_set4 UN_empty Diff_empty Un_empty_right comp_def
-  apply (rule \<eta>_free)
-  done
-
-lemma tvsubst_VVr: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> tvsubst f (VVr x) = f x"
-  unfolding tvsubst_def VVr_def comp_def
-  apply (rule trans)
-   apply (rule tvsubst_Uctor)
-    apply (rule trans[OF arg_cong2[OF \<eta>_set2 refl, of "(\<inter>)"]])
-    apply (rule Int_empty_left)
-  unfolding tvnoclash_terms_def
-   apply (rule trans[OF arg_cong2[OF \<eta>_set2 refl, of "(\<inter>)"]])
-   apply (rule Int_empty_left)
-  unfolding CCTOR_def terms_pre.map_comp[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound]
-    id_o comp_def[of fst] fst_conv id_def[symmetric] terms_pre.map_id fun_cong[OF meta_eq_to_obj_eq[OF VVr_def[unfolded comp_def, symmetric]]] if_P[OF isVVr_VVr] asVVr_VVr
-  apply (rule fun_cong[OF Abs_SSfun_inverse])
-  apply (rule iffD2[OF mem_Collect_eq])
-  apply assumption
-  done
-
-lemma tvsubst_cctor_not_isVVr: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> set2_terms_pre x \<inter> IImsupp f = {} \<Longrightarrow> tvnoclash_terms x \<Longrightarrow>
-  \<not>isVVr (terms_ctor x) \<Longrightarrow> tvsubst f (terms_ctor x) = terms_ctor (map_terms_pre id id (tvsubst f) (tvsubst f) x)"
-  unfolding tvsubst_def
-  apply (rule trans)
-   apply (rule tvsubst_Uctor)
-  unfolding PFVars_def Un_empty_right
-    apply (rule trans[OF arg_cong2[OF refl, of _ _ "(\<inter>)"]])
-     apply (rule arg_cong[of _ _ IImsupp])
-     apply (rule Abs_SSfun_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply assumption
-    apply assumption
-   apply assumption
-  unfolding CCTOR_def terms_pre.map_comp[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound]
-    id_o comp_def[of fst] fst_conv id_def[symmetric] terms_pre.map_id if_not_P
-  unfolding comp_def snd_conv
-  apply (rule refl)
-  done
-
 lemma not_isVVr_free: "\<not>isVVr (terms_ctor x) \<Longrightarrow> set1_terms_pre x = {}"
   apply (rule \<eta>_compl_free)
   unfolding isVVr_def VVr_def image_iff Set.bex_simps not_ex comp_def
@@ -320,10 +271,14 @@ lemma FFVars_tvsubst:
       apply (rule arg_cong[of _ _ "\<lambda>x. FFVars_terms (tvsubst f x)"])
       apply assumption
     unfolding tvsubst_VVr[OF assms]
-    subgoal premises prems for a
-      unfolding prems(6) FVars_VVr UN_single
-      apply (rule refl)
-      done
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule arg_cong[of _ _ "\<lambda>x. \<Union>(_ ` x)"])
+      apply (rule arg_cong[of _ _ FFVars_terms])
+      apply assumption
+     apply (unfold FVars_VVr UN_single)
+     apply (rule refl)
+
     apply (rule trans)
      apply (rule arg_cong[of _ _ FFVars_terms])
      apply (rule tvsubst_cctor_not_isVVr)

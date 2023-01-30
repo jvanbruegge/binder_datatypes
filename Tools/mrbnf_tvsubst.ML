@@ -1056,6 +1056,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
 
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
 
+    val free = MRBNF_Def.free_of_mrbnf mrbnf;
+    val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
+    val n = live + free + bound;
     val eta_set_empties = map (Option.map (fn def =>
       let
         val args = (snd o dest_Type o snd o dest_funT o fastype_of o #eta) def;
@@ -1064,9 +1067,6 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
            | (MRBNF_Def.Bound_Var, x) => (fn (a, b, c) => (a, x::b, c))
            | (MRBNF_Def.Free_Var, x) => (fn (a, b, c) => (a, b, x::c))
         ) (var_types ~~ args) ([], [], []);
-        val free = MRBNF_Def.free_of_mrbnf mrbnf;
-        val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
-        val n = live + free + bound;
         val sets = MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
           (replicate n live_args) (replicate n bound_args) (replicate n free_args) mrbnf;
         val sets' = filter ((curry (op<>) (#aT def)) o HOLogic.dest_setT o snd o dest_funT o fastype_of o snd) (var_types ~~ sets);
@@ -1125,28 +1125,122 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       ) sets' end
     )) defs;
 
+    val FVars_VVrs = @{map 3} (fn FVars => fn set_empties => Option.map (fn def =>
+      let val a = Free ("a", #aT def);
+      in Goal.prove_sorry lthy (names [a]) [] (mk_Trueprop_eq (FVars $ (fst (#VVr def) $ a), mk_singleton a)) (fn {context=ctxt,...} =>
+        unfold_thms_tac ctxt (@{thms comp_def UN_empty Diff_empty Un_empty_right}
+          @ #FVars_ctors quotient @ [snd (#VVr def)] @ the set_empties
+        ) THEN rtac ctxt (#eta_free (#axioms def)) 1
+      ) end
+    )) (#FVars quotient) eta_set_empties defs;
+
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+
+    val fs' = map2 (fn f =>
+      let val (name, T) = dest_Free f;
+      in Option.map (K (Free (name, fst (dest_funT T) --> #T quotient))) end
+    ) fs defs;
+    val some_fs' = map_filter I fs';
+    val (tvsubst, lthy) = mk_def_t true Binding.empty I (Binding.name_of b) (length some_defs + 1)
+      (fold_rev Term.absfree (map dest_Free some_fs') (Term.abs ("x", #T quotient) (
+        Term.list_comb (#rec_fun rec_res $ Bound 0, map2 (fn def => fn f => #Abs def $ f) some_defs some_fs')
+      ))) lthy;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    val tvsubst =
+      let
+        val tvsubst' = Morphism.term phi (fst tvsubst);
+        val old_vars = rev (map TVar (Term.add_tvars tvsubst' []));
+      in (
+        Term.subst_atomic_types (old_vars ~~ vars) tvsubst',
+        Morphism.thm phi (snd tvsubst)
+      ) end;
+
+    val f'_prems = map_filter I (map2 (fn f => Option.map (fn def => HOLogic.mk_Trueprop (#mk_SSupp_bound def (the f)))) fs' defs);
+    val tvsubst_VVrs = @{map 4} (fn f => fn set_empties => fn VVr_thms => Option.map (fn def =>
+      let val a = Free ("a", #aT def);
+      in Goal.prove_sorry lthy (names (some_fs' @ [a])) f'_prems (
+        mk_Trueprop_eq (Term.list_comb (fst tvsubst, some_fs' @ [fst (#VVr def) $ a]), the f $ a)
+      ) (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd tvsubst, snd (#VVr def), @{thm comp_def}]),
+        rtac ctxt trans,
+        rtac ctxt (#rec_Uctor rec_res),
+        K (unfold_thms_tac ctxt (the set_empties @ [snd (#noclash rec_res), snd CCTOR])),
+        rtac ctxt @{thm Int_empty_left},
+        rtac ctxt @{thm Int_empty_left},
+        K (unfold_thms_tac' ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}
+          @ [MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]
+          ) (fn ctxt => ALLGOALS (resolve_tac ctxt @{thms supp_id_bound bij_id}))
+        ),
+        rtac ctxt trans,
+        rtac ctxt @{thm if_P},
+        K (unfold_thms_tac ctxt [snd (#isVVr def), snd (#VVr def), @{thm comp_def}]),
+        rtac ctxt exI,
+        rtac ctxt refl,
+        rtac ctxt trans,
+        rtac ctxt (fun_cong OF [#Abs_inverse (snd (#SSfun def))]),
+        rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
+        resolve_tac ctxt prems,
+        rtac ctxt (mk_arg_cong ctxt (the f)),
+        rtac ctxt (Local_Defs.unfold0 ctxt [@{thm comp_def}, snd (#VVr def)] (#asVVr_VVr (the VVr_thms)))
+      ]) end
+    )) fs' eta_set_empties VVr_thms defs;
+
+    val tvsubst_not_isVVr =
+      let
+        val preT = MRBNF_Def.mk_T_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+          (replicate live (#T quotient)) vars vars mrbnf;
+        val x = Free ("x", preT);
+        val sets = MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
+          (replicate n (replicate live (#T quotient)))
+          (replicate n vars) (replicate n vars) mrbnf;
+        val bound_sets = map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ sets);
+        val int_empty_prems = map_filter I (
+          @{map 3} (fn bset => fn f => Option.map (fn def => HOLogic.mk_Trueprop (
+            mk_int_empty (bset $ x, fst (#IImsupp def) $ the f)
+          ))) bound_sets fs' defs
+        );
+        val m = length int_empty_prems;
+        val VVr_prems = map (fn def => HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x)))) some_defs;
+        val prems = f'_prems @ int_empty_prems @ [HOLogic.mk_Trueprop (fst (#noclash rec_res) $ x)] @ VVr_prems;
+        val tvsubst_t = Term.list_comb (fst tvsubst, some_fs');
+        val ids = map HOLogic.id_const vars;
+        val map_t = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+          (replicate live tvsubst_t) ids ids mrbnf;
+        val goal = mk_Trueprop_eq (tvsubst_t $ (#ctor quotient $ x), #ctor quotient $ (map_t $ x));
+      in Goal.prove_sorry lthy (names (some_fs' @ [x])) prems goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd tvsubst]),
+        rtac ctxt trans,
+        rtac ctxt (#rec_Uctor rec_res),
+        K (unfold_thms_tac ctxt (@{thms Un_empty_right} @ map (snd o #PFVars) some_defs)),
+        rtac ctxt trans,
+        rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<inter>)"]},
+        resolve_tac ctxt (map (mk_arg_cong ctxt o fst o #IImsupp) some_defs),
+        resolve_tac ctxt (map (#Abs_inverse o snd o #SSfun) some_defs),
+        rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
+        REPEAT_DETERM o resolve_tac ctxt prems,
+        K (unfold_thms_tac' ctxt (@{thms comp_assoc comp_def[of snd] snd_conv id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}
+          @ [snd CCTOR, MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]
+          @ map (fn thm => @{thm if_not_P} OF [thm]) (drop (2 * m + 1) prems)
+          ) (fn ctxt => ALLGOALS (resolve_tac ctxt @{thms supp_id_bound bij_id}))
+        ),
+        K (unfold_thms_tac ctxt [@{thm comp_def}, Thm.symmetric (snd tvsubst)]),
+        rtac ctxt refl
+      ]) end;
+
     (* TODO: Remove *)
     val notes =
       [("SSupp_VVr_empty", map_filter (Option.map #SSupp_VVr_empty) defs),
        ("SSupp_VVr_bound", map_filter (Option.map #SSupp_VVr_bound) defs),
-       ("VVr_inj", map_filter I VVr_injs),
-       ("rrename_VVr", map_filter I rrename_VVrs),
        ("in_IImsupp", map_filter I in_IImsupps),
-       ("IImsupp_VVr", map_filter I IImsupp_VVrs),
-       ("IImsupp_imsupp_rrename_commute", map_filter I IImsupp_imsupp_rrename_commutes),
-       ("SSupp_comp_subset", map_filter (Option.map #SSupp_comp_subset) SSupp_comps),
-       ("SSupp_comp_bound", map_filter (Option.map #SSupp_comp_bound) SSupp_comps),
-       ("SSupp_comp_rename_subset", map_filter (Option.map #SSupp_comp_rename_subset) SSupp_comps),
-       ("SSupp_comp_rename_bound", map_filter (Option.map #SSupp_comp_rename_bound) SSupp_comps),
-       ("IImsupp_comp_image", map_filter (Option.map #IImsupp_comp_image) SSupp_comps),
-       ("isVVr_rename", map_filter (Option.map #isVVr_rename) VVr_thms),
-       ("asVVr_VVr", map_filter (Option.map #asVVr_VVr) VVr_thms),
-       ("tvsubst_swap", [#rec_swap rec_res]),
-       ("tvsubst_UFVars", #rec_UFVarss rec_res),
-       ("tvsubst_Uctor", [#rec_Uctor rec_res]),
        ("\<eta>_set2", [hd (the (hd eta_set_empties))]),
        ("\<eta>_set3", [nth (the (hd eta_set_empties)) 1]),
-       ("\<eta>_set4", [nth (the (hd eta_set_empties)) 2])
+       ("\<eta>_set4", [nth (the (hd eta_set_empties)) 2]),
+       ("FVars_VVr", map_filter I FVars_VVrs),
+       ("tvsubst_VVr", map_filter I tvsubst_VVrs),
+       ("tvsubst_cctor_not_isVVr", [tvsubst_not_isVVr])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])
       ));

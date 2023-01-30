@@ -231,4 +231,32 @@ ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
+(* tvsubst helper lemmas *)
+lemma bij_not_eq_twice: "bij g \<Longrightarrow> g a \<noteq> a \<Longrightarrow> g (g a) \<noteq> g a"
+  by simp
+lemma bij_not_equal_iff: "bij f \<Longrightarrow> a \<noteq> b \<longleftrightarrow> f a \<noteq> f b"
+  by simp
+lemma bij_id_imsupp: "bij f \<Longrightarrow> f a = a \<Longrightarrow> a \<notin> imsupp f"
+  unfolding imsupp_def supp_def
+  by (simp add: bij_inv_eq_iff image_in_bij_eq)
+lemma id_o_commute: "id \<circ> f = f \<circ> id" by simp
+lemma fst_o_f: "fst \<circ> (\<lambda>(x, y). (f x, g x y)) = f \<circ> fst"
+  by auto
+lemma exists_fresh: "|A::'a set| <o |UNIV::'a set| \<Longrightarrow> \<exists>a::'a. a \<notin> A"
+  by (metis UNIV_eq_I ordLess_irreflexive)
+lemma swap_fresh: "y \<notin> A \<Longrightarrow> x \<in> id(x := y, y := x) ` A \<Longrightarrow> False"
+  by auto
+lemma forall_in_eq_UNIV: "\<forall>c. (c::'a) \<in> X \<Longrightarrow> X = (UNIV :: 'a set)" by blast
+lemma image_const: "a \<in> X \<Longrightarrow> \<forall>c. c \<in> (\<lambda>_. c) ` X" by simp
+lemma ordIso_ordLess_False: "a =o b \<Longrightarrow> a <o b \<Longrightarrow> False"
+  by (simp add: not_ordLess_ordIso)
+lemma Union_UN_swap: "\<Union> (\<Union>x\<in>A. P x) = (\<Union>x\<in>A. \<Union>(P x))" by blast
+lemma UN_cong: "(\<And>x. x \<in> A \<Longrightarrow> P x = Q x) \<Longrightarrow> \<Union>(P ` A) = \<Union>(Q ` A)" by simp
+lemma supp_swap_bound: "infinite (UNIV :: 'a set) \<Longrightarrow> |supp (id (x := y, y := x :: 'a))| <o |UNIV::'a set|"
+  by (rule ordLeq_ordLess_trans[OF card_of_mono1[OF supp_swap_le] finite_ordLess_infinite2])
+    (auto simp: cinfinite_imp_infinite)
+lemma UN_single: "\<Union>(f ` {a}) = f a" by simp
+
+ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
+
 end

@@ -1074,6 +1074,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         val eta_natural' = Local_Defs.unfold0 lthy @{thms comp_def} (fun_cong OF [#eta_natural (#axioms def)]);
       in map (fn (ty, set) =>
         let
+          val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf];
           val T = (HOLogic.dest_setT o snd o dest_funT o fastype_of) set;
           val goal = mk_Trueprop_eq (set $ (#eta def $ a), mk_bot T)
         in Goal.prove_sorry lthy (names [a]) [] goal (fn {context=ctxt, ...} => EVERY1 [
@@ -1091,11 +1092,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
             K (prefer_tac (free + 2 * bound + 1)),
             etac ctxt @{thm swap_fresh},
             assume_tac ctxt,
-            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id supp_swap_bound bij_swap},
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_swap_bound bij_swap} @ [infinite_UNIV]),
             rtac ctxt sym,
             rtac ctxt trans,
             rtac ctxt eta_natural',
-            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id supp_swap_bound bij_swap},
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_swap_bound bij_swap} @ [infinite_UNIV]),
             K (unfold_thms_tac ctxt @{thms id_def}),
             rtac ctxt refl
           ] else EVERY' [

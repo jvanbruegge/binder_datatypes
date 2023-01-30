@@ -49,82 +49,8 @@ in lthy end
 print_theorems
 print_mrbnfs
 
-lemma UN_single: "\<Union>(f ` {a}) = f a" by simp
-
-lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id)"
-  apply (rule iffD2[OF bij_iff])
-    apply (rule exI[of _ "map_terms_pre id (inv f) (rrename_terms (inv f)) id"])
-  apply (frule bij_imp_bij_inv)
-  apply (frule supp_inv_bound)
-   apply assumption
-  apply (rule conjI)
-   apply (rule trans)
-    apply (rule terms_pre.map_comp0[symmetric])
-         apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 terms.rrename_comp0s terms.rrename_id0s
-  apply (rule terms_pre.map_id0)
-  apply (rule trans)
-   apply (rule terms_pre.map_comp0[symmetric])
-        apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp2 terms.rrename_comp0s terms.rrename_id0s
-  apply (rule terms_pre.map_id0)
-  done
-
-lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id) = map_terms_pre id (inv f) (rrename_terms (inv f)) id"
-  apply (frule bij_imp_bij_inv)
-  apply (frule supp_inv_bound)
-  apply assumption
-  apply (rule inv_unique_comp)
-   apply (rule trans)
-    apply (rule terms_pre.map_comp0[symmetric])
-         apply (assumption | rule supp_id_bound)+
-   defer
-  apply (rule trans)
-    apply (rule terms_pre.map_comp0[symmetric])
-         apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 inv_o_simp2 terms.rrename_comp0s terms.rrename_id0s terms_pre.map_id0
-   apply (rule refl)+
-  done
-
-(* Term for variable substitution *)
-(* TODO: Define with ML *)
 definition \<eta> :: "'a::var_terms_pre \<Rightarrow> ('a, 'b::var_terms_pre, 'c, 'd) terms_pre" where
   "\<eta> a \<equiv> Abs_terms_pre (Inl a)"
-
-(* helpers *)
-lemma notin_rangeE: "b \<notin> range f \<Longrightarrow> (\<And>x. b \<noteq> f x \<Longrightarrow> P) \<Longrightarrow> P"
-  by fast
-lemma nexists_setl: "\<nexists>x. y = Inl x \<Longrightarrow> Basic_BNFs.setl y = {}"
-  by (metis sumE sum_set_simps(2))
-lemma supp_swap_bound: "|supp (id (x := y, y := x :: 'a))| <o |UNIV::'a::var_terms_pre set|"
-  by (rule ordLeq_ordLess_trans[OF card_of_mono1[OF supp_swap_le] finite_ordLess_infinite2])
-    (auto simp: cinfinite_imp_infinite[OF terms.UNIV_cinfinite])
-lemma ordLess_not_equal: "|A| <o |B| \<Longrightarrow> A \<noteq> B"
-  using ordLess_irreflexive by blast
-lemma bij_id_imsupp: "bij f \<Longrightarrow> f a = a \<Longrightarrow> a \<notin> imsupp f"
-  unfolding imsupp_def supp_def
-  by (simp add: bij_inv_eq_iff image_in_bij_eq)
-lemma bij_not_eq_twice: "bij g \<Longrightarrow> g a \<noteq> a \<Longrightarrow> g (g a) \<noteq> g a"
-  by simp
-lemma bij_not_equal_iff: "bij f \<Longrightarrow> a \<noteq> b \<longleftrightarrow> f a \<noteq> f b"
-  by simp
-lemma fst_o_f: "fst \<circ> (\<lambda>(x, y). (f x, g x y)) = f \<circ> fst"
-  by auto
-lemma id_o_commute: "id \<circ> f = f \<circ> id" by simp
-lemma case_lam_iff: "(\<lambda>x. f (case x of (a, b) \<Rightarrow> P a b)) = (\<lambda>(x, y). f (P x y))"
-  by auto
-lemma case_lam_app_iff: "(\<lambda>x. (case x of (a, b) \<Rightarrow> \<lambda>p. P a b p) t) = (\<lambda>(x, y). P x y t)"
-  by auto
-lemma exists_fresh: "|A::'a set| <o |UNIV::'a set| \<Longrightarrow> \<exists>a::'a. a \<notin> A"
-  by (metis UNIV_eq_I ordLess_irreflexive)
-lemma swap_fresh: "y \<notin> A \<Longrightarrow> x \<in> id(x := y, y := x) ` A \<Longrightarrow> False"
-  by auto
-lemma forall_in_eq_UNIV: "\<forall>c. (c::'a) \<in> X \<Longrightarrow> X = (UNIV :: 'a set)" by blast
-lemma image_const: "a \<in> X \<Longrightarrow> \<forall>c. c \<in> (\<lambda>_. c) ` X" by simp
-lemma ordIso_ordLess_False: "a =o b \<Longrightarrow> a <o b \<Longrightarrow> False"
-  by (simp add: not_ordLess_ordIso)
-lemma Union_UN_swap: "\<Union> (\<Union>x\<in>A. P x) = (\<Union>x\<in>A. \<Union>(P x))" by blast
-lemma UN_cong: "(\<And>x. x \<in> A \<Longrightarrow> P x = Q x) \<Longrightarrow> \<Union>(P ` A) = \<Union>(Q ` A)" by simp
 
 (* eta axioms *)
 lemma \<eta>_free: "set1_terms_pre (\<eta> a) = {a}"
@@ -134,25 +60,25 @@ lemma \<eta>_inj: "\<eta> a = \<eta> b \<Longrightarrow> a = b"
   unfolding Abs_terms_pre_inject[OF UNIV_I UNIV_I] sum.inject  \<eta>_def
   by assumption
 lemma \<eta>_compl_free: "x \<notin> range \<eta> \<Longrightarrow> set1_terms_pre x = {}"
-  unfolding set1_terms_pre_def comp_def Un_empty sum.set_map UN_singleton UN_empty2  \<eta>_def
+  unfolding set1_terms_pre_def comp_def Un_empty sum.set_map UN_singleton UN_empty2
   apply (rule conjI)
    apply (rule Abs_terms_pre_cases[of x])
-   apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-  unfolding Abs_terms_pre_inverse[OF UNIV_I] Abs_terms_pre_inject[OF UNIV_I UNIV_I] image_iff bex_UNIV
-   apply ((rule nexists_setl, assumption) | rule refl)+
+  apply hypsubst_thin
+  unfolding Abs_terms_pre_inverse[OF UNIV_I] Abs_terms_pre_inject[OF UNIV_I UNIV_I] image_iff bex_UNIV \<eta>_def
+   apply (erule contrapos_np)
+   apply (drule iffD2[OF ex_in_conv])
+   apply (erule exE)
+   apply (erule setl.cases)
+   apply hypsubst
+   apply (rule exI)
+   apply (rule refl)
+  apply (rule refl)
   done
 lemma \<eta>_natural: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'b::var_terms_pre \<Rightarrow> 'b)| <o |UNIV::'b set|
   \<Longrightarrow> map_terms_pre f g h i \<circ> \<eta> = \<eta> \<circ> f"
   unfolding comp_def map_terms_pre_def Abs_terms_pre_inverse[OF UNIV_I] map_sum.simps  \<eta>_def
-  apply (rule refl)
-  done
+  by (rule refl)
 
-ML_file \<open>Tools/mrbnf_tvsubst.ML\<close>
-
-declare [[ML_print_depth=1000]]
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
 local_setup \<open>fn lthy =>
 let
   val fp_result = the (MRBNF_FP_Def_Sugar.fp_result_of lthy "STLC.terms")
@@ -303,6 +229,41 @@ lemma terms_distinct[simp]:
   unfolding Var_def App_def Abs_def terms.TT_injects0 map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I]
     Abs_terms_pre_inject[OF UNIV_I UNIV_I] map_sum_def sum.case
   by auto
+
+lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id)"
+  apply (rule iffD2[OF bij_iff])
+    apply (rule exI[of _ "map_terms_pre id (inv f) (rrename_terms (inv f)) id"])
+  apply (frule bij_imp_bij_inv)
+  apply (frule supp_inv_bound)
+   apply assumption
+  apply (rule conjI)
+   apply (rule trans)
+    apply (rule terms_pre.map_comp0[symmetric])
+         apply (assumption | rule supp_id_bound)+
+  unfolding id_o inv_o_simp1 terms.rrename_comp0s terms.rrename_id0s
+  apply (rule terms_pre.map_id0)
+  apply (rule trans)
+   apply (rule terms_pre.map_comp0[symmetric])
+        apply (assumption | rule supp_id_bound)+
+  unfolding id_o inv_o_simp2 terms.rrename_comp0s terms.rrename_id0s
+  apply (rule terms_pre.map_id0)
+  done
+
+lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id) = map_terms_pre id (inv f) (rrename_terms (inv f)) id"
+  apply (frule bij_imp_bij_inv)
+  apply (frule supp_inv_bound)
+  apply assumption
+  apply (rule inv_unique_comp)
+   apply (rule trans)
+    apply (rule terms_pre.map_comp0[symmetric])
+         apply (assumption | rule supp_id_bound)+
+   defer
+  apply (rule trans)
+    apply (rule terms_pre.map_comp0[symmetric])
+         apply (assumption | rule supp_id_bound)+
+  unfolding id_o inv_o_simp1 inv_o_simp2 terms.rrename_comp0s terms.rrename_id0s terms_pre.map_id0
+   apply (rule refl)+
+  done
 
 lemma Var_set1: "terms_ctor v = Var a \<Longrightarrow> a \<in> set1_terms_pre v"
   unfolding Var_def terms.TT_injects0

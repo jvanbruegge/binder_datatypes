@@ -120,6 +120,10 @@ lemma exists_fresh: "|A::'a set| <o |UNIV::'a set| \<Longrightarrow> \<exists>a:
   by (metis UNIV_eq_I ordLess_irreflexive)
 lemma swap_fresh: "y \<notin> A \<Longrightarrow> x \<in> id(x := y, y := x) ` A \<Longrightarrow> False"
   by auto
+lemma forall_in_eq_UNIV: "\<forall>c. (c::'a) \<in> X \<Longrightarrow> X = (UNIV :: 'a set)" by blast
+lemma image_const: "a \<in> X \<Longrightarrow> \<forall>c. c \<in> (\<lambda>_. c) ` X" by simp
+lemma ordIso_ordLess_False: "a =o b \<Longrightarrow> a <o b \<Longrightarrow> False"
+  by (simp add: not_ordLess_ordIso)
 
 (* eta axioms *)
 lemma \<eta>_free: "set1_terms_pre (\<eta> a) = {a}"
@@ -181,84 +185,6 @@ lemma isVVr_VVr: "isVVr (VVr x)"
   apply (rule refl)
   done
 
-lemma \<eta>_set2: "set2_terms_pre (\<eta> (a::'a::var_terms_pre) :: ('a, 'b::var_terms_pre, 'c, 'd) terms_pre) = {}"
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  unfolding empty_iff
-  apply (rule iffI)
-  apply (rule exE[OF exists_fresh])
-  apply (rule terms_pre.set_bd_UNIV(2)[of "\<eta> a :: ('a, 'b::var_terms_pre, 'c, 'd) terms_pre"])
-  subgoal for x y
-  apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
-   apply (rule arg_cong[of _ _ set2_terms_pre])
-   apply (rule fun_cong[OF \<eta>_natural[OF supp_id_bound bij_swap supp_swap_bound, unfolded o_id, symmetric], unfolded comp_def, of _ x y])
-    unfolding terms_pre.set_map[OF supp_id_bound bij_swap supp_swap_bound]
-    apply (rule swap_fresh)
-     apply assumption
-    apply assumption
-    done
-   apply (rule FalseE)
-   apply assumption
-  done
-
-lemma forall_in_eq_UNIV: "\<forall>c. (c::'a) \<in> X \<Longrightarrow> X = (UNIV :: 'a set)" by blast
-lemma image_const: "a \<in> X \<Longrightarrow> \<forall>c. c \<in> (\<lambda>_. c) ` X" by simp
-lemma ordIso_ordLess_False: "a =o b \<Longrightarrow> a <o b \<Longrightarrow> False"
-  by (simp add: not_ordLess_ordIso)
-
-lemma \<eta>_set3: "set3_terms_pre (\<eta> (a::'a::var_terms_pre) :: ('a, 'b::var_terms_pre, 'c, 'd) terms_pre) = {}"
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  unfolding empty_iff
-  apply (rule iffI)
-   apply (drule image_const)
-   apply (drule iffD1[OF all_cong1, rotated])
-    apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
-     apply (rule terms_pre.set_map[OF supp_id_bound bij_id supp_id_bound, symmetric])
-  unfolding fun_cong[OF \<eta>_natural[OF supp_id_bound bij_id supp_id_bound], unfolded o_id, unfolded comp_def]
-   apply (drule forall_in_eq_UNIV)
-   apply (drule trans[symmetric])
-    apply (rule conjunct1[OF card_order_on_Card_order[OF terms_pre.bd_card_order]])
-   apply (drule card_of_ordIso_subst)
-   apply (drule ordIso_symmetric)
-   apply (drule ordIso_transitive)
-    apply (rule ordIso_symmetric)
-    apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
-    apply (rule conjunct2[OF card_order_on_Card_order[OF terms_pre.bd_card_order]])
-   apply (rule ordIso_ordLess_False)
-    apply assumption
-   apply (rule terms_pre.set_bd)
-  apply (rule FalseE)
-  apply assumption
-  done
-
-(* Same tactic as for set3 *)
-lemma \<eta>_set4: "set4_terms_pre (\<eta> (a::'a::var_terms_pre) :: ('a, 'b::var_terms_pre, 'c, 'd) terms_pre) = {}"
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  unfolding empty_iff
-  apply (rule iffI)
-   apply (drule image_const)
-   apply (drule iffD1[OF all_cong1, rotated])
-    apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
-     apply (rule terms_pre.set_map[OF supp_id_bound bij_id supp_id_bound, symmetric])
-  unfolding fun_cong[OF \<eta>_natural[OF supp_id_bound bij_id supp_id_bound], unfolded o_id, unfolded comp_def]
-   apply (drule forall_in_eq_UNIV)
-   apply (drule trans[symmetric])
-    apply (rule conjunct1[OF card_order_on_Card_order[OF terms_pre.bd_card_order]])
-   apply (drule card_of_ordIso_subst)
-   apply (drule ordIso_symmetric)
-   apply (drule ordIso_transitive)
-    apply (rule ordIso_symmetric)
-    apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
-    apply (rule conjunct2[OF card_order_on_Card_order[OF terms_pre.bd_card_order]])
-   apply (rule ordIso_ordLess_False)
-    apply assumption
-   apply (rule terms_pre.set_bd)
-  apply (rule FalseE)
-  apply assumption
-  done
-
 lemma FVars_VVr: "FFVars_terms (VVr a) = {a}"
   unfolding VVr_def terms.FFVars_cctors \<eta>_set2 \<eta>_set3 \<eta>_set4 UN_empty Diff_empty Un_empty_right comp_def
   apply (rule \<eta>_free)
@@ -297,15 +223,6 @@ lemma tvsubst_cctor_not_isVVr: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a te
     id_o comp_def[of fst] fst_conv id_def[symmetric] terms_pre.map_id if_not_P
   unfolding comp_def snd_conv
   apply (rule refl)
-  done
-
-lemma FFVars_tvsubst_weak:
-  assumes "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set|"
-shows "FFVars_terms (tvsubst f t) \<subseteq> FFVars_terms t \<union> IImsupp f"
-  unfolding tvsubst_def
-  apply (rule tvsubst_UFVars[unfolded Un_empty_right PFVars_def, of _ "Abs_SSfun f", unfolded
-    Abs_SSfun_inverse[OF iffD2[OF mem_Collect_eq, of "\<lambda>(f::'a::var_terms_pre \<Rightarrow> 'a terms). |SSupp f| <o |UNIV::'a set|", OF assms]]
-  ])
   done
 
 lemma not_isVVr_free: "\<not>isVVr (terms_ctor x) \<Longrightarrow> set1_terms_pre x = {}"

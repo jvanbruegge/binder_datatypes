@@ -1054,6 +1054,77 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
 
     val (rec_res, lthy) = MRBNF_Recursor.create_binding_recursor qualify rec_model b lthy;
 
+    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+
+    val eta_set_empties = map (Option.map (fn def =>
+      let
+        val args = (snd o dest_Type o snd o dest_funT o fastype_of o #eta) def;
+        val (live_args, bound_args, free_args) = fold_rev (
+          fn (MRBNF_Def.Live_Var, x) => (fn (a, b, c) => (x::a, b, c))
+           | (MRBNF_Def.Bound_Var, x) => (fn (a, b, c) => (a, x::b, c))
+           | (MRBNF_Def.Free_Var, x) => (fn (a, b, c) => (a, b, x::c))
+        ) (var_types ~~ args) ([], [], []);
+        val free = MRBNF_Def.free_of_mrbnf mrbnf;
+        val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
+        val n = live + free + bound;
+        val sets = MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
+          (replicate n live_args) (replicate n bound_args) (replicate n free_args) mrbnf;
+        val sets' = filter ((curry (op<>) (#aT def)) o HOLogic.dest_setT o snd o dest_funT o fastype_of o snd) (var_types ~~ sets);
+        val a = Free ("a", #aT def);
+        val eta_natural' = Local_Defs.unfold0 lthy @{thms comp_def} (fun_cong OF [#eta_natural (#axioms def)]);
+      in map (fn (ty, set) =>
+        let
+          val T = (HOLogic.dest_setT o snd o dest_funT o fastype_of) set;
+          val goal = mk_Trueprop_eq (set $ (#eta def $ a), mk_bot T)
+        in Goal.prove_sorry lthy (names [a]) [] goal (fn {context=ctxt, ...} => EVERY1 [
+          rtac ctxt @{thm iffD2[OF set_eq_iff]},
+          rtac ctxt allI,
+          K (unfold_thms_tac ctxt @{thms empty_iff}),
+          rtac ctxt iffI,
+          if ty <> MRBNF_Def.Live_Var then EVERY' [
+            rtac ctxt (infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (set $ (#eta def $ a)))] @{thm exE[OF exists_fresh]}),
+            resolve_tac ctxt (MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf),
+            dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
+            rtac ctxt (mk_arg_cong ctxt set),
+            K (prefer_tac 2),
+            EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+            K (prefer_tac (free + 2 * bound + 1)),
+            etac ctxt @{thm swap_fresh},
+            assume_tac ctxt,
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id supp_swap_bound bij_swap},
+            rtac ctxt sym,
+            rtac ctxt trans,
+            rtac ctxt eta_natural',
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id supp_swap_bound bij_swap},
+            K (unfold_thms_tac ctxt @{thms id_def}),
+            rtac ctxt refl
+          ] else EVERY' [
+            dtac ctxt @{thm image_const},
+            dtac ctxt @{thm iffD1[OF all_cong1, rotated]},
+            rtac ctxt sym,
+            rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<in>)"]},
+            resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+            EqSubst.eqsubst_asm_tac ctxt [0] [eta_natural'],
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+            K (unfold_thms_tac ctxt @{thms id_def}),
+            dtac ctxt @{thm forall_in_eq_UNIV},
+            dtac ctxt @{thm trans[symmetric]},
+            rtac ctxt (@{thm conjunct1[OF card_order_on_Card_order]} OF [MRBNF_Def.bd_card_order_of_mrbnf mrbnf]),
+            dtac ctxt @{thm card_of_ordIso_subst},
+            dtac ctxt @{thm ordIso_symmetric},
+            dtac ctxt @{thm ordIso_transitive},
+            rtac ctxt @{thm ordIso_symmetric},
+            rtac ctxt @{thm iffD1[OF Card_order_iff_ordIso_card_of]},
+            rtac ctxt (@{thm conjunct2[OF card_order_on_Card_order]} OF [MRBNF_Def.bd_card_order_of_mrbnf mrbnf]),
+            etac ctxt @{thm ordIso_ordLess_False},
+            resolve_tac ctxt (MRBNF_Def.set_bd_of_mrbnf mrbnf)
+          ],
+          etac ctxt FalseE
+        ]) end
+      ) sets' end
+    )) defs;
+
     (* TODO: Remove *)
     val notes =
       [("SSupp_VVr_empty", map_filter (Option.map #SSupp_VVr_empty) defs),
@@ -1072,13 +1143,14 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
        ("asVVr_VVr", map_filter (Option.map #asVVr_VVr) VVr_thms),
        ("tvsubst_swap", [#rec_swap rec_res]),
        ("tvsubst_UFVars", #rec_UFVarss rec_res),
-       ("tvsubst_Uctor", [#rec_Uctor rec_res])
+       ("tvsubst_Uctor", [#rec_Uctor rec_res]),
+       ("\<eta>_set2", [hd (the (hd eta_set_empties))]),
+       ("\<eta>_set3", [nth (the (hd eta_set_empties)) 1]),
+       ("\<eta>_set4", [nth (the (hd eta_set_empties)) 2])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])
       ));
     val (_, lthy) = Local_Theory.notes notes lthy
-
-    val _ = @{print} (CCTOR, defs)
 
   in lthy end;
 

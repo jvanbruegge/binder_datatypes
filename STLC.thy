@@ -108,7 +108,6 @@ lemma bij_not_eq_twice: "bij g \<Longrightarrow> g a \<noteq> a \<Longrightarrow
   by simp
 lemma bij_not_equal_iff: "bij f \<Longrightarrow> a \<noteq> b \<longleftrightarrow> f a \<noteq> f b"
   by simp
-lemma not_fun_cong: "f a \<noteq> f b \<Longrightarrow> a \<noteq> b" by blast
 lemma fst_o_f: "fst \<circ> (\<lambda>(x, y). (f x, g x y)) = f \<circ> fst"
   by auto
 lemma id_o_commute: "id \<circ> f = f \<circ> id" by simp
@@ -124,6 +123,8 @@ lemma forall_in_eq_UNIV: "\<forall>c. (c::'a) \<in> X \<Longrightarrow> X = (UNI
 lemma image_const: "a \<in> X \<Longrightarrow> \<forall>c. c \<in> (\<lambda>_. c) ` X" by simp
 lemma ordIso_ordLess_False: "a =o b \<Longrightarrow> a <o b \<Longrightarrow> False"
   by (simp add: not_ordLess_ordIso)
+lemma Union_UN_swap: "\<Union> (\<Union>x\<in>A. P x) = (\<Union>x\<in>A. \<Union>(P x))" by blast
+lemma UN_cong: "(\<And>x. x \<in> A \<Longrightarrow> P x = Q x) \<Longrightarrow> \<Union>(P ` A) = \<Union>(Q ` A)" by simp
 
 (* eta axioms *)
 lemma \<eta>_free: "set1_terms_pre (\<eta> a) = {a}"
@@ -175,145 +176,7 @@ in lthy end
 \<close>
 print_theorems
 
-(* after recursor *)
-lemma not_isVVr_free: "\<not>isVVr (terms_ctor x) \<Longrightarrow> set1_terms_pre x = {}"
-  apply (rule \<eta>_compl_free)
-  unfolding isVVr_def VVr_def image_iff Set.bex_simps not_ex comp_def
-  apply (rule allI)
-  apply (erule allE)
-  apply (rule not_fun_cong)
-  apply assumption
-  done
-
-lemma Union_UN_swap: "\<Union> (\<Union>x\<in>A. P x) = (\<Union>x\<in>A. \<Union>(P x))" by blast
-lemma UN_cong: "(\<And>x. x \<in> A \<Longrightarrow> P x = Q x) \<Longrightarrow> \<Union>(P ` A) = \<Union>(Q ` A)" by simp
-
-lemma IImsupp_Diff: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin> IImsupp f) \<Longrightarrow> (\<Union>a\<in>(A - B). FFVars_terms (f a)) = (\<Union>a\<in>A. FFVars_terms (f a)) - B"
-  unfolding atomize_imp
-  unfolding atomize_all
-  apply (drule iffD2[OF disjoint_iff])
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  apply (rule iffI)
-   apply (erule UN_E)
-   apply (erule DiffE)
-   apply (rule DiffI)
-    apply (rule UN_I)
-     apply assumption
-  apply assumption
-  subgoal for x a
-    apply (rule case_split[of "f a = VVr a"])
-     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
-    apply (rule trans)
-      apply (rule arg_cong[of _ _ FFVars_terms])
-       apply assumption
-      apply (rule FVars_VVr)
-     apply (drule singletonD)
-     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-     apply assumption
-    apply (drule in_IImsupp)
-     apply assumption
-    apply (drule trans[OF Int_commute])
-    apply (drule iffD1[OF disjoint_iff])
-    apply (erule allE)
-    apply (erule impE)
-     apply assumption
-    apply assumption
-    done
-  apply (erule DiffE)
-  apply (erule UN_E)
-  apply (rule UN_I)
-   apply (rule DiffI)
-    apply assumption
-  subgoal for x a
-    apply (rule case_split[of "f a = VVr a"])
-    apply (rotate_tac -2)
-     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
-    apply (rule trans)
-      apply (rule arg_cong[of _ _ FFVars_terms])
-       apply assumption
-      apply (rule FVars_VVr)
-     apply (drule singletonD)
-     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-     apply assumption
-    apply (frule in_IImsupp)
-     apply assumption
-    apply (drule trans[OF Int_commute])
-    apply (drule iffD1[OF disjoint_iff])
-    apply (erule allE)
-    apply (erule impE)
-     prefer 2
-     apply assumption
-    unfolding IImsupp_def SSupp_def
-    apply (rule UnI1)
-    apply (rule iffD2[OF mem_Collect_eq])
-    apply assumption
-    done
-  apply assumption
-  done
-
-lemma FFVars_tvsubst:
-  fixes t::"'a::var_terms_pre terms"
-  assumes "|SSupp f| <o |UNIV::'a set|"
-  shows "FFVars_terms (tvsubst f t) = (\<Union>a\<in>FFVars_terms t. FFVars_terms (f a))"
-  apply (rule terms.TT_fresh_co_induct[of "IImsupp f" _ t])
-  apply (unfold IImsupp_def comp_def)[1]
-    apply (rule terms_pre.Un_bound)
-     apply (rule assms)
-    apply (rule terms_pre.UNION_bound)
-     apply (rule assms)
-    apply (rule terms.card_of_FFVars_bounds)
-  subgoal for x
-    apply (rule case_split[of "isVVr (terms_ctor x)"])
-    apply (unfold isVVr_def)[1]
-     apply (erule exE)
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "\<lambda>x. FFVars_terms (tvsubst f x)"])
-      apply assumption
-    unfolding tvsubst_VVr[OF assms]
-     apply (rule sym)
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "\<lambda>x. \<Union>(_ ` x)"])
-      apply (rule arg_cong[of _ _ FFVars_terms])
-      apply assumption
-     apply (unfold FVars_VVr UN_single)
-     apply (rule refl)
-
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ FFVars_terms])
-     apply (rule tvsubst_cctor_not_isVVr)
-        apply (rule assms)
-       apply (rule iffD2[OF disjoint_iff])
-    apply (rule allI)
-       apply (rule impI)
-       apply assumption
-    unfolding tvnoclash_terms_def Int_Un_distrib Un_empty
-      apply (rule conjI)
-       apply (rule iffD2[OF disjoint_iff], rule allI, rule impI)
-       apply assumption
-      apply (rule iffD2[OF disjoint_iff], rule allI, rule impI)
-    unfolding UN_iff Set.bex_simps
-      apply (rule ballI)
-      apply assumption
-     apply assumption
-    unfolding terms.FFVars_cctors terms_pre.set_map[OF supp_id_bound bij_id supp_id_bound]
-      image_id image_comp UN_Un
-    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-      apply (unfold not_isVVr_free UN_empty)
-      apply (rule refl)
-     apply (rule trans[rotated])
-      apply (rule sym)
-      apply (rule IImsupp_Diff)
-      apply assumption
-     apply (rule arg_cong2[OF _ refl, of _ _ "(-)"])
-    unfolding UN_simps comp_def
-     apply (rule UN_cong)
-     apply assumption
-    apply (rule UN_cong)
-    apply assumption
-    done
-  done
-
+(* unary substitution *)
 lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
   unfolding IImsupp_def SSupp_VVr_empty UN_empty Un_empty_left
   apply (rule refl)

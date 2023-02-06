@@ -14,6 +14,7 @@ for
 where
   "lhd LNil = undefined"
 | "ltl LNil = LNil"
+print_theorems
 
 (*copied from "Coinductive.Coinductive_List"*)
 coinductive ldistinct :: "'a llist \<Rightarrow> bool"

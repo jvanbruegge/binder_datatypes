@@ -257,6 +257,8 @@ lemma supp_swap_bound: "infinite (UNIV :: 'a set) \<Longrightarrow> |supp (id (x
     (auto simp: cinfinite_imp_infinite)
 lemma UN_single: "\<Union>(f ` {a}) = f a" by simp
 
+lemma finite_singleton: "finite {x}" by blast
+
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 
 end

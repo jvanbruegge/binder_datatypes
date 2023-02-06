@@ -96,7 +96,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
       |> Seq.maps (Rule_Cases.consume defs_ctxt (flat defs) facts)
       |> Seq.map (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
         let
-          val avoiding_arbitraries = filter (member (op=) (hd avoiding)) (map Free (hd arbitrary));
+          val avoiding_arbitraries = filter (member (op=) (hd avoiding)) (map Free (flat arbitrary));
           val avoiding_arbitrary = HOLogic.mk_tuple avoiding_arbitraries;
 
           fun extract_vars t =
@@ -200,7 +200,24 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   | NONE => []
             in maps (fn (s, Ts) => set_bd_of_T s @ get_set_bd Ts) Ts' end;
 
+          fun get_thms_of_mrbnfs f =
+            let fun get_thms_of_mrbnfs_inner Ts =
+               let
+                val Ts' = map_filter (fn T => if Term.is_Type T then SOME (Term.dest_Type T) else NONE) Ts
+                fun thms_of_T s = case MRBNF_Def.mrbnf_of ctxt s of
+                  SOME mrbnf => f mrbnf
+                  | NONE => []
+              in maps (fn (s, Ts) => thms_of_T s @ get_thms_of_mrbnfs_inner Ts) Ts' end;
+            in get_thms_of_mrbnfs_inner (map fastype_of (hd avoiding)) end;
+
+          val class_thms = get_thms_of_mrbnfs (fn mrbnf => [@{thm ordLeq_transitive[OF iffD1[OF Card_order_iff_ordLeq_card_of]]} OF [MRBNF_Def.bd_Card_order_of_mrbnf mrbnf, #var_large (MRBNF_Def.class_thms_of_mrbnf mrbnf)]]);
           val set_bds = map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (get_set_bd (map fastype_of (hd avoiding)));
+
+          val monos = get_thms_of_mrbnfs (fn mrbnf => [
+            MRBNF_Def.pred_mono_strong_of_mrbnf mrbnf,
+            MRBNF_Def.rel_mono_strong_of_mrbnf mrbnf,
+            MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf
+          ]);
 
           val rule_thm = Goal.prove_sorry ctxt [fst (dest_Free P2)] [] (Term.subst_atomic [(P_new_var, P2)] rule_new) (fn {context=ctxt,...} =>
             Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
@@ -208,18 +225,23 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 rtac ctxt rule_inst,
                 EVERY' (map (rtac ctxt) (take more_consumes prems)),
                 (* Boundness *)
-                rtac ctxt allI,
-                REPEAT_DETERM o resolve_tac ctxt (bound_thms @ set_bds @
-                  @{thms finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]}
-                ),
+                SELECT_GOAL (EVERY1 [
+                  rtac ctxt allI,
+                  REPEAT_DETERM o resolve_tac ctxt (class_thms @ bound_thms @ set_bds @
+                    @{thms finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
+                      ordLeq_transitive[OF iffD1[OF Card_order_iff_ordLeq_card_of]]
+                    }
+                  )
+                ]),
                 (* others *)
-                REPEAT_DETERM o FIRST' [
-                  resolve_tac ctxt ([refl, allI, impI] @ prems),
-                  eresolve_tac ctxt [allE],
+                REPEAT_DETERM o (K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}) THEN' (FIRST' [
+                  resolve_tac ctxt ([refl, allI, impI, conjI] @ prems),
+                  eresolve_tac ctxt [allE, conjE],
                   dresolve_tac ctxt @{thms mp[OF _ refl]},
                   hyp_subst_tac ctxt,
-                  assume_tac ctxt
-                ]
+                  assume_tac ctxt,
+                  eresolve_tac ctxt monos
+                ]))
               ]
             ) ctxt 1
           )

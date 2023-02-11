@@ -156,12 +156,22 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
               val ps' = map (fn t =>
                 let
                   val p = HOLogic.dest_Trueprop t
-                  val (generalize, p') = case p of
-                    Const (@{const_name All}, _) $ Abs (_, _, v) =>
+                  fun or (a, b) = a orelse b
+                  fun zip f g ((a, b), (c, d)) = (f (a, c), g (b, d))
+                  fun find_IHs p = case p of
+                    Const (@{const_name All}, x) $ (t' as Abs (_, _, v)) =>
                       let val (t, _) = Term.strip_comb v
-                      in if t = P_new_var then (true, Term.incr_boundvars (n - 1) v) else (false, p) end
+                      in if t = P_new_var then
+                        (true, Term.incr_boundvars ~1 v)
+                      else
+                        find_IHs t' |> apsnd (fn t => HOLogic.all_const x $ t)
+                      end
+                    | Abs (x, T, t) => find_IHs t |> apsnd (fn t => Abs (x, T, t))
+                    | a $ b => (find_IHs a, find_IHs b) |> zip or (op$)
                     | _ => (false, p);
-                  val p'' = Term.incr_boundvars n (simplify_case_prod (
+                  val (generalize, p') = find_IHs p;
+                  val i = if generalize then 1 else 0
+                  val p'' = Term.incr_boundvars (n+i) (simplify_case_prod (
                     Term.subst_bounds ([avoiding_arbitrary], HOLogic.mk_Trueprop p')
                   ));
                 in if generalize then fold_rev Logic.all arbitrary' p'' else p'' end

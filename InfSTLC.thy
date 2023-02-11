@@ -533,12 +533,6 @@ lemma lset_DALNil[simp]: "lset (Rep_dallist DALNil) = {}"
 
 primcorec linterleave where
   "linterleave xs ys = (case xs of DALList.LNil \<Rightarrow> ys | DALList.LCons x xs \<Rightarrow> DALList.LCons x (linterleave ys xs))"
-print_theorems
-
-primcorec linterleave' where
-  "linterleave' xs ys = (case xs of LNil \<Rightarrow> ys | LCons x xs \<Rightarrow> (case ys of LNil \<Rightarrow> LCons x xs | LCons y ys \<Rightarrow> LCons x (LCons y (linterleave' xs ys))))"
-
-
 
 lemma in_set_linterleaveD: "x \<in> lset (linterleave xs ys) \<Longrightarrow> x \<in> lset xs \<or> x \<in> lset ys"
 proof (induct "linterleave xs ys" arbitrary: xs ys rule: llist.set_induct)
@@ -623,72 +617,33 @@ lemma lset_DALCons[simp]: "x \<notin> keys_dallist xs \<Longrightarrow> lset (Re
    apply assumption
   by simp
 
-lemma lset_linterleave_commute: "x \<in> lset (linterleave xs ys) \<Longrightarrow> x \<in> lset (linterleave ys xs)"
-proof (induct "linterleave xs ys" arbitrary: xs ys rule: llist.set_induct)
-  case (LCons1 z1 z2)
-  then show ?case by (subst (asm) linterleave.code) (auto simp: linterleave.ctr split: llist.splits)
-next
-  case (LCons2 z1 z2 xa)
-  then show ?case
-  proof (cases xs)
-    case LNil
-    then show ?thesis using LCons2
-      by (metis linterleave.code linterleave_LNil2 llist.disc(2) llist.sel(3) llist.set_sel(2) llist.simps(4))
-  next
-    case (LCons x21 x22)
-    then have 1: "linterleave xs ys = LCons z1 (linterleave ys x22)" using LCons2(3) apply (subst (asm) linterleave.code) apply (auto split: llist.splits)
-      using LCons2.hyps(3) by presburger
-    then have 2: "z1 = x21" "z2 = linterleave ys x22" "xs = LCons z1 x22" using LCons LCons2
-        apply (metis linterleave.simps(3) llist.disc(2) llist.sel(1) llist.simps(5))
-      using LCons LCons2 1 apply auto[1]
-      by (metis LCons2.hyps(3) linterleave.simps(3) llist.disc(2) llist.sel(1) llist.simps(5) local.LCons)
-    then have "xa \<in> lset (linterleave x22 ys)" using LCons2 by simp
-    then show ?thesis using LCons2 sorry
-  qed
-qed
+lemma lset_linterleaveD:
+  "x \<in> lset zs \<Longrightarrow> zs = linterleave xs ys \<Longrightarrow> x \<in> lset xs \<union> lset ys"
+  by (induct zs arbitrary: xs ys rule: llist.set_induct)
+    (subst (asm) linterleave.code; auto split: llist.splits)+
 
-lemma lset_linterleave: "lset (linterleave xs ys) = lset xs \<union> lset ys"
-apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  apply (rule iffI)
-   apply (drule in_set_linterleaveD)
-   apply (unfold Un_iff)
-   apply assumption
-
-  apply (erule disjE)
-   apply (erule llist.set_induct)
-    apply (subst linterleave.code)
-    apply (unfold llist.case llist.set)
-    apply (rule insertI1)
-    apply (subst linterleave.code)
-   apply (unfold llist.case llist.set)
-   apply (rule insertI2)
-   apply (rule lset_linterleave_commute)
-   apply assumption
-  apply (erule llist.set_induct)
-   apply (subst linterleave.code)
-    apply (rule llist.exhaust[of xs])
-     apply hypsubst
-     apply (unfold llist.case llist.set)
-     apply (rule insertI1)
-    apply hypsubst
-    apply (unfold llist.case llist.set)
-    apply (rule insertI2)
-    apply (subst linterleave.code)
-    apply (unfold llist.case llist.set)
-    apply (rule insertI1)
-  apply (rule lset_linterleave_commute)
-  apply (subst linterleave.code)
-  apply (unfold llist.case llist.set)
-  apply (rule insertI2)
-  apply assumption
+lemma lset_linterleaveI1: "x \<in> lset xs \<Longrightarrow> x \<in> lset (linterleave xs ys)"
+  apply (induct xs arbitrary: ys rule: llist.set_induct)
+  apply (subst linterleave.code; auto split: llist.splits)
+  apply (subst linterleave.code; subst linterleave.code; auto split: llist.splits)
   done
 
-lemma lset_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> lset (Rep_dallist (dainterleave xs ys)) = lset (Rep_dallist xs) \<union> lset (Rep_dallist ys)"
+lemma lset_linterleaveI2: "x \<in> lset ys \<Longrightarrow> x \<in> lset (linterleave xs ys)"
+  apply (induct ys arbitrary: xs rule: llist.set_induct)
+  apply (subst linterleave.code; subst linterleave.code; auto split: llist.splits)
+  apply (subst linterleave.code; subst linterleave.code; auto split: llist.splits)
+  done
+
+lemma lset_linterleave: "lset (linterleave xs ys) = lset xs \<union> lset ys"
+  by (auto intro: lset_linterleaveI1 lset_linterleaveI2 dest: lset_linterleaveD)
+
+lemma lset_dainterleave[simp]: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> lset (Rep_dallist (dainterleave xs ys)) = lset (Rep_dallist xs) \<union> lset (Rep_dallist ys)"
   by transfer (auto simp: lset_linterleave)
 
-(*lemma in_dainterleave: "\<lbrakk> x \<in> lset (Rep_dallist xs) ; keys_dallist xs \<inter> keys_dallist ys = {} \<rbrakk> \<Longrightarrow> x \<in> lset (Rep_dallist (dainterleave ys xs))"
-  sorry*)
+lemma in_dainterleave1: "\<lbrakk> x \<in> lset (Rep_dallist xs) ; keys_dallist xs \<inter> keys_dallist ys = {} \<rbrakk> \<Longrightarrow> x \<in> lset (Rep_dallist (dainterleave xs ys))"
+  by transfer (auto intro: lset_linterleaveI1)
+lemma in_dainterleave2: "\<lbrakk> x \<in> lset (Rep_dallist ys) ; keys_dallist xs \<inter> keys_dallist ys = {} \<rbrakk> \<Longrightarrow> x \<in> lset (Rep_dallist (dainterleave xs ys))"
+  by transfer (auto intro: lset_linterleaveI2)
 
 lemma inj_is_inj_on: "inj f \<Longrightarrow> inj_on f A"
   by (simp add: inj_def inj_onI)
@@ -1900,7 +1855,30 @@ next
   then show ?case using Lam Ty_Lam by blast
 next
   case (LetRec \<Gamma> xs \<Gamma>2 e \<tau> \<Gamma>')
-  then show ?case sorry
+  have 1: "keys_dallist \<Gamma> \<inter> keys_dallist (map_dallist id fst xs) = {}" "keys_dallist \<Gamma>' \<inter> keys_dallist (map_dallist id fst xs) = {}"
+     apply (subst dallist.set_map, rule bij_id, rule supp_id_bound)
+     apply (simp add: LetRec)
+    apply (subst dallist.set_map, rule bij_id, rule supp_id_bound)
+    apply (rule trans[OF Int_commute])
+    by (simp add: LetRec)
+  let ?\<Gamma>3 = "dainterleave \<Gamma>' (map_dallist id fst xs)"
+  from LetRec(3,7) have x: "\<forall>a\<in>lset (Rep_dallist \<Gamma>2). fst a \<in> FFVars_terms (LetRec xs e) \<longrightarrow> a \<in> lset (Rep_dallist ?\<Gamma>3)"
+    by (auto simp: lset_dainterleave[OF 1(1)] lset_dainterleave[OF 1(2)])
+  then have "\<forall>a\<in>lset (Rep_dallist \<Gamma>2). fst a \<in> FFVars_terms e \<longrightarrow> a \<in> lset (Rep_dallist ?\<Gamma>3)" unfolding FFVars_simps
+    using 1 LetRec.hyps(2,3) keys_dallist.rep_eq by fastforce
+  then have 2: "?\<Gamma>3 \<turnstile> e : \<tau>" using LetRec(6) by fastforce
+  have "\<forall>(\<tau>', e)\<in>vals_dallist xs. ((\<forall>a\<in>lset (Rep_dallist \<Gamma>2). case a of (x, \<tau>) \<Rightarrow> x \<in> FFVars_terms e \<longrightarrow> (x, \<tau>) \<in> lset (Rep_dallist ?\<Gamma>3)) \<longrightarrow> ?\<Gamma>3 \<turnstile> e : \<tau>')
+    \<longrightarrow> ?\<Gamma>3 \<turnstile> e : \<tau>'"
+    apply (rule ballI)
+    apply (unfold case_prod_beta)
+    apply (rule impI)
+    apply (erule impE)
+     prefer 2
+    apply assumption
+    using x unfolding FFVars_simps
+    by (smt (verit, del_insts) 1 DiffI LetRec.hyps(2,3) UnCI UnE Union_iff disjoint_iff image_iff keys_dallist.rep_eq lset_dainterleave prod.collapse)
+  then show ?case using Ty_LetRec[OF trans[OF Int_commute LetRec(1)] refl dallist.pred_mono_strong[OF LetRec(4)] 2]
+    by blast
 qed
 
 lemma weaken:

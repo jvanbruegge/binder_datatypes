@@ -1370,6 +1370,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       ]) end
     )) (#FVars quotient) fs' tvsubst_VVrs FVars_VVrs not_isVVr_frees IImsupp_Diffs defs;
 
+    val _ = SSupp_comps
     (* TODO: Remove *)
     val notes =
       [("SSupp_VVr_empty", map_filter (Option.map #SSupp_VVr_empty) defs),
@@ -1383,7 +1384,10 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
        ("tvsubst_cctor_not_isVVr", [tvsubst_not_isVVr]),
        ("not_isVVr_free", map_filter I not_isVVr_frees),
        ("IImsupp_Diff", map_filter I IImsupp_Diffs),
-       ("FFVars_tvsubst", map_filter I FFVars_tvsubsts)
+       ("FFVars_tvsubst", map_filter I FFVars_tvsubsts),
+       ("SSupp_comp_bound", map_filter (Option.map #SSupp_comp_bound) SSupp_comps),
+       ("SSupp_comp_rename_bound", map_filter (Option.map #SSupp_comp_rename_bound) SSupp_comps),
+       ("IImsupp_comp_image", map_filter (Option.map #IImsupp_comp_image) SSupp_comps)
       ] |> (map (fn (thmN, thms) =>
         ((Binding.name thmN, []), [(thms, [])])
       ));

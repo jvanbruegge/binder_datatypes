@@ -618,6 +618,31 @@ lemma llookup_NoneD: "llookup k xs = None \<Longrightarrow> ldistinct (lmap fst 
   apply (rule option.distinct)
   done
 
+lemma inj_is_inj_on: "inj f \<Longrightarrow> inj_on f A"
+  by (simp add: inj_def inj_onI)
+
+lemma llookup_lmap_SomeD:
+  fixes f::"'a \<Rightarrow> 'a" and xs::"('a \<times> 'v) llist"
+  assumes "bij f"
+  shows "llookup (f k) xs = Some v \<Longrightarrow> llookup k (lmap (map_prod (inv f) id) xs) = Some v"
+  apply (rule llookup.raw_induct[of "\<lambda>k xs v. llookup (inv f k) (lmap (map_prod (inv f) id) xs) = Some v" "f k" xs v, unfolded inv_simp1[OF assms]])
+  subgoal for g k2 xs2 v2
+    apply (cases xs2)
+    by (auto simp: assms)
+  apply assumption
+  done
+
+lemma dallookup_map_SomeD: "bij f \<Longrightarrow> dallookup (f k) xs = Some v \<Longrightarrow> dallookup k (map_dallist (inv f) id xs) = Some v"
+  apply transfer
+  apply (subst if_P)
+   apply (rule inj_is_inj_on)
+   apply (rule bij_is_inj)
+   apply (rule bij_imp_bij_inv)
+   apply assumption
+  apply (rule llookup_lmap_SomeD)
+   apply assumption+
+  done
+
 lemma dallookup_SomeD: "dallookup k xs = Some v \<Longrightarrow> (k, v) \<in> lset (Rep_dallist xs)"
   by transfer (auto intro: llookup_SomeD)
 
@@ -776,9 +801,6 @@ lemma llookup_lmapD: "llookup k xs = Some a \<Longrightarrow> ldistinct (lmap fs
 lemma dallookup_dallmapD: "dallookup k xs = Some v \<Longrightarrow> dallookup k (map_dallist id f xs) = Some (f v)"
   by transfer (auto dest: llookup_lmapD)
 
-lemma inj_is_inj_on: "inj f \<Longrightarrow> inj_on f A"
-  by (simp add: inj_def inj_onI)
-
 lemma map_dallist_DALNil[simp]: "map_dallist f1 f2 DALNil = DALNil"
   by transfer auto
 
@@ -819,6 +841,7 @@ coinductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow
 | ST_Let: "e \<^bold>\<longrightarrow> e' \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> LetRec xs e'"
 | ST_DropLet: "\<lbrakk> stuck e ; keys_dallist xs \<inter> FFVars_terms e = {} \<rbrakk> \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> e"
 | ST_LetBeta: "\<lbrakk> stuck e ; keys_dallist xs \<inter> FFVars_terms e \<noteq> {} \<rbrakk> \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> LetRec xs (tvsubst (\<lambda>k. case dallookup k xs of None \<Rightarrow> VVr k | Some v \<Rightarrow> snd v) e)"
+print_theorems
 
 no_notation Set.member  ("(_/ : _)" [51, 51] 50)
 inductive Ty :: "('a::var_terms_pre, \<tau>) dallist \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> bool" ("_ \<turnstile> _ : _" [55,55,55] 60) where
@@ -1006,10 +1029,6 @@ lemma ex_avoiding_bij:
 
 lemma single_bound: "|{a}| <o |UNIV::'a::var_terms_pre set|"
   by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite]])
-
-thm list.induct
-
-thm Ty.induct
 
 lemma Ty_strong_induct[consumes 1, case_names Bound Var App Lam LetRec]:
   fixes K::"'b \<Rightarrow> 'a::var_terms_pre set" and e::"'a terms"
@@ -1969,6 +1988,313 @@ context begin
 ML_file \<open>./Tools/binder_induction.ML\<close>
 end
 
+lemma rrename_tvsubst:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a terms" and xs::"('a, 'v) dallist"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|" "|SSupp g| <o |UNIV::'a set|"
+  shows "rrename_terms f (tvsubst g e) = tvsubst (rrename_terms f \<circ> g \<circ> inv f) (rrename_terms f e)"
+proof (binder_induction e arbitrary: xs avoiding: "IImsupp g" rule: TT_fresh_induct_param)
+  case Bound
+  then show ?case
+    unfolding IImsupp_def
+    by (meson assms(3) terms.set_bd_UNIV type_copy_set_bd var_terms_pre_class.UN_bound var_terms_pre_class.Un_bound)
+next
+  case (Var a xs)
+  show ?case
+    apply (rule trans)
+     apply (rule arg_cong[of _ _ "rrename_terms f"])
+     apply (rule tvsubst_simps)
+     apply (rule assms)
+    apply (rule sym)
+    apply (rule trans)
+    apply (rule arg_cong[of _ _ "tvsubst _"])
+     apply (rule rrename_simps)
+      apply (rule assms)+
+    apply (rule trans)
+     apply (rule tvsubst_simps)
+    apply (rule SSupp_comp_bound)
+     apply (rule SSupp_comp_rename_bound)
+        apply (rule assms supp_inv_bound)+
+    apply (unfold comp_def)
+    apply (subst inv_simp1)
+     apply (rule assms)
+    apply (rule refl)
+    done
+next
+  case (App e1 e2 f)
+  show ?case unfolding tvsubst_simps[OF assms(3)] rrename_simps[OF assms(1,2)]
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule tvsubst_simps)
+     apply (rule SSupp_comp_bound)
+      apply (rule SSupp_comp_rename_bound)
+        apply (rule assms supp_inv_bound)+
+    apply (rule iffD2[OF terms_inject_plain(2)])
+    apply (rule conjI)
+    apply (rule sym)
+     apply (rule App)+
+    apply (rule sym)
+    apply (rule App)+
+    done
+next
+  case (Lam x \<tau> e xs)
+  show ?case
+    apply (rule trans)
+     apply (rule arg_cong[of _ _ "rrename_terms f"])
+     apply (rule tvsubst_simps)
+      apply (rule assms)
+     apply (rule Lam)
+    apply (rule trans)
+     apply (rule rrename_simps)
+      apply (rule assms)+
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule arg_cong[of _ _ "tvsubst _"])
+     apply (rule rrename_simps)
+      apply (rule assms)+
+    apply (rule trans)
+     apply (rule tvsubst_simps)
+    apply (rule SSupp_comp_bound)
+      apply (rule SSupp_comp_rename_bound)
+         apply (rule assms supp_inv_bound)+
+     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]])
+    apply (rule IImsupp_comp_image[OF assms(1,2), of "Abs_SSfun g", unfolded Abs_SSfun_inverse[unfolded mem_Collect_eq, OF assms(3)]])
+     apply (rule not_imageI)
+      apply (rule assms)
+     apply (rule Lam)
+    apply (rule arg_cong[of _ _ "Lam (f x) \<tau>"])
+    apply (rule sym)
+    apply (rule Lam)
+    done
+next
+  case (LetRec xs e xs')
+  show ?case
+    apply (rule trans)
+     apply (rule arg_cong[of _ _ "rrename_terms f"])
+     apply (rule tvsubst_simps)
+      apply (rule assms)
+     apply (rule LetRec)
+    apply (rule trans)
+     apply (rule rrename_simps)
+      apply (rule assms)+
+    apply (subst dallist.map_comp)
+        apply (rule bij_id supp_id_bound assms)+
+    apply (unfold id_o o_id prod.map_comp trans[OF comp_apply[of "map_prod _ _" "map_prod _ _"] prod.map_comp, abs_def])
+    apply (rule sym)
+    apply (rule trans)
+     apply (rule arg_cong[of _ _ "tvsubst _"])
+     apply (rule rrename_simps)
+      apply (rule assms)+
+    apply (rule trans)
+     apply (rule tvsubst_simps)
+    apply (rule SSupp_comp_bound)
+      apply (rule SSupp_comp_rename_bound)
+         apply (rule assms supp_inv_bound)+
+     apply (rule trans)
+       apply (subst dallist.set_map)
+    apply (rule assms)+
+      apply (rule arg_cong2[OF refl, of _ _ "(\<inter>)"])
+      apply (rule IImsupp_comp_image[OF assms(1,2), of "Abs_SSfun g", unfolded Abs_SSfun_inverse[unfolded mem_Collect_eq, OF assms(3)]])
+     apply (rule trans)
+      apply (rule image_Int[symmetric])
+      apply (rule bij_is_inj)
+      apply (rule assms)
+     apply (unfold image_is_empty)
+     apply (rule LetRec)
+    apply (subst dallist.map_comp)
+        apply (rule supp_id_bound bij_id assms)+
+    apply (unfold id_o o_id prod.map_comp trans[OF comp_apply[of "map_prod _ _" "map_prod _ _"] prod.map_comp, abs_def])
+    apply (rule arg_cong2[of _ _ _ _ LetRec])
+     apply (rule dallist.map_cong)
+           apply (rule assms refl)+
+     apply (rule prod.map_cong)
+       apply (rule refl)+
+     apply (rule trans[OF comp_apply])
+     apply (rule sym)
+     apply (rule trans[OF comp_apply])
+     apply (drule bspec[OF LetRec(2)[unfolded dallist.pred_set]])
+     apply (unfold case_prod_beta snds.simps)
+     apply hypsubst
+     apply assumption
+    apply (rule sym)
+    apply (rule LetRec)
+    done
+qed
+
+lemma SSupp_upd_bound:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a terms"
+  shows "|SSupp (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |SSupp f| <o |UNIV::'a set|"
+  unfolding SSupp_def
+  apply (auto simp only: fun_upd_apply single_bound ordLeq_refl split: if_splits
+      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF terms_pre.Un_bound], rotated]
+      intro: card_of_mono1)
+  done
+
+corollary SSupp_upd_VVr_bound: "|SSupp (VVr(a:=(t::'a::var_terms_pre terms)))| <o |UNIV::'a set|"
+  apply (rule iffD2[OF SSupp_upd_bound])
+  apply (rule SSupp_VVr_bound)
+  done
+
+lemma VVr_comp:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "rrename_terms f \<circ> VVr(x := e2) \<circ> inv f = VVr(f x := rrename_terms f e2)"
+  unfolding fun_upd_def comp_def
+  apply (rule ext)
+  subgoal for y
+    apply (rule case_split[of "y = f x"])
+     apply (subst if_P)
+      apply (simp add: assms)
+     apply (subst if_P)
+      apply assumption
+     apply (rule refl)
+    apply (subst if_not_P)
+    by (auto simp: assms Var_is_VVr[symmetric] rrename_simps)
+  done
+
+lemma stuck_aux_eqvt:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "stuck_aux e \<Longrightarrow> stuck_aux (rrename_terms f e)"
+  by (induction e rule: stuck_aux.induct) (auto simp: rrename_simps[OF assms] intro: stuck_aux.intros)
+
+lemma stuck_eqvt:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "stuck e \<Longrightarrow> stuck (rrename_terms f e)"
+unfolding stuck_def proof (erule disjE, goal_cases)
+  case 1
+  then show ?case using stuck_aux_eqvt[OF assms] by simp
+next
+  case 2
+  then show ?case using rrename_simps[OF assms] by blast
+qed
+
+lemma keys_dallist_bound: "|keys_dallist (xs::('a::var_terms_pre, 'v) dallist)| <o |UNIV::'a set|"
+  apply (rule ordLess_ordLeq_trans)
+   apply (rule dallist.set_bd)
+  using Card_order_iff_ordLeq_card_of llist.bd_Card_order ordLeq_transitive var_dallist_class.large by blast
+
+lemma vals_dallist_bound: "|vals_dallist (xs::('a::var_terms_pre, 'v) dallist)| <o |UNIV::'a set|"
+  apply (rule ordLess_ordLeq_trans)
+   apply (rule dallist.set_bd)
+  using Card_order_iff_ordLeq_card_of llist.bd_Card_order ordLeq_transitive var_dallist_class.large by blast
+
+lemma SSupp_bound: "|SSupp (\<lambda>k. case dallookup (k::'a::var_terms_pre) xs of None \<Rightarrow> VVr k | Some a \<Rightarrow> snd a)| <o |UNIV::'a set|" (is "|SSupp ?f| <o |?U|")
+proof -
+  have "SSupp ?f \<subseteq> keys_dallist xs" unfolding SSupp_def
+    apply (rule subsetI)
+    apply (drule iffD1[OF mem_Collect_eq])
+    subgoal for x
+      apply (cases "dallookup x xs")
+      by (auto dest!: dallookup_SomeD simp: keys_dallist.rep_eq rev_image_eqI)
+    done
+  then show ?thesis by (rule card_of_subset_bound[OF _ keys_dallist_bound])
+qed
+
+lemma Step_eqvt:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "e \<^bold>\<longrightarrow> e' \<Longrightarrow> vvsubst f e \<^bold>\<longrightarrow> vvsubst f e'"
+unfolding terms_vvsubst_rrename[OF assms]
+proof (coinduction arbitrary: e e')
+  case Step
+  then show ?case
+  proof cases
+    case (ST_Beta x \<tau> e1 e2)
+    then have 1: "rrename_terms f e = App (Lam (f x) \<tau> (rrename_terms f e1)) (rrename_terms f e2)" using rrename_simps[OF assms] by simp
+    from ST_Beta have "rrename_terms f e' = tvsubst (rrename_terms f \<circ> VVr(x := e2) \<circ> inv f) (rrename_terms f e1)"
+      using rrename_tvsubst[OF assms SSupp_upd_VVr_bound] by auto
+    also have "... = tvsubst (VVr (f x := rrename_terms f e2)) (rrename_terms f e1)" using VVr_comp[OF assms] by simp
+    finally show ?thesis using 1 by auto
+  next
+    case (ST_App e1 e1' e2)
+    then show ?thesis by (auto simp: rrename_simps assms)
+  next
+    case (ST_Let e1 e1' xs)
+    then show ?thesis using assms rrename_simps(4) by blast
+  next
+    case (ST_DropLet xs)
+    then have "rrename_terms f e = LetRec (map_dallist f (map_prod id (rrename_terms f)) xs) (rrename_terms f e')"
+      by (simp add: rrename_simps assms)
+    moreover have "stuck (rrename_terms f e')" using ST_DropLet stuck_eqvt[OF assms] by blast
+    moreover have "keys_dallist (map_dallist f (map_prod id (rrename_terms f)) xs) \<inter> FFVars_terms (rrename_terms f e') = {}"
+      using ST_DropLet by (auto simp: assms dallist.set_map terms.FFVars_rrenames)
+    ultimately show ?thesis by blast
+  next
+    case (ST_LetBeta e1 xs)
+    let ?g = "\<lambda>k. case dallookup k xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x"
+    let ?xs = "map_dallist f (map_prod id (rrename_terms f)) xs"
+    have "rrename_terms f \<circ> ?g \<circ> inv f = (\<lambda>k. case dallookup (inv f k) xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> rrename_terms f (snd x))"
+      apply (unfold comp_def)
+      apply (rule ext)
+      subgoal for k
+        apply (cases "dallookup (inv f k) xs")
+         apply simp
+         apply (unfold Var_is_VVr[symmetric])
+         apply (rule trans)
+          apply (rule rrename_simps)
+           apply (rule assms)+
+         apply (subst inv_simp2[of f])
+          apply (rule assms)
+         apply (rule refl)
+        by simp
+      done
+    also have "... = (\<lambda>k. case dallookup k ?xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x)"
+      apply (rule ext)
+      subgoal for k
+        apply (cases "dallookup (inv f k) xs")
+         apply simp
+         apply (cases "dallookup k ?xs")
+          apply simp
+         apply (metis (mono_tags, lifting) assms(1) assms(2) bij_betw_imp_surj dallist.set_map(1) dallookup_NoneD dallookup_NoneI not_imageI option.discI surj_f_inv_f)
+        apply simp
+        apply (cases "dallookup k ?xs")
+         apply simp
+         apply (metis assms(1) assms(2) dallist.set_map(1) dallookup_NoneD dallookup_NoneI image_in_bij_eq option.discI)
+        apply simp
+        apply (rotate_tac -1)
+        apply (drule dallookup_dallmapD[of _ _ _ "map_prod id (rrename_terms (inv f))"])
+        apply (subst (asm) dallist.map_comp)
+            apply (rule assms supp_id_bound bij_id)+
+        apply (unfold id_o o_id prod.map_comp trans[OF comp_apply[of "map_prod _ _" "map_prod _ _"] prod.map_comp, abs_def])
+        apply (subst (asm) terms.rrename_comp0s)
+            apply (rule assms supp_inv_bound bij_imp_bij_inv)+
+        apply (subst (asm) inv_o_simp1[of f])
+         apply (rule assms)
+        apply (unfold terms.rrename_id0s map_prod.id)
+        subgoal for a b
+          apply (rule prod.exhaust[of b])
+          apply hypsubst_thin
+          apply (unfold snd_conv map_prod_simp id_def)
+          apply (unfold id_def[symmetric])
+          apply (drule dallookup_map_SomeD[of "inv f", rotated])
+           apply (rule bij_imp_bij_inv)
+           apply (rule assms)
+          apply (subst (asm) inv_inv_eq)
+           apply (rule assms)
+          apply simp
+          apply (rule trans)
+           apply (rule terms.rrename_comps)
+              apply (rule assms bij_imp_bij_inv supp_inv_bound)+
+          apply (subst inv_o_simp2)
+           apply (rule assms)
+          apply (rule terms.rrename_ids)
+          done
+        done
+      done
+    finally have 1: "rrename_terms f (tvsubst ?g e1)
+    = tvsubst (\<lambda>k. case dallookup k ?xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x) (rrename_terms f e1)" (is "_ = ?e1'")
+      unfolding rrename_tvsubst[OF assms SSupp_bound] by simp
+    from ST_LetBeta have "rrename_terms f e = LetRec ?xs (rrename_terms f e1)"
+      by (simp add: rrename_simps assms)
+    moreover have "rrename_terms f e' = LetRec ?xs ?e1'" using 1 rrename_simps[OF assms] ST_LetBeta by auto
+    moreover have "stuck (rrename_terms f e1)" using ST_LetBeta stuck_eqvt[OF assms] by blast
+    moreover have "keys_dallist ?xs \<inter> FFVars_terms (rrename_terms f e1) \<noteq> {}"
+      using ST_LetBeta by (auto simp: assms dallist.set_map terms.FFVars_rrenames)
+    ultimately show ?thesis by blast
+  qed
+qed
+
 lemma context_morph: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; \<forall>(x, \<tau>)\<in>lset (Rep_dallist \<Gamma>). x \<in> FFVars_terms e \<longrightarrow> (x, \<tau>)\<in>lset (Rep_dallist \<Gamma>') \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile> e : \<tau>"
 proof (binder_induction \<Gamma> e \<tau> arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_strong_induct)
   case (Var x \<Gamma> \<tau> \<Gamma>')
@@ -2017,22 +2343,6 @@ lemma weaken:
   shows "dainterleave \<Gamma> xs \<turnstile> e : \<tau>"
   using context_morph[OF assms(1)] in_dainterleave1[OF _ assms(2)] by blast
 
-lemma SSupp_bound: "|SSupp (\<lambda>k. case dallookup (k::'a::var_terms_pre) xs of None \<Rightarrow> VVr k | Some a \<Rightarrow> snd a)| <o |UNIV::'a set|" (is "|SSupp ?f| <o |?U|")
-proof -
-  have "SSupp ?f \<subseteq> keys_dallist xs" unfolding SSupp_def
-    apply (rule subsetI)
-    apply (drule iffD1[OF mem_Collect_eq])
-    subgoal for x
-      apply (cases "dallookup x xs")
-      by (auto dest!: dallookup_SomeD simp: keys_dallist.rep_eq rev_image_eqI)
-    done
-  then show ?thesis
-    apply (rule card_of_subset_bound)
-    apply (rule ordLess_ordLeq_trans)
-     apply (rule dallist.set_bd)
-    using Card_order_iff_ordLeq_card_of llist.bd_Card_order ordLeq_transitive var_dallist_class.large by blast
-qed
-
 (*lemma substitution: "\<lbrakk> \<Gamma>' \<turnstile> e : \<tau> ; \<Gamma>' = dainterleave (map_dallist id fst xs) \<Gamma> ; pred_dallist (\<lambda>(\<tau>1, v). \<Gamma>' \<turnstile> v : \<tau>1 \<and> FFVars_terms v \<inter> keys_dallist xs = {}) xs; keys_dallist xs \<inter> keys_dallist \<Gamma> = {} \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> tvsubst (\<lambda>k. case dallookup k xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x) e : \<tau>"
 proof (binder_induction \<Gamma>' e \<tau> arbitrary: \<Gamma> avoiding: \<Gamma> xs rule: Ty_strong_induct)
   case (Var x \<Gamma>' \<tau> \<Gamma>)
@@ -2068,10 +2378,10 @@ next
   then show ?case sorry
 qed*)
 
-corollary substitution_single:
+(*corollary substitution_single:
   assumes "DALCons x \<tau>1 \<Gamma> \<turnstile> e : \<tau>" "DALCons x \<tau>1 \<Gamma> \<turnstile> v : \<tau>1" "x \<notin> keys_dallist \<Gamma>"
   shows "\<Gamma> \<turnstile> tvsubst (VVr(x:=v)) e : \<tau>"
-(*proof -
+proof -
   let ?xs = "DALCons x (\<tau>1, v) DALNil"
   have 1: "(\<lambda>k. case dallookup k ?xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x) = (VVr(x:=v))" by auto
   have 2: "dainterleave (map_dallist id fst ?xs) \<Gamma> = DALCons x \<tau>1 \<Gamma>"
@@ -2079,17 +2389,74 @@ corollary substitution_single:
   have 3: "pred_dallist (\<lambda>(\<tau>1, v). DALNil \<turnstile> v : \<tau>1) ?xs = DALNil \<turnstile> v : \<tau>1" by auto
   show ?thesis using substitution[of _ ?xs \<Gamma> e \<tau>, unfolded 1 2 3, OF assms(1,2)] assms(3) by simp
 qed*)
-  sorry
+
+lemma substitution_single:
+  assumes "\<Gamma>' \<turnstile> e : \<tau>" "\<Gamma>' \<turnstile> v : \<tau>1" "\<Gamma>' = DALCons x \<tau>1 \<Gamma>" "x \<notin> keys_dallist \<Gamma>"
+  shows "\<Gamma> \<turnstile> tvsubst (VVr(x:=v)) e : \<tau>"
+using assms proof (binder_induction \<Gamma>' e \<tau> arbitrary: \<Gamma> avoiding: \<Gamma> v rule: Ty_strong_induct)
+  case (Var y \<Gamma>' \<tau> \<Gamma>)
+  then show ?case
+    apply (subst tvsubst_simps)
+     apply (rule SSupp_upd_VVr_bound)
+    apply (unfold fun_upd_def Var_is_VVr[symmetric])
+    apply (rule case_split[of "y = x"])
+     apply (subst if_P)
+      apply assumption
+
+    sorry
+next
+  case (App \<Gamma>' e1 \<tau>1 \<tau>2 e2 \<Gamma>)
+  then show ?case sorry
+next
+  case (Lam x \<Gamma>' \<tau> e \<tau>2 \<Gamma>)
+  then show ?case sorry
+next
+  case (LetRec \<Gamma>' xs \<Gamma>' e \<tau> \<Gamma>)
+  then show ?case sorry
+qed
 
 theorem preservation: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; e \<^bold>\<longrightarrow> e' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> e' : \<tau>"
-proof (induction \<Gamma> e \<tau> arbitrary: e' rule: Ty.induct)
+proof (binder_induction \<Gamma> e \<tau> arbitrary: e' avoiding: e' rule: Ty_strong_induct)
+  case (App \<Gamma> e1 \<tau>1 \<tau>2 e2 e')
+  from App.prems show ?case
+  proof cases
+    case (ST_Beta x \<tau> e1' e2')
+    then show ?thesis using App sorry
+  next
+    case (ST_App e1 e1' e2)
+    then show ?thesis using App by (auto intro: Ty.intros)
+  qed simp_all
+next
+  case (LetRec \<Gamma> xs \<Gamma>' e \<tau> e')
+  from LetRec.prems show ?case
+  proof cases
+    case (ST_Let e1 e1' ys)
+    then show ?thesis using LetRec sorry
+  next
+    case (ST_DropLet ys)
+    then obtain f where 1: "bij f" "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
+      "map_dallist f (map_prod id (vvsubst f)) xs = ys" "vvsubst f e = e'"
+      "id_on (\<Union> (FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) f" using LetRec_inject by blast
+    then have 2: "keys_dallist xs \<inter> FFVars_terms e = {}" using terms.set_map ST_DropLet(3)
+      by (metis (no_types, lifting) bij_betw_apply bij_imp_bij_betw dallist.set_map(1) disjoint_iff)
+    then have 3: "\<Gamma> \<turnstile> e : \<tau>" using LetRec(2,3) context_morph[OF LetRec(5)]
+      by (smt (verit, ccfv_threshold) Int_emptyD Prelim.image_id UnE bij_id case_prodI2 dallist.set_map(1) fst_conv imageI keys_dallist.rep_eq lset_dainterleave supp_id_bound)
+    have "id_on (FFVars_terms e) f" using 1 2 by (metis Diff_Un_disjunct id_on_Un)
+    then have "e = e'" using 1 by (metis id_apply id_onD supp_id_bound terms.map_cong0 terms.map_id)
+    then show ?thesis using 3 by blast
+  next
+    case (ST_LetBeta e1 ys)
+    then show ?thesis using LetRec Ty_LetRec sorry
+  qed simp_all
+qed (auto elim: STE)
+
+
+(*proof (induction \<Gamma> e \<tau> arbitrary: e' rule: Ty.induct)
   case (Ty_App \<Gamma> e1 \<tau>1 \<tau>2 e2)
   from Ty_App.prems show ?case
   proof cases
     case (ST_Beta x \<tau> e1' e2')
-    then obtain y::"'a::var_terms_pre" and e3 where 1: "DALCons y \<tau>1 \<Gamma> \<turnstile> e3 : \<tau>2" "y \<notin> keys_dallist \<Gamma>" "Lam x \<tau> e1' = Lam y \<tau>1 e3" using Ty_App(1) by (force elim: TyE)
-    then have 2: "DALCons y \<tau>1 \<Gamma> \<turnstile> e2 : \<tau>1" using weaken[OF Ty_App(2), of "DALCons y \<tau>1 DALNil"] by auto
-    then show ?thesis using substitution_single[OF 1(1) 2 1(2)] sorry
+    then show ?thesis sorry
   next
     case (ST_App e1 e1' e2)
     then show ?thesis using Ty_App by (auto intro: Ty.intros)
@@ -2098,15 +2465,53 @@ next
   case (Ty_LetRec \<Gamma> xs \<Gamma>' e \<tau>)
   from Ty_LetRec.prems show ?case
   proof cases
-    case (ST_Let e1 e1' xs1)
-    then show ?thesis using Ty.Ty_LetRec Ty_LetRec (* rename + induction *) sorry
+    case (ST_Let e2 e1' ys)
+    then obtain f::"'a::var_terms_pre \<Rightarrow> 'a" where 1: "bij f" "|supp f| <o |UNIV::'a set|"
+      "map_dallist f (map_prod id (vvsubst f)) xs = ys" "vvsubst f e = e2"
+      "id_on (\<Union>(FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) f"
+      using LetRec_inject by blast
+    then have "map_dallist id fst xs = map_dallist id fst (map_dallist (inv f) id ys)"
+      by (smt (verit) Product_Type.fst_comp_map_prod bij_id bij_imp_bij_inv dallist.map_comp dallist.map_id inv_id inv_o_simp1 supp_id_bound supp_inv_bound)
+
+    have "vvsubst f e \<^bold>\<longrightarrow> e1'" using ST_Let(3) 1 by simp
+    then have "vvsubst f e \<^bold>\<longrightarrow> vvsubst f (vvsubst (inv f) e1')" by (simp add: 1 supp_inv_bound terms.map_comp terms.map_id)
+    then have "e \<^bold>\<longrightarrow> vvsubst (inv f) e1'" using Step_eqvt[of "inv f"]
+      by (metis 1(1,2) bij_betw_inv_into inv_o_simp1 supp_inv_bound terms.map_comp terms.map_id)
+    then have "\<Gamma>' \<turnstile> vvsubst (inv f) e1' : \<tau>" by (rule Ty_LetRec)
+    then have "\<Gamma> \<turnstile> LetRec xs (vvsubst (inv f) e1') : \<tau>" (is "\<Gamma> \<turnstile> ?e : \<tau>") using Ty.Ty_LetRec[OF Ty_LetRec(1,2)] Ty_LetRec(4)
+      by (simp add: dallist.pred_set split_beta)
+
+    obtain g::"'a::var_terms_pre \<Rightarrow> 'a" where 3: "bij g" "|supp g| <o |UNIV::'a set|" "imsupp g \<inter> keys_dallist \<Gamma> = {}" "\<forall>a. a \<in> imsupp f - keys_dallist \<Gamma> \<union> keys_dallist xs \<and> f a \<notin> keys_dallist \<Gamma> \<longrightarrow> g a = f a"
+      "id_on (\<Union> (FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) g"
+      apply atomize_elim
+      apply (rule exE[OF ex_avoiding_bij[OF 1(2,1) cinfinite_imp_infinite[OF terms.UNIV_cinfinite] _ 1(5) _ trans[OF Int_commute Ty_LetRec(1)]]])
+         apply (rule ordLeq_ordLess_trans[OF card_of_diff])
+         apply (rule terms.Un_bound)
+          apply (rule terms.UNION_bound)
+           apply (rule ordLeq_ordLess_trans[OF card_of_image])
+           apply (rule vals_dallist_bound keys_dallist_bound terms.set_bd_UNIV)+
+      apply (erule conjE)+
+      apply (rule exI)
+      apply ((rule conjI)?, assumption)+
+      done
+  
+    show ?thesis using 2  (* rename + induction *) sorry
   next
     case (ST_DropLet ys)
-    then show ?thesis using Ty_LetRec (* needs context strengthening *) sorry
+    then obtain f where 1: "bij f" "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
+      "map_dallist f (map_prod id (vvsubst f)) xs = ys" "vvsubst f e = e'"
+      "id_on (\<Union> (FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) f" using LetRec_inject by blast
+    then have 2: "keys_dallist xs \<inter> FFVars_terms e = {}" using terms.set_map ST_DropLet(3)
+      by (metis (no_types, lifting) bij_betw_apply bij_imp_bij_betw dallist.set_map(1) disjoint_iff)
+    then have 3: "\<Gamma> \<turnstile> e : \<tau>" using Ty_LetRec(1,2) context_morph[OF Ty_LetRec(3)]
+      by (smt (verit, ccfv_threshold) Int_emptyD Prelim.image_id UnE bij_id case_prodI2 dallist.set_map(1) fst_conv imageI keys_dallist.rep_eq lset_dainterleave supp_id_bound)
+    have "id_on (FFVars_terms e) f" using 1 2 by (metis Diff_Un_disjunct id_on_Un)
+    then have "e = e'" using 1 by (metis id_apply id_onD supp_id_bound terms.map_cong0 terms.map_id)
+    then show ?thesis using 3 by blast
   next
-    case (ST_LetBeta e xs)
+    case (ST_LetBeta e2 ys)
     then show ?thesis sorry
   qed simp_all
-qed (auto elim: STE)
+qed (auto elim: STE)*)
 
 end

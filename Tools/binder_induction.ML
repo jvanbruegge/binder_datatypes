@@ -102,33 +102,44 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           fun extract_vars t =
             let
               val T = fastype_of t
-              fun extract_deep T t = if T = TFree var then t else
-                let
-                  val (name, Ts) = Term.dest_Type T
-                  val sets = case MRBNF_Def.mrbnf_of ctxt name of
-                    SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
-                    | NONE => (case BNF_Def.bnf_of ctxt name of
-                      SOME bnf => BNF_Def.sets_of_bnf bnf
-                      | NONE => error "Only single variables and variables in (MR)BNFs are supported, use the fset or set['a] BNFs instead of set"
+              fun extract_deep T t = if T = TFree var then (SOME t, []) else
+                case try HOLogic.dest_setT T of
+                  SOME (TFree a) => if a = var then (NONE, [t]) else error "Wrong variable kind in set"
+                | NONE =>
+                  let
+                    val (name, Ts) = Term.dest_Type T
+                    val sets = case MRBNF_Def.mrbnf_of ctxt name of
+                      SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
+                      | NONE => (case BNF_Def.bnf_of ctxt name of
+                        SOME bnf => BNF_Def.sets_of_bnf bnf
+                        | NONE => error "Only single variables and variables in (MR)BNFs are supported, use the fset or set['a] BNFs instead of set"
+                      );
+                    val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts)
+                    val sets' = map_filter (fn (T, s) => if member (op=) (Term.add_tfreesT T []) var then
+                      SOME (T, subst s) else NONE) (Ts ~~ sets);
+                    val (ts, ts') = split_list (map (fn (T, s) => extract_deep T (case fastype_of t of
+                      Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
+                      | _ => s $ t)) sets'
                     );
-                  val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts)
-                  val sets' = map_filter (fn (T, s) => if member (op=) (Term.add_tfreesT T []) var then
-                    SOME (T, subst s) else NONE) (Ts ~~ sets);
-                  val ts = map (fn (T, s) => extract_deep T (case fastype_of t of
-                    Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
-                    | _ => s $ t)) sets'
-                in foldl1 MRBNF_Util.mk_Un ts end;
+                  in (SOME (foldl1 MRBNF_Util.mk_Un (map_filter I ts)), flat ts') end;
 
-            in if T = TFree var then HOLogic.mk_set T [t] else extract_deep T t end
+            in if T = TFree var then (SOME (HOLogic.mk_set T [t]), []) else extract_deep T t end
+
+          val (terms, raws) = apfst (map_filter I) (apsnd flat (split_list (map extract_vars (hd avoiding))));
 
           val K_t = case hd avoiding of
             [] => Term.abs ("\<rho>", HOLogic.unitT) (Const (@{const_name bot}, HOLogic.mk_setT (TFree var)))
-            | _ => MRBNF_Util.mk_case_tuple (map Term.dest_Free avoiding_arbitraries)
-              (foldl1 MRBNF_Util.mk_Un (map extract_vars (hd avoiding)));
+            | _ => MRBNF_Util.mk_case_tuple (map Term.dest_Free avoiding_arbitraries) (
+              case terms of
+                [] => Term.abs ("\<rho>", HOLogic.unitT) (foldl1 MRBNF_Util.mk_Un raws)
+              | _ => case raws of
+                [] => foldl1 MRBNF_Util.mk_Un terms
+                | _ => MRBNF_Util.mk_Un (foldl1 MRBNF_Util.mk_Un raws, foldl1 MRBNF_Util.mk_Un terms));
 
           val arbitrary' = map Free (hd arbitrary);
           val concl = Thm.concl_of rule
           val P_var = hd (Term.add_vars concl [])
+
           val P_new_var =
             let val (Ts, T) = Term.strip_type (snd P_var);
             in Var (fst P_var, fold_rev (curry op-->) (take (length Ts - 1) Ts @ map snd (hd arbitrary)) T) end;
@@ -185,7 +196,11 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           ) (tl prems);
           val Const (@{const_name Trueprop}, _) $ (Const (@{const_name All}, _) $ Abs (_, _, concl_new)) = concl
 
-          val rule_new = fold_rev (curry Logic.mk_implies) (take more_consumes (Thm.prems_of rule) @ prems_new) (HOLogic.mk_Trueprop concl_new)
+          fun mk_bound t = MRBNF_Util.mk_ordLess (MRBNF_Util.mk_card_of t)
+            (MRBNF_Util.mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (fastype_of t))));
+          val rule_new = fold_rev (curry Logic.mk_implies) (
+            take more_consumes (Thm.prems_of rule) @ map (HOLogic.mk_Trueprop o mk_bound) raws @ prems_new
+          ) (HOLogic.mk_Trueprop concl_new);
 
           fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
           val P2 = Free (hd (Term.variant_frees rule_new [("P", fastype_of P_new_var)]));
@@ -218,7 +233,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   SOME mrbnf => f mrbnf
                   | NONE => []
               in maps (fn (s, Ts) => thms_of_T s @ get_thms_of_mrbnfs_inner Ts) Ts' end;
-            in get_thms_of_mrbnfs_inner (map fastype_of (hd avoiding)) end;
+            in get_thms_of_mrbnfs_inner (map fastype_of (hd avoiding @ map_filter I (hd insts) @ map Free (hd arbitrary))) end;
 
           val class_thms = get_thms_of_mrbnfs (fn mrbnf => [@{thm ordLeq_transitive[OF iffD1[OF Card_order_iff_ordLeq_card_of]]} OF [MRBNF_Def.bd_Card_order_of_mrbnf mrbnf, #var_large (MRBNF_Def.class_thms_of_mrbnf mrbnf)]]);
           val set_bds = map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (get_set_bd (map fastype_of (hd avoiding)));
@@ -237,7 +252,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 (* Boundness *)
                 SELECT_GOAL (EVERY1 [
                   rtac ctxt allI,
-                  REPEAT_DETERM o resolve_tac ctxt (class_thms @ bound_thms @ set_bds @
+                  REPEAT_DETERM o resolve_tac ctxt (class_thms @ bound_thms @ set_bds @ prems @
                     @{thms finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
                       ordLeq_transitive[OF iffD1[OF Card_order_iff_ordLeq_card_of]]
                     }
@@ -251,11 +266,17 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   hyp_subst_tac ctxt,
                   assume_tac ctxt,
                   eresolve_tac ctxt monos
-                ]))
+                ])),
+                K (print_tac ctxt "foo")
               ]
             ) ctxt 1
-          )
-        in (((drop 1 cases, concls), (more_consumes, more_facts)), rule_thm) end
+          );
+          val names = map (fst o dest_Free) (
+            fst (BNF_Util.mk_Frees "Bound" (map (K HOLogic.unitT) raws) ctxt)
+          );
+          val names' = map (fn s => String.substring (s, 0, String.size s - 2)) names;
+          val new_cases = map (fn s => ((s, []), [])) names'
+        in (((new_cases @ drop 1 cases, concls), (more_consumes, more_facts)), rule_thm) end
       )
     |> Seq.maps (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
           (PRECISE_CONJUNCTS (length concls) (ALLGOALS (fn j =>

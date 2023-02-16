@@ -828,6 +828,10 @@ lemma keys_dallist_DALNil[simp]: "keys_dallist DALNil = {}"
   by transfer auto
 lemma keys_dallist_DALCons[simp]: "x \<notin> keys_dallist xs \<Longrightarrow> keys_dallist (DALCons x v xs) = insert x (keys_dallist xs)"
   by transfer auto
+lemma vals_dallist_DALNil[simp]: "vals_dallist DALNil = {}"
+  by transfer auto
+lemma vals_dallist_DALCons[simp]: "x \<notin> keys_dallist xs \<Longrightarrow> vals_dallist (DALCons x v xs) = insert v (vals_dallist xs)"
+  by transfer auto
 
 lemma pred_dallist_DALNil[simp]: "pred_dallist R DALNil"
   unfolding dallist.pred_rel by transfer auto
@@ -2404,8 +2408,9 @@ qed
 
 lemma weaken:
   assumes "\<Gamma> \<turnstile> e : \<tau>" "keys_dallist \<Gamma> \<inter> keys_dallist xs = {}"
-  shows "dainterleave \<Gamma> xs \<turnstile> e : \<tau>"
-  using context_morph[OF assms(1)] in_dainterleave1[OF _ assms(2)] by blast
+  shows "dainterleave xs \<Gamma> \<turnstile> e : \<tau>"
+  using context_morph[OF assms(1)] in_dainterleave2[OF _ assms(2)]
+  by (metis (no_types, lifting) Int_commute UnCI assms(2) case_prodI2 lset_dainterleave)
 
 lemma IImsupp_context_lookup: "IImsupp (context_lookup xs) \<subseteq> keys_dallist xs \<union> \<Union> (FFVars_terms ` \<Union> (Basic_BNFs.snds ` vals_dallist xs))"
   unfolding IImsupp_def context_lookup_def SSupp_def comp_def Var_is_VVr[symmetric] UN_snds_eq_snd
@@ -2417,111 +2422,195 @@ lemma dainterleave_map: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrig
   sorry
 lemma context_lookup_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> context_lookup (dainterleave xs ys) = context_lookup (dainterleave ys xs)"
   sorry
-lemma tvsubst_context_lookup_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> tvsubst (context_lookup (dainterleave xs ys)) e = tvsubst (context_lookup xs) (tvsubst (context_lookup xs) e)"
-  sorry
 lemma keys_dallist_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> keys_dallist (dainterleave xs ys) = keys_dallist xs \<union> keys_dallist ys"
   sorry
 lemma vals_dallist_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> vals_dallist (dainterleave xs ys) = vals_dallist xs \<union> vals_dallist ys"
   sorry
 lemma pred_dallist_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> pred_dallist P xs \<Longrightarrow> pred_dallist P ys \<Longrightarrow> pred_dallist P (dainterleave xs ys)"
-  unfolding dallist.pred_set by (metis UnE vals_dallist_dainterleave)
+  unfolding dallist.pred_set by (metis UnE vals_dallist_dainterleave)*)
 
-lemma substitution_context: "\<Gamma> \<turnstile> tvsubst (context_lookup xs) e : \<tau> \<Longrightarrow> keys_dallist \<Gamma> \<inter> keys_dallist xs = {} \<Longrightarrow> dainterleave \<Gamma> (map_dallist id fst xs) \<turnstile> e : \<tau>"
-  sorry
-lemma FVars_in_context: "\<Gamma> \<turnstile> e : \<tau> \<Longrightarrow> FFVars_terms e \<subseteq> keys_dallist \<Gamma>"
+(*lemma substitution_context: "\<Gamma> \<turnstile> tvsubst (context_lookup xs) e : \<tau> \<Longrightarrow> keys_dallist \<Gamma> \<inter> keys_dallist xs = {} \<Longrightarrow> dainterleave \<Gamma> (map_dallist id fst xs) \<turnstile> e : \<tau>"
   sorry*)
-lemma FVars_context_lookup: "FFVars_terms (context_lookup xs a) \<subseteq> \<Union>(FFVars_terms ` snd ` vals_dallist xs) \<union> {a}"
-  sorry
 
-lemma substitution: "\<lbrakk> \<Gamma>' \<turnstile> e : \<tau> ; \<Gamma>' = dainterleave (map_dallist id fst xs) \<Gamma> ; pred_dallist (\<lambda>(\<tau>1, v). \<Gamma>' \<turnstile> v : \<tau>1) xs; keys_dallist xs \<inter> keys_dallist \<Gamma> = {} \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile> tvsubst (context_lookup xs) e : \<tau>"
+(*lemma tvsubst_context_lookup_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> tvsubst (context_lookup (dainterleave xs ys)) e = tvsubst (context_lookup xs) (tvsubst (context_lookup ys) e)"
   sorry
-(*proof (binder_induction \<Gamma>' e \<tau> arbitrary: \<Gamma> xs avoiding: \<Gamma> xs rule: Ty_strong_induct)
-  case (Var x \<Gamma>' \<tau> \<Gamma> xs)
-  then have 1: "keys_dallist (map_dallist id fst xs) \<inter> keys_dallist \<Gamma> = {}" by (simp add: dallist.set_map supp_id_bound)
-  let ?e = "case dallookup x xs of None \<Rightarrow> VVr x | Some x \<Rightarrow> snd x"
-  show ?case unfolding tvsubst_simps[OF SSupp_bound] unfolding context_lookup_def
+*)
+
+lemma FVars_in_context: "\<Gamma> \<turnstile> e : \<tau> \<Longrightarrow> FFVars_terms e \<subseteq> keys_dallist \<Gamma>"
+proof (induction \<Gamma> e \<tau> rule: Ty.induct)
+  case (Ty_Var x \<Gamma> \<tau>)
+  then show ?case by (force simp: keys_dallist.rep_eq dest: dallookup_SomeD)
+next
+  case (Ty_LetRec \<Gamma> xs \<Gamma>' e \<tau>)
+  then have 1: "keys_dallist (map_dallist id fst xs) \<inter> keys_dallist \<Gamma> = {}" by (simp add: dallist.set_map(1) supp_id_bound Int_commute)
+  have "keys_dallist \<Gamma>' = keys_dallist \<Gamma> \<union> keys_dallist xs"
+    using arg_cong[OF lset_dainterleave[OF 1], of "(`) fst", unfolded image_Un keys_dallist.rep_eq[symmetric]] Ty_LetRec(2)
+    by (simp add: dallist.set_map(1) sup_commute supp_id_bound)
+  then have 2: "\<And>A. A \<subseteq> keys_dallist \<Gamma>' \<Longrightarrow> A - keys_dallist xs \<subseteq> keys_dallist \<Gamma>" by blast
+
+  show ?case unfolding FFVars_simps Un_Diff
+    apply (rule Un_least)
+     apply (rule 2)
+     apply (rule subsetI)
+     apply (erule UN_E)
+     apply (erule imageE)
+    apply hypsubst
+     apply (drule bspec[OF Ty_LetRec(4)[unfolded dallist.pred_set]])
+     apply (unfold case_prod_beta)
+     apply (drule conjunct2)
+     apply (rule set_mp)
+      apply assumption+
+    apply (rule 2)
+    apply (rule Ty_LetRec)
+    done
+qed auto
+
+lemma FVars_context_lookup: "FFVars_terms (context_lookup xs a) \<subseteq> \<Union>(FFVars_terms ` snd ` vals_dallist xs) \<union> {a}"
+  apply (rule subsetI)
+  apply (unfold context_lookup_def Var_is_VVr[symmetric])
+  apply (cases "dallookup a xs")
+   apply simp
+  apply (frule dallookup_SomeD)
+  apply (unfold vals_dallist.rep_eq)
+  by fastforce
+
+lemma LetRec_tvsubst_eq: "LetRec xs e = LetRec ys e1 \<Longrightarrow> LetRec ys (tvsubst (context_lookup ys) e1) = LetRec xs (tvsubst (context_lookup xs) e)"
+      apply (rule sym)
+  apply (unfold LetRec_inject)
+  apply (erule exE conjE)+
+      apply (rule exI)
+      apply (rule conjI, assumption)+
+      apply (unfold FFVars_tvsubst[OF SSupp_bound])
+      apply (rule conjI)
+       apply (rule id_on_antimono)
+        apply assumption
+       apply (rule Diff_mono[OF _ subset_refl])
+       apply (rule subsetI)
+       apply (erule UnE)
+        apply (rule UnI1)
+        apply assumption
+       apply (erule UN_E)
+       apply (drule set_mp[OF FVars_context_lookup])
+       apply (erule UnE)
+        apply (erule UN_E)
+        apply (erule imageE)
+        apply hypsubst
+        apply (rule UnI1)
+        apply (rule UN_I)
+         apply (rule imageI)
+         apply assumption+
+       apply (drule singletonD)
+       apply hypsubst
+       apply (rule UnI2)
+       apply assumption
+      apply (rule conjI)
+       apply assumption
+      apply (unfold terms_vvsubst_rrename)
+      apply (rule trans)
+       apply (rule rrename_tvsubst)
+         apply (rule SSupp_bound | assumption)+
+      apply (rule arg_cong2[of _ _ _ _ tvsubst])
+       apply (unfold context_lookup_def comp_def)
+       apply (rule ext)
+      subgoal for f x
+        apply (cases "dallookup (inv f x) xs")
+         apply simp
+         apply (unfold Var_is_VVr[symmetric] rrename_simps)
+         apply (subst inv_simp2[of f])
+          apply assumption
+         apply (drule dallookup_NoneD)
+         apply (subgoal_tac "keys_dallist xs = inv f ` keys_dallist ys")
+          apply (simp only:)
+          apply (drule not_imageI[rotated])
+        apply assumption
+         apply (unfold image_comp)
+          apply (subst (asm) inv_simp2[of f])
+        apply assumption
+          apply (subst (asm) inv_o_simp2[of f])
+        apply assumption
+         apply (unfold image_id)
+         apply (drule dallookup_NoneI)
+         apply simp
+
+         apply simp
+         apply (subgoal_tac "xs = map_dallist (inv f) (map_prod id (vvsubst (inv f))) ys")
+        apply (simp only:)
+        apply (subst (asm) terms_vvsubst_rrename)
+            apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+          apply (subst dallist.set_map)
+            apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+          apply (rule refl)
+         apply (smt (verit) bij_imp_bij_inv dallist.map_comp dallist.map_id hidden_id_def id_hid_o_hid inv_o_simp1 map_prod.comp prod.map_id0 supp_inv_bound terms.map_comp0 terms.map_id0 terms_vvsubst_rrename)
+        apply simp
+        apply (drule dallookup_map_SomeD[of "inv f", rotated])
+         apply (rule bij_imp_bij_inv)
+        apply assumption
+        apply (unfold inv_inv_eq[of f])
+        subgoal for a
+        apply (subgoal_tac "dallookup x ys = Some (map_prod id (rrename_terms f) a)")
+           apply simp
+          apply (drule dallookup_SomeD)
+          apply (rule dallookup_SomeI)
+          apply hypsubst
+          apply (unfold map_dallist.rep_eq)
+          apply (subst if_P)
+           apply (rule inj_is_inj_on)
+           apply (rule bij_is_inj)
+           apply assumption
+          apply (subst (asm) if_P)
+           apply (rule inj_is_inj_on)
+           apply (rule bij_is_inj)
+          apply assumption
+          apply (unfold llist.set_map)
+          by auto
+        done
+      apply assumption
+      done
+
+lemma substitution: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; pred_dallist (\<lambda>(\<tau>1, v). \<Gamma> \<turnstile> v : \<tau>1) xs ; lset (Rep_dallist (map_dallist id fst xs)) \<subseteq> lset (Rep_dallist \<Gamma>) \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> tvsubst (context_lookup xs) e : \<tau>"
+proof (binder_induction \<Gamma> e \<tau> arbitrary: xs avoiding: xs rule: Ty_strong_induct)
+  case (Var x \<Gamma> \<tau> xs)
+  let ?e = "case dallookup x xs of None \<Rightarrow> Var x | Some x \<Rightarrow> snd x"
+  show ?case unfolding tvsubst_simps(1)[OF SSupp_bound, unfolded context_lookup_def] context_lookup_def unfolding Var_is_VVr[symmetric]
   proof (cases "dallookup x xs")
     case None
-    have "dallookup x \<Gamma> = Some \<tau>" using None Var(1,2) 1
-      apply (auto dest!: dallookup_NoneD dallookup_SomeD)
-      apply (unfold lset_dainterleave[OF 1] id_def[symmetric])
-      apply (drule imageI[of _ _ fst])
-      apply (unfold fst_conv keys_dallist.rep_eq[symmetric] image_Un dallist.set_map[OF bij_id supp_id_bound] image_id)
-      apply (auto intro!: dallookup_SomeI simp: keys_dallist.rep_eq)
-      by (metis (no_types, lifting) Fun.image_id Int_commute UnE Var.hyps bij_id dallist.set_map(1) dallookup_SomeD fst_conv id_apply imageI keys_dallist.rep_eq lset_dainterleave supp_id_bound)
-    then show "\<Gamma> \<turnstile> ?e : \<tau>" using None Ty_Var unfolding Var_is_VVr by auto
+    then show "\<Gamma> \<turnstile> ?e : \<tau>" by (metis Ty_Var Var.hyps option.simps(4))
   next
     case (Some a)
-    then have 2: "dallookup x (map_dallist id fst xs) = Some \<tau>" using Var sorry
-    from Var(3) have 3: "\<Gamma>' \<turnstile> snd a : fst a" unfolding dallist.pred_set vals_dallist.rep_eq using dallookup_SomeD[OF Some] by auto
-    have 5: "keys_dallist (map_dallist id fst xs) \<inter> keys_dallist \<Gamma> = {}" unfolding dallist.set_map[OF bij_id supp_id_bound] image_id by (rule Var)
-    then have "\<Gamma> \<turnstile> snd a : fst a" using context_morph[OF 3, of \<Gamma>] unfolding Var(2) lset_dainterleave[OF 5] sorry
-    then show "\<Gamma> \<turnstile> ?e : \<tau>" using Some Var by (metis "2" dallookup_dallmapD option.simps(5))
+    have "fst a = \<tau>" by (metis (no_types, lifting) Some Var.hyps Var.prems(2) dallookup_SomeD dallookup_SomeI dallookup_dallmapD option.inject subset_eq)
+    then have "\<Gamma> \<turnstile> snd a : \<tau>" using Var(2) Some unfolding dallist.pred_set by (force dest: dallookup_SomeD simp: vals_dallist.rep_eq)
+    then show "\<Gamma> \<turnstile> ?e : \<tau>" using Some by simp
   qed
 next
-  case (App \<Gamma>' e1 \<tau>1 \<tau>2 e2 \<Gamma> xs)
-  then show ?case sorry
+  case (App \<Gamma> e1 \<tau>1 \<tau>2 e2 xs)
+  then show ?case by (metis SSupp_bound Ty_App tvsubst_simps(2))
 next
-  case (Lam x \<Gamma>' \<tau> e \<tau>2 \<Gamma> xs)
-  then show ?case sorry
+  case (Lam x \<Gamma> \<tau> e \<tau>2 xs)
+  then have 1: "x \<notin> IImsupp (context_lookup xs)" by (meson IImsupp_context_lookup subsetD)
+  have "DALCons x \<tau> \<Gamma> \<turnstile> tvsubst (context_lookup xs) e : \<tau>2" using weaken[of \<Gamma> _ _ "DALCons x \<tau> DALNil"] Lam.prems(2)
+    by (fastforce intro!: Lam(4) dallist.pred_mono_strong[OF Lam(5)] simp: Lam(2))
+  then show ?case unfolding tvsubst_simps(3)[OF SSupp_bound 1] using Ty_Lam Lam by fast
 next
-  case (LetRec \<Gamma>' ys \<Gamma>'' e \<tau> \<Gamma> xs) (*
-  from LetRec(3,7) have 1: "\<Gamma>'' = dainterleave \<Gamma> (map_dallist id fst (dainterleave xs ys))"
-    using dainterleave_assoc[of \<Gamma> "map_dallist id fst xs" "map_dallist id fst ys"] dainterleave_map[of xs ys fst]
-    unfolding dallist.set_map[OF bij_id supp_id_bound] image_id sorry
-  from LetRec(1) have 2: "keys_dallist ys \<inter> IImsupp (context_lookup xs) = {}" using IImsupp_context_lookup[of xs] by auto
-  have "\<Gamma> \<turnstile> tvsubst (context_lookup (dainterleave xs ys)) e : \<tau>"
-    apply (rule LetRec(6)[OF 1])
-    apply (rule pred_dallist_dainterleave)
-    using LetRec(1) apply auto[1]
-     apply (rule dallist.pred_mono_strong[OF LetRec(8)])
-     apply (unfold case_prod_beta)
-    using weaken[of \<Gamma>' _ _ "map_dallist id fst ys"] LetRec(3,7) unfolding dallist.set_map[OF bij_id supp_id_bound] image_id using LetRec.hyps sorry
-    apply (rule dallist.pred_mono_strong[OF LetRec(4)])
-    apply (unfold case_prod_beta)
-    apply (drule conjunct1)
-     apply assumption sorry
-  then have "\<Gamma> \<turnstile> tvsubst (context_lookup ys) (tvsubst (context_lookup xs) e) : \<tau>"
-    using context_lookup_dainterleave[of xs ys] tvsubst_context_lookup_dainterleave[of ys xs e]
-    by (metis Int_Un_emptyI1 Int_Un_emptyI2 Int_left_absorb LetRec.hyps(1) dainterleave_DALNil2 inf_sup_aci(1) keys_dallist_DALNil tvsubst_context_lookup_dainterleave)
-  then have 3: "dainterleave \<Gamma> (map_dallist id fst ys) \<turnstile> tvsubst (context_lookup xs) e : \<tau>" using substitution_context LetRec(1) by blast
-
-  show ?case unfolding tvsubst_simps(4)[OF SSupp_bound 2]
+  case (LetRec \<Gamma> ys \<Gamma>' e \<tau> xs)
+  have 1: "keys_dallist ys \<inter> IImsupp (context_lookup xs) = {}" by (meson IImsupp_context_lookup Int_Un_emptyI2 Int_subset_empty2 LetRec.hyps(1))
+  show ?case unfolding tvsubst_simps(4)[OF SSupp_bound 1]
     apply (rule Ty_LetRec)
-    apply (insert LetRec(1))[1]
-       apply (unfold dallist.set_map[OF bij_id supp_id_bound] image_id Int_Un_distrib Un_empty)
-       apply (erule conjE)+
-       apply (rule trans)
-        apply (rule Int_commute)
-       apply assumption
-      apply (subst dallist.map_comp)
-        apply (rule bij_id supp_id_bound)+
-      apply (unfold id_o Product_Type.fst_comp_map_prod)
+       apply (simp add: LetRec(2) dallist.set_map(1) supp_id_bound)
       apply (rule refl)
-    prefer 2
-     apply (rule 3)
-    apply (rule iffD2[OF dallist.pred_map])
-      apply (rule bij_id supp_id_bound)+
-    apply (unfold case_prod_o_map_prod id_def)
-    apply (unfold id_def[symmetric])
-
-    sorry*)
-    show ?case sorry
-  qed*)
-
-  thm Step.cases
-
-(*corollary substitution_single:
-  assumes "DALCons x \<tau>1 \<Gamma> \<turnstile> e : \<tau>" "DALCons x \<tau>1 \<Gamma> \<turnstile> v : \<tau>1" "x \<notin> keys_dallist \<Gamma>"
-  shows "\<Gamma> \<turnstile> tvsubst (VVr(x:=v)) e : \<tau>"
-proof -
-  let ?xs = "DALCons x (\<tau>1, v) DALNil"
-  have 1: "context_lookup ?xs = (VVr(x:=v))" by (auto simp: context_lookup_def)
-  have 2: "dainterleave (map_dallist id fst ?xs) \<Gamma> = DALCons x \<tau>1 \<Gamma>"
-    using assms(3) by (auto simp: map_dallist_DALCons supp_id_bound)
-  have 3: "pred_dallist (\<lambda>(\<tau>', v). DALCons x \<tau>1 \<Gamma> \<turnstile> v : \<tau>') ?xs = DALCons x \<tau>1 \<Gamma> \<turnstile> v : \<tau>1" by auto
-  show ?thesis using substitution[OF assms(1), of ?xs \<Gamma>, unfolded 1 2 3, OF refl assms(2)] assms(3) by simp
-qed*)
+    apply (subst dallist.pred_map)
+       apply (rule supp_id_bound bij_id)+
+     apply (rule dallist.pred_mono_strong[OF LetRec(4)[of xs]])
+     apply (erule case_prodE)
+     apply hypsubst_thin
+     apply (unfold o_apply map_prod_def id_apply prod.case)
+     apply (fold id_def)
+     apply (unfold dallist.map_comp[OF bij_id supp_id_bound bij_id supp_id_bound] fst_o_f)
+     apply (fold id_def)
+     apply (unfold id_o)
+    apply (metis (no_types, lifting) LetRec.hyps(2) LetRec.hyps(3) LetRec.prems(1) LetRec.prems(2) Prelim.image_id bij_id dallist.pred_mono_strong dallist.set_map(1) inf_commute lset_dainterleave prod.case_eq_if sup.coboundedI2 supp_id_bound weaken)
+    apply (metis (no_types, lifting) Int_commute LetRec.hyps(2) LetRec.hyps(3) LetRec.hyps(6) LetRec.prems(1) LetRec.prems(2) Prelim.image_id bij_id dallist.pred_set dallist.set_map(1) lset_dainterleave split_beta sup.coboundedI2 supp_id_bound weaken)
+    done
+qed
 
 lemma Ty_eqvt_strong:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
@@ -2675,64 +2764,6 @@ lemma FFVars_tvsubst_single: "FFVars_terms (tvsubst (VVr(x := e1)) e) \<subseteq
     by auto
   done
 
-(*lemma tvsubst_eqvt:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a" and xs::"('a, 'v) dallist"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|" "|SSupp g| <o |UNIV::'a set|"
-  shows "tvsubst (g \<circ> inv f) (rrename_terms f e) = tvsubst g e"
-proof (binder_induction e arbitrary: xs avoiding: xs "IImsupp g" "imsupp f" rule: TT_fresh_induct_param)
-  case Bound1
-  then show ?case
-    unfolding IImsupp_def
-    apply (rule terms.Un_bound)
-     apply (rule assms)
-    apply (rule terms.UNION_bound)
-     apply (rule assms)
-    apply (unfold comp_def)
-    apply (rule terms.set_bd_UNIV)
-    done
-next
-  case Bound2
-  then show ?case
-    apply (rule iffD2[OF imsupp_supp_bound])
-     apply (rule cinfinite_imp_infinite[OF terms.UNIV_cinfinite])
-    apply (rule assms)
-    done
-next
-  case (Var a xs)
-  then show ?case unfolding rrename_simps[OF assms(1,2)]
-    apply (rule trans)
-     apply (rule tvsubst_simps)
-     apply (rule SSupp_comp_bound)
-        apply (rule assms supp_inv_bound)+
-    apply (rule trans)
-     apply (rule comp_apply)
-    apply (subst inv_simp1)
-     apply (rule assms)
-    apply (rule sym)
-     apply (rule tvsubst_simps)
-     apply (rule assms)
-    done
-next
-  case (App e1 e2 xs)
-  show ?case unfolding rrename_simps[OF assms(1,2)]
-    apply (rule trans)
-     apply (rule tvsubst_simps)
-     apply (rule SSupp_comp_bound)
-      apply (rule assms supp_inv_bound)+
-    apply (rule sym)
-    apply (rule trans)
-     apply (rule tvsubst_simps)
-     apply (rule assms)
-    apply (rule sym)
-    using App by argo
-next
-  case (Lam x \<tau> e xs)
-  then show ?case sorry
-next
-  case (LetRec xs e zs)
-  then show ?case sorry
-qed*)
-
 lemma Step_eqvt_strong:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
@@ -2749,93 +2780,28 @@ lemma Step_eqvt_strong:
   apply assumption
   done
 
-(*lemma App_strong_cases[consumes 1, case_names Bound ST_Beta ST_App]:
-  fixes e1::"'a::var_terms_pre terms"
-  assumes "App e1 e2 \<^bold>\<longrightarrow> e'" and "|A| <o |UNIV::'a set|"
-  and ST_Beta: "\<And>x \<tau> e1'. x \<notin> A \<Longrightarrow> e1 = Lam x \<tau> e1' \<Longrightarrow> e' = tvsubst (VVr(x := e2)) e1' \<Longrightarrow> P"
-  and ST_App: "\<And>e1'. e' = App e1' e2 \<Longrightarrow> e1 \<^bold>\<longrightarrow> e1' \<Longrightarrow> P"
-shows P
-  apply (rule Step.cases[OF assms(1)])
-  subgoal for x e2' \<tau> e
-      apply (unfold terms_inject_plain)
-      apply (erule conjE)
-      apply (rotate_tac -2)
-      apply (rule exE[OF Lam_avoid])
-       apply (rule terms.Un_bound)
-        apply (rule assms(2))
-       apply (rule terms.set_bd_UNIV)
-      apply (erule exE conjE)+
-      apply (drule trans)
-       apply assumption
-      apply (rule ST_Beta)
-        apply (rotate_tac -2)
-        apply (erule contrapos_nn)
-        apply (rule UnI1)
-        apply assumption
-       apply assumption
-      apply hypsubst
-      apply (unfold Lam_inject)
-      apply (erule exE conjE)+
-    apply hypsubst
-    apply (rule sym)
-    apply (rule exE[OF ex_avoiding_bij[of _ "FFVars_terms e - {x}" _ "FFVars_terms e2'"]])
-            apply assumption+
-          apply (rule cinfinite_imp_infinite[OF terms.UNIV_cinfinite])
-         apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-         apply (rule terms.set_bd_UNIV)
-        apply assumption
-       apply (rule single_bound)
-      apply (rule iffD2[OF disjoint_single])
-    apply assumption
-       apply (rule terms.set_bd_UNIV)
-      apply (erule conjE)+
-      apply (rule trans)
-       apply (rule arg_cong2[of _ _ _ _ tvsubst])
-        apply (rule arg_cong2[OF _ refl, of _ _ "fun_upd VVr"])
-         apply (erule allE)
-         apply (erule impE)
-          prefer 2
-          apply (rule sym)
-        apply assumption
-       apply (rule conjI)
-        apply (rule UnI2)
-        apply (rule singletonI)
-       apply (rotate_tac 2)
-       apply (erule contrapos_nn)
-       apply (rule UnI2)
-       apply assumption
-     apply (rule terms.map_cong[rotated -2])
-        apply (rule refl)
-       apply (rule case_split[of "_ \<in> _"])
-        apply (erule allE)
-        apply (erule impE)
-         prefer 2
-         apply (rule sym)
-         apply assumption
-        apply (rule conjI)
-         apply (rule UnI2)
-         apply assumption
-        apply (drule singletonD)
-        apply hypsubst
-        apply (rotate_tac 2)
-        apply (erule contrapos_nn)
-        apply (rule UnI2)
-        apply assumption
-       apply (rule trans)
-        apply (erule id_onD)
-        apply (rule DiffI)
-         apply assumption+
-       apply (rule sym)
-       apply (erule id_onD)
-       apply (rule DiffI)
-        apply assumption+
-    apply (unfold terms_vvsubst_rrename)*)
-
-
-lemma substitution_single:
+corollary substitution_single:
   assumes "DALCons x \<tau>1 \<Gamma> \<turnstile> e : \<tau>" "\<Gamma> \<turnstile> v : \<tau>1" "x \<notin> keys_dallist \<Gamma>"
   shows "\<Gamma> \<turnstile> tvsubst (VVr(x:=v)) e : \<tau>"
-  sorry
+proof -
+  let ?xs = "DALCons x (\<tau>1, v) DALNil"
+  have 1: "context_lookup ?xs = (VVr(x:=v))" by (auto simp: context_lookup_def)
+  have "DALCons x \<tau>1 \<Gamma> \<turnstile> v : \<tau>1" using weaken[OF assms(2), of "DALCons x \<tau>1 DALNil"] assms(3) by simp
+  then have 2: "pred_dallist (\<lambda>(\<tau>', v). DALCons x \<tau>1 \<Gamma> \<turnstile> v : \<tau>') ?xs" using assms(2) by auto
+
+  have x: "x \<notin> FFVars_terms v" using FVars_in_context[OF assms(2)] assms(3) by blast
+  have 3: "DALCons x \<tau>1 \<Gamma> \<turnstile> tvsubst (VVr(x := v)) e : \<tau>"
+    using substitution[OF assms(1) 2, unfolded 1] by (simp add: assms(3) map_dallist_DALCons supp_id_bound)
+  moreover have "x \<notin> FFVars_terms (tvsubst (VVr(x := v)) e)"
+    apply (rule contra_subsetD)
+     apply (rule FFVars_tvsubst_single)
+    apply (unfold Un_iff de_Morgan_disj)
+    apply (rule conjI)
+     apply simp
+    apply (rule x)
+    done
+  then show ?thesis using context_morph[OF 3] assms(3) by auto
+qed
 
 theorem preservation: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; e \<^bold>\<longrightarrow> e' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> e' : \<tau>"
 proof (binder_induction \<Gamma> e \<tau> arbitrary: e' avoiding: e' rule: Ty_strong_induct)
@@ -2857,7 +2823,7 @@ proof (binder_induction \<Gamma> e \<tau> arbitrary: e' avoiding: e' rule: Ty_st
       done
     then obtain f where f: "bij f" "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
       "f x = y" "vvsubst f e1' = e3" "id_on (FFVars_terms e1' - {x}) f" using Lam_inject by blast
-    
+
     have "\<Gamma> \<turnstile> Lam y \<tau> e3 : \<tau>1 \<rightarrow> \<tau>2" using App(1) 1 ST_Beta by simp
     then have 2: "DALCons y \<tau>1 \<Gamma> \<turnstile> e3 : \<tau>2" "\<tau> = \<tau>1" using 1 by (auto elim: Ty_LamE')
 
@@ -3140,108 +3106,7 @@ next
       "map_dallist f (map_prod id (vvsubst f)) xs = ys" "vvsubst f e = e1"
       "id_on (\<Union> (FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) f" using LetRec_inject by blast
 
-    have 4: "keys_dallist xs = inv f ` keys_dallist ys"
-      by (metis bij_imp_bij_inv bij_is_surj dallist.set_map(1) f(1) f(2) f(3) image_f_inv_f)
-    have 5: "xs = map_dallist (inv f) (map_prod id (vvsubst (inv f))) ys"
-      by (smt (verit) bij_imp_bij_inv dallist.map_comp dallist.map_id f(1) f(2) f(3) hidden_id_def id_hid_o_hid inv_o_simp1 map_prod.comp prod.map_id0 supp_inv_bound terms.map_comp0 terms.map_id0)
-
-    (* TODO: move to extra lemma *)
-    have 6: "LetRec ys (tvsubst (context_lookup ys) e1) = LetRec xs (tvsubst (context_lookup xs) e)"
-      apply (rule sym)
-      apply (unfold LetRec_inject)
-      apply (rule exI)
-      apply (rule conjI, rule f)+
-      apply (unfold FFVars_tvsubst[OF SSupp_bound])
-      apply (rule conjI)
-       apply (rule id_on_antimono)
-        apply (rule f)
-       apply (rule Diff_mono[OF _ subset_refl])
-       apply (rule subsetI)
-       apply (erule UnE)
-        apply (rule UnI1)
-        apply assumption
-       apply (erule UN_E)
-       apply (drule set_mp[OF FVars_context_lookup])
-       apply (erule UnE)
-        apply (erule UN_E)
-        apply (erule imageE)
-        apply hypsubst
-        apply (rule UnI1)
-        apply (rule UN_I)
-         apply (rule imageI)
-         apply assumption+
-       apply (drule singletonD)
-       apply hypsubst
-       apply (rule UnI2)
-       apply assumption
-      apply (rule conjI)
-       apply (rule f)
-      apply (unfold terms_vvsubst_rrename[OF f(1,2)])
-      apply (rule trans)
-       apply (rule rrename_tvsubst)
-         apply (rule f SSupp_bound)+
-      apply (rule arg_cong2[of _ _ _ _ tvsubst])
-       apply (unfold context_lookup_def comp_def)
-       apply (rule ext)
-      subgoal for x
-        apply (cases "dallookup (inv f x) xs")
-         apply simp
-         apply (unfold Var_is_VVr[symmetric] rrename_simps[OF f(1,2)])
-         apply (subst inv_simp2[of f])
-          apply (rule f)
-         apply (drule dallookup_NoneD)
-         apply (unfold 4)
-         apply (drule not_imageI[OF f(1)])
-         apply (unfold image_comp)
-         apply (subst (asm) inv_simp2[OF f(1)])
-         apply (subst (asm) inv_o_simp2[OF f(1)])
-         apply (unfold image_id)
-         apply (drule dallookup_NoneI)
-         apply simp
-
-        apply simp
-        apply (unfold 5)
-        apply (subst (asm) terms_vvsubst_rrename)
-          apply (rule bij_imp_bij_inv supp_inv_bound f)+
-        apply (drule dallookup_map_SomeD[of "inv f", rotated])
-         apply (rule bij_imp_bij_inv)
-         apply (rule f)
-        apply (unfold inv_inv_eq[OF f(1)])
-        apply (subst (asm) dallist.map_comp)
-            apply (rule bij_imp_bij_inv supp_inv_bound f)+
-        apply (subst (asm) inv_o_simp2)
-         apply (rule f)
-        apply (unfold id_o)
-        apply (drule dallookup_SomeD)
-        apply (unfold map_dallist.rep_eq)
-        apply (subst (asm) if_P)
-         apply (rule inj_is_inj_on)
-         apply (rule bij_is_inj)
-         apply (rule bij_id)
-        apply (unfold llist.set_map)
-        apply (erule imageE)
-        subgoal for a b
-          apply (rule prod.exhaust[of b])
-          apply hypsubst_thin
-          apply (unfold map_prod_simp id_def)
-          apply (unfold id_def[symmetric] prod.inject)
-          apply (erule conjE)
-          apply hypsubst_thin
-          apply (drule dallookup_SomeI)
-          apply simp
-          apply (rule trans)
-           apply (rule terms.rrename_comps)
-              apply (rule bij_imp_bij_inv supp_inv_bound f)+
-          apply (subst inv_o_simp2)
-           apply (rule f)
-          apply (rule terms.rrename_ids)
-          done
-        done
-      apply (unfold terms_vvsubst_rrename[OF f(1,2), symmetric])
-      apply (rule f)
-      done
-    
-    show ?thesis unfolding ST_LetBeta 6
+    show ?thesis unfolding ST_LetBeta LetRec_tvsubst_eq[OF ST_LetBeta(1)]
       apply (rule Ty_LetRec)
          apply (rule LetRec(2))
         apply (rule LetRec(3))
@@ -3251,14 +3116,11 @@ next
        apply assumption
       apply (rule substitution)
          apply (rule LetRec(5))
-        apply (rule LetRec(3))
        apply (rule dallist.pred_mono_strong[OF LetRec(4)])
        apply (unfold case_prod_beta)
        apply (drule conjunct1)
        apply assumption
-      apply (rule trans[OF Int_commute])
-      apply (rule LetRec(2))
-      done
+      using LetRec(3) in_dainterleave1[of _ "map_dallist id fst xs"] by (simp add: Int_commute LetRec.hyps(2) dallist.set_map(1) supp_id_bound)
   qed simp_all
 qed (auto elim: STE)
 

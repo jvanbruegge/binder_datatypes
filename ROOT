@@ -1,6 +1,6 @@
-session Masterarbeit = "HOL-Cardinals" +
+session InfSTLC = "HOL-Cardinals" +
 directories
   thys
   Tools
 theories
-  Composition
+  InfSTLC

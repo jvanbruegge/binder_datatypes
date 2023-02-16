@@ -181,7 +181,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     | a $ b => (find_IHs a, find_IHs b) |> zip or (op$)
                     | _ => (false, p);
                   val (generalize, p') = find_IHs p;
-                  val i = if generalize then 1 else 0
+                  val i = if generalize then length (hd arbitrary) else 0
                   val p'' = Term.incr_boundvars (n+i) (simplify_case_prod (
                     Term.subst_bounds ([avoiding_arbitrary], HOLogic.mk_Trueprop p')
                   ));
@@ -252,22 +252,26 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 (* Boundness *)
                 SELECT_GOAL (EVERY1 [
                   rtac ctxt allI,
-                  REPEAT_DETERM o resolve_tac ctxt (class_thms @ bound_thms @ set_bds @ prems @
+                  K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
+                  REPEAT_DETERM o resolve_tac ctxt (
+                    class_thms @ bound_thms @ set_bds @ prems @
                     @{thms finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
                       ordLeq_transitive[OF iffD1[OF Card_order_iff_ordLeq_card_of]]
                     }
                   )
                 ]),
                 (* others *)
-                REPEAT_DETERM o (K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}) THEN' (FIRST' [
-                  resolve_tac ctxt ([refl, allI, impI, conjI] @ prems),
-                  eresolve_tac ctxt [allE, conjE],
-                  dresolve_tac ctxt @{thms mp[OF _ refl]},
-                  hyp_subst_tac ctxt,
-                  assume_tac ctxt,
-                  eresolve_tac ctxt monos
-                ])),
-                K (print_tac ctxt "foo")
+                REPEAT_DETERM o (
+                  K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Un_iff de_Morgan_disj fst_conv snd_conv})
+                  THEN' (FIRST' [
+                    resolve_tac ctxt ([refl, allI, impI, conjI] @ prems),
+                    eresolve_tac ctxt [allE, conjE],
+                    dresolve_tac ctxt @{thms mp[OF _ refl]},
+                    hyp_subst_tac ctxt,
+                    assume_tac ctxt,
+                    eresolve_tac ctxt monos
+                  ])
+                )
               ]
             ) ctxt 1
           );

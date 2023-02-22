@@ -849,7 +849,7 @@ inductive stuck_aux :: "'a::var_terms_pre terms \<Rightarrow> bool" where
 definition stuck :: "'a::var_terms_pre terms \<Rightarrow> bool" where
   "stuck t \<equiv> stuck_aux t \<or> (\<exists>x \<tau> e. t = Lam x \<tau> e)"
 
-coinductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" ("_ \<^bold>\<longrightarrow> _" 25)  where
+inductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" ("_ \<^bold>\<longrightarrow> _" 25)  where
   ST_Beta: "x \<notin> FFVars_terms e2 \<Longrightarrow> App (Lam x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (VVr(x:=e2)) e"
 | ST_App: "e1 \<^bold>\<longrightarrow> e1' \<Longrightarrow> App e1 e2 \<^bold>\<longrightarrow> App e1' e2"
 | ST_Let: "e \<^bold>\<longrightarrow> e' \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> LetRec xs e'"
@@ -2260,108 +2260,27 @@ proof -
   then show ?thesis by (rule card_of_subset_bound[OF _ keys_dallist_bound])
 qed
 
+lemma rrename_terms_context_lookup:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "rrename_terms f \<circ> context_lookup xs \<circ> inv f =
+  context_lookup (map_dallist f (map_prod id (rrename_terms f)) xs)"
+  by (auto simp: fun_eq_iff context_lookup_def assms supp_inv_bound Var_is_VVr[symmetric]
+     dallist.map_comp dallist.set_map(1) dallookup_NoneI image_in_bij_eq supp_id_bound
+     dest: dallookup_NoneD
+     dest!: dallookup_eqvt[of f "inv f _" xs, rotated] 
+       dallookup_dallmapD[of _ "map_dallist f id xs" _ "map_prod id (rrename_terms f)"]
+    split: option.splits)
+
 lemma Step_eqvt:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "e \<^bold>\<longrightarrow> e' \<Longrightarrow> vvsubst f e \<^bold>\<longrightarrow> vvsubst f e'"
-unfolding terms_vvsubst_rrename[OF assms]
-proof (coinduction arbitrary: e e')
-  case Step
-  then show ?case
-  proof cases
-    case (ST_Beta x e2 \<tau> e1)
-    then have 1: "rrename_terms f e = App (Lam (f x) \<tau> (rrename_terms f e1)) (rrename_terms f e2)" using rrename_simps[OF assms] by simp
-    from ST_Beta have "rrename_terms f e' = tvsubst (rrename_terms f \<circ> VVr(x := e2) \<circ> inv f) (rrename_terms f e1)"
-      using rrename_tvsubst[OF assms SSupp_upd_VVr_bound] by auto
-    also have "... = tvsubst (VVr (f x := rrename_terms f e2)) (rrename_terms f e1)" using VVr_comp[OF assms] by simp
-    finally show ?thesis using 1 ST_Beta(3) assms(1) by (metis \<open>vvsubst f = rrename_terms f\<close> assms(2) not_imageI terms.set_map)
-  next
-    case (ST_App e1 e1' e2)
-    then show ?thesis by (auto simp: assms)
-  next
-    case (ST_Let e1 e1' xs)
-    then show ?thesis using assms rrename_simps(4) by blast
-  next
-    case (ST_DropLet xs)
-    then have "rrename_terms f e = LetRec (map_dallist f (map_prod id (rrename_terms f)) xs) (rrename_terms f e')"
-      by (simp add: assms)
-    moreover have "stuck (rrename_terms f e')" using ST_DropLet stuck_eqvt[OF assms] by blast
-    moreover have "keys_dallist (map_dallist f (map_prod id (rrename_terms f)) xs) \<inter> FFVars_terms (rrename_terms f e') = {}"
-      using ST_DropLet by (auto simp: assms dallist.set_map terms.FFVars_rrenames)
-    ultimately show ?thesis by blast
-  next
-    case (ST_LetBeta e1 xs)
-    let ?g = "\<lambda>k. case dallookup k xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x"
-    let ?xs = "map_dallist f (map_prod id (rrename_terms f)) xs"
-    have "rrename_terms f \<circ> ?g \<circ> inv f = (\<lambda>k. case dallookup (inv f k) xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> rrename_terms f (snd x))"
-      apply (unfold comp_def)
-      apply (rule ext)
-      subgoal for k
-        apply (cases "dallookup (inv f k) xs")
-         apply simp
-         apply (unfold Var_is_VVr[symmetric])
-         apply (rule trans)
-          apply (rule rrename_simps)
-           apply (rule assms)+
-         apply (subst inv_simp2[of f])
-          apply (rule assms)
-         apply (rule refl)
-        by simp
-      done
-    also have "... = (\<lambda>k. case dallookup k ?xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x)"
-      apply (rule ext)
-      subgoal for k
-        apply (cases "dallookup (inv f k) xs")
-         apply simp
-         apply (cases "dallookup k ?xs")
-          apply simp
-         apply (metis (mono_tags, lifting) assms(1) assms(2) bij_betw_imp_surj dallist.set_map(1) dallookup_NoneD dallookup_NoneI not_imageI option.discI surj_f_inv_f)
-        apply simp
-        apply (cases "dallookup k ?xs")
-         apply simp
-         apply (metis assms(1) assms(2) dallist.set_map(1) dallookup_NoneD dallookup_NoneI image_in_bij_eq option.discI)
-        apply simp
-        apply (rotate_tac -1)
-        apply (drule dallookup_dallmapD[of _ _ _ "map_prod id (rrename_terms (inv f))"])
-        apply (subst (asm) dallist.map_comp)
-            apply (rule assms supp_id_bound bij_id)+
-        apply (unfold id_o o_id prod.map_comp trans[OF comp_apply[of "map_prod _ _" "map_prod _ _"] prod.map_comp, abs_def])
-        apply (subst (asm) terms.rrename_comp0s)
-            apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-        apply (subst (asm) inv_o_simp1[of f])
-         apply (rule assms)
-        apply (unfold terms.rrename_id0s map_prod.id)
-        subgoal for a b
-          apply (rule prod.exhaust[of b])
-          apply hypsubst_thin
-          apply (unfold snd_conv map_prod_simp id_def)
-          apply (unfold id_def[symmetric])
-          apply (drule dallookup_map_SomeD[of "inv f", rotated])
-           apply (rule bij_imp_bij_inv)
-           apply (rule assms)
-          apply (subst (asm) inv_inv_eq)
-           apply (rule assms)
-          apply simp
-          apply (rule trans)
-           apply (rule terms.rrename_comps)
-              apply (rule assms bij_imp_bij_inv supp_inv_bound)+
-          apply (subst inv_o_simp2)
-           apply (rule assms)
-          apply (rule terms.rrename_ids)
-          done
-        done
-      done
-    finally have 1: "rrename_terms f (tvsubst ?g e1)
-    = tvsubst (\<lambda>k. case dallookup k ?xs of None \<Rightarrow> VVr k | Some x \<Rightarrow> snd x) (rrename_terms f e1)" (is "_ = ?e1'")
-      unfolding rrename_tvsubst[OF assms SSupp_bound, unfolded context_lookup_def] by simp
-    from ST_LetBeta have "rrename_terms f e = LetRec ?xs (rrename_terms f e1)" by (simp add: assms)
-    moreover have "rrename_terms f e' = LetRec ?xs ?e1'" using 1 rrename_simps(4)[OF assms] ST_LetBeta unfolding context_lookup_def by auto
-    moreover have "stuck (rrename_terms f e1)" using ST_LetBeta stuck_eqvt[OF assms] by blast
-    moreover have "keys_dallist ?xs \<inter> FFVars_terms (rrename_terms f e1) \<noteq> {}"
-      using ST_LetBeta by (auto simp: assms dallist.set_map terms.FFVars_rrenames)
-    ultimately show ?thesis unfolding context_lookup_def by blast
-  qed
-qed
+  unfolding terms_vvsubst_rrename[OF assms]
+  by (induct e e' rule: Step.induct)
+    (force simp: assms rrename_tvsubst SSupp_upd_bound SSupp_VVr_bound SSupp_bound VVr_comp
+      rrename_terms_context_lookup terms.FFVars_rrenames stuck_eqvt dallist.set_map disjoint_iff_not_equal
+      intro: Step.intros)+
 
 lemma context_morph: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; \<forall>(x, \<tau>)\<in>lset (Rep_dallist \<Gamma>). x \<in> FFVars_terms e \<longrightarrow> (x, \<tau>)\<in>lset (Rep_dallist \<Gamma>') \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile> e : \<tau>"
 proof (binder_induction \<Gamma> e \<tau> arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_strong_induct)

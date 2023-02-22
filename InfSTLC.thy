@@ -1,8 +1,8 @@
 theory InfSTLC
-  imports "./thys/MRBNF_Recursor" "./DALList"
+  imports "./thys/MRBNF_Recursor" "./DALList" "HOL-Library.Stream"
 begin
 
-datatype \<tau> = Unit | Arrow \<tau> \<tau> (infix "\<rightarrow>" 60)
+datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 60)
 
 (*
 binder_datatype 'var terms =
@@ -2374,36 +2374,26 @@ next
 next
   case (Lam x \<Gamma> \<tau> e \<tau>2 \<Gamma>')
   then have "\<forall>(y, \<tau>')\<in>lset (Rep_dallist (DALCons x \<tau> \<Gamma>)). y \<in> FFVars_terms e \<longrightarrow> (y, \<tau>') \<in> lset (Rep_dallist (DALCons x \<tau> \<Gamma>'))"
-    apply (unfold FFVars_simps case_prod_beta prod.collapse)
-    apply (subst lset_DALCons, assumption)+
-    by (metis DiffI empty_iff imageI insert_iff keys_dallist.rep_eq)
+    unfolding FFVars_simps case_prod_beta prod.collapse
+    by (smt (verit, del_insts) DiffI image_iff insert_absorb insert_iff insert_not_empty keys_dallist.rep_eq lset_DALCons)
   then show ?case using Lam Ty_Lam by blast
 next
   case (LetRec \<Gamma> xs \<Gamma>2 e \<tau> \<Gamma>')
   have 1: "keys_dallist (map_dallist id fst xs) \<inter> keys_dallist \<Gamma> = {}" "keys_dallist (map_dallist id fst xs) \<inter> keys_dallist \<Gamma>' = {}"
-     apply (subst dallist.set_map, rule bij_id, rule supp_id_bound)
-     apply (rule trans[OF Int_commute])
-     apply (simp add: LetRec)
-    apply (subst dallist.set_map, rule bij_id, rule supp_id_bound)
-    by (simp add: LetRec)
+    using LetRec(1,2) by (auto simp: Int_commute dallist.set_map supp_id_bound)
+
   let ?\<Gamma>3 = "dainterleave (map_dallist id fst xs) \<Gamma>'"
+
   from LetRec(3,7) have x: "\<forall>a\<in>lset (Rep_dallist \<Gamma>2). fst a \<in> FFVars_terms (LetRec xs e) \<longrightarrow> a \<in> lset (Rep_dallist ?\<Gamma>3)"
     by (force simp: lset_dainterleave[OF 1(1)] lset_dainterleave[OF 1(2)])
   then have "\<forall>a\<in>lset (Rep_dallist \<Gamma>2). fst a \<in> FFVars_terms e \<longrightarrow> a \<in> lset (Rep_dallist ?\<Gamma>3)" unfolding FFVars_simps
     using 1 LetRec.hyps(2,3) keys_dallist.rep_eq by fastforce
   then have 2: "?\<Gamma>3 \<turnstile> e : \<tau>" using LetRec(6) by fastforce
+
   have "\<forall>(\<tau>', e)\<in>vals_dallist xs. ((\<forall>a\<in>lset (Rep_dallist \<Gamma>2). case a of (x, \<tau>) \<Rightarrow> x \<in> FFVars_terms e \<longrightarrow> (x, \<tau>) \<in> lset (Rep_dallist ?\<Gamma>3)) \<longrightarrow> ?\<Gamma>3 \<turnstile> e : \<tau>')
-    \<longrightarrow> ?\<Gamma>3 \<turnstile> e : \<tau>'"
-    apply (rule ballI)
-    apply (unfold case_prod_beta)
-    apply (rule impI)
-    apply (erule impE)
-     prefer 2
-    apply assumption
-    using x unfolding FFVars_simps
+    \<longrightarrow> ?\<Gamma>3 \<turnstile> e : \<tau>'" using x unfolding case_prod_beta FFVars_simps
     by (smt (verit, del_insts) 1 DiffI LetRec.hyps(2,3) UnCI UnE Union_iff disjoint_iff image_iff keys_dallist.rep_eq lset_dainterleave prod.collapse)
-  then show ?case using Ty_LetRec[OF trans[OF Int_commute LetRec(1)] refl dallist.pred_mono_strong[OF LetRec(4)] 2]
-    by blast
+  then show ?case using Ty_LetRec[OF trans[OF Int_commute LetRec(1)] refl dallist.pred_mono_strong[OF LetRec(4)] 2] by blast
 qed
 
 lemma weaken:
@@ -2415,26 +2405,6 @@ lemma weaken:
 lemma IImsupp_context_lookup: "IImsupp (context_lookup xs) \<subseteq> keys_dallist xs \<union> \<Union> (FFVars_terms ` \<Union> (Basic_BNFs.snds ` vals_dallist xs))"
   unfolding IImsupp_def context_lookup_def SSupp_def comp_def Var_is_VVr[symmetric] UN_snds_eq_snd
   by (force split: option.splits dest: dallookup_SomeD simp: vals_dallist.rep_eq keys_dallist.rep_eq)
-
-(*lemma dainterleave_assoc: "\<lbrakk> keys_dallist xs \<inter> keys_dallist ys = {} ; keys_dallist ys \<inter> keys_dallist zs = {} \<rbrakk> \<Longrightarrow> dainterleave (dainterleave xs ys) zs = dainterleave xs (dainterleave ys zs)"
-  sorry
-lemma dainterleave_map: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> dainterleave (map_dallist id f xs) (map_dallist id f ys) = map_dallist id f (dainterleave xs ys)"
-  sorry
-lemma context_lookup_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> context_lookup (dainterleave xs ys) = context_lookup (dainterleave ys xs)"
-  sorry
-lemma keys_dallist_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> keys_dallist (dainterleave xs ys) = keys_dallist xs \<union> keys_dallist ys"
-  sorry
-lemma vals_dallist_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> vals_dallist (dainterleave xs ys) = vals_dallist xs \<union> vals_dallist ys"
-  sorry
-lemma pred_dallist_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> pred_dallist P xs \<Longrightarrow> pred_dallist P ys \<Longrightarrow> pred_dallist P (dainterleave xs ys)"
-  unfolding dallist.pred_set by (metis UnE vals_dallist_dainterleave)*)
-
-(*lemma substitution_context: "\<Gamma> \<turnstile> tvsubst (context_lookup xs) e : \<tau> \<Longrightarrow> keys_dallist \<Gamma> \<inter> keys_dallist xs = {} \<Longrightarrow> dainterleave \<Gamma> (map_dallist id fst xs) \<turnstile> e : \<tau>"
-  sorry*)
-
-(*lemma tvsubst_context_lookup_dainterleave: "keys_dallist xs \<inter> keys_dallist ys = {} \<Longrightarrow> tvsubst (context_lookup (dainterleave xs ys)) e = tvsubst (context_lookup xs) (tvsubst (context_lookup ys) e)"
-  sorry
-*)
 
 lemma FVars_in_context: "\<Gamma> \<turnstile> e : \<tau> \<Longrightarrow> FFVars_terms e \<subseteq> keys_dallist \<Gamma>"
 proof (induction \<Gamma> e \<tau> rule: Ty.induct)
@@ -3123,5 +3093,28 @@ next
       using LetRec(3) in_dainterleave1[of _ "map_dallist id fst xs"] by (simp add: Int_commute LetRec.hyps(2) dallist.set_map(1) supp_id_bound)
   qed simp_all
 qed (auto elim: STE)
+
+primcorec zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a stream \<Rightarrow> 'b stream \<Rightarrow> 'c llist" where
+  "zipWith f xs ys = LCons (f (shd xs) (shd ys)) (zipWith f (stl xs) (stl ys))"
+
+definition lnats :: "'a::var_terms_pre \<Rightarrow> 'a \<Rightarrow> 'a stream \<Rightarrow> ('a \<times> \<tau> \<times> 'a terms) llist" where
+  "lnats f x xs \<equiv> LCons (shd xs, (Unit \<rightarrow> Unit) \<rightarrow> Unit \<rightarrow> Unit, Lam f (Unit \<rightarrow> Unit) (Lam x Unit (Var x)))
+    (zipWith (\<lambda>pred name. (name, (Unit \<rightarrow> Unit) \<rightarrow> Unit \<rightarrow> Unit,
+      Lam f (Unit \<rightarrow> Unit) (Lam x Unit (App (Var f) (App (App (Var pred) (Var f)) (Var x)))))
+    ) xs (stl xs))"
+
+primcorec tollist :: "'a stream \<Rightarrow> 'a llist" where
+  "tollist xs = LCons (shd xs) (tollist (stl xs))"
+
+lemma lnats_names: "lmap fst (lnats f x xs) = tollist xs"
+unfolding lnats_def proof (coinduction arbitrary: xs)
+  case Eq_llist
+  then show ?case
+    by (smt (verit, best) fst_conv llist.disc(2) llist.sel(1,3) llist.simps(13) tollist.disc_iff tollist.simps(2,3) zipWith.code)
+qed
+
+lift_definition dallnats :: "'a::var_terms_pre \<Rightarrow> 'a \<Rightarrow> 'a stream \<Rightarrow> ('a, \<tau> \<times> 'a terms) dallist"
+  is "\<lambda>f x xs. if ldistinct (tollist xs) then lnats f x xs else LNil"
+  by (auto simp: lnats_names)
 
 end

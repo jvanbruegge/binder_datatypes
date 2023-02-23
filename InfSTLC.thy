@@ -2263,7 +2263,7 @@ lemma rrename_terms_context_lookup:
   by (auto simp: fun_eq_iff context_lookup_def assms supp_inv_bound Var_is_VVr[symmetric]
      dallist.map_comp dallist.set_map(1) dallookup_NoneI image_in_bij_eq supp_id_bound
      dest: dallookup_NoneD
-     dest!: dallookup_eqvt[of f "inv f _" xs, rotated] 
+     dest!: dallookup_eqvt[of f "inv f _" xs, rotated]
        dallookup_dallmapD[of _ "map_dallist f id xs" _ "map_prod id (rrename_terms f)"]
     split: option.splits)
 
@@ -2690,8 +2690,11 @@ qed
 theorem preservation: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; e \<^bold>\<longrightarrow> e' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> e' : \<tau>"
 proof (binder_induction \<Gamma> e \<tau> arbitrary: e' avoiding: e' rule: Ty_strong_induct)
   case (Lam x \<Gamma> \<tau> e \<tau>2 e')
-  then show ?case
-    sorry
+  from Lam.prems show ?case
+  proof cases
+    case (ST_Lam e2 e2' y \<tau>')
+    then show ?thesis using Lam sorry
+  qed simp_all
 next
   case (App \<Gamma> e1 \<tau>1 \<tau>2 e2 e')
   from App.prems show ?case
@@ -3140,11 +3143,11 @@ lemma ldistinct_fromN[simp]: "ldistinct (tollist (smap emb (fromN x)))"
 lemma context_lookup_dallnats_lt: "z < 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) = Var (emb z)"
   sorry
 
-lemma context_lookup_dallnats_gt: "z > 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) = 
+lemma context_lookup_dallnats_gt: "z > 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) =
   Lam f (Unit \<rightarrow> Unit) (Lam x Unit (App (Var f) (App (App (Var (emb (z - 1))) (Var f)) (Var x))))"
   sorry
 
-lemma context_lookup_dallnats0: "context_lookup (dallnats f x nat) (emb 100) = 
+lemma context_lookup_dallnats0: "context_lookup (dallnats f x nat) (emb 100) =
   Lam f (Unit \<rightarrow> Unit) (Lam x Unit (Var x))"
   sorry
 
@@ -3202,13 +3205,65 @@ proof -
   finally show ?thesis .
 qed
 
-lemma tvsubst_vvsubst: 
-  "|supp f| <o |UNIV| \<Longrightarrow> |SSupp g| <o |UNIV| \<Longrightarrow> tvsubst g (vvsubst f v) = tvsubst (g \<circ> f) v"
-  sorry
+lemma IImsupp_comp_subset: "IImsupp (g \<circ> f) \<subseteq> IImsupp g \<union> imsupp f"
+  unfolding IImsupp_def SSupp_def imsupp_def supp_def
+  apply (auto dest!: SSupp_comp_subset[THEN set_mp])
+  by (metis (mono_tags, lifting) CollectI FVars_VVr empty_iff image_iff insertE)
 
-lemma tvsubst_cong: 
-  "|SSupp f| <o |UNIV|\<Longrightarrow> |SSupp g| <o |UNIV| \<Longrightarrow> (\<And>x. x \<in> FFVars_terms e \<Longrightarrow> f x = g x) \<Longrightarrow> tvsubst f e = tvsubst g e"
-  sorry
+lemma tvsubst_vvsubst:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a" and xs::"('a, 'v) dallist"
+  assumes "|supp f| <o |UNIV::'a set|" "|SSupp g| <o |UNIV::'a set|"
+  shows "tvsubst g (vvsubst f v) = tvsubst (g \<circ> f) v"
+proof (binder_induction v arbitrary: xs avoiding: "imsupp f" "IImsupp g" rule: TT_fresh_induct_param)
+  case Bound1
+  then show ?case by (rule iffD2[OF imsupp_supp_bound[OF cinfinite_imp_infinite[OF terms.UNIV_cinfinite]] assms(1)])
+next
+  case Bound2
+  then show ?case unfolding IImsupp_def
+    by (auto intro!: terms.Un_bound terms.UNION_bound simp: assms(2) terms.set_bd_UNIV)
+next
+  case (Lam x \<tau> e xs)
+  then have "x \<notin> IImsupp (g \<circ> f)" by (auto dest: IImsupp_comp_subset[THEN set_mp])
+  then show ?case using Lam by (auto simp: vvsubst_simps assms tvsubst_simps SSupp_comp_bound simp del: comp_apply)
+next
+  case (LetRec xs e ys)
+  then have "keys_dallist xs \<inter> IImsupp (g \<circ> f) = {}" by (auto dest: IImsupp_comp_subset[THEN set_mp])
+  then show ?case using LetRec
+    by (auto simp: vvsubst_simps tvsubst_simps assms Int_Un_distrib dallist.set_map[OF bij_id supp_id_bound] SSupp_comp_bound
+      dallist.map_comp[OF bij_id supp_id_bound bij_id supp_id_bound] trans[OF comp_apply[of "map_prod _ _" "map_prod _ _"] prod.map_comp, abs_def]
+      supp_id_bound dallist.pred_set case_prod_beta
+      simp del: comp_apply intro!: arg_cong2[OF _ refl, of _ _ LetRec] dallist.map_cong)
+    fastforce
+qed (auto simp: vvsubst_simps tvsubst_simps assms SSupp_comp_bound simp del: comp_apply, (rule comp_apply[symmetric])?)
+
+lemma tvsubst_cong:
+  fixes e::"'a::var_terms_pre terms" and xs::"('a, 'v) dallist"
+  assumes "|SSupp f| <o |UNIV::'a set|" "|SSupp g| <o |UNIV::'a set|"
+  shows "(\<And>x. x \<in> FFVars_terms e \<Longrightarrow> f x = g x) \<Longrightarrow> tvsubst f e = tvsubst g e"
+proof (binder_induction e arbitrary: xs avoiding: "IImsupp f" "IImsupp g" rule: TT_fresh_induct_param)
+  case (Lam x \<tau> e xs)
+  {
+    fix y
+    have "y \<in> FFVars_terms e \<Longrightarrow> f y = g y" using Lam unfolding IImsupp_def SSupp_def
+      by (cases "x = y") auto
+  }
+  then show ?case using Lam by (auto simp: tvsubst_simps assms)
+next
+  case (LetRec xs e ys)
+  {
+    fix y
+    have "y \<in> FFVars_terms e \<Longrightarrow> f y = g y" using LetRec unfolding IImsupp_def SSupp_def
+      by (cases "y \<in> keys_dallist xs") auto
+  } moreover {
+    fix e' y
+    assume "e' \<in> vals_dallist xs"
+    then have "y \<in> FFVars_terms (snd e') \<Longrightarrow> f y = g y" using LetRec(1) unfolding IImsupp_def SSupp_def
+      by (cases "y \<in> keys_dallist xs") (auto intro: LetRec(4)[unfolded FFVars_simps, of y])
+  }
+  ultimately show ?case using LetRec
+    by (auto simp: tvsubst_simps assms Int_Un_distrib supp_id_bound dallist.pred_set case_prod_beta
+       intro!: arg_cong2[OF _ refl, of _ _ LetRec] dallist.map_cong)
+qed (auto intro!: terms.Un_bound terms.UNION_bound simp: tvsubst_simps assms terms.set_bd_UNIV IImsupp_def comp_def)
 
 lemma ST_Beta'': "App (Lam (x :: 'a :: var_terms_pre) \<tau> e) e' \<^bold>\<longrightarrow> tvsubst (VVr(x := e')) e"
 proof -
@@ -3224,14 +3279,9 @@ proof -
     by (rule ST_Beta) auto
   also have "tvsubst (VVr(y := e')) (vvsubst (id(x := y, y := x)) e) =
     tvsubst (VVr(y := e') o (id(x := y, y := x))) e"
-    by (subst tvsubst_vvsubst)
-      (auto simp: Var_is_VVr id_def fun_upd_def if_distrib[of VVr] supp_def SSupp_def not_sym[OF y(1)]
-       intro: card_of_subset_bound[OF _ single_bound[of y]] card_of_subset_bound[of _ "{x, y}", OF _ finite_ordLess_infinite2])
+    by (subst tvsubst_vvsubst) (auto simp: supp_swap_bound cinfinite_imp_infinite[OF terms.UNIV_cinfinite] SSupp_upd_VVr_bound)
   also have "\<dots> = tvsubst (VVr(x := e')) e"
-    by (rule tvsubst_cong)
-      (auto simp: SSupp_def split: if_splits
-       intro: card_of_subset_bound[OF _ single_bound[of y]]
-         card_of_subset_bound[of _ "{x, y}", OF _ finite_ordLess_infinite2])
+    by (rule tvsubst_cong) (auto simp: SSupp_comp_bound supp_swap_bound SSupp_upd_VVr_bound cinfinite_imp_infinite[OF terms.UNIV_cinfinite])
   finally show ?thesis .
 qed
 

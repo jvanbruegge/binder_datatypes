@@ -1385,6 +1385,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
        ("not_isVVr_free", map_filter I not_isVVr_frees),
        ("IImsupp_Diff", map_filter I IImsupp_Diffs),
        ("FFVars_tvsubst", map_filter I FFVars_tvsubsts),
+       ("SSupp_comp_subset", map_filter (Option.map #SSupp_comp_subset) SSupp_comps),
        ("SSupp_comp_bound", map_filter (Option.map #SSupp_comp_bound) SSupp_comps),
        ("SSupp_comp_rename_bound", map_filter (Option.map #SSupp_comp_rename_bound) SSupp_comps),
        ("IImsupp_comp_image", map_filter (Option.map #IImsupp_comp_image) SSupp_comps)

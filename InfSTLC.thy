@@ -3235,9 +3235,6 @@ proof -
   finally show ?thesis .
 qed
 
-lemma tvsubst_Lam_idem: "tvsubst (VVr(x := e1)) (Lam x t e2) = Lam x t e2"
-  sorry
-
 definition meets (infix "\<Down>" 60) where
   "p \<Down> q = (\<exists>r. (p \<^bold>\<longrightarrow>* r) \<and> (q \<^bold>\<longrightarrow>* r) \<and> stuck r)"
 

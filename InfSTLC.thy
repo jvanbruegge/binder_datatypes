@@ -1,5 +1,5 @@
 theory InfSTLC
-  imports "./thys/MRBNF_Recursor" "./DALList" "HOL-Library.Stream"
+  imports "./thys/MRBNF_Recursor" "./DALList" "HOL-Library.Stream" Complex_Main
 begin
 
 datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 60)
@@ -1967,9 +1967,9 @@ shows "P \<Gamma> e \<tau>"
      apply (rule assms(3-6), assumption+)+
   done
 
-coinductive steps ("_ \<longrightarrow>* _" 25) where
-  ST_refl: "x \<longrightarrow>* x"
-| ST_trans: "\<lbrakk> Step e1 e2 ; e2 \<longrightarrow>* e3 \<rbrakk> \<Longrightarrow> e1 \<longrightarrow>* e3"
+inductive steps ("_ \<^bold>\<longrightarrow>* _" 25) where
+  ST_refl: "x \<^bold>\<longrightarrow>* x"
+| ST_trans: "\<lbrakk> Step e1 e2 ; e2 \<^bold>\<longrightarrow>* e3 \<rbrakk> \<Longrightarrow> e1 \<^bold>\<longrightarrow>* e3"
 
 inductive_cases
   STE: "e \<^bold>\<longrightarrow> e2"
@@ -3016,9 +3016,11 @@ qed (auto elim: STE)
 primcorec zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a stream \<Rightarrow> 'b stream \<Rightarrow> 'c llist" where
   "zipWith f xs ys = LCons (f (shd xs) (shd ys)) (zipWith f (stl xs) (stl ys))"
 
+abbreviation Nat where "Nat \<equiv> (Unit \<rightarrow> Unit) \<rightarrow> Unit \<rightarrow> Unit"
+
 definition lnats :: "'a::var_terms_pre \<Rightarrow> 'a \<Rightarrow> 'a stream \<Rightarrow> ('a \<times> \<tau> \<times> 'a terms) llist" where
-  "lnats f x xs \<equiv> LCons (shd xs, (Unit \<rightarrow> Unit) \<rightarrow> Unit \<rightarrow> Unit, Lam f (Unit \<rightarrow> Unit) (Lam x Unit (Var x)))
-    (zipWith (\<lambda>pred name. (name, (Unit \<rightarrow> Unit) \<rightarrow> Unit \<rightarrow> Unit,
+  "lnats f x xs \<equiv> LCons (shd xs, Nat, Lam f (Unit \<rightarrow> Unit) (Lam x Unit (Var x)))
+    (zipWith (\<lambda>pred name. (name, Nat,
       Lam f (Unit \<rightarrow> Unit) (Lam x Unit (App (Var f) (App (App (Var pred) (Var f)) (Var x)))))
     ) xs (stl xs))"
 
@@ -3035,5 +3037,172 @@ qed
 lift_definition dallnats :: "'a::var_terms_pre \<Rightarrow> 'a \<Rightarrow> 'a stream \<Rightarrow> ('a, \<tau> \<times> 'a terms) dallist"
   is "\<lambda>f x xs. if ldistinct (tollist xs) then lnats f x xs else LNil"
   by (auto simp: lnats_names)
+
+corollary infinite_iff_natLeq_ordLeq:
+"(\<not>finite A) = ( natLeq \<le>o |A| )"
+using infinite_iff_card_of_nat[of A] card_of_nat
+      ordIso_ordLeq_trans ordLeq_ordIso_trans ordIso_symmetric by blast
+
+typedef aleph1 ("\<aleph>\<^sub>1") = "Field (cardSuc natLeq)"
+  by (metis Field_cardSuc_not_empty ex_in_conv natLeq_Card_order)
+
+definition aleph1 ("\<aleph>\<^sub>1") where "\<aleph>\<^sub>1 = |UNIV :: \<aleph>\<^sub>1 set|"
+
+lemma UNIV_aleph1_alt: "UNIV = Abs_aleph1 ` Field (cardSuc natLeq)"
+  by (force simp: image_iff Rep_aleph1[simplified] Rep_aleph1_inverse intro: bexI[of _ "Rep_aleph1 _"])
+
+lemma card_of_aleph1: "\<aleph>\<^sub>1 =o cardSuc natLeq"
+  unfolding UNIV_aleph1_alt aleph1_def
+  apply (rule ordIso_transitive[OF _ card_of_Field_ordIso[OF cardSuc_Card_order[OF natLeq_Card_order]]])
+  apply (rule card_of_ordIsoI[where f=Rep_aleph1])
+  apply (auto simp: bij_betw_def inj_on_def Rep_aleph1_inject Abs_aleph1_inverse image_image)
+  done
+
+instantiation aleph1 :: var_terms_pre begin
+instance proof
+  show "|Field natLeq| \<le>o |UNIV :: \<aleph>\<^sub>1 set|"
+    apply (rule ordIso_ordLeq_trans[OF card_of_Field_natLeq])
+    apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_of_aleph1[unfolded aleph1_def]]])
+    apply (rule cardSuc_ordLeq[OF natLeq_Card_order])
+    done
+next
+  show "regularCard |UNIV :: \<aleph>\<^sub>1 set|"
+    apply (rule regularCard_ordIso[OF ordIso_symmetric[OF card_of_aleph1[unfolded aleph1_def]]])
+    apply (rule Cinfinite_cardSuc[OF natLeq_Cinfinite])
+    apply (rule regularCard_cardSuc[OF natLeq_Cinfinite])
+    done
+next
+  show "|Field bd_llist| \<le>o |UNIV :: \<aleph>\<^sub>1 set|"
+    unfolding bd_llist_def
+    by (metis aleph1_def BNF_Cardinal_Order_Relation.cardSuc_ordIso_card_suc Field_card_of card_of_aleph1 card_of_mono2 natLeq_card_order ordIso_equivalence(1) ordIso_iff_ordLeq)
+qed
+end
+
+lemma natLeq_ordLess_aleph1: "natLeq <o \<aleph>\<^sub>1"
+  using cardSuc_ordLeq_ordLess card_of_Well_order card_of_aleph1 natLeq_Card_order natLeq_Well_order not_ordLeq_iff_ordLess ordIso_ordLess_False
+  unfolding aleph1_def
+  by blast
+
+definition emb :: "nat \<Rightarrow> \<aleph>\<^sub>1" where
+  "emb = (SOME f. embedS natLeq \<aleph>\<^sub>1 f)"
+
+lemma embedS_emb: "embedS natLeq \<aleph>\<^sub>1 emb"
+  using natLeq_ordLess_aleph1
+  unfolding emb_def ordLess_def
+  by (intro someI_ex[of "\<lambda>f. embedS natLeq \<aleph>\<^sub>1 f"]) auto
+
+lemma emb_inject[simp]: "emb x = emb y \<longleftrightarrow> x = y"
+  using embedS_emb unfolding embedS_def embed_def bij_betw_def natLeq_under_leq
+  by (auto simp: inj_on_def Field_natLeq dest: spec[of _ "max x y"])
+
+abbreviation suc where "suc \<equiv> emb 1"
+abbreviation zer where "zer \<equiv> emb 0"
+abbreviation suc' where "suc' \<equiv> emb 11"
+abbreviation zer' where "zer' \<equiv> emb 10"
+abbreviation m where "m \<equiv> emb 2"
+abbreviation n where "n \<equiv> emb 3"
+abbreviation mul where "mul \<equiv> emb 12"
+abbreviation nat where "nat \<equiv> smap emb (fromN 100)"
+abbreviation mul_def where "mul_def \<equiv> Lam m Nat (Lam n Nat (Lam suc (Unit \<rightarrow> Unit) (Lam zer Unit
+  (App (App (Var m) (App (Var n) (Var suc))) (Var zer)))))"
+
+definition two_times_two where
+  "two_times_two = LetRec (dallnats suc zer nat)
+     (LetRec (DALCons mul (Nat \<rightarrow> Nat \<rightarrow> Nat, mul_def) DALNil)
+     (App (App (Var mul) (Var (snth nat 1))) (Var (snth nat 1))))"
+
+definition four where
+  "four = LetRec (dallnats suc zer nat) ((Var (snth nat 3)))"
+
+lemma keys_dallist_dallnats:
+  "ldistinct (tollist xs) \<Longrightarrow> keys_dallist (dallnats f x xs) = sset xs"
+  apply transfer
+  apply (auto simp: dallnats_def)
+  sorry
+
+lemma vals_dallist_dallnats:
+  "(T, t) \<in> vals_dallist (dallnats f x xs) \<Longrightarrow> FFVars_terms t \<subseteq> sset xs"
+  apply transfer
+  apply (auto simp: dallnats_def)
+  sorry
+
+lemma lset_tollist[simp]: "lset (tollist xs) = sset xs"
+  sorry
+
+lemma ldistinct_fromN[simp]: "ldistinct (tollist (smap emb (fromN x)))"
+  apply (coinduction arbitrary: x)
+  apply (subst (2) siterate.code; subst (2) tollist.code)
+  apply (auto simp: stream.set_map)
+  done
+
+lemma context_lookup_dallnats_lt: "z < 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) = Var (emb z)"
+  sorry
+
+lemma context_lookup_dallnats_gt: "z > 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) = 
+  Lam f (Unit \<rightarrow> Unit) (Lam x Unit (App (Var f) (App (App (Var (emb (z - 1))) (Var f)) (Var x))))"
+  sorry
+
+lemma context_lookup_dallnats0: "context_lookup (dallnats f x nat) (emb 100) = 
+  Lam f (Unit \<rightarrow> Unit) (Lam x Unit (App (Var f) (App (App (Var x) (Var f)) (Var x))))"
+  sorry
+
+lemma context_lookup_singleton[simp]:
+  "context_lookup (DALCons k v DALNil) k' = (if k = k' then snd v else Var k')"
+  unfolding context_lookup_def
+  by transfer (auto simp: Var_is_VVr)
+
+lemma SSupp_fun_upd: "SSupp (VVr(x := t)) = (if t = VVr x then {} else {x})"
+  by (auto simp: SSupp_def Var_is_VVr)
+
+
+definition meets (infix "\<Down>" 60) where "p \<Down> q = (\<exists>r. (p \<^bold>\<longrightarrow>* r) \<and> (q \<^bold>\<longrightarrow>* r) \<and> stuck r)"
+
+lemma "four \<Down> two_times_two"
+  unfolding meets_def four_def two_times_two_def
+  apply (intro exI conjI)
+  apply (rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
+  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
+      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
+  apply (rule ST_trans[OF _ ST_refl], rule ST_DropLet; (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
+   prefer 2
+  apply (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats) []
+  apply (rule ST_trans, rule ST_Let, rule ST_LetBeta; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
+  apply ((rule ST_trans, rule ST_Let, rule ST_Let, rule ST_App, rule ST_Beta; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
+      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
+  apply ((rule ST_trans, rule ST_Let, rule ST_Let, rule ST_Beta; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
+      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
+  apply (rule ST_trans, rule ST_Let, rule ST_DropLet; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
+  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
+      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
+  apply (rule ST_trans, rule ST_DropLet; (auto 0 3 simp add: stuck_def stuck_aux.intros stream.set_map keys_dallist_dallnats
+      tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
+      dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
+  oops
 
 end

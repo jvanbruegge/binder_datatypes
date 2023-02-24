@@ -842,20 +842,14 @@ lemma pred_dallist_DALCons[simp]: "x \<notin> keys_dallist xs \<Longrightarrow> 
 definition context_lookup :: "('a::var_terms_pre, \<tau> \<times> 'a terms) dallist \<Rightarrow> 'a \<Rightarrow> 'a terms" where
   "context_lookup xs \<equiv> (\<lambda>k. case dallookup k xs of None \<Rightarrow> VVr k | Some a \<Rightarrow> snd a)"
 
-inductive stuck_aux :: "'a::var_terms_pre terms \<Rightarrow> bool" and stuck :: "'a::var_terms_pre terms \<Rightarrow> bool" where
-  "stuck_aux (Var x)"
-| "stuck_aux t \<Longrightarrow> stuck u \<Longrightarrow> stuck_aux (App t u)"
-| "stuck_aux t \<Longrightarrow> stuck t"
-| "stuck e \<Longrightarrow> stuck (Lam x \<tau> e)"
-
 inductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" ("_ \<^bold>\<longrightarrow> _" 25)  where
   ST_Beta: "x \<notin> FFVars_terms e2 \<Longrightarrow> App (Lam x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (VVr(x:=e2)) e"
 | ST_Lam: "e \<^bold>\<longrightarrow> e' \<Longrightarrow> Lam x \<tau> e \<^bold>\<longrightarrow> Lam x \<tau> e'"
 | ST_App1: "e1 \<^bold>\<longrightarrow> e1' \<Longrightarrow> App e1 e2 \<^bold>\<longrightarrow> App e1' e2"
 | ST_App2: "e2 \<^bold>\<longrightarrow> e2' \<Longrightarrow> App e1 e2 \<^bold>\<longrightarrow> App e1 e2'"
 | ST_Let: "e \<^bold>\<longrightarrow> e' \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> LetRec xs e'"
-| ST_DropLet: "\<lbrakk> stuck e ; keys_dallist xs \<inter> FFVars_terms e = {} \<rbrakk> \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> e"
-| ST_LetBeta: "\<lbrakk> stuck e ; keys_dallist xs \<inter> FFVars_terms e \<noteq> {} \<rbrakk> \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> LetRec xs (tvsubst (context_lookup xs) e)"
+| ST_DropLet: "keys_dallist xs \<inter> FFVars_terms e = {} \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> e"
+| ST_LetBeta: "keys_dallist xs \<inter> FFVars_terms e \<noteq> {} \<Longrightarrow> LetRec xs e \<^bold>\<longrightarrow> LetRec xs (tvsubst (context_lookup xs) e)"
 print_theorems
 
 no_notation Set.member  ("(_/ : _)" [51, 51] 50)
@@ -1975,47 +1969,8 @@ inductive steps ("_ \<^bold>\<longrightarrow>* _" 25) where
 inductive_cases
   STE: "e \<^bold>\<longrightarrow> e2"
 inductive_cases
-  stuck_auxE: "stuck_aux e"
-inductive_cases
   TyE: "\<Gamma> \<turnstile> e : \<tau>"
 print_theorems
-
-lemma no_step_imp_stuck: "\<nexists>e'. e \<^bold>\<longrightarrow> e' \<Longrightarrow> stuck e"
-proof (induction e rule: TT_induct)
-  case (Var a)
-  then show ?case
-    using stuck_aux_stuck.intros(1) stuck_aux_stuck.intros(3) by blast
-next
-  case (App e1 e2)
-  then have "stuck e1" "stuck e2"
-    by (auto intro: Step.intros)
-  moreover have "\<nexists>x \<tau> e. e1 = Lam x \<tau> e" using App(3)
-    apply -
-    apply (erule contrapos_nn)
-    apply (erule exE)+
-    apply (rule exE[OF Lam_avoid])
-     apply (rule terms.set_bd_UNIV)
-    apply (erule exE conjE)+
-    apply (drule trans)
-     apply assumption
-    apply hypsubst
-    apply (rule exI)
-    apply (rule Step.intros)
-    apply assumption
-    done
-  ultimately have "stuck_aux e1"
-    by (meson stuck.cases)
-  with \<open>stuck e2\<close> show "stuck (App e1 e2)" by (auto intro: stuck_aux_stuck.intros)
-next
-  case (Lam x \<tau> e)
-  then show ?case
-    using ST_Lam stuck_aux_stuck.intros(4) by blast
-next
-  case (LetRec xs e)
-  then have 1: "stuck e" by (auto intro: Step.intros)
-  then have "\<exists>a. LetRec xs e \<^bold>\<longrightarrow> a" by (cases "keys_dallist xs \<inter> FFVars_terms e = {}") (auto intro: Step.intros)
-  then show ?case using \<open>\<nexists>a. LetRec xs e \<^bold>\<longrightarrow> a\<close> by blast
-qed
 
 theorem progress: "DALNil \<turnstile> e : \<tau> \<Longrightarrow> (\<exists>x \<tau>' e'. e = Lam x \<tau>' e') \<or> (\<exists>e'. e \<^bold>\<longrightarrow> e')"
 proof (induction "DALNil :: ('a::var_terms_pre, \<tau>) dallist" e \<tau> rule: Ty.induct)
@@ -2053,7 +2008,6 @@ next
     then show ?thesis using ST_Let by blast
   next
     case False
-    then have "stuck e" by (rule no_step_imp_stuck)
     then show ?thesis by (cases "keys_dallist xs \<inter> FFVars_terms e = {}") (auto intro: Step.intros)
   qed
 qed
@@ -2225,14 +2179,6 @@ lemma VVr_comp:
     by (auto simp: assms Var_is_VVr[symmetric])
   done
 
-lemma
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|"
-  shows stuck_aux_eqvt: "stuck_aux e \<Longrightarrow> stuck_aux (rrename_terms f e)"
-    and stuck_eqvt: "stuck e \<Longrightarrow> stuck (rrename_terms f e)"
-  by (induction e rule: stuck_aux_stuck.inducts)
-    (auto simp: rrename_simps[OF assms] intro: stuck_aux_stuck.intros)
-
 lemma keys_dallist_bound: "|keys_dallist (xs::('a::var_terms_pre, 'v) dallist)| <o |UNIV::'a set|"
   apply (rule ordLess_ordLeq_trans)
    apply (rule dallist.set_bd)
@@ -2274,7 +2220,7 @@ lemma Step_eqvt:
   unfolding terms_vvsubst_rrename[OF assms]
   by (induct e e' rule: Step.induct)
     (force simp: assms rrename_tvsubst SSupp_upd_bound SSupp_VVr_bound SSupp_bound VVr_comp
-      rrename_terms_context_lookup terms.FFVars_rrenames stuck_eqvt dallist.set_map disjoint_iff_not_equal
+      rrename_terms_context_lookup terms.FFVars_rrenames dallist.set_map disjoint_iff_not_equal
       intro: Step.intros)+
 
 lemma context_morph: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; \<forall>(x, \<tau>)\<in>lset (Rep_dallist \<Gamma>). x \<in> FFVars_terms e \<longrightarrow> (x, \<tau>)\<in>lset (Rep_dallist \<Gamma>') \<rbrakk> \<Longrightarrow> \<Gamma>' \<turnstile> e : \<tau>"
@@ -2987,7 +2933,7 @@ next
     then obtain f where 1: "bij f" "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
       "map_dallist f (map_prod id (vvsubst f)) xs = ys" "vvsubst f e = e'"
       "id_on (\<Union> (FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) f" using LetRec_inject by blast
-    then have 2: "keys_dallist xs \<inter> FFVars_terms e = {}" using terms.set_map ST_DropLet(3)
+    then have 2: "keys_dallist xs \<inter> FFVars_terms e = {}" using terms.set_map ST_DropLet(2)
       by (metis (no_types, lifting) bij_betw_apply bij_imp_bij_betw dallist.set_map(1) disjoint_iff)
     then have 3: "\<Gamma> \<turnstile> e : \<tau>" using LetRec(2,3) context_morph[OF LetRec(5)]
       by (smt (verit, del_insts) Prelim.image_id UnE bij_id case_prodI2 dallist.set_map(1) disjoint_iff fst_conv imageI keys_dallist.rep_eq lset_dainterleave supp_id_bound)
@@ -2995,7 +2941,7 @@ next
     then have "e = e'" using 1 by (metis id_apply id_onD supp_id_bound terms.map_cong0 terms.map_id)
     then show ?thesis using 3 by blast
   next
-    case (ST_LetBeta e1 ys)
+    case (ST_LetBeta ys e1)
     then obtain f where f: "bij f" "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|"
       "map_dallist f (map_prod id (vvsubst f)) xs = ys" "vvsubst f e = e1"
       "id_on (\<Union> (FFVars_terms ` snd ` vals_dallist xs) \<union> FFVars_terms e - keys_dallist xs) f" using LetRec_inject by blast
@@ -3315,153 +3261,153 @@ proof -
 qed
 
 definition meets (infix "\<Down>" 60) where
-  "p \<Down> q = (\<exists>r. (p \<^bold>\<longrightarrow>* r) \<and> (q \<^bold>\<longrightarrow>* r) \<and> stuck r)"
+  "p \<Down> q = (\<exists>r. (p \<^bold>\<longrightarrow>* r) \<and> (q \<^bold>\<longrightarrow>* r) \<and> (\<nexists>r'. r \<^bold>\<longrightarrow> r'))"
 
 
 lemma "four \<Down> two_pls_two"
   unfolding meets_def four_def two_pls_two_def
   apply (intro exI conjI)
-    apply (rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-    apply (rule ST_trans, rule ST_DropLet; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+    apply (rule ST_trans, rule ST_DropLet; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
     apply (rule ST_refl)
    prefer 2
-   apply (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+   apply (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
       tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
       dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats) []
-  apply (rule ST_trans, rule ST_Let, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, rule ST_Let, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply ((rule ST_trans, rule ST_Let, rule ST_Let, rule ST_App1, rule ST_Beta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, rule ST_Let, rule ST_Let, rule ST_App1, rule ST_Beta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply ((rule ST_trans, rule ST_Let, rule ST_Let, rule ST_Beta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, rule ST_Let, rule ST_Let, rule ST_Beta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply (rule ST_trans, rule ST_Let, rule ST_DropLet; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, rule ST_Let, rule ST_DropLet; (auto simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply ((rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_Beta''; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_Beta''; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply ((rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_Beta''; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_Beta''; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply ((rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_Beta''; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply ((rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_Beta''; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
           tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
           dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?),
-      ((subst tvsubst_simps; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+      ((subst tvsubst_simps; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
             tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq Var_is_VVr[symmetric] SSupp_upd_VVr_bound IImsupp_def SSupp_fun_upd single_bound
             dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)+))+
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App1, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, (rule ST_Let ST_Lam)+, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_App2, rule ST_Beta'; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
-  apply (rule ST_trans, rule ST_DropLet; (auto 0 3 simp add: stuck_aux_stuck.intros stream.set_map keys_dallist_dallnats
+  apply (rule ST_trans, rule ST_DropLet; (auto 0 3 simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
   apply (rule ST_refl)

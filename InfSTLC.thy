@@ -3119,20 +3119,22 @@ definition two_pls_two where
 definition four where
   "four = LetRec (dallnats suc zer nat) ((Var (snth nat 4)))"
 
+lemma lset_tollist[simp]: "lset (tollist (xs::'a stream)) = sset xs"
+proof (rule equalityI; rule subsetI)
+  fix x
+  let ?P = "\<lambda>a (ys::'a llist). \<forall>zs. ys = tollist zs \<longrightarrow> a \<in> sset zs"
+  assume a: "x \<in> lset (tollist xs)"
+  then show "x \<in> sset xs"
+    by (rule mp[OF spec[OF llist.set_induct[of x _ ?P]] refl]; subst tollist.code) (auto simp: shd_sset stl_sset)
+next
+  fix x
+  assume "x \<in> sset xs"
+  then show "x \<in> lset (tollist xs)" by (rule stream.set_induct; subst tollist.code) auto
+qed
+
 lemma keys_dallist_dallnats:
   "ldistinct (tollist xs) \<Longrightarrow> keys_dallist (dallnats f x xs) = sset xs"
-  apply transfer
-  apply (auto simp: dallnats_def)
-  sorry
-
-lemma vals_dallist_dallnats:
-  "(T, t) \<in> vals_dallist (dallnats f x xs) \<Longrightarrow> FFVars_terms t \<subseteq> sset xs"
-  apply transfer
-  apply (auto simp: dallnats_def)
-  sorry
-
-lemma lset_tollist[simp]: "lset (tollist xs) = sset xs"
-  sorry
+  by transfer (auto simp: dallnats_def arg_cong[OF lnats_names, of lset, unfolded llist.set_map])
 
 lemma ldistinct_fromN[simp]: "ldistinct (tollist (smap emb (fromN x)))"
   apply (coinduction arbitrary: x)
@@ -3151,6 +3153,10 @@ lemma in_lset_zipWithI: "f (s !! i) (t !! i) \<in> lset (zipWith f s t)"
 
 lemma lset_zipWith: "lset (zipWith f s t) = {f (s !! i) (t !! i) | i. True}"
   by (auto simp: in_lset_zipWithI in_lset_zipWithD)
+
+lemma vals_dallist_dallnats:
+  "(T, t) \<in> vals_dallist (dallnats f x xs) \<Longrightarrow> FFVars_terms t \<subseteq> sset xs"
+  by transfer (auto simp: dallnats_def lnats_def lset_zipWith split: if_splits)
 
 lemma context_lookup_dallnats_lt: "z < 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) = Var (emb z)"
   unfolding context_lookup_def

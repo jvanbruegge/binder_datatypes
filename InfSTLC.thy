@@ -2633,14 +2633,32 @@ proof -
   then show ?thesis using context_morph[OF 3] assms(3) by auto
 qed
 
+lemma Step_preserves_FFVars: "e \<^bold>\<longrightarrow> e' \<Longrightarrow> FFVars_terms e' \<subseteq> FFVars_terms e"
+  by (induct e e' rule: Step.induct)
+    (auto simp: FFVars_tvsubst_single FFVars_tvsubst SSupp_bound dest!: set_mp[OF FVars_context_lookup])
+
+lemma Lam_StepD: "Lam x t e \<^bold>\<longrightarrow> r' \<Longrightarrow> \<exists>e'. r' = Lam x t e' \<and> (e \<^bold>\<longrightarrow> e')"
+  apply (erule Step.cases)
+        apply (auto simp: Lam_inject)
+  subgoal for e' f
+    apply (drule Step_eqvt[of "inv f", rotated -1])
+      apply (auto simp: supp_inv_bound terms.map_comp terms.map_id)
+    apply (intro exI conjI[rotated])
+         apply assumption
+        apply (rule refl)
+       apply (auto simp: supp_inv_bound id_on_def terms.set_map dest!: Step_preserves_FFVars)
+    apply (drule subsetD)
+     apply (erule imageI)
+    apply (drule spec, drule mp, erule conjI)
+    apply force+
+    done
+  done
+
 theorem preservation: "\<lbrakk> \<Gamma> \<turnstile> e : \<tau> ; e \<^bold>\<longrightarrow> e' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> e' : \<tau>"
 proof (binder_induction \<Gamma> e \<tau> arbitrary: e' avoiding: e' rule: Ty_strong_induct)
   case (Lam x \<Gamma> \<tau> e \<tau>2 e')
-  from Lam.prems show ?case
-  proof cases
-    case (ST_Lam e2 e2' y \<tau>')
-    then show ?thesis using Lam sorry
-  qed simp_all
+  obtain e'' where 1: "e' = Lam x \<tau> e''" "e \<^bold>\<longrightarrow> e''" using Lam_StepD[OF Lam.prems] by blast
+  then show ?case using Lam Ty_Lam by blast
 next
   case (App \<Gamma> e1 \<tau>1 \<tau>2 e2 e')
   from App.prems show ?case
@@ -3261,29 +3279,7 @@ proof -
 qed
 
 definition meets (infix "\<Down>" 60) where
-  "p \<Down> q = (\<exists>r. (p \<^bold>\<longrightarrow>* r) \<and> (q \<^bold>\<longrightarrow>* r) \<and> (\<nexists>r'. r \<^bold>\<longrightarrow> r'))"
-
-lemma Step_preserves_FFVars: "e \<^bold>\<longrightarrow> e' \<Longrightarrow> FFVars_terms e' \<subseteq> FFVars_terms e"
-  by (induct e e' rule: Step.induct)
-    (auto simp: FFVars_tvsubst_single FFVars_tvsubst SSupp_bound dest!: set_mp[OF FVars_context_lookup])
-  find_theorems context_lookup FFVars_terms
-
-lemma Lam_StepD: "Lam x t e \<^bold>\<longrightarrow> r' \<Longrightarrow> \<exists>e'. r' = Lam x t e' \<and> (e \<^bold>\<longrightarrow> e')"
-  apply (erule Step.cases)
-        apply (auto simp: Lam_inject)
-  subgoal for e' f
-    apply (drule Step_eqvt[of "inv f", rotated -1])
-      apply (auto simp: supp_inv_bound terms.map_comp terms.map_id)
-    apply (intro exI conjI[rotated])
-         apply assumption
-        apply (rule refl)
-       apply (auto simp: supp_inv_bound id_on_def terms.set_map dest!: Step_preserves_FFVars)
-    apply (drule subsetD)
-     apply (erule imageI)
-    apply (drule spec, drule mp, erule conjI)
-    apply force+
-    done
-  done
+  "p \<Down> q = (\<exists>r. (p \<^bold>\<longrightarrow>* r) \<and> (q \<^bold>\<longrightarrow>* r))"
 
 lemma "four \<Down> two_pls_two"
   unfolding meets_def four_def two_pls_two_def
@@ -3325,9 +3321,6 @@ lemma "four \<Down> two_pls_two"
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)
     apply (rule ST_refl)
-   prefer 2
-   apply (safe dest!: Lam_StepD)
-  apply (erule Step.cases; auto)+
   apply (rule ST_trans, rule ST_Let, rule ST_LetBeta; (auto simp add: stream.set_map keys_dallist_dallnats
         tvsubst_simps SSupp_bound context_lookup_dallnats0 context_lookup_dallnats_gt context_lookup_dallnats_lt disjoint_iff subset_eq
         dest!: IImsupp_context_lookup[THEN set_mp] vals_dallist_dallnats)?)

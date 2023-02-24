@@ -3140,16 +3140,39 @@ lemma ldistinct_fromN[simp]: "ldistinct (tollist (smap emb (fromN x)))"
   apply (auto simp: stream.set_map)
   done
 
+lemma in_lset_zipWithD[OF _ refl]: "x \<in> lset zs \<Longrightarrow> zs = zipWith f s t \<Longrightarrow> \<exists>i. x = f (s !! i) (t !! i)"
+  apply (induct zs arbitrary: s t rule: llist.set_induct)
+   apply (subst (asm) zipWith.code; auto intro: exI[of _ 0])
+   apply (subst (asm) zipWith.code; force intro: exI[of _ "Suc _"])
+  done
+
+lemma in_lset_zipWithI: "f (s !! i) (t !! i) \<in> lset (zipWith f s t)"
+  by (induct i arbitrary: s t) (subst zipWith.code; auto)+
+
+lemma lset_zipWith: "lset (zipWith f s t) = {f (s !! i) (t !! i) | i. True}"
+  by (auto simp: in_lset_zipWithI in_lset_zipWithD)
+
 lemma context_lookup_dallnats_lt: "z < 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) = Var (emb z)"
-  sorry
+  unfolding context_lookup_def
+  by transfer (auto split: option.splits simp: Var_is_VVr lnats_def lset_zipWith dest!: llookup_SomeD)
+
+lemma lmap_zipWith: "lmap f (zipWith g s t) = zipWith (\<lambda>x y. f (g x y)) s t"
+  by (coinduction arbitrary: s t) (auto simp: llist.map_sel)
+
+lemma zipWith_snd: "zipWith (\<lambda>x y. y) s t = tollist t"
+  by (coinduction arbitrary: s t) auto
 
 lemma context_lookup_dallnats_gt: "z > 100 \<Longrightarrow> context_lookup (dallnats f x nat) (emb z) =
   Lam f (Unit \<rightarrow> Unit) (Lam x Unit (App (Var f) (App (App (Var (emb (z - 1))) (Var f)) (Var x))))"
-  sorry
+  unfolding context_lookup_def
+  apply transfer
+  apply (auto split: option.splits simp: Var_is_VVr lnats_def add.commute image_iff lset_zipWith lmap_zipWith zipWith_snd dest!: llookup_SomeD llookup_NoneD)
+  by (metis Groups.add_ac(2) Suc_le_eq nat_le_iff_add numeral_nat(3))
 
 lemma context_lookup_dallnats0: "context_lookup (dallnats f x nat) (emb 100) =
   Lam f (Unit \<rightarrow> Unit) (Lam x Unit (Var x))"
-  sorry
+  unfolding context_lookup_def
+  by transfer (auto split: option.splits simp: Var_is_VVr lnats_def lset_zipWith dest!: llookup_SomeD)
 
 lemma context_lookup_singleton[simp]:
   "context_lookup (DALCons k v DALNil) k' = (if k = k' then snd v else Var k')"

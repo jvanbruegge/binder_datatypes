@@ -112,8 +112,10 @@ fun create_binder_datatype spec lthy =
       |> mk_Frees "K" (map2 (fn b => fn a => b --> HOLogic.mk_setT a) bs vars)
       ||>> mk_Frees "\<rho>" bs
       ||>> apfst hd o mk_Frees "t" [qT];
+    val bound_names = map (fst o dest_Free) (fst (mk_Frees "Bound" bs lthy));
 
     val names = map (fst o dest_Free);
+    val ctor_names = map (fst o fst) (#ctors spec);
     val strong_induct =
       let
         val (P, names_lthy) = names_lthy
@@ -258,7 +260,7 @@ fun create_binder_datatype spec lthy =
             ]
           ]
         ]) sum_prod_thms IH_idxs)
-      ]) end;
+      ]) |> Rule_Cases.name (bound_names @ ctor_names) end;
 
     val fresh_induct =
       let
@@ -279,12 +281,12 @@ fun create_binder_datatype spec lthy =
           Goal.assume_rule_tac ctxt,
           resolve_tac ctxt prems
         ]
-      ]) end;
+      ]) |> Rule_Cases.name (bound_names @ ctor_names) end;
 
     val induct = Local_Defs.unfold0 lthy
       @{thms notin_empty_eq_True Int_empty_right HOL.simp_thms(6) HOL.True_implies_equals} (
       fold (K (fn thm => thm OF @{thms emp_bound})) (1 upto length vars) fresh_induct
-    );
+    ) |> Rule_Cases.name ctor_names;
 
     val notes =
       [("strong_induct", [strong_induct]),

@@ -41,6 +41,7 @@ in lthy' end\<close>
 print_theorems
 print_mrbnfs
 
+declare [[names_short]]
 thm
   term.strong_induct
   term.fresh_induct

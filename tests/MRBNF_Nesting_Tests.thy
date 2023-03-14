@@ -1,8 +1,11 @@
 theory MRBNF_Nesting_Tests
-  imports "../thys/MRBNF_Recursor" "../DALList"
+  imports "../thys/MRBNF_Recursor" "../DALList" "HOL-Eisbach.Eisbach"
 begin
 
 datatype \<tau> = Base | Arrow \<tau> \<tau> (infixr "(\<rightarrow>)" 50)
+
+lemma disjointI: "(\<And>x. x \<in> A \<Longrightarrow> x \<notin> B) \<Longrightarrow> A \<inter> B = {}"
+  by blast
 
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
@@ -10,8 +13,8 @@ ML \<open>
 val ctors = [
   (("Var", NONE), [@{typ 'var}]),
   (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Abs", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}]),
-  (("LetRec", NONE), [@{typ "('bvar, \<tau> \<times> 'brec) dallist"}, @{typ 'brec}])
+  (("Lam", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}]),
+  (("Let", NONE), [@{typ "('bvar, \<tau> \<times> 'rec) dallist"}, @{typ 'brec}])
 ]
 
 val spec = {
@@ -35,5 +38,7 @@ let
 in lthy' end\<close>
 print_theorems
 print_mrbnfs
+
+thm term.TT_fresh_co_induct_param term.strong_induct
 
 end

@@ -44,6 +44,7 @@ fun nesting_mrbnfs ctxt ctr_Tsss Us =
 
 fun create_binder_datatype spec lthy =
   let
+    (* TODO: use type copies of sum and prod to make it safer *)
     val fp_pre_T = foldr1 mk_sumT (map (foldr1 HOLogic.mk_prodT o snd) (#ctors spec))
 
     val (resBs, Xs) = fold_rev (
@@ -84,7 +85,7 @@ fun create_binder_datatype spec lthy =
             HOLogic.mk_tuple xs
           ))
         );
-        val (ctor, lthy) = MRBNF_Recursor.mk_def_t true Binding.empty I name 0 rhs lthy
+        val (ctor, lthy) = MRBNF_Recursor.mk_def_t true Binding.empty I name (length Ts') rhs lthy
       in (ctor, (i+1, RT, ts @ later, lthy)) end
     ) (#ctors spec) (1, pre_repT, [], lthy);
 
@@ -98,12 +99,170 @@ fun create_binder_datatype spec lthy =
     );
     val ctors = map morph ctors;
 
-    val _ = @{print} ctors
-
-    (*val fp_nesting_mrbnfs = nesting_mrbnfs lthy [map snd (#ctors spec)] (take (#rec_vars spec) (
+    val fp_nesting_mrbnfs = nesting_mrbnfs lthy [map snd (#ctors spec)] (take (#rec_vars spec) (
       map_filter (fn (x, Live_Var) => SOME (TFree x) | _ => NONE) (#vars spec)
-    ));*)
+    ));
+    val names_lthy = fold (Variable.declare_constraints o Logic.mk_type) vars lthy;
 
+    val quotient = #quotient_fp (hd res)
+    val qT = #T quotient;
+    val strong_induct =
+      let
+        val (bs, names_lthy) = mk_TFrees (length vars) names_lthy;
+        val ((((Ks, rhos), P), t), names_lthy) = names_lthy
+          |> mk_Frees "K" (map2 (fn b => fn a => b --> HOLogic.mk_setT a) bs vars)
+          ||>> mk_Frees "\<rho>" bs
+          ||>> apfst hd o mk_Frees "P" [qT --> fold_rev (curry (op-->)) bs @{typ bool}]
+          ||>> apfst hd o mk_Frees "t" [qT];
+
+        fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
+        val bound_prems = @{map 3} (fn K => fn rho => fn aT => HOLogic.mk_Trueprop (mk_all (dest_Free rho) (
+          mk_ordLess (mk_card_of (K $ rho)) (mk_card_of (HOLogic.mk_UNIV aT))
+        ))) Ks rhos vars;
+
+        fun opt_to_list NONE = []
+          | opt_to_list (SOME x) = [x]
+
+        fun mk_IHs _ (TFree x) t = opt_to_list (
+          Option.mapPartial (
+            fn MRBNF_Def.Live_Var => SOME (HOLogic.mk_Trueprop (
+              fold_rev mk_all (map dest_Free rhos) (Term.list_comb (P, t::rhos))
+            ))
+            | _ => NONE
+          ) (AList.lookup (op=) (#vars spec) x))
+          | mk_IHs names_lthy (Type (n, Ts)) t = (case MRBNF_Def.mrbnf_of lthy n of SOME mrbnf =>
+            let
+              val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+              val Ts' = map_filter (fn (T, MRBNF_Def.Live_Var) => SOME T | _ => NONE) (Ts ~~ var_types);
+              val (zs, names_lthy) = mk_Frees "z" Ts' names_lthy;
+              val repl = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts;
+              val sets = map (Term.subst_atomic_types repl) (MRBNF_Def.sets_of_mrbnf mrbnf);
+              val sets' = map_filter (fn (s, MRBNF_Def.Live_Var) => SOME s | _ => NONE) (sets ~~ var_types);
+              val IHs = flat (@{map 3} (fn T => fn z => fn set => map (fn IH =>
+                let
+                  val prem = HOLogic.mk_Trueprop (HOLogic.mk_mem (z, set $ t));
+                in case IH of
+                    (all as Const ("Pure.all", _)) $ Abs (a, b, c) => Logic.all z (all $ Abs (a, b,
+                      Logic.mk_implies (prem, c)))
+                    | t => Logic.all z (Logic.mk_implies (prem, t))
+                end
+              ) (mk_IHs names_lthy T z)) Ts' zs sets');
+            in IHs end | NONE => [])
+          | mk_IHs _ _ _ = [];
+
+        val K_rhos = map2 (curry (op$)) Ks rhos;
+
+        fun mk_avoiding_prems var K_rho t =
+          let
+            fun get_sets (T as TFree _) = if T = var then SOME [t] else NONE
+              | get_sets (Type (n, Ts)) = Option.mapPartial (fn mrbnf =>
+                  let
+                    val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
+                    val bnf_sets = map (Term.subst_atomic_types (Ts' ~~ Ts)) (MRBNF_Def.sets_of_mrbnf mrbnf);
+                    val setss = flat (map_filter I (map2 (fn bset => Option.map (map (
+                      fn (t as Free _) => bset $ t | t => mk_UNION t bset
+                    ))) bnf_sets (map get_sets Ts)));
+                  in if setss = [] then NONE else SOME setss end
+              ) (MRBNF_Def.mrbnf_of lthy n)
+              | get_sets _ = NONE
+          in case t of
+            (t as Free (_, T as (TFree _))) => if T = var then
+              [HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, K_rho)))] else []
+            | _ => (case get_sets (fastype_of t) of
+              SOME ts => map (fn t => HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (t, K_rho))) ts
+              | NONE => []
+            )
+          end;
+
+        val bounds = map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
+        val rules = map2 (fn (_, tys) => fn (ctor, _) =>
+          let
+            val (xs, names_lthy) = names_lthy
+              |> mk_Frees "x" tys;
+            val avoiding_prems = flat (maps (fn f => map f xs) (map2 mk_avoiding_prems bounds K_rhos));
+            val IHs = flat (map2 (mk_IHs names_lthy) tys xs);
+            val concl = HOLogic.mk_Trueprop (Term.list_comb (P, Term.list_comb (ctor, xs)::rhos));
+            val goal = fold_rev (curry Logic.mk_implies) (avoiding_prems @ IHs) concl
+          in Term.subst_atomic_types replace (fold_rev Logic.all (xs @ rhos) goal) end
+        ) (#ctors spec) ctors;
+
+        val names = map (fst o dest_Free);
+        val n = length Ks;
+        val goal = HOLogic.mk_Trueprop (fold_rev mk_all (map dest_Free rhos) (Term.list_comb (P, t::rhos)));
+        val thm = infer_instantiate' lthy (
+          maps (fn K => [NONE, SOME (Thm.cterm_of lthy K)]) Ks @ map (SOME o Thm.cterm_of lthy) [P, t]
+        ) (#fresh_co_induct_param (#inner quotient));
+
+        val pre_mrbnf = #pre_mrbnf (hd res);
+        val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
+
+        val (sum_prod_thms, last) = split_last (
+          map (fn (_, tys) => @{thm sum.exhaust} :: replicate (length tys - 1) @{thm prod.exhaust}) (#ctors spec)
+        );
+        val sum_prod_thms = sum_prod_thms @ [tl last]
+        val rec_vars = map TFree (take (#rec_vars spec) (
+          map_filter (fn (x, MRBNF_Def.Live_Var) => SOME x | _ => NONE) (#vars spec)
+        ) @ map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME x | _ => NONE) (#vars spec));
+        fun find_idx _ [] _ = NONE
+          | find_idx x (y::ys) n = if x = y then SOME n else find_idx x ys (n+1)
+        fun get_rec_var_idxs (t as TFree _) = opt_to_list (find_idx t rec_vars 0)
+          | get_rec_var_idxs (Type (_, Ts)) = maps get_rec_var_idxs Ts
+          | get_rec_var_idxs _ = []
+        val IH_idxs = map (maps get_rec_var_idxs o snd) (#ctors spec);
+        fun get_i i idx (y::ys) j n = if n < i then
+            get_i i idx ys (if idx = y then j + 1 else j) (n + 1)
+          else j
+          | get_i _ _ [] j _ = j
+
+      in Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms ball_UNIV[symmetric]}),
+        rtac ctxt thm,
+        EVERY' (map (fn p => rtac ctxt (@{thm spec} OF [p])) (take n prems)),
+        Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+          rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#Abs_cases (snd info))) 1
+        ) ctxt,
+        hyp_subst_tac ctxt,
+        EVERY' (map2 (fn thms => fn idxs => EVERY' [
+          EVERY' (map (fn thm => Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+            rtac ctxt (infer_instantiate' ctxt [SOME (snd (snd (split_last params)))] thm) 1
+          ) ctxt) thms),
+          hyp_subst_tac ctxt,
+          K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) ctors)),
+          FIRST' [
+            resolve_tac ctxt (drop n prems) THEN_ALL_NEW (K no_tac),
+            EVERY' [
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt (
+                @{thms sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right comp_def
+                  UN_singleton sum_set_simps prod_set_simps UN_single UN_empty
+                  }
+                @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+                @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
+              )),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
+                REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+              ],
+              K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
+              resolve_tac ctxt (drop n prems),
+              EVERY' (map_index (fn (i, idx) => EVERY' [
+                REPEAT_DETERM o rtac ctxt allI,
+                TRY o rtac ctxt @{thm disjointI},
+                Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => rtac ctxt (nth prems idx) 1) ctxt,
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms UN_empty UN_empty2 Un_empty_left Un_empty_right}),
+                rtac ctxt (mk_UnIN (length (filter (curry (op=) idx) idxs)) (get_i i idx idxs 1 0)),
+                REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms singletonI UNIV_I UN_I})
+              ]) idxs)
+            ]
+          ]
+        ]) sum_prod_thms IH_idxs)
+      ]) end;
+
+    val notes =
+      [("strong_induct", [strong_induct])
+      ] |> (map (fn (thmN, thms) =>
+        ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), []), [(thms, [])])
+      ))
+    val (_, lthy) = Local_Theory.notes notes lthy
 
   in lthy end;
 

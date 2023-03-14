@@ -6,6 +6,8 @@ datatype \<tau> = Base | Arrow \<tau> \<tau> (infixr "(\<rightarrow>)" 50)
 
 lemma disjointI: "(\<And>x. x \<in> A \<Longrightarrow> x \<notin> B) \<Longrightarrow> A \<inter> B = {}"
   by blast
+lemma notin_empty_eq_True: "x \<notin> {} = True"
+  by simp
 
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
@@ -39,6 +41,9 @@ in lthy' end\<close>
 print_theorems
 print_mrbnfs
 
-thm term.TT_fresh_co_induct_param term.strong_induct
+thm
+  term.strong_induct
+  term.fresh_induct
+  term.induct
 
 end

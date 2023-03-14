@@ -106,14 +106,18 @@ fun create_binder_datatype spec lthy =
 
     val quotient = #quotient_fp (hd res)
     val qT = #T quotient;
+
+    val (bs, names_lthy) = mk_TFrees (length vars) names_lthy;
+    val (((Ks, rhos), t), names_lthy) = names_lthy
+      |> mk_Frees "K" (map2 (fn b => fn a => b --> HOLogic.mk_setT a) bs vars)
+      ||>> mk_Frees "\<rho>" bs
+      ||>> apfst hd o mk_Frees "t" [qT];
+
+    val names = map (fst o dest_Free);
     val strong_induct =
       let
-        val (bs, names_lthy) = mk_TFrees (length vars) names_lthy;
-        val ((((Ks, rhos), P), t), names_lthy) = names_lthy
-          |> mk_Frees "K" (map2 (fn b => fn a => b --> HOLogic.mk_setT a) bs vars)
-          ||>> mk_Frees "\<rho>" bs
-          ||>> apfst hd o mk_Frees "P" [qT --> fold_rev (curry (op-->)) bs @{typ bool}]
-          ||>> apfst hd o mk_Frees "t" [qT];
+        val (P, names_lthy) = names_lthy
+          |> apfst hd o mk_Frees "P" [qT --> fold_rev (curry (op-->)) bs @{typ bool}];
 
         fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
         val bound_prems = @{map 3} (fn K => fn rho => fn aT => HOLogic.mk_Trueprop (mk_all (dest_Free rho) (
@@ -186,7 +190,6 @@ fun create_binder_datatype spec lthy =
           in Term.subst_atomic_types replace (fold_rev Logic.all (xs @ rhos) goal) end
         ) (#ctors spec) ctors;
 
-        val names = map (fst o dest_Free);
         val n = length Ks;
         val goal = HOLogic.mk_Trueprop (fold_rev mk_all (map dest_Free rhos) (Term.list_comb (P, t::rhos)));
         val thm = infer_instantiate' lthy (
@@ -257,8 +260,36 @@ fun create_binder_datatype spec lthy =
         ]) sum_prod_thms IH_idxs)
       ]) end;
 
+    val fresh_induct =
+      let
+        val ((As, P), _) = names_lthy
+          |> mk_Frees "A" (map (range_type o fastype_of) Ks)
+          ||>> apfst hd o mk_Frees "P" [qT --> @{typ bool}];
+        val Ks' = map2 (fn K => Term.abs ("_", domain_type (fastype_of K))) Ks As;
+        val P' = Term.absfree (dest_Free t) (
+          fold_rev Term.abs (map (fn K => ("_", domain_type (fastype_of K))) Ks) (P $ t)
+        );
+        val thm' = Local_Defs.unfold0 lthy @{thms HOL.simp_thms(35) triv_forall_equality} (
+          infer_instantiate' lthy (map (SOME o Thm.cterm_of lthy) (Ks' @ [P', t])) strong_induct
+        );
+      in Goal.prove_sorry lthy (names (As @ [P, t])) (Thm.prems_of thm') (Thm.concl_of thm') (fn {context=ctxt, prems} => EVERY1 [
+        rtac ctxt thm',
+        REPEAT_DETERM o FIRST' [
+          assume_tac ctxt,
+          Goal.assume_rule_tac ctxt,
+          resolve_tac ctxt prems
+        ]
+      ]) end;
+
+    val induct = Local_Defs.unfold0 lthy
+      @{thms notin_empty_eq_True Int_empty_right HOL.simp_thms(6) HOL.True_implies_equals} (
+      fold (K (fn thm => thm OF @{thms emp_bound})) (1 upto length vars) fresh_induct
+    );
+
     val notes =
-      [("strong_induct", [strong_induct])
+      [("strong_induct", [strong_induct]),
+        ("fresh_induct", [fresh_induct]),
+        ("induct", [induct])
       ] |> (map (fn (thmN, thms) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), []), [(thms, [])])
       ))

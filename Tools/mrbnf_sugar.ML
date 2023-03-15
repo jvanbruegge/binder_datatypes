@@ -42,7 +42,7 @@ fun add_nesting_mrbnf_names Us =
 fun nesting_mrbnfs ctxt ctr_Tsss Us =
   map_filter (mrbnf_of ctxt) (fold (fold (fold (add_nesting_mrbnf_names Us))) ctr_Tsss []);
 
-fun create_binder_datatype spec lthy =
+fun create_binder_datatype (spec : spec) lthy =
   let
     (* TODO: use type copies of sum and prod to make it safer *)
     val fp_pre_T = foldr1 mk_sumT (map (foldr1 HOLogic.mk_prodT o snd) (#ctors spec))
@@ -114,8 +114,27 @@ fun create_binder_datatype spec lthy =
       ||>> apfst hd o mk_Frees "t" [qT];
     val bound_names = map (fst o dest_Free) (fst (mk_Frees "Bound" bs lthy));
 
+    val rec_vars = map TFree (take (#rec_vars spec) (
+      map_filter (fn (x, MRBNF_Def.Live_Var) => SOME x | _ => NONE) (#vars spec)
+    ));
+
     val names = map (fst o dest_Free);
     val ctor_names = map (fst o fst) (#ctors spec);
+
+    fun get_sets (T as TFree _) vars t = if member (op=) vars T then SOME [t] else NONE
+      | get_sets (Type (n, Ts)) vars t = Option.mapPartial (fn mrbnf =>
+          let
+            val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
+            val bnf_sets = map (Term.subst_atomic_types (Ts' ~~ Ts)) (MRBNF_Def.sets_of_mrbnf mrbnf);
+            val ts' = map (fn bset => case t of (t as Free _) => bset $ t | t => mk_UNION t bset) bnf_sets;
+            val setss = flat (map_filter I (map2 (fn T => fn t' => get_sets T vars t') Ts ts'));
+          in if setss = [] then NONE else SOME setss end
+      ) (MRBNF_Def.mrbnf_of lthy n)
+      | get_sets _ _ _ = NONE;
+
+    val pre_mrbnf = #pre_mrbnf (hd res);
+    val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
+
     val strong_induct =
       let
         val (P, names_lthy) = names_lthy
@@ -158,27 +177,13 @@ fun create_binder_datatype spec lthy =
 
         val K_rhos = map2 (curry (op$)) Ks rhos;
 
-        fun mk_avoiding_prems var K_rho t =
-          let
-            fun get_sets (T as TFree _) = if T = var then SOME [t] else NONE
-              | get_sets (Type (n, Ts)) = Option.mapPartial (fn mrbnf =>
-                  let
-                    val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
-                    val bnf_sets = map (Term.subst_atomic_types (Ts' ~~ Ts)) (MRBNF_Def.sets_of_mrbnf mrbnf);
-                    val setss = flat (map_filter I (map2 (fn bset => Option.map (map (
-                      fn (t as Free _) => bset $ t | t => mk_UNION t bset
-                    ))) bnf_sets (map get_sets Ts)));
-                  in if setss = [] then NONE else SOME setss end
-              ) (MRBNF_Def.mrbnf_of lthy n)
-              | get_sets _ = NONE
-          in case t of
-            (t as Free (_, T as (TFree _))) => if T = var then
-              [HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, K_rho)))] else []
-            | _ => (case get_sets (fastype_of t) of
-              SOME ts => map (fn t => HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (t, K_rho))) ts
-              | NONE => []
-            )
-          end;
+        fun mk_avoiding_prems var K_rho t = case t of
+          (t as Free (_, T as (TFree _))) => if T = var then
+            [HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, K_rho)))] else []
+          | _ => (case get_sets (fastype_of t) [var] t of
+            SOME ts => map (fn t => HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (t, K_rho))) ts
+            | NONE => []
+          );
 
         val bounds = map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
         val rules = map2 (fn (_, tys) => fn (ctor, _) =>
@@ -198,16 +203,11 @@ fun create_binder_datatype spec lthy =
           maps (fn K => [NONE, SOME (Thm.cterm_of lthy K)]) Ks @ map (SOME o Thm.cterm_of lthy) [P, t]
         ) (#fresh_co_induct_param (#inner quotient));
 
-        val pre_mrbnf = #pre_mrbnf (hd res);
-        val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
-
         val (sum_prod_thms, last) = split_last (
           map (fn (_, tys) => @{thm sum.exhaust} :: replicate (length tys - 1) @{thm prod.exhaust}) (#ctors spec)
         );
         val sum_prod_thms = sum_prod_thms @ [tl last]
-        val rec_vars = map TFree (take (#rec_vars spec) (
-          map_filter (fn (x, MRBNF_Def.Live_Var) => SOME x | _ => NONE) (#vars spec)
-        ) @ map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME x | _ => NONE) (#vars spec));
+        val rec_vars = rec_vars @ map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
         fun find_idx _ [] _ = NONE
           | find_idx x (y::ys) n = if x = y then SOME n else find_idx x ys (n+1)
         fun get_rec_var_idxs (t as TFree _) = opt_to_list (find_idx t rec_vars 0)
@@ -271,6 +271,7 @@ fun create_binder_datatype spec lthy =
         val P' = Term.absfree (dest_Free t) (
           fold_rev Term.abs (map (fn K => ("_", domain_type (fastype_of K))) Ks) (P $ t)
         );
+        (* TODO: Use export instead of prove_sorry *)
         val thm' = Local_Defs.unfold0 lthy @{thms HOL.simp_thms(35) triv_forall_equality} (
           infer_instantiate' lthy (map (SOME o Thm.cterm_of lthy) (Ks' @ [P', t])) strong_induct
         );
@@ -288,12 +289,80 @@ fun create_binder_datatype spec lthy =
       fold (K (fn thm => thm OF @{thms emp_bound})) (1 upto length vars) fresh_induct
     ) |> Rule_Cases.name ctor_names;
 
+    fun get_index x ys =
+      let
+        fun go [] _ = NONE
+          | go (y::ys) n = if x = y then SOME n else go ys (n + 1)
+      in go ys 0 end;
+    val bounds = map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
+    val frees = map_filter (fn (x, MRBNF_Def.Free_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
+
+    val set_simpss = map (fn FVars =>
+      let
+        fun get_var vars = hd (filter (fn T =>
+          Term.typ_subst_atomic replace T = HOLogic.dest_setT (range_type (fastype_of FVars))
+        ) vars);
+        val free = get_var frees;
+        val bound = get_var bounds;
+        val rec_bounds = map (nth rec_vars) (the_default [] (
+          Option.mapPartial (try (nth (#binding_rel spec))) (get_index bound bounds)
+        ));
+      in map2 (fn (ctor, _) => fn (_, tys) =>
+        let
+          val (xs, _) = lthy
+            |> mk_Frees "x" tys;
+
+          fun get_set vars = map (
+            fn (t as Free _) => if fastype_of t = free then MRBNF_TVSubst.mk_singleton t else FVars $ t
+            | t => mk_UNION t FVars
+          ) (flat (map_filter I (map2 (fn T => fn x => get_sets T vars x) tys xs)));
+          val sets = get_set (free::subtract (op=) rec_bounds rec_vars)
+          val brec_sets = get_set rec_bounds
+          val bsets = map (fn (t as Free _) => MRBNF_TVSubst.mk_singleton t | t => t) (
+            flat (map_filter I (map2 (fn T => fn x => get_sets T [bound] x) tys xs))
+          );
+          val sets = sets @ (case brec_sets of
+            [] => []
+            | _ => [HOLogic.mk_binop @{const_name minus} (
+              foldl1 MRBNF_Util.mk_Un brec_sets,
+              foldl1 MRBNF_Util.mk_Un bsets
+             )]
+          );
+
+          val goal = Term.subst_atomic_types replace (mk_Trueprop_eq (
+            FVars $ Term.list_comb (ctor, xs),
+            case sets of
+              [] => Const (@{const_name bot}, HOLogic.mk_setT free)
+              | _ => foldl1 MRBNF_Util.mk_Un sets
+          ));
+          val thms = @{thms sum.set_map prod.set_map comp_def UN_empty UN_empty2 Un_empty_left Un_empty_right
+            UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un
+          };
+        in Goal.prove_sorry lthy (names xs) [] goal (fn {context=ctxt, ...} => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt (
+            thms @ map snd ctors @ #FVars_ctors quotient @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+            @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
+          )),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+          ],
+          K (Local_Defs.unfold0_tac ctxt thms),
+          rtac ctxt refl
+        ]) end
+      ) ctors (#ctors spec)
+    end) (#FVars quotient);
+
+    val simp = @{attributes [simp]}
+    val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
+
     val notes =
-      [("strong_induct", [strong_induct]),
-        ("fresh_induct", [fresh_induct]),
-        ("induct", [induct])
-      ] |> (map (fn (thmN, thms) =>
-        ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), []), [(thms, [])])
+      [("strong_induct", [strong_induct], []),
+        ("fresh_induct", [fresh_induct], []),
+        ("induct", [induct], [induct_attrib]),
+        ("set", flat set_simpss, simp)
+      ] |> (map (fn (thmN, thms, attrs) =>
+        ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))
     val (_, lthy) = Local_Theory.notes notes lthy
 

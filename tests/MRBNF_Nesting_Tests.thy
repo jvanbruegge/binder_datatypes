@@ -34,6 +34,10 @@ val spec = {
 } : MRBNF_Sugar.spec;
 \<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 local_setup \<open>fn lthy =>
 let
   val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
@@ -46,5 +50,12 @@ thm
   term.strong_induct
   term.fresh_induct
   term.induct
+
+thm term.set
+thm list.set
+
+lemma rrename_id: "rrename_term id t = t"
+proof induction
+  oops
 
 end

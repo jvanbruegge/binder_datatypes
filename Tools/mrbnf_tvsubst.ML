@@ -18,6 +18,8 @@ sig
 
   val create_tvsubst_of_mrbnf: binding -> (binding -> binding) -> (Proof.context -> tactic) tvsubst_model
     -> local_theory -> (*tvsubst_result * *) local_theory
+
+  val mk_singleton: term -> term
 end
 
 structure MRBNF_TVSubst : MRBNF_TVSUBST =

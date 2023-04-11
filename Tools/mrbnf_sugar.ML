@@ -446,7 +446,26 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
         ]) end
       ) ctors (#ctors spec) end;
 
-    val _ = @{print} map_simps
+    val ctors_tys = ctors ~~ map snd (#ctors spec);
+    val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
+      let
+        val ((xs, ys), _) = names_lthy
+          |> mk_Frees "x" tys1
+          ||>> mk_Frees "y" tys2;
+        val goal = Term.subst_atomic_types replace (HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_eq (
+          Term.list_comb (ctor, xs), Term.list_comb (ctor2, ys)
+        ))));
+      in if i = j then [] else [Goal.prove_sorry lthy (names (xs @ ys)) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
+          @ [ctor_def, ctor2_def, #inject quotient, MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
+            #Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}]
+        )),
+        rtac ctxt @{thm notI},
+        REPEAT_DETERM o eresolve_tac ctxt @{thms exE conjE sum.distinct[THEN notE]}
+      ])] end
+    ) ctors_tys) ctors_tys));
+
+    (* TODO: map_bij (rename simps); injection *)
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
@@ -455,7 +474,9 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
       [("strong_induct", [strong_induct], []),
         ("fresh_induct", [fresh_induct], []),
         ("induct", [induct], [induct_attrib]),
-        ("set", flat set_simpss, simp)
+        ("set", flat set_simpss, simp),
+        ("map", map_simps, simp),
+        ("distinct", distinct, simp)
       ] |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))

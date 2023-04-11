@@ -82,8 +82,6 @@ in lthy' end\<close>
 print_theorems
 print_mrbnfs
 
-(* hide rename, proof simp rules for vvsubst *)
-
 declare [[names_short]]
 thm
   term.strong_induct
@@ -91,5 +89,7 @@ thm
   term.induct
 
 thm term.set
+thm term.map
+thm term.distinct
 
 end

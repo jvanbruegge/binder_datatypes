@@ -184,7 +184,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
               HOLogic.mk_imp (HOLogic.eq_const (fastype_of avoiding_arbitrary) $ Bound n $ avoiding_arbitrary, Term.list_comb (P2, insts' @ arbitrary')
             )))
           )
-          val rule_inst = fold (fn thm => fn thm2 => thm OF [thm2]) (replicate (1 + n) spec @ [mp]) (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P2_t]) rule)
+          val rule_inst = fold (fn thm => fn thm2 => thm OF [thm2]) (replicate (1 + n) @{thm spec} @ [mp]) (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P2_t]) rule)
           fun rtac ctxt = resolve_tac ctxt o single
 
           val class = hd (filter (String.isPrefix "var_" o MRBNF_Util.short_type_name) (snd var));

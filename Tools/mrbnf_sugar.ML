@@ -28,7 +28,8 @@ type spec = {
   rec_vars: int,
   binding_rel: int list list,
   ctors: ((string * mixfix option) * typ list) list,
-  map_b: binding
+  map_b: binding,
+  tvsubst_b: binding
 };
 
 fun add_nesting_mrbnf_names Us =
@@ -43,7 +44,7 @@ fun add_nesting_mrbnf_names Us =
 fun nesting_mrbnfs ctxt ctr_Tsss Us =
   map_filter (mrbnf_of ctxt) (fold (fold (fold (add_nesting_mrbnf_names Us))) ctr_Tsss []);
 
-fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_result) (info : MRBNF_Comp.absT_info) lthy =
+fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_result) (absinfo : MRBNF_Comp.absT_info) lthy =
   let
     val fp_b_name = "MRBNF_Nesting_Tests." ^ Binding.name_of (#fp_b spec);
     val fp_pre_T = BNF_FP_Util.mk_sumprodT_balanced (map snd (#ctors spec));
@@ -68,7 +69,7 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
     (*val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;*)
 
     (* TODO: delete *)
-    val (As, _) = mk_TFrees' (replicate 2 (MRBNF_Def.class_of_mrbnf (#pre_mrbnf (hd res)))) lthy;
+    val (As, _) = mk_TFrees' (replicate 1 (MRBNF_Def.class_of_mrbnf (#pre_mrbnf (hd res)))) lthy;
     val tmp = (map TVar (rev (Term.add_tvars (#ctor (#quotient_fp (hd res))) [])) ~~ As);
     val phi = Morphism.morphism "xx" {
       binding = [], fact = [], term = [Term.subst_atomic_types tmp], typ = [Term.typ_subst_atomic tmp]
@@ -78,13 +79,11 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
     val quotient_ctor = #ctor (#quotient_fp (hd res));
     val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));
     val pre_repT = Term.typ_subst_atomic replace fp_pre_T;
-    val n = length replace;
-    val absT = pre_repT --> domain_type (fastype_of quotient_ctor);
     val abs =
-      let val (s, _) = dest_Const (#abs info)
+      let val (s, _) = dest_Const (#abs absinfo)
       in Const (s, pre_repT --> domain_type (fastype_of quotient_ctor)) end;
 
-    fun mk_ctor k xs = quotient_ctor $ (abs $ mk_sumprod_balanced (domain_type (fastype_of abs)) (length (#ctors spec)) k xs);
+    fun mk_ctor k xs abs = abs $ mk_sumprod_balanced (domain_type (fastype_of abs)) (length (#ctors spec)) k xs;
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
@@ -92,7 +91,7 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
       let
         val Ts' = map (Term.typ_subst_atomic replace) Ts;
         val (xs, _) = mk_Frees Name.uu Ts' lthy;
-        val rhs = fold_rev Term.absfree (map dest_Free xs) (mk_ctor i xs);
+        val rhs = fold_rev Term.absfree (map dest_Free xs) (quotient_ctor $ mk_ctor i xs abs);
         val (ctor, lthy) = MRBNF_Recursor.mk_def_t true Binding.empty I name (length Ts') rhs lthy;
       in (ctor, (i + 1, lthy)) end
     ) (#ctors spec) (1, lthy);
@@ -257,23 +256,16 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
 
     val fresh_induct =
       let
-        val ((As, P), _) = names_lthy
+        val ((As, P), names_lthy') = names_lthy
           |> mk_Frees "A" (map (range_type o fastype_of) Ks)
           ||>> apfst hd o mk_Frees "P" [qT --> @{typ bool}];
         val Ks' = map2 (fn K => Term.abs ("_", domain_type (fastype_of K))) Ks As;
         val P' = Term.absfree (dest_Free t) (Term.abs ("_", b) (P $ t));
-        (* TODO: Use export instead of prove_sorry *)
+        val phi = Proof_Context.export_morphism names_lthy' lthy;
         val thm' = Local_Defs.unfold0 lthy @{thms HOL.simp_thms(35) triv_forall_equality} (
           infer_instantiate' lthy (map (SOME o Thm.cterm_of lthy) (Ks' @ [P', t])) strong_induct
         );
-      in Goal.prove_sorry lthy (names (As @ [P, t])) (Thm.prems_of thm') (Thm.concl_of thm') (fn {context=ctxt, prems} => EVERY1 [
-        rtac ctxt thm',
-        REPEAT_DETERM o FIRST' [
-          assume_tac ctxt,
-          Goal.assume_rule_tac ctxt,
-          resolve_tac ctxt prems
-        ]
-      ]) |> Rule_Cases.name (bound_names @ ctor_names) end;
+      in Morphism.thm phi thm' |> Rule_Cases.name (bound_names @ ctor_names) end;
 
     val induct = Local_Defs.unfold0 lthy
       @{thms notin_empty_eq_True Int_empty_right HOL.simp_thms(6) HOL.True_implies_equals} (
@@ -466,6 +458,76 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
     ) ctors_tys) ctors_tys));
 
     (* TODO: map_bij (rename simps); injection *)
+
+    (* Term for variable substitution *)
+    val x = length replace - #rec_vars spec;
+    val abs' =
+      let
+        val (s, _) = dest_Const (#abs absinfo)
+        val pre_repT = Term.typ_subst_atomic (take x replace) fp_pre_T;
+        val (n, Ts) = dest_Type (domain_type (fastype_of quotient_ctor));
+        val Ts' = take x Ts @ drop x (map (TFree o fst) (#vars spec));
+      in Const (s, pre_repT --> Type (n, Ts')) end;
+    val etas = map_filter (Option.map (Term.subst_atomic_types (take x replace))) (map_index (fn (i, (_, tys)) =>
+      if length tys = 1 andalso member (op=) frees (hd tys) then
+        SOME (Term.abs ("a", hd tys) (mk_ctor (i + 1) [Bound 0] abs'))
+      else NONE
+    ) (#ctors spec));
+
+    fun eta_free_tac ctxt = EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (
+        @{thms map_sum.simps map_prod_simp comp_def sum_set_simps cSup_singleton Union_empty Un_empty_left Un_empty_right}
+        @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+        @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
+      )),
+      rtac ctxt refl
+    ];
+    fun eta_inj_tac ctxt = EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (@{thms sum.inject} @ [#Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}])),
+      assume_tac ctxt
+    ];
+    fun eta_compl_free_tac ctxt = EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (
+        @{thms comp_def sum.set_map UN_empty2 Un_empty_right Un_empty_left UN_singleton}
+        @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+      )),
+      Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+        rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#Abs_cases (snd info))) 1
+      ) ctxt,
+      hyp_subst_tac ctxt,
+      K (Local_Defs.unfold0_tac ctxt (@{thms image_iff bex_UNIV}
+        @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}]
+      )),
+      etac ctxt @{thm contrapos_np},
+      dtac ctxt @{thm iffD2[OF ex_in_conv]},
+      etac ctxt exE,
+      REPEAT_DETERM o etac ctxt @{thm UN_E},
+      REPEAT_DETERM o eresolve_tac ctxt @{thms setl.cases setr.cases},
+      hyp_subst_tac ctxt,
+      rtac ctxt exI,
+      rtac ctxt refl
+    ];
+    fun eta_natural_tac ctxt = EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps}
+        @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, MRBNF_Def.map_def_of_mrbnf pre_mrbnf]
+      )),
+      rtac ctxt refl
+    ];
+
+    val tvsubst_axioms = {
+      eta_free = eta_free_tac,
+      eta_inj = eta_inj_tac,
+      eta_compl_free = eta_compl_free_tac,
+      eta_natural = eta_natural_tac
+    };
+    val tvsubst_model = {
+      fp_result = hd res,
+      etas = map (SOME o rpair tvsubst_axioms) etas
+    }
+    (* TODO: Fix tactics for multiple variables *)
+    val (tvsubst_res, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (#tvsubst_b spec) (Binding.prefix_name "tv") tvsubst_model lthy;
+
+    val _ = @{print} (#tvsubst_VVrs tvsubst_res)
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))

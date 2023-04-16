@@ -257,6 +257,14 @@ lemma supp_swap_bound: "infinite (UNIV :: 'a set) \<Longrightarrow> |supp (id (x
     (auto simp: cinfinite_imp_infinite)
 lemma UN_single: "\<Union>(f ` {a}) = f a" by simp
 
-(*ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>*)
+lemma disjointI: "(\<And>x. x \<in> A \<Longrightarrow> x \<notin> B) \<Longrightarrow> A \<inter> B = {}"
+  by blast
+lemma notin_empty_eq_True: "x \<notin> {} = True"
+  by simp
+lemma Int_empty_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
+  by blast
+
+ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
+ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 end

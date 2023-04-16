@@ -261,7 +261,7 @@ lemma disjointI: "(\<And>x. x \<in> A \<Longrightarrow> x \<notin> B) \<Longrigh
   by blast
 lemma notin_empty_eq_True: "x \<notin> {} = True"
   by simp
-lemma Int_empty_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
+lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
   by blast
 
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>

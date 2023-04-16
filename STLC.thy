@@ -11,96 +11,34 @@ datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 40)
 *)
 
 ML \<open>
-val name = "terms"
-val T = @{typ "'var + 'rec * 'rec + 'bvar * \<tau> * 'brec"}
+val ctors = [
+  (("Var", (NONE : mixfix option)), [@{typ 'var}]),
+  (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
+  (("Abs", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}])
+]
+
+val spec = {
+  fp_b = @{binding "terms"},
+  vars = [
+    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
+    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
+    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
+    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
+  ],
+  binding_rel = [[0]],
+  rec_vars = 2,
+  ctors = ctors,
+  map_b = @{binding vvsubst},
+  tvsubst_b = @{binding tvsubst}
+}
 \<close>
 
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let
-  val Xs = map dest_TFree [@{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
-  val resBs = map dest_TFree [@{typ 'var}]
-  val rel = [[0]]
-
-  fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val qualify = Binding.prefix_name (name ^ "_pre_")
-
-  (* Step 1: Create pre-MRBNF *)
-  val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
-    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var)] T
-    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-
-  (* Step 2: Seal the pre-MRBNF with a typedef *)
-  val ((mrbnf, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name ^ "_pre")) true (fst tys) [] mrbnf lthy
-
-  (* Step 3: Register the pre-MRBNF as a BNF in its live variables *)
-  val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-
-  (* Step 4: Create fixpoint of pre-MRBNF *)
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
-
-  (* Step 5: Create recursor and create fixpoint as MRBNF *)
-  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I (hd res) lthy;
-
-  (* Step 6: Register fixpoint MRBNF *)
-  val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
-in lthy end
-\<close>
-print_theorems
+  val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
+in lthy' end\<close>
 print_mrbnfs
-
-definition \<eta> :: "'a::var_terms_pre \<Rightarrow> ('a, 'b::var_terms_pre, 'c, 'd) terms_pre" where
-  "\<eta> a \<equiv> Abs_terms_pre (Inl a)"
-
-(* eta axioms *)
-lemma \<eta>_free: "set1_terms_pre (\<eta> a) = {a}"
-  unfolding set1_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] \<eta>_def
-  by auto
-lemma \<eta>_inj: "\<eta> a = \<eta> b \<Longrightarrow> a = b"
-  unfolding Abs_terms_pre_inject[OF UNIV_I UNIV_I] sum.inject  \<eta>_def
-  by assumption
-lemma \<eta>_compl_free: "x \<notin> range \<eta> \<Longrightarrow> set1_terms_pre x = {}"
-  unfolding set1_terms_pre_def comp_def Un_empty sum.set_map UN_singleton UN_empty2
-  apply (rule conjI)
-   apply (rule Abs_terms_pre_cases[of x])
-  apply hypsubst_thin
-  unfolding Abs_terms_pre_inverse[OF UNIV_I] Abs_terms_pre_inject[OF UNIV_I UNIV_I] image_iff bex_UNIV \<eta>_def
-   apply (erule contrapos_np)
-   apply (drule iffD2[OF ex_in_conv])
-   apply (erule exE)
-   apply (erule setl.cases)
-   apply hypsubst
-   apply (rule exI)
-   apply (rule refl)
-  apply (rule refl)
-  done
-lemma \<eta>_natural: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'b::var_terms_pre \<Rightarrow> 'b)| <o |UNIV::'b set|
-  \<Longrightarrow> map_terms_pre f g h i \<circ> \<eta> = \<eta> \<circ> f"
-  unfolding comp_def map_terms_pre_def Abs_terms_pre_inverse[OF UNIV_I] map_sum.simps  \<eta>_def
-  by (rule refl)
-
-local_setup \<open>fn lthy =>
-let
-  val fp_result = the (MRBNF_FP_Def_Sugar.fp_result_of lthy "STLC.terms")
-
-  val axioms = {
-    eta_free = fn ctxt => resolve_tac ctxt @{thms \<eta>_free} 1,
-    eta_inj = fn ctxt => resolve_tac ctxt @{thms \<eta>_inj} 1 THEN assume_tac ctxt 1,
-    eta_compl_free = fn ctxt => resolve_tac ctxt @{thms \<eta>_compl_free} 1 THEN assume_tac ctxt 1,
-    eta_natural = fn ctxt => resolve_tac ctxt @{thms \<eta>_natural} 1 THEN ALLGOALS (assume_tac ctxt)
-  };
-
-  val model = {
-    fp_result = fp_result,
-    etas = [SOME (
-      @{term "\<eta>::'a::var_terms_pre \<Rightarrow> ('a, 'b::var_terms_pre, 'c, 'd) terms_pre"},
-      axioms
-    )]
-  };
-  val lthy = MRBNF_TVSubst.create_tvsubst_of_mrbnf @{binding tvsubst} (Binding.prefix_name "tv") model lthy
-in lthy end
-\<close>
-print_theorems
 
 (* unary substitution *)
 lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
@@ -162,25 +100,6 @@ corollary SSupp_upd_VVr_bound: "|SSupp (VVr(a:=(t::'a::var_terms_pre terms)))| <
 lemma supp_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
   unfolding supp_def id_on_def by blast
 
-(* Nice syntax for binder datatypes *)
-definition Var :: "'a::var_terms_pre \<Rightarrow> 'a terms" where
-  "Var a \<equiv> terms_ctor (Abs_terms_pre (Inl a))"
-definition App :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> 'a terms" where
-  "App e1 e2 \<equiv> terms_ctor (Abs_terms_pre (Inr (Inl (e1, e2))))"
-definition Abs :: "'a::var_terms_pre \<Rightarrow> \<tau> \<Rightarrow> 'a terms \<Rightarrow> 'a terms" where
-  "Abs x t e \<equiv> terms_ctor (Abs_terms_pre (Inr (Inr (x, t, e))))"
-
-lemma FFVars_terms_simps[simp]:
-  "FFVars_terms (Var a) = {a}"
-  "FFVars_terms (App e1 e2) = FFVars_terms e1 \<union> FFVars_terms e2"
-  "FFVars_terms (Abs x \<tau> e) = FFVars_terms e - {x}"
-  unfolding Var_def App_def Abs_def terms.FFVars_cctors set1_terms_pre_def set2_terms_pre_def set3_terms_pre_def set4_terms_pre_def
-    Abs_terms_pre_inverse[OF UNIV_I] comp_def map_sum_def sum.case sum_set_simps Union_empty UN_empty
-    Un_empty_left Un_empty_right cSup_singleton empty_Diff map_prod_def prod.case prod_set_simps
-    image_Un Union_Un_distrib UN_single
-  apply (rule refl)+
-  done
-
 lemma rrename_simps:
   assumes "bij (f::'a::var_terms_pre \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a set|"
   shows "rrename_terms f (Var a) = Var (f a)"
@@ -211,24 +130,13 @@ lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
   done
 lemma Abs_inject: "(Abs x \<tau> e = Abs x' \<tau>' e') = (\<exists>f. bij f \<and> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<and> id_on (FFVars_terms (Abs x \<tau> e)) f \<and> f x = x' \<and> \<tau> = \<tau>' \<and> rrename_terms f e = e')"
-  unfolding FFVars_terms_simps
+  unfolding terms.set
   unfolding Abs_def terms.TT_injects0 map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_terms_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_terms_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_terms_pre_def
     Un_empty_right UN_single
   apply (rule refl)
   done
-
-lemma terms_distinct[simp]:
-  "Var a \<noteq> App e1 e2"
-  "Var a \<noteq> Abs x \<tau> e"
-  "App e1 e2 \<noteq> Var a"
-  "App e1 e2 \<noteq> Abs x \<tau> e"
-  "Abs x \<tau> e \<noteq> Var a"
-  "Abs x \<tau> e \<noteq> App e1 e2"
-  unfolding Var_def App_def Abs_def terms.TT_injects0 map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I]
-    Abs_terms_pre_inject[OF UNIV_I UNIV_I] map_sum_def sum.case
-  by auto
 
 lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id)"
   apply (rule iffD2[OF bij_iff])
@@ -265,23 +173,6 @@ lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_terms_p
    apply (rule refl)+
   done
 
-lemma Var_set1: "terms_ctor v = Var a \<Longrightarrow> a \<in> set1_terms_pre v"
-  unfolding Var_def terms.TT_injects0
-  apply (erule exE)
-  apply (erule conjE)+
-  subgoal for f
-    apply (drule iffD2[OF bij_imp_inv', rotated, of "map_terms_pre id f (rrename_terms f) id"])
-     apply (rule bij_map_terms_pre)
-      apply assumption+
-    apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-    unfolding map_terms_pre_inv_simp
-    unfolding map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case
-      id_def set1_terms_pre_def sum_set_simps ccpo_Sup_singleton
-    apply (rule UnI1)
-    apply (rule singletonI)
-    done
-  done
-
 lemma Abs_set3: "terms_ctor v = Abs x \<tau> e \<Longrightarrow> \<exists>x' e'. terms_ctor v = Abs x' \<tau> e' \<and> x' \<in> set2_terms_pre v \<and> e' \<in> set3_terms_pre v"
   unfolding Abs_def terms.TT_injects0
   apply (erule exE)
@@ -313,31 +204,6 @@ unfolding set2_terms_pre_def set3_terms_pre_def comp_def Abs_terms_pre_inverse[O
   done
   done
 
-lemma App_set4: "terms_ctor v = App e1 e2 \<Longrightarrow> e1 \<in> set4_terms_pre v \<and> e2 \<in> set4_terms_pre v"
-  unfolding App_def terms.TT_injects0
-  apply (erule exE)
-  apply (erule conjE)+
-  subgoal for f
-    apply (drule iffD2[OF bij_imp_inv', rotated, of "map_terms_pre id f (rrename_terms f) id"])
-     apply (rule bij_map_terms_pre)
-      apply assumption+
-    unfolding map_terms_pre_inv_simp
-    unfolding map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case
-      map_prod_def prod.case
-    unfolding id_def
-    apply (drule sym)
-    apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-    unfolding set4_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] sum_set_simps
-    map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
-      ccpo_Sup_singleton Un_empty_right
-    apply (rule conjI)
-     apply (rule UnI1)
-     apply (rule singletonI)
-    apply (rule UnI2)
-    apply (rule singletonI)
-    done
-  done
-
 lemma Abs_avoid: "|A::'a::var_terms_pre set| <o |UNIV::'a set| \<Longrightarrow> \<exists>x' e'. Abs x \<tau> e = Abs x' \<tau> e' \<and> x' \<notin> A"
   apply (drule terms.TT_fresh_nchotomys[of _ "Abs x \<tau> e"])
   apply (erule exE)
@@ -359,180 +225,9 @@ lemma Abs_avoid: "|A::'a::var_terms_pre set| <o |UNIV::'a set| \<Longrightarrow>
   apply assumption
   done
 
-lemma TT_fresh_induct_param[case_names Bound Var App Abs]:
-  fixes x::"'a::var_terms_pre terms" and K::"'b \<Rightarrow> 'a set"
-  assumes "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|"
-and Var: "\<And>a \<rho>. P (Var a) \<rho>"
-and App: "\<And>e1 e2 \<rho>. \<lbrakk> \<forall>\<rho>. P e1 \<rho> ; \<forall>\<rho>. P e2 \<rho> \<rbrakk> \<Longrightarrow> P (App e1 e2) \<rho>"
-and Abs: "\<And>x \<tau> e \<rho>. \<lbrakk> x \<notin> K \<rho> ; \<forall>\<rho>. P e \<rho> \<rbrakk> \<Longrightarrow> P (Abs x \<tau> e) \<rho>"
-shows "\<forall>\<rho>. P x \<rho>"
-  apply (rule allI)
-  subgoal for \<rho>
-  apply (rule spec[OF terms.TT_fresh_co_induct_param[of "UNIV::'b set", unfolded ball_UNIV, of K]])
-   apply (rule spec[OF assms(1)])
-  subgoal premises IHs for v \<rho>
-    apply (rule Abs_terms_pre_cases[of v])
-    subgoal for y
-      apply (rule sum.exhaust[of y])
-       apply hypsubst
-      apply (rule Var[unfolded Var_def])
-      subgoal for y2
-        apply (rule sum.exhaust[of y2])
-        subgoal for y3
-          apply (rule prod.exhaust[of y3])
-          apply hypsubst
-          apply (frule arg_cong[of _ _ "Abs_terms_pre"])
-        apply (rotate_tac -1)
-          apply (drule arg_cong[of _ _ terms_ctor])
-          unfolding App_def[symmetric]
-          apply (drule App_set4)
-          apply (erule conjE)
-          apply (rule App)
-           apply (rule allI)
-           apply (rule IHs(2))
-            apply hypsubst
-            apply assumption
-           apply (rule UNIV_I)
-          apply (rule allI)
-          apply (rule IHs(2))
-           apply hypsubst
-           apply assumption
-          apply (rule UNIV_I)
-          done
-        subgoal for y3
-          apply (rule prod.exhaust[of y3])
-          apply hypsubst
-          subgoal for x y4
-            apply (rule prod.exhaust[of y4])
-            apply hypsubst
-            apply (frule arg_cong[of _ _ terms_ctor])
-            unfolding Abs_def[symmetric]
-            apply (frule Abs_set3)
-            apply (erule exE conjE)+
-            apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ P]])
-            apply (rule trans)
-             apply (rule sym)
-              apply assumption
-             apply (rotate_tac -3)
-             apply assumption
-            apply (rule Abs)
-             apply (rule IHs)
-             apply assumption
-            apply (rule allI)
-            apply (rule IHs(1))
-             apply assumption
-            apply (rule UNIV_I)
-            done
-          done
-        done
-      done
-    done
-  done
-  done
-
-lemma TT_fresh_induct[case_names Bound Var App Abs]:
-  assumes bound: "|A::'a set| <o |UNIV::'a::var_terms_pre set|"
-  and Var: "\<And>a. P (Var a)"
-  and App: "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (App e1 e2)"
-  and Abs: "\<And>x \<tau> e. x \<notin> A \<Longrightarrow> P e \<Longrightarrow> P (Abs x \<tau> e)"
-shows "P x"
-  apply (rule spec[OF TT_fresh_induct_param[of _ "\<lambda>x \<rho>. P x"]])
-     apply (rule allI)
-     apply (rule assms | assumption | erule allE)+
-  done
-
-lemmas TT_plain_induct = TT_fresh_induct[OF emp_bound, case_names Var App Abs]
-
-lemma tvsubst_Var: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> tvsubst f (Var x) = f x"
-  unfolding Var_def fun_cong[OF meta_eq_to_obj_eq[OF VVr_def[unfolded comp_def \<eta>_def, symmetric]]]
-  apply (rule tvsubst_VVr)
-  apply assumption
-  done
-
 lemma VVr_eq_Var: "VVr a = Var a"
   unfolding VVr_def Var_def comp_def \<eta>_def
   by (rule refl)
-
-lemma terms_isVVr:
-  "isVVr (Var a)"
-  "\<not>isVVr (App e1 e2)"
-  "\<not>isVVr (Abs x \<tau> e)"
-  unfolding isVVr_def VVr_eq_Var
-  by auto
-
-lemma tvsubst_App: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> tvsubst f (App e1 e2) = App (tvsubst f e1) (tvsubst f e2)"
-  unfolding App_def
-  apply (rule trans)
-   apply (rule tvsubst_cctor_not_isVVr)
-      apply assumption
-  unfolding set2_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case sum_set_simps
-    Union_empty Un_empty_left ccpo_Sup_singleton tvnoclash_terms_def
-     apply (rule Int_empty_left)+
-   apply (rule terms_isVVr[unfolded App_def])
-  unfolding map_terms_pre_def comp_def map_sum_def Abs_terms_pre_inverse[OF UNIV_I] sum.case
-    map_prod_def prod.case
-  apply (rule refl)
-  done
-lemma tvsubst_Abs: "|SSupp (f::'a::var_terms_pre \<Rightarrow> 'a terms)| <o |UNIV::'a set| \<Longrightarrow> x \<notin> IImsupp f \<Longrightarrow> tvsubst f (Abs x \<tau> e) = Abs x \<tau> (tvsubst f e)"
-  unfolding Abs_def
-  apply (rule trans)
-   apply (rule tvsubst_cctor_not_isVVr)
-      apply assumption
-  unfolding set2_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case
-    map_prod_def prod.case sum_set_simps Union_empty prod_set_simps ccpo_Sup_singleton Un_empty_left
-  Un_empty_right disjoint_iff tvnoclash_terms_def set1_terms_pre_def set4_terms_pre_def UN_empty empty_iff not_False_eq_True
-     apply (rule allI)
-     apply (rule impI)
-     apply (drule singletonD)
-     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-     apply assumption
-    apply (rule allI)
-    apply (rule impI)
-    apply (rule TrueI)
-   apply (rule terms_isVVr[unfolded Abs_def])
-  unfolding map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case
-    map_prod_def prod.case id_def
-  apply (rule refl)
-  done
-lemmas tvsubst_simps = tvsubst_Var tvsubst_App tvsubst_Abs
-
-lemma vvsubst_Var: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> vvsubst f (Var a) = Var (f a)"
-  unfolding Var_def
-  apply (rule trans)
-   apply (rule terms_cctor)
-     apply assumption
-  unfolding \<eta>_def[symmetric] \<eta>_set2 noclash_terms_def fun_cong[OF \<eta>_natural[OF _ bij_id supp_id_bound], unfolded comp_def]
-    apply (rule Int_empty_left)+
-  apply (rule refl)
-  done
-lemma vvsubst_App: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> vvsubst f (App e1 e2) = App (vvsubst f e1) (vvsubst f e2)"
-  unfolding App_def
-  apply (rule trans)
-   apply (rule terms_cctor)
-     apply assumption
-  unfolding set2_terms_pre_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def comp_def sum.case sum_set_simps
-    Union_empty Un_empty_left Un_empty_right cSup_singleton noclash_terms_def map_terms_pre_def map_prod_def prod.case
-    apply (rule Int_empty_left)+
-  apply (rule refl)
-  done
-lemma vvsubst_Abs: "|supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> x \<notin> imsupp f \<Longrightarrow> vvsubst f (Abs x \<tau> e) = Abs x \<tau> (vvsubst f e)"
-  unfolding Abs_def
-  apply (rule trans)
-   apply (rule terms_cctor)
-     apply assumption
-  unfolding set2_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case sum_set_simps
-    Union_empty Un_empty_left map_prod_def prod.case prod_set_simps cSup_singleton Un_empty_right
-    noclash_terms_def set1_terms_pre_def set4_terms_pre_def UN_empty map_terms_pre_def id_def
-    apply (rule iffD2[OF disjoint_iff])
-    apply (rule allI)
-    apply (rule impI)
-    apply (drule singletonD)
-    apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-    apply assumption
-   apply (rule Int_empty_right)
-  apply (rule refl)
-  done
-lemmas vvsubst_simps = vvsubst_Var vvsubst_App vvsubst_Abs
 
 (* small step semantics *)
 no_notation Set.member  ("(_/ : _)" [51, 51] 50)
@@ -740,7 +435,7 @@ lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
     apply (rule allI)
     apply (rule clI)
     apply (erule conjE)
-  unfolding vvsubst_simps
+  unfolding terms.map
     apply (rule Ty_Var)
     apply (rule provided)
       apply assumption+
@@ -748,7 +443,7 @@ lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
   apply (rule allI)
    apply (rule clI)
    apply (erule conjE)
-  unfolding vvsubst_simps
+  unfolding terms.map
    apply (rule Ty_App)
       apply (assumption | (rule allI, (erule allE)+, rule clD[of P]) | rule iffD1[OF rename_Ty])+
   (* binding case *)
@@ -782,7 +477,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
         apply assumption
       unfolding Un_iff de_Morgan_disj
        apply (erule conjE)+
-      unfolding vvsubst_simps
+      unfolding terms.map
        apply (rule Ty_Abs)
           apply assumption
          apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ fresh]])
@@ -898,7 +593,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
           apply assumption
          apply (rotate_tac -4)
       apply assumption
-        apply (unfold FFVars_terms_simps)[1]
+        apply (unfold terms.set)[1]
       subgoal for y e' f' g z
         apply (rule case_split[of "z \<in> {x}"])
           apply (drule singletonD)
@@ -1017,7 +712,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
           apply assumption
          apply (rule sym)
          apply assumption
-        unfolding FFVars_terms_simps
+        unfolding terms.set
         apply (drule id_onD, rule DiffI, assumption+)+
         apply (rule trans)
          apply assumption
@@ -1130,7 +825,7 @@ lemma Ty_AbsE:
     and "\<And>y e' \<tau>' \<tau>\<^sub>2. y \<notin> A \<Longrightarrow> Abs x \<tau>\<^sub>1 e = Abs y \<tau>' e' \<Longrightarrow> \<tau> = (\<tau>' \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> y \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,y:\<tau>' \<turnstile>\<^sub>t\<^sub>y e' : \<tau>\<^sub>2 \<Longrightarrow> P"
   shows P
   apply (rule mp[OF Ty_fresh_induct[OF assms(2,1), of "\<lambda>\<Gamma>' e' \<tau>'. \<Gamma>' = \<Gamma> \<and> e' = Abs x \<tau>\<^sub>1 e \<and> \<tau>' = \<tau> \<longrightarrow> P"]])
-     apply (rule impI, (erule conjE)+, rotate_tac -2, erule notE[rotated], rule terms_distinct)+
+     apply (rule impI, (erule conjE)+, rotate_tac -2, erule notE[rotated], rule terms.distinct)+
    apply (rule impI)
    apply (erule conjE)+
    apply hypsubst
@@ -1265,7 +960,7 @@ apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
       apply (rule UnI2)
       apply (rule singletonI)
      apply assumption
-    unfolding FFVars_terms_simps
+    unfolding terms.set
     apply (drule id_onD, rule DiffI, assumption+)+
     apply (rule trans)
      apply assumption
@@ -1284,22 +979,22 @@ proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamm
   then show ?case by (auto intro: Ty.Ty_Var)
 next
   case (Ty_App \<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2 \<Gamma>')
-  then show ?case unfolding FFVars_terms_simps by (meson Ty.Ty_App UnI1 UnI2)
+  then show ?case unfolding terms.set by (meson Ty.Ty_App UnI1 UnI2)
 next
   case (Ty_Abs x \<Gamma> \<tau> e \<tau>\<^sub>2 \<Gamma>')
   then have "\<forall>y\<in>FFVars_terms e. \<forall>\<tau>'. (y, \<tau>') |\<in>| \<Gamma>,x:\<tau> \<longrightarrow> (y, \<tau>') |\<in>| \<Gamma>',x:\<tau>"
-    by (metis DiffI FFVars_terms_simps(3) fimageI finsert_iff fresh_def fst_conv fsts.cases prod_set_simps(1))
+    by (metis DiffI terms.set(3) fimageI finsert_iff fresh_def fst_conv fsts.cases prod_set_simps(1))
   moreover have "x \<sharp> \<Gamma>'" using Ty_Abs unfolding fresh_def
     by (metis UN_I fimageE fmember.rep_eq fsts.intros)
   ultimately show ?case using Ty_Abs by (auto intro: Ty.Ty_Abs)
 qed
 
 lemma substitution: "\<lbrakk> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x:=v)) e : \<tau>"
-proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v rule: TT_fresh_induct_param)
+proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v rule: terms.strong_induct)
   case (Var a \<Gamma> \<tau>)
   then have 2: "(a, \<tau>) |\<in>| \<Gamma>,x:\<tau>'" by blast
   from \<open>{||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>'\<close> have 3: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y v : \<tau>'" using context_invariance by blast
-  then show ?case unfolding tvsubst_simps[OF SSupp_upd_VVr_bound] unfolding fun_upd_def
+  then show ?case unfolding terms.subst[OF SSupp_upd_VVr_bound] unfolding fun_upd_def
   proof (cases "a = x")
     case True
     then have "\<tau> = \<tau>'" using 2 Var(1) unfolding fresh_def
@@ -1315,7 +1010,7 @@ next
   from App(3) obtain \<tau>\<^sub>1 where "\<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>" "\<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1" by blast
   then have "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>" "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e2 : \<tau>\<^sub>1" using App by blast+
   then have "\<Gamma> \<turnstile>\<^sub>t\<^sub>y App (tvsubst (VVr(x := v)) e1) (tvsubst (VVr(x := v)) e2) : \<tau>" using Ty_App by blast
-  then show ?case unfolding tvsubst_simps(2)[OF SSupp_upd_VVr_bound, symmetric] .
+  then show ?case unfolding terms.subst(2)[OF SSupp_upd_VVr_bound, symmetric] .
 next
   case (Abs y \<tau>\<^sub>1 e \<Gamma> \<tau>)
   then have 1: "y \<notin> IImsupp (VVr(x:=v))" by (simp add: IImsupp_def SSupp_def)
@@ -1326,7 +1021,7 @@ next
   ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := v)) e : \<tau>\<^sub>2" using Abs(2,5) by metis
   moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def
     by (metis UN_I UnI1 fimageE fmember.rep_eq fsts.intros)
-  ultimately show ?case unfolding tvsubst_simps(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
+  ultimately show ?case unfolding terms.subst(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
 qed
 
 theorem progress: "{||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> (\<exists>x \<tau> e'. e = Abs x \<tau> e') \<or> (\<exists>e'. e \<longrightarrow> e')"
@@ -1343,7 +1038,7 @@ proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> arbitrary:
     case (ST_Beta x \<tau> e e2')
     then have "{||} \<turnstile>\<^sub>t\<^sub>y App (Abs x \<tau> e) e2 : \<tau>\<^sub>2" using Ty_App Ty.Ty_App by fastforce
     have "{||} \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2" using Ty_App ST_Beta
-      by (smt (verit, ccfv_SIG) Abs_inject App_inject Ty.cases \<tau>.inject terms_distinct(2) terms_distinct(4))
+      by (smt (verit, ccfv_SIG) Abs_inject App_inject Ty.cases \<tau>.inject terms.distinct(2, 4))
     then have "{||},x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" by (auto elim: Ty_AbsE')
     then have "{||} \<turnstile>\<^sub>t\<^sub>y tvsubst (VVr(x := e2')) e : \<tau>\<^sub>2" using substitution ST_Beta(1) Ty_App(3) unfolding fresh_def by fastforce
     then show ?thesis using ST_Beta by simp

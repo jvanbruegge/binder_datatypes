@@ -56,7 +56,7 @@ fun create_binder_datatype (spec : spec) lthy =
     fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
 
     val name = Binding.name_of (#fp_b spec);
-    val pre_name = name ^ "_pre_" ^ name;
+    val pre_name = name ^ "_pre" (* ^ name *);
     val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
 

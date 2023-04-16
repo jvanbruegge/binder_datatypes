@@ -193,7 +193,7 @@ fun prove_model_axioms binding qualify model lthy =
 fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
   let
     val (_, lthy) = Local_Theory.begin_nested lthy;
-    val mk_def_t = mk_def_t false b qualify;
+    val mk_def_t = mk_def_t (*false*) true b qualify;
     val quotient = #quotient_fp (#fp_result model)
     val ctor = #ctor quotient;
     val FVarss = #FVars quotient;

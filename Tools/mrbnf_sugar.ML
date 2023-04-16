@@ -510,7 +510,7 @@ fun create_binder_datatype (spec : spec) lthy =
             snd (#noclash vvsubst_res)
           ])),
           REPEAT_DETERM o FIRST' [
-            resolve_tac ctxt (@{thms Int_empty_left Int_empty_right iffD2[OF Int_empty_single]
+            resolve_tac ctxt (@{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single]
               supp_id_bound bij_id conjI
             } @ prems),
             EVERY' [
@@ -554,7 +554,7 @@ fun create_binder_datatype (spec : spec) lthy =
               K (Local_Defs.unfold0_tac ctxt thms)
             ])),
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms Int_empty_left iffD2[OF Int_empty_single] iffD2[OF notin_empty_eq_True TrueI]} @ prems
+              @{thms Int_empty_left iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI]} @ prems
             ),
             rtac ctxt @{thm notI},
             etac ctxt exE,

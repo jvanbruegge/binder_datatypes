@@ -416,8 +416,6 @@ lemma ex_avoiding_bij:
 
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
-lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
-  by simp
 
 lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
   fixes K::"'p \<Rightarrow> 'a::var_terms_pre set" and e::"'a terms"

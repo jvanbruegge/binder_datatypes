@@ -432,7 +432,7 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
       Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
       UN_single
     };
-    fun mk_map_simps fs mk_supp_bound mapx tac =
+    fun mk_map_simps fs mk_supp_bound mk_imsupp mapx tac =
       let
         val mapx = Term.list_comb (mapx, fs);
         val prems = map (HOLogic.mk_Trueprop o mk_supp_bound) fs;
@@ -531,7 +531,7 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
           K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
           rtac ctxt refl
         ];
-      in mk_map_simps fs MRBNF_Recursor.mk_supp_bound mapx tac end;
+      in mk_map_simps fs MRBNF_Recursor.mk_supp_bound mk_imsupp mapx tac end;
 
     val tvsubst_simps =
       let
@@ -543,6 +543,7 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
         fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
           mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of h)))
         );
+        fun mk_imsupp h = the (List.find (fn s => domain_type (fastype_of s) = fastype_of h) (#IImsupps tvsubst_res)) $ h;
         fun tac ctxt prems = EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
           EVERY' [
@@ -557,7 +558,14 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
               @ #isVVrs tvsubst_res @ map snd (#VVrs tvsubst_res)
               @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash tvsubst_res)]
             )),
-            REPEAT_DETERM o rtac ctxt @{thm Int_empty_left},
+            K (TRYALL (REPEAT_DETERM o EVERY' [
+              EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
+              REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
+              K (Local_Defs.unfold0_tac ctxt thms)
+            ])),
+            REPEAT_DETERM o resolve_tac ctxt (
+              @{thms Int_empty_left iffD2[OF Int_empty_single] iffD2[OF notin_empty_eq_True TrueI]} @ prems
+            ),
             rtac ctxt @{thm notI},
             etac ctxt exE,
             dtac ctxt (iffD1 OF [#inject quotient]),
@@ -565,15 +573,12 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
             K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject id_def}
               @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
                 #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
-              ]
-            )),
+            ])),
             eresolve_tac ctxt @{thms sum.distinct[THEN notE]},
-            rtac ctxt refl,
-            K (print_tac ctxt "foo")
+            rtac ctxt refl
           ]
         ];
-      in mk_map_simps fs mk_supp_bound (#tvsubst tvsubst_res) tac end;
-    val _ = @{print} tvsubst_simps
+      in mk_map_simps fs mk_supp_bound mk_imsupp (#tvsubst tvsubst_res) tac end;
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
@@ -584,7 +589,8 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
         ("induct", [induct], [induct_attrib]),
         ("set", flat set_simpss, simp),
         ("map", map_simps, simp),
-        ("distinct", distinct, simp)
+        ("distinct", distinct, simp),
+        ("subst", tvsubst_simps, simp)
       ] |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))

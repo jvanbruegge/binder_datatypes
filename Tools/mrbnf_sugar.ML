@@ -1,4 +1,4 @@
-(*signature MRBNF_SUGAR =
+signature MRBNF_SUGAR =
 sig
 
 type spec = {
@@ -7,14 +7,15 @@ type spec = {
   rec_vars: int,
   binding_rel: int list list,
   ctors: ((string * mixfix option) * typ list) list,
-  map_b: binding
+  map_b: binding,
+  tvsubst_b: binding
 };
 
 val create_binder_datatype : spec -> local_theory -> local_theory
 
-end*)
+end
 
-structure MRBNF_Sugar (*: MRBNF_SUGAR*) =
+structure MRBNF_Sugar : MRBNF_SUGAR =
 struct
 
 open BNF_Util
@@ -44,12 +45,9 @@ fun add_nesting_mrbnf_names Us =
 fun nesting_mrbnfs ctxt ctr_Tsss Us =
   map_filter (mrbnf_of ctxt) (fold (fold (fold (add_nesting_mrbnf_names Us))) ctr_Tsss []);
 
-fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_result) (absinfo : MRBNF_Comp.absT_info) lthy =
+fun create_binder_datatype (spec : spec) lthy =
   let
-    val fp_b_name = "MRBNF_Nesting_Tests." ^ Binding.name_of (#fp_b spec);
     val fp_pre_T = BNF_FP_Util.mk_sumprodT_balanced (map snd (#ctors spec));
-    val res = [the (MRBNF_FP_Def_Sugar.fp_result_of lthy fp_b_name)];
-    val rec_mrbnf = the (MRBNF_Def.mrbnf_of lthy fp_b_name);
 
     val (resBs, Xs) = fold_rev (
       fn (x, Free_Var) => (fn (a, b) => (x::a, b))
@@ -59,22 +57,14 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
 
     val name = Binding.name_of (#fp_b spec);
     val pre_name = name ^ "_pre_" ^ name;
-    (*val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
+    val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
 
-    val ((mrbnf, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
+    val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
     val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
-    val ((rec_mrbnf, vvsubst_res), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (#map_b spec) I (hd res) lthy;*)
-    (*val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;*)
-
-    (* TODO: delete *)
-    val (As, _) = mk_TFrees' (replicate 1 (MRBNF_Def.class_of_mrbnf (#pre_mrbnf (hd res)))) lthy;
-    val tmp = (map TVar (rev (Term.add_tvars (#ctor (#quotient_fp (hd res))) [])) ~~ As);
-    val phi = Morphism.morphism "xx" {
-      binding = [], fact = [], term = [Term.subst_atomic_types tmp], typ = [Term.typ_subst_atomic tmp]
-    };
-    val res = map (MRBNF_FP_Def_Sugar.morph_fp_result phi) res;
+    val ((rec_mrbnf, vvsubst_res), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (#map_b spec) I (hd res) lthy;
+    val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 
     val quotient_ctor = #ctor (#quotient_fp (hd res));
     val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));

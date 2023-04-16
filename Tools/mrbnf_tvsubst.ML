@@ -15,6 +15,7 @@ sig
   type tvsubst_result = {
     tvsubst: term,
     SSupps: term list,
+    IImsupps: term list,
     VVrs: (term * thm) list,
     isVVrs: thm list,
     noclash: term * thm,
@@ -51,6 +52,7 @@ type 'a tvsubst_model = {
 type tvsubst_result = {
   tvsubst: term,
   SSupps: term list,
+  IImsupps: term list,
   VVrs: (term * thm) list,
   isVVrs: thm list,
   noclash: term * thm,
@@ -1406,6 +1408,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val result = {
       tvsubst = fst tvsubst,
       SSupps = map_filter (Option.map (fst o #SSupp)) defs,
+      IImsupps = map_filter (Option.map (fst o #IImsupp)) defs,
       VVrs = VVrs',
       isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
       tvsubst_VVrs = map_filter I tvsubst_VVrs,

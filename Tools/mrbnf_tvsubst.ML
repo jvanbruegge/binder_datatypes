@@ -14,6 +14,10 @@ sig
 
   type tvsubst_result = {
     tvsubst: term,
+    SSupps: term list,
+    VVrs: (term * thm) list,
+    isVVrs: thm list,
+    noclash: term * thm,
     tvsubst_VVrs: thm list,
     tvsubst_cctor_not_isVVr: thm
   };
@@ -46,6 +50,10 @@ type 'a tvsubst_model = {
 
 type tvsubst_result = {
   tvsubst: term,
+  SSupps: term list,
+  VVrs: (term * thm) list,
+  isVVrs: thm list,
+  noclash: term * thm,
   tvsubst_VVrs: thm list,
   tvsubst_cctor_not_isVVr: thm
 };
@@ -1392,10 +1400,18 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       ]) end
     )) (#FVars quotient) fs' tvsubst_VVrs FVars_VVrs not_isVVr_frees IImsupp_Diffs defs;
 
+    val VVrs' = map_filter (Option.map ((fn (VVr, VVr_def) => (VVr, @{thm eq_reflection} OF [mk_unabs_def 1 (
+      @{thm meta_eq_to_obj_eq} OF [Local_Defs.unfold0 lthy (@{thms comp_def} @ eta_defs) VVr_def]
+    )])) o #VVr)) defs;
     val result = {
       tvsubst = fst tvsubst,
+      SSupps = map_filter (Option.map (fst o #SSupp)) defs,
+      VVrs = VVrs',
+      isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
       tvsubst_VVrs = map_filter I tvsubst_VVrs,
-      tvsubst_cctor_not_isVVr = tvsubst_not_isVVr
+      tvsubst_cctor_not_isVVr = tvsubst_not_isVVr,
+      (* todo reuse noclash from vvsubst *)
+      noclash = #noclash rec_res
     }: tvsubst_result;
 
     (* TODO: Remove *)

@@ -16,25 +16,26 @@ val ctors = [
   (("Var", (NONE : mixfix option)), [@{typ 'var}]),
   (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Lam", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}]),
-  (("Let", NONE), [@{typ "('bvar, \<tau> \<times> 'rec) dallist"}, @{typ 'brec}]),
+  (("Let", NONE), [@{typ "('bvar, \<tau> \<times> 'rec) dallist"}, @{typ 'brec}])(*,
   (("Var2", NONE), [@{typ 'tvar}]),
-  (("Lam2", NONE), [@{typ 'tbvar}, @{typ \<tau>}, @{typ 'brec}])
+  (("Lam2", NONE), [@{typ 'tbvar}, @{typ \<tau>}, @{typ 'brec}])*)
 ]
 
 val spec = {
   fp_b = @{binding "term"},
   vars = [
     (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
-    (dest_TFree @{typ 'tvar}, MRBNF_Def.Free_Var),
+    (*(dest_TFree @{typ 'tvar}, MRBNF_Def.Free_Var),*)
     (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
-    (dest_TFree @{typ 'tbvar}, MRBNF_Def.Bound_Var),
+    (*(dest_TFree @{typ 'tbvar}, MRBNF_Def.Bound_Var),*)
     (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var),
     (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var)
   ],
-  binding_rel = [[1], [1]],
+  binding_rel = [[1](*, [1]*)],
   rec_vars = 2,
   ctors = ctors,
-  map_b = @{binding vvsubst}
+  map_b = @{binding vvsubst},
+  tvsubst_b = @{binding tvsubst}
 }
 
 val info_ref = Unsynchronized.ref (NONE : MRBNF_Comp.absT_info option);
@@ -67,6 +68,7 @@ let
   in lthy end
 \<close>
 
+ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 ML \<open>

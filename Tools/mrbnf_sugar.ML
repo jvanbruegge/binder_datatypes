@@ -339,105 +339,6 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
       ) ctors (#ctors spec)
     end) (#FVars quotient);
 
-    val map_simps =
-      let
-        val (fs, _) = lthy
-          |> mk_Frees "f" (map (fn a => a --> a) vars);
-        val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf rec_mrbnf));
-        val mapx = Term.subst_atomic_types (Ts' ~~ vars) (Term.list_comb (
-          MRBNF_Def.map_of_mrbnf rec_mrbnf, fs
-        ));
-        val prems = map (HOLogic.mk_Trueprop o MRBNF_Recursor.mk_supp_bound) fs;
-
-        fun mk_map (T as Type (n, Ts)) = (case MRBNF_Def.mrbnf_of lthy n of
-              SOME mrbnf =>
-                let
-                  val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
-                  val lives = map (Term.typ_subst_atomic (Ts' ~~ Ts)) (MRBNF_Def.lives_of_mrbnf mrbnf);
-                  val inner_map = Term.subst_atomic_types (
-                    (Ts' ~~ Ts) @ (MRBNF_Def.lives'_of_mrbnf mrbnf ~~ lives)
-                  ) (MRBNF_Def.map_of_mrbnf mrbnf);
-                  val gs = map mk_map Ts;
-                in Term.list_comb (inner_map, gs) end
-              | NONE => HOLogic.id_const T)
-            | mk_map (T as TFree _) =
-              (if member (op=) frees T then
-                the (List.find (fn Free (_, T') => domain_type T' = Term.typ_subst_atomic replace T) fs)
-              else if member (op=) rec_vars T then
-                mapx
-              else HOLogic.id_const T)
-            | mk_map T = HOLogic.id_const T;
-        fun mk_set vars (Type (n, Ts)) x = Option.mapPartial (fn mrbnf =>
-            let
-              val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
-              val sets = map (Term.subst_atomic_types (Ts' ~~ Ts)) (MRBNF_Def.sets_of_mrbnf mrbnf);
-              val ts = map_filter I (map2 (fn T => fn set => mk_set vars T (case x of
-                Free _ => set $ x | _ => MRBNF_Util.mk_UNION x set
-              )) Ts sets);
-            in if ts = [] then NONE else SOME (foldl1 MRBNF_Util.mk_Un ts) end
-          ) (MRBNF_Def.mrbnf_of lthy n)
-          | mk_set vars (T as TFree _) x = if member (op=) vars T then SOME x else NONE
-          | mk_set _  _ _ = NONE
-      in map2 (fn (ctor, ctor_def) => fn (_, tys) =>
-        let
-          val (xs, _) = lthy
-            |> mk_Frees "x" (map (Term.typ_subst_atomic replace) tys);
-
-          val gs = map (Term.subst_atomic_types replace o mk_map) tys;
-          val ts = map2 (fn g => fn x => case g of
-            Const ("Fun.id", _) => x
-            | _ => g $ x
-          ) gs xs;
-
-          val bound_sets = map2 (mk_set bounds) tys xs;
-          fun get_f T = the (List.find (fn t' => domain_type (fastype_of t') = T) fs);
-          val imsupp_prems = map_filter (Option.map (fn t => HOLogic.mk_Trueprop (
-            case Term.subst_atomic_types replace t of
-              t as Free (_, T) => HOLogic.mk_not (HOLogic.mk_mem (t, mk_imsupp (get_f T)))
-              | t => MRBNF_Recursor.mk_int_empty (t, mk_imsupp (get_f (HOLogic.dest_setT (fastype_of t))))
-          ))) bound_sets;
-          val bound_set = case map_filter I bound_sets of [] => NONE | xs => SOME (foldl1 MRBNF_Util.mk_Un xs);
-          val brec_vars = subtract (op=) (map (nth rec_vars) (flat (#binding_rel spec))) rec_vars;
-          val free_sets = map_filter (Option.mapPartial (fn t => case try (member (op=) rec_vars o HOLogic.dest_setT) (fastype_of t) of
-            SOME true => SOME (MRBNF_Util.mk_UNION t (hd (#FVars quotient))) | SOME _ => SOME t | NONE => NONE
-          )) (map2 (mk_set (frees @ brec_vars)) tys xs);
-          val free_set = case free_sets of
-            [] => NONE
-            | _ => SOME (foldl1 MRBNF_Util.mk_Un free_sets);
-          val noclash_prems = case (free_set, bound_set) of
-            (SOME f, SOME b) => [Term.subst_atomic_types replace (HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (b, f)))]
-            | _ => [];
-
-          val goal = mk_Trueprop_eq (
-            mapx $ Term.list_comb (ctor, xs),
-            Term.list_comb (ctor, ts)
-          );
-          val thms = @{thms prod.set_map sum.set_map prod_set_simps sum_set_simps UN_empty UN_empty2
-            Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
-            UN_single
-          };
-        in Goal.prove_sorry lthy (names (fs @ xs)) (prems @ imsupp_prems @ noclash_prems) goal (fn {context=ctxt, prems} => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt [ctor_def]),
-          rtac ctxt (trans OF [#vvsubst_ctor vvsubst_res]),
-          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
-            MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
-            #Abs_inverse (snd info) OF @{thms UNIV_I},
-            snd (#noclash vvsubst_res)
-          ])),
-          REPEAT_DETERM o FIRST' [
-            resolve_tac ctxt (@{thms Int_empty_left Int_empty_right iffD2[OF Int_empty_single]
-              supp_id_bound bij_id conjI
-            } @ prems),
-            EVERY' [
-              EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
-              K (Local_Defs.unfold0_tac ctxt thms)
-            ]
-          ],
-          K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
-          rtac ctxt refl
-        ]) end
-      ) ctors (#ctors spec) end;
-
     val ctors_tys = ctors ~~ map snd (#ctors spec);
     val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
       let
@@ -527,7 +428,152 @@ fun create_binder_datatype (spec : spec) (vvsubst_res : MRBNF_VVSubst.vvsubst_re
     (* TODO: Fix tactics for multiple variables *)
     val (tvsubst_res, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (#tvsubst_b spec) (Binding.prefix_name "tv") tvsubst_model lthy;
 
-    val _ = @{print} (#tvsubst_VVrs tvsubst_res)
+    val thms = @{thms prod.set_map sum.set_map prod_set_simps sum_set_simps UN_empty UN_empty2
+      Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
+      UN_single
+    };
+    fun mk_map_simps fs mk_supp_bound mapx tac =
+      let
+        val mapx = Term.list_comb (mapx, fs);
+        val prems = map (HOLogic.mk_Trueprop o mk_supp_bound) fs;
+
+        fun mk_map (T as Type (n, Ts)) = (case MRBNF_Def.mrbnf_of lthy n of
+              SOME mrbnf =>
+                let
+                  val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
+                  val lives = map (Term.typ_subst_atomic (Ts' ~~ Ts)) (MRBNF_Def.lives_of_mrbnf mrbnf);
+                  val inner_map = Term.subst_atomic_types (
+                    (Ts' ~~ Ts) @ (MRBNF_Def.lives'_of_mrbnf mrbnf ~~ lives)
+                  ) (MRBNF_Def.map_of_mrbnf mrbnf);
+                  val gs = map mk_map Ts;
+                in Term.list_comb (inner_map, gs) end
+              | NONE => HOLogic.id_const T)
+            | mk_map (T as TFree _) =
+              (if member (op=) frees T then
+                the (List.find (fn Free (_, T') => domain_type T' = Term.typ_subst_atomic replace T) fs)
+              else if member (op=) rec_vars T then
+                mapx
+              else HOLogic.id_const T)
+            | mk_map T = HOLogic.id_const T;
+        fun mk_set vars (Type (n, Ts)) x = Option.mapPartial (fn mrbnf =>
+            let
+              val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf));
+              val sets = map (Term.subst_atomic_types (Ts' ~~ Ts)) (MRBNF_Def.sets_of_mrbnf mrbnf);
+              val ts = map_filter I (map2 (fn T => fn set => mk_set vars T (case x of
+                Free _ => set $ x | _ => MRBNF_Util.mk_UNION x set
+              )) Ts sets);
+            in if ts = [] then NONE else SOME (foldl1 MRBNF_Util.mk_Un ts) end
+          ) (MRBNF_Def.mrbnf_of lthy n)
+          | mk_set vars (T as TFree _) x = if member (op=) vars T then SOME x else NONE
+          | mk_set _  _ _ = NONE
+      in map2 (fn (ctor, ctor_def) => fn (_, tys) =>
+        let
+          val (xs, _) = lthy
+            |> mk_Frees "x" (map (Term.typ_subst_atomic replace) tys);
+
+          val gs = map (Term.subst_atomic_types replace o mk_map) tys;
+          val ts = map2 (fn g => fn x => case g of
+            Const ("Fun.id", _) => x
+            | _ => g $ x
+          ) gs xs;
+
+          val bound_sets = map2 (mk_set bounds) tys xs;
+          fun get_f T = the (List.find (fn t' => domain_type (fastype_of t') = T) fs);
+          val imsupp_prems = map_filter (Option.map (fn t => HOLogic.mk_Trueprop (
+            case Term.subst_atomic_types replace t of
+              t as Free (_, T) => HOLogic.mk_not (HOLogic.mk_mem (t, mk_imsupp (get_f T)))
+              | t => MRBNF_Recursor.mk_int_empty (t, mk_imsupp (get_f (HOLogic.dest_setT (fastype_of t))))
+          ))) bound_sets;
+          val bound_set = case map_filter I bound_sets of [] => NONE | xs => SOME (foldl1 MRBNF_Util.mk_Un xs);
+          val brec_vars = subtract (op=) (map (nth rec_vars) (flat (#binding_rel spec))) rec_vars;
+          val free_sets = map_filter (Option.mapPartial (fn t => case try (member (op=) rec_vars o HOLogic.dest_setT) (fastype_of t) of
+            SOME true => SOME (MRBNF_Util.mk_UNION t (hd (#FVars quotient))) | SOME _ => SOME t | NONE => NONE
+          )) (map2 (mk_set (frees @ brec_vars)) tys xs);
+          val free_set = case free_sets of
+            [] => NONE
+            | _ => SOME (foldl1 MRBNF_Util.mk_Un free_sets);
+          val noclash_prems = case (free_set, bound_set) of
+            (SOME f, SOME b) => [Term.subst_atomic_types replace (HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (b, f)))]
+            | _ => [];
+
+          val rhs = if length ts = 1 andalso fastype_of (hd ts) = range_type (fastype_of quotient_ctor) then
+            hd ts else Term.list_comb (ctor, ts)
+          val goal = mk_Trueprop_eq (
+            mapx $ Term.list_comb (ctor, xs), rhs
+          );
+        in Goal.prove_sorry lthy (names (fs @ xs)) (prems @ imsupp_prems @ noclash_prems) goal (fn {context=ctxt, prems} =>
+          Local_Defs.unfold0_tac ctxt [ctor_def] THEN tac ctxt prems
+        ) end
+      ) ctors (#ctors spec) end;
+
+    val map_simps =
+      let
+        val (fs, _) = lthy
+          |> mk_Frees "f" (map (fn a => a --> a) vars);
+        val Ts' = snd (dest_Type (MRBNF_Def.T_of_mrbnf rec_mrbnf));
+        val mapx = Term.subst_atomic_types (Ts' ~~ vars) (MRBNF_Def.map_of_mrbnf rec_mrbnf);
+        fun tac ctxt prems = EVERY1 [
+          rtac ctxt (trans OF [#vvsubst_ctor vvsubst_res]),
+          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
+            MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
+            #Abs_inverse (snd info) OF @{thms UNIV_I},
+            snd (#noclash vvsubst_res)
+          ])),
+          REPEAT_DETERM o FIRST' [
+            resolve_tac ctxt (@{thms Int_empty_left Int_empty_right iffD2[OF Int_empty_single]
+              supp_id_bound bij_id conjI
+            } @ prems),
+            EVERY' [
+              EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
+              K (Local_Defs.unfold0_tac ctxt thms)
+            ]
+          ],
+          K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
+          rtac ctxt refl
+        ];
+      in mk_map_simps fs MRBNF_Recursor.mk_supp_bound mapx tac end;
+
+    val tvsubst_simps =
+      let
+        val (fs, _) = lthy
+          |> mk_Frees "f" (map (fn a => a --> range_type (fastype_of quotient_ctor)) vars);
+        fun mk_supp h = the (List.find (fn s =>
+          domain_type (domain_type (fastype_of s)) = domain_type (fastype_of h)
+        ) (#SSupps tvsubst_res)) $ h;
+        fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
+          mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of h)))
+        );
+        fun tac ctxt prems = EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
+          EVERY' [
+            resolve_tac ctxt (#tvsubst_VVrs tvsubst_res),
+            REPEAT_DETERM o resolve_tac ctxt prems
+          ] ORELSE' EVERY' [
+            rtac ctxt trans,
+            rtac ctxt (#tvsubst_cctor_not_isVVr tvsubst_res),
+            REPEAT_DETERM o resolve_tac ctxt prems,
+            K (Local_Defs.unfold0_tac ctxt (thms
+              @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+              @ #isVVrs tvsubst_res @ map snd (#VVrs tvsubst_res)
+              @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash tvsubst_res)]
+            )),
+            REPEAT_DETERM o rtac ctxt @{thm Int_empty_left},
+            rtac ctxt @{thm notI},
+            etac ctxt exE,
+            dtac ctxt (iffD1 OF [#inject quotient]),
+            REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+            K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject id_def}
+              @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
+                #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
+              ]
+            )),
+            eresolve_tac ctxt @{thms sum.distinct[THEN notE]},
+            rtac ctxt refl,
+            K (print_tac ctxt "foo")
+          ]
+        ];
+      in mk_map_simps fs mk_supp_bound (#tvsubst tvsubst_res) tac end;
+    val _ = @{print} tvsubst_simps
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))

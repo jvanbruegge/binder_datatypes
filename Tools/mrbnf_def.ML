@@ -60,6 +60,7 @@ sig
   val bounds_of_mrbnf: mrbnf -> typ list
   val live_of_mrbnf: mrbnf -> int
   val lives_of_mrbnf: mrbnf -> typ list
+  val lives'_of_mrbnf: mrbnf -> typ list
   val dead_of_mrbnf: mrbnf -> int
   val deads_of_mrbnf: mrbnf -> typ list
   val bd_of_mrbnf: mrbnf -> term
@@ -771,6 +772,7 @@ val bound_of_mrbnf = #bound o rep_mrbnf;
 val bounds_of_mrbnf = #bounds o rep_mrbnf;
 val live_of_mrbnf = #live o rep_mrbnf;
 val lives_of_mrbnf = #lives o rep_mrbnf;
+val lives'_of_mrbnf = #lives' o rep_mrbnf;
 val dead_of_mrbnf = #dead o rep_mrbnf;
 val deads_of_mrbnf = #deads o rep_mrbnf;
 val class_of_mrbnf = #class o rep_mrbnf;

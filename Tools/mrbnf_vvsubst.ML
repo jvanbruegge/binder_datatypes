@@ -1,7 +1,12 @@
 signature MRBNF_VVSUBST =
 sig
+  type vvsubst_result = {
+    vvsubst_ctor: thm,
+    noclash: term * thm
+  };
+
   val mrbnf_of_quotient_fixpoint: binding -> (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
-    -> local_theory -> MRBNF_Def.mrbnf * local_theory
+    -> local_theory -> (MRBNF_Def.mrbnf * vvsubst_result) * local_theory
 end
 
 structure MRBNF_VVSubst : MRBNF_VVSUBST =
@@ -12,6 +17,11 @@ open BNF_Util
 open MRBNF_Util
 open MRBNF_Def
 open MRBNF_Recursor
+
+type vvsubst_result = {
+  vvsubst_ctor: thm,
+  noclash: term * thm
+};
 
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
@@ -756,6 +766,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         ((Binding.name thmN, []), [(thms, [])])
       ));
     val (_, lthy) = Local_Theory.notes notes lthy
-  in (x, lthy) end;
+    val res = {
+      vvsubst_ctor = vvsubst_cctor,
+      noclash = #noclash res
+    };
+
+  in ((x, res), lthy) end;
 
 end

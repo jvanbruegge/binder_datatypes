@@ -241,11 +241,11 @@ lemma isin_rename: "bij f \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id 
 abbreviation extend :: "('a * \<tau>) fset \<Rightarrow> 'a::var_terms_pre \<Rightarrow> \<tau> \<Rightarrow> ('a * \<tau>) fset" ("(_,_:_)" [52, 52, 52] 53) where
   "extend \<Gamma> a \<tau> \<equiv> finsert (a, \<tau>) \<Gamma>"
 
-inductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" ("_ \<longrightarrow> _" 25) where
-  ST_Beta: "App (Abs x \<tau> e) e2 \<longrightarrow> tvsubst (VVr(x:=e2)) e"
-| ST_App: "e1 \<longrightarrow> e1' \<Longrightarrow> App e1 e2 \<longrightarrow> App e1' e2"
+inductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" (infixr "\<^bold>\<longrightarrow>" 25) where
+  ST_Beta: "App (Abs x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (VVr(x:=e2)) e"
+| ST_App: "e1 \<^bold>\<longrightarrow> e1' \<Longrightarrow> App e1 e2 \<^bold>\<longrightarrow> App e1' e2"
 
-inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> bool" ("_ \<turnstile>\<^sub>t\<^sub>y _ : _") where
+inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> bool" ("_ \<turnstile>\<^sub>t\<^sub>y _ : _" [25, 25, 25] 26) where
   Ty_Var: "(x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y Var x : \<tau>"
 | Ty_App: "\<lbrakk> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 ; \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y App e1 e2 : \<tau>\<^sub>2"
 | Ty_Abs: "\<lbrakk> x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau> e : \<tau> \<rightarrow> \<tau>\<^sub>2"
@@ -997,11 +997,11 @@ proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v rule
     case True
     then have "\<tau> = \<tau>'" using 2 Var(1) unfolding fresh_def
       by (metis Var(2) Pair_inject finsertE fresh_def fst_eqD rev_fimage_eqI)
-    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y if a = x then v else VVr a : \<tau>" using True 3 by simp
+    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y (if a = x then v else VVr a) : \<tau>" using True 3 by simp
   next
     case False
     then have "(a, \<tau>) |\<in>| \<Gamma>" using 2 by blast
-    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y if a = x then v else VVr a : \<tau>" unfolding VVr_eq_Var using False Ty.Ty_Var by auto
+    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y (if a = x then v else VVr a) : \<tau>" unfolding VVr_eq_Var using False Ty.Ty_Var by auto
   qed
 next
   case (App e1 e2 \<Gamma> \<tau>)
@@ -1022,13 +1022,13 @@ next
   ultimately show ?case unfolding terms.subst(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
 qed
 
-theorem progress: "{||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> (\<exists>x \<tau> e'. e = Abs x \<tau> e') \<or> (\<exists>e'. e \<longrightarrow> e')"
+theorem progress: "{||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> (\<exists>x \<tau> e'. e = Abs x \<tau> e') \<or> (\<exists>e'. e \<^bold>\<longrightarrow> e')"
 proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> rule: Ty.induct)
   case (Ty_App e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2)
   from Ty_App(2) show ?case using ST_Beta ST_App by blast
 qed auto
 
-theorem preservation: "\<lbrakk> {||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; e \<longrightarrow> e' \<rbrakk> \<Longrightarrow> {||} \<turnstile>\<^sub>t\<^sub>y e' : \<tau>"
+theorem preservation: "\<lbrakk> {||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; e \<^bold>\<longrightarrow> e' \<rbrakk> \<Longrightarrow> {||} \<turnstile>\<^sub>t\<^sub>y e' : \<tau>"
 proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> arbitrary: e' rule: Ty.induct)
   case (Ty_App e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2)
   from Ty_App(5) show ?case
@@ -1047,7 +1047,7 @@ proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> arbitrary:
   qed
 next
   case (Ty_Abs x \<tau> e \<tau>\<^sub>2)
-  from \<open>Abs x \<tau> e \<longrightarrow> e'\<close> show ?case by cases auto
+  from \<open>Abs x \<tau> e \<^bold>\<longrightarrow> e'\<close> show ?case by cases auto
 qed auto
 
 end

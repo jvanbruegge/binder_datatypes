@@ -96,9 +96,9 @@ fun create_binder_datatype (spec : spec) lthy =
     );
     val ctors = map morph ctors;
 
-    val fp_nesting_mrbnfs = nesting_mrbnfs lthy [map snd (#ctors spec)] (take (#rec_vars spec) (
+    val fp_nesting_mrbnfs = nesting_mrbnfs lthy [map snd (#ctors spec)] (*(take (#rec_vars spec) (
       map_filter (fn (x, Live_Var) => SOME (TFree x) | _ => NONE) (#vars spec)
-    ));
+    )); *) (map (TFree o fst) (#vars spec))
     val names_lthy = fold (Variable.declare_constraints o Logic.mk_type) vars lthy;
 
     val quotient = #quotient_fp (hd res)
@@ -436,7 +436,9 @@ fun create_binder_datatype (spec : spec) lthy =
                     (Ts' ~~ Ts) @ (MRBNF_Def.lives'_of_mrbnf mrbnf ~~ lives)
                   ) (MRBNF_Def.map_of_mrbnf mrbnf);
                   val gs = map mk_map Ts;
-                in Term.list_comb (inner_map, gs) end
+                in if forall (fn Const ("Fun.id", _) => true | _ => false) gs then
+                  HOLogic.id_const T
+                else Term.list_comb (inner_map, gs) end
               | NONE => HOLogic.id_const T)
             | mk_map (T as TFree _) =
               (if member (op=) frees T then
@@ -518,6 +520,7 @@ fun create_binder_datatype (spec : spec) lthy =
               K (Local_Defs.unfold0_tac ctxt thms)
             ]
           ],
+          K (Local_Defs.unfold0_tac ctxt (map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs)),
           K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
           rtac ctxt refl
         ];
@@ -554,17 +557,19 @@ fun create_binder_datatype (spec : spec) lthy =
               K (Local_Defs.unfold0_tac ctxt thms)
             ])),
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms Int_empty_left iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI]} @ prems
+              @{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI]} @ prems
             ),
             rtac ctxt @{thm notI},
             etac ctxt exE,
             dtac ctxt (iffD1 OF [#inject quotient]),
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
-            K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject id_def}
+            K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
               @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
                 #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
             ])),
             eresolve_tac ctxt @{thms sum.distinct[THEN notE]},
+            K (Local_Defs.unfold0_tac ctxt (map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs)),
+            K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
             rtac ctxt refl
           ]
         ];

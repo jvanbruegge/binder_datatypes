@@ -386,7 +386,9 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           (trans OF [pred_cong0_of_mrbnf outer OF map pred_set_of_mrbnf inners, pred_set_of_mrbnf outer]);
         val in_alt = case try (fn () => in_alt_thm RS @{thm Collect_inj} RS sym) () of
           SOME thm => thm
-          | NONE => @{thm in_alt_top};
+          | NONE => case try (fn () => trans OF [@{thm Set.UNIV_def} RS sym, in_alt_thm] RS @{thm Collect_inj} RS sym) () of
+            SOME thm => Local_Defs.unfold0 ctxt @{thms Set.UNIV_def} thm
+            | NONE => @{thm in_alt_top};
       in
         unfold_thms_tac ctxt (@{thm Ball_Collect} :: set'_eq_sets) THEN
         HEADGOAL (rtac ctxt (trans OF [pred_alt, in_alt]))

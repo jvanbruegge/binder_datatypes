@@ -1,5 +1,6 @@
 theory MRBNF_Recursor
   imports "./MRBNF_Composition"
+  keywords "binder_inductive" :: thy_goal
 begin
 
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
@@ -266,5 +267,7 @@ lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
 
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
+
+ML_file \<open>../Tools/binder_inductive.ML\<close>
 
 end

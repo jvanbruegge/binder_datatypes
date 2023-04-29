@@ -250,15 +250,9 @@ inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Righ
 | Ty_App: "\<lbrakk> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 ; \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y App e1 e2 : \<tau>\<^sub>2"
 | Ty_Abs: "\<lbrakk> x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau> e : \<tau> \<rightarrow> \<tau>\<^sub>2"
 
-(* Design for better inductive:
-
-provide additional command `binder_inductive` that takes the name of a normal inductive as argument.
-This uses the map function of the BNFs involved.
-
-binder_inductive Ty where
-  Ty_Abs: x
-
-This opens a proof for all the equalities and implications needed: *)
+binder_inductive Ty where 3: x
+  sorry
+print_theorems
 
 lemma provided:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"

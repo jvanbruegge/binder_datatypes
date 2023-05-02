@@ -27,6 +27,9 @@ lemma type_definition_id: "type_definition id id top"
 lemma image_single: "{f x} = f ` {x}"
   by simp
 
+lemma Grp_OO: "(Grp f OO R) x y = R (f x) y"
+  unfolding OO_def Grp_UNIV_def by blast
+
 ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_comp.ML\<close>
 

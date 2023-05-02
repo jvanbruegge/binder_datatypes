@@ -29,7 +29,7 @@ let
   val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
 
   (* Step 5: Create recursor and create fixpoint as MRBNF *)
-  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I (hd res) lthy;
+  val ((rec_mrbnf, _), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint @{binding vvsubst} I (hd res) lthy;
 
   (* Step 6: Register fixpoint MRBNF *)
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
@@ -64,7 +64,7 @@ let
   val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
 
   (* Step 5: Create recursor and create fixpoint as MRBNF *)
-  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name (name ^ "_") @{binding vvsubst}) I (hd res) lthy;
+  val ((rec_mrbnf, _), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name (name ^ "_") @{binding vvsubst}) I (hd res) lthy;
 
   (* Step 6: Register fixpoint MRBNF *)
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
@@ -100,7 +100,7 @@ let
   val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), 2)] rel lthy;
 
   (* Step 5: Create recursor and create fixpoint as MRBNF *)
-  val (rec_mrbnf, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name (name ^ "_") @{binding vvsubst}) I (hd res) lthy;
+  val ((rec_mrbnf, _), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (Binding.prefix_name (name ^ "_") @{binding vvsubst}) I (hd res) lthy;
 
   (* Step 6: Register fixpoint MRBNF *)
   val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;

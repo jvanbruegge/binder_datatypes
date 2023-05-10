@@ -99,7 +99,7 @@ by (smt (z3) G_I_intro G_mono IntI Tmap_cong_id emptyE empty_subsetI imageI le_b
 (* Barendregt-enhanced (strong) induction: *)
 lemma BE_induct: 
 assumes I: "I (t::('a::largeEnough) T)"
-and strong: "\<And> p t v. Vsupp v \<inter> Tsupp t = {} \<and> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v \<Longrightarrow> R p t"
+and strong: "\<And> p t v. Vsupp v \<inter> Psupp p = {} \<and> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v \<Longrightarrow> R p t"
 shows "R p t"
 proof-
   {fix \<sigma>::"'a\<Rightarrow>'a" assume \<sigma>: "ssbij \<sigma>"
@@ -110,9 +110,12 @@ proof-
 
    define v' where v': "v' \<equiv> Vmap \<sigma> v"
 
-   obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vsupp v') \<inter> Vsupp v' = {}" and "\<forall>a \<in> Tsupp (Tmap \<sigma> t). \<rho> a = a"  
-   	 using small_Vsupp small_Tsupp small_ssbij by metis
-   hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t" by (meson Tmap_cong_id)
+   obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vsupp v') \<inter> Vsupp v' = {}" and 
+   "\<forall>a \<in> Tsupp (Tmap \<sigma> t) \<union> Psupp p. \<rho> a = a"  
+   	 using small_Vsupp small_Tsupp small_ssbij  
+   	 by (metis Int_Un_eq(2) Int_iff all_not_in_conv image_eqI small_Psupp)
+   hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t"  
+     by (simp add: Tmap_cong_id)
    hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
    	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>)
 
@@ -137,8 +140,8 @@ proof-
    apply(rule G_mono[rule_format, OF _ G]) 
    by (simp add: Tmap_id)
    
-   have vv': "Vsupp (Vmap \<rho> v') \<inter> Tsupp (Tmap \<sigma> t) = {}"  
-   using "0" G G_equiv G_fresh \<rho>(1) by fastforce
+   have vv': "Vsupp (Vmap \<rho> v') \<inter> Psupp p = {}"  
+     using small_Psupp small_ssbij by fastforce  
 
    show "R p (Tmap \<sigma> t)"
    apply(rule strong[of "Vmap \<rho> v'"], intro conjI)

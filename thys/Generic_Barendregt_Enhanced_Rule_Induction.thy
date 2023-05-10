@@ -5,7 +5,7 @@ begin
 consts laregeEnough :: "'a \<Rightarrow> bool"
 
 class largeEnough =
- assumes "largeEnough (undefined::'a)"
+assumes "largeEnough (undefined::'a)"
 
 (* General infrastructure: *)
 consts small :: "('a::largeEnough) set \<Rightarrow> bool" (* small/bounded sets *)
@@ -37,7 +37,7 @@ typedecl 'a T (* term-like entities *)
 consts Tmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a T \<Rightarrow> 'a T"
 consts Tsupp :: "('a::largeEnough) T \<Rightarrow> 'a set"
 
-typedecl 'a V (* variable-binding entities *)
+typedecl 'a V (* variable-binding entities (essentially, binders) *)
 consts Vmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a V \<Rightarrow> 'a V"
 consts Vsupp :: "('a::largeEnough) V \<Rightarrow> 'a set"
 
@@ -99,7 +99,7 @@ by (smt (z3) G_I_intro G_mono IntI Tmap_cong_id emptyE empty_subsetI imageI le_b
 (* Barendregt-enhanced (strong) induction: *)
 lemma BE_induct: 
 assumes I: "I (t::('a::largeEnough) T)"
-and strong: "\<And> p t. (\<exists> v. Vsupp v \<inter> Tsupp t = {} \<and> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v) \<Longrightarrow> R p t"
+and strong: "\<And> p t v. Vsupp v \<inter> Tsupp t = {} \<and> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v \<Longrightarrow> R p t"
 shows "R p t"
 proof-
   {fix \<sigma>::"'a\<Rightarrow>'a" assume \<sigma>: "ssbij \<sigma>"
@@ -141,16 +141,13 @@ proof-
    using "0" G G_equiv G_fresh \<rho>(1) by fastforce
 
    show "R p (Tmap \<sigma> t)"
-   proof(rule strong)
-     show "\<exists>v. Vsupp v \<inter> Tsupp (Tmap \<sigma> t) = {} \<and> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) v"
-     apply(rule exI[of _ "Vmap \<rho> v'"], intro conjI)
-       subgoal by fact
-       subgoal by fact .
+   apply(rule strong[of "Vmap \<rho> v'"], intro conjI)
+     subgoal by fact
+     subgoal by fact .
    qed
- qed
- }
- from this[of id] show ?thesis 
- 	 by (simp add: Tmap_id ssbij_id)
+  }
+  from this[of id] show ?thesis 
+  by (simp add: Tmap_id ssbij_id)
 qed
 
 

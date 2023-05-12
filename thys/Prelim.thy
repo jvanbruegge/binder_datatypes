@@ -442,7 +442,8 @@ lemma supp_inv_bound:
   using s card_of_image ordLeq_ordLess_trans by blast
 
 lemma Un_Cinfinite_ordLess: "|A| <o r \<Longrightarrow> |B| <o r \<Longrightarrow> Cinfinite r \<Longrightarrow> |A \<union> B| <o r"
-  by (simp add: cinfinite_def)
+  using Un_Cinfinite_bound_strict .
+ (* apply (simp add: cinfinite_def) *)
 
 lemma supp_the_inv_bound_gen:
   "Cinfinite r \<Longrightarrow> inj f \<Longrightarrow> |supp f| <o r \<Longrightarrow> |supp (the_inv f)| <o r"

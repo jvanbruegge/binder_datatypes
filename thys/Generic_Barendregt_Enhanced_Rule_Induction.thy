@@ -81,8 +81,11 @@ consts G :: "('a T \<Rightarrow> bool) \<Rightarrow> ('a::largeEnough) T \<Right
 axiomatization where 
 G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap \<sigma> t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
 and 
+(*
+INterestingly, not needed: 
 G_fresh: "\<And>R t v. G R t v \<Longrightarrow> Vsupp v \<inter> Tsupp t = {}"
 and 
+*)
 G_mono[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<longrightarrow> G R' t v"
 
 (* *)

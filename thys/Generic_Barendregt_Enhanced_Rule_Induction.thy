@@ -79,7 +79,7 @@ small_Psupp: "\<And>p. small (Psupp p)"
 consts G :: "('a T \<Rightarrow> bool) \<Rightarrow> ('a::largeEnough) T \<Rightarrow> 'a V \<Rightarrow> bool"
 
 axiomatization where 
-G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap \<sigma> t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
+G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
 and 
 (*
 INterestingly, not needed: 
@@ -124,21 +124,22 @@ proof-
 
    have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" by (simp add: \<rho>(1) \<sigma> ssbij_comp)
 
-   define \<sigma>'' where \<sigma>'': "\<sigma>'' = inv \<sigma> o inv \<rho>"
+   define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
    have ss_\<sigma>'': "ssbij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv by blast
    
-   have 1[simp]: "\<sigma>'' \<circ> \<rho> o \<sigma> = id" 
-   unfolding \<sigma>'' by (simp add: \<rho>(1) \<sigma> rewriteR_comp_comp ssbij_invR)
+   have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
+   unfolding \<sigma>'' using \<rho>\<sigma> ssbij_invL by auto 
    
    have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t v" 
    apply(rule G_mono[rule_format, OF _ G]) using ss_\<sigma>'' by auto
    hence G: "G (\<lambda>t'. I (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t v" 
    using I_equiv[OF _ ss_\<sigma>''] by (metis (mono_tags, lifting) G_mono predicate1I)
-   have G: "G (\<lambda>t'. I (Tmap \<sigma>'' (Tmap (\<rho> o \<sigma>) t')) \<and> (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (\<rho> o \<sigma>) t')))) (Tmap (\<rho> o \<sigma>) t) (Vmap (\<rho> o \<sigma>) v)" 
+  have G: "G (\<lambda>t'. I (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> 
+                   (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) (Tmap (\<rho> o \<sigma>) t) (Vmap (\<rho> o \<sigma>) v)" 
    using G_equiv[OF \<rho>\<sigma> G] .
-   have G: "G (\<lambda>t'. I (Tmap (\<sigma>'' o \<rho> o \<sigma>) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o \<rho> o \<sigma>) t'))) (Tmap \<sigma> t) (Vmap \<rho> v')" 
-   unfolding v' Vmap_comp'[symmetric, OF \<rho>(1) \<sigma>] 0[symmetric] apply(rule G_mono[rule_format, OF _ G])  
-   by auto (metis "1" Tmap_comp' \<rho>\<sigma> fun.map_comp ss_\<sigma>'')+ 
+   have G: "G (\<lambda>t'. I (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) (Tmap \<sigma> t) (Vmap \<rho> v')" 
+     unfolding v' Vmap_comp'[symmetric, OF \<rho>(1) \<sigma>] 0[symmetric] apply(rule G_mono[rule_format, OF _ G])  
+     apply auto by (metis "1" Tmap_comp' \<sigma>'' ss_\<sigma>'' ssbij_inv)+
    have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) (Vmap \<rho> v')" 
    apply(rule G_mono[rule_format, OF _ G]) 
    by (simp add: Tmap_id)

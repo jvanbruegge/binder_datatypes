@@ -39,8 +39,8 @@ in lthy' end\<close>
 print_mrbnfs
 
 (* unary substitution *)
-lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
-  unfolding IImsupp_def SSupp_VVr_empty UN_empty Un_empty_left
+lemma IImfvars_VVr_empty: "IImfvars VVr = {}"
+  unfolding IImfvars_def SSupp_VVr_empty UN_empty Un_empty_left
   apply (rule refl)
   done
 
@@ -58,7 +58,7 @@ lemma tvsubst_VVr_func: "tvsubst VVr t = t"
       apply (rule trans)
        apply (rule tvsubst_cctor_not_isVVr)
           apply (rule SSupp_VVr_bound)
-      unfolding IImsupp_VVr_empty
+      unfolding IImfvars_VVr_empty
          apply (rule Int_empty_right)
       unfolding tvnoclash_terms_def Int_Un_distrib Un_empty
         apply (rule conjI)
@@ -70,7 +70,7 @@ lemma tvsubst_VVr_func: "tvsubst VVr t = t"
       apply (rule arg_cong[of _ _ terms_ctor])
       apply (rule trans)
       apply (rule terms_pre.map_cong)
-                 apply (rule supp_id_bound bij_id)+
+                 apply (rule fvars_id_bound bij_id)+
            apply (assumption | rule refl)+
       unfolding id_def[symmetric] terms_pre.map_id
       apply (rule refl)
@@ -95,11 +95,11 @@ corollary SSupp_upd_VVr_bound: "|SSupp (VVr(a:=(t::'a::var_terms_pre terms)))| <
   apply (rule SSupp_VVr_bound)
   done
 
-lemma supp_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
-  unfolding supp_def id_on_def by blast
+lemma fvars_subset_id_on: "fvars f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
+  unfolding fvars_def id_on_def by blast
 
 lemma rrename_simps:
-  assumes "bij (f::'a::var_terms_pre \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a set|"
+  assumes "bij (f::'a::var_terms_pre \<Rightarrow> 'a)" "|fvars f| <o |UNIV::'a set|"
   shows "rrename_terms f (Var a) = Var (f a)"
     "rrename_terms f (App e1 e2) = App (rrename_terms f e1) (rrename_terms f e2)"
     "rrename_terms f (Abs x e) = Abs (f x) (rrename_terms f e)"
@@ -126,7 +126,7 @@ lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
   apply (erule exE conjE)+
   apply assumption
   done
-lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|
+lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |fvars (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<and> id_on (FFVars_terms (Abs x e)) f \<and> f x = x' \<and> rrename_terms f e = e')"
   unfolding terms.set
   unfolding Abs_def terms.TT_injects0 map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I]
@@ -136,37 +136,37 @@ lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::'
   apply (rule refl)
   done
 
-lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id)"
+lemma bij_map_terms_pre: "bij f \<Longrightarrow> |fvars (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id)"
   apply (rule iffD2[OF bij_iff])
     apply (rule exI[of _ "map_terms_pre id (inv f) (rrename_terms (inv f)) id"])
   apply (frule bij_imp_bij_inv)
-  apply (frule supp_inv_bound)
+  apply (frule fvars_inv_bound)
    apply assumption
   apply (rule conjI)
    apply (rule trans)
     apply (rule terms_pre.map_comp0[symmetric])
-         apply (assumption | rule supp_id_bound)+
+         apply (assumption | rule fvars_id_bound)+
   unfolding id_o inv_o_simp1 terms.rrename_comp0s terms.rrename_id0s
   apply (rule terms_pre.map_id0)
   apply (rule trans)
    apply (rule terms_pre.map_comp0[symmetric])
-        apply (assumption | rule supp_id_bound)+
+        apply (assumption | rule fvars_id_bound)+
   unfolding id_o inv_o_simp2 terms.rrename_comp0s terms.rrename_id0s
   apply (rule terms_pre.map_id0)
   done
 
-lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id) = map_terms_pre id (inv f) (rrename_terms (inv f)) id"
+lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |fvars (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (rrename_terms f) id) = map_terms_pre id (inv f) (rrename_terms (inv f)) id"
   apply (frule bij_imp_bij_inv)
-  apply (frule supp_inv_bound)
+  apply (frule fvars_inv_bound)
   apply assumption
   apply (rule inv_unique_comp)
    apply (rule trans)
     apply (rule terms_pre.map_comp0[symmetric])
-         apply (assumption | rule supp_id_bound)+
+         apply (assumption | rule fvars_id_bound)+
    defer
   apply (rule trans)
     apply (rule terms_pre.map_comp0[symmetric])
-         apply (assumption | rule supp_id_bound)+
+         apply (assumption | rule fvars_id_bound)+
   unfolding id_o inv_o_simp1 inv_o_simp2 terms.rrename_comp0s terms.rrename_id0s terms_pre.map_id0
    apply (rule refl)+
   done
@@ -183,7 +183,7 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_terms_pre id f (rrename_ter
     apply (rule exI)
     apply (rule conjI)
      apply (rule exI[of _ "id"])
-     apply (rule conjI bij_id supp_id_bound id_on_id)+
+     apply (rule conjI bij_id fvars_id_bound id_on_id)+
     apply (drule sym)
     unfolding terms.rrename_id0s terms_pre.map_id map_terms_pre_inv_simp
     unfolding map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case
@@ -193,12 +193,12 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_terms_pre id f (rrename_ter
 unfolding set2_terms_pre_def set3_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] sum_set_simps
     map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
       ccpo_Sup_singleton Un_empty_right id_on_def image_single[symmetric]
-  unfolding terms.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
+  unfolding terms.FFVars_rrenames[OF bij_imp_bij_inv fvars_inv_bound]
   unfolding image_single image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv], symmetric]
-    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF terms.rrename_bijs[OF bij_imp_bij_inv supp_inv_bound]]
-  terms.rrename_inv_simps[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
-  unfolding terms.rrename_comps[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 terms.rrename_ids
-  apply (rule conjI bij_imp_bij_inv supp_inv_bound singletonI | assumption)+
+    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF terms.rrename_bijs[OF bij_imp_bij_inv fvars_inv_bound]]
+  terms.rrename_inv_simps[OF bij_imp_bij_inv fvars_inv_bound] inv_simp2
+  unfolding terms.rrename_comps[OF bij_imp_bij_inv fvars_inv_bound] inv_o_simp2 terms.rrename_ids
+  apply (rule conjI bij_imp_bij_inv fvars_inv_bound singletonI | assumption)+
   done
   done
 
@@ -245,42 +245,122 @@ definition "ssbij f \<equiv> bij f \<and> small (supp (f::'a::var_terms_pre \<Ri
 
 definition Tmap :: "('a::var_terms_pre \<Rightarrow> 'a) \<Rightarrow> 'a T \<Rightarrow> 'a T" where 
 "Tmap f \<equiv> map_prod (rrename_terms f) (rrename_terms f)"
-fun Tsupp :: "('a::var_terms_pre) T \<Rightarrow> 'a set" where 
-"Tsupp (e1,e2) = FFVars_terms e1 \<union> FFVars_terms e2"
+
+fun Tfvars :: "('a::var_terms_pre) T \<Rightarrow> 'a set" where 
+"Tfvars (e1,e2) = FFVars_terms e1 \<union> FFVars_terms e2"
 
 definition Vmap :: "('a::var_terms_pre \<Rightarrow> 'a) \<Rightarrow> 'a V \<Rightarrow> 'a V" where 
 "Vmap f \<equiv> map_prod f f"
 
-fun Vsupp :: "('a::var_terms_pre) V \<Rightarrow> 'a set" where 
-"Vsupp (x1,x2) = {x1,x2}"
+fun Vfvars :: "('a::var_terms_pre) V \<Rightarrow> 'a set" where 
+"Vfvars (x1,x2) = {x1,x2}"
 
 
 find_theorems name: set name: terms 
 
 definition G :: "('a::var_terms_pre T \<Rightarrow> bool) \<Rightarrow> 'a::var_terms_pre terms \<times> 'a terms \<Rightarrow> 'a V \<Rightarrow> bool"
 where
-"G \<equiv> (\<lambda>R (ee1,ee2) v.  
-            \<forall>x xx. v = (x, xx) \<longrightarrow> 
-            (\<exists>e e2. ee1 = App (Abs x e) e2 \<and> ee2 = tvsubst (VVr(x := e2)) e) \<or>
-            (\<exists>e1 e1' e2. ee1 = App e1 e2 \<and> ee2 = App e1' e2 \<and> R (e1,e1')) \<or>
-            (\<exists>e e'. ee1 = Abs xx e \<and> ee2 = Abs xx e' \<and> R (e,e')))"
+"G \<equiv> (\<lambda>R t v.  
+            (\<exists>e1 e2. fst t = App (Abs (fst v) e1) e2 \<and> snd t = tvsubst (VVr(fst v := e2)) e1) \<or>
+            (\<exists>e1 e1' e2. fst t = App e1 e2 \<and> snd t = App e1' e2 \<and> R (e1,e1')) \<or>
+            (\<exists>e e'. fst t = Abs (snd v) e \<and> snd t = Abs (snd v) e' \<and> R (e,e')))"
 
 lemma step_G: "step = lfp (\<lambda>R t. \<exists>v. G R t v)" 
   unfolding step_def G_def apply(rule arg_cong[of _ _  lfp])
   unfolding fun_eq_iff by auto blast
 
+lemma G_mono: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<Longrightarrow> G R' t v"
+unfolding G_def by fastforce
 
-lemma 
-G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap \<sigma> t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
-  unfolding ssbij_def G_def ssbij_def Tmap_def Vmap_def apply auto 
-  sorry
+lemma rrename_terms_simps[simp]: 
+"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow> 
+ rrename_terms \<sigma> (Var a) = Var (\<sigma> a)"
+"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow> 
+ rrename_terms \<sigma> (App e1 e2) = App (rrename_terms \<sigma> e1) (rrename_terms \<sigma> e2)"
+"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow> 
+ rrename_terms \<sigma> (Abs a e) = Abs (\<sigma> a) (rrename_terms \<sigma> e)"
+sorry
 
-lemma 
-G_fresh: "\<And>R t v. G R t v \<Longrightarrow> Vsupp v \<inter> Tsupp t = {}"
-  unfolding G_def apply auto
+find_theorems tvsubst 
+lemma rrename_terms_tvsubst: "bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>  
+     |SSupp \<tau>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>
+     rrename_terms \<sigma> (tvsubst \<tau> e) = tvsubst (rrename_terms \<sigma> \<circ> \<tau>) (rrename_terms \<sigma> e)"
+sorry
 
-lemma 
-G_mono[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<longrightarrow> G R' t v"
+lemma tvsubst_o: "|SSupp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>  
+     |SSupp \<tau>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>
+     tvsubst \<sigma> (tvsubst \<tau> e) = tvsubst (tvsubst \<sigma> \<circ> \<tau>) e"
+sorry
+
+lemma [simp]: "bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>  
+      rrename_terms \<sigma> o (VVr(a := e)) = VVr (\<sigma> a := rrename_terms \<sigma> e)"
+sorry
+
+lemmas SSupp_upd_VVr_bound[simp,intro]
+lemmas supp_inv_bound[simp]
+lemmas terms.rrename_ids[simp]
+
+lemma G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
+unfolding G_def subgoal for \<sigma> R t v apply(elim disjE)
+  subgoal apply(rule disjI1)
+  subgoal apply(elim exE) subgoal for e1 e2
+  apply(rule exI[of _ "rrename_terms \<sigma> e1"]) apply(rule exI[of _ "rrename_terms \<sigma> e2"])
+  apply(cases t) apply(cases v) unfolding ssbij_def small_def Tmap_def Vmap_def apply simp
+  apply(subst rrename_terms_tvsubst) by auto . .
+  (* *)
+  subgoal apply(rule disjI2, rule disjI1)
+  subgoal apply(elim exE) subgoal for e1 e1' e2
+  apply(rule exI[of _ "rrename_terms \<sigma> e1"]) apply(rule exI[of _ "rrename_terms \<sigma> e1'"]) 
+  apply(rule exI[of _ "rrename_terms \<sigma> e2"])
+  apply(cases t) apply(cases v) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  by (simp add: terms.rrename_comps) . . 
+  (* *)
+  subgoal apply(rule disjI2, rule disjI2)
+  subgoal apply(elim exE) subgoal for e e'
+  apply(rule exI[of _ "rrename_terms \<sigma> e"]) apply(rule exI[of _ "rrename_terms \<sigma> e'"]) 
+  apply(cases t) apply(cases v) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  by (simp add: terms.rrename_comps) . . . .
+
+lemma rrename_terms_cong_id[simp]: 
+"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>   
+ \<forall>a\<in>FFVars_terms e. \<sigma> a = (a::'a) \<Longrightarrow> rrename_terms \<sigma> e = e"
+sorry
+
+lemma Abs_rrename_trans: 
+"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_terms_pre set| \<Longrightarrow>   
+ \<forall>a'\<in>FFVars_terms e - {a::'a}. \<sigma> a' = a' \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename_terms \<sigma> e)"
+sorry
+  
+
+lemma G_var_equiv: "\<And>\<rho> R t v. (\<forall>a \<in> Tfvars t - Vfvars v. \<rho> a = a) \<Longrightarrow> ssbij \<rho> \<Longrightarrow> G R t v \<Longrightarrow> G R t (Vmap \<rho> v)"
+unfolding G_def subgoal for \<rho> R t v apply(elim disjE)
+  subgoal apply(rule disjI1)
+  subgoal apply(elim exE) subgoal for e1 e2
+  apply(rule exI[of _ "rrename_terms \<rho> e1"]) apply(rule exI[of _ "rrename_terms \<rho> e2"])
+  apply(cases t) apply(cases v) unfolding ssbij_def small_def Tmap_def Vmap_def apply simp
+  apply(intro conjI)
+    subgoal for u a b apply(subst Abs_rrename_trans[of \<rho>]) apply simp_all 
+     apply(subgoal_tac "\<forall>a\<in>(FFVars_terms e1 - {a}) \<union> FFVars_terms e2 \<union> (FFVars_terms (tvsubst (VVr(a := e2)) e1) - {a, b}). \<rho> a = a")
+       subgoal  
+         by blast
+       subgoal sledgehammer
+
+
+ sorry . . 
+  (* *)
+  subgoal apply(rule disjI2, rule disjI1)
+  subgoal apply(elim exE) subgoal for e1 e1' e2
+  apply(rule exI[of _ "rrename_terms \<rho> e1"]) apply(rule exI[of _ "rrename_terms \<rho> e1'"]) 
+  apply(rule exI[of _ "rrename_terms \<rho> e2"])
+  apply(cases t) apply(cases v) unfolding ssbij_def small_def Tmap_def Vmap_def apply simp
+  apply(intro conjI) sorry . . 
+  (* *)
+  subgoal apply(rule disjI2, rule disjI2)
+  subgoal apply(elim exE) subgoal for e e'
+  apply(rule exI[of _ "rrename_terms \<rho> e"]) apply(rule exI[of _ "rrename_terms \<rho> e'"]) 
+  apply(cases t) apply(cases v) unfolding ssbij_def small_def Tmap_def Vmap_def apply simp
+  apply(intro conjI) sorry . . . . 
+
 
 
 
@@ -309,7 +389,7 @@ print_theorems
 
 lemma provided:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  assumes "bij f" "|fvars f| <o |UNIV::'a set|"
   shows
     (* equivariance *)
     "(x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id |`| \<Gamma>"
@@ -328,7 +408,7 @@ lemma provided:
 lemma rename_Ty_aux:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes
-    "bij f" "|supp f| <o |UNIV::'a set|" "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
+    "bij f" "|fvars f| <o |UNIV::'a set|" "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
   shows "map_prod f id |`| \<Gamma> \<turnstile>\<^sub>t\<^sub>y vvsubst f e : \<tau>'"
   apply (rule Ty.induct[OF assms(3)])
   unfolding terms_vvsubst_rrename[OF assms(1,2)] rrename_simps[OF assms(1,2)]
@@ -348,7 +428,7 @@ lemma rename_Ty_aux:
 
 lemma rename_Ty:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  assumes "bij f" "|fvars f| <o |UNIV::'a set|"
   shows "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<longleftrightarrow> map_prod f id |`| \<Gamma> \<turnstile>\<^sub>t\<^sub>y vvsubst f e : \<tau>'"
   apply (rule iffI)
    apply (rule rename_Ty_aux)
@@ -357,21 +437,21 @@ lemma rename_Ty:
   apply (drule rename_Ty_aux[rotated -1])
     apply (rule bij_imp_bij_inv)
     apply (rule assms)
-   apply (rule supp_inv_bound)
+   apply (rule fvars_inv_bound)
     apply (rule assms)+
-  unfolding terms.map_comp[OF assms(2) supp_inv_bound[OF assms]]
+  unfolding terms.map_comp[OF assms(2) fvars_inv_bound[OF assms]]
     inv_o_simp1[OF assms(1)] terms.map_id map_prod.comp id_o map_prod.id fset.map_comp fset.map_id
   apply assumption
   done
 
 definition cl :: "(('a::var_terms_pre \<times> \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<times> \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> 'b \<Rightarrow> bool" where
-  "cl P \<Gamma> e \<tau> \<rho> \<equiv> (\<forall>f. bij f \<and> |supp f| <o |UNIV::'a set| \<longrightarrow> P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>)"
+  "cl P \<Gamma> e \<tau> \<rho> \<equiv> (\<forall>f. bij f \<and> |fvars f| <o |UNIV::'a set| \<longrightarrow> P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>)"
 
 lemmas clI = allI[THEN iffD2[OF meta_eq_to_obj_eq[OF cl_def]], unfolded atomize_imp[symmetric]]
 
 lemma clD:
   fixes e::"'a::var_terms_pre terms" and f::"'a \<Rightarrow> 'a"
-assumes "cl P \<Gamma> e \<tau> \<rho>" and "bij f" "|supp f| <o |UNIV::'a set|"
+assumes "cl P \<Gamma> e \<tau> \<rho>" and "bij f" "|fvars f| <o |UNIV::'a set|"
 shows "P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>"
   apply (rule mp[OF spec[OF assms(1)[unfolded cl_def]]])
   apply (rule conjI)
@@ -384,14 +464,14 @@ lemma cl_ext: "cl P \<Gamma> e \<tau> \<rho> \<Longrightarrow> P \<Gamma> e \<ta
   apply (erule impE)
    apply (rule conjI)
     apply (rule bij_id)
-   apply (rule supp_id_bound)
+   apply (rule fvars_id_bound)
   unfolding map_prod.id fset.map_id terms.map_id
   apply assumption
   done
 
 lemma cl_vvsubst:
   fixes e::"'a::var_terms_pre terms"
-  assumes f: "bij f" "|supp f| <o |UNIV::'a set|" and cl: "cl P \<Gamma> e \<tau> \<rho>"
+  assumes f: "bij f" "|fvars f| <o |UNIV::'a set|" and cl: "cl P \<Gamma> e \<tau> \<rho>"
   shows "cl P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>"
   unfolding cl_def
   apply (rule allI impI)+
@@ -401,7 +481,7 @@ lemma cl_vvsubst:
    apply (rule bij_comp)
     apply (rule f)
    apply assumption
-  apply (rule supp_comp_bound)
+  apply (rule fvars_comp_bound)
     apply (rule f)
    apply assumption
   apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
@@ -422,7 +502,7 @@ lemma cl_cl: "cl (cl P) = cl P"
    apply (erule impE)
     apply (rule conjI)
      apply (rule bij_id)
-    apply (rule supp_id_bound)
+    apply (rule fvars_id_bound)
   unfolding map_prod.id fset.map_id terms.map_id
    apply assumption
   apply (rule allI impI)+
@@ -434,12 +514,12 @@ lemma cl_cl: "cl (cl P) = cl P"
   apply (rule conjI)
    apply (rule bij_comp)
     apply assumption+
-  apply (rule supp_comp_bound)
+  apply (rule fvars_comp_bound)
     apply assumption+
   apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
   done
 
-lemma TT_inject: "(terms_ctor a = terms_ctor b) = (\<exists>(f::'a::var_terms_pre \<Rightarrow> 'a). bij f \<and> |supp f| <o |UNIV::'a set|
+lemma TT_inject: "(terms_ctor a = terms_ctor b) = (\<exists>(f::'a::var_terms_pre \<Rightarrow> 'a). bij f \<and> |fvars f| <o |UNIV::'a set|
   \<and> id_on (\<Union>(FFVars_terms ` set3_terms_pre a) - set2_terms_pre a) f \<and> map_terms_pre id f (vvsubst f) id a = b)"
   unfolding terms.TT_injects0 conj_assoc[symmetric]
   apply (rule ex_cong)
@@ -452,11 +532,11 @@ lemma TT_inject: "(terms_ctor a = terms_ctor b) = (\<exists>(f::'a::var_terms_pr
 
 lemma ex_avoiding_bij:
   fixes f :: "'a \<Rightarrow> 'a" and I D A :: "'a set"
-  assumes  "|supp f| <o |UNIV :: 'a set|" "bij f" "infinite (UNIV :: 'a set)"
+  assumes  "|fvars f| <o |UNIV :: 'a set|" "bij f" "infinite (UNIV :: 'a set)"
     "|I| <o |UNIV :: 'a set|" "id_on I f"
     "|D| <o |UNIV :: 'a set|" "D \<inter> A = {}" "|A| <o |UNIV :: 'a set|"
-  shows "\<exists>(g::'a \<Rightarrow> 'a). bij g \<and> |supp g| <o |UNIV::'a set| \<and> imsupp g \<inter> A = {} \<and>
-    (\<forall>a. a \<in> (imsupp f - A) \<union> D \<and> f a \<notin> A \<longrightarrow> g a = f a) \<and> id_on I g"
+  shows "\<exists>(g::'a \<Rightarrow> 'a). bij g \<and> |fvars g| <o |UNIV::'a set| \<and> imfvars g \<inter> A = {} \<and>
+    (\<forall>a. a \<in> (imfvars f - A) \<union> D \<and> f a \<notin> A \<longrightarrow> g a = f a) \<and> id_on I g"
   apply (rule exI[of _ "avoiding_bij f I D A"])
   apply (rule conjI avoiding_bij assms)+
   done
@@ -500,7 +580,7 @@ lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
       apply (rule exE[OF Abs_avoid])
        apply (rule terms_pre.Un_bound)
       apply (rule terms_pre.Un_bound)
-        apply (rule iffD2[OF imsupp_supp_bound[OF cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite]]])
+        apply (rule iffD2[OF imfvars_fvars_bound[OF cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite]]])
         apply assumption
         apply (rule spec[OF bound])
        apply (rule terms_pre.UNION_bound)
@@ -526,7 +606,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
        apply (rule Ty_Abs)
           apply assumption
          apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ fresh]])
-          apply (rule not_in_imsupp_same[symmetric])
+          apply (rule not_in_imfvars_same[symmetric])
           apply assumption
          apply (rule provided)
           apply assumption+
@@ -572,7 +652,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
          apply (rule iffD1[OF fun_cong[OF fun_cong[OF prod.rel_eq]]])
          apply (rule iffD2[OF prod.rel_map(2)])
          apply (rule prod.rel_refl_strong)
-          apply (rule not_in_imsupp_same[symmetric])
+          apply (rule not_in_imfvars_same[symmetric])
       apply (drule trans[OF Int_commute])
           apply (unfold disjoint_iff)[1]
           apply (erule allE)
@@ -588,7 +668,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
 
        apply (rule iffD2[OF arg_cong3[OF _ refl refl, of _ _ Ty]])
         apply (rule arg_cong3[OF refl _ refl, of _ _ extend])
-        apply (rule not_in_imsupp_same[symmetric])
+        apply (rule not_in_imfvars_same[symmetric])
         apply assumption
       unfolding provided(3)[symmetric]
        apply (rule iffD1[OF rename_Ty])
@@ -684,7 +764,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
            apply (rule UN_I)
             apply assumption
            apply assumption
-          apply (rule not_in_imsupp_same[symmetric])
+          apply (rule not_in_imfvars_same[symmetric])
           apply assumption
          apply (rule id_apply[symmetric])
         apply (rule iffD1[OF rename_Ty])
@@ -694,7 +774,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
       apply (rule iffD2[OF fun_cong[of "P _ _ _"]])
        apply (rule arg_cong3[OF _ refl refl])
        apply (rule arg_cong3[OF refl _ refl, of _ _ extend])
-       apply (rule not_in_imsupp_same[symmetric])
+       apply (rule not_in_imfvars_same[symmetric])
        apply assumption
       unfolding provided(3)[symmetric]
       apply (rule clD[of P, rotated])
@@ -781,7 +861,7 @@ apply (raw_tactic \<open>resolve_tac @{context} (
          apply (rule prod.rel_refl_strong)
           apply (drule trans[OF Int_commute])
        apply (unfold disjoint_iff)[1]
-       apply (rule not_in_imsupp_same[symmetric])
+       apply (rule not_in_imfvars_same[symmetric])
        apply (erule allE)+
        apply (rotate_tac -1)
        apply (erule impE)
@@ -849,14 +929,14 @@ print_theorems
 
 lemma provided_strong:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a" and \<Gamma>::"('a \<times> \<tau>) fset"
-  shows "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> x \<sharp> \<Gamma> \<longleftrightarrow> f x \<sharp> map_prod f id |`| \<Gamma>"
+  shows "bij f \<Longrightarrow> |fvars f| <o |UNIV::'a set| \<Longrightarrow> x \<sharp> \<Gamma> \<longleftrightarrow> f x \<sharp> map_prod f id |`| \<Gamma>"
   apply (rule iffI)
    apply (rule provided)
   apply assumption+
   apply (drule provided[rotated -1])
     apply (rule bij_imp_bij_inv)
   apply assumption
-  apply (rule supp_inv_bound)
+  apply (rule fvars_inv_bound)
   apply assumption+
   unfolding inv_simp1 fset.map_comp comp_def prod.map_comp id_def
   unfolding id_def[symmetric] prod.map_id fset.map_id
@@ -949,7 +1029,7 @@ apply (rule terms_pre.UNION_bound)
          apply (rule prod.rel_refl_strong)
   apply (drule trans[OF Int_commute])
        apply (unfold disjoint_iff)[1]
-    apply (rule not_in_imsupp_same[symmetric])
+    apply (rule not_in_imfvars_same[symmetric])
     apply (erule allE)+
     apply (rotate_tac -1)
     apply (erule impE)
@@ -973,7 +1053,7 @@ apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
          apply (rule prod.rel_refl_strong)
   apply (drule trans[OF Int_commute])
        apply (unfold disjoint_iff)[1]
-     apply (rule not_in_imsupp_same[symmetric])
+     apply (rule not_in_imfvars_same[symmetric])
      apply (rotate_tac -1)
      apply (erule allE)
      apply (erule impE)
@@ -1058,7 +1138,7 @@ next
   then show ?case unfolding terms.subst(2)[OF SSupp_upd_VVr_bound, symmetric] .
 next
   case (Abs y \<tau>\<^sub>1 e \<Gamma> \<tau>)
-  then have 1: "y \<notin> IImsupp (VVr(x:=v))" by (simp add: IImsupp_def SSupp_def)
+  then have 1: "y \<notin> IImfvars (VVr(x:=v))" by (simp add: IImfvars_def SSupp_def)
   have "y \<notin> \<Union>(Basic_BNFs.fsts ` fset (\<Gamma>,x:\<tau>'))" using Abs(1) unfolding fresh_def by auto
   then obtain \<tau>\<^sub>2 where 2: "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" "\<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2)" using Abs(3) Ty_AbsE' by metis
   moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" by blast

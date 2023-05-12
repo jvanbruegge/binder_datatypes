@@ -9,7 +9,7 @@ assumes "largeEnough (undefined::'a)"
 
 (* General infrastructure: *)
 consts small :: "('a::largeEnough) set \<Rightarrow> bool" (* small/bounded sets *)
-consts ssbij :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> bool" (* small-support bijections *)
+consts ssbij :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> bool" (* small-fvarsort bijections *)
 
 axiomatization where 
 ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
@@ -20,7 +20,9 @@ ssbij_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau
 and 
 ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>)"
 and 
-small_ssbij: "\<And> A B. small A \<Longrightarrow> small B \<Longrightarrow> \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> A = {} \<and> (\<forall>b\<in>B. \<sigma> b = b)"
+small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> 
+   \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'-A. \<sigma> a = a)"
+ 
 
 lemma ssbij_invL: "ssbij \<sigma> \<Longrightarrow> \<sigma> o inv \<sigma> = id"
 by (meson bij_is_surj ssbij_bij surj_iff)
@@ -35,25 +37,25 @@ using ssbij_invR pointfree_idE by fastforce
 
 typedecl 'a T (* term-like entities *)
 consts Tmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a T \<Rightarrow> 'a T"
-consts Tsupp :: "('a::largeEnough) T \<Rightarrow> 'a set"
+consts Tfvars :: "('a::largeEnough) T \<Rightarrow> 'a set"
 
 typedecl 'a V (* variable-binding entities (essentially, binders) *)
 consts Vmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a V \<Rightarrow> 'a V"
-consts Vsupp :: "('a::largeEnough) V \<Rightarrow> 'a set"
+consts Vfvars :: "('a::largeEnough) V \<Rightarrow> 'a set"
 
 typedecl 'a P (* parameters *)
-consts Psupp :: "('a::largeEnough) P \<Rightarrow> 'a set"
+consts Pfvars :: "('a::largeEnough) P \<Rightarrow> 'a set"
 
 axiomatization where 
 Tmap_id: "Tmap id = id"
 and 
 Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
 and 
-small_Tsupp: "\<And>t. small (Tsupp t)" 
+small_Tfvars: "\<And>t. small (Tfvars t)" 
 and 
-Tmap_Tsupp: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tsupp (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
+Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
-Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
+Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
 
 lemma Tmap_comp': "\<And>\<sigma> \<tau> t. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
 using Tmap_comp by fastforce
@@ -63,15 +65,15 @@ Vmap_id: "Vmap id = id"
 and 
 Vmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
 and 
-small_Vsupp: "\<And>v. small (Vsupp v)" 
+small_Vfvars: "\<And>v. small (Vfvars v)" 
 and 
-Vmap_Vsupp: "\<And>v \<sigma>. ssbij \<sigma> \<Longrightarrow> Vsupp (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vsupp v)"
+Vmap_Vfvars: "\<And>v \<sigma>. ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
 
 lemma Vmap_comp': "\<And>\<sigma> \<tau> v. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) v = Vmap \<sigma> (Vmap \<tau> v)"
 using Vmap_comp by fastforce
 
 axiomatization where  
-small_Psupp: "\<And>p. small (Psupp p)" 
+small_Pfvars: "\<And>p. small (Pfvars p)" 
 
 
 (* *)
@@ -79,83 +81,90 @@ small_Psupp: "\<And>p. small (Psupp p)"
 consts G :: "('a T \<Rightarrow> bool) \<Rightarrow> ('a::largeEnough) T \<Rightarrow> 'a V \<Rightarrow> bool"
 
 axiomatization where 
+G_mono[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<Longrightarrow> G R' t v"
+and 
 G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
 and 
 (*
-INterestingly, not needed: 
-G_fresh: "\<And>R t v. G R t v \<Longrightarrow> Vsupp v \<inter> Tsupp t = {}"
+This was too strong (e.g., would not be true for disjuncts in the definition of G 
+that do not deal with bound variables; also different bound variables for different disjoints 
+could not be added to the top, to form a single var-structure v ): 
+G_fresh: "\<And>R t v. G R t v \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
 and 
 *)
-G_mono[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<longrightarrow> G R' t v"
+(* "Operational" intuition for this next axiom: 
+If a disjunct refers to the given variables, then these are fresh for t;
+if it does not, then there is no dependency on that variable. 
+*)
+G_var_equiv: "\<And>\<rho> R t v. (\<forall>a \<in> Tfvars t - Vfvars v. \<rho> a = a) \<Longrightarrow> ssbij \<rho> \<Longrightarrow> G R t v \<Longrightarrow> G R t (Vmap \<rho> v)"
 
 (* *)
+
+lemma G_mono'[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<longrightarrow> G R' t v"
+  using G_mono by auto
 
 inductive I :: "('a::largeEnough) T \<Rightarrow> bool" where 
 G_I_intro: "G I t v \<Longrightarrow> I t"
 
+thm nitpick_unfold(143)
+lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R t v)"
+  using nitpick_unfold(143) by auto
+
 lemma I_equiv: 
 assumes "I t" and "ssbij \<sigma>"
 shows "I (Tmap \<sigma> t)"
-using assms apply induct  
-by (smt (z3) G_I_intro G_mono IntI Tmap_cong_id emptyE empty_subsetI imageI le_boolI' le_funI small_Tsupp small_ssbij)
+using assms apply induct  (* SL-generated proof: *)
+proof -
+  fix ta :: "'a T" and v :: "'a V"
+  assume a1: "G (\<lambda>x. I x \<and> (ssbij \<sigma> \<longrightarrow> I (Tmap \<sigma> x))) ta v"
+  have "(\<lambda>t. I (Tmap (inv \<sigma>) t) \<and> (ssbij \<sigma> \<longrightarrow> I (Tmap \<sigma> (Tmap (inv \<sigma>) t)))) \<le> I"
+    by (smt (z3) Tmap_comp' Tmap_id assms(2) id_apply predicate1I ssbij_inv ssbij_invL)
+  then show "I (Tmap \<sigma> ta)"
+    using a1 G_I_intro G_equiv G_mono assms(2) by blast
+qed 
 
 (* Barendregt-enhanced (strong) induction: *)
 lemma BE_induct: 
 assumes I: "I (t::('a::largeEnough) T)"
-and strong: "\<And> p t v. Vsupp v \<inter> Psupp p = {} \<and> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v \<Longrightarrow> R p t"
+and strong: "\<And> p t v. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v \<Longrightarrow> R p t"
 shows "R p t"
 proof-
   {fix \<sigma>::"'a\<Rightarrow>'a" assume \<sigma>: "ssbij \<sigma>"
    have "R p (Tmap \<sigma> t)"
    using I \<sigma> proof(induct arbitrary: \<sigma> p)
-   fix t and v and \<sigma>::"'a\<Rightarrow>'a" and p 
-   assume G: "G (\<lambda>t'. I t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) t v" and \<sigma>: "ssbij \<sigma>" 
+     fix t and v and \<sigma>::"'a\<Rightarrow>'a" and p 
+     assume G: "G (\<lambda>t'. I t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) t v" and \<sigma>: "ssbij \<sigma>" 
 
-   define v' where v': "v' \<equiv> Vmap \<sigma> v"
+     define v' where v': "v' \<equiv> Vmap \<sigma> v"
 
-   obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vsupp v') \<inter> Vsupp v' = {}" and 
-   "\<forall>a \<in> Tsupp (Tmap \<sigma> t) \<union> Psupp p. \<rho> a = a"  
-   	 using small_Vsupp small_Tsupp small_ssbij  
-   	 by (metis Int_Un_eq(2) Int_iff all_not_in_conv image_eqI small_Psupp)
-   hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t"  
-     by (simp add: Tmap_cong_id)
-   hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
-   	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>)
+     obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vfvars v') \<inter> Pfvars p = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t) - Vfvars v'. \<rho> a = a"
+     by (meson small_Pfvars small_Tfvars small_Vfvars small_ssbij)
 
-   have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" by (simp add: \<rho>(1) \<sigma> ssbij_comp)
-
-   define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
-   have ss_\<sigma>'': "ssbij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv by blast
+     have fresh_p: "Vfvars (Vmap \<rho> v') \<inter> Pfvars p = {}"  
+     using Vmap_Vfvars \<rho>(1) \<rho>(2) by blast  
    
-   have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
-   unfolding \<sigma>'' using \<rho>\<sigma> ssbij_invL by auto 
+     have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma> t'))) t v" 
+     apply(rule G_mono[OF _ G]) using \<sigma> by auto
+     hence G: "G (\<lambda>t'. I (Tmap \<sigma> t') \<and> (\<forall>p'. R p' (Tmap \<sigma> t'))) t v" 
+     using I_equiv[OF _ \<sigma>] by (metis (mono_tags, lifting) G_mono predicate1I)
+     have G: "G (\<lambda>t'. I (Tmap \<sigma> (Tmap (inv \<sigma>) t')) \<and> 
+                   (\<forall>p'. R p' (Tmap \<sigma> (Tmap (inv \<sigma>) t')))) (Tmap \<sigma> t) (Vmap \<sigma> v)" 
+     using G_equiv[OF \<sigma> G] .
+     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) v'" 
+     unfolding v'
+     apply(rule G_mono[OF _ G])   
+     by auto (metis Tmap_comp' Tmap_id \<sigma> id_apply ssbij_inv ssbij_invL)+
+     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) (Vmap \<rho> v')"
+     using G_var_equiv[OF \<rho>(3,1) G] .
    
-   have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t v" 
-   apply(rule G_mono[rule_format, OF _ G]) using ss_\<sigma>'' by auto
-   hence G: "G (\<lambda>t'. I (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t v" 
-   using I_equiv[OF _ ss_\<sigma>''] by (metis (mono_tags, lifting) G_mono predicate1I)
-  have G: "G (\<lambda>t'. I (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> 
-                   (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) (Tmap (\<rho> o \<sigma>) t) (Vmap (\<rho> o \<sigma>) v)" 
-   using G_equiv[OF \<rho>\<sigma> G] .
-   have G: "G (\<lambda>t'. I (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) (Tmap \<sigma> t) (Vmap \<rho> v')" 
-     unfolding v' Vmap_comp'[symmetric, OF \<rho>(1) \<sigma>] 0[symmetric] apply(rule G_mono[rule_format, OF _ G])  
-     apply auto by (metis "1" Tmap_comp' \<sigma>'' ss_\<sigma>'' ssbij_inv)+
-   have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) (Vmap \<rho> v')" 
-   apply(rule G_mono[rule_format, OF _ G]) 
-   by (simp add: Tmap_id)
-   
-   have vv': "Vsupp (Vmap \<rho> v') \<inter> Psupp p = {}"  
-     using small_Psupp small_ssbij by fastforce  
-
-   show "R p (Tmap \<sigma> t)"
-   apply(rule strong[of "Vmap \<rho> v'"], intro conjI)
-     subgoal by fact
-     subgoal by fact .
-   qed
+     show "R p (Tmap \<sigma> t)" using strong[OF fresh_p G] . 
+  qed
   }
   from this[of id] show ?thesis 
   by (simp add: Tmap_id ssbij_id)
 qed
+
+
 
 
 

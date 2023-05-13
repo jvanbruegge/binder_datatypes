@@ -20,8 +20,8 @@ ssbij_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau
 and 
 ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>)"
 and 
-small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> 
-   \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'-A. \<sigma> a = a)"
+small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> 
+   \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
  
 
 lemma ssbij_invL: "ssbij \<sigma> \<Longrightarrow> \<sigma> o inv \<sigma> = id"
@@ -96,7 +96,10 @@ and
 If a disjunct refers to the given variables, then these are fresh for t;
 if it does not, then there is no dependency on that variable. 
 *)
+(*
 G_var_equiv: "\<And>\<rho> R t v. (\<forall>a \<in> Tfvars t - Vfvars v. \<rho> a = a) \<Longrightarrow> ssbij \<rho> \<Longrightarrow> G R t v \<Longrightarrow> G R t (Vmap \<rho> v)"
+*)
+G_fresh: "\<And>R t v. G R t v \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
 
 (* *)
 
@@ -137,25 +140,41 @@ proof-
 
      define v' where v': "v' \<equiv> Vmap \<sigma> v"
 
-     obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vfvars v') \<inter> Pfvars p = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t) - Vfvars v'. \<rho> a = a"
+     have "Vfvars v' \<inter> Tfvars (Tmap \<sigma> t) = {}" 
+     unfolding v' using G_fresh[OF G_equiv[OF \<sigma> G]] .
+
+     then obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vfvars v') \<inter> Pfvars p = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
      by (meson small_Pfvars small_Tfvars small_Vfvars small_ssbij)
 
      have fresh_p: "Vfvars (Vmap \<rho> v') \<inter> Pfvars p = {}"  
-     using Vmap_Vfvars \<rho>(1) \<rho>(2) by blast  
+       using Vmap_Vfvars \<rho>(1) \<rho>(2) by blast 
+
+     hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t" 
+     using Tmap_cong_id[OF \<rho>(1,3)] by blast
+     hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
+   	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>)
+
+     have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" by (simp add: \<rho>(1) \<sigma> ssbij_comp)
+
+     define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
+     have ss_\<sigma>'': "ssbij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv by blast
    
-     have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma> t'))) t v" 
-     apply(rule G_mono[OF _ G]) using \<sigma> by auto
-     hence G: "G (\<lambda>t'. I (Tmap \<sigma> t') \<and> (\<forall>p'. R p' (Tmap \<sigma> t'))) t v" 
-     using I_equiv[OF _ \<sigma>] by (metis (mono_tags, lifting) G_mono predicate1I)
-     have G: "G (\<lambda>t'. I (Tmap \<sigma> (Tmap (inv \<sigma>) t')) \<and> 
-                   (\<forall>p'. R p' (Tmap \<sigma> (Tmap (inv \<sigma>) t')))) (Tmap \<sigma> t) (Vmap \<sigma> v)" 
-     using G_equiv[OF \<sigma> G] .
-     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) v'" 
-     unfolding v'
-     apply(rule G_mono[OF _ G])   
-     by auto (metis Tmap_comp' Tmap_id \<sigma> id_apply ssbij_inv ssbij_invL)+
-     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) (Vmap \<rho> v')"
-     using G_var_equiv[OF \<rho>(3,1) G] .
+     have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
+     unfolding \<sigma>''  
+     using \<rho>\<sigma> ssbij_invL by auto  
+   
+     have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t v" 
+     apply(rule G_mono[rule_format, OF _ G]) using ss_\<sigma>'' by auto
+     hence G: "G (\<lambda>t'. I (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t v" 
+     using I_equiv[OF _ ss_\<sigma>''] by (metis (mono_tags, lifting) G_mono predicate1I)
+     have G: "G (\<lambda>t'. I (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) (Tmap (\<rho> o \<sigma>) t) (Vmap (\<rho> o \<sigma>) v)" 
+     using G_equiv[OF \<rho>\<sigma> G] .
+     have G: "G (\<lambda>t'. I (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) (Tmap \<sigma> t) (Vmap \<rho> v')" 
+     unfolding v' Vmap_comp'[symmetric, OF \<rho>(1) \<sigma>] 0[symmetric] apply(rule G_mono[rule_format, OF _ G])
+     apply auto by (metis "1" Tmap_comp' \<rho>\<sigma> ss_\<sigma>'' ssbij_inv)+  
+     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) (Vmap \<rho> v')" 
+     apply(rule G_mono[rule_format, OF _ G]) 
+     by (simp add: Tmap_id)
    
      show "R p (Tmap \<sigma> t)" using strong[OF fresh_p G] . 
   qed

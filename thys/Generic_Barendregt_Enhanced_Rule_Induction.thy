@@ -2,14 +2,14 @@ theory Generic_Barendregt_Enhanced_Rule_Induction
 imports Main
 begin 
 
-consts laregeEnough :: "'a \<Rightarrow> bool"
+consts largeEnough :: "'a \<Rightarrow> bool"
 
-class largeEnough =
+class largeEnough = 
 assumes "largeEnough (undefined::'a)"
 
 (* General infrastructure: *)
 consts small :: "('a::largeEnough) set \<Rightarrow> bool" (* small/bounded sets *)
-consts ssbij :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> bool" (* small-fvarsort bijections *)
+consts ssbij :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> bool" (* small-support bijections *)
 
 axiomatization where 
 small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
@@ -54,7 +54,7 @@ and
 Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
 and 
 small_Tfvars: "\<And>t. small (Tfvars t)" 
-and 
+and (* the weaker, inclusion-based version is sufficient (and similarly for V): *)
 Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
 Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
@@ -63,8 +63,8 @@ lemma Tmap_comp': "\<And>\<sigma> \<tau> t. ssbij \<sigma> \<Longrightarrow> ssb
 using Tmap_comp by fastforce
 
 axiomatization where 
-Vmap_id: "Vmap id = id"
-and 
+(* : "Vmap id = id" (not needed)
+and *)
 Vmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
 and 
 small_Vfvars: "\<And>v. small (Vfvars v)" 
@@ -113,6 +113,7 @@ thm nitpick_unfold(143)
 lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
   using nitpick_unfold(143) by auto
 
+(*  Not needed: 
 lemma I_equiv: 
 assumes "I t" and "ssbij \<sigma>"
 shows "I (Tmap \<sigma> t)"
@@ -127,6 +128,7 @@ using assms proof induct
     by auto (metis Tmap_comp' Tmap_id id_apply ssbij_inv ssbij_invL)
   thus ?case by(subst I.simps, auto)
 qed
+*)
 
 inductive I' :: "('a::largeEnough) T \<Rightarrow> bool" where 
 G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"
@@ -148,12 +150,11 @@ using assms proof induct
 qed
 
 
-
-(* NB: This could replace G_fresh in the axiomatization. 
+(* NB: The following could replace G_fresh in the axiomatization. 
 It has the advantage that it is weaker, but also two disadvantages:
 -- it depends on the "auxiliary" defined predicate I'
--- the dependency on I' seems truly inessentially, in that in concrete cases 
-all that is need to check that is the equivariance of I'
+-- the dependency on I' seems truly inessential, in that in concrete cases 
+all that one needs to use is the equivariance of I'
  *)
 lemma G_fresh_I': 
 "\<And>v t. G I' v t \<Longrightarrow> \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G I' w t"
@@ -164,7 +165,6 @@ apply(induct rule: I.induct)
 apply(subst I'.simps) 
 by auto (metis (no_types, lifting) G_fresh_I' G_mono' predicate1I)
 
-
 lemma I_eq_I': "I = I'"
 apply(rule ext)
 subgoal for t
@@ -174,7 +174,6 @@ apply(rule iffI)
   by (smt (verit) G_mono' I.simps predicate1I) . .
   
   
-
 (* Barendregt-enhanced (strong) induction. 
 NB: we get freshness for t as well, as a bonus (even though the inductive definition of I 
 needs not guarantee that -- see again the case of beta-reduction)
@@ -189,7 +188,8 @@ proof-
    have "R p (Tmap \<sigma> t)"
    using I \<sigma> unfolding I_eq_I' proof(induct arbitrary: \<sigma> p)
      fix v t and \<sigma>::"'a\<Rightarrow>'a" and p 
-     assume vt: "Vfvars v \<inter> Tfvars t = {}"
+     assume vt: "Vfvars v \<inter> Tfvars t = {}" (* this additional vt assumption is what we have gained 
+     by transitioning from I to I', whose inductive definition has this freshness side-condition *)
      and G: "G (\<lambda>t'. I' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) v t" and \<sigma>: "ssbij \<sigma>" 
 
      define v' where v': "v' \<equiv> Vmap \<sigma> v"

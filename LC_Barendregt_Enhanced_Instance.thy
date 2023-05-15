@@ -280,18 +280,22 @@ sorry
 (* AN EXAMPLE INDUCTIVE DEFINITION *)
 (* (a reduced form of) small step semantics *) 
 
-inductive step :: "'a::var_term_pre term \<times> 'a term \<Rightarrow> bool" where
-  Beta: "step (App (Abs x e) e2, tvsubst (VVr(x:=e2)) e)"
-| AppL: "step (e1,e1') \<Longrightarrow> step (App e1 e2, App e1' e2)"
-| Xi: "step (e,e') \<Longrightarrow> step (Abs x e, Abs x e')"
+inductive step :: "'a::var_term_pre term \<Rightarrow> 'a term \<Rightarrow> bool" where
+  Beta: "step (App (Abs x e) e2) (tvsubst (VVr(x:=e2)) e)"
+| AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
+| Xi: "step e e' \<Longrightarrow> step (Abs x e) (Abs x e')"
 
 lemmas step_def = nitpick_unfold(173)
+
+lemma lfp_curry2: "lfp (\<lambda>p x1 x2. F p x1 x2) x1 x2 = lfp (\<lambda>q (x1,x2). F (\<lambda>x1 x2. q (x1,x2)) x1 x2) (x1,x2)"
+sorry
 
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
 type_synonym 'a T = "'a term \<times> 'a term"
-type_synonym 'a V = "'a list"
+type_synonym 'a V = "'a list" (* in this case, could have also taken to be 'a option; 
+and the most uniform approach would have been 'a + unit + 'a *)
 
 definition "small (A::'a set) \<equiv> |A| <o |UNIV::'a set|" 
 definition "ssbij f \<equiv> bij f \<and> small (supp (f::'a::var_term_pre \<Rightarrow> 'a))" 
@@ -317,9 +321,17 @@ where
          \<or>
          (\<exists>x e e'. v = [x] \<and> fst t = Abs x e \<and> snd t = Abs x e' \<and> R (e,e'))"
 
-lemma step_G: "step = lfp (\<lambda>R t. \<exists>v. G R v t)" 
-  unfolding step_def G_def apply(rule arg_cong[of _ _  lfp])
-  unfolding fun_eq_iff by simp (smt (verit))
+definition "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
+
+lemma step_I: "step t1 t2 = I (t1,t2)" 
+  unfolding step_def I_def unfolding lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+  unfolding fun_eq_iff G_def apply safe
+    subgoal by auto
+    subgoal by auto
+    subgoal by auto
+    subgoal by auto
+    subgoal by auto
+    subgoal by auto .
 
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
@@ -400,9 +412,9 @@ axiomatization where
 small_Pfvars: "\<And>p. small (Pfvars p)" 
 
 theorem BE_induct: 
-assumes I: "step (t::('a::var_term_pre) T)"
+assumes I: "I (t::('a::var_term_pre) T)"
 and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
-      G (\<lambda>t'. step t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
+      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
 shows "R p t"
 sorry
 
@@ -419,13 +431,16 @@ subgoal premises p using p(1) apply(induct arbitrary: p rule: step.induct)
 using p(2-) by auto .
 *)
 
-corollary BE_induct_step: "step t \<Longrightarrow>
-(\<And>x e e2 p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> R p (App (Abs x e) e2, tvsubst (VVr(x := e2)) e)) \<Longrightarrow>
-(\<And>e1 e1' e2 p. step (e1, e1') \<Longrightarrow> (\<forall>p'. R p' (e1, e1')) \<Longrightarrow> R p (App e1 e2, App e1' e2)) \<Longrightarrow> 
-(\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> step (e, e') \<Longrightarrow> (\<forall>p'. R p' (e, e')) \<Longrightarrow> R p (Abs x e, Abs x e')) \<Longrightarrow> 
- R p t"
-apply(erule BE_induct)
-unfolding G_def by auto
+corollary BE_induct_step: "step t1 t2 \<Longrightarrow>
+(\<And>x e e2 p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> R p (App (Abs x e) e2) (tvsubst (VVr(x := e2)) e)) \<Longrightarrow>
+(\<And>e1 e1' e2 p. step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> R p (App e1 e2) (App e1' e2)) \<Longrightarrow> 
+(\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Abs x e) (Abs x e')) \<Longrightarrow> 
+ R p t1 t2"
+unfolding step_I
+apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
+  subgoal by auto
+  subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  unfolding G_def by auto .
       
 
 end

@@ -1,17 +1,22 @@
 theory Generic_Barendregt_Enhanced_Rule_Induction
-imports Main
+imports Main "MRBNF_Recursor"
 begin 
 
-consts largeEnough :: "'a \<Rightarrow> bool"
+(* consts largeEnough :: "'a \<Rightarrow> bool"
 
 class largeEnough = 
-assumes "largeEnough (undefined::'a)"
+assumes "largeEnough (undefined::'a)" *)
 
 (* General infrastructure: *)
-consts small :: "('a::largeEnough) set \<Rightarrow> bool" (* small/bounded sets *)
-consts ssbij :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> bool" (* small-support bijections *)
+typedecl AA 
+axiomatization where AA: "infinite (UNIV::AA set) \<and> regularCard |UNIV::AA set|"
 
-axiomatization where 
+definition small :: "AA set \<Rightarrow> bool" where 
+"small A \<equiv> |A| <o |UNIV::AA set|"(* small/bounded sets *)
+definition ssbij :: "(AA \<Rightarrow> AA) \<Rightarrow> bool" (* small-support bijections *) where 
+"ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::AA set|"
+
+lemma 
 small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
 and 
 ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
@@ -24,7 +29,7 @@ ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>
 and 
 small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> 
    \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
- 
+sorry
 
 lemma ssbij_invL: "ssbij \<sigma> \<Longrightarrow> \<sigma> o inv \<sigma> = id"
 by (meson bij_is_surj ssbij_bij surj_iff)
@@ -37,16 +42,16 @@ lemma ssbij_invR': "ssbij \<sigma> \<Longrightarrow> inv \<sigma> (\<sigma> a) =
 using ssbij_invR pointfree_idE by fastforce
 
 
-typedecl 'a T (* term-like entities *)
-consts Tmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a T \<Rightarrow> 'a T"
-consts Tfvars :: "('a::largeEnough) T \<Rightarrow> 'a set"
+typedecl TT (* term-like entities *)
+consts Tmap :: "(AA \<Rightarrow> AA) \<Rightarrow> TT \<Rightarrow> TT"
+consts Tfvars :: "TT \<Rightarrow> AA set"
 
-typedecl 'a V (* variable-binding entities (essentially, binders) *)
-consts Vmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a V \<Rightarrow> 'a V"
-consts Vfvars :: "('a::largeEnough) V \<Rightarrow> 'a set"
+typedecl VV (* variable-binding entities (essentially, binders) *)
+consts Vmap :: "(AA \<Rightarrow> AA) \<Rightarrow> VV \<Rightarrow> VV"
+consts Vfvars :: "VV \<Rightarrow> AA set"
 
-typedecl 'a P (* parameters *)
-consts Pfvars :: "('a::largeEnough) P \<Rightarrow> 'a set"
+typedecl PP (* parameters *)
+consts Pfvars :: "PP \<Rightarrow> AA set"
 
 axiomatization where 
 Tmap_id: "Tmap id = id"
@@ -79,13 +84,13 @@ small_Pfvars: "\<And>p. small (Pfvars p)"
 
 lemma Vfvars_Tfvars_disj: "ssbij \<sigma> \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<inter> Tfvars (Tmap \<sigma> t) = {}"
 apply(frule Vmap_Vfvars[of _ v]) apply(frule Tmap_Tfvars[of _ t])  
-apply(drule ssbij_bij)  
+apply(drule ssbij_bij)    
 by auto (metis Int_iff bij_inv_eq_iff emptyE imageE insert_absorb insert_subset)
 
 
 (* *)
 
-consts G :: "('a T \<Rightarrow> bool) \<Rightarrow> 'a V \<Rightarrow> ('a::largeEnough) T \<Rightarrow> bool"
+consts G :: "(TT \<Rightarrow> bool) \<Rightarrow> VV \<Rightarrow> TT \<Rightarrow> bool"
 
 axiomatization where 
 G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
@@ -106,7 +111,7 @@ axiomatization where G_fresh:
 lemma G_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> G R v t \<longrightarrow> G R' v t"
   using G_mono by blast
 
-inductive I :: "('a::largeEnough) T \<Rightarrow> bool" where 
+inductive I :: "TT \<Rightarrow> bool" where 
 G_I_intro: "G I v t \<Longrightarrow> I t"
 
 thm nitpick_unfold(143)
@@ -132,7 +137,7 @@ qed
 (* *)
 *)
 
-inductive I' :: "('a::largeEnough) T \<Rightarrow> bool" where 
+inductive I' :: "TT \<Rightarrow> bool" where 
 G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"
 
 lemma I'_equiv: 
@@ -181,15 +186,15 @@ NB: we get freshness for t as well, as a bonus (even though the inductive defini
 needs not guarantee that -- see again the case of beta-reduction)
  *)
 theorem BE_induct: 
-assumes I: "I (t::('a::largeEnough) T)"
+assumes I: "I (t::TT)"
 and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
       G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
 shows "R p t"
 proof- 
-  {fix \<sigma>::"'a\<Rightarrow>'a" assume \<sigma>: "ssbij \<sigma>"
+  {fix \<sigma> assume \<sigma>: "ssbij \<sigma>"
    have "R p (Tmap \<sigma> t)"
    using I \<sigma> unfolding I_eq_I' proof(induct arbitrary: \<sigma> p)
-     fix v t and \<sigma>::"'a\<Rightarrow>'a" and p 
+     fix v t \<sigma> p 
      assume vt: "Vfvars v \<inter> Tfvars t = {}" (* this additional vt assumption is what we have gained 
      by transitioning from I to I', whose inductive definition has this freshness side-condition *)
      and G: "G (\<lambda>t'. I' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) v t" and \<sigma>: "ssbij \<sigma>" 

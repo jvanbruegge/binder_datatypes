@@ -113,6 +113,7 @@ thm nitpick_unfold(143)
 lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
   using nitpick_unfold(143) by auto
 
+(*
 (*  Not needed: *) 
 lemma I_equiv: 
 assumes "I t" and "ssbij \<sigma>"
@@ -129,6 +130,7 @@ using assms proof induct
   thus ?case by(subst I.simps, auto)
 qed
 (* *)
+*)
 
 inductive I' :: "('a::largeEnough) T \<Rightarrow> bool" where 
 G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"

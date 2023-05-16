@@ -294,11 +294,8 @@ sorry
 
 type_synonym 'a T = "'a term \<times> 'a term"
 type_synonym 'a V = "'a list" (* in this case, could have also taken to be 'a option; 
-<<<<<<< HEAD
 and the most uniform approach would have been 'a + unit + 'a + 'a *)
-=======
-and the most uniform approach would have been 'a + unit + 'a *)
->>>>>>> 757d85dd4e95e11f963395ef84930411fb88ab5d
+
 
 definition "small (A::'a set) \<equiv> |A| <o |UNIV::'a set|" 
 definition "ssbij f \<equiv> bij f \<and> small (supp (f::'a::var_term_pre \<Rightarrow> 'a))" 
@@ -434,13 +431,9 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(rule exI[of _ "e2'"])
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
-<<<<<<< HEAD
       subgoal apply(subst tvsubst_VVr_rrename_term) apply auto apply(subst (asm) FFVars_tvsubst)
-      apply (auto split: if_splits)  by (metis FVars_VVr singletonI)
-=======
-      subgoal apply(subst tvsubst_VVr_rrename_term) apply auto sorry (* TODO: must use FFVars_term tvsubst *)
->>>>>>> 757d85dd4e95e11f963395ef84930411fb88ab5d
-      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def)  . . . .
+      apply (auto split: if_splits)  by (metis FVars_VVr singletonI) 
+      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def) . . . .
   (* *)
 
 
@@ -475,23 +468,15 @@ corollary BE_induct_step: "step t1 t2 \<Longrightarrow>
 (\<And>x e e2 p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> R p (App (Abs x e) e2) (tvsubst (VVr(x := e2)) e)) \<Longrightarrow>
 (\<And>e1 e1' e2 p. step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> R p (App e1 e2) (App e1' e2)) \<Longrightarrow> 
 (\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Abs x e) (Abs x e')) \<Longrightarrow> 
-<<<<<<< HEAD
 (\<And>x e e' e2 e2' p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
    x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
    R p (App (Abs x e) e2) (tvsubst (VVr(x := e2')) e')) \<Longrightarrow>
-=======
->>>>>>> 757d85dd4e95e11f963395ef84930411fb88ab5d
  R p t1 t2"
 unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by auto
   subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-<<<<<<< HEAD
   unfolding G_def apply auto apply(subst (asm) FFVars_tvsubst) by (auto split: if_splits) . 
 
-=======
-  unfolding G_def by auto .
->>>>>>> 757d85dd4e95e11f963395ef84930411fb88ab5d
-      
 
 end

@@ -227,16 +227,14 @@ lemma VVr_eq_Var: "VVr a = Var a"
   unfolding VVr_def Var_def comp_def \<eta>_def
   by (rule refl)
 
-lemma rrename_term_simps[simp]: 
-"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow> 
- rrename_term \<sigma> (Var a) = Var (\<sigma> a)"
-"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow> 
- rrename_term \<sigma> (App e1 e2) = App (rrename_term \<sigma> e1) (rrename_term \<sigma> e2)"
-"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow> 
- rrename_term \<sigma> (Abs a e) = Abs (\<sigma> a) (rrename_term \<sigma> e)"
-sorry
+
+(* *)
+
+lemmas rrename_simps[simp] 
+
 
 find_theorems tvsubst 
+
 lemma rrename_term_tvsubst: "bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>  
      |SSupp \<tau>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>
      rrename_term \<sigma> (tvsubst \<tau> e) = tvsubst (rrename_term \<sigma> \<circ> \<tau>) (rrename_term \<sigma> e)"
@@ -281,9 +279,10 @@ sorry
 (* (a reduced form of) small step semantics *) 
 
 inductive step :: "'a::var_term_pre term \<Rightarrow> 'a term \<Rightarrow> bool" where
-  Beta: "step (App (Abs x e) e2) (tvsubst (VVr(x:=e2)) e)"
+  Beta: "step (App (Abs x e1) e2) (tvsubst (VVr(x:=e2)) e1)"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | Xi: "step e e' \<Longrightarrow> step (Abs x e) (Abs x e')"
+|PBeta: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App (Abs x e1) e2) (tvsubst (VVr(x:=e2')) e1')"
 
 lemmas step_def = nitpick_unfold(173)
 
@@ -319,18 +318,23 @@ where
          \<or>
          (\<exists>e1 e1' e2. v = [] \<and> fst t = App e1 e2 \<and> snd t = App e1' e2 \<and> R (e1,e1')) 
          \<or>
-         (\<exists>x e e'. v = [x] \<and> fst t = Abs x e \<and> snd t = Abs x e' \<and> R (e,e'))"
+         (\<exists>x e e'. v = [x] \<and> fst t = Abs x e \<and> snd t = Abs x e' \<and> R (e,e'))
+         \<or>
+         (\<exists>x e1 e1' e2 e2'. v = [x] \<and> fst t = App (Abs x e1) e2 \<and> snd t = tvsubst (VVr(x := e2')) e1' \<and> 
+            R (e1,e1') \<and> R (e2,e2'))"
 
 definition "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
 
 lemma step_I: "step t1 t2 = I (t1,t2)" 
   unfolding step_def I_def unfolding lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
   unfolding fun_eq_iff G_def apply safe
+    subgoal apply simp by metis
     subgoal by auto
     subgoal by auto
+    subgoal apply simp by metis
     subgoal by auto
     subgoal by auto
-    subgoal by auto
+    subgoal apply simp by metis
     subgoal by auto .
 
 
@@ -355,12 +359,21 @@ unfolding G_def subgoal for \<sigma> R v t apply(elim disjE)
   apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
   by (simp add: term.rrename_comps) . . 
   (* *)
-  subgoal apply(rule disjI2, rule disjI2)
+  subgoal apply(rule disjI2, rule disjI2, rule disjI1)
   subgoal apply(elim exE) subgoal for x e e'
   apply(rule exI[of _ "\<sigma> x"])
   apply(rule exI[of _ "rrename_term \<sigma> e"]) apply(rule exI[of _ "rrename_term \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
-  by (simp add: term.rrename_comps) . . . .
+  by (simp add: term.rrename_comps) . . 
+  (* *)
+  subgoal apply(rule disjI2, rule disjI2, rule disjI2)
+  subgoal apply(elim exE) subgoal for x e1 e1' e2 e2'
+  apply(rule exI[of _ "\<sigma> x"])
+  apply(rule exI[of _ "rrename_term \<sigma> e1"]) apply(rule exI[of _ "rrename_term \<sigma> e1'"]) 
+  apply(rule exI[of _ "rrename_term \<sigma> e2"]) apply(rule exI[of _ "rrename_term \<sigma> e2'"]) 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply (simp add: term.rrename_comps) apply(subst rrename_term_tvsubst) by auto . . . .
+  
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
 by (metis Abs_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
@@ -381,6 +394,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst tvsubst_VVr_rrename_term) by auto . .
+  (* *)
   subgoal for xx e1 e1' e2
   apply(rule exI[of _ "[]"])  
   apply(rule conjI)
@@ -390,18 +404,35 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(rule exI[of _ "e1'"])
     apply(rule exI[of _ "e2"]) 
     apply(cases t)  apply simp . .
+  (* *)
   subgoal for xx x e e'
   apply(rule exI[of _ "[xx]"])  
   apply(rule conjI)
     subgoal unfolding ssbij_def small_def Vmap_def by auto 
-    subgoal apply(rule disjI2, rule disjI2) 
+    subgoal apply(rule disjI2, rule disjI2, rule disjI1) 
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e'"])
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def) . . . .
+      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def) . . 
+  (* *)
+  subgoal for xx x e1 e1' e2 e2'
+  apply(rule exI[of _ "[xx]"])  
+  apply(rule conjI)
+    subgoal unfolding ssbij_def small_def Vmap_def by auto 
+    subgoal apply(rule disjI2, rule disjI2, rule disjI2)
+    apply(rule exI[of _ "xx"]) 
+    apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1"])
+    apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1'"])
+    apply(rule exI[of _ "e2"])
+    apply(rule exI[of _ "e2'"])
+    apply(cases t)  apply simp apply(intro conjI)
+      subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst tvsubst_VVr_rrename_term) apply auto sorry (* TODO: must use FFVars_term tvsubst *)
+      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def)  . . . .
+  (* *)
 
 
 (* WHAT THE ABSTRACT SETTING GIVES US: *)

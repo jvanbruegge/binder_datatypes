@@ -113,7 +113,7 @@ thm nitpick_unfold(143)
 lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
   using nitpick_unfold(143) by auto
 
-(*  Not needed: 
+(*  Not needed: *) 
 lemma I_equiv: 
 assumes "I t" and "ssbij \<sigma>"
 shows "I (Tmap \<sigma> t)"
@@ -128,7 +128,7 @@ using assms proof induct
     by auto (metis Tmap_comp' Tmap_id id_apply ssbij_inv ssbij_invL)
   thus ?case by(subst I.simps, auto)
 qed
-*)
+(* *)
 
 inductive I' :: "('a::largeEnough) T \<Rightarrow> bool" where 
 G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"
@@ -263,7 +263,91 @@ it is "annoying" they have to assume it.
 TODO: Formalize the Urban-Berghofer-Norrish result and show that it is a particular case of this. 
 *)
 
+(* 
+theorem BE_induct2: 
+assumes I: "I (t::('a::largeEnough) T)"
+and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> 
+      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
+shows "R p t"
+proof- 
+  {fix \<sigma>::"'a\<Rightarrow>'a" assume \<sigma>: "ssbij \<sigma>"
+   have "R p (Tmap \<sigma> t)"
+   using I \<sigma> proof(induct arbitrary: \<sigma> p)
+     fix v t and \<sigma>::"'a\<Rightarrow>'a" and p 
+     assume (* vt: "Vfvars v \<inter> Tfvars t = {}" (* this additional vt assumption is what we have gained 
+     by transitioning from I to I', whose inductive definition has this freshness side-condition *)
+     and *) G: "G (\<lambda>t'. I t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) v t" and \<sigma>: "ssbij \<sigma>" 
 
+     obtain \<rho> where \<rho>: "ssbij \<rho>" and 1: "R p (Tmap \<rho> (Tmap \<sigma> t)) \<Longrightarrow> R p (Tmap \<sigma> t)" and fresh_p: "Vfvars (Vmap \<rho> v) \<inter> Pfvars p = {}" sorry
+     hence 1: "R p (Tmap (\<rho> o \<sigma>) t) \<Longrightarrow> R p (Tmap \<sigma> t)" 
+       by (simp add: Tmap_comp' \<sigma>)
+     show "R p (Tmap \<sigma> t)" 
+     apply(rule 1) apply(rule strong[OF fresh_p])
 
+     define v' where v': "v' \<equiv> Vmap \<sigma> v"
+
+     (* have v't: "Vfvars v' \<inter> Tfvars (Tmap \<sigma> t) = {}" 
+     using vt unfolding v'  
+     using Vfvars_Tfvars_disj \<sigma> by blast  *)
+     have v't: "Vfvars v' \<inter> (Tfvars (Tmap \<sigma> t) - Vfvars v') = {}" by blast
+
+     have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
+       by (simp add: small_Pfvars small_Tfvars small_Un)
+
+     have small: "small (Tfvars (Tmap \<sigma> t) - Vfvars v')" sorry
+
+     then obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vfvars v') \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t) - Vfvars v'. \<rho> a = a"
+     by (meson small_Vfvars small_p_t small_ssbij v't)  
+
+     have fresh_p: "Vfvars (Vmap \<rho> v') \<inter> Pfvars p = {}" 
+     and fresh_t: "Vfvars (Vmap \<rho> v') \<inter> Tfvars (Tmap \<sigma> t) = {}"  
+     using Vmap_Vfvars \<rho>(1) \<rho>(2) by blast+ 
+
+     (* hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t" 
+     using Tmap_cong_id[OF \<rho>(1,2)] by blast
+     hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
+   	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>) *)
+
+     have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" by (simp add: \<rho>(1) \<sigma> ssbij_comp)
+
+     define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
+     have ss_\<sigma>'': "ssbij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv by blast
+   
+     have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
+     unfolding \<sigma>'' using \<rho>\<sigma> ssbij_invL by auto  
+   
+     have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) v t" 
+     apply(rule G_mono[OF _ G]) using ss_\<sigma>'' by auto
+     hence G: "G (\<lambda>t'. I (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) v t" 
+     using I_equiv[OF _ ss_\<sigma>''] by (metis (mono_tags, lifting) G_mono predicate1I)
+     have G: "G (\<lambda>t'. I (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) 
+                (Vmap (\<rho> o \<sigma>) v) (Tmap (\<rho> o \<sigma>) t) " 
+     using G_equiv[OF \<rho>\<sigma> G] .
+     have G: "G (\<lambda>t'. I (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) 
+                (Vmap \<rho> v') (Tmap (\<rho> o \<sigma>) t) " 
+     unfolding v' Vmap_comp'[symmetric, OF \<rho>(1) \<sigma>] apply(rule G_mono[OF _ G])
+     apply auto by (metis "1" Tmap_comp' \<rho>\<sigma> ss_\<sigma>'' ssbij_inv)+  
+     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Vmap \<rho> v') (Tmap (\<rho> o \<sigma>) t)" 
+     apply(rule G_mono[OF _ G]) 
+     by (simp add: Tmap_id)
+     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Vmap \<rho> v') (Tmap \<rho> (Tmap \<sigma> t))" 
+     using G Tmap_comp' \<rho>(1) \<sigma> by fastforce
+
+     have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Vmap \<rho> v') (Tmap \<rho> tt) \<Longrightarrow> 
+           (Vfvars (Vmap \<rho> v') \<inter> Pfvars p = {}) \<Longrightarrow> 
+           (\<forall>a \<in> Tfvars tt - Vfvars v'. \<rho> a = a) \<Longrightarrow> R p (Tmap \<rho> tt) \<Longrightarrow> R p tt"
+     sorry
+
+     have "R p (Tmap \<rho> (Tmap \<sigma> t))" 
+     using strong[OF fresh_p G] .
+
+     show "R p (Tmap \<sigma> t)" 
+     using strong[OF fresh_p G]
+  qed
+  }
+  from this[of id] show ?thesis 
+  by (simp add: Tmap_id ssbij_id)
+qed
+*)
 
 end 

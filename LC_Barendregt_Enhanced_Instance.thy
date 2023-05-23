@@ -1,5 +1,6 @@
 theory LC_Barendregt_Enhanced_Instance
   imports "thys/MRBNF_Recursor" "HOL-Library.FSet" "FixedCountableVars"
+  Curry_LFP "thys/Generic_Barendregt_Enhanced_Rule_Induction"
 begin 
 
 (* binder_datatype 'a term =
@@ -37,6 +38,15 @@ let
   val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
 in lthy' end\<close>
 print_mrbnfs
+
+(* Monomorphising: *)
+instance var :: var_term_pre apply standard 
+  using Field_natLeq infinite_iff_card_of_nat infinite_var
+  by (auto simp add: regularCard_var)
+
+type_synonym trm = "var term"
+
+(* *)
 
 (* unary substitution *)
 lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
@@ -82,15 +92,15 @@ lemma singl_bound: "|{a}| <o |UNIV::'a::var_term_pre set|"
   by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]])
 
 lemma SSupp_upd_bound:
-  fixes f::"'a::var_term_pre \<Rightarrow> 'a term"
-  shows "|SSupp (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |SSupp f| <o |UNIV::'a set|"
+  fixes f::"var \<Rightarrow> trm"
+  shows "|SSupp (f (a:=t))| <o |UNIV::var set| \<longleftrightarrow> |SSupp f| <o |UNIV::var set|"
   unfolding SSupp_def
   apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
       elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF term_pre.Un_bound], rotated]
       intro: card_of_mono1)
   done
 
-corollary SSupp_upd_VVr_bound: "|SSupp (VVr(a:=(t::'a::var_term_pre term)))| <o |UNIV::'a set|"
+corollary SSupp_upd_VVr_bound: "|SSupp (VVr(a:=(t::trm)))| <o |UNIV::var set|"
   apply (rule iffD2[OF SSupp_upd_bound])
   apply (rule SSupp_VVr_bound)
   done
@@ -98,8 +108,8 @@ corollary SSupp_upd_VVr_bound: "|SSupp (VVr(a:=(t::'a::var_term_pre term)))| <o 
 lemma fvars_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
   unfolding supp_def id_on_def by blast
 
-lemma rrename_simps:
-  assumes "bij (f::'a::var_term_pre \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a set|"
+proposition rrename_simps[simp]:
+  assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
   shows "rrename_term f (Var a) = Var (f a)"
     "rrename_term f (App e1 e2) = App (rrename_term f e1) (rrename_term f e2)"
     "rrename_term f (Abs x e) = Abs (f x) (rrename_term f e)"
@@ -108,7 +118,7 @@ lemma rrename_simps:
     apply (rule refl)+
   done
 
-lemma App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
+proposition App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
 proof
   assume "App a b = App c d"
   then show "a = c \<and> b = d"
@@ -117,7 +127,8 @@ proof
       Abs_term_pre_inject[OF UNIV_I UNIV_I]
     by blast
 qed simp
-lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
+
+proposition Var_inject[simp]: "(Var a = Var b) = (a = b)"
   apply (rule iffI[rotated])
    apply (rule arg_cong[of _ _ Var])
   apply assumption
@@ -127,7 +138,7 @@ lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
   apply assumption
   done
 
-lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::'a::var_term_pre \<Rightarrow> 'a)| <o |UNIV::'a set|
+lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
   \<and> id_on (FFVars_term (Abs x e)) f \<and> f x = x' \<and> rrename_term f e = e')"
   unfolding term.set
   unfolding Abs_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
@@ -137,7 +148,7 @@ lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::'
   apply (rule refl)
   done
 
-lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::'a::var_term_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_term_pre (id::_::var_term_pre \<Rightarrow> _) f (rrename_term f) id)"
+lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_term_pre (id::var \<Rightarrow>var) f (rrename_term f) id)"
   apply (rule iffD2[OF bij_iff])
     apply (rule exI[of _ "map_term_pre id (inv f) (rrename_term (inv f)) id"])
   apply (frule bij_imp_bij_inv)
@@ -156,7 +167,7 @@ lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::'a::var_term_pre \<Ri
   apply (rule term_pre.map_id0)
   done
 
-lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_term_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_term_pre (id::_::var_term_pre \<Rightarrow> _) f (rrename_term f) id) = map_term_pre id (inv f) (rrename_term (inv f)) id"
+lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> inv (map_term_pre (id::_::var_term_pre \<Rightarrow> _) f (rrename_term f) id) = map_term_pre id (inv f) (rrename_term (inv f)) id"
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
   apply assumption
@@ -172,7 +183,7 @@ lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_term_pre
    apply (rule refl)+
   done
 
-lemma Abs_set3: "term_ctor v = Abs x e \<Longrightarrow> \<exists>x' e'. term_ctor v = Abs x' e' \<and> x' \<in> set2_term_pre v \<and> e' \<in> set3_term_pre v"
+lemma Abs_set3: "term_ctor v = Abs (x::var) e \<Longrightarrow> \<exists>x' e'. term_ctor v = Abs x' e' \<and> x' \<in> set2_term_pre v \<and> e' \<in> set3_term_pre v"
   unfolding Abs_def term.TT_injects0
   apply (erule exE)
   apply (erule conjE)+
@@ -203,7 +214,7 @@ unfolding set2_term_pre_def set3_term_pre_def comp_def Abs_term_pre_inverse[OF U
   done
   done
 
-lemma Abs_avoid: "|A::'a::var_term_pre set| <o |UNIV::'a set| \<Longrightarrow> \<exists>x' e'. Abs x e = Abs x' e' \<and> x' \<notin> A"
+lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Abs x e = Abs x' e' \<and> x' \<notin> A"
   apply (drule term.TT_fresh_nchotomys[of _ "Abs x e"])
   apply (erule exE)
   apply (erule conjE)
@@ -236,17 +247,17 @@ find_theorems tvsubst
 
 find_theorems "_::_::var_term_pre" "regularCard"
 
-lemma rrename_term_tvsubst: "bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>  
-     |SSupp \<tau>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>
+lemma rrename_term_tvsubst: "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>  
+     |SSupp \<tau>| <o |UNIV:: var set| \<Longrightarrow>
      rrename_term \<sigma> (tvsubst \<tau> e) = tvsubst (rrename_term \<sigma> \<circ> \<tau>) (rrename_term \<sigma> e)"
 sorry
 
-lemma tvsubst_o: "|SSupp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>  
-     |SSupp \<tau>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>
+lemma tvsubst_o: "|SSupp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>  
+     |SSupp \<tau>| <o |UNIV:: var set| \<Longrightarrow>
      tvsubst \<sigma> (tvsubst \<tau> e) = tvsubst (tvsubst \<sigma> \<circ> \<tau>) e"
 sorry
 
-lemma [simp]: "bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>  
+lemma [simp]: "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>  
       rrename_term \<sigma> o (VVr(a := e)) = VVr (\<sigma> a := rrename_term \<sigma> e)"
 sorry
 
@@ -255,31 +266,42 @@ lemmas supp_inv_bound[simp]
 lemmas term.rrename_ids[simp]
 lemmas bij_swap[simp]
 
-lemma supp_swap_bound[intro]: "|supp (id(x::'a := xx, xx := x))| <o |UNIV:: 'a::var_term_pre set|"
+lemma supp_swap_bound[intro]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
 by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
 
 lemmas supp_id_bound[simp]
 
 lemma rrename_term_cong_id[simp]: 
-"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>   
- \<forall>a\<in>FFVars_term e. \<sigma> a = (a::'a) \<Longrightarrow> rrename_term \<sigma> e = e"
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
+ \<forall>a\<in>FFVars_term e. \<sigma> a = (a::var) \<Longrightarrow> rrename_term \<sigma> e = e"
 sorry
 
 lemma Abs_rrename_term: 
-"bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>   
- \<forall>a'\<in>FFVars_term e - {a::'a}. \<sigma> a' = a' \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename_term \<sigma> e)"
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
+ \<forall>a'\<in>FFVars_term e - {a::var}. \<sigma> a' = a' \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename_term \<sigma> e)"
 sorry
 
 lemma tvsubst_VVr_rrename_term: 
 "xx \<notin> FFVars_term e1 - {x} \<Longrightarrow> 
- tvsubst (VVr((x::'a::var_term_pre) := e2)) e1 = tvsubst (VVr(xx := e2)) (rrename_term (id(x := xx, xx := x)) e1)"
+ tvsubst (VVr((x::var) := e2)) e1 = tvsubst (VVr(xx := e2)) (rrename_term (id(x := xx, xx := x)) e1)"
 sorry
+
+
+(* INSTANTIATING THE ABSTRACT SETTING: *)
+
+(* INSTATIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
+
+print_locales
+interpretation Small where dummy = "undefined :: var" 
+apply standard
+  apply (simp add: infinite_var)  
+  using term_prevar_term_prevar_sumterm_prevar_prodIDterm_prevar_prodID_class.regular by blast
  
 
 (* AN EXAMPLE INDUCTIVE DEFINITION *)
 (* (a reduced form of) small step semantics *) 
 
-inductive step :: "'a::var_term_pre term \<Rightarrow> 'a term \<Rightarrow> bool" where
+inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Abs x e1) e2) (tvsubst (VVr(x:=e2)) e1)"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | Xi: "step e e' \<Longrightarrow> step (Abs x e) (Abs x e')"
@@ -287,38 +309,35 @@ inductive step :: "'a::var_term_pre term \<Rightarrow> 'a term \<Rightarrow> boo
 
 lemmas step_def = nitpick_unfold(173)
 
-lemma lfp_curry2: "lfp F x1 x2 = lfp (\<lambda>q (x1,x2). F (\<lambda>x1 x2. q (x1,x2)) x1 x2) (x1,x2)"
-proof-
-  have "lfp (\<lambda>p x1 x2. F p x1 x2) \<le> (\<lambda> x1 x2. lfp (\<lambda>q (x1,x2). F (\<lambda>x1 x2. q (x1,x2)) x1 x2) (x1,x2))"
-  apply(rule complete_lattice_class.lfp_lowerbound)
-  unfolding le_fun_def apply auto sorry
-  show ?thesis sorry
-qed
+(* INSTANTIATING THE Components LOCALE: *)
 
-
-(* INSTANTIATING THE ABSTRACT SETTING: *)
-
-type_synonym 'a T = "'a term \<times> 'a term"
-type_synonym 'a V = "'a list" (* in this case, could have also taken to be 'a option; 
+type_synonym T = "trm \<times> trm"
+type_synonym V = "var list" (* in this case, could have also taken to be 'a option; 
 and the most uniform approach would have been 'a + unit + 'a + 'a *)
 
 
-definition "small (A::'a set) \<equiv> |A| <o |UNIV::'a set|" 
-definition "ssbij f \<equiv> bij f \<and> small (supp (f::'a::var_term_pre \<Rightarrow> 'a))" 
-
-definition Tmap :: "('a::var_term_pre \<Rightarrow> 'a) \<Rightarrow> 'a T \<Rightarrow> 'a T" where 
+definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
 "Tmap f \<equiv> map_prod (rrename_term f) (rrename_term f)"
 
-fun Tfvars :: "('a::var_term_pre) T \<Rightarrow> 'a set" where 
+fun Tfvars :: "T \<Rightarrow> var set" where 
 "Tfvars (e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
-definition Vmap :: "('a::var_term_pre \<Rightarrow> 'a) \<Rightarrow> 'a V \<Rightarrow> 'a V" where 
+definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where 
 "Vmap \<equiv> map"
 
-fun Vfvars :: "('a::var_term_pre) V \<Rightarrow> 'a set" where 
+fun Vfvars :: "V \<Rightarrow> var set" where 
 "Vfvars v = set v"
 
-definition G :: "('a::var_term_pre T \<Rightarrow> bool) \<Rightarrow> 'a V \<Rightarrow> 'a T \<Rightarrow> bool"
+interpretation Components where dummy = "undefined :: var" and 
+Tmap = Tmap and Tfvars = Tfvars
+and Vmap = Vmap and Vfvars = Vfvars 
+apply standard unfolding ssbij_def Tmap_def Vmap_def
+  using small_Un small_def term.card_of_FFVars_bounds
+  apply (auto simp: term.FFVars_rrenames term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)  
+  by auto 
+
+  
+definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>R v t.  
          (\<exists>x e1 e2. v = [x] \<and> fst t = App (Abs x e1) e2 \<and> snd t = tvsubst (VVr(x := e2)) e1)
@@ -330,27 +349,13 @@ where
          (\<exists>x e1 e1' e2 e2'. v = [x] \<and> fst t = App (Abs x e1) e2 \<and> snd t = tvsubst (VVr(x := e2')) e1' \<and> 
             R (e1,e1') \<and> R (e2,e2'))"
 
-definition "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
-
-lemma step_I: "step t1 t2 = I (t1,t2)" 
-  unfolding step_def I_def unfolding lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-  unfolding fun_eq_iff G_def apply safe
-    subgoal apply simp by metis
-    subgoal by auto
-    subgoal by auto
-    subgoal apply simp by metis
-    subgoal by auto
-    subgoal by auto
-    subgoal apply simp by metis
-    subgoal by auto .
-
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma G_mono: "\<And>R R' k v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+lemma GG_mono: "\<And>R R' k v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 unfolding G_def by fastforce
 
-lemma G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+lemma GG_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
 unfolding G_def subgoal for \<sigma> R v t apply(elim disjE)
   subgoal apply(rule disjI1)
   subgoal apply(elim exE) subgoal for x e1 e2 
@@ -385,7 +390,7 @@ unfolding G_def subgoal for \<sigma> R v t apply(elim disjE)
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
 by (metis Abs_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
 
-lemma G_fresh: 
+lemma GG_fresh: 
 "\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
          \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
 subgoal for R v t
@@ -443,34 +448,34 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
   (* *)
 
 
-(* WHAT THE ABSTRACT SETTING GIVES US: *)
-typedecl 'a P (* parameters *)
-consts Pfvars :: "('a::var_term_pre) P \<Rightarrow> 'a set"
+(* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-axiomatization where  
-small_Pfvars: "\<And>p. small (Pfvars p)" 
+interpretation Induct where dummy = "undefined :: var" and 
+Tmap = Tmap and Tfvars = Tfvars
+and Vmap = Vmap and Vfvars = Vfvars and G = G
+apply standard 
+  using GG_mono GG_equiv GG_fresh by auto
 
-theorem BE_induct: 
-assumes I: "I (t::('a::var_term_pre) T)"
-and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
-      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
-shows "R p t"
-sorry
+(* *)
+lemmas I_def = nitpick_unfold(178) 
+
+lemma step_I: "step t1 t2 = I (t1,t2)" 
+  unfolding step_def I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+  unfolding fun_eq_iff G_def apply safe
+    subgoal apply simp by metis
+    subgoal by auto
+    subgoal by auto
+    subgoal apply simp by metis
+    subgoal by auto
+    subgoal by auto
+    subgoal apply simp by metis
+    subgoal by auto .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm step.induct[no_vars]
 
-(*
-corollary just_some_sanity_check: "step t \<Longrightarrow>
-(\<And>x e e2 p. R p (App (Abs x e) e2, tvsubst (VVr(x := e2)) e)) \<Longrightarrow>
-(\<And>e1 e1' e2 p. step (e1, e1') \<Longrightarrow> (\<forall>p'. R p' (e1, e1')) \<Longrightarrow> R p (App e1 e2, App e1' e2)) \<Longrightarrow> 
-(\<And>e e' x p. step (e, e') \<Longrightarrow> (\<forall>p'. R p' (e, e')) \<Longrightarrow> R p (Abs x e, Abs x e')) \<Longrightarrow> 
- R p t"
-subgoal premises p using p(1) apply(induct arbitrary: p rule: step.induct) 
-using p(2-) by auto .
-*)
-
-corollary BE_induct_step: "step t1 t2 \<Longrightarrow>
+corollary BE_induct_step: "(\<And>p. small (Pfvars p)) \<Longrightarrow> 
+step t1 t2 \<Longrightarrow> 
 (\<And>x e e2 p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> R p (App (Abs x e) e2) (tvsubst (VVr(x := e2)) e)) \<Longrightarrow>
 (\<And>e1 e1' e2 p. step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> R p (App e1 e2) (App e1' e2)) \<Longrightarrow> 
 (\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Abs x e) (Abs x e')) \<Longrightarrow> 

@@ -4,6 +4,7 @@ begin
 
 (* We take a countably infinite number of variables *)
 
+hide_type var
 datatype var = Variable nat 
 
 lemma bij_Variable: "bij Variable"

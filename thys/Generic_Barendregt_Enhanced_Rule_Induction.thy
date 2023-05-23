@@ -101,8 +101,6 @@ and Tfvars :: "'T \<Rightarrow> 'A set"
 (* 'V: variable-binding entities (essentially, binders) *)
 and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
 and Vfvars :: "'V \<Rightarrow> 'A set"
-(* PP: parameters *)
-and Pfvars :: "'P \<Rightarrow> 'A set"
 assumes  
 Tmap_id: "Tmap id = id"
 and 
@@ -123,8 +121,6 @@ small_Vfvars: "\<And>v. small (Vfvars v)"
 and 
 Vmap_Vfvars: "\<And>v \<sigma>. ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
 (* *)
-and 
-small_Pfvars: "\<And>p. small (Pfvars p)" 
 (* *)
 begin
 
@@ -144,15 +140,13 @@ by auto (metis Int_iff bij_inv_eq_iff emptyE imageE insert_absorb insert_subset)
 end (* locale Components *)
 
 
-locale Induct = Components dummy Tmap Tfvars Vmap Vfvars Pfvars
+locale Induct = Components dummy Tmap Tfvars Vmap Vfvars 
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
 and Vfvars :: "'V \<Rightarrow> 'A set"
-
-and Pfvars :: "'P \<Rightarrow> 'A set"
 +
 fixes (* The operator that defines the inductive predicate as gfp:  *)
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
@@ -249,7 +243,14 @@ apply(rule iffI)
 NB: we get freshness for t as well, as a bonus (even though the inductive definition of I 
 needs not guarantee that -- see again the case of beta-reduction)
  *)
-theorem BE_induct: 
+
+(* PP: parameters *) 
+
+theorem BE_induct[consumes 2]: 
+(* Parameters: *)
+fixes Pfvars :: "'P \<Rightarrow> 'A set"
+assumes small_Pfvars: "\<And>p. small (Pfvars p)" 
+(* *)
 assumes I: "I (t::'T)"
 and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
       G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
@@ -338,7 +339,7 @@ it is "annoying" they have to assume it.
 
 TODO: Formalize the Urban-Berghofer-Norrish result and show that it is a particular case of this. 
 *)
->>>>>>> 1d1e5bd1c1a124c11c7a46d3214ad595344db03a
+
 
 
 

@@ -1,9 +1,10 @@
 theory FixedUncountableVars
-imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set" 
+imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set" (* "thys/MRBNF_Recursor" *)
 begin
 
 (* We take a number of suc-Aleph0 variables *)
 
+hide_type var
 typedef var = "{x::nat set. x \<in> Field (cardSuc natLeq)}" 
  by simp (metis Field_cardSuc_not_empty Field_natLeq all_not_in_conv natLeq_card_order)
 
@@ -81,5 +82,6 @@ lemma finite_exists_var:
 assumes "finite X"
 shows "\<exists> x::var. x \<notin> X"
 by (simp add: assms ex_new_if_finite infinite_var)
+
 
 end

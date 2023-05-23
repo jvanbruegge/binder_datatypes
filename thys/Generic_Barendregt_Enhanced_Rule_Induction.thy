@@ -1,17 +1,26 @@
 theory Generic_Barendregt_Enhanced_Rule_Induction
-imports Main
+imports Main "MRBNF_Recursor"
 begin 
 
-consts laregeEnough :: "'a \<Rightarrow> bool"
+(* consts largeEnough :: "'a \<Rightarrow> bool"
 
-class largeEnough =
-assumes "largeEnough (undefined::'a)"
+class largeEnough = 
+assumes "largeEnough (undefined::'a)" *)
 
 (* General infrastructure: *)
-consts small :: "('a::largeEnough) set \<Rightarrow> bool" (* small/bounded sets *)
-consts ssbij :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> bool" (* small-fvarsort bijections *)
+locale Small = 
+fixes dummy :: "'A"
+assumes "infinite (UNIV::'A set) \<and> regularCard |UNIV::'A set|"
+begin 
 
-axiomatization where 
+definition small :: "'A set \<Rightarrow> bool" where 
+"small A \<equiv> |A| <o |UNIV::'A set|"(* small/bounded sets *)
+definition ssbij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" (* small-support bijections *) where 
+"ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'A set|"
+
+lemma 
+small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
+and  
 ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
 and 
 ssbij_id: "ssbij id"
@@ -19,10 +28,12 @@ and
 ssbij_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> ssbij (\<sigma> o \<tau>)"
 and 
 ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>)"
-and 
-small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> 
-   \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'-A. \<sigma> a = a)"
+and  
+small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> 
+   \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
  
+sorry
+
 
 lemma ssbij_invL: "ssbij \<sigma> \<Longrightarrow> \<sigma> o inv \<sigma> = id"
 by (meson bij_is_surj ssbij_bij surj_iff)
@@ -34,130 +45,228 @@ by (meson bij_def inv_o_cancel ssbij_bij)
 lemma ssbij_invR': "ssbij \<sigma> \<Longrightarrow> inv \<sigma> (\<sigma> a) = a"
 using ssbij_invR pointfree_idE by fastforce
 
+ 
+end (* contaxt Small *)
 
-typedecl 'a T (* term-like entities *)
-consts Tmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a T \<Rightarrow> 'a T"
-consts Tfvars :: "('a::largeEnough) T \<Rightarrow> 'a set"
 
-typedecl 'a V (* variable-binding entities (essentially, binders) *)
-consts Vmap :: "(('a::largeEnough)\<Rightarrow>'a) \<Rightarrow> 'a V \<Rightarrow> 'a V"
-consts Vfvars :: "('a::largeEnough) V \<Rightarrow> 'a set"
-
-typedecl 'a P (* parameters *)
-consts Pfvars :: "('a::largeEnough) P \<Rightarrow> 'a set"
-
-axiomatization where 
+locale Components = Small dummy 
+for dummy :: 'A 
++
+fixes (* 'T: term-like entities *)
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+(* 'V: variable-binding entities (essentially, binders) *)
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+(* PP: parameters *)
+and Pfvars :: "'P \<Rightarrow> 'A set"
+assumes  
 Tmap_id: "Tmap id = id"
 and 
 Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
 and 
 small_Tfvars: "\<And>t. small (Tfvars t)" 
-and 
+and (* the weaker, inclusion-based version is sufficient (and similarly for V): *)
 Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
 Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
-
-lemma Tmap_comp': "\<And>\<sigma> \<tau> t. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
-using Tmap_comp by fastforce
-
-axiomatization where 
-Vmap_id: "Vmap id = id"
+(* *)
 and 
+(* : "Vmap id = id" (not needed)
+and *)
 Vmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
 and 
 small_Vfvars: "\<And>v. small (Vfvars v)" 
 and 
 Vmap_Vfvars: "\<And>v \<sigma>. ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
+(* *)
+and 
+small_Pfvars: "\<And>p. small (Pfvars p)" 
+(* *)
+begin
+
+lemma Tmap_comp': "\<And>\<sigma> \<tau> t. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
+using Tmap_comp by fastforce 
 
 lemma Vmap_comp': "\<And>\<sigma> \<tau> v. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) v = Vmap \<sigma> (Vmap \<tau> v)"
 using Vmap_comp by fastforce
 
-axiomatization where  
-small_Pfvars: "\<And>p. small (Pfvars p)" 
-
-
-(* *)
-
-consts G :: "('a T \<Rightarrow> bool) \<Rightarrow> ('a::largeEnough) T \<Rightarrow> 'a V \<Rightarrow> bool"
-
-axiomatization where 
-G_mono[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<Longrightarrow> G R' t v"
-and 
-G_equiv: "\<And>\<sigma> R t v. ssbij \<sigma> \<Longrightarrow> G R t v \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t) (Vmap \<sigma> v)"
-and 
-(*
-This was too strong (e.g., would not be true for disjuncts in the definition of G 
-that do not deal with bound variables; also different bound variables for different disjoints 
-could not be added to the top, to form a single var-structure v ): 
-G_fresh: "\<And>R t v. G R t v \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
-and 
-*)
-(* "Operational" intuition for this next axiom: 
-If a disjunct refers to the given variables, then these are fresh for t;
-if it does not, then there is no dependency on that variable. 
-*)
-G_var_equiv: "\<And>\<rho> R t v. (\<forall>a \<in> Tfvars t - Vfvars v. \<rho> a = a) \<Longrightarrow> ssbij \<rho> \<Longrightarrow> G R t v \<Longrightarrow> G R t (Vmap \<rho> v)"
+lemma Vfvars_Tfvars_disj: "ssbij \<sigma> \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<inter> Tfvars (Tmap \<sigma> t) = {}"
+apply(frule Vmap_Vfvars[of _ v]) apply(frule Tmap_Tfvars[of _ t])  
+apply(drule ssbij_bij)    
+by auto (metis Int_iff bij_inv_eq_iff emptyE imageE insert_absorb insert_subset)
 
 (* *)
 
-lemma G_mono'[mono]: "\<And>R R' t v. R \<le> R' \<Longrightarrow> G R t v \<longrightarrow> G R' t v"
-  using G_mono by auto
+end (* locale Components *)
 
-inductive I :: "('a::largeEnough) T \<Rightarrow> bool" where 
-G_I_intro: "G I t v \<Longrightarrow> I t"
+
+locale Induct = Components dummy Tmap Tfvars Vmap Vfvars Pfvars
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+
+and Pfvars :: "'P \<Rightarrow> 'A set"
++
+fixes (* The operator that defines the inductive predicate as gfp:  *)
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
+assumes 
+G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+and 
+G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t) "
+and 
+(* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
+including beta-reduction (see their paper): 
+G_fresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
+I replace it with a much weaker condition: namely that such a fresh v can be produced 
+for equivariant relations R:  
+*)
+G_fresh: 
+"\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
+         \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
+begin
+
+lemma G_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> G R v t \<longrightarrow> G R' v t"
+  using G_mono by blast
+
+inductive I :: "'T \<Rightarrow> bool" where 
+G_I_intro: "G I v t \<Longrightarrow> I t"
 
 thm nitpick_unfold(143)
-lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R t v)"
+lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
   using nitpick_unfold(143) by auto
 
+(*
+(*  Not needed: *) 
 lemma I_equiv: 
 assumes "I t" and "ssbij \<sigma>"
 shows "I (Tmap \<sigma> t)"
-using assms apply induct  (* SL-generated proof: *)
-proof -
-  fix ta :: "'a T" and v :: "'a V"
-  assume a1: "G (\<lambda>x. I x \<and> (ssbij \<sigma> \<longrightarrow> I (Tmap \<sigma> x))) ta v"
-  have "(\<lambda>t. I (Tmap (inv \<sigma>) t) \<and> (ssbij \<sigma> \<longrightarrow> I (Tmap \<sigma> (Tmap (inv \<sigma>) t)))) \<le> I"
-    by (smt (z3) Tmap_comp' Tmap_id assms(2) id_apply predicate1I ssbij_inv ssbij_invL)
-  then show "I (Tmap \<sigma> ta)"
-    using a1 G_I_intro G_equiv G_mono assms(2) by blast
-qed 
+using assms proof induct
+  case (G_I_intro v t)   note \<sigma> = G_I_intro(2)
+  have G: "G (\<lambda>t. I (Tmap \<sigma> t)) v t"
+  apply(rule G_mono[OF _ G_I_intro(1)]) using \<sigma> by auto
+  have G: "G (\<lambda>t. I (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+  using G_equiv[OF \<sigma> G] .
+  have "G I (Vmap \<sigma> v) (Tmap \<sigma> t)" 
+  apply(rule G_mono[OF _ G]) using \<sigma> 
+    by auto (metis Tmap_comp' Tmap_id id_apply ssbij_inv ssbij_invL)
+  thus ?case by(subst I.simps, auto)
+qed
+(* *)
+*)
 
-(* Barendregt-enhanced (strong) induction: *)
-lemma BE_induct: 
-assumes I: "I (t::('a::largeEnough) T)"
-and strong: "\<And> p t v. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t v \<Longrightarrow> R p t"
+inductive I' :: "'T \<Rightarrow> bool" where 
+G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"
+
+lemma I'_equiv: 
+assumes "I' t" and "ssbij \<sigma>"
+shows "I' (Tmap \<sigma> t)"
+using assms proof induct
+  case (G_I'_intro v t)   note \<sigma> = G_I'_intro(3)
+  have G: "G (\<lambda>t. I' (Tmap \<sigma> t)) v t"
+  apply(rule G_mono[OF _ G_I'_intro(2)]) using \<sigma> by auto
+  have vv: "Vfvars (Vmap \<sigma> v) \<inter> Tfvars (Tmap \<sigma> t) = {}" using Vfvars_Tfvars_disj[OF \<sigma> G_I'_intro(1)] .   
+  have G: "G (\<lambda>t. I' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+  using G_equiv[OF \<sigma> G] .
+  have G: "G I' (Vmap \<sigma> v) (Tmap \<sigma> t)" 
+  apply(rule G_mono[OF _ G]) using \<sigma> 
+    by auto (metis Tmap_comp' Tmap_id id_apply ssbij_inv ssbij_invL)
+  show ?case using vv G by (subst I'.simps, auto) 
+qed
+
+
+(* NB: The following could replace G_fresh in the axiomatization. 
+It has the advantage that it is weaker, but also two disadvantages:
+-- it depends on the "auxiliary" defined predicate I'
+-- the dependency on I' seems truly inessential, in that in concrete cases 
+all that one needs to use is the equivariance of I'
+ *)
+lemma G_fresh_I': 
+"\<And>v t. G I' v t \<Longrightarrow> \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G I' w t"
+using G_fresh I'_equiv by blast
+
+lemma I_imp_I': "I t \<Longrightarrow> I' t"
+apply(induct rule: I.induct)
+apply(subst I'.simps) 
+by auto (metis (no_types, lifting) G_fresh_I' G_mono' predicate1I)
+
+lemma I_eq_I': "I = I'"
+apply(rule ext)
+subgoal for t
+apply(rule iffI)
+  subgoal using I_imp_I' by auto 
+  subgoal apply(induct rule: I'.induct)  
+  by (smt (verit) G_mono' I.simps predicate1I) . .
+  
+  
+(* Barendregt-enhanced (strong) induction. 
+NB: we get freshness for t as well, as a bonus (even though the inductive definition of I 
+needs not guarantee that -- see again the case of beta-reduction)
+ *)
+theorem BE_induct: 
+assumes I: "I (t::'T)"
+and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
+      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
 shows "R p t"
-proof-
-  {fix \<sigma>::"'a\<Rightarrow>'a" assume \<sigma>: "ssbij \<sigma>"
+proof- 
+  {fix \<sigma> assume \<sigma>: "ssbij \<sigma>"
    have "R p (Tmap \<sigma> t)"
-   using I \<sigma> proof(induct arbitrary: \<sigma> p)
-     fix t and v and \<sigma>::"'a\<Rightarrow>'a" and p 
-     assume G: "G (\<lambda>t'. I t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) t v" and \<sigma>: "ssbij \<sigma>" 
+   using I \<sigma> unfolding I_eq_I' proof(induct arbitrary: \<sigma> p)
+     fix v t \<sigma> p 
+     assume vt: "Vfvars v \<inter> Tfvars t = {}" (* this additional vt assumption is what we have gained 
+     by transitioning from I to I', whose inductive definition has this freshness side-condition *)
+     and G: "G (\<lambda>t'. I' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) v t" and \<sigma>: "ssbij \<sigma>" 
 
      define v' where v': "v' \<equiv> Vmap \<sigma> v"
 
-     obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vfvars v') \<inter> Pfvars p = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t) - Vfvars v'. \<rho> a = a"
-     by (meson small_Pfvars small_Tfvars small_Vfvars small_ssbij)
+     have v't: "Vfvars v' \<inter> Tfvars (Tmap \<sigma> t) = {}" 
+     using vt unfolding v'  
+     using Vfvars_Tfvars_disj \<sigma> by blast 
 
-     have fresh_p: "Vfvars (Vmap \<rho> v') \<inter> Pfvars p = {}"  
-     using Vmap_Vfvars \<rho>(1) \<rho>(2) by blast  
+     have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
+       by (simp add: small_Pfvars small_Tfvars small_Un)
+
+     obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` (Vfvars v') \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
+     using small_ssbij small_Tfvars small_Vfvars  small_p_t v't by metis
+
+     have fresh_p: "Vfvars (Vmap \<rho> v') \<inter> Pfvars p = {}" 
+     and fresh_t: "Vfvars (Vmap \<rho> v') \<inter> Tfvars (Tmap \<sigma> t) = {}"  
+     using Vmap_Vfvars \<rho>(1) \<rho>(2) by blast+ 
+
+     hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t" 
+     using Tmap_cong_id[OF \<rho>(1,3)] by blast
+     hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
+   	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>)
+
+     have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" by (simp add: \<rho>(1) \<sigma> ssbij_comp)
+
+     define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
+     have ss_\<sigma>'': "ssbij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv by blast
    
-     have "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' (Tmap \<sigma> t'))) t v" 
-     apply(rule G_mono[OF _ G]) using \<sigma> by auto
-     hence G: "G (\<lambda>t'. I (Tmap \<sigma> t') \<and> (\<forall>p'. R p' (Tmap \<sigma> t'))) t v" 
-     using I_equiv[OF _ \<sigma>] by (metis (mono_tags, lifting) G_mono predicate1I)
-     have G: "G (\<lambda>t'. I (Tmap \<sigma> (Tmap (inv \<sigma>) t')) \<and> 
-                   (\<forall>p'. R p' (Tmap \<sigma> (Tmap (inv \<sigma>) t')))) (Tmap \<sigma> t) (Vmap \<sigma> v)" 
-     using G_equiv[OF \<sigma> G] .
-     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) v'" 
-     unfolding v'
-     apply(rule G_mono[OF _ G])   
-     by auto (metis Tmap_comp' Tmap_id \<sigma> id_apply ssbij_inv ssbij_invL)+
-     have G: "G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t) (Vmap \<rho> v')"
-     using G_var_equiv[OF \<rho>(3,1) G] .
+     have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
+     unfolding \<sigma>'' using \<rho>\<sigma> ssbij_invL by auto  
    
-     show "R p (Tmap \<sigma> t)" using strong[OF fresh_p G] . 
+     have "G (\<lambda>t'. I' t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) v t" 
+     apply(rule G_mono[OF _ G]) using ss_\<sigma>'' by auto
+     hence G: "G (\<lambda>t'. I' (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) v t" 
+     using I'_equiv[OF _ ss_\<sigma>''] 
+     by (smt (verit, del_insts) G_mono predicate1I) 
+     have G: "G (\<lambda>t'. I' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) 
+                (Vmap (\<rho> o \<sigma>) v) (Tmap (\<rho> o \<sigma>) t) " 
+     using G_equiv[OF \<rho>\<sigma> G] .
+     have G: "G (\<lambda>t'. I' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) 
+                (Vmap \<rho> v') (Tmap \<sigma> t) " 
+     unfolding v' Vmap_comp'[symmetric, OF \<rho>(1) \<sigma>] 0[symmetric] apply(rule G_mono[OF _ G])
+     apply auto by (metis "1" Tmap_comp' \<rho>\<sigma> ss_\<sigma>'' ssbij_inv)+  
+     have G: "G (\<lambda>t'. I' t' \<and> (\<forall>p'. R p' t')) (Vmap \<rho> v') (Tmap \<sigma> t)" 
+     apply(rule G_mono[OF _ G]) 
+     by (simp add: Tmap_id)
+
+     show "R p (Tmap \<sigma> t)" 
+     using strong[OF fresh_p fresh_t G[unfolded I_eq_I'[symmetric]]] .
   qed
   }
   from this[of id] show ?thesis 
@@ -165,6 +274,28 @@ proof-
 qed
 
 
+
+end (* context Induct *)
+
+
+(* 
+Novel contribution: This principle is significantly more general than the one in 
+Urban-Berghofer-Norrish:
+- It is purely semantic, i.e., does not assume a fixed rigid format, where the assumptions 
+of the rules are assumed to be of the form R t1 ... R tn
+- Does not need to formalized meta-language to be epressed rigorously (they use "generic terms", 
+quite non-rigorous presentation)
+- It allows higher-order operators in rules
+- Does not need to talk about explicit bindings, but handles everything via equivariance; 
+this means that the result is not restricted to inductive rules for term-like entities
+- It is really on par with standard Knaster-Tarski induction
+- It covers more cases of interest (beta-reduction and the like), i.e., it makes formal 
+their informal observation that in principle freshness can be assume there too, but that 
+it is "annoying" they have to assume it. 
+
+TODO: Formalize the Urban-Berghofer-Norrish result and show that it is a particular case of this. 
+*)
+>>>>>>> 1d1e5bd1c1a124c11c7a46d3214ad595344db03a
 
 
 

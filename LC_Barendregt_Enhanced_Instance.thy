@@ -1,5 +1,5 @@
 theory LC_Barendregt_Enhanced_Instance
-  imports "thys/MRBNF_Recursor" "HOL-Library.FSet"
+  imports "thys/MRBNF_Recursor" "HOL-Library.FSet" "FixedCountableVars"
 begin 
 
 (* binder_datatype 'a term =
@@ -126,6 +126,7 @@ lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
   apply (erule exE conjE)+
   apply assumption
   done
+
 lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::'a::var_term_pre \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<and> id_on (FFVars_term (Abs x e)) f \<and> f x = x' \<and> rrename_term f e = e')"
   unfolding term.set
@@ -231,9 +232,9 @@ lemma VVr_eq_Var: "VVr a = Var a"
 (* *)
 
 lemmas rrename_simps[simp] 
-
-
 find_theorems tvsubst 
+
+find_theorems "_::_::var_term_pre" "regularCard"
 
 lemma rrename_term_tvsubst: "bij (\<sigma>::'a\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>  
      |SSupp \<tau>| <o |UNIV:: 'a::var_term_pre set| \<Longrightarrow>
@@ -286,8 +287,13 @@ inductive step :: "'a::var_term_pre term \<Rightarrow> 'a term \<Rightarrow> boo
 
 lemmas step_def = nitpick_unfold(173)
 
-lemma lfp_curry2: "lfp (\<lambda>p x1 x2. F p x1 x2) x1 x2 = lfp (\<lambda>q (x1,x2). F (\<lambda>x1 x2. q (x1,x2)) x1 x2) (x1,x2)"
-sorry
+lemma lfp_curry2: "lfp F x1 x2 = lfp (\<lambda>q (x1,x2). F (\<lambda>x1 x2. q (x1,x2)) x1 x2) (x1,x2)"
+proof-
+  have "lfp (\<lambda>p x1 x2. F p x1 x2) \<le> (\<lambda> x1 x2. lfp (\<lambda>q (x1,x2). F (\<lambda>x1 x2. q (x1,x2)) x1 x2) (x1,x2))"
+  apply(rule complete_lattice_class.lfp_lowerbound)
+  unfolding le_fun_def apply auto sorry
+  show ?thesis sorry
+qed
 
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

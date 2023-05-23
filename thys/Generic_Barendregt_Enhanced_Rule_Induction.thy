@@ -8,13 +8,15 @@ class largeEnough =
 assumes "largeEnough (undefined::'a)" *)
 
 (* General infrastructure: *)
-typedecl AA 
-axiomatization where AA: "infinite (UNIV::AA set) \<and> regularCard |UNIV::AA set|"
+locale Small = 
+fixes dummy :: "'A"
+assumes "infinite (UNIV::'A set) \<and> regularCard |UNIV::'A set|"
+begin 
 
-definition small :: "AA set \<Rightarrow> bool" where 
-"small A \<equiv> |A| <o |UNIV::AA set|"(* small/bounded sets *)
-definition ssbij :: "(AA \<Rightarrow> AA) \<Rightarrow> bool" (* small-support bijections *) where 
-"ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::AA set|"
+definition small :: "'A set \<Rightarrow> bool" where 
+"small A \<equiv> |A| <o |UNIV::'A set|"(* small/bounded sets *)
+definition ssbij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" (* small-support bijections *) where 
+"ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'A set|"
 
 lemma 
 small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
@@ -41,19 +43,21 @@ by (meson bij_def inv_o_cancel ssbij_bij)
 lemma ssbij_invR': "ssbij \<sigma> \<Longrightarrow> inv \<sigma> (\<sigma> a) = a"
 using ssbij_invR pointfree_idE by fastforce
 
+end (* contaxt Small *)
 
-typedecl TT (* term-like entities *)
-consts Tmap :: "(AA \<Rightarrow> AA) \<Rightarrow> TT \<Rightarrow> TT"
-consts Tfvars :: "TT \<Rightarrow> AA set"
 
-typedecl VV (* variable-binding entities (essentially, binders) *)
-consts Vmap :: "(AA \<Rightarrow> AA) \<Rightarrow> VV \<Rightarrow> VV"
-consts Vfvars :: "VV \<Rightarrow> AA set"
-
-typedecl PP (* parameters *)
-consts Pfvars :: "PP \<Rightarrow> AA set"
-
-axiomatization where 
+locale Components = Small dummy 
+for dummy :: 'A 
++
+fixes (* 'T: term-like entities *)
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+(* 'V: variable-binding entities (essentially, binders) *)
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+(* PP: parameters *)
+and Pfvars :: "'P \<Rightarrow> 'A set"
+assumes 
 Tmap_id: "Tmap id = id"
 and 
 Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
@@ -63,11 +67,8 @@ and (* the weaker, inclusion-based version is sufficient (and similarly for V): 
 Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
 Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
-
-lemma Tmap_comp': "\<And>\<sigma> \<tau> t. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
-using Tmap_comp by fastforce
-
-axiomatization where 
+(* *)
+and 
 (* : "Vmap id = id" (not needed)
 and *)
 Vmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
@@ -75,43 +76,60 @@ and
 small_Vfvars: "\<And>v. small (Vfvars v)" 
 and 
 Vmap_Vfvars: "\<And>v \<sigma>. ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
+(* *)
+and 
+small_Pfvars: "\<And>p. small (Pfvars p)" 
+(* *)
+begin
+
+lemma Tmap_comp': "\<And>\<sigma> \<tau> t. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
+using Tmap_comp by fastforce
 
 lemma Vmap_comp': "\<And>\<sigma> \<tau> v. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) v = Vmap \<sigma> (Vmap \<tau> v)"
 using Vmap_comp by fastforce
-
-axiomatization where  
-small_Pfvars: "\<And>p. small (Pfvars p)" 
 
 lemma Vfvars_Tfvars_disj: "ssbij \<sigma> \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<inter> Tfvars (Tmap \<sigma> t) = {}"
 apply(frule Vmap_Vfvars[of _ v]) apply(frule Tmap_Tfvars[of _ t])  
 apply(drule ssbij_bij)    
 by auto (metis Int_iff bij_inv_eq_iff emptyE imageE insert_absorb insert_subset)
 
-
 (* *)
 
-consts G :: "(TT \<Rightarrow> bool) \<Rightarrow> VV \<Rightarrow> TT \<Rightarrow> bool"
+end (* locale Components *)
 
-axiomatization where 
+
+locale Induct = Components dummy Tmap Tfvars Vmap Vfvars Pfvars
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+
+and Pfvars :: "'P \<Rightarrow> 'A set"
++
+fixes (* The operator that defines the inductive predicate as gfp:  *)
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
+assumes 
 G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 and 
 G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t) "
+and 
 (* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
 including beta-reduction (see their paper): 
 G_fresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
 I replace it with a much weaker condition: namely that such a fresh v can be produced 
 for equivariant relations R:  
 *)
-axiomatization where G_fresh: 
+G_fresh: 
 "\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
          \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
-
-(* *)
+begin
 
 lemma G_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> G R v t \<longrightarrow> G R' v t"
   using G_mono by blast
 
-inductive I :: "TT \<Rightarrow> bool" where 
+inductive I :: "'T \<Rightarrow> bool" where 
 G_I_intro: "G I v t \<Longrightarrow> I t"
 
 thm nitpick_unfold(143)
@@ -137,7 +155,7 @@ qed
 (* *)
 *)
 
-inductive I' :: "TT \<Rightarrow> bool" where 
+inductive I' :: "'T \<Rightarrow> bool" where 
 G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"
 
 lemma I'_equiv: 
@@ -186,7 +204,7 @@ NB: we get freshness for t as well, as a bonus (even though the inductive defini
 needs not guarantee that -- see again the case of beta-reduction)
  *)
 theorem BE_induct: 
-assumes I: "I (t::TT)"
+assumes I: "I (t::'T)"
 and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
       G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
 shows "R p t"
@@ -231,7 +249,8 @@ proof-
      have "G (\<lambda>t'. I' t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) v t" 
      apply(rule G_mono[OF _ G]) using ss_\<sigma>'' by auto
      hence G: "G (\<lambda>t'. I' (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) v t" 
-     using I'_equiv[OF _ ss_\<sigma>''] by (metis (mono_tags, lifting) G_mono predicate1I)
+     using I'_equiv[OF _ ss_\<sigma>''] 
+     by (smt (verit, del_insts) G_mono predicate1I) 
      have G: "G (\<lambda>t'. I' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) 
                 (Vmap (\<rho> o \<sigma>) v) (Tmap (\<rho> o \<sigma>) t) " 
      using G_equiv[OF \<rho>\<sigma> G] .
@@ -250,6 +269,9 @@ proof-
   from this[of id] show ?thesis 
   by (simp add: Tmap_id ssbij_id)
 qed
+
+
+end (* context Induct *)
 
 
 (* 

@@ -10,7 +10,8 @@ assumes "largeEnough (undefined::'a)" *)
 (* General infrastructure: *)
 locale Small = 
 fixes dummy :: "'A"
-assumes "infinite (UNIV::'A set) \<and> regularCard |UNIV::'A set|"
+assumes inf_A: "infinite (UNIV::'A set)" 
+and reg_A: "regularCard |UNIV::'A set|"
 begin 
 
 definition small :: "'A set \<Rightarrow> bool" where 
@@ -18,30 +19,72 @@ definition small :: "'A set \<Rightarrow> bool" where
 definition ssbij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" (* small-support bijections *) where 
 "ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'A set|"
 
-lemma 
-small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
-and  
-ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
-and 
-ssbij_id: "ssbij id"
-and 
-ssbij_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> ssbij (\<sigma> o \<tau>)"
-and 
-ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>)"
-and  
-small_ssbij: "\<And> A B A'. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> 
-   \<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
- 
-sorry
+lemma small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
+using Un_bound small_def Small_axioms Small_def by blast
+
+lemma ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
+unfolding ssbij_def by auto
+
+lemma ssbij_id: "ssbij id" unfolding ssbij_def bij_def  
+  by (simp add: supp_id_bound)
+
+lemma ssbij_comp: "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> ssbij (\<sigma> o \<tau>)"
+by (meson Small_axioms Small_def bij_comp ssbij_def supp_comp_bound)
+
+lemma ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>)"
+by (simp add: ssbij_def supp_inv_bound)
+
+
+lemma small_ssbij: 
+assumes s: "small A" "small B" "small A'" "A \<inter> A' = {}"
+shows "\<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
+proof-
+  obtain D where D: "D \<inter> B = {}" "D \<inter> A = {}" "D \<inter> A' = {}" and DA: "|D| =o |A|"
+  using exists_subset_compl[of A "A' \<union> B"]  
+  by (metis Int_Un_emptyI1 Int_Un_emptyI2 Int_commute Un_bound inf_A ordIso_symmetric s(1) s(2) s(3) small_def)
+
+  then obtain u where u: "bij_betw u A D"  
+  using card_of_ordIso ordIso_symmetric by blast
+  hence u: "u ` A = D" "\<And>a b. a \<in> A \<Longrightarrow> b \<in> A \<Longrightarrow> u a = u b \<longleftrightarrow> a = b"
+  unfolding bij_betw_def inj_on_def by auto
+
+  let ?iu = "inv_into A u" 
+  have iu: "bij_betw ?iu D A"
+  using u by (metis bij_betw_def bij_betw_inv_into inj_on_def)
+  hence iu: "?iu ` D = A" "\<And>a b. a \<in> D \<Longrightarrow> b \<in> D \<Longrightarrow> ?iu a = ?iu b \<longleftrightarrow> a = b"
+  unfolding bij_betw_def inj_on_def by auto
+
+  define v where "v \<equiv> \<lambda>a. if a \<in> A then u a else if a \<in> D then ?iu a else a"
+  have v[simp]: "\<And>a. a \<in> A \<Longrightarrow> v a = u a" "\<And>a. a \<in> D \<Longrightarrow> v a = ?iu a"
+  "\<And>a. a \<notin> A \<and> a \<notin> D \<Longrightarrow> v a = a"
+  using D(2) unfolding v_def by auto
+
+  have cas: "\<And>a. a \<in> A \<or> a \<in> D \<or> (a \<notin> A \<and> a \<notin> D)" by auto
+
+  have bv: "bij v"
+  unfolding bij_def inj_def image_def apply auto 
+  apply (metis (mono_tags, lifting) D(2) Int_emptyD f_inv_into_f imageI iu(1) u(1) u(2) v_def)
+  by (metis f_inv_into_f inv_into_into iu(1) u(1) v(2) v_def) 
+
+  have sv: "supp v \<subseteq> A \<union> D" unfolding supp_def using v(3) by blast
+
+  show ?thesis apply(rule exI[of _ v], intro conjI)
+    subgoal using bv sv s(1) unfolding ssbij_def small_def 
+      by (meson DA card_of_Un_ordLess_infinite card_of_subset_bound inf_A ordIso_ordLess_trans)
+    subgoal using D(1) u(1) by auto
+    subgoal using sv D(3) s(4) unfolding supp_def by auto . 
+qed
 
 
 lemma ssbij_invL: "ssbij \<sigma> \<Longrightarrow> \<sigma> o inv \<sigma> = id"
 by (meson bij_is_surj ssbij_bij surj_iff)
+
 lemma ssbij_invL': "ssbij \<sigma> \<Longrightarrow> \<sigma> (inv \<sigma> a) = a"
 using ssbij_invL pointfree_idE by fastforce
-(* *)
+
 lemma ssbij_invR: "ssbij \<sigma> \<Longrightarrow> inv \<sigma> o \<sigma> = id"
 by (meson bij_def inv_o_cancel ssbij_bij)
+
 lemma ssbij_invR': "ssbij \<sigma> \<Longrightarrow> inv \<sigma> (\<sigma> a) = a"
 using ssbij_invR pointfree_idE by fastforce
 

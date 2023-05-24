@@ -1,5 +1,6 @@
 theory LC_Beta 
-imports LC  "../../Curry_LFP" "../Generic_Barendregt_Enhanced_Rule_Induction"
+imports LC  "../Instantiation_Infrastructure/Curry_LFP" 
+"../Generic_Barendregt_Enhanced_Rule_Induction"
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

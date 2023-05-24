@@ -1,5 +1,6 @@
 theory LC
-  imports "../MRBNF_Recursor" "HOL-Library.FSet" "../../FixedCountableVars"
+imports "../MRBNF_Recursor" "HOL-Library.FSet" 
+ "../Instantiation_Infrastructure/FixedCountableVars"
 begin 
 
 (****************************)

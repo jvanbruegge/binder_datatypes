@@ -3,6 +3,12 @@ theory LC_Barendregt_Enhanced_Instance
   Curry_LFP "thys/Generic_Barendregt_Enhanced_Rule_Induction"
 begin 
 
+lemmas supp_inv_bound[simp]
+lemmas bij_swap[simp]
+lemmas supp_id_bound[simp]
+
+lemma fvars_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
+  unfolding supp_def id_on_def by blast
 lemma finite_singleton: "finite {x}" by blast
 
 
@@ -44,8 +50,9 @@ let
 in lthy' end\<close>
 print_mrbnfs
 
-declare tvsubst_VVr[simp]
-declare FVars_VVr[simp]
+lemmas tvsubst_VVr[simp] FVars_VVr[simp]
+term.rrename_ids[simp] term.rrename_cong_ids[simp]
+term.FFVars_rrenames[simp]
 
 lemma singl_bound: "|{a}| <o |UNIV::'a::var_term_pre set|"
   by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]])
@@ -100,8 +107,6 @@ lemma tvsubst_VVr_func[simp]: "tvsubst VVr t = t"
       done
     done
 
-
-
 lemma SSupp_upd_bound:
   fixes f::"var \<Rightarrow> trm"
   shows "|SSupp (f (a:=t))| <o |UNIV::var set| \<longleftrightarrow> |SSupp f| <o |UNIV::var set|"
@@ -115,9 +120,6 @@ corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::trm)))| <o |UNIV
   apply (rule iffD2[OF SSupp_upd_bound])
   apply (rule SSupp_VVr_bound)
   done
-
-lemma fvars_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
-  unfolding supp_def id_on_def by blast
 
 proposition rrename_simps[simp]:
   assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
@@ -250,13 +252,28 @@ lemma VVr_eq_Var[simp]: "VVr = Var"
   unfolding VVr_def Var_def comp_def \<eta>_def
   by (rule refl)
 
-corollary SSupp_upd_Var_bound[simp,intro!]: "|SSupp (Var(a:=(t::trm)))| <o |UNIV::var set|"
+lemma SSupp_upd_Var_bound[simp,intro!]: "|SSupp (Var(a:=(t::trm)))| <o |UNIV::var set|"
 using SSupp_upd_VVr_bound by auto
 
+lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
+by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
 
+lemma rrename_swap_Var1[simp]: "rrename_term (id(x := xx, xx := x)) (Var (x::var)) = Var xx" 
+apply(subst rrename_simps(1)) by auto
+lemma rrename_swap_Var2[simp]: "rrename_term (id(x := xx, xx := x)) (Var (xx::var)) = Var x" 
+apply(subst rrename_simps(1)) by auto
+lemma rrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> rrename_term (id(x := xx, xx := x)) (Var (z::var)) = Var z" 
+apply(subst rrename_simps(1)) by auto
+lemma rrename_swap_Var[simp]: "rrename_term (id(x := xx, xx := x)) (Var (z::var)) = 
+ Var (if z = x then xx else if z = xx then x else z)"
+apply(subst rrename_simps(1)) by auto
+
+lemma Abs_rrename: 
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
+ (\<And>a'. a' \<in>FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename_term \<sigma> e)"
+by (metis rrename_simps(3) term.rrename_cong_ids term.set(3))
 
 (* *)
-
 
 lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: var set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: var set|"
 unfolding IImsupp_def 
@@ -293,14 +310,6 @@ shows "|SSupp (\<lambda>a. tvsubst (\<sigma>::var\<Rightarrow>trm) (\<tau> a))| 
 using SSupp_tvsubst_bound[OF assms] unfolding o_def .
 
 (* *)
-
-declare term.FFVars_rrenames[simp]
-
-find_theorems rrename_term VVr
-
-lemma rrename_term_VVr[simp]: 
-"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o  |UNIV:: var set| \<Longrightarrow> rrename_term \<sigma> (VVr x) = Var (\<sigma> x)"
-by simp
 
 lemma IImsupp_rrename_su: 
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" 
@@ -347,11 +356,6 @@ proof-
       subgoal using IImsupp_tvsubst_su'[OF s(1)] by blast . . 
 qed
 
-(*
-lemma "rrename_term \<sigma> (tvsubst (VVr(x := e2)) e1) = 
-       tvsubst (VVr(\<sigma> x := rrename_term \<sigma> e2)) (rrename_term \<sigma> e1)"
-*)
-
 lemma rrename_tvsubst_comp: 
 assumes b[simp]: "bij (\<sigma>::var\<Rightarrow>var)" and s[simp]: "|supp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
 shows "rrename_term \<sigma> (tvsubst \<tau> e) = tvsubst (rrename_term \<sigma> \<circ> \<tau>) e"
@@ -366,8 +370,6 @@ proof-
       subgoal unfolding imsupp_def supp_def by simp
       subgoal using IImsupp_rrename_su' b s(1) by blast . .
 qed
-
-find_theorems tvsubst  Var
 
 lemma IImsupp_rrename_update_su: 
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
@@ -426,30 +428,20 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 
-
-lemmas supp_inv_bound[simp]
-lemmas term.rrename_ids[simp]
-lemmas bij_swap[simp]
-
-lemma supp_swap_bound[intro]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
-by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
-
-lemmas supp_id_bound[simp]
-
-lemma rrename_term_cong_id[simp]: 
-"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
- \<forall>a\<in>FFVars_term e. \<sigma> a = (a::var) \<Longrightarrow> rrename_term \<sigma> e = e"
-sorry
-
-lemma Abs_rrename_term: 
-"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
- \<forall>a'\<in>FFVars_term e - {a::var}. \<sigma> a' = a' \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename_term \<sigma> e)"
-sorry
-
 lemma tvsubst_Var_rrename_term: 
-"xx \<notin> FFVars_term e1 - {x} \<Longrightarrow> 
- tvsubst (Var((x::var) := e2)) e1 = tvsubst (VVr(xx := e2)) (rrename_term (id(x := xx, xx := x)) e1)"
-sorry
+assumes xx: "xx \<notin> FFVars_term e1 - {x}"
+shows "tvsubst (Var((x::var) := e2)) e1 = tvsubst (Var(xx := e2)) (rrename_term (id(x := xx, xx := x)) e1)"
+proof-
+  show ?thesis using xx
+  apply(induct e1 rule: term.fresh_induct[where A = "{x,xx} \<union> FFVars_term e2"])
+    subgoal by (metis insert_is_Un term.set(1) term.set(2) term.set_bd_UNIV)
+    subgoal by simp
+    subgoal by auto
+    subgoal for y t apply simp apply(subgoal_tac 
+      "y \<notin> IImsupp (Var(x := e2)) \<and> y \<notin> IImsupp (Var(xx := e2))") 
+      subgoal unfolding imsupp_def supp_def by auto
+      subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
+qed
 
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -501,7 +493,6 @@ apply standard unfolding ssbij_def Tmap_def Vmap_def
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)  
   by auto 
 
-  
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>R v t.  
@@ -517,11 +508,11 @@ where
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma GG_mono: "\<And>R R' k v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 unfolding G_def by fastforce
 
-lemma GG_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
-unfolding G_def subgoal for \<sigma> R v t apply(elim disjE)
+lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI1)
   subgoal apply(elim exE) subgoal for x e1 e2 
   apply(rule exI[of _ "\<sigma> x"])
@@ -550,16 +541,15 @@ unfolding G_def subgoal for \<sigma> R v t apply(elim disjE)
   apply(rule exI[of _ "rrename_term \<sigma> e2"]) apply(rule exI[of _ "rrename_term \<sigma> e2'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
   apply (simp add: term.rrename_comps) apply(subst rrename_tvsubst_comp) by auto
- . . . .
+ . . . 
   
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
 by (metis Abs_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
 
 lemma GG_fresh: 
-"\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
-         \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
-subgoal for R v t
+"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
+ \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
 using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
   subgoal for xx x e1 e2
   apply(rule exI[of _ "[xx]"])  
@@ -570,7 +560,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1"])
     apply(rule exI[of _ "e2"])
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal using tvsubst_Var_rrename_term by auto . .
   (* *)
   subgoal for xx e1 e1' e2
@@ -592,8 +582,8 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e'"])
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . 
   (* *)
   subgoal for xx x e1 e1' e2 e2'
@@ -607,10 +597,10 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(rule exI[of _ "e2"])
     apply(rule exI[of _ "e2'"])
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst tvsubst_Var_rrename_term) 
       by (auto simp: FFVars_tvsubst split: if_splits)  
-      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . .
+      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . 
   (* *)
 
 

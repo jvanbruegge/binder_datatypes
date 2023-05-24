@@ -9,6 +9,8 @@ begin
 | Abs x::'a t::"'a term" binds x in t
 *)
 
+declare [[inductive_internals]]
+
 ML \<open>
 val ctors = [
   (("Var", (NONE : mixfix option)), [@{typ 'var}]),
@@ -307,7 +309,7 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | Xi: "step e e' \<Longrightarrow> step (Abs x e) (Abs x e')"
 |PBeta: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App (Abs x e1) e2) (tvsubst (VVr(x:=e2')) e1')"
 
-lemmas step_def = nitpick_unfold(173)
+thm step_def
 
 (* INSTANTIATING THE Components LOCALE: *)
 
@@ -428,7 +430,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def) . . 
+      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . 
   (* *)
   subgoal for xx x e1 e1' e2 e2'
   apply(rule exI[of _ "[xx]"])  
@@ -444,7 +446,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
       subgoal apply(subst Abs_rrename_term[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst tvsubst_VVr_rrename_term) apply auto apply(subst (asm) FFVars_tvsubst)
       apply (auto split: if_splits)  by (metis FVars_VVr singletonI) 
-      subgoal by (metis supp_swap_bound Prelim.bij_swap small_def ssbij_def) . . . .
+      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . .
   (* *)
 
 

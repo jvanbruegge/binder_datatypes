@@ -73,6 +73,7 @@ where
 lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 unfolding G_def by fastforce
 
+(* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI1)
@@ -107,6 +108,10 @@ unfolding G_def apply(elim disjE)
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
 by (metis Abs_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
 
+(* NB: The entities affected by variables are passed as witnesses to exI 
+with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
+as they are. 
+*)
 lemma GG_fresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
  \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"

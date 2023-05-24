@@ -2,6 +2,8 @@ theory Generic_Barendregt_Enhanced_Rule_Induction
 imports Main "MRBNF_Recursor"
 begin 
 
+declare [[inductive_internals]]
+
 (* consts largeEnough :: "'a \<Rightarrow> bool"
 
 class largeEnough = 

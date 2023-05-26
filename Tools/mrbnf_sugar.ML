@@ -47,7 +47,9 @@ fun nesting_mrbnfs ctxt ctr_Tsss Us =
 
 fun create_binder_datatype (spec : spec) lthy =
   let
+val _ = @{print} "1"
     val fp_pre_T = BNF_FP_Util.mk_sumprodT_balanced (map snd (#ctors spec));
+val _ = @{print} "2"
 
     val (resBs, Xs) = fold_rev (
       fn (x, Free_Var) => (fn (a, b) => (x::a, b))
@@ -59,11 +61,15 @@ fun create_binder_datatype (spec : spec) lthy =
     val pre_name = name ^ "_pre" (* ^ name *);
     val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-
+val _ = @{print} "3"
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
+    val _ = @{print} mrbnf
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
+val _ = @{print} bnf
     val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
+val _ = @{print} res
     val ((rec_mrbnf, vvsubst_res), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (#map_b spec) I (hd res) lthy;
+val _ = @{print} rec_mrbnf
     val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
 
     val quotient_ctor = #ctor (#quotient_fp (hd res));
@@ -117,6 +123,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val names = map (fst o dest_Free);
     val ctor_names = map (fst o fst) (#ctors spec);
+    val _ = @{print} "wat"
 
     fun get_sets (T as TFree _) vars t = if member (op=) vars T then SOME [t] else NONE
       | get_sets (Type (n, Ts)) vars t = Option.mapPartial (fn mrbnf =>

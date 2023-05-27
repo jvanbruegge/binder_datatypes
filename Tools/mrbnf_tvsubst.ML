@@ -75,7 +75,8 @@ fun prove_model_axioms binding qualify model lthy =
     val eta_names = lthy
       |> mk_Frees "\<eta>" (map_filter (Option.map (fastype_of o fst)) (#etas model))
       |> fst
-      |> map (fst o dest_Free);
+      |> map (fst o dest_Free)
+      |> map (fn s => s ^ "_" ^ short_type_name (fst (dest_Type (#T (#quotient_fp (#fp_result model))))));
     val eta_names_opt = fst (fold_map (fn x => fn names => case x of
       SOME _ => (SOME (hd names), tl names)
       | NONE => (NONE, names)

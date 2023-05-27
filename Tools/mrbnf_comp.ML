@@ -1511,17 +1511,21 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
       (case mrbnf_opt of
         NONE => ((DEADID_mrbnf, ([T], [])), accum)
       | SOME (mrbnf, lthy') =>
-        if optim andalso forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
-          andalso Library.inter (op=) (map dest_TFree Ts) (map fst var_types) = []
+        if forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
+          andalso Library.inter (fn (a, b) => fst a = fst b andalso snd a <> snd b)
+            (map dest_TFree Ts ~~ var_types_of_mrbnf mrbnf) var_types = []
         then
           let
             val T' = T_of_mrbnf mrbnf;
             val deads = deads_of_mrbnf mrbnf;
+            val frees = frees_of_mrbnf mrbnf;
+            val bounds = bounds_of_mrbnf mrbnf;
             val lives = lives_of_mrbnf mrbnf;
+            val vars = interlace lives bounds frees (var_types_of_mrbnf mrbnf)
             val tvars' = Term.add_tvarsT T' [];
             val Ds_As =
               apply2 (map (Term.typ_subst_TVars (map fst tvars' ~~ map TFree tfrees)))
-                (deads, lives);
+                (deads, vars);
           in ((mrbnf, Ds_As), (x, lthy')) end
         else
           let

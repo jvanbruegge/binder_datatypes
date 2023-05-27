@@ -52,7 +52,7 @@ val ctors = [
   (("Var", (NONE : mixfix option)), [@{typ 'var}]),
   (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Lam", NONE), [@{typ 'bvar}, @{typ "'tyvar \<tau>"}, @{typ 'brec}]),
-  (("TyApp", NONE), [@{typ 'rec}, @{typ "'tyvar \<tau>"}]),
+  (("TyApp2", NONE), [@{typ 'rec}, @{typ "'tyvar \<tau>"}]),
   (("TyLam", NONE), [@{typ 'btyvar}, @{typ 'brec}])
 ]
 
@@ -89,7 +89,7 @@ lemma IImsupp_VVr_empty: "IImsupp VVr = {}"
   done
 
 lemma tvsubst_VVr_func: "tvsubst VVr t = t"
-  apply (rule terms.TT_plain_co_induct)
+  apply (rule term.TT_plain_co_induct)
   subgoal for x
     apply (rule case_split[of "isVVr (terms_ctor x)"])
      apply (unfold isVVr_def)[1]

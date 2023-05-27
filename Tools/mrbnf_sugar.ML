@@ -287,9 +287,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
           fun get_set vars = map (
             fn (t as Free _) => if fastype_of t = free then MRBNF_TVSubst.mk_singleton t else FVars $ t
-            | t => case fastype_of t of
-              Type (n, _) => if n = fst (dest_Type qT) then mk_UNION t FVars else t
-              | _ => t
+            | t => if member (op=) rec_vars (HOLogic.dest_setT (fastype_of t)) then mk_UNION t FVars else t
           ) (flat (map_filter I (map2 (fn T => fn x => get_sets T vars x) tys xs)));
           val sets = get_set (free::subtract (op=) rec_bounds rec_vars)
           val brec_sets = get_set rec_bounds
@@ -423,7 +421,7 @@ fun create_binder_datatype (spec : spec) lthy =
       Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
       UN_single
     };
-    fun mk_map_simps fs mk_supp_bound mk_imsupp mapx tac =
+    (*fun mk_map_simps fs mk_supp_bound mk_imsupp mapx tac =
       let
         val mapx = Term.list_comb (mapx, fs);
         val prems = map (HOLogic.mk_Trueprop o mk_supp_bound) fs;
@@ -537,7 +535,7 @@ fun create_binder_datatype (spec : spec) lthy =
         fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
           mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of h)))
         );
-        fun mk_imsupp h = the (List.find (fn s => domain_type (fastype_of s) = fastype_of h) (#IImsupps tvsubst_res)) $ h;
+        fun mk_imsupp h = the (List.find (fn s => domain_type (fastype_of s) = fastype_of h) (flat (#IImsuppss tvsubst_res))) $ h;
         fun tac ctxt prems = EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
           EVERY' [
@@ -574,7 +572,7 @@ fun create_binder_datatype (spec : spec) lthy =
             rtac ctxt refl
           ]
         ];
-      in mk_map_simps fs mk_supp_bound mk_imsupp (#tvsubst tvsubst_res) tac end;
+      in mk_map_simps fs mk_supp_bound mk_imsupp (#tvsubst tvsubst_res) tac end;*)
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
@@ -584,9 +582,9 @@ fun create_binder_datatype (spec : spec) lthy =
         ("fresh_induct", [fresh_induct], []),
         ("induct", [induct], [induct_attrib]),
         ("set", flat set_simpss, simp),
-        ("map", map_simps, simp),
-        ("distinct", distinct, simp),
-        ("subst", tvsubst_simps, simp)
+        (*("map", map_simps, simp),*)
+        ("distinct", distinct, simp)
+        (*("subst", tvsubst_simps, simp)*)
       ] |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))

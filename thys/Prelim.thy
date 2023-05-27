@@ -471,7 +471,7 @@ definition "hidden_id = id"
 lemma id_hid_o_hid: "id = hidden_id o hidden_id"
   unfolding hidden_id_def by simp
 
-lemma emp_bound: "|{}| <o |UNIV|"
+lemma emp_bound: "|{}::'a set| <o |UNIV::'b set|"
   by (rule card_of_empty4[THEN iffD2, OF UNIV_not_empty])
 
 lemma regularCard_csum: "Cinfinite r \<Longrightarrow> Cinfinite s \<Longrightarrow> regularCard r \<Longrightarrow> regularCard s \<Longrightarrow> regularCard (r +c s)"
@@ -732,5 +732,58 @@ lemma prod_in_Collect_iff: "(a, b) \<in> {(x, y). A x y} \<longleftrightarrow> A
 
 lemma Grp_UNIV_def: "Grp f = (\<lambda>x. (=) (f x))"
   unfolding Grp_def by auto
+
+definition cmin where "cmin r s \<equiv> if r <o s then r +c czero else czero +c s"
+
+lemma cmin1:
+  assumes "Card_order r" "Card_order s"
+  shows "cmin r s \<le>o r"
+unfolding cmin_def proof (cases "r <o s", unfold if_P if_not_P)
+  case True
+  then show "r +c czero \<le>o r" by (simp add: assms(1) csum_czero1 ordIso_imp_ordLeq) 
+next
+  case False
+  have "Well_order r" "Well_order s" using assms by auto
+  then have "s \<le>o r" using False using not_ordLeq_iff_ordLess by blast
+  moreover have "czero +c s =o s" using assms csum_czero2 by blast
+  ultimately show "czero +c s \<le>o r" using ordIso_ordLeq_trans by blast
+qed
+
+lemma cmin2:
+  assumes "Card_order r" "Card_order s"
+  shows "cmin r s \<le>o s"
+unfolding cmin_def proof (cases "r <o s", unfold if_P if_not_P)
+  case True
+  then show "r +c czero \<le>o s" using assms(1) csum_czero1 ordIso_ordLeq_trans ordLess_imp_ordLeq by blast 
+next
+  case False
+  then show "czero +c s \<le>o s" using ordIso_ordLeq_trans using assms(2) csum_czero2 ordIso_imp_ordLeq by blast 
+qed
+
+lemma cmin_greater:
+  assumes "Card_order s1" "Card_order s2" "r <o s1" "r <o s2"
+  shows "r <o cmin s1 s2"
+unfolding cmin_def proof (cases "s1 <o s2", unfold if_P if_not_P)
+  case True
+  have "s1 =o s1 +c czero" using assms(1) csum_czero1 ordIso_symmetric by blast
+  then show "r <o s1 +c czero" using assms(3) ordLess_ordIso_trans by blast
+next
+  case False
+  have "s2 =o czero +c s2" using assms(2) csum_czero2 ordIso_symmetric by blast
+  then show "r <o czero +c s2" using assms(4) ordLess_ordIso_trans by blast
+qed
+
+lemma cmin_Cinfinite:
+  assumes "Cinfinite s1" "Cinfinite s2"
+  shows "Cinfinite (cmin s1 s2)"
+unfolding cmin_def proof (cases "s1 <o s2", unfold if_P if_not_P)
+  case True
+  have "s1 +c czero =o s1" using assms(1) csum_czero1 by blast
+  then show "Cinfinite (s1 +c czero)" using Cinfinite_cong assms(1) ordIso_symmetric by blast
+next
+  case False
+  have "czero +c s2 =o s2" using assms(2) csum_czero2 by blast
+  then show "Cinfinite (czero +c s2)" using Cinfinite_cong assms(2) ordIso_symmetric by blast
+qed
 
 end

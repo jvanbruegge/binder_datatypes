@@ -1,6 +1,6 @@
 theory MRBNF_Recursor
   imports "./MRBNF_Composition"
-  keywords "binder_inductive" :: thy_goal
+  (*keywords "binder_inductive" :: thy_goal*)
 begin
 
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
@@ -265,9 +265,15 @@ lemma notin_empty_eq_True: "x \<notin> {} = True"
 lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
   by blast
 
-ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
+lemma finite_singleton: "finite {x}" by blast
+
+(*ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 ML_file \<open>../Tools/binder_inductive.ML\<close>
+
+context begin
+ML_file \<open>../Tools/binder_induction.ML\<close>
+end*)
 
 end

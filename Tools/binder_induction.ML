@@ -206,6 +206,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
               EVERY1 [
                 rtac ctxt rule_inst,
+                K (print_tac ctxt "foo"),
                 EVERY' (map (rtac ctxt) (take more_consumes prems)),
                 (* Boundness *)
                 rtac ctxt allI,

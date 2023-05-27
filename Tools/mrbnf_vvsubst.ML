@@ -150,6 +150,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
       P = P,
       PFVarss = PFVarss,
       Pmap = ssfun_map,
+      min_bound = false,
       axioms = {
         Pmap_id0 = fn ctxt => EVERY1 [
           K (unfold_thms_tac ctxt [compSS_id0]),

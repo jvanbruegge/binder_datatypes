@@ -12,7 +12,8 @@ sig
     P: typ,
     PFVarss: term list,
     Pmap: term,
-    axioms: 'a parameter_axioms
+    axioms: 'a parameter_axioms,
+    min_bound: bool
   };
 
   type 'a model_axioms = {
@@ -79,7 +80,8 @@ type 'a parameter = {
   P: typ,
   PFVarss: term list,
   Pmap: term,
-  axioms: 'a parameter_axioms
+  axioms: 'a parameter_axioms,
+  min_bound: bool
 };
 
 type 'a model_axioms = {
@@ -118,17 +120,22 @@ fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
 fun chop_f_prems [] = []
   | chop_f_prems (bij::supp::xs) = [bij, supp]::chop_f_prems xs;
 
-fun add_f_prems hs =
+fun add_f_prems min_bound hs =
   let
     fun interlace [] [] = []
       | interlace (x::xs) (y::ys) = x::y::interlace xs ys
+    val vars = fold_rev Term.add_tfrees hs [];
+    val bd = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV o TFree) vars);
+    fun mk_supp_bound' f = mk_ordLess (mk_card_of (mk_supp f)) (if min_bound then bd else
+      mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of f)))
+    );
   in
     fold_rev (fn a => fn b => Logic.implies $ a $ b) (
-      interlace (map (HOLogic.mk_Trueprop o mk_bij) hs) (map (HOLogic.mk_Trueprop o mk_supp_bound) hs)
+      interlace (map (HOLogic.mk_Trueprop o mk_bij) hs) (map (HOLogic.mk_Trueprop o mk_supp_bound') hs)
     )
   end;
 
-fun mk_termlike_goals quotient_opt T mapx FVars lthy =
+fun mk_termlike_goals min_bound quotient_opt T mapx FVars lthy =
   let
     val vars = rev (map TFree (Term.add_tfreesT T []));
     val n = length vars;
@@ -146,7 +153,7 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
       Term.list_comb (mapx, map HOLogic.id_const vars @ t) $
       HOLogic.id_const T
     )),
-    map_comp0 = fold_rev Logic.all (fs @ gs @ t) (add_f_prems (fs @ gs) (HOLogic.mk_Trueprop (
+    map_comp0 = fold_rev Logic.all (fs @ gs @ t) (add_f_prems min_bound (fs @ gs) (HOLogic.mk_Trueprop (
       HOLogic.eq_const (T --> T) $
         (Term.list_comb (mapx, map2 (curry HOLogic.mk_comp) fs gs @ t)) $
         (HOLogic.mk_comp (
@@ -161,7 +168,7 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
           mk_Trueprop_eq (f $ a, a)
         )) FVars xs fs;
       in
-        fold_rev Logic.all (d::t @ fs) (add_f_prems fs (fold_rev (curry Logic.mk_implies) prems (
+        fold_rev Logic.all (d::t @ fs) (add_f_prems min_bound fs (fold_rev (curry Logic.mk_implies) prems (
           mk_Trueprop_eq (Term.list_comb (mapx, fs @ t) $ d, d)
         )))
       end,
@@ -169,7 +176,7 @@ fun mk_termlike_goals quotient_opt T mapx FVars lthy =
       let
         val FVars = nth FVars i;
       in
-        fold_rev Logic.all (d::t @ fs) (add_f_prems fs (mk_Trueprop_eq (
+        fold_rev Logic.all (d::t @ fs) (add_f_prems min_bound fs (mk_Trueprop_eq (
           Term.list_comb (FVars, map (fn t => Term.list_comb (#rename (the quotient_opt), fs @ [t])) t @ [Term.list_comb (mapx, fs @ t) $ d]),
           mk_image (nth fs i) $ Term.list_comb (FVars, t @ [d])
         )))
@@ -253,7 +260,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       ||>> apfst hd o mk_Frees "pu" [#P params --> #U model]
       ||>> apfst hd o mk_Frees "t" [qT];
 
-    val pgoals = mk_termlike_goals NONE (#P params) (fst Pmap) (map fst PFVars) lthy;
+    val pgoals = mk_termlike_goals (#min_bound params) NONE (#P params) (fst Pmap) (map fst PFVars) lthy;
     val small_PFVars_goals = map (fn FVars =>
       let val a = HOLogic.dest_setT (snd (dest_funT (fastype_of FVars)));
       in Logic.all p (HOLogic.mk_Trueprop (mk_ordLess
@@ -271,11 +278,12 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       P = #P params,
       PFVarss = map fst PFVars,
       Pmap = fst Pmap,
-      axioms = param_thms
+      axioms = param_thms,
+      min_bound = #min_bound params
     };
 
     val tacs = #axioms model;
-    val goals = mk_termlike_goals (SOME quotient_fp) (#U model) (fst Umap) (map fst UFVars) lthy;
+    val goals = mk_termlike_goals false (SOME quotient_fp) (#U model) (fst Umap) (map fst UFVars) lthy;
 
     val small_avoiding_set_goals = map (fn (i, A) => HOLogic.mk_Trueprop (mk_ordLess
       (mk_card_of A) (mk_card_of (HOLogic.mk_UNIV (nth vars i)))
@@ -312,7 +320,7 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
           MRBNF_Def.interlace (replicate live pair_map) fs fs (MRBNF_Def.var_types_of_mrbnf mrbnf)
         );
       in
-        fold_rev Logic.all (fs @ [y, p]) (add_f_prems fs (mk_Trueprop_eq (
+        fold_rev Logic.all (fs @ [y, p]) (add_f_prems (#min_bound params) fs (mk_Trueprop_eq (
           Term.list_comb (fst Umap, fs @ ctor_map) $ (fst Uctor $ y $ p),
           fst Uctor $ (mapF $ y) $ Term.list_comb (fst Pmap, fs @ [p])
         )))

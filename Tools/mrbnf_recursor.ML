@@ -430,6 +430,11 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
+    fun card T = if #min_bound params then
+      foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars)
+      else mk_card_of (HOLogic.mk_UNIV T)
+    fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f)) (card (domain_type (fastype_of f)));
+
     val pre_T = mk_T_of_mrbnf deads (replicate live raw_T) vars vars mrbnf;
     fun mk_sets T =
       let
@@ -746,10 +751,10 @@ fun create_binding_recursor qualify model ff0_b lthy =
     val (raw_live_sets, raw_bound_sets, raw_free_sets) = mk_sets raw_T
     val (prod_live_sets, prod_bound_sets, prod_free_sets) = mk_sets prod_PU_T
 
-    fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f)) (if #min_bound params then
+    fun card T = if #min_bound params then
       foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars)
-      else mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of f)))
-    );
+      else mk_card_of (HOLogic.mk_UNIV T)
+    fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f)) (card (domain_type (fastype_of f)));
     fun prepare_prems f = [mk_bij f, mk_supp_bound f];
     val f_prems = maps (map HOLogic.mk_Trueprop o prepare_prems) fs;
     val f_g_prems = f_prems @ maps (map HOLogic.mk_Trueprop o prepare_prems) gs;
@@ -925,6 +930,14 @@ fun create_binding_recursor qualify model ff0_b lthy =
       ) $ y $ y') end;
 
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
+    val Cinfinite_card = if not (#min_bound params) then
+      @{thm conjI[OF _ card_of_Card_order]} OF [UNIV_cinfinite_of_mrbnf mrbnf]
+    else Goal.prove_sorry lthy [] [] (HOLogic.mk_conj (
+      mk_cinfinite (card @{typ bool}), mk_Card_order (card @{typ bool})
+    )) (fn {context=ctxt, ...} => EVERY1 [
+      K (print_tac ctxt "foo")
+    ]);
+
     val Uctor_cong =
       let
         val imsupp_prems = mk_imsupp_prems quotient y fs @ mk_imsupp_prems quotient y' gs;
@@ -1129,9 +1142,9 @@ fun create_binding_recursor qualify model ff0_b lthy =
               val exists_bij_betw's = map (fn s => infer_instantiate' ctxt [
                   NONE, NONE, SOME (Thm.cterm_of ctxt s), SOME (Thm.cterm_of ctxt fA_t),
                   SOME (Thm.cterm_of ctxt t), NONE, NONE, SOME (Thm.cterm_of ctxt fB_t)
-                ] (@{thm exists_bij_betw_refl} OF [infinite_UNIV])
+                ] (@{thm exists_bij_betw_refl} OF [Cinfinite_card])
               ) prod_bound_sets;
-              val exists_bij_betws = map2 (fn g_t => fn ex => exE OF [Drule.rotate_prems 2 (
+              val exists_bij_betws = map2 (fn g_t => fn ex => exE OF [Drule.rotate_prems 3 (
                   infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt g_t)] ex
               )]) g_ts exists_bij_betw's;
 
@@ -1323,7 +1336,7 @@ fun create_binding_recursor qualify model ff0_b lthy =
                 REPEAT_DETERM o etac ctxt conjE,
                 assume_tac ctxt
               ];
-              val card_thms = @{thms cmin1 cmin2 card_of_Card_order}
+              val card_thms = @{thms cmin1 cmin2 card_of_Card_order ordLeq_refl}
                 @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (every_other (tl raw_f_prems));
             in EVERY1 [
               rtac ctxt conjI,
@@ -1615,13 +1628,14 @@ fun create_binding_recursor qualify model ff0_b lthy =
                           SOME (Thm.cterm_of ctxt (mk_map_t pick's ap_pick's)),
                           SOME (Thm.cterm_of ctxt (Term.abs ("x", pre_T) (mk_Un (mk_Un (FVars $ (ctor $ Bound 0), PFVars $ p), avoiding_set)))),
                           NONE, NONE, SOME (Thm.cterm_of ctxt (mk_map_t picks ap_picks))
-                        ] (@{thm exists_bij_betw} OF [infinite_UNIV, pick, pick', h_prem])
+                        ] (@{thm exists_bij_betw} OF [Cinfinite_card, @{thm _}, pick, pick', h_prem])
                     ) (every_other pick_prems) (every_other pick_prems') (every_other h_prems) raw_bound_sets
                       (#FVars raw) (#PFVarss params) (#avoiding_sets model);
                   val set_map_tac = SELECT_GOAL (unfold_thms_tac' ctxt (@{thms image_id id_o o_id comp_def[of fst] fst_conv id_def[symmetric]} @ MRBNF_Def.set_map_of_mrbnf mrbnf) (fn ctxt => REPEAT_DETERM (resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick_prems') 1)));
                 in EVERY1 [
                   EVERY' (map (fn thm => EVERY' [
                     rtac ctxt (exE OF [thm]),
+                    REPEAT_DETERM o resolve_tac ctxt card_thms,
                     resolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 thm OF [mr_rel_prem]) mr_rel_set_thms),
                     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
                     REPEAT_DETERM o EVERY' [
@@ -1853,7 +1867,8 @@ fun create_binding_recursor qualify model ff0_b lthy =
         K (unfold_thms_tac ctxt [suitable_def]),
         REPEAT_DETERM o resolve_tac ctxt [@{thm choice}, allI],
         rtac ctxt @{thm exists_suitable_aux},
-        rtac ctxt infinite_UNIV,
+        rtac ctxt Cinfinite_card,
+        REPEAT_DETERM o resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLeq_refl ordLeq_transitive},
         rtac ctxt Un_bound,
         resolve_tac ctxt (MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf),
         rtac ctxt @{thm card_of_minus_bound},

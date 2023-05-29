@@ -228,40 +228,48 @@ lemmas supp_inv_betw_extU = extU[THEN conjunct2, THEN conjunct2,
 lemmas imsupp_inv_betw_extU = extU[THEN conjunct2, THEN conjunct2,
     THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
+lemma cinfinite_imp_infinite: "cinfinite |A| \<Longrightarrow> infinite A"
+  by (simp add: cinfinite_def)
+lemma cinfinite_iff_infinite: "cinfinite |A| = infinite A"
+  by (simp add: cinfinite_def)
+
 lemma ex_bij_betw_supp:
   fixes A B C :: "'a set"
-  assumes i: "infinite (UNIV :: 'a set)" and
-  bound: "|A| <o |UNIV :: 'a set|"
+  assumes i: "Cinfinite r" and
+  bound: "|A| <o r"
   and AB: "bij_betw uu A B" and emp: "A \<inter> B = {}" "A \<inter> C = {}" "B \<inter> C = {}"
-shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} \<and>
+shows "EX u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} \<and>
              eq_on A u uu"
 proof-
   have abo: "|A| =o |B|" using AB
     using card_of_ordIso by blast
-  hence b2: "|B| <o |UNIV :: 'a set|" using bound
+  hence b2: "|B| <o r" using bound
     using ordIso_ordLess_trans ordIso_symmetric by blast
   define u where "u \<equiv> extU A B uu"
   show ?thesis apply(rule exI[of _ u])
     using extU[OF AB emp(1), unfolded u_def[symmetric]] apply auto
-    apply (metis abo bound card_of_Un_infinite card_of_mono1 finite_Un
-finite_ordLess_infinite2 i ordIso_iff_ordLeq ordLeq_ordLess_trans)
+    apply (meson Un_Cinfinite_bound_strict b2 bound card_of_mono1 i ordLeq_ordLess_trans)
   using assms by auto
 qed
+lemmas ex_bij_betw_supp_UNIV = ex_bij_betw_supp[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order],
+    of "UNIV::'a set" "_::'a set"]
 
 lemma ordIso_ex_bij_betw_supp:
   fixes A B C :: "'a set"
-  assumes i: "infinite (UNIV :: 'a set)" and
-  bound: "|A| <o |UNIV :: 'a set|"
+  assumes i: "Cinfinite r" and
+  bound: "|A| <o r"
   and AB: "|A| =o |B|" and emp: "A \<inter> B = {}" "A \<inter> C = {}" "B \<inter> C = {}"
-shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}"
+shows "EX u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}"
 proof-
   obtain uu where AB: "bij_betw uu A B"
     using AB unfolding card_of_ordIso[symmetric] by blast
-  have "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}
+  have "EX u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}
     \<and> eq_on A u uu"
   apply(rule ex_bij_betw_supp) using assms AB by auto
   thus ?thesis by auto
 qed
+lemmas ordIso_ex_bij_betw_supp_UNIV = ordIso_ex_bij_betw_supp[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order],
+    of "UNIV::'a set" "_::'a set"]
 
 abbreviation Grp where "Grp \<equiv> BNF_Def.Grp UNIV"
 

@@ -13,13 +13,17 @@ lemma card_of_minus_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |A - B| <o |
   by (rule card_of_subset_bound[OF Diff_subset])
 
 lemma exists_subset_compl:
-  assumes "infinite (UNIV::'b set)" "|U \<union> S::'b set| <o |UNIV::'b set|"
+  assumes "Cinfinite r" "r \<le>o |UNIV::'b set|" "|U \<union> S::'b set| <o r"
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
 proof -
-  have 1: "|U| <o |UNIV::'b set|" using assms(2) using card_of_Un1 ordLeq_ordLess_trans by blast
-  have "|-(U \<union> S)| =o |UNIV::'b set|" using card_of_Un_diff_infinite[OF assms(1,2)]
+  have 1: "|U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
+  have "|-(U \<union> S)| =o |UNIV::'b set|"
+    using card_of_Un_diff_infinite[OF
+        cinfinite_imp_infinite[OF cinfinite_mono[OF assms(2) conjunct1[OF assms(1)]]]
+        ordLess_ordLeq_trans[OF assms(3,2)]
+    ]
     by (simp add: Compl_eq_Diff_UNIV)
-  then have "|U| <o |-(U \<union> S)|" using 1 ordIso_symmetric ordLess_ordIso_trans by blast
+  then have "|U| <o |-(U \<union> S)|" using ordLess_ordLeq_trans[OF 1 assms(2)] ordIso_symmetric ordLess_ordIso_trans by fast
   then obtain B where 1: "B \<subseteq> -(U \<union> S)" "|U| =o |B|"
     by (meson internalize_card_of_ordLeq2 ordLess_imp_ordLeq)
   then have "U \<inter> B = {}" "B \<inter> S = {}" by blast+
@@ -27,13 +31,13 @@ proof -
 qed
 
 lemma exists_suitable_aux:
-  assumes "infinite (UNIV::'a set)" "|U \<union> (S - U)::'a set| <o |UNIV::'a set|"
-  shows "\<exists>(u::'a \<Rightarrow> 'a). bij u \<and> |supp u| <o |UNIV::'a set| \<and> imsupp u \<inter> (S - U) = {} \<and> u ` U \<inter> S = {}"
+  assumes "Cinfinite r" "r \<le>o |UNIV::'a set|" "|U \<union> (S - U)::'a set| <o r"
+  shows "\<exists>(u::'a \<Rightarrow> 'a). bij u \<and> |supp u| <o r \<and> imsupp u \<inter> (S - U) = {} \<and> u ` U \<inter> S = {}"
 proof -
-  have 1: "|U| <o |UNIV::'a set|" using assms(2) using card_of_Un1 ordLeq_ordLess_trans by blast
+  have 1: "|U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
   obtain B where 2: "U \<inter> B = {}" "B \<inter> (S - U) = {}" "|U| =o |B|"
-    using exists_subset_compl[OF assms(1,2)] by blast
-  obtain u where 3: "bij u" "|supp u| <o |UNIV::'a set|" "bij_betw u U B" "imsupp u \<inter> (S - U) = {}"
+    using exists_subset_compl[OF assms(1,2,3)] by blast
+  obtain u where 3: "bij u" "|supp u| <o r" "bij_betw u U B" "imsupp u \<inter> (S - U) = {}"
     using ordIso_ex_bij_betw_supp[OF assms(1) 1 2(3,1) Diff_disjoint 2(2)] by blast
   then have "u ` U \<subseteq> B" unfolding bij_betw_def by blast
   then have "u ` U \<inter> S = {}" using 2 by blast
@@ -50,44 +54,55 @@ lemma arg_cong3: "\<lbrakk> a1 = a2 ; b1 = b2 ; c1 = c2 \<rbrakk> \<Longrightarr
 
 lemma exists_bij_betw:
   fixes L R h::"'a \<Rightarrow> 'a"
-  assumes "infinite (UNIV::'a set)" "bij R" "bij L" "bij h" "f2 x = h ` f2 y"
-    and u: "|f1 (A x) \<union> g (A x)::'a set| <o |UNIV::'a set|" "f1 (A x) \<inter> g (A x) = {}" "f1 (A x) = L ` f2 x"
-    and w: "|(f1 (B y)) \<union> (g (B y))::'a set| <o |UNIV::'a set|" "f1 (B y) \<inter> g (B y) = {}" "f1 (B y) = R ` f2 y"
+  assumes "Cinfinite r" "r \<le>o |UNIV::'a set|" "bij R" "bij L" "bij h" "f2 x = h ` f2 y"
+    and u: "|f1 (A x) \<union> g (A x)::'a set| <o r" "f1 (A x) \<inter> g (A x) = {}" "f1 (A x) = L ` f2 x"
+    and w: "|(f1 (B y)) \<union> (g (B y))::'a set| <o r" "f1 (B y) \<inter> g (B y) = {}" "f1 (B y) = R ` f2 y"
   shows "\<exists>(u::'a \<Rightarrow> 'a) (w::'a \<Rightarrow> 'a).
-    bij u \<and> |supp u| <o |UNIV::'a set| \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}
-  \<and> bij w \<and> |supp w| <o |UNIV::'a set| \<and> imsupp w \<inter> g (B y) = {} \<and> w ` f1 (B y) \<inter> f1 (B y) = {}
+    bij u \<and> |supp u| <o r \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}
+  \<and> bij w \<and> |supp w| <o r \<and> imsupp w \<inter> g (B y) = {} \<and> w ` f1 (B y) \<inter> f1 (B y) = {}
   \<and> eq_on (f2 y) (u \<circ> L \<circ> h) (w \<circ> R)"
 proof -
-  have 1: "|f1 (A x)| <o |UNIV::'a set|" "|f1 (B y)| <o |UNIV::'a set|"
+  have 1: "|f1 (A x)| <o r" "|f1 (B y)| <o r"
     using card_of_Un1 card_of_Un2 ordLeq_ordLess_trans u(1) w(1) by blast+
-  have "|f1 (A x) \<union> g (A x) \<union> f1 (B y) \<union> g (B y)| <o |UNIV::'a set|" (is "|?A| <o _")
-    using card_of_Un_ordLess_infinite[OF assms(1) u(1) w(1)] Un_assoc by metis
+  then have 2: "|f1 (A x)| <o |UNIV::'a set|" "|f1 (B y)| <o |UNIV::'a set|"
+    using ordLess_ordLeq_trans[OF _ assms(2)] by blast+
+  have "|f1 (A x) \<union> g (A x) \<union> f1 (B y) \<union> g (B y)| <o r" (is "|?A| <o _")
+    using Un_Cinfinite_ordLess[OF u(1) w(1) assms(1)] Un_assoc by metis
   then have "|-?A| =o |UNIV::'a set|"
-    by (rule card_of_Un_diff_infinite[OF assms(1) _, unfolded Compl_eq_Diff_UNIV[symmetric]])
-  then have "|f1 (A x)| <o |-?A|" by (rule ordLess_ordIso_trans[OF 1(1) ordIso_symmetric])
+    apply -
+    apply (rule card_of_Un_diff_infinite[of "UNIV::'a set" ?A, unfolded Compl_eq_Diff_UNIV[symmetric]])
+     apply (rule cinfinite_imp_infinite)
+     apply (rule cinfinite_mono)
+      apply (rule assms(2))
+     apply (rule conjunct1[OF assms(1)])
+    apply (rule ordLess_ordLeq_trans)
+     apply assumption
+    apply (rule assms(2))
+    done
+  then have "|f1 (A x)| <o |-?A|" by (rule ordLess_ordIso_trans[OF 2(1) ordIso_symmetric])
 
   then obtain C where C: "C \<subseteq> -?A" "|f1 (A x)| =o |C|"
     using ordLess_imp_ordLeq[THEN iffD1[OF internalize_card_of_ordLeq2]] by metis
   then have 3: "f1 (A x) \<inter> C = {}" "C \<inter> g (A x) = {}" "f1 (B y) \<inter> C = {}" "C \<inter> g (B y) = {}" by blast+
 
-  obtain u::"'a \<Rightarrow> 'a" where x: "bij u" "|supp u| <o |UNIV::'a set|" "bij_betw u (f1 (A x)) C" "imsupp u \<inter> g (A x) = {}"
+  obtain u::"'a \<Rightarrow> 'a" where x: "bij u" "|supp u| <o r" "bij_betw u (f1 (A x)) C" "imsupp u \<inter> g (A x) = {}"
     using ordIso_ex_bij_betw_supp[OF assms(1) 1(1) C(2) 3(1) u(2) 3(2)] by blast
 
-  have "bij_betw (inv R) (f1 (B y)) (f2 y)" unfolding bij_betw_def by (simp add: assms(2) inj_on_def w(3))
-  moreover have "bij_betw h (f2 y) (f2 x)" using bij_imp_bij_betw assms(4,5) by auto
-  moreover have "bij_betw L (f2 x) (f1 (A x))" unfolding bij_betw_def by (simp add: assms(3) inj_on_def u(3))
+  have "bij_betw (inv R) (f1 (B y)) (f2 y)" unfolding bij_betw_def by (simp add: assms(3) inj_on_def w(3))
+  moreover have "bij_betw h (f2 y) (f2 x)" using bij_imp_bij_betw assms(5,6) by auto
+  moreover have "bij_betw L (f2 x) (f1 (A x))" unfolding bij_betw_def by (simp add: assms(4) inj_on_def u(3))
   ultimately have 4: "bij_betw (u \<circ> L \<circ> h \<circ> inv R) (f1 (B y)) C" using bij_betw_trans x(3) by blast
 
-  obtain w::"'a \<Rightarrow> 'a" where y: "bij w" "|supp w| <o |UNIV::'a set|" "bij_betw w (f1 (B y)) C"
+  obtain w::"'a \<Rightarrow> 'a" where y: "bij w" "|supp w| <o r" "bij_betw w (f1 (B y)) C"
     "imsupp w \<inter> g (B y) = {}" "eq_on (f1 (B y)) w (u \<circ> L \<circ> h \<circ> inv R)"
     using ex_bij_betw_supp[OF assms(1) 1(2) 4 3(3) w(2) 3(4)] by blast
 
-  have "eq_on (f2 y) (u \<circ> L \<circ> h) (w \<circ> R)" using y(5) unfolding eq_on_def using assms(2) w(3) by auto
+  have "eq_on (f2 y) (u \<circ> L \<circ> h) (w \<circ> R)" using y(5) unfolding eq_on_def using assms(3) w(3) by auto
   moreover have "u ` f1 (A x) \<inter> f1 (A x) = {}" "w ` f1 (B y) \<inter> f1 (B y) = {}" using bij_betw_imp_surj_on x(3) y(3) 3(1,3) by blast+
   ultimately show ?thesis using x(1,2,4) y(1,2,4) by blast
 qed
 
-lemmas exists_bij_betw_refl = exists_bij_betw[OF _ _ _ bij_id image_id[symmetric], unfolded o_id]
+lemmas exists_bij_betw_refl = exists_bij_betw[OF _ _ _ _ bij_id image_id[symmetric], unfolded o_id]
 
 lemma imsupp_id_on: "imsupp u \<inter> A = {} \<Longrightarrow> id_on A u"
   unfolding imsupp_def supp_def id_on_def by blast
@@ -126,9 +141,6 @@ lemma Int_Un_emptyI2: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inte
 lemma imsupp_comp_image: "bij f \<Longrightarrow> imsupp (f \<circ> g \<circ> inv f) = f ` imsupp g"
   apply (auto simp: supp_def imsupp_def bij_inv_eq_iff image_in_bij_eq)
   by (smt (verit, del_insts) imageI inv_simp1 mem_Collect_eq)
-
-lemma cinfinite_imp_infinite: "cinfinite |A| \<Longrightarrow> infinite A"
-  by (simp add: cinfinite_def)
 
 lemma id_on_comp3: "c z = z \<Longrightarrow> b (c z) = c z \<Longrightarrow> a z = z \<Longrightarrow> (a \<circ> b \<circ> c) z = z"
   by simp

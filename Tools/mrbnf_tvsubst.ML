@@ -417,6 +417,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val (eta_defs, model, lthy) = prove_model_axioms b (*qualify*) I model lthy;
     val (CCTOR, defs, vars, lthy) = define_tvsubst_consts b (*qualify*) I model lthy;
 
+    val _ = @{print} "tvsubst"
     val nvars = length vars;
     val mrbnf = #pre_mrbnf (#fp_result model);
     val quotient = #quotient_fp (#fp_result model);

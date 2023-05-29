@@ -9,7 +9,7 @@ ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
   using card_of_mono1 ordLeq_ordLess_trans by blast
-lemma card_of_minus_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |A - B| <o |UNIV::'a set|"
+lemma card_of_minus_bound: "|A| <o r \<Longrightarrow> |A - B| <o r"
   by (rule card_of_subset_bound[OF Diff_subset])
 
 lemma exists_subset_compl:
@@ -103,6 +103,7 @@ proof -
 qed
 
 lemmas exists_bij_betw_refl = exists_bij_betw[OF _ _ _ _ bij_id image_id[symmetric], unfolded o_id]
+lemmas exists_bij_betw_refl_UNIV = exists_bij_betw_refl[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order] ordLeq_refl[OF card_of_Card_order]]
 
 lemma imsupp_id_on: "imsupp u \<inter> A = {} \<Longrightarrow> id_on A u"
   unfolding imsupp_def supp_def id_on_def by blast
@@ -132,6 +133,7 @@ lemma comp_pair:
 
 lemma bij_if: "bij g \<Longrightarrow> bij (if P then id else g)" by simp
 lemma supp_if: "|supp (u::'a \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> |supp (if P then id else u)| <o |UNIV::'a set|" using supp_id_bound by auto
+lemma supp_if': "Cinfinite r \<Longrightarrow> |supp u| <o r \<Longrightarrow> |supp (if P then id else u)| <o r" using supp_id_bound' by auto
 lemma imsupp_if_empty: "imsupp u \<inter> A = {} \<Longrightarrow> imsupp (if P then id else u) \<inter> A = {}" unfolding imsupp_def supp_def by simp
 lemma image_if_empty: "u ` A \<inter> B = {} \<Longrightarrow> (P \<Longrightarrow> A \<inter> B = {}) \<Longrightarrow> (if P then id else u) ` A \<inter> B = {}" by simp
 

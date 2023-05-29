@@ -615,22 +615,16 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     )) rrename_VVrs in_IImsuppss IImsupp_VVrs (0 upto nvars - 1) defs;
     
     val cmin_UNIV = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
-    val (rT, _) = lthy
-      |> fold (Variable.declare_constraints o Logic.mk_type) vars
-      |> apfst hd o mk_TFrees 1;
-    val Un_bound =
-      let
-        val ([r1, r2], _) = lthy
-          |> mk_Frees "r" (map HOLogic.mk_setT [rT, rT]);
-        fun mk_bd t = HOLogic.mk_Trueprop (mk_ordLess (mk_card_of t) cmin_UNIV);
-      in Goal.prove_sorry lthy (names [r1, r2]) [] (Logic.mk_implies (
-        mk_bd r1, Logic.mk_implies (mk_bd r2, mk_bd (mk_Un (r1, r2)))
-      )) (fn {context=ctxt, ...} => EVERY1 [
-        rtac ctxt @{thm Un_Cinfinite_ordLess},
-        assume_tac ctxt,
-        assume_tac ctxt,
-        REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_Cinfinite conjI card_of_Card_order})
-      ]) end;
+    val Cinfinite_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (HOLogic.mk_conj (
+      mk_cinfinite cmin_UNIV, mk_Card_order cmin_UNIV
+    ))) (fn {context=ctxt, ...} => EVERY1 [
+      REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_Cinfinite conjI card_of_Card_order})
+    ]);
+    val regularCard_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (mk_regularCard cmin_UNIV)) (fn {context=ctxt, ...} => EVERY1 [
+      REPEAT_DETERM o resolve_tac ctxt (#var_regular (MRBNF_Def.class_thms_of_mrbnf mrbnf) :: MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_regularCard cmin_Cinfinite conjI card_of_Card_order})
+    ]);
+    val Un_bound = @{thm Un_Cinfinite_ordLess} OF [@{thm _}, @{thm _}, Cinfinite_card];
+    val UNION_bound = @{thm regularCard_UNION_bound} OF [Cinfinite_card, regularCard_card];
 
     val SSupp_comps = @{map 4} (fn f => fn rrename_VVr => fn i => Option.map (fn def =>
       let
@@ -914,10 +908,10 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     fun small_PFVars_tac ctxt = EVERY1 [
       K (unfold_thms_tac ctxt (@{thms comp_def case_prod_beta} @ maps (map snd o #IImsupps) some_defs)),
       REPEAT_DETERM o resolve_tac ctxt (
-        [MRBNF_Def.Un_bound_of_mrbnf mrbnf, MRBNF_Def.UNION_bound_of_mrbnf mrbnf]
+        [Un_bound, UNION_bound]
         @ map (fn def => @{thm iffD1[OF mem_Collect_eq]} OF [#Rep (snd (#SSfun def))]) some_defs
         @ #card_of_FVars_bound_UNIVs quotient
-        @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}
+        @ @{thms cmin_greater card_of_Card_order}
       )
     ];
 
@@ -1159,7 +1153,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     ];
 
     val model_axioms = {
-      small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1),
+      small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt (@{thm Cinfinite_gt_empty} OF [Cinfinite_card]) 1),
       Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
       Umap_comp0 = fn ctxt => rtac ctxt (#rename_comp0 quotient RS sym) 1 THEN ALLGOALS (assume_tac ctxt),
       Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),

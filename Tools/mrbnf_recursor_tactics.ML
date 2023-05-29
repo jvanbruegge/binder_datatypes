@@ -48,10 +48,10 @@ fun mk_f_termination_tac mk_relation wf_subshapes set_subshape_images set_subsha
   REPEAT_DETERM o etac ctxt conjE,
   dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
   resolve_tac ctxt set_maps,
-  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems)),
+  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})),
   K (unfold_thms_tac ctxt @{thms image_id}),
   dresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
-  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt prems)
+  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}))
 ]);
 
 fun mk_Umap'_CTOR_tac mrbnf Umap'_def PUmap'_def CTOR_def rename_def abs_ctor total_abs_eq_iff alpha_bij_eq rep_abs Umap_Uctor Uctor ctxt prems =
@@ -275,13 +275,14 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
 
 fun mk_alpha_ctor_picks_tac mrbnf pick_prems alpha_intro alpha_refl pick_id_ons ctxt prems =
   EVERY1 [
-    rtac ctxt (alpha_intro OF pick_prems),
+    rtac ctxt (alpha_intro OF every_other pick_prems),
+    REPEAT_DETERM o resolve_tac ctxt (pick_prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
     REPEAT_DETERM o resolve_tac ctxt (map2 (fn a => fn b => a OF [b]) pick_id_ons prems),
     rtac ctxt (iffD2 OF [arg_cong OF [MRBNF_Def.map_comp_of_mrbnf mrbnf]]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
     K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}),
     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
     Method.insert_tac ctxt pick_prems,
     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id inv_o_simp1 Grp_UNIV_id conversep_eq OO_eq relcompp_conversep_Grp}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf),
@@ -311,14 +312,14 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
         rtac ctxt (alpha_ctor_picks OF prems),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
           K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]} @ [f_simp OF prems]))
         ],
         K (unfold_thms_tac ctxt @{thms comp_def}),
         rtac ctxt @{thm subset_trans},
         resolve_tac ctxt UFVars'_CTORs,
         EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-        REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+        REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
         Method.insert_tac ctxt prems,
         SELECT_GOAL (unfold_thms_tac ctxt suitable_defs),
         REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
@@ -328,7 +329,7 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
         rtac ctxt @{thm Un_upper2},
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt)
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})
         ],
         REPEAT_DETERM o EVERY' [
           TRY o etac ctxt UnE,
@@ -338,11 +339,11 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
           hyp_subst_tac ctxt,
           resolve_tac ctxt (map (fn thm => spec OF [thm]) IH),
           eresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI}) set_subshape_images @ set_subshapes),
-          REPEAT_DETERM o assume_tac ctxt
+          REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})
         ],
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
           K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]})
         ],
         rtac ctxt @{thm subset_refl}

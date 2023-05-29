@@ -430,6 +430,8 @@ lemmas Grp_UNIV_id = eq_alt[symmetric]
 
 lemma supp_id_bound: "|supp id| <o |UNIV :: 'a set|"
   by (simp add: card_of_empty4 supp_id)
+lemma supp_id_bound': "Cinfinite r \<Longrightarrow> |supp id| <o r"
+  by (simp add: supp_id Cinfinite_gt_empty)
 
 lemma supp_the_inv_f_o_f_bound: "inj f \<Longrightarrow> |supp (the_inv f o f)| <o |UNIV|"
   by (smt f_the_inv_into_f fun.map_cong inv_o_cancel pointfree_idE supp_id_bound)
@@ -792,6 +794,19 @@ next
   case False
   have "czero +c s2 =o s2" using assms(2) csum_czero2 by blast
   then show "Cinfinite (czero +c s2)" using Cinfinite_cong assms(2) ordIso_symmetric by blast
+qed
+
+lemma cmin_regularCard:
+  assumes "regularCard s1" "regularCard s2" "Cinfinite s1" "Cinfinite s2"
+  shows "regularCard (cmin s1 s2)"
+unfolding cmin_def proof (cases "s1 <o s2", unfold if_P if_not_P)
+  case True
+  have "s1 +c czero =o s1" using assms(3) csum_czero1 by blast
+  then show "regularCard (s1 +c czero)" using regularCard_ordIso ordIso_symmetric assms by blast
+next
+  case False
+  have "czero +c s2 =o s2" using assms(4) csum_czero2 by blast
+  then show "regularCard (czero +c s2)" using regularCard_ordIso ordIso_symmetric assms by blast
 qed
 
 end

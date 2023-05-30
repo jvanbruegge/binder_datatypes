@@ -7,8 +7,10 @@ datatype \<tau> = Base | Arrow \<tau> \<tau> (infixr "(\<rightarrow>)" 50)
 ML \<open>
 val ctors = [
   (("Var", (NONE : mixfix option)), [@{typ 'var}]),
+  (("TyVar", (NONE : mixfix option)), [@{typ 'tyvar}]),
   (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Lam", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}]),
+  (("TyLam", NONE), [@{typ 'btyvar}, @{typ \<tau>}, @{typ 'brec}]),
   (("Let", NONE), [@{typ "('bvar, \<tau> \<times> 'rec) dallist"}, @{typ 'brec}])
 ]
 
@@ -16,20 +18,18 @@ val spec = {
   fp_b = @{binding "term"},
   vars = [
     (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
+    (dest_TFree @{typ 'tyvar}, MRBNF_Def.Free_Var),
     (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
+    (dest_TFree @{typ 'btyvar}, MRBNF_Def.Bound_Var),
     (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var),
     (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var)
   ],
-  binding_rel = [[1]],
+  binding_rel = [[1], [1]],
   rec_vars = 2,
   ctors = ctors,
   map_b = @{binding vvsubst},
   tvsubst_b = @{binding tvsubst}
 }
-\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0
 \<close>
 
 declare [[ML_print_depth=10000]]

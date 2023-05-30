@@ -48,10 +48,10 @@ fun mk_f_termination_tac mk_relation wf_subshapes set_subshape_images set_subsha
   REPEAT_DETERM o etac ctxt conjE,
   dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
   resolve_tac ctxt set_maps,
-  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems)),
+  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})),
   K (unfold_thms_tac ctxt @{thms image_id}),
   dresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
-  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt prems)
+  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}))
 ]);
 
 fun mk_Umap'_CTOR_tac mrbnf Umap'_def PUmap'_def CTOR_def rename_def abs_ctor total_abs_eq_iff alpha_bij_eq rep_abs Umap_Uctor Uctor ctxt prems =
@@ -67,13 +67,13 @@ fun mk_Umap'_CTOR_tac mrbnf Umap'_def PUmap'_def CTOR_def rename_def abs_ctor to
     rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt Uctor)] @{thm arg_cong2[OF _ refl]}),
     rtac ctxt trans,
     rtac ctxt map_comp,
-    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     rtac ctxt @{thm sym[THEN trans[rotated]]},
     rtac ctxt map_comp,
-    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt @{thms id_o o_id}),
     rtac ctxt (MRBNF_Def.map_cong_of_mrbnf mrbnf),
-    REPEAT_DETERM o resolve_tac ctxt prems,
+    REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt (@{thms comp_def case_prod_map_prod split_beta fst_map_prod snd_map_prod map_prod_simp id_def} @ [
       PUmap'_def, Umap'_def
     ])),
@@ -83,10 +83,13 @@ fun mk_Umap'_CTOR_tac mrbnf Umap'_def PUmap'_def CTOR_def rename_def abs_ctor to
       SELECT_GOAL (unfold_thms_tac ctxt [rename_def]),
       rtac ctxt (iffD2 OF [total_abs_eq_iff]),
       rtac ctxt (iffD2 OF [alpha_bij_eq]),
-      REPEAT_DETERM o resolve_tac ctxt prems,
+      REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
       rtac ctxt rep_abs
     ])
   ] end;
+
+fun every_other [] = []
+  | every_other (x::_::xs) = x :: @{thm _} :: every_other xs;
 
 fun mk_Uctor_rename_tac nvars Uctor PUmap_def Umap_Uctor Pmap_imsupp_empty Umap_cong_id UFVars_subsets ctxt prems =
   let
@@ -104,11 +107,11 @@ fun mk_Uctor_rename_tac nvars Uctor PUmap_def Umap_Uctor Pmap_imsupp_empty Umap_
     rtac ctxt @{thm sym[THEN trans[rotated]]},
     rtac ctxt trans,
     rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt Uctor)] @{thm arg_cong2[OF refl]}),
-
     rtac ctxt (Pmap_imsupp_empty RS sym OF (f_prems @ imsupp_PFVars_empties)),
     K (unfold_thms_tac ctxt [PUmap_def]),
     rtac ctxt (Umap_Uctor RS sym OF f_prems),
-    rtac ctxt (Umap_cong_id RS sym OF f_prems),
+    rtac ctxt (Umap_cong_id RS sym OF (every_other f_prems)),
+    REPEAT_DETERM o resolve_tac ctxt (f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     REPEAT_DETERM o EVERY' [
       dtac ctxt @{thm set_rev_mp},
       resolve_tac ctxt UFVars_subsets,
@@ -142,13 +145,13 @@ let
     rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt Uctor)] @{thm arg_cong2[OF _ refl]}),
     rtac ctxt (@{thm iffD2[OF fun_cong[OF fun_cong]]} OF [MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf RS sym]),
     rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ f_prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt @{thms id_o o_id OO_eq}),
     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
-    REPEAT_DETERM o resolve_tac ctxt (f_prems @ g_prems),
+    REPEAT_DETERM o resolve_tac ctxt (f_prems @ g_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt @{thms relcompp_conversep_Grp}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV]),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
       REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
@@ -232,14 +235,14 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       ]
     ],
     rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) OF id_prems]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV]),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt @{thms id_o o_id}),
     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv supp_id_bound bij_id} @ f_prems @ g_prems @ [infinite_UNIV]),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv supp_id_bound bij_id} @ f_prems @ g_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id relcompp_conversep_Grp}),
     K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV]),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
       REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
@@ -256,11 +259,13 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       rtac ctxt conjI,
       rtac ctxt (iffD2 OF [total_abs_eq_iff]),
       rtac ctxt alpha_trans,
-      rtac ctxt (iffD2 OF [alpha_bij_eq OF f_prems]),
+      rtac ctxt (iffD2 OF [alpha_bij_eq OF every_other f_prems]),
+      REPEAT_DETERM o resolve_tac ctxt (f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
       rtac ctxt rep_abs,
       rtac ctxt (Drule.rotate_prems 1 alpha_trans),
       rtac ctxt alpha_sym,
-      rtac ctxt (iffD2 OF [alpha_bij_eq OF g_prems]),
+      rtac ctxt (iffD2 OF [alpha_bij_eq OF every_other g_prems]),
+      REPEAT_DETERM o resolve_tac ctxt (g_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
       rtac ctxt rep_abs,
       assume_tac ctxt,
       SELECT_GOAL (unfold_thms_tac ctxt [PUmap_def, PUmap'_def, Umap'_def, @{thm id_def}]),
@@ -268,18 +273,16 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
     ]
   ] end;
 
-fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bound_Var => bounds | _ => [])
-fun swapped thm a b = [thm OF [a, b], thm OF [b, a]];
-
 fun mk_alpha_ctor_picks_tac mrbnf pick_prems alpha_intro alpha_refl pick_id_ons ctxt prems =
   EVERY1 [
-    rtac ctxt (alpha_intro OF pick_prems),
+    rtac ctxt (alpha_intro OF every_other pick_prems),
+    REPEAT_DETERM o resolve_tac ctxt (pick_prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
     REPEAT_DETERM o resolve_tac ctxt (map2 (fn a => fn b => a OF [b]) pick_id_ons prems),
     rtac ctxt (iffD2 OF [arg_cong OF [MRBNF_Def.map_comp_of_mrbnf mrbnf]]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
     K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}),
     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
     Method.insert_tac ctxt pick_prems,
     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id inv_o_simp1 Grp_UNIV_id conversep_eq OO_eq relcompp_conversep_Grp}),
     rtac ctxt (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf),
@@ -309,14 +312,14 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
         rtac ctxt (alpha_ctor_picks OF prems),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
           K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]} @ [f_simp OF prems]))
         ],
         K (unfold_thms_tac ctxt @{thms comp_def}),
         rtac ctxt @{thm subset_trans},
         resolve_tac ctxt UFVars'_CTORs,
         EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-        REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+        REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
         Method.insert_tac ctxt prems,
         SELECT_GOAL (unfold_thms_tac ctxt suitable_defs),
         REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
@@ -326,7 +329,7 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
         rtac ctxt @{thm Un_upper2},
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt)
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})
         ],
         REPEAT_DETERM o EVERY' [
           TRY o etac ctxt UnE,
@@ -336,11 +339,11 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
           hyp_subst_tac ctxt,
           resolve_tac ctxt (map (fn thm => spec OF [thm]) IH),
           eresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI}) set_subshape_images @ set_subshapes),
-          REPEAT_DETERM o assume_tac ctxt
+          REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})
         ],
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}),
           K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]})
         ],
         rtac ctxt @{thm subset_refl}
@@ -363,16 +366,16 @@ FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_de
     ))] arg_cong),
     K (unfold_thms_tac ctxt [snd XX]),
     rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV]),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv} @ FVars_ctors)),
     REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV])
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def]}),
     REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_tac ctxt [0] FVars_renames,
-      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV])
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     K (unfold_thms_tac ctxt @{thms image_comp[symmetric] image_UN[symmetric]}),
     REPEAT_DETERM o EVERY' [
@@ -399,16 +402,16 @@ FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_de
       ],
       K (unfold_thms_tac ctxt @{thms image_id image_empty id_o}),
       defer_tac,
-      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv} @ f_prems)
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv} @ f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_tac ctxt [0] @{thms image_set_diff[OF bij_is_inj, symmetric]},
-      resolve_tac ctxt (f_prems @ pick_prems)
+      resolve_tac ctxt (f_prems @ pick_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     K (unfold_thms_tac ctxt (map2 (fn p => fn s => @{thm id_on_image} OF [p OF [s]]) pick_id_ons suitable_prems)),
     TRY o EVERY' [
       EqSubst.eqsubst_tac ctxt [0] (map2 (fn p => fn s => @{thm id_on_image} OF [p OF [s]]) pick_id_on_images suitable_prems),
-      REPEAT_DETERM o resolve_tac ctxt f_prems
+      REPEAT_DETERM o resolve_tac ctxt (f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     rtac ctxt trans,
     rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<inter>)"]},
@@ -426,20 +429,20 @@ FVars_renames FVars_ctors pick_id_ons pick_id_on_images PFVars_Pmaps suitable_de
     if inv then K all_tac else EVERY' [
       rtac ctxt sym,
       resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
-      REPEAT_DETERM o resolve_tac ctxt f_prems
+      REPEAT_DETERM o resolve_tac ctxt (f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     REPEAT_DETERM o rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]},
     K (unfold_thms_tac ctxt FVars_ctors),
     if inv then K all_tac else REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_tac ctxt [0] (@{thms image_set_diff[OF bij_is_inj, symmetric]} @ MRBNF_Def.set_map_of_mrbnf mrbnf @ FVars_renames),
-      REPEAT_DETERM o resolve_tac ctxt f_prems,
+      REPEAT_DETERM o resolve_tac ctxt (f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
       K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]})
     ],
     rtac ctxt refl,
     if not inv then rtac ctxt refl THEN' rtac ctxt refl else EVERY' [
       rtac ctxt sym,
       resolve_tac ctxt PFVars_Pmaps,
-      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ f_prems),
+      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ f_prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
       rtac ctxt @{thm id_on_image},
       rtac ctxt @{thm id_on_inv},
       resolve_tac ctxt f_prems,
@@ -454,16 +457,16 @@ fun mk_imsupp_id_on_XX_tac nvars mrbnf FVars FVars_rename FVars_ctor infinite_UN
   in EVERY1 [
     K (unfold_thms_tac ctxt [XXl_def, XXr_def]),
     EqSubst.eqsubst_asm_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound supp_id_bound bij_id} @ f_prems @ pick_prems @ [infinite_UNIV]),
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound supp_id_bound bij_id} @ f_prems @ pick_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv} @ [FVars_ctor])),
     REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV])
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def]}),
     REPEAT_DETERM o EVERY' [
       EqSubst.eqsubst_asm_tac ctxt [0] [FVars_rename],
-      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV])
+      REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ f_prems @ pick_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
     ],
     K (unfold_thms_tac ctxt @{thms image_comp[symmetric] image_UN[symmetric]}),
     REPEAT_DETERM o EVERY' [

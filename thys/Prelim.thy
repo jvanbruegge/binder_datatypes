@@ -228,40 +228,48 @@ lemmas supp_inv_betw_extU = extU[THEN conjunct2, THEN conjunct2,
 lemmas imsupp_inv_betw_extU = extU[THEN conjunct2, THEN conjunct2,
     THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
+lemma cinfinite_imp_infinite: "cinfinite |A| \<Longrightarrow> infinite A"
+  by (simp add: cinfinite_def)
+lemma cinfinite_iff_infinite: "cinfinite |A| = infinite A"
+  by (simp add: cinfinite_def)
+
 lemma ex_bij_betw_supp:
   fixes A B C :: "'a set"
-  assumes i: "infinite (UNIV :: 'a set)" and
-  bound: "|A| <o |UNIV :: 'a set|"
+  assumes i: "Cinfinite r" and
+  bound: "|A| <o r"
   and AB: "bij_betw uu A B" and emp: "A \<inter> B = {}" "A \<inter> C = {}" "B \<inter> C = {}"
-shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} \<and>
+shows "EX u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> imsupp u \<inter> C = {} \<and>
              eq_on A u uu"
 proof-
   have abo: "|A| =o |B|" using AB
     using card_of_ordIso by blast
-  hence b2: "|B| <o |UNIV :: 'a set|" using bound
+  hence b2: "|B| <o r" using bound
     using ordIso_ordLess_trans ordIso_symmetric by blast
   define u where "u \<equiv> extU A B uu"
   show ?thesis apply(rule exI[of _ u])
     using extU[OF AB emp(1), unfolded u_def[symmetric]] apply auto
-    apply (metis abo bound card_of_Un_infinite card_of_mono1 finite_Un
-finite_ordLess_infinite2 i ordIso_iff_ordLeq ordLeq_ordLess_trans)
+    apply (meson Un_Cinfinite_bound_strict b2 bound card_of_mono1 i ordLeq_ordLess_trans)
   using assms by auto
 qed
+lemmas ex_bij_betw_supp_UNIV = ex_bij_betw_supp[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order],
+    of "UNIV::'a set" "_::'a set"]
 
 lemma ordIso_ex_bij_betw_supp:
   fixes A B C :: "'a set"
-  assumes i: "infinite (UNIV :: 'a set)" and
-  bound: "|A| <o |UNIV :: 'a set|"
+  assumes i: "Cinfinite r" and
+  bound: "|A| <o r"
   and AB: "|A| =o |B|" and emp: "A \<inter> B = {}" "A \<inter> C = {}" "B \<inter> C = {}"
-shows "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}"
+shows "EX u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}"
 proof-
   obtain uu where AB: "bij_betw uu A B"
     using AB unfolding card_of_ordIso[symmetric] by blast
-  have "EX u. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}
+  have "EX u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> imsupp u \<inter> C = {}
     \<and> eq_on A u uu"
   apply(rule ex_bij_betw_supp) using assms AB by auto
   thus ?thesis by auto
 qed
+lemmas ordIso_ex_bij_betw_supp_UNIV = ordIso_ex_bij_betw_supp[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order],
+    of "UNIV::'a set" "_::'a set"]
 
 abbreviation Grp where "Grp \<equiv> BNF_Def.Grp UNIV"
 
@@ -422,6 +430,8 @@ lemmas Grp_UNIV_id = eq_alt[symmetric]
 
 lemma supp_id_bound: "|supp id| <o |UNIV :: 'a set|"
   by (simp add: card_of_empty4 supp_id)
+lemma supp_id_bound': "Cinfinite r \<Longrightarrow> |supp id| <o r"
+  by (simp add: supp_id Cinfinite_gt_empty)
 
 lemma supp_the_inv_f_o_f_bound: "inj f \<Longrightarrow> |supp (the_inv f o f)| <o |UNIV|"
   by (smt f_the_inv_into_f fun.map_cong inv_o_cancel pointfree_idE supp_id_bound)
@@ -471,7 +481,7 @@ definition "hidden_id = id"
 lemma id_hid_o_hid: "id = hidden_id o hidden_id"
   unfolding hidden_id_def by simp
 
-lemma emp_bound: "|{}| <o |UNIV|"
+lemma emp_bound: "|{}::'a set| <o |UNIV::'b set|"
   by (rule card_of_empty4[THEN iffD2, OF UNIV_not_empty])
 
 lemma regularCard_csum: "Cinfinite r \<Longrightarrow> Cinfinite s \<Longrightarrow> regularCard r \<Longrightarrow> regularCard s \<Longrightarrow> regularCard (r +c s)"
@@ -732,5 +742,71 @@ lemma prod_in_Collect_iff: "(a, b) \<in> {(x, y). A x y} \<longleftrightarrow> A
 
 lemma Grp_UNIV_def: "Grp f = (\<lambda>x. (=) (f x))"
   unfolding Grp_def by auto
+
+definition cmin where "cmin r s \<equiv> if r <o s then r +c czero else czero +c s"
+
+lemma cmin1:
+  assumes "Card_order r" "Card_order s"
+  shows "cmin r s \<le>o r"
+unfolding cmin_def proof (cases "r <o s", unfold if_P if_not_P)
+  case True
+  then show "r +c czero \<le>o r" by (simp add: assms(1) csum_czero1 ordIso_imp_ordLeq) 
+next
+  case False
+  have "Well_order r" "Well_order s" using assms by auto
+  then have "s \<le>o r" using False using not_ordLeq_iff_ordLess by blast
+  moreover have "czero +c s =o s" using assms csum_czero2 by blast
+  ultimately show "czero +c s \<le>o r" using ordIso_ordLeq_trans by blast
+qed
+
+lemma cmin2:
+  assumes "Card_order r" "Card_order s"
+  shows "cmin r s \<le>o s"
+unfolding cmin_def proof (cases "r <o s", unfold if_P if_not_P)
+  case True
+  then show "r +c czero \<le>o s" using assms(1) csum_czero1 ordIso_ordLeq_trans ordLess_imp_ordLeq by blast 
+next
+  case False
+  then show "czero +c s \<le>o s" using ordIso_ordLeq_trans using assms(2) csum_czero2 ordIso_imp_ordLeq by blast 
+qed
+
+lemma cmin_greater:
+  assumes "Card_order s1" "Card_order s2" "r <o s1" "r <o s2"
+  shows "r <o cmin s1 s2"
+unfolding cmin_def proof (cases "s1 <o s2", unfold if_P if_not_P)
+  case True
+  have "s1 =o s1 +c czero" using assms(1) csum_czero1 ordIso_symmetric by blast
+  then show "r <o s1 +c czero" using assms(3) ordLess_ordIso_trans by blast
+next
+  case False
+  have "s2 =o czero +c s2" using assms(2) csum_czero2 ordIso_symmetric by blast
+  then show "r <o czero +c s2" using assms(4) ordLess_ordIso_trans by blast
+qed
+
+lemma cmin_Cinfinite:
+  assumes "Cinfinite s1" "Cinfinite s2"
+  shows "Cinfinite (cmin s1 s2)"
+unfolding cmin_def proof (cases "s1 <o s2", unfold if_P if_not_P)
+  case True
+  have "s1 +c czero =o s1" using assms(1) csum_czero1 by blast
+  then show "Cinfinite (s1 +c czero)" using Cinfinite_cong assms(1) ordIso_symmetric by blast
+next
+  case False
+  have "czero +c s2 =o s2" using assms(2) csum_czero2 by blast
+  then show "Cinfinite (czero +c s2)" using Cinfinite_cong assms(2) ordIso_symmetric by blast
+qed
+
+lemma cmin_regularCard:
+  assumes "regularCard s1" "regularCard s2" "Cinfinite s1" "Cinfinite s2"
+  shows "regularCard (cmin s1 s2)"
+unfolding cmin_def proof (cases "s1 <o s2", unfold if_P if_not_P)
+  case True
+  have "s1 +c czero =o s1" using assms(3) csum_czero1 by blast
+  then show "regularCard (s1 +c czero)" using regularCard_ordIso ordIso_symmetric assms by blast
+next
+  case False
+  have "czero +c s2 =o s2" using assms(4) csum_czero2 by blast
+  then show "regularCard (czero +c s2)" using regularCard_ordIso ordIso_symmetric assms by blast
+qed
 
 end

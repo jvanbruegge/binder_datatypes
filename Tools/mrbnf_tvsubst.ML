@@ -111,7 +111,7 @@ fun prove_model_axioms binding qualify model lthy =
           |> mk_Frees "f" fTs;
 
         val lthy = snd (Local_Theory.begin_nested lthy);
-        val (raw_eta, lthy) = mk_def_t true binding qualify (the eta_name) 0 eta lthy
+        val (raw_eta, lthy) = mk_def_t false binding qualify (the eta_name) 0 eta lthy
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;
 
@@ -194,7 +194,7 @@ fun prove_model_axioms binding qualify model lthy =
 fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
   let
     val (_, lthy) = Local_Theory.begin_nested lthy;
-    val mk_def_t = mk_def_t (*false*) true b qualify;
+    val mk_def_t = mk_def_t false b qualify;
     val quotient = #quotient_fp (#fp_result model)
     val ctor = #ctor quotient;
     val FVarss = #FVars quotient;
@@ -300,7 +300,7 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
             REPEAT_DETERM (resolve_tac ctxt @{thms cmin_greater card_of_Card_order emp_bound} 1)
           ]);
 
-        val name = Binding.concealed ( (* qualify (Binding.prefix_name "SSupp_" b)) *) Binding.name ("SSfun" ^ the suffix));
+        val name = Binding.concealed (Binding.name ("SSfun" ^ "_" ^ short_type_name (fst (dest_Type (#T quotient))) ^ the suffix));
         val (info, lthy) = typedef (name, map dest_TFree vars, Mixfix.NoSyn)
           (HOLogic.mk_Collect ("f", aT --> qT, mk_SSupp_bound (Bound 0))) NONE (fn ctxt => EVERY1 [
             rtac ctxt exI,
@@ -409,8 +409,8 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
 
 fun create_tvsubst_of_mrbnf b qualify model lthy =
   let
-    val (eta_defs, model, lthy) = prove_model_axioms b (*qualify*) I model lthy;
-    val (CCTOR, defs, vars, lthy) = define_tvsubst_consts b (*qualify*) I model lthy;
+    val (eta_defs, model, lthy) = prove_model_axioms b qualify model lthy;
+    val (CCTOR, defs, vars, lthy) = define_tvsubst_consts b qualify model lthy;
 
     val nvars = length vars;
     val mrbnf = #pre_mrbnf (#fp_result model);
@@ -871,7 +871,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
             Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
               resolve_tac ctxt prems 1
             ) ctxt,
-            rtac ctxt (mk_UnIN nvars i),
+            rtac ctxt (mk_UnIN (length some_defs) i),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound})
           ]
         ],
@@ -881,7 +881,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         assume_tac ctxt,
         K (unfold_thms_tac ctxt @{thms o_id}),
         resolve_tac ctxt (map (#Rep_inverse o snd o #SSfun) some_defs)
-      ]) (1 upto nvars))
+      ]) (1 upto (length some_defs)))
     ];
 
     fun PFVars_Pmap_tac ctxt = EVERY1 [
@@ -1081,12 +1081,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
         let
           val y = snd (nth params 1);
-          val p = Thm.term_of (snd (nth params 2));
           val ctor_map_t = #ctor quotient $ (MRBNF_Def.mk_map_comb_of_mrbnf
             (MRBNF_Def.deads_of_mrbnf mrbnf) live_gs bound_gs free_gs mrbnf $
               Thm.term_of y
             );
-        in EVERY1 (map_filter I (@{map 3} (fn i => fn VVr_thms => (Option.map (fn def => EVERY' [
+        in EVERY1 (@{map 3} (fn i => fn VVr_thms => fn def => EVERY' [
           rtac ctxt (infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (fst (#isVVr def) $ ctor_map_t))] @{thm case_split}),
           SELECT_GOAL (unfold_thms_tac ctxt @{thms if_P if_not_P}),
           SELECT_GOAL (unfold_thms_tac ctxt [snd (#isVVr def)]),
@@ -1097,7 +1096,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           rtac ctxt trans,
           rtac ctxt (mk_arg_cong ctxt (fst (#asVVr def))),
           assume_tac ctxt,
-          rtac ctxt (#asVVr_VVr (the VVr_thms)),
+          rtac ctxt (#asVVr_VVr VVr_thms),
           rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<union>)"]},
           rtac ctxt (mk_arg_cong ctxt FVars),
           assume_tac ctxt,
@@ -1110,14 +1109,14 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           rtac ctxt subsetI,
           rtac ctxt UnI2,
           REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] (snd (#SSupp def) :: map snd (#IImsupps def)),
-          rtac ctxt (mk_UnIN nvars i),
+          rtac ctxt (mk_UnIN (length some_defs) i),
           TRY o rtac ctxt @{thm UnI2},
           rtac ctxt @{thm UN_I},
           rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
           assume_tac ctxt,
           rtac ctxt @{thm iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]]},
           assume_tac ctxt
-        ]))) (nvars downto 1) (rev VVr_thms) (rev defs))) end
+        ]) ((length some_defs) downto 1) (map_filter I (rev VVr_thms)) (rev some_defs)) end
       ) ctxt,
       K (unfold_thms_tac ctxt (@{thms if_not_P} @ #FVars_ctors quotient)),
       REPEAT_DETERM o EVERY' [
@@ -1161,9 +1160,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       |> mk_Frees "p" P_Ts;
 
     val PFVarss = map (fn i => mk_case_tuple (map dest_Free ps) (
-      foldl1 mk_Un (map_filter I (map2 (fn p => Option.map (fn def =>
+      foldl1 mk_Un (map2 (fn p => fn def =>
         fst (nth (#IImsupps def) i) $ (#Rep def $ p)
-      )) ps defs))
+      ) ps some_defs)
     )) (0 upto nvars - 1);
 
     val rec_model = {
@@ -1290,7 +1289,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val tvsubst =
       let
         val tvsubst' = Morphism.term phi (fst tvsubst);
-        val old_vars = rev (map TVar (Term.add_tvars tvsubst' []));
+        val old_vars = rev (map TVar (Term.add_tvarsT (body_type (fastype_of tvsubst')) []));
       in (
         Term.subst_atomic_types (old_vars ~~ vars) tvsubst',
         Morphism.thm phi (snd tvsubst)
@@ -1357,13 +1356,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val tvsubst_not_isVVr =
       let
         val bound_sets = map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ sets);
-        val int_empty_prems = map_filter I (
-          @{map 3} (fn bset => fn i => Option.map (fn def => HOLogic.mk_Trueprop (
-            mk_int_empty (bset $ x, foldl1 mk_Un (map_filter I (map2 (fn f => Option.map (fn def =>
-              fst (nth (#IImsupps def) i) $ the f
-            )) fs' defs)))
-          ))) bound_sets (0 upto nvars - 1) defs
-        );
+        val int_empty_prems = map2 (fn bset => fn i => HOLogic.mk_Trueprop (
+          mk_int_empty (bset $ x, foldl1 mk_Un (map_filter I (map2 (fn f => Option.map (fn def =>
+          fst (nth (#IImsupps def) i) $ the f
+          )) fs' defs)))
+        )) bound_sets (0 upto nvars - 1);
         val m = length int_empty_prems;
         val VVr_prems = map (fn def => HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x)))) some_defs;
         val prems = f'_prems @ int_empty_prems @ [HOLogic.mk_Trueprop (fst (#noclash rec_res) $ x)] @ VVr_prems;
@@ -1384,7 +1381,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         ],
         K (unfold_thms_tac' ctxt (@{thms comp_assoc comp_def[of snd] snd_conv id_o o_id comp_def[of fst] fst_conv id_def[symmetric] prod.case}
           @ [snd CCTOR, MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]
-          @ map (fn thm => @{thm if_not_P} OF [thm]) (drop (2 * m + 1) prems)
+          @ map (fn thm => @{thm if_not_P} OF [thm]) (drop (length some_defs + nvars + 1) prems)
           ) (fn ctxt => ALLGOALS (resolve_tac ctxt (@{thms supp_id_bound bij_id} @ [@{thm supp_id_bound'} OF [Cinfinite_card]])))
         ),
         K (unfold_thms_tac ctxt [@{thm comp_def}, Thm.symmetric (snd tvsubst)]),
@@ -1567,9 +1564,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       [("SSupp_VVr_empty", map_filter (Option.map #SSupp_VVr_empty) defs),
        ("SSupp_VVr_bound", map_filter (Option.map #SSupp_VVr_bound) defs),
        ("in_IImsupp", flat (map_filter I in_IImsuppss)),
-       ("\<eta>_set2", [hd (the (hd eta_set_empties))]),
-       ("\<eta>_set3", [nth (the (hd eta_set_empties)) 1]),
-       ("\<eta>_set4", [nth (the (hd eta_set_empties)) 2]),
+       ("eta_set_empties", flat (map_filter I eta_set_empties)),
        ("FVars_VVr", flat (map_filter I FVars_VVrs)),
        ("tvsubst_VVr", map_filter I tvsubst_VVrs),
        ("tvsubst_cctor_not_isVVr", [tvsubst_not_isVVr]),
@@ -1577,7 +1572,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
        ("IImsupp_Diff", map_filter I IImsupp_Diffs)
        (*("FFVars_tvsubst", map_filter I FFVars_tvsubsts)*)
       ] |> (map (fn (thmN, thms) =>
-        ((Binding.name thmN, []), [(thms, [])])
+        ((Binding.qualify true (short_type_name (fst (dest_Type (#T quotient)))) (Binding.name thmN), []), [(thms, [])])
       ));
     val (_, lthy) = Local_Theory.notes notes lthy
 

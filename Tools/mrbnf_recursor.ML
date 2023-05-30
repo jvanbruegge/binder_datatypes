@@ -196,7 +196,7 @@ fun mk_def_t public b qualify name n rhs lthy =
     val thm' = if n > 0 then
       @{thm eq_reflection} OF [Ctr_Sugar_Util.mk_unabs_def n (@{thm meta_eq_to_obj_eq} OF [thm])]
     else thm;
-    val lthy = if public then
+    val lthy = if (* public *) true then
       snd (Local_Theory.note ((Thm.def_binding b', []), [thm']) lthy)
     else lthy;
   in ((t, thm'), lthy) end;

@@ -32,13 +32,6 @@ val spec = {
 }
 \<close>
 
-ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
-ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
 declare [[ML_print_depth=10000]]
 
 local_setup \<open>fn lthy =>

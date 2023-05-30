@@ -484,14 +484,18 @@ fun create_binder_datatype (spec : spec) lthy =
           ) gs xs;
 
           val bound_sets = map2 (mk_set bounds) tys xs;
-          fun get_f T = List.find (fn t' => @{print} (HOLogic.dest_setT (fastype_of (mk_imsupp t' T))) = T) (@{print}fs);
+          fun get_fs T = filter (fn t' => HOLogic.dest_setT (fastype_of (mk_imsupp t' T)) = T) fs;
           val imsupp_prems = map_filter (Option.mapPartial (fn t => case Term.subst_atomic_types replace t of
-              t as Free (_, T) => Option.map (fn f => HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, mk_imsupp f T)))) (get_f T)
+              t as Free (_, T) => (case get_fs T of
+                [] => NONE
+                | xs => SOME (HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, foldl1 mk_Un (map (fn f => mk_imsupp f T) xs))))))
               | t =>
                 let val T = HOLogic.dest_setT (fastype_of t);
-                in Option.map (fn f => HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (t, mk_imsupp f T))) (get_f T) end
+                in case get_fs T of
+                  [] => NONE
+                  | xs => SOME (HOLogic.mk_Trueprop (MRBNF_Recursor.mk_int_empty (t, foldl1 mk_Un (map (fn f => mk_imsupp f T) xs))))
+                end
           )) bound_sets;
-          val _ = @{print} bound_sets;
           val bound_set = case map_filter I bound_sets of [] => NONE | xs => SOME (foldl1 MRBNF_Util.mk_Un xs);
           val brec_vars = subtract (op=) (map (nth rec_vars) (flat (#binding_rel spec))) rec_vars;
           val free_sets = map_filter (Option.mapPartial (fn t => case try (member (op=) rec_vars o HOLogic.dest_setT) (fastype_of t) of
@@ -562,11 +566,12 @@ fun create_binder_datatype (spec : spec) lthy =
           domain_type (domain_type (fastype_of s)) = domain_type (fastype_of h)
         ) (#SSupps tvsubst_res));
         fun mk_supp_bound h = Option.map (fn s => mk_ordLess (mk_card_of s) cmin_UNIV) (mk_supp h);
-        fun mk_imsupp h T = foldl1 mk_Un (map (fn f =>
-          the (List.find (fn s => domain_type (fastype_of s) = fastype_of h
-            andalso HOLogic.dest_setT (body_type (fastype_of s)) = T
-          ) (flat (#IImsuppss tvsubst_res))) $ f
-        ) fs);
+        fun mk_imsupp h T = foldl1 mk_Un (map_filter (fn f => Option.map (fn t => t $ f) (
+          List.find (fn s => domain_type (fastype_of s) = fastype_of h
+            andalso domain_type (fastype_of s) = fastype_of f
+            andalso HOLogic.dest_setT (range_type (fastype_of s)) = T
+          ) (flat (#IImsuppss tvsubst_res))
+        )) fs);
         fun tac ctxt prems = EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
           EVERY' [

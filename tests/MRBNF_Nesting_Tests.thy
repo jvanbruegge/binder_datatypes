@@ -59,5 +59,4 @@ thm term.map
 thm term.distinct
 thm term.subst
 
-
 end

@@ -15,7 +15,6 @@ ML \<open>
 val tyctors = [
   (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
   (("TyArr", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("TyApp", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("TyAll", NONE), [@{typ 'bvar}, @{typ 'brec}])
 ]
 val tyspec = {
@@ -59,7 +58,7 @@ val ctors = [
   (("Var", (NONE : mixfix option)), [@{typ 'var}]),
   (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Lam", NONE), [@{typ 'bvar}, @{typ "'tyvar \<tau>"}, @{typ 'brec}]),
-  (("TyApp2", NONE), [@{typ 'rec}, @{typ "'tyvar \<tau>"}]),
+  (("TyApp", NONE), [@{typ 'rec}, @{typ "'tyvar \<tau>"}]),
   (("TyLam", NONE), [@{typ 'btyvar}, @{typ 'brec}])
 ]
 

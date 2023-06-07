@@ -42,8 +42,9 @@ assumes s: "small A" "small B" "small A'" "A \<inter> A' = {}"
 shows "\<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
 proof-
   obtain D where D: "D \<inter> B = {}" "D \<inter> A = {}" "D \<inter> A' = {}" and DA: "|D| =o |A|"
-  using exists_subset_compl[of A "A' \<union> B"]  
-  by (metis Int_Un_emptyI1 Int_Un_emptyI2 Int_commute Un_bound inf_A ordIso_symmetric s(1) s(2) s(3) small_def)
+  using exists_subset_compl[of _ A "A' \<union> B"]  
+  by (metis Field_card_of Int_Un_emptyI1 Int_Un_emptyI2 Int_commute card_of_Card_order card_of_UNIV 
+   cinfinite_def inf_A ordIso_symmetric s(1-3) small_Un small_def)  
 
   then obtain u where u: "bij_betw u A D"  
   using card_of_ordIso ordIso_symmetric by blast

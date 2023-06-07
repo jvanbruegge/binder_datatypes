@@ -48,7 +48,7 @@ val spec = {
     (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
     (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
   ],
-  binding_rel = [[1], [0]],
+  binding_rel = [[0]],
   rec_vars = 2,
   ctors = ctors,
   map_b = @{binding vvsubst},

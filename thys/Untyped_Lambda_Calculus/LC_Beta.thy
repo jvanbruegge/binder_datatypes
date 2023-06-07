@@ -51,7 +51,8 @@ Tmap = Tmap and Tfvars = Tfvars
 and Vmap = Vmap and Vfvars = Vfvars 
 apply standard unfolding ssbij_def Tmap_def Vmap_def
   using small_Un small_def term.card_of_FFVars_bounds
-  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)  
+  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A
+    term.FFVars_rrenames) sledgehammer
   by auto 
 
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool"
@@ -203,7 +204,7 @@ unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by auto
   subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-  unfolding G_def by (auto simp: FFVars_tvsubst split: if_splits) .
+  unfolding G_def apply (auto simp: FFVars_tvsubst split: if_splits) .
 
 
 end

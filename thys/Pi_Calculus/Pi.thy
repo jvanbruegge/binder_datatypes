@@ -30,9 +30,14 @@ declare [[inductive_internals]]
 
 ML \<open>
 val ctors = [
-  (("Var", (NONE : mixfix option)), [@{typ 'var}]),
-  (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Abs", NONE), [@{typ 'bvar}, @{typ 'brec}])
+  (("Zero", (NONE : mixfix option)), []), 
+  (("Sum", NONE), [@{typ 'rec}, @{typ 'rec}]),
+  (("Par", NONE), [@{typ 'rec}, @{typ 'rec}]),
+  (("Bang", NONE), [@{typ 'rec}]),
+  (("Match", NONE), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
+  (("Out", NONE), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
+  (("Inp", NONE), [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}]),
+  (("Res", NONE), [@{typ 'bvar}, @{typ 'brec}])
 ]
 
 val spec = {
@@ -43,7 +48,7 @@ val spec = {
     (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
     (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
   ],
-  binding_rel = [[0]],
+  binding_rel = [[1], [0]],
   rec_vars = 2,
   ctors = ctors,
   map_b = @{binding vvsubst},

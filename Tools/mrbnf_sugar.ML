@@ -428,8 +428,6 @@ fun create_binder_datatype (spec : spec) lthy =
       )) vars
     }
 
-    val (tvsubst_res, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (#tvsubst_b spec) (Binding.prefix_name "tv") tvsubst_model lthy;
-
     val thms = @{thms prod.set_map sum.set_map prod_set_simps sum_set_simps UN_empty UN_empty2
       Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
       UN_single
@@ -557,73 +555,79 @@ fun create_binder_datatype (spec : spec) lthy =
     ))) (fn {context=ctxt, ...} => EVERY1 [
       REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_Cinfinite conjI card_of_Card_order})
     ]);
-    val tvsubst_simps =
+
+    val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) then
       let
-        val (fs, _) = lthy
-          |> mk_Frees "f" (map (fn a => a --> range_type (fastype_of quotient_ctor)) vars);
-        val fs = map_filter I (map2 (fn f => Option.map (fn _ => f)) fs (#etas tvsubst_model));
-        fun mk_supp h = Option.map (fn t => t $ h) (List.find (fn s =>
-          domain_type (domain_type (fastype_of s)) = domain_type (fastype_of h)
-        ) (#SSupps tvsubst_res));
-        fun mk_supp_bound h = Option.map (fn s => mk_ordLess (mk_card_of s) cmin_UNIV) (mk_supp h);
-        fun mk_imsupp h T = foldl1 mk_Un (map_filter (fn f => Option.map (fn t => t $ f) (
-          List.find (fn s => domain_type (fastype_of s) = fastype_of h
-            andalso domain_type (fastype_of s) = fastype_of f
-            andalso HOLogic.dest_setT (range_type (fastype_of s)) = T
-          ) (flat (#IImsuppss tvsubst_res))
-        )) fs);
-        fun tac ctxt prems = EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
-          EVERY' [
-            resolve_tac ctxt (#tvsubst_VVrs tvsubst_res),
-            REPEAT_DETERM o resolve_tac ctxt prems
-          ] ORELSE' EVERY' [
-            rtac ctxt trans,
-            rtac ctxt (#tvsubst_cctor_not_isVVr tvsubst_res),
-            REPEAT_DETERM o resolve_tac ctxt prems,
-            K (Local_Defs.unfold0_tac ctxt (thms
-              @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
-              @ #isVVrs tvsubst_res @ map snd (#VVrs tvsubst_res)
-              @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash tvsubst_res)]
-            )),
-            K (TRYALL (REPEAT_DETERM o EVERY' [
-              EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ [@{thm supp_id_bound'} OF [Cinfinite_card]]),
-              K (Local_Defs.unfold0_tac ctxt thms)
-            ])),
-            REPEAT_DETERM o resolve_tac ctxt (
-              @{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI} @ prems
-            ),
-            REPEAT_DETERM o EVERY' [
-              rtac ctxt @{thm notI},
-              etac ctxt exE,
-              dtac ctxt (iffD1 OF [#inject quotient]),
-              REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
-              K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
-                @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
-                  #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
-              ])),
-              eresolve_tac ctxt @{thms sum.distinct[THEN notE]}
-            ],
-            K (Local_Defs.unfold0_tac ctxt (map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs)),
-            K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
-            rtac ctxt refl
-          ]
-        ];
-      in mk_map_simps fs mk_supp_bound mk_imsupp (#tvsubst tvsubst_res) tac end;
+        val (tvsubst_res, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (#tvsubst_b spec) (Binding.prefix_name "tv") tvsubst_model lthy;
+        val tvsubst_simps =
+          let
+            val (fs, _) = lthy
+              |> mk_Frees "f" (map (fn a => a --> range_type (fastype_of quotient_ctor)) vars);
+            val fs = map_filter I (map2 (fn f => Option.map (fn _ => f)) fs (#etas tvsubst_model));
+            fun mk_supp h = Option.map (fn t => t $ h) (List.find (fn s =>
+              domain_type (domain_type (fastype_of s)) = domain_type (fastype_of h)
+            ) (#SSupps tvsubst_res));
+            fun mk_supp_bound h = Option.map (fn s => mk_ordLess (mk_card_of s) cmin_UNIV) (mk_supp h);
+            fun mk_imsupp h T = foldl1 mk_Un (map_filter (fn f => Option.map (fn t => t $ f) (
+              List.find (fn s => domain_type (fastype_of s) = fastype_of h
+                andalso domain_type (fastype_of s) = fastype_of f
+                andalso HOLogic.dest_setT (range_type (fastype_of s)) = T
+              ) (flat (#IImsuppss tvsubst_res))
+            )) fs);
+            fun tac ctxt prems = EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
+              EVERY' [
+                resolve_tac ctxt (#tvsubst_VVrs tvsubst_res),
+                REPEAT_DETERM o resolve_tac ctxt prems
+              ] ORELSE' EVERY' [
+                rtac ctxt trans,
+                rtac ctxt (#tvsubst_cctor_not_isVVr tvsubst_res),
+                REPEAT_DETERM o resolve_tac ctxt prems,
+                K (Local_Defs.unfold0_tac ctxt (thms
+                  @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+                  @ #isVVrs tvsubst_res @ map snd (#VVrs tvsubst_res)
+                  @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash tvsubst_res)]
+                )),
+                K (TRYALL (REPEAT_DETERM o EVERY' [
+                  EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ [@{thm supp_id_bound'} OF [Cinfinite_card]]),
+                  K (Local_Defs.unfold0_tac ctxt thms)
+                ])),
+                REPEAT_DETERM o resolve_tac ctxt (
+                  @{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI} @ prems
+                ),
+                REPEAT_DETERM o EVERY' [
+                  rtac ctxt @{thm notI},
+                  etac ctxt exE,
+                  dtac ctxt (iffD1 OF [#inject quotient]),
+                  REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+                  K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
+                    @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
+                      #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
+                  ])),
+                  eresolve_tac ctxt @{thms sum.distinct[THEN notE]}
+                ],
+                K (Local_Defs.unfold0_tac ctxt (map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs)),
+                K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
+                rtac ctxt refl
+              ]
+            ];
+          in mk_map_simps fs mk_supp_bound mk_imsupp (#tvsubst tvsubst_res) tac end;
+        in (lthy, SOME (tvsubst_res, tvsubst_simps)) end
+      else (lthy, NONE);
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
 
     val notes =
-      [("strong_induct", [strong_induct], []),
+      ([("strong_induct", [strong_induct], []),
         ("fresh_induct", [fresh_induct], []),
         ("induct", [induct], [induct_attrib]),
         ("set", flat set_simpss, simp),
         ("map", map_simps, simp),
-        ("distinct", distinct, simp),
-        ("subst", tvsubst_simps, simp)
-      ] |> (map (fn (thmN, thms, attrs) =>
+        ("distinct", distinct, simp)
+      ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)
+      ) |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))
     val (_, lthy) = Local_Theory.notes notes lthy

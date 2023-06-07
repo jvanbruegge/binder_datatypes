@@ -76,11 +76,26 @@ instance var :: var_term_pre apply standard
 
 type_synonym trm = "var term"
 
+(* Some lighter notations: *)
+abbreviation "VVr \<equiv> tvVVr_tvsubst"
+lemmas VVr_def = tvVVr_tvsubst_def
+abbreviation "isVVr \<equiv> tvisVVr_tvsubst"
+lemmas isVVr_def = tvisVVr_tvsubst_def
+abbreviation "IImsupp \<equiv> tvIImsupp_tvsubst"
+lemmas IImsupp_def = tvIImsupp_tvsubst_def
+abbreviation "SSupp \<equiv> tvSSupp_tvsubst"
+lemmas SSupp_def = tvSSupp_tvsubst_def
+abbreviation "FFVars \<equiv> FFVars_term"
+(* *)
+
+lemma FFVars_tvsubst[simp]: 
+"FFVars (tvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
+sorry (* AtoDJ: This lemma was no longer available... *)
 
 (* *)
 
 (* Enabling some simplification rules: *)
-lemmas tvsubst_VVr[simp] FVars_VVr[simp]
+lemmas term.tvsubst_VVr[simp] term.FVars_VVr[simp]
 term.rrename_ids[simp] term.rrename_cong_ids[simp]
 term.FFVars_rrenames[simp]
 
@@ -88,13 +103,15 @@ lemma singl_bound: "|{a}| <o |UNIV::var set|"
   by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]])
 
 lemma IImsupp_VVr_empty[simp]: "IImsupp VVr = {}"
-  unfolding IImsupp_def SSupp_VVr_empty UN_empty Un_empty_left
+  unfolding IImsupp_def 
+  term.SSupp_VVr_empty UN_empty Un_empty_left
   apply (rule refl)
   done
 
 (* VVr is here the Var constructor: *)
 lemma VVr_eq_Var[simp]: "VVr = Var"
-  unfolding VVr_def Var_def comp_def \<eta>_def
+  unfolding VVr_def Var_def comp_def
+  tv\<eta>_term_tvsubst_def
   by (rule refl)
 
 (* *)
@@ -102,18 +119,18 @@ lemma VVr_eq_Var[simp]: "VVr = Var"
 
 lemma tvsubst_VVr_func[simp]: "tvsubst VVr t = t"
   apply (rule term.TT_plain_co_induct)
-  subgoal for x
+  subgoal for x 
     apply (rule case_split[of "isVVr (term_ctor x)"])
      apply (unfold isVVr_def)[1]
      apply (erule exE)
     subgoal premises prems for a
-      unfolding prems
-      apply (rule tvsubst_VVr)
-      apply (rule SSupp_VVr_bound)
+      unfolding prems  
+      apply (rule term.tvsubst_VVr) 
+      apply (rule term.SSupp_VVr_bound)
         done
       apply (rule trans)
-       apply (rule tvsubst_cctor_not_isVVr)
-          apply (rule SSupp_VVr_bound)
+       apply (rule term.tvsubst_cctor_not_isVVr)
+          apply (rule term.SSupp_VVr_bound)
       unfolding IImsupp_VVr_empty
          apply (rule Int_empty_right)
       unfolding tvnoclash_term_def Int_Un_distrib Un_empty
@@ -271,7 +288,7 @@ by (metis rrename_simps(3) term.rrename_cong_ids term.set(3))
 lemma SSupp_upd_bound:
   fixes f::"var \<Rightarrow> trm"
   shows "|SSupp (f (a:=t))| <o |UNIV::var set| \<longleftrightarrow> |SSupp f| <o |UNIV::var set|"
-  unfolding SSupp_def
+  unfolding SSupp_def  
   apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
       elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF term_pre.Un_bound], rotated]
       intro: card_of_mono1)
@@ -279,7 +296,7 @@ lemma SSupp_upd_bound:
 
 corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::trm)))| <o |UNIV::var set|"
   apply (rule iffD2[OF SSupp_upd_bound])
-  apply (rule SSupp_VVr_bound)
+  apply (rule term.SSupp_VVr_bound)
   done
 
 lemma SSupp_upd_Var_bound[simp,intro!]: "|SSupp (Var(a:=(t::trm)))| <o |UNIV::var set|"
@@ -297,8 +314,8 @@ by (simp add: var_ID_class.Un_bound term.set_bd_UNIV var_term_pre_class.UN_bound
 lemma IImsupp_tvsubst_su: 
 assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: var set|" 
 shows "IImsupp (tvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
-unfolding IImsupp_def SSupp_def apply (auto simp: FFVars_tvsubst) 
-  by (metis s singletonD term.set(1) term.subst(1)) 
+unfolding IImsupp_def SSupp_def apply auto
+by (metis s singletonD term.set(1) term.subst(1)) 
 
 lemma IImsupp_tvsubst_su': 
 assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: var set|" 

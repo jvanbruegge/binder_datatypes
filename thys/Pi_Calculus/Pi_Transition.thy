@@ -160,7 +160,8 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst tvsubst_Var_rrename_term) 
-      by (auto simp: FFVars_tvsubst split: if_splits)  
+      apply (auto split: if_splits)   
+      by blast
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . 
   (* *)
 
@@ -204,7 +205,8 @@ unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by auto
   subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-  unfolding G_def by (auto simp: FFVars_tvsubst split: if_splits) .
+  unfolding G_def apply (auto split: if_splits)
+    by (metis (no_types, lifting)) .
 
 
 end

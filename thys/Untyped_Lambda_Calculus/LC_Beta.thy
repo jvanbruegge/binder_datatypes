@@ -51,8 +51,7 @@ Tmap = Tmap and Tfvars = Tfvars
 and Vmap = Vmap and Vfvars = Vfvars 
 apply standard unfolding ssbij_def Tmap_def Vmap_def
   using small_Un small_def term.card_of_FFVars_bounds
-  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A
-    term.FFVars_rrenames) sledgehammer
+  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)  
   by auto 
 
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool"
@@ -160,7 +159,8 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst tvsubst_Var_rrename_term) 
-      by (auto simp: FFVars_tvsubst split: if_splits)  
+      apply (auto split: if_splits)   
+      by blast
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . 
   (* *)
 
@@ -204,7 +204,8 @@ unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by auto
   subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-  unfolding G_def apply (auto simp: FFVars_tvsubst split: if_splits) .
+  unfolding G_def apply (auto split: if_splits)
+    by (metis (no_types, lifting)) .
 
 
 end

@@ -26,6 +26,13 @@ lemma finite_singleton: "finite {x}" by blast
 | Abs x::'a t::"'a term" binds x in t
 *)
 
+(* 
+binder_datatype 'a commit =
+  Finp 'a 'a :'a pi" 
+| Fout 'a 'a :'a pi" 
+| Bout (x::'a) (y::'a) (P::"'a pi") binds y in P
+*)
+
 declare [[inductive_internals]]
 
 ML \<open>

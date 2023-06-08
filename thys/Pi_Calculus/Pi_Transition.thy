@@ -13,20 +13,29 @@ begin
 print_locales
 interpretation Small where dummy = "undefined :: var" 
 apply standard
-  apply (simp add: infinite_var)  
-  using term_prevar_term_prevar_sumterm_prevar_prodIDterm_prevar_prodID_class.regular by blast
+by (simp_all add: infinite_var regularCard_var)  
+
+
+abbreviation "usub P y x \<equiv> vvsubst (id(x:=y)) P"
  
 
 (* AN EXAMPLE INDUCTIVE DEFINITION *)
-(* (a reduced form of) small step semantics *) 
+(* (a reduced form of) small trans semantics *) 
+find_theorems vvsubst
+inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+Inp: "trans (Inp a x P) (usub P y x)"
+|
+Out: "trans (Out a x P) (usub P y x)"
 
-inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Refl: "step e e"
-| App: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1' e2')"
-| Xi: "step e e' \<Longrightarrow> step (Abs x e) (Abs x e')"
-| PBeta: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App (Abs x e1) e2) (tvsubst (Var(x:=e2')) e1')"
 
-thm step_def
+
+
+term 
+| App: "trans e1 e1' \<Longrightarrow> trans e2 e2' \<Longrightarrow> trans (App e1 e2) (App e1' e2')"
+| Xi: "trans e e' \<Longrightarrow> trans (Abs x e) (Abs x e')"
+| PBeta: "trans e1 e1' \<Longrightarrow> trans e2 e2' \<Longrightarrow> trans (App (Abs x e1) e2) (tvsubst (Var(x:=e2')) e1')"
+
+thm trans_def
 
 (* INSTANTIATING THE Components LOCALE: *)
 
@@ -176,8 +185,8 @@ apply standard
 
 (* *)
 
-lemma step_I: "step t1 t2 = I (t1,t2)" 
-  unfolding step_def I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma trans_I: "trans t1 t2 = I (t1,t2)" 
+  unfolding trans_def I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
   unfolding fun_eq_iff G_def apply safe 
     subgoal by auto
     subgoal by auto
@@ -189,19 +198,19 @@ lemma step_I: "step t1 t2 = I (t1,t2)"
     subgoal by (metis fst_conv snd_conv) .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
-thm step.induct[no_vars]
+thm trans.induct[no_vars]
 
-corollary BE_induct_step: "(\<And>p. small (Pfvars p)) \<Longrightarrow> 
-step t1 t2 \<Longrightarrow> 
+corollary BE_induct_trans: "(\<And>p. small (Pfvars p)) \<Longrightarrow> 
+trans t1 t2 \<Longrightarrow> 
 (\<And>e p. R p e e) \<Longrightarrow>
-(\<And>e1 e1' e2 e2' p. step e1 e1' \<Longrightarrow> 
+(\<And>e1 e1' e2 e2' p. trans e1 e1' \<Longrightarrow> 
   (\<forall>p'. R p' e1 e1') \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> R p (App e1 e2) (App e1' e2')) \<Longrightarrow> 
-(\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Abs x e) (Abs x e')) \<Longrightarrow> 
-(\<And>x e e' e2 e2' p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
+(\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> trans e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Abs x e) (Abs x e')) \<Longrightarrow> 
+(\<And>x e e' e2 e2' p. x \<notin> Pfvars p \<Longrightarrow> trans e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> trans e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
    x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
    R p (App (Abs x e) e2) (tvsubst (VVr(x := e2')) e')) \<Longrightarrow>
  R p t1 t2"
-unfolding step_I
+unfolding trans_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by auto
   subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])

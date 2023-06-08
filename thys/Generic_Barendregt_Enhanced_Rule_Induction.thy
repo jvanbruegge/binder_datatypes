@@ -156,7 +156,7 @@ G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bo
 assumes 
 G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 and 
-G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t) "
+G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
 and 
 (* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
 including beta-reduction (see their paper): 
@@ -169,6 +169,7 @@ G_fresh:
          \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
 
 
+(* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
 locale Induct_simple = Components dummy Tmap Tfvars Vmap Vfvars 
 for dummy :: 'A 
 and
@@ -201,9 +202,8 @@ lemma G_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> G R v t \<lo
 inductive I :: "'T \<Rightarrow> bool" where 
 G_I_intro: "G I v t \<Longrightarrow> I t"
 
-thm nitpick_unfold(143)
 lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
-  using nitpick_unfold(143) by auto
+using I_def[simplified] .
 
 (*
 (*  Not needed: *) 

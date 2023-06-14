@@ -21,8 +21,14 @@ definition small :: "'A set \<Rightarrow> bool" where
 definition ssbij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" (* small-support bijections *) where 
 "ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'A set|"
 
-lemma small_Un: "\<And>A B. small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
+lemma small_Un: "small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
 using Un_bound small_def Small_axioms Small_def by blast
+
+lemma finite_UN_small:
+assumes "finite As" and "\<And>A. A \<in> As \<Longrightarrow> small A"
+shows "small (\<Union> As)"
+using assms apply(induct As)  
+using small_Un by (auto simp: inf_A small_def)
 
 lemma ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
 unfolding ssbij_def by auto

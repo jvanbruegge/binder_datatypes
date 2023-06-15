@@ -25,8 +25,6 @@ sig
 
   val create_tvsubst_of_mrbnf: binding -> (binding -> binding) -> (Proof.context -> tactic) tvsubst_model
     -> local_theory -> tvsubst_result * local_theory
-
-  val mk_singleton: term -> term
 end
 
 structure MRBNF_TVSubst : MRBNF_TVSUBST =
@@ -59,14 +57,6 @@ type tvsubst_result = {
   tvsubst_VVrs: thm list,
   tvsubst_cctor_not_isVVr: thm
 };
-
-fun mk_bot T = Const (@{const_name bot}, HOLogic.mk_setT T)
-
-fun mk_singleton t =
-  let
-    val T = fastype_of t;
-    val sT = HOLogic.mk_setT T;
-  in Const (@{const_name Set.insert}, T --> sT --> sT) $ t $ mk_bot T end
 
 val names = map (fst o dest_Free);
 
@@ -607,7 +597,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         resolve_tac ctxt prems
       ]) end
     )) rrename_VVrs in_IImsuppss IImsupp_VVrs (0 upto nvars - 1) defs;
-    
+
     val cmin_UNIV = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
     val Cinfinite_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (HOLogic.mk_conj (
       mk_cinfinite cmin_UNIV, mk_Card_order cmin_UNIV

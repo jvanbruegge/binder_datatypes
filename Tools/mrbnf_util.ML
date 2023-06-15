@@ -18,6 +18,9 @@ sig
   val mk_id_on: term -> term -> term
   val mk_card_suc: term -> term
   val mk_cmin: term * term -> term
+  val mk_singleton: term -> term
+  val mk_bot: typ -> term
+  val mk_int_empty: term * term -> term;
 
   val mk_case_tuple: (string * typ) list -> term -> term
 
@@ -76,6 +79,19 @@ fun mk_cmin (t1, t2) =
     val T2 = fastype_of t2;
     val T = mk_sumT (apply2 (fst o dest_relT) (T1, T2));
   in Const (@{const_name cmin}, T1 --> T2 --> mk_relT (T, T)) $ t1 $ t2 end
+
+fun mk_bot T = Const (@{const_name bot}, HOLogic.mk_setT T)
+
+fun mk_singleton t =
+  let
+    val T = fastype_of t;
+    val sT = HOLogic.mk_setT T;
+  in Const (@{const_name Set.insert}, T --> sT --> sT) $ t $ mk_bot T end
+
+fun mk_int_empty sets = HOLogic.mk_eq (
+  HOLogic.mk_binop @{const_name inf} sets,
+  Const (@{const_name bot}, fastype_of (fst sets))
+);
 
 fun short_type_name full_name = String.tokens (fn c => c = #".") full_name |> List.last;
 

@@ -50,7 +50,6 @@ sig
   val mk_defs_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term list
     -> local_theory -> ((term * thm) list * local_theory);
 
-  val mk_int_empty: term * term -> term;
   val chop_f_prems: 'a list -> 'a list list;
   val every_other: 'a list -> 'a list;
   val mk_supp_bound: term -> term;
@@ -388,11 +387,6 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
       axioms = model_thms
     } : thm model;
   in ((model', defs), lthy') end;
-
-fun mk_int_empty sets = HOLogic.mk_eq (
-  HOLogic.mk_binop @{const_name inf} sets,
-  Const (@{const_name bot}, fastype_of (fst sets))
-);
 
 val mk_minus = HOLogic.mk_binop @{const_name minus}
 

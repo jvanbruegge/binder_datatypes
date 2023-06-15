@@ -213,14 +213,12 @@ Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
 lemma Abs_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow> 
   x = x' \<and> 
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_term (Inp x y e)) f \<and> f y = y' \<and> rrename_term f e = e')"
+  \<and> id_on (FFVars_term e - {y}) f \<and> f y = y' \<and> rrename_term f e = e')"
   unfolding term.set  
   unfolding Inp_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
-    Un_empty_right UN_single apply auto
-  by (metis bij_pointE term.distinct(3) term.map(4) term.rrename_bijs term_vvsubst_rrename)+
-
+    Un_empty_right UN_single by auto
 
 lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_term_pre (id::var \<Rightarrow>var) f (rrename_term f) id)"
   apply (rule iffD2[OF bij_iff])
@@ -313,8 +311,7 @@ lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
 lemma Abs_rrename: 
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
  (\<And>a'. a' \<in> FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Inp b a e = Inp b (\<sigma> a) (rrename_term \<sigma> e)"
-by (metis rrename_simps(1) rrename_simps(4) term.distinct(22) term.map(4) term_vvsubst_rrename)
-
+  using Abs_inject id_on_def by blast
 
 (* Bound properties (needed as auxiliaries): *)
 

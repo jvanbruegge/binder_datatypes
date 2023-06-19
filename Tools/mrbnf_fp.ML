@@ -1529,7 +1529,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val (TT_existential_co_induct, TT_fresh_co_induct_param, TT_fresh_induct_param_no_clash_opt,
       subshapess_opt,
-      TT_subshape_induct_opt, wf_subshapess_opt, set_subshape_imagesss_opt, set_subshapesss_opt,
+      TT_subshape_induct_opt, wf_subshape_opt, subshape_rel_opt, set_subshape_imagesss_opt, set_subshapesss_opt,
       TT_fresh_co_induct, TT_plain_co_induct, lthy) = if co
       then let
           (* Define coinductive predicate alpha' *)
@@ -1827,7 +1827,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             Drule.rotate_prems ~1 (thm RS @{thm spec2} RS mp);
         in
           (after_qed TT_existential_coinduct, after_qed TT_fresh_coinduct_param, NONE, NONE, NONE,
-            NONE, NONE, NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
+            NONE, NONE, NONE, NONE, after_qed TT_fresh_coinduct, after_qed TT_plain_coinduct, lthy)
         end
       else let
           (* Define inductive predicate subshape *)
@@ -1941,46 +1941,67 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 |> prove lthy (Ps @ ys) hyps goal
             end;
 
-          fun mk_wf_subshape CA1 CA2 subshape_t =
+          val sumT = foldr1 BNF_Util.mk_sumT CAs
+          val subshape_rel = HOLogic.Collect_const (HOLogic.mk_prodT (sumT, sumT)) $ HOLogic.mk_case_prod (Term.abs ("t", sumT) (Term.abs ("t'", sumT) (
+            BNF_FP_Util.mk_case_sumN (map2 (fn CA1 => fn subshapes => Term.abs ("x", CA1) (
+              BNF_FP_Util.mk_case_sumN (map2 (fn CA2 => fn subshape => Term.abs ("y", CA2) (
+                subshape $ Bound 1 $ Bound 0
+              )) CAs subshapes) $ Bound 1
+            )) CAs (transpose subshapessAs)) $ Bound 1
+          )));
+          val wf_subshape =
             let
-              val T = HOLogic.mk_prodT (CA1, CA2)
-              val goal = HOLogic.mk_Trueprop (Const (@{const_name wf}, HOLogic.mk_setT T --> @{typ bool}) $ (
-                HOLogic.Collect_const T $ HOLogic.mk_case_prod (Term.abs ("t", CA1) (Term.abs ("t'", CA2) (
-                  subshape_t $ Bound 1 $ Bound 0
-              )))));
-            in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt,...} =>
-              Ctr_Sugar_Tactics.unfold_thms_tac ctxt @{thms wf_def prod_in_Collect_iff} THEN
-              EVERY1 [
-                REPEAT_DETERM o resolve_tac ctxt [allI, impI],
-                rtac ctxt subshape_induct,
+              val wf = Const (@{const_name wf}, HOLogic.mk_setT (HOLogic.mk_prodT (sumT, sumT)) --> @{typ bool})
+              val goal = HOLogic.mk_Trueprop (wf $ subshape_rel)
+              fun sumE_tac ctxt = Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+                rtac ctxt (infer_instantiate' ctxt [SOME (snd (snd (split_last params)))] (
+                  BNF_GFP_Util.mk_sumEN n
+                )) 1
+              ) ctxt THEN_ALL_NEW hyp_subst_tac ctxt;
+            in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} => EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt @{thms wf_def prod_in_Collect_iff prod.case}),
+              REPEAT_DETERM o resolve_tac ctxt [allI, impI],
+              sumE_tac ctxt,
+              K (ALLGOALS (fn i => Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+                let
+                  val P = Thm.term_of (snd (hd params));
+                  val subshape_induct' = infer_instantiate' lthy (map2 (fn x => fn inj => SOME (Thm.cterm_of lthy (
+                    Term.absfree (dest_Free x) (P $ inj)
+                  ))) ys (mk_sum_ctors ys)) subshape_induct;
+                in rtac ctxt (BNF_FP_Rec_Sugar_Util.mk_conjunctN n i OF [subshape_induct']) 1 end
+              ) ctxt i)),
+              REPEAT_DETERM o EVERY' [
                 etac ctxt allE,
                 etac ctxt impE,
-                defer_tac,
+                K (prefer_tac 2),
                 assume_tac ctxt,
                 rtac ctxt allI,
                 rtac ctxt impI,
-                Goal.assume_rule_tac ctxt
-              ])
-            end;
-          val wf_subshapess = map2 (fn CA => map2 (mk_wf_subshape CA) CAs) CAs subshapessAs
+                sumE_tac ctxt,
+                K (Local_Defs.unfold0_tac ctxt @{thms sum.case}),
+                REPEAT_DETERM o Goal.assume_rule_tac ctxt
+              ]
+            ]) end;
 
-          fun mk_set_subshape_images set_ts CA ctor_t x subshape_t rename_t subshape_intro alpha_refl rename_inv_simp rename_bij =
+          fun mk_set_subshape_images subshape_ts set_ts CA ctor_t x subshape_intros =
             let
-              val n = length set_ts;
-              fun mk_set_subshape_image i set_t =
+              fun mk_set_subshape_image (n, i) CA set_t rename_t subshape_t =
                 let
                   val (t, _) = apfst hd (mk_Frees "t" [CA] lthy);
-                  val prem = HOLogic.mk_Trueprop (HOLogic.mk_mem (t,
-                    mk_image (Term.list_comb (rename_t, ffs)) $ (set_t $ x)
-                  ));
-                  val goal = HOLogic.mk_Trueprop (subshape_t $ t $ (ctor_t $ x));
-                in prove lthy (ffs @ [t, x]) (prem_terms_ffs @ [prem]) goal (
-                  mk_set_subshape_image_tac i n subshape_intro alpha_refl rename_inv_simp rename_bij
+                  val goal = Logic.mk_implies (
+                    HOLogic.mk_Trueprop (HOLogic.mk_mem (t,
+                      mk_image (Term.list_comb (rename_t, ffs)) $ (set_t $ x)
+                    )),
+                    HOLogic.mk_Trueprop (subshape_t $ t $ (ctor_t $ x))
+                  );
+                in prove lthy (ffs @ [t, x]) (prem_terms_ffs) goal (
+                  mk_set_subshape_image_tac i n subshape_intros alpha_refls rename_ids rename_comps
                 ) end;
-            in map2 mk_set_subshape_image (1 upto n) set_ts end;
-          val set_subshape_imagesss = map2 (fn subshapes => fn intros =>
-              @{map 10} mk_set_subshape_images rec_setss_As CAs ctorsAs xs subshapes renamesAs intros alpha_refls rename_inv_simps rename_bijs
-            ) subshapessAs subshape_intross
+            in @{map 5} (@{map 5} mk_set_subshape_image) (map (fn n => map (pair n) (1 upto n)) ks) (map2 replicate ks CAs)
+              (fst (fold_map (fn k => fn set_ts => (take k set_ts, drop k set_ts)) ks set_ts))
+              (map2 replicate ks renamesAs) (map2 replicate ks subshape_ts) end;
+          val set_subshape_imagesss = @{map 6} mk_set_subshape_images subshapessAs rec_setss_As CAs ctorsAs xs
+              subshape_intross;
           val set_subshapesss = map (map (map (fn thm =>
             Local_Defs.unfold0 lthy (@{thm image_id}::rename_id0s) (thm OF (
               maps (K @{thms bij_id supp_id_bound}) ffs
@@ -2189,8 +2210,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             (replicate fbound @{thm supp_id_bound[unfolded supp_id]})) |> full_simplify lthy;
         in
           (TT_existential_induct, TT_fresh_induct_param, SOME TT_fresh_induct_param_no_clash,
-            SOME subshapessAs,
-            SOME subshape_induct, SOME wf_subshapess, SOME set_subshape_imagesss, SOME set_subshapesss,
+            SOME subshapessAs, SOME subshape_induct, SOME wf_subshape, SOME subshape_rel,
+            SOME set_subshape_imagesss, SOME set_subshapesss,
             TT_fresh_induct, TT_plain_induct, lthy)
         end;
 
@@ -2272,7 +2293,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     (* TODO: use giant map instead of x times (nth ... i) *)
     val ress = map (fn i =>
       let
-        fun nth_opt xs_opt i = Option.map (fn xs => nth xs i) xs_opt
+        fun nth_opt xs_opt i = Option.mapPartial (fn xs => try (nth xs) i) xs_opt
         val raw_fp_res = {
           T = nth CAs i,
           ctor = nth ctorsAs i,
@@ -2292,6 +2313,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           card_of_FVars_bound_UNIVs = nth card_of_FVars_boundss i,
           inner = {
             alpha = nth alphasAs i,
+            subshape_rel = subshape_rel_opt,
 
             exhaust = nth raw_exhausts i,
             rename_simp = nth rename_simps i,
@@ -2306,7 +2328,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             alpha_elim = nth alpha_elims i,
 
             subshapes = nth_opt subshapess_opt i,
-            wf_subshapes = nth_opt wf_subshapess_opt i,
+            wf_subshape = wf_subshape_opt, (* TODO: do not duplicate this *)
             set_subshapess = nth_opt set_subshapesss_opt i,
             set_subshape_imagess = nth_opt set_subshape_imagesss_opt i,
             subshape_induct = TT_subshape_induct_opt
@@ -2423,8 +2445,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         Option.map (single o pair "TT_subshape_induct" o single)
         TT_subshape_induct_opt
       )) @ (the_default [] (
-        Option.map (single o pair "wf_subshapes" o flat)
-        wf_subshapess_opt
+        Option.map (single o pair "wf_subshape" o single)
+        wf_subshape_opt
       )) @ (the_default [] (
         Option.map (single o pair "set_subshape_images" o flat o flat)
         set_subshape_imagesss_opt

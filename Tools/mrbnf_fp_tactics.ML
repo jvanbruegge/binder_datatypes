@@ -78,7 +78,7 @@ sig
     Proof.context -> thm list -> tactic
   val mk_alpha_subshape_tac: int -> thm -> thm -> thm -> (term list -> term list -> thm list) ->
     (term list -> thm option list) -> thm list -> thm -> thm -> thm list -> Proof.context -> tactic
-  val mk_set_subshape_image_tac: int -> int -> thm -> thm -> thm -> thm -> Proof.context -> thm list -> tactic
+  val mk_set_subshape_image_tac: int -> int -> thm list -> thm list -> thm list -> thm list -> Proof.context -> thm list -> tactic
 
   val mk_TT_existential_induct_tac: thm list -> thm list -> thm -> (thm * thm) list -> thm list ->
     thm list -> thm list -> thm list -> thm list -> (thm -> term -> term -> thm) list -> thm list ->
@@ -871,17 +871,24 @@ fun mk_alpha_subshape_tac fbound supp_comp_bound alpha_trans rename_comp mk_subs
       Subgoal.FOCUS_PARAMS subgoal_tac ctxt]
   end;
 
-fun mk_set_subshape_image_tac i n subshape_intro alpha_refl rename_inv_simp rename_bij ctxt prems =
+fun mk_set_subshape_image_tac i n subshape_intros alpha_refls rename_ids rename_comps ctxt prems =
   EVERY1 [
-    rtac ctxt (Drule.rotate_prems ~2 subshape_intro),
-    rtac ctxt alpha_refl,
-    rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
-    rtac ctxt (fun_cong OF [rename_inv_simp RS sym]),
-    EVERY' (map (rtac ctxt) (fst (split_last prems))),
+    etac ctxt imageE,
+    hyp_subst_tac ctxt,
+    resolve_tac ctxt subshape_intros,
+    K (prefer_tac (length prems + 2)),
     rtac ctxt (BNF_Util.mk_UnIN n i),
-    rtac ctxt @{thm iffD1[OF image_in_bij_eq]},
-    rtac ctxt rename_bij,
-    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems)
+    assume_tac ctxt,
+    K (prefer_tac (length prems + 1)),
+    EqSubst.eqsubst_tac ctxt [0] rename_comps,
+    K (prefer_tac (length prems * 2 + 1)),
+    REPEAT_DETERM o EVERY' [
+      EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
+      resolve_tac ctxt prems
+    ],
+    EqSubst.eqsubst_tac ctxt [0] rename_ids,
+    resolve_tac ctxt alpha_refls,
+    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems)
   ];
 
 fun mk_TT_existential_induct_tac rename_ids Quotient_rep_abss subshape_induct_inst conj_arg_congs

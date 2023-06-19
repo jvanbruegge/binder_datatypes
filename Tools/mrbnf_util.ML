@@ -21,6 +21,7 @@ sig
   val mk_singleton: term -> term
   val mk_bot: typ -> term
   val mk_int_empty: term * term -> term;
+  val mk_sum_ctors: term list -> term list;
 
   val mk_case_tuple: (string * typ) list -> term -> term
 
@@ -92,6 +93,14 @@ fun mk_int_empty sets = HOLogic.mk_eq (
   HOLogic.mk_binop @{const_name inf} sets,
   Const (@{const_name bot}, fastype_of (fst sets))
 );
+
+fun mk_sum_ctors [x] = [x]
+  | mk_sum_ctors [x, y] =
+    [BNF_FP_Util.mk_Inl (fastype_of y) x, BNF_FP_Util.mk_Inr (fastype_of x) y]
+  | mk_sum_ctors (x::xs) =
+     let val ctors = mk_sum_ctors xs
+     in (BNF_FP_Util.mk_Inl (fastype_of (hd ctors)) x::(
+      map (BNF_FP_Util.mk_Inr (fastype_of x)) ctors)) end
 
 fun short_type_name full_name = String.tokens (fn c => c = #".") full_name |> List.last;
 

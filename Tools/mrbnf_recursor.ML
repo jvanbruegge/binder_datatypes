@@ -564,7 +564,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
           Function_Common.default_config (mk_f_pat_complete_tac (#inject raw)) lthy
         );
         val (info, lthy') = Function.prove_termination NONE (mk_f_termination_tac mk_relation (the (
-          #wf_subshapes inner)) (flat (the (#set_subshape_imagess inner))) (flat (the (
+          #wf_subshape inner)) (flat (the (#set_subshape_imagess inner))) (flat (the (
           #set_subshapess inner))) (set_map_of_mrbnf mrbnf) pick_prems lthy'
         ) lthy';
 

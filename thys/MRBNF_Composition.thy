@@ -12,6 +12,11 @@ ML_file \<open>../Tools/mrbnf_def.ML\<close>
 local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.ID") (BNF_Comp.ID_bnf)\<close>
 local_setup \<open>snd o MRBNF_Def.register_bnf_as_mrbnf (SOME "BNF_Composition.DEADID") (BNF_Comp.DEADID_bnf)\<close>
 
+local_setup \<open>fold (fn name => fn lthy =>
+  snd (MRBNF_Def.register_bnf_as_mrbnf NONE (the (BNF_Def.bnf_of lthy name)) lthy)
+) [@{type_name sum}, @{type_name prod}]
+\<close>
+
 lemma Grp_Rep: "type_definition Rep Abs top \<Longrightarrow> type_definition Rep2 Abs2 top \<Longrightarrow>
   ((BNF_Def.Grp (Collect P) f)\<inverse>\<inverse> OO BNF_Def.Grp (Collect P) g) (Rep x) (Rep2 y) =
   ((BNF_Def.Grp (Collect P) (Abs \<circ> f))\<inverse>\<inverse> OO BNF_Def.Grp (Collect P) (Abs2 \<circ> g)) x y"

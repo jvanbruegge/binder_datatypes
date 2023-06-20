@@ -13,7 +13,7 @@ print_locales
 interpretation Small where dummy = "undefined :: var" 
 apply standard
   apply (simp add: infinite_var)  
-  using term_prevar_term_prevar_sumterm_prevar_prodIDterm_prevar_prodID_class.regular by blast
+  using var_term_pre_class.regular by blast
  
 
 (* AN EXAMPLE INDUCTIVE DEFINITION *)

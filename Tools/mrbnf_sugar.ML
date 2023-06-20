@@ -49,10 +49,10 @@ fun create_binder_datatype (spec : spec) lthy =
   let
     val fp_pre_T = BNF_FP_Util.mk_sumprodT_balanced (map snd (#ctors spec));
 
-    val (resBs, Xs) = fold_rev (
+    val (resBs, Xs) = (*fold_rev (
       fn (x, Free_Var) => (fn (a, b) => (x::a, b))
        | (x, _) => (fn (a, b) => (a, x::b))
-    ) (#vars spec) ([], []);
+    ) (#vars spec) ([], []);*) (map fst (#vars spec), [])
     fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
 
     val name = Binding.name_of (#fp_b spec);

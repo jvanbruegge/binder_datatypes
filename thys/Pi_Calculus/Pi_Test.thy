@@ -44,10 +44,10 @@ Multithreading.parallel_proofs := 4
 
 local_setup \<open>fn lthy =>
 let
-  val name1 = "test1"
-  val name2 = "test2"
+  val name1 = "commit_internal"
+  val name2 = "commit"
   val T1 = @{typ "'var term"}
-  val T2 = @{typ "'bvar * 'brec"}
+  val T2 = @{typ "'var * 'var * 'var term +'var * 'var * 'var term +  'bvar * 'brec"}
   val Xs = map dest_TFree []
   val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
   val rel = [[0]]
@@ -84,25 +84,36 @@ in lthy end
 \<close>
 print_theorems
 
-definition Bout :: "'a::{var_test1_pre,var_test2_pre} \<Rightarrow> 'a term \<Rightarrow> 'a test2" where
-  "Bout x t \<equiv> test2_ctor (Abs_test2_pre (x, test1_ctor (Abs_test1_pre t)))"
+definition Finp :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> 'a \<Rightarrow> 'a term \<Rightarrow> 'a commit" where
+  "Finp x y t \<equiv> commit_ctor (Abs_commit_pre (Inl (x, y, t)))"
+definition Fout :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> 'a \<Rightarrow> 'a term \<Rightarrow> 'a commit" where
+  "Fout x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inl (x, y, t))))"
+definition Bout :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> 'a term \<Rightarrow> 'a commit" where
+  "Bout x t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (x, commit_internal_ctor (Abs_commit_internal_pre t)))))"
 
-lemma FFVars_simps[simp]: "FFVars_test2 (Bout x t) = FFVars_term t - {x}"
-  apply (unfold Bout_def)
+lemma FFVars_commit_simps[simp]:
+  "FFVars_commit (Finp x y t) = {x, y} \<union> FFVars_term t"
+  "FFVars_commit (Fout x y t) = {x, y} \<union> FFVars_term t"
+  "FFVars_commit (Bout x t) = FFVars_term t - {x}"
+  apply (unfold Bout_def Finp_def Fout_def)
   apply (rule trans)
-   apply (rule test1.FFVars_cctors)
-  apply (unfold set1_test2_pre_def comp_def Abs_test2_pre_inverse[OF UNIV_I] map_prod_simp
-    UN_empty UN_empty2 prod_set_simps set3_test2_pre_def cSup_singleton Un_empty_left Un_empty_right
-    Sup_empty set2_test2_pre_def set4_test2_pre_def UN_single
+     apply (rule commit_internal.FFVars_cctors)
+    defer
+    apply (rule trans, rule commit_internal.FFVars_cctors)
+    defer
+    apply (rule trans, rule commit_internal.FFVars_cctors)
+  apply (unfold set1_commit_pre_def comp_def Abs_commit_pre_inverse[OF UNIV_I] map_prod_simp
+    UN_empty UN_empty2 prod_set_simps set3_commit_pre_def cSup_singleton Un_empty_left Un_empty_right
+    Sup_empty set2_commit_pre_def set4_commit_pre_def UN_single map_sum.simps sum_set_simps
   )
   apply (rule arg_cong2[OF _ refl, of _ _ minus])
   apply (rule trans)
-   apply (rule test1.FFVars_cctors)
-  apply (unfold set1_test1_pre_def comp_def Abs_test1_pre_inverse[OF UNIV_I] map_prod_simp prod_set_simps
-    UN_empty cSup_singleton Un_empty_left Un_empty_right set3_test1_pre_def empty_Diff
-    set4_test1_pre_def
+   apply (rule commit_internal.FFVars_cctors)
+  apply (unfold set1_commit_internal_pre_def comp_def Abs_commit_internal_pre_inverse[OF UNIV_I] map_prod_simp prod_set_simps
+    UN_empty cSup_singleton Un_empty_left Un_empty_right set3_commit_internal_pre_def empty_Diff
+    set4_commit_internal_pre_def
   )
-  apply (rule refl)
+    apply auto
   done
 
 

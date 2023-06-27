@@ -47,7 +47,7 @@ let
   val name1 = "commit_internal"
   val name2 = "commit"
   val T1 = @{typ "'var term"}
-  val T2 = @{typ "'var * 'var * 'var term +'var * 'var * 'var term +  'bvar * 'brec"}
+  val T2 = @{typ "'var * 'var * 'var term +'var * 'var * 'var term + 'var * 'bvar * 'brec"}
   val Xs = map dest_TFree []
   val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
   val rel = [[0]]
@@ -88,13 +88,13 @@ definition Finp :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> '
   "Finp x y t \<equiv> commit_ctor (Abs_commit_pre (Inl (x, y, t)))"
 definition Fout :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> 'a \<Rightarrow> 'a term \<Rightarrow> 'a commit" where
   "Fout x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inl (x, y, t))))"
-definition Bout :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> 'a term \<Rightarrow> 'a commit" where
-  "Bout x t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (x, commit_internal_ctor (Abs_commit_internal_pre t)))))"
+definition Bout :: "'a::{var_commit_pre,var_commit_internal_pre} \<Rightarrow> 'a \<Rightarrow> 'a term \<Rightarrow> 'a commit" where
+  "Bout x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (x, y, commit_internal_ctor (Abs_commit_internal_pre t)))))"
 
 lemma FFVars_commit_simps[simp]:
   "FFVars_commit (Finp x y t) = {x, y} \<union> FFVars_term t"
   "FFVars_commit (Fout x y t) = {x, y} \<union> FFVars_term t"
-  "FFVars_commit (Bout x t) = FFVars_term t - {x}"
+  "FFVars_commit (Bout x y t) = {x} \<union> (FFVars_term t - {y})"
   apply (unfold Bout_def Finp_def Fout_def)
   apply (rule trans)
      apply (rule commit_internal.FFVars_cctors)
@@ -106,7 +106,8 @@ lemma FFVars_commit_simps[simp]:
     UN_empty UN_empty2 prod_set_simps set3_commit_pre_def cSup_singleton Un_empty_left Un_empty_right
     Sup_empty set2_commit_pre_def set4_commit_pre_def UN_single map_sum.simps sum_set_simps
   )
-  apply (rule arg_cong2[OF _ refl, of _ _ minus])
+    apply (rule arg_cong2[OF refl, of _ _ "(\<union>)"])
+apply (rule arg_cong2[OF _ refl, of _ _ minus])
   apply (rule trans)
    apply (rule commit_internal.FFVars_cctors)
   apply (unfold set1_commit_internal_pre_def comp_def Abs_commit_internal_pre_inverse[OF UNIV_I] map_prod_simp prod_set_simps

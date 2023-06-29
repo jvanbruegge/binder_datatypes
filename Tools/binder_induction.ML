@@ -85,7 +85,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
       ) (MRBNF_Def.mrbnf_of ctxt name)) (try dest_Type (fastype_of t)))) (hd insts)));
       val (var, mrbnf) = case vars of
         [x] => x
-      | _ => error "Induction on datatypes with more than one variable is not supported yet";      
+      | _ => error "Induction on datatypes with more than one variable is not supported yet";
 
       fun inst_rule (concls, r) =
         (if null insts then `Rule_Cases.get r
@@ -104,10 +104,15 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
       |> Seq.maps (Rule_Cases.consume defs_ctxt (flat defs) facts)
       |> Seq.map (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
         let
+          val finsts = map_filter I (flat insts);
           val avoiding_arbitraries = filter (fn arb =>
             exists (Term.exists_subterm (curry (op=) arb)) (flat avoiding)
           ) (map Free (flat arbitrary));
-          val avoiding_arbitrary = HOLogic.mk_tuple avoiding_arbitraries;
+          val avoiding_inducts = filter (fn (_, ind) =>
+              exists (Term.exists_subterm (curry (op=) ind)) (flat avoiding)
+          ) (0 upto length finsts - 1 ~~ finsts);
+          val avoiding_dynamics = avoiding_arbitraries @ map snd avoiding_inducts;
+          val avoiding_dynamic = HOLogic.mk_tuple avoiding_dynamics;
 
           fun extract_vars t =
             let
@@ -138,9 +143,9 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             [] => Term.abs ("\<rho>", HOLogic.unitT) (Const (@{const_name bot}, HOLogic.mk_setT var))
             | _ =>
               let val avoiding_set = foldl1 MRBNF_Util.mk_Un (terms @ raws);
-              in case avoiding_arbitraries of
+              in case avoiding_dynamics of
                 [] => Term.abs ("\<rho>", HOLogic.unitT) avoiding_set
-                | _ => MRBNF_Util.mk_case_tuple (map Term.dest_Free avoiding_arbitraries) avoiding_set
+                | _ => MRBNF_Util.mk_case_tuple (map Term.dest_Free avoiding_dynamics) avoiding_set
               end;
 
           val arbitrary' = map Free (flat arbitrary);
@@ -150,7 +155,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             let val (Ts, T) = Term.strip_type (snd P_var);
             in Var (fst P_var, fold_rev (curry op-->) (take (length Ts - 1) Ts @ map snd (flat arbitrary)) T) end;
           val insts' = map_filter I (hd insts);
-          val P' = fold_rev Term.absfree (map (dest_Free o the) (hd insts)) (Term.abs ("\<rho>", fastype_of avoiding_arbitrary) (Term.list_comb (P_new_var, insts' @ arbitrary')));
+          val P' = fold_rev Term.absfree (map (dest_Free o the) (hd insts)) (Term.abs ("\<rho>", fastype_of avoiding_dynamic) (Term.list_comb (P_new_var, insts' @ arbitrary')));
           val rule'' = infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P']) rule;
           val prems = drop more_consumes (Thm.cprems_of rule'')
           val concl = Thm.concl_of rule''
@@ -170,7 +175,9 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
               val vars_new = take (length vars - 1) vars
               val ps = Logic.strip_imp_prems body
               val cl = Logic.strip_imp_concl body
-              val ps' = map (fn t =>
+              val comb = snd (Term.strip_comb (HOLogic.dest_Trueprop cl));
+              val avoid_inds = map (nth comb o fst) avoiding_inducts;
+              val ps' = map_index (fn (i, t) =>
                 let
                   val p = HOLogic.dest_Trueprop t
                   val (generalize, p') = case p of
@@ -178,9 +185,11 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                       let val (t, _) = Term.strip_comb v
                       in if t = P_new_var then (true, Term.incr_boundvars (n - 1) v) else (false, p) end
                     | _ => (false, p);
+
                   val p'' = Term.incr_boundvars n (simplify_case_prod (
-                    Term.subst_bounds ([avoiding_arbitrary], HOLogic.mk_Trueprop p')
+                    Term.subst_bounds ([avoiding_dynamic], HOLogic.mk_Trueprop p')
                   ));
+                  val p'' = if i = 0 then Term.subst_atomic (map snd avoiding_inducts ~~ avoid_inds) p'' else p''
                 in if generalize then fold_rev Logic.all arbitrary' p'' else p'' end
               ) ps;
 
@@ -203,11 +212,11 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
 
           fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
           val P2 = Free (hd (Term.variant_frees rule_new [("P", fastype_of P_new_var)]));
-          val P2_t = fold_rev Term.absfree (map dest_Free insts') (Term.abs ("\<rho>", fastype_of avoiding_arbitrary) (
+          val P2_t = fold_rev Term.absfree (map dest_Free insts') (Term.abs ("\<rho>", fastype_of avoiding_dynamic) (
             fold_rev mk_all (flat arbitrary) (
-              HOLogic.mk_imp (HOLogic.eq_const (fastype_of avoiding_arbitrary) $ Bound n $ avoiding_arbitrary, Term.list_comb (P2, insts' @ arbitrary')
+              HOLogic.mk_imp (HOLogic.eq_const (fastype_of avoiding_dynamic) $ Bound n $ avoiding_dynamic, Term.list_comb (P2, insts' @ arbitrary')
             )))
-          )
+          );
           val rule_inst = fold (fn thm => fn thm2 => thm OF [thm2]) (replicate (1 + n) @{thm spec} @ [mp]) (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P2_t]) rule)
           fun rtac ctxt = resolve_tac ctxt o single
 
@@ -236,11 +245,12 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
               EVERY1 [
                 rtac ctxt rule_inst,
                 EVERY' (map (rtac ctxt) (take more_consumes prems)),
+                K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
                 (* Boundness *)
                 rtac ctxt allI,
                 REPEAT_DETERM o resolve_tac ctxt (bound_thms @ set_bds @ prems @
                   @{thms finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
-                    ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso]]
+                    ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso]] emp_bound
                   }
                 ),
                 (* others *)
@@ -249,7 +259,8 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   eresolve_tac ctxt [allE],
                   dresolve_tac ctxt @{thms mp[OF _ refl]},
                   hyp_subst_tac ctxt,
-                  assume_tac ctxt
+                  assume_tac ctxt,
+                  EqSubst.eqsubst_asm_tac ctxt [0] @{thms snd_conv fst_conv}
                 ]
               ]
             ) ctxt 1

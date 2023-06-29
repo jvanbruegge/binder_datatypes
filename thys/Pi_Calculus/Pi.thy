@@ -3,22 +3,11 @@
 theory Pi
 imports "../MRBNF_Recursor" "HOL-Library.FSet" 
  "../Instantiation_Infrastructure/FixedCountableVars"
+ "../General_Customization"
 begin 
 
-(****************************)
-(* 1. GENERAL CUSTOMIZATION *)
 
-lemmas supp_inv_bound[simp]
-lemmas bij_swap[simp]
-lemmas supp_id_bound[simp]
-
-lemma fvars_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
-  unfolding supp_def id_on_def by blast
-lemma finite_singleton: "finite {x}" by blast
-
-
-(****************************)
-(* 2. DATATYPE DECLARTION  *)
+(* DATATYPE DECLARTION  *)
 
 (* binder_datatype 'a term =
   Var 'a
@@ -26,18 +15,9 @@ lemma finite_singleton: "finite {x}" by blast
 | Abs x::'a t::"'a term" binds x in t
 *)
 
-(* 
-binder_datatype 'a commit =
-  Finp 'a 'a :'a pi" 
-| Fout 'a 'a :'a pi" 
-| Bout (x::'a) (y::'a) (P::"'a pi") binds y in P
-*)
-
-declare [[inductive_internals]]
-
 ML \<open>
 val ctors = [
-  (("Zero", (NONE : mixfix option)), []), 
+  (("Zero", (NONE : mixfix option)), []),
   (("Sum", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Par", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Bang", NONE), [@{typ 'rec}]),
@@ -68,12 +48,12 @@ local_setup \<open>fn lthy =>
 let
   val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
 in lthy' end\<close>
+print_theorems
 print_mrbnfs
 
 
-
 (****************************)
-(* 3. DATATYPE-SPECIFIC CUSTOMIZATION  *)
+(* DATATYPE-SPECIFIC CUSTOMIZATION  *)
 
 
 (* Monomorphising: *)
@@ -83,8 +63,14 @@ instance var :: var_term_pre apply standard
 
 type_synonym trm = "var term"
 
+find_theorems name: imsupp 
+
 
 (* Some lighter notations: *)
+
+abbreviation "rrename \<equiv> rrename_term"
+abbreviation "FFVars \<equiv> FFVars_term"
+
 (*
 abbreviation "VVr \<equiv> tvVVr_tvsubst"
 lemmas VVr_def = tvVVr_tvsubst_def
@@ -95,8 +81,7 @@ lemmas IImsupp_def = tvIImsupp_tvsubst_def
 abbreviation "SSupp \<equiv> tvSSupp_tvsubst"
 lemmas SSupp_def = tvSSupp_tvsubst_def
 *)
-abbreviation "rrename \<equiv> rrename_term"
-abbreviation "FFVars \<equiv> FFVars_term"
+
 (* *)
 
 (* 
@@ -509,6 +494,6 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 *)
- 
+
 
 end

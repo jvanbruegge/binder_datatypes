@@ -1,22 +1,11 @@
 theory LC
 imports "../MRBNF_Recursor" "HOL-Library.FSet" 
  "../Instantiation_Infrastructure/FixedCountableVars"
+ "../General_Customization"
 begin 
 
-(****************************)
-(* 1. GENERAL CUSTOMIZATION *)
 
-lemmas supp_inv_bound[simp]
-lemmas bij_swap[simp]
-lemmas supp_id_bound[simp]
-
-lemma fvars_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
-  unfolding supp_def id_on_def by blast
-lemma finite_singleton: "finite {x}" by blast
-
-
-(****************************)
-(* 2. DATATYPE DECLARTION  *)
+(* DATATYPE DECLARTION  *)
 
 (* binder_datatype 'a term =
   Var 'a
@@ -59,7 +48,7 @@ print_mrbnfs
 
 
 (****************************)
-(* 3. DATATYPE-SPECIFIC CUSTOMIZATION  *)
+(* DATATYPE-SPECIFIC CUSTOMIZATION  *)
 
 
 (* Monomorphising: *)

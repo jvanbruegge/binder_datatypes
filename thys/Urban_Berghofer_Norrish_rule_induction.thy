@@ -220,7 +220,7 @@ unfolding G_def G'_def fun_eq_iff apply safe
   subgoal by auto .
 
 inductive II :: "'T T_tuple \<Rightarrow> bool" where 
-"rl \<in> rules \<Longrightarrow> 
+"rl \<in> rules \<Longrightarrow>  
  (\<forall>pred ss. Scond pred ss \<in> set (side rl) \<longrightarrow> pred (it_tuple vval tval ss)) \<Longrightarrow> 
  (\<forall>ts\<in>set (hyps rl). II (it_tuple vval tval ts)) \<Longrightarrow>
  II (it_tuple vval tval (conc rl))"

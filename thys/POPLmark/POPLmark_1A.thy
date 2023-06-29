@@ -6,6 +6,7 @@ theory POPLmark_1A
 begin
 
 declare bij_swap[simp]
+declare supp_id_bound[simp]
 
 ML \<open>
 val ctors = [
@@ -81,7 +82,92 @@ lemma rrename_typ_simps[simp]:
   done
 
 type_synonym type = "var typ"
-type_synonym \<Gamma>\<^sub>\<tau> = "(var, type) dalist"
+
+fun well_formed :: "(var \<times> type) list \<Rightarrow> bool" where
+  "well_formed [] \<longleftrightarrow> True"
+| "well_formed ((x, t)#xs) \<longleftrightarrow> x \<notin> fst ` set xs \<and> FFVars_typ t \<subseteq> fst ` set xs \<and> well_formed xs"
+
+typedef \<Gamma>\<^sub>\<tau> = "{ xs::(var \<times> type) list. well_formed xs }"
+  by (rule exI[of _ "[]"]) simp
+
+setup_lifting type_definition_\<Gamma>\<^sub>\<tau>
+
+lift_definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>"
+  is "\<lambda>f xs. if bij f \<and> |supp f| <o |UNIV::var set| then map (map_prod f (rrename_typ f)) xs else []"
+  subgoal for f xs
+    apply (induction xs)
+     apply (auto simp: rev_image_eqI typ.FFVars_rrenames)
+    by (metis Product_Type.fst_comp_map_prod image_comp image_eqI subset_eq)
+  done
+lift_definition dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" is "\<lambda>xs. fst ` set xs" .
+lift_definition pairs :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> (var \<times> type) set" is "set" .
+
+lift_definition extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,57,57] 62)
+  is "\<lambda>\<Gamma> x T. if x \<notin> fst ` set \<Gamma> \<and> FFVars_typ T \<subseteq> fst ` set \<Gamma> then (x, T)#\<Gamma> else \<Gamma>"
+  by auto
+lift_definition concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_, _" [65,65] 70)
+  is "\<lambda>xs ys. if fst ` set xs \<inter> fst ` set ys = {} then xs @ ys else xs"
+  subgoal for xs ys
+    apply auto
+    apply (induction xs)
+     apply auto
+      apply (metis fst_conv image_iff)
+    apply (metis fst_conv image_iff)
+    by auto
+  done
+lift_definition empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") is "[]" by simp
+
+lemma well_formed_dom: "well_formed xs \<Longrightarrow> T \<in> snd ` set xs \<Longrightarrow> FFVars_typ T \<subseteq> fst ` set xs"
+proof (induction xs)
+  case (Cons a xs)
+  then show ?case
+    apply (cases "T = snd a")
+     apply (metis dual_order.trans image_mono prod.exhaust_sel set_subset_Cons well_formed.simps(2))
+    apply simp
+    apply (rule subset_insertI2)
+    by (metis prod.exhaust_sel well_formed.simps(2))
+qed simp
+
+lemma map_context_id[simp]: "map_context id = id"
+  by (rule ext, transfer, auto)
+lemma map_context_comp0[simp]:
+  assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
+  shows "map_context f \<circ> map_context g = map_context (f \<circ> g)"
+  apply (rule ext)
+  using assms apply transfer
+  by (auto simp: supp_comp_bound infinite_var typ.rrename_comps)
+lemmas map_context_comp = trans[OF comp_apply[symmetric] fun_cong[OF map_context_comp0]]
+declare map_context_comp[simp]
+lemma context_dom_set[simp]:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "dom (map_context f xs) = f ` dom xs"
+  using assms apply transfer apply auto
+  apply (metis fst_conv imageI)
+  by (metis fst_conv fst_map_prod imageI)
+lemma context_set_bd_UNIV[simp]: "|dom xs| <o |UNIV::var set|"
+  apply transfer
+   apply (rule ordLeq_ordLess_trans[OF card_of_image])
+   apply (rule ordLess_ordLeq_trans)
+    apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
+   apply (rule var_typ_pre_class.large)
+  done
+lemma map_context_cong_id:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+    and "\<And>a. a \<in> dom xs \<Longrightarrow> f a = a"
+  shows "map_context f xs = xs"
+  using assms apply transfer
+  apply auto
+  apply (rule trans)
+   apply (rule list.map_cong)
+    apply (rule refl)
+   apply (rule prod.map_cong[of _ _ _ "\<lambda>x. x"])
+     apply (rule refl)
+    apply (simp add: fsts.simps)
+   apply (rule typ.rrename_cong_ids)
+     apply assumption+
+  apply (metis imageI in_mono snds.cases well_formed_dom)
+  apply simp
+  done
 
 declare [[inductive_internals]]
 
@@ -89,22 +175,33 @@ notation Fun (infixr "\<rightarrow>" 65)
 notation Forall ("\<forall> _ <: _ . _" [62, 62, 62] 70)
 
 abbreviation in_context :: "var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("_ <: _ \<in> _" [55,55,55] 60) where
-  "x <: t \<in> \<Gamma> \<equiv> (x, t) \<in> pairs_dalist \<Gamma>"
-abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,57,57] 62) where
-  "\<Gamma>, x<:t \<equiv> insert_dalist x t \<Gamma>"
-abbreviation map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
-  "map_context f \<equiv> map_dalist f (rrename_typ f)"
-abbreviation dom :: "('k, 'v) dalist \<Rightarrow> 'k set" where "dom \<equiv> keys_dalist"
-abbreviation empty :: "'a set" ("\<emptyset>") where "empty \<equiv> {}"
-abbreviation concat :: "('k, 'v) dalist \<Rightarrow> ('k, 'v) dalist \<Rightarrow> ('k, 'v) dalist" ("_, _" [65,65] 70) where
-  "concat \<equiv> concat_dalist"
+  "x <: t \<in> \<Gamma> \<equiv> (x, t) \<in> pairs \<Gamma>"
+abbreviation well_scoped :: "type \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("_ closed'_in _" [55, 55] 60) where
+  "well_scoped S \<Gamma> \<equiv> FFVars_typ S \<subseteq> dom \<Gamma>"
 
 inductive Ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
-  SA_Top:         "\<Gamma> \<turnstile> S <: Top"
-| SA_Refl_TVar:   "\<Gamma> \<turnstile> TyVar x <: TyVar x"
-| SA_Trans_TVar:  "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
-| SA_Arrow:       "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
-| SA_All:         "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2" (* potentially needs "x \<notin> dom \<Gamma>" as assumption *)
+  SA_Top: "S closed_in \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
+| SA_Refl_TVar: "TyVar x closed_in \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
+| SA_Trans_TVar: "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
+| SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
+| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 ; x \<notin> dom \<Gamma> ; T\<^sub>1 closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
+
+lemma pairs_dom: "dom \<Gamma> = fst ` pairs \<Gamma>"
+  by transfer (rule refl)
+lemma dom_extend[simp]: "x \<notin> dom \<Gamma> \<Longrightarrow> T closed_in \<Gamma> \<Longrightarrow> dom (\<Gamma>, x <: T) = dom \<Gamma> \<union> {x}"
+  by transfer auto
+
+lemma well_scoped[intro]:
+  assumes "\<Gamma> \<turnstile> S <: T"
+  shows "S closed_in \<Gamma>" "T closed_in \<Gamma>"
+using assms proof (induction \<Gamma> S T rule: Ty.induct)
+  case (SA_Trans_TVar x U \<Gamma> T) {
+    case 1 then show ?case using SA_Trans_TVar
+      by (metis fst_conv imageI pairs_dom singletonD subsetI typ.set(1))
+  next
+    case 2 then show ?case by (simp add: SA_Trans_TVar)
+  }
+qed auto
 
 thm Ty_def
 declare Ty.intros[intro]
@@ -121,7 +218,7 @@ type_synonym V = "var list"
 definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
   "Tmap f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
 fun Tfvars :: "T \<Rightarrow> var set" where
-  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = keys_dalist \<Gamma> \<union> \<Union>(FFVars_typ ` vals_dalist \<Gamma>) \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
+  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
 definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where 
   "Vmap \<equiv> map"
@@ -133,54 +230,18 @@ Tmap = Tmap and Tfvars = Tfvars
 and Vmap = Vmap and Vfvars = Vfvars 
 apply standard unfolding ssbij_def Tmap_def Vmap_def
   using small_Un small_def typ.card_of_FFVars_bounds
-         apply (auto simp: typ.FFVars_rrenames dalist.map_id0 map_prod.comp dalist.set_map dalist.map_comp typ.rrename_comp0s inf_A)
+         apply (auto simp: typ.FFVars_rrenames map_prod.comp dalist.set_map dalist.map_comp typ.rrename_comp0s inf_A)
     apply (rule var_typ_pre_class.Un_bound var_typ_pre_class.UN_bound
         typ.card_of_FFVars_bounds dalist.set_bd[THEN ordLess_ordLeq_trans[OF _ var_typ_pre_class.large]])+
-     apply auto
-    apply (rule sym)
-    apply (rule trans[OF dalist.map_id[symmetric]])
-    apply (rule dalist.map_cong)
-          apply (rule bij_id supp_id_bound refl | assumption)+
-     apply (rule trans[OF id_apply])
-     apply (rule sym)
-     apply (erule ballE)
-      apply assumption
-     apply (erule notE)
-     apply (rule UnI1)+
-     apply assumption
-    apply (rule trans[OF id_apply])
-    apply (rule sym)
-    apply (rule typ.rrename_cong_ids)
-      apply assumption+
-    apply (erule ballE)
-     apply assumption
-    apply (erule notE)
-    apply (rule UnI1, rule UnI1, rule UnI2)
-    apply (rule UN_I)
-     apply assumption+
-   apply (rule typ.rrename_cong_ids)
-      apply assumption+
-    apply (erule ballE)
-     apply assumption
-    apply (erule notE)
-    apply (rule UnI1, rule UnI2)
-     apply assumption
-   apply (rule typ.rrename_cong_ids)
-      apply assumption+
-    apply (erule ballE)
-     apply assumption
-    apply (erule notE)
-    apply (rule UnI2)
-  apply assumption
-  done
+  by (auto simp: map_context_cong_id typ.rrename_cong_ids)
 
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool" where
   "G \<equiv> \<lambda>R v t.
-    (v = [] \<and> snd (snd t) = Top)
-  \<or> (\<exists>x. v = [] \<and> fst (snd t) = TyVar x \<and> fst (snd t) = snd (snd t))
+    (v = [] \<and> snd (snd t) = Top \<and> fst (snd t) closed_in fst t)
+  \<or> (\<exists>x. v = [] \<and> fst (snd t) = TyVar x \<and> fst (snd t) = snd (snd t) \<and> fst (snd t) closed_in fst t)
   \<or> (\<exists>x U \<Gamma> T. v = [] \<and> fst t = \<Gamma> \<and> fst (snd t) = TyVar x \<and> snd (snd t) = T \<and> x <: U \<in> \<Gamma> \<and> R (\<Gamma>, U, T))
   \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2. v = [] \<and> fst t = \<Gamma> \<and> fst (snd t) = (S\<^sub>1 \<rightarrow> S\<^sub>2) \<and> snd (snd t) = (T\<^sub>1 \<rightarrow> T\<^sub>2) \<and> R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<and> R (\<Gamma>, S\<^sub>2, T\<^sub>2))
-  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. v = [x] \<and> fst t = \<Gamma> \<and> fst (snd t) = (\<forall>x<:S\<^sub>1. S\<^sub>2) \<and> snd (snd t) = (\<forall>x<:T\<^sub>1. T\<^sub>2) \<and> R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<and> R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2))
+  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. v = [x] \<and> fst t = \<Gamma> \<and> fst (snd t) = (\<forall>x<:S\<^sub>1. S\<^sub>2) \<and> snd (snd t) = (\<forall>x<:T\<^sub>1. T\<^sub>2) \<and> R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<and> R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2) \<and> x \<notin> dom \<Gamma> \<and> T\<^sub>1 closed_in \<Gamma>)
   "
 
 lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
@@ -188,13 +249,24 @@ lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 
 lemma in_context_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_typ f T \<in> map_dalist f (rrename_typ f) \<Gamma>"
+  shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_typ f T \<in> map_context f \<Gamma>"
   using assms by transfer (auto simp: inj_on_def)
 
 lemma extend_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "map_context f (\<Gamma>,x<:T) = map_context f \<Gamma>,f x <: rrename_typ f T"
-  using assms by transfer (auto simp: inj_on_def image_iff)
+  using assms apply transfer apply (auto simp: typ.FFVars_rrenames)
+     apply (metis fst_conv image_iff)
+    apply (metis Product_Type.fst_comp_map_prod imageI image_comp subset_eq)
+   apply (metis fst_conv image_iff map_prod_imageI)
+  by (smt (verit, best) bij_not_equal_iff fst_conv image_iff image_subset_iff prod_fun_imageE)
+
+lemma closed_in_eqvt:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "S closed_in \<Gamma> \<Longrightarrow> rrename_typ f S closed_in map_context f \<Gamma>"
+  using assms apply transfer
+  apply (auto simp: typ.FFVars_rrenames)
+  by (metis Product_Type.fst_comp_map_prod imageI image_comp subset_eq)
 
 lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
   unfolding G_def
@@ -202,7 +274,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\
   subgoal
     apply (rule disjI1)
     apply (cases t)
-    unfolding ssbij_def Tmap_def Vmap_def by simp
+    unfolding ssbij_def Tmap_def Vmap_def using closed_in_eqvt by simp
   subgoal
     apply (rule disjI2, rule disjI1)
     apply (erule exE)
@@ -217,18 +289,17 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\
     subgoal for x U \<Gamma> T
       apply (rule exI)
       apply (rule exI[of _ "rrename_typ \<sigma> U"])
-      apply (rule exI[of _ "map_dalist \<sigma> (rrename_typ \<sigma>) \<Gamma>"])
+      apply (rule exI[of _ "map_context \<sigma> \<Gamma>"])
       apply (rule exI[of _ "rrename_typ \<sigma> T"])
       apply (cases t)
       unfolding ssbij_def Tmap_def Vmap_def
-      by (auto simp: in_context_eqvt dalist.map_comp supp_inv_bound
-          typ.rrename_comps typ.rrename_comp0s dalist.map_id)
+      by (auto simp: in_context_eqvt supp_inv_bound typ.rrename_comps typ.rrename_comp0s)
     done
   subgoal
     apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
     apply (elim exE conjE)
     subgoal for \<Gamma> T1 S1 S2 T2
-      apply (rule exI[of _ "map_dalist \<sigma> (rrename_typ \<sigma>) \<Gamma>"])
+      apply (rule exI[of _ "map_context \<sigma> \<Gamma>"])
       apply (rule exI[of _ "rrename_typ \<sigma> T1"])
       apply (rule exI[of _ "rrename_typ \<sigma> S1"])
       apply (rule exI[of _ "rrename_typ \<sigma> S2"])
@@ -240,7 +311,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\
   apply (rule disjI2)+
   apply (elim exE conjE)
   subgoal for \<Gamma> T1 S1 x S2 T2
-          apply (rule exI[of _ "map_dalist \<sigma> (rrename_typ \<sigma>) \<Gamma>"])
+          apply (rule exI[of _ "map_context \<sigma> \<Gamma>"])
       apply (rule exI[of _ "rrename_typ \<sigma> T1"])
     apply (rule exI[of _ "rrename_typ \<sigma> S1"])
     apply (rule exI)
@@ -263,8 +334,7 @@ lemma Forall_rrename:
   apply (unfold typ.TT_injects0)
   apply (unfold set3_typ_pre_def set2_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps
     map_prod_simp sum_set_simps prod_set_simps cSup_singleton Un_empty_left Un_empty_right
-    Union_empty image_insert image_empty map_typ_pre_def id_def
-  )
+    Union_empty image_insert image_empty map_typ_pre_def id_def)
   apply (rule exI[of _ \<sigma>])
   apply (rule conjI assms)+
    apply (unfold id_on_def atomize_all atomize_imp)[1]
@@ -302,7 +372,24 @@ lemma GG_fresh:
       apply (elim conjE)
         apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"])
       by auto
-    sorry
+    apply (rule iffD2[OF arg_cong[of _ _ R]])
+     apply (rule arg_cong[of _ _ "\<lambda>x::\<Gamma>\<^sub>\<tau>. (x, _::type, _::type)"])
+     defer
+     apply (elim allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+     apply (rule conjI)
+      apply (simp add: ssbij_def)
+      apply assumption
+    apply (subst extend_eqvt)
+      apply (rule bij_swap)
+     apply (rule supp_swap_bound)
+     apply (rule infinite_var)
+    apply (rule arg_cong3[of _ _ _ _ _ _ extend])
+      apply (metis Prelim.bij_swap fun_upd_apply id_apply infinite_var map_context_cong_id supp_swap_bound)
+     apply simp
+    by (auto intro!: typ.rrename_cong_ids[symmetric])
   done
 
 interpretation Induct where dummy = "undefined :: var"
@@ -315,16 +402,17 @@ lemma Ty_I: "Ty \<Gamma> T1 T2 = I (\<Gamma>, T1, T2)"
   unfolding Ty_def I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
   unfolding fun_eq_iff G_def apply safe
            apply auto
-  by blast
+  by blast+
 
 corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
   "\<Gamma> \<turnstile> S <: T \<Longrightarrow>
   \<forall>\<rho>. |K \<rho>| <o |UNIV::var set| \<Longrightarrow>  
-  (\<And>\<Gamma> S \<rho>. P \<Gamma> S Top \<rho>) \<Longrightarrow>
-  (\<And>\<Gamma> x \<rho>. P \<Gamma> (TyVar x) (TyVar x) \<rho>) \<Longrightarrow>
+  (\<And>\<Gamma> S \<rho>. S closed_in \<Gamma> \<Longrightarrow> P \<Gamma> S Top \<rho>) \<Longrightarrow>
+  (\<And>\<Gamma> x \<rho>. TyVar x closed_in \<Gamma> \<Longrightarrow> P \<Gamma> (TyVar x) (TyVar x) \<rho>) \<Longrightarrow>
   (\<And>x U \<Gamma> T \<rho>. x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<forall>\<rho>. P \<Gamma> U T \<rho> \<Longrightarrow> P \<Gamma> (TyVar x) T \<rho>) \<Longrightarrow>
   (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<rho>. \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2) \<rho>) \<Longrightarrow>
-  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2) \<rho>) \<Longrightarrow>
+  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow>
+    \<forall>\<rho>. P (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> T\<^sub>1 closed_in \<Gamma> \<Longrightarrow> P \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2) \<rho>) \<Longrightarrow>
  \<forall>\<rho>. P \<Gamma> S T \<rho>"
   unfolding Ty_I
   apply (rule allI)
@@ -340,27 +428,76 @@ corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_T
   done
 
 (********************* Actual formalization ************************)
-lemma Ty_refl: "\<Gamma> \<turnstile> T <: T"
-  by (induction arbitrary: \<Gamma>) auto
 
-lemma Ty_permute: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; pairs_dalist \<Gamma> = pairs_dalist \<Delta> \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> S <: T"
-proof (induction \<Gamma> S T arbitrary: \<Delta> rule: Ty.induct)
-  case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
-  then have "keys_dalist \<Gamma> = keys_dalist \<Delta>" by (metis fst_pairs_dalist)
-  then have "pairs_dalist (\<Gamma>, x <: T\<^sub>1) = pairs_dalist (\<Delta>, x <: T\<^sub>1)"
-    by (metis SA_All.prems pairs_insert_fresh pairs_insert_same)
-  then show ?case using SA_All by blast
-qed auto
+context begin
+ML_file \<open>../../Tools/binder_induction.ML\<close>
+end
 
-lemma in_concat_dalist[simp]: "keys_dalist xs \<inter> keys_dalist ys = {} \<Longrightarrow> pairs_dalist (concat_dalist xs ys) = pairs_dalist xs \<union> pairs_dalist ys"
+(* TODO: When doing binder induction on a type, always avoid its own free variables *)
+lemma Ty_refl: "T closed_in \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
+  apply (unfold atomize_imp)
+  apply (rule mp[OF spec[OF spec[OF typ.strong_induct[of "\<lambda>(\<Gamma>, t). dom \<Gamma> \<union> FFVars_typ t"
+  "\<lambda>t \<rho>. \<forall>\<Gamma>. \<Gamma> = fst \<rho> \<and> t = snd \<rho> \<longrightarrow> t closed_in \<Gamma> \<longrightarrow> \<Gamma> \<turnstile> t <: t"
+]]], rotated -1, of _ "(\<Gamma>, T)"])
+       apply simp
+      apply (rule allI)
+      apply (unfold case_prod_beta)[1]
+      apply (rule typ.Un_bound)
+       apply simp
+      apply (rule typ.set_bd_UNIV)
+     apply (auto simp: SA_Refl_TVar)
+   apply blast
+  by (metis Diff_eq_empty_iff Diff_insert2 SA_All Un_insert_right dom_extend sup_bot.right_neutral)
+
+lemma pairs_extend[simp]: "x \<notin> dom \<Gamma> \<Longrightarrow> T closed_in \<Gamma> \<Longrightarrow> pairs (\<Gamma>, x <: T) = pairs \<Gamma> \<union> {(x, T)}"
   by transfer auto
 
-lemma Ty_weakening: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; dom \<Gamma> \<inter> dom \<Delta> = \<emptyset> \<rbrakk> \<Longrightarrow> \<Gamma>,\<Delta> \<turnstile> S <: T"
-proof (binder_induction \<Gamma> S T avoiding: \<Delta> rule: Ty_strong_induct)
-(*proof (induction \<Gamma> S T arbitrary: \<Delta> rule: Ty.induct)
+lemma Ty_permute: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; pairs \<Gamma> = pairs \<Delta> \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> S <: T"
+proof (binder_induction \<Gamma> S T arbitrary: \<Delta> avoiding: "dom \<Delta>" rule: Ty_strong_induct)
+  case (Bound \<Delta>)
+  then show ?case by (rule context_set_bd_UNIV)
+next
+  case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<Delta>)
+  then have "pairs (\<Gamma>, x <: T\<^sub>1) = pairs (\<Delta>, x <: T\<^sub>1)" by (metis pairs_dom pairs_extend)
+  then show ?case by (meson SA_All Ty.SA_All well_scoped(1))
+qed (auto simp: Ty.intros pairs_dom)
+
+lemma closed_in_concat: "dom \<Gamma> \<inter> dom \<Delta> = {} \<Longrightarrow> T closed_in \<Gamma> \<Longrightarrow> T closed_in (\<Gamma>, \<Delta>)"
+  by transfer auto
+lemma in_context_concat: "dom \<Gamma> \<inter> dom \<Delta> = {} \<Longrightarrow> x <: T \<in> \<Gamma> \<Longrightarrow> x <: T \<in> \<Gamma>,\<Delta>"
+  by transfer auto
+lemma dom_concat[simp]: "dom \<Gamma> \<inter> dom \<Delta> = {} \<Longrightarrow> dom (\<Gamma>, \<Delta>) = dom \<Gamma> \<union> dom \<Delta>"
+  by transfer auto
+lemma pairs_concat[simp]: "dom \<Gamma> \<inter> dom \<Delta> = {} \<Longrightarrow> pairs (\<Gamma>, \<Delta>) = pairs \<Gamma> \<union> pairs \<Delta>"
+  by transfer auto
+
+lemma Ty_weakening: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> \<Gamma>,\<Delta> \<turnstile> S <: T"
+proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" rule: Ty_strong_induct)
+  case (SA_Top \<Gamma> S)
+  then show ?case  using Ty.SA_Top closed_in_concat by presburger
+next
+  case (SA_Refl_TVar \<Gamma> x)
+  then show ?case using Ty.SA_Refl_TVar closed_in_concat by presburger
+next
+  case (SA_Trans_TVar x U \<Gamma> T)
+  then show ?case using in_context_concat by blast
+next
   case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
-  then show ?case sorry
-qed auto*)
-  oops
+  have "pairs ((\<Gamma> , x <: T\<^sub>1), \<Delta>) = pairs ((\<Gamma>, \<Delta>), x <: T\<^sub>1)"
+    apply (subst pairs_extend)
+    using SA_All apply simp
+     apply (rule closed_in_concat)
+      apply (rule SA_All)+
+    apply (subst pairs_concat)
+    using SA_All apply simp
+    apply (subst pairs_extend)
+    using SA_All apply simp
+     apply (rule SA_All)
+    apply (subst pairs_concat)
+     apply (rule SA_All)
+    by blast
+  then have "(\<Gamma>, \<Delta>), x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2" using Ty_permute SA_All by auto
+  then show ?case  using SA_All Ty.SA_All well_scoped(1) by auto
+qed (auto simp: Ty.intros)
 
 end

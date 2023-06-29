@@ -98,4 +98,13 @@ lift_definition concat_dalist :: "('k, 'v) dalist \<Rightarrow> ('k, 'v) dalist 
   is "\<lambda>xs ys. if fst ` set xs \<inter> fst ` set ys = {} then xs @ ys else []"
   by auto
 
+lemma pairs_dalist_concat[simp]: "keys_dalist xs \<inter> keys_dalist ys = {} \<Longrightarrow> pairs_dalist (concat_dalist xs ys) = pairs_dalist xs \<union> pairs_dalist ys"
+  by transfer auto
+lemma pairs_dalist_insert[simp]: "k \<notin> keys_dalist xs \<Longrightarrow> pairs_dalist (insert_dalist k v xs) = pairs_dalist xs \<union> {(k, v)}"
+  by transfer auto
+lemma keys_dalist_concat[simp]: "keys_dalist xs \<inter> keys_dalist ys = {} \<Longrightarrow> keys_dalist (concat_dalist xs ys) = keys_dalist xs \<union> keys_dalist ys"
+  by transfer auto
+lemma keys_dalist_insert[simp]: "keys_dalist (insert_dalist k v xs) = keys_dalist xs \<union> {k}"
+  by transfer auto
+
 end

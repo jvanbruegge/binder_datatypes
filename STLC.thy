@@ -811,6 +811,7 @@ lemma Ty_AbsE:
       apply assumption+
   apply (rule conjI refl)+
   done
+
 lemma Ty_AbsE':
   assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>" "x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>)"
 and "\<And>\<tau>\<^sub>2. \<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P"

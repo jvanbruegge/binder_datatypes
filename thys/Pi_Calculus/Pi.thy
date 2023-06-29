@@ -3,22 +3,11 @@
 theory Pi
 imports "../MRBNF_Recursor" "HOL-Library.FSet" 
  "../Instantiation_Infrastructure/FixedCountableVars"
+ "../General_Customization"
 begin 
 
-(****************************)
-(* 1. GENERAL CUSTOMIZATION *)
 
-lemmas supp_inv_bound[simp]
-lemmas bij_swap[simp]
-lemmas supp_id_bound[simp]
-
-lemma fvars_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
-  unfolding supp_def id_on_def by blast
-lemma finite_singleton: "finite {x}" by blast
-
-
-(****************************)
-(* 2. DATATYPE DECLARTION  *)
+(* DATATYPE DECLARTION  *)
 
 (* binder_datatype 'a term =
   Var 'a
@@ -26,18 +15,9 @@ lemma finite_singleton: "finite {x}" by blast
 | Abs x::'a t::"'a term" binds x in t
 *)
 
-(* 
-binder_datatype 'a commit =
-  Finp 'a 'a :'a pi" 
-| Fout 'a 'a :'a pi" 
-| Bout (x::'a) (y::'a) (P::"'a pi") binds y in P
-*)
-
-declare [[inductive_internals]]
-
 ML \<open>
 val ctors = [
-  (("Zero", (NONE : mixfix option)), []), 
+  (("Zero", (NONE : mixfix option)), []),
   (("Sum", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Par", NONE), [@{typ 'rec}, @{typ 'rec}]),
   (("Bang", NONE), [@{typ 'rec}]),
@@ -68,12 +48,12 @@ local_setup \<open>fn lthy =>
 let
   val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
 in lthy' end\<close>
+print_theorems
 print_mrbnfs
 
 
-
 (****************************)
-(* 3. DATATYPE-SPECIFIC CUSTOMIZATION  *)
+(* DATATYPE-SPECIFIC CUSTOMIZATION  *)
 
 
 (* Monomorphising: *)
@@ -83,8 +63,14 @@ instance var :: var_term_pre apply standard
 
 type_synonym trm = "var term"
 
+find_theorems name: imsupp 
+
 
 (* Some lighter notations: *)
+
+abbreviation "rrename \<equiv> rrename_term"
+abbreviation "FFVars \<equiv> FFVars_term"
+
 (*
 abbreviation "VVr \<equiv> tvVVr_tvsubst"
 lemmas VVr_def = tvVVr_tvsubst_def
@@ -95,8 +81,7 @@ lemmas IImsupp_def = tvIImsupp_tvsubst_def
 abbreviation "SSupp \<equiv> tvSSupp_tvsubst"
 lemmas SSupp_def = tvSSupp_tvsubst_def
 *)
-abbreviation "rrename \<equiv> rrename_term"
-abbreviation "FFVars \<equiv> FFVars_term"
+
 (* *)
 
 (* 
@@ -213,14 +198,12 @@ Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
 lemma Abs_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow> 
   x = x' \<and> 
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_term (Inp x y e)) f \<and> f y = y' \<and> rrename_term f e = e')"
+  \<and> id_on (FFVars_term e - {y}) f \<and> f y = y' \<and> rrename_term f e = e')"
   unfolding term.set  
   unfolding Inp_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
-    Un_empty_right UN_single apply auto
-  by (metis bij_pointE term.distinct(3) term.map(4) term.rrename_bijs term_vvsubst_rrename)+
-
+    Un_empty_right UN_single by auto
 
 lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_term_pre (id::var \<Rightarrow>var) f (rrename_term f) id)"
   apply (rule iffD2[OF bij_iff])
@@ -313,8 +296,7 @@ lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
 lemma Abs_rrename: 
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
  (\<And>a'. a' \<in> FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Inp b a e = Inp b (\<sigma> a) (rrename_term \<sigma> e)"
-by (metis rrename_simps(1) rrename_simps(4) term.distinct(22) term.map(4) term_vvsubst_rrename)
-
+  using Abs_inject id_on_def by blast
 
 (* Bound properties (needed as auxiliaries): *)
 
@@ -512,6 +494,6 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 *)
- 
+
 
 end

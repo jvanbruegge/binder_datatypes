@@ -157,7 +157,7 @@ and Tfvars :: "'T \<Rightarrow> 'A set"
 and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
 and Vfvars :: "'V \<Rightarrow> 'A set"
 +
-fixes (* The operator that defines the inductive predicate as gfp:  *)
+fixes (* The operator that defines the inductive predicate as lfp:  *)
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
 assumes 
 G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"

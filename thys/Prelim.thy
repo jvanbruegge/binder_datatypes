@@ -66,6 +66,9 @@ definition id_on :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> bo
 lemma id_on_id[simp,intro!]: "id_on A id"
   unfolding id_on_def by auto
 
+lemma id_on_insert[simp]: "id_on (insert x A) f \<longleftrightarrow> f x = x \<and> id_on A f"
+  unfolding id_on_def by blast
+
 definition "eq_on A f g \<equiv> \<forall> a. a \<in> A \<longrightarrow> f a = g a"
 
 lemma eq_on_refl[simp,intro!]: "eq_on A f f" unfolding eq_on_def by auto

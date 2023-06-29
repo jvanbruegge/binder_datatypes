@@ -2,7 +2,7 @@ signature MRBNF_RECURSOR_TACTICS =
 sig
 
   val mk_f_pat_complete_tac: thm -> Proof.context -> tactic
-  val mk_f_termination_tac: (typ -> term) -> thm list -> thm list -> thm list -> thm list
+  val mk_f_termination_tac: (typ -> term) -> thm -> thm list -> thm list -> thm list
     -> thm list -> Proof.context -> tactic
 
   val mk_Umap'_CTOR_tac: MRBNF_Def.mrbnf -> thm -> thm -> thm -> thm -> thm -> thm -> thm -> thm
@@ -39,10 +39,10 @@ fun mk_f_pat_complete_tac raw_inject ctxt = EVERY1 [
   rtac ctxt refl
 ];
 
-fun mk_f_termination_tac mk_relation wf_subshapes set_subshape_images set_subshapes set_maps prems ctxt = EVERY1 [
+fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshapes set_maps prems ctxt = EVERY1 [
   Function_Relation.relation_tac ctxt mk_relation,
   rtac ctxt @{thm wf_inv_image},
-  resolve_tac ctxt wf_subshapes,
+  rtac ctxt wf_subshape,
   K (unfold_thms_tac ctxt @{thms in_inv_image prod_in_Collect_iff comp_def snd_conv fst_conv})
 ] THEN ALLGOALS (EVERY' [
   REPEAT_DETERM o etac ctxt conjE,

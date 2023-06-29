@@ -50,7 +50,6 @@ sig
   val mk_defs_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term list
     -> local_theory -> ((term * thm) list * local_theory);
 
-  val mk_int_empty: term * term -> term;
   val chop_f_prems: 'a list -> 'a list list;
   val every_other: 'a list -> 'a list;
   val mk_supp_bound: term -> term;
@@ -389,11 +388,6 @@ fun prove_model_axioms b qualify (model : (Proof.context -> tactic) model) lthy 
     } : thm model;
   in ((model', defs), lthy') end;
 
-fun mk_int_empty sets = HOLogic.mk_eq (
-  HOLogic.mk_binop @{const_name inf} sets,
-  Const (@{const_name bot}, fastype_of (fst sets))
-);
-
 val mk_minus = HOLogic.mk_binop @{const_name minus}
 
 fun mk_map_prod f g =
@@ -570,7 +564,7 @@ fun define_recursor_consts qualify (model : thm model) ff0_b lthy =
           Function_Common.default_config (mk_f_pat_complete_tac (#inject raw)) lthy
         );
         val (info, lthy') = Function.prove_termination NONE (mk_f_termination_tac mk_relation (the (
-          #wf_subshapes inner)) (flat (the (#set_subshape_imagess inner))) (flat (the (
+          #wf_subshape inner)) (flat (the (#set_subshape_imagess inner))) (flat (the (
           #set_subshapess inner))) (set_map_of_mrbnf mrbnf) pick_prems lthy'
         ) lthy';
 

@@ -172,7 +172,7 @@ for equivariant relations R:
 *)
 G_fresh: 
 "\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
-         \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
+         \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> G R w t"
 
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)

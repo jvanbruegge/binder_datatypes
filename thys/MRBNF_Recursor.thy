@@ -281,13 +281,27 @@ lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
 
 lemma finite_singleton: "finite {x}" by blast
 
+lemma ex_avoiding_bij:
+  fixes f :: "'a \<Rightarrow> 'a" and I D A :: "'a set"
+  assumes  "|supp f| <o |UNIV :: 'a set|" "bij f" "infinite (UNIV :: 'a set)"
+    "|I| <o |UNIV :: 'a set|" "id_on I f"
+    "|D| <o |UNIV :: 'a set|" "D \<inter> A = {}" "|A| <o |UNIV :: 'a set|"
+  shows "\<exists>(g::'a \<Rightarrow> 'a). bij g \<and> |supp g| <o |UNIV::'a set| \<and> imsupp g \<inter> A = {} \<and>
+    (\<forall>a. a \<in> (imsupp f - A) \<union> D \<and> f a \<notin> A \<longrightarrow> g a = f a) \<and> id_on I g"
+  apply (rule exI[of _ "avoiding_bij f I D A"])
+  apply (rule conjI avoiding_bij assms)+
+  done
+
+lemma id_on_empty: "id_on {} f"
+  unfolding id_on_def by simp
+
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 (*ML_file \<open>../Tools/binder_inductive.ML\<close>*)
 
-context begin
+(*context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end
+end*)
 
 end

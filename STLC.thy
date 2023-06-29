@@ -393,20 +393,6 @@ lemma TT_inject: "(terms_ctor a = terms_ctor b) = (\<exists>(f::'a::var_terms_pr
 
 (*no_notation extend ("(_,_:_)")*)
 
-lemma ex_avoiding_bij:
-  fixes f :: "'a \<Rightarrow> 'a" and I D A :: "'a set"
-  assumes  "|supp f| <o |UNIV :: 'a set|" "bij f" "infinite (UNIV :: 'a set)"
-    "|I| <o |UNIV :: 'a set|" "id_on I f"
-    "|D| <o |UNIV :: 'a set|" "D \<inter> A = {}" "|A| <o |UNIV :: 'a set|"
-  shows "\<exists>(g::'a \<Rightarrow> 'a). bij g \<and> |supp g| <o |UNIV::'a set| \<and> imsupp g \<inter> A = {} \<and>
-    (\<forall>a. a \<in> (imsupp f - A) \<union> D \<and> f a \<notin> A \<longrightarrow> g a = f a) \<and> id_on I g"
-  apply (rule exI[of _ "avoiding_bij f I D A"])
-  apply (rule conjI avoiding_bij assms)+
-  done
-
-lemma id_on_empty: "id_on {} f"
-  unfolding id_on_def by simp
-
 lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
   fixes K::"'p \<Rightarrow> 'a::var_terms_pre set" and e::"'a terms"
   assumes x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>" and bound: "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|"
@@ -825,6 +811,7 @@ lemma Ty_AbsE:
       apply assumption+
   apply (rule conjI refl)+
   done
+
 lemma Ty_AbsE':
   assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>" "x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>)"
 and "\<And>\<tau>\<^sub>2. \<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P"

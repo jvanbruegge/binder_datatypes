@@ -22,6 +22,7 @@ sig
 
   type raw_result = {
     alpha: term,
+    subshape_rel: term option,
 
     exhaust: thm,
     rename_simp: thm,
@@ -36,7 +37,7 @@ sig
     alpha_elim: thm,
 
     subshapes: term list option,
-    wf_subshapes: thm list option,
+    wf_subshape: thm option,
     set_subshapess: thm list list option,
     set_subshape_imagess: thm list list option,
     subshape_induct: thm option
@@ -128,6 +129,7 @@ fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_
 
 type raw_result = {
   alpha: term,
+  subshape_rel: term option,
 
   exhaust: thm,
   rename_simp: thm,
@@ -142,16 +144,17 @@ type raw_result = {
   alpha_elim: thm,
 
   subshapes: term list option,
-  wf_subshapes: thm list option,
+  wf_subshape: thm option,
   set_subshapess: thm list list option,
   set_subshape_imagess: thm list list option,
   subshape_induct: thm option
 };
 
 fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij, alpha_bij_eq,
-  alpha_FVarss, subshapes, wf_subshapes, set_subshapess, set_subshape_imagess, subshape_induct,
-  alpha_intro, exhaust, rename_simp, alpha_elim } = {
+  alpha_FVarss, subshapes, wf_subshape, set_subshapess, set_subshape_imagess, subshape_induct,
+  alpha_intro, exhaust, rename_simp, alpha_elim, subshape_rel } = {
   alpha = Morphism.term phi alpha,
+  subshape_rel = Option.map (Morphism.term phi) subshape_rel,
   exhaust = Morphism.thm phi exhaust,
   rename_simp = Morphism.thm phi rename_simp,
   alpha_refl = Morphism.thm phi alpha_refl,
@@ -163,7 +166,7 @@ fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij,
   alpha_intro = Morphism.thm phi alpha_intro,
   alpha_elim = Morphism.thm phi alpha_elim,
   subshapes = Option.map (map (Morphism.term phi)) subshapes,
-  wf_subshapes = Option.map (map (Morphism.thm phi)) wf_subshapes,
+  wf_subshape = Option.map (Morphism.thm phi) wf_subshape,
   set_subshapess = Option.map (map (map (Morphism.thm phi))) set_subshapess,
   set_subshape_imagess = Option.map (map (map (Morphism.thm phi))) set_subshape_imagess,
   subshape_induct = Option.map (Morphism.thm phi) subshape_induct

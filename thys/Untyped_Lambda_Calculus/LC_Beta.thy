@@ -13,7 +13,7 @@ print_locales
 interpretation Small where dummy = "undefined :: var" 
 apply standard
   apply (simp add: infinite_var)  
-  using term_prevar_term_prevar_sumterm_prevar_prodIDterm_prevar_prodID_class.regular by blast
+  using var_term_pre_class.regular by blast
  
 
 (* AN EXAMPLE INDUCTIVE DEFINITION *)
@@ -51,8 +51,8 @@ Tmap = Tmap and Tfvars = Tfvars
 and Vmap = Vmap and Vfvars = Vfvars 
 apply standard unfolding ssbij_def Tmap_def Vmap_def
   using small_Un small_def term.card_of_FFVars_bounds
-  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)  
-  by auto 
+  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)
+  using var_sum_class.Un_bound by blast
 
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool"
 where

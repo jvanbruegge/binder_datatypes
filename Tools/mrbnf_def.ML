@@ -232,17 +232,17 @@ sig
 
   val print_mrbnfs: Proof.context -> unit
   val prepare_def: inline_policy -> (Proof.context -> fact_policy) -> bool ->
-    (binding -> binding) -> (Proof.context -> 'a -> typ) -> (Proof.context -> 'b -> term) ->
+    (binding -> binding) -> (Proof.context -> 'a -> typ) -> (Proof.context -> 'b -> term) -> (Proof.context -> 'c -> sort) ->
     typ list option -> ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
-    ((((((binding * 'a) * 'b) * (var_type * 'b) list) * 'b) * 'b list) * 'b option) * 'b option ->
+    (((((((binding * 'a) * 'b) * (var_type * 'b) list) * 'b) * 'b list) * 'b option) * 'b option) * 'c option ->
     Proof.context ->
     string * term list * ((Proof.context -> thm list -> tactic) option * term list list) *
     ((thm list -> thm list list) -> thm list list -> Proof.context -> mrbnf * local_theory) *
     local_theory * thm list
   val define_mrbnf_consts: inline_policy -> fact_policy -> bool -> typ list option ->
     ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
-    ((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option)
-    * term option -> local_theory ->
+    (((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option)
+    * term option) * sort option -> local_theory ->
       ((typ list * typ list * typ list * typ *
         (string list * thm * thm) *
          ((thm -> local_theory -> string list * local_theory) * (string list * local_theory -> thm))) *
@@ -261,8 +261,8 @@ sig
     ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
     ((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option) * term option ->
     local_theory -> mrbnf * local_theory
-  val mrbnf_cmd: (((((((binding * string) * string) * (var_type * string) list) * string)
-      * string list) * string option) * string option) * (Proof.context -> Plugin_Name.filter) ->
+  val mrbnf_cmd: ((((((((binding * string) * string) * (var_type * string) list) * string)
+      * string list) * string option) * string option) * string option) * (Proof.context -> Plugin_Name.filter) ->
     Proof.context -> Proof.state
 end;
 
@@ -1602,8 +1602,8 @@ val (add_prems, add_map_transfer_prems, mk_prem_terms) =
   end;
 
 fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map_b rel_b pred_b set_bs
-    (((((((mrbnf_b, T_rhs), map_rhs), var_set_rhss), bd_rhs), wit_rhss), rel_rhs_opt),
-    pred_rhs_opt) no_defs_lthy =
+    ((((((((mrbnf_b, T_rhs), map_rhs), var_set_rhss), bd_rhs), wit_rhss), rel_rhs_opt),
+    pred_rhs_opt), sort_opt) no_defs_lthy =
   let
     val (var_types, set_rhss) = split_list var_set_rhss;
     val non_dead = length var_types;
@@ -1709,7 +1709,9 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
           ((class, unfold_bd_def var_large, var_regular), (K (pair coclass), fn (sort, lthy) => unfold_bd_def' lthy (mk_covar_large (sort, lthy))), lthy)
       | NONE =>
         let
-          val (class, lthy) = define_var_type_class (mk_prefix_binding var_typeN) mrbnf_bd_raw lthy;
+          val (class, lthy) = case sort_opt of
+            SOME class => (class, lthy)
+            | NONE => define_var_type_class (mk_prefix_binding var_typeN) mrbnf_bd_raw lthy;
           val var_large = get_class_assumption class var_type_class_ass1N lthy
           val var_regular = get_class_assumption class var_type_class_ass2N lthy
           val mk_covar_large = fn (coclass, lthy) => get_class_assumption coclass var_type_class_ass1N lthy
@@ -1731,6 +1733,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
                 let
                   val colarge = get_local_class_assumption var_type_class_ass1N ctxt;
                   val coregular = get_local_class_assumption var_type_class_ass2N ctxt;
+                  val _ = @{print} colarge
                 in
                   mk_mr_subclass_tac ctxt bd_Card_order colarge coregular
                 end;
@@ -1902,9 +1905,9 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
        mk_pred_spec)), lthy)
   end;
 
-fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term Ds_opt classes_opt
-  map_b rel_b pred_b set_bs (((((((raw_mrbnf_b, raw_mrbnf_T), raw_map), raw_var_sets), raw_bd),
-    raw_wits), raw_rel_opt), raw_pred_opt) no_defs_lthy =
+fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term prep_sort Ds_opt classes_opt
+  map_b rel_b pred_b set_bs ((((((((raw_mrbnf_b, raw_mrbnf_T), raw_map), raw_var_sets), raw_bd),
+    raw_wits), raw_rel_opt), raw_pred_opt), raw_sort_opt) no_defs_lthy =
   let
     val fact_policy = mk_fact_policy no_defs_lthy;
     val mrbnf_b = qualify raw_mrbnf_b;
@@ -1929,6 +1932,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
     val wit_rhss = map (prep_term no_defs_lthy) raw_wits;
     val rel_rhs_opt = Option.map (prep_term no_defs_lthy) raw_rel_opt;
     val pred_rhs_opt = Option.map (prep_term no_defs_lthy) raw_pred_opt;
+    val sort_opt = Option.map (prep_sort no_defs_lthy) raw_sort_opt;
 
     fun err T =
       error ("Trying to register the type " ^ quote (Syntax.string_of_typ no_defs_lthy T) ^
@@ -1951,8 +1955,8 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
      (mrbnf_map_def, mrbnf_set_defs, mrbnf_bd_def, mrbnf_wit_defs, mrbnf_rel_def, mrbnf_pred_def),
      (mk_mrbnf_map_Ds, mk_mrbnf_t_Ds, mk_mrbnf_T_Ds, _, _, mk_rel_spec, mk_pred_spec)), lthy) =
        define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map_b rel_b pred_b set_bs
-         (((((((mrbnf_b, T_rhs), map_rhs), (var_types ~~ set_rhss)), bd_rhs), wit_rhss), rel_rhs_opt),
-           pred_rhs_opt) no_defs_lthy;
+         ((((((((mrbnf_b, T_rhs), map_rhs), (var_types ~~ set_rhss)), bd_rhs), wit_rhss), rel_rhs_opt),
+           pred_rhs_opt), sort_opt) no_defs_lthy;
 
     val dead = length deads;
 
@@ -3593,8 +3597,8 @@ fun mrbnf_def const_policy fact_policy internal qualify tacs Ds classes
       goals (map (fn tac => fn {context = ctxt, prems = _} =>
         unfold_thms_tac ctxt one_step_defs THEN tac ctxt) tac_list)
     |> (fn thms => after_qed mk_wit_thms (map single thms) lthy)
-  end) o prepare_def const_policy fact_policy internal qualify (K I) (K I) Ds classes
-    map_b rel_b pred_b set_bs raw_csts;
+  end) o prepare_def const_policy fact_policy internal qualify (K I) (K I) (K I) Ds classes
+    map_b rel_b pred_b set_bs (raw_csts, NONE);
 
 fun mrbnf_of_bnf bnf lthy =
   let val mrbnf_tactics = {
@@ -3752,7 +3756,7 @@ fun mrbnf_cmd (raw_csts, raw_plugins) =
     |> Proof.unfolding ([[(@{thm OO_Grp_alt} :: @{thm mem_Collect_eq} :: defs, [])]])
     |> Proof.refine_singleton (Method.Basic (fn ctxt =>
       Method.SIMPLE_METHOD (TRYALL (rtac ctxt refl))))
-  end) o prepare_def Do_Inline (user_policy Note_Some) false I Syntax.read_typ Syntax.read_term
+  end) o prepare_def Do_Inline (user_policy Note_Some) false I Syntax.read_typ Syntax.read_term Syntax.read_sort
     NONE NONE Binding.empty Binding.empty Binding.empty [] raw_csts;
 
 fun print_mrbnfs ctxt =
@@ -3813,6 +3817,7 @@ val _ =
            Parse.reserved "plugins") Parse.term)) [] --
        Scan.option ((Parse.reserved "rel" -- @{keyword ":"}) |-- Parse.term) --
        Scan.option ((Parse.reserved "pred" -- @{keyword ":"}) |-- Parse.term) --
+       Scan.option ((Parse.reserved "var_class" -- @{keyword ":"}) |-- Parse.sort) --
        Scan.optional Plugin_Name.parse_filter (K Plugin_Name.default_filter)
        >> mrbnf_cmd);
 

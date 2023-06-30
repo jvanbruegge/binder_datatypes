@@ -83,9 +83,11 @@ lemma rrename_typ_simps[simp]:
 
 type_synonym type = "var typ"
 
+abbreviation pre_dom :: "(var \<times> type) list \<Rightarrow> var set" where "pre_dom xs \<equiv> fst ` set xs"
+
 fun well_formed :: "(var \<times> type) list \<Rightarrow> bool" where
   "well_formed [] \<longleftrightarrow> True"
-| "well_formed ((x, t)#xs) \<longleftrightarrow> x \<notin> fst ` set xs \<and> FFVars_typ t \<subseteq> fst ` set xs \<and> well_formed xs"
+| "well_formed ((x, t)#xs) \<longleftrightarrow> x \<notin> pre_dom xs \<and> FFVars_typ t \<subseteq> pre_dom xs \<and> well_formed xs"
 
 typedef \<Gamma>\<^sub>\<tau> = "{ xs::(var \<times> type) list. well_formed xs }"
   by (rule exI[of _ "[]"]) simp
@@ -99,14 +101,14 @@ lift_definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<
      apply (auto simp: rev_image_eqI typ.FFVars_rrenames)
     by (metis Product_Type.fst_comp_map_prod image_comp image_eqI subset_eq)
   done
-lift_definition dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" is "\<lambda>xs. fst ` set xs" .
+lift_definition dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" is "pre_dom" .
 lift_definition pairs :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> (var \<times> type) set" is "set" .
 
 lift_definition extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,57,57] 62)
-  is "\<lambda>\<Gamma> x T. if x \<notin> fst ` set \<Gamma> \<and> FFVars_typ T \<subseteq> fst ` set \<Gamma> then (x, T)#\<Gamma> else \<Gamma>"
+  is "\<lambda>\<Gamma> x T. if x \<notin> pre_dom \<Gamma> \<and> FFVars_typ T \<subseteq> pre_dom \<Gamma> then (x, T)#\<Gamma> else \<Gamma>"
   by auto
 lift_definition concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_, _" [65,65] 70)
-  is "\<lambda>xs ys. if fst ` set xs \<inter> fst ` set ys = {} then xs @ ys else xs"
+  is "\<lambda>xs ys. if pre_dom xs \<inter> pre_dom ys = {} then xs @ ys else xs"
   subgoal for xs ys
     apply auto
     apply (induction xs)
@@ -117,7 +119,7 @@ lift_definition concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<
   done
 lift_definition empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") is "[]" by simp
 
-lemma well_formed_dom: "well_formed xs \<Longrightarrow> T \<in> snd ` set xs \<Longrightarrow> FFVars_typ T \<subseteq> fst ` set xs"
+lemma well_formed_dom: "well_formed xs \<Longrightarrow> T \<in> snd ` set xs \<Longrightarrow> FFVars_typ T \<subseteq> pre_dom xs"
 proof (induction xs)
   case (Cons a xs)
   then show ?case

@@ -509,7 +509,7 @@ proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" 
         
         sorry
       have "(\<Gamma> , X <: R), (\<Delta>, Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
-        apply (rule SA_All(4))
+        apply (rule SA_All(4))sorry
 
       show ?case
         apply (rule Ty.SA_All)

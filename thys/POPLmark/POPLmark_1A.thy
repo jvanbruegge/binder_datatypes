@@ -432,7 +432,8 @@ corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_T
 (********************* Actual formalization ************************)
 
 lemma Ty_refl: "T closed_in \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
-  by (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" T rule: typ.strong_induct) (auto simp: Diff_single_insert SA_All)
+  by (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: typ.strong_induct)
+     (auto simp: Diff_single_insert SA_All)
 
 lemma pairs_extend[simp]: "x \<notin> dom \<Gamma> \<Longrightarrow> T closed_in \<Gamma> \<Longrightarrow> pairs (\<Gamma>, x <: T) = pairs \<Gamma> \<union> {(x, T)}"
   by transfer auto

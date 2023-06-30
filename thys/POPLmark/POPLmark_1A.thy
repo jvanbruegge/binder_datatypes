@@ -1,7 +1,7 @@
 theory POPLmark_1A
   imports "../MRBNF_Recursor"
     "../../DAList" "../Instantiation_Infrastructure/FixedCountableVars"
-    "../Instantiation_Infrastructure/Curry_LFP" 
+    "../Instantiation_Infrastructure/Curry_LFP"
     "../Generic_Barendregt_Enhanced_Rule_Induction"
 begin
 
@@ -39,10 +39,10 @@ in lthy' end\<close>
 print_theorems
 print_mrbnfs
 
-instance var :: var_typ_pre apply standard 
+instance var :: var_typ_pre apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
   by (auto simp add: regularCard_var)
-instance var :: var_dalist apply standard 
+instance var :: var_dalist apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
   by (auto simp add: regularCard_var)
 
@@ -110,9 +110,9 @@ thm Ty_def
 declare Ty.intros[intro]
 
 (* instantiating the induction locale *)
-interpretation Small where dummy = "undefined :: var" 
+interpretation Small where dummy = "undefined :: var"
 apply standard
-  apply (simp add: infinite_var)  
+  apply (simp add: infinite_var)
   using var_typ_pre_class.regular by blast
 
 type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
@@ -123,14 +123,14 @@ definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" whe
 fun Tfvars :: "T \<Rightarrow> var set" where
   "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = keys_dalist \<Gamma> \<union> \<Union>(FFVars_typ ` vals_dalist \<Gamma>) \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
-definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where 
+definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
   "Vmap \<equiv> map"
-fun Vfvars :: "V \<Rightarrow> var set" where 
+fun Vfvars :: "V \<Rightarrow> var set" where
   "Vfvars v = set v"
 
 interpretation Components where dummy = "undefined :: var" and
 Tmap = Tmap and Tfvars = Tfvars
-and Vmap = Vmap and Vfvars = Vfvars 
+and Vmap = Vmap and Vfvars = Vfvars
 apply standard unfolding ssbij_def Tmap_def Vmap_def
   using small_Un small_def typ.card_of_FFVars_bounds
          apply (auto simp: typ.FFVars_rrenames dalist.map_id0 map_prod.comp dalist.set_map dalist.map_comp typ.rrename_comp0s inf_A)
@@ -253,10 +253,10 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\
     done
   done
 
-lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
+lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
   by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tfvars small_def small_ssbij subsetI)
 
-lemma Forall_rrename: 
+lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "
  (\<And>a'. a'\<in>FFVars_typ T2 - {x::'a::var_typ_pre} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Forall x T1 T2 = Forall (\<sigma> x) T1 (rrename_typ \<sigma> T2)"
   apply (unfold Forall_def)
@@ -319,7 +319,7 @@ lemma Ty_I: "Ty \<Gamma> T1 T2 = I (\<Gamma>, T1, T2)"
 
 corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
   "\<Gamma> \<turnstile> S <: T \<Longrightarrow>
-  \<forall>\<rho>. |K \<rho>| <o |UNIV::var set| \<Longrightarrow>  
+  \<forall>\<rho>. |K \<rho>| <o |UNIV::var set| \<Longrightarrow>
   (\<And>\<Gamma> S \<rho>. P \<Gamma> S Top \<rho>) \<Longrightarrow>
   (\<And>\<Gamma> x \<rho>. P \<Gamma> (TyVar x) (TyVar x) \<rho>) \<Longrightarrow>
   (\<And>x U \<Gamma> T \<rho>. x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<forall>\<rho>. P \<Gamma> U T \<rho> \<Longrightarrow> P \<Gamma> (TyVar x) T \<rho>) \<Longrightarrow>

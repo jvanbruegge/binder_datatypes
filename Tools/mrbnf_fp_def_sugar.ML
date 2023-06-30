@@ -234,8 +234,8 @@ fun substitute_vars vars fp_result =
     val replacement = (old_vars ~~ vars);
     val phi = Morphism.morphism "instantiate vars" {
       binding = [], fact = [],
-      typ = [Term.typ_subst_atomic replacement],
-      term = [Term.subst_atomic_types replacement]
+      typ = [fn _ => Term.typ_subst_atomic replacement],
+      term = [fn _ => Term.subst_atomic_types replacement]
     };
   in morph_fp_result phi fp_result end;
 
@@ -246,7 +246,7 @@ structure Data = Generic_Data (
 );
 
 val register_fp_results = fold (fn fp_result as { quotient_fp = { T = Type (s, _), ...}, ...} =>
-  Local_Theory.declaration {syntax = false, pervasive = true}
+  Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
     (fn phi => Data.map (Symtab.update (s, morph_fp_result phi fp_result))));
 
 fun fp_result_of_generic context =

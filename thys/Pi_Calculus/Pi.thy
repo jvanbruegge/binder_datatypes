@@ -10,9 +10,14 @@ begin
 (* DATATYPE DECLARTION  *)
 
 (* binder_datatype 'a term =
-  Var 'a
-| App "'a term" "'a term"
-| Abs x::'a t::"'a term" binds x in t
+  Zero
+| Sum "'a term" "'a term"
+| Par "'a term" "'a term"
+| Bang "'a term" 
+| Match 'a 'a "'a term" 
+| Match 'a 'a "'a term" 
+| Inp x::'a 'a t::"'a term" binds x in t
+| Res x::'a t::"'a term" binds x in t
 *)
 
 ML \<open>
@@ -63,7 +68,8 @@ instance var :: var_term_pre apply standard
 
 type_synonym trm = "var term"
 
-find_theorems name: imsupp 
+lemma singl_bound: "|{a}| <o |UNIV::var set|"
+  by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]])
 
 
 (* Some lighter notations: *)
@@ -71,89 +77,19 @@ find_theorems name: imsupp
 abbreviation "rrename \<equiv> rrename_term"
 abbreviation "FFVars \<equiv> FFVars_term"
 
-(*
-abbreviation "VVr \<equiv> tvVVr_tvsubst"
-lemmas VVr_def = tvVVr_tvsubst_def
-abbreviation "isVVr \<equiv> tvisVVr_tvsubst"
-lemmas isVVr_def = tvisVVr_tvsubst_def
-abbreviation "IImsupp \<equiv> tvIImsupp_tvsubst"
-lemmas IImsupp_def = tvIImsupp_tvsubst_def
-abbreviation "SSupp \<equiv> tvSSupp_tvsubst"
-lemmas SSupp_def = tvSSupp_tvsubst_def
-*)
-
-(* *)
-
-(* 
-lemma FFVars_tvsubst[simp]: 
-"FFVars (tvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
-sorry 
-*)
-
 (* *)
 
 (* Enabling some simplification rules: *)
 
-lemmas (* term.tvsubst_VVr[simp] term.FVars_VVr[simp] *)
-term.rrename_ids[simp] term.rrename_cong_ids[simp]
+lemmas term.rrename_ids[simp] term.rrename_cong_ids[simp]
 term.FFVars_rrenames[simp]
 
 lemmas term_vvsubst_rrename[simp]
 
-lemma singl_bound: "|{a}| <o |UNIV::var set|"
-  by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]])
 
-(*
-lemma IImsupp_VVr_empty[simp]: "IImsupp VVr = {}"
-  unfolding IImsupp_def 
-  term.SSupp_VVr_empty UN_empty Un_empty_left
-  apply (rule refl)
-  done
-
-(* VVr is here the Var constructor: *)
-lemma VVr_eq_Var[simp]: "VVr = Var"
-  unfolding VVr_def Var_def comp_def
-  tv\<eta>_term_tvsubst_def
-  by (rule refl)
-*)
 
 (* *)
-(* Properties of term-for-variable substitution *)
-
-(*
-lemma tvsubst_VVr_func[simp]: "tvsubst VVr t = t"
-  apply (rule term.TT_plain_co_induct)
-  subgoal for x 
-    apply (rule case_split[of "isVVr (term_ctor x)"])
-     apply (unfold isVVr_def)[1]
-     apply (erule exE)
-    subgoal premises prems for a
-      unfolding prems  
-      apply (rule term.tvsubst_VVr) 
-      apply (rule term.SSupp_VVr_bound)
-        done
-      apply (rule trans)
-       apply (rule term.tvsubst_cctor_not_isVVr)
-          apply (rule term.SSupp_VVr_bound)
-      unfolding IImsupp_VVr_empty
-         apply (rule Int_empty_right)
-      unfolding tvnoclash_term_def Int_Un_distrib Un_empty
-        apply (rule conjI)
-         apply (rule iffD2[OF disjoint_iff], rule allI, rule impI, assumption)
-        apply (rule iffD2[OF disjoint_iff], rule allI, rule impI)
-      unfolding UN_iff Set.bex_simps
-        apply (rule ballI)
-        apply assumption+
-      apply (rule arg_cong[of _ _ term_ctor])
-      apply (rule trans)
-      apply (rule term_pre.map_cong)
-                 apply (rule supp_id_bound bij_id)+
-           apply (assumption | rule refl)+
-      unfolding id_def[symmetric] term_pre.map_id
-      apply (rule refl)
-      done
-    done
-*)
+(* Properties of renaming (variable-for-variable substitution) *)
 
 proposition rrename_simps[simp]:
   assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
@@ -164,10 +100,17 @@ proposition rrename_simps[simp]:
     "rrename_term f (Match x y e) = Match (f x) (f y) (rrename_term f e)"
     "rrename_term f (Out x y e) = Out (f x) (f y) (rrename_term f e)"
     "rrename_term f (Inp x y e) = Inp (f x) (f y) (rrename_term f e)"
-  unfolding Zero_def Sum_def Par_def Bang_def Match_def Out_def Inp_def term.rrename_cctors[OF assms] map_term_pre_def comp_def
+    "rrename_term f (Res x e) = Res (f x) (rrename_term f e)"
+  unfolding Zero_def Sum_def Par_def Bang_def Match_def Out_def Inp_def Res_def term.rrename_cctors[OF assms] map_term_pre_def comp_def
     Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
     apply (rule refl)+
   done
+
+lemma rrename_cong: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> (\<And>z. z \<in> FFVars w \<Longrightarrow> f z = g z) \<Longrightarrow> rrename f w = rrename g w"
+sorry
+
+(* Properties of the constructors *)
 
 proposition Sum_inject[simp]: "(Sum a b = Sum c d) = (a = c \<and> b = d)"
 unfolding Sum_def fun_eq_iff term.TT_injects0
@@ -195,7 +138,7 @@ unfolding Out_def fun_eq_iff term.TT_injects0
 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
 Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
 
-lemma Abs_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow> 
+lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow> 
   x = x' \<and> 
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
   \<and> id_on (FFVars_term e - {y}) f \<and> f y = y' \<and> rrename_term f e = e')"
@@ -296,133 +239,14 @@ lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
 lemma Abs_rrename: 
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>   
  (\<And>a'. a' \<in> FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Inp b a e = Inp b (\<sigma> a) (rrename_term \<sigma> e)"
-  using Abs_inject id_on_def by blast
+  using Inp_inject id_on_def by blast
 
 (* Bound properties (needed as auxiliaries): *)
-
-(*
-lemma SSupp_upd_bound:
-  fixes f::"var \<Rightarrow> trm"
-  shows "|SSupp (f (a:=t))| <o |UNIV::var set| \<longleftrightarrow> |SSupp f| <o |UNIV::var set|"
-  unfolding SSupp_def  
-  apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
-      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF term_pre.Un_bound], rotated]
-      intro: card_of_mono1)
-  done
-
-corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::trm)))| <o |UNIV::var set|"
-  apply (rule iffD2[OF SSupp_upd_bound])
-  apply (rule term.SSupp_VVr_bound)
-  done
-
-lemma SSupp_upd_Var_bound[simp,intro!]: "|SSupp (Var(a:=(t::trm)))| <o |UNIV::var set|"
-using SSupp_upd_VVr_bound by auto
-*)
 
 lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
 by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
 
-(*
-lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: var set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: var set|"
-unfolding IImsupp_def 
-by (simp add: var_ID_class.Un_bound term.set_bd_UNIV var_term_pre_class.UN_bound)
 
-(* *)
-
-lemma IImsupp_tvsubst_su: 
-assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: var set|" 
-shows "IImsupp (tvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
-unfolding IImsupp_def SSupp_def apply auto
-by (metis s singletonD term.set(1) term.subst(1)) 
-
-lemma IImsupp_tvsubst_su': 
-assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: var set|" 
-shows "IImsupp (\<lambda>a. tvsubst (\<sigma>::var\<Rightarrow>trm) (\<tau> a)) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
-using IImsupp_tvsubst_su[OF assms] unfolding o_def .
-
-lemma IImsupp_tvsubst_bound: 
-assumes s: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|" 
-shows "|IImsupp (tvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>)| <o |UNIV:: var set|"
-using IImsupp_tvsubst_su[OF s(1)] s   
-by (meson Un_bound SSupp_IImsupp_bound card_of_subset_bound)
-
-lemma SSupp_tvsubst_bound: 
-assumes s: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|" 
-shows "|SSupp (tvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>)| <o |UNIV:: var set|"
-using IImsupp_tvsubst_bound[OF assms] 
-by (metis IImsupp_def card_of_subset_bound sup_ge1)
-
-lemma SSupp_tvsubst_bound': 
-assumes s: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|" 
-shows "|SSupp (\<lambda>a. tvsubst (\<sigma>::var\<Rightarrow>trm) (\<tau> a))| <o |UNIV:: var set|"
-using SSupp_tvsubst_bound[OF assms] unfolding o_def .
-
-(* *)
-
-lemma IImsupp_rrename_su: 
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" 
-shows "IImsupp (rrename_term (\<sigma>::var\<Rightarrow>var) o \<tau>) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"
-unfolding IImsupp_def imsupp_def supp_def SSupp_def by force
-
-lemma IImsupp_rrename_su': 
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" 
-shows "IImsupp (\<lambda>a. rrename_term (\<sigma>::var\<Rightarrow>var) (\<tau> a)) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"
-using IImsupp_rrename_su[OF assms] unfolding o_def .
-
-lemma IImsupp_rrename_bound: 
-assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|" 
-shows "|IImsupp (rrename_term (\<sigma>::var\<Rightarrow>var) o \<tau>)| <o |UNIV:: var set|"
-using IImsupp_rrename_su[OF s(1,2)] s
-by (metis SSupp_IImsupp_bound finite_Un finite_iff_le_card_var finite_subset imsupp_supp_bound infinite_var)
-
-lemma SSupp_rrename_bound: 
-assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"  
-shows "|SSupp (rrename_term (\<sigma>::var\<Rightarrow>var) o \<tau>)| <o |UNIV:: var set|"
-using IImsupp_rrename_bound[OF assms] 
-by (metis IImsupp_def card_of_subset_bound sup_ge1)
-
-lemma SSupp_rrename_bound': 
-assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"  
-shows "|SSupp (\<lambda>a. rrename_term (\<sigma>::var\<Rightarrow>var) (\<tau> a))| <o |UNIV:: var set|"
-using SSupp_rrename_bound[OF assms] unfolding o_def .
-
-(* *)
-lemma SSupp_update_rrename_bound: 
-"|SSupp (Var(\<sigma> (x::var) := rrename_term \<sigma> e))| <o |UNIV::var set|"
-using SSupp_upd_Var_bound .
-
-lemma IImsupp_rrename_update_su: 
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "IImsupp (rrename_term \<sigma> \<circ> Var(x := e)) \<subseteq> 
-       imsupp \<sigma> \<union> {x} \<union> FFVars_term e"
-unfolding IImsupp_def SSupp_def imsupp_def supp_def by (auto split: if_splits)  
-
-lemma IImsupp_rrename_update_bound: 
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "|IImsupp (rrename_term \<sigma> \<circ> Var(x := e))| <o |UNIV::var set|"
-using IImsupp_rrename_update_su[OF assms]  
-by (meson Un_bound card_of_subset_bound imsupp_supp_bound infinite_var s(2) singl_bound term.set_bd_UNIV)
-
-lemma SSupp_rrename_update_bound: 
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "|SSupp (rrename_term \<sigma> \<circ> Var(x := e))| <o |UNIV::var set|"
-using IImsupp_rrename_update_bound[OF assms] 
-  by (metis (mono_tags) IImsupp_def finite_Un finite_iff_le_card_var)
-*)
-
-(*
-(* Action of swapping (a particular renaming) on variables *)
-
-lemma rrename_swap_Var1[simp]: "rrename_term (id(x := xx, xx := x)) (Var (x::var)) = Var xx" 
-apply(subst rrename_simps(1)) by auto
-lemma rrename_swap_Var2[simp]: "rrename_term (id(x := xx, xx := x)) (Var (xx::var)) = Var x" 
-apply(subst rrename_simps(1)) by auto
-lemma rrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> rrename_term (id(x := xx, xx := x)) (Var (z::var)) = Var z" 
-apply(subst rrename_simps(1)) by auto
-lemma rrename_swap_Var[simp]: "rrename_term (id(x := xx, xx := x)) (Var (z::var)) = 
- Var (if z = x then xx else if z = xx then x else z)"
-apply(subst rrename_simps(1)) by auto
-*)
 
 (* Compositionality properties of renaming and term-for-variable substitution *)
 
@@ -494,6 +318,13 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 *)
+
+(* Swapping and unary substitution, as abbreviations: *)
+abbreviation "swap P x y \<equiv> rrename (id(x:=y,y:=x)) P"
+abbreviation "usub P y x \<equiv> vvsubst (id(x:=y)) P"
+
+
+
 
 
 end

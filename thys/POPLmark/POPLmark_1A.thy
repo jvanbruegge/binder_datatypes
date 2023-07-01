@@ -83,9 +83,11 @@ lemma rrename_typ_simps[simp]:
 
 type_synonym type = "var typ"
 
+abbreviation pre_dom :: "(var \<times> type) list \<Rightarrow> var set" where "pre_dom xs \<equiv> fst ` set xs"
+
 fun well_formed :: "(var \<times> type) list \<Rightarrow> bool" where
   "well_formed [] \<longleftrightarrow> True"
-| "well_formed ((x, t)#xs) \<longleftrightarrow> x \<notin> fst ` set xs \<and> FFVars_typ t \<subseteq> fst ` set xs \<and> well_formed xs"
+| "well_formed ((x, t)#xs) \<longleftrightarrow> x \<notin> pre_dom xs \<and> FFVars_typ t \<subseteq> pre_dom xs \<and> well_formed xs"
 
 typedef \<Gamma>\<^sub>\<tau> = "{ xs::(var \<times> type) list. well_formed xs }"
   by (rule exI[of _ "[]"]) simp
@@ -99,17 +101,17 @@ lift_definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<
      apply (auto simp: rev_image_eqI typ.FFVars_rrenames)
     by (metis Product_Type.fst_comp_map_prod image_comp image_eqI subset_eq)
   done
-lift_definition dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" is "\<lambda>xs. fst ` set xs" .
+lift_definition dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" is "pre_dom" .
 lift_definition pairs :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> (var \<times> type) set" is "set" .
 
 lift_definition extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,57,57] 62)
-  is "\<lambda>\<Gamma> x T. if x \<notin> fst ` set \<Gamma> \<and> FFVars_typ T \<subseteq> fst ` set \<Gamma> then (x, T)#\<Gamma> else \<Gamma>"
+  is "\<lambda>\<Gamma> x T. if x \<notin> pre_dom \<Gamma> \<and> FFVars_typ T \<subseteq> pre_dom \<Gamma> then (x, T)#\<Gamma> else \<Gamma>"
   by auto
 lift_definition concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_, _" [65,65] 70)
-  is "\<lambda>xs ys. if fst ` set xs \<inter> fst ` set ys = {} then xs @ ys else xs"
+  is "\<lambda>xs ys. if pre_dom xs \<inter> pre_dom ys = {} then ys @ xs else []"
   subgoal for xs ys
     apply auto
-    apply (induction xs)
+    apply (induction ys)
      apply auto
       apply (metis fst_conv image_iff)
     apply (metis fst_conv image_iff)
@@ -117,7 +119,7 @@ lift_definition concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<
   done
 lift_definition empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") is "[]" by simp
 
-lemma well_formed_dom: "well_formed xs \<Longrightarrow> T \<in> snd ` set xs \<Longrightarrow> FFVars_typ T \<subseteq> fst ` set xs"
+lemma well_formed_dom: "well_formed xs \<Longrightarrow> T \<in> snd ` set xs \<Longrightarrow> FFVars_typ T \<subseteq> pre_dom xs"
 proof (induction xs)
   case (Cons a xs)
   then show ?case
@@ -430,7 +432,8 @@ corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_T
 (********************* Actual formalization ************************)
 
 lemma Ty_refl: "T closed_in \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
-  by (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" T rule: typ.strong_induct) (auto simp: Diff_single_insert SA_All)
+  by (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: typ.strong_induct)
+     (auto simp: Diff_single_insert SA_All)
 
 lemma pairs_extend[simp]: "x \<notin> dom \<Gamma> \<Longrightarrow> T closed_in \<Gamma> \<Longrightarrow> pairs (\<Gamma>, x <: T) = pairs \<Gamma> \<union> {(x, T)}"
   by transfer auto
@@ -471,5 +474,81 @@ next
   then have "(\<Gamma>, \<Delta>), x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2" using Ty_permute SA_All by auto
   then show ?case  using SA_All Ty.SA_All well_scoped(1) by auto
 qed (auto simp: Ty.intros)
+
+lemma extend_assoc: "\<lbrakk> dom \<Gamma> \<inter> dom \<Delta> = {} ; X \<notin> dom \<Gamma> ; X \<notin> dom \<Delta> ; T closed_in \<Delta> \<rbrakk> \<Longrightarrow> \<Gamma>, \<Delta> , X <: T = \<Gamma>, (\<Delta> , X <: T)"
+  by transfer (auto split: if_splits)
+
+lemma Ty_well_formed :
+  assumes "X \<notin> dom \<Gamma>" "(\<Gamma> , X <: Q) , \<Delta> \<turnstile> M <: N" "\<Gamma> \<turnstile> R <: Q"
+  shows "M closed_in (\<Gamma> , X <: R) , \<Delta>" and "N closed_in (\<Gamma> , X <: R) , \<Delta>"
+  using well_scoped dom_concat dom_extend assms
+  by (smt (verit, best) concat.rep_eq dom.rep_eq)+
+
+lemma Ty_transitivity : "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+  and Ty_narrowing : "\<lbrakk> dom \<Gamma> \<inter> dom \<Delta> = {} ; X \<notin> dom \<Gamma> ; X \<notin> dom \<Delta> ; (\<Gamma> , X <: Q) , \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> (\<Gamma> , X <: R) , \<Delta> \<turnstile> M <: N"
+proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
+  case (TyVar Y \<Gamma> \<Delta>)
+  show trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+    by (induction \<Gamma> S "TyVar Y" rule: Ty.induct) auto
+  {
+    case Ty_narrowing: 2
+    then have closed: "M closed_in (\<Gamma> , X <: R) , \<Delta>" "N closed_in (\<Gamma> , X <: R) , \<Delta>"
+      using Ty_well_formed by simp_all
+    have closed2: "TyVar Y closed_in \<Gamma>" using well_scoped Ty_narrowing by blast
+    from Ty_narrowing(4,1-3,5) closed show ?case
+    proof (induction "(\<Gamma> , X <: TyVar Y), \<Delta>" M N arbitrary: \<Delta>  rule: Ty.induct)
+      case (SA_Trans_TVar Z U T)
+      then show ?case sorry
+    next
+      case (SA_All T\<^sub>1 S\<^sub>1 Z S\<^sub>2 T\<^sub>2)
+      have "(\<Gamma> , X <: TyVar Y), \<Delta> , Z <: T\<^sub>1 = (\<Gamma> , X <: TyVar Y), (\<Delta> , Z <: T\<^sub>1)"
+        apply (rule extend_assoc)
+        apply (metis (no_types, lifting) Int_Un_distrib2 Int_Un_eq(4) SA_All.prems(1) SA_All.prems(2) SA_All.prems(3) SA_All.prems(4) disjoint_single dom_extend inf_sup_aci(4) well_scoped(2))
+        using SA_All.hyps(5) SA_All.prems(1) SA_All.prems(2) SA_All.prems(3) SA_All.prems(4) well_scoped(2) apply fastforce
+        using SA_All.hyps(5) SA_All.prems(1) SA_All.prems(2) SA_All.prems(3) SA_All.prems(4) well_scoped(2) apply fastforce
+        
+        sorry
+      have "(\<Gamma> , X <: R), (\<Delta>, Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
+        apply (rule SA_All(4))sorry
+
+      show ?case
+        apply (rule Ty.SA_All)
+        using SA_All
+           apply simp
+        using SA_All
+        sorry
+    qed auto
+  }
+next
+  case (Top \<Gamma> X \<Delta>)
+  {
+    case 1
+    then show ?case sorry
+  next
+    case 2
+    then show ?case sorry
+  }
+next
+  case (Fun x1 x2 \<Gamma> X \<Delta>)
+  {
+    case 1
+    then show ?case sorry
+  next
+    case 2
+    then show ?case sorry
+  }
+next
+  case (Forall x1 x2 x3 \<Gamma> X \<Delta>)
+  {
+    case 1
+    then show ?case sorry
+  next
+    case 2
+    then show ?case sorry
+  }
+qed simp_all
+
+
+
 
 end

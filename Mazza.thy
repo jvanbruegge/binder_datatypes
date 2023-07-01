@@ -1,13 +1,13 @@
 theory Mazza
   imports
-   "thys/MRBNF_Recursor"
-   "HOL-Library.Linear_Temporal_Logic_on_Streams"
-   "HOL-Library.Prefix_Order"
-   "HOL-Library.Countable_Set_Type"
-   "HOL-Library.Extended_Nat"
-   "HOL-Cardinals.Cardinals"
-   "HOL-Library.Disjoint_Sets"
-   "HOL-Library.BNF_Corec"
+    "thys/MRBNF_Recursor"
+    "HOL-Library.Linear_Temporal_Logic_on_Streams"
+    "HOL-Library.Prefix_Order"
+    "HOL-Library.Countable_Set_Type"
+    "HOL-Library.Extended_Nat"
+    "HOL-Cardinals.Cardinals"
+    "HOL-Library.Disjoint_Sets"
+    "HOL-Library.BNF_Corec"
 begin
 
 (*untyped lambda calculus*)
@@ -54,7 +54,7 @@ lemma infinite_natLeq: "natLeq \<le>o |A| \<Longrightarrow> infinite A"
 
 lemma infinite: "infinite (UNIV :: 'a ::infinite_regular set)"
   using ordLeq_transitive[OF ordLess_imp_ordLeq[OF card_suc_greater_set[OF natLeq_card_order ordLeq_refl[OF natLeq_Card_order]]]
-    ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF Card_order_card_suc[OF natLeq_card_order]]] large]]
+      ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF Card_order_card_suc[OF natLeq_card_order]]] large]]
   by (rule infinite_natLeq)
 
 lemma infinite_ex_inj: "\<exists>f :: nat \<Rightarrow> 'a :: infinite_regular. inj f"
@@ -147,7 +147,7 @@ lemma count_stream_infinity_iff: "count_stream s x = \<infinity> \<longleftright
   apply (induct s x rule: count_stream.induct)
   apply (subst count_stream.simps)
   apply (auto simp: shd_sset alw_iff_sdrop ev_holds_sset simp flip: holds_eq1 dest: spec[of _ 0])
-  apply (metis (mono_tags, lifting) eSuc_infinity eSuc_inject ev_iff_sdrop sdrop_simps(1) sdrop_stl snth_sset stl_sset)
+   apply (metis (mono_tags, lifting) eSuc_infinity eSuc_inject ev_iff_sdrop sdrop_simps(1) sdrop_stl snth_sset stl_sset)
   apply (metis (mono_tags, lifting) ev_iff_sdrop sdrop_simps(1) sdrop_stl snth_sset stl_sset)
   done
 
@@ -211,7 +211,7 @@ lemma cinfmset_eqI: "(\<forall>x. count_cinfmset A x = count_cinfmset B x) \<Lon
 lemma cinfmset_set_map: "set_cinfmset (image_cinfmset f A) = f ` set_cinfmset A"
   apply transfer
   apply (auto simp: Let_def image_iff)
-    apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)
+   apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)
   apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)
   done
 
@@ -314,7 +314,7 @@ lemma count_stream_smap: "finite (f -` {x} \<inter> sset s) \<Longrightarrow>
     using prems(2-)
     apply (subst prems(1))
         apply (auto elim!: finite_subset[rotated] stream.set_sel(2))
-      apply (auto simp: shd_sset sum.If_cases)
+    apply (auto simp: shd_sset sum.If_cases)
     apply (subst card_0_eq[THEN iffD2])
       apply (auto elim!: finite_subset[rotated] stream.set_sel(2))
      apply metis
@@ -323,7 +323,7 @@ lemma count_stream_smap: "finite (f -` {x} \<inter> sset s) \<Longrightarrow>
      apply metis
     apply (rule sum.cong)
      apply auto
-    apply (auto intro!: sum.cong elim!: stream.set_sel(2))
+     apply (auto intro!: sum.cong elim!: stream.set_sel(2))
     apply (metis stream.sel(1) stream.sel(2) stream.set_cases)
     done
   done
@@ -331,7 +331,7 @@ lemma count_stream_smap: "finite (f -` {x} \<inter> sset s) \<Longrightarrow>
 lemma image_cinfmset_cinfmset[simp]: "image_cinfmset f (cinfmset s) = cinfmset (smap f s)"
   by transfer
     (auto simp: fun_eq_iff Let_def count_stream_infinity_iff' count_stream_zero_iff sset_range
-    infinite_iff_alw_ev[symmetric] count_stream_smap simp flip: holds_eq1 intro: finite_surj[of _ _ "snth _"])
+      infinite_iff_alw_ev[symmetric] count_stream_smap simp flip: holds_eq1 intro: finite_surj[of _ _ "snth _"])
 
 lift_definition NATS_cinfmset :: "nat cinfmset" is "\<lambda>x::nat. 1"
   by auto
@@ -406,12 +406,262 @@ lemma count_stream_spermute:
     done
   done
 
-lemma count_stream_flat: "\<exists>!xs \<in> sset s. x \<in> set xs \<Longrightarrow>
+coinductive counts_stream where
+  "x \<notin> sset s \<Longrightarrow> counts_stream s x 0"
+| "counts_stream s x n \<Longrightarrow> counts_stream (x ## s) x (eSuc n)"
+| "x \<in> sset s \<Longrightarrow> counts_stream s x n \<Longrightarrow> x \<noteq> y \<Longrightarrow> counts_stream (y ## s) x n"
+
+lemma enat_coinduct:
+  assumes "R n n'"
+    "(\<And>n n'. R n n' \<Longrightarrow> (n = 0 \<longleftrightarrow> n' = 0) \<and> (\<forall>m m'. n = eSuc m \<longrightarrow> n' = eSuc m' \<longrightarrow> R m m'))"
+  shows "n = n'"
+proof ((cases n; cases n'), goal_cases enat_enat enat_inf inf_enat inf_inf)
+  case (enat_enat m m')
+  with assms(1) show ?case
+    apply hypsubst_thin
+  proof (induct m arbitrary: m')
+    case 0
+    then show ?case
+      by (induct m') (auto simp: enat_0 dest: assms(2))
+  next
+    case (Suc m)
+    then show ?case
+      by (induct m') (auto simp: enat_0 simp flip: eSuc_enat dest!: assms(2))
+  qed
+next
+  case (enat_inf m)
+  with assms(1) show ?case
+    by (hypsubst_thin) (induct m, auto simp: enat_0 eSuc_enat dest: assms(2))
+next
+  case (inf_enat m')
+  with assms(1) show ?case
+    by (hypsubst_thin) (induct m', auto simp: enat_0 eSuc_enat dest: assms(2))
+next
+  case inf_inf
+  then show ?case
+    by simp
+qed
+
+lemma in_sset_counts_stream: "x \<in> sset s \<Longrightarrow> counts_stream s x 0 \<Longrightarrow> False"
+  by (induct x s rule: stream.set_induct; erule counts_stream.cases) auto
+
+lemma counts_stream_inject: "counts_stream s x m \<Longrightarrow> counts_stream s x n \<Longrightarrow> m = n"
+  apply (coinduction arbitrary: s m n rule: enat_coinduct)
+  apply (erule counts_stream.cases; erule counts_stream.cases)
+          apply (auto dest: in_sset_counts_stream)
+  subgoal for s y m m'
+    apply (induct x s rule: stream.set_induct; erule counts_stream.cases; erule counts_stream.cases)
+                     apply auto
+    done
+  done
+
+lemma counts_stream_count_stream: "counts_stream s x (count_stream s x)"
+  apply (coinduction arbitrary: s x)
+  subgoal for s x
+    apply (auto simp: count_stream_zero_iff)
+    apply (subst count_stream.simps)
+    apply (subst (asm) (1 3) count_stream.simps)
+    apply (cases s)
+    apply (auto simp: Let_def split: if_splits)
+         apply (metis sdrop.simps(1) sdrop_simps(2) sdrop_stl stream.sel(2))
+        apply (metis count_stream.elims sdrop.simps(1) sdrop_add sdrop_simps(2) stream.sel(2))
+       apply (rule exI[of _ \<infinity>])
+       apply (auto simp: count_stream_infinity_iff' alw_iff_sdrop ev_iff_sdrop HLD_iff
+        dest: spec[of _ "Suc 0"]) []
+       apply (metis rangeE sdrop_simps(2) sdrop_snth sdrop_stl sset_range stream.sel(2))
+      apply (metis count_stream.elims sdrop.simps(1) sdrop_add sdrop_simps(2) stream.sel(2))
+     apply (metis count_stream.elims sdrop.simps(1) sdrop_add sdrop_simps(2) stream.sel(2))
+    apply (metis count_stream.elims eSuc_infinity_iff sdrop_simps(2) sdrop_stl stream.sel(2))
+    done
+  done
+
+lemma counts_stream_flat: "\<forall>xs \<in> sset s. xs \<noteq> [] \<Longrightarrow>
+  counts_stream (flat s) x (if infinite {i. x \<in> set (s !! i)} then \<infinity> else (\<Sum>i | x \<in> set (s !! i). count_list (s !! i) x))"
+  apply (coinduction arbitrary: s)
+  subgoal for s
+    apply (cases "{i. x \<in> set (s !! i)} = {}")
+     apply (rule disjI1)
+     apply (auto simp: enat_0_iff dest: not_finite_existsD) []
+     apply (metis imageE sset_range)
+    apply (cases "infinite {i. x \<in> set (s !! i)}")
+     apply (cases "x = hd (shd s)")
+      apply (rule disjI2)
+      apply (rule disjI1)
+      apply (subst flat.code)
+      apply auto []
+       apply (rule exI[of _ \<infinity>])
+       apply simp
+       apply (rule disjI1)
+       apply (rule exI[of _ "stl s"])
+       apply simp []
+       apply (rule conjI)
+        apply (metis stl_sset)
+       apply (erule contrapos_nn)
+       apply (rule finite_subset[rotated])
+        apply (rule finite_insert[THEN iffD2, of _ "0"])
+        apply (erule finite_imageI[of _ Suc])
+       apply (auto simp: image_iff) []
+       apply (metis nat.exhaust snth.simps(2))
+      apply (rule exI[of _ \<infinity>])
+      apply simp
+      apply (rule disjI1)
+      apply (rule exI[of _ "tl (shd s) ## stl s"])
+      apply simp []
+      apply (rule conjI)
+       apply (metis stl_sset)
+      apply (erule contrapos_nn)
+      apply (rule finite_subset[rotated])
+       apply (erule finite_insert[THEN iffD2, of _ "0"])
+      apply (auto simp: image_iff) []
+      apply (metis Suc_pred snth.simps(2) stream.sel(2))
+     apply (rule disjI2)
+     apply (rule disjI2)
+     apply (subst flat.code)
+     apply auto []
+        apply (smt (verit, ccfv_SIG) UN_I flat.code insertE snth_sset sset_flat stream.set)
+       apply (rule exI[of _ "stl s"])
+       apply simp
+       apply (rule conjI)
+        apply (metis stl_sset)
+       apply (erule contrapos_nn)
+       apply (rule finite_subset[rotated])
+        apply (rule finite_insert[THEN iffD2, of _ "0"])
+        apply (erule finite_imageI[of _ Suc])
+       apply (auto simp: image_iff) []
+       apply (metis nat.exhaust snth.simps(2))
+      apply (metis (no_types, opaque_lifting) UN_I list.exhaust_sel list_decode.cases set_ConsD snth.simps(1) snth.simps(2) snth_sset sset_flat stl_sset)
+     apply (rule exI[of _ "tl (shd s) ## stl s"])
+     apply simp
+     apply (rule conjI)
+      apply (metis stl_sset)
+     apply (erule contrapos_nn)
+     apply (rule finite_subset[rotated])
+      apply (erule finite_insert[THEN iffD2, of _ "0"])
+     apply (auto simp: image_iff) []
+     apply (metis Suc_pred snth.simps(2) stream.sel(2))
+
+    apply (cases "x = hd (shd s)")
+     apply (rule disjI2)
+     apply (rule disjI1)
+     apply (subst flat.code)
+     apply (auto simp: enat_eSuc_iff) []
+      apply (cases "\<Sum>i | x \<in> set (s !! i). count_list (s !! i) x")
+       apply (simp add: count_list_0_iff)
+    subgoal for xs m
+      apply (rule exI[of _ "enat m"])
+      apply (rule conjI)
+       apply (rule exI[of _ "m"])
+       apply (rule conjI[rotated])
+        apply (rule refl)
+       apply simp
+      apply (rule disjI1)
+      apply (rule exI[of _ "stl s"])
+      apply simp
+      apply (rule conjI)
+       apply (erule finite_surj[of _ _ "\<lambda>x. x - 1"])
+       apply (auto simp: image_iff) []
+       apply (metis One_nat_def diff_Suc_1 snth.simps(2))
+      apply (rule impI conjI[rotated])+
+       apply (metis stl_sset)
+      apply (subst (asm) sum.remove[of _ "0"])
+        apply (auto simp: shd_sset)
+      apply (cases "shd s")
+       apply (auto simp: shd_sset image_iff simp flip: snth.simps
+          intro!: sum.reindex_bij_betw[of Suc, symmetric])
+      using not0_implies_Suc apply blast
+      done
+     apply (cases "\<Sum>i | x \<in> set (s !! i). count_list (s !! i) x")
+      apply (simp add: count_list_0_iff)
+    subgoal for xs m
+      apply (rule exI[of _ "enat m"])
+      apply (rule conjI)
+       apply (rule exI[of _ "m"])
+       apply (rule conjI[rotated])
+        apply (rule refl)
+       apply simp
+      apply (rule disjI1)
+      apply (rule exI[of _ "tl (shd s) ## stl s"])
+      apply simp
+      apply (rule conjI)
+       apply (erule finite_subset[rotated])
+       apply (auto simp: image_iff) []
+       apply (metis hd_in_set list.sel(2) not0_implies_Suc snth.simps(1) snth.simps(2) snth_Stream)
+      apply (rule impI conjI[rotated])+
+       apply (metis stl_sset)
+      apply (rule Suc_inject)
+      apply (erule trans[OF sym])
+      apply (cases "hd (shd s) \<in> set (tl (shd s))")
+       apply (subst (1 2) sum.remove[of _ 0])
+           apply auto [5]
+        apply (metis list.sel(2) list.set_sel(1))
+       apply (cases "shd s")
+        apply (auto simp: shd_sset gr0_conv_Suc intro!: sum.cong) [2]
+      using not0_implies_Suc apply fastforce
+      apply (subst (1) sum.remove[of _ 0])
+        apply auto [3]
+       apply (metis list.sel(2) list.set_sel(1))
+      apply (cases "shd s")
+       apply (auto simp: shd_sset gr0_conv_Suc intro!: sum.cong) [2]
+       apply (metis nat.exhaust snth.simps(1) snth.simps(2) stream.sel(1) stream.sel(2))
+      apply (metis gr0_conv_Suc neq0_conv snth.simps(1) snth.simps(2) snth_Stream stream.sel(1))
+      done
+    apply (rule disjI2)
+    apply (rule disjI2)
+    apply (subst flat.code)
+    apply (auto simp: enat_eSuc_iff) []
+       apply (smt (verit, ccfv_threshold) UN_I flat.code insert_iff snth_sset sset_flat stream.set)
+      apply (rule exI[of _ "stl s"])
+      apply simp
+      apply (rule conjI)
+       apply (rule finite_subset[rotated])
+        apply (erule finite_imageI[of _ "\<lambda>x. x - 1"])
+       apply (auto simp: image_iff) []
+       apply (metis diff_Suc_Suc minus_nat.diff_0 snth.simps(2))
+      apply (intro impI conjI)
+       apply (auto simp: shd_sset image_iff dest: stl_sset simp flip: snth.simps
+        intro!: sum.reindex_bij_betw[of Suc, symmetric])
+      apply (metis empty_iff list.sel(1) list.set(1) list_decode.cases set_ConsD tl_Nil)
+     apply (metis (no_types, opaque_lifting) UN_I gr0_implies_Suc less_nat_zero_code list.exhaust_sel not_less_iff_gr_or_eq set_ConsD snth.simps(2) snth_sset sset_flat stl_sset)
+      apply (rule exI[of _ "tl (shd s) ## stl s"])
+      apply simp
+      apply (rule conjI)
+       apply (erule finite_subset[rotated])
+     apply (auto simp: image_iff) []
+    apply (metis gr0_conv_Suc list.set_sel(2) neq0_conv snth.simps(1) snth.simps(2) snth_Stream stream.sel(1) tl_Nil)
+      apply (intro impI conjI)
+       apply (auto simp: shd_sset image_iff dest: stl_sset simp flip: snth.simps(2)
+        intro!: sum.cong)
+    apply (metis empty_iff list.exhaust_sel list.set(1) nat.exhaust set_ConsD snth.simps(1) snth.simps(2) snth_Stream stream.sel(1))
+     apply (metis list.sel(2) list.set_sel(2) not0_implies_Suc snth.simps(1) snth.simps(2) snth_Stream stream.sel(1))
+    subgoal for _ i
+      apply (cases s; cases "shd s"; cases i)
+         apply simp_all
+      done
+    done
+  done
+
+lemma count_stream_flat:
+  "\<forall>xs \<in> sset s. xs \<noteq> [] \<Longrightarrow>
+  count_stream (flat s) x = (if infinite {i. x \<in> set (s !! i)} then \<infinity> else (\<Sum>i | x \<in> set (s !! i). count_list (s !! i) x))"
+  by (erule counts_stream_inject[OF counts_stream_count_stream counts_stream_flat])
+
+lemma count_list_replicate: "count_list (replicate n x) x = n"
+  by (induct n) auto
+
+lemma count_stream_flat_unique: "\<exists>!i. x \<in> set (s !! i) \<Longrightarrow>
    \<forall>xs \<in> sset s. \<exists>z. \<exists>n > 0. xs = replicate n z \<Longrightarrow>
-   count_stream (flat s) x = length (THE xs. xs \<in> sset s \<and> x \<in> set xs)"
-  apply (subst count_stream_alt)
-  apply (auto simp: Let_def)
-  sorry
+   count_stream (flat s) x = length (s !! (THE i. x \<in> set (s !! i)))"
+  apply (rule the1I2)
+  apply assumption
+  apply (subst count_stream_flat)
+   apply (auto simp: finite_nat_set_iff_bounded)
+  subgoal for i j m
+    apply (subst sum.remove[of _ i])
+      apply (auto simp: finite_nat_set_iff_bounded)
+    apply (subst sum.neutral)
+     apply (auto simp: count_list_replicate dest!: bspec[of _ _ "s !! i"])
+    done
+  done
 
 lemma ex_cinfmset: "\<exists>xs. cinfmset xs = X"
   apply transfer
@@ -419,33 +669,32 @@ lemma ex_cinfmset: "\<exists>xs. cinfmset xs = X"
     apply (elim conjE exE disjE1')
     apply (frule (1) bij_betw_from_nat_into)
     subgoal
-       apply (rule exI[of _ "flat (smap (\<lambda>i.
+      apply (rule exI[of _ "flat (smap (\<lambda>i.
          let x = from_nat_into {x. f x \<noteq> 0} i in replicate (the_enat (f x)) x) nats)"])
       apply (rule ext)
       subgoal for z
         apply (cases "f z = 0")
-         apply (auto simp: count_stream_zero_iff)
-         apply (subst (asm) sset_flat)
-          apply (auto simp: stream.set_map Let_def zero_enat_def) [2]
+        apply (auto simp: count_stream_zero_iff)
+        apply (subst (asm) sset_flat)
+        apply (auto simp: stream.set_map Let_def zero_enat_def) [2]
         apply (smt (verit) bij_betw_def mem_Collect_eq neq0_conv rangeI the_enat.simps)
-      apply (subst count_stream_flat)
-          apply (auto simp: stream.set_map Let_def)
-           apply (metis (mono_tags, lifting) enat_0_iff(2) from_nat_into_surj mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
-         apply (metis (mono_tags, lifting) Collect_empty_eq enat_0_iff(2) from_nat_into mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
+        apply (subst count_stream_flat_unique)
+        apply (auto simp: stream.set_map Let_def)
+        apply (metis (mono_tags, lifting) enat_0_iff(2) from_nat_into_surj mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
+        apply (metis (mono_tags, lifting) Collect_empty_eq enat_0_iff(2) from_nat_into mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
         apply (rule the1I2)
-          apply (auto simp: stream.set_map Let_def)
-           apply (metis (mono_tags, lifting) enat_0_iff(2) from_nat_into_surj mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
+        apply (auto simp: stream.set_map Let_def)
+        apply (metis (mono_tags, lifting) enat_0_iff(2) from_nat_into_surj mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
         apply (metis (mono_tags, lifting) the_enat.simps)
         done
       done
-term smerge
+    sorry
   done
 
 lemma cinfmset_eq_iff_spermute: "cinfmset xs' = cinfmset xs \<longleftrightarrow> (\<exists>\<pi>. bij \<pi> \<and> spermute \<pi> xs = xs')"
   apply transfer
   apply (auto simp: count_stream_spermute fun_eq_iff)
   apply (auto simp: count_stream_alt Let_def split: if_splits)
-  sledgehammer
   sorry
 
 lemma szip_smap_same: "szip (smap f s) (smap g s) = smap (\<lambda>x. (f x, g x)) s"
@@ -533,7 +782,7 @@ bnf "'a cinfmset"
     apply (unfold rel_cinfmset_def)
     apply safe
     apply (drule stream_all2_reorder_left_invariance[rotated])
-     apply assumption
+    apply assumption
     apply (auto simp add: stream.rel_compp relcompp_apply)
     done
   subgoal for R
@@ -588,7 +837,7 @@ lemma ex_inj_infinite_regular_var_ilam_pre:
   unfolding card_of_ordLeq[of UNIV UNIV, simplified]
   apply (rule ordLeq_transitive[OF _ large])
   apply (rule ordLeq_transitive[OF countable_card_le_natLeq[THEN iffD1]])
-   apply simp
+  apply simp
   apply (rule natLeq_ordLeq_cinfinite)
   apply (rule ilam_pre.bd_Cinfinite)
   done
@@ -763,11 +1012,11 @@ mrbnf "'a dllist"
       thm bchoice_iff
       apply (auto simp: inj_on_def)
       find_theorems "Least _ = Least _"
-    find_theorems "countable _ \<longleftrightarrow> _"
-    find_consts "_ llist \<Rightarrow> _"
-  subgoal by blast
-  subgoal by (clarsimp, transfer) auto
-  done
+      find_theorems "countable _ \<longleftrightarrow> _"
+      find_consts "_ llist \<Rightarrow> _"
+      subgoal by blast
+      subgoal by (clarsimp, transfer) auto
+      done
 
 (*
 coinductive sdistinct where
@@ -844,7 +1093,7 @@ lemma sdistinct_smap: "inj_on f (sset s) \<Longrightarrow> sdistinct s \<Longrig
 
 typedef 'a dstream = "{xs :: 'a :: infinite_regular stream. sdistinct xs}"
   by (auto intro!: exI[of _ "smap (SOME f :: nat \<Rightarrow> 'a. inj f) nats"] sdistinct_smap
-    someI_ex[OF infinite_ex_inj])
+      someI_ex[OF infinite_ex_inj])
 
 setup_lifting type_definition_dstream
 

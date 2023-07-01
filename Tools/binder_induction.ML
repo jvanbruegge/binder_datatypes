@@ -240,7 +240,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
 
           val set_bds = map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (get_set_bd (map fastype_of (flat avoiding)));
 
-          val rule_thm = Goal.prove_sorry ctxt [fst (dest_Free P2)] [] (Term.subst_atomic [(P_new_var, P2)] rule_new) (fn {context=ctxt,...} =>
+          val rule_thm = Goal.prove_sorry defs_ctxt [fst (dest_Free P2)] [] (Term.subst_atomic [(P_new_var, P2)] rule_new) (fn {context=ctxt,...} =>
             Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
               EVERY1 [
                 rtac ctxt rule_inst,

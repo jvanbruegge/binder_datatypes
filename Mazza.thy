@@ -645,8 +645,72 @@ lemma count_stream_flat:
   count_stream (flat s) x = (if infinite {i. x \<in> set (s !! i)} then \<infinity> else (\<Sum>i | x \<in> set (s !! i). count_list (s !! i) x))"
   by (erule counts_stream_inject[OF counts_stream_count_stream counts_stream_flat])
 
-lemma count_list_replicate: "count_list (replicate n x) x = n"
+lemma count_list_replicate: "count_list (replicate n x) y = (if x = y then n else 0)"
   by (induct n) auto
+
+lemma counts_stream_sinterleave: "counts_stream s x n \<Longrightarrow> counts_stream t x m \<Longrightarrow>
+  counts_stream (sinterleave s t) x (n + m)"
+  apply (coinduction arbitrary: s t n m)
+  apply (erule counts_stream.cases; erule counts_stream.cases)
+          apply (auto simp: sset_sinterleave)
+  subgoal for s1 s2 m
+    apply (cases s1)
+    apply (auto simp: sinterleave_code)
+     apply (metis add.right_neutral counts_stream.intros(1) counts_stream.intros(2) sinterleave_code)+
+    done
+  subgoal for s1 s2 m
+    apply (cases s1)
+    apply (auto simp: sinterleave_code sset_sinterleave)
+     apply (metis add.right_neutral counts_stream.intros(1) counts_stream.intros(3) sinterleave_code)+
+    done
+  subgoal for s1 n s2
+    apply (auto simp: sinterleave_code sset_sinterleave)
+    apply (metis add_0 counts_stream.intros(1))
+    done
+  subgoal for s1 n s2 m
+    apply (auto simp: sinterleave_code sset_sinterleave)
+    apply (metis add.commute counts_stream.intros(2) iadd_Suc sinterleave_code)
+    done
+  subgoal for s1 n s2 m y
+    apply (auto simp: sinterleave_code sset_sinterleave)
+    apply (metis add.commute counts_stream.simps iadd_Suc sinterleave_code)
+    done
+  subgoal for s1 n y s2
+    apply (auto simp: sinterleave_code sset_sinterleave)
+    apply (metis add_0 counts_stream.intros(1))
+    done
+  subgoal for s1 n y s2 m
+    apply (auto simp: sinterleave_code sset_sinterleave)
+    apply (metis add.commute counts_stream.intros(2) iadd_Suc sinterleave_code)
+    done
+  subgoal for s1 n y s2 m z
+    apply (auto simp: sinterleave_code sset_sinterleave)
+    apply (metis add.commute counts_stream.intros(3) sinterleave_code)
+    done
+  done
+
+lemma count_stream_sinterleave:
+  "count_stream (sinterleave s t) x = count_stream s x + count_stream t x"
+  by (rule counts_stream_sinterleave[OF counts_stream_count_stream counts_stream_count_stream, of s t x,
+    THEN counts_stream_inject[OF counts_stream_count_stream]])
+
+lemma count_stream_Stream_eq: "count_stream (x ## s) x = eSuc (count_stream s x)"
+  apply (subst count_stream.simps; subst eSuc_infinity[symmetric])
+  apply (auto simp del: eSuc_infinity simp: count_stream_infinity_iff' alw_iff_sdrop ev_iff_sdrop HLD_iff)
+  apply (auto simp: sset_range image_iff sdrop_snth dest!: spec[of _ "Suc _"])
+  done
+
+lemma count_stream_Stream_neq: "x \<noteq> y \<Longrightarrow> count_stream (y ## s) x = count_stream s x"
+  apply (subst count_stream.simps)
+  apply (auto simp: count_stream_infinity_iff' count_stream_zero_iff alw_iff_sdrop ev_iff_sdrop HLD_iff)
+  apply (auto simp: sset_range image_iff sdrop_snth)
+  apply (metis add_Suc snth_Stream)
+  done
+
+lemma count_stream_shift:
+  "count_stream (xs @- s) x = count_list xs x + count_stream s x"
+  by (induct xs arbitrary: s)
+    (auto simp: enat_0 count_stream_Stream_eq eSuc_enat count_stream_Stream_neq simp flip: iadd_Suc)
 
 lemma count_stream_flat_unique: "\<exists>!i. x \<in> set (s !! i) \<Longrightarrow>
    \<forall>xs \<in> sset s. \<exists>z. \<exists>n > 0. xs = replicate n z \<Longrightarrow>
@@ -662,6 +726,9 @@ lemma count_stream_flat_unique: "\<exists>!i. x \<in> set (s !! i) \<Longrightar
      apply (auto simp: count_list_replicate dest!: bspec[of _ _ "s !! i"])
     done
   done
+
+lemma count_list_concat: "distinct xss \<Longrightarrow> count_list (concat xss) x = (\<Sum>xs \<in> set xss. count_list xs x)"
+  by (induct xss) auto
 
 lemma ex_cinfmset: "\<exists>xs. cinfmset xs = X"
   apply transfer
@@ -688,7 +755,86 @@ lemma ex_cinfmset: "\<exists>xs. cinfmset xs = X"
         apply (metis (mono_tags, lifting) the_enat.simps)
         done
       done
-    sorry
+  proof -
+    fix x
+    assume countable: "countable {x. f x \<noteq> 0}" and x: "f x = \<infinity>"
+    then have "countable {x. f x = \<infinity>}"
+      by (smt (verit) Collect_mono countable_subset infinity_ne_i0)
+    then obtain \<iota> :: "'a \<Rightarrow> nat" where inj: "inj_on \<iota> {x. f x = \<infinity>}"
+      unfolding countable_def by blast
+    thm inv_into_f_f
+    define safe_inv where "safe_inv = (\<lambda>i. if i \<in> \<iota> ` {x. f x = \<infinity>} then inv_into {x. f x = \<infinity>} \<iota> i else
+      x)"
+    define inf where "inf = smerge (smap (\<lambda>i. sconst (safe_inv i)) nats)"
+    from inj have inf_in: "count_stream inf y = \<infinity>" if "f y = \<infinity>" for y
+      unfolding smerge_def inf_def safe_inv_def using that
+      apply (subst count_stream_flat)
+       apply (auto simp: stream.set_map image_iff Bex_def infinite_nat_iff_unbounded)
+      subgoal for m1 m2 m3 m4 m5
+        apply (drule spec[of _ "Suc (max m2 (\<iota> y))"], drule mp, simp)
+        apply (drule spec[of _ "\<iota> y"], drule mp, simp)
+        apply (auto dest!: spec[of _ y])
+        done
+      done
+    from inj have inf_out: "count_stream inf y = 0" if "f y \<noteq> \<infinity>" for y
+      unfolding smerge_def inf_def safe_inv_def using that x
+      by (auto simp: stream.set_map image_iff Bex_def count_stream_zero_iff)
+    let ?FIN = "{x. f x \<noteq> 0 \<and> f x \<noteq> \<infinity>}"
+    show ?thesis
+    proof (cases "finite ?FIN")
+      case True
+      then obtain xs where xs: "distinct xs" "set xs = ?FIN"
+        by (meson finite_distinct_list)
+      define fin where "fin = List.maps (\<lambda>x. replicate (the_enat (f x)) x) xs"
+      have fin_in: "count_list fin y = f y" if "y \<in> ?FIN" for y
+        unfolding fin_def List.maps_def using xs that True
+        by (subst count_list_concat, unfold set_map; (subst sum.reindex)?)
+          (auto simp: distinct_map inj_on_def enat_0 count_list_replicate)
+      have fin_out: "count_list fin y = 0" if "y \<notin> ?FIN" for y
+        unfolding fin_def List.maps_def using xs True
+        apply (subst count_list_concat, unfold set_map; (subst sum.reindex)?)
+          apply (auto simp: distinct_map inj_on_def enat_0 count_list_replicate)
+        using that[simplified]
+        by force
+      from fin_in fin_out inf_in inf_out show ?thesis
+        apply (intro exI[of _ "fin @- inf"])
+        apply (auto simp: fun_eq_iff count_stream_shift)
+        apply (metis add.commute comm_monoid_add_class.add_0 enat.exhaust zero_enat_def)
+        done
+    next
+      case False
+      with countable have bij: "bij_betw (from_nat_into ?FIN) UNIV ?FIN"
+        by (metis (mono_tags, lifting) bij_betw_from_nat_into countable_subset mem_Collect_eq subsetI)
+      define fin where "fin = flat (smap (\<lambda>i.
+         let x = from_nat_into ?FIN i in replicate (the_enat (f x)) x) nats)"
+      have fin_in: "count_stream fin y = f y" if "y \<in> ?FIN" for y
+        unfolding fin_def using that bij
+        apply (subst count_stream_flat_unique)
+          apply (auto simp: stream.set_map Let_def)
+           apply (metis (mono_tags, lifting) countableI_type countable_iff_bij enat_0 from_nat_into_surj mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
+          apply (meson bij_betw_finite countableI_bij from_nat_into_inj_infinite infinite_UNIV_nat)
+         apply (smt (verit, best) bij_betw_def mem_Collect_eq neq0_conv rangeI the_enat.simps zero_enat_def)
+        apply (rule the1I2)
+         apply (auto simp: stream.set_map Let_def)
+         apply (metis (mono_tags, lifting) countableI_type countable_iff_bij enat_0 from_nat_into_surj mem_Collect_eq the_enat.simps zero_less_iff_neq_zero)
+        apply (meson bij_betw_finite countableI_bij from_nat_into_inj_infinite infinite_UNIV_nat)
+        done
+      have fin_out: "count_stream fin y = 0" if "y \<notin> ?FIN" for y
+        unfolding fin_def using that bij
+        unfolding count_stream_zero_iff
+         apply (subst sset_flat)
+         apply (auto simp: stream.set_map Let_def count_stream_zero_iff zero_enat_def)
+        apply (smt (verit, best) bij_betw_def mem_Collect_eq neq0_conv rangeI the_enat.simps zero_enat_def)
+         apply (smt (verit, ccfv_SIG) bij_betw_def mem_Collect_eq neq0_conv rangeI the_enat.simps)
+        apply (smt (verit, ccfv_threshold) bij_betw_def enat.distinct(2) mem_Collect_eq rangeI)
+        done
+      from fin_in fin_out inf_in inf_out show ?thesis
+        apply (intro exI[of _ "sinterleave fin inf"])
+        apply (auto simp: fun_eq_iff count_stream_sinterleave)
+        apply (metis add.comm_neutral add_0 enat2_cases)
+        done
+    qed
+  qed
   done
 
 lemma cinfmset_eq_iff_spermute: "cinfmset xs' = cinfmset xs \<longleftrightarrow> (\<exists>\<pi>. bij \<pi> \<and> spermute \<pi> xs = xs')"

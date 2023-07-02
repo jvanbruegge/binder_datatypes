@@ -157,7 +157,15 @@ inductive Ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<R
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
 and
-  SA_TVarE[elim]: "\<Gamma> \<turnstile> S <: TyVar X"
+  SA_TVarE[elim]: "\<Gamma> \<turnstile> S <: TyVar Z"
+and
+  SA_ArrER[elim]: "\<Gamma> \<turnstile> S <: T\<^sub>1 \<rightarrow> T\<^sub>2"
+and
+  SA_ArrEL[elim]: "\<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T "
+and
+  SA_AllER[elim]: "\<Gamma> \<turnstile> S <: \<forall>Z<:T\<^sub>1. T\<^sub>2"
+and
+  SA_AllEL[elim]: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
 
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Gamma> S T rule: Ty.induct)

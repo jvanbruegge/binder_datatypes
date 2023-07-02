@@ -586,96 +586,126 @@ proof (induction \<Delta>)
 qed auto
 
 lemma Ty_transitivity : "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
-  and Ty_narrowing : "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R) , \<Delta> \<turnstile> M <: N"
-proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
-  case (TyVar Y \<Gamma> \<Delta>)
-  {
-    fix \<Gamma> S T
-    show Ty_trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
-      by (induction \<Gamma> S "TyVar Y" rule: Ty.induct) auto
-  } note Ty_trans = this
-  {
-    case 2
-    then have wf: "\<turnstile> \<Gamma> , X <: R, \<Delta> ok" using narrow_wf well_scoped wf_context by metis
-    from 2 have closed: "M closed_in \<Gamma> , X <: R, \<Delta>" "N closed_in \<Gamma> , X <: R, \<Delta>" using well_scoped by fastforce+
-    from 2 wf closed show ?case
-    proof (binder_induction "\<Gamma>, X <: TyVar Y, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
-      case (SA_Trans_TVar Z U T \<Delta>')
-      show ?case
-      proof (cases "X = Z")
-        case True
-        then have u: "U = TyVar Y" using SA_Trans_TVar(1,2) context_determ wf_context by blast
-        have "TyVar Y closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
-        then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> TyVar Y <: T" using SA_Trans_TVar True u by auto
-        moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: TyVar Y" using Ty_weakening[OF Ty_weakening_extend[OF SA_Trans_TVar(4)]]
-          by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
-        ultimately have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T" using Ty_trans by blast
-        then show ?thesis unfolding True u using Ty.SA_Trans_TVar by auto
+  and Ty_narrowing : "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
+proof -
+  have
+    Ty_trans: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+  and Ty_narrow: "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q ; \<turnstile> \<Gamma> , X <: R, \<Delta> ok ; M closed_in \<Gamma> , X <: R, \<Delta> ; N closed_in \<Gamma> , X <: R, \<Delta> \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
+  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
+    case (TyVar Y \<Gamma> \<Delta>)
+    {
+      fix \<Gamma> S T
+      show Ty_trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+        by (induction \<Gamma> S "TyVar Y" rule: Ty.induct) auto
+    } note Ty_trans = this
+    {
+      case 2
+      then show ?case
+      proof (binder_induction "\<Gamma>, X <: TyVar Y, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
+        case (SA_Trans_TVar Z U T \<Delta>')
+        show ?case
+        proof (cases "X = Z")
+          case True
+          then have u: "U = TyVar Y" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+          have "TyVar Y closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+          then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> TyVar Y <: T" using SA_Trans_TVar True u by auto
+          moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: TyVar Y" using Ty_weakening[OF Ty_weakening_extend[OF SA_Trans_TVar(4)]]
+            by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
+          ultimately have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T" using Ty_trans by blast
+          then show ?thesis unfolding True u using Ty.SA_Trans_TVar by auto
+        next
+          case False
+          have x: "U closed_in \<Gamma> , X <: R , \<Delta>'" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          show ?thesis
+            apply (rule Ty.SA_Trans_TVar)
+            using SA_Trans_TVar False x by auto
+        qed
       next
-        case False
-        have x: "U closed_in \<Gamma> , X <: R , \<Delta>'" using SA_Trans_TVar(2) well_scoped(1) by fastforce
-        show ?thesis
-          apply (rule Ty.SA_Trans_TVar)
-          using SA_Trans_TVar False x by auto
-      qed
-    next
-      case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
+        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
+        then show ?case by auto
+      next
+        case (SA_All T\<^sub>1 S\<^sub>1 Z S\<^sub>2 T\<^sub>2 \<Delta>')
+        have 1: "\<turnstile> \<Gamma>, X <: R, \<Delta>', Z <: T\<^sub>1 ok"
+          apply (rule wf_Cons)
+          using SA_All UnI1 image_iff by auto
+        have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
+          apply (rule SA_All(5))
+          using 1 SA_All(6,8,9) by (auto intro!: SA_All(5))
+        then show ?case using SA_All by auto
+      qed (rule context_set_bd_UNIV | blast)+
+    }
+  next
+    case (Top \<Gamma> \<Delta>)
+    {
+      case 1
       then show ?case by auto
     next
-      case (SA_All T\<^sub>1 S\<^sub>1 Z S\<^sub>2 T\<^sub>2 \<Delta>')
-      have 1: "\<turnstile> \<Gamma>, X <: R, \<Delta>', Z <: T\<^sub>1 ok"
-        apply (rule wf_Cons)
-        using SA_All UnI1 image_iff by auto
-      have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
-        apply (rule SA_All(5))
-        using 1 SA_All(6,8,9) by (auto intro!: SA_All(5))
-      then show ?case using SA_All by auto
-    qed (rule context_set_bd_UNIV | blast)+
-  }
-next
-  case (Top \<Gamma> \<Delta>)
-  {
-    case 1
-    then show ?case by auto
+      case 2
+      then show ?case
+      proof (induction "\<Gamma> , X <: Top , \<Delta>" M N rule: Ty.induct)
+        case (SA_Top S)
+        show ?case
+          apply (rule Ty.SA_Top)
+          sorry
+      next
+        case (SA_Refl_TVar x)
+        then show ?case sorry
+      next
+        case (SA_Trans_TVar x U T)
+        then show ?case sorry
+      next
+        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2)
+        then show ?case sorry
+      next
+        case (SA_All T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
+        then show ?case sorry
+      qed
+    }
   next
-    case 2
-    then show ?case sorry
-  }
-next
-  case (Fun Q\<^sub>1 Q\<^sub>2 \<Gamma> \<Delta>)
-  {
-    case 1
-    then obtain S\<^sub>1 S\<^sub>2
-    where
-      eqS: "S = S\<^sub>1 \<rightarrow> S\<^sub>2"
-    and
-      SA_SQ1: "\<Gamma> \<turnstile> Q\<^sub>1 <: S\<^sub>1"
-    and
-      SA_SQ2: "\<Gamma> \<turnstile> S\<^sub>2 <: Q\<^sub>2"
-    using SA_ArrER (* why isn't this sledgehammer-able? *) sorry
-    moreover obtain T\<^sub>1 T\<^sub>2
-    where
-      eqT: "T = T\<^sub>1 \<rightarrow> T\<^sub>2"
-    and
-      SA_QT1: "\<Gamma> \<turnstile> T\<^sub>1 <: Q\<^sub>1"
-    and
-      SA_QT2: "\<Gamma> \<turnstile> Q\<^sub>2 <: T\<^sub>2"
-    using SA_ArrEL (* why isn't this sledgehammer-able? *) sorry
-    then show ?case using SA_Arrow eqS SA_SQ1 SA_SQ2 1  sorry
+    case (Fun Q\<^sub>1 Q\<^sub>2 \<Gamma> \<Delta>)
+    {
+      case 1
+      then obtain S\<^sub>1 S\<^sub>2
+      where
+        eqS: "S = S\<^sub>1 \<rightarrow> S\<^sub>2"
+      and
+        SA_SQ1: "\<Gamma> \<turnstile> Q\<^sub>1 <: S\<^sub>1"
+      and
+        SA_SQ2: "\<Gamma> \<turnstile> S\<^sub>2 <: Q\<^sub>2"
+      using SA_ArrER (* why isn't this sledgehammer-able? *) sorry
+      moreover obtain T\<^sub>1 T\<^sub>2
+      where
+        eqT: "T = T\<^sub>1 \<rightarrow> T\<^sub>2"
+      and
+        SA_QT1: "\<Gamma> \<turnstile> T\<^sub>1 <: Q\<^sub>1"
+      and
+        SA_QT2: "\<Gamma> \<turnstile> Q\<^sub>2 <: T\<^sub>2"
+      using SA_ArrEL (* why isn't this sledgehammer-able? *) sorry
+      then show ?case using SA_Arrow eqS SA_SQ1 SA_SQ2 1  sorry
+    next
+      case 2
+      then show ?case sorry
+    }
   next
-    case 2
-    then show ?case sorry
-  }
-next
-  case (Forall x1 x2 x3 \<Gamma> \<Delta>)
-  {
-    case 1
-    then show ?case sorry
-  next
-    case 2
-    then show ?case sorry
-  }
-qed simp_all
+    case (Forall x1 x2 x3 \<Gamma> \<Delta>)
+    {
+      case 1
+      then show ?case sorry
+    next
+      case 2
+      then show ?case sorry
+    }
+  qed simp_all
+
+  show "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T" using Ty_trans by blast
+  show "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
+    apply (rule Ty_narrow)
+        apply assumption+
+    using narrow_wf well_scoped wf_context apply metis
+    using well_scoped by fastforce+
+qed
+
+(**)
 
 
 

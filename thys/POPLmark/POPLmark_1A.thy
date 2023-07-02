@@ -154,6 +154,11 @@ inductive Ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<R
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
 | SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
 
+inductive_cases
+  SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
+and
+  SA_TVarE[elim]: "\<Gamma> \<turnstile> S <: TyVar X"
+
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Gamma> S T rule: Ty.induct)
 
@@ -566,7 +571,7 @@ proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" 
     from 2 have closed: "M closed_in \<Gamma> , X <: R, \<Delta>" "N closed_in \<Gamma> , X <: R, \<Delta>" using well_scoped by fastforce+
     from 2 wf closed show ?case
     proof (binder_induction "\<Gamma>, X <: TyVar Y, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
-      case (SA_Trans_TVar x U T \<Delta>')
+      case (SA_Trans_TVar Z U T \<Delta>')
       then show ?case sorry
     next
       case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
@@ -586,7 +591,7 @@ next
   case (Top \<Gamma> \<Delta>)
   {
     case 1
-    then show ?case sorry
+    then show ?case by auto
   next
     case 2
     then show ?case sorry

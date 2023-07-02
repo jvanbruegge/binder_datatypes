@@ -157,15 +157,15 @@ inductive Ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<R
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
 and
-  SA_TVarE[elim]: "\<Gamma> \<turnstile> S <: TyVar Z"
+  SA_TVarE: "\<Gamma> \<turnstile> S <: TyVar Z"
 and
-  SA_ArrER[elim]: "\<Gamma> \<turnstile> S <: T\<^sub>1 \<rightarrow> T\<^sub>2"
+  SA_ArrER: "\<Gamma> \<turnstile> S <: T\<^sub>1 \<rightarrow> T\<^sub>2"
 and
-  SA_ArrEL[elim]: "\<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T "
+  SA_ArrEL: "\<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T "
 and
-  SA_AllER[elim]: "\<Gamma> \<turnstile> S <: \<forall>Z<:T\<^sub>1. T\<^sub>2"
+  SA_AllER: "\<Gamma> \<turnstile> S <: \<forall>Z<:T\<^sub>1. T\<^sub>2"
 and
-  SA_AllEL[elim]: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
+  SA_AllEL: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
 
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Gamma> S T rule: Ty.induct)
@@ -504,6 +504,10 @@ corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_T
 
 (********************* Actual formalization ************************)
 
+context begin
+ML_file \<open>../../Tools/binder_induction.ML\<close>
+end
+
 lemma Ty_refl: "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
 proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: typ.strong_induct)
   case (TyVar x \<Gamma>)
@@ -532,21 +536,6 @@ qed auto
 lemma weaken_closed: "\<lbrakk> S closed_in \<Gamma> ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> S closed_in \<Gamma>,\<Delta>"
   by auto
 
-lemma Ty_weakening: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; \<turnstile> \<Delta> ok ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> \<Gamma>,\<Delta> \<turnstile> S <: T"
-proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" rule: Ty_strong_induct)
-  case (SA_Top \<Gamma> S)
-  then show ?case using wf_concat Ty.SA_Top weaken_closed by presburger
-next
-  case (SA_Refl_TVar \<Gamma> x)
-  then show ?case using wf_concat Ty.SA_Refl_TVar weaken_closed by presburger
-next
-  case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
-  then have "\<turnstile> (\<Gamma>, \<Delta>), x <: T\<^sub>1 ok"
-    by (smt (verit) UnE fst_conv image_iff list.discI list.inject set_append well_scoped(1) wf_Cons wf_Ty.cases wf_context)
-  then have "(\<Gamma> , \<Delta>), x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2" using Ty_permute SA_All by auto
-  then show ?case using SA_All by auto
-qed auto
-
 lemma wf_concat_disjoint: "\<turnstile> \<Gamma>, \<Delta> ok \<Longrightarrow> dom \<Gamma> \<inter> dom \<Delta> = {}"
 proof (induction \<Delta>)
   case (Cons a \<Delta>)
@@ -554,8 +543,37 @@ proof (induction \<Delta>)
     by (smt (verit, del_insts) Un_iff append_Cons disjoint_iff fst_conv image_iff inf.idem insertE list.inject list.simps(15) set_append set_empty2 wf_Ty.cases)
 qed simp
 
+lemma wf_insert: "\<lbrakk> \<turnstile> \<Gamma>,\<Delta> ok ; x \<notin> dom \<Gamma> ; x \<notin> dom \<Delta> ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,x<:T,\<Delta> ok"
+  by (induction \<Delta>) auto
+
+lemma Ty_weakening: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; \<turnstile> \<Gamma>,\<Delta> ok \<rbrakk> \<Longrightarrow> \<Gamma>,\<Delta> \<turnstile> S <: T"
+proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" rule: Ty_strong_induct)
+  case (SA_Top \<Gamma> S)
+  then show ?case using Ty.SA_Top weaken_closed wf_concat_disjoint by presburger
+next
+  case (SA_Refl_TVar \<Gamma> x)
+  then show ?case using Ty.SA_Refl_TVar weaken_closed wf_concat_disjoint by presburger
+next
+  case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
+  have 1: "\<turnstile> \<Gamma>, x <: T\<^sub>1, \<Delta> ok"
+    by (metis wf_insert SA_All(1,4) SA_All.prems fst_conv wf_ConsE wf_context)
+  have 2: "\<turnstile> \<Gamma> , \<Delta> , x <: T\<^sub>1 ok"
+    by (smt (verit, del_insts) SA_All(1,3,4,6) UnE fst_conv image_iff set_append well_scoped(1) wf_Cons wf_ConsE wf_context)
+  show ?case using Ty_permute[OF _ 2] 1 SA_All by auto
+qed auto
+
+corollary Ty_weakening_extend: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; X \<notin> dom \<Gamma> ; Q closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma>,X<:Q \<turnstile> S <: T"
+  using Ty_weakening[of _ _ _ "[(X, Q)]"] by (metis append_Cons append_Nil wf_Cons wf_context)
+
 lemma wf_concatD: "\<turnstile> \<Gamma>, \<Delta> ok \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Delta>) auto
+
+lemma context_determ: "\<lbrakk> X <: U \<in> \<Gamma> , X <: U', \<Delta> ;  \<turnstile> \<Gamma> , X <: U', \<Delta> ok \<rbrakk> \<Longrightarrow> U = U'"
+proof (induction \<Delta>)
+  case Nil
+  then show ?case
+    by (metis Pair_inject append_Nil fst_conv image_eqI set_ConsD wf_ConsE)
+qed auto
 
 lemma narrow_wf: "\<lbrakk> \<turnstile> (\<Gamma> , X <: Q), \<Delta> ok ; R closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<turnstile> (\<Gamma>, X <: R), \<Delta> ok"
 proof (induction \<Delta>)
@@ -571,8 +589,11 @@ lemma Ty_transitivity : "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<tur
   and Ty_narrowing : "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R) , \<Delta> \<turnstile> M <: N"
 proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
   case (TyVar Y \<Gamma> \<Delta>)
-  show trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
-    by (induction \<Gamma> S "TyVar Y" rule: Ty.induct) auto
+  {
+    fix \<Gamma> S T
+    show Ty_trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+      by (induction \<Gamma> S "TyVar Y" rule: Ty.induct) auto
+  } note Ty_trans = this
   {
     case 2
     then have wf: "\<turnstile> \<Gamma> , X <: R, \<Delta> ok" using narrow_wf well_scoped wf_context by metis
@@ -580,7 +601,23 @@ proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" 
     from 2 wf closed show ?case
     proof (binder_induction "\<Gamma>, X <: TyVar Y, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
       case (SA_Trans_TVar Z U T \<Delta>')
-      then show ?case sorry
+      show ?case
+      proof (cases "X = Z")
+        case True
+        then have u: "U = TyVar Y" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+        have "TyVar Y closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+        then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> TyVar Y <: T" using SA_Trans_TVar True u by auto
+        moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: TyVar Y" using Ty_weakening[OF Ty_weakening_extend[OF SA_Trans_TVar(4)]]
+          by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
+        ultimately have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T" using Ty_trans by blast
+        then show ?thesis unfolding True u using Ty.SA_Trans_TVar by auto
+      next
+        case False
+        have x: "U closed_in \<Gamma> , X <: R , \<Delta>'" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+        show ?thesis
+          apply (rule Ty.SA_Trans_TVar)
+          using SA_Trans_TVar False x by auto
+      qed
     next
       case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
       then show ?case by auto
@@ -609,7 +646,7 @@ next
   {
     case 1
     then obtain S\<^sub>1 S\<^sub>2
-    where 
+    where
       eqS: "S = S\<^sub>1 \<rightarrow> S\<^sub>2"
     and
       SA_SQ1: "\<Gamma> \<turnstile> Q\<^sub>1 <: S\<^sub>1"
@@ -617,7 +654,7 @@ next
       SA_SQ2: "\<Gamma> \<turnstile> S\<^sub>2 <: Q\<^sub>2"
     using SA_ArrER (* why isn't this sledgehammer-able? *) sorry
     moreover obtain T\<^sub>1 T\<^sub>2
-    where 
+    where
       eqT: "T = T\<^sub>1 \<rightarrow> T\<^sub>2"
     and
       SA_QT1: "\<Gamma> \<turnstile> T\<^sub>1 <: Q\<^sub>1"

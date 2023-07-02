@@ -703,14 +703,59 @@ proof -
     } note Ty_trans = this
     {
       case 2
-      then show ?case sorry
+      then show ?case
+      proof (binder_induction "\<Gamma>, X <: (Q\<^sub>1 \<rightarrow> Q\<^sub>2), \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
+        case (SA_Trans_TVar Z U T \<Delta>')
+        then show ?case
+        proof (cases "X = Z")
+          case True
+           then have u: "U = (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+          have "(Q\<^sub>1 \<rightarrow> Q\<^sub>2) closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+          then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> (Q\<^sub>1 \<rightarrow> Q\<^sub>2) <: T" using SA_Trans_TVar True u by auto
+          moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using Ty_weakening[OF Ty_weakening_extend[OF SA_Trans_TVar(4)]]
+            by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
+          ultimately have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T" using Ty_trans by blast
+          then show ?thesis unfolding True u using Ty.SA_Trans_TVar by auto
+        next
+          case False
+          have x: "U closed_in \<Gamma> , X <: R , \<Delta>'" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          show ?thesis
+            apply (rule Ty.SA_Trans_TVar)
+            using SA_Trans_TVar False x by auto
+        qed
+      next
+        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
+        then show ?case by auto
+      next
+        case (SA_All T\<^sub>1 S\<^sub>1 Z S\<^sub>2 T\<^sub>2 \<Delta>')
+        have 1: "\<turnstile> \<Gamma>, X <: R, \<Delta>', Z <: T\<^sub>1 ok"
+          apply (rule wf_Cons)
+          using SA_All UnI1 image_iff by auto
+        have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
+          apply (rule SA_All(5))
+          using 1 SA_All(6,8,9) by (auto intro!: SA_All(5))
+        then show ?case using SA_All by auto
+      qed (rule context_set_bd_UNIV | blast)+
     }
   next
-    case (Forall x1 x2 x3 \<Gamma> \<Delta>)
+    case (Forall Y T\<^sub>1 T\<^sub>2 \<Gamma> \<Delta>)
     {
-      case 1
-      then show ?case sorry
-    next
+      fix \<Gamma> S T
+      assume "\<Gamma> \<turnstile> S <: \<forall>Y<:T\<^sub>1. T\<^sub>2" "\<Gamma> \<turnstile> \<forall>Y<:T\<^sub>1. T\<^sub>2 <: T"
+      then show "\<Gamma> \<turnstile> S <: T"
+      proof (induction \<Gamma> S "\<forall>Y<:T\<^sub>1. T\<^sub>2" rule: Ty.induct)
+        case left: (SA_All \<Gamma> R\<^sub>1 S\<^sub>1 Z S\<^sub>2 R\<^sub>2)
+        from left(6,1-5) show ?case
+        proof cases
+          case SA_Top
+          then show ?thesis by (meson SA_All Ty.SA_Top left(1,3) well_scoped(1))
+        next
+          case (SA_All U\<^sub>1 Q\<^sub>1 V Q\<^sub>2 U\<^sub>2)
+          then show ?thesis using left sorry
+        qed auto
+      qed auto
+    } note Ty_trans = this
+    {
       case 2
       then show ?case sorry
     }

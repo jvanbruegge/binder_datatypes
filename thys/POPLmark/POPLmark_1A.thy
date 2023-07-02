@@ -81,6 +81,18 @@ lemma rrename_typ_simps[simp]:
      apply (rule refl)+
   done
 
+lemma typ_inject[simp]:
+  "TyVar x = TyVar y \<longleftrightarrow> x = y"
+  "Fun T1 T2 = Fun R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
+  (*"Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> rrename_typ (id(x:=y,y:=x)) T2 = R2"*) (* not needed for now *)
+    apply (unfold TyVar_def Fun_def Forall_def typ.TT_injects0
+      set3_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
+      cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_typ_pre_def
+      prod.map_id set2_typ_pre_def prod_set_simps prod.set_map UN_single Abs_typ_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject map_prod_simp
+    )
+    by auto
+
 type_synonym type = "var typ"
 type_synonym \<Gamma>\<^sub>\<tau> = "(var \<times> type) list"
 
@@ -591,8 +603,8 @@ proof -
   have
     Ty_trans: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
   and Ty_narrow: "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q ; \<turnstile> \<Gamma> , X <: R, \<Delta> ok ; M closed_in \<Gamma> , X <: R, \<Delta> ; N closed_in \<Gamma> , X <: R, \<Delta> \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
-  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
-    case (TyVar Y \<Gamma> \<Delta>)
+  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
+    case (TyVar Y \<Gamma> \<Delta> S T)
     {
       fix \<Gamma> S T
       show Ty_trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
@@ -635,54 +647,61 @@ proof -
       qed (rule context_set_bd_UNIV | blast)+
     }
   next
-    case (Top \<Gamma> \<Delta>)
+    case (Top \<Gamma> \<Delta> S T)
+    show Ty_trans: "\<Gamma> \<turnstile> S <: Top \<Longrightarrow> \<Gamma> \<turnstile> Top <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T" by auto
     {
-      case 1
-      then show ?case by auto
-    next
       case 2
       then show ?case
-      proof (induction "\<Gamma> , X <: Top , \<Delta>" M N rule: Ty.induct)
-        case (SA_Top S)
-        show ?case
-          apply (rule Ty.SA_Top)
-          sorry
+      proof (binder_induction "\<Gamma>, X <: Top, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
+        case (SA_Trans_TVar Z U T \<Delta>')
+        then show ?case
+        proof (cases "X = Z")
+          case True
+          then have u: "U = Top" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+          have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> Top <: T" using SA_Trans_TVar True u by auto
+          then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T"
+            by (metis SA_TopE SA_Trans_TVar.prems(1) Ty_weakening Ty_weakening_extend wf_ConsE wf_concatD)
+          then show ?thesis unfolding True u using Ty.SA_Trans_TVar by auto
+        next
+          case False
+          have x: "U closed_in \<Gamma> , X <: R , \<Delta>'" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          show ?thesis
+            apply (rule Ty.SA_Trans_TVar)
+            using SA_Trans_TVar False x by auto
+        qed
       next
-        case (SA_Refl_TVar x)
-        then show ?case sorry
+        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
+        then show ?case by auto
       next
-        case (SA_Trans_TVar x U T)
-        then show ?case sorry
-      next
-        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2)
-        then show ?case sorry
-      next
-        case (SA_All T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
-        then show ?case sorry
-      qed
+        case (SA_All T\<^sub>1 S\<^sub>1 Z S\<^sub>2 T\<^sub>2 \<Delta>')
+        have 1: "\<turnstile> \<Gamma>, X <: R, \<Delta>', Z <: T\<^sub>1 ok"
+          apply (rule wf_Cons)
+          using SA_All UnI1 image_iff by auto
+        have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
+          apply (rule SA_All(5))
+          using 1 SA_All(6,8,9) by (auto intro!: SA_All(5))
+        then show ?case using SA_All by auto
+      qed (rule context_set_bd_UNIV | blast)+
     }
   next
-    case (Fun Q\<^sub>1 Q\<^sub>2 \<Gamma> \<Delta>)
+    case (Fun Q\<^sub>1 Q\<^sub>2 \<Gamma> \<Delta> S T)
     {
-      case 1
-      then obtain S\<^sub>1 S\<^sub>2
-      where
-        eqS: "S = S\<^sub>1 \<rightarrow> S\<^sub>2"
-      and
-        SA_SQ1: "\<Gamma> \<turnstile> Q\<^sub>1 <: S\<^sub>1"
-      and
-        SA_SQ2: "\<Gamma> \<turnstile> S\<^sub>2 <: Q\<^sub>2"
-      using SA_ArrER (* why isn't this sledgehammer-able? *) sorry
-      moreover obtain T\<^sub>1 T\<^sub>2
-      where
-        eqT: "T = T\<^sub>1 \<rightarrow> T\<^sub>2"
-      and
-        SA_QT1: "\<Gamma> \<turnstile> T\<^sub>1 <: Q\<^sub>1"
-      and
-        SA_QT2: "\<Gamma> \<turnstile> Q\<^sub>2 <: T\<^sub>2"
-      using SA_ArrEL (* why isn't this sledgehammer-able? *) sorry
-      then show ?case using SA_Arrow eqS SA_SQ1 SA_SQ2 1  sorry
-    next
+      fix \<Gamma> S T
+      assume "\<Gamma> \<turnstile> S <: Q\<^sub>1 \<rightarrow> Q\<^sub>2" "\<Gamma> \<turnstile> Q\<^sub>1 \<rightarrow> Q\<^sub>2 <: T"
+      then show "\<Gamma> \<turnstile> S <: T"
+      proof (induction \<Gamma> S "Q\<^sub>1 \<rightarrow> Q\<^sub>2" rule: Ty.induct)
+        case left: (SA_Arrow \<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2)
+        from left(6,1-5) show ?case
+        proof cases
+          case SA_Top
+          then show ?thesis by (meson left(1,3) Ty.SA_Arrow Ty.SA_Top well_scoped(1))
+        next
+          case right: (SA_Arrow U\<^sub>1 R\<^sub>1 R\<^sub>2 U\<^sub>2)
+          then show ?thesis using left by (metis Fun(1,3) SA_Arrow typ_inject(2))
+        qed auto
+      qed auto
+    } note Ty_trans = this
+    {
       case 2
       then show ?case sorry
     }

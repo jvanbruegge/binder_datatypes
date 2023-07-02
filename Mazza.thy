@@ -837,11 +837,185 @@ lemma ex_cinfmset: "\<exists>xs. cinfmset xs = X"
   qed
   done
 
+lemma set_stake: "set (stake i s) = snth s ` {0 ..< i}"
+  by (induct i arbitrary: s)
+    (auto simp: image_iff less_Suc_eq_0_disj Ball_def simp flip: snth.simps)
+
+lemma exist_nth_occurrence_in_stream:
+  "count_stream s x > n \<Longrightarrow> \<exists>i. s !! i = x \<and> count_list (stake i s) (s !! i) = n"
+  apply (induct s x arbitrary: n rule: count_stream.induct)
+  apply (subst (asm) (2) count_stream.simps)
+  apply (auto split: if_splits)
+  subgoal for s x n
+    apply (induct n)
+     apply (unfold sset_range sdrop_snth image_iff)
+     apply clarsimp
+    subgoal for i
+      apply (rule exI[of _ "LEAST i. s !! i = x"])
+      apply (rule LeastI2_wellorder)
+       apply (erule sym)
+      apply (auto simp: count_list_0_iff set_stake)
+      done
+    apply clarsimp
+    subgoal for k j
+      apply (drule spec[of _ "Suc k"])
+      apply (erule exE)
+      subgoal for z
+        apply (rule exI[of _ "LEAST i. i > k \<and> s !! i = x"])
+        apply (rule LeastI2_wellorder[of _ "Suc k + z"])
+         apply auto
+        subgoal for i
+          apply (subst id_take_nth_drop[of k])
+           apply (auto simp: take_stake drop_stake count_list_0_iff set_stake)
+          apply (metis Suc_eq_plus1 add.commute add.left_commute diff_diff_left diff_is_0_eq' less_add_Suc1 less_nat_zero_code sdrop.simps(2) sdrop_snth zero_less_diff)
+          done
+        done
+      done
+    done
+  subgoal for s n m
+    apply (cases n)
+     apply (auto simp: count_list_0_iff) []
+     apply (metis length_pos_if_in_set less_nat_zero_code list.size(3) snth.simps(1) stake_invert_Nil)
+    subgoal for m
+      apply (drule meta_spec[of _ m])
+      apply (auto simp: Suc_ile_eq intro: exI[of _ "Suc _"])
+      done
+    done
+  subgoal for s x n m
+    apply (drule meta_spec[of _ n])
+    apply (auto intro: exI[of _ "Suc _"])
+    done
+  done
+
+function sfind_index where
+  "sfind_index n x i s = (if count_stream s x \<le> n then i else
+    if shd s = x then case n of 0 \<Rightarrow> i | Suc m \<Rightarrow> sfind_index m x (Suc i) (stl s)
+    else sfind_index n x (Suc i) (stl s))"
+  by auto
+termination
+  apply (relation "measure (\<lambda>(n, x, _, s). LEAST i. s !! i = x \<and> count_list (stake i s) (s !! i) = n)")
+    apply (auto simp: not_le)
+   apply (rule exE[OF exist_nth_occurrence_in_stream])
+    apply assumption
+   apply (subst (2) Least_Suc)
+     apply assumption
+    apply (auto simp: less_Suc_eq_le intro!: eq_refl arg_cong[of _ _ Least]) [2]
+  apply (rule exE[OF exist_nth_occurrence_in_stream])
+   apply assumption
+  apply (subst (2) Least_Suc)
+    apply assumption
+   apply (auto simp: less_Suc_eq_le intro!: eq_refl arg_cong[of _ _ Least]) [2]
+  done
+declare sfind_index.simps[simp del]
+
+lemma sfind_index_ge[simp]: "sfind_index n x j xs \<ge> j"
+  apply (induct n x j xs rule: sfind_index.induct)
+  apply (subst sfind_index.simps)
+  apply (auto split: nat.splits)
+  using Suc_leD by blast
+
+lemma sfind_index_snth:
+  "count_stream xs x > n \<Longrightarrow> xs !! (sfind_index n x j xs - j) = x"
+  apply (induct n x j xs rule: sfind_index.induct)
+  apply (subst sfind_index.simps)
+  apply (auto simp: enat_0 count_stream_zero_iff split: nat.splits)
+    apply (metis Suc_diff_Suc div_if le_div_geq not_less_eq sfind_index_ge snth.simps(2) stream.sel(1) stream.sel(2) stream.set_cases zero_less_Suc)
+  apply (smt (verit) Suc_diff_Suc alw.cases count_stream.elims count_stream_infinity_iff dual_order.strict_trans enat_ord_simps(2) iless_Suc_eq lessI order_less_le sfind_index_ge shd_sset snth.simps(2))
+  apply (metis Suc_diff_Suc count_stream_Stream_neq linorder_not_less not_less_eq sfind_index_ge snth.simps(2) stream.exhaust_sel)
+  done
+
+lemma sfind_index_count_list:
+  "count_stream xs x > n \<Longrightarrow> count_list (stake (sfind_index n x j xs - j) xs) x = n"
+  apply (induct n x j xs rule: sfind_index.induct)
+  apply (subst sfind_index.simps)
+  apply (auto simp: enat_0 count_stream_zero_iff count_list_0_iff set_stake image_iff sset_range split: nat.splits)
+  subgoal for i s j k l
+    apply (cases l; cases j)
+     apply (auto simp: less_diff_conv dest!: meta_mp bspec[of _ _ "j - 1"])
+    done
+  subgoal for i s n
+    apply (cases "sfind_index n (shd s) (Suc i) (stl s) - i")
+     apply auto
+     apply (meson not_less_eq_eq sfind_index_ge)
+    subgoal for m
+      apply (subgoal_tac "sfind_index n (shd s) (Suc i) (stl s) - Suc i = m")
+      apply auto
+      apply (drule meta_spec)
+      apply (drule meta_mp)
+       apply assumption
+      apply (drule meta_mp)
+       apply (rule refl)
+      apply (erule meta_mp)
+       apply (smt (verit, ccfv_SIG) Suc_ile_eq alw.cases count_stream.elims count_stream_infinity_iff iless_Suc_eq linorder_le_cases shd_sset)
+      done
+    done
+  subgoal for y i s n
+    apply (cases "sfind_index (Suc n) y (Suc i) (stl s) - i")
+     apply auto
+     apply (meson not_less_eq_eq sfind_index_ge)
+    subgoal for m
+      apply (drule meta_mp)
+       apply (metis count_stream_Stream_neq stream.collapse)
+      apply (subgoal_tac "sfind_index (Suc n) y (Suc i) (stl s) - Suc i = m")
+       apply auto
+      done
+    done
+  done
+
+lemma snth_equalityI: "(\<And>i. s !! i = t !! i) \<Longrightarrow> s = t"
+  apply (coinduction arbitrary: s t)
+  apply auto
+  apply (metis snth.simps(1))
+  apply (metis snth.simps(2))
+  done
+
+lemma sfind_index_inject:
+  "count_stream xs x > n \<Longrightarrow> count_stream xs y > m \<Longrightarrow>
+   sfind_index n x j xs = sfind_index m y j xs \<Longrightarrow> n = m \<and> x = y"
+  by (metis sfind_index_count_list sfind_index_snth)
+
+lemma count_list_less_count_stream:
+  "count_list (stake i s) (s !! i) < count_stream s (s !! i)"
+  apply (induct i arbitrary: s)
+   apply (auto simp: enat_0 count_stream_zero_iff shd_sset)
+   apply (metis count_stream_Stream_eq eSuc_enat ileI1 iless_Suc_eq stream.collapse)
+  apply (metis count_stream_Stream_neq stream.collapse)
+  done
+
+lemma count_list_inject:
+  "count_list (stake i s) (s !! j) = count_list (stake j s) (s !! j) \<Longrightarrow>
+  s !! i = s !! j \<Longrightarrow> i = j"
+  apply (induct i arbitrary: j s)
+   apply (auto simp: count_list_0_iff set_stake image_iff)
+   apply (metis atLeast0LessThan lessThan_iff neq0_conv sdrop.simps(1) sdrop_simps(1))
+  subgoal for i j
+    apply (cases j)
+     apply (auto split: if_splits)
+    done
+  done
+
 lemma cinfmset_eq_iff_spermute: "cinfmset xs' = cinfmset xs \<longleftrightarrow> (\<exists>\<pi>. bij \<pi> \<and> spermute \<pi> xs = xs')"
   apply transfer
-  apply (auto simp: count_stream_spermute fun_eq_iff)
-  apply (auto simp: count_stream_alt Let_def split: if_splits)
-  sorry
+  subgoal for xs' xs
+    apply (auto simp: count_stream_spermute fun_eq_iff)
+    apply (rule exI[of _ "\<lambda>i. let x = xs' !! i in sfind_index (count_list (stake i xs') x) x 0 xs"])
+    apply (auto simp: Let_def spermute_def intro!: snth_equalityI)
+     apply (rule bijI)
+      apply (rule injI)
+    subgoal for i j
+      apply (frule spec[of _ "xs' !! i", THEN sym])
+      apply (drule spec[of _ "xs' !! j", THEN sym])
+      apply (drule sfind_index_inject[rotated 2])
+        apply (auto simp: count_list_less_count_stream dest: count_list_inject)
+      done
+     apply (unfold surj_def)
+    apply (rule allI)
+    subgoal for i
+      by (metis count_list_inject count_list_less_count_stream minus_nat.diff_0 sfind_index_count_list sfind_index_snth)
+    subgoal for i
+      by (metis count_list_less_count_stream diff_zero sfind_index_snth)
+    done
+  done
 
 lemma szip_smap_same: "szip (smap f s) (smap g s) = smap (\<lambda>x. (f x, g x)) s"
   by (coinduction arbitrary: s) auto

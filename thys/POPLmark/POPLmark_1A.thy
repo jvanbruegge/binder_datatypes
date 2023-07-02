@@ -605,10 +605,26 @@ next
     then show ?case sorry
   }
 next
-  case (Fun x1 x2 \<Gamma> \<Delta>)
+  case (Fun Q\<^sub>1 Q\<^sub>2 \<Gamma> \<Delta>)
   {
     case 1
-    then show ?case sorry
+    then obtain S\<^sub>1 S\<^sub>2
+    where 
+      eqS: "S = S\<^sub>1 \<rightarrow> S\<^sub>2"
+    and
+      SA_SQ1: "\<Gamma> \<turnstile> Q\<^sub>1 <: S\<^sub>1"
+    and
+      SA_SQ2: "\<Gamma> \<turnstile> S\<^sub>2 <: Q\<^sub>2"
+    using SA_ArrER (* why isn't this sledgehammer-able? *) sorry
+    moreover obtain T\<^sub>1 T\<^sub>2
+    where 
+      eqT: "T = T\<^sub>1 \<rightarrow> T\<^sub>2"
+    and
+      SA_QT1: "\<Gamma> \<turnstile> T\<^sub>1 <: Q\<^sub>1"
+    and
+      SA_QT2: "\<Gamma> \<turnstile> Q\<^sub>2 <: T\<^sub>2"
+    using SA_ArrEL (* why isn't this sledgehammer-able? *) sorry
+    then show ?case using SA_Arrow eqS SA_SQ1 SA_SQ2 1  sorry
   next
     case 2
     then show ?case sorry

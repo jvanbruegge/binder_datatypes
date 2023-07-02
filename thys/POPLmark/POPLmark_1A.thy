@@ -692,7 +692,7 @@ proof -
   have
     Ty_trans: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
   and Ty_narrow: "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q ; \<turnstile> \<Gamma> , X <: R, \<Delta> ok ; M closed_in \<Gamma> , X <: R, \<Delta> ; N closed_in \<Gamma> , X <: R, \<Delta> \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
-  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T M N X R avoiding: "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
+  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T M N X R avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
     case (TyVar Y \<Gamma> \<Delta> S T M N X R)
     {
       fix \<Gamma> S T
@@ -798,7 +798,7 @@ proof -
         then show ?case
         proof (cases "X = Z")
           case True
-           then have u: "U = (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+          then have u: "U = (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using SA_Trans_TVar(1,2) context_determ wf_context by blast
           have "(Q\<^sub>1 \<rightarrow> Q\<^sub>2) closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
           then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> (Q\<^sub>1 \<rightarrow> Q\<^sub>2) <: T" using SA_Trans_TVar True u by auto
           moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using Ty_weakening[OF Ty_weakening_extend[OF SA_Trans_TVar(4)]]
@@ -854,7 +854,39 @@ proof -
       then show ?case using Ty_trans Forall(1) by blast
     next
       case 2
-      then show ?case sorry
+      then show ?case using Forall(1)
+      proof (binder_induction "\<Gamma>, Y <: (\<forall>X<:Q\<^sub>1. Q\<^sub>2), \<Delta>" M N arbitrary: \<Delta> avoiding: X Y "dom \<Gamma>" "dom \<Delta>" rule: Ty_strong_induct)
+        case (SA_Trans_TVar Z U T \<Delta>')
+        then show ?case
+        proof (cases "Y = Z")
+          case True
+          then have u: "U = \<forall> X <: Q\<^sub>1 . Q\<^sub>2" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+          have "\<forall> X <: Q\<^sub>1 . Q\<^sub>2 closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+          then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> \<forall> X <: Q\<^sub>1 . Q\<^sub>2 <: T" using SA_Trans_TVar True u by auto
+          moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: \<forall> X <: Q\<^sub>1 . Q\<^sub>2" using Ty_weakening[OF Ty_weakening_extend[OF SA_Trans_TVar(4)]]
+            by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
+          moreover have "X \<notin> dom (\<Gamma> , Z <: R , \<Delta>')" using SA_Trans_TVar(8) True by auto
+          ultimately have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: T" using Ty_trans by blast
+          then show ?thesis unfolding True u using Ty.SA_Trans_TVar by auto
+        next
+          case False
+          have x: "U closed_in \<Gamma> , Y <: R , \<Delta>'" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          show ?thesis
+            apply (rule Ty.SA_Trans_TVar)
+            using SA_Trans_TVar False x by auto
+        qed
+      next
+        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<Delta>')
+        then show ?case by auto
+      next
+        case (SA_All T\<^sub>1 S\<^sub>1 Z S\<^sub>2 T\<^sub>2 \<Delta>')
+        have 1: "\<turnstile> \<Gamma>, Y <: R, \<Delta>', Z <: T\<^sub>1 ok"
+          apply (rule wf_Cons)
+          using SA_All UnI1 image_iff by auto
+        have "\<Gamma> , Y <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
+          by (smt (verit) 1 SA_All(1,4-6,10) Un_commute Un_insert_left append_Cons fst_conv image_insert insert_iff list.simps(15) set_append well_scoped(1,2))
+        then show ?case using SA_All by auto
+      qed (rule context_set_bd_UNIV | blast)+
     }
   qed simp_all
 

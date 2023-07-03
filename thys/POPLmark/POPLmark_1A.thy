@@ -94,11 +94,9 @@ lemma typ_inject:
   by auto
 declare typ_inject(1,2)[simp]
 
-lemma Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
-  apply (rule trans)
-   apply (rule typ_inject)
-  apply (rule arg_cong2[OF refl, of _ _ "(\<and>)"])
-  by (metis (no_types, opaque_lifting) bij_id id_on_id id_on_insert insert_Diff_single insert_absorb supp_id_bound typ.rrename_cong_ids)
+corollary Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
+  using typ_inject(3) typ.rrename_cong_ids
+  by (metis (no_types, lifting) Diff_empty Diff_insert0 id_on_insert insert_Diff)
 
 lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "

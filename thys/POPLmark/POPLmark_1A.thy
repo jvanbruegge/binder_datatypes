@@ -137,6 +137,7 @@ abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
 abbreviation empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") where "empty_context \<equiv> []"
 abbreviation dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "dom xs \<equiv> fst ` set xs"
+abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "FFVars_ctxt xs \<equiv> \<Union>(FFVars_typ ` snd ` set xs)"
 
 lemma map_context_id[simp]: "map_context id = id"
   unfolding map_context_def by simp
@@ -163,7 +164,7 @@ lemma context_set_bd_UNIV[simp]: "|dom xs| <o |UNIV::var set|"
   done
 lemma context_map_cong_id:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  and "\<And>a. a \<in> dom \<Gamma> \<union> \<Union>(FFVars_typ ` snd ` set \<Gamma>) \<Longrightarrow> f a = a"
+  and "\<And>a. a \<in> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<Longrightarrow> f a = a"
 shows "map_context f \<Gamma> = \<Gamma>"
   unfolding map_context_def
   apply (rule trans)
@@ -240,7 +241,7 @@ type_synonym V = "var list"
 definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
   "Tmap f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
 fun Tfvars :: "T \<Rightarrow> var set" where
-  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> \<Union>(FFVars_typ ` snd ` set \<Gamma>) \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
+  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
 definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
   "Vmap \<equiv> map"
@@ -380,7 +381,7 @@ lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
 lemma swap_idemp[simp]: "id(x := x) = id" by auto
 lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
 
-lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> \<Union>(FFVars_typ ` snd ` set \<Gamma>) \<Longrightarrow> a \<in> dom \<Gamma>"
+lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
 proof (induction \<Gamma>)
   case (Cons a \<Gamma>)
   then show ?case by auto

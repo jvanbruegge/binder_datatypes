@@ -129,13 +129,16 @@ type_synonym \<Gamma>\<^sub>\<tau> = "(var \<times> type) list"
 definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
   "map_context f \<equiv> map (map_prod f (rrename_typ f))"
 
+abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where
+  "FFVars_ctxt xs \<equiv> \<Union>(FFVars_typ ` snd ` set xs)"
 abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,75,75] 71) where
   "extend \<Gamma> x T \<equiv> (x, T)#\<Gamma>"
 abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" (infixl "(,)" 71) where
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
 abbreviation empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") where "empty_context \<equiv> []"
 abbreviation dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "dom xs \<equiv> fst ` set xs"
-abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "FFVars_ctxt xs \<equiv> \<Union>(FFVars_typ ` snd ` set xs)"
+abbreviation disjoint :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" (infixl "(\<bottom>)" 71) where
+  "disjoint \<Gamma> \<Delta> \<equiv> dom \<Gamma> \<inter> dom \<Delta> = {}"
 
 lemma map_context_id[simp]: "map_context id = id"
   unfolding map_context_def by simp
@@ -221,7 +224,7 @@ case (SA_Trans_TVar x U \<Gamma> T) {
   case 1 then show ?case using SA_Trans_TVar
     by (metis fst_conv imageI singletonD subsetI typ.set(1))
 next
-  case 2 then show ?case by (simp add: SA_Trans_TVar)
+  case 2 then show ?case using SA_Trans_TVar by simp
 } qed auto
 
 thm Ty_def
@@ -380,10 +383,7 @@ lemma swap_idemp[simp]: "id(x := x) = id" by auto
 lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
 
 lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
-proof (induction \<Gamma>)
-  case (Cons a \<Gamma>)
-  then show ?case by auto
-qed auto
+  by (induction \<Gamma>) auto
 
 lemma GG_fresh:
   "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow>
@@ -551,7 +551,7 @@ next
   then show ?case by (meson SA_All(1,3,5,6,7) Ty.SA_All well_scoped(1) wf_Cons)
 qed auto
 
-lemma wf_concat: "\<lbrakk> \<turnstile> \<Delta> ok ; \<turnstile> \<Gamma> ok ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,\<Delta> ok"
+lemma wf_concat: "\<lbrakk> \<turnstile> \<Delta> ok ; \<turnstile> \<Gamma> ok ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,\<Delta> ok"
 proof (induction \<Delta> rule: wf_Ty.induct)
   case (wf_Cons x \<Delta> T)
   then have 1: "(\<Gamma>, (\<Delta> , x <: T)) = ((\<Gamma>, \<Delta>), x <: T)" by simp
@@ -560,10 +560,10 @@ proof (induction \<Delta> rule: wf_Ty.induct)
     using wf_Cons by auto
 qed auto
 
-lemma weaken_closed: "\<lbrakk> S closed_in \<Gamma> ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> S closed_in \<Gamma>,\<Delta>"
+lemma weaken_closed: "\<lbrakk> S closed_in \<Gamma> ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> S closed_in \<Gamma>,\<Delta>"
   by auto
 
-lemma wf_concat_disjoint: "\<turnstile> \<Gamma>, \<Delta> ok \<Longrightarrow> dom \<Gamma> \<inter> dom \<Delta> = {}"
+lemma wf_concat_disjoint: "\<turnstile> \<Gamma>, \<Delta> ok \<Longrightarrow> \<Gamma> \<bottom> \<Delta>"
 proof (induction \<Delta>)
   case (Cons a \<Delta>)
   then show ?case

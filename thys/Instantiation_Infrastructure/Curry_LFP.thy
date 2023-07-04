@@ -187,4 +187,48 @@ lemma lfp_curry5:
 "lfp F x1 x2 x3 x4 x5 \<longleftrightarrow> lfp (\<lambda>q (x1,x2,x3,x4,x5). F (\<lambda>x1 x2 x3 x4 x5. q (x1,x2,x3,x4,x5)) x1 x2 x3 x4 x5) (x1,x2,x3,x4,x5)"  
 using lfp_curry5' unfolding curry5_def uncurry5_def fun_eq_iff o_def by metis
 
+
+
+(* *)
+(* *)
+
+lemmas disjI3_1 = disjI1[OF disjI1, simplified]
+lemmas disjI3_2 = disjI1[OF disjI2, simplified]
+lemmas disjI3_3 = disjI2[OF disjI2, simplified]
+
+(* *)
+
+lemmas disjI4_1 = disjI1[OF disjI1, OF disjI1, simplified]
+lemmas disjI4_2 = disjI1[OF disjI2, OF disjI1, simplified]
+lemmas disjI4_3 = disjI2[OF disjI2, OF disjI1, simplified]
+lemmas disjI4_4 = disjI2[OF disjI2, OF disjI2, simplified]
+
+(* *)
+
+lemmas disjI5_1 = disjI1[OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI5_2 = disjI1[OF disjI2, OF disjI1, OF disjI1, simplified]
+lemmas disjI5_3 = disjI2[OF disjI2, OF disjI1, OF disjI1, simplified]
+lemmas disjI5_4 = disjI2[OF disjI2, OF disjI2, OF disjI1, simplified]
+lemmas disjI5_5 = disjI2[OF disjI2, OF disjI2, OF disjI2, simplified]
+
+(* *)
+
+lemmas disjI6_1 = disjI1[OF disjI1, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI6_2 = disjI1[OF disjI2, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI6_3 = disjI2[OF disjI2, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI6_4 = disjI2[OF disjI2, OF disjI2, OF disjI1, OF disjI1, simplified]
+lemmas disjI6_5 = disjI2[OF disjI2, OF disjI2, OF disjI2, OF disjI1, simplified]
+lemmas disjI6_6 = disjI2[OF disjI2, OF disjI2, OF disjI2, OF disjI2, simplified]
+
+(* *)
+
+lemmas disjI7_1 = disjI1[OF disjI1, OF disjI1, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI7_2 = disjI1[OF disjI2, OF disjI1, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI7_3 = disjI2[OF disjI2, OF disjI1, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI7_4 = disjI2[OF disjI2, OF disjI2, OF disjI1, OF disjI1, OF disjI1, simplified]
+lemmas disjI7_5 = disjI2[OF disjI2, OF disjI2, OF disjI2, OF disjI1, OF disjI1, simplified]
+lemmas disjI7_6 = disjI2[OF disjI2, OF disjI2, OF disjI2, OF disjI2, OF disjI1, simplified]
+lemmas disjI7_7 = disjI2[OF disjI2, OF disjI2, OF disjI2, OF disjI2, OF disjI2, simplified]
+
+
 end

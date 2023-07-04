@@ -64,12 +64,13 @@ Open: "trans P (Fout a x P') \<Longrightarrow> a \<noteq> x \<Longrightarrow>
 ScopeF: "trans P (Cmt act P') \<Longrightarrow> y \<notin> vars act \<Longrightarrow> 
    trans (Res y P) (Cmt act (Res y P'))"
 |
-ScopeB: "trans P (Bout a x P') \<Longrightarrow> y \<notin> {a,x}  \<Longrightarrow> x \<notin> {a} \<union> FFVars P
+ScopeB: "trans P (Bout a x P') \<Longrightarrow> y \<notin> {a,x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P
    \<Longrightarrow> 
    trans (Res y P) (Bout a x (Res y P'))"
 |
 Par1: "trans P1 (Cmt act P1') \<Longrightarrow> 
-   \<^cancel>\<open>present in Bengtson but not needed: set (bvars act) \<inter> fvars act = {} \<Longrightarrow> \<close>  
+   \<^cancel>\<open>present in Bengtson but not needed (and will be an 'output' 
+      of strong induction) : set (bvars act) \<inter> fvars act = {} \<Longrightarrow> \<close>  
    set (bvars act) \<inter> FFVars P1 = {} \<Longrightarrow>  \<^cancel>\<open>can be eliminated \<close> 
    set (bvars act) \<inter> FFVars P2 = {} \<Longrightarrow> 
    trans (Par P1 P2) (Cmt act (Par P1' P2))" 
@@ -85,7 +86,7 @@ Com2: "trans P1 (Fout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Longr
 |
 Close1: "trans P1 (Finp a x P1') \<Longrightarrow> trans P2 (Bout a x P2') \<Longrightarrow> 
     \<^cancel>\<open> x \<noteq> a seems essential, and not an artifact \<close> 
-   x \<notin> {a} \<union>  FFVars P1 \<union> FFVars P2 \<Longrightarrow>
+   x \<notin> {a} \<union> FFVars P1 \<union> FFVars P2 \<Longrightarrow>
    trans (Par P1 P2) (Bout a x (Par P1' P2'))" 
 (* |
 Close2: "trans P1 (Bout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Longrightarrow> 
@@ -658,7 +659,7 @@ and ScopeB:
     trans P (Bout a x P') \<Longrightarrow> (\<forall>p'. \<phi> p' P (Bout a x P')) \<Longrightarrow> y \<notin> {a, x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P \<Longrightarrow>
     \<phi> p (Res y P) (Bout a x (Res y P'))" 
 and Par1: 
-"\<And>P1 act P1' P2 p. set (bvars act) \<inter> Pfvars p = {} \<Longrightarrow> 
+"\<And>P1 act P1' P2 p. set (bvars act) \<inter> (Pfvars p \<union> fvars act) = {} \<Longrightarrow> 
     trans P1 (Cmt act P1') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P1 (Cmt act P1')) \<Longrightarrow>
     set (bvars act) \<inter> FFVars P1 = {} \<Longrightarrow> 
@@ -690,7 +691,7 @@ apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
       subgoal using Open by auto
       subgoal for Pa act P' y using ScopeF[of y p act] by (cases act, auto) 
       subgoal using ScopeB by auto
-      subgoal using Par1 by auto
+      subgoal for P1 act P1' P2 using Par1[of act] by (cases act, auto)
       subgoal using Com1 by auto
       subgoal using Close1 by auto . . .
 

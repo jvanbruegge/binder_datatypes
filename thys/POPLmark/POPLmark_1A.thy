@@ -94,11 +94,9 @@ lemma typ_inject:
   by auto
 declare typ_inject(1,2)[simp]
 
-lemma Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
-  apply (rule trans)
-   apply (rule typ_inject)
-  apply (rule arg_cong2[OF refl, of _ _ "(\<and>)"])
-  by (metis (no_types, opaque_lifting) bij_id id_on_id id_on_insert insert_Diff_single insert_absorb supp_id_bound typ.rrename_cong_ids)
+corollary Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
+  using typ_inject(3) typ.rrename_cong_ids
+  by (metis (no_types, lifting) Diff_empty Diff_insert0 id_on_insert insert_Diff)
 
 lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "
@@ -131,12 +129,16 @@ type_synonym \<Gamma>\<^sub>\<tau> = "(var \<times> type) list"
 definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
   "map_context f \<equiv> map (map_prod f (rrename_typ f))"
 
+abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where
+  "FFVars_ctxt xs \<equiv> \<Union>(FFVars_typ ` snd ` set xs)"
 abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,75,75] 71) where
   "extend \<Gamma> x T \<equiv> (x, T)#\<Gamma>"
 abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" (infixl "(,)" 71) where
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
 abbreviation empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") where "empty_context \<equiv> []"
 abbreviation dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "dom xs \<equiv> fst ` set xs"
+abbreviation disjoint :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" (infixl "(\<bottom>)" 71) where
+  "disjoint \<Gamma> \<Delta> \<equiv> dom \<Gamma> \<inter> dom \<Delta> = {}"
 
 lemma map_context_id[simp]: "map_context id = id"
   unfolding map_context_def by simp
@@ -163,7 +165,7 @@ lemma context_set_bd_UNIV[simp]: "|dom xs| <o |UNIV::var set|"
   done
 lemma context_map_cong_id:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  and "\<And>a. a \<in> dom \<Gamma> \<union> \<Union>(FFVars_typ ` snd ` set \<Gamma>) \<Longrightarrow> f a = a"
+  and "\<And>a. a \<in> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<Longrightarrow> f a = a"
 shows "map_context f \<Gamma> = \<Gamma>"
   unfolding map_context_def
   apply (rule trans)
@@ -222,7 +224,7 @@ case (SA_Trans_TVar x U \<Gamma> T) {
   case 1 then show ?case using SA_Trans_TVar
     by (metis fst_conv imageI singletonD subsetI typ.set(1))
 next
-  case 2 then show ?case by (simp add: SA_Trans_TVar)
+  case 2 then show ?case using SA_Trans_TVar by simp
 } qed auto
 
 thm Ty_def
@@ -240,7 +242,7 @@ type_synonym V = "var list"
 definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
   "Tmap f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
 fun Tfvars :: "T \<Rightarrow> var set" where
-  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> \<Union>(FFVars_typ ` snd ` set \<Gamma>) \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
+  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
 definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
   "Vmap \<equiv> map"
@@ -380,11 +382,8 @@ lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
 lemma swap_idemp[simp]: "id(x := x) = id" by auto
 lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
 
-lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> \<Union>(FFVars_typ ` snd ` set \<Gamma>) \<Longrightarrow> a \<in> dom \<Gamma>"
-proof (induction \<Gamma>)
-  case (Cons a \<Gamma>)
-  then show ?case by auto
-qed auto
+lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
+  by (induction \<Gamma>) auto
 
 lemma GG_fresh:
   "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow>
@@ -552,7 +551,7 @@ next
   then show ?case by (meson SA_All(1,3,5,6,7) Ty.SA_All well_scoped(1) wf_Cons)
 qed auto
 
-lemma wf_concat: "\<lbrakk> \<turnstile> \<Delta> ok ; \<turnstile> \<Gamma> ok ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,\<Delta> ok"
+lemma wf_concat: "\<lbrakk> \<turnstile> \<Delta> ok ; \<turnstile> \<Gamma> ok ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,\<Delta> ok"
 proof (induction \<Delta> rule: wf_Ty.induct)
   case (wf_Cons x \<Delta> T)
   then have 1: "(\<Gamma>, (\<Delta> , x <: T)) = ((\<Gamma>, \<Delta>), x <: T)" by simp
@@ -561,10 +560,10 @@ proof (induction \<Delta> rule: wf_Ty.induct)
     using wf_Cons by auto
 qed auto
 
-lemma weaken_closed: "\<lbrakk> S closed_in \<Gamma> ; dom \<Gamma> \<inter> dom \<Delta> = {} \<rbrakk> \<Longrightarrow> S closed_in \<Gamma>,\<Delta>"
+lemma weaken_closed: "\<lbrakk> S closed_in \<Gamma> ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> S closed_in \<Gamma>,\<Delta>"
   by auto
 
-lemma wf_concat_disjoint: "\<turnstile> \<Gamma>, \<Delta> ok \<Longrightarrow> dom \<Gamma> \<inter> dom \<Delta> = {}"
+lemma wf_concat_disjoint: "\<turnstile> \<Gamma>, \<Delta> ok \<Longrightarrow> \<Gamma> \<bottom> \<Delta>"
 proof (induction \<Delta>)
   case (Cons a \<Delta>)
   then show ?case

@@ -635,7 +635,7 @@ fun create_binder_datatype (spec : spec) lthy =
       else (lthy, NONE);
 
     val simp = @{attributes [simp]}
-    val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
+    val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
 
     val notes =
       ([("strong_induct", [strong_induct], []),

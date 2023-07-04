@@ -3552,7 +3552,7 @@ fun mrbnf_interpretation name f =
 val interpret_mrbnf = MRBNF_Plugin.data;
 
 fun register_mrbnf_raw key mrbnf =
-  Local_Theory.declaration {syntax = false, pervasive = true}
+  Local_Theory.declaration {syntax = false, pos = Position.none, pervasive = true}
     (fn phi => Data.map (Symtab.update (key, morph_mrbnf phi mrbnf)));
 
 fun register_mrbnf plugins key mrbnf =

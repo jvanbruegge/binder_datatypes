@@ -1019,4 +1019,7 @@ bnf "'a cinfmset"
     done
   done
 
+lifting_update cinfmset.lifting
+lifting_forget cinfmset.lifting
+
 end

@@ -96,9 +96,6 @@ lemma inj_embed: "inj embed"
 
 abbreviation "ifv \<equiv> FFVars_ilam"
 
-consts lam_ilam :: "'b :: var_ilam_pre lam \<Rightarrow> nat list \<Rightarrow> 'b :: var_ilam_pre ilam"  ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000)
-consts ilam_lam :: "'b :: var_ilam_pre ilam \<Rightarrow> 'b :: var_ilam_pre lam"  ("\<lparr>_\<rparr>" [999] 1000)
-
 lemma iso_partition_into_countable: "|UNIV :: 'a :: var_ilam_pre set| *c natLeq =o |UNIV :: 'a :: var_ilam_pre set|"
   by (rule cprod_infinite1'[OF _ Cinfinite_Cnotzero[OF natLeq_Cinfinite]])
     (simp_all add: var_ilam_pre_class.cinfinite var_sum_class.large)
@@ -159,21 +156,40 @@ definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_i
    | Inr (Inl (M, N)) \<Rightarrow> iApp (snd M (myCons 0 a)) (image_cinfmset (\<lambda>i. snd N (myCons (i + 1) a)) NATS_cinfmset)
    | Inr (Inr (x, M)) \<Rightarrow> iAbs \<lbrace>x\<rbrace> (snd M a))"
 
-ML_file \<open>Tools/mrbnf_recursor2.ML\<close>
+lemma get_cinfset_image_cinfset: "bij f \<Longrightarrow> f (get_cinfset A x) = get_cinfset (image_cinfset f A) x"
+  apply transfer
+  apply auto
+  sorry
 
-ML \<open>Multithreading.parallel_proofs := 0\<close>
+lemma map_CCTOR_lam_ilam:
+  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
+  ivvsubst f (CCTOR_lam_ilam y p) = CCTOR_lam_ilam
+    (map_lam_pre f f (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p))))
+       (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p)))) y) (id p)"
+  apply (auto simp: CCTOR_lam_ilam_def map_lam_pre_def Abs_lam_pre_inverse
+    cinfmset.map_comp o_def get_cinfset_image_cinfset[of f] split: sum.splits prod.splits)
+  sorry
+
+lemma set_CCTOR_lam_ilam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set3_lam_pre y \<union> set4_lam_pre y \<Longrightarrow> ifv (pu p) \<subseteq> fv t \<union> {} \<union> {}) \<Longrightarrow>
+   ifv (CCTOR_lam_ilam y p) \<subseteq> fv (lam_ctor (map_lam_pre id id fst fst y)) \<union> {} \<union> {}"
+  apply (auto simp: CCTOR_lam_ilam_def split: sum.splits prod.splits)
+  sorry
+
 
 local_setup \<open>fn lthy =>
 let
   fun rtac ctxt = resolve_tac ctxt o single
   val model_tacs = {
-    small_avoiding_sets = [fn ctxt => print_tac ctxt "small" THEN Skip_Proof.cheat_tac ctxt 1],
-    Umap_id0 = fn ctxt => print_tac ctxt "Umap_id" THEN Skip_Proof.cheat_tac ctxt 1,
-    Umap_comp0 = fn ctxt => print_tac ctxt "Umap_comp" THEN Skip_Proof.cheat_tac ctxt 1,
-    Umap_cong_id = fn ctxt => print_tac ctxt "Umap_cong_id" THEN Skip_Proof.cheat_tac ctxt 1,
-    UFVars_Umap = [fn ctxt => print_tac ctxt "UFVars_Umap" THEN Skip_Proof.cheat_tac ctxt 1],
-    Umap_Uctor = fn ctxt => print_tac ctxt "Umap_Uctor" THEN Skip_Proof.cheat_tac ctxt 1,
-    UFVars_subsets = [fn ctxt => print_tac ctxt "UFVars_subset" THEN Skip_Proof.cheat_tac ctxt 1]
+    small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
+    Umap_id0 = fn ctxt => rtac ctxt @{thm ilam.map_id0} 1,
+    Umap_comp0 = fn ctxt => (rtac ctxt @{thm ilam.map_comp0} THEN_ALL_NEW assume_tac ctxt) 1,
+    Umap_cong_id = fn ctxt => (rtac ctxt @{thm trans[OF ilam.map_cong[OF _ supp_id_bound refl] ilam.map_id, simplified]}
+       THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1,
+    UFVars_Umap = [fn ctxt => rtac ctxt @{thm ilam.set_map} 1 THEN assume_tac ctxt 1],
+    Umap_Uctor = fn ctxt => (rtac ctxt @{thm map_CCTOR_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1,
+    UFVars_subsets = [fn ctxt => (rtac ctxt @{thm set_CCTOR_lam_ilam}
+       THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1]
   } : (Proof.context -> tactic) MRBNF_Recursor.model_axioms;
 
   val params = {
@@ -181,11 +197,11 @@ let
     PFVarss = [@{term "\<lambda>_ :: 'a P_lam_ilam. {} :: 'a :: var_ilam_pre set"}],
     Pmap = @{term "\<lambda>(_ :: 'a \<Rightarrow> 'a). id :: 'a :: var_ilam_pre P_lam_ilam \<Rightarrow> 'a P_lam_ilam"},
     axioms = {
-      Pmap_id0 = fn ctxt => print_tac ctxt "Pmap_id" THEN Skip_Proof.cheat_tac ctxt 1,
-      Pmap_comp0 = fn ctxt => print_tac ctxt "Pmap_comp" THEN Skip_Proof.cheat_tac ctxt 1,
-      Pmap_cong_id = fn ctxt => print_tac ctxt "Pmap_cong_id" THEN Skip_Proof.cheat_tac ctxt 1,
-      PFVars_Pmaps = [fn ctxt => print_tac ctxt "PFVars_Pmaps" THEN Skip_Proof.cheat_tac ctxt 1],
-      small_PFVarss = [fn ctxt => print_tac ctxt "small_PFVars" THEN Skip_Proof.cheat_tac ctxt 1]
+      Pmap_id0 = fn ctxt => rtac ctxt refl 1,
+      Pmap_comp0 = fn ctxt => rtac ctxt sym 1 THEN rtac ctxt @{thm id_o} 1,
+      Pmap_cong_id = fn ctxt => rtac ctxt @{thm id_apply} 1,
+      PFVars_Pmaps = [fn ctxt => rtac ctxt sym 1 THEN rtac ctxt @{thm image_empty} 1],
+      small_PFVarss = [fn ctxt => rtac ctxt @{thm emp_bound} 1]
     },
     min_bound = false
   } : (Proof.context -> tactic) MRBNF_Recursor.parameter;
@@ -194,15 +210,15 @@ let
   val model = {
     U = @{typ "'a :: var_ilam_pre ilam"},
     fp_result = fp_res,
-    UFVars = [@{term "(\<lambda>u t. FFVars_ilam u) :: 'a ilam \<Rightarrow> 'a lam \<Rightarrow> 'a :: var_ilam_pre set"}],
-    Umap = @{term "(\<lambda>f u t. ivvsubst f u) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a ilam \<Rightarrow> 'a lam \<Rightarrow> 'a :: var_ilam_pre ilam"},
+    UFVars = [@{term "(\<lambda>t u. FFVars_ilam u) :: 'a lam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre set"}],
+    Umap = @{term "(\<lambda>f t u. ivvsubst f u) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a lam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre ilam"},
     Uctor = @{term CCTOR_lam_ilam},
     avoiding_sets = [ @{term "{} :: 'a::var_ilam_pre set"}],
     parameters = params,
     axioms = model_tacs
   } : (Proof.context -> tactic) MRBNF_Recursor.model;
   val _ = model;
-  val (res, lthy) = MRBNF_Recursor2.create_binding_recursor (Binding.suffix_name "_lam_ilam") model (Binding.name "lam_ilam") lthy;
+  val (res, lthy) = MRBNF_Recursor.create_binding_recursor (Binding.qualify false "lam_ilam") model (Binding.name "lam_ilam") lthy;
   val notes = [
     ("ctor", [#rec_Uctor res]),
     ("swap", [#rec_swap res]),
@@ -214,19 +230,51 @@ let
 in lthy end
 \<close>
 
-print_theorems
-find_theorems name: swap name: Mazza
+abbreviation lam_ilam ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where "lam_ilam t xs \<equiv> ff0_lam_ilam t (Abs_P_lam_ilam xs)"
 
 lemma lam_ilam_simps[simp]:
   "\<lbrakk>Var x\<rbrakk>a = iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode a))"
   "\<lbrakk>Abs x M\<rbrakk>a = iAbs \<lbrace>x\<rbrace> (\<lbrakk>M\<rbrakk>a)"
   "\<lbrakk>App M N\<rbrakk>a = iApp \<lbrakk>M\<rbrakk>(0#a) (image_cinfmset (\<lambda>i. \<lbrakk>N\<rbrakk>((i + 1) # a)) NATS_cinfmset)"
-  sorry
+  unfolding Var_def Abs_def App_def
+    apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set1_lam_pre_def set2_lam_pre_def map_lam_pre_def
+      Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
+      CCTOR_lam_ilam_def split: sum.splits)
+   apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set1_lam_pre_def set4_lam_pre_def map_lam_pre_def
+      Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
+      CCTOR_lam_ilam_def split: sum.splits)
+  apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set2_lam_pre_def set4_lam_pre_def map_lam_pre_def
+      Abs_lam_pre_inverse Abs_P_lam_ilam_inverse myCons.abs_eq
+      CCTOR_lam_ilam_def split: sum.splits)
+  done
+
+context includes cinfmset.lifting begin
+
+lemma in_image_cinfmset: "y \<in>#\<in> image_cinfmset f X \<longleftrightarrow> y \<in> f ` set_cinfmset X"
+  apply transfer
+  apply (auto simp: Let_def image_iff)
+   apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)+
+  done
+
+lemma NATS_cinfmset_UNIV: "i \<in>#\<in> NATS_cinfmset"
+  by transfer auto
+
+end
+
+thm lam_ilam.ifv
+
+lemma ifv_subset: "ifv (\<lbrakk>M\<rbrakk>a) \<subseteq> {x. \<exists>y b. y \<in> fv M \<and> rev a \<le> rev b \<and> x = get_cinfset \<lbrace>y\<rbrace> (list_encode b)}"
+  apply (induct M arbitrary: a)
+    apply (auto simp: in_image_cinfmset NATS_cinfmset_UNIV)
+    apply (smt (verit, ccfv_threshold) Prefix_Order.prefixI dual_order.trans in_mono mem_Collect_eq rev.simps(2))
+   apply (smt (verit, ccfv_threshold) Prefix_Order.prefixI dual_order.trans in_mono mem_Collect_eq rev.simps(2))
+  using get_cinfset_in by blast
 
 lemma ifv_lam_ilam_disjoint:
   fixes M N :: "'a :: var_ilam_pre lam"
   assumes "\<not>a \<le> a'" "\<not>a' \<le> a"
   shows "ifv (\<lbrakk>M\<rbrakk>a) \<inter> ifv (\<lbrakk>N\<rbrakk>a') = {}"
+  find_theorems ifv ff0_lam_ilam
   sorry
 
 inductive affine where
@@ -244,6 +292,8 @@ lemma
     (auto simp: cinfmset.set_map intro!: affine.intros
       elim: ifv_lam_ilam_disjoint[unfolded disjoint_iff, rule_format, THEN notE, of _ _ _ _ _ False, rotated 2])+
 
+
+consts ilam_lam :: "'b :: var_ilam_pre ilam \<Rightarrow> 'b :: var_ilam_pre lam"  ("\<lparr>_\<rparr>" [999] 1000)
 
 inductive uniform where
   "uniform (iVar x)"

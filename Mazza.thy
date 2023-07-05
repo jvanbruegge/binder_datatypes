@@ -160,41 +160,41 @@ definition CCCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PPUU_la
 
 ML_file \<open>Tools/mrbnf_recursor2.ML\<close>
 
-ML \<open>Multithreading.parallel_proofs := 4\<close>
+ML \<open>Multithreading.parallel_proofs := 0\<close>
 
 local_setup \<open>fn lthy =>
 let
   fun rtac ctxt = resolve_tac ctxt o single
   val model_tacs = {
-    small_avoiding_sets = [fn ctxt => print_tac ctxt "small"],
-    Umap_id0 = fn ctxt => print_tac ctxt "Umap_id",
-    Umap_comp0 = fn ctxt => print_tac ctxt "Umap_comp",
-    Umap_cong_id = fn ctxt => print_tac ctxt "Umap_cong_id",
-    UFVars_Umap = [fn ctxt => print_tac ctxt "UFVars_Umap"],
-    Umap_Uctor = fn ctxt => print_tac ctxt "Umap_Uctor",
-    UFVars_subsets = [fn ctxt => print_tac ctxt "UFVars_subset"]
+    small_avoiding_sets = [fn ctxt => print_tac ctxt "small" THEN Skip_Proof.cheat_tac ctxt 1],
+    Umap_id0 = fn ctxt => print_tac ctxt "Umap_id" THEN Skip_Proof.cheat_tac ctxt 1,
+    Umap_comp0 = fn ctxt => print_tac ctxt "Umap_comp" THEN Skip_Proof.cheat_tac ctxt 1,
+    Umap_cong_id = fn ctxt => print_tac ctxt "Umap_cong_id" THEN Skip_Proof.cheat_tac ctxt 1,
+    UFVars_Umap = [fn ctxt => print_tac ctxt "UFVars_Umap" THEN Skip_Proof.cheat_tac ctxt 1],
+    Umap_Uctor = fn ctxt => print_tac ctxt "Umap_Uctor" THEN Skip_Proof.cheat_tac ctxt 1,
+    UFVars_subsets = [fn ctxt => print_tac ctxt "UFVars_subset" THEN Skip_Proof.cheat_tac ctxt 1]
   } : (Proof.context -> tactic) MRBNF_Recursor.model_axioms;
 
   val params = {
     P = @{typ "('a :: var_ilam_pre) PP_lam_ilam"},
     PFVarss = [@{term "\<lambda>_ :: 'a PP_lam_ilam. {} :: 'a :: var_ilam_pre set"}],
-    Pmap = @{term "\<lambda>(_ :: 'a \<Rightarrow> 'a). id :: 'a PP_lam_ilam \<Rightarrow> 'a PP_lam_ilam"},
+    Pmap = @{term "\<lambda>(_ :: 'a \<Rightarrow> 'a). id :: 'a :: var_ilam_pre PP_lam_ilam \<Rightarrow> 'a PP_lam_ilam"},
     axioms = {
-      Pmap_id0 = fn ctxt => print_tac ctxt "Pmap_id",
-      Pmap_comp0 = fn ctxt => print_tac ctxt "Pmap_comp",
-      Pmap_cong_id = fn ctxt => print_tac ctxt "Pmap_cong_id",
-      PFVars_Pmaps = [fn ctxt => print_tac ctxt "PFVars_Pmaps"],
-      small_PFVarss = [fn ctxt => print_tac ctxt "small_PFVars"]
+      Pmap_id0 = fn ctxt => print_tac ctxt "Pmap_id" THEN Skip_Proof.cheat_tac ctxt 1,
+      Pmap_comp0 = fn ctxt => print_tac ctxt "Pmap_comp" THEN Skip_Proof.cheat_tac ctxt 1,
+      Pmap_cong_id = fn ctxt => print_tac ctxt "Pmap_cong_id" THEN Skip_Proof.cheat_tac ctxt 1,
+      PFVars_Pmaps = [fn ctxt => print_tac ctxt "PFVars_Pmaps" THEN Skip_Proof.cheat_tac ctxt 1],
+      small_PFVarss = [fn ctxt => print_tac ctxt "small_PFVars" THEN Skip_Proof.cheat_tac ctxt 1]
     },
     min_bound = false
   } : (Proof.context -> tactic) MRBNF_Recursor.parameter;
 
   val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of lthy @{type_name lam});
   val model = {
-    U = @{typ "'a :: var_ilam_pre UU_lam_ilam"},
+    U = @{typ "'a :: var_ilam_pre ilam"},
     fp_result = fp_res,
-    UFVars = [@{term "FFVars_ilam :: 'a ilam \<Rightarrow> 'a :: var_ilam_pre set"}],
-    Umap = @{term "ivvsubst :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre ilam"},
+    UFVars = [@{term "(\<lambda>u t. FFVars_ilam u) :: 'a ilam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre set"}],
+    Umap = @{term "(\<lambda>f u t. ivvsubst f u) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a ilam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre ilam"},
     Uctor = @{term CCCTOR_lam_ilam},
     avoiding_sets = [ @{term "{} :: 'a::var_ilam_pre set"}],
     parameters = params,

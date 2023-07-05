@@ -161,6 +161,11 @@ lemma get_cinfset_image_cinfset: "bij f \<Longrightarrow> f (get_cinfset A x) = 
   apply auto
   oops
 
+lemma image_cinfset_super: "bij f \<Longrightarrow> image_cinfset f \<lbrace>x\<rbrace> = \<lbrace>f x\<rbrace>"
+  apply transfer
+  apply (auto simp: image_iff)
+  oops
+
 lemma map_CCTOR_lam_ilam:
   "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
   ivvsubst f (CCTOR_lam_ilam y p) = CCTOR_lam_ilam
@@ -168,7 +173,16 @@ lemma map_CCTOR_lam_ilam:
        (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p)))) y) (id p)"
   apply (auto simp: CCTOR_lam_ilam_def map_lam_pre_def Abs_lam_pre_inverse
     cinfmset.map_comp o_def split: sum.splits prod.splits)
-  sorry
+  subgoal for x
+    apply (auto simp add: iVar_def ilam.TT_injects0 supp_id_bound ilam.rrename_id0s ilam_pre.map_id
+      Abs_ilam_pre_inject intro!: exI[of _ id])
+    sorry
+  subgoal for x t b
+    apply (auto simp add: ilam_vvsubst_rrename ilam.rrename_cctors map_ilam_pre_def
+      iAbs_def ilam.TT_injects0 supp_id_bound ilam.rrename_id0s ilam_pre.map_id
+      Abs_ilam_pre_inject Abs_ilam_pre_inverse cinfset.map_id intro!: exI[of _ "id"])
+    sorry
+  done
 
 lemma set_CCTOR_lam_ilam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set3_lam_pre y \<union> set4_lam_pre y \<Longrightarrow> ifv (pu p) \<subseteq> fv t \<union> {} \<union> {}) \<Longrightarrow>

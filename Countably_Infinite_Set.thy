@@ -1,6 +1,6 @@
 theory Countably_Infinite_Set
   imports
-    "thys/MRBNF_Recursor"
+    "thys/MRBNF_Composition"
     "HOL-Library.Countable_Set_Type"
 begin
 

@@ -143,18 +143,18 @@ lemma super_in: "set_cinfset \<lbrace>x\<rbrace> \<in> var_partition"
 lemma disjoint_super: "\<lbrace>x\<rbrace> \<noteq> \<lbrace>y\<rbrace> \<Longrightarrow> set_cinfset \<lbrace>x\<rbrace> \<inter> set_cinfset \<lbrace>y\<rbrace> = {}"
   by (metis Int_emptyI ex1_var_partition set_cinfset_inject super_in)
 
-typedef 'a PP_lam_ilam = "UNIV :: nat list set" by blast
-setup_lifting type_definition_PP_lam_ilam
-lift_definition myCons :: "nat \<Rightarrow> 'a PP_lam_ilam \<Rightarrow> 'a PP_lam_ilam" is Cons .
-type_synonym 'a UU_lam_ilam = "'a ilam"
-type_synonym 'a PPUU_lam_ilam = "'a PP_lam_ilam \<Rightarrow> 'a UU_lam_ilam"
+typedef 'a P_lam_ilam = "UNIV :: nat list set" by blast
+setup_lifting type_definition_P_lam_ilam
+lift_definition myCons :: "nat \<Rightarrow> 'a P_lam_ilam \<Rightarrow> 'a P_lam_ilam" is Cons .
+type_synonym 'a U_lam_ilam = "'a ilam"
+type_synonym 'a PU_lam_ilam = "'a P_lam_ilam \<Rightarrow> 'a U_lam_ilam"
 
 subclass (in var_ilam_pre) var_lam_pre
   by standard
 
-definition CCCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PPUU_lam_ilam, 'a lam \<times> 'a PPUU_lam_ilam) lam_pre \<Rightarrow> 'a PPUU_lam_ilam" where
-  "CCCTOR_lam_ilam lp = (\<lambda>a. case Rep_lam_pre lp of
-     Inl x \<Rightarrow> iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode (Rep_PP_lam_ilam a)))
+definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_ilam, 'a lam \<times> 'a PU_lam_ilam) lam_pre \<Rightarrow> 'a PU_lam_ilam" where
+  "CCTOR_lam_ilam lp = (\<lambda>a. case Rep_lam_pre lp of
+     Inl x \<Rightarrow> iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode (Rep_P_lam_ilam a)))
    | Inr (Inl (M, N)) \<Rightarrow> iApp (snd M (myCons 0 a)) (image_cinfmset (\<lambda>i. snd N (myCons (i + 1) a)) NATS_cinfmset)
    | Inr (Inr (x, M)) \<Rightarrow> iAbs \<lbrace>x\<rbrace> (snd M a))"
 
@@ -176,9 +176,9 @@ let
   } : (Proof.context -> tactic) MRBNF_Recursor.model_axioms;
 
   val params = {
-    P = @{typ "('a :: var_ilam_pre) PP_lam_ilam"},
-    PFVarss = [@{term "\<lambda>_ :: 'a PP_lam_ilam. {} :: 'a :: var_ilam_pre set"}],
-    Pmap = @{term "\<lambda>(_ :: 'a \<Rightarrow> 'a). id :: 'a :: var_ilam_pre PP_lam_ilam \<Rightarrow> 'a PP_lam_ilam"},
+    P = @{typ "('a :: var_ilam_pre) P_lam_ilam"},
+    PFVarss = [@{term "\<lambda>_ :: 'a P_lam_ilam. {} :: 'a :: var_ilam_pre set"}],
+    Pmap = @{term "\<lambda>(_ :: 'a \<Rightarrow> 'a). id :: 'a :: var_ilam_pre P_lam_ilam \<Rightarrow> 'a P_lam_ilam"},
     axioms = {
       Pmap_id0 = fn ctxt => print_tac ctxt "Pmap_id" THEN Skip_Proof.cheat_tac ctxt 1,
       Pmap_comp0 = fn ctxt => print_tac ctxt "Pmap_comp" THEN Skip_Proof.cheat_tac ctxt 1,
@@ -193,9 +193,9 @@ let
   val model = {
     U = @{typ "'a :: var_ilam_pre ilam"},
     fp_result = fp_res,
-    UFVars = [@{term "(\<lambda>u t. FFVars_ilam u) :: 'a ilam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre set"}],
-    Umap = @{term "(\<lambda>f u t. ivvsubst f u) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a ilam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre ilam"},
-    Uctor = @{term CCCTOR_lam_ilam},
+    UFVars = [@{term "(\<lambda>u t. FFVars_ilam u) :: 'a ilam \<Rightarrow> 'a lam \<Rightarrow> 'a :: var_ilam_pre set"}],
+    Umap = @{term "(\<lambda>f u t. ivvsubst f u) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a ilam \<Rightarrow> 'a lam \<Rightarrow> 'a :: var_ilam_pre ilam"},
+    Uctor = @{term CCTOR_lam_ilam},
     avoiding_sets = [ @{term "{} :: 'a::var_ilam_pre set"}],
     parameters = params,
     axioms = model_tacs

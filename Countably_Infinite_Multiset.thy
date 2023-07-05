@@ -991,14 +991,9 @@ bnf "'a cinfmset"
     apply (metis (mono_tags, lifting) mem_Collect_eq vimage_inter_cong)
     done
   subgoal by (simp add: cinfmset_set_map fun_eq_iff)
-  sorry
-(*
-  subgoal
-    using cinfset.bd_card_order by blast
-  subgoal
-    using cinfset.bd_cinfinite by blast
-  subgoal
-    using cinfset.bd_regularCard by blast
+  subgoal by (simp add: Prelim.card_order_card_suc natLeq_card_order)
+  subgoal by (simp add: infinite_regular_card_order.cinfinite infinite_regular_card_order_card_suc natLeq_Cinfinite natLeq_card_order)
+  subgoal by (simp add: natLeq_Card_order natLeq_card_order natLeq_cinfinite regular_card_suc)
   subgoal
     apply (rule card_suc_greater_set[OF natLeq_card_order])
     apply transfer
@@ -1023,6 +1018,5 @@ bnf "'a cinfmset"
       done
     done
   done
-*)
 
 end

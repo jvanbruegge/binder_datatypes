@@ -84,7 +84,7 @@ Close2: "trans P1 (Bout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Lon
 Bang: "trans (Par P (Bang P)) C \<Longrightarrow> trans (Bang P) C"
 *)
 
-(* 
+
 lemma 
 assumes "trans P (Cmt act P')"
 shows "FFVars P \<inter> set (bvars act) = {}" 
@@ -93,9 +93,10 @@ proof-
   show ?thesis using assms unfolding C_def[symmetric] using C_def
   apply(induct arbitrary: act P' rule: trans.induct) 
     subgoal for x a u P act P' apply(cases act) by (auto elim: trans.cases)
-    subgoal for P a x P' act P'a apply(cases act) apply (auto elim: trans.cases)
-    subgoal 
-*) 
+    subgoal for P a x P' act P'a apply(cases act) apply auto
+     apply (erule trans.cases) apply auto
+    (* abandoned *)
+    oops
 
 
 (* INSTANTIATING THE Components LOCALE: *)
@@ -281,34 +282,6 @@ proof-
 qed
 
 
-
-
-
-fun permOfAct where 
-"permOfAct xx (bout a x) = id(x:=xx)"
-|
-"permOfAct xx _ = id"
-
-lemma bvars_act_bout: "bvars act = [] \<or> (\<exists>a b. act = bout a b)"
-by(cases act, auto)
-
-
-
-lemma FFVars_swap[simp]: "{x::var,y} \<inter> FFVars P = {} \<Longrightarrow> swap P x y = P"
-apply(rule term.rrename_cong_ids) by auto
-
-(* lemma "bij ((id(x := xx, xx := x)) (y := yy, yy := y))"
-unfolding bij_def inj_def apply auto
-
-lemma "ssbij (id(x := xx, xx := x, y := yy, yy := y))"
-unfolding ssbij_def bij_def inj_def apply auto sledgehammser
-*)
-lemma rrename_o_swap[simp]: 
-"rrename (id(y::var := yy, yy := y) o id(x := xx, xx := x)) P = 
- swap (swap P x xx) y yy"
-apply(subst term.rrename_comps[symmetric])
-by auto
-
 (* NB: The entities affected by variables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
 as they are. 
@@ -406,18 +379,20 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ "a"]) 
     apply(rule exI[of _ "xx"])
     apply(rule exI[of _ "swap (swap P' x xx) y yy"]) 
-    apply(cases t) apply simp apply(intro conjI)
+    apply(cases t) apply (simp add: sw_def) apply(intro conjI)
       subgoal using Res_refresh by auto
       apply(erule allE[of _ "id(x:=xx,xx:=x) o id(y:=yy,yy:=y)"])
       apply(erule allE[of _ "P"])
       apply(erule allE[of _ "Bout a x P'"])      
-      apply (auto simp: ssbij_def sw_def split: if_splits) 
+      apply (auto simp: ssbij_def rrename_o_swap split: if_splits) 
         subgoal using infinite_var not_ordLeq_ordLess supp_comp_bound by blast
         subgoal by (metis (no_types, lifting) Res_inject_swap Res_refresh) 
+        subgoal using not_ordLess_ordLeq term_pre.supp_comp_bound by blast
+        subgoal using Res_refresh by blast
+        subgoal by (metis Res_inject_swap Res_refresh)
         subgoal apply(subgoal_tac "swap (swap P y yy) x xx = swap P y yy")
-        defer subgoal apply(rule FFVars_swap) by (auto simp: sw_def)
-        apply(subst swap_commute) apply(auto simp: sw_def)
-        sledgehammer sorry . . . .
+        defer subgoal apply(rule FFVars_swap') by (auto simp: sw_def)
+        apply(subst swap_commute) by auto . . . .
   (* *)
   subgoal for P1 act P1' P2
   using bvars_act_bout[of act] apply(elim disjE exE)

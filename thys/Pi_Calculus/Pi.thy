@@ -140,8 +140,13 @@ proposition rrename_simps[simp]:
   done
 
 lemma rrename_cong: 
-"bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> (\<And>z. z \<in> FFVars w \<Longrightarrow> f z = g z) \<Longrightarrow> rrename f w = rrename g w"
-sorry
+assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"  
+"(\<And>z. (z::var) \<in> FFVars P \<Longrightarrow> f z = g z)"
+shows "rrename f P = rrename g P"
+(* A to J: why term.rrename_cong_ids 
+and not the above more general thoerem? *)
+using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: term.strong_induct)
+using assms apply auto by (metis not_in_supp_alt)+
 
 (* Properties of the constructors *)
 
@@ -289,82 +294,11 @@ lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV
 by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
 
 
-
-(* Compositionality properties of renaming and term-for-variable substitution *)
-
-(*
-lemma tvsubst_comp: 
-assumes s[simp]: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "tvsubst (\<sigma>::var\<Rightarrow>trm) (tvsubst \<tau> e) = tvsubst (tvsubst \<sigma> \<circ> \<tau>) e"
-proof-
-  note SSupp_tvsubst_bound'[OF s, simp]
-  show ?thesis
-  apply(induct e rule: term.fresh_induct[where A = "IImsupp \<sigma> \<union> IImsupp \<tau>"])
-    subgoal using Un_bound[OF s]  
-      using var_ID_class.Un_bound SSupp_IImsupp_bound s(1) s(2) by blast
-    subgoal by simp
-    subgoal by simp
-    subgoal for x t apply(subgoal_tac "x \<notin> IImsupp (\<lambda>a. tvsubst \<sigma> (\<tau> a))") 
-      subgoal by simp
-      subgoal using IImsupp_tvsubst_su'[OF s(1)] by blast . . 
-qed
-
-lemma rrename_tvsubst_comp: 
-assumes b[simp]: "bij (\<sigma>::var\<Rightarrow>var)" and s[simp]: "|supp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "rrename_term \<sigma> (tvsubst \<tau> e) = tvsubst (rrename_term \<sigma> \<circ> \<tau>) e"
-proof-
-  note SSupp_rrename_bound'[OF b s, simp]
-  show ?thesis
-  apply(induct e rule: term.fresh_induct[where A = "IImsupp \<tau> \<union> imsupp \<sigma>"])
-    subgoal using s(1) s(2) Un_bound SSupp_IImsupp_bound imsupp_supp_bound infinite_var by blast
-    subgoal by simp 
-    subgoal by simp
-    subgoal for x t apply simp apply(subgoal_tac "x \<notin> IImsupp (\<lambda>a. rrename_term  \<sigma> (\<tau> a))") 
-      subgoal unfolding imsupp_def supp_def by simp
-      subgoal using IImsupp_rrename_su' b s(1) by blast . .
-qed
-
-(* Equivariance of unary substitution: *)
-
-lemma tvsubst_rrename_comp[simp]: 
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "tvsubst (rrename_term \<sigma> \<circ> Var(x := e2)) e1 = tvsubst (Var(\<sigma> x := rrename_term \<sigma> e2)) (rrename_term \<sigma> e1)"
-proof-
-  note SSupp_rrename_update_bound[OF assms, unfolded comp_def, simplified, simp]
-  note SSupp_update_rrename_bound[unfolded fun_upd_def, simplified, simp] 
-  show ?thesis
-  apply(induct e1 rule: term.fresh_induct[where A = "{x} \<union> FFVars_term e2 \<union> imsupp \<sigma>"])
-    subgoal by (meson Un_bound imsupp_supp_bound infinite_var s(2) singl_bound term.set_bd_UNIV) 
-    subgoal by auto 
-    subgoal by simp
-    subgoal for y t apply simp apply(subgoal_tac 
-      "y \<notin> IImsupp ((\<lambda>a. rrename_term \<sigma> (if a = x then e2 else Var a))) \<and> 
-      \<sigma> y \<notin> IImsupp (\<lambda>a. if a = \<sigma> x then rrename_term \<sigma> e2 else Var a)") 
-      subgoal unfolding imsupp_def supp_def by simp
-      subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
-qed
-
-(* Unary substitution versus swapping: *)
-lemma tvsubst_Var_rrename_term: 
-assumes xx: "xx \<notin> FFVars_term e1 - {x}"
-shows "tvsubst (Var((x::var) := e2)) e1 = tvsubst (Var(xx := e2)) (rrename_term (id(x := xx, xx := x)) e1)"
-proof-
-  show ?thesis using xx
-  apply(induct e1 rule: term.fresh_induct[where A = "{x,xx} \<union> FFVars_term e2"])
-    subgoal by (metis insert_is_Un term.set(1) term.set(2) term.set_bd_UNIV)
-    subgoal by simp
-    subgoal by auto
-    subgoal for y t apply simp apply(subgoal_tac 
-      "y \<notin> IImsupp (Var(x := e2)) \<and> y \<notin> IImsupp (Var(xx := e2))") 
-      subgoal unfolding imsupp_def supp_def by auto
-      subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
-qed
-*)
-
 (* Swapping and unary substitution, as abbreviations: *)
 abbreviation "swap P (x::var) y \<equiv> rrename (id(x:=y,y:=x)) P"
 abbreviation "usub P (y::var) x \<equiv> vvsubst (id(x:=y)) P"
 
+(* *)
 
 lemma usub_swap_disj: 
 assumes "{u,v} \<inter> {x,y} = {}"
@@ -380,6 +314,14 @@ proof-
     using term_pre.supp_comp_bound by auto 
 qed
 
+lemma rrename_o_swap: 
+"rrename (id(y::var := yy, yy := y) o id(x := xx, xx := x)) P = 
+ swap (swap P x xx) y yy"
+apply(subst term.rrename_comps[symmetric])
+by auto
+
+(* *)
+
 lemma swap_simps[simp]: "swap Zero (y::var) x = Zero"
 "swap (Sum P Q) (y::var) x = Sum (swap P y x) (swap Q y x)"
 "swap (Par P Q) (y::var) x = Par (swap P y x) (swap Q y x)"
@@ -393,6 +335,9 @@ by (auto simp: sw_def)
 lemma FFVars_swap[simp]: "FFVars (swap P y x) = 
  (\<lambda>u. sw u x y) ` (FFVars P)"
 apply(subst term.FFVars_rrenames) by (auto simp: sw_def)
+
+lemma FFVars_swap'[simp]: "{x::var,y} \<inter> FFVars P = {} \<Longrightarrow> swap P x y = P"
+apply(rule term.rrename_cong_ids) by auto
 
 (* *)
 

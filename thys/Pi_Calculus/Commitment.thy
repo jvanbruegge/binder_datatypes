@@ -119,15 +119,11 @@ apply(rule commit_pre_map_cong_id) unfolding toUnfold by auto
 
 lemma map_commit_pre_Inr_Inr_Inl_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> 
  map_commit_pre id f (rrename_commit_internal f) id
-          (Abs_commit_pre (Inr (Inr (Inl (x, y, commit_internal_ctor (Abs_commit_internal_pre P)))))) = 
+          (Abs_commit_pre (Inr (Inr (Inl (x::var, y::var, commit_internal_ctor (Abs_commit_internal_pre P)))))) = 
  Abs_commit_pre (Inr (Inr (Inl (x, f y, commit_internal_ctor (Abs_commit_internal_pre (rrename f P))))))"
 unfolding map_commit_pre_def toUnfold apply auto 
-unfolding commit_internal.rrename_cctors(1)
-apply(subst commit_internal.rrename_cctors(1)) apply auto
-  subgoal sorry (* AtoJ: what UNIV is this? *)
-  subgoal unfolding map_commit_internal_pre_def apply (auto simp: toUnfold) 
-    by (simp add: \<open>\<lbrakk>bij f; |supp f| <o |UNIV|\<rbrakk> \<Longrightarrow> |supp f| <o |UNIV|\<close>) .
-
+unfolding commit_internal.rrename_cctors(1)  
+unfolding map_commit_internal_pre_def by (simp add: toUnfold(27))
 
 lemma map_commit_pre_Inr_Inr_Inr_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> 
  map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (rrename_commit_internal f) id (Abs_commit_pre (Inr (Inr (Inr P)))) = 
@@ -294,6 +290,9 @@ lemma rrename_commit_Cmt[simp]:
 "bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>  
  rrename_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
 by (cases act, auto)
+
+lemma bvars_act_bout: "bvars act = [] \<or> (\<exists>a b. act = bout a b)"
+by(cases act, auto)
 
 
 

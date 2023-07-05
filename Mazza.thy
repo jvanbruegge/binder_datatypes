@@ -158,7 +158,7 @@ definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_i
 
 lemma get_cinfset_image_cinfset: "bij f \<Longrightarrow> f (get_cinfset A x) = get_cinfset (image_cinfset f A) x"
   apply transfer
-  apply auto
+  apply (auto dest: inj_on_subset[OF bij_is_inj subset_UNIV])
   oops
 
 lemma image_cinfset_super: "bij f \<Longrightarrow> image_cinfset f \<lbrace>x\<rbrace> = \<lbrace>f x\<rbrace>"

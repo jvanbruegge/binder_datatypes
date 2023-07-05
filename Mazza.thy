@@ -159,7 +159,7 @@ definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_i
 lemma get_cinfset_image_cinfset: "bij f \<Longrightarrow> f (get_cinfset A x) = get_cinfset (image_cinfset f A) x"
   apply transfer
   apply auto
-  sorry
+  oops
 
 lemma map_CCTOR_lam_ilam:
   "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
@@ -167,7 +167,7 @@ lemma map_CCTOR_lam_ilam:
     (map_lam_pre f f (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p))))
        (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p)))) y) (id p)"
   apply (auto simp: CCTOR_lam_ilam_def map_lam_pre_def Abs_lam_pre_inverse
-    cinfmset.map_comp o_def get_cinfset_image_cinfset[of f] split: sum.splits prod.splits)
+    cinfmset.map_comp o_def split: sum.splits prod.splits)
   sorry
 
 lemma set_CCTOR_lam_ilam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longrightarrow>
@@ -272,10 +272,20 @@ lemma ifv_subset: "ifv (\<lbrakk>M\<rbrakk>a) \<subseteq> {x. \<exists>y b. y \<
 
 lemma ifv_lam_ilam_disjoint:
   fixes M N :: "'a :: var_ilam_pre lam"
-  assumes "\<not>a \<le> a'" "\<not>a' \<le> a"
+  assumes "\<not>rev a \<le> rev a'" "\<not>rev a' \<le> rev a"
   shows "ifv (\<lbrakk>M\<rbrakk>a) \<inter> ifv (\<lbrakk>N\<rbrakk>a') = {}"
-  find_theorems ifv ff0_lam_ilam
-  sorry
+  apply (auto dest!: set_mp[OF ifv_subset])
+  subgoal for x y b b'
+    apply (subgoal_tac "\<lbrace>x\<rbrace> = \<lbrace>y\<rbrace>")
+    subgoal
+      apply simp
+      apply (drule injD[OF inj_get_cinfset])
+      apply (drule injD[OF inj_list_encode])
+      apply (smt (verit, ccfv_SIG) Prefix_Order.prefixE Prefix_Order.prefixI append_eq_append_conv2 assms(1) assms(2))
+      done
+    apply (metis IntI disjoint_super emptyE get_cinfset_in)
+    done
+  done
 
 inductive affine where
   "affine (iVar x)"

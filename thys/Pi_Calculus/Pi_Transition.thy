@@ -10,7 +10,7 @@ begin
 
 hide_const trans
 
-definition "sw a x y \<equiv> if a = x then y else if a = y then x else a"
+
 
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -22,25 +22,7 @@ interpretation Small where dummy = "undefined :: var"
 apply standard
 by (simp_all add: infinite_var regularCard_var)
 
-datatype (vars:'a) action = finp 'a 'a | fout 'a 'a | bout 'a 'a | tau 
 
-type_synonym act = "var action"
-
-fun Cmt :: "act \<Rightarrow> trm \<Rightarrow> cmt" where 
- "Cmt (finp x y) P = Finp x y P"
-|"Cmt (fout x y) P = Fout x y P"
-|"Cmt (bout x y) P = Bout x y P"
-|"Cmt tau P = Tau P"
-
-fun bvars :: "act \<Rightarrow> var list" where 
- "bvars (bout x y) = [y]"
-|"bvars _ = []" 
-
-fun fvars :: "act \<Rightarrow> var set" where 
- "fvars (bout x y) = {x}"
-|"fvars act = vars act"
-
-abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
 
 
 (* The "late" transition relation  *)
@@ -71,7 +53,7 @@ ScopeB: "trans P (Bout a x P') \<Longrightarrow> y \<notin> {a,x} \<Longrightarr
 Par1: "trans P1 (Cmt act P1') \<Longrightarrow> 
    \<^cancel>\<open>present in Bengtson but not needed (and will be an 'output' 
       of strong induction) : set (bvars act) \<inter> fvars act = {} \<Longrightarrow> \<close>  
-   set (bvars act) \<inter> FFVars P1 = {} \<Longrightarrow>  \<^cancel>\<open>can be eliminated \<close> 
+   set (bvars act) \<inter> FFVars P1 = {} \<Longrightarrow> 
    set (bvars act) \<inter> FFVars P2 = {} \<Longrightarrow> 
    trans (Par P1 P2) (Cmt act (Par P1' P2))" 
 (* |
@@ -84,10 +66,16 @@ Com1: "trans P1 (Finp a x P1') \<Longrightarrow> trans P2 (Fout a x P2') \<Longr
 Com2: "trans P1 (Fout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Longrightarrow> 
    trans (Par P1 P2) (Tau (Par P1' P2'))"  *)
 |
-Close1: "trans P1 (Finp a x P1') \<Longrightarrow> trans P2 (Bout a x P2') \<Longrightarrow> 
-    \<^cancel>\<open> x \<noteq> a seems essential, and not an artifact \<close> 
-   x \<notin> {a} \<union> FFVars P1 \<union> FFVars P2 \<Longrightarrow>
+Close1: "trans P1 (Finp a x P1') \<Longrightarrow> trans P2 (Bout a x  P2') \<Longrightarrow>
+    \<^cancel>\<open>  x \<noteq> a seems essential, and not an artifact \<close> 
+   x \<notin> {a} \<union> FFVars P1 \<^cancel>\<open>\<union> FFVars P2 was in Bengtson\<close>  \<Longrightarrow>
    trans (Par P1 P2) (Bout a x (Par P1' P2'))" 
+(*  
+x fresh P1  x=/=a
+trans (P1=[xx/x]) (Finp a[xx/x[xx/x])] xx P1' \<Longrightarrow> trans P2 (Bout a xx  P2'[xx/x]) 
+\<Longrightarrow>
+trans (Par P1 P2) (Bout a xx (Par P1'[xx/x] P2'[xx/x])) 
+*)
 (* |
 Close2: "trans P1 (Bout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Longrightarrow> 
    x \<notin> {a} \<union> FFVars P1 \<union> FFVars P2 \<Longrightarrow>
@@ -96,6 +84,18 @@ Close2: "trans P1 (Bout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Lon
 Bang: "trans (Par P (Bang P)) C \<Longrightarrow> trans (Bang P) C"
 *)
 
+(* 
+lemma 
+assumes "trans P (Cmt act P')"
+shows "FFVars P \<inter> set (bvars act) = {}" 
+proof- 
+  define C where "C = Cmt act P'"
+  show ?thesis using assms unfolding C_def[symmetric] using C_def
+  apply(induct arbitrary: act P' rule: trans.induct) 
+    subgoal for x a u P act P' apply(cases act) by (auto elim: trans.cases)
+    subgoal for P a x P' act P'a apply(cases act) apply (auto elim: trans.cases)
+    subgoal 
+*) 
 
 
 (* INSTANTIATING THE Components LOCALE: *)
@@ -155,7 +155,7 @@ where
  \<or>  \<^cancel>\<open>Par1: \<close> 
  (\<exists>P1 act P1' P2. 
     v = bvars act \<and> fst t = Par P1 P2 \<and> snd t = Cmt act (Par P1' P2) \<and> 
-    set (bvars act) \<inter> FFVars P1 = {} \<and> \<^cancel>\<open>can be eliminated \<close>
+    set (bvars act) \<inter> FFVars P1 = {} \<and> 
     set (bvars act) \<inter> FFVars P2 = {} \<and> 
     R (P1, Cmt act P1'))
  \<or> \<^cancel>\<open>Com1: \<close> 
@@ -165,7 +165,7 @@ where
  \<or> \<^cancel>\<open>Close1: \<close> 
  (\<exists>P1 a x P1' P2 P2'. 
     v = [x] \<and> fst t = Par P1 P2 \<and> snd t = Bout a x (Par P1' P2') \<and> 
-    x \<notin> {a} \<union> FFVars P1 \<union> FFVars P2 \<and> 
+    x \<notin> {a} \<union> FFVars P1 \<and> 
     R (P1, Finp a x P1') \<and> R (P2, Bout a x P2'))
 "
 
@@ -175,41 +175,8 @@ where
 lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 unfolding G_def by (smt (z3) le_boolE le_funD)
 
-thm term.rrename_comps
 
-find_theorems rrename_commit Finp
-
-
-lemma rrename_commit_Finp[simp]: "bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
-  rrename_commit \<sigma> (Finp a u P) = Finp (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-sorry
-
-lemma rrename_commit_Fout[simp]: "bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
-  rrename_commit \<sigma> (Fout a u P) = Fout (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-sorry
-
-lemma rrename_commit_Bout[simp]: "bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
-  rrename_commit \<sigma> (Bout a u P) = Bout (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-sorry
-
-lemma rrename_commit_Tau[simp]: "bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
-  rrename_commit \<sigma> (Tau P) = Tau (rrename \<sigma> P)"
-sorry
-
-
-lemma rrename_usub[simp]: "bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>  
- rrename \<sigma> (usub P u x) = usub (rrename \<sigma> P) (\<sigma> u) (\<sigma> x)"
-sorry
-
-lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = map \<sigma> (bvars act)"
-by (cases act, auto)
-
-lemma rrename_commit_Cmt[simp]: 
-"bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>  
- rrename_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
-by (cases act, auto)
-
-lemmas action.set_map[simp]
+(* *)
 
 (* lemma FFVars_commit_Cmt[simp]: "FFVars_commit (Cmt act P) = FFVars P" *)
  
@@ -289,36 +256,14 @@ unfolding G_def apply(elim disjE)
 
 (* *)
 
-lemma Inp_refresh: 
-"xx \<notin> FFVars P \<or> xx = x \<Longrightarrow> Inp a x P = Inp a xx (swap P x xx)"
-sorry
 
-lemma Res_refresh: 
-"xx \<notin> FFVars P \<or> xx = x \<Longrightarrow> Res x P = Res xx (swap P x xx)"
-sorry
-
-
-lemma swap_usub: 
-"swap (usub P u x) z1 z2 = usub (swap P z1 z2) (sw u z1 z2) (sw x z1 z2)"
-sorry
-
-lemma usub_refresh: 
-"xx \<notin> FFVars P \<or> xx = x \<Longrightarrow> usub P u x = usub (swap P x xx) u xx"
-sorry
 
 (*  *)
 
 find_theorems FFVars vvsubst
 
-lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
-using finite_iff_le_card_var by blast
 
-lemma finite_FFVars: "finite (FFVars P)"
-unfolding ls_UNIV_iff_finite[symmetric] 
-by (simp add: term.set_bd_UNIV)
-
-lemma finite_FFVars_commit: "finite (FFVars_commit C)"
-using commit_internal.card_of_FFVars_bounds(2) finite_iff_le_card_var by blast
+(* Supply of fresh variables: *)
 
 lemma finite_Tfvars: "finite (Tfvars t)"
 using finite_iff_le_card_var small_Tfvars small_def by blast
@@ -331,45 +276,13 @@ proof-
   using finite_Tfvars by blast
   then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts))"
   by (meson ex_new_if_finite finite_iff_le_card_var 
-    infinite_iff_natLeq_ordLeq term_prevar_term_prevar_term_prevar_sumDEADIDterm_prevar_prodIDterm_prevar_sumterm_prevar_prodIDterm_prevar_term_prevar_sumterm_prevar_term_prevar_prodIDterm_prevar_sumterm_prevar_term_prevar_prodID_class.large)
+    infinite_iff_natLeq_ordLeq var_term_pre_class.large)
   thus ?thesis by auto
 qed
 
-(*
-definition getFresh :: "var list \<Rightarrow> trm list \<Rightarrow> var" where 
-"getFresh xs ts \<equiv> SOME z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> FFVars t)" 
-
-lemma getFresh: 
-"getFresh xs ts \<notin> set xs \<and> 
- (\<forall>t \<in> set ts. getFresh xs ts \<notin> FFVars t)"
-using exists_fresh unfolding getFresh_def 
-by (rule someI_ex)
-*)
 
 
 
-
-  
-(*
-lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
-using Abs_avoid small_Tfvars small_def by blast 
-
-lemma fresh2: "\<exists>xx1 xx2. xx1 \<noteq> xx2 \<and> {xx1,xx2} \<inter> Tfvars t = {}"  
-using fresh[of t] apply safe subgoal for xx apply(rule exI[of _ xx])
-apply auto
-using Abs_avoid small_Tfvars small_def
-by (metis FFVars_commit_simps(1) UnCI commit_internal.card_of_FFVars_bounds(2) 
-finite_Un finite_iff_le_card_var insert_iff) .
-
-resh2': "\<exists>xx. xx \<notin> Tfvars t \<and> xx \<notin> {}"  
-using Abs_avoid small_Tfvars small_def by blast
-
-lemma fresh_n: "\<exists>xxs. length xxs = n \<and> set xxs \<inter> Tfvars t = {}"
-sorry
-*)
-
-lemma id_upd_same[simp]: "id(y := y) = id"
-  by auto
 
 fun permOfAct where 
 "permOfAct xx (bout a x) = id(x:=xx)"
@@ -395,20 +308,6 @@ lemma rrename_o_swap[simp]:
  swap (swap P x xx) y yy"
 apply(subst term.rrename_comps[symmetric])
 by auto
-
-lemma swap_commute: 
-"{y,yy} \<inter> {x,xx} = {} \<Longrightarrow> 
- swap (swap P y yy) x xx = swap (swap P x xx) y yy"
-apply(subst term.rrename_comps) apply auto
-apply (auto simp add: MRBNF_Recursor.supp_swap_bound 
-cinfinite_imp_infinite term.UNIV_cinfinite)
-apply(subst term.rrename_comps) apply (auto simp add: MRBNF_Recursor.supp_swap_bound 
-cinfinite_imp_infinite term.UNIV_cinfinite)
-apply(rule rrename_cong) 
-apply auto  
-by (meson finite.emptyI finite_iff_le_card_var finite_insert finite_subset finite_supp_comp supp_swap_le)
-
-
 
 (* NB: The entities affected by variables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
@@ -478,8 +377,6 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     subgoal for a b
     using exists_fresh[of "[a,b]" "[t]"] apply(elim exE conjE)
     subgoal for yy
-    (* using exists_fresh[of "[yy,a,b]" "[t]"] apply(elim exE conjE)
-    subgoal for xb *)
     apply(rule exI[of _ "[yy]"])  
     apply(rule conjI)
       subgoal unfolding ssbij_def small_def Vmap_def by auto 
@@ -510,19 +407,17 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ "xx"])
     apply(rule exI[of _ "swap (swap P' x xx) y yy"]) 
     apply(cases t) apply simp apply(intro conjI)
-      subgoal by auto  
+      subgoal using Res_refresh by auto
       apply(erule allE[of _ "id(x:=xx,xx:=x) o id(y:=yy,yy:=y)"])
       apply(erule allE[of _ "P"])
       apply(erule allE[of _ "Bout a x P'"])      
-      apply (auto simp: ssbij_def split: if_splits) 
-        subgoal using Res_refresh by blast 
-        subgoal using Res_refresh by (metis Bout_inj)
+      apply (auto simp: ssbij_def sw_def split: if_splits) 
         subgoal using infinite_var not_ordLeq_ordLess supp_comp_bound by blast
-        subgoal using Res_refresh by blast
-        subgoal using Res_refresh by (metis Bout_inj)
+        subgoal by (metis (no_types, lifting) Res_inject_swap Res_refresh) 
         subgoal apply(subgoal_tac "swap (swap P y yy) x xx = swap P y yy")
-        defer subgoal apply(rule FFVars_swap) by auto
-        apply simp apply(subst swap_commute) by auto . . . .
+        defer subgoal apply(rule FFVars_swap) by (auto simp: sw_def)
+        apply(subst swap_commute) apply(auto simp: sw_def)
+        sledgehammer sorry . . . .
   (* *)
   subgoal for P1 act P1' P2
   using bvars_act_bout[of act] apply(elim disjE exE)
@@ -612,7 +507,8 @@ lemma trans_I: "trans t1 t2 = I (t1,t2)"
       subgoal apply(rule exI) apply(rule disjI7_3) by auto
       \<^cancel>\<open>ScopeB: \<close> 
       subgoal for P a x P' y 
-      apply(rule exI[of _ "[x, y]"]) apply(rule disjI7_4) by auto
+      apply(rule exI[of _ "[x, y]"]) apply(rule disjI7_4) 
+      by (auto simp: sw_def)
       \<^cancel>\<open>Par1: \<close>
       subgoal apply(rule exI) apply(rule disjI7_5) by auto
       \<^cancel>\<open>Com1: \<close> 
@@ -628,7 +524,7 @@ lemma trans_I: "trans t1 t2 = I (t1,t2)"
       \<^cancel>\<open>ScopeF: \<close> 
       subgoal apply(rule disjI7_3) by auto
       \<^cancel>\<open>ScopeB: \<close> 
-      subgoal apply(rule disjI7_4) by fastforce
+      subgoal apply(rule disjI7_4) by (fastforce simp: sw_def)
       \<^cancel>\<open>Par1: \<close>
       subgoal apply(rule disjI7_5) by auto
       \<^cancel>\<open>Com1: \<close> 
@@ -673,12 +569,12 @@ and Com1:
     (\<forall>p'. \<phi> p' P2 (Fout a x P2')) \<Longrightarrow> 
     \<phi> p (Par P1 P2) (Tau (Par P1' P2'))"
 and Close1: 
-"\<And>P1 a x P1' P2 P2' p. x \<notin> Pfvars p \<Longrightarrow> 
+"\<And>P1 a x P1' P2 P2' p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars P2 \<Longrightarrow> 
     trans P1 (Finp a x P1') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P1 (Finp a x P1')) \<Longrightarrow>
     trans P2 (Bout a x P2') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P2 (Bout a x P2')) \<Longrightarrow> 
-    x \<notin> {a} \<union> FFVars P1 \<union> FFVars P2 \<Longrightarrow> 
+    x \<notin> {a} \<union> FFVars P1 \<Longrightarrow> 
     \<phi> p (Par P1 P2) (Bout a x (Par P1' P2'))"
 shows "\<phi> p P C" 
 apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
@@ -688,6 +584,7 @@ apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
     subgoal for p v t apply(subst (asm) G_def) 
     unfolding trans_I[symmetric] apply (auto split: if_splits) 
       subgoal using Inp by auto
+      subgoal using Inp by auto (* not clear how this appeared... *)
       subgoal using Open by auto
       subgoal for Pa act P' y using ScopeF[of y p act] by (cases act, auto) 
       subgoal using ScopeB by auto

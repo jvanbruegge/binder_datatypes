@@ -6,6 +6,10 @@ imports "../MRBNF_Recursor" "HOL-Library.FSet"
  "../General_Customization"
 begin 
 
+context begin
+ML_file \<open>../../Tools/binder_induction.ML\<close>
+end
+
 
 (* DATATYPE DECLARTION  *)
 
@@ -15,7 +19,7 @@ begin
 | Par "'a term" "'a term"
 | Bang "'a term" 
 | Match 'a 'a "'a term" 
-| Match 'a 'a "'a term" 
+| Out 'a 'a "'a term" 
 | Inp x::'a 'a t::"'a term" binds x in t
 | Res x::'a t::"'a term" binds x in t
 *)
@@ -71,6 +75,16 @@ type_synonym trm = "var term"
 lemma singl_bound: "|{a}| <o |UNIV::var set|"
   by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]])
 
+lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
+using finite_iff_le_card_var by blast
+
+lemma supp_id_update_le[simp,intro!]: 
+"|supp (id(x := y))| <o |UNIV::var set|"
+by (metis finite.emptyI finite.insertI finite_card_var imsupp_id_fun_upd imsupp_supp_bound infinite_var)
+
+
+definition "sw a x y \<equiv> if a = x then y else if a = y then x else a"
+definition "sb a x y \<equiv> if a = y then x else a"
 
 (* Some lighter notations: *)
 
@@ -85,6 +99,25 @@ lemmas term.rrename_ids[simp] term.rrename_cong_ids[simp]
 term.FFVars_rrenames[simp]
 
 lemmas term_vvsubst_rrename[simp]
+
+
+(* Supply of fresh variables *)
+
+lemma finite_FFVars: "finite (FFVars P)"
+unfolding ls_UNIV_iff_finite[symmetric] 
+by (simp add: term.set_bd_UNIV)
+
+lemma exists_fresh:
+"\<exists> z. z \<notin> set xs \<and> (\<forall>P \<in> set Ps. z \<notin> FFVars P)"
+proof-
+  have 0: "|set xs \<union> \<Union> (FFVars ` (set Ps))| <o |UNIV::var set|" 
+  unfolding ls_UNIV_iff_finite  
+  using finite_FFVars by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (FFVars ` (set Ps))"
+  by (meson ex_new_if_finite finite_iff_le_card_var 
+    infinite_iff_natLeq_ordLeq var_term_pre_class.large)
+  thus ?thesis by auto
+qed
 
 
 
@@ -144,6 +177,15 @@ lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow>
   \<and> id_on (FFVars_term e - {y}) f \<and> f y = y' \<and> rrename_term f e = e')"
   unfolding term.set  
   unfolding Inp_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
+    map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
+    set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
+    Un_empty_right UN_single by auto
+
+lemma Res_inject: "(Res y e = Res y' e') \<longleftrightarrow> 
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FFVars_term e - {y}) f \<and> f y = y' \<and> rrename_term f e = e')"
+  unfolding term.set  
+  unfolding Res_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
     Un_empty_right UN_single by auto
@@ -320,11 +362,204 @@ qed
 *)
 
 (* Swapping and unary substitution, as abbreviations: *)
-abbreviation "swap P x y \<equiv> rrename (id(x:=y,y:=x)) P"
-abbreviation "usub P y x \<equiv> vvsubst (id(x:=y)) P"
+abbreviation "swap P (x::var) y \<equiv> rrename (id(x:=y,y:=x)) P"
+abbreviation "usub P (y::var) x \<equiv> vvsubst (id(x:=y)) P"
+
+
+lemma usub_swap_disj: 
+assumes "{u,v} \<inter> {x,y} = {}"
+shows "usub (swap P u v) x y = swap (usub P x y) u v"
+proof-
+  note term_vvsubst_rrename[simp del]
+  show ?thesis using assms 
+  apply(subst term_vvsubst_rrename[symmetric]) apply auto
+  apply(subst term.map_comp) apply auto
+  apply(subst term_vvsubst_rrename[symmetric]) apply auto
+  apply(subst term.map_comp) apply auto
+  apply(rule term.map_cong0) 
+    using term_pre.supp_comp_bound by auto 
+qed
+
+lemma swap_simps[simp]: "swap Zero (y::var) x = Zero"
+"swap (Sum P Q) (y::var) x = Sum (swap P y x) (swap Q y x)"
+"swap (Par P Q) (y::var) x = Par (swap P y x) (swap Q y x)"
+"swap (Bang P) (y::var) x = Bang (swap P y x)"
+"swap (Match u v P) (y::var) x = Match (sw u y x) (sw v y x) (swap P y x)"
+"swap (Out u v P) (y::var) x = Out (sw u y x) (sw v y x) (swap P y x)"
+"swap (Inp u v P) (y::var) x = Inp (sw u y x) (sw v y x) (swap P y x)"
+"swap (Res v P) (y::var) x = Res (sw v y x) (swap P y x)"
+by (auto simp: sw_def)
+
+lemma FFVars_swap[simp]: "FFVars (swap P y x) = 
+ (\<lambda>u. sw u x y) ` (FFVars P)"
+apply(subst term.FFVars_rrenames) by (auto simp: sw_def)
+
+(* *)
+
+lemma Inp_inject_swap: "Inp u v P = Inp u' v' P' \<longleftrightarrow> 
+  u = u' \<and> (v' \<notin> FFVars P \<or> v' = v) \<and> swap P v' v = P'"
+unfolding Inp_inject apply(rule iffI)
+  subgoal unfolding id_on_def apply auto
+  apply(rule rrename_cong) by auto 
+  subgoal apply clarsimp
+  apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
+
+lemma Inp_inject_swap': "Inp u v P = Inp u' v' P' \<longleftrightarrow> 
+  u = u' \<and> 
+  (\<exists>z. (z \<notin> FFVars P \<or> z = v) \<and> (z \<notin> FFVars P' \<or> z = v') \<and> 
+       swap P z v = swap P' z v')"
+unfolding Inp_inject_swap apply(rule iffI)
+  subgoal apply clarsimp apply(rule exI[of _ v']) by auto
+  subgoal by (metis Inp_inject_swap) .
+
+lemma Inp_refresh': "v' \<notin> FFVars P \<or> v' = v \<Longrightarrow> 
+   Inp u v P = Inp u v' (swap P v' v)"
+using Inp_inject_swap by auto
+
+lemma Inp_refresh: 
+"xx \<notin> FFVars P \<or> xx = x \<Longrightarrow> Inp a x P = Inp a xx (swap P x xx)"
+using Inp_refresh'
+  by (metis Inp_refresh' fun_upd_twist) 
+
+(* *)
+
+lemma Res_inject_swap: "Res v P = Res v' P' \<longleftrightarrow> 
+  (v' \<notin> FFVars P \<or> v' = v) \<and> swap P v' v = P'"
+unfolding Res_inject apply(rule iffI)
+  subgoal unfolding id_on_def apply auto
+  apply(rule rrename_cong) by auto 
+  subgoal apply clarsimp
+  apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
+
+lemma Res_inject_swap': "Res v P = Res v' P' \<longleftrightarrow> 
+  (\<exists>z. (z \<notin> FFVars P \<or> z = v) \<and> (z \<notin> FFVars P' \<or> z = v') \<and> 
+       swap P z v = swap P' z v')"
+unfolding Res_inject_swap apply(rule iffI)
+  subgoal apply clarsimp apply(rule exI[of _ v']) by auto
+  subgoal by (metis Inp_inject_swap)  .
+
+lemma Res_refresh': "v' \<notin> FFVars P \<or> v' = v \<Longrightarrow> 
+   Res v P = Res v' (swap P v' v)"
+using Res_inject_swap by auto
+
+lemma Res_refresh: 
+"xx \<notin> FFVars P \<or> xx = x \<Longrightarrow> Res x P = Res xx (swap P x xx)"
+by (metis Res_inject_swap fun_upd_twist)
+
+(* *)
+
+lemma FFVars_usub[simp]: "FFVars (usub P y x) = 
+ (if x \<in> FFVars P then FFVars P - {x} \<union> {y} else FFVars P)"
+apply(subst term.set_map) by auto
+
+lemma usub_simps_free[simp]: "\<And>y x. usub Zero (y::var) x = Zero"
+"\<And>y x P Q. usub (Sum P Q) (y::var) x = Sum (usub P y x) (usub Q y x)"
+"\<And>y x P Q. usub (Par P Q) (y::var) x = Par (usub P y x) (usub Q y x)"
+"\<And>y x P. usub (Bang P) (y::var) x = Bang (usub P y x)"
+"\<And>y x u v P. usub (Match u v P) (y::var) x = Match (sb u y x) (sb v y x) (usub P y x)"
+"usub (Out u v P) (y::var) x = Out (sb u y x) (sb v y x) (usub P y x)"
+by (auto simp: sb_def)
+
+lemma usub_Inp'[simp]: 
+"v \<notin> {x,y} \<Longrightarrow> u \<noteq> v \<Longrightarrow> usub (Inp u v P) (y::var) x = Inp (sb u y x) v (usub P y x)"
+apply(subst term.map)
+  subgoal by auto
+  subgoal by (auto simp: imsupp_def supp_def)
+  subgoal by auto
+  subgoal by (auto simp: sb_def) .
+
+lemma usub_Inp[simp]: 
+assumes v: "v \<notin> {x,y}" 
+shows "usub (Inp u v P) (y::var) x = Inp (sb u y x) v (usub P y x)"
+proof-
+  obtain v' where v': "v' \<notin> {u,v,x,y}" "v' \<notin> FFVars P"
+  using exists_fresh[of "[u,v,x,y]" "[P]"] by auto
+  define P' where P': "P' = swap P v' v"
+  have 0: "Inp u v P = Inp u v' P'" unfolding v' P'  
+    using Inp_inject_swap v'(2) by blast
+  have 1: "usub P' y x = swap (usub P y x) v' v"
+  unfolding P' apply(rule usub_swap_disj) using v v' by auto
+  have 2: "Inp (sb u y x) v (usub P y x) = Inp (sb u y x) v' (usub P' y x)"
+  using v v' unfolding v' 1  unfolding Inp_inject_swap by auto
+  show ?thesis using v' unfolding 0 2 by auto
+qed
+
+lemma usub_Res[simp]: 
+"v \<notin> {x,y} \<Longrightarrow> usub (Res v P) (y::var) x = Res v (usub P y x)"
+apply(subst term.map)
+  subgoal by auto
+  subgoal by (auto simp: imsupp_def supp_def)
+  subgoal by auto . 
+
+lemmas usub_simps = usub_simps_free usub_Inp usub_Res
+
+
+(* *)
 
 
 
+lemma rrename_usub[simp]: 
+assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
+shows "rrename \<sigma> (usub P u (x::var)) = usub (rrename \<sigma> P) (\<sigma> u) (\<sigma> x)"
+using assms 
+apply(binder_induction P avoiding: "supp \<sigma>" u x rule: term.strong_induct)
+using assms by (auto simp: sb_def)
+
+lemma sw_sb: 
+"sw (sb z u x) z1 z2 = sb (sw z z1 z2) (sw u z1 z2) (sw x z1 z2)"
+unfolding sb_def sw_def by auto
+
+
+lemma swap_usub: 
+"swap (usub P (u::var) x) z1 z2 = usub (swap P z1 z2) (sw u z1 z2) (sw x z1 z2)"
+apply(binder_induction P avoiding: u x z1 z2 rule: term.strong_induct)
+  subgoal 
+  (* A to D or J: using [[simp_trace=true]] apply simp 
+   Do you know what is happening here?? 
+  *)
+  apply(subst swap_simps) apply(subst usub_simps) by auto
+  subgoal apply(subst swap_simps | subst usub_simps)+ by presburger
+  subgoal apply(subst swap_simps | subst usub_simps)+ by presburger
+  subgoal apply(subst swap_simps | subst usub_simps)+ by presburger
+  subgoal apply(subst swap_simps | subst usub_simps)+ 
+  unfolding sw_sb by presburger
+  subgoal apply(subst swap_simps | subst usub_simps)+ 
+  unfolding sw_sb by presburger
+  subgoal apply(subst swap_simps | subst usub_simps)+ 
+    subgoal by auto
+    subgoal apply(subst swap_simps | subst usub_simps)+ 
+      subgoal unfolding sw_def sb_def by auto
+      unfolding sw_sb by presburger .
+  subgoal apply(subst swap_simps | subst usub_simps)+ 
+    subgoal by auto
+    subgoal apply(subst swap_simps | subst usub_simps)+ 
+      subgoal unfolding sw_def sb_def by auto
+      unfolding sw_sb by presburger . . 
+
+lemma usub_refresh: 
+assumes "xx \<notin> FFVars P \<or> xx = x"
+shows "usub P u x = usub (swap P x xx) u xx"
+proof-
+  note term_vvsubst_rrename[simp del]
+  show ?thesis using assms 
+  apply(subst term_vvsubst_rrename[symmetric]) apply simp
+    subgoal by auto
+    subgoal apply(subst term.map_comp) 
+      subgoal by auto
+      subgoal by auto
+      subgoal apply(rule term.map_cong0) 
+      using term_pre.supp_comp_bound by auto . . 
+qed
+
+lemma swap_commute: 
+"{y,yy} \<inter> {x,xx} = {} \<Longrightarrow> 
+ swap (swap P y yy) x xx = swap (swap P x xx) y yy"
+apply(subst term.rrename_comps)
+apply auto
+apply(subst term.rrename_comps)
+apply auto
+apply(rule rrename_cong) 
+by (auto simp: term_pre.supp_comp_bound)
 
 
 

@@ -171,9 +171,8 @@ unfolding toUnfold apply auto
   apply(subst map_commit_pre_Inr_Inr_Inl_aux) apply auto
   unfolding commit_internal.FFVars_cctors(1) by (auto simp: toUnfold id_on_def) 
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"]) 
-  apply(subst map_commit_pre_Inr_Inr_Inl_aux) apply auto
-  unfolding commit_internal.FFVars_cctors(1) apply (auto simp: toUnfold id_on_def) 
-  by (metis bij_swap supp_swap_bound fun_upd_upd)+ .
+  apply(subst map_commit_pre_Inr_Inr_Inl_aux) by auto .
+
 
 lemma Tau_inj[simp]: "Tau P = Tau P' \<longleftrightarrow> P = P'"
 unfolding Tau_def unfolding commit_internal.TT_injects0 apply simp
@@ -218,5 +217,84 @@ unfolding Bout_def Tau_def
 by (smt (verit) Inl_Inr_False Inr_inject commit_internal.TT_injects0(2) map_commit_pre_Inr_Inr_Inl_aux toUnfold(22))
 
 lemmas Tau_Bout_diff[simp] = Bout_Tau_diff[symmetric]
+
+(* Supply of fresh variables *)
+
+lemma finite_FFVars_commit: "finite (FFVars_commit C)"
+unfolding ls_UNIV_iff_finite[symmetric] 
+by (simp add: commit_internal.card_of_FFVars_bounds(2))
+
+lemma exists_fresh:
+"\<exists> z. z \<notin> set xs \<and> (\<forall>P \<in> set Cs. z \<notin> FFVars_commit P)"
+proof-
+  have 0: "|set xs \<union> \<Union> (FFVars_commit ` (set Cs))| <o |UNIV::var set|" 
+  unfolding ls_UNIV_iff_finite  
+  using finite_FFVars_commit by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (FFVars_commit ` (set Cs))"
+  by (meson ex_new_if_finite finite_iff_le_card_var 
+    infinite_iff_natLeq_ordLeq var_term_pre_class.large)
+  thus ?thesis by auto
+qed
+
+(* *)
+
+lemma rrename_commit_Finp[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+  rrename_commit \<sigma> (Finp a u P) = Finp (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
+unfolding Finp_def unfolding commit_internal.rrename_cctors 
+unfolding map_commit_pre_def unfolding toUnfold by simp
+
+lemma rrename_commit_Fout[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+  rrename_commit \<sigma> (Fout a u P) = Fout (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
+unfolding Fout_def unfolding commit_internal.rrename_cctors 
+unfolding map_commit_pre_def unfolding toUnfold by simp
+
+lemma rrename_commit_Bout[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+  rrename_commit \<sigma> (Bout a u P) = Bout (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
+unfolding Bout_def unfolding commit_internal.rrename_cctors 
+unfolding map_commit_pre_def unfolding toUnfold
+unfolding commit_internal.rrename_cctors(1)
+unfolding map_commit_internal_pre_def unfolding toUnfold by simp
+
+lemma rrename_commit_Tau[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+  rrename_commit \<sigma> (Tau P) = Tau (rrename \<sigma> P)"
+unfolding Tau_def unfolding commit_internal.rrename_cctors 
+unfolding map_commit_pre_def unfolding toUnfold
+unfolding commit_internal.rrename_cctors(1)
+unfolding map_commit_internal_pre_def unfolding toUnfold by simp
+
+
+(* Actions *)
+
+datatype (vars:'a) action = finp 'a 'a | fout 'a 'a | bout 'a 'a | tau 
+
+lemmas action.set_map[simp]
+
+type_synonym act = "var action"
+
+fun Cmt :: "act \<Rightarrow> trm \<Rightarrow> cmt" where 
+ "Cmt (finp x y) P = Finp x y P"
+|"Cmt (fout x y) P = Fout x y P"
+|"Cmt (bout x y) P = Bout x y P"
+|"Cmt tau P = Tau P"
+
+fun bvars :: "act \<Rightarrow> var list" where 
+ "bvars (bout x y) = [y]"
+|"bvars _ = []" 
+
+fun fvars :: "act \<Rightarrow> var set" where 
+ "fvars (bout x y) = {x}"
+|"fvars act = vars act"
+
+abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
+
+lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = map \<sigma> (bvars act)"
+by (cases act, auto)
+
+lemma rrename_commit_Cmt[simp]: 
+"bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>  
+ rrename_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
+by (cases act, auto)
+
+
 
 end

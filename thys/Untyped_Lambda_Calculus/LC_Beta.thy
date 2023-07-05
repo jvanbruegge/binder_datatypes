@@ -27,6 +27,8 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 
 thm step_def
 
+(* xx fresh \<Longrightarrow> tvsubst (Var(x:=e2')) e1' = tvsubst (Var(xx:=e2')) e1'[xx\<and>x]  *)
+
 (* INSTANTIATING THE Components LOCALE: *)
 
 type_synonym T = "trm \<times> trm"

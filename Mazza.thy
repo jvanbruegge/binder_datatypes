@@ -198,8 +198,7 @@ typedef 'a :: var_ilam_pre U_lam_ilam = "{T :: ('a \<Rightarrow> 'a cinfset) \<R
   subgoal for z Z g a
     apply (cases "g undefined = g z")
      apply (auto simp: bij_cinfset_def get_cinfset_in get_cinfset_inverse)
-    defer
-    sledgehammer
+     defer
   apply (simp add: bij_cinfset_def get_cinfset_in get_cinfset_inverse)
   find_theorems ivvsubst iVar
 type_synonym 'a PU_lam_ilam = "'a P_lam_ilam \<Rightarrow> 'a U_lam_ilam"

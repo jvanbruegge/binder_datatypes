@@ -43,8 +43,8 @@ Sum2: "trans P2 C \<Longrightarrow> trans (Sum P1 P2) C"
 Open: "trans P (Fout a x P') \<Longrightarrow> a \<noteq> x \<Longrightarrow> 
        trans (Res x P) (Bout a x P')"
 |
-ScopeF: "trans P (Cmt act P') \<Longrightarrow> y \<notin> vars act \<Longrightarrow> 
-   trans (Res y P) (Cmt act (Res y P'))"
+ScopeF: "trans P (Cmt act P') \<Longrightarrow> x \<notin> vars act \<Longrightarrow> 
+   trans (Res x P) (Cmt act (Res x P'))"
 |
 ScopeB: "trans P (Bout a x P') \<Longrightarrow> y \<notin> {a,x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P
    \<Longrightarrow> 
@@ -143,9 +143,9 @@ where
     a \<noteq> x \<and> 
     R (P,Fout a x P')) 
  \<or>  \<^cancel>\<open>ScopeF: \<close> 
- (\<exists> P act P' y.  \<^cancel>\<open>Can be made stronger, adding v = bvars act @ [y] \<close> 
-    v = [y] \<and> fst t = Res y P \<and> snd t = Cmt act (Res y P') \<and>  
-    y \<notin> vars act \<and> 
+ (\<exists> P act P' x.  \<^cancel>\<open>Can be made stronger, adding v = bvars act @ [y] \<close> 
+    v = [x] \<and> fst t = Res x P \<and> snd t = Cmt act (Res x P') \<and>  
+    x \<notin> vars act \<and> 
     R (P, Cmt act P'))
  \<or>  \<^cancel>\<open>ScopeB: \<close> 
  (\<exists> P a x P' y. 
@@ -201,11 +201,11 @@ unfolding G_def apply(elim disjE)
   by (simp add: term.rrename_comps) . . 
   (* ScopeF: *)
   subgoal apply(rule disjI7_3)
-  subgoal apply(elim exE) subgoal for P act P' y
+  subgoal apply(elim exE) subgoal for P act P' x
   apply(rule exI[of _ "rrename \<sigma> P"])
   apply(rule exI[of _ "map_action \<sigma> act"])
   apply(rule exI[of _ "rrename \<sigma> P'"])
-  apply(rule exI[of _ "\<sigma> y"]) 
+  apply(rule exI[of _ "\<sigma> x"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
   apply (simp add: term.rrename_comps) 
   by (auto simp add: action.map_id action.map_comp) . .
@@ -351,44 +351,44 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       apply(erule allE[of _ "Fout a x P'"]) 
       by (auto simp: ssbij_def split: if_splits ) . .
   (* ScopeF: *)
-  subgoal for P act P' y 
+  subgoal for P act P' x
   using bvars_act_bout[of act] apply(elim disjE exE)
     subgoal
     using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
-    subgoal for yy
-    apply(rule exI[of _ "[yy]"])  
+    subgoal for xx
+    apply(rule exI[of _ "[xx]"])  
     apply(rule conjI)
       subgoal unfolding ssbij_def small_def Vmap_def by auto 
       subgoal apply(rule disjI7_3) 
-      apply(rule exI[of _ "swap P y yy"])
-      apply(rule exI[of _ "swapa act y yy"]) 
-      apply(rule exI[of _ "swap P' y yy"])
-      apply(rule exI[of _ "yy"]) 
+      apply(rule exI[of _ "swap P x xx"])
+      apply(rule exI[of _ "swapa act x xx"]) 
+      apply(rule exI[of _ "swap P' x xx"])
+      apply(rule exI[of _ "xx"]) 
       apply(cases t) apply simp apply(intro conjI)
         subgoal using Res_refresh by blast
         subgoal using Res_refresh apply(cases act, simp_all split: if_splits)  
           by blast+
         subgoal by auto
-        subgoal apply(erule allE[of _ "id(y:=yy,yy:=y)"])
+        subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
         apply(erule allE[of _ "P"])
         apply(erule allE[of _ "Cmt act P'"]) 
         by (auto simp: ssbij_def split: if_splits ) . . .
     (* *)
     subgoal for a b
     using exists_fresh[of "[a,b]" "[t]"] apply(elim exE conjE)
-    subgoal for yy
-    apply(rule exI[of _ "[yy]"])  
+    subgoal for xx
+    apply(rule exI[of _ "[xx]"])  
     apply(rule conjI)
       subgoal unfolding ssbij_def small_def Vmap_def by auto 
       subgoal apply(rule disjI7_3) 
-      apply(rule exI[of _ "swap P y yy"]) 
+      apply(rule exI[of _ "swap P x xx"]) 
       apply(rule exI[of _ "act"]) 
-      apply(rule exI[of _ "swap P' y yy"])
-      apply(rule exI[of _ "yy"]) 
+      apply(rule exI[of _ "swap P' x xx"])
+      apply(rule exI[of _ "xx"]) 
       apply(cases t) apply simp apply(intro conjI)
         subgoal using Res_refresh by blast
         subgoal using Res_refresh[symmetric] by blast           
-        subgoal apply(erule allE[of _ "id(y:=yy,yy:=y)"])
+        subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
         apply(erule allE[of _ "P"])
         apply(erule allE[of _ "Cmt act P'"]) 
         by (auto simp: ssbij_def split: if_splits ) . . . .

@@ -51,15 +51,29 @@ mrbnf "'a ::infinite_regular cinfset"
   subgoal by (clarsimp, transfer) auto
   done
 
+lift_definition idx_cinfset :: "'a :: infinite_regular cinfset \<Rightarrow> 'a \<Rightarrow> nat" is "to_nat_on" .
+
 lift_definition get_cinfset :: "'a :: infinite_regular cinfset \<Rightarrow> nat \<Rightarrow> 'a" is "from_nat_into" .
+
+lemma bij_betw_idx_cinfset: "bij_betw (idx_cinfset S) (set_cinfset S) UNIV"
+  by transfer (simp add: to_nat_on_infinite)
 
 lemma bij_betw_get_cinfset: "bij_betw (get_cinfset S) UNIV (set_cinfset S)"
   by transfer (simp add: bij_betw_from_nat_into)
+
+lemma surj_idx_cinfset: "surj (idx_cinfset S)"
+  by (meson bij_betw_idx_cinfset bij_betw_imp_surj)
 
 lemma inj_get_cinfset: "inj (get_cinfset S)"
   by (metis bij_betw_def bij_betw_get_cinfset)
 
 lemma get_cinfset_in: "get_cinfset S n \<in>\<in> S"
   by (metis bij_betw_def bij_betw_get_cinfset rangeI)
+
+lemma get_cinfset_inverse: "idx_cinfset S (get_cinfset S n) = n"
+  by transfer auto
+
+lemma idx_cinfset_inverse: "x \<in>\<in> S \<Longrightarrow> get_cinfset S (idx_cinfset S x) = x"
+  by transfer auto
 
 end

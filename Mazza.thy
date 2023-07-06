@@ -141,54 +141,142 @@ lemma super_in: "set_cinfset \<lbrace>x\<rbrace> \<in> var_partition"
 lemma disjoint_super: "\<lbrace>x\<rbrace> \<noteq> \<lbrace>y\<rbrace> \<Longrightarrow> set_cinfset \<lbrace>x\<rbrace> \<inter> set_cinfset \<lbrace>y\<rbrace> = {}"
   by (metis Int_emptyI ex1_var_partition set_cinfset_inject super_in)
 
-typedef 'a P_lam_ilam = "UNIV :: nat list set" by blast
-setup_lifting type_definition_P_lam_ilam
-lift_definition myCons :: "nat \<Rightarrow> 'a P_lam_ilam \<Rightarrow> 'a P_lam_ilam" is Cons .
-type_synonym 'a U_lam_ilam = "'a ilam"
+(*
+typedef 'a :: var_ilam_pre super =
+   "{f :: 'a \<Rightarrow> 'a cinfset. \<forall>x y. x \<in>\<in> f x \<and>
+       (f x \<noteq> f y \<longrightarrow> set_cinfset (f x) \<inter> set_cinfset (f y) = {})}"
+  by (auto intro!: exI[of _ super] simp: in_super dest: disjoint_super)
+setup_lifting type_definition_super
+lift_definition apply_super :: "'a :: var_ilam_pre super \<Rightarrow> 'a \<Rightarrow> 'a cinfset" is "id :: _ \<Rightarrow> ('a \<Rightarrow> 'a cinfset)" .
+lift_definition comp_super :: "'a :: var_ilam_pre super \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a :: var_ilam_pre super" is
+  "\<lambda>g f. if bij f then g o f else g"
+  apply auto
+  subgoal for f g x
+    sledgehammer
+  sorry
+*)
+
+definition bij_cinfset where
+  "bij_cinfset A B x = (if x \<in>\<in> A then get_cinfset B (idx_cinfset A x) else x)"
+
+lemma bij_cinfset: "bij_betw (bij_cinfset A B) (set_cinfset A) (set_cinfset B)"
+  unfolding bij_cinfset_def
+  apply transfer
+  subgoal for A B
+    apply (intro bij_betwI')
+      apply (auto simp: bij_betw_def image_iff intro!: inj_onI from_nat_into) [2]
+    subgoal for y
+      apply (rule bexI[of _ "from_nat_into A (to_nat_on B y)"])
+       apply (auto intro: from_nat_into)
+      done
+    done
+  done
+
+lemma card_of_set_cinfset: "|set_cinfset A| =o natLeq"
+  using bij_betw_idx_cinfset card_of_nat card_of_ordIso ordIso_transitive by blast
+
+lemma supp_bij_cinfset[simp]:
+  "|supp (bij_cinfset A B :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set|"
+  unfolding bij_cinfset_def supp_def
+  apply (rule ordLeq_ordLess_trans[of _ "|set_cinfset A|", OF card_of_mono1])
+   apply (auto intro!: ordIso_ordLess_trans[OF card_of_set_cinfset])
+  sorry
+
+find_theorems "bij_cinfset"
+
+typedef 'a P_lam_ilam = "UNIV :: unit set" by auto
+typedef 'a :: var_ilam_pre U_lam_ilam = "{T :: ('a \<Rightarrow> 'a cinfset) \<Rightarrow> nat list \<Rightarrow> 'a ilam.
+  \<forall>z Z g a. T (g(z := Z)) a = ivvsubst (bij_cinfset (g z) Z) (T g a)}"
+  apply (rule exI[of _ "\<lambda>g a. iVar (get_cinfset (g undefined) (list_encode a))"] CollectI allI)+
+  apply (auto simp: bij_cinfset_def get_cinfset_in get_cinfset_inverse)
+  subgoal for z Z g a
+    apply (cases "g undefined = g z")
+     apply (auto simp: bij_cinfset_def get_cinfset_in get_cinfset_inverse)
+    defer
+    sledgehammer
+  apply (simp add: bij_cinfset_def get_cinfset_in get_cinfset_inverse)
+  find_theorems ivvsubst iVar
 type_synonym 'a PU_lam_ilam = "'a P_lam_ilam \<Rightarrow> 'a U_lam_ilam"
 
 subclass (in var_ilam_pre) var_lam_pre
   by standard
 
 definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_ilam, 'a lam \<times> 'a PU_lam_ilam) lam_pre \<Rightarrow> 'a PU_lam_ilam" where
-  "CCTOR_lam_ilam lp = (\<lambda>a. case Rep_lam_pre lp of
-     Inl x \<Rightarrow> iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode (Rep_P_lam_ilam a)))
-   | Inr (Inl (M, N)) \<Rightarrow> iApp (snd M (myCons 0 a)) (image_cinfmset (\<lambda>i. snd N (myCons (i + 1) a)) \<nat>#)
-   | Inr (Inr (x, M)) \<Rightarrow> iAbs \<lbrace>x\<rbrace> (snd M a))"
+  "CCTOR_lam_ilam lp = (\<lambda>u. case Rep_lam_pre lp of
+     Inl x \<Rightarrow> \<lambda>g a. iVar (get_cinfset (apply_super g x) (list_encode a))
+   | Inr (Inl (M, N)) \<Rightarrow> \<lambda>g a. iApp (snd M u g (0 # a)) (image_cinfmset (\<lambda>i. snd N u g ((i + 1) # a)) \<nat>#)
+   | Inr (Inr (x, M)) \<Rightarrow> \<lambda>g a. iAbs (apply_super g x) (snd M u g a))"
 
-lemma get_cinfset_image_cinfset: "bij f \<Longrightarrow> f (get_cinfset A x) = get_cinfset (image_cinfset f A) x"
+lemma apply_super_comp_super[simp]: "apply_super (comp_super g f) x = apply_super g (f x)"
   apply transfer
-  apply (auto dest: inj_on_subset[OF bij_is_inj subset_UNIV])
-  oops
-
-lemma image_cinfset_super: "bij f \<Longrightarrow> image_cinfset f \<lbrace>x\<rbrace> = \<lbrace>f x\<rbrace>"
-  apply transfer
-  apply (auto simp: image_iff)
-  oops
-
-lemma map_CCTOR_lam_ilam:
-  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
-  ivvsubst f (CCTOR_lam_ilam y p) = CCTOR_lam_ilam
-    (map_lam_pre f f (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p))))
-       (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. ivvsubst f (pu (id p)))) y) (id p)"
-  apply (auto simp: CCTOR_lam_ilam_def map_lam_pre_def Abs_lam_pre_inverse
-    cinfmset.map_comp o_def split: sum.splits prod.splits)
-  subgoal for x
-    apply (auto simp add: iVar_def ilam.TT_injects0 supp_id_bound ilam.rrename_id0s ilam_pre.map_id
-      Abs_ilam_pre_inject intro!: exI[of _ id])
-    sorry
-  subgoal for x t b
-    apply (auto simp add: ilam_vvsubst_rrename ilam.rrename_cctors map_ilam_pre_def
-      iAbs_def ilam.TT_injects0 supp_id_bound ilam.rrename_id0s ilam_pre.map_id
-      Abs_ilam_pre_inject Abs_ilam_pre_inverse cinfset.map_id intro!: exI[of _ "id"])
-    sorry
+  apply auto
   done
 
+lemma map_CCTOR_lam_ilam:
+  "bij f \<Longrightarrow>
+       |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
+       (\<lambda>g. CCTOR_lam_ilam y p (comp_super g f)) =
+       CCTOR_lam_ilam
+        (map_lam_pre f f
+          (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p g. pu (id p) (comp_super g f)))
+          (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p g. pu (id p) (comp_super g f))) y)
+        (id p) "
+  apply (auto simp: CCTOR_lam_ilam_def map_lam_pre_def Abs_lam_pre_inverse
+    cinfmset.map_comp o_def split: sum.splits prod.splits)
+  done
+
+definition "AbsT z T = (\<lambda>g a. iAbs (apply_super g z) (T g a))"
+
+definition "fvT T = {x. \<exists>g g'.
+           (\<exists>a. T g a \<noteq> T g' a) \<and>
+           (\<forall>y. y \<noteq> x \<longrightarrow> apply_super g y = apply_super g' y)}"
+
+lemma "fvT (AbsT z T) \<subseteq> fvT T - {z}"
+  unfolding AbsT_def fvT_def
+  apply auto
+  subgoal sorry
+  subgoal for g g' a
+    apply (erule notE)
+    apply (cases "g = g'")
+    apply auto
+
 lemma set_CCTOR_lam_ilam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set3_lam_pre y \<union> set4_lam_pre y \<Longrightarrow> ifv (pu p) \<subseteq> fv t \<union> {} \<union> {}) \<Longrightarrow>
-   ifv (CCTOR_lam_ilam y p) \<subseteq> fv (lam_ctor (map_lam_pre id id fst fst y)) \<union> {} \<union> {}"
-  apply (auto simp: CCTOR_lam_ilam_def split: sum.splits prod.splits)
-  sorry
+       (\<And>t pu p.
+           (t, pu) \<in> set3_lam_pre y \<union> set4_lam_pre y \<Longrightarrow>
+           {x. \<exists>g g' a. pu p g a \<noteq> pu p g' a \<and> (\<forall>y. y \<noteq> x \<longrightarrow> apply_super g y = apply_super g' y)}
+           \<subseteq> fv t \<union> {} \<union> {}) \<Longrightarrow>
+       {x. \<exists>g g' a.
+              CCTOR_lam_ilam y p g a \<noteq> CCTOR_lam_ilam y p g' a \<and> (\<forall>y. y \<noteq> x \<longrightarrow> apply_super g y = apply_super g' y)}
+       \<subseteq> fv (lam_ctor (map_lam_pre id id fst fst y)) \<union> {} \<union> {}"
+  apply (auto simp: CCTOR_lam_ilam_def
+    Var_def[symmetric] Abs_def[symmetric] App_def[symmetric]
+    map_lam_pre_def set3_lam_pre_def set4_lam_pre_def
+
+ split: sum.splits prod.splits)
+     apply metis
+  subgoal
+  apply (erule contrapos_np) sorry
+   apply (erule contrapos_np)
+  subgoal for y t rec x g g' a
+    apply (drule meta_spec[of _ t])
+    apply (drule meta_spec[of _ p])
+    apply simp
+    apply (cases "x \<noteq> y")
+     apply simp
+     apply (smt (verit) mem_Collect_eq subsetD)
+    apply simp
+    apply (cases "rec p g a = rec p g' a")
+    apply (drule subsetD[of _ _ y])
+     apply auto
+    apply (rule exI[of _ g])
+    apply (rule exI[of _ g'])
+    apply auto
+    sorry
+   apply (erule contrapos_np)
+  subgoal for y t rec g g' a
+    apply (drule meta_spec[of _ t])
+    apply (drule meta_spec[of _ p])
+    apply simp
 
 
 local_setup \<open>fn lthy =>
@@ -201,9 +289,9 @@ let
     Umap_cong_id = fn ctxt => (rtac ctxt @{thm trans[OF ilam.map_cong[OF _ supp_id_bound refl] ilam.map_id, simplified]}
        THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1,
     UFVars_Umap = [fn ctxt => rtac ctxt @{thm ilam.set_map} 1 THEN assume_tac ctxt 1],
-    Umap_Uctor = fn ctxt => (rtac ctxt @{thm map_CCTOR_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1,
-    UFVars_subsets = [fn ctxt => (rtac ctxt @{thm set_CCTOR_lam_ilam}
-       THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1]
+    Umap_Uctor = fn ctxt => print_tac ctxt "map" THEN Skip_Proof.cheat_tac ctxt 1 (*(rtac ctxt @{thm map_CCTOR_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1*),
+    UFVars_subsets = [fn ctxt => print_tac ctxt "set" THEN Skip_Proof.cheat_tac ctxt (*(rtac ctxt @{thm set_CCTOR_lam_ilam}
+       THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt])*) 1]
   } : (Proof.context -> tactic) MRBNF_Recursor.model_axioms;
 
   val params = {
@@ -222,10 +310,10 @@ let
 
   val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of lthy @{type_name lam});
   val model = {
-    U = @{typ "'a :: var_ilam_pre ilam"},
+    U = @{typ "'a :: var_ilam_pre U_lam_ilam"},
     fp_result = fp_res,
-    UFVars = [@{term "(\<lambda>t u. FFVars_ilam u) :: 'a lam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre set"}],
-    Umap = @{term "(\<lambda>f t u. ivvsubst f u) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a lam \<Rightarrow> 'a ilam \<Rightarrow> 'a :: var_ilam_pre ilam"},
+    UFVars = [@{term "(\<lambda>t T. {x. \<exists>g g' a. T g a \<noteq> T g' a \<and> (\<forall>y. y \<noteq> x \<longrightarrow> apply_super g y = apply_super g' y)}) :: 'a lam \<Rightarrow> 'a U_lam_ilam \<Rightarrow> 'a :: var_ilam_pre set"}],
+    Umap = @{term "(\<lambda>f t T g a. T (comp_super g f) a) :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a lam \<Rightarrow> 'a U_lam_ilam \<Rightarrow> 'a :: var_ilam_pre U_lam_ilam"},
     Uctor = @{term CCTOR_lam_ilam},
     avoiding_sets = [ @{term "{} :: 'a::var_ilam_pre set"}],
     parameters = params,

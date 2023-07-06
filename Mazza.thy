@@ -153,7 +153,7 @@ subclass (in var_ilam_pre) var_lam_pre
 definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_ilam, 'a lam \<times> 'a PU_lam_ilam) lam_pre \<Rightarrow> 'a PU_lam_ilam" where
   "CCTOR_lam_ilam lp = (\<lambda>a. case Rep_lam_pre lp of
      Inl x \<Rightarrow> iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode (Rep_P_lam_ilam a)))
-   | Inr (Inl (M, N)) \<Rightarrow> iApp (snd M (myCons 0 a)) (image_cinfmset (\<lambda>i. snd N (myCons (i + 1) a)) NATS_cinfmset)
+   | Inr (Inl (M, N)) \<Rightarrow> iApp (snd M (myCons 0 a)) (image_cinfmset (\<lambda>i. snd N (myCons (i + 1) a)) \<nat>#)
    | Inr (Inr (x, M)) \<Rightarrow> iAbs \<lbrace>x\<rbrace> (snd M a))"
 
 lemma get_cinfset_image_cinfset: "bij f \<Longrightarrow> f (get_cinfset A x) = get_cinfset (image_cinfset f A) x"
@@ -244,12 +244,20 @@ let
 in lthy end
 \<close>
 
+
+
+lemma
+  "f g (Var x :: 'a :: var_ilam_pre lam) a = (iVar (get_cinfset (g x) (list_encode a)) :: 'a ilam)"
+  "f g (Abs x M) a = iAbs (g x) (f g M a)"
+  "f g (App M N) a = iApp (f g M (0#a)) (image_cinfmset (\<lambda>i. f g N ((i + 1) # a)) \<nat>#)"
+  sorry
+
 abbreviation lam_ilam ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where "lam_ilam t xs \<equiv> ff0_lam_ilam t (Abs_P_lam_ilam xs)"
 
 lemma lam_ilam_simps[simp]:
   "\<lbrakk>Var x\<rbrakk>a = iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode a))"
   "\<lbrakk>Abs x M\<rbrakk>a = iAbs \<lbrace>x\<rbrace> (\<lbrakk>M\<rbrakk>a)"
-  "\<lbrakk>App M N\<rbrakk>a = iApp \<lbrakk>M\<rbrakk>(0#a) (image_cinfmset (\<lambda>i. \<lbrakk>N\<rbrakk>((i + 1) # a)) NATS_cinfmset)"
+  "\<lbrakk>App M N\<rbrakk>a = iApp \<lbrakk>M\<rbrakk>(0#a) (image_cinfmset (\<lambda>i. \<lbrakk>N\<rbrakk>((i + 1) # a)) \<nat>#)"
   unfolding Var_def Abs_def App_def
     apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set1_lam_pre_def set2_lam_pre_def map_lam_pre_def
       Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
@@ -270,7 +278,7 @@ lemma in_image_cinfmset: "y \<in>#\<in> image_cinfmset f X \<longleftrightarrow>
    apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)+
   done
 
-lemma NATS_cinfmset_UNIV: "i \<in>#\<in> NATS_cinfmset"
+lemma NATS_cinfmset_UNIV: "i \<in>#\<in> \<nat>#"
   by transfer auto
 
 end

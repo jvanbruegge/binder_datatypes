@@ -238,7 +238,7 @@ lemma image_cinfmset_cinfmset[simp]: "image_cinfmset f (cinfmset s) = cinfmset (
     (auto simp: fun_eq_iff Let_def count_stream_infinity_iff' count_stream_zero_iff sset_range
       infinite_iff_alw_ev[symmetric] count_stream_smap simp flip: holds_eq1 intro: finite_surj[of _ _ "snth _"])
 
-lift_definition NATS_cinfmset :: "nat cinfmset" is "\<lambda>x::nat. 1"
+lift_definition NATS_cinfmset :: "nat cinfmset" ("\<nat>#") is "\<lambda>x::nat. 1"
   by auto
 
 definition "spermute \<pi> s = smap (\<lambda>i. snth s (\<pi> i)) nats"

@@ -43,7 +43,7 @@ Sum2: "trans P2 C \<Longrightarrow> trans (Sum P1 P2) C"
 Open: "trans P (Fout a x P') \<Longrightarrow> a \<noteq> x \<Longrightarrow> 
        trans (Res x P) (Bout a x P')"
 |
-ScopeF: "trans P (Cmt act P') \<Longrightarrow> x \<notin> vars act \<Longrightarrow> 
+ScopeF: "trans P (Cmt act P') \<Longrightarrow> \<not> is_bout act \<Longrightarrow> x \<notin> vars act \<Longrightarrow> 
    trans (Res x P) (Cmt act (Res x P'))"
 |
 ScopeB: "trans P (Bout a x P') \<Longrightarrow> y \<notin> {a,x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P
@@ -144,9 +144,9 @@ where
     a \<noteq> x \<and> 
     R (P,Fout a x P')) 
  \<or>  \<^cancel>\<open>ScopeF: \<close> 
- (\<exists> P act P' x.  \<^cancel>\<open>Can be made stronger, adding v = bvars act @ [y] \<close> 
+ (\<exists> P act P' x.  
     v = [x] \<and> fst t = Res x P \<and> snd t = Cmt act (Res x P') \<and>  
-    x \<notin> vars act \<and> 
+    \<not> is_bout act \<and> x \<notin> vars act \<and> 
     R (P, Cmt act P'))
  \<or>  \<^cancel>\<open>ScopeB: \<close> 
  (\<exists> P a x P' y. 

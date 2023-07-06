@@ -182,7 +182,13 @@ lemma supp_bij_cinfset[simp]:
    apply (auto intro!: ordIso_ordLess_trans[OF card_of_set_cinfset])
   sorry
 
-find_theorems "bij_cinfset"
+lemma
+  fixes z0
+  defines "T \<equiv> (\<lambda>g a. iVar (get_cinfset (g z0) (list_encode a)))"
+  shows "\<forall>z Z g a. T (g(z := Z)) a = ivvsubst (bij_cinfset (g z) Z) (T g a)"
+  apply (auto simp: T_def)
+   apply (auto simp: bij_cinfset_def get_cinfset_in get_cinfset_inverse)
+  sorry
 
 typedef 'a P_lam_ilam = "UNIV :: unit set" by auto
 typedef 'a :: var_ilam_pre U_lam_ilam = "{T :: ('a \<Rightarrow> 'a cinfset) \<Rightarrow> nat list \<Rightarrow> 'a ilam.

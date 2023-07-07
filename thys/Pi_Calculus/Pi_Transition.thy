@@ -27,7 +27,8 @@ by (simp_all add: infinite_var regularCard_var)
 
 (* The "late" transition relation  *)
 inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
-Inp: "x \<notin> {a,u} \<Longrightarrow> trans (Inp a x P) (Finp a u (usub P u x))"
+Inp: "\<comment> \<open>Present in Bengtson: x \<notin> {a,u} \<Longrightarrow> \<close>
+trans (Inp a x P) (Finp a u (usub P u x))"
 (* |
 Out: "trans (Out a x P) (Fout a x P)"
 |
@@ -136,8 +137,8 @@ where
 "G \<equiv> \<lambda>R v t.
  \<^cancel>\<open>Inp: \<close>  
  (\<exists>x a u P. 
-    v = [x] \<and> fst t = Inp a x P \<and> snd t = Finp a u (usub P u x) \<and> 
-    x \<notin> {a,u})
+    v = [x] \<and> fst t = Inp a x P \<and> snd t = Finp a u (usub P u x) 
+ \<comment> \<open>\<and> x \<notin> {a,u} \<close>)
  \<or>  \<^cancel>\<open>Open: \<close> 
  (\<exists>P a x P'. 
     v = [x] \<and> fst t = Res x P \<and> snd t = Bout a x P' \<and> 
@@ -358,13 +359,13 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       apply(rule exI[of _ "act"]) 
       apply(rule exI[of _ "swap P' x xx"])
       apply(rule exI[of _ "xx"]) 
-      apply(cases t) apply simp apply(intro conjI)
+      apply(cases t) apply simp (* apply(intro conjI)
         subgoal using Res_refresh by blast
         subgoal using Res_refresh[symmetric] by blast           
         subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
         apply(erule allE[of _ "P"])
         apply(erule allE[of _ "Cmt act P'"]) 
-        by (auto simp: ssbij_def split: if_splits ) . . . .
+        by (auto simp: ssbij_def split: if_splits ) *) . . . .
   (* ScopeB: *)
   subgoal for P a x P' y
   using exists_fresh[of "[a,x,y]" "[t]"] apply(elim exE conjE)

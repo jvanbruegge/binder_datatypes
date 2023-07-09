@@ -422,7 +422,6 @@ apply(intro ext iffI)
   by (smt (verit, best) E.I'.simps E.I.simps E.I_eq_I' GG_def G_mono' II'.intros II'_I' predicate1I) .
 
 
-
 theorem BE_induct_enhanced[consumes 2]: 
 (* Parameters: *)
 fixes Pfvars :: "'P \<Rightarrow> 'A set"

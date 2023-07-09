@@ -222,9 +222,9 @@ lemma bij_betw_swap: "bij_betw f A B \<Longrightarrow> a \<in> A \<Longrightarro
 
 typedef 'a :: var_ilam_pre super =
    "{f :: 'a \<Rightarrow> 'a cinfset. bij_betw f UNIV cinf_partition \<and> (\<forall>x y. x \<noteq> y \<longrightarrow> set_cinfset (f x) \<inter> set_cinfset (f y) = {})}"
+  morphisms apply_super Rep_super
   by (auto intro!: exI[of _ super] simp: bij_betw_super dest: disjoint_super)
 setup_lifting type_definition_super
-lift_definition apply_super :: "'a :: var_ilam_pre super \<Rightarrow> 'a \<Rightarrow> 'a cinfset" is "id :: _ \<Rightarrow> ('a \<Rightarrow> 'a cinfset)" .
 lift_definition comp_super :: "'a :: var_ilam_pre super \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a :: var_ilam_pre super" is
   "\<lambda>g f. if bij f then g o f else g"
   by (auto simp: bij_betw_comp_iff2[symmetric])
@@ -310,13 +310,12 @@ abbreviation "bij_super g z z' \<equiv> bij_cinfset (apply_super g z) (apply_sup
 typedef 'a P_lam_ilam = "UNIV :: unit set" by auto
 typedef 'a :: var_ilam_pre U_lam_ilam = "{T :: 'a super \<Rightarrow> nat list \<Rightarrow> 'a ilam.
   (\<exists>X. finite X \<and> (\<forall>g g'. eq_on_super g g' X \<longrightarrow> T g = T g')
-     \<and> (\<forall>z z' g a. z' \<notin> X \<longrightarrow>
-       ivvsubst (bij_super g z z') (T g a) = T (swap_super g z z') a))}"
+     \<and> (\<forall>z z' g a. z' \<notin> X \<longrightarrow>  ivvsubst (bij_super g z z') (T g a) = T (swap_super g z z') a))}"
   apply (rule exI[of _ "\<lambda>g a. iVar (get_cinfset (apply_super g undefined) (list_encode a))"] exI[of _ "{undefined}"] CollectI allI)+
   apply (auto 0 4 simp: infinite bij_cinfset_def get_cinfset_inverse idx_cinfset_inverse get_cinfset_in
     dest: apply_super_eqI[OF get_cinfset_in] apply_super_eqI[OF _ get_cinfset_in])
-  apply (metis (mono_tags, lifting) Int_emptyD Rep_super apply_super.rep_eq get_cinfset_in mem_Collect_eq)
-  apply (metis (mono_tags, lifting) Int_emptyD Rep_super apply_super.rep_eq get_cinfset_in mem_Collect_eq)
+  apply (meson Int_emptyD apply_super_disjoint get_cinfset_in)
+  apply (meson Int_emptyD apply_super_disjoint get_cinfset_in)
   done
 
 setup_lifting type_definition_U_lam_ilam
@@ -391,7 +390,7 @@ lemma iApp_inject[simp]: "(iApp t U = iApp t' U') = (t = t' \<and> U = U')"
   apply (auto simp: ilam_vvsubst_rrename id_def[symmetric] cinfmset.map_id supp_id_bound intro!: exI[of _ id])
   done
 
-lemma image_cinfset_bij_cinfset:
+lemma image_cinfset_bij_cinfset[simp]:
   includes cinfset.lifting
   shows "image_cinfset (bij_cinfset A B) A = B"
   unfolding bij_cinfset_def
@@ -408,12 +407,68 @@ lemma image_cinfset_bij_cinfset':
   apply (auto simp add: from_nat_into infinite_imp_nonempty image_iff inj_on_def)
   by (metis Int_Collect Int_iff emptyE from_nat_into_surj to_nat_on_surj)
 
-lemma exist_fresh_super: "|A::'a set| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
-  |B :: 'a set| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
-  \<exists>a. a \<notin> A \<and> set_cinfset (apply_super g a) \<inter> B = {} \<and> set_cinfset (apply_super g' a) \<inter> B = {}"
-  sorry
+lemma bij_bij_super[simp]: "bij (bij_super g z z')"
+  by (metis apply_super_disjoint bij_cinfset bij_cinfset_self bij_id)
 
-lemma iAbs_super_eqI: "finite X \<Longrightarrow>
+lemma image_cinfset_bij_super_idle[simp]: "x \<noteq> z \<Longrightarrow> x \<noteq> z' \<Longrightarrow> image_cinfset (bij_super g z z') (apply_super g x) = apply_super g x"
+  apply (rule trans[OF cinfset.map_cong cinfset.map_id])
+       apply (auto simp: supp_id_bound)
+  apply (auto simp: bij_cinfset_def dest: apply_super_disjoint)
+  done
+
+lemma image_cinfset_bij_super'[simp]:
+  "image_cinfset (bij_super g z z') (apply_super g z') = apply_super g z"
+  apply (cases "z = z'")
+  apply (simp add: cinfset.map_id)
+  apply (erule image_cinfset_bij_cinfset'[OF apply_super_disjoint])
+  done
+
+lemma vimage_ordLess_var_ilam_pre:
+  assumes "|A| <o |UNIV :: 'a :: var_ilam_pre set|"
+      and "\<And>a. a \<in> A \<Longrightarrow> |vimage f {a}| <o |UNIV :: 'a :: var_ilam_pre set|"
+  shows "|vimage f A| <o |UNIV :: 'a :: var_ilam_pre set|"
+proof-
+  have "vimage f A = (\<Union>a \<in> A. vimage f {a})" by auto
+  also have "|\<Union>a \<in> A. vimage f {a}| <o |UNIV :: 'a :: var_ilam_pre set|"
+    using ilam.UNION_bound[OF assms] .
+  finally show ?thesis .
+qed
+
+lemma apply_super_vimage_singleton:
+  "apply_super g -` {apply_super g x} = {x :: 'a :: var_ilam_pre}"
+  by (auto elim: bij_betw_apply_super[THEN bij_betw_imp_inj_on, THEN injD])
+
+lemma exist_fresh_super:
+  assumes "|A :: 'a set| <o |UNIV :: 'a :: var_ilam_pre set|"
+          "|B :: 'a set| <o |UNIV :: 'a :: var_ilam_pre set|"
+  shows "\<exists>a. a \<notin> A \<and> set_cinfset (apply_super g a) \<inter> B = {} \<and> set_cinfset (apply_super g' a) \<inter> B = {}"
+proof -
+  let ?X = "\<lambda>g. {X \<in> range (apply_super g). set_cinfset X \<inter> B \<noteq> {}}"
+  have *: "|?X g| <o |UNIV :: 'a :: var_ilam_pre set|" for g
+    apply (rule ordLeq_ordLess_trans[OF _ assms(2)])
+    apply (fold card_of_ordLeq)
+    apply (auto intro!: exI[of _ "\<lambda>X. SOME x. x \<in> set_cinfset X \<and> x \<in> B"])
+     apply (auto simp: inj_on_def)
+    apply (metis (no_types, lifting) apply_super_disjoint disjoint_iff someI_ex)
+    apply (metis (no_types, lifting) someI_ex)
+    done
+  have "|A \<union> vimage (apply_super g) (?X g) \<union> vimage (apply_super g') (?X g')|
+   <o |UNIV :: 'a :: var_ilam_pre set|" (is "|?A| <o _")
+    apply (intro ilam.Un_bound assms(1))
+     apply (rule vimage_ordLess_var_ilam_pre[OF *])
+     apply (erule CollectE conjE imageE)+
+     apply hypsubst_thin
+     apply (simp add: apply_super_vimage_singleton infinite)
+     apply (rule vimage_ordLess_var_ilam_pre[OF *])
+     apply (erule CollectE conjE imageE)+
+     apply hypsubst_thin
+    apply (simp add: apply_super_vimage_singleton infinite)
+    done
+  then obtain x where "x \<notin> ?A" using exists_fresh by blast
+  then show ?thesis by auto
+qed
+
+lemma iAbs_super_eqI0: "finite X \<Longrightarrow>
   \<forall>g g'. (\<forall>x\<in>X. apply_super g x = apply_super g' x) \<longrightarrow> (\<forall>a. T g a = T g' a) \<Longrightarrow>
   (\<forall>z z' g a. z' \<notin> X \<longrightarrow> ivvsubst (bij_cinfset (apply_super g z) (apply_super g z')) (T g a) = T (swap_super g z z') a) \<Longrightarrow>
   \<forall>y. y \<noteq> z \<longrightarrow> apply_super g y = apply_super g' y \<Longrightarrow>
@@ -432,37 +487,34 @@ lemma iAbs_super_eqI: "finite X \<Longrightarrow>
        prefer 2
        apply (erule spec)
       apply auto []
-       apply (simp_all (no_asm))
      apply (rule sym)
-     apply (cases "apply_super g z = apply_super g zz")
-    apply (smt (verit, ccfv_SIG) apply_super_swap_super)
     subgoal premises prems
       using prems(5,3)
       unfolding iAbs_inject
-      apply (intro exI[of _ "bij_cinfset (apply_super g z) (apply_super g zz)"])
-      apply (intro conjI)
-          apply (rule bij_cinfset)
-          apply transfer
-          apply fastforce
-         apply (simp_all add: image_cinfset_bij_cinfset ilam_vvsubst_rrename[symmetric])
+      apply (intro exI[of _ "bij_super g z zz"])
       apply (auto simp: id_on_def bij_cinfset_def)
       done
      apply (rule sym)
-     apply (cases "apply_super g' z = apply_super g' zz")
-    apply (smt (verit, ccfv_SIG) apply_super_swap_super)
     subgoal premises prems
       using prems(5,3)
       unfolding iAbs_inject
-      apply (intro exI[of _ "bij_cinfset (apply_super g' z) (apply_super g' zz)"])
-      apply (intro conjI)
-          apply (rule bij_cinfset)
-          apply transfer
-          apply fastforce
-         apply (simp_all add: image_cinfset_bij_cinfset ilam_vvsubst_rrename[symmetric])
-       apply (auto simp: id_on_def bij_cinfset_def)
+      apply (intro exI[of _ "bij_super g' z zz"])
+      apply (auto simp: id_on_def bij_cinfset_def)
       done
     done
   done
+
+lemma iAbs_super_eqI: "\<forall>y. y \<noteq> z \<longrightarrow> apply_super g y = apply_super g' y \<Longrightarrow>
+  iAbs (apply_super g z) (Rep_U_lam_ilam T g a) = iAbs (apply_super g' z) (Rep_U_lam_ilam T g' a)"
+  using Rep_U_lam_ilam[of T]
+  by (force elim!: iAbs_super_eqI0)
+
+lemma ivvsubst_bij_iAbs:
+  fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV :: 'a set|"
+  shows "ivvsubst f (iAbs x t) = iAbs (image_cinfset f x) (ivvsubst f t)"
+  unfolding iAbs_def ilam_vvsubst_rrename[OF assms] ilam.rrename_cctors[OF assms]
+  by (auto simp: map_ilam_pre_def Abs_ilam_pre_inverse)
 
 lift_definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_lam_ilam, 'a lam \<times> 'a PU_lam_ilam) lam_pre \<Rightarrow> 'a PU_lam_ilam" is
   "\<lambda>lp :: ('a::var_ilam_pre, 'a, 'a lam \<times> _, 'a lam \<times> _) lam_pre.
@@ -499,10 +551,10 @@ lift_definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_
     apply (drule mp, rule refl)+
     apply safe
     subgoal for X
-      apply (rule exI[of _ "X - {x}"])
-      apply (clarsimp simp add: ilam.map_id)
-      apply safe
-      sorry
+      apply (rule exI[of _ "insert x X"])
+      apply (clarsimp simp add: ilam.map_id ivvsubst_bij_iAbs cinfset.map_id)
+      apply fastforce
+      done
     done
   subgoal for lp1 lp2 x M TM1 TM2 u g a
     apply (drule spec[of _ u])+
@@ -542,6 +594,65 @@ lift_definition set_U_lam_ilam :: " 'a lam \<Rightarrow> 'a :: var_ilam_pre U_la
   "\<lambda>t T. {x. \<exists>g g' a. T g a \<noteq> T g' a \<and> (\<forall>y. y \<noteq> x \<longrightarrow> apply_super g y = apply_super g' y)}"
   .
 
+lemma map_sum_eq_conv:
+  "map_sum f g x = Inl y \<longleftrightarrow> (\<exists>l. x = Inl l \<and> y = f l)"
+  "map_sum f g x = Inr z \<longleftrightarrow> (\<exists>r. x = Inr r \<and> z = g r)"
+  "Inl y = map_sum f g x \<longleftrightarrow> (\<exists>l. x = Inl l \<and> y = f l)"
+  "Inr z = map_sum f g x \<longleftrightarrow> (\<exists>r. x = Inr r \<and> z = g r)"
+  by (cases x; auto)+
+
+lemma comp_super_id[simp]: "comp_super g id = g"
+  by transfer auto
+
+lemma map_U_lam_ilam_id: "map_U_lam_ilam id t = id"
+  by transfer' auto
+
+lemma comp_super_comp[simp]: "bij f \<Longrightarrow> bij h \<Longrightarrow> comp_super (comp_super g f) h = comp_super g (f o h)"
+  by transfer auto
+
+lemma comp_super_cong_id: "(\<forall>x. f x = x) \<Longrightarrow> comp_super g f = g"
+  by transfer auto
+
+lemma map_U_lam_ilam_comp:
+  fixes f g :: "'a :: var_ilam_pre \<Rightarrow> 'a"
+  shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
+   map_U_lam_ilam (f \<circ> g) t = map_U_lam_ilam f t \<circ> map_U_lam_ilam g t"
+  by transfer' (auto simp: fun_eq_iff)
+
+lemma map_U_lam_ilam_cong_id:
+  fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
+  shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
+    (\<And>a. a \<in> set_U_lam_ilam t d \<Longrightarrow> f a = a) \<Longrightarrow> map_U_lam_ilam f t d = d"
+  apply transfer
+  apply (auto simp: fun_eq_iff)
+  subgoal for f T X g a
+    apply (rule ccontr)
+    apply (subgoal_tac "\<exists>x \<in> X. f x \<noteq> x")
+     apply (erule bexE)
+    subgoal for x
+      apply (drule meta_spec[of _ x])
+      apply auto
+      apply (erule meta_mp)
+      sorry
+    apply (erule contrapos_np)
+    apply (auto simp: comp_super_cong_id)
+    done
+  done
+
+lemma set_U_lam_ilam_map_U_lam_ilam:
+  fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
+  shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
+    set_U_lam_ilam (rrename_lam f t) (map_U_lam_ilam f t d) = f ` set_U_lam_ilam t d"
+  apply transfer
+  apply (auto simp: image_iff)
+  apply (smt (z3) apply_super_comp_super bij_implies_inject)
+  subgoal for f T X z g g' a
+    apply (rule exI[of _ "comp_super g (inv f)"])
+    apply (rule exI[of _ "comp_super g' (inv f)"])
+    apply (auto dest: spec[of _ "inv f _"])
+    done
+  done
+
 lemma map_CCTOR_lam_ilam:
   "bij f \<Longrightarrow>
        |supp f| <o |UNIV| \<Longrightarrow>
@@ -552,33 +663,48 @@ lemma map_CCTOR_lam_ilam:
           (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. map_U_lam_ilam f t (pu (id p))))
           (\<lambda>(t, pu). (rrename_lam f t, \<lambda>p. map_U_lam_ilam f t (pu (id p)))) y)
         (id p)"
-  sorry
+  apply (rule iffD1[OF Rep_U_lam_ilam_inject])
+  apply (auto simp add: map_U_lam_ilam.rep_eq CCTOR_lam_ilam.rep_eq map_lam_pre_def
+    Abs_lam_pre_inverse map_sum_eq_conv
+      Var_def[symmetric] App_def[symmetric] Abs_def[symmetric] split: sum.splits)
+  done
 
 lemma set_CCTOR_lam_ilam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longrightarrow>
   set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longrightarrow>
        (\<And>t pu p. (t, pu) \<in> set3_lam_pre y \<union> set4_lam_pre y \<Longrightarrow> set_U_lam_ilam t (pu p) \<subseteq> fv t \<union> {} \<union> {}) \<Longrightarrow>
        set_U_lam_ilam t (CCTOR_lam_ilam y p) \<subseteq> fv (lam_ctor (map_lam_pre id id fst fst y)) \<union> {} \<union> {}"
   apply clarsimp
-  apply (auto simp: CCTOR_lam_ilam_def set_U_lam_ilam_def
-    Var_def[symmetric] Abs_def[symmetric] App_def[symmetric]
-    map_lam_pre_def set3_lam_pre_def set4_lam_pre_def
-    Abs_lam_pre_inverse
- split: sum.splits prod.splits)
-
+  apply (auto simp add: set_U_lam_ilam_def CCTOR_lam_ilam.rep_eq map_lam_pre_def
+      set3_lam_pre_def set4_lam_pre_def Abs_lam_pre_inverse map_sum_eq_conv subset_eq
+      Var_def[symmetric] App_def[symmetric] Abs_def[symmetric] split: sum.splits)
+      apply metis
+     apply metis
+    apply metis
+  subgoal for x z g t g' T a
+    apply (erule contrapos_np)
+    apply (rule iAbs_super_eqI)
+    apply (smt (verit, del_insts) UNIV_I bij_betw_apply_super bij_betw_iff_bijections)
+    done
+  subgoal for z g t g' T a
+    apply (erule contrapos_np)
+    apply (rule iAbs_super_eqI)
+    apply (smt (verit, del_insts) UNIV_I bij_betw_apply_super bij_betw_iff_bijections)
+    done
+  done
 
 local_setup \<open>fn lthy =>
 let
   fun rtac ctxt = resolve_tac ctxt o single
   val model_tacs = {
     small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
-    Umap_id0 = fn ctxt => rtac ctxt @{thm ilam.map_id0} 1,
-    Umap_comp0 = fn ctxt => (rtac ctxt @{thm ilam.map_comp0} THEN_ALL_NEW assume_tac ctxt) 1,
-    Umap_cong_id = fn ctxt => (rtac ctxt @{thm trans[OF ilam.map_cong[OF _ supp_id_bound refl] ilam.map_id, simplified]}
+    Umap_id0 = fn ctxt => rtac ctxt @{thm map_U_lam_ilam_id} 1,
+    Umap_comp0 = fn ctxt => (rtac ctxt @{thm map_U_lam_ilam_comp} THEN_ALL_NEW assume_tac ctxt) 1,
+    Umap_cong_id = fn ctxt => (rtac ctxt @{thm map_U_lam_ilam_cong_id}
        THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1,
-    UFVars_Umap = [fn ctxt => rtac ctxt @{thm ilam.set_map} 1 THEN assume_tac ctxt 1],
-    Umap_Uctor = fn ctxt => print_tac ctxt "map" THEN Skip_Proof.cheat_tac ctxt 1 (*(rtac ctxt @{thm map_CCTOR_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1*),
-    UFVars_subsets = [fn ctxt => print_tac ctxt "set" THEN Skip_Proof.cheat_tac ctxt (*(rtac ctxt @{thm set_CCTOR_lam_ilam}
-       THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt])*) 1]
+    UFVars_Umap = [fn ctxt => (rtac ctxt @{thm set_U_lam_ilam_map_U_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1],
+    Umap_Uctor = fn ctxt => (rtac ctxt @{thm map_CCTOR_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1,
+    UFVars_subsets = [fn ctxt => (rtac ctxt @{thm set_CCTOR_lam_ilam}
+       THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1]
   } : (Proof.context -> tactic) MRBNF_Recursor.model_axioms;
 
   val params = {
@@ -619,15 +745,11 @@ let
 in lthy end
 \<close>
 
+lift_definition super_lifted :: "'a :: var_ilam_pre super" is "super"
+  by (auto simp: bij_betw_super disjoint_super)
 
-
-lemma
-  "f g (Var x :: 'a :: var_ilam_pre lam) a = (iVar (get_cinfset (g x) (list_encode a)) :: 'a ilam)"
-  "f g (Abs x M) a = iAbs (g x) (f g M a)"
-  "f g (App M N) a = iApp (f g M (0#a)) (image_cinfmset (\<lambda>i. f g N ((i + 1) # a)) \<nat>#)"
-  sorry
-
-abbreviation lam_ilam ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where "lam_ilam t xs \<equiv> ff0_lam_ilam t (Abs_P_lam_ilam xs)"
+abbreviation lam_ilam :: "'a :: var_ilam_pre lam \<Rightarrow> nat list \<Rightarrow> 'a ilam" ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where
+   "lam_ilam t a \<equiv> Rep_U_lam_ilam (ff0_lam_ilam t (Abs_P_lam_ilam ())) super_lifted a"
 
 lemma lam_ilam_simps[simp]:
   "\<lbrakk>Var x\<rbrakk>a = iVar (get_cinfset \<lbrace>x\<rbrace> (list_encode a))"
@@ -636,13 +758,13 @@ lemma lam_ilam_simps[simp]:
   unfolding Var_def Abs_def App_def
     apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set1_lam_pre_def set2_lam_pre_def map_lam_pre_def
       Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
-      CCTOR_lam_ilam_def split: sum.splits)
+      CCTOR_lam_ilam.rep_eq super_lifted.rep_eq split: sum.splits)
    apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set1_lam_pre_def set4_lam_pre_def map_lam_pre_def
       Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
-      CCTOR_lam_ilam_def split: sum.splits)
+      CCTOR_lam_ilam.rep_eq super_lifted.rep_eq split: sum.splits)
   apply (subst lam_ilam.ctor; auto simp: noclash_lam_def set2_lam_pre_def set4_lam_pre_def map_lam_pre_def
-      Abs_lam_pre_inverse Abs_P_lam_ilam_inverse myCons.abs_eq
-      CCTOR_lam_ilam_def split: sum.splits)
+      Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
+      CCTOR_lam_ilam.rep_eq super_lifted.rep_eq split: sum.splits)
   done
 
 context includes cinfmset.lifting begin
@@ -657,8 +779,6 @@ lemma NATS_cinfmset_UNIV: "i \<in>#\<in> \<nat>#"
   by transfer auto
 
 end
-
-thm lam_ilam.ifv
 
 lemma ifv_subset: "ifv (\<lbrakk>M\<rbrakk>a) \<subseteq> {x. \<exists>y b. y \<in> fv M \<and> rev a \<le> rev b \<and> x = get_cinfset \<lbrace>y\<rbrace> (list_encode b)}"
   apply (induct M arbitrary: a)

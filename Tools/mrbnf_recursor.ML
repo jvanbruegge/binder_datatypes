@@ -123,7 +123,7 @@ fun add_f_prems min_bound hs =
   let
     fun interlace [] [] = []
       | interlace (x::xs) (y::ys) = x::y::interlace xs ys
-    val vars = fold_rev Term.add_tfrees (hs |> @{print}) [];
+    val vars = fold_rev Term.add_tfrees hs [];
     val bd = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV o TFree) vars);
     fun mk_supp_bound' f = mk_ordLess (mk_card_of (mk_supp f)) (if min_bound then bd else
       mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of f)))

@@ -224,11 +224,12 @@ typedef 'a :: var_ilam_pre super =
    "{f :: 'a \<Rightarrow> 'a cinfset. inj f \<and> (\<forall>x y. x \<noteq> y \<longrightarrow> set_cinfset (f x) \<inter> set_cinfset (f y) = {})}"
    morphisms apply_super Rep_super
   using bij_betw_super
-  by (auto intro!: exI[of _ super] dest: bij_betw_imp_inj_on disjoint_super)
+  by (auto intro!: exI[of _ super] simp: dest: disjoint_super bij_betw_imp_inj_on)
 setup_lifting type_definition_super
 lift_definition comp_super :: "'a :: var_ilam_pre super \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a :: var_ilam_pre super" is
-  "\<lambda>g f. if bij f then g o f else g"
-  by (auto simp: bij_betw_comp_iff2[symmetric] dest: bij_is_inj intro: inj_compose)
+  "\<lambda>g f. if inj f then g o f else g"
+  apply (auto intro!: inj_compose)
+  by (meson Int_emptyD injD)
 lift_definition swap_super :: "'a :: var_ilam_pre super \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a :: var_ilam_pre super" is
   "\<lambda>g z z'. g (z := g z', z' := g z)"
   by (auto simp: inj_on_def split: if_splits)
@@ -553,15 +554,18 @@ lift_definition CCTOR_lam_ilam :: "('a::var_ilam_pre, 'a, 'a lam \<times> 'a PU_
     done
   done
 
-lemma apply_super_comp_super[simp]: "bij f \<Longrightarrow> apply_super (comp_super g f) = apply_super g o f"
+lemma apply_super_comp_super[simp]: "inj f \<Longrightarrow> apply_super (comp_super g f) = apply_super g o f"
   apply transfer
   apply auto
   done
 
+lemma apply_super_comp_super'[simp]: "bij f \<Longrightarrow> apply_super (comp_super g f) = apply_super g o f"
+  by (rule apply_super_comp_super[OF bij_is_inj])
+
 lemma comp_super_swap_super[simp]: "bij f \<Longrightarrow>
   comp_super (swap_super g z z') f =
   swap_super (comp_super g f) (inv f z) (inv f z')"
-  by transfer fastforce
+  by transfer (auto simp: fun_eq_iff inv_f_eq dest: bij_is_inj)
 
 lift_definition map_U_lam_ilam :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a lam \<Rightarrow> 'a U_lam_ilam \<Rightarrow> 'a :: var_ilam_pre U_lam_ilam" is
   "\<lambda>f t T g a. if bij f then T (comp_super g f) a else T g a"
@@ -597,8 +601,8 @@ lemma comp_super_id[simp]: "comp_super g id = g"
 lemma map_U_lam_ilam_id: "map_U_lam_ilam id t = id"
   by transfer' auto
 
-lemma comp_super_comp[simp]: "bij f \<Longrightarrow> bij h \<Longrightarrow> comp_super (comp_super g f) h = comp_super g (f o h)"
-  by transfer auto
+lemma comp_super_comp[simp]: "inj f \<Longrightarrow> inj h \<Longrightarrow> comp_super (comp_super g f) h = comp_super g (f o h)"
+  by transfer (auto simp: inj_compose)
 
 lemma comp_super_cong_id: "(\<forall>x. f x = x) \<Longrightarrow> comp_super g f = g"
   by transfer auto
@@ -607,7 +611,7 @@ lemma map_U_lam_ilam_comp:
   fixes f g :: "'a :: var_ilam_pre \<Rightarrow> 'a"
   shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
    map_U_lam_ilam (f \<circ> g) t = map_U_lam_ilam f t \<circ> map_U_lam_ilam g t"
-  by transfer' (auto simp: fun_eq_iff)
+  by transfer' (auto simp: fun_eq_iff dest!: bij_is_inj)
 
 lemma map_U_lam_ilam_cong_id:
   fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
@@ -643,11 +647,11 @@ lemma set_U_lam_ilam_map_U_lam_ilam:
     set_U_lam_ilam (rrename_lam f t) (map_U_lam_ilam f t d) = f ` set_U_lam_ilam t d"
   apply transfer
   apply (auto simp: image_iff)
-  apply (smt (z3) apply_super_comp_super comp_def bij_implies_inject)
+  apply (smt (z3) apply_super_comp_super' comp_def bij_implies_inject)
   subgoal for f T X z g g' a
     apply (rule exI[of _ "comp_super g (inv f)"])
     apply (rule exI[of _ "comp_super g' (inv f)"])
-    apply (auto dest: spec[of _ "inv f _"])
+    apply (auto dest: spec[of _ "inv f _"] simp: bij_is_inj)
     done
   done
 
@@ -680,14 +684,11 @@ lemma set_CCTOR_lam_ilam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longr
     apply metis
   subgoal for x z g t g' T a
     apply (erule contrapos_np)
-    apply (rule iAbs_super_eqI)
-    sledgehammer
-    apply (smt (verit, del_insts) UNIV_I inj_apply_super bij_betw_iff_bijections)
+     apply (metis (no_types, lifting) iAbs_super_eqI)
     done
   subgoal for z g t g' T a
     apply (erule contrapos_np)
-    apply (rule iAbs_super_eqI)
-    apply (smt (verit, del_insts) UNIV_I inj_apply_super bij_betw_iff_bijections)
+     apply (metis (no_types, lifting) iAbs_super_eqI)
     done
   done
 
@@ -745,7 +746,7 @@ in lthy end
 \<close>
 
 lift_definition super_lifted :: "'a :: var_ilam_pre super" is "super"
-  by (auto simp: bij_betw_super disjoint_super)
+  by (auto simp: disjoint_super bij_betw_imp_inj_on[OF bij_betw_super])
 
 abbreviation lam_ilam :: "'a :: var_ilam_pre lam \<Rightarrow> nat list \<Rightarrow> 'a ilam" ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where
    "lam_ilam t a \<equiv> Rep_U_lam_ilam (ff0_lam_ilam t (Abs_P_lam_ilam ())) super_lifted a"
@@ -823,18 +824,7 @@ definition "class" where
 
 definition "rep g x = inv (apply_super g) (class g x)"
 
-lemma ex1_cinf_partition: "\<exists>!X. X \<in> cinf_partition \<and> x \<in>\<in> X"
-  apply safe
-   apply transfer
-  using ex1_var_partition var_partition_cinf apply fastforce
-   apply transfer
-  using ex1_var_partition var_partition_cinf apply blast
-  done
-
-lemma range_apply_super: "range (apply_super g) = cinf_partition"
-  by (meson inj_apply_super bij_betw_def)
-
-lemma in_class: "x \<in>\<in> class g x"
+lemma in_class: "x \<in> range (apply_super g) \<Longrightarrow> x \<in>\<in> class g x"
   unfolding class_def range_apply_super
   by (rule the1I2[OF ex1_cinf_partition]) auto
 
@@ -888,7 +878,7 @@ lemma rep_swap_super: "rep (swap_super g (rep g z) (rep g z')) x = swap_rep g z 
   unfolding rep_def swap_super.rep_eq swap_rep_def
   apply auto
     apply (metis (no_types, opaque_lifting) UNIV_I apply_super_rep apply_super_swap_super
-      inj_apply_super bij_betw_imp_inj_on ex1_cinf_partition imageI in_class inv_f_f range_apply_super swap_super.rep_eq)+
+      inj_apply_super bij_betw_imp_inj_on imageI in_class inv_f_f range_apply_super swap_super.rep_eq)+
   done
 
 typedef 'a P_ilam_lam = "UNIV :: unit set" by auto
@@ -898,11 +888,6 @@ typedef 'a :: var_ilam_pre U_ilam_lam = "{T :: 'a super \<Rightarrow> 'a lam.
   apply (rule exI[of _ "\<lambda>g. Var (rep g undefined)"] exI[of _ "{undefined}"] CollectI allI)+
   apply (auto simp: infinite eq_rep_def bij_cinfset_def rep_swap_super)
   done
-
-lift_definition comp2_super :: "'a :: var_ilam_pre super \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a :: var_ilam_pre super" is
-  "\<lambda>g f. if bij f then image_cinfset f o g else g"
-  apply auto
-  sledgehammer
 
 lemma "bij f \<Longrightarrow> rep (comp_super g f) x = inv f (rep g x)"
   unfolding rep_def
@@ -1034,12 +1019,12 @@ lemma set_CCTOR_ilam_lam: "set2_lam_pre y \<inter> ({} \<union> {}) = {} \<Longr
   subgoal for x z g t g' T a
     apply (erule contrapos_np)
     apply (rule iAbs_super_eqI)
-    apply (smt (verit, del_insts) UNIV_I inj_apply_super bij_betw_iff_bijections)
+    apply (smt (verit, del_insts) UNIV_I bij_betw_apply_super bij_betw_iff_bijections)
     done
   subgoal for z g t g' T a
     apply (erule contrapos_np)
     apply (rule iAbs_super_eqI)
-    apply (smt (verit, del_insts) UNIV_I inj_apply_super bij_betw_iff_bijections)
+    apply (smt (verit, del_insts) UNIV_I bij_betw_apply_super bij_betw_iff_bijections)
     done
   done
 

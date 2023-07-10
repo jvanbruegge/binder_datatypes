@@ -83,9 +83,6 @@ lemma supp_id_update_le[simp,intro!]:
 by (metis finite.emptyI finite.insertI finite_card_var imsupp_id_fun_upd imsupp_supp_bound infinite_var)
 
 
-definition "sw a x y \<equiv> if a = x then y else if a = y then x else a"
-definition "sb a x y \<equiv> if a = y then x else a"
-
 (* Some lighter notations: *)
 
 abbreviation "rrename \<equiv> rrename_term"

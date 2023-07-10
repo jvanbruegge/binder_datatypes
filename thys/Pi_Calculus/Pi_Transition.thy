@@ -70,7 +70,7 @@ Com2: "trans P1 (Fout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Longr
 Close1: "trans P1 (Finp a x P1') \<Longrightarrow> trans P2 (Bout a x  P2') \<Longrightarrow>
     \<^cancel>\<open>  x \<noteq> a seems essential, and not an artifact \<close> 
    x \<notin> {a} \<union> FFVars P1 \<^cancel>\<open>\<union> FFVars P2 was in Bengtson\<close>  \<Longrightarrow>
-   trans (Par P1 P2) (Bout a x (Par P1' P2'))" 
+   trans (Par P1 P2) (Tau (Res x (Par P1' P2')))" 
 (*  
 x fresh P1  x=/=a
 trans (P1=[xx/x]) (Finp a[xx/x[xx/x])] xx P1' \<Longrightarrow> trans P2 (Bout a xx  P2'[xx/x]) 

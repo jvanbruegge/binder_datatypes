@@ -613,6 +613,8 @@ lemma map_U_lam_ilam_comp:
    map_U_lam_ilam (f \<circ> g) t = map_U_lam_ilam f t \<circ> map_U_lam_ilam g t"
   by transfer' (auto simp: fun_eq_iff dest!: bij_is_inj)
 
+find_theorems bij name: swap
+
 lemma map_U_lam_ilam_cong_id:
   fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
   shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>

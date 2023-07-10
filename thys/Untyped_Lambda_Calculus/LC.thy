@@ -477,6 +477,6 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 
-
+(* todo: proper swapping, and checking that the swappingFresh etc. properties hold *)
 
 end

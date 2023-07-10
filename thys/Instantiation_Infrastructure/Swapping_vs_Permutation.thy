@@ -1206,10 +1206,15 @@ by (simp add: n permutFvars_permutFvars' permutFvars_toPerm s)
 
 (* *)
 
-(* AtoD: Relevant theorems for our case: *)
-thm toSwp_toPerm toPerm_toSwp
+(* thm toSwp_toPerm toPerm_toSwp
 thm permutFvars_toPerm
 thm swappingFvars_toSwp
+*)
+
+(* AtoD: Relevant theorems for our case: *)
+
+thm fsupp_ex_compose_strong[of f] compose.simps[no_vars]
+
 
 
 

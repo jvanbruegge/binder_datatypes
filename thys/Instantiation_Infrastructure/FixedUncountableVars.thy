@@ -84,4 +84,30 @@ shows "\<exists> x::var. x \<notin> X"
 by (simp add: assms ex_new_if_finite infinite_var)
 
 
+(* *)
+
+definition sw :: "var \<Rightarrow> var \<Rightarrow> var \<Rightarrow> var" where 
+"sw x y z \<equiv> if x = y then z else if x = z then y else x"
+
+lemma sw_eqL[simp,intro!]: "\<And> x y z. sw x x y = y"
+and sw_eqR[simp,intro!]: "\<And> x y z. sw x y x = y"
+and sw_diff[simp]: "\<And> x y z. x \<noteq> y \<Longrightarrow> x \<noteq> z \<Longrightarrow> sw x y z = x"
+  unfolding sw_def by auto
+
+lemma sw_sym: "sw x y z = sw x z y"
+and sw_id[simp]: "sw x y y = x"
+and sw_sw: "sw (sw x y z) y1 z1 = sw (sw x y1 z1) (sw y y1 z1) (sw z y1 z1)"
+and sw_invol[simp]: "sw (sw x y z) y z = x"
+  unfolding sw_def by auto
+
+lemma sw_invol2: "sw (sw x y z) z y = x"
+  by (simp add: sw_sym)
+
+lemma sw_inj[iff]: "sw x z1 z2 = sw y z1 z2 \<longleftrightarrow> x = y"
+  unfolding sw_def by auto
+
+lemma sw_surj: "\<exists>y. x = sw y z1 z2"
+  by (metis sw_invol)
+
+
 end

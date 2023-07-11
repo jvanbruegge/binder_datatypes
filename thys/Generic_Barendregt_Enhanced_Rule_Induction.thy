@@ -149,7 +149,7 @@ by auto (metis Int_iff bij_inv_eq_iff emptyE imageE insert_absorb insert_subset)
 end (* locale Components *)
 
 
-locale Induct = Components dummy Tmap Tfvars Vmap Vfvars 
+locale Induct1 = Components dummy Tmap Tfvars Vmap Vfvars 
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
@@ -163,43 +163,6 @@ assumes
 G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 and 
 G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
-and 
-(* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
-including beta-reduction (see their paper): 
-G_fresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
-I replace it with a much weaker condition: namely that such a fresh v can be produced 
-for equivariant relations R:  
-*)
-G_fresh: 
-"\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
-         \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> G R w t"
-
-
-(* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale Induct_simple = Components dummy Tmap Tfvars Vmap Vfvars 
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
-and Tfvars :: "'T \<Rightarrow> 'A set"
-and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
-and Vfvars :: "'V \<Rightarrow> 'A set"
-+
-fixes (* The operator that defines the inductive predicate as gfp:  *)
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
-assumes 
-G_mono[mono]: "\<And>R R' v t. R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
-and 
-G_equiv: "\<And>\<sigma> R v t. ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t) "
-and 
-G_fresh_simple: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
-
-sublocale Induct_simple < Induct apply standard
-  subgoal using G_mono .
-  subgoal using G_equiv .
-  subgoal using G_fresh_simple by blast .
-
-
-context Induct
 begin
 
 lemma G_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> G R v t \<longrightarrow> G R' v t"
@@ -249,6 +212,99 @@ using assms proof induct
   show ?case using vv G by (subst I'.simps, auto) 
 qed
 
+definition GG where "GG R \<equiv> G (\<lambda>t. I' t \<and> R t)"
+
+lemma GG_imp_G: "GG R v t \<Longrightarrow> G R v t" 
+unfolding GG_def by (metis (no_types, lifting) G_mono predicate1I)
+
+lemma GG_mono[mono]: "R \<le> R' \<Longrightarrow> GG R v t \<Longrightarrow> GG R' v t"
+unfolding GG_def using G_mono[of "\<lambda>t. I' t \<and> R t" "\<lambda>t. I' t \<and> R' t"] by auto
+
+lemma GG_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> GG R v t \<longrightarrow> GG R' v t"
+  using GG_mono by blast
+
+lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> GG R v t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+unfolding GG_def using G_equiv[of \<sigma> "\<lambda>t. I' t \<and> R t" v t] I'_equiv[of _ \<sigma>]   
+by simp (smt (z3) G_mono Tmap_comp' Tmap_id id_apply predicate1I ssbij_inv ssbij_invL)
+
+inductive II' :: "'T \<Rightarrow> bool" where 
+GG_II'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> GG II' v t \<Longrightarrow> II' t"
+
+lemma II'_I': "II' = I'"
+apply(intro ext iffI)
+  subgoal for t apply(induct rule: II'.induct)
+  unfolding GG_def  
+  by (metis (no_types, lifting) G_mono I'.intros predicate1I)
+  subgoal for t apply(induct rule: I'.induct)
+  by (auto simp: GG_def intro: II'.intros) .
+  
+end (* context Induct1 *)
+
+
+locale Induct_enhanced = Induct1 dummy Tmap Tfvars Vmap Vfvars G
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+and 
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
++
+assumes 
+GG_fresh: 
+"\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG R v t \<Longrightarrow> 
+         \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> GG R w t"
+
+
+locale Induct = Induct1 dummy Tmap Tfvars Vmap Vfvars G
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+and 
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
++
+assumes 
+(* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
+including beta-reduction (see their paper): 
+G_fresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
+I replace it with a much weaker condition: namely that such a fresh v can be produced 
+for equivariant relations R:  
+*)
+G_fresh: 
+"\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
+         \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> G R w t"
+
+
+sublocale Induct_enhanced < E: Induct where G = GG
+apply standard
+  subgoal using GG_mono .
+  subgoal using GG_equiv .
+  subgoal using GG_fresh . .
+
+(* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
+locale Induct_simple = Induct1 dummy Tmap Tfvars Vmap Vfvars G 
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+and 
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
++
+assumes 
+G_fresh_simple: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
+
+sublocale Induct_simple < Induct apply standard
+  subgoal using G_fresh_simple by blast . 
+
+
+context Induct
+begin
 
 (* NB: The following could replace G_fresh in the axiomatization. 
 It has the advantage that it is weaker, but also two disadvantages:
@@ -352,9 +408,34 @@ proof-
   by (simp add: Tmap_id ssbij_id)
 qed
 
-
-
 end (* context Induct *)
+
+
+context Induct_enhanced 
+begin
+
+lemma E_I: "E.I = I"
+apply(intro ext iffI)
+  subgoal for t apply(induct rule: E.I.induct) 
+  by (metis (mono_tags, lifting) GG_def G_mono I.intros predicate1I)
+  subgoal for t apply(induct rule: I.induct) 
+  by (smt (verit, best) E.I'.simps E.I.simps E.I_eq_I' GG_def G_mono' II'.intros II'_I' predicate1I) .
+
+
+theorem BE_induct_enhanced[consumes 2]: 
+(* Parameters: *)
+fixes Pfvars :: "'P \<Rightarrow> 'A set"
+assumes small_Pfvars: "\<And>p. small (Pfvars p)" 
+(* *)
+assumes I: "I (t::'T)"
+and strong: "\<And> p v t. Vfvars v \<inter> Pfvars p = {} \<Longrightarrow> Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> 
+      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) v t \<Longrightarrow> R p t"
+shows "R p t"
+apply(rule E.BE_induct[unfolded E_I, OF small_Pfvars I, of _ R])
+using strong GG_imp_G by blast
+
+
+end (* context Induct_enhanced *)
 
 
 (* 

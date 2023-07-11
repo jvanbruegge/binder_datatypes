@@ -268,7 +268,7 @@ instance
 
 end
 
-lemma
+lemma small_super:
   fixes g :: "'a :: cinf \<Rightarrow> var cinfset"
   shows "inj g \<Longrightarrow> cinf_partition_on UNIV X \<Longrightarrow> range g \<subseteq> X \<Longrightarrow> infinite (X - range g)"
   apply (rule subset_ordLeq_diff_infinite)
@@ -279,24 +279,24 @@ lemma
      apply (metis Field_natLeq MRBNF_Composition.var_ID_class.large infinite_iff_card_of_nat)
     apply (metis infinite_UNIV_char_0 inj_on_finite)
    apply assumption
-  apply (drule cinf_partition_on_in_iff)
   apply (rule ccontr)
   apply simp
   apply (subst (asm) card_of_ordLeq2[symmetric])
    apply (auto simp: image_iff)
+  apply transfer
+  apply (auto simp: subset_eq image_iff partition_on_def disjoint_def)
+  apply (metis UNIV_I countableI_type countable_UN exists_var)
+  done
 
 
 
 typedef 'a :: cinf super =
    "{g :: 'a \<Rightarrow> var cinfset.
-      inj g \<and> (\<exists>X. cinf_partition_on UNIV X \<and> range g \<subseteq> X \<and> infinite (X - range g))}"
+      inj g \<and> (\<exists>X. cinf_partition_on UNIV X \<and> range g \<subseteq> X)}"
    morphisms apply_super Rep_super
-  apply (intro exI[of _ super] exI[of _ cinf_partition] conjI CollectI
-    subset_ordLeq_diff_infinite)
-  using bij_betw_super0 unfolding super_def
-  apply (auto intro!: inj_compose ordLess_ordIso_trans[OF _ cinf_partition_ordIso[THEN ordIso_symmetric]]
-    countable_card_var simp: bij_betw_def inj_embed cinf_partition infinite_cinf_partition)
-  done
+  using bij_betw_super0
+  by (auto intro!: exI[of _ super] exI[of _ cinf_partition] inj_compose ordLess_ordIso_trans[OF _ cinf_partition_ordIso[THEN ordIso_symmetric]]
+    countable_card_var simp: super_def bij_betw_def inj_embed cinf_partition)
 
 setup_lifting type_definition_super
 

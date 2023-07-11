@@ -477,6 +477,184 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 
-(* todo: proper swapping, and checking that the swappingFresh etc. properties hold *)
+(*   *)
+
+(* *)
+
+(* Swapping and unary substitution, as abbreviations: *)
+abbreviation "swap t (x::var) y \<equiv> rrename (id(x:=y,y:=x)) t"
+abbreviation "usub t (y::var) x \<equiv> vvsubst (id(x:=y)) t"
+
+(* *)
+
+lemma usub_swap_disj: 
+assumes "{u,v} \<inter> {x,y} = {}"
+shows "usub (swap t u v) x y = swap (usub t x y) u v"
+proof-
+  note term_vvsubst_rrename[simp del]
+  show ?thesis using assms 
+  apply(subst term_vvsubst_rrename[symmetric]) apply auto
+  apply(subst term.map_comp) apply auto
+  apply(subst term_vvsubst_rrename[symmetric]) apply auto
+  apply(subst term.map_comp) apply auto
+  apply(rule term.map_cong0) 
+    using term_pre.supp_comp_bound by auto 
+qed
+
+lemma rrename_o_swap: 
+"rrename (id(y::var := yy, yy := y) o id(x := xx, xx := x)) t = 
+ swap (swap t x xx) y yy"
+apply(subst term.rrename_comps[symmetric])
+by auto
+
+(* *)
+
+lemma swap_simps[simp]: "swap (Var z) (y::var) x = Var (sw z y x)"
+"swap (App t s) (y::var) x = App(swap t y x) (swap s y x)"
+"swap (Abs v t) (y::var) x = Abs (sw v y x) (swap t y x)"
+by (auto simp: sw_def)
+
+lemma FFVars_swap[simp]: "FFVars (swap t y x) = 
+ (\<lambda>u. sw u x y) ` (FFVars t)"
+apply(subst term.FFVars_rrenames) by (auto simp: sw_def)
+
+lemma FFVars_swap'[simp]: "{x::var,y} \<inter> FFVars t = {} \<Longrightarrow> swap t x y = t"
+apply(rule term.rrename_cong_ids) by auto
+
+(* *)
+
+lemma Abs_inject_swap: "Abs v t = Abs v' t' \<longleftrightarrow> 
+  (v' \<notin> FFVars t \<or> v' = v) \<and> swap t v' v = t'"
+unfolding Abs_inject apply(rule iffI)
+  subgoal unfolding id_on_def apply auto
+  apply(rule rrename_cong) by auto 
+  subgoal apply clarsimp
+  apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
+
+lemma Abs_inject_swap': "Abs v t = Abs v' t' \<longleftrightarrow> 
+  (\<exists>z. (z \<notin> FFVars t \<or> z = v) \<and> (z \<notin> FFVars t' \<or> z = v') \<and> 
+       swap t z v = swap t' z v')"
+unfolding Abs_inject_swap apply(rule iffI)
+  subgoal apply clarsimp apply(rule exI[of _ v']) by auto
+  subgoal by (smt (verit, del_insts) Abs_inject_swap)    .
+
+lemma Abs_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow> 
+   Abs v t = Abs v' (swap t v' v)"
+using Abs_inject_swap by auto
+
+lemma Abs_refresh: 
+"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> Abs x t = Abs xx (swap t x xx)"
+by (metis Abs_inject_swap fun_upd_twist)
+
+(* *)
+
+lemma FFVars_usub[simp]: "FFVars (usub t y x) = 
+ (if x \<in> FFVars t then FFVars t - {x} \<union> {y} else FFVars t)"
+apply(subst term.set_map) by auto
+
+lemma usub_simps_free[simp]: "\<And>y x. usub (Var z) (y::var) x = Var (sb z y x)"
+"\<And>y x t s. usub (App t s) (y::var) x = App (usub t y x) (usub s y x)"
+by (auto simp: sb_def)
+
+lemma usub_Abs[simp]: 
+"v \<notin> {x,y} \<Longrightarrow> usub (Abs v t) (y::var) x = Abs v (usub t y x)"
+apply(subst term.map)
+  subgoal by auto
+  subgoal by (auto simp: imsupp_def supp_def)
+  subgoal by auto . 
+
+lemmas usub_simps = usub_simps_free usub_Abs
+
+
+(* *)
+
+
+
+lemma rrename_usub[simp]: 
+assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
+shows "rrename \<sigma> (usub t u (x::var)) = usub (rrename \<sigma> t) (\<sigma> u) (\<sigma> x)"
+using assms 
+apply(binder_induction t avoiding: "supp \<sigma>" u x rule: term.strong_induct)
+using assms by (auto simp: sb_def)
+
+lemma sw_sb: 
+"sw (sb z u x) z1 z2 = sb (sw z z1 z2) (sw u z1 z2) (sw x z1 z2)"
+unfolding sb_def sw_def by auto
+
+
+lemma swap_usub: 
+"swap (usub t (u::var) x) z1 z2 = usub (swap t z1 z2) (sw u z1 z2) (sw x z1 z2)"
+apply(binder_induction t avoiding: u x z1 z2 rule: term.strong_induct)
+  subgoal 
+  apply(subst swap_simps) apply(subst usub_simps) by (auto simp: sb_def)
+  subgoal apply(subst swap_simps | subst usub_simps)+ by presburger
+  subgoal apply(subst swap_simps | subst usub_simps)+ 
+    subgoal by auto
+    subgoal apply(subst swap_simps | subst usub_simps)+ 
+      subgoal unfolding sw_def sb_def by auto
+      unfolding sw_sb by presburger . . 
+
+lemma usub_refresh: 
+assumes "xx \<notin> FFVars t \<or> xx = x"
+shows "usub t u x = usub (swap t x xx) u xx"
+proof-
+  note term_vvsubst_rrename[simp del]
+  show ?thesis using assms 
+  apply(subst term_vvsubst_rrename[symmetric]) apply simp
+    subgoal by auto
+    subgoal apply(subst term.map_comp) 
+      subgoal by auto
+      subgoal by auto
+      subgoal apply(rule term.map_cong0) 
+      using term_pre.supp_comp_bound by auto . . 
+qed
+
+lemma swap_commute: 
+"{y,yy} \<inter> {x,xx} = {} \<Longrightarrow> 
+ swap (swap t y yy) x xx = swap (swap t x xx) y yy"
+apply(subst term.rrename_comps)
+apply auto
+apply(subst term.rrename_comps)
+apply auto
+apply(rule rrename_cong) 
+by (auto simp: term_pre.supp_comp_bound)
+
+
+(* *)
+
+term "swappingFvars swap FFVars"
+term "permutFvars (\<lambda>f t. rrename t f) FFVars" 
+
+lemma swappingFvars_swap_FFVars: "swappingFvars swap FFVars"
+unfolding swappingFvars_def apply auto 
+  apply (metis id_swapTwice rrename_o_swap term.rrename_ids)
+  using sw_invol2 apply presburger
+  by (metis (no_types, lifting) image_iff sw_invol2)
+
+lemma nswapping_swap: "nswapping swap" 
+unfolding nswapping_def apply auto
+apply (metis id_swapTwice rrename_o_swap term.rrename_ids)
+by (metis id_swapTwice2 rrename_o_swap)
+
+lemma permutFvars_rrename_FFVar: "permutFvars (\<lambda>f t. rrename t f) FFVars"
+unfolding permutFvars_def apply auto 
+  apply (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps)
+  apply (simp add: finite_iff_le_card_var fsupp_def supp_def)
+  apply (simp add: finite_iff_le_card_var fsupp_def image_in_bij_eq supp_def)
+  by (simp add: finite_iff_le_card_var fsupp_def image_in_bij_eq supp_def)
+
+lemma permut_rrename: "permut (\<lambda>f t. rrename t f)"
+unfolding permut_def apply auto 
+by (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps)
+
+lemma toSwp_rrename: "toSwp (\<lambda>f t. rrename t f) = swap"
+by (meson toSwp_def)
+
+lemma fsupp_supp: "fsupp f \<longleftrightarrow> |supp f| <o |UNIV::var set|"
+unfolding fsupp_def supp_def using finite_iff_le_card_var by blast
+
+lemma toPerm_swap: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> toPerm swap t f = rrename f t"
+apply(subst toSwp_rrename[symmetric]) 
+by (simp add: fsupp_supp permut_rrename toPerm_toSwp) 
 
 end

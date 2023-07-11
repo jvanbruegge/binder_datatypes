@@ -2,6 +2,7 @@ theory Countably_Infinite_Set
   imports
     "thys/MRBNF_Composition"
     "HOL-Library.Countable_Set_Type"
+    "HOL-Library.Disjoint_Sets"
 begin
 
 class infinite_regular =
@@ -75,5 +76,21 @@ lemma get_cinfset_inverse: "idx_cinfset S (get_cinfset S n) = n"
 
 lemma idx_cinfset_inverse: "x \<in>\<in> S \<Longrightarrow> get_cinfset S (idx_cinfset S x) = x"
   by transfer auto
+
+lift_definition cinf_inter :: "'a cinfset \<Rightarrow> 'a :: infinite_regular cinfset \<Rightarrow> 'a set" is "inter" .
+
+lift_definition cinf_partition_on :: "'a set \<Rightarrow> 'a :: infinite_regular cinfset set \<Rightarrow> bool" is "partition_on" .
+
+lemma cinf_partition_on_in: "cinf_partition_on A X \<Longrightarrow> B \<in> X \<Longrightarrow> x \<in>\<in> B \<Longrightarrow> x \<in> A"
+  by transfer (auto simp: partition_on_def)
+
+lemma cinf_partition_on_in_iff: "cinf_partition_on A X \<Longrightarrow> x \<in> A \<longleftrightarrow> (\<exists>!B \<in> X. x \<in>\<in> B)"
+  by safe (transfer fixing: x A; auto simp: partition_on_def disjoint_def)+
+
+lemma cinf_partition_on_disjoint: "cinf_partition_on A X \<Longrightarrow> B \<in> X \<Longrightarrow> C \<in> X \<Longrightarrow> B \<noteq> C \<Longrightarrow> cinf_inter B C = {}"
+  by transfer (auto simp: partition_on_def disjoint_def)
+
+lemma cinf_inter_emptyD: "cinf_inter B C = {} \<longleftrightarrow> (\<forall>x. \<not> (x \<in>\<in> B \<and> x \<in>\<in> C))"
+  by transfer (auto dest!: Int_emptyD)
 
 end

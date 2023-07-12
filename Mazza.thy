@@ -268,17 +268,17 @@ subclass (in cinf) var_lam_pre
   apply (meson card_of_nat countable_def countable_or_card_of ex_inj local.infinite ordIso_symmetric ordIso_transitive)
   done
 
+(*
 lemma small_super:
   fixes g :: "'a :: cinf \<Rightarrow> ivar cinfset"
-  shows "inj g \<Longrightarrow> cinf_partition_on UNIV X \<Longrightarrow> range g \<subseteq> X \<Longrightarrow> infinite (X - range g)"
+  shows "infinite A \<Longrightarrow> inj g \<Longrightarrow> cinf_partition_on UNIV X \<Longrightarrow> g ` A \<subseteq> X \<Longrightarrow> infinite (X - g ` A)"
   apply (rule subset_ordLeq_diff_infinite)
-    apply (rule countable_as_injective_image[of "range g"])
+    apply (rule countable_as_injective_image[of "g ` A"])
       apply (rule countable_image)
       apply blast
-     apply (simp add: finite_image_iff)
-     apply (metis Field_natLeq MRBNF_Composition.var_ID_class.large infinite_iff_card_of_nat)
-    apply (metis infinite_UNIV_char_0 inj_on_finite)
-   apply assumption
+     apply (simp add: finite_image_iff inj_on_subset[OF _ subset_UNIV])
+    apply (metis cinf_class.infinite inj_on_finite)
+   apply (metis)
   apply (rule ccontr)
   apply simp
   apply (subst (asm) card_of_ordLeq2[symmetric])
@@ -287,62 +287,47 @@ lemma small_super:
   apply (auto simp: subset_eq image_iff partition_on_def disjoint_def)
   apply (metis UNIV_I countableI_type countable_UN exists_ivar)
   done
+*)
 
+definition "pw_disjoint ZZ = (\<forall>X \<in> ZZ. \<forall>Y \<in> ZZ. X \<noteq> Y \<longrightarrow> set_cinfset X \<inter> set_cinfset Y = {})"
 
+definition "is_super g = (inj g \<and> pw_disjoint (range g))"
 
-typedef 'a :: cinf super =
-   "{g :: 'a \<Rightarrow> ivar cinfset.
-      inj g \<and> (\<exists>X. cinf_partition_on UNIV X \<and> range g \<subseteq> X)}"
+typedef 'a :: cinf super = "{g :: 'a \<Rightarrow> ivar cinfset. is_super g}"
    morphisms apply_super Rep_super
-  using bij_betw_super0
-  by (auto intro!: exI[of _ super] exI[of _ cinf_partition] inj_compose ordLess_ordIso_trans[OF _ cinf_partition_ordIso[THEN ordIso_symmetric]]
-    countable_card_ivar simp: super_def bij_betw_def inj_embed cinf_partition)
+  using bij_betw_super0 unfolding is_super_def pw_disjoint_def
+  apply (auto intro!: exI[of _ super] inj_compose
+    simp: super_def bij_betw_def inj_embed cinf_partition)
+  by (metis Int_emptyD cinf_partition_disjoint range_eqI)
 
 setup_lifting type_definition_super
 
 lift_definition comp_super :: "'a :: cinf super \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> 'a :: cinf super" is
   "\<lambda>g f. if inj f then g o f else g"
-  apply (rule conjI)
-   apply (auto intro!: inj_compose dest: Int_emptyD injD) []
-  apply (elim conjE exE)
-  subgoal for g f X
-    apply (intro exI[of _ X] conjI impI)
-    apply assumption
-     apply (simp_all del: o_apply add: fun.set_map)
-     apply (auto simp: subset_eq) []
-    done
-  done
+  unfolding is_super_def pw_disjoint_def
+  by (auto intro!: inj_compose dest: Int_emptyD injD)
 
 lemma range_swap: "range (g(z := g z', z' := g z)) = range g"
   by auto
 
+lemma is_super_swap: "is_super g \<Longrightarrow> is_super (g(y := g x, x := g y))"
+  unfolding is_super_def pw_disjoint_def
+  by (fastforce simp: inj_on_def split: if_splits)
+
 lift_definition swap_super :: "'a :: cinf super \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a :: cinf super" is
   "\<lambda>g z z'. g (z := g z', z' := g z)"
-  apply (rule conjI)
-  apply (auto simp: inj_on_def split: if_splits) []
-  apply (elim conjE exE)
-  subgoal for g z z' X
-    unfolding range_swap
-    apply (intro exI[of _ X] conjI impI)
-      apply assumption
-     apply auto
-    done
-  done
+  by (rule is_super_swap)
 
 lemma swap_super_self[simp]: "swap_super g x x = g"
   by transfer auto
 
 lemma apply_super_eqI:
   "x \<in>\<in> apply_super g z \<Longrightarrow> x \<in>\<in> apply_super g z' \<Longrightarrow> apply_super g z = apply_super g z'"
-  apply transfer
-  apply auto
-  by (metis cinf_partition_on_in_iff iso_tuple_UNIV_I range_subsetD)
+  by transfer (auto simp: is_super_def pw_disjoint_def)
 
 lemma apply_super_swap_super[simp]: "apply_super (swap_super g z z') x =
   (if x = z then apply_super g z' else if x = z' then apply_super g z else apply_super g x)"
-  apply transfer
-  apply auto
-  done
+  by transfer auto
 
 definition bij_cinfset where
   "bij_cinfset A B x = (if x \<in>\<in> A then get_cinfset B (idx_cinfset A x)
@@ -391,17 +376,14 @@ lemma set_cinfset_bound: "|set_cinfset A :: 'a set| <o |UNIV :: 'a :: var_ilam_p
 lemma supp_bij_cinfset[simp]:
   "|supp (bij_cinfset A B :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set|"
   unfolding bij_cinfset_def supp_def
-  apply (rule ordLeq_ordLess_trans[of _ "|set_cinfset A \<union> set_cinfset B|", OF card_of_mono1])
-   apply (auto simp: set_cinfset_bound ilam.Un_bound)
-  done
+  by (rule ordLeq_ordLess_trans[of _ "|set_cinfset A \<union> set_cinfset B|", OF card_of_mono1])
+    (auto simp: set_cinfset_bound ilam.Un_bound)
 
 lemma inj_apply_super: "inj (apply_super g)"
-  by transfer auto
+  by transfer (auto simp: is_super_def)
 
 lemma apply_super_disjoint: "z \<noteq> z' \<Longrightarrow> set_cinfset (apply_super g z) \<inter> set_cinfset (apply_super g z') = {}"
-  apply transfer
-  apply auto
-  by (metis UNIV_I cinf_partition_on_in_iff in_mono injD range_eqI)
+  by transfer (fastforce simp: is_super_def inj_on_def pw_disjoint_def)
 
 abbreviation "eq_on_super g g' X \<equiv> \<forall>x \<in> X. apply_super g x = apply_super g' x"
 abbreviation "bij_super g z z' \<equiv> bij_cinfset (apply_super g z) (apply_super g z')"
@@ -699,13 +681,118 @@ lemma map_U_lam_ilam_comp:
 lemma comp_super_swap[simp]: "comp_super g (id(x := y, y := x)) = swap_super g x y"
   by transfer (auto simp: bij_swap[THEN bij_is_inj])
 
+lemma exists_fresh_super:
+  fixes g :: "'a :: cinf \<Rightarrow> ivar cinfset"
+  shows "inj g \<Longrightarrow> pw_disjoint (range g) \<Longrightarrow>
+  \<exists>Z. Z \<notin> range g \<and> pw_disjoint (insert Z (range g))"
+  unfolding pw_disjoint_def
+  apply transfer
+  apply clarsimp
+  subgoal premises prems for g
+  proof -
+    have "|\<Union>x \<in> UNIV. g x| <o |UNIV :: ivar set|"
+      apply (rule ilam.UNION_bound)
+       apply (rule ordIso_ordLess_trans[OF _ natLeq_less_UNIV])
+       apply (meson card_of_card_order_on card_of_ordLeqI card_order_on_ordIso
+          cinf_class.infinite ex_inj exists_univ_eq finite_iff_cardOf_nat natLeq_card_order
+          ordLeq_iff_ordLess_or_ordIso ordLeq_ordIso_trans ordLess_ordIso_trans)
+      using countable_card_ivar prems(1) apply blast
+      done
+    then have "infinite (UNIV - (\<Union>x \<in> UNIV. g x))"
+      by (rule subset_ordLeq_diff_infinite[rotated 2]) (auto simp: infinite_ivar)
+    with infinite_countable_subset'[OF this] obtain Z where
+      "Z \<inter> \<Union>(range g) = {}" "countable Z" "infinite Z"
+      by auto
+    then show ?thesis
+      apply (intro exI[of _ Z])
+      apply auto
+      by (metis Union_disjoint finite.emptyI inf.idem inf_commute rangeI)
+  qed
+  done
+
+lift_definition refresh :: "'a :: cinf super \<Rightarrow> 'a \<Rightarrow> 'a :: cinf super" is
+  "\<lambda>g x. g(x := SOME Y. Y \<notin> range g \<and> pw_disjoint (insert Y (range g)))"
+  subgoal for g a
+    unfolding is_super_def
+    apply (rule someI2_ex[where P="\<lambda>Y. Y \<notin> range g \<and> pw_disjoint (insert Y (range g))"])
+    apply (rule exists_fresh_super)
+    apply (auto simp: inj_on_def pw_disjoint_def)
+    done
+  done
+
+lifting_update cinfset.lifting
+lifting_forget cinfset.lifting
+
+lift_definition plug :: "'a \<Rightarrow> ivar cinfset \<Rightarrow> 'a super \<Rightarrow> 'a :: cinf super" is
+  "\<lambda>x Y g. let h = g(x := Y) in if is_super h then h else g"
+  by (auto simp: Let_def is_super_def)
+
+lemma apply_super_refresh: "x \<noteq> y \<Longrightarrow> apply_super (refresh g x) y = apply_super g y"
+  by transfer auto
+
+lemma apply_super_plug: "x \<noteq> y \<Longrightarrow> apply_super (plug x Y g) y = apply_super g y"
+  by transfer (auto simp: Let_def)
+
+lemma super_eqI: "\<forall>x. apply_super g x = apply_super g' x \<Longrightarrow> g = g'"
+  by transfer auto
+
+lemma swap_super_dance:
+  "x \<noteq> y \<Longrightarrow> plug x (apply_super g y) (plug y (apply_super g x) (refresh (refresh g x) y)) =
+  swap_super g x y"
+  apply (rule super_eqI)
+  apply (auto simp: apply_super_plug apply_super_refresh)
+  subgoal
+    apply (transfer fixing: x y)
+    apply (unfold Let_def[where 'a = "'a \<Rightarrow> ivar cinfset"])
+    apply (subst if_P)
+    subgoal for g
+      apply (rule someI2_ex[where P="\<lambda>Y. Y \<notin> range g \<and> pw_disjoint (insert Y (range g))"])
+       apply (rule exists_fresh_super)
+      apply (auto simp: is_super_def pw_disjoint_def inj_on_def)
+      done
+    apply simp
+    done
+  subgoal
+    apply (transfer fixing: x y)
+    apply (unfold Let_def[where 'a = "'a \<Rightarrow> ivar cinfset"])
+    apply (subst if_P)
+    subgoal for g
+      apply (rule someI2_ex[where P="\<lambda>Y. Y \<notin> range g \<and> pw_disjoint (insert Y (range g))"])
+       apply (rule exists_fresh_super)
+      apply (auto simp: is_super_def pw_disjoint_def inj_on_def)
+      done
+    apply (simp add: is_super_swap)
+    done
+  done
+
 lemma map_U_lam_ilam_cong_swap:
   fixes x y :: "'a :: cinf"
   shows "x \<notin> set_U_lam_ilam t d \<Longrightarrow> y \<notin> set_U_lam_ilam t d \<Longrightarrow> map_U_lam_ilam (id(x := y, y := x)) t d = d"
+  apply (cases "x = y")
+  apply (simp add: map_U_lam_ilam_id)
   apply (transfer fixing: x y t)
   apply (auto simp: fun_eq_iff)
-  subgoal for T X g a
-    sorry
+  subgoal premises prems for T X g a
+  proof -
+    let ?X = "apply_super g x"
+    let ?Y = "apply_super g y"
+    have "T g a = T (refresh g x) a"
+      using prems(1)[rule_format, of g "refresh g x"]
+      by (auto simp: apply_super_refresh)
+    also have "\<dots> = T (refresh (refresh g x) y) a"
+      using prems(2)[rule_format, of "refresh g x" "refresh (refresh g x) y"]
+      by (auto simp: apply_super_refresh)
+    also have "\<dots> = T (plug y ?X (refresh (refresh g x) y)) a"
+      using prems(2)[rule_format, of "refresh (refresh g x) y" "plug y ?X (refresh (refresh g x) y)"]
+      by (auto simp: apply_super_plug)
+    also have "\<dots> = T (plug x ?Y (plug y ?X (refresh (refresh g x) y))) a"
+      using prems(1)[rule_format, of "plug y ?X (refresh (refresh g x) y)"
+        "plug x ?Y (plug y ?X (refresh (refresh g x) y))"]
+      by (auto simp: apply_super_plug)
+    also have "\<dots> = T (swap_super g x y) a"
+      unfolding swap_super_dance[OF \<open>x \<noteq> y\<close>] ..
+    finally show ?thesis by (rule sym)
+  qed
   done
 
 lemma map_U_lam_ilam_cong_id:
@@ -849,10 +936,15 @@ in lthy end
 \<close>
 
 lift_definition super_lifted :: "'a :: cinf super" is super
-  apply (intro exI[of _ cinf_partition] conjI CollectI subset_ordLeq_diff_infinite)
-  using bij_betw_super0
-  apply (auto intro!: inj_compose ordLess_ordIso_trans[OF _ cinf_partition_ordIso[THEN ordIso_symmetric]]
-    countable_card_var simp: super_def bij_betw_def inj_embed cinf_partition infinite_cinf_partition)
+  unfolding is_super_def pw_disjoint_def super_def
+  apply (intro conjI CollectI ballI impI)
+  subgoal using bij_betw_super0 by (auto intro!: inj_compose inj_embed simp: bij_betw_def)
+  subgoal for X Y
+    apply (rule Int_emptyI)
+    subgoal for z
+      using cinf_partition_on_in_iff[OF cinf_partition, of z, THEN iffD1, OF UNIV_I] bij_betw_super0
+      by (metis UNIV_I bij_betw_iff_bijections fun.set_map image_iff)
+    done
   done
 
 abbreviation lam_ilam :: "'a :: cinf lam \<Rightarrow> nat list \<Rightarrow> ivar ilam" ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where
@@ -905,33 +997,6 @@ lemma
     (auto simp: cinfmset.set_map intro!: affine.intros
       elim: ifv_lam_ilam_disjoint[unfolded disjoint_iff, rule_format, THEN notE, of _ _ _ _ _ False, rotated 2])+
 
-definition "class" where
-  "class g x = (THE X. X \<in> range (apply_super g) \<and> x \<in>\<in> X)"
-
-definition "rep g x = inv (apply_super g) (class g x)"
-
-lemma in_class: "x \<in> range (apply_super g) \<Longrightarrow> x \<in>\<in> class g x"
-  unfolding class_def range_apply_super
-  by (rule the1I2[OF ex1_cinf_partition]) auto
-
-lemma class_in_range: "class g x \<in> range (apply_super g)"
-  unfolding class_def range_apply_super
-  by (rule the1I2[OF ex1_cinf_partition]) auto
-
-lemma apply_super_rep: "apply_super g (rep g x) = class g x"
-  unfolding rep_def
-  by (simp add: class_in_range f_inv_into_f)
-
-definition eq_rep where
-  "eq_rep g g' X = (\<forall>x \<in> X. rep g x = rep g' x)"
-
-definition swap_rep where
-  "swap_rep g z z' = (id(rep g z := rep g z', rep g z' := rep g z))"
-
-lemma supp_swap_rep_bound[simp]:
-  "|supp (swap_rep g z z' :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set|"
-  by (simp add: infinite supp_swap_bound swap_rep_def)
-
 lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f :: 'a \<Rightarrow> 'a. bij f \<and> |supp f| <o |UNIV::'a :: var_lam_pre set|
   \<and> id_on (fv (Abs x e)) f \<and> f x = x' \<and> vvsubst f e = e')"
   unfolding lam.set
@@ -959,6 +1024,54 @@ lemma App_inject[simp]: "(App t U = App t' U') = (t = t' \<and> U = U')"
     Un_empty_right UN_single
   apply (auto simp: lam_vvsubst_rrename id_def[symmetric] cinfmset.map_id supp_id_bound intro!: exI[of _ id])
   done
+
+lemma lam_ilam_inject: "\<lbrakk>M\<rbrakk>a = \<lbrakk>N\<rbrakk>a \<Longrightarrow> M = N"
+proof (induct M arbitrary: a N)
+  case (Var x)
+  then show ?case
+    apply (induct N arbitrary: a)
+      apply auto
+    by (metis Int_emptyD disjoint_super get_cinfset_in)
+next
+  case (App M1 M2)
+  then show ?case
+    apply (induct N arbitrary: a)
+      apply auto
+    find_theorems image_cinfmset inj
+    sorry
+next
+  case (Abs x1 M)
+  then show ?case sorry
+qed
+
+(* UPTO HERE OK *)
+
+definition "class" where
+  "class g x = (THE X. X \<in> range (apply_super g) \<and> x \<in>\<in> X)"
+
+definition "rep g x = inv (apply_super g) (class g x)"
+
+lemma in_class: "x \<in> range (apply_super g) \<Longrightarrow> x \<in>\<in> class g x"
+  unfolding class_def range_apply_super
+  by (rule the1I2[OF ex1_cinf_partition]) auto
+
+lemma class_in_range: "class g x \<in> range (apply_super g)"
+  unfolding class_def range_apply_super
+  by (rule the1I2[OF ex1_cinf_partition]) auto
+
+lemma apply_super_rep: "apply_super g (rep g x) = class g x"
+  unfolding rep_def
+  by (simp add: class_in_range f_inv_into_f)
+
+definition eq_rep where
+  "eq_rep g g' X = (\<forall>x \<in> X. rep g x = rep g' x)"
+
+definition swap_rep where
+  "swap_rep g z z' = (id(rep g z := rep g z', rep g z' := rep g z))"
+
+lemma supp_swap_rep_bound[simp]:
+  "|supp (swap_rep g z z' :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: var_ilam_pre set|"
+  by (simp add: infinite supp_swap_bound swap_rep_def)
 
 lemma rep_swap_super: "rep (swap_super g (rep g z) (rep g z')) x = swap_rep g z z' (rep g x)"
   unfolding rep_def swap_super.rep_eq swap_rep_def
@@ -1037,29 +1150,7 @@ lemma map_U_ilam_lam_cong_id:
   fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
   shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: var_ilam_pre set| \<Longrightarrow>
     (\<And>a. a \<in> set_U_ilam_lam t d \<Longrightarrow> f a = a) \<Longrightarrow> map_U_ilam_lam f t d = d"
-  apply transfer
-  apply (auto simp: fun_eq_iff)
-  subgoal for f T X g a
-    apply (frule spec2)
-    apply (drule mp)
-     prefer 2
-     apply (erule spec)
-    apply safe
-    apply (rule exE[OF exists_fresh, of X])
-    apply (meson finite_ordLess_infinite2 infinite)
-    subgoal for x z
-       apply auto
-      apply (drule meta_spec[of _ x])
-      apply (cases "f x = x")
-       apply auto
-      apply (rule FalseE)
-      apply (erule meta_mp)
-      apply (rule exI[of _ "swap_super g x z"])
-      apply (rule exI[of _ "g"])
-      apply auto
-      sorry
-    done
-  done
+  oops
 
 lemma set_U_ilam_lam_map_U_ilam_lam:
   fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"

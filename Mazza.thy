@@ -3,6 +3,7 @@ theory Mazza
     "thys/MRBNF_Recursor"
     Countably_Infinite_Set
     Countably_Infinite_Multiset
+    "thys/Instantiation_Infrastructure/Swapping_vs_Permutation"
     "thys/Instantiation_Infrastructure/FixedUncountableVars"
 begin
 
@@ -244,32 +245,27 @@ lemma bij_betw_swap: "bij_betw f A B \<Longrightarrow> a \<in> A \<Longrightarro
   apply (auto simp: inj_on_def)
   done
 
-instantiation var :: var_ilam_pre begin
+instantiation ivar :: var_ilam_pre begin
 instance
   apply standard
-    apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_var]])
+    apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
     apply (rule ordIso_ordLeq_trans[OF card_of_Field_natLeq])
     apply (rule ordLess_imp_ordLeq)
     apply (rule cardSuc_greater[OF natLeq_Card_order])
-   apply (rule regularCard_ordIso[OF ordIso_symmetric[OF card_var]])
+   apply (rule regularCard_ordIso[OF ordIso_symmetric[OF card_ivar]])
     apply (simp add: Cinfinite_cardSuc natLeq_Card_order natLeq_cinfinite)
    apply (simp add: natLeq_Cinfinite regularCard_cardSuc)
-  apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_var]])
+  apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
   apply (metis Field_card_suc cardSuc_ordIso_card_suc card_order_card_suc Un_iff card_of_unique
     natLeq_card_order ordIso_symmetric ordIso_transitive ordLeq_ordLess_Un_ordIso)
   done
 end
 
-class cinf = countable + var_lam_pre
+subclass (in cinf) var_lam_pre
 
-instantiation nat :: cinf begin
-instance
-  by standard (simp_all add: stable_nat stable_regularCard)
-
-end
 
 lemma small_super:
-  fixes g :: "'a :: cinf \<Rightarrow> var cinfset"
+  fixes g :: "'a :: cinf \<Rightarrow> ivar cinfset"
   shows "inj g \<Longrightarrow> cinf_partition_on UNIV X \<Longrightarrow> range g \<subseteq> X \<Longrightarrow> infinite (X - range g)"
   apply (rule subset_ordLeq_diff_infinite)
     apply (rule countable_as_injective_image[of "range g"])
@@ -285,18 +281,18 @@ lemma small_super:
    apply (auto simp: image_iff)
   apply transfer
   apply (auto simp: subset_eq image_iff partition_on_def disjoint_def)
-  apply (metis UNIV_I countableI_type countable_UN exists_var)
+  apply (metis UNIV_I countableI_type countable_UN exists_ivar)
   done
 
 
 
 typedef 'a :: cinf super =
-   "{g :: 'a \<Rightarrow> var cinfset.
+   "{g :: 'a \<Rightarrow> ivar cinfset.
       inj g \<and> (\<exists>X. cinf_partition_on UNIV X \<and> range g \<subseteq> X)}"
    morphisms apply_super Rep_super
   using bij_betw_super0
   by (auto intro!: exI[of _ super] exI[of _ cinf_partition] inj_compose ordLess_ordIso_trans[OF _ cinf_partition_ordIso[THEN ordIso_symmetric]]
-    countable_card_var simp: super_def bij_betw_def inj_embed cinf_partition)
+    countable_card_ivar simp: super_def bij_betw_def inj_embed cinf_partition)
 
 setup_lifting type_definition_super
 
@@ -310,10 +306,6 @@ lift_definition comp_super :: "'a :: cinf super \<Rightarrow> ('a \<Rightarrow> 
     apply assumption
      apply (simp_all del: o_apply add: fun.set_map)
      apply (auto simp: subset_eq) []
-    apply (rule impI)
-    apply (erule infinite_super[rotated])
-    apply (rule Diff_mono[OF subset_refl])
-    apply auto
     done
   done
 
@@ -411,9 +403,10 @@ abbreviation "eq_on_super g g' X \<equiv> \<forall>x \<in> X. apply_super g x = 
 abbreviation "bij_super g z z' \<equiv> bij_cinfset (apply_super g z) (apply_super g z')"
 
 typedef 'a P_lam_ilam = "UNIV :: unit set" by auto
-typedef 'a :: cinf U_lam_ilam = "{T :: 'a super \<Rightarrow> nat list \<Rightarrow> var ilam.
+typedef 'a :: cinf U_lam_ilam = "{T :: 'a super \<Rightarrow> nat list \<Rightarrow> ivar ilam.
   (\<exists>X. finite X \<and> (\<forall>g g'. eq_on_super g g' X \<longrightarrow> T g = T g')
-     \<and> (\<forall>z z' g a. z' \<notin> X \<longrightarrow>  ivvsubst (bij_super g z z') (T g a) = T (swap_super g z z') a))}"
+     \<and> (\<forall>z z' g a. z' \<notin> X \<longrightarrow>  ivvsubst (bij_super g z z') (T g a) = T (swap_super g z z') a)
+     \<and> (\<forall>g a. ifv (T g a) \<subseteq> (\<Union>z \<in> X. set_cinfset (apply_super g z))))}"
   apply (rule exI[of _ "\<lambda>g a. iVar (get_cinfset (apply_super g undefined) (list_encode a))"] exI[of _ "{undefined}"] CollectI allI)+
   apply (auto 0 4 simp: infinite bij_cinfset_def get_cinfset_inverse idx_cinfset_inverse get_cinfset_in
     dest: apply_super_eqI[OF get_cinfset_in] apply_super_eqI[OF _ get_cinfset_in])
@@ -515,21 +508,6 @@ lemma image_cinfset_bij_super'[simp]:
   apply (erule image_cinfset_bij_cinfset'[OF apply_super_disjoint])
   done
 
-lemma vimage_ordLess_var_lam_pre:
-  assumes "|A| <o |UNIV :: 'a :: var_lam_pre set|"
-      and "\<And>a. a \<in> A \<Longrightarrow> |vimage f {a}| <o |UNIV :: 'a :: var_lam_pre set|"
-  shows "|vimage f A| <o |UNIV :: 'a :: var_lam_pre set|"
-proof-
-  have "vimage f A = (\<Union>a \<in> A. vimage f {a})" by auto
-  also have "|\<Union>a \<in> A. vimage f {a}| <o |UNIV :: 'a :: var_lam_pre set|"
-    using lam.UNION_bound[OF assms] .
-  finally show ?thesis .
-qed
-
-lemma apply_super_vimage_singleton:
-  "apply_super g -` {apply_super g x} = {x :: 'a :: cinf}"
-  by (auto elim: inj_apply_super[THEN injD])
-
 lemma cinf_small_iff_finite[simp]: "|A :: 'b set| <o |UNIV :: 'a :: cinf set| \<longleftrightarrow> finite A"
   apply (auto simp: finite_iff_cardOf_nat elim!: ordLess_ordLeq_trans[rotated])
    apply (meson countableI_type countable_card_of_nat ordLess_ordLeq_trans)
@@ -537,36 +515,15 @@ lemma cinf_small_iff_finite[simp]: "|A :: 'b set| <o |UNIV :: 'a :: cinf set| \<
     var_lam_pre_class.large ordLess_ordLeq_trans)
   done
 
-lemma exist_fresh_super:
-  assumes "|A :: 'a set| <o |UNIV :: 'a :: cinf set|" and
-          *: "\<And>g :: 'a super. |{X \<in> range (apply_super g). set_cinfset X \<inter> B \<noteq> {}}| <o |UNIV :: 'a :: cinf set|"
-  shows "\<exists>a. a \<notin> A \<and> set_cinfset (apply_super g a) \<inter> B = {} \<and> set_cinfset (apply_super g' a) \<inter> B = {}"
-proof -
-  let ?X = "\<lambda>g. {X \<in> range (apply_super g). set_cinfset X \<inter> B \<noteq> {}}"
-  have "|A \<union> vimage (apply_super g) (?X g) \<union> vimage (apply_super g') (?X g')|
-   <o |UNIV :: 'a :: cinf set|" (is "|?A| <o _")
-    apply (intro lam.Un_bound assms(1))
-     apply (rule vimage_ordLess_var_lam_pre[OF *])
-     apply (erule CollectE conjE imageE)+
-     apply hypsubst_thin
-     apply (simp add: apply_super_vimage_singleton)
-     apply (rule vimage_ordLess_var_lam_pre[OF *])
-     apply (erule CollectE conjE imageE)+
-     apply hypsubst_thin
-    apply (simp add: apply_super_vimage_singleton)
-    done
-  then obtain x where "x \<notin> ?A" using exists_fresh by blast
-  then show ?thesis by auto
-qed
-
 lemma iAbs_super_eqI0: "finite X \<Longrightarrow>
   \<forall>g g'. (\<forall>x\<in>X. apply_super g x = apply_super g' x) \<longrightarrow> (\<forall>a. T g a = T g' a) \<Longrightarrow>
-  (\<forall>z z' g a. z' \<notin> X \<longrightarrow> ivvsubst (bij_cinfset (apply_super g z) (apply_super g z')) (T g a) = T (swap_super g z z') a) \<Longrightarrow>
+  (\<forall>z z' g a. z' \<notin> X \<longrightarrow>
+    ivvsubst (bij_cinfset (apply_super g z) (apply_super g z')) (T g a) = T (swap_super g z z') a) \<Longrightarrow>
+  (\<forall>g a. ifv (T g a) \<subseteq> (\<Union>z \<in> insert z X. set_cinfset (apply_super g z))) \<Longrightarrow>
   \<forall>y. y \<noteq> z \<longrightarrow> apply_super g y = apply_super g' y \<Longrightarrow>
   iAbs (apply_super g z) (T g a) = iAbs (apply_super g' z) (T g' a)"
-  apply (rule exist_fresh_super[THEN exE, of "insert z X" "ifv (T g a) \<union> ifv (T g' a)" g g'])
-    apply simp
-  subgoal premises prems for g
+  apply (rule exists_fresh[THEN exE, of "insert z X"])
+    apply simp_all
   subgoal for zz
     apply (rule box_equals[of
       "iAbs (apply_super (swap_super g z zz) z) (T (swap_super g z zz) a)"
@@ -580,17 +537,19 @@ lemma iAbs_super_eqI0: "finite X \<Longrightarrow>
       apply auto []
      apply (rule sym)
     subgoal premises prems
-      using prems(5,3)
+      using prems(3,6) prems(4)[rule_format, of g a]
       unfolding iAbs_inject
       apply (intro exI[of _ "bij_super g z zz"])
-      apply (auto simp: id_on_def bij_cinfset_def)
+      apply (auto simp: id_on_def bij_cinfset_def subset_eq)
+      apply (metis Int_emptyD apply_super_disjoint)
       done
      apply (rule sym)
     subgoal premises prems
-      using prems(5,3)
+      using prems(3,6) prems(4)[rule_format, of g' a]
       unfolding iAbs_inject
       apply (intro exI[of _ "bij_super g' z zz"])
-      apply (auto simp: id_on_def bij_cinfset_def)
+      apply (auto simp: id_on_def bij_cinfset_def subset_eq)
+      apply (metis Int_emptyD apply_super_disjoint)
       done
     done
   done
@@ -598,7 +557,7 @@ lemma iAbs_super_eqI0: "finite X \<Longrightarrow>
 lemma iAbs_super_eqI: "\<forall>y. y \<noteq> z \<longrightarrow> apply_super g y = apply_super g' y \<Longrightarrow>
   iAbs (apply_super g z) (Rep_U_lam_ilam T g a) = iAbs (apply_super g' z) (Rep_U_lam_ilam T g' a)"
   using Rep_U_lam_ilam[of T]
-  by (force elim!: iAbs_super_eqI0)
+  by (fastforce elim!: iAbs_super_eqI0)
 
 lemma ivvsubst_bij_iAbs:
   fixes f :: "'a :: var_ilam_pre \<Rightarrow> 'a"
@@ -606,6 +565,19 @@ lemma ivvsubst_bij_iAbs:
   shows "ivvsubst f (iAbs x t) = iAbs (image_cinfset f x) (ivvsubst f t)"
   unfolding iAbs_def ilam_vvsubst_rrename[OF assms] ilam.rrename_cctors[OF assms]
   by (auto simp: map_ilam_pre_def Abs_ilam_pre_inverse)
+
+context includes cinfmset.lifting begin
+
+lemma in_image_cinfmset: "y \<in>#\<in> image_cinfmset f X \<longleftrightarrow> y \<in> f ` set_cinfmset X"
+  apply transfer
+  apply (auto simp: Let_def image_iff)
+   apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)+
+  done
+
+lemma NATS_cinfmset_UNIV: "i \<in>#\<in> \<nat>#"
+  by transfer auto
+
+end
 
 lift_definition CCTOR_lam_ilam :: "('a::cinf, 'a, 'a lam \<times> 'a PU_lam_ilam, 'a lam \<times> 'a PU_lam_ilam) lam_pre \<Rightarrow> 'a PU_lam_ilam" is
   "\<lambda>lp :: ('a::cinf, 'a, 'a lam \<times> _, 'a lam \<times> _) lam_pre.
@@ -629,7 +601,8 @@ lift_definition CCTOR_lam_ilam :: "('a::cinf, 'a, 'a lam \<times> 'a PU_lam_ilam
     apply safe
     subgoal for XM XN
       apply (rule exI[of _ "XM \<union> XN"])
-       apply (fastforce simp: cinfmset_map_comp intro!: arg_cong2[of _ _ _ _ image_cinfmset])
+      apply (auto simp: cinfmset_map_comp subset_eq in_image_cinfmset intro!: arg_cong2[of _ _ _ _ image_cinfmset])
+      apply meson
       done
     done
   subgoal for lp1 lp2 M N TM2 TN2 TM1 TN1 u g a
@@ -671,13 +644,19 @@ lift_definition map_U_lam_ilam :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a lam \<
   "\<lambda>f t T g a. if bij f then T (comp_super g f) a else T g a"
   apply safe
   subgoal for f _ T X
-    apply (rule exI[of _ "if bij f then f ` X else X"])
-    apply (clarsimp simp add: fun_eq_iff)
+    apply (intro exI[of _ "if bij f then f ` X else X"] conjI)
+       apply (clarsimp simp add: fun_eq_iff)+
     subgoal for z z' g a
-    apply (drule spec[of _ "inv f z"])
+      apply (drule spec[of _ "inv f z"])
       apply (drule spec[of _ "inv f z'"])
       apply (drule mp)
        apply force
+      apply (rotate_tac -1)
+      apply (drule spec2[of _ "comp_super g f" a])
+      apply auto
+      done
+    apply clarsimp
+    subgoal for g a z
       apply (drule spec2[of _ "comp_super g f" a])
       apply auto
       done
@@ -719,7 +698,12 @@ lemma map_U_lam_ilam_cong_id:
     (\<And>a. a \<in> set_U_lam_ilam t d \<Longrightarrow> f a = a) \<Longrightarrow> map_U_lam_ilam f t d = d"
   apply transfer
   apply (auto simp: fun_eq_iff)
-  subgoal for f T X g a
+  subgoal premises prems for f T X g a
+  proof -
+    thm fsupp_ex_compose_strong[of f]
+    obtain \<pi> where
+
+
     apply (frule spec2)
     apply (drule mp)
      prefer 2
@@ -852,7 +836,7 @@ lift_definition super_lifted :: "'a :: cinf super" is super
     countable_card_var simp: super_def bij_betw_def inj_embed cinf_partition infinite_cinf_partition)
   done
 
-abbreviation lam_ilam :: "'a :: cinf lam \<Rightarrow> nat list \<Rightarrow> var ilam" ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where
+abbreviation lam_ilam :: "'a :: cinf lam \<Rightarrow> nat list \<Rightarrow> ivar ilam" ("\<lbrakk>_\<rbrakk>_" [999, 1000] 1000) where
    "lam_ilam t a \<equiv> Rep_U_lam_ilam (ff0_lam_ilam t (Abs_P_lam_ilam ())) super_lifted a"
 
 lemma lam_ilam_simps[simp]:
@@ -870,19 +854,6 @@ lemma lam_ilam_simps[simp]:
       Abs_lam_pre_inverse Abs_P_lam_ilam_inverse
       CCTOR_lam_ilam.rep_eq super_lifted.rep_eq split: sum.splits)
   done
-
-context includes cinfmset.lifting begin
-
-lemma in_image_cinfmset: "y \<in>#\<in> image_cinfmset f X \<longleftrightarrow> y \<in> f ` set_cinfmset X"
-  apply transfer
-  apply (auto simp: Let_def image_iff)
-   apply (metis (mono_tags, lifting) disjoint_iff_not_equal finite.emptyI mem_Collect_eq vimage_singleton_eq)+
-  done
-
-lemma NATS_cinfmset_UNIV: "i \<in>#\<in> \<nat>#"
-  by transfer auto
-
-end
 
 lemma ifv_subset: "ifv (\<lbrakk>M\<rbrakk>a) \<subseteq> {x. \<exists>y b. y \<in> fv M \<and> rev a \<le> rev b \<and> x = get_cinfset \<lbrace>y\<rbrace> (list_encode b)}"
   apply (induct M arbitrary: a)

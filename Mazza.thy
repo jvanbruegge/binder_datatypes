@@ -696,8 +696,6 @@ lemma map_U_lam_ilam_comp:
    map_U_lam_ilam (f \<circ> g) t = map_U_lam_ilam f t \<circ> map_U_lam_ilam g t"
   by transfer' (auto simp: fun_eq_iff dest!: bij_is_inj)
 
-thm bij_swap[THEN bij_is_inj]
-
 lemma comp_super_swap[simp]: "comp_super g (id(x := y, y := x)) = swap_super g x y"
   by transfer (auto simp: bij_swap[THEN bij_is_inj])
 
@@ -709,9 +707,6 @@ lemma map_U_lam_ilam_cong_swap:
   subgoal for T X g a
     sorry
   done
-
-lemma "supp (id(x := y, y := x) \<circ> f) = {x,y} \<union> supp f"
-  apply (auto simp: supp_def)
 
 lemma map_U_lam_ilam_cong_id:
   fixes f :: "'a :: cinf \<Rightarrow> 'a"

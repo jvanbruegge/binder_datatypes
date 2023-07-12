@@ -262,7 +262,11 @@ instance
 end
 
 subclass (in cinf) var_lam_pre
-
+  apply standard
+  using Field_natLeq infinite_iff_card_of_nat infinite apply auto[1]
+  apply (rule regularCard_ordIso[OF _ natLeq_Cinfinite regularCard_natLeq])
+  apply (meson card_of_nat countable_def countable_or_card_of ex_inj local.infinite ordIso_symmetric ordIso_transitive)
+  done
 
 lemma small_super:
   fixes g :: "'a :: cinf \<Rightarrow> ivar cinfset"

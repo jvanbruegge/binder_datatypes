@@ -696,38 +696,58 @@ lemma map_U_lam_ilam_comp:
    map_U_lam_ilam (f \<circ> g) t = map_U_lam_ilam f t \<circ> map_U_lam_ilam g t"
   by transfer' (auto simp: fun_eq_iff dest!: bij_is_inj)
 
+thm bij_swap[THEN bij_is_inj]
+
+lemma comp_super_swap[simp]: "comp_super g (id(x := y, y := x)) = swap_super g x y"
+  by transfer (auto simp: bij_swap[THEN bij_is_inj])
+
+lemma map_U_lam_ilam_cong_swap:
+  fixes x y :: "'a :: cinf"
+  shows "x \<notin> set_U_lam_ilam t d \<Longrightarrow> y \<notin> set_U_lam_ilam t d \<Longrightarrow> map_U_lam_ilam (id(x := y, y := x)) t d = d"
+  apply (transfer fixing: x y t)
+  apply (auto simp: fun_eq_iff)
+  subgoal for T X g a
+    sorry
+  done
+
+lemma "supp (id(x := y, y := x) \<circ> f) = {x,y} \<union> supp f"
+  apply (auto simp: supp_def)
+
 lemma map_U_lam_ilam_cong_id:
   fixes f :: "'a :: cinf \<Rightarrow> 'a"
-  shows "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a :: cinf set| \<Longrightarrow>
-    (\<And>a. a \<in> set_U_lam_ilam t d \<Longrightarrow> f a = a) \<Longrightarrow> map_U_lam_ilam f t d = d"
-  apply transfer
-  apply (auto simp: fun_eq_iff)
-  subgoal premises prems for f T X g a
-  proof -
-    thm fsupp_ex_compose_strong[of f]
-    obtain \<pi> where
-
-
-    apply (frule spec2)
-    apply (drule mp)
-     prefer 2
-     apply (erule spec)
-    apply safe
-    apply (rule exE[OF exists_fresh, of X])
-    apply simp
-    subgoal for x z
-       apply auto
-      apply (drule meta_spec[of _ x])
-      apply (cases "f x = x")
-       apply auto
-      apply (rule FalseE)
-      apply (erule meta_mp)
-      apply (rule exI[of _ "swap_super g x z"])
-      apply (rule exI[of _ "g"])
-      apply auto
-      sorry
-    done
-  done
+  assumes "bij f" "|supp f| <o |UNIV :: 'a :: cinf set|"
+    "(\<And>a. a \<in> set_U_lam_ilam t d \<Longrightarrow> f a = a)"
+  shows "map_U_lam_ilam f t d = d"
+proof -
+  from fsupp_ex_compose_even_stronger[of f] assms(1,2)
+  obtain \<pi> ::  "('a \<times> 'a) list" where f: "f = compose \<pi>" and nonred: "nonredundant \<pi>"
+    by (auto simp: fsupp_def supp_def)
+  moreover have "set_U_lam_ilam t d \<inter> supp f = {}" using assms(3)
+    by (auto simp: supp_def)
+  ultimately show ?thesis
+  proof (induct \<pi> arbitrary: f rule: list_induct_Pair)
+    case Nil
+    then show ?case
+      by (simp add: id_def[symmetric] map_U_lam_ilam_id)
+  next
+    case (Cons x y \<pi>)
+    from Cons(3,4) nonredundant_Cons[OF Cons(3)] have "set_U_lam_ilam t d \<inter> supp (compose \<pi>) = {}"
+      "x \<notin> set_U_lam_ilam t d" "y \<notin> set_U_lam_ilam t d"
+      unfolding Cons(2)
+        apply (auto simp del: compose.simps simp: supp_def dest!: nonredundant_compose)
+      by (metis (mono_tags, lifting) Int_emptyD mem_Collect_eq)
+    then show ?case
+      using bij_compose[of \<pi>] supp_swap_bound[of x y, OF infinite] Cons(3)
+      unfolding Cons(2) compose.simps
+      apply (subst map_U_lam_ilam_comp)
+          apply (simp_all add: inj_def bij_is_inj) [4]
+       apply (metis fsupp_compose fsupp_def supp_def)
+      apply simp
+      apply (subst Cons(1)[OF refl])
+        apply (simp_all add: nonredundant_Cons map_U_lam_ilam_cong_swap)
+      done
+  qed
+qed
 
 lemma set_U_lam_ilam_map_U_lam_ilam:
   fixes f :: "'a :: cinf \<Rightarrow> 'a"

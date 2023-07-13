@@ -1025,26 +1025,34 @@ lemma App_inject[simp]: "(App t U = App t' U') = (t = t' \<and> U = U')"
   apply (auto simp: lam_vvsubst_rrename id_def[symmetric] cinfmset.map_id supp_id_bound intro!: exI[of _ id])
   done
 
-lemma lam_ilam_inject: "\<lbrakk>M\<rbrakk>a = \<lbrakk>N\<rbrakk>a \<Longrightarrow> M = N"
-proof (induct M arbitrary: a N)
+(* UPTO HERE OK *)
+
+lemma lam_ilam_inject: "\<lbrakk>M\<rbrakk>a = \<lbrakk>N\<rbrakk>b \<Longrightarrow> a = b \<and> M = N"
+proof (induct M arbitrary: a b N)
   case (Var x)
   then show ?case
-    apply (induct N arbitrary: a)
+    apply (induct N)
       apply auto
-    by (metis Int_emptyD disjoint_super get_cinfset_in)
+     apply (metis apply_super_eqI get_cinfset_in get_cinfset_inverse list_encode_eq super_lifted.rep_eq)
+    apply (metis Int_emptyD disjoint_super get_cinfset_in)
+    done
 next
   case (App M1 M2)
   then show ?case
-    apply (induct N arbitrary: a)
-      apply auto
-    find_theorems image_cinfmset inj
-    sorry
+    using NATS_cinfmset_UNIV[of 0]
+    apply (induct N)
+      apply (auto dest!: arg_cong[of _ _ "\<lambda>X. \<lbrakk>M2\<rbrakk>(Suc 0 # a) \<in>#\<in> X"] simp: cinfmset_set_map image_iff)
+    apply metis
+    done
 next
-  case (Abs x1 M)
-  then show ?case sorry
+  case (Abs x M)
+  then show ?case
+    apply (induct N)
+      apply simp_all
+    apply (drule sym)
+    apply (auto simp add: iAbs_inject)
+    sorry
 qed
-
-(* UPTO HERE OK *)
 
 definition "class" where
   "class g x = (THE X. X \<in> range (apply_super g) \<and> x \<in>\<in> X)"

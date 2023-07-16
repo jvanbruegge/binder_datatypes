@@ -72,11 +72,11 @@ where
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
 unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI1)
   subgoal  
@@ -114,7 +114,7 @@ by (metis Abs_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
 as they are. 
 *)
-lemma GG_fresh: 
+lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
  \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
 using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
@@ -122,13 +122,13 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
   apply(rule exI[of _ "[]"])  
   apply(rule conjI)
     subgoal unfolding ssbij_def small_def Vmap_def by auto 
-    subgoal apply(rule disjI1) by simp .
+    subgoal apply(rule disjI4_1) by simp .
   (* *)
   subgoal for xx e1 e1' e2 e2'
   apply(rule exI[of _ "[]"])  
   apply(rule conjI)
     subgoal unfolding ssbij_def small_def Vmap_def by auto 
-    subgoal apply(rule disjI2, rule disjI1) 
+    subgoal apply(rule disjI4_2) 
     apply(rule exI[of _ "e1"]) 
     apply(rule exI[of _ "e1'"])
     apply(rule exI[of _ "e2"]) 
@@ -139,7 +139,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
   apply(rule exI[of _ "[xx]"])  
   apply(rule conjI)
     subgoal unfolding ssbij_def small_def Vmap_def by auto 
-    subgoal apply(rule disjI2, rule disjI2, rule disjI1) 
+    subgoal apply(rule disjI4_3) 
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e'"])
@@ -152,7 +152,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
   apply(rule exI[of _ "[xx]"])  
   apply(rule conjI)
     subgoal unfolding ssbij_def small_def Vmap_def by auto 
-    subgoal apply(rule disjI2, rule disjI2, rule disjI2)
+    subgoal apply(rule disjI4_4)
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1'"])
@@ -160,7 +160,7 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
     apply(rule exI[of _ "e2'"])
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst tvsubst_Var_rrename_term) 
+      subgoal apply(subst tvsubst_Var_rrename) 
       apply (auto split: if_splits)   
       by blast
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . 
@@ -169,45 +169,68 @@ using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Induct where dummy = "undefined :: var" and 
+interpretation Lam: Induct where dummy = "undefined :: var" and 
 Tmap = Tmap and Tfvars = Tfvars
 and Vmap = Vmap and Vfvars = Vfvars and G = G
 apply standard 
-  using GG_mono GG_equiv GG_fresh by auto
+  using G_mono G_equiv G_refresh by auto
 
 (* *)
 
-lemma step_I: "step t1 t2 = I (t1,t2)" 
-  unfolding step_def I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-  unfolding fun_eq_iff G_def apply safe 
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal apply simp by metis
-    subgoal by (metis fst_conv snd_conv)
-    subgoal by (metis fst_conv snd_conv)
-    subgoal by (metis fst_conv snd_conv)
-    subgoal by (metis fst_conv snd_conv) .
+lemma step_I: "step t1 t2 = Lam.I (t1,t2)" 
+unfolding step_def Lam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+unfolding fun_eq_iff G_def apply clarify
+subgoal for R tt1 tt2 apply(rule iffI)
+  subgoal apply(elim disjE exE)
+    \<^cancel>\<open>Refl: \<close>
+    subgoal apply(rule exI) apply(rule disjI4_1) by auto
+    \<^cancel>\<open>App: \<close>
+    subgoal apply(rule exI) apply(rule disjI4_2) by auto
+    \<^cancel>\<open>Xi: \<close>
+    subgoal apply(rule exI) apply(rule disjI4_3) by auto
+    \<^cancel>\<open>PBeta: \<close>
+    subgoal apply(rule exI) apply(rule disjI4_4) by auto .
+  subgoal apply(elim disjE exE)
+    \<^cancel>\<open>Refl: \<close>
+    subgoal apply(rule disjI4_1) by auto
+    \<^cancel>\<open>App: \<close>
+    subgoal apply(rule disjI4_2) by auto
+    \<^cancel>\<open>Xi: \<close>
+    subgoal apply(rule disjI4_3) by auto
+    \<^cancel>\<open>PBeta: \<close>
+    subgoal apply(rule disjI4_4) by auto . . .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm step.induct[no_vars]
 
-corollary BE_induct_step: "(\<And>p. small (Pfvars p)) \<Longrightarrow> 
-step t1 t2 \<Longrightarrow> 
-(\<And>e p. R p e e) \<Longrightarrow>
-(\<And>e1 e1' e2 e2' p. step e1 e1' \<Longrightarrow> 
-  (\<forall>p'. R p' e1 e1') \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> R p (App e1 e2) (App e1' e2')) \<Longrightarrow> 
-(\<And>e e' x p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Abs x e) (Abs x e')) \<Longrightarrow> 
-(\<And>x e e' e2 e2' p. x \<notin> Pfvars p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
-   x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
-   R p (App (Abs x e) e2) (tvsubst (VVr(x := e2')) e')) \<Longrightarrow>
- R p t1 t2"
+corollary BE_induct_step: 
+assumes par: "\<And>p. small (Pfvars p)"
+and st: "step t1 t2"  
+and Refl: "\<And>e p. R p e e"
+and App: "\<And>e1 e1' e2 e2' p. 
+  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
+  R p (App e1 e2) (App e1' e2')"
+and Xi: "\<And>e e' x p. 
+  x \<notin> Pfvars p \<Longrightarrow> 
+  step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
+  R p (Abs x e) (Abs x e')" 
+and PBeta: "\<And>x e1 e1' e2 e2' p. 
+  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
+  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
+  step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
+  R p (App (Abs x e1) e2) (tvsubst (VVr(x := e2')) e1')"
+shows "R p t1 t2"
 unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
-  subgoal by auto
-  subgoal apply(erule BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-  unfolding G_def apply (auto split: if_splits)
-    by (metis (no_types, lifting)) .
+  subgoal by simp
+  subgoal using par st apply(elim Lam.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+    subgoal unfolding step_I by simp
+    subgoal for p v t apply(subst (asm) G_def) 
+    unfolding step_I[symmetric] apply (auto split: if_splits) 
+      subgoal using Refl by auto
+      subgoal using App by auto  
+      subgoal using Xi by auto
+      subgoal for x e1 e1' e2 e2' using PBeta[of x p e2 e1' e2' e1] by auto . . .
 
 
 end

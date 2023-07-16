@@ -263,7 +263,8 @@ apply standard unfolding ssbij_def Tmap_def Vmap_def
    apply (smt (verit, del_insts) UN_I UnI1 UnI2 image_iff list.set_map prod_fun_imageE snd_conv typ.FFVars_rrenames)
   done
 
-
+(* AtoJ: I have now removed the extra hypotheses for G, since 
+we are using the "enhanced" version *)
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool" where
   "G \<equiv> \<lambda>R v t.
     (v = [] \<and> snd (snd t) = Top \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
@@ -278,7 +279,7 @@ definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Righta
      R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2) \<comment> \<open>\<and> \<Gamma>,x<:T1 \<turnstile> S2 <: T2 \<close>)
   "
 
-lemma GG_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
   unfolding G_def by fastforce
 
 lemma in_context_eqvt:
@@ -324,7 +325,7 @@ next
   then show ?case by (auto intro!: Ty.SA_All simp: extend_eqvt)
 qed auto
 
-lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
   unfolding G_def
   apply (elim disjE)
   subgoal
@@ -397,7 +398,7 @@ abbreviation GG where "GG R \<equiv> G (\<lambda>t'. Ii t' \<and> R t')"
 lemma GG_rev: "GG R = G (\<lambda>t'. R t' \<and> Ii t')"
 unfolding fun_eq_iff G_def by fastforce
 
-lemma GG_fresh:
+lemma GG_refresh:
   "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG R v t \<Longrightarrow>
   \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> GG R w t"
   unfolding GG_rev using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
@@ -483,55 +484,49 @@ lemma GG_fresh:
 interpretation PM: Induct1 where dummy = "undefined :: var"
   and Tmap = Tmap and Tfvars = Tfvars and Vmap = Vmap and Vfvars = Vfvars and G = G
   apply standard
-  using GG_mono GG_equiv GG_fresh by auto 
+  using G_mono G_equiv GG_refresh by auto 
 
+(* AtoJ: Now the proof of this is completely standard:  *)
 lemma Ty_PM_I: "Ty \<Gamma> T1 T2 = PM.I (\<Gamma>, T1, T2)"
-(* AtoJ: This can probably be heavily simplified, since now 
-PM.I is defined just like Ty *)
-  apply (rule iffI) 
-  subgoal
-   apply (induction \<Gamma> T1 T2 rule: Ty.induct)
-        apply (rule PM.I.intros)
-        apply (unfold G_def)[1]
-        apply (rule disjI1)
-        apply simp
-       apply (rule PM.I.intros)
-       apply (unfold G_def)[1]
-       apply (rule disjI2, rule disjI1)
-       apply auto[1]
-      apply (rule PM.I.intros)
-      apply (unfold G_def)[1]
-      apply (rule disjI2, rule disjI2, rule disjI1)
-      apply auto[1]
-          apply (rule PM.I.intros)
-      apply (unfold G_def)[1]
-     apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
-     apply auto[1]
-              apply (rule PM.I.intros)
-      apply (unfold G_def)[1]
-    apply (rule disjI2)+
-    by fastforce
-
-    apply (erule PM.I.induct[of "(\<Gamma>, T1, T2)" "\<lambda>(\<Gamma>, T1, T2). \<Gamma> \<turnstile> T1 <: T2", unfolded prod.case])
-  subgoal for v t
-    apply (cases t)
-    apply hypsubst_thin
-    apply (unfold prod.case G_def)
-    apply (elim disjE)
-    by auto
-  done
-
+unfolding Ty_def PM.I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+unfolding fun_eq_iff G_def apply clarify
+subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
+  subgoal apply(elim disjE exE)
+    \<^cancel>\<open>SA_Top: \<close>
+    subgoal apply(rule exI) apply(rule disjI5_1) by auto
+    \<^cancel>\<open>SA_Refl_TVar: \<close>
+    subgoal apply(rule exI) apply(rule disjI5_2) by auto
+    \<^cancel>\<open>SA_Trans_TVar: \<close>
+    subgoal apply(rule exI) apply(rule disjI5_3) by auto
+    \<^cancel>\<open>SA_Arrow: \<close>
+    subgoal apply(rule exI) apply(rule disjI5_4) by auto 
+    \<^cancel>\<open>SA_All: \<close>
+    subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2 
+    apply(rule exI[of _ "[x]"]) apply(rule disjI5_5) by auto .
+  subgoal apply(elim disjE exE)
+    \<^cancel>\<open>SA_Top: \<close>
+    subgoal apply(rule disjI5_1) by auto
+    \<^cancel>\<open>SA_Refl_TVar: \<close>
+    subgoal apply(rule disjI5_2) by auto
+    \<^cancel>\<open>SA_Trans_TVar: \<close>
+    subgoal apply(rule disjI5_3) by auto
+    \<^cancel>\<open>SA_Arrow: \<close>
+    subgoal apply(rule disjI5_4) by auto 
+    \<^cancel>\<open>SA_All: \<close>
+    subgoal for v \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
+    apply(rule disjI5_5) by fastforce . . .
 
 interpretation PM: Induct_enhanced where dummy = "undefined :: var"
   and Tmap = Tmap and Tfvars = Tfvars and Vmap = Vmap and Vfvars = Vfvars and G = G
   apply standard unfolding PM.GG_def subgoal for R v t
-  apply(drule GG_fresh[of R v t]) 
+  apply(drule GG_refresh[of R v t]) 
   using Ty_PM_I[symmetric]  
   by (auto simp add: G_def) .
 print_theorems
 
 find_theorems name: BE_induct
 
+(* 
 corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
   "\<Gamma> \<turnstile> S <: T \<Longrightarrow>
   \<forall>\<rho>. |K \<rho>| <o |UNIV::var set| \<Longrightarrow>
@@ -553,12 +548,62 @@ corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_T
       unfolding G_def by (auto split: if_splits)
     done
   done
+*)
+
+corollary BE_induct_Ty:
+assumes par: "\<And>p. small (Pfvars p)" 
+and Ty: "\<Gamma> \<turnstile> S <: T" 
+and SA_Top: "\<And>\<Gamma> S p. 
+   \<turnstile> \<Gamma> ok \<Longrightarrow> S closed_in \<Gamma> \<Longrightarrow> 
+   \<phi> p \<Gamma> S Top"
+and SA_Refl_TVar: "\<And>\<Gamma> x p. 
+   \<turnstile> \<Gamma> ok \<Longrightarrow> TyVar x closed_in \<Gamma> \<Longrightarrow> 
+   \<phi> p \<Gamma> (TyVar x) (TyVar x)"
+and SA_Trans_TVar: "\<And>x U \<Gamma> T p. 
+   x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> U T \<Longrightarrow> 
+   \<phi> p \<Gamma> (TyVar x) T"
+and SA_Arrow: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 p. 
+   \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> S\<^sub>2 T\<^sub>2 \<Longrightarrow> 
+   \<phi> p \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2)" 
+and SA_All: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 p. 
+   x \<notin> Pfvars p \<Longrightarrow> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> 
+   \<forall>p. \<phi> p (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<Longrightarrow> 
+   \<phi> p \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2)"
+shows "\<phi> p \<Gamma> S T"
+apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi> p \<Gamma> S T")
+  subgoal by simp
+  subgoal using par Ty
+  apply(elim PM.BE_induct_enhanced[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
+    subgoal using Ty_PM_I by simp
+    subgoal for p v t apply(subst (asm) G_def) 
+    unfolding Ty_PM_I[symmetric] apply (auto split: if_splits) 
+      subgoal using SA_Top by auto
+      subgoal for \<Gamma>' X T using SA_Refl_TVar[of \<Gamma>' X p] 
+      by simp (metis fst_conv imageI)
+      subgoal using SA_Trans_TVar by auto
+      subgoal using SA_Arrow by auto
+      subgoal using SA_All by auto . . .
+
 
 (********************* Actual formalization ************************)
 
 context begin
 ML_file \<open>../../Tools/binder_induction.ML\<close>
 end
+
+(* A bit of customization: *)
+lemma Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
+  "\<Gamma> \<turnstile> S <: T \<Longrightarrow>
+  \<forall>\<rho>. |K \<rho>| <o |UNIV::var set| \<Longrightarrow>
+  (\<And>\<Gamma> S \<rho>. \<lbrakk> \<turnstile> \<Gamma> ok ; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> P \<Gamma> S Top \<rho>) \<Longrightarrow>
+  (\<And>\<Gamma> x \<rho>. \<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> P \<Gamma> (TyVar x) (TyVar x) \<rho>) \<Longrightarrow>
+  (\<And>x U \<Gamma> T \<rho>. x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<forall>\<rho>. P \<Gamma> U T \<rho> \<Longrightarrow> P \<Gamma> (TyVar x) T \<rho>) \<Longrightarrow>
+  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<rho>. \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2) \<rho>) \<Longrightarrow>
+  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2) \<rho>) \<Longrightarrow>
+ \<forall>\<rho>. P \<Gamma> S T \<rho>"
+apply safe subgoal for p  
+apply(rule BE_induct_Ty[where \<phi> = "\<lambda> p \<Gamma> S T. P \<Gamma> S T p", of K])
+by (auto simp: small_def) .
 
 lemma Ty_refl: "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
 proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: typ.strong_induct)
@@ -923,8 +968,5 @@ proof -
 qed
 
 (**)
-
-
-
 
 end

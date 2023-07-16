@@ -11,8 +11,6 @@ begin
 hide_const trans
 
 
-
-
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
 (* INSTATIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
@@ -21,8 +19,6 @@ print_locales
 interpretation Small where dummy = "undefined :: var" 
 apply standard
 by (simp_all add: infinite_var regularCard_var)
-
-
 
 
 (* The "late" transition relation  *)
@@ -84,20 +80,6 @@ Close2: "trans P1 (Bout a x P1') \<Longrightarrow> trans P2 (Finp a x P2') \<Lon
 |
 Bang: "trans (Par P (Bang P)) C \<Longrightarrow> trans (Bang P) C"
 *)
-
-
-lemma 
-assumes "trans P (Cmt act P')"
-shows "FFVars P \<inter> set (bvars act) = {}" 
-proof- 
-  define C where "C = Cmt act P'"
-  show ?thesis using assms unfolding C_def[symmetric] using C_def
-  apply(induct arbitrary: act P' rule: trans.induct) 
-    subgoal for x a u P act P' apply(cases act) by (auto elim: trans.cases)
-    subgoal for P a x P' act P'a apply(cases act) apply auto
-     apply (erule trans.cases) apply auto
-    (* abandoned *)
-    oops
 
 
 (* INSTANTIATING THE Components LOCALE: *)
@@ -166,7 +148,7 @@ where
     R (P1, Finp a x P1') \<and> R (P2, Fout a x P2'))
  \<or> \<^cancel>\<open>Close1: \<close> 
  (\<exists>P1 a x P1' P2 P2'. 
-    v = [x] \<and> fst t = Par P1 P2 \<and> snd t = Bout a x (Par P1' P2') \<and> 
+    v = [x] \<and> fst t = Par P1 P2 \<and> snd t = Tau (Res x (Par P1' P2')) \<and> 
     x \<notin> {a} \<union> FFVars P1 \<and> 
     R (P1, Finp a x P1') \<and> R (P2, Bout a x P2'))
 "
@@ -287,7 +269,7 @@ qed
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
 as they are. 
 *)
-lemma GG_fresh: 
+lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
  \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
 unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
@@ -359,13 +341,7 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       apply(rule exI[of _ "act"]) 
       apply(rule exI[of _ "swap P' x xx"])
       apply(rule exI[of _ "xx"]) 
-      apply(cases t) apply simp (* apply(intro conjI)
-        subgoal using Res_refresh by blast
-        subgoal using Res_refresh[symmetric] by blast           
-        subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
-        apply(erule allE[of _ "P"])
-        apply(erule allE[of _ "Cmt act P'"]) 
-        by (auto simp: ssbij_def split: if_splits ) *) . . . .
+      apply(cases t) by simp . . . 
   (* ScopeB: *)
   subgoal for P a x P' y
   using exists_fresh[of "[a,x,y]" "[t]"] apply(elim exE conjE)
@@ -394,7 +370,7 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
         subgoal apply(subgoal_tac "swap (swap P y yy) x xx = swap P y yy")
         defer subgoal apply(rule FFVars_swap') by (auto simp: sw_def)
         apply(subst swap_commute) by auto . . . .
-  (* *)
+  (* Par1 *)
   subgoal for P1 act P1' P2
   using bvars_act_bout[of act] apply(elim disjE exE)
     subgoal
@@ -436,7 +412,7 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ P2]) 
     apply(rule exI[of _ P2']) 
     apply(cases t) by simp  .  
-  (* Par1: *)
+  (* Close1: *)
   subgoal for P1 a x P1' P2 P2'
   using exists_fresh[of "[a,x]" "[t]"] apply(elim exE conjE)
   subgoal for xx
@@ -451,10 +427,11 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ P2]) 
     apply(rule exI[of _ "swap P2' x xx"]) 
     apply(cases t) apply simp apply(intro conjI)
+      subgoal by (simp add: Res_inject_swap fun_upd_twist)
       subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
       apply(erule allE[of _ "P1"])
       apply(erule allE[of _ "Finp a x P1'"])      
-      by (auto simp: ssbij_def split: if_splits) 
+      by (auto simp: ssbij_def split: if_splits)  
       subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
       apply(erule allE[of _ "P1"])
       apply(erule allE[of _ "Bout a x P1'"])      
@@ -463,57 +440,57 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Induct where dummy = "undefined :: var" and 
+interpretation Pi: Induct where dummy = "undefined :: var" and 
 Tmap = Tmap and Tfvars = Tfvars
 and Vmap = Vmap and Vfvars = Vfvars and G = G
 apply standard 
-  using GG_mono GG_equiv GG_fresh by auto
+  using GG_mono GG_equiv G_refresh by auto
 
 
-lemma trans_I: "trans t1 t2 = I (t1,t2)" 
-  unfolding trans_def I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-  unfolding fun_eq_iff G_def apply clarify
-  subgoal for R PP QQ apply(rule iffI)
-    subgoal apply(elim disjE exE)
-      \<^cancel>\<open>Inp: \<close>
-      subgoal apply(rule exI) apply(rule disjI7_1) by auto
-      \<^cancel>\<open>Open: \<close>
-      subgoal apply(rule exI) apply(rule disjI7_2) by auto
-      \<^cancel>\<open>ScopeF: \<close> 
-      subgoal apply(rule exI) apply(rule disjI7_3) by auto
-      \<^cancel>\<open>ScopeB: \<close> 
-      subgoal for P a x P' y 
-      apply(rule exI[of _ "[x, y]"]) apply(rule disjI7_4) 
-      by (auto simp: sw_def)
-      \<^cancel>\<open>Par1: \<close>
-      subgoal apply(rule exI) apply(rule disjI7_5) by auto
-      \<^cancel>\<open>Com1: \<close> 
-      subgoal apply(rule exI) apply(rule disjI7_6) by auto
-      \<^cancel>\<open>Close1: \<close> 
-      subgoal apply(rule exI) apply(rule disjI7_7) by auto .
+lemma trans_I: "trans t1 t2 = Pi.I (t1,t2)" 
+unfolding trans_def Pi.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+unfolding fun_eq_iff G_def apply clarify
+subgoal for R PP QQ apply(rule iffI)
+  subgoal apply(elim disjE exE)
+    \<^cancel>\<open>Inp: \<close>
+    subgoal apply(rule exI) apply(rule disjI7_1) by auto
+    \<^cancel>\<open>Open: \<close>
+    subgoal apply(rule exI) apply(rule disjI7_2) by auto
+    \<^cancel>\<open>ScopeF: \<close> 
+    subgoal apply(rule exI) apply(rule disjI7_3) by auto
+    \<^cancel>\<open>ScopeB: \<close> 
+    subgoal for P a x P' y 
+    apply(rule exI[of _ "[x, y]"]) apply(rule disjI7_4) 
+    by (auto simp: sw_def)
+    \<^cancel>\<open>Par1: \<close>
+    subgoal apply(rule exI) apply(rule disjI7_5) by auto
+    \<^cancel>\<open>Com1: \<close> 
+    subgoal apply(rule exI) apply(rule disjI7_6) by auto
+    \<^cancel>\<open>Close1: \<close> 
+    subgoal apply(rule exI) apply(rule disjI7_7) by auto .
     (* *)
-    subgoal apply(elim disjE exE)
-      \<^cancel>\<open>Inp: \<close>
-      subgoal apply(rule disjI7_1) by auto
-      \<^cancel>\<open>Open: \<close>
-      subgoal apply(rule disjI7_2) by fastforce
-      \<^cancel>\<open>ScopeF: \<close> 
-      subgoal apply(rule disjI7_3) by auto
-      \<^cancel>\<open>ScopeB: \<close> 
-      subgoal apply(rule disjI7_4) by (fastforce simp: sw_def)
-      \<^cancel>\<open>Par1: \<close>
-      subgoal apply(rule disjI7_5) by auto
-      \<^cancel>\<open>Com1: \<close> 
-      subgoal apply(rule disjI7_6) by auto
-      \<^cancel>\<open>Close1: \<close> 
-      subgoal apply(rule disjI7_7) by auto . . .
+  subgoal apply(elim disjE exE)
+    \<^cancel>\<open>Inp: \<close>
+    subgoal apply(rule disjI7_1) by auto
+    \<^cancel>\<open>Open: \<close>
+    subgoal apply(rule disjI7_2) by fastforce
+    \<^cancel>\<open>ScopeF: \<close> 
+    subgoal apply(rule disjI7_3) by auto
+    \<^cancel>\<open>ScopeB: \<close> 
+    subgoal apply(rule disjI7_4) by (fastforce simp: sw_def)
+    \<^cancel>\<open>Par1: \<close>
+    subgoal apply(rule disjI7_5) by auto
+    \<^cancel>\<open>Com1: \<close> 
+    subgoal apply(rule disjI7_6) by auto
+    \<^cancel>\<open>Close1: \<close> 
+    subgoal apply(rule disjI7_7) by auto . . .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm trans.induct[of P C \<phi>, no_vars]
 
 corollary BE_induct_trans: 
 assumes 
-par: "(\<And>p. small (Pfvars p))" 
+par: "\<And>p. small (Pfvars p)" 
 and tr: "trans P C"
 and Inp: 
 "\<And>x a u P p. x \<notin> {a, u} \<Longrightarrow> 
@@ -551,16 +528,16 @@ and Close1:
     trans P2 (Bout a x P2') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P2 (Bout a x P2')) \<Longrightarrow> 
     x \<notin> {a} \<union> FFVars P1 \<Longrightarrow> 
-    \<phi> p (Par P1 P2) (Bout a x (Par P1' P2'))"
+    \<phi> p (Par P1 P2) (Tau (Res x (Par P1' P2')))"
 shows "\<phi> p P C" 
 apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
   subgoal by simp
-  subgoal using par tr apply(elim BE_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
+  subgoal using par tr apply(elim Pi.BE_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
     subgoal unfolding trans_I by simp
     subgoal for p v t apply(subst (asm) G_def) 
     unfolding trans_I[symmetric] apply (auto split: if_splits) 
       subgoal using Inp by auto
-      subgoal using Inp by auto (* not clear how this appeared... *)
+      subgoal using Inp by auto (* not clear why this duplication happened... *)
       subgoal using Open by auto
       subgoal for Pa act P' y using ScopeF[of y p act] by (cases act, auto) 
       subgoal using ScopeB by auto

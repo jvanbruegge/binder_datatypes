@@ -188,7 +188,6 @@ lemma lfp_curry5:
 using lfp_curry5' unfolding curry5_def uncurry5_def fun_eq_iff o_def by metis
 
 
-
 (* *)
 (* *)
 

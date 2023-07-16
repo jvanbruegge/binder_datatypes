@@ -1,6 +1,6 @@
 (* Here we instantiate the general enhanced rule induction to parallel beta reduction
 for the (untyped) lambda-calculus *)
-theory LC_Beta 
+theory LC_Parallel_Beta 
 imports LC  "../Instantiation_Infrastructure/Curry_LFP" 
 "../Generic_Barendregt_Enhanced_Rule_Induction"
 begin

@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to parallel beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Parallel_Beta 
-imports LC  "../Instantiation_Infrastructure/Curry_LFP" 
+imports LC "../Instantiation_Infrastructure/Curry_LFP" 
 "../Generic_Barendregt_Enhanced_Rule_Induction"
 begin
 
@@ -16,8 +16,7 @@ apply standard
   using var_term_pre_class.regular by blast
  
 
-(* AN EXAMPLE INDUCTIVE DEFINITION *)
-(* (a reduced form of) small step semantics *) 
+(* *)
 
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Refl: "step e e"

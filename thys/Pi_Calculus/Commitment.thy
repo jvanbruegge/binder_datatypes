@@ -273,9 +273,9 @@ fun Cmt :: "act \<Rightarrow> trm \<Rightarrow> cmt" where
 |"Cmt (bout x y) P = Bout x y P"
 |"Cmt tau P = Tau P"
 
-fun bvars :: "act \<Rightarrow> var list" where 
- "bvars (bout x y) = [y]"
-|"bvars _ = []" 
+fun bvars :: "act \<Rightarrow> var set" where 
+ "bvars (bout x y) = {y}"
+|"bvars _ = {}" 
 
 fun fvars :: "act \<Rightarrow> var set" where 
  "fvars (bout x y) = {x}"
@@ -283,7 +283,7 @@ fun fvars :: "act \<Rightarrow> var set" where
 
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
 
-lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = map \<sigma> (bvars act)"
+lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = image \<sigma> (bvars act)"
 by (cases act, auto)
 
 lemma rrename_commit_Cmt[simp]: 
@@ -291,7 +291,7 @@ lemma rrename_commit_Cmt[simp]:
  rrename_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
 by (cases act, auto)
 
-lemma bvars_act_bout: "bvars act = [] \<or> (\<exists>a b. act = bout a b)"
+lemma bvars_act_bout: "bvars act = {} \<or> (\<exists>a b. act = bout a b)"
 by(cases act, auto)
 
 

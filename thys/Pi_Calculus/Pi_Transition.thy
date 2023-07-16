@@ -49,9 +49,9 @@ ScopeB: "trans P (Bout a x P') \<Longrightarrow> y \<notin> {a,x} \<Longrightarr
 |
 Par1: "trans P1 (Cmt act P1') \<Longrightarrow> 
    \<^cancel>\<open>present in Bengtson but not needed (and will be an 'output' 
-      of strong induction) : set (bvars act) \<inter> fvars act = {} \<Longrightarrow> \<close>  
-   set (bvars act) \<inter> FFVars P1 = {} \<Longrightarrow> 
-   set (bvars act) \<inter> FFVars P2 = {} \<Longrightarrow> 
+      of strong induction) : bvars act \<inter> fvars act = {} \<Longrightarrow> \<close>  
+   bvars act \<inter> FFVars P1 = {} \<Longrightarrow> 
+   bvars act \<inter> FFVars P2 = {} \<Longrightarrow> 
    trans (Par P1 P2) (Cmt act (Par P1' P2))" 
 (* |
 Par2: "trans P2 (Cmt act P2') \<Longrightarrow> bvars act \<inter> FFVars P1 = {} \<Longrightarrow> 
@@ -94,18 +94,19 @@ definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" whe
 fun Tfvars :: "T \<Rightarrow> var set" where 
 "Tfvars (e1,e2) = FFVars e1 \<union> FFVars_commit e2"
 
+(*
 definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where 
 "Vmap \<equiv> map"
 
 fun Vfvars :: "V \<Rightarrow> var set" where 
 "Vfvars v = set v"
+*)
 
 lemmas commit_internal.FFVars_rrenames[simp]
 
 interpretation Components where dummy = "undefined :: var" and 
 Tmap = Tmap and Tfvars = Tfvars
-and Vmap = Vmap and Vfvars = Vfvars 
-apply standard unfolding ssbij_def Tmap_def Vmap_def
+apply standard unfolding ssbij_def Tmap_def 
   using small_Un small_def term.card_of_FFVars_bounds
     commit_internal.card_of_FFVars_bounds(2)
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s 
@@ -114,41 +115,44 @@ apply standard unfolding ssbij_def Tmap_def Vmap_def
           inf_A) 
   by blast 
 
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool"
+lemma small_bvars[simp,intro!]: "small (bvars act)"
+by (cases act, auto)
+
+definition G :: "(T \<Rightarrow> bool) \<Rightarrow> var set \<Rightarrow> T \<Rightarrow> bool"
 where
-"G \<equiv> \<lambda>R v t.
+"G \<equiv> \<lambda>R B t.
  \<^cancel>\<open>Inp: \<close>  
  (\<exists>x a u P. 
-    v = [x] \<and> fst t = Inp a x P \<and> snd t = Finp a u (usub P u x) 
+    B = {x} \<and> fst t = Inp a x P \<and> snd t = Finp a u (usub P u x) 
  \<comment> \<open>\<and> x \<notin> {a,u} \<close>)
  \<or>  \<^cancel>\<open>Open: \<close> 
  (\<exists>P a x P'. 
-    v = [x] \<and> fst t = Res x P \<and> snd t = Bout a x P' \<and> 
+    B = {x} \<and> fst t = Res x P \<and> snd t = Bout a x P' \<and> 
     a \<noteq> x \<and> 
     R (P,Fout a x P')) 
  \<or>  \<^cancel>\<open>ScopeF: \<close> 
  (\<exists> P act P' x.  
-    v = [x] \<and> fst t = Res x P \<and> snd t = Cmt act (Res x P') \<and>  
+    B = {x} \<and> fst t = Res x P \<and> snd t = Cmt act (Res x P') \<and>  
     \<not> is_bout act \<and> x \<notin> vars act \<and> 
     R (P, Cmt act P'))
  \<or>  \<^cancel>\<open>ScopeB: \<close> 
  (\<exists> P a x P' y. 
-    v = [x,y] \<and> fst t = Res y P \<and> snd t = Bout a x (Res y P') \<and>  
+    B = {x,y} \<and> fst t = Res y P \<and> snd t = Bout a x (Res y P') \<and>  
     y \<notin> {a,x} \<and> x \<notin> {a} \<union> FFVars P \<and>  
     R (P, Bout a x P'))
  \<or>  \<^cancel>\<open>Par1: \<close> 
  (\<exists>P1 act P1' P2. 
-    v = bvars act \<and> fst t = Par P1 P2 \<and> snd t = Cmt act (Par P1' P2) \<and> 
-    set (bvars act) \<inter> FFVars P1 = {} \<and> 
-    set (bvars act) \<inter> FFVars P2 = {} \<and> 
+    B = bvars act \<and> fst t = Par P1 P2 \<and> snd t = Cmt act (Par P1' P2) \<and> 
+    bvars act \<inter> FFVars P1 = {} \<and> 
+    bvars act \<inter> FFVars P2 = {} \<and> 
     R (P1, Cmt act P1'))
  \<or> \<^cancel>\<open>Com1: \<close> 
  (\<exists>P1 a x P1' P2 P2'. 
-    v = [] \<and> fst t = Par P1 P2 \<and> snd t = Tau (Par P1' P2') \<and>  
+    B = {} \<and> fst t = Par P1 P2 \<and> snd t = Tau (Par P1' P2') \<and>  
     R (P1, Finp a x P1') \<and> R (P2, Fout a x P2'))
  \<or> \<^cancel>\<open>Close1: \<close> 
  (\<exists>P1 a x P1' P2 P2'. 
-    v = [x] \<and> fst t = Par P1 P2 \<and> snd t = Tau (Res x (Par P1' P2')) \<and> 
+    B = {x} \<and> fst t = Par P1 P2 \<and> snd t = Tau (Res x (Par P1' P2')) \<and> 
     x \<notin> {a} \<union> FFVars P1 \<and> 
     R (P1, Finp a x P1') \<and> R (P2, Bout a x P2'))
 "
@@ -166,14 +170,14 @@ unfolding G_def by (smt (z3) le_boolE le_funD)
  
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   (* Inp: *)
   subgoal apply(rule disjI7_1)
   subgoal apply(elim exE) subgoal for x a u P
   apply(rule exI[of _ "\<sigma> x"]) apply(rule exI[of _ "\<sigma> a"]) 
   apply(rule exI[of _ "\<sigma> u"]) apply(rule exI[of _ "rrename \<sigma> P"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: term.rrename_comps) . . 
   (* Open: *)
   subgoal apply(rule disjI7_2)
@@ -181,7 +185,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "rrename \<sigma> P"])
   apply(rule exI[of _ "\<sigma> a"]) apply(rule exI[of _ "\<sigma> x"])
   apply(rule exI[of _ "rrename \<sigma> P'"])   
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: term.rrename_comps) . . 
   (* ScopeF: *)
   subgoal apply(rule disjI7_3)
@@ -190,7 +194,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "map_action \<sigma> act"])
   apply(rule exI[of _ "rrename \<sigma> P'"])
   apply(rule exI[of _ "\<sigma> x"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def  
   apply (simp add: term.rrename_comps) 
   by (auto simp add: action.map_id action.map_comp) . .
   (* ScopeB: *)
@@ -201,7 +205,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "\<sigma> x"]) 
   apply(rule exI[of _ "rrename \<sigma> P'"])
   apply(rule exI[of _ "\<sigma> y"])   
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: term.rrename_comps) 
   by auto . .
   (* Par1: *)
@@ -211,7 +215,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "map_action \<sigma> act"])
   apply(rule exI[of _ "rrename \<sigma> P1'"])
   apply(rule exI[of _ "rrename \<sigma> P2"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: term.rrename_comps)  
   by (auto simp add: action.map_id action.map_comp) . .
   (* Com1: *)
@@ -223,7 +227,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "rrename \<sigma> P1'"])
   apply(rule exI[of _ "rrename \<sigma> P2"])
   apply(rule exI[of _ "rrename \<sigma> P2'"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: term.rrename_comps) . .
   (* Close1: *)
   subgoal apply(rule disjI7_7)
@@ -234,7 +238,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "rrename \<sigma> P1'"])
   apply(rule exI[of _ "rrename \<sigma> P2"])
   apply(rule exI[of _ "rrename \<sigma> P2'"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def Vmap_def 
+  apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: term.rrename_comps)
   by auto . . .
 
@@ -270,16 +274,17 @@ with x and (the fresh) xx swapped, whereas the non-affected ones are passed
 as they are. 
 *)
 lemma G_refresh: 
-"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
- \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G R w t"
-unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
+"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
+ \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+unfolding G_def Tmap_def apply(elim disjE exE conjE)
   (* Inp: *) 
   subgoal for x a u P
   using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
   subgoal for xx
-  apply(rule exI[of _ "[xx]"])  
-  apply(rule conjI)
-    subgoal unfolding ssbij_def small_def Vmap_def by auto 
+  apply(rule exI[of _ "{xx}"])  
+  apply(intro conjI)
+    subgoal by simp
+    subgoal unfolding ssbij_def small_def by auto 
     subgoal apply(rule disjI7_1) 
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "a"])
@@ -291,9 +296,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
   subgoal for P a x P'
   using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
   subgoal for xx
-  apply(rule exI[of _ "[xx]"])  
-  apply(rule conjI)
-    subgoal unfolding ssbij_def small_def Vmap_def by auto 
+  apply(rule exI[of _ "{xx}"])  
+  apply(intro conjI)
+    subgoal by simp
+    subgoal unfolding ssbij_def small_def by auto 
     subgoal apply(rule disjI7_2) 
     apply(rule exI[of _ "swap P x xx"])
     apply(rule exI[of _ "a"]) 
@@ -312,9 +318,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     subgoal
     using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
     subgoal for xx
-    apply(rule exI[of _ "[xx]"])  
-    apply(rule conjI)
-      subgoal unfolding ssbij_def small_def Vmap_def by auto 
+    apply(rule exI[of _ "{xx}"])  
+    apply(intro conjI)
+      subgoal by simp
+      subgoal unfolding ssbij_def small_def by auto 
       subgoal apply(rule disjI7_3) 
       apply(rule exI[of _ "swap P x xx"])
       apply(rule exI[of _ "swapa act x xx"]) 
@@ -323,7 +330,7 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       apply(cases t) apply simp apply(intro conjI)
         subgoal using Res_refresh by blast
         subgoal using Res_refresh apply(cases act, simp_all split: if_splits)  
-          by blast+
+        by blast+
         subgoal by auto
         subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
         apply(erule allE[of _ "P"])
@@ -333,9 +340,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     subgoal for a b
     using exists_fresh[of "[a,b]" "[t]"] apply(elim exE conjE)
     subgoal for xx
-    apply(rule exI[of _ "[xx]"])  
-    apply(rule conjI)
-      subgoal unfolding ssbij_def small_def Vmap_def by auto 
+    apply(rule exI[of _ "{xx}"])  
+    apply(intro conjI)
+      subgoal by simp
+      subgoal unfolding ssbij_def small_def by auto 
       subgoal apply(rule disjI7_3) 
       apply(rule exI[of _ "swap P x xx"]) 
       apply(rule exI[of _ "act"]) 
@@ -348,9 +356,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
   subgoal for yy
   using exists_fresh[of "[a,x,y,yy]" "[t]"] apply(elim exE conjE)
   subgoal for xx  
-  apply(rule exI[of _ "[xx,yy]"])  
-  apply(rule conjI)
-    subgoal unfolding ssbij_def small_def Vmap_def by auto 
+  apply(rule exI[of _ "{xx,yy}"])  
+  apply(intro conjI)
+    subgoal by simp
+    subgoal unfolding ssbij_def small_def  by auto 
     subgoal apply(rule disjI7_4)
     apply(rule exI[of _ "swap (swap P x xx) y yy"])
     apply(rule exI[of _ "a"]) 
@@ -360,8 +369,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       subgoal using Res_refresh by auto
       apply(erule allE[of _ "id(x:=xx,xx:=x) o id(y:=yy,yy:=y)"])
       apply(erule allE[of _ "P"])
-      apply(erule allE[of _ "Bout a x P'"])      
-      apply (auto simp: ssbij_def rrename_o_swap split: if_splits) 
+      apply(erule allE[of _ "Bout a x P'"]) 
+      apply clarify apply(rule exI[of _ yy])     
+      apply (simp add: ssbij_def rrename_o_swap split: if_splits)
+      apply safe 
         subgoal using infinite_var not_ordLeq_ordLess supp_comp_bound by blast
         subgoal by (metis (no_types, lifting) Res_inject_swap Res_refresh) 
         subgoal using not_ordLess_ordLeq term_pre.supp_comp_bound by blast
@@ -376,9 +387,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     subgoal
     using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
     subgoal for yy
-    apply(rule exI[of _ "[]"])  
-    apply(rule conjI)
-      subgoal unfolding ssbij_def small_def Vmap_def by auto 
+    apply(rule exI[of _ "{}"])  
+    apply(intro conjI)
+      subgoal by simp
+      subgoal unfolding ssbij_def small_def by auto 
       subgoal apply(rule disjI7_5) 
       apply(rule exI[of _ P1])
       apply(rule exI[of _ act]) 
@@ -389,9 +401,10 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
     subgoal for a b
     using exists_fresh[of "[a,b]" "[t]"] apply(elim exE conjE)
     subgoal for bb
-    apply(rule exI[of _ "[bb]"])  
-    apply(rule conjI)
-      subgoal unfolding ssbij_def small_def Vmap_def by auto 
+    apply(rule exI[of _ "{bb}"])  
+    apply(intro conjI)
+      subgoal by simp
+      subgoal unfolding ssbij_def small_def by auto 
       subgoal apply(rule disjI7_5)
       apply(rule exI[of _ P1]) 
       apply(rule exI[of _ "bout a bb"]) 
@@ -401,24 +414,26 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       by (metis Bout_inj) . . . 
   (* Com1: *)
   subgoal for P1 a x P1' P2 P2'
-  apply(rule exI[of _ "[]"])  
-  apply(rule conjI)
-  subgoal unfolding ssbij_def small_def Vmap_def by auto 
-  subgoal apply(rule disjI7_6) 
-    apply(rule exI[of _ P1])
-    apply(rule exI[of _ a]) 
-    apply(rule exI[of _ x])
-    apply(rule exI[of _ P1']) 
-    apply(rule exI[of _ P2]) 
-    apply(rule exI[of _ P2']) 
-    apply(cases t) by simp  .  
+  apply(rule exI[of _ "{}"])  
+  apply(intro conjI)
+    subgoal by simp
+    subgoal unfolding ssbij_def small_def by auto 
+    subgoal apply(rule disjI7_6) 
+      apply(rule exI[of _ P1])
+      apply(rule exI[of _ a]) 
+      apply(rule exI[of _ x])
+      apply(rule exI[of _ P1']) 
+      apply(rule exI[of _ P2]) 
+      apply(rule exI[of _ P2']) 
+      apply(cases t) by simp . 
   (* Close1: *)
   subgoal for P1 a x P1' P2 P2'
   using exists_fresh[of "[a,x]" "[t]"] apply(elim exE conjE)
   subgoal for xx
-  apply(rule exI[of _ "[xx]"])  
-  apply(rule conjI)
-    subgoal unfolding ssbij_def small_def Vmap_def by auto 
+  apply(rule exI[of _ "{xx}"])  
+  apply(intro conjI)
+    subgoal by simp
+    subgoal unfolding ssbij_def small_def by auto 
     subgoal apply(rule disjI7_7)
     apply(rule exI[of _ "swap P1 x xx"]) 
     apply(rule exI[of _ a]) 
@@ -435,14 +450,13 @@ unfolding G_def Tmap_def Vmap_def apply(elim disjE exE conjE)
       subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
       apply(erule allE[of _ "P1"])
       apply(erule allE[of _ "Bout a x P1'"])      
-      apply (auto simp: ssbij_def split: if_splits)  
+      apply (simp add: ssbij_def split: if_splits)  
       by (metis Bout_inj)+ . . . .
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
 interpretation Pi: Induct where dummy = "undefined :: var" and 
-Tmap = Tmap and Tfvars = Tfvars
-and Vmap = Vmap and Vfvars = Vfvars and G = G
+Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using GG_mono GG_equiv G_refresh by auto
 
@@ -453,23 +467,24 @@ unfolding fun_eq_iff G_def apply clarify
 subgoal for R PP QQ apply(rule iffI)
   subgoal apply(elim disjE exE)
     \<^cancel>\<open>Inp: \<close>
-    subgoal apply(rule exI) apply(rule disjI7_1) by auto
+    subgoal for a x P apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI7_1) by auto
     \<^cancel>\<open>Open: \<close>
-    subgoal apply(rule exI) apply(rule disjI7_2) by auto
+    subgoal for P a x apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI7_2) by auto
     \<^cancel>\<open>ScopeF: \<close> 
-    subgoal apply(rule exI) apply(rule disjI7_3) by auto
+    subgoal for P act P' x apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI7_3) by auto
     \<^cancel>\<open>ScopeB: \<close> 
     subgoal for P a x P' y 
-    apply(rule exI[of _ "[x, y]"]) apply(rule disjI7_4) 
-    by (auto simp: sw_def)
+    apply(rule exI[of _ "{x, y}"], rule conjI, simp) apply(rule disjI7_4) 
+    by (fastforce simp: sw_def)
     \<^cancel>\<open>Par1: \<close>
-    subgoal apply(rule exI) apply(rule disjI7_5) by auto
+    subgoal for P1 act P1' P2 apply(rule exI[of _ "bvars act"], rule conjI, simp) 
+    apply(rule disjI7_5) by auto
     \<^cancel>\<open>Com1: \<close> 
-    subgoal apply(rule exI) apply(rule disjI7_6) by auto
+    subgoal for P1 a x P1' P2 apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI7_6) by auto
     \<^cancel>\<open>Close1: \<close> 
-    subgoal apply(rule exI) apply(rule disjI7_7) by auto .
+    subgoal for P1 a x P1' P2 apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI7_7) by auto .
     (* *)
-  subgoal apply(elim disjE exE)
+  subgoal apply(elim conjE disjE exE)
     \<^cancel>\<open>Inp: \<close>
     subgoal apply(rule disjI7_1) by auto
     \<^cancel>\<open>Open: \<close>
@@ -508,11 +523,11 @@ and ScopeB:
     trans P (Bout a x P') \<Longrightarrow> (\<forall>p'. \<phi> p' P (Bout a x P')) \<Longrightarrow> y \<notin> {a, x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P \<Longrightarrow>
     \<phi> p (Res y P) (Bout a x (Res y P'))" 
 and Par1: 
-"\<And>P1 act P1' P2 p. set (bvars act) \<inter> (Pfvars p \<union> fvars act) = {} \<Longrightarrow> 
+"\<And>P1 act P1' P2 p. bvars act \<inter> (Pfvars p \<union> fvars act) = {} \<Longrightarrow> 
     trans P1 (Cmt act P1') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P1 (Cmt act P1')) \<Longrightarrow>
-    set (bvars act) \<inter> FFVars P1 = {} \<Longrightarrow> 
-    set (bvars act) \<inter> FFVars P2 = {} \<Longrightarrow> 
+    bvars act \<inter> FFVars P1 = {} \<Longrightarrow> 
+    bvars act \<inter> FFVars P2 = {} \<Longrightarrow> 
     \<phi> p (Par P1 P2) (Cmt act (Par P1' P2))"
 and Com1: 
 "\<And>P1 a x P1' P2 P2' p. 
@@ -535,9 +550,8 @@ apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
   subgoal using par tr apply(elim Pi.BE_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
     subgoal unfolding trans_I by simp
     subgoal for p v t apply(subst (asm) G_def) 
-    unfolding trans_I[symmetric] apply (auto split: if_splits) 
+    unfolding trans_I[symmetric] apply(elim disjE exE)
       subgoal using Inp by auto
-      subgoal using Inp by auto (* not clear why this duplication happened... *)
       subgoal using Open by auto
       subgoal for Pa act P' y using ScopeF[of y p act] by (cases act, auto) 
       subgoal using ScopeB by auto

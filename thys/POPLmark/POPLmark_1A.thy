@@ -244,15 +244,15 @@ definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" whe
 fun Tfvars :: "T \<Rightarrow> var set" where
   "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
-definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
+(* definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
   "Vmap \<equiv> map"
 fun Vfvars :: "V \<Rightarrow> var set" where
   "Vfvars v = set v"
+*)
 
 interpretation Components where dummy = "undefined :: var" and
 Tmap = Tmap and Tfvars = Tfvars
-and Vmap = Vmap and Vfvars = Vfvars
-apply standard unfolding ssbij_def Tmap_def Vmap_def
+apply standard unfolding ssbij_def Tmap_def 
   using small_Un small_def typ.card_of_FFVars_bounds
          apply (auto simp: typ.FFVars_rrenames map_prod.comp dalist.set_map dalist.map_comp typ.rrename_comp0s inf_A)
     apply (rule var_typ_pre_class.Un_bound var_typ_pre_class.UN_bound context_set_bd_UNIV set_bd_UNIV
@@ -265,16 +265,16 @@ apply standard unfolding ssbij_def Tmap_def Vmap_def
 
 (* AtoJ: I have now removed the extra hypotheses for G, since 
 we are using the "enhanced" version *)
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> V \<Rightarrow> T \<Rightarrow> bool" where
-  "G \<equiv> \<lambda>R v t.
-    (v = [] \<and> snd (snd t) = Top \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
-  \<or> (\<exists>x. v = [] \<and> fst (snd t) = TyVar x \<and> fst (snd t) = snd (snd t) \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
-  \<or> (\<exists>x U \<Gamma> T. v = [] \<and> fst t = \<Gamma> \<and> fst (snd t) = TyVar x \<and> snd (snd t) = T \<and> x <: U \<in> \<Gamma> \<and> R (\<Gamma>, U, T) 
+definition G :: "(T \<Rightarrow> bool) \<Rightarrow> var set \<Rightarrow> T \<Rightarrow> bool" where
+  "G \<equiv> \<lambda>R B t.
+    (B = {} \<and> snd (snd t) = Top \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
+  \<or> (\<exists>x. B = {} \<and> fst (snd t) = TyVar x \<and> fst (snd t) = snd (snd t) \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
+  \<or> (\<exists>x U \<Gamma> T. B = {} \<and> fst t = \<Gamma> \<and> fst (snd t) = TyVar x \<and> snd (snd t) = T \<and> x <: U \<in> \<Gamma> \<and> R (\<Gamma>, U, T) 
    \<comment> \<open>\<and> \<Gamma> \<turnstile> U <: T\<close>)
-  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2. v = [] \<and> fst t = \<Gamma> \<and> fst (snd t) = (S\<^sub>1 \<rightarrow> S\<^sub>2) \<and> snd (snd t) = (T\<^sub>1 \<rightarrow> T\<^sub>2) \<and> 
+  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2. B = {} \<and> fst t = \<Gamma> \<and> fst (snd t) = (S\<^sub>1 \<rightarrow> S\<^sub>2) \<and> snd (snd t) = (T\<^sub>1 \<rightarrow> T\<^sub>2) \<and> 
      R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<comment> \<open> \<and> \<Gamma> \<turnstile> T1 <: S1 \<close> \<and> 
      R (\<Gamma>, S\<^sub>2, T\<^sub>2) \<comment> \<open> \<and> \<Gamma> \<turnstile> S2 <: T2 \<close> )
-  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. v = [x] \<and> fst t = \<Gamma> \<and> fst (snd t) = (\<forall>x<:S\<^sub>1. S\<^sub>2) \<and> snd (snd t) = (\<forall>x<:T\<^sub>1. T\<^sub>2) \<and> 
+  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. B = {x} \<and> fst t = \<Gamma> \<and> fst (snd t) = (\<forall>x<:S\<^sub>1. S\<^sub>2) \<and> snd (snd t) = (\<forall>x<:T\<^sub>1. T\<^sub>2) \<and> 
      R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<comment> \<open>\<and> \<Gamma> \<turnstile> T1 <: S1 \<close> \<and> 
      R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2) \<comment> \<open>\<and> \<Gamma>,x<:T1 \<turnstile> S2 <: T2 \<close>)
   "
@@ -325,20 +325,20 @@ next
   then show ?case by (auto intro!: Ty.SA_All simp: extend_eqvt)
 qed auto
 
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
+lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
   unfolding G_def
   apply (elim disjE)
   subgoal
     apply (rule disjI1)
     apply (cases t)
-    unfolding ssbij_def Tmap_def Vmap_def using closed_in_eqvt wf_eqvt by simp
+    unfolding ssbij_def Tmap_def using closed_in_eqvt wf_eqvt by simp
   subgoal
     apply (rule disjI2, rule disjI1)
     apply (erule exE)
     apply (elim conjE)
     subgoal for x
       apply (cases t)
-      unfolding ssbij_def Tmap_def Vmap_def using wf_eqvt by auto
+      unfolding ssbij_def Tmap_def using wf_eqvt by auto
     done
   subgoal
     apply (rule disjI2, rule disjI2, rule disjI1)
@@ -349,7 +349,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<
       apply (rule exI[of _ "map_context \<sigma> \<Gamma>"])
       apply (rule exI[of _ "rrename_typ \<sigma> T"])
       apply (cases t)
-      unfolding ssbij_def Tmap_def Vmap_def
+      unfolding ssbij_def Tmap_def 
       apply (auto simp: in_context_eqvt supp_inv_bound typ.rrename_comps typ.rrename_comp0s Ty_eqvt)
       done
     done
@@ -362,7 +362,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<
       apply (rule exI[of _ "rrename_typ \<sigma> S1"])
       apply (rule exI[of _ "rrename_typ \<sigma> S2"])
       apply (rule exI[of _ "rrename_typ \<sigma> T2"])
-      apply (cases t) unfolding ssbij_def Tmap_def Vmap_def
+      apply (cases t) unfolding ssbij_def Tmap_def 
       by (auto simp: in_context_eqvt dalist.map_comp supp_inv_bound
           typ.rrename_comps typ.rrename_comp0s dalist.map_id Ty_eqvt)
     done
@@ -375,7 +375,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> G R v t \<Longrightarrow> G (\<
     apply (rule exI)
       apply (rule exI[of _ "rrename_typ \<sigma> S2"])
     apply (rule exI[of _ "rrename_typ \<sigma> T2"])
-    apply (cases t) unfolding ssbij_def Tmap_def Vmap_def
+    apply (cases t) unfolding ssbij_def Tmap_def
     apply (auto simp: in_context_eqvt supp_inv_bound typ.FFVars_rrenames
           typ.rrename_comps typ.rrename_comp0s extend_eqvt[symmetric] wf_eqvt Ty_eqvt
       )
@@ -399,17 +399,18 @@ lemma GG_rev: "GG R = G (\<lambda>t'. R t' \<and> Ii t')"
 unfolding fun_eq_iff G_def by fastforce
 
 lemma GG_refresh:
-  "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG R v t \<Longrightarrow>
-  \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> GG R w t"
-  unfolding GG_rev using fresh[of t] unfolding G_def Tmap_def Vmap_def apply safe
-  subgoal by (rule exI[of _ "[]"]) auto
-  subgoal by (rule exI[of _ "[]"]) auto
-  subgoal by (rule exI[of _ "[]"]) auto
-  subgoal by (rule exI[of _ "[]"]) fastforce
+  "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow>
+  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t"
+  unfolding GG_rev using fresh[of t] unfolding G_def Tmap_def apply safe
+  subgoal by (rule exI[of _ "{}"]) auto
+  subgoal by (rule exI[of _ "{}"]) auto
+  subgoal by (rule exI[of _ "{}"]) auto
+  subgoal by (rule exI[of _ "{}"]) fastforce
   subgoal for xx \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-    apply (rule exI[of _ "[xx]"])
+    apply (rule exI[of _ "{xx}"])
     apply (rule conjI)
     subgoal by auto
+    apply(rule conjI, simp) 
     apply (rule disjI2)+
     apply (rule exI[of _ "fst t"])
   apply (rule exI[of _ "T\<^sub>1"])
@@ -482,28 +483,29 @@ lemma GG_refresh:
  
 (* The name "PM" of this interpretation stands for "POPLmark" *)
 interpretation PM: Induct1 where dummy = "undefined :: var"
-  and Tmap = Tmap and Tfvars = Tfvars and Vmap = Vmap and Vfvars = Vfvars and G = G
+  and Tmap = Tmap and Tfvars = Tfvars and G = G
   apply standard
   using G_mono G_equiv GG_refresh by auto 
 
-(* AtoJ: Now the proof of this is completely standard:  *)
+(* AtoJ: Now the proof of this is completely standard, 
+bacause we use the original operator G:  *)
 lemma Ty_PM_I: "Ty \<Gamma> T1 T2 = PM.I (\<Gamma>, T1, T2)"
 unfolding Ty_def PM.I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
   subgoal apply(elim disjE exE)
     \<^cancel>\<open>SA_Top: \<close>
-    subgoal apply(rule exI) apply(rule disjI5_1) by auto
+    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_1) by auto
     \<^cancel>\<open>SA_Refl_TVar: \<close>
-    subgoal apply(rule exI) apply(rule disjI5_2) by auto
+    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_2) by auto
     \<^cancel>\<open>SA_Trans_TVar: \<close>
-    subgoal apply(rule exI) apply(rule disjI5_3) by auto
+    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_3) by auto
     \<^cancel>\<open>SA_Arrow: \<close>
-    subgoal apply(rule exI) apply(rule disjI5_4) by auto 
+    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_4) by auto 
     \<^cancel>\<open>SA_All: \<close>
     subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2 
-    apply(rule exI[of _ "[x]"]) apply(rule disjI5_5) by auto .
-  subgoal apply(elim disjE exE)
+    apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI5_5) by auto .
+  subgoal apply(elim conjE disjE exE)
     \<^cancel>\<open>SA_Top: \<close>
     subgoal apply(rule disjI5_1) by auto
     \<^cancel>\<open>SA_Refl_TVar: \<close>
@@ -517,38 +519,12 @@ subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
     apply(rule disjI5_5) by fastforce . . .
 
 interpretation PM: Induct_enhanced where dummy = "undefined :: var"
-  and Tmap = Tmap and Tfvars = Tfvars and Vmap = Vmap and Vfvars = Vfvars and G = G
+  and Tmap = Tmap and Tfvars = Tfvars and G = G
   apply standard unfolding PM.GG_def subgoal for R v t
   apply(drule GG_refresh[of R v t]) 
   using Ty_PM_I[symmetric]  
   by (auto simp add: G_def) .
 print_theorems
-
-find_theorems name: BE_induct
-
-(* 
-corollary Ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
-  "\<Gamma> \<turnstile> S <: T \<Longrightarrow>
-  \<forall>\<rho>. |K \<rho>| <o |UNIV::var set| \<Longrightarrow>
-  (\<And>\<Gamma> S \<rho>. \<lbrakk> \<turnstile> \<Gamma> ok ; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> P \<Gamma> S Top \<rho>) \<Longrightarrow>
-  (\<And>\<Gamma> x \<rho>. \<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> P \<Gamma> (TyVar x) (TyVar x) \<rho>) \<Longrightarrow>
-  (\<And>x U \<Gamma> T \<rho>. x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<forall>\<rho>. P \<Gamma> U T \<rho> \<Longrightarrow> P \<Gamma> (TyVar x) T \<rho>) \<Longrightarrow>
-  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<rho>. \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2) \<rho>) \<Longrightarrow>
-  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2) \<rho>) \<Longrightarrow>
- \<forall>\<rho>. P \<Gamma> S T \<rho>"
-  unfolding Ty_PM_I
-  apply (rule allI)
-  subgoal for \<rho>
-    apply (subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> P \<Gamma> S T \<rho>")
-    subgoal by auto
-    subgoal apply (rule PM.BE_induct_enhanced[where R="\<lambda>p (\<Gamma>,S,T). P \<Gamma> S T p" and Pfvars = K])
-        apply (unfold small_def)[1]
-        apply (erule allE)
-        apply assumption+
-      unfolding G_def by (auto split: if_splits)
-    done
-  done
-*)
 
 corollary BE_induct_Ty:
 assumes par: "\<And>p. small (Pfvars p)" 
@@ -576,11 +552,10 @@ apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi
   subgoal using par Ty
   apply(elim PM.BE_induct_enhanced[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
     subgoal using Ty_PM_I by simp
-    subgoal for p v t apply(subst (asm) G_def) 
-    unfolding Ty_PM_I[symmetric] apply (auto split: if_splits) 
+    subgoal for p B t apply(subst (asm) G_def) 
+    unfolding Ty_PM_I[symmetric] apply(elim disjE exE)
       subgoal using SA_Top by auto
-      subgoal for \<Gamma>' X T using SA_Refl_TVar[of \<Gamma>' X p] 
-      by simp (metis fst_conv imageI)
+      subgoal for X using SA_Refl_TVar[of _ X p] by auto
       subgoal using SA_Trans_TVar by auto
       subgoal using SA_Arrow by auto
       subgoal using SA_All by auto . . .

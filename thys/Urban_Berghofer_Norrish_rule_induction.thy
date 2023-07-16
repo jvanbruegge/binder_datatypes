@@ -199,9 +199,9 @@ definition G' where
   (\<forall>pred ss. Scond pred ss \<in> set (side rl) \<longrightarrow> pred (it_tuple vval tval ss)) \<and> 
   (\<forall>ts\<in>set (hyps rl). R (it_tuple vval tval ts)))"
 
-definition G  :: "('T T_tuple \<Rightarrow> bool) \<Rightarrow> 'A list \<Rightarrow> 'T T_tuple \<Rightarrow> bool" where 
-"G \<equiv> (\<lambda>R xs ts. \<exists>rl vval tval.
-  set xs = vval ` (varsbpR rl) \<and> 
+definition G :: "('T T_tuple \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T T_tuple \<Rightarrow> bool" where 
+"G \<equiv> (\<lambda>R B ts. \<exists>rl vval tval.
+  B = vval ` (varsbpR rl) \<and> 
   ts = it_tuple vval tval (conc rl) \<and>
   rl \<in> rules \<and> 
   (\<forall>pred ss. Scond pred ss \<in> set (side rl) \<longrightarrow> pred (it_tuple vval tval ss)) \<and> 
@@ -209,14 +209,11 @@ definition G  :: "('T T_tuple \<Rightarrow> bool) \<Rightarrow> 'A list \<Righta
 
 lemma ex_comm2: "(\<exists>x y z. P x y z) = (\<exists>y z x . P x y z)" by auto
 
-lemma G'_G: "G' R ts = (\<exists>xs. G R xs ts)"
+lemma G'_G: "G' R ts = (\<exists>B. G R B ts)"
 unfolding G_def G'_def fun_eq_iff apply safe 
   subgoal for rl vval tval
   apply(subst ex_comm2)
-  apply(rule exI[of _ rl]) apply(rule exI[of _ vval])
-  apply(subgoal_tac "\<exists>xs. set xs = vval ` varsbpR rl")
-    subgoal by auto
-    subgoal by (simp add: finite_list finite_varsbpR) . 
+  apply(rule exI[of _ rl]) apply(rule exI[of _ vval]) by auto
   subgoal by auto .
 
 inductive II :: "'T T_tuple \<Rightarrow> bool" where 
@@ -231,6 +228,7 @@ unfolding II_def G'_def ..
 lemma II_def2: "II = lfp (\<lambda>R t. \<exists>xs. G R xs t)"
 unfolding II_G' G'_G ..
 
+(* 
 type_synonym 'a V = "'a list"
 definition Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'A V \<Rightarrow> 'A V" where "Vmap \<equiv> map"
 definition Vfvars :: "'A V \<Rightarrow> 'A set" where "Vfvars \<equiv> set"
@@ -243,17 +241,18 @@ unfolding Vfvars_def small_def by (simp add: inf_A)
 
 lemma Vmap_Vfvars: "ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
 unfolding Vmap_def Vfvars_def by auto
+*)
 
-lemma G_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
 unfolding G_def le_fun_def by auto blast
  
 lemma G_equiv: 
-assumes "ssbij \<sigma>" "G R v ts" 
-shows "G (\<lambda>t'. R (Tmap_tuple (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap_tuple \<sigma> ts)"
+assumes "ssbij \<sigma>" "small B" "G R B ts" 
+shows "G (\<lambda>t'. R (Tmap_tuple (inv \<sigma>) t')) (image \<sigma> B) (Tmap_tuple \<sigma> ts)"
 using assms unfolding G_def apply safe subgoal for rl vval tval
 apply(rule exI[of _ rl]) apply(rule exI[of _ "\<sigma> o vval"])
 apply(rule exI[of _ "Tmap \<sigma> o tval"]) apply(intro conjI)
-  subgoal unfolding Vmap_def by auto
+  subgoal by auto
   subgoal apply(subst it_tuple_Tmap_tuple) using wfR_rules unfolding wfR_def by auto
   subgoal by auto
   subgoal apply safe subgoal for pred ss
@@ -271,20 +270,20 @@ apply(rule exI[of _ "Tmap \<sigma> o tval"]) apply(intro conjI)
       subgoal by (simp add: Tmap_id ssbij_invR) . . . . .
 
 lemma G_fresh_simple: 
-assumes "G R v ts"
-shows "Vfvars v \<inter> Tfvars_tuple ts = {}"
+assumes "small B" "G R B ts"
+shows "B \<inter> Tfvars_tuple ts = {}"
 using assms unfolding G_def apply(elim exE conjE) 
-subgoal for rl vval tval apply(frule VCcomp2) unfolding Vfvars_def by auto . 
+subgoal for rl vval tval apply(frule VCcomp2) by auto . 
 
 end (* context UBN *)
 
  
-(* The UBN result is subm=sumed by ours: *)
-sublocale UBN < Induct_simple where dummy = dummy and Tmap = Tmap_tuple 
-and Tfvars = Tfvars_tuple and Vmap = Vmap and Vfvars = Vfvars and G = G apply standard
+(* The UBN result is subsumed by ours: *)
+sublocale UBN < UBN: Induct_simple where dummy = dummy and Tmap = Tmap_tuple 
+and Tfvars = Tfvars_tuple and G = G apply standard
 using small_Tfvars_tuple Tmap_tuple_Tfvars_tuple Tmap_tuple_cong_id 
-small_Vfvars G_equiv G_fresh_simple
-by (auto simp: Tmap_id Tmap_comp' Vmap_comp Vmap_Vfvars G_mono)  
+G_equiv G_fresh_simple
+by (auto simp: Tmap_id Tmap_comp' G_mono)  
 
 
 

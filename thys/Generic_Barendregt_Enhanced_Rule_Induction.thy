@@ -248,7 +248,7 @@ and
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
-GG_fresh: 
+GG_refresh: 
 "\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG R v t \<Longrightarrow> 
          \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> GG R w t"
 
@@ -266,11 +266,11 @@ G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bo
 assumes 
 (* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
 including beta-reduction (see their paper): 
-G_fresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
+G_refresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
 I replace it with a much weaker condition: namely that such a fresh v can be produced 
 for equivariant relations R:  
 *)
-G_fresh: 
+G_refresh: 
 "\<And>R v t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> G R v t \<Longrightarrow> 
          \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> G R w t"
 
@@ -278,20 +278,20 @@ G_fresh:
 context Induct
 begin
 
-(* NB: The following could replace G_fresh in the axiomatization. 
+(* NB: The following could replace G_refresh in the axiomatization. 
 It has the advantage that it is weaker, but also two disadvantages:
 -- it depends on the "auxiliary" defined predicate I'
 -- the dependency on I' seems truly inessential, in that in concrete cases 
 all that one needs to use is the equivariance of I'
  *)
-lemma G_fresh_I': 
+lemma G_refresh_I': 
 "\<And>v t. G I' v t \<Longrightarrow> \<exists>w. Vfvars w  \<inter> Tfvars t = {} \<and> G I' w t"
-using G_fresh I'_equiv by blast
+using G_refresh I'_equiv by blast
 
 lemma I_imp_I': "I t \<Longrightarrow> I' t"
 apply(induct rule: I.induct)
 apply(subst I'.simps) 
-by auto (metis (no_types, lifting) G_fresh_I' G_mono' predicate1I)
+by auto (metis (no_types, lifting) G_refresh_I' G_mono' predicate1I)
 
 lemma I_eq_I': "I = I'"
 apply(rule ext)
@@ -308,7 +308,7 @@ sublocale Induct_enhanced < E: Induct where G = GG
 apply standard
   subgoal using GG_mono .
   subgoal using GG_equiv .
-  subgoal using GG_fresh . .
+  subgoal using GG_refresh . .
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
 locale Induct_simple = Induct1 dummy Tmap Tfvars Vmap Vfvars G 
@@ -322,10 +322,10 @@ and
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
-G_fresh_simple: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
+G_fresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
 
 sublocale Induct_simple < Induct apply standard
-  subgoal using G_fresh_simple by blast . 
+  subgoal using G_fresh by blast . 
 
 
 context Induct 

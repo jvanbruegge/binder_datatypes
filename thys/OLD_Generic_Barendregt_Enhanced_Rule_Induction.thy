@@ -1,8 +1,13 @@
-theory Generic_Barendregt_Enhanced_Rule_Induction
+theory OLD_Generic_Barendregt_Enhanced_Rule_Induction
 imports Main "MRBNF_Recursor"
 begin 
 
 declare [[inductive_internals]]
+
+(* consts largeEnough :: "'a \<Rightarrow> bool"
+
+class largeEnough = 
+assumes "largeEnough (undefined::'a)" *)
 
 (* General infrastructure: *)
 locale Small = 
@@ -92,7 +97,8 @@ by (meson bij_def inv_o_cancel ssbij_bij)
 lemma ssbij_invR': "ssbij \<sigma> \<Longrightarrow> inv \<sigma> (\<sigma> a) = a"
 using ssbij_invR pointfree_idE by fastforce
 
-end (* context Small *)
+ 
+end (* contaxt Small *)
 
 
 locale Components = Small dummy 
@@ -168,7 +174,7 @@ G_I_intro: "G I v t \<Longrightarrow> I t"
 lemma "I \<equiv> lfp (\<lambda>R t. \<exists>v. G R v t)"
 using I_def[simplified] .
 
-
+(*
 (*  Not needed: *) 
 lemma I_equiv: 
 assumes "I t" and "ssbij \<sigma>"
@@ -185,7 +191,7 @@ using assms proof induct
   thus ?case by(subst I.simps, auto)
 qed
 (* *)
-
+*)
 
 inductive I' :: "'T \<Rightarrow> bool" where 
 G_I'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> G I' v t \<Longrightarrow> I' t"
@@ -206,33 +212,31 @@ using assms proof induct
   show ?case using vv G by (subst I'.simps, auto) 
 qed
 
-(* definition GG where "GG R \<equiv> G (\<lambda>t. I' t \<and> R t)" *)
-definition GG where "GG R \<equiv> G (\<lambda>t. I t \<and> R t)"
+definition GG where "GG R \<equiv> G (\<lambda>t. I' t \<and> R t)"
 
 lemma GG_imp_G: "GG R v t \<Longrightarrow> G R v t" 
 unfolding GG_def by (metis (no_types, lifting) G_mono predicate1I)
 
 lemma GG_mono[mono]: "R \<le> R' \<Longrightarrow> GG R v t \<Longrightarrow> GG R' v t"
-unfolding GG_def using G_mono[of "\<lambda>t. I t \<and> R t" "\<lambda>t. I t \<and> R' t"] by auto
+unfolding GG_def using G_mono[of "\<lambda>t. I' t \<and> R t" "\<lambda>t. I' t \<and> R' t"] by auto
 
 lemma GG_mono'[mono]: "\<And>R R' v t.  R \<le> R' \<Longrightarrow> GG R v t \<longrightarrow> GG R' v t"
   using GG_mono by blast
 
 lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> GG R v t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Vmap \<sigma> v) (Tmap \<sigma> t)"
-unfolding GG_def using G_equiv[of \<sigma> "\<lambda>t. I t \<and> R t" v t] I_equiv[of _ \<sigma>]   
+unfolding GG_def using G_equiv[of \<sigma> "\<lambda>t. I' t \<and> R t" v t] I'_equiv[of _ \<sigma>]   
 by simp (smt (z3) G_mono Tmap_comp' Tmap_id id_apply predicate1I ssbij_inv ssbij_invL)
 
-inductive II :: "'T \<Rightarrow> bool" where 
-GG_II_intro: "GG II v t \<Longrightarrow> II t"
+inductive II' :: "'T \<Rightarrow> bool" where 
+GG_II'_intro: "Vfvars v \<inter> Tfvars t = {} \<Longrightarrow> GG II' v t \<Longrightarrow> II' t"
 
-lemma II_I: "II = I"
+lemma II'_I': "II' = I'"
 apply(intro ext iffI)
-  subgoal for t apply(induct rule: II.induct)
+  subgoal for t apply(induct rule: II'.induct)
   unfolding GG_def  
-  by (metis (no_types, lifting) G_mono I.intros predicate1I)
-  subgoal for t apply(induct rule: I.induct)  
-  by (auto simp: GG_def intro: II.intros) .
-
+  by (metis (no_types, lifting) G_mono I'.intros predicate1I)
+  subgoal for t apply(induct rule: I'.induct)
+  by (auto simp: GG_def intro: II'.intros) .
   
 end (* context Induct1 *)
 
@@ -275,6 +279,30 @@ G_fresh:
          \<exists>w. Vfvars w \<inter> Tfvars t = {} \<and> G R w t"
 
 
+sublocale Induct_enhanced < E: Induct where G = GG
+apply standard
+  subgoal using GG_mono .
+  subgoal using GG_equiv .
+  subgoal using GG_fresh . .
+
+(* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
+locale Induct_simple = Induct1 dummy Tmap Tfvars Vmap Vfvars G 
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
+and Vfvars :: "'V \<Rightarrow> 'A set"
+and 
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
++
+assumes 
+G_fresh_simple: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
+
+sublocale Induct_simple < Induct apply standard
+  subgoal using G_fresh_simple by blast . 
+
+
 context Induct
 begin
 
@@ -300,36 +328,7 @@ apply(rule iffI)
   subgoal using I_imp_I' by auto 
   subgoal apply(induct rule: I'.induct)  
   by (smt (verit) G_mono' I.simps predicate1I) . .
- 
-end (* context Induct *)
-
-
-sublocale Induct_enhanced < E: Induct where G = GG
-apply standard
-  subgoal using GG_mono .
-  subgoal using GG_equiv .
-  subgoal using GG_fresh . .
-
-(* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale Induct_simple = Induct1 dummy Tmap Tfvars Vmap Vfvars G 
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
-and Tfvars :: "'T \<Rightarrow> 'A set"
-and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
-and Vfvars :: "'V \<Rightarrow> 'A set"
-and 
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'V \<Rightarrow> 'T \<Rightarrow> bool"
-+
-assumes 
-G_fresh_simple: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
-
-sublocale Induct_simple < Induct apply standard
-  subgoal using G_fresh_simple by blast . 
-
-
-context Induct 
-begin 
+  
   
 (* Barendregt-enhanced (strong) induction. 
 NB: we get freshness for t as well, as a bonus (even though the inductive definition of I 
@@ -420,7 +419,8 @@ apply(intro ext iffI)
   subgoal for t apply(induct rule: E.I.induct) 
   by (metis (mono_tags, lifting) GG_def G_mono I.intros predicate1I)
   subgoal for t apply(induct rule: I.induct) 
-  by (smt (verit, best) E.I'.simps E.I.simps E.I_eq_I' GG_def G_mono' II.intros II_I predicate1I) .
+  by (smt (verit, best) E.I'.simps E.I.simps E.I_eq_I' GG_def G_mono' II'.intros II'_I' predicate1I) .
+
 
 theorem BE_induct_enhanced[consumes 2]: 
 (* Parameters: *)

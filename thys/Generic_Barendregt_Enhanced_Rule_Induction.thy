@@ -167,18 +167,16 @@ using Tmap_Tfvars ssbij_bij by fastforce
 end (* locale Components *)
 
 
-locale Induct1 = Components dummy Tmap Tfvars (* Vmap Vfvars *)
+locale Induct1 = Components dummy Tmap Tfvars 
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
-(* and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
-and Vfvars :: "'V \<Rightarrow> 'A set" *)
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
 assumes 
-G_mono[mono]: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+G_mono: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
 and 
 G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
 begin
@@ -262,6 +260,10 @@ apply(intro ext iffI)
   subgoal for t apply(induct rule: I.induct)  
   by (auto simp: GG_def intro: II.intros) .
 
+lemma I'_imp_I: "I' t \<Longrightarrow> I t"
+apply(induct rule: I'.induct)
+by (smt (verit) G_mono I.simps predicate1I) 
+
   
 end (* context Induct1 *)
 
@@ -271,36 +273,30 @@ for dummy :: 'A
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
-(* and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
-and Vfvars :: "'V \<Rightarrow> 'A set" *)
 and 
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
 GG_refresh: 
-"\<And>R B t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow> 
+"\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
+         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> 
+          small B \<Longrightarrow> GG R B t \<Longrightarrow> 
          \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t"
 
 
-locale Induct = Induct1 dummy Tmap Tfvars (* Vmap Vfvars*) G
+
+locale Induct = Induct1 dummy Tmap Tfvars G
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
-(* and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
-and Vfvars :: "'V \<Rightarrow> 'A set" *)
 and 
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
-(* This one, in the style of Urban-Berghofer-Norrish, does not cover cases of interest, 
-including beta-reduction (see their paper): 
-G_refresh: "\<And>R v t. G R v t \<Longrightarrow> Vfvars v \<inter> Tfvars t = {}"
-I replace it with a much weaker condition: namely that such a fresh v can be produced 
-for equivariant relations R:  
-*)
 G_refresh: 
-"\<And>R B t. (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
+"\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
+         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
          \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
 
 
@@ -315,7 +311,7 @@ all that one needs to use is the equivariance of I'
  *)
 lemma G_refresh_I': 
 "\<And>B t. small B \<Longrightarrow> G I' B t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G I' C t"
-using G_refresh I'_equiv by simp
+using G_refresh I'_equiv by (simp add: I'_imp_I)
 
 lemma I_imp_I': "I t \<Longrightarrow> I' t"
 apply(induct rule: I.induct)
@@ -327,17 +323,32 @@ apply(rule ext)
 subgoal for t
 apply(rule iffI)
   subgoal using I_imp_I' by auto 
-  subgoal apply(induct rule: I'.induct)  
-  by (smt (verit) G_mono I.simps predicate1I) . .
+  subgoal using I'_imp_I by auto . .
  
 end (* context Induct *)
 
 
-sublocale Induct_enhanced < E: Induct where G = GG
+sublocale Induct_enhanced < E: Induct1 where G = GG
 apply standard
   subgoal using GG_mono .
-  subgoal using GG_equiv .
-  subgoal using GG_refresh . .
+  subgoal using GG_equiv . .
+
+context Induct_enhanced 
+begin
+
+lemma E_I: "E.I = I"
+apply(intro ext iffI)
+  subgoal for t apply(induct rule: E.I.induct) 
+  by (metis (mono_tags, lifting) GG_def G_mono I.intros predicate1I)
+  subgoal for t apply(induct rule: I.induct) 
+  by (metis E.I.intros GG_def) .
+
+end (* context Induct_enhanced *)
+
+
+sublocale Induct_enhanced < E: Induct where G = GG
+apply standard
+subgoal using GG_refresh unfolding E_I . .
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
 locale Induct_simple = Induct1 dummy Tmap Tfvars (* Vmap Vfvars *) G 
@@ -345,8 +356,6 @@ for dummy :: 'A
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
-(* and Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'V \<Rightarrow> 'V"
-and Vfvars :: "'V \<Rightarrow> 'A set" *)
 and 
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
 +
@@ -448,13 +457,6 @@ end (* context Induct *)
 context Induct_enhanced 
 begin
 
-lemma E_I: "E.I = I"
-apply(intro ext iffI)
-  subgoal for t apply(induct rule: E.I.induct) 
-  by (metis (mono_tags, lifting) GG_def G_mono I.intros predicate1I)
-  subgoal for t apply(induct rule: I.induct) 
-  by (smt (verit, best) E.I'.simps E.I.simps E.I_eq_I' GG_def G_mono II.intros II_I predicate1I) .
-
 theorem BE_induct_enhanced[consumes 2]: 
 (* Parameters: *)
 fixes Pfvars :: "'P \<Rightarrow> 'A set"
@@ -467,9 +469,85 @@ shows "R p t"
 apply(rule E.BE_induct[unfolded E_I, OF small_Pfvars I, of _ R])
 using strong GG_imp_G by blast
 
-
 end (* context Induct_enhanced *)
 
+
+locale Induct1_strong = Components dummy Tmap Tfvars 
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
++
+fixes (* The operator that defines the inductive predicate as lfp:  *)
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
+assumes 
+G_mono_strong: 
+"\<And>R R' B t. small B \<Longrightarrow> G (\<lambda>t. R t \<and> R' t) B t \<longleftrightarrow> G R B t \<and> G R' B t"
+and 
+G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+begin
+
+lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+using G_mono_strong[of B R' R t] 
+by (smt (z3) le_fun_def order_antisym_conv predicate1I)
+
+end (* Induct1_strong  *)
+
+
+sublocale Induct1_strong < Induct1
+apply standard
+  subgoal using G_mono .
+  subgoal using G_equiv . .
+
+
+locale Induct_enhanced2 = Induct1_strong dummy Tmap Tfvars G
+for dummy :: 'A 
+and
+Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tfvars :: "'T \<Rightarrow> 'A set"
+and 
+G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
++
+assumes 
+(*
+G_binding_orthogonal:
+"\<And>R R' B B' t. small B \<Longrightarrow> small B' \<Longrightarrow> G R B t \<Longrightarrow> G R' B' t \<Longrightarrow> G R' B t"
+and 
+*)
+GG_refresh_into_G: 
+"\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
+         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow> 
+         \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+begin
+
+lemma GG_refresh: 
+assumes "\<forall>t. R t \<longrightarrow> I t" "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))" "small B" and GG: "GG R B t"
+shows "\<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t" 
+proof-
+  have I: "I t" using GG unfolding GG_def
+  using G_mono_strong I.intros assms(3) by blast
+  then obtain C' where C': "small C'" and G_I: "G I C' t" 
+    using I.simps by blast
+
+  show ?thesis using GG_refresh_into_G[OF assms]
+  apply safe subgoal for C apply(rule exI[of _ C])
+  using C' G_I unfolding GG_def 
+  apply(subst G_mono_strong)  apply auto
+  using G_binding_orthogonal[of C C' R t I] by auto .
+qed
+
+end (* context Induct_enhanced2 *)
+
+
+sublocale Induct_enhanced2 < Induct_enhanced
+apply standard 
+using GG_refresh . 
+
+(* So the enhanced induction theorem becomes available in 
+Induct_enhanced2 too: *)
+context Induct_enhanced2 begin 
+thm BE_induct_enhanced
+end (* context Induct_enhanced *)
 
 
 end 

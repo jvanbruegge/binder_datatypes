@@ -391,17 +391,75 @@ lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
 lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
   by (induction \<Gamma>) auto
 
+lemma finite_Tfvars: "finite (Tfvars t)"
+using finite_iff_le_card_var small_Tfvars small_def by blast
+
+lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
+using finite_iff_le_card_var by blast
+
+lemma exists_fresh:
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tfvars t)"
+proof-
+  have 0: "|set xs \<union> \<Union> (Tfvars ` (set ts))| <o |UNIV::var set|" 
+  unfolding ls_UNIV_iff_finite  
+  using finite_Tfvars by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts))"
+  by (meson exists_fresh) 
+  thus ?thesis by auto
+qed
+
 abbreviation Ii where "Ii \<equiv> \<lambda>(\<Gamma>,S,T). \<Gamma> \<turnstile> S <: T"
-abbreviation GG where "GG R \<equiv> G (\<lambda>t'. Ii t' \<and> R t')"
 
-(* just for keeping J's original proof: *)
-lemma GG_rev: "GG R = G (\<lambda>t'. R t' \<and> Ii t')"
-unfolding fun_eq_iff G_def by fastforce
+lemma rrename_swap_FFvars[simp]: "x \<notin> FFVars_typ T \<Longrightarrow> xx \<notin> FFVars_typ T \<Longrightarrow> 
+  rrename_typ (id(x := xx, xx := x)) T = T"
+apply(rule typ.rrename_cong_ids) by auto
 
-lemma GG_refresh:
-  "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow>
-  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t"
-  unfolding GG_rev using fresh[of t] unfolding G_def Tmap_def apply safe
+lemma map_context_swap_FFVars[simp]: 
+"\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k) \<and> 
+           xx \<noteq> fst k \<and> xx \<notin> FFVars_typ (snd k) \<Longrightarrow> 
+    map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
+unfolding map_context_def apply(rule map_idI) by auto
+
+lemma G_refresh:
+  "(\<And>t. R t \<Longrightarrow> Ii t) \<Longrightarrow> (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow>
+  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+unfolding G_def Tmap_def apply safe
+  subgoal by (rule exI[of _ "{}"]) auto
+  subgoal by (rule exI[of _ "{}"]) auto
+  subgoal by (rule exI[of _ "{}"]) auto
+  subgoal by (rule exI[of _ "{}"]) fastforce
+  subgoal for \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
+  using exists_fresh[of "[x]" "[t]"] apply(elim exE conjE)
+  subgoal for xx apply (rule exI[of _ "{xx}"])
+  apply (intro conjI)
+    subgoal by simp 
+    subgoal by simp 
+    subgoal apply(rule disjI5_5)
+    apply(rule exI[of _ "fst t"])  
+    apply (rule exI[of _ "T\<^sub>1"])
+    apply (rule exI[of _ "S\<^sub>1"])
+    apply (rule exI[of _ "xx"])
+    apply (rule exI[of _ "rrename_typ (id(x:=xx,xx:=x)) S\<^sub>2"])
+    apply (rule exI[of _ "rrename_typ (id(x:=xx,xx:=x)) T\<^sub>2"])
+    apply (cases t) apply simp apply (intro conjI)
+      subgoal apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal for \<Gamma> _ _ apply(erule allE[of _ "id(x:=xx,xx:=x)"])
+      apply(erule allE[of _ "\<Gamma> , x <: T\<^sub>1"])
+      apply(erule allE[of _ S\<^sub>2]) apply(erule allE[of _ T\<^sub>2])
+      subgoal premises P using P(2-)
+      using wf_FFVars[OF wf_context[OF P(1)[OF P(5)]]]
+      wf_context[OF P(1)[OF P(6)]]
+      apply(subgoal_tac "(\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k)) \<and> 
+                         x \<notin> FFVars_typ T\<^sub>1")
+      apply(subst (asm) extend_eqvt, simp, simp)
+      subgoal apply (auto simp add: ssbij_def) 
+      by (metis image_eqI map_context_swap_FFVars) 
+      subgoal by (auto simp add: ssbij_def) . . . . . .
+
+(* AtoJ: I also ported the original proof (below), but I think the above 
+one is more maintainable. 
+  using fresh[of t] unfolding G_def Tmap_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
@@ -425,23 +483,19 @@ lemma GG_refresh:
       apply (elim conjE)
         apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"])
       by auto 
+    subgoal for a b c subgoal premises P
+    using P(2-) apply -
     apply (rule iffD2[OF arg_cong[of _ _ R]])
      apply (rule arg_cong[of _ _ "\<lambda>x::\<Gamma>\<^sub>\<tau>. (x, _::type, _::type)"])
      defer
      apply (elim allE)
      apply (erule impE)
-      prefer 2
+      prefer 2  
       apply assumption
      apply (rule conjI)
       apply (simp add: ssbij_def)
       apply assumption
      apply auto[1]
-     apply (rule iffD2[OF arg_cong3[OF _ refl refl, of _ _ Ty], rotated])
-      apply (rule Ty_eqvt)
-        apply assumption
-       apply (rule bij_swap)
-      apply (rule supp_swap_bound)
-    apply (rule infinite_var)
     apply (subst extend_eqvt)
       apply (rule bij_swap)
      apply (rule supp_swap_bound)
@@ -453,39 +507,23 @@ lemma GG_refresh:
        apply (rule supp_swap_bound)
        apply (rule infinite_var)
        apply (erule UnE)
-        apply auto[1]
-        apply (metis fst_conv image_eqI list.discI list.inject wf_Ty.cases wf_context)
-       apply (drule wf_FFVars[rotated])
-        apply (erule wf_context)
-       apply (metis fst_conv fun_upd_apply id_apply list.discI list.inject wf_Ty.cases wf_context)
-      apply simp
-     apply (smt (verit) Prelim.bij_swap fst_conv fun_upd_apply id_apply infinite_var list.discI list.inject subset_eq supp_swap_bound typ.rrename_cong_ids well_scoped(1) wf_Ty.cases wf_context)
-    apply (subst extend_eqvt)
-      apply (rule bij_swap)
-     apply (rule supp_swap_bound)
-      apply (rule infinite_var)
-    apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-      apply (rule sym)
-      apply (rule context_map_cong_id)
-        apply (rule bij_swap)
-       apply (rule supp_swap_bound)
-       apply (rule infinite_var)
-       apply (erule UnE)
-        apply auto[1]
-        apply (metis fst_conv image_eqI list.discI list.inject wf_Ty.cases wf_context)
-       apply (drule wf_FFVars[rotated])
-        apply (erule wf_context)
-       apply (metis fst_conv fun_upd_apply id_apply list.discI list.inject wf_Ty.cases wf_context)
-      apply simp
-     apply (smt (verit) Prelim.bij_swap fst_conv fun_upd_apply id_apply infinite_var list.discI list.inject subset_eq supp_swap_bound typ.rrename_cong_ids well_scoped(1) wf_Ty.cases wf_context)
-    done
-  done
- 
+        apply auto[1]  
+        apply (metis P(1) fst_conv image_eqI wf_ConsE wf_context)
+       apply (drule wf_FFVars[rotated])  
+        apply (meson P(1) wf_context) 
+       apply (metis P(1) fst_conv fun_upd_apply id_apply wf_ConsE wf_context)
+     apply simp
+     apply (smt (verit) P(1) Prelim.bij_swap fst_conv fun_upd_apply 
+       id_apply infinite_var list.discI list.inject subset_eq 
+       supp_swap_bound typ.rrename_cong_ids well_scoped(1) 
+       wf_Ty.cases wf_context) . . . .
+*)
+
 (* The name "PM" of this interpretation stands for "POPLmark" *)
 interpretation PM: Induct1 where dummy = "undefined :: var"
   and Tmap = Tmap and Tfvars = Tfvars and G = G
   apply standard
-  using G_mono G_equiv GG_refresh by auto 
+  using G_mono G_equiv  by auto 
 
 (* AtoJ: Now the proof of this is completely standard, 
 bacause we use the original operator G:  *)
@@ -518,12 +556,10 @@ subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
     subgoal for v \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
     apply(rule disjI5_5) by fastforce . . .
 
-interpretation PM: Induct_enhanced where dummy = "undefined :: var"
+interpretation PM: Induct where dummy = "undefined :: var"
   and Tmap = Tmap and Tfvars = Tfvars and G = G
-  apply standard unfolding PM.GG_def subgoal for R v t
-  apply(drule GG_refresh[of R v t]) 
-  using Ty_PM_I[symmetric]  
-  by (auto simp add: G_def) .
+  apply standard subgoal for R B t
+  using G_refresh[of R B t] unfolding Ty_PM_I by auto .
 print_theorems
 
 corollary BE_induct_Ty:
@@ -550,7 +586,7 @@ shows "\<phi> p \<Gamma> S T"
 apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi> p \<Gamma> S T")
   subgoal by simp
   subgoal using par Ty
-  apply(elim PM.BE_induct_enhanced[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
+  apply(elim PM.BE_induct[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
     subgoal using Ty_PM_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding Ty_PM_I[symmetric] apply(elim disjE exE)

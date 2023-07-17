@@ -232,6 +232,7 @@ using assms proof induct
   show ?case using BB G small_image[OF B(1)] by (subst I'.simps, auto) 
 qed
 
+(*
 definition GG where "GG R \<equiv> G (\<lambda>t. I t \<and> R t)"
 
 lemma GG_imp_G: "small B \<Longrightarrow> GG R B t \<Longrightarrow> G R B t" 
@@ -259,16 +260,16 @@ apply(intro ext iffI)
   by (metis (no_types, lifting) G_mono I.intros predicate1I)
   subgoal for t apply(induct rule: I.induct)  
   by (auto simp: GG_def intro: II.intros) .
+*)
 
 lemma I'_imp_I: "I' t \<Longrightarrow> I t"
 apply(induct rule: I'.induct)
 by (smt (verit) G_mono I.simps predicate1I) 
 
-  
 end (* context Induct1 *)
 
-
-locale Induct_enhanced = Induct1 dummy Tmap Tfvars (*Vmap Vfvars *) G
+(* 
+locale Induct_enhanced = Induct1 dummy Tmap Tfvars G
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
@@ -282,7 +283,7 @@ GG_refresh:
          (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> 
           small B \<Longrightarrow> GG R B t \<Longrightarrow> 
          \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t"
-
+*)
 
 
 locale Induct = Induct1 dummy Tmap Tfvars G
@@ -327,7 +328,7 @@ apply(rule iffI)
  
 end (* context Induct *)
 
-
+(* 
 sublocale Induct_enhanced < E: Induct1 where G = GG
 apply standard
   subgoal using GG_mono .
@@ -349,6 +350,7 @@ end (* context Induct_enhanced *)
 sublocale Induct_enhanced < E: Induct where G = GG
 apply standard
 subgoal using GG_refresh unfolding E_I . .
+*)
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
 locale Induct_simple = Induct1 dummy Tmap Tfvars (* Vmap Vfvars *) G 
@@ -453,7 +455,7 @@ qed
 
 end (* context Induct *)
 
-
+(*
 context Induct_enhanced 
 begin
 
@@ -548,6 +550,7 @@ Induct_enhanced2 too: *)
 context Induct_enhanced2 begin 
 thm BE_induct_enhanced
 end (* context Induct_enhanced *)
+*)
 
 
 end 

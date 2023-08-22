@@ -480,7 +480,10 @@ fun create_binder_datatype (spec : spec) lthy =
                   case try HOLogic.dest_setT (fastype_of x) of
                     SOME _ => SOME (MRBNF_Util.mk_UNION x FVars)
                     | NONE => SOME (FVars $ x)
-                  else SOME (mk_singleton x)
+                  else (case try HOLogic.dest_setT (fastype_of x) of
+                    SOME _ => SOME x
+                    | NONE => SOME (mk_singleton x)
+                  )
                 )
               ) else NONE
           | mk_set _ _ _ _ = NONE

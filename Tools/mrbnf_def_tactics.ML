@@ -323,9 +323,10 @@ fun mk_mr_rel_conversep_tac ctxt assms prems id_prems inv_prems mr_rel_OO_Grp_al
           etac ctxt @{thm exE},
           REPEAT_DETERM o etac ctxt @{thm conjE},
           hyp_subst_tac ctxt,
-          Subgoal.FOCUS_PARAMS (subgoal_tac exI_z) ctxt
+          Subgoal.FOCUS_PARAMS (subgoal_tac exI_z) ctxt,
+          REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] set_map'
         ] THEN
-        unfold_thms_tac ctxt (map_comp' :: @{thm id_o} :: set_map') THEN
+        unfold_thms_tac ctxt [map_comp', @{thm id_o}] THEN
         REPEAT_DETERM (EVERY1 [
           rtac ctxt conjI,
           FIRST' [

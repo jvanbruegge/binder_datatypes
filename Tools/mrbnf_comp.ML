@@ -890,39 +890,16 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
           K (unfold_thms_tac ctxt @{thms inv_id}),
           rtac ctxt (mr_rel_OO_of_mrbnf mrbnf RS sym) THEN_ALL_NEW supp_bij_ass_tac,
           K (unfold_thms_tac ctxt @{thms o_id id_o Grp_fst_snd eq_alt[symmetric] conversep_eq eq_OO}),
-
           rtac ctxt trans,
           rtac ctxt (mr_rel_def_of_mrbnf mrbnf RS meta_eq_to_obj_eq |> BNF_Util.mk_unabs_def (live + free + bound + 2)),
-          EVERY' [
-            rtac ctxt (trans OF [rel_map]),
-            rtac ctxt sym,
-            rtac ctxt (trans OF [rel_map])
-          ] ORELSE' Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
-            let
-              val t = concl |> Thm.term_of |> Logic.strip_imp_concl |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> snd
-              val (tr $ (tm $ _) $ _) = t
-              fun get_arg_types x = strip_comb x |> snd |> map (op`(fst o dest_funT o fastype_of))
-              val tr' = fold_map (fn t => fn xs => case xs of
-                [] => (NONE, []) | y::ys => if fst t = fst y then (SOME (snd y), ys) else (NONE, xs)
-              ) (get_arg_types tm) (get_arg_types tr) |> fst
-              val Rs = map_filter I (cond_keep tr' is_live_old)
-              val Fs = cond_keep (strip_comb tm |> snd) is_live_old
-
-              val thm = infer_instantiate' context (map (SOME o Thm.cterm_of ctxt) (Rs @ Fs))
-                (hd (rel_map_of_mrbnf mrbnf))
-              |> (fn thm => (thm RS box_equals RS sym) |> Drule.rotate_prems 1)
-            in rtac context thm 1 end
-          ) ctxt,
-          rtac ctxt (rel_cong0 RS fun_cong RS fun_cong),
-          K (unfold_thms_tac ctxt @{thms id_apply Grp_UNIV_def}),
-          REPEAT_DETERM o rtac ctxt refl,
-          IF_UNSOLVED o EVERY' [
-            rtac ctxt (rel_cong0 RS @{thm cong} RS fun_cong OF (replicate live refl)),
-            rtac ctxt (map_comp_of_mrbnf mrbnf RS trans),
-            REPEAT_DETERM o supp_bij_ass_tac,
-            K (unfold_thms_tac ctxt @{thms id_o o_id}),
-            rtac ctxt refl
-          ]
+          K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
+          rtac ctxt trans,
+          rtac ctxt (rel_map RS sym),
+          K (unfold_thms_tac ctxt @{thms id_def[symmetric]}),
+          EqSubst.eqsubst_tac ctxt [0] [map_comp_of_mrbnf mrbnf],
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+          K (unfold_thms_tac ctxt @{thms id_o o_id}),
+          rtac ctxt refl
         ]
       end;
 

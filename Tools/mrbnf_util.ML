@@ -7,6 +7,7 @@ sig
   val cond_interlace: 'a list -> 'a list -> bool list -> 'a list
   val cond_automap: ('a -> 'a) -> 'a list -> bool list -> 'a list
   val short_type_name: string -> string
+  val swap: 'a * 'b -> 'b * 'a
 
   val mk_supp: term -> term
   val mk_imsupp: term -> term
@@ -54,6 +55,8 @@ structure MRBNF_Util : MRBNF_UTIL =
 struct
 
 open BNF_Util
+
+fun swap (a, b) = (b, a)
 
 fun mk_arg_cong ctxt n t =
   let

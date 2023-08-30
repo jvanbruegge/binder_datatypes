@@ -3,10 +3,6 @@ theory MRBNF_Recursor
   (*keywords "binder_inductive" :: thy_goal*)
 begin
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
-
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
   using card_of_mono1 ordLeq_ordLess_trans by blast
 lemma card_of_minus_bound: "|A| <o r \<Longrightarrow> |A - B| <o r"
@@ -241,11 +237,6 @@ lemma small_PFVars:
 lemma comp_middle: "f (h z) = h z \<Longrightarrow> g (h z) = h z \<Longrightarrow> (f \<circ> g \<circ> h) z = h z"
   by simp
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
-
 (* tvsubst helper lemmas *)
 lemma bij_not_eq_twice: "bij g \<Longrightarrow> g a \<noteq> a \<Longrightarrow> g (g a) \<noteq> g a"
   by simp
@@ -294,6 +285,15 @@ lemma ex_avoiding_bij:
 
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
+
+ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>

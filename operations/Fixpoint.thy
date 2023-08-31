@@ -16,6 +16,7 @@ Multithreading.parallel_proofs := 0
 \<close>
 
 declare [[ML_print_depth=1000]]
+declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let
   val Xs = map dest_TFree [@{typ 'a}, @{typ 'b}]

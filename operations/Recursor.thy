@@ -875,4 +875,756 @@ apply (rule sym)
   apply (erule id_onD[OF imsupp_id_on, rotated], assumption)
   done
 
+lemmas infinite_UNIV = cinfinite_imp_infinite[OF T1_pre.UNIV_cinfinite]
+
+lemma U1ctor_cong:
+    fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+    assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+            "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
+  shows
+ "(\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y' \<union> set8_T1_pre y' \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y' \<union> set10_T1_pre y' \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y' \<union> set8_T1_pre y' \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y' \<union> set10_T1_pre y' \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  imsupp f1 \<inter> (FFVars_T11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp f2 \<inter> (FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  imsupp g1 \<inter> (FFVars_T11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y')) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp g2 \<inter> (FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y')) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  f1 ` set5_T1_pre y \<inter> set5_T1_pre y = {} \<Longrightarrow> f2 ` set6_T1_pre y \<inter> set6_T1_pre y = {} \<Longrightarrow>
+  g1 ` set5_T1_pre y' \<inter> set5_T1_pre y' = {} \<Longrightarrow> g2 ` set6_T1_pre y' \<inter> set6_T1_pre y' = {} \<Longrightarrow>
+  mr_rel_T1_pre (inv g1 \<circ> f1) (inv g2 \<circ> f2) id (=) (inv g1 \<circ> f1) (inv g2 \<circ> f2)
+    (\<lambda>(t, pu) (t', pu'). rrename_T1 f1 f2 t = rrename_T1 g1 g2 t' \<and>
+      PU1map f1 f2 t pu = PU1map g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rrename_T1 f1 f2 t = rrename_T1 g1 g2 t' \<and>
+      PU1map f1 f2 t pu = PU1map g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rrename_T2 f1 f2 t = rrename_T2 g1 g2 t' \<and>
+      PU2map f1 f2 t pu = PU2map g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rrename_T2 f1 f2 t = rrename_T2 g1 g2 t' \<and>
+      PU2map f1 f2 t pu = PU2map g1 g2 t' pu')
+  y y' \<Longrightarrow> U1ctor y p = U1ctor y' p"
+  apply (rule trans)
+   apply (rule U1ctor_rename[OF assms(1-4)] U2ctor_rename[OF assms(1-4)])
+          apply assumption+
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule U1ctor_rename[OF assms(5-8)] U2ctor_rename[OF assms(5-8)])
+          apply assumption+
+  apply (rule sym)
+  apply (rule arg_cong2[OF _ refl, of _ _ U1ctor] arg_cong2[OF _ refl, of _ _ U2ctor])
+  apply (rule iffD2[OF fun_cong[OF fun_cong[OF T1_pre.mr_rel_eq[symmetric]]]]
+    iffD2[OF fun_cong[OF fun_cong[OF T2_pre.mr_rel_eq[symmetric]]]]
+  )
+  apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                apply (rule supp_id_bound bij_id assms)+
+  apply (unfold id_o o_id OO_eq Grp_UNIV_id)
+  apply (rule iffD2[OF T1_pre.mr_rel_map(3)] iffD2[OF T2_pre.mr_rel_map(3)])
+                   apply (rule supp_id_bound bij_id assms)+
+  apply (unfold inv_id id_o Grp_UNIV_id OO_eq conversep_eq)
+  apply (unfold relcompp_conversep_Grp)
+  apply (rule T1_pre.mr_rel_mono_strong T2_pre.mr_rel_mono_strong)
+              apply (rule supp_comp_bound supp_inv_bound infinite_UNIV supp_id_bound bij_id bij_comp bij_imp_bij_inv assms)+
+       apply assumption
+  apply (unfold case_prod_beta Grp_UNIV_def prod.inject)
+(* ALLGOALS passive_case OR ... *)
+(* passive case *)
+      apply (rule ballI impI)+
+      apply assumption
+(* default case *)
+     apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+     apply assumption
+  (* copied from above *)
+     apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+    apply assumption
+apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+   apply assumption
+apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+  apply assumption
+  done
+
+lemma U2ctor_cong:
+    fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+    assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+            "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
+  shows
+ "(\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y' \<union> set8_T2_pre y' \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y' \<union> set10_T2_pre y' \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y' \<union> set8_T2_pre y' \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y' \<union> set10_T2_pre y' \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  imsupp f1 \<inter> (FFVars_T21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp f2 \<inter> (FFVars_T22 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  imsupp g1 \<inter> (FFVars_T21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y')) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp g2 \<inter> (FFVars_T22 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y')) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  f1 ` set5_T2_pre y \<inter> set5_T2_pre y = {} \<Longrightarrow> f2 ` set6_T2_pre y \<inter> set6_T2_pre y = {} \<Longrightarrow>
+  g1 ` set5_T2_pre y' \<inter> set5_T2_pre y' = {} \<Longrightarrow> g2 ` set6_T2_pre y' \<inter> set6_T2_pre y' = {} \<Longrightarrow>
+  mr_rel_T2_pre (inv g1 \<circ> f1) (inv g2 \<circ> f2) id (=) (inv g1 \<circ> f1) (inv g2 \<circ> f2)
+    (\<lambda>(t, pu) (t', pu'). rrename_T1 f1 f2 t = rrename_T1 g1 g2 t' \<and>
+      PU1map f1 f2 t pu = PU1map g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rrename_T1 f1 f2 t = rrename_T1 g1 g2 t' \<and>
+      PU1map f1 f2 t pu = PU1map g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rrename_T2 f1 f2 t = rrename_T2 g1 g2 t' \<and>
+      PU2map f1 f2 t pu = PU2map g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rrename_T2 f1 f2 t = rrename_T2 g1 g2 t' \<and>
+      PU2map f1 f2 t pu = PU2map g1 g2 t' pu')
+  y y' \<Longrightarrow> U2ctor y p = U2ctor y' p"
+ (* same tactic as above *)
+  apply (rule trans)
+   apply (rule U1ctor_rename[OF assms(1-4)] U2ctor_rename[OF assms(1-4)])
+          apply assumption+
+  apply (rule sym)
+  apply (rule trans)
+   apply (rule U1ctor_rename[OF assms(5-8)] U2ctor_rename[OF assms(5-8)])
+          apply assumption+
+  apply (rule sym)
+  apply (rule arg_cong2[OF _ refl, of _ _ U1ctor] arg_cong2[OF _ refl, of _ _ U2ctor])
+  apply (rule iffD2[OF fun_cong[OF fun_cong[OF T1_pre.mr_rel_eq[symmetric]]]]
+    iffD2[OF fun_cong[OF fun_cong[OF T2_pre.mr_rel_eq[symmetric]]]]
+  )
+  apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                apply (rule supp_id_bound bij_id assms)+
+  apply (unfold id_o o_id OO_eq Grp_UNIV_id)
+  apply (rule iffD2[OF T1_pre.mr_rel_map(3)] iffD2[OF T2_pre.mr_rel_map(3)])
+                   apply (rule supp_id_bound bij_id assms)+
+  apply (unfold inv_id id_o Grp_UNIV_id OO_eq conversep_eq)
+  apply (unfold relcompp_conversep_Grp)
+  apply (rule T1_pre.mr_rel_mono_strong T2_pre.mr_rel_mono_strong)
+              apply (rule supp_comp_bound supp_inv_bound infinite_UNIV supp_id_bound bij_id bij_comp bij_imp_bij_inv assms)+
+       apply assumption
+  apply (unfold case_prod_beta Grp_UNIV_def prod.inject)
+(* ALLGOALS passive_case OR ... *)
+(* passive case *)
+      apply (rule ballI impI)+
+      apply assumption
+(* default case *)
+     apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+     apply assumption
+  (* copied from above *)
+     apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+    apply assumption
+apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+   apply assumption
+apply (rule ballI impI)+
+     apply (erule conjE)
+     apply (rule conjI)
+      apply assumption
+  apply assumption
+  done
+
+lemmas T1_pre_set_map_ids = T1_pre.set_map[OF supp_id_bound supp_id_bound supp_id_bound bij_id supp_id_bound bij_id supp_id_bound]
+lemmas T2_pre_set_map_ids = T2_pre.set_map[OF supp_id_bound supp_id_bound supp_id_bound bij_id supp_id_bound bij_id supp_id_bound]
+
+lemma U1ctor'_cong:
+    fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+    assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+            "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
+  shows
+ "(\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y' \<union> set8_T1_pre y' \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y' \<union> set10_T1_pre y' \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y' \<union> set8_T1_pre y' \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y' \<union> set10_T1_pre y' \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  imsupp f1 \<inter> (FVars_T11 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp f2 \<inter> (FVars_T12 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  imsupp g1 \<inter> (FVars_T11 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y')) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp g2 \<inter> (FVars_T12 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y')) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  f1 ` set5_T1_pre y \<inter> set5_T1_pre y = {} \<Longrightarrow> f2 ` set6_T1_pre y \<inter> set6_T1_pre y = {} \<Longrightarrow>
+  g1 ` set5_T1_pre y' \<inter> set5_T1_pre y' = {} \<Longrightarrow> g2 ` set6_T1_pre y' \<inter> set6_T1_pre y' = {} \<Longrightarrow>
+  mr_rel_T1_pre (inv g1 \<circ> f1) (inv g2 \<circ> f2) id (=) (inv g1 \<circ> f1) (inv g2 \<circ> f2)
+    (\<lambda>(t, pu) (t', pu'). rename_T1 f1 f2 t = rename_T1 g1 g2 t' \<and>
+      PU1map' f1 f2 t pu = PU1map' g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rename_T1 f1 f2 t = rename_T1 g1 g2 t' \<and>
+      PU1map' f1 f2 t pu = PU1map' g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rename_T2 f1 f2 t = rename_T2 g1 g2 t' \<and>
+      PU2map' f1 f2 t pu = PU2map' g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rename_T2 f1 f2 t = rename_T2 g1 g2 t' \<and>
+      PU2map' f1 f2 t pu = PU2map' g1 g2 t' pu')
+  y y' \<Longrightarrow> U1ctor' y p = U1ctor' y' p"
+  apply (unfold U1ctor'_def U2ctor'_def)
+  apply (rule U1ctor_cong[OF assms] U2ctor_cong[OF assms])
+                  apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids image_id image_Un[symmetric])
+(* REPEAT_DETERM *)
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+(* copied from above *)
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                 apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+           apply assumption
+  (* end REPEAT_DETERM *)
+  (* REPEAT_DETERM *)
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+(* copied from above *)
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+  (* END REPEAT_DETERM *)
+      apply assumption+
+  apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV assms)+
+  apply (unfold Grp_UNIV_id OO_eq id_o o_id)
+  apply (rule iffD2[OF T1_pre.mr_rel_map(3)] iffD2[OF T2_pre.mr_rel_map(3)])
+                   apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV assms)+
+  apply (unfold inv_id id_o o_id Grp_UNIV_id OO_eq conversep_eq)
+  apply (unfold relcompp_conversep_Grp Grp_OO)
+  apply (rule T1_pre.mr_rel_mono_strong T2_pre.mr_rel_mono_strong)
+                   apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV assms)+
+       apply assumption
+(* REPEAT_DETERM (passive_case ORELSE default_case) *)
+(* passive case *)
+      apply (rule ballI impI)+
+      apply assumption
+(* default_case *)
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  (* copied from above *)
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  done
+
+lemma U2ctor'_cong:
+    fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+    assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+            "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
+  shows
+ "(\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y' \<union> set8_T2_pre y' \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y' \<union> set10_T2_pre y' \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y' \<union> set8_T2_pre y' \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y' \<union> set10_T2_pre y' \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  imsupp f1 \<inter> (FVars_T21 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp f2 \<inter> (FVars_T22 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  imsupp g1 \<inter> (FVars_T21 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y')) \<union> PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  imsupp g2 \<inter> (FVars_T22 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y')) \<union> PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  f1 ` set5_T2_pre y \<inter> set5_T2_pre y = {} \<Longrightarrow> f2 ` set6_T2_pre y \<inter> set6_T2_pre y = {} \<Longrightarrow>
+  g1 ` set5_T2_pre y' \<inter> set5_T2_pre y' = {} \<Longrightarrow> g2 ` set6_T2_pre y' \<inter> set6_T2_pre y' = {} \<Longrightarrow>
+  mr_rel_T2_pre (inv g1 \<circ> f1) (inv g2 \<circ> f2) id (=) (inv g1 \<circ> f1) (inv g2 \<circ> f2)
+    (\<lambda>(t, pu) (t', pu'). rename_T1 f1 f2 t = rename_T1 g1 g2 t' \<and>
+      PU1map' f1 f2 t pu = PU1map' g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rename_T1 f1 f2 t = rename_T1 g1 g2 t' \<and>
+      PU1map' f1 f2 t pu = PU1map' g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rename_T2 f1 f2 t = rename_T2 g1 g2 t' \<and>
+      PU2map' f1 f2 t pu = PU2map' g1 g2 t' pu')
+  (\<lambda>(t, pu) (t', pu'). rename_T2 f1 f2 t = rename_T2 g1 g2 t' \<and>
+      PU2map' f1 f2 t pu = PU2map' g1 g2 t' pu')
+  y y' \<Longrightarrow> U2ctor' y p = U2ctor' y' p"
+  apply (unfold U1ctor'_def U2ctor'_def)
+  apply (rule U1ctor_cong[OF assms] U2ctor_cong[OF assms])
+                  apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids image_id image_Un[symmetric])
+(* REPEAT_DETERM *)
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+(* copied from above *)
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                 apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+                  apply assumption
+                  apply (drule exists_map_prod_id)
+                  apply (erule exE conjE)+
+                  apply hypsubst
+                  apply (unfold U1FVars_1'_def[symmetric] U1FVars_2'_def[symmetric] U2FVars_1'_def[symmetric] U2FVars_2'_def[symmetric] FVars_def2s[symmetric])[1]
+           apply assumption
+  (* end REPEAT_DETERM *)
+  (* REPEAT_DETERM *)
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+(* copied from above *)
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+  subgoal
+          apply (erule trans[OF arg_cong2[OF refl arg_cong2[OF arg_cong2[OF _ refl, of _ _ "(\<union>)"] refl, of _ _ "(\<union>)"], of _ _ "(\<inter>)"], rotated])
+          apply (unfold FFVars_T11_def FFVars_T12_def FFVars_T21_def FFVars_T22_def T1_ctor_def T2_ctor_def)[1]
+          apply (rule T1.alpha_FVarss)
+          apply (rule T1.alpha_transs)
+           apply (rule T1.TT_Quotient_rep_abss)
+          apply (rule alpha_T1_alpha_T2.intros)
+                apply (rule bij_id supp_id_bound id_on_id)+
+          apply (subst (2) T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold fst_comp_map_prod[symmetric])
+          apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric])
+               apply (rule supp_id_bound bij_id)+
+          apply (subst T1_pre.map_comp T2_pre.map_comp)
+               apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id)
+          apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                      apply (rule supp_id_bound bij_id)+
+          apply (unfold id_o o_id Grp_UNIV_id OO_eq T1.rename_ids)
+          apply (unfold mr_rel_T1_pre_def mr_rel_T2_pre_def T1_pre.map_id T2_pre.map_id)[1]
+    apply (rule T1_pre.rel_refl_strong T2_pre.rel_refl_strong)
+    apply (unfold Grp_OO comp_def)
+        apply (rule refl T1.TT_Quotient_rep_abss)+
+    done
+  (* END REPEAT_DETERM *)
+      apply assumption+
+  apply (rule iffD2[OF T1_pre.mr_rel_map(1)] iffD2[OF T2_pre.mr_rel_map(1)])
+                apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV assms)+
+  apply (unfold Grp_UNIV_id OO_eq id_o o_id)
+  apply (rule iffD2[OF T1_pre.mr_rel_map(3)] iffD2[OF T2_pre.mr_rel_map(3)])
+                   apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV assms)+
+  apply (unfold inv_id id_o o_id Grp_UNIV_id OO_eq conversep_eq)
+  apply (unfold relcompp_conversep_Grp Grp_OO)
+  apply (rule T1_pre.mr_rel_mono_strong T2_pre.mr_rel_mono_strong)
+                   apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV assms)+
+       apply assumption
+(* REPEAT_DETERM (passive_case ORELSE default_case) *)
+(* passive case *)
+      apply (rule ballI impI)+
+      apply assumption
+(* default_case *)
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  (* copied from above *)
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  subgoal
+     apply (rule ballI impI)+
+     apply (unfold case_prod_beta fst_map_prod snd_map_prod rrename_T1_def rrename_T2_def)[1]
+  apply (erule conjE)
+     apply (rule conjI)
+      apply (rule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])
+  (* REPEAT_DETERM *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+  (* copied from above *)
+      apply (rule T1.alpha_transs)
+       apply (rule T1.alpha_bij_eqs[THEN iffD2])
+           apply (rule assms)+
+       apply (rule T1.TT_Quotient_rep_abss)
+      apply (rule T1.alpha_syms)
+   (* END REPEAT_DETERM *)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T1]] iffD2[OF arg_cong2[OF _ refl, of _ _ alpha_T2]])
+       apply assumption
+     apply (rule T1.alpha_refls)
+    apply (unfold PU1map_def PU2map_def PU1map'_def PU2map'_def U1map'_def U2map'_def id_def)
+    apply assumption
+    done
+  done
+
 end

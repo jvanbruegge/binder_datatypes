@@ -507,6 +507,17 @@ apply (erule allE conjE)+
   apply ((rule conjI)?, assumption)+
   done
 
+lemma pick_id_ons':
+  "suitable11 pick1 \<Longrightarrow> id_on (\<Union>(FVars_T11 ` set8_T1_pre x) - set5_T1_pre x) (pick1 x p)"
+  "suitable11 pick1 \<Longrightarrow> id_on (\<Union>(FVars_T21 ` set10_T1_pre x) - set5_T1_pre x) (pick1 x p)"
+  "suitable12 pick2 \<Longrightarrow> id_on (\<Union>(FVars_T12 ` set8_T1_pre x) - set6_T1_pre x) (pick2 x p)"
+  "suitable21 pick3 \<Longrightarrow> id_on (\<Union>(FVars_T11 ` set8_T2_pre y) - set5_T2_pre y) (pick3 y p)"
+  "suitable21 pick3 \<Longrightarrow> id_on (\<Union>(FVars_T21 ` set10_T2_pre y) - set5_T2_pre y) (pick3 y p)"
+  "suitable22 pick4 \<Longrightarrow> id_on (\<Union>(FVars_T12 ` set8_T2_pre y) - set6_T2_pre y) (pick4 y p)"
+       apply -
+       apply (drule pick_id_ons[unfolded id_on_Un], ((erule conjE)+)?, assumption)+
+  done
+
 lemma pick_id_on_images:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -554,6 +565,20 @@ apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated])
        apply (subst image_set_diff[OF bij_is_inj, symmetric], rule assms)+
        apply (unfold image_Un[symmetric])?
   apply (rule refl)
+  done
+
+lemma pick_id_on_images':
+  fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  shows
+  "suitable11 pick1 \<Longrightarrow> id_on (f1 ` (\<Union>(FVars_T11 ` set8_T1_pre x) - set5_T1_pre x)) (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p)"
+  "suitable11 pick1 \<Longrightarrow> id_on (f1 ` (\<Union>(FVars_T21 ` set10_T1_pre x) - set5_T1_pre x)) (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p)"
+  "suitable12 pick2 \<Longrightarrow> id_on (f2 ` (\<Union>(FVars_T12 ` set8_T1_pre x) - set6_T1_pre x)) (pick2 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p)"
+  "suitable21 pick3 \<Longrightarrow> id_on (f1 ` (\<Union>(FVars_T11 ` set8_T2_pre y) - set5_T2_pre y)) (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) y) p)"
+  "suitable21 pick3 \<Longrightarrow> id_on (f1 ` (\<Union>(FVars_T21 ` set10_T2_pre y) - set5_T2_pre y)) (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) y) p)"
+  "suitable22 pick4 \<Longrightarrow> id_on (f2 ` (\<Union>(FVars_T12 ` set8_T2_pre y) - set6_T2_pre y)) (pick4 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) y) p)"
+       apply -
+       apply (drule pick_id_on_images[OF assms, unfolded image_Un id_on_Un], ((erule conjE)+)?, assumption)+
   done
 
 (* lower axioms to raw type *)
@@ -3085,12 +3110,107 @@ apply (rule int_empties1[OF suitable_prems] int_empties2[OF suitable_prems])
                apply assumption
               apply (unfold comp_assoc[symmetric])[1]
               apply (rule trans)
+              apply (rule comp_apply)
+              apply (drule DiffI[rotated])
+               apply (rule UN_I)
+                apply assumption
+              apply assumption
+              apply (rotate_tac -1)
+              apply (rule trans)
+              apply (rule arg_cong[of _ _ "_ \<circ> _"])
+        apply (erule id_onD[OF pick_id_ons'(1)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(2)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(3)[OF suitable_prems(2)]]
+            id_onD[OF pick_id_ons'(4)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(5)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(6)[OF suitable_prems(4)]])
+              apply (rule trans[OF comp_apply])
+              apply (rule trans)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rotate_tac -1)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply assumption
+              apply (rule sym)
+              apply (rule comp_middle)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (erule id_onD[rotated, OF imageI])
+        apply assumption
+        apply (erule id_onD[OF pick_id_on_images'(1)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(2)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(3)[OF f_prems suitable_prems(2)] imageI]
+            id_onD[OF pick_id_on_images'(4)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(5)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(6)[OF f_prems suitable_prems(4)] imageI])
+          (* end repeat twice *)
+            apply (rule T1.alpha_refls)
+  (* end binding alpha_bij_tac *)
+apply (rule trans)
+             apply (rule arg_cong[of _ _ "PU1map' _ _ _"])
+             apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshapes T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (rule suitable'_prems f_prems imsupp_prems pick_prems T1.alpha_refls)+
+            apply (subst T1.rename_comps)
+                    apply (rule pick_prems f_prems)+
+            apply (rule trans)
+            apply (rule ext)
+            apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                       apply (rule suitable'_prems f_prems bij_comp pick_prems supp_comp_bound infinite_UNIV)+
+                   apply (erule eq_bij_betw_refl_prems)+
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+               apply assumption
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+              apply assumption
+             apply (rule T1.alpha_refls)
+            apply (rule sym)
+            apply (rule trans)
+             apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                       apply (rule suitable'_prems f_prems bij_comp supp_comp_bound pick_prems infinite_UNIV)+
+                   apply (erule eq_bij_betw_refl_prems)+
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+               apply assumption
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+              apply assumption
+             apply (rule T1.alpha_refls)
+            apply (rule IHs[THEN conjunct2])
+                       apply (subst T1.rename_comps)
+                            apply (rule f_prems pick_prems bij_comp supp_comp_bound infinite_UNIV)+
+                           apply (erule eq_bij_betw_refl_prems)+
+                       apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems pick_prems | erule eq_bij_betw_refl_prems)+
+                      apply (rule suitable_prems f_prems imsupp_prems)+
+            apply (rule T1.alpha_syms)
+        (* binding alpha_bij_tac, again *)
+           apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
+                        apply (rule T1.alpha_bijs)
+                      apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
+            (* repeat twice *)
+              apply (rule ballI)
+              apply (rule case_split[of "_ \<in> _"])
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (erule eq_onD)
+               apply assumption
+              apply (unfold comp_assoc[symmetric])[1]
+              apply (rule trans)
                apply (rule comp_apply)
               apply (rule trans)
                apply (rule arg_cong[of _ _ "_ \<circ> _"])
         apply (rule id_onD[OF pick_id_ons(2)[OF suitable_prems(2)]]
             id_onD[OF pick_id_ons(1)[OF suitable_prems(1)]])
-(* TODO: generalize *)        apply (rule UnI1)
                apply (rule DiffI)
                 apply (rule UN_I)
                  apply assumption+
@@ -3118,11 +3238,384 @@ apply (rule int_empties1[OF suitable_prems] int_empties2[OF suitable_prems])
                apply assumption
               apply (rule pick_id_on_images[OF f_prems, THEN id_onD])
                apply (rule suitable_prems)
-             apply (rule imageI)
-        apply (rule UnI1)
-             apply assumption
+              apply (rule imageI)
+              apply assumption
+            (* copied from above *)
+             apply (rule ballI)
+              apply (rule case_split[of "_ \<in> _"])
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (erule eq_onD)
+               apply assumption
+              apply (unfold comp_assoc[symmetric])[1]
+              apply (rule trans)
+              apply (rule comp_apply)
+              apply (drule DiffI[rotated])
+               apply (rule UN_I)
+                apply assumption
+              apply assumption
+              apply (rotate_tac -1)
+              apply (rule trans)
+              apply (rule arg_cong[of _ _ "_ \<circ> _"])
+        apply (erule id_onD[OF pick_id_ons'(1)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(2)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(3)[OF suitable_prems(2)]]
+            id_onD[OF pick_id_ons'(4)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(5)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(6)[OF suitable_prems(4)]])
+              apply (rule trans[OF comp_apply])
+              apply (rule trans)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rotate_tac -1)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply assumption
+              apply (rule sym)
+              apply (rule comp_middle)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (erule id_onD[rotated, OF imageI])
+        apply assumption
+        apply (erule id_onD[OF pick_id_on_images'(1)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(2)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(3)[OF f_prems suitable_prems(2)] imageI]
+            id_onD[OF pick_id_on_images'(4)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(5)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(6)[OF f_prems suitable_prems(4)] imageI])
+          (* end repeat twice *)
+            apply (rule T1.alpha_refls)
+  (* end binding_alpha_bij_tac *)
+
+  (* orelse nonbinding recursive set, again *)
+        apply (rule relcomppI)
+             apply (rule iffD2[OF fun_cong[OF fun_cong[OF Grp_UNIV_def]]])
+             apply (rule refl)
+            apply (unfold prod.case)
+            apply (rule conjI)
+            (* alpha_bij_tac *)
+             apply (rule T1.alpha_bijs)
+                       apply (erule eq_bij_betw_refl_prems)+
+                (* repeat twice *)
+               apply (rule ballI)
+               apply (unfold T1.FVars_renames[OF f_prems])[1]
+               apply (erule imageE)
+               apply hypsubst
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (drule UN_I)
+                apply assumption
+               apply (rotate_tac -1)
+               apply (rule trans)
+                apply (drule id_onD[rotated, OF imageI])
+                 apply assumption
+                apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated, OF imageI])
+               apply assumption
+            (* copied from above *)
+               apply (rule ballI)
+               apply (unfold T1.FVars_renames[OF f_prems])[1]
+               apply (erule imageE)
+               apply hypsubst
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (drule UN_I)
+                apply assumption
+               apply (rotate_tac -1)
+               apply (rule trans)
+                apply (drule id_onD[rotated, OF imageI])
+                 apply assumption
+                apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated, OF imageI])
+              apply assumption
           (* end repeat twice *)
         apply (rule T1.alpha_refls)
+        (* end alpha_bij_tac *)
+        apply (rule trans)
+             apply (rule arg_cong[of _ _ "PU1map' _ _ _"] arg_cong[of _ _ "PU2map' _ _ _"])
+             apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshapes)
+                       apply (rule suitable'_prems f_prems imsupp_prems T1.alpha_refls)+
+            apply (rule trans)
+        apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                       apply (rule suitable'_prems f_prems)+
+                   apply (erule eq_bij_betw_refl_prems)+
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+               apply assumption
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+              apply assumption
+             apply (rule T1.alpha_refls)
+            apply (rule sym)
+            apply (rule trans)
+             apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                       apply (rule suitable'_prems f_prems)+
+                   apply (erule eq_bij_betw_refl_prems)+
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+               apply assumption
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+              apply assumption
+             apply (rule T1.alpha_refls)
+            apply (rule IHs[THEN conjunct2])
+                       apply (subst T1.rename_comps)
+                            apply (rule f_prems)+
+                           apply (erule eq_bij_betw_refl_prems)+
+                       apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems | erule eq_bij_betw_refl_prems)+
+                      apply (rule suitable_prems f_prems imsupp_prems)+
+            apply (rule T1.alpha_syms)
+          (* alpha_bij_tac, copied from above *)
+          apply (rule T1.alpha_bijs)
+                       apply (erule eq_bij_betw_refl_prems)+
+                (* repeat twice *)
+               apply (rule ballI)
+               apply (unfold T1.FVars_renames[OF f_prems])[1]
+               apply (erule imageE)
+               apply hypsubst
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (drule UN_I)
+                apply assumption
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+                apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated, OF imageI])
+               apply assumption
+            (* copied from above *)
+               apply (rule ballI)
+               apply (unfold T1.FVars_renames[OF f_prems])[1]
+               apply (erule imageE)
+               apply hypsubst
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (drule UN_I)
+                apply assumption
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+                apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated, OF imageI])
+              apply assumption
+          (* end repeat twice *)
+          apply (rule T1.alpha_refls)
+
+    (* orelse binding recursive set, again *)
+           apply (rule relcomppI)
+            apply (unfold Grp_UNIV_def)[1]
+            apply (rule refl)
+           apply (unfold prod.case)
+           apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
+           apply (rule conjI)
+        (* binding alpha_bij_tac *)
+            apply (rule T1.alpha_bijs)
+                      apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
+
+            (* nonbinding recursive occurence *)
+            apply (rule ballI)
+            apply (subst comp_def)+
+apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (drule UN_I)
+                apply assumption
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+                apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated, OF imageI])
+               apply assumption
+            (* copied from above, binding case *)
+             apply (rule ballI)
+              apply (rule case_split[of "_ \<in> _"])
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (erule eq_onD)
+               apply assumption
+              apply (unfold comp_assoc[symmetric])[1]
+              apply (rule trans)
+              apply (rule comp_apply)
+              apply (drule DiffI[rotated])
+               apply (rule UN_I)
+                apply assumption
+              apply assumption
+              apply (rotate_tac -1)
+              apply (rule trans)
+              apply (rule arg_cong[of _ _ "_ \<circ> _"])
+        apply (erule id_onD[OF pick_id_ons'(1)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(2)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(3)[OF suitable_prems(2)]]
+            id_onD[OF pick_id_ons'(4)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(5)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(6)[OF suitable_prems(4)]])
+              apply (rule trans[OF comp_apply])
+              apply (rule trans)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rotate_tac -1)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply assumption
+              apply (rule sym)
+              apply (rule comp_middle)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (erule id_onD[rotated, OF imageI])
+        apply assumption
+        apply (erule id_onD[OF pick_id_on_images'(1)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(2)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(3)[OF f_prems suitable_prems(2)] imageI]
+            id_onD[OF pick_id_on_images'(4)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(5)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(6)[OF f_prems suitable_prems(4)] imageI])
+          (* end repeat twice *)
+            apply (rule T1.alpha_refls)
+  (* end binding alpha_bij_tac *)
+apply (rule trans)
+             apply (rule arg_cong[of _ _ "PU1map' _ _ _"] arg_cong[of _ _ "PU2map' _ _ _"])
+             apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshapes T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (rule suitable'_prems f_prems imsupp_prems pick_prems bij_id supp_id_bound T1.alpha_refls)+
+            apply (subst T1.rename_comps)
+                 apply (rule pick_prems f_prems bij_id supp_id_bound)+
+        apply (unfold id_o o_id)
+            apply (rule trans)
+            apply (rule ext)
+            apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                       apply (rule suitable'_prems f_prems bij_comp pick_prems supp_comp_bound infinite_UNIV)+
+                   apply (erule eq_bij_betw_refl_prems)+
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+               apply assumption
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+              apply assumption
+             apply (rule T1.alpha_refls)
+            apply (rule sym)
+            apply (rule trans)
+             apply (rule ext)
+             apply (rule IHs[THEN conjunct1, symmetric])
+                    apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                       apply (rule suitable'_prems f_prems bij_comp supp_comp_bound pick_prems infinite_UNIV)+
+                   apply (erule eq_bij_betw_refl_prems)+
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+               apply assumption
+               apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
+               apply (erule conjE)+
+              apply assumption
+             apply (rule T1.alpha_refls)
+            apply (rule IHs[THEN conjunct2])
+                       apply (subst T1.rename_comps)
+                            apply (rule f_prems pick_prems bij_comp supp_comp_bound infinite_UNIV)+
+                           apply (erule eq_bij_betw_refl_prems)+
+                       apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems pick_prems | erule eq_bij_betw_refl_prems)+
+                      apply (rule suitable_prems f_prems imsupp_prems)+
+            apply (rule T1.alpha_syms)
+        (* binding alpha_bij_tac, again *)
+           apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
+                      apply (rule T1.alpha_bijs)
+                      apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
+
+            (* nonbinding recursive occurence *)
+            apply (rule ballI)
+            apply (subst comp_def)+
+apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (drule UN_I)
+                apply assumption
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+                apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated, OF imageI])
+               apply assumption
+            (* copied from above, binding case *)
+             apply (rule ballI)
+              apply (rule case_split[of "_ \<in> _"])
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (erule eq_onD)
+               apply assumption
+              apply (unfold comp_assoc[symmetric])[1]
+              apply (rule trans)
+              apply (rule comp_apply)
+              apply (drule DiffI[rotated])
+               apply (rule UN_I)
+                apply assumption
+              apply assumption
+              apply (rotate_tac -1)
+              apply (rule trans)
+              apply (rule arg_cong[of _ _ "_ \<circ> _"])
+        apply (erule id_onD[OF pick_id_ons'(1)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(2)[OF suitable_prems(1)]]
+            id_onD[OF pick_id_ons'(3)[OF suitable_prems(2)]]
+            id_onD[OF pick_id_ons'(4)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(5)[OF suitable_prems(3)]]
+            id_onD[OF pick_id_ons'(6)[OF suitable_prems(4)]])
+              apply (rule trans[OF comp_apply])
+              apply (rule trans)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rotate_tac -1)
+               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply assumption
+              apply (rule sym)
+              apply (rule comp_middle)
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (erule id_onD[rotated, OF imageI])
+        apply assumption
+        apply (erule id_onD[OF pick_id_on_images'(1)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(2)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(3)[OF f_prems suitable_prems(2)] imageI]
+            id_onD[OF pick_id_on_images'(4)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(5)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(6)[OF f_prems suitable_prems(4)] imageI])
+          (* end repeat twice *)
+            apply (rule T1.alpha_refls)
+  (* end binding alpha_bij_tac *)
+(**********************************************************************************************)
+(*    f picks t = f picks' t' *)
+
 
 
         thm comp_middle

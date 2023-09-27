@@ -16,6 +16,7 @@ sig
     rename_inv_simp: thm,
     FVars_ctors: thm list,
     FVars_renames: thm list,
+    FVars_intross: thm list list,
     card_of_FVars_bounds: thm list,
     card_of_FVars_bound_UNIVs: thm list
   };
@@ -102,13 +103,14 @@ type 'a fp_result_T = {
   rename_inv_simp: thm,
   FVars_ctors: thm list,
   FVars_renames: thm list,
+  FVars_intross: thm list list,
   card_of_FVars_bounds: thm list,
   card_of_FVars_bound_UNIVs: thm list
 };
 
 fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_id0, rename_id,
   rename_comp0, rename_comp, rename_bij, rename_inv_simp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
-  card_of_FVars_bound_UNIVs } = {
+  card_of_FVars_bound_UNIVs, FVars_intross } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
   rename = Morphism.term phi rename,
@@ -123,6 +125,7 @@ fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_
   rename_inv_simp = Morphism.thm phi rename_inv_simp,
   FVars_ctors = map (Morphism.thm phi) FVars_ctors,
   FVars_renames = map (Morphism.thm phi) FVars_renames,
+  FVars_intross = map (map (Morphism.thm phi)) FVars_intross,
   card_of_FVars_bounds = map (Morphism.thm phi) card_of_FVars_bounds,
   card_of_FVars_bound_UNIVs = map (Morphism.thm phi) card_of_FVars_bound_UNIVs
 } : 'a fp_result_T;

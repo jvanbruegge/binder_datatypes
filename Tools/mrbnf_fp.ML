@@ -2309,6 +2309,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_inv_simp = nth rename_inv_simps i,
           FVars_ctors = nth (transpose FVars_ctorss) i,
           FVars_renames = nth (transpose FVars_renamess) i,
+          FVars_intross = FVars_intross,
           card_of_FVars_bounds = nth card_of_FVars_boundss' i,
           card_of_FVars_bound_UNIVs = nth card_of_FVars_boundss i,
           inner = {
@@ -2349,6 +2350,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_inv_simp = nth rrename_inv_simps i,
           FVars_ctors = nth (transpose FFVars_cctorss) i,
           FVars_renames = nth (transpose FFVars_rrenamess) i,
+          FVars_intross = FFVars_intross,
           card_of_FVars_bounds = nth card_of_FFVars_boundss' i,
           card_of_FVars_bound_UNIVs = nth card_of_FFVars_boundss i,
           inner = {
@@ -2382,6 +2384,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val lthy = register_fp_results ress lthy
 
+    val _ = @{print} FVars_intross
+    val _ = @{print} FFVars_intross
     val notes =
       [("rename_simps", rename_simps),
        ("rename_id0s", rename_id0s),
@@ -2401,6 +2405,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("alpha_FVarss", flat alpha_FVarsss),
        ("alpha_syms", alpha_syms),
        ("alpha_transs", alpha_transs),
+       ("alpha_elims", alpha_elims),
        ("card_of_FVarsB_bounds", flat card_of_FVarsB_boundss),
        ("refresh_sets", refresh_sets),
        ("refreshs", refreshs),
@@ -2418,6 +2423,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("card_of_FFVars_bounds", flat card_of_FFVars_boundss),
        ("FFVars_cctors", flat FFVars_cctorss),
        ("FFVars_intros", flat FFVars_intross),
+       ("FVars_intros", flat FVars_intross),
        ("FFVars_elims", flat FFVars_elimss),
        ("FFVars_inducts", FFVars_inducts),
        ("FFVars_rrenames", flat FFVars_rrenamess),

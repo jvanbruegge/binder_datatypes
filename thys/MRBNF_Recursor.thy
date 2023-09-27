@@ -48,6 +48,12 @@ lemma imsupp_same_subset: "\<lbrakk> a \<notin> B ; a \<in> A ; imsupp f \<inter
 lemma arg_cong3: "\<lbrakk> a1 = a2 ; b1 = b2 ; c1 = c2 \<rbrakk> \<Longrightarrow> h a1 b1 c1 = h a2 b2 c2"
   by simp
 
+definition eq_bij_betw where
+  "eq_bij_betw r u w g A B x y f1 f2 h L R \<equiv>
+    bij u \<and> |supp u| <o r \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}
+  \<and> bij w \<and> |supp w| <o r \<and> imsupp w \<inter> g (B y) = {} \<and> w ` f1 (B y) \<inter> f1 (B y) = {}
+  \<and> eq_on (f2 y) (u \<circ> L \<circ> h) (w \<circ> R)"
+
 lemma exists_bij_betw:
   fixes L R h::"'a \<Rightarrow> 'a"
   assumes "Cinfinite r" "r \<le>o |UNIV::'a set|" "bij R" "bij L" "bij h" "f2 x = h ` f2 y"
@@ -98,8 +104,18 @@ proof -
   ultimately show ?thesis using x(1,2,4) y(1,2,4) by blast
 qed
 
+lemmas exists_bij_betw_def = exists_bij_betw[unfolded eq_bij_betw_def[symmetric]]
+
+definition eq_bij_betw_refl where
+ "eq_bij_betw_refl r u w g A B x y f1 f2 L R \<equiv>
+    bij u \<and> |supp u| <o r \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}
+  \<and> bij w \<and> |supp w| <o r \<and> imsupp w \<inter> g (B y) = {} \<and> w ` f1 (B y) \<inter> f1 (B y) = {}
+  \<and> eq_on f2 (u \<circ> L) (w \<circ> R)"
+
 lemmas exists_bij_betw_refl = exists_bij_betw[OF _ _ _ _ bij_id image_id[symmetric], unfolded o_id]
 lemmas exists_bij_betw_refl_UNIV = exists_bij_betw_refl[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order] ordLeq_refl[OF card_of_Card_order]]
+
+lemmas exists_bij_betw_refl_def = exists_bij_betw_refl[unfolded eq_bij_betw_refl_def[symmetric]]
 
 lemma imsupp_id_on: "imsupp u \<inter> A = {} \<Longrightarrow> id_on A u"
   unfolding imsupp_def supp_def id_on_def by blast

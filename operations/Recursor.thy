@@ -6880,4 +6880,405 @@ lemma f_swap_alpha:
     done
   done
 
+lemma exists_suitables:
+  "\<exists>pick1. suitable11 pick1"
+  "\<exists>pick2. suitable12 pick2"
+  "\<exists>pick3. suitable21 pick3"
+  "\<exists>pick4. suitable22 pick4"
+     apply (unfold suitable_defs)
+     apply (rule choice allI)+
+     apply (rule exists_suitable_aux)
+       apply (rule conjI)
+        apply (rule T1_pre.UNIV_cinfinite)
+       apply (rule card_of_Card_order)
+      apply (rule ordLeq_refl)
+      apply (rule card_of_Card_order)
+     apply (rule T1_pre.Un_bound T1_pre.set_bd_UNIV ordLeq_ordLess_trans[OF card_of_diff]
+      T1.card_of_FVars_bounds small_PFVars_1 small_PFVars_2 small_avoiding_set1 small_avoiding_set2
+      )+
+    (* copied from above *)
+    apply (rule choice allI)+
+    apply (rule exists_suitable_aux)
+      apply (rule conjI)
+       apply (rule T1_pre.UNIV_cinfinite)
+      apply (rule card_of_Card_order)
+     apply (rule ordLeq_refl)
+     apply (rule card_of_Card_order)
+    apply (rule T1_pre.Un_bound T1_pre.set_bd_UNIV ordLeq_ordLess_trans[OF card_of_diff]
+      T1.card_of_FVars_bounds small_PFVars_1 small_PFVars_2 small_avoiding_set1 small_avoiding_set2
+      )+
+   apply (rule choice allI)+
+   apply (rule exists_suitable_aux)
+     apply (rule conjI)
+      apply (rule T1_pre.UNIV_cinfinite)
+     apply (rule card_of_Card_order)
+    apply (rule ordLeq_refl)
+    apply (rule card_of_Card_order)
+   apply (rule T2_pre.Un_bound T2_pre.set_bd_UNIV ordLeq_ordLess_trans[OF card_of_diff]
+      T1.card_of_FVars_bounds small_PFVars_1 small_PFVars_2 small_avoiding_set1 small_avoiding_set2
+      )+
+  apply (rule choice allI)+
+  apply (rule exists_suitable_aux)
+    apply (rule conjI)
+     apply (rule T1_pre.UNIV_cinfinite)
+    apply (rule card_of_Card_order)
+   apply (rule ordLeq_refl)
+   apply (rule card_of_Card_order)
+  apply (rule T1_pre.Un_bound T2_pre.set_bd_UNIV ordLeq_ordLess_trans[OF card_of_diff]
+      T1.card_of_FVars_bounds small_PFVars_1 small_PFVars_2 small_avoiding_set1 small_avoiding_set2
+      )+
+  done
+
+lemma suitable_pick0s:
+  "suitable11 pick1_0"
+  "suitable12 pick2_0"
+  "suitable21 pick3_0"
+  "suitable22 pick4_0"
+     apply (unfold pick1_0_def pick2_0_def pick3_0_def pick4_0_def)
+     apply (rule someI_ex[OF exists_suitables(1)])
+    apply (rule someI_ex[OF exists_suitables(2)])
+   apply (rule someI_ex[OF exists_suitables(3)])
+  apply (rule someI_ex[OF exists_suitables(4)])
+  done
+
+lemma f_alphas:
+  assumes "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
+    and "suitable11 pick1'" "suitable12 pick2'" "suitable21 pick3'" "suitable22 pick4'"
+  shows "alpha_T1 t1 t1' \<Longrightarrow> f_T1 pick1 pick2 pick3 pick4 t1 = f_T1 pick1' pick2' pick3' pick4' t1'"
+    "alpha_T2 t2 t2' \<Longrightarrow> f_T2 pick1 pick2 pick3 pick4 t2 = f_T2 pick1' pick2' pick3' pick4' t2'"
+   apply -
+   apply (rule f_swap_alpha[THEN conjunct1, THEN conjunct2] f_swap_alpha[THEN conjunct2, THEN conjunct2])
+                  apply (rule assms bij_id supp_id_bound)+
+      apply (unfold imsupp_id)
+      apply (rule Int_empty_left)+
+    apply (assumption | rule T1.alpha_refls)+
+    (* copied *)
+  apply (rule f_swap_alpha[THEN conjunct1, THEN conjunct2] f_swap_alpha[THEN conjunct2, THEN conjunct2])
+                 apply (rule assms bij_id supp_id_bound)+
+     apply (unfold imsupp_id)
+     apply (rule Int_empty_left)+
+   apply (assumption | rule T1.alpha_refls)+
+  done
+
+lemma f0_alphas:
+  "alpha_T1 t1 t1' \<Longrightarrow> f0_T1 t1 = f0_T1 t1'"
+  "alpha_T2 t2 t2' \<Longrightarrow> f0_T2 t2 = f0_T2 t2'"
+   apply (unfold f0_T1_def f0_T2_def)
+   apply (rule f_alphas)
+           apply (rule suitable_pick0s)+
+   apply assumption
+    (* copied from above *)
+  apply (rule f_alphas)
+          apply (rule suitable_pick0s)+
+  apply assumption
+  done
+
+lemmas f0_UFVars' = f_UFVars'[OF suitable_pick0s, unfolded f0_T1_def[symmetric] f0_T2_def[symmetric]]
+
+thm trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
+
+lemma f0_T1_ctor:
+  assumes int_empty: "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
+    and noclash: "noclash_T1 x"
+  shows
+    "f0_T1 (raw_T1_ctor x) p = U1ctor' (map_T1_pre id id id id id id (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T2 t))  (\<lambda>t. (t, f0_T2 t)) x) p"
+proof -
+  let ?pick1_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick1_0 x' p'"
+  let ?pick2_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick2_0 x' p'"
+
+  have suitable_pick1s: "suitable11 ?pick1_1" "suitable12 ?pick2_1"
+     apply (unfold suitable_defs)
+     apply (rule allI)
+     apply (rule allI)
+     apply (insert suitable_pick0s(1))[1]
+     apply (unfold suitable_defs)
+     apply (erule allE conjE)+
+     apply (rule conjI bij_if supp_if imsupp_if_empty image_if_empty | assumption)+
+     apply (drule iffD1[OF prod.inject])
+     apply (erule conjE)
+     apply hypsubst
+     apply (rule trans)
+      apply (unfold Un_assoc)[1]
+      apply (rule Int_Un_distrib)
+     apply (unfold Un_empty T1.FVars_ctors)[1]
+     apply (rule conjI)
+      apply (insert noclash)[1]
+      apply (unfold Int_Un_distrib Un_empty noclash_T1_def)[1]
+      apply (erule conjE)+
+      apply (rule conjI)+
+          apply (assumption | rule Diff_disjoint int_empty)+
+      (* copied from above *)
+    apply (rule allI)
+    apply (rule allI)
+    apply (insert suitable_pick0s(2))[1]
+    apply (unfold suitable_defs)
+    apply (erule allE conjE)+
+    apply (rule conjI bij_if supp_if imsupp_if_empty image_if_empty | assumption)+
+    apply (drule iffD1[OF prod.inject])
+    apply (erule conjE)
+    apply hypsubst
+    apply (rule trans)
+     apply (unfold Un_assoc)[1]
+     apply (rule Int_Un_distrib)
+    apply (unfold Un_empty T1.FVars_ctors)[1]
+    apply (rule conjI)
+     apply (insert noclash)[1]
+     apply (unfold Int_Un_distrib Un_empty noclash_T1_def)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+         apply (assumption | rule Diff_disjoint int_empty)+
+    done
+
+  show ?thesis
+    apply (rule trans)
+     apply (rule fun_cong[of _ _ p])
+     apply (unfold f0_T1_def)[1]
+     apply (rule f_alphas)
+             apply (rule suitable_pick1s suitable_pick0s)+
+     apply (rule T1.alpha_refls)+
+    apply (rule trans)
+     apply (rule f_T1_simp)
+        apply (rule suitable_pick1s suitable_pick0s)+
+    apply (unfold if_P[OF refl])
+    apply (rule arg_cong2[OF _ refl, of _ _ U1ctor'])
+    apply (rule T1_pre.map_cong)
+                        apply (rule supp_id_bound bij_id refl)+
+       apply (unfold prod.inject T1.rename_ids)
+      (* REPEAT_DETERM *)
+       apply (rule conjI[OF refl])
+       apply (rule trans)
+        apply (rule f_alphas)
+                apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+        apply (rule T1.alpha_refls)
+       apply (unfold f0_T1_def)[1]
+       apply (rule refl)
+      (* copied from above *)
+      apply (rule conjI[OF refl])
+      apply (rule trans)
+       apply (rule f_alphas)
+               apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+       apply (rule T1.alpha_refls)
+      apply (unfold f0_T1_def)[1]
+      apply (rule refl)
+      (* copied from above *)
+     apply (rule conjI[OF refl])
+     apply (rule trans)
+      apply (rule f_alphas)
+              apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+      apply (rule T1.alpha_refls)
+     apply (unfold f0_T2_def)[1]
+     apply (rule refl)
+      (* copied from above *)
+    apply (rule conjI[OF refl])
+    apply (rule trans)
+     apply (rule f_alphas)
+             apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+     apply (rule T1.alpha_refls)
+    apply (unfold f0_T2_def)[1]
+    apply (rule refl)
+    done
+qed
+
+lemma f0_T2_ctor:
+  assumes int_empty: "set5_T2_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T2_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
+    and noclash: "noclash_T2 x"
+  shows
+    "f0_T2 (raw_T2_ctor x) p = U2ctor' (map_T2_pre id id id id id id (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T2 t))  (\<lambda>t. (t, f0_T2 t)) x) p"
+proof -
+  let ?pick3_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick3_0 x' p'"
+  let ?pick4_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick4_0 x' p'"
+
+  have suitable_pick1s: "suitable21 ?pick3_1" "suitable22 ?pick4_1"
+     apply (unfold suitable_defs)
+     apply (rule allI)
+     apply (rule allI)
+     apply (insert suitable_pick0s(3))[1]
+     apply (unfold suitable_defs)
+     apply (erule allE conjE)+
+     apply (rule conjI bij_if supp_if imsupp_if_empty image_if_empty | assumption)+
+     apply (drule iffD1[OF prod.inject])
+     apply (erule conjE)
+     apply hypsubst
+     apply (rule trans)
+      apply (unfold Un_assoc)[1]
+      apply (rule Int_Un_distrib)
+     apply (unfold Un_empty T1.FVars_ctors)[1]
+     apply (rule conjI)
+      apply (insert noclash)[1]
+      apply (unfold Int_Un_distrib Un_empty noclash_T2_def)[1]
+      apply (erule conjE)+
+      apply (rule conjI)+
+          apply (assumption | rule Diff_disjoint int_empty)+
+      (* copied from above *)
+    apply (rule allI)
+    apply (rule allI)
+    apply (insert suitable_pick0s(4))[1]
+    apply (unfold suitable_defs)
+    apply (erule allE conjE)+
+    apply (rule conjI bij_if supp_if imsupp_if_empty image_if_empty | assumption)+
+    apply (drule iffD1[OF prod.inject])
+    apply (erule conjE)
+    apply hypsubst
+    apply (rule trans)
+     apply (unfold Un_assoc)[1]
+     apply (rule Int_Un_distrib)
+    apply (unfold Un_empty T1.FVars_ctors)[1]
+    apply (rule conjI)
+     apply (insert noclash)[1]
+     apply (unfold Int_Un_distrib Un_empty noclash_T2_def)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+         apply (assumption | rule Diff_disjoint int_empty)+
+    done
+
+  show ?thesis
+    apply (rule trans)
+     apply (rule fun_cong[of _ _ p])
+     apply (unfold f0_T2_def)[1]
+     apply (rule f_alphas)
+             apply (rule suitable_pick1s suitable_pick0s)+
+     apply (rule T1.alpha_refls)+
+    apply (rule trans)
+     apply (rule f_T2_simp)
+        apply (rule suitable_pick1s suitable_pick0s)+
+    apply (unfold if_P[OF refl])
+    apply (rule arg_cong2[OF _ refl, of _ _ U2ctor'])
+    apply (rule T2_pre.map_cong)
+                        apply (rule supp_id_bound bij_id refl)+
+       apply (unfold prod.inject T1.rename_ids)
+      (* REPEAT_DETERM *)
+       apply (rule conjI[OF refl])
+       apply (rule trans)
+        apply (rule f_alphas)
+                apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+        apply (rule T1.alpha_refls)
+       apply (unfold f0_T1_def)[1]
+       apply (rule refl)
+      (* copied from above *)
+      apply (rule conjI[OF refl])
+      apply (rule trans)
+       apply (rule f_alphas)
+               apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+       apply (rule T1.alpha_refls)
+      apply (unfold f0_T1_def)[1]
+      apply (rule refl)
+      (* copied from above *)
+     apply (rule conjI[OF refl])
+     apply (rule trans)
+      apply (rule f_alphas)
+              apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+      apply (rule T1.alpha_refls)
+     apply (unfold f0_T2_def)[1]
+     apply (rule refl)
+      (* copied from above *)
+    apply (rule conjI[OF refl])
+    apply (rule trans)
+     apply (rule f_alphas)
+             apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+     apply (rule T1.alpha_refls)
+    apply (unfold f0_T2_def)[1]
+    apply (rule refl)
+    done
+qed
+
+lemmas f0_swaps = conjunct1[OF f_swap_alpha[rotated -2, OF T1.alpha_refls suitable_pick0s suitable_pick0s], unfolded f0_T1_def[symmetric], THEN conjunct1]
+  conjunct2[OF f_swap_alpha[rotated -2, OF T1.alpha_refls suitable_pick0s suitable_pick0s], unfolded f0_T2_def[symmetric], THEN conjunct1]
+
+lemma nnoclash_noclashs:
+  "nnoclash_T1 x = noclash_T1 (map_T1_pre id id id id id id rep_T1 rep_T1 rep_T2 rep_T2 x)"
+  "nnoclash_T2 y = noclash_T2 (map_T2_pre id id id id id id rep_T1 rep_T1 rep_T2 rep_T2 y)"
+   apply (unfold nnoclash_T1_def nnoclash_T2_def noclash_T1_def noclash_T2_def
+      T1_pre_set_map_ids T2_pre_set_map_ids image_id
+      )
+   apply (unfold image_comp[unfolded comp_def] FFVars_T11_def[symmetric] FFVars_T12_def[symmetric]
+      FFVars_T21_def[symmetric] FFVars_T22_def[symmetric]
+      )
+   apply (rule refl)+
+  done
+
+
+(**********************************************)
+(*********** Final result lemmas **************)
+(**********************************************)
+
+lemma ff0_cctors:
+  "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> nnoclash_T1 x \<Longrightarrow>
+     ff0_T1 (T1_ctor x) p = U1ctor (map_T1_pre id id id id id id (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T2 t))  (\<lambda>t. (t, ff0_T2 t)) x) p"
+  "set5_T2_pre y \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T2_pre y \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> nnoclash_T2 y \<Longrightarrow>
+     ff0_T2 (T2_ctor y) p = U2ctor (map_T2_pre id id id id id id (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T2 t))  (\<lambda>t. (t, ff0_T2 t)) y) p"
+   apply (unfold ff0_T1_def ff0_T2_def T1_ctor_def T2_ctor_def)
+   apply (rule trans)
+    apply (rule f0_alphas[THEN fun_cong])
+    apply (rule T1.TT_Quotient_rep_abss)
+   apply (rule trans)
+    apply (rule f0_T1_ctor)
+      apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids)
+      apply assumption+
+    apply (rule nnoclash_noclashs[THEN iffD1])
+    apply assumption
+   apply (unfold U1ctor'_def)[1]
+   apply (subst T1_pre.map_comp)
+        apply (rule supp_id_bound bij_id)+
+   apply (unfold comp_def map_prod_simp id_def)
+   apply (unfold id_def[symmetric])
+   apply (subst T1_pre.map_comp)
+        apply (rule supp_id_bound bij_id)+
+   apply (unfold comp_def map_prod_simp id_def)
+   apply (unfold id_def[symmetric] T1.TT_Quotient_abs_reps)
+   apply (rule refl)
+    (* copied from above *)
+  apply (rule trans)
+   apply (rule f0_alphas[THEN fun_cong])
+   apply (rule T1.TT_Quotient_rep_abss)
+  apply (rule trans)
+   apply (rule f0_T2_ctor)
+     apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids)
+     apply assumption+
+   apply (rule nnoclash_noclashs[THEN iffD1])
+   apply assumption
+  apply (unfold U2ctor'_def)[1]
+  apply (subst T2_pre.map_comp)
+       apply (rule supp_id_bound bij_id)+
+  apply (unfold comp_def map_prod_simp id_def)
+  apply (unfold id_def[symmetric])
+  apply (subst T2_pre.map_comp)
+       apply (rule supp_id_bound bij_id)+
+  apply (unfold comp_def map_prod_simp id_def)
+  apply (unfold id_def[symmetric] T1.TT_Quotient_abs_reps)
+  apply (rule refl)
+  done
+
+lemma ff0_swaps:
+  fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+    and imsupp_prems: "imsupp f1 \<inter> avoiding_set1 = {}" "imsupp f2 \<inter> avoiding_set2 = {}"
+  shows
+    "ff0_T1 (rrename_T1 f1 f2 t1) p = U1map f1 f2 t1 (ff0_T1 t1 (Pmap (inv f1) (inv f2) p))"
+    "ff0_T2 (rrename_T2 f1 f2 t2) p = U2map f1 f2 t2 (ff0_T2 t2 (Pmap (inv f1) (inv f2) p))"
+   apply (unfold ff0_T1_def ff0_T2_def rrename_T1_def rrename_T2_def)
+   apply (rule trans)
+    apply (rule f0_alphas[THEN fun_cong])
+    apply (rule T1.TT_Quotient_rep_abss)
+   apply (rule trans)
+    apply (rule f0_swaps)
+         apply (rule assms)+
+   apply (unfold PU1map'_def U1map'_def T1.TT_Quotient_abs_reps)[1]
+   apply (rule refl)
+    (* copied from above *)
+  apply (rule trans)
+   apply (rule f0_alphas[THEN fun_cong])
+   apply (rule T1.TT_Quotient_rep_abss)
+  apply (rule trans)
+   apply (rule f0_swaps)
+        apply (rule assms)+
+  apply (unfold PU2map'_def U2map'_def T1.TT_Quotient_abs_reps)[1]
+  apply (rule refl)
+  done
+
+lemmas ff0_UFVarss = f0_UFVars'(1)[of "rep_T1 _", unfolded U1FVars_1'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
+  f0_UFVars'(2)[of "rep_T1 _", unfolded U1FVars_2'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
+  f0_UFVars'(3)[of "rep_T2 _", unfolded U2FVars_1'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
+  f0_UFVars'(4)[of "rep_T2 _", unfolded U2FVars_2'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
+
+
 end

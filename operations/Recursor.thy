@@ -974,8 +974,6 @@ lemma U2ctor_rename:
   apply (erule id_onD[OF imsupp_id_on, rotated], assumption)
   done
 
-lemmas infinite_UNIV = cinfinite_imp_infinite[OF T1_pre.UNIV_cinfinite]
-
 lemma U1ctor_cong:
   fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"

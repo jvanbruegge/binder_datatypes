@@ -70,4 +70,6 @@ in lthy end
 \<close>
 print_theorems
 
+lemmas infinite_UNIV = cinfinite_imp_infinite[OF T1_pre.UNIV_cinfinite]
+
 end

@@ -67,12 +67,13 @@ sig
   type fp_result = {
     fp: BNF_Util.fp_kind,
     binding_relation: int list list,
-    raw_fp: raw_result fp_result_T,
-    quotient_fp: quotient_result fp_result_T,
-    pre_mrbnf: MRBNF_Def.mrbnf
+    rec_vars: int list,
+    raw_fps: raw_result fp_result_T list,
+    quotient_fps: quotient_result fp_result_T list,
+    pre_mrbnfs: MRBNF_Def.mrbnf list
   };
 
-  val substitute_vars: typ list -> fp_result -> fp_result
+  val substitute_vars: (typ * typ) list -> fp_result -> fp_result
 
   val morph_fp_result_T: (morphism -> 'a -> 'a) -> morphism -> 'a fp_result_T -> 'a fp_result_T
   val morph_raw_result: morphism -> raw_result -> raw_result
@@ -217,28 +218,25 @@ fresh_co_induct_param } = {
 type fp_result = {
   fp: BNF_Util.fp_kind,
   binding_relation: int list list,
-  raw_fp: raw_result fp_result_T,
-  quotient_fp: quotient_result fp_result_T,
-  pre_mrbnf: MRBNF_Def.mrbnf
+  rec_vars: int list,
+  raw_fps: raw_result fp_result_T list,
+  quotient_fps: quotient_result fp_result_T list,
+  pre_mrbnfs: MRBNF_Def.mrbnf list
 };
 
-fun morph_fp_result phi ({ fp, binding_relation, raw_fp, quotient_fp, pre_mrbnf }) = {
-  fp = fp, binding_relation = binding_relation,
-  raw_fp = morph_fp_result_T morph_raw_result phi raw_fp,
-  quotient_fp = morph_fp_result_T morph_quotient_result phi quotient_fp,
-  pre_mrbnf = MRBNF_Def.morph_mrbnf phi pre_mrbnf
+fun morph_fp_result phi ({ fp, binding_relation, rec_vars, raw_fps, quotient_fps, pre_mrbnfs }) = {
+  fp = fp, binding_relation = binding_relation, rec_vars = rec_vars,
+  raw_fps = map (morph_fp_result_T morph_raw_result phi) raw_fps,
+  quotient_fps = map (morph_fp_result_T morph_quotient_result phi) quotient_fps,
+  pre_mrbnfs = map (MRBNF_Def.morph_mrbnf phi) pre_mrbnfs
 } : fp_result;
 
-fun substitute_vars vars fp_result =
+fun substitute_vars replacements fp_result =
   let
-    val old_vars = rev (map TFree (Term.add_tfreesT (#T (#quotient_fp fp_result)) [])
-      @ map TVar (Term.add_tvarsT (#T (#quotient_fp fp_result)) [])
-    );
-    val replacement = (old_vars ~~ vars);
     val phi = Morphism.morphism "instantiate vars" {
       binding = [], fact = [],
-      typ = [fn _ => Term.typ_subst_atomic replacement],
-      term = [fn _ => Term.subst_atomic_types replacement]
+      typ = [fn _ => Term.typ_subst_atomic replacements],
+      term = [fn _ => Term.subst_atomic_types replacements]
     };
   in morph_fp_result phi fp_result end;
 
@@ -248,7 +246,7 @@ structure Data = Generic_Data (
   fun merge data : T = Symtab.merge (K true) data;
 );
 
-val register_fp_results = fold (fn fp_result as { quotient_fp = { T = Type (s, _), ...}, ...} =>
+val register_fp_results = fold (fn fp_result as { quotient_fps = ({ T = Type (s, _), ...} :: _), ...} =>
   Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
     (fn phi => Data.map (Symtab.update (s, morph_fp_result phi fp_result))));
 

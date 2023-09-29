@@ -1920,8 +1920,8 @@ lemma int_empties1:
 
 ML \<open>
 val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
-val quotient = #quotient_fp fp_res
-val raw = #raw_fp fp_res
+val quotient = hd (#quotient_fps fp_res)
+val raw = hd (#raw_fps fp_res)
 \<close>
 
 lemma int_empties2:
@@ -7277,6 +7277,5 @@ lemmas ff0_UFVarss = f0_UFVars'(1)[of "rep_T1 _", unfolded U1FVars_1'_def T1.TT_
   f0_UFVars'(2)[of "rep_T1 _", unfolded U1FVars_2'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
   f0_UFVars'(3)[of "rep_T2 _", unfolded U2FVars_1'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
   f0_UFVars'(4)[of "rep_T2 _", unfolded U2FVars_2'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
-
 
 end

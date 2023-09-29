@@ -1,7 +1,7 @@
 signature MRBNF_FP =
 sig
   val construct_binder_fp: BNF_Util.fp_kind -> ((string * MRBNF_Def.mrbnf) * int) list ->
-    int list list -> local_theory -> MRBNF_FP_Def_Sugar.fp_result list * local_theory
+    int list list -> local_theory -> MRBNF_FP_Def_Sugar.fp_result * local_theory
 end;
 
 structure MRBNF_FP : MRBNF_FP =
@@ -2291,7 +2291,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
 
     (* TODO: use giant map instead of x times (nth ... i) *)
-    val ress = map (fn i =>
+    val (raw_ress, quot_ress) = split_list (map (fn i =>
       let
         fun nth_opt xs_opt i = Option.mapPartial (fn xs => try (nth xs) i) xs_opt
         val raw_fp_res = {
@@ -2373,19 +2373,20 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             fresh_co_induct = TT_fresh_co_induct
           }
         } : quotient_result fp_result_T;
-      in {
-        fp = fp,
-        binding_relation = binding_relation,
-        raw_fp = raw_fp_res,
-        quotient_fp = quotient_fp_res,
-        pre_mrbnf = nth mrbnfs i
-      } : fp_result end
-    ) (0 upto n - 1);
+      in (raw_fp_res, quotient_fp_res) end
+    ) (0 upto n - 1));
 
-    val lthy = register_fp_results ress lthy
+    val res = {
+      fp = fp,
+      binding_relation = binding_relation,
+      rec_vars = ks,
+      raw_fps = raw_ress,
+      quotient_fps = quot_ress,
+      pre_mrbnfs = mrbnfs
+    } : fp_result;
 
-    val _ = @{print} FVars_intross
-    val _ = @{print} FFVars_intross
+    val lthy = register_fp_results [res] lthy
+
     val notes =
       [("rename_simps", rename_simps),
        ("rename_id0s", rename_id0s),
@@ -2465,7 +2466,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val (noted, lthy') = Local_Theory.notes notes lthy
   in
-    (ress, lthy')
+    (res, lthy')
   end;
 
 end;

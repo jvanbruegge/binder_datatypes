@@ -69,39 +69,18 @@ lemma small_PFVars:
    apply (rule small_PFVars infinite_UNIV)+
   done
 
-ML \<open>
-val nvars:int = 2
+definition U1map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1" where
+  "U1map f1 f2 t \<equiv> \<lambda>u. rrename_T1 f1 f2 u"
+definition U2map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2" where
+  "U2map f1 f2 t \<equiv> \<lambda>u. rrename_T2 f1 f2 u"
 
-val parameters = {
-  P = @{typ "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P"},
-  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
-  PFVarss = [
-    @{term "PFVars_1 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
-    @{term "PFVars_2 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"}
-  ],
-  min_bound = false,
-  axioms = {
-    Pmap_id0 = fn ctxt => resolve_tac ctxt @{thms Pmap_id0} 1,
-    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmap} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVars} 1)
-  }
-};
-\<close>
-
-definition U1map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1" where
-  "U1map f1 f2 t u \<equiv> rrename_T1 f1 f2 u"
-definition U2map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2" where
-  "U2map f1 f2 t u \<equiv> rrename_T2 f1 f2 u"
-
-definition U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U1 \<Rightarrow> 'var set" where
+definition U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U1 \<Rightarrow> 'var set" where
   "U1FVars_1 t u \<equiv> FFVars_T11 u"
-definition U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U1 \<Rightarrow> 'tyvar set" where
+definition U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U1 \<Rightarrow> 'tyvar set" where
   "U1FVars_2 t u \<equiv> FFVars_T12 u"
-definition U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U2 \<Rightarrow> 'var set" where
+definition U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U2 \<Rightarrow> 'var set" where
   "U2FVars_1 t u \<equiv> FFVars_T21 u"
-definition U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U2 \<Rightarrow> 'tyvar set" where
+definition U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U2 \<Rightarrow> 'tyvar set" where
   "U2FVars_2 t u \<equiv> FFVars_T22 u"
 
 lemma U1map_Uctor:
@@ -473,6 +452,28 @@ lemma U2FVars_subsets:
     done
   done
 
+
+ML \<open>
+val nvars:int = 2
+
+val parameters = {
+  P = @{typ "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P"},
+  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
+  PFVarss = [
+    @{term "PFVars_1 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
+    @{term "PFVars_2 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"}
+  ],
+  min_bound = false,
+  axioms = {
+    Pmap_id0 = fn ctxt => resolve_tac ctxt @{thms Pmap_id0} 1,
+    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+    PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmap} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
+    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVars} 1)
+  }
+};
+\<close>
+
 ML \<open>
 val T1_model = {
   binding = @{binding vvsubst_T1},
@@ -481,7 +482,7 @@ val T1_model = {
     @{term "U1FVars_1 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1 \<Rightarrow> _"},
     @{term "U1FVars_2 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1 \<Rightarrow> _"}
   ],
-  Umap = @{term "\<lambda>f1 f2 (t::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1) (u::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1). rrename_T1 f1 f2 u"},
+  Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1 \<Rightarrow> _"},
   Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
   avoiding_sets = [
     @{term "{} :: 'var::{var_T1_pre,var_T2_pre} set"},
@@ -489,10 +490,10 @@ val T1_model = {
   ],
   axioms = {
     small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms emp_bound} 1),
-    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    UFVars_Umaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
+    Umap_id0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_id0s} 1,
+    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Umap_cong_id = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN Local_Defs.unfold0_tac ctxt @{thms U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+    UFVars_Umaps = replicate nvars (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U1map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U1FVars_subsets} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
   }
@@ -505,7 +506,7 @@ val T2_model = {
     @{term "U2FVars_1 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U2 \<Rightarrow> _"},
     @{term "U2FVars_2 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U2 \<Rightarrow> _"}
   ],
-  Umap = @{term "\<lambda>f1 f2 (t::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2) (u::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U2). rrename_T2 f1 f2 u"},
+  Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U2 \<Rightarrow> _"},
   Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
   avoiding_sets = [
     @{term "{} :: 'var::{var_T1_pre,var_T2_pre} set"},
@@ -513,10 +514,10 @@ val T2_model = {
   ],
   axioms = {
     small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms emp_bound} 1),
-    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    UFVars_Umaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
+    Umap_id0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_id0s} 1,
+    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Umap_cong_id = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+    UFVars_Umaps = replicate nvars (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subsets} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
   }
@@ -531,7 +532,8 @@ ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 local_setup \<open>fn lthy =>
 let
   val qualify = I
-  val (res, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res [T1_model, T2_model] lthy
+  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters [T1_model, T2_model] lthy
+  val _ = @{print} ress
 in lthy end\<close>
 
 end

@@ -215,7 +215,17 @@ else undefined)"
   )) p
 else undefined)"
      apply pat_completeness
-  by simp_all
+    apply (unfold prod.inject sum.inject raw_T1.inject raw_T2.inject Inl_Inr_False Inr_Inl_False)
+    (* REPEAT_DETERM *)
+    apply ((erule conjE)+, hypsubst)?
+    apply (rule refl | erule FalseE)
+    (* copied from above *)
+   apply ((erule conjE)+, hypsubst)?
+   apply (rule refl | erule FalseE)
+    (* copied from above *)
+  apply ((erule conjE)+, hypsubst)?
+  apply (rule refl | erule FalseE)
+  done
 termination
   apply (relation "inv_image {(x, y). case x of
     Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)

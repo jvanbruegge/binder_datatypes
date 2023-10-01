@@ -298,7 +298,6 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
         val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
         val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
 
-        val qT = #T quotient_fp;
         val prod_PUs = map2 (fn model => fn quotient_fp =>
           HOLogic.mk_prodT (#T quotient_fp, #P params --> #U model)
         ) models (#quotient_fps fp_res);
@@ -307,10 +306,9 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
         val frees = vars @ pfrees;
         val bounds = pbounds @ vars;
 
-        val (((y, pus), t), _) = lthy
+        val ((y, pus), _) = lthy
           |> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads (plives @ As) bounds frees mrbnf]
-          ||>> mk_Frees "pu" (map (snd o HOLogic.dest_prodT) As)
-          ||>> apfst hd o mk_Frees "t" [qT];
+          ||>> mk_Frees "pu" (map (snd o HOLogic.dest_prodT) As);
 
         val tacs = #axioms model;
         val goals = mk_termlike_goals vars false (SOME quotient_fp) (#U model) (#Umap model) (#UFVarss model) lthy;
@@ -419,114 +417,213 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
 
 val mk_minus = HOLogic.mk_binop @{const_name minus}
 
-fun mk_map_prod f g =
+fun mk_bin_map name mk_T f g =
   let
     val f_T = fastype_of f
     val g_T = fastype_of g
     val (fa, fb) = dest_funT f_T
     val (ga, gb) = dest_funT g_T
-  in Const (@{const_name map_prod},
-    f_T --> g_T --> HOLogic.mk_prodT (fa, ga) --> HOLogic.mk_prodT (fb, gb)
- ) $ f $ g end;
+  in Const (name, f_T --> g_T --> mk_T (fa, ga) --> mk_T (fb, gb)) $ f $ g end;
 
-(*fun define_recursor_consts qualify fp_result params (models : thm model list) lthy =
+val mk_map_prod = mk_bin_map @{const_name map_prod} HOLogic.mk_prodT
+val mk_map_sum = mk_bin_map @{const_name map_sum} BNF_Util.mk_sumT
+
+fun mk_inv_image R f =
   let
-    val raw = #raw_fp fp_result
-    val quotient = #quotient_fp fp_result
-    val mrbnf = #pre_mrbnf fp_result
-    val deads = deads_of_mrbnf mrbnf
-    val live = live_of_mrbnf mrbnf
-    val bound = bound_of_mrbnf mrbnf
-    val n = live + bound + free_of_mrbnf mrbnf
-    val var_types = var_types_of_mrbnf mrbnf
+    val f_T = fastype_of f
+    val arg_T = fst (dest_funT f_T);
+  in Const (@{const_name inv_image},
+    fastype_of R --> f_T --> BNF_Util.mk_relT (arg_T, arg_T)
+  ) $ R $ f end
 
-    val P = #P params
-    val U = #U model
-    val PU = P --> U
-    val PFVarss = #PFVarss params
-    val raw_T = #T raw
-    val vars = rev (map TFree (Term.add_tfreesT raw_T []))
-    val nvars = length vars
+fun mk_names _ [] = []
+  | mk_names s [_] = [s]
+  | mk_names s xs = map (fn i => s ^ string_of_int i) (1 upto length xs)
 
-    val ctor = #ctor raw
-    val FVars = #FVars raw
-    val abs = #abs (#inner quotient)
+fun define_recursor_consts qualify fp_res params (models : thm model list) vars (pfrees, pbounds, plives) lthy =
+  let
+    val nvars = length vars;
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
-    fun card T = if #min_bound params then
-      foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars)
-      else mk_card_of (HOLogic.mk_UNIV T)
-    fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f)) (card (domain_type (fastype_of f)));
-
-    val pre_T = mk_T_of_mrbnf deads (replicate live raw_T) vars vars mrbnf;
-    fun mk_sets T =
+    val (suitables, lthy) = @{fold_map 4} (fn model => fn raw => fn mrbnf => fn name => fn lthy =>
       let
-        val pre_sets = mk_sets_of_mrbnf (replicate n deads) (replicate n (replicate live T))
-          (replicate n vars) (replicate n vars) mrbnf
-        val binding_sets = map_filter (fn (Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
-        val free_sets = map_filter (fn (Free_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
-        val live_sets = map_filter (fn (Live_Var, x) => SOME x | _ => NONE) (var_types ~~ pre_sets)
-      in (live_sets, binding_sets, free_sets) end;
-    val (live_sets, binding_sets, free_sets) = mk_sets raw_T;
+        val pre_T = fst (dest_funT (fastype_of (#ctor raw)));
+        val sets = MRBNF_Def.sets_of_mrbnf mrbnf;
+        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
+          (fst (dest_funT (fastype_of (hd sets))), pre_T) Vartab.empty;
+        val sets = map (Envir.subst_term (tyenv, Vartab.empty)) sets;
+        val bsets = map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (MRBNF_Def.var_types_of_mrbnf mrbnf ~~ sets)
+        val rhss = @{map 5} (fn var => fn FVars => fn PFVars => fn avoiding_set => fn bset =>
+          let
+            val f_T = var --> var;
+            val pick = Free ("pick", pre_T --> #P params --> f_T);
+            val pick_t = pick $ Bound 1 $ Bound 0;
+            val Un_t = mk_Un (mk_Un (
+              FVars $ (#ctor raw $ Bound 1), PFVars $ Bound 0),
+              avoiding_set
+            );
+          in Term.absfree (dest_Free pick) (HOLogic.mk_all ("x", pre_T, HOLogic.mk_all ("p", #P params, foldr1 HOLogic.mk_conj [
+            mk_bij pick_t, mk_supp_bound pick_t, mk_int_empty (
+              mk_imsupp pick_t, mk_minus (bset $ Bound 1, Un_t)
+            ),
+            mk_int_empty (mk_image pick_t $ (bset $ Bound 1), Un_t)
+          ]))) end
+        ) vars (#FVars raw) (#PFVarss params) (#avoiding_sets model) bsets;
+      in mk_defs_t false (#binding model) qualify name 0 rhss lthy end
+    ) models (#raw_fps fp_res) (#pre_mrbnfs fp_res) (mk_names "suitable" models) lthy;
 
-    fun mk_suitable_rhs var bset FVars PFVars avoiding_set =
+    val ((fs, p), _) = lthy
+      |> mk_Frees "f" (map (fn v => v --> v) vars)
+      ||>> apfst hd o mk_Frees "p" [#P params];
+
+    val (model_consts, lthy) = @{fold_map 4} (fn model => fn raw => fn quot => fn mrbnf => fn lthy =>
       let
-        val f_T = var --> var
-        val pick_T = pre_T --> P --> f_T
-        val pick_t = Free ("pick", pick_T) $ Bound 1 $ Bound 0
-        val Un = foldl1 mk_Un [
-          FVars $ (ctor $ Bound 1),
-          PFVars $ Bound 0,
-          avoiding_set
-        ];
-      in Term.absfree ("pick", pick_T) (
-        HOLogic.mk_all ("x", pre_T, (HOLogic.mk_all ("p", P, (foldr1 HOLogic.mk_conj [
-          mk_bij pick_t, mk_supp_bound pick_t,
-          mk_int_empty (mk_imsupp pick_t, mk_minus (Un, bset $ Bound 1)),
-          mk_int_empty (mk_image pick_t $ (bset $ Bound 1), Un)
-        ]))))
-      ) end;
-
-    val (suitables, lthy) = mk_defs_t false ff0_b qualify "suitable" 0
-      (@{map 5} mk_suitable_rhs vars binding_sets FVars PFVarss (#avoiding_sets model))
-      lthy
-
-    val fs = map (fn var => Free ("f", var --> var)) vars;
-    val x = Free ("x", pre_T)
-    val p = Free ("p", P)
-
-    val (Umap', lthy) = mk_def_t false ff0_b qualify "Umap'" (nvars + 1) (fold_rev Term.abs (map dest_Free fs @ [("t", raw_T)]) (
-      Term.list_comb (#Umap model, map Bound (nvars downto 1) @ [abs $ Bound 0])
-    )) lthy;
-
-    val (UFVars', lthy) = mk_defs_t false ff0_b qualify "UFVars'" 1 (map (fn UFVars =>
-      Term.abs ("t", raw_T) (UFVars $ (abs $ Bound 0))
-    ) (#UFVars model)) lthy
-
-    fun mk_PUmap_rhs Umap_t T = fold_rev Term.absfree (map dest_Free (fs @ [Free ("t", T), Free ("pu", PU), p])) (
-      Term.list_comb (Umap_t, map Bound (nvars + 2 downto 2)) $ (Bound 1 $ Term.list_comb (#Pmap params,
-        map mk_inv fs @ [Bound 0]
-      ))
-    );
-    val (PUmap', lthy) = mk_def_t false ff0_b qualify "PUmap'" (nvars + 1) (mk_PUmap_rhs (fst Umap') raw_T) lthy
-    val (PUmap, lthy) = mk_def_t false ff0_b qualify "PUmap" (nvars + 1) (mk_PUmap_rhs (#Umap model) (#T quotient)) lthy
-
-    val ids = map HOLogic.id_const vars;
-    fun mk_map_id fs =
-      let val (As, Bs) = map_split (dest_funT o fastype_of) fs;
-      in Term.list_comb (mk_map_of_mrbnf deads As Bs vars vars mrbnf, interlace fs ids ids var_types) end;
-
-    val (CTOR, lthy) =
-      let
-        fun mk_CTOR_lives_T T = replicate live (HOLogic.mk_prodT (T, PU))
-        val CTOR_x_T = mk_T_of_mrbnf deads (mk_CTOR_lives_T raw_T) vars vars mrbnf
-
-        val rhs = Term.abs ("x", CTOR_x_T) (#Uctor model $ (
-          mk_map_id (replicate live (mk_map_prod abs (HOLogic.id_const PU))) $ Bound 0
+        val def = mk_def_t false (#binding model) qualify;
+        val abs = #abs (#inner quot);
+        fun mk_PUmap T Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", T) (
+          Term.abs ("pu", #P params --> #U model) (Term.abs ("p", #P params) (
+            Term.list_comb (Umap, fs @ [Bound 2]) $ (Bound 1 $ Term.list_comb (#Pmap params,
+              map mk_inv fs @ [Bound 0]
+            ))
+          ))
         ));
-      in mk_def_t false ff0_b qualify "CTOR" 1 rhs lthy end;
+        val mapx =
+          let
+            val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
+            val (X_T, X'_T) = apfst (snd o split_last) (Term.strip_type (fastype_of mapx));
+            val A'_T = hd (Term.binder_types (fastype_of (#Uctor model)));
+            val A_T = Type (apsnd (map (fn Type (@{type_name prod}, [T, PU]) =>
+              HOLogic.mk_prodT (#T (fst (the (
+                List.find (curry (op=) T o #T o snd) (#raw_fps fp_res ~~ #quotient_fps fp_res)
+              ))), PU)
+              | T => T
+            )) (dest_Type A'_T));
+            val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
+              (X_T --> X'_T, A_T --> A'_T)
+              Vartab.empty;
+            val mapx = Envir.subst_term (tyenv, Vartab.empty) mapx;
+            val gs = map (fn Type (@{type_name prod}, [T, PU]) => mk_map_prod (
+                #abs (#inner (the (List.find (curry (op=) T o #T) (#quotient_fps fp_res))))
+              ) (HOLogic.id_const PU)
+              | T => HOLogic.id_const T
+            ) (snd (dest_Type A'_T));
+          in Term.list_comb (mapx, gs) end;
+        val ((((Umap', UFVars's), PUmap), Uctor'), lthy) = lthy
+          |> def "Umap'" (nvars + 1) (fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", #T raw) (
+              Term.list_comb (#Umap model, fs @ [abs $ Bound 0])
+            )))
+          ||>> mk_defs_t false (#binding model) qualify "UFVars'" 1 (map (fn UFVars =>
+              Term.abs ("t", #T raw) (UFVars $ (abs $ Bound 0))
+            ) (#UFVarss model))
+          ||>> def "PUmap" (nvars + 1) (mk_PUmap (#T quot) (#Umap model))
+          ||>> def "Uctor'" 1 (Term.abs ("y", fst (dest_funT (fastype_of mapx))) (#Uctor model $ (mapx $ Bound 0)));
+        val (PUmap', lthy) = lthy
+          |> def "PUmap'" (nvars + 1) (mk_PUmap (#T raw) (fst Umap'));
+      in ({ Umap' = Umap', UFVars's = UFVars's, PUmap = PUmap, PUmap' = PUmap', Uctor' = Uctor' }, lthy) end
+    ) models (#raw_fps fp_res) (#quotient_fps fp_res) (#pre_mrbnfs fp_res) lthy;
 
+    fun interlace lives bounds frees = MRBNF_Def.interlace
+      (map HOLogic.id_const plives @ lives) (map HOLogic.id_const pbounds @ bounds)
+      (frees @ map HOLogic.id_const pfrees);
+    val (rec_fs, lthy) =
+      let
+        val ((pickss, xs), names_lthy) = lthy
+          |> mk_Freess "pick" (map (map (fst o dest_funT o fastype_of o fst)) suitables)
+          ||>> mk_Frees "x" (map (fst o dest_funT o fastype_of o #ctor) (#raw_fps fp_res));
+        val f_name = "f_" ^ short_type_name (Binding.name_of (Binding.conglomerate (map #binding models)));
+        val (fs, _) = names_lthy
+          |> mk_Frees f_name (map2 (fn model => fn raw =>
+            fold_rev (curry (op-->)) (map fastype_of (flat pickss)) (
+              #T raw --> #P params --> #U model
+            )
+          ) models (#raw_fps fp_res));
+        val picks = flat pickss;
+
+        val thy = Proof_Context.theory_of lthy;
+        val ids = map HOLogic.id_const vars;
+        val rec_ts = map2 (fn f => fn raw =>
+          let val t = Free ("t", #T raw)
+          in Term.absfree (dest_Free t) (
+            HOLogic.mk_prod (t, Term.list_comb (f, picks) $ t)
+          ) end
+        ) fs (#raw_fps fp_res);
+
+        val map_ts = @{map 5} (fn raw => fn mrbnf => fn model_const => fn x => fn picks =>
+          let
+            val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
+            val (X_T, X'_T) = apfst (snd o split_last) (Term.strip_type (fastype_of mapx));
+            val pre_T = fst (dest_funT (fastype_of (#ctor raw)));
+            val tyenv1 = Sign.typ_match thy (X_T --> X'_T,
+              pre_T --> hd (Term.binder_types (fastype_of (fst (#Uctor' model_const))))
+            ) Vartab.empty;
+            val tyenv2 = Sign.typ_match thy (X_T --> X'_T, pre_T --> pre_T) Vartab.empty;
+            val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+            fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs)
+            val rename_ts = map2 (fn i => fn raw => if member (op=) (flat (#binding_relation fp_res)) i then
+              let val to_rename = @{map 3} (fn is => fn pick => fn var => if member (op=) is i then pick $ x $ p else HOLogic.id_const var) (#binding_relation fp_res) picks vars;
+              in if forall (fn Const (@{const_name id}, _) => true | _ => false) to_rename then
+                HOLogic.id_const (#T raw) else
+                Term.list_comb (#rename raw, to_rename)
+              end
+              else HOLogic.id_const (#T raw)
+            ) (0 upto foldr1 (op+) (#rec_vars fp_res) - 1) (replicate_rec (#raw_fps fp_res));
+          in Term.list_comb (
+            Envir.subst_term (tyenv1, Vartab.empty) mapx,
+            interlace (flat (map2 replicate (#rec_vars fp_res) rec_ts)) ids ids var_types
+          ) $ (Term.list_comb (
+            Envir.subst_term (tyenv2, Vartab.empty) mapx,
+            interlace rename_ts (map (fn pick => pick $ x $ p) picks) ids var_types
+          ) $ x) end
+        ) (#raw_fps fp_res) (#pre_mrbnfs fp_res) model_consts xs pickss;
+
+        val eqs = @{map 6} (fn f => fn x => fn raw => fn model => fn model_const => fn map_t => mk_Trueprop_eq (
+          Term.list_comb (f, picks) $ (#ctor raw $ x) $ p,
+          BNF_FP_Util.mk_If (foldr1 HOLogic.mk_conj (map2 (curry (op$) o fst) (flat suitables) picks))
+            (fst (#Uctor' model_const) $ map_t $ p)
+            (Const (@{const_name undefined}, #U model))
+        )) fs xs (#raw_fps fp_res) models model_consts map_ts;
+
+        val lthy = snd (Function.add_function
+          (map (fn f => (Binding.concealed (Binding.name (fst (dest_Free f))), NONE, NoSyn)) fs)
+          (map (fn eq => (((Binding.concealed Binding.empty, []), eq), [], [])) eqs)
+          Function_Common.default_config (mk_f_pat_complete_tac (map #inject (#raw_fps fp_res))) lthy
+        );
+
+        fun mk_relation T =
+          let
+            val T' = fst (dest_relT T)
+            val Ts = fold_map (K (swap o BNF_FP_Util.dest_sumT)) (2 upto length models) T';
+            val Ts = snd Ts :: rev (fst Ts);
+            val (sndss, Ts') = split_list (map (
+              fold_map (K (fn T => (snd_const T, snd (HOLogic.dest_prodT T)))) picks
+            ) Ts);
+            val funs = map2 (fn snds => fn T => foldl1 HOLogic.mk_comp (fst_const T :: rev snds)) sndss Ts';
+            val map_sum = foldr1 (uncurry mk_map_sum) funs;
+            val subshape_rel = the (#subshape_rel (#inner (hd (#raw_fps fp_res))));
+          in mk_inv_image subshape_rel map_sum end;
+
+        val pick_prems = maps ((fn suitable_def =>
+          let
+            val conj = spec OF [spec OF [iffD1 OF [
+              @{thm fun_cong[OF meta_eq_to_obj_eq]} OF [suitable_def]
+            ]]];
+          in [conj RS conjunct1, conj RS conjunct2 RS conjunct1] end
+        ) o snd) (flat suitables);
+
+        val (info, lthy) = Function.prove_termination NONE (mk_f_termination_tac mk_relation
+          (the (#wf_subshape (#inner (hd (#raw_fps fp_res)))))
+          (maps (flat o the o #set_subshape_imagess o #inner) (#raw_fps fp_res))
+          (maps (flat o the o #set_subshapess o #inner) (#raw_fps fp_res))
+          (maps set_map_of_mrbnf (#pre_mrbnfs fp_res)) pick_prems lthy
+        ) lthy;
+
+        val _ = @{print} (#fs info)
+      in ((), lthy) end;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+    (*
     val nbound = length (#binding_relation fp_result);
     val pick_Ts = map (fn var => pre_T --> P --> var --> var) (take nbound vars);
     val picks = fst (mk_Frees "pick" pick_Ts lthy);
@@ -682,6 +779,7 @@ fun mk_map_prod f g =
   in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,
     morph f, map morph pick0s, morph f0, morph ff0, morph noclash, morph nnoclash, morph XXl,
     morph XXr), lthy) end; *)
+  in () end;
 
 fun every_other [] = []
   | every_other [x] = [x]
@@ -719,8 +817,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
     in (fp_res, (pfrees, pbounds, plives)) end;
 
     val ((params, models, defs), lthy) = prove_model_axioms qualify fp_res params models vars passives lthy;
-
-    val _ = @{print} (params, models, defs)
+    val _ = define_recursor_consts qualify fp_res params models vars passives lthy;
     (*val ((suitables, Umap', UFVars's, PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
     XXl, XXr), lthy) = define_recursor_consts qualify model ff0_b lthy
 
@@ -2111,6 +2208,6 @@ fun create_binding_recursor qualify fp_res params models lthy =
     rec_swap = unfold_defs ff0_swap,
     rec_UFVarss = map unfold_defs ff0_UFVarss,
     noclash = nnoclash
-  }, lthy) *) error "foo" end;
+  }, lthy) *) (error "foo", lthy) end;
 
 end

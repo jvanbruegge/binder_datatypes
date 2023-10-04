@@ -454,9 +454,11 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
     ) models (#raw_fps fp_res) (#pre_mrbnfs fp_res) (mk_names "suitable" models) lthy;
     val suitables = flat suitabless;
 
-    val ((fs, p), _) = lthy
+    val ((((fs, p), pickss), xs), names_lthy) = lthy
       |> mk_Frees "f" (map (fn v => v --> v) vars)
-      ||>> apfst hd o mk_Frees "p" [#P params];
+      ||>> apfst hd o mk_Frees "p" [#P params]
+      ||>> mk_Freess "pick" (map (map (fst o dest_funT o fastype_of o fst)) suitabless)
+      ||>> mk_Frees "x" (map (fst o dest_funT o fastype_of o #ctor) (#raw_fps fp_res));
 
     val (model_consts, lthy) = @{fold_map 4} (fn model => fn raw => fn quot => fn mrbnf => fn lthy =>
       let
@@ -508,11 +510,24 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
     fun interlace lives bounds frees = MRBNF_Def.interlace
       (map HOLogic.id_const plives @ lives) (map HOLogic.id_const pbounds @ bounds)
       (frees @ map HOLogic.id_const pfrees);
+
+    val map_ts = @{map 3} (fn mrbnf => fn raw => fn model_const =>
+      let
+        val thy = Proof_Context.theory_of lthy;
+        val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
+        val (X_T, X'_T) = apfst (snd o split_last) (Term.strip_type (fastype_of mapx));
+        val pre_T = fst (dest_funT (fastype_of (#ctor raw)));
+        val tyenv1 = Sign.typ_match thy (X_T --> X'_T,
+          pre_T --> hd (Term.binder_types (fastype_of (fst (#Uctor' model_const))))
+        ) Vartab.empty;
+        val tyenv2 = Sign.typ_match thy (X_T --> X'_T, pre_T --> pre_T) Vartab.empty;
+      in (Envir.subst_term (tyenv1, Vartab.empty) mapx, Envir.subst_term (tyenv2, Vartab.empty) mapx) end
+    ) (#pre_mrbnfs fp_res) (#raw_fps fp_res) model_consts;
+
+    fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs)
+
     val (rec_fs, lthy) =
       let
-        val ((pickss, xs), names_lthy) = lthy
-          |> mk_Freess "pick" (map (map (fst o dest_funT o fastype_of o fst)) suitabless)
-          ||>> mk_Frees "x" (map (fst o dest_funT o fastype_of o #ctor) (#raw_fps fp_res));
         val f_name = "f_" ^ short_type_name (Binding.name_of b);
         val (fs, _) = names_lthy
           |> mk_Frees f_name (map2 (fn model => fn raw =>
@@ -522,7 +537,6 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
           ) models (#raw_fps fp_res));
         val picks = flat pickss;
 
-        val thy = Proof_Context.theory_of lthy;
         val ids = map HOLogic.id_const vars;
         val rec_ts = map2 (fn f => fn raw =>
           let val t = Free ("t", #T raw)
@@ -531,17 +545,9 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
           ) end
         ) fs (#raw_fps fp_res);
 
-        val map_ts = @{map 5} (fn raw => fn mrbnf => fn model_const => fn x => fn picks =>
+        val map_ts = @{map 4} (fn mrbnf => fn x => fn picks => fn (map_t1, map_t2) =>
           let
-            val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
-            val (X_T, X'_T) = apfst (snd o split_last) (Term.strip_type (fastype_of mapx));
-            val pre_T = fst (dest_funT (fastype_of (#ctor raw)));
-            val tyenv1 = Sign.typ_match thy (X_T --> X'_T,
-              pre_T --> hd (Term.binder_types (fastype_of (fst (#Uctor' model_const))))
-            ) Vartab.empty;
-            val tyenv2 = Sign.typ_match thy (X_T --> X'_T, pre_T --> pre_T) Vartab.empty;
             val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
-            fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs)
             val rename_ts = map2 (fn i => fn raw => if member (op=) (flat (#binding_relation fp_res)) i then
               let val to_rename = @{map 3} (fn is => fn pick => fn var => if member (op=) is i then pick $ x $ p else HOLogic.id_const var) (#binding_relation fp_res) picks vars;
               in if forall (fn Const (@{const_name id}, _) => true | _ => false) to_rename then
@@ -550,14 +556,12 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
               end
               else HOLogic.id_const (#T raw)
             ) (0 upto foldr1 (op+) (#rec_vars fp_res) - 1) (replicate_rec (#raw_fps fp_res));
-          in Term.list_comb (
-            Envir.subst_term (tyenv1, Vartab.empty) mapx,
+          in Term.list_comb (map_t1,
             interlace (flat (map2 replicate (#rec_vars fp_res) rec_ts)) ids ids var_types
-          ) $ (Term.list_comb (
-            Envir.subst_term (tyenv2, Vartab.empty) mapx,
+          ) $ (Term.list_comb (map_t2,
             interlace rename_ts (map (fn pick => pick $ x $ p) picks) ids var_types
           ) $ x) end
-        ) (#raw_fps fp_res) (#pre_mrbnfs fp_res) model_consts xs pickss;
+        ) (#pre_mrbnfs fp_res) xs pickss map_ts;
 
         val lhss = @{map 3} (fn f => fn x => fn raw =>
           Term.list_comb (f, picks) $ (#ctor raw $ x) $ p
@@ -648,56 +652,70 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
       map2 (fn f0 => fn quot => Term.abs ("t", #T quot) (fst f0 $ (#rep (#inner quot) $ Bound 0))) f0s (#quotient_fps fp_res)
     ) lthy;
 
+    val n = length suitables + nvars + 2;
+    val Pmap = Term.list_comb (#Pmap params, map mk_inv fs) $ p;
+    val (XXls, lthy) = mk_defs_t false b qualify "XXl" n
+      (@{map 4} (fn mrbnf => fn (map_t1, _) => fn picks => fn x =>
+        let
+          val pick_ts = map (fn pick => pick $ x $ Pmap) picks;
+          val pick_ts' = map2 (fn f => fn pick_t => HOLogic.mk_comp (f, pick_t)) fs pick_ts;
+          val recs = @{map 4} (fn i => fn raw => fn (f_t, _) => fn model_const =>
+            let
+              val t = Free ("t", #T raw);
+              val rename_t = Term.list_comb (#rename raw, @{map 3} (fn rel => fn pick_t => fn f =>
+                if member (op=) rel i then pick_t else f
+              ) (#binding_relation fp_res) pick_ts' fs) $ t;
+              val binds = member (op=) (flat (#binding_relation fp_res)) i;
+              val inner_t = if binds then
+                  Term.list_comb (#rename raw, map2 (fn rel => fn pick_t =>
+                    if member (op=) rel i then pick_t else HOLogic.id_const (Term.body_type (fastype_of pick_t))
+                  ) (#binding_relation fp_res) pick_ts) $ t
+                else t;
+              val PU_t = Term.list_comb (fst (#PUmap' model_const), fs)
+                $ inner_t $ (Term.list_comb (f_t, flat pickss) $ inner_t)
+            in Term.absfree (dest_Free t) (HOLogic.mk_prod (rename_t, PU_t)) end
+          ) (0 upto length suitables - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs) (replicate_rec model_consts);
+        in fold_rev Term.absfree (map dest_Free (flat pickss @ fs @ [p, x])) (
+          Term.list_comb (map_t1, interlace recs pick_ts fs (MRBNF_Def.var_types_of_mrbnf mrbnf))
+        ) end
+      ) (#pre_mrbnfs fp_res) map_ts pickss xs) lthy;
+
+    val rename_ts = map (fn raw => Term.list_comb (#rename raw, fs)) (#raw_fps fp_res);
+    val (XXrs, lthy) = mk_defs_t false b qualify "XXr" n
+      (@{map 4} (fn mrbnf => fn (map_t1, map_t2) => fn picks => fn x =>
+        let
+          val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+          val inner_map = Term.list_comb (map_t2, interlace (
+            flat (map2 replicate (#rec_vars fp_res) rename_ts)
+          ) fs fs var_types) $ x;
+          val pick_ts = map2 (fn pick => fn f => HOLogic.mk_comp (pick $ inner_map $ p, f)) picks fs;
+          val recs = @{map 3} (fn i => fn raw => fn (f_t, _) =>
+            let
+              val t = Free ("t", #T raw);
+              val rename_t = Term.list_comb (#rename raw, @{map 3} (fn rel => fn pick_t => fn f =>
+                if member (op=) rel i then pick_t else f
+              ) (#binding_relation fp_res) pick_ts fs) $ t;
+            in Term.absfree (dest_Free t) (HOLogic.mk_prod (
+              rename_t, Term.list_comb (f_t, flat pickss) $ rename_t
+            )) end
+          ) (0 upto length suitables - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs);
+        in fold_rev Term.absfree (map dest_Free (flat pickss @ fs @ [p, x])) (
+          Term.list_comb (map_t1, interlace recs pick_ts fs var_types) $ x
+        ) end
+      ) (#pre_mrbnfs fp_res) map_ts pickss xs) lthy;
+
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
-    (*
-    fun mk_live_fs tbound tpassive = map (fn i => if member (op=) (flat (#binding_relation fp_result)) i then
-      tbound else tpassive
-    ) (0 upto live - 1);
-    val raw_PU_T = HOLogic.mk_prodT (raw_T, PU);
-    val (XXl, lthy) =
-      let
-        val pick_ts = map (fn pick => pick $ x $ Term.list_comb (#Pmap params, map mk_inv fs @ [p])) picks
-        val comp_ts = map2 (fn pick => fn f => HOLogic.mk_comp (f, pick)) pick_ts fs
-        fun mk_rec_t fs' t = Term.abs ("x", raw_T) (HOLogic.mk_prod (
-          Term.list_comb (#rename raw, fs' @ [Bound 0]),
-          Term.list_comb (fst PUmap', fs) $ (t $ Bound 0) $ (Term.list_comb (fst f, picks) $ (t $ Bound 0))
-        ));
-        val rec_t = mk_rec_t fs (Term.absdummy raw_T (Bound 0))
-        val brec_t = mk_rec_t comp_ts (Term.list_comb (#rename raw, pick_ts))
 
-        val rhs = fold_rev Term.absfree (map dest_Free (picks @ fs @ [p, x])) (Term.list_comb (
-          mk_map_of_mrbnf deads (replicate live raw_T) (replicate live raw_PU_T)
-            vars vars mrbnf, interlace (mk_live_fs brec_t rec_t) comp_ts fs var_types
-        ) $ x);
-      in mk_def_t false ff0_b qualify "XXl" (2 * nbound + 2) rhs lthy end;
-    val (XXr, lthy) =
-      let
-        fun mk_map_t T = mk_map_of_mrbnf deads (replicate live raw_T) (replicate live T) vars vars mrbnf
-        val map_comp_t = Term.list_comb (mk_map_t raw_T,
-          interlace (replicate live (Term.list_comb (#rename raw, fs))) fs fs var_types
-        ) $ x;
-        val comp_ts = map2 (fn pick => fn f => HOLogic.mk_comp (pick $ map_comp_t $ p, f)) picks fs;
-        fun mk_rec_t fs' = Term.abs ("x", raw_T) (HOLogic.mk_prod (
-          Term.list_comb (#rename raw, fs') $ Bound 0,
-          Term.list_comb (fst f, picks) $ (Term.list_comb (#rename raw, fs') $ Bound 0)
-        ));
-        val rhs = fold_rev Term.absfree (map dest_Free (picks @ fs @ [p, x])) (Term.list_comb (
-          mk_map_t raw_PU_T,
-          interlace (mk_live_fs (mk_rec_t comp_ts) (mk_rec_t fs)) comp_ts fs var_types
-        ) $ x);
-      in mk_def_t false ff0_b qualify "XXr" (2 * nbound + 2) rhs lthy end;
+    val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (apply2 fastype_of (
+      Morphism.term phi (fst (#Uctor' (hd model_consts))), fst (#Uctor' (hd model_consts))
+    )) Vartab.empty;
+    val morph = map_prod (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi) (Morphism.thm phi);
 
-    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-    val phi = Proof_Context.export_morphism old_lthy lthy;
-
-    val vars' = rev (map TVar (Term.add_tvars (Morphism.term phi (fst Umap')) []));
-    fun morph (t, thm) = (Term.subst_atomic_types (vars' ~~ vars) (Morphism.term phi t), Morphism.thm phi thm);
-
-  in ((map morph suitables, morph Umap', map morph UFVars', morph PUmap', morph PUmap, morph CTOR,
-    morph f, map morph pick0s, morph f0, morph ff0, morph noclash, morph nnoclash, morph XXl,
-    morph XXr), lthy) end; *)
-  in () end;
+  in ((map (map morph) suitabless, map (morph o #Umap') model_consts, map (map morph o #UFVars's) model_consts,
+    map (morph o #PUmap') model_consts, map (morph o #PUmap) model_consts, map (morph o #Uctor') model_consts,
+    map morph rec_fs, map (map morph) pick0ss, map morph f0s, map morph ff0s, map morph XXls, map morph XXrs),
+  lthy) end;
 
 fun every_other [] = []
   | every_other [x] = [x]
@@ -735,11 +753,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
     in (fp_res, (pfrees, pbounds, plives)) end;
 
     val ((params, models, defs), lthy) = prove_model_axioms qualify fp_res params models vars passives lthy;
-    val _ = define_recursor_consts qualify fp_res params models vars passives lthy;
-    (*val ((suitables, Umap', UFVars's, PUmap', PUmap, CTOR, f, pick0s, f0, ff0, noclash, nnoclash,
-    XXl, XXr), lthy) = define_recursor_consts qualify model ff0_b lthy
+    val ((suitabless, Umap's, UFVars'ss, PUmap's, PUmaps, Uctor's, rec_fs, pick0ss,
+      f0s, ff0s, XXls, XXrs), lthy) = define_recursor_consts qualify fp_res params models vars passives lthy;
 
-    val axioms = #axioms model;
+(*    val axioms = #axioms model;
     val paxioms = #axioms params;
 
     val P = #P params;

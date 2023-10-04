@@ -328,12 +328,12 @@ lemma f_T1_simp: "suitable11 pick1 \<Longrightarrow> suitable12 pick2 \<Longrigh
       (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
       (\<lambda>t. (rename_T2 (pick1 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t)))
      x) p"
-  apply (unfold f_T1.simps)
-  apply (subst if_P)
-   apply ((rule conjI)?, assumption)+
-  apply (rule arg_cong2[OF _ refl, of _ _ U1ctor'])
   apply (rule trans)
-   apply (rule T1_pre.map_comp)
+   apply (rule f_T1.simps)
+  apply (rule trans)
+  apply (rule if_P)
+   apply ((rule conjI)?, assumption)+
+  apply (subst T1_pre.map_comp)
                 apply (rule supp_id_bound bij_id | erule suitable_bij suitable_supp_bound)+
   apply (unfold id_o o_id)
   apply (unfold comp_def)
@@ -347,12 +347,12 @@ lemma f_T2_simp: "suitable11 pick1 \<Longrightarrow> suitable12 pick2 \<Longrigh
       (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
       (\<lambda>t. (rename_T2 (pick3 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t)))
      x) p"
-  apply (unfold f_T2.simps)
-  apply (subst if_P)
-   apply ((rule conjI)?, assumption)+
-  apply (rule arg_cong2[OF _ refl, of _ _ U2ctor'])
   apply (rule trans)
-   apply (rule T2_pre.map_comp)
+   apply (rule f_T2.simps)
+  apply (rule trans)
+  apply (rule if_P)
+   apply ((rule conjI)?, assumption)+
+  apply (subst T2_pre.map_comp)
                 apply (rule supp_id_bound bij_id | erule suitable_bij suitable_supp_bound)+
   apply (unfold id_o o_id)
   apply (unfold comp_def)
@@ -372,37 +372,6 @@ abbreviation "rep_T2 \<equiv> quot_type.rep Rep_T2"
 
 definition "ff0_T1 t \<equiv> f0_T1 (rep_T1 t)"
 definition "ff0_T2 t \<equiv> f0_T2 (rep_T2 t)"
-
-definition noclash_T1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) pre_T1 \<Rightarrow> bool" where
-  "noclash_T1 x \<equiv> (
-    (set5_T1_pre x \<inter> (set1_T1_pre x \<union> \<Union>(FVars_T11 ` set7_T1_pre x) \<union> \<Union>(FVars_T21 ` set9_T1_pre x)) = {})
-    \<and> (set6_T1_pre x \<inter> (set2_T1_pre x \<union> \<Union>(FVars_T12 ` set7_T1_pre x) \<union> \<Union>(FVars_T22 ` set9_T1_pre x) \<union> \<Union>(FVars_T22 ` set10_T1_pre x)) = {})
-  )"
-definition noclash_T2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) pre_T2 \<Rightarrow> bool" where
-  "noclash_T2 x \<equiv> (
-    (set5_T2_pre x \<inter> (set1_T2_pre x \<union> \<Union>(FVars_T11 ` set7_T2_pre x) \<union> \<Union>(FVars_T21 ` set9_T2_pre x)) = {})
-    \<and> (set6_T2_pre x \<inter> (set2_T2_pre x \<union> \<Union>(FVars_T12 ` set7_T2_pre x) \<union> \<Union>(FVars_T22 ` set9_T2_pre x) \<union> \<Union>(FVars_T22 ` set10_T2_pre x)) = {})
-  )"
-
-type_synonym ('var, 'tyvar, 'a, 'b) pre_TT1 = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar,
-  ('var, 'tyvar, 'a, 'b) T1, ('var, 'tyvar, 'a, 'b) T1,
-  ('var, 'tyvar, 'a, 'b) T2, ('var, 'tyvar, 'a, 'b) T2
-) T1_pre"
-type_synonym ('var, 'tyvar, 'a, 'b) pre_TT2 = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar,
-  ('var, 'tyvar, 'a, 'b) T1, ('var, 'tyvar, 'a, 'b) T1,
-  ('var, 'tyvar, 'a, 'b) T2, ('var, 'tyvar, 'a, 'b) T2
-) T2_pre"
-
-definition nnoclash_T1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) pre_TT1 \<Rightarrow> bool" where
-  "nnoclash_T1 x \<equiv> (
-    (set5_T1_pre x \<inter> (set1_T1_pre x \<union> \<Union>(FFVars_T11 ` set7_T1_pre x) \<union> \<Union>(FFVars_T21 ` set9_T1_pre x)) = {})
-    \<and> (set6_T1_pre x \<inter> (set2_T1_pre x \<union> \<Union>(FFVars_T12 ` set7_T1_pre x) \<union> \<Union>(FFVars_T22 ` set9_T1_pre x) \<union> \<Union>(FFVars_T22 ` set10_T1_pre x)) = {})
-  )"
-definition nnoclash_T2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) pre_TT2 \<Rightarrow> bool" where
-  "nnoclash_T2 x \<equiv> (
-    (set5_T2_pre x \<inter> (set1_T2_pre x \<union> \<Union>(FFVars_T11 ` set7_T2_pre x) \<union> \<Union>(FFVars_T21 ` set9_T2_pre x)) = {})
-    \<and> (set6_T2_pre x \<inter> (set2_T2_pre x \<union> \<Union>(FFVars_T12 ` set7_T2_pre x) \<union> \<Union>(FFVars_T22 ` set9_T2_pre x) \<union> \<Union>(FFVars_T22 ` set10_T2_pre x)) = {})
-  )"
 
 definition XXl1 where
   "XXl1 pick1 pick2 pick3 pick4 f1 f2 p x \<equiv>
@@ -6987,7 +6956,7 @@ thm trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
 
 lemma f0_T1_ctor:
   assumes int_empty: "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
-    and noclash: "noclash_T1 x"
+    and noclash: "noclash_raw_T1 x"
   shows
     "f0_T1 (raw_T1_ctor x) p = U1ctor' (map_T1_pre id id id id id id (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T2 t))  (\<lambda>t. (t, f0_T2 t)) x) p"
 proof -
@@ -7011,7 +6980,7 @@ proof -
      apply (unfold Un_empty T1.FVars_ctors)[1]
      apply (rule conjI)
       apply (insert noclash)[1]
-      apply (unfold Int_Un_distrib Un_empty noclash_T1_def)[1]
+      apply (unfold Int_Un_distrib Un_empty noclash_raw_T1_def)[1]
       apply (erule conjE)+
       apply (rule conjI)+
           apply (assumption | rule Diff_disjoint int_empty)+
@@ -7031,7 +7000,7 @@ proof -
     apply (unfold Un_empty T1.FVars_ctors)[1]
     apply (rule conjI)
      apply (insert noclash)[1]
-     apply (unfold Int_Un_distrib Un_empty noclash_T1_def)[1]
+     apply (unfold Int_Un_distrib Un_empty noclash_raw_T1_def)[1]
      apply (erule conjE)+
      apply (rule conjI)+
          apply (assumption | rule Diff_disjoint int_empty)+
@@ -7089,7 +7058,7 @@ qed
 
 lemma f0_T2_ctor:
   assumes int_empty: "set5_T2_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T2_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
-    and noclash: "noclash_T2 x"
+    and noclash: "noclash_raw_T2 x"
   shows
     "f0_T2 (raw_T2_ctor x) p = U2ctor' (map_T2_pre id id id id id id (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T2 t))  (\<lambda>t. (t, f0_T2 t)) x) p"
 proof -
@@ -7113,7 +7082,7 @@ proof -
      apply (unfold Un_empty T1.FVars_ctors)[1]
      apply (rule conjI)
       apply (insert noclash)[1]
-      apply (unfold Int_Un_distrib Un_empty noclash_T2_def)[1]
+      apply (unfold Int_Un_distrib Un_empty noclash_raw_T2_def)[1]
       apply (erule conjE)+
       apply (rule conjI)+
           apply (assumption | rule Diff_disjoint int_empty)+
@@ -7133,7 +7102,7 @@ proof -
     apply (unfold Un_empty T1.FVars_ctors)[1]
     apply (rule conjI)
      apply (insert noclash)[1]
-     apply (unfold Int_Un_distrib Un_empty noclash_T2_def)[1]
+     apply (unfold Int_Un_distrib Un_empty noclash_raw_T2_def)[1]
      apply (erule conjE)+
      apply (rule conjI)+
          apply (assumption | rule Diff_disjoint int_empty)+
@@ -7192,27 +7161,14 @@ qed
 lemmas f0_swaps = conjunct1[OF f_swap_alpha[rotated -2, OF T1.alpha_refls suitable_pick0s suitable_pick0s], unfolded f0_T1_def[symmetric], THEN conjunct1]
   conjunct2[OF f_swap_alpha[rotated -2, OF T1.alpha_refls suitable_pick0s suitable_pick0s], unfolded f0_T2_def[symmetric], THEN conjunct1]
 
-lemma nnoclash_noclashs:
-  "nnoclash_T1 x = noclash_T1 (map_T1_pre id id id id id id rep_T1 rep_T1 rep_T2 rep_T2 x)"
-  "nnoclash_T2 y = noclash_T2 (map_T2_pre id id id id id id rep_T1 rep_T1 rep_T2 rep_T2 y)"
-   apply (unfold nnoclash_T1_def nnoclash_T2_def noclash_T1_def noclash_T2_def
-      T1_pre_set_map_ids T2_pre_set_map_ids image_id
-      )
-   apply (unfold image_comp[unfolded comp_def] FFVars_T11_def[symmetric] FFVars_T12_def[symmetric]
-      FFVars_T21_def[symmetric] FFVars_T22_def[symmetric]
-      )
-   apply (rule refl)+
-  done
-
-
 (**********************************************)
 (*********** Final result lemmas **************)
 (**********************************************)
 
 lemma ff0_cctors:
-  "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> nnoclash_T1 x \<Longrightarrow>
+  "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T1 x \<Longrightarrow>
      ff0_T1 (T1_ctor x) p = U1ctor (map_T1_pre id id id id id id (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T2 t))  (\<lambda>t. (t, ff0_T2 t)) x) p"
-  "set5_T2_pre y \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T2_pre y \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> nnoclash_T2 y \<Longrightarrow>
+  "set5_T2_pre y \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T2_pre y \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T2 y \<Longrightarrow>
      ff0_T2 (T2_ctor y) p = U2ctor (map_T2_pre id id id id id id (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T2 t))  (\<lambda>t. (t, ff0_T2 t)) y) p"
    apply (unfold ff0_T1_def ff0_T2_def T1_ctor_def T2_ctor_def)
    apply (rule trans)
@@ -7222,7 +7178,7 @@ lemma ff0_cctors:
     apply (rule f0_T1_ctor)
       apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids)
       apply assumption+
-    apply (rule nnoclash_noclashs[THEN iffD1])
+    apply (rule T1.nnoclash_noclashs[THEN iffD1])
     apply assumption
    apply (unfold U1ctor'_def)[1]
    apply (subst T1_pre.map_comp)
@@ -7242,7 +7198,7 @@ lemma ff0_cctors:
    apply (rule f0_T2_ctor)
      apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids)
      apply assumption+
-   apply (rule nnoclash_noclashs[THEN iffD1])
+   apply (rule T1.nnoclash_noclashs[THEN iffD1])
    apply assumption
   apply (unfold U2ctor'_def)[1]
   apply (subst T2_pre.map_comp)

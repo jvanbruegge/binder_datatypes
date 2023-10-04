@@ -526,6 +526,10 @@ val T2_model = {
 val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
 \<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
@@ -535,5 +539,6 @@ let
   val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters [T1_model, T2_model] lthy
   val _ = @{print} ress
 in lthy end\<close>
+print_theorems
 
 end

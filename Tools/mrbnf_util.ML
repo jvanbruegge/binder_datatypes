@@ -32,6 +32,10 @@ sig
   val thm_instantiate_dummy_terms: Proof.context -> term option list -> thm -> thm
   val thm_instantiate_fixed_terms: Proof.context -> term option list -> term list -> thm -> thm
   val new_definition: binding -> term -> local_theory -> (string * term * thm) * local_theory
+  val mk_def_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term
+    -> local_theory -> ((term * thm) * local_theory);
+  val mk_defs_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term list
+    -> local_theory -> ((term * thm) list * local_theory);
 
   val simp_only_tac: Proof.context -> thm list -> int -> tactic
   val simp_only: Proof.context -> thm list -> int -> tactic
@@ -57,6 +61,26 @@ struct
 open BNF_Util
 
 fun swap (a, b) = (b, a)
+
+fun mk_def_t public b qualify name n rhs lthy =
+  let
+    val b' = qualify (Binding.name name);
+    val b'' = if Binding.is_empty b then b' else Binding.prefix_name (Binding.name_of b' ^ "_") b;
+    val b' = if public then b' else Binding.concealed b'';
+    val ((t, thm), lthy) = apfst (apsnd snd) (Local_Theory.define_internal (
+      (b', NoSyn), ((Binding.concealed (Thm.def_binding b'), []), rhs)
+    ) lthy);
+    val thm' = if n > 0 then
+      @{thm eq_reflection} OF [Ctr_Sugar_Util.mk_unabs_def n (@{thm meta_eq_to_obj_eq} OF [thm])]
+    else thm;
+    val lthy = if (* public *) true then
+      snd (Local_Theory.note ((Thm.def_binding b', []), [thm']) lthy)
+    else lthy;
+  in ((t, thm'), lthy) end;
+
+fun mk_defs_t public b qualify name n [x] = apfst single o mk_def_t public b qualify name n x
+  | mk_defs_t public b qualify name n rhss = fold_map (fn (i, x) =>
+      mk_def_t public b qualify (name ^ string_of_int i) n x) (1 upto length rhss ~~ rhss)
 
 fun mk_arg_cong ctxt n t =
   let

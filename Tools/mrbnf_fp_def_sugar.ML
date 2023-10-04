@@ -5,6 +5,7 @@ sig
     ctor: term,
     rename: term,
     FVars: term list,
+    noclash: term * thm,
     inner: 'a,
 
     inject: thm,
@@ -52,6 +53,7 @@ sig
     rename_def: thm,
     FVars_defs: thm list,
 
+    nnoclash_noclash: thm,
     alpha_quotient_sym: thm,
     total_abs_eq_iff: thm,
     abs_rep: thm,
@@ -93,6 +95,7 @@ type 'a fp_result_T = {
   ctor: term,
   rename: term,
   FVars: term list,
+  noclash: term * thm,
   inner: 'a,
 
   inject: thm,
@@ -111,11 +114,12 @@ type 'a fp_result_T = {
 
 fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_id0, rename_id,
   rename_comp0, rename_comp, rename_bij, rename_inv_simp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
-  card_of_FVars_bound_UNIVs, FVars_intross } = {
+  card_of_FVars_bound_UNIVs, FVars_intross, noclash } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
   rename = Morphism.term phi rename,
   FVars = map (Morphism.term phi) FVars,
+  noclash = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) noclash,
   inner = morph phi inner,
   inject = Morphism.thm phi inject,
   rename_id0 = Morphism.thm phi rename_id0,
@@ -184,6 +188,7 @@ type quotient_result = {
   rename_def: thm,
   FVars_defs: thm list,
 
+  nnoclash_noclash: thm,
   alpha_quotient_sym: thm,
   total_abs_eq_iff: thm,
   abs_rep: thm,
@@ -198,12 +203,13 @@ type quotient_result = {
 
 fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
 abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename_cong_id,
-fresh_co_induct_param } = {
+fresh_co_induct_param, nnoclash_noclash } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
   rename_def = Morphism.thm phi rename_def,
   FVars_defs = map (Morphism.thm phi) FVars_defs,
+  nnoclash_noclash = Morphism.thm phi nnoclash_noclash,
   alpha_quotient_sym = Morphism.thm phi alpha_quotient_sym,
   total_abs_eq_iff = Morphism.thm phi total_abs_eq_iff,
   abs_rep = Morphism.thm phi abs_rep,

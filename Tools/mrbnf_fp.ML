@@ -2290,6 +2290,52 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val cctor_eq_intro_rrenames = map (fn thm => (thm RS iffD2)
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
 
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+    fun mk_noclashs FVarsss = @{fold_map 5} (fn x => fn T => fn fsets => fn bsets => fn rec_sets => fn lthy =>
+      let
+        val name = "noclash_" ^ short_type_name (fst (dest_Type T));
+        val UNss = map (fn FVars => map2 (fn A => mk_UNION (A $ x)) rec_sets (flat (map2 replicate ks FVars))) FVarsss;
+        val mk_free_UNss = map (fn UNs => fn rel => map_filter (fn (i, t) => if member (op=) rel i then NONE else SOME t) ((0 upto length rec_sets - 1) ~~ UNs)) UNss;
+        val rhss = @{map 4} (fn fset => fn bset => fn rel => fn mk_free_UNs =>
+          mk_int_empty (bset $ x, foldl1 mk_Un (fset $ x :: mk_free_UNs rel))
+        ) fsets bsets binding_relation mk_free_UNss;
+        val rhs = Term.absfree (dest_Free x) (foldr1 HOLogic.mk_conj rhss);
+      in mk_def_t true Binding.empty I name 1 rhs lthy end
+    );
+    val (noclashs, lthy) = mk_noclashs FVarsssAs xs CAs (transpose free_setss_Ast) (transpose bound_setss_Ast) rec_setss_As lthy;
+    val (nnoclashs, lthy) = mk_noclashs FFVarsssAs vs CBs (transpose free_setss_Bst) (transpose bound_setss_Bst) rec_setss_Bs lthy;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+    val (noclashs, nnoclashs) =
+      let
+        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (
+          fastype_of (Morphism.term phi (fst (hd noclashs))), fastype_of (fst (hd noclashs))
+        ) Vartab.empty;
+        val morph = map (map_prod
+          (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi)
+          (Morphism.thm phi)
+        );
+      in (morph noclashs, morph nnoclashs) end;
+
+    val nnoclash_noclashs = @{map 5} (fn nnoclash => fn noclash => fn v => fn map_t => fn mrbnf =>
+      let
+        val ids = map HOLogic.id_const As;
+        val goal = mk_Trueprop_eq (
+          fst nnoclash $ v,
+          fst noclash $ (Term.list_comb (map_t, ids @ take fbound ids @ flat (map2 replicate ks TT_reps)) $ v)
+        );
+      in Goal.prove_sorry lthy [fst (dest_Free v)] [] goal (fn {context=ctxt, ...} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt (map snd noclashs @ map snd nnoclashs)),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+        ],
+        K (Local_Defs.unfold0_tac ctxt (@{thms image_id image_comp[unfolded comp_def]} @ flat FFVars_defss)),
+        rtac ctxt refl
+      ]) end
+    ) nnoclashs noclashs vs mrbnf_maps_BsAs mrbnfs;
+
     (* TODO: use giant map instead of x times (nth ... i) *)
     val (raw_ress, quot_ress) = split_list (map (fn i =>
       let
@@ -2299,6 +2345,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           ctor = nth ctorsAs i,
           rename = nth renamesAs i,
           FVars = nth (transpose FVarsssAs) i,
+          noclash = nth noclashs i,
 
           inject = nth raw_injects i,
           rename_id0 = nth rename_id0s i,
@@ -2340,6 +2387,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           ctor = nth cctorsAs i,
           rename = nth rrenamesAs i,
           FVars = nth (transpose FFVarsssAs) i,
+          noclash = nth nnoclashs i,
 
           inject = nth TT_injects0 i,
           rename_id0 = nth rrename_id0s i,
@@ -2361,6 +2409,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             rename_def = nth rrename_defs i,
             FVars_defs = nth (transpose FFVars_defss) i,
 
+            nnoclash_noclash = nth nnoclash_noclashs i,
             alpha_quotient_sym = nth alpha_quotient_syms i,
             total_abs_eq_iff = nth Quotient_total_abs_eq_iffs i,
             abs_rep = nth Quotient_abs_reps i,
@@ -2413,6 +2462,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("avoid_freshs", flat avoid_freshss),
        ("alpha_avoids", alpha_avoids),
        ("equivp_alphas", equivp_alphas),
+       ("nnoclash_noclashs", nnoclash_noclashs),
        ("TT_Quotients", TT_Quotients),
        ("TT_alpha_quotient_syms", alpha_quotient_syms),
        ("TT_Quotient_total_abs_eq_iffs", Quotient_total_abs_eq_iffs),

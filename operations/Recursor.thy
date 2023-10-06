@@ -464,26 +464,22 @@ lemma pick_id_ons:
   "suitable12 pick2 \<Longrightarrow> id_on (\<Union>(FVars_T12 ` set8_T1_pre x) - set6_T1_pre x) (pick2 x p)"
   "suitable21 pick3 \<Longrightarrow> id_on ((\<Union>(FVars_T11 ` set8_T2_pre y) - set5_T2_pre y) \<union> (\<Union>(FVars_T21 ` set10_T2_pre y) - set5_T2_pre y)) (pick3 y p)"
   "suitable22 pick4 \<Longrightarrow> id_on (\<Union>(FVars_T12 ` set8_T2_pre y) - set6_T2_pre y) (pick4 y p)"
-     apply (unfold suitable_defs Int_Un_distrib Un_empty Un_Diff Diff_idemp T1.FVars_ctors)
-
+     apply (unfold suitable_defs Int_Un_distrib Un_empty Un_Diff Diff_idemp T1.FVars_ctors id_on_Un)
 (* ALLGOALS *)
      apply (erule allE conjE)+
-     apply (rule imsupp_id_on)
-     apply ((unfold Int_Un_distrib Un_empty)[1])?
-     apply ((rule conjI)?, assumption)+
+     apply (rule conjI | erule imsupp_id_on)+
     (* copied from above*)
-    apply (erule allE conjE)+
-    apply (rule imsupp_id_on)
-    apply ((unfold Int_Un_distrib Un_empty)[1])?
-    apply ((rule conjI)?, assumption)+
-   apply (erule allE conjE)+
-   apply (rule imsupp_id_on)
-   apply ((unfold Int_Un_distrib Un_empty)[1])?
-   apply ((rule conjI)?, assumption)+
-  apply (erule allE conjE)+
-  apply (rule imsupp_id_on)
-  apply ((unfold Int_Un_distrib Un_empty)[1])?
-  apply ((rule conjI)?, assumption)+
+     apply (erule allE conjE)+
+    apply (rule conjI | erule imsupp_id_on)+
+    (* copied from above*)
+     apply (erule allE conjE)+
+    apply (rule conjI | erule imsupp_id_on)+
+    (* copied from above*)
+     apply (erule allE conjE)+
+    apply (rule conjI | erule imsupp_id_on)+
+    (* copied from above*)
+     apply (erule allE conjE)+
+    apply (rule conjI | erule imsupp_id_on)+
   done
 
 lemma pick_id_ons':
@@ -508,41 +504,31 @@ lemma pick_id_on_images:
      apply -
     (* EVERY' (map ... pick_id_ons) *)
      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated])
-      apply (erule pick_id_ons(1))
-     apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj] comp_def image_comp image_UN,
+      apply (erule pick_id_ons)
+     apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj, symmetric] image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric],
       ((rule supp_id_bound bij_id assms)+)?
       )+
-     apply (unfold image_UN[symmetric])
-     apply (subst image_set_diff[OF bij_is_inj, symmetric], rule assms)+
-     apply (unfold image_Un[symmetric])?
      apply (rule refl)
-    (* copied from above (incremented index) *)
+    (* copied from above *)
     apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated])
-     apply (erule pick_id_ons(2))
-    apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj] comp_def image_comp image_UN,
+     apply (erule pick_id_ons)
+    apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj, symmetric] image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric],
       ((rule supp_id_bound bij_id assms)+)?
       )+
-    apply (unfold image_UN[symmetric])
-    apply (subst image_set_diff[OF bij_is_inj, symmetric], rule assms)+
-    apply (unfold image_Un[symmetric])?
     apply (rule refl)
+    (* copied from above *)
    apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated])
-    apply (erule pick_id_ons(3))
-   apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj] comp_def image_comp image_UN,
+    apply (erule pick_id_ons)
+   apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj, symmetric] image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric],
       ((rule supp_id_bound bij_id assms)+)?
       )+
-   apply (unfold image_UN[symmetric])
-   apply (subst image_set_diff[OF bij_is_inj, symmetric], rule assms)+
-   apply (unfold image_Un[symmetric])?
    apply (rule refl)
+    (* copied from above *)
   apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated])
-   apply (erule pick_id_ons(4))
-  apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj] comp_def image_comp image_UN,
+   apply (erule pick_id_ons)
+  apply (subst T1_pre.set_map T2_pre.set_map T1.FVars_renames image_set_diff[OF bij_is_inj, symmetric] image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric],
       ((rule supp_id_bound bij_id assms)+)?
       )+
-  apply (unfold image_UN[symmetric])
-  apply (subst image_set_diff[OF bij_is_inj, symmetric], rule assms)+
-  apply (unfold image_Un[symmetric])?
   apply (rule refl)
   done
 

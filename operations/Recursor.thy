@@ -970,32 +970,7 @@ lemma U1ctor_cong:
               apply (rule supp_comp_bound supp_inv_bound infinite_UNIV supp_id_bound bij_id bij_comp bij_imp_bij_inv assms)+
        apply assumption
       apply (unfold case_prod_beta Grp_UNIV_def prod.inject)
-    (* ALLGOALS passive_case OR ... *)
-    (* passive case *)
-      apply (rule ballI impI)+
-      apply assumption
-    (* default case *)
-     apply (rule ballI impI)+
-     apply (erule conjE)
-     apply (rule conjI)
-      apply assumption
-     apply assumption
-    (* copied from above *)
-    apply (rule ballI impI)+
-    apply (erule conjE)
-    apply (rule conjI)
-     apply assumption
-    apply assumption
-   apply (rule ballI impI)+
-   apply (erule conjE)
-   apply (rule conjI)
-    apply assumption
-   apply assumption
-  apply (rule ballI impI)+
-  apply (erule conjE)
-  apply (rule conjI)
-   apply assumption
-  apply assumption
+      apply ((rule ballI impI)+, assumption)+
   done
 
 lemma U2ctor_cong:
@@ -1051,32 +1026,7 @@ lemma U2ctor_cong:
               apply (rule supp_comp_bound supp_inv_bound infinite_UNIV supp_id_bound bij_id bij_comp bij_imp_bij_inv assms)+
        apply assumption
       apply (unfold case_prod_beta Grp_UNIV_def prod.inject)
-    (* ALLGOALS passive_case OR ... *)
-    (* passive case *)
-      apply (rule ballI impI)+
-      apply assumption
-    (* default case *)
-     apply (rule ballI impI)+
-     apply (erule conjE)
-     apply (rule conjI)
-      apply assumption
-     apply assumption
-    (* copied from above *)
-    apply (rule ballI impI)+
-    apply (erule conjE)
-    apply (rule conjI)
-     apply assumption
-    apply assumption
-   apply (rule ballI impI)+
-   apply (erule conjE)
-   apply (rule conjI)
-    apply assumption
-   apply assumption
-  apply (rule ballI impI)+
-  apply (erule conjE)
-  apply (rule conjI)
-   apply assumption
-  apply assumption
+      apply ((rule ballI impI)+, assumption)+
   done
 
 lemmas T1_pre_set_map_ids = T1_pre.set_map[OF supp_id_bound supp_id_bound supp_id_bound bij_id supp_id_bound bij_id supp_id_bound, unfolded image_id]

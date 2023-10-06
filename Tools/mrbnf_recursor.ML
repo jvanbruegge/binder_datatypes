@@ -944,7 +944,67 @@ fun create_binding_recursor qualify fp_res params models lthy =
         @{thm fun_cong[OF meta_eq_to_obj_eq, symmetric]} OF [FVars_def]
       ] (thm OF [#alpha_quotient_sym (#inner quot)])
     ) (#FVars_defs (#inner quot)) o #alpha_FVarss o #inner) (#quotient_fps fp_res) (#raw_fps fp_res);
+    val FVars_def2s = flat FVars_def2ss;
 
+    val lthy = Config.put Goal.quick_and_dirty false lthy;
+    val UFVars'_subsetss = @{map 9} (fn y => fn map_t => fn quot => fn mrbnf => fn raw => fn (lsets, bsets, _) => fn model => fn Uctor' =>
+      @{map 7} (fn FVars => fn bset => fn PFVars => fn avoiding_set => fn UFVars's_transp => fn FVarss_transp => fn UFVars' =>
+        let
+          val int_empty_prem = HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars $ p, avoiding_set)));
+          val subset_prems = @{map 5} (fn raw => fn model => fn lsets => fn UFVars' => fn FVars =>
+            let
+              val (t, pu) = apply2 Free (("t", #T raw), ("pu", #P params --> #U model));
+            in fold_rev Logic.all [t, pu, p] (Logic.mk_implies (
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_prod (t, pu), foldl1 mk_Un (map (fn s => s $ y) lsets))),
+              HOLogic.mk_Trueprop (mk_leq (fst UFVars' $ t $ (pu $ p)) (mk_Un (mk_Un (FVars $ t, PFVars $ p), avoiding_set)))
+            )) end
+          ) (#raw_fps fp_res) models (fst (fold_map chop (#rec_vars fp_res) lsets)) UFVars's_transp FVarss_transp;
+          val ctor_t = #ctor raw $ (map_t $ y);
+          val concl = HOLogic.mk_Trueprop (mk_leq
+            (fst UFVars' $ ctor_t $ (fst Uctor' $ y $ p))
+            (mk_Un (mk_Un (FVars $ ctor_t, PFVars $ p), avoiding_set))
+          );
+          val goal = fold_rev (curry Logic.mk_implies) (int_empty_prem :: subset_prems) concl;
+        in Goal.prove_sorry lthy (names [y, p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
+          K (unfold_thms_tac ctxt (map snd (UFVars's_transp @ [Uctor']) @ FVars_def2s @ [#abs_ctor (#inner quot)])),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+            REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound}
+          ],
+          K (unfold_thms_tac ctxt @{thms fst_comp_map_prod}),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf RS sym],
+            REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound}
+          ],
+          resolve_tac ctxt (#UFVars_subsets (#axioms model)),
+          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+          REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
+          K (unfold_thms_tac ctxt @{thms image_id}),
+          assume_tac ctxt,
+          REPEAT_DETERM o EVERY' [
+            REPEAT_DETERM o EVERY' [
+              EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+              REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound}
+            ],
+            K (unfold_thms_tac ctxt @{thms image_Un[symmetric]}),
+            dtac ctxt @{thm exists_map_prod_id},
+            etac ctxt exE,
+            etac ctxt conjE,
+            hyp_subst_tac ctxt,
+            Goal.assume_rule_tac ctxt
+          ]
+        ]) end
+      ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params) (transpose UFVars'ss) (transpose (map #FVars (#raw_fps fp_res)))
+    ) ys map_id_fsts (#quotient_fps fp_res) (#pre_mrbnfs fp_res) (#raw_fps fp_res) PU_setss models Uctor's UFVars'ss;
+
+    val Pmap_imsupp_empty =
+      let
+        val imsupp_prems = map2 (fn f => fn PFVars => HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, PFVars $ p))) fs (#PFVarss params);
+        val goal = mk_Trueprop_eq (Term.list_comb (#Pmap params, fs) $ p, p);
+      in Goal.prove_sorry lthy (names (fs @ [p])) (f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        rtac ctxt (#Pmap_cong_id (#axioms params)),
+        REPEAT_DETERM o (resolve_tac ctxt prems ORELSE' etac ctxt @{thm id_onD[OF imsupp_id_on, rotated]})
+      ]) end;
 
 (*    val axioms = #axioms model;
     val paxioms = #axioms params;

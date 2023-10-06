@@ -693,17 +693,12 @@ lemma U1FVars'_subsets: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
    apply -
   subgoal
     apply (unfold U1FVars_1'_def U1FVars_2'_def U2FVars_1'_def U2FVars_2'_def U1ctor'_def U2ctor'_def FVars_def2s T1.TT_abs_ctors)
-    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
+    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)+
     apply (unfold fst_comp_map_prod)
-    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
-     apply (unfold fst_comp_map_prod)
-     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-     apply (rule refl)
+    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
-      apply (unfold image_id image_Un[symmetric])
+      apply (unfold image_id)
       apply assumption
       (* ALLGOALS *)
      apply ((subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)+, unfold image_id)?
@@ -728,17 +723,12 @@ lemma U1FVars'_subsets: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
 (* copied from above *)
   subgoal
     apply (unfold U1FVars_1'_def U1FVars_2'_def U2FVars_1'_def U2FVars_2'_def U1ctor'_def U2ctor'_def FVars_def2s T1.TT_abs_ctors)
-    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
+    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)+
     apply (unfold fst_comp_map_prod)
-    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
-     apply (unfold fst_comp_map_prod)
-     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-     apply (rule refl)
+    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
-      apply (unfold image_id image_Un[symmetric])
+      apply (unfold image_id)
       apply assumption
       (* ALLGOALS *)
      apply ((subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)+, unfold image_id)?
@@ -773,17 +763,12 @@ lemma U2FVars'_subsets: "set5_T2_pre (y2::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b
    apply -
   subgoal
     apply (unfold U1FVars_1'_def U1FVars_2'_def U2FVars_1'_def U2FVars_2'_def U1ctor'_def U2ctor'_def FVars_def2s T1.TT_abs_ctors)
-    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
+    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)+
     apply (unfold fst_comp_map_prod)
-    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
-     apply (unfold fst_comp_map_prod)
-     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-     apply (rule refl)
+    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
-      apply (unfold image_id image_Un[symmetric])
+      apply (unfold image_id)
       apply assumption
       (* ALLGOALS *)
      apply ((subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)+, unfold image_id)?
@@ -808,17 +793,12 @@ lemma U2FVars'_subsets: "set5_T2_pre (y2::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b
 (* copied from above *)
   subgoal
     apply (unfold U1FVars_1'_def U1FVars_2'_def U2FVars_1'_def U2FVars_2'_def U1ctor'_def U2ctor'_def FVars_def2s T1.TT_abs_ctors)
-    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
+    apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)+
     apply (unfold fst_comp_map_prod)
-    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (subst T1_pre.map_comp T2_pre.map_comp, (rule supp_id_bound bij_id)+)
-     apply (unfold fst_comp_map_prod)
-     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
-     apply (rule refl)
+    apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
-      apply (unfold image_id image_Un[symmetric])
+      apply (unfold image_id)
       apply assumption
       (* ALLGOALS *)
      apply ((subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)+, unfold image_id)?
@@ -847,8 +827,7 @@ lemma Pmap_imsupp_empty:
     "imsupp f1 \<inter> PFVars_1 p = {}" "imsupp f2 \<inter> PFVars_2 p = {}"
   shows "Pmap f1 f2 p = p"
   apply (rule Pmap_cong_id)
-       apply (rule assms)+
-   apply (erule id_onD[OF imsupp_id_on, rotated], rule assms)+
+       apply (rule assms | erule id_onD[OF imsupp_id_on, rotated])+
   done
 
 lemma U1ctor_rename:

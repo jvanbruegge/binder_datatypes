@@ -1687,9 +1687,6 @@ lemma alpha_ctor_picks2:
   done
 lemmas alpha_ctor_picks = alpha_ctor_picks1 alpha_ctor_picks2
 
-lemma image_Int_empty: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
-  by force
-
 lemma int_empties1:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
   assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
@@ -1740,7 +1737,7 @@ lemma int_empties1:
      apply assumption
     apply (rule trans[OF image_Int[OF bij_is_inj, symmetric]])
      apply (rule f_prems)
-    apply (unfold image_is_empty)
+    apply (rule iffD2[OF image_is_empty])
     apply (insert suitable_prems)
     apply (subst image_set_diff[OF bij_is_inj, symmetric], erule suitable_bij)+
     apply (unfold suitable_defs Int_Un_distrib Un_empty T1.FVars_ctors)
@@ -2037,7 +2034,8 @@ lemma int_empties4:
     apply (unfold image_UN[symmetric] image_Un[symmetric])
     apply (subst image_set_diff[OF bij_is_inj, symmetric], (rule f_prems supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV | ((insert suitable_prems)[1], erule suitable_bij suitable_supp_bound))+)+
     apply (unfold image_comp[symmetric])
-    apply (subst pick_id_on_images'[THEN id_on_image], (rule f_prems suitable_prems)+)+    apply (unfold image_Un[symmetric] T1.FVars_ctors[symmetric])
+    apply (subst pick_id_on_images'[THEN id_on_image], (rule f_prems suitable_prems)+)+
+    apply (unfold image_Un[symmetric] T1.FVars_ctors[symmetric])
     apply (subst T2_pre.set_map[symmetric])
            prefer 8
            apply (subst T1.FVars_renames[symmetric])
@@ -2094,12 +2092,16 @@ lemma U2FVars'_alpha:
       erule T1.TT_Quotient_total_abs_eq_iffs[THEN iffD2])+
   done
 
-lemma conj_spec1: "(\<forall>x. P x) \<and> Q \<Longrightarrow> P x \<and> Q" by blast
-lemma conj_spec2: "P \<and> (\<forall>x. Q x) \<Longrightarrow> P \<and> Q x" by blast
-lemmas conj_spec = conj_spec1[THEN conj_spec2]
-lemma conj_impI1: "(P \<longrightarrow> Q) \<and> P' \<Longrightarrow> P \<Longrightarrow> Q \<and> P'" by simp
-lemma conj_impI2: "P \<and> (P' \<longrightarrow> Q) \<Longrightarrow> P' \<Longrightarrow> P \<and> Q" by simp
-lemmas conj_impI = conj_impI1[OF conj_impI2]
+lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>x. Q x) \<Longrightarrow> P x1 \<and> Q x2"
+  apply (erule conjE allE)+
+  apply ((rule conjI)?, assumption)+
+  done
+
+lemma conj_impI: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
+  apply (erule conjE)+
+  apply (erule impE, assumption)+
+  apply ((rule conjI)?, assumption)+
+  done
 
 lemma f_UFVars':
   assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
@@ -2128,7 +2130,7 @@ proof -
     subgoal for t p
       apply (rule raw_T1.exhaust[of t])
       apply hypsubst_thin
-      subgoal premises prems for x
+      subgoal premises prems
         apply (rule conjI)
         subgoal
           apply (subst T1.alpha_FVarss)

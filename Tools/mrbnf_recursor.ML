@@ -758,7 +758,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
 
     val pick_Tss = map (map (fst o dest_funT o fastype_of o fst)) suitabless;
 
-    val ((((((((((((fs, gs), pickss), pick'ss), xs), ys), ys'), vs), vs'), ts), ts'), p), _) = lthy
+    val ((((((((((((((fs, gs), pickss), pick'ss), xs), ys), ys'), vs), vs'), ts), ts'), pus), p), p'), _) = lthy
       |> mk_Frees "f" (map (fn var => var --> var) vars)
       ||>> mk_Frees "g" (map (fn var => var --> var) vars)
       ||>> mk_Freess "pick" pick_Tss
@@ -770,7 +770,9 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ||>> mk_Frees "v'" (map (fst o dest_funT o fastype_of o #Uctor) models)
       ||>> mk_Frees "t" (map #T (#raw_fps fp_res))
       ||>> mk_Frees "t'" (map #T (#raw_fps fp_res))
-      ||>> apfst hd o mk_Frees "p" [#P params];
+      ||>> mk_Frees "pu" (map (fn model => #P params --> #U model) models)
+      ||>> apfst hd o mk_Frees "p" [#P params]
+      ||>> apfst hd o mk_Frees "p'" [#P params];
 
     val mk_pre_setss = (@{map 3} (fn mrbnf => fn raw => fn t =>
       let
@@ -1583,9 +1585,132 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ])
       )) goalss end;
 
-    val _ = @{print} f_UFVars'ss
-    val lthy = Config.put Goal.quick_and_dirty false lthy;
+    fun map2_prod f (a, b) (c, d) = (f a c, f b d);
+    val (XXl_UFVars'sss, XXr_UFVars'sss) = map2_prod (fn left =>
+      @{map 5} (fn x => fn raw => fn mrbnf => fn (lsets, _, _) => fn XX =>
+        @{map 9} (fn t => fn pu => fn lsets => fn subshape => fn raw' => fn rec_f' => fn PUmap' =>
+          @{map 5} (fn FVars => fn PFVars => fn avoiding_set => fn UFVars' => fn f_UFVars' =>
+            let
+              val y = Free ("y", #T raw');
+              val IHs = if not left then [] else [
+                Logic.all y (Logic.all p (Logic.mk_implies (
+                  HOLogic.mk_Trueprop (subshape $ y $ (#ctor raw $ x)),
+                  mk_Trueprop_eq (
+                    Term.list_comb (fst rec_f', flat pickss) $ (Term.list_comb (#rename raw', fs) $ y) $ p,
+                    Term.list_comb (fst PUmap', fs) $ y $ (Term.list_comb (fst rec_f', flat pickss) $ y) $ p
+                  )
+                )))
+              ];
+              val XX_t = Term.list_comb (fst XX, flat pickss @ fs) $ p' $ x
+              val goal = Logic.mk_implies (
+                HOLogic.mk_Trueprop (HOLogic.mk_mem (
+                  HOLogic.mk_prod (t, pu),
+                  foldl1 mk_Un (map (fn s => s $ XX_t) lsets)
+                )),
+                HOLogic.mk_Trueprop (mk_leq
+                  (fst UFVars' $ t $ (pu $ p))
+                  (mk_Un (mk_Un (FVars $ t, PFVars $ p), avoiding_set))
+                )
+              );
+            in Goal.prove_sorry lthy (names (flat pickss @ fs @ [x, t, pu, p, p'])) (suitable_prems @ f_prems @ IHs) goal (fn {context=ctxt, prems} =>
+              let
+                val ((suitable_prems, f_prems), IHs) = prems
+                  |> chop m
+                  ||>> chop (2 * nvars);
+                val pick_prems = mk_pick_prems suitable_prems;
+              in EVERY1 [
+                K (unfold_thms_tac ctxt [snd XX]),
+                REPEAT_DETERM o EVERY' [
+                  EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems)
+                ],
+                REPEAT_DETERM o EVERY' [
+                  TRY o etac ctxt @{thm UnE},
+                  etac ctxt imageE,
+                  dtac ctxt @{thm iffD1[OF prod.inject]},
+                  etac ctxt conjE,
+                  hyp_subst_tac_thin true ctxt,
+                  if not left then K all_tac else EVERY' [
+                    EqSubst.eqsubst_tac ctxt [0] [hd IHs RS sym],
+                    eresolve_tac ctxt (
+                      maps (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI})) (the (#set_subshape_imagess (#inner raw)))
+                      @ flat (the (#set_subshapess (#inner raw)))
+                    ),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                    TRY o EVERY' [
+                      EqSubst.eqsubst_tac ctxt [0] [#rename_comp raw'],
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems),
+                      K (unfold_thms_tac ctxt @{thms id_o o_id})
+                    ]
+                  ],
+                  rtac ctxt (f_UFVars' OF suitable_prems)
+                ]
+              ] end
+            ) end
+          ) (#FVars raw') (#PFVarss params) (#avoiding_sets params)
+        ) ts pus (fst (fold_map chop (#rec_vars fp_res) lsets)) (the (#subshapes (#inner raw))) (#raw_fps fp_res) rec_fs PUmap's UFVars'ss f_UFVars'ss
+      ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) PU_setss
+    ) (true, false) (XXls, XXrs);
 
+    val (imsupp_id_on_XXlss, imsupp_id_on_XXrss) = apply2 (
+      @{map 9} (fn i => fn x => fn raw => fn mrbnf => fn map_t => fn (lsets, bsets, fsets) => fn pick_id_onss' => fn pick_id_on_imagess' => fn XX =>
+        @{map 8} (fn FVars => fn f => fn PFVars => fn avoiding_set => fn FVars_transps => fn bset => fn fset => fn rel =>
+          let
+            val w = Free ("w", fastype_of f);
+            val XX_t = Term.list_comb (fst XX, flat pickss @ fs) $ p $ x;
+            val As = fset $ x :: map2 (fn i => fn FVars =>
+              let val A = mk_UNION (nth lsets i $ x) FVars;
+              in if member (op=) rel i then mk_minus (A, bset $ x) else A end
+            ) (0 upto m - 1) (replicate_rec FVars_transps)
+            val goal = Logic.mk_implies (
+              HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp w,
+                mk_Un (mk_Un (FVars $ (#ctor raw $ (map_t $ XX_t)), PFVars $ p), avoiding_set)
+              )),
+              HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj
+                (map (fn A => mk_id_on (mk_image f $ A) w) As)
+              )
+            );
+          in Goal.prove_sorry lthy (names (flat pickss @ fs @ [x, p, w])) (suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
+            let
+              val (suitable_prems, f_prems) = chop m prems;
+              val pick_prems = mk_pick_prems suitable_prems;
+              val (y, y') = map_prod (fn xs => fold (curry op+) xs 0) hd (chop (i - 1) (#rec_vars fp_res));
+              val suitable_prems' = take y' (drop y suitable_prems);
+            in EVERY1 [
+              K (unfold_thms_tac ctxt [snd XX]),
+              EqSubst.eqsubst_asm_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems),
+              K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]} @ #FVars_ctors raw)),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems)
+              ],
+              K (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty image_comp[unfolded comp_def]}),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems)
+              ],
+              K (unfold_thms_tac ctxt @{thms image_UN[symmetric]}),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] @{thms image_set_diff[OF bij_is_inj, symmetric]},
+                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id bij_comp} @ f_prems @ pick_prems)
+              ],
+              REPEAT_DETERM o etac ctxt conjE,
+              K (unfold_thms_tac ctxt (@{thms image_comp[symmetric]}
+                @ flat (map2 (fn p => map (fn thm => @{thm id_on_image} OF [thm OF [p]])) suitable_prems' pick_id_onss')
+                @ flat (map2 (fn p => map (fn thm => @{thm id_on_image} OF [thm OF (f_prems @ [p])])) suitable_prems' pick_id_on_imagess')
+              )),
+              REPEAT_DETERM o EVERY' [
+                TRY o rtac ctxt conjI,
+                etac ctxt @{thm imsupp_id_on}
+              ]
+            ] end
+          ) end
+        ) (#FVars raw) fs (#PFVarss params) (#avoiding_sets params) (transpose (map #FVars (#raw_fps fp_res))) bsets fsets (#binding_relation fp_res)
+      ) (1 upto length xs) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) map_id_fsts pre_setss pick_id_onsss' pick_id_on_image'sss
+    ) (XXls, XXrs);
+
+    val lthy = Config.put Goal.quick_and_dirty false lthy;
 (*
     val f_swap_alpha =
       let

@@ -304,6 +304,22 @@ lemma id_on_empty: "id_on {} f"
 
 lemma image_Int_empty: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
   by force
+lemma eq_bij_betw_refl_prems:
+  assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"
+  shows "bij u" "|supp u| <o r"
+    "bij w" "|supp w| <o r"
+  using assms unfolding eq_bij_betw_refl_def by auto
+lemma eq_bij_betw_refl_imsupp:
+  assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"
+  shows "imsupp u \<inter> g (A x) = {} \<and> imsupp w \<inter> g (B y) = {}"
+  using assms unfolding eq_bij_betw_refl_def by auto
+lemma eq_bij_betw_prems:
+  assumes "eq_bij_betw r u w g A B x y f1 f2 h L R"
+  shows "bij u" "|supp u| <o r"
+    "bij w" "|supp w| <o r"
+  using assms unfolding eq_bij_betw_def by auto
+lemma id_on_eq: "id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> A = B \<Longrightarrow> x \<in> A \<Longrightarrow> f x = g x"
+  unfolding id_on_def by simp
 
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>

@@ -521,13 +521,6 @@ val T2_model = {
 val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
 \<close>
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
 declare [[quick_and_dirty]]
 local_setup \<open>fn lthy =>
 let
@@ -536,5 +529,6 @@ let
   val _ = @{print} ress
 in lthy end\<close>
 print_theorems
+declare [[quick_and_dirty=false]]
 
 end

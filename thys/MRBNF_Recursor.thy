@@ -325,7 +325,7 @@ ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
-(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
@@ -337,6 +337,6 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end*)
+end
 
 end

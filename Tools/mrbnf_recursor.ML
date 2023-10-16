@@ -730,6 +730,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       let val Ts = Term.binder_types (fastype_of (#Pmap params));
       in map (fst o dest_funT) (take (length Ts - 1) Ts) end;
     val nvars = length vars;
+    val r = length (#raw_fps fp_res);
 
     val (fp_res, passives as (pfrees, pbounds, plives)) = let
       val T = Type (apsnd (map (fn Type (@{type_name prod}, [T, _]) => T | T => T)) (dest_Type (
@@ -1710,6 +1711,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ) (1 upto length xs) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) map_id_fsts pre_setss pick_id_onsss' pick_id_on_image'sss
     ) (XXls, XXrs);
 
+    val suitable'_prems = flat (map2 (map2 ((curry op$) o fst)) suitabless pick'ss);
     val f_swap_alpha =
       let
         val imsupp_prems = map2 (fn f => fn s => HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, s))) fs (#avoiding_sets params);
@@ -1724,7 +1726,6 @@ fun create_binding_recursor qualify fp_res params models lthy =
           )
         )) rec_fs (#raw_fps fp_res) PUmap's ts ts';
         val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj goals);
-        val suitable'_prems = flat (map2 (map2 ((curry op$) o fst)) suitabless pick'ss);
 
         val insts = @{map 4} (fn t => fn t' => fn alpha_prem => fn goal => Term.absfree (dest_Free t) (
           fold_rev mk_all (map dest_Free (p :: t' :: fs @ flat pickss @ flat pick'ss)) (
@@ -2637,157 +2638,159 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ] end
       ) end;
 
-    val lthy = Config.put Goal.quick_and_dirty false lthy;
-    val _ = @{print} f_swap_alpha
-(*
-    val f_alpha = Goal.prove_sorry lthy (names (picks @ pick's @ [t, t']))
-      (suitable_pick_prems @ suitable_pick'_prems @ [alpha_prem]) (mk_Trueprop_eq (
-        Term.list_comb (fst f, picks) $ t, Term.list_comb (fst f, pick's) $ t'
-      )) (fn {context=ctxt, prems} => EVERY1 [
-        rtac ctxt (f_swap_alpha RS conjunct2 OF (take (2*nvars) prems)),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ [@{thm supp_id_bound'} OF [Cinfinite_card]]),
+    val exists_suitabless = map2 (fn mrbnf => map (fn suitable =>
+      let val goal = HOLogic.mk_exists ("pick", fst (dest_funT (fastype_of (fst suitable))), fst suitable $ Bound 0);
+      in Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop goal) (fn {context=ctxt,...} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd suitable]),
+        REPEAT_DETERM o resolve_tac ctxt @{thms choice allI},
+        rtac ctxt @{thm exists_suitable_aux},
+        rtac ctxt conjI,
+        rtac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf),
+        rtac ctxt @{thm card_of_Card_order},
+        rtac ctxt @{thm ordLeq_refl},
+        rtac ctxt @{thm card_of_Card_order},
+        REPEAT_DETERM o resolve_tac ctxt (@{thms ordLeq_ordLess_trans[OF card_of_diff]}
+          @ (MRBNF_Def.Un_bound_of_mrbnf mrbnf :: MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
+          @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
+          @ #small_PFVarss (#axioms params) @ #small_avoiding_sets (#axioms params)
+        )
+      ]) end
+    )) (#pre_mrbnfs fp_res) suitabless;
+
+    val suitable_pick0ss = @{map 3} (@{map 3} (fn suitable => fn ex_suitable => fn pick0 =>
+      Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (fst suitable $ fst pick0)) (fn {context=ctxt, ...} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd pick0]),
+        rtac ctxt (@{thm someI_ex} OF [ex_suitable])
+      ])
+    )) suitabless exists_suitabless pick0ss;
+
+    val f_swap_alphas = map (fn i => fold (fn t1 => fn t2 => t2 RS t1)
+      (replicate i conjunct2 @ (if i = r - 1 then [] else [conjunct1])) f_swap_alpha
+    ) (0 upto r - 1);
+    val f_alphas = @{map 4} (fn rec_f => fn raw => fn t => fn t' =>
+      let
+        val goal = Logic.mk_implies (
+          HOLogic.mk_Trueprop (#alpha (#inner raw) $ t $ t'),
+          mk_Trueprop_eq (
+            Term.list_comb (fst rec_f, flat pickss) $ t,
+            Term.list_comb (fst rec_f, flat pick'ss) $ t'
+          )
+        );
+      in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ [t, t'])) (suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        resolve_tac ctxt (map (fn thm => thm RS conjunct2) f_swap_alphas),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
         K (unfold_thms_tac ctxt @{thms imsupp_id}),
         REPEAT_DETERM o rtac ctxt @{thm Int_empty_left},
-        resolve_tac ctxt prems
-      ]);
+        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)))
+      ]) end
+    ) rec_fs (#raw_fps fp_res) ts ts';
 
-    val Un_bound = @{thm Un_Cinfinite_ordLess} OF [@{thm _}, @{thm _}, Cinfinite_card];
-    val exists_suitables = map2 (fn pick_T => fn (suitable, suitable_def) => Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (
-        HOLogic.mk_exists ("pick", pick_T, suitable $ Bound 0)
-      )) (fn {context=ctxt, ...} =>
-      EVERY1 [
-        K (unfold_thms_tac ctxt [suitable_def]),
-        REPEAT_DETERM o resolve_tac ctxt [@{thm choice}, allI],
-        rtac ctxt @{thm exists_suitable_aux},
-        rtac ctxt Cinfinite_card,
-        REPEAT_DETERM o resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLeq_refl ordLeq_transitive},
-        rtac ctxt Un_bound,
-        SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
-          @ MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf
-        ) 1)),
-        rtac ctxt @{thm card_of_minus_bound},
-        rtac ctxt Un_bound,
-        rtac ctxt Un_bound,
-        SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
-          @ #card_of_FVars_bound_UNIVs raw
-        ) 1)),
-        resolve_tac ctxt (#small_PFVarss paxioms),
-        resolve_tac ctxt (#small_avoiding_sets axioms)
-      ])
-    ) pick_Ts suitables;
+    val f0_alphas = @{map 4} (fn f0 => fn raw => fn t => fn t' =>
+      let val goal = Logic.mk_implies (
+        HOLogic.mk_Trueprop (#alpha (#inner raw) $ t $ t'),
+        mk_Trueprop_eq (fst f0 $ t, fst f0 $ t')
+      ) in Goal.prove_sorry lthy (names [t, t']) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd f0]),
+        resolve_tac ctxt f_alphas,
+        REPEAT_DETERM o resolve_tac ctxt (flat suitable_pick0ss),
+        assume_tac ctxt
+      ]) end
+    ) f0s (#raw_fps fp_res) ts ts';
 
-    val suitable_pick0s = map2 (fn (_, pick0_def) => fn exists_suitable =>
-      Local_Defs.unfold0 lthy [@{thm symmetric} OF [pick0_def]] (@{thm someI_ex} OF [exists_suitable])
-    ) pick0s exists_suitables;
+    val f0_UFVars'ss = map2 (fn f0 => map (fn thm =>
+      Local_Defs.unfold0 lthy [Thm.symmetric (snd f0)] (thm OF (flat suitable_pick0ss))
+    )) f0s f_UFVars'ss;
 
-    val f0_alpha = Local_Defs.unfold0 lthy [@{thm symmetric} OF [snd f0]] (
-      f_alpha OF (suitable_pick0s @ suitable_pick0s)
-    );
-    val f0_UFVars's = map (fn f_UFVars' => Local_Defs.unfold0 lthy [@{thm symmetric} OF [snd f0]] (
-      f_UFVars' OF suitable_pick0s
-    )) f_UFVars's;
-
-    val ids = map HOLogic.id_const vars;
-    val f0_ctor =
+    val f0_ctors = @{map 8} (fn i => fn f0 => fn raw => fn mrbnf => fn Uctor' => fn x => fn deads => fn (_, bsets, _) =>
       let
-        val int_empty_prems = @{map 3} (fn bset => fn PFVars => fn avoiding_set =>
-          HOLogic.mk_Trueprop (mk_int_empty (bset $ x, mk_Un (PFVars $ p, avoiding_set)))
-        ) raw_bound_sets (#PFVarss params) (#avoiding_sets model);
-        val noclash_prem = HOLogic.mk_Trueprop (fst noclash $ x);
+        val int_empties = @{map 3} (fn bset => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
+          mk_int_empty (bset $ x, mk_Un (PFVars $ p, avoiding_set))
+        )) bsets (#PFVarss params) (#avoiding_sets params);
+        val noclash = HOLogic.mk_Trueprop (fst (#noclash raw) $ x);
+        val live_ts = map2 (fn t => fn f0 => Term.absfree (dest_Free t) (
+          HOLogic.mk_prod (t, fst f0 $ t)
+        )) ts f0s;
         val goal = mk_Trueprop_eq (
-          fst f0 $ (ctor $ x) $ p,
-          fst CTOR $ (Term.list_comb (
-            MRBNF_Def.mk_map_of_mrbnf deads (replicate live raw_T) (replicate live prod_PU_T) vars vars mrbnf,
-            MRBNF_Def.interlace (replicate live (
-              Term.absfree (dest_Free t) (HOLogic.mk_prod (t, fst f0 $ t))
-            )) ids ids var_types
-          ) $ x) $ p
+          fst f0 $ (#ctor raw $ x) $ p,
+          fst Uctor' $ (mk_map_comb_of_mrbnf deads (replicate_rec live_ts) ids ids mrbnf $ x) $ p
         );
-        val x' = Free ("x'", pre_T);
-        val p' = Free ("p'", P);
-        val pick1s = map2 (fn var => fn (pick0, _) => Term.absfree (dest_Free x') (Term.absfree (dest_Free p') (BNF_FP_Util.mk_If
-          (HOLogic.mk_eq (HOLogic.mk_prod (x', p'), HOLogic.mk_prod (x, p)))
-          (HOLogic.id_const var)
-          (pick0 $ x' $ p')
-        ))) vars pick0s;
-        val suitable_pick1s = @{map 3} (fn (suitable, suitable_def) => fn suitable_pick0 => fn pick1 =>
-          Goal.prove_sorry lthy (names [x, p]) (int_empty_prems @ [noclash_prem]) (HOLogic.mk_Trueprop (suitable $ pick1)) (fn {context=ctxt, prems} => EVERY1 [
-            K (unfold_thms_tac ctxt [suitable_def]),
-            rtac ctxt allI,
-            rtac ctxt allI,
-            rtac ctxt (allE OF [Local_Defs.unfold0 ctxt [suitable_def] suitable_pick0]),
-            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
-            REPEAT_DETERM o EVERY' [
-              TRY o rtac ctxt conjI,
-              resolve_tac ctxt (@{thms bij_if supp_if imsupp_if_empty image_if_empty} @ [@{thm supp_if'} OF [Cinfinite_card]]),
-              assume_tac ctxt
-            ],
-            K (unfold_thms_tac ctxt @{thms prod.inject}),
-            etac ctxt conjE,
-            hyp_subst_tac ctxt,
-            rtac ctxt trans,
-            K (unfold_thms_tac ctxt @{thms Un_assoc}),
-            rtac ctxt @{thm Int_Un_distrib},
-            K (unfold_thms_tac ctxt (@{thm Un_empty} :: #FVars_ctors raw)),
-            rtac ctxt conjI,
-            SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
-            Method.insert_tac ctxt [Local_Defs.unfold0 ctxt (snd noclash :: @{thms Int_Un_distrib Un_empty}) (snd (split_last prems))],
-            REPEAT_DETERM o etac ctxt conjE,
-            REPEAT_DETERM o rtac ctxt conjI,
-            REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thm Diff_disjoint} :: prems))
-          ])
-        ) suitables suitable_pick0s pick1s;
-      in Goal.prove_sorry lthy (names [x, p]) (int_empty_prems @ [noclash_prem]) goal (fn {context=ctxt, prems} =>
-        let val suitable_pick1s = map (fn thm => thm OF prems) suitable_pick1s;
+      in Goal.prove_sorry lthy (names [x, p]) (int_empties @ [noclash]) goal (fn {context=ctxt, prems} =>
+        let
+          val x' = Free ("x'", snd (dest_Free x));
+          val p' = Free ("p'", snd (dest_Free p));
+          val suitable_pick1s = @{map 4} (fn suitable => fn pick0 => fn suitable_pick0 => fn var =>
+            let val goal = HOLogic.mk_Trueprop (fst suitable $ Term.absfree (dest_Free x') (Term.absfree (dest_Free p') (
+              BNF_FP_Util.mk_If (HOLogic.mk_eq (apply2 HOLogic.mk_prod ((x', p'), (x, p))))
+                (HOLogic.id_const var) (fst pick0 $ x' $ p')
+            ))) in Goal.prove_sorry ctxt [] [] goal (fn {context=ctxt, ...} => EVERY1 [
+              K (unfold_thms_tac ctxt [snd suitable]),
+              rtac ctxt allI,
+              rtac ctxt allI,
+              Method.insert_tac ctxt [suitable_pick0],
+              K (unfold_thms_tac ctxt [snd suitable]),
+              REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+              REPEAT_DETERM o FIRST' [
+                resolve_tac ctxt @{thms conjI bij_if supp_if imsupp_if_empty image_if_empty},
+                assume_tac ctxt
+              ],
+              dtac ctxt @{thm iffD1[OF prod.inject]},
+              etac ctxt conjE,
+              hyp_subst_tac ctxt,
+              rtac ctxt trans,
+              SELECT_GOAL (unfold_thms_tac ctxt @{thms Un_assoc}),
+              rtac ctxt @{thm Int_Un_distrib},
+              SELECT_GOAL (unfold_thms_tac ctxt (@{thms Un_empty} @ #FVars_ctors raw)),
+              rtac ctxt conjI,
+              Method.insert_tac ctxt (drop nvars prems),
+              SELECT_GOAL (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ [snd (#noclash raw)])),
+              REPEAT_DETERM o etac ctxt conjE,
+              REPEAT_DETERM o rtac ctxt conjI,
+              REPEAT_DETERM o FIRST' [
+                assume_tac ctxt,
+                resolve_tac ctxt (@{thms Diff_disjoint} @ take nvars prems)
+              ]
+            ]) end
+          ) (nth suitabless i) (nth pick0ss i) (nth suitable_pick0ss i) vars;
         in EVERY1 [
           rtac ctxt trans,
           rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt p)] fun_cong),
           SELECT_GOAL (unfold_thms_tac ctxt [snd f0]),
-          rtac ctxt (f_alpha OF (suitable_pick0s @ suitable_pick1s @ [#alpha_refl (#inner raw)])),
+          resolve_tac ctxt f_alphas,
+          REPEAT_DETERM o resolve_tac ctxt (suitable_pick1s @ flat suitable_pick0ss),
+          rtac ctxt (#alpha_refl (#inner raw)),
           rtac ctxt trans,
-          rtac ctxt (snd f OF suitable_pick1s),
-          K (unfold_thms_tac ctxt (@{thms if_P[OF refl]} @ [#rename_id0 raw, MRBNF_Def.map_id_of_mrbnf mrbnf])),
-          rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst CTOR))] @{thm arg_cong2[OF _ refl]}),
+          resolve_tac ctxt (map snd rec_fs),
+          REPEAT_DETERM o resolve_tac ctxt (suitable_pick1s @ flat suitable_pick0ss),
+          K (unfold_thms_tac ctxt @{thms if_P[OF refl]}),
+          rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst Uctor'))] @{thm arg_cong2[OF _ refl]}),
           rtac ctxt (MRBNF_Def.map_cong_of_mrbnf mrbnf),
-          REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound refl},
-          K (unfold_thms_tac ctxt [snd f0]),
+          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id refl},
+          K (unfold_thms_tac ctxt (@{thms prod.inject} @ map #rename_id (#raw_fps fp_res))),
           REPEAT_DETERM o EVERY' [
-            rtac ctxt @{thm iffD2[OF prod.inject]},
-            rtac ctxt conjI,
-            rtac ctxt refl,
-            rtac ctxt (f_alpha OF (suitable_pick1s @ suitable_pick0s)),
-            rtac ctxt (#alpha_refl (#inner raw))
+            rtac ctxt @{thm conjI[OF refl]},
+            rtac ctxt trans,
+            resolve_tac ctxt f_alphas,
+            REPEAT_DETERM o resolve_tac ctxt (flat suitable_pick0ss
+              @ map (Local_Defs.unfold0 ctxt @{thms prod.inject}) suitable_pick1s
+            ),
+            resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+            SELECT_GOAL (unfold_thms_tac ctxt (map snd f0s)),
+            rtac ctxt refl
           ]
         ] end
-      ) end;
+      ) end
+    ) (0 upto r - 1) f0s (#raw_fps fp_res) (#pre_mrbnfs fp_res) Uctor's xs deadss pre_setss;
 
-    val f0_swap = Local_Defs.unfold0 lthy [@{thm symmetric} OF [snd f0], snd PUmap'] (
-      Drule.rotate_prems ~1 f_swap_alpha OF ([#alpha_refl (#inner raw)] @ suitable_pick0s @ suitable_pick0s)
-    ) RS conjunct1;
+    val f0_swaps = map2 (fn thm => fn f0 => Local_Defs.unfold0 lthy [Thm.symmetric (snd f0)] (
+      Drule.rotate_prems ~2 thm OF (
+        map (#alpha_refl o #inner) (#raw_fps fp_res) @ flat (suitable_pick0ss @ suitable_pick0ss)
+      )
+    ) RS conjunct1) f_swap_alphas f0s;
 
-    val id_prems = mk_prems @{thms supp_id_bound} @{thms bij_id supp_id_bound} var_types
-    val nnoclash_noclash =
-      let
-        val set_map_id = map (fn thm => thm OF id_prems) (MRBNF_Def.set_map_of_mrbnf mrbnf);
-        val comp_FVarss = map (fn FVars => infer_instantiate' lthy [SOME (Thm.cterm_of lthy FVars)] @{thm comp_def}) (#FVars raw);
-      in Goal.prove_sorry lthy (names [qx]) [] (mk_Trueprop_eq (
-        fst nnoclash $ qx,
-        fst noclash $ (Term.list_comb (
-          MRBNF_Def.mk_map_of_mrbnf deads (replicate live (#T quotient)) (replicate live raw_T) vars vars mrbnf,
-          MRBNF_Def.interlace (replicate live (#rep (#inner quotient))) ids ids var_types
-        ) $ qx)
-      )) (fn {context=ctxt, ...} =>
-        unfold_thms_tac ctxt (@{thms image_id image_comp} @ comp_FVarss @ set_map_id
-          @ [snd noclash, snd nnoclash] @ map (fn thm => @{thm symmetric} OF [thm]) (
-            #FVars_defs (#inner quotient)
-          )
-        ) THEN
-        rtac ctxt refl 1
-      ) end;
+    val lthy = Config.put Goal.quick_and_dirty false lthy;
+    val _ = @{print} f0_swaps
 
-    val qt = Free ("t", #T quotient);
-    val (_, quot_bound_sets, _) = mk_sets (#T quotient)
-
+(*
     (* Final result lemmas *)
     val ff0_cctor =
       let

@@ -6861,8 +6861,6 @@ lemma f0_alphas:
 
 lemmas f0_UFVars' = f_UFVars'[OF suitable_pick0s, unfolded f0_T1_def[symmetric] f0_T2_def[symmetric]]
 
-thm trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
-
 lemma f0_T1_ctor:
   assumes int_empty: "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
     and noclash: "noclash_raw_T1 x"
@@ -6921,7 +6919,7 @@ proof -
      apply (unfold f0_T1_def)[1]
      apply (rule f_alphas)
              apply (rule suitable_pick1s suitable_pick0s)+
-     apply (rule T1.alpha_refls)+
+     apply (rule T1.alpha_refls)
     apply (rule trans)
      apply (rule f_T1_simp)
         apply (rule suitable_pick1s suitable_pick0s)+

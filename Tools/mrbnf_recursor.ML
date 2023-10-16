@@ -40,8 +40,7 @@ sig
     rec_fun: term,
     rec_Uctor: thm,
     rec_swap: thm,
-    rec_UFVarss: thm list,
-    noclash: term * thm
+    rec_UFVarss: thm list
   };
 
   val mk_def_t: bool -> binding -> (binding -> binding) -> bstring -> int -> term
@@ -107,8 +106,7 @@ type recursor_result = {
   rec_fun: term,
   rec_Uctor: thm,
   rec_swap: thm,
-  rec_UFVarss: thm list,
-  noclash: term * thm
+  rec_UFVarss: thm list
 };
 
 fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
@@ -759,12 +757,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
 
     val pick_Tss = map (map (fst o dest_funT o fastype_of o fst)) suitabless;
 
-    val ((((((((((((((fs, gs), pickss), pick'ss), xs), ys), ys'), vs), vs'), ts), ts'), pus), p), p'), _) = lthy
+    val (((((((((((((((fs, gs), pickss), pick'ss), xs), xs'), ys), ys'), vs), vs'), ts), ts'), pus), p), p'), _) = lthy
       |> mk_Frees "f" (map (fn var => var --> var) vars)
       ||>> mk_Frees "g" (map (fn var => var --> var) vars)
       ||>> mk_Freess "pick" pick_Tss
       ||>> mk_Freess "pick'" pick_Tss
       ||>> mk_Frees "x" (map (fst o dest_funT o fastype_of o #ctor) (#raw_fps fp_res))
+      ||>> mk_Frees "x'" (map (fst o dest_funT o fastype_of o #ctor) (#quotient_fps fp_res))
       ||>> mk_Frees "y" (map (fst o dest_funT o fastype_of o fst) Uctor's)
       ||>> mk_Frees "y'" (map (fst o dest_funT o fastype_of o fst) Uctor's)
       ||>> mk_Frees "v" (map (fst o dest_funT o fastype_of o #Uctor) models)
@@ -794,6 +793,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       );
 
     val pre_setss = mk_pre_setss (map #ctor (#raw_fps fp_res));
+    val quot_pre_setss = mk_pre_setss (map #ctor (#quotient_fps fp_res));
     val PU_setss = mk_pre_setss (map fst Uctor's);
     val quot_PU_setss = mk_pre_setss (map #Uctor models);
 
@@ -2787,79 +2787,81 @@ fun create_binding_recursor qualify fp_res params models lthy =
       )
     ) RS conjunct1) f_swap_alphas f0s;
 
-    val lthy = Config.put Goal.quick_and_dirty false lthy;
-    val _ = @{print} f0_swaps
-
-(*
     (* Final result lemmas *)
-    val ff0_cctor =
+    val ff0_cctors = @{map 8} (fn i => fn ff0 => fn quot => fn mrbnf => fn Uctor => fn x => fn deads => fn (_, bsets, _) =>
       let
-        val int_empty_prems = @{map 3} (fn bset => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
-          mk_int_empty (bset $ qx, mk_Un (PFVars $ p, avoiding_set))
-        )) quot_bound_sets (#PFVarss params) (#avoiding_sets model);
-        val nnoclash_prem = HOLogic.mk_Trueprop (fst nnoclash $ qx);
-        val rec_t = Term.absfree (dest_Free qt) (HOLogic.mk_prod (qt, fst ff0 $ qt));
+        val int_empties = @{map 3} (fn bset => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
+          mk_int_empty (bset $ x, mk_Un (PFVars $ p, avoiding_set))
+        )) bsets (#PFVarss params) (#avoiding_sets params);
+        val noclash = HOLogic.mk_Trueprop (fst (#noclash quot) $ x);
+        val live_ts = map2 (fn t => fn f0 => Term.absfree (dest_Free t) (
+          HOLogic.mk_prod (t, fst f0 $ t)
+        )) (map2 (fn t => fn quot => Free (fst (dest_Free t), #T quot)) ts (#quotient_fps fp_res)) ff0s;
         val goal = mk_Trueprop_eq (
-          fst ff0 $ (#ctor quotient $ qx) $ p,
-          #Uctor model $ (Term.list_comb (
-            MRBNF_Def.mk_map_of_mrbnf deads (replicate live (#T quotient)) (replicate live (HOLogic.mk_prodT (#T quotient, P --> U)))
-              vars vars mrbnf,
-            MRBNF_Def.interlace (replicate live rec_t) ids ids var_types
-          ) $ qx) $ p
+          fst ff0 $ (#ctor quot $ x) $ p,
+          Uctor $ (mk_map_comb_of_mrbnf deads (replicate_rec live_ts) ids ids mrbnf $ x) $ p
         );
-        val set_maps = map (fn thm => Local_Defs.unfold0 lthy @{thms image_id} (
-          infer_instantiate' lthy (
-            replicate live (SOME (Thm.cterm_of lthy (#rep (#inner quotient))))
-          ) (thm OF id_prems)
-        ) RS sym) (MRBNF_Def.set_map_of_mrbnf mrbnf);
-      in Goal.prove_sorry lthy (names [x, p]) (int_empty_prems @ [nnoclash_prem]) goal (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd ff0, #ctor_def (#inner quotient)]),
+      in Goal.prove_sorry lthy (names [x, p]) (int_empties @ [noclash]) goal (fn {context=ctxt, prems} => EVERY1 [
+        Method.insert_tac ctxt prems,
+        K (unfold_thms_tac ctxt (#ctor_def (#inner quot) :: map snd ff0s)),
         rtac ctxt trans,
-        rtac ctxt (fun_cong OF [f0_alpha]),
-        rtac ctxt (#rep_abs (#inner quotient)),
+        resolve_tac ctxt (map (fn thm => fun_cong OF [thm]) f0_alphas),
+        rtac ctxt (#rep_abs (#inner quot)),
         rtac ctxt trans,
-        rtac ctxt f0_ctor,
-        REPEAT_DETERM o resolve_tac ctxt (map (Local_Defs.unfold0 ctxt set_maps) prems),
-        rtac ctxt (iffD1 OF [nnoclash_noclash]),
-        resolve_tac ctxt prems,
-        K (unfold_thms_tac ctxt (@{thms id_o o_id} @ [snd CTOR, MRBNF_Def.map_comp_of_mrbnf mrbnf OF (id_prems @ id_prems)])),
-        K (unfold_thms_tac ctxt (@{thms comp_def map_prod_def prod.case id_def} @ [#abs_rep (#inner quotient)])),
+        resolve_tac ctxt f0_ctors,
+        K (unfold_thms_tac ctxt (flat set_map_idss)),
+        REPEAT_DETERM o assume_tac ctxt,
+        rtac ctxt (iffD1 OF [#nnoclash_noclash (#inner quot)]),
+        assume_tac ctxt,
+        K (unfold_thms_tac ctxt (map snd Uctor's)),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+          K (unfold_thms_tac ctxt @{thms comp_def map_prod_simp id_def}),
+          K (unfold_thms_tac ctxt @{thms id_def[symmetric]})
+        ],
+        K (unfold_thms_tac ctxt (map (#abs_rep o #inner) (#quotient_fps fp_res))),
         rtac ctxt refl
-      ]) end;
+      ]) end
+    ) (0 upto r - 1) ff0s (#quotient_fps fp_res) (#pre_mrbnfs fp_res) (map #Uctor models) xs' deadss quot_pre_setss;
 
-    val ff0_swap =
+    val ff0_swaps = @{map 5} (fn ff0 => fn quot => fn t => fn model => fn f0_alpha =>
       let
+        val t = Free (fst (dest_Free t), #T quot);
         val imsupp_prems = map2 (fn f => fn avoiding_set => HOLogic.mk_Trueprop (
-          mk_int_empty (mk_imsupp f, avoiding_set))
-        ) fs (#avoiding_sets model);
+          mk_int_empty (mk_imsupp f, avoiding_set)
+        )) fs (#avoiding_sets params);
         val goal = mk_Trueprop_eq (
-          fst ff0 $ (Term.list_comb (#rename quotient, fs) $ qt) $ p,
-          Term.list_comb (#Umap model, fs) $ qt $ (fst ff0 $ qt $ (Term.list_comb (#Pmap params, map mk_inv fs) $ p))
+          fst ff0 $ (Term.list_comb (#rename quot, fs) $ t) $ p,
+          Term.list_comb (#Umap model, fs) $ t $ (fst ff0 $ t $ (
+            Term.list_comb (#Pmap params, map mk_inv fs) $ p
+          ))
         );
-      in Goal.prove_sorry lthy (names (fs @ [qt, p])) (f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd ff0, #rename_def (#inner quotient)]),
+      in Goal.prove_sorry lthy (names (fs @ [t, p])) (f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd ff0, #rename_def (#inner quot)]),
         rtac ctxt trans,
         rtac ctxt (fun_cong OF [f0_alpha]),
-        rtac ctxt (#rep_abs (#inner quotient)),
+        rtac ctxt (#rep_abs (#inner quot)),
         rtac ctxt trans,
-        rtac ctxt f0_swap,
+        resolve_tac ctxt f0_swaps,
         REPEAT_DETERM o resolve_tac ctxt prems,
-        K (unfold_thms_tac ctxt [snd Umap', #abs_rep (#inner quotient)]),
+        K (unfold_thms_tac ctxt (map snd (PUmap's @ Umap's) @ [#abs_rep (#inner quot)])),
         rtac ctxt refl
-      ]) end;
+      ]) end
+    ) ff0s (#quotient_fps fp_res) ts models f0_alphas;
 
-    val ff0_UFVarss = @{map 3} (fn (_, UFVars'_def) => fn f0_UFVars' => fn FVars_def2 => Local_Defs.unfold0 lthy
-      [#abs_rep (#inner quotient), UFVars'_def, FVars_def2, @{thm symmetric} OF [snd ff0]]
-      (infer_instantiate' lthy [SOME (Thm.cterm_of lthy (#rep (#inner quotient) $ Var (("t", 0), #T quotient)))] f0_UFVars')
-    ) UFVars's f0_UFVars's FVars_def2s;
+    val ff0_UFVarsss = map2 (fn quot => map (fn thm => Local_Defs.unfold0 lthy (
+      map snd (flat UFVars'ss) @ [#abs_rep (#inner quot)] @ map (Thm.symmetric o snd) ff0s @ FVars_def2s
+    ) (
+      infer_instantiate' lthy [SOME (Thm.cterm_of lthy (#rep (#inner quot) $ Var (("t", 0), #T quot)))] thm
+    ))) (#quotient_fps fp_res) f0_UFVars'ss;
 
-    val unfold_defs = Local_Defs.unfold0 lthy defs*)
-  in (*({
+    val unfold_defs = Local_Defs.unfold0 lthy defs;
+  in (@{map 4} (fn ff0 => fn ff0_cctor => fn ff0_swap => fn ff0_UFVarss => {
     rec_fun = fst ff0,
     rec_Uctor = unfold_defs ff0_cctor,
     rec_swap = unfold_defs ff0_swap,
-    rec_UFVarss = map unfold_defs ff0_UFVarss,
-    noclash = nnoclash
-  }, lthy) *) (error "foo", lthy) end;
+    rec_UFVarss = map unfold_defs ff0_UFVarss
+  }) ff0s ff0_cctors ff0_swaps ff0_UFVarsss, lthy) end;
 
 end

@@ -31,7 +31,7 @@ let
 
   val (tys, _, (mrbnfs as [mrbnf1, mrbnf2], (accum, lthy))) =
       MRBNF_Comp.normalize_mrbnfs (K I) [] (map (map dest_TFree) [snd tys1, snd tys2])
-      [] (K (resBs @ Xs)) NONE [mrbnf1, mrbnf2] (accum, lthy);
+      [] [] (K (resBs @ Xs)) NONE [mrbnf1, mrbnf2] (accum, lthy);
 
   (* Step 2: Seal the pre-MRBNF with a typedef *)
   val ((mrbnf1, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name1 ^ "_pre")) true (fst tys1) [] mrbnf1 lthy

@@ -174,7 +174,8 @@ fun prove_model_axioms binding qualify (model : (Proof.context -> tactic) tvsubs
     val n = MRBNF_Def.free_of_mrbnf mrbnf - length vars;
     val (Ts, _) = names_lthy
       |> mk_TFrees' (replicate n (MRBNF_Def.class_of_mrbnf mrbnf));
-    val old_vars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps (#fp_result model)))) []));
+    val var_T = #T (hd (#quotient_fps (#fp_result model)));
+    val old_vars = map TVar (rev (Term.add_tvarsT var_T [])) @ map TFree (rev (Term.add_tfreesT var_T []));
     val new_vars = fst (fold_map (fn SOME a => (fn xs => (a, xs)) | NONE => fn xs => (hd xs, tl xs)) vars_opt Ts);
 
   in (map_filter (Option.map (snd o fst)) etas, {
@@ -1072,7 +1073,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       K (unfold_thms_tac ctxt (snd CCTOR :: @{thms Un_empty_right case_prod_beta prod.collapse})),
       Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
         let
-          val y = snd (nth params 1);
+          val y = snd (hd params);
           val ctor_map_t = #ctor quotient $ (MRBNF_Def.mk_map_comb_of_mrbnf
             (MRBNF_Def.deads_of_mrbnf mrbnf) live_gs bound_gs free_gs mrbnf $
               Thm.term_of y

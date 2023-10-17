@@ -62,7 +62,7 @@ lemma tvsubst_VVr_func: "tvsubst tvVVr_tvsubst t = t"
           apply (rule terms.SSupp_VVr_bound)
       unfolding tvIImsupp_tvsubst_VVr_empty
          apply (rule Int_empty_right)
-      unfolding tvnoclash_terms_def Int_Un_distrib Un_empty
+      unfolding noclash_terms_def Int_Un_distrib Un_empty
         apply (rule conjI)
          apply (rule iffD2[OF disjoint_iff], rule allI, rule impI, assumption)
         apply (rule iffD2[OF disjoint_iff], rule allI, rule impI)

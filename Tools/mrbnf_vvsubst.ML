@@ -31,7 +31,8 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
     val mk_def_t = mk_def_t false (Binding.name name) qualify
 
     val (_, lthy) = Local_Theory.begin_nested old_lthy;
-    val (x, _) = apfst hd (mk_TFrees' [class_of_mrbnf (#pre_mrbnf fp_result)] lthy);
+    val mrbnf = hd (#pre_mrbnfs fp_result);
+    val (x, _) = apfst hd (mk_TFrees' [class_of_mrbnf mrbnf] lthy);
 
     val ssfun = hd (Typedef.get_info lthy "MRBNF_Recursor.ssfun");
 
@@ -41,7 +42,7 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
     val abs = Const (#Abs_name (fst ssfun), rep_type --> abs_type);
     val rep = Const (#Rep_name (fst ssfun), abs_type --> rep_type);
 
-    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf (#pre_mrbnf fp_result)];
+    val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
 
     val compSS = (
       Const (@{const_name compSS}, (x --> x) --> abs_type --> abs_type),
@@ -52,11 +53,10 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
       @{thm PFVars_def}
     );
 
-    val mrbnf = #pre_mrbnf fp_result;
     val deads = deads_of_mrbnf mrbnf;
     val live = live_of_mrbnf mrbnf;
     val var_types = var_types_of_mrbnf mrbnf;
-    val quotient = #quotient_fp fp_result;
+    val quotient = hd (#quotient_fps fp_result);
     val T = #T quotient;
     val nvars = length vars;
 
@@ -103,21 +103,23 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
     lthy
   ) end;
 
-fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
+fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar.fp_result) lthy =
   let
-    val mrbnf = #pre_mrbnf fp_result;
+    val mrbnf = hd (#pre_mrbnfs fp_result);
     val live = live_of_mrbnf mrbnf;
     val bound = bound_of_mrbnf mrbnf;
     val free = free_of_mrbnf mrbnf;
     val deads = deads_of_mrbnf mrbnf;
     val var_types = var_types_of_mrbnf mrbnf;
-    val name = short_type_name (fst (dest_Type (#T (#quotient_fp fp_result))));
-    val nvars = length (Term.add_tfreesT (#T (#quotient_fp fp_result)) []);
+    val quotient = hd (#quotient_fps fp_result);
+    val name = short_type_name (fst (dest_Type (#T quotient)));
+    val nvars = length (Term.add_tfreesT (#T quotient) []);
     val (vars, _) = lthy
       |> mk_TFrees' (replicate nvars (class_of_mrbnf mrbnf));
-    val fp_result = MRBNF_FP_Def_Sugar.substitute_vars vars fp_result;
+    val old_vars = map TFree (rev (Term.add_tfreesT (#T quotient) []));
+    val fp_result = MRBNF_FP_Def_Sugar.substitute_vars (old_vars ~~ vars) fp_result;
 
-    val quotient = #quotient_fp fp_result;
+    val quotient = hd (#quotient_fps fp_result);
     val T = #T quotient;
 
     val (
@@ -149,6 +151,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     val parameters = {
       P = P,
       PFVarss = PFVarss,
+      avoiding_sets = map (fn var => Const (@{const_name bot}, HOLogic.mk_setT var)) vars,
       Pmap = ssfun_map,
       min_bound = false,
       axioms = {
@@ -187,9 +190,10 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         small_PFVarss = replicate nvars (fn ctxt => EVERY1 [
           K (unfold_thms_tac ctxt @{thms case_prod_beta}),
           rtac ctxt small_PFVars
-        ])
+        ]),
+        small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1)
       }
-    };
+    } : (Proof.context -> tactic) MRBNF_Recursor.parameter;
 
     val names = map (fst o dest_Free);
     fun mk_prems frees bounds = maps (fn MRBNF_Def.Free_Var => frees | MRBNF_Def.Bound_Var => bounds | _ => []);
@@ -306,14 +310,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     ) (0 upto nvars - 1) prod_bsets (#FVars quotient) vars PFVarss;
 
     val model_tacs = {
-      small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt @{thm emp_bound} 1),
       Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
       Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym), REPEAT_DETERM o assume_tac ctxt],
       Umap_cong_id = fn ctxt => EVERY1 [
         rtac ctxt (#rename_cong_id (#inner quotient)),
         REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
       ],
-      UFVars_Umap = replicate nvars (fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]),
+      UFVars_Umaps = replicate nvars (fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]),
       Umap_Uctor = fn ctxt => rtac ctxt Umap_Uctor 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
       UFVars_subsets = map (fn UFVars_subset => fn ctxt => EVERY1 [
         K (unfold_thms_tac ctxt @{thms case_prod_beta}),
@@ -324,16 +327,15 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     val model = {
       U = T,
-      fp_result = fp_result,
-      UFVars = map (Term.abs ("t", T)) (#FVars quotient),
+      binding = Binding.name ("vvsubst_" ^ name),
+      UFVarss = map (Term.abs ("t", T)) (#FVars quotient),
       Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", T) (Term.list_comb (#rename quotient, fs))),
       Uctor = CCTOR',
-      avoiding_sets = map (fn var => Const (@{const_name bot}, HOLogic.mk_setT var)) vars,
-      parameters = parameters,
       axioms = model_tacs
-    };
+    } : (Proof.context -> tactic) MRBNF_Recursor.model;
 
-    val (res, lthy) = create_binding_recursor qualify model (Binding.name ("vvsubst_" ^ name)) lthy;
+    val (ress, lthy) = create_binding_recursor qualify fp_result parameters [model] lthy;
+    val res = hd ress;
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
@@ -360,7 +362,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     val vvsubst_cctor =
       let
         val imsupp_prems = map2 (fn bset => fn f => HOLogic.mk_Trueprop (mk_int_empty (bset $ x, mk_imsupp f))) bsets fs;
-        val noclash_prem = HOLogic.mk_Trueprop (fst (#noclash res) $ x);
+        val noclash_prem = HOLogic.mk_Trueprop (fst (#noclash quotient) $ x);
         val vvsubst_t = Term.list_comb (fst vvsubst, fs);
         val goal = mk_Trueprop_eq (
           vvsubst_t $ (ctor $ x),
@@ -415,7 +417,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
 
     fun helper_tac ctxt = EVERY' [
       REPEAT_DETERM o Int_empty_tac ctxt,
-      K (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ [snd (#noclash res)])),
+      K (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ [snd (#noclash quotient)])),
       REPEAT_DETERM o EVERY' [
         rtac ctxt conjI,
         REPEAT_DETERM o FIRST' [
@@ -572,7 +574,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
         rtac ctxt trans,
         rtac ctxt vvsubst_cctor,
         REPEAT_DETERM o resolve_tac ctxt prems,
-        K (unfold_thms_tac ctxt (@{thms image_id} @ set_maps @ [snd (#noclash res)])),
+        K (unfold_thms_tac ctxt (@{thms image_id} @ set_maps @ [snd (#noclash quotient)])),
         REPEAT_DETERM_N nvars o EVERY' [
           rtac ctxt @{thm Int_subset_empty2[rotated]},
           rtac ctxt @{thm Un_upper1},
@@ -769,7 +771,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify fp_result lthy =
     val (_, lthy) = Local_Theory.notes notes lthy
     val res = {
       vvsubst_ctor = vvsubst_cctor,
-      noclash = #noclash res
+      noclash = #noclash quotient
     };
 
   in ((x, res), lthy) end;

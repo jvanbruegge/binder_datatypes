@@ -12,9 +12,10 @@ val name2 = "T2";
 val rel = [[1,3], [1]];
 (*val T1 = @{typ "'var + unit + 'tyvar + 'rec * 'rec2 + 'bvar * 'brec + 'btyvar * 'brec2 + 'a"}
 val T2 = @{typ "'var + 'tyvar + 'rec * 'rec2 + 'bvar * 'brec + 'btyvar * 'brec2 + 'b * 'rec"};*)
-Multithreading.parallel_proofs := 0
+Multithreading.parallel_proofs := 4
 \<close>
 
+declare [[quick_and_dirty]]
 declare [[ML_print_depth=1000]]
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
@@ -69,5 +70,10 @@ let
 in lthy end
 \<close>
 print_theorems
+
+declare [[quick_and_dirty=false]]
+
+thm noclash_T1_def
+lemmas infinite_UNIV = cinfinite_imp_infinite[OF T1_pre.UNIV_cinfinite]
 
 end

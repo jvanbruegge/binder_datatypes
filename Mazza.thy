@@ -886,12 +886,11 @@ local_setup \<open>fn lthy =>
 let
   fun rtac ctxt = resolve_tac ctxt o single
   val model_tacs = {
-    small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
     Umap_id0 = fn ctxt => rtac ctxt @{thm map_U_lam_ilam_id} 1,
     Umap_comp0 = fn ctxt => (rtac ctxt @{thm map_U_lam_ilam_comp} THEN_ALL_NEW assume_tac ctxt) 1,
     Umap_cong_id = fn ctxt => (rtac ctxt @{thm map_U_lam_ilam_cong_id}
        THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1,
-    UFVars_Umap = [fn ctxt => (rtac ctxt @{thm set_U_lam_ilam_map_U_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1],
+    UFVars_Umaps = [fn ctxt => (rtac ctxt @{thm set_U_lam_ilam_map_U_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1],
     Umap_Uctor = fn ctxt => (rtac ctxt @{thm map_CCTOR_lam_ilam} THEN_ALL_NEW assume_tac ctxt) 1,
     UFVars_subsets = [fn ctxt => (rtac ctxt @{thm set_CCTOR_lam_ilam}
        THEN_ALL_NEW FIRST' [assume_tac ctxt, Goal.assume_rule_tac ctxt]) 1]
@@ -901,7 +900,9 @@ let
     P = @{typ "('a :: cinf) P_lam_ilam"},
     PFVarss = [@{term "\<lambda>_ :: 'a P_lam_ilam. {} :: 'a :: cinf set"}],
     Pmap = @{term "\<lambda>(_ :: 'a \<Rightarrow> 'a). id :: 'a :: cinf P_lam_ilam \<Rightarrow> 'a P_lam_ilam"},
+    avoiding_sets = [ @{term "{} :: 'a::cinf set"}],
     axioms = {
+      small_avoiding_sets = [fn ctxt => rtac ctxt @{thm emp_bound} 1],
       Pmap_id0 = fn ctxt => rtac ctxt refl 1,
       Pmap_comp0 = fn ctxt => rtac ctxt sym 1 THEN rtac ctxt @{thm id_o} 1,
       Pmap_cong_id = fn ctxt => rtac ctxt @{thm id_apply} 1,
@@ -913,17 +914,16 @@ let
 
   val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of lthy @{type_name lam});
   val model = {
+    binding = Binding.name "lam_ilam",
     U = @{typ "'a :: cinf U_lam_ilam"},
-    fp_result = fp_res,
-    UFVars = [@{term "set_U_lam_ilam :: 'a lam \<Rightarrow> 'a U_lam_ilam \<Rightarrow> 'a :: cinf set"}],
+    UFVarss = [@{term "set_U_lam_ilam :: 'a lam \<Rightarrow> 'a U_lam_ilam \<Rightarrow> 'a :: cinf set"}],
     Umap = @{term "map_U_lam_ilam :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a lam \<Rightarrow> 'a U_lam_ilam \<Rightarrow> 'a :: cinf U_lam_ilam"},
     Uctor = @{term CCTOR_lam_ilam},
-    avoiding_sets = [ @{term "{} :: 'a::cinf set"}],
-    parameters = params,
     axioms = model_tacs
   } : (Proof.context -> tactic) MRBNF_Recursor.model;
   val _ = model;
-  val (res, lthy) = MRBNF_Recursor.create_binding_recursor (Binding.qualify false "lam_ilam") model (Binding.name "lam_ilam") lthy;
+  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor (Binding.qualify false "lam_ilam") fp_res params [model] lthy;
+  val res = hd ress;
   val notes = [
     ("ctor", [#rec_Uctor res]),
     ("swap", [#rec_swap res]),

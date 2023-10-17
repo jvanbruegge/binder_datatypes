@@ -1,7 +1,7 @@
 signature MRBNF_RECURSOR_TACTICS =
 sig
 
-  val mk_f_pat_complete_tac: thm -> Proof.context -> tactic
+  val mk_f_pat_complete_tac: thm list -> Proof.context -> tactic
   val mk_f_termination_tac: (typ -> term) -> thm -> thm list -> thm list -> thm list
     -> thm list -> Proof.context -> tactic
 
@@ -31,27 +31,34 @@ struct
 open MRBNF_Util
 open BNF_Tactics
 
-fun mk_f_pat_complete_tac raw_inject ctxt = EVERY1 [
-  Pat_Completeness.pat_completeness_tac ctxt,
-  REPEAT_DETERM o etac ctxt @{thm Pair_inject},
-  dtac ctxt (iffD1 OF [raw_inject]),
-  hyp_subst_tac ctxt,
-  rtac ctxt refl
+fun mk_f_pat_complete_tac raw_injects ctxt = EVERY [
+  Pat_Completeness.pat_completeness_tac ctxt 1,
+  unfold_thms_tac ctxt (@{thms prod.inject sum.inject Inl_Inr_False Inr_Inl_False} @ raw_injects),
+  ALLGOALS (EVERY' [
+    REPEAT_DETERM o etac ctxt conjE,
+    TRY o hyp_subst_tac ctxt,
+    rtac ctxt refl ORELSE' etac ctxt FalseE
+  ])
 ];
 
 fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshapes set_maps prems ctxt = EVERY1 [
   Function_Relation.relation_tac ctxt mk_relation,
   rtac ctxt @{thm wf_inv_image},
   rtac ctxt wf_subshape,
-  K (unfold_thms_tac ctxt @{thms in_inv_image prod_in_Collect_iff comp_def snd_conv fst_conv})
-] THEN ALLGOALS (EVERY' [
+  K (unfold_thms_tac ctxt @{thms in_inv_image map_sum.simps sum.case prod_in_Collect_iff comp_def snd_conv fst_conv})
+] THEN REPEAT_DETERM (EVERY1 [
   REPEAT_DETERM o etac ctxt conjE,
-  dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
-  resolve_tac ctxt set_maps,
-  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})),
+  EqSubst.eqsubst_asm_tac ctxt [0] set_maps,
+  REPEAT_DETERM o FIRST' [
+    eresolve_tac ctxt prems,
+    resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}
+  ],
   K (unfold_thms_tac ctxt @{thms image_id}),
-  dresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
-  REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (prems @ @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}))
+  eresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
+  REPEAT_DETERM o FIRST' [
+    eresolve_tac ctxt prems,
+    resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}
+  ]
 ]);
 
 fun mk_Umap'_CTOR_tac mrbnf Umap'_def PUmap'_def CTOR_def rename_def abs_ctor total_abs_eq_iff alpha_bij_eq rep_abs Umap_Uctor Uctor ctxt prems =

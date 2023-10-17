@@ -116,7 +116,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar
     val nvars = length (Term.add_tfreesT (#T quotient) []);
     val (vars, _) = lthy
       |> mk_TFrees' (replicate nvars (class_of_mrbnf mrbnf));
-    val old_vars = map TVar (rev (Term.add_tvarsT (#T quotient) []));
+    val old_vars = map TFree (rev (Term.add_tfreesT (#T quotient) []));
     val fp_result = MRBNF_FP_Def_Sugar.substitute_vars (old_vars ~~ vars) fp_result;
 
     val quotient = hd (#quotient_fps fp_result);

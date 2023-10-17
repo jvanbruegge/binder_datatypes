@@ -650,6 +650,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
       map2 (fn f0 => fn quot => Term.abs ("t", #T quot) (fst f0 $ (#rep (#inner quot) $ Bound 0))) f0s (#quotient_fps fp_res)
     ) lthy;
 
+    val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val n = length suitables + nvars + 2;
     val Pmap = Term.list_comb (#Pmap params, map mk_inv fs) $ p;
     val (XXls, lthy) = mk_defs_t false b qualify "XXl" n
@@ -672,7 +673,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
               val PU_t = Term.list_comb (fst (#PUmap' model_const), fs)
                 $ inner_t $ (Term.list_comb (f_t, flat pickss) $ inner_t)
             in Term.absfree (dest_Free t) (HOLogic.mk_prod (rename_t, PU_t)) end
-          ) (0 upto length suitables - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs) (replicate_rec model_consts);
+          ) (0 upto nrecs - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs) (replicate_rec model_consts);
         in fold_rev Term.absfree (map dest_Free (flat pickss @ fs @ [p, x])) (
           Term.list_comb (map_t1, interlace recs pick_ts' fs (MRBNF_Def.var_types_of_mrbnf mrbnf)) $ x
         ) end
@@ -696,7 +697,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
             in Term.absfree (dest_Free t) (HOLogic.mk_prod (
               rename_t, Term.list_comb (f_t, flat pickss) $ rename_t
             )) end
-          ) (0 upto length suitables - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs);
+          ) (0 upto nrecs - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs);
         in fold_rev Term.absfree (map dest_Free (flat pickss @ fs @ [p, x])) (
           Term.list_comb (map_t1, interlace recs pick_ts fs var_types) $ x
         ) end
@@ -1465,7 +1466,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ]) end
     ) (#UFVarss model)) (#raw_fps fp_res) (#quotient_fps fp_res) models ts ts' UFVars'ss;
 
-    val (conj_spec, conj_impI) = if length (#raw_fps fp_res) = 1 then (spec, impI) else
+    val (conj_spec, conj_impI) = if length (#raw_fps fp_res) = 1 then (spec, mp) else
       let
         val (Ts, _) = mk_TFrees (length (#raw_fps fp_res)) lthy;
         val ((Ps1, xs), _) = lthy
@@ -1653,6 +1654,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) PU_setss
     ) (true, false) (XXls, XXrs);
 
+    val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val (imsupp_id_on_XXlss, imsupp_id_on_XXrss) = apply2 (
       @{map 9} (fn i => fn x => fn raw => fn mrbnf => fn map_t => fn (lsets, bsets, fsets) => fn pick_id_onss' => fn pick_id_on_imagess' => fn XX =>
         @{map 8} (fn FVars => fn f => fn PFVars => fn avoiding_set => fn FVars_transps => fn bset => fn fset => fn rel =>
@@ -1662,7 +1664,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             val As = fset $ x :: map2 (fn i => fn FVars =>
               let val A = mk_UNION (nth lsets i $ x) FVars;
               in if member (op=) rel i then mk_minus (A, bset $ x) else A end
-            ) (0 upto m - 1) (replicate_rec FVars_transps)
+            ) (0 upto nrecs - 1) (replicate_rec FVars_transps)
             val goal = Logic.mk_implies (
               HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp w,
                 mk_Un (mk_Un (FVars $ (#ctor raw $ (map_t $ XX_t)), PFVars $ p), avoiding_set)
@@ -1880,8 +1882,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ]) [int_empty_XXls, int_empty_XXrs])
                 ]) exists_bij_betws),
                 REPEAT_DETERM o etac ctxt exE,
-                rtac ctxt (Drule.rotate_prems (4 * nvars + 2 * m) Uctor'_cong),
-                REPEAT_DETERM_N (2 * m) o EVERY' [
+                rtac ctxt (Drule.rotate_prems (4 * nvars + 2 * nvars * r) Uctor'_cong),
+                REPEAT_DETERM_N (4 * nvars) o EVERY' [
                   SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
                   REPEAT_DETERM o etac ctxt conjE,
                   assume_tac ctxt
@@ -2160,7 +2162,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                               in Term.absfree (dest_Free t) (HOLogic.mk_prod (rename_t,
                                 Term.list_comb (fst rec_f, picks) $ rename_t
                               )) end
-                            ) (0 upto m - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec ts) (replicate_rec rec_fs);
+                            ) (0 upto nrecs - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec ts) (replicate_rec rec_fs);
                           in Term.absfree (dest_Free x) (map_id_fst $ (
                             mk_map_comb_of_mrbnf deads live_ts pick_ts (map HOLogic.id_const vars) mrbnf $ x
                           )) end;
@@ -2782,13 +2784,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
     ) (0 upto r - 1) f0s (#raw_fps fp_res) (#pre_mrbnfs fp_res) Uctor's xs deadss pre_setss;
 
     val f0_swaps = map2 (fn thm => fn f0 => Local_Defs.unfold0 lthy [Thm.symmetric (snd f0)] (
-      Drule.rotate_prems ~2 thm OF (
+      Drule.rotate_prems (0 - r) thm OF (
         map (#alpha_refl o #inner) (#raw_fps fp_res) @ flat (suitable_pick0ss @ suitable_pick0ss)
       )
     ) RS conjunct1) f_swap_alphas f0s;
 
     (* Final result lemmas *)
-    val ff0_cctors = @{map 8} (fn i => fn ff0 => fn quot => fn mrbnf => fn Uctor => fn x => fn deads => fn (_, bsets, _) =>
+    val ff0_cctors = @{map 7} (fn ff0 => fn quot => fn mrbnf => fn Uctor => fn x => fn deads => fn (_, bsets, _) =>
       let
         val int_empties = @{map 3} (fn bset => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
           mk_int_empty (bset $ x, mk_Un (PFVars $ p, avoiding_set))
@@ -2823,7 +2825,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
         K (unfold_thms_tac ctxt (map (#abs_rep o #inner) (#quotient_fps fp_res))),
         rtac ctxt refl
       ]) end
-    ) (0 upto r - 1) ff0s (#quotient_fps fp_res) (#pre_mrbnfs fp_res) (map #Uctor models) xs' deadss quot_pre_setss;
+    ) ff0s (#quotient_fps fp_res) (#pre_mrbnfs fp_res) (map #Uctor models) xs' deadss quot_pre_setss;
 
     val ff0_swaps = @{map 5} (fn ff0 => fn quot => fn t => fn model => fn f0_alpha =>
       let

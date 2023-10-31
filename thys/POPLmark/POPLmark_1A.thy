@@ -696,6 +696,7 @@ proof (induction \<Delta>)
   then show ?case unfolding 1 using Cons 2 by auto
 qed auto
 
+(* todo for A: look at this and the next *)
 (* TODO: Automatically derive these from strong induction *)
 lemma SA_AllE1[consumes 2, case_names SA_Trans_TVar SA_All]:
   assumes "\<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: T" "X \<notin> dom \<Gamma>"

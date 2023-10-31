@@ -309,6 +309,8 @@ It has the advantage that it is weaker, but also two disadvantages:
 -- it depends on the "auxiliary" defined predicate I'
 -- the dependency on I' seems truly inessential, in that in concrete cases 
 all that one needs to use is the equivariance of I'
+Later note: in the end, if was useful for getting in inductive information, 
+namely strenthening G_refresh to further assume that R implies I ("\<forall>t. R t \<longrightarrow> I t").  
  *)
 lemma G_refresh_I': 
 "\<And>B t. small B \<Longrightarrow> G I' B t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G I' C t"

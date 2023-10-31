@@ -2,91 +2,90 @@ theory FixedUncountableVars
 imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set" (* "thys/MRBNF_Recursor" *)
 begin
 
-(* We take a number of suc-Aleph0 variables *)
+(* We take a number of suc-Aleph0 ivariables *)
 
-hide_type var
-typedef var = "{x::nat set. x \<in> Field (cardSuc natLeq)}" 
+typedef ivar = "{x::nat set. x \<in> Field (cardSuc natLeq)}"
  by simp (metis Field_cardSuc_not_empty Field_natLeq all_not_in_conv natLeq_card_order)
 
-lemma bij_betw_Rep_var: "bij_betw Rep_var (UNIV::var set) (Field (cardSuc natLeq))"
-by (smt (verit, best) Abs_var_inverse Rep_var Rep_var_inject UNIV_I bij_betwI' mem_Collect_eq)
+lemma bij_betw_Rep_ivar: "bij_betw Rep_ivar (UNIV::ivar set) (Field (cardSuc natLeq))"
+by (smt (verit, best) Abs_ivar_inverse Rep_ivar Rep_ivar_inject UNIV_I bij_betwI' mem_Collect_eq)
 
-lemma card_var: "|UNIV::var set| =o cardSuc natLeq"
+lemma card_ivar: "|UNIV::ivar set| =o cardSuc natLeq"
 proof-
-  have "|UNIV::var set| =o |Field (cardSuc natLeq)|"
-  using bij_betw_Rep_var card_of_ordIso by auto
-  also have "|Field (cardSuc natLeq)| =o cardSuc natLeq" 
+  have "|UNIV::ivar set| =o |Field (cardSuc natLeq)|"
+  using bij_betw_Rep_ivar card_of_ordIso by auto
+  also have "|Field (cardSuc natLeq)| =o cardSuc natLeq"
     by (simp add: natLeq_Card_order)
   finally show ?thesis .
 qed
 
-lemma le_card_var: "natLeq <o cardSuc natLeq"
+lemma le_card_ivar: "natLeq <o cardSuc natLeq"
 using cardSuc_greater natLeq_Card_order by blast
 
-lemma infinite_var: "infinite (UNIV::var set)" 
-using Field_natLeq bij_betw_Rep_var bij_betw_finite natLeq_Card_order by fastforce
+lemma infinite_ivar: "infinite (UNIV::ivar set)"
+using Field_natLeq bij_betw_Rep_ivar bij_betw_finite natLeq_Card_order by fastforce
 
-lemma regularCard_var: "regularCard |UNIV::var set|" 
-using Cinfinite_cardSuc card_var natLeq_Cinfinite ordIso_symmetric 
+lemma regularCard_ivar: "regularCard |UNIV::ivar set|"
+using Cinfinite_cardSuc card_ivar natLeq_Cinfinite ordIso_symmetric
 regularCard_cardSuc regularCard_ordIso by blast
 
 lemma countable_iff_lq_natLeq: "countable A \<longleftrightarrow> |A| \<le>o natLeq"
-unfolding countable_def 
+unfolding countable_def
 by (metis Field_card_of UNIV_I card_of_mono2 card_of_nat card_of_ordLeq ordLeq_ordIso_trans subsetI)
 
-lemma countable_iff_le_card_var: "countable A \<longleftrightarrow> |A| <o |UNIV::var set|"
+lemma countable_iff_le_card_ivar: "countable A \<longleftrightarrow> |A| <o |UNIV::ivar set|"
 proof-
   have "countable A \<longleftrightarrow> |A| <o cardSuc natLeq"
-  unfolding countable_iff_lq_natLeq 
+  unfolding countable_iff_lq_natLeq
   by (simp add: natLeq_Card_order)
-  also have "\<dots> \<longleftrightarrow> |A| <o |UNIV::var set|" 
-    by (meson card_var not_ordLess_ordIso ordIso_iff_ordLeq ordLeq_iff_ordLess_or_ordIso ordLeq_transitive)
+  also have "\<dots> \<longleftrightarrow> |A| <o |UNIV::ivar set|"
+    by (meson card_ivar not_ordLess_ordIso ordIso_iff_ordLeq ordLeq_iff_ordLess_or_ordIso ordLeq_transitive)
   finally show ?thesis .
 qed
 
-lemma countable_card_var: "countable A \<Longrightarrow> |A| <o |UNIV::var set|"
-using countable_iff_le_card_var by auto
+lemma countable_card_ivar: "countable A \<Longrightarrow> |A| <o |UNIV::ivar set|"
+using countable_iff_le_card_ivar by auto
 
-lemma finite_card_var: "finite A \<Longrightarrow> |A| <o |UNIV::var set|"
-using infinite_var by auto
+lemma finite_card_ivar: "finite A \<Longrightarrow> |A| <o |UNIV::ivar set|"
+using infinite_ivar by auto
 
-lemma countable_exists_countable_var: 
-assumes "countable (A::var set)"
+lemma countable_exists_countable_ivar:
+assumes "countable (A::ivar set)"
 shows "\<exists>B. B \<inter> A = {} \<and> infinite B"
 apply(rule exI[of _ "-A"])
-by simp (metis Compl_eq_Diff_UNIV assms card_of_Well_order countable_card_var 
+by simp (metis Compl_eq_Diff_UNIV assms card_of_Well_order countable_card_ivar
 not_ordLeq_iff_ordLess ordLeq_iff_ordLess_or_ordIso uncountable_infinite uncountable_minus_countable)
 
-lemma countable_exists_finite_var: 
-assumes "countable (A::var set)"
+lemma countable_exists_finite_ivar:
+assumes "countable (A::ivar set)"
 shows "\<exists>B. B \<inter> A = {} \<and> finite B \<and> card B = n"
 proof-
   obtain B' where B': "B' \<inter> A = {}" and iB': "infinite B'"
-  using countable_exists_countable_var[OF assms] by auto
+  using countable_exists_countable_ivar[OF assms] by auto
   obtain B where "B \<subseteq> B' \<and> finite B \<and> card B = n"
   using iB' by (meson infinite_arbitrarily_large)
   thus ?thesis using B' by auto
 qed
 
-lemma countable_exists_list_var: 
-assumes "countable (A::var set)"
+lemma countable_exists_list_ivar:
+assumes "countable (A::ivar set)"
 shows "\<exists>xs. set xs \<inter> A = {} \<and> distinct xs \<and> length xs = n"
-by (metis assms countable_exists_finite_var distinct_remdups finite_list length_remdups_card_conv set_remdups)
+by (metis assms countable_exists_finite_ivar distinct_remdups finite_list length_remdups_card_conv set_remdups)
 
-lemma exists_var: 
-assumes "countable (X::var set)"
+lemma exists_ivar:
+assumes "countable (X::ivar set)"
 shows "\<exists>x. x \<notin> X"
-by (metis Int_absorb assms countable_exists_countable_var disjoint_iff finite.emptyI)
+by (metis Int_absorb assms countable_exists_countable_ivar disjoint_iff finite.emptyI)
 
-lemma finite_exists_var:
+lemma finite_exists_ivar:
 assumes "finite X"
-shows "\<exists> x::var. x \<notin> X"
-by (simp add: assms ex_new_if_finite infinite_var)
+shows "\<exists> x::ivar. x \<notin> X"
+by (simp add: assms ex_new_if_finite infinite_ivar)
 
 
 (* *)
 
-definition sw :: "var \<Rightarrow> var \<Rightarrow> var \<Rightarrow> var" where 
+definition sw :: "ivar \<Rightarrow> ivar \<Rightarrow> ivar \<Rightarrow> ivar" where
 "sw x y z \<equiv> if x = y then z else if x = z then y else x"
 
 lemma sw_eqL[simp,intro!]: "\<And> x y z. sw x x y = y"

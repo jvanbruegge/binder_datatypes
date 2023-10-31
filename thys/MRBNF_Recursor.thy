@@ -3,10 +3,6 @@ theory MRBNF_Recursor
   (*keywords "binder_inductive" :: thy_goal*)
 begin
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
-
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
   using card_of_mono1 ordLeq_ordLess_trans by blast
 lemma card_of_minus_bound: "|A| <o r \<Longrightarrow> |A - B| <o r"
@@ -51,6 +47,12 @@ lemma imsupp_same_subset: "\<lbrakk> a \<notin> B ; a \<in> A ; imsupp f \<inter
 
 lemma arg_cong3: "\<lbrakk> a1 = a2 ; b1 = b2 ; c1 = c2 \<rbrakk> \<Longrightarrow> h a1 b1 c1 = h a2 b2 c2"
   by simp
+
+definition eq_bij_betw where
+  "eq_bij_betw r u w g A B x y f1 f2 h L R \<equiv>
+    bij u \<and> |supp u| <o r \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}
+  \<and> bij w \<and> |supp w| <o r \<and> imsupp w \<inter> g (B y) = {} \<and> w ` f1 (B y) \<inter> f1 (B y) = {}
+  \<and> eq_on (f2 y) (u \<circ> L \<circ> h) (w \<circ> R)"
 
 lemma exists_bij_betw:
   fixes L R h::"'a \<Rightarrow> 'a"
@@ -102,8 +104,18 @@ proof -
   ultimately show ?thesis using x(1,2,4) y(1,2,4) by blast
 qed
 
+lemmas exists_bij_betw_def = exists_bij_betw[unfolded eq_bij_betw_def[symmetric]]
+
+definition eq_bij_betw_refl where
+ "eq_bij_betw_refl r u w g A B x y f1 f2 L R \<equiv>
+    bij u \<and> |supp u| <o r \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}
+  \<and> bij w \<and> |supp w| <o r \<and> imsupp w \<inter> g (B y) = {} \<and> w ` f1 (B y) \<inter> f1 (B y) = {}
+  \<and> eq_on f2 (u \<circ> L) (w \<circ> R)"
+
 lemmas exists_bij_betw_refl = exists_bij_betw[OF _ _ _ _ bij_id image_id[symmetric], unfolded o_id]
 lemmas exists_bij_betw_refl_UNIV = exists_bij_betw_refl[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order] ordLeq_refl[OF card_of_Card_order]]
+
+lemmas exists_bij_betw_refl_def = exists_bij_betw_refl[unfolded eq_bij_betw_refl_def[symmetric]]
 
 lemma imsupp_id_on: "imsupp u \<inter> A = {} \<Longrightarrow> id_on A u"
   unfolding imsupp_def supp_def id_on_def by blast
@@ -241,11 +253,6 @@ lemma small_PFVars:
 lemma comp_middle: "f (h z) = h z \<Longrightarrow> g (h z) = h z \<Longrightarrow> (f \<circ> g \<circ> h) z = h z"
   by simp
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
-
 (* tvsubst helper lemmas *)
 lemma bij_not_eq_twice: "bij g \<Longrightarrow> g a \<noteq> a \<Longrightarrow> g (g a) \<noteq> g a"
   by simp
@@ -295,13 +302,41 @@ lemma ex_avoiding_bij:
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
 
+lemma image_Int_empty: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
+  by force
+lemma eq_bij_betw_refl_prems:
+  assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"
+  shows "bij u" "|supp u| <o r"
+    "bij w" "|supp w| <o r"
+  using assms unfolding eq_bij_betw_refl_def by auto
+lemma eq_bij_betw_refl_imsupp:
+  assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"
+  shows "imsupp u \<inter> g (A x) = {} \<and> imsupp w \<inter> g (B y) = {}"
+  using assms unfolding eq_bij_betw_refl_def by auto
+lemma eq_bij_betw_prems:
+  assumes "eq_bij_betw r u w g A B x y f1 f2 h L R"
+  shows "bij u" "|supp u| <o r"
+    "bij w" "|supp w| <o r"
+  using assms unfolding eq_bij_betw_def by auto
+lemma id_on_eq: "id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> A = B \<Longrightarrow> x \<in> A \<Longrightarrow> f x = g x"
+  unfolding id_on_def by simp
+
+ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
+
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 (*ML_file \<open>../Tools/binder_inductive.ML\<close>*)
 
-(*context begin
+context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end*)
+end
 
 end

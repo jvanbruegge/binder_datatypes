@@ -237,9 +237,6 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
     val free = MRBNF_Def.free_of_mrbnf outer;
     val bound = MRBNF_Def.bound_of_mrbnf outer;
     val live = MRBNF_Def.live_of_mrbnf outer;
-    val mr_rel_def = BNF_Util.mk_unabs_def (free + bound + live + 2) (
-      @{thm meta_eq_to_obj_eq} OF [MRBNF_Def.mr_rel_def_of_mrbnf outer]
-    );
     val rel_map = Local_Defs.unfold0 ctxt @{thms id_o o_id} (
       Local_Defs.unfold0 ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer] (
         hd (MRBNF_Def.mr_rel_map_of_mrbnf outer)
@@ -260,19 +257,17 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
     K (unfold_thms_tac ctxt @{thms id_o o_id}),
     rtac ctxt refl,
     REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
-    rtac ctxt trans,
-    rtac ctxt (sym OF [mr_rel_def]),
     K (unfold_thms_tac ctxt [in_alt]),
     REPEAT_DETERM o EVERY' [
-      EqSubst.eqsubst_tac ctxt [0] [
+      EqSubst.eqsubst_tac ctxt [0] (map (unfold_thms ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer]) [
         MRBNF_Def.mr_rel_Grp_of_mrbnf outer RS sym,
         MRBNF_Def.mr_rel_conversep_of_mrbnf outer RS sym,
         MRBNF_Def.mr_rel_OO_of_mrbnf outer RS sym
-      ],
+      ]),
       REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt)
     ],
     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id}),
-    rtac ctxt (fun_cong OF [fun_cong OF [MRBNF_Def.mr_rel_cong0_of_mrbnf outer]]),
+    rtac ctxt (fun_cong OF [fun_cong OF [MRBNF_Def.rel_cong0_of_mrbnf outer]]),
     EVERY' (map (fn mrbnf => EVERY' [
       rtac ctxt ext,
       rtac ctxt ext,

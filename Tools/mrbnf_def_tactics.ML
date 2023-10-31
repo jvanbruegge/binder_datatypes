@@ -57,9 +57,7 @@ fun mk_mr_typedef_tac ctxt = unfold_tac ctxt @{thms ex_in_conv} THEN
   (rtac ctxt @{thm Field_cardSuc_not_empty[OF Card_order_csum]} |> HEADGOAL);
 
 fun mk_mr_subclass_tac ctxt bd_Card_order colarge coregular =
-  print_tac ctxt "1" THEN
   Class.intro_classes_tac ctxt [] THEN
-  (print_tac ctxt "foo") THEN
   ([rtac ctxt (@{thm ordIso_ordLeq_trans} OF [@{thm card_of_Field_ordIso} OF [bd_Card_order]]),
     rtac ctxt (@{thm ordLess_imp_ordLeq} OF [@{thm iffD2} OF [@{thm cardSuc_ordLess_ordLeq} OF
       [bd_Card_order, @{thm card_of_Card_order}]]]),
@@ -325,9 +323,10 @@ fun mk_mr_rel_conversep_tac ctxt assms prems id_prems inv_prems mr_rel_OO_Grp_al
           etac ctxt @{thm exE},
           REPEAT_DETERM o etac ctxt @{thm conjE},
           hyp_subst_tac ctxt,
-          Subgoal.FOCUS_PARAMS (subgoal_tac exI_z) ctxt
+          Subgoal.FOCUS_PARAMS (subgoal_tac exI_z) ctxt,
+          REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] set_map'
         ] THEN
-        unfold_thms_tac ctxt (map_comp' :: @{thm id_o} :: set_map') THEN
+        unfold_thms_tac ctxt [map_comp', @{thm id_o}] THEN
         REPEAT_DETERM (EVERY1 [
           rtac ctxt conjI,
           FIRST' [

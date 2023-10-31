@@ -62,7 +62,7 @@ lemma tvsubst_VVr_func: "tvsubst tvVVr_tvsubst t = t"
           apply (rule terms.SSupp_VVr_bound)
       unfolding tvIImsupp_tvsubst_VVr_empty
          apply (rule Int_empty_right)
-      unfolding tvnoclash_terms_def Int_Un_distrib Un_empty
+      unfolding noclash_terms_def Int_Un_distrib Un_empty
         apply (rule conjI)
          apply (rule iffD2[OF disjoint_iff], rule allI, rule impI, assumption)
         apply (rule iffD2[OF disjoint_iff], rule allI, rule impI)
@@ -87,10 +87,9 @@ lemma SSupp_upd_bound:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a terms"
   shows "|tvSSupp_tvsubst (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |tvSSupp_tvsubst f| <o |UNIV::'a set|"
   unfolding tvSSupp_tvsubst_def
-  apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
+  by (auto simp only: fun_upd_apply fset_simps singl_bound ordLeq_refl split: if_splits
       elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF terms_pre.Un_bound], rotated]
       intro: card_of_mono1)
-  done
 
 corollary SSupp_upd_VVr_bound: "|tvSSupp_tvsubst (tvVVr_tvsubst(a:=(t::'a::var_terms_pre terms)))| <o |UNIV::'a set|"
   apply (rule iffD2[OF SSupp_upd_bound])
@@ -263,10 +262,10 @@ lemma provided:
     "\<lbrakk> x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<rbrakk> \<Longrightarrow> x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>)"
    apply (simp add: assms isin_rename)
   unfolding fresh_def
-  apply (metis Product_Type.fst_comp_map_prod assms(1) bij_not_equal_iff fimageE fset.map_comp)
+     apply force
+  using assms(1) fimage_iff apply fastforce
    apply simp
-  using fmember.rep_eq image_iff apply fastforce
-  done
+  using fimage_iff by fastforce
 
 lemma rename_Ty_aux:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
@@ -955,8 +954,7 @@ next
   case (Ty_Abs x \<Gamma> \<tau> e \<tau>\<^sub>2 \<Gamma>')
   then have "\<forall>y\<in>FFVars_terms e. \<forall>\<tau>'. (y, \<tau>') |\<in>| \<Gamma>,x:\<tau> \<longrightarrow> (y, \<tau>') |\<in>| \<Gamma>',x:\<tau>"
     by (metis DiffI terms.set(3) fimageI finsert_iff fresh_def fst_conv fsts.cases prod_set_simps(1))
-  moreover have "x \<sharp> \<Gamma>'" using Ty_Abs unfolding fresh_def
-    by (metis UN_I fimageE fmember.rep_eq fsts.intros)
+  moreover have "x \<sharp> \<Gamma>'" using Ty_Abs unfolding fresh_def by auto
   ultimately show ?case using Ty_Abs by (auto intro: Ty.Ty_Abs)
 qed
 
@@ -990,8 +988,7 @@ next
   moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" by blast
   moreover have "x \<sharp> \<Gamma>,y:\<tau>\<^sub>1" using Abs(1,4) unfolding fresh_def by auto
   ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := v)) e : \<tau>\<^sub>2" using Abs(2,5) by metis
-  moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def
-    by (metis UN_I UnI1 fimageE fmember.rep_eq fsts.intros)
+  moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def by auto
   ultimately show ?case unfolding terms.subst(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
 qed
 

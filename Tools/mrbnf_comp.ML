@@ -39,12 +39,14 @@ sig
   val permute_mrbnf: (binding -> binding) -> int list -> int list -> MRBNF_Def.mrbnf ->
     (comp_cache * unfold_set) * local_theory -> MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
   val normalize_mrbnfs: (int -> binding -> binding) -> (string * sort) option list ->
-    (string * sort) list list -> (string * sort) list -> ((string * sort) list list ->
+    (string * sort) list list -> (string * sort) list -> ((string * sort) * MRBNF_Def.var_type) list ->
+    ((string * sort) list list ->
     (string * sort) list) -> MRBNF_Def.mrbnf option ->  MRBNF_Def.mrbnf list -> (comp_cache * unfold_set) * local_theory ->
     (int list list * (string * sort) list) * MRBNF_Def.mrbnf option * (MRBNF_Def.mrbnf list * ((comp_cache * unfold_set) * local_theory))
   val compose_mrbnf: MRBNF_Def.inline_policy -> (int -> binding -> binding) ->
     ((string * sort) list list -> (string * sort) list) -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list ->
-    typ list -> typ list list -> typ option list -> typ list list -> (comp_cache * unfold_set) * local_theory ->
+    typ list -> typ list list -> typ option list -> typ list list ->
+    ((string * sort) * MRBNF_Def.var_type) list -> (comp_cache * unfold_set) * local_theory ->
     (MRBNF_Def.mrbnf * (typ list * typ list)) * ((comp_cache * unfold_set) * local_theory)
 
   type absT_info =
@@ -890,39 +892,16 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
           K (unfold_thms_tac ctxt @{thms inv_id}),
           rtac ctxt (mr_rel_OO_of_mrbnf mrbnf RS sym) THEN_ALL_NEW supp_bij_ass_tac,
           K (unfold_thms_tac ctxt @{thms o_id id_o Grp_fst_snd eq_alt[symmetric] conversep_eq eq_OO}),
-
           rtac ctxt trans,
           rtac ctxt (mr_rel_def_of_mrbnf mrbnf RS meta_eq_to_obj_eq |> BNF_Util.mk_unabs_def (live + free + bound + 2)),
-          EVERY' [
-            rtac ctxt (trans OF [rel_map]),
-            rtac ctxt sym,
-            rtac ctxt (trans OF [rel_map])
-          ] ORELSE' Subgoal.FOCUS_PARAMS (fn {context, concl, ...} =>
-            let
-              val t = concl |> Thm.term_of |> Logic.strip_imp_concl |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> snd
-              val (tr $ (tm $ _) $ _) = t
-              fun get_arg_types x = strip_comb x |> snd |> map (op`(fst o dest_funT o fastype_of))
-              val tr' = fold_map (fn t => fn xs => case xs of
-                [] => (NONE, []) | y::ys => if fst t = fst y then (SOME (snd y), ys) else (NONE, xs)
-              ) (get_arg_types tm) (get_arg_types tr) |> fst
-              val Rs = map_filter I (cond_keep tr' is_live_old)
-              val Fs = cond_keep (strip_comb tm |> snd) is_live_old
-
-              val thm = infer_instantiate' context (map (SOME o Thm.cterm_of ctxt) (Rs @ Fs))
-                (hd (rel_map_of_mrbnf mrbnf))
-              |> (fn thm => (thm RS box_equals RS sym) |> Drule.rotate_prems 1)
-            in rtac context thm 1 end
-          ) ctxt,
-          rtac ctxt (rel_cong0 RS fun_cong RS fun_cong),
-          K (unfold_thms_tac ctxt @{thms id_apply Grp_UNIV_def}),
-          REPEAT_DETERM o rtac ctxt refl,
-          IF_UNSOLVED o EVERY' [
-            rtac ctxt (rel_cong0 RS @{thm cong} RS fun_cong OF (replicate live refl)),
-            rtac ctxt (map_comp_of_mrbnf mrbnf RS trans),
-            REPEAT_DETERM o supp_bij_ass_tac,
-            K (unfold_thms_tac ctxt @{thms id_o o_id}),
-            rtac ctxt refl
-          ]
+          K (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
+          rtac ctxt trans,
+          rtac ctxt (rel_map RS sym),
+          K (unfold_thms_tac ctxt @{thms id_def[symmetric]}),
+          EqSubst.eqsubst_tac ctxt [0] [map_comp_of_mrbnf mrbnf],
+          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+          K (unfold_thms_tac ctxt @{thms id_o o_id}),
+          rtac ctxt refl
         ]
       end;
 
@@ -1111,7 +1090,7 @@ structure Vars = Table(type key = (string * sort) val ord = tfree_ord);
 fun map_option f (SOME x) = SOME (f x)
   | map_option _ NONE = NONE
 
-fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer_opt mrbnfs accum =
+fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum =
   let
     val oAs' = case outer_opt of
       NONE => []
@@ -1121,7 +1100,7 @@ fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer_opt mrbnfs accum =
       ) (oAs ~~ var_types_of_mrbnf outer);
     val var_map = fold (fold (fn (A, var_type) => Vars.map_default (A, var_type) (fn var_type' =>
       case var_type_ord (var_type, var_type') of LESS => var_type | _ => var_type'
-    ))) (oAs' :: map2 (fn As => fn mrbnf => As ~~ var_types_of_mrbnf mrbnf) Ass mrbnfs)
+    ))) (oAs' :: Xs :: map2 (fn As => fn mrbnf => As ~~ var_types_of_mrbnf mrbnf) Ass mrbnfs)
       (Vars.make (Ds ~~ replicate (length Ds) MRBNF_Def.Dead_Var))
 
     val odemote_target_types = map (fn x => case x of
@@ -1198,14 +1177,14 @@ fun normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs outer_opt mrbnfs accum =
         lift_ns srcs dests inners' accum''')
   end;
 
-fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess accum =
+fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess Xs accum =
   let
     val b = name_of_mrbnf outer;
     val Ass = map (map Term.dest_TFree) tfreess;
     val oAs = map (map_option Term.dest_TFree) otfrees
     val Ds = fold (fold Term.add_tfreesT) (oDs :: Dss) [];
     val ((kill_poss, As), outer', (inners', ((cache', unfold_set'), lthy'))) =
-      normalize_mrbnfs qualify oAs Ass Ds flatten_tyargs (SOME outer) inners accum;
+      normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs (SOME outer) inners accum;
     val Ds =
       oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
     val As = map TFree As;
@@ -1215,14 +1194,14 @@ fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss o
         (clean_compose_mrbnf const_policy (qualify 0) b (the outer') inners' (unfold_set', lthy')))
   end;
 
-fun compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess
+fun compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess Xs
     (accum as ((cache, _), _)) =
   let val key = key_of_compose oDs Dss (map_filter I otfrees) tfreess outer inners in
     (case Typtab.lookup cache key of
       SOME mrbnf_Ds_As => (mrbnf_Ds_As, accum)
     | NONE =>
       cache_comp key
-        (raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess accum))
+        (raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess Xs accum))
   end;
 
 (* Hide the type of the bound (optimization) and unfold the definitions (nicer to the user) *)
@@ -1568,8 +1547,9 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
               apfst (apsnd split_list o split_list) (@{fold_map 2}
                 (fn i => mrbnf_of_typ optim Smart_Inline (qualify i) flatten_tyargs Xs Ds0 var_types)
                 (if length Ts' = 1 then [0] else 1 upto length Ts') Ts' (x, lthy'));
+            val Xs' = map (swap o `(the_default MRBNF_Def.Live_Var o AList.lookup (op=) var_types)) Xs
           in
-            compose_mrbnf const_policy qualify flatten_tyargs mrbnf inners oDs Dss oAs Ass (accum', lthy'')
+            compose_mrbnf const_policy qualify flatten_tyargs mrbnf inners oDs Dss oAs Ass Xs' (accum', lthy'')
           end)
       |> tap check_bad_dead
     end;

@@ -1,8 +1,8 @@
 theory POPLmark_1A
   imports "../MRBNF_Recursor"
-    "../../DAList" "../Instantiation_Infrastructure/FixedCountableVars"
     "../Instantiation_Infrastructure/Curry_LFP"
     "../Generic_Barendregt_Enhanced_Rule_Induction"
+    "../Instantiation_Infrastructure/FixedCountableVars"
 begin
 
 declare bij_swap[simp]
@@ -41,9 +41,6 @@ print_theorems
 print_mrbnfs
 
 instance var :: var_typ_pre apply standard
-  using Field_natLeq infinite_iff_card_of_nat infinite_var
-  by (auto simp add: regularCard_var)
-instance var :: var_dalist apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
   by (auto simp add: regularCard_var)
 
@@ -254,7 +251,7 @@ interpretation Components where dummy = "undefined :: var" and
 Tmap = Tmap and Tfvars = Tfvars
 apply standard unfolding ssbij_def Tmap_def 
   using small_Un small_def typ.card_of_FFVars_bounds
-         apply (auto simp: typ.FFVars_rrenames map_prod.comp dalist.set_map dalist.map_comp typ.rrename_comp0s inf_A)
+         apply (auto simp: typ.FFVars_rrenames map_prod.comp typ.rrename_comp0s inf_A)
     apply (rule var_typ_pre_class.Un_bound var_typ_pre_class.UN_bound context_set_bd_UNIV set_bd_UNIV
         typ.card_of_FFVars_bounds)+
       apply (auto simp: context_map_cong_id typ.rrename_cong_ids intro: context_map_cong_id)
@@ -363,8 +360,8 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B
       apply (rule exI[of _ "rrename_typ \<sigma> S2"])
       apply (rule exI[of _ "rrename_typ \<sigma> T2"])
       apply (cases t) unfolding ssbij_def Tmap_def 
-      by (auto simp: in_context_eqvt dalist.map_comp supp_inv_bound
-          typ.rrename_comps typ.rrename_comp0s dalist.map_id Ty_eqvt)
+      by (auto simp: in_context_eqvt supp_inv_bound
+          typ.rrename_comps typ.rrename_comp0s Ty_eqvt)
     done
   apply (rule disjI2)+
   apply (elim exE conjE)

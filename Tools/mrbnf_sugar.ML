@@ -62,10 +62,10 @@ fun create_binder_datatype (spec : spec) lthy =
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
     val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
-    val ((rec_mrbnf, vvsubst_res), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (#map_b spec) I (hd res) lthy;
-    val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (#quotient_fp (hd res))))) rec_mrbnf lthy;
+    val ((rec_mrbnf, vvsubst_res), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (#map_b spec) I res lthy;
+    val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
 
-    val quotient_ctor = #ctor (#quotient_fp (hd res));
+    val quotient_ctor = #ctor (hd (#quotient_fps res));
     val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));
     val pre_repT = Term.typ_subst_atomic replace fp_pre_T;
     val abs =
@@ -100,7 +100,7 @@ fun create_binder_datatype (spec : spec) lthy =
     )); *) (map (TFree o fst) (#vars spec))
     val names_lthy = fold (Variable.declare_constraints o Logic.mk_type) vars lthy;
 
-    val quotient = #quotient_fp (hd res)
+    val quotient = hd (#quotient_fps res)
     val qT = #T quotient;
 
     val (b, names_lthy) = apfst hd (mk_TFrees (length vars) names_lthy);
@@ -128,7 +128,7 @@ fun create_binder_datatype (spec : spec) lthy =
       ) (MRBNF_Def.mrbnf_of lthy n)
       | get_sets _ _ _ = NONE;
 
-    val pre_mrbnf = #pre_mrbnf (hd res);
+    val pre_mrbnf = hd (#pre_mrbnfs res);
     val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
 
     val strong_induct =
@@ -422,7 +422,7 @@ fun create_binder_datatype (spec : spec) lthy =
       eta_natural = eta_natural_tac
     };
     val tvsubst_model = {
-      fp_result = hd res,
+      fp_result = res,
       etas = map (fn a => Option.map (rpair tvsubst_axioms) (
         List.find (fn t => domain_type (fastype_of t) = a) etas
       )) vars
@@ -480,7 +480,10 @@ fun create_binder_datatype (spec : spec) lthy =
                   case try HOLogic.dest_setT (fastype_of x) of
                     SOME _ => SOME (MRBNF_Util.mk_UNION x FVars)
                     | NONE => SOME (FVars $ x)
-                  else SOME (mk_singleton x)
+                  else (case try HOLogic.dest_setT (fastype_of x) of
+                    SOME _ => SOME x
+                    | NONE => SOME (mk_singleton x)
+                  )
                 )
               ) else NONE
           | mk_set _ _ _ _ = NONE
@@ -635,7 +638,7 @@ fun create_binder_datatype (spec : spec) lthy =
       else (lthy, NONE);
 
     val simp = @{attributes [simp]}
-    val induct_attrib = Attrib.internal (K (Induct.induct_type (fst (dest_Type qT))))
+    val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
 
     val notes =
       ([("strong_induct", [strong_induct], []),

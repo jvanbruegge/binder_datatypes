@@ -1733,7 +1733,6 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
                 let
                   val colarge = get_local_class_assumption var_type_class_ass1N ctxt;
                   val coregular = get_local_class_assumption var_type_class_ass2N ctxt;
-                  val _ = @{print} colarge
                 in
                   mk_mr_subclass_tac ctxt bd_Card_order colarge coregular
                 end;
@@ -3552,7 +3551,7 @@ fun mrbnf_interpretation name f =
 val interpret_mrbnf = MRBNF_Plugin.data;
 
 fun register_mrbnf_raw key mrbnf =
-  Local_Theory.declaration {syntax = false, pervasive = true}
+  Local_Theory.declaration {syntax = false, pos = Position.none, pervasive = true}
     (fn phi => Data.map (Symtab.update (key, morph_mrbnf phi mrbnf)));
 
 fun register_mrbnf plugins key mrbnf =

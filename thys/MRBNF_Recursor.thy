@@ -321,6 +321,9 @@ lemma eq_bij_betw_prems:
 lemma id_on_eq: "id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> A = B \<Longrightarrow> x \<in> A \<Longrightarrow> f x = g x"
   unfolding id_on_def by simp
 
+lemma notin_supp: "x \<notin> supp f \<Longrightarrow> f x = x"
+  unfolding supp_def by blast
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

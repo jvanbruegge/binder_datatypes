@@ -157,13 +157,13 @@ definition Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow
 definition avoiding_set1 :: "'var::{var_T1_pre,var_T2_pre} set" where "avoiding_set1 \<equiv> {}"
 definition avoiding_set2 :: "'tyvar::{var_T1_pre,var_T2_pre} set" where "avoiding_set2 \<equiv> {}"
 
-abbreviation "U1FVars_1 \<equiv> \<lambda>_. FFVars_T11"
-abbreviation "U1FVars_2 \<equiv> \<lambda>_. FFVars_T12"
-abbreviation "U2FVars_1 \<equiv> \<lambda>_. FFVars_T21"
-abbreviation "U2FVars_2 \<equiv> \<lambda>_. FFVars_T22"
+abbreviation "U1FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). FFVars_T11 x"
+abbreviation "U1FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). FFVars_T12 x"
+abbreviation "U2FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). FFVars_T21 x"
+abbreviation "U2FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). FFVars_T22 x"
 
-abbreviation "U1map \<equiv> \<lambda>f1 f2 _. rrename_T1 f1 f2"
-abbreviation "U2map \<equiv> \<lambda>f1 f2 _. rrename_T2 f1 f2"
+abbreviation "U1map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). rrename_T1 f1 f2 x"
+abbreviation "U2map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). rrename_T2 f1 f2 x"
 
 (**********************************************************************)
 (*                               PROOFS                               *)
@@ -1422,7 +1422,7 @@ apply (unfold isVVr12_def)[1]
   done
   done
 
-lemma U1FVars_subset_2: "set6_T1_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+lemma U1FVars_subset_2: "set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
@@ -1935,6 +1935,83 @@ thm U1FVars_subset_1 U1FVars_subset_2
 
 (* model2 axioms *)
 thm U2map_Uctor
-thm U2FVars_subset_2 U2FVars_subset_2
+thm U2FVars_subset_1 U2FVars_subset_2
 
+ML \<open>
+val nvars:int = 2
+
+val parameters = {
+  P = @{typ "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P"},
+  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"},
+  PFVarss = [
+    @{term "PFVars_1 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"},
+    @{term "PFVars_2 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"}
+  ],
+  avoiding_sets = [
+    @{term "avoiding_set1 :: 'var::{var_T1_pre,var_T2_pre} set"},
+    @{term "avoiding_set2 :: 'tyvar::{var_T1_pre,var_T2_pre} set"}
+  ],
+  min_bound = true,
+  axioms = {
+    Pmap_id0 = fn ctxt => resolve_tac ctxt @{thms Pmap_id0} 1,
+    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+    PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmaps} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
+    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVarss} 1),
+    small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_avoiding_sets} 1)
+  }
+};
+
+val card_thms = @{thms ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
+\<close>
+
+ML \<open>
+val T1_model = {
+  binding = @{binding tvsubst_T1},
+  U = @{typ "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1"},
+  UFVarss = [
+    @{term "U1FVars_1 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"},
+    @{term "U1FVars_2 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"}
+  ],
+  Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"},
+  Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> _"},
+  axioms = {
+    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_id0s} 1,
+    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
+    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
+    UFVars_Umaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1)),
+    Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U1map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U1FVars_subset_1 U1FVars_subset_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
+  }
+};
+
+val T2_model = {
+  binding = @{binding vvsubst_T2},
+  U = @{typ "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2"},
+  UFVarss = [
+    @{term "U2FVars_1 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"},
+    @{term "U2FVars_2 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"}
+  ],
+  Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"},
+  Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> _"},
+  axioms = {
+    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_id0s} 1,
+    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
+    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
+    UFVars_Umaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1)),
+    Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subset_1 U2FVars_subset_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
+  }
+};
+
+val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
+\<close>
+
+local_setup \<open>fn lthy =>
+let
+  val qualify = I
+  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters [T1_model, T2_model] lthy
+  val _ = @{print} ress
+in lthy end\<close>
+print_theorems
 end

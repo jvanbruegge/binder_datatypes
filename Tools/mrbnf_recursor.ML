@@ -116,20 +116,18 @@ fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
 fun chop_f_prems [] = []
   | chop_f_prems (bij::supp::xs) = [bij, supp]::chop_f_prems xs;
 
-fun add_f_prems min_bound hs =
+fun mk_f_prems min_bound fs =
   let
-    fun interlace [] [] = []
-      | interlace (x::xs) (y::ys) = x::y::interlace xs ys
-    val vars = fold_rev Term.add_tfrees hs [];
-    val bd = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV o TFree) vars);
+    val vars = fold_rev (fn x => fn xs => if exists (curry (op=) x) xs then xs else x::xs) (
+      map (domain_type o fastype_of) fs
+    ) [];
+    val bd = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
     fun mk_supp_bound' f = mk_ordLess (mk_card_of (mk_supp f)) (if min_bound then bd else
       mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of f)))
-    );
-  in
-    fold_rev (fn a => fn b => Logic.implies $ a $ b) (
-      interlace (map (HOLogic.mk_Trueprop o mk_bij) hs) (map (HOLogic.mk_Trueprop o mk_supp_bound') hs)
     )
-  end;
+  in maps (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound' f]) fs end;
+
+fun add_f_prems min_bound hs = fold_rev (curry Logic.mk_implies) (mk_f_prems min_bound hs);
 
 fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars lthy =
   let
@@ -261,7 +259,6 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
           val UFVarss = map morph UFVarss;
           val Umap = morph Umap;
           val Uctor = morph Uctor;
-          val avoiding_sets = map morph avoiding_sets;
         in (({
           binding = #binding model,
           U = #U model,
@@ -294,7 +291,7 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
           ||>> mk_Frees "pu" (map (snd o HOLogic.dest_prodT) As);
 
         val tacs = #axioms model;
-        val goals = mk_termlike_goals vars false (SOME quotient_fp) (#U model) (#Umap model) (#UFVarss model) lthy;
+        val goals = mk_termlike_goals vars (#min_bound params) (SOME quotient_fp) (#U model) (#Umap model) (#UFVarss model) lthy;
 
         val mapF_ap =
           let
@@ -418,9 +415,16 @@ fun mk_names _ [] = []
   | mk_names s [_] = [s]
   | mk_names s xs = map (fn i => s ^ string_of_int i) (1 upto length xs)
 
+val card_thms = @{thms ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
+
 fun define_recursor_consts qualify fp_res params (models : thm model list) vars (pfrees, pbounds, plives) lthy =
   let
     val nvars = length vars;
+
+    fun card T = if #min_bound params then
+      foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars)
+      else mk_card_of (HOLogic.mk_UNIV T)
+    fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f)) (card (domain_type (fastype_of f)));
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
@@ -628,7 +632,11 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
             rtac ctxt @{thm if_P},
             REPEAT_DETERM o (rtac ctxt conjI ORELSE' assume_tac ctxt),
             EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-            REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' eresolve_tac ctxt pick_prems),
+            REPEAT_DETERM o FIRST' [
+              resolve_tac ctxt @{thms bij_id supp_id_bound},
+              eresolve_tac ctxt pick_prems,
+              resolve_tac ctxt card_thms
+            ],
             K (unfold_thms_tac ctxt @{thms id_o o_id}),
             K (unfold_thms_tac ctxt @{thms comp_def}),
             rtac ctxt refl
@@ -835,9 +843,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ) (map (nth FVars_UNs) rel)
     ) (#binding_relation fp_res)) xs (#raw_fps fp_res) FVars_UNss suitabless pickss pick_id_onss;
 
-    val mk_f_prems = maps (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]);
-    val f_prems = mk_f_prems fs;
-    val g_prems = mk_f_prems gs;
+    val f_prems = mk_f_prems (#min_bound params) fs;
+    val g_prems = mk_f_prems (#min_bound params) gs;
 
     val deadss = map2 (fn mrbnf => fn raw =>
       let
@@ -876,7 +883,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             @ MRBNF_Def.set_map_of_mrbnf mrbnf
             @ maps #FVars_renames (#raw_fps fp_res)
           ),
-          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems)
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms)
         ],
         rtac ctxt refl
       ]) end
@@ -933,21 +940,22 @@ fun create_binding_recursor qualify fp_res params models lthy =
           rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of lthy (#Uctor model))] @{thm arg_cong2[OF _ refl]}),
           rtac ctxt trans,
           rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
-          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms),
           rtac ctxt sym,
           rtac ctxt trans,
           rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
-          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms),
           K (unfold_thms_tac ctxt @{thms id_o o_id}),
           rtac ctxt (MRBNF_Def.map_cong_of_mrbnf mrbnf),
-          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms),
           K (unfold_thms_tac ctxt @{thms comp_def case_prod_map_prod split_beta fst_map_prod snd_map_prod map_prod_simp id_def}),
           REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [
             rtac ctxt @{thm iffD2[OF prod.inject]},
             rtac ctxt conjI,
             SELECT_GOAL (unfold_thms_tac ctxt (map (#rename_def o #inner) (#quotient_fps fp_res))),
             resolve_tac ctxt (map (fn quot => iffD2 OF [#total_abs_eq_iff (#inner quot)]) (#quotient_fps fp_res)),
-            resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw) OF prems]) (#raw_fps fp_res)),
+            resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
+            REPEAT_DETERM o resolve_tac ctxt (prems @ card_thms),
             resolve_tac ctxt (map (fn quot => #alpha_quotient_sym (#inner quot)) (#quotient_fps fp_res)),
             rtac ctxt refl
           ])
@@ -1126,14 +1134,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
         rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (#Uctor model))] @{thm arg_cong2[OF _ refl]}),
         rtac ctxt (@{thm iffD1[OF fun_cong[OF fun_cong]]} OF [MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf]),
         rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms),
         K (unfold_thms_tac ctxt @{thms id_o o_id OO_eq Grp_UNIV_id}),
         rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms),
         K (unfold_thms_tac ctxt @{thms id_o o_id inv_id Grp_UNIV_id OO_eq conversep_eq}),
         K (unfold_thms_tac ctxt @{thms relcompp_conversep_Grp}),
         rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ prems @ card_thms),
         assume_tac ctxt,
         K (unfold_thms_tac ctxt @{thms case_prod_beta Grp_UNIV_def prod.inject}),
         REPEAT_DETERM o EVERY' [
@@ -1198,14 +1206,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ],
         REPEAT_DETERM o assume_tac ctxt,
         rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems @ card_thms),
         K (unfold_thms_tac ctxt @{thms id_o o_id Grp_UNIV_id OO_eq}),
         rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems @ card_thms),
         K (unfold_thms_tac ctxt @{thms id_o o_id inv_id Grp_UNIV_id OO_eq conversep_eq}),
         K (unfold_thms_tac ctxt @{thms relcompp_conversep_Grp Grp_OO}),
         rtac ctxt (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems @ card_thms),
         assume_tac ctxt,
         REPEAT_DETERM o EVERY' [
           REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
@@ -1217,7 +1225,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             REPEAT_DETERM_N 2 o EVERY' [
               resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
               resolve_tac ctxt (map ((fn thm => iffD2 OF [thm]) o #alpha_bij_eq o #inner) (#raw_fps fp_res)),
-              REPEAT_DETERM o resolve_tac ctxt prems,
+              REPEAT_DETERM o resolve_tac ctxt (prems @ card_thms),
               resolve_tac ctxt (map (#rep_abs o #inner) (#quotient_fps fp_res)),
               resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res))
             ],
@@ -1256,17 +1264,16 @@ fun create_binding_recursor qualify fp_res params models lthy =
 
     val suitable_prems = map2 (fn a => fn b => HOLogic.mk_Trueprop (fst a $ b)) (flat suitabless) (flat pickss);
 
-    val pick_premsss = @{map 3} (fn x => map2 (fn pick => fn suitable =>
-      let val goals = map (fn f => Logic.mk_implies (
-        HOLogic.mk_Trueprop (fst suitable $ pick),
-        HOLogic.mk_Trueprop (f (pick $ x $ p))
-      )) [mk_bij, mk_supp_bound];
+    val pick_premsss = @{map 3} (fn x => fn picks => @{map 3} (fn concls => fn pick => fn suitable =>
+      let val goals = map (fn concl => Logic.mk_implies (
+        HOLogic.mk_Trueprop (fst suitable $ pick), concl
+      )) concls;
       in map (fn goal => Goal.prove_sorry lthy (names [pick, x, p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
         K (unfold_thms_tac ctxt [snd suitable]),
         REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
         assume_tac ctxt
       ])) goals end
-    )) xs pickss suitabless;
+    ) (chop_f_prems (mk_f_prems (#min_bound params) (map (fn pck => pck $ x $ p) picks))) picks) xs pickss suitabless;
     val pick_prems = flat (flat pick_premsss);
 
     val rec_n = foldr1 (op+) (#rec_vars fp_res);
@@ -1293,7 +1300,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
         EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
         REPEAT_DETERM o FIRST' [
           resolve_tac ctxt @{thms bij_id supp_id_bound},
-          eresolve_tac ctxt pick_prems
+          eresolve_tac ctxt pick_prems,
+          resolve_tac ctxt card_thms
         ],
         K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}),
         rtac ctxt (Drule.rotate_prems ~1 (#alpha_intro (#inner raw))),
@@ -1309,7 +1317,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
         REPEAT_DETERM o resolve_tac ctxt (refl :: map (#alpha_refl o #inner) (#raw_fps fp_res)),
         REPEAT_DETERM o FIRST' [
           resolve_tac ctxt @{thms bij_id supp_id_bound},
-          eresolve_tac ctxt pick_prems
+          eresolve_tac ctxt pick_prems,
+          resolve_tac ctxt card_thms
         ],
         REPEAT_DETERM o eresolve_tac ctxt pick_id_ons
       ]) end
@@ -1335,20 +1344,20 @@ fun create_binding_recursor qualify fp_res params models lthy =
             K (unfold_thms_tac ctxt [snd XXl]),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms),
             K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}),
             K (unfold_thms_tac ctxt (#FVars_ctors raw)),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def]}),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_comp[symmetric] image_UN[symmetric]}),
             REPEAT_DETERM o EVERY' [
@@ -1369,7 +1378,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
             REPEAT_DETERM o etac ctxt conjE,
             assume_tac ctxt,
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems @ card_thms),
             K (prefer_tac 2),
             rtac ctxt @{thm imsupp_image_empty_IntI},
             rtac ctxt @{thm trans[OF Int_commute]},
@@ -1413,25 +1422,25 @@ fun create_binding_recursor qualify fp_res params models lthy =
             K (unfold_thms_tac ctxt [snd XXr]),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms),
             K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}),
             K (unfold_thms_tac ctxt (#FVars_ctors raw)),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def]}),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_UN[symmetric]}),
             REPEAT_DETERM o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] @{thms image_set_diff[OF bij_is_inj, symmetric]},
-              REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ prems @ pick_prems)
+              REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_comp[symmetric]}),
             REPEAT_DETERM o EVERY' [
@@ -1449,7 +1458,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             K (unfold_thms_tac ctxt (maps (map snd) suitabless)),
             REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
             assume_tac ctxt,
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems)
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms)
           ] end
         ) end
       ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params)
@@ -1546,7 +1555,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   K (unfold_thms_tac ctxt [snd rec_f OF suitable_prems]),
                   resolve_tac ctxt (flat UFVars'_subsetss),
                   EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms),
                   Method.insert_tac ctxt suitable_prems,
                   SELECT_GOAL (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ maps (map snd) suitabless)),
                   REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
@@ -1556,7 +1565,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   REPEAT_DETERM o EVERY' [
                     REPEAT_DETERM1 o EVERY' [
                       EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems)
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms)
                     ],
                     REPEAT_DETERM1 o EVERY' [
                       TRY o etac ctxt UnE,
@@ -1569,7 +1578,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         maps (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI})) (the (#set_subshape_imagess (#inner raw)))
                         @ flat (the (#set_subshapess (#inner raw)))
                       ),
-                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems)
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms)
                     ]
                   ]
                 ]) end
@@ -1624,7 +1633,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 K (unfold_thms_tac ctxt [snd XX]),
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems)
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems @ card_thms)
                 ],
                 REPEAT_DETERM o EVERY' [
                   TRY o etac ctxt @{thm UnE},
@@ -1638,10 +1647,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       maps (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI})) (the (#set_subshape_imagess (#inner raw)))
                       @ flat (the (#set_subshapess (#inner raw)))
                     ),
-                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms),
                     TRY o EVERY' [
                       EqSubst.eqsubst_tac ctxt [0] [#rename_comp raw'],
-                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems),
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
                       K (unfold_thms_tac ctxt @{thms id_o o_id})
                     ]
                   ],
@@ -1682,21 +1691,21 @@ fun create_binding_recursor qualify fp_res params models lthy =
             in EVERY1 [
               K (unfold_thms_tac ctxt [snd XX]),
               EqSubst.eqsubst_asm_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems),
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems @ card_thms),
               K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]} @ #FVars_ctors raw)),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems)
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems @ card_thms)
               ],
               K (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty image_comp[unfolded comp_def]}),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_asm_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems)
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems @ card_thms)
               ],
               K (unfold_thms_tac ctxt @{thms image_UN[symmetric]}),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_asm_tac ctxt [0] @{thms image_set_diff[OF bij_is_inj, symmetric]},
-                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id bij_comp} @ f_prems @ pick_prems)
+                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id bij_comp} @ f_prems @ pick_prems @ card_thms)
               ],
               REPEAT_DETERM o etac ctxt conjE,
               K (unfold_thms_tac ctxt (@{thms image_comp[symmetric]}
@@ -1712,6 +1721,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ) (#FVars raw) fs (#PFVarss params) (#avoiding_sets params) (transpose (map #FVars (#raw_fps fp_res))) bsets fsets (#binding_relation fp_res)
       ) (1 upto length xs) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) map_id_fsts pre_setss pick_id_onsss' pick_id_on_image'sss
     ) (XXls, XXrs);
+
+    val Cinfinite_UNIV = conjI OF [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd (#pre_mrbnfs fp_res)), @{thm card_of_Card_order}];
+    val regularCard_UNIV = #var_regular (MRBNF_Def.class_thms_of_mrbnf (hd (#pre_mrbnfs fp_res)));
+    val (Cinfinite_card, regularCard_card) = fold_rev (fn Cinf => fn (a1, a2) => (
+      @{thm cmin_Cinfinite} OF [Cinf, a1],
+      @{thm cmin_regularCard} OF [regularCard_UNIV, a2, Cinf, a1]
+    )) (replicate (nvars - 1) Cinfinite_UNIV) (Cinfinite_UNIV, regularCard_UNIV);
+    val Un_bound = @{thm regularCard_Un} OF [conjunct2 OF [Cinfinite_card], conjunct1 OF [Cinfinite_card], regularCard_card];
 
     val suitable'_prems = flat (map2 (map2 ((curry op$) o fst)) suitabless pick'ss);
     val f_swap_alpha =
@@ -1740,7 +1757,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
           )
         )) ts ts' alpha_prems goals;
       in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ fs @ ts @ ts' @ [p]))
-      (suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems @ f_prems @ imsupp_prems @  map HOLogic.mk_Trueprop alpha_prems)
+      (suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems @ f_prems @ imsupp_prems @ map HOLogic.mk_Trueprop alpha_prems)
       goal (fn {context=ctxt, prems} =>
         let
           fun apply_n thm n = fold (K (fn t => thm OF [t])) (0 upto n - 1);
@@ -1800,43 +1817,45 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   in infer_instantiate' ctxt (
                     map (SOME o Thm.cterm_of ctxt) [R, L, bset, XXl_t, x]
                     @ [NONE, NONE, SOME (Thm.cterm_of ctxt XXr_t)]
-                  ) (@{thm exists_bij_betw_refl_def} OF [conjI OF [
-                    MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf,
-                    @{thm card_of_Card_order}
-                  ]]) end
+                  ) (@{thm exists_bij_betw_refl_def} OF [Cinfinite_card]) end
                 ) PU_bsets (nth pickss (i - 1)) fs;
 
                 val exists_bij_betws = @{map 4} (fn thm => fn FVars => fn PFVars => fn avoiding_set => exE OF [
-                  infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (
+                  Drule.rotate_prems 1 (infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (
                     Term.absfree (dest_Free y) (mk_Un (mk_Un (
                       FVars $ (#ctor raw $ (map_id_fst $ y)),
                       PFVars $ p
                     ), avoiding_set))
-                  ))] thm
+                  ))] thm)
                 ]) exists_bij_betw's (#FVars raw) (#PFVarss params) (#avoiding_sets params);
 
-                val Un_bound = MRBNF_Def.Un_bound_of_mrbnf mrbnf;
                 fun bound_tac ctxt = EVERY' [
                   rtac ctxt Un_bound,
-                  resolve_tac ctxt (MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf),
+                  K (prefer_tac 2),
                   rtac ctxt Un_bound,
                   rtac ctxt Un_bound,
-                  resolve_tac ctxt (#card_of_FVars_bound_UNIVs raw),
+                  K (prefer_tac 2),
                   resolve_tac ctxt (#small_PFVarss (#axioms params)),
-                  resolve_tac ctxt (#small_avoiding_sets (#axioms params))
+                  SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
+                    @ #card_of_FVars_bound_UNIVs raw
+                  ) 1)),
+                  resolve_tac ctxt (#small_avoiding_sets (#axioms params)),
+                  SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
+                    @ MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf
+                  ) 1))
                 ];
               in EVERY1 [
                 rtac ctxt conjI,
                 EqSubst.eqsubst_tac ctxt [0] [#rename_simp (#inner raw)],
-                REPEAT_DETERM o resolve_tac ctxt prems,
+                REPEAT_DETERM o resolve_tac ctxt (prems @ card_thms),
                 rtac ctxt trans,
                 rtac ctxt (snd rec_f OF suitable_prems),
                 EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
                 K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of "\<lambda>t. (_ t, _ t)"]}),
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems)
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms)
                 ],
                 K (unfold_thms_tac ctxt (Thm.symmetric (snd XXr) :: @{thms id_o o_id})),
                 rtac ctxt sym,
@@ -1851,7 +1870,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 EqSubst.eqsubst_tac ctxt [0] [@{thm trans[OF comp_apply[symmetric]]} OF [
                   fun_cong OF [#Pmap_comp0 (#axioms params) RS sym]
                 ]],
-                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ f_prems),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ f_prems @ card_thms),
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp2},
                   resolve_tac ctxt f_prems
@@ -1860,25 +1879,25 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   Local_Defs.unfold0 ctxt @{thms id_def} (fun_cong OF [#Pmap_id0 (#axioms params)])
                 )]),
                 EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
                 K (unfold_thms_tac ctxt @{thms id_o o_id comp_pair prod.case}),
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems)
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms)
                 ],
                 K (unfold_thms_tac ctxt (Thm.symmetric (snd XXl) :: @{thms id_o o_id})),
                 EVERY' (map (fn thm => EVERY' [
                   rtac ctxt thm,
-                  REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl card_of_Card_order},
                   REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp} @ f_prems @ pick_prems),
                   EVERY' (map (fn thms => EVERY' [
                     bound_tac ctxt,
                     resolve_tac ctxt thms,
-                    REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ f_prems @ imsupp_prems),
+                    REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ f_prems @ imsupp_prems @ card_thms),
                     SELECT_GOAL (unfold_thms_tac ctxt (map snd [XXl, XXr])),
                     EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems),
-                    rtac ctxt refl
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems @ card_thms),
+                    rtac ctxt refl,
+                    REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl card_of_Card_order cmin1 cmin2}
                   ]) [int_empty_XXls, int_empty_XXrs])
                 ]) exists_bij_betws),
                 REPEAT_DETERM o etac ctxt exE,
@@ -1906,13 +1925,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),
                 REPEAT_DETERM o FIRST' [
                   eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
-                  resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ f_prems @ pick_prems)
+                  resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms)
                 ],
                 K (unfold_thms_tac ctxt @{thms id_o o_id Grp_UNIV_id OO_eq}),
                 rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
                 REPEAT_DETERM o FIRST' [
                   eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
-                  resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ f_prems @ pick_prems)
+                  resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms)
                 ],
                 K (unfold_thms_tac ctxt @{thms inv_id id_o o_id Grp_UNIV_id conversep_eq OO_eq}),
                 K (unfold_thms_tac ctxt (MRBNF_Def.mr_rel_def_of_mrbnf mrbnf :: @{thms relcompp_conversep_Grp})),
@@ -1920,7 +1939,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 rtac ctxt (trans OF [MRBNF_Def.map_cong0_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]),
                 REPEAT_DETERM o FIRST' [
                   eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
-                  resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ f_prems @ pick_prems)
+                  resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms)
                 ],
                 REPEAT_DETERM o FIRST' [
                   rtac ctxt refl,
@@ -1973,10 +1992,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     EVERY' [
                       rtac ctxt @{thm context_conjI},
                       resolve_tac ctxt (map (#alpha_bij o #inner) (#raw_fps fp_res)),
-                      REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
+                      REPEAT_DETERM o (eresolve_tac ctxt @{thms eq_bij_betw_refl_prems} ORELSE' resolve_tac ctxt card_thms),
                       REPEAT_DETERM1 o EVERY' [
                         rtac ctxt ballI,
-                        SELECT_GOAL (unfold_thms_tac ctxt (maps (map (fn thm => thm OF f_prems) o #FVars_renames) (#raw_fps fp_res))),
+                        EqSubst.eqsubst_asm_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
+                        REPEAT_DETERM o resolve_tac ctxt (f_prems @ card_thms),
                         etac ctxt imageE,
                         hyp_subst_tac ctxt,
                         SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
@@ -2002,14 +2022,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       REPEAT_DETERM o EVERY' [
                         EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                         REPEAT_DETERM o FIRST' [
-                          resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems),
+                          resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms),
                           eresolve_tac ctxt @{thms eq_bij_betw_refl_prems}
                         ]
                       ],
                       rtac ctxt @{thm context_conjI},
                       resolve_tac ctxt (map (#alpha_bij o #inner) (#raw_fps fp_res)),
                       REPEAT_DETERM o FIRST' [
-                        resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems),
+                        resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms),
                         eresolve_tac ctxt @{thms eq_bij_betw_refl_prems}
                       ],
                       REPEAT_DETERM1 o FIRST' [
@@ -2093,11 +2113,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     @ maps (map (fn thm => Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                   ) (#raw_fps fp_res)),
                   REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id}
-                    @ map (#alpha_refl o #inner) (#raw_fps fp_res) @ prems @ pick_prems
+                    @ map (#alpha_refl o #inner) (#raw_fps fp_res) @ prems @ pick_prems @ card_thms
                   ),
                   TRY o EVERY' [
                     EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
-                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
                     K (unfold_thms_tac ctxt @{thms id_o o_id})
                   ],
                   REPEAT_DETERM o EVERY' [
@@ -2107,7 +2127,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     eresolve_tac ctxt (maps (fn raw => maps (map (fn thm =>
                       Drule.rotate_prems ~1 thm OF [imageI])
                     ) (the (#set_subshape_imagess (#inner raw)))) (#raw_fps fp_res)),
-                    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ suitable_prems @ suitable'_prems @ f_prems @ pick_prems),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ suitable_prems @ suitable'_prems @ f_prems @ pick_prems @ card_thms),
                     REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
                     REPEAT_DETERM o EVERY' [
                       SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def Int_Un_distrib Un_empty}),
@@ -2119,13 +2139,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ],
                   resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
                   EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound bij_comp} @ [infinite_UNIV] @ f_prems @ pick_prems),
-                  REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound bij_comp} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms),
+                  REPEAT_DETERM o (eresolve_tac ctxt @{thms eq_bij_betw_refl_prems} ORELSE' resolve_tac ctxt card_thms),
                   eresolve_tac ctxt (maps (fn raw => maps (map (fn thm =>
                     Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                   ) (#raw_fps fp_res)),
                   REPEAT_DETERM o FIRST' [
-                    resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems),
+                    resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms),
                     eresolve_tac ctxt @{thms eq_bij_betw_refl_prems}
                   ],
                   REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ f_prems @ imsupp_prems),
@@ -2133,7 +2153,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     REPEAT_DETERM o EVERY' [
                       EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                       REPEAT_DETERM o FIRST' [
-                        resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems),
+                        resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems @ card_thms),
                         eresolve_tac ctxt @{thms eq_bij_betw_refl_prems}
                       ]
                     ],
@@ -2171,12 +2191,12 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         val FVars_t = Thm.cterm_of ctxt (Term.absfree (dest_Free x) (mk_Un (mk_Un (
                           FVars $ (#ctor raw $ x), PFVars $ p), avoiding_set
                         )));
-                      in infer_instantiate' ctxt [
-                        NONE, cbset, NONE, NONE, cbset, SOME pick'_map_t, SOME FVars_t,
+                      in Drule.rotate_prems 1 (infer_instantiate' ctxt [
+                        cbset, NONE, NONE, cbset, SOME pick'_map_t, SOME FVars_t,
                         NONE, NONE, SOME pick_map_t
                       ] (
-                        @{thm exists_bij_betw_def} OF (@{thms _ _} @ [pick_bij, pick'_bij, h_bij])
-                      ) end
+                        @{thm exists_bij_betw_def} OF ([Cinfinite_card] @ @{thms _} @ [pick_bij, pick'_bij, h_bij])
+                      )) end
                     ) bsets (nth pick_bijss (i - 1)) (nth pick'_bijss (i - 1)) (every_other h_prems) (#FVars raw) (#PFVarss params) (#avoiding_sets params);
                     val mr_rel_sets' = map_filter (
                       fn (_, MRBNF_Def.Live_Var) => NONE
@@ -2186,11 +2206,6 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   in EVERY1 [
                     EVERY' (map (fn thm => EVERY' [
                       rtac ctxt (exE OF [thm]),
-                      rtac ctxt conjI,
-                      rtac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf),
-                      rtac ctxt @{thm card_of_Card_order},
-                      rtac ctxt @{thm ordLeq_refl},
-                      rtac ctxt @{thm card_of_Card_order},
                       resolve_tac ctxt mr_rel_sets,
                       REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
                       EVERY' (map (fn suitables => EVERY' [
@@ -2200,7 +2215,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         rtac ctxt (alpha_ctor_pick OF suitables),
                         REPEAT_DETERM o EVERY' [
                           EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ pick_prems)
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ pick_prems @ card_thms)
                         ],
                         Method.insert_tac ctxt suitables,
                         K (unfold_thms_tac ctxt (@{thms image_id} @ maps (map snd) suitabless)),
@@ -2208,10 +2223,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         assume_tac ctxt,
                         REPEAT_DETERM o EVERY' [
                           EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ pick_prems)
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ pick_prems @ card_thms)
                         ],
                         K (unfold_thms_tac ctxt @{thms image_id}),
-                        rtac ctxt refl
+                        rtac ctxt refl,
+                        REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl card_of_Card_order cmin1 cmin2}
                       ]) [suitable'_prems, suitable_prems])
                     ]) exists_bij_betw2s),
                     REPEAT_DETERM o etac ctxt exE,
@@ -2224,13 +2240,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     REPEAT_DETERM_N (2 * nvars) o EVERY' [
                       REPEAT_DETERM o EVERY' [
                         EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems)
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
                       ],
                       SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
                       REPEAT_DETERM o etac ctxt conjE,
                       REPEAT_DETERM o EVERY' [
                         EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems)
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
                       ],
                       K (unfold_thms_tac ctxt @{thms image_id}),
                       assume_tac ctxt
@@ -2240,7 +2256,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     REPEAT_DETERM o EVERY' [
                       REPEAT_DETERM1 o EVERY' [
                         EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems)
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
                       ],
                       REPEAT_DETERM1 o EVERY' [
                         TRY o etac ctxt UnE,
@@ -2255,13 +2271,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     (* mr_rel_goal *)
                     rtac ctxt (iffD2 OF [hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf)]),
                     REPEAT_DETERM o FIRST' [
-                      resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ pick_prems @ pick'_prems),
+                      resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ pick_prems @ pick'_prems @ card_thms),
                       eresolve_tac ctxt @{thms eq_bij_betw_prems}
                     ],
                     K (unfold_thms_tac ctxt @{thms id_o o_id Grp_UNIV_id OO_eq}),
                     rtac ctxt (iffD2 OF [nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2]),
                     REPEAT_DETERM o FIRST' [
-                      resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ pick_prems @ pick'_prems),
+                      resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ pick_prems @ pick'_prems @ card_thms),
                       eresolve_tac ctxt @{thms eq_bij_betw_prems}
                     ],
                     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id Grp_UNIV_id OO_eq conversep_eq}),
@@ -2270,7 +2286,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     K (prefer_tac (2 * (MRBNF_Def.free_of_mrbnf mrbnf + 2 * MRBNF_Def.bound_of_mrbnf mrbnf) + 1)),
                     rtac ctxt mr_rel_prem,
                     REPEAT_DETERM o FIRST' [
-                      resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ h_prems @ pick_prems @ pick'_prems),
+                      resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ h_prems @ pick_prems @ pick'_prems @ card_thms),
                       eresolve_tac ctxt @{thms eq_bij_betw_prems}
                     ],
                     REPEAT_DETERM o FIRST' [
@@ -2348,7 +2364,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           EVERY' [
                             resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_bij o #inner) (#raw_fps fp_res)),
                             assume_tac ctxt ORELSE' resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                            REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                            REPEAT_DETERM o (eresolve_tac ctxt @{thms eq_bij_betw_prems} ORELSE' resolve_tac ctxt card_thms),
                             REPEAT_DETERM1 o EVERY' [
                               rtac ctxt ballI,
                               SELECT_GOAL (unfold_thms_tac ctxt (@{thms eq_bij_betw_def} @ flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
@@ -2380,7 +2396,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                             REPEAT_DETERM o EVERY' [
                               EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                               REPEAT_DETERM o FIRST' [
-                                resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems),
+                                resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms),
                                 eresolve_tac ctxt @{thms eq_bij_betw_prems}
                               ]
                             ],
@@ -2498,7 +2514,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                             ],
                             resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
                             REPEAT_DETERM o FIRST' [
-                              resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ pick'_prems @ h_prems),
+                              resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ pick'_prems @ h_prems @ card_thms),
                               eresolve_tac ctxt @{thms eq_bij_betw_prems}
                             ],
                             resolve_tac ctxt (map (fn raw =>
@@ -2515,13 +2531,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                               resolve_tac ctxt @{thms refl o_id[symmetric]}
                             ],
                             REPEAT_DETERM o FIRST' [
-                              resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems),
+                              resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems @ card_thms),
                               eresolve_tac ctxt @{thms eq_bij_betw_prems}
                             ],
                             rtac ctxt refl,
                             resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
                             REPEAT_DETERM o FIRST' [
-                              resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems),
+                              resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems @ card_thms),
                               eresolve_tac ctxt @{thms eq_bij_betw_prems}
                             ],
                             assume_tac ctxt
@@ -2535,7 +2551,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           @ maps (map (fn thm => Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                         ) (#raw_fps fp_res)),
                         REPEAT_DETERM o FIRST' [
-                          resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ suitable_prems),
+                          resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ suitable_prems @ card_thms),
                           eresolve_tac ctxt @{thms eq_bij_betw_prems}
                         ],
                         REPEAT_DETERM o EVERY' [
@@ -2547,7 +2563,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
                           EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                           REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                            resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms),
                             eresolve_tac ctxt @{thms eq_bij_betw_prems}
                           ]
                         ],
@@ -2559,7 +2575,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         ) (#raw_fps fp_res)),
                         REPEAT_DETERM o FIRST' [
                           eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                          resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems)
+                          resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ card_thms)
                         ],
                         REPEAT_DETERM_N m o resolve_tac ctxt suitable_prems,
                         REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
@@ -2575,29 +2591,29 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         resolve_tac ctxt (map (fn thm => fun_cong OF [thm]) PUmap'_alphas),
                         TRY o EVERY' [
                           resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems)
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
                         ],
                         assume_tac ctxt,
                         resolve_tac ctxt (map (fn t =>
                           mk_arg_cong lthy (nvars +  2) (fst t) OF (replicate nvars refl)
                         ) PUmap's),
                         resolve_tac ctxt (maps (fn raw => [#rename_comp raw RS sym, #rename_id raw]) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
                         resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
                         eresolve_tac ctxt (maps (fn raw =>
                           maps (map (fn thm => Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                         ) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms),
                         REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
-                        REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]},
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order}),
                         EqSubst.eqsubst_tac ctxt [0] (maps (fn raw => [#rename_comp raw RS sym, #rename_id raw]) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
                         TRY o EVERY' [
                           resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems)
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
                         ],
                         assume_tac ctxt,
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms),
                         REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
                         REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
                         REPEAT_DETERM o EVERY' [
@@ -2606,11 +2622,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           assume_tac ctxt
                         ],
                         resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]},
+                        REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order},
                         EqSubst.eqsubst_tac ctxt [0] (map #rename_id (#raw_fps fp_res)) ORELSE' EVERY' [
                           EqSubst.eqsubst_asm_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                           REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ h_prems @ pick_prems @ pick'_prems),
+                            resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ h_prems @ pick_prems @ pick'_prems @ card_thms),
                             eresolve_tac ctxt @{thms eq_bij_betw_prems}
                           ]
                         ],
@@ -2620,11 +2636,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         K (unfold_thms_tac ctxt @{thms comp_assoc}),
                         TRY o EVERY' [
                           EqSubst.eqsubst_tac ctxt [0] (map (fn raw => #rename_comp raw RS sym) (#raw_fps fp_res)),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems)
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms)
                         ],
                         REPEAT_DETERM o EVERY' [
                           resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                          REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems) ORELSE' eresolve_tac ctxt @{thms eq_bij_betw_prems})
+                          REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms) ORELSE' eresolve_tac ctxt @{thms eq_bij_betw_prems})
                         ],
                         resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
                         assume_tac ctxt
@@ -2646,15 +2662,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
         K (unfold_thms_tac ctxt [snd suitable]),
         REPEAT_DETERM o resolve_tac ctxt @{thms choice allI},
         rtac ctxt @{thm exists_suitable_aux},
-        rtac ctxt conjI,
-        rtac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf),
-        rtac ctxt @{thm card_of_Card_order},
-        rtac ctxt @{thm ordLeq_refl},
-        rtac ctxt @{thm card_of_Card_order},
+        rtac ctxt Cinfinite_card,
+        REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl cmin1 cmin2 card_of_Card_order},
         REPEAT_DETERM o resolve_tac ctxt (@{thms ordLeq_ordLess_trans[OF card_of_diff]}
-          @ (MRBNF_Def.Un_bound_of_mrbnf mrbnf :: MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
+          @ (Un_bound :: MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
           @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
           @ #small_PFVarss (#axioms params) @ #small_avoiding_sets (#axioms params)
+          @ @{thms cmin_greater card_of_Card_order}
         )
       ]) end
     )) (#pre_mrbnfs fp_res) suitabless;
@@ -2680,7 +2694,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
         );
       in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ [t, t'])) (suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         resolve_tac ctxt (map (fn thm => thm RS conjunct2) f_swap_alphas),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ @{thms cmin_greater card_of_Card_order}),
         K (unfold_thms_tac ctxt @{thms imsupp_id}),
         REPEAT_DETERM o rtac ctxt @{thm Int_empty_left},
         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)))
@@ -2732,7 +2746,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
               K (unfold_thms_tac ctxt [snd suitable]),
               REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
               REPEAT_DETERM o FIRST' [
-                resolve_tac ctxt @{thms conjI bij_if supp_if imsupp_if_empty image_if_empty},
+                resolve_tac ctxt (
+                  [conjunct1 OF [Cinfinite_card], conjunct2 OF [Cinfinite_card]]
+                  @ @{thms conjI bij_if supp_if' imsupp_if_empty image_if_empty}
+                ),
                 assume_tac ctxt
               ],
               dtac ctxt @{thm iffD1[OF prod.inject]},

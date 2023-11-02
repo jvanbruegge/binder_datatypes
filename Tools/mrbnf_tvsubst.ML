@@ -1460,16 +1460,17 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
             FVars $ (f $ Bound 0)
           )))) (#FVars quotient) fs'))
         );
+        val _ = @{print} (Thm.cterm_of lthy goal)
       in Goal.prove_sorry lthy (names (some_fs' @ [t])) f'_prems goal (fn {context=ctxt, prems} => EVERY1 [
-        rtac ctxt (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) (map_filter I (map2 (fn i => Option.map (fn _ =>
+        rtac ctxt (infer_instantiate' ctxt ((map (Option.map (Thm.cterm_of ctxt)) (map2 (fn i => Option.map (fn _ =>
           foldl1 mk_Un (map_filter I (map2 (fn f => Option.map (fn def =>
             fst (nth (#IImsupps def) i) $ the f
           )) fs' defs))
         )) (0 upto nvars - 1) defs)) @ [NONE, SOME (Thm.cterm_of ctxt t)]) (#fresh_co_induct (#inner quotient))),
         REPEAT_DETERM o EVERY' [
           SELECT_GOAL (unfold_thms_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
-          REPEAT_DETERM1 o resolve_tac ctxt (
-            map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (take nvars prems)
+          REPEAT_DETERM1 o resolve_tac ctxt (@{thms emp_bound}
+            @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (take nvars prems)
             @ #card_of_FVars_bound_UNIVs quotient
             @ [MRBNF_Def.Un_bound_of_mrbnf mrbnf, MRBNF_Def.UNION_bound_of_mrbnf mrbnf]
             @ @{thms cmin1 cmin2 card_of_Card_order ordLeq_refl}
@@ -1500,7 +1501,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         REPEAT_DETERM o resolve_tac ctxt prems,
         REPEAT_DETERM o EVERY' [
           TRY o EVERY' [
-            rtac ctxt (@{thm iffD2[OF meta_eq_to_obj_eq]} OF [snd (#noclash rec_res)]),
+            rtac ctxt (@{thm iffD2[OF meta_eq_to_obj_eq]} OF [snd (#noclash quotient)]),
             SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty})
           ],
           REPEAT_DETERM o rtac ctxt conjI,
@@ -1536,7 +1537,8 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           Goal.assume_rule_tac ctxt
         ])
       ]) end
-    )) (#FVars quotient) (0 upto nvars - 1) fs' tvsubst_VVrs FVars_VVrs not_isVVr_frees IImsupp_Diffs defs;*)
+    )) (#FVars quotient) (0 upto nvars - 1) fs' tvsubst_VVrs FVars_VVrs not_isVVr_frees IImsupp_Diffs defs;
+    val _ = @{print} FFVars_tvsubsts *)
 
     val VVrs' = map_filter (Option.map ((fn (VVr, VVr_def) => (VVr, @{thm eq_reflection} OF [mk_unabs_def 1 (
       @{thm meta_eq_to_obj_eq} OF [Local_Defs.unfold0 lthy (@{thms comp_def} @ eta_defs) VVr_def]

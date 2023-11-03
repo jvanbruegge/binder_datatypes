@@ -191,10 +191,10 @@ lemma "I \<equiv> lfp (\<lambda>R t. \<exists>B. small B \<and> G R B t)"
 using I_def[simplified] .
  
 lemma I_equiv: 
-assumes "I t" and "ssbij \<sigma>"
+assumes "I t" and \<sigma>: "ssbij \<sigma>"
 shows "I (Tmap \<sigma> t)"
-using assms proof induct 
-  case (G_I_intro B t)   note B = G_I_intro(1) note \<sigma> = G_I_intro(3)
+using assms(1) proof induct 
+  case (G_I_intro B t)   note B = G_I_intro(1)  
   have G: "G (\<lambda>t. I (Tmap \<sigma> t)) B t"
   apply(rule G_mono[OF _ G_I_intro(1,2)]) using \<sigma> by auto
   have G: "G (\<lambda>t. I (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (image \<sigma> B) (Tmap \<sigma> t)"
@@ -214,76 +214,29 @@ lemma G_small_mono'[mono]: "\<And>R R' B t.  R \<le> R' \<Longrightarrow>
 inductive I' :: "'T \<Rightarrow> bool" where 
 G_I'_intro: "small B \<Longrightarrow> B \<inter> Tfvars t = {} \<Longrightarrow> G I' B t \<Longrightarrow> I' t"
 
-lemma I'_equiv: 
-assumes "I' t" and "ssbij \<sigma>"
-shows "I' (Tmap \<sigma> t)"
-using assms proof induct
-  case (G_I'_intro B t)  note B = G_I'_intro(1,2)  note \<sigma> = G_I'_intro(4)
-  have G: "G (\<lambda>t. I' (Tmap \<sigma> t)) B t"
-  apply(rule G_mono[OF _ G_I'_intro(1,3)]) using \<sigma> by auto
-  have BB: "image \<sigma> B \<inter> Tfvars (Tmap \<sigma> t) = {}"  using image_Tfvars_disj[OF \<sigma> G_I'_intro(2)] .    
-  have G: "G (\<lambda>t. I' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (image \<sigma> B) (Tmap \<sigma> t)"
-  using G_equiv[OF \<sigma> B(1) G] .
-  have G: "G I' (image \<sigma> B) (Tmap \<sigma> t)" 
-  apply(rule G_mono[OF _ _ G]) 
-    subgoal using \<sigma> 
-    by auto (metis Tmap_comp' Tmap_id id_apply ssbij_inv ssbij_invL)
-    subgoal using small_image[OF B(1)] . .
-  show ?case using BB G small_image[OF B(1)] by (subst I'.simps, auto) 
-qed
-
-(*
-definition GG where "GG R \<equiv> G (\<lambda>t. I t \<and> R t)"
-
-lemma GG_imp_G: "small B \<Longrightarrow> GG R B t \<Longrightarrow> G R B t" 
-unfolding GG_def by (metis (no_types, lifting) G_mono predicate1I)
-
-lemma GG_mono[mono]: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow> GG R' B t"
-unfolding GG_def using G_mono[of "\<lambda>t. I t \<and> R t" "\<lambda>t. I t \<and> R' t" B] 
-by auto
-
-lemma GG_mono'[mono]: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<and> GG R B t \<longrightarrow> small B \<and> GG R' B t"
-  using GG_mono by blast
-
-lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
-unfolding GG_def using G_equiv[of \<sigma> B "\<lambda>t. I t \<and> R t" t] I_equiv[of _ \<sigma>]   
-apply simp by (smt (z3) G_mono Tmap_comp' Tmap_id id_apply predicate1I small_image ssbij_inv ssbij_invL)
-
-
-inductive II :: "'T \<Rightarrow> bool" where 
-GG_II_intro: "small B \<Longrightarrow> GG II B t \<Longrightarrow> II t"
-
-lemma II_I: "II = I"
-apply(intro ext iffI)
-  subgoal for t apply(induct rule: II.induct)
-  unfolding GG_def  
-  by (metis (no_types, lifting) G_mono I.intros predicate1I)
-  subgoal for t apply(induct rule: I.induct)  
-  by (auto simp: GG_def intro: II.intros) .
-*)
-
 lemma I'_imp_I: "I' t \<Longrightarrow> I t"
 apply(induct rule: I'.induct)
 by (smt (verit) G_mono I.simps predicate1I) 
 
-end (* context Induct1 *)
+lemma I'_equiv: 
+assumes "I' t" and \<sigma>: "ssbij \<sigma>"
+shows "I' (Tmap \<sigma> t)"
+using assms(1) proof induct
+  case (G_I'_intro B t)  note B = G_I'_intro(1,2)   
+  have G: "G (\<lambda>t. I' (Tmap \<sigma> t)) B t"
+  apply(rule G_mono[OF _ G_I'_intro(1,3)]) using \<sigma> by auto
+  have BB: "image \<sigma> B \<inter> Tfvars (Tmap \<sigma> t) = {}" using image_Tfvars_disj[OF \<sigma> G_I'_intro(2)] .    
+  have G: "G (\<lambda>t. I' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (image \<sigma> B) (Tmap \<sigma> t)"
+  using G_equiv[OF \<sigma> B(1) G] .
+  have 0: "(\<lambda>t. I' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) = I'"
+  unfolding fun_eq_iff  
+  by (metis Tmap_comp' Tmap_cong_id \<sigma> id_apply ssbij_comp ssbij_inv ssbij_invL)
+  have G: "G I' (image \<sigma> B) (Tmap \<sigma> t)"
+  using G unfolding 0 .
+  show ?case using BB G small_image[OF B(1)] by (subst I'.simps, auto) 
+qed
 
-(* 
-locale Induct_enhanced = Induct1 dummy Tmap Tfvars G
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
-and Tfvars :: "'T \<Rightarrow> 'A set"
-and 
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
-+
-assumes 
-GG_refresh: 
-"\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
-         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> 
-          small B \<Longrightarrow> GG R B t \<Longrightarrow> 
-         \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t"
-*)
+end (* context Induct1 *)
 
 
 locale Induct = Induct1 dummy Tmap Tfvars G
@@ -317,9 +270,14 @@ lemma G_refresh_I':
 using G_refresh I'_equiv by (simp add: I'_imp_I)
 
 lemma I_imp_I': "I t \<Longrightarrow> I' t"
-apply(induct rule: I.induct)
-apply(subst I'.simps) 
-by auto (metis (no_types, lifting) G_refresh_I' G_mono predicate1I)
+proof(induct rule: I.induct)
+  case (G_I_intro B t)
+  hence G: "G I' B t" by (metis (no_types, lifting) G_mono predicate1I)
+  note sB = `small B` 
+  from G_refresh_I'[OF sB G]
+  obtain C where 0: "small C" "C \<inter> Tfvars t = {}" "G I' C t" by auto 
+  show ?case using I'.intros[OF 0] .
+qed
 
 lemma I_eq_I': "I = I'"
 apply(rule ext)
@@ -330,29 +288,6 @@ apply(rule iffI)
  
 end (* context Induct *)
 
-(* 
-sublocale Induct_enhanced < E: Induct1 where G = GG
-apply standard
-  subgoal using GG_mono .
-  subgoal using GG_equiv . .
-
-context Induct_enhanced 
-begin
-
-lemma E_I: "E.I = I"
-apply(intro ext iffI)
-  subgoal for t apply(induct rule: E.I.induct) 
-  by (metis (mono_tags, lifting) GG_def G_mono I.intros predicate1I)
-  subgoal for t apply(induct rule: I.induct) 
-  by (metis E.I.intros GG_def) .
-
-end (* context Induct_enhanced *)
-
-
-sublocale Induct_enhanced < E: Induct where G = GG
-apply standard
-subgoal using GG_refresh unfolding E_I . .
-*)
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
 locale Induct_simple = Induct1 dummy Tmap Tfvars (* Vmap Vfvars *) G 
@@ -456,103 +391,6 @@ proof-
 qed
 
 end (* context Induct *)
-
-(*
-context Induct_enhanced 
-begin
-
-theorem BE_induct_enhanced[consumes 2]: 
-(* Parameters: *)
-fixes Pfvars :: "'P \<Rightarrow> 'A set"
-assumes small_Pfvars: "\<And>p. small (Pfvars p)" 
-(* *)
-assumes I: "I (t::'T)"
-and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Pfvars p = {} \<Longrightarrow> B \<inter> Tfvars t = {} \<Longrightarrow> 
-      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) B t \<Longrightarrow> R p t"
-shows "R p t"
-apply(rule E.BE_induct[unfolded E_I, OF small_Pfvars I, of _ R])
-using strong GG_imp_G by blast
-
-end (* context Induct_enhanced *)
-
-
-locale Induct1_strong = Components dummy Tmap Tfvars 
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
-and Tfvars :: "'T \<Rightarrow> 'A set"
-+
-fixes (* The operator that defines the inductive predicate as lfp:  *)
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
-assumes 
-G_mono_strong: 
-"\<And>R R' B t. small B \<Longrightarrow> G (\<lambda>t. R t \<and> R' t) B t \<longleftrightarrow> G R B t \<and> G R' B t"
-and 
-G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
-begin
-
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
-using G_mono_strong[of B R' R t] 
-by (smt (z3) le_fun_def order_antisym_conv predicate1I)
-
-end (* Induct1_strong  *)
-
-
-sublocale Induct1_strong < Induct1
-apply standard
-  subgoal using G_mono .
-  subgoal using G_equiv . .
-
-
-locale Induct_enhanced2 = Induct1_strong dummy Tmap Tfvars G
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
-and Tfvars :: "'T \<Rightarrow> 'A set"
-and 
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
-+
-assumes 
-(*
-G_binding_orthogonal:
-"\<And>R R' B B' t. small B \<Longrightarrow> small B' \<Longrightarrow> G R B t \<Longrightarrow> G R' B' t \<Longrightarrow> G R' B t"
-and 
-*)
-GG_refresh_into_G: 
-"\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
-         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> GG R B t \<Longrightarrow> 
-         \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
-begin
-
-lemma GG_refresh: 
-assumes "\<forall>t. R t \<longrightarrow> I t" "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))" "small B" and GG: "GG R B t"
-shows "\<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> GG R C t" 
-proof-
-  have I: "I t" using GG unfolding GG_def
-  using G_mono_strong I.intros assms(3) by blast
-  then obtain C' where C': "small C'" and G_I: "G I C' t" 
-    using I.simps by blast
-
-  show ?thesis using GG_refresh_into_G[OF assms]
-  apply safe subgoal for C apply(rule exI[of _ C])
-  using C' G_I unfolding GG_def 
-  apply(subst G_mono_strong)  apply auto
-  using G_binding_orthogonal[of C C' R t I] by auto .
-qed
-
-end (* context Induct_enhanced2 *)
-
-
-sublocale Induct_enhanced2 < Induct_enhanced
-apply standard 
-using GG_refresh . 
-
-(* So the enhanced induction theorem becomes available in 
-Induct_enhanced2 too: *)
-context Induct_enhanced2 begin 
-thm BE_induct_enhanced
-end (* context Induct_enhanced *)
-*)
 
 
 end 

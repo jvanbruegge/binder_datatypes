@@ -2472,6 +2472,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("TT_nchotomys", TT_nchotomys),
        ("rrename_cctors", rrename_cctors),
        ("card_of_FFVars_bounds", flat card_of_FFVars_boundss),
+       ("FFVars_bd", flat card_of_FFVars_boundss'),
        ("FFVars_cctors", flat FFVars_cctorss),
        ("FFVars_intros", flat FFVars_intross),
        ("FVars_intros", flat FVars_intross),

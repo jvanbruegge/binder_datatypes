@@ -5,6 +5,9 @@ imports "../MRBNF_Recursor" "HOL-Library.Stream"
  "../General_Customization"
 begin
 
+
+lemmas stream.set_map[simp] lemmas stream.map_id[simp]
+
 context begin
 ML_file \<open>../../Tools/binder_induction.ML\<close>
 end
@@ -238,88 +241,109 @@ proposition rrename_simps[simp]:
     apply (rule refl)+
   done
 
-lemma rrename_cong:
-assumes "bij f" "|supp f| <o |UNIV::ivar set|" "bij g" "|supp g| <o |UNIV::ivar set|"
-"(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
-shows "rrename f P = rrename g P"
-(* A to J: why term.rrename_cong_ids
-and not the above more general theorem? *)
-HERE
-(* 
-using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: iterm.strong_induct)
-using assms apply auto by (metis not_in_supp_alt)+
+thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
 
-proposition App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
+
+lemma itrm_strong_induct[consumes 1, case_names iVar iApp iAbs]: 
+"|A| <o |UNIV::ivar set|  
+\<Longrightarrow>
+(\<And>x. P (iVar (x::ivar))) 
+\<Longrightarrow>
+(\<And>t1 ts2. P t1 \<Longrightarrow> (\<And>z. z \<in> sset ts2 \<Longrightarrow> P z) \<Longrightarrow> P (iApp t1 ts2)) 
+\<Longrightarrow> 
+(\<And>xs t. sset xs \<inter> A = {} \<Longrightarrow> P t \<Longrightarrow> P (iAbs xs t)) 
+\<Longrightarrow> 
+P t"
+apply(rule iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
+by auto
+
+lemma rrename_cong:
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" and g: "bij g" "|supp g| <o |UNIV::ivar set|"
+and eq: "(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
+shows "rrename f P = rrename g P"
+proof-
+  have 0: "|supp f \<union> supp g| <o |UNIV::ivar set|" 
+    using f(2) g(2) var_stream_class.Un_bound by blast
+  show ?thesis using 0 eq apply(induct P rule: itrm_strong_induct)
+    subgoal using f g by auto
+    subgoal using f g by simp (metis stream.map_cong0)  
+    subgoal using f g by simp (metis (no_types, opaque_lifting) Int_emptyD UnI1 UnI2 not_in_supp_alt 
+                       stream.map_ident_strong) .
+qed
+ 
+
+
+proposition iApp_inject[simp]: "(iApp a b = iApp c d) = (a = c \<and> b = d)"
 proof
-  assume "App a b = App c d"
+  assume "iApp a b = iApp c d"
   then show "a = c \<and> b = d"
-    unfolding App_def fun_eq_iff term.TT_injects0
-      map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-      Abs_term_pre_inject[OF UNIV_I UNIV_I]
-    by blast
+    unfolding iApp_def fun_eq_iff iterm.TT_injects0
+      map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+      Abs_iterm_pre_inject[OF UNIV_I UNIV_I]
+    by auto
 qed simp
 
-proposition Var_inject[simp]: "(Var a = Var b) = (a = b)"
+proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
   apply (rule iffI[rotated])
-   apply (rule arg_cong[of _ _ Var])
+   apply (rule arg_cong[of _ _ iVar])
   apply assumption
-  unfolding Var_def term.TT_injects0 map_term_pre_def comp_def map_sum_def sum.case Abs_term_pre_inverse[OF UNIV_I]
-  id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject
+  unfolding iVar_def iterm.TT_injects0 map_iterm_pre_def comp_def map_sum_def sum.case Abs_iterm_pre_inverse[OF UNIV_I]
+  id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
   apply (erule exE conjE)+
   apply assumption
   done
 
-lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_term (Abs x e)) f \<and> f x = x' \<and> rrename f e = e')"
-  unfolding term.set
-  unfolding Abs_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
-    map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
-    set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
-    Un_empty_right UN_single
-  apply (rule refl)
-  done
+lemma iAbs_inject: "(iAbs xs e = iAbs xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
+  \<and> id_on (FFVars (iAbs xs e)) f \<and> smap f xs = xs' \<and> rrename f e = e')"
+  unfolding iterm.set
+  unfolding iAbs_def iterm.TT_injects0 map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I]
+    map_sum_def sum.case map_prod_def prod.case id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
+    set3_iterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_iterm_pre_def
+    Un_empty_right UN_single by auto
 
-lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_term_pre (id::var \<Rightarrow>var) f (rrename f) id)"
+lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set| \<Longrightarrow> bij (map_iterm_pre (id::ivar \<Rightarrow>ivar) f (rrename f) id)"
   apply (rule iffD2[OF bij_iff])
-    apply (rule exI[of _ "map_term_pre id (inv f) (rrename (inv f)) id"])
+    apply (rule exI[of _ "map_iterm_pre id (inv f) (rrename (inv f)) id"])
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
    apply assumption
   apply (rule conjI)
    apply (rule trans)
-    apply (rule term_pre.map_comp0[symmetric])
+    apply (rule iterm_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 term.rrename_comp0s term.rrename_id0s
-  apply (rule term_pre.map_id0)
+  unfolding id_o inv_o_simp1 iterm.rrename_comp0s iterm.rrename_id0s
+  apply (rule iterm_pre.map_id0)
   apply (rule trans)
-   apply (rule term_pre.map_comp0[symmetric])
+   apply (rule iterm_pre.map_comp0[symmetric])
         apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp2 term.rrename_comp0s term.rrename_id0s
-  apply (rule term_pre.map_id0)
+  unfolding id_o inv_o_simp2 iterm.rrename_comp0s iterm.rrename_id0s
+  apply (rule iterm_pre.map_id0)
   done
 
-lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> inv (map_term_pre (id::_::var_term_pre \<Rightarrow> _) f (rrename f) id) = map_term_pre id (inv f) (rrename (inv f)) id"
+lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set| \<Longrightarrow> 
+   inv (map_iterm_pre (id::_::var_iterm_pre \<Rightarrow> _) f (rrename f) id) = map_iterm_pre id (inv f) (rrename (inv f)) id"
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
   apply assumption
   apply (rule inv_unique_comp)
    apply (rule trans)
-    apply (rule term_pre.map_comp0[symmetric])
+    apply (rule iterm_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
    defer
   apply (rule trans)
-    apply (rule term_pre.map_comp0[symmetric])
+    apply (rule iterm_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 inv_o_simp2 term.rrename_comp0s term.rrename_id0s term_pre.map_id0
+  unfolding id_o inv_o_simp1 inv_o_simp2 iterm.rrename_comp0s iterm.rrename_id0s iterm_pre.map_id0
    apply (rule refl)+
   done
 
-lemma Abs_set3: "term_ctor v = Abs (x::var) e \<Longrightarrow> \<exists>x' e'. term_ctor v = Abs x' e' \<and> x' \<in> set2_term_pre v \<and> e' \<in> set3_term_pre v"
-  unfolding Abs_def term.TT_injects0
+lemma Abs_set3: "iterm_ctor v = iAbs (xs::ivar stream) e \<Longrightarrow> 
+ \<exists>xs' e'. iterm_ctor v = iAbs xs' e' \<and> sset xs' \<subseteq> set2_iterm_pre v \<and> e' \<in> set3_iterm_pre v"
+  unfolding iAbs_def iterm.TT_injects0
   apply (erule exE)
   apply (erule conjE)+
   subgoal for f
-apply (drule iffD2[OF bij_imp_inv', rotated, of "map_term_pre id f (rrename f) id"])
+apply (drule iffD2[OF bij_imp_inv', rotated, of "map_iterm_pre id f (rrename f) id"])
      apply (rule bij_map_term_pre)
       apply assumption+
     apply (rule exI)
@@ -328,25 +352,24 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_term_pre id f (rrename f) i
      apply (rule exI[of _ "id"])
      apply (rule conjI bij_id supp_id_bound id_on_id)+
     apply (drule sym)
-    unfolding term.rrename_id0s term_pre.map_id map_term_pre_inv_simp
-    unfolding map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case
+    unfolding iterm.rrename_id0s iterm_pre.map_id map_term_pre_inv_simp
+    unfolding map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case
       map_prod_def prod.case id_def
     apply assumption
     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-unfolding set2_term_pre_def set3_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] sum_set_simps
+unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] sum_set_simps
     map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
       ccpo_Sup_singleton Un_empty_right id_on_def image_single[symmetric]
-  unfolding term.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
+  unfolding iterm.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
   unfolding image_single image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv], symmetric]
-    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF term.rrename_bijs[OF bij_imp_bij_inv supp_inv_bound]]
-  term.rrename_inv_simps[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
-  unfolding term.rrename_comps[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 term.rrename_ids
-  apply (rule conjI bij_imp_bij_inv supp_inv_bound singletonI | assumption)+
-  done
-  done
+    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF iterm.rrename_bijs[OF bij_imp_bij_inv supp_inv_bound]]
+  iterm.rrename_inv_simps[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
+  unfolding iterm.rrename_comps[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 iterm.rrename_ids
+  apply (rule conjI bij_imp_bij_inv supp_inv_bound singletonI | assumption)+ 
+  by auto .
 
-lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Abs x e = Abs x' e' \<and> x' \<notin> A"
-  apply (drule term.TT_fresh_nchotomys[of _ "Abs x e"])
+lemma Abs_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>xs' e'. iAbs xs e = iAbs xs' e' \<and> sset xs' \<inter> A = {}"
+  apply (drule iterm.TT_fresh_nchotomys[of _ "iAbs xs e"])
   apply (erule exE)
   apply (erule conjE)
    apply (drule sym)
@@ -359,126 +382,124 @@ lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
     apply assumption
   apply (rotate_tac 2)
    apply assumption
-  apply (drule iffD1[OF disjoint_iff])
-  apply (erule allE)
-  apply (erule impE)
-   apply assumption
-  apply assumption
-  done
+  apply (drule iffD1[OF disjoint_iff]) 
+  by auto
 
 lemma Abs_rrename:
-"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>
- (\<And>a'. a' \<in>FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename \<sigma> e)"
-by (metis rrename_simps(3) term.rrename_cong_ids term.set(3))
+"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow>
+ (\<And>a'. a' \<in> FFVars e - sset (as::ivar stream) \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> iAbs as e = iAbs (smap \<sigma> as) (rrename \<sigma> e)"
+by (metis rrename_simps(3) iterm.rrename_cong_ids iterm.set(3))
 
 
 (* Bound properties (needed as auxiliaries): *)
 
 lemma SSupp_upd_bound:
-  fixes f::"var \<Rightarrow> trm"
-  shows "|SSupp (f (a:=t))| <o |UNIV::var set| \<longleftrightarrow> |SSupp f| <o |UNIV::var set|"
+  fixes f::"ivar \<Rightarrow> itrm" 
+  shows "|SSupp (f (a:=t))| <o |UNIV::ivar set| \<longleftrightarrow> |SSupp f| <o |UNIV::ivar set|"
   unfolding SSupp_def
-  apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl fset_simps split: if_splits
-      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF term_pre.Un_bound], rotated]
+  apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
+      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF iterm_pre.Un_bound], rotated]
       intro: card_of_mono1)  sorry
 
 
-corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::trm)))| <o |UNIV::var set|"
+corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::itrm)))| <o |UNIV::ivar set|"
   apply (rule iffD2[OF SSupp_upd_bound])
-  apply (rule term.SSupp_VVr_bound)
+  apply (rule iterm.SSupp_VVr_bound)
   done
 
-lemma SSupp_upd_Var_bound[simp,intro!]: "|SSupp (Var(a:=(t::trm)))| <o |UNIV::var set|"
+lemma SSupp_upd_iVar_bound[simp,intro!]: "|SSupp (iVar(a:=(t::itrm)))| <o |UNIV::ivar set|"
 using SSupp_upd_VVr_bound by auto
 
-lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
-by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
+lemma supp_swap_bound[simp,intro!]: "|supp (id(x::ivar := xx, xx := x))| <o |UNIV:: ivar set|"
+by (simp add: cinfinite_imp_infinite supp_swap_bound iterm.UNIV_cinfinite)
 
-lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: var set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: var set|"
+lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: ivar set|"
 unfolding IImsupp_def
-by (simp add: var_ID_class.Un_bound term.set_bd_UNIV var_term_pre_class.UN_bound)
+by (simp add: var_ID_class.Un_bound iterm.set_bd_UNIV var_iterm_pre_class.UN_bound)
 
 (* *)
 
 lemma IImsupp_itvsubst_su:
-assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: var set|"
-shows "IImsupp (itvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
+assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: ivar set|"
+shows "IImsupp (itvsubst (\<sigma>::ivar\<Rightarrow>itrm) o \<tau>) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
 unfolding IImsupp_def SSupp_def apply auto
-by (metis s singletonD term.set(1) term.subst(1))
+by (metis s singletonD iterm.set(1) iterm.subst(1))
 
 lemma IImsupp_itvsubst_su':
-assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: var set|"
-shows "IImsupp (\<lambda>a. itvsubst (\<sigma>::var\<Rightarrow>trm) (\<tau> a)) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
+assumes s[simp]: "|SSupp \<sigma>| <o  |UNIV:: ivar set|"
+shows "IImsupp (\<lambda>a. itvsubst (\<sigma>::ivar\<Rightarrow>itrm) (\<tau> a)) \<subseteq> IImsupp \<sigma> \<union> IImsupp \<tau>"
 using IImsupp_itvsubst_su[OF assms] unfolding o_def .
 
 lemma IImsupp_itvsubst_bound:
-assumes s: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "|IImsupp (itvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>)| <o |UNIV:: var set|"
+assumes s: "|SSupp \<sigma>| <o |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
+shows "|IImsupp (itvsubst (\<sigma>::ivar\<Rightarrow>itrm) o \<tau>)| <o |UNIV:: ivar set|"
 using IImsupp_itvsubst_su[OF s(1)] s
 by (meson Un_bound SSupp_IImsupp_bound card_of_subset_bound)
 
 lemma SSupp_itvsubst_bound:
-assumes s: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "|SSupp (itvsubst (\<sigma>::var\<Rightarrow>trm) o \<tau>)| <o |UNIV:: var set|"
+assumes s: "|SSupp \<sigma>| <o |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
+shows "|SSupp (itvsubst (\<sigma>::ivar\<Rightarrow>itrm) o \<tau>)| <o |UNIV:: ivar set|"
 using IImsupp_itvsubst_bound[OF assms]
 by (metis IImsupp_def card_of_subset_bound sup_ge1)
 
 lemma SSupp_itvsubst_bound':
-assumes s: "|SSupp \<sigma>| <o |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "|SSupp (\<lambda>a. itvsubst (\<sigma>::var\<Rightarrow>trm) (\<tau> a))| <o |UNIV:: var set|"
+assumes s: "|SSupp \<sigma>| <o |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
+shows "|SSupp (\<lambda>a. itvsubst (\<sigma>::ivar\<Rightarrow>itrm) (\<tau> a))| <o |UNIV:: ivar set|"
 using SSupp_itvsubst_bound[OF assms] unfolding o_def .
 
 (* *)
 
 lemma IImsupp_rrename_su:
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|"
-shows "IImsupp (rrename (\<sigma>::var\<Rightarrow>var) o \<tau>) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"
+assumes s[simp]: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|"
+shows "IImsupp (rrename (\<sigma>::ivar\<Rightarrow>ivar) o \<tau>) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"
 unfolding IImsupp_def imsupp_def supp_def SSupp_def by force
 
 lemma IImsupp_rrename_su':
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|"
-shows "IImsupp (\<lambda>a. rrename (\<sigma>::var\<Rightarrow>var) (\<tau> a)) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"
+assumes s[simp]: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|"
+shows "IImsupp (\<lambda>a. rrename (\<sigma>::ivar\<Rightarrow>ivar) (\<tau> a)) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"
 using IImsupp_rrename_su[OF assms] unfolding o_def .
 
 lemma IImsupp_rrename_bound:
-assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "|IImsupp (rrename (\<sigma>::var\<Rightarrow>var) o \<tau>)| <o |UNIV:: var set|"
+assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
+shows "|IImsupp (rrename (\<sigma>::ivar\<Rightarrow>ivar) o \<tau>)| <o |UNIV:: ivar set|"
 using IImsupp_rrename_su[OF s(1,2)] s
-by (metis SSupp_IImsupp_bound finite_Un finite_iff_le_card_var finite_subset imsupp_supp_bound infinite_var)
+by (metis SSupp_IImsupp_bound finite_Un finite_iff_le_card_ivar finite_subset imsupp_supp_bound infinite_ivar)
 
 lemma SSupp_rrename_bound:
-assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "|SSupp (rrename (\<sigma>::var\<Rightarrow>var) o \<tau>)| <o |UNIV:: var set|"
+assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
+shows "|SSupp (rrename (\<sigma>::ivar\<Rightarrow>ivar) o \<tau>)| <o |UNIV:: ivar set|"
 using IImsupp_rrename_bound[OF assms]
 by (metis IImsupp_def card_of_subset_bound sup_ge1)
 
 lemma SSupp_rrename_bound':
-assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|" "|SSupp \<tau>| <o |UNIV:: var set|"
-shows "|SSupp (\<lambda>a. rrename (\<sigma>::var\<Rightarrow>var) (\<tau> a))| <o |UNIV:: var set|"
+assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
+shows "|SSupp (\<lambda>a. rrename (\<sigma>::ivar\<Rightarrow>ivar) (\<tau> a))| <o |UNIV:: ivar set|"
 using SSupp_rrename_bound[OF assms] unfolding o_def .
 
 (* *)
 lemma SSupp_update_rrename_bound:
-"|SSupp (Var(\<sigma> (x::var) := rrename \<sigma> e))| <o |UNIV::var set|"
-using SSupp_upd_Var_bound .
+"|SSupp (iVar(\<sigma> (x::ivar) := rrename \<sigma> e))| <o |UNIV::ivar set|"
+using SSupp_upd_iVar_bound .
 
 lemma IImsupp_rrename_update_su:
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "IImsupp (rrename \<sigma> \<circ> Var(x := e)) \<subseteq>
-       imsupp \<sigma> \<union> {x} \<union> FFVars_term e"
+assumes s[simp]: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|"
+shows "IImsupp (rrename \<sigma> \<circ> iVar(x := e)) \<subseteq>
+       imsupp \<sigma> \<union> {x} \<union> FFVars_iterm e"
 unfolding IImsupp_def SSupp_def imsupp_def supp_def by (auto split: if_splits)
 
 lemma IImsupp_rrename_update_bound:
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "|IImsupp (rrename \<sigma> \<circ> Var(x := e))| <o |UNIV::var set|"
+assumes s[simp]: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|"
+shows "|IImsupp (rrename \<sigma> \<circ> iVar(x := e))| <o |UNIV::ivar set|"
 using IImsupp_rrename_update_su[OF assms]
-by (meson Un_bound card_of_subset_bound imsupp_supp_bound infinite_var s(2) singl_bound term.set_bd_UNIV)
+by (meson Un_bound card_of_subset_bound imsupp_supp_bound infinite_ivar s(2) singl_bound iterm.set_bd_UNIV)
 
 lemma SSupp_rrename_update_bound:
-assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "|SSupp (rrename \<sigma> \<circ> Var(x := e))| <o |UNIV::var set|"
-using IImsupp_rrename_update_bound[OF assms]
-  by (metis (mono_tags) IImsupp_def finite_Un finite_iff_le_card_var)
+assumes s[simp]: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|"
+shows "|SSupp (rrename \<sigma> \<circ> iVar(x := e))| <o |UNIV::ivar set|"
+using IImsupp_rrename_update_bound[OF assms] unfolding IImsupp_def  apply auto
+HERE
+(* 
+  by (smetis (mono_tags) IImsupp_def finite_Un finite_iff_le_card_var)
 
 (* Action of swapping (a particular renaming) on variables *)
 

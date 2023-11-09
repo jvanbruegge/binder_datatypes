@@ -342,7 +342,7 @@ proof-
      have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
        by (simp add: small_Pfvars small_Tfvars small_Un)
 
-     obtain \<rho> where \<rho>: "ssbij \<rho>" "\<rho> ` B' \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
+     obtain \<rho> where \<rho>: "ssbij \<rho>" "image \<rho> B' \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
      using small_ssbij small_Tfvars small_B' small_p_t v't by metis
 
      have fresh_p: "image \<rho> B' \<inter> Pfvars p = {}" 
@@ -370,6 +370,8 @@ proof-
      have G: "G (\<lambda>t'. I' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) 
                 (image (\<rho> o \<sigma>) B) (Tmap (\<rho> o \<sigma>) t) " 
      using G_equiv[OF \<rho>\<sigma> small_B G] .
+     
+
      have G: "G (\<lambda>t'. I' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) 
                 (image \<rho> B') (Tmap \<sigma> t) "  
      unfolding B' unfolding image_comp 0[symmetric]
@@ -382,8 +384,10 @@ proof-
        subgoal by (simp add: Tmap_id)
        subgoal using small_image[OF small_B'] . .
 
+     note sm = small_image[OF small_B']
+
      show "R p (Tmap \<sigma> t)" 
-     using strong[OF small_image[OF small_B'] fresh_p fresh_t G[unfolded I_eq_I'[symmetric]]] .
+     using strong[OF sm fresh_p fresh_t G[unfolded I_eq_I'[symmetric]]] .
   qed
   }
   from this[of id] show ?thesis 

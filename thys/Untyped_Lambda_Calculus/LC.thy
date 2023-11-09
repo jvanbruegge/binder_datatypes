@@ -61,6 +61,12 @@ instance var :: var_term_pre apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
   by (auto simp add: regularCard_var)
 
+instance var::cinf
+apply standard 
+  subgoal apply(rule exI[of _ "inv Variable"])
+  by (simp add: bij_Variable bij_is_inj)
+  subgoal using infinite_var . .
+
 type_synonym trm = "var term"
 
 (* Some lighter notations: *)
@@ -80,6 +86,10 @@ abbreviation "rrename \<equiv> rrename_term"
 lemma FFVars_tvsubst[simp]:
 "FFVars (tvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
 sorry (* AtoDJ: This lemma was no longer available... *)
+
+lemma fsupp_le[simp]: 
+"fsupp (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set|" 
+by (simp add: finite_card_var fsupp_def supp_def)
 
 (* *)
 
@@ -565,10 +575,7 @@ apply(subst term.map)
 
 lemmas usub_simps = usub_simps_free usub_Abs
 
-
 (* *)
-
-
 
 lemma rrename_usub[simp]:
 assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
@@ -627,8 +634,8 @@ term "permutFvars (\<lambda>f t. rrename t f) FFVars"
 
 lemma swappingFvars_swap_FFVars: "swappingFvars swap FFVars"
 unfolding swappingFvars_def apply auto
-  apply (metis id_swapTwice rrename_o_swap term.rrename_ids)
-  using sw_invol2 apply presburger
+  apply (metis id_swapTwice rrename_o_swap term.rrename_ids) 
+  using sw_invol2 apply metis 
   by (metis (no_types, lifting) image_iff sw_invol2)
 
 lemma nswapping_swap: "nswapping swap"
@@ -636,18 +643,25 @@ unfolding nswapping_def apply auto
 apply (metis id_swapTwice rrename_o_swap term.rrename_ids)
 by (metis id_swapTwice2 rrename_o_swap)
 
-lemma permutFvars_rrename_FFVar: "permutFvars (\<lambda>f t. rrename t f) FFVars"
-unfolding permutFvars_def apply auto
-  apply (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps)
-  apply (simp add: finite_iff_le_card_var fsupp_def supp_def)
-  apply (simp add: finite_iff_le_card_var fsupp_def image_in_bij_eq supp_def)
-  by (simp add: finite_iff_le_card_var fsupp_def image_in_bij_eq supp_def)
 
-lemma permut_rrename: "permut (\<lambda>f t. rrename t f)"
+
+
+thm term.rrename_comps
+
+typ trm
+
+term FFVars
+lemma permutFvars_rrename_FFVar: "permutFvars (\<lambda>t f. rrename f (t::trm)) FFVars"
+unfolding permutFvars_def apply auto
+  apply (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps) 
+  apply (simp add: finite_iff_le_card_var fsupp_def supp_def)
+  apply (simp add: finite_iff_le_card_var fsupp_def image_in_bij_eq supp_def) .
+
+lemma permut_rrename: "permut (\<lambda>t f. rrename f (t::trm))"
 unfolding permut_def apply auto
 by (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps)
 
-lemma toSwp_rrename: "toSwp (\<lambda>f t. rrename t f) = swap"
+lemma toSwp_rrename: "toSwp (\<lambda>t f. rrename f t) = swap"
 by (meson toSwp_def)
 
 lemma fsupp_supp: "fsupp f \<longleftrightarrow> |supp f| <o |UNIV::var set|"

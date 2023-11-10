@@ -175,6 +175,27 @@ and not the above more general thoerem? *)
 using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: term.strong_induct)
 using assms apply auto by (metis not_in_supp_alt)+
 
+lemma itvsubst_cong:
+assumes f: "|SSupp f| <o |UNIV::var set|" and g: "|SSupp g| <o |UNIV::var set|"
+and eq: "(\<And>z. (z::var) \<in> FFVars P \<Longrightarrow> f z = g z)"
+shows "tvsubst f P = tvsubst g P"
+proof-
+  have fg: "|IImsupp f| <o |UNIV::var set|" "|IImsupp g| <o |UNIV::var set|" 
+    using f g  
+    by (simp_all add: IImsupp_def term.card_of_FFVars_bounds 
+       term_prevar_term_prevar_term_prevar_prodIDterm_prevar_prodIDsum_class.UN_bound 
+       term_prevar_term_prevar_term_prevar_prodIDterm_prevar_prodIDsum_class.Un_bound) 
+  have 0: "|IImsupp f \<union> IImsupp g| <o |UNIV::var set|" 
+    using fg var_term_pre_class.Un_bound by blast
+  show ?thesis using 0 eq apply(binder_induction P avoiding: "IImsupp f" "IImsupp g" rule: term.strong_induct)
+    subgoal using fg by auto
+    subgoal using fg by simp  
+    subgoal using f g by simp
+    subgoal using f g by simp
+    subgoal using f g fg apply simp unfolding IImsupp_def SSupp_def 
+    by auto metis .
+qed
+
 proposition App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
 proof
   assume "App a b = App c d"

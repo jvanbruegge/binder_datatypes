@@ -278,8 +278,26 @@ proof-
     subgoal using f g by simp (metis (no_types, opaque_lifting) Int_emptyD UnI1 UnI2 not_in_supp_alt 
                        stream.map_ident_strong) .
 qed
- 
 
+lemma itvsubst_cong:
+assumes f: "|SSupp f| <o |UNIV::ivar set|" and g: "|SSupp g| <o |UNIV::ivar set|"
+and eq: "(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
+shows "itvsubst f P = itvsubst g P"
+proof-
+  have fg: "|IImsupp f| <o |UNIV::ivar set|" "|IImsupp g| <o |UNIV::ivar set|" 
+    using f g 
+    by (simp add: IImsupp_def iterm.UNION_bound iterm.set_bd_UNIV var_stream_class.Un_bound)+
+  have 0: "|IImsupp f \<union> IImsupp g| <o |UNIV::ivar set|" 
+    using fg var_stream_class.Un_bound by auto
+  show ?thesis using 0 eq apply(induct P rule: itrm_strong_induct)
+    subgoal using f g by auto
+    subgoal using f g by simp (metis stream.map_cong0)  
+    subgoal using f g apply simp apply(subst iterm.subst(3)) 
+    apply auto apply(subst iterm.subst(3))
+    by auto (smt (verit) IImsupp_def Int_Un_emptyI1 Int_Un_emptyI2 Int_emptyD SSupp_def mem_Collect_eq) .
+qed
+
+(* *)
 
 proposition iApp_inject[simp]: "(iApp a b = iApp c d) = (a = c \<and> b = d)"
 proof

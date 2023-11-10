@@ -15,7 +15,7 @@ end
 (* binder_datatype 'a term =
   Var 'a
 | App "'a term" "'a term"
-| Abs x::'a t::"'a term" binds x in t
+| Lam x::'a t::"'a term" binds x in t
 *)
 
 declare [[inductive_internals]]
@@ -24,7 +24,7 @@ ML \<open>
 val ctors = [
   (("Var", (NONE : mixfix option)), [@{typ 'var}]),
   (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Abs", NONE), [@{typ 'bvar}, @{typ 'brec}])
+  (("Lam", NONE), [@{typ 'bvar}, @{typ 'brec}])
 ]
 
 val spec = {
@@ -160,8 +160,8 @@ proposition rrename_simps[simp]:
   assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
   shows "rrename f (Var a) = Var (f a)"
     "rrename f (App e1 e2) = App (rrename f e1) (rrename f e2)"
-    "rrename f (Abs x e) = Abs (f x) (rrename f e)"
-  unfolding Var_def App_def Abs_def term.rrename_cctors[OF assms] map_term_pre_def comp_def
+    "rrename f (Lam x e) = Lam (f x) (rrename f e)"
+  unfolding Var_def App_def Lam_def term.rrename_cctors[OF assms] map_term_pre_def comp_def
     Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
     apply (rule refl)+
   done
@@ -195,10 +195,10 @@ proposition Var_inject[simp]: "(Var a = Var b) = (a = b)"
   apply assumption
   done
 
-lemma Abs_inject: "(Abs x e = Abs x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_term (Abs x e)) f \<and> f x = x' \<and> rrename f e = e')"
+lemma Lam_inject: "(Lam x e = Lam x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FFVars_term (Lam x e)) f \<and> f x = x' \<and> rrename f e = e')"
   unfolding term.set
-  unfolding Abs_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
+  unfolding Lam_def term.TT_injects0 map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
     Un_empty_right UN_single
@@ -240,8 +240,8 @@ lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow
    apply (rule refl)+
   done
 
-lemma Abs_set3: "term_ctor v = Abs (x::var) e \<Longrightarrow> \<exists>x' e'. term_ctor v = Abs x' e' \<and> x' \<in> set2_term_pre v \<and> e' \<in> set3_term_pre v"
-  unfolding Abs_def term.TT_injects0
+lemma Lam_set3: "term_ctor v = Lam (x::var) e \<Longrightarrow> \<exists>x' e'. term_ctor v = Lam x' e' \<and> x' \<in> set2_term_pre v \<and> e' \<in> set3_term_pre v"
+  unfolding Lam_def term.TT_injects0
   apply (erule exE)
   apply (erule conjE)+
   subgoal for f
@@ -271,12 +271,12 @@ unfolding set2_term_pre_def set3_term_pre_def comp_def Abs_term_pre_inverse[OF U
   done
   done
 
-lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Abs x e = Abs x' e' \<and> x' \<notin> A"
-  apply (drule term.TT_fresh_nchotomys[of _ "Abs x e"])
+lemma Lam_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Lam x e = Lam x' e' \<and> x' \<notin> A"
+  apply (drule term.TT_fresh_nchotomys[of _ "Lam x e"])
   apply (erule exE)
   apply (erule conjE)
    apply (drule sym)
-  apply (frule Abs_set3)
+  apply (frule Lam_set3)
   apply (erule exE conjE)+
   apply (rule exI)+
   apply (rule conjI)
@@ -292,9 +292,9 @@ lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
   apply assumption
   done
 
-lemma Abs_rrename:
+lemma Lam_rrename:
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>
- (\<And>a'. a' \<in>FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Abs a e = Abs (\<sigma> a) (rrename \<sigma> e)"
+ (\<And>a'. a' \<in>FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Lam a e = Lam (\<sigma> a) (rrename \<sigma> e)"
 by (metis rrename_simps(3) term.rrename_cong_ids term.set(3))
 
 
@@ -521,7 +521,7 @@ by auto
 
 lemma swap_simps[simp]: "swap (Var z) (y::var) x = Var (sw z y x)"
 "swap (App t s) (y::var) x = App(swap t y x) (swap s y x)"
-"swap (Abs v t) (y::var) x = Abs (sw v y x) (swap t y x)"
+"swap (Lam v t) (y::var) x = Lam (sw v y x) (swap t y x)"
 by (auto simp: sw_def)
 
 lemma FFVars_swap[simp]: "FFVars (swap t y x) =
@@ -533,28 +533,28 @@ apply(rule term.rrename_cong_ids) by auto
 
 (* *)
 
-lemma Abs_inject_swap: "Abs v t = Abs v' t' \<longleftrightarrow>
+lemma Lam_inject_swap: "Lam v t = Lam v' t' \<longleftrightarrow>
   (v' \<notin> FFVars t \<or> v' = v) \<and> swap t v' v = t'"
-unfolding Abs_inject apply(rule iffI)
+unfolding Lam_inject apply(rule iffI)
   subgoal unfolding id_on_def apply auto
   apply(rule rrename_cong) by auto
   subgoal apply clarsimp
   apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
 
-lemma Abs_inject_swap': "Abs v t = Abs v' t' \<longleftrightarrow>
+lemma Lam_inject_swap': "Lam v t = Lam v' t' \<longleftrightarrow>
   (\<exists>z. (z \<notin> FFVars t \<or> z = v) \<and> (z \<notin> FFVars t' \<or> z = v') \<and>
        swap t z v = swap t' z v')"
-unfolding Abs_inject_swap apply(rule iffI)
+unfolding Lam_inject_swap apply(rule iffI)
   subgoal apply clarsimp apply(rule exI[of _ v']) by auto
-  subgoal by (smt (verit, del_insts) Abs_inject_swap)    .
+  subgoal by (smt (verit, del_insts) Lam_inject_swap)    .
 
-lemma Abs_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
-   Abs v t = Abs v' (swap t v' v)"
-using Abs_inject_swap by auto
+lemma Lam_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
+   Lam v t = Lam v' (swap t v' v)"
+using Lam_inject_swap by auto
 
-lemma Abs_refresh:
-"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> Abs x t = Abs xx (swap t x xx)"
-by (metis Abs_inject_swap fun_upd_twist)
+lemma Lam_refresh:
+"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> Lam x t = Lam xx (swap t x xx)"
+by (metis Lam_inject_swap fun_upd_twist)
 
 (* *)
 
@@ -566,14 +566,14 @@ lemma usub_simps_free[simp]: "\<And>y x. usub (Var z) (y::var) x = Var (sb z y x
 "\<And>y x t s. usub (App t s) (y::var) x = App (usub t y x) (usub s y x)"
 by (auto simp: sb_def)
 
-lemma usub_Abs[simp]:
-"v \<notin> {x,y} \<Longrightarrow> usub (Abs v t) (y::var) x = Abs v (usub t y x)"
+lemma usub_Lam[simp]:
+"v \<notin> {x,y} \<Longrightarrow> usub (Lam v t) (y::var) x = Lam v (usub t y x)"
 apply(subst term.map)
   subgoal by auto
   subgoal by (auto simp: imsupp_def supp_def)
   subgoal by auto .
 
-lemmas usub_simps = usub_simps_free usub_Abs
+lemmas usub_simps = usub_simps_free usub_Lam
 
 (* *)
 
@@ -643,14 +643,6 @@ unfolding nswapping_def apply auto
 apply (metis id_swapTwice rrename_o_swap term.rrename_ids)
 by (metis id_swapTwice2 rrename_o_swap)
 
-
-
-
-thm term.rrename_comps
-
-typ trm
-
-term FFVars
 lemma permutFvars_rrename_FFVar: "permutFvars (\<lambda>t f. rrename f (t::trm)) FFVars"
 unfolding permutFvars_def apply auto
   apply (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps) 

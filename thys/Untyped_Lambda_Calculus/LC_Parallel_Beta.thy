@@ -21,8 +21,8 @@ apply standard
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Refl: "step e e"
 | App: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1' e2')"
-| Xi: "step e e' \<Longrightarrow> step (Abs x e) (Abs x e')"
-| PBeta: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App (Abs x e1) e2) (tvsubst (Var(x:=e2')) e1')"
+| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
+| PBeta: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
 
 thm step_def
 
@@ -64,9 +64,9 @@ where
          (\<exists>e1 e1' e2 e2'. B = {}  \<and> fst t = App e1 e2 \<and> snd t = App e1' e2' \<and> 
                           R (e1,e1') \<and> R (e2,e2')) 
          \<or>
-         (\<exists>x e e'. B = {x} \<and> fst t = Abs x e \<and> snd t = Abs x e' \<and> R (e,e'))
+         (\<exists>x e e'. B = {x} \<and> fst t = Lam x e \<and> snd t = Lam x e' \<and> R (e,e'))
          \<or>
-         (\<exists>x e1 e1' e2 e2'. B = {x}  \<and> fst t = App (Abs x e1) e2 \<and> snd t = tvsubst (Var(x := e2')) e1' \<and> 
+         (\<exists>x e1 e1' e2 e2'. B = {x}  \<and> fst t = App (Lam x e1) e2 \<and> snd t = tvsubst (Var(x := e2')) e1' \<and> 
             R (e1,e1') \<and> R (e2,e2'))"
 
 
@@ -108,7 +108,7 @@ unfolding G_def apply(elim disjE)
   
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
-by (metis Abs_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
+by (metis Lam_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
 
 (* NB: The entities affected by variables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
@@ -147,8 +147,8 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e'"])
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . 
   (* *)
   subgoal for xx x e1 e1' e2 e2'
@@ -163,7 +163,7 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
     apply(rule exI[of _ "e2"])
     apply(rule exI[of _ "e2'"])
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Abs_rrename[of "id(x:=xx,xx:=x)"]) by auto
+      subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst tvsubst_Var_rrename) 
       apply (auto split: if_splits)   
       by blast
@@ -216,12 +216,12 @@ and App: "\<And>e1 e1' e2 e2' p.
 and Xi: "\<And>e e' x p. 
   x \<notin> Pfvars p \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
-  R p (Abs x e) (Abs x e')" 
+  R p (Lam x e) (Lam x e')" 
 and PBeta: "\<And>x e1 e1' e2 e2' p. 
   x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
   step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
-  R p (App (Abs x e1) e2) (tvsubst (VVr(x := e2')) e1')"
+  R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2')) e1')"
 shows "R p t1 t2"
 unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")

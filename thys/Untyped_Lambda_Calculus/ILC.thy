@@ -21,14 +21,14 @@ declare [[inductive_internals]]
   Bot
 | Var 'a
 | App "'a iterm" "'a iterm cinfmset"
-| Abs "X::'a cinfset" "t::'a iterm" binds X in t
+| iLam "X::'a cinfset" "t::'a iterm" binds X in t
 *)
 
 ML \<open>
 val ctors = [
   (("iVar", (NONE : mixfix option)), [@{typ 'var}]),
   (("iApp", NONE), [@{typ 'rec}, @{typ "'rec stream"}]),
-  (("iAbs", NONE), [@{typ "'bvar stream"}, @{typ 'brec}])
+  (("iLam", NONE), [@{typ "'bvar stream"}, @{typ 'brec}])
 ]
 
 val spec_iterm = {
@@ -110,7 +110,7 @@ lemma bd_iterm_pre_ordIso: "bd_iterm_pre =o card_suc natLeq"
      apply (simp add: natLeq_Cinfinite ordLeq_csum2)
     apply (simp add: csum_absorb1 infinite_regular_card_order.Card_order infinite_regular_card_order.cinfinite infinite_regular_card_order_card_suc natLeq_Cinfinite natLeq_card_order natLeq_ordLeq_cinfinite)
   using Card_order_cprod card_order_on_well_order_on apply blast
-  apply (simp add: inj_on_def Abs_iterm_pre_bdT_inject)
+  apply (simp add: inj_on_def iLam_iterm_pre_bdT_inject)
   done
 *) sorry
 
@@ -235,23 +235,23 @@ proposition rrename_simps[simp]:
   assumes "bij (f::ivar \<Rightarrow> ivar)" "|supp f| <o |UNIV::ivar set|"
   shows "rrename f (iVar a) = iVar (f a)"
     "rrename f (iApp e1 es2) = iApp (rrename f e1) (smap (rrename f) es2)"
-    "rrename f (iAbs xs e) = iAbs (smap f xs) (rrename f e)"
-  unfolding iVar_def iApp_def iAbs_def iterm.rrename_cctors[OF assms] map_iterm_pre_def comp_def
-    Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
+    "rrename f (iLam xs e) = iLam (smap f xs) (rrename f e)"
+  unfolding iVar_def iApp_def iLam_def iterm.rrename_cctors[OF assms] map_iterm_pre_def comp_def
+    iLam_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
     apply (rule refl)+
   done
 
 thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
 
 
-lemma itrm_strong_induct[consumes 1, case_names iVar iApp iAbs]: 
+lemma itrm_strong_induct[consumes 1, case_names iVar iApp iLam]: 
 "|A| <o |UNIV::ivar set|  
 \<Longrightarrow>
 (\<And>x. P (iVar (x::ivar))) 
 \<Longrightarrow>
 (\<And>t1 ts2. P t1 \<Longrightarrow> (\<And>z. z \<in> sset ts2 \<Longrightarrow> P z) \<Longrightarrow> P (iApp t1 ts2)) 
 \<Longrightarrow> 
-(\<And>xs t. sset xs \<inter> A = {} \<Longrightarrow> P t \<Longrightarrow> P (iAbs xs t)) 
+(\<And>xs t. sset xs \<inter> A = {} \<Longrightarrow> P t \<Longrightarrow> P (iLam xs t)) 
 \<Longrightarrow> 
 P t"
 apply(rule iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
@@ -278,8 +278,8 @@ proof
   assume "iApp a b = iApp c d"
   then show "a = c \<and> b = d"
     unfolding iApp_def fun_eq_iff iterm.TT_injects0
-      map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-      Abs_iterm_pre_inject[OF UNIV_I UNIV_I]
+      map_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+      iLam_iterm_pre_inject[OF UNIV_I UNIV_I]
     by auto
 qed simp
 
@@ -287,17 +287,17 @@ proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
   apply (rule iffI[rotated])
    apply (rule arg_cong[of _ _ iVar])
   apply assumption
-  unfolding iVar_def iterm.TT_injects0 map_iterm_pre_def comp_def map_sum_def sum.case Abs_iterm_pre_inverse[OF UNIV_I]
-  id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
+  unfolding iVar_def iterm.TT_injects0 map_iterm_pre_def comp_def map_sum_def sum.case iLam_iterm_pre_inverse[OF UNIV_I]
+  id_def iLam_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
   apply (erule exE conjE)+
   apply assumption
   done
 
-lemma iAbs_inject: "(iAbs xs e = iAbs xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
-  \<and> id_on (FFVars (iAbs xs e)) f \<and> smap f xs = xs' \<and> rrename f e = e')"
+lemma iLam_inject: "(iLam xs e = iLam xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
+  \<and> id_on (FFVars (iLam xs e)) f \<and> smap f xs = xs' \<and> rrename f e = e')"
   unfolding iterm.set
-  unfolding iAbs_def iterm.TT_injects0 map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I]
-    map_sum_def sum.case map_prod_def prod.case id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
+  unfolding iLam_def iterm.TT_injects0 map_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I]
+    map_sum_def sum.case map_prod_def prod.case id_def iLam_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_iterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_iterm_pre_def
     Un_empty_right UN_single by auto
 
@@ -337,9 +337,9 @@ lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarro
    apply (rule refl)+
   done
 
-lemma Abs_set3: "iterm_ctor v = iAbs (xs::ivar stream) e \<Longrightarrow> 
- \<exists>xs' e'. iterm_ctor v = iAbs xs' e' \<and> sset xs' \<subseteq> set2_iterm_pre v \<and> e' \<in> set3_iterm_pre v"
-  unfolding iAbs_def iterm.TT_injects0
+lemma iLam_set3: "iterm_ctor v = iLam (xs::ivar stream) e \<Longrightarrow> 
+ \<exists>xs' e'. iterm_ctor v = iLam xs' e' \<and> sset xs' \<subseteq> set2_iterm_pre v \<and> e' \<in> set3_iterm_pre v"
+  unfolding iLam_def iterm.TT_injects0
   apply (erule exE)
   apply (erule conjE)+
   subgoal for f
@@ -353,11 +353,11 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_iterm_pre id f (rrename f) 
      apply (rule conjI bij_id supp_id_bound id_on_id)+
     apply (drule sym)
     unfolding iterm.rrename_id0s iterm_pre.map_id map_term_pre_inv_simp
-    unfolding map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case
+    unfolding map_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case
       map_prod_def prod.case id_def
     apply assumption
     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] sum_set_simps
+unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I] sum_set_simps
     map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
       ccpo_Sup_singleton Un_empty_right id_on_def image_single[symmetric]
   unfolding iterm.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
@@ -368,12 +368,12 @@ unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def Abs_iterm_pre_inverse[O
   apply (rule conjI bij_imp_bij_inv supp_inv_bound singletonI | assumption)+ 
   by auto .
 
-lemma Abs_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>xs' e'. iAbs xs e = iAbs xs' e' \<and> sset xs' \<inter> A = {}"
-  apply (drule iterm.TT_fresh_nchotomys[of _ "iAbs xs e"])
+lemma iLam_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>xs' e'. iLam xs e = iLam xs' e' \<and> sset xs' \<inter> A = {}"
+  apply (drule iterm.TT_fresh_nchotomys[of _ "iLam xs e"])
   apply (erule exE)
   apply (erule conjE)
    apply (drule sym)
-  apply (frule Abs_set3)
+  apply (frule iLam_set3)
   apply (erule exE conjE)+
   apply (rule exI)+
   apply (rule conjI)
@@ -385,9 +385,9 @@ lemma Abs_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>x
   apply (drule iffD1[OF disjoint_iff]) 
   by auto
 
-lemma Abs_rrename:
+lemma iLam_rrename:
 "bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow>
- (\<And>a'. a' \<in> FFVars e - sset (as::ivar stream) \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> iAbs as e = iAbs (smap \<sigma> as) (rrename \<sigma> e)"
+ (\<And>a'. a' \<in> FFVars e - sset (as::ivar stream) \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> iLam as e = iLam (smap \<sigma> as) (rrename \<sigma> e)"
 by (metis rrename_simps(3) iterm.rrename_cong_ids iterm.set(3))
 
 
@@ -612,7 +612,7 @@ by auto
 
 lemma swap_simps[simp]: "swap (iVar z) (y::ivar) x = iVar (sw z y x)"
 "swap (iApp t ss) (y::ivar) x = iApp (swap t y x) (smap (\<lambda>s. swap s y x) ss)"
-"swap (iAbs vs t) (y::ivar) x = iAbs (smap (\<lambda>v. sw v y x) vs) (swap t y x)"
+"swap (iLam vs t) (y::ivar) x = iLam (smap (\<lambda>v. sw v y x) vs) (swap t y x)"
 unfolding sw_def by simp_all (metis eq_id_iff fun_upd_apply)
 
 lemma FFVars_swap[simp]: "FFVars (swap t y x) = (\<lambda>u. sw u x y) ` (FFVars t)"
@@ -625,28 +625,28 @@ apply(rule iterm.rrename_cong_ids) by auto
 
 thm rrename_cong
 
-lemma iAbs_inject_swap: "iAbs vs t = iAbs vs' t' \<longleftrightarrow>
+lemma iLam_inject_swap: "iLam vs t = iLam vs' t' \<longleftrightarrow>
   (vs' \<inter> FFVars t = {} \<or> vs' = vs) \<and> map swap t v' v = t'"
-unfolding Abs_inject apply(rule iffI)
+unfolding iLam_inject apply(rule iffI)
   subgoal unfolding id_on_def apply auto
   apply(rule rrename_cong) by auto
   subgoal apply clarsimp
   apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
 
-lemma Abs_inject_swap': "Abs v t = Abs v' t' \<longleftrightarrow>
+lemma iLam_inject_swap': "iLam v t = iLam v' t' \<longleftrightarrow>
   (\<exists>z. (z \<notin> FFVars t \<or> z = v) \<and> (z \<notin> FFVars t' \<or> z = v') \<and>
        swap t z v = swap t' z v')"
-unfolding Abs_inject_swap apply(rule iffI)
+unfolding iLam_inject_swap apply(rule iffI)
   subgoal apply clarsimp apply(rule exI[of _ v']) by auto
-  subgoal by (smt (verit, del_insts) Abs_inject_swap)    .
+  subgoal by (smt (verit, del_insts) iLam_inject_swap)    .
 
-lemma Abs_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
-   Abs v t = Abs v' (swap t v' v)"
-using Abs_inject_swap by auto
+lemma iLam_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
+   iLam v t = iLam v' (swap t v' v)"
+using iLam_inject_swap by auto
 
-lemma Abs_refresh:
-"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> Abs x t = Abs xx (swap t x xx)"
-by (metis Abs_inject_swap fun_upd_twist)
+lemma iLam_refresh:
+"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> iLam x t = iLam xx (swap t x xx)"
+by (metis iLam_inject_swap fun_upd_twist)
 
 (* *)
 
@@ -658,14 +658,14 @@ lemma usub_simps_free[simp]: "\<And>y x. usub (Var z) (y::var) x = Var (sb z y x
 "\<And>y x t s. usub (App t s) (y::var) x = App (usub t y x) (usub s y x)"
 by (auto simp: sb_def)
 
-lemma usub_Abs[simp]:
-"v \<notin> {x,y} \<Longrightarrow> usub (Abs v t) (y::var) x = Abs v (usub t y x)"
+lemma usub_iLam[simp]:
+"v \<notin> {x,y} \<Longrightarrow> usub (iLam v t) (y::var) x = iLam v (usub t y x)"
 apply(subst term.map)
   subgoal by auto
   subgoal by (auto simp: imsupp_def supp_def)
   subgoal by auto .
 
-lemmas usub_simps = usub_simps_free usub_Abs
+lemmas usub_simps = usub_simps_free usub_iLam
 
 (* *)
 

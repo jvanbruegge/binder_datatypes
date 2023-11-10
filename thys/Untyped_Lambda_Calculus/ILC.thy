@@ -6,7 +6,15 @@ imports "../MRBNF_Recursor" "HOL-Library.Stream"
 begin
 
 
+(* More on streams: *)
+
+definition sdistinct where 
+"sdistinct xs \<equiv> \<forall>i j. i \<noteq> j \<longrightarrow> snth xs i \<noteq> snth xs j"
+
 lemmas stream.set_map[simp] lemmas stream.map_id[simp]
+
+
+(* *)
 
 context begin
 ML_file \<open>../../Tools/binder_induction.ML\<close>
@@ -69,7 +77,7 @@ lemma inj_embed: "inj embed"
   unfolding embed_def
   by (rule someI_ex[OF ex_inj_infinite_regular_var_iterm_pre[where 'a='a]])
 
-abbreviation "ifv \<equiv> FFVars_iterm"
+(* abbreviation "ifv \<equiv> FFVars_iterm" *)
 
 
 
@@ -237,7 +245,7 @@ proposition rrename_simps[simp]:
     "rrename f (iApp e1 es2) = iApp (rrename f e1) (smap (rrename f) es2)"
     "rrename f (iLam xs e) = iLam (smap f xs) (rrename f e)"
   unfolding iVar_def iApp_def iLam_def iterm.rrename_cctors[OF assms] map_iterm_pre_def comp_def
-    iLam_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
+    Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
     apply (rule refl)+
   done
 
@@ -278,8 +286,8 @@ proof
   assume "iApp a b = iApp c d"
   then show "a = c \<and> b = d"
     unfolding iApp_def fun_eq_iff iterm.TT_injects0
-      map_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-      iLam_iterm_pre_inject[OF UNIV_I UNIV_I]
+      map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+      Abs_iterm_pre_inject[OF UNIV_I UNIV_I]
     by auto
 qed simp
 
@@ -287,8 +295,8 @@ proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
   apply (rule iffI[rotated])
    apply (rule arg_cong[of _ _ iVar])
   apply assumption
-  unfolding iVar_def iterm.TT_injects0 map_iterm_pre_def comp_def map_sum_def sum.case iLam_iterm_pre_inverse[OF UNIV_I]
-  id_def iLam_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
+  unfolding iVar_def iterm.TT_injects0 map_iterm_pre_def comp_def map_sum_def sum.case Abs_iterm_pre_inverse[OF UNIV_I]
+  id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
   apply (erule exE conjE)+
   apply assumption
   done
@@ -296,8 +304,8 @@ proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
 lemma iLam_inject: "(iLam xs e = iLam xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
   \<and> id_on (FFVars (iLam xs e)) f \<and> smap f xs = xs' \<and> rrename f e = e')"
   unfolding iterm.set
-  unfolding iLam_def iterm.TT_injects0 map_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I]
-    map_sum_def sum.case map_prod_def prod.case id_def iLam_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
+  unfolding iLam_def iterm.TT_injects0 map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I]
+    map_sum_def sum.case map_prod_def prod.case id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_iterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_iterm_pre_def
     Un_empty_right UN_single by auto
 
@@ -353,11 +361,11 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_iterm_pre id f (rrename f) 
      apply (rule conjI bij_id supp_id_bound id_on_id)+
     apply (drule sym)
     unfolding iterm.rrename_id0s iterm_pre.map_id map_term_pre_inv_simp
-    unfolding map_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case
+    unfolding map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case
       map_prod_def prod.case id_def
     apply assumption
     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def iLam_iterm_pre_inverse[OF UNIV_I] sum_set_simps
+unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] sum_set_simps
     map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
       ccpo_Sup_singleton Un_empty_right id_on_def image_single[symmetric]
   unfolding iterm.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
@@ -462,8 +470,8 @@ using IImsupp_rrename_su[OF assms] unfolding o_def .
 lemma IImsupp_rrename_bound:
 assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
 shows "|IImsupp (rrename (\<sigma>::ivar\<Rightarrow>ivar) o \<tau>)| <o |UNIV:: ivar set|"
-using IImsupp_rrename_su[OF s(1,2)] s
-by (metis SSupp_IImsupp_bound finite_Un finite_iff_le_card_ivar finite_subset imsupp_supp_bound infinite_ivar)
+using IImsupp_rrename_su[OF s(1,2)] s  
+by (meson SSupp_IImsupp_bound card_of_subset_bound imsupp_supp_bound infinite_ivar var_stream_class.Un_bound)
 
 lemma SSupp_rrename_bound:
 assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
@@ -623,9 +631,89 @@ apply(rule iterm.rrename_cong_ids) by auto
 
 (* *)
 
-thm rrename_cong
+definition theN where 
+"theN vs v \<equiv> SOME i. snth vs i = v"
 
-lemma iLam_inject_swap: "iLam vs t = iLam vs' t' \<longleftrightarrow>
+lemma theN: "v \<in> sset vs \<Longrightarrow> snth vs (theN vs v) = v"
+unfolding theN_def apply(rule someI_ex) by (metis imageE sset_range)
+
+lemma theN_inj1: "sdistinct vs \<Longrightarrow> v \<in> sset vs \<Longrightarrow>  
+  snth vs i = snth vs (theN vs v) \<Longrightarrow> i = theN vs v"
+using theN[of v vs] unfolding sdistinct_def by fastforce
+
+lemma theN_inj[simp]: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
+  snth vs (theN vs v1) = snth vs (theN vs v2) \<Longrightarrow> v1 = v2"
+using theN_inj1 by (simp add: ILC.theN)
+
+lemma inj_on_theN: "sdistinct vs \<Longrightarrow> inj_on (theN vs) (sset vs)"
+unfolding inj_on_def by auto
+
+lemma surj_theN: "sdistinct vs \<Longrightarrow> theN vs ` (sset vs) = UNIV"
+unfolding image_def by auto (metis sdistinct_def snth_sset theN)
+
+lemma bij_betw_theN: "sdistinct vs \<Longrightarrow> bij_betw (theN vs) (sset vs) UNIV"
+unfolding bij_betw_def using inj_on_theN surj_theN by auto
+
+lemma theN_snth[simp]: "sdistinct vs \<Longrightarrow> theN vs (snth vs i) = i"
+by (metis snth_sset theN theN_inj1)
+
+
+lemma sdistinct_bij_betw_snth: 
+assumes "sdistinct vs"  "sdistinct vs'" and V: "V \<inter> sset vs = {}"
+shows "\<exists>f. bij_betw f (sset vs) (sset vs') \<and> id_on V f \<and> 
+           (\<forall>i. f (snth vs i) = snth vs' i)"
+proof-
+  define f where "f \<equiv> \<lambda>v. if v \<in> V then v else snth vs' (theN vs v)"
+  show ?thesis 
+  apply(rule exI[of _ f], intro conjI)
+    subgoal using assms V unfolding image_def f_def bij_betw_def inj_on_def apply safe
+      apply (metis disjoint_iff sdistinct_def theN)
+      apply auto[1]  
+      by (metis Int_emptyD snth_sset theN theN_snth)
+    subgoal unfolding f_def id_on_def by auto
+    subgoal using assms unfolding f_def by auto .
+qed
+
+lemma sset_natLeq: "|sset vs| \<le>o natLeq"
+by (metis card_of_image countable_card_of_nat countable_iff_lq_natLeq sset_range)
+
+lemma sdistinct_bij_smap: 
+assumes "sdistinct vs" "sdistinct vs'" "sset vs \<inter> sset vs' = {}"
+and V: "V \<inter> (sset vs \<union> sset vs') = {}" "|V| <o |UNIV::ivar set|"
+shows "\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
+  \<comment> \<open> bij_betw f (sset vs) (sset vs') \<and>\<close>  smap f vs = vs' \<and> id_on V f"
+proof-
+  have a3: "(sset vs \<union> V) \<inter> sset vs' = {}" using assms by auto
+  have ss: "|sset vs| <o |UNIV::ivar set|" "|sset vs'| <o |UNIV::ivar set|"
+  by (auto simp: countable_card_ivar sset_range V(2) var_stream_class.Un_bound)
+  obtain f where f: "bij_betw f (sset vs) (sset vs')" "id_on V f" "\<And>i. f (snth vs i) = snth vs' i"
+  using sdistinct_bij_betw_snth[OF assms(1,2), of V] V(1) by auto
+  hence f2: "smap f vs = vs'" by (simp add: smap_alt)
+  (* hence ff: "bij_betw f (sset vs \<union> V) (sset vs' \<union> V)"
+  using f(1,2) V(1) unfolding bij_betw_def id_on_def inj_on_def 
+  by (metis Int_emptyD Un_iff f(2) id_on_image image_Un image_eqI) *)
+   
+  obtain u where u: "bij u \<and>
+      |supp u| <o |UNIV::ivar set| \<and> bij_betw u (sset vs) (sset vs') \<and> 
+      imsupp u \<inter> V = {} \<and> 
+      eq_on (sset vs) u f"
+  using ex_bij_betw_supp_UNIV[OF _ _ f(1) assms(3), of V]  
+  using ss assms infinite_ivar  
+  by (metis Int_Un_emptyI1 Int_Un_emptyI2 Int_commute)
+  show ?thesis apply(rule exI[of _ u]) 
+  using u f f2 unfolding eq_on_def id_on_def imsupp_def supp_def by (auto simp: smap_alt)
+qed
+
+
+thm iLam_inject[of vs t vs']
+
+
+
+(*
+lemma iLam_inject_swap: 
+assumes "sdistinct vs"   "sdistinct vs'"
+shows "iLam vs t = iLam vs' t' \<longleftrightarrow>
+  (\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| ) \<and> 
   (vs' \<inter> FFVars t = {} \<or> vs' = vs) \<and> map swap t v' v = t'"
 unfolding iLam_inject apply(rule iffI)
   subgoal unfolding id_on_def apply auto
@@ -639,28 +727,49 @@ lemma iLam_inject_swap': "iLam v t = iLam v' t' \<longleftrightarrow>
 unfolding iLam_inject_swap apply(rule iffI)
   subgoal apply clarsimp apply(rule exI[of _ v']) by auto
   subgoal by (smt (verit, del_insts) iLam_inject_swap)    .
+*)
 
-lemma iLam_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
-   iLam v t = iLam v' (swap t v' v)"
-using iLam_inject_swap by auto
+lemma iLam_refresh': 
+assumes d: "sdistinct vs" "sdistinct vs'"
+and s: "sset vs' \<inter> FFVars (iLam vs (t::itrm)) = {}" "sset vs \<inter> sset vs' = {}"
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam vs t)) f \<and> 
+      smap f vs = vs' \<and> iLam vs t = iLam vs' (rrename f t)"
+proof-
+  have fv: "FFVars (iLam vs (t::itrm)) \<inter> (sset vs \<union> sset vs') = {}"
+  using s(1) by auto
+  have fv2: "|FFVars (iLam vs t)| <o |UNIV::ivar set|" 
+  using iterm.set_bd_UNIV by blast
+  from sdistinct_bij_smap[OF d s(2) fv fv2]
+  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "smap f vs = vs'" 
+  "id_on (FFVars (iLam vs t)) f" by auto
+  show ?thesis apply(rule exI[of _ f], intro conjI)
+    subgoal using f by auto
+    subgoal using f by auto
+    subgoal using f by auto
+    subgoal using f by auto
+    subgoal unfolding iLam_inject apply(rule exI[of _ f]) using f by auto .
+qed
 
-lemma iLam_refresh:
-"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> iLam x t = iLam xx (swap t x xx)"
-by (metis iLam_inject_swap fun_upd_twist)
+lemma iLam_refresh: 
+assumes d: "sdistinct vs" "sdistinct vs'"
+and s: "sset vs' \<inter> FFVars (t::itrm) = {}" "sset vs \<inter> sset vs' = {}"
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam vs t)) f \<and> 
+      smap f vs = vs' \<and> iLam vs t = iLam vs' (rrename f t)"
+apply(rule iLam_refresh'[OF d]) using s by auto
 
 (* *)
 
 lemma FFVars_usub[simp]: "FFVars (usub t y x) =
  (if x \<in> FFVars t then FFVars t - {x} \<union> {y} else FFVars t)"
-apply(subst term.set_map) by auto
+apply(subst iterm.set_map) by auto
 
-lemma usub_simps_free[simp]: "\<And>y x. usub (Var z) (y::var) x = Var (sb z y x)"
-"\<And>y x t s. usub (App t s) (y::var) x = App (usub t y x) (usub s y x)"
+lemma usub_simps_free[simp]: "\<And>y x. usub (iVar z) (y::ivar) x = iVar (sb z y x)"
+"\<And>y x t s. usub (iApp t ss) (y::ivar) x = iApp (usub t y x) (smap (\<lambda>s. usub s y x) ss)"
 by (auto simp: sb_def)
 
 lemma usub_iLam[simp]:
-"v \<notin> {x,y} \<Longrightarrow> usub (iLam v t) (y::var) x = iLam v (usub t y x)"
-apply(subst term.map)
+"sset vs \<inter> {x,y} = {} \<Longrightarrow> usub (iLam vs t) (y::ivar) x = iLam vs (usub t y x)"
+apply(subst iterm.map)
   subgoal by auto
   subgoal by (auto simp: imsupp_def supp_def)
   subgoal by auto .
@@ -670,10 +779,10 @@ lemmas usub_simps = usub_simps_free usub_iLam
 (* *)
 
 lemma rrename_usub[simp]:
-assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
-shows "rrename \<sigma> (usub t u (x::var)) = usub (rrename \<sigma> t) (\<sigma> u) (\<sigma> x)"
+assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::ivar set|"
+shows "rrename \<sigma> (usub t u (x::ivar)) = usub (rrename \<sigma> t) (\<sigma> u) (\<sigma> x)"
 using assms
-apply(binder_induction t avoiding: "supp \<sigma>" u x rule: term.strong_induct)
+apply(binder_induction t avoiding: "supp \<sigma>" u x rule: iterm.strong_induct)
 using assms by (auto simp: sb_def)
 
 lemma sw_sb:

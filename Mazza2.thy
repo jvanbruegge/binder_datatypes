@@ -9,10 +9,7 @@ theory Mazza2
 begin
 
 
-(* More on streams: *)
 
-definition sdistinct where 
-"sdistinct xs \<equiv> \<forall>i j. i \<noteq> j \<longrightarrow> snth xs i \<noteq> snth xs j"
 
 (*untyped lambda calculus*)
 (* binder_datatype 'a lam =

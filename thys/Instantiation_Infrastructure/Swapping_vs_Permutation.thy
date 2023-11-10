@@ -22,7 +22,7 @@ end
 lemma exists_fresh: "finite (A :: 'v :: cinf set) \<Longrightarrow> \<exists>x. x \<notin> A"
   using ex_new_if_finite infinite by auto
 
-definition sw :: "'v :: cinf \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'v" where
+definition sw :: "'v \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'v" where
 "sw x y z \<equiv> if x = y then z else if x = z then y else x"
 
 lemma sw_eqL[simp,intro!]: "\<And> x y z. sw x x y = y"
@@ -52,7 +52,7 @@ lemma list_induct_Pair[case_names Nil Cons]:
 by (metis list.inducts surj_pair)
 
 (* Nominal-logic-style swapping: *)
-definition nswapping :: "('c \<Rightarrow> 'v :: cinf \<Rightarrow> 'v \<Rightarrow> 'c) \<Rightarrow>  bool" where
+definition nswapping :: "('c \<Rightarrow> 'v \<Rightarrow> 'v \<Rightarrow> 'c) \<Rightarrow>  bool" where
 "nswapping swp \<equiv>
   (\<forall> c x. swp c x x = c) \<and>
   (\<forall> c x y. swp (swp c x y) x y = c) \<and>

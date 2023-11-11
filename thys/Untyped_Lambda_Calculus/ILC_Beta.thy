@@ -65,10 +65,11 @@ qed
 (* *)
 
 inductive step :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
-  Beta: "step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es) e1)"
+  Beta: "sdistinct xs \<Longrightarrow> \<comment> \<open> todo: eventually remoive this -- when using distinct streams \<close>
+         step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es) e1)"
 | iAppL: "step e1 e1' \<Longrightarrow> step (iApp e1 es2) (iApp e1' es2)"
 | iAppR: "step (snth es2 i) e2' \<Longrightarrow> step (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
-| Xi: "step e e' \<Longrightarrow> step (iLam x e) (iLam x e')"
+| Xi: "step e e' \<Longrightarrow> step (iLam xs e) (iLam xs e')"
 
 thm step_def
 
@@ -97,7 +98,8 @@ apply standard unfolding ssbij_def Tmap_def
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> ivar set \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>R B t.  
-         (\<exists>xs e1 es2. B = sset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (mkSubst xs es2) e1)
+         (\<exists>xs e1 es2. B = sset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (mkSubst xs es2) e1 \<and> 
+                      sdistinct xs)
          \<or>
          (\<exists>e1 e1' es2. B = {} \<and> fst t = iApp e1 es2 \<and> snd t = iApp e1' es2 \<and> 
                        R (e1,e1')) 
@@ -135,7 +137,7 @@ lemma bij_sdistinct_smap'[simp]:
 "bij f \<Longrightarrow> sdistinct (smap f xs) \<longleftrightarrow> sdistinct xs"
 by (simp add: inj_on_def inj_on_sdistinct_smap)
 
-lemma mkSubst_smap: 
+lemma mkSubst_smap_rrename: 
 assumes s: "ssbij \<sigma>"
 shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma> = rrename \<sigma> \<circ> mkSubst xs es2"
 proof(rule ext)  
@@ -161,10 +163,10 @@ proof(rule ext)
   qed
 qed
 
-lemma mkSubst_smap_inv: 
+lemma mkSubst_smap_rrename_inv: 
 assumes s: "ssbij \<sigma>"
 shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) = rrename \<sigma> \<circ> mkSubst xs es2 o inv \<sigma>"
-unfolding mkSubst_smap[OF assms, symmetric] using assms unfolding fun_eq_iff ssbij_def by auto
+unfolding mkSubst_smap_rrename[OF assms, symmetric] using assms unfolding fun_eq_iff ssbij_def by auto
 
 lemma rrename_eq_itvsubst_iVar: 
 "ssbij \<sigma> \<Longrightarrow> rrename \<sigma> = itvsubst (iVar o \<sigma>)"
@@ -185,21 +187,18 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (rrename_iterm \<sigma>) es2"])  
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: iterm.rrename_comps) apply(subst rrename_itvsubst_comp) apply auto
-  apply(subst mkSubst_smap_inv) unfolding ssbij_def apply auto 
+  apply(subst mkSubst_smap_rrename_inv) unfolding ssbij_def apply auto 
   apply(subst rrename_eq_itvsubst_iVar'[of _ e1]) unfolding ssbij_def apply auto
   apply(subst itvsubst_comp) 
-    subgoal by (metis SSupp_mkSubst mkSubst_smap_inv ssbij_def)
+    subgoal by (metis SSupp_mkSubst mkSubst_smap_rrename_inv ssbij_def)
     subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
     subgoal apply(rule itvsubst_cong)
       subgoal using SSupp_rrename_bound by blast
-      subgoal using SSupp_itvsubst_bound 
-         \<open>\<lbrakk>|sset xs| <o |UNIV|; B = sset xs; t = (iApp (iLam xs e1) es2, 
-        itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|\<rbrakk> \<Longrightarrow> |SSupp (iVar \<circ> \<sigma>)| <o |UNIV|\<close> 
-         \<open>\<lbrakk>|sset xs| <o |UNIV|; B = sset xs; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); 
-        bij \<sigma>; |supp \<sigma>| <o |UNIV|\<rbrakk> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV|\<close> by blast
+      subgoal using SSupp_itvsubst_bound sledgehammer
+        using \<open>\<lbrakk>|sset xs| <o |UNIV|; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|; B = sset xs; sdistinct xs\<rbrakk> \<Longrightarrow> |SSupp (iVar \<circ> \<sigma>)| <o |UNIV|\<close> \<open>\<lbrakk>|sset xs| <o |UNIV|; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|; B = sset xs; sdistinct xs\<rbrakk> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV|\<close> by blast
+
       subgoal for x apply simp apply(subst iterm.subst(1))
-        subgoal using \<open>\<lbrakk>|sset xs| <o |UNIV|; B = sset xs; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|\<rbrakk> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV|\<close> by linarith
-        subgoal by simp . . . . .
+        subgoal using \<open>\<lbrakk>|sset xs| <o |UNIV|; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|; B = sset xs; sdistinct xs\<rbrakk> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV|\<close> by linarith       subgoal by simp . . . . .
   (* *)
   subgoal apply(rule disjI4_2)
   subgoal apply(elim exE) subgoal for e1 e1' es2 
@@ -228,9 +227,20 @@ unfolding G_def apply(elim disjE)
 lemma small_sset[simp,intro]: "small (sset xs)"
 by (simp add: card_sset_ivar small_def)
 
+lemma small_image_sset[simp,intro]: "small (f ` sset xs)"
+by (metis small_sset stream.set_map)
 
-lemma fresh: "\<exists>xxs. sset xxs \<inter> Tfvars t = {}"  
+lemma Tvars_sset: "(Tfvars t - sset xs) \<inter> sset xs = {}" "|Tfvars t - sset xs| <o |UNIV::ivar set|"
+apply auto by (meson card_of_minus_bound small_Tfvars small_def)
+
+lemma mkSubst_smap: "bij f \<Longrightarrow> sdistinct xs \<Longrightarrow> z \<in> sset xs \<Longrightarrow> mkSubst (smap f xs) es (f z) = mkSubst xs es z"
+by (smt (verit, ccfv_threshold) bij_sdistinct_smap mkSubst_snth snth_smap theN)
+
+(*
+lemma fresh: "\<exists>ff xxs. sset xxs \<inter> Tfvars t = {} \<and> sset xxs \<inter> Tfvars t = {}" 
+using iLam_refresh 
 by (meson iLam_avoid small_Tfvars small_def) 
+*)
 
 (* NB: The entities affected by ivariables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
@@ -239,20 +249,31 @@ as they are.
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
-using fresh[of t] unfolding G_def Tmap_def apply safe
-  subgoal for xxs xs e1 e2 
-  apply(rule exI[of _ "sset xxs"])  
+(* using fresh[of t] *) unfolding G_def Tmap_def apply safe
+  subgoal for xs e1 es2  
+  using refresh[OF Tvars_sset, of xs t]  apply safe
+  subgoal for f
+  apply(rule exI[of _ "f ` (sset xs)"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding id_on_def by auto (metis DiffI Int_emptyD image_eqI)
     subgoal apply(rule disjI4_1)
-    apply(rule exI[of _ "xxs"]) 
-    apply(rule exI[of _ "rrename_iterm (id(x:=xx,xx:=x)) e1"]) 
-    apply(rule exI[of _ "e2"]) 
+    apply(rule exI[of _ "smap f xs"]) 
+    apply(rule exI[of _ "rrename f e1"]) 
+    apply(rule exI[of _ "es2"]) 
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst iLam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst itvsubst_iVar_rrename) 
-      apply (auto split: if_splits) . . . 
+      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst rrename_eq_itvsubst_iVar)
+        subgoal unfolding ssbij_def by auto
+        subgoal apply(subst itvsubst_comp)
+          subgoal by auto
+          subgoal sorry
+          subgoal apply(rule itvsubst_cong)
+            subgoal by blast
+            subgoal sorry
+            subgoal unfolding id_on_def
+            by simp (metis (no_types, lifting) bij_not_eq_twice imageE mkSubst_idle mkSubst_smap stream.set_map)
+  . . . . . .
   (* *)
   subgoal for xx e1 e1' e2 
   apply(rule exI[of _ "{}"])  

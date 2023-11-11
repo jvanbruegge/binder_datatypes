@@ -13,6 +13,36 @@ definition sdistinct where
 
 lemmas stream.set_map[simp] lemmas stream.map_id[simp]
 
+lemma sset_natLeq: "|sset vs| \<le>o natLeq"
+by (metis card_of_image countable_card_of_nat countable_iff_lq_natLeq sset_range)
+
+definition theN where 
+"theN vs v \<equiv> SOME i. snth vs i = v"
+
+lemma theN: "v \<in> sset vs \<Longrightarrow> snth vs (theN vs v) = v"
+unfolding theN_def apply(rule someI_ex) by (metis imageE sset_range)
+
+lemma theN_inj1: "sdistinct vs \<Longrightarrow> v \<in> sset vs \<Longrightarrow>  
+  snth vs i = snth vs (theN vs v) \<Longrightarrow> i = theN vs v"
+using theN[of v vs] unfolding sdistinct_def by fastforce
+
+lemma theN_inj[simp]: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
+  snth vs (theN vs v1) = snth vs (theN vs v2) \<Longrightarrow> v1 = v2"
+using theN_inj1 by (simp add: ILC.theN)
+
+lemma inj_on_theN: "sdistinct vs \<Longrightarrow> inj_on (theN vs) (sset vs)"
+unfolding inj_on_def by auto
+
+lemma surj_theN: "sdistinct vs \<Longrightarrow> theN vs ` (sset vs) = UNIV"
+unfolding image_def by auto (metis sdistinct_def snth_sset theN)
+
+lemma bij_betw_theN: "sdistinct vs \<Longrightarrow> bij_betw (theN vs) (sset vs) UNIV"
+unfolding bij_betw_def using inj_on_theN surj_theN by auto
+
+lemma theN_snth[simp]: "sdistinct vs \<Longrightarrow> theN vs (snth vs i) = i"
+by (metis snth_sset theN theN_inj1)
+
+
 
 (* *)
 
@@ -649,131 +679,90 @@ apply(rule iterm.rrename_cong_ids) by auto
 
 (* *)
 
-definition theN where 
-"theN vs v \<equiv> SOME i. snth vs i = v"
-
-lemma theN: "v \<in> sset vs \<Longrightarrow> snth vs (theN vs v) = v"
-unfolding theN_def apply(rule someI_ex) by (metis imageE sset_range)
-
-lemma theN_inj1: "sdistinct vs \<Longrightarrow> v \<in> sset vs \<Longrightarrow>  
-  snth vs i = snth vs (theN vs v) \<Longrightarrow> i = theN vs v"
-using theN[of v vs] unfolding sdistinct_def by fastforce
-
-lemma theN_inj[simp]: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
-  snth vs (theN vs v1) = snth vs (theN vs v2) \<Longrightarrow> v1 = v2"
-using theN_inj1 by (simp add: ILC.theN)
-
-lemma inj_on_theN: "sdistinct vs \<Longrightarrow> inj_on (theN vs) (sset vs)"
-unfolding inj_on_def by auto
-
-lemma surj_theN: "sdistinct vs \<Longrightarrow> theN vs ` (sset vs) = UNIV"
-unfolding image_def by auto (metis sdistinct_def snth_sset theN)
-
-lemma bij_betw_theN: "sdistinct vs \<Longrightarrow> bij_betw (theN vs) (sset vs) UNIV"
-unfolding bij_betw_def using inj_on_theN surj_theN by auto
-
-lemma theN_snth[simp]: "sdistinct vs \<Longrightarrow> theN vs (snth vs i) = i"
-by (metis snth_sset theN theN_inj1)
 
 
-lemma sdistinct_bij_betw_snth: 
-assumes "sdistinct vs"  "sdistinct vs'" and V: "V \<inter> sset vs = {}"
-shows "\<exists>f. bij_betw f (sset vs) (sset vs') \<and> id_on V f \<and> 
-           (\<forall>i. f (snth vs i) = snth vs' i)"
+lemma bij_betw_snth: 
+assumes V: "|V::ivar set| <o |UNIV::ivar set|"
+shows "\<exists>f vs'. bij_betw f (sset vs) (sset vs') \<and> V \<inter> sset vs' = {} \<and> smap f vs = vs'"
 proof-
-  define f where "f \<equiv> \<lambda>v. if v \<in> V then v else snth vs' (theN vs v)"
-  show ?thesis 
-  apply(rule exI[of _ f], intro conjI)
-    subgoal using assms V unfolding image_def f_def bij_betw_def inj_on_def apply safe
-      apply (metis disjoint_iff sdistinct_def theN)
-      apply auto[1]  
-      by (metis Int_emptyD snth_sset theN theN_snth)
-    subgoal unfolding f_def id_on_def by auto
-    subgoal using assms unfolding f_def by auto .
+  have "|UNIV - V| =o |UNIV::ivar set|" apply(rule card_of_Un_diff_infinite) 
+  using V by (auto simp: infinite_ivar)
+  hence "|sset vs| <o |UNIV - V|"  
+    by (meson countable_card_ivar countable_iff_lq_natLeq ordIso_symmetric ordLess_ordIso_trans sset_natLeq)
+  then obtain f where f: "inj_on f (sset vs)" "f ` (sset vs) \<subseteq> UNIV - V"
+  by (meson card_of_ordLeq ordLess_imp_ordLeq)
+  show ?thesis apply(intro exI[of _ f] exI[of _ "smap f vs"])
+  using f unfolding bij_betw_def by auto
 qed
 
-lemma sset_natLeq: "|sset vs| \<le>o natLeq"
-by (metis card_of_image countable_card_of_nat countable_iff_lq_natLeq sset_range)
-
-lemma sdistinct_bij_smap: 
-assumes "sdistinct vs" "sdistinct vs'" "sset vs \<inter> sset vs' = {}"
-and V: "V \<inter> (sset vs \<union> sset vs') = {}" "|V| <o |UNIV::ivar set|"
-shows "\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
-  \<comment> \<open> bij_betw f (sset vs) (sset vs') \<and>\<close>  smap f vs = vs' \<and> id_on V f"
+lemma refresh: 
+assumes V: "V \<inter> sset xs = {}" "|V| <o |UNIV::ivar set|"
+shows "\<exists>f xs'. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
+               sset xs' \<inter> sset xs = {} \<and> sset xs' \<inter> V = {} \<and>
+               smap f xs = xs' \<and> id_on V f"
 proof-
-  have a3: "(sset vs \<union> V) \<inter> sset vs' = {}" using assms by auto
-  have ss: "|sset vs| <o |UNIV::ivar set|" "|sset vs'| <o |UNIV::ivar set|"
+  have ss: "|sset xs| <o |UNIV::ivar set|" 
   by (auto simp: countable_card_ivar sset_range V(2) var_stream_class.Un_bound)
-  obtain f where f: "bij_betw f (sset vs) (sset vs')" "id_on V f" "\<And>i. f (snth vs i) = snth vs' i"
-  using sdistinct_bij_betw_snth[OF assms(1,2), of V] V(1) by auto
-  hence f2: "smap f vs = vs'" by (simp add: smap_alt)
-  (* hence ff: "bij_betw f (sset vs \<union> V) (sset vs' \<union> V)"
-  using f(1,2) V(1) unfolding bij_betw_def id_on_def inj_on_def 
-  by (metis Int_emptyD Un_iff f(2) id_on_image image_Un image_eqI) *)
-   
+  hence ss1: "|sset xs \<union> V| <o |UNIV::ivar set|"
+  by (meson assms(2) var_stream_class.Un_bound)
+  obtain f xs' where f: "bij_betw f (sset xs) (sset xs')" 
+  "sset xs \<inter> sset xs' = {}" "V \<inter> sset xs' = {}" "smap f xs = xs'"
+  using bij_betw_snth[OF ss1, of xs] by fastforce 
+  
   obtain u where u: "bij u \<and>
-      |supp u| <o |UNIV::ivar set| \<and> bij_betw u (sset vs) (sset vs') \<and> 
+      |supp u| <o |UNIV::ivar set| \<and> bij_betw u (sset xs) (sset xs') \<and> 
       imsupp u \<inter> V = {} \<and> 
-      eq_on (sset vs) u f"
-  using ex_bij_betw_supp_UNIV[OF _ _ f(1) assms(3), of V]  
-  using ss assms infinite_ivar  
-  by (metis Int_Un_emptyI1 Int_Un_emptyI2 Int_commute)
-  show ?thesis apply(rule exI[of _ u]) 
-  using u f f2 unfolding eq_on_def id_on_def imsupp_def supp_def by (auto simp: smap_alt)
+      eq_on (sset xs) u f"
+  using ex_bij_betw_supp_UNIV[OF _ ss f(1,2), of V] V(1) f(3)  
+  by (metis Int_commute infinite_ivar)
+
+  show ?thesis apply(intro exI[of _ u] exI[of _ xs']) 
+  using u f unfolding eq_on_def id_on_def imsupp_def supp_def by (auto simp: smap_alt)
 qed
-
-
-thm iLam_inject[of vs t vs']
-
-
-
-(*
-lemma iLam_inject_swap: 
-assumes "sdistinct vs"   "sdistinct vs'"
-shows "iLam vs t = iLam vs' t' \<longleftrightarrow>
-  (\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| ) \<and> 
-  (vs' \<inter> FFVars t = {} \<or> vs' = vs) \<and> map swap t v' v = t'"
-unfolding iLam_inject apply(rule iffI)
-  subgoal unfolding id_on_def apply auto
-  apply(rule rrename_cong) by auto
-  subgoal apply clarsimp
-  apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
-
-lemma iLam_inject_swap': "iLam v t = iLam v' t' \<longleftrightarrow>
-  (\<exists>z. (z \<notin> FFVars t \<or> z = v) \<and> (z \<notin> FFVars t' \<or> z = v') \<and>
-       swap t z v = swap t' z v')"
-unfolding iLam_inject_swap apply(rule iffI)
-  subgoal apply clarsimp apply(rule exI[of _ v']) by auto
-  subgoal by (smt (verit, del_insts) iLam_inject_swap)    .
-*)
 
 lemma iLam_refresh': 
-assumes d: "sdistinct vs" "sdistinct vs'"
-and s: "sset vs' \<inter> FFVars (iLam vs (t::itrm)) = {}" "sset vs \<inter> sset vs' = {}"
-shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam vs t)) f \<and> 
-      smap f vs = vs' \<and> iLam vs t = iLam vs' (rrename f t)"
+"\<exists>f xs'. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> 
+      sset xs' \<inter> sset xs = {} \<and> sset xs' \<inter> FFVars (iLam xs (t::itrm)) = {} \<and> 
+      smap f xs = xs' \<and> 
+      id_on (FFVars (iLam xs t)) f \<and> 
+      iLam xs t = iLam xs' (rrename f t)"
 proof-
-  have fv: "FFVars (iLam vs (t::itrm)) \<inter> (sset vs \<union> sset vs') = {}"
-  using s(1) by auto
-  have fv2: "|FFVars (iLam vs t)| <o |UNIV::ivar set|" 
-  using iterm.set_bd_UNIV by blast
-  from sdistinct_bij_smap[OF d s(2) fv fv2]
-  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "smap f vs = vs'" 
-  "id_on (FFVars (iLam vs t)) f" by auto
-  show ?thesis apply(rule exI[of _ f], intro conjI)
+  define V where "V = FFVars (iLam xs (t::itrm))"
+  have V: "V \<inter> sset xs = {}" "|V| <o |UNIV::ivar set|" 
+  unfolding V_def  
+    using iterm.set_bd_UNIV apply (auto simp: Int_commute)  
+    using card_of_minus_bound by blast
+  obtain f xs' where f: "bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
+               sset xs' \<inter> sset xs = {} \<and> sset xs' \<inter> V = {} \<and>
+               smap f xs = xs' \<and> id_on V f"
+  using refresh[OF V] by auto
+  show ?thesis apply(intro exI[of _ f] exI[of _ xs'], intro conjI)
     subgoal using f by auto
     subgoal using f by auto
     subgoal using f by auto
+    subgoal using f unfolding V_def by auto
     subgoal using f by auto
-    subgoal unfolding iLam_inject apply(rule exI[of _ f]) using f by auto .
+    subgoal using f unfolding V_def id_on_def by auto
+    subgoal unfolding iLam_inject apply(rule exI[of _ f]) using f unfolding V_def by auto .
 qed
 
 lemma iLam_refresh: 
-assumes d: "sdistinct vs" "sdistinct vs'"
-and s: "sset vs' \<inter> FFVars (t::itrm) = {}" "sset vs \<inter> sset vs' = {}"
-shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam vs t)) f \<and> 
-      smap f vs = vs' \<and> iLam vs t = iLam vs' (rrename f t)"
-apply(rule iLam_refresh'[OF d]) using s by auto
+"\<exists>f xs'. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> 
+      sset xs' \<inter> sset xs = {} \<and> sset xs' \<inter> FFVars (t::itrm) = {} \<and> 
+      smap f xs = xs' \<and> 
+      id_on (FFVars t - sset xs) f \<and> 
+      iLam xs t = iLam xs' (rrename f t)"
+using iLam_refresh'[of xs t] 
+apply (elim exE conjE) subgoal for f xs' apply(intro exI[of _ f] exI[of _ xs'])  
+apply(intro conjI)
+  subgoal by simp
+  subgoal by simp
+  subgoal by simp
+  subgoal unfolding id_on_def by (metis DiffI disjoint_iff iterm.set(3))
+  subgoal by simp
+  subgoal unfolding id_on_def 
+    using iterm.set(3) by blast
+  subgoal by simp . .
 
 (* *)
 

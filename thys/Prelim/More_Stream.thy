@@ -4,9 +4,22 @@ begin
 
 (* More on streams: *)
 
-definition sdistinct where 
-"sdistinct xs \<equiv> \<forall>i j. i \<noteq> j \<longrightarrow> snth xs i \<noteq> snth xs j"
+coinductive sdistinct where
+  "x \<notin> sset s \<Longrightarrow> sdistinct s \<Longrightarrow> sdistinct (x ## s)"
 
+lemma sdistinct_stl: "sdistinct s \<Longrightarrow> sdistinct (stl s)"
+  by (erule sdistinct.cases) simp
+
+lemma sdistinct_fromN[simp]: "sdistinct (fromN n)"
+  by (coinduction arbitrary: n) (subst siterate.code,  auto)
+
+lemma sdistinct_def2: "sdistinct xs \<longleftrightarrow> (\<forall>i j. i \<noteq> j \<longrightarrow> snth xs i \<noteq> snth xs j)"
+apply safe
+  subgoal for i j
+   apply(induct "i-j" arbitrary: i j) apply auto
+    sorry
+  subgoal sorry .
+  
 lemmas stream.set_map[simp] lemmas stream.map_id[simp]
 
 lemma sset_natLeq: "|sset vs| \<le>o natLeq"
@@ -20,7 +33,7 @@ unfolding theN_def apply(rule someI_ex) by (metis imageE sset_range)
 
 lemma theN_inj1: "sdistinct vs \<Longrightarrow> v \<in> sset vs \<Longrightarrow>  
   snth vs i = snth vs (theN vs v) \<Longrightarrow> i = theN vs v"
-using theN[of v vs] unfolding sdistinct_def by fastforce
+using theN[of v vs] unfolding sdistinct_def2 by fastforce
 
 lemma theN_inj[simp]: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
   snth vs (theN vs v1) = snth vs (theN vs v2) \<Longrightarrow> v1 = v2"
@@ -30,7 +43,7 @@ lemma inj_on_theN: "sdistinct vs \<Longrightarrow> inj_on (theN vs) (sset vs)"
 unfolding inj_on_def by auto
 
 lemma surj_theN: "sdistinct vs \<Longrightarrow> theN vs ` (sset vs) = UNIV"
-unfolding image_def by auto (metis sdistinct_def snth_sset theN)
+unfolding image_def by auto (metis sdistinct_def2 snth_sset theN)
 
 lemma bij_betw_theN: "sdistinct vs \<Longrightarrow> bij_betw (theN vs) (sset vs) UNIV"
 unfolding bij_betw_def using inj_on_theN surj_theN by auto
@@ -40,11 +53,17 @@ by (metis snth_sset theN theN_inj1)
 
 lemma inj_on_sdistinct_smap: 
 "inj_on f (sset xs) \<Longrightarrow> sdistinct xs \<Longrightarrow> sdistinct (smap f xs)"
-unfolding sdistinct_def inj_on_def apply simp using snth_sset by blast
+unfolding sdistinct_def2 inj_on_def apply simp using snth_sset by blast
+
+(* 
+lemma sdistinct_smap: "inj_on f (sset s) \<Longrightarrow> sdistinct s \<Longrightarrow> sdistinct (smap f s)"
+  by (coinduction arbitrary: s)
+    (auto simp: smap_ctr stream.set_map inj_on_def stream.set_sel sdistinct_stl elim: sdistinct.cases)
+*)
 
 lemma sdistinct_smap: 
 "sdistinct (smap f xs) \<Longrightarrow> sdistinct xs"
-unfolding sdistinct_def by auto metis
+unfolding sdistinct_def2 by auto metis
 
 lemma inj_on_sdistinct_smap'[simp]: 
 "inj_on f (sset xs) \<Longrightarrow> sdistinct (smap f xs) \<longleftrightarrow> sdistinct xs"
@@ -57,5 +76,63 @@ by (simp add: inj_on_def inj_on_sdistinct_smap)
 lemma bij_sdistinct_smap'[simp]: 
 "bij f \<Longrightarrow> sdistinct (smap f xs) \<longleftrightarrow> sdistinct xs"
 by (simp add: inj_on_def inj_on_sdistinct_smap)
+
+
+(* *)
+
+class infinite_regular =
+  assumes large: "|Field (card_suc natLeq)| \<le>o |UNIV::'a set|" and regular: "regularCard |UNIV::'a set|"
+
+lemma infinite_natLeq: "natLeq \<le>o |A| \<Longrightarrow> infinite A"
+  using infinite_iff_natLeq_ordLeq by blast
+
+lemma infinite: "infinite (UNIV :: 'a ::infinite_regular set)"
+  using ordLeq_transitive[OF ordLess_imp_ordLeq[OF card_suc_greater_set[OF natLeq_card_order ordLeq_refl[OF natLeq_Card_order]]]
+    ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF Card_order_card_suc[OF natLeq_card_order]]] large]]
+  by (rule infinite_natLeq)
+
+lemma infinite_ex_inj: "\<exists>f :: nat \<Rightarrow> 'a :: infinite_regular. inj f"
+  by (rule infinite_countable_subset[OF infinite, simplified])
+
+typedef 'a dstream = "{xs :: 'a :: infinite_regular stream. sdistinct xs}"
+  by (auto intro!: exI[of _ "smap (SOME f :: nat \<Rightarrow> 'a. inj f) nats"] inj_on_sdistinct_smap
+    someI_ex[OF infinite_ex_inj])
+
+setup_lifting type_definition_dstream
+
+(*
+lift_definition dsmap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a dstream \<Rightarrow> 'a :: infinite_regular dstream" is
+  "\<lambda>f xs. if bij f then smap f xs else xs"
+  by (auto simp: bij_def intro!: sdistinct_smap elim: inj_on_subset)
+*)
+
+lift_definition dsmap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a dstream \<Rightarrow> 'a :: infinite_regular dstream" is
+  "\<lambda>f xs. if inj_on f (sset xs) then smap f xs else xs"
+  by (auto intro!: sdistinct_smap elim: inj_on_subset)
+
+lift_definition dsset :: "'a :: infinite_regular dstream \<Rightarrow> 'a set" is "sset" .
+
+lift_definition dsnth :: "'a :: infinite_regular dstream \<Rightarrow> nat \<Rightarrow> 'a" (infixl \<open>!#!\<close> 100) is "snth" .
+
+lemma countable_sset:
+  fixes s
+  notes * = LeastI[where P="\<lambda>i. s !! i = s !! _", OF refl]
+  shows "countable (sset s)"
+  unfolding sset_range
+  by (intro countableI[where f="\<lambda>x. LEAST i. snth s i = x"] inj_onI, elim imageE, hypsubst_thin)
+    (rule box_equals[OF _ * *], simp)
+
+lemma dsset_natLeq: "|dsset vs| \<le>o natLeq"
+apply transfer using sset_natLeq by auto
+
+lemma dsset_range: "dsset s = range (dsnth s)"
+apply transfer using sset_range by metis
+
+lemma dsset_dsmap[simp]: "inj_on f (dsset vs) \<Longrightarrow> dsset (dsmap f vs) = f ` dsset vs"
+apply transfer by auto
+
+lemma dsmap_alt: "inj_on f (dsset vs) \<Longrightarrow>dsmap f vs = vs' \<longleftrightarrow> (\<forall>n. f (dsnth vs n) = dsnth vs' n)" 
+apply transfer by (auto simp: smap_alt)
+
 
 end

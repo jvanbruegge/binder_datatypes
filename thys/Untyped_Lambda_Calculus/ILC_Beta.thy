@@ -168,14 +168,45 @@ assumes s: "ssbij \<sigma>"
 shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) = rrename \<sigma> \<circ> mkSubst xs es2 o inv \<sigma>"
 unfolding mkSubst_smap_rrename[OF assms, symmetric] using assms unfolding fun_eq_iff ssbij_def by auto
 
+
+lemma rrename_iVar[simp]: 
+assumes "ssbij (\<sigma>::ivar\<Rightarrow>ivar)"
+shows "rrename \<sigma> (iVar x) = iVar (\<sigma> x)"
+using assms rrename_simps(1) ssbij_def by auto
+
+
+lemma supp_SSupp_iVar_le[simp]: "SSupp (iVar \<circ> \<sigma>) = supp \<sigma>" 
+unfolding supp_def SSupp_def by simp
+
+
 lemma rrename_eq_itvsubst_iVar: 
-"ssbij \<sigma> \<Longrightarrow> rrename \<sigma> = itvsubst (iVar o \<sigma>)"
-sorry
+assumes "ssbij (\<sigma>::ivar\<Rightarrow>ivar)" 
+shows "rrename \<sigma> = itvsubst (iVar o \<sigma>)"
+proof
+  fix t 
+  have 0: "|supp \<sigma>| <o |UNIV::ivar set|" using assms unfolding ssbij_def by auto
+  have 00: " |IImsupp (iVar \<circ> \<sigma>)| <o |UNIV::ivar set|" 
+    using SSupp_IImsupp_bound by (metis "0" supp_SSupp_iVar_le)
+  show "rrename \<sigma> t = itvsubst (iVar o \<sigma>) t" using 00 assms apply(induct t rule: itrm_strong_induct)
+    subgoal for x by (simp add: "0")
+    subgoal unfolding ssbij_def  
+    by (auto intro: stream.map_cong) 
+    subgoal for xs t unfolding ssbij_def  
+    by (simp add: IImsupp_def disjoint_iff not_in_supp_alt stream.map_ident_strong) . 
+qed
+     
 
 lemma rrename_eq_itvsubst_iVar': 
 "ssbij \<sigma> \<Longrightarrow> rrename \<sigma> e = itvsubst (iVar o \<sigma>) e"
 using rrename_eq_itvsubst_iVar by auto
 
+lemma card_SSupp_itvsubst_mkSubst_rrename_inv: 
+"ssbij \<sigma> \<Longrightarrow> |SSupp (itvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (iVar \<circ> \<sigma>))| <o |UNIV::ivar set|"
+by (metis SSupp_itvsubst_bound SSupp_mkSubst mkSubst_smap_rrename_inv ssbij_def supp_SSupp_iVar_le)
+
+lemma card_SSupp_mkSubst_rrename_inv: 
+"ssbij \<sigma> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV::ivar set|"
+by (metis SSupp_mkSubst mkSubst_smap_rrename_inv)
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
@@ -194,11 +225,10 @@ unfolding G_def apply(elim disjE)
     subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
     subgoal apply(rule itvsubst_cong)
       subgoal using SSupp_rrename_bound by blast
-      subgoal using SSupp_itvsubst_bound sledgehammer
-        using \<open>\<lbrakk>|sset xs| <o |UNIV|; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|; B = sset xs; sdistinct xs\<rbrakk> \<Longrightarrow> |SSupp (iVar \<circ> \<sigma>)| <o |UNIV|\<close> \<open>\<lbrakk>|sset xs| <o |UNIV|; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|; B = sset xs; sdistinct xs\<rbrakk> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV|\<close> by blast
-
-      subgoal for x apply simp apply(subst iterm.subst(1))
-        subgoal using \<open>\<lbrakk>|sset xs| <o |UNIV|; t = (iApp (iLam xs e1) es2, itvsubst (mkSubst xs es2) e1); bij \<sigma>; |supp \<sigma>| <o |UNIV|; B = sset xs; sdistinct xs\<rbrakk> \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV|\<close> by linarith       subgoal by simp . . . . .
+      subgoal using card_SSupp_itvsubst_mkSubst_rrename_inv ssbij_def by auto
+   subgoal for x apply simp apply(subst iterm.subst(1))
+      subgoal using card_SSupp_mkSubst_rrename_inv[unfolded ssbij_def] by auto
+      subgoal by simp . . . . . 
   (* *)
   subgoal apply(rule disjI4_2)
   subgoal apply(elim exE) subgoal for e1 e1' es2 
@@ -267,10 +297,10 @@ lemma G_refresh:
         subgoal unfolding ssbij_def by auto
         subgoal apply(subst itvsubst_comp)
           subgoal by auto
-          subgoal sorry
+          subgoal by simp
           subgoal apply(rule itvsubst_cong)
             subgoal by blast
-            subgoal sorry
+            subgoal by (simp add: SSupp_itvsubst_bound)
             subgoal unfolding id_on_def
             by simp (metis (no_types, lifting) bij_not_eq_twice imageE mkSubst_idle mkSubst_smap stream.set_map)
   . . . . . .

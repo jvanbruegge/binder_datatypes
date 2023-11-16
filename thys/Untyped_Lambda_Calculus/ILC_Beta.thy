@@ -253,7 +253,7 @@ corollary BE_induct_step:
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "step t1 t2"  
 and Beta: "\<And>xs e1 es2 p. 
-  sset xs \<inter> Pfvars p = {} \<Longrightarrow> sset xs \<inter> \<Union> (FFVars ` sset es2) = {} \<Longrightarrow> 
+  sset xs \<inter> Pfvars p = {} \<Longrightarrow> sset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
   sdistinct xs \<Longrightarrow> 
   R p (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
 and iAppL: "\<And>e1 e1' es2 p. 

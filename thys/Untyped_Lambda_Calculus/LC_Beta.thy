@@ -202,7 +202,7 @@ corollary BE_induct_step:
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "step t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1 \<Longrightarrow> x \<notin> FFVars_term e2) \<Longrightarrow> 
+  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
   R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
 and AppL: "\<And>e1 e1' e2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 

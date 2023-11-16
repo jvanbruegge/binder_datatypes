@@ -7,7 +7,7 @@ begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
-(* INSTATIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
+(* INSTANTIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
 
 print_locales
 interpretation Small where dummy = "undefined :: ivar" 
@@ -66,7 +66,7 @@ qed
 
 inductive step :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
   Beta: "sdistinct xs \<Longrightarrow> \<comment> \<open> todo: eventually remoive this -- when using distinct streams \<close>
-         step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es) e1)"
+         step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
 | iAppL: "step e1 e1' \<Longrightarrow> step (iApp e1 es2) (iApp e1' es2)"
 | iAppR: "step (snth es2 i) e2' \<Longrightarrow> step (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "step e e' \<Longrightarrow> step (iLam xs e) (iLam xs e')"
@@ -305,7 +305,7 @@ lemma G_refresh:
             by simp (metis (no_types, lifting) bij_not_eq_twice imageE mkSubst_idle mkSubst_smap stream.set_map)
   . . . . . .
   (* *)
-  subgoal for xx e1 e1' e2 
+  subgoal for e1 e1' es2 
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
@@ -313,10 +313,10 @@ lemma G_refresh:
     subgoal apply(rule disjI4_2) 
     apply(rule exI[of _ "e1"]) 
     apply(rule exI[of _ "e1'"])
-    apply(rule exI[of _ "e2"]) 
+    apply(rule exI[of _ "es2"]) 
     apply(cases t) apply simp . .
   (* *)
-  subgoal for xx e1 e2 e2' 
+  subgoal for e1 e2 es2' 
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
@@ -324,23 +324,24 @@ lemma G_refresh:
     subgoal apply(rule disjI4_3) 
     apply(rule exI[of _ "e1"]) 
     apply(rule exI[of _ "e2"])
-    apply(rule exI[of _ "e2'"]) 
-    apply(cases t) apply simp . .
+    apply(rule exI[of _ "es2'"]) 
+    apply(cases t) apply auto . .
   (* *)
-  subgoal for xx x e e'
-  apply(rule exI[of _ "{xx}"])  
+  subgoal for xs e e'
+  using refresh[OF Tvars_sset, of xs t]  apply safe
+  subgoal for f
+  apply(rule exI[of _ "f ` (sset xs)"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding id_on_def by auto (metis DiffI Int_emptyD image_eqI)
     subgoal apply(rule disjI4_4) 
-    apply(rule exI[of _ "xx"]) 
-    apply(rule exI[of _ "rrename_iterm (id(x:=xx,xx:=x)) e"])
-    apply(rule exI[of _ "rrename_iterm (id(x:=xx,xx:=x)) e'"])
+    apply(rule exI[of _ "smap f xs"]) 
+    apply(rule exI[of _ "rrename f e"]) 
+    apply(rule exI[of _ "rrename f e'"]) 
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst iLam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst iLam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . .
-  (* *)
+      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
+      subgoal unfolding ssbij_def by auto . . . . 
 
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
@@ -358,13 +359,13 @@ unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE)
     \<^cancel>\<open>Beta: \<close>
-    subgoal for x e1 e2 apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI4_1) by auto 
+    subgoal for xs e1 apply(rule exI[of _ "sset xs"], rule conjI, simp) apply(rule disjI4_1) by auto
     \<^cancel>\<open>iAppL: \<close>
     subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_2) by auto
     \<^cancel>\<open>iAppR: \<close>
     subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_3) by auto
     \<^cancel>\<open>Xi: \<close>
-    subgoal for e e' x apply(rule exI[of _ "{x}"], rule conjI, simp)  apply(rule disjI4_4) by auto .
+    subgoal for e e' xs apply(rule exI[of _ "sset xs"], rule conjI, simp)  apply(rule disjI4_4) by auto .
   subgoal apply(elim conjE disjE exE)
     \<^cancel>\<open>Beta: \<close>
     subgoal apply(rule disjI4_1) by auto
@@ -376,24 +377,25 @@ subgoal for R tt1 tt2 apply(rule iffI)
     subgoal apply(rule disjI4_4) by auto . . .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
-thm step.induct[no_ivars]
+thm step.induct[no_vars] 
 
 corollary BE_induct_step: 
-assumes par: "\<And>p. small (Pfivars p)"
+assumes par: "\<And>p. small (Pfvars p)"
 and st: "step t1 t2"  
-and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfivars p \<Longrightarrow> x \<notin> FFVars e2 \<Longrightarrow> (x \<in> FFVars e1 \<Longrightarrow> x \<notin> FFVars e2) \<Longrightarrow> 
-  R p (iApp (iLam x e1) e2) (itvsubst (VVr(x := e2)) e1)"
-and iAppL: "\<And>e1 e1' e2 p. 
+and Beta: "\<And>xs e1 es2 p. 
+  sset xs \<inter> Pfvars p = {} \<Longrightarrow> sset xs \<inter> \<Union> (FFVars ` sset es2) = {} \<Longrightarrow> 
+  sdistinct xs \<Longrightarrow> 
+  R p (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
+and iAppL: "\<And>e1 e1' es2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
-  R p (iApp e1 e2) (iApp e1' e2)"
-and iAppR: "\<And>e1 e2 e2' p. 
-  step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
-  R p (iApp e1 e2) (iApp e1 e2')"
-and Xi: "\<And>e e' x p. 
-  x \<notin> Pfivars p \<Longrightarrow> 
+  R p (iApp e1 es2) (iApp e1' es2)"
+and iAppR: "\<And>e1 es2 i e2' p. 
+  step (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R p' (es2 !! i) e2') \<Longrightarrow> 
+  R p (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
+and Xi: "\<And>e e' xs p. 
+  sset xs \<inter> Pfvars p = {} \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
-  R p (iLam x e) (iLam x e')" 
+  R p (iLam xs e) (iLam xs e')" 
 shows "R p t1 t2"
 unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
@@ -402,7 +404,7 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
     subgoal unfolding step_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding step_I[symmetric] apply(elim disjE exE)
-      subgoal for x e1 e2  using Beta[of x p e2 e1] by auto
+      subgoal for xs e1 es2 using Beta[of xs p es2 e1] by force
       subgoal using iAppL by auto  
       subgoal using iAppR by auto  
       subgoal using Xi by auto . . .

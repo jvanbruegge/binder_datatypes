@@ -31,9 +31,6 @@ thm step_def
 
 type_synonym T = "trm \<times> trm"
 
-(* type_synonym V = "var list" (* in this case, could have also taken to be 'a option; 
-and the most uniform approach would have been 'a + unit + 'a + 'a *) *)
-
 definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
 "Tmap f \<equiv> map_prod (rrename_term f) (rrename_term f)"
 

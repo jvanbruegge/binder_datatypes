@@ -1,5 +1,5 @@
 theory FixedUncountableVars
-imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set" (* "thys/MRBNF_Recursor" *)
+imports "../Prelim/Card_Prelim" 
 begin
 
 (* We take a number of suc-Aleph0 ivariables *)
@@ -19,9 +19,6 @@ proof-
   finally show ?thesis .
 qed
 
-lemma le_card_ivar: "natLeq <o cardSuc natLeq"
-using cardSuc_greater natLeq_Card_order by blast
-
 lemma infinite_ivar: "infinite (UNIV::ivar set)"
 using Field_natLeq bij_betw_Rep_ivar bij_betw_finite natLeq_Card_order by fastforce
 
@@ -29,14 +26,10 @@ lemma regularCard_ivar: "regularCard |UNIV::ivar set|"
 using Cinfinite_cardSuc card_ivar natLeq_Cinfinite ordIso_symmetric
 regularCard_cardSuc regularCard_ordIso by blast
 
-lemma countable_iff_lq_natLeq: "countable A \<longleftrightarrow> |A| \<le>o natLeq"
-unfolding countable_def
-by (metis Field_card_of UNIV_I card_of_mono2 card_of_nat card_of_ordLeq ordLeq_ordIso_trans subsetI)
-
 lemma countable_iff_le_card_ivar: "countable A \<longleftrightarrow> |A| <o |UNIV::ivar set|"
 proof-
   have "countable A \<longleftrightarrow> |A| <o cardSuc natLeq"
-  unfolding countable_iff_lq_natLeq
+  unfolding countable_card_le_natLeq
   by (simp add: natLeq_Card_order)
   also have "\<dots> \<longleftrightarrow> |A| <o |UNIV::ivar set|"
     by (meson card_ivar not_ordLess_ordIso ordIso_iff_ordLeq ordLeq_iff_ordLess_or_ordIso ordLeq_transitive)

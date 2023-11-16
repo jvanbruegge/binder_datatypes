@@ -1,56 +1,17 @@
 theory ILC
-imports "../MRBNF_Recursor" "HOL-Library.Stream"
+imports "../MRBNF_Recursor" 
  "../Instantiation_Infrastructure/FixedUncountableVars"
  "../Instantiation_Infrastructure/Swapping_vs_Permutation"
  "../General_Customization"
+ "../Prelim/More_Stream"
 begin
 
-
-(* More on streams: *)
-
-definition sdistinct where 
-"sdistinct xs \<equiv> \<forall>i j. i \<noteq> j \<longrightarrow> snth xs i \<noteq> snth xs j"
-
-lemmas stream.set_map[simp] lemmas stream.map_id[simp]
-
-lemma sset_natLeq: "|sset vs| \<le>o natLeq"
-by (metis card_of_image countable_card_of_nat countable_iff_lq_natLeq sset_range)
-
-definition theN where 
-"theN vs v \<equiv> SOME i. snth vs i = v"
-
-lemma theN: "v \<in> sset vs \<Longrightarrow> snth vs (theN vs v) = v"
-unfolding theN_def apply(rule someI_ex) by (metis imageE sset_range)
-
-lemma theN_inj1: "sdistinct vs \<Longrightarrow> v \<in> sset vs \<Longrightarrow>  
-  snth vs i = snth vs (theN vs v) \<Longrightarrow> i = theN vs v"
-using theN[of v vs] unfolding sdistinct_def by fastforce
-
-lemma theN_inj[simp]: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
-  snth vs (theN vs v1) = snth vs (theN vs v2) \<Longrightarrow> v1 = v2"
-using theN_inj1 by (simp add: ILC.theN)
-
-lemma inj_on_theN: "sdistinct vs \<Longrightarrow> inj_on (theN vs) (sset vs)"
-unfolding inj_on_def by auto
-
-lemma surj_theN: "sdistinct vs \<Longrightarrow> theN vs ` (sset vs) = UNIV"
-unfolding image_def by auto (metis sdistinct_def snth_sset theN)
-
-lemma bij_betw_theN: "sdistinct vs \<Longrightarrow> bij_betw (theN vs) (sset vs) UNIV"
-unfolding bij_betw_def using inj_on_theN surj_theN by auto
-
-lemma theN_snth[simp]: "sdistinct vs \<Longrightarrow> theN vs (snth vs i) = i"
-by (metis snth_sset theN theN_inj1)
-
-
-
-(* *)
 
 context begin
 ML_file \<open>../../Tools/binder_induction.ML\<close>
 end
 
-(* DATATYPE DECLARTION  *)
+(* DATATYPE DECLARATION  *)
 
 declare [[inductive_internals]]
 
@@ -205,6 +166,19 @@ by (simp add: finite_card_var fsupp_def supp_def)
 
 (* *)
 
+lemma itrm_strong_induct[consumes 1, case_names iVar iApp iLam]: 
+"|A| <o |UNIV::ivar set|  
+\<Longrightarrow>
+(\<And>x. P (iVar (x::ivar))) 
+\<Longrightarrow>
+(\<And>t1 ts2. P t1 \<Longrightarrow> (\<And>z. z \<in> sset ts2 \<Longrightarrow> P z) \<Longrightarrow> P (iApp t1 ts2)) 
+\<Longrightarrow> 
+(\<And>xs t. sset xs \<inter> A = {} \<Longrightarrow> P t \<Longrightarrow> P (iLam xs t)) 
+\<Longrightarrow> 
+P t"
+apply(rule iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
+by auto
+
 (* Enabling some simplification rules: *)
 lemmas iterm.tvsubst_VVr[simp] 
 lemmas iterm.FVars_VVr[simp]
@@ -282,18 +256,7 @@ proposition rrename_simps[simp]:
 thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
 
 
-lemma itrm_strong_induct[consumes 1, case_names iVar iApp iLam]: 
-"|A| <o |UNIV::ivar set|  
-\<Longrightarrow>
-(\<And>x. P (iVar (x::ivar))) 
-\<Longrightarrow>
-(\<And>t1 ts2. P t1 \<Longrightarrow> (\<And>z. z \<in> sset ts2 \<Longrightarrow> P z) \<Longrightarrow> P (iApp t1 ts2)) 
-\<Longrightarrow> 
-(\<And>xs t. sset xs \<inter> A = {} \<Longrightarrow> P t \<Longrightarrow> P (iLam xs t)) 
-\<Longrightarrow> 
-P t"
-apply(rule iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
-by auto
+
 
 lemma rrename_cong:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" and g: "bij g" "|supp g| <o |UNIV::ivar set|"
@@ -600,6 +563,30 @@ proof-
       subgoal using IImsupp_rrename_su' b s(1) by blast . .
 qed
 
+(* Unary (term-for-var) substitution versus renaming: *)
+
+lemma supp_SSupp_iVar_le[simp]: "SSupp (iVar \<circ> \<sigma>) = supp \<sigma>" 
+unfolding supp_def SSupp_def by simp
+
+lemma rrename_eq_itvsubst_iVar: 
+assumes "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|" 
+shows "rrename \<sigma> = itvsubst (iVar o \<sigma>)"
+proof
+  fix t 
+  have 0: "|supp \<sigma>| <o |UNIV::ivar set|" using assms by auto
+  have 00: " |IImsupp (iVar \<circ> \<sigma>)| <o |UNIV::ivar set|" 
+    using SSupp_IImsupp_bound by (metis "0" supp_SSupp_iVar_le)
+  show "rrename \<sigma> t = itvsubst (iVar o \<sigma>) t" using 00 assms apply(induct t rule: itrm_strong_induct)
+    subgoal for x by (simp add: "0")
+    subgoal by (auto intro: stream.map_cong) 
+    subgoal for xs t 
+    by (simp add: IImsupp_def disjoint_iff not_in_supp_alt stream.map_ident_strong) . 
+qed
+     
+lemma rrename_eq_itvsubst_iVar': 
+"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> rrename \<sigma> e = itvsubst (iVar o \<sigma>) e"
+using rrename_eq_itvsubst_iVar by auto
+
 (* Equivariance of unary substitution: *)
 
 lemma itvsubst_rrename_comp[simp]:
@@ -679,8 +666,6 @@ apply(rule iterm.rrename_cong_ids) by auto
 
 (* *)
 
-
-
 lemma bij_betw_snth: 
 assumes V: "|V::ivar set| <o |UNIV::ivar set|"
 shows "\<exists>f vs'. bij_betw f (sset vs) (sset vs') \<and> V \<inter> sset vs' = {} \<and> smap f vs = vs'"
@@ -688,7 +673,7 @@ proof-
   have "|UNIV - V| =o |UNIV::ivar set|" apply(rule card_of_Un_diff_infinite) 
   using V by (auto simp: infinite_ivar)
   hence "|sset vs| <o |UNIV - V|"  
-    by (meson countable_card_ivar countable_iff_lq_natLeq ordIso_symmetric ordLess_ordIso_trans sset_natLeq)
+    by (meson countable_card_ivar countable_card_le_natLeq ordIso_symmetric ordLess_ordIso_trans sset_natLeq)
   then obtain f where f: "inj_on f (sset vs)" "f ` (sset vs) \<subseteq> UNIV - V"
   by (meson card_of_ordLeq ordLess_imp_ordLeq)
   show ?thesis apply(intro exI[of _ f] exI[of _ "smap f vs"])
@@ -844,43 +829,70 @@ apply(rule rrename_cong)
 by (auto simp: iterm_pre.supp_comp_bound)
 
 
-(* *)
+(*   *)
+(* Substitution from a sequence (here, a stream) *)
 
-(*
-term "swappingFvars swap FFVars"
-term "permutFvars (\<lambda>f t. rrename t f) FFVars"
+(* "making" the substitution function that maps each xs_i to es_i; only 
+meaningful if xs is non-repetitive *)
+definition "mkSubst xs es \<equiv> \<lambda>x. if sdistinct xs \<and> x \<in> sset xs then snth es (theN xs x) else iVar x"
 
-lemma swappingFvars_swap_FFVars: "swappingFvars swap FFVars"
-unfolding swappingFvars_def apply auto
-  apply (metis id_swapTwice rrename_o_swap term.rrename_ids) 
-  using sw_invol2 apply metis 
-  by (metis (no_types, lifting) image_iff sw_invol2)
+lemma mkSubst_snth[simp]: "sdistinct xs \<Longrightarrow> mkSubst xs es (snth xs i) = snth es i"
+unfolding mkSubst_def by auto
 
-lemma nswapping_swap: "nswapping swap"
-unfolding nswapping_def apply auto
-apply (metis id_swapTwice rrename_o_swap term.rrename_ids)
-by (metis id_swapTwice2 rrename_o_swap)
+lemma mkSubst_idle[simp]: "\<not> sdistinct xs \<or> \<not> x \<in> sset xs \<Longrightarrow> mkSubst xs es x = iVar x"
+unfolding mkSubst_def by auto
 
+lemma card_sset_ivar: "|sset xs| <o |UNIV::ivar set|"
+using countable_card_ivar countable_card_le_natLeq sset_natLeq by auto
 
-lemma permutFvars_rrename_FFVar: "permutFvars (\<lambda>t f. rrename f (t::trm)) FFVars"
-unfolding permutFvars_def apply auto
-  apply (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps) 
-  apply (simp add: finite_iff_le_card_var fsupp_def supp_def)
-  apply (simp add: finite_iff_le_card_var fsupp_def image_in_bij_eq supp_def) .
+lemma SSupp_mkSubst[simp,intro]: "|SSupp (mkSubst xs es)| <o |UNIV::ivar set|"
+proof-
+  have "SSupp (mkSubst xs es) \<subseteq> sset xs"
+  unfolding SSupp_def by auto (metis mkSubst_idle)
+  thus ?thesis by (simp add: card_of_subset_bound card_sset_ivar)
+qed
 
-lemma permut_rrename: "permut (\<lambda>t f. rrename f (t::trm))"
-unfolding permut_def apply auto
-by (simp add: finite_iff_le_card_var fsupp_def supp_def term.rrename_comps)
+lemma mkSubst_smap_rrename: 
+assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|" 
+shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma> = rrename \<sigma> \<circ> mkSubst xs es2"
+proof(rule ext)  
+  fix x
+  show "(mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma>) x = (rrename \<sigma> \<circ> mkSubst xs es2) x"
+  proof(cases "sdistinct xs \<and> x \<in> sset xs")
+    case False
+    hence F: "\<not> sdistinct (smap \<sigma> xs) \<or> \<not> \<sigma> x \<in> sset (smap \<sigma> xs)"
+    using s by auto
+    thus ?thesis using F False
+    unfolding o_def apply(subst mkSubst_idle) 
+      subgoal by auto
+      subgoal using s by auto .
+  next
+    case True
+    then obtain i where Tr: "sdistinct xs" and Tri: "x = snth xs i" by (metis theN)
+    hence T: "sdistinct (smap \<sigma> xs)" and Ti: "\<sigma> x = snth (smap \<sigma> xs) i"
+    using s by auto
+    thus ?thesis using T Tr
+    unfolding o_def Ti apply(subst mkSubst_snth) 
+      subgoal by auto
+      subgoal unfolding Tri by auto . 
+  qed
+qed
 
-lemma toSwp_rrename: "toSwp (\<lambda>t f. rrename f t) = swap"
-by (meson toSwp_def)
+lemma mkSubst_smap_rrename_inv: 
+assumes "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|" 
+shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) = rrename \<sigma> \<circ> mkSubst xs es2 o inv \<sigma>"
+unfolding mkSubst_smap_rrename[OF assms, symmetric] using assms unfolding fun_eq_iff by auto
 
-lemma fsupp_supp: "fsupp f \<longleftrightarrow> |supp f| <o |UNIV::var set|"
-unfolding fsupp_def supp_def using finite_iff_le_card_var by blast
+lemma card_SSupp_itvsubst_mkSubst_rrename_inv: 
+"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> |SSupp (itvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (iVar \<circ> \<sigma>))| <o |UNIV::ivar set|"
+by (metis SSupp_itvsubst_bound SSupp_mkSubst mkSubst_smap_rrename_inv supp_SSupp_iVar_le)
 
-lemma toPerm_swap: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> toPerm swap t f = rrename f t"
-apply(subst toSwp_rrename[symmetric])
-by (simp add: fsupp_supp permut_rrename toPerm_toSwp)
-*)
+lemma card_SSupp_mkSubst_rrename_inv: 
+"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set|  \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV::ivar set|"
+by (metis SSupp_mkSubst mkSubst_smap_rrename_inv)
+
+lemma mkSubst_smap: "bij f \<Longrightarrow> sdistinct xs \<Longrightarrow> z \<in> sset xs \<Longrightarrow> mkSubst (smap f xs) es (f z) = mkSubst xs es z"
+by (smt (verit, ccfv_threshold) bij_sdistinct_smap mkSubst_snth snth_smap theN)
+
 
 end

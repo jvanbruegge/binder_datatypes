@@ -1,5 +1,5 @@
 theory Card_Prelim
-  imports "HOL-Cardinals.Cardinals"
+  imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set_Type"
 begin
 
 lemma regularCard_Un:
@@ -41,5 +41,14 @@ lemma type_definition_card_UNIV:
 
 lemma Cinfinite_card_trans: "Cinfinite r \<Longrightarrow> r \<le>o |q| \<Longrightarrow> Cinfinite |q|"
   using cinfinite_mono card_of_Card_order by blast
+
+lemma le_card_ivar: "natLeq <o cardSuc natLeq"
+using cardSuc_greater natLeq_Card_order by blast
+
+(*
+lemma countable_iff_lq_natLeq: "countable A \<longleftrightarrow> |A| \<le>o natLeq"
+unfolding countable_def
+by (metis Field_card_of UNIV_I card_of_mono2 card_of_nat card_of_ordLeq ordLeq_ordIso_trans subsetI)
+*)
 
 end

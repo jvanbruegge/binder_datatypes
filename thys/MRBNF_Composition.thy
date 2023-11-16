@@ -1,5 +1,5 @@
 theory MRBNF_Composition
-  imports Prelim
+  imports "Prelim/Prelim"
   keywords
     "print_mrbnfs" :: diag and
     "mrbnf" :: thy_goal

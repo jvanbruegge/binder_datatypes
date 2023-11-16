@@ -3,6 +3,7 @@ imports "../MRBNF_Recursor" "HOL-Library.FSet"
  "../Instantiation_Infrastructure/FixedCountableVars"
  "../Instantiation_Infrastructure/Swapping_vs_Permutation"
  "../General_Customization"
+ "../Prelim/More_List"
 begin
 
 context begin
@@ -93,6 +94,19 @@ by (simp add: finite_card_var fsupp_def supp_def)
 
 (* *)
 
+lemma trm_strong_induct[consumes 1, case_names Var App Lam]: 
+"|A| <o |UNIV::var set|  
+\<Longrightarrow>
+(\<And>x. P (Var (x::var))) 
+\<Longrightarrow>
+(\<And>t1 t2. P t1 \<Longrightarrow> P t2 \<Longrightarrow> P (App t1 t2)) 
+\<Longrightarrow> 
+(\<And>x t. x \<notin> A \<Longrightarrow> P t \<Longrightarrow> P (Lam x t)) 
+\<Longrightarrow> 
+P t"
+apply(rule term.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
+by auto
+
 (* Enabling some simplification rules: *)
 lemmas term.tvsubst_VVr[simp] term.FVars_VVr[simp]
 term.rrename_ids[simp] term.rrename_cong_ids[simp]
@@ -175,7 +189,7 @@ and not the above more general thoerem? *)
 using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: term.strong_induct)
 using assms apply auto by (metis not_in_supp_alt)+
 
-lemma itvsubst_cong:
+lemma tvsubst_cong:
 assumes f: "|SSupp f| <o |UNIV::var set|" and g: "|SSupp g| <o |UNIV::var set|"
 and eq: "(\<And>z. (z::var) \<in> FFVars P \<Longrightarrow> f z = g z)"
 shows "tvsubst f P = tvsubst g P"
@@ -472,6 +486,31 @@ proof-
       subgoal using IImsupp_rrename_su' b s(1) by blast . .
 qed
 
+
+(* Unary (term-for-var) substitution versus renaming: *)
+
+lemma supp_SSupp_Var_le[simp]: "SSupp (Var \<circ> \<sigma>) = supp \<sigma>" 
+unfolding supp_def SSupp_def by simp
+
+lemma rrename_eq_tvsubst_Var: 
+assumes "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|" 
+shows "rrename \<sigma> = tvsubst (Var o \<sigma>)"
+proof
+  fix t 
+  have 0: "|supp \<sigma>| <o |UNIV::var set|" using assms by auto
+  have 00: " |IImsupp (Var \<circ> \<sigma>)| <o |UNIV::var set|" 
+    using SSupp_IImsupp_bound by (metis "0" supp_SSupp_Var_le)
+  show "rrename \<sigma> t = tvsubst (Var o \<sigma>) t" using 00 assms apply(induct t rule: trm_strong_induct)
+    subgoal for x by (simp add: "0")
+    subgoal by auto
+    subgoal for x t 
+    by (simp add: IImsupp_def disjoint_iff not_in_supp_alt) . 
+qed
+     
+lemma rrename_eq_tvsubst_Var': 
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> rrename \<sigma> e = tvsubst (Var o \<sigma>) e"
+using rrename_eq_tvsubst_Var by auto
+
 (* Equivariance of unary substitution: *)
 
 lemma tvsubst_rrename_comp[simp]:
@@ -683,5 +722,80 @@ unfolding fsupp_def supp_def using finite_iff_le_card_var by blast
 lemma toPerm_swap: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> toPerm swap t f = rrename f t"
 apply(subst toSwp_rrename[symmetric])
 by (simp add: fsupp_supp permut_rrename toPerm_toSwp)
+
+
+(* *)
+(* Substitution from a sequence (here, a list) *)
+
+(* "making" the substitution function that maps each xs_i to es_i; only 
+meaningful if xs is non-repetitive *)
+definition "mkSubst xs es \<equiv> \<lambda>x. if distinct xs \<and> x \<in> set xs then nth es (theN xs x) else Var x"
+
+lemma mkSubst_nth[simp]: "distinct xs \<Longrightarrow> i < length xs \<Longrightarrow> mkSubst xs es (nth xs i) = nth es i"
+unfolding mkSubst_def by auto
+
+lemma mkSubst_idle[simp]: "\<not> distinct xs \<or> \<not> x \<in> set xs \<Longrightarrow> mkSubst xs es x = Var x"
+unfolding mkSubst_def by auto
+
+lemma card_set_var: "|set xs| <o |UNIV::var set|"
+by (simp add: infinite_var) 
+
+lemma SSupp_mkSubst[simp,intro]: "|SSupp (mkSubst xs es)| <o |UNIV::var set|"
+proof-
+  have "SSupp (mkSubst xs es) \<subseteq> set xs"
+  unfolding SSupp_def by auto (metis mkSubst_idle)
+  thus ?thesis by (simp add: card_of_subset_bound card_set_var)
+qed
+
+lemma mkSubst_map_rrename: 
+assumes s: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|" 
+and l: "length es2 = length xs"
+shows "mkSubst (map \<sigma> xs) (map (rrename \<sigma>) es2) \<circ> \<sigma> = rrename \<sigma> \<circ> mkSubst xs es2"
+proof(rule ext)  
+  fix x
+  show "(mkSubst (map \<sigma> xs) (map (rrename \<sigma>) es2) \<circ> \<sigma>) x = (rrename \<sigma> \<circ> mkSubst xs es2) x"
+  proof(cases "distinct xs \<and> x \<in> set xs")
+    case False
+    hence F: "\<not> distinct (map \<sigma> xs) \<or> \<not> \<sigma> x \<in> set (map \<sigma> xs)"
+    using s by auto
+    thus ?thesis using F False
+    unfolding o_def apply(subst mkSubst_idle) 
+      subgoal by auto
+      subgoal using s by auto .
+  next
+    case True
+    then obtain i where i: "i < length xs" and Tr: "distinct xs" and Tri: "x = nth xs i" by (metis theN)
+    hence T: "distinct (map \<sigma> xs)" and Ti: "\<sigma> x = nth (map \<sigma> xs) i"
+    using s by auto
+    thus ?thesis using T Tr
+    unfolding o_def Ti apply(subst mkSubst_nth) 
+      subgoal by auto
+      subgoal using i unfolding Tri by auto 
+      subgoal using l i unfolding Tri by auto .
+  qed
+qed
+
+lemma mkSubst_map_rrename_inv: 
+assumes "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|" "length es2 = length xs"
+shows "mkSubst (map \<sigma> xs) (map (rrename \<sigma>) es2) = rrename \<sigma> \<circ> mkSubst xs es2 o inv \<sigma>"
+unfolding mkSubst_map_rrename[OF assms, symmetric] using assms unfolding fun_eq_iff by auto
+
+lemma card_SSupp_itvsubst_mkSubst_rrename_inv: 
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+ length es = length xs \<Longrightarrow> 
+|SSupp (tvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (Var \<circ> \<sigma>))| <o |UNIV::var set|"
+by (metis SSupp_tvsubst_bound SSupp_mkSubst mkSubst_map_rrename_inv supp_SSupp_Var_le)
+
+lemma card_SSupp_mkSubst_rrename_inv: 
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+ length es = length xs \<Longrightarrow> 
+ |SSupp (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>)| <o |UNIV::var set|"
+by (metis SSupp_mkSubst mkSubst_map_rrename_inv)
+
+lemma mkSubst_smap: "bij f \<Longrightarrow> distinct xs \<Longrightarrow> z \<in> set xs \<Longrightarrow> 
+ length es = length xs \<Longrightarrow> 
+ mkSubst (map f xs) es (f z) = mkSubst xs es z"
+by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map) 
+
 
 end

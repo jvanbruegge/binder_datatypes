@@ -4,6 +4,28 @@ begin
 
 (* More on streams: *)
 
+(* update a stream at an index: *)
+definition "supd xs i y \<equiv> shift (stake i xs) (SCons y (sdrop (Suc i) xs))"
+
+lemma snth_supd: "snth (supd xs i y) j = (if i = j then y else snth xs j)"
+unfolding supd_def apply(split if_splits) apply safe
+  subgoal by auto
+  subgoal apply(cases "j < i") 
+    subgoal by auto 
+    subgoal by simp (metis Suc_diff_Suc add_diff_inverse_nat not_less_iff_gr_or_eq sdrop_snth 
+                     sdrop_stl snth.simps(2) snth_Stream) . .
+
+lemma snth_supd_same[simp]: "snth (supd xs i y) i = y"
+unfolding snth_supd by auto
+
+lemma snth_supd_diff[simp]: "j \<noteq> i \<Longrightarrow> snth (supd xs i y) j = snth xs j"
+unfolding snth_supd by auto
+
+lemma smap_supd[simp]: "smap f (supd xs i y) = supd (smap f xs) i (f y)"
+by (simp add: supd_def)
+
+(* *)
+
 coinductive sdistinct where
   "x \<notin> sset s \<Longrightarrow> sdistinct s \<Longrightarrow> sdistinct (x ## s)"
 

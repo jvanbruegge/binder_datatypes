@@ -1,20 +1,10 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Beta 
-imports LC "../Instantiation_Infrastructure/Curry_LFP" 
-"../Generic_Barendregt_Enhanced_Rule_Induction"
+imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
-
-(* INSTATIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
-
-print_locales
-interpretation Small where dummy = "undefined :: var" 
-apply standard
-  apply (simp add: infinite_var)  
-  using var_term_pre_class.regular by blast
- 
 
 (* *)
 

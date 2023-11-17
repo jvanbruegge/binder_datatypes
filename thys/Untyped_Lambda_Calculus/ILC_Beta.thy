@@ -1,53 +1,20 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
-for the (untyped) lambda-calculus *)
+for Mazza's infinitary lambda-calculus *)
 theory ILC_Beta 
-imports ILC "../Instantiation_Infrastructure/Curry_LFP" 
-"../Generic_Barendregt_Enhanced_Rule_Induction"
+imports ILC2 "../Instantiation_Infrastructure/Curry_LFP" 
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
-(* INSTANTIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
-
-print_locales
-interpretation Small where dummy = "undefined :: ivar" 
-apply standard
-  apply (simp add: infinite_ivar)
-  using regularCard_ivar .  
- 
-
 (* *)
 
-(* update a stream at an index: *)
-definition "supd xs i y \<equiv> shift (stake i xs) (SCons y (sdrop (Suc i) xs))"
+inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
+  Beta: "istep (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
+| iAppL: "istep e1 e1' \<Longrightarrow> istep (iApp e1 es2) (iApp e1' es2)"
+| iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
+| Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
 
-lemma snth_supd: "snth (supd xs i y) j = (if i = j then y else snth xs j)"
-unfolding supd_def apply(split if_splits) apply safe
-  subgoal by auto
-  subgoal apply(cases "j < i") 
-    subgoal by auto 
-    subgoal by simp (metis Suc_diff_Suc add_diff_inverse_nat not_less_iff_gr_or_eq sdrop_snth 
-                     sdrop_stl snth.simps(2) snth_Stream) . .
-
-lemma snth_supd_same[simp]: "snth (supd xs i y) i = y"
-unfolding snth_supd by auto
-
-lemma snth_supd_diff[simp]: "j \<noteq> i \<Longrightarrow> snth (supd xs i y) j = snth xs j"
-unfolding snth_supd by auto
-
-lemma smap_supd[simp]: "smap f (supd xs i y) = supd (smap f xs) i (f y)"
-by (simp add: supd_def)
-
-
-(* *)
-
-inductive step :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
-  Beta: "step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
-| iAppL: "step e1 e1' \<Longrightarrow> step (iApp e1 es2) (iApp e1' es2)"
-| iAppR: "step (snth es2 i) e2' \<Longrightarrow> step (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
-| Xi: "step e e' \<Longrightarrow> step (iLam xs e) (iLam xs e')"
-
-thm step_def
+thm istep_def
 
 
 (* INSTANTIATING THE Components LOCALE: *)
@@ -71,7 +38,7 @@ apply standard unfolding ssbij_def Tmap_def
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> ivar set \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>R B t.  
-         (\<exists>xs e1 es2. B = dsset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (mkSubst xs es2) e1)
+         (\<exists>xs e1 es2. B = dsset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (imkSubst xs es2) e1)
          \<or>
          (\<exists>e1 e1' es2. B = {} \<and> fst t = iApp e1 es2 \<and> snd t = iApp e1' es2 \<and> 
                        R (e1,e1')) 
@@ -98,16 +65,16 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (rrename_iterm \<sigma>) es2"])  
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: iterm.rrename_comps) apply(subst rrename_itvsubst_comp) apply auto
-  apply(subst mkSubst_smap_rrename_inv) unfolding ssbij_def apply auto 
+  apply(subst imkSubst_smap_rrename_inv) unfolding ssbij_def apply auto 
   apply(subst rrename_eq_itvsubst_iVar'[of _ e1]) unfolding ssbij_def apply auto
   apply(subst itvsubst_comp) 
-    subgoal by (metis SSupp_mkSubst mkSubst_smap_rrename_inv)
+    subgoal by (metis SSupp_imkSubst imkSubst_smap_rrename_inv)
     subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
     subgoal apply(rule itvsubst_cong)
       subgoal using SSupp_rrename_bound by blast
-      subgoal using card_SSupp_itvsubst_mkSubst_rrename_inv ssbij_def by auto
+      subgoal using card_SSupp_itvsubst_imkSubst_rrename_inv ssbij_def by auto
    subgoal for x apply simp apply(subst iterm.subst(1))
-      subgoal using card_SSupp_mkSubst_rrename_inv[unfolded ssbij_def] by auto
+      subgoal using card_SSupp_imkSubst_rrename_inv[unfolded ssbij_def] by auto
       subgoal by simp . . . . . 
   (* *)
   subgoal apply(rule disjI4_2)
@@ -132,13 +99,6 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "rrename_iterm \<sigma> e"]) apply(rule exI[of _ "rrename_iterm \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: iterm.rrename_comps) . . . 
-
-
-lemma small_dsset[simp,intro]: "small (dsset xs)"
-by (simp add: card_dsset_ivar small_def)
-
-lemma small_image_sset[simp,intro]: "inj_on f (dsset xs) \<Longrightarrow> small (f ` dsset xs)"
-by (metis countable_card_ivar countable_card_le_natLeq dsset.rep_eq small_def sset_natLeq stream.set_map)
 
 lemma Tvars_dsset: "(Tfvars t - dsset xs) \<inter> dsset xs = {}" "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tfvars small_def)
@@ -170,7 +130,7 @@ unfolding G_def Tmap_def apply safe
             subgoal by blast
             subgoal by (simp add: SSupp_itvsubst_bound)
             subgoal unfolding id_on_def
-            by simp (metis (no_types, lifting) bij_not_eq_twice imageE mkSubst_idle mkSubst_smap dstream.set_map)
+            by simp (metis (no_types, lifting) bij_not_eq_twice imageE imkSubst_idle imkSubst_smap dstream.set_map)
   . . . . . .
   (* *)
   subgoal for e1 e1' es2 
@@ -221,8 +181,8 @@ apply standard
 
 (* *)
 
-lemma step_I: "step t1 t2 = iLam.I (t1,t2)" 
-unfolding step_def iLam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma istep_I: "istep t1 t2 = iLam.I (t1,t2)" 
+unfolding istep_def iLam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE)
@@ -245,36 +205,35 @@ subgoal for R tt1 tt2 apply(rule iffI)
     subgoal apply(rule disjI4_4) by auto . . .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
-thm step.induct[no_vars] 
+thm istep.induct[no_vars] 
 
-corollary BE_induct_step: 
+corollary BE_induct_istep: 
 assumes par: "\<And>p. small (Pfvars p)"
-and st: "step t1 t2"  
+and st: "istep t1 t2"  
 and Beta: "\<And>xs e1 es2 p. 
   dsset xs \<inter> Pfvars p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
-  R p (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
+  R p (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
 and iAppL: "\<And>e1 e1' es2 p. 
-  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
+  istep e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
   R p (iApp e1 es2) (iApp e1' es2)"
 and iAppR: "\<And>e1 es2 i e2' p. 
-  step (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R p' (es2 !! i) e2') \<Longrightarrow> 
+  istep (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R p' (es2 !! i) e2') \<Longrightarrow> 
   R p (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 and Xi: "\<And>e e' xs p. 
   dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
-  step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
+  istep e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (iLam xs e) (iLam xs e')" 
 shows "R p t1 t2"
-unfolding step_I
+unfolding istep_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
   subgoal using par st apply(elim iLam.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-    subgoal unfolding step_I by simp
+    subgoal unfolding istep_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
-    unfolding step_I[symmetric] apply(elim disjE exE)
+    unfolding istep_I[symmetric] apply(elim disjE exE)
       subgoal for xs e1 es2 using Beta[of xs p es2 e1] by force
       subgoal using iAppL by auto  
       subgoal using iAppR by auto  
       subgoal using Xi by auto . . .
-
 
 end

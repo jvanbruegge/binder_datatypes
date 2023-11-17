@@ -8,7 +8,12 @@ print_locales
 interpretation Small where dummy = "undefined :: ivar" 
 apply standard
   apply (simp add: infinite_ivar)
-  using regularCard_ivar .  
+  using regularCard_ivar . 
+
+instance ivar :: infinite_regular
+apply standard 
+  using Field_natLeq infinite_iff_card_of_nat infinite_ivar apply auto[]
+  using regularCard_ivar by blast
 
 lemma small_dsset[simp,intro]: "small (dsset xs)"
 by (simp add: card_dsset_ivar small_def)

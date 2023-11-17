@@ -114,6 +114,8 @@ lift_definition dsset :: "'a :: infinite_regular dstream \<Rightarrow> 'a set" i
 
 lift_definition dsnth :: "'a :: infinite_regular dstream \<Rightarrow> nat \<Rightarrow> 'a" (infixl \<open>!#!\<close> 100) is "snth" .
 
+lift_definition dtheN :: "'a :: infinite_regular dstream \<Rightarrow> 'a \<Rightarrow> nat" is "theN" .
+
 lemma countable_sset:
   fixes s
   notes * = LeastI[where P="\<lambda>i. s !! i = s !! _", OF refl]
@@ -131,8 +133,37 @@ apply transfer using sset_range by metis
 lemma dsset_dsmap[simp]: "inj_on f (dsset vs) \<Longrightarrow> dsset (dsmap f vs) = f ` dsset vs"
 apply transfer by auto
 
-lemma dsmap_alt: "inj_on f (dsset vs) \<Longrightarrow>dsmap f vs = vs' \<longleftrightarrow> (\<forall>n. f (dsnth vs n) = dsnth vs' n)" 
+lemma dsmap_alt: "inj_on f (dsset vs) \<Longrightarrow> dsmap f vs = vs' \<longleftrightarrow> (\<forall>n. f (dsnth vs n) = dsnth vs' n)" 
 apply transfer by (auto simp: smap_alt)
+
+lemma dsnth_dsmap: "inj_on f (dsset vs) \<Longrightarrow> dsnth (dsmap f vs) n = f (dsnth vs n)"
+apply transfer using snth_smap by metis
+
+(* *)
+
+
+lemma dtheN: "v \<in> dsset vs \<Longrightarrow> dsnth vs (dtheN vs v) = v"
+apply transfer using theN by metis
+
+lemma dtheN_inj1: "v \<in> dsset vs \<Longrightarrow>  
+  dsnth vs i = dsnth vs (dtheN vs v) \<Longrightarrow> i = dtheN vs v"
+apply transfer using theN_inj1 by metis
+
+lemma dtheN_inj[simp]: "v1 \<in> dsset vs \<Longrightarrow> v2 \<in> dsset vs \<Longrightarrow>
+  dsnth vs (dtheN vs v1) = dsnth vs (dtheN vs v2) \<Longrightarrow> v1 = v2"
+apply transfer using theN_inj by metis
+
+lemma inj_on_dtheN: "inj_on (dtheN vs) (dsset vs)"
+apply transfer using inj_on_theN by metis
+
+lemma surj_dtheN: "dtheN vs ` (dsset vs) = UNIV"
+apply transfer using surj_theN by metis
+
+lemma bij_betw_dtheN: "bij_betw (dtheN vs) (dsset vs) UNIV"
+apply transfer using bij_betw_theN by metis
+
+lemma dtheN_dsnth[simp]: "dtheN vs (dsnth vs i) = i"
+apply transfer using theN_snth by metis
 
 
 end

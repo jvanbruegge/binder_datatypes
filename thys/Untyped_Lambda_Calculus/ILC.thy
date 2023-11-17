@@ -867,31 +867,33 @@ by (auto simp: iterm_pre.supp_comp_bound)
 meaningful if xs is non-repetitive *)
 definition "mkSubst xs es \<equiv> \<lambda>x. if x \<in> dsset xs then snth es (dtheN xs x) else iVar x"
 
-lemma mkSubst_snth[simp]: "sdistinct xs \<Longrightarrow> mkSubst xs es (snth xs i) = snth es i"
+lemma mkSubst_dsnth[simp]: "mkSubst xs es (dsnth xs i) = snth es i"
+unfolding mkSubst_def using dsset_range by auto
+
+lemma mkSubst_idle[simp]: "\<not> x \<in> dsset xs \<Longrightarrow> mkSubst xs es x = iVar x"
 unfolding mkSubst_def by auto
 
-lemma mkSubst_idle[simp]: "\<not> sdistinct xs \<or> \<not> x \<in> sset xs \<Longrightarrow> mkSubst xs es x = iVar x"
-unfolding mkSubst_def by auto
-
-lemma card_sset_ivar: "|sset xs| <o |UNIV::ivar set|"
-using countable_card_ivar countable_card_le_natLeq sset_natLeq by auto
+lemma card_dsset_ivar: "|dsset xs| <o |UNIV::ivar set|"
+using countable_card_ivar countable_card_le_natLeq dsset_natLeq by auto
 
 lemma SSupp_mkSubst[simp,intro]: "|SSupp (mkSubst xs es)| <o |UNIV::ivar set|"
 proof-
-  have "SSupp (mkSubst xs es) \<subseteq> sset xs"
+  have "SSupp (mkSubst xs es) \<subseteq> dsset xs"
   unfolding SSupp_def by auto (metis mkSubst_idle)
-  thus ?thesis by (simp add: card_of_subset_bound card_sset_ivar)
+  thus ?thesis by (simp add: card_of_subset_bound card_dsset_ivar)
 qed
 
 lemma mkSubst_smap_rrename: 
 assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|" 
-shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma> = rrename \<sigma> \<circ> mkSubst xs es2"
+shows "mkSubst (dsmap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma> = rrename \<sigma> \<circ> mkSubst xs es2"
 proof(rule ext)  
   fix x
-  show "(mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma>) x = (rrename \<sigma> \<circ> mkSubst xs es2) x"
-  proof(cases "sdistinct xs \<and> x \<in> sset xs")
+  have inj[simp]: "inj_on \<sigma> (dsset xs)"
+  using s unfolding bij_def inj_on_def by auto
+  show "(mkSubst (dsmap \<sigma> xs) (smap (rrename \<sigma>) es2) \<circ> \<sigma>) x = (rrename \<sigma> \<circ> mkSubst xs es2) x"
+  proof(cases "x \<in> dsset xs")
     case False
-    hence F: "\<not> sdistinct (smap \<sigma> xs) \<or> \<not> \<sigma> x \<in> sset (smap \<sigma> xs)"
+    hence F: "\<not> \<sigma> x \<in> dsset (dsmap \<sigma> xs)"
     using s by auto
     thus ?thesis using F False
     unfolding o_def apply(subst mkSubst_idle) 
@@ -899,31 +901,32 @@ proof(rule ext)
       subgoal using s by auto .
   next
     case True
-    then obtain i where Tr: "sdistinct xs" and Tri: "x = snth xs i" by (metis theN)
-    hence T: "sdistinct (smap \<sigma> xs)" and Ti: "\<sigma> x = snth (smap \<sigma> xs) i"
-    using s by auto
-    thus ?thesis using T Tr
-    unfolding o_def Ti apply(subst mkSubst_snth) 
-      subgoal by auto
-      subgoal unfolding Tri by auto . 
+    then obtain i where Tri: "x = dsnth xs i" by (metis dtheN)
+    hence Ti: "\<sigma> x = dsnth (dsmap \<sigma> xs) i"
+    using s dsmap_alt inj by blast
+    thus ?thesis 
+    unfolding o_def Ti apply(subst mkSubst_dsnth) 
+    unfolding Tri by auto 
   qed
 qed
 
 lemma mkSubst_smap_rrename_inv: 
 assumes "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|" 
-shows "mkSubst (smap \<sigma> xs) (smap (rrename \<sigma>) es2) = rrename \<sigma> \<circ> mkSubst xs es2 o inv \<sigma>"
+shows "mkSubst (dsmap \<sigma> xs) (smap (rrename \<sigma>) es2) = rrename \<sigma> \<circ> mkSubst xs es2 o inv \<sigma>"
 unfolding mkSubst_smap_rrename[OF assms, symmetric] using assms unfolding fun_eq_iff by auto
 
 lemma card_SSupp_itvsubst_mkSubst_rrename_inv: 
-"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> |SSupp (itvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (iVar \<circ> \<sigma>))| <o |UNIV::ivar set|"
+"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> 
+ |SSupp (itvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (iVar \<circ> \<sigma>))| <o |UNIV::ivar set|"
 by (metis SSupp_itvsubst_bound SSupp_mkSubst mkSubst_smap_rrename_inv supp_SSupp_iVar_le)
 
 lemma card_SSupp_mkSubst_rrename_inv: 
-"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set|  \<Longrightarrow> |SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV::ivar set|"
+"bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set|  \<Longrightarrow> 
+|SSupp (rrename \<sigma> \<circ> mkSubst xs es2 \<circ> inv \<sigma>)| <o |UNIV::ivar set|"
 by (metis SSupp_mkSubst mkSubst_smap_rrename_inv)
 
-lemma mkSubst_smap: "bij f \<Longrightarrow> sdistinct xs \<Longrightarrow> z \<in> sset xs \<Longrightarrow> mkSubst (smap f xs) es (f z) = mkSubst xs es z"
-by (smt (verit, ccfv_threshold) bij_sdistinct_smap mkSubst_snth snth_smap theN)
+lemma mkSubst_smap: "bij f \<Longrightarrow> z \<in> dsset xs \<Longrightarrow> mkSubst (dsmap f xs) es (f z) = mkSubst xs es z"
+by (metis bij_betw_def bij_imp_bij_betw dsmap_alt dtheN mkSubst_dsnth) 
 
 
 end

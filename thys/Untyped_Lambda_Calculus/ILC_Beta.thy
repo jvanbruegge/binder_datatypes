@@ -42,8 +42,7 @@ by (simp add: supd_def)
 (* *)
 
 inductive step :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
-  Beta: "sdistinct xs \<Longrightarrow> \<comment> \<open> todo: eventually remoive this -- when using distinct streams \<close>
-         step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
+  Beta: "step (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
 | iAppL: "step e1 e1' \<Longrightarrow> step (iApp e1 es2) (iApp e1' es2)"
 | iAppR: "step (snth es2 i) e2' \<Longrightarrow> step (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "step e e' \<Longrightarrow> step (iLam xs e) (iLam xs e')"
@@ -72,8 +71,7 @@ apply standard unfolding ssbij_def Tmap_def
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> ivar set \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>R B t.  
-         (\<exists>xs e1 es2. B = sset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (mkSubst xs es2) e1 \<and> 
-                      sdistinct xs)
+         (\<exists>xs e1 es2. B = dsset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (mkSubst xs es2) e1)
          \<or>
          (\<exists>e1 e1' es2. B = {} \<and> fst t = iApp e1 es2 \<and> snd t = iApp e1' es2 \<and> 
                        R (e1,e1')) 
@@ -81,7 +79,7 @@ where
          (\<exists>e1 es2 i e2'. B = {} \<and> fst t = iApp e1 es2 \<and> snd t = iApp e1 (supd es2 i e2') \<and> 
                          R (snth es2 i,e2')) 
          \<or>
-         (\<exists>xs e e'. B = sset xs \<and> fst t = iLam xs e \<and> snd t = iLam xs e' \<and> R (e,e'))"
+         (\<exists>xs e e'. B = dsset xs \<and> fst t = iLam xs e \<and> snd t = iLam xs e' \<and> R (e,e'))"
 
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
@@ -95,7 +93,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for xs e1 es2
-  apply(rule exI[of _ "smap \<sigma> xs"])
+  apply(rule exI[of _ "dsmap \<sigma> xs"])
   apply(rule exI[of _ "rrename_iterm \<sigma> e1"])  
   apply(rule exI[of _ "smap (rrename_iterm \<sigma>) es2"])  
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
@@ -130,34 +128,34 @@ unfolding G_def apply(elim disjE)
   (* *)
   subgoal apply(rule disjI4_4)
   subgoal apply(elim exE) subgoal for xs e e'
-  apply(rule exI[of _ "smap \<sigma> xs"])
+  apply(rule exI[of _ "dsmap \<sigma> xs"])
   apply(rule exI[of _ "rrename_iterm \<sigma> e"]) apply(rule exI[of _ "rrename_iterm \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: iterm.rrename_comps) . . . 
 
 
-lemma small_sset[simp,intro]: "small (sset xs)"
-by (simp add: card_sset_ivar small_def)
+lemma small_dsset[simp,intro]: "small (dsset xs)"
+by (simp add: card_dsset_ivar small_def)
 
-lemma small_image_sset[simp,intro]: "small (f ` sset xs)"
-by (metis small_sset stream.set_map)
+lemma small_image_sset[simp,intro]: "inj_on f (dsset xs) \<Longrightarrow> small (f ` dsset xs)"
+by (metis countable_card_ivar countable_card_le_natLeq dsset.rep_eq small_def sset_natLeq stream.set_map)
 
-lemma Tvars_sset: "(Tfvars t - sset xs) \<inter> sset xs = {}" "|Tfvars t - sset xs| <o |UNIV::ivar set|"
+lemma Tvars_dsset: "(Tfvars t - dsset xs) \<inter> dsset xs = {}" "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tfvars small_def)
 
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
-(* using fresh[of t] *) unfolding G_def Tmap_def apply safe
+unfolding G_def Tmap_def apply safe
   subgoal for xs e1 es2  
-  using refresh[OF Tvars_sset, of xs t]  apply safe
+  using refresh[OF Tvars_dsset, of xs t]  apply safe
   subgoal for f
-  apply(rule exI[of _ "f ` (sset xs)"])  
+  apply(rule exI[of _ "f ` (dsset xs)"])  
   apply(intro conjI)
-    subgoal by simp
+    subgoal using small_dsset small_image by auto
     subgoal unfolding id_on_def by auto (metis DiffI Int_emptyD image_eqI)
     subgoal apply(rule disjI4_1)
-    apply(rule exI[of _ "smap f xs"]) 
+    apply(rule exI[of _ "dsmap f xs"]) 
     apply(rule exI[of _ "rrename f e1"]) 
     apply(rule exI[of _ "es2"]) 
     apply(cases t)  apply simp apply(intro conjI)
@@ -172,7 +170,7 @@ lemma G_refresh:
             subgoal by blast
             subgoal by (simp add: SSupp_itvsubst_bound)
             subgoal unfolding id_on_def
-            by simp (metis (no_types, lifting) bij_not_eq_twice imageE mkSubst_idle mkSubst_smap stream.set_map)
+            by simp (metis (no_types, lifting) bij_not_eq_twice imageE mkSubst_idle mkSubst_smap dstream.set_map)
   . . . . . .
   (* *)
   subgoal for e1 e1' es2 
@@ -196,16 +194,16 @@ lemma G_refresh:
     apply(rule exI[of _ "e2"])
     apply(rule exI[of _ "es2'"]) 
     apply(cases t) apply auto . .
-  (* *)
+  (* *) 
   subgoal for xs e e'
-  using refresh[OF Tvars_sset, of xs t]  apply safe
+  using refresh[OF Tvars_dsset, of xs t]  apply safe
   subgoal for f
-  apply(rule exI[of _ "f ` (sset xs)"])  
+  apply(rule exI[of _ "f ` (dsset xs)"])  
   apply(intro conjI)
-    subgoal by simp
+    subgoal using small_image by auto
     subgoal unfolding id_on_def by auto (metis DiffI Int_emptyD image_eqI)
     subgoal apply(rule disjI4_4) 
-    apply(rule exI[of _ "smap f xs"]) 
+    apply(rule exI[of _ "dsmap f xs"]) 
     apply(rule exI[of _ "rrename f e"]) 
     apply(rule exI[of _ "rrename f e'"]) 
     apply(cases t)  apply simp apply(intro conjI)
@@ -229,13 +227,13 @@ unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE)
     \<^cancel>\<open>Beta: \<close>
-    subgoal for xs e1 apply(rule exI[of _ "sset xs"], rule conjI, simp) apply(rule disjI4_1) by auto
+    subgoal for xs e1 apply(rule exI[of _ "dsset xs"], rule conjI, simp) apply(rule disjI4_1) by auto
     \<^cancel>\<open>iAppL: \<close>
     subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_2) by auto
     \<^cancel>\<open>iAppR: \<close>
     subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_3) by auto
     \<^cancel>\<open>Xi: \<close>
-    subgoal for e e' xs apply(rule exI[of _ "sset xs"], rule conjI, simp)  apply(rule disjI4_4) by auto .
+    subgoal for e e' xs apply(rule exI[of _ "dsset xs"], rule conjI, simp)  apply(rule disjI4_4) by auto .
   subgoal apply(elim conjE disjE exE)
     \<^cancel>\<open>Beta: \<close>
     subgoal apply(rule disjI4_1) by auto
@@ -253,8 +251,7 @@ corollary BE_induct_step:
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "step t1 t2"  
 and Beta: "\<And>xs e1 es2 p. 
-  sset xs \<inter> Pfvars p = {} \<Longrightarrow> sset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
-  sdistinct xs \<Longrightarrow> 
+  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
   R p (iApp (iLam xs e1) es2) (itvsubst (mkSubst xs es2) e1)"
 and iAppL: "\<And>e1 e1' es2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
@@ -263,7 +260,7 @@ and iAppR: "\<And>e1 es2 i e2' p.
   step (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R p' (es2 !! i) e2') \<Longrightarrow> 
   R p (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 and Xi: "\<And>e e' xs p. 
-  sset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (iLam xs e) (iLam xs e')" 
 shows "R p t1 t2"

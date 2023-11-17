@@ -138,6 +138,12 @@ lift_definition dsnth :: "'a :: infinite_regular dstream \<Rightarrow> nat \<Rig
 
 lift_definition dtheN :: "'a :: infinite_regular dstream \<Rightarrow> 'a \<Rightarrow> nat" is "theN" .
 
+lift_definition dsdrop:: "nat \<Rightarrow> 'a :: infinite_regular dstream \<Rightarrow> 'a dstream" is "sdrop" 
+by (metis add_left_cancel sdistinct_def2 sdrop_snth)
+
+lift_definition dstake:: "nat \<Rightarrow> 'a :: infinite_regular dstream \<Rightarrow> 'a list" is "stake" .
+
+
 lemma countable_sset:
   fixes s
   notes * = LeastI[where P="\<lambda>i. s !! i = s !! _", OF refl]

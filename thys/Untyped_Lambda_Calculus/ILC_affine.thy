@@ -74,7 +74,7 @@ unfolding G_def apply(elim disjE)
   (* *)
   subgoal apply(rule disjI3_3)
   subgoal apply(elim exE) subgoal for e1 es2
-  apply(rule exI[of _ "rrename_iterm \<sigma> e1"]) 
+  apply(rule exI[of _ "rrename \<sigma> e1"]) 
   apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) 
   unfolding ssbij_def small_def Tmap_def 
   apply (fastforce simp add: iterm.rrename_comps) . . . .

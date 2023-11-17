@@ -61,8 +61,8 @@ unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for xs e1 es2
   apply(rule exI[of _ "dsmap \<sigma> xs"])
-  apply(rule exI[of _ "rrename_iterm \<sigma> e1"])  
-  apply(rule exI[of _ "smap (rrename_iterm \<sigma>) es2"])  
+  apply(rule exI[of _ "rrename \<sigma> e1"])  
+  apply(rule exI[of _ "smap (rrename \<sigma>) es2"])  
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: iterm.rrename_comps) apply(subst rrename_itvsubst_comp) apply auto
   apply(subst imkSubst_smap_rrename_inv) unfolding ssbij_def apply auto 
@@ -79,24 +79,24 @@ unfolding G_def apply(elim disjE)
   (* *)
   subgoal apply(rule disjI4_2)
   subgoal apply(elim exE) subgoal for e1 e1' es2 
-  apply(rule exI[of _ "rrename_iterm \<sigma> e1"]) apply(rule exI[of _ "rrename_iterm \<sigma> e1'"]) 
-  apply(rule exI[of _ "smap (rrename_iterm \<sigma>) es2"]) 
+  apply(rule exI[of _ "rrename \<sigma> e1"]) apply(rule exI[of _ "rrename \<sigma> e1'"]) 
+  apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: iterm.rrename_comps) . . 
   (* *)
   subgoal apply(rule disjI4_3)
   subgoal apply(elim exE) subgoal for e1 es2 i e2' 
-  apply(rule exI[of _ "rrename_iterm \<sigma> e1"]) 
-  apply(rule exI[of _ "smap (rrename_iterm \<sigma>) es2"]) 
+  apply(rule exI[of _ "rrename \<sigma> e1"]) 
+  apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) 
   apply(rule exI[of _ i])
-  apply(rule exI[of _ "rrename_iterm \<sigma> e2'"]) 
+  apply(rule exI[of _ "rrename \<sigma> e2'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: iterm.rrename_comps) . . .
   (* *)
   subgoal apply(rule disjI4_4)
   subgoal apply(elim exE) subgoal for xs e e'
   apply(rule exI[of _ "dsmap \<sigma> xs"])
-  apply(rule exI[of _ "rrename_iterm \<sigma> e"]) apply(rule exI[of _ "rrename_iterm \<sigma> e'"]) 
+  apply(rule exI[of _ "rrename \<sigma> e"]) apply(rule exI[of _ "rrename \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: iterm.rrename_comps) . . . 
 

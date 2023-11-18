@@ -42,8 +42,8 @@ find_theorems inv_into
 
 thm iLam_inject[no_vars]
 
-lemma iLam_inject_strong: 
-assumes "|X::ivar set| <o |UNIV::ivar set|" "X \<inter> dsset xs = {}"
+lemma iLam_inject_avoid: 
+assumes "|X::ivar set| <o |UNIV::ivar set|" "X \<inter> dsset xs = {}" "X \<inter> dsset xs' = {}"
 shows 
 "(iLam xs e = iLam xs' e') = 
  (\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> id_on X f \<and> 
@@ -64,19 +64,22 @@ proof-
   obtain xsa ea ea' where il: "iLam xs e = iLam xsa ea" and ee': "ee' = iLam xsa ea'" 
   and ss: "ssuper xsa" and r: "reneqv ea ea'" 
   using assms by cases auto
+  have 0: "|FFVars ee'| <o |UNIV::ivar set|"  
+    by (simp add: iterm.set_bd_UNIV)
   have "reneqv (iLam xsa ea) ee'"  
     using assms il by force
   moreover have "FFVars (iLam xsa ea) \<inter> dsset xs = {}"  
     by (metis DiffD2 disjointI il iterm.set(3))
   moreover have "ssuper xs" using iLam_eq_super il ss by blast
-  ultimately have 0: "FFVars ee' \<inter> dsset xs = {}"  
+  ultimately have 1: "FFVars ee' \<inter> dsset xs = {}"  
     using reneqv_Fvars by fastforce
-  have 1: "|FFVars ee'| <o |UNIV::ivar set|"  
-    by (simp add: iterm.set_bd_UNIV)
+  have 2: "FFVars ee' \<inter> dsset xsa = {}"  
+    unfolding ee' by auto
+  
   obtain f where f: " bij f" "|supp f| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs e)) f"
   and ff: "id_on (FFVars ee') f" 
   and xsa: "xsa = dsmap f xs" and ea: "ea = rrename f e"
-  using il[unfolded iLam_inject_strong[OF 1 0]] by auto
+  using il[unfolded iLam_inject_avoid[OF 0 1 2]] by auto
   hence e: "e = rrename (inv f) ea" by (metis inv_simp1 iterm.rrename_bijs iterm.rrename_inv_simps)
 
   show ?thesis apply(rule exI[of _ "rrename (inv f) ea'"]) apply(intro conjI)

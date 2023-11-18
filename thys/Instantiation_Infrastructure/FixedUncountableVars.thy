@@ -101,5 +101,7 @@ lemma sw_inj[iff]: "sw x z1 z2 = sw y z1 z2 \<longleftrightarrow> x = y"
 lemma sw_surj: "\<exists>y. x = sw y z1 z2"
   by (metis sw_invol)
 
+(* *)
+
 
 end

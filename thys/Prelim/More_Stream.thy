@@ -100,6 +100,20 @@ lemma bij_sdistinct_smap'[simp]:
 by (simp add: inj_on_def inj_on_sdistinct_smap)
 
 
+lemma sdistinct_inj_snth: "sdistinct xs \<Longrightarrow> inj (snth xs)"
+unfolding sset_range inj_on_def sdistinct_def2 by auto
+
+lemma sdistinct_snth_inj[simp]: "sdistinct xs \<Longrightarrow> snth xs i = snth xs j \<longleftrightarrow> i = j"
+by (metis theN_snth)
+
+lemma stream_eq_nth: "xs = ys \<longleftrightarrow> (\<forall>i. snth xs i = snth ys i)"
+by (metis smap_alt stream_smap_nats)
+
+lemma inj_ex_snth: 
+assumes "inj f"
+shows "\<exists>xs. sdistinct xs \<and> (\<forall>n. snth xs n = f n)"
+by (metis assms atLeast_0 inj_on_sdistinct_smap sdistinct_fromN snth_smap sset_fromN stream_smap_nats theN_snth)
+
 (* *)
 
 class infinite_regular =
@@ -171,7 +185,6 @@ apply transfer using snth_smap by metis
 
 (* *)
 
-
 lemma dtheN: "v \<in> dsset vs \<Longrightarrow> dsnth vs (dtheN vs v) = v"
 apply transfer using theN by metis
 
@@ -195,28 +208,14 @@ apply transfer using bij_betw_theN by metis
 lemma dtheN_dsnth[simp]: "dtheN vs (dsnth vs i) = i"
 apply transfer using theN_snth by metis
 
-lemma sdistinct_inj_snth: "sdistinct xs \<Longrightarrow> inj (snth xs)"
-unfolding sset_range inj_on_def sdistinct_def2 by auto
-
-lemma sdistinct_snth_inj[simp]: "sdistinct xs \<Longrightarrow> snth xs i = snth xs j \<longleftrightarrow> i = j"
-by (metis theN_snth)
-
 lemma inj_dsnth: "inj (dsnth xs)"
 apply transfer using sdistinct_inj_snth by auto
 
 lemma dsnth_inj[simp]: "dsnth xs i = dsnth xs j \<longleftrightarrow> i = j"
 apply transfer by auto
 
-lemma stream_eq_nth: "xs = ys \<longleftrightarrow> (\<forall>i. snth xs i = snth ys i)"
-by (metis smap_alt stream_smap_nats)
-
 lemma dstream_eq_nth: "xs = ys \<longleftrightarrow> (\<forall>i. dsnth xs i = dsnth ys i)"
 apply transfer unfolding stream_eq_nth by auto
-
-lemma inj_ex_snth: 
-assumes "inj f"
-shows "\<exists>xs. sdistinct xs \<and> (\<forall>n. snth xs n = f n)"
-by (metis assms atLeast_0 inj_on_sdistinct_smap sdistinct_fromN snth_smap sset_fromN stream_smap_nats theN_snth)
 
 lemma inj_ex_dsnth: 
 "inj f \<Longrightarrow> \<exists>xs. \<forall>n. dsnth xs n = f n"

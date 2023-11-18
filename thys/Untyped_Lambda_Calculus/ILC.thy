@@ -162,6 +162,14 @@ instance
   sorry
 end
 
+definition iVariable :: "nat \<Rightarrow> ivar" where "iVariable \<equiv> ILC.embed"
+
+lemma iVariable_inj: "inj iVariable"
+unfolding iVariable_def by (metis inj_embed)
+
+lemma inj_iVariable[simp]: "iVariable n = iVariable m \<longleftrightarrow> n = m"
+by (meson injD iVariable_inj)
+
 type_synonym itrm = "ivar iterm"
 
 (* Some lighter notations: *)
@@ -278,8 +286,6 @@ proposition rrename_simps[simp]:
   done
 
 thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
-
-
 
 
 lemma rrename_cong:

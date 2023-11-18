@@ -812,4 +812,17 @@ next
   then show "regularCard (czero +c s2)" using regularCard_ordIso ordIso_symmetric assms by blast
 qed
 
+(*  *)
+
+definition natOf :: "nat list \<Rightarrow> nat" where 
+"natOf \<equiv> SOME f . inj f"
+
+lemma inject_natOf: "inj natOf"
+by (metis ex_inj natOf_def someI_ex)
+
+lemma inj_natOf[simp]: "natOf p = natOf p \<longleftrightarrow> p = p"
+by (meson injD inject_natOf)
+
+(*    *)
+
 end

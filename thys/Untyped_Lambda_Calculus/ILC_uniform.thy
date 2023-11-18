@@ -215,31 +215,36 @@ sorry
 definition theSN where 
 "theSN x \<equiv> SOME xs_i. super (fst xs_i) \<and> x = dsnth (fst xs_i) (snd xs_i)"
 
-lemma theSN': "super (fst (theSN x)) \<and> x = dsnth (fst (theSN x)) (snd (theSN x))"
-unfolding theSN_def apply(rule someI_ex)
-by simp (metis dtheN super_exhaust)
+lemma theSN': "x \<in> \<Union> (dsset ` (range superOf)) \<Longrightarrow> super (fst (theSN x)) \<and> x = dsnth (fst (theSN x)) (snd (theSN x))"
+unfolding theSN_def apply(rule someI_ex)  
+by simp (metis dtheN super_superOf) 
 
-lemma theSN: "(xs,i) = theSN x \<Longrightarrow> super xs \<and> dsnth xs i = x"
+lemma theSN: "x \<in> \<Union> (dsset ` (range superOf)) \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super xs \<and> dsnth xs i = x"
 by (metis fst_conv snd_conv theSN')
 
 lemma theSN_unique: 
-"(xs,i) = theSN x \<Longrightarrow> super ys \<and> dsnth ys j = x \<Longrightarrow> ys = xs \<and> j = i"
-apply(drule theSN) 
-by (metis Int_emptyD dsset_range dtheN_dsnth range_eqI super_disj)
+"x \<in> \<Union> (dsset ` (range superOf)) \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super ys \<and> dsnth ys j = x \<Longrightarrow> ys = xs \<and> j = i"
+by (metis Int_emptyD dsset_range dtheN_dsnth rangeI super_disj theSN) 
 
 (* Extending a renaming on variables to one on ivariables via "superOf"; 
 essentially, renaming is applied in block to all "super-variables": *)
 definition ext where 
-"ext f x \<equiv> let (xs,i) = theSN x in dsnth (superOf (f (subOf xs))) i"
+"ext f x \<equiv> if x \<in> \<Union> (dsset ` (range superOf)) 
+   then let (xs,i) = theSN x in dsnth (superOf (f (subOf xs))) i
+   else x"
 
 lemma bij_ext: "bij f \<Longrightarrow> bij (ext f)" 
-unfolding bij_def inj_on_def surj_def ext_def apply (auto split: prod.splits)
-apply (metis subOf_superOf superOf_subOf super_superOf surjective_pairing theSN' theSN_unique)
-by (metis subOf_superOf superOf_subOf super_superOf theSN' theSN_unique)
+unfolding bij_def inj_on_def surj_def ext_def apply (auto split: prod.splits simp: image_def)
+  apply (smt (verit, ccfv_SIG) UN_I comp_apply dtheN inj_image_mem_iff inj_onD inj_untab prod.inject range_eqI 
+subOf_superOf superOf' superOf_def super_superOf theSN_unique)
+  apply (metis dsset_range range_eqI)  
+  apply (metis dsset_range rangeI) sorry
+
 
 lemma supp_ext: "supp (ext f) \<subseteq> {x. \<exists>xs. x \<in> dsset xs \<and> super xs \<and> subOf xs \<in> supp f}"
-unfolding supp_def  
-by auto (metis case_prod_conv dsset_range ext_def prod.collapse range_eqI superOf_subOf theSN')
+unfolding supp_def  apply auto 
+by (smt (verit, del_insts) case_prod_conv dsset_range ext_def prod.collapse range_eqI superOf_subOf theSN')
+
 
 lemma supp_ext': "supp (ext f) \<subseteq> \<Union> (dsset ` ({xs . super xs} \<inter> subOf -` (supp f)))"
 using supp_ext by fastforce

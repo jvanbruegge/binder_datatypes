@@ -222,4 +222,12 @@ lemma inj_ex_dsnth:
 apply transfer using inj_ex_snth by auto
 
 
+thm stream.map_cong0[no_vars]
+
+lemma dsmap_cong: "inj_on f (dsset xs) \<Longrightarrow> inj_on g (dsset xs) \<Longrightarrow>  
+ (\<And>z. z \<in> dsset xs \<Longrightarrow> f z = g z) \<Longrightarrow> dsmap f xs = dsmap g xs"
+apply transfer by (auto cong: stream.map_cong0)  
+
+
+
 end

@@ -41,6 +41,9 @@ by (simp add: comp_assoc dstream.map_comp iterm_pre.supp_comp_bound) .
 
 (* *)
 
+(* todo: revert, as this is vacuous *)
+(* I should revert to super, and should prove euivariance under bijections that 
+send supervariables to supervariables. This is enough to prove transitivity. *)
 inductive reneqv where
  iVar: "ssuper xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> reneqv (iVar x) (iVar x')"
 |iLam: "ssuper xs \<Longrightarrow> reneqv e e' \<Longrightarrow> reneqv (iLam xs e) (iLam xs e')"

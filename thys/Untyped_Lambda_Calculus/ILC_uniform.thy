@@ -28,27 +28,26 @@ lemma reneqv_iVar_casesR:
  (\<exists> xs x. e = iVar x \<and> ssuper xs \<and> {x,x'} \<subseteq> dsset xs)"
 apply(erule reneqv.cases) by auto
 
+(*
+lemma ssuper_dsset_eq_: 
+"ssuper xs \<Longrightarrow> ssuper xs' \<Longrightarrow> dsset xs \<inter> dsset xs' \<noteq> {} \<Longrightarrow> dsset xs = dsset xs'"
+unfolding ssuper_def apply auto sledgehammer
+*)
 
-thm iLam_inject
-
+lemma reneqv_Fvars_super: "reneqv e e' \<Longrightarrow> ssuper xs \<Longrightarrow> 
+   FFVars e \<inter> dsset xs \<noteq> {} \<Longrightarrow> FFVars e' \<inter> dsset xs \<noteq> {}" 
+apply(induct arbitrary: xs rule: reneqv.induct) 
+apply auto sorry
 
 lemma reneqv_Fvars: "reneqv e e' \<Longrightarrow> 
 {xs . ssuper xs \<and> FFVars e \<inter> dsset xs \<noteq> {}} = {xs . ssuper xs \<and> FFVars e' \<inter> dsset xs \<noteq> {}}" 
 apply(induct rule: reneqv.induct) 
-apply auto sorry
+apply auto sledgehammers
 
 
 find_theorems inv_into
 
-thm iLam_inject[no_vars]
 
-lemma iLam_inject_avoid: 
-assumes "|X::ivar set| <o |UNIV::ivar set|" "X \<inter> dsset xs = {}" "X \<inter> dsset xs' = {}"
-shows 
-"(iLam xs e = iLam xs' e') = 
- (\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> id_on X f \<and> 
-      dsmap f xs = xs' \<and> rrename f e = e')"
-sorry
 
 lemma iLam_eq_super: 
 assumes "iLam xs e = iLam xsa ea"

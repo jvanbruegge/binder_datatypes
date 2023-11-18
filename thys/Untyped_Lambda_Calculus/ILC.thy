@@ -935,4 +935,46 @@ lemma imkSubst_smap: "bij f \<Longrightarrow> z \<in> dsset xs \<Longrightarrow>
 by (metis bij_betw_def bij_imp_bij_betw dsmap_alt dtheN imkSubst_dsnth) 
 
 
+(* *)
+
+thm iLam_inject[no_vars]
+
+thm ex_avoiding_bij
+
+lemma iLam_inject_avoid: 
+assumes X: "|X::ivar set| <o |UNIV::ivar set|" "X \<inter> dsset xs = {}" "X \<inter> dsset xs' = {}"
+shows 
+"(iLam xs e = iLam xs' e') = 
+ (\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> id_on X f \<and> 
+      dsmap f xs = xs' \<and> rrename f e = e')"
+proof
+  assume "iLam xs e = iLam xs' e'"
+  then obtain f where 
+  f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs e)) f" "dsmap f xs = xs'" "rrename f e = e'"
+  unfolding iLam_inject by auto
+  have bf: "bij_betw f (dsset xs) (dsset xs')" 
+  using f unfolding bij_betw_def bij_def inj_on_def  
+  using dstream.set_map f by blast 
+  have 0: " |dsset xs \<union> dsset xs'| <o |UNIV::ivar set|" 
+    by (meson card_dsset_ivar var_stream_class.Un_bound)
+  have 1: "(dsset xs \<union> dsset xs') \<inter> X = {}"  
+    by (simp add: Int_commute assms(2) assms(3) boolean_algebra.conj_disj_distrib)
+  show "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> id_on X f \<and> dsmap f xs = xs' \<and> rrename f e = e'"
+  using ex_avoiding_bij[OF f(2,1) infinite_ivar iterm.set_bd_UNIV f(3) 0 1 X(1)]
+  apply safe subgoal for g apply(rule exI[of _ g]) using X f unfolding imsupp_def supp_def id_on_def 
+  apply safe 
+  subgoal by blast
+  subgoal apply(rule dsmap_cong) 
+    apply (meson bij_betw_def bij_imp_bij_betw) 
+    apply (meson bij_betw_def bij_imp_bij_betw) 
+    by (smt (verit) Un_iff bf bij_betw_apply disjoint_iff_not_equal)  
+  subgoal apply(rule rrename_cong)
+    apply blast 
+    apply (metis supp_def) 
+    apply meson 
+    using f(2) apply force
+    by (smt (verit) Diff_iff Int_emptyD UnCI bf bij_betw_iff_bijections iterm.set(3)) . .  
+qed(unfold iLam_inject, auto)
+
+
 end

@@ -290,7 +290,7 @@ end (* context Induct *)
 
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale Induct_simple = Induct1 dummy Tmap Tfvars (* Vmap Vfvars *) G 
+locale Induct_simple = Induct1 dummy Tmap Tfvars G 
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"

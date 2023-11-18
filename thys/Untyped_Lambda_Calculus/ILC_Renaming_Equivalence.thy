@@ -168,15 +168,15 @@ unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation iLam: Induct where dummy = "undefined :: ivar" and 
+interpretation Reneqv : Induct where dummy = "undefined :: ivar" and 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto
 
 (* *)
 
-lemma reneqv_I: "reneqv t1 t2 = iLam.I (t1,t2)" 
-unfolding reneqv_def iLam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma reneqv_I: "reneqv t1 t2 = Reneqv.I (t1,t2)" 
+unfolding reneqv_def Reneqv.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE conjE)
@@ -216,7 +216,7 @@ shows "R p t1 t2"
 unfolding reneqv_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim iLam.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  subgoal using par st apply(elim Reneqv.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
     subgoal unfolding reneqv_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding reneqv_I[symmetric] apply(elim disjE exE)

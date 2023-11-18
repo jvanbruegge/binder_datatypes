@@ -7,29 +7,166 @@ begin
 
 (* *)
 
-consts ivarOf :: "var \<Rightarrow> ivar"
 
-axiomatization where inject_ivarOf: "inj ivarOf"
+lemma card_var_ivar: "|UNIV::var set| <o |UNIV::ivar set|" 
+using card_var natLeq_less_UNIV ordIso_ordLess_trans by blast
 
-lemma inj_ivarOf[simp]: "ivarOf x = ivarOf y \<longleftrightarrow> x = y"
-by (meson injD inject_ivarOf)
+definition ivarOf :: "var \<Rightarrow> ivar" where "ivarOf \<equiv> ILC.embed"
 
-consts super :: "ivar dstream \<Rightarrow> bool"
+lemma ivarOf_inj: "inj ivarOf"
+unfolding ivarOf_def by (metis inj_embed)
 
-axiomatization where 
- super_disj:  "\<And>xs xs'. super xs \<Longrightarrow> super xs' \<Longrightarrow> xs \<noteq> xs' \<Longrightarrow> dsset xs \<inter> dsset xs' = {}"
-and 
- super_exhaust: "\<And>x. \<exists>xs. super xs \<and> x \<in> dsset xs"
-and 
- super_countable: "countable {xs . super xs}"
-and 
- super_infinite: "infinite {xs . super xs}"
-and 
- super_ivarOf: "\<And>xs. super xs \<Longrightarrow> dsset xs \<subseteq> range ivarOf"
+lemma inj_ivarOf[simp]: "ivarOf n = ivarOf m \<longleftrightarrow> n = m"
+by (meson injD ivarOf_inj)
+
+(* *)
+
+definition iVariable :: "nat \<Rightarrow> ivar" where "iVariable \<equiv> ILC.embed"
+
+lemma iVariable_inj: "inj iVariable"
+unfolding iVariable_def by (metis inj_embed)
+
+lemma inj_iVariable[simp]: "iVariable n = iVariable m \<longleftrightarrow> n = m"
+by (meson injD iVariable_inj)
+
+(* *)
 
 
-consts superOf :: "var \<Rightarrow> ivar dstream"
-axiomatization where bij_superOf: "bij_betw superOf UNIV {xs. super xs}"
+term "Abs_dstream o (smap iVariable) o fromN"
+term Variable
+term Abs_dstream
+
+lemma card_nat_le_dstream: "|UNIV::nat set| \<le>o |UNIV:: ivar dstream set|"
+unfolding card_of_ordLeq[symmetric] apply(rule exI[of _ "Abs_dstream o (smap iVariable) o fromN"])
+unfolding inj_def 
+by simp (smt (verit) Abs_dstream_inverse injD iVariable_inj 
+mem_Collect_eq sdistinct_def2 sdistinct_fromN siterate.sel(1) smap_simps(1) snth_smap)
+
+lemma card_ivar_dstream_nat: "|UNIV:: ivar set| =o |UNIV :: (nat \<times> ivar) set|"
+proof-
+  have "|UNIV :: (nat \<times> ivar) set| =o |(UNIV::nat set) \<times> (UNIV:: ivar set)|" by auto
+  also have "|(UNIV::nat set) \<times> (UNIV:: ivar set)| =o |UNIV:: ivar set|"
+  apply(subst card_of_Times_infinite_simps)   
+  using More_Stream.infinite  
+  using More_Stream.infinite infinite_iff_card_of_nat by auto 
+  finally show ?thesis using ordIso_symmetric by auto
+qed
+ 
+definition tab where "tab \<equiv> SOME (f::ivar \<Rightarrow> nat \<times> ivar). bij f"
+
+lemma bij_tab: "bij tab"
+unfolding tab_def 
+using card_ivar_dstream_nat unfolding card_of_ordIso[symmetric]  
+by (metis tfl_some)
+
+lemma inj_tab: "inj tab" and surj_tab: "surj tab"
+using bij_tab unfolding bij_def by auto
+
+lemma tab_inj[simp]: "tab x = tab y \<longleftrightarrow> x = y"
+by (simp add: bij_tab)
+
+definition "untab \<equiv> inv tab"
+
+lemma bij_untab: "bij untab"
+by (simp add: bij_tab untab_def)
+lemma inj_untab: "inj untab" and surj_untab: "surj untab"
+using bij_untab unfolding bij_def by auto
+
+lemma untab_inj[simp]: "untab x = untab y \<longleftrightarrow> x = y"
+by (simp add: bij_untab)
+
+lemma tab_untab[simp]: "tab (untab x) = x"
+by (simp add: bij_tab untab_def)
+
+lemma untab_tab[simp]: "untab (tab x) = x"
+by (simp add: bij_tab untab_def)
+
+
+lemma dsnth_untab_exhaust: "\<exists>xs. (\<exists>x. \<forall>n. dsnth xs n = untab (n,x)) \<and> y \<in> dsset xs"
+proof-
+  obtain x n0 where y: "y = untab (n0,x)"  
+    by (metis prod.collapse untab_tab)
+  define dxs where "dxs \<equiv> smap (\<lambda>n. untab (n, x)) nats"
+  have "\<exists>xs. \<forall>n. xs !#! n = untab (n, x)"
+  apply(rule inj_ex_dsnth) unfolding inj_def by auto
+  thus ?thesis using y    
+  by (metis dsnth.rep_eq dsset.rep_eq snth_sset)
+qed
+
+(* *)
+
+definition superOf' where 
+"superOf' x \<equiv> SOME xs. \<forall>n. dsnth xs n = untab (n,x)"
+
+lemma superOf': "\<forall>n. dsnth (superOf' x) n = untab (n,x)"
+unfolding superOf'_def apply(rule someI_ex)  
+by (metis dsnth_untab_exhaust dtheN snd_conv untab_inj) 
+
+lemma superOf'_inj[simp]: "superOf' x = superOf' y \<longleftrightarrow> x = y"
+using superOf' by (metis Pair_inject tab_untab)
+
+lemma inj_superOf': "inj superOf'" 
+unfolding inj_def by auto
+
+
+(* *)
+definition "superOf \<equiv> superOf' o ivarOf"
+
+lemma superOf_inj[simp]: "superOf x = superOf y \<longleftrightarrow> x = y"
+unfolding superOf_def by auto
+
+lemma inj_superOf: "inj superOf" 
+unfolding inj_def by auto
+
+
+(* *)
+  
+
+definition super :: "ivar dstream \<Rightarrow> bool" where 
+"super xs \<equiv> \<exists>x. \<forall>n. dsnth xs n = untab (n,ivarOf x)"
+
+lemma super_disj:  "super xs \<Longrightarrow> super xs' \<Longrightarrow> xs \<noteq> xs' \<Longrightarrow> dsset xs \<inter> dsset xs' = {}"
+unfolding super_def  dsset_range by (auto simp: dstream_eq_nth)
+
+(*
+lemma super_exhaust: 
+assumes "y \<in> range ivarOf"
+shows "\<exists>xs. super xs \<and> y \<in> dsset xs"
+proof-
+  obtain x n0 where y: "y = untab (n0,x)"  
+    by (metis prod.collapse untab_tab)
+  define dxs where "dxs \<equiv> smap (\<lambda>n. untab (n, x)) nats"
+  have "\<exists>xs. \<forall>n. xs !#! n = untab (n, x)"
+  apply(rule inj_ex_dsnth) unfolding inj_def by auto
+  thus ?thesis unfolding super_def image_def using y  sledgehammer
+  by (metis dsnth.rep_eq dsset.rep_eq snth_sset)
+qed
+*)
+
+
+
+lemma super_superOf[simp]: "super (superOf x)"
+by (simp add: superOf' superOf_def super_def)
+
+
+lemma super_imp_superOf: "super xs \<Longrightarrow> \<exists>x. xs = superOf x"
+by (metis Int_emptyD comp_apply dsset_range range_eqI superOf' superOf_def super_def super_disj)
+
+lemma card_super: "|UNIV::var set| =o |{xs . super xs}|"
+apply(rule card_of_ordIsoI[of superOf])
+unfolding bij_betw_def 
+using inj_superOf super_imp_superOf by fastforce
+
+lemma super_countable: "countable {xs . super xs}"
+using card_super  
+by (meson card_of_nat card_var countable_card_of_nat ordIso_iff_ordLeq ordIso_transitive ordIso_transitive)
+ 
+lemma super_infinite: "infinite {xs . super xs}"
+using card_super infinite_var by auto
+
+
+lemma bij_superOf: "bij_betw superOf UNIV {xs. super xs}"
+by (smt (verit) UNIV_I bij_betwI' mem_Collect_eq superOf_inj super_imp_superOf super_superOf)
 
 definition subOf where "subOf xs \<equiv> SOME x. superOf x = xs"
 
@@ -42,16 +179,14 @@ by (metis (mono_tags, lifting) bij_betw_imp_inj_on bij_superOf inv_f_f someI_ex 
 lemma subOf_inj[simp]: "super xs \<Longrightarrow> super ys \<Longrightarrow> subOf xs = subOf ys \<longleftrightarrow> xs = ys"
 by (metis superOf_subOf)
 
-lemma superOf_inj[simp]: "superOf x = superOf y \<longleftrightarrow> x = y"
-by (metis subOf_superOf)
-
-lemma super_superOf[simp]: "super (superOf x)"
-using bij_betw_apply bij_superOf by fastforce
 
 (* *)
 
-consts natOf :: "nat list \<Rightarrow> nat"
-axiomatization where inject_natOf: "inj natOf"
+definition natOf :: "nat list \<Rightarrow> nat" where 
+"natOf \<equiv> SOME f . inj f"
+
+lemma inject_natOf: "inj natOf"
+by (metis ex_inj natOf_def someI_ex)
 
 lemma inj_natOf[simp]: "natOf p = natOf p \<longleftrightarrow> p = p"
 by (meson injD inject_natOf)
@@ -70,12 +205,12 @@ and
 tr_App[simp]: "tr (App e1 e2) p = iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
 
 
+
 lemma FFVars_tr: 
-"ivarOf -` (\<Union> (dsset ` (dsdrop (natOf p) ` (superOf ` (ivarOf -` ILC.FFVars (tr e p)))))) \<subseteq> 
- LC.FFVars e"
+"{subOf xs | xs . dsset xs \<inter> ILC.FFVars (tr e p) \<noteq> {}} \<subseteq> LC.FFVars e"
 sorry
 
-term "\<Union> (range (dsset o superOf))"
+(* *)
 
 definition theSN where 
 "theSN x \<equiv> SOME xs_i. super (fst xs_i) \<and> x = dsnth (fst xs_i) (snd xs_i)"
@@ -109,9 +244,6 @@ by auto (metis case_prod_conv dsset_range ext_def prod.collapse range_eqI superO
 lemma supp_ext': "supp (ext f) \<subseteq> \<Union> (dsset ` ({xs . super xs} \<inter> subOf -` (supp f)))"
 using supp_ext by fastforce
 
-lemma card_var_ivar: "|UNIV::var set| <o |UNIV::ivar set|" 
-using card_var natLeq_less_UNIV ordIso_ordLess_trans by blast
-
 lemma card_supp_ext: 
 assumes "|supp f| <o |UNIV::var set|"
 shows "|supp (ext f)| <o |UNIV::ivar set|"
@@ -125,7 +257,7 @@ proof-
   apply(rule card_of_Sigma_ordLeq_infinite)
     subgoal by (simp add: infinite_var)
     subgoal by (metis Int_left_absorb bij_betw_def bij_superOf inf_le2 le_inf_iff surj_imp_ordLeq) 
-    subgoal using super_ivarOf surj_imp_ordLeq by fastforce .
+    subgoal using dsset_natLeq card_var ordIso_iff_ordLeq ordLeq_transitive by blast .
   also have "|UNIV::var set| <o |UNIV::ivar set|" 
     using card_var_ivar .
   finally show ?thesis .
@@ -141,7 +273,7 @@ sorry
 
 (* todo: this could be equivariant in spite of super? *)
 inductive reneqv where
- iVar: "{x,x'} \<subseteq> dsset xs \<Longrightarrow> reneqv (iVar x) (iVar x')"
+ iVar: "super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> reneqv (iVar x) (iVar x')"
 |iLam: "super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> reneqv (iLam xs e) (iLam xs e')"
 |iApp: 
 "reneqv e1 e1' \<Longrightarrow>

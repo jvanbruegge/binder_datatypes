@@ -343,7 +343,8 @@ proof-
        by (simp add: small_Pfvars small_Tfvars small_Un)
 
      obtain \<rho> where \<rho>: "ssbij \<rho>" "image \<rho> B' \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
-     using small_ssbij small_Tfvars small_B' small_p_t v't by metis
+     using small_ssbij[of B' "Pfvars p \<union> Tfvars (Tmap \<sigma> t)" "Tfvars (Tmap \<sigma> t)"] 
+     using small_Tfvars small_B' small_p_t v't by metis
 
      have fresh_p: "image \<rho> B' \<inter> Pfvars p = {}" 
      and fresh_t: "image \<rho> B' \<inter> Tfvars (Tmap \<sigma> t) = {}"  

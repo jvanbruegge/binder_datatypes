@@ -78,7 +78,6 @@ proof-
     subgoal using sv D(3) s(4) unfolding supp_def by auto . 
 qed
 
-
 lemma ssbij_invL: "ssbij \<sigma> \<Longrightarrow> \<sigma> o inv \<sigma> = id"
 by (meson bij_is_surj ssbij_bij surj_iff)
 
@@ -175,10 +174,18 @@ and Tfvars :: "'T \<Rightarrow> 'A set"
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
+and 
+wfBij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool"
 assumes 
 G_mono: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
 and 
-G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+and 
+wfBij_id[simp,intro]: "wfBij id"
+and 
+wfBij_comp[simp]: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> wfBij \<tau> \<Longrightarrow> wfBij (\<tau> o \<sigma>)"
+and 
+wfBij_inv[simp]: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> wfBij (inv \<sigma>)"
 begin
 
 lemma G_small_mono[mono]: "\<And>R R' B t.  R \<le> R' \<Longrightarrow> small B \<and> G R B t \<longrightarrow> small B \<and> G R' B t"
@@ -191,7 +198,7 @@ lemma "I \<equiv> lfp (\<lambda>R t. \<exists>B. small B \<and> G R B t)"
 using I_def[simplified] .
  
 lemma I_equiv: 
-assumes "I t" and \<sigma>: "ssbij \<sigma>"
+assumes "I t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 shows "I (Tmap \<sigma> t)"
 using assms(1) proof induct 
   case (G_I_intro B t)   note B = G_I_intro(1)  
@@ -219,18 +226,18 @@ apply(induct rule: I'.induct)
 by (smt (verit) G_mono I.simps predicate1I) 
 
 lemma I'_equiv: 
-assumes "I' t" and \<sigma>: "ssbij \<sigma>"
+assumes "I' t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 shows "I' (Tmap \<sigma> t)"
 using assms(1) proof induct
   case (G_I'_intro B t)  note B = G_I'_intro(1,2)   
   have G: "G (\<lambda>t. I' (Tmap \<sigma> t)) B t"
   apply(rule G_mono[OF _ G_I'_intro(1,3)]) using \<sigma> by auto
-  have BB: "image \<sigma> B \<inter> Tfvars (Tmap \<sigma> t) = {}" using image_Tfvars_disj[OF \<sigma> G_I'_intro(2)] .    
+  have BB: "image \<sigma> B \<inter> Tfvars (Tmap \<sigma> t) = {}" using image_Tfvars_disj[OF \<sigma>(1) G_I'_intro(2)] .    
   have G: "G (\<lambda>t. I' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (image \<sigma> B) (Tmap \<sigma> t)"
   using G_equiv[OF \<sigma> B(1) G] .
   have 0: "(\<lambda>t. I' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) = I'"
   unfolding fun_eq_iff  
-  by (metis Tmap_comp' Tmap_cong_id \<sigma> id_apply ssbij_comp ssbij_inv ssbij_invL)
+  by (metis Tmap_comp' Tmap_cong_id \<sigma>(1) id_apply ssbij_comp ssbij_inv ssbij_invL)
   have G: "G I' (image \<sigma> B) (Tmap \<sigma> t)"
   using G unfolding 0 .
   show ?case using BB G small_image[OF B(1)] by (subst I'.simps, auto) 
@@ -239,18 +246,19 @@ qed
 end (* context Induct1 *)
 
 
-locale Induct = Induct1 dummy Tmap Tfvars G
+locale Induct = Induct1 dummy Tmap Tfvars G wfBij
 for dummy :: 'A 
 and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and 
 G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
+and wfBij 
 +
 assumes 
 G_refresh: 
 "\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
-         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
+         (\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
          \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
 
 
@@ -323,13 +331,13 @@ and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Pfvars p = {} \<
       G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) B t \<Longrightarrow> R p t"
 shows "R p t"
 proof- 
-  {fix \<sigma> assume \<sigma>: "ssbij \<sigma>"
+  {fix \<sigma> assume \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
    have "R p (Tmap \<sigma> t)"
    using I \<sigma> unfolding I_eq_I' proof(induct arbitrary: \<sigma> p)
      fix B t \<sigma> p 
      assume small_B: "small B" and vt: "B \<inter> Tfvars t = {}" (* this additional vt assumption is what we have gained 
      by transitioning from I to I', whose inductive definition has this freshness side-condition *)
-     and G: "G (\<lambda>t'. I' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) B t" and \<sigma>: "ssbij \<sigma>" 
+     and G: "G (\<lambda>t'. I' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> wfBij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) B t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 
      define B' where B': "B' \<equiv> image \<sigma> B"
      have small_B': "small B'"  
@@ -342,23 +350,25 @@ proof-
      have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
        by (simp add: small_Pfvars small_Tfvars small_Un)
 
-     obtain \<rho> where \<rho>: "ssbij \<rho>" "image \<rho> B' \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
+     obtain \<rho> where \<rho>: "ssbij \<rho>" "wfBij \<rho>" "image \<rho> B' \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
      using small_ssbij[of B' "Pfvars p \<union> Tfvars (Tmap \<sigma> t)" "Tfvars (Tmap \<sigma> t)"] 
-     using small_Tfvars small_B' small_p_t v't by metis
+     using small_Tfvars small_B' small_p_t v't sorry
 
      have fresh_p: "image \<rho> B' \<inter> Pfvars p = {}" 
      and fresh_t: "image \<rho> B' \<inter> Tfvars (Tmap \<sigma> t) = {}"  
-     using \<rho>(1,2) by auto
+     using \<rho>(1,2,3) by auto
 
      hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t" 
-     using Tmap_cong_id[OF \<rho>(1,3)] by blast
+     using Tmap_cong_id[OF \<rho>(1,4)] by blast
      hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
    	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>)
 
-     have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" by (simp add: \<rho>(1) \<sigma> ssbij_comp)
+     have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" "wfBij (\<rho> o \<sigma>)" apply (simp add: \<rho>(1) \<sigma> ssbij_comp)
+     apply(rule wfBij_comp) using \<sigma> \<rho> by auto
 
      define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
-     have ss_\<sigma>'': "ssbij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv by blast
+     have ss_\<sigma>'': "ssbij \<sigma>''" "wfBij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' ssbij_comp ssbij_inv apply blast
+     using \<rho>\<sigma>(2) \<sigma>'' by blast
    
      have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
      unfolding \<sigma>'' using \<rho>\<sigma> ssbij_invL by auto  

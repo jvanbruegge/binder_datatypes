@@ -132,8 +132,9 @@ using c unfolding closed_def proof(elim disjE exE conjE)
   show ?thesis apply(rule exI[of _ id]) unfolding A ssbij_def by auto
 next
   fix xs assume xs: "super xs" and A: "A = dsset xs"
-  obtain xs' where xs': "super xs'" and xss': "xs \<noteq> xs'"
-  using xs super_infinite by (smt (verit, del_insts) Collect_cong Collect_conv_if finite.simps)
+  obtain xs' where xs': "super xs'" and xss': "xs \<noteq> xs'" and "dsset xs' \<inter> B = {}"
+  using xs super_infinite sledgehammer
+ by (ssmt (verit, del_insts) Collect_cong Collect_conv_if finite.simps)
   hence ds: "dsset xs \<inter> dsset xs' = {}" using super_disj xs by auto
   show ?thesis
   sorry

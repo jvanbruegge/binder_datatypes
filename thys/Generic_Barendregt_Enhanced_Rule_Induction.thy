@@ -205,8 +205,8 @@ extend_wfBij:
 "\<And>A A' B. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> closed A
            \<Longrightarrow> \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<rho> a = a)" *)
 extend_wfBij: 
-"\<And>A. small A \<Longrightarrow> bsmall A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
-     \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
+"\<And>A B. small A \<Longrightarrow> bsmall A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> (\<forall>a\<in>A\<inter>B. \<rho> a = a) \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
+        \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
 begin
 
 lemma GG_mmono2[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> GG R xs t \<longrightarrow> GG R' xs t"
@@ -223,7 +223,7 @@ lemma II_equiv:
 assumes "II t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 shows "II (Tmap \<sigma> t)"
 using assms(1) proof induct 
-  case (GG_II_intro xs t)   (* note xs = GG_II_intro(1) *) 
+  case (GG_II_intro xs t)   
   have GG: "GG (\<lambda>t. II (Tmap \<sigma> t)) xs t"
   apply(rule GG_mmono[OF _ GG_II_intro(1)]) using \<sigma> by auto
   have GG: "GG (\<lambda>t. II (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Bmap \<sigma> xs) (Tmap \<sigma> t)"
@@ -495,10 +495,32 @@ using GG_def G_equiv small_image by force
 lemma GG_wfB: "GG R B t \<Longrightarrow> small B"
 unfolding GG_def by auto
 
+(* In this particular contex, all small bijections are well-formed: *)
+lemma ssbij_wfBij: "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma>"
+unfolding wfBij_def ssbij_def 
+using bij_card_of_ordIso ordIso_ordLess_trans ordIso_symmetric small_def by blast
+
+(* and any small set is also bsmall, but it seems we don't have the 
+cardinality lemmas yet to prove it (but I don't think we need it): 
+lemma small_bsmall: "small A \<Longrightarrow> bsmall A"
+unfolding small_def bsmall_def 
+sorry
+*)
+
+lemma cinfinite_A: "cinfinite |UNIV::'A set|" 
+unfolding cinfinite_def 
+by (simp add: inf_A)
+
+lemma extend_small: 
+assumes "small A" "bij_betw \<rho> A B" "\<forall>a\<in>A\<inter>B. \<rho> a = a"
+shows "\<exists>\<rho>'. ssbij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
+using assms cinfinite_A ex_bij_betw_supp'[of "|UNIV::'A set|" A \<rho> B] 
+unfolding eq_on_def small_def ssbij_def by auto
+
 lemma extend_wfBij: 
-"\<And>A. small A \<Longrightarrow> bsmall A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
+"small A \<Longrightarrow> bsmall A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> (\<forall>a\<in>A\<inter>B. \<rho> a = a) \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
      \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
-unfolding wfBij_def sorry
+using extend_small by (metis ssbij_wfBij) 
 
 end (* context Induct1 *)
 
@@ -537,10 +559,6 @@ shows "I (Tmap \<sigma> t)"
 using II_equiv I_eq_II assms by auto
 
 
-lemma ssbij_wfBij: "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma>"
-unfolding wfBij_def ssbij_def 
-using bij_card_of_ordIso ordIso_ordLess_trans ordIso_symmetric small_def by blast
-
 end (* context Induct1 *)
  
 
@@ -576,8 +594,11 @@ by (simp add: GG_rrefresh)
 
 context Induct
 begin
+
+
 thm BE_iinduct 
 
+(* Formulating the theorem in custom form: *)
 theorem BE_induct[consumes 2]: 
 (* Parameters: *)
 fixes Pfvars :: "'P \<Rightarrow> 'A set"
@@ -590,7 +611,6 @@ shows "R p t"
 apply(rule BE_iinduct[of Pfvars _ R p, OF small_Pfvars I[unfolded I_eq_II]])
 subgoal for p B t apply(rule strong[of B p t]) 
 by (auto simp add: GG_def I_eq_II) .
-
 
 end (* context Induct *)
 
@@ -607,10 +627,8 @@ assumes
 G_fresh: "\<And>R B t. small B \<Longrightarrow> G R B t \<Longrightarrow> B \<inter> Tfvars t = {}"
 
 
-
-
-
-
+sublocale Induct_simple < Induct apply standard 
+using G_fresh by blast
 
 
 end 

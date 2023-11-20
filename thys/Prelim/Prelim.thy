@@ -254,8 +254,34 @@ proof-
     apply (meson Un_Cinfinite_bound_strict b2 bound card_of_mono1 i ordLeq_ordLess_trans)
   using assms by auto
 qed
+
 lemmas ex_bij_betw_supp_UNIV = ex_bij_betw_supp[OF conjI[OF iffD2[OF cinfinite_iff_infinite] card_of_Card_order],
     of "UNIV::'a set" "_::'a set"]
+
+lemma ex_bij_betw_supp':
+  fixes A B C :: "'a set"
+  assumes i: "Cinfinite r" and
+  bound: "|A| <o r"
+  and AB: "bij_betw uu A B" and int: "eq_on (A\<inter>B) uu id"
+shows "\<exists> u. bij u \<and> |supp u| <o r \<and> bij_betw u A B \<and> eq_on A u uu"
+proof-
+  define AA BB CC where AA: "AA = A - B" and BB: "BB = B - A" and CC: "CC = A \<inter> B"
+  note defs = AA BB CC
+  have 0: "|AA| <o r"
+  "bij_betw uu AA BB" "AA \<inter> BB = {}" "AA \<inter> CC = {}" "BB \<inter> CC = {}"
+     subgoal using AA bound card_of_diff ordLeq_ordLess_trans by blast
+     subgoal by (smt (verit, del_insts) AA AB BB DiffE DiffI Diff_Diff_Int bij_betw_iff_bijections 
+               eq_on_def id_apply int)
+     subgoal unfolding defs by auto
+     subgoal unfolding defs by auto
+     subgoal unfolding defs by auto .
+  show ?thesis using ex_bij_betw_supp[OF i 0]
+  apply safe subgoal for u apply(rule exI[of _ u], safe)
+    subgoal by (smt (verit, ccfv_SIG) AA AB CC DiffI Diff_Diff_Int bij_betw_cong 
+      eq_on_def id_apply imsupp_empty_IntD2 inf_commute int) 
+    subgoal by (smt (verit, best) AA CC DiffI Diff_Diff_Int Int_commute eq_on_def 
+      id_apply imsupp_empty_IntD2 int) . .
+qed
 
 lemma ordIso_ex_bij_betw_supp:
   fixes A B C :: "'a set"

@@ -121,13 +121,15 @@ and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
 (* well-formed binders: *)
 and wfB :: "'B \<Rightarrow> bool" 
+(* smallness w.r.t. crossing binders: *)
+and bsmall :: "'A set \<Rightarrow> bool"
 assumes  
 Tmap_id[simp]: "Tmap id = id"
 and 
 Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
 and 
 small_Tfvars: "\<And>t. small (Tfvars t)" 
-and (* the weaker, inclusion-based version is sufficient: *)
+and (* the weaker, inclusion-based version is sufficient (and also for B): *)
 Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
 Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
@@ -137,24 +139,30 @@ and
 Bmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Bmap (\<sigma> o \<tau>) = Bmap \<sigma> o Bmap \<tau>"
 and 
 small_Bvars: "\<And>xs. wfB xs \<Longrightarrow> small (Bvars xs)" 
-and (* need something slightly stronger than usual, employing small support injections instead of bijections
-     and also using equality not inclusion:  *)
-Bmap_Bvars': "\<And>xs \<sigma>. |supp \<sigma>| <o |UNIV::'A set| \<Longrightarrow> inj_on \<sigma> (Bvars xs) \<Longrightarrow> Bvars (Bmap \<sigma> xs) = \<sigma> ` (Bvars xs)"
+and 
+Bmap_Bvars: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
 and 
 Bmap_cong_id: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Bvars xs. \<sigma> a = a) \<Longrightarrow> Bmap \<sigma> xs = xs"
+(* and 
+infinite_wfB: "\<And>xs. wfB xs \<Longrightarrow> infinite {Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
 and 
-infinite_wfB: "\<And>xs. infinite {Bmap \<sigma> xs | \<sigma> . inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
+reg_wfB: "\<And>xs. wfB xs \<Longrightarrow> regularCard |{Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}|" *)
+(* *)
+and  
+(* bsmallness is subject to properties similar to the ones enjoyed by smallness: *)
+bsmall_Tfvars: "\<And>t. bsmall (Tfvars t)" 
 and 
-reg_wfB: "\<And>xs. regularCard |{Bmap \<sigma> xs | \<sigma> . inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}|"
+bsmall_Bvars: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)" 
+and 
+bsmall_Un: "bsmall A \<Longrightarrow> bsmall B \<Longrightarrow> bsmall (A \<union> B)"
 begin
 
-lemma Bmap_Bvars: "ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
-using Bmap_Bvars' unfolding ssbij_def bij_def inj_on_def by auto
 
+(*
 (* Smaller w.r.t. well-formed binders: *)
 definition bsmall :: "'A set \<Rightarrow> bool" where 
 "bsmall A \<equiv> \<forall>xs. wfB xs \<longrightarrow> |{ys . wfB ys \<and> A \<inter> Bvars ys \<noteq> {}}| <o 
-                            |{Bmap \<sigma> xs | \<sigma> . inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}|"
+                            |{Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}|"
 
 lemma bsmall_Un: 
 assumes "bsmall A" "bsmall B"
@@ -166,13 +174,15 @@ proof-
   show ?thesis unfolding bsmall_def 0 
   using assms bsmall_def card_of_Un_ordLess_infinite infinite_wfB by blast
 qed
+*)
 
+(*
 lemma finite_UN_bsmall:
 assumes "finite As" and "\<And>A. A \<in> As \<Longrightarrow> bsmall A"
 shows "bsmall (\<Union> As)"
 using assms apply(induct As)  
 using bsmall_Un by (auto simp: bsmall_def infinite_wfB)
-
+*)
 
 (* *)
 
@@ -193,7 +203,6 @@ using Bmap_Bvars ssbij_bij by fastforce
 definition wfBij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" 
 where "wfBij \<sigma> \<equiv> \<forall>xs. wfB xs \<longleftrightarrow> wfB (Bmap \<sigma> xs)"
 
-
 lemma wfBij_id[simp,intro]: "wfBij id"
 unfolding wfBij_def by auto
 
@@ -210,13 +219,13 @@ end (* locale CComponents *)
 
 (* GENERAL VERSIIONS OF THE LOCALES, WIITH wfBij AND closed *)
 
-locale IInduct1 = CComponents dummy Tmap Tfvars Bmap Bvars wfB
+locale IInduct1 = CComponents dummy Tmap Tfvars Bmap Bvars wfB bsmall
 for dummy :: 'A 
 and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
-and wfB 
+and wfB and bsmall
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
 GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
@@ -234,9 +243,14 @@ and
 extend_wfBij: 
 "\<And>A A' B. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> closed A
            \<Longrightarrow> \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<rho> a = a)" *)
+(*
 extend_wfBij: 
 "\<And>A. small A \<Longrightarrow> bsmall A \<Longrightarrow> inj_on \<rho> A \<Longrightarrow> id_on (A \<inter> \<rho>`A) \<rho> \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
       \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
+*)
+extend_to_wfBij: 
+"\<And>xs A A'. wfB xs \<Longrightarrow> small A \<Longrightarrow> bsmall A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> Bvars xs \<inter> A' = {} \<Longrightarrow> 
+           \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bvars xs \<inter> A = {} \<and> id_on A' \<rho>"
 begin
 
 lemma GG_mmono2[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> GG R xs t \<longrightarrow> GG R' xs t"
@@ -298,13 +312,13 @@ qed
 end (* context IInduct1 *)
 
 
-locale IInduct = IInduct1 dummy Tmap Tfvars Bmap Bvars wfB GG 
+locale IInduct = IInduct1 dummy Tmap Tfvars Bmap Bvars wfB bsmall GG 
 for dummy :: 'A 
 and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
-and wfB
+and wfB and bsmall
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
@@ -354,13 +368,13 @@ end (* context IInduct *)
 
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale IInduct_simple = IInduct1 dummy Tmap Tfvars Bmap Bvars wfB GG 
+locale IInduct_simple = IInduct1 dummy Tmap Tfvars Bmap Bvars wfB bsmall GG 
 for dummy :: 'A 
 and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
-and wfB
+and wfB and bsmall
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
@@ -385,10 +399,17 @@ needs not guarantee that -- see again the case of beta-reduction)
 
 
 lemma extend: 
-assumes xs: "wfB xs" and t: "II t" and p: "bsmall (Pfvars p)" 
+assumes xs: "wfB xs" and t: "II t" and p: "small (Pfvars p)" "bsmall (Pfvars p)" 
 and b: "Bvars xs \<inter> Tfvars t = {}"
 shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` (Bvars xs) \<inter> (Pfvars p \<union> Tfvars t) = {} \<and> 
            id_on (Tfvars t) \<rho>"
+apply(rule extend_to_wfBij)  
+  subgoal by fact
+  subgoal using p(1) small_Tfvars small_Un by auto
+  subgoal by (simp add: II_bsmall bsmall_Un p(2) t)
+  subgoal by simp
+  subgoal by fact .
+(*
 proof-
   define K where K: "K = {Bmap \<sigma> xs |\<sigma>. inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
   have KK: "infinite K \<and> regularCard |K|"
@@ -426,7 +447,7 @@ proof-
    apply(rule exI[of _ \<rho>']) unfolding eq_on_def id_on_def 
       using s2 s b unfolding id_on_def by auto .
 qed
-
+*)
 
 theorem BE_iinduct[consumes 2]: 
 (* Parameters: *)
@@ -446,6 +467,8 @@ proof-
      by transitioning from II to II', whose inductive definition has this freshness side-condition *)
      and GG: "GG (\<lambda>t'. II' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> wfBij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) xs t" 
      and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
+
+     have sp: "small (Pfvars p)" "bsmall (Pfvars p)" using small_Pfvars by auto
 
      have "II' t"  
        by (metis (no_types, lifting) GG II.simps II_eq_II' IInduct1.GG_mmono IInduct1_axioms predicate1I)
@@ -470,7 +493,7 @@ proof-
 
      obtain \<rho> where \<rho>: "ssbij \<rho>" "wfBij \<rho>" "\<rho> ` (Bvars xs') \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" 
      "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
-     using extend[OF wfB' II_s_t _, of Pfvars, OF small_Pfvars[THEN conjunct2] v't] 
+     using extend[OF wfB' II_s_t, of Pfvars, OF sp v't] 
      unfolding id_on_def by metis 
  
      have "\<rho> ` (Bvars xs') \<inter> Pfvars p = {}" 
@@ -548,8 +571,8 @@ and
 Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
 
 sublocale Components < CComponents where Tmap = Tmap and Tfvars = Tfvars and 
-Bmap = image and Bvars = id and wfB = small apply standard 
-using Tmap_id Tmap_comp small_Tfvars Tmap_Tfvars Tmap_cong_id apply auto
+Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_ . True" apply standard 
+using Tmap_id Tmap_comp small_Tfvars Tmap_Tfvars Tmap_cong_id apply auto 
 by fastforce
 
 
@@ -584,33 +607,33 @@ lemma ssbij_wfBij: "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma>"
 unfolding wfBij_def ssbij_def 
 using bij_card_of_ordIso ordIso_ordLess_trans ordIso_symmetric small_def by blast
 
-(* and any small set is also bsmall, but it seems we don't have the 
-cardinality lemmas yet to prove it (but I don't think we need it): 
-lemma small_bsmall: "small A \<Longrightarrow> bsmall A"
-unfolding small_def bsmall_def 
-sorry
-*)
-
 lemma cinfinite_A: "cinfinite |UNIV::'A set|" 
 unfolding cinfinite_def 
 by (simp add: inf_A)
 
 lemma extend_small: 
-assumes "small A" "bij_betw \<rho> A B" "\<forall>a\<in>A\<inter>B. \<rho> a = a"
-shows "\<exists>\<rho>'. ssbij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
+assumes "small A" "bij_betw \<rho> A B" "id_on (A\<inter>B) \<rho>"
+shows "\<exists>\<rho>'. ssbij \<rho>' \<and> eq_on A \<rho>' \<rho>"
 using assms cinfinite_A ex_bij_betw_supp'[of "|UNIV::'A set|" A \<rho> B] 
-unfolding eq_on_def small_def ssbij_def by auto
+unfolding eq_on_def small_def ssbij_def id_on_def eq_on_def by auto
 
 lemma extend_wfBij: 
-"small A \<Longrightarrow> bsmall A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> (\<forall>a\<in>A\<inter>B. \<rho> a = a) \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
-     \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
+"small A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> id_on (A\<inter>B) \<rho> \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
+     \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
 using extend_small by (metis ssbij_wfBij) 
+
+
+lemma extend_to_wfBij: 
+"small B \<Longrightarrow> small A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> B \<inter> A' = {} \<Longrightarrow> 
+ \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
+sorry
+
 
 end (* context Induct1 *)
 
 sublocale Induct1 < IInduct1 where Tmap = Tmap and Tfvars = Tfvars and 
-Bmap = image and Bvars = id and wfB = small and GG = GG apply standard 
-using GG_mmono GG_eequiv GG_wfB extend_wfBij by auto
+Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
+using GG_mmono GG_eequiv GG_wfB extend_to_wfBij by auto
 
 context Induct1
 begin 
@@ -672,8 +695,8 @@ by (metis GG_def assms(2) assms(3) ssbij_wfBij)
 end (* context Induct *)
 
 sublocale Induct < IInduct where Tmap = Tmap and Tfvars = Tfvars and 
-Bmap = image and Bvars = id and wfB = small and GG = GG apply standard 
-by (simp add: GG_rrefresh)
+Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
+by (auto simp: GG_rrefresh)
 
 
 context Induct
@@ -692,9 +715,10 @@ assumes I: "I (t::'T)"
 and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Pfvars p = {} \<Longrightarrow> B \<inter> Tfvars t = {} \<Longrightarrow> 
       G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) B t \<Longrightarrow> R p t"
 shows "R p t"
-apply(rule BE_iinduct[of Pfvars _ R p, OF small_Pfvars I[unfolded I_eq_II]])
-subgoal for p B t apply(rule strong[of B p t]) 
-by (auto simp add: GG_def I_eq_II) .
+apply(rule BE_iinduct[of Pfvars _ R p, OF _ I[unfolded I_eq_II]])
+  subgoal using small_Pfvars by auto
+  subgoal for p B t apply(rule strong[of B p t]) 
+  by (auto simp add: GG_def I_eq_II) .
 
 end (* context Induct *)
 

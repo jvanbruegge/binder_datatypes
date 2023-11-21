@@ -124,25 +124,25 @@ and wfB :: "'B \<Rightarrow> bool"
 (* smallness w.r.t. crossing binders: *)
 and bsmall :: "'A set \<Rightarrow> bool"
 assumes  
-Tmap_id[simp]: "Tmap id = id"
+TTmap_id[simp]: "Tmap id = id"
 and 
-Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
+TTmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
 and 
-small_Tfvars: "\<And>t. small (Tfvars t)" 
+ssmall_Tfvars: "\<And>t. small (Tfvars t)" 
 and (* the weaker, inclusion-based version is sufficient (and also for B): *)
-Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
+TTmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
-Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
+TTmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
 and 
-Bmap_id[simp]: "Bmap id = id"
+BBmap_id[simp]: "Bmap id = id"
 and 
-Bmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Bmap (\<sigma> o \<tau>) = Bmap \<sigma> o Bmap \<tau>"
+BBmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Bmap (\<sigma> o \<tau>) = Bmap \<sigma> o Bmap \<tau>"
 and 
 small_Bvars: "\<And>xs. wfB xs \<Longrightarrow> small (Bvars xs)" 
 and 
-Bmap_Bvars: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
+BBmap_Bvars: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
 and 
-Bmap_cong_id: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Bvars xs. \<sigma> a = a) \<Longrightarrow> Bmap \<sigma> xs = xs"
+BBmap_cong_id: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Bvars xs. \<sigma> a = a) \<Longrightarrow> Bmap \<sigma> xs = xs"
 (* and 
 infinite_wfB: "\<And>xs. wfB xs \<Longrightarrow> infinite {Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
 and 
@@ -150,7 +150,7 @@ reg_wfB: "\<And>xs. wfB xs \<Longrightarrow> regularCard |{Bmap \<sigma> xs | \<
 (* *)
 and  
 (* bsmallness is subject to properties similar to the ones enjoyed by smallness: *)
-bsmall_Tfvars: "\<And>t. bsmall (Tfvars t)" 
+bssmall_Tfvars: "\<And>t. bsmall (Tfvars t)"  (* not needed *)
 and 
 bsmall_Bvars: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)" 
 and 
@@ -186,17 +186,17 @@ using bsmall_Un by (auto simp: bsmall_def infinite_wfB)
 
 (* *)
 
-lemma Tmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
-using Tmap_comp by fastforce 
+lemma TTmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
+using TTmap_comp by fastforce 
 
 lemma image_Tfvars_disj: "ssbij \<sigma> \<Longrightarrow> B \<inter> Tfvars t = {} \<Longrightarrow> image \<sigma> B \<inter> Tfvars (Tmap \<sigma> t) = {}"
-using Tmap_Tfvars ssbij_bij by fastforce
+using TTmap_Tfvars ssbij_bij by fastforce
 
-lemma Bmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Bmap (\<sigma> o \<tau>) xs = Bmap \<sigma> (Bmap \<tau> xs)"
-using Bmap_comp by fastforce 
+lemma BBmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Bmap (\<sigma> o \<tau>) xs = Bmap \<sigma> (Bmap \<tau> xs)"
+using BBmap_comp by fastforce 
 
 lemma image_Bvars_disj: "ssbij \<sigma> \<Longrightarrow> B \<inter> Bvars xs = {} \<Longrightarrow> image \<sigma> B \<inter> Bvars (Bmap \<sigma> xs) = {}"
-using Bmap_Bvars ssbij_bij by fastforce
+using BBmap_Bvars ssbij_bij by fastforce
 
 (* *)
 
@@ -208,10 +208,10 @@ unfolding wfBij_def by auto
 
 lemma wfBij_comp[simp]: 
 "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> wfBij \<tau> \<Longrightarrow> wfBij (\<tau> o \<sigma>)"
-by (simp add: Bmap_comp' wfBij_def)
+by (simp add: BBmap_comp' wfBij_def)
 
 lemma wfBij_inv[simp]: "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> wfBij (inv \<sigma>)"
-by (metis Bmap_comp' Bmap_id id_apply ssbij_inv ssbij_invL wfBij_def)
+by (metis BBmap_comp' BBmap_id id_apply ssbij_inv ssbij_invL wfBij_def)
 
 end (* locale CComponents *)
 
@@ -275,7 +275,7 @@ using assms(1) proof induct
   have "GG II (Bmap \<sigma> xs) (Tmap \<sigma> t)" 
   apply(rule GG_mmono[OF _ GG])
   using \<sigma> 
-  by auto (metis Tmap_comp' Tmap_id id_apply ssbij_inv ssbij_invL) 
+  by auto (metis TTmap_comp' TTmap_id id_apply ssbij_inv ssbij_invL) 
   thus ?case by (subst II.simps, auto)
 qed
 
@@ -298,12 +298,12 @@ using assms(1) proof induct
   have GG: "GG (\<lambda>t. II' (Tmap \<sigma> t)) xs t" 
   apply(rule GG_mmono[OF _ GG_II'_intro(2)]) using \<sigma> by auto
   have BB: "Bvars (Bmap \<sigma> xs) \<inter> Tfvars (Tmap \<sigma> t) = {}" using image_Tfvars_disj[OF \<sigma>(1) GG_II'_intro(1)] 
-  using Bmap_Bvars[OF \<sigma>(1)] by fastforce 
+  using BBmap_Bvars[OF \<sigma>(1)] by fastforce 
   have GG: "GG (\<lambda>t. II' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Bmap \<sigma> xs) (Tmap \<sigma> t)"
   using GG_eequiv[OF \<sigma> GG] .
   have 0: "(\<lambda>t. II' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) = II'"
   unfolding fun_eq_iff  
-  by (metis Tmap_comp' Tmap_cong_id \<sigma>(1) id_apply ssbij_comp ssbij_inv ssbij_invL)
+  by (metis TTmap_comp' TTmap_cong_id \<sigma>(1) id_apply ssbij_comp ssbij_inv ssbij_invL)
   have GG: "GG II' (Bmap \<sigma> xs) (Tmap \<sigma> t)"
   using GG unfolding 0 .
   show ?case using BB GG small_image by (subst II'.simps, auto) 
@@ -405,7 +405,7 @@ shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` (Bvars 
            id_on (Tfvars t) \<rho>"
 apply(rule extend_to_wfBij)  
   subgoal by fact
-  subgoal using p(1) small_Tfvars small_Un by auto
+  subgoal using p(1) ssmall_Tfvars small_Un by auto
   subgoal by (simp add: II_bsmall bsmall_Un p(2) t)
   subgoal by simp
   subgoal by fact .
@@ -431,16 +431,16 @@ proof-
   hence "supp \<sigma> \<subseteq> Bvars xs" unfolding id_on_def supp_def by auto
   hence sp: "|supp \<sigma>| <o |UNIV::'A set|" 
     using card_of_subset_bound small_Bvars small_def xs by blast
-  have s2: "(Pfvars p \<union> Tfvars t) \<inter> \<sigma> ` Bvars xs = {}" using Bmap_Bvars'[OF sp s(1)] s(3) by auto
+  have s2: "(Pfvars p \<union> Tfvars t) \<inter> \<sigma> ` Bvars xs = {}" using BBmap_Bvars'[OF sp s(1)] s(3) by auto
   have s3: "inj_on \<sigma> (Bvars xs \<union> Tfvars t)" using s s2 unfolding inj_on_def id_on_def  
     by clarsimp (metis UnCI disjoint_iff imageI)
   let ?A = "Bvars xs \<union> Tfvars t"
   have 0: "small ?A" "bsmall ?A" "inj_on \<sigma> ?A" "id_on (?A \<inter> \<sigma> ` ?A) \<sigma>" "wfBij \<sigma>"
-    subgoal using small_Bvars small_Tfvars small_Un xs by auto
+    subgoal using small_Bvars ssmall_Tfvars small_Un xs by auto
     subgoal by (simp add: Bvars_bsmall II_bsmall bsmall_Un t xs)
     subgoal by fact
     subgoal using s2 s unfolding id_on_def  
-      using Bmap_Bvars' sp 
+      using BBmap_Bvars' sp 
       by auto (metis Int_emptyD UnCI image_eqI)+
     subgoal using s(1,2) sxs xs unfolding wfBij_def  sorry .
   show ?thesis using extend_wfBij[OF 0] apply safe subgoal for \<rho>' 
@@ -485,10 +485,10 @@ proof-
      have v't: "Bvars xs' \<inter> Tfvars (Tmap \<sigma> t) = {}" 
      using vt unfolding xs'  
      using image_Tfvars_disj \<sigma>  
-     by (meson Bmap_Bvars Int_subset_empty1)
+     by (meson BBmap_Bvars Int_subset_empty1)
 
      have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
-       by (simp add: small_Pfvars small_Tfvars small_Un)
+       by (simp add: small_Pfvars ssmall_Tfvars small_Un)
 
 
      obtain \<rho> where \<rho>: "ssbij \<rho>" "wfBij \<rho>" "\<rho> ` (Bvars xs') \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" 
@@ -501,12 +501,12 @@ proof-
      using \<rho>(1,2,3) by auto
      hence fresh_p: "Bvars (Bmap \<rho> xs') \<inter> Pfvars p = {}" 
      and fresh_t: "Bvars (Bmap \<rho> xs') \<inter> Tfvars (Tmap \<sigma> t) = {}"
-     using \<rho>(1) Bmap_Bvars by fastforce+ 
+     using \<rho>(1) BBmap_Bvars by fastforce+ 
 
      hence "Tmap \<rho> (Tmap \<sigma> t) = Tmap \<sigma> t" 
-     using Tmap_cong_id[OF \<rho>(1,4)] by blast
+     using TTmap_cong_id[OF \<rho>(1,4)] by blast
      hence 0: "Tmap (\<rho> o \<sigma>) t = Tmap \<sigma> t" 
-   	 by (simp add: Tmap_comp' \<rho>(1) \<sigma>)
+   	 by (simp add: TTmap_comp' \<rho>(1) \<sigma>)
 
      have \<rho>\<sigma>: "ssbij (\<rho> o \<sigma>)" "wfBij (\<rho> o \<sigma>)" apply (simp add: \<rho>(1) \<sigma> ssbij_comp)
      apply(rule wfBij_comp) using \<sigma> \<rho> by auto
@@ -531,9 +531,9 @@ proof-
      
      have GG: "GG (\<lambda>t'. II' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) 
                 (Bmap \<rho> xs') (Tmap \<sigma> t) "  
-     unfolding xs' unfolding image_comp 0[symmetric] Bmap_comp'[symmetric, OF \<rho>(1) \<sigma>(1)] 
+     unfolding xs' unfolding image_comp 0[symmetric] BBmap_comp'[symmetric, OF \<rho>(1) \<sigma>(1)] 
      apply(rule GG_mmono[OF _ GG])
-     by auto (metis 1 Tmap_comp' Tmap_id \<sigma>'' id_apply ss_\<sigma>''(1) ssbij_inv)+    
+     by auto (metis 1 TTmap_comp' TTmap_id \<sigma>'' id_apply ss_\<sigma>''(1) ssbij_inv)+    
 
      have GG: "GG (\<lambda>t'. II' t' \<and> (\<forall>p'. R p' t')) (Bmap \<rho> xs') (Tmap \<sigma> t)" 
      apply(rule GG_mmono[OF _ GG]) 

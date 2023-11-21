@@ -127,7 +127,7 @@ and
 Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
 and 
 small_Tfvars: "\<And>t. small (Tfvars t)" 
-and (* the weaker, inclusion-based version is sufficient (and similarly for B): *)
+and (* the weaker, inclusion-based version is sufficient: *)
 Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
 and 
 Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
@@ -137,14 +137,44 @@ and
 Bmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Bmap (\<sigma> o \<tau>) = Bmap \<sigma> o Bmap \<tau>"
 and 
 small_Bvars: "\<And>xs. wfB xs \<Longrightarrow> small (Bvars xs)" 
-and 
-Bmap_Bvars: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
+and (* need something slightly stronger than usual, employing small support injections instead of bijections
+     and also using equality not inclusion:  *)
+Bmap_Bvars': "\<And>xs \<sigma>. |supp \<sigma>| <o |UNIV::'A set| \<Longrightarrow> inj_on \<sigma> (Bvars xs) \<Longrightarrow> Bvars (Bmap \<sigma> xs) = \<sigma> ` (Bvars xs)"
 and 
 Bmap_cong_id: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Bvars xs. \<sigma> a = a) \<Longrightarrow> Bmap \<sigma> xs = xs"
+and 
+infinite_wfB: "\<And>xs. infinite {Bmap \<sigma> xs | \<sigma> . inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
+and 
+reg_wfB: "\<And>xs. regularCard |{Bmap \<sigma> xs | \<sigma> . inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}|"
 begin
 
-(* Being smaller than the number of well-formed binders: *)
-definition bsmall :: "'A set \<Rightarrow> bool" where "bsmall X \<equiv> |X| <o |{xs . wfB xs}|"
+lemma Bmap_Bvars: "ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
+using Bmap_Bvars' unfolding ssbij_def bij_def inj_on_def by auto
+
+(* Smaller w.r.t. well-formed binders: *)
+definition bsmall :: "'A set \<Rightarrow> bool" where 
+"bsmall A \<equiv> \<forall>xs. wfB xs \<longrightarrow> |{ys . wfB ys \<and> A \<inter> Bvars ys \<noteq> {}}| <o 
+                            |{Bmap \<sigma> xs | \<sigma> . inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}|"
+
+lemma bsmall_Un: 
+assumes "bsmall A" "bsmall B"
+shows "bsmall (A \<union> B)"
+proof-
+  have 0: "{ys . wfB ys \<and> (A \<union> B) \<inter> Bvars ys \<noteq> {}} = 
+   {ys . wfB ys \<and>  A \<inter> Bvars ys \<noteq> {}} \<union> {ys . wfB ys \<and> B \<inter> Bvars ys \<noteq> {}}"
+  by auto
+  show ?thesis unfolding bsmall_def 0 
+  using assms bsmall_def card_of_Un_ordLess_infinite infinite_wfB by blast
+qed
+
+lemma finite_UN_bsmall:
+assumes "finite As" and "\<And>A. A \<in> As \<Longrightarrow> bsmall A"
+shows "bsmall (\<Union> As)"
+using assms apply(induct As)  
+using bsmall_Un by (auto simp: bsmall_def infinite_wfB)
+
+
+(* *)
 
 lemma Tmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
 using Tmap_comp by fastforce 
@@ -205,8 +235,8 @@ extend_wfBij:
 "\<And>A A' B. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> closed A
            \<Longrightarrow> \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<rho> a = a)" *)
 extend_wfBij: 
-"\<And>A B. small A \<Longrightarrow> bsmall A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> (\<forall>a\<in>A\<inter>B. \<rho> a = a) \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
-        \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> (\<forall>a\<in>A. \<rho>' a = \<rho> a)"
+"\<And>A. small A \<Longrightarrow> bsmall A \<Longrightarrow> inj_on \<rho> A \<Longrightarrow> id_on (A \<inter> \<rho>`A) \<rho> \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
+      \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
 begin
 
 lemma GG_mmono2[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> GG R xs t \<longrightarrow> GG R' xs t"
@@ -278,10 +308,15 @@ and wfB
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
+Bvars_bsmall: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)"
+and 
+II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
+and 
 GG_rrefresh: 
 "\<And>R xs t. (\<forall>t. R t \<longrightarrow> II t) \<Longrightarrow> 
          (\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG R xs t \<Longrightarrow> 
          \<exists>ys. Bvars ys \<inter> Tfvars t = {} \<and> GG R ys t"
+
 
 
 context IInduct
@@ -329,11 +364,15 @@ and wfB
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
+Bvars_bsmall: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)"
+and 
+II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
+and 
 GG_ffresh: "\<And>R xs t. GG R xs t \<Longrightarrow> Bvars xs \<inter> Tfvars t = {}"
 
 
 sublocale IInduct_simple < IInduct apply standard
-  subgoal using GG_ffresh by blast . 
+  using Bvars_bsmall II_bsmall GG_ffresh by blast+
 
 
 context IInduct 
@@ -345,10 +384,54 @@ needs not guarantee that -- see again the case of beta-reduction)
  *)
 
 
+lemma extend: 
+assumes xs: "wfB xs" and t: "II t" and p: "bsmall (Pfvars p)" 
+and b: "Bvars xs \<inter> Tfvars t = {}"
+shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` (Bvars xs) \<inter> (Pfvars p \<union> Tfvars t) = {} \<and> 
+           id_on (Tfvars t) \<rho>"
+proof-
+  define K where K: "K = {Bmap \<sigma> xs |\<sigma>. inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
+  have KK: "infinite K \<and> regularCard |K|"
+  unfolding K by (simp add: infinite_wfB reg_wfB)
+  have bs: "bsmall (Bvars xs \<union> Pfvars p \<union> Tfvars t)" 
+    using II_bsmall[OF t] p bsmall_Un  
+    using Bvars_bsmall xs by auto
+  
+  hence "|{ys. wfB ys \<and> (Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars ys \<noteq> {}}| <o |K|"  
+  using xs unfolding bsmall_def K by auto
+  hence "|K - {ys. wfB ys \<and> (Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars ys \<noteq> {}}| =o |K|" 
+    using KK card_of_Un_diff_infinite by blast 
+  hence "K - {ys. wfB ys \<and> (Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars ys \<noteq> {}} \<noteq> {}"
+  using KK card_of_ordIso_finite by fastforce
+  then obtain \<sigma> where s: "inj_on \<sigma> (Bvars xs)" "id_on (- Bvars xs) \<sigma>" 
+  "(Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars (Bmap \<sigma> xs) = {}" 
+  and sxs: "wfB (Bmap \<sigma> xs)" 
+  unfolding K by blast
+  hence "supp \<sigma> \<subseteq> Bvars xs" unfolding id_on_def supp_def by auto
+  hence sp: "|supp \<sigma>| <o |UNIV::'A set|" 
+    using card_of_subset_bound small_Bvars small_def xs by blast
+  have s2: "(Pfvars p \<union> Tfvars t) \<inter> \<sigma> ` Bvars xs = {}" using Bmap_Bvars'[OF sp s(1)] s(3) by auto
+  have s3: "inj_on \<sigma> (Bvars xs \<union> Tfvars t)" using s s2 unfolding inj_on_def id_on_def  
+    by clarsimp (metis UnCI disjoint_iff imageI)
+  let ?A = "Bvars xs \<union> Tfvars t"
+  have 0: "small ?A" "bsmall ?A" "inj_on \<sigma> ?A" "id_on (?A \<inter> \<sigma> ` ?A) \<sigma>" "wfBij \<sigma>"
+    subgoal using small_Bvars small_Tfvars small_Un xs by auto
+    subgoal by (simp add: Bvars_bsmall II_bsmall bsmall_Un t xs)
+    subgoal by fact
+    subgoal using s2 s unfolding id_on_def  
+      using Bmap_Bvars' sp 
+      by auto (metis Int_emptyD UnCI image_eqI)+
+    subgoal using s(1,2) sxs xs unfolding wfBij_def  sorry .
+  show ?thesis using extend_wfBij[OF 0] apply safe subgoal for \<rho>' 
+   apply(rule exI[of _ \<rho>']) unfolding eq_on_def id_on_def 
+      using s2 s b unfolding id_on_def by auto .
+qed
+
+
 theorem BE_iinduct[consumes 2]: 
 (* Parameters: *)
 fixes Pfvars :: "'P \<Rightarrow> 'A set"
-assumes small_Pfvars: "\<And>p. small (Pfvars p)" 
+assumes small_Pfvars: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)" 
 (* *)
 assumes II: "II (t::'T)"
 and strong: "\<And> p xs t. Bvars xs \<inter> Pfvars p = {} \<Longrightarrow> Bvars xs \<inter> Tfvars t = {} \<Longrightarrow> 
@@ -364,10 +447,10 @@ proof-
      and GG: "GG (\<lambda>t'. II' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> wfBij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) xs t" 
      and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 
-     (* have "II' t"  
-       by (metis (no_types, lifting) GG II.simps II_eq_II' IInduct1.GG_mmono IInduct1_axioms predicate1II small_B)
+     have "II' t"  
+       by (metis (no_types, lifting) GG II.simps II_eq_II' IInduct1.GG_mmono IInduct1_axioms predicate1I)
      hence II_T: "II t" using II'_imp_II by auto
-     hence "II (Tmap \<sigma> t)" by (simp add: II_equiv \<sigma>(1) \<sigma>(2)) *)
+     hence II_s_t: "II (Tmap \<sigma> t)" by (simp add: II_equiv \<sigma>(1) \<sigma>(2)) 
 
      define xs' where xs': "xs' \<equiv> Bmap \<sigma> xs"
 
@@ -384,10 +467,11 @@ proof-
      have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
        by (simp add: small_Pfvars small_Tfvars small_Un)
 
+
      obtain \<rho> where \<rho>: "ssbij \<rho>" "wfBij \<rho>" "\<rho> ` (Bvars xs') \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" 
      "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"
-     (* using extend_wfBij[of B' "Pfvars p \<union> Tfvars (Tmap \<sigma> t)" "Tfvars (Tmap \<sigma> t)"] 
-     using small_Tfvars small_B' small_p_t v't clB' by metis *) sorry
+     using extend[OF wfB' II_s_t _, of Pfvars, OF small_Pfvars[THEN conjunct2] v't] 
+     unfolding id_on_def by metis 
  
      have "\<rho> ` (Bvars xs') \<inter> Pfvars p = {}" 
      and "\<rho> ` (Bvars xs') \<inter> Tfvars (Tmap \<sigma> t) = {}"  

@@ -132,4 +132,36 @@ lemma subOf_inj[simp]: "super xs \<Longrightarrow> super ys \<Longrightarrow> su
 by (metis superOf_subOf)
 
 
+(* The set of supervariables "touched" by a set, or by an iterm: *)
+
+definition touchedSuper :: "ivar set \<Rightarrow> ivar dstream set" where 
+"touchedSuper X \<equiv> {xs. super xs \<and> X \<inter> dsset xs \<noteq> {}}"
+
+lemma touchedSuper_mono: "X \<subseteq> Y \<Longrightarrow> touchedSuper X \<subseteq> touchedSuper Y"
+using disjoint_iff unfolding touchedSuper_def by auto
+
+definition touchedSuperT :: "itrm \<Rightarrow> ivar dstream set" where 
+"touchedSuperT t \<equiv> touchedSuper (FFVars t)"
+
+lemma touchedSuper_iVar_singl: "touchedSuperT (iVar x) = {} \<or> (\<exists>xs. touchedSuperT (iVar x) = {xs})"
+proof-
+  {fix xs xs' assume "{xs,xs'} \<subseteq> touchedSuperT (iVar x)" and "xs \<noteq> xs'"
+   hence False unfolding touchedSuperT_def touchedSuper_def  
+     by auto (meson Int_emptyD super_disj)
+  }
+  thus ?thesis 
+    by auto (metis insertI1 insert_absorb subsetI subset_singletonD)
+qed
+
+lemma touchedSuper_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuperT (iVar x) = {xs}"
+unfolding touchedSuperT_def touchedSuper_def by auto (meson Int_emptyD super_disj)
+
+lemma touchedSuper_iLam[simp]: "super ys \<Longrightarrow> touchedSuperT (iLam ys e) = touchedSuperT e - {ys}"
+unfolding touchedSuperT_def touchedSuper_def 
+by auto (auto simp: Diff_Int_distrib2 Int_emptyD super_disj)
+
+lemma touchedSuper_iApp[simp]: "touchedSuperT (iApp e es) = touchedSuperT e \<union> \<Union> (touchedSuperT ` (sset es))"
+unfolding touchedSuperT_def touchedSuper_def by auto
+
+
 end 

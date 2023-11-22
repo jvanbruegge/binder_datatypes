@@ -229,5 +229,16 @@ lemma dsmap_cong: "inj_on f (dsset xs) \<Longrightarrow> inj_on g (dsset xs) \<L
 apply transfer by (auto cong: stream.map_cong0)  
 
 
+lemmas dsnth_dsmap[simp]
+
+lemma dsnth_dsmap_cong: "(\<And>i. f (dsnth xs i) = dsnth ys i) \<Longrightarrow> dsmap f xs = ys"
+by (metis (no_types, opaque_lifting) dsmap_alt dtheN dtheN_dsnth inj_onCI)
+
+lemma ex_dsmap: "\<exists>f. bij_betw f (dsset xs) (dsset ys) \<and> dsmap f xs = ys \<and> id_on (- dsset xs) f"
+apply(rule exI[of _ "\<lambda>x. if x \<in> dsset xs then dsnth ys (dtheN xs x) else x"])
+unfolding bij_betw_def inj_on_def apply (simp add: dsmap_alt inj_on_def) 
+by (smt (verit, ccfv_SIG) ComplD dsset_range id_on_def image_cong image_image range_eqI surj_dtheN)
+
+
 
 end

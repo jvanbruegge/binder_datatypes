@@ -5,8 +5,6 @@ imports LC2 ILC2 "../Instantiation_Infrastructure/Curry_LFP"
 Supervariables
 begin
 
-(* INSTANTIATING THE ABSTRACT SETTING: *)
-
 (* *)
 inductive reneqv where
  iVar: "super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> reneqv (iVar x) (iVar x')"
@@ -18,6 +16,64 @@ inductive reneqv where
  reneqv (iApp e1 es2) (iApp e1' es2')"
 
 thm reneqv_def
+
+
+
+(* INSTANTIATING THE ABSTRACT SETTING: *)
+
+(* PREPARING THE INSTANTIATION: *)
+
+(* the set of supervariables "touched" by aa set, or by an iterm: *)
+
+definition touchedSuper :: "ivar set \<Rightarrow> ivar dstream set" where 
+"touchedSuper X \<equiv> {xs. super xs \<and> X \<inter> dsset xs \<noteq> {}}"
+
+lemma touchedSuper_mono: "X \<subseteq> Y \<Longrightarrow> touchedSuper X \<subseteq> touchedSuper Y"
+using disjoint_iff unfolding touchedSuper_def by auto
+
+definition touchedSuperT :: "itrm \<Rightarrow> ivar dstream set" where 
+"touchedSuperT t \<equiv> touchedSuper (FFVars t)"
+
+lemma touchedSuper_iVar_singl: "touchedSuperT (iVar x) = {} \<or> (\<exists>xs. touchedSuperT (iVar x) = {xs})"
+proof-
+  {fix xs xs' assume "{xs,xs'} \<subseteq> touchedSuperT (iVar x)" and "xs \<noteq> xs'"
+   hence False unfolding touchedSuperT_def touchedSuper_def  
+     by auto (meson Int_emptyD super_disj)
+  }
+  thus ?thesis 
+    by auto (metis insertI1 insert_absorb subsetI subset_singletonD)
+qed
+
+lemma touchedSuper_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuperT (iVar x) = {xs}"
+unfolding touchedSuperT_def touchedSuper_def by auto (meson Int_emptyD super_disj)
+
+lemma touchedSuper_iLam[simp]: "super ys \<Longrightarrow> touchedSuperT (iLam ys e) = touchedSuperT e - {ys}"
+unfolding touchedSuperT_def touchedSuper_def 
+by auto (auto simp: Diff_Int_distrib2 Int_emptyD super_disj)
+
+lemma touchedSuper_iApp[simp]: "touchedSuperT (iApp e es) = touchedSuperT e \<union> \<Union> (touchedSuperT ` (sset es))"
+unfolding touchedSuperT_def touchedSuper_def by auto
+
+lemma reneqv_FFvars_super: 
+"reneqv e1 e2 \<Longrightarrow> touchedSuperT e1 = touchedSuperT e2 \<and> finite (touchedSuperT e1) \<and> finite (touchedSuperT e2) "
+proof(induct rule: reneqv.induct)
+  case (iVar xs x x')
+  then show ?case by auto 
+next
+  case (iLam xs e e')
+  then show ?case by auto
+next
+  case (iApp e1 e1' es2 es2')
+  obtain e2 e2' where e2: "e2 \<in> sset es2" and e2': "e2' \<in> sset es2'" 
+  using shd_sset by blast+
+  hence 0: "touchedSuperT ` sset es2 = {touchedSuperT e2}" "touchedSuperT ` sset es2' = {touchedSuperT e2}"
+  using iApp(3) by auto
+  have "\<Union> (touchedSuperT ` sset es2) = \<Union> (touchedSuperT ` sset es2') \<and>
+       finite (\<Union> (touchedSuperT ` sset es2)) \<and> finite (\<Union> (touchedSuperT ` sset es2'))" 
+  unfolding 0 using iApp(3) e2 e2' by auto    
+  thus ?case using iApp by simp
+qed
+
 
 (* INSTANTIATING THE CComponents LOCALE: *)
 
@@ -44,7 +100,7 @@ fun wfB :: "B \<Rightarrow> bool" where
                        |Some xs \<Rightarrow> super xs)"
 
 definition bsmall :: "ivar set \<Rightarrow> bool" where 
-"bsmall X \<equiv> finite {xs . super xs \<and> X \<inter> dsset xs \<noteq> {}}"
+"bsmall X \<equiv> finite (touchedSuper X)"
 
 lemma super_dsset_singl: 
  "super ys \<Longrightarrow> {xs . super xs \<and> dsset ys \<inter> dsset xs \<noteq> {}} = {ys}"
@@ -67,7 +123,7 @@ iterm.rrename_comp0s inf_A bsmall_def intro!: ext split: option.splits)
 apply (simp add: iterm.set_bd_UNIV) 
 apply (simp add: comp_def dstream.map_comp)
 apply (simp add: dstream_map_ident_strong)
-unfolding bsmall_def apply(frule super_dsset_singl) apply auto
+unfolding bsmall_def touchedSuper_def apply simp apply(frule super_dsset_singl) apply auto
 using super_Un_ddset_triv  
 by (smt (verit) finite_Un rev_finite_subset) 
 
@@ -128,7 +184,7 @@ unfolding G_def by auto
 
 lemma extend_super: 
 assumes "super xs" "|A| <o |UNIV::ivar set|" 
- "finite {xs. super xs \<and> A \<inter> dsset xs \<noteq> {}}" "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
+ "finite (touchedSuper A)" "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
 shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> (\<forall>xs. super xs \<longleftrightarrow> super (dsmap \<rho> xs)) \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> id_on A' \<rho>"
 sorry
 
@@ -140,7 +196,7 @@ proof(cases xxs)
   thus ?thesis apply(intro exI[of _ id]) unfolding ssbij_def by auto
 next
   case (Some xs)
-  hence 0: "super xs" "|A| <o |UNIV::ivar set|" "finite {xs. super xs \<and> A \<inter> dsset xs \<noteq> {}}" "A' \<subseteq> A"
+  hence 0: "super xs" "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A' \<subseteq> A"
   "dsset xs \<inter> A' = {}"
   using assms by (auto split: option.splits simp: small_def bsmall_def) 
   show ?thesis using extend_super[OF 0] apply safe
@@ -179,30 +235,22 @@ subgoal for R tt1 tt2 apply(rule iffI)
     \<^cancel>\<open>iApp: \<close>
     subgoal apply(rule disjI3_3) by auto . . .
   
-lemma reneqv_FFvars_super: 
-"reneqv e1 e2 \<Longrightarrow> 
-  {xs. super xs \<and> FFVars e1 \<inter> dsset xs \<noteq> {}} = {xs. super xs \<and> FFVars e2 \<inter> dsset xs \<noteq> {}} 
-  \<and>
-  finite {xs. super xs \<and> FFVars e1 \<inter> dsset xs \<noteq> {}} \<and> 
-  finite {xs. super xs \<and> FFVars e2 \<inter> dsset xs \<noteq> {}}"
-sorry
+
 
 lemma III_bsmall: "Reneqv.II t \<Longrightarrow> bsmall (Tfvars t)"
 apply(cases t)
   subgoal for e1 e2 apply simp
   unfolding reneqv_I[symmetric] apply(drule reneqv_FFvars_super)
-  unfolding bsmall_def[symmetric] 
-  using bsmall_Un by auto .
-
+  apply(rule bsmall_Un) unfolding bsmall_def touchedSuperT_def by auto .
 
 
 thm refresh
 lemma refresh_super: 
 assumes V: " dsset xs \<inter> V = {}" "|V| <o |UNIV::ivar set|" 
-  "finite {xs. super xs \<and> V \<inter> dsset xs \<noteq> {}}"
+  "finite (touchedSuper V)"
 and xs: "super xs"  
 shows "\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
-               \<comment> \<open> dsset xs' \<inter> dsset xs = {} \<and>  \<close>dsset (dsmap f xs) \<inter> V = {} \<and>
+           dsset (dsmap f xs) \<inter> V = {} \<and>
            id_on V f \<and> (\<forall>ys. super ys \<longleftrightarrow> super (dsmap f ys))"
 using extend_super[OF xs V(2) V(3) _ V(1), simplified]
 apply safe subgoal for \<rho> apply(intro exI[of _ \<rho>]) 
@@ -213,10 +261,10 @@ lemma Tvars_dsset: "dsset xs \<inter> (Tfvars t - dsset xs) = {}"
   "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
 using ILC2.small_def card_of_minus_bound ssmall_Tfvars by blast+
 
-lemma Tvars_dsset_finite: "Reneqv.II t \<Longrightarrow> finite {xs. super xs \<and> (Tfvars t - dsset ys) \<inter> dsset (xs::ivar dstream) \<noteq> {}}"
+lemma Tvars_dsset_finite: "Reneqv.II t \<Longrightarrow> finite (touchedSuper (Tfvars t - dsset ys))"
 apply(subgoal_tac "bsmall (Tfvars t)")
   subgoal unfolding bsmall_def 
-    by (smt (verit) Collect_mono Diff_Int_distrib2 empty_Diff rev_finite_subset)
+    by (meson Diff_subset rev_finite_subset touchedSuper_mono) 
   subgoal by (metis III_bsmall) . 
 
 lemma G_rrefresh: 
@@ -289,7 +337,7 @@ thm reneqv.induct[no_vars]
 thm bsmall_def[of "Pfvars p"]
 
 corollary BE_induct_reneqv: 
-assumes par: "\<And>p. small (Pfvars p) \<and> finite {xs. super xs \<and> Pfvars p \<inter> dsset xs \<noteq> {}}"
+assumes par: "\<And>p. small (Pfvars p) \<and> finite (touchedSuper (Pfvars p))"
 and st: "reneqv t1 t2"  
 and iVar: "\<And>xs x x' p. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>

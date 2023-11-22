@@ -175,13 +175,15 @@ and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
 and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
 shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
    presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
-   id_on A' \<rho> \<and> eq_on (dsset xs) \<rho> f"
+   id_on A' \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f"
 proof- 
-  obtain g where g: "bij_betw g (dsset ys) (dsset xs)" "dsmap g ys = xs" "id_on (- dsset ys) g" using ex_dsmap by auto
+  obtain g where g: "bij_betw g (dsset ys) (dsset xs)" "dsmap g ys = xs" using ex_dsmap by auto
   define \<rho> where "\<rho> \<equiv> \<lambda>z. if z \<in> dsset xs then f z else if z \<in> dsset ys then g z else z"
   have i: "inj_on f (dsset xs)" "inj_on g (dsset ys)" using f(1) g(1) unfolding bij_betw_def by auto
   have s: "supp \<rho> \<subseteq> dsset xs \<union> dsset ys"   
     unfolding \<rho>_def supp_def by auto 
+  have io: "id_on (- (dsset xs \<union> dsset ys)) \<rho>" 
+  unfolding \<rho>_def id_on_def by auto
   have 0: "dsmap \<rho> xs = ys" "dsmap \<rho> ys = xs"
     subgoal unfolding \<rho>_def using f(1) f(2) dsset_range apply(intro dsnth_dsmap_cong) 
     apply auto using dsmap_alt i(1) by auto 
@@ -209,6 +211,7 @@ proof-
       by (meson Int_emptyD assms(5) bij_betw_apply f(1)) 
     subgoal unfolding id_on_def \<rho>_def 
       using assms(5) assms(6) assms(7) by auto 
+    subgoal by fact
     subgoal unfolding \<rho>_def eq_on_def by auto .
 qed
 
@@ -218,7 +221,7 @@ A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}
 and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
 shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
    presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
-   id_on A \<rho> \<and> eq_on (dsset xs) \<rho> f"
+   id_on A \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f"
 apply(rule extend_super1) using assms by auto
 
 lemma extend_super: 

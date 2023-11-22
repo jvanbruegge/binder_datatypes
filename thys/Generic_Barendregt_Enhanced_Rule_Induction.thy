@@ -622,12 +622,33 @@ lemma extend_wfBij:
      \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
 using extend_small by (metis ssbij_wfBij) 
 
-
 lemma extend_to_wfBij: 
-"small B \<Longrightarrow> small A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> B \<inter> A' = {} \<Longrightarrow> 
- \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
-sorry
+assumes "small B" "small A" "A' \<subseteq> A" "B \<inter> A' = {}"
+shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
+proof-
+  have "|- (A \<union> B)| =o |UNIV::'A set|"  
+  by (metis Compl_eq_Diff_UNIV Un_bound assms(1) assms(2) card_of_Un_diff_infinite inf_A small_def)
+  hence "|B| <o |- (A \<union> B)|"  
+    using assms(1) ordIso_symmetric ordLess_ordIso_trans small_def by blast
+  then obtain f where f: "inj_on f B" "f ` B \<subseteq> - (A \<union> B)" 
+    by (meson card_of_ordLeq ordLeq_iff_ordLess_or_ordIso)
+  define g where "g \<equiv> \<lambda>a. if a \<in> B then f a else a"
+  have g: "inj_on g (B \<union> A')" "g ` (B \<union> A') \<subseteq> - (A \<union> B) \<union> A'" using f 
+  unfolding g_def inj_on_def using assms(3,4) by auto
+  define C where C: "C = g ` (B \<union> A')"
+  have b: "bij_betw g (B \<union> A') C" unfolding C bij_betw_def using g by simp
 
+  have 0: "Cinfinite |UNIV::'A set|" "|B \<union> A'| <o |UNIV::'A set|" "eq_on ((B \<union> A') \<inter> C) g id"
+    subgoal by (simp add: cinfinite_A)
+    subgoal by (meson assms(1-3) card_of_subset_bound small_Un small_def)
+    subgoal using assms(3) f unfolding eq_on_def C g_def by auto .
+    
+  show ?thesis using ex_bij_betw_supp'[OF 0(1,2) b 0(3)] apply safe
+  subgoal for \<rho> apply(rule exI[of _ \<rho>]) using ssbij_wfBij unfolding ssbij_def
+  unfolding id_on_def apply auto  
+  apply (metis ComplD UnCI eq_on_def f(2) g_def image_subset_iff)
+  by (metis Int_emptyD UnCI assms(4) eq_on_def g_def) .
+qed
 
 end (* context Induct1 *)
 

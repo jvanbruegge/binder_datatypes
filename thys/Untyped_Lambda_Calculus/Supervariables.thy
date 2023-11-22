@@ -164,4 +164,105 @@ lemma touchedSuper_iApp[simp]: "touchedSuperT (iApp e es) = touchedSuperT e \<un
 unfolding touchedSuperT_def touchedSuper_def by auto
 
 
+(* The notion of a function preserving supervariables: *)
+definition "presSuper \<sigma> \<equiv> \<forall>xs. super xs \<longleftrightarrow> super (dsmap \<sigma> xs)"  
+
+
+lemma extend_super1: 
+assumes xs: "super xs" and ys: "super ys" and 
+A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset ys = {}"
+and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
+and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
+shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
+   presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
+   id_on A' \<rho> \<and> eq_on (dsset xs) \<rho> f"
+proof- 
+  obtain g where g: "bij_betw g (dsset ys) (dsset xs)" "dsmap g ys = xs" "id_on (- dsset ys) g" using ex_dsmap by auto
+  define \<rho> where "\<rho> \<equiv> \<lambda>z. if z \<in> dsset xs then f z else if z \<in> dsset ys then g z else z"
+  have i: "inj_on f (dsset xs)" "inj_on g (dsset ys)" using f(1) g(1) unfolding bij_betw_def by auto
+  have s: "supp \<rho> \<subseteq> dsset xs \<union> dsset ys"   
+    unfolding \<rho>_def supp_def by auto 
+  have 0: "dsmap \<rho> xs = ys" "dsmap \<rho> ys = xs"
+    subgoal unfolding \<rho>_def using f(1) f(2) dsset_range apply(intro dsnth_dsmap_cong) 
+    apply auto using dsmap_alt i(1) by auto 
+    subgoal unfolding \<rho>_def using g(1) g(2) dsset_range apply(intro dsnth_dsmap_cong) 
+    using i 
+    by auto (metis Int_emptyD dsnth_dsmap f(2) i(1) rangeI super_disj xs ys) .
+
+  have 1: "\<And>zs. super zs \<Longrightarrow> zs \<notin> {xs,ys} \<Longrightarrow> dsmap \<rho> zs = zs"
+  unfolding \<rho>_def apply(intro dsnth_dsmap_cong) unfolding id_on_def apply auto 
+  apply (metis Int_emptyD dsset_range rangeI super_disj ys)
+  apply (metis Int_emptyD dsset_range rangeI super_disj ys(1))  
+  by (metis Int_emptyD dsset_range rangeI super_disj xs)
+
+  show ?thesis apply(rule exI[of _ \<rho>], intro conjI)
+    subgoal using f g unfolding bij_def inj_def surj_def bij_betw_def inj_on_def apply auto 
+      apply (smt (verit, ccfv_SIG) Int_emptyD ys(1) \<rho>_def image_iff super_disj xs)
+      apply (smt (verit, del_insts) Int_emptyD \<rho>_def bij_betw_iff_bijections f(1) g(1) super_disj xs ys(1)) .
+    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound var_stream_class.Un_bound)
+    subgoal unfolding presSuper_def apply clarify subgoal for zs  
+    apply(cases "zs \<in> {xs,ys}")
+      subgoal using 0 ys(1) xs by auto
+      subgoal using 1  
+      by simp (smt (verit, ccfv_threshold) "0"(1) "0"(2) \<open>bij \<rho>\<close> bij_implies_inject dsnth_dsmap dsnth_dsmap_cong inj_onI) . .
+    subgoal unfolding \<rho>_def apply auto 
+      by (meson Int_emptyD assms(5) bij_betw_apply f(1)) 
+    subgoal unfolding id_on_def \<rho>_def 
+      using assms(5) assms(6) assms(7) by auto 
+    subgoal unfolding \<rho>_def eq_on_def by auto .
+qed
+
+lemma extend_super2: 
+assumes xs: "super xs" and ys: "super ys" and 
+A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}" "A \<inter> dsset ys = {}"
+and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
+shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
+   presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
+   id_on A \<rho> \<and> eq_on (dsset xs) \<rho> f"
+apply(rule extend_super1) using assms by auto
+
+lemma extend_super: 
+assumes xs: "super xs" and A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
+shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> id_on A' \<rho>"
+proof- 
+  obtain ys where ys: "super ys" "A \<inter> dsset ys = {}" "ys \<noteq> xs"
+    by (smt (verit, del_insts) assms(3) finite.simps insert_subset mem_Collect_eq set_eq_subset subset_eq super_infinite touchedSuper_def)
+
+  obtain f where f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" "id_on (- dsset xs) f" using ex_dsmap by auto
+  obtain g where g: "bij_betw g (dsset ys) (dsset xs)" "dsmap g ys = xs" "id_on (- dsset ys) g" using ex_dsmap by auto
+  define \<rho> where "\<rho> \<equiv> \<lambda>z. if z \<in> dsset xs then f z else if z \<in> dsset ys then g z else z"
+  have i: "inj_on f (dsset xs)" "inj_on g (dsset ys)" using f(1) g(1) unfolding bij_betw_def by auto
+  have s: "supp \<rho> \<subseteq> supp f \<union> supp g"  "supp f \<subseteq> dsset xs"  "supp g \<subseteq> dsset ys" 
+    subgoal unfolding \<rho>_def supp_def by auto
+    subgoal using f(3) unfolding supp_def id_on_def by auto
+    subgoal using g(3) unfolding supp_def id_on_def by auto .
+  have 0: "dsmap \<rho> xs = ys" "dsmap \<rho> ys = xs"
+    subgoal unfolding \<rho>_def using f(1) f(2) dsset_range apply(intro dsnth_dsmap_cong) 
+    apply auto using dsmap_alt i(1) by auto 
+    subgoal unfolding \<rho>_def using g(1) g(2) dsset_range apply(intro dsnth_dsmap_cong) 
+    using i by auto (metis Int_emptyD bij_betw_apply g(1) rangeI super_disj xs ys(1) ys(3)) .
+
+  have 1: "\<And>zs. super zs \<Longrightarrow> zs \<notin> {xs,ys} \<Longrightarrow> dsmap \<rho> zs = zs"
+  unfolding \<rho>_def apply(intro dsnth_dsmap_cong) using f(3) g(3) unfolding id_on_def apply auto 
+  apply (meson Int_emptyD super_disj xs ys(1) ys(3)) 
+  apply (metis Int_emptyD dsset_range rangeI super_disj ys(1))  
+  by (metis Int_emptyD dsset_range rangeI super_disj xs)
+
+  show ?thesis apply(rule exI[of _ \<rho>], intro conjI)
+    subgoal using f g unfolding bij_def inj_def surj_def bij_betw_def inj_on_def apply auto 
+      apply (smt (verit, ccfv_SIG) Int_emptyD ys(1) \<rho>_def image_iff super_disj xs)
+      apply (smt (verit, del_insts) Int_emptyD \<rho>_def bij_betw_iff_bijections f(1) g(1) super_disj xs ys(1)) .
+    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound var_stream_class.Un_bound)
+    subgoal unfolding presSuper_def apply clarify subgoal for zs  
+    apply(cases "zs \<in> {xs,ys}")
+      subgoal using 0 ys(1) xs by auto
+      subgoal using 1  
+      by simp (smt (verit, ccfv_threshold) "0"(1) "0"(2) \<open>bij \<rho>\<close> bij_implies_inject dsnth_dsmap dsnth_dsmap_cong inj_onI) . .
+    subgoal unfolding \<rho>_def 
+      by auto (meson Int_emptyD bij_betw_apply f(1) ys(2))
+    subgoal unfolding id_on_def \<rho>_def 
+      using assms(4) assms(5) ys(2) by auto . 
+qed
+
+
 end 

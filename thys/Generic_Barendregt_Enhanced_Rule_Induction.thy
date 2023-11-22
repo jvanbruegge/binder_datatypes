@@ -143,48 +143,12 @@ and
 BBmap_Bvars: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> Bvars (Bmap \<sigma> xs) \<subseteq> \<sigma> ` (Bvars xs)"
 and 
 BBmap_cong_id: "\<And>xs \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Bvars xs. \<sigma> a = a) \<Longrightarrow> Bmap \<sigma> xs = xs"
-(* and 
-infinite_wfB: "\<And>xs. wfB xs \<Longrightarrow> infinite {Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
-and 
-reg_wfB: "\<And>xs. wfB xs \<Longrightarrow> regularCard |{Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}|" *)
-(* *)
 and  
 (* bsmallness is subject to properties similar to the ones enjoyed by smallness: *)
-(* bssmall_Tfvars: "\<And>t. bsmall (Tfvars t)"  (* not needed *)
-and *)
 bsmall_Bvars: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)" 
 and 
 bsmall_Un: "bsmall A \<Longrightarrow> bsmall B \<Longrightarrow> bsmall (A \<union> B)"
 begin
-
-
-(*
-(* Smaller w.r.t. well-formed binders: *)
-definition bsmall :: "'A set \<Rightarrow> bool" where 
-"bsmall A \<equiv> \<forall>xs. wfB xs \<longrightarrow> |{ys . wfB ys \<and> A \<inter> Bvars ys \<noteq> {}}| <o 
-                            |{Bmap \<sigma> xs | \<sigma> . ssbij \<sigma> \<and> wfB (Bmap \<sigma> xs)}|"
-
-lemma bsmall_Un: 
-assumes "bsmall A" "bsmall B"
-shows "bsmall (A \<union> B)"
-proof-
-  have 0: "{ys . wfB ys \<and> (A \<union> B) \<inter> Bvars ys \<noteq> {}} = 
-   {ys . wfB ys \<and>  A \<inter> Bvars ys \<noteq> {}} \<union> {ys . wfB ys \<and> B \<inter> Bvars ys \<noteq> {}}"
-  by auto
-  show ?thesis unfolding bsmall_def 0 
-  using assms bsmall_def card_of_Un_ordLess_infinite infinite_wfB by blast
-qed
-*)
-
-(*
-lemma finite_UN_bsmall:
-assumes "finite As" and "\<And>A. A \<in> As \<Longrightarrow> bsmall A"
-shows "bsmall (\<Union> As)"
-using assms apply(induct As)  
-using bsmall_Un by (auto simp: bsmall_def infinite_wfB)
-*)
-
-(* *)
 
 lemma TTmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
 using TTmap_comp by fastforce 
@@ -236,18 +200,8 @@ and
 GG_eequiv: "\<And>\<sigma> R xs t. ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> 
    GG R xs t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Bmap \<sigma> xs) (Tmap \<sigma> t)"
 and 
-(* *)
 GG_wfB: "\<And>R xs t. GG R xs t \<Longrightarrow> wfB xs"
 and 
-(* 
-extend_wfBij: 
-"\<And>A A' B. small A \<Longrightarrow> small B \<Longrightarrow> small A' \<Longrightarrow> A \<inter> A' = {} \<Longrightarrow> closed A
-           \<Longrightarrow> \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<rho> a = a)" *)
-(*
-extend_wfBij: 
-"\<And>A. small A \<Longrightarrow> bsmall A \<Longrightarrow> inj_on \<rho> A \<Longrightarrow> id_on (A \<inter> \<rho>`A) \<rho> \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
-      \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
-*)
 extend_to_wfBij: 
 "\<And>xs A A'. wfB xs \<Longrightarrow> small A \<Longrightarrow> bsmall A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> Bvars xs \<inter> A' = {} \<Longrightarrow> 
            \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bvars xs \<inter> A = {} \<and> id_on A' \<rho>"
@@ -322,8 +276,6 @@ and wfB and bsmall
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
-(* Bvars_bsmall: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)"
-and *)
 II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
 and 
 GG_rrefresh: 
@@ -409,45 +361,6 @@ apply(rule extend_to_wfBij)
   subgoal by (simp add: II_bsmall bsmall_Un p(2) t)
   subgoal by simp
   subgoal by fact .
-(*
-proof-
-  define K where K: "K = {Bmap \<sigma> xs |\<sigma>. inj_on \<sigma> (Bvars xs) \<and> id_on (- Bvars xs) \<sigma> \<and> wfB (Bmap \<sigma> xs)}"
-  have KK: "infinite K \<and> regularCard |K|"
-  unfolding K by (simp add: infinite_wfB reg_wfB)
-  have bs: "bsmall (Bvars xs \<union> Pfvars p \<union> Tfvars t)" 
-    using II_bsmall[OF t] p bsmall_Un  
-    using Bvars_bsmall xs by auto
-  
-  hence "|{ys. wfB ys \<and> (Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars ys \<noteq> {}}| <o |K|"  
-  using xs unfolding bsmall_def K by auto
-  hence "|K - {ys. wfB ys \<and> (Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars ys \<noteq> {}}| =o |K|" 
-    using KK card_of_Un_diff_infinite by blast 
-  hence "K - {ys. wfB ys \<and> (Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars ys \<noteq> {}} \<noteq> {}"
-  using KK card_of_ordIso_finite by fastforce
-  then obtain \<sigma> where s: "inj_on \<sigma> (Bvars xs)" "id_on (- Bvars xs) \<sigma>" 
-  "(Bvars xs \<union> Pfvars p \<union> Tfvars t) \<inter> Bvars (Bmap \<sigma> xs) = {}" 
-  and sxs: "wfB (Bmap \<sigma> xs)" 
-  unfolding K by blast
-  hence "supp \<sigma> \<subseteq> Bvars xs" unfolding id_on_def supp_def by auto
-  hence sp: "|supp \<sigma>| <o |UNIV::'A set|" 
-    using card_of_subset_bound small_Bvars small_def xs by blast
-  have s2: "(Pfvars p \<union> Tfvars t) \<inter> \<sigma> ` Bvars xs = {}" using BBmap_Bvars'[OF sp s(1)] s(3) by auto
-  have s3: "inj_on \<sigma> (Bvars xs \<union> Tfvars t)" using s s2 unfolding inj_on_def id_on_def  
-    by clarsimp (metis UnCI disjoint_iff imageI)
-  let ?A = "Bvars xs \<union> Tfvars t"
-  have 0: "small ?A" "bsmall ?A" "inj_on \<sigma> ?A" "id_on (?A \<inter> \<sigma> ` ?A) \<sigma>" "wfBij \<sigma>"
-    subgoal using small_Bvars ssmall_Tfvars small_Un xs by auto
-    subgoal by (simp add: Bvars_bsmall II_bsmall bsmall_Un t xs)
-    subgoal by fact
-    subgoal using s2 s unfolding id_on_def  
-      using BBmap_Bvars' sp 
-      by auto (metis Int_emptyD UnCI image_eqI)+
-    subgoal using s(1,2) sxs xs unfolding wfBij_def  sorry .
-  show ?thesis using extend_wfBij[OF 0] apply safe subgoal for \<rho>' 
-   apply(rule exI[of _ \<rho>']) unfolding eq_on_def id_on_def 
-      using s2 s b unfolding id_on_def by auto .
-qed
-*)
 
 theorem BE_iinduct[consumes 2]: 
 (* Parameters: *)
@@ -489,7 +402,6 @@ proof-
 
      have small_p_t: "small (Pfvars p \<union> Tfvars (Tmap \<sigma> t))"  
        by (simp add: small_Pfvars ssmall_Tfvars small_Un)
-
 
      obtain \<rho> where \<rho>: "ssbij \<rho>" "wfBij \<rho>" "\<rho> ` (Bvars xs') \<inter> (Pfvars p \<union> Tfvars (Tmap \<sigma> t)) = {}" 
      "\<forall>a \<in> Tfvars (Tmap \<sigma> t). \<rho> a = a"

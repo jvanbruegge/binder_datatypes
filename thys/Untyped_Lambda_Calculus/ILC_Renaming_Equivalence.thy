@@ -21,7 +21,7 @@ thm reneqv_def
 
 (* PREPARING THE INSTANTIATION: *)
 
-lemma reneqv_FFvars_super: 
+lemma reneqv_touchedSuperT: 
 "reneqv e1 e2 \<Longrightarrow> touchedSuperT e1 = touchedSuperT e2 \<and> finite (touchedSuperT e1) \<and> finite (touchedSuperT e2) "
 proof(induct rule: reneqv.induct)
   case (iVar xs x x')
@@ -40,6 +40,9 @@ next
   unfolding 0 using iApp(3) e2 e2' by auto    
   thus ?case using iApp by simp
 qed
+
+lemmas reneqv_touchedSuperT_eq = reneqv_touchedSuperT[THEN conjunct1]
+lemmas reneqv_finite_touchedSuperT = reneqv_touchedSuperT[THEN conjunct2]
 
 
 (* INSTANTIATING THE CComponents LOCALE: *)
@@ -93,6 +96,13 @@ apply (simp add: dstream_map_ident_strong)
 unfolding bsmall_def touchedSuper_def apply simp apply(frule super_dsset_singl) apply auto
 using super_Un_ddset_triv  
 by (smt (verit) finite_Un rev_finite_subset) 
+
+lemma wfBij_presSuper: "wfBij = presSuper"
+unfolding wfBij_def presSuper_def fun_eq_iff apply safe
+  subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
+  subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
+  subgoal for \<sigma> xxs apply(cases xxs) by auto 
+  subgoal for \<sigma> xxs apply(cases xxs) by auto .
 
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> B \<Rightarrow> T \<Rightarrow> bool"
 where
@@ -148,49 +158,6 @@ unfolding G_def apply(elim disjE)
 lemma G_wfB: "G R B t \<Longrightarrow> wfB B"
 unfolding G_def by auto 
 
-lemma extend_super: 
-assumes xs: "super xs" and A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
-shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> (\<forall>xs. super xs \<longleftrightarrow> super (dsmap \<rho> xs)) \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> id_on A' \<rho>"
-proof- 
-  obtain ys where ys: "super ys" "A \<inter> dsset ys = {}" "ys \<noteq> xs"
-    by (smt (verit, del_insts) assms(3) finite.simps insert_subset mem_Collect_eq set_eq_subset subset_eq super_infinite touchedSuper_def)
-
-  obtain f where f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" "id_on (- dsset xs) f" using ex_dsmap by auto
-  obtain g where g: "bij_betw g (dsset ys) (dsset xs)" "dsmap g ys = xs" "id_on (- dsset ys) g" using ex_dsmap by auto
-  define \<rho> where "\<rho> \<equiv> \<lambda>z. if z \<in> dsset xs then f z else if z \<in> dsset ys then g z else z"
-  have i: "inj_on f (dsset xs)" "inj_on g (dsset ys)" using f(1) g(1) unfolding bij_betw_def by auto
-  have s: "supp \<rho> \<subseteq> supp f \<union> supp g"  "supp f \<subseteq> dsset xs"  "supp g \<subseteq> dsset ys" 
-    subgoal unfolding \<rho>_def supp_def by auto
-    subgoal using f(3) unfolding supp_def id_on_def by auto
-    subgoal using g(3) unfolding supp_def id_on_def by auto .
-  have 0: "dsmap \<rho> xs = ys" "dsmap \<rho> ys = xs"
-    subgoal unfolding \<rho>_def using f(1) f(2) dsset_range apply(intro dsnth_dsmap_cong) 
-    apply auto using dsmap_alt i(1) by auto 
-    subgoal unfolding \<rho>_def using g(1) g(2) dsset_range apply(intro dsnth_dsmap_cong) 
-    using i by auto (metis Int_emptyD bij_betw_apply g(1) rangeI super_disj xs ys(1) ys(3)) .
-
-  have 1: "\<And>zs. super zs \<Longrightarrow> zs \<notin> {xs,ys} \<Longrightarrow> dsmap \<rho> zs = zs"
-  unfolding \<rho>_def apply(intro dsnth_dsmap_cong) using f(3) g(3) unfolding id_on_def apply auto 
-  apply (meson Int_emptyD super_disj xs ys(1) ys(3)) 
-  apply (metis Int_emptyD dsset_range rangeI super_disj ys(1))  
-  by (metis Int_emptyD dsset_range rangeI super_disj xs)
-
-  show ?thesis apply(rule exI[of _ \<rho>], intro conjI)
-    subgoal using f g unfolding bij_def inj_def surj_def bij_betw_def inj_on_def apply auto 
-      apply (smt (verit, ccfv_SIG) Int_emptyD ys(1) \<rho>_def image_iff super_disj xs)
-      apply (smt (verit, del_insts) Int_emptyD \<rho>_def bij_betw_iff_bijections f(1) g(1) super_disj xs ys(1)) .
-    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound var_stream_class.Un_bound)
-    subgoal apply clarify subgoal for zs  
-    apply(cases "zs \<in> {xs,ys}")
-      subgoal using 0 ys(1) xs by auto
-      subgoal using 1  
-      by simp (smt (verit, ccfv_threshold) "0"(1) "0"(2) \<open>bij \<rho>\<close> bij_implies_inject dsnth_dsmap dsnth_dsmap_cong inj_onI) . .
-    subgoal unfolding \<rho>_def 
-      by auto (meson Int_emptyD bij_betw_apply f(1) ys(2))
-    subgoal unfolding id_on_def \<rho>_def 
-      using assms(4) assms(5) ys(2) by auto . 
-qed
-
 lemma eextend_to_wfBij: 
 assumes "wfB xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bvars xxs \<inter> A' = {}"
 shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bvars xxs \<inter> A = {} \<and> id_on A' \<rho>" 
@@ -204,7 +171,7 @@ next
   using assms by (auto split: option.splits simp: small_def bsmall_def) 
   show ?thesis using extend_super[OF 0] apply safe
   subgoal for \<rho> apply(rule exI[of _ \<rho>]) 
-  using Some by (auto split: option.splits simp: wfBij_def ssbij_def) .
+  using Some by (auto split: option.splits simp: wfBij_presSuper ssbij_def) .
 qed 
 
 
@@ -242,7 +209,7 @@ subgoal for R tt1 tt2 apply(rule iffI)
 lemma III_bsmall: "Reneqv.II t \<Longrightarrow> bsmall (Tfvars t)"
 apply(cases t)
   subgoal for e1 e2 apply simp
-  unfolding reneqv_I[symmetric] apply(drule reneqv_FFvars_super)
+  unfolding reneqv_I[symmetric] apply(drule reneqv_touchedSuperT)
   apply(rule bsmall_Un) unfolding bsmall_def touchedSuperT_def by auto .
 
 thm refresh
@@ -252,7 +219,7 @@ assumes V: " dsset xs \<inter> V = {}" "|V| <o |UNIV::ivar set|"
 and xs: "super xs"  
 shows "\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
            dsset (dsmap f xs) \<inter> V = {} \<and>
-           id_on V f \<and> (\<forall>ys. super ys \<longleftrightarrow> super (dsmap f ys))"
+           id_on V f \<and> presSuper f"
 using extend_super[OF xs V(2) V(3) _ V(1), simplified]
 apply safe subgoal for \<rho> apply(intro exI[of _ \<rho>]) 
 unfolding id_on_def by auto .
@@ -294,13 +261,13 @@ unfolding G_def Tmap_def apply safe
   subgoal for f
   apply(rule exI[of _ "Some (dsmap f xs)"])  
   apply(intro conjI) 
-    subgoal unfolding id_on_def apply auto  
+    subgoal unfolding id_on_def presSuper_def apply auto  
       by (smt (verit, ccfv_SIG) Diff_Int_distrib Diff_disjoint Diff_empty Int_emptyD Tfvars.simps Un_iff bij_betw_apply bij_imp_bij_betw dstream.set_map iterm.set(3) prod.collapse super_disj)
     subgoal apply(rule disjI3_2)
     apply(rule exI[of _ "dsmap f xs"]) 
     apply(rule exI[of _ "rrename f e"]) 
     apply(rule exI[of _ "rrename f e'"]) 
-    apply(cases t)  apply simp apply(intro conjI)
+    apply(cases t) unfolding presSuper_def apply simp apply(intro conjI)
       subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
       subgoal apply(subst rrename_eq_itvsubst_iVar)
         subgoal unfolding ssbij_def by auto
@@ -334,8 +301,6 @@ apply standard using III_bsmall G_rrefresh by auto
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm reneqv.induct[no_vars] 
-
-thm bsmall_def[of "Pfvars p"]
 
 corollary BE_induct_reneqv: 
 assumes par: "\<And>p. small (Pfvars p) \<and> finite (touchedSuper (Pfvars p))"

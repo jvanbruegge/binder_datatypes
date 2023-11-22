@@ -5,10 +5,13 @@ begin
 
 (* We already know equivariance from the general infrastructure: *)
 lemma rrename_reneqv:
-assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" and r: "reneqv e e'" 
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
+and r: "reneqv e e'" 
 shows "reneqv (rrename f e) (rrename f e')"
-using assms unfolding reneqv_I using Reneqv.I_equiv[of "(e,e')" f]
-unfolding Tmap_def ssbij_def by auto
+using assms unfolding reneqv_I using Reneqv.II_equiv[of "(e,e')" f]
+unfolding Tmap_def ssbij_def wfBij_presSuper by auto
+
+find_theorems reneqv
 
 
 lemma reneweqv_sym:
@@ -17,15 +20,25 @@ apply(induct rule: reneqv.induct)
 apply (auto intro: reneqv.intros)  
 by (metis Un_iff iApp insert_subset)
 
+definition uniform :: "ivar iterm \<Rightarrow> bool" 
+where "uniform e \<equiv> \<exists>e'. reneqv e e'" 
+
+lemma uniform_def2: "uniform e \<longleftrightarrow> (\<exists>e'. reneqv e' e)"
+unfolding uniform_def using reneweqv_sym by auto
+
+lemma uniform_finite_touchedUponT: "uniform e \<Longrightarrow> finite (touchedSuperT e)"
+using reneqv_finite_touchedSuperT uniform_def by blast
+
+
 
 lemma reneqv_iVar_casesL:
 "reneqv (iVar x) e' \<Longrightarrow> 
- (\<exists> xs x'. e' = iVar x' \<and> ssuper xs \<and> {x,x'} \<subseteq> dsset xs)"
+ (\<exists> xs x'. e' = iVar x' \<and> super xs \<and> {x,x'} \<subseteq> dsset xs)"
 apply(erule reneqv.cases) by auto
 
 lemma reneqv_iVar_casesR:
 "reneqv e (iVar x') \<Longrightarrow> 
- (\<exists> xs x. e = iVar x \<and> ssuper xs \<and> {x,x'} \<subseteq> dsset xs)"
+ (\<exists> xs x. e = iVar x \<and> super xs \<and> {x,x'} \<subseteq> dsset xs)"
 apply(erule reneqv.cases) by auto
 
 (*
@@ -34,51 +47,72 @@ lemma ssuper_dsset_eq_:
 unfolding ssuper_def apply auto sledgehammer
 *)
 
-lemma reneqv_Fvars_super: "reneqv e e' \<Longrightarrow> ssuper xs \<Longrightarrow> 
-   FFVars e \<inter> dsset xs \<noteq> {} \<Longrightarrow> FFVars e' \<inter> dsset xs \<noteq> {}" 
-apply(induct arbitrary: xs rule: reneqv.induct) 
-apply auto sorry
 
-lemma reneqv_Fvars: "reneqv e e' \<Longrightarrow> 
-{xs . ssuper xs \<and> FFVars e \<inter> dsset xs \<noteq> {}} = {xs . ssuper xs \<and> FFVars e' \<inter> dsset xs \<noteq> {}}" 
-apply(induct rule: reneqv.induct) 
-apply auto sledgehammers
 
 
 find_theorems inv_into
 
 
-
+(*
 lemma iLam_eq_super: 
-assumes "iLam xs e = iLam xsa ea"
-shows "ssuper xs \<longleftrightarrow> ssuper xsa"
+assumes "iLam xs e = iLam xsa ea" "super xs" "super xsa"
+shows "xs = xsa"
 using assms assms[THEN sym]
 unfolding iLam_inject  
-by (metis rrename_ssuper)
+by (metis rrename_super)
+*)
+
+thm iLam_inject[no_vars]
+
+lemma iLam_inject_super: 
+assumes u: "uniform (iLam xs e)" and eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> id_on (ILC.FFVars (iLam xs e)) f \<and> 
+           dsmap f xs = xs' \<and> rrename f e = e'"
+proof-
+  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> dsmap f xs = xs' \<and> 
+     rrename f e = e'" using eq unfolding iLam_inject by auto
+  hence i: "inj_on f (dsset xs)" unfolding bij_def inj_on_def by auto
+  define A where A: "A = FFVars (iLam xs e)"
+  have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
+     "A \<inter> dsset xs' = {}" "bij_betw f (dsset xs) (dsset xs')" "dsmap f xs = xs'"
+    subgoal unfolding A using iterm.set_bd_UNIV by blast
+    subgoal unfolding A using touchedSuperT_def u uniform_finite_touchedUponT by fastforce
+    subgoal unfolding A by auto
+    subgoal unfolding A eq by auto
+    subgoal using f unfolding bij_def bij_betw_def inj_on_def using i by auto
+    subgoal using f by auto .
+  show ?thesis using extend_super2[OF super 0] apply safe
+  subgoal for g apply(rule exI[of _ g]) using f unfolding A eq_on_def id_on_def 
+  by (fastforce intro!:  dstream.map_cong0 ILC.rrename_cong) .
+qed
+
+thm extend_super2[of xs xs' A f]
 
 lemma reneqv_iLam_casesL:
-assumes "reneqv (iLam xs e) ee'"
-shows "\<exists> e'. ee' = iLam xs e' \<and> ssuper xs \<and> reneqv e e'"
+assumes xs: "super xs" and rr: "reneqv (iLam xs e) ee'"
+shows "\<exists> e'. ee' = iLam xs e' \<and> super xs \<and> reneqv e e'"
 proof-
   obtain xsa ea ea' where il: "iLam xs e = iLam xsa ea" and ee': "ee' = iLam xsa ea'" 
-  and ss: "ssuper xsa" and r: "reneqv ea ea'" 
-  using assms by cases auto
-  have 0: "|FFVars ee'| <o |UNIV::ivar set|"  
+  and xsa: "super xsa" and r: "reneqv ea ea'" 
+  using rr by cases auto
+  (* have 0: "|FFVars ee'| <o |UNIV::ivar set|"  
     by (simp add: iterm.set_bd_UNIV)
   have "reneqv (iLam xsa ea) ee'"  
     using assms il by force
   moreover have "FFVars (iLam xsa ea) \<inter> dsset xs = {}"  
     by (metis DiffD2 disjointI il iterm.set(3))
-  moreover have "ssuper xs" using iLam_eq_super il ss by blast
   ultimately have 1: "FFVars ee' \<inter> dsset xs = {}"  
     using reneqv_Fvars by fastforce
   have 2: "FFVars ee' \<inter> dsset xsa = {}"  
-    unfolding ee' by auto
+    unfolding ee' by auto *)
+  have u: "uniform (iLam xs e)" using rr unfolding uniform_def ee' by auto
   
-  obtain f where f: " bij f" "|supp f| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs e)) f"
-  and ff: "id_on (FFVars ee') f" 
+  obtain f where f: " bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f" "id_on (FFVars (iLam xs e)) f"
   and xsa: "xsa = dsmap f xs" and ea: "ea = rrename f e"
-  using il[unfolded iLam_inject_avoid[OF 0 1 2]] by auto
+  using  iLam_inject_super[OF u il xs xsa] by auto
+
+
+
   hence e: "e = rrename (inv f) ea" by (metis inv_simp1 iterm.rrename_bijs iterm.rrename_inv_simps)
 
   show ?thesis apply(rule exI[of _ "rrename (inv f) ea'"]) apply(intro conjI)

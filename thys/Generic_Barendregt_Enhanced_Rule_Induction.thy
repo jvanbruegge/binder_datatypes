@@ -150,8 +150,8 @@ reg_wfB: "\<And>xs. wfB xs \<Longrightarrow> regularCard |{Bmap \<sigma> xs | \<
 (* *)
 and  
 (* bsmallness is subject to properties similar to the ones enjoyed by smallness: *)
-bssmall_Tfvars: "\<And>t. bsmall (Tfvars t)"  (* not needed *)
-and 
+(* bssmall_Tfvars: "\<And>t. bsmall (Tfvars t)"  (* not needed *)
+and *)
 bsmall_Bvars: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)" 
 and 
 bsmall_Un: "bsmall A \<Longrightarrow> bsmall B \<Longrightarrow> bsmall (A \<union> B)"
@@ -322,8 +322,8 @@ and wfB and bsmall
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
-Bvars_bsmall: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)"
-and 
+(* Bvars_bsmall: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)"
+and *)
 II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
 and 
 GG_rrefresh: 
@@ -658,7 +658,6 @@ using GG_mmono GG_eequiv GG_wfB extend_to_wfBij by auto
 
 context Induct1
 begin 
-
 
 lemma G_mono'[mono]: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<and> G R B t \<longrightarrow> small B \<and> G R' B t"
 using G_mono by auto

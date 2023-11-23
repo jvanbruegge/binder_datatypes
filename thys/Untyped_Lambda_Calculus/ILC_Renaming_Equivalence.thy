@@ -302,15 +302,15 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm reneqv.induct[no_vars] 
 
-corollary BE_induct_reneqv: 
-assumes par: "\<And>p. small (Pfvars p) \<and> finite (touchedSuper (Pfvars p))"
+corollary BE_induct_reneqv[consumes 2, case_names iVar iLam iApp]: 
+assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
 and st: "reneqv t1 t2"  
 and iVar: "\<And>xs x x' p. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
   R p (iVar x) (iVar x')"
 and iLam: "\<And>e e' xs p. 
   dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
-  reneqv e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
+  super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (iLam xs e) (iLam xs e')" 
 and iApp: "\<And>e1 e1' es2 es2' p. 
   reneqv e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
@@ -328,5 +328,25 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using iVar by auto 
       subgoal using iLam by auto  
       subgoal using iApp by auto . . .
+
+(* with fixed parameters: *)
+corollary BE_induct_reneqv'[consumes 2, case_names iVar iLam iApp]: 
+assumes par: "small A \<and> bsmall A"
+and st: "reneqv t1 t2"  
+and iVar: "\<And>xs x x'. 
+  super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
+  R (iVar x) (iVar x')"
+and iLam: "\<And>e e' xs. 
+  dsset xs \<inter> A = {} \<Longrightarrow> 
+  super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> R e e' \<Longrightarrow> 
+  R (iLam xs e) (iLam xs e')" 
+and iApp: "\<And>e1 e1' es2 es2'. 
+  reneqv e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
+  (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e' \<and> R e e') \<Longrightarrow> 
+  R (iApp e1 es2) (iApp e1' es2')"
+shows "R t1 t2"
+apply(rule BE_induct_reneqv[of "\<lambda>_::unit. A"]) using assms by auto
+
+  
 
 end

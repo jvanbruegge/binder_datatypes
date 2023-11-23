@@ -138,9 +138,127 @@ next
     subgoal using iApp.hyps(2) 1 by blast
     subgoal using iApp.hyps(3) 2  
     by auto (meson reneweqv_sym snth_sset)+ .
-qed
+qed 
 
 lemma uniform_def3: "uniform e \<longleftrightarrow> reneqv e e"
 using reneqv_trans reneweqv_sym uniform_def by blast
+
+(* *)
+lemma reneqv_itvsubst:
+assumes r: "reneqv e e'" and rr: "\<And>xs x x'. super xs \<Longrightarrow> {x, x'} \<subseteq> dsset xs \<longrightarrow> reneqv (f x) (f' x')" 
+and s: "|SSupp f| <o |UNIV::ivar set|" "|SSupp f'| <o |UNIV::ivar set|"
+and f: "finite (touchedSuper (IImsupp f))" "finite (touchedSuper (IImsupp f'))"
+shows "reneqv (itvsubst f e) (itvsubst f' e')"
+proof-
+  have ims: "|IImsupp f| <o |UNIV::ivar set|" "|IImsupp f'| <o |UNIV::ivar set|"
+  using s ILC.SSupp_IImsupp_bound by auto
+  have par: "small (IImsupp f \<union> IImsupp f') \<and> bsmall (IImsupp f \<union> IImsupp f')"
+  using ims f unfolding small_def   
+  using var_stream_class.Un_bound bsmall_Un bsmall_def by blast
+  show ?thesis using par r rr proof(induct rule: BE_induct_reneqv')
+    case (iVar xs x x')
+    then show ?case using s by auto
+  next
+    case (iLam e e' xs)
+    show ?case using iLam apply(subst iterm.subst)
+      subgoal using s by auto
+      subgoal using s by auto
+      apply(subst iterm.subst)
+        subgoal using s by auto
+        subgoal using s by auto
+        subgoal apply(rule reneqv.iLam) by auto .
+  next
+    case (iApp e1 e1' es2 es2')
+    then show ?case apply(subst iterm.subst)
+      subgoal using s by auto
+      apply(subst iterm.subst)
+        subgoal using s by auto
+        subgoal apply(rule reneqv.iApp) apply auto  
+        by (meson reneqv_trans reneweqv_sym)+ .
+  qed 
+qed
+
+thm imkSubst_def
+
+
+
+(* *)  
+
+definition "reneqvS es es' \<equiv> \<forall>e e'. {e,e'} \<subseteq> sset es \<union> sset es' \<longrightarrow> reneqv e e'"
+
+lemma reneweqvS_sym:
+"reneqvS es es' \<Longrightarrow> reneqvS es' es"
+unfolding reneqvS_def by auto
+
+lemma reneweqvS_trans:
+"reneqvS es es' \<Longrightarrow> reneqvS es' es'' \<Longrightarrow> reneqvS es es''"
+unfolding reneqvS_def  using reneqv_trans shd_sset by auto blast+
+
+
+definition "uniformS es \<equiv> \<exists>es'. reneqvS es es'"
+
+lemma uniformS_def2: "uniformS es \<longleftrightarrow> (\<exists>es'. reneqvS es' es)"
+unfolding uniformS_def using reneweqvS_sym by blast
+
+lemma uniformS_def3: "uniformS es \<longleftrightarrow> reneqvS es es"
+unfolding uniformS_def using reneweqvS_sym reneweqvS_trans by blast
+
+lemma uniformS_sset_uniform: "uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> uniform e"
+using reneqvS_def uniformS_def2 uniform_def3 by auto
+
+lemma uniformS_touchedSuperT_eq: 
+"uniformS es \<Longrightarrow> {e,e'} \<subseteq> sset es \<Longrightarrow> touchedSuperT e = touchedSuperT e'"
+using reneqvS_def reneqv_touchedSuperT_eq uniformS_def3 by auto
+
+lemma uniformS_touchedSuper_eq: 
+"uniformS es \<Longrightarrow> {e,e'} \<subseteq> sset es \<Longrightarrow> touchedSuper (FFVars e) = touchedSuper (FFVars e')"
+using uniformS_touchedSuperT_eq touchedSuperT_def by auto
+
+lemma touchedSuper_UN: "touchedSuper (\<Union> XX) = \<Union> (touchedSuper  ` XX)"
+unfolding touchedSuper_def by auto
+
+lemma uniformS_touchedSuper: 
+"uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> touchedSuper (\<Union> (FFVars ` (sset es))) = touchedSuper (FFVars e)"
+unfolding touchedSuper_UN  
+by auto (metis empty_subsetI insert_subset touchedSuperT_def uniformS_touchedSuperT_eq) 
+
+(* *)
+
+lemma touchedSuper_IImsupp_imkSubst: 
+"super xs \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> {xs} \<union> touchedSuper (\<Union> (FFVars ` (sset es)))"
+unfolding touchedSuper_def IImsupp_def SSupp_def imkSubst_def apply auto 
+apply (meson disjoint_iff imkSubst_idle super_disj)
+apply (metis Int_emptyD UN_I snth_sset) . 
+
+lemma uniformS_touchedSuper_IImsupp_imkSubst: 
+"super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> 
+ {xs} \<union> touchedSuper (FFVars e)"
+using touchedSuper_IImsupp_imkSubst uniformS_touchedSuper by blast
+
+lemma super_uniformS_finite_touchedSuper_imkSubst: 
+"super xs \<Longrightarrow> uniformS es \<Longrightarrow> finite (touchedSuper (IImsupp (imkSubst xs es)))"
+by (metis finite_insert insert_is_Un rev_finite_subset snth_sset touchedSuperT_def 
+touchedSuper_IImsupp_imkSubst uniformS_sset_uniform uniformS_touchedSuper uniform_finite_touchedUponT)
+
+(* *)
+
+(* Mazza Lemma 11: *)
+lemma reneqv_imkSubst:
+assumes r: "reneqv e e'" and xs: "super xs" and rr: "reneqvS es es'" 
+shows "reneqv (itvsubst (imkSubst xs es) e) (itvsubst (imkSubst xs es') e')"
+apply(rule reneqv_itvsubst[OF r])
+  subgoal by (smt (verit, del_insts) Un_iff imkSubst_def inf.absorb_iff2 inf_bot_right 
+     insert_subset reneqv.simps reneqvS_def rr singleton_insert_inj_eq snth_sset touchedSuper_iVar xs)
+  subgoal by simp
+  subgoal by simp
+  subgoal using rr super_uniformS_finite_touchedSuper_imkSubst uniformS_def xs by blast
+  subgoal using rr super_uniformS_finite_touchedSuper_imkSubst uniformS_def2 xs by blast .
+
+(* Mazza Lemma 12: *)
+lemma uniform_imkSubst:
+assumes u: "uniform e" and xs: "super xs" and rr: "uniformS es" 
+shows "uniform (itvsubst (imkSubst xs es) e)"
+using reneqv_imkSubst rr u uniformS_def3 uniform_def3 xs by blast
+
 
 end

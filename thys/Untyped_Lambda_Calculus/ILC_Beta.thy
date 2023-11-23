@@ -174,15 +174,15 @@ unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation iLam: Induct where dummy = "undefined :: ivar" and 
+interpretation Istep: Induct where dummy = "undefined :: ivar" and 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto
 
 (* *)
 
-lemma istep_I: "istep t1 t2 = iLam.I (t1,t2)" 
-unfolding istep_def iLam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma istep_I: "istep t1 t2 = Istep.I (t1,t2)" 
+unfolding istep_def Istep.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE)
@@ -207,7 +207,7 @@ subgoal for R tt1 tt2 apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm istep.induct[no_vars] 
 
-corollary BE_induct_istep: 
+corollary BE_induct_istep[consumes 2, case_names Beta iAppL iAppR Xi]: 
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "istep t1 t2"  
 and Beta: "\<And>xs e1 es2 p. 
@@ -227,7 +227,7 @@ shows "R p t1 t2"
 unfolding istep_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim iLam.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  subgoal using par st apply(elim Istep.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
     subgoal unfolding istep_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding istep_I[symmetric] apply(elim disjE exE)
@@ -235,5 +235,33 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using iAppL by auto  
       subgoal using iAppR by auto  
       subgoal using Xi by auto . . .
+
+(* ... and with fixed parameters: *)
+corollary BE_induct_istep'[consumes 2, case_names Beta iAppL iAppR Xi]: 
+assumes par: "small A"
+and st: "istep t1 t2"  
+and Beta: "\<And>xs e1 es2. 
+  dsset xs \<inter> A = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
+  R (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
+and iAppL: "\<And>e1 e1' es2. 
+  istep e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
+  R (iApp e1 es2) (iApp e1' es2)"
+and iAppR: "\<And>e1 es2 i e2'. 
+  istep (snth es2 i) e2' \<Longrightarrow> R (es2 !! i) e2' \<Longrightarrow> 
+  R (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
+and Xi: "\<And>e e' xs. 
+  dsset xs \<inter> A = {} \<Longrightarrow> 
+  istep e e' \<Longrightarrow> R e e' \<Longrightarrow> 
+  R (iLam xs e) (iLam xs e')" 
+shows "R t1 t2"
+apply(rule BE_induct_istep[of "\<lambda>_::unit. A"]) using assms by auto
+
+(* Also inferring equivariance from the general infrastructure: *)
+corollary rrename_istep:
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" 
+and r: "istep e e'" 
+shows "istep (rrename f e) (rrename f e')"
+using assms unfolding istep_I using Istep.I_equiv[of "(e,e')" f]
+unfolding Tmap_def ssbij_def by auto
 
 end

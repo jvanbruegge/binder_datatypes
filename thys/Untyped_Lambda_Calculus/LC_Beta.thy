@@ -152,15 +152,15 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Lam: Induct where dummy = "undefined :: var" and 
+interpretation Step: Induct where dummy = "undefined :: var" and 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto
 
 (* *)
 
-lemma step_I: "step t1 t2 = Lam.I (t1,t2)" 
-unfolding step_def Lam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma step_I: "step t1 t2 = Step.I (t1,t2)" 
+unfolding step_def Step.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE)
@@ -185,7 +185,7 @@ subgoal for R tt1 tt2 apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm step.induct[no_vars]
 
-corollary BE_induct_step: 
+corollary BE_induct_step[consumes 2, case_names Beta AppL AppR Xi]: 
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "step t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
@@ -205,7 +205,7 @@ shows "R p t1 t2"
 unfolding step_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Lam.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  subgoal using par st apply(elim Step.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
     subgoal unfolding step_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding step_I[symmetric] apply(elim disjE exE)
@@ -213,6 +213,35 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using AppL by auto  
       subgoal using AppR by auto  
       subgoal using Xi by auto . . .
+
+(* ... and with fixed parameters: *)
+corollary BE_induct_step'[consumes 2, case_names Beta AppL AppR Xi]: 
+assumes par: "small A"
+and st: "step t1 t2"  
+and Beta: "\<And>x e1 e2. 
+  x \<notin> A \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  R (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
+and AppL: "\<And>e1 e1' e2. 
+  step e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
+  R (App e1 e2) (App e1' e2)"
+and AppR: "\<And>e1 e2 e2'. 
+  step e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
+  R (App e1 e2) (App e1 e2')"
+and Xi: "\<And>e e' x. 
+  x \<notin> A \<Longrightarrow> 
+  step e e' \<Longrightarrow> R e e' \<Longrightarrow> 
+  R (Lam x e) (Lam x e')" 
+shows "R t1 t2"
+apply(rule BE_induct_step[of "\<lambda>_::unit. A"]) using assms by auto
+
+
+(* Also inferring equivariance from the general infrastructure: *)
+corollary rrename_step:
+assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
+and r: "step e e'" 
+shows "step (rrename f e) (rrename f e')"
+using assms unfolding step_I using Step.I_equiv[of "(e,e')" f]
+unfolding Tmap_def ssbij_def by auto
 
 
 end

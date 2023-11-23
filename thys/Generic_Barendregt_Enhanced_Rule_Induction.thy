@@ -504,14 +504,14 @@ begin
 
 definition GG where "GG R B t \<equiv> small B \<and> G R B t"
 
-lemma GG_mmono: "R \<le> R' \<Longrightarrow> GG R B t \<Longrightarrow> GG R' B t"
+lemma GGG_mmono: "R \<le> R' \<Longrightarrow> GG R B t \<Longrightarrow> GG R' B t"
 by (simp add: GG_def G_mono)
 
-lemma GG_eequiv: "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> 
+lemma GGG_eequiv: "ssbij \<sigma> \<Longrightarrow>
    GG R B t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (\<sigma> ` B) (Tmap \<sigma> t)"
 using GG_def G_equiv small_image by force
 
-lemma GG_wfB: "GG R B t \<Longrightarrow> small B"
+lemma GGG_wfB: "GG R B t \<Longrightarrow> small B"
 unfolding GG_def by auto
 
 (* In this particular contex, all small bijections are well-formed: *)
@@ -534,7 +534,7 @@ lemma extend_wfBij:
      \<exists>\<rho>'. ssbij \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
 using extend_small by (metis ssbij_wfBij) 
 
-lemma extend_to_wfBij: 
+lemma eextend_to_wfBij: 
 assumes "small B" "small A" "A' \<subseteq> A" "B \<inter> A' = {}"
 shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
 proof-
@@ -566,7 +566,7 @@ end (* context Induct1 *)
 
 sublocale Induct1 < IInduct1 where Tmap = Tmap and Tfvars = Tfvars and 
 Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
-using GG_mmono GG_eequiv GG_wfB extend_to_wfBij by auto
+using GGG_mmono GGG_eequiv GGG_wfB eextend_to_wfBij by auto
 
 context Induct1
 begin 
@@ -593,9 +593,9 @@ apply(intro ext, rule iffI)
     by (simp,metis (no_types, lifting) G_mono predicate1I) . .
  
 lemma I_equiv: 
-assumes "I t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
+assumes "I t" and \<sigma>: "ssbij \<sigma>" 
 shows "I (Tmap \<sigma> t)"
-using II_equiv I_eq_II assms by auto
+using II_equiv I_eq_II assms using ssbij_wfBij by auto
 
 
 end (* context Induct1 *)
@@ -617,7 +617,7 @@ G_refresh:
          \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
 begin
 
-lemma GG_rrefresh: 
+lemma GGG_rrefresh: 
 assumes "\<forall>t. R t \<longrightarrow> II t" "\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)" "GG R B t"
 shows "\<exists>C. C \<inter> Tfvars t = {} \<and> GG R C t"
 using G_refresh[OF assms(1)[unfolded I_eq_II[symmetric]]]
@@ -628,7 +628,7 @@ end (* context Induct *)
 
 sublocale Induct < IInduct where Tmap = Tmap and Tfvars = Tfvars and 
 Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
-by (auto simp: GG_rrefresh)
+by (auto simp: GGG_rrefresh)
 
 
 context Induct

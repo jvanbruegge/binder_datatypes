@@ -1,7 +1,9 @@
 (* Here we instantiate the general enhanced rule induction to the renaming-equivalence 
 relation from Mazza  *)
 theory ILC_Renaming_Equivalence
-imports LC2 ILC2 "../Instantiation_Infrastructure/Curry_LFP" Supervariables
+imports LC2 ILC2 
+"../Instantiation_Infrastructure/Curry_LFP" 
+Supervariables 
 begin
 
 (* *)
@@ -329,7 +331,7 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using iLam by auto  
       subgoal using iApp by auto . . .
 
-(* with fixed parameters: *)
+(* ... and with fixed parameters: *)
 corollary BE_induct_reneqv'[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "small A \<and> bsmall A"
 and st: "reneqv t1 t2"  
@@ -346,6 +348,14 @@ and iApp: "\<And>e1 e1' es2 es2'.
   R (iApp e1 es2) (iApp e1' es2')"
 shows "R t1 t2"
 apply(rule BE_induct_reneqv[of "\<lambda>_::unit. A"]) using assms by auto
+
+(* Also inferring equivariance from the general infrastructure: *)
+corollary rrename_reneqv:
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
+and r: "reneqv e e'" 
+shows "reneqv (rrename f e) (rrename f e')"
+using assms unfolding reneqv_I using Reneqv.II_equiv[of "(e,e')" f]
+unfolding Tmap_def ssbij_def wfBij_presSuper by auto
 
   
 

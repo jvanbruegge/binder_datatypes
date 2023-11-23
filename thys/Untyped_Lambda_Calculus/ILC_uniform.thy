@@ -1,6 +1,6 @@
 (* Here we instantiate the general enhanced rule induction to the "reneqv" predicate from Mazza  *)
 theory ILC_uniform
-imports ILC_Renaming_Equivalence
+imports ILC_Renaming_Equivalence 
 begin
 
 definition uniform :: "ivar iterm \<Rightarrow> bool" 
@@ -9,22 +9,11 @@ where "uniform e \<equiv> \<exists>e'. reneqv e e'"
 lemma uniform_finite_touchedUponT: "uniform e \<Longrightarrow> finite (touchedSuperT e)"
 using reneqv_finite_touchedSuperT uniform_def by blast
 
-(* We already know equivariance from the general infrastructure: *)
-lemma rrename_reneqv:
-assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
-and r: "reneqv e e'" 
-shows "reneqv (rrename f e) (rrename f e')"
-using assms unfolding reneqv_I using Reneqv.II_equiv[of "(e,e')" f]
-unfolding Tmap_def ssbij_def wfBij_presSuper by auto
-
-find_theorems reneqv
-
 (* Symmetry follows by normal induction: *)
 lemma reneweqv_sym:
 "reneqv e e' \<Longrightarrow> reneqv e' e"
 apply(induct rule: reneqv.induct) 
-apply (auto intro: reneqv.intros)  
-by (metis Un_iff iApp insert_subset)
+by (auto intro!: reneqv.intros)  
 
 lemma uniform_def2: "uniform e \<longleftrightarrow> (\<exists>e'. reneqv e' e)"
 unfolding uniform_def using reneweqv_sym by auto
@@ -143,6 +132,13 @@ qed
 lemma uniform_def3: "uniform e \<longleftrightarrow> reneqv e e"
 using reneqv_trans reneweqv_sym uniform_def by blast
 
+corollary rrename_uniform:
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
+and r: "uniform (e::itrm)" 
+shows "uniform (rrename f e)"
+using assms unfolding uniform_def3 
+by (intro rrename_reneqv) auto
+
 (* *)
 lemma reneqv_itvsubst:
 assumes r: "reneqv e e'" and rr: "\<And>xs x x'. super xs \<Longrightarrow> {x, x'} \<subseteq> dsset xs \<longrightarrow> reneqv (f x) (f' x')" 
@@ -178,11 +174,7 @@ proof-
   qed 
 qed
 
-thm imkSubst_def
-
-
-
-(* *)  
+(* *)
 
 definition "reneqvS es es' \<equiv> \<forall>e e'. {e,e'} \<subseteq> sset es \<union> sset es' \<longrightarrow> reneqv e e'"
 

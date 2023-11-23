@@ -8,13 +8,13 @@ begin
 
 (* *)
 
-inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Refl: "step e e"
-| App: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1' e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
-| PBeta: "step e1 e1' \<Longrightarrow> step e2 e2' \<Longrightarrow> step (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
+inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Refl: "pstep e e"
+| App: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App e1 e2) (App e1' e2')"
+| Xi: "pstep e e' \<Longrightarrow> pstep (Lam x e) (Lam x e')"
+| PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
 
-thm step_def
+thm pstep_def
 
 (* xx fresh \<Longrightarrow> tvsubst (Var(x:=e2')) e1' = tvsubst (Var(xx:=e2')) e1'[xx\<and>x]  *)
 
@@ -163,15 +163,15 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Lam: Induct where dummy = "undefined :: var" and 
+interpretation Pstep: Induct where dummy = "undefined :: var" and 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto
 
 (* *)
 
-lemma step_I: "step t1 t2 = Lam.I (t1,t2)" 
-unfolding step_def Lam.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma pstep_I: "pstep t1 t2 = Pstep.I (t1,t2)" 
+unfolding pstep_def Pstep.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE)
@@ -194,36 +194,65 @@ subgoal for R tt1 tt2 apply(rule iffI)
     subgoal apply(rule disjI4_4) by auto . . .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
-thm step.induct[no_vars]
+thm pstep.induct[no_vars]
 
-corollary BE_induct_step: 
+corollary BE_induct_pstep[consumes 2, case_names Refl App Xi PBeta]:  
 assumes par: "\<And>p. small (Pfvars p)"
-and st: "step t1 t2"  
+and st: "pstep t1 t2"  
 and Refl: "\<And>e p. R p e e"
 and App: "\<And>e1 e1' e2 e2' p. 
-  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
+  pstep e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> pstep e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
   R p (App e1 e2) (App e1' e2')"
 and Xi: "\<And>e e' x p. 
   x \<notin> Pfvars p \<Longrightarrow> 
-  step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
+  pstep e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (Lam x e) (Lam x e')" 
 and PBeta: "\<And>x e1 e1' e2 e2' p. 
   x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
-  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
-  step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
+  pstep e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
+  pstep e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
   R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2')) e1')"
 shows "R p t1 t2"
-unfolding step_I
+unfolding pstep_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Lam.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-    subgoal unfolding step_I by simp
+  subgoal using par st apply(elim Pstep.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+    subgoal unfolding pstep_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
-    unfolding step_I[symmetric] apply(elim disjE exE)
+    unfolding pstep_I[symmetric] apply(elim disjE exE)
       subgoal using Refl by auto
       subgoal using App by auto  
       subgoal using Xi by auto
       subgoal for x e1 e1' e2 e2' using PBeta[of x p e2 e1' e2' e1] by fastforce . . .
+
+
+(* ... and with fixed parameters: *)
+corollary BE_induct_pstep'[consumes 2, case_names Refl App Xi PBeta]:  
+assumes par: "small A"
+and st: "pstep t1 t2"  
+and Refl: "\<And>e. R e e"
+and App: "\<And>e1 e1' e2 e2'. 
+  pstep e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
+  R (App e1 e2) (App e1' e2')"
+and Xi: "\<And>e e' x. 
+  x \<notin> A \<Longrightarrow> 
+  pstep e e' \<Longrightarrow> R e e' \<Longrightarrow> 
+  R (Lam x e) (Lam x e')" 
+and PBeta: "\<And>x e1 e1' e2 e2'. 
+  x \<notin> A \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
+  pstep e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
+  pstep e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
+  R (App (Lam x e1) e2) (tvsubst (VVr(x := e2')) e1')"
+shows "R t1 t2"
+apply(rule BE_induct_pstep[of "\<lambda>_::unit. A"]) using assms by auto
+
+(* Also inferring equivariance from the general infrastructure: *)
+corollary rrename_pstep:
+assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
+and r: "pstep e e'" 
+shows "pstep (rrename f e) (rrename f e')"
+using assms unfolding pstep_I using Pstep.I_equiv[of "(e,e')" f]
+unfolding Tmap_def ssbij_def by auto
 
 
 end

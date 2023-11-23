@@ -124,15 +124,15 @@ unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation iLam: Induct where dummy = "undefined :: ivar" and 
+interpretation Affine: Induct where dummy = "undefined :: ivar" and 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
-  using G_mono G_equiv G_refresh by auto
+  using G_mono G_equiv G_refresh by auto 
 
 (* *)
 
-lemma affine_I: "affine t = iLam.I t" 
-unfolding affine_def iLam.I_def apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma affine_I: "affine t = Affine.I t" 
+unfolding affine_def Affine.I_def apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt apply(rule iffI)
   subgoal apply(elim disjE exE conjE)
@@ -153,7 +153,7 @@ subgoal for R tt apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm affine.induct[no_vars] 
 
-corollary BE_induct_affine: 
+corollary BE_induct_affine[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "affine t"  
 and iVar: "\<And>x p. R p (iVar x)"
@@ -169,12 +169,36 @@ shows "R p t"
 unfolding affine_I
 apply(subgoal_tac "R p t") (* this is overkill here, but I keep the general pattern *)
   subgoal by simp
-  subgoal using par st apply(elim iLam.BE_induct[where R = "\<lambda>p t. R p t"])
+  subgoal using par st apply(elim Affine.BE_induct[where R = "\<lambda>p t. R p t"])
     subgoal unfolding affine_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding affine_I[symmetric] apply(elim disjE exE)
       subgoal for x using iVar by auto
       subgoal using iLam by auto  
       subgoal using iApp by auto . . .
+
+(* ... and with fixed parameters: *)
+corollary BE_induct_affine'[consumes 2, case_names iVar iLam iApp]: 
+assumes par: "small A"
+and st: "affine t"  
+and iVar: "\<And>x. R (iVar x)"
+and iLam: "\<And>e xs. 
+  dsset xs \<inter> A = {} \<Longrightarrow> 
+  affine e \<Longrightarrow> R e \<Longrightarrow> R (iLam xs e)" 
+and iApp: "\<And>e1 es2.
+    affine e1 \<Longrightarrow> R e1 \<Longrightarrow>
+    (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> (affine e2 \<and> R e2) \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
+    (\<forall>e2 e2'. e2 \<in> sset es2 \<and> e2' \<in> sset es2 \<and> e2 \<noteq> e2' \<longrightarrow> FFVars e2 \<inter> FFVars e2' = {}) \<Longrightarrow> 
+    R (iApp e1 es2)"
+shows "R t"
+apply(rule BE_induct_affine[of "\<lambda>_::unit. A"]) using assms by auto
+
+(* Also inferring equivariance from the general infrastructure: *)
+corollary rrename_affine:
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" 
+and r: "affine (e::itrm)" 
+shows "affine (rrename f e)"
+using assms unfolding affine_I using Affine.I_equiv[of e f]
+unfolding Tmap_def ssbij_def by auto
 
 end

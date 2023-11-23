@@ -455,14 +455,14 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Pi: Induct where dummy = "undefined :: var" and 
+interpretation Trans: Induct where dummy = "undefined :: var" and 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using GG_mono GG_equiv G_refresh by auto
 
 
-lemma trans_I: "trans t1 t2 = Pi.I (t1,t2)" 
-unfolding trans_def Pi.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma trans_I: "trans t1 t2 = Trans.I (t1,t2)" 
+unfolding trans_def Trans.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R PP QQ apply(rule iffI)
   subgoal apply(elim disjE exE)
@@ -503,7 +503,7 @@ subgoal for R PP QQ apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm trans.induct[of P C \<phi>, no_vars]
 
-corollary BE_induct_trans: 
+corollary BE_induct_trans[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
 assumes 
 par: "\<And>p. small (Pfvars p)" 
 and tr: "trans P C"
@@ -547,7 +547,7 @@ and Close1:
 shows "\<phi> p P C" 
 apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
   subgoal by simp
-  subgoal using par tr apply(elim Pi.BE_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
+  subgoal using par tr apply(elim Trans.BE_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
     subgoal unfolding trans_I by simp
     subgoal for p v t apply(subst (asm) G_def) 
     unfolding trans_I[symmetric] apply(elim disjE exE)
@@ -558,6 +558,59 @@ apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
       subgoal for P1 act P1' P2 using Par1[of act] by (cases act, auto)
       subgoal using Com1 by auto
       subgoal using Close1 by auto . . .
+
+(* ... and with fixed parameters: *)
+corollary BE_induct_trans'[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
+assumes 
+par: "small A" 
+and tr: "trans P C"
+and Inp: 
+"\<And>x a u P. x \<notin> {a, u} \<Longrightarrow> 
+    \<phi> (Inp a x P) (Finp a u (usub P u x))"
+and Open:  
+"\<And>P a x P'. x \<notin> A \<Longrightarrow> x \<noteq> a \<Longrightarrow> 
+    trans P (Fout a x P') \<Longrightarrow> \<phi> P (Fout a x P') \<Longrightarrow> a \<noteq> x \<Longrightarrow> 
+    \<phi> (Res x P) (Bout a x P')"
+and ScopeF: 
+"\<And>P act P' y. y \<notin> A \<Longrightarrow> y \<notin> fvars act \<Longrightarrow> 
+    trans P (Cmt act P') \<Longrightarrow> \<phi> P (Cmt act P') \<Longrightarrow> y \<notin> vars act \<Longrightarrow> 
+    \<phi> (Res y P) (Cmt act (Res y P'))"
+and ScopeB: 
+"\<And>P a x P' y. {x,y} \<inter> A = {} \<Longrightarrow> a \<notin> {x,y} \<Longrightarrow> 
+    trans P (Bout a x P') \<Longrightarrow> \<phi> P (Bout a x P') \<Longrightarrow> y \<notin> {a, x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P \<Longrightarrow>
+    \<phi> (Res y P) (Bout a x (Res y P'))" 
+and Par1: 
+"\<And>P1 act P1' P2. bvars act \<inter> (A \<union> fvars act) = {} \<Longrightarrow> 
+    trans P1 (Cmt act P1') \<Longrightarrow>
+    \<phi> P1 (Cmt act P1') \<Longrightarrow>
+    bvars act \<inter> FFVars P1 = {} \<Longrightarrow> 
+    bvars act \<inter> FFVars P2 = {} \<Longrightarrow> 
+    \<phi> (Par P1 P2) (Cmt act (Par P1' P2))"
+and Com1: 
+"\<And>P1 a x P1' P2 P2'. 
+    trans P1 (Finp a x P1') \<Longrightarrow>
+    \<phi> P1 (Finp a x P1') \<Longrightarrow> 
+    trans P2 (Fout a x P2') \<Longrightarrow> 
+    \<phi> P2 (Fout a x P2') \<Longrightarrow> 
+    \<phi> (Par P1 P2) (Tau (Par P1' P2'))"
+and Close1: 
+"\<And>P1 a x P1' P2 P2'. x \<notin> A \<Longrightarrow> x \<notin> FFVars P2 \<Longrightarrow> 
+    trans P1 (Finp a x P1') \<Longrightarrow>
+    \<phi> P1 (Finp a x P1') \<Longrightarrow>
+    trans P2 (Bout a x P2') \<Longrightarrow>
+    \<phi> P2 (Bout a x P2') \<Longrightarrow> 
+    x \<notin> {a} \<union> FFVars P1 \<Longrightarrow> 
+    \<phi> (Par P1 P2) (Tau (Res x (Par P1' P2')))"
+shows "\<phi> P C" 
+apply(rule BE_induct_trans[of "\<lambda>_::unit. A"]) using assms by auto
+
+(* Also inferring equivariance from the general infrastructure: *)
+corollary rrename_pstep:
+assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
+and r: "trans P C" 
+shows "trans (rrename f P) (rrename_commit f C)"
+using assms unfolding trans_I using Trans.I_equiv[of "(P,C)" f]
+unfolding Tmap_def ssbij_def by auto
 
 
 

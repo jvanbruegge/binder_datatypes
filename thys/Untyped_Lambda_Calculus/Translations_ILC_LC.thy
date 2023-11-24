@@ -3,6 +3,11 @@ theory Translations_ILC_LC
 imports ILC_uniform ILC_affine ILC_beta
 begin
 
+
+lemma istep_FFVars: "istep e e' \<Longrightarrow> ILC.FFVars e' \<subseteq> ILC.FFVars e"
+apply(induct rule: istep.induct) 
+by (auto simp: imkSubst_def) (metis in_mono snth_sset snth_supd_diff snth_supd_same theN)
+
 (* *)
 lemma tvsubst_affine':
 assumes f: "|SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
@@ -88,10 +93,9 @@ using assms apply auto
   apply (simp add: imkSubst_def)
   by (metis Int_emptyD dtheN imkSubst_def iterm.set(1) singletonD snth_sset)
 
-lemma istep_FFVars: "istep e e' \<Longrightarrow> ILC.FFVars e' \<subseteq> ILC.FFVars e"
-sorry
 
-(* An example where normal induction would not work, but fresh induction with empty parameters 
+(* TO DOCUMENT IN THE PAPER: 
+An example where normal induction would not work, but fresh induction with empty parameters 
 is helpful -- namely, the "bonus" freshness assumption allows us to assume xs fresh for es, 
 which is crucial in the beta case. *)
 lemma istep_affine:
@@ -104,6 +108,21 @@ proof-
     unfolding affine_iApp_iff by auto 
     subgoal unfolding affine_iApp_iff using istep_FFVars by fastforce
     subgoal unfolding affine_iApp_iff using istep_FFVars 
+    by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
+    subgoal by auto . 
+qed
+
+
+lemma istep_uniform:
+assumes "istep e e'" and "uniform e"
+shows "uniform e'"
+proof-
+  have "small {}" by simp
+  thus ?thesis using assms apply(induct rule: BE_induct_istep')
+    subgoal for xs e1 es2 apply(rule uniform_imkSubst)
+    unfolding uniform_iApp_iff apply auto 
+    subgoal unfolding uniform_iApp_iff using istep_FFVars by fastforce
+    subgoal unfolding uniform_iApp_iff using istep_FFVars 
     by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
     subgoal by auto . 
 qed

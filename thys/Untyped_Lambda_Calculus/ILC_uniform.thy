@@ -253,4 +253,29 @@ shows "uniform (itvsubst (imkSubst xs es) e)"
 using reneqv_imkSubst rr u uniformS_def3 uniform_def3 xs by blast
 
 
+(* Inversion/simplification rules for "uniform": *)
+
+lemma uniform_iVar[simp]:
+"uniform (iVar x) \<longleftrightarrow> (\<exists>xs. super xs \<and> x \<in> dsset xs)"
+unfolding uniform_def3 by (meson bot.extremum iVar insert_subset reneqv_iVar_casesR)
+
+lemma uniform_iLam_iff[simp]:
+assumes xs: "super xs" 
+shows "uniform (iLam xs e) \<longleftrightarrow> uniform e"
+unfolding uniform_def3  
+by (meson iLam reneqv_iLam_casesL reneqv_trans reneweqv_sym xs)
+
+(* It is impossible to express uniformity in terms of itself alone, 
+this is why renaming equivalence was necessary... same as with parametricity etc.*)
+lemma uniform_iApp_iff:
+"uniform (iApp e es) \<longleftrightarrow> 
+ uniform e \<and> (\<forall>e e'. {e,e'} \<subseteq> sset es \<longrightarrow> reneqv e e')"
+unfolding uniform_def3 using iApp reneqv_iApp_casesL by fastforce
+
+lemma uniform_iApp_case:
+"uniform (iApp e es) \<Longrightarrow>
+ uniform e \<and> (\<forall>e' \<in> sset es. uniform e')"
+unfolding uniform_iApp_iff unfolding uniform_def3 by auto
+
+
 end

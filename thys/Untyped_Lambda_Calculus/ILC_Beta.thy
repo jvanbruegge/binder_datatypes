@@ -264,4 +264,7 @@ shows "istep (irrename f e) (irrename f e')"
 using assms unfolding istep_I using Istep.I_equiv[of "(e,e')" f]
 unfolding Tmap_def ssbij_def by auto
 
+
+ 
+
 end

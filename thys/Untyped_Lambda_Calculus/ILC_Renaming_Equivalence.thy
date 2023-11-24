@@ -52,7 +52,7 @@ lemmas reneqv_finite_touchedSuperT = reneqv_touchedSuperT[THEN conjunct2]
 type_synonym T = "itrm \<times> itrm"
 
 definition Tmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (rrename f) (rrename f)"
+"Tmap f \<equiv> map_prod (irrename f) (irrename f)"
 
 fun Tfvars :: "T \<Rightarrow> ivar set" where 
 "Tfvars (e1,e2) = FFVars e1 \<union> FFVars e2"
@@ -140,15 +140,15 @@ unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI3_2)
   subgoal apply(elim exE) subgoal for xs e e'
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
-  apply(rule exI[of _ "rrename \<sigma> e"]) 
-  apply(rule exI[of _ "rrename \<sigma> e'"])  
+  apply(rule exI[of _ "irrename \<sigma> e"]) 
+  apply(rule exI[of _ "irrename \<sigma> e'"])  
   apply(cases t) unfolding ssbij_def small_def Tmap_def wfBij_def
   apply (simp add: iterm.rrename_comps) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3)
   subgoal apply(elim exE) subgoal for e1 e1' es2 es2'
-  apply(rule exI[of _ "rrename \<sigma> e1"]) apply(rule exI[of _ "rrename \<sigma> e1'"]) 
-  apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) apply(rule exI[of _ "smap (rrename \<sigma>) es2'"])
+  apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"]) 
+  apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) apply(rule exI[of _ "smap (irrename \<sigma>) es2'"])
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: iterm.rrename_comps) 
   by (metis image_in_bij_eq iterm.rrename_bijs iterm.rrename_inv_simps) . . .
@@ -267,15 +267,15 @@ unfolding G_def Tmap_def apply safe
       by (smt (verit, ccfv_SIG) Diff_Int_distrib Diff_disjoint Diff_empty Int_emptyD Tfvars.simps Un_iff bij_betw_apply bij_imp_bij_betw dstream.set_map iterm.set(3) prod.collapse super_disj)
     subgoal apply(rule disjI3_2)
     apply(rule exI[of _ "dsmap f xs"]) 
-    apply(rule exI[of _ "rrename f e"]) 
-    apply(rule exI[of _ "rrename f e'"]) 
+    apply(rule exI[of _ "irrename f e"]) 
+    apply(rule exI[of _ "irrename f e'"]) 
     apply(cases t) unfolding presSuper_def apply simp apply(intro conjI)
-      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst rrename_eq_itvsubst_iVar)
+      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst irrename_eq_itvsubst_iVar)
         subgoal unfolding ssbij_def by auto
         subgoal unfolding ssbij_def by auto
-        subgoal by (smt (verit, best) Diff_iff Un_iff iLam_rrename id_on_def 
-           rrename_eq_itvsubst_iVar) . 
+        subgoal by (smt (verit, best) Diff_iff Un_iff iLam_irrename id_on_def 
+           irrename_eq_itvsubst_iVar) . 
         subgoal unfolding id_on_def ssbij_def wfBij_def by (auto split: option.splits) . . .
   (* *)
   subgoal for e1 e1' es2 es2'
@@ -350,10 +350,10 @@ shows "R t1 t2"
 apply(rule BE_induct_reneqv[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
-corollary rrename_reneqv:
+corollary irrename_reneqv:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
 and r: "reneqv e e'" 
-shows "reneqv (rrename f e) (rrename f e')"
+shows "reneqv (irrename f e) (irrename f e')"
 using assms unfolding reneqv_I using Reneqv.II_equiv[of "(e,e')" f]
 unfolding Tmap_def ssbij_def wfBij_presSuper by auto
 

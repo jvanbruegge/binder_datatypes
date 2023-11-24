@@ -22,7 +22,7 @@ thm istep_def
 type_synonym T = "itrm \<times> itrm"
 
 definition Tmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (rrename f) (rrename f)"
+"Tmap f \<equiv> map_prod (irrename f) (irrename f)"
 
 fun Tfvars :: "T \<Rightarrow> ivar set" where 
 "Tfvars (e1,e2) = FFVars e1 \<union> FFVars e2"
@@ -61,42 +61,42 @@ unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for xs e1 es2
   apply(rule exI[of _ "dsmap \<sigma> xs"])
-  apply(rule exI[of _ "rrename \<sigma> e1"])  
-  apply(rule exI[of _ "smap (rrename \<sigma>) es2"])  
+  apply(rule exI[of _ "irrename \<sigma> e1"])  
+  apply(rule exI[of _ "smap (irrename \<sigma>) es2"])  
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
-  apply (simp add: iterm.rrename_comps) apply(subst rrename_itvsubst_comp) apply auto
-  apply(subst imkSubst_smap_rrename_inv) unfolding ssbij_def apply auto 
-  apply(subst rrename_eq_itvsubst_iVar'[of _ e1]) unfolding ssbij_def apply auto
+  apply (simp add: iterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
+  apply(subst imkSubst_smap_irrename_inv) unfolding ssbij_def apply auto 
+  apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding ssbij_def apply auto
   apply(subst itvsubst_comp) 
-    subgoal by (metis SSupp_imkSubst imkSubst_smap_rrename_inv)
+    subgoal by (metis SSupp_imkSubst imkSubst_smap_irrename_inv)
     subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
     subgoal apply(rule itvsubst_cong)
-      subgoal using SSupp_rrename_bound by blast
-      subgoal using card_SSupp_itvsubst_imkSubst_rrename_inv ssbij_def by auto
+      subgoal using SSupp_irrename_bound by blast
+      subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv ssbij_def by auto
    subgoal for x apply simp apply(subst iterm.subst(1))
-      subgoal using card_SSupp_imkSubst_rrename_inv[unfolded ssbij_def] by auto
+      subgoal using card_SSupp_imkSubst_irrename_inv[unfolded ssbij_def] by auto
       subgoal by simp . . . . . 
   (* *)
   subgoal apply(rule disjI4_2)
   subgoal apply(elim exE) subgoal for e1 e1' es2 
-  apply(rule exI[of _ "rrename \<sigma> e1"]) apply(rule exI[of _ "rrename \<sigma> e1'"]) 
-  apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) 
+  apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"]) 
+  apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: iterm.rrename_comps) . . 
   (* *)
   subgoal apply(rule disjI4_3)
   subgoal apply(elim exE) subgoal for e1 es2 i e2' 
-  apply(rule exI[of _ "rrename \<sigma> e1"]) 
-  apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) 
+  apply(rule exI[of _ "irrename \<sigma> e1"]) 
+  apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
   apply(rule exI[of _ i])
-  apply(rule exI[of _ "rrename \<sigma> e2'"]) 
+  apply(rule exI[of _ "irrename \<sigma> e2'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: iterm.rrename_comps) . . .
   (* *)
   subgoal apply(rule disjI4_4)
   subgoal apply(elim exE) subgoal for xs e e'
   apply(rule exI[of _ "dsmap \<sigma> xs"])
-  apply(rule exI[of _ "rrename \<sigma> e"]) apply(rule exI[of _ "rrename \<sigma> e'"]) 
+  apply(rule exI[of _ "irrename \<sigma> e"]) apply(rule exI[of _ "irrename \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: iterm.rrename_comps) . . . 
 
@@ -116,11 +116,11 @@ unfolding G_def Tmap_def apply safe
     subgoal unfolding id_on_def by auto (metis DiffI Int_emptyD image_eqI)
     subgoal apply(rule disjI4_1)
     apply(rule exI[of _ "dsmap f xs"]) 
-    apply(rule exI[of _ "rrename f e1"]) 
+    apply(rule exI[of _ "irrename f e1"]) 
     apply(rule exI[of _ "es2"]) 
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst rrename_eq_itvsubst_iVar)
+      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst irrename_eq_itvsubst_iVar)
         subgoal unfolding ssbij_def by auto
         subgoal unfolding ssbij_def by auto
         subgoal apply(subst itvsubst_comp)
@@ -164,11 +164,11 @@ unfolding G_def Tmap_def apply safe
     subgoal unfolding id_on_def by auto (metis DiffI Int_emptyD image_eqI)
     subgoal apply(rule disjI4_4) 
     apply(rule exI[of _ "dsmap f xs"]) 
-    apply(rule exI[of _ "rrename f e"]) 
-    apply(rule exI[of _ "rrename f e'"]) 
+    apply(rule exI[of _ "irrename f e"]) 
+    apply(rule exI[of _ "irrename f e'"]) 
     apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
       subgoal unfolding ssbij_def by auto . . . . 
 
 
@@ -257,10 +257,10 @@ shows "R t1 t2"
 apply(rule BE_induct_istep[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
-corollary rrename_istep:
+corollary irrename_istep:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" 
 and r: "istep e e'" 
-shows "istep (rrename f e) (rrename f e')"
+shows "istep (irrename f e) (irrename f e')"
 using assms unfolding istep_I using Istep.I_equiv[of "(e,e')" f]
 unfolding Tmap_def ssbij_def by auto
 

@@ -82,22 +82,31 @@ lemma imkSubst_affine:
 assumes r: "affine e" and 
 fv: "\<And>e1. e1 \<in> sset es \<Longrightarrow> affine e1 \<and> FFVars e \<inter> FFVars e1 = {}"
 "\<And>i j. i \<noteq> j \<Longrightarrow> FFVars (snth es i) \<inter> FFVars (snth es j) = {}"
-and xs: "super xs"
 shows "affine (itvsubst (imkSubst xs es) e)"
 apply(rule tvsubst_affine)
 using assms apply auto 
-  apply (simp add: affine.iVar imkSubst_def)
+  apply (simp add: imkSubst_def)
   by (metis Int_emptyD dtheN imkSubst_def iterm.set(1) singletonD snth_sset)
 
+lemma istep_FFVars: "istep e e' \<Longrightarrow> ILC.FFVars e' \<subseteq> ILC.FFVars e"
+sorry
 
+(* An example where normal induction would not work, but fresh induction with empty parameters 
+is helpful -- namely, the "bonus" freshness assumption allows us to assume xs fresh for es, 
+which is crucial in the beta case. *)
 lemma istep_affine:
 assumes "istep e e'" and "affine e"
 shows "affine e'"
-using assms apply(induct rule: istep.induct)
-  subgoal for xs e1 es2 apply(rule imkSubst_affine)
-    subgoal apply(cases rule: affine.cases) apply auto 
-(* todo: need fresh-cases for istep; then can prove istep_uniform too  *)
-
+proof-
+  have "small {}" by simp
+  thus ?thesis using assms apply(induct rule: BE_induct_istep')
+    subgoal for xs e1 es2 apply(rule imkSubst_affine)
+    unfolding affine_iApp_iff by auto 
+    subgoal unfolding affine_iApp_iff using istep_FFVars by fastforce
+    subgoal unfolding affine_iApp_iff using istep_FFVars 
+    by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
+    subgoal by auto . 
+qed
 
 
 (*******)
@@ -190,7 +199,7 @@ sorry
   
 lemma rrename_tr:
 assumes "bij f" and "|supp f| <o |UNIV::var set|"
-shows "tr (LC.rrename f e) p = ILC.rrename (ext f) (tr e p)"
+shows "tr (rrename f e) p = irrename (ext f) (tr e p)"
 sorry
 
 

@@ -7,15 +7,16 @@ begin
 
 (* *)
 
-inductive affine where
- iVar: "affine (iVar x)"
+inductive affine  :: "itrm \<Rightarrow> bool" where
+ iVar[simp,intro!]: "affine (iVar x)"
 |iLam: "affine e \<Longrightarrow> affine (iLam xs e)"
 |iApp: 
 "affine e1 \<Longrightarrow>
  (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
- (\<forall>e2 e2'. e2 \<in> sset es2 \<and> e2' \<in> sset es2 \<and> e2 \<noteq> e2' \<longrightarrow> FFVars e2 \<inter> FFVars e2' = {}) 
+ (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) 
  \<Longrightarrow>
  affine (iApp e1 es2)"
+
 
 thm affine_def
 
@@ -25,7 +26,7 @@ thm affine_def
 type_synonym T = "itrm"
 
 definition Tmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> rrename f"
+"Tmap f \<equiv> irrename f"
 
 fun Tfvars :: "T \<Rightarrow> ivar set" where 
 "Tfvars e = FFVars e"
@@ -48,7 +49,7 @@ where
          (\<exists>e1 es2. B = {} \<and> t = iApp e1 es2 \<and> 
                    R e1 \<and> 
                    (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> R e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<and> 
-                   (\<forall>e2 e2'. e2 \<in> sset es2 \<and> e2' \<in> sset es2 \<and> e2 \<noteq> e2' \<longrightarrow> FFVars e2 \<inter> FFVars e2' = {})
+                   (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {})
          )"
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
@@ -68,14 +69,14 @@ unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI3_2)
   subgoal apply(elim exE) subgoal for xs e
   apply(rule exI[of _ "dsmap \<sigma> xs"])
-  apply(rule exI[of _ "rrename \<sigma> e"])  
+  apply(rule exI[of _ "irrename \<sigma> e"])  
   unfolding ssbij_def small_def Tmap_def  
   apply (simp add: iterm.rrename_comps) . . .
   (* *)
   subgoal apply(rule disjI3_3)
   subgoal apply(elim exE) subgoal for e1 es2
-  apply(rule exI[of _ "rrename \<sigma> e1"]) 
-  apply(rule exI[of _ "smap (rrename \<sigma>) es2"]) 
+  apply(rule exI[of _ "irrename \<sigma> e1"]) 
+  apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
   unfolding ssbij_def small_def Tmap_def 
   apply (fastforce simp add: iterm.rrename_comps) . . . .
 
@@ -103,13 +104,13 @@ unfolding G_def Tmap_def apply safe
     subgoal unfolding id_on_def by auto 
     subgoal apply(rule disjI3_2)
     apply(rule exI[of _ "dsmap f xs"]) 
-    apply(rule exI[of _ "rrename f e"]) 
+    apply(rule exI[of _ "irrename f e"]) 
     apply simp apply(intro conjI)
-      subgoal apply(subst iLam_rrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst rrename_eq_itvsubst_iVar)
+      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst irrename_eq_itvsubst_iVar)
         subgoal unfolding ssbij_def by auto
         subgoal unfolding ssbij_def by auto
-        subgoal apply(subst rrename_eq_itvsubst_iVar[symmetric]) unfolding ssbij_def by auto . . . . 
+        subgoal apply(subst irrename_eq_itvsubst_iVar[symmetric]) unfolding ssbij_def by auto . . . . 
   (* *)
   subgoal for e1 es2
   apply(rule exI[of _ "{}"])  
@@ -163,7 +164,7 @@ and iLam: "\<And>e xs p.
 and iApp: "\<And>e1 es2 p.
     affine e1 \<Longrightarrow> (\<forall>p'. R p' e1) \<Longrightarrow>
     (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> (affine e2 \<and> (\<forall>p'. R p' e2)) \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
-    (\<forall>e2 e2'. e2 \<in> sset es2 \<and> e2' \<in> sset es2 \<and> e2 \<noteq> e2' \<longrightarrow> FFVars e2 \<inter> FFVars e2' = {}) \<Longrightarrow> 
+    (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) \<Longrightarrow> 
     R p (iApp e1 es2)"
 shows "R p t"
 unfolding affine_I
@@ -188,17 +189,48 @@ and iLam: "\<And>e xs.
 and iApp: "\<And>e1 es2.
     affine e1 \<Longrightarrow> R e1 \<Longrightarrow>
     (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> (affine e2 \<and> R e2) \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
-    (\<forall>e2 e2'. e2 \<in> sset es2 \<and> e2' \<in> sset es2 \<and> e2 \<noteq> e2' \<longrightarrow> FFVars e2 \<inter> FFVars e2' = {}) \<Longrightarrow> 
+    (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) \<Longrightarrow> 
     R (iApp e1 es2)"
 shows "R t"
 apply(rule BE_induct_affine[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
-corollary rrename_affine:
+corollary irrename_affine:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" 
 and r: "affine (e::itrm)" 
-shows "affine (rrename f e)"
+shows "affine (irrename f e)"
 using assms unfolding affine_I using Affine.I_equiv[of e f]
 unfolding Tmap_def ssbij_def by auto
+
+
+(* ... and equivariance gives us a nice iLam inversion rule: *)
+
+lemma affine_App_case:
+"affine (iApp e1 es2) \<Longrightarrow> 
+ affine e1 \<and> 
+ (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
+ (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {})"
+apply(subst (asm) affine.simps) by auto
+
+lemma affine_iApp_iff:
+"affine (iApp e1 es2) \<longleftrightarrow> 
+ (affine e1 \<and> 
+  (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<and>
+  (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}))"
+apply(subst affine.simps) by auto 
+
+lemma affine_iLam_case: 
+assumes "affine (iLam xs e)"
+shows "affine e" 
+proof-
+  obtain xs' e' where 0: "iLam xs e = iLam xs' e'" and "affine e'"
+  using assms by (smt (verit, del_insts) affine.cases iterm.distinct(2) iterm.distinct(4))
+  thus ?thesis using 0 unfolding iLam_inject 
+  by (metis iLam_inject irrename_affine)
+qed
+
+lemma affine_iLam_iff[simp]: 
+"affine (iLam xs e) \<longleftrightarrow> affine e" 
+using affine.simps affine_iLam_case by blast
 
 end

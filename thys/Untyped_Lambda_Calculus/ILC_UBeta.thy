@@ -310,57 +310,40 @@ unfolding Tmap_def ssbij_def by auto
 
 (* Other properties: *)
 
-lemma uniform_iLam_imp_avoid: 
-assumes A: "small A" 
-shows "\<exists> xs' e'. iLam xs e = iLam xs' e' \<and> dsset xs' \<inter> A = {}"
-(* 
-proof-
-  obtain xs' e' where xs': "super xs'" and e': "uniform e'" and il: "iLam xs e = iLam xs' e'"
-  using uniform_iLam_imp[OF u] by auto
-  define B where B: "B = A \<union> dsset xs' \<union> FFVars (iLam xs e)"
-  have bsB: "bsmall B" unfolding B apply(intro ILC_Renaming_Equivalence.bsmall_Un)
-    subgoal by fact
-    subgoal using super_bsmall[OF xs'] .
-    subgoal using u bsmall_def touchedSuperT_def uniform_finite_touchedUponT by fastforce .
-  hence BB: "finite (touchedSuper B)" unfolding bsmall_def by auto
-  have BBB: "|B| <o |UNIV::ivar set|"  
-    by (metis B ILC2.small_def assms(2) card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
-  obtain xs'' where xxs'': "super xs''" "B \<inter> dsset xs'' = {}" 
-    by (smt (verit) Collect_cong Int_commute bsB bsmall_def super_infinite touchedSuper_def)
-  obtain f where xs'': "xs'' = dsmap f xs'" and f: "bij_betw f (dsset xs') (dsset xs'')" "id_on (- dsset xs') f" 
-  by (metis ex_dsmap)
-  obtain g where g: "bij g" "|supp g| <o |UNIV::ivar set|"
-      "presSuper g" "g ` dsset xs' \<inter> B = {}" "id_on (- dsset xs' \<inter> - dsset xs'') g" 
-      "eq_on (dsset xs') g f"
-  using extend_super1[OF xs' xxs''(1) BBB BB xxs''(2), of "{}", simplified, OF f(1) xs''[symmetric]]
-  by auto
-
-  
-  show ?thesis apply(intro exI[of _ xs''] exI[of _ "irrename g e'"], safe)
-    subgoal by fact
-    subgoal using e' g(1) g(2) g(3) irrename_uniform by presburger
-    subgoal unfolding il xs'' iLam_inject apply(rule exI[of _ g], safe)
-      subgoal by fact subgoal by fact
-      subgoal using g(5) unfolding id_on_def apply simp  
-        by (metis B DiffI UnCI disjoint_iff il iterm.set(3) xxs''(2))
-      subgoal apply(rule dsmap_cong)
-        subgoal by (simp add: g(1) inj_on_def)
-        subgoal using bij_betw_def f(1) by blast
-        subgoal by (meson eq_on_def g(6)) . .
-    subgoal using B xxs''(2) by blast . 
-qed
-*)
-sorry
-
-
+(* this captures the freshness assumption for beta (coming from the "parameter" 
+predicate hred as part of ustep. So fresh induction will use both 
+the avoidance from the ustep Xi rule and this one (for hred).  Contrast this with 
+beta, which does not "hide" any freshness assumptions inside parameter predicates, 
+so its rule induction covers both beta and Xi. *)
 lemma hred_eq_avoid: 
-assumes "small A"
-and "hred e e'"
+assumes A: "small A" and r: "hred e e'"
 shows "\<exists> xs e1 es2. dsset xs \<inter> \<Union> (FFVars ` (sset es2)) = {} \<and> dsset xs \<inter> A = {} \<and>
             e = iApp (iLam xs e1) es2 \<and> e' = itvsubst (imkSubst xs es2) e1"
-sorry
-(* this captures the freshness assumption for beta (I proved it in another theory) *)
+proof-
+  obtain xs e1 es2 where e: "e = iApp (iLam xs e1) es2" and e': "e' = itvsubst (imkSubst xs es2) e1" 
+  using r unfolding hred_def by auto
+  define B where B: "B = A \<union> \<Union> (FFVars ` (sset es2))"
+  have "small B" unfolding B by (metis A Tfvars.simps Un_absorb small_Un ssmall_Tfvars)
+  then obtain xs' e1' where 0: "iLam xs e1 = iLam xs' e1'" "dsset xs' \<inter> B = {}"
+  using iLam_avoid by (meson small_def)
 
+  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs e1)) f" 
+  and 1: "xs' = dsmap f xs" "e1' = irrename f e1" using 0(1) unfolding iLam_inject by auto
+  show ?thesis apply(intro exI[of _ xs'] exI[of _ e1'] exI[of _ es2]) apply(intro conjI)
+    subgoal using 0(2) unfolding B by auto
+    subgoal using 0(2) unfolding B by auto
+    subgoal unfolding e 0(1) ..
+    subgoal unfolding e' 0(1) 1 apply(subst irrename_eq_itvsubst_iVar')
+      subgoal by fact  subgoal by fact
+      subgoal apply(subst itvsubst_comp)
+        subgoal by simp
+        subgoal by (simp add: f(2))   
+        apply(subst itvsubst_cong) apply auto 
+        apply (simp add: SSupp_itvsubst_bound f(2))
+        by (metis (full_types) "0"(1) "1"(1) Diff_iff f(1) f(3) id_on_def imkSubst_idle 
+          imkSubst_smap iterm.set(3)) . . 
+qed
+          
  
 
 end

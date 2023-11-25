@@ -190,7 +190,8 @@ unfolding G_def apply(elim disjE)
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap smap_sflat) 
   sledgehammer
-  by (smetis inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id) . . 
+  by (metis ILC_Renaming_Equivalence.wfBij_presSuper id_apply inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id0 uniformS_irrename)
+  . .  
   (* *)
   subgoal apply(rule disjI4_4)
   subgoal apply(elim exE) subgoal for xs es es'
@@ -262,12 +263,13 @@ subgoal for R tt1 tt2 apply(rule iffI)
 lemma III_bsmall: "Istep.II t \<Longrightarrow> bsmall (Tfvars t)"
 apply(cases t)
   subgoal for e1 e2 apply simp
-  unfolding ustep_I[symmetric] 
+  unfolding ustep_I[symmetric]  
   apply(rule bsmall_Un) unfolding bsmall_def touchedSuperT_def 
-  apply auto .
+  using touchedSuperT_def 
+  touchedSuper_UN ustep_finite_touchedSuperT by auto
 
 
-(* *)
+(* HERE *)
 
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 

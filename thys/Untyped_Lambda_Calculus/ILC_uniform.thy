@@ -375,23 +375,66 @@ proof-
      subgoal using il(2) by auto .
 qed
 
+lemma iLam_eq_imkSubst: 
+assumes il: "iLam (xs::ivar dstream) e1 = iLam xs' e1'"
+shows "itvsubst (imkSubst xs es2) e1 = itvsubst (imkSubst xs' es2) e1'"
+proof-
+  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (ILC.FFVars (iLam xs e1)) f" 
+  and 0: "xs' = dsmap f xs" "e1' = irrename f e1" using il[unfolded iLam_inject] by auto
+  show ?thesis unfolding 0 apply(subst irrename_eq_itvsubst_iVar')
+    subgoal by fact subgoal by fact
+    subgoal apply(subst itvsubst_comp)
+      subgoal by simp
+      subgoal using f(2) by auto
+      subgoal apply(rule itvsubst_cong)
+        subgoal by simp
+        subgoal by (simp add: SSupp_itvsubst_bound f(2))
+        subgoal apply simp 
+     by (metis (full_types) Diff_iff dstream.set_map f(1) f(2) f(3) id_on_def 
+        imkSubst_idle imkSubst_smap iterm.set(3) not_imageI) . . .
+qed
+          
+lemma reneqv_head_reduction: 
+assumes r: "reneqv (iApp (iLam xs e1) es2) (iApp (iLam ys d1) ds2)"
+shows "reneqv (itvsubst (imkSubst xs es2) e1) (itvsubst (imkSubst ys ds2) d1)"
+proof-  (* we needed some delicate renaming lemmas, to turn 
+   the bound sequences into supervariables, to allow for the nice inversion rules 
+  for renaming equivalence to pop up... *)
+  have uu: "uniform (iApp (iLam xs e1) es2)" "uniform (iApp (iLam ys d1) ds2)"
+  using r using uniform_def uniform_def2 by auto
+  obtain xs' e1' where x0: "super xs'" and x1: "iLam xs e1 = iLam xs' e1'"
+         and x2: "itvsubst (imkSubst xs es2) e1 = itvsubst (imkSubst xs' es2) e1'"
+         and x3: "\<forall>e\<in>sset es2. dsset xs' \<inter> FFVars e = {}"
+  using uu iLam_switch_to_super by fastforce
+  hence ux': "uniform (iApp (iLam xs' e1') es2)"  
+  using uu by auto
+  obtain ys' d1' where y0: "super ys'" and y1: "iLam ys d1 = iLam ys' d1'"
+         and y2: "itvsubst (imkSubst ys ds2) d1 = itvsubst (imkSubst ys' ds2) d1'"
+         and y3: "\<forall>e\<in>sset ds2. dsset ys' \<inter> FFVars e = {}"
+  using uu iLam_switch_to_super by fastforce
+  hence uy': "uniform (iApp (iLam ys' d1') ds2)"  
+  using uu by auto
+  have r: "reneqv (iApp (iLam xs' e1') es2) (iApp (iLam ys' d1') ds2)"
+  using r x1 y1 by auto 
+  hence "reneqv (iLam xs' e1') (iLam ys' d1')" and rr: "\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset ds2 \<longrightarrow> reneqv e e'"
+  using reneqv_iApp_casesR by fastforce+
+  then obtain ee1' where il: "iLam ys' d1' = iLam xs' ee1'" and r: "reneqv e1' ee1'"
+  using reneqv_iLam_casesL x0 by blast
+  hence yy1: "iLam ys d1 = iLam xs' ee1'" using y1 by simp
+
+  have itv: "itvsubst (imkSubst xs es2) e1 = itvsubst (imkSubst xs' es2) e1'"
+  using iLam_eq_imkSubst[OF x1] .
+  have iitv: "itvsubst (imkSubst ys ds2) d1 = itvsubst (imkSubst xs' ds2) ee1'"
+  using iLam_eq_imkSubst[OF yy1] . 
+  
+  show ?thesis unfolding itv iitv apply(rule reneqv_imkSubst)
+  using r x0 rr unfolding reneqvS_def by auto
+qed
+
 lemma uniform_head_reduction: 
 assumes u: "uniform (iApp (iLam xs e1) es2)"
 shows "uniform (itvsubst (imkSubst xs es2) e1)"
-proof- (* we needed some delicate renaming lemmas, to turn 
-   the bound sequence into a supervariable *)
-  obtain xs' e1' where 0: "super xs'" and 1: "iLam xs e1 = iLam xs' e1'"
-         and 2: "itvsubst (imkSubst xs es2) e1 = itvsubst (imkSubst xs' es2) e1'"
-         and 3: "\<forall>e\<in>sset es2. dsset xs' \<inter> FFVars e = {}"
-    using assms iLam_switch_to_super by fastforce
-    hence u: "uniform (iApp (iLam xs' e1') es2)"  
-      using assms by auto
-    show ?thesis unfolding 2 apply(rule uniform_imkSubst)
-      subgoal using u unfolding uniform_iApp_iff uniform_iLam_iff[OF 0] by simp
-      subgoal by fact
-      subgoal using u unfolding uniform_iApp_iff uniformS_def3  
-        by (simp add: reneqvS_def) .
-qed
+using assms unfolding uniform_def3 by (elim reneqv_head_reduction) 
 
 (* not true (and not claimed by Mazza *)
 (*

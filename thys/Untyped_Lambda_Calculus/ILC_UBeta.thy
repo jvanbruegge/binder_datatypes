@@ -29,15 +29,7 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
       subgoal using card_SSupp_imkSubst_irrename_inv[unfolded ssbij_def] by auto
       subgoal by simp . . . .
 
-lemma hred_eq_avoid: 
-assumes "small A"
-and "hred e e'"
-shows "\<exists> xs e1 es2. dsset xs \<inter> \<Union> (FFVars ` (sset es2)) = {} \<and> dsset xs \<inter> A = {} \<and>
-            e = iApp (iLam xs e1) es2 \<and> e' = itvsubst (imkSubst xs es2) e1"
-sorry
-(* this captures the freshness assumption for beta (I proved it in another theory) *)
-
-term stream_all2
+(* *)
 
 definition nat2 :: "nat \<Rightarrow> nat \<times> nat" where 
 "nat2 \<equiv> SOME f. bij f"
@@ -57,6 +49,8 @@ lemma smap_sflat: "smap f (sflat xss) = sflat (smap (smap f) xss)"
 unfolding sflat_def 
 unfolding stream.map_comp apply(rule stream.map_cong0) 
 subgoal for z by (cases "nat2 z", auto) . 
+
+(* *)
 
 inductive ustep :: "itrm stream \<Rightarrow> itrm stream \<Rightarrow> bool" where
   Beta: "stream_all2 hred es es' \<Longrightarrow> ustep es es'"
@@ -314,7 +308,13 @@ using assms unfolding ustep_I using Istep.I_equiv[of "(es,es')" f]
 unfolding Tmap_def ssbij_def by auto
 
 
-
+lemma hred_eq_avoid: 
+assumes "small A"
+and "hred e e'"
+shows "\<exists> xs e1 es2. dsset xs \<inter> \<Union> (FFVars ` (sset es2)) = {} \<and> dsset xs \<inter> A = {} \<and>
+            e = iApp (iLam xs e1) es2 \<and> e' = itvsubst (imkSubst xs es2) e1"
+sorry
+(* this captures the freshness assumption for beta (I proved it in another theory) *)
 
  
 

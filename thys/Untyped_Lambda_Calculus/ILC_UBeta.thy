@@ -310,7 +310,7 @@ unfolding Tmap_def ssbij_def by auto
 
 (* Other properties: *)
 
-(* this captures the freshness assumption for beta (coming from the "parameter" 
+(* The following captures the freshness assumption for beta (coming from the "parameter" 
 predicate hred as part of ustep. So fresh induction will use both 
 the avoidance from the ustep Xi rule and this one (for hred).  Contrast this with 
 beta, which does not "hide" any freshness assumptions inside parameter predicates, 

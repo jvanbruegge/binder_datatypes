@@ -17,6 +17,7 @@ inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
 thm istep_def
 
 
+
 (* INSTANTIATING THE Components LOCALE: *)
 
 type_synonym T = "itrm \<times> itrm"

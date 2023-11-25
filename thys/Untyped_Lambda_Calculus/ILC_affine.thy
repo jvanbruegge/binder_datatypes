@@ -233,4 +233,91 @@ lemma affine_iLam_iff[simp]:
 "affine (iLam xs e) \<longleftrightarrow> affine e" 
 using affine.simps affine_iLam_case by blast
 
+(* Other properties: *)
+
+(* *)
+lemma tvsubst_affine':
+assumes f: "|SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
+and fv: "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (f x) \<inter> FFVars (f y) = {}"
+and r: "affine (e::itrm)" 
+shows "affine (itvsubst f e)"
+proof-
+  have ims: "|IImsupp f| <o |UNIV::ivar set|"  
+  using f ILC.SSupp_IImsupp_bound by auto
+  have par: "small (IImsupp f)"
+  using ims f unfolding small_def by blast
+  show ?thesis using par r proof(induct rule: BE_induct_affine')
+    case (iVar x)
+    then show ?case using f af by auto
+  next
+    case (iLam e xs)
+    show ?case using iLam apply(subst iterm.subst)
+      subgoal using f by auto
+      subgoal by auto
+      subgoal apply(rule affine.iLam) by auto .
+  next
+    case (iApp e1 es2)
+    then show ?case apply(subst iterm.subst)
+      subgoal using f by auto
+      subgoal apply(rule affine.iApp) using fv
+      by auto (metis Int_emptyD)+ .
+  qed 
+qed
+
+(* Strengthening the previous result with "{x,y} \<subseteq> FFVars e " 
+(which seems to prevent the above proof by induction), otherwise the result is 
+not strong enough to instantiate to imakeSubst... *)
+lemma tvsubst_affine:
+assumes f: "|SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
+and fv: "\<And>x y. {x,y} \<subseteq> FFVars e \<Longrightarrow> x \<noteq> y \<Longrightarrow> FFVars (f x) \<inter> FFVars (f y) = {}"
+and r: "affine (e::itrm)" 
+shows "affine (itvsubst f e)"
+proof-
+  obtain xs and x::ivar where x: "x \<in> dsset xs" 
+    using dsset_range by blast 
+  define t where "t = iLam xs (iVar x)"
+  have t: "FFVars t = {}" "affine t" unfolding t_def using x by (auto intro: affine.intros)
+  
+  have fve: "\<And>e. |FFVars e| <o |UNIV::ivar set|" 
+    by (simp add: iterm.set_bd_UNIV)
+
+  have "|\<Union> ((FFVars o f) ` (FFVars e))| \<le>o |Sigma (FFVars e) (FFVars o f)|"
+  by (rule card_of_UNION_Sigma)
+  also have "|Sigma (FFVars e) (FFVars o f)| <o |UNIV::ivar set|"
+  apply(rule stable_elim)
+    subgoal by (metis exists_fresh UNIV_I card_ivar card_of_Field_ordIso card_of_nat 
+         finite_iff_ordLess_natLeq natLeq_Card_order ordIso_equivalence(3) ordIso_ordLess_trans 
+         ordLess_ordIso_trans stable_cardSuc stable_ordIso1)
+    subgoal by fact
+    subgoal unfolding o_def using fve . .
+  finally have ffv: "|\<Union> ((FFVars o f) ` (FFVars e))| <o |UNIV::ivar set|" . 
+
+  define g where "g \<equiv> \<lambda>x. if x \<in> FFVars e then f x 
+                                           else if x \<in> \<Union> ((FFVars o f) ` (FFVars e)) then t 
+                                           else iVar x"
+  have sg: "SSupp g \<subseteq> FFVars e \<union> \<Union> ((FFVars o f) ` (FFVars e))" unfolding g_def SSupp_def by auto
+
+  have g: "|SSupp g| <o |UNIV::ivar set|" "\<And>x. affine (g x)"
+  "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (g x) \<inter> FFVars (g y) = {}"
+     subgoal using sg by (meson card_of_subset_bound ffv fve var_stream_class.Un_bound)
+     subgoal by (simp add: af affine.iVar g_def t(2)) 
+     subgoal using fv unfolding g_def by (simp add: fv t(1)) . 
+
+  have 0: "itvsubst f e = itvsubst g e" apply(rule itvsubst_cong)
+    using f g unfolding g_def by auto
+
+  show ?thesis unfolding 0
+  using tvsubst_affine'[OF g r] by simp
+qed
+     
+lemma imkSubst_affine:
+assumes r: "affine e" and 
+fv: "\<And>e1. e1 \<in> sset es \<Longrightarrow> affine e1 \<and> FFVars e \<inter> FFVars e1 = {}"
+"\<And>i j. i \<noteq> j \<Longrightarrow> FFVars (snth es i) \<inter> FFVars (snth es j) = {}"
+shows "affine (itvsubst (imkSubst xs es) e)"
+apply(rule tvsubst_affine)
+using assms apply auto 
+  apply (simp add: imkSubst_def)
+  by (metis Int_emptyD dtheN imkSubst_def iterm.set(1) singletonD snth_sset)
+
 end

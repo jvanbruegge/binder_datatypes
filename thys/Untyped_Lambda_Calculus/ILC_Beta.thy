@@ -1,6 +1,6 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for Mazza's infinitary lambda-calculus *)
-theory ILC_Beta
+theory ILC_Beta 
 imports ILC2 "../Instantiation_Infrastructure/Curry_LFP" 
 begin
 
@@ -264,6 +264,12 @@ and r: "istep e e'"
 shows "istep (irrename f e) (irrename f e')"
 using assms unfolding istep_I using Istep.I_equiv[of "(e,e')" f]
 unfolding Tmap_def ssbij_def by auto
+
+(* Other properties: *)
+
+lemma istep_FFVars: "istep e e' \<Longrightarrow> ILC.FFVars e' \<subseteq> ILC.FFVars e"
+apply(induct rule: istep.induct) 
+by (auto simp: imkSubst_def)  
 
 
  

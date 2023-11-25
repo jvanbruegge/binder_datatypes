@@ -308,6 +308,51 @@ using assms unfolding ustep_I using Istep.I_equiv[of "(es,es')" f]
 unfolding Tmap_def ssbij_def by auto
 
 
+(* Other properties: *)
+
+lemma uniform_iLam_imp_avoid: 
+assumes A: "small A" 
+shows "\<exists> xs' e'. iLam xs e = iLam xs' e' \<and> dsset xs' \<inter> A = {}"
+(* 
+proof-
+  obtain xs' e' where xs': "super xs'" and e': "uniform e'" and il: "iLam xs e = iLam xs' e'"
+  using uniform_iLam_imp[OF u] by auto
+  define B where B: "B = A \<union> dsset xs' \<union> FFVars (iLam xs e)"
+  have bsB: "bsmall B" unfolding B apply(intro ILC_Renaming_Equivalence.bsmall_Un)
+    subgoal by fact
+    subgoal using super_bsmall[OF xs'] .
+    subgoal using u bsmall_def touchedSuperT_def uniform_finite_touchedUponT by fastforce .
+  hence BB: "finite (touchedSuper B)" unfolding bsmall_def by auto
+  have BBB: "|B| <o |UNIV::ivar set|"  
+    by (metis B ILC2.small_def assms(2) card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+  obtain xs'' where xxs'': "super xs''" "B \<inter> dsset xs'' = {}" 
+    by (smt (verit) Collect_cong Int_commute bsB bsmall_def super_infinite touchedSuper_def)
+  obtain f where xs'': "xs'' = dsmap f xs'" and f: "bij_betw f (dsset xs') (dsset xs'')" "id_on (- dsset xs') f" 
+  by (metis ex_dsmap)
+  obtain g where g: "bij g" "|supp g| <o |UNIV::ivar set|"
+      "presSuper g" "g ` dsset xs' \<inter> B = {}" "id_on (- dsset xs' \<inter> - dsset xs'') g" 
+      "eq_on (dsset xs') g f"
+  using extend_super1[OF xs' xxs''(1) BBB BB xxs''(2), of "{}", simplified, OF f(1) xs''[symmetric]]
+  by auto
+
+  
+  show ?thesis apply(intro exI[of _ xs''] exI[of _ "irrename g e'"], safe)
+    subgoal by fact
+    subgoal using e' g(1) g(2) g(3) irrename_uniform by presburger
+    subgoal unfolding il xs'' iLam_inject apply(rule exI[of _ g], safe)
+      subgoal by fact subgoal by fact
+      subgoal using g(5) unfolding id_on_def apply simp  
+        by (metis B DiffI UnCI disjoint_iff il iterm.set(3) xxs''(2))
+      subgoal apply(rule dsmap_cong)
+        subgoal by (simp add: g(1) inj_on_def)
+        subgoal using bij_betw_def f(1) by blast
+        subgoal by (meson eq_on_def g(6)) . .
+    subgoal using B xxs''(2) by blast . 
+qed
+*)
+sorry
+
+
 lemma hred_eq_avoid: 
 assumes "small A"
 and "hred e e'"

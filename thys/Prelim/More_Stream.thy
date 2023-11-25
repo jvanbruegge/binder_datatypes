@@ -114,6 +114,22 @@ assumes "inj f"
 shows "\<exists>xs. sdistinct xs \<and> (\<forall>n. snth xs n = f n)"
 by (metis assms atLeast_0 inj_on_sdistinct_smap sdistinct_fromN snth_smap sset_fromN stream_smap_nats theN_snth)
 
+(* *) 
+lemma set_stake: "set (stake i xs) = snth xs ` {..<i}"
+unfolding set_conv_nth by force
+
+lemma set_sdrop: "sset (sdrop i xs) = snth xs ` {i ..}"
+unfolding sset_range apply auto 
+apply (simp add: sdrop_snth) 
+by (metis add_diff_inverse_nat not_less rangeI sdrop_snth)
+
+
+lemma sset_supd[simp]: "sset (supd es i e) = {snth es j | j . j \<noteq> i} \<union> {e}"
+unfolding supd_def apply auto unfolding set_sdrop set_stake apply auto
+  apply (metis Suc_n_not_le_n snth.simps(2))
+  by (metis atLeast_iff imageI lessThan_iff not_less not_less_eq_eq not_less_iff_gr_or_eq 
+    sdrop.simps(2) set_sdrop)
+
 (* *)
 
 class infinite_regular =
@@ -238,6 +254,8 @@ lemma ex_dsmap: "\<exists>f. bij_betw f (dsset xs) (dsset ys) \<and> dsmap f xs 
 apply(rule exI[of _ "\<lambda>x. if x \<in> dsset xs then dsnth ys (dtheN xs x) else x"])
 unfolding bij_betw_def inj_on_def apply (simp add: dsmap_alt inj_on_def) 
 by (smt (verit, ccfv_SIG) ComplD dsset_range id_on_def image_cong image_image range_eqI surj_dtheN)
+
+
 
 
 

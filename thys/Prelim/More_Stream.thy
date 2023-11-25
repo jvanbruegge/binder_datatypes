@@ -77,6 +77,10 @@ lemma inj_on_sdistinct_smap:
 "inj_on f (sset xs) \<Longrightarrow> sdistinct xs \<Longrightarrow> sdistinct (smap f xs)"
 unfolding sdistinct_def2 inj_on_def apply simp using snth_sset by blast
 
+lemma smap_eq: 
+"smap f xs = xs \<longleftrightarrow> id_on (sset xs) f"
+by (metis (full_types) id_on_def snth_smap stream.map_ident_strong theN)
+
 (* 
 lemma sdistinct_smap: "inj_on f (sset s) \<Longrightarrow> sdistinct s \<Longrightarrow> sdistinct (smap f s)"
   by (coinduction arbitrary: s)
@@ -129,6 +133,46 @@ unfolding supd_def apply auto unfolding set_sdrop set_stake apply auto
   apply (metis Suc_n_not_le_n snth.simps(2))
   by (metis atLeast_iff imageI lessThan_iff not_less not_less_eq_eq not_less_iff_gr_or_eq 
     sdrop.simps(2) set_sdrop)
+
+lemma stream_all2_iff_snth: "stream_all2 P xs ys \<longleftrightarrow> (\<forall>i. P (snth xs i) (snth ys i))"
+unfolding stream_all2_def BNF_Def.Grp_def apply auto 
+  using in_mono apply fastforce unfolding OO_def apply auto 
+  apply(rule exI[of _ "szip xs ys"]) apply auto 
+  apply (simp add: stream_eq_nth)  
+  apply (metis fst_conv prod.sel(2) snth_szip theN)
+  apply (simp add: stream_eq_nth)  
+  apply (metis fst_conv prod.sel(2) snth_szip theN) .
+
+lemma sset_smap2: "sset (smap2 f xs ys) = {(f (snth xs i) (snth ys i)) | i . True}"
+unfolding sset_range by auto
+
+(* *)
+
+(* *)
+
+definition nat2 :: "nat \<Rightarrow> nat \<times> nat" where 
+"nat2 \<equiv> SOME f. bij f"
+
+lemma bij_nat2: "bij nat2" 
+by (metis bij_prod_decode nat2_def someI_ex)
+
+fun snth2 where "snth2 xss (i,j) = snth (snth xss i) j"
+
+definition sflat :: "'a stream stream \<Rightarrow> 'a stream" where 
+"sflat xss \<equiv> smap (\<lambda>i. snth2 xss (nat2 i)) nats"
+
+lemma snth_sflat: "snth (sflat xss) i = snth2 xss (nat2 i)"
+by (simp add: sflat_def)
+
+lemma smap_sflat: "smap f (sflat xss) = sflat (smap (smap f) xss)"
+unfolding sflat_def 
+unfolding stream.map_comp apply(rule stream.map_cong0) 
+subgoal for z by (cases "nat2 z", auto) . 
+
+lemma sset_sflat: "sset (sflat xss) = \<Union> (sset ` (sset xss))"
+unfolding sset_range image_def apply (auto simp: snth_sflat) 
+apply (smt (verit, ccfv_threshold) mem_Collect_eq snth2.elims) 
+by (metis bij_inv_eq_iff bij_nat2 snth2.simps)
 
 (* *)
 
@@ -255,8 +299,9 @@ apply(rule exI[of _ "\<lambda>x. if x \<in> dsset xs then dsnth ys (dtheN xs x) 
 unfolding bij_betw_def inj_on_def apply (simp add: dsmap_alt inj_on_def) 
 by (smt (verit, ccfv_SIG) ComplD dsset_range id_on_def image_cong image_image range_eqI surj_dtheN)
 
-
-
+lemma dsmap_eq: 
+"inj_on f (dsset xs) \<Longrightarrow> dsmap f xs = xs \<longleftrightarrow> id_on (dsset xs) f"
+apply transfer using smap_eq by auto
 
 
 end

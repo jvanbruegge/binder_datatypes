@@ -1,9 +1,8 @@
 (* Here we instantiate the general enhanced rule induction to the renaming-equivalence 
 relation from Mazza  *)
 theory ILC_Renaming_Equivalence
-imports LC2 ILC2 
+imports LC2 ILC2 BSmall
 "../Instantiation_Infrastructure/Curry_LFP" 
-Supervariables 
 begin
 
 (* *)
@@ -57,37 +56,11 @@ definition Tmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" w
 fun Tfvars :: "T \<Rightarrow> ivar set" where 
 "Tfvars (e1,e2) = FFVars e1 \<union> FFVars e2"
 
-type_synonym B = "ivar dstream option"
 
-fun Bmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> B \<Rightarrow> B" where 
-"Bmap f xxs = (case xxs of None \<Rightarrow> None
-                          |Some xs \<Rightarrow> Some (dsmap f xs))"
-
-fun Bvars :: "B \<Rightarrow> ivar set" where 
-"Bvars xxs = (case xxs of None \<Rightarrow> {}
-                         |Some xs \<Rightarrow> dsset xs)"
-
-fun wfB :: "B \<Rightarrow> bool" where 
-"wfB xxs = (case xxs of None \<Rightarrow> True
-                       |Some xs \<Rightarrow> super xs)"
-
-definition bsmall :: "ivar set \<Rightarrow> bool" where 
-"bsmall X \<equiv> finite (touchedSuper X)"
-
-lemma super_dsset_singl: 
- "super ys \<Longrightarrow> {xs . super xs \<and> dsset ys \<inter> dsset xs \<noteq> {}} = {ys}"
-apply safe 
-apply (meson Int_emptyD super_disj)
-by (simp add: dsset_range)
-
-lemma super_Un_ddset_triv: "{xs. super xs \<and> (A \<union> B) \<inter> dsset xs \<noteq> {}} \<subseteq>  
-   {xs. super xs \<and> A \<inter> dsset xs \<noteq> {}} \<union> 
-   {xs. super xs \<and> B \<inter> dsset xs \<noteq> {}}"
-by auto
 
 interpretation CComponents where dummy = "undefined :: ivar" and 
-Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
-and wfB = wfB and bsmall = bsmall
+Tmap = Tmap and Tfvars = Tfvars 
+and Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall
 apply standard unfolding ssbij_def Tmap_def  
 using small_Un small_def iterm.card_of_FFVars_bounds
 apply (auto simp: iterm.rrename_id0s map_prod.comp 
@@ -157,7 +130,7 @@ unfolding G_def apply(elim disjE)
 
 (* *)
 
-lemma G_wfB: "G R B t \<Longrightarrow> wfB B"
+lemma G_wfB: "G R xxs t \<Longrightarrow> wfB xxs"
 unfolding G_def by auto 
 
 lemma eextend_to_wfBij: 

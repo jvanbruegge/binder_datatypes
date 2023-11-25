@@ -350,6 +350,11 @@ lemma iLam_inject: "(iLam xs e = iLam xs' e') = (\<exists>f. bij f \<and> |supp 
     set3_iterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_iterm_pre_def
     Un_empty_right UN_single by auto
 
+lemma iLam_same_inject[simp]: "iLam (xs::ivar dstream) e = iLam xs e' \<longleftrightarrow> e = e'"
+unfolding iLam_inject apply safe
+apply(rule iterm.rrename_cong_ids[symmetric]) 
+unfolding id_on_def by auto (metis bij_betw_def bij_imp_bij_betw dsnth_dsmap dtheN)
+
 lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set| \<Longrightarrow> bij (map_iterm_pre (id::ivar \<Rightarrow>ivar) f (irrename f) id)"
   apply (rule iffD2[OF bij_iff])
     apply (rule exI[of _ "map_iterm_pre id (inv f) (irrename (inv f)) id"])

@@ -96,6 +96,11 @@ assumes xs: "super xs'" and rr: "reneqv ee (iLam xs' e')"
 shows "\<exists> e. ee = iLam xs' e \<and> reneqv e e'"
 using reneqv_iLam_casesL reneweqv_sym rr xs by blast
 
+lemma reneqv_iLam_iff:
+assumes "super xs"
+shows "reneqv (iLam xs e) (iLam xs e') \<longleftrightarrow> reneqv e e'"
+by (metis assms iLam_same_inject reneqv.iLam reneqv_iLam_casesR)
+
 lemma reneqv_iApp_casesL:
 assumes rr: "reneqv (iApp e1 es2) ee'"
 shows "\<exists> e1' es2'. ee' = iApp e1' es2' \<and> reneqv e1 e1' \<and> 
@@ -195,6 +200,24 @@ unfolding uniformS_def using reneweqvS_sym by blast
 lemma uniformS_def3: "uniformS es \<longleftrightarrow> reneqvS es es"
 unfolding uniformS_def using reneweqvS_sym reneweqvS_trans by blast
 
+lemma uniformS_def4: 
+"uniformS es = (\<forall>e e'. {e, e'} \<subseteq> sset es \<union> sset es \<longrightarrow> reneqv e e')"
+using uniformS_def3[unfolded reneqvS_def] .
+
+lemma uniformS_smap2_iApp_iff: 
+"uniformS (smap2 iApp es ess) \<longleftrightarrow> uniformS es \<and> uniformS (sflat ess)"
+unfolding uniformS_def4 sset_sflat sset_smap2 unfolding sset_range apply auto
+  apply (metis iApp_inject reneqv_iApp_casesR)
+  subgoal for i j i' j' apply(erule allE[of _ "iApp (es !! i) (ess !! i)"])
+  apply(erule allE[of _ "iApp (es !! i') (ess !! i')"]) apply auto
+  using reneqv_iApp_casesR by fastforce
+  subgoal by (metis Un_iff insert_subset rangeI reneqv.iApp sset_range) .
+
+lemma uniformS_smap2_iLam_iff:
+assumes "super xs"
+shows "uniformS (smap (iLam xs) es) \<longleftrightarrow> uniformS es"
+using assms unfolding uniformS_def4 by (force simp: image_def reneqv_iLam_iff) 
+
 lemma uniformS_sset_uniform: "uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> uniform e"
 using reneqvS_def uniformS_def2 uniform_def3 by auto
 
@@ -231,6 +254,8 @@ lemma super_uniformS_finite_touchedSuper_imkSubst:
 "super xs \<Longrightarrow> uniformS es \<Longrightarrow> finite (touchedSuper (IImsupp (imkSubst xs es)))"
 by (metis finite_insert insert_is_Un rev_finite_subset snth_sset touchedSuperT_def 
 touchedSuper_IImsupp_imkSubst uniformS_sset_uniform uniformS_touchedSuper uniform_finite_touchedUponT)
+
+
 
 (* *)
 
@@ -435,6 +460,14 @@ lemma uniform_head_reduction:
 assumes u: "uniform (iApp (iLam xs e1) es2)"
 shows "uniform (itvsubst (imkSubst xs es2) e1)"
 using assms unfolding uniform_def3 by (elim reneqv_head_reduction) 
+
+(* *)
+
+lemma uniformS_finite_touchedSuperT: 
+"uniformS es \<Longrightarrow> finite (\<Union> (touchedSuperT ` (sset es)))"
+by (metis Un_absorb equals0I 
+finite.emptyI finite_UN infinite_Un touchedSuper_iApp 
+uniformS_def4 uniformS_sset_uniform uniform_finite_touchedUponT uniform_iApp_iff)
 
 (* not true (and not claimed by Mazza *)
 (*

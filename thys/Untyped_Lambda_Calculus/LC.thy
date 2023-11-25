@@ -240,6 +240,11 @@ lemma Lam_inject: "(Lam x e = Lam x' e') = (\<exists>f. bij f \<and> |supp (f::v
   apply (rule refl)
   done
 
+lemma Lam_same_inject[simp]: "Lam (x::var) e = Lam x e' \<longleftrightarrow> e = e'"
+unfolding Lam_inject apply safe
+apply(rule term.rrename_cong_ids[symmetric]) 
+unfolding id_on_def by auto
+
 lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_term_pre (id::var \<Rightarrow>var) f (rrename f) id)"
   apply (rule iffD2[OF bij_iff])
     apply (rule exI[of _ "map_term_pre id (inv f) (rrename (inv f)) id"])

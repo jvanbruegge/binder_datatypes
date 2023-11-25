@@ -1,11 +1,9 @@
 (* uniform (parallel) reduction (\<Rightarrow> from Mazza) *)
 theory ILC_UBeta
-imports ILC2 "../Instantiation_Infrastructure/Curry_LFP" 
+imports (* LC2 ILC2 BSmall *)
+ILC_uniform
+(* "../Instantiation_Infrastructure/Curry_LFP" *)
 begin
-
-
-datatype ctxt = Hole | ApL ctxt "itrm stream" | ApR itrm ctxt | Lm "ivar dstream" ctxt
-
 
 (* head reduction: *)
 definition hred :: "ivar iterm \<Rightarrow> ivar iterm \<Rightarrow> bool" where 
@@ -29,39 +27,67 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
       subgoal using card_SSupp_imkSubst_irrename_inv[unfolded ssbij_def] by auto
       subgoal by simp . . . .
 
-(* *)
+lemma hred_reneqv: 
+assumes "reneqv e ee" "hred e e'" "hred ee ee'" 
+shows "reneqv e' ee'"
+using assms reneqv_head_reduction unfolding hred_def by auto 
 
-definition nat2 :: "nat \<Rightarrow> nat \<times> nat" where 
-"nat2 \<equiv> SOME f. bij f"
+lemma hred_reneqvS: 
+assumes "reneqvS es ees" "stream_all2 hred es es'" and "stream_all2 hred ees ees'"
+shows "reneqvS es' ees'"
+using hred_reneqv assms unfolding reneqvS_def stream_all2_iff_snth sset_range  
+by simp (smt (verit) image_iff)
 
-lemma bij_nat2: "bij nat2" 
-by (metis bij_prod_decode nat2_def someI_ex)
+lemma hred_uniform: 
+assumes "hred e e'" and "uniform e"
+shows "uniform e'"
+using assms hred_reneqv unfolding uniform_def3 by blast
 
-fun snth2 where "snth2 xss (i,j) = snth (snth xss i) j"
+lemma hred_uniformS: 
+assumes "stream_all2 hred es es'" and "uniformS es"
+shows "uniformS es'"
+using assms hred_reneqvS unfolding uniformS_def3 by blast
 
-definition sflat :: "'a stream stream \<Rightarrow> 'a stream" where 
-"sflat xss \<equiv> smap (\<lambda>i. snth2 xss (nat2 i)) nats"
 
-lemma snth_sflat: "snth (sflat xss) i = snth2 xss (nat2 i)"
-by (simp add: sflat_def)
-
-lemma smap_sflat: "smap f (sflat xss) = sflat (smap (smap f) xss)"
-unfolding sflat_def 
-unfolding stream.map_comp apply(rule stream.map_cong0) 
-subgoal for z by (cases "nat2 z", auto) . 
-
-(* *)
-
+(* Mazza defines this relation to uniform terms. I only sufficient uniformity assumptions 
+(avoiding redundant ones) *)
 inductive ustep :: "itrm stream \<Rightarrow> itrm stream \<Rightarrow> bool" where
-  Beta: "stream_all2 hred es es' \<Longrightarrow> ustep es es'"
-| iAppL: "ustep es es' \<Longrightarrow> ustep (smap2 iApp es ess) (smap2 iApp es' ess)"
-| iAppR: "ustep (sflat ess) (sflat ess') \<Longrightarrow> ustep (smap2 iApp es ess) (smap2 iApp es ess')"
-| Xi: "ustep es es' \<Longrightarrow> ustep (smap (iLam xs) es) (smap (iLam xs) es')"
+  Beta: "uniformS es \<Longrightarrow> stream_all2 hred es es' \<Longrightarrow> ustep es es'"
+| iAppL: "uniformS (sflat ess) \<Longrightarrow> ustep es es' \<Longrightarrow> ustep (smap2 iApp es ess) (smap2 iApp es' ess)"
+| iAppR: "uniformS es \<Longrightarrow> ustep (sflat ess) (sflat ess') \<Longrightarrow> ustep (smap2 iApp es ess) (smap2 iApp es ess')"
+| Xi: "super xs \<Longrightarrow> ustep es es' \<Longrightarrow> ustep (smap (iLam xs) es) (smap (iLam xs) es')"
 
 thm ustep_def
 
+lemma ustep_uniformS:
+assumes "ustep es es'" 
+shows "uniformS es \<and> uniformS es'"
+using assms proof(induct rule: ustep.induct)
+  case (Beta es es')
+  then show ?case using hred_uniformS by simp
+next
+  case (iAppL es es' ess)
+  then show ?case unfolding uniformS_smap2_iApp_iff by auto
+next
+  case (iAppR ess ess' es)
+  then show ?case unfolding uniformS_smap2_iApp_iff by auto
+next
+  case (Xi xs es es')
+  then show ?case using uniformS_smap2_iLam_iff by auto
+qed
 
-(* INSTANTIATING THE Components LOCALE: *)
+
+(* INSTANTIATING THE ABSTRACT SETTING: *)
+
+(* PREPARING THE INSTANTIATION: *)
+
+lemma ustep_finite_touchedSuperT: 
+"ustep es1 es2 \<Longrightarrow> 
+ finite (\<Union> (touchedSuperT ` (sset es1))) \<and> finite (\<Union> (touchedSuperT ` (sset es2)))"
+using uniformS_finite_touchedSuperT ustep_uniformS by blast
+
+
+(* INSTANTIATING THE CComponents LOCALE: *)
 
 type_synonym T = "itrm stream \<times> itrm stream"
 
@@ -77,70 +103,84 @@ using countable_card_ivar countable_sset by blast
 
 thm stream.map_cong0[no_vars]
 
-
-
-
-interpretation Components where dummy = "undefined :: ivar" and 
+interpretation CComponents where dummy = "undefined :: ivar" and 
 Tmap = Tmap and Tfvars = Tfvars
+and Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall
 apply standard unfolding ssbij_def Tmap_def  
   using small_Un small_def iterm.card_of_FFVars_bounds
-  apply (auto simp: iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s inf_A fun_eq_iff stream.map_comp
-    intro!: var_sum_class.UN_bound var_sum_class.Un_bound stream.map_ident_strong iterm.rrename_cong_ids)
-  by auto 
+  apply (auto simp: dstream.map_comp dstream_map_ident_strong
+ dstream.map_comp iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s inf_A fun_eq_iff stream.map_comp
+    intro!: 
+var_sum_class.UN_bound var_sum_class.Un_bound 
+stream.map_ident_strong iterm.rrename_cong_ids intro!: ext split: option.splits)
+  apply auto 
+ unfolding bsmall_def touchedSuper_def apply simp apply(frule super_dsset_singl) apply auto
+  using super_Un_ddset_triv  
+  by (smt (verit) finite_Un rev_finite_subset) 
 
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> ivar set \<Rightarrow> T \<Rightarrow> bool"
+lemma wfBij_presSuper: "wfBij = presSuper"
+unfolding wfBij_def presSuper_def fun_eq_iff apply safe
+  subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
+  subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
+  subgoal for \<sigma> xxs apply(cases xxs) by auto 
+  subgoal for \<sigma> xxs apply(cases xxs) by auto .
+
+definition G :: "(T \<Rightarrow> bool) \<Rightarrow> B \<Rightarrow> T \<Rightarrow> bool"
 where
-"G \<equiv> \<lambda>R B t.  
-         (\<exists>es es'. B = {} \<and> fst t = es \<and> snd t = es' \<and> 
-                      stream_all2 hred es es')
+"G \<equiv> \<lambda>R xxs t.  
+         (\<exists>es es'. xxs = None \<and> fst t = es \<and> snd t = es' \<and> 
+                   uniformS es \<and> stream_all2 hred es es')
          \<or>
-         (\<exists>es es' ess. B = {} \<and> fst t = smap2 iApp es ess \<and> snd t = smap2 iApp es' ess \<and> 
-                       R (es,es')) 
+         (\<exists>es es' ess. xxs = None \<and> fst t = smap2 iApp es ess \<and> snd t = smap2 iApp es' ess \<and> 
+                       uniformS (sflat ess) \<and> R (es,es')) 
          \<or>
-         (\<exists>es ess ess'. B = {} \<and> fst t = smap2 iApp es ess \<and> snd t = smap2 iApp es ess' \<and> 
-                        R (sflat ess,sflat ess'))
+         (\<exists>es ess ess'. xxs = None \<and> fst t = smap2 iApp es ess \<and> snd t = smap2 iApp es ess' \<and> 
+                        uniformS es \<and> R (sflat ess,sflat ess'))
          \<or>
-         (\<exists>xs es es'. B = dsset xs \<and> fst t = smap (iLam xs) es \<and> snd t = smap (iLam xs) es' \<and> 
-                       R (es,es'))"
+         (\<exists>xs es es'. xxs = Some xs \<and> fst t = smap (iLam xs) es \<and> snd t = smap (iLam xs) es' \<and> 
+                      super xs \<and> R (es,es'))"
 
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+lemma G_mmono: "R \<le> R' \<Longrightarrow> G R xxs t \<Longrightarrow> G R' xxs t"
 unfolding G_def by fastforce
-
-lemma stream_all2_iff_snth: "stream_all2 P xs ys \<longleftrightarrow> (\<forall>i. P (snth xs i) (snth ys i))"
-unfolding stream_all2_def BNF_Def.Grp_def apply auto 
-  using in_mono apply fastforce unfolding OO_def apply auto 
-  apply(rule exI[of _ "szip xs ys"]) apply auto 
-  apply (simp add: stream_eq_nth)  
-  apply (metis fst_conv prod.sel(2) snth_szip theN)
-  apply (simp add: stream_eq_nth)  
-  apply (metis fst_conv prod.sel(2) snth_szip theN) .
 
 declare iterm.rrename_id0s[simp]
 
 lemma smap2_smap: "smap2 f (smap g xs) (smap h ys) = smap2 (\<lambda>x y. f (g x) (h y)) xs ys"
 by (simp add: smap2_alt)
 
+lemma uniformS_irrename: 
+"bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+ uniformS es \<Longrightarrow> uniformS (smap (irrename \<sigma>) es)"
+unfolding uniformS_def4 stream.set_map  
+using irrename_reneqv by auto
+
+
+lemma uniformS_sflat: "uniformS (sflat ess) \<longleftrightarrow> (\<forall>i j i' j'. 
+  reneqv (snth2 ess (i,j)) (snth2 ess (i',j')))"
+unfolding uniformS_def4 sset_sflat apply auto
+apply (metis snth_sset) by (metis More_Stream.theN)
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+lemma G_eequiv: "ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> G R xxs t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Bmap \<sigma> xxs) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for es es'  
   apply(rule exI[of _ "smap (irrename \<sigma>) es"])  
   apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
-  apply (simp add: iterm.rrename_comps) unfolding stream_all2_iff_snth
+  apply(cases t) unfolding ssbij_def small_def Tmap_def wfBij_presSuper
+  apply (simp add: iterm.rrename_comps uniformS_irrename) unfolding stream_all2_iff_snth
   using hred_irrename by auto . .
   (* *)
   subgoal apply(rule disjI4_2)
   subgoal apply(elim exE) subgoal for es es' ess
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
-  by (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap) . .
+  apply(cases t) unfolding ssbij_def small_def Tmap_def wfBij_presSuper
+  apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap uniformS_irrename  
+     uniformS_sflat irrename_reneqv) . . .
   (* *)
   subgoal apply(rule disjI4_3)
   subgoal apply(elim exE) subgoal for es ess ess'
@@ -149,18 +189,85 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap smap_sflat) 
-  by (metis inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id) . . 
+  sledgehammer
+  by (smetis inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id) . . 
   (* *)
   subgoal apply(rule disjI4_4)
   subgoal apply(elim exE) subgoal for xs es es'
   apply(rule exI[of _ "dsmap \<sigma> xs"])
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
-  apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap) 
-    by (metis (no_types, lifting) comp_apply irrename_simps(3) stream.map_cong0) . . . 
-
+  apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap)
+    by (metis (no_types, lifting) comp_apply irrename_simps(3) presSuper_def stream.map_cong wfBij_presSuper) 
+   . . . 
+(*
 lemma Tvars_dsset: "(Tfvars t - dsset xs) \<inter> dsset xs = {}" "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tfvars small_def)
+*)
+
+(* *)
+
+lemma G_wfB: "G R xxs t \<Longrightarrow> wfB xxs"
+unfolding G_def by auto
+
+lemma eextend_to_wfBij: 
+assumes "wfB xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bvars xxs \<inter> A' = {}"
+shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bvars xxs \<inter> A = {} \<and> id_on A' \<rho>" 
+proof(cases xxs)
+  case None
+  thus ?thesis apply(intro exI[of _ id]) unfolding ssbij_def by auto
+next
+  case (Some xs)
+  hence 0: "super xs" "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A' \<subseteq> A"
+  "dsset xs \<inter> A' = {}"
+  using assms by (auto split: option.splits simp: small_def bsmall_def) 
+  show ?thesis using extend_super[OF 0] apply safe
+  subgoal for \<rho> apply(rule exI[of _ \<rho>]) 
+  using Some by (auto split: option.splits simp: wfBij_presSuper ssbij_def) .
+qed 
+
+
+interpretation Istep : IInduct1 
+where dummy = "undefined :: ivar" and 
+Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
+and wfB = wfB and bsmall = bsmall and GG = G
+apply standard
+using G_mmono G_eequiv G_wfB eextend_to_wfBij by auto
+
+(* *)
+ 
+lemma ustep_I: "ustep t1 t2 = Istep.II (t1,t2)" 
+unfolding ustep_def Istep.II_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+unfolding fun_eq_iff G_def apply clarify
+subgoal for R tt1 tt2 apply(rule iffI)
+  subgoal apply(elim disjE exE conjE)
+    \<^cancel>\<open>Beta: \<close>
+    subgoal apply(rule exI[of _ None]) apply(rule disjI4_1) by auto
+    \<^cancel>\<open>iAppL: \<close>
+    subgoal apply(rule exI[of _ None]) apply(rule disjI4_2) by auto
+    \<^cancel>\<open>iAppR: \<close>
+    subgoal apply(rule exI[of _ None])  apply(rule disjI4_3) by auto
+    \<^cancel>\<open>Xi: \<close>
+    subgoal for xs es es' apply(rule exI[of _ "Some xs"]) apply(rule disjI4_4) by auto .
+  subgoal apply(elim conjE disjE exE)
+    \<^cancel>\<open>Beta: \<close>
+    subgoal apply(rule disjI4_1) by auto
+    \<^cancel>\<open>iAppL: \<close>
+    subgoal apply(rule disjI4_2) by auto
+    \<^cancel>\<open>iAppR: \<close>
+    subgoal apply(rule disjI4_3) by auto
+    \<^cancel>\<open>Xi: \<close>
+    subgoal apply(rule disjI4_4) by auto . . .
+
+lemma III_bsmall: "Istep.II t \<Longrightarrow> bsmall (Tfvars t)"
+apply(cases t)
+  subgoal for e1 e2 apply simp
+  unfolding ustep_I[symmetric] 
+  apply(rule bsmall_Un) unfolding bsmall_def touchedSuperT_def 
+  apply auto .
+
+
+(* *)
 
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
@@ -226,28 +333,7 @@ apply standard
 
 (* *)
 
-lemma ustep_I: "ustep t1 t2 = Istep.I (t1,t2)" 
-unfolding ustep_def Istep.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-unfolding fun_eq_iff G_def apply clarify
-subgoal for R tt1 tt2 apply(rule iffI)
-  subgoal apply(elim disjE exE)
-    \<^cancel>\<open>Beta: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI4_1) by auto
-    \<^cancel>\<open>iAppL: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_2) by auto
-    \<^cancel>\<open>iAppR: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_3) by auto
-    \<^cancel>\<open>Xi: \<close>
-    subgoal for es es' xs apply(rule exI[of _ "dsset xs"], rule conjI, simp) apply(rule disjI4_4) by auto .
-  subgoal apply(elim conjE disjE exE)
-    \<^cancel>\<open>Beta: \<close>
-    subgoal apply(rule disjI4_1) by auto
-    \<^cancel>\<open>iAppL: \<close>
-    subgoal apply(rule disjI4_2) by auto
-    \<^cancel>\<open>iAppR: \<close>
-    subgoal apply(rule disjI4_3) by auto
-    \<^cancel>\<open>Xi: \<close>
-    subgoal apply(rule disjI4_4) by auto . . .
+
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm ustep.induct[no_vars] 

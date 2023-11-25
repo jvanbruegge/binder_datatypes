@@ -269,7 +269,7 @@ apply(cases t)
   touchedSuper_UN ustep_finite_touchedSuperT by auto
 
 
-(* HERE *)
+(* HERE *) 
 
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 

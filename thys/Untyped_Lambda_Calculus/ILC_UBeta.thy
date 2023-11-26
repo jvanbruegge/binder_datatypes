@@ -1,8 +1,6 @@
 (* uniform (parallel) reduction (\<Rightarrow> from Mazza) *)
 theory ILC_UBeta
-imports (* LC2 ILC2 BSmall *)
-ILC_uniform
-(* "../Instantiation_Infrastructure/Curry_LFP" *)
+imports ILC_uniform
 begin
 
 (* head reduction: *)

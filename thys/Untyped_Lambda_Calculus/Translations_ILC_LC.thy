@@ -189,6 +189,8 @@ sorry
 lemma FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
 sorry
 
+
+
 interpretation T : LamRec where 
 B = B and VarB = VarB and AppB = AppB and LamB = LamB and renB = renB and FVarsB = FVarsB
 apply standard
@@ -211,36 +213,12 @@ using T.rec_App unfolding tr_def AppB_def by auto
 
 lemma rrename_tr:
 "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> tr (rrename f e) p = irrename (ext f) (tr e p)"
-sorry
+using T.rec_rrename unfolding tr_def renB_def by auto
 
 lemma FFVars_tr: 
-"\<Union> {subOf ` touchedSuper (ILC.FFVars (tr e p)) | p . True} \<subseteq> LC.FFVars e"
+"subOf ` touchedSuper (ILC.FFVars (tr e p)) \<subseteq> LC.FFVars e"
+using T.FVarsB_rec unfolding tr_def FVarsB_def by auto
 
-term T.rec
-
-thm T.rec_Var T.rec_Lam
-
-
-(* *)
-
-
-
-axiomatization where 
-tr_Var[simp]: "tr (Var x) p = iVar (dsnth (superOf x) (natOf p))"
-and 
-tr_Lam[simp]: "tr (Lam x e) p = iLam (superOf x) (tr e p)"
-and 
-tr_App[simp]: "tr (App e1 e2) p = iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
-
-lemma rrename_tr:
-assumes "bij f" and "|supp f| <o |UNIV::var set|"
-shows "tr (rrename f e) p = irrename (ext f) (tr e p)"
-sorry
-
-lemma FFVars_tr: 
-"\<Union> {subOf ` touchedSuper (ILC.FFVars (tr e p)) | p . True} \<subseteq> LC.FFVars e"
-sorry
-  
 
 
 

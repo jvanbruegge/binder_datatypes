@@ -885,7 +885,7 @@ lemma rec_rrename: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var
  rec (rrename \<sigma> e) = renB \<sigma> (rec e)"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
-lemma FFVarsB_rec: "FVarsB (rec e) \<subseteq> FFVars e"
+lemma FVarsB_rec: "FVarsB (rec e) \<subseteq> FFVars e"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
 lemma rec_unique: 

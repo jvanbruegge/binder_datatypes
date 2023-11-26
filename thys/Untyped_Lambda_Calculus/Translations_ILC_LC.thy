@@ -43,8 +43,6 @@ and
 variable is located)
 *)
 
-
-
 lemma bij_theSN: 
 "bij_betw theSN RSuper ({xs. super xs} \<times> (UNIV::nat set))"
 unfolding bij_betw_def inj_on_def apply auto
@@ -145,7 +143,7 @@ and
 tr_App[simp]: "tr (App e1 e2) p = iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
 
 lemma FFVars_tr: 
-"{subOf xs | xs . dsset xs \<inter> ILC.FFVars (tr e p) \<noteq> {}} \<subseteq> LC.FFVars e"
+"subOf ` touchedSuper (ILC.FFVars (tr e p)) \<subseteq> LC.FFVars e"
 sorry
   
 lemma rrename_tr:

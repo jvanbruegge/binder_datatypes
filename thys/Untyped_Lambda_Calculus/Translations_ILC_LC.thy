@@ -96,6 +96,10 @@ qed
 lemma small_supp_ext_f: "ILC2.small (supp (ext f))" 
 by (simp add: ILC2.small_def card_supp_ext)
 
+lemma ext_id[simp]: "ext id = id" 
+unfolding ext_def apply(rule ext) apply (auto split: prod.splits) 
+  using superOf_subOf theSN by presburger
+
 lemma super_dsmap_ext: "super xs \<Longrightarrow> super (dsmap (ext f) xs)"
 unfolding ext_def by (smt (z3) case_prod_conv dsnth_dsmap_cong fst_conv snd_conv super_superOf theSN' theSN_ex)
 
@@ -142,43 +146,54 @@ definition FVarsB where "FVarsB E \<equiv> \<Union> {subOf ` touchedSuper (ILC.F
 
 
 lemma VarB_B: "VarB x \<in> B"
-sorry
+unfolding VarB_def B_def apply auto  
+  by (metis dsset_range rangeI super_superOf)
 
 lemma AppB_B: "{b1,b2} \<subseteq> B \<Longrightarrow> AppB b1 b2 \<in> B"
-sorry
+unfolding AppB_def B_def apply auto sorry
 
 lemma LamB_B: "b \<in>  B \<Longrightarrow> LamB x b \<in> B"
-sorry
+unfolding LamB_def B_def by auto
 
 lemma renB_B: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB \<sigma> b \<in> B"
-sorry
+unfolding renB_def B_def  
+using bij_ext card_supp_ext irrename_uniform presSuper_ext by auto
 
 lemma renB_id[simp,intro]: "b \<in> B \<Longrightarrow> renB id b = b"
-sorry
+unfolding renB_def B_def fun_eq_iff by auto
 
 lemma renB_comp: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
     bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
-sorry
+unfolding renB_def B_def fun_eq_iff 
+by (simp add: bij_ext card_supp_ext ext_comp iterm.rrename_comps)
 
 lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
    (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
    renB \<sigma> b = b"
-sorry
+unfolding renB_def B_def fun_eq_iff FVarsB_def  apply auto 
+apply(rule iterm.rrename_cong_ids)  
+  using bij_ext apply auto 
+  using card_supp_ext apply auto  sorry (* todo: need congruence rule for ext *)
 
 lemma renB_FVarsB: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
    x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
-sorry 
+unfolding FVarsB_def renB_def apply auto sorry
 
 lemma renB_VarB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VarB x) = VarB (\<sigma> x)"
-sorry
+unfolding renB_def VarB_def fun_eq_iff apply auto apply(subst irrename_simps) 
+  using bij_ext card_supp_ext apply auto sorry
 
 lemma renB_AppB: "\<And>\<sigma> b1 b2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> {b1,b2} \<subseteq> B \<Longrightarrow> 
    renB \<sigma> (AppB b1 b2) = AppB (renB \<sigma> b1) (renB \<sigma> b2)"
-sorry
+unfolding renB_def AppB_def fun_eq_iff apply auto apply(subst irrename_simps) 
+  using bij_ext card_supp_ext apply auto  
+  by (metis (mono_tags, lifting) comp_apply stream.map_comp stream.map_cong)
 
 lemma renB_LamB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> 
    renB \<sigma> (LamB x b) = LamB (\<sigma> x) (renB \<sigma> b)"
-sorry
+unfolding renB_def LamB_def fun_eq_iff apply auto apply(subst irrename_simps) 
+  using bij_ext card_supp_ext apply auto  
+  sledgehammer
 
 lemma FVarsB_VarB: "\<And>x. FVarsB (VarB x) \<subseteq> {x}"
 sorry
@@ -201,6 +216,9 @@ by (auto simp add: renB_cong renB_FVarsB)
 
 
 definition tr :: "trm \<Rightarrow> nat list \<Rightarrow> itrm" where "tr = T.rec"
+
+lemma uniform_tr[simp,intro]: "uniform (tr e p)"
+using T.rec_B  by (simp add: B_def tr_def)
 
 lemma tr_Var[simp]: "tr (Var x) p = iVar (dsnth (superOf x) (natOf p))"
 using T.rec_Var unfolding tr_def VarB_def by auto

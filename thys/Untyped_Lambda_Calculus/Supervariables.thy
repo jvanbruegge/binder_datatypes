@@ -268,4 +268,17 @@ proof-
 qed
 
 
+thm refresh
+lemma refresh_super: 
+assumes V: " dsset xs \<inter> V = {}" "|V| <o |UNIV::ivar set|" 
+  "finite (touchedSuper V)"
+and xs: "super xs"  
+shows "\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
+           dsset (dsmap f xs) \<inter> V = {} \<and>
+           id_on V f \<and> presSuper f"
+using extend_super[OF xs V(2) V(3) _ V(1), simplified]
+apply safe subgoal for \<rho> apply(intro exI[of _ \<rho>]) 
+unfolding id_on_def by auto .
+
+
 end 

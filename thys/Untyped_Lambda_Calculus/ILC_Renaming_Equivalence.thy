@@ -187,17 +187,6 @@ apply(cases t)
   unfolding reneqv_I[symmetric] apply(drule reneqv_touchedSuperT)
   apply(rule bsmall_Un) unfolding bsmall_def touchedSuperT_def by auto .
 
-thm refresh
-lemma refresh_super: 
-assumes V: " dsset xs \<inter> V = {}" "|V| <o |UNIV::ivar set|" 
-  "finite (touchedSuper V)"
-and xs: "super xs"  
-shows "\<exists>f. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::ivar set| \<and> 
-           dsset (dsmap f xs) \<inter> V = {} \<and>
-           id_on V f \<and> presSuper f"
-using extend_super[OF xs V(2) V(3) _ V(1), simplified]
-apply safe subgoal for \<rho> apply(intro exI[of _ \<rho>]) 
-unfolding id_on_def by auto .
 
 
 lemma Tvars_dsset: "dsset xs \<inter> (Tfvars t - dsset xs) = {}" 
@@ -267,8 +256,9 @@ unfolding G_def Tmap_def apply safe
 
 interpretation Reneqv : IInduct
 where dummy = "undefined :: ivar" and 
-Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
-and wfB = wfB and bsmall = bsmall and GG = G
+Tmap = Tmap and Tfvars = Tfvars and 
+Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall 
+and GG = G
 apply standard using III_bsmall G_rrefresh by auto
 
 (* *)

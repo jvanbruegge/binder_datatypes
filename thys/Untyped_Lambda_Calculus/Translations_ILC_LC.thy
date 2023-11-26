@@ -3,7 +3,7 @@ theory Translations_ILC_LC
 imports ILC_relations_more
 begin
 
-(* Translating lambda to (affine, uniform) infinitary-lambda *)
+(* Translating finitary lambda to (affine, uniform) infinitary-lambda *)
 
 definition theSN where 
 "theSN x \<equiv> SOME xs_i. super (fst xs_i) \<and> x = dsnth (fst xs_i) (snd xs_i)"

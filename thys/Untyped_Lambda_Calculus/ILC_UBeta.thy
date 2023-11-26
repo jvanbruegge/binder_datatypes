@@ -47,6 +47,12 @@ shows "uniformS es'"
 using assms hred_reneqvS unfolding uniformS_def3 by blast
 
 
+(* TO DOCUMENT in the paper: 
+Mazza is very informal when defining \<Rightarrow> (the uniform step relation, def. 7). 
+One way to make this rigorous was to define reduction of a countable number of 
+(i.e., a stream of) terms in parallel, and to flatten from matrix to streams when we get to 
+application. (Mazza fails to discuss this 'escalation" to matrices... )
+*)
 (* Mazza defines this relation to uniform terms. I only sufficient uniformity assumptions 
 (avoiding redundant ones) *)
 inductive ustep :: "itrm stream \<Rightarrow> itrm stream \<Rightarrow> bool" where
@@ -112,7 +118,7 @@ apply standard unfolding ssbij_def Tmap_def
 var_sum_class.UN_bound var_sum_class.Un_bound 
 stream.map_ident_strong iterm.rrename_cong_ids intro!: ext split: option.splits)
   apply auto 
- unfolding bsmall_def touchedSuper_def apply simp apply(frule super_dsset_singl) apply auto
+ unfolding bsmall_def touchedSuper_def apply(frule super_dsset_singl) apply auto
   using super_Un_ddset_triv  
   by (smt (verit) finite_Un rev_finite_subset) 
 
@@ -444,15 +450,13 @@ proof-
           imkSubst_smap iterm.set(3)) . . 
 qed
 
-
 lemma hred_FFVars: "hred e e' \<Longrightarrow> FFVars e' \<subseteq> FFVars e"
 unfolding hred_def by auto (metis imkSubst_def iterm.set(1) singletonD snth_sset)+
- 
 
-lemma ustep_FFVars: "ustep es es' \<Longrightarrow> FFVars (snth es' i) \<subseteq> FFVars (snth es i)"
-apply(induct arbitrary: i rule: ustep.induct) 
+lemma ustep_FFVars: "ustep es es' \<Longrightarrow> (\<forall>i. FFVars (snth es' i) \<subseteq> FFVars (snth es i))"
+apply(induct rule: ustep.induct) 
 using hred_FFVars apply (auto simp: sset_smap2 sset_range snth_sflat stream_all2_iff_snth )
-subgoal for es ess ess' i x a  sorry .
+by (metis in_mono nat2_nat1 snth2.simps)
           
  
 

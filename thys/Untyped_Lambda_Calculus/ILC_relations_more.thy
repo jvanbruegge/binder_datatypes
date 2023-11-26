@@ -42,63 +42,29 @@ lemma affineS_sflat: "affineS (sflat ess) \<longleftrightarrow>
  (\<forall>i j i' j'. affine (snth2 ess (i,j)) \<and> ILC.FFVars ((snth2 ess (i,j))) \<inter> ILC.FFVars ((snth2 ess (i',j'))) = {})"
 sorry 
 
+lemma affineS_smap_iLam_iff: "affineS (smap (iLam xs) es) \<longleftrightarrow> 
+  (\<forall>i j. i \<noteq> j \<longrightarrow> affine (snth es i) \<and> ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth es j) \<subseteq> dsset xs)"
+unfolding affineS_def by auto (metis More_Stream.theN nat.simps(3))
+
 lemma ustep_affine:
+assumes "ustep es es'"
+shows "\<forall>i. affine (es !! i) \<longrightarrow> affine (es' !! i)"
+using assms apply(induct rule: ustep.induct)
+  subgoal for es es' unfolding stream_all2_iff_snth using hread_affine by auto
+  subgoal apply auto unfolding affine_iApp_iff using ustep_FFVars by fastforce
+  subgoal apply auto unfolding affine_iApp_iff using ustep_FFVars 
+  apply (auto simp: snth_sflat sset_range image_def)
+    apply (metis nat2_nat1 snth2.simps) 
+    apply (metis Int_emptyD in_mono nat2_nat1 snth2.simps snth_sflat)
+    by (metis Int_emptyD insert_absorb insert_subset nat2_nat1 snth2.simps snth_sflat) 
+  subgoal for es es' xs apply(frule ustep_FFVars) by auto  . 
+
+lemma ustep_affineS:
 assumes "ustep es es'" and "affineS es"
 shows "affineS es'"
-proof-
-  have "ILC2.small {} \<and> bsmall {}" by auto
-  thus ?thesis using assms apply(induct rule: BE_induct_ustep')
-    subgoal for es es' using hred_affineS by auto
-    subgoal unfolding affineS_smap2_iApp_iff using ustep_FFVars by fastforce
-    subgoal  unfolding affineS_smap2_iApp_iff using ustep_FFVars apply (auto simp: affineS_sflat)  
-    sorry
-    subgoal by auto . 
-qed
-
-
-(* *)
-
-
-
-
-(* TO DOCUMENT in the paper: 
-Mazza is very informal when defining \<Rightarrow> (the uniform step relation). 
-One way to make this rigorous was to define reduction of a countable number of 
-(i.e., a stream of) terms in parallel, and to flatten from matrix to streams when we get to 
-application. (Mazza fails to discuss this 'escalation" to matrices... )
-*)
-
-
-
-(*
-lemma ustep_reneqvS:
-assumes "reneqvS es ees" "ustep es es'" "ustep ees ees'"
-shows "reneqvS es' ees'"
-proof-
-  have "small {}" by simp
-  thus ?thesis using assms( apply(induct rule: BE_induct_ustep')
-    subgoal using hred_uniformS .
-    subgoal unfolding uniformS_def3  reneqvS_def sset_smap2 apply auto  
-    sledgehammer
-*)
-    
-
-find_theorems uniform iLam
-
-lemma uniformS_smap_iLam_imp: 
-assumes "uniformS (smap (iLam xs) es)"
-shows "\<exists>f ys. bij f \<and> |supp f| < |UNIV::ivar set| \<and> 
- super ys \<and> ys = dsmap f xs \<and> 
- smap (iLam xs) es = smap (iLam ys) (smap (irrename f) es) \<and>
- id_on (\<Union> (FFVars ` (sset es)) - dsset xs) f"
-sorry
-
-
-
-
-
-
-
+using assms ustep_affine ustep_FFVars unfolding affineS_def apply auto 
+  apply (metis More_Stream.theN snth_sset)
+  by (meson disjoint_iff_not_equal in_mono)
 
 
 

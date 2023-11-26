@@ -156,6 +156,24 @@ definition nat2 :: "nat \<Rightarrow> nat \<times> nat" where
 lemma bij_nat2: "bij nat2" 
 by (metis bij_prod_decode nat2_def someI_ex)
 
+definition nat1 :: "nat \<times> nat \<Rightarrow> nat" where 
+"nat1 \<equiv> inv nat2"
+
+lemma bij_nat1: "bij nat1" 
+by (simp add: bij_nat2 nat1_def)
+
+lemma nat2_inj[simp]: "nat2 u = nat2 v \<longleftrightarrow> u = v"
+using bij_nat2 by force
+
+lemma nat1_inj[simp]: "nat1 u = nat1 v \<longleftrightarrow> u = v"
+using bij_nat1 by force
+
+lemma nat1_nat2[simp]: "nat1 (nat2 u) = u"
+by (simp add: bij_nat2 nat1_def)
+
+lemma nat2_nat1[simp]: "nat2 (nat1 u) = u"
+by (simp add: bij_nat2 nat1_def)
+
 fun snth2 where "snth2 xss (i,j) = snth (snth xss i) j"
 
 definition sflat :: "'a stream stream \<Rightarrow> 'a stream" where 

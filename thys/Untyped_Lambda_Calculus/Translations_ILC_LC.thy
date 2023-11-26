@@ -5,22 +5,33 @@ begin
 
 (* Translating finitary lambda to (affine, uniform) infinitary-lambda *)
 
+(* the range of supervariables: *)
+definition "RSuper \<equiv> \<Union> (dsset ` (range superOf))"
+
+lemma super_dsset_RSuper: "super xs \<Longrightarrow> dsset xs \<subseteq> RSuper"
+by (metis RSuper_def UN_iff range_eqI subsetI superOf_subOf)
+
+lemma RSuper_def2: "RSuper = \<Union> (dsset ` {xs. super xs})"
+unfolding RSuper_def apply auto 
+  using super_superOf apply blast  
+  by (metis superOf_subOf)
+
 definition theSN where 
 "theSN x \<equiv> SOME xs_i. super (fst xs_i) \<and> x = dsnth (fst xs_i) (snd xs_i)"
 
-lemma theSN': "x \<in> \<Union> (dsset ` (range superOf)) \<Longrightarrow> super (fst (theSN x)) \<and> x = dsnth (fst (theSN x)) (snd (theSN x))"
-unfolding theSN_def apply(rule someI_ex)  
+lemma theSN': "x \<in> RSuper \<Longrightarrow> super (fst (theSN x)) \<and> x = dsnth (fst (theSN x)) (snd (theSN x))"
+unfolding theSN_def RSuper_def apply(rule someI_ex)  
 by simp (metis dtheN super_superOf)  
 
-lemma theSN: "x \<in> \<Union> (dsset ` (range superOf)) \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super xs \<and> dsnth xs i = x"
+lemma theSN: "x \<in> RSuper \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super xs \<and> dsnth xs i = x"
 by (metis fst_conv snd_conv theSN')
 
 lemma theSN_unique: 
-"x \<in> \<Union> (dsset ` (range superOf)) \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super ys \<and> dsnth ys j = x \<Longrightarrow> ys = xs \<and> j = i"
+"x \<in> RSuper \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super ys \<and> dsnth ys j = x \<Longrightarrow> ys = xs \<and> j = i"
 by (metis Int_emptyD dsset_range dtheN_dsnth rangeI super_disj theSN) 
 
-lemma theSN_ex: "super xs \<Longrightarrow> \<exists> x \<in> \<Union> (dsset ` (range superOf)). (xs,i) = theSN x "
-by (metis (full_types) Union_iff dsset_range imageI rangeI super_imp_superOf surjective_pairing theSN_unique)
+lemma theSN_ex: "super xs \<Longrightarrow> \<exists> x \<in> RSuper. (xs,i) = theSN x"
+by (metis (full_types) RSuper_def Union_iff dsset_range imageI rangeI super_imp_superOf surjective_pairing theSN_unique)
 
 (* This summarizes the only properties we are interested in about theSN, 
 which in turn will be used to prove the correctness of the supervariable-based 
@@ -31,29 +42,33 @@ and
 (2) the pairs (xs,n) indicating specific supervariables xs and positions n (where the 
 variable is located)
 *)
+
+
+
 lemma bij_theSN: 
-"bij_betw theSN (\<Union> (dsset ` (range superOf))) ({xs. super xs} \<times> (UNIV::nat set))"
+"bij_betw theSN RSuper ({xs. super xs} \<times> (UNIV::nat set))"
 unfolding bij_betw_def inj_on_def apply auto
-  apply (metis dtheN fst_conv snd_conv super_superOf theSN' theSN_ex)
+  apply (metis theSN')
   apply (meson UnionI imageI rangeI theSN)
-  by (metis UN_simps(10) imageI theSN_ex)
+  by (metis imageI theSN_ex)
+
+
 
 (* Extending a renaming on variables to one on ivariables via "superOf"; 
 essentially, renaming is applied in block to all "super-variables", 
 and those ivars that do not participate in supervariables are left unchanged.
 *)
 definition ext :: "(var \<Rightarrow> var) \<Rightarrow> ivar \<Rightarrow> ivar" where 
-"ext f x \<equiv> if x \<in> \<Union> (dsset ` (range superOf)) 
+"ext f x \<equiv> if x \<in> RSuper 
    then let (xs,i) = theSN x in dsnth (superOf (f (subOf xs))) i
    else x"
 
 lemma bij_ext: "bij f \<Longrightarrow> bij (ext f)" 
 unfolding bij_def inj_on_def surj_def ext_def apply (auto split: prod.splits simp: image_def)
-apply (smt (verit, ccfv_SIG) UN_I comp_apply dtheN inj_image_mem_iff inj_onD inj_untab prod.inject range_eqI 
-           subOf_superOf superOf' superOf_def super_superOf theSN_unique)
-apply (metis dsset_range range_eqI)  
-apply (metis dsset_range rangeI)  
-by (metis dsset_range dtheN fst_conv range_eqI snd_conv subOf_superOf super_superOf theSN' theSN_ex)
+  apply (metis Int_emptyD dsnth.rep_eq dsset.rep_eq dtheN_dsnth snth_sset subOf_superOf superOf_subOf super_disj super_superOf theSN)
+   apply (metis RSuper_def UN_iff dsset_range range_eqI)  
+  apply (metis super_superOf theSN theSN_ex)  
+  by (metis prod.inject subOf_superOf superOf_subOf super_superOf theSN theSN_ex) 
   
 lemma supp_ext: "supp (ext f) \<subseteq> {x. \<exists>xs. x \<in> dsset xs \<and> super xs \<and> subOf xs \<in> supp f}"
 unfolding supp_def  apply auto 
@@ -80,6 +95,35 @@ proof-
     using card_var_ivar .
   finally show ?thesis .
 qed
+
+lemma super_dsmap_ext: "super xs \<Longrightarrow> super (dsmap (ext f) xs)"
+unfolding ext_def by (smt (z3) case_prod_conv dsnth_dsmap_cong fst_conv snd_conv super_superOf theSN' theSN_ex)
+
+lemma ext_comp: "ext (g o f) = ext g o ext f"
+apply(rule ext) unfolding ext_def apply (auto split: prod.splits) 
+  apply (metis subOf_superOf super_superOf theSN_unique)
+  using super_superOf theSN theSN_ex by blast
+
+lemma ext_inv: "bij f \<Longrightarrow> ext (inv f) = inv (ext f)"
+by (metis (no_types, lifting) bij_ext bij_id comp_assoc ext_comp inv_id inv_o_simp1 inv_o_simp2 inv_unique_comp)
+
+lemma super_dsmap_ext': 
+assumes f: "bij f" "|supp f| <o |UNIV::var set|" and s: "super (dsmap (ext f) xs)"
+shows "super xs"  
+proof-
+  have 0: "dsmap (ext (inv f)) ((dsmap (ext f) xs)) = xs"
+  apply(subst dstream.map_comp) using f 
+  by (auto simp add: bij_ext card_supp_ext bij_ext ext_inv)  
+  have "super (dsmap (ext (inv f)) ((dsmap (ext f) xs)))"
+  using s using super_dsmap_ext by auto 
+  thus ?thesis unfolding 0 .
+qed
+
+lemma presSuper_ext: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> presSuper (ext f)"
+unfolding presSuper_def using super_dsmap_ext super_dsmap_ext' by blast
+
+lemma touchedSuper_supp: "touchedSuper (supp (ext f)) \<subseteq> superOf ` (supp f)"
+using supp_ext[of f]  apply auto sledgehammer
 
 (* *)
 

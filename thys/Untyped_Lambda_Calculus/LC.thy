@@ -805,7 +805,7 @@ by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map)
 
 (* RECURSOR *)
 
-locale LamRec = 
+locale LC_Rec = 
 fixes B :: "'b set"
 and VarB :: "var \<Rightarrow> 'b" 
 and AppB :: "'b \<Rightarrow> 'b \<Rightarrow> 'b"
@@ -898,7 +898,7 @@ apply(rule ext) subgoal for e apply(induct e)
 using assms by auto .
 
 
-end (* context LamRec *)
+end (* context LC_Rec *)
 
 
 

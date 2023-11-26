@@ -1,5 +1,5 @@
 (* The translations back and forth between the infinitary and finitary lambda-calculi *)
-theory Translations_ILC_LC
+theory Translation_LC_to_ILC
 imports ILC_relations_more
 begin
 
@@ -253,7 +253,7 @@ unfolding FVarsB_def LamB_def
   by (auto simp add: touchedSuper_def)
 
 
-interpretation T : LamRec where 
+interpretation T : LC_Rec where 
 B = B and VarB = VarB and AppB = AppB and LamB = LamB and renB = renB and FVarsB = FVarsB
 apply standard
 using VarB_B AppB_B LamB_B renB_B renB_id renB_comp 

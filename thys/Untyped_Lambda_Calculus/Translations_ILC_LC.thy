@@ -78,8 +78,7 @@ lemma supp_ext': "supp (ext f) \<subseteq> \<Union> (dsset ` ({xs . super xs} \<
 using supp_ext by fastforce
 
 lemma card_supp_ext: 
-assumes "|supp f| <o |UNIV::var set|"
-shows "|supp (ext f)| <o |UNIV::ivar set|"
+"|supp (ext f)| <o |UNIV::ivar set|"
 proof-
   have "|supp (ext f)| \<le>o |\<Union> (dsset ` ({xs . super xs} \<inter> subOf -` (supp f)))|"
   using supp_ext' card_of_mono1 by blast
@@ -96,6 +95,9 @@ proof-
   finally show ?thesis .
 qed
 
+lemma small_supp_ext_f: "ILC2.small (supp (ext f))" 
+by (simp add: ILC2.small_def card_supp_ext)
+
 lemma super_dsmap_ext: "super xs \<Longrightarrow> super (dsmap (ext f) xs)"
 unfolding ext_def by (smt (z3) case_prod_conv dsnth_dsmap_cong fst_conv snd_conv super_superOf theSN' theSN_ex)
 
@@ -108,7 +110,7 @@ lemma ext_inv: "bij f \<Longrightarrow> ext (inv f) = inv (ext f)"
 by (metis (no_types, lifting) bij_ext bij_id comp_assoc ext_comp inv_id inv_o_simp1 inv_o_simp2 inv_unique_comp)
 
 lemma super_dsmap_ext': 
-assumes f: "bij f" "|supp f| <o |UNIV::var set|" and s: "super (dsmap (ext f) xs)"
+assumes f: "bij f" and s: "super (dsmap (ext f) xs)"
 shows "super xs"  
 proof-
   have 0: "dsmap (ext (inv f)) ((dsmap (ext f) xs)) = xs"
@@ -123,7 +125,13 @@ lemma presSuper_ext: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Long
 unfolding presSuper_def using super_dsmap_ext super_dsmap_ext' by blast
 
 lemma touchedSuper_supp: "touchedSuper (supp (ext f)) \<subseteq> superOf ` (supp f)"
-using supp_ext[of f]  apply auto sledgehammer
+using supp_ext[of f]  apply auto  
+by (smt (verit, del_insts) IntE UN_iff image_iff mem_Collect_eq subset_eq superOf_subOf 
+   super_disj supp_ext' touchedSuper_UN touchedSuper_def touchedSuper_mono vimage_eq)
+
+lemma bsmall_supp_ext_f: "finite (supp f) \<Longrightarrow> bsmall (supp (ext f))" 
+by (meson bsmall_def finite_surj touchedSuper_supp)
+
 
 (* *)
 

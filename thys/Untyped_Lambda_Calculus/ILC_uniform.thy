@@ -113,6 +113,11 @@ shows "\<exists> e1 es2. ee = iApp e1 es2 \<and> reneqv e1 e1' \<and>
           (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e')"
 using assms by cases auto
 
+lemma reneqv_iApp_iff:
+"reneqv (iApp e1 es2) (iApp e1' es2') \<longleftrightarrow> 
+ reneqv e1 e1' \<and> (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e')"
+apply(subst reneqv.simps) by auto
+
 lemma reneqv_trans:
 "reneqv e e' \<Longrightarrow> reneqv e' e'' \<Longrightarrow> reneqv e e''"
 proof(induct arbitrary: e'' rule: reneqv.induct)

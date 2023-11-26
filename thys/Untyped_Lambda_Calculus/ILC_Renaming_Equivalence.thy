@@ -225,8 +225,7 @@ unfolding G_def Tmap_def apply safe
   subgoal for f
   apply(rule exI[of _ "Some (dsmap f xs)"])  
   apply(intro conjI) 
-    subgoal unfolding id_on_def presSuper_def apply auto  
-      by (smt (verit, ccfv_SIG) Diff_Int_distrib Diff_disjoint Diff_empty Int_emptyD Tfvars.simps Un_iff bij_betw_apply bij_imp_bij_betw dstream.set_map iterm.set(3) prod.collapse super_disj)
+    subgoal unfolding id_on_def presSuper_def by (cases t, auto) 
     subgoal apply(rule disjI3_2)
     apply(rule exI[of _ "dsmap f xs"]) 
     apply(rule exI[of _ "irrename f e"]) 

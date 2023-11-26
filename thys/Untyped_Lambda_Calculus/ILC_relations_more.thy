@@ -39,7 +39,7 @@ lemma affineS_smap2_iApp_iff:
 sorry
 
 lemma affineS_sflat: "affineS (sflat ess) \<longleftrightarrow> 
- (\<forall>i j i' j'. affine (snth2 ess (i,j)) \<and> ILC.FFVars ((snth2 ess (i,j))) \<inter> ILC.FFVars ((snth2 ess (i,j))) = {})"
+ (\<forall>i j i' j'. affine (snth2 ess (i,j)) \<and> ILC.FFVars ((snth2 ess (i,j))) \<inter> ILC.FFVars ((snth2 ess (i',j'))) = {})"
 sorry 
 
 lemma ustep_affine:
@@ -50,7 +50,8 @@ proof-
   thus ?thesis using assms apply(induct rule: BE_induct_ustep')
     subgoal for es es' using hred_affineS by auto
     subgoal unfolding affineS_smap2_iApp_iff using ustep_FFVars by fastforce
-    subgoal  unfolding affineS_smap2_iApp_iff using ustep_FFVars apply (auto simp: affineS_sflat) sledgehammer
+    subgoal  unfolding affineS_smap2_iApp_iff using ustep_FFVars apply (auto simp: affineS_sflat)  
+    sorry
     subgoal by auto . 
 qed
 

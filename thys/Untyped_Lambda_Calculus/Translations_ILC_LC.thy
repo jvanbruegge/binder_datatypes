@@ -192,18 +192,21 @@ unfolding renB_def AppB_def fun_eq_iff apply auto apply(subst irrename_simps)
 lemma renB_LamB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> 
    renB \<sigma> (LamB x b) = LamB (\<sigma> x) (renB \<sigma> b)"
 unfolding renB_def LamB_def fun_eq_iff apply auto apply(subst irrename_simps) 
-  using bij_ext card_supp_ext apply auto  
-  sledgehammer
+  using bij_ext card_supp_ext apply auto sorry 
+
 
 lemma FVarsB_VarB: "\<And>x. FVarsB (VarB x) \<subseteq> {x}"
-sorry
+unfolding FVarsB_def VarB_def apply auto 
+  by (smt (verit, del_insts) Diff_eq_empty_iff Diff_iff dsset_range empty_subsetI insert_subset mem_Collect_eq rangeI subOf_superOf super_disj super_superOf touchedSuper_def touchedSuper_mono)
 
 lemma FVarsB_AppB: "{b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (AppB b1 b2) \<subseteq> FVarsB b1 \<union> FVarsB b2"
-sorry
+unfolding FVarsB_def AppB_def apply auto  
+  (* by (smt (verit) UN_iff Un_iff disjoint_iff image_eqI mem_Collect_eq touchedSuper_def) *) sorry
 
 lemma FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
-sorry
-
+unfolding FVarsB_def LamB_def  
+  using touchedSuperT_def touchedSuper_iLam apply auto 
+  by (auto simp add: touchedSuper_def)
 
 
 interpretation T : LamRec where 

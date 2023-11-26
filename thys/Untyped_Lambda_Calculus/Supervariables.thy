@@ -137,6 +137,10 @@ by (metis superOf_subOf)
 definition touchedSuper :: "ivar set \<Rightarrow> ivar dstream set" where 
 "touchedSuper X \<equiv> {xs. super xs \<and> X \<inter> dsset xs \<noteq> {}}"
 
+lemma touchedSuper_emp[simp,intro!]: "touchedSuper {} = {}"
+unfolding touchedSuper_def by auto
+
+
 lemma touchedSuper_mono: "X \<subseteq> Y \<Longrightarrow> touchedSuper X \<subseteq> touchedSuper Y"
 using disjoint_iff unfolding touchedSuper_def by auto
 

@@ -443,6 +443,16 @@ proof-
         by (metis (full_types) "0"(1) "1"(1) Diff_iff f(1) f(3) id_on_def imkSubst_idle 
           imkSubst_smap iterm.set(3)) . . 
 qed
+
+
+lemma hred_FFVars: "hred e e' \<Longrightarrow> FFVars e' \<subseteq> FFVars e"
+unfolding hred_def by auto (metis imkSubst_def iterm.set(1) singletonD snth_sset)+
+ 
+
+lemma ustep_FFVars: "ustep es es' \<Longrightarrow> FFVars (snth es' i) \<subseteq> FFVars (snth es i)"
+apply(induct arbitrary: i rule: ustep.induct) 
+using hred_FFVars apply (auto simp: sset_smap2 sset_range snth_sflat stream_all2_iff_snth )
+subgoal for es ess ess' i x a  sorry .
           
  
 

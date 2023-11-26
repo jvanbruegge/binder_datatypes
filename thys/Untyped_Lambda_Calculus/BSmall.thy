@@ -32,4 +32,7 @@ lemma super_Un_ddset_triv: "{xs. super xs \<and> (A \<union> B) \<inter> dsset x
    {xs. super xs \<and> B \<inter> dsset xs \<noteq> {}}"
 by auto
 
+lemma bsmall_emp[simp,intro!]: "bsmall {}" 
+unfolding bsmall_def by auto
+
 end 

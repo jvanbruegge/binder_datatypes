@@ -132,8 +132,98 @@ by (meson bsmall_def finite_surj touchedSuper_supp)
 
 
 (* *)
+definition B :: "(nat list \<Rightarrow> ivar iterm) set" where "B \<equiv> {E. \<forall> p. uniform (E p)}"
 
-consts tr :: "trm \<Rightarrow> nat list \<Rightarrow> itrm"
+definition VarB where "VarB x p \<equiv> iVar (dsnth (superOf x) (natOf p))"
+definition LamB where "LamB x E p \<equiv> iLam (superOf x) (E p)"
+definition AppB where "AppB E1 E2 p \<equiv> iApp (E1 (p @ [0])) (smap (\<lambda>n. E2 (p @ [Suc n])) nats)"
+definition renB where "renB f E p \<equiv> irrename (ext f) (E p)"
+definition FVarsB where "FVarsB E \<equiv> \<Union> {subOf ` touchedSuper (ILC.FFVars (E p)) | p . True}"
+
+
+lemma VarB_B: "VarB x \<in> B"
+sorry
+
+lemma AppB_B: "{b1,b2} \<subseteq> B \<Longrightarrow> AppB b1 b2 \<in> B"
+sorry
+
+lemma LamB_B: "b \<in>  B \<Longrightarrow> LamB x b \<in> B"
+sorry
+
+lemma renB_B: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB \<sigma> b \<in> B"
+sorry
+
+lemma renB_id[simp,intro]: "b \<in> B \<Longrightarrow> renB id b = b"
+sorry
+
+lemma renB_comp: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+    bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
+sorry
+
+lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+   (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
+   renB \<sigma> b = b"
+sorry
+
+lemma renB_FVarsB: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+   x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
+sorry 
+
+lemma renB_VarB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VarB x) = VarB (\<sigma> x)"
+sorry
+
+lemma renB_AppB: "\<And>\<sigma> b1 b2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> {b1,b2} \<subseteq> B \<Longrightarrow> 
+   renB \<sigma> (AppB b1 b2) = AppB (renB \<sigma> b1) (renB \<sigma> b2)"
+sorry
+
+lemma renB_LamB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> 
+   renB \<sigma> (LamB x b) = LamB (\<sigma> x) (renB \<sigma> b)"
+sorry
+
+lemma FVarsB_VarB: "\<And>x. FVarsB (VarB x) \<subseteq> {x}"
+sorry
+
+lemma FVarsB_AppB: "{b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (AppB b1 b2) \<subseteq> FVarsB b1 \<union> FVarsB b2"
+sorry
+
+lemma FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
+sorry
+
+interpretation T : LamRec where 
+B = B and VarB = VarB and AppB = AppB and LamB = LamB and renB = renB and FVarsB = FVarsB
+apply standard
+using VarB_B AppB_B LamB_B renB_B renB_id renB_comp 
+renB_VarB renB_AppB renB_LamB
+FVarsB_VarB FVarsB_AppB FVarsB_LamB
+by (auto simp add: renB_cong renB_FVarsB)  
+
+
+definition tr :: "trm \<Rightarrow> nat list \<Rightarrow> itrm" where "tr = T.rec"
+
+lemma tr_Var[simp]: "tr (Var x) p = iVar (dsnth (superOf x) (natOf p))"
+using T.rec_Var unfolding tr_def VarB_def by auto
+
+lemma tr_Lam[simp]: "tr (Lam x e) p = iLam (superOf x) (tr e p)"
+using T.rec_Lam unfolding tr_def LamB_def by auto
+
+lemma tr_App[simp]: "tr (App e1 e2) p = iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
+using T.rec_App unfolding tr_def AppB_def by auto
+
+lemma rrename_tr:
+"bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> tr (rrename f e) p = irrename (ext f) (tr e p)"
+sorry
+
+lemma FFVars_tr: 
+"\<Union> {subOf ` touchedSuper (ILC.FFVars (tr e p)) | p . True} \<subseteq> LC.FFVars e"
+
+term T.rec
+
+thm T.rec_Var T.rec_Lam
+
+
+(* *)
+
+
 
 axiomatization where 
 tr_Var[simp]: "tr (Var x) p = iVar (dsnth (superOf x) (natOf p))"
@@ -142,14 +232,16 @@ tr_Lam[simp]: "tr (Lam x e) p = iLam (superOf x) (tr e p)"
 and 
 tr_App[simp]: "tr (App e1 e2) p = iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
 
-lemma FFVars_tr: 
-"subOf ` touchedSuper (ILC.FFVars (tr e p)) \<subseteq> LC.FFVars e"
-sorry
-  
 lemma rrename_tr:
 assumes "bij f" and "|supp f| <o |UNIV::var set|"
 shows "tr (rrename f e) p = irrename (ext f) (tr e p)"
 sorry
+
+lemma FFVars_tr: 
+"\<Union> {subOf ` touchedSuper (ILC.FFVars (tr e p)) | p . True} \<subseteq> LC.FFVars e"
+sorry
+  
+
 
 
 end 

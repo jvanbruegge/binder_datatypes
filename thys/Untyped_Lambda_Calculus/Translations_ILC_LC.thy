@@ -22,9 +22,15 @@ by (metis Int_emptyD dsset_range dtheN_dsnth rangeI super_disj theSN)
 lemma theSN_ex: "super xs \<Longrightarrow> \<exists> x \<in> \<Union> (dsset ` (range superOf)). (xs,i) = theSN x "
 by (metis (full_types) Union_iff dsset_range imageI rangeI super_imp_superOf surjective_pairing theSN_unique)
 
-(* The summarizes the only properties we are interested in about theSN, 
+(* This summarizes the only properties we are interested in about theSN, 
 which in turn will be used to prove the correctness of the supervariable-based 
-renaming extension: *)
+renaming extension. 
+It ways that theSN is a bijection between 
+(1) the set of all variables that appear in supervariables 
+and 
+(2) the pairs (xs,n) indicating specific supervariables xs and positions n (where the 
+variable is located)
+*)
 lemma bij_theSN: 
 "bij_betw theSN (\<Union> (dsset ` (range superOf))) ({xs. super xs} \<times> (UNIV::nat set))"
 unfolding bij_betw_def inj_on_def apply auto

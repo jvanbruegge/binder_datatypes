@@ -803,4 +803,105 @@ lemma mkSubst_smap: "bij f \<Longrightarrow> distinct xs \<Longrightarrow> z \<i
 by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map) 
 
 
+(* RECURSOR *)
+
+locale LamRec = 
+fixes B :: "'b set"
+and VarB :: "var \<Rightarrow> 'b" 
+and AppB :: "'b \<Rightarrow> 'b \<Rightarrow> 'b"
+and LamB :: "var \<Rightarrow> 'b \<Rightarrow> 'b"
+and renB :: "(var \<Rightarrow> var) \<Rightarrow> 'b \<Rightarrow> 'b"
+and FVarsB :: "'b \<Rightarrow> var set"
+assumes 
+(* closedness: *)
+VarB_B[simp,intro]: "\<And>x. VarB x \<in> B"
+and 
+AppB_B[simp,intro]: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> AppB b1 b2 \<in> B"
+and 
+LamB_B[simp,intro]: "\<And>x b. b \<in>  B \<Longrightarrow> LamB x b \<in> B"
+and 
+renB_B[simp]: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB \<sigma> b \<in> B"
+and (* proper axioms: *)
+renB_id[simp,intro]: "\<And>b. b \<in> B \<Longrightarrow> renB id b = b"
+and (* proper axioms: *)
+(* *)
+renB_comp[simp,intro]: "\<And>b \<sigma> \<tau>. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+    bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
+and 
+renB_cong[simp]: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+   (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
+   renB \<sigma> b = b"
+and 
+renB_FVarsB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+   x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
+and 
+(* *)
+renB_VarB[simp]: "\<And>\<sigma> x. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VarB x) = VarB (\<sigma> x)"
+and 
+renB_AppB[simp]: "\<And>\<sigma> b1 b2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> {b1,b2} \<subseteq> B \<Longrightarrow> 
+   renB \<sigma> (AppB b1 b2) = AppB (renB \<sigma> b1) (renB \<sigma> b2)"
+and 
+renB_LamB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> 
+   renB \<sigma> (LamB x b) = LamB (\<sigma> x) (renB \<sigma> b)"
+(* *)
+and 
+FVarsB_VarB: "\<And>x. FVarsB (VarB x) \<subseteq> {x}"
+and 
+FVarsB_AppB: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (AppB b1 b2) \<subseteq> FVarsB b1 \<union> FVarsB b2"
+and 
+FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
+begin 
+
+definition morFromTrm where 
+"morFromTrm H \<equiv> 
+ (\<forall>e. H e \<in> B) \<and>  
+ (\<forall>x. H (Var x) = VarB x) \<and> 
+ (\<forall>e1 e2. H (App e1 e2) = AppB (H e1) (H e2)) \<and> 
+ (\<forall>x e. H (Lam x e) = LamB x (H e)) \<and> 
+ (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
+ (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
+
+lemma ex_morFromTrm: "\<exists>!H. morFromTrm H"
+sorry
+
+definition rec where "rec \<equiv> SOME H. morFromTrm H"
+
+lemma morFromTrm_rec: "morFromTrm rec"
+by (metis ex_morFromTrm rec_def someI_ex)
+
+lemma rec_B[simp,intro!]: "rec e \<in> B"
+using morFromTrm_rec unfolding morFromTrm_def by auto
+
+lemma rec_Var[simp]: "rec (Var x) = VarB x"
+using morFromTrm_rec unfolding morFromTrm_def by auto
+
+lemma rec_App[simp]: "rec (App e1 e2) = AppB (rec e1) (rec e2)"
+using morFromTrm_rec unfolding morFromTrm_def by auto
+
+lemma rec_Lam[simp]: "rec (Lam x e) = LamB x (rec e)"
+using morFromTrm_rec unfolding morFromTrm_def by auto
+
+lemma rec_rrename: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
+ rec (rrename \<sigma> e) = renB \<sigma> (rec e)"
+using morFromTrm_rec unfolding morFromTrm_def by auto
+
+lemma FFVarsB_rec: "FVarsB (rec e) \<subseteq> FFVars e"
+using morFromTrm_rec unfolding morFromTrm_def by auto
+
+lemma rec_unique: 
+assumes "\<And>e. H e \<in> B" 
+"\<And>x. H (Var x) = VarB x" 
+"\<And>e1 e2. H (App e1 e2) = AppB (H e1) (H e2)"
+"\<And>x e. H (Lam x e) = LamB x (H e)"
+shows "H = rec"
+apply(rule ext) subgoal for e apply(induct e)
+using assms by auto .
+
+
+end (* context LamRec *)
+
+
+
+
+
 end

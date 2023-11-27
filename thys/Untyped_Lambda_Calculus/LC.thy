@@ -861,7 +861,7 @@ definition morFromTrm where
  (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
  (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
 
-lemma ex_morFromTrm: "\<exists>!H. morFromTrm H"
+lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
 sorry
 
 definition rec where "rec \<equiv> SOME H. morFromTrm H"

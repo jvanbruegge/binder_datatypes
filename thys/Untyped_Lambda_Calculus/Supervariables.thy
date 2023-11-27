@@ -285,4 +285,52 @@ apply safe subgoal for \<rho> apply(intro exI[of _ \<rho>])
 unfolding id_on_def by auto .
 
 
+(* *)
+
+(* the range of supervariables: *)
+definition "RSuper \<equiv> \<Union> (dsset ` (range superOf))"
+
+lemma super_dsset_RSuper: "super xs \<Longrightarrow> dsset xs \<subseteq> RSuper"
+by (metis RSuper_def UN_iff range_eqI subsetI superOf_subOf)
+
+lemma RSuper_def2: "RSuper = \<Union> (dsset ` {xs. super xs})"
+unfolding RSuper_def apply auto 
+  using super_superOf apply blast  
+  by (metis superOf_subOf)
+
+definition theSN where 
+"theSN x \<equiv> SOME xs_i. super (fst xs_i) \<and> x = dsnth (fst xs_i) (snd xs_i)"
+
+lemma theSN': "x \<in> RSuper \<Longrightarrow> super (fst (theSN x)) \<and> x = dsnth (fst (theSN x)) (snd (theSN x))"
+unfolding theSN_def RSuper_def apply(rule someI_ex)  
+by simp (metis dtheN super_superOf)  
+
+lemma theSN: "x \<in> RSuper \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super xs \<and> dsnth xs i = x"
+by (metis fst_conv snd_conv theSN')
+
+lemma theSN_unique: 
+"x \<in> RSuper \<Longrightarrow> (xs,i) = theSN x \<Longrightarrow> super ys \<and> dsnth ys j = x \<Longrightarrow> ys = xs \<and> j = i"
+by (metis Int_emptyD dsset_range dtheN_dsnth rangeI super_disj theSN) 
+
+lemma theSN_ex: "super xs \<Longrightarrow> \<exists> x \<in> RSuper. (xs,i) = theSN x"
+by (metis (full_types) RSuper_def Union_iff dsset_range imageI rangeI super_imp_superOf surjective_pairing theSN_unique)
+
+(* This summarizes the only properties we are interested in about theSN, 
+which in turn will be used to prove the correctness of the supervariable-based 
+renaming extension. 
+It ways that theSN is a bijection between 
+(1) the set of all variables that appear in supervariables 
+and 
+(2) the pairs (xs,n) indicating specific supervariables xs and positions n (where the 
+variable is located)
+*)
+
+lemma bij_theSN: 
+"bij_betw theSN RSuper ({xs. super xs} \<times> (UNIV::nat set))"
+unfolding bij_betw_def inj_on_def apply auto
+  apply (metis theSN')
+  apply (meson UnionI imageI rangeI theSN)
+  by (metis imageI theSN_ex)
+
+
 end 

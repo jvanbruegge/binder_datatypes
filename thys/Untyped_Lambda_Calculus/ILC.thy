@@ -1041,7 +1041,7 @@ definition morFromTrm where
  (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::ivar set| \<longrightarrow> H (irrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
  (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
 
-lemma ex_morFromTrm: "\<exists>!H. morFromTrm H"
+lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
 sorry
 
 definition rec where "rec \<equiv> SOME H. morFromTrm H"
@@ -1076,7 +1076,6 @@ assumes "\<And>e. H e \<in> B"
 shows "H = rec"
 apply(rule ext) subgoal for e apply(induct e)
 using assms by (auto cong: stream.map_cong) .
-
 
 end (* context ILC_Rec *)
 

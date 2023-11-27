@@ -58,7 +58,7 @@ renB_iLamB[simp]: "\<And>\<sigma> xs b. bij \<sigma> \<Longrightarrow> |supp \<s
    renB \<sigma> (iLamB xs b) = iLamB (dsmap \<sigma> xs) (renB \<sigma> b)"
 (* *)
 and 
-FVarsB_iVarB: "\<And>x. x \<in> RSuper \<Longrightarrow> FVarsB (iVarB x) \<subseteq> {x}"
+FVarsB_iVarB: "\<And>x. x \<in> RSuper \<Longrightarrow> touchedSuper (FVarsB (iVarB x)) \<subseteq> touchedSuper {x}"
 and 
 FVarsB_iAppB: "\<And>b1 bs2. b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> FVarsB (iAppB b1 bs2) \<subseteq> 
  FVarsB b1 \<union> \<Union> (FVarsB ` (sset bs2))"
@@ -74,7 +74,7 @@ definition morFromTrm where
  (\<forall>xs e. super xs \<and> good e \<longrightarrow> H (iLam xs e) = iLamB xs (H e)) \<and> 
  (\<forall>\<sigma> e. good e \<and> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::ivar set| \<and> bsmall (supp \<sigma>) \<and> presSuper \<sigma>  
           \<longrightarrow> H (irrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
- (\<forall>e. good e \<longrightarrow> FVarsB (H e) \<subseteq> FFVars e)"
+ (\<forall>e. good e \<longrightarrow> touchedSuper (FVarsB (H e)) \<subseteq> touchedSuper (FFVars e))"
 
 lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
 sorry
@@ -100,7 +100,7 @@ lemma rec_irrename: "good e \<Longrightarrow> bij \<sigma> \<Longrightarrow> |su
  rec (irrename \<sigma> e) = renB \<sigma> (rec e)"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
-lemma FVarsB_rec: "good e \<Longrightarrow> FVarsB (rec e) \<subseteq> FFVars e"
+lemma FVarsB_rec: "good e \<Longrightarrow> touchedSuper (FVarsB (rec e)) \<subseteq> touchedSuper (FFVars e)"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
 lemma rec_unique: 

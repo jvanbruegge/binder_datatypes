@@ -28,17 +28,7 @@ lemma varOf_ivarOf[simp]: "varOf (ivarOf x) = x"
 using varOf_o_ivarOf unfolding fun_eq_iff by auto
 *)
 
-
-
-
-thm dstream.map_comp[no_vars]
-
-lemma dstream_map_comp: 
-"bij (f::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV::ivar set| \<Longrightarrow> 
- dsmap g o dsmap f = dsmap (g \<circ> f)"
-using dstream.map_comp unfolding fun_eq_iff by auto
-
-
+(* Restricting a (supervariable-preserving) ivar-permutation to a ver-permutation *)
 definition restr :: "(ivar \<Rightarrow> ivar) \<Rightarrow> var \<Rightarrow> var" where 
 "restr f x \<equiv> subOf (dsmap f (superOf x))"
 
@@ -52,17 +42,50 @@ unfolding restr_def fun_eq_iff
 apply(subst dstream_map_comp[symmetric]) 
 by (auto simp add: presSuper_def)
 
-lemma bij_restr: "bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> bij (restr f)"
-sorry
+lemma bij_restr: 
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
+shows "bij (restr f)"
+proof-
+  have 0: "\<And>d. dsmap f (dsmap (inv f) d) = d" 
+  using f(1,2) by (simp add: dstream.map_comp)
+  show ?thesis unfolding bij_def[of "restr f"] inj_def surj_def restr_def apply safe
+    subgoal using f by (metis bij_imp_bij_inv dstream.map_comp dstream.map_id inv_o_simp1 
+       presSuper_def subOf_superOf superOf_subOf super_superOf supp_inv_bound)
+    subgoal for y by (metis 0 f(3) presSuper_def subOf_inj subOf_superOf super_superOf) .
+qed
 
-lemma card_supp_restr: "bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
-   |supp (restr f)| <o |UNIV::var set|"
-sorry
+term "subOf ` (touchedSuper (supp f))"
 
+lemma supp_restr: 
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" 
+shows "supp (restr f) \<subseteq> subOf ` (touchedSuper (supp f))"
+unfolding restr_def supp_def image_def touchedSuper_def 
+by auto (smt (verit, ccfv_threshold) disjoint_iff dstream_map_ident_strong mem_Collect_eq subOf_superOf super_superOf)
+
+lemma card_supp_restr: 
+assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "bsmall (supp f)" "presSuper f"
+shows "|supp (restr f)| <o |UNIV::var set|" 
+proof-
+  have "|supp (restr f)| \<le>o |subOf ` (touchedSuper (supp f))|"
+  using supp_restr[OF f(1,2)] by auto
+  also have "|subOf ` (touchedSuper (supp f))| <o |UNIV::var set|"
+  using f(3) unfolding bsmall_def by (simp add: finite_card_var)
+  finally show ?thesis .
+qed
+
+lemma finite_supp_restr: 
+assumes "bij f" "|supp f| <o |UNIV::ivar set|" "bsmall (supp f)" "presSuper f"
+shows "finite (supp (restr f))" 
+using card_supp_restr[OF assms] unfolding finite_iff_le_card_var .
+
+lemma restr_cong_id: 
+assumes "bij f" "|supp f| <o |UNIV::ivar set|" "bsmall (supp f)" "presSuper f"
+and "\<And>y x. y \<in> FFVars e \<Longrightarrow> x \<in> dsset (superOf y) \<Longrightarrow> f x = x" "z \<in> LC.FFVars e"
+shows "restr f z = z"
+using assms unfolding restr_def by (simp add: dstream_map_ident_strong)
 
 
 (* *)
-
 
 definition iVarB where "iVarB x \<equiv> Var (subOf (fst (theSN x)))"
 definition iLamB where "iLamB (xs::ivar dstream) b \<equiv> Lam (subOf xs) b"
@@ -96,36 +119,56 @@ unfolding renB_def apply(subst restr_comp)
 lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
    renB \<sigma> b = b"
-sorry
+unfolding renB_def FVarsB_def apply(rule term.rrename_cong_ids)
+by (auto simp add: bij_restr card_supp_restr intro: restr_cong_id) 
 
-lemma renB_FVarsB: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_FVarsB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
-sorry
+unfolding renB_def FVarsB_def apply safe
+  subgoal by simp (metis (no_types, lifting) bij_restr card_supp_restr dstream.set_map image_in_bij_eq inv_simp2 
+    presSuper_def restr_def superOf_subOf super_superOf term.FFVars_rrenames)
+  subgoal by simp (metis bij_restr card_supp_restr dstream.set_map image_in_bij_eq inv_simp1 presSuper_def 
+    restr_def superOf_subOf super_superOf term.FFVars_rrenames) .
 
-lemma renB_iVarB[simp]: "\<And>\<sigma> x. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_iVarB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
   x \<in> RSuper \<Longrightarrow> 
   renB \<sigma> (iVarB x) = iVarB (\<sigma> x)"
-sorry
+unfolding renB_def iVarB_def apply(subst rrename_simps)
+  subgoal by (auto simp add: bij_restr)
+  subgoal by (auto simp add: card_supp_restr)
+  subgoal unfolding restr_def apply(cases "theSN x", cases "theSN (\<sigma> x)") 
+  by simp (smt (verit, ccfv_SIG) RSuper_def UN_iff bij_betw_def bij_betw_inv_into bij_superOf 
+     dstream.set_map dtheN image_in_bij_eq inv_simp2 mem_Collect_eq presSuper_def superOf_subOf 
+     theSN_unique) .
 
-lemma renB_iAppB[simp]: "\<And>\<sigma> b1 bs2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_iAppB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow>
    renB \<sigma> (iAppB b1 bs2) = iAppB (renB \<sigma> b1) (smap (renB \<sigma>) bs2)"
-sorry
+unfolding renB_def iAppB_def apply(subst rrename_simps)
+  subgoal by (auto simp add: bij_restr)
+  subgoal by (auto simp add: card_supp_restr)
+  subgoal by auto .
 
-lemma renB_iLamB[simp]: "\<And>\<sigma> xs b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_iLamB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    b \<in> B \<Longrightarrow> super xs \<Longrightarrow> 
    renB \<sigma> (iLamB xs b) = iLamB (dsmap \<sigma> xs) (renB \<sigma> b)"
-sorry 
+unfolding renB_def iLamB_def apply(subst rrename_simps)
+  subgoal by (auto simp add: bij_restr)
+  subgoal by (auto simp add: card_supp_restr)
+  subgoal using restr_def superOf_subOf by auto .
 
-lemma FVarsB_iVarB: "\<And>x. x \<in> RSuper \<Longrightarrow> FVarsB (iVarB x) \<subseteq> {x}"
-sorry
+lemma FVarsB_iVarB: "x \<in> RSuper \<Longrightarrow> touchedSuper (FVarsB (iVarB x)) \<subseteq> touchedSuper {x}"
+unfolding FVarsB_def iVarB_def RSuper_def apply(cases "theSN x") 
+  by auto (metis (mono_tags, lifting) Int_emptyD dtheN insert_subset mem_Collect_eq mk_disjoint_insert 
+   singletonI superOf_subOf super_disj super_dsset_RSuper super_superOf theSN_unique touchedSuper_def)
 
-lemma FVarsB_iAppB: "\<And>b1 bs2. b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> FVarsB (iAppB b1 bs2) \<subseteq> 
+lemma FVarsB_iAppB: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> FVarsB (iAppB b1 bs2) \<subseteq> 
  FVarsB b1 \<union> \<Union> (FVarsB ` (sset bs2))"
-sorry
+unfolding FVarsB_def iAppB_def by (fastforce simp: shd_sset)
 
-lemma FVarsB_iLamB: "\<And>xs b. b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs"
-sorry
+lemma FVarsB_iLamB: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs"
+unfolding FVarsB_def iLamB_def 
+by auto (metis Int_emptyD subOf_superOf super_disj super_superOf)
 
 interpretation T' : ILC_SuperRec where 
 B = B and iVarB = iVarB and iAppB = iAppB and iLamB = iLamB and renB = renB and FVarsB = FVarsB
@@ -156,8 +199,15 @@ lemma irrename_tr':
 using T'.rec_irrename unfolding tr'_def renB_def by auto
 
 lemma FFVars_tr': 
-"good e \<Longrightarrow> x \<in> LC.FFVars (tr' e) \<Longrightarrow> dsset (superOf x) \<subseteq> ILC.FFVars e"
-using T'.FVarsB_rec unfolding tr'_def FVarsB_def by auto
+assumes "good e" "x \<in> LC.FFVars (tr' e)"
+shows "dsset (superOf x) \<inter> ILC.FFVars e \<noteq> {}"
+proof-
+  have "superOf x \<in> touchedSuper (ILC.FFVars e)"
+  using assms using T'.FVarsB_rec  FVarsB_def unfolding tr'_def  by (auto simp: touchedSuper_Union)
+  thus ?thesis unfolding touchedSuper_def by auto
+qed
+
+
 
 
 

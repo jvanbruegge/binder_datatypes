@@ -68,7 +68,7 @@ iterm.rrename_comp0s inf_A bsmall_def intro!: ext split: option.splits)
 apply (simp add: iterm.set_bd_UNIV) 
 apply (simp add: comp_def dstream.map_comp)
 apply (simp add: dstream_map_ident_strong)
-unfolding bsmall_def touchedSuper_def apply(frule super_dsset_singl) apply auto
+unfolding bsmall_def touchedSuper_def  
 using super_Un_ddset_triv  
 by (smt (verit) finite_Un rev_finite_subset) 
 

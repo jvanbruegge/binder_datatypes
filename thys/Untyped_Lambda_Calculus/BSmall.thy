@@ -21,12 +21,6 @@ fun wfB :: "B \<Rightarrow> bool" where
 definition bsmall :: "ivar set \<Rightarrow> bool" where 
 "bsmall X \<equiv> finite (touchedSuper X)"
 
-lemma super_dsset_singl: 
- "super ys \<Longrightarrow> {xs . super xs \<and> dsset ys \<inter> dsset xs \<noteq> {}} = {ys}"
-apply safe 
-apply (meson Int_emptyD super_disj)
-by (simp add: dsset_range)
-
 lemma super_Un_ddset_triv: "{xs. super xs \<and> (A \<union> B) \<inter> dsset xs \<noteq> {}} \<subseteq>  
    {xs. super xs \<and> A \<inter> dsset xs \<noteq> {}} \<union> 
    {xs. super xs \<and> B \<inter> dsset xs \<noteq> {}}"

@@ -31,6 +31,12 @@ mrbnf "'a ::infinite_regular dstream"
   subgoal by (clarsimp, transfer) auto
   done
 
+lemma dstream_map_comp: 
+"bij f \<Longrightarrow> |supp (f::'a\<Rightarrow>'a)| <o |UNIV::('a ::infinite_regular) set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV::('a ::infinite_regular) set| \<Longrightarrow> 
+ dsmap g o dsmap f = dsmap (g \<circ> f)"
+apply(rule ext)
+using dstream.map_comp[of f g] by auto
+
 thm dstream.map_cong[no_vars]
 
 lemma dstream_map_ident_strong: "(\<And>z. z \<in> dsset t \<Longrightarrow> f z = z) \<Longrightarrow> dsmap f t = t"

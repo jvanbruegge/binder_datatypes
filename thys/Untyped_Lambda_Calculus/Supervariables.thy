@@ -140,9 +140,16 @@ definition touchedSuper :: "ivar set \<Rightarrow> ivar dstream set" where
 lemma touchedSuper_emp[simp,intro!]: "touchedSuper {} = {}"
 unfolding touchedSuper_def by auto
 
-
 lemma touchedSuper_mono: "X \<subseteq> Y \<Longrightarrow> touchedSuper X \<subseteq> touchedSuper Y"
 using disjoint_iff unfolding touchedSuper_def by auto
+
+lemma touchedSuper_Union: 
+"touchedSuper (\<Union> (F ` I)) = (\<Union>i\<in>I. touchedSuper (F i))"
+unfolding touchedSuper_def by auto
+
+lemma touchedSuper_UN: 
+"touchedSuper (\<Union> KK) = \<Union> {touchedSuper K | K . K \<in> KK}"
+unfolding touchedSuper_def by auto
 
 definition touchedSuperT :: "itrm \<Rightarrow> ivar dstream set" where 
 "touchedSuperT t \<equiv> touchedSuper (FFVars t)"
@@ -166,6 +173,18 @@ by auto (auto simp: Diff_Int_distrib2 Int_emptyD super_disj)
 
 lemma touchedSuper_iApp[simp]: "touchedSuperT (iApp e es) = touchedSuperT e \<union> \<Union> (touchedSuperT ` (sset es))"
 unfolding touchedSuperT_def touchedSuper_def by auto
+
+lemma super_dsset_singl: 
+ "super ys \<Longrightarrow> {xs . super xs \<and> dsset ys \<inter> dsset xs \<noteq> {}} = {ys}"
+apply safe 
+apply (meson Int_emptyD super_disj)
+by (simp add: dsset_range)
+
+lemma super_touchedSuper_dsset[simp]: "super xs \<Longrightarrow> touchedSuper (dsset xs) = {xs}"
+using super_dsset_singl touchedSuper_def by auto
+
+lemma touchedSuper_dsset_superOf[simp]: "touchedSuper (dsset (superOf x)) = {superOf x}"
+by auto
 
 
 (* The notion of a function preserving supervariables: *)

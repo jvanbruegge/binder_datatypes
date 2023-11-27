@@ -29,16 +29,37 @@ using varOf_o_ivarOf unfolding fun_eq_iff by auto
 *)
 
 
+
+
+thm dstream.map_comp[no_vars]
+
+lemma dstream_map_comp: 
+"bij (f::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV::ivar set| \<Longrightarrow> 
+ dsmap g o dsmap f = dsmap (g \<circ> f)"
+using dstream.map_comp unfolding fun_eq_iff by auto
+
+
 definition restr :: "(ivar \<Rightarrow> ivar) \<Rightarrow> var \<Rightarrow> var" where 
 "restr f x \<equiv> subOf (dsmap f (superOf x))"
 
 lemma restr_id[simp]: "restr id = id"
 unfolding restr_def by auto
 
-lemma restr_comp: "bij f \<Longrightarrow> |supp f| < |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
-bij g\<Longrightarrow> |supp g| < |UNIV::ivar set| \<Longrightarrow> presSuper g \<Longrightarrow> 
+lemma restr_comp: "bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+bij g \<Longrightarrow> |supp g| <o |UNIV::ivar set| \<Longrightarrow> presSuper g \<Longrightarrow> 
 restr (g o f) = restr g o restr f"
-unfolding restr_def apply auto sorry
+unfolding restr_def fun_eq_iff 
+apply(subst dstream_map_comp[symmetric]) 
+by (auto simp add: presSuper_def)
+
+lemma bij_restr: "bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> bij (restr f)"
+sorry
+
+lemma card_supp_restr: "bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+   |supp (restr f)| <o |UNIV::var set|"
+sorry
+
+
 
 (* *)
 
@@ -50,27 +71,29 @@ definition renB where "renB f b \<equiv> rrename (restr f) b"
 definition FVarsB where "FVarsB b \<equiv> \<Union> ((dsset o superOf) ` (FFVars b))"
 
 
-lemma iVarB_B: "\<And>x. x \<in> RSuper \<Longrightarrow> iVarB x \<in> B"
-sorry
+lemma iVarB_B: "x \<in> RSuper \<Longrightarrow> iVarB x \<in> B"
+unfolding B_def by auto
 
-lemma iAppB_B: "\<And>b1 bs2. b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> iAppB b1 bs2 \<in> B"
-sorry
+lemma iAppB_B: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> iAppB b1 bs2 \<in> B"
+unfolding B_def by auto
 
-lemma iLamB_B: "\<And>xs b. b \<in> B \<Longrightarrow> super xs \<Longrightarrow> iLamB xs b \<in> B"
-sorry
+lemma iLamB_B: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> iLamB xs b \<in> B"
+unfolding B_def by auto
 
-lemma renB_B: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_B: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
   b \<in> B \<Longrightarrow> renB \<sigma> b \<in> B"
-sorry
+unfolding B_def by auto
 
-lemma renB_id: "\<And>b. b \<in> B \<Longrightarrow> renB id b = b"
-sorry
+lemma renB_id: "b \<in> B \<Longrightarrow> renB id b = b"
+unfolding renB_def by auto
 
-lemma renB_comp: "\<And>b \<sigma> \<tau>. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
-    bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::ivar set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
-sorry
+lemma renB_comp: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+    bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<tau>) \<Longrightarrow> presSuper \<tau> \<Longrightarrow> 
+    b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
+unfolding renB_def apply(subst restr_comp) 
+  by (auto simp add: bij_restr card_supp_restr term.rrename_comps)
 
-lemma renB_cong: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
    renB \<sigma> b = b"
 sorry
@@ -109,7 +132,7 @@ B = B and iVarB = iVarB and iAppB = iAppB and iLamB = iLamB and renB = renB and 
 apply standard
 using iVarB_B iAppB_B iLamB_B renB_B renB_id renB_comp 
 renB_iVarB renB_iAppB renB_iLamB
-FVarsB_iVarB FVarsB_iAppB FVarsB_iLamB
+FVarsB_iVarB FVarsB_iAppB FVarsB_iLamB apply auto
 by (auto simp add: renB_cong renB_FVarsB)  
 
 

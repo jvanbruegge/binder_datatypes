@@ -94,7 +94,7 @@ definition renB where "renB f b \<equiv> rrename (restr f) b"
 definition FVarsB where "FVarsB b \<equiv> \<Union> ((dsset o superOf) ` (FFVars b))"
 
 
-lemma iVarB_B: "x \<in> RSuper \<Longrightarrow> iVarB x \<in> B"
+lemma iVarB_B: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> iVarB x \<in> B"
 unfolding B_def by auto
 
 lemma iAppB_B: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> iAppB b1 bs2 \<in> B"
@@ -131,7 +131,7 @@ unfolding renB_def FVarsB_def apply safe
     restr_def superOf_subOf super_superOf term.FFVars_rrenames) .
 
 lemma renB_iVarB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
-  x \<in> RSuper \<Longrightarrow> 
+  super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> 
   renB \<sigma> (iVarB x) = iVarB (\<sigma> x)"
 unfolding renB_def iVarB_def apply(subst rrename_simps)
   subgoal by (auto simp add: bij_restr)
@@ -157,10 +157,10 @@ unfolding renB_def iLamB_def apply(subst rrename_simps)
   subgoal by (auto simp add: card_supp_restr)
   subgoal using restr_def superOf_subOf by auto .
 
-lemma FVarsB_iVarB: "x \<in> RSuper \<Longrightarrow> touchedSuper (FVarsB (iVarB x)) \<subseteq> touchedSuper {x}"
-unfolding FVarsB_def iVarB_def RSuper_def apply(cases "theSN x") 
+lemma FVarsB_iVarB: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuper (FVarsB (iVarB x)) \<subseteq> touchedSuper {x}"
+unfolding FVarsB_def iVarB_def apply(cases "theSN x") 
   by auto (metis (mono_tags, lifting) Int_emptyD dtheN insert_subset mem_Collect_eq mk_disjoint_insert 
-   singletonI superOf_subOf super_disj super_dsset_RSuper super_superOf theSN_unique touchedSuper_def)
+   singletonI superOf_subOf super_dsset_RSuper theSN_unique touchedSuper_def)
 
 lemma FVarsB_iAppB: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> FVarsB (iAppB b1 bs2) \<subseteq> 
  FVarsB b1 \<union> \<Union> (FVarsB ` (sset bs2))"
@@ -175,7 +175,7 @@ B = B and iVarB = iVarB and iAppB = iAppB and iLamB = iLamB and renB = renB and 
 apply standard
 using iVarB_B iAppB_B iLamB_B renB_B renB_id renB_comp 
 renB_iVarB renB_iAppB renB_iLamB
-FVarsB_iVarB FVarsB_iAppB FVarsB_iLamB apply auto
+FVarsB_iVarB FVarsB_iAppB FVarsB_iLamB apply auto  
 by (auto simp add: renB_cong renB_FVarsB)  
 
 
@@ -183,7 +183,7 @@ by (auto simp add: renB_cong renB_FVarsB)
 
 definition tr' :: "itrm \<Rightarrow> trm" where "tr' = T'.rec"
 
-lemma tr'_iVar[simp]: "x \<in> RSuper \<Longrightarrow> tr' (iVar x) = Var (subOf (fst (theSN x)))"
+lemma tr'_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> tr' (iVar x) = Var (subOf (fst (theSN x)))"
 using T'.rec_iVar unfolding tr'_def iVarB_def by auto
 
 lemma tr'_iLam[simp]: "super xs \<Longrightarrow> good e \<Longrightarrow> tr' (iLam xs e) = Lam (subOf xs) (tr' e)"

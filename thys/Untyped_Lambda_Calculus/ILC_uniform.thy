@@ -3,6 +3,7 @@ theory ILC_uniform
 imports ILC_Renaming_Equivalence 
 begin
 
+
 definition uniform :: "ivar iterm \<Rightarrow> bool" 
 where "uniform e \<equiv> \<exists>e'. reneqv e e'" 
 
@@ -33,28 +34,16 @@ lemma reneqv_iVar_casesR:
  (\<exists> xs x. e = iVar x \<and> super xs \<and> {x,x'} \<subseteq> dsset xs)"
 apply(erule reneqv.cases) by auto
 
-lemma iLam_inject_super: 
+
+
+lemma uniform_iLam_inject_super: 
 assumes u: "uniform (iLam xs e)" and eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
 shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> 
        id_on (ILC.FFVars (iLam xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
            dsmap f xs = xs' \<and> irrename f e = e'"
-proof-
-  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> 
-     dsmap f xs = xs' \<and> irrename f e = e'" using eq unfolding iLam_inject by auto
-  hence i: "inj_on f (dsset xs)" unfolding bij_def inj_on_def by auto
-  define A where A: "A = FFVars (iLam xs e)"
-  have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
-     "A \<inter> dsset xs' = {}" "bij_betw f (dsset xs) (dsset xs')" "dsmap f xs = xs'"
-    subgoal unfolding A using iterm.set_bd_UNIV by blast
-    subgoal unfolding A using touchedSuperT_def u uniform_finite_touchedUponT by fastforce
-    subgoal unfolding A by auto
-    subgoal unfolding A eq by auto
-    subgoal using f unfolding bij_def bij_betw_def inj_on_def using i by auto
-    subgoal using f by auto .
-  show ?thesis using extend_super2[OF super 0] apply safe
-  subgoal for g apply(rule exI[of _ g]) using f unfolding A eq_on_def id_on_def 
-    by (metis DiffI ILC.irrename_cong dstream.map_cong0 iterm.set(3)) .
-qed
+apply(rule iLam_inject_super) using assms  
+by (metis finite_Diff2 finite_singleton touchedSuper_iLam uniform_finite_touchedUponT, auto)
+
 
 lemma reneqv_iLam_casesL:
 assumes xs: "super xs" and rr: "reneqv (iLam xs e) ee'"
@@ -69,7 +58,7 @@ proof-
   obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f" 
   "id_on (FFVars (iLam xsa ea)) f" "id_on (- (dsset xsa \<union> dsset xs)) f" 
   and xsaa: "dsmap f xsa = xs" and e: "e = irrename f ea"
-  using iLam_inject_super[OF u il[symmetric] xsa xs] by auto
+  using uniform_iLam_inject_super[OF u il[symmetric] xsa xs] by auto
 
   have ff: "f ` (dsset xsa) = dsset xs" by (simp add: f(1) f(2) xsaa[symmetric])
 
@@ -79,7 +68,6 @@ proof-
   hence "FFVars ea' \<inter> dsset xs \<subseteq> dsset xsa" unfolding ee' by auto
   hence fv: "FFVars ea' \<inter> dsset xs = {} \<or> xs = xsa"  
   using super_disj[OF xs xsa] by auto
-
 
   show ?thesis apply(rule exI[of _ "irrename f ea'"]) apply(intro conjI)
     subgoal unfolding ee' unfolding iLam_inject apply(rule exI[of _ f]) apply(intro conjI)

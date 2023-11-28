@@ -362,8 +362,32 @@ unfolding bij_betw_def inj_on_def apply auto
   apply (meson UnionI imageI rangeI theSN)
   by (metis imageI theSN_ex)
 
+(* *)
 
-
+lemma iLam_inject_super: 
+assumes u: "finite (touchedSuperT e)" and 
+eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> 
+       id_on (ILC.FFVars (iLam xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
+           dsmap f xs = xs' \<and> irrename f e = e'"
+proof-
+  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> 
+     dsmap f xs = xs' \<and> irrename f e = e'" using eq unfolding iLam_inject by auto
+  hence i: "inj_on f (dsset xs)" unfolding bij_def inj_on_def by auto
+  define A where A: "A = FFVars (iLam xs e)"
+  have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
+     "A \<inter> dsset xs' = {}" "bij_betw f (dsset xs) (dsset xs')" "dsmap f xs = xs'"
+    subgoal unfolding A using iterm.set_bd_UNIV by blast
+    subgoal unfolding A using touchedSuperT_def u  
+      using super(1) touchedSuper_iLam by auto
+    subgoal unfolding A by auto
+    subgoal unfolding A eq by auto
+    subgoal using f unfolding bij_def bij_betw_def inj_on_def using i by auto
+    subgoal using f by auto .
+  show ?thesis using extend_super2[OF super 0] apply safe
+  subgoal for g apply(rule exI[of _ g]) using f unfolding A eq_on_def id_on_def 
+    by (metis DiffI ILC.irrename_cong dstream.map_cong0 iterm.set(3)) .
+qed
 
 
 end 

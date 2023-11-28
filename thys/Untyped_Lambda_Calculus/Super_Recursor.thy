@@ -75,7 +75,8 @@ sorry
 (* will use this: *)
 thm iLam_inject_super (* TODO: have this for vanilla Lam and iLam too (and in general, 
 such a tight support for f is useful); also infer the version for a fresh ys; 
-maybe instead of "good" I can just have "finite (touchedSuperT e)"?  *)
+maybe instead of "good e" I can just have "finite (touchedSuperT e)", i.e., "bsmall e"?
+Also, FVarsB_iAppB and FVarsB_iLamB could probably also be relaxed to factor in touchedSuper. *)
 
 definition rec where "rec \<equiv> SOME H. morFromTrm H"
 

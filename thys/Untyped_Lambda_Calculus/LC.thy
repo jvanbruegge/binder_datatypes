@@ -1105,8 +1105,21 @@ next
   (* *)
   next
     fix b y 
-    assume "R (Lam x t) b" "y \<in> FVarsB b" 
-    show "y \<in> FFVars (Lam x t)"
+    assume R: "R (Lam x t) b" and y: "y \<in> FVarsB b"
+    then obtain x' t' b'
+    where 0: "R t' b'" "Lam x t = Lam x' t'" "b = LamB x' b'" 
+    using R_Lam_elim by metis
+
+    have b': "b' \<in>  B"
+    using 0(1,3) R_B by auto
+
+    have "|{x,x'} \<union> FFVars t \<union> FFVars t'| <o |UNIV::var set|"
+    by (metis Un_insert_right singl_bound sup_bot_right term.set_bd_UNIV var_term_pre_class.Un_bound)
+    then obtain z where z: 
+    "z \<notin> {x,x'} \<union> FFVars t \<union> FFVars t'" 
+    by (meson exists_fresh)
+
+    show "y \<in> FFVars (Lam x t)" unfolding 0(2)
     sorry
   (* *)
   next

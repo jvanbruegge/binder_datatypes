@@ -803,6 +803,62 @@ lemma mkSubst_smap: "bij f \<Longrightarrow> distinct xs \<Longrightarrow> z \<i
 by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map) 
 
 
+
+(* *)
+
+thm Lam_inject[no_vars]
+
+lemma Lam_inject_strong:
+assumes "Lam (x::var) e = Lam x' e'"
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::var set| \<and>  
+   id_on (- {x,x'}) f \<and> id_on (FFVars (Lam x e)) f \<and>
+   f x = x' \<and> rrename f e = e'" 
+apply(rule exI[of _ "id(x := x', x' := x)"])
+using assms unfolding Lam_inject_swap apply safe
+unfolding id_on_def by auto (metis fun_upd_twist)
+
+
+lemma Lam_inject_strong':
+assumes il: "Lam (x::var) e = Lam x' e'" and z: "z \<notin> FFVars (Lam x e) \<union> FFVars (Lam x' e')"
+shows 
+"\<exists>f f'. 
+   bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFVars (Lam x e)) f \<and> f x = z \<and> 
+   bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFVars (Lam x' e')) f' \<and> f' x' = z \<and> 
+   rrename f e = rrename f' e'"
+proof-
+  define f where "f = id(x := z, z := x)"
+  have f: "bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFVars (Lam x e)) f \<and> f x = z"
+  using z unfolding f_def id_on_def by auto
+  define f' where "f' = id(x' := z, z := x')"
+  have f': "bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFVars (Lam x' e')) f' \<and> f' x' = z"
+  using z unfolding f'_def id_on_def by auto
+ 
+  obtain g where g: "bij g \<and> |supp g| <o |UNIV::var set| \<and> id_on (FFVars (Lam x e)) g \<and> g x = x'" and ge: "e' = rrename g e"
+  using il unfolding Lam_inject by auto
+
+  have ff': "rrename f e = rrename f' e'" 
+  unfolding f_def f'_def ge unfolding f_def f'_def using g apply(subst term.rrename_comps)
+    subgoal by auto  subgoal by auto subgoal by auto subgoal by auto
+    subgoal apply(rule rrename_cong) using g
+      subgoal by auto  subgoal by auto subgoal by auto 
+      subgoal using term_pre.supp_comp_bound by auto
+      subgoal using term_pre.supp_comp_bound z unfolding id_on_def by auto . .
+
+  show ?thesis
+  apply(rule exI[of _ f]) apply(rule exI[of _ f'])
+  using f f' ff' by auto
+qed
+
+
+thm term.induct[no_vars]
+
+lemma trm_rrename_induct[case_names Var App Lam]:
+assumes "\<And>x. P (Var (x::var))"
+and "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (App e1 e2)" 
+and "\<And>x e. (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> P (rrename f e)) \<Longrightarrow> P (Lam x e)"
+shows "P t"
+sorry
+
 (* RECURSOR *)
 
 locale LC_Rec = 
@@ -852,6 +908,8 @@ and
 FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
 begin 
 
+
+
 definition morFromTrm where 
 "morFromTrm H \<equiv> 
  (\<forall>e. H e \<in> B) \<and>  
@@ -861,8 +919,221 @@ definition morFromTrm where
  (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
  (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
 
+inductive R where 
+Var: "R (Var x) (VarB x)"
+|
+App: "R e1 b1 \<Longrightarrow> R e2 b2 \<Longrightarrow> R (App e1 e2) (AppB b1 b2)"
+|
+Lam: "R e b \<Longrightarrow> R (Lam x e) (LamB x b)"
+
+term R
+
+
+thm Lam_inject_strong[no_vars]
+
+lemma not_in_FVarsB_LamB: "b \<in> B \<Longrightarrow> x \<notin> FVarsB (LamB x b)"
+using FVarsB_LamB by auto
+
+lemma LamB_inject_strong_rev: 
+assumes bb': "{b,b'} \<subseteq> B" and 
+x': "x' = x \<or> x' \<notin> FVarsB b" and 
+f: "bij f" "|supp f| <o |UNIV::var set|" 
+"id_on (- {x, x'}) f" "f x = x'" and r: "renB f b = b'"
+shows "LamB x b = LamB x' b'"
+proof-
+  have id: "id_on (FVarsB (LamB x b)) f"
+  using f FVarsB_LamB bb' x' unfolding id_on_def by auto
+  have "LamB x b = renB f (LamB x b)"
+  apply(rule sym) apply(rule renB_cong) using f bb' FVarsB_LamB unfolding id_on_def 
+  using id unfolding id_on_def by auto
+  also have "\<dots> = LamB x' b'" apply(subst renB_LamB) using f r bb' by auto
+  finally show ?thesis .
+qed
+
+lemma LamB_inject_strong'_rev: 
+assumes bb': "{b,b'} \<subseteq> B"  
+and z: "z = x \<or> z \<notin> FVarsB b" "z = x' \<or> z \<notin> FVarsB b'"
+and f: "bij f" "|supp f| <o |UNIV::var set|" "id_on (- {x, z}) f" "f x = z" 
+and f': "bij f'" "|supp f'| <o |UNIV::var set|" "id_on (- {x', z}) f'" "f' x' = z" 
+and r: "renB f b = renB f' b'"
+shows "LamB x b = LamB x' b'" 
+proof-
+  define c where c: "c = renB f b"
+  have c': "c = renB f' b'" unfolding c r ..
+  have "LamB x b = LamB z c"  
+  apply(rule LamB_inject_strong_rev[of _ _ _ _ f]) 
+  using assms FVarsB_LamB id_on_def unfolding c by auto
+  also have "LamB z c = LamB x' b'"  
+  apply(rule sym, rule LamB_inject_strong_rev[of _ _ _ _ f']) 
+  using assms FVarsB_LamB id_on_def unfolding c by auto
+  finally show ?thesis .
+qed
+  
+(* *)
+
+lemma R_Var_elim[simp]: "R (Var x) b \<longleftrightarrow> b = VarB x"
+apply safe
+  subgoal using R.cases by fastforce
+  subgoal by (auto intro: R.intros) .
+
+lemma R_App_elim: 
+assumes "R (App t1 t2) b"
+shows "\<exists>b1 b2. R t1 b1 \<and> R t2 b2 \<and> b = AppB b1 b2"
+by (metis App_inject R.simps assms term.distinct(1) term.distinct(4))
+
+lemma R_Lam_elim: 
+assumes "R (Lam x t) b"
+shows "\<exists>x' t' e. R t' e \<and> Lam x t = Lam x' t' \<and> b = LamB x' e"
+using assms by (cases rule: R.cases) auto
+
+lemma R_total: 
+"\<exists>b. R e b"
+apply(induct e) by (auto intro: R.intros)
+
+lemma R_B: 
+"R e b \<Longrightarrow> b \<in> B"
+apply(induct rule: R.induct) by auto
+
+lemma R_main: 
+"(\<forall>b b'. R e b \<longrightarrow> R e b' \<longrightarrow> b = b') \<and> 
+ (\<forall>b. R e b \<longrightarrow> FVarsB b \<subseteq> FFVars e) \<and> 
+ (\<forall>b f. R e b \<and> bij f \<and> |supp f| <o |UNIV::var set|
+        \<longrightarrow> R (rrename f e) (renB f b))"
+proof(induct e rule: trm_rrename_induct)
+  case (Var x)
+  then show ?case using FVarsB_VarB by auto
+next
+  case (App e1 e2)
+  then show ?case apply safe 
+    subgoal by (metis R_App_elim)
+    subgoal by simp (smt (verit, del_insts) FVarsB_AppB R_App_elim 
+      R_B Un_iff bot.extremum insert_Diff insert_subset)
+    subgoal apply(drule R_App_elim) 
+      by (smt (verit, del_insts) R.simps R_B bot.extremum insert_subset renB_AppB 
+      rrename_simps(2)) .
+next
+  case (Lam x t)
+  note Lamm = Lam[rule_format]
+  note Lam1 = Lamm[THEN conjunct1, rule_format]
+  note Lam2 = Lamm[THEN conjunct2, THEN conjunct1, rule_format]
+  note Lam3 = Lamm[THEN conjunct2, THEN conjunct2, rule_format, OF _ _ conjI, OF _ _ _ conjI]
+  note Lam33 = Lam3[of id, simplified]
+
+  show ?case proof safe
+    fix b1 b2 assume RLam: "R (Lam x t) b1" "R (Lam x t) b2" 
+    then obtain x1' t1' b1' x2' t2' b2'
+    where 1: "R t1' b1'" "Lam x t = Lam x1' t1'" "b1 = LamB x1' b1'"
+    and   2: "R t2' b2'" "Lam x t = Lam x2' t2'" "b2 = LamB x2' b2'"
+    using R_Lam_elim by metis
+
+    have b12': "{b1',b2'} \<subseteq> B"
+    using 1(1,3) 2(1,3) R_B by auto
+
+    have "|{x,x1',x2'} \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2'| <o |UNIV::var set|"
+    by (metis Un_insert_right singl_bound sup_bot_right term.set_bd_UNIV var_term_pre_class.Un_bound)
+    then obtain z where z: 
+    "z \<notin> {x,x1',x2'} \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2'" 
+    by (meson exists_fresh)
+
+    obtain f1 f1' where 
+    f1: "bij f1" "|supp f1| <o |UNIV::var set|"
+       "id_on (- {x, z}) f1 \<and> id_on (FFVars (Lam x t)) f1" and 
+    f1': "bij f1'" "|supp f1'| <o |UNIV::var set|"
+       "id_on (- {x1', z}) f1' \<and> id_on (FFVars (Lam x1' t1')) f1'"
+    and z1: "f1 x = z" "f1' x1' = z"  
+    and f1f1': "rrename f1 t = rrename f1' t1'"   
+    using z Lam_inject_strong'[OF 1(2), of z] by auto
+
+    have if1': "bij (inv f1' o f1)" "|supp (inv f1' o f1)| <o |UNIV::var set|"
+    by (auto simp add: f1 f1' term_pre.supp_comp_bound)
+
+    have t1': "t1' = rrename (inv f1' o f1) t"  
+    using f1f1' by (metis (mono_tags, lifting) bij_imp_bij_inv f1 f1' 
+       inv_o_simp1 supp_inv_bound term.rrename_comps term.rrename_ids)
+
+    have fvb1': "FVarsB b1' \<subseteq> FFVars t1'"
+    using Lam2[OF if1', unfolded t1'[symmetric], OF 1(1)] .
+
+    obtain f2 f2' where 
+    f2: "bij f2" "|supp f2| <o |UNIV::var set|"
+      "id_on (- {x, z}) f2 \<and> id_on (FFVars (Lam x t)) f2" and 
+    f2': "bij f2'" "|supp f2'| <o |UNIV::var set|"
+      "id_on (- {x2', z}) f2' \<and> id_on (FFVars (Lam x2' t2')) f2'"
+    and z2: "f2 x = z" "f2' x2' = z"  
+    and f2f2': "rrename f2 t = rrename f2' t2'"   
+    using z Lam_inject_strong'[OF 2(2), of z] by auto
+
+    have if2': "bij (inv f2' o f2)" "|supp (inv f2' o f2)| <o |UNIV::var set|"
+    by (auto simp add: f2 f2' term_pre.supp_comp_bound)
+
+    have t2': "t2' = rrename (inv f2' o f2) t" 
+    using f2f2' by (metis (mono_tags, lifting) bij_imp_bij_inv f2 f2' 
+      inv_o_simp1 supp_inv_bound term.rrename_comps term.rrename_ids)
+
+    have fvb2': "FVarsB b2' \<subseteq> FFVars t2'"
+    using Lam2[OF if2', unfolded t2'[symmetric], OF 2(1)] .
+
+    define ff2' where "ff2' = f1 o (inv f2) o f2'"
+
+    have ff2': "bij ff2'" "|supp ff2'| <o |UNIV::var set|"
+       "id_on (- {x2', z}) ff2' \<and> id_on (FFVars (Lam x2' t2')) ff2'" 
+    unfolding ff2'_def using f1 f2 f2'  
+      subgoal by auto 
+      subgoal unfolding ff2'_def using f1 f2 f2' by (simp add: term_pre.supp_comp_bound)
+      subgoal unfolding ff2'_def using f1 f2 f2' unfolding id_on_def by simp (metis inv_simp1 z1(1) z2(1)) .
+
+    have zz2: "ff2' x2' = z"
+    by (metis comp_def f2 ff2'_def inv_simp1 z1(1) z2(1) z2(2))
+ 
+    have rew1: "rrename f1' (rrename (inv f1' \<circ> f1) t) = rrename f1 t" 
+    using f1f1' t1' by auto
+
+    have rew2: "rrename ff2' (rrename (inv f2' \<circ> f2) t) = rrename f1 t" 
+    by (smt (verit, del_insts) bij_betw_imp_inj_on bij_imp_bij_inv bij_o f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2' ff2'_def o_inv_o_cancel supp_inv_bound term.rrename_comps term_pre.supp_comp_bound)
+ 
+    show "b1 = b2" unfolding 1(3) 2(3) 
+    apply(rule LamB_inject_strong'_rev[OF b12', of z _ _ f1' ff2'])
+      subgoal using z fvb1' by auto
+      subgoal using z fvb2' by auto
+      subgoal using f1' by auto  subgoal using f1' by auto
+      subgoal using f1' by auto  subgoal using z1 by auto
+      subgoal using ff2' by auto  subgoal using ff2' by auto
+      subgoal using ff2' by auto  subgoal using zz2 by auto 
+      subgoal apply(rule Lam1[OF f1(1,2)])  
+        subgoal using Lam3[OF if1' 1(1)[unfolded t1'] f1'(1,2), unfolded rew1] .
+        subgoal using Lam3[OF if2' 2(1)[unfolded t2'] ff2'(1,2), unfolded rew2] . . .
+  (* *)
+  next
+    fix b y 
+    assume "R (Lam x t) b" "y \<in> FVarsB b" 
+    show "y \<in> FFVars (Lam x t)"
+    sorry
+  (* *)
+  next
+    fix b and f :: "var\<Rightarrow>var"
+    assume "R (Lam x t) b" and f: "bij f" "|supp f| <o |UNIV::var set|"
+    show "R (rrename f (Lam x t)) (renB f b)" 
+    sorry
+  qed
+qed
+
+lemmas R_functional = R_main[THEN conjunct1]
+lemmas R_FFVars = R_main[THEN conjunct2, THEN conjunct1]
+lemmas R_subst = R_main[THEN conjunct2, THEN conjunct2]
+
+definition H :: "trm \<Rightarrow> 'b" where "H t \<equiv> SOME d. R t d"
+
+lemma R_F: "R t (H t)"
+by (simp add: R_total H_def someI_ex)
+
 lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
-sorry
+apply(rule exI[of _ H]) unfolding morFromTrm_def apply(intro conjI)
+  subgoal using R_B R_F by auto
+  subgoal using R.Var R_F R_functional by blast
+  subgoal using R.App R_F R_functional by blast
+  subgoal using R.Lam R_F R_functional by blast
+  subgoal by (meson R_F R_functional R_subst)
+  subgoal by (simp add: R_F R_FFVars) .
 
 definition rec where "rec \<equiv> SOME H. morFromTrm H"
 

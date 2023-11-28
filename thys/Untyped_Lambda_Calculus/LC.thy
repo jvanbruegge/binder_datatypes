@@ -804,7 +804,7 @@ by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map)
 
 
 
-(* *)
+(* RECURSOR PREPARATIONS: *)
 
 thm Lam_inject[no_vars]
 
@@ -849,15 +849,26 @@ proof-
   using f f' ff' by auto
 qed
 
-
-thm term.induct[no_vars]
-
 lemma trm_rrename_induct[case_names Var App Lam]:
-assumes "\<And>x. P (Var (x::var))"
-and "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (App e1 e2)" 
-and "\<And>x e. (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> P (rrename f e)) \<Longrightarrow> P (Lam x e)"
+assumes VVar: "\<And>x. P (Var (x::var))"
+and AApp: "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (App e1 e2)" 
+and LLam: "\<And>x e. (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> P (rrename f e)) \<Longrightarrow> P (Lam x e)"
 shows "P t"
-sorry
+proof-
+  have "\<forall>f. bij f \<and> |supp f| <o |UNIV::var set| \<longrightarrow> P (rrename f t)"
+  proof(induct)
+    case (Var x)
+    then show ?case using VVar by auto
+  next
+    case (App t1 t2)
+    then show ?case using AApp by auto
+  next
+    case (Lam x t)
+    then show ?case using LLam
+      by simp (metis bij_o term.rrename_comps term_pre.supp_comp_bound)
+  qed
+  thus ?thesis apply(elim allE[of _ id]) by auto
+qed
 
 (* RECURSOR *)
 
@@ -887,9 +898,11 @@ and
 renB_cong[simp]: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
    (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
    renB \<sigma> b = b"
-and 
+(* and 
+NB: This is redundant:  
 renB_FVarsB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
    x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
+*)
 and 
 (* *)
 renB_VarB[simp]: "\<And>\<sigma> x. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VarB x) = VarB (\<sigma> x)"
@@ -907,29 +920,6 @@ FVarsB_AppB: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (AppB 
 and 
 FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
 begin 
-
-
-
-definition morFromTrm where 
-"morFromTrm H \<equiv> 
- (\<forall>e. H e \<in> B) \<and>  
- (\<forall>x. H (Var x) = VarB x) \<and> 
- (\<forall>e1 e2. H (App e1 e2) = AppB (H e1) (H e2)) \<and> 
- (\<forall>x e. H (Lam x e) = LamB x (H e)) \<and> 
- (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
- (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
-
-inductive R where 
-Var: "R (Var x) (VarB x)"
-|
-App: "R e1 b1 \<Longrightarrow> R e2 b2 \<Longrightarrow> R (App e1 e2) (AppB b1 b2)"
-|
-Lam: "R e b \<Longrightarrow> R (Lam x e) (LamB x b)"
-
-term R
-
-
-thm Lam_inject_strong[no_vars]
 
 lemma not_in_FVarsB_LamB: "b \<in> B \<Longrightarrow> x \<notin> FVarsB (LamB x b)"
 using FVarsB_LamB by auto
@@ -968,7 +958,28 @@ proof-
   using assms FVarsB_LamB id_on_def unfolding c by auto
   finally show ?thesis .
 qed
-  
+
+(* NB: 
+We obtain a more general recursor if we replace renB_cong with LamB_inject_strong_rev; 
+and an even more general one if we replace it with LamB_inject_strong'_rev. 
+*)
+
+definition morFromTrm where 
+"morFromTrm H \<equiv> 
+ (\<forall>e. H e \<in> B) \<and>  
+ (\<forall>x. H (Var x) = VarB x) \<and> 
+ (\<forall>e1 e2. H (App e1 e2) = AppB (H e1) (H e2)) \<and> 
+ (\<forall>x e. H (Lam x e) = LamB x (H e)) \<and> 
+ (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
+ (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
+
+inductive R where 
+Var: "R (Var x) (VarB x)"
+|
+App: "R e1 b1 \<Longrightarrow> R e2 b2 \<Longrightarrow> R (App e1 e2) (AppB b1 b2)"
+|
+Lam: "R e b \<Longrightarrow> R (Lam x e) (LamB x b)"
+
 (* *)
 
 lemma R_Var_elim[simp]: "R (Var x) b \<longleftrightarrow> b = VarB x"

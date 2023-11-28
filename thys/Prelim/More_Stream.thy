@@ -317,6 +317,37 @@ apply(rule exI[of _ "\<lambda>x. if x \<in> dsset xs then dsnth ys (dtheN xs x) 
 unfolding bij_betw_def inj_on_def apply (simp add: dsmap_alt inj_on_def) 
 by (smt (verit, ccfv_SIG) ComplD dsset_range id_on_def image_cong image_image range_eqI surj_dtheN)
 
+lemma countable_dsset: "countable (dsset xs)" 
+by (simp add: countable_sset dsset.rep_eq)
+
+lemma dsset_card_le: "|dsset xs| \<le>o |UNIV::nat set|"
+using countable_card_of_nat countable_dsset by blast
+
+lemma dsset_card_ls: "|dsset xs| <o |UNIV::'a :: infinite_regular set|"
+proof-
+  have "|dsset xs| <o |Field (card_suc natLeq)|" 
+    using Card_order_iff_ordLeq_card_of Prelim.Card_order_card_suc 
+    card_suc_greater_set dsset_natLeq natLeq_card_order ordLess_ordLeq_trans by blast
+  thus ?thesis 
+    using large ordLess_ordLeq_trans by blast
+qed
+
+lemma ex_dsmap': 
+assumes ds: "dsset xs \<inter> dsset ys = {}"
+shows "\<exists>f::'a\<Rightarrow>'a. bij f \<and> |supp f| <o |UNIV::'a :: infinite_regular set| \<and> 
+   bij_betw f (dsset xs) (dsset ys) \<and> dsmap f xs = ys"
+proof-
+  obtain f where f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys"
+  using ex_dsmap by auto
+  obtain u where u: "bij u \<and> |supp u| <o |UNIV::'a :: infinite_regular set| \<and> 
+     bij_betw u (dsset xs) (dsset ys) \<and> eq_on (dsset xs) u f" 
+  using ex_bij_betw_supp_UNIV[OF _ _ f(1) ds, where C = "{}", simplified]  
+  using dsset_card_ls infinite by blast
+  show ?thesis apply(rule exI[of _ u])
+  using u f(2) apply auto  
+  by (meson bij_betw_imp_inj_on dsmap_cong eq_on_def f(1))
+qed
+
 lemma dsmap_eq: 
 "inj_on f (dsset xs) \<Longrightarrow> dsmap f xs = xs \<longleftrightarrow> id_on (dsset xs) f"
 apply transfer using smap_eq by auto

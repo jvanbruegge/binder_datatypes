@@ -987,6 +987,158 @@ proof
     by (smt (verit) Diff_iff Int_emptyD UnCI bf bij_betw_iff_bijections iterm.set(3)) . .  
 qed(unfold iLam_inject, auto)
 
+
+
+(* RECURSOR PREPARATIONS: *)
+
+thm iLam_inject[no_vars]
+
+
+
+lemma iLam_inject_strong:
+assumes il: "iLam (xs::ivar dstream) e = iLam xs' e'" 
+and ds: "dsset xs \<inter> dsset xs' = {}" 
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and>  
+   id_on (- (dsset xs \<union> dsset xs')) f \<and> id_on (FFVars (iLam xs e)) f \<and>
+   dsmap f xs = xs' \<and> irrename f e = e'" 
+proof-
+  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|"  "dsmap f xs = xs'" 
+  and ff: "id_on (FFVars (iLam xs e)) f" "irrename f e = e'"  
+  using assms unfolding iLam_inject by auto
+  have bf: "bij_betw f (dsset xs) (dsset xs')"
+  by (metis bij_imp_bij_betw dstream.set_map f)
+  have bif: "bij_betw (inv f) (dsset xs') (dsset xs)"
+  using bf bij_bij_betw_inv f by blast
+  define g where "g \<equiv> \<lambda>x. if x \<in> dsset xs then f x 
+    else if x \<in> dsset xs' then inv f x else x"
+  have sg: "supp g \<subseteq> dsset xs \<union> dsset xs'" unfolding g_def supp_def by auto
+  show ?thesis apply(rule exI[of _ g]) apply safe
+    subgoal unfolding bij_def apply(rule conjI)
+      subgoal unfolding inj_def   
+        by (smt (verit, del_insts) Int_emptyD bf bij_betw_apply 
+         bij_implies_inject bijection.eq_invI bijection.intro ds dstream.set_map 
+         f g_def image_in_bij_eq)
+      subgoal apply (auto simp: image_def g_def)  
+        apply (metis (no_types, lifting) Int_Collect Int_ac(3) Int_emptyD bf 
+          bij_betw_apply ds f(1) inv_simp1)
+        by (metis bif bij_betw_apply f(1) inv_simp2) .
+      subgoal by (meson card_dsset_ivar card_of_subset_bound sg var_stream_class.Un_bound)
+      subgoal unfolding id_on_def g_def by auto
+      subgoal unfolding g_def id_on_def  
+        by (metis f(1) ff(1) id_onD inv_simp1)  
+      subgoal using f 
+        by (meson \<open>bij g\<close> \<open>|supp g| <o |UNIV|\<close> dstream.map_cong g_def)
+      subgoal by (metis f ff \<open>bij g\<close> \<open>dsmap g xs = xs'\<close> \<open>id_on (FFVars (iLam xs e)) g\<close> 
+        \<open>|supp g| <o |UNIV|\<close> iLam_inject iLam_same_inject) .
+qed
+
+
+lemma iLam_inject_strong':
+assumes il: "iLam (xs::ivar dstream) e = iLam xs' e'" 
+and zs: "dsset zs \<inter> (dsset xs \<union> dsset xs' \<union> FFVars e \<union> FFVars e') = {}"
+shows 
+"\<exists>f f'. 
+   bij f \<and> |supp f| <o |UNIV::ivar set| \<and> 
+     id_on ((- (dsset xs \<union> dsset zs))) f \<and> id_on (FFVars (iLam xs e)) f \<and> dsmap f xs = zs \<and> 
+   bij f' \<and> |supp f'| <o |UNIV::ivar set| \<and> 
+     id_on (- (dsset xs' \<union> dsset zs)) f' \<and> id_on (FFVars (iLam xs' e')) f' \<and> dsmap f' xs' = zs \<and> 
+   irrename f e = irrename f' e'"
+proof-
+  
+  have ds: "dsset xs \<inter> dsset zs = {}" using zs by auto
+  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|"
+  "dsmap f xs = zs" and bf: "bij_betw f (dsset xs) (dsset zs)"  
+  using ex_dsmap'[OF ds] by auto
+  have bif: "bij_betw (inv f) (dsset zs) (dsset xs)"
+  using bf bij_bij_betw_inv f by blast
+
+  define g where "g \<equiv> \<lambda>x. if x \<in> dsset xs then f x 
+    else if x \<in> dsset zs then inv f x else x"
+  have sg: "supp g \<subseteq> dsset xs \<union> dsset zs" unfolding g_def supp_def by auto
+  
+  have g: "bij g \<and> |supp g| <o |UNIV::ivar set| \<and>  
+   id_on (- (dsset xs \<union> dsset zs)) g \<and> id_on (FFVars (iLam xs e)) g \<and>
+   dsmap g xs = zs" apply safe
+  subgoal unfolding bij_def apply(rule conjI)
+      subgoal unfolding inj_def   
+        by (smt (verit, del_insts) Int_emptyD bf bij_betw_apply 
+         bij_implies_inject bijection.eq_invI bijection.intro ds dstream.set_map 
+         f g_def image_in_bij_eq)
+      subgoal apply (auto simp: image_def g_def)  
+        apply (metis (no_types, lifting) Int_Collect Int_ac(3) Int_emptyD bf 
+          bij_betw_apply ds f(1) inv_simp1)
+        by (metis bif bij_betw_apply f(1) inv_simp2) .
+      subgoal by (meson card_dsset_ivar card_of_subset_bound sg var_stream_class.Un_bound)
+      subgoal unfolding id_on_def g_def by auto
+      subgoal unfolding g_def id_on_def using Int_Un_emptyI1 zs by auto
+      subgoal by (metis \<open>bij g\<close> \<open>|supp g| <o |UNIV|\<close> dstream.map_cong f(1) f(2) f(3) g_def) .
+
+
+term (*
+        by (smt (verit, del_insts) Int_emptyD bf bij_betw_apply 
+         bij_implies_injsect bijection.eq_invI bijection.intro ds dstream.set_map 
+         f g_def image_in_bij_eq)
+      subgoal apply (auto simp: image_def g_def)  
+        apply (metis (no_types, lifting) Int_Collect Int_ac(3) Int_emptyD bf 
+          bij_betw_apply ds f inv_simp1)
+        by (metis bif bij_betw_apply f inv_simp2) .
+      subgoal by (meson card_dsset_ivar card_of_subset_bound sg var_stream_class.Un_bound)
+      subgoal unfolding id_on_def g_def by auto
+      subgoal using f unfolding g_def id_on_def by (metis inv_simp1)
+      subgoal using f 
+        by (meson \<open>bij g\<close> \<open>|supp g| <o |UNIV|\<close> dstream.map_cong g_def)
+      subgoal by (metis f \<open>bij g\<close> \<open>dsmap g xs = xs'\<close> \<open>id_on (FFVars (iLam xs e)) g\<close> 
+        \<open>|supp g| <o |UNIV|\<close> iLam_inject iLam_same_inject) .
+     
+  
+
+
+  define f where "f = id(x := z, z := x)"
+  have f: "bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFiVars (iLam x e)) f \<and> f x = z"
+  using z unfolding f_def id_on_def by auto
+  define f' where "f' = id(x' := z, z := x')"
+  have f': "bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFiVars (iLam x' e')) f' \<and> f' x' = z"
+  using z unfolding f'_def id_on_def by auto
+ 
+  obtain g where g: "bij g \<and> |supp g| <o |UNIV::var set| \<and> id_on (FFiVars (iLam x e)) g \<and> g x = x'" and ge: "e' = irrename g e"
+  using il unfolding iLam_inject by auto
+
+  have ff': "irrename f e = irrename f' e'" 
+  unfolding f_def f'_def ge unfolding f_def f'_def using g apply(subst term.irrename_comps)
+    subgoal by auto  subgoal by auto subgoal by auto subgoal by auto
+    subgoal apply(rule irrename_cong) using g
+      subgoal by auto  subgoal by auto subgoal by auto 
+      subgoal using term_pre.supp_comp_bound by auto
+      subgoal using term_pre.supp_comp_bound z unfolding id_on_def by auto . .
+
+  show ?thesis
+  apply(rule exI[of _ f]) apply(rule exI[of _ f'])
+  using f f' ff' by auto
+qed
+
+lemma itrm_irrename_induct[case_names iVar iApp iLam]:
+assumes iiVar: "\<And>x. P (iVar (x::var))"
+and iiApp: "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (iApp e1 e2)" 
+and iiLam: "\<And>x e. (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> P (irrename f e)) \<Longrightarrow> P (iLam x e)"
+shows "P t"
+proof-
+  have "\<forall>f. bij f \<and> |supp f| <o |UNIV::var set| \<longrightarrow> P (irrename f t)"
+  proof(induct)
+    case (iVar x)
+    then show ?case using iiVar by auto
+  next
+    case (iApp t1 t2)
+    then show ?case using iiApp by auto
+  next
+    case (iLam x t)
+    then show ?case using iiLam
+      by simp (metis bij_o term.irrename_comps term_pre.supp_comp_bound)
+  qed
+  thus ?thesis apply(elim allE[of _ id]) by auto
+qed
+
+
+term term (*
 (* RECURSOR *)
 
 locale ILC_Rec = 

@@ -1,16 +1,10 @@
 theory Super_Recursor
-imports BSmall Supervariables
+imports BSmall Supervariables ILC_Good 
 begin
 
 
 (* "SUPER" RECURSOR (i.e., restricted to supervariable binders)  *)
 
-inductive good where 
-iVar: "x \<in> RSuper \<Longrightarrow> good (iVar x)"
-|
-iApp: "good e1 \<Longrightarrow> (\<forall>e2\<in>sset es2. good e2) \<Longrightarrow> good (iApp e1 es2)"
-|
-iLam: "super xs \<Longrightarrow> good e \<Longrightarrow> good (iLam xs e)"
 
 locale ILC_SuperRec = 
 fixes B :: "'b set"

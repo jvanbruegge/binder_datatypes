@@ -186,9 +186,20 @@ using super_dsset_singl touchedSuper_def by auto
 lemma touchedSuper_dsset_superOf[simp]: "touchedSuper (dsset (superOf x)) = {superOf x}"
 by auto
 
-
 (* The notion of a function preserving supervariables: *)
 definition "presSuper \<sigma> \<equiv> \<forall>xs. super xs \<longleftrightarrow> super (dsmap \<sigma> xs)"  
+
+(* *)
+
+lemma touchedSuperT_irrename[simp]: 
+"bij f \<and> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+ touchedSuperT (irrename f e) = (dsmap f) ` (touchedSuperT e)"
+unfolding touchedSuperT_def touchedSuper_def image_def 
+by auto (smt (verit, ccfv_threshold) Int_emptyD bij_betw_inv_into dstream.map_comp dstream.map_id 
+dstream.set_map image_in_bij_eq inv_inv_eq inv_o_simp1 presSuper_def supp_inv_bound)+ 
+
+
+(* *)
 
 
 lemma extend_super1: 
@@ -350,6 +361,9 @@ unfolding bij_betw_def inj_on_def apply auto
   apply (metis theSN')
   apply (meson UnionI imageI rangeI theSN)
   by (metis imageI theSN_ex)
+
+
+
 
 
 end 

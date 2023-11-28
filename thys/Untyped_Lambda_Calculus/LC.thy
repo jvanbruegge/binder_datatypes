@@ -1105,10 +1105,46 @@ next
   (* *)
   next
     fix b y 
-    assume R: "R (Lam x t) b" and y: "y \<in> FVarsB b"
+    assume R: "R (Lam x t) b" and yy: "y \<in> FVarsB b"
     then obtain x' t' b'
     where 0: "R t' b'" "Lam x t = Lam x' t'" "b = LamB x' b'" 
     using R_Lam_elim by metis
+
+    have b': "b' \<in>  B"
+    using 0(1,3) R_B by auto
+
+    have y: "y \<noteq> x'" "y \<in> FVarsB b'" using b' yy unfolding 0 
+    using FVarsB_LamB[OF b'] by auto
+
+    have "|{x,x'} \<union> FFVars t \<union> FFVars t'| <o |UNIV::var set|"
+    by (metis Un_insert_right singl_bound sup_bot_right term.set_bd_UNIV var_term_pre_class.Un_bound)
+    then obtain z where z: 
+    "z \<notin> {x,x'} \<union> FFVars t \<union> FFVars t'" 
+    by (meson exists_fresh)
+
+    obtain f where 
+    f: "bij f" "|supp f| <o |UNIV::var set|"
+       "id_on (- {x, x'}) f \<and> id_on (FFVars (Lam x t)) f" 
+    and z: "f x = x'"   
+    and t': "t' = rrename f t" 
+    using  Lam_inject_strong[OF 0(2)] by auto
+    
+    have fvb't': "FVarsB b' \<subseteq> FFVars t'"
+    using Lam2[OF f(1,2), unfolded t'[symmetric], OF 0(1)] .
+    have yt': "y \<in> FFVars t'" using fvb't' y(2) by auto
+
+    show "y \<in> FFVars (Lam x t)" using yt' y unfolding 0(2) by auto
+  (* *)
+  next
+    fix b and f :: "var\<Rightarrow>var"
+
+    assume "R (Lam x t) b" and f: "bij f" "|supp f| <o |UNIV::var set|"
+
+   
+    then obtain x' t' b'
+    where 0: "R t' b'" "Lam x t = Lam x' t'" "b = LamB x' b'" 
+    using R_Lam_elim by metis
+
 
     have b': "b' \<in>  B"
     using 0(1,3) R_B by auto
@@ -1119,14 +1155,24 @@ next
     "z \<notin> {x,x'} \<union> FFVars t \<union> FFVars t'" 
     by (meson exists_fresh)
 
-    show "y \<in> FFVars (Lam x t)" unfolding 0(2)
-    sorry
-  (* *)
-  next
-    fix b and f :: "var\<Rightarrow>var"
-    assume "R (Lam x t) b" and f: "bij f" "|supp f| <o |UNIV::var set|"
+    obtain g where 
+    g: "bij g" "|supp g| <o |UNIV::var set|"
+       "id_on (- {x, x'}) g \<and> id_on (FFVars (Lam x t)) g" 
+    and z: "g x = x'"   
+    and t': "t' = rrename g t" 
+    using Lam_inject_strong[OF 0(2)] by auto
+
+    have RR: "R (Lam (f x') (rrename f t')) (LamB (f x') (renB f b'))"
+    apply(rule R.Lam) unfolding t' apply(rule Lam3)
+      subgoal by fact  subgoal by fact
+      subgoal using 0(1) unfolding t' .
+      subgoal by fact subgoal by fact .
+
     show "R (rrename f (Lam x t)) (renB f b)" 
-    sorry
+    unfolding 0 using RR apply(subst rrename_simps) 
+      subgoal using f by auto subgoal using f by auto
+      subgoal apply(subst renB_LamB)
+       using f b' by auto .  
   qed
 qed
 

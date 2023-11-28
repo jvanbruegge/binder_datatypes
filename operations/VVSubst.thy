@@ -1353,82 +1353,23 @@ proof -
        apply (rule trans)
         apply (rule vvsubst_cctor_1 vvsubst_cctor_2)
              apply (rule f_prems supp_id_bound bij_id)+
-        (* helper_tac *)
-          apply (subst Int_commute)
-        (* Int_empty_tac *)
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI)
-          apply (rule impI)
-          apply assumption
-        (* END Int_empty_tac *)
-         apply (subst Int_commute)
-        (* Int_empty_tac *)
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption
-        (* END Int_empty_tac *)
-        apply (unfold Int_Un_distrib Un_empty noclash_T1_def)
         (* REPEAT_DETERM *)
-        apply (rule conjI)+
         (* Int_empty_tac *)
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI)
-           apply (rule impI)
-           apply assumption
-        (* END Int_empty_tac *)
+          apply (subst Int_commute)
           apply (rule iffD2[OF disjoint_iff])
           apply (rule allI)
           apply (rule impI)
-          apply assumption?
-          apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-          apply (rule iffD2[OF Set.bex_simps(8)])
-          apply (rule ballI)
           apply assumption
-        (* repeated *)
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption?
-         apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-         apply (rule iffD2[OF Set.bex_simps(8)])
-         apply (rule ballI)
-         apply assumption
-        (* copied from above *)
-        apply (rule conjI)+
-        (* Int_empty_tac *)
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI)
-           apply (rule impI)
-           apply assumption
         (* END Int_empty_tac *)
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI)
-          apply (rule impI)
-          apply assumption?
-          apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-          apply (rule iffD2[OF Set.bex_simps(8)])
-          apply (rule ballI)
-          apply assumption
-        (* repeated *)
+        (* Int_empty_tac repeated *)
+         apply (subst Int_commute)
          apply (rule iffD2[OF disjoint_iff])
          apply (rule allI)
          apply (rule impI)
-         apply assumption?
-         apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-         apply (rule iffD2[OF Set.bex_simps(8)])
-         apply (rule ballI)
          apply assumption
-        (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
+        (* END Int_empty_tac repeated *)
+        (* END REPEAT_DETERM *)
         apply assumption
-        (* END helper_tac *)
        apply (rule sym)
        apply (rule trans)
         apply (rule T1.rrename_cctors)
@@ -1439,19 +1380,18 @@ proof -
         (* REPEAT_DETERM *)
             apply (rule trans[OF _ id_apply[symmetric]])
             apply (erule id_onD[OF imsupp_id_on, rotated])
-            apply (subst Int_commute)
         (* Int_empty_tac *)
+            apply (subst Int_commute)
             apply (rule iffD2[OF disjoint_iff])
             apply (rule allI)
             apply (rule impI)
             apply assumption
         (* END Int_empty_tac *)
         (* copied from above *)
-
            apply (rule trans[OF _ id_apply[symmetric]])
            apply (erule id_onD[OF imsupp_id_on, rotated])
-           apply (subst Int_commute)
         (* Int_empty_tac *)
+           apply (subst Int_commute)
            apply (rule iffD2[OF disjoint_iff])
            apply (rule allI)
            apply (rule impI)
@@ -1463,82 +1403,21 @@ proof -
       apply (rule trans)
        apply (rule vvsubst_cctor_1 vvsubst_cctor_2)
             apply (rule f_prems supp_id_bound bij_id)+
-        (* helper_tac *)
+        (* Int_empty_tac *)
          apply (subst Int_commute)
-        (* Int_empty_tac *)
          apply (rule iffD2[OF disjoint_iff])
          apply (rule allI)
          apply (rule impI)
          apply assumption
         (* END Int_empty_tac *)
+        (* Int_empty_tac *)
         apply (subst Int_commute)
-        (* Int_empty_tac *)
         apply (rule iffD2[OF disjoint_iff])
         apply (rule allI)
         apply (rule impI)
         apply assumption
         (* END Int_empty_tac *)
-       apply (unfold Int_Un_distrib Un_empty noclash_T2_def)
-        (* REPEAT_DETERM *)
-       apply (rule conjI)+
-        (* Int_empty_tac *)
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI)
-          apply (rule impI)
-          apply assumption
-        (* END Int_empty_tac *)
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption?
-         apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-         apply (rule iffD2[OF Set.bex_simps(8)])
-         apply (rule ballI)
-         apply assumption
-        (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
-        apply assumption
-        (* copied from above *)
-       apply (rule conjI)+
-        (* Int_empty_tac *)
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI)
-          apply (rule impI)
-          apply assumption
-        (* END Int_empty_tac *)
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption?
-         apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-         apply (rule iffD2[OF Set.bex_simps(8)])
-         apply (rule ballI)
-         apply assumption
-        (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
-        apply assumption
-        (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-        (* END helper_tac *)
+      apply assumption
       apply (rule sym)
       apply (rule trans)
        apply (rule T1.rrename_cctors)
@@ -1549,19 +1428,18 @@ proof -
         (* REPEAT_DETERM *)
            apply (rule trans[OF _ id_apply[symmetric]])
            apply (erule id_onD[OF imsupp_id_on, rotated])
-           apply (subst Int_commute)
         (* Int_empty_tac *)
+           apply (subst Int_commute)
            apply (rule iffD2[OF disjoint_iff])
            apply (rule allI)
            apply (rule impI)
            apply assumption
         (* END Int_empty_tac *)
         (* copied from above *)
-
           apply (rule trans[OF _ id_apply[symmetric]])
           apply (erule id_onD[OF imsupp_id_on, rotated])
-          apply (subst Int_commute)
         (* Int_empty_tac *)
+          apply (subst Int_commute)
           apply (rule iffD2[OF disjoint_iff])
           apply (rule allI)
           apply (rule impI)
@@ -1610,52 +1488,6 @@ proof -
   have x: "((FFVars_T11 (vvsubst_T1 f1 f2 f3 f4 x) = f1 ` FFVars_T11 x) \<and> (FFVars_T12 (vvsubst_T1 f1 f2 f3 f4 x) = f2 ` FFVars_T12 x))
       \<and> ((FFVars_T21 (vvsubst_T2 f1 f2 f3 f4 y) = f1 ` FFVars_T21 y) \<and> (FFVars_T22 (vvsubst_T2 f1 f2 f3 f4 y) = f2 ` FFVars_T22 y))"
     apply (rule T1.TT_fresh_co_induct[of _ _ _ _ x y, rotated 2])
-       apply (subgoal_tac "noclash_T1 v1") (* TODO: Add this directly to the induction theorem *)
-        prefer 2
-        apply (unfold noclash_T1_def Int_Un_distrib Un_empty)[1]
-      (* REPEAT_DETERM *)
-        apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-      (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-      (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI impI)+
-        apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-        apply assumption
-      (* END REPEAT_DETERM *)
        apply (rule conjI)
         apply (subst vvsubst_cctor_1)
               apply (rule f_prems)+
@@ -1753,54 +1585,7 @@ proof -
        apply assumption
       apply assumption?
 
-(* second type *)
-      apply (subgoal_tac "noclash_T2 v2") (* TODO: Add this directly to the induction theorem *)
-       prefer 2
-       apply (unfold noclash_T2_def Int_Un_distrib Un_empty)[1]
-      (* REPEAT_DETERM *)
-       apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI impI)+
-        apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-        apply assumption
-      (* repeated *)
-       apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI impI)+
-        apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-        apply assumption
-      (* repeated *)
-       apply ((rule conjI)+)?
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI impI)+
-       apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-       apply assumption
-      (* END REPEAT_DETERM *)
-
+      (* second type *)
       apply (rule conjI)
        apply (subst vvsubst_cctor_2)
              apply (rule f_prems)+
@@ -1954,64 +1739,7 @@ proof -
        apply (rule impI)
        apply assumption
       (* END REPEAT_DETERM *)
-      apply (unfold noclash_T1_def Int_Un_distrib Un_empty)
-      apply (rule conjI)+
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption
-      (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      apply (rule conjI)+
-      (* repeated *)
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption
-      (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      (* repeated *)
-      apply (rule iffD2[OF disjoint_iff])
-      apply (rule allI)
-      apply (rule impI)
-      apply assumption?
-      apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-      apply (rule iffD2[OF Set.bex_simps(8)])
-      apply (rule ballI)
       apply assumption
-      (* END REPEAT_DETERM *)
      apply (unfold set3_T1_simp)
      apply (subst T1_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
      apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2034,64 +1762,7 @@ proof -
       apply (rule impI)
       apply assumption
       (* END REPEAT_DETERM *)
-     apply (unfold noclash_T2_def Int_Un_distrib Un_empty)
-     apply (rule conjI)+
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      (* repeated *)
-      apply (rule iffD2[OF disjoint_iff])
-      apply (rule allI)
-      apply (rule impI)
-      apply assumption?
-      apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-      apply (rule iffD2[OF Set.bex_simps(8)])
-      apply (rule ballI)
-      apply assumption
-     apply (rule conjI)+
-      (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      (* repeated *)
-      apply (rule iffD2[OF disjoint_iff])
-      apply (rule allI)
-      apply (rule impI)
-      apply assumption?
-      apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-      apply (rule iffD2[OF Set.bex_simps(8)])
-      apply (rule ballI)
-      apply assumption
-      (* repeated *)
-     apply (rule iffD2[OF disjoint_iff])
-     apply (rule allI)
-     apply (rule impI)
-     apply assumption?
-     apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-     apply (rule iffD2[OF Set.bex_simps(8)])
-     apply (rule ballI)
      apply assumption
-      (* END REPEAT_DETERM *)
     apply (unfold set3_T2_simp)
     apply (subst T2_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
     apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2145,64 +1816,7 @@ proof -
        apply (rule impI)
        apply assumption
       (* END REPEAT_DETERM *)
-      apply (unfold noclash_T1_def Int_Un_distrib Un_empty)
-      apply (rule conjI)+
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption
-      (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      apply (rule conjI)+
-      (* repeated *)
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI)
-         apply (rule impI)
-         apply assumption
-      (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption?
-        apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-        apply (rule iffD2[OF Set.bex_simps(8)])
-        apply (rule ballI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      (* repeated *)
-      apply (rule iffD2[OF disjoint_iff])
-      apply (rule allI)
-      apply (rule impI)
-      apply assumption?
-      apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-      apply (rule iffD2[OF Set.bex_simps(8)])
-      apply (rule ballI)
       apply assumption
-      (* END REPEAT_DETERM *)
      apply (unfold set4_T1_simp)
      apply (subst T1_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
      apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2225,64 +1839,7 @@ proof -
       apply (rule impI)
       apply assumption
       (* END REPEAT_DETERM *)
-     apply (unfold noclash_T2_def Int_Un_distrib Un_empty)
-     apply (rule conjI)+
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      (* repeated *)
-      apply (rule iffD2[OF disjoint_iff])
-      apply (rule allI)
-      apply (rule impI)
-      apply assumption?
-      apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-      apply (rule iffD2[OF Set.bex_simps(8)])
-      apply (rule ballI)
-      apply assumption
-     apply (rule conjI)+
-      (* repeated *)
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI)
-        apply (rule impI)
-        apply assumption
-      (* repeated *)
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI)
-       apply (rule impI)
-       apply assumption?
-       apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-       apply (rule iffD2[OF Set.bex_simps(8)])
-       apply (rule ballI)
-       apply assumption
-      (* repeated *)
-      apply (rule iffD2[OF disjoint_iff])
-      apply (rule allI)
-      apply (rule impI)
-      apply assumption?
-      apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-      apply (rule iffD2[OF Set.bex_simps(8)])
-      apply (rule ballI)
-      apply assumption
-      (* repeated *)
-     apply (rule iffD2[OF disjoint_iff])
-     apply (rule allI)
-     apply (rule impI)
-     apply assumption?
-     apply (rule iffD2[OF arg_cong[OF UN_iff, of Not]])
-     apply (rule iffD2[OF Set.bex_simps(8)])
-     apply (rule ballI)
      apply assumption
-      (* END REPEAT_DETERM *)
     apply (unfold set4_T2_simp)
     apply (subst T2_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
     apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2364,54 +1921,6 @@ proof -
     \<and> (vvsubst_T2 (g1 \<circ> f1) (g2 \<circ> f2) (g3 \<circ> f3) (g4 \<circ> f4) t2 = vvsubst_T2 g1 g2 g3 g4 (vvsubst_T2 f1 f2 f3 f4 t2))"
     subgoal for t1 t2
       apply (rule T1.TT_fresh_co_induct[of _ _ _ _ t1 t2, rotated 2])
-
-         apply (subgoal_tac "noclash_T1 v1") (* TODO: Add this directly to the induction theorem *)
-          prefer 2
-          apply (unfold noclash_T1_def Int_Un_distrib Un_empty)[1]
-        (* REPEAT_DETERM *)
-          apply ((rule conjI)+)?
-             apply (rule iffD2[OF disjoint_iff])
-             apply (rule allI impI)+
-             apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-             apply assumption
-        (* repeated *)
-            apply ((rule conjI)+)?
-            apply (rule iffD2[OF disjoint_iff])
-            apply (rule allI impI)+
-            apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-            apply assumption
-        (* repeated *)
-           apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-        (* repeated *)
-          apply ((rule conjI)+)?
-             apply (rule iffD2[OF disjoint_iff])
-             apply (rule allI impI)+
-             apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-             apply assumption
-        (* repeated *)
-            apply ((rule conjI)+)?
-            apply (rule iffD2[OF disjoint_iff])
-            apply (rule allI impI)+
-            apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-            apply assumption
-        (* repeated *)
-           apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-        (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-        (* END REPEAT_DETERM *)
-
          apply (rule trans)
           apply (rule vvsubst_cctor_1)
                apply (rule supp_comp_bound f_prems g_prems infinite_UNIV)+
@@ -2456,7 +1965,7 @@ proof -
           apply (rule vvsubst_cctor_1)
                apply (rule g_prems)+
 
-(* REPEAT_DETERM *)
+            (* REPEAT_DETERM *)
             apply (subst T1_pre.set_map)
                    apply (rule f_prems supp_id_bound bij_id)+
             apply (unfold image_id)
@@ -2515,54 +2024,7 @@ proof -
 
             apply (rule trans[OF _ comp_apply[symmetric]], assumption)+
 
-(* second type *)
-        apply (subgoal_tac "noclash_T2 v2") (* TODO: Add this directly to the induction theorem *)
-         prefer 2
-         apply (unfold noclash_T2_def Int_Un_distrib Un_empty)[1]
-        (* REPEAT_DETERM *)
-         apply ((rule conjI)+)?
-            apply (rule iffD2[OF disjoint_iff])
-            apply (rule allI impI)+
-            apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-            apply assumption
-        (* repeated *)
-           apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-        (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-        (* repeated *)
-         apply ((rule conjI)+)?
-            apply (rule iffD2[OF disjoint_iff])
-            apply (rule allI impI)+
-            apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-            apply assumption
-        (* repeated *)
-           apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-        (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-        (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-        (* END REPEAT_DETERM *)
-
+        (* second type *)
         apply (rule trans)
          apply (rule vvsubst_cctor_2)
               apply (rule supp_comp_bound f_prems g_prems infinite_UNIV)+
@@ -2864,53 +2326,6 @@ proof -
     (\<forall>a. a \<in> FFVars_T22 y \<longrightarrow> f2 a = g2 a) \<longrightarrow> (\<forall>a. a \<in> set3_T2 y \<longrightarrow> f3 a = g3 a) \<longrightarrow> (\<forall>a. a \<in> set4_T2 y \<longrightarrow> f4 a = g4 a) \<longrightarrow> vvsubst_T2 f1 f2 f3 f4 y = vvsubst_T2 g1 g2 g3 g4 y)"
     apply (rule T1.TT_fresh_co_induct[of _ _ _ _ x y, rotated 2])
        apply (rule allI impI)+
-       apply (subgoal_tac "noclash_T1 v1") (* TODO: Add this directly to the induction theorem *)
-        prefer 2
-        apply (unfold noclash_T1_def Int_Un_distrib Un_empty)[1]
-      (* REPEAT_DETERM *)
-        apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-      (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-           apply (rule iffD2[OF disjoint_iff])
-           apply (rule allI impI)+
-           apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-           apply assumption
-      (* repeated *)
-          apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI impI)+
-        apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-        apply assumption
-      (* END REPEAT_DETERM *)
-
        apply (rule trans)
         apply (rule vvsubst_cctor_1)
              apply (rule f_prems)+
@@ -3060,54 +2475,8 @@ proof -
        apply assumption
       apply assumption
       done
-        (* second type *)
-      apply (subgoal_tac "noclash_T2 v2") (* TODO: Add this directly to the induction theorem *)
-       prefer 2
-       apply (unfold noclash_T2_def Int_Un_distrib Un_empty)[1]
-      (* REPEAT_DETERM *)
-       apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI impI)+
-        apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-        apply assumption
-      (* repeated *)
-       apply ((rule conjI)+)?
-          apply (rule iffD2[OF disjoint_iff])
-          apply (rule allI impI)+
-          apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-          apply assumption
-      (* repeated *)
-         apply ((rule conjI)+)?
-         apply (rule iffD2[OF disjoint_iff])
-         apply (rule allI impI)+
-         apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-         apply assumption
-      (* repeated *)
-        apply ((rule conjI)+)?
-        apply (rule iffD2[OF disjoint_iff])
-        apply (rule allI impI)+
-        apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-        apply assumption
-      (* repeated *)
-       apply ((rule conjI)+)?
-       apply (rule iffD2[OF disjoint_iff])
-       apply (rule allI impI)+
-       apply ((unfold UN_iff Set.bex_simps(8))[1], rule ballI)?
-       apply assumption
-      (* END REPEAT_DETERM *)
 
+      (* second type *)
       apply (rule trans)
        apply (rule vvsubst_cctor_2)
             apply (rule f_prems)+

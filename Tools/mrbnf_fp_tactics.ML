@@ -86,7 +86,7 @@ sig
       (term -> thm) list -> thm list list -> Proof.context -> thm list -> tactic
   val mk_TT_fresh_induct_param_tac: thm -> (term -> term -> thm) list -> thm list ->
     thm list list -> Proof.context -> thm list -> tactic
-  val mk_TT_fresh_induct_param_no_clash_tac: int -> int -> thm -> thm list -> thm list ->
+  val mk_TT_fresh_induct_param_no_clash_tac: int -> int -> (term * thm) list -> thm -> thm list -> thm list ->
     thm list -> thm list -> Proof.context -> thm list -> tactic
 
   val mk_alpha'_bij_eq_invs_tac: int -> thm -> thm list -> (term list -> term list -> thm list) ->
@@ -968,23 +968,54 @@ fun mk_TT_fresh_induct_param_tac TT_existential_induct mk_exI_funs alpha_aavoids
       aavoid_freshss |> EVERY' o map (fn f => Subgoal.FOCUS_PARAMS f ctxt)]
   end;
 
-fun mk_TT_fresh_induct_param_no_clash_tac fbound n meta_mp_inst UNIV_Is card_of_FFVars_bounds
+fun mk_TT_fresh_induct_param_no_clash_tac fbound n noclashs meta_mp_inst UNIV_Is card_of_FFVars_bounds
   Un_bounds FFVars_cctors ctxt assms =
-  EVERY1 [rtac ctxt meta_mp_inst, rtac ctxt ballI, dtac ctxt bspec, etac ctxt @{thm SigmaI},
-    REPEAT_DETERM o rtac ctxt @{thm SigmaI[rotated]}, map (rtac ctxt) UNIV_Is |> EVERY',
+  EVERY1 [
+    rtac ctxt meta_mp_inst,
+    rtac ctxt ballI,
+    dtac ctxt bspec,
+    etac ctxt @{thm SigmaI},
+    REPEAT_DETERM o rtac ctxt @{thm SigmaI[rotated]},
+    EVERY' (map (rtac ctxt) UNIV_Is),
     asm_simp_only_tac ctxt @{thms prod.case},
-    REPEAT_DETERM_N fbound o (simp_only_plus ctxt @{thms prod.case} [hyp_subst_tac_thin true ctxt,
-      etac ctxt @{thm SigmaE}, resolve_tac ctxt (Un_bounds @ take fbound assms @
-        card_of_FFVars_bounds)] |> SELECT_GOAL o HEADGOAL),
-    REPEAT_DETERM_N n o EVERY' [REPEAT_DETERM o FIRST' [etac ctxt @{thm SigmaE}, hyp_subst_tac ctxt,
-        simp_only ctxt @{thms prod.case}, rtac ctxt impI,
-        eresolve_tac ctxt (map (Drule.rotate_prems ~1) (drop fbound assms))],
-      REPEAT_DETERM o EVERY' [dtac ctxt @{thm meta_spec2}, dtac ctxt meta_mp, assume_tac ctxt,
-      dtac ctxt meta_mp, etac ctxt @{thm SigmaI}, REPEAT_DETERM o rtac ctxt @{thm SigmaI[rotated]},
-      REPEAT_DETERM o rtac ctxt UNIV_I, simp_only_tac ctxt @{thms prod.case}, etac ctxt mp,
-        rtac ctxt refl], asm_simp_only_plus ctxt (FFVars_cctors @ @{thms Un_iff UN_iff
-            de_Morgan_disj simp_thms bex_simps Ball_def})
-          [EVERY' [dtac ctxt meta_spec, dtac ctxt meta_mp, assume_tac ctxt]]]];
+    REPEAT_DETERM_N fbound o (SELECT_GOAL (HEADGOAL (simp_only_plus ctxt @{thms prod.case} [
+      hyp_subst_tac_thin true ctxt,
+      etac ctxt @{thm SigmaE},
+      resolve_tac ctxt (Un_bounds @ take fbound assms @ card_of_FFVars_bounds)
+    ]))),
+    REPEAT_DETERM_N n o EVERY' [
+      REPEAT_DETERM o FIRST' [
+        etac ctxt @{thm SigmaE},
+        hyp_subst_tac ctxt,
+        simp_only ctxt @{thms prod.case},
+        rtac ctxt impI,
+        eresolve_tac ctxt (map (Drule.rotate_prems ~1) (drop fbound assms))
+      ],
+      REPEAT_DETERM o EVERY' [
+        dtac ctxt @{thm meta_spec2},
+        dtac ctxt meta_mp,
+        assume_tac ctxt,
+        dtac ctxt meta_mp,
+        etac ctxt @{thm SigmaI},
+        REPEAT_DETERM o rtac ctxt @{thm SigmaI[rotated]},
+        REPEAT_DETERM o rtac ctxt UNIV_I,
+        simp_only_tac ctxt @{thms prod.case},
+        etac ctxt mp,
+        rtac ctxt refl
+      ],
+      asm_simp_only_plus ctxt (FFVars_cctors @ map snd noclashs
+        @ @{thms Int_Un_distrib disjoint_iff Un_empty Un_iff UN_iff de_Morgan_disj simp_thms bex_simps Ball_def}
+      ) [
+        rtac ctxt conjI,
+        rtac ctxt allI THEN' rtac ctxt impI,
+        EVERY' [
+          dtac ctxt meta_spec,
+          dtac ctxt meta_mp,
+          assume_tac ctxt
+        ]
+      ]
+    ]
+  ];
 
 fun mk_alpha'_bij_eq_invs_tac fbound alpha'_coinduct_inst raw_injects mk_exIs mutual imp_forward
   supp_comp_bounds rename_simps FVars_renames rename_comps alpha'_elims raw_nchotomys mr_rel_maps

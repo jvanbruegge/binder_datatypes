@@ -1527,6 +1527,52 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val (TT_fresh_cases, TT_fresh_nchotomys) = @{map 7} mk_TT_fresh_cases vs ws cctorsAs
       bound_setss_Bs TT_nchotomys alpha_aavoids aavoid_freshss |> split_list;
 
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+    fun mk_noclashs FVarsss = @{fold_map 5} (fn x => fn T => fn fsets => fn bsets => fn rec_sets => fn lthy =>
+      let
+        val name = "noclash_" ^ short_type_name (fst (dest_Type T));
+        val UNss = map (fn FVars => map2 (fn A => mk_UNION (A $ x)) rec_sets (flat (map2 replicate ks FVars))) FVarsss;
+        val mk_free_UNss = map (fn UNs => fn rel => map_filter (fn (i, t) => if member (op=) rel i then NONE else SOME t) ((0 upto length rec_sets - 1) ~~ UNs)) UNss;
+        val rhss = @{map 4} (fn fset => fn bset => fn rel => fn mk_free_UNs =>
+          mk_int_empty (bset $ x, foldl1 mk_Un (fset $ x :: mk_free_UNs rel))
+        ) fsets bsets binding_relation mk_free_UNss;
+        val rhs = Term.absfree (dest_Free x) (foldr1 HOLogic.mk_conj rhss);
+      in mk_def_t true Binding.empty I name 1 rhs lthy end
+    );
+    val (noclashs, lthy) = mk_noclashs FVarsssAs xs CAs (transpose free_setss_Ast) (transpose bound_setss_Ast) rec_setss_As lthy;
+    val (nnoclashs, lthy) = mk_noclashs FFVarsssAs vs CBs (transpose free_setss_Bst) (transpose bound_setss_Bst) rec_setss_Bs lthy;
+
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+    val (noclashs, nnoclashs) =
+      let
+        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (
+          fastype_of (Morphism.term phi (fst (hd noclashs))), fastype_of (fst (hd noclashs))
+        ) Vartab.empty;
+        val morph = map (map_prod
+          (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi)
+          (Morphism.thm phi)
+        );
+      in (morph noclashs, morph nnoclashs) end;
+
+    val nnoclash_noclashs = @{map 5} (fn nnoclash => fn noclash => fn v => fn map_t => fn mrbnf =>
+      let
+        val ids = map HOLogic.id_const As;
+        val goal = mk_Trueprop_eq (
+          fst nnoclash $ v,
+          fst noclash $ (Term.list_comb (map_t, ids @ take fbound ids @ flat (map2 replicate ks TT_reps)) $ v)
+        );
+      in Goal.prove_sorry lthy [fst (dest_Free v)] [] goal (fn {context=ctxt, ...} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt (map snd noclashs @ map snd nnoclashs)),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+        ],
+        K (Local_Defs.unfold0_tac ctxt (@{thms image_id image_comp[unfolded comp_def]} @ flat FFVars_defss)),
+        rtac ctxt refl
+      ]) end
+    ) nnoclashs noclashs vs mrbnf_maps_BsAs mrbnfs;
+
     val (TT_existential_co_induct, TT_fresh_co_induct_param, TT_fresh_induct_param_no_clash_opt,
       subshapess_opt,
       TT_subshape_induct_opt, wf_subshape_opt, subshape_rel_opt, set_subshape_imagesss_opt, set_subshapesss_opt,
@@ -2167,15 +2213,15 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               fun mk_prem_imp v (w, P) set =
                 [HOLogic.mk_mem (w, set $ v), HOLogic.mk_mem (rho, param), P $ w $ rho]
                 |> foldr1 Logic.mk_implies o map HOLogic.mk_Trueprop |> fold_rev Logic.all [w, rho];
-              fun mk_prem2 v fsets bsets sets cctor P = map2 (mk_prem_imp v)
+              fun mk_prem2 v noclash fsets bsets sets cctor P = map2 (mk_prem_imp v)
                 (ws ~~ Ps |> mk_rec_lives) sets @ flat (@{map 6} (mk_imps v sets) zs fsets bsets
                   binding_matrix FFVarsssAs varsOfs) @ map HOLogic.mk_Trueprop
-                  [HOLogic.mk_mem (rho, param), P $ (cctor $ v) $ rho]
+                  [fst noclash $ v, HOLogic.mk_mem (rho, param), P $ (cctor $ v) $ rho]
                 |> foldr1 Logic.mk_implies |> fold_rev Logic.all [v, rho];
 
               val ball_rho_param = absfree (dest_Free rho) #> mk_Ball param;
               val prems = map mk_prem1 varsOfs @
-                @{map 6} mk_prem2 vs free_setss_Bs bound_setss_Bs rec_setss_Bs cctorsAs Ps;
+                @{map 7} mk_prem2 vs nnoclashs free_setss_Bs bound_setss_Bs rec_setss_Bs cctorsAs Ps;
               val goal = map2 (op $ o rpair rho oo curry op $) Ps ws |> mk_conjs |> ball_rho_param
                 |> HOLogic.mk_Trueprop;
 
@@ -2191,7 +2237,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
               val UNIV_Is = map (fn w => thm_instantiate_terms lthy [SOME w] UNIV_I) (rev ws);
             in
-              mk_TT_fresh_induct_param_no_clash_tac fbound n meta_mp_inst UNIV_Is
+              mk_TT_fresh_induct_param_no_clash_tac fbound n nnoclashs meta_mp_inst UNIV_Is
                 (flat card_of_FFVars_boundss) Un_bounds (flat FFVars_cctorss)
                 |> prove lthy (param :: Ps @ ws @ varsOfs) prems goal
             end;
@@ -2289,52 +2335,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
     val cctor_eq_intro_rrenames = map (fn thm => (thm RS iffD2)
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
-
-    val (_, lthy) = Local_Theory.begin_nested lthy;
-    fun mk_noclashs FVarsss = @{fold_map 5} (fn x => fn T => fn fsets => fn bsets => fn rec_sets => fn lthy =>
-      let
-        val name = "noclash_" ^ short_type_name (fst (dest_Type T));
-        val UNss = map (fn FVars => map2 (fn A => mk_UNION (A $ x)) rec_sets (flat (map2 replicate ks FVars))) FVarsss;
-        val mk_free_UNss = map (fn UNs => fn rel => map_filter (fn (i, t) => if member (op=) rel i then NONE else SOME t) ((0 upto length rec_sets - 1) ~~ UNs)) UNss;
-        val rhss = @{map 4} (fn fset => fn bset => fn rel => fn mk_free_UNs =>
-          mk_int_empty (bset $ x, foldl1 mk_Un (fset $ x :: mk_free_UNs rel))
-        ) fsets bsets binding_relation mk_free_UNss;
-        val rhs = Term.absfree (dest_Free x) (foldr1 HOLogic.mk_conj rhss);
-      in mk_def_t true Binding.empty I name 1 rhs lthy end
-    );
-    val (noclashs, lthy) = mk_noclashs FVarsssAs xs CAs (transpose free_setss_Ast) (transpose bound_setss_Ast) rec_setss_As lthy;
-    val (nnoclashs, lthy) = mk_noclashs FFVarsssAs vs CBs (transpose free_setss_Bst) (transpose bound_setss_Bst) rec_setss_Bs lthy;
-
-    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-    val phi = Proof_Context.export_morphism old_lthy lthy;
-    val (noclashs, nnoclashs) =
-      let
-        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (
-          fastype_of (Morphism.term phi (fst (hd noclashs))), fastype_of (fst (hd noclashs))
-        ) Vartab.empty;
-        val morph = map (map_prod
-          (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi)
-          (Morphism.thm phi)
-        );
-      in (morph noclashs, morph nnoclashs) end;
-
-    val nnoclash_noclashs = @{map 5} (fn nnoclash => fn noclash => fn v => fn map_t => fn mrbnf =>
-      let
-        val ids = map HOLogic.id_const As;
-        val goal = mk_Trueprop_eq (
-          fst nnoclash $ v,
-          fst noclash $ (Term.list_comb (map_t, ids @ take fbound ids @ flat (map2 replicate ks TT_reps)) $ v)
-        );
-      in Goal.prove_sorry lthy [fst (dest_Free v)] [] goal (fn {context=ctxt, ...} => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt (map snd noclashs @ map snd nnoclashs)),
-        REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
-        ],
-        K (Local_Defs.unfold0_tac ctxt (@{thms image_id image_comp[unfolded comp_def]} @ flat FFVars_defss)),
-        rtac ctxt refl
-      ]) end
-    ) nnoclashs noclashs vs mrbnf_maps_BsAs mrbnfs;
 
     (* TODO: use giant map instead of x times (nth ... i) *)
     val (raw_ress, quot_ress) = split_list (map (fn i =>

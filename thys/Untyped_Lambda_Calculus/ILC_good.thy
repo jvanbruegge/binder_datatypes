@@ -16,7 +16,6 @@ iApp: "good e1 \<Longrightarrow> (\<forall>e2. e2 \<in> sset es2 \<longrightarro
   \<Longrightarrow> good (iApp e1 es2)"
 
 
-
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
 (* PREPARING THE INSTANTIATION: *)

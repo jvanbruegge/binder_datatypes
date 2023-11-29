@@ -1379,9 +1379,12 @@ next
 
     show "R (irrename f (iApp e1 es2)) (renB f b)"
     unfolding b using 0  
-    using b12(1) b12(2) f(1) f(2) irrename_simps(2) renB_iAppB by auto
+    using b12(1) b12(2) f(1) f(2) irrename_simps(2) renB_iAppB by auto 
+  qed
 next (* HERE *)
-  case (iLam x t)
+  case (iLam xs e)
+  show ?case sorry 
+(* 
   note iLamm = iLam[rule_format]
   note iLam1 = iLamm[THEN conjunct1, rule_format]
   note iLam2 = iLamm[THEN conjunct2, THEN conjunct1, rule_format]
@@ -1543,13 +1546,16 @@ next (* HERE *)
       subgoal apply(subst renB_iLamB)
        using f b' by auto .  
   qed
+*)
 qed
 
 lemmas R_functional = R_main[THEN conjunct1]
 lemmas R_FFiVars = R_main[THEN conjunct2, THEN conjunct1]
 lemmas R_subst = R_main[THEN conjunct2, THEN conjunct2]
 
-definition H :: "trm \<Rightarrow> 'b" where "H t \<equiv> SOME d. R t d"
+(* *)
+
+definition H :: "itrm \<Rightarrow> 'b" where "H t \<equiv> SOME d. R t d"
 
 lemma R_F: "R t (H t)"
 by (simp add: R_total H_def someI_ex)
@@ -1558,22 +1564,18 @@ lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
 apply(rule exI[of _ H]) unfolding morFromTrm_def apply(intro conjI)
   subgoal using R_B R_F by auto
   subgoal using R.iVar R_F R_functional by blast
-  subgoal using R.iApp R_F R_functional by blast
+  subgoal using R.iApp R_F R_functional unfolding stream_all2_iff_snth  
+    by (metis snth_smap)
   subgoal using R.iLam R_F R_functional by blast
   subgoal by (meson R_F R_functional R_subst)
   subgoal by (simp add: R_F R_FFiVars) .
-
-
-
-(* *)
-
-lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
-sorry
 
 definition rec where "rec \<equiv> SOME H. morFromTrm H"
 
 lemma morFromTrm_rec: "morFromTrm rec"
 by (metis ex_morFromTrm rec_def someI_ex)
+
+(* *)
 
 lemma rec_B[simp,intro!]: "rec e \<in> B"
 using morFromTrm_rec unfolding morFromTrm_def by auto

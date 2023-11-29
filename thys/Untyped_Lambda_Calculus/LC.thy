@@ -973,6 +973,8 @@ definition morFromTrm where
  (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
  (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
 
+(* *)
+
 inductive R where 
 Var: "R (Var x) (VarB x)"
 |
@@ -988,13 +990,13 @@ apply safe
   subgoal by (auto intro: R.intros) .
 
 lemma R_App_elim: 
-assumes "R (App t1 t2) b"
-shows "\<exists>b1 b2. R t1 b1 \<and> R t2 b2 \<and> b = AppB b1 b2"
+assumes "R (App e1 e2) b"
+shows "\<exists>b1 b2. R e1 b1 \<and> R e2 b2 \<and> b = AppB b1 b2"
 by (metis App_inject R.simps assms term.distinct(1) term.distinct(4))
 
 lemma R_Lam_elim: 
-assumes "R (Lam x t) b"
-shows "\<exists>x' t' e. R t' e \<and> Lam x t = Lam x' t' \<and> b = LamB x' e"
+assumes "R (Lam x e) b"
+shows "\<exists>x' e' b'. R e' b' \<and> Lam x e = Lam x' e' \<and> b = LamB x' b'"
 using assms by (cases rule: R.cases) auto
 
 lemma R_total: 

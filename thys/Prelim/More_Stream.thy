@@ -81,6 +81,10 @@ lemma smap_eq:
 "smap f xs = xs \<longleftrightarrow> id_on (sset xs) f"
 by (metis (full_types) id_on_def snth_smap stream.map_ident_strong theN)
 
+lemma smap_eq2: 
+"smap f xs = smap g xs \<longleftrightarrow> eq_on (sset xs) f g"
+by (smt (verit, best) eq_on_def snth_smap stream.map_cong0 theN)
+
 (* 
 lemma sdistinct_smap: "inj_on f (sset s) \<Longrightarrow> sdistinct s \<Longrightarrow> sdistinct (smap f s)"
   by (coinduction arbitrary: s)
@@ -351,6 +355,10 @@ qed
 lemma dsmap_eq: 
 "inj_on f (dsset xs) \<Longrightarrow> dsmap f xs = xs \<longleftrightarrow> id_on (dsset xs) f"
 apply transfer using smap_eq by auto
+
+lemma dsmap_eq2: 
+"inj_on f (dsset xs) \<Longrightarrow> inj_on g (dsset xs) \<Longrightarrow> dsmap f xs = dsmap g xs \<longleftrightarrow> eq_on (dsset xs) f g"
+apply transfer using smap_eq2 by auto
 
 
 end

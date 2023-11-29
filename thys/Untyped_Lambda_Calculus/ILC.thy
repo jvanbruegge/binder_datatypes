@@ -1324,17 +1324,6 @@ lemma R_B: "R e b \<Longrightarrow> b \<in> B"
 apply(induct rule: R.induct) 
 by simp_all (metis (no_types, lifting) iAppB_B stream_all2_iff_snth subsetI theN)
 
-
-(*
-lemma dsset_dsmap_bij_bij_betw: 
-assumes xs: "dsset xs \<inter> dsset zs = {}" "dsmap f xs = zs" 
-and f: "id_on (- (dsset xs \<inter> dsset zs)) f" "bij_betw f (dsset xs) (dsset zs)" "bij f"
-and x: "x\<in>dsset xs"
-shows "f (f x) = x" 
-proof-
-*)
-  
-
 lemma R_main: 
 "(\<forall>b b'. R e b \<longrightarrow> R e b' \<longrightarrow> b = b') \<and> 
  (\<forall>b. R e b \<longrightarrow> FVarsB b \<subseteq> FFVars e) \<and> 
@@ -1407,7 +1396,7 @@ next
     unfolding b using 0  
     using b12(1) b12(2) f(1) f(2) irrename_simps(2) renB_iAppB by auto 
   qed
-next (* HERE *)
+next  
   case (iLam xs t)
   note iLamm = iLam[rule_format]
   note iLam1 = iLamm[THEN conjunct1, rule_format]
@@ -1452,11 +1441,10 @@ next (* HERE *)
     have fvb1': "FVarsB b1' \<subseteq> FFVars t1'"
     using iLam2[OF if1', unfolded t1'[symmetric], OF 1(1)] .
 
-   obtain f2 f2' where 
+    obtain f2 f2' where 
     f2: "bij f2" "|supp f2| <o |UNIV::ivar set|"
        "id_on (- (dsset xs \<union> dsset zs)) f2 \<and> id_on (FFVars(iLam xs t)) f2"
-       "id_on (dsset xs \<union> dsset zs) (f2 o f2)"
-    and 
+       "id_on (dsset xs \<union> dsset zs) (f2 o f2)" and 
     f2': "bij f2'" "|supp f2'| <o |UNIV::ivar set|"
        "id_on (- (dsset xs2' \<union> dsset zs)) f2' \<and> id_on (FFVars(iLam xs2' t2')) f2'"
        "id_on (dsset xs2' \<union> dsset zs) (f2' o f2')"
@@ -1475,7 +1463,6 @@ next (* HERE *)
     have fvb2': "FVarsB b2' \<subseteq> FFVars t2'"
     using iLam2[OF if2', unfolded t2'[symmetric], OF 2(1)] .
 
-    (* *)
     have if2: "bij (inv f2)" "|supp (inv f2)| <o |UNIV::ivar set|" 
     "bij_betw (inv f2) (dsset zs) (dsset xs)"
     apply (auto simp add: f2(1,2))
@@ -1486,206 +1473,134 @@ next (* HERE *)
     apply (metis bij_imp_bij_betw dstream.set_map f1(1) f1(2) zs1(1))
     by (metis bij_betw_def bij_imp_bij_betw dsset_dsmap f2'(1) zs2(2))
 
-    have bbe1': "bij_betw f1 (dsset zs) (dsset xs)"
-    using bbe(1) f1(1,3) zs unfolding id_on_def bij_betw_def  
-    apply (auto simp add: f1(1) inj_on_def image_def) 
-    apply (metis (no_types, opaque_lifting) IntI Int_Un_emptyI1 bbe(1) 
-    bij_betw_imp_inj_on dsset_dsmap emptyE f1(1) not_imageI rangeI range_ex1_eq zs1(1))
-    by (smt (verit, del_insts) Int_Un_emptyI1 Int_emptyD UNIV_I mem_Collect_eq)
-
-    have bbe2': "bij_betw f2 (dsset zs) (dsset xs)"
-    using bbe(2) f2(1,3) zs unfolding id_on_def bij_betw_def  
-    apply (auto simp add: f2(1) inj_on_def image_def)    
-    apply (metis (no_types, opaque_lifting) Int_Un_emptyI1 Int_emptyD bij_betw_apply 
-       f2(1) if2(3) inv_simp1)
-    by (metis (no_types, opaque_lifting) Int_Un_emptyI1 Int_emptyD Un_assoc bij_betw_apply bij_bij_betw_inv bij_pointE f2(1) if2(3)) 
-    
-
     have iif2: "id_on (- (dsset xs \<union> dsset zs)) (inv f2)"
     using f2(1) f2(3) id_on_inv by blast
 
     have eo1: "eq_on (dsset xs \<union> dsset zs) f1 (inv f1)"
-    using f1(4) unfolding id_on_def eq_on_def apply auto  sledgehammer
-    apply (metis ComplI UnE f1(1) f1(3) id_on_def insv_simp1)
-    by (metis f1(1) invs_simp1)
+    using f1(4) unfolding id_on_def eq_on_def  
+    by simp (metis f1(1) inv_simp1)  
 
     have eo2: "eq_on (dsset xs \<union> dsset zs) f2 (inv f2)"
-    using f2(4) unfolding id_on_def eq_on_def apply auto 
-    apply (metis ComplI UnE f2(1) f2(3) id_on_def inv_simp1)
-    by (metis f2(1) inv_simp1)
+    using f2(4) unfolding id_on_def eq_on_def  
+    by simp (metis f2(1) inv_simp1)
 
-    have eo2: "eq_on (dsset xs \<union> dsset zs) f2 (inv f2)"
-    using f2(4) unfolding id_on_def eq_on_def apply auto 
-    apply (metis ComplI UnE f2(1) f2(3) id_on_def inv_simp1)
-    by (metis f2(1) inv_simp1)
-
-    (* have "xs = dsmap f1 zs" 
-    unfolding zs1(1)[symmetric] apply(subst dstream.map_comp)
-       subgoal by fact subgoal by fact
-       subgoal apply(rule sym)  
-       apply(rule dstream_map_ident_strong) apply auto *)
-
-    (* have eq_f1f2: "eq_on (dsset zs) f1 f2"  
-      sledgehammser
-      by (msetis bbe(1) bij_betw_imp_inj_on bij_bij_betw_inv dsmap_eq2 f2(1) if2(3) zs1(1) zs2(1))
-    have eq_if1if2: "eq_on (dsset xs) (inv f1) (inv f2)"  *)
- 
-    (* by (smt (verist, del_insts) bij_imp_inv' dstream.set_map eq_f1f2 eq_on_def 
-       f1(1) f1(2) f2(1) image_in_bij_eq zs1(1)) *)
-   (*  hence "\<And>x. x \<in> dsset xs \<Longrightarrow> f1 (inv f2 x) = x"
-    sledgehammer *)
-
-      have eq_f1f2: "eq_on (dsset zs) (inv f1) (inv f2)" 
+    have eq_f1f2: "eq_on (dsset zs) (inv f1) (inv f2)" 
     by (metis bbe(1) bij_betw_imp_inj_on bij_bij_betw_inv 
       dsmap_eq2 dstream.map_comp f1(1) f1(2) f2(1) f2(2) if2(3) 
-     inv_o_simp1 supp_inv_bound zs1(1) zs2(1))
-
+      inv_o_simp1 supp_inv_bound zs1(1) zs2(1))
 
     have eq_f1f2: "eq_on (dsset xs) (inv f1) (inv f2)" 
-    sledgehammers
+    by (smt (verit, best) Un_iff bbe(1) bij_betw_apply eo1 eo2 eq_f1f2 eq_on_def f1(1) f2(1) inv_simp2)
 
     have id_f1f2: "id_on (dsset xs) (f1 o inv f2)" 
-    sledgsehammer
+    by (smt (verit, best) bij_inv_eq_iff comp_apply eq_f1f2 eq_onD f1(1) id_on_def)
     
-
     define ff2' where "ff2' = f1 o (inv f2) o f2'"
-
- (*   {fix x assume x: "x \<notin> dsset xs2'" "x \<notin> dsset zs" 
-     have 0: "ff2' x = f1 (inv f2 x)"
-     using x f2' unfolding ff2'_def id_on_def by simp
-     have "ff2' x = x" 
-     proof(cases "x \<in> dsset xs")
-       case False thus ?thesis using x f1 f2 f2' unfolding ff2'_def id_on_def  
-       by simp (metis inv_simp1) 
-     next
-       case True
-       hence ii: "inv f2 x \<in> dsset zs" 
-         by (metis bbe2' bij_betw_def f2(1) image_in_bij_eq)   
-       hence "f1 (inv f2 x) \<in> dsset xs" 
-         using bbe1' bij_betwE by blast  
-       have "f2 (inv f2 x) = x" by (simp add: f2(1))
-       show ?thesis sledgehammer
-       
-       
-       show ?thesis 
-          
-    } *)
-   (* hence iff2': "id_on (- (dsset xs2' \<union> dsset zs)) ff2'"
-    unfolding id_on_def by auto *)
-      
 
     have ff2': "bij ff2'" "|supp ff2'| <o |UNIV::ivar set|"
        "id_on (- (dsset xs2' \<union> dsset zs)) ff2' \<and> id_on (FFVars (iLam xs2' t2')) ff2'" 
     unfolding ff2'_def using f1 f2 f2'  
       subgoal by auto 
       subgoal unfolding ff2'_def using f1 f2 f2' by (simp add: iterm_pre.supp_comp_bound)
-      subgoal unfolding ff2'_def using f1 f2 f2' iif2  eo2
-unfolding id_on_def eq_on_def apply auto  
+      subgoal apply(rule conjI)  
+        subgoal unfolding ff2'_def using f1 f2 f2' eo2
+        unfolding id_on_def eq_on_def apply simp by (metis bij_inv_eq_iff eq_f1f2 eq_on_def)
+        subgoal unfolding ff2'_def using f1 f2 f2' iif2  eo2
+        unfolding id_on_def eq_on_def apply simp  
+        by (metis bbe(2) bij_betw_def comp_apply id_f1f2 id_on_def not_imageI) . .
 
-    defer 
-        apply (smt (verit, best) "2"(2) DiffI f1(3) f2(3) id_on_def id_on_inv iterm.set(3))
-     subgoal for a apply(cases "a \<notin> dsset xs") 
-       subgoal by auto
-       subgoal apply auto  
- by ssimp (metis inv_simp1 zs1(1) zs2(1)) .
-
-    have zz2: "ff2' x2' = z"
-    by (metis comp_def f2 ff2'_def inv_simp1 z1(1) z2(1) z2(2))
+    have zz2: "dsmap ff2' xs2' = zs"
+    by (metis bbe(1) bbe(2) bij_betw_def bij_bij_betw_inv comp_eq_dest_lhs dsnth_dsmap 
+          dsnth_dsmap_cong f2(1) ff2'_def if2(3) inv_simp1 zs1(1) zs2(1) zs2(2))
  
-    have rew1: "rrename f1' (rrename (inv f1' \<circ> f1) t) = rrename f1 t" 
+    have rew1: "irrename f1' (irrename (inv f1' \<circ> f1) t) = irrename f1 t" 
     using f1f1' t1' by auto
 
-    have rew2: "rrename ff2' (rrename (inv f2' \<circ> f2) t) = rrename f1 t" 
-    by (smt (verit, del_insts) bij_betw_imp_inj_on bij_imp_bij_inv bij_o f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2' ff2'_def o_inv_o_cancel supp_inv_bound term.rrename_comps term_pre.supp_comp_bound)
- 
+    have rew2: "irrename ff2' (irrename (inv f2' \<circ> f2) t) = irrename f1 t" 
+    by (smt (verit, best) bij_betw_comp_iff bij_is_inj f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2' 
+            ff2'_def if2(2) iterm.rrename_comps iterm.supp_comp_bound o_inv_o_cancel t2')
+
     show "b1 = b2" unfolding 1(3) 2(3) 
-    apply(rule iLamB_inject_strong'_rev[OF b12', of z _ _ f1' ff2'])
-      subgoal using z fvb1' by auto
-      subgoal using z fvb2' by auto
+    apply(rule iLamB_inject_strong'_rev[OF b12', of zs f1' _ ff2'])
+      subgoal using zs fvb1' by auto
+      subgoal using zs fvb2' by auto
       subgoal using f1' by auto  subgoal using f1' by auto
-      subgoal using f1' by auto  subgoal using z1 by auto
+      subgoal using f1' by auto  subgoal using zs1 by auto
       subgoal using ff2' by auto  subgoal using ff2' by auto
       subgoal using ff2' by auto  subgoal using zz2 by auto 
       subgoal apply(rule iLam1[OF f1(1,2)])  
         subgoal using iLam3[OF if1' 1(1)[unfolded t1'] f1'(1,2), unfolded rew1] .
         subgoal using iLam3[OF if2' 2(1)[unfolded t2'] ff2'(1,2), unfolded rew2] . . .
+
   (* *)
   next
-    fix b y 
-    assume R: "R (iLam x t) b" and yy: "y \<in> FVarsB b"
-    then obtain x' t' b'
-    where 0: "R t' b'" "iLam x t = iLam x' t'" "b = iLamB x' b'" 
+    fix b y
+    assume R: "R (iLam xs t) b" and yy: "y \<in> FVarsB b"
+    then obtain xs' t' b'
+    where 0: "R t' b'" "iLam xs t = iLam xs' t'" "b = iLamB xs' b'" 
     using R_iLam_elim by metis
 
     have b': "b' \<in>  B"
     using 0(1,3) R_B by auto
 
-    have y: "y \<noteq> x'" "y \<in> FVarsB b'" using b' yy unfolding 0 
+    have y: "y \<notin> dsset xs'" "y \<in> FVarsB b'" using b' yy unfolding 0 
     using FVarsB_iLamB[OF b'] by auto
 
-    have "|{x,x'} \<union> FFVarst \<union> FFVarst'| <o |UNIV::ivar set|"
-    by (metis Un_insert_right singl_bound sup_bot_right term.set_bd_UNIV ivar_term_pre_class.Un_bound)
+    have "|dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'| <o |UNIV::ivar set|"
+    by (simp add: card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound) 
     then obtain z where z: 
-    "z \<notin> {x,x'} \<union> FFVarst \<union> FFVarst'" 
+    "z \<notin> dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'" 
     by (meson exists_fresh)
 
     obtain f where 
-    f: "bij f" "|supp f| <o |UNIV::ivar set|"
-       "id_on (- {x, x'}) f \<and> id_on (FFVars(iLam x t)) f" 
-    and z: "f x = x'"   
-    and t': "t' = rrename f t" 
-    using  iLam_inject_strong[OF 0(2)] by auto
+    f: "bij f" "|supp f| <o |UNIV::ivar set|" 
+    "id_on (FFVars (iLam xs t)) f "
+    and zs: "dsmap f xs = xs'"   
+    and t': "t' = irrename f t" 
+    using 0(2) unfolding iLam_inject by auto
     
-    have fvb't': "FVarsB b' \<subseteq> FFVarst'"
+    have fvb't': "FVarsB b' \<subseteq> FFVars t'"
     using iLam2[OF f(1,2), unfolded t'[symmetric], OF 0(1)] .
-    have yt': "y \<in> FFVarst'" using fvb't' y(2) by auto
+    have yt': "y \<in> FFVars t'" using fvb't' y(2) by auto
 
-    show "y \<in> FFVars(iLam x t)" using yt' y unfolding 0(2) by auto
+    show "y \<in> FFVars(iLam xs t)" using yt' y unfolding 0(2) by auto
+
   (* *)
   next
     fix b and f :: "ivar\<Rightarrow>ivar"
-
-    assume "R (iLam x t) b" and f: "bij f" "|supp f| <o |UNIV::ivar set|"
-
-   
-    then obtain x' t' b'
-    where 0: "R t' b'" "iLam x t = iLam x' t'" "b = iLamB x' b'" 
+    assume "R (iLam xs t) b" and f: "bij f" "|supp f| <o |UNIV::ivar set|" 
+    then obtain xs' t' b'
+    where 0: "R t' b'" "iLam xs t = iLam xs' t'" "b = iLamB xs' b'" 
     using R_iLam_elim by metis
-
 
     have b': "b' \<in>  B"
     using 0(1,3) R_B by auto
 
-    have "|{x,x'} \<union> FFVarst \<union> FFVarst'| <o |UNIV::ivar set|"
-    by (metis Un_insert_right singl_bound sup_bot_right term.set_bd_UNIV ivar_term_pre_class.Un_bound)
-    then obtain z where z: 
-    "z \<notin> {x,x'} \<union> FFVarst \<union> FFVarst'" 
-    by (meson exists_fresh)
+    have "|dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'| <o |UNIV::ivar set|"
+    by (meson card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+  
+    then obtain zs where zs: 
+    "dsset zs \<inter> (dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t') = {}" 
+    using iLam_avoid by blast
 
-    obtain g where 
-    g: "bij g" "|supp g| <o |UNIV::ivar set|"
-       "id_on (- {x, x'}) g \<and> id_on (FFVars(iLam x t)) g" 
-    and z: "g x = x'"   
-    and t': "t' = rrename g t" 
-    using iLam_inject_strong[OF 0(2)] by auto
+    obtain g where g: "bij g" "|supp g| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs t)) g" 
+    and z: "dsmap g xs = xs'"   
+    and t': "t' = irrename g t"
+    using 0(2) unfolding iLam_inject by auto 
 
-    have RR: "R (iLam (f x') (rrename f t')) (iLamB (f x') (renB f b'))"
+    have RR: "R (iLam (dsmap f xs') (irrename f t')) (iLamB (dsmap f xs') (renB f b'))"
     apply(rule R.iLam) unfolding t' apply(rule iLam3)
       subgoal by fact  subgoal by fact
       subgoal using 0(1) unfolding t' .
       subgoal by fact subgoal by fact .
 
-    show "R (rrename f (iLam x t)) (renB f b)" 
-    unfolding 0 using RR apply(subst rrename_simps) 
+    show "R (irrename f (iLam xs t)) (renB f b)" 
+    unfolding 0 using RR apply(subst irrename_simps) 
       subgoal using f by auto subgoal using f by auto
-      subgoal apply(subst renB_iLamB)
-       using f b' by auto .  
+      subgoal apply(subst renB_iLamB) using f b' by auto .  
   qed
 qed
 
-
-
-term term (*
 lemmas R_functional = R_main[THEN conjunct1]
 lemmas R_FFVars= R_main[THEN conjunct2, THEN conjunct1]
 lemmas R_subst = R_main[THEN conjunct2, THEN conjunct2]
@@ -1705,7 +1620,7 @@ apply(rule exI[of _ H]) unfolding morFromTrm_def apply(intro conjI)
     by (metis snth_smap)
   subgoal using R.iLam R_F R_functional by blast
   subgoal by (meson R_F R_functional R_subst)
-  subgoal by (simp add: R_F R_FFiVars) .
+  subgoal by (simp add: R_F R_FFVars) .
 
 definition rec where "rec \<equiv> SOME H. morFromTrm H"
 

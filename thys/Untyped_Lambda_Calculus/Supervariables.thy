@@ -207,7 +207,7 @@ assumes xs: "super xs" and ys: "super ys" and
 A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset ys = {}"
 and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
 and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
-shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
+shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> finite (touchedSuper (supp \<rho>)) \<and> 
    presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
    id_on A' \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f \<and> 
    id_on (dsset xs) (\<rho> o \<rho>)"
@@ -217,6 +217,8 @@ proof-
   have i: "inj_on f (dsset xs)" "inj_on g (dsset ys)" using f(1) g(1) unfolding bij_betw_def by auto
   have s: "supp \<rho> \<subseteq> dsset xs \<union> dsset ys"   
     unfolding \<rho>_def supp_def by auto 
+  hence ss: "touchedSuper (supp \<rho>) \<subseteq> touchedSuper (dsset xs) \<union> touchedSuper (dsset ys)"
+    unfolding touchedSuper_def by auto
   have io: "id_on (- (dsset xs \<union> dsset ys)) \<rho>" 
   unfolding \<rho>_def id_on_def by auto
   have 0: "dsmap \<rho> xs = ys" "dsmap \<rho> ys = xs"
@@ -237,6 +239,7 @@ proof-
       apply (smt (verit, ccfv_SIG) Int_emptyD ys(1) \<rho>_def image_iff super_disj xs)
       apply (smt (verit, del_insts) Int_emptyD \<rho>_def bij_betw_iff_bijections f(1) g(1) super_disj xs ys(1)) .
     subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound var_stream_class.Un_bound)
+    subgoal using ss by (simp add: finite_subset xs ys)
     subgoal unfolding presSuper_def apply clarify subgoal for zs  
     apply(cases "zs \<in> {xs,ys}")
       subgoal using 0 ys(1) xs by auto
@@ -257,7 +260,7 @@ lemma extend_super2:
 assumes xs: "super xs" and ys: "super ys" and 
 A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}" "A \<inter> dsset ys = {}"
 and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
-shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
+shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> finite (touchedSuper (supp \<rho>)) \<and>
    presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
    id_on A \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f \<and> 
    id_on (dsset xs) (\<rho> o \<rho>)"
@@ -376,7 +379,7 @@ unfolding bij_betw_def inj_on_def apply auto
 lemma iLam_inject_super: 
 assumes u: "finite (touchedSuperT e)" and 
 eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
-shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> 
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> finite (touchedSuper (supp f)) \<and> 
        id_on (ILC.FFVars (iLam xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
        id_on (dsset xs) (f o f) \<and>
        dsmap f xs = xs' \<and> irrename f e = e'"
@@ -384,7 +387,7 @@ proof(cases "xs = xs'")
   case True
   thus ?thesis apply(intro exI[of _ id]) 
   apply (auto simp add: presSuper_def) 
-  using eq iLam_same_inject by blast
+  using eq iLam_same_inject unfolding touchedSuper_def supp_def by auto
 next
   case False
   hence ds: "dsset xs \<inter> dsset xs' = {}" using super  

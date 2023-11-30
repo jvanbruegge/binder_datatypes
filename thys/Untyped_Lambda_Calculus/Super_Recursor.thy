@@ -39,12 +39,12 @@ and ill: "iLam (xs::ivar dstream) e = iLam xs' e'"
 and zs: "dsset zs \<inter> (dsset xs \<union> dsset xs' \<union> FFVars e \<union> FFVars e') = {}"
 shows 
 "\<exists>f f'. 
-   bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and>
+   bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> bsmall (supp f) \<and> 
      id_on ((- (dsset xs \<union> dsset zs))) f \<and> id_on (FFVars (iLam xs e)) f \<and> 
-     id_on (dsset xs \<union> dsset zs) (f o f) \<and> dsmap f xs = zs \<and> 
-   bij f' \<and> |supp f'| <o |UNIV::ivar set| \<and> presSuper f' \<and>
+     id_on (dsset xs) (f o f) \<and> dsmap f xs = zs \<and> 
+   bij f' \<and> |supp f'| <o |UNIV::ivar set| \<and> presSuper f' \<and> bsmall (supp f') \<and> 
      id_on (- (dsset xs' \<union> dsset zs)) f' \<and> id_on (FFVars (iLam xs' e')) f' \<and> 
-     id_on (dsset xs' \<union> dsset zs) (f' o f') \<and> dsmap f' xs' = zs \<and> 
+     id_on (dsset xs') (f' o f') \<and> dsmap f' xs' = zs \<and> 
    irrename f e = irrename f' e'"
 proof-  
 
@@ -52,13 +52,13 @@ proof-
   using iLam_refreshVars[of xs zs e] zs by auto
   hence il': "iLam xs' e' = iLam zs ee" using ill by auto
 
-  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and>
+  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> bsmall (supp f) \<and>
     presSuper f \<and> id_on (ILC.FFVars (iLam xs e)) f \<and> 
     id_on (- (dsset xs \<union> dsset zs)) f \<and> 
     id_on (dsset xs) (f \<circ> f) \<and> dsmap f xs = zs \<and> irrename f e = ee"
   using iLam_inject_super_strong[OF bs il s(1,3)] by auto
 
-  obtain f' where f': "bij f' \<and> |supp f'| <o |UNIV::ivar set| \<and>
+  obtain f' where f': "bij f' \<and> |supp f'| <o |UNIV::ivar set| \<and> bsmall (supp f') \<and>
     presSuper f' \<and> id_on (ILC.FFVars (iLam xs' e')) f' \<and> 
     id_on (- (dsset xs' \<union> dsset zs)) f' \<and> 
     id_on (dsset xs') (f' \<circ> f') \<and> dsmap f' xs' = zs \<and> irrename f' e' = ee"
@@ -83,14 +83,15 @@ qed
 
 term good
 
-lemma itrm_irrename_induct[consumes 1, case_names iVar iApp iLam]:
+lemma good_irrename_induct[consumes 1, case_names iVar iApp iLam]:
 assumes bs: "good t"
 and iiVar: "\<And>xs x. super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> P (iVar (x::ivar))"
 and iiApp: "\<And>e1 es2. good e1 \<Longrightarrow> P e1 \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')  \<Longrightarrow> 
   (\<forall>e2\<in>sset es2. good e2 \<and> P e2) \<Longrightarrow> P (iApp e1 es2)" 
-and iiLam: "\<And>xs e. bsmall (FFVars e) \<Longrightarrow> 
-  (\<And>f. good e \<Longrightarrow> bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> P (irrename f e)) \<Longrightarrow> P (iLam xs e)"
+and iiLam: "\<And>xs e. super xs \<Longrightarrow> 
+  (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> good (irrename f e) \<and> P (irrename f e)) 
+  \<Longrightarrow> P (iLam xs e)"
 shows "P t"
 sorry
 (* 
@@ -237,122 +238,157 @@ definition morFromTrm where
           \<longrightarrow> H (irrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
  (\<forall>e. good e \<longrightarrow> touchedSuper (FVarsB (H e)) \<subseteq> touchedSuper (FFVars e))"
 
+thm good.induct
+
 (* *)
 
 (* *)
 
 inductive R where 
-iVar: "R (iVar x) (iVarB x)"
+iVar: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> R (iVar x) (iVarB x)"
 |
-iApp: "R e1 b1 \<Longrightarrow> stream_all2 R es2 bs2 \<Longrightarrow> R (iApp e1 es2) (iAppB b1 bs2)"
+iApp: "R e1 b1 \<Longrightarrow> 
+   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
+   stream_all2 R es2 bs2 \<Longrightarrow> 
+   R (iApp e1 es2) (iAppB b1 bs2)"
 |
 iLam: "R e b \<Longrightarrow> super xs \<Longrightarrow>  R (iLam xs e) (iLamB xs b)"
 
 (* *)
 
-lemma R_iVar_elim[simp]: "R (iVar x) b \<longleftrightarrow> b = iVarB x"
+lemma R_iVar_elim[simp]: "R (iVar x) b \<longleftrightarrow> (\<exists>xs. super xs \<and> x \<in> dsset xs \<and> b = iVarB x)"
 apply safe
-  subgoal using R.cases by fastforce
+  subgoal by (cases rule: R.cases) auto
   subgoal by (auto intro: R.intros) .
 
 lemma R_iApp_elim: 
 assumes "R (iApp e1 es2) b"
-shows "\<exists>b1 bs2. R e1 b1 \<and> stream_all2 R es2 bs2 \<and> b = iAppB b1 bs2"
-by (metis (no_types, lifting) R.cases assms iApp_inject iterm.distinct(3) iterm.distinct(6))
+shows "\<exists>b1 bs2. R e1 b1 \<and> (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<and> 
+               stream_all2 R es2 bs2 \<and> b = iAppB b1 bs2"
+using assms by (cases rule: R.cases) auto
 
 lemma R_iLam_elim: 
 assumes "R (iLam xs e) b"
-shows "\<exists>xs' e' b'. R e' b' \<and> iLam xs e = iLam xs' e' \<and> b = iLamB xs' b'"
+shows "\<exists>xs' e' b'. super xs' \<and> R e' b' \<and> iLam xs e = iLam xs' e' \<and> b = iLamB xs' b'"
 using assms by (cases rule: R.cases) auto
 
 lemma R_total: 
-"good e \<Longrightarrow> \<exists>b. R e b"
-proof(induct e)
-  case (iVar x)
-  then show ?case by (auto intro: R.intros) 
-next
-  case (iApp e1 es2)
-  then obtain b1 where r1: "R e1 b1" by auto
-  from iApp obtain B where r2: "\<forall>e2 \<in> sset es2. R e2 (B e2)" by metis
-  show ?case apply(rule exI[of _ "iAppB b1 (smap B es2)"])
-  apply(rule R.iApp)
-    subgoal by fact
-    subgoal by (simp add: r2 stream_all2_iff_snth) .
-next
-  case (iLam x1 e)
-  then show ?case by (auto intro: R.intros) 
-qed
-
-lemma R_B: "good e \<Longrightarrow> R e b \<Longrightarrow> b \<in> B"
-proof(induct rule: good.induct)
+"good e \<Longrightarrow> \<exists>b. b \<in> B \<and> R e b"
+proof(induct e rule: good.induct)
   case (iVar xs x)
   then show ?case by auto
 next
-  case (iLam xs e)
-  from `R (iLam xs e) b` 
-  show ?case sorry
-next
   case (iApp e1 es2)
-  then show ?case sorry
+  then obtain b1 where b1: "b1 \<in> B" "R e1 b1" by auto
+  from iApp(3) obtain E2 where 
+  E2: "\<And>e2. e2 \<in> sset es2 \<Longrightarrow> good e2 \<and> (E2 e2) \<in> B \<and> R e2 (E2 e2)" by metis
+  term "iAppB b1 (smap E2 es2)"
+  show ?case apply(rule exI[of _ "iAppB b1 (smap E2 es2)"], intro conjI)
+    subgoal apply(rule iAppB_B) using b1 E2 by auto
+    subgoal apply(rule R.iApp) using b1 E2 iApp(4) unfolding stream_all2_iff_snth by auto .   
+next
+  case (iLam xs e)
+  then obtain b where b: "b \<in> B" "R e b" by auto
+  show ?case apply(rule exI[of _ "iLamB xs b"], intro conjI)
+    subgoal apply(rule iLamB_B) using iLam b by auto
+    subgoal apply(rule R.iLam) using iLam b by auto .
 qed
 
+lemma R_B: "R e b \<Longrightarrow> b \<in> B"
+apply(induct rule: R.induct) 
+by simp_all (metis (no_types, lifting) iAppB_B stream_all2_iff_snth subsetI theN)
 
-  apply auto sledgehammer
-term bys simp_all (metis (no_types, lifting) iAppB_B stream_all2_iff_snth subsetI theN)
+lemma R_good: "R e b \<Longrightarrow> good e"
+apply(induct rule: R.induct)  
+  subgoal by (intro good.intros) auto
+  subgoal apply (intro good.intros)
+  unfolding stream_all2_iff_snth sset_range by auto
+  subgoal by (intro good.intros) auto .
+
+lemma super_bsmall_dsset: "super xs \<Longrightarrow> bsmall (dsset xs)"
+by (simp add: bsmall_def)
+
+lemma presSuper_id[simp,intro]: "presSuper id"
+unfolding presSuper_def by auto
+
+lemma presSuper_comp: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+ bij g \<Longrightarrow> |supp g| <o |UNIV::ivar set| \<Longrightarrow> presSuper g \<Longrightarrow> 
+ presSuper (g o f)"
+unfolding presSuper_def by (auto simp: dstream.map_comp[symmetric])
+
+lemma presSuper_inv: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow>  presSuper (inv f)"
+by (metis bij_bij_betw_inv dstream.map_comp inv_o_simp2 presSuper_def presSuper_id supp_inv_bound)
+
 
 lemma R_main: 
+assumes "good e"
+shows 
 "(\<forall>b b'. R e b \<longrightarrow> R e b' \<longrightarrow> b = b') \<and> 
- (\<forall>b. R e b \<longrightarrow> FVarsB b \<subseteq> FFVars e) \<and> 
- (\<forall>b f. R e b \<and> bij f \<and> |supp f| <o |UNIV::ivar set|
+ (\<forall>b. R e b \<longrightarrow> touchedSuper (FVarsB b) \<subseteq> touchedSuper (FFVars e)) \<and> 
+ (\<forall>b f. R e b \<and> bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> bsmall (supp f) 
         \<longrightarrow> R (irrename f e) (renB f b))"
-proof(induct e rule: itrm_irrename_induct)
-  case (iVar x)
-  then show ?case using FVarsB_iVarB by auto
+using assms proof(induct e rule: good_irrename_induct)
+  case (iVar xs x)
+  then show ?case using FVarsB_iVarB 
+    by (auto simp: presSuper_def)
 next
   case (iApp e1 es2)
-  note iApp11 = iApp(1)[THEN conjunct1, rule_format]
-  note iApp12 = iApp(1)[THEN conjunct2, THEN conjunct1, rule_format]
-  note iApp13 = iApp(1)[THEN conjunct2, THEN conjunct2, rule_format, 
-     OF conjI, OF _ conjI]
-  note iApp21 = iApp(2)[rule_format, THEN conjunct1, rule_format]
-  note iApp22 = iApp(2)[rule_format, THEN conjunct2, THEN conjunct1, rule_format]
-  note iApp23 = iApp(2)[rule_format, THEN conjunct2, THEN conjunct2, rule_format, 
-     OF _ conjI, OF _ _ conjI]
+  note iApp11 = iApp(2)[THEN conjunct1, rule_format]
+  note iApp12 = iApp(2)[THEN conjunct2, THEN conjunct1, rule_format]
+  note iApp13 = iApp(2)[THEN conjunct2, THEN conjunct2, rule_format, 
+     OF conjI, OF _ conjI, OF _ _ conjI, OF _ _ _ conjI]
+  note iApp21 = iApp(4)[rule_format, THEN conjunct2, THEN conjunct1, rule_format]
+  note iApp22 = iApp(4)[rule_format, THEN conjunct2, THEN conjunct2, THEN conjunct1, rule_format]
+  note iApp23 = iApp(4)[rule_format, THEN conjunct2, THEN conjunct2, THEN conjunct2, rule_format, 
+     OF _ conjI, OF _ _ conjI, OF _ _ _ conjI, OF _ _ _ _ conjI]
+
+  note gd = iApp(1) iApp(3)[rule_format]
+  iApp(4)[rule_format, THEN conjunct1, rule_format]
 
   show ?case proof safe 
     fix b b' assume "R (iApp e1 es2) b" "R (iApp e1 es2) b'"
     then obtain b1 bs2 b1' bs2' where R1: "R e1 b1" "R e1 b1'" 
     and R2: "stream_all2 R es2 bs2" "stream_all2 R es2 bs2'" 
     and b: "b = iAppB b1 bs2" "b' = iAppB b1' bs2'"
-    using R_iApp_elim by blast
+    and es2: "(\<forall>e2 e2'. {e2, e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
+    using R_iApp_elim 
+    by meson
 
     have 1: "b1 = b1'" using iApp11[OF R1] .
     have 2: "bs2 = bs2'" using iApp21 R2 
     unfolding stream_all2_iff_snth sset_range image_def stream_eq_nth by fastforce
     show "b = b'" unfolding b 1 2 ..
   next
-    fix b x assume "R (iApp e1 es2) b" and xx: "x \<in> FVarsB b"
+    fix b x assume "R (iApp e1 es2) b" and xx: "x \<in> touchedSuper (FVarsB b)"
     then obtain b1 bs2 where R1: "R e1 b1"  
     and R2: "stream_all2 R es2 bs2"  
     and b: "b = iAppB b1 bs2"  
+    and es2: "(\<forall>e2 e2'. {e2, e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
     using R_iApp_elim by blast
 
     have b12: "b1 \<in> B" "sset bs2 \<subseteq> B"   
     using R1 R_B  
     by auto (metis R2 R_B stream_all2_iff_snth theN)
 
-    have x: "x \<in> FVarsB b1 \<or> (\<exists>b2\<in>sset bs2. x \<in> FVarsB b2)"
-    using xx b12 FVarsB_iAppB unfolding b by fastforce
+    have x: "x \<in> touchedSuper (FVarsB b1) \<or> (\<exists>b2\<in>sset bs2. x \<in> touchedSuper (FVarsB b2))"
+    using xx b12 FVarsB_iAppB unfolding b touchedSuper_def by fastforce
 
-    have fb1: "FVarsB b1 \<subseteq> FFVars e1" using iApp12[OF R1] .
-    have fb2: "\<Union> (FVarsB ` (sset bs2)) \<subseteq> \<Union> (FFVars ` (sset es2))"
-    using iApp22 R2 unfolding stream_all2_iff_snth sset_range image_def by auto
+    have fb1: "touchedSuper (FVarsB b1) \<subseteq> touchedSuper (FFVars e1)" using iApp12[OF R1] .
+    have fb2: "touchedSuper (\<Union> (FVarsB ` (sset bs2))) \<subseteq> 
+               touchedSuper (\<Union> (FFVars ` (sset es2)))"
+    using iApp22 R2 unfolding stream_all2_iff_snth sset_range image_def touchedSuper_UN 
+    by auto
 
-    show "x \<in> FFVars (iApp e1 es2)" 
-    using x fb1 fb2 by auto
+    show "x \<in> touchedSuper (FFVars (iApp e1 es2))" 
+    using x fb1 fb2   
+    by safe (force simp: touchedSuper_iApp UN_iff touchedSuperT_def touchedSuper_def)+ 
+
   next
     fix b and f::"ivar \<Rightarrow> ivar" 
     assume "R (iApp e1 es2) b" and f: "bij f" "|supp f| <o |UNIV::ivar set|" 
+    "presSuper f" "bsmall (supp f)"
     then obtain b1 bs2 where R1: "R e1 b1"  
     and R2: "stream_all2 R es2 bs2" and b: "b = iAppB b1 bs2"  
     using R_iApp_elim by blast
@@ -365,47 +401,73 @@ next
             (iAppB (renB f b1) (smap (renB f) bs2))"
     apply(rule R.iApp) 
       subgoal using iApp13[OF R1 f] .
+      subgoal using gd f(1) f(2) f(3) touchedSuperT_irrename
+      unfolding stream_all2_iff_snth sset_range image_def  
+      by fastforce+
       subgoal using iApp23[OF _ _ f] R2
-      unfolding stream_all2_iff_snth sset_range image_def by auto .
+      unfolding stream_all2_iff_snth sset_range image_def by fastforce .
 
     show "R (irrename f (iApp e1 es2)) (renB f b)"
     unfolding b using 0  
-    using b12(1) b12(2) f(1) f(2) irrename_simps(2) renB_iAppB by auto 
+    using gd b12(1) b12(2) f irrename_simps(2) renB_iAppB by auto
   qed
 next  
   case (iLam xs t)
-  note iLamm = iLam[rule_format]
-  note iLam1 = iLamm[THEN conjunct1, rule_format]
-  note iLam2 = iLamm[THEN conjunct2, THEN conjunct1, rule_format]
-  note iLam3 = iLamm[THEN conjunct2, THEN conjunct2, rule_format, OF _ _ conjI, OF _ _ _ conjI]
+  note iLamm = iLam(2)[rule_format]
+  note iLam1 = iLamm[THEN conjunct2, THEN conjunct1, rule_format]
+  note iLam2 = iLamm[THEN conjunct2, THEN conjunct2, THEN conjunct1, rule_format]
+  note iLam3 = iLamm[THEN conjunct2, THEN conjunct2, THEN conjunct2, rule_format, 
+    OF _ _ conjI, OF _ _ _ conjI, OF _ _ _ _ conjI, OF _ _ _ _ _ conjI]
   note iLam33 = iLam3[of id, simplified]
+  note xs = `super xs` 
+  note gd = iLamm[THEN conjunct1, rule_format]
+  hence gdt: "good t" by fastforce
 
   show ?case proof safe
     fix b1 b2 assume RiLam: "R (iLam xs t) b1" "R (iLam xs t) b2" 
     then obtain xs1' t1' b1' xs2' t2' b2'
     where 1: "R t1' b1'" "iLam xs t = iLam xs1' t1'" "b1 = iLamB xs1' b1'"
     and   2: "R t2' b2'" "iLam xs t = iLam xs2' t2'" "b2 = iLamB xs2' b2'"
+    and xs1': "super xs1'" and xs2': "super xs2'"
     using R_iLam_elim by metis
+    hence s: "super xs" "super xs1'" "super xs2'" using xs by auto
+
+    have gd12': "good t1'" "good t2'" using 1(1) 2(1) R_good by auto
+
+    hence bs: "bsmall (ILC.FFVars t)" and bs1: "bsmall (ILC.FFVars t1')" and bs2: "bsmall (ILC.FFVars t2')"
+    using s good_finite_touchedSuperT[OF gd12'(1)] good_finite_touchedSuperT[OF gd12'(2)]
+    good_finite_touchedSuperT[OF gdt]
+    by (auto simp add: bsmall_def touchedSuperT_def[symmetric]) 
 
     have b12': "{b1',b2'} \<subseteq> B"
     using 1(1,3) 2(1,3) R_B by auto
 
-    have "|dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2'| <o |UNIV::ivar set|"
-    by (meson card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound) 
-    then obtain zs where zs: 
-    "dsset zs \<inter> (dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2') = {}" 
-    by (meson iLam_avoid)
+    (* have "|dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2'| <o |UNIV::ivar set|"
+    by (meson card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound) *)
+
+    have "bsmall (dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2')"
+    apply(intro bsmall_Un) using bs bs1 bs2 s super_bsmall_dsset by auto
+
+    then obtain zs where zs: "super zs"
+    and dzs: "dsset zs \<inter> (dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2') = {}" 
+    unfolding bsmall_def touchedSuper_def 
+    by (smt (verit) Collect_cong Int_commute super_infinite)
+
+    have dzs1: "dsset zs \<inter> (dsset xs \<union> dsset xs1' \<union> ILC.FFVars t \<union> ILC.FFVars t1') = {}"
+    using dzs by auto
 
     obtain f1 f1' where 
     f1: "bij f1" "|supp f1| <o |UNIV::ivar set|"
+       "presSuper f1" "bsmall (supp f1)"
        "id_on (- (dsset xs \<union> dsset zs)) f1 \<and> id_on (FFVars(iLam xs t)) f1" 
        "id_on (dsset xs) (f1 o f1)" and 
     f1': "bij f1'" "|supp f1'| <o |UNIV::ivar set|"
+       "presSuper f1'" "bsmall (supp f1')"
        "id_on (- (dsset xs1' \<union> dsset zs)) f1' \<and> id_on (FFVars(iLam xs1' t1')) f1'"
        "id_on (dsset xs1') (f1' o f1')" 
     and zs1: "dsmap f1 xs = zs" "dsmap f1' xs1' = zs"
     and f1f1': "irrename f1 t = irrename f1' t1'"   
-    using zs iLam_inject_strong'[OF 1(2), of zs] by force
+    using iLam_inject_super_strong'[OF bs bs1 xs xs1' zs 1(2) dzs1] by blast
 
     have if1': "bij (inv f1' o f1)" "|supp (inv f1' o f1)| <o |UNIV::ivar set|"
     by (auto simp add: f1 f1' iterm_pre.supp_comp_bound)
@@ -414,19 +476,24 @@ next
     using f1f1' by (metis (mono_tags, lifting) bij_imp_bij_inv f1(1,2) f1'(1,2)
        inv_o_simp1 supp_inv_bound iterm.rrename_comps iterm.rrename_ids)
 
-    have fvb1': "FVarsB b1' \<subseteq> FFVars t1'"
+    have fvb1': "touchedSuper (FVarsB b1') \<subseteq> touchedSuper (FFVars t1')"
     using iLam2[OF if1', unfolded t1'[symmetric], OF 1(1)] .
+
+    have dzs2: "dsset zs \<inter> (dsset xs \<union> dsset xs2' \<union> ILC.FFVars t \<union> ILC.FFVars t2') = {}"
+    using dzs by auto
 
     obtain f2 f2' where 
     f2: "bij f2" "|supp f2| <o |UNIV::ivar set|"
+       "presSuper f2" "bsmall (supp f2)"
        "id_on (- (dsset xs \<union> dsset zs)) f2 \<and> id_on (FFVars(iLam xs t)) f2"
        "id_on (dsset xs) (f2 o f2)" and 
     f2': "bij f2'" "|supp f2'| <o |UNIV::ivar set|"
+       "presSuper f2'" "bsmall (supp f2')"
        "id_on (- (dsset xs2' \<union> dsset zs)) f2' \<and> id_on (FFVars(iLam xs2' t2')) f2'"
        "id_on (dsset xs2') (f2' o f2')"
     and zs2: "dsmap f2 xs = zs" "dsmap f2' xs2' = zs"
-    and f2f2': "irrename f2 t = irrename f2' t2'"   
-    using zs iLam_inject_strong'[OF 2(2), of zs] by force 
+    and f2f2': "irrename f2 t = irrename f2' t2'" 
+    using iLam_inject_super_strong'[OF bs bs2 xs xs2' zs 2(2) dzs2] by blast   
 
     have if2': "bij (inv f2' o f2)" "|supp (inv f2' o f2)| <o |UNIV::ivar set|"
     by (auto simp add: f2 f2' iterm_pre.supp_comp_bound)
@@ -436,7 +503,7 @@ next
     by (metis (mono_tags, lifting) bij_imp_bij_inv f2(1,2) f2'(1,2)
       inv_o_simp1 iterm.rrename_comps iterm.rrename_ids supp_inv_bound)
 
-    have fvb2': "FVarsB b2' \<subseteq> FFVars t2'"
+    have fvb2': "touchedSuper (FVarsB b2') \<subseteq> touchedSuper (FFVars t2')"
     using iLam2[OF if2', unfolded t2'[symmetric], OF 2(1)] .
 
     have if2: "bij (inv f2)" "|supp (inv f2)| <o |UNIV::ivar set|" 
@@ -450,15 +517,15 @@ next
     by (metis bij_betw_def bij_imp_bij_betw dsset_dsmap f2'(1) zs2(2))
 
     have iif2: "id_on (- (dsset xs \<union> dsset zs)) (inv f2)"
-    using f2(1) f2(3) id_on_inv by blast
+    using f2(1,3,5) id_on_inv by blast
 
     have eo1: "eq_on (dsset xs) f1 (inv f1)"
-    using f1(4) unfolding id_on_def eq_on_def  
-    by simp (metis f1(1) inv_simp1)  
+    using f1(1,5,6) unfolding id_on_def eq_on_def   
+    by simp (metis inv_simp1)  
 
     have eo2: "eq_on (dsset xs) f2 (inv f2)"
-    using f2(4) unfolding id_on_def eq_on_def  
-    by simp (metis f2(1) inv_simp1)
+    using f2(1,5,6) unfolding id_on_def eq_on_def  
+    by simp (metis inv_simp1)
 
     have eq_f1f2: "eq_on (dsset zs) (inv f1) (inv f2)" 
     by (metis bbe(1) bij_betw_imp_inj_on bij_bij_betw_inv 
@@ -472,12 +539,17 @@ next
     by (smt (verit, best) bij_inv_eq_iff comp_apply eq_f1f2 eq_onD f1(1) id_on_def)
     
     define ff2' where "ff2' = f1 o (inv f2) o f2'"
+  
 
-    have ff2': "bij ff2'" "|supp ff2'| <o |UNIV::ivar set|"
+    have ff2': "bij ff2'" "|supp ff2'| <o |UNIV::ivar set|" 
+       "presSuper ff2'" "bsmall (supp ff2')"
        "id_on (- (dsset xs2' \<union> dsset zs)) ff2' \<and> id_on (FFVars (iLam xs2' t2')) ff2'" 
     unfolding ff2'_def using f1 f2 f2'  
       subgoal by auto 
       subgoal unfolding ff2'_def using f1 f2 f2' by (simp add: iterm_pre.supp_comp_bound)
+      subgoal  
+        by (simp add: f1(1) f1(2) f1(3) f2'(1) f2'(2) f2'(3) f2(1) f2(2) f2(3) iterm_pre.supp_comp_bound presSuper_comp presSuper_inv)
+      subgoal sorry
       subgoal apply(rule conjI)  
         subgoal unfolding ff2'_def using f1 f2 f2' eo2
         unfolding id_on_def eq_on_def apply simp by (metis bij_inv_eq_iff eq_f1f2 eq_on_def)

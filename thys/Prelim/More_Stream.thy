@@ -352,6 +352,24 @@ proof-
   by (meson bij_betw_imp_inj_on dsmap_cong eq_on_def f(1))
 qed
 
+lemma ex_dsmap'': 
+assumes ds: "dsset xs \<inter> dsset ys = {}" and 
+A: "|A| <o |UNIV::'a :: infinite_regular set|" "A \<inter> (dsset xs \<union> dsset ys) = {}"
+shows "\<exists>f::'a\<Rightarrow>'a. bij f \<and> |supp f| <o |UNIV::'a :: infinite_regular set| \<and> 
+   bij_betw f (dsset xs) (dsset ys) \<and> dsmap f xs = ys \<and> 
+   id_on A f"
+proof-
+  obtain f where f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys"
+  using ex_dsmap by auto
+  obtain u where u: "bij u \<and> |supp u| <o |UNIV::'a :: infinite_regular set| \<and> 
+     bij_betw u (dsset xs) (dsset ys) \<and> imsupp u \<inter> A = {} \<and> eq_on (dsset xs) u f" 
+  using ex_bij_betw_supp_UNIV[OF _ _ f(1) ds, where C = "A", simplified]  
+  using A dsset_card_ls infinite by blast
+  show ?thesis apply(rule exI[of _ u])
+  using u f(2) unfolding imsupp_def id_on_def supp_def apply auto  
+  by (meson bij_betw_imp_inj_on dsmap_cong eq_on_def f(1)) 
+qed
+
 lemma dsmap_eq: 
 "inj_on f (dsset xs) \<Longrightarrow> dsmap f xs = xs \<longleftrightarrow> id_on (dsset xs) f"
 apply transfer using smap_eq by auto

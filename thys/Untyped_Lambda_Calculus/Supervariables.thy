@@ -209,7 +209,8 @@ and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
 and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
 shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
    presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
-   id_on A' \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f"
+   id_on A' \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f \<and> 
+   id_on (dsset xs) (\<rho> o \<rho>)"
 proof- 
   obtain g where g: "bij_betw g (dsset ys) (dsset xs)" "dsmap g ys = xs" using ex_dsmap by auto
   define \<rho> where "\<rho> \<equiv> \<lambda>z. if z \<in> dsset xs then f z else if z \<in> dsset ys then g z else z"
@@ -246,7 +247,10 @@ proof-
     subgoal unfolding id_on_def \<rho>_def 
       using assms(5) assms(6) assms(7) by auto 
     subgoal by fact
-    subgoal unfolding \<rho>_def eq_on_def by auto .
+    subgoal unfolding \<rho>_def eq_on_def by auto 
+    subgoal unfolding \<rho>_def id_on_def apply simp 
+      by (metis bij_betw_apply dsnth_dsmap dtheN f(1) f(2) g(2) i(1) i(2) 
+       singleton_insert_inj_eq touchedSuper_iVar xs ys) .
 qed
 
 lemma extend_super2: 
@@ -255,12 +259,14 @@ A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}
 and f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys" 
 shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> 
    presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> 
-   id_on A \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f"
+   id_on A \<rho> \<and> id_on (- (dsset xs \<union> dsset ys)) \<rho> \<and> eq_on (dsset xs) \<rho> f \<and> 
+   id_on (dsset xs) (\<rho> o \<rho>)"
 apply(rule extend_super1) using assms by auto
 
 lemma extend_super: 
 assumes xs: "super xs" and A: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" and A': "A' \<subseteq> A" "dsset xs \<inter> A' = {}"
-shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> id_on A' \<rho>"
+shows "\<exists>\<rho>. bij (\<rho>::ivar\<Rightarrow>ivar) \<and> |supp \<rho>| <o |UNIV::ivar set| \<and> presSuper \<rho> \<and> \<rho> ` (dsset xs) \<inter> A = {} \<and> id_on A' \<rho> \<and> 
+           id_on (dsset xs) (\<rho> o \<rho>)"
 proof- 
   obtain ys where ys: "super ys" "A \<inter> dsset ys = {}" "ys \<noteq> xs"
     by (smt (verit, del_insts) assms(3) finite.simps insert_subset mem_Collect_eq set_eq_subset subset_eq super_infinite touchedSuper_def)
@@ -298,7 +304,10 @@ proof-
     subgoal unfolding \<rho>_def 
       by auto (meson Int_emptyD bij_betw_apply f(1) ys(2))
     subgoal unfolding id_on_def \<rho>_def 
-      using assms(4) assms(5) ys(2) by auto . 
+      using assms(4) assms(5) ys(2) by auto 
+    subgoal using f unfolding id_on_def \<rho>_def apply simp 
+      by (metis dsnth_dsmap dsset_dsmap dtheN g(2) i(1) i(2) 
+       image_eqI singleton_insert_inj_eq touchedSuper_iVar xs ys(1)) .
 qed
 
 
@@ -369,10 +378,20 @@ assumes u: "finite (touchedSuperT e)" and
 eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
 shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> 
        id_on (ILC.FFVars (iLam xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
-           dsmap f xs = xs' \<and> irrename f e = e'"
-proof-
+       id_on (dsset xs) (f o f) \<and>
+       dsmap f xs = xs' \<and> irrename f e = e'"
+proof(cases "xs = xs'")
+  case True
+  thus ?thesis apply(intro exI[of _ id]) 
+  apply (auto simp add: presSuper_def) 
+  using eq iLam_same_inject by blast
+next
+  case False
+  hence ds: "dsset xs \<inter> dsset xs' = {}" using super  
+    using super_disj by blast
   obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> 
-     dsmap f xs = xs' \<and> irrename f e = e'" using eq unfolding iLam_inject by auto
+     id_on (dsset xs) (f \<circ> f) \<and> 
+     dsmap f xs = xs' \<and> irrename f e = e'" using iLam_inject_strong[OF eq ds] by auto
   hence i: "inj_on f (dsset xs)" unfolding bij_def inj_on_def by auto
   define A where A: "A = FFVars (iLam xs e)"
   have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
@@ -386,7 +405,7 @@ proof-
     subgoal using f by auto .
   show ?thesis using extend_super2[OF super 0] apply safe
   subgoal for g apply(rule exI[of _ g]) using f unfolding A eq_on_def id_on_def 
-    by (metis DiffI ILC.irrename_cong dstream.map_cong0 iterm.set(3)) .
+    by simp (metis dstream.map_cong irrename_cong) .
 qed
 
 

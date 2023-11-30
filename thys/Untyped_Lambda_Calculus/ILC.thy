@@ -993,14 +993,12 @@ qed(unfold iLam_inject, auto)
 
 thm iLam_inject[no_vars]
 
-
-
 lemma iLam_inject_strong:
 assumes il: "iLam (xs::ivar dstream) e = iLam xs' e'" 
 and ds: "dsset xs \<inter> dsset xs' = {}" 
 shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and>  
    id_on (- (dsset xs \<union> dsset xs')) f \<and> id_on (FFVars (iLam xs e)) f \<and> 
-   id_on (dsset xs \<union> dsset xs') (f o f) \<and>
+   id_on (dsset xs) (f o f) \<and>
    dsmap f xs = xs' \<and> irrename f e = e'" 
 proof-
   obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|"  "dsmap f xs = xs'" 
@@ -1043,10 +1041,10 @@ shows
 "\<exists>f f'. 
    bij f \<and> |supp f| <o |UNIV::ivar set| \<and> 
      id_on ((- (dsset xs \<union> dsset zs))) f \<and> id_on (FFVars (iLam xs e)) f \<and> 
-     id_on (dsset xs \<union> dsset zs) (f o f) \<and> dsmap f xs = zs \<and> 
+     id_on (dsset xs) (f o f) \<and> dsmap f xs = zs \<and> 
    bij f' \<and> |supp f'| <o |UNIV::ivar set| \<and> 
      id_on (- (dsset xs' \<union> dsset zs)) f' \<and> id_on (FFVars (iLam xs' e')) f' \<and> 
-     id_on (dsset xs' \<union> dsset zs) (f' o f') \<and> dsmap f' xs' = zs \<and> 
+     id_on (dsset xs') (f' o f') \<and> dsmap f' xs' = zs \<and> 
    irrename f e = irrename f' e'"
 proof-  
   have ds: "dsset xs \<inter> dsset zs = {}" using zs by auto
@@ -1062,7 +1060,7 @@ proof-
   
   have g: "bij g" "|supp g| <o |UNIV::ivar set|"
    "id_on (- (dsset xs \<union> dsset zs)) g" "id_on (FFVars (iLam xs e)) g"
-   "id_on (dsset xs \<union> dsset zs) (g o g)"
+   "id_on (dsset xs) (g o g)"
    "dsmap g xs = zs"  
   subgoal unfolding bij_def apply(rule conjI)
     subgoal unfolding inj_def   
@@ -1077,8 +1075,7 @@ proof-
    subgoal unfolding id_on_def g_def by auto
    subgoal unfolding g_def id_on_def using Int_Un_emptyI1 zs by auto
    subgoal using  zs unfolding id_on_def apply auto
-     apply (metis Int_emptyD bf bij_betw_apply ds f(1) g_def inv_simp1)
-     by (metis Int_emptyD bf bij_betw_def ds f(1) g_def image_in_bij_eq inv_simp2)
+     apply (metis Int_emptyD bf bij_betw_apply ds f(1) g_def inv_simp1) .
    subgoal by (metis \<open>bij g\<close> \<open>|supp g| <o |UNIV|\<close> dstream.map_cong f(1) f(2) f(3) g_def) .
 
   (* *)
@@ -1096,7 +1093,7 @@ proof-
   
   have g': "bij g'" "|supp g'| <o |UNIV::ivar set|" 
    "id_on (- (dsset xs' \<union> dsset zs)) g'" "id_on (FFVars (iLam xs' e')) g'"
-   "id_on (dsset xs' \<union> dsset zs) (g' o g')"
+   "id_on (dsset xs') (g' o g')"
    "dsmap g' xs' = zs" 
   subgoal unfolding bij_def apply(rule conjI)
     subgoal unfolding inj_def   
@@ -1111,8 +1108,7 @@ proof-
    subgoal unfolding id_on_def g'_def by auto
    subgoal unfolding g'_def id_on_def using Int_Un_emptyI1 zs by auto
    subgoal using zs unfolding id_on_def apply auto 
-     apply (metis Int_emptyD bf' bij_betw_apply ds' f'(1) g'_def inv_simp1)
-     by (metis (no_types, lifting) Int_emptyD bf' bij_betw_apply bij_bij_betw_inv ds' f'(1) g'_def inv_simp1)
+     apply (metis Int_emptyD bf' bij_betw_apply ds' f'(1) g'_def inv_simp1) .
    subgoal by (metis \<open>bij g'\<close> \<open>|supp g'| <o |UNIV|\<close> dstream.map_cong f'(1) f'(2) f'(3) g'_def) .
 
    obtain h where h: "bij h" "|supp h| <o |UNIV::ivar set|" 
@@ -1263,8 +1259,8 @@ proof-
 qed
 
 (* NB: 
-We obtain a more general recursor if we replace renB_cong with LamB_inject_strong_rev; 
-and an even more general one if we replace it with LamB_inject_strong'_rev. 
+We obtain a more general recursor if we replace renB_cong with iLamB_inject_strong_rev; 
+and an even more general one if we replace it with iLamB_inject_strong'_rev. 
 *)
 
 definition morFromTrm where 
@@ -1423,10 +1419,10 @@ next
     obtain f1 f1' where 
     f1: "bij f1" "|supp f1| <o |UNIV::ivar set|"
        "id_on (- (dsset xs \<union> dsset zs)) f1 \<and> id_on (FFVars(iLam xs t)) f1" 
-       "id_on (dsset xs \<union> dsset zs) (f1 o f1)" and 
+       "id_on (dsset xs) (f1 o f1)" and 
     f1': "bij f1'" "|supp f1'| <o |UNIV::ivar set|"
        "id_on (- (dsset xs1' \<union> dsset zs)) f1' \<and> id_on (FFVars(iLam xs1' t1')) f1'"
-       "id_on (dsset xs1' \<union> dsset zs) (f1' o f1')" 
+       "id_on (dsset xs1') (f1' o f1')" 
     and zs1: "dsmap f1 xs = zs" "dsmap f1' xs1' = zs"
     and f1f1': "irrename f1 t = irrename f1' t1'"   
     using zs iLam_inject_strong'[OF 1(2), of zs] by force
@@ -1444,10 +1440,10 @@ next
     obtain f2 f2' where 
     f2: "bij f2" "|supp f2| <o |UNIV::ivar set|"
        "id_on (- (dsset xs \<union> dsset zs)) f2 \<and> id_on (FFVars(iLam xs t)) f2"
-       "id_on (dsset xs \<union> dsset zs) (f2 o f2)" and 
+       "id_on (dsset xs) (f2 o f2)" and 
     f2': "bij f2'" "|supp f2'| <o |UNIV::ivar set|"
        "id_on (- (dsset xs2' \<union> dsset zs)) f2' \<and> id_on (FFVars(iLam xs2' t2')) f2'"
-       "id_on (dsset xs2' \<union> dsset zs) (f2' o f2')"
+       "id_on (dsset xs2') (f2' o f2')"
     and zs2: "dsmap f2 xs = zs" "dsmap f2' xs2' = zs"
     and f2f2': "irrename f2 t = irrename f2' t2'"   
     using zs iLam_inject_strong'[OF 2(2), of zs] by force 
@@ -1476,11 +1472,11 @@ next
     have iif2: "id_on (- (dsset xs \<union> dsset zs)) (inv f2)"
     using f2(1) f2(3) id_on_inv by blast
 
-    have eo1: "eq_on (dsset xs \<union> dsset zs) f1 (inv f1)"
+    have eo1: "eq_on (dsset xs) f1 (inv f1)"
     using f1(4) unfolding id_on_def eq_on_def  
     by simp (metis f1(1) inv_simp1)  
 
-    have eo2: "eq_on (dsset xs \<union> dsset zs) f2 (inv f2)"
+    have eo2: "eq_on (dsset xs) f2 (inv f2)"
     using f2(4) unfolding id_on_def eq_on_def  
     by simp (metis f2(1) inv_simp1)
 
@@ -1490,7 +1486,7 @@ next
       inv_o_simp1 supp_inv_bound zs1(1) zs2(1))
 
     have eq_f1f2: "eq_on (dsset xs) (inv f1) (inv f2)" 
-    by (smt (verit, best) Un_iff bbe(1) bij_betw_apply eo1 eo2 eq_f1f2 eq_on_def f1(1) f2(1) inv_simp2)
+    by (metis bbe(1) bij_betw_imp_inj_on bij_bij_betw_inv dsmap_eq2 eo1 eo2 eq_on_sym eq_on_trans f2(1) if2(3) zs1(1) zs2(1))
 
     have id_f1f2: "id_on (dsset xs) (f1 o inv f2)" 
     by (smt (verit, best) bij_inv_eq_iff comp_apply eq_f1f2 eq_onD f1(1) id_on_def)

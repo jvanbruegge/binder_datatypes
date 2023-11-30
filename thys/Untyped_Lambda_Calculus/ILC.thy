@@ -1213,7 +1213,6 @@ and
 FVarsB_iLamB: "\<And>xs b. b \<in> B \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs"
 begin 
 
-
 lemma not_in_FVarsB_iLamB: 
 "b \<in> B \<Longrightarrow> dsset xs \<inter> FVarsB (iLamB xs b) = {}"
 using FVarsB_iLamB by auto

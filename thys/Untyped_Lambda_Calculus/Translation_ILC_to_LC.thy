@@ -10,24 +10,6 @@ begin
 definition B :: "(var term) set" where "B \<equiv> UNIV"
 
 
-(*
-term ivarOf
-
-definition varOf :: "ivar \<Rightarrow> var" where 
-"varOf \<equiv> SOME f. f o ivarOf = id"
-
-find_theorems ivarOf
-
-lemma inj_ex_comp: "inj g \<Longrightarrow> \<exists>f. f o g = id"
-using inv_o_cancel by blast
-
-lemma varOf_o_ivarOf: "varOf o ivarOf = id"
-by (smt (verit, ccfv_threshold) inj_ex_comp ivarOf_inj someI_ex varOf_def)
-
-lemma varOf_ivarOf[simp]: "varOf (ivarOf x) = x"
-using varOf_o_ivarOf unfolding fun_eq_iff by auto
-*)
-
 (* Restricting a (supervariable-preserving) ivar-permutation to a ver-permutation *)
 definition restr :: "(ivar \<Rightarrow> ivar) \<Rightarrow> var \<Rightarrow> var" where 
 "restr f x \<equiv> subOf (dsmap f (superOf x))"
@@ -190,6 +172,7 @@ lemma tr'_iLam[simp]: "super xs \<Longrightarrow> good e \<Longrightarrow> tr' (
 using T'.rec_iLam unfolding tr'_def iLamB_def by auto
 
 lemma tr'_iApp[simp]: "good e1 \<Longrightarrow> (\<forall>e2\<in>sset es2. good e2) \<Longrightarrow> 
+  (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
   tr' (iApp e1 es2) = App (tr' e1) (tr' (snth es2 0))"
 using T'.rec_iApp unfolding tr'_def iAppB_def by auto
 
@@ -207,7 +190,46 @@ proof-
   thus ?thesis unfolding touchedSuper_def by auto
 qed
 
+(* *)
 
+lemma reneqv_good: "reneqv e e' \<Longrightarrow> good e \<and> good e'"
+apply(induct rule: reneqv.induct) 
+  subgoal by(auto intro: good.intros) 
+  subgoal by(auto intro: good.intros) 
+  subgoal apply(rule conjI)
+    subgoal apply(rule good.iApp) using reneqv_touchedSuperT_eq by blast+
+    subgoal apply(rule good.iApp) using reneqv_touchedSuperT_eq by blast+ . .
+
+lemma uniform_good: "uniform e \<Longrightarrow> good e"
+using reneqv_good unfolding uniform_def3 by auto
+
+lemma uniformS_good: 
+"uniformS es2 \<Longrightarrow> 
+ (\<forall>e2\<in>sset es2. good e2) \<and> 
+ (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
+unfolding uniformS_def4 using reneqv_good reneqv_touchedSuperT_eq by auto 
+
+
+(* We recover Mazza's desired definition: *)
+
+thm tr'_iVar 
+
+lemma tr'_iLam_uniform[simp]: "super xs \<Longrightarrow> uniform e \<Longrightarrow> tr' (iLam xs e) = Lam (subOf xs) (tr' e)"
+using uniform_good by auto
+
+lemma tr'_iApp_uniform[simp]: "uniform e1 \<Longrightarrow> uniformS es2 \<Longrightarrow> 
+  tr' (iApp e1 es2) = App (tr' e1) (tr' (snth es2 0))"
+by (simp add: uniformS_good uniform_good)
+
+lemma irrename_tr'_uniform:
+"uniform e \<Longrightarrow> bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp f) \<Longrightarrow> presSuper f \<Longrightarrow>
+ tr' (irrename f e) = rrename (restr f) (tr' e)"
+using uniform_good irrename_tr' by auto
+
+lemma FFVars_tr'_uniform: 
+assumes "uniform e" "x \<in> LC.FFVars (tr' e)"
+shows "dsset (superOf x) \<inter> ILC.FFVars e \<noteq> {}"
+using assms FFVars_tr'  uniform_good by auto
 
 
 

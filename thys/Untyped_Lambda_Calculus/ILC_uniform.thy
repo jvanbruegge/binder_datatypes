@@ -38,9 +38,9 @@ apply(erule reneqv.cases) by auto
 
 lemma uniform_iLam_inject_super: 
 assumes u: "uniform (iLam xs e)" and eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
-shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> 
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> finite (touchedSuper (supp f)) \<and>
        id_on (ILC.FFVars (iLam xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
-           dsmap f xs = xs' \<and> irrename f e = e'"
+       id_on (dsset xs) (f o f) \<and> dsmap f xs = xs' \<and> irrename f e = e'"
 apply(rule iLam_inject_super) using assms  
 by (metis finite_Diff2 finite_singleton touchedSuper_iLam uniform_finite_touchedUponT, auto)
 

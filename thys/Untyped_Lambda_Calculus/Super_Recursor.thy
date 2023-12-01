@@ -1,6 +1,6 @@
 (* "SUPER" RECURSOR (i.e., restricted to supervariable binders)  *)
 theory Super_Recursor
-imports BSmall Supervariables ILC_Good 
+imports BSmall Supervariables ILC_good 
 begin
 
 

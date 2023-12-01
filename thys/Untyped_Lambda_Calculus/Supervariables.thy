@@ -199,6 +199,41 @@ by auto (smt (verit, ccfv_threshold) Int_emptyD bij_betw_inv_into dstream.map_co
 dstream.set_map image_in_bij_eq inv_inv_eq inv_o_simp1 presSuper_def supp_inv_bound)+ 
 
 
+
+lemma presSuper_id[simp,intro]: "presSuper id"
+unfolding presSuper_def by auto
+
+lemma presSuper_comp: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+ bij g \<Longrightarrow> |supp g| <o |UNIV::ivar set| \<Longrightarrow> presSuper g \<Longrightarrow> 
+ presSuper (g o f)"
+unfolding presSuper_def by (auto simp: dstream.map_comp[symmetric])
+
+lemma presSuper_inv: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> presSuper (inv f)"
+by (metis bij_bij_betw_inv dstream.map_comp inv_o_simp2 presSuper_def presSuper_id supp_inv_bound)
+
+lemma touchedSuper_supp_comp: 
+"touchedSuper (supp (g \<circ> f)) \<subseteq> touchedSuper (supp g) \<union> touchedSuper (supp f)"
+unfolding touchedSuper_def using supp_o by fastforce
+
+lemma touchedSuper_image: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+touchedSuper (f ` A) = (dsmap f) ` (touchedSuper A)"
+unfolding touchedSuper_def apply safe  
+  subgoal for xs _ a  unfolding image_def apply simp  
+    by (smt (verit) Int_emptyD bij_betw_inv_into dstream.map_comp 
+    dstream.map_id dstream.set_map 
+    image_in_bij_eq inv_inv_eq inv_o_simp2 presSuper_def supp_inv_bound)
+  subgoal unfolding presSuper_def by (auto simp: image_def dssset_dsmap' presSuper_def) 
+  subgoal unfolding presSuper_def by (auto simp: image_def dssset_dsmap' presSuper_def) .
+
+lemma touchedSuper_supp_inv: 
+"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
+touchedSuper (supp (inv f)) = dsmap f ` (touchedSuper (supp f))"
+unfolding supp_inv by (simp add: touchedSuper_image)
+
+
 (* *)
 
 

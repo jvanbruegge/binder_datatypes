@@ -378,5 +378,8 @@ lemma dsmap_eq2:
 "inj_on f (dsset xs) \<Longrightarrow> inj_on g (dsset xs) \<Longrightarrow> dsmap f xs = dsmap g xs \<longleftrightarrow> eq_on (dsset xs) f g"
 apply transfer using smap_eq2 by auto
 
+lemma dssset_dsmap': "bij f \<Longrightarrow> dsset (dsmap f vs) = f ` dsset vs"
+apply(rule dsset_dsmap) unfolding bij_def inj_def inj_on_def by auto
+
 
 end

@@ -32,15 +32,37 @@ lemma hred_affineS:
 using hread_affine unfolding stream_all2_iff_snth affineS_def sset_range 
 by auto (metis disjoint_iff_not_equal hred_def insert_absorb insert_subset istep.Beta istep_FFVars)
 
+
+lemma affineS_sflat: "affineS (sflat ess) \<longleftrightarrow> 
+ (\<forall>i j i' j'. affine (snth2 ess (i,j)) \<and> 
+    ((i,j) \<noteq> (i',j') \<longrightarrow> ILC.FFVars ((snth2 ess (i,j))) \<inter> ILC.FFVars ((snth2 ess (i',j'))) = {}))"
+unfolding affineS_def sset_sflat sset_range image_def snth_sflat apply safe
+  subgoal by (smt (verit, ccfv_threshold) UNIV_I mem_Collect_eq nat2_nat1 snth_sflat)
+  subgoal apply auto by (metis Int_emptyD nat2_nat1 snth2.simps snth_sflat snth_supd_diff snth_supd_same)
+  subgoal for i j i' j' x apply(erule allE[of _ "nat1 (i,j)"]) apply(erule allE[of _ "nat1 (i',j')"]) by auto
+  subgoal by (metis snth2.elims)
+  subgoal by (metis (no_types, lifting) Int_emptyD nat2_inj snth2.elims) .
+
+
 lemma affineS_smap2_iApp_iff: 
 "affineS (smap2 iApp es ess) \<longleftrightarrow> 
  affineS es \<and> affineS (sflat ess) \<and> 
   (\<forall>i j k. ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth2 ess (j,k)) = {})"
-sorry
+unfolding affineS_def sset_sflat sset_range image_def snth_sflat affineS_sflat Un_def Int_def apply safe
+  subgoal using affine_iApp_iff by fastforce
+  subgoal by auto
+  subgoal by auto (metis affine_iApp_iff snth2.elims snth_sset)
+  subgoal for ii jj x apply(cases "nat2 ii", cases "nat2 jj") apply auto  
+  by (metis Int_emptyD affine_iApp_iff nat2_inj snth_sset)
+  subgoal by auto (metis Int_emptyD affine_iApp_iff snth_sset)
+  subgoal apply(auto simp: affine_iApp_iff sset_range image_def)  
+    apply (metis nat2_nat1 snth2.simps)
+    by (metis nat2_nat1 prod.inject snth2.simps)
+  subgoal apply auto
+    apply (metis More_Stream.theN) 
+    apply (metis More_Stream.theN) 
+    by (smt (verit, ccfv_SIG) More_Stream.theN nat2_nat1 prod.inject snth2.simps) .
 
-lemma affineS_sflat: "affineS (sflat ess) \<longleftrightarrow> 
- (\<forall>i j i' j'. affine (snth2 ess (i,j)) \<and> ILC.FFVars ((snth2 ess (i,j))) \<inter> ILC.FFVars ((snth2 ess (i',j'))) = {})"
-sorry 
 
 lemma affineS_smap_iLam_iff: "affineS (smap (iLam xs) es) \<longleftrightarrow> 
   (\<forall>i j. i \<noteq> j \<longrightarrow> affine (snth es i) \<and> ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth es j) \<subseteq> dsset xs)"

@@ -306,23 +306,6 @@ using assms unfolding good_I using Reneqv.II_equiv[of e f]
 unfolding Tmap_def ssbij_def wfBij_presSuper by auto
 
 
-(* Other properties: *)
-
-lemma bsmall_supp_ifd[simp,intro!]: "bsmall (supp id)"
-unfolding bsmall_def supp_def by auto
-
-lemma super_bsmall_dsset: "super xs \<Longrightarrow> bsmall (dsset xs)"
-by (simp add: bsmall_def)
-
-lemma bsmall_supp_comp: "bsmall (supp g) \<Longrightarrow> bsmall (supp f) \<Longrightarrow> bsmall (supp (g o f))"
-unfolding bsmall_def using touchedSuper_supp_comp 
-by (metis finite_UnI rev_finite_subset)
-
-lemma bsmall_supp_inv: 
-"bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> bsmall (supp f) 
- \<Longrightarrow> bsmall (supp (inv f))"
-unfolding bsmall_def by (simp add: touchedSuper_supp_inv)
-
   
 
 end

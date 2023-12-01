@@ -248,6 +248,10 @@ lemma FFVars_tr:
 "subOf ` touchedSuper (ILC.FFVars (tr e p)) \<subseteq> LC.FFVars e"
 using T.FVarsB_rec unfolding tr_def FVarsB_def by auto
 
+(* *)
+lemma uniformS_tr[simp,intro]: "uniformS (smap (tr e) ps)"
+unfolding uniformS_def4 by auto
+
 
 
 end 

@@ -306,6 +306,106 @@ using assms unfolding good_I using Reneqv.II_equiv[of e f]
 unfolding Tmap_def ssbij_def wfBij_presSuper by auto
 
 
+(* Other properties: *)
+
+
+lemma touchedSuperT_itvsubst: "touchedSuperT (itvsubst f t) = \<Union> ((touchedSuperT o f) ` (FFVars t))"
+unfolding touchedSuperT_def by (auto simp: touchedSuper_UN )
+
+lemma good_FFVars_RSuper: "good e \<Longrightarrow> FFVars e \<subseteq> RSuper"
+apply(induct rule: good.induct) unfolding RSuper_def 
+  by auto (metis superOf_subOf)
+
+lemma good_FFVars_super: "good e \<Longrightarrow> x \<in> FFVars e \<Longrightarrow> \<exists>xs. super xs \<and> x \<in> dsset xs"
+apply(drule good_FFVars_RSuper) unfolding RSuper_def2 by auto
+
+lemma UN_touchedSuperT_super_eq: 
+assumes f: "\<And>xs x x'. super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> touchedSuperT (f x) = touchedSuperT (f x')"
+and AA': "A \<subseteq> RSuper" "A' \<subseteq> RSuper" "touchedSuper A = touchedSuper A'"
+shows "(\<Union>x\<in>A. touchedSuperT (f x)) = (\<Union>x'\<in>A'. touchedSuperT (f x'))"
+proof safe
+  fix y x assume x: "x \<in> A" and y: "y \<in> touchedSuperT (f x)"
+  then obtain xs where xs: "super xs" "x \<in> dsset xs" using AA' unfolding RSuper_def2 by auto
+  then obtain x' where x': "x' \<in> dsset xs" "x' \<in> A'" using AA' x xs unfolding touchedSuper_def by fastforce
+  hence "touchedSuperT (f x) = touchedSuperT (f x')" using f xs x x' by blast
+  thus "y \<in> (\<Union>x'\<in>A'. touchedSuperT (f x'))" using y x' by auto
+next
+  fix y x' assume x': "x' \<in> A'" and y: "y \<in> touchedSuperT (f x')"
+  then obtain xs where xs: "super xs" "x' \<in> dsset xs" using AA' unfolding RSuper_def2 by auto
+  then obtain x where x: "x \<in> dsset xs" "x \<in> A" using AA' x' xs unfolding touchedSuper_def by fastforce
+  hence "touchedSuperT (f x) = touchedSuperT (f x')" using f xs x x' by blast
+  thus "y \<in> (\<Union>x\<in>A. touchedSuperT (f x))" using y x by auto
+qed
+  
+
+
+lemma good_itvsubst:
+assumes r: "good e" and rr: 
+    "\<And>xs x. super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> good (f x)"
+    "\<And>xs x x'. super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> 
+     touchedSuperT (f x) = touchedSuperT (f x')" 
+and s: "|SSupp f| <o |UNIV::ivar set|"  
+and f: "finite (touchedSuper (IImsupp f))"  
+shows "good (itvsubst f e)"
+proof-
+  have ims: "|IImsupp f| <o |UNIV::ivar set|" 
+  using s ILC.SSupp_IImsupp_bound by auto
+  have par: "small (IImsupp f) \<and> bsmall (IImsupp f)"
+  using ims f unfolding small_def   
+  using var_stream_class.Un_bound bsmall_Un bsmall_def by blast
+  show ?thesis using par r proof(induct rule: BE_induct_good')
+    case (iVar xs x)
+    then show ?case using s rr by auto
+  next
+    case (iLam e xs)
+    show ?case using iLam apply(subst iterm.subst)
+      subgoal using s by blast
+      subgoal using s by auto 
+      subgoal apply(rule good.iLam) by auto .
+  next
+    case (iApp e1 es2)
+    then show ?case apply(subst iterm.subst)
+      subgoal using s by auto
+      subgoal apply(rule good.iApp)
+        subgoal by auto
+        subgoal by auto
+        subgoal apply clarsimp subgoal for e2 e2' unfolding touchedSuperT_itvsubst apply clarsimp
+        apply(rule UN_touchedSuperT_super_eq)
+          subgoal using rr by auto
+          subgoal unfolding RSuper_def2 using good_FFVars_super by auto  
+          subgoal unfolding RSuper_def2 using good_FFVars_super by auto 
+          subgoal unfolding touchedSuperT_def by blast . . . . 
+  qed
+qed
+
+
+lemma good_sset_touchedSuper: 
+"(\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e') \<Longrightarrow> 
+e \<in> sset es \<Longrightarrow> touchedSuper (\<Union> (FFVars ` (sset es))) = touchedSuper (FFVars e)"
+unfolding touchedSuper_UN using touchedSuperT_def by blast
+
+lemma touchedSuper_IImsupp_imkSubst: 
+"super xs \<Longrightarrow> (\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e') \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
+ touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> 
+ {xs} \<union> touchedSuper (FFVars e)"
+using touchedSuper_IImsupp_imkSubst good_sset_touchedSuper by blast
+
+
+lemma super_good_finite_touchedSuper_imkSubst: 
+"super xs \<Longrightarrow> (\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e') 
+ \<Longrightarrow> finite (touchedSuper (IImsupp (imkSubst xs es)))"
+by (metis Supervariables.touchedSuper_IImsupp_imkSubst bot.extremum finite.insertI 
+finite_Un good_finite_touchedSuperT insert_subset rev_finite_subset snth_sset touchedSuperT_def good_sset_touchedSuper)
+        
+lemma good_imkSubst:
+assumes r: "good e" and xs: "super xs" and rr: "\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e'" 
+shows "good (itvsubst (imkSubst xs es) e)"
+apply(rule good_itvsubst[OF r])
+  subgoal by (metis bot.extremum iVar imkSubst_def insert_subset rr snth_sset) 
+  subgoal by (metis bot.extremum imkSubst_def insert_subset rr singleton_inject snth_sset touchedSuper_iVar xs)
+  subgoal by simp
+  subgoal using rr super_good_finite_touchedSuper_imkSubst xs by blast .
+
   
 
 end

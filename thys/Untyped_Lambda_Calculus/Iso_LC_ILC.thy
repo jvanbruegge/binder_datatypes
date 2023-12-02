@@ -74,8 +74,9 @@ lemma "super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es 
 *)
 
 (* Mazza's lemma 17 *)
-lemma 
-assumes "\<And>i j. i \<noteq> j \<Longrightarrow> \<not> prefix (snth ps i) (snth ps j)"
+lemma tr_tvsubst_Var_reneqv: 
+(* This assumption made by Mazza is not needed: 
+assumes "\<And>i j. i \<noteq> j \<Longrightarrow> \<not> prefix (snth ps i) (snth ps j)" *)
 shows "reneqv
          (tr (tvsubst (Var(x:=e)) ee) q) 
          (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q))"
@@ -115,6 +116,103 @@ proof-
           subgoal using Lam.hyps(2) by fastforce . . .
   qed
 qed
+
+find_theorems good uniformS 
+
+thm uniformS_good[no_vars]
+
+lemma touchedSuper_Un: "touchedSuper (A \<union> A') = touchedSuper A \<union> touchedSuper A'"
+unfolding touchedSuper_def by auto
+
+lemma super_subOf_theN_eq: "super xs \<Longrightarrow> super ys \<Longrightarrow> x \<in> dsset ys \<Longrightarrow> subOf (fst (theSN x)) = subOf xs \<Longrightarrow> xs = ys"
+by (metis dtheN prod.collapse subsetD superOf_subOf super_dsset_RSuper theSN_unique)
+
+
+(* *)
+
+
+thm uniform_imkSubst[no_vars]
+
+find_theorems uniformS  itvsubst
+
+
+(* Here rule induction for good is needed. Could not have done induction on 
+t, neiother for this nor for the next theorem uassuming uniformity, 
+namely tr'_itvsubst_uniform . In fact I came up with 
+tr'_itvsubst_good_uniformS because I could not prove directly Mazza's tr'_itvsubst_uniform; 
+as there is no induction I can do on "uniform" and structiral induction (on t) would fail 
+in the lambda-case because we would not know xs is a supervariable (and we would not be able to recover it).
+*)
+lemma tr'_itvsubst_good_uniformS: 
+assumes txs: "super xs" "uniformS ts" (* and t: "uniform t" *)
+(* NB: while good t is needed for induction, the "uniformS t assumption cannot be replaced by the following: 
+"(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
+because this would fail to prove the Var case (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
+*)
+and t: "good t"
+shows "tr' (itvsubst (imkSubst xs ts) t) = 
+       tvsubst (Var((subOf xs):=(tr' (snth ts 0)))) (tr' t)"
+proof-
+  define A where "A = dsset xs \<union> \<Union> (ILC.FFVars ` (sset ts))"
+  obtain t2 where t2: "t2 \<in> sset ts"  
+    using snth_sset by blast
+  have g: "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
+  using txs(2) uniformS_good by auto
+  have "touchedSuper (\<Union> (ILC.FFVars ` sset ts)) = touchedSuper (ILC.FFVars t2)"
+  using t2 g apply auto unfolding touchedSuperT_def  
+  apply (smt (verit, ccfv_SIG) touchedSuper_UN UN_iff image_iff)
+   by (metis UN_iff touchedSuper_Union)
+  hence 0: "touchedSuper (dsset xs \<union> \<Union> (ILC.FFVars ` sset ts)) = 
+    touchedSuper (dsset xs) \<union> touchedSuper (ILC.FFVars t2)"
+  unfolding touchedSuper_Un by auto
+
+  have A: "ILC2.small A \<and> bsmall A" apply(rule conjI)
+    subgoal unfolding A_def ILC2.small_def
+    by (metis ILC_UBeta.Tfvars.simps ILC_UBeta.Tvars_dsset(2) Un_Diff_cancel 
+    card_dsset_ivar sup.idem var_stream_class.Un_bound)   
+    subgoal unfolding A_def bsmall_def unfolding 0  
+      by (metis g bsmall_def finite_Un good_finite_touchedSuperT super_bsmall t2 touchedSuperT_def txs(1)) .
+  then show ?thesis using t txs apply(induct rule: BE_induct_good')
+    subgoal for ys x apply auto 
+      apply (metis bot.extremum imkSubst_def insert_subset 
+       reneqvS_def reneqv_tr' shd_sset snth_sset sup.idem super_subOf_theN_eq uniformS_def3)
+      by (metis dtheN fst_conv imkSubst_idle snd_conv theSN' theSN_ex tr'_iVar) 
+    (* *)
+    defer
+    subgoal apply(subst tr'_iApp)
+    subgoal by auto
+    subgoal by auto
+    subgoal by auto
+    subgoal apply(subst iterm.subst(2))
+      subgoal by auto
+      subgoal apply(subst tr'_iApp)
+        subgoal using g good_imkSubst by auto
+        subgoal using g good_imkSubst by auto
+        subgoal apply clarsimp  apply (simp add: touchedSuperT_itvsubst ) 
+         apply(drule uniformS_good) unfolding imkSubst_def apply auto sorry    
+        subgoal using shd_sset by fastforce . . .
+    (* *)
+    subgoal apply(subst tr'_iLam)
+      apply auto apply(subst iterm.subst(3))
+        subgoal by auto subgoal unfolding A_def apply auto using touchedSuper_IImsupp_imkSubst 
+        unfolding touchedSuper_def apply auto sorry 
+        subgoal apply(subst term.subst(3))
+          subgoal by auto subgoal apply auto sorry 
+          subgoal apply(subst tr'_iLam) 
+            subgoal unfolding A_def by auto
+            subgoal using g good_imkSubst by auto
+            subgoal by auto . . . . 
+qed
+
+(* Lemma 18 from Mazza: *)
+lemma tr'_itvsubst_uniform: 
+assumes txs: "super xs" "uniformS ts" and t: "uniform t"
+shows "tr' (itvsubst (imkSubst xs ts) t) = 
+       tvsubst (Var((subOf xs):=(tr' (snth ts 0)))) (tr' t)"
+by (simp add: t tr'_itvsubst_good_uniformS txs(1) txs(2) uniform_good)
+
+
+
 
 
 

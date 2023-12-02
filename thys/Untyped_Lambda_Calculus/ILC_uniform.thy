@@ -222,21 +222,12 @@ lemma uniformS_touchedSuper_eq:
 "uniformS es \<Longrightarrow> {e,e'} \<subseteq> sset es \<Longrightarrow> touchedSuper (FFVars e) = touchedSuper (FFVars e')"
 using uniformS_touchedSuperT_eq touchedSuperT_def by auto
 
-lemma touchedSuper_UN: "touchedSuper (\<Union> XX) = \<Union> (touchedSuper  ` XX)"
-unfolding touchedSuper_def by auto
-
 lemma uniformS_touchedSuper: 
 "uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> touchedSuper (\<Union> (FFVars ` (sset es))) = touchedSuper (FFVars e)"
 unfolding touchedSuper_UN  
 by auto (metis empty_subsetI insert_subset touchedSuperT_def uniformS_touchedSuperT_eq) 
 
 (* *)
-
-lemma touchedSuper_IImsupp_imkSubst: 
-"super xs \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> {xs} \<union> touchedSuper (\<Union> (FFVars ` (sset es)))"
-unfolding touchedSuper_def IImsupp_def SSupp_def imkSubst_def apply auto 
-apply (meson disjoint_iff imkSubst_idle super_disj)
-apply (metis Int_emptyD UN_I snth_sset) . 
 
 lemma uniformS_touchedSuper_IImsupp_imkSubst: 
 "super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> 

@@ -147,7 +147,10 @@ lemma touchedSuper_Union:
 "touchedSuper (\<Union> (F ` I)) = (\<Union>i\<in>I. touchedSuper (F i))"
 unfolding touchedSuper_def by auto
 
-lemma touchedSuper_UN: 
+lemma touchedSuper_UN: "touchedSuper (\<Union> XX) = \<Union> (touchedSuper  ` XX)"
+unfolding touchedSuper_def apply auto .
+
+lemma touchedSuper_UN': 
 "touchedSuper (\<Union> KK) = \<Union> {touchedSuper K | K . K \<in> KK}"
 unfolding touchedSuper_def by auto
 
@@ -185,6 +188,8 @@ using super_dsset_singl touchedSuper_def by auto
 
 lemma touchedSuper_dsset_superOf[simp]: "touchedSuper (dsset (superOf x)) = {superOf x}"
 by auto
+
+
 
 (* The notion of a function preserving supervariables: *)
 definition "presSuper \<sigma> \<equiv> \<forall>xs. super xs \<longleftrightarrow> super (dsmap \<sigma> xs)"  
@@ -232,6 +237,17 @@ lemma touchedSuper_supp_inv:
 "bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> presSuper f \<Longrightarrow> 
 touchedSuper (supp (inv f)) = dsmap f ` (touchedSuper (supp f))"
 unfolding supp_inv by (simp add: touchedSuper_image)
+
+(* *)
+
+lemma touchedSuper_IImsupp_imkSubst: 
+"super xs \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> {xs} \<union> touchedSuper (\<Union> (FFVars ` (sset es)))"
+unfolding touchedSuper_def IImsupp_def SSupp_def imkSubst_def apply auto 
+apply (meson disjoint_iff imkSubst_idle super_disj)
+apply (metis Int_emptyD UN_I snth_sset) . 
+
+
+
 
 
 (* *)

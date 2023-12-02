@@ -2,7 +2,7 @@
 
 theory Iso_LC_ILC 
 imports Translation_LC_to_ILC  Translation_ILC_to_LC ILC_affine 
-"HOL-Library.Sublist"
+"HOL-Library.Sublist" LC_Beta
 begin
 
 term tr
@@ -178,24 +178,27 @@ apply standard
   subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto .  
     
 
+(* Lemma 18 from Mazza: *)
+(* Here rule induction for good is needed. There is no way to to induction on "uniform" 
+directly (and a genralization for reneqv is not clear); 
+also structural induction on t would not work, as the proof would fail 
+in the lambda case because we would not know xs is a supervariable 
+(and we would not be able to recover it).
 
-(* Here rule induction for good is needed. Could not have done induction on 
-t, neiother for this nor for the next theorem uassuming uniformity, 
-namely tr'_itvsubst_uniform . In fact I came up with 
-tr'_itvsubst_good_uniformS because I could not prove directly Mazza's tr'_itvsubst_uniform; 
-as there is no induction I can do on "uniform" and structiral induction (on t) would fail 
-in the lambda-case because we would not know xs is a supervariable (and we would not be able to recover it).
+So "good" acts like a bit of an "interpolant" (a sweet spot) between "uniform" 
+(which does not have induction) and "reneqv" (which being binary it is too heavy). 
+
+And we actually need *fresh induction* for good (so an application of our 
+rule induction meta-theory), because in the lambda-case we must avoid xs and the free vars of the 
+ts's. 
 *)
 lemma tr'_itvsubst_good_uniformS: 
-assumes txs: "super xs" "uniformS ts" (* and t: "uniform t" *)
-(* NB: while good t is needed for induction, the "uniformS t assumption cannot be replaced by the following: 
-"(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
-because this would fail to prove the Var case (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
-*)
-and t: "good t"
+assumes txs: "super xs" "uniformS ts" and t: "uniform t" 
 shows "tr' (itvsubst (imkSubst xs ts) t) = 
        tvsubst (Var((subOf xs):=(tr' (snth ts 0)))) (tr' t)"
 proof-
+  have t: "good t" using t  
+    by (simp add: uniform_good)
   define A where "A = dsset xs \<union> \<Union> (ILC.FFVars ` (sset ts))"
   obtain t2 where t2: "t2 \<in> sset ts"  
     using snth_sset by blast
@@ -215,6 +218,12 @@ proof-
     card_dsset_ivar sup.idem var_stream_class.Un_bound)   
     subgoal unfolding A_def bsmall_def unfolding 0  
       by (metis g bsmall_def finite_Un good_finite_touchedSuperT super_bsmall t2 touchedSuperT_def txs(1)) .
+  
+  (* NB: while good t is needed for induction, 
+    the "uniformS t assumption cannot be replaced by the following: 
+     "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
+      because this would fail to prove the Var case (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
+  *)
   then show ?thesis using t txs apply(induct rule: BE_induct_good')
     subgoal for ys x apply auto 
       apply (metis bot.extremum imkSubst_def insert_subset 
@@ -252,12 +261,134 @@ proof-
             subgoal by auto . . . . 
 qed
 
-(* Lemma 18 from Mazza: *)
-lemma tr'_itvsubst_uniform: 
-assumes txs: "super xs" "uniformS ts" and t: "uniform t"
-shows "tr' (itvsubst (imkSubst xs ts) t) = 
-       tvsubst (Var((subOf xs):=(tr' (snth ts 0)))) (tr' t)"
-by (simp add: t tr'_itvsubst_good_uniformS txs(1) txs(2) uniform_good)
+
+
+(* Theorem 9 from Mazza: *)
+(* Theorem 9(1): *)
+lemma tr'_tr: "tr' (tr e p) = e"
+apply(induct e arbitrary: p) 
+  subgoal for x p apply simp apply(subst tr'_iVar[of "superOf x"]) 
+    subgoal by auto
+    subgoal by (simp add: dsset_range)
+    subgoal by (metis fst_eqD subOf_superOf super_superOf theSN theSN_ex) .
+  subgoal apply simp apply(subst tr'_iApp_uniform) 
+    subgoal by blast
+    subgoal unfolding uniformS_def4 by auto
+    subgoal by auto .
+  subgoal by simp .
+
+(* Theorem 9(2): *)
+(* We again need "good" induction for the same reason: because 
+structural induction does not take 
+care of the supervariable assumptiin in the lambda-case. But this 
+time regular induction works, no need fresh induction like before. 
+Note also that "uniform t" is also needed in the induction, otherwise 
+the iApp case does not go through. 
+*)
+lemma tr_tr': 
+assumes t: "uniform t"
+shows "reneqv (tr (tr' t) p) t" 
+proof-
+have tt: "good t" using uniform_good[OF t] .
+show ?thesis using tt t
+apply(induct arbitrary: p rule: good.induct) 
+  subgoal for xs x p apply clarsimp  
+    apply(rule reneqv.iVar[of xs]) 
+    by auto (metis dsset_range rangeI subsetD superOf_subOf super_dsset_RSuper 
+       super_subOf_theN_eq theSN') 
+  subgoal for xs t p apply(subst tr'_iLam) 
+    subgoal by simp
+    subgoal by simp
+    subgoal apply simp apply(rule reneqv.iLam) by auto .
+  subgoal for t1 ts p apply(subst tr'_iApp) 
+    subgoal by simp
+    subgoal by simp
+    subgoal by simp
+    subgoal apply simp apply(rule reneqv.iApp) 
+      subgoal unfolding uniform_iApp_iff by auto
+      subgoal unfolding sset_range image_def  
+      by simp (smt (verit, ccfv_threshold) bot.extremum insert_subset reneqv_trans 
+         reneweqv_sym snth.simps(1) snth_sset uniform_iApp_case uniform_iApp_iff) . . .
+qed
+
+(* *)
+definition red where 
+"red e ee \<equiv> \<exists>x e1 e2. e = App (Lam x e1) e2 \<and> ee = tvsubst (Var(x:=e2)) e1"
+
+lemma red_step: "red e ee \<Longrightarrow> step e ee"
+by (metis red_def step.Beta)
+
+lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
+unfolding stream_all2_iff_snth using red_step by auto
+
+lemma hred_def2: 
+assumes t: "uniform t"
+shows 
+"hred t tt \<longleftrightarrow> 
+   (\<exists>xs e1 es2. super xs \<and> t = iApp (iLam xs e1) es2 \<and> tt = itvsubst (imkSubst xs es2) e1)"
+unfolding hred_def by (metis iLam_switch_to_super t)
+
+lemma tr'_hred_red: 
+assumes ttt: "hred t tt" and t: "uniform t"
+shows "red (tr' t) (tr' tt)"
+using ttt t unfolding red_def hred_def2[OF t] 
+by (metis reneqv_iApp_iff tr'_iApp_uniform tr'_iLam_uniform tr'_itvsubst_good_uniformS 
+   uniformS_def4 uniform_def3 uniform_iLam_iff)
+
+lemma tr'_hred_red2: 
+assumes "uniformS ts" "stream_all2 hred ts ts'"
+shows "stream_all2 red (smap tr' ts) (smap tr' ts')"
+using assms unfolding stream_all2_iff_snth 
+by (simp add: tr'_hred_red uniformS_sset_uniform)
+
+(* Theorem 19(4) (generalized for our (necessarily stream-based) version of 
+uniform step (see previous discussion, when introducing ustep, for why) *)
+lemma ustep_step: "ustep ts ss \<Longrightarrow> stream_all2 step (smap tr' ts) (smap tr' ss)"
+proof(induct rule: ustep.induct)
+  case (Beta es es')
+  then show ?case using red_step2 tr'_hred_red2 by blast
+next
+  case (iAppL ess es es')
+  then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
+    apply(subst tr'_iApp_uniform)
+      subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
+      apply(subst tr'_iApp_uniform)
+        subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+        subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
+        subgoal apply(rule step.AppL) by auto . .
+next
+  case (iAppR es ess ess')
+  then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
+    apply(subst tr'_iApp_uniform)
+      subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
+      by simp (metis snth2.simps uniformS_sflat ustep_uniformS)
+      apply(subst tr'_iApp_uniform)
+        subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+        subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
+        by simp (metis snth2.simps uniformS_sflat ustep_uniformS)
+        subgoal apply(rule step.AppR) unfolding snth_sflat  
+        by (metis nat2_nat1 snth.simps(1) snth2.simps) . .
+next
+  case (Xi xs es es')
+  then show ?case unfolding stream_all2_iff_snth apply clarsimp subgoal for i
+    apply(subst tr'_iLam_uniform)
+      subgoal by simp
+      subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal apply(subst tr'_iLam_uniform)
+        subgoal by simp
+        subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal apply(rule step.Xi) by auto . . .
+qed
+ 
+(* *)
+(* Theorem 19(3): *)
+lemma step_ustep: "stream_all2 step es ees \<Longrightarrow> 
+  \<exists>tts. ustep (smap (\<lambda>e. tr e p) es) tts \<and> 
+        stream_all2 reneqv tts (smap (\<lambda>e. tr ee p) ees)"
+sorry 
+  
 
 
 

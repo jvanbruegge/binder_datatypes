@@ -59,13 +59,20 @@ apply(induct rule: reneqv.induct)
 lemma IImsupp_Var: "LC.IImsupp (Var(x := e)) \<subseteq> FFVars e \<union> {x}"
 unfolding LC.IImsupp_def LC.SSupp_def by auto
 
-thm uniformS_touchedSuper_IImsupp_imkSubst[no_vars]
+lemma IImsupp_Var': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> LC.IImsupp (Var(x := e))"
+using IImsupp_Var by auto 
 
 lemma uniformS_touchedSuper_IImsupp_imkSubst':
 "super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
   ys \<noteq> xs \<Longrightarrow> ys \<notin> touchedSuper (ILC.FFVars e) \<Longrightarrow> 
   ys \<notin> touchedSuper (ILC.IImsupp (imkSubst xs es))"
 using uniformS_touchedSuper_IImsupp_imkSubst by auto
+
+lemma uniformS_touchedSuper_IImsupp_imkSubst'':
+"super xs \<Longrightarrow> super ys \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
+  ys \<noteq> xs \<Longrightarrow> dsset ys \<inter> ILC.FFVars e = {} \<Longrightarrow> 
+  dsset ys \<inter> ILC.IImsupp (imkSubst xs es) = {}"
+using uniformS_touchedSuper_IImsupp_imkSubst' unfolding touchedSuper_def by blast
 
 (*
 lemma "super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
@@ -117,9 +124,7 @@ proof-
   qed
 qed
 
-find_theorems good uniformS 
-
-thm uniformS_good[no_vars]
+(* *)
 
 lemma touchedSuper_Un: "touchedSuper (A \<union> A') = touchedSuper A \<union> touchedSuper A'"
 unfolding touchedSuper_def by auto
@@ -128,12 +133,50 @@ lemma super_subOf_theN_eq: "super xs \<Longrightarrow> super ys \<Longrightarrow
 by (metis dtheN prod.collapse subsetD superOf_subOf super_dsset_RSuper theSN_unique)
 
 
-(* *)
+lemma FFVars_touchedSuperT_imkSubst_UN_incl: 
+assumes xs: "super xs" and 0: "touchedSuperT e2 = touchedSuperT e2'"
+and 1: "(\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
+shows "(\<Union>x\<in>ILC.FFVars e2. touchedSuperT (imkSubst xs ts x)) \<subseteq>
+       (\<Union>x'\<in>ILC.FFVars e2'. touchedSuperT (imkSubst xs ts x'))"
+proof safe
+  fix x y
+  assume x: "x \<in> ILC.FFVars e2" and y: "y \<in> touchedSuperT (imkSubst xs ts x)"
+  show "y \<in> (\<Union>x'\<in>ILC.FFVars e2'. touchedSuperT (imkSubst xs ts x'))"
+  proof(cases "x \<in> dsset xs")
+    case True note xx = True
+    then obtain x' where x': "x' \<in> ILC.FFVars e2'" "x' \<in> dsset xs" 
+    using xs 0 x unfolding touchedSuperT_def touchedSuper_def by auto
+    obtain i where xi: "x = dsnth xs i" using xx by (metis dtheN)
+    hence ii: "imkSubst xs ts x = snth ts i" by simp
+    obtain i' where xi': "x' = dsnth xs i'" using x' by (metis dtheN)
+    hence ii': "imkSubst xs ts x' = snth ts i'" by simp
+    have y': "y \<in> touchedSuperT (imkSubst xs ts x')"
+    using y 1 unfolding ii ii' sset_range image_def by auto
+    thus ?thesis using x' by auto
+  next
+    case False note xx = False
+    hence ii: "imkSubst xs ts x = iVar x" by simp
+    obtain xs1 where xs1: "super xs1" "xs1 \<noteq> xs" "x \<in> dsset xs1"
+    using xx touchedSuperT_def touchedSuper_def y by auto   
+    obtain x' where x': "x'\<in>ILC.FFVars e2'" "x' \<in> dsset xs1"
+    using 0 x xs1 unfolding touchedSuperT_def touchedSuper_def by auto
+    hence "x' \<notin> dsset xs" using xs1 by (metis IntI empty_iff super_disj xs)
+    hence ii': "imkSubst xs ts x' = iVar x'" by simp
+    have y': "y \<in> touchedSuperT (imkSubst xs ts x')" 
+    using touchedSuper_iVar x'(2) xs1(1) xs1(3) y unfolding ii ii' by auto
+    show ?thesis using y' x'(1) by auto
+  qed
+qed
 
-
-thm uniform_imkSubst[no_vars]
-
-find_theorems uniformS  itvsubst
+lemma FFVars_touchedSuperT_imkSubst_UN: 
+assumes xs: "super xs" and 0: "touchedSuperT e2 = touchedSuperT e2'"
+and 1: "(\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
+shows "(\<Union>x\<in>ILC.FFVars e2. touchedSuperT (imkSubst xs ts x)) =
+       (\<Union>x'\<in>ILC.FFVars e2'. touchedSuperT (imkSubst xs ts x'))"
+apply standard
+  subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto
+  subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto .  
+    
 
 
 (* Here rule induction for good is needed. Could not have done induction on 
@@ -179,7 +222,7 @@ proof-
       by (metis dtheN fst_conv imkSubst_idle snd_conv theSN' theSN_ex tr'_iVar) 
     (* *)
     defer
-    subgoal apply(subst tr'_iApp)
+    subgoal for e1 es2 apply(subst tr'_iApp)
     subgoal by auto
     subgoal by auto
     subgoal by auto
@@ -189,15 +232,20 @@ proof-
         subgoal using g good_imkSubst by auto
         subgoal using g good_imkSubst by auto
         subgoal apply clarsimp  apply (simp add: touchedSuperT_itvsubst ) 
-         apply(drule uniformS_good) unfolding imkSubst_def apply auto sorry    
+        apply(drule uniformS_good) subgoal for e2 e2'  
+        by (metis FFVars_touchedSuperT_imkSubst_UN) .
         subgoal using shd_sset by fastforce . . .
     (* *)
-    subgoal apply(subst tr'_iLam)
+    subgoal for e ys apply(subst tr'_iLam)
       apply auto apply(subst iterm.subst(3))
-        subgoal by auto subgoal unfolding A_def apply auto using touchedSuper_IImsupp_imkSubst 
-        unfolding touchedSuper_def apply auto sorry 
+        subgoal by auto 
+        subgoal unfolding A_def apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
+          using shd_sset super_touchedSuper_dsset by fastforce+
         subgoal apply(subst term.subst(3))
-          subgoal by auto subgoal apply auto sorry 
+          subgoal by auto subgoal unfolding A_def apply(rule IImsupp_Var') 
+          apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
+           Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
+           superOf_subOf super_touchedSuper_dsset touchedSuper_emp uniformS_good)      
           subgoal apply(subst tr'_iLam) 
             subgoal unfolding A_def by auto
             subgoal using g good_imkSubst by auto

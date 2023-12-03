@@ -386,6 +386,12 @@ qed
 
 
 find_theorems uniformS ustep
+
+(* crucial: *)
+lemma ustep_sflat: 
+assumes "\<And>n. ustep (snth tss n) (snth tss' n)"
+shows "ustep (sflat tss) (sflat tss')"
+sorry
  
 (* *)
 (* Theorem 19(3): *)
@@ -448,11 +454,18 @@ next
        "\<And>n. stream_all2 reneqv (snth ttss n) (smap (tr e2') (qs n))" 
   using 00 unfolding ttss_def by auto
   
+  have 111: "\<And>n. smap (\<lambda>p. tr e2 (p @ [Suc n])) ps = 
+            snth (smap (\<lambda>n. smap (\<lambda>p. tr e2 (p @ [Suc n])) ps) nats) n"
+  unfolding stream_eq_nth by auto
+
   define tts' where "tts' = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
     subgoal unfolding 0 apply(rule ustep.iAppR)
       subgoal unfolding uniformS_def4 by auto
-      subgoal using ttss(1) unfolding qs unfolding stream.map_comp o_def sorry .
+      subgoal using ttss(1) unfolding qs unfolding stream.map_comp o_def
+      apply(subst (asm) 111)
+
+ sorry .
     subgoal unfolding stream_all2_iff_snth apply auto
     apply(rule reneqv.iApp)
       subgoal using ttss(2) unfolding stream_all2_iff_snth qs by auto

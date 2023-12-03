@@ -5,14 +5,6 @@ imports Translation_LC_to_ILC  Translation_ILC_to_LC ILC_affine
 "HOL-Library.Sublist" LC_Beta
 begin
 
-term tr
-term tr'
-
-find_theorems name: prefix
-term "prefix a b" 
-
-find_theorems tr 
-
 
 lemma tr_FFVars_super: 
 "x \<in> ILC.FFVars (tr e p) \<Longrightarrow> \<exists>xs p'. super xs \<and> x = dsnth xs (natOf p')"
@@ -20,7 +12,6 @@ apply(induct e arbitrary: p x)
   subgoal using super_superOf by fastforce
   subgoal by auto
   subgoal by auto .
-
 
 lemma tr_FFVars_prefix: 
 "x \<in> ILC.FFVars (tr e p) \<Longrightarrow> super xs \<Longrightarrow> x = dsnth xs (natOf p') \<Longrightarrow> prefix p p'"
@@ -56,29 +47,6 @@ apply(induct rule: reneqv.induct)
       subgoal unfolding uniformS_def4 by auto
       subgoal using shd_sset by auto . . .
 
-lemma IImsupp_Var: "LC.IImsupp (Var(x := e)) \<subseteq> FFVars e \<union> {x}"
-unfolding LC.IImsupp_def LC.SSupp_def by auto
-
-lemma IImsupp_Var': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> LC.IImsupp (Var(x := e))"
-using IImsupp_Var by auto 
-
-lemma uniformS_touchedSuper_IImsupp_imkSubst':
-"super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
-  ys \<noteq> xs \<Longrightarrow> ys \<notin> touchedSuper (ILC.FFVars e) \<Longrightarrow> 
-  ys \<notin> touchedSuper (ILC.IImsupp (imkSubst xs es))"
-using uniformS_touchedSuper_IImsupp_imkSubst by auto
-
-lemma uniformS_touchedSuper_IImsupp_imkSubst'':
-"super xs \<Longrightarrow> super ys \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
-  ys \<noteq> xs \<Longrightarrow> dsset ys \<inter> ILC.FFVars e = {} \<Longrightarrow> 
-  dsset ys \<inter> ILC.IImsupp (imkSubst xs es) = {}"
-using uniformS_touchedSuper_IImsupp_imkSubst' unfolding touchedSuper_def by blast
-
-(*
-lemma "super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
- {xsa. super xsa \<and> ILC.IImsupp (imkSubst xs es) \<inter> dsset xsa \<noteq> {}} \<subseteq> 
- {xs} \<union> {xs. super xs \<and> ILC.FFVars e \<inter> dsset xs \<noteq> {}}"
-*)
 
 (* Mazza's lemma 17 *)
 lemma tr_tvsubst_Var_reneqv: 
@@ -124,7 +92,8 @@ proof-
   qed
 qed
 
-(* difference from the above is that we have a different position q' *)
+(* difference from the above lemma (tr_tvsubst_Var_reneqv) 
+is that we have a different position q' *)
 lemma tr_tvsubst_Var_reneqv':  
 shows "reneqv
          (tr (tvsubst (Var(x:=e)) ee) q) 
@@ -132,13 +101,6 @@ shows "reneqv
 using reneqv_trans tr_tvsubst_Var_reneqv by blast
 
 (* *)
-
-lemma touchedSuper_Un: "touchedSuper (A \<union> A') = touchedSuper A \<union> touchedSuper A'"
-unfolding touchedSuper_def by auto
-
-lemma super_subOf_theN_eq: "super xs \<Longrightarrow> super ys \<Longrightarrow> x \<in> dsset ys \<Longrightarrow> subOf (fst (theSN x)) = subOf xs \<Longrightarrow> xs = ys"
-by (metis dtheN prod.collapse subsetD superOf_subOf super_dsset_RSuper theSN_unique)
-
 
 lemma FFVars_touchedSuperT_imkSubst_UN_incl: 
 assumes xs: "super xs" and 0: "touchedSuperT e2 = touchedSuperT e2'"
@@ -269,7 +231,6 @@ proof-
 qed
 
 
-
 (* Theorem 9 from Mazza: *)
 (* Theorem 9(1): *)
 lemma tr'_tr: "tr' (tr e p) = e"
@@ -318,17 +279,8 @@ apply(induct arbitrary: p rule: good.induct)
          reneqv_sym snth.simps(1) snth_sset uniform_iApp_case uniform_iApp_iff) . . .
 qed
 
+
 (* *)
-definition red where 
-"red e ee \<equiv> \<exists>x e1 e2. e = App (Lam x e1) e2 \<and> ee = tvsubst (Var(x:=e2)) e1"
-
-lemma red_step: "red e ee \<Longrightarrow> step e ee"
-by (metis red_def step.Beta)
-
-lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
-unfolding stream_all2_iff_snth using red_step by auto
-
-
 
 lemma tr'_hred_red: 
 assumes ttt: "hred t tt" and t: "uniform t"
@@ -385,19 +337,6 @@ next
 qed
 
 
-definition build2stream where 
-"build2stream f \<equiv> smap (\<lambda>i. smap (\<lambda>j. f i j) nats) nats"
-
-lemma snth_build2stream[simp]: "snth (snth (build2stream f) i) j = f i j"
-unfolding build2stream_def by auto
-
-lemma ex_sflat: "\<exists>tss. ts = sflat tss"
-apply(rule exI[of _ "build2stream (\<lambda> i j. snth ts (nat1 (i,j)))"])
-unfolding stream_eq_nth apply safe
-subgoal for i apply(cases "nat2 i") unfolding snth_sflat  
-by simp (metis nat1_nat2) . 
-
- 
 (* *)
 (* Theorem 19(3): *)
 lemma step_ustep: "step e ee \<Longrightarrow> 

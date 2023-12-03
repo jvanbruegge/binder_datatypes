@@ -152,6 +152,12 @@ unfolding sset_range by auto
 
 (* *)
 
+definition build2stream where 
+"build2stream f \<equiv> smap (\<lambda>i. smap (\<lambda>j. f i j) nats) nats"
+
+lemma snth_build2stream[simp]: "snth (snth (build2stream f) i) j = f i j"
+unfolding build2stream_def by auto
+
 (* *)
 
 definition nat2 :: "nat \<Rightarrow> nat \<times> nat" where 
@@ -195,6 +201,12 @@ lemma sset_sflat: "sset (sflat xss) = \<Union> (sset ` (sset xss))"
 unfolding sset_range image_def apply (auto simp: snth_sflat) 
 apply (smt (verit, ccfv_threshold) mem_Collect_eq snth2.elims) 
 by (metis bij_inv_eq_iff bij_nat2 snth2.simps)
+
+lemma ex_sflat: "\<exists>tss. ts = sflat tss"
+apply(rule exI[of _ "build2stream (\<lambda> i j. snth ts (nat1 (i,j)))"])
+unfolding stream_eq_nth apply safe
+subgoal for i apply(cases "nat2 i") unfolding snth_sflat  
+by simp (metis nat1_nat2) . 
 
 (* *)
 

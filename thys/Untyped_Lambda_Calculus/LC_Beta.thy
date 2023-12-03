@@ -2,6 +2,7 @@
 for the (untyped) lambda-calculus *)
 theory LC_Beta 
 imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
+"../Prelim/More_Stream"
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -242,6 +243,19 @@ and r: "step e e'"
 shows "step (rrename f e) (rrename f e')"
 using assms unfolding step_I using Step.I_equiv[of "(e,e')" f]
 unfolding Tmap_def ssbij_def by auto
+
+
+(* Other properties: *)
+
+(* *)
+definition red where 
+"red e ee \<equiv> \<exists>x e1 e2. e = App (Lam x e1) e2 \<and> ee = tvsubst (Var(x:=e2)) e1"
+
+lemma red_step: "red e ee \<Longrightarrow> step e ee"
+by (metis red_def step.Beta)
+
+lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
+unfolding stream_all2_iff_snth using red_step by auto
 
 
 end

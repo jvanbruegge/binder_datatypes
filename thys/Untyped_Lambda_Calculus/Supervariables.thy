@@ -189,6 +189,11 @@ using super_dsset_singl touchedSuper_def by auto
 lemma touchedSuper_dsset_superOf[simp]: "touchedSuper (dsset (superOf x)) = {superOf x}"
 by auto
 
+lemma touchedSuper_Un: "touchedSuper (A \<union> A') = touchedSuper A \<union> touchedSuper A'"
+unfolding touchedSuper_def by auto
+
+
+
 
 
 (* The notion of a function preserving supervariables: *)
@@ -424,6 +429,10 @@ unfolding bij_betw_def inj_on_def apply auto
   apply (metis theSN')
   apply (meson UnionI imageI rangeI theSN)
   by (metis imageI theSN_ex)
+
+lemma super_subOf_theN_eq: "super xs \<Longrightarrow> super ys \<Longrightarrow> x \<in> dsset ys \<Longrightarrow> subOf (fst (theSN x)) = subOf xs \<Longrightarrow> xs = ys"
+by (metis dtheN prod.collapse subsetD superOf_subOf super_dsset_RSuper theSN_unique)
+
 
 (* *)
 

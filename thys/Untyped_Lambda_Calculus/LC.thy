@@ -396,6 +396,12 @@ using SSupp_tvsubst_bound[OF assms] unfolding o_def .
 
 (* *)
 
+lemma IImsupp_Var: "IImsupp (Var(x := e)) \<subseteq> FFVars e \<union> {x}"
+unfolding LC.IImsupp_def LC.SSupp_def by auto
+
+lemma IImsupp_Var': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> IImsupp (Var(x := e))"
+using IImsupp_Var by auto 
+
 lemma IImsupp_rrename_su:
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|"
 shows "IImsupp (rrename (\<sigma>::var\<Rightarrow>var) o \<tau>) \<subseteq> imsupp \<sigma> \<union> IImsupp \<tau>"

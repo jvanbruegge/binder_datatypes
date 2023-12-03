@@ -234,6 +234,18 @@ lemma uniformS_touchedSuper_IImsupp_imkSubst:
  {xs} \<union> touchedSuper (FFVars e)"
 using touchedSuper_IImsupp_imkSubst uniformS_touchedSuper by blast
 
+lemma uniformS_touchedSuper_IImsupp_imkSubst':
+"super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
+  ys \<noteq> xs \<Longrightarrow> ys \<notin> touchedSuper (ILC.FFVars e) \<Longrightarrow> 
+  ys \<notin> touchedSuper (ILC.IImsupp (imkSubst xs es))"
+using uniformS_touchedSuper_IImsupp_imkSubst by auto
+
+lemma uniformS_touchedSuper_IImsupp_imkSubst'':
+"super xs \<Longrightarrow> super ys \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
+  ys \<noteq> xs \<Longrightarrow> dsset ys \<inter> ILC.FFVars e = {} \<Longrightarrow> 
+  dsset ys \<inter> ILC.IImsupp (imkSubst xs es) = {}"
+using uniformS_touchedSuper_IImsupp_imkSubst' unfolding touchedSuper_def by blast
+
 lemma super_uniformS_finite_touchedSuper_imkSubst: 
 "super xs \<Longrightarrow> uniformS es \<Longrightarrow> finite (touchedSuper (IImsupp (imkSubst xs es)))"
 by (metis finite_insert insert_is_Un rev_finite_subset snth_sset touchedSuperT_def 

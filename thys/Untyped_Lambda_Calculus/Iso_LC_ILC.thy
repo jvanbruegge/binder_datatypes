@@ -385,13 +385,18 @@ next
 qed
 
 
-find_theorems uniformS ustep
+definition build2stream where 
+"build2stream f \<equiv> smap (\<lambda>i. smap (\<lambda>j. f i j) nats) nats"
 
-(* crucial: *)
-lemma ustep_sflat: 
-assumes "\<And>n. ustep (snth tss n) (snth tss' n)"
-shows "ustep (sflat tss) (sflat tss')"
-sorry
+lemma snth_build2stream[simp]: "snth (snth (build2stream f) i) j = f i j"
+unfolding build2stream_def by auto
+
+lemma ex_sflat: "\<exists>tss. ts = sflat tss"
+apply(rule exI[of _ "build2stream (\<lambda> i j. snth ts (nat1 (i,j)))"])
+unfolding stream_eq_nth apply safe
+subgoal for i apply(cases "nat2 i") unfolding snth_sflat  
+by simp (metis nat1_nat2) . 
+
  
 (* *)
 (* Theorem 19(3): *)
@@ -436,47 +441,27 @@ next
       subgoal using tts(2) unfolding stream_all2_iff_snth qs by auto
       subgoal by auto . .   
 next
-  case (AppR e2 e2' e1 ps)  (* thus ?case apply(intro exI[of _ tts'] conjI) 
-    subgoal apply simp using ustep.iAppR *)
+  case (AppR e2 e2' e1 ps)   
   have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
     = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
   by (auto simp: stream_eq_nth)
-  (* define qs where qs: "qs \<equiv> \<lambda>n. smap (\<lambda>p. p @ [Suc n]) ps"  *)
+
+  define qss where qss: "qss = smap (\<lambda>p. smap (\<lambda>n. p @ [Suc n]) nats) ps" 
+  have 333: "smap (smap (tr e2)) qss = smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps"
+  unfolding stream_eq_nth qss by auto
+  define qs :: "nat list stream" where qs: "qs = sflat qss"
+
+  have 33: "smap (tr e2) qs = sflat (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)"
+  unfolding qs smap_sflat 333 ..
 
   from AppR  obtain tts where 
   tts: "ustep (smap (tr e2) qs) tts" "stream_all2 reneqv tts (smap (tr e2') qs)"
   by auto
 
-  have 22: "tts = sflat ttss" sorry
-  have 33: "smap (tr e2) qs = sflat (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)"
-  sorry
-
+  obtain ttss where 22: "tts = sflat ttss" using ex_sflat by blast
   have 222: "\<And> i j. ttss !! i !! j = tts !! (nat1 (i,j))"
   unfolding 22 by (simp add: snth_sflat)
-  
-
-  (* have "ustep (sflat (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)) (sflat ttss)" *)
-
-  (*
-  have "\<forall>n. \<exists>tts. ustep (smap (tr e2) (qs n)) tts \<and> 
-   stream_all2 reneqv tts (smap (tr e2') (qs n))" using AppR(2) by auto 
-  then obtain tts where 
-  00: "\<And>n. ustep (smap (tr e2) (qs n)) (tts n) \<and> 
-       stream_all2 reneqv (tts n) (smap (tr e2') (qs n))" 
-   by metis
-  define ttss where "ttss \<equiv> smap tts nats"
-  have ttss: "\<And>n. ustep (smap (tr e2) (qs n)) (snth ttss n)"
-       "\<And>n. stream_all2 reneqv (snth ttss n) (smap (tr e2') (qs n))" 
-  using 00 unfolding ttss_def by auto
-  *)
- 
-  
-  (*
-  have 111: "\<And>n. smap (\<lambda>p. tr e2 (p @ [Suc n])) ps = 
-            snth (smap (\<lambda>n. smap (\<lambda>p. tr e2 (p @ [Suc n])) ps) nats) n"
-  unfolding stream_eq_nth by auto
-  *)
 
   define tts' where "tts' = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
@@ -500,18 +485,6 @@ next
     subgoal apply simp unfolding 0 apply(rule ustep.Xi) using tts(1) by auto
     subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLam) .
 qed
-
-
-
-(*
-lemma step_ustep: "stream_all2 step es ees \<Longrightarrow> 
-  \<exists>tts. ustep (smap (\<lambda>e. tr e p) es) tts \<and> 
-        stream_all2 reneqv tts (smap (\<lambda>e. tr ee p) ees)"
-sorry 
-*)
-  
-
-
 
 
 

@@ -102,8 +102,8 @@ proof-
     then show ?case apply(subst term.subst(2))
       subgoal by auto
       subgoal apply (simp add: reneqv_iApp_iff) apply safe
-        using App.hyps(1,2) reneqv_trans reneweqv_sym apply blast+    
-        using App.hyps(2) reneqv_trans reneweqv_sym by blast .
+        using App.hyps(1,2) reneqv_trans reneqv_sym apply blast+    
+        using App.hyps(2) reneqv_trans reneqv_sym by blast .
   next
     case (Lam y t)
     then show ?case apply(subst term.subst(3))
@@ -123,6 +123,13 @@ proof-
           subgoal using Lam.hyps(2) by fastforce . . .
   qed
 qed
+
+(* difference from the above is that we have a different position q' *)
+lemma tr_tvsubst_Var_reneqv':  
+shows "reneqv
+         (tr (tvsubst (Var(x:=e)) ee) q) 
+         (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q'))"
+using reneqv_trans tr_tvsubst_Var_reneqv by blast
 
 (* *)
 
@@ -308,7 +315,7 @@ apply(induct arbitrary: p rule: good.induct)
       subgoal unfolding uniform_iApp_iff by auto
       subgoal unfolding sset_range image_def  
       by simp (smt (verit, ccfv_threshold) bot.extremum insert_subset reneqv_trans 
-         reneweqv_sym snth.simps(1) snth_sset uniform_iApp_case uniform_iApp_iff) . . .
+         reneqv_sym snth.simps(1) snth_sset uniform_iApp_case uniform_iApp_iff) . . .
 qed
 
 (* *)
@@ -384,12 +391,48 @@ qed
  
 (* *)
 (* Theorem 19(3): *)
+lemma step_ustep: "step e ee \<Longrightarrow> 
+  \<exists>tts. ustep (smap (tr e) ps) tts \<and> 
+        stream_all2 reneqv tts (smap (tr ee) ps)"
+proof(induct rule: step.induct)
+  case (Beta x e1 e2)
+  (* smap (tr (tvsubst (Var(x:=e2)) e1)) ps *)  
+  define qs where qs: "qs \<equiv> \<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats"
+  (* have 0: "\<And>i. smap (tr e2) (qs i) = smap (\<lambda>n. tr e2 (ps !! i @ [Suc n])) nats" sorry *)
+  term "smap (\<lambda>p. itvsubst (imkSubst (superOf x) (smap (tr e2) ps)) (tr e1 p)) ps"
+  thm tr_tvsubst_Var_reneqv'
+  show ?case apply(intro exI[of _ 
+   "smap (\<lambda>p. itvsubst (imkSubst (superOf x) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) (tr e1 (p @ [0]))) ps"] conjI)
+    subgoal apply simp apply(rule ustep.Beta)
+      subgoal unfolding uniformS_def4 apply clarsimp
+      apply(rule reneqv.iApp) 
+        subgoal apply(rule reneqv.iLam) using reneqv_tr by auto
+        subgoal by auto . 
+      subgoal unfolding stream_all2_iff_snth hred_def by auto .
+    subgoal unfolding stream_all2_iff_snth apply auto subgoal for i 
+    apply(rule reneqv_trans[OF tr_tvsubst_Var_reneqv'[of x e2 e1 "ps !! i" undefined "ps !! i @ [0]"], 
+        THEN reneqv_sym]) apply(rule reneqv_imkSubst)
+    unfolding reneqvS_def by auto . .    
+next
+  case (AppL e1 e1' e2)
+  then show ?case sorry
+next
+  case (AppR e2 e2' e1)
+  then show ?case sorry
+next
+  case (Xi e e' x)
+  then show ?case sorry
+qed
+
+
+
+(*
 lemma step_ustep: "stream_all2 step es ees \<Longrightarrow> 
   \<exists>tts. ustep (smap (\<lambda>e. tr e p) es) tts \<and> 
         stream_all2 reneqv tts (smap (\<lambda>e. tr ee p) ees)"
 sorry 
+*)
   
-
 
 
 

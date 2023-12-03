@@ -11,13 +11,13 @@ lemma uniform_finite_touchedUponT: "uniform e \<Longrightarrow> finite (touchedS
 using reneqv_finite_touchedSuperT uniform_def by blast
 
 (* Symmetry follows by normal induction: *)
-lemma reneweqv_sym:
+lemma reneqv_sym:
 "reneqv e e' \<Longrightarrow> reneqv e' e"
 apply(induct rule: reneqv.induct) 
 by (auto intro!: reneqv.intros)  
 
 lemma uniform_def2: "uniform e \<longleftrightarrow> (\<exists>e'. reneqv e' e)"
-unfolding uniform_def using reneweqv_sym by auto
+unfolding uniform_def using reneqv_sym by auto
 
 (* But to prove transitivity we will need inversion rules, which for the lambda case
 will require (1) the custom presSuper equivariance and (2) a custom supervariable-based injectivity for 
@@ -82,7 +82,7 @@ qed
 lemma reneqv_iLam_casesR:
 assumes xs: "super xs'" and rr: "reneqv ee (iLam xs' e')"
 shows "\<exists> e. ee = iLam xs' e \<and> reneqv e e'"
-using reneqv_iLam_casesL reneweqv_sym rr xs by blast
+using reneqv_iLam_casesL reneqv_sym rr xs by blast
 
 lemma reneqv_iLam_iff:
 assumes "super xs"
@@ -124,11 +124,11 @@ next
   show ?case unfolding e'' apply(rule reneqv.iApp)
     subgoal using iApp.hyps(2) 1 by blast
     subgoal using iApp.hyps(3) 2  
-    by auto (meson reneweqv_sym snth_sset)+ .
+    by auto (meson reneqv_sym snth_sset)+ .
 qed 
 
 lemma uniform_def3: "uniform e \<longleftrightarrow> reneqv e e"
-using reneqv_trans reneweqv_sym uniform_def by blast
+using reneqv_trans reneqv_sym uniform_def by blast
 
 corollary irrename_uniform:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
@@ -168,7 +168,7 @@ proof-
       apply(subst iterm.subst)
         subgoal using s by auto
         subgoal apply(rule reneqv.iApp) apply auto  
-        by (meson reneqv_trans reneweqv_sym)+ .
+        by (meson reneqv_trans reneqv_sym)+ .
   qed 
 qed
 
@@ -272,7 +272,7 @@ lemma uniform_iLam_iff[simp]:
 assumes xs: "super xs" 
 shows "uniform (iLam xs e) \<longleftrightarrow> uniform e"
 unfolding uniform_def3  
-by (meson iLam reneqv_iLam_casesL reneqv_trans reneweqv_sym xs)
+by (meson iLam reneqv_iLam_casesL reneqv_trans reneqv_sym xs)
 
 (* It is impossible to express uniformity in terms of itself alone, 
 this is why renaming equivalence was necessary... same as with parametricity etc.*)

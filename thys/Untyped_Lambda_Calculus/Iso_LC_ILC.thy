@@ -328,12 +328,7 @@ by (metis red_def step.Beta)
 lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
 unfolding stream_all2_iff_snth using red_step by auto
 
-lemma hred_def2: 
-assumes t: "uniform t"
-shows 
-"hred t tt \<longleftrightarrow> 
-   (\<exists>xs e1 es2. super xs \<and> t = iApp (iLam xs e1) es2 \<and> tt = itvsubst (imkSubst xs es2) e1)"
-unfolding hred_def by (metis iLam_switch_to_super t)
+
 
 lemma tr'_hred_red: 
 assumes ttt: "hred t tt" and t: "uniform t"
@@ -388,17 +383,18 @@ next
         subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
       subgoal apply(rule step.Xi) by auto . . .
 qed
+
+
+find_theorems uniformS ustep
  
 (* *)
 (* Theorem 19(3): *)
 lemma step_ustep: "step e ee \<Longrightarrow> 
   \<exists>tts. ustep (smap (tr e) ps) tts \<and> 
         stream_all2 reneqv tts (smap (tr ee) ps)"
-proof(induct rule: step.induct)
-  case (Beta x e1 e2)
-  (* smap (tr (tvsubst (Var(x:=e2)) e1)) ps *)  
+proof(induct arbitrary: ps rule: step.induct)
+  case (Beta x e1 e2 ps)
   define qs where qs: "qs \<equiv> \<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats"
-  (* have 0: "\<And>i. smap (tr e2) (qs i) = smap (\<lambda>n. tr e2 (ps !! i @ [Suc n])) nats" sorry *)
   term "smap (\<lambda>p. itvsubst (imkSubst (superOf x) (smap (tr e2) ps)) (tr e1 p)) ps"
   thm tr_tvsubst_Var_reneqv'
   show ?case apply(intro exI[of _ 
@@ -410,18 +406,68 @@ proof(induct rule: step.induct)
         subgoal by auto . 
       subgoal unfolding stream_all2_iff_snth hred_def by auto .
     subgoal unfolding stream_all2_iff_snth apply auto subgoal for i 
+    (* Below I put undefined because the choice of the position stream does not matter *)
     apply(rule reneqv_trans[OF tr_tvsubst_Var_reneqv'[of x e2 e1 "ps !! i" undefined "ps !! i @ [0]"], 
         THEN reneqv_sym]) apply(rule reneqv_imkSubst)
     unfolding reneqvS_def by auto . .    
 next
-  case (AppL e1 e1' e2)
-  then show ?case sorry
+  case (AppL e1 e1' e2 ps) 
+  have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
+    = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
+      (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
+  by (auto simp: stream_eq_nth)
+  define qs where qs: "qs = smap (\<lambda>p. p @ [0]) ps"
+  obtain tts where tts: "ustep (smap (tr e1) qs) tts" 
+  "stream_all2 reneqv tts (smap (tr e1') qs)" using AppL(2)[of qs] by auto
+  define tts' where "tts' = smap2 iApp tts
+      (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)"  
+  show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
+    subgoal unfolding 0 apply(rule ustep.iAppL)
+      subgoal unfolding uniformS_sflat by auto
+      subgoal using tts(1) unfolding qs unfolding stream.map_comp o_def . .
+    subgoal unfolding stream_all2_iff_snth apply auto
+    apply(rule reneqv.iApp)
+      subgoal using tts(2) unfolding stream_all2_iff_snth qs by auto
+      subgoal by auto . .   
 next
-  case (AppR e2 e2' e1)
-  then show ?case sorry
+  case (AppR e2 e2' e1 ps)  
+  have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
+    = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
+      (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
+  by (auto simp: stream_eq_nth)
+  define qs where qs: "qs \<equiv> \<lambda>n. smap (\<lambda>p. p @ [Suc n]) ps"  
+
+  have "\<forall>n. \<exists>tts. ustep (smap (tr e2) (qs n)) tts \<and> 
+   stream_all2 reneqv tts (smap (tr e2') (qs n))" using AppR(2) by auto 
+  then obtain tts where 
+  00: "\<And>n. ustep (smap (tr e2) (qs n)) (tts n) \<and> 
+       stream_all2 reneqv (tts n) (smap (tr e2') (qs n))" 
+   by metis
+  define ttss where "ttss \<equiv> smap tts nats"
+  have ttss: "\<And>n. ustep (smap (tr e2) (qs n)) (snth ttss n)"
+       "\<And>n. stream_all2 reneqv (snth ttss n) (smap (tr e2') (qs n))" 
+  using 00 unfolding ttss_def by auto
+  
+  define tts' where "tts' = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
+  show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
+    subgoal unfolding 0 apply(rule ustep.iAppR)
+      subgoal unfolding uniformS_def4 by auto
+      subgoal using ttss(1) unfolding qs unfolding stream.map_comp o_def sorry .
+    subgoal unfolding stream_all2_iff_snth apply auto
+    apply(rule reneqv.iApp)
+      subgoal using ttss(2) unfolding stream_all2_iff_snth qs by auto
+      subgoal unfolding sset_range image_def  
+      by simp (metis (mono_tags, lifting) reneqv_sym reneqv_tr reneqv_trans snth_smap stream_all2_iff_snth ttss(2)) . . 
 next
   case (Xi e e' x)
-  then show ?case sorry
+  then obtain tts where tts: "ustep (smap (tr e) ps) tts" "stream_all2 reneqv tts (smap (tr e') ps)"
+  by auto
+  have 0: "smap (\<lambda>p. iLam (superOf x) (tr e p)) ps = 
+           smap (iLam (superOf x)) (smap (tr e) ps)"
+  unfolding stream_eq_nth by auto
+  show ?case apply(intro exI[of _ "smap (iLam (superOf x)) tts"] conjI)
+    subgoal apply simp unfolding 0 apply(rule ustep.Xi) using tts(1) by auto
+    subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLam) .
 qed
 
 

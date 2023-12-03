@@ -80,6 +80,85 @@ next
   then show ?case using uniformS_smap2_iLam_iff by auto
 qed
 
+lemma hred_def2: 
+assumes t: "uniform t"
+shows 
+"hred t tt \<longleftrightarrow> 
+   (\<exists>xs e1 es2. super xs \<and> t = iApp (iLam xs e1) es2 \<and> tt = itvsubst (imkSubst xs es2) e1)"
+unfolding hred_def by (metis iLam_switch_to_super t)
+
+lemma hred_reneqv': 
+assumes r: "reneqv e ee" "hred e e'"
+shows "\<exists>ee'. hred ee ee' \<and> reneqv e' ee'"
+proof-
+  have u: "uniform e" using r unfolding uniform_def by auto
+  show ?thesis using r
+  unfolding hred_def2[OF u] 
+  apply(auto dest!: reneqv_iApp_casesL reneqv_iLam_casesL) 
+  by (metis hred_def r(1) reneqv_head_reduction)
+qed
+
+lemma hred_reneqvS': 
+assumes r: "reneqvS es ees" "stream_all2 hred es es'"
+shows "\<exists>ees'. stream_all2 hred ees ees' \<and> reneqvS es' ees'"
+proof-
+  have "\<forall>i. \<exists>ee'. hred (snth ees i) ee' \<and> reneqv (snth es' i) ee'"
+  using assms unfolding stream_all2_iff_snth reneqvS_def sset_range image_def
+  using hred_reneqv' by simp blast
+  then obtain EE' where EE': "\<forall>i. hred (snth ees i) (EE' i) \<and> reneqv (snth es' i) (EE' i)"
+  by metis
+  show ?thesis apply(rule exI[of _ "smap EE' nats"])
+  using EE' assms unfolding stream_all2_iff_snth reneqvS_def sset_range image_def 
+  by simp (metis (no_types, lifting) hred_reneqv)
+qed
+
+(* *)
+
+(* 
+lemma reneqvS_smap2_iApp_iff: "reneqvS (smap2 iApp es ess) (smap2 iApp ds dss) \<longleftrightarrow> 
+  reneqvS es ds \<and> 
+  (\<forall>i j i' j'. reneqv (snth2 ess (i,j)) (snth2 dss (i',j')))"
+unfolding reneqvS_def sset_range image_def apply (auto simp: reneqv_iApp_iff)
+  apply (metis reneqv_iApp_iff)+  sorry
+
+
+lemma reneqvS_smap2_iApp_iffL: "reneqvS (smap2 iApp es ess) ds1 \<longleftrightarrow> 
+  (\<exists>ds dss. ds1 = smap2 iApp ds dss \<and> 
+  reneqvS es ds \<and> 
+  (\<forall>i j i' j'. reneqv (snth2 ess (i,j)) (snth2 dss (i',j'))))"
+sorry
+
+
+lemma ustep_reneqvS:
+assumes "ustep es es'" "reneqvS es ds"
+shows "\<exists>ds'. ustep ds ds' \<and> reneqvS es' ds'"
+using assms proof(induct arbitrary: ds rule: ustep.induct)
+  case (Beta es es')
+  obtain ds' where ds': "stream_all2 hred ds ds'" "reneqvS es' ds'"
+  using hred_reneqvS'[OF Beta(3) Beta(2)] by auto
+
+  show ?case apply(intro exI[of _ ds'] conjI)
+    subgoal apply(rule ustep.Beta) using Beta ds'  unfolding uniformS_def2 by auto
+    subgoal by fact .
+next
+  case (iAppL ess es es' ds1)
+  from iAppL(4) obtain ds where ds1: "ds1 = smap2 iApp ds ess"
+  and "reneqvS es ds" unfolding reneqvS_smap2_iApp_iffL apply auto sledgehammer 
+  with iAppL(3) obtain ds' where ds': "ustep ds ds'" "reneqvS es' ds'" by auto
+  show ?case apply(intro exI[of _ "smap2 iApp ds' ess"] conjI)
+    subgoal unfolding ds1 apply(rule ustep.iAppL) by fact+
+    subgoal unfolding reneqvS_smap2_iApp_iff using ds'(2) iAppL(1) 
+    using iAppL(1) unfolding uniformS_def4 sset_sflat sset_range image_def 
+    snth_sflat by simp (metis nat2_nat1 snth2.simps) .
+      
+next
+  case (iAppR es ess ess' ds1)
+  then show ?case sorry
+next
+  case (Xi xs es es' ds)
+  then show ?case sorry
+qed
+*)
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 

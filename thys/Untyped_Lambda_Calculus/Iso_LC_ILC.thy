@@ -436,13 +436,29 @@ next
       subgoal using tts(2) unfolding stream_all2_iff_snth qs by auto
       subgoal by auto . .   
 next
-  case (AppR e2 e2' e1 ps)  
+  case (AppR e2 e2' e1 ps)  (* thus ?case apply(intro exI[of _ tts'] conjI) 
+    subgoal apply simp using ustep.iAppR *)
   have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
     = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
   by (auto simp: stream_eq_nth)
-  define qs where qs: "qs \<equiv> \<lambda>n. smap (\<lambda>p. p @ [Suc n]) ps"  
+  (* define qs where qs: "qs \<equiv> \<lambda>n. smap (\<lambda>p. p @ [Suc n]) ps"  *)
 
+  from AppR  obtain tts where 
+  tts: "ustep (smap (tr e2) qs) tts" "stream_all2 reneqv tts (smap (tr e2') qs)"
+  by auto
+
+  have 22: "tts = sflat ttss" sorry
+  have 33: "smap (tr e2) qs = sflat (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)"
+  sorry
+
+  have 222: "\<And> i j. ttss !! i !! j = tts !! (nat1 (i,j))"
+  unfolding 22 by (simp add: snth_sflat)
+  
+
+  (* have "ustep (sflat (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)) (sflat ttss)" *)
+
+  (*
   have "\<forall>n. \<exists>tts. ustep (smap (tr e2) (qs n)) tts \<and> 
    stream_all2 reneqv tts (smap (tr e2') (qs n))" using AppR(2) by auto 
   then obtain tts where 
@@ -453,24 +469,26 @@ next
   have ttss: "\<And>n. ustep (smap (tr e2) (qs n)) (snth ttss n)"
        "\<And>n. stream_all2 reneqv (snth ttss n) (smap (tr e2') (qs n))" 
   using 00 unfolding ttss_def by auto
+  *)
+ 
   
+  (*
   have 111: "\<And>n. smap (\<lambda>p. tr e2 (p @ [Suc n])) ps = 
             snth (smap (\<lambda>n. smap (\<lambda>p. tr e2 (p @ [Suc n])) ps) nats) n"
   unfolding stream_eq_nth by auto
+  *)
 
   define tts' where "tts' = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
     subgoal unfolding 0 apply(rule ustep.iAppR)
       subgoal unfolding uniformS_def4 by auto
-      subgoal using ttss(1) unfolding qs unfolding stream.map_comp o_def
-      apply(subst (asm) 111)
-
- sorry .
+      subgoal using tts(1) unfolding 22 33 . .
     subgoal unfolding stream_all2_iff_snth apply auto
     apply(rule reneqv.iApp)
-      subgoal using ttss(2) unfolding stream_all2_iff_snth qs by auto
+      subgoal unfolding stream_all2_iff_snth by auto
       subgoal unfolding sset_range image_def  
-      by simp (metis (mono_tags, lifting) reneqv_sym reneqv_tr reneqv_trans snth_smap stream_all2_iff_snth ttss(2)) . . 
+      unfolding 222 using tts(1,2) unfolding stream_all2_iff_snth    
+      apply simp using reneqv_sym reneqv_trans by blast+ . .
 next
   case (Xi e e' x)
   then obtain tts where tts: "ustep (smap (tr e) ps) tts" "stream_all2 reneqv tts (smap (tr e') ps)"

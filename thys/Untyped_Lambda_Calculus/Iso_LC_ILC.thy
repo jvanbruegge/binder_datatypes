@@ -1,8 +1,8 @@
 (* Mazza's isomorphism between affine uniform ILC and LC *)
 
 theory Iso_LC_ILC 
-imports Translation_LC_to_ILC  Translation_ILC_to_LC ILC_affine 
-"HOL-Library.Sublist" LC_Beta
+imports Translation_LC_to_ILC Translation_ILC_to_LC ILC_affine 
+"HOL-Library.Sublist" LC_Beta_depth
 begin
 
 
@@ -183,7 +183,7 @@ proof-
 
   have A: "ILC2.small A \<and> bsmall A" apply(rule conjI)
     subgoal unfolding A_def ILC2.small_def
-    by (metis ILC_UBeta.Tfvars.simps ILC_UBeta.Tvars_dsset(2) Un_Diff_cancel 
+    by (metis ILC_UBeta_depth.Tfvars.simps ILC_UBeta_depth.Tvars_dsset(2) Un_Diff_cancel 
     card_dsset_ivar sup.idem var_stream_class.Un_bound)   
     subgoal unfolding A_def bsmall_def unfolding 0  
       by (metis g bsmall_def finite_Un good_finite_touchedSuperT super_bsmall t2 touchedSuperT_def txs(1)) .
@@ -295,61 +295,62 @@ shows "stream_all2 red (smap tr' ts) (smap tr' ts')"
 using assms unfolding stream_all2_iff_snth 
 by (simp add: tr'_hred_red uniformS_sset_uniform)
 
+
 (* Theorem 19(4) (generalized for our (necessarily stream-based) version of 
-uniform step (see previous discussion, when introducing ustep, for why) *)
-lemma ustep_step: "ustep ts ss \<Longrightarrow> stream_all2 step (smap tr' ts) (smap tr' ss)"
-proof(induct rule: ustep.induct)
+uniform step (see previous discussion, when introducing ustepD, for why) *)
+lemma ustepD_step: "ustepD d ts ss \<Longrightarrow> stream_all2 (stepD d) (smap tr' ts) (smap tr' ss)"
+proof(induct rule: ustepD.induct)
   case (Beta es es')
-  then show ?case using red_step2 tr'_hred_red2 by blast
+  then show ?case using red_stepD2 tr'_hred_red2 by blast
 next
-  case (iAppL ess es es')
+  case (iAppL ess d es es')
   then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
     apply(subst tr'_iApp_uniform)
-      subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
       subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
       apply(subst tr'_iApp_uniform)
-        subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
         subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
-        subgoal apply(rule step.AppL) by auto . .
+        subgoal apply(rule stepD.AppL) by auto . .
 next
-  case (iAppR es ess ess')
+  case (iAppR es d ess ess')
   then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
     apply(subst tr'_iApp_uniform)
-      subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
       subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
-      by simp (metis snth2.simps uniformS_sflat ustep_uniformS)
+      by simp (metis snth2.simps uniformS_sflat ustepD_uniformS)
       apply(subst tr'_iApp_uniform)
-        subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
         subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
-        by simp (metis snth2.simps uniformS_sflat ustep_uniformS)
-        subgoal apply(rule step.AppR) unfolding snth_sflat  
+        by simp (metis snth2.simps uniformS_sflat ustepD_uniformS)
+        subgoal apply(rule stepD.AppR) unfolding snth_sflat  
         by (metis nat2_nat1 snth.simps(1) snth2.simps) . .
 next
-  case (Xi xs es es')
+  case (Xi xs d es es')
   then show ?case unfolding stream_all2_iff_snth apply clarsimp subgoal for i
     apply(subst tr'_iLam_uniform)
       subgoal by simp
-      subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
+      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
       subgoal apply(subst tr'_iLam_uniform)
         subgoal by simp
-        subgoal using snth_sset uniformS_sset_uniform ustep_uniformS by blast
-      subgoal apply(rule step.Xi) by auto . . .
+        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+      subgoal apply(rule stepD.Xi) by auto . . .
 qed
 
 
 (* *)
 (* Theorem 19(3): *)
-lemma step_ustep: "step e ee \<Longrightarrow> 
-  \<exists>tts. ustep (smap (tr e) ps) tts \<and> 
+lemma step_ustepD: "stepD d e ee \<Longrightarrow> 
+  \<exists>tts. ustepD d (smap (tr e) ps) tts \<and> 
         stream_all2 reneqv tts (smap (tr ee) ps)"
-proof(induct arbitrary: ps rule: step.induct)
+proof(induct arbitrary: ps rule: stepD.induct)
   case (Beta x e1 e2 ps)
   define qs where qs: "qs \<equiv> \<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats"
   term "smap (\<lambda>p. itvsubst (imkSubst (superOf x) (smap (tr e2) ps)) (tr e1 p)) ps"
   thm tr_tvsubst_Var_reneqv'
   show ?case apply(intro exI[of _ 
    "smap (\<lambda>p. itvsubst (imkSubst (superOf x) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) (tr e1 (p @ [0]))) ps"] conjI)
-    subgoal apply simp apply(rule ustep.Beta)
+    subgoal apply simp apply(rule ustepD.Beta)
       subgoal unfolding uniformS_def4 apply clarsimp
       apply(rule reneqv.iApp) 
         subgoal apply(rule reneqv.iLam) using reneqv_tr by auto
@@ -361,18 +362,18 @@ proof(induct arbitrary: ps rule: step.induct)
         THEN reneqv_sym]) apply(rule reneqv_imkSubst)
     unfolding reneqvS_def by auto . .    
 next
-  case (AppL e1 e1' e2 ps) 
+  case (AppL d e1 e1' e2 ps) 
   have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
     = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
   by (auto simp: stream_eq_nth)
   define qs where qs: "qs = smap (\<lambda>p. p @ [0]) ps"
-  obtain tts where tts: "ustep (smap (tr e1) qs) tts" 
+  obtain tts where tts: "ustepD d (smap (tr e1) qs) tts" 
   "stream_all2 reneqv tts (smap (tr e1') qs)" using AppL(2)[of qs] by auto
   define tts' where "tts' = smap2 iApp tts
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
-    subgoal unfolding 0 apply(rule ustep.iAppL)
+    subgoal unfolding 0 apply(rule ustepD.iAppL)
       subgoal unfolding uniformS_sflat by auto
       subgoal using tts(1) unfolding qs unfolding stream.map_comp o_def . .
     subgoal unfolding stream_all2_iff_snth apply auto
@@ -380,7 +381,7 @@ next
       subgoal using tts(2) unfolding stream_all2_iff_snth qs by auto
       subgoal by auto . .   
 next
-  case (AppR e2 e2' e1 ps)   
+  case (AppR d e2 e2' e1 ps)   
   have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
     = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
@@ -395,7 +396,7 @@ next
   unfolding qs smap_sflat 333 ..
 
   from AppR  obtain tts where 
-  tts: "ustep (smap (tr e2) qs) tts" "stream_all2 reneqv tts (smap (tr e2') qs)"
+  tts: "ustepD d (smap (tr e2) qs) tts" "stream_all2 reneqv tts (smap (tr e2') qs)"
   by auto
 
   obtain ttss where 22: "tts = sflat ttss" using ex_sflat by blast
@@ -404,7 +405,7 @@ next
 
   define tts' where "tts' = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
-    subgoal unfolding 0 apply(rule ustep.iAppR)
+    subgoal unfolding 0 apply(rule ustepD.iAppR)
       subgoal unfolding uniformS_def4 by auto
       subgoal using tts(1) unfolding 22 33 . .
     subgoal unfolding stream_all2_iff_snth apply auto
@@ -414,14 +415,14 @@ next
       unfolding 222 using tts(1,2) unfolding stream_all2_iff_snth    
       apply simp using reneqv_sym reneqv_trans by blast+ . .
 next
-  case (Xi e e' x)
-  then obtain tts where tts: "ustep (smap (tr e) ps) tts" "stream_all2 reneqv tts (smap (tr e') ps)"
+  case (Xi d e e' x)
+  then obtain tts where tts: "ustepD d (smap (tr e) ps) tts" "stream_all2 reneqv tts (smap (tr e') ps)"
   by auto
   have 0: "smap (\<lambda>p. iLam (superOf x) (tr e p)) ps = 
            smap (iLam (superOf x)) (smap (tr e) ps)"
   unfolding stream_eq_nth by auto
   show ?case apply(intro exI[of _ "smap (iLam (superOf x)) tts"] conjI)
-    subgoal apply simp unfolding 0 apply(rule ustep.Xi) using tts(1) by auto
+    subgoal apply simp unfolding 0 apply(rule ustepD.Xi) using tts(1) by auto
     subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLam) .
 qed
 

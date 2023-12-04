@@ -1,6 +1,5 @@
-(* Here we instantiate the general enhanced rule induction to beta reduction
-for the (untyped) lambda-calculus *)
-theory LC_Beta 
+(*Beta reduction for the (untyped) lambda-calculus with applicative redex-depth counted *)
+theory LC_Beta_depth 
 imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
 "../Prelim/More_Stream" LC_Head_Reduction
 begin
@@ -9,24 +8,24 @@ begin
 
 (* *)
 
-inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
-| AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
-| AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
+inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
+| AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
+| AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
+| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
 
-thm step_def
+thm stepD_def
 
 
 (* INSTANTIATING THE Components LOCALE: *)
 
-type_synonym T = "trm \<times> trm"
+type_synonym T = "nat \<times> trm \<times> trm"
 
 definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (rrename_term f) (rrename_term f)"
+"Tmap f \<equiv> map_prod id (map_prod (rrename_term f) (rrename_term f))"
 
 fun Tfvars :: "T \<Rightarrow> var set" where 
-"Tfvars (e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
+"Tfvars (d,e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
 
 interpretation Components where dummy = "undefined :: var" and 
@@ -39,15 +38,16 @@ apply standard unfolding ssbij_def Tmap_def
 definition G :: "(T \<Rightarrow> bool) \<Rightarrow> var set \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>R B t.  
-         (\<exists>x e1 e2. B = {x} \<and> fst t = App (Lam x e1) e2 \<and> snd t = tvsubst (Var(x := e2)) e1)
+         (\<exists>x e1 e2. B = {x} \<and> fst t = 0 \<and> fst (snd t) = App (Lam x e1) e2 \<and> snd (snd t) = tvsubst (Var(x := e2)) e1)
          \<or>
-         (\<exists>e1 e1' e2. B = {} \<and> fst t = App e1 e2 \<and> snd t = App e1' e2 \<and> 
-                      R (e1,e1')) 
+         (\<exists>e1 d e1' e2. B = {} \<and> fst t = Suc d \<and> fst (snd t) = App e1 e2 \<and> snd (snd t) = App e1' e2 \<and> 
+                      R (d,e1,e1')) 
          \<or>
-         (\<exists>e1 e2 e2'. B = {} \<and> fst t = App e1 e2 \<and> snd t = App e1 e2' \<and> 
-                      R (e2,e2')) 
+         (\<exists>e1 d e2 e2'. B = {} \<and> fst t = Suc d \<and> fst (snd t) = App e1 e2 \<and> snd (snd t) = App e1 e2' \<and> 
+                      R (d,e2,e2')) 
          \<or>
-         (\<exists>x e e'. B = {x} \<and> fst t = Lam x e \<and> snd t = Lam x e' \<and> R (e,e'))"
+         (\<exists>x d e e'. B = {x} \<and> fst t = d \<and> fst (snd t) = Lam x e \<and> snd (snd t) = Lam x e' \<and> 
+                     R (d,e,e'))"
 
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
@@ -67,22 +67,26 @@ unfolding G_def apply(elim disjE)
   apply (simp add: term.rrename_comps) apply(subst rrename_tvsubst_comp) by auto . .
   (* *)
   subgoal apply(rule disjI4_2)
-  subgoal apply(elim exE) subgoal for e1 e1' e2 
-  apply(rule exI[of _ "rrename_term \<sigma> e1"]) apply(rule exI[of _ "rrename_term \<sigma> e1'"]) 
+  subgoal apply(elim exE) subgoal for e1 d e1' e2 
+  apply(rule exI[of _ "rrename_term \<sigma> e1"]) 
+  apply(rule exI[of _ "d"])
+  apply(rule exI[of _ "rrename_term \<sigma> e1'"]) 
   apply(rule exI[of _ "rrename_term \<sigma> e2"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: term.rrename_comps) . . 
   (* *)
   subgoal apply(rule disjI4_3)
-  subgoal apply(elim exE) subgoal for e1 e2 e2' 
+  subgoal apply(elim exE) subgoal for e1 d e2 e2' 
   apply(rule exI[of _ "rrename_term \<sigma> e1"]) 
+  apply(rule exI[of _ "d"])
   apply(rule exI[of _ "rrename_term \<sigma> e2"]) apply(rule exI[of _ "rrename_term \<sigma> e2'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   by (simp add: term.rrename_comps) . . 
   (* *)
   subgoal apply(rule disjI4_4)
-  subgoal apply(elim exE) subgoal for x e e'
+  subgoal apply(elim exE) subgoal for x d e e'
   apply(rule exI[of _ "\<sigma> x"])
+  apply(rule exI[of _ "d"])
   apply(rule exI[of _ "rrename_term \<sigma> e"]) apply(rule exI[of _ "rrename_term \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: term.rrename_comps) . . .
@@ -113,35 +117,38 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
       subgoal apply(subst tvsubst_Var_rrename) 
       apply (auto split: if_splits) . . . 
   (* *)
-  subgoal for xx e1 e1' e2 
+  subgoal for xx e1 d e1' e2 
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
     subgoal unfolding ssbij_def small_def by auto 
     subgoal apply(rule disjI4_2) 
     apply(rule exI[of _ "e1"]) 
+    apply(rule exI[of _ "d"])
     apply(rule exI[of _ "e1'"])
     apply(rule exI[of _ "e2"]) 
     apply(cases t) apply simp . .
   (* *)
-  subgoal for xx e1 e2 e2' 
+  subgoal for xx e1 d e2 e2' 
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
     subgoal unfolding ssbij_def small_def by auto 
     subgoal apply(rule disjI4_3) 
-    apply(rule exI[of _ "e1"]) 
+    apply(rule exI[of _ "e1"])
+    apply(rule exI[of _ d]) 
     apply(rule exI[of _ "e2"])
     apply(rule exI[of _ "e2'"]) 
     apply(cases t) apply simp . .
   (* *)
-  subgoal for xx x e e'
+  subgoal for xx x d e e'
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
     subgoal by simp
     subgoal unfolding ssbij_def small_def by auto 
     subgoal apply(rule disjI4_4) 
     apply(rule exI[of _ "xx"]) 
+    apply(rule exI[of _ "fst t"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e'"])
     apply(cases t)  apply simp apply(intro conjI)
@@ -160,11 +167,11 @@ apply standard
 
 (* *)
 
-lemma step_I: "step t1 t2 = Step.I (t1,t2)" 
-unfolding step_def Step.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
+lemma stepD_I: "stepD d t1 t2 = Step.I (d,t1,t2)" 
+unfolding stepD_def Step.I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
 unfolding fun_eq_iff G_def apply clarify
-subgoal for R tt1 tt2 apply(rule iffI)
-  subgoal apply(elim disjE exE)
+subgoal for R d tt1 tt2 apply(rule iffI)
+  subgoal apply(elim disjE exE conjE)
     \<^cancel>\<open>Beta: \<close>
     subgoal for x e1 e2 apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI4_1) by auto 
     \<^cancel>\<open>AppL: \<close>
@@ -184,75 +191,74 @@ subgoal for R tt1 tt2 apply(rule iffI)
     subgoal apply(rule disjI4_4) by auto . . .
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
-thm step.induct[no_vars]
+thm stepD.induct[no_vars]
 
-corollary BE_induct_step[consumes 2, case_names Beta AppL AppR Xi]: 
+corollary BE_induct_stepD[consumes 2, case_names Beta AppL AppR Xi]: 
 assumes par: "\<And>p. small (Pfvars p)"
-and st: "step t1 t2"  
+and st: "stepD d t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
   x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
-  R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
-and AppL: "\<And>e1 e1' e2 p. 
-  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
-  R p (App e1 e2) (App e1' e2)"
-and AppR: "\<And>e1 e2 e2' p. 
-  step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
-  R p (App e1 e2) (App e1 e2')"
-and Xi: "\<And>e e' x p. 
+  R p 0 (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
+and AppL: "\<And>d e1 e1' e2 p. 
+  stepD d e1 e1' \<Longrightarrow> (\<forall>p'. R p' d e1 e1') \<Longrightarrow> 
+  R p (Suc d) (App e1 e2) (App e1' e2)"
+and AppR: "\<And>d e1 e2 e2' p. 
+  stepD d e2 e2' \<Longrightarrow> (\<forall>p'. R p' d e2 e2') \<Longrightarrow> 
+  R p (Suc d) (App e1 e2) (App e1 e2')"
+and Xi: "\<And>d e e' x p. 
   x \<notin> Pfvars p \<Longrightarrow> 
-  step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
-  R p (Lam x e) (Lam x e')" 
-shows "R p t1 t2"
-unfolding step_I
-apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
+  stepD d e e' \<Longrightarrow> (\<forall>p'. R p' d e e') \<Longrightarrow> 
+  R p d (Lam x e) (Lam x e')" 
+shows "R p d t1 t2"
+unfolding stepD_I
+apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Step.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-    subgoal unfolding step_I by simp
+  subgoal using par st apply(elim Step.BE_induct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
+    subgoal unfolding stepD_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
-    unfolding step_I[symmetric] apply(elim disjE exE)
-      subgoal for x e1 e2  using Beta[of x p e2 e1] by auto
+    unfolding stepD_I[symmetric] apply(elim disjE exE)
+      subgoal using Beta by auto
       subgoal using AppL by auto  
       subgoal using AppR by auto  
       subgoal using Xi by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_step'[consumes 2, case_names Beta AppL AppR Xi]: 
+corollary BE_induct_stepD'[consumes 2, case_names Beta AppL AppR Xi]: 
 assumes par: "small A"
-and st: "step t1 t2"  
+and st: "stepD d t1 t2"  
 and Beta: "\<And>x e1 e2. 
   x \<notin> A \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
-  R (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
-and AppL: "\<And>e1 e1' e2. 
-  step e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
-  R (App e1 e2) (App e1' e2)"
-and AppR: "\<And>e1 e2 e2'. 
-  step e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
-  R (App e1 e2) (App e1 e2')"
-and Xi: "\<And>e e' x. 
+  R 0 (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
+and AppL: "\<And>d e1 e1' e2. 
+  stepD d e1 e1' \<Longrightarrow> R d e1 e1' \<Longrightarrow> 
+  R (Suc d) (App e1 e2) (App e1' e2)"
+and AppR: "\<And>d e1 e2 e2'. 
+  stepD d e2 e2' \<Longrightarrow> R d e2 e2' \<Longrightarrow> 
+  R (Suc d) (App e1 e2) (App e1 e2')"
+and Xi: "\<And>d e e' x. 
   x \<notin> A \<Longrightarrow> 
-  step e e' \<Longrightarrow> R e e' \<Longrightarrow> 
-  R (Lam x e) (Lam x e')" 
-shows "R t1 t2"
-apply(rule BE_induct_step[of "\<lambda>_::unit. A"]) using assms by auto
+  stepD d e e' \<Longrightarrow> R d e e' \<Longrightarrow> 
+  R d (Lam x e) (Lam x e')" 
+shows "R d t1 t2"
+apply(rule BE_induct_stepD[of "\<lambda>_::unit. A"]) using assms by auto
 
 
 (* Also inferring equivariance from the general infrastructure: *)
-corollary rrename_step:
+corollary rrename_stepD:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
-and r: "step e e'" 
-shows "step (rrename f e) (rrename f e')"
-using assms unfolding step_I using Step.I_equiv[of "(e,e')" f]
+and r: "stepD d e e'" 
+shows "stepD d (rrename f e) (rrename f e')"
+using assms unfolding stepD_I using Step.I_equiv[of "(d,e,e')" f]
 unfolding Tmap_def ssbij_def by auto
 
 
 (* Other properties: *)
 
-(* *)
-lemma red_step: "red e ee \<Longrightarrow> step e ee"
-by (metis red_def step.Beta)
+lemma red_stepD: "red e ee \<Longrightarrow> stepD 0 e ee"
+by (metis red_def stepD.Beta)
 
-lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
-unfolding stream_all2_iff_snth using red_step by auto
+lemma red_stepD2: "stream_all2 red es ees \<Longrightarrow> stream_all2 (stepD 0) es ees"
+unfolding stream_all2_iff_snth using red_stepD by auto
 
 
 end

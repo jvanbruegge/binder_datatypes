@@ -2,7 +2,7 @@
 for the (untyped) lambda-calculus *)
 theory LC_Beta 
 imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
-"../Prelim/More_Stream"
+"../Prelim/More_Stream" LC_Head_Reduction
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -248,9 +248,6 @@ unfolding Tmap_def ssbij_def by auto
 (* Other properties: *)
 
 (* *)
-definition red where 
-"red e ee \<equiv> \<exists>x e1 e2. e = App (Lam x e1) e2 \<and> ee = tvsubst (Var(x:=e2)) e1"
-
 lemma red_step: "red e ee \<Longrightarrow> step e ee"
 by (metis red_def step.Beta)
 

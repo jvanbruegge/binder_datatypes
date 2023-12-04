@@ -1,6 +1,6 @@
 (* The translations back and forth between the infinitary and finitary lambda-calculi *)
 theory ILC_relations_more
-imports (* ILC_uniform *) ILC_affine ILC_Beta ILC_UBeta
+imports (* ILC_uniform *) ILC_affine ILC_Beta ILC_UBeta_depth
 begin
 
 
@@ -68,23 +68,25 @@ lemma affineS_smap_iLam_iff: "affineS (smap (iLam xs) es) \<longleftrightarrow>
   (\<forall>i j. i \<noteq> j \<longrightarrow> affine (snth es i) \<and> ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth es j) \<subseteq> dsset xs)"
 unfolding affineS_def by auto (metis More_Stream.theN nat.simps(3))
 
-lemma ustep_affine:
-assumes "ustep es es'"
+(* *)
+
+lemma ustepD_affine:
+assumes "ustepD d es es'"
 shows "\<forall>i. affine (es !! i) \<longrightarrow> affine (es' !! i)"
-using assms apply(induct rule: ustep.induct)
+using assms apply(induct rule: ustepD.induct)
   subgoal for es es' unfolding stream_all2_iff_snth using hread_affine by auto
-  subgoal apply auto unfolding affine_iApp_iff using ustep_FFVars by fastforce
-  subgoal apply auto unfolding affine_iApp_iff using ustep_FFVars 
+  subgoal apply auto unfolding affine_iApp_iff using ustepD_FFVars by fastforce
+  subgoal apply auto unfolding affine_iApp_iff using ustepD_FFVars 
   apply (auto simp: snth_sflat sset_range image_def)
     apply (metis nat2_nat1 snth2.simps) 
     apply (metis Int_emptyD in_mono nat2_nat1 snth2.simps snth_sflat)
     by (metis Int_emptyD insert_absorb insert_subset nat2_nat1 snth2.simps snth_sflat) 
-  subgoal for es es' xs apply(frule ustep_FFVars) by auto  . 
+  subgoal for es es' xs apply(frule ustepD_FFVars) by auto  . 
 
-lemma ustep_affineS:
-assumes "ustep es es'" and "affineS es"
+lemma ustepD_affineS:
+assumes "ustepD d es es'" and "affineS es"
 shows "affineS es'"
-using assms ustep_affine ustep_FFVars unfolding affineS_def apply auto 
+using assms ustepD_affine ustepD_FFVars unfolding affineS_def apply auto 
   apply (metis More_Stream.theN snth_sset)
   by (meson disjoint_iff_not_equal in_mono)
 

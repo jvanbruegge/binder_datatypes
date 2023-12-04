@@ -2,6 +2,10 @@ theory VVSubst
   imports "./Fixpoint"
 begin
 
+(********************************)
+(******* Definitions ************)
+(********************************)
+
 type_synonym ('var, 'tyvar, 'a, 'b, 'c) P = "('var \<Rightarrow> 'var) \<times> ('tyvar \<Rightarrow> 'tyvar) \<times> ('a \<Rightarrow> 'a) \<times> ('b \<Rightarrow> 'c)"
 type_synonym ('var, 'tyvar, 'a, 'c) U1 = "('var, 'tyvar, 'a, 'c) T1"
 type_synonym ('var, 'tyvar, 'a, 'c) U2 = "('var, 'tyvar, 'a, 'c) T2"
@@ -9,7 +13,7 @@ type_synonym ('var, 'tyvar, 'a, 'c) U2 = "('var, 'tyvar, 'a, 'c) T2"
 type_synonym ('var, 'tyvar, 'a, 'b, 'c) rec_T1 = "('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1)"
 type_synonym ('var, 'tyvar, 'a, 'b, 'c) rec_T2 = "('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2)"
 
-definition validP :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> bool" where
+abbreviation validP :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> bool" where
   "validP p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow>
     |supp f1| <o |UNIV::'var set| \<and> |supp f2| <o |UNIV::'tyvar set| \<and>
     |supp f3| <o |UNIV::'a set|"
@@ -25,16 +29,85 @@ definition U2ctor :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_
       ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) x
   )"
 
-definition PFVars_1 :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> 'var set" where
+abbreviation PFVars_1 :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> 'var set" where
   "PFVars_1 p \<equiv> case p of (f1, f2, _, _) \<Rightarrow> imsupp f1"
-definition PFVars_2 :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> 'tyvar set" where
+abbreviation PFVars_2 :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> 'tyvar set" where
   "PFVars_2 p \<equiv> case p of (f1, f2, _, _) \<Rightarrow> imsupp f2"
 
-definition Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'b,'c) P" where
+abbreviation Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'b,'c) P" where
   "Pmap g1 g2 p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow> (compSS g1 f1, compSS g2 f2, f3, f4)"
 
+abbreviation U1map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1" where
+  "U1map f1 f2 t \<equiv> \<lambda>u. rrename_T1 f1 f2 u"
+abbreviation U2map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2" where
+  "U2map f1 f2 t \<equiv> \<lambda>u. rrename_T2 f1 f2 u"
+
+abbreviation U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U1 \<Rightarrow> 'var set" where
+  "U1FVars_1 t u \<equiv> FFVars_T11 u"
+abbreviation U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U1 \<Rightarrow> 'tyvar set" where
+  "U1FVars_2 t u \<equiv> FFVars_T12 u"
+abbreviation U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U2 \<Rightarrow> 'var set" where
+  "U2FVars_1 t u \<equiv> FFVars_T21 u"
+abbreviation U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U2 \<Rightarrow> 'tyvar set" where
+  "U2FVars_2 t u \<equiv> FFVars_T22 u"
+
+function set3_raw_T1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T1 \<Rightarrow> 'a set"
+  and set3_raw_T2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T2 \<Rightarrow> 'a set" where
+  "set3_raw_T1 (raw_T1_ctor x) = set3_T1_pre x \<union> \<Union>(set3_raw_T1 ` set7_T1_pre x) \<union> \<Union>(set3_raw_T1 ` set8_T1_pre x)  \<union> \<Union>(set3_raw_T2 ` set9_T1_pre x) \<union> \<Union>(set3_raw_T2 ` set10_T1_pre x)"
+| "set3_raw_T2 (raw_T2_ctor x) = set3_T2_pre x \<union> \<Union>(set3_raw_T1 ` set7_T2_pre x) \<union> \<Union>(set3_raw_T1 ` set8_T2_pre x)  \<union> \<Union>(set3_raw_T2 ` set9_T2_pre x) \<union> \<Union>(set3_raw_T2 ` set10_T2_pre x)"
+     apply pat_completeness
+    apply (unfold sum.inject raw_T1.inject raw_T2.inject sum.distinct)
+    apply ((hypsubst, rule refl) | erule sum.distinct[THEN notE])+
+  done
+termination
+  apply (relation "{(x, y). case x of
+    Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
+  | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
+ }")
+          apply (rule T1.wf_subshape)
+         apply (unfold mem_Collect_eq prod.case sum.case)
+         apply (erule T1.set_subshapes)+
+  done
+function set4_raw_T1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T1 \<Rightarrow> 'b set"
+  and set4_raw_T2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T2 \<Rightarrow> 'b set" where
+  "set4_raw_T1 (raw_T1_ctor x) = set4_T1_pre x \<union> \<Union>(set4_raw_T1 ` set7_T1_pre x) \<union> \<Union>(set4_raw_T1 ` set8_T1_pre x)  \<union> \<Union>(set4_raw_T2 ` set9_T1_pre x) \<union> \<Union>(set4_raw_T2 ` set10_T1_pre x)"
+| "set4_raw_T2 (raw_T2_ctor x) = set4_T2_pre x \<union> \<Union>(set4_raw_T1 ` set7_T2_pre x) \<union> \<Union>(set4_raw_T1 ` set8_T2_pre x)  \<union> \<Union>(set4_raw_T2 ` set9_T2_pre x) \<union> \<Union>(set4_raw_T2 ` set10_T2_pre x)"
+     apply pat_completeness
+    apply (unfold sum.inject raw_T1.inject raw_T2.inject)
+    apply ((hypsubst, rule refl) | erule sum.distinct[THEN notE])+
+  done
+termination
+  apply (relation "{(x, y). case x of
+    Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
+  | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
+ }")
+          apply (rule T1.wf_subshape)
+         apply (unfold mem_Collect_eq prod.case sum.case)
+         apply (erule T1.set_subshapes)+
+  done
+
+definition "set3_T1 x \<equiv> set3_raw_T1 (quot_type.rep Rep_T1 x)"
+definition "set3_T2 x \<equiv> set3_raw_T2 (quot_type.rep Rep_T2 x)"
+
+definition "set4_T1 x \<equiv> set4_raw_T1 (quot_type.rep Rep_T1 x)"
+definition "set4_T2 x \<equiv> set4_raw_T2 (quot_type.rep Rep_T2 x)"
+
+coinductive rel_T1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> bool"
+  and rel_T2 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2 \<Rightarrow> bool" where
+  "\<lbrakk> bij f1 ; |supp f1| <o |UNIV::'var set| ; id_on ((\<Union>(FFVars_T11 ` set8_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FFVars_T21 ` set10_T1_pre x) - set5_T1_pre x)) f1 ;
+     bij f2 ; |supp f2| <o |UNIV::'tyvar set| ; id_on (\<Union>(FFVars_T12 ` set8_T1_pre x) - set6_T1_pre x) f2 ;
+    rel_T1_pre R (rel_T1 R) (rel_T1 R) (rel_T2 R) (rel_T2 R) (map_T1_pre id id id id f1 f2 id (rrename_T1 f1 f2) id (rrename_T2 f1 id) x) y \<rbrakk>
+    \<Longrightarrow> rel_T1 R (T1_ctor x) (T1_ctor y)"
+| "\<lbrakk> bij f1 ; |supp f1| <o |UNIV::'var set| ; id_on ((\<Union>(FFVars_T11 ` set8_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FFVars_T21 ` set10_T2_pre x2) - set5_T2_pre x2)) f1 ;
+     bij f2 ; |supp f2| <o |UNIV::'tyvar set| ; id_on (\<Union>(FFVars_T12 ` set8_T2_pre x2) - set6_T2_pre x2) f2 ;
+    rel_T2_pre R (rel_T1 R) (rel_T1 R) (rel_T2 R) (rel_T2 R) (map_T2_pre id id id id f1 f2 id (rrename_T1 f1 f2) id (rrename_T2 f1 id) x2) y2 \<rbrakk>
+    \<Longrightarrow> rel_T2 R (T2_ctor x2) (T2_ctor y2)"
+
+(********************************)
+(******* Axiom Proofs ***********)
+(********************************)
 lemma Pmap_id0: "Pmap id id = id"
-  apply (unfold Pmap_def compSS_id id_o o_id inv_id)
+  apply (unfold compSS_id id_o o_id inv_id)
   apply (unfold id_def case_prod_beta prod.collapse)
   apply (rule refl)
   done
@@ -44,7 +117,7 @@ lemma Pmap_comp0:
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
           "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
         shows "validP p \<Longrightarrow> Pmap (g1 \<circ> f1) (g2 \<circ> f2) p = (Pmap g1 g2 \<circ> Pmap f1 f2) p"
-  apply (unfold Pmap_def validP_def case_prod_beta)
+  apply (unfold case_prod_beta)
   apply (erule conjE)+
   apply (subst compSS_comp0[symmetric], (rule infinite_UNIV assms | assumption)+)+
   apply (unfold comp_def case_prod_beta fst_conv snd_conv)
@@ -54,7 +127,7 @@ lemma Pmap_cong_id:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "validP p \<Longrightarrow> (\<And>a. a \<in> PFVars_1 p \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 p \<Longrightarrow> f2 a = a) \<Longrightarrow> Pmap f1 f2 p = p"
-  apply (unfold Pmap_def PFVars_1_def PFVars_2_def validP_def case_prod_beta fst_conv snd_conv)
+  apply (unfold case_prod_beta fst_conv snd_conv)
   apply (erule conjE)+
   apply (subst compSS_cong_id, (rule assms | assumption)+)+
   apply (unfold prod.collapse)
@@ -66,7 +139,7 @@ lemma PFVars_Pmap:
   shows
     "validP p \<Longrightarrow> PFVars_1 (Pmap f1 f2 p) = f1 ` PFVars_1 p"
     "validP p \<Longrightarrow> PFVars_2 (Pmap f1 f2 p) = f2 ` PFVars_2 p"
-   apply (unfold Pmap_def PFVars_1_def PFVars_2_def case_prod_beta validP_def fst_conv snd_conv)
+   apply (unfold case_prod_beta fst_conv snd_conv)
   apply (erule conjE)+
    apply (subst imsupp_compSS, (rule infinite_UNIV assms refl | assumption)+)+
    apply (erule conjE)+
@@ -76,26 +149,12 @@ lemma PFVars_Pmap:
 lemma small_PFVars:
   fixes p::"('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a, 'b, 'c) P"
   shows "validP p \<Longrightarrow> |PFVars_1 p| <o |UNIV::'var set|" "validP p \<Longrightarrow> |PFVars_2 p| <o |UNIV::'tyvar set|"
-   apply (unfold PFVars_1_def PFVars_2_def validP_def case_prod_beta)
+   apply (unfold case_prod_beta)
    apply (erule conjE)+
    apply (rule iffD2[OF imsupp_supp_bound] infinite_UNIV | assumption)+
   apply (erule conjE)+
   apply assumption
   done
-
-definition U1map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1" where
-  "U1map f1 f2 t \<equiv> \<lambda>u. rrename_T1 f1 f2 u"
-definition U2map :: "('var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2" where
-  "U2map f1 f2 t \<equiv> \<lambda>u. rrename_T2 f1 f2 u"
-
-definition U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U1 \<Rightarrow> 'var set" where
-  "U1FVars_1 t u \<equiv> FFVars_T11 u"
-definition U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U1 \<Rightarrow> 'tyvar set" where
-  "U1FVars_2 t u \<equiv> FFVars_T12 u"
-definition U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U2 \<Rightarrow> 'var set" where
-  "U2FVars_1 t u \<equiv> FFVars_T21 u"
-definition U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'c) U2 \<Rightarrow> 'tyvar set" where
-  "U2FVars_2 t u \<equiv> FFVars_T22 u"
 
 lemma U1map_Uctor:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
@@ -107,7 +166,7 @@ lemma U1map_Uctor:
       (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
       (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
     y) (Pmap f1 f2 p)"
-  apply (unfold U1map_def U2map_def U1ctor_def validP_def case_prod_beta Pmap_def fst_conv snd_conv)
+  apply (unfold U1ctor_def case_prod_beta fst_conv snd_conv)
   apply (erule conjE)+
   apply (rule trans)
    apply (rule T1.rrename_cctors)
@@ -180,7 +239,7 @@ lemma U2map_Uctor:
       (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
       (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
     y) (Pmap f1 f2 p)"
-  apply (unfold U1map_def U2map_def U2ctor_def validP_def case_prod_beta Pmap_def fst_conv snd_conv)
+  apply (unfold U2ctor_def case_prod_beta fst_conv snd_conv)
   apply (erule conjE)+
   apply (rule trans)
    apply (rule T1.rrename_cctors)
@@ -253,7 +312,7 @@ lemma U1FVars_subsets:
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> {}"
-   apply (unfold U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def validP_def case_prod_beta U1ctor_def Un_empty_right T1.FFVars_cctors PFVars_1_def PFVars_2_def)
+   apply (unfold case_prod_beta U1ctor_def Un_empty_right T1.FFVars_cctors)
   apply (erule conjE)+
   subgoal premises prems
     apply (subst T1_pre.set_map, (rule bij_id supp_id_bound prems)+)+
@@ -417,7 +476,7 @@ lemma U2FVars_subsets:
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
   U2FVars_2 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FFVars_T22 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> {}"
-   apply (unfold U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def validP_def case_prod_beta U2ctor_def Un_empty_right T1.FFVars_cctors PFVars_1_def PFVars_2_def)
+   apply (unfold case_prod_beta U2ctor_def Un_empty_right T1.FFVars_cctors)
   apply (erule conjE)+
   subgoal premises prems
     apply (subst T2_pre.set_map, (rule bij_id supp_id_bound prems)+)+
@@ -576,7 +635,7 @@ lemma valid_Pmap:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "validP p \<Longrightarrow> validP (Pmap f1 f2 p)"
-  apply (unfold validP_def Pmap_def case_prod_beta fst_conv snd_conv compSS_def)
+  apply (unfold case_prod_beta fst_conv snd_conv compSS_def)
   apply (erule conjE)+
   apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
   done
@@ -632,13 +691,12 @@ val T1_model = {
   } option,
   axioms = {
     Umap_id0 = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def}),
       resolve_tac ctxt [trans],
       resolve_tac ctxt @{thms T1.rrename_id0s[THEN fun_cong]},
       resolve_tac ctxt @{thms id_apply}
     ],
-    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Umap_cong_id = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN Local_Defs.unfold0_tac ctxt @{thms U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
     Umap_Uctor = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms if_True}),
       resolve_tac ctxt @{thms U1map_Uctor},
@@ -667,13 +725,12 @@ val T2_model = {
   } option,
   axioms = {
     Umap_id0 = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def}),
       resolve_tac ctxt [trans],
       resolve_tac ctxt @{thms T1.rrename_id0s[THEN fun_cong]},
       resolve_tac ctxt @{thms id_apply}
     ],
-    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Umap_cong_id = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
+    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subsets} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
   }
@@ -699,40 +756,15 @@ in lthy end\<close>
 print_theorems
 declare [[quick_and_dirty=false]]
 
-function set3_raw_T1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T1 \<Rightarrow> 'a set"
-  and set3_raw_T2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T2 \<Rightarrow> 'a set" where
-  "set3_raw_T1 (raw_T1_ctor x) = set3_T1_pre x \<union> \<Union>(set3_raw_T1 ` set7_T1_pre x) \<union> \<Union>(set3_raw_T1 ` set8_T1_pre x)  \<union> \<Union>(set3_raw_T2 ` set9_T1_pre x) \<union> \<Union>(set3_raw_T2 ` set10_T1_pre x)"
-| "set3_raw_T2 (raw_T2_ctor x) = set3_T2_pre x \<union> \<Union>(set3_raw_T1 ` set7_T2_pre x) \<union> \<Union>(set3_raw_T1 ` set8_T2_pre x)  \<union> \<Union>(set3_raw_T2 ` set9_T2_pre x) \<union> \<Union>(set3_raw_T2 ` set10_T2_pre x)"
-     apply pat_completeness
-    apply (unfold sum.inject raw_T1.inject raw_T2.inject sum.distinct)
-    apply ((hypsubst, rule refl) | erule sum.distinct[THEN notE])+
-  done
-termination
-  apply (relation "{(x, y). case x of
-    Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
-  | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
- }")
-          apply (rule T1.wf_subshape)
-         apply (unfold mem_Collect_eq prod.case sum.case)
-         apply (erule T1.set_subshapes)+
-  done
-function set4_raw_T1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T1 \<Rightarrow> 'b set"
-  and set4_raw_T2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) raw_T2 \<Rightarrow> 'b set" where
-  "set4_raw_T1 (raw_T1_ctor x) = set4_T1_pre x \<union> \<Union>(set4_raw_T1 ` set7_T1_pre x) \<union> \<Union>(set4_raw_T1 ` set8_T1_pre x)  \<union> \<Union>(set4_raw_T2 ` set9_T1_pre x) \<union> \<Union>(set4_raw_T2 ` set10_T1_pre x)"
-| "set4_raw_T2 (raw_T2_ctor x) = set4_T2_pre x \<union> \<Union>(set4_raw_T1 ` set7_T2_pre x) \<union> \<Union>(set4_raw_T1 ` set8_T2_pre x)  \<union> \<Union>(set4_raw_T2 ` set9_T2_pre x) \<union> \<Union>(set4_raw_T2 ` set10_T2_pre x)"
-     apply pat_completeness
-    apply (unfold sum.inject raw_T1.inject raw_T2.inject sum.distinct)
-    apply ((hypsubst, rule refl) | erule sum.distinct[THEN notE])+
-  done
-termination
-  apply (relation "{(x, y). case x of
-    Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
-  | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
- }")
-          apply (rule T1.wf_subshape)
-         apply (unfold mem_Collect_eq prod.case sum.case)
-         apply (erule T1.set_subshapes)+
-  done
+definition vvsubst_T1 :: "('var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1" where
+  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> ff01_vvsubst_T1_vvsubst_T2 t (f1, f2, f3, f4)"
+definition vvsubst_T2 :: "('var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2" where
+  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> ff02_vvsubst_T1_vvsubst_T2 t (f1, f2, f3, f4)"
+
+definition pick1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<times> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T1" where
+  "pick1 R f1 f2 f3 xy \<equiv> SOME z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = fst xy \<and> vvsubst_T1 f1 f2 f3 snd z = snd xy"
+definition pick2 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<times> ('var, 'tyvar, 'a, 'c) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T2" where
+  "pick2 R f1 f2 f3 xy \<equiv> SOME z. set4_T2 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T2 id id id fst z = fst xy \<and> vvsubst_T2 f1 f2 f3 snd z = snd xy"
 
 lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>y. Q y) \<Longrightarrow> P x \<and> Q y"
   apply (erule conjE allE)+
@@ -1214,12 +1246,6 @@ proof -
     done
 qed
 
-definition "set3_T1 x \<equiv> set3_raw_T1 (quot_type.rep Rep_T1 x)"
-definition "set3_T2 x \<equiv> set3_raw_T2 (quot_type.rep Rep_T2 x)"
-
-definition "set4_T1 x \<equiv> set4_raw_T1 (quot_type.rep Rep_T1 x)"
-definition "set4_T2 x \<equiv> set4_raw_T2 (quot_type.rep Rep_T2 x)"
-
 lemma set3_T1_simp: "set3_T1 (T1_ctor x) = set3_T1_pre x \<union> \<Union>(set3_T1 ` set7_T1_pre x) \<union> \<Union>(set3_T1 ` set8_T1_pre x) \<union> \<Union>(set3_T2 ` set9_T1_pre x) \<union> \<Union>(set3_T2 ` set10_T1_pre x)"
   apply (unfold set3_T1_def set3_T2_def T1_ctor_def)
   apply (rule trans)
@@ -1287,11 +1313,6 @@ lemma set4_rrenames:
      apply (rule assms)+
   done
 
-definition vvsubst_T1 :: "('var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1" where
-  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> ff01_vvsubst_T1_vvsubst_T2 t (f1, f2, f3, f4)"
-definition vvsubst_T2 :: "('var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var) \<Rightarrow> ('tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar) \<Rightarrow> ('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2" where
-  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> ff02_vvsubst_T1_vvsubst_T2 t (f1, f2, f3, f4)"
-
 lemma vvsubst_cctor_1:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar" and f3::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c"
   assumes f_prems: "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
@@ -1301,7 +1322,7 @@ lemma vvsubst_cctor_1:
   apply (unfold vvsubst_T1_def vvsubst_T2_def)
   apply (rule trans)
    apply (rule T1.rec_Uctors)
-     apply (unfold U1ctor_def U2ctor_def PFVars_1_def PFVars_2_def prod.case Un_empty_left Un_empty_right validP_def)
+     apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
   apply (rule conjI f_prems)+
      apply (rule trans[OF Int_commute], rule int_empties)+
    apply (rule noclash_prems)
@@ -1323,7 +1344,7 @@ lemma vvsubst_cctor_2:
   apply (unfold vvsubst_T1_def vvsubst_T2_def)
   apply (rule trans)
    apply (rule T1.rec_Uctors)
-     apply (unfold U1ctor_def U2ctor_def PFVars_1_def PFVars_2_def prod.case Un_empty_left Un_empty_right validP_def)
+     apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
   apply (rule conjI f_prems)+
      apply (rule trans[OF Int_commute], rule int_empties)+
    apply (rule noclash_prems)
@@ -1911,9 +1932,6 @@ proof -
     apply assumption
     done
 qed
-
-lemma Int_image_imsupp: "imsupp f \<inter> A = {} \<Longrightarrow> A \<inter> f ` B = {} \<longleftrightarrow> A \<inter> B = {}"
-  unfolding imsupp_def supp_def by (smt (verit) UnCI disjoint_iff image_iff mem_Collect_eq)
 
 lemma vvsubst_comp0s:
   fixes f1 g1::"'var::var_T1 \<Rightarrow> 'var" and f2 g2::"'tyvar::var_T1 \<Rightarrow> 'tyvar" and f3 g3::"'a::var_T1 \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c" and g4::"'c \<Rightarrow> 'd"
@@ -2674,17 +2692,6 @@ proof -
     apply assumption
     done
 qed
-
-coinductive rel_T1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::var_T1, 'tyvar::var_T1, 'a::var_T1, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> bool"
-  and rel_T2 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2 \<Rightarrow> bool" where
-  "\<lbrakk> bij f1 ; |supp f1| <o |UNIV::'var set| ; id_on ((\<Union>(FFVars_T11 ` set8_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FFVars_T21 ` set10_T1_pre x) - set5_T1_pre x)) f1 ;
-     bij f2 ; |supp f2| <o |UNIV::'tyvar set| ; id_on (\<Union>(FFVars_T12 ` set8_T1_pre x) - set6_T1_pre x) f2 ;
-    rel_T1_pre R (rel_T1 R) (rel_T1 R) (rel_T2 R) (rel_T2 R) (map_T1_pre id id id id f1 f2 id (rrename_T1 f1 f2) id (rrename_T2 f1 id) x) y \<rbrakk>
-    \<Longrightarrow> rel_T1 R (T1_ctor x) (T1_ctor y)"
-| "\<lbrakk> bij f1 ; |supp f1| <o |UNIV::'var set| ; id_on ((\<Union>(FFVars_T11 ` set8_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FFVars_T21 ` set10_T2_pre x2) - set5_T2_pre x2)) f1 ;
-     bij f2 ; |supp f2| <o |UNIV::'tyvar set| ; id_on (\<Union>(FFVars_T12 ` set8_T2_pre x2) - set6_T2_pre x2) f2 ;
-    rel_T2_pre R (rel_T1 R) (rel_T1 R) (rel_T2 R) (rel_T2 R) (map_T2_pre id id id id f1 f2 id (rrename_T1 f1 f2) id (rrename_T2 f1 id) x2) y2 \<rbrakk>
-    \<Longrightarrow> rel_T2 R (T2_ctor x2) (T2_ctor y2)"
 
 lemma rel_plain_cases:
   "rel_T1 R x y \<Longrightarrow> (\<And>x' y'. x = T1_ctor x' \<Longrightarrow> y = T1_ctor y' \<Longrightarrow> rel_T1_pre R (rel_T1 R) (rel_T1 R) (rel_T2 R) (rel_T2 R) x' y' \<Longrightarrow> P) \<Longrightarrow> P"
@@ -3869,13 +3876,6 @@ proof -
       done
     done
 qed
-
-
-
-definition pick1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::var_T1 \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var_T1 \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var_T1 \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<times> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T1" where
-  "pick1 R f1 f2 f3 xy \<equiv> SOME z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = fst xy \<and> vvsubst_T1 f1 f2 f3 snd z = snd xy"
-definition pick2 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::var_T1 \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var_T1 \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var_T1 \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<times> ('var, 'tyvar, 'a, 'c) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T2" where
-  "pick2 R f1 f2 f3 xy \<equiv> SOME z. set4_T2 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T2 id id id fst z = fst xy \<and> vvsubst_T2 f1 f2 f3 snd z = snd xy"
 
 lemma in_rel1:
   fixes f1::"'var::var_T1 \<Rightarrow> 'var" and f2::"'tyvar::var_T1 \<Rightarrow> 'tyvar" and f3::"'a::var_T1 \<Rightarrow> 'a" and R::"'b \<Rightarrow> 'c \<Rightarrow> bool"

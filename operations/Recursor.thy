@@ -3057,6 +3057,8 @@ lemma imsupp_id_on_XXr4:
 lemmas imsupp_id_on_XX = imsupp_id_on_XXl1 imsupp_id_on_XXl2 imsupp_id_on_XXl3 imsupp_id_on_XXl4
   imsupp_id_on_XXr1 imsupp_id_on_XXr2 imsupp_id_on_XXr3 imsupp_id_on_XXr4
 
+lemmas imsupp_id_empty = trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
+
 lemma f_swap_alpha:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
   assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
@@ -3237,7 +3239,6 @@ lemma f_swap_alpha:
           (* end repeat *)
           (* END EVERY' *)
          apply (erule exE)+
-        thm U1ctor'_cong
          apply (rule U1ctor'_cong[rotated 16])
                             apply (((unfold eq_bij_betw_refl_def)[1], (erule conjE)+, assumption)+)[8]
                          defer
@@ -3432,7 +3433,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                            apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems | erule eq_bij_betw_refl_prems)+
-                          apply (rule suitable_prems f_prems imsupp_prems)+
+                          apply (rule bij_id supp_id_bound suitable_prems trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left])+
             apply (rule T1.alpha_syms)
             apply assumption
 
@@ -3446,7 +3447,7 @@ lemma f_swap_alpha:
           (* binding alpha_bij_tac *)
             apply (rule T1.alpha_bijs)
                       apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
-          (* repeat twice *)
+          (* repeat nvars *)
               apply (rule ballI)
               apply (rule case_split[of "_ \<in> _"])
                apply (unfold eq_bij_betw_refl_def)[1]
@@ -3472,7 +3473,7 @@ lemma f_swap_alpha:
                apply (erule conjE)+
                apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
                apply (erule conjE)+
-               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply (erule id_onD[rotated, OF imageI, of _ _ f2])
                apply assumption
               apply (rule sym)
               apply (rule comp_middle)
@@ -3480,13 +3481,15 @@ lemma f_swap_alpha:
                apply (erule conjE)+
                apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
                apply (erule conjE)+
-               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply (erule id_onD[rotated, OF imageI])
                apply assumption
-              apply (rule pick_id_on_images[OF f_prems, THEN id_onD])
-               apply (rule suitable_prems)
-              apply (rule imageI)
-              apply assumption
-          (* copied from above *)
+              apply (erule id_onD[OF pick_id_on_images'(1)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(2)[OF f_prems suitable_prems(1)] imageI]
+            id_onD[OF pick_id_on_images'(3)[OF f_prems suitable_prems(2)] imageI]
+            id_onD[OF pick_id_on_images'(4)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(5)[OF f_prems suitable_prems(3)] imageI]
+            id_onD[OF pick_id_on_images'(6)[OF f_prems suitable_prems(4)] imageI])
+          (* copied from above, with f1 instead of f2 in id_onD *)
              apply (rule ballI)
              apply (rule case_split[of "_ \<in> _"])
               apply (unfold eq_bij_betw_refl_def)[1]
@@ -3516,7 +3519,7 @@ lemma f_swap_alpha:
               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
               apply (erule conjE)+
               apply (rotate_tac -1)
-              apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+              apply (erule id_onD[rotated, OF imageI, of _ _ f1])
               apply assumption
              apply (rule sym)
              apply (rule comp_middle)
@@ -3532,7 +3535,7 @@ lemma f_swap_alpha:
             id_onD[OF pick_id_on_images'(4)[OF f_prems suitable_prems(3)] imageI]
             id_onD[OF pick_id_on_images'(5)[OF f_prems suitable_prems(3)] imageI]
             id_onD[OF pick_id_on_images'(6)[OF f_prems suitable_prems(4)] imageI])
-          (* end repeat twice *)
+          (* end repeat nvars *)
             apply (rule T1.alpha_refls)
           (* end binding alpha_bij_tac *)
            apply (rule trans)
@@ -3576,7 +3579,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                           apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems pick_prems | erule eq_bij_betw_refl_prems)+
-                         apply (rule suitable_prems f_prems imsupp_prems)+
+                         apply (rule bij_id supp_id_bound suitable_prems imsupp_id_empty)+
            apply (rule T1.alpha_syms)
            apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
            apply assumption
@@ -3670,7 +3673,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                          apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems | erule eq_bij_betw_refl_prems)+
-                        apply (rule suitable_prems f_prems imsupp_prems)+
+                        apply (rule bij_id supp_id_bound suitable_prems imsupp_id_empty)+
           apply (rule T1.alpha_syms)
           apply assumption
 
@@ -3696,7 +3699,7 @@ lemma f_swap_alpha:
              apply assumption
             apply (rotate_tac -1)
             apply (rule trans)
-             apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+             apply (erule id_onD[rotated, OF imageI, of _ _ f2])
              apply assumption
             apply (rule sym)
             apply (erule id_onD[rotated, OF imageI])
@@ -3731,7 +3734,7 @@ lemma f_swap_alpha:
             apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
             apply (erule conjE)+
             apply (rotate_tac -1)
-            apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+            apply (erule id_onD[rotated, OF imageI, of _ _ f1])
             apply assumption
            apply (rule sym)
            apply (rule comp_middle)
@@ -3792,7 +3795,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                         apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                            apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems pick_prems | erule eq_bij_betw_refl_prems)+
-                       apply (rule suitable_prems f_prems imsupp_prems)+
+                       apply (rule supp_id_bound bij_id suitable_prems imsupp_id_empty)+
          apply (rule T1.alpha_syms)
          apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
          apply assumption
@@ -3803,13 +3806,6 @@ lemma f_swap_alpha:
             f_T1_simp[OF suitable'_prems] f_T2_simp[OF suitable'_prems])
         subgoal for p
         proof -
-          thm pick_prems
-          note tmp = exists_bij_betw_def
-
-
-
-
-
           note exists_bij_betw2s = exists_bij_betw_def[OF _ _ pick_prems(1) pick'_prems(1) h_prems(1),
               of _ set5_T1_pre _ _ set5_T1_pre
               "\<lambda>x. map_T1_pre id id id id id id fst fst fst fst (
@@ -4409,7 +4405,7 @@ lemma f_swap_alpha:
                              apply (rule T1_pre.mr_rel_set(5,6)[rotated -1, OF iffD2[OF T1_pre.mr_rel_flip mr_rel_prem]])
                                 apply (rule bij_id supp_id_bound h_prems supp_inv_bound bij_imp_bij_inv)+
                             apply (drule not_imageI[rotated])
-                             apply (rule h_prems)
+                             prefer 2
                             apply (unfold image_comp)[1]
                             apply (subst (asm) inv_o_simp2)
                              apply (rule h_prems)
@@ -4426,7 +4422,8 @@ lemma f_swap_alpha:
                 id_onD[OF pick_id_ons'(6)[OF suitable'_prems(4)]]
                 )
                              apply assumption
-                            apply assumption
+                             apply assumption
+                            apply (rule h_prems)
                            apply (unfold eq_bij_betw_def)[1]
                            apply (erule conjE)+
                            apply (drule imsupp_id_on)+
@@ -4713,9 +4710,9 @@ lemma f_swap_alpha:
                                 apply (rule supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left])+
                                apply assumption
                               apply (erule eq_bij_betw_prems)+
-                          apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[4]
-                      apply (erule eq_bij_betw_prems)+
-               apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[2]
+                          apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[2]
+                        apply assumption
+                       apply (rule supp_id_bound bij_id imsupp_id_empty | erule eq_bij_betw_prems)+
              apply (rule T1.alpha_transs)
               apply assumption
              apply (rule T1.alpha_bij_eqs[THEN iffD2])
@@ -4748,12 +4745,13 @@ lemma f_swap_alpha:
                 T1.alpha_FVarss(4)[OF alpha_ctor_picks(2)[OF suitable'_prems], symmetric])+
                         apply (drule imsupp_id_on)+
                         apply (erule id_on_eq)
-                          apply assumption
+                          prefer 2
                          apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])+
                          apply (rule T1.alpha_FVarss)
                          apply (rule alpha_T1_alpha_T2.intros[rotated -1])
                                apply (rule mr_rel_prem)
-                              apply (rule h_prems h_id_ons)+
+                               apply (rule h_prems h_id_ons)+
+                         apply assumption
                         apply (rule UnI1)
                         apply (rule UnI1)
                         apply (erule T1.FVars_intros)
@@ -4962,10 +4960,12 @@ lemma f_swap_alpha:
           _ _ "XXr2 pick1 pick2 pick3 pick4 f1 f2 p"
           ]
       note exists_bij_betws = exE[OF exists_bij_betw's(1)[
-            of _ _ "\<lambda>x. FVars_T21 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst x)) \<union> PFVars_1 p \<union> avoiding_set1",
+            of _ _ "\<lambda>x. FVars_T21 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst x)) \<union> PFVars_1 p \<union> avoiding_set1"
+            "set5_T2_pre x",
             rotated 3
             ]] exE[OF exists_bij_betw's(2)[
-            of _ _ "\<lambda>x. FVars_T22 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst x)) \<union> PFVars_2 p \<union> avoiding_set2",
+            of _ _ "\<lambda>x. FVars_T22 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst x)) \<union> PFVars_2 p \<union> avoiding_set2"
+            "set6_T2_pre x",
             rotated 3
             ]]
       note pick_prems =
@@ -5069,7 +5069,8 @@ lemma f_swap_alpha:
                  apply (rule int_empties3[OF suitable_prems] int_empties4[OF suitable_prems])
                       apply (rule f_prems imsupp_prems)+
                 apply (unfold XXl2_def XXr2_def)[1]
-                apply (subst T2_pre.set_map)
+                apply (rule trans)
+                 apply (rule T2_pre.set_map)
                        apply (rule f_prems supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV pick_prems)+
                 apply (rule refl)
           (* repeated *)
@@ -5085,7 +5086,8 @@ lemma f_swap_alpha:
               apply (rule int_empties3[OF suitable_prems] int_empties4[OF suitable_prems])
                    apply (rule f_prems imsupp_prems)+
              apply (unfold XXl2_def XXr2_def)[1]
-             apply (subst T2_pre.set_map)
+             apply (rule trans)
+             apply (rule T2_pre.set_map)
                     apply (rule f_prems supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV pick_prems)+
              apply (rule refl)
           (* end repeat *)
@@ -5288,7 +5290,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                            apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems | erule eq_bij_betw_refl_prems)+
-                          apply (rule suitable_prems f_prems imsupp_prems)+
+                          apply (rule bij_id supp_id_bound suitable_prems imsupp_id_empty)+
             apply (rule T1.alpha_syms)
             apply assumption
 
@@ -5332,7 +5334,7 @@ lemma f_swap_alpha:
                apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
                apply (erule conjE)+
                apply (rotate_tac -1)
-               apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+               apply (erule id_onD[rotated, OF imageI, of _ _ f2])
                apply assumption
               apply (rule sym)
               apply (rule comp_middle)
@@ -5379,7 +5381,7 @@ lemma f_swap_alpha:
               apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
               apply (erule conjE)+
               apply (rotate_tac -1)
-              apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+              apply (erule id_onD[rotated, OF imageI, of _ _ f1])
               apply assumption
              apply (rule sym)
              apply (rule comp_middle)
@@ -5439,7 +5441,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                           apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems pick_prems | erule eq_bij_betw_refl_prems)+
-                         apply (rule suitable_prems f_prems imsupp_prems)+
+                         apply (rule bij_id supp_id_bound suitable_prems imsupp_id_empty)+
            apply (rule T1.alpha_syms)
            apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
            apply assumption
@@ -5533,7 +5535,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                          apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems | erule eq_bij_betw_refl_prems)+
-                        apply (rule suitable_prems f_prems imsupp_prems)+
+                        apply (rule bij_id supp_id_bound suitable_prems imsupp_id_empty)+
           apply (rule T1.alpha_syms)
           apply assumption
 
@@ -5559,7 +5561,7 @@ lemma f_swap_alpha:
              apply assumption
             apply (rotate_tac -1)
             apply (rule trans)
-             apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+             apply (erule id_onD[rotated, OF imageI, of _ _ f2])
              apply assumption
             apply (rule sym)
             apply (erule id_onD[rotated, OF imageI])
@@ -5594,7 +5596,7 @@ lemma f_swap_alpha:
             apply (drule imsupp_id_on_XX[OF suitable_prems f_prems])+
             apply (erule conjE)+
             apply (rotate_tac -1)
-            apply (erule id_onD[rotated, OF imageI, of _ _ f1] id_onD[rotated, OF imageI, of _ _ f2])
+            apply (erule id_onD[rotated, OF imageI, of _ _ f1])
             apply assumption
            apply (rule sym)
            apply (rule comp_middle)
@@ -5655,7 +5657,7 @@ lemma f_swap_alpha:
                             apply (erule eq_bij_betw_refl_prems)+
                         apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                            apply (rule bij_comp supp_comp_bound infinite_UNIV f_prems pick_prems | erule eq_bij_betw_refl_prems)+
-                       apply (rule suitable_prems f_prems imsupp_prems)+
+                       apply (rule supp_id_bound bij_id suitable_prems imsupp_id_empty)+
          apply (rule T1.alpha_syms)
          apply (subst T1.rename_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
          apply assumption
@@ -6199,9 +6201,9 @@ lemma f_swap_alpha:
                                 apply (rule supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left])+
                                 apply assumption
                                 apply (erule eq_bij_betw_prems)+
-                            apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[4]
-                        apply (erule eq_bij_betw_prems)+
-                 apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[2]
+                            apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[2]
+                          apply assumption
+                        apply (rule bij_id supp_id_bound imsupp_id_empty | erule eq_bij_betw_prems)+
                apply (rule T1.alpha_transs)
                 apply assumption
                apply (rule T1.alpha_bij_eqs[THEN iffD2])
@@ -6248,7 +6250,7 @@ lemma f_swap_alpha:
                              apply (rule T2_pre.mr_rel_set(5,6)[rotated -1, OF iffD2[OF T2_pre.mr_rel_flip mr_rel_prem]])
                                 apply (rule bij_id supp_id_bound h_prems supp_inv_bound bij_imp_bij_inv)+
                             apply (drule not_imageI[rotated])
-                             apply (rule h_prems)
+                             prefer 2
                             apply (unfold image_comp)[1]
                             apply (subst (asm) inv_o_simp2)
                              apply (rule h_prems)
@@ -6265,7 +6267,8 @@ lemma f_swap_alpha:
                 id_onD[OF pick_id_ons'(6)[OF suitable'_prems(4)]]
                 )
                              apply assumption
-                            apply assumption
+                             apply assumption
+                            apply (rule h_prems)
                            apply (unfold eq_bij_betw_def)[1]
                            apply (erule conjE)+
                            apply (drule imsupp_id_on)+
@@ -6552,9 +6555,9 @@ lemma f_swap_alpha:
                                 apply (rule supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left])+
                                apply assumption
                               apply (erule eq_bij_betw_prems)+
-                          apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[4]
-                      apply (erule eq_bij_betw_prems)+
-               apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[2]
+                          apply (((unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+)[2]
+                        apply assumption
+                      apply (rule bij_id supp_id_bound imsupp_id_empty | erule eq_bij_betw_prems)+
              apply (rule T1.alpha_transs)
               apply assumption
              apply (rule T1.alpha_bij_eqs[THEN iffD2])
@@ -6590,12 +6593,13 @@ lemma f_swap_alpha:
                 T1.alpha_FVarss(4)[OF alpha_ctor_picks(2)[OF suitable'_prems], symmetric])+
                         apply (drule imsupp_id_on)+
                         apply (erule id_on_eq)
-                          apply assumption
+                          prefer 2
                          apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])+
                          apply (rule T1.alpha_FVarss)
                          apply (rule alpha_T1_alpha_T2.intros[rotated -1])
                                apply (rule mr_rel_prem)
-                              apply (rule h_prems h_id_ons)+
+                               apply (rule h_prems h_id_ons)+
+                         apply assumption
                         apply (rule UnI1)
                         apply (rule UnI1)
                         apply (erule T1.FVars_intros)

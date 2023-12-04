@@ -2153,7 +2153,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
                     resolve_tac ctxt card_thms
                   ],
-                  REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ f_prems @ imsupp_prems),
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound imsupp_id_empty} @ suitable_prems),
                   assume_tac ctxt ORELSE' EVERY' [
                     REPEAT_DETERM o EVERY' [
                       EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),

@@ -395,25 +395,6 @@ proof-
             imkSubst_smap iterm.set(3)) . . .
      subgoal using il(2) by auto .
 qed
-
-lemma iLam_eq_imkSubst: 
-assumes il: "iLam (xs::ivar dstream) e1 = iLam xs' e1'"
-shows "itvsubst (imkSubst xs es2) e1 = itvsubst (imkSubst xs' es2) e1'"
-proof-
-  obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (ILC.FFVars (iLam xs e1)) f" 
-  and 0: "xs' = dsmap f xs" "e1' = irrename f e1" using il[unfolded iLam_inject] by auto
-  show ?thesis unfolding 0 apply(subst irrename_eq_itvsubst_iVar')
-    subgoal by fact subgoal by fact
-    subgoal apply(subst itvsubst_comp)
-      subgoal by simp
-      subgoal using f(2) by auto
-      subgoal apply(rule itvsubst_cong)
-        subgoal by simp
-        subgoal by (simp add: SSupp_itvsubst_bound f(2))
-        subgoal apply simp 
-     by (metis (full_types) Diff_iff dstream.set_map f(1) f(2) f(3) id_on_def 
-        imkSubst_idle imkSubst_smap iterm.set(3) not_imageI) . . .
-qed
           
 lemma reneqv_head_reduction: 
 assumes r: "reneqv (iApp (iLam xs e1) es2) (iApp (iLam ys d1) ds2)"

@@ -298,7 +298,7 @@ by (simp add: tr'_hred_red uniformS_sset_uniform)
 
 (* Theorem 19(4) (generalized for our (necessarily stream-based) version of 
 uniform step (see previous discussion, when introducing ustepD, for why) *)
-lemma ustepD_step: "ustepD d ts ss \<Longrightarrow> stream_all2 (stepD d) (smap tr' ts) (smap tr' ss)"
+lemma ustepD_stepD: "ustepD d ts ss \<Longrightarrow> stream_all2 (stepD d) (smap tr' ts) (smap tr' ss)"
 proof(induct rule: ustepD.induct)
   case (Beta es es')
   then show ?case using red_stepD2 tr'_hred_red2 by blast
@@ -340,9 +340,9 @@ qed
 
 (* *)
 (* Theorem 19(3): *)
-lemma step_ustepD: "stepD d e ee \<Longrightarrow> 
-  \<exists>tts. ustepD d (smap (tr e) ps) tts \<and> 
-        stream_all2 reneqv tts (smap (tr ee) ps)"
+lemma stepD_ustepD: "stepD d e ee \<Longrightarrow> 
+  \<exists>ts. ustepD d (smap (tr e) ps) ts \<and> 
+       stream_all2 reneqv ts (smap (tr ee) ps)"
 proof(induct arbitrary: ps rule: stepD.induct)
   case (Beta x e1 e2 ps)
   define qs where qs: "qs \<equiv> \<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats"
@@ -425,6 +425,111 @@ next
     subgoal apply simp unfolding 0 apply(rule ustepD.Xi) using tts(1) by auto
     subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLam) .
 qed
+
+
+(* *)
+
+
+lemma usetpD_snth_eq: 
+"ustepD d ts ss \<Longrightarrow> snth ts i = snth ts j \<Longrightarrow> snth ss i = snth ss j"
+apply(induct arbitrary: i j rule: ustepD.induct)
+  subgoal unfolding stream_all2_iff_snth using hred_determ by metis
+  subgoal by (metis iApp_inject snth_smap2)  
+  subgoal apply simp unfolding snth_sflat  
+    by (metis nat2_nat1 snth2.simps stream_eq_nth)
+  subgoal by (metis iLam_same_inject snth_smap) .
+
+(* Closer to how Mazza defines things informally, namely
+he only "paralelizes" the definition in the iAppR case 
+(without acknowledging though that parallelization should happen hereditarily): 
+ *)
+inductive ustepD' :: "nat \<Rightarrow> itrm \<Rightarrow> itrm \<Rightarrow> bool" where
+  Beta: "uniform e \<Longrightarrow> hred e e' \<Longrightarrow> ustepD' 0 e e'"
+| iAppL: "uniformS es \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' (Suc d) (iApp e es) (iApp e' es)"
+| iAppR: "uniform e \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD' (Suc d) (iApp e es) (iApp e es')"
+| Xi: "super xs \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' d (iLam xs e) (iLam xs e')"
+
+
+lemma uniformS_sconst: "uniformS (sconst e) \<longleftrightarrow> uniform e"
+unfolding uniformS_def4 uniform_def3 by auto
+
+lemma stream_all2_sconst: "stream_all2 R (sconst a) (sconst b) \<longleftrightarrow> R a b"
+unfolding stream_all2_iff_snth by auto
+
+lemma sconst_iApp: "sconst (iApp e es) = smap2 iApp (sconst e) (sconst es)"
+unfolding stream_eq_nth by auto
+
+lemma sconst_iLam: "sconst (iLam xs e) = smap (iLam xs) (sconst e)"
+unfolding stream_eq_nth by auto
+
+lemma snth_sflat_scons: "snth (sflat (sconst es)) k = snth es (snd (nat2 k))"
+unfolding snth_sflat by (cases "nat2 k", auto)
+
+(* This brings home the intuition that uniform reduction takes place synchronously 
+on all the elements of the stream; namely, no matter how these are shuffled, 
+the reduction predicate holds. 
+*)
+lemma usetpD_snth_shuffle: 
+assumes 1: "ustepD d es es'"
+shows "ustepD d (smap (\<lambda>i. es !! (f i)) nats) (smap (\<lambda>i. es' !! (f i)) nats)"
+using 1 proof(induct arbitrary: f rule: ustepD.induct)
+  case (Beta es es')
+  then show ?case 
+  apply(intro ustepD.Beta) 
+  unfolding uniformS_def4 stream_all2_iff_snth sset_range image_def
+  by auto
+next
+  case (iAppL ess d es es' f)
+  have 0: "\<And> es ess. smap (\<lambda>i. smap2 iApp es ess !! f i) nats = 
+                      smap2 iApp (smap (\<lambda>i. es !! f i) nats) (smap (\<lambda>i. ess !! f i) nats)"
+  unfolding stream_eq_nth by auto
+  show ?case unfolding 0 apply(rule ustepD.iAppL)
+    subgoal using iAppL(1) unfolding uniformS_sflat by auto
+    subgoal using iAppL(3) . .
+next
+  case (iAppR es d ess ess' f)
+  have 0: "\<And> es ess. smap (\<lambda>i. smap2 iApp es ess !! f i) nats = 
+                      smap2 iApp (smap (\<lambda>i. es !! f i) nats) (smap (\<lambda>i. ess !! f i) nats)"
+  unfolding stream_eq_nth by auto
+  define g where g: "g \<equiv> \<lambda>k. nat1 (case nat2 k of (i,j) \<Rightarrow> (f i, j))"
+  have 1: "\<And> ess j. snth (sflat (smap (\<lambda>i. ess !! f i) nats)) j = snth (smap (\<lambda>i. sflat ess !! g i) nats) j"
+  unfolding g snth_sflat subgoal for ees k by (cases "nat2 k", auto) .
+  hence 1: "\<And> ess. sflat (smap (\<lambda>i. ess !! f i) nats) = smap (\<lambda>i. sflat ess !! g i) nats" 
+  unfolding stream_eq_nth by auto
+  show ?case unfolding 0 apply(rule ustepD.iAppR)
+    subgoal using iAppR(1) unfolding uniformS_def4 by auto
+    subgoal using iAppR(3) unfolding 1 . .
+next
+  case (Xi xs d es es' f)
+  have 0: "\<And> xs es. smap (\<lambda>i. smap (iLam xs) es !! f i) nats = 
+                     smap (iLam xs) (smap (\<lambda>i. es !! f i) nats)"
+  unfolding stream_eq_nth by auto
+  show ?case unfolding 0 apply(rule ustepD.Xi)
+    subgoal using Xi(1) unfolding uniformS_sflat by auto
+    subgoal using Xi(3) . .
+qed
+
+
+lemma ustepD_sflat_sconst:
+"ustepD d es es' \<Longrightarrow> ustepD d (sflat (sconst es)) (sflat (sconst es'))"
+apply(drule usetpD_snth_shuffle[where f = "\<lambda>k. snd (nat2 k)"])
+unfolding snth_sflat_scons[symmetric] by (metis stream_smap_nats)
+
+lemma ustepD'_ustepD: 
+"ustepD' d e e' \<Longrightarrow> ustepD d (sconst e) (sconst e')"
+apply(induct rule: ustepD'.induct)
+  subgoal apply(rule ustepD.Beta) unfolding uniformS_sconst stream_all2_sconst by auto 
+  subgoal unfolding sconst_iApp apply(rule ustepD.iAppL) 
+  unfolding uniformS_sflat unfolding uniformS_def4  
+  by fastforce
+  subgoal for e d es es' unfolding sconst_iApp apply(rule ustepD.iAppR) 
+  unfolding uniformS_def4 uniform_def3  
+    subgoal by auto
+    subgoal (* this requires ustepD_sflat_sconst , which would not easily go by induction, 
+     so I was led to the shuffling generalization usetpD_snth_shuffle *)
+    using ustepD_sflat_sconst by auto .
+  subgoal unfolding sconst_iLam apply(rule ustepD.Xi) 
+  unfolding uniformS_def4 uniform_def3 by fastforce+ .
 
 
 

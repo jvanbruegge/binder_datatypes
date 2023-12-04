@@ -85,6 +85,11 @@ qed
 lemma hred_FFVars: "hred e e' \<Longrightarrow> FFVars e' \<subseteq> FFVars e"
 unfolding hred_def by auto (metis imkSubst_def iterm.set(1) singletonD snth_sset)+
 
+lemma hred_determ: 
+"hred e e' \<Longrightarrow> hred e e'' \<Longrightarrow> e' = e''"
+unfolding hred_def  
+by auto (meson iLam_eq_imkSubst)
+
 
 
 end

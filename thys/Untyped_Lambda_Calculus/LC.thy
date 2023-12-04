@@ -809,6 +809,28 @@ lemma mkSubst_smap: "bij f \<Longrightarrow> distinct xs \<Longrightarrow> z \<i
 by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map) 
 
 
+(* *)
+
+lemma Lam_eq_tvsubst: 
+assumes il: "Lam (x::var) e1 = Lam x' e1'"
+shows "tvsubst (Var (x:=e2)) e1 = tvsubst (Var (x':=e2)) e1'"
+proof-
+  obtain f where f: "bij f" "|supp f| <o |UNIV::var set|" "id_on (FFVars (Lam x e1)) f" 
+  and 0: "x' = f x" "e1' = rrename f e1" using il[unfolded Lam_inject] by auto
+  show ?thesis unfolding 0 apply(subst rrename_eq_tvsubst_Var')
+    subgoal by fact subgoal by fact
+    subgoal apply(subst tvsubst_comp)
+      subgoal by simp
+      subgoal using f(2) by auto
+      subgoal apply(rule tvsubst_cong)
+        subgoal by simp
+        subgoal by (simp add: SSupp_tvsubst_bound f(2))
+        subgoal apply simp 
+     subgoal using f(1) f(3) id_onD by fastforce . . . .
+qed
+
+
+
 
 (* RECURSOR PREPARATIONS: *)
 

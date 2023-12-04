@@ -324,6 +324,8 @@ lemma id_on_eq: "id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> A = B \
 lemma notin_supp: "x \<notin> supp f \<Longrightarrow> f x = x"
   unfolding supp_def by blast
 
+lemmas imsupp_id_empty = trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

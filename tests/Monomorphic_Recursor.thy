@@ -183,9 +183,6 @@ val T2_model = {
 val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1");
 \<close>
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
 local_setup \<open>fn lthy =>
 let
   val qualify = I

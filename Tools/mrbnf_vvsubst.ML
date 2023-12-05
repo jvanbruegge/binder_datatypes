@@ -316,7 +316,6 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar
         rtac ctxt (#rename_cong_id (#inner quotient)),
         REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
       ],
-      UFVars_Umaps = replicate nvars (fn ctxt => EVERY1 [resolve_tac ctxt (#FVars_renames quotient), REPEAT_DETERM o assume_tac ctxt]),
       Umap_Uctor = fn ctxt => rtac ctxt Umap_Uctor 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
       UFVars_subsets = map (fn UFVars_subset => fn ctxt => EVERY1 [
         K (unfold_thms_tac ctxt @{thms case_prod_beta}),

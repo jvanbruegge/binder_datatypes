@@ -22,7 +22,6 @@ sig
     Umap_id0: 'a,
     Umap_comp0: 'a,
     Umap_cong_id: 'a,
-    UFVars_Umaps: 'a list,
     Umap_Uctor: 'a,
     UFVars_subsets: 'a list
   };
@@ -88,7 +87,6 @@ type 'a model_axioms = {
   Umap_id0: 'a,
   Umap_comp0: 'a,
   Umap_cong_id: 'a,
-  UFVars_Umaps: 'a list,
   Umap_Uctor: 'a,
   UFVars_subsets: 'a list
 };
@@ -374,7 +372,6 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
           Umap_id0 = prove lthy defs (#map_id0 goals) (#Umap_id0 tacs),
           Umap_comp0 = prove lthy defs (#map_comp0 goals) (#Umap_comp0 tacs),
           Umap_cong_id = prove lthy defs (#map_cong_id goals) (#Umap_cong_id tacs),
-          UFVars_Umaps = map2 (prove lthy defs) (#FVars_map goals) (#UFVars_Umaps tacs),
           Umap_Uctor = prove lthy defs Umap_Uctor_goal (#Umap_Uctor tacs),
           UFVars_subsets = map2 (prove lthy defs) UFVars_subset_goals (#UFVars_subsets tacs)
         } : thm model_axioms;

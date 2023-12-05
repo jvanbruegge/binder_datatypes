@@ -231,8 +231,8 @@ proof-
 qed
 
 
-(* Theorem 9 from Mazza: *)
-(* Theorem 9(1): *)
+(* Theorem 19 from Mazza (his main theorem): *)
+(* Theorem 19(1): *)
 lemma tr'_tr: "tr' (tr e p) = e"
 apply(induct e arbitrary: p) 
   subgoal for x p apply simp apply(subst tr'_iVar[of "superOf x"]) 
@@ -245,7 +245,7 @@ apply(induct e arbitrary: p)
     subgoal by auto .
   subgoal by simp .
 
-(* Theorem 9(2): *)
+(* Theorem 19(2): *)
 (* We again need "good" induction for the same reason: because 
 structural induction does not take 
 care of the supervariable assumptiin in the lambda-case. But this 
@@ -515,7 +515,7 @@ lemma ustepD_sflat_sconst:
 apply(drule usetpD_snth_shuffle[where f = "\<lambda>k. snd (nat2 k)"])
 unfolding snth_sflat_scons[symmetric] by (metis stream_smap_nats)
 
-lemma ustepD'_ustepD: 
+lemma ustepD'_ustepD_sconst: 
 "ustepD' d e e' \<Longrightarrow> ustepD d (sconst e) (sconst e')"
 apply(induct rule: ustepD'.induct)
   subgoal apply(rule ustepD.Beta) unfolding uniformS_sconst stream_all2_sconst by auto 
@@ -530,6 +530,49 @@ apply(induct rule: ustepD'.induct)
     using ustepD_sflat_sconst by auto .
   subgoal unfolding sconst_iLam apply(rule ustepD.Xi) 
   unfolding uniformS_def4 uniform_def3 by fastforce+ .
+
+(* For the converse direction (from ustepD t ustepD') we need another consequence of 
+our shuffling generalization: *)
+lemma snth_snth_sflat: "snth (snth ess i) j = snth (sflat ess) (nat1 (i,j))"
+unfolding snth_sflat by auto
+
+lemma ustepD_sflat_snth: 
+"ustepD d (sflat ess) (sflat ess') \<Longrightarrow> ustepD d (ess !! i) (ess' !! i)"
+apply(drule usetpD_snth_shuffle[where f = "\<lambda>j. nat1 (i,j)"])
+unfolding snth_sflat by simp (metis stream_smap_nats)
+
+lemma ustepD_ustepD'_snth: 
+"ustepD d es es' \<Longrightarrow> ustepD' d (snth es i) (snth es' i)"
+apply(induct arbitrary: i rule: ustepD.induct)
+  subgoal apply(rule ustepD'.Beta) unfolding uniformS_def4 stream_all2_iff_snth uniform_def3 by auto
+  subgoal for ess d es es' i unfolding snth_smap2 apply(rule ustepD'.iAppL) 
+  unfolding uniformS_def4 stream_all2_iff_snth uniform_def3 sset_range image_def snth_sflat 
+  by simp (metis nat2_nat1 snth2.simps)
+  subgoal for es d ess ess' i unfolding snth_smap2 apply(rule ustepD'.iAppR)   
+  unfolding uniformS_def4 stream_all2_iff_snth uniform_def3 sset_range image_def snth_sflat 
+    subgoal by auto
+    subgoal (* here we need the sfhuffling lemma "other" consequence: *)
+    using ustepD_sflat_snth by auto .
+  subgoal unfolding snth_smap apply(rule ustepD'.Xi) by auto .
+
+
+(* Now Theorem 19(3,4) exactly in Mazza's formulations: *)
+
+(* Theorem 19(4)*)
+lemma ustepD'_stepD: "ustepD' d t s \<Longrightarrow> stepD d (tr' t) (tr' s)" 
+apply(drule ustepD'_ustepD_sconst)
+apply(drule ustepD_stepD)  
+by (simp add: smap_sconst stream_all2_sconst)
+
+(* Theorem 19(3): *)
+lemma stepD_ustepD': "stepD d e ee \<Longrightarrow> 
+  \<exists>t. ustepD' d (tr e p) t \<and> reneqv t (tr ee p)"  
+apply(drule stepD_ustepD[of _ _ _ "sconst p"]) apply safe
+subgoal for ts apply(rule exI[of _ "snth ts 0"]) apply safe
+  subgoal apply(drule ustepD_ustepD'_snth[of _ _ _ 0]) by simp
+  subgoal unfolding stream_all2_iff_snth  
+  by simp (metis snth.simps(1)) . .
+
 
 
 

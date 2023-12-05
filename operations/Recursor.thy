@@ -565,7 +565,9 @@ lemma pick_id_on_images':
   done
 
 (* lower axioms to raw type *)
-lemma U1map'_U1ctor': "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+lemma U1map'_U1ctor': "validP p \<Longrightarrow>
+  pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   U1map' f1 f2 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor' y p)
 = U1ctor' (map_T1_pre f1 f2 id id f1 f2
     (\<lambda>(t, pu). (rename_T1 f1 f2 t, PU1map' f1 f2 t pu))
@@ -579,7 +581,11 @@ lemma U1map'_U1ctor': "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var
   apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
   apply (rule trans)
    apply (rule U1map_Uctor U2map_Uctor)
-      apply assumption+
+        apply assumption
+       apply (rule iffD2[OF T1_pre.pred_map])
+              apply (rule bij_id supp_id_bound)+
+       apply (unfold id_o o_id comp_assoc snd_comp_map_prod)
+  apply assumption+
   apply (rule arg_cong2[OF _ refl, of _ _ U1ctor] arg_cong2[OF _ refl, of _ _ U2ctor])
   apply (rule trans)
    apply (rule T1_pre.map_comp T2_pre.map_comp)
@@ -627,7 +633,9 @@ lemma U1map'_U1ctor': "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var
    apply (rule T1.TT_alpha_quotient_syms)
   apply (rule refl)
   done
-lemma U2map'_Uctor': "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+lemma U2map'_Uctor': "validP p \<Longrightarrow>
+  pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y2 \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   U2map' f1 f2 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y2)) (U2ctor' y2 p)
 = U2ctor' (map_T2_pre f1 f2 id id f1 f2
     (\<lambda>(t, pu). (rename_T1 f1 f2 t, PU1map' f1 f2 t pu))
@@ -642,7 +650,11 @@ lemma U2map'_Uctor': "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_
   apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)
   apply (rule trans)
    apply (rule U1map_Uctor U2map_Uctor)
-      apply assumption+
+        apply assumption
+       apply (rule iffD2[OF T2_pre.pred_map])
+              apply (rule supp_id_bound bij_id)+
+       apply (unfold id_o o_id comp_assoc snd_comp_map_prod)
+       apply assumption+
   apply (rule arg_cong2[OF _ refl, of _ _ U1ctor] arg_cong2[OF _ refl, of _ _ U2ctor])
   apply (rule trans)
    apply (rule T1_pre.map_comp T2_pre.map_comp)
@@ -700,11 +712,15 @@ lemmas FVars_def2s = T1.alpha_FVarss(1)[OF T1.TT_alpha_quotient_syms(1),
     unfolded fun_cong[OF meta_eq_to_obj_eq[OF FFVars_T22_def], symmetric]
     ]
 
-lemma U1FVars'_subsets: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+lemma U1FVars'_subsets: "validP p \<Longrightarrow>
+  pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
+  set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U1FVars_1' (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor' y p) \<subseteq> FVars_T11 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
-  "set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  "validP p \<Longrightarrow>
+  pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
+  set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2' (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor' y p) \<subseteq> FVars_T12 (raw_T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
@@ -715,6 +731,11 @@ lemma U1FVars'_subsets: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
     apply (unfold fst_comp_map_prod)
     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
+        apply assumption
+       apply (rule iffD2[OF T1_pre.pred_map])
+              apply (rule supp_id_bound bij_id)+
+       apply (unfold id_o o_id comp_assoc snd_comp_map_prod)
+       apply assumption
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
       apply (unfold image_id)
       apply assumption
@@ -745,6 +766,11 @@ lemma U1FVars'_subsets: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
     apply (unfold fst_comp_map_prod)
     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
+        apply assumption
+       apply (rule iffD2[OF T1_pre.pred_map])
+              apply (rule supp_id_bound bij_id)+
+       apply (unfold id_o o_id comp_assoc snd_comp_map_prod)
+       apply assumption
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
       apply (unfold image_id)
       apply assumption
@@ -769,11 +795,15 @@ lemma U1FVars'_subsets: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
     done
   done
 
-lemma U2FVars'_subsets: "set5_T2_pre (y2::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+lemma U2FVars'_subsets: "validP p \<Longrightarrow>
+  pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y2 \<Longrightarrow>
+  set5_T2_pre (y2::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set7_T2_pre y2 \<union> set8_T2_pre y2 \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T2_pre y2 \<union> set10_T2_pre y2 \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U2FVars_1' (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y2)) (U2ctor' y2 p) \<subseteq> FVars_T21 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y2)) \<union> PFVars_1 p \<union> avoiding_set1"
-  "set6_T2_pre y2 \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  "validP p \<Longrightarrow>
+  pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y2 \<Longrightarrow>
+  set6_T2_pre y2 \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set7_T2_pre y2 \<union> set8_T2_pre y2 \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T2_pre y2 \<union> set10_T2_pre y2 \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U2FVars_2' (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y2)) (U2ctor' y2 p) \<subseteq> FVars_T22 (raw_T2_ctor (map_T2_pre id id id id id id fst fst fst fst y2)) \<union> PFVars_2 p \<union> avoiding_set2"
@@ -785,6 +815,11 @@ lemma U2FVars'_subsets: "set5_T2_pre (y2::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b
     apply (unfold fst_comp_map_prod)
     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
+        apply assumption
+       apply (rule iffD2[OF T2_pre.pred_map])
+              apply (rule supp_id_bound bij_id)+
+       apply (unfold id_o o_id comp_assoc snd_comp_map_prod)
+       apply assumption
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
       apply (unfold image_id)
       apply assumption
@@ -815,6 +850,11 @@ lemma U2FVars'_subsets: "set5_T2_pre (y2::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b
     apply (unfold fst_comp_map_prod)
     apply (subst T1_pre.map_comp[symmetric] T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id)+)+
     apply (rule U1FVars_subsets U2FVars_subsets)
+        apply assumption
+       apply (rule iffD2[OF T2_pre.pred_map])
+              apply (rule supp_id_bound bij_id)+
+       apply (unfold id_o o_id comp_assoc snd_comp_map_prod)
+       apply assumption
       apply (subst T1_pre.set_map T2_pre.set_map, (rule supp_id_bound bij_id)+)
       apply (unfold image_id)
       apply assumption
@@ -850,7 +890,8 @@ lemma Pmap_imsupp_empty:
 
 lemma U1ctor_rename:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes "validP p" "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes "validP p" "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
+    "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "(\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -867,16 +908,18 @@ lemma U1ctor_rename:
   apply (rule trans)
    apply (rule trans)
     apply (rule arg_cong2[OF refl, of _ _ U1ctor] arg_cong2[OF refl, of _ _ U2ctor])
-    apply (rule Pmap_imsupp_empty[symmetric, OF assms(1-5)])
+    apply (rule Pmap_imsupp_empty[symmetric, OF assms(1,3-6)])
      apply ((unfold Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+
    apply (unfold PU1map_def PU2map_def)
    apply (rule U1map_Uctor[symmetric] U2map_Uctor[symmetric])
       apply (rule assms)+
   apply (rule U1map_cong_id U2map_cong_id)
+        apply (rule validU1_Uctor)
        apply (rule assms)+
     (* ALLGOALS *)
    apply (drule set_rev_mp)
     apply (rule U1FVars_subsets U2FVars_subsets)
+        apply (rule assms)+
       apply (erule Int_subset_empty1[OF Int_Un_emptyI2[OF
           trans[OF arg_cong2[OF refl Un_assoc[symmetric], of "(\<inter>)"]]
           ] imsupp_image_subset])
@@ -885,6 +928,7 @@ lemma U1ctor_rename:
     (* copied from above *)
   apply (drule set_rev_mp)
    apply (rule U1FVars_subsets U2FVars_subsets)
+       apply (rule assms)+
      apply (erule Int_subset_empty1[OF Int_Un_emptyI2[OF
           trans[OF arg_cong2[OF refl Un_assoc[symmetric], of "(\<inter>)"]]
           ] imsupp_image_subset])
@@ -893,7 +937,8 @@ lemma U1ctor_rename:
   done
 lemma U2ctor_rename:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes "validP p" "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
+    "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "(\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -911,16 +956,18 @@ lemma U2ctor_rename:
   apply (rule trans)
    apply (rule trans)
     apply (rule arg_cong2[OF refl, of _ _ U1ctor] arg_cong2[OF refl, of _ _ U2ctor])
-    apply (rule Pmap_imsupp_empty[symmetric, OF assms(1-4)])
+    apply (rule Pmap_imsupp_empty[symmetric, OF assms(1,3-6)])
      apply ((unfold Int_Un_distrib Un_empty)[1], (erule conjE)+, assumption)+
    apply (unfold PU1map_def PU2map_def)
    apply (rule U1map_Uctor[symmetric] U2map_Uctor[symmetric])
       apply (rule assms)+
   apply (rule U1map_cong_id U2map_cong_id)
+        apply (rule validU2_Uctor)
        apply (rule assms)+
     (* ALLGOALS *)
    apply (drule set_rev_mp)
     apply (rule U1FVars_subsets U2FVars_subsets)
+        apply (rule assms)+
       apply (erule Int_subset_empty1[OF Int_Un_emptyI2[OF
           trans[OF arg_cong2[OF refl Un_assoc[symmetric], of "(\<inter>)"]]
           ] imsupp_image_subset])
@@ -929,6 +976,7 @@ lemma U2ctor_rename:
     (* copied from above *)
   apply (drule set_rev_mp)
    apply (rule U1FVars_subsets U2FVars_subsets)
+       apply (rule assms)+
      apply (erule Int_subset_empty1[OF Int_Un_emptyI2[OF
           trans[OF arg_cong2[OF refl Un_assoc[symmetric], of "(\<inter>)"]]
           ] imsupp_image_subset])
@@ -938,7 +986,10 @@ lemma U2ctor_rename:
 
 lemma U1ctor_cong:
   fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes "validP p"
+    "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
+    "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
+    "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
   shows
     "(\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -966,11 +1017,11 @@ lemma U1ctor_cong:
       PU2map f1 f2 t pu = PU2map g1 g2 t' pu')
   y y' \<Longrightarrow> U1ctor y p = U1ctor y' p"
   apply (rule trans)
-   apply (rule U1ctor_rename[OF assms(1-4)] U2ctor_rename[OF assms(1-4)])
+   apply (rule U1ctor_rename[OF assms(1-2,4-7)])
           apply assumption+
   apply (rule sym)
   apply (rule trans)
-   apply (rule U1ctor_rename[OF assms(5-8)] U2ctor_rename[OF assms(5-8)])
+   apply (rule U1ctor_rename[OF assms(1,3,8-11)])
           apply assumption+
   apply (rule sym)
   apply (rule arg_cong2[OF _ refl, of _ _ U1ctor] arg_cong2[OF _ refl, of _ _ U2ctor])
@@ -993,7 +1044,10 @@ lemma U1ctor_cong:
 
 lemma U2ctor_cong:
   fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes "validP p"
+    "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
+    "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
+    "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
   shows
     "(\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -1022,11 +1076,11 @@ lemma U2ctor_cong:
   y y' \<Longrightarrow> U2ctor y p = U2ctor y' p"
     (* same tactic as above *)
   apply (rule trans)
-   apply (rule U1ctor_rename[OF assms(1-4)] U2ctor_rename[OF assms(1-4)])
+   apply (rule U2ctor_rename[OF assms(1,2,4-7)])
           apply assumption+
   apply (rule sym)
   apply (rule trans)
-   apply (rule U1ctor_rename[OF assms(5-8)] U2ctor_rename[OF assms(5-8)])
+   apply (rule U2ctor_rename[OF assms(1,3,8-11)])
           apply assumption+
   apply (rule sym)
   apply (rule arg_cong2[OF _ refl, of _ _ U1ctor] arg_cong2[OF _ refl, of _ _ U2ctor])
@@ -1052,7 +1106,10 @@ lemmas T2_pre_set_map_ids = T2_pre.set_map[OF supp_id_bound supp_id_bound supp_i
 
 lemma U1ctor'_cong:
   fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes "validP p"
+    "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
+    "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
+  and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
   shows
     "(\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -1080,7 +1137,19 @@ lemma U1ctor'_cong:
       PU2map' f1 f2 t pu = PU2map' g1 g2 t' pu')
   y y' \<Longrightarrow> U1ctor' y p = U1ctor' y' p"
   apply (unfold U1ctor'_def U2ctor'_def)
-  apply (rule U1ctor_cong[OF assms] U2ctor_cong[OF assms])
+  apply (rule U1ctor_cong[OF _ _ _ f_prems] U2ctor_cong[OF _ _ _ f_prems])
+                     apply (rule assms)
+                    (* REPEAT twice *)
+                    apply (rule iffD2[OF T1_pre.pred_map])
+                      apply (rule supp_id_bound bij_id)+
+                    apply (unfold id_o o_id comp_assoc snd_comp_map_prod)[1]
+                    apply (rule assms)
+                    (* repeated *)
+                    apply (rule iffD2[OF T1_pre.pred_map])
+                      apply (rule supp_id_bound bij_id)+
+                    apply (unfold id_o o_id comp_assoc snd_comp_map_prod)[1]
+                   apply (rule assms)
+                  (* END REPEAT twice *)
                   apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids image_id image_Un[symmetric])
     (* REPEAT_DETERM *)
                   apply (drule exists_map_prod_id)
@@ -1337,7 +1406,10 @@ lemma U1ctor'_cong:
 
 lemma U2ctor'_cong:
   fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes "validP p"
+    "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
+    "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
+  and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
   shows
     "(\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -1365,7 +1437,19 @@ lemma U2ctor'_cong:
       PU2map' f1 f2 t pu = PU2map' g1 g2 t' pu')
   y y' \<Longrightarrow> U2ctor' y p = U2ctor' y' p"
   apply (unfold U1ctor'_def U2ctor'_def)
-  apply (rule U1ctor_cong[OF assms] U2ctor_cong[OF assms])
+  apply (rule U1ctor_cong[OF _ _ _ f_prems] U2ctor_cong[OF _ _ _ f_prems])
+                     apply (rule assms)
+                    (* REPEAT twice *)
+                    apply (rule iffD2[OF T2_pre.pred_map])
+                      apply (rule supp_id_bound bij_id)+
+                    apply (unfold id_o o_id comp_assoc snd_comp_map_prod)[1]
+                    apply (rule assms)
+                    (* repeated *)
+                    apply (rule iffD2[OF T2_pre.pred_map])
+                      apply (rule supp_id_bound bij_id)+
+                    apply (unfold id_o o_id comp_assoc snd_comp_map_prod)[1]
+                   apply (rule assms)
+                    (* END repeat twice *)
                   apply (unfold T1_pre_set_map_ids T2_pre_set_map_ids image_id image_Un[symmetric])
     (* REPEAT_DETERM *)
                   apply (drule exists_map_prod_id)
@@ -1707,7 +1791,8 @@ lemmas alpha_ctor_picks = alpha_ctor_picks1 alpha_ctor_picks2
 
 lemma int_empties1:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
+  assumes valid: "validP p"
+    and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     and imsupp_prems: "imsupp f1 \<inter> avoiding_set1 = {}" "imsupp f2 \<inter> avoiding_set2 = {}"
   shows "set5_T1_pre (XXl1 pick1 pick2 pick3 pick4 f1 f2 p x) \<inter>
@@ -1735,6 +1820,7 @@ lemma int_empties1:
       apply (rule iffD2[OF image_Int_empty])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric])
+           apply (rule valid)
           prefer 5
           apply (insert suitable_prems)[1]
           apply (unfold suitable_defs)[1]
@@ -1792,6 +1878,7 @@ lemma int_empties1:
       apply (rule iffD2[OF image_Int_empty])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric] PFVars_Pmap_2[symmetric])
+           apply (rule valid)
           prefer 5
           apply (insert suitable_prems)[1]
           apply (unfold suitable_defs)[1]
@@ -1907,7 +1994,8 @@ lemma int_empties2:
 
 lemma int_empties3:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
+  assumes valid: "validP p"
+    and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     and imsupp_prems: "imsupp f1 \<inter> avoiding_set1 = {}" "imsupp f2 \<inter> avoiding_set2 = {}"
   shows "set5_T2_pre (XXl2 pick1 pick2 pick3 pick4 f1 f2 p x) \<inter>
@@ -1935,6 +2023,7 @@ lemma int_empties3:
       apply (rule iffD2[OF image_Int_empty])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric])
+           apply (rule valid)
           prefer 5
           apply (insert suitable_prems)[1]
           apply (unfold suitable_defs)[1]
@@ -1992,6 +2081,7 @@ lemma int_empties3:
       apply (rule iffD2[OF image_Int_empty])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric] PFVars_Pmap_2[symmetric])
+           apply (rule valid)
           prefer 5
           apply (insert suitable_prems)[1]
           apply (unfold suitable_defs)[1]

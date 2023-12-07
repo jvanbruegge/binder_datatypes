@@ -8491,6 +8491,13 @@ lemmas f0_swaps = conjunct1[OF f_swap_alpha[rotated -2, OF T1.alpha_refls _ suit
 (*********** Final result lemmas **************)
 (**********************************************)
 
+lemma ff0_valid:
+  "pred_fun validP validU1 (ff0_T1 (T1_ctor y))"
+  "pred_fun validP validU2 (ff0_T2 (T2_ctor y2))"
+   apply (unfold ff0_T1_def ff0_T2_def f0_T1_def f0_T2_def)
+   apply (rule valid_f[OF suitable_pick0s])+
+  done
+
 lemma ff0_cctors:
   "validP p \<Longrightarrow> set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T1 x \<Longrightarrow>
      ff0_T1 (T1_ctor x) p = U1ctor (map_T1_pre id id id id id id (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T1 t p' else undefined)) (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T1 t p' else undefined)) (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T2 t p' else undefined))  (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T2 t p' else undefined)) x) p"

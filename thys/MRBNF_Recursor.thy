@@ -326,6 +326,9 @@ lemma notin_supp: "x \<notin> supp f \<Longrightarrow> f x = x"
 
 lemmas imsupp_id_empty = trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
 
+lemma pred_fun_If: "pred_fun P Q f \<Longrightarrow> pred_fun P Q (\<lambda>x. if P x then f x else undefined)"
+  by simp
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

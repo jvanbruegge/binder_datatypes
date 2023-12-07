@@ -218,16 +218,16 @@ function f_T1 :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow
   and f_T2 :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2" where
   "f_T1 pick1 pick2 pick3 pick4 (raw_T1_ctor x) p = (if suitable11 pick1 \<and> suitable12 pick2 \<and> suitable21 pick3 \<and> suitable22 pick4 \<and> validP p then
   U1ctor' (map_T1_pre id id id id id id
-    (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t)) (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-    (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t)) (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t)) (
+    (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined))
+    (\<lambda>t. (t, \<lambda>p. if validP p then f_T2 pick1 pick2 pick3 pick4 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f_T2 pick1 pick2 pick3 pick4 t p else undefined)) (
   map_T1_pre id id id id (pick1 x p) (pick2 x p) id
     (rename_T1 (pick1 x p) (pick2 x p)) id (rename_T2 (pick1 x p) id) x
   )) p
 else undefined)"
 | "f_T2 pick1 pick2 pick3 pick4 (raw_T2_ctor x) p = (if suitable11 pick1 \<and> suitable12 pick2 \<and> suitable21 pick3 \<and> suitable22 pick4 \<and> validP p then
   U2ctor' (map_T2_pre id id id id id id
-    (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t)) (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-    (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t)) (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t)) (
+    (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined))
+    (\<lambda>t. (t, \<lambda>p. if validP p then f_T2 pick1 pick2 pick3 pick4 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f_T2 pick1 pick2 pick3 pick4 t p else undefined)) (
   map_T2_pre id id id id (pick3 x p) (pick4 x p) id
     (rename_T1 (pick3 x p) (pick4 x p)) id (rename_T2 (pick3 x p) id) x
   )) p
@@ -341,10 +341,10 @@ print_theorems
 lemma f_T1_simp: "suitable11 pick1 \<Longrightarrow> suitable12 pick2 \<Longrightarrow> suitable21 pick3 \<Longrightarrow> suitable22 pick4 \<Longrightarrow> validP p \<Longrightarrow>
   f_T1 pick1 pick2 pick3 pick4 (raw_T1_ctor x) p =
     U1ctor' (map_T1_pre id id id id (pick1 x p) (pick2 x p)
-      (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-      (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t)))
-      (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-      (\<lambda>t. (rename_T2 (pick1 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t)))
+      (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined))
+      (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t) p' else undefined))
+      (\<lambda>t. (t, \<lambda>p. if validP p then f_T2 pick1 pick2 pick3 pick4 t p else undefined))
+      (\<lambda>t. (rename_T2 (pick1 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t) p' else undefined))
      x) p"
   apply (rule trans)
    apply (rule f_T1.simps)
@@ -360,10 +360,10 @@ lemma f_T1_simp: "suitable11 pick1 \<Longrightarrow> suitable12 pick2 \<Longrigh
 lemma f_T2_simp: "suitable11 pick1 \<Longrightarrow> suitable12 pick2 \<Longrightarrow> suitable21 pick3 \<Longrightarrow> suitable22 pick4 \<Longrightarrow> validP p \<Longrightarrow>
   f_T2 pick1 pick2 pick3 pick4 (raw_T2_ctor x) p =
     U2ctor' (map_T2_pre id id id id (pick3 x p) (pick4 x p)
-      (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-      (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t)))
-      (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-      (\<lambda>t. (rename_T2 (pick3 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t)))
+      (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+      (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t) p' else undefined))
+      (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+      (\<lambda>t. (rename_T2 (pick3 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t) p' else undefined))
      x) p"
   apply (rule trans)
    apply (rule f_T2.simps)
@@ -431,23 +431,23 @@ definition XXr1 where
     map_T1_pre f1 f2 id id
       (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
       (pick2 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f2)
-      (\<lambda>t. (rename_T1 f1 f2 t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 f1 f2 t)))
+      (\<lambda>t. (rename_T1 f1 f2 t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 f1 f2 t) p' else undefined))
       (\<lambda>t. (rename_T1
         (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         (pick2 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f2)
-       t, f_T1 pick1 pick2 pick3 pick4 (rename_T1
+       t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1
         (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         (pick2 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f2)
-       t)
+       t) p' else undefined
       ))
-      (\<lambda>t. (rename_T2 f1 f2 t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 f1 f2 t)))
+      (\<lambda>t. (rename_T2 f1 f2 t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 f1 f2 t) p' else undefined))
       (\<lambda>t. (rename_T2
         (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         f2
-       t, f_T2 pick1 pick2 pick3 pick4 (rename_T2
+       t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2
         (pick1 (map_T1_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         f2
-       t)
+       t) p' else undefined
       ))
       x
   "
@@ -456,23 +456,23 @@ definition XXr2 where
     map_T2_pre f1 f2 id id
       (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
       (pick4 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f2)
-      (\<lambda>t. (rename_T1 f1 f2 t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 f1 f2 t)))
+      (\<lambda>t. (rename_T1 f1 f2 t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 f1 f2 t) p' else undefined))
       (\<lambda>t. (rename_T1
         (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         (pick4 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f2)
-       t, f_T1 pick1 pick2 pick3 pick4 (rename_T1
+       t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1
         (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         (pick4 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f2)
-       t)
+       t) p' else undefined
       ))
-      (\<lambda>t. (rename_T2 f1 f2 t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 f1 f2 t)))
+      (\<lambda>t. (rename_T2 f1 f2 t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 f1 f2 t) p' else undefined))
       (\<lambda>t. (rename_T2
         (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         f2
-       t, f_T2 pick1 pick2 pick3 pick4 (rename_T2
+       t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2
         (pick3 (map_T2_pre f1 f2 id id f1 f2 (rename_T1 f1 f2) (rename_T1 f1 f2) (rename_T2 f1 f2) (rename_T2 f1 f2) x) p \<circ> f1)
         f2
-       t)
+       t) p' else undefined
       ))
       x
   "
@@ -1894,10 +1894,10 @@ lemma alpha_ctor_picks1:
   alpha_T1 (raw_T1_ctor x) (raw_T1_ctor (
     map_T1_pre id id id id id id fst fst fst fst (
       map_T1_pre id id id id (pick1 x p) (pick2 x p)
-        (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-        (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t)))
-        (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-        (\<lambda>t. (rename_T2 (pick1 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t)))
+        (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+        (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t) p' else undefined))
+        (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+        (\<lambda>t. (rename_T2 (pick1 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t) p' else undefined))
         x
       )
     ))"
@@ -1920,10 +1920,10 @@ lemma alpha_ctor_picks2:
   alpha_T2 (raw_T2_ctor x) (raw_T2_ctor (
     map_T2_pre id id id id id id fst fst fst fst (
       map_T2_pre id id id id (pick3 x p) (pick4 x p)
-        (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-        (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t)))
-        (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-        (\<lambda>t. (rename_T2 (pick3 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t)))
+        (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+        (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t) p' else undefined))
+        (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+        (\<lambda>t. (rename_T2 (pick3 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t) p' else undefined))
         x
       )
     ))"
@@ -2456,20 +2456,18 @@ proof -
      apply (rule T1_pre.pred_mono_strong0)
           apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True]])
           apply (rule TrueI)
-         apply (rule ballI impI TrueI iffD2[OF comp_apply])+
+         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
         apply (drule T1.set_subshapes)
         apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply])+
-       apply (subst comp_apply)
+       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
        apply (drule T1.set_subshape_images[rotated -1, OF imageI])
            prefer 5 (* 2 * nvars + 1 *)
            apply assumption
             apply (rule supp_id_bound mk_pick_prems[OF suitable_prems] | assumption)+
-         apply (rule ballI impI TrueI iffD2[OF comp_apply])+
+         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
         apply (drule T1.set_subshapes)
         apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply])+
-       apply (subst comp_apply)
+       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
        apply (drule T1.set_subshape_images[rotated -1, OF imageI])
            prefer 5 (* 2 * nvars + 1 *)
            apply assumption
@@ -2492,20 +2490,18 @@ proof -
      apply (rule T2_pre.pred_mono_strong0)
           apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True]])
           apply (rule TrueI)
-         apply (rule ballI impI TrueI iffD2[OF comp_apply])+
+         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
         apply (drule T1.set_subshapes)
         apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply])+
-       apply (subst comp_apply)
+       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
        apply (drule T1.set_subshape_images[rotated -1, OF imageI])
            prefer 5 (* 2 * nvars + 1 *)
            apply assumption
             apply (rule supp_id_bound bij_id mk_pick_prems[OF suitable_prems] | assumption)+
-         apply (rule ballI impI TrueI iffD2[OF comp_apply])+
+         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
         apply (drule T1.set_subshapes)
         apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply])+
-       apply (subst comp_apply)
+       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
        apply (drule T1.set_subshape_images[rotated -1, OF imageI])
            prefer 5 (* 2 * nvars + 1 *)
            apply assumption
@@ -2566,11 +2562,9 @@ proof -
              apply (rule iffD2[OF T1_pre.pred_map])
                     apply (rule supp_id_bound bij_id pick_prems prems)+
              apply (unfold id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric])[1]
-             apply (unfold comp_assoc[symmetric])[1]
-          apply (unfold comp_def)[1]
              apply (rule T1_pre.pred_mono_strong0)
                   apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
-                 apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                 apply (rule ballI impI TrueI valid_f[OF suitable_prems] iffD2[OF comp_apply] pred_fun_If)+
             apply (subst T1_pre.set_map T2_pre.set_map)
                    apply (rule supp_id_bound bij_id pick_prems prems)+
             apply (insert suitable_prems(1))[1]
@@ -2584,6 +2578,8 @@ proof -
             apply (unfold prod.inject)
             apply (erule conjE)
             apply hypsubst
+            apply (subst if_P)
+             apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2592,6 +2588,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
            apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
            apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2604,6 +2602,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2612,6 +2612,8 @@ proof -
           apply (unfold prod.inject)
           apply (erule conjE)
           apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
              apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2632,11 +2634,10 @@ proof -
              apply (rule iffD2[OF T1_pre.pred_map])
                     apply (rule supp_id_bound bij_id pick_prems prems)+
              apply (unfold id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric])[1]
-             apply (unfold comp_assoc[symmetric])[1]
           apply (unfold comp_def)[1]
              apply (rule T1_pre.pred_mono_strong0)
                   apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
-                 apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                 apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
             apply (subst T1_pre.set_map T2_pre.set_map)
                    apply (rule supp_id_bound bij_id pick_prems prems)+
             apply (insert suitable_prems(2))[1]
@@ -2650,6 +2651,8 @@ proof -
             apply (unfold prod.inject)
             apply (erule conjE)
             apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2658,6 +2661,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2670,6 +2675,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2678,6 +2685,8 @@ proof -
           apply (unfold prod.inject)
           apply (erule conjE)
           apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2707,11 +2716,10 @@ proof -
              apply (rule iffD2[OF T2_pre.pred_map])
                     apply (rule supp_id_bound bij_id pick_prems prems)+
              apply (unfold id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric])[1]
-             apply (unfold comp_assoc[symmetric])[1]
              apply (unfold comp_def)[1]
              apply (rule T2_pre.pred_mono_strong0)
                   apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
-                 apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                 apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
             apply (subst T1_pre.set_map T2_pre.set_map)
                    apply (rule supp_id_bound bij_id pick_prems prems)+
             apply (insert suitable_prems(3))[1]
@@ -2725,6 +2733,8 @@ proof -
             apply (unfold prod.inject)
             apply (erule conjE)
             apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2733,6 +2743,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2745,6 +2757,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2753,6 +2767,8 @@ proof -
           apply (unfold prod.inject)
           apply (erule conjE)
           apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct1])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2773,11 +2789,10 @@ proof -
              apply (rule iffD2[OF T2_pre.pred_map])
                     apply (rule supp_id_bound bij_id pick_prems prems)+
              apply (unfold id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric])[1]
-             apply (unfold comp_assoc[symmetric])[1]
              apply (unfold comp_def)[1]
              apply (rule T2_pre.pred_mono_strong0)
                   apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
-                 apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                 apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
             apply (subst T1_pre.set_map T2_pre.set_map)
                    apply (rule supp_id_bound bij_id pick_prems prems)+
             apply (insert suitable_prems(4))[1]
@@ -2791,6 +2806,8 @@ proof -
             apply (unfold prod.inject)
             apply (erule conjE)
             apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2799,6 +2816,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -2811,6 +2830,8 @@ proof -
            apply (unfold prod.inject)
            apply (erule conjE)
            apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
             apply assumption
@@ -2819,6 +2840,8 @@ proof -
           apply (unfold prod.inject)
           apply (erule conjE)
           apply hypsubst
+           apply (subst if_P)
+            apply assumption
             apply (rule prems(1,2)[THEN spec, THEN mp, THEN conjunct2])
              apply (erule T1.set_subshape_images[rotated -1, OF imageI] T1.set_subshapes)
               apply (rule pick_prems bij_id supp_id_bound prems)+
@@ -3221,12 +3244,16 @@ lemma XXr_U1FVars':
     apply (unfold prod.inject)
     apply (erule conjE)
     apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
    apply (erule imageE)
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* END goal1 *)
     (* copied from above *)
@@ -3237,12 +3264,16 @@ lemma XXr_U1FVars':
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
   apply (erule imageE)
   apply (unfold prod.inject)
   apply (erule conjE)
   apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
   done
 
@@ -3264,12 +3295,16 @@ lemma XXr_U1FVars'_2:
     apply (unfold prod.inject)
     apply (erule conjE)
     apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
    apply (erule imageE)
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* END goal1 *)
     (* copied from above *)
@@ -3280,12 +3315,16 @@ lemma XXr_U1FVars'_2:
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
   apply (erule imageE)
   apply (unfold prod.inject)
   apply (erule conjE)
   apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
   done
 
@@ -3308,12 +3347,16 @@ lemma XXr_U2FVars':
     apply (unfold prod.inject)
     apply (erule conjE)
     apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
    apply (erule imageE)
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* END goal1 *)
     (* copied from above *)
@@ -3324,12 +3367,16 @@ lemma XXr_U2FVars':
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
   apply (erule imageE)
   apply (unfold prod.inject)
   apply (erule conjE)
   apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
   done
 
@@ -3352,12 +3399,16 @@ lemma XXr_U2FVars'_2:
     apply (unfold prod.inject)
     apply (erule conjE)
     apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
    apply (erule imageE)
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* END goal1 *)
     (* copied from above *)
@@ -3368,12 +3419,16 @@ lemma XXr_U2FVars'_2:
    apply (unfold prod.inject)
    apply (erule conjE)
    apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
     (* copied from above *)
   apply (erule imageE)
   apply (unfold prod.inject)
   apply (erule conjE)
   apply hypsubst_thin
+    apply (subst if_P)
+     apply (rule valid)
     apply (rule f_UFVars'[OF valid(1) suitable_prems])
   done
 
@@ -3731,9 +3786,6 @@ lemma valid_PUmap':
     done
   done
 
-lemma pred_fun_If: "pred_fun P Q f \<Longrightarrow> pred_fun P Q (\<lambda>x. if P x then f x else undefined)"
-  by simp
-
 lemma valid_XXl1:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
@@ -3821,7 +3873,7 @@ lemma valid_XXr1:
   apply (unfold comp_def)
   apply (rule T1_pre.pred_mono_strong0)
        apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
-      apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+      apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
   done
 lemma valid_XXr2:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
@@ -3836,7 +3888,7 @@ lemma valid_XXr2:
   apply (unfold comp_def)
   apply (rule T2_pre.pred_mono_strong0)
        apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
-      apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+      apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
   done
 lemmas valid_XXl = valid_XXl1 valid_XXl2
 lemmas valid_XXr = valid_XXr1 valid_XXr2
@@ -3967,7 +4019,7 @@ lemma f_swap_alpha:
               apply (unfold comp_def)[1]
               apply (rule T1_pre.pred_mono_strong0)
                    apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
-        apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+        apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
              apply (rule f_prems)+
          apply (subst trans[OF comp_apply[symmetric] Pmap_comp0[symmetric]])
                  apply (rule valid f_prems bij_imp_bij_inv supp_inv_bound)+
@@ -3979,6 +4031,54 @@ lemma f_swap_alpha:
          apply (unfold comp_pair prod.case)
          apply (subst T1.rename_comps, (rule supp_id_bound bij_id f_prems pick_prems)+)+
          apply (unfold id_o o_id)
+         apply (rule trans)
+          apply (rule arg_cong2[OF _ refl, of _ _ U1ctor'])
+          apply (rule T1_pre.map_cong[rotated -10])
+                            (* REPEAT_DETERM *)
+                            apply ((rule refl)+)[6]
+                            (* ORELSE *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* repeated *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* repeated *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* repeated *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* END REPEAT_DETERM *)
+                        apply (rule f_prems supp_id_bound bij_comp pick_prems supp_comp_bound infinite_UNIV)+
+          apply (rule refl)
          apply (unfold XXl1_def[symmetric])
           (* EVERY' (map ... exists_bij_betws) *)
          apply (rule exists_bij_betws(1))
@@ -4256,6 +4356,10 @@ lemma f_swap_alpha:
              apply (rule T1.alpha_refls)
             apply (rule sym)
             apply (rule trans)
+             apply (rule valid_PUmap'_If)
+                 apply assumption
+                apply (erule eq_bij_betw_refl_prems)+
+        apply (rule trans)
              apply (rule IHs[THEN conjunct1, symmetric])
                             apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems | assumption)+
@@ -4406,6 +4510,10 @@ lemma f_swap_alpha:
             apply (rule T1.alpha_refls)
            apply (rule sym)
            apply (rule trans)
+            apply (rule valid_PUmap'_If)
+                apply assumption
+               apply (erule eq_bij_betw_refl_prems)+
+        apply (rule trans)
             apply (rule IHs[THEN conjunct1, symmetric])
                            apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems bij_comp supp_comp_bound pick_prems infinite_UNIV | assumption)+
@@ -4506,8 +4614,12 @@ lemma f_swap_alpha:
            apply (rule T1.alpha_refls)
           apply (rule sym)
           apply (rule trans)
+           apply (rule valid_PUmap'_If)
+               apply assumption
+              apply (erule eq_bij_betw_refl_prems)+
+          apply (rule trans)
            apply (rule IHs[THEN conjunct1, symmetric])
-                          apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                           apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems | assumption)+
                  apply (erule eq_bij_betw_refl_prems)+
              apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
@@ -4635,8 +4747,12 @@ lemma f_swap_alpha:
           apply (rule T1.alpha_refls)
          apply (rule sym)
          apply (rule trans)
+          apply (rule valid_PUmap'_If)
+              apply assumption
+             apply (erule eq_bij_betw_refl_prems)+
+         apply (rule trans)
           apply (rule IHs[THEN conjunct1, symmetric])
-                         apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems bij_comp supp_comp_bound pick_prems infinite_UNIV | assumption)+
                 apply (erule eq_bij_betw_refl_prems)+
             apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
@@ -4666,35 +4782,35 @@ lemma f_swap_alpha:
               of _ set5_T1_pre _ _ set5_T1_pre
               "\<lambda>x. map_T1_pre id id id id id id fst fst fst fst (
             map_T1_pre id id id id (pick1' x' p) (pick2' x' p)
-              (\<lambda>t. (t, f_T1 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T1 (pick1' x' p) (pick2' x' p) t, f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick1' x' p) (pick2' x' p) t)))
-              (\<lambda>t. (t, f_T2 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T2 (pick1' x' p) id t, f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick1' x' p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick1' x' p) (pick2' x' p) t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick1' x' p) (pick2' x' p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick1' x' p) id t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick1' x' p) id t) p' else undefined))
               x)"
               "\<lambda>x. FVars_T11 (raw_T1_ctor x) \<union> PFVars_1 p \<union> avoiding_set1"
               _ "\<lambda>x'. map_T1_pre id id id id id id fst fst fst fst (
             map_T1_pre id id id id (pick1 x p) (pick2 x p)
-              (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t)))
-              (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T2 (pick1 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick1 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t) p' else undefined))
               x')"
               ] exists_bij_betw_def[OF _ _ pick_prems(3) pick'_prems(3) h_prems(3),
               of _ set6_T1_pre _ _ set6_T1_pre
               "\<lambda>x. map_T1_pre id id id id id id fst fst fst fst (
             map_T1_pre id id id id (pick1' x' p) (pick2' x' p)
-              (\<lambda>t. (t, f_T1 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T1 (pick1' x' p) (pick2' x' p) t, f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick1' x' p) (pick2' x' p) t)))
-              (\<lambda>t. (t, f_T2 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T2 (pick1' x' p) id t, f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick1' x' p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick1' x' p) (pick2' x' p) t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick1' x' p) (pick2' x' p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick1' x' p) id t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick1' x' p) id t) p' else undefined))
               x)"
               "\<lambda>x. FVars_T12 (raw_T1_ctor x) \<union> PFVars_2 p \<union> avoiding_set2"
               _ "\<lambda>x'. map_T1_pre id id id id id id fst fst fst fst (
             map_T1_pre id id id id (pick1 x p) (pick2 x p)
-              (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t)))
-              (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T2 (pick1 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick1 x p) (pick2 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick1 x p) (pick2 x p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick1 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick1 x p) id t) p' else undefined))
               x')"
               ]
           show ?thesis
@@ -4868,7 +4984,7 @@ lemma f_swap_alpha:
                               apply (unfold comp_def)[1]
                               apply (rule T1_pre.pred_mono_strong0)
                                 apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
-                                apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                                apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
                                 (* repeated *)
                               apply (rule iffD2[OF T1_pre.pred_map])
                                 apply (rule supp_id_bound bij_id pick_prems pick'_prems)+
@@ -4876,7 +4992,7 @@ lemma f_swap_alpha:
                               apply (unfold comp_def)[1]
                               apply (rule T1_pre.pred_mono_strong0)
                                 apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
-                                apply (rule ballI impI TrueI valid_f[OF suitable'_prems])+
+                                apply (rule ballI impI TrueI valid_f[OF suitable'_prems] pred_fun_If)+
                              (* END REPEAT twice *)
                             apply (erule eq_bij_betw_prems)+
               (* subset tac *)
@@ -4886,6 +5002,8 @@ lemma f_swap_alpha:
                      apply (drule iffD1[OF prod.inject])
                      apply (erule conjE)
                      apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* repeated *)
@@ -4894,6 +5012,8 @@ lemma f_swap_alpha:
                     apply (drule iffD1[OF prod.inject])
                     apply (erule conjE)
                     apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* end subset_tac *)
@@ -4904,6 +5024,8 @@ lemma f_swap_alpha:
                     apply (drule iffD1[OF prod.inject])
                     apply (erule conjE)
                     apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                     apply (rule f_UFVars'[OF _ suitable_prems])
                     apply assumption
               (* repeated *)
@@ -4912,6 +5034,8 @@ lemma f_swap_alpha:
                    apply (drule iffD1[OF prod.inject])
                    apply (erule conjE)
                    apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                    apply (rule f_UFVars'[OF _ suitable_prems])
                    apply assumption
               (* copied from above *)
@@ -4921,6 +5045,8 @@ lemma f_swap_alpha:
                    apply (drule iffD1[OF prod.inject])
                    apply (erule conjE)
                    apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                    apply (rule f_UFVars'[OF _ suitable_prems])
                    apply assumption
               (* repeated *)
@@ -4929,6 +5055,8 @@ lemma f_swap_alpha:
                   apply (drule iffD1[OF prod.inject])
                   apply (erule conjE)
                   apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                   apply (rule f_UFVars'[OF _ suitable_prems])
                   apply assumption
 
@@ -4939,6 +5067,8 @@ lemma f_swap_alpha:
                   apply (drule iffD1[OF prod.inject])
                   apply (erule conjE)
                   apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* repeated *)
@@ -4947,6 +5077,8 @@ lemma f_swap_alpha:
                  apply (drule iffD1[OF prod.inject])
                  apply (erule conjE)
                  apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
 
@@ -4957,6 +5089,8 @@ lemma f_swap_alpha:
                  apply (drule iffD1[OF prod.inject])
                  apply (erule conjE)
                  apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
               (* repeated *)
@@ -4965,6 +5099,8 @@ lemma f_swap_alpha:
                 apply (drule iffD1[OF prod.inject])
                 apply (erule conjE)
                 apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
 
@@ -4975,6 +5111,8 @@ lemma f_swap_alpha:
                 apply (drule iffD1[OF prod.inject])
                 apply (erule conjE)
                 apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
               (* repeated *)
@@ -4983,6 +5121,8 @@ lemma f_swap_alpha:
                apply (drule iffD1[OF prod.inject])
                apply (erule conjE)
                apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
 
@@ -4993,6 +5133,8 @@ lemma f_swap_alpha:
                apply (drule iffD1[OF prod.inject])
                apply (erule conjE)
                apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
               (* repeated *)
@@ -5001,6 +5143,8 @@ lemma f_swap_alpha:
               apply (drule iffD1[OF prod.inject])
               apply (erule conjE)
               apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
 
@@ -5011,6 +5155,8 @@ lemma f_swap_alpha:
               apply (drule iffD1[OF prod.inject])
               apply (erule conjE)
               apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
               (* repeated *)
@@ -5019,6 +5165,8 @@ lemma f_swap_alpha:
              apply (drule iffD1[OF prod.inject])
              apply (erule conjE)
              apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable'_prems])
                      apply assumption
 
@@ -5200,6 +5348,10 @@ lemma f_swap_alpha:
                apply (rule allI)
                apply (rule impI)
                apply (rule trans)
+                apply (rule valid_PUmap'_If)
+                    apply assumption
+                   apply (erule eq_bij_betw_prems)+
+            apply (rule trans)
                 apply (unfold eq_bij_betw_def)[1]
                 apply (erule conjE)+
                 apply (rule IHs[THEN conjunct1, symmetric])
@@ -5234,6 +5386,9 @@ lemma f_swap_alpha:
                                 apply (rule PUmap'_cong)
                                 apply (rule T1.rename_comps[symmetric] T1.rename_ids)
                                 apply ((rule h_prems pick'_prems)+)?
+                                apply (subst if_P)
+                                apply (erule valid_Pmap)
+                                apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                                 apply (rule IHs[THEN conjunct2])
                                 apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                                 apply (rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV pick'_prems h_prems)+
@@ -5452,6 +5607,10 @@ lemma f_swap_alpha:
               apply (rule allI)
               apply (rule impI)
               apply (rule trans)
+                apply (rule valid_PUmap'_If)
+                    apply assumption
+                   apply (erule eq_bij_betw_prems)+
+            apply (rule trans)
                apply (rule IHs[THEN conjunct1, symmetric])
                               apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                                 apply (rule pick_prems suitable_prems | erule eq_bij_betw_prems | assumption)+
@@ -5483,6 +5642,9 @@ lemma f_swap_alpha:
                                 apply (rule PUmap'_cong)
                                 apply (rule T1.rename_comps[symmetric])
                                 apply (rule h_prems pick'_prems)+
+                                apply (subst if_P)
+                                apply (erule valid_Pmap)
+                                apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                                 apply (rule IHs[THEN conjunct2])
                                 apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                                 apply (rule bij_comp supp_comp_bound infinite_UNIV pick'_prems h_prems)+
@@ -5582,6 +5744,10 @@ lemma f_swap_alpha:
             apply (rule allI)
             apply (rule impI)
              apply (rule trans)
+            apply (rule valid_PUmap'_If)
+                  apply assumption
+            apply (erule eq_bij_betw_prems)+
+            apply (rule trans)
               apply (unfold eq_bij_betw_def)[1]
               apply (erule conjE)+
               apply (rule IHs[THEN conjunct1, symmetric])
@@ -5610,6 +5776,9 @@ lemma f_swap_alpha:
                                 apply assumption
                                 apply (rule PUmap'_cong)
                                 apply (rule refl)
+                                apply (subst if_P)
+                                apply (erule valid_Pmap)
+                                apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                                apply (rule IHs[THEN conjunct2, OF _ _ suitable'_prems suitable'_prems])
                                 apply (erule T1.set_subshapes)
                                 apply (erule valid_Pmap; (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+)
@@ -5763,6 +5932,10 @@ lemma f_swap_alpha:
             apply (rule allI)
             apply (rule impI)
             apply (rule trans)
+             apply (rule valid_PUmap'_If)
+            apply assumption
+            apply (erule eq_bij_betw_prems)+
+            apply (rule trans)
              apply (rule IHs[THEN conjunct1, symmetric])
                             apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                                apply (rule bij_id supp_id_bound pick_prems suitable_prems | erule eq_bij_betw_prems | assumption)+
@@ -5794,6 +5967,9 @@ lemma f_swap_alpha:
                     apply (rule PUmap'_cong)
                     apply (rule T1.rename_comps[symmetric] T1.rename_ids)
                     apply (rule supp_id_bound bij_id h_prems pick'_prems)+
+                    apply (subst if_P)
+                    apply (erule valid_Pmap)
+                    apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                     apply (rule IHs[THEN conjunct2])
                     apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                     apply (rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV pick'_prems h_prems)+
@@ -5915,7 +6091,7 @@ lemma f_swap_alpha:
               apply (unfold comp_def)[1]
               apply (rule T2_pre.pred_mono_strong0)
                    apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
-                  apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                  apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
              apply (rule f_prems)+
          apply (subst trans[OF comp_apply[symmetric] Pmap_comp0[symmetric]])
                   apply (rule valid)
@@ -5928,6 +6104,54 @@ lemma f_swap_alpha:
          apply (unfold comp_pair prod.case)
          apply (subst T1.rename_comps, (rule supp_id_bound bij_id f_prems pick_prems)+)+
          apply (unfold id_o o_id)
+         apply (rule trans)
+          apply (rule arg_cong2[OF _ refl, of _ _ U2ctor'])
+          apply (rule T2_pre.map_cong[rotated -10])
+                            (* REPEAT_DETERM *)
+                            apply ((rule refl)+)[6]
+                            (* ORELSE *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* repeated *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* repeated *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* repeated *)
+                            apply (rule iffD2[OF prod.inject])
+                            apply (rule conjI[OF refl])
+                            apply (rule ext)
+                            apply (rule if_cong)
+                            apply (rule refl)
+                            apply (rule valid_PUmap'_If)
+                            apply assumption
+                            apply (rule f_prems)+
+                            apply (rule refl)
+                            (* END REPEAT_DETERM *)
+                        apply (rule f_prems supp_id_bound bij_comp pick_prems supp_comp_bound infinite_UNIV)+
+          apply (rule refl)
          apply (unfold XXl2_def[symmetric])
           (* EVERY' (map ... exists_bij_betws) *)
          apply (rule exists_bij_betws(1))
@@ -6208,6 +6432,10 @@ lemma f_swap_alpha:
              apply (rule T1.alpha_refls)
             apply (rule sym)
             apply (rule trans)
+             apply (rule valid_PUmap'_If)
+                 apply assumption
+                apply (erule eq_bij_betw_refl_prems)+
+            apply (rule trans)
              apply (rule IHs[THEN conjunct1, symmetric])
                             apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems | assumption)+
@@ -6364,6 +6592,10 @@ lemma f_swap_alpha:
             apply (rule T1.alpha_refls)
            apply (rule sym)
            apply (rule trans)
+            apply (rule valid_PUmap'_If)
+                apply assumption
+               apply (erule eq_bij_betw_refl_prems)+
+           apply (rule trans)
             apply (rule IHs[THEN conjunct1, symmetric])
                            apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems bij_comp supp_comp_bound pick_prems infinite_UNIV | assumption)+
@@ -6464,7 +6696,11 @@ lemma f_swap_alpha:
               apply assumption
              apply (rule T1.alpha_refls)
             apply (rule sym)
-            apply (rule trans)
+          apply (rule trans)
+           apply (rule valid_PUmap'_If)
+               apply assumption
+              apply (erule eq_bij_betw_refl_prems)+
+          apply (rule trans)
              apply (rule IHs[THEN conjunct1, symmetric])
                             apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems | assumption)+
@@ -6592,8 +6828,12 @@ lemma f_swap_alpha:
           apply (rule T1.alpha_refls)
          apply (rule sym)
          apply (rule trans)
+          apply (rule valid_PUmap'_If)
+              apply assumption
+             apply (erule eq_bij_betw_refl_prems)+
+         apply (rule trans)
           apply (rule IHs[THEN conjunct1, symmetric])
-                         apply (erule T1.set_subshape_images[rotated -1, OF imageI])
+                          apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                             apply (rule suitable_prems suitable'_prems f_prems bij_comp supp_comp_bound pick_prems infinite_UNIV | assumption)+
                 apply (erule eq_bij_betw_refl_prems)+
             apply (unfold eq_bij_betw_refl_def Int_Un_distrib Un_empty)[1]
@@ -6624,35 +6864,35 @@ lemma f_swap_alpha:
               of _ set5_T2_pre _ _ set5_T2_pre
               "\<lambda>x. map_T2_pre id id id id id id fst fst fst fst (
             map_T2_pre id id id id (pick3' x' p) (pick4' x' p)
-              (\<lambda>t. (t, f_T1 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T1 (pick3' x' p) (pick4' x' p) t, f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick3' x' p) (pick4' x' p) t)))
-              (\<lambda>t. (t, f_T2 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T2 (pick3' x' p) id t, f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick3' x' p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick3' x' p) (pick4' x' p) t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick3' x' p) (pick4' x' p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick3' x' p) id t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick3' x' p) id t) p' else undefined))
               x)"
               "\<lambda>x. FVars_T21 (raw_T2_ctor x) \<union> PFVars_1 p \<union> avoiding_set1"
               _ "\<lambda>x'. map_T2_pre id id id id id id fst fst fst fst (
             map_T2_pre id id id id (pick3 x p) (pick4 x p)
-              (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t)))
-              (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T2 (pick3 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick3 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t) p' else undefined))
               x')"
               ] exists_bij_betw_def[OF _ _ pick_prems(7) pick'_prems(7) h_prems(3),
               of _ set6_T2_pre _ _ set6_T2_pre
               "\<lambda>x. map_T2_pre id id id id id id fst fst fst fst (
             map_T2_pre id id id id (pick3' x' p) (pick4' x' p)
-              (\<lambda>t. (t, f_T1 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T1 (pick3' x' p) (pick4' x' p) t, f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick3' x' p) (pick4' x' p) t)))
-              (\<lambda>t. (t, f_T2 pick1' pick2' pick3' pick4' t))
-              (\<lambda>t. (rename_T2 (pick3' x' p) id t, f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick3' x' p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick3' x' p) (pick4' x' p) t, \<lambda>p'. if validP p' then f_T1 pick1' pick2' pick3' pick4' (rename_T1 (pick3' x' p) (pick4' x' p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick3' x' p) id t, \<lambda>p'. if validP p' then f_T2 pick1' pick2' pick3' pick4' (rename_T2 (pick3' x' p) id t) p' else undefined))
               x)"
               "\<lambda>x. FVars_T22 (raw_T2_ctor x) \<union> PFVars_2 p \<union> avoiding_set2"
               _ "\<lambda>x'. map_T2_pre id id id id id id fst fst fst fst (
             map_T2_pre id id id id (pick3 x p) (pick4 x p)
-              (\<lambda>t. (t, f_T1 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t)))
-              (\<lambda>t. (t, f_T2 pick1 pick2 pick3 pick4 t))
-              (\<lambda>t. (rename_T2 (pick3 x p) id t, f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t)))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T1 (pick3 x p) (pick4 x p) t, \<lambda>p'. if validP p' then f_T1 pick1 pick2 pick3 pick4 (rename_T1 (pick3 x p) (pick4 x p) t) p' else undefined))
+              (\<lambda>t. (t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 t p' else undefined))
+              (\<lambda>t. (rename_T2 (pick3 x p) id t, \<lambda>p'. if validP p' then f_T2 pick1 pick2 pick3 pick4 (rename_T2 (pick3 x p) id t) p' else undefined))
               x')"
               ]
           show ?thesis
@@ -6825,7 +7065,7 @@ lemma f_swap_alpha:
                               apply (unfold comp_def)[1]
                               apply (rule T2_pre.pred_mono_strong0)
                                 apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
-                                apply (rule ballI impI TrueI valid_f[OF suitable_prems])+
+                                apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
                               (* repeated *)
                               apply (rule iffD2[OF T2_pre.pred_map])
                                 apply (rule supp_id_bound bij_id pick'_prems)+
@@ -6833,7 +7073,7 @@ lemma f_swap_alpha:
                               apply (unfold comp_def)[1]
                               apply (rule T2_pre.pred_mono_strong0)
                                 apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
-                                apply (rule ballI impI TrueI valid_f[OF suitable'_prems])+
+                                apply (rule ballI impI TrueI valid_f[OF suitable'_prems] pred_fun_If)+
                               (* END REPEAT twice *)
                             apply (erule eq_bij_betw_prems)+
               (* subset tac *)
@@ -6843,6 +7083,8 @@ lemma f_swap_alpha:
                      apply (drule iffD1[OF prod.inject])
                      apply (erule conjE)
                      apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* repeated *)
@@ -6851,6 +7093,8 @@ lemma f_swap_alpha:
                     apply (drule iffD1[OF prod.inject])
                     apply (erule conjE)
                     apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* end subset_tac *)
@@ -6861,6 +7105,8 @@ lemma f_swap_alpha:
                     apply (drule iffD1[OF prod.inject])
                     apply (erule conjE)
                     apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* repeated *)
@@ -6869,6 +7115,8 @@ lemma f_swap_alpha:
                    apply (drule iffD1[OF prod.inject])
                    apply (erule conjE)
                    apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
 
@@ -6879,6 +7127,8 @@ lemma f_swap_alpha:
                    apply (drule iffD1[OF prod.inject])
                    apply (erule conjE)
                    apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* repeated *)
@@ -6887,6 +7137,8 @@ lemma f_swap_alpha:
                   apply (drule iffD1[OF prod.inject])
                   apply (erule conjE)
                   apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
 
@@ -6897,6 +7149,8 @@ lemma f_swap_alpha:
                   apply (drule iffD1[OF prod.inject])
                   apply (erule conjE)
                   apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
               (* repeated *)
@@ -6905,6 +7159,8 @@ lemma f_swap_alpha:
                  apply (drule iffD1[OF prod.inject])
                  apply (erule conjE)
                  apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                      apply (rule f_UFVars'[OF _ suitable_prems])
                      apply assumption
 
@@ -6915,6 +7171,8 @@ lemma f_swap_alpha:
                  apply (drule iffD1[OF prod.inject])
                  apply (erule conjE)
                  apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
               (* repeated *)
@@ -6923,6 +7181,8 @@ lemma f_swap_alpha:
                 apply (drule iffD1[OF prod.inject])
                 apply (erule conjE)
                 apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
 
@@ -6933,6 +7193,8 @@ lemma f_swap_alpha:
                 apply (drule iffD1[OF prod.inject])
                 apply (erule conjE)
                 apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
               (* repeated *)
@@ -6941,6 +7203,8 @@ lemma f_swap_alpha:
                apply (drule iffD1[OF prod.inject])
                apply (erule conjE)
                apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
 
@@ -6951,6 +7215,8 @@ lemma f_swap_alpha:
                apply (drule iffD1[OF prod.inject])
                apply (erule conjE)
                apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
               (* repeated *)
@@ -6959,6 +7225,8 @@ lemma f_swap_alpha:
               apply (drule iffD1[OF prod.inject])
               apply (erule conjE)
               apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
 
@@ -6969,6 +7237,8 @@ lemma f_swap_alpha:
               apply (drule iffD1[OF prod.inject])
               apply (erule conjE)
               apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
               (* repeated *)
@@ -6977,6 +7247,8 @@ lemma f_swap_alpha:
              apply (drule iffD1[OF prod.inject])
              apply (erule conjE)
              apply hypsubst
+                     apply (subst if_P)
+                      apply assumption
                  apply (rule f_UFVars'[OF _ suitable'_prems])
                  apply assumption
 
@@ -7161,6 +7433,10 @@ lemma f_swap_alpha:
                apply (rule allI)
                apply (rule impI)
                apply (rule trans)
+                apply (rule valid_PUmap'_If)
+                    apply assumption
+                   apply (erule eq_bij_betw_prems)+
+               apply (rule trans)
                 apply (unfold eq_bij_betw_def)[1]
                 apply (erule conjE)+
                 apply (rule IHs[THEN conjunct1, symmetric])
@@ -7189,6 +7465,9 @@ lemma f_swap_alpha:
                                 apply assumption
                                 apply (rule PUmap'_cong)
                                 apply (rule refl)
+                                apply (subst if_P)
+                                apply (erule valid_Pmap)
+                                apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                                 apply (rule IHs[THEN conjunct2, OF _ _ suitable'_prems suitable'_prems])
                                 apply (erule T1.set_subshapes)
                                 apply (erule valid_Pmap; (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+)
@@ -7395,6 +7674,10 @@ lemma f_swap_alpha:
               apply (rule allI)
             apply (rule impI)
               apply (rule trans)
+               apply (rule valid_PUmap'_If)
+                   apply assumption
+                  apply (erule eq_bij_betw_prems)+
+              apply (rule trans)
                apply (rule IHs[THEN conjunct1, symmetric])
                               apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                                 apply (rule pick_prems suitable_prems | erule eq_bij_betw_prems | assumption)+
@@ -7441,8 +7724,11 @@ lemma f_swap_alpha:
                      apply (rule T1.alpha_bij_eqs[THEN iffD2])
                          apply (rule pick'_prems)+
                      apply assumption
-                     apply (rule PUmap'_cong)
+                    apply (rule PUmap'_cong)
                      apply (rule refl)
+                    apply (subst if_P)
+                     apply (erule valid_Pmap)
+                        apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                     apply (rule IHs[THEN conjunct2])
                                 apply (subst T1.rename_comps, (rule pick_prems pick'_prems h_prems)+)+
                                 apply (erule T1.set_subshape_images[rotated -1, OF imageI])
@@ -7521,6 +7807,10 @@ lemma f_swap_alpha:
             apply (rule allI)
             apply (rule impI)
              apply (rule trans)
+              apply (rule valid_PUmap'_If)
+                  apply assumption
+                 apply (erule eq_bij_betw_prems)+
+             apply (rule trans)
               apply (unfold eq_bij_betw_def)[1]
               apply (erule conjE)+
               apply (rule IHs[THEN conjunct1, symmetric])
@@ -7549,7 +7839,10 @@ lemma f_swap_alpha:
                                 apply assumption
                                 apply (rule PUmap'_cong)
                                 apply (rule refl)
-                               apply (rule IHs[THEN conjunct2, OF _ _ suitable'_prems suitable'_prems])
+                                apply (subst if_P)
+                                apply (erule valid_Pmap)
+                                apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
+                                apply (rule IHs[THEN conjunct2, OF _ _ suitable'_prems suitable'_prems])
                                 apply (erule T1.set_subshapes)
                                 apply (erule valid_Pmap; (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+)
                                 apply (rule supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left])+
@@ -7708,7 +8001,11 @@ lemma f_swap_alpha:
             apply (rule allI)
             apply (rule impI)
             apply (rule trans)
-             apply (rule IHs[THEN conjunct1, symmetric])
+             apply (rule valid_PUmap'_If)
+                 apply assumption
+                apply (erule eq_bij_betw_prems)+
+            apply (rule trans)
+            apply (rule IHs[THEN conjunct1, symmetric])
                             apply (erule T1.set_subshape_images[rotated -1, OF imageI])
                                apply (rule bij_id supp_id_bound pick_prems suitable_prems | erule eq_bij_betw_prems | assumption)+
                apply (unfold eq_bij_betw_def Int_Un_distrib Un_empty)[1]
@@ -7757,6 +8054,9 @@ lemma f_swap_alpha:
                    apply assumption
                   apply (rule PUmap'_cong)
                    apply (rule refl)
+                  apply (subst if_P)
+                   apply (erule valid_Pmap)
+                      apply (rule bij_imp_bij_inv supp_inv_bound | erule eq_bij_betw_prems)+
                   apply (rule IHs[THEN conjunct2])
                                 apply (subst T1.rename_comps, (rule bij_id supp_id_bound pick_prems pick'_prems h_prems)+)+
                                 apply (erule T1.set_subshape_images[rotated -1, OF imageI])
@@ -7873,7 +8173,7 @@ lemma f0_T1_ctor:
     and int_empty: "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
     and noclash: "noclash_raw_T1 x"
   shows
-    "f0_T1 (raw_T1_ctor x) p = U1ctor' (map_T1_pre id id id id id id (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T2 t))  (\<lambda>t. (t, f0_T2 t)) x) p"
+    "f0_T1 (raw_T1_ctor x) p = U1ctor' (map_T1_pre id id id id id id (\<lambda>t. (t, \<lambda>p. if validP p then f0_T1 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f0_T1 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f0_T2 t p else undefined))  (\<lambda>t. (t, \<lambda>p. if validP p then f0_T2 t p else undefined)) x) p"
 proof -
   let ?pick1_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick1_0 x' p'"
   let ?pick2_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick2_0 x' p'"
@@ -7945,44 +8245,93 @@ proof -
        apply (unfold prod.inject T1.rename_ids)
       (* REPEAT_DETERM *)
        apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
        apply (rule trans)
-        apply (rule f_alphas)
+         apply (rule f_alphas)
+                  apply assumption
                 apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
         apply (rule T1.alpha_refls)
        apply (unfold f0_T1_def)[1]
+        apply (rule refl)
+       apply (unfold if_not_P)[1]
        apply (rule refl)
       (* copied from above *)
-      apply (rule conjI[OF refl])
-      apply (rule trans)
-       apply (rule f_alphas)
-               apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
-       apply (rule T1.alpha_refls)
-      apply (unfold f0_T1_def)[1]
-      apply (rule refl)
+       apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
+       apply (rule trans)
+         apply (rule f_alphas)
+                  apply assumption
+                apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+        apply (rule T1.alpha_refls)
+       apply (unfold f0_T1_def)[1]
+        apply (rule refl)
+       apply (unfold if_not_P)[1]
+       apply (rule refl)
       (* copied from above *)
-     apply (rule conjI[OF refl])
+       apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
      apply (rule trans)
-      apply (rule f_alphas)
+       apply (rule f_alphas)
+    apply assumption
               apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
       apply (rule T1.alpha_refls)
      apply (unfold f0_T2_def)[1]
      apply (rule refl)
+       apply (unfold if_not_P)[1]
+       apply (rule refl)
       (* copied from above *)
-    apply (rule conjI[OF refl])
-    apply (rule trans)
-     apply (rule f_alphas)
-             apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
-     apply (rule T1.alpha_refls)
-    apply (unfold f0_T2_def)[1]
-    apply (rule refl)
+       apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
+     apply (rule trans)
+       apply (rule f_alphas)
+    apply assumption
+              apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+      apply (rule T1.alpha_refls)
+     apply (unfold f0_T2_def)[1]
+     apply (rule refl)
+       apply (unfold if_not_P)[1]
+       apply (rule refl)
     done
 qed
 
 lemma f0_T2_ctor:
-  assumes int_empty: "set5_T2_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T2_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
+  assumes valid: "validP p"
+    and int_empty: "set5_T2_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {}" "set6_T2_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {}"
     and noclash: "noclash_raw_T2 x"
   shows
-    "f0_T2 (raw_T2_ctor x) p = U2ctor' (map_T2_pre id id id id id id (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T1 t)) (\<lambda>t. (t, f0_T2 t))  (\<lambda>t. (t, f0_T2 t)) x) p"
+    "f0_T2 (raw_T2_ctor x) p = U2ctor' (map_T2_pre id id id id id id (\<lambda>t. (t, \<lambda>p. if validP p then f0_T1 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f0_T1 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f0_T2 t p else undefined))  (\<lambda>t. (t, \<lambda>p. if validP p then f0_T2 t p else undefined)) x) p"
 proof -
   let ?pick3_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick3_0 x' p'"
   let ?pick4_1 = "\<lambda>x' p'. if (x', p') = (x, p) then id else pick4_0 x' p'"
@@ -7991,9 +8340,13 @@ proof -
      apply (unfold suitable_defs)
      apply (rule allI)
      apply (rule allI)
+     apply (rule impI)
      apply (insert suitable_pick0s(3))[1]
      apply (unfold suitable_defs)
-     apply (erule allE conjE)+
+     apply (erule allE)+
+     apply (erule impE)
+      apply assumption
+     apply (erule conjE)+
      apply (rule conjI bij_if supp_if imsupp_if_empty image_if_empty | assumption)+
      apply (drule iffD1[OF prod.inject])
      apply (erule conjE)
@@ -8011,9 +8364,13 @@ proof -
       (* copied from above *)
     apply (rule allI)
     apply (rule allI)
+    apply (rule impI)
     apply (insert suitable_pick0s(4))[1]
     apply (unfold suitable_defs)
-    apply (erule allE conjE)+
+    apply (erule allE)+
+    apply (erule impE)
+     apply assumption
+    apply (erule conjE)+
     apply (rule conjI bij_if supp_if imsupp_if_empty image_if_empty | assumption)+
     apply (drule iffD1[OF prod.inject])
     apply (erule conjE)
@@ -8032,14 +8389,13 @@ proof -
 
   show ?thesis
     apply (rule trans)
-     apply (rule fun_cong[of _ _ p])
      apply (unfold f0_T2_def)[1]
      apply (rule f_alphas)
-             apply (rule suitable_pick1s suitable_pick0s)+
-     apply (rule T1.alpha_refls)+
+             apply (rule valid suitable_pick1s suitable_pick0s)+
+     apply (rule T1.alpha_refls)
     apply (rule trans)
      apply (rule f_T2_simp)
-        apply (rule suitable_pick1s suitable_pick0s)+
+        apply (rule valid suitable_pick1s suitable_pick0s)+
     apply (unfold if_P[OF refl])
     apply (rule arg_cong2[OF _ refl, of _ _ U2ctor'])
     apply (rule T2_pre.map_cong)
@@ -8047,54 +8403,103 @@ proof -
        apply (unfold prod.inject T1.rename_ids)
       (* REPEAT_DETERM *)
        apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
        apply (rule trans)
-        apply (rule f_alphas)
+         apply (rule f_alphas)
+                  apply assumption
                 apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
         apply (rule T1.alpha_refls)
        apply (unfold f0_T1_def)[1]
+        apply (rule refl)
+       apply (unfold if_not_P)[1]
        apply (rule refl)
       (* copied from above *)
-      apply (rule conjI[OF refl])
-      apply (rule trans)
-       apply (rule f_alphas)
-               apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
-       apply (rule T1.alpha_refls)
-      apply (unfold f0_T1_def)[1]
-      apply (rule refl)
+       apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
+       apply (rule trans)
+         apply (rule f_alphas)
+                  apply assumption
+                apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+        apply (rule T1.alpha_refls)
+       apply (unfold f0_T1_def)[1]
+        apply (rule refl)
+       apply (unfold if_not_P)[1]
+       apply (rule refl)
       (* copied from above *)
-     apply (rule conjI[OF refl])
+       apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
      apply (rule trans)
-      apply (rule f_alphas)
+       apply (rule f_alphas)
+    apply assumption
               apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
       apply (rule T1.alpha_refls)
      apply (unfold f0_T2_def)[1]
      apply (rule refl)
+       apply (unfold if_not_P)[1]
+       apply (rule refl)
       (* copied from above *)
-    apply (rule conjI[OF refl])
-    apply (rule trans)
-     apply (rule f_alphas)
-             apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
-     apply (rule T1.alpha_refls)
-    apply (unfold f0_T2_def)[1]
-    apply (rule refl)
+       apply (rule conjI[OF refl])
+       apply (rule ext)
+       apply (rule case_split)
+        apply (rule trans)
+         apply (rule if_P)
+         apply assumption
+        apply (rule trans[rotated])
+         apply (rule sym)
+         apply (rule if_P)
+         apply assumption
+     apply (rule trans)
+       apply (rule f_alphas)
+    apply assumption
+              apply (rule suitable_pick0s suitable_pick1s[unfolded prod.inject])+
+      apply (rule T1.alpha_refls)
+     apply (unfold f0_T2_def)[1]
+     apply (rule refl)
+       apply (unfold if_not_P)[1]
+       apply (rule refl)
     done
 qed
 
-lemmas f0_swaps = conjunct1[OF f_swap_alpha[rotated -2, OF T1.alpha_refls suitable_pick0s suitable_pick0s], unfolded f0_T1_def[symmetric], THEN conjunct1]
-  conjunct2[OF f_swap_alpha[rotated -2, OF T1.alpha_refls suitable_pick0s suitable_pick0s], unfolded f0_T2_def[symmetric], THEN conjunct1]
+lemmas f0_swaps = conjunct1[OF f_swap_alpha[rotated -2, OF T1.alpha_refls _ suitable_pick0s suitable_pick0s], unfolded f0_T1_def[symmetric], THEN conjunct1]
+  conjunct2[OF f_swap_alpha[rotated -2, OF T1.alpha_refls _ suitable_pick0s suitable_pick0s], unfolded f0_T2_def[symmetric], THEN conjunct1]
 
 (**********************************************)
 (*********** Final result lemmas **************)
 (**********************************************)
 
 lemma ff0_cctors:
-  "set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T1 x \<Longrightarrow>
-     ff0_T1 (T1_ctor x) p = U1ctor (map_T1_pre id id id id id id (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T2 t))  (\<lambda>t. (t, ff0_T2 t)) x) p"
-  "set5_T2_pre y \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T2_pre y \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T2 y \<Longrightarrow>
-     ff0_T2 (T2_ctor y) p = U2ctor (map_T2_pre id id id id id id (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T1 t)) (\<lambda>t. (t, ff0_T2 t))  (\<lambda>t. (t, ff0_T2 t)) y) p"
+  "validP p \<Longrightarrow> set5_T1_pre x \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T1_pre x \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T1 x \<Longrightarrow>
+     ff0_T1 (T1_ctor x) p = U1ctor (map_T1_pre id id id id id id (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T1 t p' else undefined)) (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T1 t p' else undefined)) (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T2 t p' else undefined))  (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T2 t p' else undefined)) x) p"
+  "validP p \<Longrightarrow> set5_T2_pre y \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow> set6_T2_pre y \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow> noclash_T2 y \<Longrightarrow>
+     ff0_T2 (T2_ctor y) p = U2ctor (map_T2_pre id id id id id id (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T1 t p' else undefined)) (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T1 t p' else undefined)) (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T2 t p' else undefined))  (\<lambda>t. (t, \<lambda>p'. if validP p' then ff0_T2 t p' else undefined)) y) p"
    apply (unfold ff0_T1_def ff0_T2_def T1_ctor_def T2_ctor_def)
    apply (rule trans)
-    apply (rule f0_alphas[THEN fun_cong])
+    apply (rule f0_alphas)
+     apply assumption
     apply (rule T1.TT_Quotient_rep_abss)
    apply (rule trans)
     apply (rule f0_T1_ctor)
@@ -8114,7 +8519,8 @@ lemma ff0_cctors:
    apply (rule refl)
     (* copied from above *)
   apply (rule trans)
-   apply (rule f0_alphas[THEN fun_cong])
+   apply (rule f0_alphas)
+  apply assumption
    apply (rule T1.TT_Quotient_rep_abss)
   apply (rule trans)
    apply (rule f0_T2_ctor)
@@ -8136,14 +8542,16 @@ lemma ff0_cctors:
 
 lemma ff0_swaps:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  assumes valid: "validP p"
+    and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     and imsupp_prems: "imsupp f1 \<inter> avoiding_set1 = {}" "imsupp f2 \<inter> avoiding_set2 = {}"
   shows
     "ff0_T1 (rrename_T1 f1 f2 t1) p = U1map f1 f2 t1 (ff0_T1 t1 (Pmap (inv f1) (inv f2) p))"
     "ff0_T2 (rrename_T2 f1 f2 t2) p = U2map f1 f2 t2 (ff0_T2 t2 (Pmap (inv f1) (inv f2) p))"
    apply (unfold ff0_T1_def ff0_T2_def rrename_T1_def rrename_T2_def)
    apply (rule trans)
-    apply (rule f0_alphas[THEN fun_cong])
+    apply (rule f0_alphas)
+     apply (rule valid)
     apply (rule T1.TT_Quotient_rep_abss)
    apply (rule trans)
     apply (rule f0_swaps)
@@ -8152,7 +8560,8 @@ lemma ff0_swaps:
    apply (rule refl)
     (* copied from above *)
   apply (rule trans)
-   apply (rule f0_alphas[THEN fun_cong])
+   apply (rule f0_alphas)
+    apply (rule valid)
    apply (rule T1.TT_Quotient_rep_abss)
   apply (rule trans)
    apply (rule f0_swaps)
@@ -8161,9 +8570,9 @@ lemma ff0_swaps:
   apply (rule refl)
   done
 
-lemmas ff0_UFVarss = f0_UFVars'(1)[of "rep_T1 _", unfolded U1FVars_1'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
-  f0_UFVars'(2)[of "rep_T1 _", unfolded U1FVars_2'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
-  f0_UFVars'(3)[of "rep_T2 _", unfolded U2FVars_1'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
-  f0_UFVars'(4)[of "rep_T2 _", unfolded U2FVars_2'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
+lemmas ff0_UFVarss = f0_UFVars'(1)[of _ "rep_T1 _", unfolded U1FVars_1'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
+  f0_UFVars'(2)[of _ "rep_T1 _", unfolded U1FVars_2'_def T1.TT_Quotient_abs_reps ff0_T1_def[symmetric] FVars_def2s]
+  f0_UFVars'(3)[of _ "rep_T2 _", unfolded U2FVars_1'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
+  f0_UFVars'(4)[of _ "rep_T2 _", unfolded U2FVars_2'_def T1.TT_Quotient_abs_reps ff0_T2_def[symmetric] FVars_def2s]
 
 end

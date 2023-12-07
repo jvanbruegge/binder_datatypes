@@ -27,16 +27,16 @@ proof -
 qed
 
 lemma exists_suitable_aux:
-  assumes "Cinfinite r" "r \<le>o |UNIV::'a set|" "|U \<union> (S - U)::'a set| <o r"
-  shows "\<exists>(u::'a \<Rightarrow> 'a). bij u \<and> |supp u| <o r \<and> imsupp u \<inter> (S - U) = {} \<and> u ` U \<inter> S = {}"
+  assumes "Cinfinite r" "r \<le>o |UNIV::'a set|" "P \<Longrightarrow> |U \<union> (S - U)::'a set| <o r"
+  shows "\<exists>(u::'a \<Rightarrow> 'a). P \<longrightarrow> bij u \<and> |supp u| <o r \<and> imsupp u \<inter> (S - U) = {} \<and> u ` U \<inter> S = {}"
 proof -
-  have 1: "|U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
-  obtain B where 2: "U \<inter> B = {}" "B \<inter> (S - U) = {}" "|U| =o |B|"
+  have 1: "P \<Longrightarrow> |U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
+  obtain B where 2: "P \<Longrightarrow> U \<inter> B = {}" "P \<Longrightarrow> B \<inter> (S - U) = {}" "P \<Longrightarrow> |U| =o |B|"
     using exists_subset_compl[OF assms(1,2,3)] by blast
-  obtain u where 3: "bij u" "|supp u| <o r" "bij_betw u U B" "imsupp u \<inter> (S - U) = {}"
+  obtain u where 3: "bij u" "P \<Longrightarrow> |supp u| <o r" "P \<Longrightarrow> bij_betw u U B" "P \<Longrightarrow> imsupp u \<inter> (S - U) = {}"
     using ordIso_ex_bij_betw_supp[OF assms(1) 1 2(3,1) Diff_disjoint 2(2)] by blast
-  then have "u ` U \<subseteq> B" unfolding bij_betw_def by blast
-  then have "u ` U \<inter> S = {}" using 2 by blast
+  then have "P \<Longrightarrow> u ` U \<subseteq> B" unfolding bij_betw_def by blast
+  then have "P \<Longrightarrow> u ` U \<inter> S = {}" using 2 by blast
   then show ?thesis using 3 by blast
 qed
 

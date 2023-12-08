@@ -330,15 +330,13 @@ and wfB and bsmall
 and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
-Bvars_bsmall: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bvars xs)"
-and 
 II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
 and 
 GG_ffresh: "\<And>R xs t. GG R xs t \<Longrightarrow> Bvars xs \<inter> Tfvars t = {}"
 
 
 sublocale IInduct_simple < IInduct apply standard
-  using Bvars_bsmall II_bsmall GG_ffresh by blast+
+  using II_bsmall GG_ffresh by blast+
 
 
 context IInduct 

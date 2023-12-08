@@ -191,64 +191,42 @@ lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin
 lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
   unfolding imsupp_def supp_def by fastforce
 
-typedef 'a ssfun = "{ f::'a \<Rightarrow> 'a. |supp f| <o |UNIV::'a set| }"
-  using supp_id_bound by blast
-
-lemmas ssfun_rep_eq = Abs_ssfun_inverse[OF iffD2[OF mem_Collect_eq]]
-
-definition compSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a ssfun \<Rightarrow> 'a ssfun" where
-  "compSS f \<equiv> \<lambda>p. Abs_ssfun (f \<circ> Rep_ssfun p \<circ> inv f)"
-definition PFVars :: "'a ssfun \<Rightarrow> 'a set" where
-  "PFVars p \<equiv> imsupp (Rep_ssfun p)"
-
-lemma compSS_rep_eq:
-  fixes f::"'a \<Rightarrow> 'a"
-  assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "Rep_ssfun (compSS f p) = f \<circ> Rep_ssfun p \<circ> inv f"
-  unfolding compSS_def
-  by (simp add: ssfun_rep_eq supp_comp_bound supp_inv_bound iffD1[OF mem_Collect_eq Rep_ssfun] assms)
+definition compSS :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a)" where
+  "compSS f g \<equiv> f \<circ> g \<circ> inv f"
 
 lemma compSS_id: "compSS id = id"
-  unfolding compSS_def id_o o_id inv_id Rep_ssfun_inverse
+  unfolding compSS_def id_o o_id inv_id
   unfolding id_def
   by (rule refl)
 
 lemma compSS_comp0:
-  fixes f g::"'a \<Rightarrow> 'a"
-  assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
-  shows "compSS f \<circ> compSS g = compSS (f \<circ> g)"
-proof
-  fix p
-  have "|supp (g \<circ> Rep_ssfun p \<circ> inv g)| <o |UNIV::'a set|"
-    by (simp add: supp_comp_bound assms iffD1[OF mem_Collect_eq Rep_ssfun] supp_inv_bound)
-  then show "(compSS f \<circ> compSS g) p = compSS (f \<circ> g) p" unfolding compSS_def
-    by (simp add: ssfun_rep_eq comp_assoc[symmetric] o_inv_distrib assms)
+  fixes f g h::"'a \<Rightarrow> 'a"
+  assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|" "|supp h| <o |UNIV::'a set|"
+  shows "(compSS f \<circ> compSS g) h = compSS (f \<circ> g) h"
+proof -
+  have "|supp (g \<circ> h \<circ> inv g)| <o |UNIV::'a set|"
+    by (simp add: supp_comp_bound assms supp_inv_bound)
+  then show ?thesis unfolding compSS_def
+    by (simp add: comp_assoc[symmetric] o_inv_distrib assms)
 qed
 
 lemma compSS_cong_id:
   fixes f::"'a \<Rightarrow> 'a"
-  assumes "bij f" and cong: "\<And>a. a \<in> PFVars p \<Longrightarrow> f a = a"
+  assumes "bij f" "|supp p| <o |UNIV::'a set|" and cong: "\<And>a. a \<in> imsupp p \<Longrightarrow> f a = a"
   shows "compSS f p = p"
 proof -
-  have 1: "imsupp f \<inter> PFVars p = {}"
+  have 1: "imsupp f \<inter> imsupp p = {}"
     by (meson Int_emptyI assms(1) bij_imsupp_supp_ne cong not_in_supp_alt)
   then show ?thesis unfolding compSS_def using imsupp_commute
-    by (metis PFVars_def Rep_ssfun_inverse assms(1) bij_is_surj inv_inv_eq o_inv_o_cancel surj_imp_inj_inv)
+    by (metis assms(1) bij_is_surj inv_inv_eq o_inv_o_cancel surj_imp_inj_inv)
 qed
 
-lemma PFVars_compSS:
+lemma imsupp_compSS:
   fixes f::"'a \<Rightarrow> 'a"
-  assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "PFVars (compSS f p) = f ` PFVars p"
-  unfolding PFVars_def compSS_rep_eq[OF assms]
+  assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|" "|supp p| <o |UNIV::'a set|"
+  shows "imsupp (compSS f p) = f ` imsupp p"
+  unfolding compSS_def
   using assms(2) by (rule imsupp_comp_image)
-
-lemma small_PFVars:
-  fixes p::"'a ssfun"
-  assumes "infinite (UNIV::'a set)"
-  shows "|PFVars p| <o |UNIV::'a set|"
-  unfolding PFVars_def imsupp_supp_bound[OF assms]
-  by (rule iffD1[OF mem_Collect_eq Rep_ssfun])
 
 lemma comp_middle: "f (h z) = h z \<Longrightarrow> g (h z) = h z \<Longrightarrow> (f \<circ> g \<circ> h) z = h z"
   by simp
@@ -333,7 +311,7 @@ ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
@@ -346,5 +324,5 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
 end
-
+*)
 end

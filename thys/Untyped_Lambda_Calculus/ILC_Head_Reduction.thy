@@ -61,7 +61,12 @@ proof-
   obtain xs e1 es2 where e: "e = iApp (iLam xs e1) es2" and e': "e' = itvsubst (imkSubst xs es2) e1" 
   using r unfolding hred_def by auto
   define B where B: "B = A \<union> \<Union> (FFVars ` (sset es2))"
-  have "small B" unfolding B by (metis A Tfvars.simps Un_absorb small_Un ssmall_Tfvars)
+  have "small B" unfolding B
+  apply(rule small_Un)
+    subgoal by fact
+    subgoal apply(rule small_UN)
+      subgoal by (simp add: countable_card_ivar countable_sset)
+      subgoal by (simp add: ILC2.small_def iterm.set_bd_UNIV) . .
   then obtain xs' e1' where 0: "iLam xs e1 = iLam xs' e1'" "dsset xs' \<inter> B = {}"
   using iLam_avoid by (meson small_def)
 

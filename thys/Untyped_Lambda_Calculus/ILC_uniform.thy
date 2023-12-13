@@ -106,6 +106,7 @@ lemma reneqv_iApp_iff:
  reneqv e1 e1' \<and> (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e')"
 apply(subst reneqv.simps) by auto
 
+(* goes by normal induction, once we have the inversion rules: *)
 lemma reneqv_trans:
 "reneqv e e' \<Longrightarrow> reneqv e' e'' \<Longrightarrow> reneqv e e''"
 proof(induct arbitrary: e'' rule: reneqv.induct)
@@ -137,7 +138,7 @@ shows "uniform (irrename f e)"
 using assms unfolding uniform_def3 
 by (intro irrename_reneqv) auto
 
-(* *)
+(* *)  (* requires strong induction: *)
 lemma reneqv_itvsubst:
 assumes r: "reneqv e e'" and rr: "\<And>xs x x'. super xs \<Longrightarrow> {x, x'} \<subseteq> dsset xs \<longrightarrow> reneqv (f x) (f' x')" 
 and s: "|SSupp f| <o |UNIV::ivar set|" "|SSupp f'| <o |UNIV::ivar set|"

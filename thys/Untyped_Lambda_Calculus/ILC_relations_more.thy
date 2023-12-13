@@ -5,9 +5,11 @@ begin
 
 
 (* TO DOCUMENT IN THE PAPER: 
-An example where normal induction would not work, but fresh induction with empty parameters 
-is helpful -- namely, the "bonus" freshness assumption allows us to assume xs fresh for es, 
-which is crucial in the beta case. *)
+An example where fresh induction with empty parameters allow one to use a weaker lemma -- 
+namely, the "bonus" freshness assumption allows us to assume xs fresh for es, 
+which is helpful in the beta case. *)
+
+
 lemma istep_affine:
 assumes "istep e e'" and "affine e"
 shows "affine e'"
@@ -21,6 +23,21 @@ proof-
     by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
     subgoal by auto . 
 qed
+
+(* alternative proof by normal induction, using stronger lemma: *)
+lemma 
+assumes "istep e e'" and "affine e"
+shows "affine e'"
+using assms apply(induct rule: istep.induct)
+  subgoal for xs e1 es2 apply(rule imkSubst_affine_strong) 
+    subgoal by (simp add: affine_iApp_iff) 
+    subgoal using affine_iApp_iff by auto
+    subgoal using affine_iApp_iff by auto .
+  subgoal unfolding affine_iApp_iff using istep_FFVars by fastforce
+    subgoal unfolding affine_iApp_iff using istep_FFVars 
+    by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
+    subgoal by auto . 
+
 
 definition "affineS es \<equiv> (\<forall>e\<in>sset es. affine e) \<and> (\<forall>i j. i \<noteq> j \<longrightarrow> ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth es j) = {})"
 

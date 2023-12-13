@@ -309,7 +309,8 @@ proof-
   show ?thesis unfolding 0
   using tvsubst_affine'[OF g r] by simp
 qed
-     
+
+   
 lemma imkSubst_affine:
 assumes r: "affine e" and 
 fv: "\<And>e1. e1 \<in> sset es \<Longrightarrow> affine e1 \<and> FFVars e \<inter> FFVars e1 = {}"
@@ -319,5 +320,16 @@ apply(rule tvsubst_affine)
 using assms apply auto 
   apply (simp add: imkSubst_def)
   by (metis Int_emptyD dtheN imkSubst_def iterm.set(1) singletonD snth_sset)
+
+lemma imkSubst_affine_strong:
+assumes r: "affine e" and 
+fv: "\<And>e1. e1 \<in> sset es \<Longrightarrow> affine e1 \<and> FFVars e \<inter> FFVars e1 \<subseteq> dsset xs"
+"\<And>i j. i \<noteq> j \<Longrightarrow> FFVars (snth es i) \<inter> FFVars (snth es j) = {}"
+shows "affine (itvsubst (imkSubst xs es) e)"
+apply(rule tvsubst_affine)
+using assms apply auto 
+  apply (simp add: imkSubst_def) 
+  by (smt (verit, best) IntI disjoint_insert(2) dtheN imkSubst_def in_mono iterm.set(1) 
+  mk_disjoint_insert singletonD snth_sset) 
 
 end

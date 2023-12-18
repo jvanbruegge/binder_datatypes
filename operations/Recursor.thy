@@ -480,7 +480,8 @@ definition XXr2 where
 (**********************************************************************)
 (*                               PROOFS                               *)
 (**********************************************************************)
-
+thm imsupp_id_on
+thm imsupp_def supp_def
 lemma pick_id_ons:
   "suitable11 pick1 \<Longrightarrow> validP p \<Longrightarrow> id_on ((\<Union>(FVars_T11 ` set8_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_T21 ` set10_T1_pre x) - set5_T1_pre x)) (pick1 x p)"
   "suitable12 pick2 \<Longrightarrow> validP p \<Longrightarrow> id_on (\<Union>(FVars_T12 ` set8_T1_pre x) - set6_T1_pre x) (pick2 x p)"
@@ -2422,14 +2423,11 @@ lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>x. Q x) \<Longrightarrow> P
   apply ((rule conjI)?, assumption)+
   done
 
-lemma conj_impI: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
+lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
   apply (erule conjE)+
   apply (erule impE, assumption)+
   apply ((rule conjI)?, assumption)+
   done
-
-lemma snd_comp_mk_prod: "snd \<circ> (\<lambda>x. (g x, f x)) = f"
-  by auto
 
 lemma valid_f:
   assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
@@ -2440,9 +2438,9 @@ proof -
   have x: "pred_fun validP validU1 (f_T1 pick1 pick2 pick3 pick4 t1) \<and> pred_fun validP validU2 (f_T2 pick1 pick2 pick3 pick4 t2)"
   apply (rule T1.TT_subshape_induct[of _ _ t1 t2])
   subgoal for y
+    apply (rule pred_funI)
     apply (rule raw_T1.exhaust[of y])
     apply hypsubst_thin
-    apply (rule pred_funI)
     apply (subst f_T1_simp[OF suitable_prems])
      apply (unfold U1ctor'_def)
      apply assumption
@@ -2453,25 +2451,14 @@ proof -
      apply (rule iffD2[OF T1_pre.pred_map])
             apply (rule supp_id_bound mk_pick_prems[OF suitable_prems] | assumption)+
      apply (unfold id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric])
+    subgoal premises prems
      apply (rule T1_pre.pred_mono_strong0)
-          apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True]])
-          apply (rule TrueI)
-         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
-        apply (drule T1.set_subshapes)
-        apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
-       apply (drule T1.set_subshape_images[rotated -1, OF imageI])
-           prefer 5 (* 2 * nvars + 1 *)
-           apply assumption
-            apply (rule supp_id_bound mk_pick_prems[OF suitable_prems] | assumption)+
-         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
-        apply (drule T1.set_subshapes)
-        apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
-       apply (drule T1.set_subshape_images[rotated -1, OF imageI])
-           prefer 5 (* 2 * nvars + 1 *)
-           apply assumption
-            apply (rule supp_id_bound bij_id mk_pick_prems[OF suitable_prems] | assumption)+
+          apply (rule iffD2[OF fun_cong[OF T1_pre.pred_True] TrueI])
+          apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If prems mk_pick_prems[OF suitable_prems] supp_id_bound bij_id
+          | erule T1.set_subshapes T1.set_subshape_images[rotated -1, OF imageI]
+          )+
+      done
+    apply assumption
     done
   subgoal for y
     apply (rule raw_T2.exhaust[of y])
@@ -2487,25 +2474,14 @@ proof -
      apply (rule iffD2[OF T2_pre.pred_map])
             apply (rule supp_id_bound bij_id mk_pick_prems[OF suitable_prems] | assumption)+
      apply (unfold id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric])
+     subgoal premises prems
      apply (rule T2_pre.pred_mono_strong0)
-          apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True]])
-          apply (rule TrueI)
-         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
-        apply (drule T1.set_subshapes)
-        apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
-       apply (drule T1.set_subshape_images[rotated -1, OF imageI])
-           prefer 5 (* 2 * nvars + 1 *)
-           apply assumption
-            apply (rule supp_id_bound bij_id mk_pick_prems[OF suitable_prems] | assumption)+
-         apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If)+
-        apply (drule T1.set_subshapes)
-        apply assumption
-       apply (rule ballI impI iffD2[OF comp_apply] pred_fun_If)+
-       apply (drule T1.set_subshape_images[rotated -1, OF imageI])
-           prefer 5 (* 2 * nvars + 1 *)
-           apply assumption
-            apply (rule supp_id_bound bij_id mk_pick_prems[OF suitable_prems] | assumption)+
+          apply (rule iffD2[OF fun_cong[OF T2_pre.pred_True] TrueI])
+          apply (rule ballI impI TrueI iffD2[OF comp_apply] pred_fun_If prems mk_pick_prems[OF suitable_prems] supp_id_bound bij_id
+          | erule T1.set_subshapes T1.set_subshape_images[rotated -1, OF imageI]
+          )+
+      done
+    apply assumption
     done
   done
 
@@ -2535,7 +2511,7 @@ proof -
       \<and> U1FVars_2' t1 (f_T1 pick1 pick2 pick3 pick4 t1 p) \<subseteq> FVars_T12 t1 \<union> PFVars_2 p \<union> avoiding_set2)
     \<and> (U2FVars_1' t2 (f_T2 pick1 pick2 pick3 pick4 t2 p) \<subseteq> FVars_T21 t2 \<union> PFVars_1 p \<union> avoiding_set1
       \<and> U2FVars_2' t2 (f_T2 pick1 pick2 pick3 pick4 t2 p) \<subseteq> FVars_T22 t2 \<union> PFVars_2 p \<union> avoiding_set2)"
-    apply (rule conj_impI[OF conj_spec[OF T1.TT_subshape_induct[of
+    apply (rule conj_mp[OF conj_spec[OF T1.TT_subshape_induct[of
             "\<lambda>t. \<forall>p. validP p \<longrightarrow> (U1FVars_1' t (f_T1 pick1 pick2 pick3 pick4 t p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1
         \<and> U1FVars_2' t (f_T1 pick1 pick2 pick3 pick4 t p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2)"
             "\<lambda>t. \<forall>p. validP p \<longrightarrow> (U2FVars_1' t (f_T2 pick1 pick2 pick3 pick4 t p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1
@@ -3931,7 +3907,7 @@ lemma f_swap_alpha:
   shows "(f_T1 pick1 pick2 pick3 pick4 (rename_T1 f1 f2 t1) p = PU1map' f1 f2 t1 (f_T1 pick1 pick2 pick3 pick4 t1) p \<and> f_T1 pick1 pick2 pick3 pick4 t1 p = f_T1 pick1' pick2' pick3' pick4' t1' p)
  \<and> (f_T2 pick1 pick2 pick3 pick4 (rename_T2 f1 f2 t2) p = PU2map' f1 f2 t2 (f_T2 pick1 pick2 pick3 pick4 t2) p \<and> f_T2 pick1 pick2 pick3 pick4 t2 p = f_T2 pick1' pick2' pick3' pick4' t2' p)
 "
-  apply (rule conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_impI[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF T1.TT_subshape_induct[of "
+  apply (rule conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_mp[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF conj_spec[OF T1.TT_subshape_induct[of "
     \<lambda>t. \<forall>p t' f1 f2 pick1 pick2 pick3 pick4 pick1' pick2' pick3' pick4'. validP p \<longrightarrow>
       suitable11 pick1 \<longrightarrow> suitable12 pick2 \<longrightarrow> suitable21 pick3 \<longrightarrow> suitable22 pick4 \<longrightarrow>
       suitable11 pick1' \<longrightarrow> suitable12 pick2' \<longrightarrow> suitable21 pick3' \<longrightarrow> suitable22 pick4' \<longrightarrow>

@@ -50,12 +50,14 @@ fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshap
   REPEAT_DETERM o etac ctxt conjE,
   EqSubst.eqsubst_asm_tac ctxt [0] set_maps,
   REPEAT_DETERM o FIRST' [
+    assume_tac ctxt,
     eresolve_tac ctxt prems,
     resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}
   ],
   K (unfold_thms_tac ctxt @{thms image_id}),
   eresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
   REPEAT_DETERM o FIRST' [
+    assume_tac ctxt,
     eresolve_tac ctxt prems,
     resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}
   ]

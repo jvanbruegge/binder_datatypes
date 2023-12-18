@@ -102,10 +102,10 @@ lemma U1map_Uctor:
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "validP p \<Longrightarrow> U1map f1 f2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst t)) (U1ctor y p) =
     U1ctor (map_T1_pre f1 f2 id id f1 f2
-      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
+      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
     y) (Pmap f1 f2 p)"
   apply (unfold U1map_def U2map_def U1ctor_def validP_def case_prod_beta Pmap_def fst_conv snd_conv)
   apply (erule conjE)+
@@ -118,22 +118,69 @@ lemma U1map_Uctor:
               apply (unfold compSS_def)
               apply (rule bij_id supp_id_bound assms supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
   apply (unfold id_o o_id)
-  apply (unfold comp_def snd_conv fst_conv)
+  apply (unfold comp_assoc comp_def[of snd] comp_def[of fst] fst_conv snd_conv)
+  apply (subst inv_o_simp1, rule assms)+
+  apply (unfold id_o o_id)
+  apply (rule arg_cong[of _ _ T1_ctor])
+  apply (rule T1_pre.map_cong)
+                      apply (rule supp_comp_bound assms infinite_UNIV supp_id_bound bij_id refl | assumption)+
+    (* REPEAT_DETERM *)
+     apply (rule trans[OF comp_apply])
+     apply (rule sym)
+     apply (rule trans[OF comp_apply])
+     apply (unfold fst_conv snd_conv)
+     apply (rule trans[OF if_P])
+      apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+     apply (unfold comp_def)[1]
+     apply (subst inv_simp1 inv_inv_eq, rule assms)+
+     apply (unfold prod.collapse)
+     apply (rule refl)
+    (* repeated *)
+    apply (rule trans[OF comp_apply])
+    apply (rule sym)
+    apply (rule trans[OF comp_apply])
+    apply (unfold fst_conv snd_conv)
+    apply (rule trans[OF if_P])
+     apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+    apply (unfold comp_def)[1]
+    apply (subst inv_simp1 inv_inv_eq, rule assms)+
+    apply (unfold prod.collapse)
+    apply (rule refl)
+    (* repeated *)
+   apply (rule trans[OF comp_apply])
+   apply (rule sym)
+   apply (rule trans[OF comp_apply])
+   apply (unfold fst_conv snd_conv)
+   apply (rule trans[OF if_P])
+    apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+   apply (unfold comp_def)[1]
+   apply (subst inv_simp1 inv_inv_eq, rule assms)+
+   apply (unfold prod.collapse)
+   apply (rule refl)
+    (* repeated *)
+  apply (rule trans[OF comp_apply])
+  apply (rule sym)
+  apply (rule trans[OF comp_apply])
+  apply (unfold fst_conv snd_conv)
+  apply (rule trans[OF if_P])
+   apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+  apply (unfold comp_def)[1]
   apply (subst inv_simp1 inv_inv_eq, rule assms)+
   apply (unfold prod.collapse)
   apply (rule refl)
+    (* END REPEAT_DETERM *)
   done
 lemma U2map_Uctor:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "validP p \<Longrightarrow> U2map f1 f2 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst t)) (U2ctor y p) =
     U2ctor (map_T2_pre f1 f2 id id f1 f2
-      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
+      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+      (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+      (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
     y) (Pmap f1 f2 p)"
-apply (unfold U1map_def U2map_def U2ctor_def validP_def case_prod_beta Pmap_def fst_conv snd_conv)
+  apply (unfold U1map_def U2map_def U2ctor_def validP_def case_prod_beta Pmap_def fst_conv snd_conv)
   apply (erule conjE)+
   apply (rule trans)
    apply (rule T1.rrename_cctors)
@@ -144,20 +191,67 @@ apply (unfold U1map_def U2map_def U2ctor_def validP_def case_prod_beta Pmap_def 
               apply (unfold compSS_def)
               apply (rule bij_id supp_id_bound assms supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
   apply (unfold id_o o_id)
-  apply (unfold comp_def snd_conv fst_conv)
+  apply (unfold comp_assoc comp_def[of snd] comp_def[of fst] fst_conv snd_conv)
+  apply (subst inv_o_simp1, rule assms)+
+  apply (unfold id_o o_id)
+  apply (rule arg_cong[of _ _ T2_ctor])
+  apply (rule T2_pre.map_cong)
+                      apply (rule supp_comp_bound assms infinite_UNIV supp_id_bound bij_id refl | assumption)+
+    (* REPEAT_DETERM *)
+     apply (rule trans[OF comp_apply])
+     apply (rule sym)
+     apply (rule trans[OF comp_apply])
+     apply (unfold fst_conv snd_conv)
+     apply (rule trans[OF if_P])
+      apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+     apply (unfold comp_def)[1]
+     apply (subst inv_simp1 inv_inv_eq, rule assms)+
+     apply (unfold prod.collapse)
+     apply (rule refl)
+    (* repeated *)
+    apply (rule trans[OF comp_apply])
+    apply (rule sym)
+    apply (rule trans[OF comp_apply])
+    apply (unfold fst_conv snd_conv)
+    apply (rule trans[OF if_P])
+     apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+    apply (unfold comp_def)[1]
+    apply (subst inv_simp1 inv_inv_eq, rule assms)+
+    apply (unfold prod.collapse)
+    apply (rule refl)
+    (* repeated *)
+   apply (rule trans[OF comp_apply])
+   apply (rule sym)
+   apply (rule trans[OF comp_apply])
+   apply (unfold fst_conv snd_conv)
+   apply (rule trans[OF if_P])
+    apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+   apply (unfold comp_def)[1]
+   apply (subst inv_simp1 inv_inv_eq, rule assms)+
+   apply (unfold prod.collapse)
+   apply (rule refl)
+    (* repeated *)
+  apply (rule trans[OF comp_apply])
+  apply (rule sym)
+  apply (rule trans[OF comp_apply])
+  apply (unfold fst_conv snd_conv)
+  apply (rule trans[OF if_P])
+   apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
+  apply (unfold comp_def)[1]
   apply (subst inv_simp1 inv_inv_eq, rule assms)+
   apply (unfold prod.collapse)
   apply (rule refl)
+    (* END REPEAT_DETERM *)
   done
 
 lemma U1FVars_subsets:
   "validP p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
   U1FVars_1 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> {}"
   "validP p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> {}"
    apply (unfold U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def validP_def case_prod_beta U1ctor_def Un_empty_right T1.FFVars_cctors PFVars_1_def PFVars_2_def)
   apply (erule conjE)+
@@ -181,7 +275,8 @@ lemma U1FVars_subsets:
         apply (rule empty_subsetI)
        apply (rule UN_mono[OF subset_refl])
        apply (rule prems)
-       apply (unfold prod.collapse)
+        apply (unfold prod.collapse)
+        apply (rule conjI prems)+
        apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY *)
@@ -198,6 +293,7 @@ lemma U1FVars_subsets:
       apply (rule UN_mono[OF subset_refl])
       apply (rule prems)
       apply (unfold prod.collapse)
+       apply (rule conjI prems)+
       apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY
@@ -214,6 +310,7 @@ lemma U1FVars_subsets:
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
      apply (unfold prod.collapse)
+      apply (rule conjI prems)+
      apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY *)
@@ -230,6 +327,7 @@ lemma U1FVars_subsets:
     apply (rule UN_mono[OF subset_refl])
     apply (rule prems)
     apply (unfold prod.collapse)
+    apply (rule conjI prems)+
     apply (((rule UnI1)?, assumption) | rule UnI2)+
     done
   apply (erule conjE)+
@@ -254,6 +352,7 @@ lemma U1FVars_subsets:
        apply (rule UN_mono[OF subset_refl])
        apply (rule prems)
        apply (unfold prod.collapse)
+        apply (rule conjI prems)+
        apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY *)
@@ -270,6 +369,7 @@ lemma U1FVars_subsets:
       apply (rule UN_mono[OF subset_refl])
       apply (rule prems)
       apply (unfold prod.collapse)
+       apply (rule conjI prems)+
       apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY
@@ -286,6 +386,7 @@ lemma U1FVars_subsets:
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
      apply (unfold prod.collapse)
+      apply (rule conjI prems)+
      apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY
@@ -302,18 +403,19 @@ lemma U1FVars_subsets:
     apply (rule UN_mono[OF subset_refl])
     apply (rule prems)
     apply (unfold prod.collapse)
+     apply (rule conjI prems)+
     apply (((rule UnI1)?, assumption) | rule UnI2)+
     done
   done
 
 lemma U2FVars_subsets:
   "validP p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
   U2FVars_1 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FFVars_T21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> {}"
   "validP p \<Longrightarrow> set6_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
   U2FVars_2 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FFVars_T22 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> {}"
    apply (unfold U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def validP_def case_prod_beta U2ctor_def Un_empty_right T1.FFVars_cctors PFVars_1_def PFVars_2_def)
   apply (erule conjE)+
@@ -338,6 +440,7 @@ lemma U2FVars_subsets:
        apply (rule UN_mono[OF subset_refl])
        apply (rule prems)
        apply (unfold prod.collapse)
+        apply (rule conjI prems)+
        apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY *)
@@ -354,6 +457,7 @@ lemma U2FVars_subsets:
       apply (rule UN_mono[OF subset_refl])
       apply (rule prems)
       apply (unfold prod.collapse)
+       apply (rule conjI prems)+
       apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY
@@ -370,6 +474,7 @@ lemma U2FVars_subsets:
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
      apply (unfold prod.collapse)
+      apply (rule conjI prems)+
      apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY *)
@@ -386,6 +491,7 @@ lemma U2FVars_subsets:
     apply (rule UN_mono[OF subset_refl])
     apply (rule prems)
     apply (unfold prod.collapse)
+     apply (rule conjI prems)+
     apply (((rule UnI1)?, assumption) | rule UnI2)+
     done
   apply (erule conjE)+
@@ -410,6 +516,7 @@ lemma U2FVars_subsets:
        apply (rule UN_mono[OF subset_refl])
        apply (rule prems)
        apply (unfold prod.collapse)
+        apply (rule conjI prems)+
        apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY *)
@@ -426,6 +533,7 @@ lemma U2FVars_subsets:
       apply (rule UN_mono[OF subset_refl])
       apply (rule prems)
       apply (unfold prod.collapse)
+       apply (rule conjI prems)+
       apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY
@@ -442,6 +550,7 @@ lemma U2FVars_subsets:
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
      apply (unfold prod.collapse)
+      apply (rule conjI prems)+
      apply (((rule UnI1)?, assumption) | rule UnI2)+
       (* copied from above *)
       (* TRY
@@ -458,6 +567,7 @@ lemma U2FVars_subsets:
     apply (rule UN_mono[OF subset_refl])
     apply (rule prems)
     apply (unfold prod.collapse)
+     apply (rule conjI prems)+
     apply (((rule UnI1)?, assumption) | rule UnI2)+
     done
   done
@@ -474,7 +584,7 @@ lemma valid_Pmap:
 ML \<open>
 val nvars:int = 2
 
-val parameters = {
+val parameters_struct = {
   P = @{typ "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P"},
   Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
   PFVarss = [
@@ -486,16 +596,20 @@ val parameters = {
     @{term "{} :: 'tyvar::{var_T1_pre,var_T2_pre} set"}
   ],
   validity = SOME {
-    pred = @{term validP},
+    pred = @{term "validP::('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'c) P => bool"},
     valid_Pmap = fn ctxt => resolve_tac ctxt @{thms valid_Pmap} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)
   },
   min_bound = false,
   axioms = {
-    Pmap_id0 = fn ctxt => resolve_tac ctxt @{thms Pmap_id0} 1,
+    Pmap_id0 = fn ctxt => EVERY1 [
+      resolve_tac ctxt [trans],
+      resolve_tac ctxt @{thms fun_cong[OF Pmap_id0]},
+      resolve_tac ctxt @{thms id_apply}
+    ],
     Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
     PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmap} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVars} 1),
+    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVars} 1 THEN assume_tac ctxt 1),
     small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms emp_bound} 1)
   }
 };
@@ -511,18 +625,33 @@ val T1_model = {
   ],
   Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1 \<Rightarrow> _"},
   Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
-  validitiy = NONE : {
+  validity = SOME {
+    pred = @{term "\<lambda>(_::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1). True"},
+    valid_Umap = fn ctxt => resolve_tac ctxt @{thms TrueI} 1,
+    valid_Uctor = fn ctxt => resolve_tac ctxt @{thms TrueI} 1
+  }, (* NONE : {
     pred: term,
     valid_Umap: Proof.context -> tactic,
     valid_Uctor: Proof.context -> tactic
-  } option,
+  } option, *)
   axioms = {
-    Umap_id0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Umap_id0 = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def}),
+      resolve_tac ctxt [trans],
+      resolve_tac ctxt @{thms T1.rrename_id0s[THEN fun_cong]},
+      resolve_tac ctxt @{thms id_apply}
+    ],
+    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Umap_cong_id = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN Local_Defs.unfold0_tac ctxt @{thms U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    UFVars_Umaps = replicate nvars (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-    Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U1map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U1FVars_subsets} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
+    Umap_Uctor = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms if_True}),
+      resolve_tac ctxt @{thms U1map_Uctor},
+      REPEAT_DETERM o assume_tac ctxt
+    ],
+    UFVars_subsets = replicate nvars (fn ctxt => EVERY1 [
+      resolve_tac ctxt @{thms U1FVars_subsets},
+      REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
+    ])
   }
 };
 
@@ -535,16 +664,20 @@ val T2_model = {
   ],
   Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U2 \<Rightarrow> _"},
   Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
-  validitiy = NONE : {
+  validity = NONE : {
     pred: term,
     valid_Umap: Proof.context -> tactic,
     valid_Uctor: Proof.context -> tactic
   } option,
   axioms = {
-    Umap_id0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Umap_id0 = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def}),
+      resolve_tac ctxt [trans],
+      resolve_tac ctxt @{thms T1.rrename_id0s[THEN fun_cong]},
+      resolve_tac ctxt @{thms id_apply}
+    ],
+    Umap_comp0 = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def} THEN resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Umap_cong_id = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    UFVars_Umaps = replicate nvars (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def U1FVars_1_def U1FVars_2_def U2FVars_1_def U2FVars_2_def} THEN resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subsets} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
   }
@@ -557,7 +690,7 @@ val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
 local_setup \<open>fn lthy =>
 let
   val qualify = I
-  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters [T1_model, T2_model] lthy
+  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters_struct [T1_model, T2_model] lthy
   val _ = @{print} ress
 in lthy end\<close>
 print_theorems

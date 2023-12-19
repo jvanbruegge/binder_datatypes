@@ -99,10 +99,10 @@ unfolding renB_def apply(subst restr_comp)
   by (auto simp add: bij_restr card_supp_restr term.rrename_comps)
 
 lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
-   (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
+   (\<forall>xs \<in> touchedSuper (FVarsB b). dsmap \<sigma> xs = xs) \<Longrightarrow> 
    renB \<sigma> b = b"
 unfolding renB_def FVarsB_def apply(rule term.rrename_cong_ids)
-by (auto simp add: bij_restr card_supp_restr intro: restr_cong_id) 
+by (auto simp: bij_restr card_supp_restr restr_def touchedSuper_UN intro: restr_cong_id)
 
 lemma renB_FVarsB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
@@ -144,12 +144,17 @@ unfolding FVarsB_def iVarB_def apply(cases "theSN x")
   by auto (metis (mono_tags, lifting) Int_emptyD dtheN insert_subset mem_Collect_eq mk_disjoint_insert 
    singletonI superOf_subOf super_dsset_RSuper theSN_unique touchedSuper_def)
 
-lemma FVarsB_iAppB: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> FVarsB (iAppB b1 bs2) \<subseteq> 
- FVarsB b1 \<union> \<Union> (FVarsB ` (sset bs2))"
-unfolding FVarsB_def iAppB_def by (fastforce simp: shd_sset)
+(* Unlike FVarsB_iVarB, we have that 
+FVarsB_iAppB and FVarsB_iLamB actually even hold in a "raw", stronger version, with touchedSuper removed and with 
+FVarsB_iLamB formulated as follows: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs" *)
+lemma FVarsB_iAppB: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> 
+ touchedSuper (FVarsB (iAppB b1 bs2)) \<subseteq> 
+ touchedSuper (FVarsB b1) \<union> \<Union> ((touchedSuper o FVarsB) ` (sset bs2))"
+unfolding FVarsB_def iAppB_def touchedSuper_def by (fastforce simp: shd_sset)
 
-lemma FVarsB_iLamB: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs"
-unfolding FVarsB_def iLamB_def 
+lemma FVarsB_iLamB: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow>
+  touchedSuper (FVarsB (iLamB xs b)) \<subseteq> touchedSuper (FVarsB b) - {xs}"
+unfolding FVarsB_def iLamB_def touchedSuper_def
 by auto (metis Int_emptyD subOf_superOf super_disj super_superOf)
 
 interpretation T' : ILC_SuperRec where 

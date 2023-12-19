@@ -144,7 +144,7 @@ renB_comp[simp,intro]: "\<And>b \<sigma> \<tau>. bij \<sigma> \<Longrightarrow> 
     b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
 and 
 renB_cong[simp]: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
-   (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
+   (\<forall>xs \<in> touchedSuper (FVarsB b). dsmap \<sigma> xs = xs) \<Longrightarrow> 
    renB \<sigma> b = b"
 (* and 
 NB: This is redundant: 
@@ -168,15 +168,17 @@ renB_iLamB[simp]: "\<And>\<sigma> xs b. bij \<sigma> \<Longrightarrow> |supp \<s
 and 
 FVarsB_iVarB: "\<And>xs x. super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuper (FVarsB (iVarB x)) \<subseteq> touchedSuper {x}"
 and 
-FVarsB_iAppB: "\<And>b1 bs2. b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> FVarsB (iAppB b1 bs2) \<subseteq> 
- FVarsB b1 \<union> \<Union> (FVarsB ` (sset bs2))"
+FVarsB_iAppB: "\<And>b1 bs2. b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> 
+ touchedSuper (FVarsB (iAppB b1 bs2)) \<subseteq> 
+ touchedSuper (FVarsB b1) \<union> \<Union> ((touchedSuper o FVarsB) ` (sset bs2))"
 and 
-FVarsB_iLamB: "\<And>xs b. b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs"
+FVarsB_iLamB: "\<And>xs b. b \<in> B \<Longrightarrow> super xs \<Longrightarrow> 
+  touchedSuper (FVarsB (iLamB xs b)) \<subseteq> touchedSuper (FVarsB b) - {xs}"
 begin 
 
 lemma not_in_FVarsB_iLamB: 
-"b \<in> B \<Longrightarrow> super xs \<Longrightarrow> dsset xs \<inter> FVarsB (iLamB xs b) = {}"
-using FVarsB_iLamB by auto
+"b \<in> B \<Longrightarrow> super xs \<Longrightarrow> touchedSuper (dsset xs \<inter> FVarsB (iLamB xs b)) = {}"
+using FVarsB_iLamB unfolding touchedSuper_def by auto
 
 thm iLam_inject_super_strong
 
@@ -188,9 +190,16 @@ f: "bij f" "|supp f| <o |UNIV::ivar set|" "bsmall (supp f)" "presSuper f"
 "id_on (- (dsset xs \<union> dsset xs')) f" "dsmap f xs = xs'" and r: "renB f b = b'"
 shows "iLamB xs b = iLamB xs' b'"
 proof-
-  have id: "id_on (FVarsB (iLamB xs b)) f"
-  using s f FVarsB_iLamB bb' xs' unfolding id_on_def  
-  by blast
+  have "\<forall>ys\<in>touchedSuper (FVarsB b - dsset xs). dsmap f ys = ys"
+  using s f FVarsB_iLamB bb' xs' unfolding touchedSuper_def 
+  by auto (smt (verit, ccfv_SIG) Compl_iff Int_iff dstream.set_map id_on_def 
+     image_eqI presSuper_def super_disj) 
+  
+  hence id: "\<forall>ys\<in>touchedSuper (FVarsB (iLamB xs b)). dsmap f ys = ys"
+  using bb' s FVarsB_iLamB super_dsset_singl 
+  by auto (smt (z3) Diff_eq_empty_iff Diff_iff FVarsB_iLamB all_not_in_conv disjoint_iff 
+  mem_Collect_eq touchedSuper_def) 
+
   have "iLamB xs b = renB f (iLamB xs b)"
   apply(rule sym) apply(rule renB_cong) using s f bb' FVarsB_iLamB unfolding id_on_def 
   using id unfolding id_on_def by auto
@@ -361,7 +370,7 @@ next
     by auto (metis R2 R_B stream_all2_iff_snth theN)
 
     have x: "x \<in> touchedSuper (FVarsB b1) \<or> (\<exists>b2\<in>sset bs2. x \<in> touchedSuper (FVarsB b2))"
-    using xx b12 FVarsB_iAppB unfolding b touchedSuper_def by fastforce
+    using xx b12 FVarsB_iAppB unfolding b by fastforce
 
     have fb1: "touchedSuper (FVarsB b1) \<subseteq> touchedSuper (FFVars e1)" using iApp12[OF R1] .
     have fb2: "touchedSuper (\<Union> (FVarsB ` (sset bs2))) \<subseteq> 
@@ -598,8 +607,8 @@ next
     using 0(1,3) R_B by auto
 
     have ys: "dsset ys \<inter> dsset xs' = {}" "ys \<in> touchedSuper (FVarsB b')" using b' yys unfolding 0 
-    using FVarsB_iLamB[OF b' xs'] xs' unfolding touchedSuper_def apply auto 
-    by (metis insert_absorb insert_disjoint(1) not_in_FVarsB_iLamB super_disj)
+    using FVarsB_iLamB[OF b' xs'] xs' (*unfolding touchedSuper_def *) 
+    by auto (metis (no_types, lifting) DiffD2 insertCI mem_Collect_eq subsetD touchedSuper_def touchedSuper_iVar)
 
     have "bsmall (dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t')"
     apply(intro bsmall_Un) using bs bs' xs xs' super_bsmall_dsset by auto   

@@ -148,7 +148,7 @@ apply standard
     
 
 (* Lemma 18 from Mazza: *)
-(* Here rule induction for good is needed. There is no way to to induction on "uniform" 
+(* Here rule induction for good is needed. There is no way to do induction on "uniform" 
 directly (and a genralization for reneqv is not clear); 
 also structural induction on t would not work, as the proof would fail 
 in the lambda case because we would not know xs is a supervariable 

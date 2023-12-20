@@ -573,6 +573,8 @@ subgoal for ts apply(rule exI[of _ "snth ts 0"]) apply safe
   subgoal unfolding stream_all2_iff_snth  
   by simp (metis snth.simps(1)) . .
 
+find_theorems ustepD reneqv
+
 
 
 

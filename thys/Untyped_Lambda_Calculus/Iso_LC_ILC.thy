@@ -551,7 +551,7 @@ apply(induct arbitrary: i rule: ustepD.induct)
   subgoal for es d ess ess' i unfolding snth_smap2 apply(rule ustepD'.iAppR)   
   unfolding uniformS_def4 stream_all2_iff_snth uniform_def3 sset_range image_def snth_sflat 
     subgoal by auto
-    subgoal (* here we need the sfhuffling lemma "other" consequence: *)
+    subgoal (* here we need the shuffling lemma's "other" consequence, ustepD_sflat_snth: *)
     using ustepD_sflat_snth by auto .
   subgoal unfolding snth_smap apply(rule ustepD'.Xi) by auto .
 

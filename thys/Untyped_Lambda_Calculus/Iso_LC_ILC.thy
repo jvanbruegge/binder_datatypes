@@ -295,49 +295,6 @@ shows "stream_all2 red (smap tr' ts) (smap tr' ts')"
 using assms unfolding stream_all2_iff_snth 
 by (simp add: tr'_hred_red uniformS_sset_uniform)
 
-
-(* Theorem 19(4) (generalized for our (necessarily stream-based) version of 
-uniform step (see previous discussion, when introducing ustepD, for why) *)
-lemma ustepD_stepD: "ustepD d ts ss \<Longrightarrow> stream_all2 (stepD d) (smap tr' ts) (smap tr' ss)"
-proof(induct rule: ustepD.induct)
-  case (Beta es es')
-  then show ?case using red_stepD2 tr'_hred_red2 by blast
-next
-  case (iAppL ess d es es')
-  then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
-    apply(subst tr'_iApp_uniform)
-      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-      subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
-      apply(subst tr'_iApp_uniform)
-        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-        subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
-        subgoal apply(rule stepD.AppL) by auto . .
-next
-  case (iAppR es d ess ess')
-  then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
-    apply(subst tr'_iApp_uniform)
-      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-      subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
-      by simp (metis snth2.simps uniformS_sflat ustepD_uniformS)
-      apply(subst tr'_iApp_uniform)
-        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-        subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
-        by simp (metis snth2.simps uniformS_sflat ustepD_uniformS)
-        subgoal apply(rule stepD.AppR) unfolding snth_sflat  
-        by (metis nat2_nat1 snth.simps(1) snth2.simps) . .
-next
-  case (Xi xs d es es')
-  then show ?case unfolding stream_all2_iff_snth apply clarsimp subgoal for i
-    apply(subst tr'_iLam_uniform)
-      subgoal by simp
-      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-      subgoal apply(subst tr'_iLam_uniform)
-        subgoal by simp
-        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-      subgoal apply(rule stepD.Xi) by auto . . .
-qed
-
-
 (* *)
 (* Theorem 19(3): *)
 lemma stepD_ustepD: "stepD d e ee \<Longrightarrow> 
@@ -424,6 +381,48 @@ next
   show ?case apply(intro exI[of _ "smap (iLam (superOf x)) tts"] conjI)
     subgoal apply simp unfolding 0 apply(rule ustepD.Xi) using tts(1) by auto
     subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLam) .
+qed
+
+
+(* Theorem 19(4) (generalized for our (necessarily stream-based) version of 
+uniform step (see previous discussion, when introducing ustepD, for why) *)
+lemma ustepD_stepD: "ustepD d ts ss \<Longrightarrow> stream_all2 (stepD d) (smap tr' ts) (smap tr' ss)"
+proof(induct rule: ustepD.induct)
+  case (Beta es es')
+  then show ?case using red_stepD2 tr'_hred_red2 by blast
+next
+  case (iAppL ess d es es')
+  then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
+    apply(subst tr'_iApp_uniform)
+      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+      subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
+      apply(subst tr'_iApp_uniform)
+        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+        subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range by auto
+        subgoal apply(rule stepD.AppL) by auto . .
+next
+  case (iAppR es d ess ess')
+  then show ?case unfolding stream_all2_iff_snth  apply clarsimp subgoal for i
+    apply(subst tr'_iApp_uniform)
+      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+      subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
+      by simp (metis snth2.simps uniformS_sflat ustepD_uniformS)
+      apply(subst tr'_iApp_uniform)
+        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+        subgoal unfolding uniformS_sflat unfolding uniformS_def4 sset_range image_def 
+        by simp (metis snth2.simps uniformS_sflat ustepD_uniformS)
+        subgoal apply(rule stepD.AppR) unfolding snth_sflat  
+        by (metis nat2_nat1 snth.simps(1) snth2.simps) . .
+next
+  case (Xi xs d es es')
+  then show ?case unfolding stream_all2_iff_snth apply clarsimp subgoal for i
+    apply(subst tr'_iLam_uniform)
+      subgoal by simp
+      subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+      subgoal apply(subst tr'_iLam_uniform)
+        subgoal by simp
+        subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
+      subgoal apply(rule stepD.Xi) by auto . . .
 qed
 
 

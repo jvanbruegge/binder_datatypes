@@ -41,10 +41,10 @@ consts U2ctor :: "(Var, Var, 'a::{var_T1_pre,var_T2_pre}, 'b, Var, Var,
 
 axiomatization where
   (* parameter axioms *)
-  Pmap_id0: "Pmap id id = id"
+  Pmap_id0: "Pmap id id d = d"
   and Pmap_comp0: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp g1| <o |UNIV::Var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp g2| <o |UNIV::Var set| \<Longrightarrow>
-  Pmap (g1 \<circ> f1) (g2 \<circ> f2) = Pmap g1 g2 \<circ> Pmap f1 f2"
+  Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
   and Pmap_cong_id: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   (\<And>a. a \<in> PFVars_1 d \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 d \<Longrightarrow> f2 a = a) \<Longrightarrow>
   Pmap f1 f2 d = d"
@@ -57,17 +57,13 @@ axiomatization where
   and small_avoiding_set1: "|avoiding_set1::Var set| <o |UNIV::Var set|"
   and small_avoiding_set2: "|avoiding_set2::Var set| <o |UNIV::Var set|"
   (* model 1 axioms *)
-  and U1map_id0: "U1map id id (t1::(Var, Var, 'a::{var_T1_pre,var_T2_pre}, 'b) T1) = id"
+  and U1map_id0: "U1map id id (t1::(Var, Var, 'a::{var_T1_pre,var_T2_pre}, 'b) T1) u1 = u1"
   and U1map_comp0: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp g1| <o |UNIV::Var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp g2| <o |UNIV::Var set| \<Longrightarrow>
-  U1map (g1 \<circ> f1) (g2 \<circ> f2) t1 = U1map g1 g2 t1 \<circ> U1map f1 f2 t1"
+  U1map (g1 \<circ> f1) (g2 \<circ> f2) t1 u1 = (U1map g1 g2 t1 \<circ> U1map f1 f2 t1) u1"
   and U1map_cong_id: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   (\<And>a. a \<in> U1FVars_1 t1 u1 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> U1FVars_2 t1 u1 \<Longrightarrow> f2 a = a) \<Longrightarrow>
   U1map f1 f2 t1 u1 = u1"
-  and U1FVars_Umap_1: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
-  U1FVars_1 (rrename_T1 f1 f2 t1) (U1map f1 f2 t1 u1) = f1 ` U1FVars_1 t1 u1"
-  and U1FVars_Umap_2: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
-  U1FVars_2 (rrename_T1 f1 f2 t1) (U1map f1 f2 t1 u1) = f2 ` U1FVars_2 t1 u1"
   and U1map_Uctor: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   U1map f1 f2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p)
 = U1ctor (map_T1_pre f1 f2 id id f1 f2
@@ -85,17 +81,13 @@ axiomatization where
   (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
   (* model 2 axioms *)
-  and U2map_id0: "U2map id id (t2::(Var, Var, 'a::{var_T1_pre,var_T2_pre}, 'b) T2) = id"
+  and U2map_id0: "U2map id id (t2::(Var, Var, 'a::{var_T1_pre,var_T2_pre}, 'b) T2) u2 = u2"
   and U2map_comp0: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp g1| <o |UNIV::Var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp g2| <o |UNIV::Var set| \<Longrightarrow>
-  U2map (g1 \<circ> f1) (g2 \<circ> f2) t2 = U2map g1 g2 t2 \<circ> U2map f1 f2 t2"
+  U2map (g1 \<circ> f1) (g2 \<circ> f2) t2 u2 = (U2map g1 g2 t2 \<circ> U2map f1 f2 t2) u2"
   and U2map_cong_id: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   (\<And>a. a \<in> U2FVars_1 t2 u2 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> U2FVars_2 t2 u2 \<Longrightarrow> f2 a = a) \<Longrightarrow>
   U2map f1 f2 t2 u2 = u2"
-  and U2FVars_Umap_1: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
-  U2FVars_1 (rrename_T2 f1 f2 t2) (U2map f1 f2 t2 u2) = f1 ` U2FVars_1 t2 u2"
-  and U2FVars_Umap_2: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
-  U2FVars_2 (rrename_T2 f1 f2 t2) (U2map f1 f2 t2 u2) = f2 ` U2FVars_2 t2 u2"
   and U2map_Uctor: "bij f1 \<Longrightarrow> |supp f1| <o |UNIV::Var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp f2| <o |UNIV::Var set| \<Longrightarrow>
   U2map f1 f2 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y2)) (U2ctor y2 p)
 = U2ctor (map_T2_pre f1 f2 id id f1 f2
@@ -126,6 +118,7 @@ val parameters = {
   PFVarss = [@{term PFVars_1}, @{term PFVars_2}],
   avoiding_sets = [@{term avoiding_set1}, @{term avoiding_set2}],
   min_bound = false,
+  validity = NONE : { pred: term, valid_Pmap: Proof.context -> tactic } option,
   axioms = {
     Pmap_id0 = fn ctxt => resolve_tac ctxt @{thms Pmap_id0} 1,
     Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
@@ -144,14 +137,12 @@ val T1_model = {
   UFVarss = [@{term U1FVars_1}, @{term U1FVars_2}],
   Umap = @{term U1map},
   Uctor = @{term U1ctor},
+  validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
   axioms = {
     Umap_id0 = fn ctxt => resolve_tac ctxt @{thms U1map_id0} 1,
     Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms U1map_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms U1map_cong_id} 1 THEN REPEAT_DETERM (
       assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1
-    ),
-    UFVars_Umaps = replicate nvars (fn ctxt =>
-      resolve_tac ctxt @{thms U1FVars_Umap_1 U1FVars_Umap_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)
     ),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U1map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U1FVars_subset_1 U1FVars_subset_2} 1 THEN
@@ -165,14 +156,12 @@ val T2_model = {
   UFVarss = [@{term U2FVars_1}, @{term U2FVars_2}],
   Umap = @{term U2map},
   Uctor = @{term U2ctor},
+  validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
   axioms = {
     Umap_id0 = fn ctxt => resolve_tac ctxt @{thms U2map_id0} 1,
     Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms U2map_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms U2map_cong_id} 1 THEN REPEAT_DETERM (
       assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1
-    ),
-    UFVars_Umaps = replicate nvars (fn ctxt =>
-      resolve_tac ctxt @{thms U2FVars_Umap_1 U2FVars_Umap_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)
     ),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subset_1 U2FVars_subset_2} 1 THEN

@@ -309,6 +309,9 @@ lemma pred_fun_If: "pred_fun P Q f \<Longrightarrow> pred_fun P Q (\<lambda>x. i
 lemma snd_comp_mk_prod: "snd \<circ> (\<lambda>x. (g x, f x)) = f"
   by auto
 
+lemma supp_id_bound_cmin: "Card_order r \<Longrightarrow> |supp (id::'a \<Rightarrow> _)| <o r \<Longrightarrow> |supp (id::'a \<Rightarrow> _)| <o cmin |UNIV| r"
+  using cmin_greater supp_id_bound by blast
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

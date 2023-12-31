@@ -625,15 +625,11 @@ val T1_model = {
   ],
   Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1 \<Rightarrow> _"},
   Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, 'c) P \<Rightarrow> _"},
-  validity = SOME {
-    pred = @{term "\<lambda>(_::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'c) U1). True"},
-    valid_Umap = fn ctxt => resolve_tac ctxt @{thms TrueI} 1,
-    valid_Uctor = fn ctxt => resolve_tac ctxt @{thms TrueI} 1
-  }, (* NONE : {
+  validity = NONE : {
     pred: term,
     valid_Umap: Proof.context -> tactic,
     valid_Uctor: Proof.context -> tactic
-  } option, *)
+  } option,
   axioms = {
     Umap_id0 = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms U1map_def U2map_def}),

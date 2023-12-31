@@ -33,7 +33,12 @@ val spec = {
 }
 \<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 declare [[mrbnf_internals]]
+declare [[ML_print_depth=10000]]
 local_setup \<open>fn lthy =>
 let
   val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy

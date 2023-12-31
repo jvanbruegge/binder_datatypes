@@ -1140,8 +1140,12 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
 
     val card_thms = @{thms ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
     val model_axioms = {
-      Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
-      Umap_comp0 = fn ctxt => rtac ctxt (#rename_comp0 quotient RS sym) 1 THEN ALLGOALS (REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt card_thms)),
+      Umap_id0 = fn ctxt => EVERY1 [
+        rtac ctxt trans,
+        rtac ctxt (fun_cong OF [#rename_id0 quotient]),
+        rtac ctxt @{thm id_apply}
+      ],
+      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym RS fun_cong), REPEAT_DETERM o assume_tac ctxt],
       Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
       Umap_Uctor = Umap_Uctor_tac,
       UFVars_subsets = map UFVars_subset_tac (#FVars quotient)
@@ -1164,6 +1168,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         HOLogic.mk_tuple (map2 (fn p => fn def => Term.list_comb (fst (#compSS def), fs @ [p])) ps some_defs)
       )),
       avoiding_sets = map mk_bot vars,
+      validity = NONE,
       axioms = parameter_axioms,
       min_bound = true
     };
@@ -1173,6 +1178,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       UFVarss = map (fn FVars => Term.abs ("t", #T quotient) FVars) (#FVars quotient),
       Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", #T quotient) (Term.list_comb (#rename quotient, fs))),
       Uctor = fst CCTOR,
+      validity = NONE,
       axioms = model_axioms
     } : (Proof.context -> tactic) MRBNF_Recursor.model;
 

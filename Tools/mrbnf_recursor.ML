@@ -14,6 +14,10 @@ sig
     PFVarss: term list,
     Pmap: term,
     avoiding_sets: term list,
+    validity: {
+      pred: term,
+      valid_Pmap: 'a
+    } option,
     axioms: 'a parameter_axioms,
     min_bound: bool
   };
@@ -32,6 +36,11 @@ sig
     UFVarss: term list,
     Umap: term,
     Uctor: term,
+    validity: {
+      pred: term,
+      valid_Umap: 'a,
+      valid_Uctor: 'a
+    } option,
     axioms: 'a model_axioms
   };
 
@@ -39,6 +48,7 @@ sig
     rec_fun: term,
     rec_Uctor: thm,
     rec_swap: thm,
+    rec_valid: thm option,
     rec_UFVarss: thm list
   };
 
@@ -79,6 +89,10 @@ type 'a parameter = {
   PFVarss: term list,
   Pmap: term,
   avoiding_sets: term list,
+  validity: {
+    pred: term,
+    valid_Pmap: 'a
+  } option,
   axioms: 'a parameter_axioms,
   min_bound: bool
 };
@@ -97,6 +111,11 @@ type 'a model = {
   UFVarss: term list,
   Umap: term,
   Uctor: term,
+  validity: {
+    pred: term,
+    valid_Umap: 'a,
+    valid_Uctor: 'a
+  } option,
   axioms: 'a model_axioms
 };
 
@@ -104,6 +123,7 @@ type recursor_result = {
   rec_fun: term,
   rec_Uctor: thm,
   rec_swap: thm,
+  rec_valid: thm option,
   rec_UFVarss: thm list
 };
 
@@ -127,7 +147,13 @@ fun mk_f_prems min_bound fs =
 
 fun add_f_prems min_bound hs = fold_rev (curry Logic.mk_implies) (mk_f_prems min_bound hs);
 
-fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars lthy =
+fun addPred pred_opt d = case pred_opt of
+  SOME t => (fn p => Logic.mk_implies (
+    HOLogic.mk_Trueprop (t $ d),
+    p
+  )) | NONE => I
+
+fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars pred_opt lthy =
   let
     val n = length vars;
 
@@ -138,20 +164,23 @@ fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars lthy =
       ||>> apfst hd o mk_Frees "d" [T]
       ||>> mk_Frees "t" (the_default [] (Option.map (single o #T) quotient_opt))
       ||>> mk_Frees "a" vars;
+
+    val addPred = addPred pred_opt d;
   in {
-    map_id0 = fold_rev Logic.all t (HOLogic.mk_Trueprop (
-      HOLogic.eq_const (T --> T) $
-      Term.list_comb (mapx, map HOLogic.id_const vars @ t) $
-      HOLogic.id_const T
-    )),
-    map_comp0 = fold_rev Logic.all (fs @ gs @ t) (add_f_prems min_bound (fs @ gs) (HOLogic.mk_Trueprop (
-      HOLogic.eq_const (T --> T) $
-        (Term.list_comb (mapx, map2 (curry HOLogic.mk_comp) fs gs @ t)) $
-        (HOLogic.mk_comp (
+    map_id0 = fold_rev Logic.all ([d] @ t) (addPred (HOLogic.mk_Trueprop (
+      HOLogic.mk_eq (
+        Term.list_comb (mapx, map HOLogic.id_const vars @ t) $ d,
+        d
+      )
+    ))),
+    map_comp0 = fold_rev Logic.all ([d] @ fs @ gs @ t) (addPred (add_f_prems min_bound (fs @ gs) (HOLogic.mk_Trueprop (
+      HOLogic.mk_eq (
+        Term.list_comb (mapx, map2 (curry HOLogic.mk_comp) fs gs @ t) $ d,
+        HOLogic.mk_comp (
           Term.list_comb (mapx, fs @ t),
           Term.list_comb (mapx, gs @ t)
-        ))
-    ))),
+        ) $ d
+    ))))),
     map_cong_id =
       let
         val prems = @{map 3} (fn FVars => fn a => fn f => Logic.all a (Logic.implies $
@@ -159,22 +188,46 @@ fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars lthy =
           mk_Trueprop_eq (f $ a, a)
         )) FVars xs fs;
       in
-        fold_rev Logic.all (d::t @ fs) (add_f_prems min_bound fs (fold_rev (curry Logic.mk_implies) prems (
+        fold_rev Logic.all (d::t @ fs) (addPred (add_f_prems min_bound fs (fold_rev (curry Logic.mk_implies) prems (
           mk_Trueprop_eq (Term.list_comb (mapx, fs @ t) $ d, d)
-        )))
+        ))))
       end,
     FVars_map = map (fn i =>
       let
         val FVars = nth FVars i;
       in
-        fold_rev Logic.all (d::t @ fs) (add_f_prems min_bound fs (mk_Trueprop_eq (
+        fold_rev Logic.all (d::t @ fs) (addPred (add_f_prems min_bound fs (mk_Trueprop_eq (
           Term.list_comb (FVars, map (fn t => Term.list_comb (#rename (the quotient_opt), fs @ [t])) t @ [Term.list_comb (mapx, fs @ t) $ d]),
           mk_image (nth fs i) $ Term.list_comb (FVars, t @ [d])
-        )))
+        ))))
       end
     ) (0 upto n - 1)
   }
 end;
+
+fun pred_True T = Term.abs ("_", T) @{term True};
+fun mk_pred_fun P Q =
+  let
+    val PT = fastype_of P;
+    val QT = fastype_of Q;
+    val fT = domain_type PT --> domain_type QT;
+  in Const (@{const_name pred_fun}, PT --> QT --> fT --> @{typ bool}) $ P $ Q end;
+
+fun mk_UPred params valids rec_vars deads plives As bounds frees mrbnf y =
+  if not (exists Option.isSome valids) then NONE else
+    let
+      val validP = case #validity params of
+        NONE => pred_True (#P params)
+        | SOME v => #pred v;
+      val pre_pred = Term.list_comb (
+        MRBNF_Def.mk_pred_of_mrbnf deads (plives @ As) bounds frees mrbnf,
+        map pred_True plives @ map2 (fn pred => fn A =>
+          let val pred = case pred of SOME t => mk_pred_fun validP t
+            | NONE => pred_True (snd (HOLogic.dest_prodT A));
+          in HOLogic.mk_comp (pred, snd_const A) end
+        ) (flat (map2 replicate rec_vars (map (Option.map #pred) valids))) As
+      ) $ y;
+    in SOME pre_pred end
 
 fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic) model list) vars (pfrees, pbounds, plives) lthy =
   let
@@ -187,40 +240,57 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
       Ctr_Sugar_Tactics.unfold_thms_tac context defs THEN tac context
     );
 
-    val (PFVarss, Pmap, avoiding_sets, lthy) = let
+    fun def_option name n t_opt lthy = case t_opt of
+      SOME t => apfst SOME (def_hidden name n t lthy)
+      | NONE => (NONE, lthy)
+
+    val (PFVarss, Pmap, avoiding_sets, validP_opt, lthy) = let
       val (_, lthy) = Local_Theory.begin_nested lthy;
-      val (((PFVarss, Pmap), avoiding_sets), lthy) = lthy
+      val ((((PFVarss, Pmap), avoiding_sets), validP_opt), lthy) = lthy
         |> defs_hidden "PFVars" 0 (#PFVarss params)
         ||>> def_hidden "Pmap" 0 (#Pmap params)
-        ||>> defs_hidden "avoiding_set" 0 (#avoiding_sets params);
+        ||>> defs_hidden "avoiding_set" 0 (#avoiding_sets params)
+        ||>> def_option "validP" 0 (Option.map #pred (#validity params));
       val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
       val phi = Proof_Context.export_morphism old_lthy lthy;
       val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
         (fastype_of (Morphism.term phi (fst Pmap)), fastype_of (#Pmap params))
         Vartab.empty;
       fun morph (t, thm) = (Envir.subst_term (tyenv, Vartab.empty) (Morphism.term phi t), Morphism.thm phi thm);
-    in (map morph PFVarss, morph Pmap, map morph avoiding_sets, lthy) end;
+    in (map morph PFVarss, morph Pmap, map morph avoiding_sets, Option.map morph validP_opt, lthy) end;
 
-    val defs = map snd PFVarss @ map snd avoiding_sets @ [snd Pmap];
-    val pgoals = mk_termlike_goals vars (#min_bound params) NONE (#P params) (fst Pmap) (map fst PFVarss) lthy;
+    val defs = map snd PFVarss @ map snd avoiding_sets @ [snd Pmap] @ the_default [] (Option.map (single o snd) validP_opt);
+    val pgoals = mk_termlike_goals vars (#min_bound params) NONE (#P params) (fst Pmap) (map fst PFVarss) (Option.map fst validP_opt) lthy;
 
     val ((fs, p), _) = lthy
       |> mk_Frees "f" (map2 (curry op -->) vars vars)
       ||>> apfst hd o mk_Frees "p" [#P params];
 
+    val addPred = addPred (Option.map fst validP_opt) p;
     fun card T = if #min_bound params then
       foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars)
     else mk_card_of (HOLogic.mk_UNIV T);
 
     val small_PFVars_goals = map (fn FVars =>
       let val a = HOLogic.dest_setT (snd (dest_funT (fastype_of FVars)));
-      in Logic.all p (HOLogic.mk_Trueprop (
+      in Logic.all p (addPred (HOLogic.mk_Trueprop (
         mk_ordLess (mk_card_of (FVars $ p)) (card a)
-      )) end
+      ))) end
     ) (map fst PFVarss);
     val small_avoiding_set_goals = map (fn (i, (A, _)) => HOLogic.mk_Trueprop (mk_ordLess
       (mk_card_of A) (card (nth vars i))
     )) (0 upto length vars - 1 ~~ avoiding_sets);
+
+    val valid_Pmap_opt = Option.map (fn v =>
+      let
+        val pred = fst (the validP_opt);
+        val goal = fold_rev Logic.all (fs @ [p]) (Logic.mk_implies (
+          HOLogic.mk_Trueprop (pred $ p), add_f_prems (#min_bound params) fs (
+            HOLogic.mk_Trueprop (pred $ (Term.list_comb (fst Pmap, fs) $ p))
+          )
+        ));
+      in prove lthy defs goal (#valid_Pmap v) end
+    ) (#validity params);
 
     val param_thms = {
       Pmap_id0 = prove lthy defs (#map_id0 pgoals) (#Pmap_id0 ptacs),
@@ -230,11 +300,16 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
       small_PFVarss = map2 (prove lthy defs) small_PFVars_goals (#small_PFVarss ptacs),
       small_avoiding_sets = map2 (prove lthy defs) small_avoiding_set_goals (#small_avoiding_sets ptacs)
     } : thm parameter_axioms;
-    val params' = {
+
+    val params = {
       P = #P params,
       PFVarss = map fst PFVarss,
       Pmap = fst Pmap,
       avoiding_sets = map fst avoiding_sets,
+      validity = Option.map (fn def => {
+        pred = fst def,
+        valid_Pmap = the valid_Pmap_opt
+      }) validP_opt,
       axioms = param_thms,
       min_bound = #min_bound params
     } : thm parameter;
@@ -243,10 +318,11 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
       let
           fun qual s = s ^ "_" ^ Binding.name_of (#binding model);
           val (_, lthy) = Local_Theory.begin_nested lthy
-          val (((UFVarss, Umap), Uctor), lthy) = lthy
+          val ((((UFVarss, Umap), Uctor), validU_opt), lthy) = lthy
             |> defs_hidden (qual "UFVars") 0 (#UFVarss model)
             ||>> def_hidden (qual "Umap") 0 (#Umap model)
             ||>> def_hidden (qual "Uctor") 0 (#Uctor model)
+            ||>> def_option (qual "validU") 0 (Option.map #pred (#validity model))
 
           val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
           val phi = Proof_Context.export_morphism old_lthy lthy;
@@ -257,15 +333,22 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
           val UFVarss = map morph UFVarss;
           val Umap = morph Umap;
           val Uctor = morph Uctor;
+          val validU_opt = Option.map morph validU_opt;
         in (({
           binding = #binding model,
           U = #U model,
           UFVarss = map fst UFVarss,
           Umap = fst Umap,
           Uctor = fst Uctor,
+          validity = Option.map (fn v => {
+            pred = fst (the validU_opt),
+            valid_Umap = #valid_Umap v,
+            valid_Uctor = #valid_Uctor v
+          }) (#validity model),
           axioms = #axioms model
-        } : (Proof.context -> tactic) model, map snd UFVarss @ [snd Umap, snd Uctor]),
-        lthy)end
+        } : (Proof.context -> tactic) model,
+          map snd UFVarss @ [snd Umap, snd Uctor] @ the_default [] (Option.map (single o snd) validU_opt)),
+        lthy) end
       ) models lthy);
     val defs = defs @ flat model_defss;
 
@@ -284,12 +367,14 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
         val frees = vars @ pfrees;
         val bounds = pbounds @ vars;
 
-        val ((y, pus), _) = lthy
+        val ((((y, pus), u), t), _) = lthy
           |> apfst hd o mk_Frees "y" [MRBNF_Def.mk_T_of_mrbnf deads (plives @ As) bounds frees mrbnf]
-          ||>> mk_Frees "pu" (map (snd o HOLogic.dest_prodT) As);
+          ||>> mk_Frees "pu" (map (snd o HOLogic.dest_prodT) As)
+          ||>> apfst hd o mk_Frees "u" [#U model]
+          ||>> apfst hd o mk_Frees "t" [#T quotient_fp];
 
         val tacs = #axioms model;
-        val goals = mk_termlike_goals vars (#min_bound params) (SOME quotient_fp) (#U model) (#Umap model) (#UFVarss model) lthy;
+        val goals = mk_termlike_goals vars (#min_bound params) (SOME quotient_fp) (#U model) (#Umap model) (#UFVarss model) (Option.map #pred (#validity model)) lthy;
 
         val mapF_ap =
           let
@@ -301,26 +386,34 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
               (MRBNF_Def.var_types_of_mrbnf mrbnf);
           in Term.list_comb (mapF, gs) end;
 
+        val addUPred =
+          let val pred = case mk_UPred params (map #validity models) (#rec_vars fp_res) deads plives As bounds frees mrbnf y of
+            NONE => I | SOME t => fn t' => Logic.mk_implies (HOLogic.mk_Trueprop t, t')
+          in addPred o pred end
+
         val Umap_Uctor_goal =
           let
             val ctor_map = #ctor quotient_fp $ (mapF_ap $ y);
+            val valid_If = case #validity params of
+              NONE => I | SOME v => fn t => BNF_FP_Util.mk_If (#pred v $ Bound 0) t (BNF_GFP_Util.mk_undefined (fastype_of t));
             val pair_maps = @{map 3} (fn pu => fn model => fn quot => HOLogic.mk_case_prod (Term.abs ("t", #T quot) (
               Term.abs ("pu", snd (dest_Free pu)) (HOLogic.mk_prod (
                 Term.list_comb (#rename quot, fs @ [Bound 1]),
-                Term.abs ("P", #P params) (Term.list_comb (#Umap model, fs @ [Bound 2]) $ (
-                  Bound 1 $ (Term.list_comb (fst Pmap, map mk_inv fs) $ Bound 0)
-                )
-              ))
+                Term.abs ("p", #P params) (valid_If (
+                  Term.list_comb (#Umap model, fs @ [Bound 2]) $ (
+                    Bound 1 $ (Term.list_comb (fst Pmap, map mk_inv fs) $ Bound 0)
+                  )
+              )))
             )))) pus (flat (map2 replicate (#rec_vars fp_res) models)) (flat (map2 replicate (#rec_vars fp_res) (#quotient_fps fp_res)));
             val mapF = Term.list_comb (
               MRBNF_Def.mk_map_of_mrbnf deads (plives @ As) (plives @ As) bounds frees mrbnf,
               MRBNF_Def.interlace (map HOLogic.id_const plives @ pair_maps) (map HOLogic.id_const pbounds @ fs) (fs @ map HOLogic.id_const pfrees) (MRBNF_Def.var_types_of_mrbnf mrbnf)
             );
           in
-            fold_rev Logic.all (fs @ [y, p]) (add_f_prems (#min_bound params) fs (mk_Trueprop_eq (
+            fold_rev Logic.all (fs @ [y, p]) (addUPred (add_f_prems (#min_bound params) fs (mk_Trueprop_eq (
               Term.list_comb (#Umap model, fs @ [ctor_map]) $ (#Uctor model $ y $ p),
               #Uctor model $ (mapF $ y) $ Term.list_comb (fst Pmap, fs @ [p])
-            )))
+            ))))
           end;
 
         val UFVars_subset_goals =
@@ -342,7 +435,7 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
                   drop (length plives) (map_filter (fn (MRBNF_Def.Live_Var, x) => SOME (x $ y) | _ => NONE) mrbnf_sets)
                 ));
                 val recSets_Uns = map (foldr1 mk_Un) recSetss;
-              in fold_rev Logic.all [y, p] (fold_rev (curry Logic.mk_implies) (
+              in fold_rev Logic.all [y, p] (addUPred (fold_rev (curry Logic.mk_implies) (
                   mk_Trueprop_eq (
                     mk_Int (topBind i $ y, HOLogic.mk_binop @{const_name sup} (nth (map fst PFVarss) i $ p, A)),
                     Const (@{const_name bot}, HOLogic.mk_setT (nth vars i))
@@ -351,18 +444,18 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
                       val (t_T, pu_T) = HOLogic.dest_prodT prod_PU;
                       val pu = Free ("pu", pu_T);
                       val t = Free ("t", t_T);
-                    in fold_rev Logic.all [t, pu, p] (Logic.implies $
+                    in fold_rev Logic.all [t, pu, p] (addPred (Logic.implies $
                       HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_tuple [t, pu], recSets_Un)) $
                       HOLogic.mk_Trueprop (mk_leq
                         (Term.list_comb (nth (#UFVarss model) i, [t, pu $ p]))
                         (mk_Un (mk_Un (nth (#FVars quotient_fp) i $ t, nth (map fst PFVarss) i $ p), A))
                       )
-                    ) end
+                    )) end
                   ) recSets_Uns prod_PUs models (#quotient_fps fp_res))
                 (HOLogic.mk_Trueprop (mk_leq
                   (Term.list_comb (nth (#UFVarss model) i, [#ctor quotient_fp $ (mapF_ap $ y), #Uctor model $ y $ p]))
                   (mk_Un (mk_Un (nth (#FVars quotient_fp) i $ (#ctor quotient_fp $ (mapF_ap $ y)), nth (map fst PFVarss) i $ p), A))
-                )))
+                ))))
               end;
           in
             map mk_goal (0 upto length vars - 1)
@@ -375,17 +468,36 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
           Umap_Uctor = prove lthy defs Umap_Uctor_goal (#Umap_Uctor tacs),
           UFVars_subsets = map2 (prove lthy defs) UFVars_subset_goals (#UFVars_subsets tacs)
         } : thm model_axioms;
+
+        val validity = Option.map (fn v =>
+          let
+            val valid_Umap_goal = fold_rev Logic.all (fs @ [t, u]) (Logic.mk_implies (
+              HOLogic.mk_Trueprop (#pred v $ u),
+              add_f_prems (#min_bound params) fs (HOLogic.mk_Trueprop (
+                #pred v $ (Term.list_comb (#Umap model, fs) $ t $ u)
+              ))
+            ));
+            val valid_Uctor_goal = fold_rev Logic.all [y, p] (addUPred (
+              HOLogic.mk_Trueprop (#pred v $ (#Uctor model $ y $ p))
+            ));
+          in {
+            pred = #pred v,
+            valid_Umap = prove lthy defs valid_Umap_goal (#valid_Umap v),
+            valid_Uctor = prove lthy defs valid_Uctor_goal (#valid_Uctor v)
+          } end
+        ) (#validity model);
         val model' = {
           binding = #binding model,
           U = #U model,
           UFVarss = #UFVarss model,
           Umap = #Umap model,
           Uctor = #Uctor model,
+          validity = validity,
           axioms = model_thms
         } : thm model;
       in (model', lthy) end
     ) models (#pre_mrbnfs fp_res) (#quotient_fps fp_res) lthy;
-  in ((params', models', defs), lthy) end;
+  in ((params, models', defs), lthy) end;
 
 val mk_minus = HOLogic.mk_binop @{const_name minus}
 
@@ -412,7 +524,7 @@ fun mk_names _ [] = []
   | mk_names s [_] = [s]
   | mk_names s xs = map (fn i => s ^ string_of_int i) (1 upto length xs)
 
-val card_thms = @{thms ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
+val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
 
 fun define_recursor_consts qualify fp_res params (models : thm model list) vars (pfrees, pbounds, plives) lthy =
   let
@@ -442,12 +554,17 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
               FVars $ (#ctor raw $ Bound 1), PFVars $ Bound 0),
               avoiding_set
             );
-          in Term.absfree (dest_Free pick) (HOLogic.mk_all ("x", pre_T, HOLogic.mk_all ("p", #P params, foldr1 HOLogic.mk_conj [
-            mk_bij pick_t, mk_supp_bound pick_t, mk_int_empty (
-              mk_imsupp pick_t, mk_minus (Un_t, bset $ Bound 1)
-            ),
-            mk_int_empty (mk_image pick_t $ (bset $ Bound 1), Un_t)
-          ]))) end
+            val valid_imp = case #validity params of
+              NONE => I
+              | SOME v => fn t => HOLogic.mk_imp (#pred v $ Bound 0, t);
+          in Term.absfree (dest_Free pick) (HOLogic.mk_all ("x", pre_T, HOLogic.mk_all ("p", #P params, valid_imp (
+            foldr1 HOLogic.mk_conj [
+              mk_bij pick_t, mk_supp_bound pick_t, mk_int_empty (
+                mk_imsupp pick_t, mk_minus (Un_t, bset $ Bound 1)
+              ),
+              mk_int_empty (mk_image pick_t $ (bset $ Bound 1), Un_t)
+            ]
+          )))) end
         ) vars (#FVars raw) (#PFVarss params) (#avoiding_sets params) bsets;
       in mk_defs_t false (#binding model) qualify name 0 rhss lthy end
     ) models (#raw_fps fp_res) (#pre_mrbnfs fp_res) (mk_names "suitable" models) lthy;
@@ -459,6 +576,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
       ||>> mk_Freess "pick" (map (map (fst o dest_funT o fastype_of o fst)) suitabless)
       ||>> mk_Frees "x" (map (fst o dest_funT o fastype_of o #ctor) (#raw_fps fp_res));
 
+    val addPred = addPred (Option.map #pred (#validity params)) p;
     val (model_consts, lthy) = @{fold_map 4} (fn model => fn raw => fn quot => fn mrbnf => fn lthy =>
       let
         val def = mk_def_t false (#binding model) qualify;
@@ -524,6 +642,9 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
     ) (#pre_mrbnfs fp_res) (#raw_fps fp_res) model_consts;
 
     fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs)
+    val valid_If = case #validity params of NONE => I
+      | SOME v => fn t => Term.abs ("p", #P params) (BNF_FP_Util.mk_If (#pred v $ Bound 0)
+        (t $ Bound 0) (BNF_GFP_Util.mk_undefined (fastype_of (t $ Bound 0))));
 
     val (rec_fs, lthy) =
       let
@@ -540,7 +661,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
         val rec_ts = map2 (fn f => fn raw =>
           let val t = Free ("t", #T raw)
           in Term.absfree (dest_Free t) (
-            HOLogic.mk_prod (t, Term.list_comb (f, picks) $ t)
+            HOLogic.mk_prod (t, valid_If (Term.list_comb (f, picks) $ t))
           ) end
         ) fs (#raw_fps fp_res);
 
@@ -566,9 +687,12 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
           Term.list_comb (f, picks) $ (#ctor raw $ x) $ p
         ) fs xs (#raw_fps fp_res);
 
+        val validP = case #validity params of
+          NONE => []
+          | SOME v => [#pred v $ p];
         val eqs = @{map 4} (fn model => fn model_const => fn lhs => fn map_t => mk_Trueprop_eq (
           lhs,
-          BNF_FP_Util.mk_If (foldr1 HOLogic.mk_conj (map2 (curry (op$) o fst) suitables picks))
+          BNF_FP_Util.mk_If (foldr1 HOLogic.mk_conj (map2 (curry (op$) o fst) suitables picks @ validP))
             (fst (#Uctor' model_const) $ map_t $ p)
             (Const (@{const_name undefined}, #U model))
         )) models model_consts lhss map_ts;
@@ -594,9 +718,11 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
 
         val pick_prems = maps ((fn suitable_def =>
           let
-            val conj = spec OF [spec OF [iffD1 OF [
+            val mp' = case #validity params of
+              NONE => I | SOME _ => fn t => mp OF [t];
+            val conj = mp' (spec OF [spec OF [iffD1 OF [
               @{thm fun_cong[OF meta_eq_to_obj_eq]} OF [suitable_def]
-            ]]];
+            ]]]);
           in [conj RS conjunct1, conj RS conjunct2 RS conjunct1] end
         ) o snd) suitables;
 
@@ -619,9 +745,9 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
             val map_t' = Term.list_comb (map_t1, args) $ x;
 
            val prems = map2 (fn s => fn p => HOLogic.mk_Trueprop (fst s $ p)) suitables picks;
-           val goal = fold_rev (curry Logic.mk_implies) prems (
+           val goal = fold_rev (curry Logic.mk_implies) prems (addPred (
              mk_Trueprop_eq (lhs, fst (#Uctor' model_const) $ map_t' $ p)
-          );
+           ));
           in Goal.prove_sorry lthy (map (fst o dest_Free) (picks @ [x, p])) [] goal (fn {context=ctxt, ...} => EVERY1 [
             rtac ctxt trans,
             resolve_tac ctxt (the (#simps info)),
@@ -632,7 +758,8 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
             REPEAT_DETERM o FIRST' [
               resolve_tac ctxt @{thms bij_id supp_id_bound},
               eresolve_tac ctxt pick_prems,
-              resolve_tac ctxt card_thms
+              resolve_tac ctxt card_thms,
+              assume_tac ctxt
             ],
             K (unfold_thms_tac ctxt @{thms id_o o_id}),
             K (unfold_thms_tac ctxt @{thms comp_def}),
@@ -658,6 +785,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
     val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val n = length suitables + nvars + 2;
     val Pmap = Term.list_comb (#Pmap params, map mk_inv fs) $ p;
+
     val (XXls, lthy) = mk_defs_t false b qualify "XXl" n
       (@{map 4} (fn mrbnf => fn (map_t1, _) => fn picks => fn x =>
         let
@@ -677,7 +805,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
                 else t;
               val PU_t = Term.list_comb (fst (#PUmap' model_const), fs)
                 $ inner_t $ (Term.list_comb (f_t, flat pickss) $ inner_t)
-            in Term.absfree (dest_Free t) (HOLogic.mk_prod (rename_t, PU_t)) end
+            in Term.absfree (dest_Free t) (HOLogic.mk_prod (rename_t, valid_If PU_t)) end
           ) (0 upto nrecs - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs) (replicate_rec model_consts);
         in fold_rev Term.absfree (map dest_Free (flat pickss @ fs @ [p, x])) (
           Term.list_comb (map_t1, interlace recs pick_ts' fs (MRBNF_Def.var_types_of_mrbnf mrbnf)) $ x
@@ -700,7 +828,7 @@ fun define_recursor_consts qualify fp_res params (models : thm model list) vars 
                 if member (op=) rel i then pick_t else f
               ) (#binding_relation fp_res) pick_ts fs) $ t;
             in Term.absfree (dest_Free t) (HOLogic.mk_prod (
-              rename_t, Term.list_comb (f_t, flat pickss) $ rename_t
+              rename_t, valid_If (Term.list_comb (f_t, flat pickss) $ rename_t)
             )) end
           ) (0 upto nrecs - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs);
         in fold_rev Term.absfree (map dest_Free (flat pickss @ fs @ [p, x])) (
@@ -780,6 +908,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ||>> apfst hd o mk_Frees "p" [#P params]
       ||>> apfst hd o mk_Frees "p'" [#P params];
 
+    val bounds = pbounds @ vars;
+    val frees = vars @ pfrees;
+    val mrbnfs = #pre_mrbnfs fp_res;
+
     val mk_pre_setss = (@{map 3} (fn mrbnf => fn raw => fn t =>
       let
         val sets = MRBNF_Def.sets_of_mrbnf mrbnf;
@@ -812,33 +944,39 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ) lsets idxs (replicate_rec FVarss)) bsets (#binding_relation fp_res) (transpose (map #FVars (#raw_fps fp_res)))
     ) pre_setss xs rec_idxss;
 
+    val addPred = addPred (Option.map #pred (#validity params)) p;
+
     val names = map (fst o dest_Free);
     val pick_id_onss = @{map 5} (fn x => fn raw => @{map 4} (fn rel => fn FVars_UNs => fn suitable => fn pick =>
       let
         val A = foldl1 mk_Un (map (nth FVars_UNs) rel);
         val goal = Logic.mk_implies (
           HOLogic.mk_Trueprop (fst suitable $ pick),
-          HOLogic.mk_Trueprop (mk_id_on A (pick $ x $ p))
+          addPred (HOLogic.mk_Trueprop (mk_id_on A (pick $ x $ p)))
         );
       in Goal.prove_sorry lthy (names [pick, x, p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
         K (unfold_thms_tac ctxt (snd suitable :: @{thms Int_Un_distrib Un_empty Un_Diff Diff_idemp id_on_Un} @ #FVars_ctors raw)),
-        REPEAT_DETERM o eresolve_tac ctxt @{thms allE conjE},
-        REPEAT_DETERM o (rtac ctxt conjI ORELSE' etac ctxt @{thm imsupp_id_on})      ]) end
+        REPEAT_DETERM o etac ctxt allE,
+        TRY o (etac ctxt impE THEN' assume_tac ctxt),
+        REPEAT_DETERM o etac ctxt conjE,
+        REPEAT_DETERM o (rtac ctxt conjI ORELSE' etac ctxt @{thm imsupp_id_on})
+      ]) end
     ) (#binding_relation fp_res)) xs (#raw_fps fp_res) FVars_UNss suitabless pickss;
 
-    val pick_id_onsss' = @{map 6} (fn x => fn raw => @{map 5} (fn rel => fn FVars_UNs => fn suitable => fn pick => fn pick_id_on =>
+    val pick_id_onsss' = @{map 5} (fn x => @{map 5} (fn rel => fn FVars_UNs => fn suitable => fn pick => fn pick_id_on =>
       map (fn A =>
         let val goal = Logic.mk_implies (
           HOLogic.mk_Trueprop (fst suitable $ pick),
-          HOLogic.mk_Trueprop (mk_id_on A (pick $ x $ p))
+          addPred (HOLogic.mk_Trueprop (mk_id_on A (pick $ x $ p)))
         ) in Goal.prove_sorry lthy (names [pick, x, p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
           dtac ctxt pick_id_on,
           K (unfold_thms_tac ctxt @{thms id_on_Un}),
+          TRY o assume_tac ctxt,
           REPEAT_DETERM o etac ctxt conjE,
-          assume_tac ctxt
+          TRY o assume_tac ctxt
         ]) end
       ) (map (nth FVars_UNs) rel)
-    ) (#binding_relation fp_res)) xs (#raw_fps fp_res) FVars_UNss suitabless pickss pick_id_onss;
+    ) (#binding_relation fp_res)) xs FVars_UNss suitabless pickss pick_id_onss;
 
     val f_prems = mk_f_prems (#min_bound params) fs;
     val g_prems = mk_f_prems (#min_bound params) gs;
@@ -869,11 +1007,12 @@ fun create_binding_recursor qualify fp_res params models lthy =
         val A = foldl1 mk_Un (map (nth FVars_UNs) rel);
         val goal = Logic.mk_implies (
           HOLogic.mk_Trueprop (fst suitable $ pick),
-          HOLogic.mk_Trueprop (mk_id_on (mk_image f $ A) (pick $ map_t $ p))
+          addPred (HOLogic.mk_Trueprop (mk_id_on (mk_image f $ A) (pick $ map_t $ p)))
         );
       in Goal.prove_sorry lthy (names (fs @ [pick, x, p])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ id_on], rotated]},
         etac ctxt pick_id_on,
+        TRY o assume_tac ctxt,
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] (
             @{thms image_comp[unfolded comp_def] image_set_diff[OF bij_is_inj, symmetric] image_UN[symmetric] image_Un[symmetric]}
@@ -891,18 +1030,20 @@ fun create_binding_recursor qualify fp_res params models lthy =
         let
           val goal = Logic.mk_implies (
             HOLogic.mk_Trueprop (fst suitable $ pick),
-            HOLogic.mk_Trueprop (mk_id_on (mk_image f $ nth FVars_UNs i) (pick $ map_t $ p))
+            addPred (HOLogic.mk_Trueprop (mk_id_on (mk_image f $ nth FVars_UNs i) (pick $ map_t $ p)))
           );
         in Goal.prove_sorry lthy (names (fs @ [pick, x, p])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
           dtac ctxt (pick_id_on_image OF prems),
+          TRY o assume_tac ctxt,
           K (unfold_thms_tac ctxt @{thms image_Un id_on_Un}),
           REPEAT_DETERM o etac ctxt conjE,
-          assume_tac ctxt
+          TRY o assume_tac ctxt
         ]) end
       ) rel
     ) (#binding_relation fp_res) fs) xs map_rename_ts FVars_UNss suitabless pickss pick_id_on_imagess;
 
     val prod_PU_Ts = map2 (fn raw => fn model => HOLogic.mk_prodT (#T raw, #P params --> #U model)) (#raw_fps fp_res) models;
+    val quot_PU_Ts = map2 (fn quot => fn model => HOLogic.mk_prodT (#T quot, #P params --> #U model)) (#quotient_fps fp_res) models;
     val map_id_fsts = map2 (fn deads =>
       mk_map_comb_of_mrbnf deads (replicate_rec (map fst_const prod_PU_Ts)) ids ids
     ) deadss (#pre_mrbnfs fp_res);
@@ -911,19 +1052,33 @@ fun create_binding_recursor qualify fp_res params models lthy =
         fst_const (HOLogic.mk_prodT (#T quot, #P params --> #U model))
       ) (#quotient_fps fp_res) models)) ids ids
     ) deadss (#pre_mrbnfs fp_res);
+    val valid_If = case #validity params of NONE => I
+      | SOME v => fn t => Term.abs ("p", #P params) (BNF_FP_Util.mk_If (#pred v $ Bound 0) (Term.incr_boundvars 1 t $ Bound 0) (BNF_GFP_Util.mk_undefined (fastype_of (t $ Bound 0))))
 
-    val Umap'_Uctor's = @{map 9} (fn y => fn mrbnf => fn Umap' => fn Uctor' => fn raw => fn quot => fn map_id_fst => fn deads => fn model =>
+    val validP_prems = case #validity params of
+      NONE => []
+      | SOME v => [HOLogic.mk_Trueprop (#pred v $ p)];
+    val validP'_prems = case #validity params of
+      NONE => []
+      | SOME v => [HOLogic.mk_Trueprop (#pred v $ p')];
+    fun mk_UPred' As = @{map 3} (fn deads => mk_UPred params (map #validity models) (#rec_vars fp_res) deads plives (replicate_rec As) bounds frees) deadss mrbnfs;
+    val valid_y_premss = map (fn NONE => validP_prems | SOME t => validP_prems @ [HOLogic.mk_Trueprop t]) (mk_UPred' prod_PU_Ts ys);
+    val valid_v_premss = map (fn NONE => validP_prems | SOME t => validP_prems @ [HOLogic.mk_Trueprop t]) (mk_UPred' quot_PU_Ts vs);
+    val valid_yy'_premss = map2 (fn y_prems => fn NONE => y_prems | SOME t => y_prems @ [HOLogic.mk_Trueprop t]) valid_y_premss (mk_UPred' prod_PU_Ts ys');
+    val valid_vv'_premss = map2 (fn v_prems => fn NONE => v_prems | SOME t => v_prems @ [HOLogic.mk_Trueprop t]) valid_v_premss (mk_UPred' quot_PU_Ts vs');
+
+    val Umap'_Uctor's = @{map 10} (fn y => fn mrbnf => fn Umap' => fn Uctor' => fn raw => fn quot => fn map_id_fst => fn deads => fn model => fn valid_prems =>
       let
         val live_ts = @{map 3} (fn raw => fn PUmap' => fn PU_T => HOLogic.mk_case_prod (Term.abs ("t", #T raw) (Term.abs ("pu", snd (HOLogic.dest_prodT PU_T)) (HOLogic.mk_prod (
           Term.list_comb (#rename raw, fs) $ Bound 1,
-          Term.list_comb (fst PUmap', fs) $ Bound 1 $ Bound 0
+          valid_If (Term.list_comb (fst PUmap', fs) $ Bound 1 $ Bound 0)
         ))))) (#raw_fps fp_res) PUmap's prod_PU_Ts;
         val map_t = mk_map_comb_of_mrbnf deads (replicate_rec live_ts) fs fs mrbnf;
         val goal = mk_Trueprop_eq (
           Term.list_comb (fst Umap', fs) $ (#ctor raw $ (map_id_fst $ y)) $ (fst Uctor' $ y $ p),
           fst Uctor' $ (map_t $ y) $ (Term.list_comb (#Pmap params, fs) $ p)
         );
-      in Goal.prove_sorry lthy (names (fs @ [y, p])) f_prems goal (fn {context=ctxt, prems} => EVERY [
+      in Goal.prove_sorry lthy (names (fs @ [y, p])) (valid_prems @ f_prems) goal (fn {context=ctxt, prems} => EVERY [
         unfold_thms_tac ctxt (map snd (PUmap's @ Umap's @ [Uctor'])),
         EVERY1 [
           K (unfold_thms_tac ctxt [#abs_ctor (#inner quot)]),
@@ -933,7 +1088,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
           EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf RS sym],
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
           rtac ctxt trans,
-          rtac ctxt (#Umap_Uctor (#axioms model) OF prems),
+          rtac ctxt (#Umap_Uctor (#axioms model)),
+          TRY o EVERY' [
+            resolve_tac ctxt prems,
+            rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+            K (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_map_prod})
+          ],
+          REPEAT_DETERM o resolve_tac ctxt prems,
           rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of lthy (#Uctor model))] @{thm arg_cong2[OF _ refl]}),
           rtac ctxt trans,
           rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
@@ -958,7 +1120,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
           ])
         ]
       ]) end
-    ) ys (#pre_mrbnfs fp_res) Umap's Uctor's (#raw_fps fp_res) (#quotient_fps fp_res) map_id_fsts deadss models;
+    ) ys (#pre_mrbnfs fp_res) Umap's Uctor's (#raw_fps fp_res) (#quotient_fps fp_res) map_id_fsts deadss models valid_y_premss;
 
     val FVars_def2ss = map2 (fn quot => map2 (fn FVars_def => fn thm =>
       Local_Defs.unfold0 lthy [
@@ -972,10 +1134,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
         @{map 5} (fn raw => fn model => fn lsets => fn UFVars' => fn FVars =>
           let
             val (t, pu) = apply2 Free (("t", #T raw), ("pu", #P params --> #U model));
-          in fold_rev Logic.all [t, pu, p] (Logic.mk_implies (
+          in fold_rev Logic.all [t, pu, p] (addPred (Logic.mk_implies (
             HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_prod (t, pu), foldl1 mk_Un (map (fn s => s $ y) lsets))),
             HOLogic.mk_Trueprop (mk_leq (UFVars' $ t $ (pu $ p)) (mk_Un (mk_Un (FVars $ t, PFVars $ p), avoiding_set)))
-          )) end
+          ))) end
         ) fps models (fst (fold_map chop (#rec_vars fp_res) lsets))
       ) (#PFVarss params) (#avoiding_sets params) (transpose UFVarsss) (transpose (map #FVars fps))
     );
@@ -985,7 +1147,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
     val quot_subset_premsss = mk_subset_premsss (#quotient_fps fp_res) (map #UFVarss models) vs quot_PU_setss;
     val quot_subset_premsss' = mk_subset_premsss (#quotient_fps fp_res) (map #UFVarss models) vs' quot_PU_setss;
 
-    val UFVars'_subsetss = @{map 10} (fn y => fn map_t => fn quot => fn mrbnf => fn raw => fn (_, bsets, _) => fn model => fn Uctor' =>
+    val UFVars'_subsetss = @{map 11} (fn y => fn map_t => fn quot => fn mrbnf => fn raw => fn (_, bsets, _) => fn model => fn Uctor' => fn valid_prems =>
       @{map 7} (fn FVars => fn bset => fn PFVars => fn avoiding_set => fn UFVars's_transp => fn UFVars' => fn subset_prems =>
         let
           val int_empty_prem = HOLogic.mk_Trueprop (mk_int_empty (bset $ y, mk_Un (PFVars $ p, avoiding_set)));
@@ -994,7 +1156,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             (fst UFVars' $ ctor_t $ (fst Uctor' $ y $ p))
             (mk_Un (mk_Un (FVars $ ctor_t, PFVars $ p), avoiding_set))
           );
-          val goal = fold_rev (curry Logic.mk_implies) (int_empty_prem :: subset_prems) concl;
+          val goal = fold_rev (curry Logic.mk_implies) (valid_prems @ [int_empty_prem] @ subset_prems) concl;
         in Goal.prove_sorry lthy (names [y, p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (unfold_thms_tac ctxt (map snd (UFVars's_transp @ [Uctor']) @ FVars_def2s @ [#abs_ctor (#inner quot)])),
           REPEAT_DETERM o EVERY' [
@@ -1007,6 +1169,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
             REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound}
           ],
           resolve_tac ctxt (#UFVars_subsets (#axioms model)),
+          TRY o assume_tac ctxt,
+          TRY o EVERY' [
+            rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+            REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
+            K (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_map_prod}),
+            assume_tac ctxt
+          ],
           EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
           REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
           K (unfold_thms_tac ctxt @{thms image_id}),
@@ -1025,13 +1194,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
           ]
         ]) end
       ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params) (transpose UFVars'ss)
-    ) ys map_id_fsts (#quotient_fps fp_res) (#pre_mrbnfs fp_res) (#raw_fps fp_res) PU_setss models Uctor's UFVars'ss subset_premsss;
+    ) ys map_id_fsts (#quotient_fps fp_res) (#pre_mrbnfs fp_res) (#raw_fps fp_res) PU_setss models Uctor's valid_y_premss UFVars'ss subset_premsss;
 
     val Pmap_imsupp_empty =
       let
         val imsupp_prems = map2 (fn f => fn PFVars => HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, PFVars $ p))) fs (#PFVarss params);
         val goal = mk_Trueprop_eq (Term.list_comb (#Pmap params, fs) $ p, p);
-      in Goal.prove_sorry lthy (names (fs @ [p])) (f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (fs @ [p])) (validP_prems @ f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt (#Pmap_cong_id (#axioms params)),
         REPEAT_DETERM o (resolve_tac ctxt prems ORELSE' etac ctxt @{thm id_onD[OF imsupp_id_on, rotated]})
       ]) end;
@@ -1044,14 +1213,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
     fun mk_int_empty_prems v = map2 (fn f => fn bset => HOLogic.mk_Trueprop (
       mk_int_empty (mk_image f $ (bset $ v), bset $ v)
     ));
-    val Uctor_renames = @{map 8} (fn v => fn model => fn quot => fn subset_premss => fn map_t => fn (_, bsets, _) => fn deads => fn mrbnf =>
+    val Uctor_renames = @{map 9} (fn v => fn model => fn quot => fn subset_premss => fn map_t => fn (_, bsets, _) => fn deads => fn mrbnf => fn valid_prems =>
       let
         val imsupp_prems = mk_imsupp_prems quot map_t v fs;
         val int_empty_prems = mk_int_empty_prems v fs bsets;
         val live_ts = @{map 3} (fn quot => fn model => fn PUmap => HOLogic.mk_case_prod (Term.abs ("t", #T quot) (Term.abs ("pu", #P params --> #U model) (
           HOLogic.mk_prod (
             Term.list_comb (#rename quot, fs) $ Bound 1,
-            Term.list_comb (fst PUmap, fs) $ Bound 1 $ Bound 0
+            valid_If (Term.list_comb (fst PUmap, fs) $ Bound 1 $ Bound 0)
           )
         )))) (#quotient_fps fp_res) models PUmaps;
         val concl = mk_Trueprop_eq (
@@ -1059,23 +1228,31 @@ fun create_binding_recursor qualify fp_res params models lthy =
           #Uctor model $ (mk_map_comb_of_mrbnf deads (replicate_rec live_ts) fs fs mrbnf $ v) $ p
         );
         val goal = fold_rev (curry Logic.mk_implies) (flat subset_premss @ imsupp_prems @ int_empty_prems) concl;
-      in Goal.prove_sorry lthy (names (fs @ [v, p])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (fs @ [v, p])) (valid_prems @ f_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt sym,
         rtac ctxt trans,
         rtac ctxt trans,
         rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of lthy (#Uctor model))] @{thm arg_cong2[OF refl]}),
-        rtac ctxt (Pmap_imsupp_empty RS sym OF prems),
+        rtac ctxt (Pmap_imsupp_empty RS sym),
         REPEAT_DETERM o EVERY' [
+          K (prefer_tac (2 * nvars + 1)),
           SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
           REPEAT_DETERM o etac ctxt conjE,
           assume_tac ctxt
         ],
+        REPEAT_DETERM o resolve_tac ctxt prems,
         K (unfold_thms_tac ctxt (map snd PUmaps)),
-        rtac ctxt (#Umap_Uctor (#axioms model) RS sym OF prems),
-        rtac ctxt (#Umap_cong_id (#axioms model) OF prems),
+        rtac ctxt (#Umap_Uctor (#axioms model) RS sym),
+        REPEAT_DETERM o resolve_tac ctxt prems,
+        rtac ctxt (#Umap_cong_id (#axioms model)),
+        (case #validity model of
+          NONE => K all_tac
+          | SOME v => rtac ctxt (#valid_Uctor v)),
+        REPEAT_DETERM o resolve_tac ctxt prems,
         REPEAT_DETERM o EVERY' [
           dtac ctxt set_rev_mp,
           resolve_tac ctxt (maps (#UFVars_subsets o #axioms) models),
+          REPEAT_DETERM o resolve_tac ctxt prems,
           etac ctxt @{thm Int_subset_empty1[OF Int_Un_emptyI2[OF
             trans[OF arg_cong2[OF refl Un_assoc[symmetric], of "(\<inter>)"]]
             ] imsupp_image_subset]
@@ -1086,19 +1263,22 @@ fun create_binding_recursor qualify fp_res params models lthy =
           assume_tac ctxt
         ]
       ]) end
-    ) vs models (#quotient_fps fp_res) quot_subset_premsss quot_map_id_fsts quot_PU_setss deadss (#pre_mrbnfs fp_res);
+    ) vs models (#quotient_fps fp_res) quot_subset_premsss quot_map_id_fsts quot_PU_setss deadss (#pre_mrbnfs fp_res) valid_v_premss;
 
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd (#pre_mrbnfs fp_res))];
 
     val comps = map2 (fn g => fn f => HOLogic.mk_comp (mk_inv g, f)) gs fs;
     fun mk_mr_rel_prem deads y y' fps PUmaps mk_rel mrbnf =
       let
+        val valid_imp = case #validity params of
+          NONE => HOLogic.mk_eq o apply2 (Term.incr_boundvars ~1)
+          | SOME v => fn (a, b) => HOLogic.mk_all ("p", #P params, HOLogic.mk_imp (#pred v $ Bound 0, HOLogic.mk_eq (a $ Bound 0, b $ Bound 0)));
         val live_Ts = plives @ replicate_rec (map2 (fn fp => fn model => HOLogic.mk_prodT (#T fp, #P params --> #U model)) fps models);
         val live_ts = @{map 3} (fn fp => fn PUmap => fn model => HOLogic.mk_case_prod (
           Term.abs ("t", #T fp) (Term.abs ("pu", #P params --> #U model) (HOLogic.mk_case_prod (
             Term.abs ("t'", #T fp) (Term.abs ("pu'", #P params --> #U model) (HOLogic.mk_conj (
               mk_rel fp (Term.list_comb (#rename fp, fs) $ Bound 3, Term.list_comb (#rename fp, gs) $ Bound 1),
-              HOLogic.mk_eq (Term.list_comb (fst PUmap, fs) $ Bound 3 $ Bound 2, Term.list_comb (fst PUmap, gs) $ Bound 1 $ Bound 0)
+              valid_imp (Term.list_comb (fst PUmap, fs) $ Bound 4 $ Bound 3, Term.list_comb (fst PUmap, gs) $ Bound 2 $ Bound 1)
             )))
           )))
         )) fps PUmaps models;
@@ -1109,7 +1289,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ) $ y $ y')
       end;
 
-    val Uctor_congs = @{map 11} (fn v => fn v' => fn model => fn quot => fn subset_premss => fn subset_premss' => fn map_t => fn (_, bsets, _) => fn deads => fn mrbnf => fn Uctor_rename =>
+    val Uctor_congs = @{map 12} (fn v => fn v' => fn model => fn quot => fn subset_premss => fn subset_premss' => fn map_t => fn (_, bsets, _) => fn deads => fn mrbnf => fn Uctor_rename => fn valid_vv'_prems =>
       let
         val imsupp_prems = mk_imsupp_prems quot map_t v fs @ mk_imsupp_prems quot map_t v' gs;
         val int_empty_prems = mk_int_empty_prems v fs bsets @ mk_int_empty_prems v' gs bsets;
@@ -1117,14 +1297,18 @@ fun create_binding_recursor qualify fp_res params models lthy =
         val goal = fold_rev (curry Logic.mk_implies)
           (flat subset_premss @ flat subset_premss' @ imsupp_prems @ int_empty_prems @ [mr_rel_prem])
           (mk_Trueprop_eq (#Uctor model $ v $ p, #Uctor model $ v' $ p));
-      in Goal.prove_sorry lthy (names (fs @ gs @ [v, v', p])) (f_prems @ g_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        val nvalid = length valid_vv'_prems;
+        val nvalid' = length (hd valid_v_premss);
+      in Goal.prove_sorry lthy (names (fs @ gs @ [v, v', p])) (valid_vv'_prems @ f_prems @ g_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt trans,
-        rtac ctxt (Uctor_rename OF (take (2 * nvars) prems)),
+        rtac ctxt (Uctor_rename OF (replicate nvalid' @{thm _} @ take (2 * nvars) (drop nvalid prems))),
+        REPEAT_DETERM o resolve_tac ctxt prems,
         REPEAT_DETERM o Goal.assume_rule_tac ctxt,
         REPEAT_DETERM o assume_tac ctxt,
         rtac ctxt sym,
         rtac ctxt trans,
-        rtac ctxt (Uctor_rename OF (drop (2 * nvars) prems)),
+        rtac ctxt (Uctor_rename OF (replicate nvalid' @{thm _} @ drop (2 * nvars) (drop nvalid prems))),
+        REPEAT_DETERM o resolve_tac ctxt prems,
         REPEAT_DETERM o Goal.assume_rule_tac ctxt,
         REPEAT_DETERM o assume_tac ctxt,
         rtac ctxt sym,
@@ -1144,9 +1328,23 @@ fun create_binding_recursor qualify fp_res params models lthy =
         REPEAT_DETERM o EVERY' [
           REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
           assume_tac ctxt
+        ],
+        REPEAT_DETERM o EVERY' [
+          REPEAT_DETERM1 o resolve_tac ctxt [ballI, impI],
+          REPEAT_DETERM o etac ctxt conjE,
+          rtac ctxt conjI,
+          assume_tac ctxt,
+          rtac ctxt ext,
+          rtac ctxt @{thm case_split},
+          REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms if_P} THEN' assume_tac ctxt),
+          etac ctxt allE,
+          etac ctxt mp,
+          assume_tac ctxt,
+          K (unfold_thms_tac ctxt @{thms if_not_P}),
+          rtac ctxt refl
         ]
       ]) end
-    ) vs vs' models (#quotient_fps fp_res) quot_subset_premsss quot_subset_premsss' quot_map_id_fsts quot_PU_setss deadss (#pre_mrbnfs fp_res) Uctor_renames;
+    ) vs vs' models (#quotient_fps fp_res) quot_subset_premsss quot_subset_premsss' quot_map_id_fsts quot_PU_setss deadss (#pre_mrbnfs fp_res) Uctor_renames valid_vv'_premss;
 
     val set_map_idss = map (fn mrbnf =>
       let val id_prems = maps (
@@ -1155,7 +1353,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       in map (fn thm => Local_Defs.unfold0 lthy @{thms image_id} (thm OF id_prems)) (MRBNF_Def.set_map_of_mrbnf mrbnf) end
     ) (#pre_mrbnfs fp_res);
 
-    val Uctor'_congs = @{map 12} (fn y => fn y' => fn raw => fn quot => fn Uctor' => fn mrbnf => fn subset_premss => fn subset_premss' => fn map_t => fn (_, bsets, _) => fn deads => fn Uctor_cong =>
+    val Uctor'_congs = @{map 13} (fn y => fn y' => fn raw => fn quot => fn Uctor' => fn mrbnf => fn subset_premss => fn subset_premss' => fn map_t => fn (_, bsets, _) => fn deads => fn Uctor_cong => fn valid_yy'_prems =>
       let
         val imsupp_prems = mk_imsupp_prems raw map_t y fs @ mk_imsupp_prems raw map_t y' gs;
         val int_empty_prems = mk_int_empty_prems y fs bsets @ mk_int_empty_prems y' gs bsets;
@@ -1164,9 +1362,17 @@ fun create_binding_recursor qualify fp_res params models lthy =
           (flat subset_premss @ flat subset_premss' @ imsupp_prems @ int_empty_prems @ [mr_rel_prem])
           (mk_Trueprop_eq (fst Uctor' $ y $ p, fst Uctor' $ y' $ p));
         val FVars'_defs = maps (map (Thm.symmetric o snd)) UFVars'ss @ maps (map (fn thm => thm RS sym)) FVars_def2ss;
-      in Goal.prove_sorry lthy (names (fs @ gs @ [y, y', p])) (f_prems @ g_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        val nvalid = length valid_yy'_prems;
+      in Goal.prove_sorry lthy (names (fs @ gs @ [y, y', p])) (valid_yy'_prems @ f_prems @ g_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         K (unfold_thms_tac ctxt [snd Uctor']),
-        rtac ctxt (Uctor_cong OF prems),
+        rtac ctxt (Uctor_cong OF (replicate nvalid @{thm _} @ drop nvalid prems)),
+        TRY o resolve_tac ctxt prems,
+        REPEAT_DETERM_N 2 o EVERY' [
+          rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+          SELECT_GOAL (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_map_prod}),
+          resolve_tac ctxt prems
+        ],
         K (unfold_thms_tac ctxt (@{thms image_id image_Un[symmetric]} @ flat set_map_idss)),
         REPEAT_DETERM o EVERY' [
           dtac ctxt @{thm exists_map_prod_id},
@@ -1232,7 +1438,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
           ]
         ]
       ]) end
-    ) ys ys' (#raw_fps fp_res) (#quotient_fps fp_res) Uctor's (#pre_mrbnfs fp_res) subset_premsss subset_premsss' map_id_fsts PU_setss deadss Uctor_congs;
+    ) ys ys' (#raw_fps fp_res) (#quotient_fps fp_res) Uctor's (#pre_mrbnfs fp_res) subset_premsss subset_premsss' map_id_fsts PU_setss deadss Uctor_congs valid_yy'_premss;
 
     val Umap'_alphas = @{map 6} (fn raw => fn quot => fn model => fn Umap' => fn t => fn t' =>
       let val goal = Logic.mk_implies (
@@ -1263,11 +1469,16 @@ fun create_binding_recursor qualify fp_res params models lthy =
 
     val pick_premsss = @{map 3} (fn x => fn picks => @{map 3} (fn concls => fn pick => fn suitable =>
       let val goals = map (fn concl => Logic.mk_implies (
-        HOLogic.mk_Trueprop (fst suitable $ pick), concl
+        HOLogic.mk_Trueprop (fst suitable $ pick), addPred concl
       )) concls;
       in map (fn goal => Goal.prove_sorry lthy (names [pick, x, p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
         K (unfold_thms_tac ctxt [snd suitable]),
-        REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+        REPEAT_DETERM o etac ctxt allE,
+        TRY o EVERY' [
+          etac ctxt impE,
+          assume_tac ctxt
+        ],
+        REPEAT_DETERM o etac ctxt conjE,
         assume_tac ctxt
       ])) goals end
     ) (chop_f_prems (mk_f_prems (#min_bound params) (map (fn pck => pck $ x $ p) picks))) picks) xs pickss suitabless;
@@ -1285,17 +1496,18 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 if member (op=) rel i then pick_t else HOLogic.id_const v
               ) (#binding_relation fp_res) pick_ts vars) $ t;
           in Term.absfree (dest_Free t) (HOLogic.mk_prod (
-            rename_t, Term.list_comb (fst f, flat pickss) $ rename_t
+            rename_t, valid_If (Term.list_comb (fst f, flat pickss) $ rename_t)
           )) end
         ) (0 upto rec_n - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec rec_fs);
         val map_t2 = mk_map_comb_of_mrbnf deads live_ts
           pick_ts (map HOLogic.id_const vars) mrbnf;
-        val goal = fold_rev (curry Logic.mk_implies) suitable_prems (HOLogic.mk_Trueprop (
+        val goal = fold_rev (curry Logic.mk_implies) suitable_prems (addPred (HOLogic.mk_Trueprop (
           #alpha (#inner raw) $ (#ctor raw $ x) $ (#ctor raw $ (map_t $ (map_t2 $ x)))
-        ));
+        )));
       in Goal.prove_sorry lthy (names (flat pickss @ [x, p])) [] goal (fn {context=ctxt, ...} => EVERY1 [
         EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
         REPEAT_DETERM o FIRST' [
+          assume_tac ctxt,
           resolve_tac ctxt @{thms bij_id supp_id_bound},
           eresolve_tac ctxt pick_prems,
           resolve_tac ctxt card_thms
@@ -1306,18 +1518,20 @@ fun create_binding_recursor qualify fp_res params models lthy =
         SELECT_GOAL (unfold_thms_tac ctxt @{thms inv_id id_o o_id Grp_UNIV_id conversep_eq OO_eq}),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
-          eresolve_tac ctxt pick_prems
+          eresolve_tac ctxt pick_prems,
+          TRY o assume_tac ctxt
         ],
         K (unfold_thms_tac ctxt @{thms relcompp_conversep_Grp}),
         K (unfold_thms_tac ctxt [MRBNF_Def.mr_rel_def_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]),
         rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
         REPEAT_DETERM o resolve_tac ctxt (refl :: map (#alpha_refl o #inner) (#raw_fps fp_res)),
         REPEAT_DETERM o FIRST' [
+          assume_tac ctxt,
           resolve_tac ctxt @{thms bij_id supp_id_bound},
           eresolve_tac ctxt pick_prems,
           resolve_tac ctxt card_thms
         ],
-        REPEAT_DETERM o eresolve_tac ctxt pick_id_ons
+        REPEAT_DETERM o (eresolve_tac ctxt pick_id_ons THEN' TRY o assume_tac ctxt)
       ]) end
     ) (#raw_fps fp_res) (#pre_mrbnfs fp_res) map_id_fsts xs deadss pickss pick_id_onss;
 
@@ -1330,13 +1544,22 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ) end));
 
     val m = length (flat suitabless);
+    fun mk_pick_prems validP_prems prems = flat (map2 (fn p => map (fn thm => thm OF ([p] @ validP_prems))) prems (flat pick_premsss));
+
     val int_empty_XXlss = @{map 6} (fn x => fn raw => fn mrbnf => fn XXl => fn map_t => fn (_, bsets, _) =>
       @{map 4} (fn FVars => fn bset => fn PFVars => fn avoiding_set =>
         let
           val goal = mk_int_empty_goal x bset XXl FVars (#ctor raw) map_t PFVars avoiding_set;
-        in Goal.prove_sorry lthy (names (flat pickss @ fs @ [p, x])) (suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
+        in Goal.prove_sorry lthy (names (flat pickss @ fs @ [p, x])) (validP_prems @ suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
           let
-            val pick_prems = flat (map2 (fn p => map (fn thm => thm OF [p])) (take (length (flat suitabless)) prems) (flat pick_premsss));
+            val (validP_prems, prems) = chop (length validP_prems) prems;
+            val (suitable_prems, f_prems) = chop m prems;
+            val valid_Pmap_prems = map (fn thm =>
+              (#valid_Pmap (the (#validity params))) OF (thm :: maps (fn xs =>
+                [@{thm bij_imp_bij_inv} OF [hd xs], @{thm supp_inv_bound} OF xs]
+              ) (chop_f_prems f_prems))
+            ) validP_prems;
+            val pick_prems = mk_pick_prems valid_Pmap_prems suitable_prems;
           in EVERY1 [
             K (unfold_thms_tac ctxt [snd XXl]),
             REPEAT_DETERM o EVERY' [
@@ -1368,10 +1591,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
             rtac ctxt @{thm iffD2[OF image_Int_empty]},
             resolve_tac ctxt prems,
             EqSubst.eqsubst_tac ctxt [0] (map (fn thm => thm RS sym) (#PFVars_Pmaps (#axioms params))),
+            TRY o resolve_tac ctxt validP_prems,
             K (prefer_tac (2 * nvars + 1)),
             Method.insert_tac ctxt (take m prems),
             K (unfold_thms_tac ctxt (maps (map snd) suitabless)),
-            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE, impE OF (@{thm _} :: valid_Pmap_prems)],
             SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
             REPEAT_DETERM o etac ctxt conjE,
             assume_tac ctxt,
@@ -1382,7 +1606,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             assume_tac ctxt,
             Method.insert_tac ctxt (take m prems),
             SELECT_GOAL (unfold_thms_tac ctxt (maps (map snd) suitabless)),
-            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE, impE OF (@{thm _} :: valid_Pmap_prems)],
             SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
             REPEAT_DETERM o etac ctxt conjE,
             assume_tac ctxt,
@@ -1395,7 +1619,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             ],
             Method.insert_tac ctxt (take m prems),
             K (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ maps (map snd) suitabless @ maps #FVars_ctors (#raw_fps fp_res))),
-            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE, impE OF (@{thm _} :: valid_Pmap_prems)],
             REPEAT_DETERM o rtac ctxt conjI,
             REPEAT_DETERM o (assume_tac ctxt ORELSE' EVERY' [
               rtac ctxt @{thm trans[OF image_Int[OF bij_is_inj, symmetric]]},
@@ -1408,13 +1632,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params)
     ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) XXls map_id_fsts PU_setss;
 
-    fun mk_pick_prems prems = flat (map2 (fn p => map (fn thm => thm OF [p])) prems (flat pick_premsss));
     val int_empty_XXrss = @{map 6} (fn x => fn raw => fn mrbnf => fn XXr => fn map_t => fn (_, bsets, _) =>
       @{map 4} (fn FVars => fn bset => fn PFVars => fn avoiding_set =>
         let
           val goal = mk_int_empty_goal x bset XXr FVars (#ctor raw) map_t PFVars avoiding_set;
-        in Goal.prove_sorry lthy (names (flat pickss @ fs @ [p, x])) (suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
-          let val pick_prems = mk_pick_prems (take (length (flat suitabless)) prems);
+        in Goal.prove_sorry lthy (names (flat pickss @ fs @ [p, x])) (validP_prems @ suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
+          let
+            val (validP_prems, prems') = chop (length validP_prems) prems;
+            val pick_prems = mk_pick_prems validP_prems (take m prems');
           in EVERY1 [
             K (unfold_thms_tac ctxt [snd XXr]),
             REPEAT_DETERM o EVERY' [
@@ -1451,9 +1676,9 @@ fun create_binding_recursor qualify fp_res params models lthy =
             K (prefer_tac (2 * nvars + 1)),
             EqSubst.eqsubst_tac ctxt [0] [#rename_simp (#inner raw)],
             K (prefer_tac (2 * nvars + 1)),
-            Method.insert_tac ctxt (take m prems),
+            Method.insert_tac ctxt (take m prems'),
             K (unfold_thms_tac ctxt (maps (map snd) suitabless)),
-            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE, impE OF (@{thm _} :: validP_prems)],
             assume_tac ctxt,
             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms)
           ] end
@@ -1472,7 +1697,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ]) end
     ) (#UFVarss model)) (#raw_fps fp_res) (#quotient_fps fp_res) models ts ts' UFVars'ss;
 
-    val (conj_spec, conj_impI) = if length (#raw_fps fp_res) = 1 then (spec, mp) else
+    val (conj_spec, conj_mp) = if length (#raw_fps fp_res) = 1 then (spec, mp) else
       let
         val (Ts, _) = mk_TFrees (length (#raw_fps fp_res)) lthy;
         val ((Ps1, xs), _) = lthy
@@ -1497,10 +1722,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
           ]
         ]);
 
-        val conj_impI_goal = fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) (
+        val conj_mp_goal = fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) (
           foldr1 HOLogic.mk_conj (map2 (curry HOLogic.mk_imp) Ps2 Qs) :: Ps2
         ) (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj Qs));
-        val conj_impI = Goal.prove_sorry lthy (names (Ps2 @ Qs)) [] conj_impI_goal (fn {context=ctxt, ...} => EVERY1 [
+        val conj_mp = Goal.prove_sorry lthy (names (Ps2 @ Qs)) [] conj_mp_goal (fn {context=ctxt, ...} => EVERY1 [
           REPEAT_DETERM o etac ctxt conjE,
           REPEAT_DETERM o (etac ctxt impE THEN' assume_tac ctxt),
           REPEAT_DETERM o EVERY' [
@@ -1508,7 +1733,64 @@ fun create_binding_recursor qualify fp_res params models lthy =
             assume_tac ctxt
           ]
         ]);
-      in (conj_spec, conj_impI) end
+      in (conj_spec, conj_mp) end;
+
+    val n = length models;
+    fun split_conj n thm = if n = 1 then [thm]
+      else let val (thms, thm) = fold_map
+        (K (fn thm => (thm RS conjunct1, thm RS conjunct2))) (1 upto n - 1) thm
+      in thms @ [thm] end;
+
+    val valid_f_opts = if exists (Option.isSome o #validity) models then
+      let
+        val validP = the_default (pred_True (#P params)) (Option.map #pred (#validity params));
+        val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (@{map 3} (fn rec_f => fn model => fn t =>
+          mk_pred_fun validP (the_default (pred_True (#U model)) (Option.map #pred (#validity model)))
+            $ (Term.list_comb (fst rec_f, flat pickss) $ t)
+        ) rec_fs models ts));
+        val thm = Goal.prove_sorry lthy (names (flat pickss @ ts)) suitable_prems goal (fn {context=ctxt, prems=suitable_prems} => EVERY1 [
+          rtac ctxt (infer_instantiate' ctxt (replicate n NONE @ map (SOME o Thm.cterm_of ctxt) ts) (
+            the (#subshape_induct (#inner (hd (#raw_fps fp_res))))
+          )),
+          EVERY' (@{map 5} (fn raw => fn rec_f => fn Uctor' => fn model => fn mrbnf => EVERY' [
+            rtac ctxt @{thm pred_funI},
+            rtac ctxt @{thm TrueI} ORELSE' EVERY' [
+              Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+                rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#exhaust (#inner raw))) 1
+              ) ctxt,
+              hyp_subst_tac ctxt,
+              EqSubst.eqsubst_tac ctxt [0] [snd rec_f OF suitable_prems],
+              assume_tac ctxt,
+              K (unfold_thms_tac ctxt [snd Uctor']),
+              resolve_tac ctxt (the_default [] (Option.map (single o #valid_Uctor) (#validity model))),
+              assume_tac ctxt,
+              REPEAT_DETERM o EVERY' [
+                rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+                REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_id_bound bij_id} @ mk_pick_prems [] suitable_prems))
+              ],
+              K (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_map_prod snd_comp_mk_prod comp_def[symmetric]}),
+              Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
+                rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
+                rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
+                REPEAT_DETERM o FIRST' [
+                  resolve_tac ctxt (
+                    @{thms ballI impI TrueI iffD2[OF comp_apply] pred_fun_If}
+                    @ prems @ mk_pick_prems [] suitable_prems
+                    @ @{thms supp_id_bound bij_id}
+                  ),
+                  eresolve_tac ctxt (
+                    flat (the (#set_subshapess (#inner raw)))
+                    @ map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI}) (
+                      flat (the (#set_subshape_imagess (#inner raw)))
+                    )
+                  )
+                ]
+              ]) ctxt
+            ]
+          ]) (#raw_fps fp_res) rec_fs Uctor's models (#pre_mrbnfs fp_res))
+        ]);
+      in SOME (split_conj n thm) end
+    else NONE;
 
     fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
     val f_UFVars'ss =
@@ -1523,39 +1805,72 @@ fun create_binding_recursor qualify fp_res params models lthy =
         val goals = map (foldr1 HOLogic.mk_conj) goalss;
         val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj goals);
 
-        val insts = map2 (fn t => Term.absfree (dest_Free t) o mk_all (dest_Free p)) ts goals;
-        val result = Goal.prove_sorry lthy (names (flat pickss @ ts @ [p])) suitable_prems goal (fn {context=ctxt, prems=suitable_prems} =>
-          let val pick_prems = mk_pick_prems suitable_prems
+        val insts = map2 (fn t => fn goal => Term.absfree (dest_Free t) (
+          mk_all (dest_Free p) (case #validity params of
+            SOME v => HOLogic.mk_imp (#pred v $ p, goal)
+            | NONE => goal
+          )
+        )) ts goals;
+        fun mp thm = case #validity params of
+          SOME _ => Drule.rotate_prems (~n) (conj_mp OF [thm])
+          | NONE => thm
+        val result = Goal.prove_sorry lthy (names (flat pickss @ ts @ [p])) (validP_prems @ suitable_prems) goal (fn {context=ctxt, prems} =>
+          let
+            val (validP_prems, suitable_prems) = chop (length validP_prems) prems;
+            val pick_prems = mk_pick_prems validP_prems suitable_prems
           in EVERY1 [
-            rtac ctxt (conj_spec OF [infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) insts)
+            rtac ctxt (mp (conj_spec OF [infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) insts)
               (the (#subshape_induct (#inner (hd (#raw_fps fp_res)))))
-            ]),
+            ])),
+            REPEAT_DETERM o resolve_tac ctxt validP_prems,
             EVERY' (@{map 4} (fn raw => fn mrbnf => fn alpha_ctor_pick => fn rec_f => EVERY' [
               rtac ctxt allI,
+              TRY o rtac ctxt impI,
               Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
                 rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#exhaust (#inner raw))) 1
               ) ctxt,
               hyp_subst_tac ctxt,
               Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
                 let
+                  val (validP_prems, prems') = case #validity params of
+                    SOME _ => apfst single (swap (split_last prems))
+                    | NONE => ([], prems);
+                  fun mp thm = case #validity params of
+                    SOME _ => thm RS @{thm mp}
+                    | NONE => thm;
+                  val pick_prems = mk_pick_prems validP_prems suitable_prems;
                   val IHs = maps (fn IH => map (fn i =>
-                    foldl1 (op RS) ((IH RS spec) :: (replicate (i - 1) conjunct2
+                    foldl1 (op RS) (mp (IH RS spec) :: (replicate (i - 1) conjunct2
                       @ (if i = nvars then [] else [conjunct1])
                     ))
-                  ) (1 upto nvars)) prems;
+                  ) (1 upto nvars)) prems';
                 in REPEAT_DETERM (EVERY1 [
                   TRY o rtac ctxt conjI,
                   EqSubst.eqsubst_tac ctxt [0] (#alpha_FVarss (#inner raw)),
                   rtac ctxt (alpha_ctor_pick OF suitable_prems),
+                  TRY o resolve_tac ctxt prems,
                   EqSubst.eqsubst_tac ctxt [0] (flat UFVars'_alphass),
                   rtac ctxt (alpha_ctor_pick OF suitable_prems),
-                  K (unfold_thms_tac ctxt [snd rec_f OF suitable_prems]),
+                  TRY o resolve_tac ctxt prems,
+                  EqSubst.eqsubst_tac ctxt [0] [snd rec_f OF suitable_prems],
+                  TRY o resolve_tac ctxt prems,
                   resolve_tac ctxt (flat UFVars'_subsetss),
+                  TRY o resolve_tac ctxt prems,
+                  TRY o EVERY' [
+                    rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                    SELECT_GOAL (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_mk_prod comp_def[symmetric]}),
+                    rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
+                    rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms ballI impI TrueI iffD2[OF comp_apply] pred_fun_If}
+                      @ the_default [] valid_f_opts @ suitable_prems
+                    )
+                  ],
                   EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                   REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms),
                   Method.insert_tac ctxt suitable_prems,
                   SELECT_GOAL (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ maps (map snd) suitabless)),
-                  REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+                  REPEAT_DETERM o eresolve_tac ctxt [allE, conjE, impE OF (@{thm _} :: validP_prems)],
                   rtac ctxt conjI,
                   assume_tac ctxt,
                   assume_tac ctxt,
@@ -1570,12 +1885,16 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       dtac ctxt @{thm iffD1[OF prod.inject]},
                       etac ctxt conjE,
                       hyp_subst_tac ctxt,
+                      TRY o EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+                        assume_tac ctxt
+                      ],
                       resolve_tac ctxt IHs,
                       eresolve_tac ctxt (
                         maps (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI})) (the (#set_subshape_imagess (#inner raw)))
                         @ flat (the (#set_subshapess (#inner raw)))
                       ),
-                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms)
+                      REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms) ORELSE' assume_tac ctxt)
                     ]
                   ]
                 ]) end
@@ -1583,17 +1902,9 @@ fun create_binding_recursor qualify fp_res params models lthy =
             ]) (#raw_fps fp_res) (#pre_mrbnfs fp_res) alpha_ctor_picks rec_fs)
           ] end
         );
-      in map (map (fn goal =>
-        Goal.prove_sorry lthy (names (flat pickss @ ts @ [p])) suitable_prems (HOLogic.mk_Trueprop goal) (fn {context=ctxt, prems} => EVERY1 [
-          Method.insert_tac ctxt [infer_instantiate' ctxt (
-              map (SOME o Thm.cterm_of ctxt) (hd ts :: p :: tl ts)
-          ) (result OF prems)],
-          REPEAT_DETERM o etac ctxt conjE,
-          assume_tac ctxt
-        ])
-      )) goalss end;
+      in map (split_conj nvars) (split_conj n result) end;
 
-    fun map2_prod f (a, b) (c, d) = (f a c, f b d);
+   fun map2_prod f (a, b) (c, d) = (f a c, f b d);
     val (XXl_UFVars'sss, XXr_UFVars'sss) = map2_prod (fn left =>
       @{map 5} (fn x => fn raw => fn mrbnf => fn (lsets, _, _) => fn XX =>
         @{map 9} (fn t => fn pu => fn lsets => fn subshape => fn raw' => fn rec_f' => fn PUmap' =>
@@ -1601,13 +1912,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
             let
               val y = Free ("y", #T raw');
               val IHs = if not left then [] else [
-                Logic.all y (Logic.all p (Logic.mk_implies (
+                Logic.all y (Logic.all p (addPred (Logic.mk_implies (
                   HOLogic.mk_Trueprop (subshape $ y $ (#ctor raw $ x)),
                   mk_Trueprop_eq (
                     Term.list_comb (fst rec_f', flat pickss) $ (Term.list_comb (#rename raw', fs) $ y) $ p,
                     Term.list_comb (fst PUmap', fs) $ y $ (Term.list_comb (fst rec_f', flat pickss) $ y) $ p
                   )
-                )))
+                ))))
               ];
               val XX_t = Term.list_comb (fst XX, flat pickss @ fs) $ p' $ x
               val goal = Logic.mk_implies (
@@ -1620,17 +1931,25 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   (mk_Un (mk_Un (FVars $ t, PFVars $ p), avoiding_set))
                 )
               );
-            in Goal.prove_sorry lthy (names (flat pickss @ fs @ [x, t, pu, p, p'])) (suitable_prems @ f_prems @ IHs) goal (fn {context=ctxt, prems} =>
+            in Goal.prove_sorry lthy (names (flat pickss @ fs @ [x, t, pu, p, p'])) (validP_prems @ validP'_prems @ suitable_prems @ f_prems @ IHs) goal (fn {context=ctxt, prems} =>
               let
-                val ((suitable_prems, f_prems), IHs) = prems
-                  |> chop m
+                val (((valid_prems, suitable_prems), f_prems), IHs) = prems
+                  |> chop (2 * length validP_prems)
+                  ||>> chop m
                   ||>> chop (2 * nvars);
-                val pick_prems = mk_pick_prems suitable_prems;
+
+                val pick_prems = mk_pick_prems [] suitable_prems;
+                val valid_prems = @{thms bij_imp_bij_inv supp_inv_bound}
+                  @ f_prems @ valid_prems
+                  @ the_default [] (Option.map (single o #valid_Pmap) (#validity params));
               in EVERY1 [
                 K (unfold_thms_tac ctxt [snd XX]),
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems @ card_thms)
+                  REPEAT_DETERM o resolve_tac ctxt (
+                    @{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound}
+                    @ f_prems @ valid_prems @ [infinite_UNIV] @ pick_prems @ card_thms
+                  )
                 ],
                 REPEAT_DETERM o EVERY' [
                   TRY o etac ctxt @{thm UnE},
@@ -1640,18 +1959,24 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   hyp_subst_tac_thin true ctxt,
                   if not left then K all_tac else EVERY' [
                     EqSubst.eqsubst_tac ctxt [0] [hd IHs RS sym],
+                    TRY o resolve_tac ctxt valid_prems,
                     eresolve_tac ctxt (
                       maps (map (fn thm => Drule.rotate_prems ~1 thm OF @{thms imageI})) (the (#set_subshape_imagess (#inner raw)))
                       @ flat (the (#set_subshapess (#inner raw)))
                     ),
-                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ valid_prems @ card_thms),
                     TRY o EVERY' [
                       EqSubst.eqsubst_tac ctxt [0] [#rename_comp raw'],
-                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ valid_prems @ card_thms),
                       K (unfold_thms_tac ctxt @{thms id_o o_id})
                     ]
                   ],
-                  rtac ctxt (f_UFVars' OF suitable_prems)
+                  TRY o EVERY' [
+                    EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+                    resolve_tac ctxt valid_prems
+                  ],
+                  rtac ctxt f_UFVars',
+                  REPEAT_DETERM o resolve_tac ctxt (valid_prems @ suitable_prems)
                 ]
               ] end
             ) end
@@ -1679,36 +2004,45 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 (map (fn A => mk_id_on (mk_image f $ A) w) As)
               )
             );
-          in Goal.prove_sorry lthy (names (flat pickss @ fs @ [x, p, w])) (suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
+          in Goal.prove_sorry lthy (names (flat pickss @ fs @ [x, p, w])) (validP_prems @ suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
             let
-              val (suitable_prems, f_prems) = chop m prems;
-              val pick_prems = mk_pick_prems suitable_prems;
+              val ((valid_prems, suitable_prems), f_prems) = prems
+                |> chop (length validP_prems)
+                ||>> chop m;
+              val pick_prems = mk_pick_prems [] suitable_prems;
               val (y, y') = map_prod (fn xs => fold (curry op+) xs 0) hd (chop (i - 1) (#rec_vars fp_res));
               val suitable_prems' = take y' (drop y suitable_prems);
+              val valid_prems = @{thms supp_inv_bound bij_imp_bij_inv}
+                @ f_prems @ valid_prems
+                @ the_default [] (Option.map (single o #valid_Pmap) (#validity params));
             in EVERY1 [
               K (unfold_thms_tac ctxt [snd XX]),
               EqSubst.eqsubst_asm_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems @ card_thms),
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ valid_prems @ card_thms),
               K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]} @ #FVars_ctors raw)),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems @ card_thms)
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ valid_prems @ card_thms)
               ],
               K (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty image_comp[unfolded comp_def]}),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_asm_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ f_prems @ card_thms)
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ valid_prems @ card_thms)
               ],
               K (unfold_thms_tac ctxt @{thms image_UN[symmetric]}),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_asm_tac ctxt [0] @{thms image_set_diff[OF bij_is_inj, symmetric]},
-                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id bij_comp} @ f_prems @ pick_prems @ card_thms)
+                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id bij_comp} @ valid_prems @ pick_prems @ card_thms)
               ],
               REPEAT_DETERM o etac ctxt conjE,
-              K (unfold_thms_tac ctxt (@{thms image_comp[symmetric]}
-                @ flat (map2 (fn p => map (fn thm => @{thm id_on_image} OF [thm OF [p]])) suitable_prems' pick_id_onss')
-                @ flat (map2 (fn p => map (fn thm => @{thm id_on_image} OF [thm OF (f_prems @ [p])])) suitable_prems' pick_id_on_imagess')
-              )),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] (
+                  @{thms image_comp[symmetric]}
+                  @ flat (map2 (fn p => map (fn thm => @{thm id_on_image} OF [thm OF [p]])) suitable_prems' pick_id_onss')
+                  @ flat (map2 (fn p => map (fn thm => @{thm id_on_image} OF [thm OF (f_prems @ [p])])) suitable_prems' pick_id_on_imagess')
+                ),
+                REPEAT_DETERM o resolve_tac ctxt valid_prems
+              ],
               REPEAT_DETERM o EVERY' [
                 TRY o rtac ctxt conjI,
                 etac ctxt @{thm imsupp_id_on}
@@ -1729,6 +2063,114 @@ fun create_binding_recursor qualify fp_res params models lthy =
       else (Cinfinite_UNIV, regularCard_UNIV);
     val Un_bound = @{thm regularCard_Un} OF [conjunct2 OF [Cinfinite_card], conjunct1 OF [Cinfinite_card], regularCard_card];
 
+    val valid_PUmap's = @{map 5} (fn model => fn PUmap' => fn Umap' => fn t => fn pu => Option.map (fn v =>
+      let
+        val pred = case #validity params of
+          SOME v => #pred v
+          | NONE => pred_True (fastype_of p);
+        val pred_fun = mk_pred_fun pred (#pred v);
+        val goal = Logic.mk_implies (
+          HOLogic.mk_Trueprop (pred_fun $ pu),
+          HOLogic.mk_Trueprop (pred_fun $ (Term.list_comb (fst PUmap', fs) $ t $ pu))
+        );
+      in Goal.prove_sorry lthy (names (fs @ [pu, t])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd PUmap', snd Umap']),
+        rtac ctxt @{thm pred_funI},
+        rtac ctxt (#valid_Umap v),
+        SELECT_GOAL (unfold_thms_tac ctxt @{thms pred_fun_def}),
+        etac ctxt allE,
+        etac ctxt mp,
+        REPEAT_DETERM o (resolve_tac ctxt (
+          @{thms bij_imp_bij_inv supp_inv_bound} @ prems
+          @ the_default [] (Option.map (single o #valid_Pmap) (#validity params))
+        ) ORELSE' assume_tac ctxt)
+      ]) end
+    ) (#validity model)) models PUmap's Umap's ts pus;
+
+    val (valid_XXls, valid_XXrs) = if exists Option.isSome (map #validity models) then
+      apply2 (SOME o
+        @{map 4} (fn mrbnf => fn deads => fn x => fn XX =>
+        let
+          val pred = case #validity params of
+            SOME v => #pred v
+            | NONE => pred_True (fastype_of p)
+          val goal = HOLogic.mk_Trueprop (Term.list_comb (
+            MRBNF_Def.mk_pred_of_mrbnf deads (plives @ replicate_rec prod_PU_Ts) bounds frees mrbnf,
+            map pred_True plives @ replicate_rec (
+              map2 (fn PU_T => fn model => HOLogic.mk_comp (case #validity model of
+                SOME v => mk_pred_fun pred (#pred v)
+                | NONE => pred_True (snd (HOLogic.dest_prodT PU_T)),
+              snd_const PU_T
+              )) prod_PU_Ts models
+            )
+          ) $ (Term.list_comb (fst XX, flat pickss @ fs) $ p $ x));
+        in Goal.prove_sorry lthy (names (flat pickss @ fs @ [p, x])) (validP_prems @ suitable_prems @ f_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+          K (unfold_thms_tac ctxt [snd XX]),
+          rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+          REPEAT_DETERM o resolve_tac ctxt (
+            @{thms supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound bij_comp supp_comp_bound}
+            @ prems @ [infinite_UNIV] @ the_default [] (Option.map (single o #valid_Pmap) (#validity params))
+            @ mk_pick_prems [] (take m (drop (length validP_prems) prems))
+          ),
+          K (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_mk_prod}),
+          K (unfold_thms_tac ctxt @{thms comp_def}),
+          rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
+          rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
+          REPEAT_DETERM o EVERY' [
+            rtac ctxt ballI,
+            rtac ctxt impI,
+            rtac ctxt @{thm TrueI} ORELSE' EVERY' [
+              rtac ctxt @{thm pred_fun_If},
+              TRY o EVERY' [
+                resolve_tac ctxt (maps (the_default [] o Option.map single) valid_PUmap's),
+                REPEAT_DETERM o resolve_tac ctxt prems
+              ],
+              resolve_tac ctxt (the_default [] valid_f_opts),
+              REPEAT_DETERM o resolve_tac ctxt prems
+            ]
+          ]
+        ]) end) mrbnfs deadss xs
+      ) (XXls, XXrs)
+      else (NONE, NONE);
+
+    val valid_PUmap'_If = Option.map (fn v => @{map 3} (fn PUmap' => fn t => fn pu =>
+      let
+        val goal = mk_Trueprop_eq (
+          Term.list_comb (fst PUmap', fs) $ t $ (Term.abs ("p'", #P params) (
+            BNF_FP_Util.mk_If (#pred v $ Bound 0) (pu $ Bound 0) (BNF_GFP_Util.mk_undefined (range_type (fastype_of pu)))
+          )) $ p,
+          Term.list_comb (fst PUmap', fs) $ t $ pu $ p
+        );
+      in Goal.prove_sorry lthy (names (fs @ [t, pu, p])) (validP_prems @ f_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd PUmap']),
+        EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+        rtac ctxt (#valid_Pmap v),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
+        rtac ctxt refl
+      ]) end
+    ) PUmap's ts pus) (#validity params);
+
+    val PUmap'_congs = @{map 5} (fn PUmap' => fn Umap' => fn t => fn t' => fn pu =>
+      let
+        val pu' = Free (apfst (fn s => s ^ "'") (dest_Free pu));
+        val Pmap = Term.list_comb (#Pmap params, map mk_inv fs) $ p;
+        val goal = Logic.mk_implies (
+          mk_Trueprop_eq (t, t'),
+          Logic.mk_implies (
+            mk_Trueprop_eq (pu $ Pmap, pu' $ Pmap),
+            mk_Trueprop_eq (
+              Term.list_comb (fst PUmap', fs @ [t, pu, p]),
+              Term.list_comb (fst PUmap', fs @ [t', pu', p])
+            )
+          )
+        );
+      in Goal.prove_sorry lthy (names (fs @ [t, t', pu, pu', p])) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd PUmap']),
+        rtac ctxt (mk_arg_cong lthy (nvars + 2) (fst Umap')),
+        REPEAT_DETERM o (rtac ctxt refl ORELSE' assume_tac ctxt)
+      ]) end
+    ) PUmap's Umap's ts ts' pus;
+
     val suitable'_prems = flat (map2 (map2 ((curry op$) o fst)) suitabless pick'ss);
     val f_swap_alpha =
       let
@@ -1739,41 +2181,43 @@ fun create_binding_recursor qualify fp_res params models lthy =
             Term.list_comb (fst f, flat pickss) $ (Term.list_comb (#rename raw, fs) $ t) $ p,
             Term.list_comb (fst PUmap', fs) $ t $ (Term.list_comb (fst f, flat pickss) $ t) $ p
           ), HOLogic.mk_eq (
-            Term.list_comb (fst f, flat pickss) $ t,
-            Term.list_comb (fst f, flat pick'ss) $ t'
+            Term.list_comb (fst f, flat pickss) $ t $ p,
+            Term.list_comb (fst f, flat pick'ss) $ t' $ p
           )
         )) rec_fs (#raw_fps fp_res) PUmap's ts ts';
         val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj goals);
 
+        val add_imp = case #validity params of
+          NONE => I | SOME v => fn t => HOLogic.mk_imp (#pred v $ p, t);
         val insts = @{map 4} (fn t => fn t' => fn alpha_prem => fn goal => Term.absfree (dest_Free t) (
           fold_rev mk_all (map dest_Free (p :: t' :: fs @ flat pickss @ flat pick'ss)) (
-            fold_rev (curry HOLogic.mk_imp) (
+            add_imp (fold_rev (curry HOLogic.mk_imp) (
               map HOLogic.dest_Trueprop suitable_prems
               @ suitable'_prems
               @ map HOLogic.dest_Trueprop (f_prems @ imsupp_prems)
               @ [alpha_prem]
-            ) goal
+            ) goal)
           )
         )) ts ts' alpha_prems goals;
       in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ fs @ ts @ ts' @ [p]))
-      (suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems @ f_prems @ imsupp_prems @ map HOLogic.mk_Trueprop alpha_prems)
+      (validP_prems @ suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems @ f_prems @ imsupp_prems @ map HOLogic.mk_Trueprop alpha_prems)
       goal (fn {context=ctxt, prems} =>
         let
           fun apply_n thm n = fold (K (fn t => thm OF [t])) (0 upto n - 1);
           val spec_n = 2 * m + nvars + 2;
-          val imp_n = 2 * m + 3 * nvars + 1;
+          val mp_n = 2 * m + 3 * nvars + 1 + length validP_prems;
           val r = length (#raw_fps fp_res);
           val induct = the (#subshape_induct (#inner (hd (#raw_fps fp_res))))
             |> infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) insts)
             |> apply_n conj_spec spec_n
-            |> apply_n conj_impI imp_n;
+            |> apply_n conj_mp mp_n;
         in EVERY1 [
           rtac ctxt induct,
           REPEAT_DETERM_N r o defer_tac,
           REPEAT_DETERM o resolve_tac ctxt prems,
-          EVERY' (@{map 23} (fn i => fn y => fn map_id_fst => fn raw => fn mrbnf => fn rec_f => fn (_, PU_bsets, _) => fn (_, bsets, _) =>
+          EVERY' (@{map 24} (fn i => fn y => fn map_id_fst => fn raw => fn mrbnf => fn rec_f => fn (_, PU_bsets, _) => fn (_, bsets, _) =>
           fn XXl => fn XXr => fn deads => fn PUmap'_alpha => fn alpha_ctor_pick => fn int_empty_XXls =>
-          fn int_empty_XXrs => fn Uctor'_cong => fn XXl_UFVars'ss => fn XXr_UFVars'ss =>
+          fn int_empty_XXrs => fn Uctor'_cong => fn XXl_UFVars'ss => fn XXr_UFVars'ss => fn Uctor' =>
           fn imsupp_id_on_XXls => fn imsupp_id_on_XXrs => fn PUmap' => fn pick_id_on'ss => fn pick_id_on_image'ss => EVERY' [
             REPEAT_DETERM o resolve_tac ctxt [allI, impI],
             etac ctxt (#alpha_elim (#inner raw)),
@@ -1781,17 +2225,28 @@ fun create_binding_recursor qualify fp_res params models lthy =
             K (unfold_thms_tac ctxt @{thms triv_forall_equality}),
             Subgoal.FOCUS (fn {context=ctxt, prems, params=ps, ...} =>
               let
-                val (((((((IHs, suitable_prems), suitable'_prems), f_prems), imsupp_prems), h_prems), h_id_ons), mr_rel_prem) = prems
+                val ((((((((IHs, valid_prems), suitable_prems), suitable'_prems), f_prems), imsupp_prems), h_prems), h_id_ons), mr_rel_prem) = prems
                   |> chop r
+                  ||>> chop (length validP_prems)
                   ||>> chop m
                   ||>> chop m
                   ||>> chop (2 * nvars)
                   ||>> chop nvars
                   ||>> chop (2 * nvars)
                   ||>> apsnd hd o chop nvars;
-                val IHs = map (apply_n mp imp_n o apply_n spec spec_n) IHs;
-                val pick_prems = mk_pick_prems suitable_prems;
-                val pick'_prems = mk_pick_prems suitable'_prems;
+                val IHs = map (apply_n mp mp_n o apply_n spec spec_n) IHs;
+                fun chop_rec xs = fst (fold_map (K (chop nvars)) (1 upto r) xs)
+
+                val valid_Pmap_opt = Option.map (fn v =>
+                  #valid_Pmap v OF (valid_prems @ maps (fn ps => [
+                    @{thm bij_imp_bij_inv} OF [hd ps],
+                    @{thm supp_inv_bound} OF ps
+                  ]) (chop_rec f_prems))
+                ) (#validity params);
+                val valid_Pmap = the_default [] (Option.map single valid_Pmap_opt);
+
+                val pick_prems = mk_pick_prems valid_prems suitable_prems @ the_default [] (Option.map (fn xs => mk_pick_prems [xs] suitable_prems) valid_Pmap_opt);
+                val pick'_prems = mk_pick_prems valid_prems suitable'_prems @ the_default [] (Option.map (fn xs => mk_pick_prems [xs] suitable'_prems) valid_Pmap_opt);
 
                 val ((((((p, fs), picks), pick's), hs), x), x') = map (Thm.term_of o snd) ps
                   |> apfst hd o chop 1
@@ -1800,7 +2255,6 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ||>> chop m
                   ||>> chop nvars
                   ||>> apply2 hd o chop 1;
-                fun chop_rec xs = fst (fold_map (K (chop nvars)) (1 upto r) xs)
                 val pickss = chop_rec picks;
                 val suitable_premss = chop_rec suitable_prems;
                 val suitable'_premss = chop_rec suitable'_prems;
@@ -1835,6 +2289,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   rtac ctxt Un_bound,
                   K (prefer_tac 2),
                   resolve_tac ctxt (#small_PFVarss (#axioms params)),
+                  TRY o resolve_tac ctxt valid_prems,
                   SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
                     @ #card_of_FVars_bound_UNIVs raw
                   ) 1)),
@@ -1843,12 +2298,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     @ MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf
                   ) 1))
                 ];
+                val pre_n = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;
               in EVERY1 [
                 rtac ctxt conjI,
                 EqSubst.eqsubst_tac ctxt [0] [#rename_simp (#inner raw)],
                 REPEAT_DETERM o resolve_tac ctxt (prems @ card_thms),
                 rtac ctxt trans,
-                rtac ctxt (snd rec_f OF suitable_prems),
+                rtac ctxt (snd rec_f OF (suitable_prems @ valid_prems)),
                 EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
                 REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
                 K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of "\<lambda>t. (_ t, _ t)"]}),
@@ -1860,23 +2316,34 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 rtac ctxt sym,
                 rtac ctxt trans,
                 rtac ctxt (fun_cong OF [fun_cong OF [PUmap'_alpha]]),
-                rtac ctxt (alpha_ctor_pick OF suitable_prems),
+                rtac ctxt (alpha_ctor_pick OF (suitable_prems @ valid_Pmap)),
                 K (unfold_thms_tac ctxt [snd PUmap']),
-                EqSubst.eqsubst_tac ctxt [0] [snd rec_f OF suitable_prems],
+                EqSubst.eqsubst_tac ctxt [0] [snd rec_f OF (suitable_prems @ valid_Pmap)],
                 rtac ctxt trans,
                 resolve_tac ctxt Umap'_Uctor's,
+                TRY o resolve_tac ctxt valid_Pmap,
+                TRY o EVERY' [
+                  rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                  SELECT_GOAL (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_mk_prod}),
+                  SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
+                  rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
+                  rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
+                  REPEAT_DETERM o resolve_tac ctxt (
+                    @{thms ballI impI TrueI pred_fun_If}
+                    @ map (fn thm => thm OF suitable_prems) (the_default [] valid_f_opts)
+                  )
+                ],
                 REPEAT_DETERM o resolve_tac ctxt f_prems,
                 EqSubst.eqsubst_tac ctxt [0] [@{thm trans[OF comp_apply[symmetric]]} OF [
-                  fun_cong OF [#Pmap_comp0 (#axioms params) RS sym]
+                  #Pmap_comp0 (#axioms params) RS sym
                 ]],
-                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ f_prems @ card_thms),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ f_prems @ valid_prems @ card_thms),
                 REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp2},
                   resolve_tac ctxt f_prems
                 ],
-                K (unfold_thms_tac ctxt [Local_Defs.unfold0 ctxt @{thms id_def[symmetric]} (
-                  Local_Defs.unfold0 ctxt @{thms id_def} (fun_cong OF [#Pmap_id0 (#axioms params)])
-                )]),
+                K (unfold_thms_tac ctxt [#Pmap_id0 (#axioms params) OF valid_prems]),
                 EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
                 REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
                 K (unfold_thms_tac ctxt @{thms id_o o_id comp_pair prod.case}),
@@ -1884,14 +2351,36 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                   REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms)
                 ],
-                K (unfold_thms_tac ctxt (Thm.symmetric (snd XXl) :: @{thms id_o o_id})),
+                K (unfold_thms_tac ctxt @{thms id_o o_id}),
+                case #validity params of NONE => K all_tac | SOME v => EVERY' [
+                  rtac ctxt trans,
+                  rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst Uctor'))] @{thm arg_cong2[OF _ refl]}),
+                  rtac ctxt (Drule.rotate_prems (~pre_n) (MRBNF_Def.map_cong_of_mrbnf mrbnf)),
+                  REPEAT_DETERM_N (pre_n - rec_n) o rtac ctxt refl,
+                  REPEAT_DETERM o EVERY' [
+                    rtac ctxt @{thm iffD2[OF prod.inject]},
+                    rtac ctxt @{thm conjI[OF refl]},
+                    rtac ctxt ext,
+                    rtac ctxt @{thm if_cong},
+                    rtac ctxt refl,
+                    eresolve_tac ctxt (the valid_PUmap'_If),
+                    REPEAT_DETERM o resolve_tac ctxt f_prems,
+                    rtac ctxt refl
+                  ],
+                  REPEAT_DETERM o resolve_tac ctxt (
+                    @{thms supp_id_bound bij_id bij_comp supp_comp_bound}
+                    @ f_prems @ pick_prems @ [infinite_UNIV]
+                  ),
+                  rtac ctxt refl
+                ],
+                K (unfold_thms_tac ctxt [Thm.symmetric (snd XXl)]),
                 EVERY' (map (fn thm => EVERY' [
                   rtac ctxt thm,
                   REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp} @ f_prems @ pick_prems),
                   EVERY' (map (fn thms => EVERY' [
                     bound_tac ctxt,
                     resolve_tac ctxt thms,
-                    REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ f_prems @ imsupp_prems @ card_thms),
+                    REPEAT_DETERM o resolve_tac ctxt (valid_prems @ suitable_prems @ f_prems @ imsupp_prems @ card_thms),
                     SELECT_GOAL (unfold_thms_tac ctxt (map snd [XXl, XXr])),
                     EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems @ card_thms),
@@ -1900,24 +2389,31 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ]) [int_empty_XXls, int_empty_XXrs])
                 ]) exists_bij_betws),
                 REPEAT_DETERM o etac ctxt exE,
-                rtac ctxt (Drule.rotate_prems (4 * nvars + 2 * nvars * r) Uctor'_cong),
+                rtac ctxt (Drule.rotate_prems (4 * nvars + 2 * nvars * r + length validP_prems + (case valid_XXls of NONE => 0 | _ => 2)) Uctor'_cong),
                 REPEAT_DETERM_N (4 * nvars) o EVERY' [
                   SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
                   REPEAT_DETERM o etac ctxt conjE,
                   assume_tac ctxt
                 ],
                 defer_tac,
+                REPEAT_DETERM o resolve_tac ctxt (valid_prems @ the_default [] valid_XXls @ the_default [] valid_XXrs @ f_prems @ suitable_prems),
                 REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
                 REPEAT_DETERM o EVERY' [
                   eresolve_tac ctxt (maps (map (fn thm =>
-                    Drule.rotate_prems ~1 (thm OF (suitable_prems @ f_prems))
+                    Drule.rotate_prems ~1 (thm OF (replicate (2 * length validP_prems) @{thm _} @ suitable_prems @ f_prems))
                   )) XXl_UFVars'ss),
+                  TRY o (assume_tac ctxt THEN' resolve_tac ctxt valid_prems),
                   eresolve_tac ctxt (map (fn IH => IH RS conjunct1) IHs),
+                  TRY o assume_tac ctxt,
                   REPEAT_DETERM o resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res) @ prems)
                 ],
-                REPEAT_DETERM o eresolve_tac ctxt (maps (map (fn thm =>
-                  thm OF (suitable_prems @ f_prems)
-                )) XXr_UFVars'ss),
+                REPEAT_DETERM o FIRST' [
+                  eresolve_tac ctxt (maps (map (fn thm =>
+                    thm OF (replicate (2 * length validP_prems) @{thm _} @ suitable_prems @ f_prems)
+                  )) XXr_UFVars'ss),
+                  assume_tac ctxt,
+                  resolve_tac ctxt valid_prems
+                ],
                 defer_tac,
                 (* mr_rel_goal *)
                 REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] [snd XXl, snd XXr],
@@ -1951,14 +2447,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     rtac ctxt trans,
                     rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
                     REPEAT_DETERM o dresolve_tac ctxt (map (fn thm =>
-                      Drule.rotate_prems ~1 (thm OF (suitable_prems @ f_prems))
+                      Drule.rotate_prems ~1 (thm OF (valid_prems @ suitable_prems @ f_prems))
                     ) imsupp_id_on_XXls),
                     REPEAT_DETERM o etac ctxt conjE,
                     etac ctxt @{thm id_onD},
                     rtac ctxt imageI,
                     assume_tac ctxt,
                     REPEAT_DETERM o dresolve_tac ctxt (map (fn thm =>
-                      Drule.rotate_prems ~1 (thm OF (suitable_prems @ f_prems))
+                      Drule.rotate_prems ~1 (thm OF (valid_prems @ suitable_prems @ f_prems))
                     ) imsupp_id_on_XXrs),
                     REPEAT_DETERM o etac ctxt conjE,
                     etac ctxt @{thm id_onD[OF id_on_inv, rotated]},
@@ -2001,7 +2497,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
                         REPEAT_DETERM o etac ctxt conjE,
                         REPEAT_DETERM o dresolve_tac ctxt (map (fn thm =>
-                          thm OF (suitable_prems @ f_prems)
+                          thm OF (valid_prems @ suitable_prems @ f_prems)
                         ) (imsupp_id_on_XXls @ imsupp_id_on_XXrs)),
                         REPEAT_DETERM o etac ctxt conjE,
                         dtac ctxt @{thm UN_I},
@@ -2041,7 +2537,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
                           REPEAT_DETERM o etac ctxt conjE,
                           REPEAT_DETERM o dresolve_tac ctxt (maps (map (fn thm =>
-                            thm OF (suitable_prems @ f_prems)
+                            thm OF (valid_prems @ suitable_prems @ f_prems)
                           )) (imsupp_id_on_XXlss @ imsupp_id_on_XXrss)),
                           REPEAT_DETERM o etac ctxt conjE,
                           dtac ctxt @{thm UN_I},
@@ -2074,7 +2570,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           rtac ctxt trans,
                           rtac ctxt @{thm arg_cong[of _ _ "_ \<circ> _"]},
                           eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                            @{thm id_onD} OF [thm OF [p]]
+                            @{thm id_onD} OF [thm OF (p::valid_Pmap)]
                           )) (nth suitable_premss (i - 1)) pick_id_on'ss)),
                           rotate_tac ~1,
                           rtac ctxt @{thm trans[OF comp_apply]},
@@ -2083,7 +2579,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                             SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
                             REPEAT_DETERM o etac ctxt conjE,
                             REPEAT_DETERM o dresolve_tac ctxt (map (fn thm =>
-                              thm OF (suitable_prems @ f_prems)
+                              thm OF (valid_prems @ suitable_prems @ f_prems)
                             ) (imsupp_id_on_XXls @ imsupp_id_on_XXrs)),
                             REPEAT_DETERM o etac ctxt conjE,
                             eresolve_tac ctxt (map (fn f => infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of lthy f)]
@@ -2097,25 +2593,32 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           ]
                         ],
                         eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                          @{thm id_onD} OF [thm OF (f_prems @ [p]), imageI]
+                          @{thm id_onD} OF [thm OF (f_prems @ [p] @ valid_prems), imageI]
                         )) (nth suitable_premss (i - 1)) pick_id_on_image'ss))
                       ]
                     ]
                   ],
                   resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+                  (rtac ctxt allI THEN' rtac ctxt impI) ORELSE' rtac ctxt ext,
                   rtac ctxt trans,
-                  resolve_tac ctxt (map (fn PUmap' =>
-                    mk_arg_cong lthy (nvars + 2) (fst PUmap') OF (replicate (nvars + 1) refl)
-                  ) PUmap's),
-                  rtac ctxt ext,
+                  TRY o EVERY' [
+                    eresolve_tac ctxt (the_default [] valid_PUmap'_If),
+                    REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
+                    rtac ctxt trans
+                  ],
+                  resolve_tac ctxt PUmap'_congs,
+                  rtac ctxt refl,
                   resolve_tac ctxt (map (fn thm => thm RS conjunct1 RS sym) IHs),
                   eresolve_tac ctxt (maps (fn raw =>
                     flat (the (#set_subshapess (#inner raw)))
                     @ maps (map (fn thm => Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                   ) (#raw_fps fp_res)),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id}
-                    @ map (#alpha_refl o #inner) (#raw_fps fp_res) @ prems @ pick_prems @ card_thms
-                  ),
+                  REPEAT_DETERM o FIRST' [
+                    eresolve_tac ctxt (@{thms eq_bij_betw_refl_prems} @ the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
+                    resolve_tac ctxt (@{thms supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv}
+                      @ map (#alpha_refl o #inner) (#raw_fps fp_res) @ prems @ pick_prems @ card_thms @ f_prems
+                    )
+                  ],
                   TRY o EVERY' [
                     EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems @ pick_prems @ card_thms),
@@ -2123,12 +2626,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ],
                   REPEAT_DETERM o EVERY' [
                     rtac ctxt trans,
-                    rtac ctxt ext,
                     resolve_tac ctxt (map (fn thm => thm RS conjunct1 RS sym) IHs),
                     eresolve_tac ctxt (maps (fn raw => maps (map (fn thm =>
                       Drule.rotate_prems ~1 thm OF [imageI])
                     ) (the (#set_subshape_imagess (#inner raw)))) (#raw_fps fp_res)),
-                    REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ suitable_prems @ suitable'_prems @ f_prems @ pick_prems @ card_thms),
+                    REPEAT_DETERM o FIRST' [
+                      assume_tac ctxt,
+                      resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ suitable_prems @ suitable'_prems @ f_prems @ pick_prems @ card_thms)
+                    ],
                     REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
                     REPEAT_DETERM o EVERY' [
                       SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def Int_Un_distrib Un_empty}),
@@ -2136,7 +2641,12 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       assume_tac ctxt
                     ],
                     resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                    rtac ctxt sym
+                    rtac ctxt sym,
+                    TRY o EVERY' [
+                      rtac ctxt trans,
+                      eresolve_tac ctxt (the_default [] valid_PUmap'_If),
+                      REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_refl_prems}
+                    ]
                   ],
                   resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
                   EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
@@ -2146,12 +2656,12 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                   ) (#raw_fps fp_res)),
                   REPEAT_DETERM o FIRST' [
-                    resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ f_prems @ pick_prems),
+                    resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound imsupp_id_empty} @ [infinite_UNIV] @ f_prems @ pick_prems @ suitable_prems),
                     eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
+                    assume_tac ctxt,
                     resolve_tac ctxt card_thms
                   ],
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound imsupp_id_empty} @ suitable_prems),
-                  assume_tac ctxt ORELSE' EVERY' [
+                  TRY o EVERY' [
                     REPEAT_DETERM o EVERY' [
                       EqSubst.eqsubst_tac ctxt [0] (map #rename_comp (#raw_fps fp_res)),
                       REPEAT_DETERM o FIRST' [
@@ -2163,11 +2673,9 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     assume_tac ctxt
                   ]
                 ]),
-                rtac ctxt ext,
-                K (unfold_thms_tac ctxt [snd rec_f OF suitable_prems, snd rec_f OF suitable'_prems]),
-                Subgoal.FOCUS_PARAMS (fn {context=ctxt, params=ps, ...} =>
+                K (unfold_thms_tac ctxt [snd rec_f OF (suitable_prems @ valid_prems), snd rec_f OF (suitable'_prems @ valid_prems)]),
+                Subgoal.FOCUS_PARAMS (fn {context=ctxt, ...} =>
                   let
-                    val p = Thm.term_of (snd (hd ps));
                     val pick_bijss = chop_rec (every_other pick_prems);
                     val pick'_bijss = chop_rec (every_other pick'_prems);
                     val exists_bij_betw2s = @{map 7} (fn bset => fn pick_bij => fn pick'_bij => fn h_bij => fn FVars => fn PFVars => fn avoiding_set =>
@@ -2183,7 +2691,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                                   if member (op=) rel i then pick_t else HOLogic.id_const var
                                 ) (#binding_relation fp_res) pick_ts vars) $ t
                               in Term.absfree (dest_Free t) (HOLogic.mk_prod (rename_t,
-                                Term.list_comb (fst rec_f, picks) $ rename_t
+                                valid_If (Term.list_comb (fst rec_f, picks) $ rename_t)
                               )) end
                             ) (0 upto nrecs - 1) (replicate_rec (#raw_fps fp_res)) (replicate_rec ts) (replicate_rec rec_fs);
                           in Term.absfree (dest_Free x) (map_id_fst $ (
@@ -2194,10 +2702,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         val FVars_t = Thm.cterm_of ctxt (Term.absfree (dest_Free x) (mk_Un (mk_Un (
                           FVars $ (#ctor raw $ x), PFVars $ p), avoiding_set
                         )));
-                      in Drule.rotate_prems 1 (infer_instantiate' ctxt [
+                      in Drule.rotate_prems 1 (infer_instantiate' ctxt ([
                         cbset, NONE, NONE, cbset, SOME pick'_map_t, SOME FVars_t,
-                        NONE, NONE, SOME pick_map_t
-                      ] (
+                        NONE] @ (case #validity params of NONE => [SOME (Thm.cterm_of ctxt p)] | _ => []) @ [SOME pick_map_t
+                      ]) (
                         @{thm exists_bij_betw_def} OF ([Cinfinite_card] @ @{thms _} @ [pick_bij, pick'_bij, h_bij])
                       )) end
                     ) bsets (nth pick_bijss (i - 1)) (nth pick'_bijss (i - 1)) (every_other h_prems) (#FVars raw) (#PFVarss params) (#avoiding_sets params);
@@ -2215,14 +2723,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         bound_tac ctxt,
                         EqSubst.eqsubst_tac ctxt [0] (#alpha_FVarss (#inner raw)),
                         rtac ctxt (#alpha_sym (#inner raw)),
-                        rtac ctxt (alpha_ctor_pick OF suitables),
+                        rtac ctxt (alpha_ctor_pick OF (suitables @ valid_prems)),
                         REPEAT_DETERM o EVERY' [
                           EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                           REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ pick_prems @ card_thms)
                         ],
                         Method.insert_tac ctxt suitables,
                         K (unfold_thms_tac ctxt (@{thms image_id} @ maps (map snd) suitabless)),
-                        REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+                        REPEAT_DETERM o eresolve_tac ctxt [allE, impE OF (@{thm _} :: valid_prems), conjE],
                         assume_tac ctxt,
                         REPEAT_DETERM o EVERY' [
                           EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
@@ -2234,7 +2742,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       ]) [suitable'_prems, suitable_prems])
                     ]) exists_bij_betw2s),
                     REPEAT_DETERM o etac ctxt exE,
-                    rtac ctxt (Drule.rotate_prems (4 * nvars + 2 * m) Uctor'_cong),
+                    rtac ctxt (Drule.rotate_prems (4 * nvars + 2 * m + length validP_prems + (case valid_XXls of NONE => 0 | _ => 2)) Uctor'_cong),
                     REPEAT_DETERM_N (2 * nvars) o EVERY' [
                       SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
                       REPEAT_DETERM o etac ctxt conjE,
@@ -2255,6 +2763,18 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       assume_tac ctxt
                     ],
                     defer_tac,
+                    TRY o EVERY' [
+                      resolve_tac ctxt valid_prems,
+                      REPEAT_DETERM o EVERY' [
+                        rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ pick_prems @ pick'_prems),
+                        SELECT_GOAL (unfold_thms_tac ctxt @{thms id_o o_id comp_assoc snd_comp_mk_prod}),
+                        SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
+                        rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
+                        rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms ballI impI TrueI pred_fun_If} @ the_default [] valid_f_opts @ suitable_prems @ suitable'_prems)
+                      ]
+                    ],
                     REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
                     REPEAT_DETERM o EVERY' [
                       REPEAT_DETERM1 o EVERY' [
@@ -2267,8 +2787,15 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         dtac ctxt @{thm iffD1[OF prod.inject]},
                         etac ctxt conjE,
                         hyp_subst_tac ctxt,
+                        TRY o EVERY' [
+                          EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+                          assume_tac ctxt
+                        ],
                         resolve_tac ctxt (flat f_UFVars'ss),
-                        REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ suitable'_prems)
+                        REPEAT_DETERM o FIRST' [
+                          resolve_tac ctxt (suitable_prems @ suitable'_prems),
+                          assume_tac ctxt
+                        ]
                       ]
                     ],
                     (* mr_rel_goal *)
@@ -2308,8 +2835,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         REPEAT_DETERM o etac ctxt conjE,
                         REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
                         SELECT_GOAL (unfold_thms_tac ctxt (flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
-                          alpha_FVars OF [alpha_pick OF suitable_prems] RS sym,
-                          alpha_FVars OF [alpha_pick OF suitable'_prems] RS sym
+                          alpha_FVars OF [alpha_pick OF (suitable_prems @ valid_prems)] RS sym,
+                          alpha_FVars OF [alpha_pick OF (suitable'_prems @ valid_prems)] RS sym
                         ]) (#alpha_FVarss (#inner raw))) alpha_ctor_picks (#raw_fps fp_res)))),
                         rtac ctxt trans,
                         rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
@@ -2374,8 +2901,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
                             REPEAT_DETERM1 o EVERY' [
                               rtac ctxt ballI,
                               SELECT_GOAL (unfold_thms_tac ctxt (@{thms eq_bij_betw_def} @ flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
-                                alpha_FVars OF [alpha_pick OF suitable_prems] RS sym,
-                                alpha_FVars OF [alpha_pick OF suitable'_prems] RS sym
+                                alpha_FVars OF [alpha_pick OF (suitable_prems @ valid_prems)] RS sym,
+                                alpha_FVars OF [alpha_pick OF (suitable'_prems @ valid_prems)] RS sym
                               ]) (#alpha_FVarss (#inner raw))) alpha_ctor_picks (#raw_fps fp_res)))),
                               REPEAT_DETERM o etac ctxt conjE,
                               REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
@@ -2419,7 +2946,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                                   EqSubst.eqsubst_asm_tac ctxt [0] (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
                                   resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
                                   resolve_tac ctxt alpha_ctor_picks,
-                                  REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ suitable'_prems)
+                                  REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ suitable'_prems @ valid_prems)
                                 ],
                                 REPEAT_DETERM1 o dtac ctxt @{thm imsupp_id_on},
                                 etac ctxt @{thm id_on_eq},
@@ -2480,7 +3007,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                                 assume_tac ctxt,
                                 rotate_tac ~1,
                                 eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                                  @{thm id_onD} OF [thm OF [p]]
+                                  @{thm id_onD} OF [thm OF (p::valid_prems)]
                                 )) (nth suitable'_premss (i - 1)) pick_id_on'ss)),
                                 REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
                                 SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
@@ -2493,7 +3020,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                                 rtac ctxt sym,
                                 resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
                                 resolve_tac ctxt (map (Drule.rotate_prems 1 o #alpha_trans o #inner) (#raw_fps fp_res)),
-                                resolve_tac ctxt (map (fn thm => thm OF suitable'_prems) alpha_ctor_picks),
+                                resolve_tac ctxt (map (fn thm => thm OF (suitable'_prems @ valid_prems)) alpha_ctor_picks),
                                 resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_intro o #inner) (#raw_fps fp_res)),
                                 REPEAT_DETERM o resolve_tac ctxt (mr_rel_prem :: h_prems @ h_id_ons),
                                 eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
@@ -2502,7 +3029,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                                 rtac ctxt sym,
                                 rtac ctxt @{thm id_on_comp2},
                                 eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                                  @{thm id_onD} OF [thm OF [p]]
+                                  @{thm id_onD} OF [thm OF (p::valid_prems)]
                                 )) (nth suitable_premss (i - 1)) pick_id_on'ss)),
                                 SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
                                 REPEAT_DETERM o etac ctxt conjE,
@@ -2513,7 +3040,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                                 rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]},
                                 rtac ctxt sym,
                                 resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
-                                resolve_tac ctxt (map (fn thm => thm OF suitable_prems) alpha_ctor_picks),
+                                resolve_tac ctxt (map (fn thm => thm OF (suitable_prems @ valid_prems)) alpha_ctor_picks),
                                 eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
                                 assume_tac ctxt,
                                 assume_tac ctxt
@@ -2553,8 +3080,14 @@ fun create_binding_recursor qualify fp_res params models lthy =
                             assume_tac ctxt
                           ]
                         ],
+                        EVERY' [
+                          rtac ctxt allI,
+                          rtac ctxt impI,
+                          rtac ctxt trans,
+                          eresolve_tac ctxt (the_default [] valid_PUmap'_If),
+                          REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems}
+                        ] ORELSE' rtac ctxt ext,
                         rtac ctxt trans,
-                        rtac ctxt ext,
                         resolve_tac ctxt (map (fn IH => IH RS conjunct1 RS sym) IHs),
                         eresolve_tac ctxt (maps (fn raw =>
                           flat (the (#set_subshapess (#inner raw)))
@@ -2563,6 +3096,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         REPEAT_DETERM o FIRST' [
                           resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ suitable_prems),
                           eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                          assume_tac ctxt,
                           resolve_tac ctxt card_thms
                         ],
                         REPEAT_DETERM o EVERY' [
@@ -2587,35 +3121,44 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         ) (#raw_fps fp_res)),
                         REPEAT_DETERM o FIRST' [
                           eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                          assume_tac ctxt,
                           resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ card_thms)
                         ],
                         REPEAT_DETERM_N m o resolve_tac ctxt suitable_prems,
                         REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
                         K (prefer_tac (3 * nvars + 2)),
                         rtac ctxt trans,
-                        rtac ctxt ext,
                         resolve_tac ctxt (map (fn thm => thm RS conjunct1) IHs),
                         eresolve_tac ctxt (maps (fn raw =>
                           maps (map (fn thm => Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                         ) (#raw_fps fp_res)),
-                        K (prefer_tac (5 * nvars + 2 * m + 2)),
+                        K (prefer_tac (5 * nvars + 2 * m + 2 + length validP_prems)),
                         rtac ctxt @{thm trans[rotated]},
-                        resolve_tac ctxt (map (fn thm => fun_cong OF [thm]) PUmap'_alphas),
+                        resolve_tac ctxt (map (fn thm => fun_cong OF [fun_cong OF [thm]]) PUmap'_alphas),
                         TRY o EVERY' [
                           resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
                           REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
                         ],
                         assume_tac ctxt,
-                        resolve_tac ctxt (map (fn t =>
-                          mk_arg_cong lthy (nvars +  2) (fst t) OF (replicate nvars refl)
-                        ) PUmap's),
+                        resolve_tac ctxt PUmap'_congs,
                         resolve_tac ctxt (maps (fn raw => [#rename_comp raw RS sym, #rename_id raw]) (#raw_fps fp_res)),
                         REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
+                        TRY o EVERY' [
+                          EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+                          eresolve_tac ctxt (the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
+                          REPEAT_DETERM o FIRST' [
+                            resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound},
+                            eresolve_tac ctxt @{thms eq_bij_betw_prems}
+                          ]
+                        ],
                         resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
                         eresolve_tac ctxt (maps (fn raw =>
                           maps (map (fn thm => Drule.rotate_prems ~1 thm OF [imageI])) (the (#set_subshape_imagess (#inner raw)))
                         ) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms),
+                        REPEAT_DETERM o FIRST' [
+                          eresolve_tac ctxt (@{thms eq_bij_betw_prems} @ the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
+                          resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)
+                        ],
                         REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
                         REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order}),
                         EqSubst.eqsubst_tac ctxt [0] (maps (fn raw => [#rename_comp raw RS sym, #rename_id raw]) (#raw_fps fp_res)),
@@ -2625,7 +3168,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
                         ],
                         assume_tac ctxt,
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms),
+                        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)),
                         REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
                         REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
                         REPEAT_DETERM o EVERY' [
@@ -2669,7 +3212,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             ) ctxt
           ]) (1 upto r) ys map_id_fsts (#raw_fps fp_res) (#pre_mrbnfs fp_res) rec_fs PU_setss pre_setss XXls XXrs deadss
           PUmap'_alphas alpha_ctor_picks int_empty_XXlss int_empty_XXrss Uctor'_congs XXl_UFVars'sss
-          XXr_UFVars'sss imsupp_id_on_XXlss imsupp_id_on_XXrss PUmap's pick_id_onsss' pick_id_on_image'sss)
+          XXr_UFVars'sss Uctor's imsupp_id_on_XXlss imsupp_id_on_XXrss PUmap's pick_id_onsss' pick_id_on_image'sss)
         ] end
       ) end;
 
@@ -2678,15 +3221,18 @@ fun create_binding_recursor qualify fp_res params models lthy =
       in Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop goal) (fn {context=ctxt,...} => EVERY1 [
         K (unfold_thms_tac ctxt [snd suitable]),
         REPEAT_DETERM o resolve_tac ctxt @{thms choice allI},
-        rtac ctxt @{thm exists_suitable_aux},
+        resolve_tac ctxt @{thms exists_suitable_aux exists_suitable_aux[of _ True, unfolded HOL.simp_thms(15)]},
         rtac ctxt Cinfinite_card,
         REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl cmin1 cmin2 card_of_Card_order},
-        REPEAT_DETERM o resolve_tac ctxt (@{thms ordLeq_ordLess_trans[OF card_of_diff]}
-          @ (Un_bound :: MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
-          @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
-          @ #small_PFVarss (#axioms params) @ #small_avoiding_sets (#axioms params)
-          @ @{thms cmin_greater card_of_Card_order}
-        )
+        REPEAT_DETERM o FIRST' [
+          resolve_tac ctxt (@{thms ordLeq_ordLess_trans[OF card_of_diff]}
+            @ (Un_bound :: MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
+            @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
+            @ #small_PFVarss (#axioms params) @ #small_avoiding_sets (#axioms params)
+            @ @{thms cmin_greater card_of_Card_order}
+          ),
+          assume_tac ctxt
+        ]
       ]) end
     )) (#pre_mrbnfs fp_res) suitabless;
 
@@ -2705,11 +3251,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
         val goal = Logic.mk_implies (
           HOLogic.mk_Trueprop (#alpha (#inner raw) $ t $ t'),
           mk_Trueprop_eq (
-            Term.list_comb (fst rec_f, flat pickss) $ t,
-            Term.list_comb (fst rec_f, flat pick'ss) $ t'
+            Term.list_comb (fst rec_f, flat pickss) $ t $ p,
+            Term.list_comb (fst rec_f, flat pick'ss) $ t' $ p
           )
         );
-      in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ [t, t'])) (suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ [t, t', p])) (validP_prems @ suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         resolve_tac ctxt (map (fn thm => thm RS conjunct2) f_swap_alphas),
         REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ @{thms cmin_greater card_of_Card_order}),
         K (unfold_thms_tac ctxt @{thms imsupp_id}),
@@ -2719,19 +3265,20 @@ fun create_binding_recursor qualify fp_res params models lthy =
     ) rec_fs (#raw_fps fp_res) ts ts';
 
     val f0_alphas = @{map 4} (fn f0 => fn raw => fn t => fn t' =>
-      let val goal = Logic.mk_implies (
+      let val goal = addPred (Logic.mk_implies (
         HOLogic.mk_Trueprop (#alpha (#inner raw) $ t $ t'),
-        mk_Trueprop_eq (fst f0 $ t, fst f0 $ t')
-      ) in Goal.prove_sorry lthy (names [t, t']) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        mk_Trueprop_eq (fst f0 $ t $ p, fst f0 $ t' $ p)
+      )) in Goal.prove_sorry lthy (names [t, t', p]) [] goal (fn {context=ctxt, ...} => EVERY1 [
         K (unfold_thms_tac ctxt [snd f0]),
         resolve_tac ctxt f_alphas,
+        TRY o assume_tac ctxt,
         REPEAT_DETERM o resolve_tac ctxt (flat suitable_pick0ss),
         assume_tac ctxt
       ]) end
     ) f0s (#raw_fps fp_res) ts ts';
 
     val f0_UFVars'ss = map2 (fn f0 => map (fn thm =>
-      Local_Defs.unfold0 lthy [Thm.symmetric (snd f0)] (thm OF (flat suitable_pick0ss))
+      Local_Defs.unfold0 lthy [Thm.symmetric (snd f0)] (thm OF (replicate (length validP_prems) @{thm _} @ flat suitable_pick0ss))
     )) f0s f_UFVars'ss;
 
     val f0_ctors = @{map 8} (fn i => fn f0 => fn raw => fn mrbnf => fn Uctor' => fn x => fn deads => fn (_, bsets, _) =>
@@ -2741,13 +3288,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
         )) bsets (#PFVarss params) (#avoiding_sets params);
         val noclash = HOLogic.mk_Trueprop (fst (#noclash raw) $ x);
         val live_ts = map2 (fn t => fn f0 => Term.absfree (dest_Free t) (
-          HOLogic.mk_prod (t, fst f0 $ t)
+          HOLogic.mk_prod (t, valid_If (fst f0 $ t))
         )) ts f0s;
         val goal = mk_Trueprop_eq (
           fst f0 $ (#ctor raw $ x) $ p,
           fst Uctor' $ (mk_map_comb_of_mrbnf deads (replicate_rec live_ts) ids ids mrbnf $ x) $ p
         );
-      in Goal.prove_sorry lthy (names [x, p]) (int_empties @ [noclash]) goal (fn {context=ctxt, prems} =>
+      in Goal.prove_sorry lthy (names [x, p]) (validP_prems @ int_empties @ [noclash]) goal (fn {context=ctxt, prems} =>
         let
           val x' = Free ("x'", snd (dest_Free x));
           val p' = Free ("p'", snd (dest_Free p));
@@ -2759,9 +3306,12 @@ fun create_binding_recursor qualify fp_res params models lthy =
               K (unfold_thms_tac ctxt [snd suitable]),
               rtac ctxt allI,
               rtac ctxt allI,
+              TRY o rtac ctxt impI,
               Method.insert_tac ctxt [suitable_pick0],
               K (unfold_thms_tac ctxt [snd suitable]),
-              REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+              REPEAT_DETERM o etac ctxt allE,
+              TRY o (etac ctxt impE THEN' assume_tac ctxt),
+              REPEAT_DETERM o etac ctxt conjE,
               REPEAT_DETERM o FIRST' [
                 resolve_tac ctxt (
                   [conjunct1 OF [Cinfinite_card], conjunct2 OF [Cinfinite_card]]
@@ -2777,26 +3327,25 @@ fun create_binding_recursor qualify fp_res params models lthy =
               rtac ctxt @{thm Int_Un_distrib},
               SELECT_GOAL (unfold_thms_tac ctxt (@{thms Un_empty} @ #FVars_ctors raw)),
               rtac ctxt conjI,
-              Method.insert_tac ctxt (drop nvars prems),
+              Method.insert_tac ctxt (drop (length validP_prems + nvars) prems),
               SELECT_GOAL (unfold_thms_tac ctxt (@{thms Int_Un_distrib Un_empty} @ [snd (#noclash raw)])),
               REPEAT_DETERM o etac ctxt conjE,
               REPEAT_DETERM o rtac ctxt conjI,
               REPEAT_DETERM o FIRST' [
                 assume_tac ctxt,
-                resolve_tac ctxt (@{thms Diff_disjoint} @ take nvars prems)
+                resolve_tac ctxt (@{thms Diff_disjoint} @ prems)
               ]
             ]) end
           ) (nth suitabless i) (nth pick0ss i) (nth suitable_pick0ss i) vars;
         in EVERY1 [
           rtac ctxt trans,
-          rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt p)] fun_cong),
           SELECT_GOAL (unfold_thms_tac ctxt [snd f0]),
           resolve_tac ctxt f_alphas,
-          REPEAT_DETERM o resolve_tac ctxt (suitable_pick1s @ flat suitable_pick0ss),
+          REPEAT_DETERM o resolve_tac ctxt (prems @ suitable_pick1s @ flat suitable_pick0ss),
           rtac ctxt (#alpha_refl (#inner raw)),
           rtac ctxt trans,
           resolve_tac ctxt (map snd rec_fs),
-          REPEAT_DETERM o resolve_tac ctxt (suitable_pick1s @ flat suitable_pick0ss),
+          REPEAT_DETERM o resolve_tac ctxt (prems @ suitable_pick1s @ flat suitable_pick0ss),
           K (unfold_thms_tac ctxt @{thms if_P[OF refl]}),
           rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (fst Uctor'))] @{thm arg_cong2[OF _ refl]}),
           rtac ctxt (MRBNF_Def.map_cong_of_mrbnf mrbnf),
@@ -2804,14 +3353,30 @@ fun create_binding_recursor qualify fp_res params models lthy =
           K (unfold_thms_tac ctxt (@{thms prod.inject} @ map #rename_id (#raw_fps fp_res))),
           REPEAT_DETERM o EVERY' [
             rtac ctxt @{thm conjI[OF refl]},
+            rtac ctxt ext,
+            TRY o EVERY' [
+              rtac ctxt @{thm case_split},
+              rtac ctxt trans,
+              rtac ctxt @{thm if_P},
+              assume_tac ctxt,
+              rtac ctxt @{thm trans[rotated]},
+              rtac ctxt sym,
+              rtac ctxt @{thm if_P},
+              assume_tac ctxt
+            ],
             rtac ctxt trans,
             resolve_tac ctxt f_alphas,
+            TRY o assume_tac ctxt,
             REPEAT_DETERM o resolve_tac ctxt (flat suitable_pick0ss
               @ map (Local_Defs.unfold0 ctxt @{thms prod.inject}) suitable_pick1s
             ),
             resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
             SELECT_GOAL (unfold_thms_tac ctxt (map snd f0s)),
-            rtac ctxt refl
+            rtac ctxt refl,
+            TRY o EVERY' [
+              SELECT_GOAL (unfold_thms_tac ctxt @{thms if_not_P}),
+              rtac ctxt refl
+            ]
           ]
         ] end
       ) end
@@ -2819,11 +3384,24 @@ fun create_binding_recursor qualify fp_res params models lthy =
 
     val f0_swaps = map2 (fn thm => fn f0 => Local_Defs.unfold0 lthy [Thm.symmetric (snd f0)] (
       Drule.rotate_prems (0 - r) thm OF (
-        map (#alpha_refl o #inner) (#raw_fps fp_res) @ flat (suitable_pick0ss @ suitable_pick0ss)
+        map (#alpha_refl o #inner) (#raw_fps fp_res) @ replicate (length validP_prems) @{thm _} @ flat (suitable_pick0ss @ suitable_pick0ss)
       )
     ) RS conjunct1) f_swap_alphas f0s;
 
     (* Final result lemmas *)
+    val ff0_valids = @{map 5} (fn ff0 => fn f0 => fn quot => fn x => fn model => Option.map (fn v =>
+      let
+        val ff_t = fst ff0 $ (#ctor quot $ x);
+        val goal = case #validity params of
+          NONE => #pred v $ (ff_t $ p)
+          | SOME v' => mk_pred_fun (#pred v') (#pred v) $ ff_t;
+      in Goal.prove_sorry lthy (names [x]) [] (HOLogic.mk_Trueprop goal) (fn {context=ctxt, ...} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd ff0, snd f0]),
+        resolve_tac ctxt (the valid_f_opts),
+        REPEAT_DETERM o resolve_tac ctxt (flat suitable_pick0ss)
+      ]) end
+    ) (#validity model)) ff0s f0s (#quotient_fps fp_res) xs' models;
+
     val ff0_cctors = @{map 7} (fn ff0 => fn quot => fn mrbnf => fn Uctor => fn x => fn deads => fn (_, bsets, _) =>
       let
         val int_empties = @{map 3} (fn bset => fn PFVars => fn avoiding_set => HOLogic.mk_Trueprop (
@@ -2831,17 +3409,18 @@ fun create_binding_recursor qualify fp_res params models lthy =
         )) bsets (#PFVarss params) (#avoiding_sets params);
         val noclash = HOLogic.mk_Trueprop (fst (#noclash quot) $ x);
         val live_ts = map2 (fn t => fn f0 => Term.absfree (dest_Free t) (
-          HOLogic.mk_prod (t, fst f0 $ t)
+          HOLogic.mk_prod (t, valid_If (fst f0 $ t))
         )) (map2 (fn t => fn quot => Free (fst (dest_Free t), #T quot)) ts (#quotient_fps fp_res)) ff0s;
         val goal = mk_Trueprop_eq (
           fst ff0 $ (#ctor quot $ x) $ p,
           Uctor $ (mk_map_comb_of_mrbnf deads (replicate_rec live_ts) ids ids mrbnf $ x) $ p
         );
-      in Goal.prove_sorry lthy (names [x, p]) (int_empties @ [noclash]) goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names [x, p]) (validP_prems @ int_empties @ [noclash]) goal (fn {context=ctxt, prems} => EVERY1 [
         Method.insert_tac ctxt prems,
         K (unfold_thms_tac ctxt (#ctor_def (#inner quot) :: map snd ff0s)),
         rtac ctxt trans,
-        resolve_tac ctxt (map (fn thm => fun_cong OF [thm]) f0_alphas),
+        resolve_tac ctxt f0_alphas,
+        TRY o assume_tac ctxt,
         rtac ctxt (#rep_abs (#inner quot)),
         rtac ctxt trans,
         resolve_tac ctxt f0_ctors,
@@ -2873,10 +3452,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
             Term.list_comb (#Pmap params, map mk_inv fs) $ p
           ))
         );
-      in Goal.prove_sorry lthy (names (fs @ [t, p])) (f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (fs @ [t, p])) (validP_prems @ f_prems @ imsupp_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         K (unfold_thms_tac ctxt [snd ff0, #rename_def (#inner quot)]),
         rtac ctxt trans,
-        rtac ctxt (fun_cong OF [f0_alpha]),
+        rtac ctxt f0_alpha,
+        TRY o resolve_tac ctxt prems,
         rtac ctxt (#rep_abs (#inner quot)),
         rtac ctxt trans,
         resolve_tac ctxt f0_swaps,
@@ -2889,15 +3469,16 @@ fun create_binding_recursor qualify fp_res params models lthy =
     val ff0_UFVarsss = map2 (fn quot => map (fn thm => Local_Defs.unfold0 lthy (
       map snd (flat UFVars'ss) @ [#abs_rep (#inner quot)] @ map (Thm.symmetric o snd) ff0s @ FVars_def2s
     ) (
-      infer_instantiate' lthy [SOME (Thm.cterm_of lthy (#rep (#inner quot) $ Var (("t", 0), #T quot)))] thm
+      infer_instantiate' lthy (replicate (length validP_prems) NONE @ [SOME (Thm.cterm_of lthy (#rep (#inner quot) $ Var (("t", 0), #T quot)))]) thm
     ))) (#quotient_fps fp_res) f0_UFVars'ss;
 
     val unfold_defs = Local_Defs.unfold0 lthy defs;
-  in (@{map 4} (fn ff0 => fn ff0_cctor => fn ff0_swap => fn ff0_UFVarss => {
+  in (@{map 5} (fn ff0 => fn ff0_valid => fn ff0_cctor => fn ff0_swap => fn ff0_UFVarss => {
     rec_fun = fst ff0,
     rec_Uctor = unfold_defs ff0_cctor,
     rec_swap = unfold_defs ff0_swap,
+    rec_valid = Option.map unfold_defs ff0_valid,
     rec_UFVarss = map unfold_defs ff0_UFVarss
-  }) ff0s ff0_cctors ff0_swaps ff0_UFVarsss, lthy) end;
+  }) ff0s ff0_valids ff0_cctors ff0_swaps ff0_UFVarsss, lthy) end;
 
 end

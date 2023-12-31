@@ -1952,9 +1952,14 @@ val parameters = {
     @{term "avoiding_set2 :: 'tyvar::{var_T1_pre,var_T2_pre} set"}
   ],
   min_bound = true,
+  validity = NONE : { pred: term, valid_Pmap: Proof.context -> tactic } option,
   axioms = {
-    Pmap_id0 = fn ctxt => resolve_tac ctxt @{thms Pmap_id0} 1,
-    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
+    Pmap_id0 = fn ctxt => EVERY1 [
+      resolve_tac ctxt [trans],
+      resolve_tac ctxt @{thms fun_cong[OF Pmap_id0]},
+      resolve_tac ctxt @{thms id_apply}
+    ],
+    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms fun_cong[OF Pmap_comp0[symmetric]]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
     PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmaps} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
     small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVarss} 1),
@@ -1975,11 +1980,15 @@ val T1_model = {
   ],
   Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"},
   Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> _"},
+  validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
   axioms = {
-    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
+    Umap_id0 = fn ctxt => EVERY1 [
+      resolve_tac ctxt [trans],
+      resolve_tac ctxt @{thms T1.rrename_id0s[THEN fun_cong]},
+      resolve_tac ctxt @{thms id_apply}
+    ],
+    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
     Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
-    UFVars_Umaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1)),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U1map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U1FVars_subset_1 U1FVars_subset_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
   }
@@ -1994,11 +2003,15 @@ val T2_model = {
   ],
   Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"},
   Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> _"},
+  validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
   axioms = {
-    Umap_id0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_id0s} 1,
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
+    Umap_id0 = fn ctxt => EVERY1 [
+      resolve_tac ctxt [trans],
+      resolve_tac ctxt @{thms T1.rrename_id0s[THEN fun_cong]},
+      resolve_tac ctxt @{thms id_apply}
+    ],
+    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms T1.rrename_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
     Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms T1.rrename_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
-    UFVars_Umaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms T1.FFVars_rrenames} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1)),
     Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subset_1 U2FVars_subset_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
   }

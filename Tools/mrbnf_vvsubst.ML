@@ -45,8 +45,8 @@ fun define_vvsubst_consts qualify name (fp_result : MRBNF_FP_Def_Sugar.fp_result
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
 
     val compSS = (
-      Const (@{const_name compSS}, (x --> x) --> abs_type --> abs_type),
-      @{thm compSS_def}
+      Const (@{const_name compSS'}, (x --> x) --> abs_type --> abs_type),
+      @{thm compSS'_def}
     );
     val PFVars = (
       Const (@{const_name PFVars}, abs_type --> HOLogic.mk_setT x),
@@ -138,9 +138,9 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar
 
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [UNIV_cinfinite_of_mrbnf mrbnf];
 
-    val compSS_id0 = @{thm compSS_id};
-    val compSS_comp0 = @{thm compSS_comp0} OF [infinite_UNIV];
-    val compSS_cong_id = @{thm compSS_cong_id};
+    val compSS_id0 = @{thm compSS'_id};
+    val compSS_comp0 = @{thm compSS'_comp0} OF [infinite_UNIV];
+    val compSS_cong_id = @{thm compSS'_cong_id};
     val PFVars_compSS = @{thm PFVars_compSS} OF [infinite_UNIV];
     val small_PFVars = @{thm small_PFVars} OF [infinite_UNIV];
 
@@ -154,6 +154,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar
       avoiding_sets = map (fn var => Const (@{const_name bot}, HOLogic.mk_setT var)) vars,
       Pmap = ssfun_map,
       min_bound = false,
+      validity = NONE,
       axioms = {
         Pmap_id0 = fn ctxt => EVERY1 [
           K (unfold_thms_tac ctxt [compSS_id0]),
@@ -310,8 +311,12 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar
     ) (0 upto nvars - 1) prod_bsets (#FVars quotient) vars PFVarss;
 
     val model_tacs = {
-      Umap_id0 = fn ctxt => rtac ctxt (#rename_id0 quotient) 1,
-      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym), REPEAT_DETERM o assume_tac ctxt],
+      Umap_id0 = fn ctxt => EVERY1 [
+        rtac ctxt trans,
+        rtac ctxt (fun_cong OF [#rename_id0 quotient]),
+        rtac ctxt @{thm id_apply}
+      ],
+      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym RS fun_cong), REPEAT_DETERM o assume_tac ctxt],
       Umap_cong_id = fn ctxt => EVERY1 [
         rtac ctxt (#rename_cong_id (#inner quotient)),
         REPEAT_DETERM o (Goal.assume_rule_tac ctxt ORELSE' assume_tac ctxt)
@@ -330,6 +335,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_b qualify (fp_result : MRBNF_FP_Def_Sugar
       UFVarss = map (Term.abs ("t", T)) (#FVars quotient),
       Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", T) (Term.list_comb (#rename quotient, fs))),
       Uctor = CCTOR',
+      validity = NONE,
       axioms = model_tacs
     } : (Proof.context -> tactic) MRBNF_Recursor.model;
 

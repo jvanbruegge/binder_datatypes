@@ -1164,6 +1164,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         HOLogic.mk_tuple (map2 (fn p => fn def => Term.list_comb (fst (#compSS def), fs @ [p])) ps some_defs)
       )),
       avoiding_sets = map mk_bot vars,
+      validity = NONE,
       axioms = parameter_axioms,
       min_bound = true
     };
@@ -1173,6 +1174,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       UFVarss = map (fn FVars => Term.abs ("t", #T quotient) FVars) (#FVars quotient),
       Umap = fold_rev Term.absfree (map dest_Free fs) (Term.abs ("t", #T quotient) (Term.list_comb (#rename quotient, fs))),
       Uctor = fst CCTOR,
+      validity = NONE,
       axioms = model_axioms
     } : (Proof.context -> tactic) MRBNF_Recursor.model;
 

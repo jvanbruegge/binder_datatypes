@@ -1,6 +1,6 @@
 theory Countably_Infinite_Multiset
   imports
-    "thys/Prelim"
+    "thys/Prelim/Prelim"
     "HOL-Library.Linear_Temporal_Logic_on_Streams"
     "HOL-Library.Prefix_Order"
     "HOL-Library.Countable_Set_Type"

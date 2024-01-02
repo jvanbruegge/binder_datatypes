@@ -36,9 +36,9 @@ apply standard unfolding ssbij_def Tmap_def
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)
   using var_sum_class.Un_bound by blast
 
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> var set \<Rightarrow> T \<Rightarrow> bool"
+definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
-"G \<equiv> \<lambda>R B t.  
+"G \<equiv> \<lambda>B R t.  
          (\<exists>x e1 e2. B = {x} \<and> fst t = App (Lam x e1) e2 \<and> snd t = tvsubst (Var(x := e2)) e1)
          \<or>
          (\<exists>e1 e1' e2. B = {} \<and> fst t = App e1 e2 \<and> snd t = App e1' e2 \<and> 
@@ -52,11 +52,11 @@ where
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
 unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G  (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for x e1 e2
@@ -96,8 +96,8 @@ with x and (the fresh) xx swapped, whereas the non-affected ones are passed
 as they are. 
 *)
 lemma G_refresh: 
-"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
+ \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
 using fresh[of t] unfolding G_def Tmap_def apply safe
   subgoal for xx x e1 e2 
   apply(rule exI[of _ "{xx}"])  

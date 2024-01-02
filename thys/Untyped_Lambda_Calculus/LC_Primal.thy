@@ -19,7 +19,7 @@ inductive primal :: "trm \<Rightarrow> bool" where
 
 definition G
 where
-"G \<equiv> \<lambda>R B e.
+"G \<equiv> \<lambda>B R e.
    (\<exists>x. B = None \<and> e = Var x \<and> prime_var x) \<or>
    (\<exists>e1 e2. B = None \<and> e = App e1 e2 \<and> R e1 \<and> R e2) \<or>
    (\<exists>x e'. B = Some x \<and> e = Lam x e' \<and> prime_var x \<and> R e')"

@@ -79,9 +79,9 @@ unfolding wfBij_def presSuper_def fun_eq_iff apply safe
   subgoal for \<sigma> xxs apply(cases xxs) by auto 
   subgoal for \<sigma> xxs apply(cases xxs) by auto .
 
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> B \<Rightarrow> T \<Rightarrow> bool"
+definition G :: "B \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
-"G \<equiv> \<lambda>R xxs t.  
+"G \<equiv> \<lambda>xxs R t.  
          (\<exists>xs x x'. xxs = None \<and> fst t = iVar x \<and> snd t = iVar x' \<and> 
                     super xs \<and> {x,x'} \<subseteq> dsset xs) 
          \<or>
@@ -94,14 +94,14 @@ where
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma G_mmono: "R \<le> R' \<Longrightarrow> G R xxs t \<Longrightarrow> G R' xxs t"
+lemma G_mmono: "R \<le> R' \<Longrightarrow> G xxs R t \<Longrightarrow> G xxs R' t"
 unfolding G_def by fastforce
 
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_eequiv: 
-"ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> G R xxs t \<Longrightarrow> 
- G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Bmap \<sigma> xxs) (Tmap \<sigma> t)"
+"ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> 
+ G  (Bmap \<sigma> xxs) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI3_1)
   subgoal apply(elim exE) subgoal for xs x x'
@@ -130,7 +130,7 @@ unfolding G_def apply(elim disjE)
 
 (* *)
 
-lemma G_wfB: "G R xxs t \<Longrightarrow> wfB xxs"
+lemma G_wfB: "G xxs R t \<Longrightarrow> wfB xxs"
 unfolding G_def by auto 
 
 lemma eextend_to_wfBij: 
@@ -202,8 +202,8 @@ subgoal apply(subgoal_tac "bsmall (Tfvars t)")
 lemma G_rrefresh: 
 "(\<forall>t. R t \<longrightarrow> Reneqv.II t) \<Longrightarrow> 
  (\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> 
- G R xxs t \<Longrightarrow> 
- \<exists>yys. Bvars yys \<inter> Tfvars t = {} \<and> G R yys t"
+ G xxs R t \<Longrightarrow> 
+ \<exists>yys. Bvars yys \<inter> Tfvars t = {} \<and> G yys R t"
 apply(subgoal_tac "Reneqv.II t") defer
 apply (metis Reneqv.GG_mmono2 Reneqv.II.simps predicate1I)
 subgoal premises p using p apply-

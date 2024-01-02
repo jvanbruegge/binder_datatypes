@@ -387,4 +387,4 @@ proof -
     using well_scoped by fastforce+
 qed
 
-end 
+end

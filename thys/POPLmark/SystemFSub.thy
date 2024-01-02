@@ -263,8 +263,8 @@ apply standard unfolding ssbij_def Tmap_def
 
 (* AtoJ: I have now removed the extra hypotheses for G, since 
 we are using the "enhanced" version *)
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> var set \<Rightarrow> T \<Rightarrow> bool" where
-  "G \<equiv> \<lambda>R B t.
+definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool" where
+  "G \<equiv> \<lambda>B R t.
     (B = {} \<and> snd (snd t) = Top \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
   \<or> (\<exists>x. B = {} \<and> fst (snd t) = TyVar x \<and> fst (snd t) = snd (snd t) \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
   \<or> (\<exists>x U \<Gamma> T. B = {} \<and> fst t = \<Gamma> \<and> fst (snd t) = TyVar x \<and> snd (snd t) = T \<and> x <: U \<in> \<Gamma> \<and> R (\<Gamma>, U, T) 
@@ -277,7 +277,7 @@ definition G :: "(T \<Rightarrow> bool) \<Rightarrow> var set \<Rightarrow> T \<
      R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2) \<comment> \<open>\<and> \<Gamma>,x<:T1 \<turnstile> S2 <: T2 \<close>)
   "
 
-lemma G_mono: "R \<le> R' \<Longrightarrow> G R v t \<Longrightarrow> G R' v t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> G v R t \<Longrightarrow> G v R' t"
   unfolding G_def by fastforce
 
 lemma in_context_eqvt:
@@ -324,7 +324,7 @@ next
   then show ?case by (auto intro!: ty.SA_All simp: extend_eqvt)
 qed auto
 
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
   unfolding G_def
   apply (elim disjE)
   subgoal
@@ -420,8 +420,8 @@ lemma map_context_swap_FFVars[simp]:
 unfolding map_context_def apply(rule map_idI) by auto
 
 lemma G_refresh:
-  "(\<And>t. R t \<Longrightarrow> Ii t) \<Longrightarrow> (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow>
-  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+  "(\<And>t. R t \<Longrightarrow> Ii t) \<Longrightarrow> (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow>
+  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
 unfolding G_def Tmap_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto

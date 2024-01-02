@@ -36,9 +36,9 @@ apply standard unfolding ssbij_def Tmap_def
   apply (auto simp: iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s inf_A)
   using var_sum_class.Un_bound by blast
 
-definition G :: "(T \<Rightarrow> bool) \<Rightarrow> ivar set \<Rightarrow> T \<Rightarrow> bool"
+definition G :: "ivar set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
-"G \<equiv> \<lambda>R B t.  
+"G \<equiv> \<lambda>B R t.  
          (\<exists>xs e1 es2. B = dsset xs \<and> fst t = iApp (iLam xs e1) es2 \<and> snd t = itvsubst (imkSubst xs es2) e1)
          \<or>
          (\<exists>e1 e1' es2. B = {} \<and> fst t = iApp e1 es2 \<and> snd t = iApp e1' es2 \<and> 
@@ -52,12 +52,12 @@ where
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
 
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
 unfolding G_def by fastforce
 
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for xs e1 es2
@@ -105,8 +105,8 @@ lemma Tvars_dsset: "(Tfvars t - dsset xs) \<inter> dsset xs = {}" "|Tfvars t - d
 apply auto by (meson card_of_minus_bound small_Tfvars small_def)
 
 lemma G_refresh: 
-"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
+ \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
 unfolding G_def Tmap_def apply safe
   subgoal for xs e1 es2  
   using refresh[OF Tvars_dsset, of xs t]  apply safe

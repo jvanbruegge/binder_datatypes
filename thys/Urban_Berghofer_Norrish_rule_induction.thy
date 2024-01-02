@@ -199,8 +199,8 @@ definition G' where
   (\<forall>pred ss. Scond pred ss \<in> set (side rl) \<longrightarrow> pred (it_tuple vval tval ss)) \<and> 
   (\<forall>ts\<in>set (hyps rl). R (it_tuple vval tval ts)))"
 
-definition G :: "('T T_tuple \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T T_tuple \<Rightarrow> bool" where 
-"G \<equiv> (\<lambda>R B ts. \<exists>rl vval tval.
+definition G :: "'A set \<Rightarrow> ('T T_tuple \<Rightarrow> bool) \<Rightarrow> 'T T_tuple \<Rightarrow> bool" where 
+"G \<equiv> (\<lambda>B R ts. \<exists>rl vval tval.
   B = vval ` (varsbpR rl) \<and> 
   ts = it_tuple vval tval (conc rl) \<and>
   rl \<in> rules \<and> 
@@ -209,7 +209,7 @@ definition G :: "('T T_tuple \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarr
 
 lemma ex_comm2: "(\<exists>x y z. P x y z) = (\<exists>y z x . P x y z)" by auto
 
-lemma G'_G: "G' R ts = (\<exists>B. G R B ts)"
+lemma G'_G: "G' R ts = (\<exists>B. G B R ts)"
 unfolding G_def G'_def fun_eq_iff apply safe 
   subgoal for rl vval tval
   apply(subst ex_comm2)
@@ -225,7 +225,7 @@ inductive II :: "'T T_tuple \<Rightarrow> bool" where
 lemma II_G': "II = lfp G'"
 unfolding II_def G'_def ..
 
-lemma II_def2: "II = lfp (\<lambda>R t. \<exists>xs. G R xs t)"
+lemma II_def2: "II = lfp (\<lambda>R t. \<exists>xs. G xs R t)"
 unfolding II_G' G'_G ..
 
 (* 
@@ -243,12 +243,12 @@ lemma Vmap_Vfvars: "ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<
 unfolding Vmap_def Vfvars_def by auto
 *)
 
-lemma G_mono: "R \<le> R' \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+lemma G_mono: "R \<le> R' \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
 unfolding G_def le_fun_def by auto blast
  
 lemma G_equiv: 
-assumes "ssbij \<sigma>" "small B" "G R B ts" 
-shows "G (\<lambda>t'. R (Tmap_tuple (inv \<sigma>) t')) (image \<sigma> B) (Tmap_tuple \<sigma> ts)"
+assumes "ssbij \<sigma>" "small B" "G B R ts" 
+shows "G  (image \<sigma> B) (\<lambda>t'. R (Tmap_tuple (inv \<sigma>) t')) (Tmap_tuple \<sigma> ts)"
 using assms unfolding G_def apply safe subgoal for rl vval tval
 apply(rule exI[of _ rl]) apply(rule exI[of _ "\<sigma> o vval"])
 apply(rule exI[of _ "Tmap \<sigma> o tval"]) apply(intro conjI)
@@ -270,7 +270,7 @@ apply(rule exI[of _ "Tmap \<sigma> o tval"]) apply(intro conjI)
       subgoal by (simp add: Tmap_id ssbij_invR) . . . . .
 
 lemma G_fresh_simple: 
-assumes "small B" "G R B ts"
+assumes "small B" "G B R ts"
 shows "B \<inter> Tfvars_tuple ts = {}"
 using assms unfolding G_def apply(elim exE conjE) 
 subgoal for rl vval tval apply(frule VCcomp2) by auto . 

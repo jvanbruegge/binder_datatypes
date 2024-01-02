@@ -199,29 +199,29 @@ and Bvars :: "'B \<Rightarrow> 'A set"
 and wfB and bsmall
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
-GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
+GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 (* *)
 assumes 
-GG_mmono: "\<And>R R' xs t. R \<le> R' \<Longrightarrow> GG R xs t \<Longrightarrow> GG R' xs t"
+GG_mmono: "\<And>R R' xs t. R \<le> R' \<Longrightarrow> GG xs R t \<Longrightarrow> GG xs R' t"
 and 
 GG_eequiv: "\<And>\<sigma> R xs t. ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> 
-   GG R xs t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Bmap \<sigma> xs) (Tmap \<sigma> t)"
+   GG xs R t \<Longrightarrow> GG  (Bmap \<sigma> xs) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
 and 
-GG_wfB: "\<And>R xs t. GG R xs t \<Longrightarrow> wfB xs"
+GG_wfB: "\<And>R xs t. GG xs R t \<Longrightarrow> wfB xs"
 and 
 extend_to_wfBij: 
 "\<And>xs A A'. wfB xs \<Longrightarrow> small A \<Longrightarrow> bsmall A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> Bvars xs \<inter> A' = {} \<Longrightarrow> 
            \<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bvars xs \<inter> A = {} \<and> id_on A' \<rho>"
 begin
 
-lemma GG_mmono2[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> GG R xs t \<longrightarrow> GG R' xs t"
+lemma GG_mmono2[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> GG xs R t \<longrightarrow> GG xs R' t"
   using GG_mmono by blast
 
 
 inductive II :: "'T \<Rightarrow> bool" where 
-GG_II_intro: "GG II xs t \<Longrightarrow> II t"
+GG_II_intro: "GG xs II t \<Longrightarrow> II t"
 
-lemma "II \<equiv> lfp (\<lambda>R t. \<exists>xs. GG R xs t)"
+lemma "II \<equiv> lfp (\<lambda>R t. \<exists>xs. GG xs R t)"
 using II_def[simplified] .
  
 lemma II_equiv: 
@@ -229,11 +229,11 @@ assumes "II t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 shows "II (Tmap \<sigma> t)"
 using assms(1) proof induct 
   case (GG_II_intro xs t)   
-  have GG: "GG (\<lambda>t. II (Tmap \<sigma> t)) xs t"
+  have GG: "GG xs (\<lambda>t. II (Tmap \<sigma> t)) t"
   apply(rule GG_mmono[OF _ GG_II_intro(1)]) using \<sigma> by auto
-  have GG: "GG (\<lambda>t. II (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Bmap \<sigma> xs) (Tmap \<sigma> t)"
+  have GG: "GG (Bmap \<sigma> xs) (\<lambda>t. II (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Tmap \<sigma> t)"
   using GG_eequiv[OF \<sigma> GG] .
-  have "GG II (Bmap \<sigma> xs) (Tmap \<sigma> t)" 
+  have "GG (Bmap \<sigma> xs) II (Tmap \<sigma> t)" 
   apply(rule GG_mmono[OF _ GG])
   using \<sigma> 
   by auto (metis TTmap_comp' TTmap_id id_apply ssbij_inv ssbij_invL) 
@@ -241,11 +241,11 @@ using assms(1) proof induct
 qed
 
 lemma GG_mmono'[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> 
- Bvars xs \<inter> Tfvars t = {} \<and> GG R xs t \<longrightarrow> Bvars xs \<inter> Tfvars t = {} \<and> GG R' xs t"
+ Bvars xs \<inter> Tfvars t = {} \<and> GG xs R t \<longrightarrow> Bvars xs \<inter> Tfvars t = {} \<and> GG xs R' t"
   using GG_mmono by blast
 
 inductive II' :: "'T \<Rightarrow> bool" where 
-GG_II'_intro: "Bvars xs \<inter> Tfvars t = {} \<Longrightarrow> GG II' xs t \<Longrightarrow> II' t"
+GG_II'_intro: "Bvars xs \<inter> Tfvars t = {} \<Longrightarrow> GG xs II' t \<Longrightarrow> II' t"
 
 lemma II'_imp_II: "II' t \<Longrightarrow> II t"
 apply(induct rule: II'.induct)
@@ -256,16 +256,16 @@ assumes "II' t" and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 shows "II' (Tmap \<sigma> t)"
 using assms(1) proof induct
   case (GG_II'_intro xs t)  note B = GG_II'_intro(1)   
-  have GG: "GG (\<lambda>t. II' (Tmap \<sigma> t)) xs t" 
+  have GG: "GG xs (\<lambda>t. II' (Tmap \<sigma> t)) t" 
   apply(rule GG_mmono[OF _ GG_II'_intro(2)]) using \<sigma> by auto
   have BB: "Bvars (Bmap \<sigma> xs) \<inter> Tfvars (Tmap \<sigma> t) = {}" using image_Tfvars_disj[OF \<sigma>(1) GG_II'_intro(1)] 
   using BBmap_Bvars[OF \<sigma>(1)] by fastforce 
-  have GG: "GG (\<lambda>t. II' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Bmap \<sigma> xs) (Tmap \<sigma> t)"
+  have GG: "GG (Bmap \<sigma> xs) (\<lambda>t. II' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) (Tmap \<sigma> t)"
   using GG_eequiv[OF \<sigma> GG] .
   have 0: "(\<lambda>t. II' (Tmap \<sigma> (Tmap (inv \<sigma>) t))) = II'"
   unfolding fun_eq_iff  
   by (metis TTmap_comp' TTmap_cong_id \<sigma>(1) id_apply ssbij_comp ssbij_inv ssbij_invL)
-  have GG: "GG II' (Bmap \<sigma> xs) (Tmap \<sigma> t)"
+  have GG: "GG  (Bmap \<sigma> xs) II'(Tmap \<sigma> t)"
   using GG unfolding 0 .
   show ?case using BB GG small_image by (subst II'.simps, auto) 
 qed
@@ -280,15 +280,15 @@ and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
 and wfB and bsmall
-and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
+and GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
 II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
 and 
 GG_rrefresh: 
 "\<And>R xs t. (\<forall>t. R t \<longrightarrow> II t) \<Longrightarrow> 
-         (\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG R xs t \<Longrightarrow> 
-         \<exists>ys. Bvars ys \<inter> Tfvars t = {} \<and> GG R ys t"
+         (\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> GG xs R t \<Longrightarrow> 
+         \<exists>ys. Bvars ys \<inter> Tfvars t = {} \<and> GG ys R t"
 
 
 
@@ -304,15 +304,15 @@ Later note: in the end, if was useful for getting in inductive information,
 namely strenthening GG_refresh to further assume that R implies II ("\<forall>t. R t \<longrightarrow> II t").  
  *)
 lemma GG_refresh_II': 
-"\<And>xs t. GG II' xs t \<Longrightarrow> \<exists>ys. Bvars ys \<inter> Tfvars t = {} \<and> GG II' ys t"
+"\<And>xs t. GG xs II' t \<Longrightarrow> \<exists>ys. Bvars ys \<inter> Tfvars t = {} \<and> GG ys II' t"
 using GG_rrefresh II'_equiv by (simp add: II'_imp_II)
 
 lemma II_imp_II': "II t \<Longrightarrow> II' t"
 proof(induct rule: II.induct)
   case (GG_II_intro xs t)
-  hence GG: "GG II' xs t" by (metis (no_types, lifting) GG_mmono predicate1I)
+  hence GG: "GG xs II' t" by (metis (no_types, lifting) GG_mmono predicate1I)
   from GG_refresh_II'[OF GG]
-  obtain ys where 0: "Bvars ys \<inter> Tfvars t = {}" "GG II' ys t" by auto 
+  obtain ys where 0: "Bvars ys \<inter> Tfvars t = {}" "GG ys II' t" by auto 
   show ?case using II'.intros[OF 0] .
 qed
 
@@ -334,12 +334,12 @@ and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
 and wfB and bsmall
-and GG :: "('T \<Rightarrow> bool) \<Rightarrow> 'B \<Rightarrow> 'T \<Rightarrow> bool"
+and GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
 II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tfvars t)"
 and 
-GG_ffresh: "\<And>R xs t. GG R xs t \<Longrightarrow> Bvars xs \<inter> Tfvars t = {}"
+GG_ffresh: "\<And>R xs t. GG xs R t \<Longrightarrow> Bvars xs \<inter> Tfvars t = {}"
 
 
 sublocale IInduct_simple < IInduct apply standard
@@ -374,7 +374,7 @@ assumes small_Pfvars: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
 (* *)
 assumes II: "II (t::'T)"
 and strong: "\<And> p xs t. Bvars xs \<inter> Pfvars p = {} \<Longrightarrow> Bvars xs \<inter> Tfvars t = {} \<Longrightarrow> 
-      GG (\<lambda>t'. II t' \<and> (\<forall>p'. R p' t')) xs t \<Longrightarrow> R p t"
+      GG xs (\<lambda>t'. II t' \<and> (\<forall>p'. R p' t')) t \<Longrightarrow> R p t"
 shows "R p t"
 proof- 
   {fix \<sigma> assume \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
@@ -383,7 +383,7 @@ proof-
      fix xs t \<sigma> p  
      assume vt: "Bvars xs \<inter> Tfvars t = {}" (* this additional vt assumption is what we have gained 
      by transitioning from II to II', whose inductive definition has this freshness side-condition *)
-     and GG: "GG (\<lambda>t'. II' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> wfBij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) xs t" 
+     and GG: "GG xs (\<lambda>t'. II' t' \<and> (\<forall>\<sigma>'. ssbij \<sigma>' \<longrightarrow> wfBij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tmap \<sigma>' t')))) t" 
      and \<sigma>: "ssbij \<sigma>" "wfBij \<sigma>"
 
      have sp: "small (Pfvars p)" "bsmall (Pfvars p)" using small_Pfvars by auto
@@ -435,24 +435,24 @@ proof-
      have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
      unfolding \<sigma>'' using \<rho>\<sigma> ssbij_invL by auto  
    
-     have "GG (\<lambda>t'. II' t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) xs t"  
+     have "GG xs (\<lambda>t'. II' t' \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t"  
      apply(rule GG_mmono[OF _ GG]) using ss_\<sigma>'' by auto
-     hence GG: "GG (\<lambda>t'. II' (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) xs t" 
+     hence GG: "GG xs (\<lambda>t'. II' (Tmap \<sigma>'' t') \<and> (\<forall>p'. R p' (Tmap \<sigma>'' t'))) t" 
      using II'_equiv[OF _ ss_\<sigma>'']  
      by (smt (verit, del_insts) GG_mmono predicate1I) 
-     have GG: "GG (\<lambda>t'. II' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> 
+     have GG: "GG (Bmap (\<rho> o \<sigma>) xs)
+                 (\<lambda>t'. II' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')) \<and> 
                       (\<forall>p'. R p' (Tmap \<sigma>'' (Tmap (inv (\<rho> o \<sigma>)) t')))) 
-                 (Bmap (\<rho> o \<sigma>) xs) 
                  (Tmap (\<rho> o \<sigma>) t) " 
      using GG_eequiv[OF \<rho>\<sigma> GG] .
      
-     have GG: "GG (\<lambda>t'. II' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) 
-                (Bmap \<rho> xs') (Tmap \<sigma> t) "  
+     have GG: "GG (Bmap \<rho> xs') (\<lambda>t'. II' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t') \<and> (\<forall>p'. R p' (Tmap (\<sigma>'' o inv (\<rho> o \<sigma>)) t'))) 
+                (Tmap \<sigma> t) "
      unfolding xs' unfolding image_comp 0[symmetric] BBmap_comp'[symmetric, OF \<rho>(1) \<sigma>(1)] 
      apply(rule GG_mmono[OF _ GG])
      by auto (metis 1 TTmap_comp' TTmap_id \<sigma>'' id_apply ss_\<sigma>''(1) ssbij_inv)+    
 
-     have GG: "GG (\<lambda>t'. II' t' \<and> (\<forall>p'. R p' t')) (Bmap \<rho> xs') (Tmap \<sigma> t)" 
+     have GG: "GG (Bmap \<rho> xs') (\<lambda>t'. II' t' \<and> (\<forall>p'. R p' t')) (Tmap \<sigma> t)" 
      apply(rule GG_mmono[OF _ GG]) 
      by auto
 
@@ -500,23 +500,23 @@ Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
+G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 assumes 
-G_mono: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G R' B t"
+G_mono: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
 and 
-G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> G (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (image \<sigma> B) (Tmap \<sigma> t)"
+G_equiv: "\<And>\<sigma> R B t. ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
 begin 
 
-definition GG where "GG R B t \<equiv> small B \<and> G R B t"
+definition GG where "GG B R t \<equiv> small B \<and> G B R t"
 
-lemma GGG_mmono: "R \<le> R' \<Longrightarrow> GG R B t \<Longrightarrow> GG R' B t"
+lemma GGG_mmono: "R \<le> R' \<Longrightarrow> GG B R t \<Longrightarrow> GG B R' t"
 by (simp add: GG_def G_mono)
 
 lemma GGG_eequiv: "ssbij \<sigma> \<Longrightarrow>
-   GG R B t \<Longrightarrow> GG (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (\<sigma> ` B) (Tmap \<sigma> t)"
+   GG B R t \<Longrightarrow> GG  (\<sigma> ` B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
 using GG_def G_equiv small_image by force
 
-lemma GGG_wfB: "GG R B t \<Longrightarrow> small B"
+lemma GGG_wfB: "GG B R t \<Longrightarrow> small B"
 unfolding GG_def by auto
 
 (* In this particular contex, all small bijections are well-formed: *)
@@ -576,14 +576,14 @@ using GGG_mmono GGG_eequiv GGG_wfB eextend_to_wfBij by auto
 context Induct1
 begin 
 
-lemma G_mono'[mono]: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<and> G R B t \<longrightarrow> small B \<and> G R' B t"
+lemma G_mono'[mono]: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<and> G B R t \<longrightarrow> small B \<and> G B R' t"
 using G_mono by auto
 
 
 inductive I :: "'T \<Rightarrow> bool" where 
-G_I_intro: "small B \<Longrightarrow> G I B t \<Longrightarrow> I t"
+G_I_intro: "small B \<Longrightarrow> G B I t \<Longrightarrow> I t"
 
-lemma "I \<equiv> lfp (\<lambda>R t. \<exists>B. small B \<and> G R B t)"
+lemma "I \<equiv> lfp (\<lambda>R t. \<exists>B. small B \<and> G B R t)"
 using I_def[simplified] .
 
 lemma I_eq_II: "I = II"
@@ -613,18 +613,18 @@ and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and 
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool"
+G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
 G_refresh: 
 "\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
-         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G R B t \<Longrightarrow> 
-         \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G R C t"
+         (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
+         \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
 begin
 
 lemma GGG_rrefresh: 
-assumes "\<forall>t. R t \<longrightarrow> II t" "\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)" "GG R B t"
-shows "\<exists>C. C \<inter> Tfvars t = {} \<and> GG R C t"
+assumes "\<forall>t. R t \<longrightarrow> II t" "\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)" "GG B R t"
+shows "\<exists>C. C \<inter> Tfvars t = {} \<and> GG C R t"
 using G_refresh[OF assms(1)[unfolded I_eq_II[symmetric]]]
 using G_refresh[of R B t] unfolding GG_def I_eq_II[symmetric] 
 by (metis GG_def assms(2) assms(3) ssbij_wfBij)
@@ -650,7 +650,7 @@ assumes small_Pfvars: "\<And>p. small (Pfvars p)"
 (* *)
 assumes I: "I (t::'T)"
 and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Pfvars p = {} \<Longrightarrow> B \<inter> Tfvars t = {} \<Longrightarrow> 
-      G (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) B t \<Longrightarrow> R p t"
+      G B (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t \<Longrightarrow> R p t"
 shows "R p t"
 apply(rule BE_iinduct[of Pfvars _ R p, OF _ I[unfolded I_eq_II]])
   subgoal using small_Pfvars by auto
@@ -666,10 +666,10 @@ and
 Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and 
-G :: "('T \<Rightarrow> bool) \<Rightarrow> 'A set \<Rightarrow> 'T \<Rightarrow> bool" 
+G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool" 
 +
 assumes 
-G_fresh: "\<And>R B t. small B \<Longrightarrow> G R B t \<Longrightarrow> B \<inter> Tfvars t = {}"
+G_fresh: "\<And>R B t. small B \<Longrightarrow> G B R t \<Longrightarrow> B \<inter> Tfvars t = {}"
 
 
 sublocale Induct_simple < Induct apply standard 

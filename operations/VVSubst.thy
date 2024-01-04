@@ -2489,22 +2489,7 @@ qed
 
 (*******************************************)
 (*********** MRBNF Axiom Proofs ************)
-lemma vvsubst_id0s:
-  "vvsubst_T1 id id id id = id"
-  "vvsubst_T2 id id id id = id"
-  subgoal
-    apply (rule trans)
-     apply (rule vvsubst_rrenames)
-        apply (rule supp_id_bound bij_id)+
-    apply (rule T1.rrename_id0s)
-    done
-  subgoal
-    apply (rule trans)
-     apply (rule vvsubst_rrenames)
-        apply (rule supp_id_bound bij_id)+
-    apply (rule T1.rrename_id0s)
-    done
-  done
+(* required for other proofs, ie needed as `thm` *)
 
 lemma FFVars_vvsubstss:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar" and f3::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c"
@@ -2890,54 +2875,8 @@ proof -
     done
 qed
 
-class var_T1 =
-  assumes large: "|Field natLeq| \<le>o |UNIV::'a set|" and regular: "regularCard |UNIV::'a set|"
-
-subclass (in var_T1) var_T1_pre
-  apply standard
-   apply (rule large)
-  apply (rule regular)
-  done
-subclass (in var_T1) var_T2_pre by standard
-
-lemma set_bd:
-  "|set3_T1 (x::('var::var_T1, 'tyvar::var_T1, 'a::var_T1, 'b) T1)| <o natLeq"
-  "|set3_T2 (y::('var::var_T1, 'tyvar::var_T1, 'a::var_T1, 'b) T2)| <o natLeq"
-  "|set4_T1 x| <o natLeq"
-  "|set4_T2 y| <o natLeq"
-proof -
-  have x: "(( |set3_T1 x| <o natLeq \<and> |set4_T1 x| <o natLeq ) \<and> ( |set3_T2 y| <o natLeq \<and> |set4_T2 y| <o natLeq ))"
-    apply (rule T1.TT_plain_co_induct[of _ _ x y])
-     apply (unfold set3_T1_simp set4_T1_simp set3_T2_simp set4_T2_simp)
-     apply (rule Un_Cinfinite_ordLess T1_pre.set_bd regularCard_UNION_bound T2_pre.set_bd
-        T1_pre.bd_Cinfinite T1_pre.bd_regularCard | (rule conjunct1, assumption) | (rule conjunct2, assumption)
-      | rule conjI
-        )+
-    done
-  show "|set3_T1 x| <o natLeq"
-    apply (insert x)
-    apply (erule conjE)+
-    apply assumption
-    done
-  show "|set3_T2 y| <o natLeq"
-    apply (insert x)
-    apply (erule conjE)+
-    apply assumption
-    done
-  show "|set4_T1 x| <o natLeq"
-    apply (insert x)
-    apply (erule conjE)+
-    apply assumption
-    done
-  show "|set4_T2 y| <o natLeq"
-    apply (insert x)
-    apply (erule conjE)+
-    apply assumption
-    done
-qed
-
 lemma vvsubst_comp0s:
-  fixes f1 g1::"'var::var_T1 \<Rightarrow> 'var" and f2 g2::"'tyvar::var_T1 \<Rightarrow> 'tyvar" and f3 g3::"'a::var_T1 \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c" and g4::"'c \<Rightarrow> 'd"
+  fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar" and f3 g3::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c" and g4::"'c \<Rightarrow> 'd"
   assumes f_prems: "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
     and g_prems: "|supp g1| <o |UNIV::'var set|" "|supp g2| <o |UNIV::'tyvar set|" "|supp g3| <o |UNIV::'a set|"
   shows "vvsubst_T1 (g1 \<circ> f1) (g2 \<circ> f2) (g3 \<circ> f3) (g4 \<circ> f4) = vvsubst_T1 g1 g2 g3 g4 \<circ> vvsubst_T1 f1 f2 f3 f4"
@@ -3173,8 +3112,48 @@ proof -
     done
 qed
 
+(*******************************************)
+(*********** MRBNF Axiom Proofs ************)
+(* not required for other proofs, only tactic needed *)
+
+lemma set_bd:
+  "|set3_T1 (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1)| <o natLeq"
+  "|set3_T2 (y::('var, 'tyvar, 'a, 'b) T2)| <o natLeq"
+  "|set4_T1 x| <o natLeq"
+  "|set4_T2 y| <o natLeq"
+proof -
+  have x: "(( |set3_T1 x| <o natLeq \<and> |set4_T1 x| <o natLeq ) \<and> ( |set3_T2 y| <o natLeq \<and> |set4_T2 y| <o natLeq ))"
+    apply (rule T1.TT_plain_co_induct[of _ _ x y])
+     apply (unfold set3_T1_simp set4_T1_simp set3_T2_simp set4_T2_simp)
+     apply (rule Un_Cinfinite_ordLess T1_pre.set_bd regularCard_UNION_bound T2_pre.set_bd
+        T1_pre.bd_Cinfinite T1_pre.bd_regularCard | (rule conjunct1, assumption) | (rule conjunct2, assumption)
+      | rule conjI
+        )+
+    done
+  show "|set3_T1 x| <o natLeq"
+    apply (insert x)
+    apply (erule conjE)+
+    apply assumption
+    done
+  show "|set3_T2 y| <o natLeq"
+    apply (insert x)
+    apply (erule conjE)+
+    apply assumption
+    done
+  show "|set4_T1 x| <o natLeq"
+    apply (insert x)
+    apply (erule conjE)+
+    apply assumption
+    done
+  show "|set4_T2 y| <o natLeq"
+    apply (insert x)
+    apply (erule conjE)+
+    apply assumption
+    done
+qed
+
 lemma vvsubst_cong:
-  fixes f1 g1::"'var::var_T1 \<Rightarrow> 'var" and f2 g2::"'tyvar::var_T1 \<Rightarrow> 'tyvar" and f3 g3::"'a::var_T1 \<Rightarrow> 'a" and f4 g4::"'b \<Rightarrow> 'c"
+  fixes f1 g1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar" and f3 g3::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f4 g4::"'b \<Rightarrow> 'c"
   assumes f_prems: "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
     and g_prems: "|supp g1| <o |UNIV::'var set|" "|supp g2| <o |UNIV::'tyvar set|" "|supp g3| <o |UNIV::'a set|"
   shows
@@ -3532,7 +3511,7 @@ proof -
 qed
 
 lemma rel_OO_mono:
-  "(rel_T1 R :: ('var::var_T1, 'tyvar::var_T1, 'a::var_T1, 'b) T1 \<Rightarrow> _) OO rel_T1 S \<le> rel_T1 (R OO S)"
+  "(rel_T1 R :: ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1 \<Rightarrow> _) OO rel_T1 S \<le> rel_T1 (R OO S)"
   "(rel_T2 R :: ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> _) OO rel_T2 S \<le> rel_T2 (R OO S)"
 proof -
   have x: "(\<forall>R' (x::('var, 'tyvar, 'a, 'b) T1) z. R' = R OO S \<and> (\<exists>y f1 f2 x'. bij f1 \<and> |supp f1| <o |UNIV::'var set|
@@ -3834,7 +3813,7 @@ proof -
     done
 
   show
-    "(rel_T1 R :: ('var::var_T1, 'tyvar::var_T1, 'a::var_T1, 'b) T1 \<Rightarrow> _) OO rel_T1 S \<le> rel_T1 (R OO S)"
+    "(rel_T1 R :: ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1 \<Rightarrow> _) OO rel_T1 S \<le> rel_T1 (R OO S)"
     "(rel_T2 R :: ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> _) OO rel_T2 S \<le> rel_T2 (R OO S)"
     subgoal
       apply (rule predicate2I)
@@ -3860,7 +3839,7 @@ proof -
 qed
 
 lemma in_rel1:
-  fixes f1::"'var::var_T1 \<Rightarrow> 'var" and f2::"'tyvar::var_T1 \<Rightarrow> 'tyvar" and f3::"'a::var_T1 \<Rightarrow> 'a" and R::"'b \<Rightarrow> 'c \<Rightarrow> bool"
+  fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar" and f3::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and R::"'b \<Rightarrow> 'c \<Rightarrow> bool"
   assumes "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
   shows
     "rel_T1 R (vvsubst_T1 f1 f2 f3 id x) y \<Longrightarrow> \<exists>z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = x \<and> vvsubst_T1 f1 f2 f3 snd z = y"
@@ -5088,7 +5067,7 @@ proof -
 qed
 
 lemma in_rel2:
-  fixes f1::"'var::var_T1 \<Rightarrow> 'var" and f2::"'tyvar::var_T1 \<Rightarrow> 'tyvar" and f3::"'a::var_T1 \<Rightarrow> 'a" and R::"'b \<Rightarrow> 'c \<Rightarrow> bool"
+  fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar" and f3::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and R::"'b \<Rightarrow> 'c \<Rightarrow> bool"
   assumes "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
   shows
     "\<exists>z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = x \<and> vvsubst_T1 f1 f2 f3 snd z = y \<Longrightarrow> rel_T1 R (vvsubst_T1 f1 f2 f3 id x) y"
@@ -5329,6 +5308,16 @@ proof -
     done
 qed
 
+class var_T1 =
+  assumes large: "|Field natLeq| \<le>o |UNIV::'a set|" and regular: "regularCard |UNIV::'a set|"
+
+subclass (in var_T1) var_T1_pre
+  apply standard
+   apply (rule large)
+  apply (rule regular)
+  done
+subclass (in var_T1) var_T2_pre by standard
+
 mrbnf "('var, 'tyvar, 'a, 'b) T1"
   map: vvsubst_T1
   sets:
@@ -5339,7 +5328,12 @@ mrbnf "('var, 'tyvar, 'a, 'b) T1"
   bd: natLeq
   rel: rel_T1
   var_class: var_T1
-               apply (rule vvsubst_id0s)
+  subgoal
+    apply (rule trans)
+     apply (rule vvsubst_rrenames)
+        apply (rule supp_id_bound bij_id)+
+    apply (rule T1.rrename_id0s)
+    done
               apply (rule vvsubst_comp0s; assumption)
              apply (rule vvsubst_cong; assumption)
             apply (rule ext, (unfold comp_def)[1], rule FFVars_vvsubstss set3_map set4_map; assumption)+
@@ -5365,7 +5359,12 @@ mrbnf "('var, 'tyvar, 'a, 'b) T2"
   bd: natLeq
   rel: rel_T2
   var_class: var_T1
-               apply (rule vvsubst_id0s)
+  subgoal
+    apply (rule trans)
+     apply (rule vvsubst_rrenames)
+        apply (rule supp_id_bound bij_id)+
+    apply (rule T1.rrename_id0s)
+    done
               apply (rule vvsubst_comp0s; assumption)
              apply (rule vvsubst_cong; assumption)
             apply (rule ext, (unfold comp_def)[1], rule FFVars_vvsubstss set3_map set4_map; assumption)+

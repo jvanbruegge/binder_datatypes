@@ -1234,13 +1234,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
         rtac ctxt trans,
         rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of lthy (#Uctor model))] @{thm arg_cong2[OF refl]}),
         rtac ctxt (Pmap_imsupp_empty RS sym),
+        TRY o resolve_tac ctxt (take (length valid_prems) prems),
+        EVERY' (map (rtac ctxt) (drop (length valid_prems) prems)),
         REPEAT_DETERM o EVERY' [
-          K (prefer_tac (2 * nvars + 1)),
           SELECT_GOAL (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
           REPEAT_DETERM o etac ctxt conjE,
           assume_tac ctxt
         ],
-        REPEAT_DETERM o resolve_tac ctxt prems,
         K (unfold_thms_tac ctxt (map snd PUmaps)),
         rtac ctxt (#Umap_Uctor (#axioms model) RS sym),
         REPEAT_DETERM o resolve_tac ctxt prems,
@@ -1697,49 +1697,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ]) end
     ) (#UFVarss model)) (#raw_fps fp_res) (#quotient_fps fp_res) models ts ts' UFVars'ss;
 
-    val (conj_spec, conj_mp) = if length (#raw_fps fp_res) = 1 then (spec, mp) else
-      let
-        val (Ts, _) = mk_TFrees (length (#raw_fps fp_res)) lthy;
-        val ((Ps1, xs), _) = lthy
-          |> mk_Frees "P" (map (fn a => a --> @{typ bool}) Ts)
-          ||>> mk_Frees "x" Ts;
-
-        val ((Ps2, Qs), _) = lthy
-          |> mk_Frees "P" (map (K @{typ bool}) Ts)
-          ||>> mk_Frees "Q" (map (K @{typ bool}) Ts);
-
-        val conj_spec_goal = Logic.mk_implies (
-          HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (
-            map (fn P => HOLogic.mk_all ("x", fst (dest_funT (fastype_of P)), P $ Bound 0)) Ps1
-          )),
-          HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (map2 (curry (op$)) Ps1 xs))
-        );
-        val conj_spec = Goal.prove_sorry lthy (names (Ps1 @ xs)) [] conj_spec_goal (fn {context=ctxt, ...} => EVERY1 [
-          REPEAT_DETERM o eresolve_tac ctxt [conjE, allE],
-          REPEAT_DETERM o EVERY' [
-            TRY o rtac ctxt conjI,
-            assume_tac ctxt
-          ]
-        ]);
-
-        val conj_mp_goal = fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) (
-          foldr1 HOLogic.mk_conj (map2 (curry HOLogic.mk_imp) Ps2 Qs) :: Ps2
-        ) (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj Qs));
-        val conj_mp = Goal.prove_sorry lthy (names (Ps2 @ Qs)) [] conj_mp_goal (fn {context=ctxt, ...} => EVERY1 [
-          REPEAT_DETERM o etac ctxt conjE,
-          REPEAT_DETERM o (etac ctxt impE THEN' assume_tac ctxt),
-          REPEAT_DETERM o EVERY' [
-            TRY o rtac ctxt conjI,
-            assume_tac ctxt
-          ]
-        ]);
-      in (conj_spec, conj_mp) end;
-
     val n = length models;
-    fun split_conj n thm = if n = 1 then [thm]
-      else let val (thms, thm) = fold_map
-        (K (fn thm => (thm RS conjunct1, thm RS conjunct2))) (1 upto n - 1) thm
-      in thms @ [thm] end;
+    val (conj_spec, conj_mp) = mk_conj_thms n lthy;
 
     val valid_f_opts = if exists (Option.isSome o #validity) models then
       let
@@ -2714,6 +2673,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       | (thm, _) => SOME (Drule.rotate_prems ~1 thm)
                     ) (MRBNF_Def.mr_rel_set_of_mrbnf mrbnf ~~ MRBNF_Def.var_types_of_mrbnf mrbnf);
                     val mr_rel_sets = map (fn thm => Local_Defs.unfold0 ctxt @{thms image_id} (thm OF [mr_rel_prem])) mr_rel_sets';
+
                   in EVERY1 [
                     EVERY' (map (fn thm => EVERY' [
                       rtac ctxt (exE OF [thm]),

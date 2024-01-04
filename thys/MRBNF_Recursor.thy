@@ -194,11 +194,6 @@ lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrighta
 definition compSS :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a)" where
   "compSS f g \<equiv> f \<circ> g \<circ> inv f"
 
-lemma compSS_id: "compSS id = id"
-  unfolding compSS_def id_o o_id inv_id
-  unfolding id_def
-  by (rule refl)
-
 lemma compSS_comp0:
   fixes f g h::"'a \<Rightarrow> 'a"
   assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|" "|supp h| <o |UNIV::'a set|"

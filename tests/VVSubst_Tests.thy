@@ -6,9 +6,6 @@ ML \<open>
 val fp_result = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
 \<close>
 
-lemma Collect_prod_beta: "{(x, y). P x y} = {p. P (fst p) (snd p)}"
-  by auto
-
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 ML \<open>

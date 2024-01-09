@@ -310,6 +310,9 @@ lemma supp_id_bound_cmin: "Card_order r \<Longrightarrow> |supp (id::'a \<Righta
 lemma Int_image_imsupp: "imsupp f \<inter> A = {} \<Longrightarrow> A \<inter> f ` B = {} \<longleftrightarrow> A \<inter> B = {}"
   unfolding imsupp_def supp_def by (smt (verit) UnCI disjoint_iff image_iff mem_Collect_eq)
 
+lemma Collect_prod_beta: "{(x, y). P x y} = {p. P (fst p) (snd p)}"
+  by auto
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
@@ -317,7 +320,7 @@ ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-(*ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
+ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
@@ -326,6 +329,6 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end *)
+end
 
 end

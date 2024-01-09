@@ -860,7 +860,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
   let
     val vars =
       let val Ts = Term.binder_types (fastype_of (#Pmap params));
-      in map (fst o dest_funT) (take (length Ts - 1) Ts) end;
+      in map (fst o dest_funT) (take (length Ts - 1 - length (Term.binder_types (#P params))) Ts) end;
     val nvars = length vars;
     val r = length (#raw_fps fp_res);
 
@@ -1632,10 +1632,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
       ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params)
     ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) XXls map_id_fsts PU_setss;
 
+    val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val int_empty_XXrss = @{map 6} (fn x => fn raw => fn mrbnf => fn XXr => fn map_t => fn (_, bsets, _) =>
-      @{map 4} (fn FVars => fn bset => fn PFVars => fn avoiding_set =>
+      @{map 5} (fn FVars => fn bset => fn PFVars => fn avoiding_set => fn rel =>
         let
           val goal = mk_int_empty_goal x bset XXr FVars (#ctor raw) map_t PFVars avoiding_set;
+          val n = 1 + nrecs + length rel;
+          val nrec_bd = length (distinct (op=) (flat (#binding_relation fp_res)));
         in Goal.prove_sorry lthy (names (flat pickss @ fs @ [p, x])) (validP_prems @ suitable_prems @ f_prems) goal (fn {context=ctxt, prems} =>
           let
             val (validP_prems, prems') = chop (length validP_prems) prems;
@@ -1650,12 +1653,12 @@ fun create_binding_recursor qualify fp_res params models lthy =
             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms),
             K (unfold_thms_tac ctxt @{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}),
             K (unfold_thms_tac ctxt (#FVars_ctors raw)),
-            REPEAT_DETERM o EVERY' [
+            REPEAT_DETERM_N n o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
               REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_comp[unfolded comp_def]}),
-            REPEAT_DETERM o EVERY' [
+            REPEAT_DETERM_N nrecs o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] (maps #FVars_renames (#raw_fps fp_res)),
               REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
@@ -1665,8 +1668,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
               REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ prems @ pick_prems @ card_thms)
             ],
             K (unfold_thms_tac ctxt @{thms image_comp[symmetric]}),
-            REPEAT_DETERM o EVERY' [
-              EqSubst.eqsubst_tac ctxt [0] (maps (maps (map (fn thm => @{thm id_on_image} OF [thm]))) pick_id_on_image'sss),
+            REPEAT_DETERM_N nrec_bd o EVERY' [
+              EqSubst.eqsubst_tac ctxt [0] (flat (map2 (flat oo map2 (fn pick => map (fn thm =>
+                infer_instantiate' ctxt (replicate nvars NONE @ [SOME (Thm.cterm_of ctxt pick)]) (@{thm id_on_image} OF [thm])
+              ))) pickss pick_id_on_image'sss)),
               REPEAT_DETERM o resolve_tac ctxt prems
             ],
             K (unfold_thms_tac ctxt (@{thms image_Un[symmetric]} @ map (fn thm => thm RS sym) (#FVars_ctors raw))),
@@ -1683,7 +1688,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms)
           ] end
         ) end
-      ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params)
+      ) (#FVars raw) bsets (#PFVarss params) (#avoiding_sets params) (#binding_relation fp_res)
     ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) XXrs map_id_fsts PU_setss;
 
     val UFVars'_alphass = @{map 6} (fn raw => fn quot => fn model => fn t => fn t' => map2 (fn UFVars => fn UFVars' =>
@@ -2200,7 +2205,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   #valid_Pmap v OF (valid_prems @ maps (fn ps => [
                     @{thm bij_imp_bij_inv} OF [hd ps],
                     @{thm supp_inv_bound} OF ps
-                  ]) (chop_rec f_prems))
+                  ]) (chop_f_prems f_prems))
                 ) (#validity params);
                 val valid_Pmap = the_default [] (Option.map single valid_Pmap_opt);
 

@@ -2419,7 +2419,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
             rename_ctor = nth rrename_cctors i,
             rename_cong_id = nth rrename_cong_ids i,
             fresh_co_induct_param = TT_fresh_co_induct_param,
-            fresh_co_induct = TT_fresh_co_induct
+            fresh_co_induct = TT_fresh_co_induct,
+            fresh_induct_param_no_clash = TT_fresh_induct_param_no_clash_opt
           }
         } : quotient_result fp_result_T;
       in (raw_fp_res, quotient_fp_res) end

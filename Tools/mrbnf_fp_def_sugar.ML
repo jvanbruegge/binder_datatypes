@@ -63,7 +63,8 @@ sig
     rename_ctor: thm,
     rename_cong_id: thm,
     fresh_co_induct_param: thm,
-    fresh_co_induct: thm
+    fresh_co_induct: thm,
+    fresh_induct_param_no_clash: thm option
   };
 
   type fp_result = {
@@ -198,12 +199,13 @@ type quotient_result = {
   rename_ctor: thm,
   rename_cong_id: thm,
   fresh_co_induct_param: thm,
-  fresh_co_induct: thm
+  fresh_co_induct: thm,
+  fresh_induct_param_no_clash: thm option
 };
 
 fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
 abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename_cong_id,
-fresh_co_induct_param, nnoclash_noclash } = {
+fresh_co_induct_param, nnoclash_noclash, fresh_induct_param_no_clash } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
@@ -218,7 +220,8 @@ fresh_co_induct_param, nnoclash_noclash } = {
   rename_ctor = Morphism.thm phi rename_ctor,
   rename_cong_id = Morphism.thm phi rename_cong_id,
   fresh_co_induct_param = Morphism.thm phi fresh_co_induct_param,
-  fresh_co_induct = Morphism.thm phi fresh_co_induct
+  fresh_co_induct = Morphism.thm phi fresh_co_induct,
+  fresh_induct_param_no_clash = Option.map (Morphism.thm phi) fresh_induct_param_no_clash
 } : quotient_result;
 
 type fp_result = {

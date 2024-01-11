@@ -1145,7 +1145,10 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         rtac ctxt (fun_cong OF [#rename_id0 quotient]),
         rtac ctxt @{thm id_apply}
       ],
-      Umap_comp0 = fn ctxt => EVERY1 [rtac ctxt (#rename_comp0 quotient RS sym RS fun_cong), REPEAT_DETERM o assume_tac ctxt],
+      Umap_comp0 = fn ctxt => EVERY1 [
+        rtac ctxt (#rename_comp0 quotient RS sym RS fun_cong),
+        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt card_thms)
+      ],
       Umap_cong_id = fn ctxt => rtac ctxt (#rename_cong_id (#inner quotient)) 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
       Umap_Uctor = Umap_Uctor_tac,
       UFVars_subsets = map UFVars_subset_tac (#FVars quotient)

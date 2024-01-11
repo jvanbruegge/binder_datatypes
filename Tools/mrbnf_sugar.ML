@@ -62,7 +62,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
     val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
-    val ((rec_mrbnf, vvsubst_res), lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint (#map_b spec) I res lthy;
+    val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res lthy;
     val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
 
     val quotient_ctor = #ctor (hd (#quotient_fps res));
@@ -553,7 +553,7 @@ fun create_binder_datatype (spec : spec) lthy =
           K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
             MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
             #Abs_inverse (snd info) OF @{thms UNIV_I},
-            snd (#noclash vvsubst_res)
+            snd (#noclash (hd (#quotient_fps res)))
           ])),
           REPEAT_DETERM o FIRST' [
             resolve_tac ctxt (@{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single]

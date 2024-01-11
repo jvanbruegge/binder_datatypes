@@ -24,7 +24,9 @@ sig
   val mk_int_empty: term * term -> term;
   val mk_sum_ctors: term list -> term list;
 
+  val mk_conj_thms: int -> local_theory -> thm * thm
   val mk_case_tuple: (string * typ) list -> term -> term
+  val split_conj: int -> thm -> thm list
 
   val new_typedef: binding -> term -> (Proof.context -> tactic) -> local_theory ->
     (string * Typedef.info) * local_theory
@@ -96,6 +98,49 @@ fun mk_arg_cong ctxt n t =
       HEADGOAL (hyp_subst_tac ctxt THEN' rtac ctxt refl))
     |> Thm.close_derivation \<^here>
   end;
+
+fun split_conj n thm = if n = 1 then [thm]
+  else let val (thms, thm) = fold_map
+    (K (fn thm => (thm RS conjunct1, thm RS conjunct2))) (1 upto n - 1) thm
+  in thms @ [thm] end;
+
+fun mk_conj_thms n lthy = if n = 1 then (spec, mp) else
+  let
+    val (Ts, _) = mk_TFrees n lthy;
+    val ((Ps1, xs), _) = lthy
+      |> mk_Frees "P" (map (fn a => a --> @{typ bool}) Ts)
+      ||>> mk_Frees "x" Ts;
+
+    val ((Ps2, Qs), _) = lthy
+      |> mk_Frees "P" (map (K @{typ bool}) Ts)
+      ||>> mk_Frees "Q" (map (K @{typ bool}) Ts);
+
+    val conj_spec_goal = Logic.mk_implies (
+      HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (
+        map (fn P => HOLogic.mk_all ("x", fst (dest_funT (fastype_of P)), P $ Bound 0)) Ps1
+      )),
+      HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (map2 (curry (op$)) Ps1 xs))
+    );
+    val conj_spec = Goal.prove_sorry lthy (map (fst o dest_Free) (Ps1 @ xs)) [] conj_spec_goal (fn {context=ctxt, ...} => EVERY1 [
+      REPEAT_DETERM o eresolve_tac ctxt [conjE, allE],
+      REPEAT_DETERM o EVERY' [
+        TRY o rtac ctxt conjI,
+        assume_tac ctxt
+      ]
+    ]);
+
+    val conj_mp_goal = fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) (
+      foldr1 HOLogic.mk_conj (map2 (curry HOLogic.mk_imp) Ps2 Qs) :: Ps2
+    ) (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj Qs));
+    val conj_mp = Goal.prove_sorry lthy (map (fst o dest_Free) (Ps2 @ Qs)) [] conj_mp_goal (fn {context=ctxt, ...} => EVERY1 [
+      REPEAT_DETERM o etac ctxt conjE,
+      REPEAT_DETERM o (etac ctxt impE THEN' assume_tac ctxt),
+      REPEAT_DETERM o EVERY' [
+        TRY o rtac ctxt conjI,
+        assume_tac ctxt
+      ]
+    ]);
+  in (conj_spec, conj_mp) end;
 
 fun mk_case_tuple [] t = t
   | mk_case_tuple [(s, T)] t = Term.absfree (s, T) t

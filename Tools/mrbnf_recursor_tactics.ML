@@ -48,7 +48,8 @@ fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshap
   K (unfold_thms_tac ctxt @{thms in_inv_image map_sum.simps sum.case prod_in_Collect_iff comp_def snd_conv fst_conv})
 ] THEN REPEAT_DETERM (EVERY1 [
   REPEAT_DETERM o etac ctxt conjE,
-  EqSubst.eqsubst_asm_tac ctxt [0] set_maps,
+  dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
+  resolve_tac ctxt set_maps,
   REPEAT_DETERM o FIRST' [
     assume_tac ctxt,
     eresolve_tac ctxt prems,

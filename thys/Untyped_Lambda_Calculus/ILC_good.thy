@@ -309,7 +309,7 @@ unfolding Tmap_def ssbij_def wfBij_presSuper by auto
 (* Other properties: *)
 
 
-lemma touchedSuperT_itvsubst: "touchedSuperT (itvsubst f t) = \<Union> ((touchedSuperT o f) ` (FFVars t))"
+lemma touchedSuperT_itvsubst: "|SSupp f| <o |UNIV :: ivar set| \<Longrightarrow> touchedSuperT (itvsubst f t) = \<Union> ((touchedSuperT o f) ` (FFVars t))"
 unfolding touchedSuperT_def by (auto simp: touchedSuper_UN )
 
 lemma good_FFVars_RSuper: "good e \<Longrightarrow> FFVars e \<subseteq> RSuper"
@@ -369,7 +369,7 @@ proof-
       subgoal apply(rule good.iApp)
         subgoal by auto
         subgoal by auto
-        subgoal apply clarsimp subgoal for e2 e2' unfolding touchedSuperT_itvsubst apply clarsimp
+        subgoal apply clarsimp subgoal for e2 e2' unfolding touchedSuperT_itvsubst[OF s] apply clarsimp
         apply(rule UN_touchedSuperT_super_eq)
           subgoal using rr by auto
           subgoal unfolding RSuper_def2 using good_FFVars_super by auto  

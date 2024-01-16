@@ -259,7 +259,7 @@ proof-
     case (iApp e1 es2)
     then show ?case apply(subst iterm.subst)
       subgoal using f by auto
-      subgoal apply(rule affine.iApp) using fv
+      subgoal apply(rule affine.iApp) using fv f
       by auto (metis Int_emptyD)+ .
   qed 
 qed

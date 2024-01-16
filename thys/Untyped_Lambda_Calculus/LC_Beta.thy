@@ -252,7 +252,11 @@ lemma red_step: "red e ee \<Longrightarrow> step e ee"
 by (metis red_def step.Beta)
 
 lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
-unfolding stream_all2_iff_snth using red_step by auto
+  unfolding stream_all2_iff_snth using red_step by auto
+
+ML \<open>
+Inductive.the_inductive @{context} @{term step}
+\<close>
 
 
 end

@@ -109,8 +109,8 @@ lemma inj_embed: "inj embed"
 (* Monomorphising: *)
 
 lemma bd_iterm_pre_ordIso: "bd_iterm_pre =o card_suc natLeq"
-  apply (rule ordIso_symmetric)  
-  apply (tactic \<open>BNF_Tactics.unfold_thms_tac @{context} [Thm.axiom @{theory} "ILC.iterm_pre.bd_iterm_pre_def"]\<close>)
+  apply (rule ordIso_symmetric)
+  apply (tactic \<open>unfold_tac @{context} [Thm.axiom @{theory} "ILC.iterm_pre.bd_iterm_pre_def"]\<close>)
   apply (rule ordIso_transitive[OF _ dir_image_ordIso])
     apply (rule ordIso_symmetric)
     apply (rule ordIso_transitive)
@@ -129,19 +129,19 @@ lemma bd_iterm_pre_ordIso: "bd_iterm_pre =o card_suc natLeq"
      apply (simp add: Card_order_csum cinfinite_cprod cinfinite_csum natLeq_Cinfinite natLeq_ordLeq_cinfinite)
     apply (rule ordIso_transitive)
      apply (rule csum_absorb2) 
-      apply (simp add: Card_order_cprod cinfinite_cprod cinfinite_csum natLeq_Cinfinite) 
-      (*
-     apply (simp add: cprod_cong1 csum_com ordIso_imp_ordLeq)
+      apply (simp add: Card_order_cprod cinfinite_cprod cinfinite_csum natLeq_Cinfinite)
+     apply (simp add: cprod_mono1 bd_stream_def csum_com ordIso_imp_ordLeq)
     apply (rule ordIso_transitive)
      apply (rule cprod_infinite1')
        apply (simp add: Card_order_csum cinfinite_csum natLeq_Cinfinite)
-      apply (simp add: lam_pre.bd_Cnotzero)
+      apply (simp add: Cinfinite_Cnotzero natLeq_Cinfinite)
      apply (simp add: natLeq_Cinfinite ordLeq_csum2)
     apply (simp add: csum_absorb1 infinite_regular_card_order.Card_order infinite_regular_card_order.cinfinite infinite_regular_card_order_card_suc natLeq_Cinfinite natLeq_card_order natLeq_ordLeq_cinfinite)
   using Card_order_cprod card_order_on_well_order_on apply blast
-  apply (simp add: inj_on_def iLam_iterm_pre_bdT_inject)
+  unfolding inj_on_def
+  apply (tactic \<open>unfold_tac @{context} [Typedef.get_info @{context} @{type_name iterm_pre_bdT} |> hd |> snd |> #Abs_inject OF [UNIV_I, UNIV_I]]\<close>)
+  apply simp
   done
-*) sorry
 
 lemma natLeq_less_UNIV: "natLeq <o |UNIV :: 'a :: var_iterm_pre set|"
   apply (rule ordLess_ordLeq_trans[OF _ iterm.var_large])
@@ -152,20 +152,16 @@ lemma natLeq_less_UNIV: "natLeq <o |UNIV :: 'a :: var_iterm_pre set|"
 instantiation ivar :: var_iterm_pre begin
 instance
   apply standard
-    apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
-    subgoal sorry
-    (*apply (rule ordIso_ordLeq_trans[OF card_of_Field_natLeq])
-    apply (rule ordLess_imp_ordLeq)
-    apply (rule cardSuc_greater[OF natLeq_Card_order]) *)
-   apply (rule regularCard_ordIso[OF ordIso_symmetric[OF card_ivar]])
-    apply (simp add: Cinfinite_cardSuc natLeq_Card_order natLeq_cinfinite)
-   apply (simp add: natLeq_Cinfinite regularCard_cardSuc)
-  apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
-
-  (* apply (metis Field_card_suc cardSuc_ordIso_card_suc card_order_card_suc Un_iff card_of_unique
-    natLeq_card_order ordIso_symmetric ordIso_transitive ordLeq_ordLess_Un_ordIso) 
-  done *)
-  sorry
+     apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
+     apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
+      apply (tactic \<open>resolve_tac @{context} [BNF_Def.bnf_of @{context} @{type_name stream} |> the |> BNF_Def.bd_Card_order_of_bnf] 1\<close>)
+     apply (simp add: bd_stream_def card_suc_least le_card_ivar natLeq_Cinfinite natLeq_card_order)
+    apply (rule regularCard_ivar)
+  using Field_natLeq infinite_iff_card_of_nat infinite_ivar apply auto[1]
+  apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
+  apply (simp add: Card_order_card_suc natLeq_card_order)
+  apply (metis card_of_Card_order card_of_card_order_on card_of_nat card_suc_alt card_suc_least countable_card_ivar countable_card_le_natLeq ordIso_imp_ordLeq)
+  done
 end
 
 definition iVariable :: "nat \<Rightarrow> ivar" where "iVariable \<equiv> ILC.embed"
@@ -192,15 +188,18 @@ abbreviation "FFVars \<equiv> FFVars_iterm"
 abbreviation "irrename \<equiv> rrename_iterm"
 (* *)
 
+ (* AtoDJ: This lemma was no longer available... *)
 lemma FFVars_itvsubst[simp]:
-"FFVars (itvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
-sorry (* AtoDJ: This lemma was no longer available... *)
-
-(*
-lemma fsupp_le[simp]: 
-"fsupp (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set|" 
-by (simp add: finite_card_var fsupp_def supp_def)
-*)
+  assumes "|SSupp (\<sigma> :: ivar \<Rightarrow> itrm)| <o |UNIV :: ivar set|"
+  shows "FFVars (itvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
+  (*apply (binder_induction t avoiding: "IImsupp \<sigma>" rule: iterm.strong_induct) (* DtoJ: fails *)*)
+  apply (rule iterm.fresh_induct[of "IImsupp \<sigma>"])
+     apply (auto simp: IImsupp_def assms intro!: Un_bound UN_bound iterm.card_of_FFVars_bounds)
+  using iterm.FVars_VVr apply (fastforce simp add: SSupp_def)
+  using iterm.FVars_VVr apply (auto simp add: SSupp_def Int_Un_distrib)
+   apply (smt (verit) disjoint_insert(1) empty_iff insertE insert_absorb iterm.FVars_VVr mem_Collect_eq)
+  apply (smt (verit, del_insts) CollectI IntI UN_iff UnCI empty_iff insertE iterm.FVars_VVr)
+  done
 
 (* *)
 
@@ -457,9 +456,9 @@ lemma SSupp_upd_bound:
   fixes f::"ivar \<Rightarrow> itrm" 
   shows "|SSupp (f (a:=t))| <o |UNIV::ivar set| \<longleftrightarrow> |SSupp f| <o |UNIV::ivar set|"
   unfolding SSupp_def
-  apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
-      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF iterm_pre.Un_bound], rotated]
-      intro: card_of_mono1)  sorry
+  by (auto simp only: fun_upd_apply singl_bound ordLeq_refl split: if_splits
+      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF iterm_pre.Un_bound], rotated, of _ "{a}"]
+      intro: card_of_mono1)
 
 
 corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::itrm)))| <o |UNIV::ivar set|"

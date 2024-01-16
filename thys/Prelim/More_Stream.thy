@@ -342,7 +342,7 @@ using countable_card_of_nat countable_dsset by blast
 lemma dsset_card_ls: "|dsset xs| <o |UNIV::'a :: infinite_regular set|"
 proof-
   have "|dsset xs| <o |Field (card_suc natLeq)|" 
-    using Card_order_iff_ordLeq_card_of Prelim.Card_order_card_suc 
+    using Card_order_iff_ordLeq_card_of Card_order_card_suc 
     card_suc_greater_set dsset_natLeq natLeq_card_order ordLess_ordLeq_trans by blast
   thus ?thesis 
     using large ordLess_ordLeq_trans by blast

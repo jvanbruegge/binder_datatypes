@@ -84,9 +84,15 @@ abbreviation "FFVars \<equiv> FFVars_term"
 abbreviation "rrename \<equiv> rrename_term"
 (* *)
 
+ (* AtoDJ: This lemma was no longer available... *)
 lemma FFVars_tvsubst[simp]:
-"FFVars (tvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
-sorry (* AtoDJ: This lemma was no longer available... *)
+  assumes "|SSupp (\<sigma> :: var \<Rightarrow> trm)| <o |UNIV :: var set|"
+  shows "FFVars (tvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
+  apply (binder_induction t avoiding: "IImsupp \<sigma>" rule: term.strong_induct)
+     apply (auto simp: IImsupp_def assms intro!: Un_bound UN_bound term.card_of_FFVars_bounds)
+  using term.FVars_VVr apply (fastforce simp add: SSupp_def)
+  using term.FVars_VVr apply (auto simp add: SSupp_def)
+  by (smt (verit) singletonD term.FVars_VVr)
 
 lemma fsupp_le[simp]: 
 "fsupp (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set|" 
@@ -105,7 +111,7 @@ lemma trm_strong_induct[consumes 1, case_names Var App Lam]:
 \<Longrightarrow> 
 P t"
 apply(rule term.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
-by auto
+  by auto
 
 (* Enabling some simplification rules: *)
 lemmas term.tvsubst_VVr[simp] term.FVars_VVr[simp]
@@ -344,10 +350,9 @@ lemma SSupp_upd_bound:
   fixes f::"var \<Rightarrow> trm"
   shows "|SSupp (f (a:=t))| <o |UNIV::var set| \<longleftrightarrow> |SSupp f| <o |UNIV::var set|"
   unfolding SSupp_def
-  apply (auto simp only: fun_upd_apply singl_bound ordLeq_refl fset_simps split: if_splits
-      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF term_pre.Un_bound], rotated]
-      intro: card_of_mono1)  sorry
-
+  by (auto simp only: fun_upd_apply singl_bound ordLeq_refl fset_simps split: if_splits
+      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF term_pre.Un_bound], rotated, of _ "{a}"]
+      intro: card_of_mono1)
 
 corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::trm)))| <o |UNIV::var set|"
   apply (rule iffD2[OF SSupp_upd_bound])

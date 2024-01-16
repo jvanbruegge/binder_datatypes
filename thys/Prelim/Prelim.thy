@@ -683,6 +683,7 @@ proof -
     by (rule infinite_regular_card_order_Un[OF co lhs_dis rhs_dis])
 qed
 
+(*
 typedef 'a suc = "Field (cardSuc |UNIV :: 'a set| )"
   using Field_cardSuc_not_empty by auto
 
@@ -718,17 +719,14 @@ lemma Card_order_card_suc: "card_order r \<Longrightarrow> Card_order (card_suc 
 lemma card_order_card_suc: "card_order r \<Longrightarrow> card_order (card_suc r)"
   using Field_card_suc Card_order_card_suc by metis
 
-lemma regular_card_suc: "card_order r \<Longrightarrow> Cinfinite r \<Longrightarrow> regularCard (card_suc r)"
-  using cardSuc_ordIso_card_suc Cinfinite_cardSuc regularCard_cardSuc regularCard_ordIso
-  by blast
+lemma card_suc_greater: "card_order r \<Longrightarrow> r <o card_suc r"
+  by (metis Field_card_order cardSuc_greater cardSuc_ordIso_card_suc ordLess_ordIso_trans)
+*)
 
 lemma infinite_regular_card_order_card_suc:
   "card_order r \<Longrightarrow> Cinfinite r \<Longrightarrow> infinite_regular_card_order (card_suc r)"
   unfolding infinite_regular_card_order_def
-  by (meson Cinfinite_cardSuc Cinfinite_cong cardSuc_ordIso_card_suc card_order_card_suc regular_card_suc)
-
-lemma card_suc_greater: "card_order r \<Longrightarrow> r <o card_suc r"
-  by (metis Field_card_order cardSuc_greater cardSuc_ordIso_card_suc ordLess_ordIso_trans)
+  by (meson Cinfinite_cardSuc Cinfinite_cong cardSuc_ordIso_card_suc card_order_card_suc regularCard_card_suc)
 
 lemma card_suc_greater_set: "\<lbrakk> card_order r ; A \<le>o r \<rbrakk> \<Longrightarrow> A <o card_suc r"
   using card_suc_greater ordLeq_ordLess_trans by blast

@@ -35,12 +35,45 @@ lemma sdistinct_stl: "sdistinct s \<Longrightarrow> sdistinct (stl s)"
 lemma sdistinct_fromN[simp]: "sdistinct (fromN n)"
   by (coinduction arbitrary: n) (subst siterate.code,  auto)
 
+lemma sdistinct_stl_snthD: "sdistinct xs \<Longrightarrow> xs !! i \<noteq> stl xs !! i"
+  by (induct i arbitrary: xs) (force elim: sdistinct.cases)+
+
+lemma sdistinct_shd_snthD: "sdistinct xs \<Longrightarrow> i > 0 \<Longrightarrow> shd xs \<noteq> xs !! i"
+  by (induct i arbitrary: xs) (force elim: sdistinct.cases)+
+
 lemma sdistinct_def2: "sdistinct xs \<longleftrightarrow> (\<forall>i j. i \<noteq> j \<longrightarrow> snth xs i \<noteq> snth xs j)"
-apply safe
+  apply safe
   subgoal for i j
-   apply(induct "i-j" arbitrary: i j) apply auto
-    sorry
-  subgoal sorry .
+    apply (cases "i < j")
+    subgoal
+    proof(induct i arbitrary: j xs)
+      case 0
+      then show ?case
+        by (simp add: sdistinct_shd_snthD)
+    next
+      case (Suc i)
+      from Suc(1)[of "stl xs"] Suc(2-) show ?case
+        by (force simp: Suc_less_eq2 sdistinct_stl)
+    qed
+    subgoal
+    proof(induct j arbitrary: i xs)
+      case 0
+      then show ?case
+        by (simp add: sdistinct_shd_snthD[symmetric])
+    next
+      case (Suc j)
+      from Suc(1)[of "stl xs" "i - 1"] Suc(2-) show ?case
+        by (cases i) (auto simp: not_less Suc_le_eq sdistinct_stl)
+    qed
+    done
+  subgoal
+    apply (coinduction arbitrary: xs)
+    subgoal for xs
+      apply (cases xs)
+      apply (auto simp: sset_range)
+       apply force
+      apply (metis snth_Stream)
+      done . .
   
 lemmas stream.set_map[simp] lemmas stream.map_id[simp]
 

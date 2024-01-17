@@ -147,7 +147,6 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 | NONE =>
                   let
                     val (name, Ts) = Term.dest_Type T
-                    (* TODO: special case sets for prod *)
                     val sets = case MRBNF_Def.mrbnf_of ctxt name of
                       SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
                       | NONE => (case BNF_Def.bnf_of ctxt name of
@@ -365,6 +364,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             ]) ctxt
           ]);
 
+          val rule_thm = Local_Defs.unfold0 ctxt @{thms MRBNF_Recursor.prod_sets_simps} rule_thm;
           val names = map (fst o dest_Free) (
             fst (BNF_Util.mk_Frees "Bound" (map (K HOLogic.unitT) bound_prems) ctxt)
           );

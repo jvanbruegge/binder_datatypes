@@ -313,6 +313,11 @@ lemma Int_image_imsupp: "imsupp f \<inter> A = {} \<Longrightarrow> A \<inter> f
 lemma Collect_prod_beta: "{(x, y). P x y} = {p. P (fst p) (snd p)}"
   by auto
 
+lemma prod_sets_simps:
+  "\<Union>(Basic_BNFs.fsts ` A) = fst ` A"
+  "\<Union>(Basic_BNFs.snds ` A) = snd ` A"
+  by force+
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
@@ -327,8 +332,8 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 (*ML_file \<open>../Tools/binder_inductive.ML\<close>*)
 
-context begin
+(*context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end
+end*)
 
 end

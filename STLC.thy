@@ -816,7 +816,7 @@ lemma Ty_AbsE:
   apply (rule conjI refl)+
   done
 
-lemma Ty_AbsE':
+lemma Ty_AbsE'':
   assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>" "x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>)"
 and "\<And>\<tau>\<^sub>2. \<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P"
 shows "P"
@@ -947,6 +947,7 @@ apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
     apply assumption
     done
   done
+lemmas Ty_AbsE' = Ty_AbsE''[unfolded prod_sets_simps]
 
 lemma context_invariance: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<Longrightarrow> \<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
 proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_fresh_induct_param)
@@ -988,11 +989,11 @@ next
 next
   case (Abs y \<tau>\<^sub>1 e \<Gamma> \<tau>)
   then have 1: "y \<notin> tvIImsupp_tvsubst (tvVVr_tvsubst(x:=v))" by (simp add: tvIImsupp_tvsubst_def tvSSupp_tvsubst_def)
-  have "y \<notin> \<Union>(Basic_BNFs.fsts ` fset (\<Gamma>,x:\<tau>'))" using Abs(1) unfolding fresh_def by auto
-  then obtain \<tau>\<^sub>2 where 2: "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" "\<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2)" using Abs(3) Ty_AbsE' by metis
+  have "y \<notin> fst ` fset (\<Gamma>,x:\<tau>')" using Abs(1,2) unfolding fresh_def by auto
+  then obtain \<tau>\<^sub>2 where 2: "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" "\<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2)" using Abs(5) Ty_AbsE' by metis
   moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" by blast
-  moreover have "x \<sharp> \<Gamma>,y:\<tau>\<^sub>1" using Abs(1,4) unfolding fresh_def by auto
-  ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := v)) e : \<tau>\<^sub>2" using Abs(2,5) by metis
+  moreover have "x \<sharp> \<Gamma>,y:\<tau>\<^sub>1" using Abs(1,2,6) unfolding fresh_def by auto
+  ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := v)) e : \<tau>\<^sub>2" using Abs(4,7) by metis
   moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def by auto
   ultimately show ?case unfolding terms.subst(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
 qed

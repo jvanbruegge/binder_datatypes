@@ -2,10 +2,6 @@ theory Binder_Induction_Tests
   imports "./VVSubst_Tests"
 begin
 
-context begin
-ML_file \<open>../Tools/binder_induction.ML\<close>
-end
-
 lemmas T1_T2_inducts = T1.TT_plain_co_induct[THEN conjunct1]
   T1.TT_plain_co_induct[THEN conjunct2]
 

@@ -318,6 +318,10 @@ lemma prod_sets_simps:
   "\<Union>(Basic_BNFs.snds ` A) = snd ` A"
   by force+
 
+lemmas induct_impliesI = impI[unfolded HOL.induct_implies_def[symmetric]]
+lemmas induct_impliesE = impE[unfolded HOL.induct_implies_def[symmetric]]
+lemmas induct_mp = mp[unfolded HOL.induct_implies_def[symmetric]]
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
@@ -332,8 +336,8 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 (*ML_file \<open>../Tools/binder_inductive.ML\<close>*)
 
-(*context begin
+context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end*)
+end
 
 end

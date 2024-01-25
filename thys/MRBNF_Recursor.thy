@@ -321,8 +321,9 @@ lemma prod_sets_simps:
 lemmas induct_impliesI = impI[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_impliesE = impE[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_mp = mp[unfolded HOL.induct_implies_def[symmetric]]
+lemmas induct_conjI = conjI[unfolded HOL.induct_conj_def[symmetric]]
 
-lemma induct_equal_ref: "HOL.induct_equal x x"
+lemma induct_equal_refl: "HOL.induct_equal x x"
   unfolding HOL.induct_equal_def by (rule refl)
 
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>

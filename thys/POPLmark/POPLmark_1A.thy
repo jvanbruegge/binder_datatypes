@@ -19,7 +19,7 @@ lemma ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans
 apply safe subgoal for p
 apply(rule BE_induct_ty[where \<phi> = "\<lambda> p \<Gamma> S T. P \<Gamma> S T p", of K])
 by (auto simp: small_def) .
-
+thm induct_impliesI[of "HOL.induct_equal _ _"]
 context begin
 ML_file \<open>../../Tools/binder_induction.ML\<close>
 end
@@ -116,28 +116,28 @@ using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^su
   case (SA_All \<Gamma> T\<^sub>1 R\<^sub>1 Y R\<^sub>2 T\<^sub>2)
   have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) T\<^sub>2"
     apply (rule Forall_swap)
-    using SA_All(1,7) well_scoped(2) by fastforce
+    using SA_All(6,9) well_scoped(2) by fastforce
   have fresh: "X \<notin> FFVars_typ T\<^sub>1"
-    by (meson SA_All(1,5) in_mono well_scoped(1))
-  have same: "R\<^sub>1 = S\<^sub>1" using SA_All(9) typ_inject(3) by blast
+    by (meson SA_All(4,9) in_mono well_scoped(1))
+  have same: "R\<^sub>1 = S\<^sub>1" using SA_All(8) typ_inject(3) by blast
   have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
-    by (metis (no_types, lifting) SA_All(9) assms(1,2) in_mono sup.bounded_iff typ.set(4) well_scoped(1))
+    by (metis (no_types, lifting) SA_All(8) assms(1,2) in_mono sup.bounded_iff typ.set(4) well_scoped(1))
   show ?case unfolding 1
     apply (rule Forall)
-    using same SA_All(5) apply simp
+    using same SA_All(4) apply simp
     apply (rule iffD2[OF arg_cong3[OF _ _ refl, of _ _ _ _ ty], rotated -1])
       apply (rule ty_eqvt)
-        apply (rule SA_All(7))
+        apply (rule SA_All(6))
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using SA_All(1,2) apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
+    using SA_All(1,9) apply (metis bij_swap SA_All(4) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
       apply simp
-    using fresh SA_All(4)
+    using fresh SA_All(3)
      apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound typ.rrename_cong_ids)
-    using x SA_All(9) unfolding same using Forall_inject_same by simp
+    using x SA_All(8) unfolding same using Forall_inject_same by simp
 qed (auto simp: Top)
 
 lemma SA_AllE2[consumes 2, case_names SA_Trans_TVar SA_All]:
@@ -149,31 +149,31 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
   case (SA_All \<Gamma> R\<^sub>1 S\<^sub>1 Y S\<^sub>2 R\<^sub>2)
   have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) S\<^sub>2"
     apply (rule Forall_swap)
-    using SA_All(1,7) well_scoped(1) by fastforce
+    using SA_All(6,9) well_scoped(1) by fastforce
   have fresh: "X \<notin> dom \<Gamma>" "Y \<notin> dom \<Gamma>"
-    using SA_All(1) apply blast
-    by (metis SA_All(7) fst_conv wf_ConsE wf_context)
+    using SA_All(9) apply blast
+    by (metis SA_All(6) fst_conv wf_ConsE wf_context)
   have fresh2: "X \<notin> FFVars_typ T\<^sub>1" "Y \<notin> FFVars_typ T\<^sub>1"
-     apply (metis SA_All(5,9) in_mono fresh(1) typ_inject(3) well_scoped(1))
-    by (metis SA_All(5,9) in_mono fresh(2) typ_inject(3) well_scoped(1))
-  have same: "R\<^sub>1 = T\<^sub>1" using SA_All(9) typ_inject(3) by blast
+     apply (metis SA_All(4,8) in_mono fresh(1) typ_inject(3) well_scoped(1))
+    by (metis SA_All(4,8) in_mono fresh(2) typ_inject(3) well_scoped(1))
+  have same: "R\<^sub>1 = T\<^sub>1" using SA_All(8) typ_inject(3) by blast
   have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
-    by (metis SA_All(9) Un_iff assms(1,2) in_mono typ.set(4) well_scoped(2))
+    by (metis SA_All(8) Un_iff assms(1,2) in_mono typ.set(4) well_scoped(2))
   show ?case unfolding 1
     apply (rule Forall)
-     apply (metis SA_All(5,9) typ_inject(3))
+     apply (metis SA_All(4,8) typ_inject(3))
     apply (rule iffD2[OF arg_cong3[OF _ refl, of _ _ _ _ ty], rotated -1])
       apply (rule ty_eqvt)
-        apply (rule SA_All(7))
+        apply (rule SA_All(6))
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using fresh apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
+    using fresh apply (metis bij_swap SA_All(4) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
       apply simp
     using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound typ.rrename_cong_ids)
-    using SA_All(9) x Forall_inject_same unfolding same by simp
+    using SA_All(8) x Forall_inject_same unfolding same by simp
 qed (auto simp: TyVar)
 
 lemma ty_transitivity : "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
@@ -182,6 +182,7 @@ proof -
   have
     ty_trans: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
   and ty_narrow: "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q ; \<turnstile> \<Gamma> , X <: R, \<Delta> ok ; M closed_in \<Gamma> , X <: R, \<Delta> ; N closed_in \<Gamma> , X <: R, \<Delta> \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
+  (*proof (induction Q rule: typ.induct)*)
   proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T M N X R avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
     case (TyVar Y \<Gamma> \<Delta> S T M N X R)
     {

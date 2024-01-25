@@ -114,6 +114,9 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val prems = Thm.prems_of rule
           val prem_concls = map Logic.strip_assums_concl prems;
 
+          val _ = @{print} rule
+          val _ = @{print} more_facts
+
           val vars_prems = map (try (
             HOLogic.dest_Trueprop
             #> snd o strip_all
@@ -135,6 +138,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val avoiding_inducts = filter (fn (_, ind) =>
               exists (Term.exists_subterm (curry (op=) ind)) avoiding
           ) (0 upto length finsts - 1 ~~ finsts);
+          val arbitrary = if length arbitrary = 0 then replicate (length P_vars) [] else arbitrary;
 
           fun extract_vars var t =
             let
@@ -170,6 +174,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
 
           val goals = Logic.dest_conjunction_list (hd (Thm.prems_of st));
           val goals' = map (Logic.list_implies o apfst (drop nmajor) o Logic.strip_horn) goals;
+          val goals'' = map (fold_rev (curry Logic.mk_implies) (map Thm.prop_of more_facts)) goals';
 
           val cases_prems = drop (nmajor + nvars) prems;
           val K_vars = rev (distinct (op=) (filter (fn (_, T) =>
@@ -187,12 +192,17 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val cases' = map (fn rule =>
             let
               val ((bvars, rho), rule) = apfst split_last (strip_pure_all rule)
-              val bvars' = rev (map Free (fold Term.rename_wrt_term goals' (map dest_Free bvars)));
+              val bvars' = rev (map Free (fold Term.rename_wrt_term goals'' (map dest_Free bvars)));
               val rule = Term.subst_atomic (bvars ~~ bvars') rule;
               val (prems, outer_concl) = Logic.strip_horn rule;
               val (P_var, P_args) = apsnd (fst o split_last) (Term.strip_comb (HOLogic.dest_Trueprop outer_concl));
-              val ((finst', goal), arb) = the (AList.lookup (op=) (map Var P_vars ~~ (finsts' ~~ goals' ~~ arbitrary)) P_var);
+              val (((finst', goal), idefs), arb) = the (AList.lookup (op=) (map Var P_vars ~~ (finsts' ~~ goals' ~~ defs ~~ arbitrary)) P_var);
+
               val subst_ind = finst' ~~ P_args;
+              val raw_defs = map (Logic.dest_equals o Thm.prop_of) idefs;
+              val eq_prems = map_filter (fn (inst, arg) =>
+                Option.map (fn def => mk_Trueprop_eq (arg, def)) (AList.lookup (op=) raw_defs inst)
+              ) subst_ind;
 
               val prems' = maps (fn prem =>
                 let
@@ -227,8 +237,15 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 else
                   let
                     val (t, ts) = Term.strip_comb concl;
-                    val (concl', strip, arbs) = case AList.lookup (op=) (map Var P_vars ~~ (goals' ~~ finsts' ~~ arbitrary)) t of
-                      SOME ((goal, inst), arbs) => (Term.subst_atomic (inst ~~ fst (split_last ts)) goal, true, arbs)
+                    val (concl', strip, arbs) = case AList.lookup (op=) (map Var P_vars ~~ (goals'' ~~ finsts' ~~ defs ~~ arbitrary)) t of
+                      SOME (((goal, inst), defs), arbs) =>
+                        let
+                          val subst = inst ~~ fst (split_last ts);
+                          val raw_defs = map (Logic.dest_equals o Thm.prop_of) defs;
+                          val eq_prems = map_filter (fn (inst, arg) =>
+                            Option.map (fn def => mk_Trueprop_eq (arg, def)) (AList.lookup (op=) raw_defs inst)
+                          ) subst;
+                        in (fold_rev (curry Logic.mk_implies) eq_prems (Term.subst_atomic subst goal), true, arbs) end
                       | NONE => (HOLogic.mk_Trueprop concl, false, []);
                     val prem' = fold_rev Logic.all ((if strip then fst (split_last lvars) else lvars) @ map Free arbs) (
                       fold_rev (curry Logic.mk_implies) prems concl'
@@ -237,13 +254,17 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 end
               ) prems;
             in fold_rev Logic.all (bvars' @ map Free arb) (
-              fold_rev (curry Logic.mk_implies) prems' (Term.subst_atomic subst_ind goal)
+              fold_rev (curry Logic.mk_implies) (
+                map (Term.subst_atomic subst_ind o Thm.prop_of) more_facts @ prems' @ eq_prems
+              ) (Term.subst_atomic subst_ind goal)
             ) end
           ) cases_prems;
 
-          val bound_prems = flat (map2 (fn (_, raws) => fn var => map (fn raw => HOLogic.mk_Trueprop (
-            MRBNF_Util.mk_ordLess (MRBNF_Util.mk_card_of raw) (MRBNF_Util.mk_card_of (HOLogic.mk_UNIV var))
-          )) raws) terms_rawss vars);
+          val bound_prems = flat (map2 (fn (_, raws) => fn var => map (fn raw =>
+            let val prem = HOLogic.mk_Trueprop (
+              MRBNF_Util.mk_ordLess (MRBNF_Util.mk_card_of raw) (MRBNF_Util.mk_card_of (HOLogic.mk_UNIV var))
+            ) in fold_rev Logic.all (filter (fn t => Term.exists_subterm (fn t' => t = t') prem) avoiding_arbitraries) prem end
+          ) raws) terms_rawss vars);
 
           fun mk_induct_implies t1 t2 =
             Const (@{const_name HOL.induct_implies}, @{typ bool} --> @{typ bool} --> @{typ bool}) $ t1 $ t2;
@@ -257,15 +278,15 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
           val rho = Free ("\<rho>", fastype_of avoiding_dynamic);
           val inst_rule = infer_instantiate ctxt (map fst P_vars ~~
-            @{map 3} (fn goal => fn inst => fn arb => Thm.cterm_of ctxt (
+            @{map 4} (fn goal => fn inst => fn arb => fn defs => Thm.cterm_of ctxt (
               fold_rev Term.absfree (map dest_Free inst) (Term.absfree (dest_Free rho) (
                 fold_rev mk_all arb (Induct.atomize_term ctxt (
                   Logic.mk_implies (mk_Trueprop_eq (
                     avoiding_dynamic, rho
-                  ), goal)
+                  ), fold_rev (curry Logic.mk_implies) (map Thm.prop_of defs) goal)
                 ))
               ))
-            )) goals' finsts' arbitrary
+            )) goals'' finsts' arbitrary defs
           ) rule;
 
           val inst_concl = Thm.concl_of inst_rule;
@@ -273,17 +294,22 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           fun dest_induct_imp (Const (@{const_name HOL.induct_implies}, _) $ t1 $ t2) = (t2, t1)
 
           fun to_pure_all (Const ("HOL.All", _) $ Abs (a, b, t)) = to_pure_all (subst_bound (Free (a, b), t))
-            | to_pure_all t = apfst HOLogic.mk_Trueprop (dest_induct_imp t)
-          val (inst_concls', rho_imp) = split_list (map (to_pure_all o HOLogic.dest_Trueprop) inst_concls);
+            | to_pure_all t = dest_induct_imp t
+          val (inst_concls', rho_imps) = split_list (map (to_pure_all o HOLogic.dest_Trueprop) inst_concls);
+          val (def_conclss, inst_concls') = split_list (map2 (fn defs =>
+            apsnd HOLogic.mk_Trueprop o fold_map (K (swap o dest_induct_imp)) (0 upto length defs - 1 + length more_facts)
+          ) defs inst_concls');
 
           val inst_concl' = Logic.mk_implies (inst_concl, Logic.mk_implies (
-            HOLogic.mk_Trueprop (hd rho_imp),
-            Logic.mk_conjunction_list inst_concls'
+            HOLogic.mk_Trueprop (hd rho_imps),
+            fold_rev (curry Logic.mk_implies) (map Thm.prop_of more_facts) (Logic.mk_conjunction_list inst_concls')
           ));
-          val inst_thm = Goal.prove_sorry ctxt [fst (dest_Free rho)] [] inst_concl' (fn {context=ctxt, ...} => EVERY1 [
-            K (Local_Defs.unfold0_tac ctxt @{thms atomize_conj HOL.induct_implies_def}),
+          val inst_thm = Goal.prove_sorry defs_ctxt [fst (dest_Free rho)] [] inst_concl' (fn {context=ctxt, ...} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt (flat defs @ @{thms atomize_conj HOL.induct_implies_def})),
             REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
             REPEAT_DETERM_N (length goals) o etac ctxt @{thm impE[OF _ refl]},
+            REPEAT_DETERM o etac ctxt @{thm impE[OF _ induct_equal_ref]},
+            REPEAT_DETERM o (etac ctxt impE THEN' assume_tac ctxt),
             REPEAT_DETERM o EVERY' [
               TRY o rtac ctxt conjI,
               assume_tac ctxt
@@ -291,12 +317,13 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           ]);
           val inst_rule = infer_instantiate ctxt (map fst K_vars ~~
             map2 (fn (terms, raws) => fn var => Thm.cterm_of ctxt (
-              MRBNF_Util.mk_case_tuple (map dest_Free avoiding_dynamics) (
+              (if length avoiding_dynamics = 0 then Term.abs ("_", @{typ unit}) else I)
+              (MRBNF_Util.mk_case_tuple (map dest_Free avoiding_dynamics) (
                 let val ts = terms @ raws
                 in if length ts = 0 then
                   MRBNF_Util.mk_bot var
                 else foldl1 MRBNF_Util.mk_Un ts end
-              )
+              ))
             )) terms_rawss vars
           ) inst_rule;
 
@@ -332,7 +359,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             SOME thm' => repeat_OF thm thm'
             | NONE => thm2;
 
-          val rule_thm = Goal.prove_sorry ctxt [] [] rule_t (fn {context=ctxt, ...} => EVERY1 [
+          val rule_thm = Goal.prove_sorry defs_ctxt [] [] rule_t (fn {context=ctxt, ...} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt @{thms induct_implies_eq}),
             Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
               let val prems' = map (Local_Defs.unfold0 ctxt @{thms induct_implies_eq[symmetric]}) prems
@@ -357,16 +384,17 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     ],
                     REPEAT_DETERM o dtac ctxt @{thm iffD1[OF arg_cong[OF singleton_iff, of Not]]}
                   ],
-                  Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
+                  Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => FIRST1 (map (fn p => EVERY' [
                     REPEAT_DETERM o resolve_tac ctxt @{thms induct_impliesI allI},
-                    resolve_tac ctxt prems',
-                    K (Local_Defs.unfold0_tac ctxt @{thms induct_implies_eq[symmetric] atomize_all[symmetric]}),
+                    rtac ctxt p,
+                    K (Local_Defs.unfold0_tac ctxt @{thms induct_implies_eq[symmetric] atomize_all[symmetric] HOL.induct_equal_def}),
                     REPEAT_DETERM o FIRST' [
-                      assume_tac ctxt,
                       (* prems from original induction theorem *)
                       resolve_tac ctxt inner_prems THEN_ALL_NEW (K no_tac),
                       (* higher order prems from original induction theorem *)
                       resolve_rule_tac ctxt inner_prems,
+
+                      assume_tac ctxt,
                       (* higher order IHs *)
                       SELECT_GOAL (EVERY1 [
                         dresolve_tac ctxt inner_prems,
@@ -379,6 +407,10 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                         assume_tac ctxt
                       ]),
                       (* IHs *)
+                      SELECT_GOAL (EVERY1 [
+                        eresolve_tac ctxt (map (Local_Defs.unfold0 ctxt @{thms HOL.induct_rulify atomize_eq} o repeat_OF @{thm spec}) inner_prems),
+                        REPEAT_DETERM o assume_tac ctxt
+                      ]),
                       SELECT_GOAL (EVERY1 [
                         resolve_tac ctxt (map (repeat_OF @{thm induct_mp} o repeat_OF @{thm spec}) inner_prems),
                         rtac ctxt refl,
@@ -400,10 +432,12 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                         REPEAT_DETERM o etac ctxt conjE,
                         assume_tac ctxt
                       ])
-                    ]
-                  ]) ctxt
+                    ],
+                    IF_UNSOLVED o K no_tac
+                  ]) prems')) ctxt
                 ],
-                rtac ctxt refl
+                rtac ctxt refl,
+                REPEAT_DETERM o resolve_tac ctxt more_facts
               ] end
             ) ctxt
           ]);
@@ -417,14 +451,14 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
         in (((new_cases @ drop nvars cases, concls), (more_consumes, more_facts)), rule_thm) end
       )
     |> Seq.maps (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
-          (PRECISE_CONJUNCTS (length concls) (ALLGOALS (Induct.inner_atomize_tac defs_ctxt))
-          THEN' Induct.atomize_tac defs_ctxt) i st
+        Induct.atomize_tac defs_ctxt i st
+        |> Seq.map @{print}
         |> Seq.maps (fn st' =>
-          Induct.guess_instance ctxt (Induct.internalize ctxt more_consumes rule) i st'
-              |> Seq.map (rule_instance ctxt (burrow_options (Variable.polymorphic ctxt) taking))
+          Induct.guess_instance ctxt (@{print}(Induct.internalize ctxt (@{print}more_consumes) rule)) i (@{print}st')
+              |> Seq.map (fn x => (@{print} "foo"; x))
               |> Seq.maps (fn rule' =>
                 CONTEXT_CASES (rule_cases ctxt rule' cases)
-                  (resolve_tac ctxt [rule'] i THEN
+                  (resolve_tac defs_ctxt [rule'] i THEN
                     PRIMITIVE (singleton (Proof_Context.export defs_ctxt ctxt))) (ctxt, st'))))
     in (context_tac CONTEXT_THEN_ALL_NEW
         ((if simp then Induct.simplify_tac ctxt THEN' (TRY o Induct.trivial_tac ctxt) else K all_tac)

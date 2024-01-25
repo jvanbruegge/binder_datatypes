@@ -4,10 +4,6 @@ begin
 
 (********************* Actual formalization ************************)
 
-context begin
-ML_file \<open>../../Tools/binder_induction.ML\<close>
-end
-
 (* A bit of customization: *)
 lemma ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
   "\<Gamma> \<turnstile> S <: T \<Longrightarrow>
@@ -16,13 +12,21 @@ lemma ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans
   (\<And>\<Gamma> x \<rho>. \<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> P \<Gamma> (TyVar x) (TyVar x) \<rho>) \<Longrightarrow>
   (\<And>x U \<Gamma> T \<rho>. x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<forall>\<rho>. P \<Gamma> U T \<rho> \<Longrightarrow> P \<Gamma> (TyVar x) T \<rho>) \<Longrightarrow>
   (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 \<rho>. \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2) \<rho>) \<Longrightarrow>
-  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> FFVars_typ S\<^sub>1 \<Longrightarrow> x \<notin> FFVars_typ T\<^sub>1 \<Longrightarrow> 
-      \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow> 
+  (\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> FFVars_typ S\<^sub>1 \<Longrightarrow> x \<notin> FFVars_typ T\<^sub>1 \<Longrightarrow>
+      \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> T\<^sub>1 S\<^sub>1 \<rho> \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<rho> \<Longrightarrow>
       P \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2) \<rho>) \<Longrightarrow>
  \<forall>\<rho>. P \<Gamma> S T \<rho>"
-apply safe subgoal for p  
+apply safe subgoal for p
 apply(rule BE_induct_ty[where \<phi> = "\<lambda> p \<Gamma> S T. P \<Gamma> S T p", of K])
 by (auto simp: small_def) .
+
+context begin
+ML_file \<open>../../Tools/binder_induction.ML\<close>
+end
+declare [[ML_print_depth=10000]]
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
 
 lemma ty_refl: "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
 proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: typ.strong_induct)
@@ -72,7 +76,7 @@ next
 next
   case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
   have 1: "\<turnstile> \<Gamma>, x <: T\<^sub>1, \<Delta> ok"
-    by (meson wf_insert SA_All.hyps(1,2,5) SA_All.prems well_scoped(1)) 
+    by (meson wf_insert SA_All.hyps(1,2,5,9) well_scoped(1))
   have 2: "\<turnstile> \<Gamma> , \<Delta> , x <: T\<^sub>1 ok"
     by (smt (verit, del_insts) SA_All(1,6,7,9) UnE fst_conv image_iff set_append well_scoped(1) wf_Cons wf_ConsE wf_context)
   show ?case using ty_permute[OF _ 2] 1 SA_All by auto
@@ -112,12 +116,9 @@ using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^su
   case (SA_All \<Gamma> T\<^sub>1 R\<^sub>1 Y R\<^sub>2 T\<^sub>2)
   have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) T\<^sub>2"
     apply (rule Forall_swap)
-    using SA_All(7,10) well_scoped(2) by fastforce
-  have fresh: "Y \<notin> dom \<Gamma>"
-    by (metis fst_conv local.SA_All(7) wf_ConsE wf_context)
-  have fresh2: "X \<notin> FFVars_typ T\<^sub>1" "Y \<notin> FFVars_typ T\<^sub>1"
-     apply (meson SA_All(5) SA_All.prems in_mono well_scoped(1))
-    by (meson SA_All(5) in_mono local.fresh well_scoped(1))
+    using SA_All(1,7) well_scoped(2) by fastforce
+  have fresh: "X \<notin> FFVars_typ T\<^sub>1"
+    by (meson SA_All(1,5) in_mono well_scoped(1))
   have same: "R\<^sub>1 = S\<^sub>1" using SA_All(9) typ_inject(3) by blast
   have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
@@ -132,9 +133,9 @@ using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^su
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using fresh SA_All(10) apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
+    using SA_All(1,2) apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
       apply simp
-    using fresh2
+    using fresh SA_All(4)
      apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound typ.rrename_cong_ids)
     using x SA_All(9) unfolding same using Forall_inject_same by simp
 qed (auto simp: Top)
@@ -148,9 +149,9 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
   case (SA_All \<Gamma> R\<^sub>1 S\<^sub>1 Y S\<^sub>2 R\<^sub>2)
   have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) S\<^sub>2"
     apply (rule Forall_swap)
-    using SA_All(7,10) well_scoped(1) by fastforce
+    using SA_All(1,7) well_scoped(1) by fastforce
   have fresh: "X \<notin> dom \<Gamma>" "Y \<notin> dom \<Gamma>"
-    using SA_All(10) apply blast
+    using SA_All(1) apply blast
     by (metis SA_All(7) fst_conv wf_ConsE wf_context)
   have fresh2: "X \<notin> FFVars_typ T\<^sub>1" "Y \<notin> FFVars_typ T\<^sub>1"
      apply (metis SA_All(5,9) in_mono fresh(1) typ_inject(3) well_scoped(1))

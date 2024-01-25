@@ -322,6 +322,9 @@ lemmas induct_impliesI = impI[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_impliesE = impE[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_mp = mp[unfolded HOL.induct_implies_def[symmetric]]
 
+lemma induct_equal_ref: "HOL.induct_equal x x"
+  unfolding HOL.induct_equal_def by (rule refl)
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
@@ -336,8 +339,8 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 (*ML_file \<open>../Tools/binder_inductive.ML\<close>*)
 
-context begin
+(*context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end
+end*)
 
 end

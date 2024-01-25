@@ -202,7 +202,7 @@ proof -
           have "TyVar Y closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
           then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> TyVar Y <: T" using SA_Trans_TVar True u by auto
           moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: TyVar Y" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
-            by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
+            by (metis SA_Trans_TVar(5) True wf_ConsE wf_concatD)
           ultimately have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T" using ty_trans by blast
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
@@ -221,8 +221,8 @@ proof -
           apply (rule wf_Cons)
           using SA_All UnI1 image_iff by auto
         have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
-          apply (rule SA_All(8))
-          using 1 SA_All(9,11,12) by (auto intro!: SA_All(8))
+          apply (rule SA_All(10))
+          using 1 SA_All(12-14) by (auto intro!: SA_All(11))
         then show ?case using SA_All by auto
       qed (rule context_set_bd_UNIV | blast)+
     }
@@ -240,7 +240,7 @@ proof -
           then have u: "U = Top" using SA_Trans_TVar(1,2) context_determ wf_context by blast
           have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> Top <: T" using SA_Trans_TVar True u by auto
           then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T"
-            by (metis SA_TopE SA_Trans_TVar.prems(1) ty_weakening ty_weakening_extend wf_ConsE wf_concatD)
+            by (metis SA_TopE SA_Trans_TVar(4) ty_weakening ty_weakening_extend wf_ConsE wf_concatD)
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
           case False
@@ -258,8 +258,8 @@ proof -
           apply (rule wf_Cons)
           using SA_All UnI1 image_iff by auto
         have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
-          apply (rule SA_All(8))
-          using 1 SA_All(9,11,12) by (auto intro!: SA_All(8))
+          apply (rule SA_All(10))
+          using 1 SA_All(12-14) by (auto intro!: SA_All(11))
         then show ?case using SA_All by auto
       qed (rule context_set_bd_UNIV | blast)+
     }
@@ -293,7 +293,7 @@ proof -
           have "(Q\<^sub>1 \<rightarrow> Q\<^sub>2) closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
           then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> (Q\<^sub>1 \<rightarrow> Q\<^sub>2) <: T" using SA_Trans_TVar True u by auto
           moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
-            by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
+            by (metis SA_Trans_TVar(5) True wf_ConsE wf_concatD)
           ultimately have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> R <: T" using ty_trans by blast
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
@@ -312,8 +312,8 @@ proof -
           apply (rule wf_Cons)
           using SA_All UnI1 image_iff by auto
         have "\<Gamma> , X <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
-          apply (rule SA_All(8))
-          using 1 SA_All(9,11,12) by (auto intro!: SA_All(8))
+          apply (rule SA_All(10))
+          using 1 SA_All(12-14) by (auto intro!: SA_All(11))
         then show ?case using SA_All by auto
       qed (rule context_set_bd_UNIV | blast)+
     }
@@ -332,20 +332,20 @@ proof -
           then show ?case by (meson SA_Top ty.SA_All well_scoped(1))
         next
           case (SA_All \<Gamma> T\<^sub>1 T\<^sub>2)
-          have 1: "\<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1" by (rule Forall(2)[OF SA_All(1,3)])
-          have "\<Gamma>, X <: T\<^sub>1 \<turnstile> S\<^sub>2 <: Q\<^sub>2" using Forall(3)[of \<emptyset> X \<Gamma> S\<^sub>2 Q\<^sub>2, OF _ SA_All(1)] SA_All(4)
+          have 1: "\<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1" by (rule Forall(4)[OF SA_All(1,3)])
+          have "\<Gamma>, X <: T\<^sub>1 \<turnstile> S\<^sub>2 <: Q\<^sub>2" using Forall(5)[of \<emptyset> X \<Gamma> S\<^sub>2 Q\<^sub>2, OF _ SA_All(1)] SA_All(4)
             by (metis (mono_tags, lifting) SA_All(2) append.left_neutral fst_conv image_insert list.simps(15) well_scoped(1) wf_context)
-          then have "\<Gamma>, X <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2" by (rule Forall(4)[OF _ SA_All(2)])
+          then have "\<Gamma>, X <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2" by (rule Forall(6)[OF _ SA_All(2)])
           then show ?case using 1 by blast
         qed
       qed auto
     qed
     {
       case 1
-      then show ?case using ty_trans Forall(1) by blast
+      then show ?case using ty_trans Forall(2) by blast
     next
       case 2
-      then show ?case using Forall(1)
+      then show ?case using Forall(1-3)
       proof (binder_induction "\<Gamma>, Y <: (\<forall>X<:Q\<^sub>1. Q\<^sub>2), \<Delta>" M N arbitrary: \<Delta> avoiding: X Y "dom \<Gamma>" "dom \<Delta>" rule: ty_strong_induct)
         case (SA_Trans_TVar Z U T \<Delta>')
         then show ?case
@@ -355,8 +355,8 @@ proof -
           have "\<forall> X <: Q\<^sub>1 . Q\<^sub>2 closed_in \<Gamma>, Z <: R, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
           then have "\<Gamma> , Z <: R , \<Delta>' \<turnstile> \<forall> X <: Q\<^sub>1 . Q\<^sub>2 <: T" using SA_Trans_TVar True u by auto
           moreover have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: \<forall> X <: Q\<^sub>1 . Q\<^sub>2" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
-            by (metis SA_Trans_TVar.prems(2) True wf_ConsE wf_concatD)
-          moreover have "X \<notin> dom (\<Gamma> , Z <: R , \<Delta>')" using SA_Trans_TVar(8) True by auto
+            by (metis SA_Trans_TVar(5) True wf_ConsE wf_concatD)
+          moreover have "X \<notin> dom (\<Gamma> , Z <: R , \<Delta>')" using SA_Trans_TVar(8-10) True by auto
           ultimately have "\<Gamma>, Z <: R, \<Delta>' \<turnstile> R <: T" using ty_trans by blast
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
@@ -375,7 +375,12 @@ proof -
           apply (rule wf_Cons)
           using SA_All UnI1 image_iff by auto
         have "\<Gamma> , Y <: R, (\<Delta>', Z <: T\<^sub>1) \<turnstile> S\<^sub>2 <: T\<^sub>2"
-          by (smt (verit) 1 SA_All(1,7-9,13) Un_commute Un_insert_left append_Cons fst_conv image_insert insert_iff list.simps(15) set_append well_scoped(1,2))
+          apply (rule SA_All(11))
+                 apply (simp add: SA_All 1)+
+          using SA_All.hyps(10) well_scoped(1) apply fastforce
+             apply (simp add: SA_All 1)
+          using SA_All.hyps(10) well_scoped(2) apply fastforce
+            using SA_All by (auto simp: 1)
         then show ?case using SA_All by auto
       qed (rule context_set_bd_UNIV | blast)+
     }

@@ -376,7 +376,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             SOME thm' => thm :: repeat_mp thm'
             | NONE => [thm]
 
-          val _ = @{print} (inst_rule RS inst_thm)
+          (*val _ = @{print} (inst_rule RS inst_thm)*)
           val rule_thm = Goal.prove_sorry defs_ctxt [] [] rule_t (fn {context=ctxt, ...} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt @{thms induct_implies_eq induct_conj_eq}),
             K (print_tac ctxt "foo"),
@@ -387,7 +387,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 val prems' = maps split_conjunction prems';
                 val _ = @{print} prems
               in EVERY1 [
-                rtac ctxt (inst_rule RS inst_thm),
+                rtac ctxt (Local_Defs.unfold0 ctxt @{thms HOL.induct_conj_eq} (inst_rule RS inst_thm)),
                 REPEAT_DETERM o resolve_tac ctxt prems,
                 K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
                 (* boundness *)
@@ -396,7 +396,6 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso]] emp_bound
                   }
                 ),
-                K (print_tac ctxt "foo1"),
                 REPEAT_DETERM o EVERY' [
                   TRY o EVERY' [
                     dtac ctxt @{thm iffD1[OF arg_cong[of _ _ Not], rotated]},
@@ -414,17 +413,43 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     dtac ctxt @{thm iffD1[OF meta_eq_to_obj_eq[OF HOL.induct_equal_def]]},
                 (*  ], *)
                   hyp_subst_tac ctxt,
+                  K (Local_Defs.unfold0_tac ctxt @{thms snd_conv fst_conv}),
+                  Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
                   K (print_tac ctxt "wat1"),
-                  FIRST' (map (fn thm => resolve_tac ctxt (repeat_mp thm) THEN_ALL_NEW (EVERY' [
-                    REPEAT_DETERM o etac ctxt allE,
-                    REPEAT_DETERM o etac ctxt @{thm induct_impliesE[OF _ induct_equal_refl]},
-                    K (print_tac ctxt "wat2"),
-                    assume_tac ctxt
-                  ] ORELSE' EVERY' [
-                    SELECT_GOAL (print_tac ctxt "fail1"),
-                    assume_tac ctxt,
-                    SELECT_GOAL (print_tac ctxt "fail")
-                  ])) prems),
+                  FIRST' (map (fn thm => resolve_tac ctxt (repeat_mp thm) THEN_ALL_NEW (FIRST' [
+                    resolve_tac ctxt inner_prems THEN_ALL_NEW K no_tac,
+                    (* Extra higher order rules, no induction *)
+                    EVERY' [
+                      REPEAT_DETERM o rtac ctxt @{thm induct_impliesI},
+                      resolve_rule_tac ctxt inner_prems
+                    ],
+                    (* Higher order freshness *)
+                    EVERY' [
+                      TRY o (rtac ctxt @{thm iffD1[OF disjoint_single]} THEN' rtac ctxt @{thm trans[OF Int_commute]}),
+                      rtac ctxt @{thm iffD2[OF disjoint_iff]},
+                      rtac ctxt allI,
+                      rtac ctxt impI,
+                      dresolve_tac ctxt (@{print}inner_prems),
+                      SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
+                      REPEAT_DETERM o etac ctxt conjE,
+                      assume_tac ctxt
+                    ],
+                    (* Higher order induction hyp *)
+                    let
+                      val inner_prems' = map_filter (try (fn thm =>
+                        repeat_OF @{thm spec} thm RS @{thm induct_mp[OF _ induct_equal_refl]}
+                      )) inner_prems;
+                      val _ = @{print} inner_prems'
+                    in FIRST' [
+                      rtac ctxt @{thm induct_impliesI} THEN' eresolve_tac ctxt inner_prems',
+                      resolve_tac ctxt inner_prems'
+                    ] THEN_ALL_NEW K no_tac end,
+                    EVERY' [
+                      SELECT_GOAL (print_tac ctxt "fail"),
+                      K no_tac
+                    ]
+                  ])) prems)
+                  ]) ctxt,
                   K (print_tac ctxt "bar")
                   (*Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => FIRST1 (map (fn p => EVERY' [
                     REPEAT_DETERM o rtac ctxt allI,

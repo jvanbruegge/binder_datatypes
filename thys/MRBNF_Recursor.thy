@@ -313,6 +313,20 @@ lemma Int_image_imsupp: "imsupp f \<inter> A = {} \<Longrightarrow> A \<inter> f
 lemma Collect_prod_beta: "{(x, y). P x y} = {p. P (fst p) (snd p)}"
   by auto
 
+lemma prod_sets_simps:
+  "\<Union>(Basic_BNFs.fsts ` A) = fst ` A"
+  "\<Union>(Basic_BNFs.snds ` A) = snd ` A"
+  by force+
+
+lemmas induct_impliesI = impI[unfolded HOL.induct_implies_def[symmetric]]
+lemmas induct_impliesE = impE[unfolded HOL.induct_implies_def[symmetric]]
+lemmas induct_mp = mp[unfolded HOL.induct_implies_def[symmetric]]
+lemmas induct_conjI = conjI[unfolded HOL.induct_conj_def[symmetric]]
+lemmas induct_forallI = allI[unfolded HOL.induct_forall_def[symmetric]]
+
+lemma induct_equal_refl: "HOL.induct_equal x x"
+  unfolding HOL.induct_equal_def by (rule refl)
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

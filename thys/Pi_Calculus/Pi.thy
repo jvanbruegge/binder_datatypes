@@ -4,12 +4,7 @@ theory Pi
 imports "../MRBNF_Recursor" "HOL-Library.FSet" 
  "../Instantiation_Infrastructure/FixedCountableVars"
  "../General_Customization"
-begin 
-
-context begin
-ML_file \<open>../../Tools/binder_induction.ML\<close>
-end
-
+begin
 
 (* DATATYPE DECLARTION  *)
 

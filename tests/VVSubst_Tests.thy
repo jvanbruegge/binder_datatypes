@@ -19,6 +19,7 @@ let
   val (_, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [@{binding vvsubst_T1}, @{binding vvsubst_T2}] I fp_result lthy
 in lthy end
 \<close>
+declare [[quick_and_dirty=false]]
 print_theorems
 print_mrbnfs
 end

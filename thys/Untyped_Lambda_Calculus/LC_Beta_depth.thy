@@ -59,7 +59,7 @@ unfolding G_def by fastforce
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
   unfolding G_def
   by (elim disj_forward exE; cases t)
-    (auto simp: Tmap_def ssbij_def supp_inv_bound
+    (auto simp: Tmap_def ssbij_def
          term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+

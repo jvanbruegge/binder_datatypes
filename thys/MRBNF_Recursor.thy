@@ -322,6 +322,7 @@ lemmas induct_impliesI = impI[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_impliesE = impE[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_mp = mp[unfolded HOL.induct_implies_def[symmetric]]
 lemmas induct_conjI = conjI[unfolded HOL.induct_conj_def[symmetric]]
+lemmas induct_forallI = allI[unfolded HOL.induct_forall_def[symmetric]]
 
 lemma induct_equal_refl: "HOL.induct_equal x x"
   unfolding HOL.induct_equal_def by (rule refl)

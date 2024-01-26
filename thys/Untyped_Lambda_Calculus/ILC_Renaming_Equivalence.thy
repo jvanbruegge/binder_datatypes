@@ -266,7 +266,7 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm reneqv.induct[no_vars] 
 
-corollary BE_induct_reneqv[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_reneqv[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
 and st: "reneqv t1 t2"  
 and iVar: "\<And>xs x x' p. 
@@ -294,7 +294,7 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using iApp by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_reneqv'[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_reneqv'[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "small A \<and> bsmall A"
 and st: "reneqv t1 t2"  
 and iVar: "\<And>xs x x'. 
@@ -309,7 +309,7 @@ and iApp: "\<And>e1 e1' es2 es2'.
   (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e' \<and> R e e') \<Longrightarrow> 
   R (iApp e1 es2) (iApp e1' es2')"
 shows "R t1 t2"
-apply(rule BE_induct_reneqv[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_reneqv[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_reneqv:

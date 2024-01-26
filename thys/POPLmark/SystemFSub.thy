@@ -569,7 +569,7 @@ interpretation ty: Induct where dummy = "undefined :: var"
   using G_refresh[of R B t] unfolding ty_I by auto .
 print_theorems
 
-corollary BE_induct_ty[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]: 
+corollary strong_induct_ty[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]: 
 assumes par: "\<And>p. small (Pfvars p)" 
 and ty: "\<Gamma> \<turnstile> S <: T" 
 and SA_Top: "\<And>\<Gamma> S p. 
@@ -593,7 +593,7 @@ shows "\<phi> p \<Gamma> S T"
 apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi> p \<Gamma> S T")
   subgoal by simp
   subgoal using par ty
-  apply(elim ty.BE_induct[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
+  apply(elim ty.strong_induct[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
     subgoal using ty_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding ty_I[symmetric] apply(elim disjE exE)
@@ -605,7 +605,7 @@ apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi
 
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_ty'[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]: 
+corollary strong_induct_ty'[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]: 
 assumes par: "small A" 
 and ty: "\<Gamma> \<turnstile> S <: T" 
 and SA_Top: "\<And>\<Gamma> S. 
@@ -626,7 +626,7 @@ and SA_All: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2.
    \<phi> (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<Longrightarrow> 
    \<phi> \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2)"
 shows "\<phi> \<Gamma> S T"
-apply(rule BE_induct_ty[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_ty[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_step:

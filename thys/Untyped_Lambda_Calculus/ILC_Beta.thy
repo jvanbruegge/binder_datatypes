@@ -208,7 +208,7 @@ subgoal for R tt1 tt2 apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm istep.induct[no_vars] 
 
-corollary BE_induct_istep[consumes 2, case_names Beta iAppL iAppR Xi]: 
+corollary strong_induct_istep[consumes 2, case_names Beta iAppL iAppR Xi]: 
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "istep t1 t2"  
 and Beta: "\<And>xs e1 es2 p. 
@@ -228,7 +228,7 @@ shows "R p t1 t2"
 unfolding istep_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Istep.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  subgoal using par st apply(elim Istep.strong_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
     subgoal unfolding istep_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding istep_I[symmetric] apply(elim disjE exE)
@@ -238,7 +238,7 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using Xi by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_istep'[consumes 2, case_names Beta iAppL iAppR Xi]: 
+corollary strong_induct_istep'[consumes 2, case_names Beta iAppL iAppR Xi]: 
 assumes par: "small A"
 and st: "istep t1 t2"  
 and Beta: "\<And>xs e1 es2. 
@@ -255,7 +255,7 @@ and Xi: "\<And>e e' xs.
   istep e e' \<Longrightarrow> R e e' \<Longrightarrow> 
   R (iLam xs e) (iLam xs e')" 
 shows "R t1 t2"
-apply(rule BE_induct_istep[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_istep[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_istep:

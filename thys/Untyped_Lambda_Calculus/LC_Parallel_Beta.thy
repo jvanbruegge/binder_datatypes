@@ -204,7 +204,7 @@ subgoal for R tt1 tt2 apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm pstep.induct[no_vars]
 
-corollary BE_induct_pstep[consumes 2, case_names Refl App Xi PBeta]:  
+corollary strong_induct_pstep[consumes 2, case_names Refl App Xi PBeta]:  
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "pstep t1 t2"  
 and Refl: "\<And>e p. R p e e"
@@ -224,7 +224,7 @@ shows "R p t1 t2"
 unfolding pstep_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Pstep.BE_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  subgoal using par st apply(elim Pstep.strong_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
     subgoal unfolding pstep_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding pstep_I[symmetric] apply(elim disjE exE)
@@ -235,7 +235,7 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
 
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_pstep'[consumes 2, case_names Refl App Xi PBeta]:  
+corollary strong_induct_pstep'[consumes 2, case_names Refl App Xi PBeta]:  
 assumes par: "small A"
 and st: "pstep t1 t2"  
 and Refl: "\<And>e. R e e"
@@ -252,7 +252,7 @@ and PBeta: "\<And>x e1 e1' e2 e2'.
   pstep e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
   R (App (Lam x e1) e2) (tvsubst (VVr(x := e2')) e1')"
 shows "R t1 t2"
-apply(rule BE_induct_pstep[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_pstep[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_pstep:

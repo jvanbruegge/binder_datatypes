@@ -560,7 +560,7 @@ subgoal for R PP QQ apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm trans.induct[of P C \<phi>, no_vars]
 
-corollary BE_induct_trans[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
+corollary strong_induct_trans[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
 assumes 
 par: "\<And>p. small (Pfvars p)" 
 and tr: "trans P C"
@@ -604,7 +604,7 @@ and Close1:
 shows "\<phi> p P C" 
 apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
   subgoal by simp
-  subgoal using par tr apply(elim Trans.BE_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
+  subgoal using par tr apply(elim Trans.strong_induct[where R = "\<lambda>p (P,C). \<phi> p P C"])
     subgoal unfolding trans_I by simp
     subgoal for p v t apply(subst (asm) G_def) 
     unfolding trans_I[symmetric] apply(elim disjE exE)
@@ -617,7 +617,7 @@ apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
       subgoal using Close1 by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_trans'[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
+corollary strong_induct_trans'[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
 assumes 
 par: "small A" 
 and tr: "trans P C"
@@ -659,7 +659,7 @@ and Close1:
     x \<notin> {a} \<union> FFVars P1 \<Longrightarrow> 
     \<phi> (Par P1 P2) (Tau (Res x (Par P1' P2')))"
 shows "\<phi> P C" 
-apply(rule BE_induct_trans[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_trans[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_pstep:

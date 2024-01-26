@@ -154,7 +154,7 @@ subgoal for R tt apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm affine.induct[no_vars] 
 
-corollary BE_induct_affine[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_affine[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "affine t"  
 and iVar: "\<And>x p. R p (iVar x)"
@@ -170,7 +170,7 @@ shows "R p t"
 unfolding affine_I
 apply(subgoal_tac "R p t") (* this is overkill here, but I keep the general pattern *)
   subgoal by simp
-  subgoal using par st apply(elim Affine.BE_induct[where R = "\<lambda>p t. R p t"])
+  subgoal using par st apply(elim Affine.strong_induct[where R = "\<lambda>p t. R p t"])
     subgoal unfolding affine_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding affine_I[symmetric] apply(elim disjE exE)
@@ -179,7 +179,7 @@ apply(subgoal_tac "R p t") (* this is overkill here, but I keep the general patt
       subgoal using iApp by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_affine'[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_affine'[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "small A"
 and st: "affine t"  
 and iVar: "\<And>x. R (iVar x)"
@@ -192,7 +192,7 @@ and iApp: "\<And>e1 es2.
     (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) \<Longrightarrow> 
     R (iApp e1 es2)"
 shows "R t"
-apply(rule BE_induct_affine[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_affine[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_affine:
@@ -246,7 +246,7 @@ proof-
   using f ILC.SSupp_IImsupp_bound by auto
   have par: "small (IImsupp f)"
   using ims f unfolding small_def by blast
-  show ?thesis using par r proof(induct rule: BE_induct_affine')
+  show ?thesis using par r proof(induct rule: strong_induct_affine')
     case (iVar x)
     then show ?case using f af by auto
   next

@@ -200,7 +200,7 @@ subgoal for R d tt1 tt2 apply(rule iffI)
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm stepD.induct[no_vars]
 
-corollary BE_induct_stepD[consumes 2, case_names Beta AppL AppR Xi]: 
+corollary strong_induct_stepD[consumes 2, case_names Beta AppL AppR Xi]: 
 assumes par: "\<And>p. small (Pfvars p)"
 and st: "stepD d t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
@@ -220,7 +220,7 @@ shows "R p d t1 t2"
 unfolding stepD_I
 apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Step.BE_induct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
+  subgoal using par st apply(elim Step.strong_induct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
     subgoal unfolding stepD_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding stepD_I[symmetric] apply(elim disjE exE)
@@ -230,7 +230,7 @@ apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
       subgoal using Xi by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_stepD'[consumes 2, case_names Beta AppL AppR Xi]: 
+corollary strong_induct_stepD'[consumes 2, case_names Beta AppL AppR Xi]: 
 assumes par: "small A"
 and st: "stepD d t1 t2"  
 and Beta: "\<And>x e1 e2. 
@@ -247,7 +247,7 @@ and Xi: "\<And>d e e' x.
   stepD d e e' \<Longrightarrow> R d e e' \<Longrightarrow> 
   R d (Lam x e) (Lam x e')" 
 shows "R d t1 t2"
-apply(rule BE_induct_stepD[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_stepD[of "\<lambda>_::unit. A"]) using assms by auto
 
 
 (* Also inferring equivariance from the general infrastructure: *)

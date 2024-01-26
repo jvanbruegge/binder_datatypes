@@ -353,7 +353,7 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm ustepD.induct[no_vars] 
 
-corollary BE_induct_ustepD[consumes 2, case_names Beta iAppL iAppR Xi]: 
+corollary strong_induct_ustepD[consumes 2, case_names Beta iAppL iAppR Xi]: 
 assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
 and st: "ustepD d t1 t2"  
 and Beta: "\<And>d es es' p. 
@@ -383,7 +383,7 @@ apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
       subgoal using Xi by auto . . .
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_ustepD'[consumes 2, case_names Beta iAppL iAppR Xi]: 
+corollary strong_induct_ustepD'[consumes 2, case_names Beta iAppL iAppR Xi]: 
 assumes par: "small A \<and> bsmall A"
 and st: "ustepD d t1 t2"  
 and Beta: "\<And>d es es'. stream_all2 hred es es' \<Longrightarrow> R d es es'"
@@ -398,7 +398,7 @@ and Xi: "\<And>d es es' xs.
   ustepD d es es' \<Longrightarrow> R d es es' \<Longrightarrow> 
   R d (smap (iLam xs) es) (smap (iLam xs) es')" 
 shows "R d t1 t2"
-apply(rule BE_induct_ustepD[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_ustepD[of "\<lambda>_::unit. A"]) using assms by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_ustepD:

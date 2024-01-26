@@ -14,7 +14,7 @@ assumes "istep e e'" and "affine e"
 shows "affine e'"
 proof-
   have "ILC2.small {}" by simp
-  thus ?thesis using assms apply(induct rule: BE_induct_istep')
+  thus ?thesis using assms apply(induct rule: strong_induct_istep')
     subgoal for xs e1 es2 apply(rule imkSubst_affine)
     unfolding affine_iApp_iff by auto 
     subgoal unfolding affine_iApp_iff using istep_FFVars by fastforce

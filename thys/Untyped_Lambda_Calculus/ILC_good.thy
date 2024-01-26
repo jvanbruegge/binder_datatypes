@@ -251,7 +251,7 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm good.induct[no_vars] 
 
-corollary BE_induct_good[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_good[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
 and st: "good t"  
 and iVar: "\<And>xs x p. 
@@ -278,7 +278,7 @@ unfolding bsmall_def[symmetric] apply(elim Reneqv.BE_iinduct[where R = "\<lambda
     subgoal using iApp by auto . . 
 
 (* ... and with fixed parameters: *)
-corollary BE_induct_good'[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_good'[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "small A \<and> bsmall A"
 and st: "good t"  
 and iVar: "\<And>xs x. 
@@ -294,7 +294,7 @@ and iApp: "\<And>e1 es2.
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
   R (iApp e1 es2)"
 shows "R t"
-apply(rule BE_induct_good[of "\<lambda>_::unit. A"]) using assms by auto
+apply(rule strong_induct_good[of "\<lambda>_::unit. A"]) using assms by auto
 
 
 (* Also inferring equivariance from the general infrastructure: *)
@@ -353,7 +353,7 @@ proof-
   have par: "small (IImsupp f) \<and> bsmall (IImsupp f)"
   using ims f unfolding small_def   
   using var_stream_class.Un_bound bsmall_Un bsmall_def by blast
-  show ?thesis using par r proof(induct rule: BE_induct_good')
+  show ?thesis using par r proof(induct rule: strong_induct_good')
     case (iVar xs x)
     then show ?case using s rr by auto
   next

@@ -193,7 +193,7 @@ proof-
      "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
       because this would fail to prove the Var case (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
   *)
-  then show ?thesis using t txs apply(induct rule: BE_induct_good')
+  then show ?thesis using t txs apply(induct rule: strong_induct_good')
     subgoal for ys x apply auto 
       apply (metis bot.extremum imkSubst_def insert_subset 
        reneqvS_def reneqv_tr' shd_sset snth_sset sup.idem super_subOf_theN_eq uniformS_def3)

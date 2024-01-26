@@ -17,7 +17,7 @@ lemma ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans
       P \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2) \<rho>) \<Longrightarrow>
  \<forall>\<rho>. P \<Gamma> S T \<rho>"
 apply safe subgoal for p
-apply(rule BE_induct_ty[where \<phi> = "\<lambda> p \<Gamma> S T. P \<Gamma> S T p", of K])
+apply(rule strong_induct_ty[where \<phi> = "\<lambda> p \<Gamma> S T. P \<Gamma> S T p", of K])
 by (auto simp: small_def) .
 
 lemma ty_refl: "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"

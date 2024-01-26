@@ -643,7 +643,7 @@ begin
 thm BE_iinduct 
 
 (* Formulating the theorem in custom form: *)
-theorem BE_induct[consumes 2]: 
+theorem strong_induct[consumes 2]: 
 (* Parameters: *)
 fixes Pfvars :: "'P \<Rightarrow> 'A set"
 assumes small_Pfvars: "\<And>p. small (Pfvars p)" 

@@ -150,7 +150,7 @@ proof-
   have par: "small (IImsupp f \<union> IImsupp f') \<and> bsmall (IImsupp f \<union> IImsupp f')"
   using ims f unfolding small_def   
   using var_stream_class.Un_bound bsmall_Un bsmall_def by blast
-  show ?thesis using par r rr proof(induct rule: BE_induct_reneqv')
+  show ?thesis using par r rr proof(induct rule: strong_induct_reneqv')
     case (iVar xs x x')
     then show ?case using s by auto
   next

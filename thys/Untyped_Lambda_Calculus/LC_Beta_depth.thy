@@ -57,7 +57,14 @@ unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
-unfolding G_def apply(elim disjE)
+  unfolding G_def
+  by (elim disj_forward exE; cases t)
+    (auto simp: Tmap_def ssbij_def supp_inv_bound
+         term.rrename_comps rrename_tvsubst_comp
+         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+         | ((rule exI[of _ "\<sigma> _"])+; auto))+
+(*  
+  unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for x e1 e2
   apply(rule exI[of _ "\<sigma> x"])
@@ -90,7 +97,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "rrename_term \<sigma> e"]) apply(rule exI[of _ "rrename_term \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: term.rrename_comps) . . .
-
+*)
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
 by (metis Lam_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))

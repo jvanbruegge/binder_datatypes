@@ -182,7 +182,6 @@ proof -
   have
     ty_trans: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
   and ty_narrow: "\<lbrakk> (\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q ; \<turnstile> \<Gamma> , X <: R, \<Delta> ok ; M closed_in \<Gamma> , X <: R, \<Delta> ; N closed_in \<Gamma> , X <: R, \<Delta> \<rbrakk> \<Longrightarrow> (\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
-  (*proof (induction Q rule: typ.induct)*)
   proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T M N X R avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: typ.strong_induct)
     case (TyVar Y \<Gamma> \<Delta> S T M N X R)
     {
@@ -393,5 +392,75 @@ proof -
     using narrow_wf well_scoped wf_context apply metis
     using well_scoped by fastforce+
 qed
+
+lemma ty_narrowing_aux:
+  assumes ty_trans: "\<And>\<Gamma> S T. \<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+  and "(\<Gamma> , X <: Q), \<Delta> \<turnstile> M <: N" "\<Gamma> \<turnstile> R <: Q"
+shows "(\<Gamma>, X <: R), \<Delta> \<turnstile> M <: N"
+proof -
+  have 1: "\<turnstile> \<Gamma>, X <: R, \<Delta> ok" using assms(2-3) narrow_wf well_scoped(1) wf_context by blast
+  show ?thesis using assms(2-3) 1
+  proof (induction "(\<Gamma> , X <: Q), \<Delta>" M N arbitrary: \<Delta> rule: ty.induct)
+    case (SA_Trans_TVar Y U T \<Delta>)
+    show ?case
+    proof (cases "X = Y")
+      case True
+      then have "\<Gamma> , X <: R , \<Delta> \<turnstile> U <: T" using SA_Trans_TVar by auto
+      then show ?thesis
+        by (metis SA_Trans_TVar(1,2,4) True context_determ list.set_intros(1) ty.SA_Trans_TVar ty_trans ty_weakening ty_weakening_extend wf_ConsE wf_concatD wf_context)
+    next
+      case False
+      then show ?thesis using SA_Trans_TVar by auto
+    qed
+  next
+    case (SA_All T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 \<Delta>)
+    then show ?case by (metis Cons_eq_appendI narrow_wf ty.SA_All well_scoped(1) wf_context)
+  qed (auto simp: ty.intros)
+qed
+
+theorem ty_transitivity2: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+proof (binder_induction Q arbitrary: \<Gamma> S T avoiding: "dom \<Gamma>" rule: typ.strong_induct)
+  case (TyVar x \<Gamma> S T)
+  then show ?case
+    by (induction \<Gamma> S "TyVar x") auto
+next
+  case (Fun x1 x2 \<Gamma> S T)
+  from Fun(4,3) show ?case
+  proof (induction \<Gamma> "x1 \<rightarrow> x2" T)
+    case (SA_Top \<Gamma>)
+    then show ?case using well_scoped by blast
+  next
+    case outer: (SA_Arrow \<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2)
+    from outer(6,1,3,5) show ?case
+    proof (induction \<Gamma> S "x1 \<rightarrow> x2")
+      case (SA_Arrow \<Gamma> U\<^sub>1 R\<^sub>1 R\<^sub>2 U\<^sub>2)
+      show ?case
+        apply (rule ty.SA_Arrow)
+         apply (metis Fun(1) SA_Arrow(1,5,6,8) typ_inject(2))
+        by (metis Fun(2) SA_Arrow(3,5,7,8) typ_inject(2))
+    qed auto
+  qed auto
+next
+  case (Forall X Q\<^sub>1 Q\<^sub>2 \<Gamma> S T)
+  from Forall(4,1,5,1) show ?case
+  proof (induction rule: SA_AllE2)
+    case outer: (SA_All \<Gamma> S\<^sub>1 S\<^sub>2)
+    from outer(3,4,1,2,4) show ?case
+    proof (induction rule: SA_AllE1)
+      case (SA_Trans_TVar \<Gamma>)
+      then show ?case by (meson SA_All SA_Top well_scoped(1))
+    next
+      case (SA_All \<Gamma> T\<^sub>1 T\<^sub>2)
+      then have "\<Gamma> , X <: T\<^sub>1 \<turnstile> S\<^sub>2 <: Q\<^sub>2"
+        using ty_narrowing_aux[where \<Delta>="[]", unfolded append.simps] Forall(2) by blast
+      then have "\<Gamma> , X <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2" using Forall(3) SA_All(2) by blast
+      moreover have "\<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1" by (rule Forall(2)[OF SA_All(1,3)])
+      ultimately show ?case by blast
+    qed
+  qed blast
+qed auto
+
+corollary ty_narrowing2: "\<lbrakk> \<Gamma> , X <: Q, \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> \<Gamma>, X <: R, \<Delta> \<turnstile> M <: N"
+  using ty_narrowing_aux ty_transitivity2 by blast
 
 end

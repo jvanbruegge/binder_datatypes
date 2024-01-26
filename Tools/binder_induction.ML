@@ -146,8 +146,8 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           fun extract_vars var t =
             let
               val T = fastype_of t
-              fun extract_deep T t = if Term.is_TFree T then
-                (if T = var then (SOME t, []) else (NONE, []))
+              fun extract_deep T t = if T = var then (SOME t, []) else (
+                if Term.is_TFree var then (NONE, [])
               else case try HOLogic.dest_setT T of
                 SOME T => (NONE, if T = var then [t] else [])
                 | NONE =>
@@ -168,9 +168,10 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     val t = case ts of
                       [] => NONE
                       | _ => SOME (foldl1 MRBNF_Util.mk_Un (map_filter I ts))
-                  in (t, flat ts') end;
+                  in (t, flat ts') end);
             in if T = var then (SOME (HOLogic.mk_set T [t]), []) else extract_deep T t end
 
+          val _ = @{print} vars
           val terms_rawss = map (fn var =>
             apfst (map_filter I) (apsnd flat (split_list (map (extract_vars var) avoiding)))
           ) vars;
@@ -417,7 +418,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
                   K (print_tac ctxt "wat1"),
                   FIRST' (map (fn thm => resolve_tac ctxt (repeat_mp thm) THEN_ALL_NEW (FIRST' [
-                    resolve_tac ctxt inner_prems THEN_ALL_NEW K no_tac,
+                    resolve_tac ctxt (prems @ inner_prems) THEN_ALL_NEW K no_tac,
                     (* Extra higher order rules, no induction *)
                     EVERY' [
                       REPEAT_DETERM o rtac ctxt @{thm induct_impliesI},

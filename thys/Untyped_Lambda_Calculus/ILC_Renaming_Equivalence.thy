@@ -293,6 +293,25 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using iLam by auto  
       subgoal using iApp by auto . . .
 
+corollary strong_induct_reneqv''[consumes 1, case_names bsmall Bound iVar iLam iApp]:
+  assumes  "reneqv t1 t2"
+and bsmall: "\<And>(p::'a). bsmall (PFVars p)"
+assumes bound: "\<And>(p::'a). |PFVars p| <o |UNIV::ivar set|"
+and iVar: "\<And>xs x x' p.
+  super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
+  R (iVar x) (iVar x') p"
+and iLam: "\<And>e e' xs p.
+  dsset xs \<inter> PFVars p = {} \<Longrightarrow>
+  super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow>
+  R (iLam xs e) (iLam xs e') p"
+and iApp: "\<And>e1 e1' es2 es2' p.
+  reneqv e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow>
+  (\<And>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<Longrightarrow> reneqv e e') \<Longrightarrow>
+  (\<And>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<Longrightarrow> \<forall>p'. R e e' p') \<Longrightarrow>
+  R (iApp e1 es2) (iApp e1' es2') p"
+shows "\<forall>(p::'a). R t1 t2 p"
+using assms strong_induct_reneqv[of PFVars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] unfolding small_def by auto
+
 (* ... and with fixed parameters: *)
 corollary strong_induct_reneqv'[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "small A \<and> bsmall A"

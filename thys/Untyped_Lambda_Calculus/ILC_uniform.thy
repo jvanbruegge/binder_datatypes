@@ -138,39 +138,44 @@ shows "uniform (irrename f e)"
 using assms unfolding uniform_def3 
 by (intro irrename_reneqv) auto
 
+thm strong_induct_reneqv' strong_induct_reneqv''
+
 (* *)  (* requires strong induction: *)
 lemma reneqv_itvsubst:
-assumes r: "reneqv e e'" and rr: "\<And>xs x x'. super xs \<Longrightarrow> {x, x'} \<subseteq> dsset xs \<longrightarrow> reneqv (f x) (f' x')" 
-and s: "|SSupp f| <o |UNIV::ivar set|" "|SSupp f'| <o |UNIV::ivar set|"
-and f: "finite (touchedSuper (IImsupp f))" "finite (touchedSuper (IImsupp f'))"
-shows "reneqv (itvsubst f e) (itvsubst f' e')"
-proof-
-  have ims: "|IImsupp f| <o |UNIV::ivar set|" "|IImsupp f'| <o |UNIV::ivar set|"
-  using s ILC.SSupp_IImsupp_bound by auto
-  have par: "small (IImsupp f \<union> IImsupp f') \<and> bsmall (IImsupp f \<union> IImsupp f')"
-  using ims f unfolding small_def   
-  using var_stream_class.Un_bound bsmall_Un bsmall_def by blast
-  show ?thesis using par r rr proof(induct rule: strong_induct_reneqv')
-    case (iVar xs x x')
-    then show ?case using s by auto
-  next
-    case (iLam e e' xs)
-    show ?case using iLam apply(subst iterm.subst)
-      subgoal using s by auto
-      subgoal using s by auto
-      apply(subst iterm.subst)
-        subgoal using s by auto
-        subgoal using s by auto
-        subgoal apply(rule reneqv.iLam) by auto .
-  next
-    case (iApp e1 e1' es2 es2')
-    then show ?case apply(subst iterm.subst)
-      subgoal using s by auto
-      apply(subst iterm.subst)
-        subgoal using s by auto
-        subgoal apply(rule reneqv.iApp) apply auto  
-        by (meson reneqv_trans reneqv_sym)+ .
-  qed 
+  assumes r: "reneqv e e'" and rr: "\<And>xs x x'. super xs \<Longrightarrow> {x, x'} \<subseteq> dsset xs \<longrightarrow> reneqv (f x) (f' x')"
+    and s: "|SSupp f| <o |UNIV::ivar set|" "|SSupp f'| <o |UNIV::ivar set|"
+    and f: "finite (touchedSuper (IImsupp f))" "finite (touchedSuper (IImsupp f'))"
+  shows "reneqv (itvsubst f e) (itvsubst f' e')"
+using r proof (binder_induction e e' avoiding: "IImsupp f" "IImsupp f'" rule: strong_induct_reneqv'')
+  case bsmall
+  then show ?case using f unfolding bsmall_def by (simp add: touchedSuper_Un)
+next
+  case Bound1
+  then show ?case using s ILC.SSupp_IImsupp_bound by auto
+next
+  case Bound2
+  then show ?case using s ILC.SSupp_IImsupp_bound by auto
+next
+  case (iVar xs x x')
+  then show ?case using s rr by auto
+next
+  case (iLam ea e'a xs)
+  then show ?case using iLam apply(subst iterm.subst)
+    subgoal using s by auto
+    subgoal using s by auto
+    apply(subst iterm.subst)
+    subgoal using s by auto
+    subgoal using s by auto
+    subgoal apply(rule reneqv.iLam) by auto .
+next
+  case (iApp e1 e1' es2 es2')
+  then show ?case using rr
+    apply(subst iterm.subst)
+    subgoal using s by auto
+    apply(subst iterm.subst)
+    subgoal using s by auto
+    subgoal apply(rule reneqv.iApp) apply auto
+      by (meson reneqv_trans reneqv_sym)+ .
 qed
 
 (* *)

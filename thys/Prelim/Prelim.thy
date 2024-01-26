@@ -849,4 +849,7 @@ by (meson injD inject_natOf)
 
 (*    *)
 
+lemma ex_push_inwards: "(\<exists>x. P x \<and> (\<exists>y. Q x y)) \<longleftrightarrow> (\<exists>y. \<exists>x. Q x y \<and> P x)"
+  by blast
+
 end

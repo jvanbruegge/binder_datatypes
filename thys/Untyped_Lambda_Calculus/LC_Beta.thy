@@ -57,6 +57,13 @@ unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G  (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+  unfolding G_def
+  by (elim disj_forward exE; cases t)
+    (auto simp: Tmap_def ssbij_def
+         term.rrename_comps rrename_tvsubst_comp
+         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+         | ((rule exI[of _ "\<sigma> _"])+; auto))+
+(*
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for x e1 e2
@@ -86,6 +93,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "rrename_term \<sigma> e"]) apply(rule exI[of _ "rrename_term \<sigma> e'"]) 
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
   by (simp add: term.rrename_comps) . . .
+*)
 
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
@@ -95,10 +103,22 @@ by (metis Lam_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
 as they are. 
 *)
+
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
-using fresh[of t] unfolding G_def Tmap_def apply safe
+  using fresh[of t] unfolding G_def Tmap_def
+(**)ssbij_def conj_assoc[symmetric]
+  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+  by (elim disj_forward exE)
+    (auto |
+    (rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (rule exI, rule conjI, rule Lam_refresh) |
+    rule tvsubst_Var_rrename |
+    (cases t; auto))+
+(**)
+(*
+  apply safe
   subgoal for xx x e1 e2 
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
@@ -149,6 +169,7 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
       subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . .
   (* *)
+*)
 
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)

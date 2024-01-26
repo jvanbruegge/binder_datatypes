@@ -67,7 +67,14 @@ unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
-unfolding G_def apply(elim disjE)
+  unfolding G_def
+  by (elim disj_forward exE; cases t)
+    (auto simp: Tmap_def ssbij_def
+         term.rrename_comps rrename_tvsubst_comp
+         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+         | ((rule exI[of _ "\<sigma> _"])+; auto))+
+(*
+  unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal  
   apply(cases t) unfolding ssbij_def small_def Tmap_def  
@@ -95,6 +102,7 @@ unfolding G_def apply(elim disjE)
   apply(cases t) unfolding ssbij_def small_def Tmap_def 
   apply (simp add: term.rrename_comps) apply(subst rrename_tvsubst_comp) by auto
  . . . 
+*)
   
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  

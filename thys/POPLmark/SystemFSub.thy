@@ -326,6 +326,13 @@ qed auto
 
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
   unfolding G_def
+  by (elim disj_forward exE; cases t)
+    (auto simp: Tmap_def ssbij_def supp_inv_bound
+      typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
+         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
+(*
+  unfolding G_def
   apply (elim disjE)
   subgoal
     apply (rule disjI1)
@@ -380,6 +387,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R
       )
     done
   done
+*)
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
   by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tfvars small_def small_ssbij subsetI)

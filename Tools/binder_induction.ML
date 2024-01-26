@@ -1,6 +1,8 @@
 structure Binder_Induction =
 struct
 
+open BNF_Util
+
 fun unless_more_args scan = Scan.unless (Scan.lift
   ((Args.$$$ "arbitrary" || Args.$$$ "taking" || Args.$$$ "avoiding" || Args.$$$ "rule") -- Args.colon)) scan;
 
@@ -13,7 +15,7 @@ val arbitrary = Scan.optional (Scan.lift (Args.$$$ "arbitrary" -- Args.colon) |-
   Parse.and_list1' (Scan.repeat (unless_more_args free))) [];
 
 val avoiding = Scan.optional (Scan.lift (Args.$$$ "avoiding" -- Args.colon) |--
-  Parse.and_list1' (Scan.repeat (unless_more_args Args.term))) [];
+  Scan.repeat (unless_more_args Args.term)) [];
 
 val taking = Scan.optional (Scan.lift (Args.$$$ "taking" -- Args.colon) |--
   Scan.repeat1 (unless_more_args inst)) [];
@@ -75,18 +77,6 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
       val ((insts, defs), defs_ctxt) = fold_map Induct.add_defs def_insts ctxt |>> split_list;
       val atomized_defs = map (map (Conv.fconv_rule (Induct.atomize_cterm defs_ctxt))) defs;
 
-      val vars = distinct (op= o apply2 fst) (flat (map_filter (Option.mapPartial (fn t => Option.mapPartial (fn (name, Ts) =>
-        Option.map (fn mrbnf =>
-          let
-            val vars = MRBNF_Def.var_types_of_mrbnf mrbnf ~~ Ts;
-          in map_filter (fn (x, T) =>
-            if x = MRBNF_Def.Free_Var orelse x = MRBNF_Def.Bound_Var then SOME (T, mrbnf) else NONE
-          ) vars end
-      ) (MRBNF_Def.mrbnf_of ctxt name)) (try dest_Type (fastype_of t)))) (hd insts)));
-      val (var, mrbnf) = case vars of
-        [x] => x
-      | _ => error "Induction on datatypes with more than one variable is not supported yet";
-
       fun inst_rule (concls, r) =
         (if null insts then `Rule_Cases.get r
          else (align_left "Rule has fewer conclusions than arguments given"
@@ -97,129 +87,264 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
         |> (fn ((cases, consumes), th) => (((cases, concls), consumes), th));
 
       val ruleq = (case opt_rule of
-        SOME rs => Seq.single (inst_rule (Rule_Cases.strict_mutual_rule ctxt rs))
+        SOME rs => inst_rule (Rule_Cases.strict_mutual_rule ctxt rs)
       | NONE => error "Automatic detection of induction rule is not supported yet, please specify with rule:"
       );
-    fun context_tac _ _ = ruleq
+
+      fun dest_ordLess t =
+        let val t' = case HOLogic.dest_mem t of
+          (t', Const (@{const_name ordLess}, _)) => t'
+          | _ => raise TERM ("dest_ordLess", [t])
+        in HOLogic.dest_prod t' end
+      fun dest_card_of (Const (@{const_name card_of}, _) $ t) = t
+        | dest_card_of t = raise TERM ("dest_card_of", [t])
+
+      fun strip_all (Const (@{const_name HOL.All}, _) $ t) = (case t of
+        Abs (x, T, t) => let val a = Free (x, T)
+          in apfst (curry (op::) a) (strip_all (Term.subst_bound (a, t))) end
+          | _ => strip_all t)
+        | strip_all t = ([], t)
+
+    fun context_tac _ _ = Seq.single ruleq
       |> Seq.maps (Rule_Cases.consume defs_ctxt (flat defs) facts)
       |> Seq.map (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
         let
+          val concl = Thm.concl_of rule
+          val P_vars = rev (Term.add_vars concl []);
+          val prems = Thm.prems_of rule
+          val prem_concls = map Logic.strip_assums_concl prems;
+
+          val vars_prems = map (try (
+            HOLogic.dest_Trueprop
+            #> snd o strip_all
+            #> fst o dest_ordLess
+            #> dest_card_of
+            #> fst o Term.strip_comb
+            #> snd o Term.dest_Var
+            #> HOLogic.dest_setT o range_type
+          )) prem_concls;
+          val ((nmajor, vars), nind_cases) = vars_prems
+            |> apfst length o chop_prefix (not o Option.isSome)
+            ||>> map_prod (map the) length o chop_prefix Option.isSome
+          val nvars = length vars;
+
           val finsts = map_filter I (flat insts);
-          val avoiding_arbitraries = filter (fn arb =>
-            exists (Term.exists_subterm (curry (op=) arb)) (flat avoiding)
-          ) (map Free (flat arbitrary));
+          val avoiding_arbitraries = distinct (op=) (filter (fn arb =>
+            exists (Term.exists_subterm (curry (op=) arb)) avoiding
+          ) (map Free (flat arbitrary)));
           val avoiding_inducts = filter (fn (_, ind) =>
-              exists (Term.exists_subterm (curry (op=) ind)) (flat avoiding)
+              exists (Term.exists_subterm (curry (op=) ind)) avoiding
           ) (0 upto length finsts - 1 ~~ finsts);
+          val arbitrary = if length arbitrary = 0 then replicate (length P_vars) [] else arbitrary;
+
+          fun extract_vars var t =
+            let
+              val T = fastype_of t
+              fun extract_deep T t = if T = var then (SOME t, []) else (
+                if Term.is_TFree T then (NONE, [])
+              else case try HOLogic.dest_setT T of
+                SOME T => (NONE, if T = var then [t] else [])
+                | NONE =>
+                  let
+                    val (name, Ts) = Term.dest_Type T
+                    val sets = case MRBNF_Def.mrbnf_of ctxt name of
+                      SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
+                      | NONE => (case BNF_Def.bnf_of ctxt name of
+                        SOME bnf => BNF_Def.sets_of_bnf bnf
+                        | NONE => error ("Type is neither a set nor a (MR)BNF: " ^ name)
+                      );
+                    val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts);
+                    val sets' = map_filter (fn (T, s) => if Term.exists_subtype (curry (op=) var) T then
+                      SOME (T, subst s) else NONE) (Ts ~~ sets);
+                    val (ts, ts') = split_list (map (fn (T, s) => extract_deep T (case fastype_of t of
+                      Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
+                      | _ => s $ t)) sets');
+                    val t = case ts of
+                      [] => NONE
+                      | _ => SOME (foldl1 MRBNF_Util.mk_Un (map_filter I ts))
+                  in (t, flat ts') end);
+            in if T = var then (SOME (HOLogic.mk_set T [t]), []) else extract_deep T t end
+
+          val terms_rawss = map (fn var =>
+            apfst (map_filter I) (apsnd flat (split_list (map (extract_vars var) avoiding)))
+          ) vars;
+
+          val more_facts' = map (fn thm =>
+            let
+              val t = Thm.prop_of thm;
+              val vars = rev (Term.add_vars t []);
+              val (vars', _) = mk_Frees "x" (map snd vars) ctxt
+              val t' = fold_rev Logic.all vars' (Term.subst_atomic (map Var vars ~~ vars') t);
+            in HOLogic.mk_Trueprop (Induct.atomize_term ctxt t') end
+          ) more_facts;
+
+          val goals = (if length concls > 1 then Logic.dest_conjunction_list else single) (hd (Thm.prems_of st));
+          val goals' = map (Logic.list_implies o apfst (drop nmajor) o Logic.strip_horn) goals;
+          val goals'' = map (fold_rev (curry Logic.mk_implies) more_facts') goals';
+
+          val cases_prems = drop (nmajor + nvars) prems;
+          val K_vars = rev (distinct (op=) (filter (fn (_, T) =>
+            case try (HOLogic.dest_setT o range_type) T of
+              NONE => false
+              | SOME T => member (op=) vars T
+          ) (fold_rev Term.add_vars cases_prems [])));
+
+          fun strip_pure_all t =
+            let fun go (Const ("Pure.all", _) $ Abs (x, T, t)) xs = go t (Free (x, T)::xs)
+                  | go t xs = (rev xs, subst_bounds (xs, t))
+            in go t [] end
+          fun mk_induct_equal (t1, t2) =
+            let val T = fastype_of t1
+            in Const (@{const_name HOL.induct_equal}, T --> T --> @{typ bool}) $ t1 $ t2 end;
+
+          val finsts' = map (map_filter I) insts;
+          val cases' = map (fn rule =>
+            let
+              val ((bvars, rho), rule) = apfst split_last (strip_pure_all rule)
+              val bvars' = rev (map Free (fold Term.rename_wrt_term goals'' (map dest_Free bvars)));
+              val rule = Term.subst_atomic (bvars ~~ bvars') rule;
+              val (prems, outer_concl) = Logic.strip_horn rule;
+              val (P_var, P_args) = apsnd (fst o split_last) (Term.strip_comb (HOLogic.dest_Trueprop outer_concl));
+              val (((finst', goal), idefs), arb) = the (AList.lookup (op=) (map Var P_vars ~~ (finsts' ~~ goals'' ~~ defs ~~ arbitrary)) P_var);
+
+              val subst_ind = finst' ~~ P_args;
+              val raw_defs = map (Logic.dest_equals o Thm.prop_of) idefs;
+              val eq_prems = map_filter (fn (inst, arg) =>
+                Option.map (fn def => HOLogic.mk_Trueprop (mk_induct_equal (arg, def))) (AList.lookup (op=) raw_defs inst)
+              ) subst_ind;
+
+              val prems' = maps (fn prem =>
+                let
+                  val (lvars, prem) = strip_pure_all prem;
+                  val (prems, concl) = apsnd HOLogic.dest_Trueprop (Logic.strip_horn prem);
+                  val (lvars, concl) = case strip_all concl of
+                    ([x], t) => if x = rho then (lvars @ [x], t) else (lvars, concl)
+                    | _ => (lvars, concl);
+                in if Term.exists_subterm (member (op=) (map Var K_vars)) concl then
+                  let
+                    val (z, (K_var, rho)) = apsnd Term.dest_comb (HOLogic.dest_mem (HOLogic.dest_not concl));
+                    val var_set_opt = try (snd o HOLogic.dest_mem o HOLogic.dest_Trueprop o hd) prems;
+                    val (terms, raws) = the (AList.lookup (op=) (map Var K_vars ~~ terms_rawss) K_var);
+
+                    val terms = map (Term.subst_atomic subst_ind) (filter (
+                      not o Term.exists_subterm (member (op=) (subtract (op=) finst' finsts))
+                    ) terms);
+
+                    fun dest_singleton (Const (@{const_name Set.insert}, _) $ t $ Const (@{const_name bot}, _)) = t
+                      | dest_singleton t = raise TERM ("dest_singleton", [t]);
+
+                    val prems' = case var_set_opt of
+                      SOME s => map (fn t => case try dest_singleton t of
+                        SOME x => HOLogic.mk_not (HOLogic.mk_mem (x, s))
+                        | NONE => MRBNF_Util.mk_int_empty (s, t)
+                      ) (terms @ raws)
+                      | NONE => map (fn t => case try dest_singleton t of
+                        SOME x => HOLogic.mk_not (HOLogic.mk_eq (z, x))
+                        | NONE => HOLogic.mk_not (HOLogic.mk_mem (z, t))
+                      ) (terms @ raws);
+                  in map HOLogic.mk_Trueprop prems' end
+                else
+                  let
+                    val (t, ts) = Term.strip_comb concl;
+                    val (concl', strip, arbs) = case AList.lookup (op=) (map Var P_vars ~~ (goals'' ~~ finsts' ~~ defs ~~ arbitrary)) t of
+                      SOME (((goal, inst), defs), arbs) =>
+                        let
+                          val subst = inst ~~ fst (split_last ts);
+                          val raw_defs = map (Logic.dest_equals o Thm.prop_of) defs;
+                          val eq_prems = map_filter (fn (inst, arg) =>
+                            Option.map (fn def => HOLogic.mk_Trueprop (mk_induct_equal (arg, def))) (AList.lookup (op=) raw_defs inst)
+                          ) subst;
+                        in (fold_rev (curry Logic.mk_implies) eq_prems (Term.subst_atomic subst goal), true, arbs) end
+                      | NONE => (HOLogic.mk_Trueprop concl, false, []);
+                    val prem' = fold_rev Logic.all ((if strip then fst (split_last lvars) else lvars) @ map Free arbs) (
+                      fold_rev (curry Logic.mk_implies) prems concl'
+                    );
+                  in [prem'] end
+                end
+              ) prems;
+            in fold_rev Logic.all (bvars' @ map Free arb) (
+              fold_rev (curry Logic.mk_implies) (prems' @ eq_prems) (Term.subst_atomic subst_ind goal)
+            ) end
+          ) cases_prems;
+
+          val bound_prems = flat (map2 (fn (_, raws) => fn var => map (fn raw =>
+            let val prem = HOLogic.mk_Trueprop (
+              MRBNF_Util.mk_ordLess (MRBNF_Util.mk_card_of raw) (MRBNF_Util.mk_card_of (HOLogic.mk_UNIV var))
+            ) in fold_rev Logic.all (filter (fn t => Term.exists_subterm (fn t' => t = t') prem) avoiding_arbitraries) prem end
+          ) raws) terms_rawss vars);
+
+          val mk_induct_conj = HOLogic.mk_binop @{const_name HOL.induct_conj}
+          fun mk_induct_implies t1 t2 =
+            Const (@{const_name HOL.induct_implies}, @{typ bool} --> @{typ bool} --> @{typ bool}) $ t1 $ t2;
+          val to_induct_implies = uncurry (fold_rev mk_induct_implies) o map_prod (map HOLogic.dest_Trueprop) HOLogic.dest_Trueprop o Logic.strip_horn
+          val rule_t = fold_rev (curry Logic.mk_implies) (take nmajor prems @ bound_prems @ cases') (
+            Logic.mk_conjunction_list (map (HOLogic.mk_Trueprop o foldr1 mk_induct_conj o map to_induct_implies o Logic.dest_conjunction_list) goals')
+          );
+
           val avoiding_dynamics = avoiding_arbitraries @ map snd avoiding_inducts;
           val avoiding_dynamic = HOLogic.mk_tuple avoiding_dynamics;
 
-          fun extract_vars t =
-            let
-              val T = fastype_of t
-              fun extract_deep T t = if T = var then (SOME t, []) else
-                case try HOLogic.dest_setT T of
-                  SOME T => if T = var then (NONE, [t]) else error "Wrong variable kind in set"
-                  | NONE =>
-                    let
-                      val (name, Ts) = Term.dest_Type T
-                      val sets = case MRBNF_Def.mrbnf_of ctxt name of
-                        SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
-                        | NONE => (case BNF_Def.bnf_of ctxt name of
-                          SOME bnf => BNF_Def.sets_of_bnf bnf
-                          | NONE => error "Only single variables and variables in (MR)BNFs are supported, use the fset or set['a] (bounded set) BNFs instead of set"
-                        );
-                      val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts);
-                      val sets' = map_filter (fn (T, s) => if Term.exists_subtype (curry (op=) var) T then
-                        SOME (T, subst s) else NONE) (Ts ~~ sets);
-                      val (ts, ts') = split_list (map (fn (T, s) => extract_deep T (case fastype_of t of
-                        Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
-                        | _ => s $ t)) sets');
-                    in (SOME (foldl1 MRBNF_Util.mk_Un (map_filter I ts)), flat ts') end;
-            in if T = var then (SOME (HOLogic.mk_set T [t]), []) else extract_deep T t end
-
-          val (terms, raws) = apfst (map_filter I) (apsnd flat (split_list (map extract_vars (flat avoiding))));
-          val K_t = case flat avoiding of
-            [] => Term.abs ("\<rho>", HOLogic.unitT) (Const (@{const_name bot}, HOLogic.mk_setT var))
-            | _ =>
-              let val avoiding_set = foldl1 MRBNF_Util.mk_Un (terms @ raws);
-              in case avoiding_dynamics of
-                [] => Term.abs ("\<rho>", HOLogic.unitT) avoiding_set
-                | _ => MRBNF_Util.mk_case_tuple (map Term.dest_Free avoiding_dynamics) avoiding_set
-              end;
-
-          val arbitrary' = map Free (flat arbitrary);
-          val concl = Thm.concl_of rule
-          val P_var = hd (Term.add_vars concl [])
-          val P_new_var =
-            let val (Ts, T) = Term.strip_type (snd P_var);
-            in Var (fst P_var, fold_rev (curry op-->) (take (length Ts - 1) Ts @ map snd (flat arbitrary)) T) end;
-          val insts' = map_filter I (hd insts);
-          val P' = fold_rev Term.absfree (map (dest_Free o the) (hd insts)) (Term.abs ("\<rho>", fastype_of avoiding_dynamic) (Term.list_comb (P_new_var, insts' @ arbitrary')));
-          val rule'' = infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P']) rule;
-          val prems = drop more_consumes (Thm.cprems_of rule'')
-          val concl = Thm.concl_of rule''
-          val n = length arbitrary'
-
-          fun simplify_case_prod ((Const (@{const_name prod.case_prod}, _) $ Abs (_, _, Abs (_, _, t))) $ (Const (@{const_name Pair}, _) $ a $ b)) = Term.subst_bounds ([b, a], t)
-            | simplify_case_prod ((Const (@{const_name prod.case_prod}, _) $ Abs (_, _, t)) $ (Const (@{const_name Pair}, _) $ a $ b)) = Term.subst_bounds ([a], simplify_case_prod (t $ b))
-            | simplify_case_prod (a $ b) = simplify_case_prod a $ simplify_case_prod b
-            | simplify_case_prod (Abs (a, b, c)) = Abs (a, b, simplify_case_prod c)
-            | simplify_case_prod t = t
-
-          val prems_new = map (fn ct =>
-            let
-              val t = Thm.term_of ct
-              val vars = Term.strip_all_vars t
-              val body = Term.strip_all_body t
-              val vars_new = take (length vars - 1) vars
-              val ps = Logic.strip_imp_prems body
-              val cl = Logic.strip_imp_concl body
-              val comb = snd (Term.strip_comb (HOLogic.dest_Trueprop cl));
-              val avoid_inds = map (nth comb o fst) avoiding_inducts;
-              val ps' = map_index (fn (i, t) =>
-                let
-                  val p = HOLogic.dest_Trueprop t
-                  val (generalize, p') = case p of
-                    Const (@{const_name All}, _) $ Abs (_, _, v) =>
-                      let val (t, _) = Term.strip_comb v
-                      in if t = P_new_var then (true, Term.incr_boundvars (n - 1) v) else (false, p) end
-                    | _ => (false, p);
-
-                  val p'' = Term.incr_boundvars n (simplify_case_prod (
-                    Term.subst_bounds ([avoiding_dynamic], HOLogic.mk_Trueprop p')
-                  ));
-                  val p'' = if i = 0 then Term.subst_atomic (map snd avoiding_inducts ~~ avoid_inds) p'' else p''
-                in if generalize then fold_rev Logic.all arbitrary' p'' else p'' end
-              ) ps;
-
-              fun mk_all (x, T) t = Logic.all_const T $ Abs (x, T, t)
-              val t' = fold_rev mk_all vars_new (fold_rev Logic.all (map Free (flat arbitrary)) (
-                fold_rev (curry Logic.mk_implies) ps' (Term.incr_boundvars (n - 1) cl)
-              ));
-            in t' end
-          ) (tl prems);
-          val Const (@{const_name Trueprop}, _) $ (Const (@{const_name All}, _) $ Abs (_, _, concl_new)) = concl
-
-          fun mk_bound t = fold_rev Logic.all
-            (filter (fn arb => Term.exists_subterm (curry (op=) arb) t) avoiding_arbitraries) (HOLogic.mk_Trueprop (
-            MRBNF_Util.mk_ordLess (MRBNF_Util.mk_card_of t)
-              (MRBNF_Util.mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (fastype_of t))))
-          ));
-          val rule_new = fold_rev (curry Logic.mk_implies) (
-            take more_consumes (Thm.prems_of rule) @ map mk_bound raws @ prems_new
-          ) (HOLogic.mk_Trueprop concl_new);
-
           fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
-          val P2 = Free (hd (Term.variant_frees rule_new [("P", fastype_of P_new_var)]));
-          val P2_t = fold_rev Term.absfree (map dest_Free insts') (Term.abs ("\<rho>", fastype_of avoiding_dynamic) (
-            fold_rev mk_all (flat arbitrary) (
-              HOLogic.mk_imp (HOLogic.eq_const (fastype_of avoiding_dynamic) $ Bound n $ avoiding_dynamic, Term.list_comb (P2, insts' @ arbitrary')
-            )))
-          );
-          val rule_inst = fold (fn thm => fn thm2 => thm OF [thm2]) (replicate (1 + n) @{thm spec} @ [mp]) (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) [K_t, P2_t]) rule)
-          fun rtac ctxt = resolve_tac ctxt o single
+          val rho = Free ("\<rho>", fastype_of avoiding_dynamic);
+          val inst_rule = infer_instantiate ctxt (map fst P_vars ~~
+            @{map 4} (fn goal => fn inst => fn arb => fn defs => Thm.cterm_of ctxt (
+              fold_rev Term.absfree (map dest_Free inst) (Term.absfree (dest_Free rho) (
+                fold_rev mk_all arb (Induct.atomize_term ctxt (
+                  Logic.mk_implies (HOLogic.mk_Trueprop (mk_induct_equal (
+                    avoiding_dynamic, rho
+                  )), fold_rev (curry Logic.mk_implies) (map Thm.prop_of defs) goal)
+                ))
+              ))
+            )) goals'' finsts' arbitrary defs
+          ) rule;
 
+          val inst_concl = Thm.concl_of inst_rule;
+          val inst_concls = Logic.dest_conjunction_list inst_concl;
+          fun dest_induct_imp (Const (@{const_name HOL.induct_implies}, _) $ t1 $ t2) = (t2, t1)
+
+          fun to_pure_all (Const ("HOL.All", _) $ Abs (a, b, t)) = to_pure_all (subst_bound (Free (a, b), t))
+            | to_pure_all t = dest_induct_imp t
+          val (inst_concls', rho_imps) = split_list (map (to_pure_all o HOLogic.dest_Trueprop) inst_concls);
+          val (def_conclss, inst_concls') = split_list (map2 (fn defs =>
+            apsnd HOLogic.mk_Trueprop o fold_map (K (swap o dest_induct_imp)) (0 upto length defs - 1 + length more_facts)
+          ) defs inst_concls');
+
+          val inst_concl' = Logic.mk_implies (inst_concl, Logic.mk_implies (
+            HOLogic.mk_Trueprop (hd rho_imps),
+            fold_rev (curry Logic.mk_implies) more_facts' (Logic.mk_conjunction_list inst_concls')
+          ));
+          val inst_thm = Goal.prove_sorry defs_ctxt [fst (dest_Free rho)] [] inst_concl' (fn {context=ctxt, ...} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt (flat defs @ @{thms atomize_conj HOL.induct_implies_def})),
+            REPEAT_DETERM o eresolve_tac ctxt [allE, conjE],
+            REPEAT_DETERM o etac ctxt @{thm impE[OF _ induct_equal_refl]},
+            REPEAT_DETERM o (etac ctxt impE THEN' FIRST' [
+              assume_tac ctxt,
+              EVERY' [
+                REPEAT_DETERM o resolve_tac ctxt @{thms induct_forallI impI},
+                Goal.assume_rule_tac ctxt
+              ]
+            ]),
+            REPEAT_DETERM o EVERY' [
+              TRY o rtac ctxt conjI,
+              assume_tac ctxt
+            ]
+          ]);
+          val inst_rule = infer_instantiate ctxt (map fst K_vars ~~
+            map2 (fn (terms, raws) => fn var => Thm.cterm_of ctxt (
+              (if length avoiding_dynamics = 0 then Term.abs ("_", @{typ unit}) else I)
+              (MRBNF_Util.mk_case_tuple (map dest_Free avoiding_dynamics) (
+                let val ts = terms @ raws
+                in if length ts = 0 then
+                  MRBNF_Util.mk_bot var
+                else foldl1 MRBNF_Util.mk_Un ts end
+              ))
+            )) terms_rawss vars
+          ) inst_rule;
+
+          val mrbnf = hd (map_filter (Option.composePartial (
+            MRBNF_Def.mrbnf_of ctxt,
+            try (fst o dest_Type o fastype_of)
+          )) finsts);
           val bound_thms = [
             MRBNF_Def.Un_bound_of_mrbnf mrbnf,
             MRBNF_Def.UNION_bound_of_mrbnf mrbnf,
@@ -238,64 +363,113 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   | NONE => []
             in maps (fn (s, Ts) => set_bd_of_T s @ get_set_bd Ts) Ts' end;
 
-          val set_bds = map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (get_set_bd (map fastype_of (flat avoiding)));
+          val set_bds = map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) (get_set_bd (map fastype_of avoiding));
 
-          val rule_thm = Goal.prove_sorry defs_ctxt [fst (dest_Free P2)] [] (Term.subst_atomic [(P_new_var, P2)] rule_new) (fn {context=ctxt,...} =>
-            Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} =>
-              EVERY1 [
-                rtac ctxt rule_inst,
-                EVERY' (map (rtac ctxt) (take more_consumes prems)),
-                K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
-                (* Boundness *)
-                rtac ctxt allI,
-                REPEAT_DETERM o resolve_tac ctxt (bound_thms @ set_bds @ prems @
-                  @{thms finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
-                    ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso]] emp_bound
-                  }
-                ),
-                (* others *)
-                REPEAT_DETERM o FIRST' [
-                  resolve_tac ctxt ([refl, allI, impI] @ prems),
-                  eresolve_tac ctxt [allE],
-                  dresolve_tac ctxt @{thms mp[OF _ refl]},
-                  hyp_subst_tac ctxt,
-                  assume_tac ctxt,
-                  EqSubst.eqsubst_asm_tac ctxt [0] @{thms snd_conv fst_conv}
-                ]
+          fun resolve_rule_tac ctxt thms =
+            let val tacs = map (fn thm => etac ctxt thm THEN_ALL_NEW assume_tac ctxt) thms
+            in fold_rev (curry op APPEND') tacs (K no_tac) end
+
+          fun repeat_OF thm thm2 = case try (curry (op OF) thm) [thm2] of
+            SOME thm' => repeat_OF thm thm'
+            | NONE => thm2;
+
+          fun repeat_mp thm = case try (fn thm => thm RS @{thm induct_mp}) thm of
+            SOME thm' => thm :: repeat_mp thm'
+            | NONE => [thm]
+
+          val rule_thm = Goal.prove_sorry defs_ctxt [] [] rule_t (fn {context=ctxt, ...} => let val ctxt' = ctxt in EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt @{thms induct_implies_eq induct_conj_eq}),
+            Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
+              rtac ctxt (Local_Defs.unfold0 ctxt @{thms HOL.induct_conj_eq} (inst_rule RS inst_thm)),
+              REPEAT_DETERM o resolve_tac ctxt prems,
+              K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
+              (* boundness *)
+              REPEAT_DETERM o resolve_tac ctxt (bound_thms @ set_bds @ prems @
+                @{thms allI finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
+                  ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso]] emp_bound
+                }
+              ),
+              REPEAT_DETERM o EVERY' [
+                TRY o EVERY' [
+                  dtac ctxt @{thm iffD1[OF arg_cong[of _ _ Not], rotated]},
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff}),
+                  rtac ctxt refl,
+                  REPEAT_DETERM o EVERY' [
+                    dtac ctxt @{thm iffD1[OF de_Morgan_disj]},
+                    etac ctxt conjE
+                  ],
+                  REPEAT_DETERM o dtac ctxt @{thm iffD1[OF arg_cong[OF singleton_iff, of Not]]}
+                ],
+                REPEAT_DETERM o rtac ctxt allI,
+                rtac ctxt @{thm induct_impliesI[of "HOL.induct_equal _ _"]},
+                dtac ctxt @{thm iffD1[OF meta_eq_to_obj_eq[OF HOL.induct_equal_def]]},
+                hyp_subst_tac ctxt,
+                K (Local_Defs.unfold0_tac ctxt @{thms snd_conv fst_conv}),
+                Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
+                FIRST' (map (fn thm => resolve_tac ctxt (repeat_mp thm) THEN_ALL_NEW (FIRST' [
+                  resolve_tac ctxt inner_prems THEN_ALL_NEW K no_tac,
+                  (* Extra higher order rules, no induction *)
+                  EVERY' [
+                    REPEAT_DETERM o rtac ctxt @{thm induct_impliesI},
+                    resolve_rule_tac ctxt inner_prems
+                  ],
+                  (* Higher order freshness *)
+                  EVERY' [
+                    TRY o (rtac ctxt @{thm iffD1[OF disjoint_single]} THEN' rtac ctxt @{thm trans[OF Int_commute]}),
+                    rtac ctxt @{thm iffD2[OF disjoint_iff]},
+                    rtac ctxt allI,
+                    rtac ctxt impI,
+                    dresolve_tac ctxt inner_prems,
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
+                    REPEAT_DETERM o etac ctxt conjE,
+                    assume_tac ctxt
+                  ],
+                  (* freshness *)
+                  SELECT_GOAL (EVERY1 [
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
+                    REPEAT_DETERM1 o rtac ctxt conjI,
+                    REPEAT_DETERM1 o (resolve_tac ctxt inner_prems THEN_ALL_NEW K no_tac),
+                    IF_UNSOLVED o K no_tac
+                  ]),
+                  (* Higher order induction hyp *)
+                  let
+                    val inner_prems' = map_filter (try (fn thm =>
+                      repeat_OF @{thm spec} thm RS @{thm induct_mp[OF _ induct_equal_refl]}
+                    )) inner_prems;
+                  in FIRST' [
+                    rtac ctxt @{thm induct_impliesI} THEN' eresolve_tac ctxt inner_prems',
+                    resolve_tac ctxt inner_prems'
+                  ] THEN_ALL_NEW K no_tac end,
+                  EVERY' [
+                    SELECT_GOAL (print_tac ctxt "fail"),
+                    K no_tac
+                  ]
+                ])) prems)
+                ]) ctxt
+              ],
+              rtac ctxt @{thm induct_equal_refl},
+              REPEAT_DETERM o FIRST' [
+                resolve_tac ctxt (@{thms induct_forallI induct_impliesI} @ more_facts),
+                assume_tac ctxt
               ]
-            ) ctxt 1
-          );
+            ]) ctxt
+          ] end);
+
+          val rule_thm = Local_Defs.unfold0 ctxt @{thms MRBNF_Recursor.prod_sets_simps} rule_thm;
           val names = map (fst o dest_Free) (
-            fst (BNF_Util.mk_Frees "Bound" (map (K HOLogic.unitT) raws) ctxt)
+            fst (BNF_Util.mk_Frees "Bound" (map (K HOLogic.unitT) bound_prems) ctxt)
           );
           val names' = map (fn s => String.substring (s, 0, String.size s - 2)) names;
           val new_cases = map (fn s => ((s, []), [])) names'
-        in (((new_cases @ drop 1 cases, concls), (more_consumes, more_facts)), rule_thm) end
+        in (((new_cases @ drop nvars cases, concls), (more_consumes, more_facts)), rule_thm) end
       )
     |> Seq.maps (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
-          (PRECISE_CONJUNCTS (length concls) (ALLGOALS (fn j =>
-            (CONJUNCTS (ALLGOALS
-              let
-                val adefs = nth_list atomized_defs (j - 1);
-                val frees = fold (Term.add_frees o Thm.prop_of) adefs [];
-                val xs = [];
-                val k = nth concls (j - 1) + more_consumes;
-              in
-                Method.insert_tac defs_ctxt (more_facts @ adefs) THEN'
-                  (if simp then
-                     Induct.rotate_tac k (length adefs) THEN'
-                     Induct.arbitrary_tac defs_ctxt k (List.partition (member op = frees) xs |> op @)
-                   else
-                     Induct.arbitrary_tac defs_ctxt k xs)
-               end)
-            THEN' Induct.inner_atomize_tac defs_ctxt) j))
-          THEN' Induct.atomize_tac defs_ctxt) i st
+        Induct.atomize_tac defs_ctxt i st
         |> Seq.maps (fn st' =>
-              Induct.guess_instance ctxt (Induct.internalize ctxt more_consumes rule) i st'
-              |> Seq.map (rule_instance ctxt (burrow_options (Variable.polymorphic ctxt) taking))
+          Induct.guess_instance ctxt (Induct.internalize ctxt more_consumes rule) i st'
               |> Seq.maps (fn rule' =>
                 CONTEXT_CASES (rule_cases ctxt rule' cases)
-                  (resolve_tac ctxt [rule'] i THEN
+                  (resolve_tac defs_ctxt [rule'] i THEN
                     PRIMITIVE (singleton (Proof_Context.export defs_ctxt ctxt))) (ctxt, st'))))
     in (context_tac CONTEXT_THEN_ALL_NEW
         ((if simp then Induct.simplify_tac ctxt THEN' (TRY o Induct.trivial_tac ctxt) else K all_tac)

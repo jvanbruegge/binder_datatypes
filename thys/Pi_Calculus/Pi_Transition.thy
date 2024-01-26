@@ -5,7 +5,7 @@ at transition time (whereas a "late" semantics would
 have transitons with bound inputs)
  *)
 theory Pi_Transition
-imports Commitment 
+imports Commitment "HOL-Eisbach.Eisbach"
 begin
 
 hide_const trans
@@ -278,14 +278,97 @@ proof-
   thus ?thesis by auto
 qed
 
+ML \<open>fun gen_fresh ctxt xs0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn {context = ctxt, params = cps, ...} =>
+  let
+    val ps = map (Thm.term_of o snd) cps;
+    fun mk zs T = filter (fn t => fastype_of t = T) ps |> append zs |> HOLogic.mk_list T |> Thm.cterm_of ctxt;
+    val xs = mk xs0 @{typ var};
+    val ts = mk ts0 @{typ "var term * var commit"};
+    val thm = infer_instantiate' ctxt [SOME xs, SOME ts] @{thm exists_fresh} RS exE;
+  in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
+
+lemma ssbij_swap: "ssbij (id(x := y, y := x))"
+  by (auto simp: ssbij_def)
+
+lemma R_forw_subst: "R (x, y) \<Longrightarrow> (\<And>x y. R (x, y) \<Longrightarrow> R (f x, g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x, z)"
+  by blast
+
+lemma FFVars_commit_Cmt: "FFVars_commit (Cmt act P) = fvars act \<union> (FFVars P - bvars act)"
+  by (cases act) auto
+
+lemma not_is_bout_bvars: "\<not> is_bout act \<longleftrightarrow> bvars act = {}"
+  by (cases act) auto
+
+lemma empty_bvars_vars_fvars: "bvars act = {} \<Longrightarrow> vars act = fvars act"
+  by (cases act) auto
 
 (* NB: The entities affected by variables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
 as they are. 
 *)
 lemma G_refresh: 
-"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  assumes "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
+  shows "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+unfolding G_def
+(*(**)ssbij_def conj_assoc[symmetric]
+  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
+    ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
+  apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [@{term t}])\<close>; clarsimp)
+        apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh)
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars))+) [2]
+
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
+      apply (rule conjI)
+  subgoal sorry
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars)))
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars)))
+  find_theorems vars fvars
+  thm 
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)))
+  
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)))
+apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)))
+  find_theorems FFVars_commit
+  find_theorems Cmt
+  apply ((erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?))
+*)
 (*  using exists_fresh[of "[]" "[t]"] unfolding G_def Tmap_def
 (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
@@ -336,6 +419,7 @@ lemma G_refresh:
     ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
 *)
 
+  using assms
 unfolding G_def Tmap_def apply(elim disjE exE conjE)
   (* Inp: *) 
   subgoal for x a u P

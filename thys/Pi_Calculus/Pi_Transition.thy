@@ -286,12 +286,14 @@ as they are.
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
-  using exists_fresh[of "[]" "[t]"] unfolding G_def Tmap_def
+(*  using exists_fresh[of "[]" "[t]"] unfolding G_def Tmap_def
 (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
     ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
   apply (elim disj_forward exE)
   apply simp_all
+*)
+(*
   apply ((auto |
     (rule exI, rule conjI, assumption) |
     (rule exI, rule conjI, rule Inp_refresh) |
@@ -332,6 +334,7 @@ lemma G_refresh:
     ((rule exI)+, (rule conjI)?, rule usub_refresh) |
     (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)) |
     ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
+*)
 
 unfolding G_def Tmap_def apply(elim disjE exE conjE)
   (* Inp: *) 

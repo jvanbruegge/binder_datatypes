@@ -4,8 +4,7 @@ imports (* ILC_uniform *) ILC_affine ILC_Beta ILC_UBeta_depth
 begin
 
 
-(* TO DOCUMENT IN THE PAPER: 
-An example where fresh induction with empty parameters allow one to use a weaker lemma -- 
+(* An example where fresh induction with empty parameters allow one to use a weaker lemma -- 
 namely, the "bonus" freshness assumption allows us to assume xs fresh for es, 
 which is helpful in the beta case. *)
 

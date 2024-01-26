@@ -574,6 +574,7 @@ subgoal for ts apply(rule exI[of _ "snth ts 0"]) apply safe
 
 find_theorems ustepD reneqv
 
+find_theorems hred super
 
 
 

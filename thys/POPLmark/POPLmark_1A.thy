@@ -19,14 +19,6 @@ lemma ty_strong_induct[consumes 1, case_names Bound SA_Top SA_Refl_TVar SA_Trans
 apply safe subgoal for p
 apply(rule BE_induct_ty[where \<phi> = "\<lambda> p \<Gamma> S T. P \<Gamma> S T p", of K])
 by (auto simp: small_def) .
-thm induct_impliesI[of "HOL.induct_equal _ _"]
-context begin
-ML_file \<open>../../Tools/binder_induction.ML\<close>
-end
-declare [[ML_print_depth=10000]]
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
 
 lemma ty_refl: "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
 proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: typ.strong_induct)

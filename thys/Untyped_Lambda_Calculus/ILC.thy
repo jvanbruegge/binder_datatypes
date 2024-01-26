@@ -6,11 +6,6 @@ imports "../MRBNF_Recursor"
  "../Prelim/More_Stream"
 begin
 
-
-context begin
-ML_file \<open>../../Tools/binder_induction.ML\<close>
-end
-
 (* We register distinct streams: *)
 mrbnf "'a ::infinite_regular dstream"
   map: dsmap

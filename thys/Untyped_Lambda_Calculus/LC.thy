@@ -6,11 +6,6 @@ imports "../MRBNF_Recursor" "HOL-Library.FSet"
  "../Prelim/More_List"
 begin
 
-context begin
-ML_file \<open>../../Tools/binder_induction.ML\<close>
-end
-
-
 (* DATATYPE DECLARTION  *)
 
 (* binder_datatype 'a term =

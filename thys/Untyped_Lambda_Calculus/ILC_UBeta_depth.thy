@@ -1,23 +1,14 @@
-(* version of uniform (parallel) reduction that tracks the applicative depth 
+(* Uniform (parallel) reduction that also tracks the applicative depth 
 (i.e., the number of application operators on top of) of the affected redex (\<Rightarrow>d from Mazza) *)
 theory ILC_UBeta_depth
 imports ILC_Head_Reduction
 begin
 
 
-(* TO DOCUMENT in the paper: 
-Mazza is very informal when defining \<Rightarrow> (the uniform step relation, def. 7). 
-One way to make this rigorous was to define reduction of a countable number of 
-(i.e., a stream of) terms in parallel, and to flatten from matrix to streams when we get to 
-application. (Mazza fails to discuss this 'escalation" to matrices... )
-*)
-(* Mazza defines this relation to uniform terms. I only sufficient uniformity assumptions 
-(avoiding redundant ones) *)
 inductive ustepD :: "nat \<Rightarrow> itrm stream \<Rightarrow> itrm stream \<Rightarrow> bool" where
   Beta: "uniformS es \<Longrightarrow> stream_all2 hred es es' \<Longrightarrow> ustepD 0 es es'"
 | iAppL: "uniformS (sflat ess) \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD (Suc d) (smap2 iApp es ess) (smap2 iApp es' ess)"
 | iAppR: "uniformS es \<Longrightarrow> ustepD d (sflat ess) (sflat ess') \<Longrightarrow> ustepD (Suc d) (smap2 iApp es ess) (smap2 iApp es ess')"
-(* lambda's are not counted, as it is the *applicative* depth *)
 | Xi: "super xs \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD d (smap (iLam xs) es) (smap (iLam xs) es')"
 
 thm ustepD_def

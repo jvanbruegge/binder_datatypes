@@ -20,3 +20,15 @@ session Binders in "thys" = Prelim +
     Generic_Barendregt_Enhanced_Rule_Induction
     General_Customization
     Urban_Berghofer_Norrish_Rule_Induction
+
+session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
+  sessions
+    "HOL-Computational_Algebra"
+  theories
+    LC
+    LC2
+    LC_Beta
+    LC_Beta_depth
+    LC_Head_Reduction
+    LC_Parallel_Beta
+    LC_Primal

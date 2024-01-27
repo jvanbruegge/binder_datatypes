@@ -1,9 +1,10 @@
 theory LC
-imports "../MRBNF_Recursor" "HOL-Library.FSet"
- "../Instantiation_Infrastructure/FixedCountableVars"
- "../Instantiation_Infrastructure/Swapping_vs_Permutation"
- "../General_Customization"
- "../Prelim/More_List"
+  imports
+  "HOL-Library.FSet"
+  "Prelim.FixedCountableVars"
+  "Prelim.Swapping_vs_Permutation"
+  "Binders.General_Customization"
+  "Prelim.More_List"
 begin
 
 (* DATATYPE DECLARTION  *)

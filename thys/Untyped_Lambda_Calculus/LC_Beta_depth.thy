@@ -1,7 +1,6 @@
 (*Beta reduction for the (untyped) lambda-calculus with applicative redex-depth counted *)
 theory LC_Beta_depth 
-imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
-"../Prelim/More_Stream" LC_Head_Reduction
+imports LC2 "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

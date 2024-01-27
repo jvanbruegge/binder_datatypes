@@ -1,8 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Beta 
-imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
-"../Prelim/More_Stream" LC_Head_Reduction
+imports LC2 "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -271,10 +270,6 @@ by (metis red_def step.Beta)
 
 lemma red_step2: "stream_all2 red es ees \<Longrightarrow> stream_all2 step es ees"
   unfolding stream_all2_iff_snth using red_step by auto
-
-ML \<open>
-Inductive.the_inductive @{context} @{term step}
-\<close>
 
 
 end

@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to parallel beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Parallel_Beta 
-imports LC2 "../Instantiation_Infrastructure/Curry_LFP" 
+imports LC2 "Prelim.Curry_LFP" 
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

@@ -4,7 +4,7 @@ of (the weak form of) our theorem.
 *)
 theory Urban_Berghofer_Norrish_Rule_Induction 
 imports Generic_Barendregt_Enhanced_Rule_Induction 
-"Instantiation_Infrastructure/FixedCountableVars"
+  "Prelim.FixedCountableVars"
 begin
 
 

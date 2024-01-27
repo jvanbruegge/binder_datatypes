@@ -183,7 +183,6 @@ abbreviation "FFVars \<equiv> FFVars_iterm"
 abbreviation "irrename \<equiv> rrename_iterm"
 (* *)
 
- (* AtoDJ: This lemma was no longer available... *)
 lemma FFVars_itvsubst[simp]:
   assumes "|SSupp (\<sigma> :: ivar \<Rightarrow> itrm)| <o |UNIV :: ivar set|"
   shows "FFVars (itvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"

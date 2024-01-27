@@ -1255,7 +1255,7 @@ thm permutFvars_toPerm
 thm swappingFvars_toSwp
 *)
 
-(* AtoD: Relevant theorems for our case: *)
+(* Relevant theorems for our case: *)
 
 thm fsupp_ex_compose_strong[of f] compose.simps[no_vars]
 

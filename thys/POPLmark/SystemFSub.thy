@@ -261,8 +261,6 @@ apply standard unfolding ssbij_def Tmap_def
    apply (smt (verit, del_insts) UN_I UnI1 UnI2 image_iff list.set_map prod_fun_imageE snd_conv typ.FFVars_rrenames)
   done
 
-(* AtoJ: I have now removed the extra hypotheses for G, since 
-we are using the "enhanced" version *)
 definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool" where
   "G \<equiv> \<lambda>B R t.
     (B = {} \<and> snd (snd t) = Top \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
@@ -434,6 +432,7 @@ lemma G_refresh:
   assumes "(\<And>t. R t \<Longrightarrow> Ii t)" "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
   shows "small B \<Longrightarrow> G B R t \<Longrightarrow>
   \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+(*New ported version of the original proof (below); should be more maintainable.*)
   unfolding G_def Tmap_def
     (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
@@ -467,7 +466,7 @@ lemma G_refresh:
       done
     done
   done
-(*
+(* Ported version of the original proof (below); should be more maintainable.
 unfolding G_def Tmap_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
@@ -503,8 +502,7 @@ unfolding G_def Tmap_def apply safe
       subgoal by (auto simp add: ssbij_def) . . . . . .
 *)
 
-(* AtoJ: I also ported the original proof (below), but I think the above 
-one is more maintainable. 
+(* 
   using fresh[of t] unfolding G_def Tmap_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
@@ -571,7 +569,7 @@ interpretation Ty: Induct1 where dummy = "undefined :: var"
   apply standard
   using G_mono G_equiv  by auto 
 
-(* AtoJ: Now the proof of this is completely standard, 
+(* Now the proof of this is completely standard, 
 bacause we use the original operator G:  *)
 lemma ty_I: "ty \<Gamma> T1 T2 = Ty.I (\<Gamma>, T1, T2)"
 unfolding ty_def Ty.I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)

@@ -80,7 +80,6 @@ abbreviation "FFVars \<equiv> FFVars_term"
 abbreviation "rrename \<equiv> rrename_term"
 (* *)
 
- (* AtoDJ: This lemma was no longer available... *)
 lemma FFVars_tvsubst[simp]:
   assumes "|SSupp (\<sigma> :: var \<Rightarrow> trm)| <o |UNIV :: var set|"
   shows "FFVars (tvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"

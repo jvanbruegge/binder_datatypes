@@ -1,8 +1,22 @@
 chapter Binders
 
-session Prelim in "thys/Prelim" = "HOL-Cardinals" +
+session Isabelle_Prelim = "HOL-Cardinals" +
   sessions
     "HOL-Library"
+    "HOL-Computational_Algebra"
+  theories [document = false]
+    "HOL-Library.Old_Datatype"
+    "HOL-Library.Nat_Bijection"
+    "HOL-Library.Countable"
+    "HOL-Library.Infinite_Set"
+    "HOL-Library.Countable_Set"
+    "HOL-Library.Countable_Set_Type"
+    "HOL-Library.Stream"
+    "HOL-Library.FSet"
+    "HOL-Library.Multiset"
+    "HOL-Computational_Algebra.Primes"
+
+session Prelim in "thys/Prelim" = Isabelle_Prelim +
   theories
     Prelim
     Card_Prelim
@@ -24,8 +38,6 @@ session Binders in "thys" = Prelim +
     Urban_Berghofer_Norrish_Rule_Induction
 
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
-  sessions
-    "HOL-Computational_Algebra"
   theories
     LC
     LC2

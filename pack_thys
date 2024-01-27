@@ -28,7 +28,7 @@ $Isabelle build -vD artifact/src -o browser_info
 HOME=`$Isabelle getenv ISABELLE_HOME_USER | sed "s/.*=//g"`
 
 cp -r $HOME/browser_info/Binders/* artifact/html
-# cp README.txt artifact
+cp README.txt artifact
 
 tar zcvf artifact.tgz artifact
-# rm -rf artifact
+rm -rf artifact

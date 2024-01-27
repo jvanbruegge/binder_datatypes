@@ -120,24 +120,24 @@ lemma G_refresh:
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
   apply (elim disj_forward exE; simp)
   apply (((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits))+) []
   apply (((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
   apply (((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
   apply (((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
   apply (((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
   apply (cases t; simp split: if_splits) []
   apply (metis insertI1)
   apply (((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
 (*
 using fresh[of t] unfolding G_def Tmap_def apply safe

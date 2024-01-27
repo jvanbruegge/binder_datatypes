@@ -1,5 +1,5 @@
 theory MRBNF_Recursor
-  imports "./MRBNF_Composition"
+  imports "MRBNF_Composition"
   (*keywords "binder_inductive" :: thy_goal*)
 begin
 

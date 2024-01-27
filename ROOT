@@ -13,12 +13,12 @@ session Prelim in "thys/Prelim" = "HOL-Cardinals" +
     "../Instantiation_Infrastructure/FixedUncountableVars"
     "../Instantiation_Infrastructure/Swapping_vs_Permutation"
 
-session Binders in "thys" = Prelim +
+session Binders in "Tools" = Prelim +
   directories
-    Tools
+    "../thys"
   theories
-    MRBNF_Composition
-    MRBNF_Recursor
-    Generic_Barendregt_Enhanced_Rule_Induction
-    General_Customization
-    Urban_Berghofer_Norrish_Rule_Induction
+    "../thys/MRBNF_Composition"
+    "../thys/MRBNF_Recursor"
+    "../thys/Generic_Barendregt_Enhanced_Rule_Induction"
+    "../thys/General_Customization"
+    "../thys/Urban_Berghofer_Norrish_Rule_Induction"

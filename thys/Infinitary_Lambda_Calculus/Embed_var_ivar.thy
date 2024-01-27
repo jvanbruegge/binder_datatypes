@@ -1,5 +1,5 @@
 theory Embed_var_ivar
-imports LC ILC
+imports Untyped_Lambda_Calculus.LC ILC
 begin
 
 (* and embedding of vars to ivars: *)

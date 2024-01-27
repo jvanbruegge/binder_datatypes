@@ -2,7 +2,7 @@
 
 theory Iso_LC_ILC 
 imports Translation_LC_to_ILC Translation_ILC_to_LC ILC_affine 
-"HOL-Library.Sublist" LC_Beta_depth
+"HOL-Library.Sublist" "Untyped_Lambda_Calculus.LC_Beta_depth"
 begin
 
 

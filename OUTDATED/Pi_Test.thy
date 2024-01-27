@@ -1,8 +1,8 @@
 (* the syntax of pi-calculus *)
 
-theory Pi
-imports "../MRBNF_Recursor" "HOL-Library.FSet" 
- "../Instantiation_Infrastructure/FixedCountableVars"
+theory Pi_Test
+imports "Binders.MRBNF_Recursor" "HOL-Library.FSet" 
+ "Prelim.FixedCountableVars"
 begin 
 
 (****************************)

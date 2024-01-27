@@ -1,6 +1,6 @@
 (* Here we instantiate the general enhanced rule induction to the "affine" predicate from Mazza  *)
 theory ILC_affine 
-imports ILC2 "../Instantiation_Infrastructure/Curry_LFP" 
+imports ILC2 "Prelim.Curry_LFP" 
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

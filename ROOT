@@ -32,3 +32,34 @@ session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
     LC_Head_Reduction
     LC_Parallel_Beta
     LC_Primal
+
+session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untyped_Lambda_Calculus +
+  theories
+    ILC
+    ILC2
+    ILC_Beta
+    ILC_affine
+    Embed_var_ivar
+    Supervariables
+    BSmall
+    ILC_Renaming_Equivalence
+    ILC_uniform
+    ILC_Head_Reduction
+    ILC_UBeta_depth
+    ILC_relations_more
+    Translation_LC_to_ILC
+    ILC_good
+    Super_Recursor
+    Translation_ILC_to_LC
+    Iso_LC_ILC
+
+session π_Calculus in "thys/Pi_Calculus" = Binders +
+  theories
+    Pi
+	Commitment
+    Pi_Transition
+
+session System_Fsub in "thys/POPLmark" = Binders +
+  theories
+    SystemFSub
+    POPLmark_1A

@@ -1,9 +1,9 @@
 (* System F with Subtyping  *)
 theory SystemFSub
-  imports "../MRBNF_Recursor"
-    "../Instantiation_Infrastructure/Curry_LFP"
-    "../Generic_Barendregt_Enhanced_Rule_Induction"
-    "../Instantiation_Infrastructure/FixedCountableVars"
+  imports "Binders.MRBNF_Recursor"
+    "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
+    "Prelim.Curry_LFP"
+    "Prelim.FixedCountableVars"
 begin
 
 declare bij_swap[simp]

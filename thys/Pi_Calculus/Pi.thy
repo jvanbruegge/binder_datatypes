@@ -1,9 +1,9 @@
 (* the syntax of pi-calculus *)
 
 theory Pi
-imports "../MRBNF_Recursor" "HOL-Library.FSet" 
- "../Instantiation_Infrastructure/FixedCountableVars"
- "../General_Customization"
+imports "HOL-Library.FSet" 
+ "Prelim.FixedCountableVars"
+ "Binders.General_Customization"
 begin
 
 (* DATATYPE DECLARTION  *)

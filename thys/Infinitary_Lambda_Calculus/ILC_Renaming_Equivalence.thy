@@ -1,8 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to the renaming-equivalence 
 relation from Mazza  *)
 theory ILC_Renaming_Equivalence
-imports LC2 ILC2 BSmall
-"../Instantiation_Infrastructure/Curry_LFP" 
+imports "Untyped_Lambda_Calculus.LC2" ILC2 BSmall "Prelim.Curry_LFP" 
 begin
 
 (* *)

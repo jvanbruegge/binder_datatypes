@@ -1,9 +1,9 @@
 theory ILC
-imports "../MRBNF_Recursor" 
- "../Instantiation_Infrastructure/FixedUncountableVars"
- "../Instantiation_Infrastructure/Swapping_vs_Permutation"
- "../General_Customization"
- "../Prelim/More_Stream"
+  imports
+ "Prelim.FixedUncountableVars"
+ "Prelim.Swapping_vs_Permutation"
+ "Binders.General_Customization"
+ "Prelim.More_Stream"
 begin
 
 (* We register distinct streams: *)

@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for Mazza's infinitary lambda-calculus *)
 theory ILC_Beta 
-imports ILC2 "../Instantiation_Infrastructure/Curry_LFP" 
+imports ILC2 "Prelim.Curry_LFP" 
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

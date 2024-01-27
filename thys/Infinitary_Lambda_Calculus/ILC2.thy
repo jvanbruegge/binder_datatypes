@@ -1,5 +1,5 @@
 theory ILC2 
-imports ILC "../Generic_Barendregt_Enhanced_Rule_Induction"
+imports ILC "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
 begin
 
 (* INSTANTIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 

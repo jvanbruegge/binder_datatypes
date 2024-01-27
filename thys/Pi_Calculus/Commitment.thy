@@ -1,11 +1,6 @@
 theory Commitment
-imports Pi  "../Instantiation_Infrastructure/Curry_LFP" 
-"../Generic_Barendregt_Enhanced_Rule_Induction"
+imports Pi  "Prelim.Curry_LFP" "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
 begin
-
-ML \<open>
-Multithreading.parallel_proofs := 4
-\<close>
 
 local_setup \<open>fn lthy =>
 let

@@ -112,9 +112,9 @@ lemma G_refresh:
   using fresh[of t] unfolding G_def Tmap_def
 (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-  by (elim disj_forward exE; clarsimp)
-    ((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  by (elim disj_forward exE; simp)
+    ((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto))+
 (*
 using fresh[of t] unfolding G_def Tmap_def apply safe

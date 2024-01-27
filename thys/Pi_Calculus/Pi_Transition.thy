@@ -341,7 +341,7 @@ unfolding G_def
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
     ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
   apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [] [@{term t}])\<close>; clarsimp)
-        apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
         | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
         | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [3]
   subgoal for P a x P' y z1 z2
@@ -353,11 +353,11 @@ unfolding G_def
     apply (rule exI[of _ z1])
     apply (rule conjI) apply assumption
     apply clarsimp
-    apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
+    apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
      apply (cases t; auto) []
     apply (rule conjI, (cases t; auto) [])
     apply (rule conjI[OF sym])
-    apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
+    apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
      apply (cases t; simp)
     apply (smt (verit, best) image_iff sw_diff sw_eqR)
     apply (rule conjI)
@@ -387,7 +387,7 @@ unfolding G_def
       apply (metis Bout_inj)
       done
     done
-    apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+    apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
         | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
         | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) []
   subgoal for P1 a x P1' P2 P2' z1 z2

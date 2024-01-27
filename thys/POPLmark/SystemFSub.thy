@@ -438,8 +438,8 @@ lemma G_refresh:
     (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
   apply (elim disj_forward exE; clarsimp)
-   apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-        (((rule exI)+)?, (rule conjI)?, rule Forall_rrename) |
+   apply (((rule exI, rule conjI[rotated], assumption) |
+        (((rule exI conjI)+)?, rule Forall_rrename) |
         (cases t; auto))+) []
   subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
     using exists_fresh[of "[x]" "[t]"] apply(elim exE conjE)

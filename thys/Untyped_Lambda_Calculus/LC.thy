@@ -528,7 +528,7 @@ proof-
 qed
 
 (* Unary substitution versus swapping: *)
-lemma tvsubst_Var_rrename:
+lemma tvsubst_refresh:
 assumes xx: "xx \<notin> FFVars_term e1 - {x}"
 shows "tvsubst (Var((x::var) := e2)) e1 = tvsubst (Var(xx := e2)) (rrename (id(x := xx, xx := x)) e1)"
 proof-

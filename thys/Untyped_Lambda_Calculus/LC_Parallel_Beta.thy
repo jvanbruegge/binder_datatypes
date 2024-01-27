@@ -118,26 +118,26 @@ lemma G_refresh:
   using fresh[of t] unfolding G_def Tmap_def
 (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-  apply (elim disj_forward exE; clarsimp)
-  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  apply (elim disj_forward exE; simp)
+  apply (((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits))+) []
-  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  apply (((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
-  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  apply (((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
-  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  apply (((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
-  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  apply (((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
   apply (cases t; simp split: if_splits) []
   apply (metis insertI1)
-  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
-    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+  apply (((rule exI, rule conjI[rotated], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_refresh) |
     (cases t; auto split: if_splits)))
 (*
 using fresh[of t] unfolding G_def Tmap_def apply safe

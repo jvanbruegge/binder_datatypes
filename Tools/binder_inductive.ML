@@ -1,8 +1,5 @@
 (*  Title:      binder_inductive.ML
-    Author:     Jan van Brügge, Herriot-Watt University
-                Andrei Popescu, University of Sheffield
-                Dmitriy Traytel, University of Copenhagen
-                
+               
     Based on the inductive module of Nominal2 by
     Author:     Christian Urban
     Author:     Tjark Weber

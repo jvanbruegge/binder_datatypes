@@ -1,3 +1,5 @@
+chapter Binders
+
 session Prelim in "thys/Prelim" = "HOL-Cardinals" +
   sessions
     "HOL-Library"
@@ -53,7 +55,7 @@ session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untype
     Translation_ILC_to_LC
     Iso_LC_ILC
 
-session π_Calculus in "thys/Pi_Calculus" = Binders +
+session Process_Calculus in "thys/Pi_Calculus" = Binders +
   theories
     Pi
 	Commitment

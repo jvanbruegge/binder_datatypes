@@ -1,9 +1,7 @@
 (* the syntax of pi-calculus *)
 
 theory Pi
-imports "HOL-Library.FSet" 
- "Prelim.FixedCountableVars"
- "Binders.General_Customization"
+  imports  "Binders.General_Customization" "Prelim.FixedCountableVars"
 begin
 
 (* DATATYPE DECLARTION  *)
@@ -497,8 +495,5 @@ apply(subst term.rrename_comps)
 apply auto
 apply(rule rrename_cong) 
 by (auto simp: term_pre.supp_comp_bound)
-
-
-
 
 end

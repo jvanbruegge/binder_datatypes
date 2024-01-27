@@ -1,0 +1,34 @@
+#!/bin/bash
+
+Isabelle=/Applications/Isabelle2023.app/bin/isabelle
+
+rm -rf artifact
+mkdir artifact
+mkdir artifact/src
+mkdir artifact/src/thys
+mkdir artifact/src/thys/Prelim
+mkdir artifact/src/thys/Untyped_Lambda_Calculus
+mkdir artifact/src/thys/Infinitary_Lambda_Calculus
+mkdir artifact/src/thys/Pi_Calculus
+mkdir artifact/src/thys/POPLmark
+mkdir artifact/src/Tools
+mkdir artifact/html
+
+cp thys/*.thy artifact/src/thys
+cp thys/Prelim/*.thy artifact/src/thys/Prelim
+cp thys/Untyped_Lambda_Calculus/*.thy artifact/src/thys/Untyped_Lambda_Calculus
+cp thys/Infinitary_Lambda_Calculus/*.thy artifact/src/thys/Infinitary_Lambda_Calculus
+cp thys/Pi_Calculus/*.thy artifact/src/thys/Pi_Calculus
+cp thys/POPLmark/*.thy artifact/src/thys/POPLmark
+cp Tools/*.ML artifact/src/Tools/
+cp ROOT artifact/src
+
+$Isabelle build -vD artifact/src -o browser_info
+
+HOME=`$Isabelle getenv ISABELLE_HOME_USER | sed "s/.*=//g"`
+
+cp -r $HOME/browser_info/Binders/* artifact/html
+# cp README.txt artifact
+
+tar zcvf artifact.tgz artifact
+# rm -rf artifact

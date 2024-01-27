@@ -178,21 +178,21 @@ apply(subgoal_tac "R p t") (* this is overkill here, but I keep the general patt
       subgoal using iLam by auto  
       subgoal using iApp by auto . . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_affine'[consumes 2, case_names iVar iLam iApp]: 
-assumes par: "small A"
-and st: "affine t"  
-and iVar: "\<And>x. R (iVar x)"
-and iLam: "\<And>e xs. 
-  dsset xs \<inter> A = {} \<Longrightarrow> 
-  affine e \<Longrightarrow> R e \<Longrightarrow> R (iLam xs e)" 
-and iApp: "\<And>e1 es2.
-    affine e1 \<Longrightarrow> R e1 \<Longrightarrow>
-    (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> (affine e2 \<and> R e2) \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
+corollary strong_induct_affine'[consumes 1, case_names Bound iVar iLam iApp]: 
+assumes st: "affine t"
+and par: "\<And>p. |Pfvars p| <o |UNIV::ivar set|"
+and iVar: "\<And>x p. R (iVar x) p"
+and iLam: "\<And>e xs p. 
+  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  affine e \<Longrightarrow> (\<forall>p'. R e p') \<Longrightarrow> R (iLam xs e) p" 
+and iApp: "\<And>e1 es2 p.
+    affine e1 \<Longrightarrow> (\<forall>p'. R e1 p') \<Longrightarrow>
+    (\<And>e2. e2 \<in> sset es2 \<Longrightarrow> (\<forall>p'. R e2 p')) \<Longrightarrow>
+    (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
     (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) \<Longrightarrow> 
-    R (iApp e1 es2)"
-shows "R t"
-apply(rule strong_induct_affine[of "\<lambda>_::unit. A"]) using assms by auto
+    R (iApp e1 es2) p"
+shows "\<forall>p. R t p"
+using strong_induct_affine[of Pfvars t "\<lambda>p t. R t p"] assms unfolding small_def by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_affine:
@@ -241,28 +241,19 @@ assumes f: "|SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
 and fv: "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (f x) \<inter> FFVars (f y) = {}"
 and r: "affine (e::itrm)" 
 shows "affine (itvsubst f e)"
-proof-
-  have ims: "|IImsupp f| <o |UNIV::ivar set|"  
-  using f ILC.SSupp_IImsupp_bound by auto
-  have par: "small (IImsupp f)"
-  using ims f unfolding small_def by blast
-  show ?thesis using par r proof(induct rule: strong_induct_affine')
-    case (iVar x)
-    then show ?case using f af by auto
-  next
-    case (iLam e xs)
-    show ?case using iLam apply(subst iterm.subst)
+using r proof (binder_induction e avoiding: "IImsupp f" rule: strong_induct_affine')
+  case (iLam ea xs)
+  show ?case using iLam apply(subst iterm.subst)
       subgoal using f by auto
       subgoal by auto
       subgoal apply(rule affine.iLam) by auto .
-  next
-    case (iApp e1 es2)
-    then show ?case apply(subst iterm.subst)
+next
+  case (iApp e1 es2)
+  then show ?case apply(subst iterm.subst)
       subgoal using f by auto
       subgoal apply(rule affine.iApp) using fv f
       by auto (metis Int_emptyD)+ .
-  qed 
-qed
+qed (auto simp: f ILC.SSupp_IImsupp_bound af)
 
 (* Strengthening the previous result with "{x,y} \<subseteq> FFVars e " 
 (which seems to prevent the above proof by induction), otherwise the result is 

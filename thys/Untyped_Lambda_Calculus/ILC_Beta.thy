@@ -237,25 +237,24 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using iAppR by auto  
       subgoal using Xi by auto . . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_istep'[consumes 2, case_names Beta iAppL iAppR Xi]: 
-assumes par: "small A"
-and st: "istep t1 t2"  
-and Beta: "\<And>xs e1 es2. 
-  dsset xs \<inter> A = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
-  R (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
-and iAppL: "\<And>e1 e1' es2. 
-  istep e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
-  R (iApp e1 es2) (iApp e1' es2)"
-and iAppR: "\<And>e1 es2 i e2'. 
-  istep (snth es2 i) e2' \<Longrightarrow> R (es2 !! i) e2' \<Longrightarrow> 
-  R (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
-and Xi: "\<And>e e' xs. 
-  dsset xs \<inter> A = {} \<Longrightarrow> 
-  istep e e' \<Longrightarrow> R e e' \<Longrightarrow> 
-  R (iLam xs e) (iLam xs e')" 
-shows "R t1 t2"
-apply(rule strong_induct_istep[of "\<lambda>_::unit. A"]) using assms by auto
+corollary strong_induct_istep''[consumes 1, case_names Bound Beta iAppL iAppR Xi]: 
+assumes st: "istep t1 t2"
+and par: "\<And>p. |Pfvars p| <o |UNIV::ivar set|"
+and Beta: "\<And>xs e1 es2 p. 
+  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
+  R (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1) p"
+and iAppL: "\<And>e1 e1' es2 p. 
+  istep e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow> 
+  R (iApp e1 es2) (iApp e1' es2) p"
+and iAppR: "\<And>e1 es2 i e2' p. 
+  istep (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R (es2 !! i) e2' p') \<Longrightarrow> 
+  R (iApp e1 es2) (iApp e1 (supd es2 i e2')) p"
+and Xi: "\<And>e e' xs p. 
+  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  istep e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow> 
+  R (iLam xs e) (iLam xs e') p" 
+shows "\<forall>p. (R t1 t2 p)"
+using strong_induct_istep[of Pfvars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_istep:

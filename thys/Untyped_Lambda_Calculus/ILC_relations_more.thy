@@ -8,19 +8,24 @@ begin
 namely, the "bonus" freshness assumption allows us to assume xs fresh for es, 
 which is helpful in the beta case. *)
 
-
+thm imkSubst_affine
 lemma istep_affine:
 assumes "istep e e'" and "affine e"
 shows "affine e'"
-proof-
-  have "ILC2.small {}" by simp
-  thus ?thesis using assms apply(induct rule: strong_induct_istep')
-    subgoal for xs e1 es2 apply(rule imkSubst_affine)
-    unfolding affine_iApp_iff by auto 
-    subgoal unfolding affine_iApp_iff using istep_FFVars by fastforce
-    subgoal unfolding affine_iApp_iff using istep_FFVars 
-    by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
-    subgoal by auto . 
+using assms proof (binder_induction e e' rule: strong_induct_istep'')
+  case (Beta xs e1 es2)
+  show ?case apply(rule imkSubst_affine) using Beta
+    unfolding affine_iApp_iff by auto
+next
+  case (iAppL e1 e1' es2)
+  then show ?case unfolding affine_iApp_iff using istep_FFVars by fastforce
+next
+  case (iAppR e1 es2 i e2')
+  then show ?case unfolding affine_iApp_iff using istep_FFVars
+  by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
+next
+  case (Xi ea e'a xs)
+  then show ?case by auto
 qed
 
 (* alternative proof by normal induction, using stronger lemma: *)

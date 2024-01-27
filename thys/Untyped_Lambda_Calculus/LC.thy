@@ -93,21 +93,6 @@ lemma fsupp_le[simp]:
 "fsupp (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set|" 
 by (simp add: finite_card_var fsupp_def supp_def)
 
-(* *)
-
-lemma trm_strong_induct[consumes 1, case_names Var App Lam]: 
-"|A| <o |UNIV::var set|  
-\<Longrightarrow>
-(\<And>x. P (Var (x::var))) 
-\<Longrightarrow>
-(\<And>t1 t2. P t1 \<Longrightarrow> P t2 \<Longrightarrow> P (App t1 t2)) 
-\<Longrightarrow> 
-(\<And>x t. x \<notin> A \<Longrightarrow> P t \<Longrightarrow> P (Lam x t)) 
-\<Longrightarrow> 
-P t"
-apply(rule term.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
-  by auto
-
 (* Enabling some simplification rules: *)
 lemmas term.tvsubst_VVr[simp] term.FVars_VVr[simp]
 term.rrename_ids[simp] term.rrename_cong_ids[simp]
@@ -507,15 +492,15 @@ lemma rrename_eq_tvsubst_Var:
 assumes "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|" 
 shows "rrename \<sigma> = tvsubst (Var o \<sigma>)"
 proof
-  fix t 
-  have 0: "|supp \<sigma>| <o |UNIV::var set|" using assms by auto
-  have 00: " |IImsupp (Var \<circ> \<sigma>)| <o |UNIV::var set|" 
-    using SSupp_IImsupp_bound by (metis "0" supp_SSupp_Var_le)
-  show "rrename \<sigma> t = tvsubst (Var o \<sigma>) t" using 00 assms apply(induct t rule: trm_strong_induct)
-    subgoal for x by (simp add: "0")
-    subgoal by auto
-    subgoal for x t 
-    by (simp add: IImsupp_def disjoint_iff not_in_supp_alt) . 
+  fix t
+  show "rrename \<sigma> t = tvsubst (Var o \<sigma>) t"
+  proof (binder_induction t avoiding: "IImsupp (Var \<circ> \<sigma>)" rule: term.strong_induct)
+    case Bound
+    then show ?case using assms SSupp_IImsupp_bound by (metis supp_SSupp_Var_le)
+  next
+    case (Lam x1 x2)
+    then show ?case by (simp add: assms IImsupp_def disjoint_iff not_in_supp_alt)
+  qed (auto simp: assms)
 qed
      
 lemma rrename_eq_tvsubst_Var': 

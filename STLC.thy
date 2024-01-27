@@ -949,8 +949,10 @@ apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
   done
 lemmas Ty_AbsE' = Ty_AbsE''[unfolded prod_sets_simps]
 
-lemma context_invariance: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<Longrightarrow> \<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>' \<Longrightarrow> \<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
-proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_fresh_induct_param)
+lemma context_invariance:
+assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>'" "\<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>'"
+shows "\<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
+using assms proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_fresh_induct_param)
   case (Ty_Var x \<tau> \<Gamma> \<Gamma>')
   then show ?case by (auto intro: Ty.Ty_Var)
 next

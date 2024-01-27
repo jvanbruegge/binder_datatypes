@@ -642,31 +642,6 @@ apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi
       subgoal using SA_Arrow by auto
       subgoal using SA_All by auto . . .
 
-
-(* ... and with fixed parameters: *)
-corollary strong_induct_ty'[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]: 
-assumes par: "small A" 
-and ty: "\<Gamma> \<turnstile> S <: T" 
-and SA_Top: "\<And>\<Gamma> S. 
-   \<turnstile> \<Gamma> ok \<Longrightarrow> S closed_in \<Gamma> \<Longrightarrow> 
-   \<phi> \<Gamma> S Top"
-and SA_Refl_TVar: "\<And>\<Gamma> x. 
-   \<turnstile> \<Gamma> ok \<Longrightarrow> TyVar x closed_in \<Gamma> \<Longrightarrow> 
-   \<phi> \<Gamma> (TyVar x) (TyVar x)"
-and SA_Trans_TVar: "\<And>x U \<Gamma> T. 
-   x <: U \<in> \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile> U <: T \<Longrightarrow> \<phi> \<Gamma> U T \<Longrightarrow> 
-   \<phi> \<Gamma> (TyVar x) T"
-and SA_Arrow: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2. 
-   \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<phi> \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<phi> \<Gamma> S\<^sub>2 T\<^sub>2 \<Longrightarrow> 
-   \<phi> \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2)" 
-and SA_All: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. 
-   x \<notin> A \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> FFVars_typ S\<^sub>1 \<Longrightarrow> x \<notin> FFVars_typ T\<^sub>1 \<Longrightarrow> 
-   \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<phi> \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> 
-   \<phi> (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<Longrightarrow> 
-   \<phi> \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2)"
-shows "\<phi> \<Gamma> S T"
-apply(rule strong_induct_ty[of "\<lambda>_::unit. A"]) using assms by auto
-
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_step:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 

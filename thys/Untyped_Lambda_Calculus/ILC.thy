@@ -187,7 +187,7 @@ abbreviation "irrename \<equiv> rrename_iterm"
 lemma FFVars_itvsubst[simp]:
   assumes "|SSupp (\<sigma> :: ivar \<Rightarrow> itrm)| <o |UNIV :: ivar set|"
   shows "FFVars (itvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
-  (*apply (binder_induction t avoiding: "IImsupp \<sigma>" rule: iterm.strong_induct) (* DtoJ: fails *)*)
+  apply (binder_induction t avoiding: "IImsupp \<sigma>" rule: iterm.strong_induct)
   apply (rule iterm.fresh_induct[of "IImsupp \<sigma>"])
      apply (auto simp: IImsupp_def assms intro!: Un_bound UN_bound iterm.card_of_FFVars_bounds)
   using iterm.FVars_VVr apply (fastforce simp add: SSupp_def)
@@ -195,21 +195,6 @@ lemma FFVars_itvsubst[simp]:
    apply (smt (verit) disjoint_insert(1) empty_iff insertE insert_absorb iterm.FVars_VVr mem_Collect_eq)
   apply (smt (verit, del_insts) CollectI IntI UN_iff UnCI empty_iff insertE iterm.FVars_VVr)
   done
-
-(* *)
-
-lemma itrm_strong_induct[consumes 1, case_names iVar iApp iLam]: 
-"|A| <o |UNIV::ivar set|  
-\<Longrightarrow>
-(\<And>x. P (iVar (x::ivar))) 
-\<Longrightarrow>
-(\<And>t1 ts2. P t1 \<Longrightarrow> (\<And>z. z \<in> sset ts2 \<Longrightarrow> P z) \<Longrightarrow> P (iApp t1 ts2)) 
-\<Longrightarrow> 
-(\<And>xs t. dsset xs \<inter> A = {} \<Longrightarrow> P t \<Longrightarrow> P (iLam xs t)) 
-\<Longrightarrow> 
-P t"
-apply(rule iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format])
-by auto
 
 (* Enabling some simplification rules: *)
 lemmas iterm.tvsubst_VVr[simp] 
@@ -292,33 +277,28 @@ lemma irrename_cong:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" and g: "bij g" "|supp g| <o |UNIV::ivar set|"
 and eq: "(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
 shows "irrename f P = irrename g P"
-proof-
-  have 0: "|supp f \<union> supp g| <o |UNIV::ivar set|" 
-    using f(2) g(2) var_stream_class.Un_bound by blast
-  show ?thesis using 0 eq apply(induct P rule: itrm_strong_induct)
-    subgoal using f g by auto
-    subgoal using f g by simp (metis stream.map_cong0)  
-    subgoal using f g 
-      by simp (smt (verit, best) Int_Un_emptyI1 Int_Un_emptyI2 Int_emptyD dstream.map_cong not_in_supp_alt) .
-qed
+using eq proof (binder_induction P avoiding: "supp f" "supp g" rule: iterm.strong_induct)
+  case (iApp x1 x2)
+  then show ?case using f g by simp (metis stream.map_cong0)
+next
+  case (iLam x1 x2)
+  thm iterm.subst
+  then show ?case using f g apply simp
+    by (metis iLam.hyps(4) irrename_simps(3) iterm.map_cong0 iterm_vvsubst_rrename)
+qed (auto simp: f g)
 
 lemma itvsubst_cong:
 assumes f: "|SSupp f| <o |UNIV::ivar set|" and g: "|SSupp g| <o |UNIV::ivar set|"
 and eq: "(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
 shows "itvsubst f P = itvsubst g P"
-proof-
-  have fg: "|IImsupp f| <o |UNIV::ivar set|" "|IImsupp g| <o |UNIV::ivar set|" 
-    using f g 
-    by (simp add: IImsupp_def iterm.UNION_bound iterm.set_bd_UNIV var_stream_class.Un_bound)+
-  have 0: "|IImsupp f \<union> IImsupp g| <o |UNIV::ivar set|" 
-    using fg var_stream_class.Un_bound by auto
-  show ?thesis using 0 eq apply(induct P rule: itrm_strong_induct)
-    subgoal using f g by auto
-    subgoal using f g by simp (metis stream.map_cong0)  
-    subgoal using f g apply simp apply(subst iterm.subst(3)) 
-    apply auto apply(subst iterm.subst(3))
-    by auto (smt (verit) IImsupp_def Int_Un_emptyI1 Int_Un_emptyI2 Int_emptyD SSupp_def mem_Collect_eq) .
-qed
+using eq proof (binder_induction P avoiding: "IImsupp f" "IImsupp g" rule: iterm.strong_induct)
+  case (iApp x1 x2)
+  then show ?case using f g by simp (metis stream.map_cong0)
+next
+  case (iLam x1 x2)
+  then show ?case  using f g apply simp
+    by (smt (verit, ccfv_threshold) IImsupp_def SSupp_def UnCI insert_absorb insert_disjoint(2) mem_Collect_eq)
+qed (auto simp: IImsupp_def iterm.UNION_bound iterm.Un_bound iterm.set_bd_UNIV f g)
 
 (* *)
 
@@ -608,14 +588,14 @@ assumes "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar 
 shows "irrename \<sigma> = itvsubst (iVar o \<sigma>)"
 proof
   fix t 
-  have 0: "|supp \<sigma>| <o |UNIV::ivar set|" using assms by auto
-  have 00: " |IImsupp (iVar \<circ> \<sigma>)| <o |UNIV::ivar set|" 
-    using SSupp_IImsupp_bound by (metis "0" supp_SSupp_iVar_le)
-  show "irrename \<sigma> t = itvsubst (iVar o \<sigma>) t" using 00 assms apply(induct t rule: itrm_strong_induct)
-    subgoal for x by (simp add: "0")
-    subgoal by (auto intro: stream.map_cong) 
-    subgoal for xs t  
-    by (simp add: IImsupp_def disjoint_iff not_in_supp_alt dstream_map_ident_strong) .
+  show "irrename \<sigma> t = itvsubst (iVar o \<sigma>) t"
+  proof (binder_induction t avoiding: "IImsupp (iVar \<circ> \<sigma>)" rule: iterm.strong_induct)
+    case Bound
+    then show ?case using SSupp_IImsupp_bound assms by (metis supp_SSupp_iVar_le)
+  next
+    case (iLam x1 x2)
+    then show ?case using assms by (simp add: IImsupp_def disjoint_iff not_in_supp_alt dstream_map_ident_strong)
+  qed (auto simp: assms intro: stream.map_cong)
 qed
      
 lemma irrename_eq_itvsubst_iVar': 

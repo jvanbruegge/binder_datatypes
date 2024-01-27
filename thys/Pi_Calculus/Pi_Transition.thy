@@ -678,51 +678,6 @@ apply(subgoal_tac "case (P,C) of (P, C) \<Rightarrow> \<phi> p P C")
       subgoal using Com1 by auto
       subgoal using Close1 by auto . . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_trans'[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
-assumes 
-par: "small A" 
-and tr: "trans P C"
-and Inp: 
-"\<And>x a u P. x \<notin> {a, u} \<Longrightarrow> 
-    \<phi> (Inp a x P) (Finp a u (usub P u x))"
-and Open:  
-"\<And>P a x P'. x \<notin> A \<Longrightarrow> x \<noteq> a \<Longrightarrow> 
-    trans P (Fout a x P') \<Longrightarrow> \<phi> P (Fout a x P') \<Longrightarrow> a \<noteq> x \<Longrightarrow> 
-    \<phi> (Res x P) (Bout a x P')"
-and ScopeF: 
-"\<And>P act P' y. y \<notin> A \<Longrightarrow> y \<notin> fvars act \<Longrightarrow> 
-    trans P (Cmt act P') \<Longrightarrow> \<phi> P (Cmt act P') \<Longrightarrow> y \<notin> vars act \<Longrightarrow> 
-    \<phi> (Res y P) (Cmt act (Res y P'))"
-and ScopeB: 
-"\<And>P a x P' y. {x,y} \<inter> A = {} \<Longrightarrow> a \<notin> {x,y} \<Longrightarrow> 
-    trans P (Bout a x P') \<Longrightarrow> \<phi> P (Bout a x P') \<Longrightarrow> y \<notin> {a, x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P \<Longrightarrow>
-    \<phi> (Res y P) (Bout a x (Res y P'))" 
-and Par1: 
-"\<And>P1 act P1' P2. bvars act \<inter> (A \<union> fvars act) = {} \<Longrightarrow> 
-    trans P1 (Cmt act P1') \<Longrightarrow>
-    \<phi> P1 (Cmt act P1') \<Longrightarrow>
-    bvars act \<inter> FFVars P1 = {} \<Longrightarrow> 
-    bvars act \<inter> FFVars P2 = {} \<Longrightarrow> 
-    \<phi> (Par P1 P2) (Cmt act (Par P1' P2))"
-and Com1: 
-"\<And>P1 a x P1' P2 P2'. 
-    trans P1 (Finp a x P1') \<Longrightarrow>
-    \<phi> P1 (Finp a x P1') \<Longrightarrow> 
-    trans P2 (Fout a x P2') \<Longrightarrow> 
-    \<phi> P2 (Fout a x P2') \<Longrightarrow> 
-    \<phi> (Par P1 P2) (Tau (Par P1' P2'))"
-and Close1: 
-"\<And>P1 a x P1' P2 P2'. x \<notin> A \<Longrightarrow> x \<notin> FFVars P2 \<Longrightarrow> 
-    trans P1 (Finp a x P1') \<Longrightarrow>
-    \<phi> P1 (Finp a x P1') \<Longrightarrow>
-    trans P2 (Bout a x P2') \<Longrightarrow>
-    \<phi> P2 (Bout a x P2') \<Longrightarrow> 
-    x \<notin> {a} \<union> FFVars P1 \<Longrightarrow> 
-    \<phi> (Par P1 P2) (Tau (Res x (Par P1' P2')))"
-shows "\<phi> P C" 
-apply(rule strong_induct_trans[of "\<lambda>_::unit. A"]) using assms by auto
-
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_pstep:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 

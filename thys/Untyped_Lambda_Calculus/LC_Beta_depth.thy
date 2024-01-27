@@ -238,27 +238,6 @@ apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
       subgoal using AppR by auto  
       subgoal using Xi by auto . . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_stepD'[consumes 2, case_names Beta AppL AppR Xi]: 
-assumes par: "small A"
-and st: "stepD d t1 t2"  
-and Beta: "\<And>x e1 e2. 
-  x \<notin> A \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
-  R 0 (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
-and AppL: "\<And>d e1 e1' e2. 
-  stepD d e1 e1' \<Longrightarrow> R d e1 e1' \<Longrightarrow> 
-  R (Suc d) (App e1 e2) (App e1' e2)"
-and AppR: "\<And>d e1 e2 e2'. 
-  stepD d e2 e2' \<Longrightarrow> R d e2 e2' \<Longrightarrow> 
-  R (Suc d) (App e1 e2) (App e1 e2')"
-and Xi: "\<And>d e e' x. 
-  x \<notin> A \<Longrightarrow> 
-  stepD d e e' \<Longrightarrow> R d e e' \<Longrightarrow> 
-  R d (Lam x e) (Lam x e')" 
-shows "R d t1 t2"
-apply(rule strong_induct_stepD[of "\<lambda>_::unit. A"]) using assms by auto
-
-
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_stepD:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 

@@ -275,27 +275,27 @@ unfolding bsmall_def[symmetric] apply(elim Reneqv.BE_iinduct[where R = "\<lambda
   unfolding good_I[symmetric] apply(elim disjE exE)
     subgoal using iVar by auto 
     subgoal using iLam by auto  
-    subgoal using iApp by auto . . 
+    subgoal using iApp by auto . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_good'[consumes 2, case_names iVar iLam iApp]: 
-assumes par: "small A \<and> bsmall A"
-and st: "good t"  
-and iVar: "\<And>xs x. 
+corollary strong_induct_good'[consumes 1, case_names bsmall Bound iVar iLam iApp]: 
+assumes st: "good t" 
+and bsmall: "\<And>p. bsmall (Pfvars p)"
+and "\<And>p. |Pfvars p| <o |UNIV::ivar set|"
+and iVar: "\<And>xs x p. 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow>
-  R (iVar x)"
-and iLam: "\<And>e xs. 
-  dsset xs \<inter> A = {} \<Longrightarrow> 
-  super xs \<Longrightarrow> good e \<Longrightarrow> R e \<Longrightarrow> 
-  R (iLam xs e)" 
-and iApp: "\<And>e1 es2. 
-  good e1 \<Longrightarrow> R e1 \<Longrightarrow> 
-  (\<forall>e. e \<in> sset es2 \<longrightarrow> good e \<and> R e) \<Longrightarrow> 
+  R (iVar x) p"
+and iLam: "\<And>e xs p. 
+  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  super xs \<Longrightarrow> good e \<Longrightarrow> (\<forall>p'. R e p') \<Longrightarrow> 
+  R (iLam xs e) p" 
+and iApp: "\<And>e1 es2 p. 
+  good e1 \<Longrightarrow> (\<forall>p'. R e1 p') \<Longrightarrow>
+  (\<And>e. e \<in> sset es2 \<Longrightarrow> \<forall>p'. R e p') \<Longrightarrow>
+  (\<forall>e. e \<in> sset es2 \<longrightarrow> good e) \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
-  R (iApp e1 es2)"
-shows "R t"
-apply(rule strong_induct_good[of "\<lambda>_::unit. A"]) using assms by auto
-
+  R (iApp e1 es2) p"
+shows "\<forall>p. R t p"
+using strong_induct_good[of Pfvars t "\<lambda>p t. R t p"] assms unfolding small_def by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_good:
@@ -338,7 +338,6 @@ next
 qed
   
 
-
 lemma good_itvsubst:
 assumes r: "good e" and rr: 
     "\<And>xs x. super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> good (f x)"
@@ -347,24 +346,15 @@ assumes r: "good e" and rr:
 and s: "|SSupp f| <o |UNIV::ivar set|"  
 and f: "finite (touchedSuper (IImsupp f))"  
 shows "good (itvsubst f e)"
-proof-
-  have ims: "|IImsupp f| <o |UNIV::ivar set|" 
-  using s ILC.SSupp_IImsupp_bound by auto
-  have par: "small (IImsupp f) \<and> bsmall (IImsupp f)"
-  using ims f unfolding small_def   
-  using var_stream_class.Un_bound bsmall_Un bsmall_def by blast
-  show ?thesis using par r proof(induct rule: strong_induct_good')
-    case (iVar xs x)
-    then show ?case using s rr by auto
-  next
-    case (iLam e xs)
-    show ?case using iLam apply(subst iterm.subst)
+using r proof (binder_induction e avoiding: "IImsupp f" rule: strong_induct_good')
+  case (iLam ea xs)
+  show ?case using iLam apply(subst iterm.subst)
       subgoal using s by blast
       subgoal using s by auto 
       subgoal apply(rule good.iLam) by auto .
-  next
-    case (iApp e1 es2)
-    then show ?case apply(subst iterm.subst)
+next
+  case (iApp e1 es2)
+  then show ?case apply(subst iterm.subst)
       subgoal using s by auto
       subgoal apply(rule good.iApp)
         subgoal by auto
@@ -375,9 +365,7 @@ proof-
           subgoal unfolding RSuper_def2 using good_FFVars_super by auto  
           subgoal unfolding RSuper_def2 using good_FFVars_super by auto 
           subgoal unfolding touchedSuperT_def by blast . . . . 
-  qed
-qed
-
+qed (auto simp: bsmall_def ILC.SSupp_IImsupp_bound s f rr)
 
 lemma good_sset_touchedSuper: 
 "(\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e') \<Longrightarrow> 

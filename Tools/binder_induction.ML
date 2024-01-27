@@ -348,17 +348,17 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             map fst K_vars ~~ map (Thm.cterm_of ctxt) K_ts
           ) inst_rule;
 
-          val mrbnf = hd (map_filter (Option.composePartial (
+          val mrbnfs = map_filter (Option.composePartial (
             MRBNF_Def.mrbnf_of ctxt,
             try (fst o dest_Type o fastype_of)
-          )) finsts);
-          val bound_thms = [
+          )) (finsts @ avoiding);
+          val bound_thms = maps (fn mrbnf => [
             MRBNF_Def.Un_bound_of_mrbnf mrbnf,
             MRBNF_Def.UNION_bound_of_mrbnf mrbnf,
             MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf,
             MRBNF_Def.bd_Card_order_of_mrbnf mrbnf,
             #var_large (MRBNF_Def.class_thms_of_mrbnf mrbnf)
-          ];
+          ]) mrbnfs;
 
           fun get_set_bd Ts =
             let

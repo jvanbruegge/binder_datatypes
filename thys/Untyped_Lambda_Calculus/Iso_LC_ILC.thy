@@ -55,29 +55,25 @@ assumes "\<And>i j. i \<noteq> j \<Longrightarrow> \<not> prefix (snth ps i) (sn
 shows "reneqv
          (tr (tvsubst (Var(x:=e)) ee) q) 
          (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q))"
-proof-
-  define A where "A = {x} \<union> FFVars e"
-  have A: "|A| <o |UNIV::var set|" unfolding A_def 
-    by (meson card_of_Un_singl_ordLess_infinite1 infinite_var term.set_bd_UNIV)
-  thus ?thesis proof(induct arbitrary: q ps rule : trm_strong_induct)
-    case (Var x)
-    then show ?case apply(subst term.subst(1))
+proof (binder_induction ee arbitrary: q ps avoiding: x e rule: term.strong_induct)
+  case (Var x q ps)
+  then show ?case apply(subst term.subst(1))
       subgoal by auto
       subgoal by auto (metis dsset_range empty_iff imkSubst_idle insert_iff rangeI reneqv_tr 
         subOf_superOf super_superOf touchedSuper_iVar tr_Var) .
-  next
-    case (App t1 t2)
-    then show ?case apply(subst term.subst(2))
+next
+  case (App t1 t2 q ps)
+  then show ?case apply(subst term.subst(2))
       subgoal by auto
       subgoal apply (simp add: reneqv_iApp_iff) apply safe
         using App.hyps(1,2) reneqv_trans reneqv_sym apply blast+    
         using App.hyps(2) reneqv_trans reneqv_sym by blast .
-  next
-    case (Lam y t)
-    then show ?case apply(subst term.subst(3))
+next
+  case (Lam y t q ps)
+  then show ?case apply(subst term.subst(3))
       subgoal by auto
-      subgoal unfolding A_def using IImsupp_Var by fastforce
-      subgoal unfolding A_def tr_Lam apply (subst iterm.subst(3))
+      subgoal using IImsupp_Var by fastforce
+      subgoal unfolding tr_Lam apply (subst iterm.subst(3))
         subgoal by auto
         subgoal using uniformS_touchedSuper_IImsupp_imkSubst 
         subgoal apply(subgoal_tac "superOf y \<notin> touchedSuper (ILC.IImsupp (imkSubst (superOf x) (smap (tr e) ps)))")
@@ -89,7 +85,6 @@ proof-
         subgoal apply(subst reneqv_iLam_iff)
           subgoal by auto
           subgoal using Lam.hyps(2) by fastforce . . .
-  qed
 qed
 
 (* difference from the above lemma (tr_tvsubst_Var_reneqv) 
@@ -145,7 +140,7 @@ shows "(\<Union>x\<in>ILC.FFVars e2. touchedSuperT (imkSubst xs ts x)) =
 apply standard
   subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto
   subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto .  
-    
+
 
 (* Lemma 18 from Mazza: *)
 (* Here rule induction for good is needed. There is no way to do induction on "uniform" 
@@ -168,7 +163,6 @@ shows "tr' (itvsubst (imkSubst xs ts) t) =
 proof-
   have t: "good t" using t  
     by (simp add: uniform_good)
-  define A where "A = dsset xs \<union> \<Union> (ILC.FFVars ` (sset ts))"
   obtain t2 where t2: "t2 \<in> sset ts"  
     using snth_sset by blast
   have g: "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
@@ -180,27 +174,41 @@ proof-
   hence 0: "touchedSuper (dsset xs \<union> \<Union> (ILC.FFVars ` sset ts)) = 
     touchedSuper (dsset xs) \<union> touchedSuper (ILC.FFVars t2)"
   unfolding touchedSuper_Un by auto
-
-  have A: "ILC2.small A \<and> bsmall A" apply(rule conjI)
-    subgoal unfolding A_def ILC2.small_def
-    by (metis ILC_UBeta_depth.Tfvars.simps ILC_UBeta_depth.Tvars_dsset(2) Un_Diff_cancel 
-    card_dsset_ivar sup.idem var_stream_class.Un_bound)   
-    subgoal unfolding A_def bsmall_def unfolding 0  
-      by (metis g bsmall_def finite_Un good_finite_touchedSuperT super_bsmall t2 touchedSuperT_def txs(1)) .
   
   (* NB: while good t is needed for induction, 
     the "uniformS t assumption cannot be replaced by the following: 
      "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
       because this would fail to prove the Var case (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
   *)
-  then show ?thesis using t txs apply(induct rule: strong_induct_good')
-    subgoal for ys x apply auto 
+  from t txs show ?thesis proof (binder_induction t avoiding: xs ts rule: strong_induct_good')
+    case bsmall
+    then show ?case unfolding bsmall_def 0
+      by (metis g bsmall_def finite_Un good_finite_touchedSuperT super_bsmall t2 touchedSuperT_def txs(1))
+  next
+    case (iVar ys x)
+    then show ?case apply auto 
       apply (metis bot.extremum imkSubst_def insert_subset 
        reneqvS_def reneqv_tr' shd_sset snth_sset sup.idem super_subOf_theN_eq uniformS_def3)
-      by (metis dtheN fst_conv imkSubst_idle snd_conv theSN' theSN_ex tr'_iVar) 
-    (* *)
-    defer
-    subgoal for e1 es2 apply(subst tr'_iApp)
+      by (metis dtheN fst_conv imkSubst_idle snd_conv theSN' theSN_ex tr'_iVar)
+  next
+    case (iLam e xsa)
+    then show ?case apply(subst tr'_iLam)
+      apply auto apply(subst iterm.subst(3))
+        subgoal by auto 
+        subgoal apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
+          using shd_sset super_touchedSuper_dsset by fastforce+
+        subgoal apply(subst term.subst(3))
+          subgoal by auto subgoal apply(rule IImsupp_Var') 
+          apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
+           Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
+           superOf_subOf super_touchedSuper_dsset touchedSuper_emp uniformS_good)      
+          subgoal apply(subst tr'_iLam) 
+            subgoal by auto
+            subgoal using g good_imkSubst by auto
+            subgoal by auto . . .
+  next
+    case (iApp e1 es2)
+    then show ?case apply(subst tr'_iApp)
     subgoal by auto
     subgoal by auto
     subgoal by auto
@@ -213,21 +221,7 @@ proof-
         apply(drule uniformS_good) subgoal for e2 e2'  
         by (metis FFVars_touchedSuperT_imkSubst_UN) .
         subgoal using shd_sset by fastforce . . .
-    (* *)
-    subgoal for e ys apply(subst tr'_iLam)
-      apply auto apply(subst iterm.subst(3))
-        subgoal by auto 
-        subgoal unfolding A_def apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
-          using shd_sset super_touchedSuper_dsset by fastforce+
-        subgoal apply(subst term.subst(3))
-          subgoal by auto subgoal unfolding A_def apply(rule IImsupp_Var') 
-          apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
-           Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
-           superOf_subOf super_touchedSuper_dsset touchedSuper_emp uniformS_good)      
-          subgoal apply(subst tr'_iLam) 
-            subgoal unfolding A_def by auto
-            subgoal using g good_imkSubst by auto
-            subgoal by auto . . . . 
+  qed
 qed
 
 

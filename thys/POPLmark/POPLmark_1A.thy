@@ -58,8 +58,10 @@ qed simp
 lemma wf_insert: "\<lbrakk> \<turnstile> \<Gamma>,\<Delta> ok ; x \<notin> dom \<Gamma> ; x \<notin> dom \<Delta> ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,x<:T,\<Delta> ok"
   by (induction \<Delta>) auto
 
-lemma ty_weakening: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; \<turnstile> \<Gamma>,\<Delta> ok \<rbrakk> \<Longrightarrow> \<Gamma>,\<Delta> \<turnstile> S <: T"
-proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" rule: ty_strong_induct)
+lemma ty_weakening:
+  assumes "\<Gamma> \<turnstile> S <: T" "\<turnstile> \<Gamma>,\<Delta> ok"
+shows "\<Gamma>,\<Delta> \<turnstile> S <: T"
+using assms proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" rule: ty_strong_induct)
   case (SA_Top \<Gamma> S)
   then show ?case using ty.SA_Top weaken_closed wf_concat_disjoint by presburger
 next

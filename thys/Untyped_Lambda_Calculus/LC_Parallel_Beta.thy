@@ -258,27 +258,6 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using Xi by auto
       subgoal for x e1 e1' e2 e2' using PBeta[of x p e2 e1' e2' e1] by fastforce . . .
 
-
-(* ... and with fixed parameters: *)
-corollary strong_induct_pstep'[consumes 2, case_names Refl App Xi PBeta]:  
-assumes par: "small A"
-and st: "pstep t1 t2"  
-and Refl: "\<And>e. R e e"
-and App: "\<And>e1 e1' e2 e2'. 
-  pstep e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
-  R (App e1 e2) (App e1' e2')"
-and Xi: "\<And>e e' x. 
-  x \<notin> A \<Longrightarrow> 
-  pstep e e' \<Longrightarrow> R e e' \<Longrightarrow> 
-  R (Lam x e) (Lam x e')" 
-and PBeta: "\<And>x e1 e1' e2 e2'. 
-  x \<notin> A \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
-  pstep e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
-  pstep e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
-  R (App (Lam x e1) e2) (tvsubst (VVr(x := e2')) e1')"
-shows "R t1 t2"
-apply(rule strong_induct_pstep[of "\<lambda>_::unit. A"]) using assms by auto
-
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_pstep:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 

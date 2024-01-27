@@ -234,25 +234,24 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
       subgoal using AppR by auto  
       subgoal using Xi by auto . . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_step'[consumes 2, case_names Beta AppL AppR Xi]: 
-assumes par: "small A"
-and st: "step t1 t2"  
-and Beta: "\<And>x e1 e2. 
-  x \<notin> A \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
-  R (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
-and AppL: "\<And>e1 e1' e2. 
-  step e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
-  R (App e1 e2) (App e1' e2)"
-and AppR: "\<And>e1 e2 e2'. 
-  step e2 e2' \<Longrightarrow> R e2 e2' \<Longrightarrow> 
-  R (App e1 e2) (App e1 e2')"
-and Xi: "\<And>e e' x. 
-  x \<notin> A \<Longrightarrow> 
-  step e e' \<Longrightarrow> R e e' \<Longrightarrow> 
-  R (Lam x e) (Lam x e')" 
-shows "R t1 t2"
-apply(rule strong_induct_step[of "\<lambda>_::unit. A"]) using assms by auto
+corollary strong_induct_step'[consumes 1, case_names Bound Beta AppL AppR Xi]: 
+assumes st: "step t1 t2"
+and par: "\<And>p. |Pfvars p| <o |UNIV::var set|"
+and Beta: "\<And>x e1 e2 p. 
+  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  R (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1) p"
+and AppL: "\<And>e1 e1' e2 p. 
+  step e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow> 
+  R (App e1 e2) (App e1' e2) p"
+and AppR: "\<And>e1 e2 e2' p. 
+  step e2 e2' \<Longrightarrow> (\<forall>p'. R e2 e2' p') \<Longrightarrow> 
+  R (App e1 e2) (App e1 e2') p"
+and Xi: "\<And>e e' x p. 
+  x \<notin> Pfvars p \<Longrightarrow> 
+  step e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow> 
+  R (Lam x e) (Lam x e') p" 
+shows "\<forall>p. R t1 t2 p"
+using strong_induct_step[of Pfvars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
 
 
 (* Also inferring equivariance from the general infrastructure: *)

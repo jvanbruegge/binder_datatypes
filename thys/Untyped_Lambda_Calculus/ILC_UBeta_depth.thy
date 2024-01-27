@@ -373,24 +373,6 @@ apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
       subgoal using iAppR by auto  
       subgoal using Xi by auto . . .
 
-(* ... and with fixed parameters: *)
-corollary strong_induct_ustepD'[consumes 2, case_names Beta iAppL iAppR Xi]: 
-assumes par: "small A \<and> bsmall A"
-and st: "ustepD d t1 t2"  
-and Beta: "\<And>d es es'. stream_all2 hred es es' \<Longrightarrow> R d es es'"
-and iAppL: "\<And>d es es' ess. 
-  ustepD d es es' \<Longrightarrow> R d es es' \<Longrightarrow> 
-  R (Suc d) (smap2 iApp es ess) (smap2 iApp es' ess)"
-and iAppR: "\<And>d ess ess' es. 
-  ustepD d (sflat ess) (sflat ess') \<Longrightarrow> R d (sflat ess) (sflat ess') \<Longrightarrow> 
-  R (Suc d) (smap2 iApp es ess) (smap2 iApp es ess')"
-and Xi: "\<And>d es es' xs. 
-  dsset xs \<inter> A = {} \<Longrightarrow> 
-  ustepD d es es' \<Longrightarrow> R d es es' \<Longrightarrow> 
-  R d (smap (iLam xs) es) (smap (iLam xs) es')" 
-shows "R d t1 t2"
-apply(rule strong_induct_ustepD[of "\<lambda>_::unit. A"]) using assms by auto
-
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_ustepD:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"

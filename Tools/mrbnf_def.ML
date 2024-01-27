@@ -1,13 +1,3 @@
-(*  Title:      HOL/Tools/MRBNF/mrbnf_def.ML
-    Author:     Dmitriy Traytel, TU Muenchen
-    Author:     Jasmin Blanchette, TU Muenchen
-    Author:     Martin Desharnais, TU Muenchen
-    Copyright   2012, 2013, 2014
-
-Definition of map-restricted bounded natural functors.
-*)
-
-
 signature MRBNF_DEF =
 sig
   type mrbnf

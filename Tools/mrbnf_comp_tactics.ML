@@ -1,11 +1,3 @@
-(*  Title:      HOL/Tools/BNF/bnf_comp_tactics.ML
-    Author:     Dmitriy Traytel, TU Muenchen
-    Author:     Jasmin Blanchette, TU Muenchen
-    Copyright   2012
-
-Tactics for composition of bounded natural functors.
-*)
-
 signature MRBNF_COMP_TACTICS =
 sig
   val mr_mk_comp_bd_card_order_tac: Proof.context -> thm list -> thm option -> tactic

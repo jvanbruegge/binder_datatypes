@@ -1,13 +1,3 @@
-(*  Title:      HOL/Tools/BNF/bnf_def_tactics.ML
-    Author:     Dmitriy Traytel, TU Muenchen
-    Author:     Jasmin Blanchette, TU Muenchen
-    Author:     Martin Desharnais, TU Muenchen
-    Author:     Ondrej Kuncar, TU Muenchen
-    Copyright   2012, 2013, 2014, 2015
-
-Tactics for definition of bounded natural functors.
-*)
-
 signature MRBNF_DEF_TACTICS =
 sig
   include BNF_DEF_TACTICS

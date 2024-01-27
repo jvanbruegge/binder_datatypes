@@ -1,10 +1,3 @@
-(*  Title:      HOL/Tools/BNF/bnf_comp.ML
-    Author:     Dmitriy Traytel, TU Muenchen
-    Author:     Jasmin Blanchette, TU Muenchen
-    Copyright   2012
-Composition of bounded natural functors.
-*)
-
 signature MRBNF_COMP =
 sig
   val typedef_threshold: int Config.T

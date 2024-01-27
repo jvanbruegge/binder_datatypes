@@ -25,4 +25,21 @@ next
   then show ?case sorry
 qed
 
+lemma meta_disjoint_iff: "(\<And>x. x \<in> A \<Longrightarrow> x \<notin> B) \<equiv> Trueprop (A \<inter> B = {})"
+  unfolding disjoint_iff by presburger
+lemmas T1_T2_strong_inducts_2 = T1_T2_strong_inducts[unfolded meta_disjoint_iff, case_names Bound1 Bound2 T1_ctor T2_ctor]
+
+lemma test2: "Q b x \<Longrightarrow> P (x::('a::{var_T1_pre,var_T2_pre}, 'b, 'c, 'd) T1)"
+  "Q2 b y \<Longrightarrow> A (b::('a \<times> 'b) list) (c::'b list) (d::'a) \<Longrightarrow> P2 (y::('a, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2)"
+proof (binder_induction x and y arbitrary: b and c b avoiding: d c b x "{}::'b set" rule: T1_T2_strong_inducts_2)
+  case Bound
+  then show ?case by (rule emp_bound)
+next
+  case (T1_ctor v1 b)
+  then show ?case sorry
+next
+  case (T2_ctor v2 c b)
+  then show ?case sorry
+qed
+
 end

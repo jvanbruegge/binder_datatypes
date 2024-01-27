@@ -109,6 +109,14 @@ as they are.
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  using fresh[of t] unfolding G_def Tmap_def
+(**)ssbij_def conj_assoc[symmetric]
+  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+  by (elim disj_forward exE; clarsimp)
+    ((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto))+
+(*
 using fresh[of t] unfolding G_def Tmap_def apply safe
   subgoal for xx x e1 e2 
   apply(rule exI[of _ "{xx}"])  
@@ -163,6 +171,7 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
       subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . .
   (* *)
+*)
 
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)

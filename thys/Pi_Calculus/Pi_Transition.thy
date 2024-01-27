@@ -5,7 +5,7 @@ at transition time (whereas a "late" semantics would
 have transitons with bound inputs)
  *)
 theory Pi_Transition
-imports Commitment "HOL-Eisbach.Eisbach"
+imports Commitment
 begin
 
 hide_const trans
@@ -278,13 +278,29 @@ proof-
   thus ?thesis by auto
 qed
 
-ML \<open>fun gen_fresh ctxt xs0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn {context = ctxt, params = cps, ...} =>
+lemma finite_vars: "finite (vars act)"
+  by (cases act) auto
+
+lemma exists_fresh':
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set as. z \<notin> vars t) \<and> (\<forall>t \<in> set ts. z \<notin> Tfvars t)"
+proof-
+  have 0: "|set xs \<union> \<Union> (Tfvars ` (set ts)) \<union> \<Union> (vars ` (set as))| <o |UNIV::var set|" 
+  unfolding ls_UNIV_iff_finite
+  using finite_Tfvars finite_vars by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts)) \<union> \<Union> (vars ` (set as))"
+  by (meson ex_new_if_finite finite_iff_le_card_var 
+    infinite_iff_natLeq_ordLeq var_term_pre_class.large)
+  thus ?thesis by auto
+qed
+
+ML \<open>fun gen_fresh ctxt xs0 acts0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn {context = ctxt, params = cps, ...} =>
   let
     val ps = map (Thm.term_of o snd) cps;
     fun mk zs T = filter (fn t => fastype_of t = T) ps |> append zs |> HOLogic.mk_list T |> Thm.cterm_of ctxt;
     val xs = mk xs0 @{typ var};
+    val acts = mk acts0 @{typ "var action"};
     val ts = mk ts0 @{typ "var term * var commit"};
-    val thm = infer_instantiate' ctxt [SOME xs, SOME ts] @{thm exists_fresh} RS exE;
+    val thm = infer_instantiate' ctxt [SOME xs, SOME acts, SOME ts] @{thm exists_fresh'} RS exE;
   in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
 
 lemma ssbij_swap: "ssbij (id(x := y, y := x))"
@@ -302,6 +318,17 @@ lemma not_is_bout_bvars: "\<not> is_bout act \<longleftrightarrow> bvars act = {
 lemma empty_bvars_vars_fvars: "bvars act = {} \<Longrightarrow> vars act = fvars act"
   by (cases act) auto
 
+lemma bvars_swapa: "bvars act = {} \<Longrightarrow> bvars (swapa act x xx) = {}"
+  by (cases act) auto
+
+lemma fvars_swapa: "xx \<in> fvars (swapa act x xx) \<longleftrightarrow> x \<in> fvars act"
+  by (cases act) auto
+
+lemma swapa_idle: "xx \<notin> vars act \<Longrightarrow> x \<notin> vars act \<Longrightarrow> swapa act x xx = act"
+  by (cases act) auto
+
+lemmas act_var_simps = not_is_bout_bvars empty_bvars_vars_fvars bvars_swapa fvars_swapa swapa_idle
+
 (* NB: The entities affected by variables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
 as they are. 
@@ -310,115 +337,76 @@ lemma G_refresh:
   assumes "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
   shows "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
 unfolding G_def
-(*(**)ssbij_def conj_assoc[symmetric]
-  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
-    ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
-  apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [@{term t}])\<close>; clarsimp)
-        apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh)
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars))+) [2]
-
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars empty_bvars_vars_fvars)))
-      apply (rule conjI)
-  subgoal sorry
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars)))
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt not_is_bout_bvars)))
-  find_theorems vars fvars
-  thm 
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)))
-  
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)))
-apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)))
-  find_theorems FFVars_commit
-  find_theorems Cmt
-  apply ((erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?))
-*)
-(*  using exists_fresh[of "[]" "[t]"] unfolding G_def Tmap_def
 (**)ssbij_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
     ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
-  apply (elim disj_forward exE)
-  apply simp_all
-*)
+  apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [] [@{term t}])\<close>; clarsimp)
+        apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [3]
+  subgoal for P a x P' y z1 z2
+    apply (rule exI[of _ "swap P y z1"])
+    apply (rule exI[of _ a])
+    apply (rule exI[of _ z2])
+    apply (rule conjI) apply assumption
+    apply (rule exI[of _ "swap (swap P' x z2) y z1"])
+    apply (rule exI[of _ z1])
+    apply (rule conjI) apply assumption
+    apply clarsimp
+    apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
+     apply (cases t; auto) []
+    apply (rule conjI, (cases t; auto) [])
+    apply (rule conjI[OF sym])
+    apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
+     apply (cases t; simp)
+    apply (smt (verit, best) image_iff sw_diff sw_eqR)
+    apply (rule conjI)
+     apply (cases t; simp)
+    apply (smt (verit, best) image_iff sw_diff sw_eqR)
+    apply (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+    apply (rule conjI)
+     apply (cases t; simp)
+     apply (smt (verit, best) image_iff sw_diff sw_eqR)
+     apply (cases t; simp)
+    apply (simp add: swap_commute term.rrename_comps[where w="swap P' y z1"] supp_comp_bound[OF _ _ inf_A]
+      term.rrename_cong_ids[symmetric])
+    done
+  subgoal for P1 act P1' P2 z1 z2
+    using bvars_act_bout[of act]
+    apply (elim disjE exE)
+    apply (rule exI[of _ act])
+     apply (cases t; auto)
+    subgoal for a b
+      apply (intro exI[of _ "bout a z1"] conjI)
+       apply (cases t; simp)
+      apply (intro exI[of _ "swap P1' b z1"] conjI)
+       apply (cases t; simp)
+       apply (cases t; simp)
+       apply (cases t; simp)
+       apply (cases t; simp)
+      apply (metis Bout_inj)
+      done
+    done
+    apply ((((rule exI)+)?, (rule conjI)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) []
+  subgoal for P1 a x P1' P2 P2' z1 z2
+    apply (rule exI[of _ a])
+    apply (rule exI[of _ z1])
+    apply (rule conjI) apply assumption
+    apply (rule exI[of _ "swap P1' x z1"])
+    apply (rule exI[of _ "swap P2' x z1"])
+    apply (intro conjI)
+        apply (cases t; simp add: Res_refresh[of z1 "Par P1' P2'" x])
+       apply assumption
+      apply (cases t; simp)
+     apply (drule assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap], of _ _ x z1])
+     apply (cases t; simp)
+    apply (drule assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap], of _ _ x z1])
+    apply (cases t; simp)
+    apply (metis Bout_inj)
+    done
 (*
-  apply ((auto |
-    (rule exI, rule conjI, assumption) |
-    (rule exI, rule conjI, rule Inp_refresh) |
-    rule usub_refresh |
-    (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps))+) [1]
-  apply ((auto |
-    ((rule exI)+, rule conjI, assumption) |
-    (rule exI, rule conjI, rule Inp_refresh) |
-    rule Res_refresh |
-    rule usub_refresh |
-    (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)) |
-    ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
-  apply ((auto |
-    ((rule exI)+, (rule conjI)?, assumption) |
-    ((rule exI)+, (rule conjI)?, rule Inp_refresh) |
-    ((rule exI)+, (rule conjI)?, rule Res_refresh) |
-    ((rule exI)+, (rule conjI)?, rule usub_refresh) |
-    (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)) |
-    ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
-  apply ((
-    ((rule exI)+, (rule conjI)?, assumption) |
-    ((rule exI)+, (rule conjI)?, rule Inp_refresh) |
-    ((rule exI)+, (rule conjI)?, rule Res_refresh) |
-    ((rule exI)+, (rule conjI)?, rule usub_refresh) |
-    (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)) |
-    ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
-  apply ((auto |
-    ((rule exI)+, (rule conjI)?, assumption) |
-    ((rule exI)+, (rule conjI)?, rule Inp_refresh) |
-    ((rule exI)+, (rule conjI)?, rule Res_refresh) |
-    ((rule exI)+, (rule conjI)?, rule usub_refresh) |
-    (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)) |
-    ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
-  apply ((auto |
-    ((rule exI)+, (rule conjI)?, assumption) |
-    ((rule exI)+, (rule conjI)?, rule Inp_refresh) |
-    ((rule exI)+, (rule conjI)?, rule Res_refresh) |
-    ((rule exI)+, (rule conjI)?, rule usub_refresh) |
-    (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps)) |
-    ((drule spec)+, drule mp, rule conjI[OF bij_swap conjI[OF supp_swap_bound]], assumption)+) [1]
-*)
-
   using assms
 unfolding G_def Tmap_def apply(elim disjE exE conjE)
   (* Inp: *) 
@@ -458,7 +446,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
       by (auto simp: ssbij_def split: if_splits ) . .
   (* ScopeF: *)
   subgoal for P act P' x
-  using bvars_act_bout[of act] apply(elim disjE exE)
+    unfolding not_is_bout_bvars
     subgoal
     using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
     subgoal for xx
@@ -479,21 +467,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
         subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
         apply(erule allE[of _ "P"])
         apply(erule allE[of _ "Cmt act P'"]) 
-        by (auto simp: ssbij_def split: if_splits ) . . .
-    (* *)
-    subgoal for a b
-    using exists_fresh[of "[a,b]" "[t]"] apply(elim exE conjE)
-    subgoal for xx
-    apply(rule exI[of _ "{xx}"])  
-    apply(intro conjI)
-      subgoal by simp
-      subgoal unfolding ssbij_def small_def by auto 
-      subgoal apply(rule disjI7_3) 
-      apply(rule exI[of _ "swap P x xx"]) 
-      apply(rule exI[of _ "act"]) 
-      apply(rule exI[of _ "swap P' x xx"])
-      apply(rule exI[of _ "xx"]) 
-      apply(cases t) by simp . . . 
+        by (auto simp: ssbij_def split: if_splits ) . . . .
   (* ScopeB: *)
   subgoal for P a x P' y
   using exists_fresh[of "[a,x,y]" "[t]"] apply(elim exE conjE)
@@ -505,7 +479,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
     subgoal by simp
     subgoal unfolding ssbij_def small_def  by auto 
     subgoal apply(rule disjI7_4)
-    apply(rule exI[of _ "swap (swap P x xx) y yy"])
+    apply(rule exI[of _ "swap P y yy"])
     apply(rule exI[of _ "a"]) 
     apply(rule exI[of _ "xx"])
     apply(rule exI[of _ "swap (swap P' x xx) y yy"]) 
@@ -595,7 +569,8 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
       apply(erule allE[of _ "P1"])
       apply(erule allE[of _ "Bout a x P1'"])      
       apply (simp add: ssbij_def split: if_splits)  
-      by (metis Bout_inj)+ . . . .
+      by (metis Bout_inj)+ . . .
+*) .
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 

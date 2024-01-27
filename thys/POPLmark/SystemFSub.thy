@@ -425,11 +425,49 @@ lemma map_context_swap_FFVars[simp]:
 "\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k) \<and> 
            xx \<noteq> fst k \<and> xx \<notin> FFVars_typ (snd k) \<Longrightarrow> 
     map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
-unfolding map_context_def apply(rule map_idI) by auto
+  unfolding map_context_def apply(rule map_idI) by auto
+
+lemma ssbij_swap: "ssbij (id(x := z, z := x))"
+  unfolding ssbij_def by auto
 
 lemma G_refresh:
-  "(\<And>t. R t \<Longrightarrow> Ii t) \<Longrightarrow> (\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow>
+  assumes "(\<And>t. R t \<Longrightarrow> Ii t)" "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
+  shows "small B \<Longrightarrow> G B R t \<Longrightarrow>
   \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  unfolding G_def Tmap_def
+    (**)ssbij_def conj_assoc[symmetric]
+  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+  apply (elim disj_forward exE; clarsimp)
+   apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+        (((rule exI)+)?, (rule conjI)?, rule Forall_rrename) |
+        (cases t; auto))+) []
+  subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
+    using exists_fresh[of "[x]" "[t]"] apply(elim exE conjE)
+    subgoal for z
+      apply (rule exI)
+      apply (rule exI[of _ "{z}"])
+      apply (intro exI conjI)
+             apply (rule refl)+
+           apply (rule Forall_swap)
+           apply (cases t; simp)
+          apply (rule Forall_swap)
+          apply (cases t; simp)
+         apply assumption+
+        apply (frule assms(1)[of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)"])
+        apply (drule assms(2)[rule_format, OF conjI, OF ssbij_swap, of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)" x z])
+        apply (auto simp: Tmap_def extend_eqvt)
+      apply (subst (asm) rrename_swap_FFvars)
+        apply (cases t; simp)
+        apply (metis fst_conv insert_Diff insert_subset snd_conv wf_ConsE wf_context)
+       apply (cases t; simp)
+      apply (subst (asm) map_context_swap_FFVars)
+       apply (cases t; simp)
+       apply (metis Pair_inject UN_I rev_image_eqI wf_ConsE wf_FFVars wf_context)
+      apply assumption
+      done
+    done
+  done
+(*
 unfolding G_def Tmap_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
@@ -463,6 +501,7 @@ unfolding G_def Tmap_def apply safe
       subgoal apply (auto simp add: ssbij_def) 
       by (metis image_eqI map_context_swap_FFVars) 
       subgoal by (auto simp add: ssbij_def) . . . . . .
+*)
 
 (* AtoJ: I also ported the original proof (below), but I think the above 
 one is more maintainable. 

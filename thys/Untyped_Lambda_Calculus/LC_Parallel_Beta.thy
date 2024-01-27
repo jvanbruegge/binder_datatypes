@@ -115,6 +115,31 @@ as they are.
 lemma G_refresh: 
 "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  using fresh[of t] unfolding G_def Tmap_def
+(**)ssbij_def conj_assoc[symmetric]
+  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+  apply (elim disj_forward exE; clarsimp)
+  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto split: if_splits))+) []
+  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto split: if_splits)))
+  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto split: if_splits)))
+  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto split: if_splits)))
+  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto split: if_splits)))
+  apply (cases t; simp split: if_splits) []
+  apply (metis insertI1)
+  apply (((rule exI[where P="\<lambda>x. _ x \<and> _ x", OF conjI[rotated]], assumption) |
+    (((rule exI)+)?, (rule conjI)?, rule Lam_refresh tvsubst_Var_rrename) |
+    (cases t; auto split: if_splits)))
+(*
 using fresh[of t] unfolding G_def Tmap_def apply safe
   subgoal for xx
   apply(rule exI[of _ "{}"])    
@@ -165,7 +190,7 @@ using fresh[of t] unfolding G_def Tmap_def apply safe
       subgoal apply(subst tvsubst_Var_rrename) 
       apply (auto split: if_splits)   
       by blast
-      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . . 
+      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . .*) . 
   (* *)
 
 

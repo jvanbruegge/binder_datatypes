@@ -488,7 +488,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           );
           val names' = map (fn s => String.substring (s, 0, String.size s - 2)) names;
           val new_cases = map (fn s => ((s, []), [])) names'
-        in (((take nmajor cases @ new_cases @ drop (nmajor + nvars) cases, concls), (more_consumes, more_facts)), rule_thm) end
+        in (((take (nmajor - more_consumes) cases @ new_cases @ drop (nmajor - more_consumes + nvars) cases, concls), (more_consumes, more_facts)), rule_thm) end
       )
     |> Seq.maps (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
         Induct.atomize_tac defs_ctxt i st

@@ -6,41 +6,36 @@ theory CoSystemFSub
     "Prelim.FixedCountableVars"
 begin
 
-ML \<open>Multithreading.parallel_proofs := 2\<close>
+ML \<open>Multithreading.parallel_proofs := 0\<close>
 
+ML \<open>
+val ctors = [
+  (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
+  (("Top", (NONE : mixfix option)), []),
+  (("Fun", NONE), [@{typ 'rec}, @{typ 'rec}]),
+  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}])
+]
+
+val spec = {
+  fp_b = @{binding "typ"},
+  vars = [
+    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
+    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
+    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
+    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
+  ],
+  binding_rel = [[0]],
+  rec_vars = 2,
+  ctors = ctors,
+  map_b = @{binding vvsubst_typ},
+  tvsubst_b = @{binding tvsubst_typ}
+}
+\<close>
+
+declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let
-  val name = "type"
-  val T = @{typ "'var + unit + 'rec * 'rec + 'bvar * 'rec * 'brec"}
-  val Xs = map dest_TFree []
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
-  val rel = [[0]]
-
-  fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
-  val qualify = Binding.prefix_name (name ^ "_pre_")
-
-  (* Step 1: Create pre-MRBNF *)
-  val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline qualify flatten_tyargs Xs []
-    [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var)] T
-    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-
-  val (_, _, (mrbnfs as [mrbnf], (accum, lthy))) =
-      MRBNF_Comp.normalize_mrbnfs (K I) [] (map (map dest_TFree) [snd tys])
-      [] [] (K (resBs @ Xs)) NONE [mrbnf] (accum, lthy);
-
-  (* Step 2: Seal the pre-MRBNF with a typedef *)
-  val ((mrbnf, (Ds, info)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name (name ^ "_pre")) true (fst tys) [] mrbnf lthy
-
-  (* Step 3: Register the pre-MRBNF as a BNF in its live variables *)
-  val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-
-  (* Step 4: Create fixpoint of pre-MRBNF *)
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [
-    ((name, mrbnf), 1)
-  ] rel lthy;
-
-  val _ = res |> @{print}
-in lthy end
-\<close>
+  val ((res, _, _, _), lthy') = MRBNF_Sugar.create_binder_type MRBNF_Util.Greatest_FP spec lthy
+in lthy' end\<close>
 
 end

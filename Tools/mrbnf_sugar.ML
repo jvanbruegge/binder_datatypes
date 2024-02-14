@@ -11,6 +11,8 @@ type spec = {
   tvsubst_b: binding
 };
 
+val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
+  -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory
 val create_binder_datatype : spec -> local_theory -> local_theory
 
 end
@@ -45,7 +47,7 @@ fun add_nesting_mrbnf_names Us =
 fun nesting_mrbnfs ctxt ctr_Tsss Us =
   map_filter (mrbnf_of ctxt) (fold (fold (fold (add_nesting_mrbnf_names Us))) ctr_Tsss []);
 
-fun create_binder_datatype (spec : spec) lthy =
+fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
   let
     val fp_pre_T = BNF_FP_Util.mk_sumprodT_balanced (map snd (#ctors spec));
 
@@ -61,7 +63,12 @@ fun create_binder_datatype (spec : spec) lthy =
       (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-    val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
+    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
+  in ((res, fp_pre_T, mrbnf, absinfo), lthy) end
+
+fun create_binder_datatype (spec : spec) lthy =
+  let
+    val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
     val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res lthy;
     val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
 

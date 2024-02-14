@@ -1411,25 +1411,29 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       wit = wit_tac
     };
 
-    fun mk_class prfx xs lthy =
-      (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
-    val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) lthy
-    val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) lthy3
+    fun mk_class prfx xs f lthy =
+      (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> f ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+    val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) I lthy;
+
+    val class_thms = class_thms_of_mrbnf mrbnf;
+    val covar_large' = @{thm ordIso_ordLeq_trans} OF [
+      @{thm cardSuc_invar_ordIso[THEN iffD2]} OF [
+        @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order],
+        @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf],
+        @{thm ordIso_symmetric} OF [bd_ordIso]
+      ],
+      #covar_large class_thms
+    ]
+    val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) (fn ctxt =>
+      let val subclass_tac = Locale.intro_locales_tac {strict = true, eager = true} ctxt []
+      in Class_Declaration.prove_subclass subclass_tac (the_single class) ctxt end
+    ) lthy3;
 
     val class_thms =
       let
-        val class_thms = class_thms_of_mrbnf mrbnf
         val var_large' = @{thm ordIso_ordLeq_trans} OF [
           @{thm card_of_cong} OF [@{thm ordIso_symmetric} OF [bd_ordIso]],
           #var_large class_thms
-        ]
-        val covar_large' = @{thm ordIso_ordLeq_trans} OF [
-          @{thm cardSuc_invar_ordIso[THEN iffD2]} OF [
-            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order],
-            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf],
-            @{thm ordIso_symmetric} OF [bd_ordIso]
-          ],
-          #covar_large class_thms
         ]
       in
         (

@@ -15,11 +15,11 @@ sig
     thm list -> tactic
   val mk_FVars_rename_tac: thm -> thm -> thm -> (thm list -> thm) -> Proof.context ->
     thm list -> tactic
-  val mk_set_level_bound_tac: thm -> thm list -> thm list -> thm list -> thm list -> thm list ->
+  val mk_set_level_bound_tac: thm -> thm list -> thm list -> thm list -> thm list -> thm list -> thm list ->
     thm list -> Proof.context -> tactic
   val mk_FVars_overapprox_tac: bool -> thm -> thm list -> thm list -> thm list -> Proof.context ->
     tactic
-  val mk_co_card_of_FVars_bounds_tac: thm -> thm -> thm -> Proof.context -> tactic
+  val mk_co_card_of_FVars_bounds_tac: thm -> thm -> MRBNF_Def.mrbnf -> Proof.context -> tactic
   val mk_card_of_FVars_bounds_tac: thm -> thm list -> thm list list -> Proof.context -> tactic
 
   val mk_alpha_refls_tac: bool -> thm -> (cterm -> thm) list -> thm list -> thm list -> thm list ->
@@ -31,8 +31,8 @@ sig
     thm list -> tactic
   val mk_alpha_bij_eq_inv_tac: (thm list -> thm) -> thm -> Proof.context -> thm list -> tactic
 
-  val mk_alpha_FVars_les_tac: bool -> bool -> int -> thm list -> thm -> thm list -> thm list ->
-    thm list -> thm list -> (thm * thm option) list list -> Proof.context -> tactic
+  val mk_alpha_FVars_les_tac: bool -> bool -> bool -> int -> (thm * thm option) list -> thm -> thm list -> thm list ->
+    thm list -> thm list -> (thm * thm option) list list -> thm list -> Proof.context -> tactic
   val mk_alpha_FVars_tac: thm -> thm -> Proof.context -> tactic
   val mk_alpha_sym_tac: bool -> int -> thm -> thm list -> thm list -> thm list list -> thm list ->
     thm list -> thm list -> (thm * thm list) list list -> Proof.context -> tactic
@@ -93,9 +93,6 @@ sig
     bool -> thm -> thm list -> thm list -> thm list -> thm list -> thm list -> thm list ->
     thm list list -> thm list list -> thm list -> thm list -> Proof.context -> thm list -> tactic
   val mk_alpha'_bij_eq_inv'_tac: thm -> thm -> thm -> Proof.context -> thm list -> tactic
-  val mk_alpha'_FVars_les_tac: bool -> int -> int -> int -> (thm * thm) list -> thm -> thm list ->
-    thm list -> thm list -> thm list -> (thm * thm option) list list -> (term -> term -> thm) ->
-    thm list -> Proof.context -> tactic
   val mk_alpha_imp_alpha's_tac: bool -> int -> thm -> thm list -> thm list -> thm list ->
     thm list -> Proof.context -> tactic
   val mk_alpha'_imp_alphas_tac: int -> thm -> thm list -> (term list -> term list -> thm list) ->
@@ -233,11 +230,26 @@ fun mk_FVars_rename_tac rename_comp rename_id FVars_rename_le mk_FVars_rename_le
         [etac ctxt @{thm image_eqI[rotated]}], etac ctxt imageE,
     dtac ctxt (FVars_rename_le RS mp OF assms), hyp_subst_tac ctxt, assume_tac ctxt];
 
-fun mk_set_level_bound_tac nat_induct set_level_simps raw_splits Un_bounds UNION_bounds
+fun mk_set_level_bound_tac nat_induct set_level_simps raw_splits ifcos Un_bounds UNION_bounds
   free_set_bounds rec_set_boundss ctxt =
-  EVERY1 [rtac ctxt nat_induct, asm_simp_only_plus ctxt (set_level_simps @ @{thms simp_thms})
-    [split_tac ctxt (raw_splits @ @{thms sum.split}), resolve_tac ctxt (@{thms conjI allI
-      impI emp_bound} @ Un_bounds @ UNION_bounds @ free_set_bounds @ rec_set_boundss)]];
+  let
+    val Cinfinites = map (fn thm => @{thm infinite_regular_card_order.Cinfinite} OF [thm]) ifcos
+    val Un_bounds = map (fn ifco => @{thm infinite_regular_card_order_Un} OF [ifco]) ifcos;
+    val UNION_bounds = map (fn ifco =>
+    @{thm regularCard_UNION_bound} OF [
+      @{thm infinite_regular_card_order.Cinfinite} OF [ifco],
+      @{thm infinite_regular_card_order.regularCard} OF [ifco]
+    ]) ifcos;
+  in EVERY1 [
+    rtac ctxt nat_induct,
+    asm_simp_only_plus ctxt (set_level_simps @ @{thms simp_thms}) [
+      split_tac ctxt (raw_splits @ @{thms sum.split}),
+      resolve_tac ctxt (@{thms Cinfinite_gt_empty} @ Cinfinites
+        @ @{thms conjI allI impI}
+        @ Un_bounds @ UNION_bounds @ free_set_bounds @ rec_set_boundss
+      )
+    ]
+  ] end;
 
 fun mk_FVars_overapprox_tac mutual FVars_induct set_level_simps raw_injects raw_splits ctxt =
   (if mutual then [rtac ctxt FVars_induct] else [rtac ctxt impI, etac ctxt FVars_induct]) @
@@ -249,10 +261,18 @@ fun mk_FVars_overapprox_tac mutual FVars_induct set_level_simps raw_injects raw_
         TRY o (rtac ctxt @{thm UN_I} THEN' assume_tac ctxt), assume_tac ctxt],
       rtac ctxt @{thm exI[of _ "Suc _"]}]] |> EVERY1;
 
-fun mk_co_card_of_FVars_bounds_tac FVars_overapprox UNION_bound natLeq_bound ctxt =
-  EVERY1 [rtac ctxt (@{thm ordLeq_ordLess_trans} OF [@{thm card_of_mono1} OF
-    [subsetI OF [FVars_overapprox]]]), assume_tac ctxt, rtac ctxt UNION_bound,
-    rtac ctxt @{thm ordLess_Field[of natLeq, unfolded Field_natLeq]}, rtac ctxt natLeq_bound];
+fun mk_co_card_of_FVars_bounds_tac FVars_overapprox UNION_bound mrbnf ctxt =
+  EVERY1 [
+    rtac ctxt (@{thm ordLeq_ordLess_trans} OF [
+      @{thm card_of_mono1} OF [subsetI OF [FVars_overapprox]]
+    ]),
+    assume_tac ctxt,
+    rtac ctxt UNION_bound,
+    rtac ctxt @{thm ordLess_Field[of natLeq, unfolded Field_natLeq]},
+    rtac ctxt @{thm natLeq_ordLess_cinfinite},
+    rtac ctxt (MRBNF_Def.bd_Cinfinite_of_mrbnf mrbnf),
+    rtac ctxt (MRBNF_Def.bd_card_order_of_mrbnf mrbnf)
+  ];
 
 fun mk_card_of_FVars_bounds_tac common_co_induct_inst FVars_ctors intross ctxt =
   [rtac ctxt common_co_induct_inst] @ map (fn intros =>
@@ -361,8 +381,8 @@ fun mk_alpha_bij_eq_inv_tac mk_rename_comp_alt alpha_bij_eq ctxt assms =
   EVERY1 [EqSubst.eqsubst_tac ctxt [0] [mk_rename_comp_alt assms], REPEAT_DETERM o
     simp_only_tac ctxt (alpha_bij_eq :: assms @ @{thms bij_imp_bij_inv supp_inv_bound})];
 
-fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_induct alpha_elims
-  raw_injects FVars_renames FVars_ctors set_transfers ctxt =
+fun mk_alpha_FVars_les_tac mutual reverse prime num_unions alpha_bij_eq_invs FVars_induct alpha_elims
+  raw_injects FVars_renames FVars_ctors set_transfers supp_comp_bounds ctxt =
   let
     val in_cong2 = @{thm arg_cong2[of _ _ _ _ "(\<in>)"]}
 
@@ -391,7 +411,10 @@ fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_ind
       let
         val UnI = BNF_Util.mk_UnIN num_unions i;
         val set_transfer_tac = EVERY' [
-          REPEAT_DETERM o assume_tac ctxt,
+          REPEAT_DETERM o FIRST' [
+            resolve_tac ctxt (@{thms bij_comp bij_imp_bij_inv supp_inv_bound} @ supp_comp_bounds),
+            assume_tac ctxt
+          ],
           SELECT_GOAL (unfold_thms_tac ctxt @{thms Grp_def image_id})
         ];
       in SELECT_GOAL (EVERY1 [
@@ -414,15 +437,28 @@ fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_ind
           assume_tac ctxt,
           etac ctxt bexE,
           if reverse then K all_tac else TRY o EVERY' [
-            dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (iffD1 OF [thm])) alpha_bij_eq_inv),
-            REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt)
+            dresolve_tac ctxt (map (fn (thm1, thm2) => Drule.rotate_prems ~1 (case thm2 of
+              SOME _ => thm1
+              | NONE => iffD1 OF [thm1]
+            )) alpha_bij_eq_inv),
+            REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt),
+            TRY o EVERY' [
+              EqSubst.eqsubst_asm_tac ctxt [0] (map_filter snd alpha_bij_eq_inv),
+              REPEAT_DETERM o FIRST' [
+                resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound},
+                assume_tac ctxt
+              ]
+            ]
           ],
           etac ctxt allE,
           etac ctxt impE,
           assume_tac ctxt,
           TRY o EVERY' [
             EqSubst.eqsubst_asm_tac ctxt [0] FVars_renames,
-            REPEAT_DETERM o (resolve_tac ctxt @{thms supp_inv_bound bij_imp_bij_inv bij_id supp_id_bound} ORELSE' assume_tac ctxt),
+            REPEAT_DETERM o FIRST' [
+              resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv bij_id supp_id_bound bij_comp} @ supp_comp_bounds),
+              assume_tac ctxt
+            ],
             K (unfold_thms_tac ctxt @{thms inv_id image_id})
           ],
           EVERY' [
@@ -434,21 +470,42 @@ fun mk_alpha_FVars_les_tac mutual reverse num_unions alpha_bij_eq_invs FVars_ind
               etac ctxt imageE THEN' hyp_subst_tac ctxt
             else EVERY' [
               EqSubst.eqsubst_asm_tac ctxt [0] @{thms image_in_bij_eq},
-              rtac ctxt @{thm bij_imp_bij_inv},
-              assume_tac ctxt,
+              REPEAT_DETERM o (resolve_tac ctxt @{thms bij_comp bij_imp_bij_inv} ORELSE' assume_tac ctxt),
+              TRY o EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] @{thms o_inv_distrib},
+                REPEAT_DETERM o (resolve_tac ctxt @{thms bij_comp bij_imp_bij_inv} ORELSE' assume_tac ctxt)
+              ],
               K (unfold_thms_tac ctxt @{thms inv_inv_eq})
             ],
+            if prime then EVERY' [
+              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]},
+              rtac ctxt @{thm id_on_image[symmetric]},
+              assume_tac ctxt,
+              rtac ctxt @{thm iffD2[OF image_in_bij_eq]},
+              assume_tac ctxt
+            ] else K all_tac,
             rtac ctxt @{thm DiffI},
             rtac ctxt @{thm UN_I},
             assume_tac ctxt,
             rtac ctxt @{thm subst[rotated, of "\<lambda>x. x \<in> _"]},
             assume_tac ctxt,
             if reverse then rtac ctxt sym else K all_tac,
+            TRY o EVERY' [
+              rtac ctxt @{thm trans[OF comp_apply]},
+              rtac ctxt @{thm arg_cong[of _ _ "inv _"]}
+            ],
             id_on_tac reverse ctxt,
             if reverse then K all_tac else EVERY' [
               rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<notin>)"]]},
               assume_tac ctxt
             ],
+            if prime then EVERY' [
+              K (unfold_thms_tac ctxt @{thms image_comp[symmetric]}),
+              rtac ctxt @{thm iffD2[OF arg_cong[of _ _ Not]]},
+              rtac ctxt @{thm inj_image_mem_iff[OF bij_is_inj]},
+              rtac ctxt @{thm bij_imp_bij_inv},
+              assume_tac ctxt
+            ] else K all_tac,
             rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]]},
             if reverse then K all_tac else EVERY' [
               K (prefer_tac 2),
@@ -1065,60 +1122,6 @@ fun mk_alpha'_bij_eq_invs_tac fbound alpha'_coinduct_inst raw_injects mk_exIs mu
 fun mk_alpha'_bij_eq_inv'_tac arg_cong_inst rename_id rename_comp ctxt assms =
   EVERY1 [rtac ctxt arg_cong_inst, REPEAT_DETERM o simp_only_tac ctxt ([rename_id, rename_comp] @
     assms @ @{thms inv_o_simp1 inv_o_simp2 supp_inv_bound bij_imp_bij_inv})];
-
-fun mk_alpha'_FVars_les_tac mutual fbound n num_unions alpha'_bij_eq_invs FVars_induct alpha'_elims
-  raw_injects FVars_renames FVars_ctors set_transfers mk_arg_cong supp_comp_bounds ctxt =
-  let
-    fun simp_only_sub_tac ctxt = asm_simp_only_plus ctxt @{thms o_apply inv_simp1 inv_simp2
-      simp_thms Un_iff Diff_iff Union_iff image_iff bex_simps imp_disjL all_conj_distrib}
-      [etac ctxt conjE,
-        EVERY' [eresolve_tac ctxt @{thms spec[of "\<lambda>x. _ x \<longrightarrow> _ x = x", THEN mp]
-          trans[OF spec[of "\<lambda>x. _ x \<longrightarrow> _ x = x", THEN mp, symmetric] inv_simp2,
-            of f "inv f x" f x for f x, THEN trans]}, rtac ctxt conjI, rtac ctxt bexI,
-          assume_tac ctxt, assume_tac ctxt],
-        resolve_tac ctxt [conjI, ballI, notI],
-        EVERY' [rtac ctxt bexI, assume_tac ctxt, assume_tac ctxt]];
-
-    fun simp_only_solve_tac ctxt alpha'_bij_eq_inv supp_comp_bound arg_cong_inst =
-      asm_simp_only_plus ctxt
-        (supp_comp_bound :: FVars_renames @ @{thms Grp_UNIV_id rel_set_def supp_id_bound bij_id
-          inv_id supp_inv_bound bij_comp bij_imp_bij_inv image_id id_apply id_on_def o_apply})
-        ([eresolve_tac ctxt [conjE, bexE, imageE],
-          EVERY' [rtac ctxt bexI, assume_tac ctxt, assume_tac ctxt],
-          EVERY' [dtac ctxt bspec, assume_tac ctxt, etac ctxt bexE, dtac ctxt spec, dtac ctxt mp,
-            assume_tac ctxt, rtac ctxt bexI, assume_tac ctxt, assume_tac ctxt]] @
-          map (fn (thm1, thm2) => EVERY' [dtac ctxt bspec, assume_tac ctxt, etac ctxt bexE,
-            dtac ctxt (Drule.rotate_prems ~1 thm1) THEN_ALL_NEW simp_only_tac ctxt (thm2 ::
-              @{thms supp_inv_bound bij_imp_bij_inv id_o o_id inv_id supp_id_bound bij_id})])
-            alpha'_bij_eq_inv @ [EVERY' [dtac ctxt spec, dtac ctxt mp, assume_tac ctxt],
-          rtac ctxt arg_cong_inst THEN_ALL_NEW simp_only_sub_tac ctxt,
-          simp_only ctxt @{thms Un_iff Diff_iff Union_iff image_iff bex_simps inv_simp2 imp_disjL
-            all_conj_distrib}]);
-
-    fun subgoal_solve_tac supp_comp_bound alpha'_bij_eq_inv i (set_transfer, set_transfer_opt)
-      focus =
-      let
-        val ctxt = #context focus;
-        val arg_cong_inst = #params focus |> map (Thm.term_of o snd)
-          |> drop (if null alpha'_bij_eq_inv then 3 else 4) |> chop fbound ||> drop 1
-          ||> take fbound |> apply2 (fn xs => nth xs n) |-> mk_arg_cong;
-        val UnI = BNF_Util.mk_UnIN num_unions i;
-        val bound_set_transfer_tac = case set_transfer_opt of NONE => []
-          | SOME set_transfer => [forward_tac ctxt [set_transfer] THEN_ALL_NEW
-            asm_simp_only_tac ctxt (supp_comp_bound :: @{thms Grp_def supp_inv_bound bij_comp
-              bij_imp_bij_inv}), dtac ctxt conjunct1];
-      in
-        [rtac ctxt UnI] @ bound_set_transfer_tac @ [dtac ctxt set_transfer THEN_ALL_NEW
-          simp_only_solve_tac ctxt alpha'_bij_eq_inv supp_comp_bound arg_cong_inst] |> EVERY1
-      end;
-  in
-    (if mutual then [] else [rtac ctxt impI]) @ [(if mutual then rtac else etac) ctxt FVars_induct
-      THEN_ALL_NEW EVERY' [rtac ctxt allI, rtac ctxt impI,
-      eresolve_tac ctxt alpha'_elims, asm_simp_only_tac ctxt (raw_injects @ FVars_ctors)],
-      map2 (fn supp_comp_bound => @{map 3} (subgoal_solve_tac supp_comp_bound)
-        ([] :: map single alpha'_bij_eq_invs) (1 upto num_unions)) supp_comp_bounds set_transfers
-        |> EVERY' o map (fn f => Subgoal.FOCUS_PARAMS f ctxt) o flat] |> EVERY1
-  end;
 
 fun mk_alpha_imp_alpha's_tac mutual fbound alpha'_coinduct raw_injects rename_ids alpha_elims
   mr_rel_mono_strong0s ctxt =

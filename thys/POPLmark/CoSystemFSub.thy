@@ -6,8 +6,6 @@ theory CoSystemFSub
     "Prelim.FixedCountableVars"
 begin
 
-ML \<open>Multithreading.parallel_proofs := 0\<close>
-
 ML \<open>
 val ctors = [
   (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
@@ -37,5 +35,6 @@ local_setup \<open>fn lthy =>
 let
   val ((res, _, _, _), lthy') = MRBNF_Sugar.create_binder_type MRBNF_Util.Greatest_FP spec lthy
 in lthy' end\<close>
+print_theorems
 
 end

@@ -684,13 +684,16 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               (termAs, def, simps, new_lthy)
             end;
 
+          fun mk_bound t = mk_ordLess (mk_card_of t) (bd_of_mrbnf (hd mrbnfs));
+          val ifcos = map bd_infinite_regular_card_order_of_mrbnf mrbnfs;
+
           val set_level_bound =
             let
               val goal = set_levelAs $ nat $ t |> mk_bound;
               val nat_induct = thm_instantiate_terms lthy [list_all_free [t] goal
                 |> absfree (dest_Free nat) |> SOME] @{thm nat.induct} RS spec;
             in
-              mk_set_level_bound_tac nat_induct set_level_simps raw_splits Un_bounds UNION_bounds
+              mk_set_level_bound_tac nat_induct set_level_simps raw_splits ifcos Un_bounds UNION_bounds
                 free_set_bounds (flat rec_set_boundss)
                 |> prove_no_prems lthy [nat, t] (HOLogic.mk_Trueprop goal)
             end;
@@ -708,17 +711,34 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
                 |> map (fn thm => thm RS mp)
             end;
 
-          fun mk_card_of_FVars_bound FVars_t y FVars_overapprox UNION_bound natLeq_bound =
+          val suc_ifcos = map (fn mrbnf =>
+            let val ifco = bd_infinite_regular_card_order_of_mrbnf mrbnf;
+            in @{thm infinite_regular_card_order_card_suc} OF [
+              @{thm infinite_regular_card_order.card_order} OF [ifco],
+              @{thm infinite_regular_card_order.Cinfinite} OF [ifco]
+            ] end
+          ) mrbnfs;
+          val UNION_bounds = map (fn ifco => @{thm regularCard_UNION_bound} OF [
+            @{thm infinite_regular_card_order.Cinfinite} OF [ifco],
+            @{thm infinite_regular_card_order.regularCard} OF [ifco]
+          ]) suc_ifcos;
+          fun mk_card_of_FVars_bound FVars_t y FVars_overapprox UNION_bound card_order natLeq_bound =
             let
+              fun mk_bound t = mk_ordLess (mk_card_of t) (mk_card_suc (bd_of_mrbnf (hd mrbnfs)));
               val goal = FVars_t $ y |> mk_bound |> HOLogic.mk_Trueprop;
+              val set_level_bound' = @{thm ordLess_transitive} OF [
+                set_level_bound,
+                @{thm card_suc_greater} OF [card_order]
+              ];
               val UNION_bound = thm_instantiate_terms lthy [SOME @{term "UNIV::nat set"}]
-                UNION_bound OF [@{thm _}, set_level_bound];
+                UNION_bound OF [@{thm _}, set_level_bound'];
             in
               mk_co_card_of_FVars_bounds_tac FVars_overapprox UNION_bound natLeq_bound
                 |> prove_no_prems lthy [y] goal
             end;
         in
-          @{map 5} mk_card_of_FVars_bound FVarssAs ys FVars_overapproxs UNION_bounds natLeq_bounds
+          @{map 6} mk_card_of_FVars_bound FVarssAs ys FVars_overapproxs UNION_bounds
+            (map bd_card_order_of_mrbnf mrbnfs) mrbnfs
             |> rpair lthy
         end
       else let
@@ -752,9 +772,15 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           (1 upto fbound) (take fbound As) zs FVarsssAs FVars_inducts lthy
         |> apfst transpose
       end;
-    val card_of_FVars_boundss = map2 (fn mrbnf => map (fn thm =>
-      @{thm ordLess_ordLeq_trans} OF [thm, var_large_of_mrbnf mrbnf]
-    )) mrbnfs card_of_FVars_boundss';
+    val card_of_FVars_boundss = map2 (fn mrbnf =>
+      let
+        val card_order = bd_card_order_of_mrbnf mrbnf;
+        val ordIso = @{thm cardSuc_ordIso_card_suc} OF [card_order] RS @{thm ordIso_symmetric}
+        val covar_large = @{thm ordIso_ordLeq_trans} OF [ordIso, #covar_large (class_thms_of_mrbnf mrbnf)]
+      in map (fn thm =>
+        @{thm ordLess_ordLeq_trans} OF [thm, if co then covar_large else var_large_of_mrbnf mrbnf]
+      ) end
+    ) mrbnfs card_of_FVars_boundss';
 
     (* Define alpha relation *)
     val (alphas_invar_result, (alphasAs, _ (*alphas*)), FVarsBssAs, lthy) =
@@ -936,9 +962,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
         val eqs = @{map 4} mk_eq ys ys' alphasAs FVars_ts;
         val goal = mk_conjs eqs |> HOLogic.mk_Trueprop;
       in
-        mk_alpha_FVars_les_tac mutual reverse (rec_live+1) (mk_rec_lives alpha_bij_eq_invs)
+        mk_alpha_FVars_les_tac mutual reverse false (rec_live+1) (mk_rec_lives (map (rpair NONE) alpha_bij_eq_invs))
           FVars_induct alpha_elims raw_injects (flat FVars_renamess) (flat FVars_ctorss)
-          set_transfers
+          set_transfers []
           |> prove_no_prems lthy (ys @ [z]) goal
           |> split_conjs
           |> map (fn thm => thm RS mp RS spec RS mp)
@@ -1320,7 +1346,9 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     fun mk_card_of_FFVars_bound w FFVars_t FFVars_def card_of_FVars_bound =
       let
         (* TODO: fix for mutual recursion *)
-        fun mk_bound t = mk_ordLess (mk_card_of t) (bd_of_mrbnf (hd mrbnfs));
+        fun mk_bound t = mk_ordLess (mk_card_of t) (
+          (if co then mk_card_suc else I) (bd_of_mrbnf (hd mrbnfs))
+        );
         val goal = FFVars_t $ w |> mk_bound |> HOLogic.mk_Trueprop;
       in
         (fn ctxt => unfold_tac ctxt [FFVars_def] THEN HEADGOAL (rtac ctxt card_of_FVars_bound))
@@ -1329,9 +1357,15 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val card_of_FFVars_boundss' = transpose (@{map 3} (@{map 4} mk_card_of_FFVars_bound ws) FFVarsssAs
       FFVars_defss (transpose card_of_FVars_boundss'));
 
-    val card_of_FFVars_boundss = map2 (fn mrbnf => map (fn thm =>
-      @{thm ordLess_ordLeq_trans} OF [thm, var_large_of_mrbnf mrbnf]
-    )) mrbnfs card_of_FFVars_boundss';
+    val card_of_FFVars_boundss = map2 (fn mrbnf =>
+      let
+        val card_order = bd_card_order_of_mrbnf mrbnf;
+        val ordIso = @{thm cardSuc_ordIso_card_suc} OF [card_order] RS @{thm ordIso_symmetric}
+        val covar_large = @{thm ordIso_ordLeq_trans} OF [ordIso, #covar_large (class_thms_of_mrbnf mrbnf)]
+      in map (fn thm =>
+        @{thm ordLess_ordLeq_trans} OF [thm, if co then covar_large else var_large_of_mrbnf mrbnf]
+      ) end
+    ) mrbnfs card_of_FFVars_boundss';
 
     fun mk_FFVars_cctor FFVars_ts b_vec v cctor FFVars_t Quotient_rep_abs rec_sets free_set
       bound_set alpha_FVars =
@@ -1695,24 +1729,17 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           val alpha'_bij_eq_inv's = @{map 7} mk_alpha'_bij_eq_inv' ys ys' alpha'sAs renamesAs
             alpha'_bij_eq_invs rename_ids rename_comps;
 
-          fun mk_alpha'_FVars_les n z FVars_ts FVars_induct set_transfers =
+          fun mk_alpha'_FVars_les z FVars_ts FVars_induct set_transfers =
             let
               fun mk_eq y y' alpha'_t FVars_t = HOLogic.mk_imp (HOLogic.mk_mem (z, FVars_t $ y),
                 HOLogic.mk_imp (alpha'_t $ y $ y', HOLogic.mk_mem (z, FVars_t $ y'))
                   |> list_all_free [y']);
               val eqs = @{map 4} mk_eq ys ys' alpha'sAs FVars_ts;
               val goal = mk_conjs eqs |> HOLogic.mk_Trueprop;
-
-              val zset = mk_Frees "zs" [fastype_of z |> HOLogic.mk_setT] frees_lthy
-                |> the_single o fst;
-              fun mk_arg_cong f g =
-                thm_instantiate_fixed_terms lthy [SOME (mk_inv f $ (g $ z)), SOME z, SOME
-                  (HOLogic.mk_mem (z, zset) |> absfree (dest_Free z))] [z, zset] arg_cong RS iffD2;
             in
-              mk_alpha'_FVars_les_tac mutual fbound (n-1) (rec_live+1)
-                (mk_rec_lives (alpha'_bij_eq_invs ~~ rename_comps)) FVars_induct alpha'_elims
-                raw_injects (flat FVars_renamess) (flat FVars_ctorss) set_transfers mk_arg_cong
-                supp_comp_bounds
+              mk_alpha_FVars_les_tac mutual false true (rec_live+1) (mk_rec_lives (alpha'_bij_eq_invs ~~ map SOME rename_comps))
+                FVars_induct alpha'_elims raw_injects (flat FVars_renamess) (flat FVars_ctorss)
+                set_transfers supp_comp_bounds
                 |> prove_no_prems lthy (ys @ [z]) goal
                 |> split_conjs
                 |> map (fn thm => Drule.rotate_prems 1 (thm RS mp RS spec RS mp))
@@ -1728,7 +1755,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
               val set_transferss = @{map 3} (add_bound_sett rec_settss) free_settss bound_settss
                 binding_matrix;
             in
-              @{map 5} mk_alpha'_FVars_les (1 upto fbound) zs FVarsssAs FVars_inducts set_transferss
+              @{map 4} mk_alpha'_FVars_les zs FVarsssAs FVars_inducts set_transferss
             end;
 
           val alpha_imp_alpha's =

@@ -1,6 +1,12 @@
 name: Build thys
 on:
   workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches: [ master ]
     paths-ignore:
@@ -11,6 +17,8 @@ jobs:
     container:
       image: makarius/isabelle:Isabelle2023
       options: "--user root"
+
+    if: github.event_name != "pull_request" || !github.event.pull_request.draft
 
     steps:
       - name: Checkout

@@ -1,5 +1,5 @@
 theory SystemF
-  imports "thys/MRBNF_Recursor"
+  imports "Binders.MRBNF_Recursor"
 begin
 
 datatype \<kappa> = Star ("\<star>") | Arrow \<kappa> \<kappa> (infixr "\<rightarrow>" 40)

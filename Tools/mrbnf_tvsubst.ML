@@ -186,6 +186,7 @@ fun prove_model_axioms binding qualify (model : (Proof.context -> tactic) tvsubs
 fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
   let
     val (_, lthy) = Local_Theory.begin_nested lthy;
+    val mk_def_public = mk_def_t true b (Binding.suffix_name ("_" ^ Binding.name_of b));
     val mk_def_t = mk_def_t false b qualify;
     val quotient = hd (#quotient_fps (#fp_result model));
     val ctor = #ctor quotient;
@@ -212,13 +213,13 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
           |> apfst hd o mk_Frees "f" [aT --> qT]
           ||>> apfst hd o mk_Frees "t" [qT];
 
-        val (SSupp, lthy) = mk_def_t ("SSupp" ^ the suffix) 1 (Term.absfree (dest_Free f) (
+        val (SSupp, lthy) = mk_def_public ("SSupp" ^ the suffix) 1 (Term.absfree (dest_Free f) (
           HOLogic.mk_Collect ("a", aT, HOLogic.mk_not (HOLogic.mk_eq (
             f $ Bound 0, fst VVr $ Bound 0
           )))
         )) lthy;
 
-        val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s => mk_def_t ("IImsupp" ^ the suffix ^ s) 1 (
+        val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s => mk_def_public ("IImsupp" ^ the suffix ^ s) 1 (
           Term.absfree (dest_Free f) (
             let val UN = mk_UNION (fst SSupp $ f) (HOLogic.mk_comp (FVars, f));
             in if fastype_of (fst SSupp $ f) = range_type (fastype_of FVars) then

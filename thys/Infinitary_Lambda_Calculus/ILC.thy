@@ -174,10 +174,10 @@ abbreviation "VVr \<equiv> tvVVr_itvsubst"
 lemmas VVr_def = tvVVr_itvsubst_def
 abbreviation "isVVr \<equiv> tvisVVr_itvsubst"
 lemmas isVVr_def = tvisVVr_itvsubst_def
-abbreviation "IImsupp \<equiv> tvIImsupp_itvsubst"
-lemmas IImsupp_def = tvIImsupp_itvsubst_def
-abbreviation "SSupp \<equiv> tvSSupp_itvsubst"
-lemmas SSupp_def = tvSSupp_itvsubst_def
+abbreviation "IImsupp \<equiv> IImsupp_itvsubst"
+lemmas IImsupp_def = IImsupp_itvsubst_def
+abbreviation "SSupp \<equiv> SSupp_itvsubst"
+lemmas SSupp_def = SSupp_itvsubst_def
 abbreviation "FFVars \<equiv> FFVars_iterm"
 
 abbreviation "irrename \<equiv> rrename_iterm"

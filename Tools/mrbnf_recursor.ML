@@ -2285,7 +2285,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 EqSubst.eqsubst_tac ctxt [0] [snd rec_f OF (suitable_prems @ valid_Pmap)],
                 rtac ctxt trans,
                 resolve_tac ctxt Umap'_Uctor's,
-                TRY o resolve_tac ctxt valid_Pmap,
+                TRY o EVERY' [
+                  resolve_tac ctxt valid_Pmap,
+                  REPEAT_DETERM o resolve_tac ctxt (f_prems @ valid_prems)
+                ],
                 TRY o EVERY' [
                   rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
                   REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
@@ -2333,7 +2336,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ],
                   REPEAT_DETERM o resolve_tac ctxt (
                     @{thms supp_id_bound bij_id bij_comp supp_comp_bound}
-                    @ f_prems @ pick_prems @ [infinite_UNIV]
+                    @ f_prems @ pick_prems @ [infinite_UNIV] @ card_thms
                   ),
                   rtac ctxt refl
                 ],

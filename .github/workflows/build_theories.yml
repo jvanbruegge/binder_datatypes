@@ -8,10 +8,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: makarius/isabelle:Isabelle2023
+    container:
+      image: makarius/isabelle:Isabelle2023
+      options: "--entrypoint /bin/bash"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Build
-        run: isabelle build -vD .
+        run: /home/isabelle/Isabelle/bin/isabelle build -vD .

@@ -1,0 +1,16 @@
+name: Build thys
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'OUTDATED/**'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: makarius/isabelle:Isabelle2023
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build
+        run: isabelle build -vD .

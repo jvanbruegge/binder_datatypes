@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: makarius/isabelle:Isabelle2023
-      options: "--entrypoint /bin/bash"
+      options: "--user root"
 
     steps:
       - name: Checkout

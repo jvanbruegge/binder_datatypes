@@ -18,7 +18,7 @@ jobs:
       image: makarius/isabelle:Isabelle2023
       options: "--user root"
 
-    if: github.event_name != "pull_request" || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
     steps:
       - name: Checkout

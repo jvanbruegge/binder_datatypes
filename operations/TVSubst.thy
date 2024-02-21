@@ -2652,9 +2652,10 @@ lemma not_isVVr_frees:
 lemma in_IImsupps:
   "f1 a \<noteq> VVr11 a \<Longrightarrow> z \<in> FFVars_T11 (f1 a) \<Longrightarrow> z \<in> IImsupp11_1 f1"
   "f2 b \<noteq> VVr12 b \<Longrightarrow> z \<in> FFVars_T11 (f2 b) \<Longrightarrow> z \<in> IImsupp12_1 f2"
+  "f3 a \<noteq> VVr21 a \<Longrightarrow> z \<in> FFVars_T21 (f3 a) \<Longrightarrow> z \<in> IImsupp21_1 f3"
   "f1 a \<noteq> VVr11 a \<Longrightarrow> z2 \<in> FFVars_T12 (f1 a) \<Longrightarrow> z2 \<in> IImsupp11_2 f1"
   "f2 b \<noteq> VVr12 b \<Longrightarrow> z2 \<in> FFVars_T12 (f2 b) \<Longrightarrow> z2 \<in> IImsupp12_2 f2"
-  "f3 a \<noteq> VVr21 a \<Longrightarrow> z \<in> FFVars_T21 (f3 a) \<Longrightarrow> z \<in> IImsupp21_1 f3"
+  "f3 a \<noteq> VVr21 a \<Longrightarrow> z2 \<in> FFVars_T22 (f3 a) \<Longrightarrow> z2 \<in> IImsupp21_2 f3"
   subgoal
     apply (unfold comp_def SSupp11_def IImsupp11_1_def)
     apply (rule UnI2)?
@@ -2666,6 +2667,15 @@ lemma in_IImsupps:
     done
   subgoal
     apply (unfold comp_def SSupp12_def IImsupp12_1_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  subgoal
+    apply (unfold comp_def SSupp21_def IImsupp21_1_def)
     apply (rule UnI2)?
     apply (rule iffD2[OF UN_iff])
     apply (rule bexI)
@@ -2692,12 +2702,215 @@ lemma in_IImsupps:
     apply assumption
     done
   subgoal
-    apply (unfold comp_def SSupp21_def IImsupp21_1_def)
+    apply (unfold comp_def SSupp21_def IImsupp21_2_def)
     apply (rule UnI2)?
     apply (rule iffD2[OF UN_iff])
     apply (rule bexI)
      apply assumption
     apply (rule CollectI)
+    apply assumption
+    done
+  done
+
+lemma IImsupp_Diffs:
+  "B \<inter> IImsupp11_1 f1 = {} \<Longrightarrow> (\<Union>a\<in>(A - B). FFVars_T11 (f1 a)) = (\<Union>a\<in>A. FFVars_T11 (f1 a)) - B"
+  "B2 \<inter> IImsupp12_2 f2 = {} \<Longrightarrow> (\<Union>a\<in>(A2 - B2). FFVars_T12 (f2 a)) = (\<Union>a\<in>A2. FFVars_T12 (f2 a)) - B2"
+  "B \<inter> IImsupp21_1 f3 = {} \<Longrightarrow> (\<Union>a\<in>(A - B). FFVars_T21 (f3 a)) = (\<Union>a\<in>A. FFVars_T21 (f3 a)) - B"
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (rule iffI)
+      (* helper_tac false *)
+     apply (erule UN_E DiffE)+
+     apply (rule DiffI UN_I)+
+       apply assumption
+      apply assumption
+     apply (rule case_split[of "_ = _"])
+      (* apply (rotate_tac -2) *)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T11])
+        apply assumption
+       apply (rule FVars_VVrs(1))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+      (* apply (rule sym) *)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps)
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      (* prefer 2 *)
+      apply assumption
+     apply assumption
+      (* END helper_tac false *)
+      (* helper_tac true *)
+    apply (erule UN_E DiffE)+
+    apply (rule DiffI UN_I)+
+      apply assumption
+      (*apply assumption*)
+     apply (rule case_split[of "_ = _"])
+      apply (rotate_tac -2)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T11])
+        apply assumption
+       apply (rule FVars_VVrs(1))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+       apply (rule sym)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(1))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+      (* apply assumption *)
+      (* END helper_tac true *)
+     apply (subst SSupp11_def IImsupp11_1_def)+
+     apply (rule UnI1)
+     apply (rule CollectI)
+     apply assumption
+    apply assumption
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (rule iffI)
+      (* helper_tac false *)
+     apply (erule UN_E DiffE)+
+     apply (rule DiffI UN_I)+
+       apply assumption
+      apply assumption
+     apply (rule case_split[of "_ = _"])
+      (* apply (rotate_tac -2) *)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T12])
+        apply assumption
+       prefer 2
+       apply (drule singletonD)
+       prefer 2
+       apply (rule FVars_VVrs(4))
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+      (* apply (rule sym) *)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(5))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      (* prefer 2 *)
+      apply assumption
+     apply assumption
+      (* END helper_tac false *)
+      (* helper_tac true *)
+    apply (erule UN_E DiffE)+
+    apply (rule DiffI UN_I)+
+      apply assumption
+      (*apply assumption*)
+     apply (rule case_split[of "_ = _"])
+      apply (rotate_tac -2)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T12])
+        apply assumption
+       apply (rule FVars_VVrs(4))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+       apply (rule sym)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(5))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+      (* apply assumption *)
+      (* END helper_tac true *)
+     apply (subst SSupp12_def IImsupp12_2_def)+
+     apply (rule UnI1)
+     apply (rule CollectI)
+     apply assumption
+    apply assumption
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (rule iffI)
+      (* helper_tac false *)
+     apply (erule UN_E DiffE)+
+     apply (rule DiffI UN_I)+
+       apply assumption
+      apply assumption
+     apply (rule case_split[of "_ = _"])
+      (* apply (rotate_tac -2) *)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T21])
+        apply assumption
+       prefer 2
+       apply (drule singletonD)
+       prefer 2
+       apply (rule FVars_VVrs(5))
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+      (* apply (rule sym) *)
+       apply assumption
+      apply assumption
+    thm in_IImsupps
+     apply (frule in_IImsupps(3))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      (* prefer 2 *)
+      apply assumption
+     apply assumption
+      (* END helper_tac false *)
+      (* helper_tac true *)
+    apply (erule UN_E DiffE)+
+    apply (rule DiffI UN_I)+
+      apply assumption
+      (*apply assumption*)
+     apply (rule case_split[of "_ = _"])
+      apply (rotate_tac -2)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T21])
+        apply assumption
+       apply (rule FVars_VVrs(5))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+       apply (rule sym)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(3))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+      (* apply assumption *)
+      (* END helper_tac true *)
+     apply (subst SSupp21_def IImsupp21_1_def)+
+     apply (rule UnI1)
+     apply (rule CollectI)
+     apply assumption
     apply assumption
     done
   done

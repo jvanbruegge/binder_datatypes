@@ -139,31 +139,14 @@ lemma Supp_VVr_empty:
   "SSupp12 VVr12 = {}"
   "SSupp21 VVr21 = {}"
     apply -
-    apply (unfold SSupp11_def)
-    apply (rule iffD2[OF set_eq_iff])
-    apply (rule allI)
-    apply (unfold mem_Collect_eq HOL.simp_thms(6) empty_iff)
-    apply (rule not_True_eq_False)
+    apply (unfold SSupp11_def HOL.simp_thms(6) not_True_eq_False empty_def[symmetric])
+    apply (rule TrueI)
     (* copied from above *)
-   apply (unfold SSupp12_def)
-   apply (rule iffD2[OF set_eq_iff])
-   apply (rule allI)
-   apply (unfold mem_Collect_eq HOL.simp_thms(6) empty_iff)
-   apply (rule not_True_eq_False)
+    apply (unfold SSupp12_def HOL.simp_thms(6) not_True_eq_False empty_def[symmetric])
+    apply (rule TrueI)
     (* copied from above *)
-  apply (unfold SSupp21_def)
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  apply (unfold mem_Collect_eq HOL.simp_thms(6) empty_iff)
-  apply (rule not_True_eq_False)
-  done
-
-lemma SSupp_VVr_bound:
-  "|SSupp11 VVr11| <o |UNIV::'x set|"
-  "|SSupp12 VVr12| <o |UNIV::'x set|"
-  "|SSupp21 VVr21| <o |UNIV::'x set|"
-    apply (unfold Supp_VVr_empty)
-    apply (rule emp_bound)+
+    apply (unfold SSupp21_def HOL.simp_thms(6) not_True_eq_False empty_def[symmetric])
+    apply (rule TrueI)
   done
 
 lemma VVr_injs:
@@ -434,7 +417,6 @@ shows
   apply (unfold Pmap_def case_prod_beta)
   apply (rule trans[OF comp_apply])
   apply (unfold prod.inject fst_conv snd_conv)
-  apply (rule conjI)
    apply (rule conjI assms
       trans[OF comp_apply[symmetric] fun_cong[OF compSS_comp0s(1)]]
       trans[OF comp_apply[symmetric] fun_cong[OF compSS_comp0s(2)]]
@@ -465,9 +447,8 @@ lemma SSupp_natural:
       apply (erule notE)
       apply (rule refl)
      apply (drule notnotD)
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-      apply assumption
+     apply (drule sym)
+    apply (erule subst)
      apply (rule trans)
       apply (rule T1.rrename_cctors)
          apply (rule assms)+
@@ -763,7 +744,7 @@ lemma IImsupp_rrename_commute:
        apply (rule trans)
         apply (rule T1.rrename_cong_ids)
              apply (rule f_prems)+
-        (* REPET_DETERM *)
+        (* REPEAT_DETERM *)
          apply (rule id_onD[rotated])
           apply assumption
          apply (rule imsupp_id_on)

@@ -44,6 +44,20 @@ sig
     axioms: 'a model_axioms
   };
 
+  type 'a quotient_model = {
+    binding: binding,
+    Uctor: term,
+    validity: {
+      pred: term,
+      valid_rrename: 'a,
+      valid_Uctor: 'a
+    } option,
+    axioms: {
+      rrename_Uctor: 'a,
+      FVars_subsets: 'a list
+    }
+  };
+
   type recursor_result = {
     rec_fun: term,
     rec_Uctor: thm,
@@ -61,6 +75,8 @@ sig
   val every_other: 'a list -> 'a list;
   val mk_supp_bound: term -> term;
 
+  val mk_quotient_model: MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T
+    -> (typ * typ) list -> (Proof.context -> tactic) quotient_model -> (Proof.context -> tactic) model
   val create_binding_recursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> (Proof.context -> tactic) parameter -> (Proof.context -> tactic) model list
     -> local_theory -> recursor_result list * local_theory;
@@ -119,6 +135,20 @@ type 'a model = {
   axioms: 'a model_axioms
 };
 
+type 'a quotient_model = {
+  binding: binding,
+  Uctor: term,
+  validity: {
+    pred: term,
+    valid_rrename: 'a,
+    valid_Uctor: 'a
+  } option,
+  axioms: {
+    rrename_Uctor: 'a,
+    FVars_subsets: 'a list
+  }
+};
+
 type recursor_result = {
   rec_fun: term,
   rec_Uctor: thm,
@@ -152,6 +182,42 @@ fun addPred pred_opt d = case pred_opt of
     HOLogic.mk_Trueprop (t $ d),
     p
   )) | NONE => I
+
+fun mk_quotient_model quot substitution qmodel =
+  let
+    fun mk_subst f = if null substitution then I else f substitution;
+    val subst = mk_subst Term.subst_atomic_types;
+    val Ts = fst (split_last (binder_types (fastype_of (#rename quot))));
+  in {
+    U = mk_subst Term.typ_subst_atomic (#T quot),
+    binding = #binding qmodel,
+    UFVarss = map (Term.abs ("t", #T quot) o subst) (#FVars quot),
+    Umap = fold_rev Term.abs (map (pair "f") Ts) (
+      Term.abs ("t", #T quot) (Term.list_comb (#rename quot, map Bound (length Ts downto 1)))
+    ),
+    Uctor = #Uctor qmodel,
+    validity = Option.map (fn v => {
+      pred = #pred v,
+      valid_Umap = #valid_rrename v,
+      valid_Uctor = #valid_Uctor v
+    }) (#validity qmodel),
+    axioms = {
+      Umap_id0 = fn ctxt => rtac ctxt (#rename_id quot) 1,
+      Umap_comp0 = fn ctxt => EVERY1 [
+        rtac ctxt sym,
+        rtac ctxt trans,
+        rtac ctxt @{thm comp_apply},
+        rtac ctxt (#rename_comp quot),
+        REPEAT_DETERM o assume_tac ctxt
+      ],
+      Umap_cong_id = fn ctxt => EVERY1 [
+        rtac ctxt (#rename_cong_id (#inner quot)),
+        REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
+      ],
+      Umap_Uctor = #rrename_Uctor (#axioms qmodel),
+      UFVars_subsets = #FVars_subsets (#axioms qmodel)
+    }
+  } : (Proof.context -> tactic) model end;
 
 fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars pred_opt lthy =
   let

@@ -32,6 +32,7 @@ and eta_natural21: "|supp (f1::'x1::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x1)|
 definition VVr11 :: "'var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1" where "VVr11 \<equiv> T1_ctor \<circ> eta11"
 definition VVr12 :: "'tyvar \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1" where "VVr12 \<equiv> T1_ctor \<circ> eta12"
 definition VVr21 :: "'var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2" where "VVr21 \<equiv> T2_ctor \<circ> eta21"
+lemmas VVr_defs = VVr11_def VVr12_def VVr21_def
 
 definition SSupp11 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'var set" where
   "SSupp11 f \<equiv> { x. f x \<noteq> VVr11 x }"
@@ -67,65 +68,17 @@ definition asVVr12 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var
 definition asVVr21 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> 'var" where
   "asVVr21 x \<equiv> (if isVVr21 x then SOME a. x = VVr21 a else undefined)"
 
-lemma Supp_VVr_empty:
-  "SSupp11 VVr11 = {}"
-  "SSupp12 VVr12 = {}"
-  "SSupp21 VVr21 = {}"
-    apply -
-    apply (unfold SSupp11_def)
-    apply (rule iffD2[OF set_eq_iff])
-    apply (rule allI)
-    apply (unfold mem_Collect_eq HOL.simp_thms(6) empty_iff)
-    apply (rule not_True_eq_False)
-    (* copied from above *)
-   apply (unfold SSupp12_def)
-   apply (rule iffD2[OF set_eq_iff])
-   apply (rule allI)
-   apply (unfold mem_Collect_eq HOL.simp_thms(6) empty_iff)
-   apply (rule not_True_eq_False)
-    (* copied from above *)
-  apply (unfold SSupp21_def)
-  apply (rule iffD2[OF set_eq_iff])
-  apply (rule allI)
-  apply (unfold mem_Collect_eq HOL.simp_thms(6) empty_iff)
-  apply (rule not_True_eq_False)
-  done
-
-lemma SSupp_VVr_bound:
-  "|SSupp11 VVr11| <o |UNIV::'x set|"
-  "|SSupp12 VVr12| <o |UNIV::'x set|"
-  "|SSupp21 VVr21| <o |UNIV::'x set|"
-    apply (unfold Supp_VVr_empty)
-    apply (rule emp_bound)+
-  done
-
-typedef (overloaded) ('var, 'tyvar, 'a, 'b) SSfun11 = "{ f. |SSupp11 (f::_ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| }"
-  apply (rule exI)
-  apply (rule iffD2[OF mem_Collect_eq])
-  apply (rule cmin_greater)
-     apply (rule card_of_Card_order SSupp_VVr_bound)+
-  done
-
-typedef (overloaded) ('var, 'tyvar, 'a, 'b) SSfun12 = "{ f. |SSupp12 (f::_ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1)| <o  cmin |UNIV::'var set| |UNIV::'tyvar set| }"
-  apply (rule exI)
-  apply (rule iffD2[OF mem_Collect_eq])
-  apply (rule cmin_greater)
-     apply (rule card_of_Card_order SSupp_VVr_bound)+
-  done
-
-typedef (overloaded) ('var, 'tyvar, 'a, 'b) SSfun21 = "{ f. |SSupp21 (f::_ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2)| <o  cmin |UNIV::'var set| |UNIV::'tyvar set| }"
-  apply (rule exI)
-  apply (rule iffD2[OF mem_Collect_eq])
-  apply (rule cmin_greater)
-     apply (rule card_of_Card_order SSupp_VVr_bound)+
-  done
+type_synonym ('var, 'tyvar, 'a, 'b) SSfun11 = "'var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1"
+type_synonym ('var, 'tyvar, 'a, 'b) SSfun12 = "'tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1"
+type_synonym ('var, 'tyvar, 'a, 'b) SSfun21 = "'var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2"
 
 definition compSS11 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun11 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) SSfun11" where
-  "compSS11 f1 f2 p \<equiv> Abs_SSfun11 (rrename_T1 f1 f2 \<circ> Rep_SSfun11 p \<circ> inv f1)"
+  "compSS11 f1 f2 h \<equiv> rrename_T1 f1 f2 \<circ> h \<circ> inv f1"
 definition compSS12 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun12 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) SSfun12" where
-  "compSS12 f1 f2 p \<equiv> Abs_SSfun12 (rrename_T1 f1 f2 \<circ> Rep_SSfun12 p \<circ> inv f2)"
+  "compSS12 f1 f2 h \<equiv> rrename_T1 f1 f2 \<circ> h \<circ> inv f2"
 definition compSS21 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun21 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) SSfun21" where
-  "compSS21 f1 f2 p \<equiv> Abs_SSfun21 (rrename_T2 f1 f2 \<circ> Rep_SSfun21 p \<circ> inv f1)"
+  "compSS21 f1 f2 h \<equiv> rrename_T2 f1 f2 \<circ> h \<circ> inv f1"
+lemmas compSS_defs = compSS11_def compSS12_def compSS21_def
 
 type_synonym ('var, 'tyvar, 'a, 'b) P = "('var, 'tyvar, 'a, 'b) SSfun11 \<times> ('var, 'tyvar, 'a, 'b) SSfun12 \<times> ('var, 'tyvar, 'a, 'b) SSfun21"
 type_synonym ('var, 'tyvar, 'a, 'b) U1 = "('var, 'tyvar, 'a, 'b) T1"
@@ -134,22 +87,22 @@ type_synonym ('var, 'tyvar, 'a, 'b) U2 = "('var, 'tyvar, 'a, 'b) T2"
 definition U1ctor :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'var, 'tyvar, ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1), ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
   ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2), ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)) T1_pre \<Rightarrow> ('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1" where
   "U1ctor y p \<equiv> case p of (f1, f2, f3) \<Rightarrow> if isVVr11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) then
-    Rep_SSfun11 f1 (asVVr11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y))) else (
+    f1 (asVVr11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y))) else (
   if isVVr12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) then
-    Rep_SSfun12 f2 (asVVr12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y))) else (
+    f2 (asVVr12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y))) else (
   T1_ctor (map_T1_pre id id id id id id ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) y)
 ))"
 definition U2ctor :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'var, 'tyvar, ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1), ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
   ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2), ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)) T2_pre \<Rightarrow> ('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2" where
   "U2ctor y p \<equiv> case p of (f1, f2, f3) \<Rightarrow> if isVVr21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) then
-    Rep_SSfun21 f3 (asVVr21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y))) else (
+    f3 (asVVr21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y))) else (
   T2_ctor (map_T2_pre id id id id id id ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) y)
 )"
 
 definition PFVars_1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> 'var set" where
-  "PFVars_1 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> IImsupp11_1 (Rep_SSfun11 f1) \<union> IImsupp12_1 (Rep_SSfun12 f2) \<union> IImsupp21_1 (Rep_SSfun21 f3)"
+  "PFVars_1 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> IImsupp11_1 f1 \<union> IImsupp12_1 f2 \<union> IImsupp21_1 f3"
 definition PFVars_2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> 'tyvar set" where
-  "PFVars_2 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> IImsupp11_2 (Rep_SSfun11 f1) \<union> IImsupp12_2 (Rep_SSfun12 f2) \<union> IImsupp21_2 (Rep_SSfun21 f3)"
+  "PFVars_2 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> IImsupp11_2 f1 \<union> IImsupp12_2 f2 \<union> IImsupp21_2 f3"
 
 definition Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) P" where
   "Pmap g1 g2 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> (compSS11 g1 g2 f1, compSS12 g1 g2 f2, compSS21 g1 g2 f3)"
@@ -165,6 +118,12 @@ abbreviation "U2FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('v
 abbreviation "U1map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). rrename_T1 f1 f2 x"
 abbreviation "U2map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). rrename_T2 f1 f2 x"
 
+definition valid_P :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> bool" where
+  "valid_P p \<equiv> case p of (f1, f2, f3) \<Rightarrow>
+  |SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|
+  \<and> |SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|
+  \<and> |SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+
 (**********************************************************************)
 (*                               PROOFS                               *)
 (**********************************************************************)
@@ -174,6 +133,29 @@ lemmas Cinfinite_card = cmin_Cinfinite[OF Cinfinite_UNIV Cinfinite_UNIV]
 lemmas regularCard_card = cmin_regularCard[OF T1_pre.var_regular T1_pre.var_regular Cinfinite_UNIV Cinfinite_UNIV]
 lemmas Un_bound = regularCard_Un[OF conjunct2[OF Cinfinite_card] conjunct1[OF Cinfinite_card] regularCard_card]
 lemmas UNION_bound = regularCard_UNION[OF conjunct2[OF Cinfinite_card] conjunct1[OF Cinfinite_card] regularCard_card]
+
+lemma Supp_VVr_empty:
+  "SSupp11 VVr11 = {}"
+  "SSupp12 VVr12 = {}"
+  "SSupp21 VVr21 = {}"
+    apply -
+    apply (unfold SSupp11_def HOL.simp_thms(6) not_True_eq_False empty_def[symmetric])
+    apply (rule TrueI)
+    (* copied from above *)
+    apply (unfold SSupp12_def HOL.simp_thms(6) not_True_eq_False empty_def[symmetric])
+    apply (rule TrueI)
+    (* copied from above *)
+    apply (unfold SSupp21_def HOL.simp_thms(6) not_True_eq_False empty_def[symmetric])
+    apply (rule TrueI)
+  done
+
+lemma SSupp_VVr_bounds:
+  "|SSupp11 VVr11| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "|SSupp12 VVr12| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "|SSupp21 VVr21| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+    apply (unfold Supp_VVr_empty)
+    apply (rule cmin_greater card_of_Card_order emp_bound)+
+  done
 
 lemma VVr_injs:
   "VVr11 x = VVr11 x' \<Longrightarrow> x = x'"
@@ -392,18 +374,6 @@ lemma compSS_comp0s:
     apply (unfold id_o o_id)?
     apply (rule ext)
     apply (rule trans[OF comp_apply])
-    apply (rule arg_cong[of _ _ Abs_SSfun11])
-    apply (unfold comp_assoc)
-    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-    apply (rule trans)
-     apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-     apply (rule Abs_SSfun11_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply (rule SSupp_rename_bounds)
-         apply (rule g_prems)+
-     apply (rule SSupp_comp_bounds)
-      apply (rule iffD1[OF mem_Collect_eq Rep_SSfun11])
-     apply (rule supp_inv_bound g_prems)+
     apply (unfold comp_assoc)
     apply (rule refl)
     done
@@ -414,18 +384,6 @@ lemma compSS_comp0s:
     apply (unfold id_o o_id)?
     apply (rule ext)
     apply (rule trans[OF comp_apply])
-    apply (rule arg_cong[of _ _ Abs_SSfun12])
-    apply (unfold comp_assoc)
-    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-    apply (rule trans)
-     apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-     apply (rule Abs_SSfun12_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply (rule SSupp_rename_bounds)
-         apply (rule g_prems)+
-     apply (rule SSupp_comp_bounds)
-      apply (rule iffD1[OF mem_Collect_eq Rep_SSfun12])
-     apply (rule supp_inv_bound g_prems)+
     apply (unfold comp_assoc)
     apply (rule refl)
     done
@@ -436,18 +394,6 @@ lemma compSS_comp0s:
     apply (unfold id_o o_id)?
     apply (rule ext)
     apply (rule trans[OF comp_apply])
-    apply (rule arg_cong[of _ _ Abs_SSfun21])
-    apply (unfold comp_assoc)
-    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-    apply (rule trans)
-     apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-     apply (rule Abs_SSfun21_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply (rule SSupp_rename_bounds)
-         apply (rule g_prems)+
-     apply (rule SSupp_comp_bounds)
-      apply (rule iffD1[OF mem_Collect_eq Rep_SSfun21])
-     apply (rule supp_inv_bound g_prems)+
     apply (unfold comp_assoc)
     apply (rule refl)
     done
@@ -457,59 +403,9 @@ lemma compSS_id0s:
   "compSS11 id id = id"
   "compSS12 id id = id"
   "compSS21 id id = id"
-  apply (unfold compSS11_def compSS12_def compSS21_def T1.rrename_id0s id_o o_id inv_id Rep_SSfun11_inverse Rep_SSfun12_inverse Rep_SSfun21_inverse)
+  apply (unfold compSS11_def compSS12_def compSS21_def T1.rrename_id0s id_o o_id inv_id)
   apply (unfold id_def)
   apply (rule refl)+
-  done
-
-lemma compSS_rep_eq:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  shows
-    "Rep_SSfun11 (compSS11 f1 f2 p) = rrename_T1 f1 f2 \<circ> Rep_SSfun11 p \<circ> inv f1"
-    "Rep_SSfun12 (compSS12 f1 f2 p2) = rrename_T1 f1 f2 \<circ> Rep_SSfun12 p2 \<circ> inv f2"
-    "Rep_SSfun21 (compSS21 f1 f2 p3) = rrename_T2 f1 f2 \<circ> Rep_SSfun21 p3 \<circ> inv f1"
-  subgoal
-    apply (unfold compSS11_def)
-    apply (rule trans)
-     apply (rule Abs_SSfun11_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply (unfold comp_assoc)[1]
-     apply (rule SSupp_rename_bounds)
-         apply (rule assms)+
-     apply (rule SSupp_comp_bounds)
-      apply (rule iffD1[OF mem_Collect_eq Rep_SSfun11])
-     apply (rule supp_inv_bound assms)+
-    apply (rule refl)
-    done
-      (* copied from above *)
-  subgoal
-    apply (unfold compSS12_def)
-    apply (rule trans)
-     apply (rule Abs_SSfun12_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply (unfold comp_assoc)[1]
-     apply (rule SSupp_rename_bounds)
-         apply (rule assms)+
-     apply (rule SSupp_comp_bounds)
-      apply (rule iffD1[OF mem_Collect_eq Rep_SSfun12])
-     apply (rule supp_inv_bound assms)+
-    apply (rule refl)
-    done
-      (* copied from above *)
-  subgoal
-    apply (unfold compSS21_def)
-    apply (rule trans)
-     apply (rule Abs_SSfun21_inverse)
-     apply (rule iffD2[OF mem_Collect_eq])
-     apply (unfold comp_assoc)[1]
-     apply (rule SSupp_rename_bounds)
-         apply (rule assms)+
-     apply (rule SSupp_comp_bounds)
-      apply (rule iffD1[OF mem_Collect_eq Rep_SSfun21])
-     apply (rule supp_inv_bound assms)+
-    apply (rule refl)
-    done
   done
 
 lemma Pmap_id0: "Pmap id id = id"
@@ -529,7 +425,6 @@ shows
   apply (unfold Pmap_def case_prod_beta)
   apply (rule trans[OF comp_apply])
   apply (unfold prod.inject fst_conv snd_conv)
-  apply (rule conjI)
    apply (rule conjI assms
       trans[OF comp_apply[symmetric] fun_cong[OF compSS_comp0s(1)]]
       trans[OF comp_apply[symmetric] fun_cong[OF compSS_comp0s(2)]]
@@ -560,9 +455,8 @@ lemma SSupp_natural:
       apply (erule notE)
       apply (rule refl)
      apply (drule notnotD)
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-      apply assumption
+     apply (drule sym)
+    apply (erule subst)
      apply (rule trans)
       apply (rule T1.rrename_cctors)
          apply (rule assms)+
@@ -609,9 +503,8 @@ lemma SSupp_natural:
       apply (erule notE)
       apply (rule refl)
      apply (drule notnotD)
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-      apply assumption
+     apply (drule sym)
+    apply (erule subst)
      apply (rule trans)
       apply (rule T1.rrename_cctors)
          apply (rule assms)+
@@ -699,7 +592,7 @@ lemma PFVars_Pmaps:
     "PFVars_2 (Pmap f1 f2 p) = f2 ` PFVars_2 p"
   subgoal
     apply (unfold Pmap_def PFVars_1_def case_prod_beta fst_conv snd_conv)
-    apply (unfold compSS_rep_eq[OF assms] image_Un)
+    apply (unfold compSS_defs image_Un)
     apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
       (* REPEAT_DETERM *)
       apply (unfold IImsupp11_1_def)
@@ -744,7 +637,7 @@ lemma PFVars_Pmaps:
     done
   subgoal
     apply (unfold Pmap_def PFVars_2_def case_prod_beta fst_conv snd_conv)
-    apply (unfold compSS_rep_eq[OF assms] image_Un)
+    apply (unfold compSS_defs image_Un)
     apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
       (* REPEAT_DETERM *)
       apply (unfold IImsupp11_2_def)
@@ -858,7 +751,7 @@ lemma IImsupp_rrename_commute:
        apply (rule trans)
         apply (rule T1.rrename_cong_ids)
              apply (rule f_prems)+
-        (* REPET_DETERM *)
+        (* REPEAT_DETERM *)
          apply (rule id_onD[rotated])
           apply assumption
          apply (rule imsupp_id_on)
@@ -1060,20 +953,15 @@ lemma IImsupp_rrename_commute:
 lemma compSS_cong_ids:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows "(\<And>a. a \<in> IImsupp11_1 (Rep_SSfun11 p) \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp11_2 (Rep_SSfun11 p) \<Longrightarrow> f2 a = a) \<Longrightarrow>
-    compSS11 f1 f2 p = p"
-    "(\<And>a. a \<in> IImsupp12_1 (Rep_SSfun12 p2) \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp12_2 (Rep_SSfun12 p2) \<Longrightarrow> f2 a = a) \<Longrightarrow>
-    compSS12 f1 f2 p2 = p2"
-    "(\<And>a. a \<in> IImsupp21_1 (Rep_SSfun21 p3) \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp21_2 (Rep_SSfun21 p3) \<Longrightarrow> f2 a = a) \<Longrightarrow>
-    compSS21 f1 f2 p3 = p3"
+  shows "(\<And>a. a \<in> IImsupp11_1 h1 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp11_2 h1 \<Longrightarrow> f2 a = a) \<Longrightarrow>
+    compSS11 f1 f2 h1 = h1"
+    "(\<And>a. a \<in> IImsupp12_1 h2 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp12_2 h2 \<Longrightarrow> f2 a = a) \<Longrightarrow>
+    compSS12 f1 f2 h2 = h2"
+    "(\<And>a. a \<in> IImsupp21_1 h3 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp21_2 h3 \<Longrightarrow> f2 a = a) \<Longrightarrow>
+    compSS21 f1 f2 h3 = h3"
   subgoal
     apply (unfold compSS11_def)
-    apply (rule Abs_SSfun11_cases[of p])
-    apply hypsubst_thin
-    apply (rule arg_cong[of _ _ Abs_SSfun11])
-    apply (rule ext)
-    apply (unfold Abs_SSfun11_inverse)
-    subgoal premises prems for y x
+    subgoal premises prems
       apply (subst IImsupp_rrename_commute)
             apply (rule f_prems)+
         (* REPEAT_DETERM *)
@@ -1093,7 +981,6 @@ lemma compSS_cong_ids:
         apply (erule bij_not_eq_twice[rotated])
         apply (rule f_prems)
         (* copied from above *)
-
        apply (rule trans[OF Int_commute])
        apply (rule iffD2[OF disjoint_iff])
        apply (rule allI)
@@ -1120,12 +1007,7 @@ lemma compSS_cong_ids:
       (* copied from above *)
   subgoal
     apply (unfold compSS12_def)
-    apply (rule Abs_SSfun12_cases[of p2])
-    apply hypsubst_thin
-    apply (rule arg_cong[of _ _ Abs_SSfun12])
-    apply (rule ext)
-    apply (unfold Abs_SSfun12_inverse)
-    subgoal premises prems for y x
+    subgoal premises prems
       apply (subst IImsupp_rrename_commute)
             apply (rule f_prems)+
         (* REPEAT_DETERM *)
@@ -1172,12 +1054,7 @@ lemma compSS_cong_ids:
       (* copied from above *)
   subgoal
     apply (unfold compSS21_def)
-    apply (rule Abs_SSfun21_cases[of p3])
-    apply hypsubst_thin
-    apply (rule arg_cong[of _ _ Abs_SSfun21])
-    apply (rule ext)
-    apply (unfold Abs_SSfun21_inverse)
-    subgoal premises prems for y x
+    subgoal premises prems
       apply (subst IImsupp_rrename_commute)
             apply (rule f_prems)+
         (* REPEAT_DETERM *)
@@ -1236,24 +1113,18 @@ lemma Pmap_cong_id:
   done
 
 lemma small_PFVarss:
-  "|PFVars_1 (p::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  "|PFVars_2 p| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "valid_P p \<Longrightarrow> |PFVars_1 (p::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "valid_P p \<Longrightarrow> |PFVars_2 p| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   subgoal
-    apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def)
-    apply (rule Un_bound UNION_bound
-        iffD1[OF mem_Collect_eq Rep_SSfun11] iffD1[OF mem_Collect_eq Rep_SSfun12] iffD1[OF mem_Collect_eq Rep_SSfun21]
-        T1.card_of_FFVars_bounds
-        cmin_greater card_of_Card_order
-        )+
+    apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def valid_P_def)
+    apply (erule conjE)+
+    apply (assumption | rule Un_bound UNION_bound T1.card_of_FFVars_bounds cmin_greater card_of_Card_order)+
     done
   (* copied from above *)
   subgoal
-    apply (unfold PFVars_2_def case_prod_beta IImsupp11_2_def IImsupp12_2_def IImsupp21_2_def comp_def)
-    apply (rule Un_bound UNION_bound
-        iffD1[OF mem_Collect_eq Rep_SSfun11] iffD1[OF mem_Collect_eq Rep_SSfun12] iffD1[OF mem_Collect_eq Rep_SSfun21]
-        T1.card_of_FFVars_bounds
-        cmin_greater card_of_Card_order
-        )+
+    apply (unfold PFVars_2_def case_prod_beta IImsupp11_2_def IImsupp12_2_def IImsupp21_2_def comp_def valid_P_def)
+    apply (erule conjE)+
+    apply (assumption | rule Un_bound UNION_bound T1.card_of_FFVars_bounds cmin_greater card_of_Card_order)+
     done
   done
 
@@ -1305,60 +1176,47 @@ lemma asVVr_VVrs:
     done
   done
 
-lemma U1FVars_subset_1: "set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U1FVars_1 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T11 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
-  apply (unfold avoiding_set1_def Un_empty_right)
+  apply (unfold avoiding_set1_def Un_empty_right case_prod_beta)
   subgoal premises prems
-  apply (unfold U1ctor_def case_prod_beta)
-  apply (rule case_split)
-   apply (subst if_P)
-    apply assumption
+    apply (unfold U1ctor_def case_prod_beta)
+    (* REPEAT_DETERM *)
+    apply (rule case_split)
+     apply (subst if_P)
+      apply assumption
      apply (unfold isVVr11_def)[1]
      apply (erule exE)
-     apply (rule iffD2[OF arg_cong2[of _ _ _ _ "(\<subseteq>)"]])
-       apply (rule arg_cong[of _ _ FFVars_T11])
-       apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun11"])
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ asVVr11])
-        apply assumption
-       apply (rule asVVr_VVrs)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])
-      apply (rule arg_cong[of _ _ FFVars_T11])
-      apply assumption
+     apply (drule sym)
+     apply (erule subst)
+     apply (unfold asVVr_VVrs)
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T11])
-       prefer 2
+       apply assumption
        apply (rule Un_upper1)
-      apply assumption
      apply (rule subsetI)
      apply (rule UnI2)
      apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def SSupp11_def)[1]
      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 1] 1\<close>)
-     apply (rule UnI2)
+     apply (rule UnI2)?
      apply (rule UN_I)
       apply (rule iffD2[OF mem_Collect_eq])
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
-    apply assumption
-  apply (unfold if_not_P)
+     apply assumption
+    apply (unfold if_not_P)
+  (* repeated *)
   apply (rule case_split)
    apply (subst if_P)
       apply assumption
-apply (unfold isVVr12_def)[1]
+     apply (unfold isVVr12_def)[1]
      apply (erule exE)
-     apply (rule iffD2[OF arg_cong2[of _ _ _ _ "(\<subseteq>)"]])
-       apply (rule arg_cong[of _ _ FFVars_T11])
-       apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun12"])
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ asVVr12])
-        apply assumption
-       apply (rule asVVr_VVrs)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])
-      apply (rule arg_cong[of _ _ FFVars_T11])
-      apply assumption
+     apply (drule sym)
+     apply (erule subst)
+     apply (unfold asVVr_VVrs)
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T11])
@@ -1369,17 +1227,20 @@ apply (unfold isVVr12_def)[1]
      apply (rule UnI2)
      apply (unfold PFVars_1_def case_prod_beta IImsupp12_1_def SSupp12_def)[1]
      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+     apply (rule UnI2)?
      apply (rule UN_I)
       apply (rule iffD2[OF mem_Collect_eq])
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
-    apply assumption
-  apply (unfold if_not_P)
+     apply assumption
+    apply (unfold if_not_P)
+  (* END REPEAT_DETERM *)
   apply (unfold T1.FFVars_cctors)
   apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_id image_comp comp_def)
   apply (rule Un_mono')+
-      apply (rule Un_upper1)
+        apply (rule Un_upper1)
+     (* REPEAT_DETERM *)
      apply (unfold UN_extend_simps(2))
      apply (rule subset_If)
       apply (unfold UN_empty')[1]
@@ -1387,7 +1248,9 @@ apply (unfold isVVr12_def)[1]
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
      apply (unfold prod.collapse)
-     apply (erule UnI1 UnI2)
+    apply (rule prems)
+       apply (erule UnI1 UnI2)
+
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
      apply (rule prems)
@@ -1398,7 +1261,8 @@ apply (unfold isVVr12_def)[1]
       apply (rule empty_subsetI)
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
-    apply (unfold prod.collapse)
+       apply (unfold prod.collapse)
+       apply (rule prems)
     apply (erule UnI1 UnI2)
      apply (rule subset_If)
       apply (unfold UN_empty')[1]
@@ -1406,6 +1270,7 @@ apply (unfold isVVr12_def)[1]
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+    apply (rule prems)
    apply (erule UnI1 UnI2)
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
@@ -1418,32 +1283,26 @@ apply (unfold isVVr12_def)[1]
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+    apply (rule prems)
   apply (erule UnI1 UnI2)
   done
   done
 
-lemma U1FVars_subset_2: "set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FFVars_T12 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
   apply (unfold avoiding_set2_def Un_empty_right)
   subgoal premises prems
   apply (unfold U1ctor_def case_prod_beta)
   apply (rule case_split)
    apply (subst if_P)
-    apply assumption
+      apply assumption
      apply (unfold isVVr11_def)[1]
      apply (erule exE)
-     apply (rule iffD2[OF arg_cong2[of _ _ _ _ "(\<subseteq>)"]])
-       apply (rule arg_cong[of _ _ FFVars_T12])
-       apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun11"])
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ asVVr11])
-        apply assumption
-       apply (rule asVVr_VVrs)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])
-      apply (rule arg_cong[of _ _ FFVars_T12])
-      apply assumption
+     apply (drule sym)
+     apply (erule subst)
+     apply (unfold asVVr_VVrs)
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T12])
@@ -1459,23 +1318,16 @@ lemma U1FVars_subset_2: "set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
       apply (rule iffD2[OF mem_Collect_eq])
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
-    apply assumption
+     apply assumption
   apply (unfold if_not_P)
   apply (rule case_split)
    apply (subst if_P)
       apply assumption
-apply (unfold isVVr12_def)[1]
+     apply (unfold isVVr12_def)[1]
      apply (erule exE)
-     apply (rule iffD2[OF arg_cong2[of _ _ _ _ "(\<subseteq>)"]])
-       apply (rule arg_cong[of _ _ FFVars_T12])
-       apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun12"])
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ asVVr12])
-        apply assumption
-       apply (rule asVVr_VVrs)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])
-      apply (rule arg_cong[of _ _ FFVars_T12])
-      apply assumption
+     apply (drule sym)
+     apply (erule subst)
+     apply (unfold asVVr_VVrs)
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T12])
@@ -1486,12 +1338,12 @@ apply (unfold isVVr12_def)[1]
      apply (rule UnI2)
      apply (unfold PFVars_2_def case_prod_beta IImsupp12_2_def SSupp12_def)[1]
      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
-    apply (rule UnI2)?
+     apply (rule UnI2)?
      apply (rule UN_I)
       apply (rule iffD2[OF mem_Collect_eq])
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
-    apply assumption
+     apply assumption
   apply (unfold if_not_P)
   apply (unfold T1.FFVars_cctors)
   apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1505,6 +1357,7 @@ apply (unfold isVVr12_def)[1]
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
      apply (unfold prod.collapse)
+        apply (rule prems)
      apply (erule UnI1 UnI2)
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
@@ -1516,7 +1369,8 @@ apply (unfold isVVr12_def)[1]
       apply (rule empty_subsetI)
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
-    apply (unfold prod.collapse)
+       apply (unfold prod.collapse)
+       apply (rule prems)
     apply (erule UnI1 UnI2)
      apply (rule subset_If)
       apply (unfold UN_empty')[1]
@@ -1524,39 +1378,34 @@ apply (unfold isVVr12_def)[1]
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+    apply (rule prems)
      apply (erule UnI2 UnI1 | rule UnI1)+
     apply (rule subset_If)
      apply (unfold UN_empty')[1]
      apply (rule empty_subsetI)
     apply (rule UN_mono[OF subset_refl])
     apply (rule prems)
-    apply (unfold prod.collapse)
+     apply (unfold prod.collapse)
+     apply (rule prems)
     apply (erule UnI2 UnI1 | rule UnI1)+
   done
   done
 
-lemma U2FVars_subset_1: "set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U2FVars_1 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FFVars_T21 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
   apply (unfold avoiding_set1_def Un_empty_right)
   subgoal premises prems
   apply (unfold U2ctor_def case_prod_beta)
   apply (rule case_split)
    apply (subst if_P)
-    apply assumption
+      apply assumption
      apply (unfold isVVr21_def)[1]
      apply (erule exE)
-     apply (rule iffD2[OF arg_cong2[of _ _ _ _ "(\<subseteq>)"]])
-       apply (rule arg_cong[of _ _ FFVars_T21])
-       apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun21"])
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ asVVr21])
-        apply assumption
-       apply (rule asVVr_VVrs)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])
-      apply (rule arg_cong[of _ _ FFVars_T21])
-      apply assumption
+     apply (drule sym)
+     apply (erule subst)
+     apply (unfold asVVr_VVrs)
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T21])
@@ -1567,12 +1416,12 @@ lemma U2FVars_subset_1: "set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
      apply (rule UnI2)
      apply (unfold PFVars_1_def case_prod_beta IImsupp21_1_def SSupp21_def)[1]
      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
-     apply (rule UnI2)
+     apply (rule UnI2)?
      apply (rule UN_I)
       apply (rule iffD2[OF mem_Collect_eq])
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
-    apply assumption
+     apply assumption
   apply (unfold if_not_P)
   apply (unfold T1.FFVars_cctors)
   apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1585,7 +1434,8 @@ lemma U2FVars_subset_1: "set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
       apply (rule empty_subsetI)
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
-     apply (unfold prod.collapse)
+        apply (unfold prod.collapse)
+        apply (rule prems)
      apply (erule UnI1 UnI2)
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
@@ -1597,7 +1447,8 @@ lemma U2FVars_subset_1: "set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
       apply (rule empty_subsetI)
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
-    apply (unfold prod.collapse)
+       apply (unfold prod.collapse)
+       apply (rule prems)
     apply (erule UnI1 UnI2)
      apply (rule subset_If)
       apply (unfold UN_empty')[1]
@@ -1605,6 +1456,7 @@ lemma U2FVars_subset_1: "set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+      apply (rule prems)
    apply (erule UnI1 UnI2)
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
@@ -1617,32 +1469,26 @@ lemma U2FVars_subset_1: "set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b,
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+     apply (rule prems)
   apply (erule UnI1 UnI2)
   done
   done
 
-lemma U2FVars_subset_2: "set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
-  (\<And>t pu p. (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set7_T2_pre y \<union> set8_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FFVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set9_T2_pre y \<union> set10_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FFVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U2FVars_2 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FFVars_T22 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
   apply (unfold avoiding_set2_def Un_empty_right)
   subgoal premises prems
   apply (unfold U2ctor_def case_prod_beta)
   apply (rule case_split)
    apply (subst if_P)
-    apply assumption
+      apply assumption
      apply (unfold isVVr21_def)[1]
      apply (erule exE)
-     apply (rule iffD2[OF arg_cong2[of _ _ _ _ "(\<subseteq>)"]])
-       apply (rule arg_cong[of _ _ FFVars_T22])
-       apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun21"])
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ asVVr21])
-        apply assumption
-       apply (rule asVVr_VVrs)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<union>)"])
-      apply (rule arg_cong[of _ _ FFVars_T22])
-      apply assumption
+     apply (drule sym)
+     apply (erule subst)
+     apply (unfold asVVr_VVrs)
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T22])
@@ -1658,7 +1504,7 @@ lemma U2FVars_subset_2: "set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar:
       apply (rule iffD2[OF mem_Collect_eq])
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
-    apply assumption
+     apply assumption
   apply (unfold if_not_P)
   apply (unfold T1.FFVars_cctors)
   apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1671,7 +1517,8 @@ lemma U2FVars_subset_2: "set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar:
       apply (rule empty_subsetI)
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
-     apply (unfold prod.collapse)
+        apply (unfold prod.collapse)
+        apply (rule prems)
      apply (erule UnI1 UnI2)
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
@@ -1684,6 +1531,7 @@ lemma U2FVars_subset_2: "set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar:
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+       apply (rule prems)
     apply (erule UnI1 UnI2)
      apply (rule subset_If)
       apply (unfold UN_empty')[1]
@@ -1691,13 +1539,15 @@ lemma U2FVars_subset_2: "set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar:
      apply (rule UN_mono[OF subset_refl])
      apply (rule prems)
     apply (unfold prod.collapse)
+    apply (rule prems)
      apply (erule UnI1 UnI2)
     apply (rule subset_If)
      apply (unfold UN_empty')[1]
      apply (rule empty_subsetI)
     apply (rule UN_mono[OF subset_refl])
     apply (rule prems)
-    apply (unfold prod.collapse)
+     apply (unfold prod.collapse)
+     apply (rule prems)
     apply (erule UnI2 UnI1 | rule UnI1)+
   done
   done
@@ -1770,13 +1620,22 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
   apply (rule refl)
   done
 
-lemma U1map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+lemma valid_Pmap: "valid_P p \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  valid_P (Pmap f1 f2 p)"
+  apply (unfold valid_P_def Pmap_def case_prod_beta compSS_defs fst_conv snd_conv)
+  apply (erule conjE)+
+  apply (assumption | rule conjI SSupp_comp_bounds SSupp_rename_bounds supp_inv_bound)+
+  done
+
+lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   U1map f1 f2 (T1_ctor (map_T1_pre id id id id id id fst fst fst fst y)) (U1ctor y p)
 = U1ctor (map_T1_pre f1 f2 id id f1 f2
-    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
+    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if valid_P p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if valid_P p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if valid_P p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if valid_P p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
  y) (Pmap f1 f2 p)"
   apply (unfold U1ctor_def)
   apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
@@ -1790,29 +1649,12 @@ lemma U1map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2
    apply (unfold if_P if_not_P)
    apply (unfold isVVr11_def)[1]
    apply (erule exE)
-   apply (rule trans)
-    apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-    apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun11"])
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ asVVr11])
-     apply assumption
-    apply (rule asVVr_VVrs)
-   apply (unfold Pmap_def case_prod_beta fst_conv snd_conv)[1]
-   apply (rule sym)
-   apply (rule trans)
-    apply (rule arg_cong2[OF refl, of _ _ Rep_SSfun11])
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ asVVr11])
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-      apply assumption
-     apply (rule rrename_VVrs)
-        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-    apply (rule asVVr_VVrs)
-   apply (rule trans)
-    apply (rule compSS_rep_eq[THEN fun_cong])
-       apply assumption+
-   apply (unfold comp_def)[1]
+   apply (drule sym)
+  apply (erule subst)
+   apply (unfold Pmap_def case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
+   apply (subst rrename_VVrs)
+       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+   apply (unfold asVVr_VVrs compSS_defs comp_def)[1]
    apply (subst inv_simp1)
     apply assumption
    apply (rule refl)
@@ -1823,29 +1665,12 @@ lemma U1map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2
    apply (unfold if_P if_not_P)
    apply (unfold isVVr12_def)[1]
    apply (erule exE)
-   apply (rule trans)
-    apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-    apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun12"])
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ asVVr12])
-     apply assumption
-    apply (rule asVVr_VVrs)
-   apply (unfold Pmap_def case_prod_beta fst_conv snd_conv)[1]
-   apply (rule sym)
-   apply (rule trans)
-    apply (rule arg_cong2[OF refl, of _ _ Rep_SSfun12])
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ asVVr12])
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-      apply assumption
-     apply (rule rrename_VVrs)
-        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-    apply (rule asVVr_VVrs)
-   apply (rule trans)
-    apply (rule compSS_rep_eq[THEN fun_cong])
-       apply assumption+
-   apply (unfold comp_def)[1]
+   apply (drule sym)
+  apply (erule subst)
+   apply (unfold Pmap_def case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
+   apply (subst rrename_VVrs)
+       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+   apply (unfold asVVr_VVrs compSS_defs comp_def)[1]
    apply (subst inv_simp1)
     apply assumption
    apply (rule refl)
@@ -1856,19 +1681,22 @@ lemma U1map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2
   apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
   apply (unfold id_o o_id)
   apply (unfold comp_def)
-  apply (subst trans[OF comp_apply[symmetric] fun_cong[OF Pmap_comp0]], (assumption | rule supp_inv_bound bij_imp_bij_inv)+)+
-  apply (subst inv_o_simp1, assumption)+
-  apply (unfold trans[OF fun_cong[OF Pmap_id0] id_apply])
+  apply (subst fun_cong[OF Pmap_comp0, unfolded comp_def], (assumption | rule supp_inv_bound bij_imp_bij_inv)+)+
+  apply (subst inv_simp1, assumption)+
+  apply (unfold id_def[symmetric] Pmap_id0)
+  apply (subst id_apply)+
+  apply (subst valid_Pmap, assumption+)+
+  apply (unfold if_True)
   apply (rule refl)
   done
 
-lemma U2map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+lemma U2map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   U2map f1 f2 (T2_ctor (map_T2_pre id id id id id id fst fst fst fst y)) (U2ctor y p)
 = U2ctor (map_T2_pre f1 f2 id id f1 f2
-    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
-    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))))
+    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if valid_P p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (rrename_T1 f1 f2 t, \<lambda>p. if valid_P p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if valid_P p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (rrename_T2 f1 f2 t, \<lambda>p. if valid_P p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
  y) (Pmap f1 f2 p)"
   apply (unfold U2ctor_def)
   apply (subst T2_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
@@ -1882,29 +1710,12 @@ lemma U2map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2
    apply (unfold if_P if_not_P)
    apply (unfold isVVr21_def)[1]
    apply (erule exE)
-   apply (rule trans)
-    apply (rule arg_cong[of _ _ "rrename_T2 f1 f2"])
-    apply (rule arg_cong2[OF refl, of _ _ "Rep_SSfun21"])
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ asVVr21])
-     apply assumption
-    apply (rule asVVr_VVrs)
-   apply (unfold Pmap_def case_prod_beta fst_conv snd_conv)[1]
-   apply (rule sym)
-   apply (rule trans)
-    apply (rule arg_cong2[OF refl, of _ _ Rep_SSfun21])
-    apply (rule trans)
-     apply (rule arg_cong[of _ _ asVVr21])
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T2 f1 f2"])
-      apply assumption
-     apply (rule rrename_VVrs)
-        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-    apply (rule asVVr_VVrs)
-   apply (rule trans)
-    apply (rule compSS_rep_eq[THEN fun_cong])
-       apply assumption+
-   apply (unfold comp_def)[1]
+   apply (drule sym)
+  apply (erule subst)
+   apply (unfold Pmap_def case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
+   apply (subst rrename_VVrs)
+       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+   apply (unfold asVVr_VVrs compSS_defs comp_def)[1]
    apply (subst inv_simp1)
     apply assumption
    apply (rule refl)
@@ -1918,6 +1729,8 @@ lemma U2map_Uctor: "bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2
   apply (subst trans[OF comp_apply[symmetric] fun_cong[OF Pmap_comp0]], (assumption | rule supp_inv_bound bij_imp_bij_inv)+)+
   apply (subst inv_o_simp1, assumption)+
   apply (unfold trans[OF fun_cong[OF Pmap_id0] id_apply])
+  apply (subst valid_Pmap, assumption+)+
+  apply (unfold if_True)
   apply (rule refl)
   done
 
@@ -1928,6 +1741,7 @@ thm Pmap_cong_id
 thm PFVars_Pmaps
 thm small_PFVarss
 thm small_avoiding_sets
+thm valid_Pmap
 
 (* model1 axioms *)
 thm U1map_Uctor
@@ -1952,7 +1766,10 @@ val parameters = {
     @{term "avoiding_set2 :: 'tyvar::{var_T1_pre,var_T2_pre} set"}
   ],
   min_bound = true,
-  validity = NONE : { pred: term, valid_Pmap: Proof.context -> tactic } option,
+  validity = SOME {
+    pred = @{term "valid_P :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"},
+    valid_Pmap = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms valid_Pmap} THEN_ALL_NEW assume_tac ctxt)
+  },
   axioms = {
     Pmap_id0 = fn ctxt => EVERY1 [
       resolve_tac ctxt [trans],
@@ -1962,7 +1779,7 @@ val parameters = {
     Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms fun_cong[OF Pmap_comp0[symmetric]]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
     Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
     PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmaps} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVarss} 1),
+    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVarss} 1 THEN assume_tac ctxt 1),
     small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_avoiding_sets} 1)
   }
 };
@@ -2020,11 +1837,1072 @@ val T2_model = {
 val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
 \<close>
 
+declare [[quick_and_dirty]]
 local_setup \<open>fn lthy =>
 let
   val qualify = I
   val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters [T1_model, T2_model] lthy
+
+  val notes =
+    [ ("rec_Uctors", map #rec_Uctor ress)
+    ] |> (map (fn (thmN, thms) =>
+      ((Binding.qualify true "T1" (Binding.name thmN), []), [(thms, [])])
+    ));
+  val (_, lthy) = Local_Theory.notes notes lthy
   val _ = @{print} ress
 in lthy end\<close>
 print_theorems
+declare [[quick_and_dirty=false]]
+
+definition tvsubst_T1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
+  "tvsubst_T1 f1 f2 f3 t \<equiv> ff01_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
+definition tvsubst_T2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2" where
+  "tvsubst_T2 f1 f2 f3 t \<equiv> ff02_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
+
+type_synonym ('var, 'tyvar, 'a, 'b) U1_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T1_pre"
+type_synonym ('var, 'tyvar, 'a, 'b) U2_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T2_pre"
+
+lemmas eta_natural' =
+  eta_natural11[THEN fun_cong, unfolded comp_def]
+  eta_natural12[THEN fun_cong, unfolded comp_def]
+  eta_natural21[THEN fun_cong, unfolded comp_def]
+
+lemma eta_set_empties:
+  fixes a::"'var::{var_T1_pre, var_T2_pre}" and b::"'tyvar::{var_T1_pre, var_T2_pre}"
+  shows "set2_T1_pre (eta11 a :: ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) U1_pre) = {}"
+  "set5_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set6_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set7_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set8_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set9_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set10_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set1_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set5_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set6_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set7_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set8_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set9_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set10_T1_pre (eta12 b :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
+  "set2_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+  "set5_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+  "set6_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+  "set7_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+  "set8_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+  "set9_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+  "set10_T2_pre (eta21 a :: ('var, 'tyvar, 'a, 'b) U2_pre) = {}"
+                      apply -
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set2_T1_pre (eta11 a)"])
+      apply (rule T1_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set2_T1_pre])
+      prefer 2
+      apply (subst (asm) T1_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set5_T1_pre (eta11 a)"])
+      apply (rule T1_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set5_T1_pre])
+      prefer 2
+      apply (subst (asm) T1_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set6_T1_pre (eta11 a)"])
+      apply (rule T1_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set6_T1_pre])
+      prefer 2
+      apply (subst (asm) T1_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set1_T1_pre (eta12 b)"])
+      apply (rule T1_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set1_T1_pre])
+      prefer 2
+      apply (subst (asm) T1_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set5_T1_pre (eta12 b)"])
+      apply (rule T1_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set5_T1_pre])
+      prefer 2
+      apply (subst (asm) T1_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set6_T1_pre (eta12 b)"])
+      apply (rule T1_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set6_T1_pre])
+      prefer 2
+      apply (subst (asm) T1_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T1_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T1_pre.set_bd)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set2_T2_pre (eta21 a)"])
+      apply (rule T2_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set2_T2_pre])
+      prefer 2
+      apply (subst (asm) T2_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set5_T2_pre (eta21 a)"])
+      apply (rule T2_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set5_T2_pre])
+      prefer 2
+      apply (subst (asm) T2_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+    (* case 1: ty \<noteq> Live *)
+     apply (rule exE[OF exists_fresh, of "set6_T2_pre (eta21 a)"])
+      apply (rule T2_pre.set_bd_UNIV)
+     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+      apply (rule arg_cong[of _ _ set6_T2_pre])
+      prefer 2
+      apply (subst (asm) T2_pre.set_map)
+             prefer 8 (* free + 2 * bound + 1 *)
+             apply (erule swap_fresh)
+             apply assumption
+            apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (rule sym)
+     apply (rule trans)
+      apply (rule eta_natural')
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+     apply (unfold id_def)
+     apply (rule refl)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T2_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T2_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T2_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T2_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T2_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T2_pre.set_bd)
+    apply (erule FalseE)
+    done
+  (* copied from above *)
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (unfold empty_iff)
+    apply (rule iffI)
+      (* case 2: ty = Live *)
+     apply (drule image_const)
+     apply (drule iffD1[OF all_cong1, rotated])
+      apply (rule sym)
+      apply (rule arg_cong2[OF refl, of _ _ "(\<in>)"])
+      apply (rule T2_pre.set_map)
+            apply (rule supp_id_bound bij_id)+
+     apply (subst (asm) eta_natural')
+         apply (rule supp_id_bound bij_id)+
+     apply (unfold id_def)
+     apply (drule forall_in_eq_UNIV)
+     apply (drule trans[symmetric])
+      apply (rule conjunct1[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (drule card_of_ordIso_subst)
+     apply (drule ordIso_symmetric)
+     apply (drule ordIso_transitive)
+      apply (rule ordIso_symmetric)
+      apply (rule iffD1[OF Card_order_iff_ordIso_card_of])
+      apply (rule conjunct2[OF card_order_on_Card_order, OF T1_pre.bd_card_order])
+     apply (erule ordIso_ordLess_False)
+     apply (rule T2_pre.set_bd)
+    apply (erule FalseE)
+    done
+  done
+
+lemma FVars_VVrs:
+  "FFVars_T11 (VVr11 a) = {a}"
+  "FFVars_T12 (VVr11 a) = {}"
+  "FFVars_T11 (VVr12 b) = {}"
+  "FFVars_T12 (VVr12 b) = {b}"
+  "FFVars_T21 (VVr21 a) = {a}"
+  "FFVars_T22 (VVr21 a) = {}"
+       apply (unfold VVr_defs comp_def T1.FFVars_cctors Un_empty_right Un_empty_left UN_empty empty_Diff eta_set_empties)
+       apply (rule refl eta_free11 eta_free12 eta_free21)+
+  done
+
+lemma tvsubst_VVrs:
+  assumes
+    "|SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+    "|SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+    "|SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  shows
+    "tvsubst_T1 f1 f2 f3 (VVr11 a :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) = f1 a"
+    "tvsubst_T1 f1 f2 f3 (VVr12 b :: ('var, 'tyvar, 'a, 'b) T1) = f2 b"
+    "tvsubst_T2 f1 f2 f3 (VVr21 a :: ('var, 'tyvar, 'a, 'b) T2) = f3 a"
+    apply (unfold tvsubst_T1_def tvsubst_T2_def)
+  subgoal
+    apply (unfold VVr_defs comp_def)[1]
+    apply (rule trans)
+     apply (rule T1.rec_Uctors)
+        apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]
+        apply (rule conjI assms cmin_greater card_of_Card_order emp_bound)+
+       apply (unfold eta_set_empties noclash_T1_def U1ctor_def prod.case Un_empty)
+       apply (rule Int_empty_left conjI)+
+    apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
+    apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T1_pre.map_id)
+    (* REPEAT_DETERM 0 *)
+    (* END REPEAT_DETERM *)
+    apply (rule trans)
+     apply (rule if_P)
+     apply (unfold isVVr11_def meta_eq_to_obj_eq[OF VVr11_def, THEN fun_cong, unfolded comp_def, symmetric] asVVr_VVrs)
+     apply (rule exI)
+     apply (rule refl)
+    apply (rule refl)
+    done
+  subgoal
+    apply (rule trans)
+     apply (rule arg_cong2[OF _ refl, of _ _ ff01_tvsubst_T1_vvsubst_T2])
+     apply (unfold VVr_defs comp_def)[1]
+     apply (rule refl)
+    apply (rule trans)
+     apply (rule T1.rec_Uctors)
+        apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]
+        apply (rule conjI assms cmin_greater card_of_Card_order emp_bound)+
+       apply (unfold eta_set_empties noclash_T1_def U1ctor_def prod.case Un_empty)
+       apply (rule Int_empty_left conjI)+
+    apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
+    apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T1_pre.map_id)
+    (* REPEAT_DETERM 1 *)
+    apply (rule trans)
+     apply (rule if_not_P)
+     apply (unfold isVVr11_def VVr11_def comp_def T1.TT_injects0)[1]
+     apply (rule iffD2[OF not_ex])
+     apply (rule allI)
+     apply (rule notI)
+     apply (erule exE conjE)+
+     apply (subst (asm) eta_natural')
+           apply (rule supp_id_bound bij_id | assumption)+
+     apply (unfold id_def)[1]
+     apply (drule arg_cong[of _ _ set2_T1_pre])
+     apply (unfold eta_free11 eta_free12 eta_set_empties)
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+    apply (rule insert_not_empty)
+    (* END REPEAT_DETERM *)
+    apply (rule trans)
+     apply (rule if_P)
+     apply (unfold isVVr12_def meta_eq_to_obj_eq[OF VVr12_def, THEN fun_cong, unfolded comp_def, symmetric] asVVr_VVrs)
+     apply (rule exI)
+     apply (rule refl)
+    apply (rule refl)
+    done
+  subgoal
+    apply (rule trans)
+     apply (rule arg_cong2[OF _ refl, of _ _ ff02_tvsubst_T1_vvsubst_T2])
+     apply (unfold VVr_defs comp_def)[1]
+     apply (rule refl)
+    apply (rule trans)
+     apply (rule T1.rec_Uctors)
+        apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]
+        apply (rule conjI assms cmin_greater card_of_Card_order emp_bound)+
+       apply (unfold eta_set_empties noclash_T2_def U2ctor_def prod.case Un_empty)
+       apply (rule Int_empty_left conjI)+
+    apply ((subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)+)
+    apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T2_pre.map_id)
+    (* REPEAT_DETERM 0 *)
+    (* END REPEAT_DETERM *)
+    apply (rule trans)
+     apply (rule if_P)
+     apply (unfold isVVr21_def meta_eq_to_obj_eq[OF VVr21_def, THEN fun_cong, unfolded comp_def, symmetric] asVVr_VVrs)
+     apply (rule exI)
+     apply (rule refl)
+    apply (rule refl)
+    done
+  done
+
+lemma tvsubst_T1_not_is_VVr:
+  fixes x::"('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U1_pre"
+  assumes f_prems: "|SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  and empty_prems: "set5_T1_pre x \<inter> (IImsupp11_1 f1 \<union> IImsupp12_1 f2 \<union> IImsupp21_1 f3) = {}" "set6_T1_pre x \<inter> (IImsupp11_2 f1 \<union> IImsupp12_2 f2 \<union> IImsupp21_2 f3) = {}"
+  and noclash: "noclash_T1 x"
+  and VVr_prems: "\<not>isVVr11 (T1_ctor x)" "\<not>isVVr12 (T1_ctor x)"
+shows
+  "tvsubst_T1 f1 f2 f3 (T1_ctor x) = T1_ctor (map_T1_pre id id id id id id (tvsubst_T1 f1 f2 f3) (tvsubst_T1 f1 f2 f3) (tvsubst_T2 f1 f2 f3) (tvsubst_T2 f1 f2 f3) x)"
+  apply (unfold tvsubst_T1_def tvsubst_T2_def)
+   apply (rule trans)
+    apply (rule T1.rec_Uctors)
+       apply (unfold valid_P_def prod.case)[1]
+       apply (rule conjI f_prems)+
+      apply (unfold PFVars_1_def PFVars_2_def avoiding_set1_def avoiding_set2_def prod.case Un_empty_right)
+     apply (rule empty_prems noclash)+
+  apply (unfold U1ctor_def prod.case)
+  apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
+  apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T1_pre.map_id)
+  apply (subst if_not_P, rule VVr_prems)+
+  apply (unfold comp_def snd_conv)
+  apply (subst if_P, (unfold valid_P_def prod.case)[1], (rule conjI f_prems)+)+
+  apply (rule refl)
+  done
+lemma tvsubst_T2_not_is_VVr:
+  fixes x::"('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U2_pre"
+  assumes f_prems: "|SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  and empty_prems: "set5_T2_pre x \<inter> (IImsupp11_1 f1 \<union> IImsupp12_1 f2 \<union> IImsupp21_1 f3) = {}" "set6_T2_pre x \<inter> (IImsupp11_2 f1 \<union> IImsupp12_2 f2 \<union> IImsupp21_2 f3) = {}"
+  and noclash: "noclash_T2 x"
+  and VVr_prems: "\<not>isVVr21 (T2_ctor x)"
+shows
+  "tvsubst_T2 f1 f2 f3 (T2_ctor x) = T2_ctor (map_T2_pre id id id id id id (tvsubst_T1 f1 f2 f3) (tvsubst_T1 f1 f2 f3) (tvsubst_T2 f1 f2 f3) (tvsubst_T2 f1 f2 f3) x)"
+  apply (unfold tvsubst_T1_def tvsubst_T2_def)
+   apply (rule trans)
+    apply (rule T1.rec_Uctors)
+       apply (unfold valid_P_def prod.case)[1]
+       apply (rule conjI f_prems)+
+      apply (unfold PFVars_1_def PFVars_2_def avoiding_set1_def avoiding_set2_def prod.case Un_empty_right)
+     apply (rule empty_prems noclash)+
+  apply (unfold U2ctor_def prod.case)
+  apply (subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)+
+  apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T2_pre.map_id)
+  apply (subst if_not_P, rule VVr_prems)+
+  apply (unfold comp_def snd_conv)
+  apply (subst if_P, (unfold valid_P_def prod.case)[1], (rule conjI f_prems)+)+
+  apply (rule refl)
+  done
+
+lemma not_isVVr_frees:
+  "\<not>isVVr11 (T1_ctor x) \<Longrightarrow> set1_T1_pre x = {}"
+  "\<not>isVVr12 (T1_ctor x) \<Longrightarrow> set2_T1_pre x = {}"
+  "\<not>isVVr21 (T2_ctor x2) \<Longrightarrow> set1_T2_pre x2 = {}"
+  subgoal
+    apply (rule eta_compl_free11)
+    apply (unfold image_iff Set.bex_simps not_ex comp_def isVVr11_def VVr11_def)
+    apply (rule allI)
+    apply (erule allE)
+    apply (erule contrapos_nn)
+    apply hypsubst
+    apply (rule refl)
+    done
+  subgoal
+    apply (rule eta_compl_free12)
+    apply (unfold image_iff Set.bex_simps not_ex comp_def isVVr12_def VVr12_def)
+    apply (rule allI)
+    apply (erule allE)
+    apply (erule contrapos_nn)
+    apply hypsubst
+    apply (rule refl)
+    done
+  subgoal
+    apply (rule eta_compl_free21)
+    apply (unfold image_iff Set.bex_simps not_ex comp_def isVVr21_def VVr21_def)
+    apply (rule allI)
+    apply (erule allE)
+    apply (erule contrapos_nn)
+    apply hypsubst
+    apply (rule refl)
+    done
+  done
+
+lemma in_IImsupps:
+  "f1 a \<noteq> VVr11 a \<Longrightarrow> z \<in> FFVars_T11 (f1 a) \<Longrightarrow> z \<in> IImsupp11_1 f1"
+  "f2 b \<noteq> VVr12 b \<Longrightarrow> z \<in> FFVars_T11 (f2 b) \<Longrightarrow> z \<in> IImsupp12_1 f2"
+  "f3 a \<noteq> VVr21 a \<Longrightarrow> z \<in> FFVars_T21 (f3 a) \<Longrightarrow> z \<in> IImsupp21_1 f3"
+  "f1 a \<noteq> VVr11 a \<Longrightarrow> z2 \<in> FFVars_T12 (f1 a) \<Longrightarrow> z2 \<in> IImsupp11_2 f1"
+  "f2 b \<noteq> VVr12 b \<Longrightarrow> z2 \<in> FFVars_T12 (f2 b) \<Longrightarrow> z2 \<in> IImsupp12_2 f2"
+  "f3 a \<noteq> VVr21 a \<Longrightarrow> z2 \<in> FFVars_T22 (f3 a) \<Longrightarrow> z2 \<in> IImsupp21_2 f3"
+  subgoal
+    apply (unfold comp_def SSupp11_def IImsupp11_1_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  subgoal
+    apply (unfold comp_def SSupp12_def IImsupp12_1_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  subgoal
+    apply (unfold comp_def SSupp21_def IImsupp21_1_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  subgoal
+    apply (unfold comp_def SSupp11_def IImsupp11_2_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  subgoal
+    apply (unfold comp_def SSupp12_def IImsupp12_2_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  subgoal
+    apply (unfold comp_def SSupp21_def IImsupp21_2_def)
+    apply (rule UnI2)?
+    apply (rule iffD2[OF UN_iff])
+    apply (rule bexI)
+     apply assumption
+    apply (rule CollectI)
+    apply assumption
+    done
+  done
+
+lemma IImsupp_Diffs:
+  "B \<inter> IImsupp11_1 f1 = {} \<Longrightarrow> (\<Union>a\<in>(A - B). FFVars_T11 (f1 a)) = (\<Union>a\<in>A. FFVars_T11 (f1 a)) - B"
+  "B2 \<inter> IImsupp12_2 f2 = {} \<Longrightarrow> (\<Union>a\<in>(A2 - B2). FFVars_T12 (f2 a)) = (\<Union>a\<in>A2. FFVars_T12 (f2 a)) - B2"
+  "B \<inter> IImsupp21_1 f3 = {} \<Longrightarrow> (\<Union>a\<in>(A - B). FFVars_T21 (f3 a)) = (\<Union>a\<in>A. FFVars_T21 (f3 a)) - B"
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (rule iffI)
+      (* helper_tac false *)
+     apply (erule UN_E DiffE)+
+     apply (rule DiffI UN_I)+
+       apply assumption
+      apply assumption
+     apply (rule case_split[of "_ = _"])
+      (* apply (rotate_tac -2) *)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T11])
+        apply assumption
+       apply (rule FVars_VVrs(1))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+      (* apply (rule sym) *)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps)
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      (* prefer 2 *)
+      apply assumption
+     apply assumption
+      (* END helper_tac false *)
+      (* helper_tac true *)
+    apply (erule UN_E DiffE)+
+    apply (rule DiffI UN_I)+
+      apply assumption
+      (*apply assumption*)
+     apply (rule case_split[of "_ = _"])
+      apply (rotate_tac -2)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T11])
+        apply assumption
+       apply (rule FVars_VVrs(1))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+       apply (rule sym)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(1))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+      (* apply assumption *)
+      (* END helper_tac true *)
+     apply (subst SSupp11_def IImsupp11_1_def)+
+     apply (rule UnI1)
+     apply (rule CollectI)
+     apply assumption
+    apply assumption
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (rule iffI)
+      (* helper_tac false *)
+     apply (erule UN_E DiffE)+
+     apply (rule DiffI UN_I)+
+       apply assumption
+      apply assumption
+     apply (rule case_split[of "_ = _"])
+      (* apply (rotate_tac -2) *)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T12])
+        apply assumption
+       prefer 2
+       apply (drule singletonD)
+       prefer 2
+       apply (rule FVars_VVrs(4))
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+      (* apply (rule sym) *)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(5))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      (* prefer 2 *)
+      apply assumption
+     apply assumption
+      (* END helper_tac false *)
+      (* helper_tac true *)
+    apply (erule UN_E DiffE)+
+    apply (rule DiffI UN_I)+
+      apply assumption
+      (*apply assumption*)
+     apply (rule case_split[of "_ = _"])
+      apply (rotate_tac -2)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T12])
+        apply assumption
+       apply (rule FVars_VVrs(4))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+       apply (rule sym)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(5))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+      (* apply assumption *)
+      (* END helper_tac true *)
+     apply (subst SSupp12_def IImsupp12_2_def)+
+     apply (rule UnI1)
+     apply (rule CollectI)
+     apply assumption
+    apply assumption
+    done
+  subgoal
+    apply (rule iffD2[OF set_eq_iff])
+    apply (rule allI)
+    apply (rule iffI)
+      (* helper_tac false *)
+     apply (erule UN_E DiffE)+
+     apply (rule DiffI UN_I)+
+       apply assumption
+      apply assumption
+     apply (rule case_split[of "_ = _"])
+      (* apply (rotate_tac -2) *)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T21])
+        apply assumption
+       prefer 2
+       apply (drule singletonD)
+       prefer 2
+       apply (rule FVars_VVrs(5))
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+      (* apply (rule sym) *)
+       apply assumption
+      apply assumption
+    thm in_IImsupps
+     apply (frule in_IImsupps(3))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      (* prefer 2 *)
+      apply assumption
+     apply assumption
+      (* END helper_tac false *)
+      (* helper_tac true *)
+    apply (erule UN_E DiffE)+
+    apply (rule DiffI UN_I)+
+      apply assumption
+      (*apply assumption*)
+     apply (rule case_split[of "_ = _"])
+      apply (rotate_tac -2)
+      apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ FFVars_T21])
+        apply assumption
+       apply (rule FVars_VVrs(5))
+      apply (drule singletonD)
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]])
+       apply (rule sym)
+       apply assumption
+      apply assumption
+     apply (frule in_IImsupps(3))
+      apply assumption
+     apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+      (* apply assumption *)
+      (* END helper_tac true *)
+     apply (subst SSupp21_def IImsupp21_1_def)+
+     apply (rule UnI1)
+     apply (rule CollectI)
+     apply assumption
+    apply assumption
+    done
+  done
+
 end

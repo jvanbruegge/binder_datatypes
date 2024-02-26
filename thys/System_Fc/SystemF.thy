@@ -28,10 +28,11 @@ val tyspec = {
   binding_rel = [[0]],
   rec_vars = 2,
   ctors = tyctors,
-  map_b = @{binding ty_vvsubst},
-  tvsubst_b = @{binding ty_tvsubst}
+  map_b = @{binding vvsubst_\<tau>},
+  tvsubst_b = @{binding tvsubst_\<tau>}
 }
 \<close>
+
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let

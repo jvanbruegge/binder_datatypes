@@ -1,5 +1,5 @@
 theory Fixpoint
-  imports "../thys/MRBNF_Recursor"
+  imports "Binders.MRBNF_Recursor"
 begin
 
 (* TODO: Show proofs as apply script *)

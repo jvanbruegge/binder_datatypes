@@ -377,19 +377,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
     } : (Proof.context -> tactic) MRBNF_Recursor.parameter;
 
     val model_tacss = @{map 3} (fn quot => fn Uctor => fn mrbnf => {
-      Umap_id0 = fn ctxt => rtac ctxt (#rename_id quot) 1,
-      Umap_comp0 = fn ctxt => EVERY1 [
-        rtac ctxt sym,
-        rtac ctxt trans,
-        rtac ctxt @{thm comp_apply},
-        rtac ctxt (#rename_comp quot),
-        REPEAT_DETERM o assume_tac ctxt
-      ],
-      Umap_cong_id = fn ctxt => EVERY1 [
-        rtac ctxt (#rename_cong_id (#inner quot)),
-        REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
-      ],
-      Umap_Uctor = fn ctxt => EVERY1 [
+      rrename_Uctor = fn ctxt => EVERY1 [
         K (unfold_thms_tac ctxt (@{thms case_prod_beta fst_conv snd_conv} @ [snd Uctor])),
         REPEAT_DETERM o etac ctxt conjE,
         rtac ctxt trans,
@@ -424,7 +412,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           rtac ctxt refl
         ]
       ],
-      UFVars_subsets = replicate nvars (fn ctxt => EVERY1 [
+      FVars_subsets = replicate nvars (fn ctxt => EVERY1 [
         K (unfold_thms_tac ctxt (@{thms case_prod_beta Un_empty_right} @ [snd Uctor] @ #FVars_ctors quot)),
         REPEAT_DETERM o etac ctxt conjE,
         Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
@@ -461,15 +449,14 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       ])
     }) (#quotient_fps fp_res) Uctors mrbnfs;
 
-    val models = @{map 4} (fn b => fn quot => fn Uctor => fn tacs => {
-      U = Term.typ_subst_atomic substitution (#T quot),
-      binding = b,
-      UFVarss = map (Term.abs ("t", #T quot) o subst) (#FVars quot),
-      Umap = fold_rev Term.absfree (map dest_Free var_fs) (Term.abs ("t", #T quot) (Term.list_comb (subst (#rename quot), var_fs))),
-      Uctor = fst Uctor,
-      validity = NONE,
-      axioms = tacs
-    } : (Proof.context -> tactic) MRBNF_Recursor.model) vvsubst_bs (#quotient_fps fp_res) Uctors model_tacss;
+    val models = @{map 4} (fn b => fn quot => fn Uctor => fn tacs =>
+      MRBNF_Recursor.mk_quotient_model quot substitution {
+        binding = b,
+        Uctor = fst Uctor,
+        validity = NONE,
+        axioms = tacs
+        } : (Proof.context -> tactic) MRBNF_Recursor.model
+    ) vvsubst_bs (#quotient_fps fp_res) Uctors model_tacss;
 
     val (ress, lthy) = create_binding_recursor qualify fp_result parameters models lthy;
     val lthy = Config.put Goal.quick_and_dirty false lthy;

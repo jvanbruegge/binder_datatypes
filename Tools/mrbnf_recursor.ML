@@ -44,6 +44,20 @@ sig
     axioms: 'a model_axioms
   };
 
+  type 'a quotient_model = {
+    binding: binding,
+    Uctor: term,
+    validity: {
+      pred: term,
+      valid_rrename: 'a,
+      valid_Uctor: 'a
+    } option,
+    axioms: {
+      rrename_Uctor: 'a,
+      FVars_subsets: 'a list
+    }
+  };
+
   type recursor_result = {
     rec_fun: term,
     rec_Uctor: thm,
@@ -61,6 +75,8 @@ sig
   val every_other: 'a list -> 'a list;
   val mk_supp_bound: term -> term;
 
+  val mk_quotient_model: MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T
+    -> (typ * typ) list -> (Proof.context -> tactic) quotient_model -> (Proof.context -> tactic) model
   val create_binding_recursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> (Proof.context -> tactic) parameter -> (Proof.context -> tactic) model list
     -> local_theory -> recursor_result list * local_theory;
@@ -119,6 +135,20 @@ type 'a model = {
   axioms: 'a model_axioms
 };
 
+type 'a quotient_model = {
+  binding: binding,
+  Uctor: term,
+  validity: {
+    pred: term,
+    valid_rrename: 'a,
+    valid_Uctor: 'a
+  } option,
+  axioms: {
+    rrename_Uctor: 'a,
+    FVars_subsets: 'a list
+  }
+};
+
 type recursor_result = {
   rec_fun: term,
   rec_Uctor: thm,
@@ -152,6 +182,48 @@ fun addPred pred_opt d = case pred_opt of
     HOLogic.mk_Trueprop (t $ d),
     p
   )) | NONE => I
+
+val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
+
+fun mk_quotient_model quot substitution qmodel =
+  let
+    fun mk_subst f = if null substitution then I else f substitution;
+    val subst = mk_subst Term.subst_atomic_types;
+    val Ts = fst (split_last (binder_types (fastype_of (#rename quot))));
+  in {
+    U = mk_subst Term.typ_subst_atomic (#T quot),
+    binding = #binding qmodel,
+    UFVarss = map (Term.abs ("t", #T quot) o subst) (#FVars quot),
+    Umap = fold_rev Term.abs (map (pair "f") Ts) (
+      Term.abs ("t", #T quot) (Term.list_comb (#rename quot, map Bound (length Ts downto 1)))
+    ),
+    Uctor = #Uctor qmodel,
+    validity = Option.map (fn v => {
+      pred = #pred v,
+      valid_Umap = #valid_rrename v,
+      valid_Uctor = #valid_Uctor v
+    }) (#validity qmodel),
+    axioms = {
+      Umap_id0 = fn ctxt => rtac ctxt (#rename_id quot) 1,
+      Umap_comp0 = fn ctxt => EVERY1 [
+        rtac ctxt sym,
+        rtac ctxt trans,
+        rtac ctxt @{thm comp_apply},
+        rtac ctxt (#rename_comp quot),
+        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt card_thms)
+      ],
+      Umap_cong_id = fn ctxt => EVERY1 [
+        rtac ctxt (#rename_cong_id (#inner quot)),
+        REPEAT_DETERM o FIRST' [
+          assume_tac ctxt,
+          Goal.assume_rule_tac ctxt,
+          resolve_tac ctxt card_thms
+        ]
+      ],
+      Umap_Uctor = #rrename_Uctor (#axioms qmodel),
+      UFVars_subsets = #FVars_subsets (#axioms qmodel)
+    }
+  } : (Proof.context -> tactic) model end;
 
 fun mk_termlike_goals vars min_bound quotient_opt T mapx FVars pred_opt lthy =
   let
@@ -233,8 +305,8 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
   let
     val ptacs = #axioms params;
     val b = Binding.conglomerate (map #binding models);
-    val defs_hidden = mk_defs_t false b qualify;
-    val def_hidden = mk_def_t false b qualify;
+    val defs_hidden = mk_defs_t false b (Binding.suffix_name "_rec" o qualify);
+    val def_hidden = mk_def_t false b (Binding.suffix_name "_rec" o qualify);
 
     fun prove lthy defs goal tac = Goal.prove_sorry lthy [] [] goal (fn {context,...} =>
       Ctr_Sugar_Tactics.unfold_thms_tac context defs THEN tac context
@@ -523,8 +595,6 @@ fun mk_inv_image R f =
 fun mk_names _ [] = []
   | mk_names s [_] = [s]
   | mk_names s xs = map (fn i => s ^ string_of_int i) (1 upto length xs)
-
-val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
 
 fun define_recursor_consts qualify fp_res params (models : thm model list) vars (pfrees, pbounds, plives) lthy =
   let
@@ -2285,7 +2355,10 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 EqSubst.eqsubst_tac ctxt [0] [snd rec_f OF (suitable_prems @ valid_Pmap)],
                 rtac ctxt trans,
                 resolve_tac ctxt Umap'_Uctor's,
-                TRY o resolve_tac ctxt valid_Pmap,
+                TRY o EVERY' [
+                  resolve_tac ctxt valid_Pmap,
+                  REPEAT_DETERM o resolve_tac ctxt (f_prems @ valid_prems)
+                ],
                 TRY o EVERY' [
                   rtac ctxt (iffD2 OF [MRBNF_Def.pred_map_of_mrbnf mrbnf]),
                   REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
@@ -2333,7 +2406,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ],
                   REPEAT_DETERM o resolve_tac ctxt (
                     @{thms supp_id_bound bij_id bij_comp supp_comp_bound}
-                    @ f_prems @ pick_prems @ [infinite_UNIV]
+                    @ f_prems @ pick_prems @ [infinite_UNIV] @ card_thms
                   ),
                   rtac ctxt refl
                 ],

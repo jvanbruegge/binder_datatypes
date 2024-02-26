@@ -40,6 +40,7 @@ Binders                    -- main metatheory including the formalization our Th
 							  from the literature in Urban_Berghofer_Norrish_Rule_Induction (App. 
 							  B), and the binding-aware datatype automation in MRBNF_Composition 
 							  and MRBNF_Recursor and the various ML files, App. F.1)
+Operations                 -- detailed proof examples for automation of the metatheory
 Untyped_Lambda_Calculus    -- formalization of the untyped lambda calculus including beta reduction
                               and parallel beta reduction (Sect 2)
 Process_Calculus           -- formalization of the pi calculus transition relation and the 
@@ -50,6 +51,7 @@ System_Fsub                -- formalization of System F with subtyping, the asso
 Infinitary_Lambda_Calculus -- formalization of Mazza's isomorphism between the untyped lambda   
                               calculus and the affine uniform infinitary lambda calculus in 
 							  Iso_LC_ILC (Sect 7.4 and App. D)
+System_Fc                  -- formalization of the historic evolution of System Fc
 
 The session structure resembles the directory structure: theories from session <SESSION> are placed
 in the directory src/thys/<SESSION>. Exceptions to this rule are the Isabelle_Prelim session which

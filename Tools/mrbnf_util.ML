@@ -84,7 +84,9 @@ fun mk_defs_t public b qualify name n [x] = apfst single o mk_def_t public b qua
   | mk_defs_t public b qualify name n rhss = fold_map (fn (i, x) =>
       mk_def_t public b qualify (name ^ string_of_int i) n x) (1 upto length rhss ~~ rhss)
 
-fun mk_arg_cong ctxt n t =
+fun mk_arg_cong ctxt 1 t = infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt t)] arg_cong
+  | mk_arg_cong ctxt 2 t = infer_instantiate' ctxt (replicate 4 NONE @ [SOME (Thm.cterm_of ctxt t)]) @{thm arg_cong2}
+  | mk_arg_cong ctxt n t =
   let
     val Us = fastype_of t |> strip_typeN n |> fst;
     val ((xs, ys), _) = ctxt

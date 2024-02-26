@@ -1,17 +1,34 @@
 theory Fixpoint
-  imports "Binders.MRBNF_Recursor"
+  imports "Binders.MRBNF_FP"
 begin
 
 (* TODO: Show proofs as apply script *)
+ML \<open>
+val ctor_T1_Ts = [
+  [@{typ 'var}],
+  [@{typ unit}],
+  [@{typ 'tyvar}],
+  [@{typ 'rec}, @{typ 'rec2}],
+  [@{typ 'bvar}, @{typ 'brec}],
+  [@{typ 'btyvar}, @{typ 'brec}],
+  [@{typ 'a}]
+]
+val ctor_T2_Ts = [
+  [@{typ 'var}],
+  [@{typ 'tyvar}],
+  [@{typ 'rec}, @{typ 'rec2}],
+  [@{typ 'bvar}, @{typ "'brec list"}],
+  [@{typ 'btyvar}, @{typ 'brec2}],
+  [@{typ 'b}, @{typ 'rec}]
+]
+\<close>
 
 ML \<open>
-val T1 = @{typ "(('var + unit) + 'tyvar + 'rec * 'rec2) + ('bvar * 'brec + 'btyvar * 'brec2) + 'a"}
-val T2 = @{typ "('var + 'tyvar + 'rec * 'rec2) + 'bvar * 'brec + 'btyvar * 'brec2 + 'b * 'rec"};
+val T1 = BNF_FP_Util.mk_sumprodT_balanced ctor_T1_Ts
+val T2 = BNF_FP_Util.mk_sumprodT_balanced ctor_T2_Ts
 val name1 = "T1";
 val name2 = "T2";
 val rel = [[1,3], [1]];
-(*val T1 = @{typ "'var + unit + 'tyvar + 'rec * 'rec2 + 'bvar * 'brec + 'btyvar * 'brec2 + 'a"}
-val T2 = @{typ "'var + 'tyvar + 'rec * 'rec2 + 'bvar * 'brec + 'btyvar * 'brec2 + 'b * 'rec"};*)
 Multithreading.parallel_proofs := 4
 \<close>
 

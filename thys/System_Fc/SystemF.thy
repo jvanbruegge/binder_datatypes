@@ -33,6 +33,11 @@ val tyspec = {
 }
 \<close>
 
+ML_file \<open>../../Tools/mrbnf_sugar.ML\<close>
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let

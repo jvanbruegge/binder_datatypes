@@ -195,7 +195,7 @@ fun mk_quotient_model quot substitution qmodel =
     binding = #binding qmodel,
     UFVarss = map (Term.abs ("t", #T quot) o subst) (#FVars quot),
     Umap = fold_rev Term.abs (map (pair "f") Ts) (
-      Term.abs ("t", #T quot) (Term.list_comb (#rename quot, map Bound (length Ts downto 1)))
+      Term.abs ("t", #T quot) (Term.list_comb (subst (#rename quot), map Bound (length Ts downto 1)))
     ),
     Uctor = #Uctor qmodel,
     validity = Option.map (fn v => {

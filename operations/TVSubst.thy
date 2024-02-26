@@ -149,6 +149,14 @@ lemma Supp_VVr_empty:
     apply (rule TrueI)
   done
 
+lemma SSupp_VVr_bounds:
+  "|SSupp11 VVr11| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "|SSupp12 VVr12| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "|SSupp21 VVr21| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+    apply (unfold Supp_VVr_empty)
+    apply (rule cmin_greater card_of_Card_order emp_bound)+
+  done
+
 lemma VVr_injs:
   "VVr11 x = VVr11 x' \<Longrightarrow> x = x'"
   "VVr12 x = VVr12 x' \<Longrightarrow> x = x'"
@@ -1176,6 +1184,7 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
   apply (unfold avoiding_set1_def Un_empty_right case_prod_beta)
   subgoal premises prems
     apply (unfold U1ctor_def case_prod_beta)
+    (* REPEAT_DETERM *)
     apply (rule case_split)
      apply (subst if_P)
       apply assumption
@@ -1187,9 +1196,8 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
      apply (rule case_split[of "_ = _"])
       apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]])
        apply (rule arg_cong[of _ _ FFVars_T11])
-       prefer 2
+       apply assumption
        apply (rule Un_upper1)
-      apply assumption
      apply (rule subsetI)
      apply (rule UnI2)
      apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def SSupp11_def)[1]
@@ -1200,7 +1208,8 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
      apply assumption
-  apply (unfold if_not_P)
+    apply (unfold if_not_P)
+  (* repeated *)
   apply (rule case_split)
    apply (subst if_P)
       apply assumption
@@ -1225,12 +1234,14 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
      apply assumption
-  apply (unfold if_not_P)
+    apply (unfold if_not_P)
+  (* END REPEAT_DETERM *)
   apply (unfold T1.FFVars_cctors)
   apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_id image_comp comp_def)
   apply (rule Un_mono')+
-      apply (rule Un_upper1)
+        apply (rule Un_upper1)
+     (* REPEAT_DETERM *)
      apply (unfold UN_extend_simps(2))
      apply (rule subset_If)
       apply (unfold UN_empty')[1]
@@ -1239,7 +1250,8 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
      apply (rule prems)
      apply (unfold prod.collapse)
     apply (rule prems)
-     apply (erule UnI1 UnI2)
+       apply (erule UnI1 UnI2)
+
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
      apply (rule Diff_Un_disjunct)
      apply (rule prems)
@@ -1670,9 +1682,10 @@ lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (
   apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
   apply (unfold id_o o_id)
   apply (unfold comp_def)
-  apply (subst trans[OF comp_apply[symmetric] fun_cong[OF Pmap_comp0]], (assumption | rule supp_inv_bound bij_imp_bij_inv)+)+
-  apply (subst inv_o_simp1, assumption)+
-  apply (unfold trans[OF fun_cong[OF Pmap_id0] id_apply])
+  apply (subst fun_cong[OF Pmap_comp0, unfolded comp_def], (assumption | rule supp_inv_bound bij_imp_bij_inv)+)+
+  apply (subst inv_simp1, assumption)+
+  apply (unfold id_def[symmetric] Pmap_id0)
+  apply (subst id_apply)+
   apply (subst valid_Pmap, assumption+)+
   apply (unfold if_True)
   apply (rule refl)
@@ -1841,6 +1854,11 @@ let
 in lthy end\<close>
 print_theorems
 declare [[quick_and_dirty=false]]
+
+definition tvsubst_T1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
+  "tvsubst_T1 f1 f2 f3 t \<equiv> ff01_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
+definition tvsubst_T2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2" where
+  "tvsubst_T2 f1 f2 f3 t \<equiv> ff02_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
 
 type_synonym ('var, 'tyvar, 'a, 'b) U1_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T1_pre"
 type_synonym ('var, 'tyvar, 'a, 'b) U2_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T2_pre"
@@ -2452,11 +2470,6 @@ lemma FVars_VVrs:
        apply (rule refl eta_free11 eta_free12 eta_free21)+
   done
 
-definition tvsubst_T1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
-  "tvsubst_T1 f1 f2 f3 t \<equiv> ff01_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
-definition tvsubst_T2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2" where
-  "tvsubst_T2 f1 f2 f3 t \<equiv> ff02_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
-
 lemma tvsubst_VVrs:
   assumes
     "|SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
@@ -2468,10 +2481,7 @@ lemma tvsubst_VVrs:
     "tvsubst_T2 f1 f2 f3 (VVr21 a :: ('var, 'tyvar, 'a, 'b) T2) = f3 a"
     apply (unfold tvsubst_T1_def tvsubst_T2_def)
   subgoal
-    apply (rule trans)
-     apply (rule arg_cong2[OF _ refl, of _ _ ff01_tvsubst_T1_vvsubst_T2])
-     apply (unfold VVr_defs comp_def)[1]
-     apply (rule refl)
+    apply (unfold VVr_defs comp_def)[1]
     apply (rule trans)
      apply (rule T1.rec_Uctors)
         apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]

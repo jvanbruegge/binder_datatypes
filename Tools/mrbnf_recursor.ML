@@ -299,8 +299,8 @@ fun prove_model_axioms qualify fp_res params (models : (Proof.context -> tactic)
   let
     val ptacs = #axioms params;
     val b = Binding.conglomerate (map #binding models);
-    val defs_hidden = mk_defs_t false b qualify;
-    val def_hidden = mk_def_t false b qualify;
+    val defs_hidden = mk_defs_t false b (Binding.suffix_name "_rec" o qualify);
+    val def_hidden = mk_def_t false b (Binding.suffix_name "_rec" o qualify);
 
     fun prove lthy defs goal tac = Goal.prove_sorry lthy [] [] goal (fn {context,...} =>
       Ctr_Sugar_Tactics.unfold_thms_tac context defs THEN tac context

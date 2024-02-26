@@ -614,7 +614,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 K (Local_Defs.unfold0_tac ctxt (thms
                   @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
                   @ #isVVrs tvsubst_res @ map snd (#VVrs tvsubst_res)
-                  @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash tvsubst_res)]
+                  @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash quotient)]
                 )),
                 K (TRYALL (REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),

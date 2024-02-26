@@ -503,9 +503,8 @@ lemma SSupp_natural:
       apply (erule notE)
       apply (rule refl)
      apply (drule notnotD)
-     apply (rule trans)
-      apply (rule arg_cong[of _ _ "rrename_T1 f1 f2"])
-      apply assumption
+     apply (drule sym)
+    apply (erule subst)
      apply (rule trans)
       apply (rule T1.rrename_cctors)
          apply (rule assms)+

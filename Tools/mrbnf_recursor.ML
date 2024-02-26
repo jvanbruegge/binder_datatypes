@@ -183,6 +183,8 @@ fun addPred pred_opt d = case pred_opt of
     p
   )) | NONE => I
 
+val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
+
 fun mk_quotient_model quot substitution qmodel =
   let
     fun mk_subst f = if null substitution then I else f substitution;
@@ -208,11 +210,15 @@ fun mk_quotient_model quot substitution qmodel =
         rtac ctxt trans,
         rtac ctxt @{thm comp_apply},
         rtac ctxt (#rename_comp quot),
-        REPEAT_DETERM o assume_tac ctxt
+        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt card_thms)
       ],
       Umap_cong_id = fn ctxt => EVERY1 [
         rtac ctxt (#rename_cong_id (#inner quot)),
-        REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
+        REPEAT_DETERM o FIRST' [
+          assume_tac ctxt,
+          Goal.assume_rule_tac ctxt,
+          resolve_tac ctxt card_thms
+        ]
       ],
       Umap_Uctor = #rrename_Uctor (#axioms qmodel),
       UFVars_subsets = #FVars_subsets (#axioms qmodel)
@@ -589,8 +595,6 @@ fun mk_inv_image R f =
 fun mk_names _ [] = []
   | mk_names s [_] = [s]
   | mk_names s xs = map (fn i => s ^ string_of_int i) (1 upto length xs)
-
-val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
 
 fun define_recursor_consts qualify fp_res params (models : thm model list) vars (pfrees, pbounds, plives) lthy =
   let

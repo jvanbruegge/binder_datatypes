@@ -197,7 +197,7 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
       [_] => map (Option.map (K "")) (#etas model)
       | _ => fst (fold_map (fn eta_opt => fn i => case eta_opt of
         NONE => (NONE, i)
-        | SOME x => (SOME (string_of_int i), i + 1)
+        | SOME _ => (SOME (string_of_int i), i + 1)
       ) (#etas model) 1);
 
     val (defs, lthy) = @{fold_map 3} (fn eta_opt => fn suffix => fn i => fn lthy => let val opt = Option.map (fn (eta, _) =>
@@ -397,8 +397,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val hs = fst (fold_map (fn def => fn hs => case def of
       SOME _ => (SOME (hd hs), tl hs) | _ => (NONE, hs)
     ) defs some_hs);
-    fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f)) card;
+    fun mk_supp_bound' f = mk_ordLess (mk_card_of (mk_supp f)) card;
     val f_premss = map (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) fs;
+    val f_premss' = map (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound' f]) fs;
 
     val rrename_VVrs = map_index (fn (i, opt) => Option.map (fn def =>
       let
@@ -431,7 +432,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     val Un_bound = @{thm Un_Cinfinite_ordLess} OF [@{thm _}, @{thm _}, Cinfinite_card];
     val UNION_bound = @{thm regularCard_UNION_bound} OF [Cinfinite_card, regularCard_card];
 
-    val SSupp_comps = @{map 4} (fn f => fn rrename_VVr => fn i => Option.map (fn def =>
+    val SSupp_comps = @{map 3} (fn f => fn rrename_VVr => Option.map (fn def =>
       let
         val g = Free ("g", #aT def --> #T quotient);
         val goal = HOLogic.mk_Trueprop (mk_leq
@@ -456,7 +457,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         ]);
 
         val SSupp_comp_bound = Goal.prove_sorry lthy (names [f, g]) (map HOLogic.mk_Trueprop [
-          #mk_SSupp_bound def g, mk_supp_bound f
+          #mk_SSupp_bound def g, mk_supp_bound' f
         ]) (HOLogic.mk_Trueprop (#mk_SSupp_bound def (HOLogic.mk_comp (g, f)))) (fn {context=ctxt, prems} => EVERY1 [
           rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_mono1]},
           rtac ctxt SSupp_comp_subset,
@@ -488,13 +489,13 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           ]);
 
         val SSupp_comp_rename_bound = Goal.prove_sorry lthy (names (fs @ [g])) (
-          [HOLogic.mk_Trueprop (#mk_SSupp_bound def g)] @ flat (f_premss)
+          [HOLogic.mk_Trueprop (#mk_SSupp_bound def g)] @ flat f_premss'
         ) (HOLogic.mk_Trueprop (#mk_SSupp_bound def (HOLogic.mk_comp (
           Term.list_comb (#rename quotient, fs), g
         )))) (fn {context=ctxt, prems} => EVERY1 [
           rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_mono1]},
           rtac ctxt SSupp_comp_rename_subset,
-          REPEAT_DETERM o resolve_tac ctxt (Un_bound :: prems)
+          REPEAT_DETERM o resolve_tac ctxt (Un_bound :: prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
         ]);
       in {
         SSupp_comp_subset = SSupp_comp_subset,
@@ -502,16 +503,19 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         SSupp_comp_rename_subset = SSupp_comp_rename_subset,
         SSupp_comp_rename_bound = SSupp_comp_rename_bound
       } end
-    )) fs rrename_VVrs (0 upto nvars - 1) defs;
+    )) fs rrename_VVrs defs;
 
-    val g_prems = maps (fn g => map HOLogic.mk_Trueprop [mk_bij g, mk_supp_bound g]) gs;
+    val g_prems' = maps (fn g => map HOLogic.mk_Trueprop [mk_bij g, mk_supp_bound' g]) gs;
+    val f_prems = flat f_premss;
+    val f_prems' = flat f_premss';
+
     val compSS_comp0s = map (Option.map (fn def =>
       let
         val goal = mk_Trueprop_eq (
           HOLogic.mk_comp (Term.list_comb (fst (#compSS def), fs), Term.list_comb (fst (#compSS def), gs)),
           Term.list_comb (fst (#compSS def), map2 (curry HOLogic.mk_comp) fs gs)
         );
-      in Goal.prove_sorry lthy (names (fs @ gs)) (g_prems @ flat f_premss) goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (fs @ gs)) (g_prems' @ f_prems') goal (fn {context=ctxt, prems} => EVERY1 [
         K (unfold_thms_tac ctxt [snd (#compSS def)]),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] (@{thms o_inv_distrib} @ [#rename_comp0 quotient RS sym]),
@@ -565,7 +569,6 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       ]) end
     )) fs (0 upto nvars - 1) defs;
 
-    val f_prems = flat f_premss;
     val IImsupp_imsupp_rrename_commutes = @{map 4} (fn rrename_VVr => fn IImsupp_VVr => fn i => Option.map (fn def =>
       let
         val g = Free ("g", #aT def --> #T quotient);
@@ -832,7 +835,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       let val goal = mk_Trueprop_eq (
         HOLogic.mk_comp (Term.list_comb (fst Pmap, fs), Term.list_comb (fst Pmap, gs)),
         Term.list_comb (fst Pmap, map2 (curry HOLogic.mk_comp) fs gs)
-      ) in Goal.prove_sorry lthy (names (fs @ gs)) (g_prems @ f_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+      ) in Goal.prove_sorry lthy (names (fs @ gs)) (g_prems' @ f_prems') goal (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt ext,
         K (unfold_thms_tac ctxt (snd Pmap :: @{thms case_prod_beta})),
         rtac ctxt @{thm trans[OF comp_apply]},
@@ -857,7 +860,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           fst valid_P $ p,
           fst valid_P $ (Term.list_comb (fst Pmap, fs) $ p)
         ));
-      in Goal.prove_sorry lthy (names (fs @ [p])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (fs @ [p])) f_prems' goal (fn {context=ctxt, prems} => EVERY1 [
         K (unfold_thms_tac ctxt (@{thms case_prod_beta fst_conv snd_conv}
           @ map (snd o #compSS) some_defs
           @ [snd Pmap, snd valid_P]
@@ -1298,7 +1301,6 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           fst (nth (#IImsupps def) i) $ the f
           )) hs defs)))
         )) bound_sets (0 upto nvars - 1);
-        val m = length int_empty_prems;
         val VVr_prems = map (fn def => HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x)))) some_defs;
         val prems = f'_prems @ int_empty_prems @ [HOLogic.mk_Trueprop (fst (#noclash quotient) $ x)] @ VVr_prems;
         val tvsubst_t = Term.list_comb (fst tvsubst, some_hs);

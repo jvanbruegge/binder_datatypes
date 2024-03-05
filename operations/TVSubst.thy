@@ -2859,7 +2859,6 @@ lemma IImsupp_Diffs:
       (* apply (rule sym) *)
        apply assumption
       apply assumption
-    thm in_IImsupps
      apply (frule in_IImsupps(3))
       apply assumption
      apply (drule trans[OF Int_commute])

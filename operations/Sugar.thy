@@ -517,9 +517,12 @@ lemma T2_distinct[simp]:
                       apply (rule notI, (erule exE conjE sum.distinct[THEN notE])+)+
   done
 
-abbreviation "eta11 (x::_::var) \<equiv> Abs_T1_pre (Inl (Inl x))"
-abbreviation "eta12 (x::_::var) \<equiv> Abs_T1_pre (Inl (Inr (Inr x)))"
-abbreviation "eta21 (x::_::var) \<equiv> Abs_T2_pre (Inl (Inl x))"
+abbreviation eta11 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g, 'h, 'i, 'j) T1_pre" where
+  "eta11 x \<equiv> Abs_T1_pre (Inl (Inl x))"
+abbreviation eta12 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g, 'h, 'i, 'j) T1_pre" where
+  "eta12 x \<equiv> Abs_T1_pre (Inl (Inr (Inr x)))"
+abbreviation eta21 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g, 'h, 'i, 'j) T2_pre" where
+  "eta21 x \<equiv> Abs_T2_pre (Inl (Inl x))"
 
 lemma eta_frees:
   "set1_T1_pre (eta11 x) = {x}"
@@ -600,5 +603,48 @@ lemma eta_naturals:
     )
     apply (rule refl)+
   done
+
+ML \<open>
+val T1_model = {
+  binding = @{binding tvsubst_T1},
+  etas = [
+    SOME (@{term "eta11"}, {
+      eta_free = fn ctxt => resolve_tac ctxt @{thms eta_frees} 1,
+      eta_inj = fn ctxt => eresolve_tac ctxt @{thms eta_injs} 1,
+      eta_compl_free = fn ctxt => eresolve_tac ctxt @{thms eta_compl_frees} 1,
+      eta_natural = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms eta_naturals} THEN_ALL_NEW assume_tac ctxt)
+    }),
+    SOME (@{term "eta12"}, {
+      eta_free = fn ctxt => resolve_tac ctxt @{thms eta_frees} 1,
+      eta_inj = fn ctxt => eresolve_tac ctxt @{thms eta_injs} 1,
+      eta_compl_free = fn ctxt => eresolve_tac ctxt @{thms eta_compl_frees} 1,
+      eta_natural = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms eta_naturals} THEN_ALL_NEW assume_tac ctxt)
+    })
+  ]
+};
+val T2_model = {
+  binding = @{binding tvsubst_T2},
+  etas = [
+    SOME (@{term "eta21"}, {
+      eta_free = fn ctxt => resolve_tac ctxt @{thms eta_frees} 1,
+      eta_inj = fn ctxt => eresolve_tac ctxt @{thms eta_injs} 1,
+      eta_compl_free = fn ctxt => eresolve_tac ctxt @{thms eta_compl_frees} 1,
+      eta_natural = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms eta_naturals} THEN_ALL_NEW assume_tac ctxt)
+    }),
+    NONE
+  ]
+};
+\<close>
+
+ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
+                
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+declare [[ML_print_depth=100000]]
+local_setup \<open>fn lthy =>
+let
+  val (res', lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf I res [T1_model, T2_model] lthy
+in lthy end\<close>
 
 end

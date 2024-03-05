@@ -4,17 +4,21 @@ theory SystemFSub
     "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
     "Prelim.Curry_LFP"
     "Prelim.FixedCountableVars"
+    "Labeled_FSet"
 begin
 
 declare bij_swap[simp]
 declare supp_id_bound[simp]
+
+(*type_synonym label = nat*)
 
 ML \<open>
 val ctors = [
   (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
   (("Top", (NONE : mixfix option)), []),
   (("Fun", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}])
+  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]) (*,
+  (("Rec", NONE), [@{typ "(label, 'rec) lfset"}]) *)
 ]
 
 val spec = {

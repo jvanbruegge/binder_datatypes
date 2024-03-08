@@ -44,18 +44,20 @@ lemma nonrep_G_map_fst_snd_bij:
   by (metis fst_conv snd_conv)+
 
 class large_G =
-  fixes dummy :: 'a
-  assumes large_G: "bd_G \<le>o |UNIV :: 'a set|"
+  assumes large: "|Field bd_G| \<le>o |UNIV :: 'a set|"
+    and regular: "regularCard |UNIV::'a set|"
 
 instantiation nat :: large_G begin
 instance proof
-qed (metis Card_order_iff_ordLeq_card_of card_order_on_Card_order G.bd_card_order)
+qed (auto simp: stable_nat stable_regularCard)
 end
 
-instantiation prod ::  (type, large_G) large_G begin
-instance proof
-qed (subst UNIV_prod, auto simp only: intro!: ordLeq_transitive[OF large_G card_of_Times2])
-end
+(*instantiation prod ::  (type, large_G) large_G begin
+instance apply standard
+  apply (subst UNIV_prod, auto simp only: intro!: ordLeq_transitive[OF large card_of_Times2])
+  using var_prod_class.large
+  
+end*)
 
 typedef ('a, 'b) lfset = "{x :: ('a :: large_G, 'b) G . nonrep_G x}"
   unfolding mem_Collect_eq
@@ -127,43 +129,92 @@ theorem lfset_rel_compp_le:
   "rel_lfset f R OO rel_lfset g S \<le> rel_lfset (g o f) (R OO S)"
   unfolding rel_lfset_def G.rel_compp Grp_o
   by (rule vimage2p_relcompp_mono[OF order_refl])
-(*
-  unfolding vimage2p_Grp fun_eq_iff relcompp_apply conversep_iff eqTrueI[OF UNIV_I] simp_thms
-  apply (safe elim!: GrpE)
-  subgoal premises prems for x y _ _ z
-  proof (cases z rule: Rep_lfset_cases[unfolded mem_Collect_eq, case_names nonrep_G Rep_lfset])
-    case nonrep_G
-    with prems(2,5) Rep_lfset[of x] show ?case
 
-      apply (auto simp: G.in_rel Grp_def) find_theorems nonrep_G sorry
-  next
-    case (Rep_lfset x)
-    with prems show ?thesis by (auto simp: Grp_def)
-  qed
-  done
-*)
-
-(* TODO @ Jan
 mrbnf "('a :: large_G, 'b) lfset"
   map: map_lfset
-  sets: bound: labels live: "values"
+  sets:
+    bound: labels
+    live: "values"
   bd: "bd_G"
   rel: "rel_lfset id"
   var_class: large_G
-  subgoal by (rule ext, transfer) simp
-  subgoal apply (rule ext, transfer) by (simp add: stream.map_comp inj_on_def)   
-  subgoal apply transfer by (simp cong: stream.map_cong inj_on_cong)  
-  subgoal apply (rule ext, transfer) by (simp add: inj_on_def)  
-  subgoal by (rule infinite_regular_card_order_card_suc[OF natLeq_card_order natLeq_Cinfinite])
+  subgoal by (rule ext, transfer) (simp add: lfset_map_id)
+  subgoal apply (rule ext, transfer) by (simp add: lfset_map_comp)
+  subgoal apply transfer using lfset_map_cong by blast  
+  subgoal apply (rule ext, transfer) by (simp add: lfset_set1_map)  
+  subgoal using lfset_set2_map by blast
   subgoal
-    apply (rule card_suc_greater_set[OF natLeq_card_order])
-    apply transfer
-    apply (simp flip: countable_card_le_natLeq add: countable_sset)
+    by (simp add: G.bd_card_order G.bd_cinfinite G.bd_regularCard infinite_regular_card_order_def)
+  subgoal using lfset_set_bd(1) by blast
+  subgoal using lfset_set_bd(2) by auto
+  subgoal by (metis comp_id lfset_rel_compp_le)
+  subgoal apply transfer 
+    apply (rule trans)
+     apply (rule lfset_in_rel)
+     apply (rule bij_id)
+    apply (rule iffI)
+     apply (erule exE conjE)+
+     apply hypsubst
+    subgoal for f R x y z
+      apply (rule exI[of _ "map_lfset (inv f) id z"])
+      apply (rule conjI)
+       apply (subst fun_cong[OF lfset_set2_map, unfolded comp_def])
+      apply (rule bij_imp_bij_inv)
+        apply assumption
+       apply (unfold image_id)
+       apply assumption
+      apply (rule conjI)
+       apply (rule trans)
+        apply (rule trans[OF comp_apply[symmetric] lfset_map_comp[symmetric, THEN fun_cong]])
+        apply (rule bij_imp_bij_inv)
+        apply assumption
+       apply (unfold id_o o_id)
+       apply (drule arg_cong[of _ _ "map_lfset (inv f) id"])
+       apply (subst (asm) trans[OF comp_apply[symmetric] lfset_map_comp[symmetric, THEN fun_cong]], rule bij_id)
+       apply (unfold id_o o_id)
+      apply (subst (asm) trans[OF comp_apply[symmetric] lfset_map_comp[symmetric, THEN fun_cong]])
+        apply assumption
+       apply (subst (asm) inv_o_simp1)
+        apply assumption
+       apply (unfold id_o lfset_map_id)
+       apply (rule trans)
+        apply assumption
+       apply (rule id_apply)
+      apply (rule trans)
+       apply (rule trans[OF comp_apply[symmetric] lfset_map_comp[symmetric, THEN fun_cong]])
+       apply (rule bij_imp_bij_inv)
+       apply assumption
+      apply (unfold o_id)
+      apply (subst inv_o_simp2)
+       apply assumption
+      apply (rule refl)
+      done
+    apply (erule exE conjE)+
+    apply hypsubst
+    apply (unfold triv_forall_equality)
+    subgoal for f R z
+      apply (rule exI[of _ "map_lfset f id z"])
+      apply (rule conjI)
+       apply (subst fun_cong[OF lfset_set2_map, unfolded comp_def])
+        apply assumption
+       apply (unfold image_id)
+       apply assumption
+      apply (subst trans[OF comp_apply[symmetric] lfset_map_comp[symmetric, THEN fun_cong]], (assumption | rule bij_id))+
+      apply (unfold id_o o_id)
+      apply (rule conjI)
+       apply (rule refl)
+      apply (rule refl)
+      done
     done
-  subgoal by blast
-  subgoal by (clarsimp, transfer) auto
   done
-*)
+
+print_bnfs
+local_setup \<open>
+snd o MRBNF_Def.register_mrbnf_as_bnf (the (MRBNF_Def.mrbnf_of @{context} "Labeled_FSet.lfset"))
+\<close>
+print_theorems
+print_bnfs
+
 
 (* locale+interpretation as a trick to get automatic proofs and replace new constants
    by existing ones afterwards *)

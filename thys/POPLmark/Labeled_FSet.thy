@@ -215,7 +215,7 @@ snd o MRBNF_Def.register_mrbnf_as_bnf (the (MRBNF_Def.mrbnf_of @{context} "Label
 print_theorems
 print_bnfs
 
-
+(*
 (* locale+interpretation as a trick to get automatic proofs and replace new constants
    by existing ones afterwards *)
 locale AUX
@@ -234,6 +234,7 @@ interpretation AUX
     maps (fn f => BNF_Def.bnf_of @{context} @{type_name lfset} |> the |> f) [BNF_Def.set_defs_of_bnf,
       single o BNF_Def.map_def_of_bnf, single o BNF_Def.rel_def_of_bnf])\<close>) (rule refl)+
 
+*)
 context begin
 
 qualified definition "Rep = Rep_G o Rep_lfset"
@@ -360,8 +361,8 @@ lemmas size_lfset_overloaded_simps =
     folded size_lfset_overloaded_def]
 
 lemma lfset_size_o_map:
-  "inj f \<Longrightarrow> size_lfset (\<lambda>_. 0) g \<circ> map_lfset_id f = size_lfset (\<lambda>_. 0) (g \<circ> f)"
-  unfolding fun_eq_iff o_apply map_lfset_id_def
+  "inj f \<Longrightarrow> size_lfset (\<lambda>_. 0) g \<circ> map_lfset id f = size_lfset (\<lambda>_. 0) (g \<circ> f)"
+  unfolding fun_eq_iff o_apply
   by transfer
     (subst fun_cong[OF fset_size_o_map, unfolded o_apply],
     auto simp add: inj_on_def split_beta map_prod_def size_prod_simp)
@@ -418,6 +419,5 @@ declare fun_cong[OF lfset_size_o_map,
 unfolded id_def inj_on_def, simplified, termination_simp]
 
 hide_fact (open) FSet.bex_simps FSet.ball_simps
-
 
 end

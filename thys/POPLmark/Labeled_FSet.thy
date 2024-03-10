@@ -52,6 +52,12 @@ instance proof
 qed (auto simp: stable_nat stable_regularCard)
 end
 
+instantiation list :: (finite) large_G begin
+instance apply standard
+   apply (metis G.bd_card_order card_order_on_Card_order infinite_UNIV_listI infinite_iff_card_of_nat)
+  by (metis card_of_nat countableI_type countable_or_card_of infinite_UNIV_listI natLeq_Cinfinite ordIso_equivalence(3) ordIso_transitive regularCard_natLeq regularCard_ordIso)
+end
+
 (*instantiation prod ::  (type, large_G) large_G begin
 instance apply standard
   apply (subst UNIV_prod, auto simp only: intro!: ordLeq_transitive[OF large card_of_Times2])
@@ -71,6 +77,21 @@ definition labels :: "('a :: large_G, 'b) lfset \<Rightarrow> 'a set" where
 
 definition "values" :: "('a :: large_G, 'b) lfset \<Rightarrow> 'b set" where
   "values = set2_G o Rep_lfset"
+
+definition "pairs" :: "('a::large_G, 'b) lfset \<Rightarrow> ('a \<times> 'b) set" where
+  "pairs = fset o Rep_G o Rep_lfset"
+
+lemma labels_pairs: "labels xs = fst ` pairs xs"
+  unfolding labels_def pairs_def set1_G_def by force
+lemma values_pairs: "values xs = snd ` pairs xs"
+  unfolding values_def pairs_def set2_G_def by force
+
+lemma pairs_lfmap: "bij f \<Longrightarrow> pairs (map_lfset f g xs) = map_prod f g ` pairs xs"
+  unfolding pairs_def map_lfset_def comp_def
+  apply (subst Abs_lfset_inverse)
+  using Rep_lfset nonrep_G_map apply auto[1]
+  apply (unfold map_G_def comp_def Abs_G_inverse[OF UNIV_I])
+  by auto
 
 definition rel_lfset :: "('a :: large_G \<Rightarrow> 'a :: large_G) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b') lfset \<Rightarrow> bool" where
   "rel_lfset f S = BNF_Def.vimage2p Rep_lfset Rep_lfset (rel_G (Grp f) S)"
@@ -286,7 +307,7 @@ lemma lfin_map_lfset: "(a, b) \<in>\<in> map_lfset id g x \<longleftrightarrow> 
 lemma lfin_label_inject: "(a, b) \<in>\<in> x \<Longrightarrow> (a, c) \<in>\<in> x \<Longrightarrow> b = c"
   by transfer (auto simp: nonrep_lfset_alt)
 
-lift_definition lfempty :: "('a::large_G, 'b) lfset" is "{||} :: ('a \<times> 'b) fset"
+lift_definition lfempty :: "('a::large_G, 'b) lfset" ("\<lbrace> \<rbrace>") is "{||} :: ('a \<times> 'b) fset"
   by (auto simp: nonrep_lfset_alt)
 
 lemma labels_lfempty[simp]: "labels lfempty = {}"
@@ -340,6 +361,65 @@ translations
   "_lfUpdate f (_lfupdbinds b bs)" \<rightleftharpoons> "_lfUpdate (_lfUpdate f b) bs"
   "f\<lbrace>x:=y\<rbrace>" \<rightleftharpoons> "CONST lfupdate f x y"
 
+lemma values_lfinsert[simp]: "values (lfinsert x y xs) \<subseteq> {y} \<union> values xs"
+  by transfer auto
+
+thm fset_induct
+(*lemma lfset_induct: "P \<lbrace> \<rbrace> \<Longrightarrow> (\<And>x y S. P S \<Longrightarrow>  P (lfinsert x y S)) \<Longrightarrow> P X"
+  apply (rule Abs_lfset_cases[of X])
+  apply hypsubst_thin
+  apply (unfold mem_Collect_eq)
+  subgoal for y
+    apply (rule Abs_G_cases[of y])
+    apply hypsubst_thin
+    subgoal for z
+      apply (unfold atomize_imp)
+      apply (rule fset_induct[of _ z])
+      apply (rule impI)+
+       apply (unfold lfempty_def Labeled_FSet.Abs_def comp_def)[1]
+       apply assumption
+      subgoal for x S
+        apply (rule prod.exhaust[of x])
+        apply hypsubst_thin
+      apply (rule impI)+
+      apply (unfold lfinsert_def map_fun_def id_o o_id)
+        apply (unfold comp_def Labeled_FSet.Abs_def Labeled_FSet.Rep_def)
+        subgoal for x1 x2
+          apply (drule meta_spec[of _ x1])
+          apply (drule meta_spec[of _ x2])
+      apply (drule meta_spec[of _ "Abs_lfset (Abs_G S)"])
+      apply (erule impE)
+       apply (simp add: nonrep_G.abs_eq nonrep_lfset_alt)
+      apply (erule impE)
+       apply (erule impE)
+            apply (rule UNIV_I)
+       apply (rotate_tac -1)
+           apply assumption
+
+          apply (subst (asm) Abs_lfset_inverse)
+           apply (rule CollectI)
+          apply (simp add: nonrep_G.abs_eq nonrep_lfset_alt)
+                    apply (subst (asm) Abs_lfset_inverse)
+           apply (rule CollectI)
+          apply (simp add: nonrep_G.abs_eq nonrep_lfset_alt)
+                    apply (subst (asm) Abs_lfset_inverse)
+           apply (rule CollectI)
+           apply (simp add: nonrep_G.abs_eq nonrep_lfset_alt)
+          apply (unfold Abs_G_inverse[OF UNIV_I])
+
+          apply (subst (asm) if_not_P)
+
+           apply (unfold nonrep_G_def)
+           apply (unfold map_fun_def id_o)
+          apply (unfold comp_def Abs_G_inverse[OF UNIV_I])
+           apply (unfold nonrep_lfset_def)[1]
+           apply force
+          apply assumption
+          done
+        done
+      done
+    done
+  done*)
 
 subsection \<open>Size setup\<close>
 

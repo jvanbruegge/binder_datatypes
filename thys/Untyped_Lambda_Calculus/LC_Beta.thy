@@ -1,13 +1,15 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Beta 
-imports LC2 "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
+  imports LC "Prelim.Curry_LFP" "Prelim.More_Stream"
+   "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
 (* *)
 
+declare [[inductive_internals]]
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
@@ -18,6 +20,74 @@ thm step_def
 
 
 (* INSTANTIATING THE Components LOCALE: *)
+
+(*
+inductive step :: "'trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
+| AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
+| AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
+| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
+
+variables_decl var \<comment>\<open> or 'a :: var_term_pre \<close>
+binder_inductive step
+  binds Beta: "{x}" | Xi: "{x}"
+  for map: "\<lambda>f. map_prod (rrename_term f) (rrename_term f)"
+  and vars: "\<lambda>(e1, e2). FFVars_term e1 \<union> FFVars_term e2"
+  
+*)
+
+interpretation Small where dummy = "undefined :: 'a :: var_term_pre"
+  apply standard
+  sorry
+
+type_synonym T = "trm \<times> trm"
+abbreviation Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
+"Tmap f \<equiv> map_prod (rrename_term f) (rrename_term f)"
+abbreviation Tfvars :: "T \<Rightarrow> var set" where 
+"Tfvars \<equiv> \<lambda> (e1,e2). FFVars_term e1 \<union> FFVars_term e2"
+definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
+where
+"G \<equiv> \<lambda>B R t.  
+         (\<exists>x e1 e2. B = {x} \<and> fst t = App (Lam x e1) e2 \<and> snd t = tvsubst (Var(x := e2)) e1)
+         \<or>
+         (\<exists>e1 e1' e2. B = {} \<and> fst t = App e1 e2 \<and> snd t = App e1' e2 \<and> 
+                      R (e1,e1')) 
+         \<or>
+         (\<exists>e2 e2' e1. B = {} \<and> fst t = App e1 e2 \<and> snd t = App e1 e2' \<and> 
+                      R (e2,e2')) 
+         \<or>
+         (\<exists>e e' x. B = {x} \<and> fst t = Lam x e \<and> snd t = Lam x e' \<and> R (e,e'))"
+lemma small_user: "small {x :: var}"
+  sorry
+interpretation Step: Induct where dummy = "undefined :: var" and 
+Tmap = Tmap and Tfvars = Tfvars and G = G
+  apply standard
+  sorry
+ML \<open>Inductive.the_inductive @{context} @{term step}\<close>
+ML \<open>Inductive.the_inductive @{context} @{term step}\<close>
+thm step_def
+lemma I_step: "Step.I (e1, e2) = step e1 e2"
+  unfolding Step.I_def step_def
+  unfolding G_def lfp_curry2
+  apply(rule arg_cong2[of _ _ _ _ lfp, OF _ refl])
+  apply (rule ext)+
+  apply (unfold conj_disj_distribL ex_disj_distrib split_beta simp_thms)
+  apply (unfold ex_simps(2)[symmetric] ex_comm[where 'a = "var set"]
+    conj_commute[of "small _"] conj_assoc simp_thms
+    eqTrueI[OF small_user] eqTrueI[OF small_empty])
+  apply (rule TrueI)
+  done
+lemma I_step': "Step.I = (\<lambda>(e1, e2). step e1 e2)"
+  unfolding I_step[symmetric] split_beta prod.collapse ..
+
+lemma disj_Imp_distrib: "((A \<or> B) \<Longrightarrow> C) \<equiv> ((A \<Longrightarrow> C) &&& (B \<Longrightarrow> C))"
+  by presburger
+thm Step.strong_induct
+thm Step.strong_induct[where R="\<lambda>p (e1, e2). R p e1 e2" and t="(e1, e2)" for R e1 e2,
+  unfolded I_step', unfolded G_def
+  disj_Imp_distrib conjunction_imp, simplified]
+find_theorems "((_ \<or> _) \<Longrightarrow> _) \<equiv> _"
+find_theorems name: induct name: Step
 
 type_synonym T = "trm \<times> trm"
 

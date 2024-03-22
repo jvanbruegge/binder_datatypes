@@ -673,7 +673,17 @@ G_fresh: "\<And>R B t. small B \<Longrightarrow> G B R t \<Longrightarrow> B \<i
 
 
 sublocale Induct_simple < Induct apply standard 
-using G_fresh by blast
+  using G_fresh by blast
+
+print_statement Induct.strong_induct[unfolded
+  Induct_def Induct1_def Components_def Small_def
+  Induct_axioms_def Induct1_axioms_def Components_axioms_def
+  conj_imp_eq_imp_imp, rule_format]
+
+print_statement IInduct.BE_iinduct[unfolded
+  IInduct_def IInduct1_def CComponents_def Small_def
+  IInduct_axioms_def IInduct1_axioms_def CComponents_axioms_def
+  conj_imp_eq_imp_imp, rule_format]
 
 
 end 

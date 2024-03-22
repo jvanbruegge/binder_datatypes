@@ -1,34 +1,43 @@
 theory No_Least_Support_Counterexample
   imports
-   "Prelim.FixedUncountableVars"
-   "Prelim.Prelim"
-   "Prelim.More_Stream"
+   "HOL-Library.Stream"
+   "HOL-Library.Countable_Set_Type"
+   "HOL-Cardinals.Cardinals"
 begin
 
-definition small :: "ivar set \<Rightarrow> bool" where 
-  "small A \<equiv> |A| <o |UNIV::ivar set|"
+type_synonym ivar = "nat suc" (* uncountable variable type *)
 
-definition ssbij :: "(ivar \<Rightarrow> ivar) \<Rightarrow> bool" (* small-support bijections *) where 
-  "ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::ivar set|"
+definition supp :: "(ivar \<Rightarrow> ivar) => ivar set" (* the support of f: *) where
+  "supp f \<equiv> {a . f a \<noteq> a}"
 
-lemma small_Un: "small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
-  using countable_iff_le_card_ivar small_def by auto
-lemma small_Diff: "small A \<Longrightarrow> small (A - B)"
-  using countable_iff_le_card_ivar small_def by auto
-lemma small_Int: "small A \<Longrightarrow> small (A \<inter> B)"
-  by (metis Diff_Diff_Int small_Diff)
+definition cbij :: "(ivar \<Rightarrow> ivar) \<Rightarrow> bool" (* countable-support bijections *) where 
+  "cbij \<sigma> \<equiv> bij \<sigma> \<and> countable (supp \<sigma>)"
+
+lemma card_of_ivar: "|UNIV :: ivar set| =o card_suc |UNIV :: nat set|"
+  by (simp add: card_order_card_suc ordIso_symmetric)
+
+lemma card_suc_greater_set: "\<lbrakk> card_order r ; A \<le>o r \<rbrakk> \<Longrightarrow> A <o card_suc r"
+  using card_suc_greater ordLeq_ordLess_trans by blast
+
+lemma countable_iff_le_card_ivar: "countable A \<longleftrightarrow> |A| <o |UNIV::ivar set|"
+  by (auto simp add: countable_card_of_nat card_suc_ordLess_imp_ordLeq card_suc_greater_set
+    ordLess_ordIso_trans[OF _ ordIso_symmetric[OF card_of_ivar]]
+    dest: ordLess_ordIso_trans[OF _ card_of_ivar])
+
+lemma countable_sset: "countable (sset s)"
+  unfolding sset_range by auto
+
+lemma stream_eq_nth: "xs = ys \<longleftrightarrow> (\<forall>i. snth xs i = snth ys i)"
+  by (metis smap_alt stream_smap_nats)
 
 lemma exists_subset_compl:
   assumes "Cinfinite r" "r \<le>o |UNIV::ivar set|" "|U \<union> S::ivar set| <o r"
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
 proof -
   have 1: "|U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
-  have "|-(U \<union> S)| =o |UNIV::ivar set|"
-    using card_of_Un_diff_infinite[OF
-        cinfinite_imp_infinite[OF cinfinite_mono[OF assms(2) conjunct1[OF assms(1)]]]
-        ordLess_ordLeq_trans[OF assms(3,2)]
-    ]
-    by (simp add: Compl_eq_Diff_UNIV)
+  have "|-(U \<union> S)| =o |UNIV::ivar set|" using assms(2,3)
+    by (metis boolean_algebra.disj_cancel_right card_of_UNIV card_of_ivar countable_Un_iff
+      countable_iff_le_card_ivar not_ordLess_ordIso ordLeq_iff_ordLess_or_ordIso ordLess_ordLeq_trans)
   then have "|U| <o |-(U \<union> S)|" using ordLess_ordLeq_trans[OF 1 assms(2)] ordIso_symmetric ordLess_ordIso_trans by fast
   then obtain B where 1: "B \<subseteq> -(U \<union> S)" "|U| =o |B|"
     by (meson internalize_card_of_ordLeq2 ordLess_imp_ordLeq)
@@ -36,16 +45,16 @@ proof -
   then show ?thesis using 1 by blast
 qed
 
-lemma small_ssbij: 
-assumes s: "small A" "small B" "small A'" "A \<inter> A' = {}"
-shows "\<exists>\<sigma>. ssbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
+lemma countable_cbij: 
+assumes s: "countable A" "countable B" "countable A'" "A \<inter> A' = {}"
+shows "\<exists>\<sigma>. cbij \<sigma> \<and> \<sigma> ` A \<inter> B = {} \<and> (\<forall>a\<in>A'. \<sigma> a = a)"
 proof-
   obtain D where D: "D \<inter> B = {}" "D \<inter> A = {}" "D \<inter> A' = {}" and DA: "|D| =o |A|"
     using exists_subset_compl[of _ A "A' \<union> B"]
-    by (smt (verit, best) Field_card_of Int_Un_distrib Int_commute Un_empty card_of_Card_order
-      card_of_UNIV cinfinite_def countable_Un_iff countable_iff_le_card_ivar infinite_ivar
-      ordIso_symmetric s(1) s(2) s(3) small_def)
-
+      Field_card_of Int_Un_distrib Int_commute Un_empty card_of_Card_order
+      card_of_UNIV cinfinite_def countable_Un_iff countable_iff_le_card_ivar
+       ordIso_symmetric s(1-3) Cinfinite_card_suc Field_card_suc natLeq_Cinfinite natLeq_card_order
+    by (smt (verit, ccfv_threshold))
   then obtain u where u: "bij_betw u A D"  
   using card_of_ordIso ordIso_symmetric by blast
   hence u: "u ` A = D" "\<And>a b. a \<in> A \<Longrightarrow> b \<in> A \<Longrightarrow> u a = u b \<longleftrightarrow> a = b"
@@ -64,16 +73,19 @@ proof-
 
   have cas: "\<And>a. a \<in> A \<or> a \<in> D \<or> (a \<notin> A \<and> a \<notin> D)" by auto
 
-  have bv: "bij v"
-  unfolding bij_def inj_def image_def apply auto 
-  apply (metis (mono_tags, lifting) D(2) Int_emptyD f_inv_into_f imageI iu(1) u(1) u(2) v_def)
-  by (metis f_inv_into_f inv_into_into iu(1) u(1) v(2) v_def) 
+  have "v x = v y \<Longrightarrow> x = y" for x y
+    using D(2) iu(1) u(1) u(2) by (auto simp: v_def image_image inj_on_def split: if_splits)
+  moreover have "\<exists>x. y = v x" for y
+    using iu(1) u(1) v(1-3) by (metis f_inv_into_f inv_into_into)
+  ultimately have bv: "bij v"
+    unfolding bij_def inj_def image_def
+    by blast
 
   have sv: "supp v \<subseteq> A \<union> D" unfolding supp_def using v(3) by blast
 
   show ?thesis apply(rule exI[of _ v], intro conjI)
-    subgoal using bv sv s(1) unfolding ssbij_def small_def
-      by (meson DA card_of_Un_ordLess_infinite card_of_mono1 infinite_ivar ordIso_ordLess_trans ordLeq_ordLess_trans)
+    subgoal using bv sv s(1) u(1) unfolding cbij_def
+      by (metis countable_Un_iff countable_image countable_subset)
     subgoal using D(1) u(1) by auto
     subgoal using sv D(3) s(4) unfolding supp_def by auto . 
 qed
@@ -123,43 +135,32 @@ lift_definition map_item :: "(ivar \<Rightarrow> ivar) \<Rightarrow> item \<Righ
   unfolding eq_ae_suffix
   apply (elim exE)
   subgoal for f s t i
-    apply (rule exI[of _ i])
-    apply auto
-    done
+    by (rule exI[of _ i]) auto
   done
 
 definition supports where
-  "supports A t = (\<forall>\<sigma>. ssbij \<sigma> \<longrightarrow> (\<forall>a\<in>A. \<sigma> a = a) \<longrightarrow> map_item \<sigma> t = t)"
+  "supports A t = (\<forall>\<sigma>. cbij \<sigma> \<longrightarrow> (\<forall>a\<in>A. \<sigma> a = a) \<longrightarrow> map_item \<sigma> t = t)"
 
 (* next 3 lemmas show that item is a nominal set *)
 lemma map_item_id: "map_item id = id"
- by (rule ext, transfer) (auto simp: eq_ae_refl)
-lemma map_item_comp: "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> map_item (\<sigma> o \<tau>) = map_item \<sigma> o map_item \<tau>"
+ by (rule ext, transfer) (auto simp: eq_ae_refl stream.map_id)
+lemma map_item_comp: "cbij \<sigma> \<Longrightarrow> cbij \<tau> \<Longrightarrow> map_item (\<sigma> o \<tau>) = map_item \<sigma> o map_item \<tau>"
   by (rule ext, transfer) (auto simp: eq_ae_refl stream.map_comp)
-lemma small_support: "\<exists>A. small A \<and> supports A t"
+lemma countable_support: "\<exists>A. countable A \<and> supports A t"
   unfolding supports_def
   apply transfer
   subgoal for s
-    apply (rule exI[of _ "sset s"])
-    apply safe
-    subgoal
-      unfolding small_def
-      using countable_card_ivar countable_sset by blast
-    subgoal
-      by (auto simp: eq_ae_refl stream.map_ident cong: stream.map_cong)
-    done
+    by (safe intro!: exI[of _ "sset s"] countable_sset)
+      (auto simp: eq_ae_refl stream.map_ident cong: stream.map_cong)
   done
 
 definition "ivar = (SOME f :: nat \<Rightarrow> ivar. inj f)"
 
 lemma ivar_inj[simp]: "ivar x = ivar y \<longleftrightarrow> x = y"
-  by (metis infinite_countable_subset infinite_ivar injD ivar_def someI_ex)
+  by (metis Cinfinite_card_suc Field_natLeq cinfinite_def infinite_countable_subset injD ivar_def
+    natLeq_card_order natLeq_cinfinite someI_ex)
 
 lift_definition inats :: "item" is "smap ivar nats" .
-
-lemma small_from: "small (ivar ` {n ..})"
-  unfolding small_def
-  by (rule countable_card_ivar) auto
 
 lemma supports_inats: "supports (ivar ` {n ..}) inats"
   unfolding supports_def
@@ -170,27 +171,22 @@ lemma supports_inats: "supports (ivar ` {n ..}) inats"
   done
 
 (* assuming the existence of a minimal support set for any item we derive a contradiction *)
-context
-  assumes minimal: "\<forall>t. \<exists>A. small A \<and> supports A t \<and> (\<forall>B. small B \<longrightarrow> supports B t \<longrightarrow> A \<subseteq> B)"
-begin
-
-lemma False
+lemma counterexample:
+  assumes minimal: "\<forall>t. \<exists>A. countable A \<and> supports A t \<and> (\<forall>B. countable B \<longrightarrow> supports B t \<longrightarrow> A \<subseteq> B)"
+  shows False
 proof -
-  from minimal obtain A where "small A" "supports A inats" "\<forall>B. small B \<longrightarrow> supports B inats \<longrightarrow> A \<subseteq> B"
+  from minimal obtain A where "countable A" "supports A inats" "\<forall>B. countable B \<longrightarrow> supports B inats \<longrightarrow> A \<subseteq> B"
     by blast
   then have *: "A \<subseteq> ivar ` {n..}" for n
-    using small_from[of n] supports_inats[of n]
-    by auto
+    using supports_inats[of n] by auto
   have "ivar x \<notin> A" for x
     using *[of "Suc x"] by auto
-  with small_ssbij[of "range ivar" "range ivar" A] small_from[of 0] \<open>small A\<close> obtain \<sigma> where
-    "ssbij \<sigma>" "\<sigma> ` range ivar \<inter> range ivar = {}" "\<forall>a\<in>A. \<sigma> a = a"
+  with countable_cbij[of "range ivar" "range ivar" A] \<open>countable A\<close> obtain \<sigma> where
+    "cbij \<sigma>" "\<sigma> ` range ivar \<inter> range ivar = {}" "\<forall>a\<in>A. \<sigma> a = a"
     by auto
   then show False
     using \<open>supports A inats\<close>[unfolded supports_def, rule_format, where \<sigma> = \<sigma>]
     by transfer (auto simp: stream.map_comp o_def eq_ae_suffix stream_eq_nth)
 qed
-
-end
 
 end

@@ -7,16 +7,13 @@ begin
 
 type_synonym ivar = "nat suc" (* uncountable variable type *)
 
-definition supp :: "(ivar \<Rightarrow> ivar) => ivar set" (* the support of f: *) where
-  "supp f \<equiv> {a . f a \<noteq> a}"
-
 definition cbij :: "(ivar \<Rightarrow> ivar) \<Rightarrow> bool" (* countable-support bijections *) where 
-  "cbij \<sigma> \<equiv> bij \<sigma> \<and> countable (supp \<sigma>)"
+  "cbij \<sigma> \<equiv> bij \<sigma> \<and> countable {x. \<sigma> x \<noteq> x}"
 
 lemma card_of_ivar: "|UNIV :: ivar set| =o card_suc |UNIV :: nat set|"
   by (simp add: card_order_card_suc ordIso_symmetric)
 
-lemma card_suc_greater_set: "\<lbrakk> card_order r ; A \<le>o r \<rbrakk> \<Longrightarrow> A <o card_suc r"
+lemma card_suc_greater_set: "card_order r \<Longrightarrow> A \<le>o r \<Longrightarrow> A <o card_suc r"
   using card_suc_greater ordLeq_ordLess_trans by blast
 
 lemma countable_iff_le_card_ivar: "countable A \<longleftrightarrow> |A| <o |UNIV::ivar set|"
@@ -81,16 +78,16 @@ proof-
     unfolding bij_def inj_def image_def
     by blast
 
-  have sv: "supp v \<subseteq> A \<union> D" unfolding supp_def using v(3) by blast
+  have sv: "{x. v x \<noteq> x} \<subseteq> A \<union> D" using v(3) by blast
 
   show ?thesis apply(rule exI[of _ v], intro conjI)
     subgoal using bv sv s(1) u(1) unfolding cbij_def
       by (metis countable_Un_iff countable_image countable_subset)
     subgoal using D(1) u(1) by auto
-    subgoal using sv D(3) s(4) unfolding supp_def by auto . 
+    subgoal using sv D(3) s(4) by auto . 
 qed
 
-definition "eq_ae s t = finite {i. snth s i \<noteq> snth t i}"
+definition "eq_ae s t = finite {i. snth s i \<noteq> snth t i}" (*almost everywhere equal streams*)
 
 lemma eq_ae_suffix: "eq_ae s t = (\<exists>i. sdrop i s = sdrop i t)"
   unfolding eq_ae_def
@@ -150,8 +147,7 @@ lemma countable_support: "\<exists>A. countable A \<and> supports A t"
   unfolding supports_def
   apply transfer
   subgoal for s
-    by (safe intro!: exI[of _ "sset s"] countable_sset)
-      (auto simp: eq_ae_refl stream.map_ident cong: stream.map_cong)
+    by (auto simp: eq_ae_refl stream.map_ident cong: stream.map_cong intro: exI[of _ "sset s"] countable_sset)
   done
 
 definition "ivar = (SOME f :: nat \<Rightarrow> ivar. inj f)"
@@ -164,11 +160,8 @@ lift_definition inats :: "item" is "smap ivar nats" .
 
 lemma supports_inats: "supports (ivar ` {n ..}) inats"
   unfolding supports_def
-  apply transfer
-  apply safe
-  subgoal for n \<sigma>
-    by (auto simp: stream.map_comp eq_ae_suffix intro!: exI[of _ n] stream.map_cong)
-  done
+  by transfer
+    (force simp: stream.map_comp eq_ae_suffix intro: stream.map_cong)
 
 (* assuming the existence of a minimal support set for any item we derive a contradiction *)
 lemma counterexample:

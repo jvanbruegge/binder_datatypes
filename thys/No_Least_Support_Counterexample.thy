@@ -19,11 +19,11 @@ lemma small_Int: "small A \<Longrightarrow> small (A \<inter> B)"
   by (metis Diff_Diff_Int small_Diff)
 
 lemma exists_subset_compl:
-  assumes "Cinfinite r" "r \<le>o |UNIV::'b set|" "|U \<union> S::'b set| <o r"
+  assumes "Cinfinite r" "r \<le>o |UNIV::ivar set|" "|U \<union> S::ivar set| <o r"
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
 proof -
   have 1: "|U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
-  have "|-(U \<union> S)| =o |UNIV::'b set|"
+  have "|-(U \<union> S)| =o |UNIV::ivar set|"
     using card_of_Un_diff_infinite[OF
         cinfinite_imp_infinite[OF cinfinite_mono[OF assms(2) conjunct1[OF assms(1)]]]
         ordLess_ordLeq_trans[OF assms(3,2)]
@@ -116,10 +116,10 @@ lemma eq_ae_trans: "eq_ae s t \<Longrightarrow> eq_ae t u \<Longrightarrow> eq_a
 lemma eq_ae_equivp: "equivp eq_ae"
   by (simp add: eq_ae_refl eq_ae_sym eq_ae_trans equivpI reflpI sympI transpI)
 
-quotient_type 'a item = "'a stream" / eq_ae
+quotient_type item = "ivar stream" / eq_ae
   by (rule eq_ae_equivp)
 
-lift_definition map_item :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a item \<Rightarrow> 'b item" is smap
+lift_definition map_item :: "(ivar \<Rightarrow> ivar) \<Rightarrow> item \<Rightarrow> item" is smap
   unfolding eq_ae_suffix
   apply (elim exE)
   subgoal for f s t i
@@ -155,7 +155,7 @@ definition "ivar = (SOME f :: nat \<Rightarrow> ivar. inj f)"
 lemma ivar_inj[simp]: "ivar x = ivar y \<longleftrightarrow> x = y"
   by (metis infinite_countable_subset infinite_ivar injD ivar_def someI_ex)
 
-lift_definition inats :: "ivar item" is "smap ivar nats" .
+lift_definition inats :: "item" is "smap ivar nats" .
 
 lemma small_from: "small (ivar ` {n ..})"
   unfolding small_def

@@ -16,10 +16,6 @@ hide_const trans
 (* INSTATIATING THE Small LOCALE (INDEPENDENTLY OF THE CONSIDERED INDUCTIVE PREDICATE *) 
 
 print_locales
-interpretation Small where dummy = "undefined :: var" 
-apply standard
-by (simp_all add: infinite_var regularCard_var)
-
 
 (* The "late" transition relation  *)
 inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where

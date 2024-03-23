@@ -289,6 +289,9 @@ by (cases act, auto)
 lemma bvars_act_bout: "bvars act = {} \<or> (\<exists>a b. act = bout a b)"
 by(cases act, auto)
 
+interpretation Small where dummy = "undefined :: var" 
+apply standard
+  by (simp_all add: infinite_var regularCard_var)
 
 
 end

@@ -77,8 +77,9 @@ session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untype
 session Process_Calculus in "thys/Pi_Calculus" = Binders +
   theories
     Pi
-	Commitment
+	  Commitment
     Pi_Transition
+    Pi_cong
 
 session System_Fsub in "thys/POPLmark" = Binders +
   theories

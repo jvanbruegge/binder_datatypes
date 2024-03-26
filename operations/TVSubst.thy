@@ -585,103 +585,6 @@ lemma SSupp_natural:
     done
   done
 
-lemma PFVars_Pmaps:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  shows "PFVars_1 (Pmap f1 f2 p) = f1 ` PFVars_1 p"
-    "PFVars_2 (Pmap f1 f2 p) = f2 ` PFVars_2 p"
-  subgoal
-    apply (unfold Pmap_def PFVars_1_def case_prod_beta fst_conv snd_conv)
-    apply (unfold compSS_defs image_Un)
-    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-      (* REPEAT_DETERM *)
-      apply (unfold IImsupp11_1_def)
-      apply (unfold image_comp[symmetric])
-      apply (subst image_comp[unfolded comp_def])
-      apply (subst T1.FFVars_rrenames)
-          apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-      apply (unfold image_UN[symmetric])
-      apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-      apply (unfold image_comp)
-      apply (subst inv_o_simp1)
-       apply (rule assms)
-      apply (unfold o_id image_Un)
-      apply (rule refl)
-      (* copied from above *)
-     apply (unfold IImsupp12_1_def)
-     apply (unfold image_comp[symmetric])
-     apply (subst image_comp[unfolded comp_def])
-     apply (subst T1.FFVars_rrenames)
-         apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-     apply (unfold image_UN[symmetric])
-     apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-     apply (unfold image_comp)
-     apply (subst inv_o_simp1)
-      apply (rule assms)
-     apply (unfold o_id image_Un)
-     apply (rule refl)
-      (* copied from above *)
-    apply (unfold IImsupp21_1_def)
-    apply (unfold image_comp[symmetric])
-    apply (subst image_comp[unfolded comp_def])
-    apply (subst T1.FFVars_rrenames)
-        apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-    apply (unfold image_UN[symmetric])
-    apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-    apply (unfold image_comp)
-    apply (subst inv_o_simp1)
-     apply (rule assms)
-    apply (unfold o_id image_Un)
-    apply (rule refl)
-      (* END REPEAT_DETERM *)
-    done
-  subgoal
-    apply (unfold Pmap_def PFVars_2_def case_prod_beta fst_conv snd_conv)
-    apply (unfold compSS_defs image_Un)
-    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-      (* REPEAT_DETERM *)
-      apply (unfold IImsupp11_2_def)
-      apply (unfold image_comp[symmetric])
-      apply (subst image_comp[unfolded comp_def])
-      apply (subst T1.FFVars_rrenames)
-          apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-      apply (unfold image_UN[symmetric])
-      apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-      apply (unfold image_comp)
-      apply (subst inv_o_simp1)
-       apply (rule assms)
-      apply (unfold o_id image_Un)
-      apply (rule refl)
-      (* copied from above *)
-     apply (unfold IImsupp12_2_def)
-     apply (unfold image_comp[symmetric])
-     apply (subst image_comp[unfolded comp_def])
-     apply (subst T1.FFVars_rrenames)
-         apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-     apply (unfold image_UN[symmetric])
-     apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-     apply (unfold image_comp)
-     apply (subst inv_o_simp1)
-      apply (rule assms)
-     apply (unfold o_id image_Un)
-     apply (rule refl)
-      (* copied from above *)
-    apply (unfold IImsupp21_2_def)
-    apply (unfold image_comp[symmetric])
-    apply (subst image_comp[unfolded comp_def])
-    apply (subst T1.FFVars_rrenames)
-        apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-    apply (unfold image_UN[symmetric])
-    apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-    apply (unfold image_comp)
-    apply (subst inv_o_simp1)
-     apply (rule assms)
-    apply (unfold o_id image_Un)
-    apply (rule refl)
-      (* END REPEAT_DETERM *)
-    done
-  done
-
 lemma IImsupp_VVrs:
   "f a \<noteq> a \<Longrightarrow> imsupp f \<inter> IImsupp11_1 y = {} \<Longrightarrow> y a = VVr11 a"
   "f2 b \<noteq> b \<Longrightarrow> imsupp f2 \<inter> IImsupp12_2 y2 = {} \<Longrightarrow> y2 b = VVr12 b"
@@ -949,7 +852,6 @@ lemma IImsupp_rrename_commute:
     done
   done
 
-
 lemma compSS_cong_ids:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -1100,41 +1002,6 @@ lemma compSS_cong_ids:
     done
   done
 
-lemma Pmap_cong_id:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  shows "(\<And>a. a \<in> PFVars_1 p \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 p \<Longrightarrow> f2 a = a) \<Longrightarrow> Pmap f1 f2 p = p"
-  apply (unfold PFVars_1_def PFVars_2_def Pmap_def case_prod_beta)
-  subgoal premises prems
-    apply (subst compSS_cong_ids, (rule f_prems prems ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order | erule UnI2 UnI1 | rule UnI1)+)+
-    apply (unfold prod.collapse)
-    apply (rule refl)
-    done
-  done
-
-lemma small_PFVarss:
-  "valid_P p \<Longrightarrow> |PFVars_1 (p::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  "valid_P p \<Longrightarrow> |PFVars_2 p| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  subgoal
-    apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def valid_P_def)
-    apply (erule conjE)+
-    apply (assumption | rule Un_bound UNION_bound T1.card_of_FFVars_bounds cmin_greater card_of_Card_order)+
-    done
-  (* copied from above *)
-  subgoal
-    apply (unfold PFVars_2_def case_prod_beta IImsupp11_2_def IImsupp12_2_def IImsupp21_2_def comp_def valid_P_def)
-    apply (erule conjE)+
-    apply (assumption | rule Un_bound UNION_bound T1.card_of_FFVars_bounds cmin_greater card_of_Card_order)+
-    done
-  done
-
-lemma small_avoiding_sets:
-  "|avoiding_set1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  "|avoiding_set2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-   apply (unfold avoiding_set1_def avoiding_set2_def)
-   apply (rule cmin_greater card_of_Card_order emp_bound)+
-  done
-
 lemmas Un_mono1 = Un_mono[OF _ empty_subsetI, unfolded Un_empty_right]
 lemmas Un_mono2 = Un_mono[OF empty_subsetI, unfolded Un_empty_left]
 
@@ -1176,6 +1043,219 @@ lemma asVVr_VVrs:
     done
   done
 
+lemma isVVr_renames:
+fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  shows
+    "isVVr11 x = isVVr11 (rrename_T1 f1 f2 x)"
+    "isVVr12 x = isVVr12 (rrename_T1 f1 f2 x)"
+    "isVVr21 y = isVVr21 (rrename_T2 f1 f2 y)"
+  apply (unfold isVVr11_def)
+  apply (rule iffI)
+   apply (erule exE)
+   apply hypsubst_thin
+   apply (subst rrename_VVrs)
+       apply (rule assms)+
+   apply (rule exI)
+   apply (rule refl)
+  apply (erule exE)
+  apply (drule arg_cong[of _ _ "rrename_T1 (inv f1) (inv f2)"])
+  apply (subst (asm) T1.rrename_comps)
+          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
+  apply (subst (asm) inv_o_simp1, rule assms)+
+  apply (unfold T1.rrename_ids)
+  apply (subst (asm) rrename_VVrs)
+      apply (rule supp_inv_bound bij_imp_bij_inv assms)+
+  apply hypsubst_thin
+  apply (rule exI)
+    apply (rule refl)
+  (* copied from above *)
+  apply (unfold isVVr12_def)
+  apply (rule iffI)
+   apply (erule exE)
+   apply hypsubst_thin
+   apply (subst rrename_VVrs)
+       apply (rule assms)+
+   apply (rule exI)
+   apply (rule refl)
+  apply (erule exE)
+  apply (drule arg_cong[of _ _ "rrename_T1 (inv f1) (inv f2)"])
+  apply (subst (asm) T1.rrename_comps)
+          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
+  apply (subst (asm) inv_o_simp1, rule assms)+
+  apply (unfold T1.rrename_ids)
+  apply (subst (asm) rrename_VVrs)
+      apply (rule supp_inv_bound bij_imp_bij_inv assms)+
+  apply hypsubst_thin
+  apply (rule exI)
+   apply (rule refl)
+  (* copied from above *)
+  apply (unfold isVVr21_def)
+  apply (rule iffI)
+   apply (erule exE)
+   apply hypsubst_thin
+   apply (subst rrename_VVrs)
+       apply (rule assms)+
+   apply (rule exI)
+   apply (rule refl)
+  apply (erule exE)
+  apply (drule arg_cong[of _ _ "rrename_T2 (inv f1) (inv f2)"])
+  apply (subst (asm) T1.rrename_comps)
+          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
+  apply (subst (asm) inv_o_simp1, rule assms)+
+  apply (unfold T1.rrename_ids)
+  apply (subst (asm) rrename_VVrs)
+      apply (rule supp_inv_bound bij_imp_bij_inv assms)+
+  apply hypsubst_thin
+  apply (rule exI)
+  apply (rule refl)
+  done
+
+lemma valid_Pmap: "valid_P p \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  valid_P (Pmap f1 f2 p)"
+  apply (unfold valid_P_def Pmap_def case_prod_beta compSS_defs fst_conv snd_conv)
+  apply (erule conjE)+
+  apply (assumption | rule conjI SSupp_comp_bounds SSupp_rename_bounds supp_inv_bound)+
+  done
+
+(**************************************)
+(***** Needed as tactics only *********)
+(**************************************)
+
+lemma PFVars_Pmaps:
+  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  shows "PFVars_1 (Pmap f1 f2 p) = f1 ` PFVars_1 p"
+    "PFVars_2 (Pmap f1 f2 p) = f2 ` PFVars_2 p"
+  subgoal
+    apply (unfold Pmap_def PFVars_1_def case_prod_beta fst_conv snd_conv)
+    apply (unfold compSS_defs image_Un)
+    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
+      (* REPEAT_DETERM *)
+      apply (unfold IImsupp11_1_def)
+      apply (unfold image_comp[symmetric])
+      apply (subst image_comp[unfolded comp_def])
+      apply (subst T1.FFVars_rrenames)
+          apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+      apply (unfold image_UN[symmetric])
+      apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+      apply (unfold image_comp)
+      apply (subst inv_o_simp1)
+       apply (rule assms)
+      apply (unfold o_id image_Un)
+      apply (rule refl)
+      (* copied from above *)
+     apply (unfold IImsupp12_1_def)
+     apply (unfold image_comp[symmetric])
+     apply (subst image_comp[unfolded comp_def])
+     apply (subst T1.FFVars_rrenames)
+         apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+     apply (unfold image_UN[symmetric])
+     apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+     apply (unfold image_comp)
+     apply (subst inv_o_simp1)
+      apply (rule assms)
+     apply (unfold o_id image_Un)
+     apply (rule refl)
+      (* copied from above *)
+    apply (unfold IImsupp21_1_def)
+    apply (unfold image_comp[symmetric])
+    apply (subst image_comp[unfolded comp_def])
+    apply (subst T1.FFVars_rrenames)
+        apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+    apply (unfold image_UN[symmetric])
+    apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+    apply (unfold image_comp)
+    apply (subst inv_o_simp1)
+     apply (rule assms)
+    apply (unfold o_id image_Un)
+    apply (rule refl)
+      (* END REPEAT_DETERM *)
+    done
+  subgoal
+    apply (unfold Pmap_def PFVars_2_def case_prod_beta fst_conv snd_conv)
+    apply (unfold compSS_defs image_Un)
+    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
+      (* REPEAT_DETERM *)
+      apply (unfold IImsupp11_2_def)
+      apply (unfold image_comp[symmetric])
+      apply (subst image_comp[unfolded comp_def])
+      apply (subst T1.FFVars_rrenames)
+          apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+      apply (unfold image_UN[symmetric])
+      apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+      apply (unfold image_comp)
+      apply (subst inv_o_simp1)
+       apply (rule assms)
+      apply (unfold o_id image_Un)
+      apply (rule refl)
+      (* copied from above *)
+     apply (unfold IImsupp12_2_def)
+     apply (unfold image_comp[symmetric])
+     apply (subst image_comp[unfolded comp_def])
+     apply (subst T1.FFVars_rrenames)
+         apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+     apply (unfold image_UN[symmetric])
+     apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+     apply (unfold image_comp)
+     apply (subst inv_o_simp1)
+      apply (rule assms)
+     apply (unfold o_id image_Un)
+     apply (rule refl)
+      (* copied from above *)
+    apply (unfold IImsupp21_2_def)
+    apply (unfold image_comp[symmetric])
+    apply (subst image_comp[unfolded comp_def])
+    apply (subst T1.FFVars_rrenames)
+        apply (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+    apply (unfold image_UN[symmetric])
+    apply (subst SSupp_natural, (rule assms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+    apply (unfold image_comp)
+    apply (subst inv_o_simp1)
+     apply (rule assms)
+    apply (unfold o_id image_Un)
+    apply (rule refl)
+      (* END REPEAT_DETERM *)
+    done
+  done
+
+lemma Pmap_cong_id:
+  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  shows "(\<And>a. a \<in> PFVars_1 p \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 p \<Longrightarrow> f2 a = a) \<Longrightarrow> Pmap f1 f2 p = p"
+  apply (unfold PFVars_1_def PFVars_2_def Pmap_def case_prod_beta)
+  subgoal premises prems
+    apply (subst compSS_cong_ids, (rule f_prems prems ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order | erule UnI2 UnI1 | rule UnI1)+)+
+    apply (unfold prod.collapse)
+    apply (rule refl)
+    done
+  done
+
+lemma small_PFVarss:
+  "valid_P p \<Longrightarrow> |PFVars_1 (p::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "valid_P p \<Longrightarrow> |PFVars_2 p| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  subgoal
+    apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def valid_P_def)
+    apply (erule conjE)+
+    apply (assumption | rule Un_bound UNION_bound T1.card_of_FFVars_bounds cmin_greater card_of_Card_order)+
+    done
+  (* copied from above *)
+  subgoal
+    apply (unfold PFVars_2_def case_prod_beta IImsupp11_2_def IImsupp12_2_def IImsupp21_2_def comp_def valid_P_def)
+    apply (erule conjE)+
+    apply (assumption | rule Un_bound UNION_bound T1.card_of_FFVars_bounds cmin_greater card_of_Card_order)+
+    done
+  done
+
+lemma small_avoiding_sets:
+  "|avoiding_set1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "|avoiding_set2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+   apply (unfold avoiding_set1_def avoiding_set2_def)
+   apply (rule cmin_greater card_of_Card_order emp_bound)+
+  done
+
 lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set7_T1_pre y \<union> set8_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FFVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set9_T1_pre y \<union> set10_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FFVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
@@ -1203,7 +1283,7 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 1] 1\<close>)
      apply (rule UnI2)?
      apply (rule UN_I)
-      apply (rule iffD2[OF mem_Collect_eq])
+      apply (rule CollectI)
       apply assumption
      apply (rule iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]])
      apply assumption
@@ -1550,83 +1630,6 @@ lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::{var
      apply (rule prems)
     apply (erule UnI2 UnI1 | rule UnI1)+
   done
-  done
-
-lemma isVVr_renames:
-fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
-  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows
-    "isVVr11 x = isVVr11 (rrename_T1 f1 f2 x)"
-    "isVVr12 x = isVVr12 (rrename_T1 f1 f2 x)"
-    "isVVr21 y = isVVr21 (rrename_T2 f1 f2 y)"
-  apply (unfold isVVr11_def)
-  apply (rule iffI)
-   apply (erule exE)
-   apply hypsubst_thin
-   apply (subst rrename_VVrs)
-       apply (rule assms)+
-   apply (rule exI)
-   apply (rule refl)
-  apply (erule exE)
-  apply (drule arg_cong[of _ _ "rrename_T1 (inv f1) (inv f2)"])
-  apply (subst (asm) T1.rrename_comps)
-          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-  apply (subst (asm) inv_o_simp1, rule assms)+
-  apply (unfold T1.rrename_ids)
-  apply (subst (asm) rrename_VVrs)
-      apply (rule supp_inv_bound bij_imp_bij_inv assms)+
-  apply hypsubst_thin
-  apply (rule exI)
-    apply (rule refl)
-  (* copied from above *)
-  apply (unfold isVVr12_def)
-  apply (rule iffI)
-   apply (erule exE)
-   apply hypsubst_thin
-   apply (subst rrename_VVrs)
-       apply (rule assms)+
-   apply (rule exI)
-   apply (rule refl)
-  apply (erule exE)
-  apply (drule arg_cong[of _ _ "rrename_T1 (inv f1) (inv f2)"])
-  apply (subst (asm) T1.rrename_comps)
-          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-  apply (subst (asm) inv_o_simp1, rule assms)+
-  apply (unfold T1.rrename_ids)
-  apply (subst (asm) rrename_VVrs)
-      apply (rule supp_inv_bound bij_imp_bij_inv assms)+
-  apply hypsubst_thin
-  apply (rule exI)
-   apply (rule refl)
-  (* copied from above *)
-  apply (unfold isVVr21_def)
-  apply (rule iffI)
-   apply (erule exE)
-   apply hypsubst_thin
-   apply (subst rrename_VVrs)
-       apply (rule assms)+
-   apply (rule exI)
-   apply (rule refl)
-  apply (erule exE)
-  apply (drule arg_cong[of _ _ "rrename_T2 (inv f1) (inv f2)"])
-  apply (subst (asm) T1.rrename_comps)
-          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-  apply (subst (asm) inv_o_simp1, rule assms)+
-  apply (unfold T1.rrename_ids)
-  apply (subst (asm) rrename_VVrs)
-      apply (rule supp_inv_bound bij_imp_bij_inv assms)+
-  apply hypsubst_thin
-  apply (rule exI)
-  apply (rule refl)
-  done
-
-lemma valid_Pmap: "valid_P p \<Longrightarrow>
-  bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
-  bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
-  valid_P (Pmap f1 f2 p)"
-  apply (unfold valid_P_def Pmap_def case_prod_beta compSS_defs fst_conv snd_conv)
-  apply (erule conjE)+
-  apply (assumption | rule conjI SSupp_comp_bounds SSupp_rename_bounds supp_inv_bound)+
   done
 
 lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>

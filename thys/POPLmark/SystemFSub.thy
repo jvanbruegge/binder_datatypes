@@ -329,18 +329,6 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R
       typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
-    apply (metis (no_types, lifting) UN_subset_iff image_eqI snd_conv subsetD)
-  using image_iff apply fastforce
-  apply (auto simp: case_prod_map_prod)
-  subgoal for \<Gamma> xs ys b l
-    apply (drule bspec)
-    apply assumption
-   apply (erule case_prodE)
-   apply (erule bexE)
-   apply (unfold case_prod_beta)
-    apply (erule conjE)
-    by (metis (no_types, opaque_lifting) fst_eqD inv_simp1 snd_eqD typ.rrename_bijs typ.rrename_inv_simps)
-  done
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
   by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tfvars small_def small_ssbij subsetI)

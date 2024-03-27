@@ -482,7 +482,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             ]) ctxt
           ] end);
 
-          val rule_thm = Local_Defs.unfold0 ctxt @{thms MRBNF_Recursor.prod_sets_simps triv_forall_equality} rule_thm;
+          val rule_thm = Local_Defs.unfold0 ctxt @{thms MRBNF_FP.prod_sets_simps triv_forall_equality} rule_thm;
           val names = map (fst o dest_Free) (
             fst (BNF_Util.mk_Frees "Bound" (map (K HOLogic.unitT) bound_prems) ctxt)
           );

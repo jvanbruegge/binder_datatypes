@@ -8,7 +8,7 @@ sig
   };
 
   type 'a tvsubst_model = {
-    fp_result: MRBNF_FP_Def_Sugar.fp_result,
+    binding: binding,
     etas: (term * 'a eta_axioms) option list
   };
 
@@ -22,8 +22,9 @@ sig
     tvsubst_cctor_not_isVVr: thm
   };
 
-  val create_tvsubst_of_mrbnf: binding -> (binding -> binding) -> (Proof.context -> tactic) tvsubst_model
-    -> local_theory -> tvsubst_result * local_theory
+  val create_tvsubst_of_mrbnf: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
+    -> (Proof.context -> tactic) tvsubst_model list -> local_theory
+    -> tvsubst_result list * local_theory
 end
 
 structure MRBNF_TVSubst : MRBNF_TVSUBST =
@@ -42,7 +43,7 @@ type 'a eta_axioms = {
 };
 
 type 'a tvsubst_model = {
-  fp_result: MRBNF_FP_Def_Sugar.fp_result,
+  binding: binding,
   etas: (term * 'a eta_axioms) option list
 };
 
@@ -58,244 +59,271 @@ type tvsubst_result = {
 
 val names = map (fst o dest_Free);
 
-fun prove_model_axioms binding qualify (model : (Proof.context -> tactic) tvsubst_model) lthy =
+fun prove_model_axioms qualify res (models : (Proof.context -> tactic) tvsubst_model list) lthy =
   let
-    val eta_names = lthy
-      |> mk_Frees "\<eta>" (map_filter (Option.map (fastype_of o fst)) (#etas model))
+    val eta_namess = lthy
+      |> mk_Freess "\<eta>" (map (map_filter (Option.map (fastype_of o fst)) o #etas) models)
       |> fst
-      |> map (fst o dest_Free)
-      |> map (fn s => s ^ "_" ^ short_type_name (fst (dest_Type (#T (hd (#quotient_fps (#fp_result model)))))));
-    val eta_names_opt = fst (fold_map (fn x => fn names => case x of
-      SOME _ => (SOME (hd names), tl names)
-      | NONE => (NONE, names)
-    ) (#etas model) eta_names);
-    val mrbnf = hd (#pre_mrbnfs (#fp_result model));
-    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf
-    val (etas, (_, lthy)) = @{fold_map 3} (fn set => fn eta_opt => fn eta_name => fn (i, lthy) => let val eta_opt' = Option.map (fn (eta, tacs) =>
-      let
-        val (aT, preT) = dest_funT (fastype_of eta);
-        val args = snd (dest_Type preT);
-        val old_vars = rev (map TVar (Term.add_tvars set []) @ map TFree (Term.add_tfrees set []));
-        val set' = Term.subst_atomic_types (old_vars ~~ args) set;
-        val vars = fold (Term.add_tfreesT) args [];
+      |> map (map (fst o dest_Free))
+      |> map2 (fn quot => map (fn s => s ^ "_" ^ short_type_name (fst (dest_Type (#T quot))))) (#quotient_fps res);
 
-        val (args_live, args_rest) = fold_rev (
-          fn (MRBNF_Def.Live_Var, x) => (fn (a, b) => (x::a, b))
-          | (_, x) => fn (a, b) => (a, x::b)
-        ) (var_types ~~ args) ([], []);
+    val eta_names_opts = map2 (fn model => fn eta_names =>
+      fst (fold_map (fn x => fn names => case x of
+        SOME _ => (SOME (hd names), tl names)
+        | NONE => (NONE, names)
+      ) (#etas model) eta_names)
+    ) models eta_namess;
 
-        val names_lthy = fold (Variable.declare_constraints o Logic.mk_type o TFree) vars lthy;
-        val ((((a, b), x), Bs), names_lthy) = names_lthy
-          |> apfst hd o mk_Frees "a" [aT]
-          ||>> apfst hd o mk_Frees "b" [aT]
-          ||>> apfst hd o mk_Frees "x" [preT]
-          ||>> mk_TFrees (length args_live);
+    val mrbnfs = #pre_mrbnfs res;
+    val nvars = length (#binding_relation res);
+    val pfree = MRBNF_Def.free_of_mrbnf (hd mrbnfs) - nvars;
+    val plive = MRBNF_Def.live_of_mrbnf (hd mrbnfs) - foldl1 (op+) (#rec_vars res);
+    val pbound = MRBNF_Def.bound_of_mrbnf (hd mrbnfs) - nvars;
 
-        val live_Ts = map2 (curry op-->) args_live Bs;
-        val fTs = cond_interlace live_Ts (map (fn T => T --> T) args_rest)
-          (map (fn MRBNF_Def.Live_Var => true | _ => false) var_types);
-
-        val (fs, _) = names_lthy
-          |> mk_Frees "f" fTs;
-
-        val lthy = snd (Local_Theory.begin_nested lthy);
-        val (raw_eta, lthy) = mk_def_t false binding qualify (the eta_name) 0 eta lthy
-        val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-        val phi = Proof_Context.export_morphism old_lthy lthy;
-
-        val eta' = Morphism.term phi (fst raw_eta);
-        val vars = snd (dest_Type (range_type (fastype_of eta')));
-        val eta = (Term.subst_atomic_types (vars ~~ args) eta', Morphism.thm phi (snd raw_eta));
-
-        val eta_free = Goal.prove_sorry lthy (names [a]) []
-          (mk_Trueprop_eq (set' $ (fst eta $ a), mk_singleton a))
-          (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_free tacs context);
-
-        val eta_inj = Goal.prove_sorry lthy (names [a, b]) []
-          (Logic.mk_implies (mk_Trueprop_eq (fst eta $ a, fst eta $ b), mk_Trueprop_eq (a, b)))
-          (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_inj tacs context);
-
-        val eta_compl_free = Goal.prove_sorry lthy [] []
-          (Logic.all x (Logic.mk_implies (
-            HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (
-              x, mk_image (fst eta) $ HOLogic.mk_UNIV aT
-            ))),
-            mk_Trueprop_eq (set' $ x, mk_bot aT)
-          )))
-          (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_compl_free tacs context);
-
-        val f_types = var_types ~~ fs;
-        val f_prems = maps (
-          fn (MRBNF_Def.Free_Var, f) => [mk_supp_bound f]
-          | (MRBNF_Def.Bound_Var, f) => [mk_bij f, mk_supp_bound f]
-          | _ => []
-        ) f_types;
-        val (free_fs, bound_fs, live_fs) = fold_rev (
-          fn (MRBNF_Def.Free_Var, x) => (fn (a, b, c) => (x::a, b, c))
-          | (MRBNF_Def.Bound_Var, x) => (fn (a, b, c) => (a, x::b, c))
-          | (_, x) => (fn (a, b, c) => (a, b, x::c))
-        ) f_types ([], [], []);
-
-        val eta' =
+    val (etass, lthy) = @{fold_map 3} (fn model => fn mrbnf => fn eta_names_opt => fn lthy =>
+      let val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf in apsnd snd (
+        @{fold_map 3} (fn set => fn eta_opt => fn eta_name => fn (i, lthy) => let val eta_opt' = Option.map (fn (eta, tacs) =>
           let
-            val (n, T) = dest_Const (fst eta);
-            val (n2, Ts) = dest_Type (range_type T);
-            val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
-            val Ts' = fst (fold_map (fn (var, ty) => fn acc => case var of
-              MRBNF_Def.Live_Var => (hd acc, tl acc)
-              | _ => (ty, acc)
-            ) (var_types ~~ Ts) Bs);
-          in Const (n, domain_type T --> Type (n2, Ts')) end;
-        val eta_natural = Goal.prove_sorry lthy (names fs) []
-          (fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) f_prems (mk_Trueprop_eq (
-            HOLogic.mk_comp (
-              MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf) live_fs bound_fs free_fs mrbnf,
-              fst eta
-            ),
-            HOLogic.mk_comp (eta', nth free_fs i)
-          )))
-          (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_natural tacs context);
-      in ((eta, {
-        eta_free = eta_free,
-        eta_inj = eta_inj,
-        eta_compl_free = eta_compl_free,
-        eta_natural = eta_natural
-      }), lthy) end
-    ) eta_opt in (Option.map fst eta_opt', (i + 1, the_default lthy (Option.map snd eta_opt'))) end)
-    (map_filter (fn (MRBNF_Def.Free_Var, set) => SOME set | _ => NONE) (
-      var_types ~~ MRBNF_Def.sets_of_mrbnf mrbnf
-    )) (#etas model) eta_names_opt (0, lthy);
+            val (aT, preT) = dest_funT (fastype_of eta);
+            val args = snd (dest_Type preT);
+            val old_vars = rev (map TVar (Term.add_tvars set []) @ map TFree (Term.add_tfrees set []));
+            val set' = Term.subst_atomic_types (old_vars ~~ args) set;
+            val vars = rev (fold (Term.add_tfreesT) args []);
 
-    val vars_opt = map (Option.map (fst o dest_funT o fastype_of o fst)) (#etas model);
-    val vars = map_filter (Option.map dest_TFree) vars_opt;
-    val names_lthy = fold (Variable.declare_constraints o Logic.mk_type o TFree) vars lthy;
-    val n = MRBNF_Def.free_of_mrbnf mrbnf - length vars;
-    val (Ts, _) = names_lthy
-      |> mk_TFrees' (replicate n (MRBNF_Def.class_of_mrbnf mrbnf));
-    val var_T = #T (hd (#quotient_fps (#fp_result model)));
-    val old_vars = map TVar (rev (Term.add_tvarsT var_T [])) @ map TFree (rev (Term.add_tfreesT var_T []));
-    val new_vars = fst (fold_map (fn SOME a => (fn xs => (a, xs)) | NONE => fn xs => (hd xs, tl xs)) vars_opt Ts);
+            val (((((frees, pfrees), plives), pbounds), bounds), rec_vars) = args
+              |> chop nvars
+              ||>> chop pfree
+              ||>> chop plive
+              ||>> chop pbound
+              ||>> chop nvars;
 
-  in (map_filter (Option.map (snd o fst)) etas, {
-    fp_result = MRBNF_FP_Def_Sugar.substitute_vars (old_vars ~~ new_vars) (#fp_result model),
-    etas = map (Option.map (apfst fst)) etas
-  } : thm tvsubst_model, lthy) end;
+            val names_lthy = fold (Variable.declare_constraints o Logic.mk_type o TFree) vars lthy;
+            val ((((a, b), x), Bs), names_lthy) = names_lthy
+              |> apfst hd o mk_Frees "a" [aT]
+              ||>> apfst hd o mk_Frees "b" [aT]
+              ||>> apfst hd o mk_Frees "x" [preT]
+              ||>> mk_TFrees (length rec_vars);
 
-fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
-  let
-    val (_, lthy) = Local_Theory.begin_nested lthy;
-    val mk_def_public = mk_def_t true b (Binding.suffix_name ("_" ^ Binding.name_of b));
-    val mk_def_t = mk_def_t false b qualify;
-    val quotient = hd (#quotient_fps (#fp_result model));
-    val ctor = #ctor quotient;
-    val FVarss = #FVars quotient;
-    val rename = #rename quotient;
-    val vars = snd (dest_Type (body_type (fastype_of rename)));
-    val nvars = length vars;
-    val (preT, qT) = dest_funT (fastype_of ctor);
-    val suffix = case map_filter I (#etas model) of
-      [_] => map (Option.map (K "")) (#etas model)
-      | _ => fst (fold_map (fn eta_opt => fn i => case eta_opt of
-        NONE => (NONE, i)
-        | SOME _ => (SOME (string_of_int i), i + 1)
-      ) (#etas model) 1);
+            val fTs = map (fn a => a --> a) (frees @ bounds) @ map2 (curry op-->) rec_vars Bs;
 
-    val (defs, lthy) = @{fold_map 3} (fn eta_opt => fn suffix => fn i => fn lthy => let val opt = Option.map (fn (eta, _) =>
+            val ((free_fs, bound_fs), live_fs) = names_lthy
+              |> mk_Frees "f" fTs
+              |> fst
+              |> chop nvars
+              ||>> chop nvars;
+            val fs = free_fs @ bound_fs @ live_fs;
+
+            val lthy = snd (Local_Theory.begin_nested lthy);
+            val (raw_eta, lthy) = mk_def_t false (#binding model) qualify (the eta_name) 0 eta lthy
+            val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+            val phi = Proof_Context.export_morphism old_lthy lthy;
+
+            val eta' = Morphism.term phi (fst raw_eta);
+            val vars = snd (dest_Type (range_type (fastype_of eta')));
+            val eta = (Term.subst_atomic_types (vars ~~ args) eta', Morphism.thm phi (snd raw_eta));
+
+            val eta_free = Goal.prove_sorry lthy (names [a]) []
+              (mk_Trueprop_eq (set' $ (fst eta $ a), mk_singleton a))
+              (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_free tacs context);
+
+            val eta_inj = Goal.prove_sorry lthy (names [a, b]) []
+              (Logic.mk_implies (mk_Trueprop_eq (fst eta $ a, fst eta $ b), mk_Trueprop_eq (a, b)))
+              (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_inj tacs context);
+
+            val eta_compl_free = Goal.prove_sorry lthy [] []
+              (Logic.all x (Logic.mk_implies (
+                HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (
+                  x, mk_image (fst eta) $ HOLogic.mk_UNIV aT
+                ))),
+                mk_Trueprop_eq (set' $ x, mk_bot aT)
+              )))
+              (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_compl_free tacs context);
+
+            val f_prems = map mk_supp_bound free_fs @ maps (fn f => [mk_bij f, mk_supp_bound f]) bound_fs;
+
+            val eta' =
+              let
+                val (n, T) = dest_Const (fst eta);
+                val (n2, _) = dest_Type (range_type T);
+                val Ts' = frees @ pfrees @ plives @ pbounds @ bounds @ Bs;
+              in Const (n, domain_type T --> Type (n2, Ts')) end;
+            val eta_natural = Goal.prove_sorry lthy (names fs) []
+              (fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) f_prems (mk_Trueprop_eq (
+                HOLogic.mk_comp (
+                  MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+                  (map HOLogic.id_const plives @ live_fs)
+                  (map HOLogic.id_const pbounds @ bound_fs)
+                  (free_fs @ map HOLogic.id_const pfrees) mrbnf,
+                  fst eta
+                ),
+                HOLogic.mk_comp (eta', nth free_fs i)
+              )))
+              (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_natural tacs context);
+          in ((eta, {
+            eta_free = eta_free,
+            eta_inj = eta_inj,
+            eta_compl_free = eta_compl_free,
+            eta_natural = eta_natural
+          }), lthy) end
+        ) eta_opt in (Option.map fst eta_opt', (i + 1, the_default lthy (Option.map snd eta_opt'))) end)
+        (take nvars (map_filter (fn (MRBNF_Def.Free_Var, set) => SOME set | _ => NONE) (
+          var_types ~~ MRBNF_Def.sets_of_mrbnf mrbnf
+        ))) (#etas model) eta_names_opt (0, lthy)
+      ) end
+    ) models mrbnfs eta_names_opts lthy;
+
+    val sort = snd (dest_TFree (domain_type (fastype_of (fst (fst (hd (map_filter I (flat etass))))))));
+    val (Ts, _) = mk_TFrees' (
+      replicate (nvars + pfree) sort @ replicate plive @{sort type} @ replicate pbound sort
+    ) lthy;
+    val ctor = #ctor (hd (#quotient_fps res));
+    val vars = map TVar (rev (Term.add_tvars ctor [])) @ map TFree (rev (Term.add_tfrees ctor []));
+    val res = MRBNF_FP_Def_Sugar.substitute_vars (vars ~~ Ts) res
+    val ctor = #ctor (hd (#quotient_fps res));
+    val args = snd (dest_Type (domain_type (fastype_of ctor)));
+
+    val etass = map (map (Option.map (fn ((eta, eta_def), thms) =>
       let
-        val (eta_name, etaT) = dest_Const eta
-        val aT = fst (dest_funT etaT);
-        val eta' = Const (eta_name, aT --> preT);
-        val (VVr, lthy) = mk_def_t ("VVr" ^ the suffix) 0 (HOLogic.mk_comp (ctor, eta')) lthy;
+        val Ts' = snd (dest_Type (range_type (fastype_of eta)));
+        val eta' = Term.subst_atomic_types (Ts' ~~ args) eta;
+      in ((eta', eta_def), thms) end
+    ))) etass;
+    val Ts' = Ts
+      |> chop nvars
+      ||>> chop pfree
+      ||>> chop plive
 
-        val ((h, t), _) = lthy
-          |> apfst hd o mk_Frees "f" [aT --> qT]
-          ||>> apfst hd o mk_Frees "t" [qT];
+  in (res, maps (map_filter (Option.map (snd o fst))) etass, Ts',
+    map2 (fn model => fn etas => {
+      binding = #binding model,
+      etas = map (Option.map (apfst fst)) etas
+    } : thm tvsubst_model) models etass, lthy
+  ) end;
 
-        val (SSupp, lthy) = mk_def_public ("SSupp" ^ the suffix) 1 (Term.absfree (dest_Free h) (
-          HOLogic.mk_Collect ("a", aT, HOLogic.mk_not (HOLogic.mk_eq (
-            h $ Bound 0, fst VVr $ Bound 0
-          )))
-        )) lthy;
+fun define_tvsubst_consts qualify fp_res (vars, pfrees, plives, pbounds) (models : thm tvsubst_model list) lthy =
+  let
+    val nvars = length vars;
+    val mk_def_t = MRBNF_Util.mk_def_t false (Binding.conglomerate (map #binding models)) qualify;
+    val mk_def_public = MRBNF_Util.mk_def_t true Binding.empty I;
 
-        val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s => mk_def_public ("IImsupp" ^ the suffix ^ s) 1 (
-          Term.absfree (dest_Free h) (
-            let val UN = mk_UNION (fst SSupp $ h) (HOLogic.mk_comp (FVars, h));
-            in if fastype_of (fst SSupp $ h) = range_type (fastype_of FVars) then
-              mk_Un (fst SSupp $ h, UN)
-            else UN end
-        ))) FVarss (if nvars = 1 then [""] else map string_of_int (1 upto nvars)) lthy;
-
-        val (isVVr, lthy) = mk_def_t ("isVVr" ^ the suffix) 1 (Term.absfree (dest_Free t) (
-          HOLogic.mk_exists ("a", aT, HOLogic.mk_eq (t, fst VVr $ Bound 0))
-        )) lthy;
-
-        val (asVVr, lthy) = mk_def_t ("asVVr" ^ the suffix) 1 (Term.absfree (dest_Free t) (
-          BNF_FP_Util.mk_If (fst isVVr $ t)
-            (HOLogic.choice_const aT $ Term.abs ("a", aT) (HOLogic.mk_eq (fst VVr $ Bound 0, t)))
-            (BNF_GFP_Util.mk_undefined aT)
-        )) lthy;
-
-        val (fs, _) = lthy
-          |> mk_Frees "f" (map (fn v => v --> v) vars);
-
-        val (compSS, lthy) = mk_def_t ("compSS" ^ the suffix) nvars (
-          fold_rev Term.absfree (map dest_Free fs) (
-            Term.absfree (dest_Free h) (HOLogic.mk_comp (
-              HOLogic.mk_comp (
-                Term.list_comb (#rename quotient, fs),
-                h
-              ),
-              mk_inv (nth fs i)
-            ))
-          )
-        ) lthy;
-      in ({
-        aT = aT,
-        SSfun = fastype_of h,
-        VVr = VVr,
-        SSupp = SSupp,
-        IImsupps = IImsupps,
-        isVVr = isVVr,
-        asVVr = asVVr,
-        compSS = compSS
-      }, lthy) end
-    ) eta_opt in (Option.map fst opt, the_default lthy (Option.map snd opt)) end)
-    (#etas model) suffix (0 upto nvars - 1) lthy;
-
-    val (name, args) = (dest_Type o fst o dest_funT o fastype_of) ctor;
-    val mrbnf = hd (#pre_mrbnfs (#fp_result model));
-    val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
-    val live = MRBNF_Def.live_of_mrbnf mrbnf;
-    val P_Ts = map_filter (Option.map #SSfun) defs;
-    val P_T = HOLogic.mk_tupleT P_Ts;
-    val live_T = HOLogic.mk_prodT (#T quotient, P_T --> #T quotient);
-
-    val arg_types = (MRBNF_Def.var_types_of_mrbnf mrbnf ~~ args);
-    val new_args = map (fn (MRBNF_Def.Live_Var, _) => live_T | (_, arg) => arg) arg_types;
-    val ids = map HOLogic.id_const vars;
-    val map_id_fst = ctor $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
-      (replicate live (fst_const live_T)) ids ids mrbnf $ Bound (length P_Ts));
-
-    val (ps, _) = lthy
-      |> mk_Frees "p" P_Ts;
-
-    val (Uctor, lthy) = mk_def_t "Uctor" 0 (Term.abs ("F", Type (name, new_args)) (mk_case_tuple (map dest_Free ps) (
-      fold (fn (p, def) => BNF_FP_Util.mk_If (fst (#isVVr def) $ map_id_fst)
-        (p $ (fst (#asVVr def) $ map_id_fst))
-    ) (ps ~~ map_filter I defs) (ctor $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
-      (replicate live (HOLogic.mk_comp (
-        Term.abs ("R", P_T --> #T quotient) (Bound 0 $ HOLogic.mk_tuple ps),
-        snd_const live_T
-      )))
-      ids ids mrbnf $ Bound (length P_Ts))
-    )))) lthy;
+    val suffixes =
+      let fun mk_ss s etas = case map_filter I etas of
+        [_] => map (Option.map (K s)) etas
+        | _ => fst (fold_map (fn eta_opt => fn i => case eta_opt of
+          NONE => (NONE, i) | SOME _ => (SOME (s ^ string_of_int i), i + 1)
+        ) etas 1);
+      in case models of
+        [m] => [mk_ss "" (#etas m)]
+        | _ => map2 (fn i => mk_ss (string_of_int i) o #etas) (1 upto length models) models
+      end;
 
     val (fs, _) = lthy
       |> mk_Frees "f" (map (fn a => a --> a) vars);
 
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+
+    val (defss, lthy) = @{fold_map 3} (fn quot => fn model => fn suffix =>
+      @{fold_map 3} (fn eta_opt => fn suffix => fn i => fn lthy => let val opt = Option.map (fn (eta, _) =>
+        let
+          val qT = #T quot;
+          val aT = domain_type (fastype_of eta);
+          val (VVr, lthy) = mk_def_t ("VVr" ^ the suffix) 0 (HOLogic.mk_comp (#ctor quot, eta)) lthy;
+
+          val ((h, t), _) = lthy
+            |> apfst hd o mk_Frees "f" [aT --> qT]
+            ||>> apfst hd o mk_Frees "t" [qT];
+
+          val (SSupp, lthy) = mk_def_public ("SSupp" ^ the suffix ^ "_" ^ Binding.name_of (#binding model))
+            1 (Term.absfree (dest_Free h) (HOLogic.mk_Collect ("a", aT, HOLogic.mk_not (HOLogic.mk_eq (
+              h $ Bound 0, fst VVr $ Bound 0
+            )))
+          )) lthy;
+
+          val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s =>
+            mk_def_public ("IImsupp" ^ the suffix ^ s ^ "_" ^ Binding.name_of (#binding model)) 1 (Term.absfree (dest_Free h) (
+              let val UN = mk_UNION (fst SSupp $ h) (HOLogic.mk_comp (FVars, h));
+              in if fastype_of (fst SSupp $ h) = range_type (fastype_of FVars) then
+                mk_Un (fst SSupp $ h, UN)
+              else UN end
+          ))) (#FVars quot) (if nvars = 1 then [""] else map (fn i => "_" ^ string_of_int i) (1 upto nvars)) lthy;
+
+          val (isVVr, lthy) = mk_def_t ("isVVr" ^ the suffix) 1 (Term.absfree (dest_Free t) (
+            HOLogic.mk_exists ("a", aT, HOLogic.mk_eq (t, fst VVr $ Bound 0))
+          )) lthy;
+
+          val (asVVr, lthy) = mk_def_t ("asVVr" ^ the suffix) 1 (Term.absfree (dest_Free t) (
+            BNF_FP_Util.mk_If (fst isVVr $ t)
+              (HOLogic.choice_const aT $ Term.abs ("a", aT) (HOLogic.mk_eq (fst VVr $ Bound 0, t)))
+              (BNF_GFP_Util.mk_undefined aT)
+          )) lthy;
+
+          val (fs, _) = lthy
+            |> mk_Frees "f" (map (fn v => v --> v) vars);
+
+          val (compSS, lthy) = mk_def_t ("compSS" ^ the suffix) nvars (
+            fold_rev Term.absfree (map dest_Free fs) (
+              Term.absfree (dest_Free h) (HOLogic.mk_comp (
+                HOLogic.mk_comp (
+                  Term.list_comb (#rename quot, fs),
+                  h
+                ),
+                mk_inv (nth fs i)
+              ))
+            )
+          ) lthy;
+        in ({
+          aT = aT,
+          SSfun = fastype_of h,
+          VVr = VVr,
+          SSupp = SSupp,
+          IImsupps = IImsupps,
+          isVVr = isVVr,
+          asVVr = asVVr,
+          compSS = compSS
+        }, lthy) end
+      ) eta_opt in (
+        Option.map fst opt, the_default lthy (Option.map snd opt))
+      end) (#etas model) suffix (0 upto nvars - 1)
+    ) (#quotient_fps fp_res) models suffixes lthy;
+
+    val P_Tss = map (map_filter (Option.map #SSfun)) defss;
+    val P_T = HOLogic.mk_tupleT (flat P_Tss);
+    val (pss, _) = lthy
+      |> mk_Freess "p" P_Tss;
+
+    val (Uctors, lthy) = @{fold_map 5} (fn ps => fn defs => fn mrbnf => fn quot => fn model => fn lthy =>
+      let
+        val ctor = #ctor quot;
+        val (name, (args, rec_args)) = dest_Type (fst (dest_funT (fastype_of ctor)))
+          |> apsnd (chop (nvars * 2 + length pfrees + length plives + length pbounds));
+        val rec_args' = map (fn T => HOLogic.mk_prodT (T, P_T --> T)) rec_args;
+        val args = args @ rec_args';
+
+        val free_ids = map HOLogic.id_const (vars @ pfrees);
+        val bound_ids = map HOLogic.id_const (pbounds @ vars);
+
+        val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
+        val map_id_fst = ctor $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
+          (map HOLogic.id_const plives @ map fst_const rec_args')
+          bound_ids free_ids mrbnf $ Bound (length (flat P_Tss)));
+        val mk_def_t = MRBNF_Util.mk_def_t false (#binding model) qualify;
+
+      in mk_def_t "Uctor" 0 (Term.abs ("F", Type (name, args)) (
+        mk_case_tuple (map dest_Free (flat pss)) (@{fold 2} (fn p => fn def =>
+          BNF_FP_Util.mk_If (fst (#isVVr def) $ map_id_fst)
+            (p $ (fst (#asVVr def) $ map_id_fst))
+        ) (rev ps) (rev (map_filter I defs)) (ctor $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
+          (map HOLogic.id_const plives @ map (fn T => HOLogic.mk_comp (
+            Term.abs ("R", snd (HOLogic.dest_prodT T)) (Bound 0 $ HOLogic.mk_tuple (flat pss)),
+            snd_const T
+          )) rec_args') bound_ids free_ids mrbnf $ Bound (length (flat P_Tss))))
+      ))) lthy end
+    ) pss defss (#pre_mrbnfs fp_res) (#quotient_fps fp_res) models lthy;
+
+    val ps = flat pss;
     val card = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
-    val some_defs = map_filter I defs;
-    val (Pmap, lthy) = mk_def_t "Pmap" nvars (fold_rev Term.absfree (map dest_Free fs) (
+    val some_defs = maps (map_filter I) defss;
+    val (Pmap, lthy) = mk_def_t "Pmap" (nvars + 1) (fold_rev Term.absfree (map dest_Free fs) (
       mk_case_tuple (map dest_Free ps) (HOLogic.mk_tuple (map2 (fn p => fn def =>
         Term.list_comb (fst (#compSS def), fs @ [p])) ps some_defs
       ))
@@ -306,44 +334,59 @@ fun define_tvsubst_consts b qualify (model : thm tvsubst_model) lthy =
       ) some_defs ps)
     )) lthy;
 
+    val (PFVarss, lthy) = mk_defs_t false (Binding.conglomerate (map #binding models)) qualify "PFVars" 1
+      (map (fn i => mk_case_tuple (map dest_Free ps) (
+        foldl1 mk_Un (flat (map2 (fn defs => map2 (fn def => fn p =>
+          fst (nth (#IImsupps def) i) $ p
+        ) (map_filter I defs)) defss pss))
+      )) (0 upto nvars - 1)) lthy;
+
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
 
-    fun morph (t, thm) phi =
-      let val t' = Morphism.term phi t
-      in (
-        Term.subst_atomic_types (map TVar (Term.add_tvars t' []) ~~ map TFree (Term.add_tfrees t [])) t',
+    val morph =
+      let
+        val uctor = fst (hd Uctors);
+        val uctor' = Morphism.term phi uctor;
+        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (fastype_of uctor', fastype_of uctor) Vartab.empty;
+        val subst = Envir.subst_term (tyenv, Vartab.empty);
+      in fn (t, thm) => (
+        Morphism.term (phi $> Morphism.term_morphism "fix_tyvars" subst) t,
         Morphism.thm phi thm
       ) end;
 
-    val defs = map (Option.map (fn def => {
-      aT = #aT def,
-      SSfun = #SSfun def,
-      VVr = morph (#VVr def) phi,
-      SSupp = morph (#SSupp def) phi,
-      IImsupps = map (fn t => morph t phi) (#IImsupps def),
-      isVVr = morph (#isVVr def) phi,
-      asVVr = morph (#asVVr def) phi,
-      compSS = morph (#compSS def) phi
-    })) defs;
+    val defss = map (map (Option.map (fn { aT, SSfun, VVr, SSupp, IImsupps, isVVr, asVVr, compSS } => {
+      aT = aT,
+      SSfun = SSfun,
+      VVr = morph VVr,
+      SSupp = morph SSupp,
+      IImsupps = map morph IImsupps,
+      isVVr = morph isVVr,
+      asVVr = morph asVVr,
+      compSS = morph compSS
+    }))) defss;
 
-  in (morph Uctor phi, morph Pmap phi, morph valid_P phi, defs, vars, lthy) end;
+  in (defss, map morph Uctors, morph Pmap, map morph PFVarss, morph valid_P, lthy) end;
 
-fun create_tvsubst_of_mrbnf b qualify model lthy =
+fun option_map2 f (SOME x) (SOME y) = SOME (f x y)
+  | option_map2 _ _ _ = NONE
+fun traverse_pair (SOME (x, y)) = (SOME x, SOME y)
+  | traverse_pair NONE = (NONE, NONE)
+
+fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
   let
-    val (eta_defs, model, lthy) = prove_model_axioms b qualify model lthy;
-    val (Uctor, Pmap, valid_P, defs, vars, lthy) = define_tvsubst_consts b qualify model lthy;
+    val (fp_res, eta_defs, vars, models, lthy) = prove_model_axioms qualify fp_res models lthy;
+    val (((vars, pfrees), plives), pbounds) = vars;
+
+    val (defss, Uctors, Pmap, PFVarss, valid_P, lthy) = define_tvsubst_consts qualify fp_res
+      (vars, pfrees, plives, pbounds) models lthy;
 
     val nvars = length vars;
-    val mrbnf = hd (#pre_mrbnfs (#fp_result model));
-    val quotient = hd (#quotient_fps (#fp_result model));
-    val live = MRBNF_Def.live_of_mrbnf mrbnf;
-
     val card = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
 
-    val defs = map2 (fn (SOME axiom) => (fn SOME def => SOME {
-      eta = fst axiom,
-      axioms = snd axiom,
+    val defss = map2 (fn model => map2 (option_map2 (fn eta => fn def => {
+      eta = fst eta,
+      axioms = snd eta,
       aT = #aT def,
       VVr = #VVr def,
       SSupp = #SSupp def,
@@ -353,22 +396,22 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       SSfun = #SSfun def,
       compSS = #compSS def,
       mk_SSupp_bound = fn t => mk_ordLess (mk_card_of (fst (#SSupp def) $ t)) card
-    } | NONE => NONE) | NONE => fn _ => NONE) (#etas model) defs;
+    })) (#etas model)) models defss;
 
-    val SSupp_VVr_empties = map (Option.map (fn def =>
-      Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (fst (#SSupp def) $ fst (#VVr def), mk_bot (#aT def))) (fn {context=ctxt, ...} => EVERY1 [
-        K (unfold_thms_tac ctxt (@{thms HOL.simp_thms(6) not_True_eq_False empty_def[symmetric]} @ [snd (#SSupp def)])),
-        rtac ctxt TrueI
-      ])
-    )) defs;
-    val SSupp_VVr_bounds = map (Option.map (fn def =>
-      Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (#mk_SSupp_bound def (fst (#VVr def)))) (fn {context=ctxt, ...} => EVERY1 [
-        K (unfold_thms_tac ctxt (map_filter I SSupp_VVr_empties)),
-        REPEAT_DETERM o resolve_tac ctxt @{thms emp_bound cmin_greater card_of_Card_order}
-      ])
-    )) defs;
+    val (SSupp_VVr_emptiess, SSupp_VVr_boundss) = split_list (map (split_list o map (traverse_pair o Option.map (fn def =>
+      let
+        val empty = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (fst (#SSupp def) $ fst (#VVr def), mk_bot (#aT def))) (fn {context=ctxt, ...} => EVERY1 [
+          K (unfold_thms_tac ctxt (@{thms HOL.simp_thms(6) not_True_eq_False empty_def[symmetric]} @ [snd (#SSupp def)])),
+          rtac ctxt TrueI
+        ]);
+        val bound = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (#mk_SSupp_bound def (fst (#VVr def)))) (fn {context=ctxt, ...} => EVERY1 [
+          K (unfold_thms_tac ctxt [empty]),
+          REPEAT_DETERM o resolve_tac ctxt @{thms emp_bound cmin_greater card_of_Card_order}
+        ]);
+      in (empty, bound) end
+    ))) defss);
 
-    val VVr_injs = map (Option.map (fn def =>
+    val VVr_injss = map2 (fn quot => map (Option.map (fn def =>
       let
         val (a, b) = (Free ("a", #aT def), Free ("b", #aT def));
         val ax = #axioms def;
@@ -378,7 +421,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       )) (fn {context=ctxt, ...} => EVERY1 [
         K (unfold_thms_tac ctxt (@{thms comp_def} @ [snd (#VVr def)])),
         rtac ctxt (#eta_inj ax),
-        dtac ctxt (iffD1 OF [#inject quotient]),
+        dtac ctxt (iffD1 OF [#inject quot]),
         REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
         dtac ctxt @{thm trans[rotated]},
         rtac ctxt sym,
@@ -388,51 +431,52 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         rtac ctxt @{thm arg_cong[OF id_apply]},
         assume_tac ctxt
       ]) end
-    )) defs;
+    ))) (#quotient_fps fp_res) defss;
 
-    val (((fs, gs), some_hs), _) = lthy
+    val (((fs, gs), some_hss), _) = lthy
       |> mk_Frees "f" (map (fn a => a --> a) vars)
       ||>> mk_Frees "g" (map (fn a => a --> a) vars)
-      ||>> mk_Frees "h" (map_filter (Option.map #SSfun) defs);
-    val hs = fst (fold_map (fn def => fn hs => case def of
+      ||>> mk_Freess "h" (map (map_filter (Option.map #SSfun)) defss);
+    val hss = map2 (fn defs => fn some_hs => fst (fold_map (fn def => fn hs => case def of
       SOME _ => (SOME (hd hs), tl hs) | _ => (NONE, hs)
-    ) defs some_hs);
+    ) defs some_hs)) defss some_hss;
     fun mk_supp_bound' f = mk_ordLess (mk_card_of (mk_supp f)) card;
-    val f_premss = map (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) fs;
-    val f_premss' = map (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound' f]) fs;
+    val f_prems = maps (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) fs;
+    val f_prems' = maps (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound' f]) fs;
 
-    val rrename_VVrs = map_index (fn (i, opt) => Option.map (fn def =>
+    val rrename_VVrss = map2 (fn quot => map_index (fn (i, opt) => Option.map (fn def =>
       let
         val a = Free ("a", #aT def);
         val VVr = fst (#VVr def)
         val goal = mk_Trueprop_eq (
-          Term.list_comb (#rename quotient, fs) $ (VVr $ a),
+          Term.list_comb (#rename quot, fs) $ (VVr $ a),
           VVr $ (nth fs i $ a)
         );
-      in Goal.prove_sorry lthy (names (fs @ [a])) (flat f_premss) goal (fn {context=ctxt, prems} => EVERY1 [
+      in Goal.prove_sorry lthy (names (fs @ [a])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
         K (unfold_thms_tac ctxt [snd (#VVr def), @{thm comp_def}]),
         rtac ctxt trans,
-        rtac ctxt (#rename_ctor (#inner quotient)),
+        rtac ctxt (#rename_ctor (#inner quot)),
         REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
-        rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (#ctor quotient))] arg_cong),
+        rtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (#ctor quot))] arg_cong),
         rtac ctxt (Local_Defs.unfold0 ctxt @{thms comp_def} (fun_cong OF [#eta_natural (#axioms def)])),
         REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
       ]) end
-    ) opt) defs;
+    ) opt)) (#quotient_fps fp_res) defss;
 
+    val mrbnfs = #pre_mrbnfs fp_res;
     val cmin_UNIV = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
     val Cinfinite_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (HOLogic.mk_conj (
       mk_cinfinite cmin_UNIV, mk_Card_order cmin_UNIV
     ))) (fn {context=ctxt, ...} => EVERY1 [
-      REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_Cinfinite conjI card_of_Card_order})
+      REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd mrbnfs) :: @{thms cmin_Cinfinite conjI card_of_Card_order})
     ]);
     val regularCard_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (mk_regularCard cmin_UNIV)) (fn {context=ctxt, ...} => EVERY1 [
-      REPEAT_DETERM o resolve_tac ctxt (#var_regular (MRBNF_Def.class_thms_of_mrbnf mrbnf) :: MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_regularCard cmin_Cinfinite conjI card_of_Card_order})
+      REPEAT_DETERM o resolve_tac ctxt (#var_regular (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs)) :: MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd mrbnfs) :: @{thms cmin_regularCard cmin_Cinfinite conjI card_of_Card_order})
     ]);
     val Un_bound = @{thm Un_Cinfinite_ordLess} OF [@{thm _}, @{thm _}, Cinfinite_card];
     val UNION_bound = @{thm regularCard_UNION_bound} OF [Cinfinite_card, regularCard_card];
 
-    val SSupp_comps = @{map 3} (fn f => fn rrename_VVr => Option.map (fn def =>
+    val SSupp_compss = @{map 3} (fn quotient => @{map 3} (fn f => fn rrename_VVr => Option.map (fn def =>
       let
         val g = Free ("g", #aT def --> #T quotient);
         val goal = HOLogic.mk_Trueprop (mk_leq
@@ -465,7 +509,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           REPEAT_DETERM o resolve_tac ctxt prems
         ]);
 
-        val SSupp_comp_rename_subset = Goal.prove_sorry lthy (names (fs @ [g])) (flat f_premss)
+        val SSupp_comp_rename_subset = Goal.prove_sorry lthy (names (fs @ [g])) f_prems
           (HOLogic.mk_Trueprop (mk_leq
             (fst (#SSupp def) $ HOLogic.mk_comp (Term.list_comb (#rename quotient, fs), g))
             (mk_Un (fst (#SSupp def) $ g, mk_supp f))
@@ -489,7 +533,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           ]);
 
         val SSupp_comp_rename_bound = Goal.prove_sorry lthy (names (fs @ [g])) (
-          [HOLogic.mk_Trueprop (#mk_SSupp_bound def g)] @ flat f_premss'
+          [HOLogic.mk_Trueprop (#mk_SSupp_bound def g)] @ f_prems'
         ) (HOLogic.mk_Trueprop (#mk_SSupp_bound def (HOLogic.mk_comp (
           Term.list_comb (#rename quotient, fs), g
         )))) (fn {context=ctxt, prems} => EVERY1 [
@@ -503,13 +547,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         SSupp_comp_rename_subset = SSupp_comp_rename_subset,
         SSupp_comp_rename_bound = SSupp_comp_rename_bound
       } end
-    )) fs rrename_VVrs defs;
+    )) fs) (#quotient_fps fp_res) rrename_VVrss defss;
 
     val g_prems' = maps (fn g => map HOLogic.mk_Trueprop [mk_bij g, mk_supp_bound' g]) gs;
-    val f_prems = flat f_premss;
-    val f_prems' = flat f_premss';
 
-    val compSS_comp0s = map (Option.map (fn def =>
+    val compSS_comp0ss = map2 (fn quotient => map (Option.map (fn def =>
       let
         val goal = mk_Trueprop_eq (
           HOLogic.mk_comp (Term.list_comb (fst (#compSS def), fs), Term.list_comb (fst (#compSS def), gs)),
@@ -527,9 +569,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         K (unfold_thms_tac ctxt @{thms comp_assoc}),
         rtac ctxt refl
       ]) end
-    )) defs;
+    ))) (#quotient_fps fp_res) defss;
 
-    val compSS_id0s = map (Option.map (fn def =>
+    val compSS_id0ss = map2 (fn quotient => map (Option.map (fn def =>
       let
         val goal = mk_Trueprop_eq (
           Term.list_comb (fst (#compSS def), map HOLogic.id_const vars),
@@ -540,10 +582,106 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           @ [snd (#compSS def), #rename_id0 quotient]
         ) THEN rtac ctxt refl 1
       ) end
-    )) defs;
+    ))) (#quotient_fps fp_res) defss;
 
+    val some_defss = map (map_filter I) defss;
+    val P_Ts = map #SSfun (flat some_defss);
+    val ((ps, p), _) = lthy
+      |> mk_Frees "p" P_Ts
+      ||>> apfst hd o mk_Frees "p" [HOLogic.mk_tupleT P_Ts];
 
-    val IImsupp_VVrs = @{map 3} (fn f => fn i => Option.map (fn def =>
+    val Pmap_id0 =
+      let val goal = mk_Trueprop_eq (
+        Term.list_comb (fst Pmap, map HOLogic.id_const vars),
+        HOLogic.id_const (fastype_of p)
+      ) in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} => EVERY1 [
+        rtac ctxt ext,
+        K (unfold_thms_tac ctxt (@{thm case_prod_beta} :: snd Pmap :: maps (map_filter I) compSS_id0ss)),
+        K (unfold_thms_tac ctxt @{thms id_def prod.collapse}),
+        rtac ctxt refl
+      ]) end
+
+    val Pmap_comp0 =
+      let val goal = mk_Trueprop_eq (
+        HOLogic.mk_comp (Term.list_comb (fst Pmap, fs), Term.list_comb (fst Pmap, gs)),
+        Term.list_comb (fst Pmap, map2 (curry HOLogic.mk_comp) fs gs)
+      ) in Goal.prove_sorry lthy (names (fs @ gs)) (g_prems' @ f_prems') goal (fn {context=ctxt, prems} => EVERY1 [
+        rtac ctxt ext,
+        rtac ctxt @{thm trans[OF comp_apply]},
+        K (unfold_thms_tac ctxt (snd Pmap :: @{thms case_prod_beta})),
+        K (unfold_thms_tac ctxt @{thms prod.inject fst_conv snd_conv}),
+        REPEAT_DETERM o resolve_tac ctxt (conjI :: prems @ map (fn thm =>
+          @{thm trans[OF comp_apply[symmetric]]} OF [@{thm fun_cong} OF [thm]]
+        ) (maps (map_filter I) compSS_comp0ss))
+      ]) end;
+
+    val SSupp_naturalss = @{map 3} (fn model => fn quotient => map2 (fn f => Option.map (fn def =>
+      let
+        val h = Free ("h", #SSfun def);
+        val goal = mk_Trueprop_eq (
+          fst (#SSupp def) $ (HOLogic.mk_comp (
+            HOLogic.mk_comp (Term.list_comb (#rename quotient, fs), h),
+            mk_inv f
+          )),
+          mk_image f $ (fst (#SSupp def) $ h)
+        );
+        val inv_simp = infer_instantiate' lthy [SOME (Thm.cterm_of lthy f)] @{thm inv_simp2};
+        val eta_naturals = map (fn thm => Local_Defs.unfold0 lthy @{thms comp_def} (
+          fun_cong OF [thm]
+        )) (map_filter (Option.map (#eta_natural o snd)) (#etas model));
+      in Goal.prove_sorry lthy (names (fs @ [h])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd (#SSupp def)]),
+        rtac ctxt @{thm iffD2[OF set_eq_iff]},
+        rtac ctxt allI,
+        rtac ctxt iffI,
+        K (unfold_thms_tac ctxt (snd (#VVr def) :: @{thms mem_Collect_eq comp_def image_Collect})),
+        etac ctxt @{thm contrapos_np},
+        dtac ctxt @{thm Meson.not_exD},
+        etac ctxt allE,
+        dtac ctxt @{thm iffD1[OF de_Morgan_conj]},
+        etac ctxt disjE,
+        EqSubst.eqsubst_asm_tac ctxt [0] [inv_simp],
+        resolve_tac ctxt prems,
+        etac ctxt notE,
+        rtac ctxt refl,
+        dtac ctxt @{thm notnotD},
+        dtac ctxt sym,
+        etac ctxt @{thm subst},
+        rtac ctxt trans,
+        rtac ctxt (#rename_ctor (#inner quotient)),
+        REPEAT_DETERM o resolve_tac ctxt prems,
+        EqSubst.eqsubst_tac ctxt [0] eta_naturals,
+        REPEAT_DETERM o resolve_tac ctxt prems,
+        EqSubst.eqsubst_tac ctxt [0] [inv_simp],
+        resolve_tac ctxt prems,
+        rtac ctxt refl,
+        etac ctxt exE,
+        etac ctxt conjE,
+        hyp_subst_tac ctxt,
+        EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
+        resolve_tac ctxt prems,
+        etac ctxt @{thm contrapos_nn},
+        dtac ctxt (mk_arg_cong lthy 1 (Term.list_comb (#rename quotient, map mk_inv fs))),
+        EqSubst.eqsubst_asm_tac ctxt [0] [#rename_comp quotient],
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_o_simp1},
+          resolve_tac ctxt prems
+        ],
+        K (unfold_thms_tac ctxt [#rename_id quotient]),
+        etac ctxt trans,
+        rtac ctxt trans,
+        rtac ctxt (#rename_ctor (#inner quotient)),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
+        EqSubst.eqsubst_tac ctxt [0] eta_naturals,
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
+        EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
+        resolve_tac ctxt prems,
+        rtac ctxt refl
+      ]) end
+    )) fs) models (#quotient_fps fp_res) defss;
+
+    val IImsupp_VVrss = map2 (fn quotient => @{map 3} (fn f => fn i => Option.map (fn def =>
       let
         val a = Free ("a", #aT def);
         val g = Free ("g", #aT def --> #T quotient);
@@ -567,9 +705,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         etac ctxt conjE,
         assume_tac ctxt
       ]) end
-    )) fs (0 upto nvars - 1) defs;
+    )) fs (0 upto nvars - 1)) (#quotient_fps fp_res) defss;
 
-    val IImsupp_imsupp_rrename_commutes = @{map 4} (fn rrename_VVr => fn IImsupp_VVr => fn i => Option.map (fn def =>
+    val IImsupp_imsupp_rrename_commutess = @{map 4} (fn quotient => @{map 4} (fn i => fn rrename_VVr => fn IImsupp_VVr => Option.map (fn def =>
       let
         val g = Free ("g", #aT def --> #T quotient);
         val int_empties = map2 (fn f => fn IImsupp =>
@@ -642,9 +780,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         assume_tac ctxt,
         resolve_tac ctxt prems
       ]) end
-    )) rrename_VVrs IImsupp_VVrs (0 upto nvars - 1) defs;
+    )) (0 upto nvars - 1)) (#quotient_fps fp_res) rrename_VVrss IImsupp_VVrss defss;
 
-    val compSS_cong_ids = map2 (fn rrename_commute => Option.map (fn def =>
+    val compSS_cong_idss = map2 (map2 (fn rrename_commute => Option.map (fn def =>
       let
         val h = Free ("h", #SSfun def);
         val IImsupp_prems = map2 (fn IImsupp => fn f =>
@@ -682,177 +820,52 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         K (unfold_thms_tac ctxt @{thms id_o o_id}),
         rtac ctxt refl
       ]) end
-    )) IImsupp_imsupp_rrename_commutes defs;
+    ))) IImsupp_imsupp_rrename_commutess defss;
 
-    val VVr_thms = @{map 4} (fn rrename_VVr => fn VVr_inj => fn f => Option.map (fn def =>
+    val asVVr_VVrss = map2 (map2 (fn VVr_inj => Option.map (fn def =>
+      let val a = Free ("a", #aT def)
+      in Goal.prove_sorry lthy (names [a]) []
+        (mk_Trueprop_eq (fst (#asVVr def) $ (fst (#VVr def) $ a), a))
+        (fn {context=ctxt, ...} => EVERY1 [
+          K (unfold_thms_tac ctxt [snd (#asVVr def), snd (#isVVr def)]),
+          rtac ctxt trans,
+          rtac ctxt @{thm if_P},
+          rtac ctxt exI,
+          rtac ctxt refl,
+          rtac ctxt @{thm some_equality},
+          rtac ctxt refl,
+          rtac ctxt (the VVr_inj),
+          assume_tac ctxt
+        ]) end
+    ))) VVr_injss defss;
+
+    val isVVr_renamess = @{map 3} (fn quotient => map2 (fn rrename_VVr => Option.map (fn def =>
       let
         val x = Free ("x", #T quotient);
         val goal = mk_Trueprop_eq (
           fst (#isVVr def) $ (Term.list_comb (#rename quotient, fs) $ x),
           fst (#isVVr def) $ x
         );
-        val isVVr_rename = Goal.prove_sorry lthy (names (fs @ [x])) (flat f_premss) goal (fn {context=ctxt, prems} => EVERY1 [
-          K (unfold_thms_tac ctxt [snd (#isVVr def)]),
-          rtac ctxt iffI,
-          etac ctxt exE,
-          dtac ctxt (mk_arg_cong lthy 1 (Term.list_comb (#rename quotient, map mk_inv fs))),
-          REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_asm_tac ctxt [0] [@{thm inv_o_simp1}, #rename_comp quotient, the rrename_VVr],
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
-          ],
-          K (unfold_thms_tac ctxt [#rename_id quotient]),
-          rtac ctxt exI,
-          assume_tac ctxt,
-          etac ctxt exE,
-          hyp_subst_tac ctxt,
-          EqSubst.eqsubst_tac ctxt [0] [the rrename_VVr],
-          REPEAT_DETERM o resolve_tac ctxt prems,
-          rtac ctxt exI,
-          rtac ctxt refl
-        ]);
-
-        val goal = Logic.mk_implies (
-          HOLogic.mk_Trueprop (fst (#isVVr def) $ x),
-          mk_Trueprop_eq (
-            fst (#asVVr def) $ (Term.list_comb (#rename quotient, fs) $ x),
-            f $ (fst (#asVVr def) $ x)
-          )
-        );
-        val asVVr_rename = Goal.prove_sorry lthy (names (fs @ [x])) (flat f_premss) goal (fn {context=ctxt, prems} => EVERY1 [
-          K (unfold_thms_tac ctxt (@{thms if_P} @ [snd (#asVVr def), isVVr_rename OF prems])),
-          K (unfold_thms_tac ctxt [snd (#isVVr def)]),
-          etac ctxt exE,
-          hyp_subst_tac ctxt,
-          EqSubst.eqsubst_tac ctxt [0] [the rrename_VVr],
-          REPEAT_DETERM o resolve_tac ctxt prems,
-          rtac ctxt trans,
-          rtac ctxt @{thm some_equality},
-          rtac ctxt refl,
-          rtac ctxt (the VVr_inj),
-          assume_tac ctxt,
-          rtac ctxt (mk_arg_cong lthy 1 f),
-          rtac ctxt sym,
-          rtac ctxt @{thm some_equality},
-          rtac ctxt refl,
-          rtac ctxt (the VVr_inj),
-          assume_tac ctxt
-        ]);
-
-        val a = Free ("a", #aT def)
-        val asVVr_VVr = Goal.prove_sorry lthy (names [a]) []
-          (mk_Trueprop_eq (fst (#asVVr def) $ (fst (#VVr def) $ a), a))
-          (fn {context=ctxt, ...} => EVERY1 [
-            K (unfold_thms_tac ctxt [snd (#asVVr def), snd (#isVVr def)]),
-            rtac ctxt trans,
-            rtac ctxt @{thm if_P},
-            rtac ctxt exI,
-            rtac ctxt refl,
-            rtac ctxt @{thm some_equality},
-            rtac ctxt refl,
-            rtac ctxt (the VVr_inj),
-            assume_tac ctxt
-          ]);
-      in {
-        isVVr_rename = isVVr_rename,
-        asVVr_rename = asVVr_rename,
-        asVVr_VVr = asVVr_VVr
-      } end
-    )) rrename_VVrs VVr_injs fs defs;
-
-    val SSupp_naturals = map2 (fn f => Option.map (fn def =>
-      let
-        val h = Free ("h", #SSfun def);
-        val goal = mk_Trueprop_eq (
-          fst (#SSupp def) $ (HOLogic.mk_comp (
-            HOLogic.mk_comp (Term.list_comb (#rename quotient, fs), h),
-            mk_inv f
-          )),
-          mk_image f $ (fst (#SSupp def) $ h)
-        );
-        val inv_simp = infer_instantiate' lthy [SOME (Thm.cterm_of lthy f)] @{thm inv_simp2};
-        val eta_naturals = map (fn thm => Local_Defs.unfold0 lthy @{thms comp_def} (
-          fun_cong OF [thm]
-        )) (map_filter (Option.map (#eta_natural o snd)) (#etas model));
-      in Goal.prove_sorry lthy (names (fs @ [h])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd (#SSupp def)]),
-        rtac ctxt @{thm iffD2[OF set_eq_iff]},
-        rtac ctxt allI,
+       in Goal.prove_sorry lthy (names (fs @ [x])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt [snd (#isVVr def)]),
         rtac ctxt iffI,
-        K (unfold_thms_tac ctxt (snd (#VVr def) :: @{thms mem_Collect_eq comp_def image_Collect})),
-        etac ctxt @{thm contrapos_np},
-        dtac ctxt @{thm Meson.not_exD},
-        etac ctxt allE,
-        dtac ctxt @{thm iffD1[OF de_Morgan_conj]},
-        etac ctxt disjE,
-        EqSubst.eqsubst_asm_tac ctxt [0] [inv_simp],
-        resolve_tac ctxt prems,
-        etac ctxt notE,
-        rtac ctxt refl,
-        dtac ctxt @{thm notnotD},
-        dtac ctxt sym,
-        etac ctxt @{thm subst},
-        rtac ctxt trans,
-        rtac ctxt (#rename_ctor (#inner quotient)),
-        REPEAT_DETERM o resolve_tac ctxt prems,
-        EqSubst.eqsubst_tac ctxt [0] eta_naturals,
-        REPEAT_DETERM o resolve_tac ctxt prems,
-        EqSubst.eqsubst_tac ctxt [0] [inv_simp],
-        resolve_tac ctxt prems,
-        rtac ctxt refl,
         etac ctxt exE,
-        etac ctxt conjE,
-        hyp_subst_tac ctxt,
-        EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
-        resolve_tac ctxt prems,
-        etac ctxt @{thm contrapos_nn},
         dtac ctxt (mk_arg_cong lthy 1 (Term.list_comb (#rename quotient, map mk_inv fs))),
-        EqSubst.eqsubst_asm_tac ctxt [0] [#rename_comp quotient],
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
         REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_o_simp1},
-          resolve_tac ctxt prems
+          EqSubst.eqsubst_asm_tac ctxt [0] [@{thm inv_o_simp1}, #rename_comp quotient, the rrename_VVr],
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
         ],
         K (unfold_thms_tac ctxt [#rename_id quotient]),
-        etac ctxt trans,
-        rtac ctxt trans,
-        rtac ctxt (#rename_ctor (#inner quotient)),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
-        EqSubst.eqsubst_tac ctxt [0] eta_naturals,
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
-        EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
-        resolve_tac ctxt prems,
+        rtac ctxt exI,
+        assume_tac ctxt,
+        etac ctxt exE,
+        hyp_subst_tac ctxt,
+        EqSubst.eqsubst_tac ctxt [0] [the rrename_VVr],
+        REPEAT_DETERM o resolve_tac ctxt prems,
+        rtac ctxt exI,
         rtac ctxt refl
       ]) end
-    )) fs defs;
-
-    val some_defs = map_filter I defs;
-    val P_Ts = map #SSfun some_defs;
-    val ((ps, p), _) = lthy
-      |> mk_Frees "p" P_Ts
-      ||>> apfst hd o mk_Frees "p" [HOLogic.mk_tupleT P_Ts];
-
-    val Pmap_comp0 =
-      let val goal = mk_Trueprop_eq (
-        HOLogic.mk_comp (Term.list_comb (fst Pmap, fs), Term.list_comb (fst Pmap, gs)),
-        Term.list_comb (fst Pmap, map2 (curry HOLogic.mk_comp) fs gs)
-      ) in Goal.prove_sorry lthy (names (fs @ gs)) (g_prems' @ f_prems') goal (fn {context=ctxt, prems} => EVERY1 [
-        rtac ctxt ext,
-        K (unfold_thms_tac ctxt (snd Pmap :: @{thms case_prod_beta})),
-        rtac ctxt @{thm trans[OF comp_apply]},
-        K (unfold_thms_tac ctxt @{thms prod.inject fst_conv snd_conv}),
-        REPEAT_DETERM o resolve_tac ctxt (conjI :: prems @ map (fn thm =>
-          @{thm trans[OF comp_apply[symmetric]]} OF [@{thm fun_cong} OF [thm]]
-        ) (map_filter I compSS_comp0s))
-      ]) end;
-    val Pmap_id0 =
-      let val goal = mk_Trueprop_eq (
-        Term.list_comb (fst Pmap, map HOLogic.id_const vars),
-        HOLogic.id_const (fastype_of p)
-      ) in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} => EVERY1 [
-        K (unfold_thms_tac ctxt (@{thm case_prod_beta} :: snd Pmap :: map_filter I compSS_id0s)),
-        K (unfold_thms_tac ctxt @{thms id_def prod.collapse}),
-        rtac ctxt refl
-      ]) end
+    ))) (#quotient_fps fp_res) rrename_VVrss defss;
 
     val valid_Pmap =
       let
@@ -862,7 +875,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         ));
       in Goal.prove_sorry lthy (names (fs @ [p])) f_prems' goal (fn {context=ctxt, prems} => EVERY1 [
         K (unfold_thms_tac ctxt (@{thms case_prod_beta fst_conv snd_conv}
-          @ map (snd o #compSS) some_defs
+          @ map (snd o #compSS) (flat some_defss)
           @ [snd Pmap, snd valid_P]
         )),
         REPEAT_DETERM o etac ctxt conjE,
@@ -870,10 +883,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           assume_tac ctxt,
           resolve_tac ctxt (@{thms conjI supp_inv_bound} @ prems @ maps (fn thms =>
             [#SSupp_comp_bound thms, #SSupp_comp_rename_bound thms]
-          ) (map_filter I SSupp_comps))
+          ) (maps (map_filter I) SSupp_compss))
         ]
       ]) end;
 
+    val some_defs = flat some_defss;
     fun Pmap_id0_tac ctxt = EVERY1 [
       rtac ctxt trans,
       rtac ctxt (fun_cong OF [Pmap_id0]),
@@ -884,9 +898,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       REPEAT_DETERM o assume_tac ctxt
     ];
     fun Pmap_cong_id_tac ctxt = EVERY1 [
-      K (unfold_thms_tac ctxt (snd Pmap :: @{thms case_prod_beta})),
+      K (unfold_thms_tac ctxt (snd Pmap :: map snd PFVarss @ @{thms case_prod_beta})),
       Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => REPEAT_DETERM (EVERY1 [
-        EqSubst.eqsubst_tac ctxt [0] (map_filter I compSS_cong_ids),
+        EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) compSS_cong_idss),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
           resolve_tac ctxt (prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
@@ -898,21 +912,21 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       rtac ctxt refl
     ];
     fun PFVars_Pmap_tac ctxt = EVERY1 [
-      K (unfold_thms_tac ctxt (snd Pmap :: @{thms case_prod_beta fst_conv snd_conv})),
+      K (unfold_thms_tac ctxt (snd Pmap :: map snd PFVarss @ @{thms case_prod_beta fst_conv snd_conv})),
       K (unfold_thms_tac ctxt (@{thm image_Un} :: map (snd o #compSS) some_defs)),
       REPEAT_DETERM o rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]},
       REPEAT_DETERM o EVERY' [
         SELECT_GOAL (unfold_thms_tac ctxt (maps (map snd o #IImsupps) some_defs)),
         K (unfold_thms_tac ctxt @{thms image_comp[symmetric]}),
         EqSubst.eqsubst_tac ctxt [0] @{thms image_comp[unfolded comp_def]},
-        EqSubst.eqsubst_tac ctxt [0] (#FVars_renames quotient),
+        EqSubst.eqsubst_tac ctxt [0] (maps #FVars_renames (#quotient_fps fp_res)),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
           resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
         ],
         K (unfold_thms_tac ctxt @{thms image_UN[symmetric]}),
         REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] (map_filter I SSupp_naturals),
+          EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) SSupp_naturalss),
           REPEAT_DETERM o FIRST' [
             assume_tac ctxt,
             resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
@@ -927,13 +941,17 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
     ];
     fun small_PFVars_tac ctxt = EVERY1 [
       K (unfold_thms_tac ctxt (@{thms case_prod_beta comp_def}
+        @ map snd PFVarss
         @ maps (map snd o #IImsupps) some_defs
         @ [snd Pmap, snd valid_P]
       )),
       REPEAT_DETERM o etac ctxt conjE,
       REPEAT_DETERM o FIRST' [
         assume_tac ctxt,
-        resolve_tac ctxt ([Un_bound, UNION_bound] @ #card_of_FVars_bound_UNIVs quotient @ @{thms cmin_greater card_of_Card_order})
+        resolve_tac ctxt ([Un_bound, UNION_bound]
+          @ maps #card_of_FVars_bound_UNIVs (#quotient_fps fp_res)
+          @ @{thms cmin_greater card_of_Card_order}
+        )
       ]
     ];
     fun valid_Pmap_tac ctxt = EVERY1 [
@@ -941,8 +959,8 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       REPEAT_DETERM o assume_tac ctxt
     ];
 
-    fun rrename_Uctor_tac ctxt = EVERY1 [
-      K (unfold_thms_tac ctxt [snd Uctor]),
+    fun mk_rrename_Uctor_tac mrbnf quotient ctxt = EVERY1 [
+      K (unfold_thms_tac ctxt (map snd Uctors)),
       REPEAT_DETERM o EVERY' [
         EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
         REPEAT_DETERM o FIRST' [
@@ -964,9 +982,7 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         ]
       ],
       REPEAT_DETERM o EVERY' [
-        EqSubst.eqsubst_tac ctxt [0] ((#rename_ctor (#inner quotient) RS sym) :: map_filter (Option.map (fn thms =>
-          #isVVr_rename thms
-        )) VVr_thms),
+        EqSubst.eqsubst_tac ctxt [0] ((#rename_ctor (#inner quotient) RS sym) :: maps (map_filter I) isVVr_renamess),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
           resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
@@ -982,16 +998,16 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         dtac ctxt sym,
         etac ctxt @{thm subst},
         SELECT_GOAL (unfold_thms_tac ctxt (@{thms case_prod_beta fst_conv snd_conv}
-          @ map_filter (Option.map #asVVr_VVr) VVr_thms
+          @ maps (map_filter I) asVVr_VVrss
           @ [snd Pmap]
         )),
-        EqSubst.eqsubst_tac ctxt [0] (map_filter I rrename_VVrs),
+        EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) rrename_VVrss),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
           resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
         ],
         SELECT_GOAL (unfold_thms_tac ctxt (@{thms comp_def} @ map (snd o #compSS) some_defs
-          @ map_filter (Option.map #asVVr_VVr) VVr_thms
+          @ maps (map_filter I) asVVr_VVrss
         )),
         EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
         assume_tac ctxt,
@@ -1032,67 +1048,69 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       K (unfold_thms_tac ctxt @{thms if_True}),
       rtac ctxt refl
     ];
-    fun mk_FVars_subset_tac FVars i ctxt = EVERY1 [
-      K (unfold_thms_tac ctxt @{thms Un_empty_right case_prod_beta}),
-      Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd Uctor, @{thm case_prod_beta}]),
-        EVERY' (map_index (fn (j, def) => EVERY' [
-          rtac ctxt @{thm case_split},
-          EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
-          assume_tac ctxt,
-          SELECT_GOAL (unfold_thms_tac ctxt (map_filter (Option.map (snd o #isVVr)) defs)),
-          etac ctxt exE,
-          dtac ctxt sym,
-          etac ctxt @{thm subst},
-          K (unfold_thms_tac ctxt (map_filter (Option.map #asVVr_VVr) VVr_thms)),
-          rtac ctxt @{thm case_split[of "_ = _"]},
-          rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]]},
-          rtac ctxt (mk_arg_cong lthy 1 FVars),
-          assume_tac ctxt,
-          rtac ctxt @{thm Un_upper1},
-          rtac ctxt subsetI,
-          rtac ctxt UnI2,
-          SELECT_GOAL (unfold_thms_tac ctxt [snd (#SSupp def), snd (nth (#IImsupps def) i)]),
-          rtac ctxt (BNF_Util.mk_UnIN (length some_defs) (j + 1)),
-          TRY o rtac ctxt UnI2,
-          rtac ctxt @{thm UN_I},
-          rtac ctxt @{thm CollectI},
-          assume_tac ctxt,
-          rtac ctxt @{thm iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]]},
-          assume_tac ctxt,
-          K (unfold_thms_tac ctxt @{thms if_not_P})
-        ]) some_defs),
-        K (unfold_thms_tac ctxt (#FVars_ctors quotient)),
-        REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
-        ],
-        K (unfold_thms_tac ctxt @{thms image_id image_comp comp_def}),
-        REPEAT_DETERM o rtac ctxt @{thm Un_mono'},
-        rtac ctxt @{thm Un_upper1},
-        REPEAT_DETERM o EVERY' [
-          TRY o EVERY' [
-            rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]]},
-            rtac ctxt @{thm Diff_Un_disjunct},
-            resolve_tac ctxt prems,
-            rtac ctxt @{thm Diff_mono[OF _ subset_refl]}
-          ],
-          SELECT_GOAL (unfold_thms_tac ctxt @{thms UN_extend_simps(2)}),
-          rtac ctxt @{thm subset_If},
-          SELECT_GOAL (unfold_thms_tac ctxt @{thms UN_empty'}),
-          rtac ctxt @{thm empty_subsetI},
-          rtac ctxt @{thm UN_mono[OF subset_refl]},
-          resolve_tac ctxt prems,
-          K (unfold_thms_tac ctxt @{thms prod.collapse}),
-          resolve_tac ctxt prems,
-          eresolve_tac ctxt @{thms UnI1 UnI2}
-        ]
-      ]) ctxt
-    ];
 
-    val PFVarss = map (fn i => mk_case_tuple (map dest_Free ps) (
-      foldl1 mk_Un (map2 (fn p => fn def => fst (nth (#IImsupps def) i) $ p) ps some_defs)
-    )) (0 upto nvars - 1);
+    fun mk_FVars_subset_tac mrbnf quotient defs n FVars i ctxt =
+      let val some_defs = map_filter I defs;
+      in EVERY1 [
+        K (unfold_thms_tac ctxt @{thms Un_empty_right case_prod_beta}),
+        Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
+          K (unfold_thms_tac ctxt (map snd Uctors @ @{thms case_prod_beta})),
+          EVERY' (map_index (fn (j, def) => EVERY' [
+            rtac ctxt @{thm case_split},
+            EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+            assume_tac ctxt,
+            SELECT_GOAL (unfold_thms_tac ctxt [snd (#isVVr def)]),
+            etac ctxt exE,
+            dtac ctxt sym,
+            etac ctxt @{thm subst},
+            K (unfold_thms_tac ctxt (maps (map_filter I) asVVr_VVrss)),
+            rtac ctxt @{thm case_split[of "_ = _"]},
+            rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<subseteq>)"]]},
+            rtac ctxt (mk_arg_cong lthy 1 FVars),
+            assume_tac ctxt,
+            rtac ctxt @{thm Un_upper1},
+            rtac ctxt subsetI,
+            rtac ctxt UnI2,
+            SELECT_GOAL (unfold_thms_tac ctxt (map snd PFVarss
+              @ [snd (#SSupp def), snd (nth (#IImsupps def) i)]
+              @ @{thms case_prod_beta}
+            )),
+            rtac ctxt (BNF_Util.mk_UnIN (length (flat some_defss)) (n + j + 1)),
+            TRY o rtac ctxt UnI2,
+            rtac ctxt @{thm UN_I},
+            rtac ctxt @{thm CollectI},
+            assume_tac ctxt,
+            rtac ctxt @{thm iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]]},
+            assume_tac ctxt,
+            K (unfold_thms_tac ctxt @{thms if_not_P})
+          ]) some_defs),
+          K (unfold_thms_tac ctxt (#FVars_ctors quotient)),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+          ],
+          K (unfold_thms_tac ctxt @{thms image_id image_comp comp_def}),
+          REPEAT_DETERM o rtac ctxt @{thm Un_mono'},
+          rtac ctxt @{thm Un_upper1},
+          REPEAT_DETERM o EVERY' [
+            TRY o EVERY' [
+              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]]},
+              rtac ctxt @{thm Diff_Un_disjunct},
+              resolve_tac ctxt prems,
+              rtac ctxt @{thm Diff_mono[OF _ subset_refl]}
+            ],
+            SELECT_GOAL (unfold_thms_tac ctxt @{thms UN_extend_simps(2)}),
+            rtac ctxt @{thm subset_If},
+            SELECT_GOAL (unfold_thms_tac ctxt @{thms UN_empty'}),
+            rtac ctxt @{thm empty_subsetI},
+            rtac ctxt @{thm UN_mono[OF subset_refl]},
+            resolve_tac ctxt prems,
+            K (unfold_thms_tac ctxt @{thms prod.collapse}),
+            resolve_tac ctxt prems,
+            eresolve_tac ctxt @{thms UnI1 UnI2}
+          ]
+        ]) ctxt
+      ] end;
 
     val parameter_axioms = {
       Pmap_id0 = Pmap_id0_tac,
@@ -1102,14 +1120,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       small_PFVarss = replicate nvars small_PFVars_tac,
       small_avoiding_sets = replicate nvars (fn ctxt => rtac ctxt (@{thm Cinfinite_gt_empty} OF [Cinfinite_card]) 1)
     };
-    val model_axioms = {
-      rrename_Uctor = rrename_Uctor_tac,
-      FVars_subsets = map2 mk_FVars_subset_tac (#FVars quotient) (0 upto nvars - 1)
-    };
-
     val parameters = {
       P = HOLogic.mk_tupleT P_Ts,
-      PFVarss = PFVarss,
+      PFVarss = map fst PFVarss,
       Pmap = fst Pmap,
       avoiding_sets = map mk_bot vars,
       validity = SOME {
@@ -1119,43 +1132,58 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       axioms = parameter_axioms,
       min_bound = true
     } : (Proof.context -> tactic) MRBNF_Recursor.parameter;
-    val rec_model = MRBNF_Recursor.mk_quotient_model quotient [] {
-      binding = b,
-      Uctor = fst Uctor,
-      validity = NONE,
-      axioms = model_axioms
-    } : (Proof.context -> tactic) MRBNF_Recursor.model;
 
-    val (rec_ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify (#fp_result model) parameters [rec_model] lthy;
-    val rec_res = hd rec_ress;
+    val rec_models = fst (@{fold_map 5} (fn quotient => fn mrbnf => fn model => fn Uctor => fn defs => fn n =>
+      (MRBNF_Recursor.mk_quotient_model quotient [] {
+        binding = #binding model,
+        Uctor = fst Uctor,
+        validity = NONE,
+        axioms = {
+          rrename_Uctor = mk_rrename_Uctor_tac mrbnf quotient,
+          FVars_subsets = map2 (mk_FVars_subset_tac mrbnf quotient defs n) (#FVars quotient) (0 upto nvars - 1)
+        }
+      } : (Proof.context -> tactic) MRBNF_Recursor.model, n + length (map_filter I defs))
+    ) (#quotient_fps fp_res) (#pre_mrbnfs fp_res) models Uctors defss 0);
+
+    val (rec_ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters rec_models lthy;
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
-    val (tvsubst, lthy) = mk_def_t false Binding.empty I (Binding.name_of b) (length ps)
+    val (tvsubsts, lthy) = @{fold_map 3} (fn res => fn model => fn quotient =>
+      mk_def_t false Binding.empty I (Binding.name_of (#binding model)) (length ps)
       (fold_rev Term.absfree (map dest_Free ps) (Term.abs ("t", #T quotient) (
-        #rec_fun rec_res $ Bound 0 $ HOLogic.mk_tuple ps)
-      )) lthy;
+        #rec_fun res $ Bound 0 $ HOLogic.mk_tuple ps)
+      ))
+    ) rec_ress models (#quotient_fps fp_res) lthy;
 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
 
-    val tvsubst =
+    val tvsubsts =
       let
-        val tvsubst_new = Morphism.term phi (fst tvsubst);
+        val tvsubst_new = Morphism.term phi (fst (hd tvsubsts));
         val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
-          (fastype_of tvsubst_new, fastype_of (fst tvsubst)) Vartab.empty
-      in (Envir.subst_term (tyenv, Vartab.empty) tvsubst_new, Morphism.thm phi (snd tvsubst)) end
+          (fastype_of tvsubst_new, fastype_of (fst (hd tvsubsts))) Vartab.empty
+        fun morph t = (
+          Envir.subst_term (tyenv, Vartab.empty) (Morphism.term phi (fst t)),
+          Morphism.thm phi (snd t)
+        )
+      in map morph tvsubsts end;
 
-    val eta_naturals' = map (Option.map (fn eta => Local_Defs.unfold0 lthy @{thms comp_def} (
-      fun_cong OF [#eta_natural (snd eta)]
-    ))) (#etas model);
+    val eta_naturalss' = map (fn model =>
+      map (Option.map (fn eta => Local_Defs.unfold0 lthy @{thms comp_def} (
+        fun_cong OF [#eta_natural (snd eta)]
+      ))) (#etas model)
+    ) models;
 
-    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+    val npassive = length plives + length pfrees + length pbounds;
+    val var_types = MRBNF_Def.var_types_of_mrbnf (hd mrbnfs);
+    val free = MRBNF_Def.free_of_mrbnf (hd mrbnfs);
+    val bound = MRBNF_Def.bound_of_mrbnf (hd mrbnfs);
+    val live = MRBNF_Def.live_of_mrbnf (hd mrbnfs);
+    val n = free + bound + live;
 
-    val free = MRBNF_Def.free_of_mrbnf mrbnf;
-    val bound = MRBNF_Def.bound_of_mrbnf mrbnf;
-    val n = live + free + bound;
-    val eta_set_empties = map (Option.map (fn def =>
+    val eta_set_emptiess = map2 (fn mrbnf => map (Option.map (fn def =>
       let
         val args = (snd o dest_Type o snd o dest_funT o fastype_of o #eta) def;
         val (live_args, bound_args, free_args) = fold_rev (
@@ -1165,6 +1193,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         ) (var_types ~~ args) ([], [], []);
         val sets = MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
           (replicate n live_args) (replicate n bound_args) (replicate n free_args) mrbnf;
+        val sets = take nvars sets @ drop (nvars + npassive) sets;
+        val var_types = replicate nvars MRBNF_Def.Free_Var @ replicate nvars MRBNF_Def.Bound_Var
+          @ replicate (foldr1 (op+) (#rec_vars fp_res)) MRBNF_Def.Live_Var;
         val sets' = filter (fn (var, set) => var <> MRBNF_Def.Free_Var orelse
           #aT def <> HOLogic.dest_setT (range_type (fastype_of set))) (var_types ~~ sets);
         val a = Free ("a", #aT def);
@@ -1221,101 +1252,111 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           etac ctxt FalseE
         ]) end
       ) sets' end
-    )) defs;
+    ))) (#pre_mrbnfs fp_res) defss;
 
-    val FVars_VVrs = map2 (fn FVars => Option.map (fn _ => map_filter (Option.map (fn def =>
+    val FVars_VVrss = map2 (fn quotient => map (Option.map (fn def => map (fn FVars =>
       let
         val a = Free ("a", #aT def);
         val T = HOLogic.dest_setT (range_type (fastype_of FVars));
         val set = if #aT def = T then mk_singleton a else Const (@{const_name bot}, HOLogic.mk_setT T)
       in Goal.prove_sorry lthy (names [a]) [] (mk_Trueprop_eq (FVars $ (fst (#VVr def) $ a), set)) (fn {context=ctxt,...} =>
         unfold_thms_tac ctxt (@{thms comp_def UN_empty Diff_empty Un_empty_right Un_empty_left empty_Diff}
-          @ #FVars_ctors quotient @ map_filter (Option.map (snd o #VVr)) defs @ flat (map_filter I eta_set_empties)
+          @ #FVars_ctors quotient @ [snd (#VVr def)] @ flat (maps (map_filter I) eta_set_emptiess)
         ) THEN resolve_tac ctxt [refl, #eta_free (#axioms def)] 1
       ) end
-    )) defs)) (#FVars quotient) defs;
+    ) (#FVars quotient)))) (#quotient_fps fp_res) defss;
 
-    val free_sets = map_filter (fn (MRBNF_Def.Free_Var, s) => SOME s | _ => NONE) (
-      var_types ~~ MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
-        (replicate n (replicate live (#T quotient))) (replicate n vars) (replicate n vars) mrbnf
-    );
-    val f'_prems = map_filter I (map2 (fn h => Option.map (fn def => HOLogic.mk_Trueprop (#mk_SSupp_bound def (the h)))) hs defs);
-    val tvsubst_VVrs = @{map 7} (fn i => fn set => fn eta => fn f => fn set_empties => fn VVr_thms => Option.map (fn def =>
-      let val a = Free ("a", #aT def);
-      in Goal.prove_sorry lthy (names (some_hs @ [a])) f'_prems (
-        mk_Trueprop_eq (Term.list_comb (fst tvsubst, some_hs @ [fst (#VVr def) $ a]), the f $ a)
-      ) (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd tvsubst, snd (#VVr def), @{thm comp_def}]),
-        rtac ctxt trans,
-        rtac ctxt (#rec_Uctor rec_res),
-        SELECT_GOAL (unfold_thms_tac ctxt (@{thms prod.case} @ [snd valid_P] @ map_filter I SSupp_VVr_empties)),
-        REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms conjI cmin_greater card_of_Card_order emp_bound}),
-        K (unfold_thms_tac ctxt (@{thms prod.case Un_empty} @ the set_empties @ [snd (#noclash quotient), snd Uctor])),
-        REPEAT_DETERM o resolve_tac ctxt @{thms Int_empty_left conjI},
-        REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
-          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
-        ],
-        K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}
-          @ [MRBNF_Def.map_id_of_mrbnf mrbnf]
-        )),
-        REPEAT_DETERM_N i o EVERY' [
+    val some_hs = flat some_hss;
+    val f'_prems = map2 (fn h => fn def => HOLogic.mk_Trueprop (#mk_SSupp_bound def h)) some_hs some_defs;
+    val setss = map (fn mrbnf =>
+      MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
+        (replicate n (plives @ flat (map2 replicate (#rec_vars fp_res) (map #T (#quotient_fps fp_res)))))
+        (replicate n (pbounds @ vars)) (replicate n (vars @ pfrees)) mrbnf
+    ) mrbnfs;
+    val preTs = map (fn mrbnf =>
+      MRBNF_Def.mk_T_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+      (plives @ flat (map2 replicate (#rec_vars fp_res) (map #T (#quotient_fps fp_res))))
+      (pbounds @ vars) (vars @ pfrees) mrbnf
+    ) mrbnfs;
+
+    val tvsubst_VVrss = @{map 10} (fn mrbnf => fn model => fn rec_res => fn tvsubst => fn quotient => fn defs => fn hs => fn eta_set_empties => fn asVVr_VVrs => fn sets =>
+      @{map 7} (fn i => fn set => fn eta => fn f => fn set_empties => fn asVVr_VVr => Option.map (fn def =>
+        let val a = Free ("a", #aT def);
+        in Goal.prove_sorry lthy (names (some_hs @ [a])) f'_prems (
+          mk_Trueprop_eq (Term.list_comb (fst tvsubst, some_hs @ [fst (#VVr def) $ a]), the f $ a)
+        ) (fn {context=ctxt, prems} => EVERY1 [
+          K (unfold_thms_tac ctxt [snd tvsubst, snd (#VVr def), @{thm comp_def}]),
           rtac ctxt trans,
-          rtac ctxt @{thm if_not_P},
-          SELECT_GOAL (unfold_thms_tac ctxt (@{thms comp_def} @ map (snd o #isVVr) some_defs @ map (snd o #VVr) some_defs @ [#inject quotient])),
-          rtac ctxt @{thm iffD2[OF not_ex]},
-          rtac ctxt allI,
-          rtac ctxt @{thm notI},
-          REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
-          EqSubst.eqsubst_asm_tac ctxt [0] (map_filter I eta_naturals'),
-          REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
-          SELECT_GOAL (unfold_thms_tac ctxt @{thms id_def}),
-          dtac ctxt (mk_arg_cong lthy 1 set),
-          K (unfold_thms_tac ctxt (#eta_free (snd (the eta)) :: flat (map_filter I eta_set_empties))),
-          rotate_tac ~1,
-          etac ctxt @{thm contrapos_pp},
-          rtac ctxt @{thm insert_not_empty}
-        ],
-        rtac ctxt trans,
-        rtac ctxt @{thm if_P},
-        K (unfold_thms_tac ctxt [snd (#isVVr def), Local_Defs.unfold0 ctxt @{thms comp_def} (
-          @{thm meta_eq_to_obj_eq} OF [snd (#VVr def)] RS fun_cong RS sym
-        ), #asVVr_VVr (the VVr_thms)]),
-        rtac ctxt exI,
-        rtac ctxt refl,
-        rtac ctxt refl
-      ]) end
-    )) (nvars - 1 downto 0) free_sets (#etas model) hs eta_set_empties VVr_thms defs;
+          rtac ctxt (#rec_Uctor rec_res),
+          SELECT_GOAL (unfold_thms_tac ctxt (@{thms prod.case} @ [snd valid_P] @ maps (map_filter I) SSupp_VVr_emptiess)),
+          REPEAT_DETERM o resolve_tac ctxt (prems @ @{thms conjI cmin_greater card_of_Card_order emp_bound}),
+          K (unfold_thms_tac ctxt (@{thms prod.case Un_empty} @ the set_empties @ map snd Uctors @ [snd (#noclash quotient)])),
+          REPEAT_DETERM o resolve_tac ctxt @{thms Int_empty_left conjI},
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+          ],
+          K (unfold_thms_tac ctxt (@{thms id_o o_id comp_def[of fst] fst_conv id_def[symmetric]}
+            @ [MRBNF_Def.map_id_of_mrbnf mrbnf]
+          )),
+          REPEAT_DETERM_N i o EVERY' [
+            rtac ctxt trans,
+            rtac ctxt @{thm if_not_P},
+            SELECT_GOAL (unfold_thms_tac ctxt (@{thms comp_def} @ map (snd o #isVVr) some_defs @ map (snd o #VVr) some_defs @ [#inject quotient])),
+            rtac ctxt @{thm iffD2[OF not_ex]},
+            rtac ctxt allI,
+            rtac ctxt @{thm notI},
+            REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+            EqSubst.eqsubst_asm_tac ctxt [0] (maps (map_filter I) eta_naturalss'),
+            REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
+            SELECT_GOAL (unfold_thms_tac ctxt @{thms id_def}),
+            dtac ctxt (mk_arg_cong lthy 1 set),
+            K (unfold_thms_tac ctxt (#eta_free (snd (the eta)) :: flat (maps (map_filter I) eta_set_emptiess))),
+            rotate_tac ~1,
+            etac ctxt @{thm contrapos_pp},
+            rtac ctxt @{thm insert_not_empty}
+          ],
+          rtac ctxt trans,
+          rtac ctxt @{thm if_P},
+          K (unfold_thms_tac ctxt [snd (#isVVr def), Local_Defs.unfold0 ctxt @{thms comp_def} (
+            @{thm meta_eq_to_obj_eq} OF [snd (#VVr def)] RS fun_cong RS sym
+          ), the asVVr_VVr]),
+          rtac ctxt exI,
+          rtac ctxt refl,
+          rtac ctxt refl
+        ]) end
+      )) (0 upto nvars - 1) (take nvars sets) (#etas model) hs eta_set_empties asVVr_VVrs defs
+    ) mrbnfs models rec_ress tvsubsts (#quotient_fps fp_res) defss hss eta_set_emptiess asVVr_VVrss setss;
 
-    val preT = MRBNF_Def.mk_T_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
-      (replicate live (#T quotient)) vars vars mrbnf;
-    val x = Free ("x", preT);
-    val sets = MRBNF_Def.mk_sets_of_mrbnf (replicate n (MRBNF_Def.deads_of_mrbnf mrbnf))
-      (replicate n (replicate live (#T quotient)))
-      (replicate n vars) (replicate n vars) mrbnf;
-    val tvsubst_not_isVVr =
+    val tvsubst_not_isVVrs = @{map 6} (fn i => fn mrbnf => fn quotient => fn rec_res => fn sets => fn preT =>
       let
-        val bound_sets = map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ sets);
+        val x = Free ("x", preT);
+        val bound_sets = drop (length pbounds) (
+          map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (var_types ~~ sets)
+        );
         val int_empty_prems = map2 (fn bset => fn i => HOLogic.mk_Trueprop (
-          mk_int_empty (bset $ x, foldl1 mk_Un (map_filter I (map2 (fn f => Option.map (fn def =>
-          fst (nth (#IImsupps def) i) $ the f
-          )) hs defs)))
+          mk_int_empty (bset $ x, foldl1 mk_Un (map2 (fn f => fn def =>
+            fst (nth (#IImsupps def) i) $ f
+          ) some_hs some_defs))
         )) bound_sets (0 upto nvars - 1);
-        val VVr_prems = map (fn def => HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x)))) some_defs;
+        val VVr_prems = map (fn def =>
+          HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x)))
+        ) (nth some_defss i);
         val prems = f'_prems @ int_empty_prems @ [HOLogic.mk_Trueprop (fst (#noclash quotient) $ x)] @ VVr_prems;
-        val tvsubst_t = Term.list_comb (fst tvsubst, some_hs);
-        val ids = map HOLogic.id_const vars;
+        val tvsubst_ts = map (fn tvsubst => Term.list_comb (fst tvsubst, some_hs)) tvsubsts;
+        val ids = map HOLogic.id_const;
         val map_t = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
-          (replicate live tvsubst_t) ids ids mrbnf;
-        val goal = mk_Trueprop_eq (tvsubst_t $ (#ctor quotient $ x), #ctor quotient $ (map_t $ x));
+          (ids plives @ flat (map2 replicate (#rec_vars fp_res) tvsubst_ts))
+          (ids (pbounds @ vars)) (ids (vars @ pfrees)) mrbnf;
+        val goal = mk_Trueprop_eq (nth tvsubst_ts i $ (#ctor quotient $ x), #ctor quotient $ (map_t $ x));
       in Goal.prove_sorry lthy (names (some_hs @ [x])) prems goal (fn {context=ctxt, prems} => EVERY1 [
-        K (unfold_thms_tac ctxt [snd tvsubst]),
+        K (unfold_thms_tac ctxt (map snd tvsubsts)),
         rtac ctxt trans,
         rtac ctxt (#rec_Uctor rec_res),
         SELECT_GOAL (unfold_thms_tac ctxt (@{thms prod.case} @ [snd valid_P])),
-        K (unfold_thms_tac ctxt @{thms Un_empty_right}),
         REPEAT_DETERM o resolve_tac ctxt (conjI :: prems),
-        K (unfold_thms_tac ctxt (@{thms prod.case} @ [snd Uctor])),
+        K (unfold_thms_tac ctxt (@{thms prod.case Un_empty_right} @ map snd Uctors @ map snd PFVarss)),
+        REPEAT_DETERM o resolve_tac ctxt prems,
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
@@ -1334,13 +1375,17 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
           REPEAT_DETERM o resolve_tac ctxt (conjI :: prems)
         ],
         rtac ctxt refl
-      ]) end;
+      ]) end
+    ) (0 upto length models - 1) (#pre_mrbnfs fp_res) (#quotient_fps fp_res) rec_ress setss preTs;
 
-    val not_isVVr_frees = map2 (fn fset => Option.map (fn def =>
-      let val goal = Logic.mk_implies (
-        HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x))),
-        mk_Trueprop_eq (fset $ x, mk_bot (#aT def))
-      ) in Goal.prove_sorry lthy (names [x]) [] goal (fn {context=ctxt, ...} => EVERY1 [
+    val not_isVVr_freess = @{map 4} (fn sets => fn quotient => fn preT => map2 (fn fset => Option.map (fn def =>
+      let
+        val x = Free ("x", preT);
+        val goal = Logic.mk_implies (
+          HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x))),
+          mk_Trueprop_eq (fset $ x, mk_bot (#aT def))
+        )
+      in Goal.prove_sorry lthy (names [x]) [] goal (fn {context=ctxt, ...} => EVERY1 [
         rtac ctxt (#eta_compl_free (#axioms def)),
         K (unfold_thms_tac ctxt (@{thms image_iff Set.bex_simps not_ex comp_def} @ [snd (#isVVr def), snd (#VVr def)])),
         rtac ctxt allI,
@@ -1349,9 +1394,9 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         hyp_subst_tac ctxt,
         rtac ctxt refl
       ]) end
-    )) (map_filter (fn (MRBNF_Def.Free_Var, x) => SOME x | _ => NONE) (var_types ~~ sets)) defs;
+    )) (take nvars sets)) setss (#quotient_fps fp_res) preTs defss;
 
-    val in_IImsuppss = map (Option.map (fn def => map2 (fn FVars => fn IImsupp =>
+    val in_IImsuppsss = map2 (fn quotient => map (Option.map (fn def => map2 (fn FVars => fn IImsupp =>
       let
         val a = Free ("a", #aT def);
         val z = Free ("z", HOLogic.dest_setT (range_type (fastype_of FVars)));
@@ -1374,61 +1419,63 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
         rtac ctxt CollectI,
         assume_tac ctxt
       ]) end
-    ) (#FVars quotient) (#IImsupps def))) defs;
+    ) (#FVars quotient) (#IImsupps def)))) (#quotient_fps fp_res) defss;
 
-    val IImsupp_Diffs = @{map 5} (fn FVars => fn f => fn i => fn in_IImsupps => Option.map (fn def =>
-      let
-        val a = Free ("a", #aT def);
-        val A = Free ("A", HOLogic.mk_setT (#aT def));
-        val B = Free ("B", HOLogic.mk_setT (#aT def));
-        val inner = Term.absfree (dest_Free a) (FVars $ (the f $ a))
-        val goal = Logic.mk_implies (
-          HOLogic.mk_Trueprop (mk_int_empty (B, fst (nth (#IImsupps def) i) $ the f)),
-          mk_Trueprop_eq (
-            mk_UNION (HOLogic.mk_binop @{const_name minus} (A, B)) inner,
-            HOLogic.mk_binop @{const_name minus} (mk_UNION A inner, B)
-          )
-        );
-      in Goal.prove_sorry lthy (names [the f, A, B]) [] goal (fn {context=ctxt, ...} => EVERY1 [
-        rtac ctxt @{thm iffD2[OF set_eq_iff]},
-        rtac ctxt allI,
-        rtac ctxt iffI,
-        let fun helper_tac inv = EVERY' [
-          REPEAT_DETERM o eresolve_tac ctxt @{thms UN_E DiffE},
-          REPEAT_DETERM o resolve_tac ctxt @{thms DiffI UN_I},
+    val IImsupp_Diffss = @{map 4} (fn quotient => fn in_IImsuppss => fn hs =>
+      @{map 5} (fn FVars => fn f => fn i => fn in_IImsupps => Option.map (fn def =>
+        let
+          val a = Free ("a", #aT def);
+          val A = Free ("A", HOLogic.mk_setT (#aT def));
+          val B = Free ("B", HOLogic.mk_setT (#aT def));
+          val inner = Term.absfree (dest_Free a) (FVars $ (the f $ a))
+          val goal = Logic.mk_implies (
+            HOLogic.mk_Trueprop (mk_int_empty (B, fst (nth (#IImsupps def) i) $ the f)),
+            mk_Trueprop_eq (
+              mk_UNION (HOLogic.mk_binop @{const_name minus} (A, B)) inner,
+              HOLogic.mk_binop @{const_name minus} (mk_UNION A inner, B)
+            )
+          );
+        in Goal.prove_sorry lthy (names [the f, A, B]) [] goal (fn {context=ctxt, ...} => EVERY1 [
+          rtac ctxt @{thm iffD2[OF set_eq_iff]},
+          rtac ctxt allI,
+          rtac ctxt iffI,
+          let fun helper_tac inv = EVERY' [
+            REPEAT_DETERM o eresolve_tac ctxt @{thms UN_E DiffE},
+            REPEAT_DETERM o resolve_tac ctxt @{thms DiffI UN_I},
+            assume_tac ctxt,
+            if not inv then assume_tac ctxt else K all_tac,
+            rtac ctxt @{thm case_split[of "_ = _"]},
+            if inv then rotate_tac ~2 else K all_tac,
+            dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
+            rtac ctxt trans,
+            rtac ctxt (mk_arg_cong lthy 1 FVars),
+            assume_tac ctxt,
+            resolve_tac ctxt (flat (maps (map_filter I) FVars_VVrss)),
+            dtac ctxt @{thm singletonD},
+            rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]]},
+            if inv then rtac ctxt sym else K all_tac,
+            assume_tac ctxt,
+            assume_tac ctxt,
+            forward_tac ctxt (the in_IImsupps),
+            assume_tac ctxt,
+            dtac ctxt @{thm trans[OF Int_commute]},
+            dtac ctxt @{thm iffD1[OF disjoint_iff]},
+            etac ctxt allE,
+            etac ctxt impE,
+            if inv then K (prefer_tac 2) else assume_tac ctxt,
+            assume_tac ctxt
+          ] in EVERY' [
+            helper_tac false,
+            helper_tac true
+          ] end,
+          REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] (snd (#SSupp def) :: map snd (#IImsupps def)),
+          rtac ctxt UnI1,
+          rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
           assume_tac ctxt,
-          if not inv then assume_tac ctxt else K all_tac,
-          rtac ctxt @{thm case_split[of "_ = _"]},
-          if inv then rotate_tac ~2 else K all_tac,
-          dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
-          rtac ctxt trans,
-          rtac ctxt (mk_arg_cong lthy 1 FVars),
-          assume_tac ctxt,
-          resolve_tac ctxt (flat (map_filter I FVars_VVrs)),
-          dtac ctxt @{thm singletonD},
-          rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<notin>)"]]},
-          if inv then rtac ctxt sym else K all_tac,
-          assume_tac ctxt,
-          assume_tac ctxt,
-          forward_tac ctxt (the in_IImsupps),
-          assume_tac ctxt,
-          dtac ctxt @{thm trans[OF Int_commute]},
-          dtac ctxt @{thm iffD1[OF disjoint_iff]},
-          etac ctxt allE,
-          etac ctxt impE,
-          if inv then K (prefer_tac 2) else assume_tac ctxt,
           assume_tac ctxt
-        ] in EVERY' [
-          helper_tac false,
-          helper_tac true
-        ] end,
-        REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] (snd (#SSupp def) :: map snd (#IImsupps def)),
-        rtac ctxt UnI1,
-        rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
-        assume_tac ctxt,
-        assume_tac ctxt
-      ]) end
-    )) (#FVars quotient) hs (0 upto nvars - 1) in_IImsuppss defs;
+        ]) end
+      )) (#FVars quotient) hs (0 upto nvars - 1) in_IImsuppss
+    ) (#quotient_fps fp_res) in_IImsuppsss hss defss;
 
     (*val FFVars_tvsubsts = @{map 8} (fn FVars => fn i => fn f => fn tvsubst_VVr => fn FVars_VVr => fn not_isVVr_free => fn IImsupp_Diff => Option.map (fn def =>
       let
@@ -1517,10 +1564,11 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       ]) end
     )) (#FVars quotient) (0 upto nvars - 1) fs' tvsubst_VVrs FVars_VVrs not_isVVr_frees IImsupp_Diffs defs;*)
 
-    val VVrs' = map_filter (Option.map ((fn (VVr, VVr_def) => (VVr, @{thm eq_reflection} OF [mk_unabs_def 1 (
+    val VVrss' = map (map_filter (Option.map ((fn (VVr, VVr_def) => (VVr, @{thm eq_reflection} OF [mk_unabs_def 1 (
       @{thm meta_eq_to_obj_eq} OF [Local_Defs.unfold0 lthy (@{thms comp_def} @ eta_defs) VVr_def]
-    )])) o #VVr)) defs;
-    val result = {
+    )])) o #VVr))) defss;
+
+    val results = @{map 5} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => {
       tvsubst = fst tvsubst,
       SSupps = map_filter (Option.map (fst o #SSupp)) defs,
       IImsuppss = map_filter (Option.map (map fst o #IImsupps)) defs,
@@ -1528,25 +1576,26 @@ fun create_tvsubst_of_mrbnf b qualify model lthy =
       isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
       tvsubst_VVrs = map_filter I tvsubst_VVrs,
       tvsubst_cctor_not_isVVr = tvsubst_not_isVVr
-    }: tvsubst_result;
+    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss';
 
     (* TODO: Remove *)
     val notes =
-      [("SSupp_VVr_empty", map_filter I SSupp_VVr_empties),
-       ("SSupp_VVr_bound", map_filter I SSupp_VVr_bounds),
-       ("in_IImsupp", flat (map_filter I in_IImsuppss)),
-       ("eta_set_empties", flat (map_filter I eta_set_empties)),
-       ("FVars_VVr", flat (map_filter I FVars_VVrs)),
-       ("tvsubst_VVr", map_filter I tvsubst_VVrs),
-       ("tvsubst_cctor_not_isVVr", [tvsubst_not_isVVr]),
-       ("not_isVVr_free", map_filter I not_isVVr_frees),
-       ("IImsupp_Diff", map_filter I IImsupp_Diffs)
+      [("SSupp_VVr_empty", maps (map_filter I) SSupp_VVr_emptiess),
+       ("SSupp_VVr_bound", maps (map_filter I) SSupp_VVr_boundss),
+       ("in_IImsupp", flat (maps (map_filter I) in_IImsuppsss)),
+       ("eta_set_empties", flat (maps (map_filter I) eta_set_emptiess)),
+       ("FVars_VVr", flat (maps (map_filter I) FVars_VVrss)),
+       ("tvsubst_VVr", maps (map_filter I) tvsubst_VVrss),
+       ("tvsubst_cctor_not_isVVr", tvsubst_not_isVVrs),
+       ("not_isVVr_free", maps (map_filter I) not_isVVr_freess),
+       ("IImsupp_Diff", maps (map_filter I) IImsupp_Diffss)
        (*("FFVars_tvsubst", map_filter I FFVars_tvsubsts)*)
       ] |> (map (fn (thmN, thms) =>
-        ((Binding.qualify true (short_type_name (fst (dest_Type (#T quotient)))) (Binding.name thmN), []), [(thms, [])])
+        ((Binding.qualify true (short_type_name (fst (dest_Type (#T (hd (#quotient_fps fp_res))))))
+          (Binding.name thmN), []), [(thms, [])])
       ));
     val (_, lthy) = Local_Theory.notes notes lthy
 
-  in (result, lthy) end;
+  in (results, lthy) end;
 
 end

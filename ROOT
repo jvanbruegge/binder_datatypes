@@ -32,6 +32,7 @@ session Binders in "thys" = Prelim +
     "../Tools"
   theories
     MRBNF_Composition
+    MRBNF_FP
     MRBNF_Recursor
     Generic_Barendregt_Enhanced_Rule_Induction
     General_Customization
@@ -43,6 +44,7 @@ session Operations in "operations" = Binders +
     Recursor
     VVSubst
     TVSubst
+    Sugar
 
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
   theories

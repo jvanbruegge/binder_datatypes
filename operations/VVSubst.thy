@@ -5269,7 +5269,11 @@ subclass (in var_T1) var_T1_pre
    apply (rule large)
   apply (rule regular)
   done
-subclass (in var_T1) var_T2_pre by standard
+subclass (in var_T1) var_T2_pre
+  apply standard
+   apply (rule large)
+  apply (rule regular)
+  done
 
 mrbnf "('var, 'tyvar, 'a, 'b) T1"
   map: vvsubst_T1

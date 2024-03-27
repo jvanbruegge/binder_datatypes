@@ -2046,17 +2046,18 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
 
     val lthy = fold (fn (mrbnf, quot) => MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T quot))) mrbnf) (xs ~~ #quotient_fps fp_res) lthy;
 
-    val (notess, lthy) = @{fold_map 3} (fn quot => fn vvsubst_cctor => fn vvsubst_rrename => fn lthy =>
+    val (notess, lthy) = @{fold_map 4} (fn quot => fn vvsubst_cctor => fn vvsubst_rrename => fn pset_simps => fn lthy =>
       let
         val vname = short_type_name (fst (dest_Type (#T quot)));
         val notes =
           [(vname ^ "_cctor", [vvsubst_cctor]),
-           (vname ^ "_vvsubst_rrename", [vvsubst_rrename])
+           (vname ^ "_vvsubst_rrename", [vvsubst_rrename]),
+           (vname ^ "_set_simps", pset_simps)
           ] |> (map (fn (thmN, thms) =>
             ((Binding.name thmN, []), [(thms, [])])
           ));
       in Local_Theory.notes notes lthy end
-    ) (#quotient_fps fp_res) vvsubst_cctors vvsubst_rrenames lthy;
+    ) (#quotient_fps fp_res) vvsubst_cctors vvsubst_rrenames pset_simpss lthy;
 
     val ress = map2 (fn t1 => fn t2 => {
       vvsubst_ctor = t1,

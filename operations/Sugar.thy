@@ -637,14 +637,12 @@ val T2_model = {
 \<close>
 
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
-                
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-declare [[ML_print_depth=100000]]
+
 local_setup \<open>fn lthy =>
 let
   val (res', lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf I res [T1_model, T2_model] lthy
+  val _ = @{print} res'
 in lthy end\<close>
+print_theorems
 
 end

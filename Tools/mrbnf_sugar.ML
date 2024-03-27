@@ -429,7 +429,7 @@ fun create_binder_datatype (spec : spec) lthy =
       eta_natural = eta_natural_tac
     };
     val tvsubst_model = {
-      fp_result = res,
+      binding = #tvsubst_b spec,
       etas = map (fn a => Option.map (rpair tvsubst_axioms) (
         List.find (fn t => domain_type (fastype_of t) = a) etas
       )) vars
@@ -586,7 +586,8 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) then
       let
-        val (tvsubst_res, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (#tvsubst_b spec) (Binding.prefix_name "tv") tvsubst_model lthy;
+        val (tvsubst_ress, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (Binding.prefix_name "tv") res [tvsubst_model] lthy;
+        val tvsubst_res = hd tvsubst_ress;
         val tvsubst_simps =
           let
             val (fs, _) = lthy

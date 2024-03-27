@@ -239,13 +239,13 @@ fun define_tvsubst_consts qualify fp_res (vars, pfrees, plives, pbounds) (models
             )))
           )) lthy;
 
-          val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s => mk_def_public ("IImsupp" ^ the suffix ^ "_" ^ s) 1 (
-            Term.absfree (dest_Free h) (
+          val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s =>
+            mk_def_public ("IImsupp" ^ the suffix ^ s ^ "_" ^ Binding.name_of (#binding model)) 1 (Term.absfree (dest_Free h) (
               let val UN = mk_UNION (fst SSupp $ h) (HOLogic.mk_comp (FVars, h));
               in if fastype_of (fst SSupp $ h) = range_type (fastype_of FVars) then
                 mk_Un (fst SSupp $ h, UN)
               else UN end
-          ))) (#FVars quot) (if nvars = 1 then [""] else map string_of_int (1 upto nvars)) lthy;
+          ))) (#FVars quot) (if nvars = 1 then [""] else map (fn i => "_" ^ string_of_int i) (1 upto nvars)) lthy;
 
           val (isVVr, lthy) = mk_def_t ("isVVr" ^ the suffix) 1 (Term.absfree (dest_Free t) (
             HOLogic.mk_exists ("a", aT, HOLogic.mk_eq (t, fst VVr $ Bound 0))

@@ -19,6 +19,11 @@ sig
     var_regular: thm,
     covar_large: thm
   }
+  type subst = {
+    subst: term,
+    subst_fns: (typ * term) list,
+    subst_def: thm
+  }
 
   val morph_mrbnf: morphism -> mrbnf -> mrbnf
   val morph_mrbnf_defs: morphism -> mrbnf -> mrbnf
@@ -154,8 +159,12 @@ sig
   val set_transfer_of_mrbnf: mrbnf -> thm list
   val wit_thms_of_mrbnf: mrbnf -> thm list
   val wit_thmss_of_mrbnf: mrbnf -> thm list list
+  val subst_id_of_mrbnf: mrbnf -> thm option
+  val subst_assoc_of_mrbnf: mrbnf -> thm option
+  val subst_vars_of_mrbnf: mrbnf -> thm list option
 
   val class_thms_of_mrbnf: mrbnf -> class_thms
+  val subst_of_mrbnf: mrbnf -> subst option
 
   val var_large_of_mrbnf: mrbnf -> thm
   val var_regular_of_mrbnf: mrbnf -> thm
@@ -224,14 +233,14 @@ sig
   val prepare_def: inline_policy -> (Proof.context -> fact_policy) -> bool ->
     (binding -> binding) -> (Proof.context -> 'a -> typ) -> (Proof.context -> 'b -> term) -> (Proof.context -> 'c -> sort) ->
     typ list option -> ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
-    ((((((((binding * 'a) * 'b) * (var_type * 'b) list) * 'b) * 'b list) * 'b option) * 'b option) * 'b option) * 'c option ->
+    ((((((((binding * 'a) * 'b) * (var_type * 'b) list) * 'b) * 'b list) * ('b * 'b list) option) * 'b option) * 'b option) * 'c option ->
     Proof.context ->
     string * term list * ((Proof.context -> thm list -> tactic) option * term list list) *
     ((thm list -> thm list list) -> thm list list -> Proof.context -> mrbnf * local_theory) *
     local_theory * thm list
-  val define_mrbnf_consts: inline_policy -> fact_policy -> bool -> typ list option ->
+(*  val define_mrbnf_consts: inline_policy -> fact_policy -> bool -> typ list option ->
     ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
-    ((((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option) * term option)
+    ((((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * (term * term list) option) * term option)
     * term option) * sort option -> local_theory ->
       ((typ list * typ list * typ list * typ *
         (string list * thm * thm) *
@@ -244,15 +253,15 @@ sig
         (typ list -> (typ list * typ list) -> (typ list * typ list) -> term) *
         (typ list -> (typ list * typ list) -> term) *
         (typ list -> term list -> term) *
-        (typ list -> typ list -> term))) * local_theory
+        (typ list -> typ list -> term))) * local_theory*)
 
   val mrbnf_def: inline_policy -> (Proof.context -> fact_policy) -> bool -> (binding -> binding) ->
     mrbnf_def_tactics -> typ list option ->
     ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
-    (((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option) * term option) * term option ->
+    (((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * (term * term list) option) * term option) * term option ->
     local_theory -> mrbnf * local_theory
   val mrbnf_cmd: (((((((((binding * string) * string) * (var_type * string) list) * string)
-      * string list) * string option) * string option) * string option) * string option) * (Proof.context -> Plugin_Name.filter) ->
+      * string list) * (string * string list) option) * string option) * string option) * string option) * (Proof.context -> Plugin_Name.filter) ->
     Proof.context -> Proof.state
 end;
 
@@ -287,12 +296,22 @@ type axioms = {
   set_bd: thm list,
   le_rel_OO: thm,
   rel_OO_Grp: thm,
-  pred_set: thm
+  pred_set: thm,
+  subst: {
+    subst_id: thm,
+    subst_assoc: thm,
+    subst_vars: thm list
+  } option
 };
 
-fun mk_axioms' ((((((((id, comp), cong), map), bd), set_bd), le_rel_OO), rel), pred) =
+fun mk_axioms' (((((((((id, comp), cong), map), bd), set_bd), le_rel_OO), rel), pred), subst) =
   {map_id0 = id, map_comp0 = comp, map_cong0 = cong, set_map0 = map, bd_infinite_regular_card_order = bd,
-   set_bd = set_bd, le_rel_OO = le_rel_OO, rel_OO_Grp = rel, pred_set = pred};
+   set_bd = set_bd, le_rel_OO = le_rel_OO, rel_OO_Grp = rel, pred_set = pred, subst = case subst of
+    [] => NONE | _ => let val ((subst_id, subst_assoc), subst_vars) = subst
+      |> apfst hd o chop 1
+      ||>> apfst hd o chop 1;
+    in SOME { subst_id = subst_id, subst_assoc = subst_assoc, subst_vars = subst_vars } end
+  };
 
 fun dest_cons [] = raise List.Empty
   | dest_cons (x :: xs) = (x, xs);
@@ -307,14 +326,14 @@ fun mk_axioms n thms = thms
   ||>> chop n
   ||>> dest_cons
   ||>> dest_cons
-  ||> the_single
+  ||>> dest_cons
   |> mk_axioms';
 
 fun zip_axioms mid mcomp mcong smap bd sbd le_rel_OO rel pred =
   [mid, mcomp, mcong] @ smap @ [bd] @ sbd @ [le_rel_OO, rel, pred];
 
 fun map_axioms f {map_id0, map_comp0, map_cong0, set_map0, bd_infinite_regular_card_order, set_bd,
-  le_rel_OO, rel_OO_Grp, pred_set} =
+  le_rel_OO, rel_OO_Grp, pred_set, subst} =
   {map_id0 = f map_id0,
     map_comp0 = f map_comp0,
     map_cong0 = f map_cong0,
@@ -323,7 +342,11 @@ fun map_axioms f {map_id0, map_comp0, map_cong0, set_map0, bd_infinite_regular_c
     set_bd = map f set_bd,
     le_rel_OO = f le_rel_OO,
     rel_OO_Grp = f rel_OO_Grp,
-    pred_set = f pred_set};
+    pred_set = f pred_set,
+    subst = Option.map (fn { subst_id, subst_assoc, subst_vars } => {
+      subst_id = f subst_id, subst_assoc = f subst_assoc, subst_vars = map f subst_vars
+    }) subst
+  };
 
 val morph_axioms = map_axioms o Morphism.thm;
 
@@ -718,16 +741,13 @@ fun var_type_ord (Live_Var, Live_Var) = EQUAL
 
 type subst = {
   subst: term,
-  subst_fns: typ list,
-  subst_def: thm,
-  subst_id: thm,
-  subst_assoc: thm
+  subst_fns: (typ * term) list,
+  subst_def: thm
 };
 
-fun morph_subst phi { subst, subst_fns, subst_def, subst_id, subst_assoc } = {
-  subst = Morphism.term phi subst, subst_fns = map (Morphism.typ phi) subst_fns,
-  subst_def = Morphism.thm phi subst_def, subst_id = Morphism.thm phi subst_def,
-  subst_assoc = Morphism.thm phi subst_assoc
+fun morph_subst phi { subst, subst_fns, subst_def } = {
+  subst = Morphism.term phi subst, subst_fns = map (fn (a, b) => (Morphism.typ phi a, Morphism.term phi b)) subst_fns,
+  subst_def = Morphism.thm phi subst_def
 };
 
 datatype mrbnf = MRBNF of {
@@ -788,6 +808,7 @@ val facts_of_mrbnf = #facts o rep_mrbnf;
 val mr_facts_of_mrbnf = #mr_facts o rep_mrbnf;
 val nwits_of_mrbnf = #nwits o rep_mrbnf;
 val wits_of_mrbnf = #wits o rep_mrbnf;
+val subst_of_mrbnf = #subst o rep_mrbnf;
 
 fun flatten_type_args_of_mrbnf mrbnf dead_x live_xs bound_xs free_xs =
   let
@@ -965,6 +986,9 @@ val set_bd_UNIV_of_mrbnf = map Lazy.force o #set_bd_UNIV o #facts o rep_mrbnf;
 val set_transfer_of_mrbnf = Lazy.force o #set_transfer o #facts o rep_mrbnf;
 val wit_thms_of_mrbnf = maps #prop o wits_of_mrbnf;
 val wit_thmss_of_mrbnf = map #prop o wits_of_mrbnf;
+val subst_id_of_mrbnf = Option.map #subst_id o #subst o #axioms o rep_mrbnf;
+val subst_assoc_of_mrbnf = Option.map #subst_assoc o #subst o #axioms o rep_mrbnf;
+val subst_vars_of_mrbnf = Option.map #subst_vars o #subst o #axioms o rep_mrbnf;
 
 val var_large_of_mrbnf = #var_large o #mr_facts o rep_mrbnf;
 val var_regular_of_mrbnf = #var_regular o #mr_facts o rep_mrbnf;
@@ -1026,8 +1050,7 @@ fun morph_mrbnf phi =
   end;
 
 fun morph_mrbnf_defs phi = map_mrbnf I I I I I I I I I I I I I I I I I I (morph_defs phi) I I I I I I I
-  (fn { subst, subst_def, subst_id, subst_assoc, subst_fns } => { subst = subst,
-    subst_def = Morphism.thm phi subst_def, subst_id = subst_id, subst_assoc = subst_assoc,
+  (fn { subst, subst_def, subst_fns } => { subst = subst, subst_def = Morphism.thm phi subst_def,
     subst_fns = subst_fns });
 
 fun permute_deads perm = map_mrbnf I I I I I I I I I I perm I I I I I I I I I I I I I I I I;
@@ -1056,6 +1079,12 @@ fun normalize_set insts instA set =
     val A = fst (Term.dest_TVar (HOLogic.dest_setT T'));
     val params = Term.add_tvar_namesT T [];
   in Term.subst_TVars ((A :: params) ~~ (instA :: insts)) set end;
+
+fun normalize_subst insts subst =
+  let
+    val T = body_type (fastype_of subst);
+    val params = Term.add_tvar_namesT T [];
+  in Term.subst_TVars (params ~~ insts) subst end;
 
 fun normalize_rel ctxt instTs instA instB rel =
   let
@@ -1220,6 +1249,9 @@ fun mk_setN i = setN ^ nonzero_string_of_int i;
 val bdN = "bd";
 val witN = "wit";
 fun mk_witN i = witN ^ nonzero_string_of_int i;
+val substN = "subst";
+val VVrN = "VVr";
+fun mk_VVrN i = VVrN ^ nonzero_string_of_int i;
 val relN = "rel";
 val mr_relN = "mr_rel";
 val predN = "pred";
@@ -1439,7 +1471,12 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (mr_rel_mono_strong0N, [Lazy.force (#mr_rel_mono_strong0 mr_facts)], []),
            (mr_rel_idN, [Lazy.force (#mr_rel_id mr_facts)], []),
            (mr_map_transferN, [Lazy.force (#mr_map_transfer mr_facts)], []),
-           (mr_set_transferN, Lazy.force (#mr_set_transfer mr_facts), [])]
+           (mr_set_transferN, Lazy.force (#mr_set_transfer mr_facts), [])] @
+          (the_default [] (Option.map (fn subst => [
+            ("subst_id", [#subst_id subst], []),
+            ("subst_assoc", [#subst_assoc subst], []),
+            ("subst_vars", #subst_vars subst, [])
+          ]) (#subst axioms)))
           |> filter_out (null o #2)
           |> map (fn (thmN, thms, attrs) =>
             ((qualify (Binding.qualify true (Binding.name_of mrbnf_b) (Binding.name thmN)), attrs),
@@ -1611,7 +1648,7 @@ val (add_prems, add_map_transfer_prems, mk_prem_terms) =
   end;
 
 fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map_b rel_b pred_b set_bs
-    (((((((((mrbnf_b, T_rhs), map_rhs), var_set_rhss), bd_rhs), wit_rhss), subst_rhs_opt), rel_rhs_opt),
+    ((((((((((mrbnf_b, T_rhs), map_rhs), var_set_rhss), bd_rhs), wit_rhss), subst_rhs_opt), VVr_rhss_opt), rel_rhs_opt),
     pred_rhs_opt), sort_opt) no_defs_lthy =
   let
     val (var_types, set_rhss) = split_list var_set_rhss;
@@ -1663,14 +1700,26 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
       in bs ~~ set_rhss end;
     val bd_bind_def = (fn () => def_qualify (mk_prefix_binding bdN), bd_rhs);
 
-    val ((((mrbnf_map_term, raw_map_def),
-      (mrbnf_set_terms, raw_set_defs)),
-      _ (* (mrbnf_bd_term, raw_bd_def) *)), (lthy, lthy_old)) =
+    val subst_bind_def_opt = Option.map (fn t => (fn () => def_qualify (mk_prefix_binding substN), t)) subst_rhs_opt;
+    val VVr_binds_defs_opt = Option.map (fn ts =>
+      let
+        val VVrTs = fst (split_last (binder_types (fastype_of (the subst_rhs_opt))));
+        val _ = if length VVrTs <> length ts then error "Need one VVr function per substitution" else ()
+      in map_index (fn (i, t) => (fn () => def_qualify (mk_prefix_binding (mk_VVrN i)), t)) ts end
+    ) VVr_rhss_opt;
+
+    fun fold_map_opt f (SOME x) y = let val r = f x y in (SOME (fst r), snd r) end
+      | fold_map_opt _ NONE y = (NONE, y)
+
+    val (((((mrbnf_map_term, raw_map_def), (mrbnf_set_terms, raw_set_defs)),
+      mrbnf_raw_subst_opt), mrbnf_raw_VVrs_opt
+      ), (lthy, lthy_old)) =
         no_defs_lthy
         |> Local_Theory.begin_nested |> snd
         |> maybe_define true map_bind_def
         ||>> apfst split_list o fold_map (maybe_define true) set_binds_defs
-        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy)) (* maybe_define true bd_bind_def*)
+        ||>> fold_map_opt (maybe_define true) subst_bind_def_opt
+        ||>> fold_map_opt (fn ts => apfst split_list o fold_map (maybe_define true) ts) VVr_binds_defs_opt
         ||> `Local_Theory.end_nested;
 
     val phi = Proof_Context.export_morphism lthy_old lthy;
@@ -1684,7 +1733,6 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
 
     val mrbnf_map_def = Morphism.thm phi raw_map_def;
     val mrbnf_set_defs = map (Morphism.thm phi) raw_set_defs;
-    (*val mrbnf_bd_def = Morphism.thm phi raw_bd_def;*)
 
     val mrbnf_map_raw = Morphism.term phi mrbnf_map_term;
 
@@ -1784,6 +1832,13 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
     val mrbnf_sets =
       map2 (normalize_set Calpha_params) alphas (map (Morphism.term phi) mrbnf_set_terms);
     val mrbnf_bd = mk_mrbnf_bd Calpha_params;
+
+    val (mrbnf_subst_opt, mrbnf_VVrs_opt) =
+      let val morph = normalize_subst Calpha_params o Morphism.term phi
+      in (
+        Option.map (map_prod morph (Morphism.thm phi)) mrbnf_raw_subst_opt,
+        Option.map (map_prod (map morph) (map (Morphism.thm phi))) mrbnf_raw_VVrs_opt
+      ) end;
 
     (*TODO: further checks of type of mrbnf_map*)
     (*TODO: check types of mrbnf_sets*)
@@ -1907,7 +1962,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
       Term.subst_atomic_types ((Ds ~~ Ds') @ (As ~~ As')) pred_spec;
   in
     (((alphas, betas, deads, Calpha, (class, var_large, var_regular), (mk_covar_type_class, mk_covar_large)),
-     (mrbnf_map, mrbnf_sets, mrbnf_bd, mrbnf_wits, mrbnf_rel, mrbnf_pred),
+     (mrbnf_map, mrbnf_sets, mrbnf_bd, mrbnf_wits, mrbnf_subst_opt, mrbnf_VVrs_opt, mrbnf_rel, mrbnf_pred),
      (mrbnf_map_def, mrbnf_set_defs, mrbnf_bd_def, mrbnf_wit_defs, mrbnf_rel_def, mrbnf_pred_def),
      (mk_mrbnf_map, mk_mrbnf_t, mk_mrbnf_T, mk_mrbnf_rel, mk_mrbnf_pred, mk_rel_spec,
        mk_pred_spec)), lthy)
@@ -1938,7 +1993,8 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
     val set_rhss = map (prep_term no_defs_lthy) raw_sets;
     val bd_rhs = prep_term no_defs_lthy raw_bd;
     val wit_rhss = map (prep_term no_defs_lthy) raw_wits;
-    val subst_rhs_opt = Option.map (prep_term no_defs_lthy) raw_subst_opt;
+    val subst_rhs_opt = Option.map (prep_term no_defs_lthy o fst) raw_subst_opt;
+    val VVr_rhss_opt = Option.map (map (prep_term no_defs_lthy) o snd) raw_subst_opt;
     val rel_rhs_opt = Option.map (prep_term no_defs_lthy) raw_rel_opt;
     val pred_rhs_opt = Option.map (prep_term no_defs_lthy) raw_pred_opt;
     val sort_opt = Option.map (prep_sort no_defs_lthy) raw_sort_opt;
@@ -1960,12 +2016,12 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         (mrbnf_b, Local_Theory.full_name no_defs_lthy mrbnf_b);
 
     val (((alphas, betas, deads, Calpha, (class, var_large_raw, var_regular), (mk_covar_type_class, mk_covar_large)),
-     (mrbnf_map, mrbnf_sets, mrbnf_bd, mrbnf_wits, mrbnf_rel, mrbnf_pred),
+     (mrbnf_map, mrbnf_sets, mrbnf_bd, mrbnf_wits, mrbnf_subst_opt, mrbnf_VVrs_opt, mrbnf_rel, mrbnf_pred),
      (mrbnf_map_def, mrbnf_set_defs, mrbnf_bd_def, mrbnf_wit_defs, mrbnf_rel_def, mrbnf_pred_def),
      (mk_mrbnf_map_Ds, mk_mrbnf_t_Ds, mk_mrbnf_T_Ds, _, _, mk_rel_spec, mk_pred_spec)), lthy) =
        define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map_b rel_b pred_b set_bs
-         (((((((((mrbnf_b, T_rhs), map_rhs), (var_types ~~ set_rhss)), bd_rhs), wit_rhss), subst_rhs_opt),
-           rel_rhs_opt), pred_rhs_opt), sort_opt) no_defs_lthy;
+         ((((((((((mrbnf_b, T_rhs), map_rhs), (var_types ~~ set_rhss)), bd_rhs), wit_rhss), subst_rhs_opt),
+           VVr_rhss_opt), rel_rhs_opt), pred_rhs_opt), sort_opt) no_defs_lthy;
 
     val dead = length deads;
 
@@ -2020,6 +2076,8 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
     val mrbnf_sets_Bs = map (mk_mrbnf_t Bs') mrbnf_sets;
     val mrbnf_sets_Ts = map (mk_mrbnf_t Ts') mrbnf_sets;
     val mrbnf_bd_As = mk_mrbnf_t As' mrbnf_bd;
+    val mrbnf_subst_As_opt = Option.map (mk_mrbnf_t As' o fst) mrbnf_subst_opt;
+    val mrbnf_VVrs_As_opt = Option.map (map (mk_mrbnf_t As') o fst) mrbnf_VVrs_opt;
     fun mk_mrbnf_rel RTs CA CB = normalize_rel lthy RTs CA CB mrbnf_rel;
     fun mk_mrbnf_pred PTs CA = normalize_pred lthy PTs CA mrbnf_pred;
 
@@ -2150,9 +2208,47 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
     val pred_set_goal = fold_rev Logic.all Ps (mk_Trueprop_eq (Term.list_comb (pred, Ps),
       Term.list_comb (mk_pred_spec Ds As', Ps)));
 
+    val subst_goals = Option.map (fn subst =>
+      let
+        val T = body_type (fastype_of subst);
+        val VVrs = the mrbnf_VVrs_As_opt;
+        val (((fs, gs), x), _) = no_defs_lthy
+          |> mk_Frees "f" (map fastype_of VVrs)
+          ||>> mk_Frees "g" (map fastype_of VVrs)
+          ||>> apfst hd o mk_Frees "x" [T];
+
+        val subst_id_goal = mk_Trueprop_eq (Term.list_comb (subst, VVrs), HOLogic.id_const T);
+
+        val subst_assoc_goal = fold_rev Logic.all (fs @ gs @ [x]) (mk_Trueprop_eq (
+          Term.list_comb (subst, gs) $ (Term.list_comb (subst, fs) $ x),
+          Term.list_comb (subst, map (fn f => HOLogic.mk_comp (Term.list_comb (subst, gs), f)) fs) $ x
+        ));
+
+        val _ = @{print} (map fastype_of VVrs)
+        val FVars = filter (member (op=) (map (fst o dest_funT o fastype_of) VVrs)
+          o HOLogic.dest_setT o snd o dest_funT o fastype_of
+        ) mrbnf_sets_As
+
+        fun mk_SSupp f VVr = HOLogic.mk_Collect ("x", fst (dest_funT (fastype_of f)),
+          HOLogic.mk_not (HOLogic.mk_eq (
+          f $ Bound 0, VVr $ Bound 0
+          ))
+        );
+
+        val subst_vars_goals = @{map 3} (fn f => fn VVr => fn FVars =>
+          fold_rev Logic.all (fs @ [x]) (HOLogic.mk_Trueprop (mk_leq
+            (FVars $ (Term.list_comb (subst, fs) $ x))
+            (foldl1 mk_Un ([FVars $ x, mk_SSupp f VVr] @ map2 (fn f => fn VVr =>
+              mk_UNION (mk_SSupp f VVr) (HOLogic.mk_comp (FVars, f))
+            ) fs VVrs))
+          ))
+        ) fs VVrs FVars;
+      in subst_id_goal :: subst_assoc_goal :: subst_vars_goals end
+    ) mrbnf_subst_As_opt;
+
     val goals = zip_axioms map_id0_goal map_comp0_goal map_cong0_goal set_map0s_goal
       infinite_regular_card_order_bd_goal set_bds_goal le_rel_OO_goal rel_OO_Grp_goal
-      pred_set_goal;
+      pred_set_goal @ the_default [] subst_goals;
 
     val mk_wit_goals = mk_wit_goals lbs lzs mrbnf_sets_lAs;
     fun triv_wit_tac ctxt = mk_trivial_wit_tac ctxt mrbnf_wit_defs;
@@ -3823,9 +3919,10 @@ val _ =
          Scan.repeat1 (Scan.unless (Parse.reserved "bd") (parse_var_type -- Parse.term))) []) --|
        (Parse.reserved "bd" -- @{keyword ":"}) -- Parse.term --
        Scan.optional ((Parse.reserved "wits" -- @{keyword ":"}) |--
-         Scan.repeat1 (Scan.unless (Parse.reserved "rel" ||
+         Scan.repeat1 (Scan.unless (Parse.reserved "subst" ||
            Parse.reserved "plugins") Parse.term)) [] --
-       Scan.option ((Parse.reserved "subst" -- @{keyword ":"}) |-- Parse.term) --
+       Scan.option ((Parse.reserved "subst" -- @{keyword ":"}) |--
+         Parse.term -- Scan.repeat1 (Scan.unless (Parse.reserved "rel") Parse.term)) --
        Scan.option ((Parse.reserved "rel" -- @{keyword ":"}) |-- Parse.term) --
        Scan.option ((Parse.reserved "pred" -- @{keyword ":"}) |-- Parse.term) --
        Scan.option ((Parse.reserved "var_class" -- @{keyword ":"}) |-- Parse.sort) --

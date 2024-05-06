@@ -31,11 +31,11 @@ sig
     MRBNF_Def.mrbnf list -> unfold_set * local_theory -> MRBNF_Def.mrbnf * (unfold_set * local_theory)
   val permute_mrbnf: (binding -> binding) -> int list -> int list -> MRBNF_Def.mrbnf ->
     (comp_cache * unfold_set) * local_theory -> MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  val normalize_mrbnfs: (int -> binding -> binding) -> (string * sort) option list ->
+  val normalize_mrbnfs: (int -> binding -> binding) -> typ option list ->
     (string * sort) list list -> (string * sort) list -> ((string * sort) * MRBNF_Def.var_type) list ->
     ((string * sort) list list ->
     (string * sort) list) -> MRBNF_Def.mrbnf option ->  MRBNF_Def.mrbnf list -> (comp_cache * unfold_set) * local_theory ->
-    (int list list * (string * sort) list) * MRBNF_Def.mrbnf option * (MRBNF_Def.mrbnf list * ((comp_cache * unfold_set) * local_theory))
+    (int list list * typ list * (string * sort) list) * MRBNF_Def.mrbnf option * (MRBNF_Def.mrbnf list * ((comp_cache * unfold_set) * local_theory))
   val compose_mrbnf: MRBNF_Def.inline_policy -> (int -> binding -> binding) ->
     ((string * sort) list list -> (string * sort) list) -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list ->
     typ list -> typ list list -> typ option list -> typ list list ->
@@ -1080,14 +1080,11 @@ fun tfree_ord ((a, S), (b, S')) = case fast_string_ord (a, b) of
   | ord => ord
 structure Vars = Table(type key = (string * sort) val ord = tfree_ord);
 
-fun map_option f (SOME x) = SOME (f x)
-  | map_option _ NONE = NONE
-
 fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum =
   let
     val oAs' = case outer_opt of
       NONE => []
-      | SOME outer => map_filter (fn (x, var_type) => case x of
+      | SOME outer => map_filter (fn (x, var_type) => case Option.mapPartial (try dest_TFree) x of
         SOME y => SOME (y, var_type)
         | NONE => NONE
       ) (oAs ~~ var_types_of_mrbnf outer);
@@ -1097,7 +1094,9 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
       (Vars.make (Ds ~~ replicate (length Ds) MRBNF_Def.Dead_Var))
 
     val odemote_target_types = map (fn x => case x of
-      SOME y => the (Vars.lookup var_map y)
+      SOME y => (case try dest_TFree y of
+        NONE => Dead_Var
+        | SOME y => the (Vars.lookup var_map y))
       | NONE => Live_Var
     ) oAs;
     val (outer_opt', accum') = case outer_opt of
@@ -1108,12 +1107,14 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
     val (inners', accum'') = @{fold_map 3} (demote_mrbnf o qualify)
       (1 upto length mrbnfs) demote_target_types mrbnfs accum'
 
-    val oAs2 = filter (fn SOME A =>
-      let val var_type = the (Vars.lookup var_map A)
-      in case var_type of
-        Dead_Var => false | _ => true
-      end
-    | NONE => true) oAs
+    val oAs2 = map (Option.map dest_TFree) (filter (fn SOME A => (case try dest_TFree A of
+      NONE => false
+      | SOME A =>
+        let val var_type = the (Vars.lookup var_map A)
+        in case var_type of
+          Dead_Var => false | _ => true
+        end)
+    | NONE => true) oAs);
     fun map_filter_killed f = map_filter (fn A => case Vars.lookup var_map A of
       SOME Dead_Var => NONE | SOME x => SOME (f A x) | NONE => SOME (f A Live_Var)
     );
@@ -1130,11 +1131,10 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
     val kill_poss = map (map_filter I o map_index (fn (i, A) => case the (Vars.lookup var_map A) of
       Dead_Var => SOME i | _ => NONE
     )) Ass
-    val new_oDs = map_filter I (map_index (fn (i, x) => case x of
-      SOME y => (case the (Vars.lookup var_map y) of
-        Dead_Var => SOME i | _ => NONE)
-      | _ => NONE
-    ) oAs)
+    val new_oDs = map_filter (Option.mapPartial (fn x => case try dest_TFree x of
+      NONE => SOME x
+      | SOME y => (case the (Vars.lookup var_map y) of Dead_Var => SOME x | _ => NONE)
+    )) oAs;
     val need_liftss = map get_lifts Ass'
     val lift_ns = map count_lifts need_liftss
     val dests = replicate (length Ass') (0 upto length As - 1)
@@ -1163,23 +1163,22 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
       NONE => (outer_opt', accum'')
       | SOME outer' => apfst SOME (lift_and_permute_mrbnf (qualify (length mrbnfs)) olift_ns osrc odest outer' accum'')
   in
-    ((kill_poss, map fst As),
+    ((kill_poss, new_oDs, map fst As),
       outer_opt'',
       @{fold_map 5} (lift_and_permute_mrbnf o qualify)
         (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
         lift_ns srcs dests inners' accum''')
   end;
 
-fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess Xs accum =
+fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss oAs tfreess Xs accum =
   let
     val b = name_of_mrbnf outer;
     val Ass = map (map Term.dest_TFree) tfreess;
-    val oAs = map (map_option Term.dest_TFree) otfrees
     val Ds = fold (fold Term.add_tfreesT) (oDs :: Dss) [];
-    val ((kill_poss, As), outer', (inners', ((cache', unfold_set'), lthy'))) =
+    val ((kill_poss, new_oDs, As), outer', (inners', ((cache', unfold_set'), lthy'))) =
       normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs (SOME outer) inners accum;
     val Ds =
-      oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
+      oDs @ new_oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
     val As = map TFree As;
   in
     apfst (rpair (Ds, As))
@@ -1534,7 +1533,7 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
               |> filter (fn x => x >= 0);
             val oAs = map (fn (T, var_type) => case var_type of
               Live_Var => NONE | _ => SOME T
-            ) (Ts ~~ var_types_of_mrbnf mrbnf)
+            ) (Ts ~~ var_types_of_mrbnf mrbnf);
             val oDs = map (nth Ts) oDs_pos;
             val ofree_bound_pos = map_filter I (map_index (fn (i, x) => case x of
               SOME _ => SOME i | NONE => NONE

@@ -10,15 +10,15 @@ begin
 declare bij_swap[simp]
 declare supp_id_bound[simp]
 
-(*type_synonym label = nat*)
+type_synonym label = string
 
 ML \<open>
 val ctors = [
   (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
   (("Top", (NONE : mixfix option)), []),
   (("Fun", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]) (*,
-  (("Rec", NONE), [@{typ "(label, 'rec) lfset"}]) *)
+  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]),
+  (("Rec", NONE), [@{typ "(label, 'rec) lfset"}])
 ]
 
 val spec = {
@@ -45,9 +45,13 @@ in lthy' end\<close>
 print_theorems
 print_mrbnfs
 
+thm typ.set
+thm typ.subst
+thm typ.map
+
 instance var :: var_typ_pre apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
-  by (auto simp add: regularCard_var)
+  by (auto simp add: regularCard_var Field_card_order G.bd_card_order infinite_iff_card_of_nat)
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.rrename_ids[simp] typ.rrename_id0s[simp]
@@ -60,7 +64,8 @@ lemma rrename_typ_simps[simp]:
     "rrename_typ f Top = Top"
     "rrename_typ f (Fun t1 t2) = Fun (rrename_typ f t1) (rrename_typ f t2)"
     "rrename_typ f (Forall x T1 T2) = Forall (f x) (rrename_typ f T1) (rrename_typ f T2)"
-     apply (unfold TyVar_def Top_def Fun_def Forall_def)
+    "rrename_typ f (Rec xs) = Rec (map_lfset id (rrename_typ f) xs)"
+     apply (unfold TyVar_def Top_def Fun_def Forall_def Rec_def)
      apply (rule trans)
       apply (rule typ.rrename_cctors)
        apply (rule assms)+
@@ -76,7 +81,10 @@ lemma rrename_typ_simps[simp]:
      apply (rule trans)
       apply (rule typ.rrename_cctors)
        apply (rule assms)+
-     defer
+      defer
+      apply (rule trans)
+       apply (rule typ.rrename_cctors)
+        apply (rule assms)+
      apply (unfold map_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps
         map_prod_simp id_def
       )
@@ -87,14 +95,15 @@ lemma typ_inject:
   "TyVar x = TyVar y \<longleftrightarrow> x = y"
   "Fun T1 T2 = Fun R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
   "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var_typ_pre \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FFVars_typ T2 - {x}) f \<and> f x = y \<and> rrename_typ f T2 = R2)"
-    apply (unfold TyVar_def Fun_def Forall_def typ.TT_injects0
+  "Rec xs = Rec ys \<longleftrightarrow> xs = ys"
+    apply (unfold TyVar_def Fun_def Forall_def Rec_def typ.TT_injects0
       set3_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
       cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_typ_pre_def
       prod.map_id set2_typ_pre_def prod_set_simps prod.set_map UN_single Abs_typ_pre_inject[OF UNIV_I UNIV_I]
-      sum.inject prod.inject map_prod_simp
+      sum.inject prod.inject map_prod_simp lfset.map_id
     )
   by auto
-declare typ_inject(1,2)[simp]
+declare typ_inject(1,2,4)[simp]
 
 corollary Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
   using typ_inject(3) typ.rrename_cong_ids
@@ -158,8 +167,8 @@ lemma context_dom_set[simp]:
   unfolding map_context_def by force
 lemma set_bd_UNIV: "|set xs| <o |UNIV::var set|"
   apply (rule ordLess_ordLeq_trans)
-    apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
-  apply (rule var_typ_pre_class.large)
+   apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
+  apply (rule var_ID_class.large)
   done
 lemma context_set_bd_UNIV[simp]: "|dom xs| <o |UNIV::var set|"
   apply (rule ordLeq_ordLess_trans[OF card_of_image])
@@ -201,6 +210,7 @@ inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<R
 | SA_Trans_TVar: "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
 | SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
+| SA_Rec: "\<lbrakk> \<turnstile> \<Gamma> ok; Rec xs closed_in \<Gamma> ; labels ys \<subseteq> labels xs ; \<forall>(l, T)\<in>pairs ys. \<exists>(k, S)\<in>pairs xs. k = l \<and> \<Gamma> \<turnstile> S <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> Rec xs <: Rec ys"
 
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
@@ -214,6 +224,11 @@ and
   SA_AllER: "\<Gamma> \<turnstile> S <: \<forall>Z<:T\<^sub>1. T\<^sub>2"
 and
   SA_AllEL: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
+and
+  SA_RecL: "\<Gamma> \<turnstile> Rec xs <: T"
+and
+  SA_RecR: "\<Gamma> \<turnstile> S <: Rec ys"
+print_theorems
 
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Gamma> S T rule: ty.induct)
@@ -227,7 +242,17 @@ case (SA_Trans_TVar x U \<Gamma> T) {
     by (metis fst_conv imageI singletonD subsetI typ.set(1))
 next
   case 2 then show ?case using SA_Trans_TVar by simp
-} qed auto
+}
+next
+  case (SA_Rec \<Gamma> xs ys)
+  {
+    case 1
+    then show ?case using SA_Rec(2) .
+  next
+    case 2
+    then show ?case using SA_Rec by (force simp: labels_pairs values_pairs)
+  }
+qed auto
 
 thm ty_def
 declare ty.intros[intro]
@@ -277,10 +302,21 @@ definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<
   \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. B = {x} \<and> fst t = \<Gamma> \<and> fst (snd t) = (\<forall>x<:S\<^sub>1. S\<^sub>2) \<and> snd (snd t) = (\<forall>x<:T\<^sub>1. T\<^sub>2) \<and>
      R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<comment> \<open>\<and> \<Gamma> \<turnstile> T1 <: S1 \<close> \<and>
      R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2) \<comment> \<open>\<and> \<Gamma>,x<:T1 \<turnstile> S2 <: T2 \<close>)
+  \<or> (\<exists>\<Gamma> xs ys.
+            B = {} \<and>
+            fst t = \<Gamma> \<and>
+            fst (snd t) = Rec xs \<and>
+            snd (snd t) = Rec ys \<and>
+            \<turnstile> \<Gamma> ok \<and>
+            Rec xs closed_in \<Gamma> \<and>
+            labels ys \<subseteq> labels xs \<and> (\<forall>(l, T)\<in>pairs ys. \<exists>(k, S)\<in>pairs xs. k = l \<and> R (\<Gamma>, S, T)))
   "
 
 lemma G_mono: "R \<le> R' \<Longrightarrow> G v R t \<Longrightarrow> G v R' t"
-  unfolding G_def by fastforce
+  unfolding G_def
+  apply (elim disj_mono[rule_format, rotated -1])
+       apply (fastforce+)[5]
+  by (smt (verit) case_prod_unfold le_boolE le_funD)
 
 lemma in_context_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
@@ -324,15 +360,25 @@ next
 next
   case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
   then show ?case by (auto intro!: ty.SA_All simp: extend_eqvt)
+next
+  case (SA_Rec \<Gamma> xs ys)
+  then show ?case
+    apply (auto intro!: ty.SA_Rec simp: wf_eqvt lfset.set_map pairs_lfmap)
+     apply (metis (no_types, lifting) SUP_le_iff closed_in_eqvt context_dom_set subsetD)
+    by (smt (verit) case_prodE case_prodI2 id_apply map_prod_simp prod.inject)
 qed auto
 
 lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
   unfolding G_def
-  by (elim disj_forward exE; cases t)
-    (auto simp: Tmap_def ssbij_def supp_inv_bound
+  apply (elim disj_forward exE; cases t)
+       apply  (auto simp: Tmap_def ssbij_def supp_inv_bound lfset.set_map pairs_lfmap values_pairs labels_pairs
       typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
+    apply (metis (no_types, lifting) SUP_le_iff imageI snd_conv subsetD)
+  using image_iff apply fastforce
+    apply (auto simp: case_prod_map_prod case_prod_beta)
+  by (metis (mono_tags, opaque_lifting) fst_conv inv_simp1 snd_conv typ.rrename_bijs typ.rrename_inv_simps)
 
 lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
   by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tfvars small_def small_ssbij subsetI)
@@ -532,8 +578,9 @@ subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
     \<^cancel>\<open>SA_Arrow: \<close>
     subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_4) by auto
     \<^cancel>\<open>SA_All: \<close>
-    subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2
-    apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI5_5) by auto .
+    subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2 
+      apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI5_5) by auto
+    by auto
   subgoal apply(elim conjE disjE exE)
     \<^cancel>\<open>SA_Top: \<close>
     subgoal apply(rule disjI5_1) by auto
@@ -545,7 +592,9 @@ subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
     subgoal apply(rule disjI5_4) by auto
     \<^cancel>\<open>SA_All: \<close>
     subgoal for v \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-    apply(rule disjI5_5) by fastforce . . .
+      apply(rule disjI5_5) by fastforce
+    subgoal for B \<Gamma> xs ys
+      apply (rule disjI6_6) by simp . . .
 
 interpretation ty: Induct where dummy = "undefined :: var"
   and Tmap = Tmap and Tfvars = Tfvars and G = G
@@ -573,6 +622,8 @@ and SA_All: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 p.
    \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow>
    \<forall>p. \<phi> p (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<Longrightarrow>
    \<phi> p \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2)"
+and SA_Rec: "\<And>\<Gamma> xs ys p. \<turnstile> \<Gamma> ok \<Longrightarrow> Rec xs closed_in \<Gamma> \<Longrightarrow> labels ys \<subseteq> labels xs \<Longrightarrow>
+  \<forall>(l, T)\<in>pairs ys. \<exists>(k, S)\<in>pairs xs. k = l \<and> \<Gamma> \<turnstile> S <: T \<and> (\<forall>p. \<phi> p \<Gamma> S T) \<Longrightarrow> \<phi> p \<Gamma> (Rec xs) (Rec ys)"
 shows "\<phi> p \<Gamma> S T"
 apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi> p \<Gamma> S T")
   subgoal by simp
@@ -585,7 +636,8 @@ apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi
       subgoal for X using SA_Refl_TVar[of _ X p] by auto
       subgoal using SA_Trans_TVar by auto
       subgoal using SA_Arrow by auto
-      subgoal using SA_All by auto . . .
+      subgoal using SA_All by auto
+      subgoal using SA_Rec by auto . . .
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_step:

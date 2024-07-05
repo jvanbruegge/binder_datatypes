@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: makarius/isabelle:Isabelle2023
+      image: makarius/isabelle:Isabelle2024
       options: "--user root"
 
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft

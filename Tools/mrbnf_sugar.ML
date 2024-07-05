@@ -6,7 +6,7 @@ type spec = {
   vars: ((string * sort) * MRBNF_Def.var_type) list,
   rec_vars: int,
   binding_rel: int list list,
-  ctors: ((string * mixfix option) * typ list) list,
+  ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
   tvsubst_b: binding
 };
@@ -30,7 +30,7 @@ type spec = {
   vars: ((string * sort) * MRBNF_Def.var_type) list,
   rec_vars: int,
   binding_rel: int list list,
-  ctors: ((string * mixfix option) * typ list) list,
+  ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
   tvsubst_b: binding
 };
@@ -105,7 +105,8 @@ fun create_binder_datatype (spec : spec) lthy =
     val fp_nesting_mrbnfs = nesting_mrbnfs lthy [map snd (#ctors spec)] (*(take (#rec_vars spec) (
       map_filter (fn (x, Live_Var) => SOME (TFree x) | _ => NONE) (#vars spec)
     )); *) (map (TFree o fst) (#vars spec))
-    val names_lthy = fold (Variable.declare_constraints o Logic.mk_type) vars lthy;
+
+    val names_lthy = fold Variable.declare_typ (map (TFree o fst) (#vars spec)) lthy;
 
     val quotient = hd (#quotient_fps res)
     val qT = #T quotient;

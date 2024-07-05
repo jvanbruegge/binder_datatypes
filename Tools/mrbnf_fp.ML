@@ -2024,7 +2024,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           )));
           val wf_subshape =
             let
-              val wf = Const (@{const_name wf}, HOLogic.mk_setT (HOLogic.mk_prodT (sumT, sumT)) --> @{typ bool})
+              val wf = Const (@{const_name wf_on}, HOLogic.mk_setT sumT --> HOLogic.mk_setT (HOLogic.mk_prodT (sumT, sumT)) --> @{typ bool}) $ HOLogic.mk_UNIV sumT
               val goal = HOLogic.mk_Trueprop (wf $ subshape_rel)
               fun sumE_tac ctxt = Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
                 rtac ctxt (infer_instantiate' ctxt [SOME (snd (snd (split_last params)))] (

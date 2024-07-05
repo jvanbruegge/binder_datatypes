@@ -53,9 +53,9 @@ declare [[inductive_internals]]
 
 ML \<open>
 val ctors = [
-  (("iVar", (NONE : mixfix option)), [@{typ 'var}]),
-  (("iApp", NONE), [@{typ 'rec}, @{typ "'rec stream"}]),
-  (("iLam", NONE), [@{typ "'bvar dstream"}, @{typ 'brec}])
+  (("iVar", NoSyn), [@{typ 'var}]),
+  (("iApp", NoSyn), [@{typ 'rec}, @{typ "'rec stream"}]),
+  (("iLam", NoSyn), [@{typ "'bvar dstream"}, @{typ 'brec}])
 ]
 
 val spec_iterm = {

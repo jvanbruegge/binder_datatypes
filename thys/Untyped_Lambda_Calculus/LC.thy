@@ -19,9 +19,9 @@ declare [[inductive_internals]]
 
 ML \<open>
 val ctors = [
-  (("Var", (NONE : mixfix option)), [@{typ 'var}]),
-  (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Lam", NONE), [@{typ 'bvar}, @{typ 'brec}])
+  (("Var", NoSyn), [@{typ 'var}]),
+  (("App", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Lam", NoSyn), [@{typ 'bvar}, @{typ 'brec}])
 ]
 
 val spec = {

@@ -6,12 +6,12 @@ datatype \<tau> = Base | Arrow \<tau> \<tau> (infixr "(\<rightarrow>)" 50)
 
 ML \<open>
 val ctors = [
-  (("Var", (NONE : mixfix option)), [@{typ 'var}]),
-  (("TyVar", (NONE : mixfix option)), [@{typ 'tyvar}]),
-  (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Lam", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}]),
-  (("TyLam", NONE), [@{typ 'btyvar}, @{typ \<tau>}, @{typ 'brec}]),
-  (("Let", NONE), [@{typ "('bvar, \<tau> \<times> 'rec) dallist"}, @{typ 'brec}])
+  (("Var", NoSyn), [@{typ 'var}]),
+  (("TyVar", NoSyn), [@{typ 'tyvar}]),
+  (("App", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Lam", NoSyn), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}]),
+  (("TyLam", NoSyn), [@{typ 'btyvar}, @{typ \<tau>}, @{typ 'brec}]),
+  (("Let", NoSyn), [@{typ "('bvar, \<tau> \<times> 'rec) dallist"}, @{typ 'brec}])
 ]
 
 val spec = {

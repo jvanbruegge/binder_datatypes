@@ -14,11 +14,11 @@ declare supp_id_bound[simp]
 
 ML \<open>
 val ctors = [
-  (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
-  (("Top", (NONE : mixfix option)), []),
-  (("Fun", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]) (*,
-  (("Rec", NONE), [@{typ "(label, 'rec) lfset"}]) *)
+  (("TyVar", NoSyn), [@{typ 'var}]),
+  (("Top", NoSyn), []),
+  (("Fun", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Forall", NoSyn), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]) (*,
+  (("Rec", NoSyn), [@{typ "(label, 'rec) lfset"}]) *)
 ]
 
 val spec = {

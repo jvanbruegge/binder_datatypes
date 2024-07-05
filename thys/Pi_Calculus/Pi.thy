@@ -19,14 +19,14 @@ begin
 
 ML \<open>
 val ctors = [
-  (("Zero", (NONE : mixfix option)), []),
-  (("Sum", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Par", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Bang", NONE), [@{typ 'rec}]),
-  (("Match", NONE), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
-  (("Out", NONE), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
-  (("Inp", NONE), [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}]),
-  (("Res", NONE), [@{typ 'bvar}, @{typ 'brec}])
+  (("Zero", NoSyn), []),
+  (("Sum", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Par", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Bang", NoSyn), [@{typ 'rec}]),
+  (("Match", NoSyn), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
+  (("Out", NoSyn), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
+  (("Inp", NoSyn), [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}]),
+  (("Res", NoSyn), [@{typ 'bvar}, @{typ 'brec}])
 ]
 
 val spec = {

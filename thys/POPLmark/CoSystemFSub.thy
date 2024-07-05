@@ -8,10 +8,10 @@ begin
 
 ML \<open>
 val ctors = [
-  (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
-  (("Top", (NONE : mixfix option)), []),
-  (("Fun", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}])
+  (("TyVar", NoSyn), [@{typ 'var}]),
+  (("Top", NoSyn), []),
+  (("Fun", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Forall", NoSyn), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}])
 ]
 
 val spec = {

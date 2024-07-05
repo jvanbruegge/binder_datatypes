@@ -13,9 +13,9 @@ datatype \<kappa> = Star ("\<star>") | Arrow \<kappa> \<kappa> (infixr "\<righta
 *)
 ML \<open>
 val tyctors = [
-  (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
-  (("TyArr", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("TyAll", NONE), [@{typ 'bvar}, @{typ 'brec}])
+  (("TyVar", NoSyn), [@{typ 'var}]),
+  (("TyArr", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("TyAll", NoSyn), [@{typ 'bvar}, @{typ 'brec}])
 ]
 val tyspec = {
   fp_b = @{binding "\<tau>"},
@@ -108,11 +108,11 @@ tvsubst_term f1 f2 t \<equiv> tvsubst_term_internal f2 (map_term_internal id id 
 
 ML \<open>
 val ctors = [
-  (("Var", (NONE : mixfix option)), [@{typ 'var}]),
-  (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Lam", NONE), [@{typ 'bvar}, @{typ "'tyvar \<tau>"}, @{typ 'brec}]),
-  (("TyApp", NONE), [@{typ 'rec}, @{typ "'tyvar \<tau>"}]),
-  (("TyLam", NONE), [@{typ 'btyvar}, @{typ 'brec}])
+  (("Var", NoSyn), [@{typ 'var}]),
+  (("App", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
+  (("Lam", NoSyn), [@{typ 'bvar}, @{typ "'tyvar \<tau>"}, @{typ 'brec}]),
+  (("TyApp", NoSyn), [@{typ 'rec}, @{typ "'tyvar \<tau>"}]),
+  (("TyLam", NoSyn), [@{typ 'btyvar}, @{typ 'brec}])
 ]
 
 val spec = {

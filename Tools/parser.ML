@@ -60,17 +60,18 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
         fn NONE => (fn T => fn acc => (T, acc))
         | SOME sel => fn T => fn acc as (params, lthy) =>
           if member (op=) vrs sel then
-            case the (Symtab.lookup params "bound") of
-              [] =>
+            case find_index (curry (op=) T) (the (Symtab.lookup params "free")) of
+              ~1 =>
                 let
                   val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
-                  val params = Symtab.map_entry "bound" (cons T') params;
-                  val rm = remove (op=) T
-                in if member (op=) (the (Symtab.lookup params "free")) T then (T', (params, lthy))
-                else if member (op=) (the (Symtab.lookup params "plive") @ the (Symtab.lookup params "pfree")) T then
-                  (T', (Symtab.map_entry "free" (cons T) (Symtab.map_entry "plive" rm (Symtab.map_entry "pfree" rm params)), lthy))
-                else error ("used undeclared free or live variable in binding clause: " ^ fst (dest_TFree T)) end
-              | x::_ => (x, acc)
+                  val rm = remove (op=) T;
+                in (T', (params
+                  |> Symtab.map_entry "bound" (cons T')
+                  |> Symtab.map_entry "free" (cons T)
+                  |> Symtab.map_entry "pfree" rm
+                  |> Symtab.map_entry "plive" rm
+                , lthy)) end
+              | n => (nth (the (Symtab.lookup params "bound")) n, acc)
           else if member (op=) ts sel then
             case try (member (op=) T_names o fst o dest_Type) T of
               SOME true => (case the (Symtab.lookup params "brec") of
@@ -112,7 +113,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     ) (cons T)) Ts params';
 
     val (ctors, (lthy, params)) = fold_map (create_ctor_spec T_names) ctors (lthy, params);
-    fun flat s t = map (rpair t o dest_TFree) (the (Symtab.lookup params s));
+    fun flat s t = rev (map (rpair t o dest_TFree) (the (Symtab.lookup params s)));
 
     val brecs = flat "brec" MRBNF_Def.Live_Var
     val recs = flat "rec" MRBNF_Def.Live_Var

@@ -9,45 +9,17 @@ begin
 
 (* DATATYPE DECLARTION  *)
 
-(* binder_datatype 'a term =
+declare [[mrbnf_internals]]
+binder_datatype 'a "term" =
   Var 'a
 | App "'a term" "'a term"
 | Lam x::'a t::"'a term" binds x in t
-*)
+for
+  vvsubst: vvsubst
+  tvsubst: tvsubst
+
 
 declare [[inductive_internals]]
-
-ML \<open>
-val ctors = [
-  (("Var", NoSyn), [@{typ 'var}]),
-  (("App", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
-  (("Lam", NoSyn), [@{typ 'bvar}, @{typ 'brec}])
-]
-
-val spec = {
-  fp_b = @{binding "term"},
-  vars = [
-    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
-    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
-    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
-    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
-  ],
-  binding_rel = [[0]],
-  rec_vars = 2,
-  ctors = ctors,
-  map_b = @{binding vvsubst},
-  tvsubst_b = @{binding tvsubst}
-}
-\<close>
-
-declare [[mrbnf_internals]]
-local_setup \<open>fn lthy =>
-let
-  val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
-in lthy' end\<close>
-print_mrbnfs
-
-
 
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)

@@ -8,7 +8,6 @@ declare [[inductive_internals]]
 locale Small = 
 fixes dummy :: "'A"
 assumes inf_A: "infinite (UNIV::'A set)" 
-(* and reg_A: "regularCard |UNIV::'A set|" *)
 begin 
 
 definition small :: "'A set \<Rightarrow> bool" where 
@@ -24,14 +23,6 @@ assumes "finite As" and "\<And>A. A \<in> As \<Longrightarrow> small A"
 shows "small (\<Union> As)"
 using assms apply(induct As)  
 using small_Un by (auto simp: inf_A small_def)
-
-(* lemma small_UN:
-assumes "|I| <o |UNIV::'A set|" and "\<And>i. i \<in> I \<Longrightarrow> small (As i)"
-shows "small (\<Union> (As ` I))"
-using assms unfolding small_def 
-apply(intro ordLess_ordIso_trans[OF regularCard_UNION, of "|UNIV::'A set|"])
-using assms inf_A reg_A cinfinite_iff_infinite by auto
-*)
 
 lemma ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
 unfolding ssbij_def by auto

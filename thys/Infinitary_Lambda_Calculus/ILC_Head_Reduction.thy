@@ -48,6 +48,13 @@ using assms hred_reneqvS unfolding uniformS_def3 by blast
 
 (* Other properties: *)
 
+lemma small_UN:
+assumes "|I| <o |UNIV::ivar set|" and "\<And>i. i \<in> I \<Longrightarrow> small (As i)"
+shows "small (\<Union> (As ` I))"
+using assms unfolding small_def 
+apply(intro ordLess_ordIso_trans[OF regularCard_UNION, of "|UNIV::ivar set|"])
+using assms regularCard_ivar inf_A cinfinite_iff_infinite by auto
+
 (* The following captures the freshness assumption for beta (coming from the "parameter" 
 predicate hred as part of ustepD. So fresh induction will use both 
 the avoidance from the ustepD Xi rule and this one (for hred).  Contrast this with 

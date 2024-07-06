@@ -208,9 +208,7 @@ declare ty.intros[intro]
 
 (* instantiating the induction locale *)
 interpretation Small where dummy = "undefined :: var"
-apply standard
-  apply (simp add: infinite_var)
-  using var_typ_pre_class.regular by blast
+apply standard by (simp add: infinite_var) 
 
 type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
 type_synonym V = "var list"

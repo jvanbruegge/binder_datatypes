@@ -6,8 +6,6 @@ begin
 
 print_locales
 interpretation Small where dummy = "undefined :: var" 
-apply standard
-  apply (simp add: infinite_var)  
-  using var_term_pre_class.regular by blast
+apply standard by (simp add: infinite_var)   
 
 end

@@ -1,5 +1,6 @@
 theory Generic_Barendregt_Enhanced_Rule_Induction
-imports Main "MRBNF_Recursor"
+  imports Main "MRBNF_Recursor"
+  keywords "binds" and "binder_inductive" :: thy_goal
 begin 
 
 declare [[inductive_internals]]
@@ -685,5 +686,6 @@ print_statement IInduct.BE_iinduct[unfolded
   IInduct_axioms_def IInduct1_axioms_def CComponents_axioms_def
   conj_imp_eq_imp_imp, rule_format]
 
+ML_file \<open>../Tools/binder_inductive.ML\<close>
 
 end 

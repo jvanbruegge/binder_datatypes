@@ -8,14 +8,11 @@ begin
 
 (* *)
 
-inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
+binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x :: var}"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
-
-thm step_def
-
+| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x :: var}"
 
 (* INSTANTIATING THE Components LOCALE: *)
 

@@ -1,6 +1,5 @@
 theory MRBNF_FP
   imports "MRBNF_Composition"
-  (*keywords "binder_inductive" :: thy_goal*)
 begin
 
 lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"

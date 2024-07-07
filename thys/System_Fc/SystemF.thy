@@ -6,7 +6,7 @@ binder_datatype 'a \<tau> =
     TyVar 'a
   | Arrow "'a \<tau>" "'a \<tau>" (infixr "\<rightarrow>" 40)
   | TyApp "'a \<tau>" "'a \<tau>" (infixr "@" 40)
-  | TyAll \<alpha>::'a "'a \<tau>" t::"'a \<tau>" (infixr "\<forall>_<_._" 30) binds \<alpha> in t
+  | TyAll \<alpha>::'a "'a \<tau>" t::"'a \<tau>" ("\<forall>_<_._" [30, 30, 30] 30) binds \<alpha> in t
 
 thm \<tau>.strong_induct
 thm \<tau>.set

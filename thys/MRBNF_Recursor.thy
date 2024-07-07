@@ -13,6 +13,8 @@ context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
 end
 
+typedecl ('a, 'b) var_selector (infix "::" 999)
+
 ML_file "../Tools/parser.ML"
 
 end

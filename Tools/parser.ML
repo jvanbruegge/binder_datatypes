@@ -10,7 +10,7 @@ fun parse_selector_typ s =
   let val ((sel, T), s') =
     (Parse.name --| @{keyword "::"} -- Parse.typ
     || Parse.typ >> pair "") s
-  in ((if sel = "" then NONE else SOME sel, T), s') end
+  in ((if sel = "" then NONE else SOME (Symbol.trim_blanks sel), T), s') end
 
 val parse_spec_arg = @{keyword "("} |-- BNF_Util.parse_binding_colon -- parse_selector_typ --| @{keyword ")"}
   || parse_selector_typ >> pair Binding.empty
@@ -52,46 +52,74 @@ val parse_binder_datatype = Parse.and_list1 (
 
 fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params) =
   let
-    val (sels, Ts) = split_list (map (apsnd (Syntax.check_typ lthy o Syntax.parse_typ lthy) o snd) xs);
+    fun find_names' [] _ _ = []
+      | find_names' (x::xs) curr b =
+        if Symbol.is_letter x
+        then find_names' xs (x::curr) b
+        else
+          if b
+          then (if x = ":" then implode (rev curr) :: find_names' xs [] false else find_names' xs [] false)
+          else (if x = ":" then find_names' xs curr true else find_names' xs [] false)
+    fun find_names s = find_names' (Symbol.explode s) [] false
+
+    val names = maps (find_names o YXML.content_of o snd o snd) xs;
+    fun mk_typedecl name = Typedecl.basic_typedecl {final = true} (Binding.name name, 0, NoSyn)
+    val (fake_names, lthy) = fold_map mk_typedecl names lthy;
+
+    val (sels, Ts) = split_list (map (apsnd (Syntax.read_typ lthy) o snd) xs);
+
+    fun fold_map_typ f (Type (n, Ts)) x =
+      let val (Ts', x') = fold_map (fold_map_typ f) Ts x
+      in f (Type (n, Ts')) x' end
+      | fold_map_typ f T x = f T x;
 
     val (Ts, (params, lthy)) = case binds of
       NONE => (Ts, (params, lthy))
-      | SOME (vrs, ts) => @{fold_map 2} (
-        fn NONE => (fn T => fn acc => (T, acc))
-        | SOME sel => fn T => fn acc as (params, lthy) =>
-          if member (op=) vrs sel then
-            case find_index (curry (op=) T) (the (Symtab.lookup params "free")) of
-              ~1 =>
-                let
-                  val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
-                  val rm = remove (op=) T;
-                in (T', (params
-                  |> Symtab.map_entry "bound" (cons T')
-                  |> Symtab.map_entry "free" (cons T)
-                  |> Symtab.map_entry "pfree" rm
-                  |> Symtab.map_entry "plive" rm
-                , lthy)) end
-              | n => (nth (the (Symtab.lookup params "bound")) n, acc)
-          else if member (op=) ts sel then
-            case try (member (op=) T_names o fst o dest_Type) T of
-              SOME true => (case the (Symtab.lookup params "brec") of
-                [] =>
-                  let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
-                  in (T', (Symtab.map_entry "brec" (cons T') params, lthy)) end
-                | x::_ => (x, acc))
-              | _ => error "can only bind in recursive subterms"
-          else (T, acc)
-      ) sels Ts (params, lthy);
+      | SOME (vrs, ts) =>
+        let
+          val Ts = map2 (fn NONE => I | SOME sel => fn T =>
+            Type (@{type_name var_selector}, [Type ("MRBNF_Recursor." ^ sel, []), T])
+          ) sels Ts;
+        in fold_map (fold_map_typ (fn T => fn acc as (params, lthy) => case T of
+          Type (@{type_name var_selector}, [Type (sel, []), T]) =>
+            let val sel = MRBNF_Util.short_type_name sel;
+            in if member (op=) vrs sel then
+              case find_index (curry (op=) T) (the (Symtab.lookup params "free")) of
+                ~1 =>
+                  let
+                    val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
+                    val rm = remove (op=) T;
+                  in (T', (params
+                    |> Symtab.map_entry "bound" (cons T')
+                    |> Symtab.map_entry "free" (cons T)
+                    |> Symtab.map_entry "pfree" rm
+                    |> Symtab.map_entry "plive" rm
+                  , lthy)) end
+                | n => (nth (the (Symtab.lookup params "bound")) n, acc)
+            else if member (op=) ts sel then
+              case try (member (op=) T_names o fst o dest_Type) T of
+                SOME true => (case the (Symtab.lookup params "brec") of
+                  [] =>
+                    let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
+                    in (T', (Symtab.map_entry "brec" (cons T') params, lthy)) end
+                  | x::_ => (x, acc))
+                | _ => error "can only bind in recursive subterms"
+            else (T, acc)
+          end
+          | _ => (T, acc)
+        )) Ts (params, lthy) end;
 
-    val (Ts, (params, lthy)) = fold_map (fn T => fn acc as (params, lthy) => case try (fst o dest_Type) T of
-      NONE => (T, acc)
-      | SOME name => if member (op=) T_names name then
-          case the (Symtab.lookup params "rec") of
-            [] => let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
-                  in (T', (Symtab.map_entry "rec" (cons T') params, lthy)) end
-            | (x::_) => (x, acc)
-      else (T, acc)
-    ) Ts (params, lthy);
+    val (Ts, (params, lthy)) = fold_map (fold_map_typ (fn T => fn acc as (params, lthy) =>
+      case try (fst o dest_Type) T of
+        NONE => (T, acc)
+      | SOME name =>
+        if member (op=) T_names name
+        then case the (Symtab.lookup params "rec") of
+          [] => let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
+                in (T', (Symtab.map_entry "rec" (cons T') params, lthy)) end
+          | (x::_) => (x, acc)
+        else (T, acc)
+    )) Ts (params, lthy);
 
     val spec = ((Binding.name_of name, mixfix), Ts)
    in (spec, (lthy, params)) end
@@ -101,7 +129,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     fun prepare_type_arg (T, sort) =
       let val TFree (s, _) = Syntax.parse_typ lthy T
       in resort_tfree_or_tvar @{sort type} (TFree (s, Typedecl.read_constraint lthy sort)) end;
-  
+
     (* This should be just a record, but the lack of record update syntax in ML makes that way too painful *)
     val params' = Symtab.make [("pfree", []), ("pbound", []), ("plive", []), ("dead", []), ("free", []), ("bound", []), ("rec", []), ("brec", [])];
     val Ts = map (map_prod I prepare_type_arg) params;

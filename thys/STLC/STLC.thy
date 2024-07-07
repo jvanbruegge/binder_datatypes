@@ -1,53 +1,24 @@
 theory STLC
-  imports "thys/MRBNF_Recursor" "HOL-Library.FSet"
+  imports "Binders.MRBNF_Recursor" "HOL-Library.FSet"
 begin
 
 datatype \<tau> = Unit | Arrow \<tau> \<tau> (infixr "\<rightarrow>" 40)
 
-(* binder_datatype 'a terms =
+declare [[mrbnf_internals]]
+
+binder_datatype 'a terms =
   Var 'a
 | App "'a terms" "'a terms"
 | Abs x::'a \<tau> t::"'a terms" binds x in t
-*)
+for
+  vvsubst: vvsubst
+  tvsubst: tvsubst
 
-ML \<open>
-val ctors = [
-  (("Var", (NONE : mixfix option)), [@{typ 'var}]),
-  (("App", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Abs", NONE), [@{typ 'bvar}, @{typ \<tau>}, @{typ 'brec}])
-]
-
-val spec = {
-  fp_b = @{binding "terms"},
-  vars = [
-    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
-    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
-    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
-    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
-  ],
-  binding_rel = [[0]],
-  rec_vars = 2,
-  ctors = ctors,
-  map_b = @{binding vvsubst},
-  tvsubst_b = @{binding tvsubst}
-}
-\<close>
-
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
-declare [[mrbnf_internals]]
-declare [[ML_print_depth=10000]]
-local_setup \<open>fn lthy =>
-let
-  val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
-in lthy' end\<close>
-print_mrbnfs
+print_theorems
 
 (* unary substitution *)
-lemma tvIImsupp_tvsubst_VVr_empty: "tvIImsupp_tvsubst tvVVr_tvsubst = {}"
-  unfolding tvIImsupp_tvsubst_def terms.SSupp_VVr_empty UN_empty Un_empty_left
+lemma IImsupp_tvsubst_VVr_empty: "IImsupp_tvsubst tvVVr_tvsubst = {}"
+  unfolding IImsupp_tvsubst_def terms.SSupp_VVr_empty UN_empty Un_empty_left
   apply (rule refl)
   done
 
@@ -65,7 +36,7 @@ lemma tvsubst_VVr_func: "tvsubst tvVVr_tvsubst t = t"
       apply (rule trans)
        apply (rule terms.tvsubst_cctor_not_isVVr)
           apply (rule terms.SSupp_VVr_bound)
-      unfolding tvIImsupp_tvsubst_VVr_empty
+      unfolding IImsupp_tvsubst_VVr_empty
          apply (rule Int_empty_right)
       unfolding noclash_terms_def Int_Un_distrib Un_empty
         apply (rule conjI)
@@ -90,13 +61,13 @@ lemma singl_bound: "|{a}| <o |UNIV::'a::var_terms_pre set|"
 
 lemma SSupp_upd_bound:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a terms"
-  shows "|tvSSupp_tvsubst (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |tvSSupp_tvsubst f| <o |UNIV::'a set|"
-  unfolding tvSSupp_tvsubst_def
+  shows "|SSupp_tvsubst (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |SSupp_tvsubst f| <o |UNIV::'a set|"
+  unfolding SSupp_tvsubst_def
   by (auto simp only: fun_upd_apply fset_simps singl_bound ordLeq_refl split: if_splits
       elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF terms_pre.Un_bound], rotated]
       intro: card_of_mono1)
 
-corollary SSupp_upd_VVr_bound: "|tvSSupp_tvsubst (tvVVr_tvsubst(a:=(t::'a::var_terms_pre terms)))| <o |UNIV::'a set|"
+corollary SSupp_upd_VVr_bound: "|SSupp_tvsubst (tvVVr_tvsubst(a:=(t::'a::var_terms_pre terms)))| <o |UNIV::'a set|"
   apply (rule iffD2[OF SSupp_upd_bound])
   apply (rule terms.SSupp_VVr_bound)
   done
@@ -990,7 +961,7 @@ next
   then show ?case unfolding terms.subst(2)[OF SSupp_upd_VVr_bound, symmetric] .
 next
   case (Abs y \<tau>\<^sub>1 e \<Gamma> \<tau>)
-  then have 1: "y \<notin> tvIImsupp_tvsubst (tvVVr_tvsubst(x:=v))" by (simp add: tvIImsupp_tvsubst_def tvSSupp_tvsubst_def)
+  then have 1: "y \<notin> IImsupp_tvsubst (tvVVr_tvsubst(x:=v))" by (simp add: IImsupp_tvsubst_def SSupp_tvsubst_def)
   have "y \<notin> fst ` fset (\<Gamma>,x:\<tau>')" using Abs(1,2) unfolding fresh_def by auto
   then obtain \<tau>\<^sub>2 where 2: "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" "\<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2)" using Abs(5) Ty_AbsE' by metis
   moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" by blast

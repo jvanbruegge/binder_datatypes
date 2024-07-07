@@ -1,14 +1,15 @@
 This is the artifact accompanying the paper:
 
-Lax-Nominal Inductive Reasoning about Syntax with Bindings
+Barendregt Joining Forces with Knaster and Tarski: 
+Strong~Rule~Induction~for Syntax with Bindings 
 
 ### How To Run?
 
 The artifact contains the tool support for defining binding datatypes and proving strong rule
 induction principles we developed in Isabelle/HOL as well as the case studies we report on in the
-paper. It works with the latest released version Isabelle2023, which can be downloaded here:
+paper. It works with the latest released version Isabelle2024, which can be downloaded here:
 
-[https://isabelle.in.tum.de/website-Isabelle2023/](https://isabelle.in.tum.de/website-Isabelle2023/)
+[https://isabelle.in.tum.de/website-Isabelle2024/](https://isabelle.in.tum.de/website-Isabelle2024/)
 
 After downloading Isabelle, a good starting point is to issue the following command
 

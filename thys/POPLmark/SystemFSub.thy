@@ -12,38 +12,12 @@ declare supp_id_bound[simp]
 
 (*type_synonym label = nat*)
 
-ML \<open>
-val ctors = [
-  (("TyVar", (NONE : mixfix option)), [@{typ 'var}]),
-  (("Top", (NONE : mixfix option)), []),
-  (("Fun", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Forall", NONE), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}]) (*,
-  (("Rec", NONE), [@{typ "(label, 'rec) lfset"}]) *)
-]
-
-val spec = {
-  fp_b = @{binding "typ"},
-  vars = [
-    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
-    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
-    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
-    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
-  ],
-  binding_rel = [[0]],
-  rec_vars = 2,
-  ctors = ctors,
-  map_b = @{binding vvsubst_typ},
-  tvsubst_b = @{binding tvsubst_typ}
-}
-\<close>
-
 declare [[mrbnf_internals]]
-local_setup \<open>fn lthy =>
-let
-  val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
-in lthy' end\<close>
-print_theorems
-print_mrbnfs
+binder_datatype 'a "typ" =
+    TyVar 'a
+  | Top
+  | Fun "'a typ" "'a typ"
+  | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
 
 instance var :: var_typ_pre apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
@@ -234,9 +208,7 @@ declare ty.intros[intro]
 
 (* instantiating the induction locale *)
 interpretation Small where dummy = "undefined :: var"
-apply standard
-  apply (simp add: infinite_var)
-  using var_typ_pre_class.regular by blast
+apply standard by (simp add: infinite_var) 
 
 type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
 type_synonym V = "var list"

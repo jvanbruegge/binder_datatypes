@@ -6,9 +6,8 @@ begin
 
 print_locales
 interpretation Small where dummy = "undefined :: ivar" 
-apply standard
-  apply (simp add: infinite_ivar)
-  using regularCard_ivar . 
+apply standard by (simp add: infinite_ivar)
+
 
 instance ivar :: infinite_regular ..
 

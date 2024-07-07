@@ -88,6 +88,10 @@ session System_Fsub in "thys/POPLmark" = Binders +
     SystemFSub
     POPLmark_1A
 
+session STLC in "thys/STLC" = Binders +
+  theories
+    STLC
+
 session System_Fc in "thys/System_Fc" = Binders +
   theories
     SystemF

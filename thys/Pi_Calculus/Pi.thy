@@ -6,53 +6,19 @@ begin
 
 (* DATATYPE DECLARTION  *)
 
-(* binder_datatype 'a term =
+declare [[mrbnf_internals]]
+binder_datatype 'a "term" =
   Zero
 | Sum "'a term" "'a term"
 | Par "'a term" "'a term"
 | Bang "'a term" 
 | Match 'a 'a "'a term" 
 | Out 'a 'a "'a term" 
-| Inp x::'a 'a t::"'a term" binds x in t
+| Inp 'a x::'a t::"'a term" binds x in t
 | Res x::'a t::"'a term" binds x in t
-*)
-
-ML \<open>
-val ctors = [
-  (("Zero", (NONE : mixfix option)), []),
-  (("Sum", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Par", NONE), [@{typ 'rec}, @{typ 'rec}]),
-  (("Bang", NONE), [@{typ 'rec}]),
-  (("Match", NONE), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
-  (("Out", NONE), [@{typ 'var}, @{typ 'var}, @{typ 'rec}]),
-  (("Inp", NONE), [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}]),
-  (("Res", NONE), [@{typ 'bvar}, @{typ 'brec}])
-]
-
-val spec = {
-  fp_b = @{binding "term"},
-  vars = [
-    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
-    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
-    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
-    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
-  ],
-  binding_rel = [[0]],
-  rec_vars = 2,
-  ctors = ctors,
-  map_b = @{binding vvsubst},
-  tvsubst_b = @{binding tvsubst}
-}
-\<close>
-
-declare [[mrbnf_internals]]
-local_setup \<open>fn lthy =>
-let
-  val lthy' = MRBNF_Sugar.create_binder_datatype spec lthy
-in lthy' end\<close>
-print_theorems
-print_mrbnfs
-
+for
+  vvsubst: vvsubst
+  tvsubst: tvsubst
 
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)

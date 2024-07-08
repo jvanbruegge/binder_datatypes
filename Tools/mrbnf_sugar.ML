@@ -83,12 +83,12 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
-    val (ctors, (_, lthy)) = fold_map (fn ((name, _), Ts) => fn (i, lthy) =>
+    val (ctors, (_, lthy)) = fold_map (fn ((name, syn), Ts) => fn (i, lthy) =>
       let
         val Ts' = map (Term.typ_subst_atomic replace) Ts;
         val (xs, _) = mk_Frees Name.uu Ts' lthy;
         val rhs = fold_rev Term.absfree (map dest_Free xs) (quotient_ctor $ mk_ctor i xs abs);
-        val (ctor, lthy) = MRBNF_Recursor.mk_def_t false Binding.empty I name (length Ts') rhs lthy;
+        val (ctor, lthy) = mk_def_t_syn syn false Binding.empty I name (length Ts') rhs lthy;
       in (ctor, (i + 1, lthy)) end
     ) (#ctors spec) (1, lthy);
 

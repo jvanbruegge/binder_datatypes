@@ -78,11 +78,9 @@ using finite_varsbp by auto
 lemma finite_varsbpR: "finite (varsbpR rl)"
 unfolding varsbpR_def using finite_varsbp_tuple by auto
 
-locale UBN_Components = Small dummy 
-for dummy :: 'A 
-+
+locale UBN_Components =
 fixes (* 'T: term-like entities *)
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 (* *)
 and 
@@ -166,9 +164,8 @@ using it_Tmap by auto
 end (* locale UBN_Components *)
 
 (* TODO: eventually switch from 'T to "'T list" to better match UBN *)
-locale UBN = UBN_Components dummy Tmap Tfvars Abs Op arity 
-for dummy :: 'A 
-and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T" and Tfvars :: "'T \<Rightarrow> 'A set"
+locale UBN = UBN_Components Tmap Tfvars Abs Op arity 
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T" and Tfvars :: "'T \<Rightarrow> 'A set"
 (* *)
 and Abs :: "'A \<Rightarrow> 'T \<Rightarrow> 'T" and Op :: "'O \<Rightarrow> 'T list \<Rightarrow> 'T" 
 and arity :: "'O \<Rightarrow> nat"
@@ -265,7 +262,7 @@ apply(rule exI[of _ "Tmap \<sigma> o tval"]) apply(intro conjI)
     subgoal by auto
     subgoal using wfR_rules unfolding wfR_def by auto
     subgoal apply(subst Tmap_tuple_comp'[symmetric])
-      subgoal using ssbij_inv by presburger
+      subgoal using ssbij_inv by blast
       subgoal .
       subgoal by (simp add: Tmap_id ssbij_invR) . . . . .
 
@@ -279,7 +276,7 @@ end (* context UBN *)
 
  
 (* The UBN result is subsumed by ours: *)
-sublocale UBN < UBN: Induct_simple where dummy = dummy and Tmap = Tmap_tuple 
+sublocale UBN < UBN: Induct_simple where Tmap = Tmap_tuple 
 and Tfvars = Tfvars_tuple and G = G apply standard
 using small_Tfvars_tuple Tmap_tuple_Tfvars_tuple Tmap_tuple_cong_id 
 G_equiv G_fresh_simple

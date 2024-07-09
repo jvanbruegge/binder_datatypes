@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Primal
-imports LC2 "Prelim.Curry_LFP" "Prelim.More_Stream" "HOL-Computational_Algebra.Primes"
+imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" "HOL-Computational_Algebra.Primes"
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

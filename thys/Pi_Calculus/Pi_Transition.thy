@@ -100,7 +100,7 @@ fun Vfvars :: "V \<Rightarrow> var set" where
 
 lemmas commit_internal.FFVars_rrenames[simp]
 
-interpretation Components where dummy = "undefined :: var" and 
+interpretation Components where 
 Tmap = Tmap and Tfvars = Tfvars
 apply standard unfolding ssbij_def Tmap_def 
   using small_Un small_def term.card_of_FFVars_bounds
@@ -108,7 +108,7 @@ apply standard unfolding ssbij_def Tmap_def
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s 
         commit_internal.rrename_cong_ids(2)
         commit_internal.rrename_id0s commit_internal.rrename_comp0s(2)
-          inf_A) 
+          infinite_UNIV) 
   by blast 
 
 lemma small_bvars[simp,intro!]: "small (bvars act)"
@@ -300,7 +300,7 @@ ML \<open>fun gen_fresh ctxt xs0 acts0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn 
   in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
 
 lemma ssbij_swap: "ssbij (id(x := y, y := x))"
-  by (auto simp: ssbij_def)
+  by (auto simp: ssbij_def MRBNF_FP.supp_swap_bound infinite_UNIV)
 
 lemma R_forw_subst: "R (x, y) \<Longrightarrow> (\<And>x y. R (x, y) \<Longrightarrow> R (f x, g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x, z)"
   by blast
@@ -364,7 +364,7 @@ unfolding G_def
      apply (cases t; simp)
      apply (smt (verit, best) image_iff sw_diff sw_eqR)
      apply (cases t; simp)
-    apply (simp add: swap_commute term.rrename_comps[where w="swap P' y z1"] supp_comp_bound[OF _ _ inf_A]
+    apply (simp add: swap_commute term.rrename_comps[where w="swap P' y z1"] supp_comp_bound[OF _ _ infinite_UNIV]
       term.rrename_cong_ids[symmetric])
     done
   subgoal for P1 act P1' P2 z1 z2
@@ -570,7 +570,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Trans: Induct where dummy = "undefined :: var" and 
+interpretation Trans: Induct where
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using GG_mono GG_equiv G_refresh by auto

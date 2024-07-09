@@ -47,8 +47,8 @@ proof-
   finally show ?thesis .
 qed
 
-lemma small_supp_ext_f: "ILC2.small (supp (ext f))" 
-by (simp add: ILC2.small_def card_supp_ext)
+lemma small_supp_ext_f: "small (supp (ext f))" 
+by (simp add: small_def card_supp_ext)
 
 lemma ext_id[simp]: "ext id = id" 
 unfolding ext_def apply(rule ext) apply (auto split: prod.splits) 

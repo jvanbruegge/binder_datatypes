@@ -35,11 +35,11 @@ fun Vfvars :: "V \<Rightarrow> var set" where
 "Vfvars v = set v"
 *)
 
-interpretation Components where dummy = "undefined :: var" and 
+interpretation Components where
 Tmap = Tmap and Tfvars = Tfvars
 apply standard unfolding ssbij_def Tmap_def 
   using small_Un small_def term.card_of_FFVars_bounds
-  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A) 
+  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s infinite_UNIV) 
   by blast
 
 definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool" where
@@ -80,7 +80,7 @@ proof-
 qed
 
 lemma ssbij_swap: "ssbij (id(x := y, y := x))"
-  by (auto simp: ssbij_def)
+  by (auto simp: ssbij_def MRBNF_FP.supp_swap_bound infinite_UNIV)
 
 lemma R_forw_subst: "R (x, y) \<Longrightarrow> (\<And>x y. R (x, y) \<Longrightarrow> R (f x, g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x, z)"
   by blast
@@ -98,7 +98,7 @@ apply (elim disj_forward exE; simp; clarsimp)
         | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set))+) [3]
   done
 
-interpretation Cong: Induct where dummy = "undefined :: var" and 
+interpretation Cong: Induct where 
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using GG_mono GG_equiv G_refresh by auto
@@ -212,7 +212,7 @@ unfolding G_trans_def
         | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set))+)
   done
 
-interpretation Trans: Induct where dummy = "undefined :: var" and 
+interpretation Trans: Induct where
 Tmap = Tmap and Tfvars = Tfvars and G = G_trans
 apply standard 
   using GG_trans_mono GG_trans_equiv G_trans_refresh by auto

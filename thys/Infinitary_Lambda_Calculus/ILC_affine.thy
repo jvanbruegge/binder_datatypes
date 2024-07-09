@@ -32,11 +32,11 @@ fun Tfvars :: "T \<Rightarrow> ivar set" where
 "Tfvars e = FFVars e"
 
 
-interpretation Components where dummy = "undefined :: ivar" and 
+interpretation Components where
 Tmap = Tmap and Tfvars = Tfvars
 apply standard unfolding ssbij_def Tmap_def  
   using small_Un small_def iterm.card_of_FFVars_bounds
-  apply (auto simp: iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s inf_A) .
+  apply (auto simp: iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s infinite_UNIV) .
 
 definition G :: "ivar set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
@@ -100,7 +100,7 @@ unfolding G_def Tmap_def apply safe
   subgoal for f
   apply(rule exI[of _ "f ` (dsset xs)"])  
   apply(intro conjI)
-    subgoal using small_dsset small_image by auto
+    subgoal using small_dsset small_image by blast
     subgoal unfolding id_on_def by auto 
     subgoal apply(rule disjI3_2)
     apply(rule exI[of _ "dsmap f xs"]) 
@@ -125,7 +125,7 @@ unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Affine: Induct where dummy = "undefined :: ivar" and 
+interpretation Affine: Induct where
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto 

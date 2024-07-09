@@ -49,11 +49,11 @@ using assms hred_reneqvS unfolding uniformS_def3 by blast
 (* Other properties: *)
 
 lemma small_UN:
-assumes "|I| <o |UNIV::ivar set|" and "\<And>i. i \<in> I \<Longrightarrow> small (As i)"
+assumes "|I| <o |UNIV::ivar set|" and "\<And>i. i \<in> I \<Longrightarrow> small (As i :: ivar set)"
 shows "small (\<Union> (As ` I))"
 using assms unfolding small_def 
 apply(intro ordLess_ordIso_trans[OF regularCard_UNION, of "|UNIV::ivar set|"])
-using assms regularCard_ivar inf_A cinfinite_iff_infinite by auto
+using assms regularCard_ivar infinite_UNIV cinfinite_iff_infinite by auto
 
 (* The following captures the freshness assumption for beta (coming from the "parameter" 
 predicate hred as part of ustepD. So fresh induction will use both 
@@ -73,7 +73,7 @@ proof-
     subgoal by fact
     subgoal apply(rule small_UN)
       subgoal by (simp add: countable_card_ivar countable_sset)
-      subgoal by (simp add: ILC2.small_def iterm.set_bd_UNIV) . .
+      subgoal by (simp add: small_def iterm.set_bd_UNIV) . .
   then obtain xs' e1' where 0: "iLam xs e1 = iLam xs' e1'" "dsset xs' \<inter> B = {}"
   using iLam_avoid by (meson small_def)
 

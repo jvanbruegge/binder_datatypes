@@ -243,46 +243,43 @@ by simp (metis nat1_nat2) .
 
 (* *)
 
-class infinite_regular = infinite +
-  assumes regular: "regularCard |UNIV::'a set|"
+class uncountable_regular =
+  assumes large: "|Field (card_suc natLeq)| \<le>o |UNIV::'a set|" and regular: "regularCard |UNIV::'a set|"
 
 lemma infinite_natLeq: "natLeq \<le>o |A| \<Longrightarrow> infinite A"
   using infinite_iff_natLeq_ordLeq by blast
 
-lemma infinite: "infinite (UNIV :: 'a ::infinite_regular set)"
+lemma infinite: "infinite (UNIV :: 'a ::uncountable_regular set)"
   using ordLeq_transitive[OF ordLess_imp_ordLeq[OF card_suc_greater_set[OF natLeq_card_order ordLeq_refl[OF natLeq_Card_order]]]
     ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso[OF Card_order_card_suc[OF natLeq_card_order]]] large]]
   by (rule infinite_natLeq)
 
-lemma infinite_ex_inj: "\<exists>f :: nat \<Rightarrow> 'a :: infinite_regular. inj f"
+instance uncountable_regular \<subseteq> infinite
+  by standard (rule infinite)
+
+lemma infinite_ex_inj: "\<exists>f :: nat \<Rightarrow> 'a :: uncountable_regular. inj f"
   by (rule infinite_countable_subset[OF infinite, simplified])
 
-typedef 'a dstream = "{xs :: 'a :: infinite_regular stream. sdistinct xs}"
+typedef 'a dstream = "{xs :: 'a :: uncountable_regular stream. sdistinct xs}"
   by (auto intro!: exI[of _ "smap (SOME f :: nat \<Rightarrow> 'a. inj f) nats"] inj_on_sdistinct_smap
     someI_ex[OF infinite_ex_inj])
 
 setup_lifting type_definition_dstream
 
-(*
-lift_definition dsmap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a dstream \<Rightarrow> 'a :: infinite_regular dstream" is
-  "\<lambda>f xs. if bij f then smap f xs else xs"
-  by (auto simp: bij_def intro!: sdistinct_smap elim: inj_on_subset)
-*)
-
-lift_definition dsmap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a dstream \<Rightarrow> 'a :: infinite_regular dstream" is
+lift_definition dsmap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a dstream \<Rightarrow> 'a :: uncountable_regular dstream" is
   "\<lambda>f xs. if inj_on f (sset xs) then smap f xs else xs"
   by (auto intro!: sdistinct_smap elim: inj_on_subset)
 
-lift_definition dsset :: "'a :: infinite_regular dstream \<Rightarrow> 'a set" is "sset" .
+lift_definition dsset :: "'a :: uncountable_regular dstream \<Rightarrow> 'a set" is "sset" .
 
-lift_definition dsnth :: "'a :: infinite_regular dstream \<Rightarrow> nat \<Rightarrow> 'a" (infixl \<open>!#!\<close> 100) is "snth" .
+lift_definition dsnth :: "'a :: uncountable_regular dstream \<Rightarrow> nat \<Rightarrow> 'a" (infixl \<open>!#!\<close> 100) is "snth" .
 
-lift_definition dtheN :: "'a :: infinite_regular dstream \<Rightarrow> 'a \<Rightarrow> nat" is "theN" .
+lift_definition dtheN :: "'a :: uncountable_regular dstream \<Rightarrow> 'a \<Rightarrow> nat" is "theN" .
 
-lift_definition dsdrop:: "nat \<Rightarrow> 'a :: infinite_regular dstream \<Rightarrow> 'a dstream" is "sdrop" 
+lift_definition dsdrop:: "nat \<Rightarrow> 'a :: uncountable_regular dstream \<Rightarrow> 'a dstream" is "sdrop" 
 by (metis add_left_cancel sdistinct_def2 sdrop_snth)
 
-lift_definition dstake:: "nat \<Rightarrow> 'a :: infinite_regular dstream \<Rightarrow> 'a list" is "stake" .
+lift_definition dstake:: "nat \<Rightarrow> 'a :: uncountable_regular dstream \<Rightarrow> 'a list" is "stake" .
 
 
 
@@ -372,7 +369,7 @@ by (simp add: countable_sset dsset.rep_eq)
 lemma dsset_card_le: "|dsset xs| \<le>o |UNIV::nat set|"
 using countable_card_of_nat countable_dsset by blast
 
-lemma dsset_card_ls: "|dsset xs| <o |UNIV::'a :: infinite_regular set|"
+lemma dsset_card_ls: "|dsset xs| <o |UNIV::'a :: uncountable_regular set|"
 proof-
   have "|dsset xs| <o |Field (card_suc natLeq)|" 
     using Card_order_iff_ordLeq_card_of Card_order_card_suc 
@@ -383,12 +380,12 @@ qed
 
 lemma ex_dsmap': 
 assumes ds: "dsset xs \<inter> dsset ys = {}"
-shows "\<exists>f::'a\<Rightarrow>'a. bij f \<and> |supp f| <o |UNIV::'a :: infinite_regular set| \<and> 
+shows "\<exists>f::'a\<Rightarrow>'a. bij f \<and> |supp f| <o |UNIV::'a :: uncountable_regular set| \<and> 
    bij_betw f (dsset xs) (dsset ys) \<and> dsmap f xs = ys"
 proof-
   obtain f where f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys"
   using ex_dsmap by auto
-  obtain u where u: "bij u \<and> |supp u| <o |UNIV::'a :: infinite_regular set| \<and> 
+  obtain u where u: "bij u \<and> |supp u| <o |UNIV::'a :: uncountable_regular set| \<and> 
      bij_betw u (dsset xs) (dsset ys) \<and> eq_on (dsset xs) u f" 
   using ex_bij_betw_supp_UNIV[OF _ _ f(1) ds, where C = "{}", simplified]  
   using dsset_card_ls infinite by blast
@@ -399,14 +396,14 @@ qed
 
 lemma ex_dsmap'': 
 assumes ds: "dsset xs \<inter> dsset ys = {}" and 
-A: "|A| <o |UNIV::'a :: infinite_regular set|" "A \<inter> (dsset xs \<union> dsset ys) = {}"
-shows "\<exists>f::'a\<Rightarrow>'a. bij f \<and> |supp f| <o |UNIV::'a :: infinite_regular set| \<and> 
+A: "|A| <o |UNIV::'a :: uncountable_regular set|" "A \<inter> (dsset xs \<union> dsset ys) = {}"
+shows "\<exists>f::'a\<Rightarrow>'a. bij f \<and> |supp f| <o |UNIV::'a :: uncountable_regular set| \<and> 
    bij_betw f (dsset xs) (dsset ys) \<and> dsmap f xs = ys \<and> 
    id_on A f"
 proof-
   obtain f where f: "bij_betw f (dsset xs) (dsset ys)" "dsmap f xs = ys"
   using ex_dsmap by auto
-  obtain u where u: "bij u \<and> |supp u| <o |UNIV::'a :: infinite_regular set| \<and> 
+  obtain u where u: "bij u \<and> |supp u| <o |UNIV::'a :: uncountable_regular set| \<and> 
      bij_betw u (dsset xs) (dsset ys) \<and> imsupp u \<inter> A = {} \<and> eq_on (dsset xs) u f" 
   using ex_bij_betw_supp_UNIV[OF _ _ f(1) ds, where C = "A", simplified]  
   using A dsset_card_ls infinite by blast

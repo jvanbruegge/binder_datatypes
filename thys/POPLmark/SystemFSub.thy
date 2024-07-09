@@ -206,10 +206,6 @@ next
 thm ty_def
 declare ty.intros[intro]
 
-(* instantiating the induction locale *)
-interpretation Small where dummy = "undefined :: var"
-apply standard by (simp add: infinite_var) 
-
 type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
 type_synonym V = "var list"
 
@@ -223,12 +219,11 @@ fun Tfvars :: "T \<Rightarrow> var set" where
 fun Vfvars :: "V \<Rightarrow> var set" where
   "Vfvars v = set v"
 *)
-
-interpretation Components where dummy = "undefined :: var" and
+interpretation Components where
 Tmap = Tmap and Tfvars = Tfvars
 apply standard unfolding ssbij_def Tmap_def
-  using small_Un small_def typ.card_of_FFVars_bounds
-         apply (auto simp: typ.FFVars_rrenames map_prod.comp typ.rrename_comp0s inf_A)
+  using small_Un typ.card_of_FFVars_bounds
+         apply (auto simp: typ.FFVars_rrenames map_prod.comp typ.rrename_comp0s infinite_UNIV small_def)
     apply (rule var_typ_pre_class.Un_bound var_typ_pre_class.UN_bound context_set_bd_UNIV set_bd_UNIV
         typ.card_of_FFVars_bounds)+
       apply (auto simp: context_map_cong_id typ.rrename_cong_ids intro: context_map_cong_id)
@@ -345,7 +340,7 @@ lemma map_context_swap_FFVars[simp]:
   unfolding map_context_def apply(rule map_idI) by auto
 
 lemma ssbij_swap: "ssbij (id(x := z, z := x))"
-  unfolding ssbij_def by auto
+  unfolding ssbij_def by (auto simp: supp_swap_bound infinite_UNIV)
 
 lemma G_refresh:
   assumes "(\<And>t. R t \<Longrightarrow> Ii t)" "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
@@ -483,8 +478,7 @@ unfolding G_def Tmap_def apply safe
 *)
 
 (* The name "PM" of this interpretation stands for "POPLmark" *)
-interpretation Ty: Induct1 where dummy = "undefined :: var"
-  and Tmap = Tmap and Tfvars = Tfvars and G = G
+interpretation Ty: Induct1 where Tmap = Tmap and Tfvars = Tfvars and G = G
   apply standard
   using G_mono G_equiv  by auto
 
@@ -519,8 +513,7 @@ subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
     subgoal for v \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
     apply(rule disjI5_5) by fastforce . . .
 
-interpretation ty: Induct where dummy = "undefined :: var"
-  and Tmap = Tmap and Tfvars = Tfvars and G = G
+interpretation ty: Induct where Tmap = Tmap and Tfvars = Tfvars and G = G
   apply standard subgoal for R B t
   using G_refresh[of R B t] unfolding ty_I by auto .
 print_theorems

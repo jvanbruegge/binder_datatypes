@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to the renaming-equivalence 
 relation from Mazza  *)
 theory ILC_good    
-  imports "Untyped_Lambda_Calculus.LC2" ILC2 BSmall "Prelim.Curry_LFP" 
+  imports "Untyped_Lambda_Calculus.LC" BSmall "Prelim.Curry_LFP" ILC2
 begin
 
 (* *)
@@ -52,14 +52,14 @@ fun Tfvars :: "T \<Rightarrow> ivar set" where
 
 
 
-interpretation CComponents where dummy = "undefined :: ivar" and 
+interpretation CComponents where
 Tmap = Tmap and Tfvars = Tfvars 
 and Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall
 apply standard unfolding ssbij_def Tmap_def  
-using small_Un small_def iterm.card_of_FFVars_bounds
-apply (auto simp: iterm.rrename_id0s map_prod.comp 
-iterm.rrename_comp0s inf_A bsmall_def intro!: ext split: option.splits)
-apply (simp add: iterm.set_bd_UNIV) 
+using iterm.card_of_FFVars_bounds
+apply (auto simp: iterm.rrename_id0s map_prod.comp
+iterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
+apply (simp add: iterm.set_bd_UNIV small_def) 
 apply (simp add: comp_def dstream.map_comp)
 apply (simp add: dstream_map_ident_strong)
 unfolding bsmall_def touchedSuper_def  
@@ -143,8 +143,7 @@ qed
 
 
 interpretation Reneqv : IInduct1 
-where dummy = "undefined :: ivar" and 
-Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
+where Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
 and wfB = wfB and bsmall = bsmall and GG = G
 apply standard
 using G_mmono G_eequiv G_wfB eextend_to_wfBij by auto
@@ -182,7 +181,7 @@ lemma Tvars_dsset: "dsset xs \<inter> (Tfvars t - dsset xs) = {}"
   "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
   "Reneqv.II t \<Longrightarrow> finite (touchedSuper (Tfvars t - dsset ys))"
 subgoal using Diff_disjoint .
-subgoal using ILC2.small_def card_of_minus_bound ssmall_Tfvars by blast
+subgoal using small_def card_of_minus_bound ssmall_Tfvars by blast
 subgoal apply(subgoal_tac "bsmall (Tfvars t)")
   subgoal unfolding bsmall_def 
     by (meson Diff_subset rev_finite_subset touchedSuper_mono) 
@@ -238,8 +237,7 @@ unfolding G_def Tmap_def apply safe
 (* FINALLY, INTERPRETING THE IInduct LOCALE: *)
 
 interpretation Reneqv : IInduct
-where dummy = "undefined :: ivar" and 
-Tmap = Tmap and Tfvars = Tfvars and 
+where Tmap = Tmap and Tfvars = Tfvars and 
 Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall 
 and GG = G
 apply standard using III_bsmall G_rrefresh by auto

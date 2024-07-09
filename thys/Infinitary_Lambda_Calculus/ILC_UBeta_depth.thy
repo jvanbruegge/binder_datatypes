@@ -90,17 +90,16 @@ using countable_card_ivar countable_sset by blast
 
 thm stream.map_cong0[no_vars]
 
-interpretation CComponents where dummy = "undefined :: ivar" and 
+interpretation CComponents where
 Tmap = Tmap and Tfvars = Tfvars
 and Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall
 apply standard unfolding ssbij_def Tmap_def  
-  using small_Un small_def iterm.card_of_FFVars_bounds
-  apply (auto simp: dstream.map_comp dstream_map_ident_strong
- dstream.map_comp iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s inf_A fun_eq_iff stream.map_comp
-    intro!: 
-var_sum_class.UN_bound var_sum_class.Un_bound 
-stream.map_ident_strong iterm.rrename_cong_ids intro!: ext split: option.splits)
-  apply auto 
+  using iterm.card_of_FFVars_bounds dsset_card_ls
+  apply (auto simp: dstream_map_ident_strong small_def
+ dstream.map_comp iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s infinite_UNIV fun_eq_iff stream.map_comp
+    intro!: var_sum_class.UN_bound var_sum_class.Un_bound
+stream.map_ident_strong iterm.rrename_cong_ids split: option.splits)
+          apply auto
  unfolding bsmall_def touchedSuper_def apply(frule super_dsset_singl) apply auto
   using super_Un_ddset_triv  
   by (smt (verit) finite_Un rev_finite_subset) 
@@ -217,8 +216,7 @@ qed
 
 
 interpretation Ustep : IInduct1 
-where dummy = "undefined :: ivar" and 
-Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
+where Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
 and wfB = wfB and bsmall = bsmall and GG = G
 apply standard
 using G_mmono G_eequiv G_wfB eextend_to_wfBij by auto
@@ -261,7 +259,7 @@ lemma Tvars_dsset: "dsset xs \<inter> (Tfvars t - dsset xs) = {}"
   "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
   "Ustep.II t \<Longrightarrow> finite (touchedSuper (Tfvars t - dsset ys))"
 subgoal using Diff_disjoint .
-subgoal using ILC2.small_def card_of_minus_bound ssmall_Tfvars by blast
+subgoal using small_def card_of_minus_bound ssmall_Tfvars by blast
 subgoal apply(subgoal_tac "bsmall (Tfvars t)")
   subgoal unfolding bsmall_def 
     by (meson Diff_subset rev_finite_subset touchedSuper_mono) 
@@ -331,8 +329,7 @@ unfolding G_def Tmap_def apply safe
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Ustep: IInduct where dummy = "undefined :: ivar" and 
-Tmap = Tmap and Tfvars = Tfvars and 
+interpretation Ustep: IInduct where Tmap = Tmap and Tfvars = Tfvars and 
 Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall 
 and GG = G
 apply standard using III_bsmall G_rrefresh by auto

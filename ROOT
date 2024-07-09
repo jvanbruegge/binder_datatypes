@@ -49,7 +49,6 @@ session Operations in "operations" = Binders +
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
   theories
     LC
-    LC2
     LC_Beta
     LC_Beta_depth
     LC_Head_Reduction

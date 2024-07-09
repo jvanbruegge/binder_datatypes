@@ -13,6 +13,21 @@ binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x}"
+
+binder_inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
+| AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
+| AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
+| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')" binds "{x}"
+
+binder_inductive step1 :: "trm \<Rightarrow> trm \<Rightarrow> bool" and step2 :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta1: "step1 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
+| AppL1: "step1 e1 e1' \<Longrightarrow> step1 (App e1 e2) (App e1' e2)"
+| AppR1: "step1 e2 e2' \<Longrightarrow> step1 (App e1 e2) (App e1 e2')"
+| Xi1: "step2 e e' \<Longrightarrow> step1 (Lam x e) (Lam x e')" binds "{x}"
+| AppL2: "step1 e1 e1' \<Longrightarrow> step2 (App e1 e2) (App e1' e2)"
+| AppR2: "step1 e2 e2' \<Longrightarrow> step2 (App e1 e2) (App e1 e2')"
+| Xi2: "step1 e e' \<Longrightarrow> step2 (Lam x e) (Lam x e')" binds "{x}"
 *)
 
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where

@@ -1,5 +1,5 @@
 theory LC_Head_Reduction
-imports LC2
+imports LC
 begin
 
 definition red where 

@@ -1,29 +1,26 @@
 theory Generic_Barendregt_Enhanced_Rule_Induction
-  imports Main "MRBNF_Recursor"
-  keywords "binds" and "binder_inductive" :: thy_goal
-begin 
+  imports "MRBNF_Recursor"
+  keywords "binds" and "binder_inductive" :: thy_goal_defn
+begin
 
 declare [[inductive_internals]]
 
 (* General infrastructure: *)
-locale Small = 
-fixes dummy :: "'A"
-assumes inf_A: "infinite (UNIV::'A set)" 
-begin 
+context infinite begin
 
-definition small :: "'A set \<Rightarrow> bool" where 
-"small A \<equiv> |A| <o |UNIV::'A set|"(* small/bounded sets *)
-definition ssbij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" (* small-support bijections *) where 
-"ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'A set|"
+definition small :: "'a set \<Rightarrow> bool" where 
+"small A \<equiv> |A| <o |UNIV::'a set|"(* small/bounded sets *)
+definition ssbij :: "('a \<Rightarrow> 'a) \<Rightarrow> bool" (* small-support bijections *) where 
+"ssbij \<sigma> \<equiv> bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'a set|"
 
 lemma small_Un: "small A \<Longrightarrow> small B \<Longrightarrow> small (A \<union> B)"
-using Un_bound small_def Small_axioms Small_def by blast
+using Un_bound small_def infinite_UNIV by blast
 
 lemma finite_UN_small:
 assumes "finite As" and "\<And>A. A \<in> As \<Longrightarrow> small A"
 shows "small (\<Union> As)"
 using assms apply(induct As)  
-using small_Un by (auto simp: inf_A small_def)
+using small_Un by (auto simp: infinite_UNIV small_def)
 
 lemma ssbij_bij: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> bij \<sigma>"
 unfolding ssbij_def by auto
@@ -32,7 +29,7 @@ lemma ssbij_id: "ssbij id" unfolding ssbij_def bij_def
   by (simp add: supp_id_bound)
 
 lemma ssbij_comp: "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> ssbij (\<sigma> o \<tau>)"
-by (meson Small_axioms Small_def bij_comp ssbij_def supp_comp_bound)
+by (meson infinite_UNIV bij_comp ssbij_def supp_comp_bound)
 
 lemma ssbij_inv: "\<And>\<sigma>. ssbij \<sigma> \<Longrightarrow> ssbij (inv \<sigma>)"
 by (simp add: ssbij_def supp_inv_bound)
@@ -44,7 +41,7 @@ proof-
   obtain D where D: "D \<inter> B = {}" "D \<inter> A = {}" "D \<inter> A' = {}" and DA: "|D| =o |A|"
   using exists_subset_compl[of _ A "A' \<union> B"]  
   by (metis Field_card_of Int_Un_emptyI1 Int_Un_emptyI2 Int_commute card_of_Card_order card_of_UNIV 
-   cinfinite_def inf_A ordIso_symmetric s(1-3) small_Un small_def)  
+   cinfinite_def infinite_UNIV ordIso_symmetric s(1-3) small_Un small_def)  
 
   then obtain u where u: "bij_betw u A D"  
   using card_of_ordIso ordIso_symmetric by blast
@@ -73,7 +70,7 @@ proof-
 
   show ?thesis apply(rule exI[of _ v], intro conjI)
     subgoal using bv sv s(1) unfolding ssbij_def small_def 
-      by (meson DA card_of_Un_ordLess_infinite card_of_subset_bound inf_A ordIso_ordLess_trans)
+      by (meson DA card_of_Un_ordLess_infinite card_of_subset_bound infinite_UNIV ordIso_ordLess_trans)
     subgoal using D(1) u(1) by auto
     subgoal using sv D(3) s(4) unfolding supp_def by auto . 
 qed
@@ -91,35 +88,33 @@ lemma ssbij_invR': "ssbij \<sigma> \<Longrightarrow> inv \<sigma> (\<sigma> a) =
 using ssbij_invR pointfree_idE by fastforce
 
 lemma small_empty[simp,intro!]: "small {}"  
-  by (simp add: inf_A small_def)
+  by (simp add: infinite_UNIV small_def)
 
 lemma small_singl[simp,intro!]: "small {x}" 
-  by (simp add: inf_A small_def)
+  by (simp add: infinite_UNIV small_def)
 
 lemma small_two[simp,intro!]: "small {x,y}" 
-  by (simp add: inf_A small_def)
+  by (simp add: infinite_UNIV small_def)
 
 lemma small_three[simp,intro!]: "small {x,y,z}" 
-  by (simp add: inf_A small_def)
+  by (simp add: infinite_UNIV small_def)
 
 lemma small_image: "small B \<Longrightarrow> small (\<sigma> ` B)"
 using card_of_image ordLeq_ordLess_trans small_def by blast
 
 lemmas image_comp' = image_comp[symmetric]
 
-end (* context Small *)
+end (* context infinite *)
 
 
-locale CComponents = Small dummy 
-for dummy :: 'A 
-+
-fixes (* 'T: term-like entities, ranged over by t *)
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale CComponents =
+  (* 'T: term-like entities, ranged over by t *)
+fixes Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
-      (* 'B: binder-like entities, ranged over by xs *)
+  (* 'B: binder-like entities, ranged over by xs *)
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
-(* well-formed binders: *)
+  (* well-formed binders: *)
 and wfB :: "'B \<Rightarrow> bool" 
 (* smallness w.r.t. crossing binders: *)
 and bsmall :: "'A set \<Rightarrow> bool"
@@ -183,9 +178,8 @@ end (* locale CComponents *)
 
 (* GENERAL VERSIIONS OF THE LOCALES, WIITH wfBij AND closed *)
 
-locale IInduct1 = CComponents dummy Tmap Tfvars Bmap Bvars wfB bsmall
-for dummy :: 'A 
-and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale IInduct1 = CComponents Tmap Tfvars Bmap Bvars wfB bsmall
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
@@ -266,9 +260,8 @@ qed
 end (* context IInduct1 *)
 
 
-locale IInduct = IInduct1 dummy Tmap Tfvars Bmap Bvars wfB bsmall GG 
-for dummy :: 'A 
-and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale IInduct = IInduct1 Tmap Tfvars Bmap Bvars wfB bsmall GG 
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
@@ -320,9 +313,8 @@ end (* context IInduct *)
 
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale IInduct_simple = IInduct1 dummy Tmap Tfvars Bmap Bvars wfB bsmall GG 
-for dummy :: 'A 
-and Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale IInduct_simple = IInduct1 Tmap Tfvars Bmap Bvars wfB bsmall GG 
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and Bmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bvars :: "'B \<Rightarrow> 'A set"
@@ -463,11 +455,9 @@ end (* context IInduct *)
 
 (* VERSIONS OF THE LOCALES WITH SMALL SETS INSTEAD OF BINDER-LIKE ENTITIES, which work in 99% of the cases: *)
 
-locale Components = Small dummy
-for dummy :: 'A
-+
+locale Components =
 fixes (* 'T: term-like entities *)
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 assumes  
 Tmap_id: "Tmap id = id"
@@ -486,10 +476,8 @@ using Tmap_id Tmap_comp small_Tfvars Tmap_Tfvars Tmap_cong_id apply auto
 by fastforce
 
 
-locale Induct1 = Components dummy Tmap Tfvars 
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale Induct1 = Components Tmap Tfvars 
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
@@ -519,10 +507,10 @@ using bij_card_of_ordIso ordIso_ordLess_trans ordIso_symmetric small_def by blas
 
 lemma cinfinite_A: "cinfinite |UNIV::'A set|" 
 unfolding cinfinite_def 
-by (simp add: inf_A)
+by (simp add: infinite_UNIV)
 
 lemma extend_small: 
-assumes "small A" "bij_betw \<rho> A B" "id_on (A\<inter>B) \<rho>"
+assumes "small (A :: 'A set)" "bij_betw \<rho> A B" "id_on (A\<inter>B) \<rho>"
 shows "\<exists>\<rho>'. ssbij \<rho>' \<and> eq_on A \<rho>' \<rho>"
 using assms cinfinite_A ex_bij_betw_supp'[of "|UNIV::'A set|" A \<rho> B] 
 unfolding eq_on_def small_def ssbij_def id_on_def eq_on_def by auto
@@ -537,7 +525,7 @@ assumes "small B" "small A" "A' \<subseteq> A" "B \<inter> A' = {}"
 shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
 proof-
   have "|- (A \<union> B)| =o |UNIV::'A set|"  
-  by (metis Compl_eq_Diff_UNIV Un_bound assms(1) assms(2) card_of_Un_diff_infinite inf_A small_def)
+  by (metis Compl_eq_Diff_UNIV Un_bound assms(1) assms(2) card_of_Un_diff_infinite infinite_UNIV small_def)
   hence "|B| <o |- (A \<union> B)|"  
     using assms(1) ordIso_symmetric ordLess_ordIso_trans small_def by blast
   then obtain f where f: "inj_on f B" "f ` B \<subseteq> - (A \<union> B)" 
@@ -600,10 +588,8 @@ end (* context Induct1 *)
  
 
 
-locale Induct = Induct1 dummy Tmap Tfvars G  
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale Induct = Induct1 Tmap Tfvars G  
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and 
 G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
@@ -633,7 +619,7 @@ context Induct
 begin
 
 
-thm BE_iinduct 
+thm BE_iinduct
 
 (* Formulating the theorem in custom form: *)
 theorem strong_induct[consumes 2]: 
@@ -653,10 +639,8 @@ apply(rule BE_iinduct[of Pfvars _ R p, OF _ I[unfolded I_eq_II]])
 end (* context Induct *)
 
 (* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale Induct_simple = Induct1 dummy Tmap Tfvars G 
-for dummy :: 'A 
-and
-Tmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+locale Induct_simple = Induct1 Tmap Tfvars G 
+for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tfvars :: "'T \<Rightarrow> 'A set"
 and 
 G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool" 
@@ -669,15 +653,24 @@ sublocale Induct_simple < Induct apply standard
   using G_fresh by blast
 
 print_statement Induct.strong_induct[unfolded
-  Induct_def Induct1_def Components_def Small_def
-  Induct_axioms_def Induct1_axioms_def Components_axioms_def
+  Induct_def Induct1_def Components_def
+  Induct_axioms_def Induct1_axioms_def
   conj_imp_eq_imp_imp, rule_format]
 
 print_statement IInduct.BE_iinduct[unfolded
-  IInduct_def IInduct1_def CComponents_def Small_def
-  IInduct_axioms_def IInduct1_axioms_def CComponents_axioms_def
+  IInduct_def IInduct1_def CComponents_def
+  IInduct_axioms_def IInduct1_axioms_def
   conj_imp_eq_imp_imp, rule_format]
 
 ML_file \<open>../Tools/binder_inductive.ML\<close>
+
+(*
+interpretation Induct MM FF GG for MM FF GG
+  apply unfold_locales
+
+ML \<open>Proof.theorem\<close>
+ML \<open>Interpretation.interpretation\<close>
+*)
+
 
 end 

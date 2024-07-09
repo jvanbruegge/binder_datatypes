@@ -1,18 +1,25 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Beta 
-imports LC2 "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
+imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
 (* *)
-
+(*
 binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x :: var}"
+  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x :: var}"
+| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x}"
+*)
+
+inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
+| AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
+| AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
+| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
 (* INSTANTIATING THE Components LOCALE: *)
 
@@ -25,11 +32,11 @@ fun Tfvars :: "T \<Rightarrow> var set" where
 "Tfvars (e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
 
-interpretation Components where dummy = "undefined :: var" and 
+interpretation Components where 
 Tmap = Tmap and Tfvars = Tfvars
 apply standard unfolding ssbij_def Tmap_def  
   using small_Un small_def term.card_of_FFVars_bounds
-  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s inf_A)
+  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s infinite_UNIV)
   using var_sum_class.Un_bound by blast
 
 definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
@@ -168,7 +175,7 @@ lemma G_refresh:
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
-interpretation Step: Induct where dummy = "undefined :: var" and 
+interpretation Step: Induct where
 Tmap = Tmap and Tfvars = Tfvars and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto

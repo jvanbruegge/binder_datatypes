@@ -871,18 +871,19 @@ fun prove_coindrule quiet_mode preds cs argTs bs xs params intr_ts mono
 
 (** specification of (co)inductive predicates **)
 
-fun mk_ind_def quiet_mode skip_mono alt_name coind cs intr_ts monos params cnames_syn lthy =
+fun mk_ind_def quiet_mode skip_mono alt_name coind cs intr_ts binds monos params cnames_syn lthy =
   let
     val fp_name = if coind then \<^const_name>\<open>Inductive.gfp\<close> else \<^const_name>\<open>Inductive.lfp\<close>;
 
+    val varsT = hd binds |> fastype_of;
     val argTs = fold (combine (op =) o arg_types_of (length params)) cs [];
     val k = log 2 1 (length cs);
     val predT = replicate k HOLogic.boolT ---> argTs ---> HOLogic.boolT;
-    val p :: xs =
+    val B :: p :: xs =
       map Free (Variable.variant_frees lthy intr_ts
-        (("p", predT) :: (mk_names "x" (length argTs) ~~ argTs)));
+        (("B", varsT) :: ("p", predT) :: (mk_names "x" (length argTs) ~~ argTs)));
     val bs =
-      map Free (Variable.variant_frees lthy (p :: xs @ intr_ts)
+      map Free (Variable.variant_frees lthy (B :: p :: xs @ intr_ts)
         (map (rpair HOLogic.boolT) (mk_names "b" k)));
 
     fun subst t =
@@ -928,6 +929,35 @@ fun mk_ind_def quiet_mode skip_mono alt_name coind cs intr_ts monos params cname
       fold_rev lambda (p :: bs @ xs)
         (if null intr_ts then \<^term>\<open>False\<close>
          else foldr1 HOLogic.mk_disj (map transform_rule intr_ts));
+
+
+    (* transform an introduction rule into a conjunction  *)
+    (*   [| p_i t; ... |] ==> p_j u                       *)
+    (* is transformed into                                *)
+    (*   b_j & x_j = u & p b_j t & ...                    *)
+
+    fun transform_rule2 bind r =
+      let
+        val SOME (_, i, ts, (Ts, _)) =
+          dest_predicate cs params (HOLogic.dest_Trueprop (Logic.strip_assums_concl r));
+        val ps =
+          HOLogic.mk_eq (B, bind) ::
+          make_bool_args HOLogic.mk_not I bs i @
+          map HOLogic.mk_eq (make_args' argTs xs Ts ~~ ts) @
+          map (subst o HOLogic.dest_Trueprop) (Logic.strip_assums_hyp r);
+      in
+        fold_rev (fn (x, T) => fn P => HOLogic.exists_const T $ Abs (x, T, P))
+          (Logic.strip_params r)
+          (if null ps then \<^term>\<open>True\<close> else foldr1 HOLogic.mk_conj ps)
+      end;
+
+    (* make a disjunction of all introduction rules *)
+
+    val fp_fun2 =
+      lambda B (lambda p (HOLogic.tupled_lambda (BNF_FP_Util.mk_tuple_balanced (bs @ xs))
+        (if null intr_ts then \<^term>\<open>False\<close>
+         else foldr1 HOLogic.mk_disj (@{map 2} transform_rule2 binds intr_ts))))
+        |> Syntax.string_of_term lthy |> writeln;
 
     (* add definition of recursive predicates to theory *)
 
@@ -1071,7 +1101,7 @@ fun add_ind_def {quiet_mode, verbose, alt_name, coind, no_elim, no_ind, skip_mon
 
     val (lthy1, lthy2, rec_binding, mono, fp_def, rec_preds_defs, rec_const, preds,
       argTs, bs, xs) = mk_ind_def quiet_mode skip_mono alt_name coind cs intr_ts
-        monos params cnames_syn lthy;
+        binds monos params cnames_syn lthy;
 
     val (intrs, unfold) = prove_intrs quiet_mode coind mono fp_def (length bs + length xs)
       intr_ts rec_preds_defs lthy2 lthy1;
@@ -1170,17 +1200,88 @@ fun gen_add_inductive mk_def
     ||> fold (snd oo Local_Theory.abbrev Syntax.mode_default) abbrevs
   end;
 
-fun gen_add_inductive_cmd mk_def verbose coind cnames_syn pnames_syn intro_srcs raw_binds raw_monos lthy =
+fun get_positions ctxt x =
   let
-    val ((vars, intrs), _) = lthy
-      |> Proof_Context.set_mode Proof_Context.mode_abbrev
-      |> Specification.read_multi_specs (cnames_syn @ pnames_syn) intro_srcs;
-    val (cs, ps) = chop (length cnames_syn) vars;
+    fun get Cs (Const ("_type_constraint_", C) $ t) = get (C :: Cs) t
+      | get Cs (Free (y, T)) =
+          if x = y then
+            map_filter Term_Position.decode_positionT
+              (T :: map (Type.constraint_type ctxt) Cs)
+          else []
+      | get _ (t $ u) = get [] t @ get [] u
+      | get _ (Abs (_, _, t)) = get [] t
+      | get _ _ = [];
+  in get [] end;
+
+fun prep_decls prep_var raw_vars ctxt =
+  let
+    val (vars, ctxt') = fold_map prep_var raw_vars ctxt;
+    val (xs, ctxt'') = ctxt'
+      |> Context_Position.set_visible false
+      |> Proof_Context.add_fixes vars
+      ||> Context_Position.restore_visible ctxt';
+    val _ =
+      Context_Position.reports ctxt''
+        (map (Binding.pos_of o #1) vars ~~
+          map (Variable.markup_entity_def ctxt'' ##> Properties.remove Markup.kindN) xs);
+  in ((vars, xs), ctxt'') end;
+
+fun close_form ctxt ys prems concl =
+  let
+    val xs = rev (fold (Variable.add_free_names ctxt) (prems @ [concl]) (rev ys));
+
+    val pos_props = Logic.strip_imp_concl concl :: Logic.strip_imp_prems concl @ prems;
+    fun get_pos x = maps (get_positions ctxt x) pos_props;
+    val _ = Context_Position.reports ctxt (maps (Syntax_Phases.reports_of_scope o get_pos) xs);
+  in Logic.close_prop_constraint (Variable.default_type ctxt) (xs ~~ xs) prems concl end;
+
+fun dummy_frees ctxt xs tss =
+  let
+    val names =
+      Variable.names_of ((fold o fold) Variable.declare_term tss ctxt)
+      |> fold Name.declare xs;
+    val (tss', _) = (fold_map o fold_map) Term.free_dummy_patterns tss names;
+  in tss' end;
+
+fun prep_specs prep_var parse_prop prep_term prep_att raw_vars raw_specss raw_binds ctxt =
+  let
+    val ((vars, xs), vars_ctxt) = prep_decls prep_var raw_vars ctxt;
+
+    val propss0 =
+      raw_specss |> map (fn ((_, raw_concl), raw_prems, raw_params) =>
+        let val (ys, ctxt') = vars_ctxt |> fold_map prep_var raw_params |-> Proof_Context.add_fixes
+        in (ys, map (pair ctxt') (raw_concl :: raw_prems)) end);
+    val props =
+      burrow (grouped 10 Par_List.map_independent (uncurry parse_prop)) (map #2 propss0)
+      |> dummy_frees vars_ctxt xs
+      |> map2 (fn (ys, _) => fn concl :: prems => close_form vars_ctxt ys prems concl) propss0;
+
+    val specs = Syntax.check_props vars_ctxt props;
+    val paramss = specs |> map (Logic.strip_params #> map Free);
+    val vars_ctxts = paramss |> map (fn ts => fold Variable.declare_term ts vars_ctxt);
     fun repair xs = 
       let val T = List.find is_some xs |> the |> the |> fastype_of |> HOLogic.dest_setT;
       in map (the_default (HOLogic.mk_set T [])) xs end;
+    val binds' = repair (@{map 2} (Option.map o prep_term) vars_ctxts raw_binds);
+    val binds = @{map 2} (fold_rev Term.lambda) paramss binds' |> map Term.strip_abs_body;
+    val specs_ctxt = vars_ctxt |> fold Variable.declare_term specs;
 
-    val binds = repair (map (Option.map (Syntax.read_term lthy)) raw_binds) |> @{print};
+    val ps = specs_ctxt |> fold_map Proof_Context.inferred_param xs |> fst;
+    val params = map2 (fn (b, _, mx) => fn (_, T) => ((b, T), mx)) vars ps;
+    val name_atts: Attrib.binding list =
+      map (fn ((name, atts), _) => (name, map (prep_att ctxt) atts)) (map #1 raw_specss);
+  in ((params, name_atts ~~ specs, binds), specs_ctxt) end;
+
+fun read_multi_specs xs specs binds =
+  prep_specs Proof_Context.read_var Syntax.parse_prop Syntax.read_term Attrib.check_src xs specs binds;
+
+fun gen_add_inductive_cmd mk_def verbose coind cnames_syn pnames_syn intro_srcs raw_binds raw_monos lthy =
+  let
+    val ((vars, intrs, binds), _) = lthy
+      |> Proof_Context.set_mode Proof_Context.mode_abbrev
+      |> read_multi_specs (cnames_syn @ pnames_syn) intro_srcs raw_binds;
+    val (cs, ps) = chop (length cnames_syn) vars;
+
     val monos = Attrib.eval_thms lthy raw_monos;
     val flags =
      {quiet_mode = false, verbose = verbose, alt_name = Binding.empty,

@@ -26,7 +26,7 @@ where
 lemma finite_set_option[simp]: "finite (set_option x)"
   by (cases x) auto
 
-interpretation CComponents where dummy = "undefined :: var" and 
+interpretation CComponents where 
 Tmap = rrename_term and
 Tfvars = FFVars_term and
 Bmap = map_option and
@@ -66,7 +66,7 @@ proof -
     done
 qed
 
-interpretation Step: IInduct where dummy = "undefined :: var" and 
+interpretation Step: IInduct where
 Tmap = rrename and
 Tfvars = FFVars and
 Bmap = map_option and

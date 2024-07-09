@@ -1,5 +1,5 @@
 theory FixedCountableVars
-imports "HOL-Cardinals.Cardinals"  
+imports "HOL-Cardinals.Cardinals" "HOL-Library.Infinite_Typeclass" 
 begin
 
 (* We take a countably infinite number of variables *)
@@ -75,5 +75,9 @@ lemma sw_surj: "\<exists>y. x = sw y z1 z2"
   by (metis sw_invol)
 
 definition "sb a x y \<equiv> if a = y then x else a"
+
+instantiation var :: infinite begin
+instance by standard (rule infinite_var)
+end 
 
 end

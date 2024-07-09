@@ -103,5 +103,9 @@ lemma sw_surj: "\<exists>y. x = sw y z1 z2"
 
 (* *)
 
+instantiation ivar :: infinite begin
+instance by standard (rule infinite_ivar)
+end 
+
 
 end

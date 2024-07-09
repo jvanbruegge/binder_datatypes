@@ -243,8 +243,8 @@ by simp (metis nat1_nat2) .
 
 (* *)
 
-class infinite_regular =
-  assumes large: "|Field (card_suc natLeq)| \<le>o |UNIV::'a set|" and regular: "regularCard |UNIV::'a set|"
+class infinite_regular = infinite +
+  assumes regular: "regularCard |UNIV::'a set|"
 
 lemma infinite_natLeq: "natLeq \<le>o |A| \<Longrightarrow> infinite A"
   using infinite_iff_natLeq_ordLeq by blast

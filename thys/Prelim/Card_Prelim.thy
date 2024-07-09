@@ -1,5 +1,5 @@
 theory Card_Prelim
-  imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set_Type"
+  imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set_Type" "HOL-Library.Infinite_Typeclass"
 begin
 
 lemma regularCard_Un:

@@ -8,17 +8,54 @@ begin
 
 (* *)
 (*
+binder_inductive sillystep :: "trm \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
+  "sillystep (Lam x a) b c d e" binds "{x}"
+where
+  map: "\<lambda>f ((a,b), c, d, e). ((rrename f a,rrename f b), rrename f c, rrename f d, rrename f e)"
+  set: "\<lambda>((a,b), c, d, e). FFVars a \<union> FFVars b \<union> FFVars c \<union> FFVars d \<union> FFVars e"
+         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+           small_def term.card_of_FFVars_bounds term.Un_bound)
+  subgoal premises prems for R b c d e x a
+  proof -
+    obtain y where "y \<notin> FFVars a \<union> FFVars b \<union> FFVars c \<union> FFVars d \<union> FFVars e \<union> {x}"
+      sorry
+    then show ?thesis
+      by (intro exI[of _ "{y}"])
+        (auto simp: singl_bound Lam_refresh[of y a x])
+  qed
+  done
+
 binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x}"
+where
+  map: "\<lambda>f (a,b). ((rrename f a,rrename f b))"
+  set: "\<lambda>(a,b). FFVars a \<union> FFVars b"
+         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+           small_def term.card_of_FFVars_bounds term.Un_bound) [6]
+  subgoal for \<sigma> R B t
+    sorry
+  subgoal for R B t
+    sorry
+  done
 
 binder_inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
 | AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')" binds "{x}"
+where
+  map: "\<lambda>f (n,a,b). ((n,rrename f a,rrename f b))"
+  set: "\<lambda>(_,a,b). FFVars a \<union> FFVars b"
+         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+           small_def term.card_of_FFVars_bounds term.Un_bound) [6]
+  subgoal for \<sigma> R B t
+    sorry
+  subgoal for R B t
+    sorry
+  done
 
 binder_inductive step1 :: "trm \<Rightarrow> trm \<Rightarrow> bool" and step2 :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta1: "step1 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
@@ -28,7 +65,20 @@ binder_inductive step1 :: "trm \<Rightarrow> trm \<Rightarrow> bool" and step2 :
 | AppL2: "step1 e1 e1' \<Longrightarrow> step2 (App e1 e2) (App e1' e2)"
 | AppR2: "step1 e2 e2' \<Longrightarrow> step2 (App e1 e2) (App e1 e2')"
 | Xi2: "step1 e e' \<Longrightarrow> step2 (Lam x e) (Lam x e')" binds "{x}"
+where
+  map: "\<lambda>f (b,e,e'). ((b,rrename f e,rrename f e'))"
+  set: "\<lambda>(_,e,e'). FFVars e \<union> FFVars e'"
+  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+           small_def term.card_of_FFVars_bounds term.Un_bound) [5]
+  subgoal for R R' B t
+    by (auto)
+  subgoal for \<sigma> R B t
+    sorry
+  subgoal for R B t
+    sorry
+  done
 *)
+
 
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"

@@ -31,28 +31,18 @@ sig
   val mk_cases: Proof.context -> term -> thm
   val inductive_forall_def: thm
   val rulify: Proof.context -> thm -> thm
-  val inductive_cases: (Attrib.binding * term list) list -> bool -> local_theory ->
-    (string * thm list) list * local_theory
-  val inductive_cases_cmd: (Attrib.binding * string list) list -> bool -> local_theory ->
-    (string * thm list) list * local_theory
-  val ind_cases_rules: Proof.context ->
-    string list -> (binding * string option * mixfix) list -> thm list
-  val inductive_simps: (Attrib.binding * term list) list -> bool -> local_theory ->
-    (string * thm list) list * local_theory
-  val inductive_simps_cmd: (Attrib.binding * string list) list -> bool -> local_theory ->
-    (string * thm list) list * local_theory
   type flags =
     {quiet_mode: bool, verbose: bool, alt_name: binding,
       no_elim: bool, no_ind: bool, skip_mono: bool}
   val add_inductive:
     flags -> ((binding * typ) * mixfix) list ->
-    (string * typ) list -> (Attrib.binding * term) list -> term list -> thm list -> local_theory ->
+    (string * typ) list -> (Attrib.binding * term) list -> term -> term -> term list -> thm list -> local_theory ->
     result * local_theory
   val add_inductive_cmd: bool ->
     (binding * string option * mixfix) list ->
     (binding * string option * mixfix) list ->
     Specification.multi_specs_cmd ->
-    string option list ->
+    string -> string -> string option list ->
     (Facts.ref * Token.src list) list ->
     local_theory -> result * local_theory
   val arities_of: thm -> (string * int) list
@@ -65,25 +55,25 @@ sig
   val select_disj_tac: Proof.context -> int -> int -> int -> tactic
   type add_ind_def =
     flags ->
-    term list -> (Attrib.binding * term) list -> term list -> thm list ->
+    term list -> (Attrib.binding * term) list -> term -> term -> term list -> thm list ->
     term list -> (binding * mixfix) list ->
-    local_theory -> result * local_theory
+    local_theory -> Proof.state
   val declare_rules: binding -> bool -> binding -> string list -> term list ->
     thm list -> binding list -> Token.src list list -> (thm * string list * int) list ->
     thm list -> thm -> local_theory -> thm list * thm list * thm list * thm * thm list * local_theory
   val add_ind_def: add_ind_def
   val gen_add_inductive: add_ind_def -> flags ->
-    ((binding * typ) * mixfix) list -> (string * typ) list -> (Attrib.binding * term) list -> term list ->
-    thm list -> local_theory -> result * local_theory
+    ((binding * typ) * mixfix) list -> (string * typ) list -> (Attrib.binding * term) list ->
+    term -> term -> term list -> thm list -> local_theory -> result * local_theory
   val gen_add_inductive_cmd: add_ind_def -> bool ->
     (binding * string option * mixfix) list ->
     (binding * string option * mixfix) list ->
-    Specification.multi_specs_cmd -> string option list -> (Facts.ref * Token.src list) list ->
+    Specification.multi_specs_cmd -> string -> string -> string option list -> (Facts.ref * Token.src list) list ->
     local_theory -> result * local_theory
   val gen_ind_decl: add_ind_def -> (local_theory -> local_theory) parser
 end;
 
-structure Binder_Inductive: BINDER_INDUCTIVE =
+structure Binder_Inductive =
 struct
 
 open BNF_Util
@@ -250,10 +240,6 @@ fun mk_mono ctxt thm =
 
 
 (* equations *)
-
-fun retrieve_equations ctxt =
-  Item_Net.retrieve (#equations (rep_data ctxt))
-  #> map (Thm.transfer' ctxt);
 
 val equation_add_permissive =
   Thm.declaration_attribute (fn thm =>
@@ -551,27 +537,6 @@ fun mk_cases ctxt prop =
 end;
 
 
-(* inductive_cases *)
-
-fun gen_inductive_cases prep_att prep_prop args int lthy =
-  let
-    val thmss =
-      map snd args
-      |> burrow (grouped 10 Par_List.map_independent (mk_cases lthy o prep_prop lthy));
-    val facts =
-      map2 (fn ((a, atts), _) => fn thms => ((a, map (prep_att lthy) atts), [(thms, [])]))
-        args thmss;
-    val (res, lthy') = lthy |> Local_Theory.notes facts
-    val _ =
-      Proof_Display.print_results
-        {interactive = int, pos = Position.thread_data (), proof_state = false}
-        lthy' ((Thm.theoremK, ""), res); 
-  in (res, lthy') end;
-
-val inductive_cases = gen_inductive_cases (K I) Syntax.check_prop;
-val inductive_cases_cmd = gen_inductive_cases Attrib.check_src Syntax.read_prop;
-
-
 (* ind_cases *)
 
 fun ind_cases_rules ctxt raw_props raw_fixes =
@@ -587,52 +552,6 @@ val _ =
         (fn (props, fixes) => fn ctxt =>
           Method.erule ctxt 0 (ind_cases_rules ctxt props fixes)))
       "case analysis for inductive definitions, based on simplified elimination rule");
-
-
-(* derivation of simplified equation *)
-
-fun mk_simp_eq ctxt prop =
-  let
-    val thy = Proof_Context.theory_of ctxt;
-    val ctxt' = Proof_Context.augment prop ctxt;
-    val lhs_of = fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o Thm.prop_of;
-    val substs =
-      retrieve_equations ctxt (HOLogic.dest_Trueprop prop)
-      |> map_filter
-        (fn eq => SOME (Pattern.match thy (lhs_of eq, HOLogic.dest_Trueprop prop)
-            (Vartab.empty, Vartab.empty), eq)
-          handle Pattern.MATCH => NONE);
-    val (subst, eq) =
-      (case substs of
-        [s] => s
-      | _ => error
-        ("equations matching pattern " ^ Syntax.string_of_term ctxt prop ^ " is not unique"));
-    val inst =
-      map (fn v => (fst v, Thm.cterm_of ctxt' (Envir.subst_term subst (Var v))))
-        (Term.add_vars (lhs_of eq) []);
-  in
-    infer_instantiate ctxt' inst eq
-    |> Conv.fconv_rule (Conv.arg_conv (Conv.arg_conv (Simplifier.full_rewrite ctxt')))
-    |> singleton (Proof_Context.export ctxt' ctxt)
-  end
-
-
-(* inductive simps *)
-
-fun gen_inductive_simps prep_att prep_prop args int lthy =
-  let
-    val facts = args |> map (fn ((a, atts), props) =>
-      ((a, map (prep_att lthy) atts),
-        map (Thm.no_attributes o single o mk_simp_eq lthy o prep_prop lthy) props));
-    val (res, lthy') = lthy |> Local_Theory.notes facts
-    val _ =
-      Proof_Display.print_results
-        {interactive = int, pos = Position.thread_data (), proof_state = false}
-        lthy' ((Thm.theoremK, ""), res)
-  in (res, lthy') end;
-
-val inductive_simps = gen_inductive_simps (K I) Syntax.check_prop;
-val inductive_simps_cmd = gen_inductive_simps Attrib.check_src Syntax.read_prop;
 
 
 (* prove induction rule *)
@@ -748,17 +667,20 @@ fun prove_indrule quiet_mode cs argTs bs xs rec_const params intr_ts mono
 
 (** specification of inductive predicates **)
 
-fun mk_ind_def quiet_mode skip_mono alt_name cs intr_ts binds monos params cnames_syn lthy =
+fun mk_ind_def quiet_mode skip_mono alt_name cs intr_ts mapx setx binds monos params cnames_syn lthy =
   let
     val fp_name = \<^const_name>\<open>Inductive.lfp\<close>;
 
-    val varsT = hd binds |> fastype_of;
+    val varT = hd binds |> fastype_of |> HOLogic.dest_setT;
     val argTs = fold (combine (op =) o arg_types_of (length params)) cs [];
     val k = log 2 1 (length cs);
-    val predT = mk_tupleT_balanced (replicate k HOLogic.boolT @ argTs) --> HOLogic.boolT;
+    val argT = mk_tupleT_balanced (replicate k HOLogic.boolT @ argTs)
+    val predT = argT --> HOLogic.boolT;
+    val mapT = (varT --> varT) --> argT --> argT;
+    val setT = argT --> HOLogic.mk_setT varT;
     val B :: p :: xs =
       map Free (Variable.variant_frees lthy intr_ts
-        (("B", varsT) :: ("p", predT) :: (mk_names "x" (length argTs) ~~ argTs)));
+        (("B", HOLogic.mk_setT varT) :: ("p", predT) :: (mk_names "x" (length argTs) ~~ argTs)));
     val bs =
       map Free (Variable.variant_frees lthy (B :: p :: xs @ intr_ts)
         (map (rpair HOLogic.boolT) (mk_names "b" k)));
@@ -772,8 +694,8 @@ fun mk_ind_def quiet_mode skip_mono alt_name cs intr_ts binds monos params cname
           in
             fold_rev (Term.abs o pair "z") Us
               (p $
-                mk_tuple1_balanced ((Us @ Zs) |> @{print}) ((make_bool_args' bs i @ make_args argTs
-                  ((map (incr_boundvars l) ts ~~ Ts) @ (zs ~~ Us))) |> @{print}))
+                mk_tuple1_balanced (Us @ Zs) (make_bool_args' bs i @ make_args argTs
+                  ((map (incr_boundvars l) ts ~~ Ts) @ (zs ~~ Us))))
           end
       | NONE =>
           (case t of
@@ -795,7 +717,7 @@ fun mk_ind_def quiet_mode skip_mono alt_name cs intr_ts binds monos params cname
           HOLogic.mk_eq (B, bind) ::
           make_bool_args HOLogic.mk_not I bs i @
           map HOLogic.mk_eq (make_args' argTs xs Ts ~~ ts) @
-          map (subst (Logic.strip_params r |> map snd) o HOLogic.dest_Trueprop) (Logic.strip_assums_hyp r);
+          map (subst (Logic.strip_params r |> map snd |> rev) o HOLogic.dest_Trueprop) (Logic.strip_assums_hyp r);
       in
         fold_rev (fn (x, T) => fn P => HOLogic.exists_const T $ Abs (x, T, P))
           (Logic.strip_params r)
@@ -807,8 +729,31 @@ fun mk_ind_def quiet_mode skip_mono alt_name cs intr_ts binds monos params cname
     val fp_fun =
       lambda B (lambda p (HOLogic.tupled_lambda (mk_tuple_balanced (bs @ xs))
         (if null intr_ts then \<^term>\<open>False\<close>
-         else foldr1 HOLogic.mk_disj (@{map 2} transform_rule binds intr_ts))))
-        |> Syntax.string_of_term lthy |> writeln;
+         else foldr1 HOLogic.mk_disj (@{map 2} transform_rule binds intr_ts))));
+
+     fun err s t T = s ^ " function\n" ^ Syntax.string_of_term lthy t ^
+       "\ndoes not have the expected type\n" ^ Syntax.string_of_typ lthy T;
+     val mapx = force_typ lthy mapT (mapx |> singleton (Variable.polymorphic lthy))
+       handle ERROR _ => error (err "map" mapx mapT);
+     val setx = force_typ lthy setT (setx |> singleton (Variable.polymorphic lthy))
+       handle ERROR _ => error (err "map" setx setT);
+
+     fun after_qed [[thm]] lthy =
+       let
+         val _ = Interpretation.interpretation (undefined ()) lthy
+         val _ = thm |> @{print};
+       in lthy end;
+
+     val goal = list_comb (Const (@{const_name Induct}, mapT --> setT --> fastype_of fp_fun --> HOLogic.boolT),
+       [mapx, setx, fp_fun])
+       |> HOLogic.mk_Trueprop;
+     val _ = goal |> Syntax.check_term lthy |> Syntax.string_of_term lthy |> writeln;
+
+   in
+      Proof.theorem NONE after_qed [[(goal, [])]] lthy
+      |> Proof.refine_singleton
+           (Method.Basic (Method.METHOD o Locale.intro_locales_tac {strict = false, eager = true}))
+   end
 (*
     (* add definition of recursive predicates to theory *)
 
@@ -863,7 +808,6 @@ fun mk_ind_def quiet_mode skip_mono alt_name cs intr_ts binds monos params cname
       list_comb (rec_const, params), preds, argTs, bs, xs)
   end;
 *)
-  in undefined () end
 
 fun declare_rules rec_binding no_ind spec_name cnames
     preds intrs intr_bindings intr_atts elims eqs raw_induct lthy =
@@ -928,12 +872,12 @@ type flags =
 
 type add_ind_def =
   flags ->
-  term list -> (Attrib.binding * term) list -> term list -> thm list ->
+  term list -> (Attrib.binding * term) list -> term -> term -> term list -> thm list ->
   term list -> (binding * mixfix) list ->
-  local_theory -> result * local_theory;
+  local_theory -> Proof.state;
 
 fun add_ind_def {quiet_mode, verbose, alt_name, no_elim, no_ind, skip_mono}
-    cs intros binds monos params cnames_syn lthy =
+    cs intros mapx setx binds monos params cnames_syn lthy =
   let
     val _ = null cnames_syn andalso error "No inductive predicates given";
     val names = map (Binding.name_of o fst) cnames_syn;
@@ -945,9 +889,14 @@ fun add_ind_def {quiet_mode, verbose, alt_name, no_elim, no_ind, skip_mono}
     val ((intr_names, intr_atts), intr_ts) =
       apfst split_list (split_list (map (check_rule lthy cs params) intros));
 
+  in
+    mk_ind_def quiet_mode skip_mono alt_name cs intr_ts
+        mapx setx binds monos params cnames_syn lthy
+  end
+(*
     val (lthy1, lthy2, rec_binding, mono, fp_def, rec_preds_defs, rec_const, preds,
       argTs, bs, xs) = mk_ind_def quiet_mode skip_mono alt_name cs intr_ts
-        binds monos params cnames_syn lthy;
+        mapx setx binds monos params cnames_syn lthy;
 
     val (intrs, unfold) = prove_intrs quiet_mode mono fp_def (length bs + length xs)
       intr_ts rec_preds_defs lthy2 lthy1;
@@ -986,12 +935,13 @@ fun add_ind_def {quiet_mode, verbose, alt_name, no_elim, no_ind, skip_mono}
         let val result' = transform_result phi result;
         in put_inductives ({names = cnames, coind = false}, result') end);
   in (result, lthy4) end;
+*)
 
 
 (* external interfaces *)
 
 fun gen_add_inductive mk_def
-    flags cnames_syn pnames spec binds monos lthy =
+    flags cnames_syn pnames spec mapx setx binds monos lthy =
   let
 
     (* abbrevs *)
@@ -1039,8 +989,10 @@ fun gen_add_inductive mk_def
     val preds = map (fn ((c, _), mx) => (c, mx)) cnames_syn';
   in
     lthy
-    |> mk_def flags cs intros binds monos ps preds
+    |> mk_def flags cs intros mapx setx binds monos ps preds
+(*
     ||> fold (snd oo Local_Theory.abbrev Syntax.mode_default) abbrevs
+*)
   end;
 
 fun get_positions ctxt x =
@@ -1086,7 +1038,7 @@ fun dummy_frees ctxt xs tss =
     val (tss', _) = (fold_map o fold_map) Term.free_dummy_patterns tss names;
   in tss' end;
 
-fun prep_specs prep_var parse_prop prep_term prep_att raw_vars raw_specss raw_binds ctxt =
+fun prep_specs prep_var parse_prop prep_term prep_att raw_vars raw_specss raw_mapx raw_setx raw_binds ctxt =
   let
     val ((vars, xs), vars_ctxt) = prep_decls prep_var raw_vars ctxt;
 
@@ -1108,21 +1060,22 @@ fun prep_specs prep_var parse_prop prep_term prep_att raw_vars raw_specss raw_bi
     val binds' = repair (@{map 2} (Option.map o prep_term) vars_ctxts raw_binds);
     val binds = @{map 2} (fold_rev Term.lambda) paramss binds' |> map Term.strip_abs_body;
     val specs_ctxt = vars_ctxt |> fold Variable.declare_term specs;
+    val mapx = prep_term vars_ctxt raw_mapx;
+    val setx = prep_term vars_ctxt raw_setx;
 
     val ps = specs_ctxt |> fold_map Proof_Context.inferred_param xs |> fst;
     val params = map2 (fn (b, _, mx) => fn (_, T) => ((b, T), mx)) vars ps;
     val name_atts: Attrib.binding list =
       map (fn ((name, atts), _) => (name, map (prep_att ctxt) atts)) (map #1 raw_specss);
-  in ((params, name_atts ~~ specs, binds), specs_ctxt) end;
+  in ((params, name_atts ~~ specs, mapx, setx, binds), specs_ctxt) end;
 
-fun read_multi_specs xs specs binds =
-  prep_specs Proof_Context.read_var Syntax.parse_prop Syntax.read_term Attrib.check_src xs specs binds;
+val read_multi_specs = prep_specs Proof_Context.read_var Syntax.parse_prop Syntax.read_term Attrib.check_src;
 
-fun gen_add_inductive_cmd mk_def verbose cnames_syn pnames_syn intro_srcs raw_binds raw_monos lthy =
+fun gen_add_inductive_cmd mk_def verbose cnames_syn pnames_syn intro_srcs raw_mapx raw_setx raw_binds raw_monos lthy =
   let
-    val ((vars, intrs, binds), _) = lthy
+    val ((vars, intrs, mapx, setx, binds), _) = lthy
       |> Proof_Context.set_mode Proof_Context.mode_abbrev
-      |> read_multi_specs (cnames_syn @ pnames_syn) intro_srcs raw_binds;
+      |> read_multi_specs (cnames_syn @ pnames_syn) intro_srcs raw_mapx raw_setx raw_binds;
     val (cs, ps) = chop (length cnames_syn) vars;
 
     val monos = Attrib.eval_thms lthy raw_monos;
@@ -1131,7 +1084,7 @@ fun gen_add_inductive_cmd mk_def verbose cnames_syn pnames_syn intro_srcs raw_bi
       no_elim = false, no_ind = false, skip_mono = false};
   in
     lthy
-    |> gen_add_inductive mk_def flags cs (map (apfst Binding.name_of o fst) ps) intrs binds monos
+    |> gen_add_inductive mk_def flags cs (map (apfst Binding.name_of o fst) ps) intrs mapx setx binds monos
   end;
 
 val add_inductive = gen_add_inductive add_ind_def;
@@ -1206,19 +1159,25 @@ val multi_specs =
     ((Parse_Spec.opt_thm_name ":" -- Parse.prop -- Parse_Spec.if_assumes -- opt_binders -- Parse.for_fixes >> rearrange) --|
       Scan.option (Scan.ahead (Parse.name || Parse.$$$ "[") -- Parse.!!! (Parse.$$$ "|"))) >> split_list;
 
+val parse_map = Parse.reserved "map" --| \<^keyword>\<open>:\<close> |-- Parse.term;
+val parse_set = Parse.reserved "set" --| \<^keyword>\<open>:\<close> |-- Parse.term;
+
+val parse_map_set = @{keyword where} |-- (parse_map -- parse_set);
+
 val where_multi_specs = Parse.where_ |-- Parse.!!! multi_specs;
-val _ = Parse_Spec.where_multi_specs
+
 fun gen_ind_decl mk_def =
   Parse.vars -- Parse.for_fixes --
   Scan.optional where_multi_specs ([], []) --
+  parse_map_set --
   Scan.optional (\<^keyword>\<open>monos\<close> |-- Parse.!!! Parse.thms1) []
-  >> (fn (((preds, params), (specs, binds)), monos) =>
-      (snd o gen_add_inductive_cmd mk_def true preds params specs binds monos));
+  >> (fn ((((preds, params), (specs, binds)), (mapx, setx)), monos) =>
+      gen_add_inductive_cmd mk_def true preds params specs mapx setx binds monos);
 
 val ind_decl = gen_ind_decl add_ind_def;
 
 val _ =
-  Outer_Syntax.local_theory \<^command_keyword>\<open>binder_inductive\<close> "define binding-aware inductive predicates"
+  Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>binder_inductive\<close> "define binding-aware inductive predicates"
     ind_decl;
 
 end;

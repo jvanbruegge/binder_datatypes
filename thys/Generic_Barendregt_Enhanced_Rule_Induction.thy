@@ -664,13 +664,4 @@ print_statement IInduct.BE_iinduct[unfolded
 
 ML_file \<open>../Tools/binder_inductive.ML\<close>
 
-(*
-interpretation Induct MM FF GG for MM FF GG
-  apply unfold_locales
-
-ML \<open>Proof.theorem\<close>
-ML \<open>Interpretation.interpretation\<close>
-*)
-
-
 end 

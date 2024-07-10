@@ -209,10 +209,10 @@ declare ty.intros[intro]
 type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
 type_synonym V = "var list"
 
-definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
-  "Tmap f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
-fun Tfvars :: "T \<Rightarrow> var set" where
-  "Tfvars (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
+definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
+  "Tperm f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
+fun Tsupp :: "T \<Rightarrow> var set" where
+  "Tsupp (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
 (* definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
   "Vmap \<equiv> map"
@@ -220,8 +220,8 @@ fun Vfvars :: "V \<Rightarrow> var set" where
   "Vfvars v = set v"
 *)
 interpretation Components where
-Tmap = Tmap and Tfvars = Tfvars
-apply standard unfolding ssbij_def Tmap_def
+Tperm = Tperm and Tsupp = Tsupp
+apply standard unfolding isPerm_def Tperm_def
   using small_Un typ.card_of_FFVars_bounds
          apply (auto simp: typ.FFVars_rrenames map_prod.comp typ.rrename_comp0s infinite_UNIV small_def)
     apply (rule var_typ_pre_class.Un_bound var_typ_pre_class.UN_bound context_set_bd_UNIV set_bd_UNIV
@@ -293,16 +293,16 @@ next
   then show ?case by (auto intro!: ty.SA_All simp: extend_eqvt)
 qed auto
 
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
   unfolding G_def
   by (elim disj_forward exE; cases t)
-    (auto simp: Tmap_def ssbij_def supp_inv_bound
+    (auto simp: Tperm_def isPerm_def supp_inv_bound
       typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
 
-lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"
-  by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tfvars small_def small_ssbij subsetI)
+lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"
+  by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tsupp small_def small_isPerm subsetI)
 
 lemma swap_idemp[simp]: "id(x := x) = id" by auto
 lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
@@ -310,19 +310,19 @@ lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
 lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
   by (induction \<Gamma>) auto
 
-lemma finite_Tfvars: "finite (Tfvars t)"
-using finite_iff_le_card_var small_Tfvars small_def by blast
+lemma finite_Tsupp: "finite (Tsupp t)"
+using finite_iff_le_card_var small_Tsupp small_def by blast
 
 lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
 using finite_iff_le_card_var by blast
 
 lemma exists_fresh:
-"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tfvars t)"
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tsupp t)"
 proof-
-  have 0: "|set xs \<union> \<Union> (Tfvars ` (set ts))| <o |UNIV::var set|"
+  have 0: "|set xs \<union> \<Union> (Tsupp ` (set ts))| <o |UNIV::var set|"
   unfolding ls_UNIV_iff_finite
-  using finite_Tfvars by blast
-  then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts))"
+  using finite_Tsupp by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tsupp ` (set ts))"
   by (meson exists_fresh)
   thus ?thesis by auto
 qed
@@ -339,16 +339,16 @@ lemma map_context_swap_FFVars[simp]:
     map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
   unfolding map_context_def apply(rule map_idI) by auto
 
-lemma ssbij_swap: "ssbij (id(x := z, z := x))"
-  unfolding ssbij_def by (auto simp: supp_swap_bound infinite_UNIV)
+lemma isPerm_swap: "isPerm (id(x := z, z := x))"
+  unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)
 
 lemma G_refresh:
-  assumes "(\<And>t. R t \<Longrightarrow> Ii t)" "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
+  assumes "(\<And>t. R t \<Longrightarrow> Ii t)" "(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t))"
   shows "small B \<Longrightarrow> G B R t \<Longrightarrow>
-  \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
 (*New ported version of the original proof (below); should be more maintainable.*)
-  unfolding G_def Tmap_def
-    (**)ssbij_def conj_assoc[symmetric]
+  unfolding G_def Tperm_def
+    (**)isPerm_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
   apply (elim disj_forward exE; clarsimp)
    apply (((rule exI, rule conjI[rotated], assumption) |
@@ -367,8 +367,8 @@ lemma G_refresh:
           apply (cases t; simp)
          apply assumption+
         apply (frule assms(1)[of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)"])
-        apply (drule assms(2)[rule_format, OF conjI, OF ssbij_swap, of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)" x z])
-        apply (auto simp: Tmap_def extend_eqvt)
+        apply (drule assms(2)[rule_format, OF conjI, OF isPerm_swap, of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)" x z])
+        apply (auto simp: Tperm_def extend_eqvt)
       apply (subst (asm) rrename_swap_FFvars)
         apply (cases t; simp)
         apply (metis fst_conv insert_Diff insert_subset snd_conv wf_ConsE wf_context)
@@ -381,7 +381,7 @@ lemma G_refresh:
     done
   done
 (* Ported version of the original proof (below); should be more maintainable.
-unfolding G_def Tmap_def apply safe
+unfolding G_def Tperm_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
@@ -411,13 +411,13 @@ unfolding G_def Tmap_def apply safe
       apply(subgoal_tac "(\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k)) \<and>
                          x \<notin> FFVars_typ T\<^sub>1")
       apply(subst (asm) extend_eqvt, simp, simp)
-      subgoal apply (auto simp add: ssbij_def)
+      subgoal apply (auto simp add: isPerm_def)
       by (metis image_eqI map_context_swap_FFVars)
-      subgoal by (auto simp add: ssbij_def) . . . . . .
+      subgoal by (auto simp add: isPerm_def) . . . . . .
 *)
 
 (*
-  using fresh[of t] unfolding G_def Tmap_def apply safe
+  using fresh[of t] unfolding G_def Tperm_def apply safe
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
   subgoal by (rule exI[of _ "{}"]) auto
@@ -451,7 +451,7 @@ unfolding G_def Tmap_def apply safe
       prefer 2
       apply assumption
      apply (rule conjI)
-      apply (simp add: ssbij_def)
+      apply (simp add: isPerm_def)
       apply assumption
      apply auto[1]
     apply (subst extend_eqvt)
@@ -478,7 +478,7 @@ unfolding G_def Tmap_def apply safe
 *)
 
 (* The name "PM" of this interpretation stands for "POPLmark" *)
-interpretation Ty: Induct1 where Tmap = Tmap and Tfvars = Tfvars and G = G
+interpretation Ty: Induct1 where Tperm = Tperm and Tsupp = Tsupp and G = G
   apply standard
   using G_mono G_equiv  by auto
 
@@ -513,7 +513,7 @@ subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
     subgoal for v \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
     apply(rule disjI5_5) by fastforce . . .
 
-interpretation ty: Induct where Tmap = Tmap and Tfvars = Tfvars and G = G
+interpretation ty: Induct where Tperm = Tperm and Tsupp = Tsupp and G = G
   apply standard subgoal for R B t
   using G_refresh[of R B t] unfolding ty_I by auto .
 print_theorems
@@ -558,7 +558,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::var set|"
 and r: "\<Gamma> \<turnstile> U <: T"
 shows "(map_context f \<Gamma>) \<turnstile> (rrename_typ f U) <: (rrename_typ f T)"
 using assms unfolding ty_I using Ty.I_equiv[of "(\<Gamma>,U,T)" f]
-unfolding Tmap_def ssbij_def by auto
+unfolding Tperm_def isPerm_def by auto
 
 
 end

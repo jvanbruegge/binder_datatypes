@@ -13,16 +13,16 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
   apply(rule exI[of _ "irrename \<sigma> e1"])  
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"])   
   apply (simp add: iterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
-  apply(subst imkSubst_smap_irrename_inv) unfolding ssbij_def apply auto 
-  apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding ssbij_def apply auto
+  apply(subst imkSubst_smap_irrename_inv) unfolding isPerm_def apply auto 
+  apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
   apply(subst itvsubst_comp) 
     subgoal by (metis SSupp_imkSubst imkSubst_smap_irrename_inv)
     subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
     subgoal apply(rule itvsubst_cong)
       subgoal using SSupp_irrename_bound by blast
-      subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv ssbij_def by auto
+      subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv isPerm_def by auto
    subgoal for x apply simp apply(subst iterm.subst(1))
-      subgoal using card_SSupp_imkSubst_irrename_inv[unfolded ssbij_def] by auto
+      subgoal using card_SSupp_imkSubst_irrename_inv[unfolded isPerm_def] by auto
       subgoal by simp . . . .
 
 lemma hred_reneqv: 

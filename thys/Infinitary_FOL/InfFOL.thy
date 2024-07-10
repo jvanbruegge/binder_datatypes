@@ -243,11 +243,11 @@ thm deduct_def
 
 type_synonym T = "ifol set\<^sub>k \<times> ifol"
 
-definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (map_set\<^sub>k (rrename_ifol' f)) (rrename_ifol' f)"
+definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
+"Tperm f \<equiv> map_prod (map_set\<^sub>k (rrename_ifol' f)) (rrename_ifol' f)"
 
-fun Tfvars :: "T \<Rightarrow> var set" where 
-"Tfvars (e1,e2) = \<Union>(FFVars_ifol' ` set\<^sub>k e1) \<union> FFVars_ifol' e2"
+fun Tsupp :: "T \<Rightarrow> var set" where 
+"Tsupp (e1,e2) = \<Union>(FFVars_ifol' ` set\<^sub>k e1) \<union> FFVars_ifol' e2"
 
 (*interpretation Small where dummy = "undefined :: var" 
 apply standard
@@ -260,9 +260,9 @@ instance k::infinite
   using cinfinite_iff_infinite by blast
 
 interpretation Components where
-Tmap = Tmap and Tfvars = Tfvars
+Tperm = Tperm and Tsupp = Tsupp
 apply standard
-unfolding Tmap_def ssbij_def small_def
+unfolding Tperm_def isPerm_def small_def
 apply (simp add: ifol'.rrename_id0s set\<^sub>k.map_id0)
 apply (rule ext)
 apply (auto simp: set\<^sub>k.map_comp ifol'.rrename_comp0s ifol'.rrename_comps)[1]
@@ -297,8 +297,8 @@ unfolding kmember_def map_fun_def id_o o_id map_set\<^sub>k_def
 unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
 apply transfer apply transfer by blast
 
-lemma in_k_equiv: "ssbij \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
-  unfolding ssbij_def
+lemma in_k_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
+  unfolding isPerm_def
   apply (erule conjE)
   apply (rule iffI)
   apply (drule in_k_equiv'[rotated])
@@ -321,8 +321,8 @@ lemma in_k1_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<
 apply (unfold k1member_def map_fun_def comp_def id_def map_set\<^sub>k\<^sub>1_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I])
 apply transfer apply transfer by blast
 
-lemma in_k1_equiv: "ssbij \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
-  unfolding ssbij_def
+lemma in_k1_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
+  unfolding isPerm_def
   apply (erule conjE)
   apply (rule iffI)
   apply (drule in_k1_equiv'[rotated])
@@ -349,10 +349,10 @@ apply transfer apply transfer by blast
 lemma supp_o_bij: "bij \<sigma> \<Longrightarrow> supp (\<sigma> \<circ> f \<circ> inv \<sigma>) = \<sigma> ` supp f"
 unfolding supp_def using bij_image_Collect_eq by fastforce
 
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
   unfolding G_def
   apply (elim disj_forward exE; cases t)
-  apply (auto simp: Tmap_def ssbij_def ifol'.rrename_comps in_k_equiv)
+  apply (auto simp: Tperm_def isPerm_def ifol'.rrename_comps in_k_equiv)
   apply (rule exI)
   apply (rule conjI)
   apply (rule refl)
@@ -364,7 +364,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R
   apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
   apply (rotate_tac -1)
   apply (drule iffD2[OF in_k1_equiv, of "inv \<sigma>", rotated])
-  apply (unfold ssbij_def)
+  apply (unfold isPerm_def)
   apply (assumption | rule conjI bij_imp_bij_inv supp_inv_bound)+
   apply (subst (asm) set\<^sub>k\<^sub>1.map_comp)
   apply (subst (asm) ifol'.rrename_comp0s)
@@ -390,7 +390,7 @@ lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R
   apply (rule conjI)
   apply assumption
   apply (erule iffD2[OF in_k1_equiv, rotated])
-  apply (unfold ssbij_def)
+  apply (unfold isPerm_def)
   apply (rule conjI)
   apply assumption+
   done
@@ -543,22 +543,22 @@ proof-
   by (smt (verit) UnCI disjoint_iff mem_Collect_eq set\<^sub>k\<^sub>2.map_cong)
 qed
 
-lemma Tvars_set\<^sub>k\<^sub>2: "(Tfvars t - set\<^sub>k\<^sub>2 xs) \<inter> set\<^sub>k\<^sub>2 xs = {}" "|Tfvars t - set\<^sub>k\<^sub>2 xs| <o |UNIV::var set|"
+lemma Tvars_set\<^sub>k\<^sub>2: "(Tsupp t - set\<^sub>k\<^sub>2 xs) \<inter> set\<^sub>k\<^sub>2 xs = {}" "|Tsupp t - set\<^sub>k\<^sub>2 xs| <o |UNIV::var set|"
 apply auto
-using card_of_minus_bound small_def ssmall_Tfvars by blast
+using card_of_minus_bound small_def ssmall_Tsupp by blast
 
 lemma Int_Diff_empty: "A \<inter> (B - C) = {} \<Longrightarrow> A \<inter> C = {} \<Longrightarrow> A \<inter> B = {}"
 by blast
 
 lemma G_refresh: 
-"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
- unfolding G_def Tmap_def ssbij_def conj_assoc[symmetric]
+"(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
+ \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
+ unfolding G_def Tperm_def isPerm_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
   apply (elim disj_forward exE conjE; simp)
   apply (rule exI, rule conjI[rotated], assumption | rule refl | assumption)+
   subgoal for \<Delta> f V
-  apply (rule exE[OF refresh[OF Tvars_set\<^sub>k\<^sub>2, of V "Pair \<Delta> (All V f)", unfolded Tfvars.simps ifol'.set
+  apply (rule exE[OF refresh[OF Tvars_set\<^sub>k\<^sub>2, of V "Pair \<Delta> (All V f)", unfolded Tsupp.simps ifol'.set
       Un_Diff Diff_idemp
    ]])
   apply (erule exE conjE)+
@@ -569,7 +569,7 @@ lemma G_refresh:
   apply (rule conjI)
   apply (unfold small_def)[1]
   apply (meson card_of_image ordLeq_ordLess_trans)
-  apply (metis Int_commute Tfvars.simps Un_Diff_Int Un_empty_right ifol'.set(4) prod.collapse set\<^sub>k\<^sub>2.set_map)
+  apply (metis Int_commute Tsupp.simps Un_Diff_Int Un_empty_right ifol'.set(4) prod.collapse set\<^sub>k\<^sub>2.set_map)
   apply (rule exI[of _ "rrename_ifol' g f"])
   apply (rule exI[of _ VV])
   apply (rule conjI)
@@ -628,7 +628,7 @@ lemma G_refresh:
 
   apply (rule prod.exhaust[of t])
   apply hypsubst
-  apply (unfold fst_conv snd_conv Tfvars.simps triv_forall_equality)
+  apply (unfold fst_conv snd_conv Tsupp.simps triv_forall_equality)
   apply hypsubst_thin
   apply (subst ifol'.set_map)
   using card_of_subset_bound small_def apply blast
@@ -640,7 +640,7 @@ subgoal premises prems for V f \<rho> \<Delta>
     let ?O = "\<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` FFVars_ifol' f \<union> imsupp \<rho> \<union> X \<union> (FFVars_ifol' f - set\<^sub>k\<^sub>2 V)"
     have osmall: "|?O| <o |UNIV::var set|"
       apply (intro var_ifol'_pre_class.Un_bound)
-      apply (metis Tfvars.simps Un_commute card_of_subset_bound small_def ssmall_Tfvars sup_ge2)
+      apply (metis Tsupp.simps Un_commute card_of_subset_bound small_def ssmall_Tsupp sup_ge2)
       using ifol'.set_bd_UNIV small_def small_image apply blast
       apply (meson card_of_mono1 imsupp_supp_bound infinite_UNIV ordLeq_ordLess_trans prems(2) prems(3) small_def)
       using X_def prems(2) small_def apply blast
@@ -747,7 +747,7 @@ subgoal premises prems for V f \<rho> \<Delta>
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
 interpretation Ideduct: Induct where
-Tmap = Tmap and Tfvars = Tfvars and G = G
+Tperm = Tperm and Tsupp = Tsupp and G = G
 apply standard  using G_mono G_equiv G_refresh by auto
 
 lemma ideduct_I: "deduct \<Delta> f = Ideduct.I (\<Delta>, f)"

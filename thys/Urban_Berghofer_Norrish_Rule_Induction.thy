@@ -80,8 +80,8 @@ unfolding varsbpR_def using finite_varsbp_tuple by auto
 
 locale UBN_Components =
 fixes (* 'T: term-like entities *)
-Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
-and Tfvars :: "'T \<Rightarrow> 'A set"
+Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and Tsupp :: "'T \<Rightarrow> 'A set"
 (* *)
 and 
 Abs :: "'A \<Rightarrow> 'T \<Rightarrow> 'T" 
@@ -90,53 +90,53 @@ Op :: "'O \<Rightarrow> 'T list \<Rightarrow> 'T"
 and 
 arity :: "'O \<Rightarrow> nat"
 assumes  
-Tmap_id: "Tmap id = id"
+Tperm_id: "Tperm id = id"
 and 
-Tmap_comp: "\<And>\<sigma> \<tau>. ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) = Tmap \<sigma> o Tmap \<tau>"
+Tperm_comp: "\<And>\<sigma> \<tau>. isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm (\<sigma> o \<tau>) = Tperm \<sigma> o Tperm \<tau>"
 and 
-small_Tfvars: "\<And>t. small (Tfvars t)" 
+small_Tsupp: "\<And>t. small (Tsupp t)" 
 and (* the weaker, inclusion-based version is sufficient (and similarly for V): *)
-Tmap_Tfvars: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> Tfvars (Tmap \<sigma> t) \<subseteq> \<sigma> ` (Tfvars t)"
+Tperm_Tsupp: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
 and 
-Tmap_cong_id: "\<And>t \<sigma>. ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars t. \<sigma> a = a) \<Longrightarrow> Tmap \<sigma> t = t"
+Tperm_cong_id: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
 (* so far, the above was a common part with our "Components" locale *)
 and
 (* Equivariance of abstraction and of the operations (the first variable-convention compatibility 
 convention from UBN): *)
-Abs_equiv: "\<And>\<sigma> a t. ssbij \<sigma> \<Longrightarrow> Tmap \<sigma> (Abs a t) = Abs (\<sigma> a) (Tmap \<sigma> t)"
+Abs_equiv: "\<And>\<sigma> a t. isPerm \<sigma> \<Longrightarrow> Tperm \<sigma> (Abs a t) = Abs (\<sigma> a) (Tperm \<sigma> t)"
 and
-Op_equiv: "\<And>\<sigma> op ts. ssbij \<sigma> \<Longrightarrow> length ts = arity op \<Longrightarrow> Tmap \<sigma> (Op op ts) = Op op (map (Tmap \<sigma>) ts)"
+Op_equiv: "\<And>\<sigma> op ts. isPerm \<sigma> \<Longrightarrow> length ts = arity op \<Longrightarrow> Tperm \<sigma> (Op op ts) = Op op (map (Tperm \<sigma>) ts)"
 begin
 
-lemma Tmap_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap (\<sigma> o \<tau>) t = Tmap \<sigma> (Tmap \<tau> t)"
-using Tmap_comp by fastforce 
+lemma Tperm_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm (\<sigma> o \<tau>) t = Tperm \<sigma> (Tperm \<tau> t)"
+using Tperm_comp by fastforce 
 
 (* Extension of the term infrastructure to term-tuples: *)
 (* *) 
-fun Tfvars_tuple :: "'T T_tuple \<Rightarrow> 'A set" where 
-"Tfvars_tuple ts = \<Union> (Tfvars ` (set ts))"
+fun Tsupp_tuple :: "'T T_tuple \<Rightarrow> 'A set" where 
+"Tsupp_tuple ts = \<Union> (Tsupp ` (set ts))"
 
-fun Tmap_tuple :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T T_tuple \<Rightarrow> 'T T_tuple" where 
-"Tmap_tuple f ts = map (Tmap f) ts"
+fun Tperm_tuple :: "('A \<Rightarrow> 'A) \<Rightarrow> 'T T_tuple \<Rightarrow> 'T T_tuple" where 
+"Tperm_tuple f ts = map (Tperm f) ts"
 
-lemma Tmap_tuple_id: "Tmap_tuple id = id"
-using Tmap_id by auto
+lemma Tperm_tuple_id: "Tperm_tuple id = id"
+using Tperm_id by auto
 
-lemma Tmap_tuple_comp: "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap_tuple (\<sigma> o \<tau>) = Tmap_tuple \<sigma> o Tmap_tuple \<tau>"
-using Tmap_comp by auto
+lemma Tperm_tuple_comp: "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm_tuple (\<sigma> o \<tau>) = Tperm_tuple \<sigma> o Tperm_tuple \<tau>"
+using Tperm_comp by auto
 
-lemma small_Tfvars_tuple: "small (Tfvars_tuple ts)" 
-by (auto intro: finite_UN_small simp: small_Tfvars)
+lemma small_Tsupp_tuple: "small (Tsupp_tuple ts)" 
+by (auto intro: finite_UN_small simp: small_Tsupp)
 
-lemma Tmap_tuple_Tfvars_tuple: 
-"ssbij \<sigma> \<Longrightarrow> Tfvars_tuple (Tmap_tuple \<sigma> ts) \<subseteq> \<sigma> ` (Tfvars_tuple ts)"
-using Tmap_Tfvars by fastforce
+lemma Tperm_tuple_Tsupp_tuple: 
+"isPerm \<sigma> \<Longrightarrow> Tsupp_tuple (Tperm_tuple \<sigma> ts) \<subseteq> \<sigma> ` (Tsupp_tuple ts)"
+using Tperm_Tsupp by fastforce
 
-lemma Tmap_tuple_cong_id: "ssbij \<sigma> \<Longrightarrow> (\<forall>a\<in>Tfvars_tuple ts. \<sigma> a = a) \<Longrightarrow> Tmap_tuple \<sigma> ts = ts"
-by (simp add: Tmap_cong_id map_idI) 
+lemma Tperm_tuple_cong_id: "isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp_tuple ts. \<sigma> a = a) \<Longrightarrow> Tperm_tuple \<sigma> ts = ts"
+by (simp add: Tperm_cong_id map_idI) 
 
-lemma Tmap_tuple_comp': "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Tmap_tuple (\<sigma> o \<tau>) ts = Tmap_tuple \<sigma> (Tmap_tuple \<tau> ts)"
-using Tmap_tuple_comp by fastforce
+lemma Tperm_tuple_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm_tuple (\<sigma> o \<tau>) ts = Tperm_tuple \<sigma> (Tperm_tuple \<tau> ts)"
+using Tperm_tuple_comp by fastforce
 
 (* Interpretation of schematic terms: *)
 fun it :: "(vvar \<Rightarrow> 'A) \<Rightarrow> (tvar \<Rightarrow> 'T) \<Rightarrow> 'O sT \<Rightarrow> 'T" where 
@@ -151,21 +151,21 @@ fun it_tuple :: "(vvar \<Rightarrow> 'A) \<Rightarrow> (tvar \<Rightarrow> 'T) \
 
 (* Consequences of the equivariance assumptions: *)
 
-lemma it_Tmap: "ssbij \<sigma> \<Longrightarrow> wfST arity st \<Longrightarrow> Tmap \<sigma> (it vval tval st) = it (\<sigma> \<circ> vval) (Tmap \<sigma> \<circ> tval) st" 
+lemma it_Tperm: "isPerm \<sigma> \<Longrightarrow> wfST arity st \<Longrightarrow> Tperm \<sigma> (it vval tval st) = it (\<sigma> \<circ> vval) (Tperm \<sigma> \<circ> tval) st" 
 apply(induct st, simp_all) 
 using Abs_equiv apply simp_all
 by (smt (verit) Op_equiv comp_apply length_map list.map_comp map_eq_conv)
 
-lemma it_tuple_Tmap_tuple: "ssbij \<sigma> \<Longrightarrow> 
+lemma it_tuple_Tperm_tuple: "isPerm \<sigma> \<Longrightarrow> 
 wfST_tuple arity sts \<Longrightarrow> 
-Tmap_tuple \<sigma> (it_tuple vval tval sts) = it_tuple (\<sigma> \<circ> vval) (Tmap \<sigma> \<circ> tval) sts"
-using it_Tmap by auto
+Tperm_tuple \<sigma> (it_tuple vval tval sts) = it_tuple (\<sigma> \<circ> vval) (Tperm \<sigma> \<circ> tval) sts"
+using it_Tperm by auto
 
 end (* locale UBN_Components *)
 
 (* TODO: eventually switch from 'T to "'T list" to better match UBN *)
-locale UBN = UBN_Components Tmap Tfvars Abs Op arity 
-for Tmap :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T" and Tfvars :: "'T \<Rightarrow> 'A set"
+locale UBN = UBN_Components Tperm Tsupp Abs Op arity 
+for Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T" and Tsupp :: "'T \<Rightarrow> 'A set"
 (* *)
 and Abs :: "'A \<Rightarrow> 'T \<Rightarrow> 'T" and Op :: "'O \<Rightarrow> 'T list \<Rightarrow> 'T" 
 and arity :: "'O \<Rightarrow> nat"
@@ -179,14 +179,14 @@ wfR_rules:
 and 
 (* *)
 side_equiv: (* The side-conditions in the rules must be equivariant: *)
-"\<And>rl \<sigma> pred ss. rl \<in> rules \<Longrightarrow> ssbij \<sigma> \<Longrightarrow> 
+"\<And>rl \<sigma> pred ss. rl \<in> rules \<Longrightarrow> isPerm \<sigma> \<Longrightarrow> 
     Scond pred ss \<in> set (side rl) \<Longrightarrow> pred (it_tuple vval tval ss) \<Longrightarrow> 
-    pred (Tmap_tuple \<sigma> (it_tuple vval tval ss))"
+    pred (Tperm_tuple \<sigma> (it_tuple vval tval ss))"
 and 
 VCcomp2: (* the second variable-convention compatibility condition from UBN: *)
 "\<And>rl vval tval. rl \<in> rules \<Longrightarrow> 
    (\<forall>pred ss. Scond pred ss \<in> set (side rl) \<longrightarrow> pred (it_tuple vval tval ss)) \<Longrightarrow> 
-   vval ` (varsbpR rl) \<inter> Tfvars_tuple (it_tuple vval tval (conc rl)) = {}"
+   vval ` (varsbpR rl) \<inter> Tsupp_tuple (it_tuple vval tval (conc rl)) = {}"
 begin
 
 definition G' where 
@@ -230,13 +230,13 @@ type_synonym 'a V = "'a list"
 definition Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'A V \<Rightarrow> 'A V" where "Vmap \<equiv> map"
 definition Vfvars :: "'A V \<Rightarrow> 'A set" where "Vfvars \<equiv> set"
 
-lemma Vmap_comp: "ssbij \<sigma> \<Longrightarrow> ssbij \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
+lemma Vmap_comp: "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
 unfolding Vmap_def by auto
 
 lemma small_Vfvars: "small (Vfvars v)" 
 unfolding Vfvars_def small_def by (simp add: inf_A)
 
-lemma Vmap_Vfvars: "ssbij \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
+lemma Vmap_Vfvars: "isPerm \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
 unfolding Vmap_def Vfvars_def by auto
 *)
 
@@ -244,31 +244,31 @@ lemma G_mono: "R \<le> R' \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
 unfolding G_def le_fun_def by auto blast
  
 lemma G_equiv: 
-assumes "ssbij \<sigma>" "small B" "G B R ts" 
-shows "G  (image \<sigma> B) (\<lambda>t'. R (Tmap_tuple (inv \<sigma>) t')) (Tmap_tuple \<sigma> ts)"
+assumes "isPerm \<sigma>" "small B" "G B R ts" 
+shows "G  (image \<sigma> B) (\<lambda>t'. R (Tperm_tuple (inv \<sigma>) t')) (Tperm_tuple \<sigma> ts)"
 using assms unfolding G_def apply safe subgoal for rl vval tval
 apply(rule exI[of _ rl]) apply(rule exI[of _ "\<sigma> o vval"])
-apply(rule exI[of _ "Tmap \<sigma> o tval"]) apply(intro conjI)
+apply(rule exI[of _ "Tperm \<sigma> o tval"]) apply(intro conjI)
   subgoal by auto
-  subgoal apply(subst it_tuple_Tmap_tuple) using wfR_rules unfolding wfR_def by auto
+  subgoal apply(subst it_tuple_Tperm_tuple) using wfR_rules unfolding wfR_def by auto
   subgoal by auto
   subgoal apply safe subgoal for pred ss
-  apply(subst it_tuple_Tmap_tuple[symmetric])
+  apply(subst it_tuple_Tperm_tuple[symmetric])
     subgoal by auto
     subgoal using wfR_rules unfolding wfR_def by auto
     subgoal apply(rule side_equiv) by auto . .  
   subgoal apply safe subgoal for ts 
-  apply(subst it_tuple_Tmap_tuple[symmetric]) 
+  apply(subst it_tuple_Tperm_tuple[symmetric]) 
     subgoal by auto
     subgoal using wfR_rules unfolding wfR_def by auto
-    subgoal apply(subst Tmap_tuple_comp'[symmetric])
-      subgoal using ssbij_inv by blast
+    subgoal apply(subst Tperm_tuple_comp'[symmetric])
+      subgoal using isPerm_inv by blast
       subgoal .
-      subgoal by (simp add: Tmap_id ssbij_invR) . . . . .
+      subgoal by (simp add: Tperm_id isPerm_invR) . . . . .
 
 lemma G_fresh_simple: 
 assumes "small B" "G B R ts"
-shows "B \<inter> Tfvars_tuple ts = {}"
+shows "B \<inter> Tsupp_tuple ts = {}"
 using assms unfolding G_def apply(elim exE conjE) 
 subgoal for rl vval tval apply(frule VCcomp2) by auto . 
 
@@ -276,11 +276,11 @@ end (* context UBN *)
 
  
 (* The UBN result is subsumed by ours: *)
-sublocale UBN < UBN: Induct_simple where Tmap = Tmap_tuple 
-and Tfvars = Tfvars_tuple and G = G apply standard
-using small_Tfvars_tuple Tmap_tuple_Tfvars_tuple Tmap_tuple_cong_id 
+sublocale UBN < UBN: Induct_simple where Tperm = Tperm_tuple 
+and Tsupp = Tsupp_tuple and G = G apply standard
+using small_Tsupp_tuple Tperm_tuple_Tsupp_tuple Tperm_tuple_cong_id 
 G_equiv G_fresh_simple
-by (auto simp: Tmap_id Tmap_comp' G_mono)  
+by (auto simp: Tperm_id Tperm_comp' G_mono)  
 
 
 

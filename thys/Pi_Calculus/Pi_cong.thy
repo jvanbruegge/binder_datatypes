@@ -21,11 +21,11 @@ type_synonym T = "trm \<times> trm"
 type_synonym V = "var list" 
 
 
-definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (rrename f) (rrename f)"
+definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
+"Tperm f \<equiv> map_prod (rrename f) (rrename f)"
 
-fun Tfvars :: "T \<Rightarrow> var set" where 
-"Tfvars (e1,e2) = FFVars e1 \<union> FFVars e2"
+fun Tsupp :: "T \<Rightarrow> var set" where 
+"Tsupp (e1,e2) = FFVars e1 \<union> FFVars e2"
 
 (*
 definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where 
@@ -36,8 +36,8 @@ fun Vfvars :: "V \<Rightarrow> var set" where
 *)
 
 interpretation Components where
-Tmap = Tmap and Tfvars = Tfvars
-apply standard unfolding ssbij_def Tmap_def 
+Tperm = Tperm and Tsupp = Tsupp
+apply standard unfolding isPerm_def Tperm_def 
   using small_Un small_def term.card_of_FFVars_bounds
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s infinite_UNIV) 
   by blast
@@ -56,50 +56,50 @@ definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<
 lemma GG_mono: "R \<le> R' \<Longrightarrow> G v R t \<Longrightarrow> G v R' t"
   unfolding G_def by force
 
-lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+lemma GG_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
   unfolding G_def
   by (elim disj_forward exE; cases t)
-    (auto simp: Tmap_def ssbij_def term.rrename_comps
+    (auto simp: Tperm_def isPerm_def term.rrename_comps
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
 
 (* same proofs as for transition *)
-lemma finite_Tfvars: "finite (Tfvars t)"
-  using finite_iff_le_card_var small_Tfvars small_def by blast
+lemma finite_Tsupp: "finite (Tsupp t)"
+  using finite_iff_le_card_var small_Tsupp small_def by blast
 
 lemma exists_fresh:
-"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tfvars t)"
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tsupp t)"
 proof-
-  have 0: "|set xs \<union> \<Union> (Tfvars ` (set ts))| <o |UNIV::var set|" 
+  have 0: "|set xs \<union> \<Union> (Tsupp ` (set ts))| <o |UNIV::var set|" 
   unfolding ls_UNIV_iff_finite  
-  using finite_Tfvars by blast
-  then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts))"
+  using finite_Tsupp by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tsupp ` (set ts))"
   by (meson ex_new_if_finite finite_iff_le_card_var 
     infinite_iff_natLeq_ordLeq var_term_pre_class.large)
   thus ?thesis by auto
 qed
 
-lemma ssbij_swap: "ssbij (id(x := y, y := x))"
-  by (auto simp: ssbij_def MRBNF_FP.supp_swap_bound infinite_UNIV)
+lemma isPerm_swap: "isPerm (id(x := y, y := x))"
+  by (auto simp: isPerm_def MRBNF_FP.supp_swap_bound infinite_UNIV)
 
 lemma R_forw_subst: "R (x, y) \<Longrightarrow> (\<And>x y. R (x, y) \<Longrightarrow> R (f x, g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x, z)"
   by blast
 
 lemma G_refresh: 
-  assumes "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
-  shows "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  assumes "(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t))"
+  shows "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
 unfolding G_def
-(**)ssbij_def conj_assoc[symmetric]
+(**)isPerm_def conj_assoc[symmetric]
 unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
     ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
 apply (elim disj_forward exE; simp; clarsimp)
         apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set))+) [3]
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set))+) [3]
   done
 
 interpretation Cong: Induct where 
-Tmap = Tmap and Tfvars = Tfvars and G = G
+Tperm = Tperm and Tsupp = Tsupp and G = G
 apply standard 
   using GG_mono GG_equiv G_refresh by auto
 
@@ -163,7 +163,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::var set|"
 and r: "P \<equiv>\<^sub>\<pi> Q" 
 shows "rrename f P \<equiv>\<^sub>\<pi> rrename f Q"
 using assms unfolding cong_I using Cong.I_equiv[of "(P,Q)" f]
-unfolding Tmap_def ssbij_def by auto
+unfolding Tperm_def isPerm_def by auto
 
 inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightarrow>)" 30) where
   "Par (Out x z P) (Inp x y Q) \<rightarrow> Par P (usub Q z y)"
@@ -183,23 +183,23 @@ definition G_trans :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow
 lemma GG_trans_mono: "R \<le> R' \<Longrightarrow> G_trans v R t \<Longrightarrow> G_trans v R' t"
   unfolding G_trans_def by blast
 
-lemma GG_trans_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G_trans B R t \<Longrightarrow> G_trans (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+lemma GG_trans_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G_trans B R t \<Longrightarrow> G_trans (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
   unfolding G_trans_def
   apply (elim disj_forward exE; cases t)
-  apply  (auto simp: Tmap_def ssbij_def term.rrename_comps
+  apply  (auto simp: Tperm_def isPerm_def term.rrename_comps
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
   by (metis Pi_cong.rrename_cong bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
 
 lemma G_trans_refresh: 
-  assumes "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
-  shows "small B \<Longrightarrow> G_trans B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G_trans C R t"
+  assumes "(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t))"
+  shows "small B \<Longrightarrow> G_trans B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G_trans C R t"
 unfolding G_trans_def
-(**)ssbij_def conj_assoc[symmetric]
+(**)isPerm_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
     ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
   apply (elim disj_forward exE; simp; clarsimp)
-  apply (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set)
+  apply (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set)
   subgoal for x z P y Q
     apply (rule exE[OF exists_fresh[of "[x, y, z]" "[(P, Q)]"]])
     subgoal for w
@@ -208,12 +208,12 @@ unfolding G_trans_def
       by (meson Inp_refresh usub_refresh)
     done
   apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set))+)
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set))+)
   done
 
 interpretation Trans: Induct where
-Tmap = Tmap and Tfvars = Tfvars and G = G_trans
+Tperm = Tperm and Tsupp = Tsupp and G = G_trans
 apply standard 
   using GG_trans_mono GG_trans_equiv G_trans_refresh by auto
 
@@ -264,6 +264,6 @@ assumes f: "bij f" "|supp f| <o |UNIV::var set|"
 and r: "trans P Q" 
 shows "trans (rrename f P) (rrename f Q)"
 using assms unfolding trans_I using Trans.I_equiv[of "(P,Q)" f]
-unfolding Tmap_def ssbij_def by auto
+unfolding Tperm_def isPerm_def by auto
 
 end

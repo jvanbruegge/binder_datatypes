@@ -84,11 +84,11 @@ type_synonym T = "trm \<times> cmt"
 type_synonym V = "var list" 
 
 
-definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (rrename f) (rrename_commit f)"
+definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
+"Tperm f \<equiv> map_prod (rrename f) (rrename_commit f)"
 
-fun Tfvars :: "T \<Rightarrow> var set" where 
-"Tfvars (e1,e2) = FFVars e1 \<union> FFVars_commit e2"
+fun Tsupp :: "T \<Rightarrow> var set" where 
+"Tsupp (e1,e2) = FFVars e1 \<union> FFVars_commit e2"
 
 (*
 definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where 
@@ -101,8 +101,8 @@ fun Vfvars :: "V \<Rightarrow> var set" where
 lemmas commit_internal.FFVars_rrenames[simp]
 
 interpretation Components where 
-Tmap = Tmap and Tfvars = Tfvars
-apply standard unfolding ssbij_def Tmap_def 
+Tperm = Tperm and Tsupp = Tsupp
+apply standard unfolding isPerm_def Tperm_def 
   using small_Un small_def term.card_of_FFVars_bounds
     commit_internal.card_of_FFVars_bounds(2)
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s 
@@ -166,10 +166,10 @@ unfolding G_def by (smt (z3) le_boolE le_funD)
  
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+lemma GG_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
   unfolding G_def
   by (elim disj_forward exE; cases t)
-    (auto simp: Tmap_def ssbij_def
+    (auto simp: Tperm_def isPerm_def
          term.rrename_comps action.map_comp action.map_id
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | (rule exI[of _ "map_action \<sigma> _"])
@@ -182,7 +182,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   subgoal apply(elim exE) subgoal for x a u P
   apply(rule exI[of _ "\<sigma> x"]) apply(rule exI[of _ "\<sigma> a"]) 
   apply(rule exI[of _ "\<sigma> u"]) apply(rule exI[of _ "rrename \<sigma> P"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   by (simp add: term.rrename_comps) . . 
   (* Open: *)
   subgoal apply(rule disjI7_2)
@@ -190,7 +190,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   apply(rule exI[of _ "rrename \<sigma> P"])
   apply(rule exI[of _ "\<sigma> a"]) apply(rule exI[of _ "\<sigma> x"])
   apply(rule exI[of _ "rrename \<sigma> P'"])   
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   by (simp add: term.rrename_comps) . . 
   (* ScopeF: *)
   subgoal apply(rule disjI7_3)
@@ -199,7 +199,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   apply(rule exI[of _ "map_action \<sigma> act"])
   apply(rule exI[of _ "rrename \<sigma> P'"])
   apply(rule exI[of _ "\<sigma> x"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def  
+  apply(cases t) unfolding isPerm_def small_def Tperm_def  
   apply (simp add: term.rrename_comps) 
   by (auto simp add: action.map_id action.map_comp) . .
   (* ScopeB: *)
@@ -210,7 +210,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   apply(rule exI[of _ "\<sigma> x"]) 
   apply(rule exI[of _ "rrename \<sigma> P'"])
   apply(rule exI[of _ "\<sigma> y"])   
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   apply (simp add: term.rrename_comps) 
   by auto . .
   (* Par1: *)
@@ -220,7 +220,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   apply(rule exI[of _ "map_action \<sigma> act"])
   apply(rule exI[of _ "rrename \<sigma> P1'"])
   apply(rule exI[of _ "rrename \<sigma> P2"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   apply (simp add: term.rrename_comps)  
   by (auto simp add: action.map_id action.map_comp) . .
   (* Com1: *)
@@ -232,7 +232,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   apply(rule exI[of _ "rrename \<sigma> P1'"])
   apply(rule exI[of _ "rrename \<sigma> P2"])
   apply(rule exI[of _ "rrename \<sigma> P2'"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   by (simp add: term.rrename_comps) . .
   (* Close1: *)
   subgoal apply(rule disjI7_7)
@@ -243,7 +243,7 @@ lemma GG_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B 
   apply(rule exI[of _ "rrename \<sigma> P1'"])
   apply(rule exI[of _ "rrename \<sigma> P2"])
   apply(rule exI[of _ "rrename \<sigma> P2'"])
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   apply (simp add: term.rrename_comps)
   by auto . . .
 *)
@@ -259,16 +259,16 @@ find_theorems FFVars vvsubst
 
 (* Supply of fresh variables: *)
 
-lemma finite_Tfvars: "finite (Tfvars t)"
-using finite_iff_le_card_var small_Tfvars small_def by blast
+lemma finite_Tsupp: "finite (Tsupp t)"
+using finite_iff_le_card_var small_Tsupp small_def by blast
 
 lemma exists_fresh:
-"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tfvars t)"
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tsupp t)"
 proof-
-  have 0: "|set xs \<union> \<Union> (Tfvars ` (set ts))| <o |UNIV::var set|" 
+  have 0: "|set xs \<union> \<Union> (Tsupp ` (set ts))| <o |UNIV::var set|" 
   unfolding ls_UNIV_iff_finite  
-  using finite_Tfvars by blast
-  then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts))"
+  using finite_Tsupp by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tsupp ` (set ts))"
   by (meson ex_new_if_finite finite_iff_le_card_var 
     infinite_iff_natLeq_ordLeq var_term_pre_class.large)
   thus ?thesis by auto
@@ -278,12 +278,12 @@ lemma finite_vars: "finite (vars act)"
   by (cases act) auto
 
 lemma exists_fresh':
-"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set as. z \<notin> vars t) \<and> (\<forall>t \<in> set ts. z \<notin> Tfvars t)"
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set as. z \<notin> vars t) \<and> (\<forall>t \<in> set ts. z \<notin> Tsupp t)"
 proof-
-  have 0: "|set xs \<union> \<Union> (Tfvars ` (set ts)) \<union> \<Union> (vars ` (set as))| <o |UNIV::var set|" 
+  have 0: "|set xs \<union> \<Union> (Tsupp ` (set ts)) \<union> \<Union> (vars ` (set as))| <o |UNIV::var set|" 
   unfolding ls_UNIV_iff_finite
-  using finite_Tfvars finite_vars by blast
-  then obtain x where "x \<notin> set xs \<union> \<Union> (Tfvars ` (set ts)) \<union> \<Union> (vars ` (set as))"
+  using finite_Tsupp finite_vars by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tsupp ` (set ts)) \<union> \<Union> (vars ` (set as))"
   by (meson ex_new_if_finite finite_iff_le_card_var 
     infinite_iff_natLeq_ordLeq var_term_pre_class.large)
   thus ?thesis by auto
@@ -299,8 +299,8 @@ ML \<open>fun gen_fresh ctxt xs0 acts0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn 
     val thm = infer_instantiate' ctxt [SOME xs, SOME acts, SOME ts] @{thm exists_fresh'} RS exE;
   in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
 
-lemma ssbij_swap: "ssbij (id(x := y, y := x))"
-  by (auto simp: ssbij_def MRBNF_FP.supp_swap_bound infinite_UNIV)
+lemma isPerm_swap: "isPerm (id(x := y, y := x))"
+  by (auto simp: isPerm_def MRBNF_FP.supp_swap_bound infinite_UNIV)
 
 lemma R_forw_subst: "R (x, y) \<Longrightarrow> (\<And>x y. R (x, y) \<Longrightarrow> R (f x, g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x, z)"
   by blast
@@ -330,16 +330,16 @@ with x and (the fresh) xx swapped, whereas the non-affected ones are passed
 as they are. 
 *)
 lemma G_refresh: 
-  assumes "(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t))"
-  shows "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
+  assumes "(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t))"
+  shows "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
 unfolding G_def
-(**)ssbij_def conj_assoc[symmetric]
+(**)isPerm_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
     ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
   apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [] [@{term t}])\<close>; clarsimp)
         apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [3]
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [3]
   subgoal for P a x P' y z1 z2
     apply (rule exI[of _ "swap P y z1"])
     apply (rule exI[of _ a])
@@ -359,7 +359,7 @@ unfolding G_def
     apply (rule conjI)
      apply (cases t; simp)
     apply (smt (verit, best) image_iff sw_diff sw_eqR)
-    apply (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
+    apply (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
     apply (rule conjI)
      apply (cases t; simp)
      apply (smt (verit, best) image_iff sw_diff sw_eqR)
@@ -384,8 +384,8 @@ unfolding G_def
       done
     done
     apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
-        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap]]]; simp?)
-        | (cases t; auto simp only: fst_conv snd_conv Tfvars.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) []
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) []
   subgoal for P1 a x P1' P2 P2' z1 z2
     apply (rule exI[of _ a])
     apply (rule exI[of _ z1])
@@ -396,15 +396,15 @@ unfolding G_def
         apply (cases t; simp add: Res_refresh[of z1 "Par P1' P2'" x])
        apply assumption
       apply (cases t; simp)
-     apply (drule assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap], of _ _ x z1])
+     apply (drule assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap], of _ _ x z1])
      apply (cases t; simp)
-    apply (drule assms[unfolded Tmap_def, simplified, rule_format, OF conjI[OF ssbij_swap], of _ _ x z1])
+    apply (drule assms[unfolded Tperm_def, simplified, rule_format, OF conjI[OF isPerm_swap], of _ _ x z1])
     apply (cases t; simp)
     apply (metis Bout_inj)
     done
 (*
   using assms
-unfolding G_def Tmap_def apply(elim disjE exE conjE)
+unfolding G_def Tperm_def apply(elim disjE exE conjE)
   (* Inp: *) 
   subgoal for x a u P
   using exists_fresh[of "[]" "[t]"] apply(elim exE conjE)
@@ -412,7 +412,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI7_1) 
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "a"])
@@ -427,7 +427,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI7_2) 
     apply(rule exI[of _ "swap P x xx"])
     apply(rule exI[of _ "a"]) 
@@ -439,7 +439,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
       apply(erule allE[of _ "id(x:=xx,xx:=x)"])
       apply(erule allE[of _ "P"])
       apply(erule allE[of _ "Fout a x P'"]) 
-      by (auto simp: ssbij_def split: if_splits ) . .
+      by (auto simp: isPerm_def split: if_splits ) . .
   (* ScopeF: *)
   subgoal for P act P' x
     unfolding not_is_bout_bvars
@@ -449,7 +449,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ "{xx}"])  
     apply(intro conjI)
       subgoal by simp
-      subgoal unfolding ssbij_def small_def by auto 
+      subgoal unfolding isPerm_def small_def by auto 
       subgoal apply(rule disjI7_3) 
       apply(rule exI[of _ "swap P x xx"])
       apply(rule exI[of _ "swapa act x xx"]) 
@@ -463,7 +463,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
         subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
         apply(erule allE[of _ "P"])
         apply(erule allE[of _ "Cmt act P'"]) 
-        by (auto simp: ssbij_def split: if_splits ) . . . .
+        by (auto simp: isPerm_def split: if_splits ) . . . .
   (* ScopeB: *)
   subgoal for P a x P' y
   using exists_fresh[of "[a,x,y]" "[t]"] apply(elim exE conjE)
@@ -473,7 +473,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
   apply(rule exI[of _ "{xx,yy}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def  by auto 
+    subgoal unfolding isPerm_def small_def  by auto 
     subgoal apply(rule disjI7_4)
     apply(rule exI[of _ "swap P y yy"])
     apply(rule exI[of _ "a"]) 
@@ -485,7 +485,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
       apply(erule allE[of _ "P"])
       apply(erule allE[of _ "Bout a x P'"]) 
       apply clarify apply(rule exI[of _ yy])     
-      apply (simp add: ssbij_def rrename_o_swap split: if_splits)
+      apply (simp add: isPerm_def rrename_o_swap split: if_splits)
       apply safe 
         subgoal using infinite_var not_ordLeq_ordLess supp_comp_bound by blast
         subgoal by (metis (no_types, lifting) Res_inject_swap Res_refresh) 
@@ -504,7 +504,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ "{}"])  
     apply(intro conjI)
       subgoal by simp
-      subgoal unfolding ssbij_def small_def by auto 
+      subgoal unfolding isPerm_def small_def by auto 
       subgoal apply(rule disjI7_5) 
       apply(rule exI[of _ P1])
       apply(rule exI[of _ act]) 
@@ -518,7 +518,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
     apply(rule exI[of _ "{bb}"])  
     apply(intro conjI)
       subgoal by simp
-      subgoal unfolding ssbij_def small_def by auto 
+      subgoal unfolding isPerm_def small_def by auto 
       subgoal apply(rule disjI7_5)
       apply(rule exI[of _ P1]) 
       apply(rule exI[of _ "bout a bb"]) 
@@ -531,7 +531,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI7_6) 
       apply(rule exI[of _ P1])
       apply(rule exI[of _ a]) 
@@ -547,7 +547,7 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI7_7)
     apply(rule exI[of _ "swap P1 x xx"]) 
     apply(rule exI[of _ a]) 
@@ -560,18 +560,18 @@ unfolding G_def Tmap_def apply(elim disjE exE conjE)
       subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
       apply(erule allE[of _ "P1"])
       apply(erule allE[of _ "Finp a x P1'"])      
-      by (auto simp: ssbij_def split: if_splits)  
+      by (auto simp: isPerm_def split: if_splits)  
       subgoal apply(erule allE[of _ "id(x:=xx,xx:=x)"])
       apply(erule allE[of _ "P1"])
       apply(erule allE[of _ "Bout a x P1'"])      
-      apply (simp add: ssbij_def split: if_splits)  
+      apply (simp add: isPerm_def split: if_splits)  
       by (metis Bout_inj)+ . . .
 *) .
 
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
 interpretation Trans: Induct where
-Tmap = Tmap and Tfvars = Tfvars and G = G
+Tperm = Tperm and Tsupp = Tsupp and G = G
 apply standard 
   using GG_mono GG_equiv G_refresh by auto
 
@@ -680,7 +680,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::var set|"
 and r: "trans P C" 
 shows "trans (rrename f P) (rrename_commit f C)"
 using assms unfolding trans_I using Trans.I_equiv[of "(P,C)" f]
-unfolding Tmap_def ssbij_def by auto
+unfolding Tperm_def isPerm_def by auto
 
 
 

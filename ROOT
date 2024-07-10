@@ -75,6 +75,10 @@ session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untype
     Translation_ILC_to_LC
     Iso_LC_ILC
 
+session Infinitary_FOL in "thys/Infinitary_FOL" = Binders +
+  theories
+    InfFOL
+
 session Process_Calculus in "thys/Pi_Calculus" = Binders +
   theories
     Pi

@@ -7,7 +7,7 @@ let
   val name1 = "commit_internal"
   val name2 = "commit"
   val T1 = @{typ "'var term"}
-  val T2 = @{typ "'var * 'var * 'var term +'var * 'var * 'var term + 'var * 'bvar * 'brec + 'var term"}
+  val T2 = @{typ "'var * 'var * 'var term +'var * 'var * 'var term + 'var * 'bvar * 'brec + 'var term + 'var * 'bvar * 'brec"}
   val Xs = map dest_TFree []
   val resBs = map dest_TFree [@{typ 'var}, @{typ 'bvar}, @{typ 'brec}, @{typ 'rec}]
   val rel = [[0]]
@@ -57,7 +57,9 @@ definition Fout :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" w
 definition Bout :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" where
   "Bout x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inl (x, y, commit_internal_ctor (Abs_commit_internal_pre t))))))"
 definition Tau :: "trm \<Rightarrow> cmt" where
-  "Tau t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inr t))))"
+  "Tau t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inr (Inl t)))))"
+definition Binp :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" where
+  "Binp x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inr (Inr (x, y, commit_internal_ctor (Abs_commit_internal_pre t)))))))"
 
 lemmas toUnfold = set1_commit_internal_pre_def
   UN_empty UN_empty2 UN_single Un_empty_left Un_empty_right
@@ -75,28 +77,15 @@ lemmas toUnfold = set1_commit_internal_pre_def
 lemma FFVars_commit_simps[simp]:
   "FFVars_commit (Finp x y t) = {x, y} \<union> FFVars t"
   "FFVars_commit (Fout x y t) = {x, y} \<union> FFVars t"
+  "FFVars_commit (Binp x y t) = {x} \<union> (FFVars t - {y})"
   "FFVars_commit (Bout x y t) = {x} \<union> (FFVars t - {y})"
   "FFVars_commit (Tau t) = FFVars t"
-  apply (unfold Bout_def Finp_def Fout_def Tau_def)
-  apply (rule trans)
-     apply (rule commit_internal.FFVars_cctors)
-    defer
-    apply (rule trans, rule commit_internal.FFVars_cctors)
-    defer
-    apply (rule trans, rule commit_internal.FFVars_cctors)
+  apply (unfold Binp_def Bout_def Finp_def Fout_def Tau_def)
+  apply (unfold commit_internal.FFVars_cctors(2))
   apply (unfold toUnfold)
-    apply (rule arg_cong2[OF refl, of _ _ "(\<union>)"])
-apply (rule arg_cong2[OF _ refl, of _ _ minus])
-  apply (rule trans)
-   apply (rule commit_internal.FFVars_cctors)
+      apply (unfold commit_internal.FFVars_cctors(1))
   apply (unfold toUnfold)
-    apply auto
-  subgoal
-    unfolding commit_internal.FFVars_cctors(2)
-    apply (unfold toUnfold) by auto
-  subgoal
-    unfolding commit_internal.FFVars_cctors(2)
-    apply (unfold toUnfold) by auto
+  apply auto
   done
 
 lemmas commit_pre.map_id0[simp]
@@ -120,10 +109,17 @@ unfolding map_commit_pre_def toUnfold apply auto
 unfolding commit_internal.rrename_cctors(1)
 unfolding map_commit_internal_pre_def by (simp add: toUnfold(27))
 
-lemma map_commit_pre_Inr_Inr_Inr_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
- map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (rrename_commit_internal f) id (Abs_commit_pre (Inr (Inr (Inr P)))) =
- Abs_commit_pre (Inr (Inr (Inr P)))"
+lemma map_commit_pre_Inr_Inr_Inr_Inl_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
+ map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (rrename_commit_internal f) id (Abs_commit_pre (Inr (Inr (Inr (Inl P))))) =
+ Abs_commit_pre (Inr (Inr (Inr (Inl P))))"
 apply(rule commit_pre_map_cong_id) unfolding toUnfold by auto
+
+lemma map_commit_pre_Inr_Inr_Inr_Inr_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
+ map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (rrename_commit_internal f) id (Abs_commit_pre (Inr (Inr (Inr (Inr (x::var, y::var, commit_internal_ctor (Abs_commit_internal_pre P))))))) =
+ Abs_commit_pre (Inr (Inr (Inr (Inr (x, f y, commit_internal_ctor (Abs_commit_internal_pre (rrename f P)))))))"
+unfolding map_commit_pre_def toUnfold apply auto
+unfolding commit_internal.rrename_cctors(1)
+unfolding map_commit_internal_pre_def by (simp add: toUnfold(27))
 
 lemma Abs_commit_pre_inj[simp]: "Abs_commit_pre k = Abs_commit_pre k' \<longleftrightarrow> k = k'"
 by (metis toUnfold(22))
@@ -164,12 +160,28 @@ unfolding toUnfold apply auto
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
   apply(subst map_commit_pre_Inr_Inr_Inl_aux) by auto .
 
+lemma Binp_inj[simp]: "Binp x y P = Binp x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
+unfolding Binp_def unfolding commit_internal.TT_injects0 apply simp
+unfolding toUnfold apply auto
+  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inr_aux) by auto
+  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inr_aux)
+  unfolding id_on_def apply auto unfolding commit_internal.FFVars_cctors(1) toUnfold by auto
+  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inr_aux)
+  unfolding id_on_def apply auto unfolding commit_internal.FFVars_cctors(1) toUnfold
+  unfolding commit_internal.TT_injects0(1) id_on_def
+  unfolding map_commit_internal_pre_def apply (auto simp: toUnfold id_on_def)
+  apply(rule rrename_cong) by auto
+  subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
+  apply(subst map_commit_pre_Inr_Inr_Inr_Inr_aux) apply auto
+  unfolding commit_internal.FFVars_cctors(1) by (auto simp: toUnfold id_on_def)
+  subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
+  apply(subst map_commit_pre_Inr_Inr_Inr_Inr_aux) by auto .
 
 lemma Tau_inj[simp]: "Tau P = Tau P' \<longleftrightarrow> P = P'"
 unfolding Tau_def unfolding commit_internal.TT_injects0 apply simp
 unfolding toUnfold apply auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_aux) by auto
-  subgoal apply(rule exI[of _ id]) apply(subst map_commit_pre_Inr_Inr_Inr_aux) by auto .
+  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inl_aux) by auto
+  subgoal apply(rule exI[of _ id]) apply(subst map_commit_pre_Inr_Inr_Inr_Inl_aux) by auto .
 
 (* *)
 
@@ -246,6 +258,13 @@ unfolding map_commit_pre_def unfolding toUnfold
 unfolding commit_internal.rrename_cctors(1)
 unfolding map_commit_internal_pre_def unfolding toUnfold by simp
 
+lemma rrename_commit_Binp[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+  rrename_commit \<sigma> (Binp a u P) = Binp (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
+unfolding Binp_def unfolding commit_internal.rrename_cctors
+unfolding map_commit_pre_def unfolding toUnfold
+unfolding commit_internal.rrename_cctors(1)
+unfolding map_commit_internal_pre_def unfolding toUnfold by simp
+
 lemma rrename_commit_Tau[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
   rrename_commit \<sigma> (Tau P) = Tau (rrename \<sigma> P)"
 unfolding Tau_def unfolding commit_internal.rrename_cctors
@@ -256,7 +275,7 @@ unfolding map_commit_internal_pre_def unfolding toUnfold by simp
 
 (* Actions *)
 
-datatype (vars:'a) action = finp 'a 'a | fout 'a 'a | is_bout: bout 'a 'a | tau
+datatype (vars:'a) action = finp 'a 'a | fout 'a 'a | is_bout: bout 'a 'a | binp 'a 'a | tau
 
 lemmas action.set_map[simp]
 
@@ -266,14 +285,17 @@ fun Cmt :: "act \<Rightarrow> trm \<Rightarrow> cmt" where
  "Cmt (finp x y) P = Finp x y P"
 |"Cmt (fout x y) P = Fout x y P"
 |"Cmt (bout x y) P = Bout x y P"
+|"Cmt (binp x y) P = Binp x y P"
 |"Cmt tau P = Tau P"
 
 fun bns :: "act \<Rightarrow> var set" where
  "bns (bout x y) = {y}"
+|"bns (binp x y) = {y}"
 |"bns _ = {}"
 
 fun fns :: "act \<Rightarrow> var set" where
  "fns (bout x y) = {x}"
+|"fns (binp x y) = {x}"
 |"fns act = vars act"
 
 fun fra :: "act \<Rightarrow> bool" where
@@ -283,7 +305,8 @@ fun fra :: "act \<Rightarrow> bool" where
 | "fra _ = False"
 
 fun ns :: "act \<Rightarrow> var set" where
-  "ns (bout x y) = {x, y}"
+  "ns (binp x y) = {x, y}"
+| "ns (bout x y) = {x, y}"
 | "ns (finp x y) = {x, y}"
 | "ns (fout x y) = {x, y}"
 | "ns tau = {}"
@@ -301,7 +324,7 @@ lemma rrename_commit_Cmt[simp]:
  rrename_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
 by (cases act, auto)
 
-lemma bvars_act_bout: "bvars act = {} \<or> (\<exists>a b. act = bout a b)"
+lemma bvars_act_bout: "bvars act = {} \<or> (\<exists>a b. act = bout a b) \<or> (\<exists>a b. act = binp a b)"
 by(cases act, auto)
 
 lemma fra_eqvt[simp]: "fra (map_action \<sigma> act) = fra act"

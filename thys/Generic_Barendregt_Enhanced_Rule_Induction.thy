@@ -667,6 +667,25 @@ lemma Tperm_comp':
 "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm (\<sigma> o \<tau>) t = Tperm \<sigma> (Tperm \<tau> t)"
 using Tperm_comp by auto
 
+lemma supports: 
+assumes "supports X t"
+and "isPerm \<sigma>" "\<forall>x\<in>X. \<sigma> x = x"
+shows "Tperm \<sigma> t = t"
+using assms unfolding supports_def by auto
+
+lemma supports2: 
+assumes "supports X t"
+and "isPerm \<sigma>" "isPerm \<tau>" "\<forall>x\<in>X. \<sigma> x = \<tau> x"
+shows "Tperm \<sigma> t = Tperm \<tau> t"
+proof-
+  have "Tperm (inv \<tau> o \<sigma>) t = t"
+  apply(rule supports)
+  using assms by (auto simp add: isPerm_comp isPerm_inv isPerm_invR')
+  thus ?thesis 
+  by (metis Tperm_comp' Tperm_id assms(2,3) id_apply isPerm_inv isPerm_invL)
+qed
+
+
 end (* context PreNominalSet *)
 
 locale NominalSet = PreNominalSet Tperm for
@@ -685,9 +704,52 @@ using ex_fin_supports Tsupp_least
 by (meson finite_subset)
 
 lemma supports_int: 
-assumes "supports X t"  "supports Y t"
+assumes fX: "finite X" and X: "supports X t" and fY: "finite Y" and Y: "supports Y t"
 shows "supports (X \<inter> Y) t"
-unfolding supports_def sorry
+unfolding supports_def proof safe
+  fix \<sigma> assume s: "isPerm \<sigma>" and i: "\<forall>x\<in>X \<inter> Y. \<sigma> x = x"
+  have "infinite (- (\<sigma> ` (X \<union> Y) \<union> Y))"  
+    by (metis assms fX finite_UnI finite_compl finite_imageI infinite_UNIV)
+  then obtain V where "V \<subseteq> (- (\<sigma> ` (X \<union> Y) \<union> Y))" and cV: "card V = card (\<sigma> ` (X - Y))"
+  and fV: "finite V"
+  by (meson infinite_arbitrarily_large)
+  hence V: "V \<inter> (\<sigma> ` (X \<union> Y) \<union> Y) = {}" by auto 
+  obtain f where "bij_betw f (\<sigma> ` (X - Y)) V" using fV cV  
+    by (metis bij_betw_iff_card fX finite_Diff finite_imageI)
+  define \<tau> where "\<tau> \<equiv> \<lambda>x. if x \<in> (\<sigma> ` (X - Y)) then f x else if x \<in> V then inv f x else x"
+  have tau: "isPerm \<tau>" "bij_betw \<tau> (\<sigma> ` (X - Y)) V" "id_on (\<sigma> ` Y) \<tau>" 
+  sorry
+  define \<sigma>' where "\<sigma>' \<equiv> \<tau> \<circ> \<sigma>"
+  have s': "isPerm \<sigma>'" 
+    by (simp add: \<sigma>'_def isPerm_comp s tau(1))
+  define \<tau>' where "\<tau>' \<equiv> \<lambda>u. if u \<in> X then \<sigma>' u else if u \<in> \<sigma>' ` X then inv \<sigma>' u else u"
+  have \<tau>': "\<And>u. u \<in> X \<Longrightarrow> \<tau>' u = \<sigma>' u" "\<And>u. u \<in> \<sigma>' ` X - X \<Longrightarrow> \<tau>' u = inv \<sigma>' u"
+  "\<And>u. u \<in> - (\<sigma>' ` X \<union> X) \<Longrightarrow> \<tau>' u = u"
+  unfolding \<tau>'_def by auto
+  have \<tau>'Y: "\<forall>x\<in>Y. \<tau>' x = x" unfolding \<tau>'_def   
+      by (smt (verit, ccfv_threshold) IntI Int_emptyD Un_Diff_Int Un_Diff_cancel Un_iff 
+      V \<sigma>'_def bij_betw_imp_surj_on comp_apply f_inv_into_f i id_onD id_on_def image_comp 
+      image_eqI in_mono inf_sup_absorb inv_into_into isPerm_bij o_inv_distrib s s' sup_commute 
+      sup_ge2 tau(1) tau(2) tau(3))
+  have p\<tau>': "isPerm \<tau>'" unfolding isPerm_def apply safe
+    subgoal sorry
+    subgoal sorry .
+  have 00: "Tperm \<sigma>' t = Tperm \<tau>' t" apply(rule supports2[OF X])
+    subgoal by fact
+    subgoal by fact
+    subgoal unfolding \<tau>'_def by auto . 
+  also have "Tperm \<tau>' t = t" apply(rule supports[OF Y])
+    subgoal by fact
+    subgoal by fact .
+  finally have 11: "Tperm \<sigma>' t = t" .
+  have \<sigma>': "\<sigma>' ` (X-Y) \<inter> Y = {}" unfolding \<sigma>'_def  
+  by auto (metis DiffI Int_Un_emptyI2 Int_emptyD V bij_betw_apply imageI tau(2))
+  have "Tperm \<sigma>' t = Tperm \<sigma> t" apply(rule supports2[OF Y])
+    subgoal by (simp add: \<sigma>'_def isPerm_comp s tau(1))
+    subgoal by fact
+    subgoal unfolding \<sigma>'_def by auto (meson id_onD imageI tau(3)) .
+  thus "Tperm \<sigma> t = t" using 11 by auto
+qed
 
 lemma supports_UNIV[simp,intro!]: "supports UNIV t"
 unfolding supports_def by (simp add: eq_id_iff)
@@ -709,18 +771,13 @@ proof-
     subgoal using Y using supports_int by auto .
 qed
 
-
 lemma small_Tsupp: "small (Tsupp t)"
 using finite_Tsupp unfolding small_def 
 by (simp add: infinite_UNIV)
 
-
-
 lemma Tsupp_supporting: 
 "isPerm \<sigma> \<Longrightarrow> (\<forall>x\<in>Tsupp t. \<sigma> x = x) \<Longrightarrow> Tperm \<sigma> t = t"
 using supports_Tsupp unfolding supports_def by auto
-
-find_theorems isPerm id
 
 lemma Tsupp_supporting2: 
 assumes 1: "isPerm \<sigma>" "isPerm \<tau>" and 2: "\<forall>x\<in>Tsupp t. \<sigma> x = \<tau> x"

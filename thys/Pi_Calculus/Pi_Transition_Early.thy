@@ -81,6 +81,9 @@ lemma swapa_idle: "xx \<notin> vars act \<Longrightarrow> x \<notin> vars act \<
 
 lemmas act_var_simps = not_is_bout_bvars empty_bvars_vars_fvars bvars_swapa fvars_swapa swapa_idle
 
+lemma small_bns[simp]: "small (bns \<alpha>)"
+  by (cases \<alpha>) auto
+
 binder_inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
   InpE: "trans (Inp a x P) (Finp a y (P[y/x]))" binds "{x}"
 | ComLeftE: "\<lbrakk> trans P (Finp a x P') ; trans Q (Fout a x Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau (P' \<parallel> Q'))"

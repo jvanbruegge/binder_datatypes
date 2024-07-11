@@ -7,21 +7,6 @@ begin
 
 (* *)
 
-inductive affine  :: "itrm \<Rightarrow> bool" where
- iVar[simp,intro!]: "affine (iVar x)"
-|iLam: "affine e \<Longrightarrow> affine (iLam xs e)"
-|iApp: 
-"affine e1 \<Longrightarrow>
- (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
- (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) 
- \<Longrightarrow>
- affine (iApp e1 es2)"
-
-
-thm affine_def
-
-
-(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "itrm"
 
@@ -31,128 +16,90 @@ definition Tperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" 
 fun Tsupp :: "T \<Rightarrow> ivar set" where 
 "Tsupp e = FFVars e"
 
-
-interpretation LSNominalSet where
-Tperm = Tperm and Tsupp = Tsupp
-apply standard unfolding isPerm_def Tperm_def  
-  using small_Un small_def iterm.card_of_FFVars_bounds
-  apply (auto simp: iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s infinite_UNIV) .
-
-definition G :: "ivar set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
-where
-"G \<equiv> \<lambda>B R t.  
-         (\<exists>x. B = {} \<and> t = iVar x) 
-         \<or> 
-         (\<exists>xs e. B = dsset xs \<and> t = iLam xs e \<and> 
-                 R e)
-         \<or> 
-         (\<exists>e1 es2. B = {} \<and> t = iApp e1 es2 \<and> 
-                   R e1 \<and> 
-                   (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> R e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<and> 
-                   (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {})
-         )"
-
-(* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
-
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
-unfolding G_def by auto
-
-(* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G  (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
-unfolding G_def apply(elim disjE)
-  subgoal apply(rule disjI3_1)
-  subgoal apply(elim exE) subgoal for x 
-  apply(rule exI[of _ "\<sigma> x"]) 
-  unfolding isPerm_def small_def Tperm_def 
-  apply auto . . .
-(* *)
-  subgoal apply(rule disjI3_2)
-  subgoal apply(elim exE) subgoal for xs e
-  apply(rule exI[of _ "dsmap \<sigma> xs"])
-  apply(rule exI[of _ "irrename \<sigma> e"])  
-  unfolding isPerm_def small_def Tperm_def  
-  apply (simp add: iterm.rrename_comps) . . .
-  (* *)
-  subgoal apply(rule disjI3_3)
-  subgoal apply(elim exE) subgoal for e1 es2
-  apply(rule exI[of _ "irrename \<sigma> e1"]) 
-  apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
-  unfolding isPerm_def small_def Tperm_def 
-  apply (fastforce simp add: iterm.rrename_comps) . . . .
-
 lemma Tvars_dsset: "(Tsupp t - dsset xs) \<inter> dsset xs = {}" "|Tsupp t - dsset xs| <o |UNIV::ivar set|"
 apply auto using card_of_minus_bound iterm.set_bd_UNIV by blast
 
-lemma G_refresh: 
-"(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
-unfolding G_def Tperm_def apply safe
-  subgoal for x
-  apply(rule exI[of _ "{}"])  
-  apply(intro conjI)
-    subgoal by simp
-    subgoal unfolding isPerm_def small_def by auto 
-    subgoal apply(rule disjI3_1) 
-    apply simp . .
-  (* *)
-  subgoal for xs e  
-  using refresh[OF Tvars_dsset, of xs t] apply safe
-  subgoal for f
-  apply(rule exI[of _ "f ` (dsset xs)"])  
-  apply(intro conjI)
-    subgoal using small_dsset small_image by blast
-    subgoal unfolding id_on_def by auto 
+ML \<open>Multithreading.parallel_proofs := 0\<close>
+binder_inductive affine  :: "itrm \<Rightarrow> bool" where
+ iVar[simp,intro!]: "affine (iVar x)"
+|iLam: "affine e \<Longrightarrow> affine (iLam xs e)" binds "dsset xs"
+|iApp: 
+"affine e1 \<Longrightarrow>
+ (\<And>e2. e2 \<in> sset es2 \<Longrightarrow> affine e2) \<Longrightarrow>
+ (\<And>e2. e2 \<in> sset es2 \<Longrightarrow> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
+ (\<And>i j. i \<noteq> j \<Longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) 
+ \<Longrightarrow>
+ affine (iApp e1 es2)"
+where perm: Tperm supp: Tsupp
+  apply standard unfolding isPerm_def Tperm_def induct_rulify_fallback
+  using small_Un small_def iterm.card_of_FFVars_bounds
+         apply (auto simp: iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s infinite_UNIV) [5]
+  subgoal by fastforce
+  subgoal for \<sigma> B R t
+    apply(elim disjE)
+    subgoal apply(rule disjI3_1)
+      subgoal apply(elim exE) subgoal for x 
+        apply(rule exI[of _ "\<sigma> x"]) 
+        unfolding isPerm_def small_def Tperm_def 
+        apply auto
+        done
+      done
+    done
+    (* *)
     subgoal apply(rule disjI3_2)
-    apply(rule exI[of _ "dsmap f xs"]) 
-    apply(rule exI[of _ "irrename f e"]) 
-    apply simp apply(intro conjI)
-      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst irrename_eq_itvsubst_iVar)
-        subgoal unfolding isPerm_def by auto
-        subgoal unfolding isPerm_def by auto
-        subgoal apply(subst irrename_eq_itvsubst_iVar[symmetric]) unfolding isPerm_def by auto . . . . 
-  (* *)
-  subgoal for e1 es2
-  apply(rule exI[of _ "{}"])  
-  apply(intro conjI)
-    subgoal by simp
-    subgoal unfolding isPerm_def small_def by auto 
-    subgoal apply(rule disjI3_3) 
-    apply(rule exI[of _ "e1"])  
-    apply(rule exI[of _ "es2"]) 
-    apply simp . . .
- 
-
-(* FINALLY, INTERPRETING THE Induct LOCALE: *)
-
-interpretation Affine: Induct where
-Tperm = Tperm and Tsupp = Tsupp and G = G
-apply standard 
-  using G_mono G_equiv G_refresh by auto 
-
-(* *)
-
-lemma affine_I: "affine t = Affine.I t" 
-unfolding affine_def Affine.I_def apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-unfolding fun_eq_iff G_def apply clarify
-subgoal for R tt apply(rule iffI)
-  subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>iVar: \<close>
-    subgoal for x apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close>
-    subgoal for e xs apply(rule exI[of _ "dsset xs"], rule conjI, simp)  apply(rule disjI3_2) by auto 
-    \<^cancel>\<open>iApp: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI3_3) by auto .
-  subgoal apply(elim conjE disjE exE)
-    \<^cancel>\<open>iVar: \<close>
-    subgoal apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close>
-    subgoal apply(rule disjI3_2) by auto
-    \<^cancel>\<open>iApp: \<close>
-    subgoal apply(rule disjI3_3) by auto . . .
-
-(* FROM ABSTRACT BACK TO CONCRETE: *)
-thm affine.induct[no_vars] 
+      subgoal apply(elim exE) subgoal for e xs
+        apply(rule exI[of _ "irrename \<sigma> e"]) 
+        apply(rule exI[of _ "dsmap \<sigma> xs"]) 
+        unfolding isPerm_def small_def Tperm_def  
+        apply (simp add: iterm.rrename_comps)
+        done
+      done
+    done
+    (* *)
+    subgoal apply(rule disjI3_3)
+      subgoal apply(elim exE) subgoal for e1 es2
+        apply(rule exI[of _ "irrename \<sigma> e1"]) 
+        apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
+        unfolding isPerm_def small_def Tperm_def 
+        apply (fastforce simp add: iterm.rrename_comps)
+        done
+      done
+    done
+  done
+  subgoal premises prems for R B t
+    using prems(2-)
+    unfolding Tperm_def apply safe
+    subgoal for x
+      apply(rule exI[of _ "{}"])  
+      apply(intro conjI)
+      subgoal by simp
+      subgoal unfolding isPerm_def small_def by auto 
+      subgoal apply(rule disjI3_1) 
+        apply simp . .
+        (* *)
+    subgoal for e xs  
+      using refresh[OF Tvars_dsset, of xs t] apply safe
+      subgoal for f
+        apply(rule exI[of _ "f ` (dsset xs)"])  
+        apply(intro conjI)
+        subgoal using small_dsset small_image by blast
+        subgoal unfolding id_on_def by auto 
+        subgoal apply(rule disjI3_2)
+          apply(rule exI[of _ "irrename f e"])
+          apply(rule exI[of _ "dsmap f xs"])
+          apply simp
+          subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto . . . 
+        (* *)
+    subgoal for e1 es2
+      apply(rule exI[of _ "{}"])  
+      apply(intro conjI)
+      subgoal by simp
+      subgoal unfolding isPerm_def small_def by auto 
+      subgoal apply(rule disjI3_3) 
+        apply(rule exI[of _ "e1"])  
+        apply(rule exI[of _ "es2"]) 
+        apply simp . . .
+  done
 
 corollary strong_induct_affine[consumes 2, case_names iVar iLam iApp]: 
 assumes par: "\<And>p. small (Psupp p)"
@@ -167,13 +114,13 @@ and iApp: "\<And>e1 es2 p.
     (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) \<Longrightarrow> 
     R p (iApp e1 es2)"
 shows "R p t"
-unfolding affine_I
+unfolding affine.alt_def
 apply(subgoal_tac "R p t") (* this is overkill here, but I keep the general pattern *)
   subgoal by simp
-  subgoal using par st apply(elim Affine.strong_induct[where R = "\<lambda>p t. R p t"])
-    subgoal unfolding affine_I by simp
-    subgoal for p B t apply(subst (asm) G_def) 
-    unfolding affine_I[symmetric] apply(elim disjE exE)
+  subgoal using par st apply(elim affine.strong_induct[where R = "\<lambda>p t. R p t"])
+    subgoal unfolding affine.alt_def by simp
+    subgoal for p B t
+    unfolding affine.alt_def[symmetric] apply(elim disjE exE)
       subgoal for x using iVar by auto
       subgoal using iLam by auto  
       subgoal using iApp by auto . . .
@@ -199,7 +146,7 @@ corollary irrename_affine:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" 
 and r: "affine (e::itrm)" 
 shows "affine (irrename f e)"
-using assms unfolding affine_I using Affine.I_equiv[of e f]
+using assms unfolding affine.alt_def using affine.equiv[of e f]
 unfolding Tperm_def isPerm_def by auto
 
 

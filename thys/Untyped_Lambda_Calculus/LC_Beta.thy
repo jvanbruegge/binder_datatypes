@@ -24,20 +24,18 @@ where perm: Tperm supp: Tsupp
          apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound) [6]
   subgoal for \<sigma> R B t
-    by (cases t)
-      (auto simp: isPerm_def
-         term.rrename_comps rrename_tvsubst_comp
+    by (elim disj_forward case_prodE)
+      (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-         | ((rule exI[of _ "\<sigma> _"])+; auto))
+         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B t
     using fresh[of t] prems(2-) unfolding
       (**)isPerm_def conj_assoc[symmetric] split_beta
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-    apply (elim disj_forward exE; simp)
-    apply ((rule exI, rule conjI[rotated], assumption) |
+    by (elim disj_forward exE; simp)
+      ((rule exI, rule conjI[rotated], assumption) |
         (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
         (cases t; auto))+
-    done
   done
 
 thm step.alt_def

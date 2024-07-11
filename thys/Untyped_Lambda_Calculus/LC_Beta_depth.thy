@@ -7,17 +7,6 @@ begin
 
 (* *)
 
-inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
-| AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
-| AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
-| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
-
-thm stepD_def
-
-
-(* INSTANTIATING THE LSNominalSet LOCALE: *)
-
 type_synonym T = "nat \<times> trm \<times> trm"
 
 definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
@@ -26,187 +15,34 @@ definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" wh
 fun Tsupp :: "T \<Rightarrow> var set" where 
 "Tsupp (d,e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
-
-interpretation LSNominalSet where
-Tperm = Tperm and Tsupp = Tsupp
-apply standard unfolding isPerm_def Tperm_def  
-  using small_Un small_def term.card_of_FFVars_bounds
-  apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s infinite_UNIV)
-  using var_sum_class.Un_bound by blast
-
-definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
-where
-"G \<equiv> \<lambda>B R t.  
-         (\<exists>x e1 e2. B = {x} \<and> fst t = 0 \<and> fst (snd t) = App (Lam x e1) e2 \<and> snd (snd t) = tvsubst (Var(x := e2)) e1)
-         \<or>
-         (\<exists>e1 d e1' e2. B = {} \<and> fst t = Suc d \<and> fst (snd t) = App e1 e2 \<and> snd (snd t) = App e1' e2 \<and> 
-                      R (d,e1,e1')) 
-         \<or>
-         (\<exists>e1 d e2 e2'. B = {} \<and> fst t = Suc d \<and> fst (snd t) = App e1 e2 \<and> snd (snd t) = App e1 e2' \<and> 
-                      R (d,e2,e2')) 
-         \<or>
-         (\<exists>x d e e'. B = {x} \<and> fst t = d \<and> fst (snd t) = Lam x e \<and> snd (snd t) = Lam x e' \<and> 
-                     R (d,e,e'))"
-
-
-(* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
-
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
-unfolding G_def by fastforce
-
-(* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
-  unfolding G_def
-  by (elim disj_forward exE; cases t)
-    (auto simp: Tperm_def isPerm_def
-         term.rrename_comps rrename_tvsubst_comp
-         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-         | ((rule exI[of _ "\<sigma> _"])+; auto))+
-(*  
-  unfolding G_def apply(elim disjE)
-  subgoal apply(rule disjI4_1)
-  subgoal apply(elim exE) subgoal for x e1 e2
-  apply(rule exI[of _ "\<sigma> x"])
-  apply(rule exI[of _ "rrename_term \<sigma> e1"])  
-  apply(rule exI[of _ "rrename_term \<sigma> e2"])  
-  apply(cases t) unfolding isPerm_def small_def Tperm_def 
-  apply (simp add: term.rrename_comps) apply(subst rrename_tvsubst_comp) by auto . .
-  (* *)
-  subgoal apply(rule disjI4_2)
-  subgoal apply(elim exE) subgoal for e1 d e1' e2 
-  apply(rule exI[of _ "rrename_term \<sigma> e1"]) 
-  apply(rule exI[of _ "d"])
-  apply(rule exI[of _ "rrename_term \<sigma> e1'"]) 
-  apply(rule exI[of _ "rrename_term \<sigma> e2"]) 
-  apply(cases t) unfolding isPerm_def small_def Tperm_def 
-  by (simp add: term.rrename_comps) . . 
-  (* *)
-  subgoal apply(rule disjI4_3)
-  subgoal apply(elim exE) subgoal for e1 d e2 e2' 
-  apply(rule exI[of _ "rrename_term \<sigma> e1"]) 
-  apply(rule exI[of _ "d"])
-  apply(rule exI[of _ "rrename_term \<sigma> e2"]) apply(rule exI[of _ "rrename_term \<sigma> e2'"]) 
-  apply(cases t) unfolding isPerm_def small_def Tperm_def 
-  by (simp add: term.rrename_comps) . . 
-  (* *)
-  subgoal apply(rule disjI4_4)
-  subgoal apply(elim exE) subgoal for x d e e'
-  apply(rule exI[of _ "\<sigma> x"])
-  apply(rule exI[of _ "d"])
-  apply(rule exI[of _ "rrename_term \<sigma> e"]) apply(rule exI[of _ "rrename_term \<sigma> e'"]) 
-  apply(cases t) unfolding isPerm_def small_def Tperm_def  
-  by (simp add: term.rrename_comps) . . .
-*)
-
-lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"  
+lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"
 by (metis Lam_avoid Tsupp.elims term.card_of_FFVars_bounds term.set(2))
 
-(* NB: The entities affected by variables are passed as witnesses to exI 
-with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
-as they are. 
-*)
-lemma G_refresh: 
-"(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
-  using fresh[of t] unfolding G_def Tperm_def
-(**)isPerm_def conj_assoc[symmetric]
-  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-  by (elim disj_forward exE; simp)
-    ((rule exI, rule conjI[rotated], assumption) |
-    (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
-    (cases t; auto))+
-(*
-using fresh[of t] unfolding G_def Tperm_def apply safe
-  subgoal for xx x e1 e2 
-  apply(rule exI[of _ "{xx}"])  
-  apply(intro conjI)
-    subgoal by simp
-    subgoal unfolding isPerm_def small_def by auto 
-    subgoal apply(rule disjI4_1)
-    apply(rule exI[of _ "xx"]) 
-    apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1"]) 
-    apply(rule exI[of _ "e2"]) 
-    apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst tvsubst_Var_rrename) 
-      apply (auto split: if_splits) . . . 
-  (* *)
-  subgoal for xx e1 d e1' e2 
-  apply(rule exI[of _ "{}"])  
-  apply(intro conjI)
-    subgoal by simp
-    subgoal unfolding isPerm_def small_def by auto 
-    subgoal apply(rule disjI4_2) 
-    apply(rule exI[of _ "e1"]) 
-    apply(rule exI[of _ "d"])
-    apply(rule exI[of _ "e1'"])
-    apply(rule exI[of _ "e2"]) 
-    apply(cases t) apply simp . .
-  (* *)
-  subgoal for xx e1 d e2 e2' 
-  apply(rule exI[of _ "{}"])  
-  apply(intro conjI)
-    subgoal by simp
-    subgoal unfolding isPerm_def small_def by auto 
-    subgoal apply(rule disjI4_3) 
-    apply(rule exI[of _ "e1"])
-    apply(rule exI[of _ d]) 
-    apply(rule exI[of _ "e2"])
-    apply(rule exI[of _ "e2'"]) 
-    apply(cases t) apply simp . .
-  (* *)
-  subgoal for xx x d e e'
-  apply(rule exI[of _ "{xx}"])  
-  apply(intro conjI)
-    subgoal by simp
-    subgoal unfolding isPerm_def small_def by auto 
-    subgoal apply(rule disjI4_4) 
-    apply(rule exI[of _ "xx"]) 
-    apply(rule exI[of _ "fst t"])
-    apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
-    apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e'"])
-    apply(cases t)  apply simp apply(intro conjI)
-      subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal by (metis supp_swap_bound Prelim.bij_swap isPerm_def) . . .
-  (* *)
-*)
-
-
-(* FINALLY, INTERPRETING THE Induct LOCALE: *)
-
-interpretation Step: Induct where 
-Tperm = Tperm and Tsupp = Tsupp and G = G
-apply standard 
-  using G_mono G_equiv G_refresh by auto
-
-(* *)
-
-lemma stepD_I: "stepD d t1 t2 = Step.I (d,t1,t2)" 
-unfolding stepD_def Step.I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-unfolding fun_eq_iff G_def apply clarify
-subgoal for R d tt1 tt2 apply(rule iffI)
-  subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>Beta: \<close>
-    subgoal for x e1 e2 apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI4_1) by auto 
-    \<^cancel>\<open>AppL: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_2) by auto
-    \<^cancel>\<open>AppR: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp)  apply(rule disjI4_3) by auto
-    \<^cancel>\<open>Xi: \<close>
-    subgoal for e e' x apply(rule exI[of _ "{x}"], rule conjI, simp)  apply(rule disjI4_4) by auto .
-  subgoal apply(elim conjE disjE exE)
-    \<^cancel>\<open>Beta: \<close>
-    subgoal apply(rule disjI4_1) by auto
-    \<^cancel>\<open>AppL: \<close>
-    subgoal apply(rule disjI4_2) by auto
-    \<^cancel>\<open>AppR: \<close>
-    subgoal apply(rule disjI4_3) by auto
-    \<^cancel>\<open>Xi: \<close>
-    subgoal apply(rule disjI4_4) by auto . . .
+binder_inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
+  Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
+| AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
+| AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
+| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')" binds "{x}"
+where perm: Tperm supp: Tsupp
+  unfolding Tperm_def
+  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
+    small_def term.card_of_FFVars_bounds term.Un_bound) [6]
+  subgoal for \<sigma> R B t
+    by (elim disj_forward exE case_prodE)
+      (auto simp: Tperm_def isPerm_def term.rrename_comps rrename_tvsubst_comp
+        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+        | ((rule exI[of _ "\<sigma> _"])+; auto))+
+  subgoal premises prems for R B t
+    using fresh[of t] prems(2-) unfolding Tperm_def
+      (**)isPerm_def conj_assoc[symmetric] split_beta
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    by (elim disj_forward exE; simp add: ex_comm)
+      ((rule exI, rule conjI[rotated], assumption) |
+        (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
+        (cases t; auto))+
+  done
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
-thm stepD.induct[no_vars]
 
 corollary strong_induct_stepD[consumes 2, case_names Beta AppL AppR Xi]: 
 assumes par: "\<And>p. small (Psupp p)"
@@ -225,13 +61,13 @@ and Xi: "\<And>d e e' x p.
   stepD d e e' \<Longrightarrow> (\<forall>p'. R p' d e e') \<Longrightarrow> 
   R p d (Lam x e) (Lam x e')" 
 shows "R p d t1 t2"
-unfolding stepD_I
+unfolding stepD.alt_def
 apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Step.strong_induct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
-    subgoal unfolding stepD_I by simp
-    subgoal for p B t apply(subst (asm) G_def) 
-    unfolding stepD_I[symmetric] apply(elim disjE exE)
+  subgoal using par st apply(elim stepD.strong_induct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
+    subgoal unfolding stepD.alt_def by simp
+    subgoal for p B t
+    unfolding stepD.alt_def[symmetric] apply(elim disjE exE case_prodE)
       subgoal using Beta by auto
       subgoal using AppL by auto  
       subgoal using AppR by auto  
@@ -242,7 +78,7 @@ corollary rrename_stepD:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
 and r: "stepD d e e'" 
 shows "stepD d (rrename f e) (rrename f e')"
-using assms unfolding stepD_I using Step.I_equiv[of "(d,e,e')" f]
+using assms unfolding stepD.alt_def using stepD.equiv[of "(d,e,e')" f]
 unfolding Tperm_def isPerm_def by auto
 
 

@@ -752,7 +752,7 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
                  rtac ctxt I_intros,
                  SELECT_GOAL (unfold_tac ctxt @{thms prod.case}),
                  rtac ctxt (mk_disjIN n i),
-                 REPEAT_DETERM o (resolve_tac ctxt [exI, conjI, refl, notI, TrueI, allI, impI] ORELSE' assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt),
+                 REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt ORELSE' resolve_tac ctxt [exI, conjI, refl, notI, TrueI, allI, impI]),
                  simp_tac ctxt
                  ]) (1 upto n))));
          val (t, _) = yield_singleton (mk_Frees "t") argT lthy;

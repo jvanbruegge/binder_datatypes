@@ -732,9 +732,9 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
      fun err s t T = s ^ " function\n" ^ Syntax.string_of_term lthy t ^
        "\ndoes not have the expected type\n" ^ Syntax.string_of_typ lthy T;
      val mapx = force_typ lthy mapT (mapx |> singleton (Variable.polymorphic lthy))
-       handle ERROR _ => error (err "map" mapx mapT);
+       handle ERROR _ => error (err "perm" mapx mapT);
      val setx = force_typ lthy setT (setx |> singleton (Variable.polymorphic lthy))
-       handle ERROR _ => error (err "map" setx setT);
+       handle ERROR _ => error (err "supp" setx setT);
 
      fun after_qed thms lthy =
        let
@@ -1090,8 +1090,8 @@ val multi_specs =
     ((Parse_Spec.opt_thm_name ":" -- Parse.prop -- Parse_Spec.if_assumes -- opt_binders -- Parse.for_fixes >> rearrange) --|
       Scan.option (Scan.ahead (Parse.name || Parse.$$$ "[") -- Parse.!!! (Parse.$$$ "|"))) >> split_list;
 
-val parse_map = Parse.reserved "map" --| \<^keyword>\<open>:\<close> |-- Parse.term;
-val parse_set = Parse.reserved "set" --| \<^keyword>\<open>:\<close> |-- Parse.term;
+val parse_map = Parse.reserved "perm" --| \<^keyword>\<open>:\<close> |-- Parse.term;
+val parse_set = Parse.reserved "supp" --| \<^keyword>\<open>:\<close> |-- Parse.term;
 
 val parse_map_set = @{keyword where} |-- (parse_map -- parse_set);
 

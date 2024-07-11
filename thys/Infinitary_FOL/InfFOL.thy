@@ -228,18 +228,7 @@ lift_definition k2member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>2 \<Rightarro
 
 lift_definition kinsert :: "'a set\<^sub>k \<Rightarrow> 'a \<Rightarrow> 'a set\<^sub>k" (infixl "," 600) is "\<lambda>xs x. binsert x xs" .
 
-declare [[inductive_internals]]
-inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (infix "\<turnstile>" 100) where
-  Hyp: "f \<in>\<^sub>k \<Delta> \<Longrightarrow> \<Delta> \<turnstile> f"
-| ConjI: "(\<And>f. f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> \<Delta> \<turnstile> f) \<Longrightarrow> \<Delta> \<turnstile> Conj F"
-| ConjE: "\<lbrakk> \<Delta> \<turnstile> Conj F ; f \<in>\<^sub>k\<^sub>1 F \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f"
-| NegI: "\<Delta>,f \<turnstile> \<bottom> \<Longrightarrow> \<Delta> \<turnstile> Neg f"
-| NegE: "\<lbrakk> \<Delta> \<turnstile> Neg f ; \<Delta> \<turnstile> f \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> \<bottom>"
-| AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
-| AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
-thm deduct_def
 
-(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "ifol set\<^sub>k \<times> ifol"
 
@@ -249,48 +238,15 @@ definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" wh
 fun Tsupp :: "T \<Rightarrow> var set" where 
 "Tsupp (e1,e2) = \<Union>(FFVars_ifol' ` set\<^sub>k e1) \<union> FFVars_ifol' e2"
 
-(*interpretation Small where dummy = "undefined :: var" 
-apply standard
-using cinfinite_iff_infinite var_ifol'_pre_class.cinfinite by blast
-*)
+instantiation k :: infinite begin
+instance apply standard
+  using cinfinite_iff_infinite var_set\<^sub>k\<^sub>2_class.cinfinite by blast
+end
 
-instance k::infinite
-  apply standard
-  using k_Cinfinite
-  using cinfinite_iff_infinite by blast
-
-interpretation LSNominalSet where
-Tperm = Tperm and Tsupp = Tsupp
-apply standard
-unfolding Tperm_def isPerm_def small_def
-apply (simp add: ifol'.rrename_id0s set\<^sub>k.map_id0)
-apply (rule ext)
-apply (auto simp: set\<^sub>k.map_comp ifol'.rrename_comp0s ifol'.rrename_comps)[1]
-apply auto[1]
-apply (rule var_ifol'_pre_class.Un_bound)
-apply (rule var_ifol'_pre_class.UN_bound)
-apply (rule set\<^sub>k.set_bd)
-using ifol'.set_bd_UNIV apply blast
-using ifol'.set_bd_UNIV apply blast
-apply auto[1]
-apply (smt (verit, del_insts) UN_I UnCI set\<^sub>k.set_map ifol'.FFVars_rrenames image_iff)
-using ifol'.FFVars_rrenames apply fastforce
-apply auto[1]
-apply (metis (full_types) UN_I UnI1 set\<^sub>k.map_ident_strong ifol'.rrename_cong_ids)
-by (simp add: ifol'.rrename_cong_ids)
-
-definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool" where
-"G \<equiv> (\<lambda>B R t.
-  (\<exists>f \<Delta>. B = {} \<and> fst t = \<Delta> \<and> snd t = f \<and> f \<in>\<^sub>k \<Delta>) \<or>
-  (\<exists>F \<Delta>. B = {} \<and> fst t = \<Delta> \<and> snd t = Conj F \<and> (\<forall>f. f \<in>\<^sub>k\<^sub>1 F \<longrightarrow> R (\<Delta>, f))) \<or>
-  (\<exists>\<Delta> F f. B = {} \<and> fst t = \<Delta> \<and> snd t = f \<and> R (\<Delta>, Conj F) \<and> f \<in>\<^sub>k\<^sub>1 F) \<or>
-  (\<exists>\<Delta> f. B = {} \<and> fst t = \<Delta> \<and> snd t = Neg f \<and> R (kinsert \<Delta> f, \<bottom>)) \<or>
-  (\<exists>\<Delta> f. B = {} \<and> fst t = \<Delta> \<and> snd t = \<bottom> \<and> R (\<Delta>, (Neg f)) \<and> R (\<Delta>, f)) \<or>
-  (\<exists>\<Delta> f V. B = set\<^sub>k\<^sub>2 V \<and> fst t = \<Delta> \<and> snd t = All V f \<and> R (\<Delta>, f) \<and> set\<^sub>k\<^sub>2 V \<inter> \<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) = {}) \<or>
-  (\<exists>\<Delta> V f \<rho>. B = set\<^sub>k\<^sub>2 V \<and> fst t = \<Delta> \<and> snd t = f\<lbrakk>\<rho>\<rbrakk> \<and> R (\<Delta>, All V f) \<and> supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V))"
-
-lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
-unfolding G_def by (smt (verit, ccfv_SIG) le_boolE le_funD)
+lemma small_set\<^sub>k\<^sub>2[simp]: "small (set\<^sub>k\<^sub>2 (V :: k set\<^sub>k\<^sub>2))"
+  unfolding small_def
+  apply (rule ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd])
+  using var_set\<^sub>k\<^sub>2_class.large by force
 
 lemma in_k_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k \<Delta> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta>"
 unfolding kmember_def map_fun_def id_o o_id map_set\<^sub>k_def
@@ -347,157 +303,7 @@ unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
 apply transfer apply transfer by blast
 
 lemma supp_o_bij: "bij \<sigma> \<Longrightarrow> supp (\<sigma> \<circ> f \<circ> inv \<sigma>) = \<sigma> ` supp f"
-unfolding supp_def using bij_image_Collect_eq by fastforce
-
-lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
-  unfolding G_def
-  apply (elim disj_forward exE; cases t)
-  apply (auto simp: Tperm_def isPerm_def ifol'.rrename_comps in_k_equiv)
-  apply (rule exI)
-  apply (rule conjI)
-  apply (rule refl)
-  apply (rule allI impI)+
-  apply (unfold set\<^sub>k.map_comp)
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  apply (rotate_tac -1)
-  apply (drule iffD2[OF in_k1_equiv, of "inv \<sigma>", rotated])
-  apply (unfold isPerm_def)
-  apply (assumption | rule conjI bij_imp_bij_inv supp_inv_bound)+
-  apply (subst (asm) set\<^sub>k\<^sub>1.map_comp)
-  apply (subst (asm) ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst (asm) inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k\<^sub>1.map_id)
-  apply (erule allE)
-  apply (erule impE)
-  apply assumption+
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  subgoal for \<Delta> F f
-  apply (rule exI[of _ "map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) F"])
-  apply (subst ifol'_rrename_simps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (unfold set\<^sub>k\<^sub>1.map_comp)
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k\<^sub>1.map_id)
-  apply (rule conjI)
-  apply assumption
-  apply (erule iffD2[OF in_k1_equiv, rotated])
-  apply (unfold isPerm_def)
-  apply (rule conjI)
-  apply assumption+
-  done
-  apply (rule exI)
-  apply (rule conjI)
-  apply (rule refl)
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (subst ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  apply (unfold id_def)[1]
-  apply (subst rrename_Bot_simp)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  subgoal for \<Delta> f
-  apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
-  apply (subst ifol'_rrename_simps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)+
-  apply (unfold ifol'.rrename_ids)
-  apply (rule conjI)
-  apply assumption+
-  done
-  apply (unfold set\<^sub>k.set_map image_comp[unfolded comp_def])
-  apply (subst ifol'.FFVars_rrenames)
-  apply assumption+
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  subgoal for \<Delta> f V
-  apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
-  apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
-  apply (rule conjI)
-  apply (unfold set\<^sub>k\<^sub>2.set_map)
-  apply (rule refl)
-  apply (rule conjI)
-  apply (rule refl)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  apply (subst ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_ids image_UN[symmetric])
-  apply (rule conjI)
-  apply assumption
-  apply (subst image_Int[symmetric])
-  apply (erule bij_is_inj)
-  apply (rule trans[rotated])
-  apply (rule image_empty)
-  apply (erule arg_cong)
-  done
-  apply (subst ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  subgoal for \<Delta> V f \<rho>
-  apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
-  apply (unfold set\<^sub>k\<^sub>2.set_map)
-  apply (rule conjI)
-  apply (rule refl)
-  apply (subst ifol'_rrename_simps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (unfold set\<^sub>k\<^sub>2.map_comp)
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold set\<^sub>k\<^sub>2.map_id)
-  apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
-  apply (subst ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_ids)
-  apply (rule exI[of _ "\<sigma> \<circ> \<rho> \<circ> inv \<sigma>"])
-  apply (subgoal_tac "|supp \<rho>| <o |UNIV::k set|")
-  prefer 2
-  apply (erule card_of_subset_bound)
-  apply (unfold small_def)[1]
-  apply assumption
-  apply (subst ifol'.map_comp0)
-  apply (rule supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
-  apply (subst ifol'.map_comp0)
-  apply (rule supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
-  apply (subst supp_o_bij)
-  apply assumption
-  apply (subst comp_apply)
-  apply (unfold ifol'_vvsubst_rrename ifol'_vvsubst_rrename[OF bij_imp_bij_inv supp_inv_bound])
-  apply (subst ifol'.rrename_comps)
-  apply (rule supp_inv_bound bij_imp_bij_inv | assumption)+
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold ifol'.rrename_ids comp_def)
-  apply (rule conjI)
-  apply (rule refl)
-  apply (rule conjI)
-  apply assumption
-  apply (erule image_mono)
-  done
-  done
+  unfolding supp_def using bij_image_Collect_eq by fastforce
 
 lemma bij_betw_snth:
 assumes V: "|V::var set| <o |UNIV::var set|"
@@ -543,235 +349,388 @@ proof-
   by (smt (verit) UnCI disjoint_iff mem_Collect_eq set\<^sub>k\<^sub>2.map_cong)
 qed
 
+lemma small_Tsupp: "small (Tsupp t)"
+  unfolding small_def
+  by (cases t)
+    (auto simp: var_ifol'_pre_class.Un_bound var_ifol'_pre_class.UN_bound set\<^sub>k.set_bd ifol'.set_bd_UNIV)
+
 lemma Tvars_set\<^sub>k\<^sub>2: "(Tsupp t - set\<^sub>k\<^sub>2 xs) \<inter> set\<^sub>k\<^sub>2 xs = {}" "|Tsupp t - set\<^sub>k\<^sub>2 xs| <o |UNIV::var set|"
 apply auto
-using card_of_minus_bound small_def ssmall_Tsupp by blast
+using card_of_minus_bound small_def small_Tsupp by blast
 
 lemma Int_Diff_empty: "A \<inter> (B - C) = {} \<Longrightarrow> A \<inter> C = {} \<Longrightarrow> A \<inter> B = {}"
 by blast
 
-lemma G_refresh: 
-"(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
- unfolding G_def Tperm_def isPerm_def conj_assoc[symmetric]
-  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-  apply (elim disj_forward exE conjE; simp)
-  apply (rule exI, rule conjI[rotated], assumption | rule refl | assumption)+
-  subgoal for \<Delta> f V
-  apply (rule exE[OF refresh[OF Tvars_set\<^sub>k\<^sub>2, of V "Pair \<Delta> (All V f)", unfolded Tsupp.simps ifol'.set
-      Un_Diff Diff_idemp
-   ]])
-  apply (erule exE conjE)+
-  subgoal for g VV
-  apply (rule exI[of _ "map_set\<^sub>k (rrename_ifol' g) \<Delta>"])
-  apply (rule exI[of _ "g ` set\<^sub>k\<^sub>2 V"])
-  apply (rule conjI[rotated])
-  apply (rule conjI)
-  apply (unfold small_def)[1]
-  apply (meson card_of_image ordLeq_ordLess_trans)
-  apply (metis Int_commute Tsupp.simps Un_Diff_Int Un_empty_right ifol'.set(4) prod.collapse set\<^sub>k\<^sub>2.set_map)
-  apply (rule exI[of _ "rrename_ifol' g f"])
-  apply (rule exI[of _ VV])
-  apply (rule conjI)
-  apply (drule arg_cong[of _ _ set\<^sub>k\<^sub>2])
-  apply (unfold set\<^sub>k\<^sub>2.set_map)
-  apply assumption
-  apply (rule conjI)
-  apply (rule trans)
-  apply (rule set\<^sub>k.map_id[symmetric])
-  apply (rule set\<^sub>k.map_cong)
-  apply (rule refl)
-  apply (rule trans)
-  apply (rule id_apply)
-  apply (rule sym)
-  apply (rule ifol'.rrename_cong_ids)
-  apply assumption+
-  apply (erule id_onD)
-  apply (rule UnI1)
-  apply blast
-  apply (rule conjI[rotated])
-  apply (rule conjI)
-  apply (erule allE)+
-  apply (erule impE)
-  prefer 2
-  apply assumption
-  apply (rule conjI | assumption)+
-  
-  apply (unfold set\<^sub>k.set_map image_comp[unfolded comp_def] ifol'.FFVars_rrenames
-    image_UN[symmetric]
-  )[1]
-  apply hypsubst
-  apply (unfold set\<^sub>k\<^sub>2.set_map)
-  apply (rule trans)
-  apply (rule image_Int[symmetric])
-  apply (erule bij_is_inj)
-  apply (rule iffD2[OF image_is_empty])
-  apply assumption
-
-  apply (subst All_def)+
-  apply (unfold ifol'.TT_injects0)
-  apply (rule exI[of _ g])
-  apply (rule conjI, assumption)+
-  apply (rule conjI)
-
-  apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
-    map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
-    Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
-    UN_singleton map_ifol'_pre_def
-  )
-  apply (erule id_on_antimono)
-  apply (rule Un_upper2)
-  apply hypsubst
-  apply (rule refl)
-  done
-  done
-
-  apply (rule prod.exhaust[of t])
-  apply hypsubst
-  apply (unfold fst_conv snd_conv Tsupp.simps triv_forall_equality)
-  apply hypsubst_thin
-  apply (subst ifol'.set_map)
-  using card_of_subset_bound small_def apply blast
-  apply (unfold triv_forall_equality)
-
-subgoal premises prems for V f \<rho> \<Delta>
-  proof -
-    define X where "X \<equiv> set\<^sub>k\<^sub>2 V"
-    let ?O = "\<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` FFVars_ifol' f \<union> imsupp \<rho> \<union> X \<union> (FFVars_ifol' f - set\<^sub>k\<^sub>2 V)"
-    have osmall: "|?O| <o |UNIV::var set|"
-      apply (intro var_ifol'_pre_class.Un_bound)
-      apply (metis Tsupp.simps Un_commute card_of_subset_bound small_def ssmall_Tsupp sup_ge2)
-      using ifol'.set_bd_UNIV small_def small_image apply blast
-      apply (meson card_of_mono1 imsupp_supp_bound infinite_UNIV ordLeq_ordLess_trans prems(2) prems(3) small_def)
-      using X_def prems(2) small_def apply blast
-      using card_of_minus_bound ifol'.set_bd_UNIV by blast
-
-    obtain W' g where W': "W' \<inter> ?O = {}" "bij_betw g X W'"
-    proof atomize_elim
-      have "|UNIV - ?O| =o |UNIV::var set|" apply(rule card_of_Un_diff_infinite) apply (rule infinite_UNIV)
-        by (rule osmall)
-      then have "|X| <o |UNIV - ?O|"
-        using X_def ordIso_iff_ordLeq ordLess_ordLeq_trans prems(2) small_def by blast
-      then obtain g where "inj_on g X" "g ` X \<subseteq> UNIV - ?O"
-        by (meson card_of_ordLeq ordLess_imp_ordLeq)
-      then show "\<exists>W' g. W' \<inter> ?O = {} \<and> bij_betw g X W'"
-        apply -
-        apply (rule exI[of _ "g ` X"])
-        by (meson Diff_disjoint bij_betw_inv disjoint_iff in_mono inj_on_imp_bij_betw)
-    qed
-
-    define \<sigma> where "\<sigma> \<equiv> \<lambda>x. if x \<in> X then g x else if x \<in> W' then inv_into X g x else x"
-
-    have \<sigma>: "\<forall>x\<in>(X \<union> W'). \<sigma> (\<sigma> x) = x" "id_on (-(X \<union> W')) \<sigma>"
-      unfolding \<sigma>_def
-      using W' apply auto apply (auto simp: bij_betw_inv_into_left bij_betw_apply bij_betw_imp_surj_on inv_into_into)
-      apply (simp add: bij_betw_def f_inv_into_f)
-      by (simp add: id_on_def)
-
-    then have \<sigma>_involuntory[simp]:"\<And>x. \<sigma> (\<sigma> x) = x" by (metis Un_iff \<sigma>_def)
-    
-    then have \<sigma>_bij: "bij \<sigma>" using involuntory_imp_bij by blast
-    have \<sigma>_inv: "inv \<sigma> = \<sigma>" by (simp add: inv_equality)
-
-    have "|X \<union> W'| <o |UNIV::var set|" unfolding X_def using W'
-      by (metis X_def bij_betw_imp_surj_on prems(2) small_def small_image var_ifol'_pre_class.Un_bound)
-    moreover have "supp \<sigma> \<subseteq> X \<union> W'" using \<sigma>(2) unfolding id_on_def by (meson UnI1 UnI2 \<sigma>_def not_in_supp_alt subsetI)
-    ultimately have \<sigma>_small: "|supp \<sigma>| <o |UNIV::var set|" using card_of_subset_bound by blast
-
-    define \<rho>' where "\<rho>' \<equiv> \<lambda>x. if x \<in> \<sigma> ` FFVars_ifol' f then (\<rho> \<circ> \<sigma>) x else x"
-    have "supp \<rho>' \<subseteq> supp (\<rho> \<circ> \<sigma>)" unfolding \<rho>'_def supp_def by auto
-    then have \<rho>'_small: "|supp \<rho>'| <o |UNIV::var set|"
-      by (meson \<sigma>_small card_of_subset_bound ifol'_pre.supp_comp_bound prems(2) prems(3) small_def)
-
-    show ?thesis using prems W'
-      apply -
-      apply (rule exI[of _ "\<Delta>"])
-      apply (rule exI[of _ "\<sigma> ` set\<^sub>k\<^sub>2 V"])
+binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (infix "\<turnstile>" 100) where
+  Hyp: "f \<in>\<^sub>k \<Delta> \<Longrightarrow> \<Delta> \<turnstile> f"
+| ConjI: "(\<And>f. f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> \<Delta> \<turnstile> f) \<Longrightarrow> \<Delta> \<turnstile> Conj F"
+| ConjE: "\<lbrakk> \<Delta> \<turnstile> Conj F ; f \<in>\<^sub>k\<^sub>1 F \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f"
+| NegI: "\<Delta>,f \<turnstile> \<bottom> \<Longrightarrow> \<Delta> \<turnstile> Neg f"
+| NegE: "\<lbrakk> \<Delta> \<turnstile> Neg f ; \<Delta> \<turnstile> f \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> \<bottom>"
+| AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f" binds "set\<^sub>k\<^sub>2 V"
+| AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>" binds "set\<^sub>k\<^sub>2 V"
+where perm: Tperm supp: Tsupp
+  unfolding Tperm_def isPerm_def small_def
+         apply (simp add: ifol'.rrename_id0s set\<^sub>k.map_id0)
+        apply (rule ext)
+        apply (auto simp: set\<^sub>k.map_comp ifol'.rrename_comp0s ifol'.rrename_comps)[1]
+       apply auto[1]
+       apply (rule var_ifol'_pre_class.Un_bound)
+        apply (rule var_ifol'_pre_class.UN_bound)
+         apply (rule set\<^sub>k.set_bd)
+  using ifol'.set_bd_UNIV apply blast
+  using ifol'.set_bd_UNIV apply blast
+      apply auto[1]
+       apply (smt (verit, del_insts) UN_I UnCI set\<^sub>k.set_map ifol'.FFVars_rrenames image_iff)
+  using ifol'.FFVars_rrenames apply fastforce
+     apply auto[1]
+      apply (metis (full_types) UN_I UnI1 set\<^sub>k.map_ident_strong ifol'.rrename_cong_ids)
+     apply (simp add: ifol'.rrename_cong_ids)
+  subgoal for R R' B t
+    unfolding induct_rulify_fallback
+    apply (cases t)
+    apply simp
+    by (smt (verit, ccfv_SIG) le_boolE le_funD)
+  subgoal for \<sigma> R B t
+    unfolding induct_rulify_fallback split_beta
+    apply (elim disj_forward exE; cases t)
+          apply (auto simp: Tperm_def isPerm_def ifol'.rrename_comps in_k_equiv)
+         apply (rule exI)
+         apply (rule conjI)
+          apply (rule refl)
+         apply (rule allI impI)+
+         apply (unfold set\<^sub>k.map_comp)
+         apply (subst ifol'.rrename_comp0s)
+             apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+         apply (subst inv_o_simp1, assumption)
+         apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+         apply (rotate_tac -1)
+         apply (drule iffD2[OF in_k1_equiv, of "inv \<sigma>", rotated])
+          apply (unfold isPerm_def)
+          apply (assumption | rule conjI bij_imp_bij_inv supp_inv_bound)+
+         apply (subst (asm) set\<^sub>k\<^sub>1.map_comp)
+         apply (subst (asm) ifol'.rrename_comp0s)
+             apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+         apply (subst (asm) inv_o_simp1, assumption)
+         apply (unfold ifol'.rrename_id0s set\<^sub>k\<^sub>1.map_id)
+         apply (erule allE)
+         apply (erule impE)
+          apply assumption+
+        apply (subst ifol'.rrename_comp0s)
+            apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+        apply (subst inv_o_simp1, assumption)
+        apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+    subgoal for \<Delta> F f
+      apply (rule exI[of _ "map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) F"])
+      apply (subst ifol'_rrename_simps)
+        apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (unfold set\<^sub>k\<^sub>1.map_comp)
+      apply (subst ifol'.rrename_comp0s)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst inv_o_simp1, assumption)
+      apply (unfold ifol'.rrename_id0s set\<^sub>k\<^sub>1.map_id)
       apply (rule conjI)
-      apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
-      apply (rule conjI[rotated])+
-      apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
-      apply (rule exI[of _ \<rho>'])
-
+       apply assumption
+      apply (erule iffD2[OF in_k1_equiv, rotated])
+      apply (unfold isPerm_def)
       apply (rule conjI)
-      apply (subst ifol'_vvsubst_rrename[symmetric])
-      apply (rule \<sigma>_bij)
-      apply (rule \<sigma>_small)
-      apply (subst ifol'.map_comp)
-      apply (rule \<sigma>_small)
-      apply (rule \<rho>'_small)
-      apply (rule ifol'.map_cong)
-      apply (meson card_of_subset_bound small_def)
-      apply (rule supp_comp_bound)
-      apply (rule \<sigma>_small)
-      apply (rule \<rho>'_small)
-      apply (rule infinite_UNIV)
-      apply (rule refl)
-      apply (unfold \<rho>'_def comp_def)[1]
-      apply simp
-      
-      apply (rule conjI)
-      apply (rule iffD2[OF arg_cong[of _ _ R]])
-      apply (rule arg_cong2[OF refl, of _ _ Pair])
-      prefer 2
-      apply assumption
-      apply (rule sym)
-      apply (unfold All_def ifol'.TT_injects0)[1]
-      apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
-        map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
-        Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
-        UN_singleton map_ifol'_pre_def
-      )[1]
-      apply (rule exI[of _ \<sigma>])
-      apply (rule conjI, rule \<sigma>_bij)
-      apply (rule conjI, rule \<sigma>_small)
-      apply (rule conjI)
-      apply (rule id_on_antimono[OF \<sigma>(2)])
-      using W' X_def apply blast
-      apply (rule refl)
-
-      apply (unfold set\<^sub>k\<^sub>2.set_map)
-      apply (subgoal_tac "supp (\<rho> \<circ> \<sigma>) \<inter> \<sigma> ` FFVars_ifol' f \<subseteq> \<sigma> ` set\<^sub>k\<^sub>2 V")
-      apply (smt (verit, best) IntI \<rho>'_def not_in_supp_alt subset_iff)
-      apply (unfold supp_def imsupp_def)
-      using X_def \<sigma>_def apply auto[1]
-      apply (rule refl)
-      apply (rule refl)
-      
-      apply (rule conjI)
-      apply (meson small_image)
-      by (smt (verit) Int_iff Un_Int_eq(1) X_def \<sigma>_def bij_betw_apply disjoint_iff image_iff)
-  qed
-  done
-
-(* FINALLY, INTERPRETING THE Induct LOCALE: *)
-
-interpretation Ideduct: Induct where
-Tperm = Tperm and Tsupp = Tsupp and G = G
-apply standard  using G_mono G_equiv G_refresh by auto
-
-lemma ideduct_I: "deduct \<Delta> f = Ideduct.I (\<Delta>, f)"
-unfolding deduct_def Ideduct.I_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-unfolding fun_eq_iff G_def HOL.induct_forall_def HOL.induct_implies_def apply clarify
-subgoal for R \<Delta> f apply(rule iffI)
-  subgoal apply(elim disjE exE)
-    apply (rule exI[of _ "{}"]) apply simp
-    apply (rule exI[of _ "{}"]) apply auto[1]
-    apply (rule exI[of _ "{}"]) apply auto[1]
-    apply (rule exI[of _ "{}"]) apply auto[1]
-    apply (rule exI[of _ "{}"]) apply auto[1]
-    subgoal for f' V
-      apply (rule exI[of _ "set\<^sub>k\<^sub>2 V"]) apply (auto simp: small_def)
-      by (metis (no_types, lifting) bij_betw_imp_surj_on card_of_UNIV card_of_ordIso_finite card_of_ordLess2 finite.intros(1) infinite_UNIV inf_top.right_neutral ordLeq_iff_ordLess_or_ordIso refresh set\<^sub>k\<^sub>2.set_map)
-    subgoal for V f \<rho>
-      apply (rule exI[of _ "set\<^sub>k\<^sub>2 V"]) apply (auto simp: small_def)
-        by (metis (no_types, lifting) bij_betw_imp_surj_on card_of_UNIV card_of_ordIso_finite card_of_ordLess2 finite.intros(1) infinite_UNIV inf_top.right_neutral ordLeq_iff_ordLess_or_ordIso refresh set\<^sub>k\<^sub>2.set_map)
+       apply assumption+
       done
-  subgoal apply(elim conjE disjE exE) by auto
-  done
-  done
+       apply (rule exI)
+       apply (rule conjI)
+        apply (rule refl)
+       apply (subst ifol'.rrename_comp0s)
+           apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+       apply (subst inv_o_simp1, assumption)
+       apply (subst ifol'.rrename_comps)
+           apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+       apply (subst inv_o_simp1, assumption)
+       apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+       apply (unfold id_def)[1]
+       apply (subst rrename_Bot_simp)
+         apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst ifol'.rrename_comp0s)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst inv_o_simp1, assumption)
+      apply (subst ifol'.rrename_comp0s)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst inv_o_simp1, assumption)
+      apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+    subgoal for \<Delta> f
+      apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
+      apply (subst ifol'_rrename_simps)
+        apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst ifol'.rrename_comps)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst ifol'.rrename_comps)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst inv_o_simp1, assumption)+
+      apply (unfold ifol'.rrename_ids)
+      apply (rule conjI)
+       apply assumption+
+      done
+     apply (unfold set\<^sub>k.set_map image_comp[unfolded comp_def])
+     apply (subst ifol'.FFVars_rrenames)
+       apply assumption+
+     apply (subst ifol'.rrename_comp0s)
+         apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+     apply (subst inv_o_simp1, assumption)
+    subgoal for \<Delta> f V
+      apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
+      apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
+      apply (rule conjI)
+       apply (unfold set\<^sub>k\<^sub>2.set_map)
+       apply (rule refl)
+      apply (rule conjI)
+       apply (rule refl)
+      apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+      apply (subst ifol'.rrename_comps)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst inv_o_simp1, assumption)
+      apply (unfold ifol'.rrename_ids image_UN[symmetric])
+      apply (rule conjI)
+       apply assumption
+      apply (subst image_Int[symmetric])
+       apply (erule bij_is_inj)
+      apply (rule trans[rotated])
+       apply (rule image_empty)
+      apply (erule arg_cong)
+      done
+    apply (subst ifol'.rrename_comp0s)
+        apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+    apply (subst inv_o_simp1, assumption)
+    apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+    subgoal for \<Delta> V f \<rho>
+      apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
+      apply (unfold set\<^sub>k\<^sub>2.set_map)
+      apply (rule conjI)
+       apply (rule refl)
+      apply (subst ifol'_rrename_simps)
+        apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (unfold set\<^sub>k\<^sub>2.map_comp)
+      apply (subst inv_o_simp1, assumption)
+      apply (unfold set\<^sub>k\<^sub>2.map_id)
+      apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
+      apply (subst ifol'.rrename_comps)
+          apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
+      apply (subst inv_o_simp1, assumption)
+      apply (unfold ifol'.rrename_ids)
+      apply (rule exI[of _ "\<sigma> \<circ> \<rho> \<circ> inv \<sigma>"])
+      apply (subgoal_tac "|supp \<rho>| <o |UNIV::k set|")
+       prefer 2
+       apply (erule card_of_subset_bound)
+       apply assumption
+      apply (subst ifol'.map_comp0)
+        apply (rule supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
+      apply (subst ifol'.map_comp0)
+        apply (rule supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
+      apply (subst supp_o_bij)
+       apply assumption
+      apply (subst comp_apply)
+      apply (unfold ifol'_vvsubst_rrename ifol'_vvsubst_rrename[OF bij_imp_bij_inv supp_inv_bound])
+      apply (subst ifol'.rrename_comps)
+          apply (rule supp_inv_bound bij_imp_bij_inv | assumption)+
+      apply (subst inv_o_simp1, assumption)
+      apply (unfold ifol'.rrename_ids comp_def)
+      apply (rule conjI)
+       apply (rule refl)
+      apply (rule conjI)
+       apply assumption
+      apply (erule image_mono)
+      done
+    done
+  subgoal premises prems for R B t
+    using prems(2-) unfolding induct_rulify_fallback split_beta
+    unfolding Tperm_def isPerm_def conj_assoc[symmetric]
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE conjE; simp)
+         apply (rule exI, rule conjI[rotated], assumption | rule refl | assumption)+
+    subgoal for \<Delta> f V
+      apply (rule exE[OF refresh[OF Tvars_set\<^sub>k\<^sub>2, of V "Pair \<Delta> (All V f)", unfolded Tsupp.simps ifol'.set
+              Un_Diff Diff_idemp
+              ]])
+      apply (erule exE conjE)+
+      subgoal for g VV
+        apply (rule exI[of _ "map_set\<^sub>k (rrename_ifol' g) \<Delta>"])
+        apply (rule exI[of _ "g ` set\<^sub>k\<^sub>2 V"])
+        apply (rule conjI[rotated])
+         apply (rule conjI)
+          apply (meson card_of_image ordLeq_ordLess_trans)
+         apply (metis Int_commute Tsupp.simps Un_Diff_Int Un_empty_right ifol'.set(4) prod.collapse set\<^sub>k\<^sub>2.set_map)
+        apply (rule exI[of _ "rrename_ifol' g f"])
+        apply (rule exI[of _ VV])
+        apply (rule conjI)
+         apply (drule arg_cong[of _ _ set\<^sub>k\<^sub>2])
+         apply (unfold set\<^sub>k\<^sub>2.set_map)
+         apply assumption
+        apply (rule conjI)
+         apply (rule trans)
+          apply (rule set\<^sub>k.map_id[symmetric])
+         apply (rule set\<^sub>k.map_cong)
+          apply (rule refl)
+         apply (rule trans)
+          apply (rule id_apply)
+         apply (rule sym)
+         apply (rule ifol'.rrename_cong_ids)
+           apply assumption+
+         apply (erule id_onD)
+         apply (rule UnI1)
+         apply blast
+        apply (rule conjI[rotated])
+         apply (rule conjI)
+          apply (erule allE)+
+          apply (erule impE)
+           prefer 2
+           apply assumption
+          apply (rule conjI | assumption)+
 
-thm deduct.induct[no_vars]
+         apply (unfold set\<^sub>k.set_map image_comp[unfolded comp_def] ifol'.FFVars_rrenames
+            image_UN[symmetric]
+            )[1]
+         apply hypsubst
+         apply (unfold set\<^sub>k\<^sub>2.set_map)
+         apply (rule trans)
+          apply (rule image_Int[symmetric])
+          apply (erule bij_is_inj)
+         apply (rule iffD2[OF image_is_empty])
+         apply assumption
+
+        apply (subst All_def)+
+        apply (unfold ifol'.TT_injects0)
+        apply (rule exI[of _ g])
+        apply (rule conjI, assumption)+
+        apply (rule conjI)
+
+         apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
+            map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
+            Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
+            UN_singleton map_ifol'_pre_def
+            )
+         apply (erule id_on_antimono)
+         apply (rule Un_upper2)
+        apply hypsubst
+        apply (rule refl)
+        done
+      done
+
+    apply (rule prod.exhaust[of t])
+    apply hypsubst
+    apply (unfold fst_conv snd_conv Tsupp.simps triv_forall_equality)
+    apply hypsubst_thin
+    apply (subst ifol'.set_map)
+     apply (simp add: card_of_subset_bound)
+    apply (unfold triv_forall_equality)
+
+    subgoal premises prems for V f \<rho> \<Delta>
+    proof -
+      define X where "X \<equiv> set\<^sub>k\<^sub>2 V"
+      let ?O = "\<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` FFVars_ifol' f \<union> imsupp \<rho> \<union> X \<union> (FFVars_ifol' f - set\<^sub>k\<^sub>2 V)"
+      have osmall: "|?O| <o |UNIV::var set|"
+        apply (intro var_ifol'_pre_class.Un_bound)
+            apply (metis Tsupp.simps Un_commute card_of_subset_bound small_def small_Tsupp sup_ge2)
+        using ifol'.set_bd_UNIV small_def small_image apply blast
+          apply (metis (no_types, lifting) card_of_image card_of_subset_bound ifol'_prevar_set\<^sub>k\<^sub>1ifol'_prevar_ifol'_prevar_set\<^sub>k\<^sub>2IDprodsum_class.Un_bound imsupp_def ordLeq_ordLess_trans prems(1) prems(2))
+        using X_def prems(1) apply blast
+        using card_of_minus_bound ifol'.set_bd_UNIV by blast
+
+      obtain W' g where W': "W' \<inter> ?O = {}" "bij_betw g X W'"
+      proof atomize_elim
+        have "|UNIV - ?O| =o |UNIV::var set|" apply(rule card_of_Un_diff_infinite) apply (rule infinite_UNIV)
+          by (rule osmall)
+        then have "|X| <o |UNIV - ?O|"
+          using X_def ordIso_iff_ordLeq ordLess_ordLeq_trans prems(1,2) by blast
+        then obtain g where "inj_on g X" "g ` X \<subseteq> UNIV - ?O"
+          by (meson card_of_ordLeq ordLess_imp_ordLeq)
+        then show "\<exists>W' g. W' \<inter> ?O = {} \<and> bij_betw g X W'"
+          apply -
+          apply (rule exI[of _ "g ` X"])
+          by (meson Diff_disjoint bij_betw_inv disjoint_iff in_mono inj_on_imp_bij_betw)
+      qed
+
+      define \<sigma> where "\<sigma> \<equiv> \<lambda>x. if x \<in> X then g x else if x \<in> W' then inv_into X g x else x"
+
+      have \<sigma>: "\<forall>x\<in>(X \<union> W'). \<sigma> (\<sigma> x) = x" "id_on (-(X \<union> W')) \<sigma>"
+        unfolding \<sigma>_def
+        using W' apply auto apply (auto simp: bij_betw_inv_into_left bij_betw_apply bij_betw_imp_surj_on inv_into_into)
+         apply (simp add: bij_betw_def f_inv_into_f)
+        by (simp add: id_on_def)
+
+      then have \<sigma>_involuntory[simp]:"\<And>x. \<sigma> (\<sigma> x) = x" by (metis Un_iff \<sigma>_def)
+
+      then have \<sigma>_bij: "bij \<sigma>" using involuntory_imp_bij by blast
+      have \<sigma>_inv: "inv \<sigma> = \<sigma>" by (simp add: inv_equality)
+
+      have "|X \<union> W'| <o |UNIV::var set|" unfolding X_def using W'
+        by (metis X_def bij_betw_imp_surj_on prems(1) small_def small_image var_ifol'_pre_class.Un_bound)
+      moreover have "supp \<sigma> \<subseteq> X \<union> W'" using \<sigma>(2) unfolding id_on_def by (meson UnI1 UnI2 \<sigma>_def not_in_supp_alt subsetI)
+      ultimately have \<sigma>_small: "|supp \<sigma>| <o |UNIV::var set|" using card_of_subset_bound by blast
+
+      define \<rho>' where "\<rho>' \<equiv> \<lambda>x. if x \<in> \<sigma> ` FFVars_ifol' f then (\<rho> \<circ> \<sigma>) x else x"
+      have "supp \<rho>' \<subseteq> supp (\<rho> \<circ> \<sigma>)" unfolding \<rho>'_def supp_def by auto
+      then have \<rho>'_small: "|supp \<rho>'| <o |UNIV::var set|"
+        by (meson \<sigma>_small card_of_subset_bound ifol'_pre.supp_comp_bound prems(1,2,3) small_def)
+
+      show ?thesis using prems W'
+        apply -
+        apply (rule exI[of _ "\<Delta>"])
+        apply (rule exI[of _ "\<sigma> ` set\<^sub>k\<^sub>2 V"])
+        apply (rule conjI)
+         apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
+         apply (rule conjI[rotated])+
+           apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
+           apply (rule exI[of _ \<rho>'])
+
+           apply (rule conjI)
+            apply (subst ifol'_vvsubst_rrename[symmetric])
+              apply (rule \<sigma>_bij)
+             apply (rule \<sigma>_small)
+            apply (subst ifol'.map_comp)
+              apply (rule \<sigma>_small)
+             apply (rule \<rho>'_small)
+            apply (rule ifol'.map_cong)
+               apply (meson card_of_subset_bound small_def)
+              apply (rule supp_comp_bound)
+                apply (rule \<sigma>_small)
+               apply (rule \<rho>'_small)
+              apply (rule infinite_UNIV)
+             apply (rule refl)
+            apply (unfold \<rho>'_def comp_def)[1]
+            apply simp
+
+           apply (rule conjI)
+            apply (rule iffD2[OF arg_cong[of _ _ R]])
+             apply (rule arg_cong2[OF refl, of _ _ Pair])
+             prefer 2
+             apply assumption
+            apply (rule sym)
+            apply (unfold All_def ifol'.TT_injects0)[1]
+            apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
+            map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
+            Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
+            UN_singleton map_ifol'_pre_def
+            )[1]
+            apply (rule exI[of _ \<sigma>])
+            apply (rule conjI, rule \<sigma>_bij)
+            apply (rule conjI, rule \<sigma>_small)
+            apply (rule conjI)
+             apply (rule id_on_antimono[OF \<sigma>(2)])
+        using W' X_def apply blast
+            apply (rule refl)
+
+           apply (unfold set\<^sub>k\<^sub>2.set_map)
+           apply (subgoal_tac "supp (\<rho> \<circ> \<sigma>) \<inter> \<sigma> ` FFVars_ifol' f \<subseteq> \<sigma> ` set\<^sub>k\<^sub>2 V")
+            apply (smt (verit, best) IntI \<rho>'_def not_in_supp_alt subset_iff)
+           apply (unfold supp_def imsupp_def)
+        using X_def \<sigma>_def apply auto[1]
+          apply (rule refl)
+         apply (rule refl)
+
+        apply (rule conjI)
+         apply (meson card_of_image ordLeq_ordLess_trans)
+        by (smt (verit) Int_iff Un_Int_eq(1) X_def \<sigma>_def bij_betw_apply disjoint_iff image_iff)
+    qed
+    done
+  done
 
 corollary strong_induct_deduct[consumes 2]:
   assumes par: "\<And>p. small (Psupp p)"
@@ -786,10 +745,10 @@ and intros: "\<And>f \<Delta> p. f \<in>\<^sub>k \<Delta> \<Longrightarrow> P p 
 shows "P p \<Delta> f"
 apply(subgoal_tac "case (\<Delta>,f) of (t1, t2) \<Rightarrow> P p t1 t2")
   apply simp
-subgoal using par st apply(elim Ideduct.strong_induct[where R = "\<lambda>p (t1,t2). P p t1 t2"])
-    subgoal unfolding ideduct_I by simp
-    subgoal for p B t apply(subst (asm) G_def) 
-    unfolding ideduct_I[symmetric] apply(elim disjE exE)
+subgoal using par st apply(elim deduct.strong_induct[where R = "\<lambda>p (t1,t2). P p t1 t2"])
+    subgoal unfolding deduct.alt_def by simp
+    subgoal for p B t
+    unfolding deduct.alt_def[symmetric] apply(elim disjE exE case_prodE)
     subgoal using intros(1) by auto
     subgoal using intros(2) by auto
     subgoal using intros(3) by auto

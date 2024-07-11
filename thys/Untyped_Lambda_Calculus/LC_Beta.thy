@@ -86,7 +86,7 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "trm \<times> trm"
 
@@ -97,7 +97,7 @@ fun Tsupp :: "T \<Rightarrow> var set" where
 "Tsupp (e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
 
-interpretation Components where 
+interpretation LSNominalSet where 
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def  
   using small_Un small_def term.card_of_FFVars_bounds
@@ -274,10 +274,10 @@ subgoal for R tt1 tt2 apply(rule iffI)
 thm step.induct[no_vars]
 
 corollary strong_induct_step[consumes 2, case_names Beta AppL AppR Xi]: 
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and st: "step t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
   R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
 and AppL: "\<And>e1 e1' e2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
@@ -286,7 +286,7 @@ and AppR: "\<And>e1 e2 e2' p.
   step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
   R p (App e1 e2) (App e1 e2')"
 and Xi: "\<And>e e' x p. 
-  x \<notin> Pfvars p \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (Lam x e) (Lam x e')" 
 shows "R p t1 t2"
@@ -304,9 +304,9 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
 
 corollary strong_induct_step'[consumes 1, case_names Bound Beta AppL AppR Xi]: 
 assumes st: "step t1 t2"
-and par: "\<And>p. |Pfvars p| <o |UNIV::var set|"
+and par: "\<And>p. |Psupp p| <o |UNIV::var set|"
 and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
   R (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1) p"
 and AppL: "\<And>e1 e1' e2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow> 
@@ -315,11 +315,11 @@ and AppR: "\<And>e1 e2 e2' p.
   step e2 e2' \<Longrightarrow> (\<forall>p'. R e2 e2' p') \<Longrightarrow> 
   R (App e1 e2) (App e1 e2') p"
 and Xi: "\<And>e e' x p. 
-  x \<notin> Pfvars p \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow> 
   R (Lam x e) (Lam x e') p" 
 shows "\<forall>p. R t1 t2 p"
-using strong_induct_step[of Pfvars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
+using strong_induct_step[of Psupp t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
 
 
 (* Also inferring equivariance from the general infrastructure: *)

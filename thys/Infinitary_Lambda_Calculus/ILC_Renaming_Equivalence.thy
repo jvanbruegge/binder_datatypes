@@ -59,7 +59,7 @@ fun Tsupp :: "T \<Rightarrow> ivar set" where
 
 interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp 
-and Bperm = Bperm and Bsupp = Bsupp and wfB = wfB and bsmall = bsmall
+and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
 using iterm.card_of_FFVars_bounds
 apply (auto simp: iterm.rrename_id0s map_prod.comp 
@@ -72,8 +72,8 @@ unfolding bsmall_def touchedSuper_def
 using super_Un_ddset_triv  
 by (smt (verit) finite_Un rev_finite_subset) 
 
-lemma wfBij_presSuper: "wfBij = presSuper"
-unfolding wfBij_def presSuper_def fun_eq_iff apply safe
+lemma presBnd_presSuper: "presBnd = presSuper"
+unfolding presBnd_def presSuper_def fun_eq_iff apply safe
   subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
   subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
   subgoal for \<sigma> xxs apply(cases xxs) by auto 
@@ -100,14 +100,14 @@ unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_eequiv: 
-"isPerm \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> 
+"isPerm \<sigma> \<Longrightarrow> presBnd \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> 
  G  (Bperm \<sigma> xxs) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI3_1)
   subgoal apply(elim exE) subgoal for xs x x'
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
   apply(rule exI[of _ "\<sigma> x"]) apply(rule exI[of _ "\<sigma> x'"]) 
-  apply(cases t) unfolding isPerm_def small_def Tperm_def wfBij_def
+  apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_def
   apply simp by (metis option.simps(5)) . .
   (* *)
   subgoal apply(rule disjI3_2)
@@ -115,7 +115,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
   apply(rule exI[of _ "irrename \<sigma> e"]) 
   apply(rule exI[of _ "irrename \<sigma> e'"])  
-  apply(cases t) unfolding isPerm_def small_def Tperm_def wfBij_def
+  apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_def
   apply (simp add: iterm.rrename_comps) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3)
@@ -130,12 +130,12 @@ unfolding G_def apply(elim disjE)
 
 (* *)
 
-lemma G_wfB: "G xxs R t \<Longrightarrow> wfB xxs"
+lemma G_bnd: "G xxs R t \<Longrightarrow> bnd xxs"
 unfolding G_def by auto 
 
-lemma eextend_to_wfBij: 
-assumes "wfB xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bsupp xxs \<inter> A' = {}"
-shows "\<exists>\<rho>. isPerm \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bsupp xxs \<inter> A = {} \<and> id_on A' \<rho>" 
+lemma eextend_to_presBnd: 
+assumes "bnd xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bsupp xxs \<inter> A' = {}"
+shows "\<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> ` Bsupp xxs \<inter> A = {} \<and> id_on A' \<rho>" 
 proof(cases xxs)
   case None
   thus ?thesis apply(intro exI[of _ id]) unfolding isPerm_def by auto
@@ -146,15 +146,15 @@ next
   using assms by (auto split: option.splits simp: small_def bsmall_def) 
   show ?thesis using extend_super[OF 0] apply safe
   subgoal for \<rho> apply(rule exI[of _ \<rho>]) 
-  using Some by (auto split: option.splits simp: wfBij_presSuper isPerm_def) .
+  using Some by (auto split: option.splits simp: presBnd_presSuper isPerm_def) .
 qed 
 
 
 interpretation Reneqv : IInduct1 
 where Tperm = Tperm and Tsupp = Tsupp and Bperm = Bperm and Bsupp = Bsupp 
-and wfB = wfB and bsmall = bsmall and GG = G
+and bnd = bnd and bsmall = bsmall and GG = G
 apply standard
-using G_mmono G_eequiv G_wfB eextend_to_wfBij by auto
+using G_mmono G_eequiv G_bnd eextend_to_presBnd by auto
 
 
 (* *)
@@ -200,13 +200,13 @@ subgoal apply(subgoal_tac "bsmall (Tsupp t)")
 
 lemma G_rrefresh: 
 "(\<forall>t. R t \<longrightarrow> Reneqv.II t) \<Longrightarrow> 
- (\<forall>\<sigma> t. isPerm \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> 
+ (\<forall>\<sigma> t. isPerm \<sigma> \<and> presBnd \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> 
  G xxs R t \<Longrightarrow> 
  \<exists>yys. Bsupp yys \<inter> Tsupp t = {} \<and> G yys R t"
 apply(subgoal_tac "Reneqv.II t") defer
 apply (metis Reneqv.GG_mmono2 Reneqv.II.simps predicate1I)
 subgoal premises p using p apply-
-apply(frule G_wfB)
+apply(frule G_bnd)
 unfolding G_def Tperm_def apply safe
   subgoal for xs x x' 
   apply(rule exI[of _ None])  
@@ -236,7 +236,7 @@ unfolding G_def Tperm_def apply safe
         subgoal unfolding isPerm_def by auto
         subgoal by (smt (verit, best) Diff_iff Un_iff iLam_irrename id_on_def 
            irrename_eq_itvsubst_iVar) . 
-        subgoal unfolding id_on_def isPerm_def wfBij_def by (auto split: option.splits) . . .
+        subgoal unfolding id_on_def isPerm_def presBnd_def by (auto split: option.splits) . . .
   (* *)
   subgoal for e1 e1' es2 es2'
   apply(rule exI[of _ None])  
@@ -254,7 +254,7 @@ unfolding G_def Tperm_def apply safe
 
 interpretation Reneqv : IInduct
 where Tperm = Tperm and Tsupp = Tsupp and 
-Bperm = Bperm and Bsupp = Bsupp and wfB = wfB and bsmall = bsmall 
+Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall 
 and GG = G
 apply standard using III_bsmall G_rrefresh by auto
 
@@ -265,13 +265,13 @@ apply standard using III_bsmall G_rrefresh by auto
 thm reneqv.induct[no_vars] 
 
 corollary strong_induct_reneqv[consumes 2, case_names iVar iLam iApp]: 
-assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
 and st: "reneqv t1 t2"  
 and iVar: "\<And>xs x x' p. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
   R p (iVar x) (iVar x')"
 and iLam: "\<And>e e' xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (iLam xs e) (iLam xs e')" 
 and iApp: "\<And>e1 e1' es2 es2' p. 
@@ -334,7 +334,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
 and r: "reneqv e e'" 
 shows "reneqv (irrename f e) (irrename f e')"
 using assms unfolding reneqv_I using Reneqv.II_equiv[of "(e,e')" f]
-unfolding Tperm_def isPerm_def wfBij_presSuper by auto
+unfolding Tperm_def isPerm_def presBnd_presSuper by auto
 
   
 

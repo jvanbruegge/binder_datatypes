@@ -78,7 +78,7 @@ Bang: "trans (Par P (Bang P)) C \<Longrightarrow> trans (Bang P) C"
 *)
 
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "trm \<times> cmt"
 type_synonym V = "var list" 
@@ -100,7 +100,7 @@ fun Vfvars :: "V \<Rightarrow> var set" where
 
 lemmas commit_internal.FFVars_rrenames[simp]
 
-interpretation Components where 
+interpretation LSNominalSet where 
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def 
   using small_Un small_def term.card_of_FFVars_bounds
@@ -620,25 +620,25 @@ thm trans.induct[of P C \<phi>, no_vars]
 
 corollary strong_induct_trans[consumes 2, case_names Inp Open ScopeF ScopeB Par1 Com1 Close1]: 
 assumes 
-par: "\<And>p. small (Pfvars p)" 
+par: "\<And>p. small (Psupp p)" 
 and tr: "trans P C"
 and Inp: 
 "\<And>x a u P p. x \<notin> {a, u} \<Longrightarrow> 
     \<phi> p (Inp a x P) (Finp a u (usub P u x))"
 and Open:  
-"\<And>P a x P' p. x \<notin> Pfvars p \<Longrightarrow> x \<noteq> a \<Longrightarrow> 
+"\<And>P a x P' p. x \<notin> Psupp p \<Longrightarrow> x \<noteq> a \<Longrightarrow> 
     trans P (Fout a x P') \<Longrightarrow> (\<forall>p'. \<phi> p' P (Fout a x P')) \<Longrightarrow> a \<noteq> x \<Longrightarrow> 
     \<phi> p (Res x P) (Bout a x P')"
 and ScopeF: 
-"\<And>P act P' y p. y \<notin> Pfvars p \<Longrightarrow> y \<notin> fvars act \<Longrightarrow> 
+"\<And>P act P' y p. y \<notin> Psupp p \<Longrightarrow> y \<notin> fvars act \<Longrightarrow> 
     trans P (Cmt act P') \<Longrightarrow> (\<forall>p'. \<phi> p' P (Cmt act P')) \<Longrightarrow> y \<notin> vars act \<Longrightarrow> 
     \<phi> p (Res y P) (Cmt act (Res y P'))"
 and ScopeB: 
-"\<And>P a x P' y p. {x,y} \<inter> Pfvars p = {} \<Longrightarrow> a \<notin> {x,y} \<Longrightarrow> 
+"\<And>P a x P' y p. {x,y} \<inter> Psupp p = {} \<Longrightarrow> a \<notin> {x,y} \<Longrightarrow> 
     trans P (Bout a x P') \<Longrightarrow> (\<forall>p'. \<phi> p' P (Bout a x P')) \<Longrightarrow> y \<notin> {a, x} \<Longrightarrow> x \<notin> {a} \<union> FFVars P \<Longrightarrow>
     \<phi> p (Res y P) (Bout a x (Res y P'))" 
 and Par1: 
-"\<And>P1 act P1' P2 p. bvars act \<inter> (Pfvars p \<union> fvars act) = {} \<Longrightarrow> 
+"\<And>P1 act P1' P2 p. bvars act \<inter> (Psupp p \<union> fvars act) = {} \<Longrightarrow> 
     trans P1 (Cmt act P1') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P1 (Cmt act P1')) \<Longrightarrow>
     bvars act \<inter> FFVars P1 = {} \<Longrightarrow> 
@@ -652,7 +652,7 @@ and Com1:
     (\<forall>p'. \<phi> p' P2 (Fout a x P2')) \<Longrightarrow> 
     \<phi> p (Par P1 P2) (Tau (Par P1' P2'))"
 and Close1: 
-"\<And>P1 a x P1' P2 P2' p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars P2 \<Longrightarrow> 
+"\<And>P1 a x P1' P2 P2' p. x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars P2 \<Longrightarrow> 
     trans P1 (Finp a x P1') \<Longrightarrow>
     (\<forall>p'. \<phi> p' P1 (Finp a x P1')) \<Longrightarrow>
     trans P2 (Bout a x P2') \<Longrightarrow>

@@ -239,7 +239,7 @@ inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (in
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
 thm deduct_def
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "ifol set\<^sub>k \<times> ifol"
 
@@ -259,7 +259,7 @@ instance k::infinite
   using k_Cinfinite
   using cinfinite_iff_infinite by blast
 
-interpretation Components where
+interpretation LSNominalSet where
 Tperm = Tperm and Tsupp = Tsupp
 apply standard
 unfolding Tperm_def isPerm_def small_def
@@ -774,15 +774,15 @@ subgoal for R \<Delta> f apply(rule iffI)
 thm deduct.induct[no_vars]
 
 corollary strong_induct_deduct[consumes 2]:
-  assumes par: "\<And>p. small (Pfvars p)"
+  assumes par: "\<And>p. small (Psupp p)"
 and st: "\<Delta> \<turnstile> f"
 and intros: "\<And>f \<Delta> p. f \<in>\<^sub>k \<Delta> \<Longrightarrow> P p \<Delta> f"
   "\<And>F \<Delta> p. (\<And>f. f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> \<Delta> \<turnstile> f) \<Longrightarrow> (\<And>f. f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> \<forall>p. P p \<Delta> f) \<Longrightarrow> P p \<Delta> (Conj F)"
   "\<And>\<Delta> F f p. \<Delta> \<turnstile> Conj F \<Longrightarrow> \<forall>p. P p \<Delta> (Conj F) \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> P p \<Delta> f"
   "\<And>\<Delta> f p. \<Delta> , f \<turnstile> \<bottom> \<Longrightarrow> \<forall>p. P p (\<Delta> , f) \<bottom> \<Longrightarrow> P p \<Delta> (Neg f)"
   "\<And>\<Delta> f p. \<Delta> \<turnstile> Neg f \<Longrightarrow> \<forall>p. P p \<Delta> (Neg f) \<Longrightarrow> \<Delta> \<turnstile> f \<Longrightarrow> \<forall>p. P p \<Delta> f \<Longrightarrow> P p \<Delta> \<bottom>"
-  "\<And>\<Delta> f V p. set\<^sub>k\<^sub>2 V \<inter> Pfvars p = {} \<Longrightarrow> \<Delta> \<turnstile> f \<Longrightarrow> \<forall>p. P p \<Delta> f \<Longrightarrow> set\<^sub>k\<^sub>2 V \<inter> \<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<Longrightarrow> P p \<Delta> (All V f)"
-  "\<And>\<Delta> V f \<rho> p. set\<^sub>k\<^sub>2 V \<inter> Pfvars p = {} \<Longrightarrow> \<Delta> \<turnstile> All V f \<Longrightarrow> \<forall>p. P p \<Delta> (All V f) \<Longrightarrow> supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<Longrightarrow> P p \<Delta> (vvsubst_ifol' \<rho> f)"
+  "\<And>\<Delta> f V p. set\<^sub>k\<^sub>2 V \<inter> Psupp p = {} \<Longrightarrow> \<Delta> \<turnstile> f \<Longrightarrow> \<forall>p. P p \<Delta> f \<Longrightarrow> set\<^sub>k\<^sub>2 V \<inter> \<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<Longrightarrow> P p \<Delta> (All V f)"
+  "\<And>\<Delta> V f \<rho> p. set\<^sub>k\<^sub>2 V \<inter> Psupp p = {} \<Longrightarrow> \<Delta> \<turnstile> All V f \<Longrightarrow> \<forall>p. P p \<Delta> (All V f) \<Longrightarrow> supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<Longrightarrow> P p \<Delta> (vvsubst_ifol' \<rho> f)"
 shows "P p \<Delta> f"
 apply(subgoal_tac "case (\<Delta>,f) of (t1, t2) \<Rightarrow> P p t1 t2")
   apply simp

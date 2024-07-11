@@ -15,7 +15,7 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 
 thm cong_def
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "trm \<times> trm"
 type_synonym V = "var list" 
@@ -35,7 +35,7 @@ fun Vfvars :: "V \<Rightarrow> var set" where
 "Vfvars v = set v"
 *)
 
-interpretation Components where
+interpretation LSNominalSet where
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def 
   using small_Un small_def term.card_of_FFVars_bounds
@@ -128,16 +128,16 @@ thm cong.induct[of P C \<phi>, no_vars]
 
 corollary strong_induct_cong[consumes 2]:
   assumes
-    par: "\<And>p. small (Pfvars p)"
+    par: "\<And>p. small (Psupp p)"
   and cg: "P \<equiv>\<^sub>\<pi> Q"
   and rules: "\<And>P Q p. P = Q \<Longrightarrow> \<phi> P Q p"
 "\<And>P Q p. \<phi> (Par P Q) (Par Q P) p"
 "\<And>P Q R p. \<phi> (Par (Par P Q) R) (Par P (Par Q R)) p"
 "\<And>P p. \<phi> (Par P Zero) P p"
-"\<And>x y P p. {x, y} \<inter> Pfvars p = {} \<Longrightarrow> x \<noteq> y \<Longrightarrow> \<phi> (Res x (Res y P)) (Res y (Res x P)) p"
-"\<And>x p. x \<notin> Pfvars p \<Longrightarrow> \<phi> (Res x Zero) Zero p"
+"\<And>x y P p. {x, y} \<inter> Psupp p = {} \<Longrightarrow> x \<noteq> y \<Longrightarrow> \<phi> (Res x (Res y P)) (Res y (Res x P)) p"
+"\<And>x p. x \<notin> Psupp p \<Longrightarrow> \<phi> (Res x Zero) Zero p"
 "\<And>P p. \<phi> (Bang P) (Par P (Bang P)) p"
-"\<And>x Q P p. x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars Q \<Longrightarrow> \<phi> (Res x (Par P Q)) (Par (Res x P) Q) p"
+"\<And>x Q P p. x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars Q \<Longrightarrow> \<phi> (Res x (Par P Q)) (Par (Res x P) Q) p"
 shows "\<phi> P Q p"
   apply(subgoal_tac "case (P,Q) of (P, Q) \<Rightarrow> \<phi> P Q p")
   subgoal by simp
@@ -236,12 +236,12 @@ subgoal for R PP QQ apply(rule iffI)
 thm trans.induct[of P Q \<phi>, no_vars]
 
 corollary strong_induct_trans[consumes 2]:
-  assumes par: "\<And>p. small (Pfvars p)"
+  assumes par: "\<And>p. small (Psupp p)"
   and tr: "trans P Q"
   and rules:
-  "\<And>x z P y Q p. y \<notin> Pfvars p \<Longrightarrow> \<phi> (Par (Out x z P) (Inp x y Q)) (Par P (usub Q z y)) p"
+  "\<And>x z P y Q p. y \<notin> Psupp p \<Longrightarrow> \<phi> (Par (Out x z P) (Inp x y Q)) (Par P (usub Q z y)) p"
   "\<And>P Q R p. P \<rightarrow> Q \<Longrightarrow> (\<And>p. \<phi> P Q p) \<Longrightarrow> \<phi> (Par P R) (Par P Q) p"
-  "\<And>P Q x p. x \<notin> Pfvars p \<Longrightarrow> P \<rightarrow> Q \<Longrightarrow> (\<And>p. \<phi> P Q p) \<Longrightarrow> \<phi> (Res x P) (Res x Q) p"
+  "\<And>P Q x p. x \<notin> Psupp p \<Longrightarrow> P \<rightarrow> Q \<Longrightarrow> (\<And>p. \<phi> P Q p) \<Longrightarrow> \<phi> (Res x P) (Res x Q) p"
   "\<And>P P' Q' Q p. P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> (\<And>p. \<phi> P' Q' p) \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> \<phi> P Q p"
 shows "\<phi> P Q p"
 apply(subgoal_tac "case (P,Q) of (P, Q) \<Rightarrow> \<phi> P Q p")

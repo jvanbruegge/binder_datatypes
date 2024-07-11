@@ -16,7 +16,7 @@ inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" 
 thm stepD_def
 
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "nat \<times> trm \<times> trm"
 
@@ -27,7 +27,7 @@ fun Tsupp :: "T \<Rightarrow> var set" where
 "Tsupp (d,e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
 
-interpretation Components where
+interpretation LSNominalSet where
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def  
   using small_Un small_def term.card_of_FFVars_bounds
@@ -209,10 +209,10 @@ subgoal for R d tt1 tt2 apply(rule iffI)
 thm stepD.induct[no_vars]
 
 corollary strong_induct_stepD[consumes 2, case_names Beta AppL AppR Xi]: 
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and st: "stepD d t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
   R p 0 (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
 and AppL: "\<And>d e1 e1' e2 p. 
   stepD d e1 e1' \<Longrightarrow> (\<forall>p'. R p' d e1 e1') \<Longrightarrow> 
@@ -221,7 +221,7 @@ and AppR: "\<And>d e1 e2 e2' p.
   stepD d e2 e2' \<Longrightarrow> (\<forall>p'. R p' d e2 e2') \<Longrightarrow> 
   R p (Suc d) (App e1 e2) (App e1 e2')"
 and Xi: "\<And>d e e' x p. 
-  x \<notin> Pfvars p \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> 
   stepD d e e' \<Longrightarrow> (\<forall>p'. R p' d e e') \<Longrightarrow> 
   R p d (Lam x e) (Lam x e')" 
 shows "R p d t1 t2"

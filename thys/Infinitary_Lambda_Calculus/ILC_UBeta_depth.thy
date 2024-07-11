@@ -92,7 +92,7 @@ thm stream.map_cong0[no_vars]
 
 interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp
-and Bperm = Bperm and Bsupp = Bsupp and wfB = wfB and bsmall = bsmall
+and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
   using iterm.card_of_FFVars_bounds dsset_card_ls
   apply (auto simp: dstream_map_ident_strong small_def
@@ -105,8 +105,8 @@ stream.map_ident_strong iterm.rrename_cong_ids split: option.splits)
   by (smt (verit) finite_Un rev_finite_subset) 
 
 (* 
-lemma wfBij_presSuper: "wfBij = presSuper"
-unfolding wfBij_def presSuper_def fun_eq_iff apply safe
+lemma presBnd_presSuper: "presBnd = presSuper"
+unfolding presBnd_def presSuper_def fun_eq_iff apply safe
   subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
   subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
   subgoal for \<sigma> xxs apply(cases xxs) by auto 
@@ -152,13 +152,13 @@ unfolding uniformS_def4 sset_sflat apply auto
 apply (metis snth_sset) by (metis More_Stream.theN)
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_eequiv: "isPerm \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> G (Bperm \<sigma> xxs) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
+lemma G_eequiv: "isPerm \<sigma> \<Longrightarrow> presBnd \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> G (Bperm \<sigma> xxs) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI4_1)
   subgoal apply(elim exE) subgoal for es es'  
   apply(rule exI[of _ "smap (irrename \<sigma>) es"])  
   apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
-  apply(cases t) unfolding isPerm_def small_def Tperm_def wfBij_presSuper
+  apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_presSuper
   apply (simp add: iterm.rrename_comps uniformS_irrename) unfolding stream_all2_iff_snth
   using hred_irrename by auto . .
   (* *)
@@ -167,7 +167,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ d])
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess"]) 
-  apply(cases t) unfolding isPerm_def small_def Tperm_def wfBij_presSuper
+  apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_presSuper
   apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap uniformS_irrename  
      uniformS_sflat irrename_reneqv) . . .
   (* *)
@@ -179,7 +179,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess'"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def  
   apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap smap_sflat) 
-  by (metis ILC_Renaming_Equivalence.wfBij_presSuper id_apply inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id0 uniformS_irrename)
+  by (metis ILC_Renaming_Equivalence.presBnd_presSuper id_apply inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id0 uniformS_irrename)
   . .  
   (* *)
   subgoal apply(rule disjI4_4)
@@ -189,18 +189,18 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def  
   apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap)
-    by (metis (no_types, lifting) comp_apply irrename_simps(3) presSuper_def stream.map_cong wfBij_presSuper) 
+    by (metis (no_types, lifting) comp_apply irrename_simps(3) presSuper_def stream.map_cong presBnd_presSuper) 
    . . . 
 
 
 (* *)
 
-lemma G_wfB: "G xxs R t \<Longrightarrow> wfB xxs"
+lemma G_bnd: "G xxs R t \<Longrightarrow> bnd xxs"
 unfolding G_def by auto
 
-lemma eextend_to_wfBij: 
-assumes "wfB xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bsupp xxs \<inter> A' = {}"
-shows "\<exists>\<rho>. isPerm \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bsupp xxs \<inter> A = {} \<and> id_on A' \<rho>" 
+lemma eextend_to_presBnd: 
+assumes "bnd xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bsupp xxs \<inter> A' = {}"
+shows "\<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> ` Bsupp xxs \<inter> A = {} \<and> id_on A' \<rho>" 
 proof(cases xxs)
   case None
   thus ?thesis apply(intro exI[of _ id]) unfolding isPerm_def by auto
@@ -211,15 +211,15 @@ next
   using assms by (auto split: option.splits simp: small_def bsmall_def) 
   show ?thesis using extend_super[OF 0] apply safe
   subgoal for \<rho> apply(rule exI[of _ \<rho>]) 
-  using Some by (auto split: option.splits simp: wfBij_presSuper isPerm_def) .
+  using Some by (auto split: option.splits simp: presBnd_presSuper isPerm_def) .
 qed 
 
 
 interpretation Ustep : IInduct1 
 where Tperm = Tperm and Tsupp = Tsupp and Bperm = Bperm and Bsupp = Bsupp 
-and wfB = wfB and bsmall = bsmall and GG = G
+and bnd = bnd and bsmall = bsmall and GG = G
 apply standard
-using G_mmono G_eequiv G_wfB eextend_to_wfBij by auto
+using G_mmono G_eequiv G_bnd eextend_to_presBnd by auto
 
 (* *)
  
@@ -267,13 +267,13 @@ subgoal apply(subgoal_tac "bsmall (Tsupp t)")
 
 lemma G_rrefresh: 
 "(\<forall>t. R t \<longrightarrow> Ustep.II t) \<Longrightarrow>  
- (\<forall>\<sigma> t. isPerm \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> 
+ (\<forall>\<sigma> t. isPerm \<sigma> \<and> presBnd \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> 
  G xxs R t \<Longrightarrow> 
  \<exists>yys. Bsupp yys \<inter> Tsupp t = {} \<and> G yys R t"
 apply(subgoal_tac "Ustep.II t") defer
 apply (metis Ustep.GG_mmono2 Ustep.II.simps predicate1I)
 subgoal premises p using p apply-
-apply(frule G_wfB)
+apply(frule G_bnd)
 unfolding G_def Tperm_def apply safe 
   subgoal for es es'
   apply(rule exI[of _ None])  
@@ -322,7 +322,7 @@ unfolding G_def Tperm_def apply safe
         apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
       subgoal unfolding stream.map_comp apply(rule stream.map_cong0) 
         apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto 
-      subgoal unfolding isPerm_def wfBij_presSuper presSuper_def by auto 
+      subgoal unfolding isPerm_def presBnd_presSuper presSuper_def by auto 
   . . . . . 
       
 
@@ -330,7 +330,7 @@ unfolding G_def Tperm_def apply safe
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
 interpretation Ustep: IInduct where Tperm = Tperm and Tsupp = Tsupp and 
-Bperm = Bperm and Bsupp = Bsupp and wfB = wfB and bsmall = bsmall 
+Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall 
 and GG = G
 apply standard using III_bsmall G_rrefresh by auto
 
@@ -342,7 +342,7 @@ apply standard using III_bsmall G_rrefresh by auto
 thm ustepD.induct[no_vars] 
 
 corollary strong_induct_ustepD[consumes 2, case_names Beta iAppL iAppR Xi]: 
-assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
 and st: "ustepD d t1 t2"  
 and Beta: "\<And>d es es' p. 
   stream_all2 hred es es' \<Longrightarrow> 
@@ -354,7 +354,7 @@ and iAppR: "\<And>d ess ess' es p.
   ustepD d (sflat ess) (sflat ess') \<Longrightarrow> (\<forall>p'. R p' d (sflat ess) (sflat ess')) \<Longrightarrow> 
   R p (Suc d) (smap2 iApp es ess) (smap2 iApp es ess')"
 and Xi: "\<And>d es es' xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   ustepD d es es' \<Longrightarrow> (\<forall>p'. R p' d es es') \<Longrightarrow> 
   R p d (smap (iLam xs) es) (smap (iLam xs) es')" 
 shows "R p d t1 t2"
@@ -376,7 +376,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
 and r: "ustepD d es es'" 
 shows "ustepD d (smap (irrename f) es) (smap (irrename f) es')"
 using assms unfolding ustepD_I using Ustep.II_equiv[of "(d,es,es')" f]
-unfolding Tperm_def isPerm_def wfBij_presSuper by auto
+unfolding Tperm_def isPerm_def presBnd_presSuper by auto
 
 
 (* Other properties: *)

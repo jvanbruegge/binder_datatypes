@@ -219,7 +219,7 @@ fun Tsupp :: "T \<Rightarrow> var set" where
 fun Vfvars :: "V \<Rightarrow> var set" where
   "Vfvars v = set v"
 *)
-interpretation Components where
+interpretation LSNominalSet where
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def
   using small_Un typ.card_of_FFVars_bounds
@@ -519,7 +519,7 @@ interpretation ty: Induct where Tperm = Tperm and Tsupp = Tsupp and G = G
 print_theorems
 
 corollary strong_induct_ty[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and ty: "\<Gamma> \<turnstile> S <: T"
 and SA_Top: "\<And>\<Gamma> S p.
    \<turnstile> \<Gamma> ok \<Longrightarrow> S closed_in \<Gamma> \<Longrightarrow>
@@ -534,7 +534,7 @@ and SA_Arrow: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2 p.
    \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> S\<^sub>2 T\<^sub>2 \<Longrightarrow>
    \<phi> p \<Gamma> (S\<^sub>1 \<rightarrow> S\<^sub>2) (T\<^sub>1 \<rightarrow> T\<^sub>2)"
 and SA_All: "\<And>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2 p.
-   x \<notin> Pfvars p \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> FFVars_typ S\<^sub>1 \<Longrightarrow> x \<notin> FFVars_typ T\<^sub>1 \<Longrightarrow>
+   x \<notin> Psupp p \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> FFVars_typ S\<^sub>1 \<Longrightarrow> x \<notin> FFVars_typ T\<^sub>1 \<Longrightarrow>
    \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 \<Longrightarrow> \<forall>p. \<phi> p \<Gamma> T\<^sub>1 S\<^sub>1 \<Longrightarrow> \<Gamma> , x <: T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<Longrightarrow>
    \<forall>p. \<phi> p (\<Gamma> , x <: T\<^sub>1) S\<^sub>2 T\<^sub>2 \<Longrightarrow>
    \<phi> p \<Gamma> (\<forall> x <: S\<^sub>1 . S\<^sub>2) (\<forall> x <: T\<^sub>1 . T\<^sub>2)"

@@ -21,7 +21,7 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
 thm affine_def
 
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "itrm"
 
@@ -32,7 +32,7 @@ fun Tsupp :: "T \<Rightarrow> ivar set" where
 "Tsupp e = FFVars e"
 
 
-interpretation Components where
+interpretation LSNominalSet where
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def  
   using small_Un small_def iterm.card_of_FFVars_bounds
@@ -155,11 +155,11 @@ subgoal for R tt apply(rule iffI)
 thm affine.induct[no_vars] 
 
 corollary strong_induct_affine[consumes 2, case_names iVar iLam iApp]: 
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and st: "affine t"  
 and iVar: "\<And>x p. R p (iVar x)"
 and iLam: "\<And>e xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   affine e \<Longrightarrow> (\<forall>p'. R p' e) \<Longrightarrow> R p (iLam xs e)" 
 and iApp: "\<And>e1 es2 p.
     affine e1 \<Longrightarrow> (\<forall>p'. R p' e1) \<Longrightarrow>
@@ -180,10 +180,10 @@ apply(subgoal_tac "R p t") (* this is overkill here, but I keep the general patt
 
 corollary strong_induct_affine'[consumes 1, case_names Bound iVar iLam iApp]: 
 assumes st: "affine t"
-and par: "\<And>p. |Pfvars p| <o |UNIV::ivar set|"
+and par: "\<And>p. |Psupp p| <o |UNIV::ivar set|"
 and iVar: "\<And>x p. R (iVar x) p"
 and iLam: "\<And>e xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   affine e \<Longrightarrow> (\<forall>p'. R e p') \<Longrightarrow> R (iLam xs e) p" 
 and iApp: "\<And>e1 es2 p.
     affine e1 \<Longrightarrow> (\<forall>p'. R e1 p') \<Longrightarrow>
@@ -192,7 +192,7 @@ and iApp: "\<And>e1 es2 p.
     (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}) \<Longrightarrow> 
     R (iApp e1 es2) p"
 shows "\<forall>p. R t p"
-using strong_induct_affine[of Pfvars t "\<lambda>p t. R t p"] assms unfolding small_def by auto
+using strong_induct_affine[of Psupp t "\<lambda>p t. R t p"] assms unfolding small_def by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_affine:

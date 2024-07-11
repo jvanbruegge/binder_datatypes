@@ -18,7 +18,7 @@ thm pstep_def
 
 (* xx fresh \<Longrightarrow> tvsubst (Var(x:=e2')) e1' = tvsubst (Var(xx:=e2')) e1'[xx\<and>x]  *)
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "trm \<times> trm"
 
@@ -38,7 +38,7 @@ fun Tsupp :: "T \<Rightarrow> var set" where
 fun Vfvars :: "V \<Rightarrow> var set" where 
 "Vfvars v = set v"  *)
 
-interpretation Components where 
+interpretation LSNominalSet where 
 Tperm = Tperm and Tsupp = Tsupp
 (* and Vmap = Vmap and Vfvars = Vfvars *)
 apply standard unfolding isPerm_def Tperm_def  
@@ -230,18 +230,18 @@ subgoal for R tt1 tt2 apply(rule iffI)
 thm pstep.induct[no_vars]
 
 corollary strong_induct_pstep[consumes 2, case_names Refl App Xi PBeta]:  
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and st: "pstep t1 t2"  
 and Refl: "\<And>e p. R p e e"
 and App: "\<And>e1 e1' e2 e2' p. 
   pstep e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> pstep e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
   R p (App e1 e2) (App e1' e2')"
 and Xi: "\<And>e e' x p. 
-  x \<notin> Pfvars p \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> 
   pstep e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (Lam x e) (Lam x e')" 
 and PBeta: "\<And>x e1 e1' e2 e2' p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> (x \<in> FFVars_term e1' \<Longrightarrow> x \<notin> FFVars_term e2') \<Longrightarrow> 
   pstep e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
   pstep e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
   R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2')) e1')"

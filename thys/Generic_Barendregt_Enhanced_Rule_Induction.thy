@@ -115,7 +115,7 @@ and Tsupp :: "'T \<Rightarrow> 'A set"
 and Bperm :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bsupp :: "'B \<Rightarrow> 'A set"
   (* well-formed binders: *)
-and wfB :: "'B \<Rightarrow> bool" 
+and bnd :: "'B \<Rightarrow> bool" 
 (* smallness w.r.t. crossing binders: *)
 and bsmall :: "'A set \<Rightarrow> bool"
 assumes  
@@ -125,22 +125,22 @@ TTperm_comp: "\<And>\<sigma> \<tau>. isPerm \<sigma> \<Longrightarrow> isPerm \<
 and 
 ssmall_Tsupp: "\<And>t. small (Tsupp t)" 
 and (* the weaker, inclusion-based version is sufficient (and also for B): *)
-TTperm_Tsupp: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
+TTsupp_seminat: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
 and 
-TTperm_cong_id: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
+TTsupp_supporting: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
 and 
 BBperm_id[simp]: "Bperm id = id"
 and 
 BBperm_comp: "\<And>\<sigma> \<tau>. isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Bperm (\<sigma> o \<tau>) = Bperm \<sigma> o Bperm \<tau>"
 and 
-small_Bsupp: "\<And>xs. wfB xs \<Longrightarrow> small (Bsupp xs)" 
+small_Bsupp: "\<And>xs. bnd xs \<Longrightarrow> small (Bsupp xs)" 
 and 
-BBperm_Bsupp: "\<And>xs \<sigma>. isPerm \<sigma> \<Longrightarrow> Bsupp (Bperm \<sigma> xs) \<subseteq> \<sigma> ` (Bsupp xs)"
+BBsupp_seminat: "\<And>xs \<sigma>. isPerm \<sigma> \<Longrightarrow> Bsupp (Bperm \<sigma> xs) \<subseteq> \<sigma> ` (Bsupp xs)"
 and 
-BBperm_cong_id: "\<And>xs \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Bsupp xs. \<sigma> a = a) \<Longrightarrow> Bperm \<sigma> xs = xs"
+BBsupp_supporting: "\<And>xs \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Bsupp xs. \<sigma> a = a) \<Longrightarrow> Bperm \<sigma> xs = xs"
 and  
 (* bsmallness is subject to properties similar to the ones enjoyed by smallness: *)
-bsmall_Bsupp: "\<And>xs. wfB xs \<Longrightarrow> bsmall (Bsupp xs)" 
+bsmall_Bsupp: "\<And>xs. bnd xs \<Longrightarrow> bsmall (Bsupp xs)" 
 and 
 bsmall_Un: "bsmall A \<Longrightarrow> bsmall B \<Longrightarrow> bsmall (A \<union> B)"
 begin
@@ -149,41 +149,42 @@ lemma TTperm_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longright
 using TTperm_comp by fastforce 
 
 lemma image_Tsupp_disj: "isPerm \<sigma> \<Longrightarrow> B \<inter> Tsupp t = {} \<Longrightarrow> image \<sigma> B \<inter> Tsupp (Tperm \<sigma> t) = {}"
-using TTperm_Tsupp isPerm_bij by fastforce
+using TTsupp_seminat isPerm_bij by fastforce
 
 lemma BBperm_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Bperm (\<sigma> o \<tau>) xs = Bperm \<sigma> (Bperm \<tau> xs)"
 using BBperm_comp by fastforce 
 
 lemma image_Bsupp_disj: "isPerm \<sigma> \<Longrightarrow> B \<inter> Bsupp xs = {} \<Longrightarrow> image \<sigma> B \<inter> Bsupp (Bperm \<sigma> xs) = {}"
-using BBperm_Bsupp isPerm_bij by fastforce
+using BBsupp_seminat isPerm_bij by fastforce
 
 (* *)
 
-definition wfBij :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" 
-where "wfBij \<sigma> \<equiv> \<forall>xs. wfB xs \<longleftrightarrow> wfB (Bperm \<sigma> xs)"
+(* The notion of preserving (well-formed) binders: *)
+definition presBnd :: "('A \<Rightarrow> 'A) \<Rightarrow> bool" 
+where "presBnd \<sigma> \<equiv> \<forall>xs. bnd xs \<longleftrightarrow> bnd (Bperm \<sigma> xs)"
 
-lemma wfBij_id[simp,intro]: "wfBij id"
-unfolding wfBij_def by auto
+lemma presBnd_id[simp,intro]: "presBnd id"
+unfolding presBnd_def by auto
 
-lemma wfBij_comp[simp]: 
-"isPerm \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> wfBij \<tau> \<Longrightarrow> wfBij (\<tau> o \<sigma>)"
-by (simp add: BBperm_comp' wfBij_def)
+lemma presBnd_comp[simp]: 
+"isPerm \<sigma> \<Longrightarrow> presBnd \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> presBnd \<tau> \<Longrightarrow> presBnd (\<tau> o \<sigma>)"
+by (simp add: BBperm_comp' presBnd_def)
 
-lemma wfBij_inv[simp]: "isPerm \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> wfBij (inv \<sigma>)"
-by (metis BBperm_comp' BBperm_id id_apply isPerm_inv isPerm_invL wfBij_def)
+lemma presBnd_inv[simp]: "isPerm \<sigma> \<Longrightarrow> presBnd \<sigma> \<Longrightarrow> presBnd (inv \<sigma>)"
+by (metis BBperm_comp' BBperm_id id_apply isPerm_inv isPerm_invL presBnd_def)
 
 end (* locale CComponents *)
 
 
 
-(* GENERAL VERSIIONS OF THE LOCALES, WIITH wfBij AND closed *)
+(* GENERAL VERSIONS OF THE LOCALES, WITH EXPLICIT BINDERS *)
 
-locale IInduct1 = CComponents Tperm Tsupp Bperm Bsupp wfB bsmall
+locale IInduct1 = CComponents Tperm Tsupp Bperm Bsupp bnd bsmall
 for Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tsupp :: "'T \<Rightarrow> 'A set"
 and Bperm :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bsupp :: "'B \<Rightarrow> 'A set"
-and wfB and bsmall
+and bnd and bsmall
 +
 fixes (* The operator that defines the inductive predicate as lfp:  *)
 GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
@@ -191,14 +192,14 @@ GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> b
 assumes 
 GG_mmono: "\<And>R R' xs t. R \<le> R' \<Longrightarrow> GG xs R t \<Longrightarrow> GG xs R' t"
 and 
-GG_eequiv: "\<And>\<sigma> R xs t. isPerm \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> 
+GG_eequiv: "\<And>\<sigma> R xs t. isPerm \<sigma> \<Longrightarrow> presBnd \<sigma> \<Longrightarrow> 
    GG xs R t \<Longrightarrow> GG  (Bperm \<sigma> xs) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
 and 
-GG_wfB: "\<And>R xs t. GG xs R t \<Longrightarrow> wfB xs"
+GG_bnd: "\<And>R xs t. GG xs R t \<Longrightarrow> bnd xs"
 and 
-extend_to_wfBij: 
-"\<And>xs A A'. wfB xs \<Longrightarrow> small A \<Longrightarrow> bsmall A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> Bsupp xs \<inter> A' = {} \<Longrightarrow> 
-           \<exists>\<rho>. isPerm \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bsupp xs \<inter> A = {} \<and> id_on A' \<rho>"
+extend_to_presBnd: 
+"\<And>xs A A'. bnd xs \<Longrightarrow> small A \<Longrightarrow> bsmall A \<Longrightarrow> A' \<subseteq> A \<Longrightarrow> Bsupp xs \<inter> A' = {} \<Longrightarrow> 
+           \<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> ` Bsupp xs \<inter> A = {} \<and> id_on A' \<rho>"
 begin
 
 lemma GG_mmono2[mono]: "\<And>R R' xs t.  R \<le> R' \<Longrightarrow> GG xs R t \<longrightarrow> GG xs R' t"
@@ -212,7 +213,7 @@ lemma "II \<equiv> lfp (\<lambda>R t. \<exists>xs. GG xs R t)"
 using II_def[simplified] .
  
 lemma II_equiv: 
-assumes "II t" and \<sigma>: "isPerm \<sigma>" "wfBij \<sigma>"
+assumes "II t" and \<sigma>: "isPerm \<sigma>" "presBnd \<sigma>"
 shows "II (Tperm \<sigma> t)"
 using assms(1) proof induct 
   case (GG_II_intro xs t)   
@@ -239,19 +240,19 @@ apply(induct rule: II'.induct)
 by (smt (verit) GG_mmono II.simps predicate1I) 
 
 lemma II'_equiv: 
-assumes "II' t" and \<sigma>: "isPerm \<sigma>" "wfBij \<sigma>"
+assumes "II' t" and \<sigma>: "isPerm \<sigma>" "presBnd \<sigma>"
 shows "II' (Tperm \<sigma> t)"
 using assms(1) proof induct
   case (GG_II'_intro xs t)  note B = GG_II'_intro(1)   
   have GG: "GG xs (\<lambda>t. II' (Tperm \<sigma> t)) t" 
   apply(rule GG_mmono[OF _ GG_II'_intro(2)]) using \<sigma> by auto
   have BB: "Bsupp (Bperm \<sigma> xs) \<inter> Tsupp (Tperm \<sigma> t) = {}" using image_Tsupp_disj[OF \<sigma>(1) GG_II'_intro(1)] 
-  using BBperm_Bsupp[OF \<sigma>(1)] by fastforce 
+  using BBsupp_seminat[OF \<sigma>(1)] by fastforce 
   have GG: "GG (Bperm \<sigma> xs) (\<lambda>t. II' (Tperm \<sigma> (Tperm (inv \<sigma>) t))) (Tperm \<sigma> t)"
   using GG_eequiv[OF \<sigma> GG] .
   have 0: "(\<lambda>t. II' (Tperm \<sigma> (Tperm (inv \<sigma>) t))) = II'"
   unfolding fun_eq_iff  
-  by (metis TTperm_comp' TTperm_cong_id \<sigma>(1) id_apply isPerm_comp isPerm_inv isPerm_invL)
+  by (metis TTperm_comp' TTsupp_supporting \<sigma>(1) id_apply isPerm_comp isPerm_inv isPerm_invL)
   have GG: "GG  (Bperm \<sigma> xs) II'(Tperm \<sigma> t)"
   using GG unfolding 0 .
   show ?case using BB GG small_image by (subst II'.simps, auto) 
@@ -260,12 +261,12 @@ qed
 end (* context IInduct1 *)
 
 
-locale IInduct = IInduct1 Tperm Tsupp Bperm Bsupp wfB bsmall GG 
+locale IInduct = IInduct1 Tperm Tsupp Bperm Bsupp bnd bsmall GG 
 for Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tsupp :: "'T \<Rightarrow> 'A set"
 and Bperm :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bsupp :: "'B \<Rightarrow> 'A set"
-and wfB and bsmall
+and bnd and bsmall
 and GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
@@ -273,7 +274,7 @@ II_bsmall: "\<And>t. II t \<Longrightarrow> bsmall (Tsupp t)"
 and 
 GG_rrefresh: 
 "\<And>R xs t. (\<forall>t. R t \<longrightarrow> II t) \<Longrightarrow> 
-         (\<forall>\<sigma> t. isPerm \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> GG xs R t \<Longrightarrow> 
+         (\<forall>\<sigma> t. isPerm \<sigma> \<and> presBnd \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> GG xs R t \<Longrightarrow> 
          \<exists>ys. Bsupp ys \<inter> Tsupp t = {} \<and> GG ys R t"
 
 
@@ -312,13 +313,13 @@ apply(rule iffI)
 end (* context IInduct *)
 
 
-(* The locale with the more restricted rule, in the style of Urban-Berghofer-Norrish: *)
-locale IInduct_simple = IInduct1 Tperm Tsupp Bperm Bsupp wfB bsmall GG 
+(* The locale with the more restrictive assumptions, in the style of Urban-Berghofer-Norrish: *)
+locale IInduct_simple = IInduct1 Tperm Tsupp Bperm Bsupp bnd bsmall GG 
 for Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tsupp :: "'T \<Rightarrow> 'A set"
 and Bperm :: "('A \<Rightarrow> 'A) \<Rightarrow> 'B \<Rightarrow> 'B"
 and Bsupp :: "'B \<Rightarrow> 'A set"
-and wfB and bsmall
+and bnd and bsmall
 and GG :: "'B \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
 +
 assumes 
@@ -334,18 +335,14 @@ sublocale IInduct_simple < IInduct apply standard
 context IInduct 
 begin 
   
-(* Barendregt-enhanced (strong) induction. 
-NB: we get freshness for t as well, as a bonus (even though the inductive definition of II 
-needs not guarantee that -- see again the case of beta-reduction)
- *)
-
+(* Strong (Barendregt-enhanced) rule induction *)
 
 lemma extend: 
-assumes xs: "wfB xs" and t: "II t" and p: "small (Pfvars p)" "bsmall (Pfvars p)" 
+assumes xs: "bnd xs" and t: "II t" and p: "small (Psupp p)" "bsmall (Psupp p)" 
 and b: "Bsupp xs \<inter> Tsupp t = {}"
-shows "\<exists>\<rho>. isPerm \<rho> \<and> wfBij \<rho> \<and> \<rho> ` (Bsupp xs) \<inter> (Pfvars p \<union> Tsupp t) = {} \<and> 
+shows "\<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> ` (Bsupp xs) \<inter> (Psupp p \<union> Tsupp t) = {} \<and> 
            id_on (Tsupp t) \<rho>"
-apply(rule extend_to_wfBij)  
+apply(rule extend_to_presBnd)  
   subgoal by fact
   subgoal using p(1) ssmall_Tsupp small_Un by auto
   subgoal by (simp add: II_bsmall bsmall_Un p(2) t)
@@ -354,24 +351,24 @@ apply(rule extend_to_wfBij)
 
 theorem BE_iinduct[consumes 2]: 
 (* Parameters: *)
-fixes Pfvars :: "'P \<Rightarrow> 'A set"
-assumes small_Pfvars: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)" 
+fixes Psupp :: "'P \<Rightarrow> 'A set"
+assumes small_Psupp: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)" 
 (* *)
 assumes II: "II (t::'T)"
-and strong: "\<And> p xs t. Bsupp xs \<inter> Pfvars p = {} \<Longrightarrow> Bsupp xs \<inter> Tsupp t = {} \<Longrightarrow> 
+and strong: "\<And> p xs t. Bsupp xs \<inter> Psupp p = {} \<Longrightarrow> Bsupp xs \<inter> Tsupp t = {} \<Longrightarrow> 
       GG xs (\<lambda>t'. II t' \<and> (\<forall>p'. R p' t')) t \<Longrightarrow> R p t"
 shows "R p t"
 proof- 
-  {fix \<sigma> assume \<sigma>: "isPerm \<sigma>" "wfBij \<sigma>"
+  {fix \<sigma> assume \<sigma>: "isPerm \<sigma>" "presBnd \<sigma>"
    have "R p (Tperm \<sigma> t)"
    using II \<sigma> unfolding II_eq_II' proof(induct arbitrary: \<sigma> p)
      fix xs t \<sigma> p  
      assume vt: "Bsupp xs \<inter> Tsupp t = {}" (* this additional vt assumption is what we have gained 
      by transitioning from II to II', whose inductive definition has this freshness side-condition *)
-     and GG: "GG xs (\<lambda>t'. II' t' \<and> (\<forall>\<sigma>'. isPerm \<sigma>' \<longrightarrow> wfBij \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tperm \<sigma>' t')))) t" 
-     and \<sigma>: "isPerm \<sigma>" "wfBij \<sigma>"
+     and GG: "GG xs (\<lambda>t'. II' t' \<and> (\<forall>\<sigma>'. isPerm \<sigma>' \<longrightarrow> presBnd \<sigma>' \<longrightarrow> (\<forall>p'. R p' (Tperm \<sigma>' t')))) t" 
+     and \<sigma>: "isPerm \<sigma>" "presBnd \<sigma>"
 
-     have sp: "small (Pfvars p)" "bsmall (Pfvars p)" using small_Pfvars by auto
+     have sp: "small (Psupp p)" "bsmall (Psupp p)" using small_Psupp by auto
 
      have "II' t"  
        by (metis (no_types, lifting) GG II.simps II_eq_II' IInduct1.GG_mmono IInduct1_axioms predicate1I)
@@ -381,40 +378,40 @@ proof-
      define xs' where xs': "xs' \<equiv> Bperm \<sigma> xs"
 
 
-     have "wfB xs" using GG_wfB[OF GG] .
-     hence wfB': "wfB xs'"  
-     unfolding xs' using \<sigma>(2) wfBij_def by auto 
+     have "bnd xs" using GG_bnd[OF GG] .
+     hence bnd': "bnd xs'"  
+     unfolding xs' using \<sigma>(2) presBnd_def by auto 
 
      have v't: "Bsupp xs' \<inter> Tsupp (Tperm \<sigma> t) = {}" 
      using vt unfolding xs'  
      using image_Tsupp_disj \<sigma>  
-     by (meson BBperm_Bsupp Int_subset_empty1)
+     by (meson BBsupp_seminat Int_subset_empty1)
 
-     have small_p_t: "small (Pfvars p \<union> Tsupp (Tperm \<sigma> t))"  
-       by (simp add: small_Pfvars ssmall_Tsupp small_Un)
+     have small_p_t: "small (Psupp p \<union> Tsupp (Tperm \<sigma> t))"  
+       by (simp add: small_Psupp ssmall_Tsupp small_Un)
 
-     obtain \<rho> where \<rho>: "isPerm \<rho>" "wfBij \<rho>" "\<rho> ` (Bsupp xs') \<inter> (Pfvars p \<union> Tsupp (Tperm \<sigma> t)) = {}" 
+     obtain \<rho> where \<rho>: "isPerm \<rho>" "presBnd \<rho>" "\<rho> ` (Bsupp xs') \<inter> (Psupp p \<union> Tsupp (Tperm \<sigma> t)) = {}" 
      "\<forall>a \<in> Tsupp (Tperm \<sigma> t). \<rho> a = a"
-     using extend[OF wfB' II_s_t, of Pfvars, OF sp v't] 
+     using extend[OF bnd' II_s_t, of Psupp, OF sp v't] 
      unfolding id_on_def by metis 
  
-     have "\<rho> ` (Bsupp xs') \<inter> Pfvars p = {}" 
+     have "\<rho> ` (Bsupp xs') \<inter> Psupp p = {}" 
      and "\<rho> ` (Bsupp xs') \<inter> Tsupp (Tperm \<sigma> t) = {}"  
      using \<rho>(1,2,3) by auto
-     hence fresh_p: "Bsupp (Bperm \<rho> xs') \<inter> Pfvars p = {}" 
+     hence fresh_p: "Bsupp (Bperm \<rho> xs') \<inter> Psupp p = {}" 
      and fresh_t: "Bsupp (Bperm \<rho> xs') \<inter> Tsupp (Tperm \<sigma> t) = {}"
-     using \<rho>(1) BBperm_Bsupp by fastforce+ 
+     using \<rho>(1) BBsupp_seminat by fastforce+ 
 
      hence "Tperm \<rho> (Tperm \<sigma> t) = Tperm \<sigma> t" 
-     using TTperm_cong_id[OF \<rho>(1,4)] by blast
+     using TTsupp_supporting[OF \<rho>(1,4)] by blast
      hence 0: "Tperm (\<rho> o \<sigma>) t = Tperm \<sigma> t" 
    	 by (simp add: TTperm_comp' \<rho>(1) \<sigma>)
 
-     have \<rho>\<sigma>: "isPerm (\<rho> o \<sigma>)" "wfBij (\<rho> o \<sigma>)" apply (simp add: \<rho>(1) \<sigma> isPerm_comp)
-     apply(rule wfBij_comp) using \<sigma> \<rho> by auto
+     have \<rho>\<sigma>: "isPerm (\<rho> o \<sigma>)" "presBnd (\<rho> o \<sigma>)" apply (simp add: \<rho>(1) \<sigma> isPerm_comp)
+     apply(rule presBnd_comp) using \<sigma> \<rho> by auto
 
      define \<sigma>'' where \<sigma>'': "\<sigma>'' = \<rho> o \<sigma>"
-     have ss_\<sigma>'': "isPerm \<sigma>''" "wfBij \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' isPerm_comp isPerm_inv apply blast
+     have ss_\<sigma>'': "isPerm \<sigma>''" "presBnd \<sigma>''" using \<rho>(1) \<sigma> \<sigma>'' isPerm_comp isPerm_inv apply blast
      using \<rho>\<sigma>(2) \<sigma>'' by blast
    
      have 1[simp]: "\<sigma>'' \<circ> inv (\<rho> o \<sigma>) = id" 
@@ -455,7 +452,7 @@ end (* context IInduct *)
 
 (* VERSIONS OF THE LOCALES WITH SMALL SETS INSTEAD OF BINDER-LIKE ENTITIES, which work in 99% of the cases: *)
 
-locale Components =
+locale LSNominalSet =
 fixes (* 'T: term-like entities *)
 Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tsupp :: "'T \<Rightarrow> 'A set"
@@ -466,17 +463,17 @@ Tperm_comp: "\<And>\<sigma> \<tau>. isPerm \<sigma> \<Longrightarrow> isPerm \<t
 and
 small_Tsupp: "\<And>t. small (Tsupp t)"
 and 
-Tperm_Tsupp: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
+Tsupp_seminat: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
 and
-Tperm_cong_id: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
+Tsupp_supporting: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
 
-sublocale Components < CComponents where Tperm = Tperm and Tsupp = Tsupp and 
-Bperm = image and Bsupp = id and wfB = small and bsmall = "\<lambda>_ . True" apply standard 
-using Tperm_id Tperm_comp small_Tsupp Tperm_Tsupp Tperm_cong_id apply auto 
+sublocale LSNominalSet < CComponents where Tperm = Tperm and Tsupp = Tsupp and 
+Bperm = image and Bsupp = id and bnd = small and bsmall = "\<lambda>_ . True" apply standard 
+using Tperm_id Tperm_comp small_Tsupp Tsupp_seminat Tsupp_supporting apply auto 
 by fastforce
 
 
-locale Induct1 = Components Tperm Tsupp 
+locale Induct1 = LSNominalSet Tperm Tsupp 
 for Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tsupp :: "'T \<Rightarrow> 'A set"
 +
@@ -497,12 +494,12 @@ lemma GGG_eequiv: "isPerm \<sigma> \<Longrightarrow>
    GG B R t \<Longrightarrow> GG  (\<sigma> ` B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
 using GG_def G_equiv small_image by force
 
-lemma GGG_wfB: "GG B R t \<Longrightarrow> small B"
+lemma GGG_bnd: "GG B R t \<Longrightarrow> small B"
 unfolding GG_def by auto
 
 (* In this particular contex, all small bijections are well-formed: *)
-lemma isPerm_wfBij: "isPerm \<sigma> \<Longrightarrow> wfBij \<sigma>"
-unfolding wfBij_def isPerm_def 
+lemma isPerm_presBnd: "isPerm \<sigma> \<Longrightarrow> presBnd \<sigma>"
+unfolding presBnd_def isPerm_def 
 using bij_card_of_ordIso ordIso_ordLess_trans ordIso_symmetric small_def by blast
 
 lemma cinfinite_A: "cinfinite |UNIV::'A set|" 
@@ -515,14 +512,14 @@ shows "\<exists>\<rho>'. isPerm \<rho>' \<and> eq_on A \<rho>' \<rho>"
 using assms cinfinite_A ex_bij_betw_supp'[of "|UNIV::'A set|" A \<rho> B] 
 unfolding eq_on_def small_def isPerm_def id_on_def eq_on_def by auto
 
-lemma extend_wfBij: 
-"small A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> id_on (A\<inter>B) \<rho> \<Longrightarrow> wfBij \<rho> \<Longrightarrow> 
-     \<exists>\<rho>'. isPerm \<rho>' \<and> wfBij \<rho>' \<and> eq_on A \<rho>' \<rho>"
-using extend_small by (metis isPerm_wfBij) 
+lemma extend_presBnd: 
+"small A \<Longrightarrow> bij_betw \<rho> A B \<Longrightarrow> id_on (A\<inter>B) \<rho> \<Longrightarrow> presBnd \<rho> \<Longrightarrow> 
+     \<exists>\<rho>'. isPerm \<rho>' \<and> presBnd \<rho>' \<and> eq_on A \<rho>' \<rho>"
+using extend_small by (metis isPerm_presBnd) 
 
-lemma eextend_to_wfBij: 
+lemma eextend_to_presBnd: 
 assumes "small B" "small A" "A' \<subseteq> A" "B \<inter> A' = {}"
-shows "\<exists>\<rho>. isPerm \<rho> \<and> wfBij \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
+shows "\<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
 proof-
   have "|- (A \<union> B)| =o |UNIV::'A set|"  
   by (metis Compl_eq_Diff_UNIV Un_bound assms(1) assms(2) card_of_Un_diff_infinite infinite_UNIV small_def)
@@ -542,7 +539,7 @@ proof-
     subgoal using assms(3) f unfolding eq_on_def C g_def by auto .
     
   show ?thesis using ex_bij_betw_supp'[OF 0(1,2) b 0(3)] apply safe
-  subgoal for \<rho> apply(rule exI[of _ \<rho>]) using isPerm_wfBij unfolding isPerm_def
+  subgoal for \<rho> apply(rule exI[of _ \<rho>]) using isPerm_presBnd unfolding isPerm_def
   unfolding id_on_def apply auto  
   apply (metis ComplD UnCI eq_on_def f(2) g_def image_subset_iff)
   by (metis Int_emptyD UnCI assms(4) eq_on_def g_def) .
@@ -551,8 +548,8 @@ qed
 end (* context Induct1 *)
 
 sublocale Induct1 < IInduct1 where Tperm = Tperm and Tsupp = Tsupp and 
-Bperm = image and Bsupp = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
-using GGG_mmono GGG_eequiv GGG_wfB eextend_to_wfBij by auto
+Bperm = image and Bsupp = id and bnd = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
+using GGG_mmono GGG_eequiv GGG_bnd eextend_to_presBnd by auto
 
 context Induct1
 begin 
@@ -581,7 +578,7 @@ apply(intro ext, rule iffI)
 lemma I_equiv: 
 assumes "I t" and \<sigma>: "isPerm \<sigma>" 
 shows "I (Tperm \<sigma> t)"
-using II_equiv I_eq_II assms using isPerm_wfBij by auto
+using II_equiv I_eq_II assms using isPerm_presBnd by auto
 
 
 end (* context Induct1 *)
@@ -602,16 +599,16 @@ G_refresh:
 begin
 
 lemma GGG_rrefresh: 
-assumes "\<forall>t. R t \<longrightarrow> II t" "\<forall>\<sigma> t. isPerm \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)" "GG B R t"
+assumes "\<forall>t. R t \<longrightarrow> II t" "\<forall>\<sigma> t. isPerm \<sigma> \<and> presBnd \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)" "GG B R t"
 shows "\<exists>C. C \<inter> Tsupp t = {} \<and> GG C R t"
 using G_refresh[OF assms(1)[unfolded I_eq_II[symmetric]]]
 using G_refresh[of R B t] unfolding GG_def I_eq_II[symmetric] 
-by (metis GG_def assms(2) assms(3) isPerm_wfBij)
+by (metis GG_def assms(2) assms(3) isPerm_presBnd)
 
 end (* context Induct *)
 
 sublocale Induct < IInduct where Tperm = Tperm and Tsupp = Tsupp and 
-Bperm = image and Bsupp = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
+Bperm = image and Bsupp = id and bnd = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
 by (auto simp: GGG_rrefresh)
 
 
@@ -624,15 +621,15 @@ thm BE_iinduct
 (* Formulating the theorem in custom form: *)
 theorem strong_induct[consumes 2]: 
 (* Parameters: *)
-fixes Pfvars :: "'P \<Rightarrow> 'A set"
-assumes small_Pfvars: "\<And>p. small (Pfvars p)" 
+fixes Psupp :: "'P \<Rightarrow> 'A set"
+assumes small_Psupp: "\<And>p. small (Psupp p)" 
 (* *)
 assumes I: "I (t::'T)"
-and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Pfvars p = {} \<Longrightarrow> B \<inter> Tsupp t = {} \<Longrightarrow> 
+and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Psupp p = {} \<Longrightarrow> B \<inter> Tsupp t = {} \<Longrightarrow> 
       G B (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t \<Longrightarrow> R p t"
 shows "R p t"
-apply(rule BE_iinduct[of Pfvars _ R p, OF _ I[unfolded I_eq_II]])
-  subgoal using small_Pfvars by auto
+apply(rule BE_iinduct[of Psupp _ R p, OF _ I[unfolded I_eq_II]])
+  subgoal using small_Psupp by auto
   subgoal for p B t apply(rule strong[of B p t]) 
   by (auto simp add: GG_def I_eq_II) .
 
@@ -652,8 +649,142 @@ G_fresh: "\<And>R B t. small B \<Longrightarrow> G B R t \<Longrightarrow> B \<i
 sublocale Induct_simple < Induct apply standard 
   using G_fresh by blast
 
+(* *)
+
+locale PreNominalSet =
+fixes 
+Tperm :: "('A :: {infinite,countable} \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+assumes  
+Tperm_id[simp]: "Tperm id = id"
+and
+Tperm_comp: "\<And>\<sigma> \<tau>. isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm (\<sigma> o \<tau>) = Tperm \<sigma> o Tperm \<tau>"
+begin 
+
+definition supports where 
+"supports X t \<equiv> \<forall>\<sigma>. isPerm \<sigma> \<and> (\<forall>x\<in>X. \<sigma> x = x) \<longrightarrow> Tperm \<sigma> t = t"
+
+lemma Tperm_comp': 
+"isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm (\<sigma> o \<tau>) t = Tperm \<sigma> (Tperm \<tau> t)"
+using Tperm_comp by auto
+
+end (* context PreNominalSet *)
+
+locale NominalSet = PreNominalSet Tperm for
+Tperm :: "('A :: {infinite,countable} \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
++
+assumes ex_fin_supports: "\<forall>t. \<exists>X. finite X \<and> supports X t"
+begin
+
+definition Tsupp where "Tsupp t \<equiv> \<Inter> {X . supports X t}"
+
+lemma Tsupp_least: "supports X t \<Longrightarrow> Tsupp t \<subseteq> X"
+unfolding Tsupp_def by auto
+
+lemma finite_Tsupp: "finite (Tsupp t)" 
+using ex_fin_supports Tsupp_least  
+by (meson finite_subset)
+
+lemma supports_int: 
+assumes "supports X t"  "supports Y t"
+shows "supports (X \<inter> Y) t"
+unfolding supports_def sorry
+
+lemma supports_UNIV[simp,intro!]: "supports UNIV t"
+unfolding supports_def by (simp add: eq_id_iff)
+
+lemma supports_finite_Int: 
+assumes "finite XX" "\<And>X. X \<in> XX \<Longrightarrow> supports X t"  
+shows "supports (\<Inter> XX) t"
+using assms apply induct by (auto simp add: supports_int)
+
+lemma supports_Tsupp: "supports (Tsupp t) t" 
+proof-
+  obtain Y where Y: "finite Y \<and> supports Y t"  
+    using ex_fin_supports by auto
+  have 0: "Tsupp t = \<Inter> {X \<inter> Y | X . supports X t}"
+  unfolding Tsupp_def using Y by auto
+  have 1: "{X \<inter> Y |X. supports X t} \<subseteq> Pow Y" by auto
+  show ?thesis unfolding 0 apply(rule supports_finite_Int)
+    subgoal using Y using "1" finite_subset by auto
+    subgoal using Y using supports_int by auto .
+qed
+
+
+lemma small_Tsupp: "small (Tsupp t)"
+using finite_Tsupp unfolding small_def 
+by (simp add: infinite_UNIV)
+
+
+
+lemma Tsupp_supporting: 
+"isPerm \<sigma> \<Longrightarrow> (\<forall>x\<in>Tsupp t. \<sigma> x = x) \<Longrightarrow> Tperm \<sigma> t = t"
+using supports_Tsupp unfolding supports_def by auto
+
+find_theorems isPerm id
+
+lemma Tsupp_supporting2: 
+assumes 1: "isPerm \<sigma>" "isPerm \<tau>" and 2: "\<forall>x\<in>Tsupp t. \<sigma> x = \<tau> x"
+shows "Tperm \<sigma> t = Tperm \<tau> t"
+proof-
+  have "Tperm (inv \<tau> o \<sigma>) t = t"
+  apply(rule Tsupp_supporting)
+  using 1 2 by (auto simp add: isPerm_comp isPerm_inv isPerm_invR')
+  thus ?thesis 
+  by (metis Tperm_comp' Tperm_id 1 id_apply isPerm_inv isPerm_invL)
+qed
+
+lemma Tsupp_seminat: "isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
+apply(rule Tsupp_least) unfolding supports_def apply safe
+apply(subst Tperm_comp'[symmetric]) 
+  subgoal by auto  
+  subgoal by auto  
+  subgoal apply(rule Tsupp_supporting2)    
+  using isPerm_comp by auto .
+
+end (* context NominalSet *)
+
+sublocale NominalSet < LSNominalSet where Tperm = Tperm and Tsupp = Tsupp
+apply standard using Tperm_id Tperm_comp small_Tsupp
+Tsupp_supporting Tsupp_seminat by auto
+
+locale Induct1_nom = NominalSet Tperm 
+for Tperm :: "('A :: {countable,infinite} \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
++
+fixes (* The operator that defines the inductive predicate as lfp:  *)
+G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
+assumes 
+G_mono: "\<And>R R' B t. R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
+and 
+G_equiv: "\<And>\<sigma> R B t. isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
+
+ 
+sublocale Induct1_nom < Induct1 where Tperm = Tperm and Tsupp = Tsupp and G = G
+apply standard using G_mono G_equiv by auto
+
+locale Induct_nom = Induct1_nom Tperm G  
+for Tperm :: "('A :: {countable,infinite} \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+and 
+G :: "'A set \<Rightarrow> ('T \<Rightarrow> bool) \<Rightarrow> 'T \<Rightarrow> bool"
++
+assumes 
+G_refresh: 
+"\<And>R B t. (\<forall>t. R t \<longrightarrow> I t) \<Longrightarrow> 
+         (\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
+         \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
+
+sublocale Induct_nom < Induct where Tperm = Tperm and Tsupp = Tsupp and G = G
+apply standard using G_refresh .
+
+
+(* This makes available the LS-nominal-set-theorem for nominal sets: *)
+context Induct_nom
+begin
+thm BE_iinduct
+end 
+
+
 print_statement Induct.strong_induct[unfolded
-  Induct_def Induct1_def Components_def
+  Induct_def Induct1_def LSNominalSet_def
   Induct_axioms_def Induct1_axioms_def
   conj_imp_eq_imp_imp, rule_format]
 

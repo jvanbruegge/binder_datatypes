@@ -14,8 +14,8 @@ fun Bsupp :: "B \<Rightarrow> ivar set" where
 "Bsupp xxs = (case xxs of None \<Rightarrow> {}
                          |Some xs \<Rightarrow> dsset xs)"
 
-fun wfB :: "B \<Rightarrow> bool" where 
-"wfB xxs = (case xxs of None \<Rightarrow> True
+fun bnd :: "B \<Rightarrow> bool" where 
+"bnd xxs = (case xxs of None \<Rightarrow> True
                        |Some xs \<Rightarrow> super xs)"
 
 definition bsmall :: "ivar set \<Rightarrow> bool" where 

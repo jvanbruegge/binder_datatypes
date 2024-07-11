@@ -18,7 +18,7 @@ thm istep_def
 
 
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "itrm \<times> itrm"
 
@@ -29,7 +29,7 @@ fun Tsupp :: "T \<Rightarrow> ivar set" where
 "Tsupp (e1,e2) = FFVars e1 \<union> FFVars e2"
 
 
-interpretation Components where
+interpretation LSNominalSet where
 Tperm = Tperm and Tsupp = Tsupp
 apply standard unfolding isPerm_def Tperm_def  
   using small_Un small_def iterm.card_of_FFVars_bounds
@@ -209,10 +209,10 @@ subgoal for R tt1 tt2 apply(rule iffI)
 thm istep.induct[no_vars] 
 
 corollary strong_induct_istep[consumes 2, case_names Beta iAppL iAppR Xi]: 
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and st: "istep t1 t2"  
 and Beta: "\<And>xs e1 es2 p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
   R p (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
 and iAppL: "\<And>e1 e1' es2 p. 
   istep e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
@@ -221,7 +221,7 @@ and iAppR: "\<And>e1 es2 i e2' p.
   istep (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R p' (es2 !! i) e2') \<Longrightarrow> 
   R p (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 and Xi: "\<And>e e' xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   istep e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (iLam xs e) (iLam xs e')" 
 shows "R p t1 t2"
@@ -239,9 +239,9 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
 
 corollary strong_induct_istep''[consumes 1, case_names Bound Beta iAppL iAppR Xi]: 
 assumes st: "istep t1 t2"
-and par: "\<And>p. |Pfvars p| <o |UNIV::ivar set|"
+and par: "\<And>p. |Psupp p| <o |UNIV::ivar set|"
 and Beta: "\<And>xs e1 es2 p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> dsset xs \<inter> \<Union>(FFVars`(sset es2)) = {} \<Longrightarrow> 
   R (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1) p"
 and iAppL: "\<And>e1 e1' es2 p. 
   istep e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow> 
@@ -250,11 +250,11 @@ and iAppR: "\<And>e1 es2 i e2' p.
   istep (snth es2 i) e2' \<Longrightarrow> (\<forall>p'. R (es2 !! i) e2' p') \<Longrightarrow> 
   R (iApp e1 es2) (iApp e1 (supd es2 i e2')) p"
 and Xi: "\<And>e e' xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   istep e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow> 
   R (iLam xs e) (iLam xs e') p" 
 shows "\<forall>p. (R t1 t2 p)"
-using strong_induct_istep[of Pfvars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
+using strong_induct_istep[of Psupp t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_istep:

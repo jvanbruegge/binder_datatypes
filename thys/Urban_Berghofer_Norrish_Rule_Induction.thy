@@ -96,10 +96,10 @@ Tperm_comp: "\<And>\<sigma> \<tau>. isPerm \<sigma> \<Longrightarrow> isPerm \<t
 and 
 small_Tsupp: "\<And>t. small (Tsupp t)" 
 and (* the weaker, inclusion-based version is sufficient (and similarly for V): *)
-Tperm_Tsupp: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
+Tsupp_seminat: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
 and 
-Tperm_cong_id: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
-(* so far, the above was a common part with our "Components" locale *)
+Tsupp_supporting: "\<And>t \<sigma>. isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp t. \<sigma> a = a) \<Longrightarrow> Tperm \<sigma> t = t"
+(* so far, the above was a common part with our "LSNominalSet" locale *)
 and
 (* Equivariance of abstraction and of the operations (the first variable-convention compatibility 
 convention from UBN): *)
@@ -130,10 +130,10 @@ by (auto intro: finite_UN_small simp: small_Tsupp)
 
 lemma Tperm_tuple_Tsupp_tuple: 
 "isPerm \<sigma> \<Longrightarrow> Tsupp_tuple (Tperm_tuple \<sigma> ts) \<subseteq> \<sigma> ` (Tsupp_tuple ts)"
-using Tperm_Tsupp by fastforce
+using Tsupp_seminat by fastforce
 
 lemma Tperm_tuple_cong_id: "isPerm \<sigma> \<Longrightarrow> (\<forall>a\<in>Tsupp_tuple ts. \<sigma> a = a) \<Longrightarrow> Tperm_tuple \<sigma> ts = ts"
-by (simp add: Tperm_cong_id map_idI) 
+by (simp add: Tsupp_supporting map_idI) 
 
 lemma Tperm_tuple_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Tperm_tuple (\<sigma> o \<tau>) ts = Tperm_tuple \<sigma> (Tperm_tuple \<tau> ts)"
 using Tperm_tuple_comp by fastforce

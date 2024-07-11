@@ -703,41 +703,70 @@ lemma finite_Tsupp: "finite (Tsupp t)"
 using ex_fin_supports Tsupp_least  
 by (meson finite_subset)
 
+(* The crucial lemma about nominal sets, all the good properties follow fro it. 
+The proof was a bit more technical than usually presented in the literature since 
+we work directly with finite permutations rather than swapping. 
+*)
 lemma supports_int: 
 assumes fX: "finite X" and X: "supports X t" and fY: "finite Y" and Y: "supports Y t"
 shows "supports (X \<inter> Y) t"
 unfolding supports_def proof safe
   fix \<sigma> assume s: "isPerm \<sigma>" and i: "\<forall>x\<in>X \<inter> Y. \<sigma> x = x"
-  have "infinite (- (\<sigma> ` (X \<union> Y) \<union> Y))"  
+  have "infinite (- (\<sigma> ` (X \<union> Y) \<union> X \<union> Y))"  
     by (metis assms fX finite_UnI finite_compl finite_imageI infinite_UNIV)
-  then obtain V where "V \<subseteq> (- (\<sigma> ` (X \<union> Y) \<union> Y))" and cV: "card V = card (\<sigma> ` (X - Y))"
+  then obtain V where "V \<subseteq> (- (\<sigma> ` (X \<union> Y) \<union> X \<union> Y))" and cV: "card V = card (\<sigma> ` (X - Y))"
   and fV: "finite V"
   by (meson infinite_arbitrarily_large)
-  hence V: "V \<inter> (\<sigma> ` (X \<union> Y) \<union> Y) = {}" by auto 
-  obtain f where "bij_betw f (\<sigma> ` (X - Y)) V" using fV cV  
+  hence V: "V \<inter> (\<sigma> ` (X \<union> Y) \<union> X \<union> Y) = {}" by auto 
+  obtain f where bf: "bij_betw f (\<sigma> ` (X - Y)) V" using fV cV  
     by (metis bij_betw_iff_card fX finite_Diff finite_imageI)
-  define \<tau> where "\<tau> \<equiv> \<lambda>x. if x \<in> (\<sigma> ` (X - Y)) then f x else if x \<in> V then inv f x else x"
+  have bif: "bij_betw (inv_into (\<sigma> ` (X - Y)) f) V (\<sigma> ` (X - Y))"  
+    using bf bij_betw_inv_into by blast
+  define \<tau> where "\<tau> \<equiv> \<lambda>x. if x \<in> (\<sigma> ` (X - Y)) then f x else if x \<in> V then inv_into (\<sigma> ` (X - Y)) f x else x"
+  have "supp \<tau> \<subseteq> \<sigma> ` (X - Y) \<union> V" unfolding supp_def \<tau>_def by auto
+  hence "finite (supp \<tau>)"  
+    by (simp add: fV fX finite_subset) 
+  hence sst: "|supp \<tau>| <o |UNIV::'A set|"  
+    by (simp add: infinite_UNIV)
   have tau: "isPerm \<tau>" "bij_betw \<tau> (\<sigma> ` (X - Y)) V" "id_on (\<sigma> ` Y) \<tau>" 
-  sorry
+    subgoal unfolding isPerm_def using s V bf bif apply safe 
+      subgoal by (smt (verit, best) Int_Un_emptyI1 Un_Diff_cancel2 \<tau>_def 
+      bij_betw_apply bij_betw_inv_into_left disjoint_iff image_Un involuntory_imp_bij)
+      subgoal using sst . .
+    subgoal unfolding \<tau>_def bij_def inj_def inj_on_def bij_betw_def 
+    by simp (metis bf bij_betw_imp_surj_on bij_betw_inv_into_left imageI) 
+    subgoal unfolding id_on_def \<tau>_def using V  
+    by (auto simp add: isPerm_bij s) .
   define \<sigma>' where "\<sigma>' \<equiv> \<tau> \<circ> \<sigma>"
-  have s': "isPerm \<sigma>'" 
-    by (simp add: \<sigma>'_def isPerm_comp s tau(1))
-  define \<tau>' where "\<tau>' \<equiv> \<lambda>u. if u \<in> X then \<sigma>' u else if u \<in> \<sigma>' ` X then inv \<sigma>' u else u"
-  have \<tau>': "\<And>u. u \<in> X \<Longrightarrow> \<tau>' u = \<sigma>' u" "\<And>u. u \<in> \<sigma>' ` X - X \<Longrightarrow> \<tau>' u = inv \<sigma>' u"
-  "\<And>u. u \<in> - (\<sigma>' ` X \<union> X) \<Longrightarrow> \<tau>' u = u"
-  unfolding \<tau>'_def by auto
-  have \<tau>'Y: "\<forall>x\<in>Y. \<tau>' x = x" unfolding \<tau>'_def   
-      by (smt (verit, ccfv_threshold) IntI Int_emptyD Un_Diff_Int Un_Diff_cancel Un_iff 
+  have s': "isPerm \<sigma>'" by (simp add: \<sigma>'_def isPerm_comp s tau(1))
+  have bbs': "bij_betw \<sigma>' X (\<sigma>' ` X)" "bij_betw (inv \<sigma>') (\<sigma>' ` X) X" "X \<inter> (\<sigma>' ` (X-Y)) = {}"
+  apply (simp add: bij_imp_bij_betw isPerm_bij s')  
+  apply (meson bij_betw_inv_into_subset isPerm_bij s' subset_UNIV)
+  by (metis Int_assoc Un_Int_eq(3) Un_Int_eq(4) V \<sigma>'_def bij_betw_imp_surj_on boolean_algebra.conj_disj_distrib image_comp inf_compl_bot_right tau(2))
+  
+  define \<tau>' where "\<tau>' \<equiv> \<lambda>u. if u \<in> (X-Y) then \<sigma>' u else if u \<in> \<sigma>' ` (X-Y) then inv \<sigma>' u else u"
+  have \<tau>': "\<And>u. u \<in> X \<Longrightarrow> \<tau>' u = \<sigma>' u" "\<And>u. u \<in> \<sigma>' ` (X-Y) \<Longrightarrow> \<tau>' u = inv \<sigma>' u"
+  "\<And>u. u \<in> - (\<sigma>' ` (X-Y) \<union> (X-Y)) \<Longrightarrow> \<tau>' u = u"
+  unfolding \<tau>'_def 
+  apply (metis Diff_iff Int_iff \<sigma>'_def \<tau>_def bbs'(3) bij_betw_def comp_apply empty_iff i image_comp inj_image_mem_iff isPerm_bij s tau(2))
+  using bbs'(3) apply auto[1]
+  by auto
+  have \<tau>'Y: "\<forall>x\<in>Y. \<tau>' x = x" unfolding \<tau>'_def  
+  by (smt (verit, ccfv_threshold) IntI Int_emptyD Un_Diff_Int Un_Diff_cancel Un_iff 
       V \<sigma>'_def bij_betw_imp_surj_on comp_apply f_inv_into_f i id_onD id_on_def image_comp 
       image_eqI in_mono inf_sup_absorb inv_into_into isPerm_bij o_inv_distrib s s' sup_commute 
       sup_ge2 tau(1) tau(2) tau(3))
-  have p\<tau>': "isPerm \<tau>'" unfolding isPerm_def apply safe
-    subgoal sorry
-    subgoal sorry .
+  have "supp \<tau>' \<subseteq> (X-Y) \<union> \<sigma>' ` (X - Y) \<union> V" unfolding supp_def \<tau>'_def by auto
+  hence "finite (supp \<tau>')" by (simp add: fV fX finite_subset) 
+  hence sst': "|supp \<tau>'| <o |UNIV::'A set|"  
+    by (simp add: infinite_UNIV)
+  have p\<tau>': "isPerm \<tau>'" using s' \<tau>' unfolding isPerm_def apply safe 
+    subgoal by (metis \<tau>'_def bij_betw_inv_into image_in_bij_eq inv_simp1 involuntory_imp_bij)
+    subgoal using sst' . .
   have 00: "Tperm \<sigma>' t = Tperm \<tau>' t" apply(rule supports2[OF X])
     subgoal by fact
     subgoal by fact
-    subgoal unfolding \<tau>'_def by auto . 
+    subgoal using \<tau>' by auto . 
   also have "Tperm \<tau>' t = t" apply(rule supports[OF Y])
     subgoal by fact
     subgoal by fact .

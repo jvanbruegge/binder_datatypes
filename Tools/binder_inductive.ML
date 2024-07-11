@@ -718,7 +718,7 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
 
      fun after_qed thms lthy =
        let
-         val Induct = thms |> hd |> hd;
+         val Induct = thms |> hd |> hd |> Inductive.rulify lthy;
          val Induct1 = Induct RS @{thm Induct.axioms(1)};
          val strong_induct_thm = Induct RS @{thm Induct.strong_induct};
          val I_intros = (Induct1 RS @{thm Induct1.I.intros}) |> rotate_prems 1;
@@ -735,7 +735,6 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
 
          val preds = result |> #preds;
          val args's = map (fn pred => make_args' argTs xs (pred |> fastype_of |> binder_types)) preds;
-         val bargss = map_index (fn (i, _) => make_bool_args' bs i) preds;
          val lhss = @{map 2} (curry list_comb) preds args's;
          val rhss = map (subst I []) lhss;
          val tuples = map (dest_comb #> snd) rhss;
@@ -747,12 +746,13 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
          val n = length intros;
          val lr_thm = Goal.prove_sorry lthy (map (fst o dest_Free) xs) [] lr_goal
            (fn {context = ctxt, prems = _} =>
+             unfold_tac ctxt @{thms induct_rulify induct_rulify_fallback} THEN
              HEADGOAL (rtac ctxt inducts_thm THEN'
                EVERY' (map (fn i => EVERY' [
                  rtac ctxt I_intros,
                  SELECT_GOAL (unfold_tac ctxt @{thms prod.case}),
                  rtac ctxt (mk_disjIN n i),
-                 REPEAT_DETERM o (resolve_tac ctxt [exI, conjI, refl, notI, TrueI] ORELSE' assume_tac ctxt),
+                 REPEAT_DETERM o (resolve_tac ctxt [exI, conjI, refl, notI, TrueI, allI, impI] ORELSE' assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt),
                  simp_tac ctxt
                  ]) (1 upto n))));
          val (t, _) = yield_singleton (mk_Frees "t") argT lthy;

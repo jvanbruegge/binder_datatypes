@@ -4,7 +4,7 @@ begin
 
 binder_inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
   InpL: "trans (Inp a x P) (Binp a x P)" binds "{x}"
-| ComLeftL: "\<lbrakk> trans P (Binp a x P') ; trans Q (Fout a x Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau ((P'[y/x]) \<parallel> Q'))" binds "{x}"
+| ComLeftL: "\<lbrakk> trans P (Binp a x P') ; trans Q (Fout a y Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau ((P'[y/x]) \<parallel> Q'))" binds "{x}"
 | CloseLeftL: "\<lbrakk> trans P (Binp a x P') ; trans Q (Bout a x Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau (Res x (P' \<parallel> Q')))" binds "{x}"
 | Open: "\<lbrakk> trans P (Fout a x P') ; a \<noteq> x \<rbrakk> \<Longrightarrow> trans (Res x P) (Bout a x P')" binds "{x}"
 | ScopeFree: "\<lbrakk> trans P (Cmt \<alpha> P') ; fra \<alpha> ; x \<notin> ns \<alpha> \<rbrakk> \<Longrightarrow> trans (Res x P) (Cmt \<alpha> (Res x P'))" binds "{x}"
@@ -36,7 +36,7 @@ where perm: Tperm supp: Tsupp
   proof -
     define G where "G \<equiv> \<lambda>B p t.
                 (\<exists>a x P. B = {x} \<and> fst t = Inp a x P \<and> snd t = Binp a x P) \<or>
-                (\<exists>P a x P' Q Q' y. B = {x} \<and> fst t = P \<parallel> Q \<and> snd t = Tau (P'[y/x] \<parallel> Q') \<and> p (P, Binp a x P') \<and> p (Q, Fout a x Q')) \<or>
+                (\<exists>P a x P' Q y Q'. B = {x} \<and> fst t = P \<parallel> Q \<and> snd t = Tau (P'[y/x] \<parallel> Q') \<and> p (P, Binp a x P') \<and> p (Q, Fout a y Q')) \<or>
                 (\<exists>P a x P' Q Q'. B = {x} \<and> fst t = P \<parallel> Q \<and> snd t = Tau (Res x (P' \<parallel> Q')) \<and> p (P, Binp a x P') \<and> p (Q, Bout a x Q')) \<or>
                 (\<exists>P a x P'. B = {x} \<and> fst t = Res x P \<and> snd t = Bout a x P' \<and> p (P, Fout a x P') \<and> a \<noteq> x) \<or>
                 (\<exists>P \<alpha> P' x. B = {x} \<and> fst t = Res x P \<and> snd t = Cmt \<alpha> (Res x P') \<and> p (P, Cmt \<alpha> P') \<and> fra \<alpha> \<and> x \<notin> ns \<alpha>) \<or>
@@ -54,10 +54,30 @@ where perm: Tperm supp: Tsupp
               | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
               | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [1]
 
-        subgoal sorry
+        subgoal for P1 a x P1' P2 y P2' z1 z2
+          apply (rule exI[of _ a])
+          apply (rule exI[of _ z1])
+          apply (rule conjI) apply assumption
+          apply (rule exI[of _ "swap P1' x z1"])
+          apply (rule exI[of _ y])
+          apply (rule conjI)
+          apply (metis FFVars_commit_simps(5) FFVars_usub Tsupp.simps UnCI insertE insert_Diff prod.collapse term.set(3) usub_refresh)
+          apply (rule conjI)
+          apply (metis (no_types, lifting) Binp_inj FFVars_commit_simps(5) FFVars_usub Tsupp.simps UnI2 Un_commute insertE insert_Diff prod.collapse term.set(3))
+          apply assumption
+          done
 
-        subgoal sorry
-
+        subgoal for P1 a x P1' P2 P2' z1 z2
+          apply (rule exI[of _ a])
+          apply (rule exI[of _ z1])
+          apply (rule conjI) apply assumption
+          apply (rule exI[of _ "swap P1' x z1"])
+          apply (rule exI[of _ "swap P2' x z1"])
+          apply (intro conjI)
+              apply (cases t; simp add: Res_refresh[of z1 "Par P1' P2'" x])
+          apply (metis Binp_inj Diff_iff FFVars_commit_simps(5) Res_inject_swap Tsupp.simps UnCI insertE insert_Diff prod.collapse term.set(3) term.set(8))
+          apply (metis Bout_inj Diff_iff FFVars_commit_simps(5) Tsupp.simps UnCI insertE insert_Diff prod.collapse singletonI term.set(3) term.set(8))
+          done
 
            apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
               | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
@@ -123,5 +143,6 @@ where perm: Tperm supp: Tsupp
     then show ?thesis unfolding G_def using prems by force
   qed
   done
+print_theorems
 
 end

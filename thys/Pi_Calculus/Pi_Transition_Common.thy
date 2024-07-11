@@ -2,7 +2,7 @@ theory Pi_Transition_Common
   imports Commitment
 begin
 
-hide_const inverse_class.inverse_divide
+hide_const inverse_class.inverse_divide trans
 no_notation inverse.inverse_divide (infixl "'/" 70)
 
 type_synonym T = "trm \<times> cmt"

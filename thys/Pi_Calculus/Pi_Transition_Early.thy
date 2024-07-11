@@ -32,8 +32,108 @@ apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
          | (rule exI[of _ "map_action \<sigma> _"])
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
 
-  subgoal for R B t
-    sorry
-  done
+  subgoal premises prems for R B t
+  proof -
+    define G where "G \<equiv> \<lambda>B p t.
+                (\<exists>a x P y. B = {x} \<and> fst t = Inp a x P \<and> snd t = Finp a y (P[y/x])) \<or>
+                (\<exists>P a x P' Q Q'. B = {} \<and> fst t = P \<parallel> Q \<and> snd t = Tau (P' \<parallel> Q') \<and> p (P, Finp a x P') \<and> p (Q, Fout a x Q')) \<or>
+                (\<exists>P a x P' Q Q'. B = {x} \<and> fst t = P \<parallel> Q \<and> snd t = Tau (Res x (P' \<parallel> Q')) \<and> p (P, Finp a x P') \<and> p (Q, Bout a x Q') \<and> x \<notin> {a} \<union> FFVars P) \<or>
+                (\<exists>P a x P'. B = {x} \<and> fst t = Res x P \<and> snd t = Bout a x P' \<and> p (P, Fout a x P') \<and> a \<noteq> x) \<or>
+                (\<exists>P \<alpha> P' x. B = {x} \<and> fst t = Res x P \<and> snd t = Cmt \<alpha> (Res x P') \<and> p (P, Cmt \<alpha> P') \<and> fra \<alpha> \<and> x \<notin> ns \<alpha>) \<or>
+                (\<exists>P a x P' y. B = {x, y} \<and> fst t = Res y P \<and> snd t = Bout a x (Res y P') \<and> p (P, Bout a x P') \<and> y \<notin> {a, x} \<and> x \<notin> FFVars P \<union> {a}) \<or>
+                (\<exists>P \<alpha> P' Q. B = bvars \<alpha> \<and> fst t = P \<parallel> Q \<and> snd t = Cmt \<alpha> (P' \<parallel> Q) \<and> p (P, Cmt \<alpha> P') \<and> bvars \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {})"
+    { assume assms: "(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t))"
+      have "small B \<Longrightarrow> G B R t \<Longrightarrow> \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
+        unfolding G_def
+(**)isPerm_def conj_assoc[symmetric]
+  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
+    ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
+  apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [] [@{term t}])\<close>; clarsimp)
+        apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [2]
 
+  subgoal for P1 a x P1' P2 P2' z1 z2
+    apply (rule exI[of _ a])
+    apply (rule exI[of _ z1])
+    apply (rule conjI) apply assumption
+    apply (rule exI[of _ "swap P1' x z1"])
+    apply (rule exI[of _ "swap P2' x z1"])
+    apply (intro conjI)
+        apply (cases t; simp add: Res_refresh[of z1 "Par P1' P2'" x])
+      apply (cases t; simp)
+     apply (drule assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap], of _ _ x z1])
+     apply (cases t; simp)
+    apply (drule assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap], of _ _ x z1])
+    apply (cases t; simp)
+    apply (metis Bout_inj)
+    apply blast
+    apply (metis Tsupp.simps Un_insert_left insertCI insert_Diff prod.collapse term.set(3))
+    done
+
+     apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
+        | (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+        | (cases t; auto simp only: fst_conv snd_conv Tsupp.simps term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [1]
+
+  apply (smt (verit) Cmt.elims Diff_iff FFVars_commit_Cmt FFVars_commit_simps(5) Tsupp.simps Un_iff action.simps(65) action.simps(66) bns.simps(3) bns.simps(4) empty_bvars_vars_fvars fra.simps(4) fra.simps(5) ns.simps(3) ns.simps(4) prod.collapse singletonI term.set(8))
+
+  subgoal for P a x P' y z1 z2
+    apply (rule exI[of _ "swap P y z1"])
+    apply (rule exI[of _ a])
+    apply (rule exI[of _ z2])
+    apply (rule conjI) apply assumption
+    apply (rule exI[of _ "swap (swap P' x z2) y z1"])
+    apply (rule exI[of _ z1])
+    apply (rule conjI) apply assumption
+    apply clarsimp
+    apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
+     apply (cases t; auto) []
+    apply (rule conjI, (cases t; auto) [])
+    apply (rule conjI[OF sym])
+    apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl] refl)))
+     apply (cases t; simp)
+    apply (smt (verit, best) image_iff sw_diff sw_eqR)
+    apply (rule conjI)
+    apply (erule (1) R_forw_subst[of R, OF _ assms[unfolded Tperm.simps, simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+    apply (rule conjI)
+     apply (cases t; simp)
+     apply (smt (verit, best) image_iff sw_diff sw_eqR)
+     apply (cases t; simp)
+    apply (simp add: swap_commute term.rrename_comps[where w="swap P' y z1"] supp_comp_bound[OF _ _ infinite_UNIV]
+      term.rrename_cong_ids[symmetric])
+    apply (cases t; simp)
+   apply (smt (verit, best) image_iff sw_diff sw_eqR)
+    done
+
+subgoal for P1 act P1' P2 z1 z2
+    using bvars_act_bout[of act]
+    apply (elim disjE exE)
+    apply (rule exI[of _ act])
+     apply (cases t; auto)
+    subgoal for a b
+      apply (intro exI[of _ "bout a z1"] conjI)
+       apply (cases t; simp)
+      apply (intro exI[of _ "swap P1' b z1"] conjI)
+       apply (cases t; simp)
+       apply (cases t; simp)
+      apply (metis Bout_inj)
+      apply (metis Tsupp.simps Un_iff bns.simps(1) disjoint_iff prod.collapse singletonD term.set(3))
+      done
+
+  subgoal for a b
+      apply (intro exI[of _ "binp a z1"] conjI)
+       apply (cases t; simp)
+      apply (intro exI[of _ "swap P1' b z1"] conjI)
+       apply (cases t; simp)
+       apply (cases t; simp)
+      apply (metis Binp_inj)
+      apply (metis Int_Un_emptyI1 Tsupp.simps bns.simps(2) disjoint_single prod.collapse term.set(3))
+    done
+    done
+  done
+    }
+    then show ?thesis unfolding G_def using prems by force
+  qed
+  done
+print_theorems
 

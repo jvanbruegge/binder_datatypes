@@ -694,9 +694,9 @@ Tperm :: "('A :: {infinite,countable} \<Rightarrow> 'A) \<Rightarrow> 'T \<Right
 assumes ex_fin_supports: "\<forall>t. \<exists>X. finite X \<and> supports X t"
 begin
 
-definition Tsupp where "Tsupp t \<equiv> \<Inter> {X . supports X t}"
+definition Tsupp where "Tsupp t \<equiv> \<Inter> {X . finite X \<and> supports X t}"
 
-lemma Tsupp_least: "supports X t \<Longrightarrow> Tsupp t \<subseteq> X"
+lemma Tsupp_least: "finite X \<Longrightarrow> supports X t \<Longrightarrow> Tsupp t \<subseteq> X"
 unfolding Tsupp_def by auto
 
 lemma finite_Tsupp: "finite (Tsupp t)" 
@@ -755,20 +755,21 @@ lemma supports_UNIV[simp,intro!]: "supports UNIV t"
 unfolding supports_def by (simp add: eq_id_iff)
 
 lemma supports_finite_Int: 
-assumes "finite XX" "\<And>X. X \<in> XX \<Longrightarrow> supports X t"  
+assumes "finite XX" "\<And>X. X \<in> XX \<Longrightarrow> finite X \<and> supports X t"  
 shows "supports (\<Inter> XX) t"
-using assms apply induct by (auto simp add: supports_int)
+using assms apply induct  
+by simp (metis Inter_insert cInf_singleton equals0I finite_Inter insertI1 insertI2 supports_int)  
 
 lemma supports_Tsupp: "supports (Tsupp t) t" 
 proof-
   obtain Y where Y: "finite Y \<and> supports Y t"  
     using ex_fin_supports by auto
-  have 0: "Tsupp t = \<Inter> {X \<inter> Y | X . supports X t}"
+  have 0: "Tsupp t = \<Inter> {X \<inter> Y | X . finite X \<and> supports X t}"
   unfolding Tsupp_def using Y by auto
-  have 1: "{X \<inter> Y |X. supports X t} \<subseteq> Pow Y" by auto
+  have 1: "{X \<inter> Y |X. finite X \<and> supports X t} \<subseteq> Pow Y" by auto
   show ?thesis unfolding 0 apply(rule supports_finite_Int)
     subgoal using Y using "1" finite_subset by auto
-    subgoal using Y using supports_int by auto .
+    subgoal using Y using supports_int by auto . 
 qed
 
 lemma small_Tsupp: "small (Tsupp t)"
@@ -792,11 +793,12 @@ qed
 
 lemma Tsupp_seminat: "isPerm \<sigma> \<Longrightarrow> Tsupp (Tperm \<sigma> t) \<subseteq> \<sigma> ` (Tsupp t)"
 apply(rule Tsupp_least) unfolding supports_def apply safe
-apply(subst Tperm_comp'[symmetric]) 
-  subgoal by auto  
-  subgoal by auto  
-  subgoal apply(rule Tsupp_supporting2)    
-  using isPerm_comp by auto .
+  subgoal by (simp add: finite_Tsupp)
+  subgoal apply(subst Tperm_comp'[symmetric]) 
+    subgoal by auto  
+    subgoal by auto  
+    subgoal apply(rule Tsupp_supporting2)    
+    using isPerm_comp by auto . .
 
 end (* context NominalSet *)
 

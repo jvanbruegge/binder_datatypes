@@ -1,23 +1,3 @@
-(*  Title:      HOL/Tools/inductive.ML
-    Author:     Lawrence C Paulson, Cambridge University Computer Laboratory
-    Author:     Stefan Berghofer and Markus Wenzel, TU Muenchen
-
-(Co)Inductive Definition module for HOL.
-
-Features:
-  * least or greatest fixedpoints
-  * mutually recursive definitions
-  * definitions involving arbitrary monotone operators
-  * automatically proves introduction and elimination rules
-
-  Introduction rules have the form
-  [| M Pj ti, ..., Q x, ... |] ==> Pk t
-  where M is some monotone operator (usually the identity)
-  Q x is any side condition on the free variables
-  ti, t are any terms
-  Pj, Pk are two of the predicates being defined in mutual recursion
-*)
-
 signature BINDER_INDUCTIVE =
 sig
   type result =
@@ -743,6 +723,7 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
          val strong_induct_thm = Induct RS @{thm Induct.strong_induct};
          val I_intros = (Induct1 RS @{thm Induct1.I.intros}) |> rotate_prems 1;
          val I_induct = Induct1 RS @{thm Induct1.I.induct};
+         val equiv_thm = Induct1 RS @{thm Induct1.I_equiv};
 
          val flags = {quiet_mode = true, verbose = false, alt_name = alt_name, coind = false,
            no_elim = false, no_ind = false, skip_mono = false};
@@ -761,12 +742,8 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
          val lr_goal = @{map 2} (curry HOLogic.mk_imp) lhss rhss
            |> Library.foldr1 HOLogic.mk_conj
            |> HOLogic.mk_Trueprop;
-         val inducts_thm = result |> #raw_induct |> @{print tracing};
-(*        apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-         apply (unfold prod.case) [1]
-         apply (rule disjI1)
-         apply (rule exI conjI refl notI TrueI | assumption)+
-         apply simp  *)
+         val intro_thms = result |> #intrs;
+         val inducts_thm = result |> #raw_induct;
          val n = length intros;
          val lr_thm = Goal.prove_sorry lthy (map (fst o dest_Free) xs) [] lr_goal
            (fn {context = ctxt, prems = _} =>
@@ -787,16 +764,33 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
              HOLogic.mk_Trueprop (Library.foldr1 HOLogic.mk_conj lhss'))
          val rl_thm = Goal.prove_sorry lthy [fst (dest_Free t)] [] rl_goal
            (fn {context = ctxt, prems = _} =>
-             print_tac ctxt "foo" THEN
-             Skip_Proof.cheat_tac ctxt 1) |> @{print};
-         val goals = @{map 2} (curry mk_Trueprop_eq) lhss rhss;
-         val _ = goals |> map (Syntax.check_term lthy #> Syntax.string_of_term lthy #> writeln)
-       in lthy end;
+              HEADGOAL (etac ctxt I_induct THEN'
+                (REPEAT_ALL_NEW (eresolve_tac ctxt [conjE, @{thm case_prodE}, @{thm case_prodE'},  disjE, exE])
+                  THEN_ALL_NEW hyp_subst_tac ctxt) THEN'
+                EVERY' (map (fn thm =>
+                  asm_full_simp_tac (ss_only (thm :: @{thms prod.inject simp_thms all_simps imp_conjL}) ctxt)) intro_thms)
+              ));
+         val goal = @{map 2} (curry HOLogic.mk_eq) lhss rhss
+           |> Library.foldr1 HOLogic.mk_conj |> HOLogic.mk_Trueprop;
+         val thms = Goal.prove_sorry lthy (map (fst o dest_Free) xs) [] goal
+           (fn {context = ctxt, prems = _} =>
+              HEADGOAL (Method.insert_tac ctxt [lr_thm, rl_thm] THEN' blast_tac ctxt))
+           |> split_conj_thm;
+
+         val rec_binding =
+           if Binding.is_empty alt_name then Binding.conglomerate (map #1 cnames_syn) else alt_name;
+         val notes =
+           (Binding.qualify_name true rec_binding "strong_induct", strong_induct_thm) ::
+           (Binding.qualify_name true rec_binding "equiv", equiv_thm) ::
+           (map (fn (b, _) => Binding.qualify_name true b "alt_def") cnames_syn ~~ thms)
+           |> map (fn (b, thm) => ((b, []), [([thm], [])]))
+       in
+         lthy |> Local_Theory.notes notes |> snd
+       end;
 
      val goal = list_comb (Const (@{const_name Induct}, mapT --> setT --> fastype_of fp_fun --> HOLogic.boolT),
        [mapx, setx, fp_fun])
        |> HOLogic.mk_Trueprop;
-     val _ = goal |> Syntax.check_term lthy |> Syntax.string_of_term lthy |> writeln;
 
    in
       Proof.theorem NONE after_qed [[(goal, [])]] lthy

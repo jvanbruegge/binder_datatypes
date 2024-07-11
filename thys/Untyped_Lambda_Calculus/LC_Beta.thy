@@ -7,247 +7,50 @@ begin
 (* INSTANTIATING THE ABSTRACT SETTING: *)
 
 (* *)
-(*
-binder_inductive sillystep :: "trm \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
-  "sillystep (Lam x a) b c d e" binds "{x}"
-where
-  map: "\<lambda>f ((a,b), c, d, e). ((rrename f a,rrename f b), rrename f c, rrename f d, rrename f e)"
-  set: "\<lambda>((a,b), c, d, e). FFVars a \<union> FFVars b \<union> FFVars c \<union> FFVars d \<union> FFVars e"
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-           small_def term.card_of_FFVars_bounds term.Un_bound)
-  subgoal premises prems for R b c d e x a
-  proof -
-    obtain y where "y \<notin> FFVars a \<union> FFVars b \<union> FFVars c \<union> FFVars d \<union> FFVars e \<union> {x}"
-      sorry
-    then show ?thesis
-      by (intro exI[of _ "{y}"])
-        (auto simp: singl_bound Lam_refresh[of y a x])
-  qed
-  done
+
+fun Tperm where "Tperm f (a,b) = ((rrename f a,rrename f b))"
+fun Tsupp where "Tsupp (a,b) = FFVars a \<union> FFVars b"
+
+lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t :: trm \<times> trm)"
+  using Tsupp.simps[of "fst t" "snd t"] unfolding prod.collapse
+  by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
 
 binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x}"
-where
-  map: "\<lambda>f (a,b). ((rrename f a,rrename f b))"
-  set: "\<lambda>(a,b). FFVars a \<union> FFVars b"
+where perm: Tperm supp: Tsupp
          apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound) [6]
   subgoal for \<sigma> R B t
-    sorry
-  subgoal for R B t
-    sorry
+    by (cases t)
+      (auto simp: isPerm_def
+         term.rrename_comps rrename_tvsubst_comp
+         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+         | ((rule exI[of _ "\<sigma> _"])+; auto))
+  subgoal premises prems for R B t
+    using fresh[of t] prems(2-) unfolding
+      (**)isPerm_def conj_assoc[symmetric] split_beta
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE; simp)
+    apply ((rule exI, rule conjI[rotated], assumption) |
+        (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
+        (cases t; auto))+
+    done
   done
 
-binder_inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
-| AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
-| AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
-| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')" binds "{x}"
-where
-  map: "\<lambda>f (n,a,b). ((n,rrename f a,rrename f b))"
-  set: "\<lambda>(_,a,b). FFVars a \<union> FFVars b"
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-           small_def term.card_of_FFVars_bounds term.Un_bound) [6]
-  subgoal for \<sigma> R B t
-    sorry
-  subgoal for R B t
-    sorry
-  done
+thm step.alt_def
+thm step.strong_induct
+thm step.equiv
 
-lemma **: "Induct (\<lambda>f (b, e, e'). (b, rrename f e, rrename f e'))
- (\<lambda>(_, e, e'). FFVars e \<union> FFVars e')
- (\<lambda>B p (b, x1, x2).
-     (\<exists>x e1 e2.
-         B = {x} \<and>
-         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))"
-  sorry
-binder_inductive step1 :: "trm \<Rightarrow> trm \<Rightarrow> bool" and step2 :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta1: "step1 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
-| AppL1: "step1 e1 e1' \<Longrightarrow> step1 (App e1 e2) (App e1' e2)"
-| AppR1: "step1 e2 e2' \<Longrightarrow> step1 (App e1 e2) (App e1 e2')"
-| Xi1: "step2 e e' \<Longrightarrow> step1 (Lam x e) (Lam x e')" binds "{x}"
-| AppL2: "step1 e1 e1' \<Longrightarrow> step2 (App e1 e2) (App e1' e2)"
-| AppR2: "step1 e2 e2' \<Longrightarrow> step2 (App e1 e2) (App e1 e2')"
-| Xi2: "step1 e e' \<Longrightarrow> step2 (Lam x e) (Lam x e')" binds "{x}"
-where
-  map: "\<lambda>f (b,e,e'). ((b,rrename f e,rrename f e'))"
-  set: "\<lambda>(_,e,e'). FFVars e \<union> FFVars e'"
-  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-           small_def term.card_of_FFVars_bounds term.Un_bound) [5]
-  subgoal for R R' B t
-    by (auto)
-  subgoal for \<sigma> R B t
-    sorry
-  subgoal for R B t
-    sorry
-  done
-
-lemma lr: "(step1 x1 x2 \<longrightarrow>
-Induct1.I
-(\<lambda>B p (b, x1, x2).
-     (\<exists>x e1 e2.
-         B = {x} \<and>
-         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
- (False, x1, x2)) \<and>
- (step2 x1 x2 \<longrightarrow>
-Induct1.I
-(\<lambda>B p (b, x1, x2).
-     (\<exists>x e1 e2.
-         B = {x} \<and>
-         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
- (True, x1, x2))"
-  apply (rule step1_step2.induct)
-        apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-         apply (unfold prod.case) [1]
-         apply (rule disjI1)
-         apply (rule exI conjI refl notI TrueI | assumption)+
-        apply simp
-       apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-        apply (unfold prod.case) [1]
-        apply (rule disjI2, rule disjI1)
-        apply (rule exI conjI refl notI TrueI | assumption)+
-       apply simp
-      apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-       apply (unfold prod.case) [1]
-       apply (rule disjI2, rule disjI2, rule disjI1)
-       apply (rule exI conjI refl notI TrueI | assumption)+
-      apply simp
-     apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-      apply (unfold prod.case) [1]
-      apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
-      apply (rule exI conjI refl notI TrueI | assumption)+
-     apply simp
-    apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-     apply (unfold prod.case) [1]
-     apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
-     apply (rule exI conjI refl notI TrueI | assumption)+
-    apply simp
-   apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-    apply (unfold prod.case) [1]
-    apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
-    apply (rule exI conjI refl notI TrueI | assumption)+
-   apply simp
-  apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
-   apply (unfold prod.case) [1]
-   apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI2)
-   apply (rule exI conjI refl notI TrueI | assumption)+
-  apply simp
-  done
-
-lemma rl: "Induct1.I
-(\<lambda>B p (b, x1, x2).
-     (\<exists>x e1 e2.
-         B = {x} \<and>
-         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e'))) t
- \<Longrightarrow>
- (\<forall>x1 x2. t = (False, x1, x2) \<longrightarrow> step1 x1 x2) \<and>
- (\<forall>x1 x2. t = (True, x1, x2) \<longrightarrow> step2 x1 x2)"
-  apply (erule Induct1.I.induct[OF Induct.axioms(1)[OF **]])
-  apply (elim conjE case_prodE disjE exE; hypsubst_thin)
-        apply (unfold prod.inject)
-        apply (simp only: step1_step2.intros(1) simp_thms all_simps imp_conjL)
-       apply (simp only: step1_step2.intros(2) simp_thms all_simps imp_conjL)
-      apply (simp only: step1_step2.intros(3) simp_thms all_simps imp_conjL)
-     apply (simp only: step1_step2.intros(4) simp_thms all_simps imp_conjL)
-    apply (simp only: step1_step2.intros(5) simp_thms all_simps imp_conjL)
-   apply (simp only: step1_step2.intros(6) simp_thms all_simps imp_conjL)
-  apply (simp only: step1_step2.intros(7) simp_thms all_simps imp_conjL)
-  done
-
-lemma
-"(step1 x1 x2 =
-Induct1.I
-(\<lambda>B p (b, x1, x2).
-     (\<exists>x e1 e2.
-         B = {x} \<and>
-         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
- (False, x1, x2))"
-"(step2 x1 x2 =
-Induct1.I
-(\<lambda>B p (b, x1, x2).
-     (\<exists>x e1 e2.
-         B = {x} \<and>
-         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
-     (\<exists>e1 e1' e2.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
-     (\<exists>e2 e2' e1.
-         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
-     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
- (True, x1, x2))"
-  using lr rl by blast+
-
-binder_inductive a and b where
-  "b (x :: var) \<Longrightarrow> a (x :: var) (z :: trm)" binds "{x :: var}"
-| "a y z \<Longrightarrow> b x"
-where map: "\<lambda>_. id" set: "\<lambda>_. {}"
-  sorry
-thm a_def
-thm a_b_def
-*)
-
+(* ALTERNATIVE instantiation without binder_inductive *)
+(*
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
-  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
+  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
+| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x}"
 
 (* INSTANTIATING THE LSNominalSet LOCALE: *)
 
@@ -325,7 +128,6 @@ unfolding G_def apply(elim disjE)
   apply(cases t) unfolding isPerm_def small_def Tperm_def  
   by (simp add: term.rrename_comps) . . .
 *)
-
 
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"  
 by (metis Lam_avoid Tsupp.elims term.card_of_FFVars_bounds term.set(2))
@@ -432,6 +234,7 @@ subgoal for R tt1 tt2 apply(rule iffI)
     subgoal apply(rule disjI4_3) by auto
     \<^cancel>\<open>Xi: \<close>
     subgoal apply(rule disjI4_4) by auto . . .
+*)
 
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm step.induct[no_vars]
@@ -453,14 +256,15 @@ and Xi: "\<And>e e' x p.
   step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (Lam x e) (Lam x e')" 
 shows "R p t1 t2"
-unfolding step_I
+unfolding step.alt_def
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Step.strong_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-    subgoal unfolding step_I by simp
-    subgoal for p B t apply(subst (asm) G_def) 
-    unfolding step_I[symmetric] apply(elim disjE exE)
-      subgoal for x e1 e2  using Beta[of x p e2 e1] by auto
+  subgoal using par st apply(elim step.strong_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+    subgoal unfolding step.alt_def by simp
+    apply (erule thin_rl)
+    subgoal for p B t
+    unfolding step.alt_def[symmetric] apply(elim disjE exE case_prodE)
+      subgoal for _ _ x e1 e2  using Beta[of x p e2 e1] by auto
       subgoal using AppL by auto  
       subgoal using AppR by auto  
       subgoal using Xi by auto . . .
@@ -484,14 +288,13 @@ and Xi: "\<And>e e' x p.
 shows "\<forall>p. R t1 t2 p"
 using strong_induct_step[of Psupp t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
 
-
 (* Also inferring equivariance from the general infrastructure: *)
 corollary rrename_step:
 assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
 and r: "step e e'" 
 shows "step (rrename f e) (rrename f e')"
-using assms unfolding step_I using Step.I_equiv[of "(e,e')" f]
-unfolding Tperm_def isPerm_def by auto
+using assms unfolding step.alt_def using step.equiv[of "(e,e')" f]
+unfolding isPerm_def by auto
 
 
 (* Other properties: *)

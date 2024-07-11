@@ -453,8 +453,7 @@ end (* context IInduct *)
 (* VERSIONS OF THE LOCALES WITH SMALL SETS INSTEAD OF BINDER-LIKE ENTITIES, which work in 99% of the cases: *)
 
 locale LSNominalSet =
-fixes (* 'T: term-like entities *)
-Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
+fixes Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T"
 and Tsupp :: "'T \<Rightarrow> 'A set"
 assumes  
 Tperm_id: "Tperm id = id"

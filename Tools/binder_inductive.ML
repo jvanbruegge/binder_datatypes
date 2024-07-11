@@ -754,11 +754,11 @@ fun mk_ind_def alt_name cs intros intr_ts mapx setx binds monos params cnames_sy
                  rtac ctxt (mk_disjIN n i),
                  REPEAT_DETERM o (resolve_tac ctxt [exI, conjI, refl, notI, TrueI] ORELSE' assume_tac ctxt),
                  simp_tac ctxt
-                 ]) (1 upto n)))) |> @{print};
+                 ]) (1 upto n))));
          val (t, _) = yield_singleton (mk_Frees "t") argT lthy;
-         val lhss' = @{map 4} (fn preds => fn bargs => fn args' => fn tuple =>
+         val lhss' = @{map 3} (fn preds => fn args' => fn tuple =>
            list_all_free args' (HOLogic.mk_imp (HOLogic.mk_eq (t, tuple),
-             list_comb (preds, args')))) preds bargss args's tuples;
+             list_comb (preds, args')))) preds args's tuples;
          val rl_goal =
            Logic.mk_implies (HOLogic.mk_Trueprop (I $ t),
              HOLogic.mk_Trueprop (Library.foldr1 HOLogic.mk_conj lhss'))

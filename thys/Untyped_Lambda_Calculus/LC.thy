@@ -18,9 +18,6 @@ for
   vvsubst: vvsubst
   tvsubst: tvsubst
 
-
-declare [[inductive_internals]]
-
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)
 

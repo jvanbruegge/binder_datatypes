@@ -42,8 +42,9 @@ thm step.alt_def
 thm step.strong_induct
 thm step.equiv
 
-(* ALTERNATIVE instantiation without binder_inductive *)
+(* ALTERNATIVE manual instantiation without the automation provided by binder_inductive *)
 (*
+declare [[inductive_internal]]
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"

@@ -57,6 +57,23 @@ where
     sorry
   done
 
+lemma **: "Induct (\<lambda>f (b, e, e'). (b, rrename f e, rrename f e'))
+ (\<lambda>(_, e, e'). FFVars e \<union> FFVars e')
+ (\<lambda>B p (b, x1, x2).
+     (\<exists>x e1 e2.
+         B = {x} \<and>
+         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))"
+  sorry
 binder_inductive step1 :: "trm \<Rightarrow> trm \<Rightarrow> bool" and step2 :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta1: "step1 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)" binds "{x}"
 | AppL1: "step1 e1 e1' \<Longrightarrow> step1 (App e1 e2) (App e1' e2)"
@@ -77,8 +94,154 @@ where
   subgoal for R B t
     sorry
   done
-*)
 
+lemma lr: "(step1 x1 x2 \<longrightarrow>
+Induct1.I
+(\<lambda>B p (b, x1, x2).
+     (\<exists>x e1 e2.
+         B = {x} \<and>
+         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
+ (False, x1, x2)) \<and>
+ (step2 x1 x2 \<longrightarrow>
+Induct1.I
+(\<lambda>B p (b, x1, x2).
+     (\<exists>x e1 e2.
+         B = {x} \<and>
+         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
+ (True, x1, x2))"
+  apply (rule step1_step2.induct)
+        apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+         apply (unfold prod.case) [1]
+         apply (rule disjI1)
+         apply (rule exI conjI refl notI TrueI | assumption)+
+        apply simp
+       apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+        apply (unfold prod.case) [1]
+        apply (rule disjI2, rule disjI1)
+        apply (rule exI conjI refl notI TrueI | assumption)+
+       apply simp
+      apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+       apply (unfold prod.case) [1]
+       apply (rule disjI2, rule disjI2, rule disjI1)
+       apply (rule exI conjI refl notI TrueI | assumption)+
+      apply simp
+     apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+      apply (unfold prod.case) [1]
+      apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
+      apply (rule exI conjI refl notI TrueI | assumption)+
+     apply simp
+    apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+     apply (unfold prod.case) [1]
+     apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
+     apply (rule exI conjI refl notI TrueI | assumption)+
+    apply simp
+   apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+    apply (unfold prod.case) [1]
+    apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
+    apply (rule exI conjI refl notI TrueI | assumption)+
+   apply simp
+  apply (rule Induct1.I.intros[OF Induct.axioms(1)[OF **], rotated])
+   apply (unfold prod.case) [1]
+   apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI2)
+   apply (rule exI conjI refl notI TrueI | assumption)+
+  apply simp
+  done
+
+lemma rl: "Induct1.I
+(\<lambda>B p (b, x1, x2).
+     (\<exists>x e1 e2.
+         B = {x} \<and>
+         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e'))) t
+ \<Longrightarrow>
+ (\<forall>x1 x2. t = (False, x1, x2) \<longrightarrow> step1 x1 x2) \<and>
+ (\<forall>x1 x2. t = (True, x1, x2) \<longrightarrow> step2 x1 x2)"
+  apply (erule Induct1.I.induct[OF Induct.axioms(1)[OF **]])
+  apply (elim conjE case_prodE disjE exE; hypsubst_thin)
+        apply (unfold prod.inject)
+        apply (simp only: step1_step2.intros(1) simp_thms all_simps imp_conjL)
+       apply (simp only: step1_step2.intros(2) simp_thms all_simps imp_conjL)
+      apply (simp only: step1_step2.intros(3) simp_thms all_simps imp_conjL)
+     apply (simp only: step1_step2.intros(4) simp_thms all_simps imp_conjL)
+    apply (simp only: step1_step2.intros(5) simp_thms all_simps imp_conjL)
+   apply (simp only: step1_step2.intros(6) simp_thms all_simps imp_conjL)
+  apply (simp only: step1_step2.intros(7) simp_thms all_simps imp_conjL)
+  done
+
+lemma
+"(step1 x1 x2 =
+Induct1.I
+(\<lambda>B p (b, x1, x2).
+     (\<exists>x e1 e2.
+         B = {x} \<and>
+         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
+ (False, x1, x2))"
+"(step2 x1 x2 =
+Induct1.I
+(\<lambda>B p (b, x1, x2).
+     (\<exists>x e1 e2.
+         B = {x} \<and>
+         \<not> b \<and> x1 = App (Lam x e1) e2 \<and> x2 = tvsubst (Var(x := e2)) e1) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> \<not> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> \<not> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (True, e, e')) \<or>
+     (\<exists>e1 e1' e2.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1' e2 \<and> p (False, e1, e1')) \<or>
+     (\<exists>e2 e2' e1.
+         B = {} \<and> b \<and> x1 = App e1 e2 \<and> x2 = App e1 e2' \<and> p (False, e2, e2')) \<or>
+     (\<exists>e e' x. B = {x} \<and> b \<and> x1 = Lam x e \<and> x2 = Lam x e' \<and> p (False, e, e')))
+ (True, x1, x2))"
+  using lr rl by blast+
+
+binder_inductive a and b where
+  "b (x :: var) \<Longrightarrow> a (x :: var) (z :: trm)" binds "{x :: var}"
+| "a y z \<Longrightarrow> b x"
+where map: "\<lambda>_. id" set: "\<lambda>_. {}"
+  sorry
+thm a_def
+thm a_b_def
+*)
 
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"

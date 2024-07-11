@@ -551,8 +551,9 @@ qed
 end (* context Induct1 *)
 
 sublocale Induct1 < IInduct1 where Tmap = Tmap and Tfvars = Tfvars and 
-Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard 
-using GGG_mmono GGG_eequiv GGG_wfB eextend_to_wfBij by auto
+Bmap = image and Bvars = id and wfB = small and bsmall = "\<lambda>_. True" and GG = GG apply standard
+    using GGG_mmono GGG_eequiv GGG_wfB eextend_to_wfBij by auto
+
 
 context Induct1
 begin 
@@ -661,7 +662,7 @@ print_statement IInduct.BE_iinduct[unfolded
   IInduct_def IInduct1_def CComponents_def
   IInduct_axioms_def IInduct1_axioms_def
   conj_imp_eq_imp_imp, rule_format]
-
+term "Induct1.I"
 ML_file \<open>../Tools/binder_inductive.ML\<close>
 
 end 

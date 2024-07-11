@@ -19,7 +19,6 @@ fun Tsupp :: "T \<Rightarrow> ivar set" where
 lemma Tvars_dsset: "(Tsupp t - dsset xs) \<inter> dsset xs = {}" "|Tsupp t - dsset xs| <o |UNIV::ivar set|"
 apply auto using card_of_minus_bound iterm.set_bd_UNIV by blast
 
-ML \<open>Multithreading.parallel_proofs := 0\<close>
 binder_inductive affine  :: "itrm \<Rightarrow> bool" where
  iVar[simp,intro!]: "affine (iVar x)"
 |iLam: "affine e \<Longrightarrow> affine (iLam xs e)" binds "dsset xs"

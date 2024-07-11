@@ -150,8 +150,6 @@ shows "map_context f \<Gamma> = \<Gamma>"
     apply (rule prod.map_cong0[of _ _ id _ id])
   using assms by (fastforce intro!: typ.rrename_cong_ids)+
 
-declare [[inductive_internals]]
-
 notation Fun (infixr "\<rightarrow>" 65)
 notation Forall ("\<forall> _ <: _ . _" [62, 62, 62] 70)
 
@@ -169,12 +167,169 @@ inductive_cases
   and wf_ConsE[elim!]: "\<turnstile> (a#\<Gamma>) ok"
 print_theorems
 
-inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
+lemma in_context_eqvt:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_typ f T \<in> map_context f \<Gamma>"
+  using assms unfolding map_context_def by auto
+
+lemma extend_eqvt:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "map_context f (\<Gamma>,x<:T) = map_context f \<Gamma>,f x <: rrename_typ f T"
+  using assms unfolding map_context_def by simp
+
+lemma closed_in_eqvt:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "S closed_in \<Gamma> \<Longrightarrow> rrename_typ f S closed_in map_context f \<Gamma>"
+  using assms by (auto simp: typ.FFVars_rrenames)
+
+lemma wf_eqvt:
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "\<turnstile> \<Gamma> ok \<Longrightarrow> \<turnstile> map_context f \<Gamma> ok"
+unfolding map_context_def proof (induction \<Gamma>)
+  case (Cons a \<Gamma>)
+  then show ?case using assms apply auto
+    apply (metis fst_conv image_iff)
+    using closed_in_eqvt map_context_def by fastforce
+qed simp
+
+type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
+type_synonym V = "var list"
+
+definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
+  "Tperm f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
+fun Tsupp :: "T \<Rightarrow> var set" where
+  "Tsupp (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
+
+lemma small_Tsupp: "small (Tsupp t)"
+  by (cases t) (auto simp: small_def typ.card_of_FFVars_bounds typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd)
+
+lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"
+  by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tsupp small_def small_isPerm subsetI)
+
+lemma swap_idemp[simp]: "id(x := x) = id" by auto
+lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
+
+lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
+  by (induction \<Gamma>) auto
+
+lemma finite_Tsupp: "finite (Tsupp t)"
+  using finite_iff_le_card_var small_Tsupp small_def by blast
+
+lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
+using finite_iff_le_card_var by blast
+
+lemma exists_fresh:
+"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tsupp t)"
+proof-
+  have 0: "|set xs \<union> \<Union> (Tsupp ` (set ts))| <o |UNIV::var set|"
+  unfolding ls_UNIV_iff_finite
+  using finite_Tsupp by blast
+  then obtain x where "x \<notin> set xs \<union> \<Union> (Tsupp ` (set ts))"
+  by (meson exists_fresh)
+  thus ?thesis by auto
+qed
+
+lemma rrename_swap_FFvars[simp]: "x \<notin> FFVars_typ T \<Longrightarrow> xx \<notin> FFVars_typ T \<Longrightarrow>
+  rrename_typ (id(x := xx, xx := x)) T = T"
+apply(rule typ.rrename_cong_ids) by auto
+
+lemma map_context_swap_FFVars[simp]:
+"\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k) \<and>
+           xx \<noteq> fst k \<and> xx \<notin> FFVars_typ (snd k) \<Longrightarrow>
+    map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
+  unfolding map_context_def apply(rule map_idI) by auto
+
+lemma isPerm_swap: "isPerm (id(x := z, z := x))"
+  unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)
+
+binder_inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
   SA_Top: "\<lbrakk> \<turnstile> \<Gamma> ok ; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
 | SA_Refl_TVar: "\<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
 | SA_Trans_TVar: "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
-| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
+| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2" binds "{x}"
+where perm: Tperm supp: Tsupp
+         apply (auto 0 3 simp: Tperm_def o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
+      small_def typ.FFVars_rrenames typ.rrename_cong_ids
+      typ.card_of_FFVars_bounds typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd
+      intro!: context_map_cong_id) [5]
+     apply (smt (verit) Union_iff image_Union image_eqI list.set_map map_context_def old.prod.inject prod.inject prod_fun_imageE snd_conv typ.FFVars_rrenames)
+  subgoal by fastforce
+  subgoal for \<sigma> R B t
+    unfolding split_beta
+    by (elim disj_forward exE; cases t)
+      (auto simp add: Tperm_def isPerm_def supp_inv_bound
+        typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
+        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+        | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
+  subgoal for R B t
+    (*New ported version of the original proof (below); should be more maintainable.*)
+    unfolding Tperm_def
+      (**)isPerm_def conj_assoc[symmetric] split_beta
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE; clarsimp)
+     apply (((rule exI, rule conjI[rotated], assumption) |
+          (((rule exI conjI)+)?, rule Forall_rrename) |
+          (cases t; auto))+) []
+    subgoal premises prems for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
+      using prems(3-)
+      using exists_fresh[of "[x]" "[t]"] apply(elim exE conjE)
+      subgoal for z
+        apply (rule exI)
+        apply (rule exI[of _ "{z}"])
+        apply (intro exI conjI)
+               apply (rule refl)+
+             apply (rule Forall_swap)
+             apply (cases t; simp)
+            apply (rule Forall_swap)
+            apply (cases t; simp)
+           apply assumption+
+          apply (frule prems(1)[rule_format, of "(fst t, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
+          apply (drule prems(2)[rule_format, OF conjI[OF _ conjI], of "id(x := z, z := x)" "fst t, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
+            apply (auto simp: Tperm_def extend_eqvt)
+        apply (subgoal_tac "\<And>t. 
+        Induct1.I (\<lambda>B R (x1, x2, x3).
+         (\<exists>\<Gamma> S. B = {} \<and> x1 = \<Gamma> \<and> x2 = S \<and> x3 = Top \<and> \<turnstile> \<Gamma> ok \<and> S closed_in \<Gamma>) \<or>
+         (\<exists>\<Gamma> x. B = {} \<and> x1 = \<Gamma> \<and> x2 = TyVar x \<and> x3 = TyVar x \<and> \<turnstile> \<Gamma> ok \<and> TyVar x closed_in \<Gamma>) \<or>
+         (\<exists>x U \<Gamma> T. B = {} \<and>  x1 = \<Gamma> \<and> x2 = TyVar x \<and> x3 = T \<and> x <: U \<in> \<Gamma> \<and> R (Pair \<Gamma> (Pair U T))) \<or>
+         (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2. B = {} \<and> x1 = \<Gamma> \<and> x2 = S\<^sub>1 \<rightarrow> S\<^sub>2 \<and> x3 = T\<^sub>1 \<rightarrow> T\<^sub>2 \<and> R (Pair \<Gamma> (Pair T\<^sub>1 S\<^sub>1)) \<and> R (Pair \<Gamma> (Pair S\<^sub>2 T\<^sub>2))) \<or>
+         (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. B = {x} \<and> x1 = \<Gamma> \<and> x2 = \<forall> x <: S\<^sub>1 . S\<^sub>2 \<and> x3 = \<forall> x <: T\<^sub>1 . T\<^sub>2 \<and> R (Pair \<Gamma> (Pair T\<^sub>1 S\<^sub>1)) \<and>
+             R (Pair (\<Gamma> , x <: T\<^sub>1) (Pair S\<^sub>2 T\<^sub>2)))) t \<Longrightarrow> \<forall>\<Gamma> S T. t = (Pair \<Gamma> (Pair S T)) \<longrightarrow> \<turnstile> \<Gamma> ok")
+         apply (drule meta_spec[of _ "Pair (fst t , x <: T\<^sub>1) (Pair S\<^sub>2 T\<^sub>2)"])
+         apply (drule meta_mp)
+          apply (erule subst[where P="\<lambda>G. Induct1.I G (Pair (fst t , x <: T\<^sub>1) (Pair S\<^sub>2 T\<^sub>2))", rotated])
+          apply (simp add: split_beta fun_eq_iff)
+         apply (subst (asm) rrename_swap_FFvars)
+           apply (cases t; simp)
+           apply blast
+          apply (smt (verit, ccfv_SIG) Tsupp.simps UnCI in_mono prod.collapse snd_conv wf_ConsE)
+         apply (subst (asm) map_context_swap_FFVars)
+          apply (cases t; simp)
+          apply (smt (verit, ccfv_SIG) UN_iff fst_conv image_iff wf_ConsE wf_FFVars)
+         apply assumption
+        subgoal premises prems for t
+          using prems(9)
+          apply (elim Induct1.I.induct[rotated 1, where Tperm = Tperm and Tsupp = Tsupp])
+           apply auto []
+          apply (standard)
+                apply (auto 0 3 simp: Tperm_def o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
+              small_def typ.FFVars_rrenames typ.rrename_cong_ids
+              typ.card_of_FFVars_bounds typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd
+              intro!: context_map_cong_id) [5]
+            apply (smt (verit) Union_iff image_Union image_eqI list.set_map map_context_def old.prod.inject prod.inject prod_fun_imageE snd_conv typ.FFVars_rrenames)
+          subgoal by fastforce
+          subgoal for \<sigma> R B t
+            unfolding split_beta
+            by (elim disj_forward exE; cases t)
+              (auto simp add: Tperm_def isPerm_def supp_inv_bound
+                typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
+                | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+                | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
+          done
+        done
+      done
+    done
+  done
 
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
@@ -203,320 +358,13 @@ next
   case 2 then show ?case using SA_Trans_TVar by simp
 } qed auto
 
-thm ty_def
 declare ty.intros[intro]
-
-type_synonym T = "\<Gamma>\<^sub>\<tau> \<times> type \<times> type"
-type_synonym V = "var list"
-
-definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where
-  "Tperm f \<equiv> map_prod (map_context f) (map_prod (rrename_typ f) (rrename_typ f))"
-fun Tsupp :: "T \<Rightarrow> var set" where
-  "Tsupp (\<Gamma>, T\<^sub>1, T\<^sub>2) = dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
-
-(* definition Vmap :: "(var \<Rightarrow> var) \<Rightarrow> V \<Rightarrow> V" where
-  "Vmap \<equiv> map"
-fun Vfvars :: "V \<Rightarrow> var set" where
-  "Vfvars v = set v"
-*)
-interpretation LSNominalSet where
-Tperm = Tperm and Tsupp = Tsupp
-apply standard unfolding isPerm_def Tperm_def
-  using small_Un typ.card_of_FFVars_bounds
-         apply (auto simp: typ.FFVars_rrenames map_prod.comp typ.rrename_comp0s infinite_UNIV small_def)
-    apply (rule var_typ_pre_class.Un_bound var_typ_pre_class.UN_bound context_set_bd_UNIV set_bd_UNIV
-        typ.card_of_FFVars_bounds)+
-      apply (auto simp: context_map_cong_id typ.rrename_cong_ids intro: context_map_cong_id)
-    apply (smt (verit, del_insts) UnI1 fst_conv imageI)
-  apply (unfold map_context_def)[1]
-   apply (smt (verit, del_insts) UN_I UnI1 UnI2 image_iff list.set_map prod_fun_imageE snd_conv typ.FFVars_rrenames)
-  done
-
-definition G :: "var set \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool" where
-  "G \<equiv> \<lambda>B R t.
-    (B = {} \<and> snd (snd t) = Top \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
-  \<or> (\<exists>x. B = {} \<and> fst (snd t) = TyVar x \<and> fst (snd t) = snd (snd t) \<and> \<turnstile> fst t ok \<and> fst (snd t) closed_in fst t)
-  \<or> (\<exists>x U \<Gamma> T. B = {} \<and> fst t = \<Gamma> \<and> fst (snd t) = TyVar x \<and> snd (snd t) = T \<and> x <: U \<in> \<Gamma> \<and> R (\<Gamma>, U, T)
-   \<comment> \<open>\<and> \<Gamma> \<turnstile> U <: T\<close>)
-  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2. B = {} \<and> fst t = \<Gamma> \<and> fst (snd t) = (S\<^sub>1 \<rightarrow> S\<^sub>2) \<and> snd (snd t) = (T\<^sub>1 \<rightarrow> T\<^sub>2) \<and>
-     R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<comment> \<open> \<and> \<Gamma> \<turnstile> T1 <: S1 \<close> \<and>
-     R (\<Gamma>, S\<^sub>2, T\<^sub>2) \<comment> \<open> \<and> \<Gamma> \<turnstile> S2 <: T2 \<close> )
-  \<or> (\<exists>\<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2. B = {x} \<and> fst t = \<Gamma> \<and> fst (snd t) = (\<forall>x<:S\<^sub>1. S\<^sub>2) \<and> snd (snd t) = (\<forall>x<:T\<^sub>1. T\<^sub>2) \<and>
-     R (\<Gamma>, T\<^sub>1, S\<^sub>1) \<comment> \<open>\<and> \<Gamma> \<turnstile> T1 <: S1 \<close> \<and>
-     R (\<Gamma>,x<:T\<^sub>1, S\<^sub>2, T\<^sub>2) \<comment> \<open>\<and> \<Gamma>,x<:T1 \<turnstile> S2 <: T2 \<close>)
-  "
-
-lemma G_mono: "R \<le> R' \<Longrightarrow> G v R t \<Longrightarrow> G v R' t"
-  unfolding G_def by fastforce
-
-lemma in_context_eqvt:
-  assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_typ f T \<in> map_context f \<Gamma>"
-  using assms unfolding map_context_def by auto
-
-lemma extend_eqvt:
-  assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "map_context f (\<Gamma>,x<:T) = map_context f \<Gamma>,f x <: rrename_typ f T"
-  using assms unfolding map_context_def by simp
-
-lemma closed_in_eqvt:
-  assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "S closed_in \<Gamma> \<Longrightarrow> rrename_typ f S closed_in map_context f \<Gamma>"
-  using assms by (auto simp: typ.FFVars_rrenames)
-
-lemma wf_eqvt:
-  assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "\<turnstile> \<Gamma> ok \<Longrightarrow> \<turnstile> map_context f \<Gamma> ok"
-unfolding map_context_def proof (induction \<Gamma>)
-  case (Cons a \<Gamma>)
-  then show ?case using assms apply auto
-    apply (metis fst_conv image_iff)
-    using closed_in_eqvt map_context_def by fastforce
-qed simp
 
 lemma ty_eqvt:
   assumes "\<Gamma> \<turnstile> S <: T" "bij f" "|supp f| <o |UNIV::var set|"
   shows "map_context f \<Gamma> \<turnstile> rrename_typ f S <: rrename_typ f T"
-  using assms proof (induction \<Gamma> S T rule: ty.induct)
-  case (SA_Top \<Gamma> S)
-  then show ?case by (auto intro!: ty.SA_Top dest: wf_eqvt closed_in_eqvt)
-next
-  case (SA_Refl_TVar \<Gamma> x)
-  then show ?case
-    apply (auto intro!: ty.SA_Refl_TVar imageI dest: wf_eqvt closed_in_eqvt)
-    by (metis fst_conv image_iff)
-next
-  case (SA_Trans_TVar x U \<Gamma> T)
-  then show ?case by (auto intro!: ty.SA_Trans_TVar dest: in_context_eqvt)
-next
-  case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
-  then show ?case by (auto intro!: ty.SA_All simp: extend_eqvt)
-qed auto
-
-lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
-  unfolding G_def
-  by (elim disj_forward exE; cases t)
-    (auto simp: Tperm_def isPerm_def supp_inv_bound
-      typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
-         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
-
-lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"
-  by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tsupp small_def small_isPerm subsetI)
-
-lemma swap_idemp[simp]: "id(x := x) = id" by auto
-lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
-
-lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
-  by (induction \<Gamma>) auto
-
-lemma finite_Tsupp: "finite (Tsupp t)"
-using finite_iff_le_card_var small_Tsupp small_def by blast
-
-lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
-using finite_iff_le_card_var by blast
-
-lemma exists_fresh:
-"\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set ts. z \<notin> Tsupp t)"
-proof-
-  have 0: "|set xs \<union> \<Union> (Tsupp ` (set ts))| <o |UNIV::var set|"
-  unfolding ls_UNIV_iff_finite
-  using finite_Tsupp by blast
-  then obtain x where "x \<notin> set xs \<union> \<Union> (Tsupp ` (set ts))"
-  by (meson exists_fresh)
-  thus ?thesis by auto
-qed
-
-abbreviation Ii where "Ii \<equiv> \<lambda>(\<Gamma>,S,T). \<Gamma> \<turnstile> S <: T"
-
-lemma rrename_swap_FFvars[simp]: "x \<notin> FFVars_typ T \<Longrightarrow> xx \<notin> FFVars_typ T \<Longrightarrow>
-  rrename_typ (id(x := xx, xx := x)) T = T"
-apply(rule typ.rrename_cong_ids) by auto
-
-lemma map_context_swap_FFVars[simp]:
-"\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k) \<and>
-           xx \<noteq> fst k \<and> xx \<notin> FFVars_typ (snd k) \<Longrightarrow>
-    map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
-  unfolding map_context_def apply(rule map_idI) by auto
-
-lemma isPerm_swap: "isPerm (id(x := z, z := x))"
-  unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)
-
-lemma G_refresh:
-  assumes "(\<And>t. R t \<Longrightarrow> Ii t)" "(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t))"
-  shows "small B \<Longrightarrow> G B R t \<Longrightarrow>
-  \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
-(*New ported version of the original proof (below); should be more maintainable.*)
-  unfolding G_def Tperm_def
-    (**)isPerm_def conj_assoc[symmetric]
-  unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-  apply (elim disj_forward exE; clarsimp)
-   apply (((rule exI, rule conjI[rotated], assumption) |
-        (((rule exI conjI)+)?, rule Forall_rrename) |
-        (cases t; auto))+) []
-  subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-    using exists_fresh[of "[x]" "[t]"] apply(elim exE conjE)
-    subgoal for z
-      apply (rule exI)
-      apply (rule exI[of _ "{z}"])
-      apply (intro exI conjI)
-             apply (rule refl)+
-           apply (rule Forall_swap)
-           apply (cases t; simp)
-          apply (rule Forall_swap)
-          apply (cases t; simp)
-         apply assumption+
-        apply (frule assms(1)[of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)"])
-        apply (drule assms(2)[rule_format, OF conjI, OF isPerm_swap, of "((fst t, x <: T\<^sub>1), S\<^sub>2, T\<^sub>2)" x z])
-        apply (auto simp: Tperm_def extend_eqvt)
-      apply (subst (asm) rrename_swap_FFvars)
-        apply (cases t; simp)
-        apply (metis fst_conv insert_Diff insert_subset snd_conv wf_ConsE wf_context)
-       apply (cases t; simp)
-      apply (subst (asm) map_context_swap_FFVars)
-       apply (cases t; simp)
-       apply (metis Pair_inject UN_I rev_image_eqI wf_ConsE wf_FFVars wf_context)
-      apply assumption
-      done
-    done
-  done
-(* Ported version of the original proof (below); should be more maintainable.
-unfolding G_def Tperm_def apply safe
-  subgoal by (rule exI[of _ "{}"]) auto
-  subgoal by (rule exI[of _ "{}"]) auto
-  subgoal by (rule exI[of _ "{}"]) auto
-  subgoal by (rule exI[of _ "{}"]) fastforce
-  subgoal for \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-  using exists_fresh[of "[x]" "[t]"] apply(elim exE conjE)
-  subgoal for xx apply (rule exI[of _ "{xx}"])
-  apply (intro conjI)
-    subgoal by simp
-    subgoal by simp
-    subgoal apply(rule disjI5_5)
-    apply(rule exI[of _ "fst t"])
-    apply (rule exI[of _ "T\<^sub>1"])
-    apply (rule exI[of _ "S\<^sub>1"])
-    apply (rule exI[of _ "xx"])
-    apply (rule exI[of _ "rrename_typ (id(x:=xx,xx:=x)) S\<^sub>2"])
-    apply (rule exI[of _ "rrename_typ (id(x:=xx,xx:=x)) T\<^sub>2"])
-    apply (cases t) apply simp apply (intro conjI)
-      subgoal apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal for \<Gamma> _ _ apply(erule allE[of _ "id(x:=xx,xx:=x)"])
-      apply(erule allE[of _ "\<Gamma> , x <: T\<^sub>1"])
-      apply(erule allE[of _ S\<^sub>2]) apply(erule allE[of _ T\<^sub>2])
-      subgoal premises P using P(2-)
-      using wf_FFVars[OF wf_context[OF P(1)[OF P(5)]]]
-      wf_context[OF P(1)[OF P(6)]]
-      apply(subgoal_tac "(\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k)) \<and>
-                         x \<notin> FFVars_typ T\<^sub>1")
-      apply(subst (asm) extend_eqvt, simp, simp)
-      subgoal apply (auto simp add: isPerm_def)
-      by (metis image_eqI map_context_swap_FFVars)
-      subgoal by (auto simp add: isPerm_def) . . . . . .
-*)
-
-(*
-  using fresh[of t] unfolding G_def Tperm_def apply safe
-  subgoal by (rule exI[of _ "{}"]) auto
-  subgoal by (rule exI[of _ "{}"]) auto
-  subgoal by (rule exI[of _ "{}"]) auto
-  subgoal by (rule exI[of _ "{}"]) fastforce
-  subgoal for xx \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-    apply (rule exI[of _ "{xx}"])
-    apply (rule conjI)
-    subgoal by auto
-    apply(rule conjI, simp)
-    apply (rule disjI2)+
-    apply (rule exI[of _ "fst t"])
-  apply (rule exI[of _ "T\<^sub>1"])
-    apply (rule exI[of _ "S\<^sub>1"])
-    apply (rule exI[of _ "xx"])
-    apply (rule exI[of _ "rrename_typ (id(x:=xx,xx:=x)) S\<^sub>2"])
-    apply (rule exI[of _ "rrename_typ (id(x:=xx,xx:=x)) T\<^sub>2"])
-    apply (cases t) apply simp
-    apply (intro conjI)
-    subgoal apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"]) by auto
-    subgoal
-      apply (elim conjE)
-        apply (subst Forall_rrename[of "id(x:=xx,xx:=x)"])
-      by auto
-    subgoal for a b c subgoal premises P
-    using P(2-) apply -
-    apply (rule iffD2[OF arg_cong[of _ _ R]])
-     apply (rule arg_cong[of _ _ "\<lambda>x::\<Gamma>\<^sub>\<tau>. (x, _::type, _::type)"])
-     defer
-     apply (elim allE)
-     apply (erule impE)
-      prefer 2
-      apply assumption
-     apply (rule conjI)
-      apply (simp add: isPerm_def)
-      apply assumption
-     apply auto[1]
-    apply (subst extend_eqvt)
-      apply (rule bij_swap)
-     apply (rule supp_swap_bound)
-      apply (rule infinite_var)
-    apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-      apply (rule sym)
-      apply (rule context_map_cong_id)
-        apply (rule bij_swap)
-       apply (rule supp_swap_bound)
-       apply (rule infinite_var)
-       apply (erule UnE)
-        apply auto[1]
-        apply (metis P(1) fst_conv image_eqI wf_ConsE wf_context)
-       apply (drule wf_FFVars[rotated])
-        apply (meson P(1) wf_context)
-       apply (metis P(1) fst_conv fun_upd_apply id_apply wf_ConsE wf_context)
-     apply simp
-     apply (smt (verit) P(1) Prelim.bij_swap fst_conv fun_upd_apply
-       id_apply infinite_var list.discI list.inject subset_eq
-       supp_swap_bound typ.rrename_cong_ids well_scoped(1)
-       wf_ty.cases wf_context) . . . .
-*)
-
-(* The name "PM" of this interpretation stands for "POPLmark" *)
-interpretation Ty: Induct1 where Tperm = Tperm and Tsupp = Tsupp and G = G
-  apply standard
-  using G_mono G_equiv  by auto
-
-(* Now the proof of this is completely standard,
-bacause we use the original operator G:  *)
-lemma ty_I: "ty \<Gamma> T1 T2 = Ty.I (\<Gamma>, T1, T2)"
-unfolding ty_def Ty.I_def lfp_curry3 apply(rule arg_cong2[of _ _ _ _ lfp], simp_all)
-unfolding fun_eq_iff G_def apply clarify
-subgoal for R \<Gamma>\<Gamma> TT1 TT2 apply(rule iffI)
-  subgoal apply(elim disjE exE)
-    \<^cancel>\<open>SA_Top: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_1) by auto
-    \<^cancel>\<open>SA_Refl_TVar: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_2) by auto
-    \<^cancel>\<open>SA_Trans_TVar: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_3) by auto
-    \<^cancel>\<open>SA_Arrow: \<close>
-    subgoal apply(rule exI[of _ "{}"], rule conjI, simp) apply(rule disjI5_4) by auto
-    \<^cancel>\<open>SA_All: \<close>
-    subgoal for T\<^sub>1 S\<^sub>1 x S\<^sub>2
-    apply(rule exI[of _ "{x}"], rule conjI, simp) apply(rule disjI5_5) by auto .
-  subgoal apply(elim conjE disjE exE)
-    \<^cancel>\<open>SA_Top: \<close>
-    subgoal apply(rule disjI5_1) by auto
-    \<^cancel>\<open>SA_Refl_TVar: \<close>
-    subgoal apply(rule disjI5_2) by auto
-    \<^cancel>\<open>SA_Trans_TVar: \<close>
-    subgoal apply(rule disjI5_3) by auto
-    \<^cancel>\<open>SA_Arrow: \<close>
-    subgoal apply(rule disjI5_4) by auto
-    \<^cancel>\<open>SA_All: \<close>
-    subgoal for v \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-    apply(rule disjI5_5) by fastforce . . .
-
-interpretation ty: Induct where Tperm = Tperm and Tsupp = Tsupp and G = G
-  apply standard subgoal for R B t
-  using G_refresh[of R B t] unfolding ty_I by auto .
-print_theorems
+  using ty.equiv[of "Pair \<Gamma> (Pair S T)" f] assms unfolding ty.alt_def
+  by (auto simp: Tperm_def isPerm_def)
 
 corollary strong_induct_ty[consumes 2, case_names ty SA_Top SA_Refl_TVar SA_Trans_TVar SA_Arrow SA_All]:
 assumes par: "\<And>p. small (Psupp p)"
@@ -543,22 +391,13 @@ apply(subgoal_tac "case (\<Gamma>, S, T) of (\<Gamma>, S, T) \<Rightarrow> \<phi
   subgoal by simp
   subgoal using par ty
   apply(elim ty.strong_induct[where R = "\<lambda>p (\<Gamma>, S, T). \<phi> p \<Gamma> S T"])
-    subgoal using ty_I by simp
-    subgoal for p B t apply(subst (asm) G_def)
-    unfolding ty_I[symmetric] apply(elim disjE exE)
+    subgoal using ty.alt_def by simp
+    subgoal for p B t
+    unfolding ty.alt_def[symmetric] apply(elim disjE exE case_prodE)
       subgoal using SA_Top by auto
-      subgoal for X using SA_Refl_TVar[of _ X p] by auto
+      subgoal for _ _ _ _ _ X using SA_Refl_TVar[of _ X p] by auto
       subgoal using SA_Trans_TVar by auto
       subgoal using SA_Arrow by auto
       subgoal using SA_All by auto . . .
-
-(* Also inferring equivariance from the general infrastructure: *)
-corollary rrename_step:
-assumes f: "bij f" "|supp f| <o |UNIV::var set|"
-and r: "\<Gamma> \<turnstile> U <: T"
-shows "(map_context f \<Gamma>) \<turnstile> (rrename_typ f U) <: (rrename_typ f T)"
-using assms unfolding ty_I using Ty.I_equiv[of "(\<Gamma>,U,T)" f]
-unfolding Tperm_def isPerm_def by auto
-
 
 end

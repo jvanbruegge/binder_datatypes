@@ -44,18 +44,18 @@ qed
 
 type_synonym T = "itrm"
 
-definition Tmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> irrename f"
+definition Tperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
+"Tperm f \<equiv> irrename f"
 
-fun Tfvars :: "T \<Rightarrow> ivar set" where 
-"Tfvars e = FFVars e"
+fun Tsupp :: "T \<Rightarrow> ivar set" where 
+"Tsupp e = FFVars e"
 
 
 
 interpretation CComponents where
-Tmap = Tmap and Tfvars = Tfvars 
-and Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall
-apply standard unfolding ssbij_def Tmap_def  
+Tperm = Tperm and Tsupp = Tsupp 
+and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
+apply standard unfolding isPerm_def Tperm_def  
 using iterm.card_of_FFVars_bounds
 apply (auto simp: iterm.rrename_id0s map_prod.comp
 iterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
@@ -66,8 +66,8 @@ unfolding bsmall_def touchedSuper_def
 using super_Un_ddset_triv  
 by (smt (verit) finite_Un rev_finite_subset) 
 
-lemma wfBij_presSuper: "wfBij = presSuper"
-unfolding wfBij_def presSuper_def fun_eq_iff apply safe
+lemma presBnd_presSuper: "presBnd = presSuper"
+unfolding presBnd_def presSuper_def fun_eq_iff apply safe
   subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
   subgoal for \<sigma> xs apply(erule allE[of _ "Some xs"]) by auto 
   subgoal for \<sigma> xxs apply(cases xxs) by auto 
@@ -95,42 +95,42 @@ unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
 lemma G_eequiv: 
-"ssbij \<sigma> \<Longrightarrow> wfBij \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> 
- G  (Bmap \<sigma> xxs) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+"isPerm \<sigma> \<Longrightarrow> presBnd \<sigma> \<Longrightarrow> G xxs R t \<Longrightarrow> 
+ G  (Bperm \<sigma> xxs) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
 unfolding G_def apply(elim disjE)
   subgoal apply(rule disjI3_1)
   subgoal apply(elim exE) subgoal for xs x
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
   apply(rule exI[of _ "\<sigma> x"]) 
-  unfolding ssbij_def small_def Tmap_def wfBij_def
+  unfolding isPerm_def small_def Tperm_def presBnd_def
   apply simp by (metis option.simps(5)) . .
   (* *)
   subgoal apply(rule disjI3_2)
   subgoal apply(elim exE) subgoal for xs e
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
   apply(rule exI[of _ "irrename \<sigma> e"])  
-  unfolding ssbij_def small_def Tmap_def wfBij_def
+  unfolding isPerm_def small_def Tperm_def presBnd_def
   apply (simp add: iterm.rrename_comps) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3) 
   subgoal apply(elim exE) subgoal for e1 es2
   apply(rule exI[of _ "irrename \<sigma> e1"]) 
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
-  unfolding ssbij_def small_def Tmap_def wfBij_presSuper 
+  unfolding isPerm_def small_def Tperm_def presBnd_presSuper 
   apply (simp add: iterm.rrename_comps image_def) 
   by (metis inv_simp1 iterm.rrename_bijs iterm.rrename_inv_simps touchedSuperT_irrename) . . .
 
 (* *)
 
-lemma G_wfB: "G xxs R t \<Longrightarrow> wfB xxs"
+lemma G_bnd: "G xxs R t \<Longrightarrow> bnd xxs"
 unfolding G_def by auto 
 
-lemma eextend_to_wfBij: 
-assumes "wfB xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bvars xxs \<inter> A' = {}"
-shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> ` Bvars xxs \<inter> A = {} \<and> id_on A' \<rho>" 
+lemma eextend_to_presBnd: 
+assumes "bnd xxs" "small A" "bsmall A" "A' \<subseteq> A" "Bsupp xxs \<inter> A' = {}"
+shows "\<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> ` Bsupp xxs \<inter> A = {} \<and> id_on A' \<rho>" 
 proof(cases xxs)
   case None
-  thus ?thesis apply(intro exI[of _ id]) unfolding ssbij_def by auto
+  thus ?thesis apply(intro exI[of _ id]) unfolding isPerm_def by auto
 next
   case (Some xs)
   hence 0: "super xs" "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A' \<subseteq> A"
@@ -138,15 +138,15 @@ next
   using assms by (auto split: option.splits simp: small_def bsmall_def) 
   show ?thesis using extend_super[OF 0] apply safe
   subgoal for \<rho> apply(rule exI[of _ \<rho>]) 
-  using Some by (auto split: option.splits simp: wfBij_presSuper ssbij_def) .
+  using Some by (auto split: option.splits simp: presBnd_presSuper isPerm_def) .
 qed 
 
 
 interpretation Reneqv : IInduct1 
-where Tmap = Tmap and Tfvars = Tfvars and Bmap = Bmap and Bvars = Bvars 
-and wfB = wfB and bsmall = bsmall and GG = G
+where Tperm = Tperm and Tsupp = Tsupp and Bperm = Bperm and Bsupp = Bsupp 
+and bnd = bnd and bsmall = bsmall and GG = G
 apply standard
-using G_mmono G_eequiv G_wfB eextend_to_wfBij by auto
+using G_mmono G_eequiv G_bnd eextend_to_presBnd by auto
 
 
 (* *)
@@ -172,31 +172,31 @@ subgoal for R tt apply(rule iffI)
     subgoal apply(rule disjI3_3) by auto . . .
   
 
-lemma III_bsmall: "Reneqv.II t \<Longrightarrow> bsmall (Tfvars t)"
+lemma III_bsmall: "Reneqv.II t \<Longrightarrow> bsmall (Tsupp t)"
 apply simp
   unfolding good_I[symmetric] 
   unfolding bsmall_def using good_finite_touchedSuperT touchedSuperT_def by auto 
 
-lemma Tvars_dsset: "dsset xs \<inter> (Tfvars t - dsset xs) = {}" 
-  "|Tfvars t - dsset xs| <o |UNIV::ivar set|"
-  "Reneqv.II t \<Longrightarrow> finite (touchedSuper (Tfvars t - dsset ys))"
+lemma Tvars_dsset: "dsset xs \<inter> (Tsupp t - dsset xs) = {}" 
+  "|Tsupp t - dsset xs| <o |UNIV::ivar set|"
+  "Reneqv.II t \<Longrightarrow> finite (touchedSuper (Tsupp t - dsset ys))"
 subgoal using Diff_disjoint .
-subgoal using small_def card_of_minus_bound ssmall_Tfvars by blast
-subgoal apply(subgoal_tac "bsmall (Tfvars t)")
+subgoal using small_def card_of_minus_bound ssmall_Tsupp by blast
+subgoal apply(subgoal_tac "bsmall (Tsupp t)")
   subgoal unfolding bsmall_def 
     by (meson Diff_subset rev_finite_subset touchedSuper_mono) 
   subgoal by (metis III_bsmall) . .
 
 lemma G_rrefresh: 
 "(\<forall>t. R t \<longrightarrow> Reneqv.II t) \<Longrightarrow> 
- (\<forall>\<sigma> t. ssbij \<sigma> \<and> wfBij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> 
+ (\<forall>\<sigma> t. isPerm \<sigma> \<and> presBnd \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> 
  G xxs R t \<Longrightarrow> 
- \<exists>yys. Bvars yys \<inter> Tfvars t = {} \<and> G yys R t"
+ \<exists>yys. Bsupp yys \<inter> Tsupp t = {} \<and> G yys R t"
 apply(subgoal_tac "Reneqv.II t") defer
 apply (metis Reneqv.GG_mmono2 Reneqv.II.simps predicate1I)
 subgoal premises p using p apply-
-apply(frule G_wfB)
-unfolding G_def Tmap_def apply safe
+apply(frule G_bnd)
+unfolding G_def Tperm_def apply safe
   subgoal for xs x 
   apply(rule exI[of _ None])  
   apply(intro conjI)
@@ -219,9 +219,9 @@ unfolding G_def Tmap_def apply safe
     unfolding presSuper_def apply simp apply(intro conjI)
       subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
       subgoal apply(subst irrename_eq_itvsubst_iVar)
-        subgoal unfolding ssbij_def by auto
-        subgoal unfolding ssbij_def by auto
-        subgoal unfolding id_on_def ssbij_def wfBij_def 
+        subgoal unfolding isPerm_def by auto
+        subgoal unfolding isPerm_def by auto
+        subgoal unfolding id_on_def isPerm_def presBnd_def 
         by (auto simp: irrename_eq_itvsubst_iVar split: option.splits) . . . .
   (* *)
   subgoal for e1 es2 
@@ -237,8 +237,8 @@ unfolding G_def Tmap_def apply safe
 (* FINALLY, INTERPRETING THE IInduct LOCALE: *)
 
 interpretation Reneqv : IInduct
-where Tmap = Tmap and Tfvars = Tfvars and 
-Bmap = Bmap and Bvars = Bvars and wfB = wfB and bsmall = bsmall 
+where Tperm = Tperm and Tsupp = Tsupp and 
+Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall 
 and GG = G
 apply standard using III_bsmall G_rrefresh by auto
 
@@ -249,13 +249,13 @@ apply standard using III_bsmall G_rrefresh by auto
 thm good.induct[no_vars] 
 
 corollary strong_induct_good[consumes 2, case_names iVar iLam iApp]: 
-assumes par: "\<And>p. small (Pfvars p) \<and> bsmall (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
 and st: "good t"  
 and iVar: "\<And>xs x p. 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow>
   R p (iVar x)"
 and iLam: "\<And>e xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> good e \<Longrightarrow> (\<forall>p'. R p' e) \<Longrightarrow> 
   R p (iLam xs e)" 
 and iApp: "\<And>e1 es2 p. 
@@ -276,13 +276,13 @@ unfolding bsmall_def[symmetric] apply(elim Reneqv.BE_iinduct[where R = "\<lambda
 
 corollary strong_induct_good'[consumes 1, case_names bsmall Bound iVar iLam iApp]: 
 assumes st: "good t" 
-and bsmall: "\<And>p. bsmall (Pfvars p)"
-and "\<And>p. |Pfvars p| <o |UNIV::ivar set|"
+and bsmall: "\<And>p. bsmall (Psupp p)"
+and "\<And>p. |Psupp p| <o |UNIV::ivar set|"
 and iVar: "\<And>xs x p. 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow>
   R (iVar x) p"
 and iLam: "\<And>e xs p. 
-  dsset xs \<inter> Pfvars p = {} \<Longrightarrow> 
+  dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> good e \<Longrightarrow> (\<forall>p'. R e p') \<Longrightarrow> 
   R (iLam xs e) p" 
 and iApp: "\<And>e1 es2 p. 
@@ -292,7 +292,7 @@ and iApp: "\<And>e1 es2 p.
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
   R (iApp e1 es2) p"
 shows "\<forall>p. R t p"
-using strong_induct_good[of Pfvars t "\<lambda>p t. R t p"] assms unfolding small_def by auto
+using strong_induct_good[of Psupp t "\<lambda>p t. R t p"] assms unfolding small_def by auto
 
 (* Also inferring equivariance from the general infrastructure: *)
 corollary irrename_good:
@@ -300,7 +300,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
 and r: "good e" 
 shows "good (irrename f e)"
 using assms unfolding good_I using Reneqv.II_equiv[of e f]
-unfolding Tmap_def ssbij_def wfBij_presSuper by auto
+unfolding Tperm_def isPerm_def presBnd_presSuper by auto
 
 
 (* Other properties: *)

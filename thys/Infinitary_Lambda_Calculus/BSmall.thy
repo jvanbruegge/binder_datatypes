@@ -6,16 +6,16 @@ begin
 
 type_synonym B = "ivar dstream option"
 
-fun Bmap :: "(ivar \<Rightarrow> ivar) \<Rightarrow> B \<Rightarrow> B" where 
-"Bmap f xxs = (case xxs of None \<Rightarrow> None
+fun Bperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> B \<Rightarrow> B" where 
+"Bperm f xxs = (case xxs of None \<Rightarrow> None
                           |Some xs \<Rightarrow> Some (dsmap f xs))"
 
-fun Bvars :: "B \<Rightarrow> ivar set" where 
-"Bvars xxs = (case xxs of None \<Rightarrow> {}
+fun Bsupp :: "B \<Rightarrow> ivar set" where 
+"Bsupp xxs = (case xxs of None \<Rightarrow> {}
                          |Some xs \<Rightarrow> dsset xs)"
 
-fun wfB :: "B \<Rightarrow> bool" where 
-"wfB xxs = (case xxs of None \<Rightarrow> True
+fun bnd :: "B \<Rightarrow> bool" where 
+"bnd xxs = (case xxs of None \<Rightarrow> True
                        |Some xs \<Rightarrow> super xs)"
 
 definition bsmall :: "ivar set \<Rightarrow> bool" where 

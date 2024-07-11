@@ -27,21 +27,21 @@ lemma finite_set_option[simp]: "finite (set_option x)"
   by (cases x) auto
 
 interpretation CComponents where 
-Tmap = rrename_term and
-Tfvars = FFVars_term and
-Bmap = map_option and
-Bvars = set_option and
-wfB = "pred_option prime_var" and
+Tperm = rrename_term and
+Tsupp = FFVars_term and
+Bperm = map_option and
+Bsupp = set_option and
+bnd = "pred_option prime_var" and
 bsmall = "\<lambda>_. True"
   apply standard
   apply (auto simp add: term.rrename_id0s term.rrename_comp0s term.set_bd_UNIV
-    ssbij_def small_def card_set_var
+    isPerm_def small_def card_set_var
     option.map_id0 option.map_comp fun_eq_iff option.set_map
     intro!: option.map_ident_strong finite_card_var)
   done
 
-lemma wfBij_alt: "wfBij \<sigma> \<longleftrightarrow> (\<forall>x. prime_var (\<sigma> x) \<longleftrightarrow> prime_var x)"
-  unfolding wfBij_def by (auto simp: option.pred_set)
+lemma presBnd_alt: "presBnd \<sigma> \<longleftrightarrow> (\<forall>x. prime_var (\<sigma> x) \<longleftrightarrow> prime_var x)"
+  unfolding presBnd_def by (auto simp: option.pred_set)
 
 lemma infinite_prime_var: "infinite {x. prime_var x}"
   apply (rule contrapos_nn[OF primes_infinite])
@@ -51,7 +51,7 @@ lemma infinite_prime_var: "infinite {x. prime_var x}"
 
 lemma refresh_prime_var:
   assumes"prime_var a" "small A" "B \<subseteq> A" "a \<notin> B"
-  shows "\<exists>\<rho>. ssbij \<rho> \<and> wfBij \<rho> \<and> \<rho> a \<notin> A \<and> id_on B \<rho>"
+  shows "\<exists>\<rho>. isPerm \<rho> \<and> presBnd \<rho> \<and> \<rho> a \<notin> A \<and> id_on B \<rho>"
 proof -
   from assms(1,2) obtain b where "prime_var b" "b \<notin> insert a A"
     apply atomize_elim
@@ -62,29 +62,29 @@ proof -
   then show ?thesis
     apply -
     apply (rule exI[of _ "id(a := b, b := a)"])
-    apply (auto simp: ssbij_def wfBij_alt assms(1,4) set_mp[OF assms(3)] id_on_def)
+    apply (auto simp: isPerm_def presBnd_alt assms(1,4) set_mp[OF assms(3)] id_on_def)
     done
 qed
 
 interpretation Step: IInduct where
-Tmap = rrename and
-Tfvars = FFVars and
-Bmap = map_option and
-Bvars = set_option and
-wfB = "pred_option prime_var" and
+Tperm = rrename and
+Tsupp = FFVars and
+Bperm = map_option and
+Bsupp = set_option and
+bnd = "pred_option prime_var" and
 bsmall = "\<lambda>_. True" and
 GG = G
   apply standard
   subgoal for R R' x e
     by (auto simp: G_def)
   subgoal for \<sigma> R x e
-    unfolding wfBij_alt ssbij_def
+    unfolding presBnd_alt isPerm_def
     by (auto simp: G_def term.rrename_comps)
   subgoal
     by (auto simp: G_def)
   subgoal for x A B
     apply (cases x)
-     apply (auto simp: ssbij_id intro: exI[of _ id] refresh_prime_var)
+     apply (auto simp: isPerm_id intro: exI[of _ id] refresh_prime_var)
     done
   subgoal
     by simp
@@ -103,11 +103,11 @@ lemma primal_II: "primal e = Step.II e"
   done
 
 lemma primal_param_induct[consumes 2, case_names Var App Lam]:
-"(\<And>p. small (Pfvars p)) \<Longrightarrow>
+"(\<And>p. small (Psupp p)) \<Longrightarrow>
 primal x \<Longrightarrow>
 (\<And>x p. prime_var x \<Longrightarrow> P p (Var x)) \<Longrightarrow>
 (\<And>e1 e2 p. primal e1 \<Longrightarrow> P p e1 \<Longrightarrow> primal e2 \<Longrightarrow> P p e2 \<Longrightarrow> P p (App e1 e2)) \<Longrightarrow>
-(\<And>x e p. x \<notin> Pfvars p \<Longrightarrow> prime_var x \<Longrightarrow> primal e \<Longrightarrow> P p e \<Longrightarrow> P p (Lam x e)) \<Longrightarrow>
+(\<And>x e p. x \<notin> Psupp p \<Longrightarrow> prime_var x \<Longrightarrow> primal e \<Longrightarrow> P p e \<Longrightarrow> P p (Lam x e)) \<Longrightarrow>
 P p x"
   apply (erule Step.BE_iinduct[simplified])
    apply (fold primal_II)
@@ -122,7 +122,7 @@ primal x \<Longrightarrow>
 (\<And>e1 e2 p. primal e1 \<Longrightarrow> P e1 \<Longrightarrow> primal e2 \<Longrightarrow> P e2 \<Longrightarrow> P (App e1 e2)) \<Longrightarrow>
 (\<And>x e p. x \<notin> A \<Longrightarrow> prime_var x \<Longrightarrow> primal e \<Longrightarrow> P e \<Longrightarrow> P (Lam x e)) \<Longrightarrow>
 P x"
-  by (rule primal_param_induct[where P = "\<lambda>_. P" and Pfvars = "\<lambda>_. A"])
+  by (rule primal_param_induct[where P = "\<lambda>_. P" and Psupp = "\<lambda>_. A"])
 
 lemma small_IImsupp_SSupp: "small (IImsupp f) \<Longrightarrow> small (SSupp f)"
   by (metis IImsupp_def card_of_subset_bound small_def sup_ge1)

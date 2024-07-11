@@ -13,7 +13,7 @@ binder_inductive sillystep :: "trm \<Rightarrow> trm \<Rightarrow> trm \<Rightar
 where
   map: "\<lambda>f ((a,b), c, d, e). ((rrename f a,rrename f b), rrename f c, rrename f d, rrename f e)"
   set: "\<lambda>((a,b), c, d, e). FFVars a \<union> FFVars b \<union> FFVars c \<union> FFVars d \<union> FFVars e"
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound)
   subgoal premises prems for R b c d e x a
   proof -
@@ -33,7 +33,7 @@ binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 where
   map: "\<lambda>f (a,b). ((rrename f a,rrename f b))"
   set: "\<lambda>(a,b). FFVars a \<union> FFVars b"
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound) [6]
   subgoal for \<sigma> R B t
     sorry
@@ -49,7 +49,7 @@ binder_inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow>
 where
   map: "\<lambda>f (n,a,b). ((n,rrename f a,rrename f b))"
   set: "\<lambda>(_,a,b). FFVars a \<union> FFVars b"
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound) [6]
   subgoal for \<sigma> R B t
     sorry
@@ -85,7 +85,7 @@ binder_inductive step1 :: "trm \<Rightarrow> trm \<Rightarrow> bool" and step2 :
 where
   map: "\<lambda>f (b,e,e'). ((b,rrename f e,rrename f e'))"
   set: "\<lambda>(_,e,e'). FFVars e \<union> FFVars e'"
-  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff ssbij_def
+  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound) [5]
   subgoal for R R' B t
     by (auto)
@@ -249,20 +249,20 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
-(* INSTANTIATING THE Components LOCALE: *)
+(* INSTANTIATING THE LSNominalSet LOCALE: *)
 
 type_synonym T = "trm \<times> trm"
 
-definition Tmap :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
-"Tmap f \<equiv> map_prod (rrename_term f) (rrename_term f)"
+definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" where 
+"Tperm f \<equiv> map_prod (rrename_term f) (rrename_term f)"
 
-fun Tfvars :: "T \<Rightarrow> var set" where 
-"Tfvars (e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
+fun Tsupp :: "T \<Rightarrow> var set" where 
+"Tsupp (e1,e2) = FFVars_term e1 \<union> FFVars_term e2"
 
 
-interpretation Components where 
-Tmap = Tmap and Tfvars = Tfvars
-apply standard unfolding ssbij_def Tmap_def  
+interpretation LSNominalSet where 
+Tperm = Tperm and Tsupp = Tsupp
+apply standard unfolding isPerm_def Tperm_def  
   using small_Un small_def term.card_of_FFVars_bounds
   apply (auto simp: term.rrename_id0s map_prod.comp term.rrename_comp0s infinite_UNIV)
   using var_sum_class.Un_bound by blast
@@ -287,10 +287,10 @@ lemma G_mono: "R \<le> R' \<Longrightarrow> small B \<Longrightarrow> G B R t \<
 unfolding G_def by fastforce
 
 (* NB: Everything is passed \<sigma>-renamed as witnesses to exI *)
-lemma G_equiv: "ssbij \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G  (image \<sigma> B) (\<lambda>t'. R (Tmap (inv \<sigma>) t')) (Tmap \<sigma> t)"
+lemma G_equiv: "isPerm \<sigma> \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> G  (image \<sigma> B) (\<lambda>t'. R (Tperm (inv \<sigma>) t')) (Tperm \<sigma> t)"
   unfolding G_def
   by (elim disj_forward exE; cases t)
-    (auto simp: Tmap_def ssbij_def
+    (auto simp: Tperm_def isPerm_def
          term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
@@ -301,34 +301,34 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "\<sigma> x"])
   apply(rule exI[of _ "rrename_term \<sigma> e1"])  
   apply(rule exI[of _ "rrename_term \<sigma> e2"])  
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   apply (simp add: term.rrename_comps) apply(subst rrename_tvsubst_comp) by auto . .
   (* *)
   subgoal apply(rule disjI4_2)
   subgoal apply(elim exE) subgoal for e1 e1' e2 
   apply(rule exI[of _ "rrename_term \<sigma> e1"]) apply(rule exI[of _ "rrename_term \<sigma> e1'"]) 
   apply(rule exI[of _ "rrename_term \<sigma> e2"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   by (simp add: term.rrename_comps) . . 
   (* *)
   subgoal apply(rule disjI4_3)
   subgoal apply(elim exE) subgoal for e1 e2 e2' 
   apply(rule exI[of _ "rrename_term \<sigma> e1"]) 
   apply(rule exI[of _ "rrename_term \<sigma> e2"]) apply(rule exI[of _ "rrename_term \<sigma> e2'"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def 
+  apply(cases t) unfolding isPerm_def small_def Tperm_def 
   by (simp add: term.rrename_comps) . . 
   (* *)
   subgoal apply(rule disjI4_4)
   subgoal apply(elim exE) subgoal for x e e'
   apply(rule exI[of _ "\<sigma> x"])
   apply(rule exI[of _ "rrename_term \<sigma> e"]) apply(rule exI[of _ "rrename_term \<sigma> e'"]) 
-  apply(cases t) unfolding ssbij_def small_def Tmap_def  
+  apply(cases t) unfolding isPerm_def small_def Tperm_def  
   by (simp add: term.rrename_comps) . . .
 *)
 
 
-lemma fresh: "\<exists>xx. xx \<notin> Tfvars t"  
-by (metis Lam_avoid Tfvars.elims term.card_of_FFVars_bounds term.set(2))
+lemma fresh: "\<exists>xx. xx \<notin> Tsupp t"  
+by (metis Lam_avoid Tsupp.elims term.card_of_FFVars_bounds term.set(2))
 
 (* NB: The entities affected by variables are passed as witnesses to exI 
 with x and (the fresh) xx swapped, whereas the non-affected ones are passed 
@@ -336,10 +336,10 @@ as they are.
 *)
 
 lemma G_refresh: 
-"(\<forall>\<sigma> t. ssbij \<sigma> \<and> R t \<longrightarrow> R (Tmap \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
- \<exists>C. small C \<and> C \<inter> Tfvars t = {} \<and> G C R t"
-  using fresh[of t] unfolding G_def Tmap_def
-(**)ssbij_def conj_assoc[symmetric]
+"(\<forall>\<sigma> t. isPerm \<sigma> \<and> R t \<longrightarrow> R (Tperm \<sigma> t)) \<Longrightarrow> small B \<Longrightarrow> G B R t \<Longrightarrow> 
+ \<exists>C. small C \<and> C \<inter> Tsupp t = {} \<and> G C R t"
+  using fresh[of t] unfolding G_def Tperm_def
+(**)isPerm_def conj_assoc[symmetric]
   unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
   by (elim disj_forward exE; simp)
     ((rule exI, rule conjI[rotated], assumption) |
@@ -352,7 +352,7 @@ lemma G_refresh:
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI4_1)
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e1"]) 
@@ -366,7 +366,7 @@ lemma G_refresh:
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI4_2) 
     apply(rule exI[of _ "e1"]) 
     apply(rule exI[of _ "e1'"])
@@ -377,7 +377,7 @@ lemma G_refresh:
   apply(rule exI[of _ "{}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI4_3) 
     apply(rule exI[of _ "e1"]) 
     apply(rule exI[of _ "e2"])
@@ -388,7 +388,7 @@ lemma G_refresh:
   apply(rule exI[of _ "{xx}"])  
   apply(intro conjI)
     subgoal by simp
-    subgoal unfolding ssbij_def small_def by auto 
+    subgoal unfolding isPerm_def small_def by auto 
     subgoal apply(rule disjI4_4) 
     apply(rule exI[of _ "xx"]) 
     apply(rule exI[of _ "rrename_term (id(x:=xx,xx:=x)) e"])
@@ -396,7 +396,7 @@ lemma G_refresh:
     apply(cases t)  apply simp apply(intro conjI)
       subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
       subgoal apply(subst Lam_rrename[of "id(x:=xx,xx:=x)"]) by auto
-      subgoal by (metis supp_swap_bound Prelim.bij_swap ssbij_def) . . .
+      subgoal by (metis supp_swap_bound Prelim.bij_swap isPerm_def) . . .
   (* *)
 *)
 
@@ -404,7 +404,7 @@ lemma G_refresh:
 (* FINALLY, INTERPRETING THE Induct LOCALE: *)
 
 interpretation Step: Induct where
-Tmap = Tmap and Tfvars = Tfvars and G = G
+Tperm = Tperm and Tsupp = Tsupp and G = G
 apply standard 
   using G_mono G_equiv G_refresh by auto
 
@@ -437,10 +437,10 @@ subgoal for R tt1 tt2 apply(rule iffI)
 thm step.induct[no_vars]
 
 corollary strong_induct_step[consumes 2, case_names Beta AppL AppR Xi]: 
-assumes par: "\<And>p. small (Pfvars p)"
+assumes par: "\<And>p. small (Psupp p)"
 and st: "step t1 t2"  
 and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
   R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
 and AppL: "\<And>e1 e1' e2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
@@ -449,7 +449,7 @@ and AppR: "\<And>e1 e2 e2' p.
   step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
   R p (App e1 e2) (App e1 e2')"
 and Xi: "\<And>e e' x p. 
-  x \<notin> Pfvars p \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
   R p (Lam x e) (Lam x e')" 
 shows "R p t1 t2"
@@ -467,9 +467,9 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
 
 corollary strong_induct_step'[consumes 1, case_names Bound Beta AppL AppR Xi]: 
 assumes st: "step t1 t2"
-and par: "\<And>p. |Pfvars p| <o |UNIV::var set|"
+and par: "\<And>p. |Psupp p| <o |UNIV::var set|"
 and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Pfvars p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
   R (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1) p"
 and AppL: "\<And>e1 e1' e2 p. 
   step e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow> 
@@ -478,11 +478,11 @@ and AppR: "\<And>e1 e2 e2' p.
   step e2 e2' \<Longrightarrow> (\<forall>p'. R e2 e2' p') \<Longrightarrow> 
   R (App e1 e2) (App e1 e2') p"
 and Xi: "\<And>e e' x p. 
-  x \<notin> Pfvars p \<Longrightarrow> 
+  x \<notin> Psupp p \<Longrightarrow> 
   step e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow> 
   R (Lam x e) (Lam x e') p" 
 shows "\<forall>p. R t1 t2 p"
-using strong_induct_step[of Pfvars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
+using strong_induct_step[of Psupp t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
 
 
 (* Also inferring equivariance from the general infrastructure: *)
@@ -491,7 +491,7 @@ assumes f: "bij f" "|supp f| <o |UNIV::var set|"
 and r: "step e e'" 
 shows "step (rrename f e) (rrename f e')"
 using assms unfolding step_I using Step.I_equiv[of "(e,e')" f]
-unfolding Tmap_def ssbij_def by auto
+unfolding Tperm_def isPerm_def by auto
 
 
 (* Other properties: *)

@@ -83,7 +83,9 @@ session Process_Calculus in "thys/Pi_Calculus" = Binders +
   theories
     Pi
 	  Commitment
-    Pi_Transition
+    Pi_Transition_Common
+    Pi_Transition_Early
+    Pi_Transition_Late
     Pi_cong
 
 session System_Fsub in "thys/POPLmark" = Binders +

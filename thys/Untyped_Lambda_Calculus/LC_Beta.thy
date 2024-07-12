@@ -10,7 +10,6 @@ begin
 
 fun Tperm where "Tperm f (a,b) = ((rrename f a,rrename f b))"
 fun Tsupp where "Tsupp (a,b) = FFVars a \<union> FFVars b"
-
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t :: trm \<times> trm)"
   using Tsupp.simps[of "fst t" "snd t"] unfolding prod.collapse
   by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
@@ -21,16 +20,16 @@ binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')" binds "{x}"
 where perm: Tperm supp: Tsupp
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-           small_def term.card_of_FFVars_bounds term.Un_bound) [6]
-  subgoal for \<sigma> R B t
+   \<comment> \<open>properties of LS-Nominal sets and monotonicity\<close>
+  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
+    small_def term.card_of_FFVars_bounds term.Un_bound) [6]
+  subgoal for \<sigma> R B t  \<comment> \<open>equivariance\<close>
     by (elim disj_forward case_prodE)
       (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B t
-    using fresh[of t] prems(2-) unfolding
-      (**)isPerm_def conj_assoc[symmetric] split_beta
+  subgoal premises prems for R B t  \<comment> \<open>refreshability\<close>
+    using fresh[of t] prems(2-) unfolding isPerm_def conj_assoc[symmetric] split_beta
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     by (elim disj_forward exE; simp)
       ((rule exI, rule conjI[rotated], assumption) |
@@ -38,9 +37,34 @@ where perm: Tperm supp: Tsupp
         (cases t; auto))+
   done
 
+corollary strong_induct_step[consumes 2, case_names Beta AppL AppR Xi]: 
+assumes par: "\<And>p. small (Psupp p)" and st: "step t1 t2"  
+and Beta: "\<And>x e1 e2 p. x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
+and AppL: "\<And>e1 e1' e2 p. step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> R p (App e1 e2) (App e1' e2)"
+and AppR: "\<And>e1 e2 e2' p. step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> R p (App e1 e2) (App e1 e2')"
+and Xi: "\<And>e e' x p. x \<notin> Psupp p \<Longrightarrow> step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> R p (Lam x e) (Lam x e')" 
+shows "R p t1 t2"
+unfolding step.alt_def apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
+  subgoal by simp
+  subgoal using par st apply(elim step.strong_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+    subgoal unfolding step.alt_def by simp
+    subgoal for p B t
+    unfolding step.alt_def[symmetric] apply(elim disjE exE case_prodE)
+      subgoal for _ _ x e1 e2  using Beta[of x p e2 e1] by auto
+      subgoal using AppL by auto  
+      subgoal using AppR by auto  
+      subgoal using Xi by auto . . .
+
+corollary rrename_step:
+assumes f: "bij f" "|supp f| <o |UNIV::var set|" and r: "step e e'" 
+shows "step (rrename f e) (rrename f e')"
+using assms unfolding step.alt_def using step.equiv[of "(e,e')" f] unfolding isPerm_def by auto
+
+(* Output of binder_inductive
 thm step.alt_def
 thm step.strong_induct
 thm step.equiv
+*)
 
 (* ALTERNATIVE manual instantiation without the automation provided by binder_inductive *)
 (*
@@ -235,39 +259,6 @@ subgoal for R tt1 tt2 apply(rule iffI)
     subgoal apply(rule disjI4_4) by auto . . .
 *)
 
-(* FROM ABSTRACT BACK TO CONCRETE: *)
-thm step.induct[no_vars]
-
-corollary strong_induct_step[consumes 2, case_names Beta AppL AppR Xi]: 
-assumes par: "\<And>p. small (Psupp p)"
-and st: "step t1 t2"  
-and Beta: "\<And>x e1 e2 p. 
-  x \<notin> Psupp p \<Longrightarrow> x \<notin> FFVars_term e2 \<Longrightarrow> 
-  R p (App (Lam x e1) e2) (tvsubst (VVr(x := e2)) e1)"
-and AppL: "\<And>e1 e1' e2 p. 
-  step e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
-  R p (App e1 e2) (App e1' e2)"
-and AppR: "\<And>e1 e2 e2' p. 
-  step e2 e2' \<Longrightarrow> (\<forall>p'. R p' e2 e2') \<Longrightarrow> 
-  R p (App e1 e2) (App e1 e2')"
-and Xi: "\<And>e e' x p. 
-  x \<notin> Psupp p \<Longrightarrow> 
-  step e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
-  R p (Lam x e) (Lam x e')" 
-shows "R p t1 t2"
-unfolding step.alt_def
-apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
-  subgoal by simp
-  subgoal using par st apply(elim step.strong_induct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
-    subgoal unfolding step.alt_def by simp
-    apply (erule thin_rl)
-    subgoal for p B t
-    unfolding step.alt_def[symmetric] apply(elim disjE exE case_prodE)
-      subgoal for _ _ x e1 e2  using Beta[of x p e2 e1] by auto
-      subgoal using AppL by auto  
-      subgoal using AppR by auto  
-      subgoal using Xi by auto . . .
-
 corollary strong_induct_step'[consumes 1, case_names Bound Beta AppL AppR Xi]: 
 assumes st: "step t1 t2"
 and par: "\<And>p. |Psupp p| <o |UNIV::var set|"
@@ -286,15 +277,6 @@ and Xi: "\<And>e e' x p.
   R (Lam x e) (Lam x e') p" 
 shows "\<forall>p. R t1 t2 p"
 using strong_induct_step[of Psupp t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] assms unfolding small_def by auto
-
-(* Also inferring equivariance from the general infrastructure: *)
-corollary rrename_step:
-assumes f: "bij f" "|supp f| <o |UNIV::var set|" 
-and r: "step e e'" 
-shows "step (rrename f e) (rrename f e')"
-using assms unfolding step.alt_def using step.equiv[of "(e,e')" f]
-unfolding isPerm_def by auto
-
 
 (* Other properties: *)
 

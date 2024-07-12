@@ -1,6 +1,6 @@
 #!/bin/bash
 
-Isabelle=/Applications/Isabelle2023.app/bin/isabelle
+Isabelle=/Applications/Isabelle2024.app/bin/isabelle
 
 rm -rf artifact
 mkdir artifact

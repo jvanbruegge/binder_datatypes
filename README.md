@@ -41,7 +41,7 @@ Untyped_Lambda_Calculus|formalization of the untyped lambda calculus including b
 Process_Calculus|formalization of the pi calculus transition relation and the  associated strong rule induction principle (Sect 7.1 and App. C.3)
 System_Fsub|formalization of System F with subtyping, the associated strong rule induction principles, and the POPLmark challenge 1A, (Sect 7.2 and App. E)
 Infinitary_Lambda_Calculus|formalization of Mazza's isomorphism between the untyped lambda calculus and the affine uniform infinitary lambda calculus in Iso_LC_ILC (Sect 7.4 and App. D)
-infinitary_FOL|formalization of the infinitary first-order logic deduction relation and the associated strong rule induction principle (Sect 8.1)
+Infinitary_FOL|formalization of the infinitary first-order logic deduction relation and the associated strong rule induction principle (Sect 8.1)
 
 The session structure resembles the directory structure: theories from session <SESSION> are placed
 in the directory src/thys/<SESSION>. Exceptions to this rule are the Isabelle_Prelim session which

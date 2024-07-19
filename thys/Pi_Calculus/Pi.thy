@@ -99,7 +99,7 @@ lemma rrename_cong:
 assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
 "(\<And>z. (z::var) \<in> FFVars P \<Longrightarrow> f z = g z)"
 shows "rrename f P = rrename g P"
-(* A to J: why term.rrename_cong_ids
+(* why term.rrename_cong_ids
 and not the above more general thoerem? *)
 using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: term.strong_induct)
 using assms apply auto by (metis not_in_supp_alt)+
@@ -416,9 +416,6 @@ lemma swap_usub:
 "swap (usub P (u::var) x) z1 z2 = usub (swap P z1 z2) (sw u z1 z2) (sw x z1 z2)"
 apply(binder_induction P avoiding: u x z1 z2 rule: term.strong_induct)
   subgoal
-  (* A to D or J: using [[simp_trace=true]] apply simp
-   Do you know what is happening here??
-  *)
   apply(subst swap_simps) apply(subst usub_simps) by auto
   subgoal apply(subst swap_simps | subst usub_simps)+ by presburger
   subgoal apply(subst swap_simps | subst usub_simps)+ by presburger

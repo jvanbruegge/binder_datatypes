@@ -215,26 +215,6 @@ snd o MRBNF_Def.register_mrbnf_as_bnf (the (MRBNF_Def.mrbnf_of @{context} "Label
 print_theorems
 print_bnfs
 
-(*
-(* locale+interpretation as a trick to get automatic proofs and replace new constants
-   by existing ones afterwards *)
-locale AUX
-lift_bnf (in AUX) (dead 'a :: large_G, aux_set_lfset: 'b) lfset [wits: "Abs_G {||} :: ('a :: large_G, 'b) G"]
-  for map: aux_map_lfset rel: aux_rel_lfset
-  by (auto simp add: nonrep_G.abs_eq nonrep_lfset_def Abs_G_inverse set2_G_def
-    intro: nonrep_G_map nonrep_G_map_fst_snd_bij)
-
-(*FIXME for J: problem with tactic in datatype and primrec otherwise*)
-definition [simp]: "map_lfset_id = map_lfset id"
-definition [simp]: "rel_lfset_id = rel_lfset id"
-
-interpretation AUX
-  rewrites "AUX.aux_map_lfset = map_lfset_id" and "AUX.aux_rel_lfset = rel_lfset_id" and "AUX.aux_set_lfset = values"
-  by (tactic \<open>Local_Defs.unfold_tac @{context} (@{thms values_def map_lfset_def rel_lfset_def map_lfset_id_def rel_lfset_id_def eq_alt[symmetric]} @
-    maps (fn f => BNF_Def.bnf_of @{context} @{type_name lfset} |> the |> f) [BNF_Def.set_defs_of_bnf,
-      single o BNF_Def.map_def_of_bnf, single o BNF_Def.rel_def_of_bnf])\<close>) (rule refl)+
-
-*)
 context begin
 
 qualified definition "Rep = Rep_G o Rep_lfset"

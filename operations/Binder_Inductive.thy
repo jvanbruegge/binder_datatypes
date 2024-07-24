@@ -69,8 +69,8 @@ lemma fresh: "\<exists>xx. xx \<notin> supp_T (x1::trm) x2"
 
 lemma G_refresh:
   assumes
-    "\<forall>x1 x2. R x1 x2 \<longrightarrow> step x1 x2"
-    "\<forall>\<sigma> x1 x2. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<and> R x1 x2 \<longrightarrow> R (rrename \<sigma> x1) (rrename \<sigma> x2)"
+    "\<And>x1 x2. R x1 x2 \<Longrightarrow> step x1 x2"
+    "\<And>\<sigma> x1 x2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> R x1 x2 \<Longrightarrow> R (rrename \<sigma> x1) (rrename \<sigma> x2)"
   shows "G R B x1 x2 \<Longrightarrow> \<exists>B'. B' \<inter> supp_T x1 x2 = {} \<and> G R B' x1 x2"
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib G_def
     apply (elim disj_forward exE)
@@ -83,41 +83,6 @@ lemma infinite_UNIV: "infinite (UNIV::var set)"
 
 lemma B_small: "G R B x1 x2 \<Longrightarrow> |B| <o |UNIV::var set|"
   unfolding G_def by (auto simp: singl_bound emp_bound)
-
-(***** helper lemmas ***)
-lemma ex_conjunct2: "\<exists>x. P x \<and> Q x \<Longrightarrow> \<exists>x. Q x"
-  by auto
-
-lemma eextend_fresh: 
-  fixes A A' B::"'a set"
-  assumes "|B| <o |UNIV::'a set|" "|A| <o |UNIV::'a set|" "infinite (UNIV::'a set)"
-    "A' \<subseteq> A" "B \<inter> A' = {}"
-shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
-proof-
-  have "|- (A \<union> B)| =o |UNIV::'a set|"
-    using card_of_Un_diff_infinite[OF assms(3), unfolded Compl_eq_Diff_UNIV[symmetric]]
-      assms(1) assms(2) assms(3) card_of_Un_ordLess_infinite by blast
-  hence "|B| <o |- (A \<union> B)|"  
-    using assms(1) ordIso_symmetric ordLess_ordIso_trans by blast
-  then obtain f where f: "inj_on f B" "f ` B \<subseteq> - (A \<union> B)" 
-    by (meson card_of_ordLeq ordLeq_iff_ordLess_or_ordIso)
-  define g where "g \<equiv> \<lambda>a. if a \<in> B then f a else a"
-  have g: "inj_on g (B \<union> A')" "g ` (B \<union> A') \<subseteq> - (A \<union> B) \<union> A'" using f 
-  unfolding g_def inj_on_def using assms(3,4) by auto
-  define C where C: "C = g ` (B \<union> A')"
-  have b: "bij_betw g (B \<union> A') C" unfolding C bij_betw_def using g by simp
-
-  have 0: "Cinfinite |UNIV::'a set|" "|B \<union> A'| <o |UNIV::'a set|" "eq_on ((B \<union> A') \<inter> C) g id"
-    subgoal by (simp add: assms(3) cinfinite_iff_infinite)
-    subgoal by (meson assms(1-4) card_of_Un_ordLess_infinite card_of_subset_bound)
-    subgoal using assms(3) f unfolding eq_on_def C g_def by auto .
-    
-  show ?thesis using ex_bij_betw_supp'[OF 0(1,2) b 0(3)] apply safe
-  subgoal for \<rho> apply(rule exI[of _ \<rho>])
-  unfolding id_on_def apply auto
-  apply (metis ComplD UnCI eq_on_def f(2) g_def image_subset_iff)
-  by (metis Int_iff Un_iff assms(5) empty_iff eq_onD g_def) .
-qed
 
 (****** BEGIN AUTOMATION *******)
 lemmas perm_ids = perm_id0s[THEN fun_cong, THEN trans[OF _ id_apply]]
@@ -133,17 +98,20 @@ lemma G_mono: "mono G"
   )+
   done
 
+lemmas G_mono' = monoD[THEN le_funD, THEN le_funD, THEN le_funD, OF G_mono, THEN le_boolD, THEN mp, rotated]
+
 lemma G_mmono: "mono (\<lambda>p x1 x2. \<exists>B. G p B x1 x2)"
   apply (rule monoI)
   apply (rule le_funI le_boolI')+
   apply (rule ex_mono)
-  apply (erule monoD[OF G_mono, THEN le_funD, THEN le_funD, THEN le_funD, THEN le_boolD])
+  apply (rule impI)
+  apply (erule G_mono')
+  apply assumption
   done
 
 definition "II \<equiv> lfp (\<lambda>p x1 x2. \<exists>B. G p B x1 x2)"
 
 lemmas II_induct = lfp_induct[THEN le_funD, THEN le_funD, OF G_mmono, THEN le_boolD, THEN mp, rotated]
-lemmas G_mono' = monoD[THEN le_funD, THEN le_funD, THEN le_funD, OF G_mono, THEN le_boolD, THEN mp, rotated]
 
 lemma II_eq: "II = step"
   apply (unfold II_def step_def)
@@ -185,6 +153,7 @@ lemma II_eq: "II = step"
    apply (erule conjE)
    apply (rule exI)+
    apply assumption
+  (* END REPEAT_DETERM *)
 
   apply (erule lfp_induct[THEN le_funD, THEN le_funD, OF step.mono, THEN le_boolD, THEN mp, rotated])
   apply (rule le_funI)+
@@ -230,11 +199,11 @@ lemma II_equiv:
   apply (erule II_induct)
   apply (rule le_funI)+
   apply (rule le_boolI)
-  apply (unfold inf_apply inf_bool_def)
   apply (erule exE)+
   apply (drule G_mono')
    apply (rule le_funI)+
    apply (rule le_boolI)
+   apply (unfold inf_apply inf_bool_def)[1]
    apply (erule conjunct2)
   apply (drule G_equiv[OF assms])
   apply (subst (asm) inv_o_simp2 perm_comps, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
@@ -314,18 +283,6 @@ lemma II'_equiv:
   apply (erule supp_int_equiv[OF assms])
   done
 
-lemmas G_refresh' = G_refresh[unfolded II_eq[symmetric]]
-
-lemma G_refresh_II': "G II' B x1 x2 \<Longrightarrow> \<exists>B'. B' \<inter> supp_T x1 x2 = {} \<and> G II' B' x1 x2"
-  apply (rule G_refresh')
-    apply (rule allI impI)+
-    apply (erule II'_imp_II)
-   apply (rule allI impI)+
-   apply (erule conjE)+
-   apply (erule II'_equiv[rotated -1])
-    apply assumption+
-  done
-
 lemma II_eq_II': "II = II'"
   apply (rule ext)+
   apply (rule iffI[rotated])
@@ -340,7 +297,10 @@ lemma II_eq_II': "II = II'"
    apply (rule le_boolI)
    apply (unfold inf_apply inf_bool_def)
    apply (erule conjunct2)
-  apply (drule G_refresh_II')
+  apply (drule G_refresh[unfolded II_eq[symmetric], rotated -1])
+    apply (erule II'_imp_II)
+   apply (erule II'_equiv[rotated -1])
+    apply assumption+
   apply (erule exE)
   apply (subst II'_def)
   apply (erule conjE)
@@ -382,38 +342,41 @@ ML \<open>
 val lthy = @{context}
 \<close>
 
-lemma II'_equiv_strong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> II' x1 x2 = II' (rrename \<sigma> x1) (rrename \<sigma> x2)"
+lemma perm_comp_inv_ids:
+  assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
+  shows
+    "rrename \<sigma> (rrename (inv \<sigma>) x1) = (x1::trm)"
+    "rrename \<sigma> (rrename (inv \<sigma>) x2) = (x2::trm)"
+   apply (rule trans)
+    apply (rule perm_comps)
+       apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+   apply (subst inv_o_simp2)
+    apply (rule assms)
+   apply (rule perm_ids)
+  (* repeated *)
+   apply (rule trans)
+    apply (rule perm_comps)
+       apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+   apply (subst inv_o_simp2)
+    apply (rule assms)
+   apply (rule perm_ids)
+  done
+
+lemma II'_equiv_strong:
+  assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
+  shows "II' x1 x2 = II' (rrename \<sigma> x1) (rrename \<sigma> x2)"
   apply (rule iffI)
-   apply (rule II'_equiv)
-  apply assumption+
+   apply (erule II'_equiv[OF assms])
   apply (drule II'_equiv[rotated -1])
     prefer 3 (* 2 * vars + 1 *)
     apply (subst (asm) perm_comps)
         prefer 5 (* 4 * vars + 1 *)
         apply (subst (asm) inv_o_simp1)
-         apply assumption
-        apply (subst (asm) perm_comps inv_o_simp1, (rule bij_imp_bij_inv supp_inv_bound | assumption)+)+
+         apply (rule assms)
+        apply (subst (asm) perm_comps inv_o_simp1, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
         apply (unfold perm_ids)
-  apply assumption
-       apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
-  done
-
-lemma perm_comp_inv_ids:
-  "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> rrename \<sigma> (rrename (inv \<sigma>) x1) = (x1::trm)"
-  "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> rrename \<sigma> (rrename (inv \<sigma>) x2) = (x2::trm)"
-   apply (rule trans)
-    apply (rule perm_comps)
-       apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-   apply (subst inv_o_simp2)
-    apply assumption
-   apply (rule perm_ids)
-  (* repeated *)
-apply (rule trans)
-    apply (rule perm_comps)
-       apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-   apply (subst inv_o_simp2)
-    apply assumption
-  apply (rule perm_ids)
+        apply assumption
+       apply (rule bij_imp_bij_inv supp_inv_bound assms)+
   done
 
 lemma BE_iinduct_aux:
@@ -430,11 +393,10 @@ shows "\<forall>\<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNI
   apply (erule conjE)
   apply (rule allI impI)+
   apply (unfold inf_apply inf_bool_def)
-  apply (frule supp_int_equiv[rotated -1])
+  apply (drule supp_int_equiv[rotated -1])
   apply assumption+
-  apply (rotate_tac -1)
-  apply (frule extend_fresh[of _ _ _ K, rotated -1])
-     apply (unfold II'_def[symmetric] II_eq_II'[symmetric])[1]
+  apply (drule extend_fresh[of _ _ _ K, rotated -1])
+     apply (unfold II_eq_II'[symmetric])[1]
      apply (rule II_equiv[rotated -1])
      apply (subst II_def)
      apply (subst lfp_unfold[OF G_mmono])
@@ -447,14 +409,13 @@ shows "\<forall>\<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNI
        apply assumption+
     apply (rule ordLeq_ordLess_trans)
      apply (rule card_of_image)
-    apply (rule B_small)
-    apply assumption
+    apply (erule B_small)
    apply (rule smalls)
   apply (erule exE conjE)+
   apply (rule step)
     apply assumption
    apply assumption
-  apply (unfold image_comp II'_def[symmetric])
+  apply (unfold image_comp)
   apply (tactic \<open>resolve_tac @{context} [Drule.rotate_prems ~1 (
     iffD2 OF [MRBNF_Util.mk_arg_cong lthy (2 + 2) @{term G} OF (replicate 2 refl)
   ])] 1\<close>)
@@ -507,7 +468,7 @@ lemma BE_iinduct:
     G (\<lambda>x1' x2'. step x1' x2' \<and> All (R x1' x2')) B x1 x2 \<Longrightarrow> R x1 x2 p"
 shows "R x1 x2 p"
   apply (rule BE_iinduct_aux[of K, unfolded II_eq_II'[symmetric] II_eq, OF smalls II,
-    THEN spec, THEN mp[OF _ bij_id], THEN mp[OF _ supp_id_bound], THEN spec,
+    THEN spec, THEN mp[OF _ bij_id, THEN mp[OF _ supp_id_bound]], THEN spec,
     unfolded perm_ids
   ])
   apply (rule step)

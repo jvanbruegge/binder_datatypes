@@ -676,7 +676,7 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
             ] end
           );
 
-        val equiv = Local_Defs.unfold0 lthy (II_eq :: map snd (perms @ supps)) II_equiv;
+        val equiv = Local_Defs.unfold0 lthy (@{thm id_apply} :: II_eq :: map snd (perms @ supps)) II_equiv;
 
         val names = map (fst o dest_Free) (fst (mk_Frees "Bound" (replicate num_vars HOLogic.unitT) lthy));
         val lthy = snd (Local_Theory.notes (map (fn (thmN, (thms, attribs)) =>

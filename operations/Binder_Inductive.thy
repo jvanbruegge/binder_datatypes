@@ -153,42 +153,46 @@ lemma II_eq: "II = step"
    apply (erule conjE)
    apply (rule exI)+
    apply assumption
-  (* END REPEAT_DETERM *)
+    (* END REPEAT_DETERM *)
 
   apply (erule lfp_induct[THEN le_funD, THEN le_funD, OF step.mono, THEN le_boolD, THEN mp, rotated])
   apply (rule le_funI)+
   apply (rule le_boolI)
   apply (unfold inf_apply inf_bool_def)
+  apply (drule monoD[OF step.mono, THEN le_funD, THEN le_funD, THEN le_boolD, THEN mp, rotated])
+   apply (rule le_funI)+
+   apply (rule le_boolI)
+   apply (erule conjunct2)
   apply (subst lfp_unfold[OF G_mmono])
   apply (unfold G_def ex_disj_distrib)
     (* REPEAT_DETERM *)
   apply (erule disj_forward)?
-   apply (erule exE conjE)+
+   apply (erule exE)+
    apply (rule exI)+
    apply (rule conjI)
     apply (rule refl)
-   apply ((rule conjI)?, assumption)+
+   apply assumption
     (* repeated *)
   apply (erule disj_forward)?
-   apply (erule exE conjE)+
+   apply (erule exE)+
    apply (rule exI)+
    apply (rule conjI)
     apply (rule refl)
-   apply ((rule conjI)?, assumption)+
+   apply assumption
     (* repeated *)
   apply (erule disj_forward)?
-   apply (erule exE conjE)+
+   apply (erule exE)+
    apply (rule exI)+
    apply (rule conjI)
     apply (rule refl)
-   apply ((rule conjI)?, assumption)+
+   apply assumption
     (* repeated *)
   apply (erule disj_forward)?
-  apply (erule exE conjE)+
+  apply (erule exE)+
   apply (rule exI)+
   apply (rule conjI)
    apply (rule refl)
-  apply ((rule conjI)?, assumption)+
+  apply assumption
     (* END REPEAT_DETERM *)
   done
 
@@ -259,7 +263,7 @@ lemma supp_int_equiv:
    apply (rule supp_seminat[OF assms])+
   done
 
-lemma II'_equiv: 
+lemma II'_equiv:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
   shows "II' x1 x2 \<Longrightarrow> II' (rrename \<sigma> x1) (rrename \<sigma> x2)"
   apply (unfold II'_def)
@@ -475,10 +479,9 @@ shows "R x1 x2 p"
   apply assumption+
   done
 
-lemma step_strong_induct[consumes 2, case_names Beta AppL AppR Xi]:
+lemma step_strong_induct[consumes 1, case_names Bound Beta AppL AppR Xi]:
   fixes K::"'p \<Rightarrow> var set"
-  assumes small: "\<And>p. |K p| <o |UNIV::var set|"
-  and II: "step x1 x2"
+  assumes consumes: "step x1 x2" "\<And>p. |K p| <o |UNIV::var set|"
   and steps:
 "\<And>x e1 e2 p. x \<notin> K p \<Longrightarrow> P (App (Lam x e1) e2) (tvsubst (Var(x := e2)) e1) p"
 "\<And>e1 e1' e2 p. step e1 e1' \<Longrightarrow> \<forall>p. P e1 e1' p \<Longrightarrow> P (App e1 e2) (App e1' e2) p"
@@ -486,38 +489,46 @@ lemma step_strong_induct[consumes 2, case_names Beta AppL AppR Xi]:
 "\<And>e e' x p. x \<notin> K p \<Longrightarrow> step e e' \<Longrightarrow> \<forall>p. P e e' p \<Longrightarrow> P (Lam x e) (Lam x e') p"
 shows "\<forall>p. P x1 x2 p"
   apply (rule allI)
-  apply (rule BE_iinduct[of K, OF small II])
+  apply (rule BE_iinduct[of K])
+  apply (rule consumes)+
   apply (unfold G_def)
   (* REPEAT_DETERM *)
   apply (erule disjE)?
    apply (erule exE conjE)+
    apply hypsubst
+   apply (unfold disjoint_single induct_rulify)?
+  subgoal premises prems
    apply (rule steps(1))
-  apply (unfold disjoint_single)?
-    apply assumption+
+    apply (assumption | rule prems (* tryall prems[THEN conjunct1] prems[THEN conjunct2] *))+
+    done
   (* repeated *)
   apply (erule disjE)?
    apply (erule exE conjE)+
    apply hypsubst
+   apply (unfold disjoint_single induct_rulify)?
+  subgoal premises prems
    apply (rule steps(2))
-  apply (unfold disjoint_single)?
-    apply assumption+
+    apply (assumption | rule prems (* tryall prems[THEN conjunct1] prems[THEN conjunct2] *))+
+    done
   (* repeated *)
   apply (erule disjE)?
    apply (erule exE conjE)+
    apply hypsubst
+   apply (unfold disjoint_single induct_rulify)?
+  subgoal premises prems
    apply (rule steps(3))
-  apply (unfold disjoint_single)?
-    apply assumption+
+    apply (assumption | rule prems (* tryall prems[THEN conjunct1] prems[THEN conjunct2] *))+
+    done
   (* repeated *)
   apply (erule disjE)?
    apply (erule exE conjE)+
    apply hypsubst
+   apply (unfold disjoint_single induct_rulify)?
+  subgoal premises prems
    apply (rule steps(4))
-  apply (unfold disjoint_single)?
-    apply assumption+
+    apply (assumption | rule prems (* tryall prems[THEN conjunct1] prems[THEN conjunct2] *))+
+    done
   (* END REPEAT_DETERM *)
   done
-
 
 end

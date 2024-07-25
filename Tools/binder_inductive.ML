@@ -35,13 +35,19 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
     val perms_supps = case perms_supps of
       (SOME a, SOME b) => (a, b)
       | _ => error "Automatic generation of permute and support operators is not supported yet, specify them with for perms: ... and supps: ..."
+    val def' = Thm.prop_of def;
+    val svars = Term.add_tvars def' [];
+    val fvars = fst (mk_TFrees' (map snd svars) no_defs_lthy);
+    val subst = (map fst svars ~~ fvars);
 
-    val (abs_vars, (rule_varss, rule_bodies)) = Thm.prop_of def
+    val (abs_vars, (rule_varss, rule_bodies)) = Term.subst_TVars subst def'
       |> snd o Logic.dest_equals
       |> snd o Term.dest_comb
       |> Term.strip_abs
       ||> HOLogic.disjuncts
       ||> split_list o map strip_ex;
+
+    val param_Ts = map (Term.typ_subst_TVars subst) param_Ts;
 
     val binds_vars = map2 (fn name => fn vars => Option.map (rpair vars) (
       AList.lookup (op=) binds name
@@ -101,11 +107,22 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
 
         val (raw_perms, raw_supps) = apply2 (map (Syntax.read_term no_defs_lthy)) perms_supps;
 
+        val thy = Proof_Context.theory_of no_defs_lthy;
+        fun mk_match mk_T ts = map2 (fn t => fn T =>
+          let
+            val t = Logic.varify_types_global t;
+            val tyenv = Sign.typ_match thy (fastype_of t, mk_T T) Vartab.empty;
+          in Envir.subst_term (tyenv, Vartab.empty) t end
+        ) ts param_Ts;
+
+        val perms = mk_match (fn T => args ---> (T --> T)) raw_perms;
+        val supps = mk_match (fn T => T --> hd bind_Ts) raw_supps;
+
         val (((G, perms), supps), lthy) = no_defs_lthy
           |> snd o Local_Theory.begin_nested
           |> mk_def_t false b qualify "G" 0 G_rhs
-          ||>> mk_defs_t false b qualify "Tperm" 0 raw_perms
-          ||>> mk_defs_t false b qualify "Tsupp" 0 raw_supps;
+          ||>> mk_defs_t false b qualify "Tperm" 0 perms
+          ||>> mk_defs_t false b qualify "Tsupp" 0 supps;
 
         fun mk_II_rhs mk_T = Const (@{const_name lfp}, (absTs ---> @{typ bool}) --> (tl absTs ---> @{typ bool})) $
           (fold_rev Term.absfree (map dest_Free (P::xs)) (
@@ -116,41 +133,23 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
 
         val (II, lthy) = mk_def_t false b qualify "II" 0 II_rhs lthy;
 
+        val supp_ts = [foldl1 mk_Un (map2 (fn x => fn s => fst s $ x) xs supps)]; (* fix for more kinds *)
+
+        val II'_rhs = mk_II_rhs (fn t =>
+          fold_rev (curry HOLogic.mk_conj) (map2 (fn B => fn t => mk_int_empty (B, t)) Bs supp_ts) t
+        );
+        val II'_op = snd (dest_comb II'_rhs);
+
+        val (II', lthy) = lthy
+          |> mk_def_t false b qualify "II'" 0 II'_rhs;
+
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
 
-        val thy = Proof_Context.theory_of lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;
         val tyenv = Sign.typ_match thy (fastype_of (Morphism.term phi (fst G)), fastype_of G_rhs) Vartab.empty;
         val morph_t = Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi
         fun morph (t, thm) = (morph_t t, Morphism.thm phi thm);
-
-        val (perms, supps) = apply2 (map morph) (perms, supps);
-
-        fun mk_match mk_T ts = map2 (fn (t, t_def) => fn T =>
-          let val tyenv = Sign.typ_match thy (fastype_of t, mk_T T) Vartab.empty;
-          in (Envir.subst_term (tyenv, Vartab.empty) t, t_def) end
-        ) ts param_Ts;
-
-        val perms = mk_match (fn T => args ---> (T --> T)) perms;
-        val supps = mk_match (fn T => T --> hd bind_Ts) supps;
-
-        val supp_ts = [foldl1 mk_Un (map2 (fn x => fn s => fst s $ x) xs supps)]; (* fix for more kinds *)
-
-        val II'_rhs = morph_t (mk_II_rhs (fn t =>
-          fold_rev (curry HOLogic.mk_conj) (map2 (fn B => fn t => mk_int_empty (B, t)) Bs supp_ts) t
-        ));
-        val II'_op = snd (dest_comb II'_rhs);
-
-        val (II', lthy) = lthy
-          |> snd o Local_Theory.begin_nested
-          |> mk_def_t false b qualify "II'" 0 II'_rhs;
-        val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
-        val thy = Proof_Context.theory_of lthy;
-        val phi' = Proof_Context.export_morphism old_lthy lthy;
-        val tyenv = Sign.typ_match thy (fastype_of (Morphism.term phi' (fst II')), fastype_of II'_rhs) Vartab.empty;
-        val morph_t' = Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi';
-        fun morph' (t, thm) = (morph_t' t, Morphism.thm phi' thm);
-      in (morph G, morph II, morph_t II_op, morph' II', morph_t' II'_op, perms, supps, lthy) end;
+      in (morph G, morph II, morph_t II_op, morph II', morph_t II'_op, map morph perms, map morph supps, lthy) end;
 
     val mk_g_prems = maps (fn g => map HOLogic.mk_Trueprop [mk_bij g, mk_supp_bound g])
     val g_prems = mk_g_prems gs;
@@ -210,10 +209,12 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
     fun mk_supp_t xs = foldl1 mk_Un o map2 (fn x => fn s => fst s $ x) xs;
     val supp_t = mk_supp_t xs supps;
 
+    val pred = Term.subst_TVars subst (hd preds);
+
     val G_refresh_goal = fold_rev Logic.all ([P] @ Bs @ xs) (Logic.mk_implies (
       fold_rev Logic.all xs (Logic.mk_implies (
         HOLogic.mk_Trueprop (Term.list_comb (P, xs)),
-        HOLogic.mk_Trueprop (Term.list_comb (hd preds, xs))
+        HOLogic.mk_Trueprop (Term.list_comb (pred, xs))
       )),
       Logic.mk_implies (
         fold_rev Logic.all (gs @ xs) (fold_rev (curry Logic.mk_implies) g_prems (Logic.mk_implies (
@@ -316,7 +317,7 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
           etac ctxt conjunct2
         ];
 
-        val II_eq = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (fst II, hd preds)) (fn {context=ctxt, ...} => EVERY1 [
+        val II_eq = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (fst II, pred)) (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt [snd II, def]),
           REPEAT_DETERM o rtac ctxt ext,
           rtac ctxt iffI,
@@ -602,7 +603,7 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
           ] end
         );
 
-        val BE_iinduct = Goal.prove_sorry lthy (names ([P'] @ Ks @ xs @ [p])) (mk_BE_iinduct_prems (hd preds))
+        val BE_iinduct = Goal.prove_sorry lthy (names ([P'] @ Ks @ xs @ [p])) (mk_BE_iinduct_prems pred)
           (HOLogic.mk_Trueprop (Term.list_comb (P', xs @ [p]))) (fn {context=ctxt, prems} => EVERY1 [
             rtac ctxt ((Local_Defs.unfold0 ctxt perm_ids (
               apply_n @{thm mp[OF _ bij_id, THEN mp[OF _ supp_id_bound]]} num_vars (

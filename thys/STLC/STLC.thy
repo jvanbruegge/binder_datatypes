@@ -75,7 +75,7 @@ corollary SSupp_upd_VVr_bound: "|SSupp_tvsubst (tvVVr_tvsubst(a:=(t::'a::var_ter
 lemma supp_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
   unfolding supp_def id_on_def by blast
 
-lemma rrename_simps:
+lemma rrename_simps[simp]:
   assumes "bij (f::'a::var_terms_pre \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a set|"
   shows "rrename_terms f (Var a) = Var (f a)"
     "rrename_terms f (App e1 e2) = App (rrename_terms f e1) (rrename_terms f e2)"
@@ -225,6 +225,40 @@ inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Righ
 | Ty_App: "\<lbrakk> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 ; \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y App e1 e2 : \<tau>\<^sub>2"
 | Ty_Abs: "\<lbrakk> x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau> e : \<tau> \<rightarrow> \<tau>\<^sub>2"
 
+lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<circ> f3) (f2 \<circ> f4)"
+  using prod.map_comp by auto
+
+declare [[ML_print_depth=10000]]
+binder_inductive Ty where
+  Ty_Abs binds x
+for perms: "\<lambda>f \<Gamma>. map_prod f id |`| \<Gamma>" rrename_terms "\<lambda>_. id"
+and supps: "\<lambda>\<Gamma>. fst ` fset \<Gamma>" FFVars_terms "\<lambda>_. {}"
+                   apply (auto simp: terms.rrename_id0s terms.rrename_comps terms.FFVars_rrenames
+      terms.rrename_cong_ids fset.set_bd ordLeq_ordLess_trans[OF card_of_image] emp_bound prod.map_comp
+      terms.set_bd_UNIV  cinfinite_imp_infinite terms.UNIV_cinfinite)[16]
+        apply (metis comp_apply id_apply map_prod_imageI)
+       apply (metis comp_apply id_apply map_prod_imageI)
+      apply force
+     apply force
+    apply force
+  subgoal for R B \<sigma> x1 x2 x3
+    apply (elim disj_forward)
+      apply (auto simp: map_prod_comp0 terms.rrename_comps[OF _ _ bij_imp_bij_inv supp_inv_bound]
+    terms.rrename_ids)
+     apply force
+    apply (rule exI)
+    apply (rule conjI)
+     apply (rule refl)
+    apply (simp add: terms.rrename_comps[OF _ _ bij_imp_bij_inv supp_inv_bound] terms.rrename_ids)
+    unfolding fresh_def by force
+  subgoal for R B x1 x2 x3
+    apply (rule exI[of _ B])
+    unfolding fresh_def by auto
+  done
+
+thm Ty.strong_induct
+thm Ty.equiv
+
 lemma provided:
   fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
@@ -242,509 +276,6 @@ lemma provided:
   using assms(1) fimage_iff apply fastforce
    apply simp
   using fimage_iff by fastforce
-
-lemma rename_Ty_aux:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes
-    "bij f" "|supp f| <o |UNIV::'a set|" "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
-  shows "map_prod f id |`| \<Gamma> \<turnstile>\<^sub>t\<^sub>y vvsubst f e : \<tau>'"
-  apply (rule Ty.induct[OF assms(3)])
-  unfolding terms_vvsubst_rrename[OF assms(1,2)] rrename_simps[OF assms(1,2)]
-    apply (rule Ty_Var)
-    apply (rule provided)
-      apply (rule assms)+
-  apply assumption
-   apply (rule Ty_App)
-    apply assumption+
-  apply (rule Ty_Abs)
-   apply (rule provided)
-     apply (rule assms)+
-   apply assumption
-  unfolding provided[OF assms(1,2)]
-  apply assumption
-  done
-
-lemma rename_Ty:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<longleftrightarrow> map_prod f id |`| \<Gamma> \<turnstile>\<^sub>t\<^sub>y vvsubst f e : \<tau>'"
-  apply (rule iffI)
-   apply (rule rename_Ty_aux)
-     apply (rule assms)+
-   apply assumption
-  apply (drule rename_Ty_aux[rotated -1])
-    apply (rule bij_imp_bij_inv)
-    apply (rule assms)
-   apply (rule supp_inv_bound)
-    apply (rule assms)+
-  unfolding terms.map_comp[OF assms(2) supp_inv_bound[OF assms]]
-    inv_o_simp1[OF assms(1)] terms.map_id map_prod.comp id_o map_prod.id fset.map_comp fset.map_id
-  apply assumption
-  done
-
-definition cl :: "(('a::var_terms_pre \<times> \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<times> \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> 'b \<Rightarrow> bool" where
-  "cl P \<Gamma> e \<tau> \<rho> \<equiv> (\<forall>f. bij f \<and> |supp f| <o |UNIV::'a set| \<longrightarrow> P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>)"
-
-lemmas clI = allI[THEN iffD2[OF meta_eq_to_obj_eq[OF cl_def]], unfolded atomize_imp[symmetric]]
-
-lemma clD:
-  fixes e::"'a::var_terms_pre terms" and f::"'a \<Rightarrow> 'a"
-assumes "cl P \<Gamma> e \<tau> \<rho>" and "bij f" "|supp f| <o |UNIV::'a set|"
-shows "P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>"
-  apply (rule mp[OF spec[OF assms(1)[unfolded cl_def]]])
-  apply (rule conjI)
-   apply (rule assms)+
-  done
-
-lemma cl_ext: "cl P \<Gamma> e \<tau> \<rho> \<Longrightarrow> P \<Gamma> e \<tau> \<rho>"
-  unfolding cl_def
-  apply (erule allE)
-  apply (erule impE)
-   apply (rule conjI)
-    apply (rule bij_id)
-   apply (rule supp_id_bound)
-  unfolding map_prod.id fset.map_id terms.map_id
-  apply assumption
-  done
-
-lemma cl_vvsubst:
-  fixes e::"'a::var_terms_pre terms"
-  assumes f: "bij f" "|supp f| <o |UNIV::'a set|" and cl: "cl P \<Gamma> e \<tau> \<rho>"
-  shows "cl P (map_prod f id |`| \<Gamma>) (vvsubst f e) \<tau> \<rho>"
-  unfolding cl_def
-  apply (rule allI impI)+
-  apply (erule conjE)
-  unfolding fset.map_comp terms.map_comp[OF f(2)] map_prod.comp id_o
-  apply (rule clD[OF cl])
-   apply (rule bij_comp)
-    apply (rule f)
-   apply assumption
-  apply (rule supp_comp_bound)
-    apply (rule f)
-   apply assumption
-  apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
-  done
-
-lemma cl_cl: "cl (cl P) = cl P"
-  unfolding cl_def
-  apply (rule ext)+
-  apply (rule iffI)
-   apply (rule allI)
-   apply (rule impI)
-   apply (erule allE)
-   apply (erule conjE)
-   apply (erule impE)
-    apply (rule conjI)
-     apply assumption+
-   apply (erule allE)
-   apply (erule impE)
-    apply (rule conjI)
-     apply (rule bij_id)
-    apply (rule supp_id_bound)
-  unfolding map_prod.id fset.map_id terms.map_id
-   apply assumption
-  apply (rule allI impI)+
-  apply (erule allE conjE)+
-  apply (erule impE)
-   defer
-  unfolding fset.map_comp map_prod.comp id_o terms.map_comp
-   apply assumption
-  apply (rule conjI)
-   apply (rule bij_comp)
-    apply assumption+
-  apply (rule supp_comp_bound)
-    apply assumption+
-  apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
-  done
-
-lemma TT_inject: "(terms_ctor a = terms_ctor b) = (\<exists>(f::'a::var_terms_pre \<Rightarrow> 'a). bij f \<and> |supp f| <o |UNIV::'a set|
-  \<and> id_on (\<Union>(FFVars_terms ` set3_terms_pre a) - set2_terms_pre a) f \<and> map_terms_pre id f (vvsubst f) id a = b)"
-  unfolding terms.TT_injects0 conj_assoc[symmetric]
-  apply (rule ex_cong)
-  apply (erule conjE)+
-  unfolding terms_vvsubst_rrename
-  apply (rule refl)
-  done
-
-(*no_notation extend ("(_,_:_)")*)
-
-lemma Ty_fresh_induct_param[consumes 1, case_names Bound Ty_Var Ty_App Ty_Abs]:
-  fixes K::"'p \<Rightarrow> 'a::var_terms_pre set" and e::"'a terms"
-  assumes x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>" and bound: "\<forall>\<rho>. |K \<rho>| <o |UNIV::'a set|"
-    and Ty_Var: "\<And>x \<tau> \<Gamma> \<rho>. (x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> P \<Gamma> (Var x) \<tau> \<rho>"
-    and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2 \<rho>. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<rho>
-      \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<Longrightarrow> \<forall>\<rho>. P \<Gamma> e2 \<tau>\<^sub>1 \<rho> \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2 \<rho>"
-    and Ty_Abs: "\<And>x \<Gamma> \<tau> e \<tau>\<^sub>2 \<rho>. x \<notin> K \<rho> \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> extend \<Gamma> x \<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> \<forall>\<rho>. P (extend \<Gamma> x \<tau>) e \<tau>\<^sub>2 \<rho> \<Longrightarrow> P \<Gamma> (Abs x \<tau> e) (\<tau> \<rightarrow> \<tau>\<^sub>2) \<rho>"
-  shows "\<forall>\<rho>. P \<Gamma> e \<tau> \<rho>"
-  apply (rule allI)
-  apply (rule cl_ext[of P])
-  apply (rule spec[OF Ty.induct[OF x, of "\<lambda>\<Gamma> e \<tau>. \<forall>\<rho>. cl P \<Gamma> e \<tau> \<rho>"]])
-
-  (* Nonbinding case *)
-    apply (rule allI)
-    apply (rule clI)
-    apply (erule conjE)
-  unfolding terms.map
-    apply (rule Ty_Var)
-    apply (rule provided)
-      apply assumption+
-  (* And again *)
-  apply (rule allI)
-   apply (rule clI)
-   apply (erule conjE)
-  unfolding terms.map
-   apply (rule Ty_App)
-      apply (assumption | (rule allI, (erule allE)+, rule clD[of P]) | rule iffD1[OF rename_Ty])+
-  (* binding case *)
-  subgoal for \<rho> x \<Gamma> \<tau> e \<tau>2
-  apply (rule allI)
-  apply (rule clI[of P])
-    apply (erule conjE)
-    subgoal for \<rho> f
-      apply (rule exE[OF Abs_avoid])
-       apply (rule terms_pre.Un_bound)
-      apply (rule terms_pre.Un_bound)
-        apply (rule iffD2[OF imsupp_supp_bound[OF cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite]]])
-        apply assumption
-        apply (rule spec[OF bound])
-       apply (rule terms_pre.UNION_bound)
-      apply (rule ordLess_ordLeq_trans[of "|fset \<Gamma>|"])
-apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>)
-        apply (rule terms.var_large)
-       apply (rule ordLess_ordLeq_trans[of "|Basic_BNFs.fsts _|"])
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>)
-      apply (rule terms.var_large)
-     apply (erule exE conjE)+
-
-       apply (rule iffD2[OF fun_cong[of _ _ \<rho>]])
-        apply (rule arg_cong3[OF refl _ refl, of _ _ P])
-        apply (rule arg_cong2[OF refl, of _ _ vvsubst])
-        apply assumption
-      unfolding Un_iff de_Morgan_disj
-       apply (erule conjE)+
-      unfolding terms.map
-       apply (rule Ty_Abs)
-          apply assumption
-         apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ fresh]])
-          apply (rule not_in_imsupp_same[symmetric])
-          apply assumption
-         apply (rule provided)
-          apply assumption+
-
-        apply (unfold Abs_inject)[1]
-        apply (erule exE conjE)+
-        apply hypsubst
-        apply (rule exE[OF ex_avoiding_bij])
-                apply (rotate_tac -3)
-                apply assumption
-               apply assumption
-              apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
-             apply (rule emp_bound)
-            apply (rule id_on_empty)
-           apply (rule singl_bound[of "x"])
-          apply (rule iffD2[OF disjoint_single])
-          apply (rule provided)
-             apply assumption+
-      apply (rule terms_pre.UNION_bound)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>)
-          apply (rule terms.var_large)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>)
-      apply (rule terms.var_large)
-        apply (erule conjE allE)+
-        apply (erule impE)
-         prefer 2
-         apply (rule iffD2[OF arg_cong2[of _ _ _ _ fresh]])
-          apply (rule sym)
-           apply assumption
-          prefer 2
-          apply (drule provided(2)[rotated -1])
-            apply (rotate_tac -6)
-            apply assumption+
-         apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
-         apply (rule iffD2[OF fset.rel_map(2)])
-         apply (rule fset.rel_refl_strong)
-         apply (rule iffD1[OF fun_cong[OF fun_cong[OF prod.rel_eq]]])
-         apply (rule iffD2[OF prod.rel_map(2)])
-         apply (rule prod.rel_refl_strong)
-          apply (rule not_in_imsupp_same[symmetric])
-      apply (drule trans[OF Int_commute])
-          apply (unfold disjoint_iff)[1]
-          apply (erule allE)
-          apply (erule impE)
-           apply (rule UN_I)
-            apply assumption+
-      apply (rule id_apply[symmetric])
-
-         apply (rule conjI)
-          apply (rule UnI2)
-         apply (rule singletonI)
-        apply assumption
-
-       apply (rule iffD2[OF arg_cong3[OF _ refl refl, of _ _ Ty]])
-        apply (rule arg_cong3[OF refl _ refl, of _ _ extend])
-        apply (rule not_in_imsupp_same[symmetric])
-        apply assumption
-      unfolding provided(3)[symmetric]
-       apply (rule iffD1[OF rename_Ty])
-      apply assumption+
-
-
-       apply (unfold Abs_inject)[1]
-       apply (erule exE conjE)+
-       apply hypsubst
-       apply (unfold terms_vvsubst_rrename[symmetric])[1]
-       apply (rule exE[OF ex_avoiding_bij])
-               apply (rotate_tac -3)
-               apply assumption
-              apply assumption
-             apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
-            prefer 2
-            apply assumption
-           apply (rule terms.card_of_FFVars_bounds)
-          apply (rule singl_bound[of "x"])
-         apply (rule iffD2[OF disjoint_single])
-         apply (rule provided)
-            apply assumption+
-        apply (rule terms_pre.UNION_bound)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>)
-          apply (rule terms.var_large)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>)
-        apply (rule terms.var_large)
-       apply (erule conjE)+
-       apply (rotate_tac -2)
-      apply (erule allE)
-       apply (rule iffD2[OF arg_cong3[OF _ _ refl, of _ _ _ _ Ty]])
-         apply (rule arg_cong3[OF refl _ refl, of _ _ extend])
-         apply (rule sym)
-         apply (erule impE)
-          apply (rule conjI)
-           apply (rule UnI2)
-           apply (rule singletonI)
-          apply assumption
-         apply assumption
-        apply (rule terms.map_cong0)
-          apply assumption
-         apply (rotate_tac -4)
-      apply assumption
-        apply (unfold terms.set)[1]
-      subgoal for y e' f' g z
-        apply (rule case_split[of "z \<in> {x}"])
-          apply (drule singletonD)
-         apply hypsubst_thin
-         apply (erule impE)
-          apply (rule conjI)
-           apply (rule UnI2)
-           apply (rule singletonI)
-          apply assumption
-         apply (rule sym)
-         apply assumption
-        apply (drule id_onD)
-         apply (rule DiffI)
-          apply assumption
-         apply assumption
-        apply (drule id_onD)
-         apply (rule DiffI)
-          apply assumption
-         apply assumption
-        apply (rule trans)
-         apply assumption
-        apply (rule sym)
-        apply assumption
-        done
-      subgoal for y e' f' g
-       apply (rule iffD2[OF arg_cong3[OF _ refl refl, of _ _ Ty]])
-      apply (rule trans)
-        apply (rule arg_cong3[OF _ refl refl, of _ _ extend])
-          prefer 2
-          apply (rule provided(3)[symmetric, of "g"])
-        apply assumption+
-      apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
-         apply (rule iffD2[OF fset.rel_map(2)])
-         apply (rule fset.rel_refl_strong)
-         apply (rule iffD1[OF fun_cong[OF fun_cong[OF prod.rel_eq]]])
-         apply (rule iffD2[OF prod.rel_map(2)])
-         apply (rule prod.rel_refl_strong)
-          apply (drule trans[OF Int_commute])
-          apply (unfold disjoint_iff)[1]
-          apply (erule allE)+
-          apply (rotate_tac -1)
-          apply (erule impE)
-           apply (rule UN_I)
-            apply assumption
-           apply assumption
-          apply (rule not_in_imsupp_same[symmetric])
-          apply assumption
-         apply (rule id_apply[symmetric])
-        apply (rule iffD1[OF rename_Ty])
-          apply assumption+
-        done
-      apply (rule allI)
-      apply (rule iffD2[OF fun_cong[of "P _ _ _"]])
-       apply (rule arg_cong3[OF _ refl refl])
-       apply (rule arg_cong3[OF refl _ refl, of _ _ extend])
-       apply (rule not_in_imsupp_same[symmetric])
-       apply assumption
-      unfolding provided(3)[symmetric]
-      apply (rule clD[of P, rotated])
-        apply assumption+
-      apply (unfold Abs_inject)
-      apply (erule exE conjE)+
-      apply hypsubst_thin
-      apply (unfold terms_vvsubst_rrename[symmetric])
-      apply (rule exE[OF ex_avoiding_bij])
-              apply (rotate_tac -3)
-              apply assumption
-      apply assumption
-            apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
-           prefer 2
-           apply assumption
-          apply (rule terms.card_of_FFVars_bounds)
-         apply (rule singl_bound)
-        apply (rule iffD2[OF disjoint_single])
-      apply (rule provided)
-        apply assumption+
-      apply (rule terms_pre.UNION_bound)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>)
-          apply (rule terms.var_large)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>)
-       apply (rule terms.var_large)
-      apply (erule conjE)+
-      apply (rotate_tac -2)
-      apply (erule allE)
-      apply (rule iffD2[OF fun_cong[of "cl _ _ _ _"]])
-       apply (rule fun_cong[of "cl _ _ _"])
-       apply (rule arg_cong3[OF refl _ _, of _ _ _ _ cl])
-        apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ extend])
-      defer
-        apply (erule impE)
-         prefer 2
-         apply (rule sym)
-         apply assumption
-        apply (rule conjI)
-         apply (rule UnI2)
-         apply (rule singletonI)
-        apply assumption
-       apply (rule terms.map_cong0)
-         apply assumption
-        apply (rotate_tac -4)
-      apply assumption+
-      subgoal for y e' \<rho> f' g z
-        apply (rule case_split[of "z \<in> {x}"])
-         apply (drule singletonD)
-         apply hypsubst_thin
-         apply (erule impE)
-          apply (rule conjI)
-           apply (rule UnI2)
-           apply (rule singletonI)
-          apply assumption
-         apply (rule sym)
-         apply assumption
-        unfolding terms.set
-        apply (drule id_onD, rule DiffI, assumption+)+
-        apply (rule trans)
-         apply assumption
-        apply (rule sym)
-        apply assumption
-        done
-       apply (rule iffD2[OF fun_cong[of "cl _ _ _ _"]])
-        apply (rule fun_cong[of "cl _ _ _"])
-        apply (rule arg_cong3[OF refl _ refl, of _ _ cl])
-        apply (rule provided(3)[symmetric, of _ x])
-         apply assumption+
-       apply (rule cl_vvsubst)
-         apply assumption+
-       apply (erule allE)
-       apply assumption
-  apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
-         apply (rule iffD2[OF fset.rel_map(2)])
-         apply (rule fset.rel_refl_strong)
-         apply (rule iffD1[OF fun_cong[OF fun_cong[OF prod.rel_eq]]])
-         apply (rule iffD2[OF prod.rel_map(2)])
-         apply (rule prod.rel_refl_strong)
-          apply (drule trans[OF Int_commute])
-       apply (unfold disjoint_iff)[1]
-       apply (rule not_in_imsupp_same[symmetric])
-       apply (erule allE)+
-       apply (rotate_tac -1)
-       apply (erule impE)
-        apply (rule UN_I)
-         apply assumption+
-      apply (rule id_apply[symmetric])
-      done
-  done
-  done
-
-lemma Ty_fresh_induct:
-  fixes A::"'a::var_terms_pre set" and e::"'a terms"
-  assumes "|A| <o |UNIV::'a set|" and x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
-    and Ty_Var: "\<And>x \<tau> \<Gamma>. (x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> P \<Gamma> (Var x) \<tau>"
-    and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> e2 \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2"
-    and Ty_Abs: "\<And>x \<Gamma> \<tau> e \<tau>\<^sub>2. x \<notin> A \<union> fst ` fset \<Gamma> \<union> FFVars_terms (Abs x \<tau> e) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P (\<Gamma>,x:\<tau>) e \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> (Abs x \<tau> e) (\<tau> \<rightarrow> \<tau>\<^sub>2)"
-  shows "P \<Gamma> e \<tau>"
-  apply (rule mp[OF spec[OF Ty_fresh_induct_param[of _ _ _ "\<lambda>\<rho>. case \<rho> of (\<Gamma>, e) \<Rightarrow> A \<union> fst ` fset \<Gamma> \<union> FFVars_terms e" "\<lambda>\<Gamma> e \<tau> \<rho>. \<rho> = (\<Gamma>, e) \<longrightarrow> P \<Gamma> e \<tau>"]]])
-  apply (rule assms)+
-       apply (rule allI)
-  subgoal for x
-    apply (rule prod.exhaust[of x])
-    apply hypsubst_thin
-    unfolding prod.case
-    apply (rule terms.Un_bound)
-     apply (rule terms.Un_bound)
-    apply (rule assms(1))
-     apply (rule ordLeq_ordLess_trans[OF card_of_image])
-     apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))) 1\<close>)
-     apply (rule terms_pre.var_large)
-    apply (rule terms.set_bd_UNIV)
-    done
-     apply (rule impI)
-     apply (rule Ty_Var)
-     apply assumption
-    apply (rule impI)
-  apply (erule allE, erule impE, rule refl)+
-    apply (rule Ty_App)
-       apply assumption+
-   apply (rule impI)
-   apply (rule Ty_Abs)
-  subgoal for x \<Gamma> \<tau> e \<tau>2 y
-    apply (rule prod.exhaust[of y])
-    apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-    unfolding prod.case Un_iff de_Morgan_disj
-    apply (erule conjE)+
-    apply (rule conjI)+
-     apply assumption+
-    done
-     apply assumption+
-   apply (erule allE)
-   apply (erule impE)
-    apply (rule refl)
-   apply assumption
-  apply (rule refl)
-  done
-
-lemmas Ty_induct_strong = Ty_fresh_induct[OF emp_bound, unfolded Un_empty_left]
 
 inductive_cases
   Ty_VarE[elim]: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Var x : \<tau>"
@@ -767,6 +298,16 @@ lemma provided_strong:
   apply assumption
   done
 
+lemma Ty_fresh_induct:
+  fixes A::"'a::var_terms_pre set" and e::"'a terms"
+  assumes "|A| <o |UNIV::'a set|" and x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
+    and Ty_Var: "\<And>x \<tau> \<Gamma>. (x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> P \<Gamma> (Var x) \<tau>"
+    and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> e2 \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2"
+    and Ty_Abs: "\<And>x \<Gamma> \<tau> e \<tau>\<^sub>2. x \<notin> A \<union> fst ` fset \<Gamma> \<union> FFVars_terms (Abs x \<tau> e) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P (\<Gamma>,x:\<tau>) e \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> (Abs x \<tau> e) (\<tau> \<rightarrow> \<tau>\<^sub>2)"
+  shows "P \<Gamma> e \<tau>"
+  using assms(2) apply (binder_induction \<Gamma> e \<tau> avoiding: A \<Gamma> e rule: Ty.strong_induct)
+    using assms by auto
+
 (* automate with binder_inductive_cases *)
 lemma Ty_AbsE:
   fixes e::"'a::var_terms_pre terms" and A::"'a set"
@@ -787,6 +328,26 @@ lemma Ty_AbsE:
   apply (rule conjI refl)+
   done
 
+lemma rename_Ty:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<longleftrightarrow> map_prod f id |`| \<Gamma> \<turnstile>\<^sub>t\<^sub>y vvsubst f e : \<tau>'"
+  apply (rule iffI)
+  apply (unfold terms_vvsubst_rrename[OF assms])
+   apply (rule Ty.equiv)
+     apply (rule assms)+
+   apply assumption
+  apply (drule Ty.equiv[rotated -1])
+    apply (rule bij_imp_bij_inv)
+    apply (rule assms)
+   apply (rule supp_inv_bound)
+    apply (rule assms)+
+  unfolding terms.rrename_comps[OF assms(1,2) bij_imp_bij_inv[OF assms(1)] supp_inv_bound[OF assms]]
+  terms.rrename_ids
+    inv_o_simp1[OF assms(1)] terms.map_id map_prod.comp id_o map_prod.id fset.map_comp fset.map_id
+  apply assumption
+  done
+
 lemma Ty_AbsE'':
   assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>" "x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>)"
 and "\<And>\<tau>\<^sub>2. \<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> x \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<Longrightarrow> P"
@@ -794,15 +355,11 @@ shows "P"
   apply (rule Ty_AbsE)
     apply (rule assms(1))
   apply (rule terms_pre.UNION_bound)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>)
+    apply (rule ordLess_ordLeq_trans)
+     apply (rule fset.set_bd)
           apply (rule terms.var_large)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>)
+   apply (rule ordLess_ordLeq_trans)
+    apply (rule prod.set_bd)
    apply (rule terms.var_large)
 
   unfolding Abs_inject
@@ -819,14 +376,10 @@ shows "P"
   apply (rule assms(2))
 apply (rule terms_pre.UNION_bound)
          apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} "FSet.fset"))
-      ) 1\<close>)
+     apply (rule fset.set_bd)
           apply (rule terms.var_large)
-         apply (rule ordLess_ordLeq_trans)
-      apply (raw_tactic \<open>resolve_tac @{context} (
-        BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name prod}))
-      ) 1\<close>)
+   apply (rule ordLess_ordLeq_trans)
+    apply (rule prod.set_bd)
    apply (rule terms.var_large)
   apply (erule conjE)+
 
@@ -923,7 +476,7 @@ lemmas Ty_AbsE' = Ty_AbsE''[unfolded prod_sets_simps]
 lemma context_invariance:
 assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>'" "\<forall>x\<in>FFVars_terms e. \<forall>\<tau>. (x, \<tau>) |\<in>| \<Gamma> \<longrightarrow> (x, \<tau>) |\<in>| \<Gamma>'"
 shows "\<Gamma>' \<turnstile>\<^sub>t\<^sub>y e : \<tau>'"
-using assms proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty_fresh_induct_param)
+using assms proof (binder_induction \<Gamma> e \<tau>' arbitrary: \<Gamma>' avoiding: \<Gamma>' rule: Ty.strong_induct)
   case (Ty_Var x \<tau> \<Gamma> \<Gamma>')
   then show ?case by (auto intro: Ty.Ty_Var)
 next

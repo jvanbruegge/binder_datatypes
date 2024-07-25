@@ -669,7 +669,7 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
                   rtac ctxt thm,
                   REPEAT_DETERM o FIRST' [
                     assume_tac ctxt,
-                    resolve_tac ctxt (prems @ flat (map_filter (try (fn thm => [thm RS conjunct1, thm RS conjunct2])) prems))
+                    resolve_tac ctxt (refl :: prems @ flat (map_filter (try (fn thm => [thm RS conjunct1, thm RS conjunct2])) prems))
                   ]
                 ]) ctxt
               ]) steps)

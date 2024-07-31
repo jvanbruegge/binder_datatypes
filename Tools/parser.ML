@@ -80,8 +80,8 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
           val Ts = map2 (fn NONE => I | SOME sel => fn T =>
             Type (@{type_name var_selector}, [Type ("MRBNF_Recursor." ^ sel, []), T])
           ) sels Ts;
-        in fold_map (fold_map_typ (fn T => fn acc as (params, lthy) => case T of
-          Type (@{type_name var_selector}, [Type (sel, []), T]) =>
+        in fold_map (fn T => fold_map_typ (fn T => fn acc as (params, lthy) => case T of
+          orig_T as Type (@{type_name var_selector}, [Type (sel, []), T]) =>
             let val sel = MRBNF_Util.short_type_name sel;
             in if member (op=) vrs sel then
               case find_index (curry (op=) T) (the (Symtab.lookup params "free")) of
@@ -96,18 +96,24 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
                     |> Symtab.map_entry "plive" rm
                   , lthy)) end
                 | n => (nth (the (Symtab.lookup params "bound")) n, acc)
-            else if member (op=) ts sel then
-              case try (member (op=) T_names o fst o dest_Type) T of
-                SOME true => (case the (Symtab.lookup params "brec") of
-                  [] =>
-                    let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
-                    in (T', (Symtab.map_entry "brec" (cons T') params, lthy)) end
-                  | x::_ => (x, acc))
-                | _ => error "can only bind in recursive subterms"
-            else (T, acc)
+            else (orig_T, acc)
           end
           | _ => (T, acc)
-        )) Ts (params, lthy) end;
+        ) T #-> fold_map_typ (fn T => fn acc as (params, lthy) => case T of
+          Type (@{type_name var_selector}, [Type (sel, []), T]) =>
+            let val sel = MRBNF_Util.short_type_name sel;
+            in if member (op=) ts sel then
+                case try (member (op=) T_names o fst o dest_Type) T of
+                  SOME true => (case the (Symtab.lookup params "brec") of
+                    [] =>
+                      let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
+                      in (T', (Symtab.map_entry "brec" (cons T') params, lthy)) end
+                    | x::_ => (x, acc))
+                  | _ => error "can only bind in recursive subterms"
+              else (T, acc)
+            end
+          | _ => (T, acc)
+      )) Ts (params, lthy) end;
 
     val (Ts, (params, lthy)) = fold_map (fold_map_typ (fn T => fn acc as (params, lthy) =>
       case try (fst o dest_Type) T of

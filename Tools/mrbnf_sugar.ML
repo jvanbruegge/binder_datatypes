@@ -207,17 +207,6 @@ fun create_binder_datatype (spec : spec) lthy =
           [NONE] @ map (SOME o Thm.cterm_of lthy) (Ks @ [P, t])
         ) (#fresh_co_induct_param (#inner quotient));
 
-        val rec_vars = rec_vars @ map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
-        fun find_idx _ [] _ = NONE
-          | find_idx x (y::ys) n = if x = y then SOME n else find_idx x ys (n+1)
-        fun get_rec_var_idxs (t as TFree _) = opt_to_list (find_idx t rec_vars 0)
-          | get_rec_var_idxs (Type (_, Ts)) = maps get_rec_var_idxs Ts
-          | get_rec_var_idxs _ = []
-        val IH_idxs = map (maps get_rec_var_idxs o snd) (#ctors spec);
-        fun get_i i idx (y::ys) j n = if n < i then
-            get_i i idx ys (if idx = y then j + 1 else j) (n + 1)
-          else j
-          | get_i _ _ [] j _ = j
         val absumprodE = BNF_FP_Util.mk_absumprodE (#type_definition (snd info)) (map (length o snd) (#ctors spec))
       in Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt @{thms ball_UNIV[symmetric]}),
@@ -238,17 +227,20 @@ fun create_binder_datatype (spec : spec) lthy =
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
         ])),
         K (Local_Defs.unfold0_tac ctxt @{thms UN_empty UN_empty2 Un_empty_left Un_empty_right}),
-        EVERY' (map2 (fn thm => fn idxs => EVERY' [
+        EVERY' (map (fn thm => Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
           rtac ctxt thm,
-          EVERY' (map_index (fn (i, idx) => EVERY' [
+          REPEAT_DETERM o FIRST' (map (fn IH => SELECT_GOAL (EVERY1 [
             REPEAT_DETERM o rtac ctxt allI,
             TRY o rtac ctxt @{thm disjointI},
-            Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => rtac ctxt (nth prems idx) 1) ctxt,
-            SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms UN_empty UN_empty2 Un_empty_left Un_empty_right}),
-            rtac ctxt (mk_UnIN (length (filter (curry (op=) idx) idxs)) (get_i i idx idxs 1 0)),
-            REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms singletonI UNIV_I UN_I})
-          ]) idxs)
-        ]) (drop n prems) IH_idxs)
+            rtac ctxt IH,
+            REPEAT_DETERM o FIRST' [
+              rtac ctxt @{thm UnI1} THEN' rtac ctxt @{thm singletonI},
+              rtac ctxt @{thm UnI2}
+            ],
+            REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms UNIV_I UN_I singletonI}),
+            IF_UNSOLVED o K no_tac
+          ])) prems)
+        ]) ctxt) (drop n prems))
       ]) |> Rule_Cases.name (bound_names @ ctor_names) end;
 
     val fresh_induct =

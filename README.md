@@ -11,6 +11,8 @@ paper. It works with the latest released version Isabelle2024, which can be down
 
 [https://isabelle.in.tum.de/website-Isabelle2024/](https://isabelle.in.tum.de/website-Isabelle2024/)
 
+The version needs to be patched with this patch: https://gist.github.com/jvanbruegge/a0488d59aac502dec8df8b692c7eacfe
+
 After downloading Isabelle, a good starting point is to issue the following command
 
 ```

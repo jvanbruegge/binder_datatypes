@@ -852,4 +852,38 @@ by (meson injD inject_natOf)
 lemma ex_push_inwards: "(\<exists>x. P x \<and> (\<exists>y. Q x y)) \<longleftrightarrow> (\<exists>y. \<exists>x. Q x y \<and> P x)"
   by blast
 
+lemma ex_conjunct2: "\<exists>x. P x \<and> Q x \<Longrightarrow> \<exists>x. Q x"
+  by auto
+
+lemma eextend_fresh: 
+  fixes A A' B::"'a set"
+  assumes "|B| <o |UNIV::'a set|" "|A| <o |UNIV::'a set|" "infinite (UNIV::'a set)"
+    "A' \<subseteq> A" "B \<inter> A' = {}"
+shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
+proof-
+  have "|- (A \<union> B)| =o |UNIV::'a set|"
+    using card_of_Un_diff_infinite[OF assms(3), unfolded Compl_eq_Diff_UNIV[symmetric]]
+      assms(1) assms(2) assms(3) card_of_Un_ordLess_infinite by blast
+  hence "|B| <o |- (A \<union> B)|"  
+    using assms(1) ordIso_symmetric ordLess_ordIso_trans by blast
+  then obtain f where f: "inj_on f B" "f ` B \<subseteq> - (A \<union> B)" 
+    by (meson card_of_ordLeq ordLeq_iff_ordLess_or_ordIso)
+  define g where "g \<equiv> \<lambda>a. if a \<in> B then f a else a"
+  have g: "inj_on g (B \<union> A')" "g ` (B \<union> A') \<subseteq> - (A \<union> B) \<union> A'" using f 
+  unfolding g_def inj_on_def using assms(3,4) by auto
+  define C where C: "C = g ` (B \<union> A')"
+  have b: "bij_betw g (B \<union> A') C" unfolding C bij_betw_def using g by simp
+
+  have 0: "Cinfinite |UNIV::'a set|" "|B \<union> A'| <o |UNIV::'a set|" "eq_on ((B \<union> A') \<inter> C) g id"
+    subgoal by (simp add: assms(3) cinfinite_iff_infinite)
+    subgoal by (meson assms(1-4) card_of_Un_ordLess_infinite card_of_ordLess order.trans)
+    subgoal using assms(3) f unfolding eq_on_def C g_def by auto .
+    
+  show ?thesis using ex_bij_betw_supp'[OF 0(1,2) b 0(3)] apply safe
+  subgoal for \<rho> apply(rule exI[of _ \<rho>])
+  unfolding id_on_def apply auto
+   apply (metis ComplD UnCI eq_on_def f(2) g_def image_subset_iff)
+  by (metis Int_iff Un_Int_eq(1) assms(5) empty_iff eq_on_def g_def sup_commute) .
+qed
+
 end

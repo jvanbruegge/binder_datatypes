@@ -10,6 +10,7 @@ sig
   val swap: 'a * 'b -> 'b * 'a
 
   val mk_supp: term -> term
+  val mk_supp_bound: term -> term
   val mk_imsupp: term -> term
   val mk_inv: term -> term
   val mk_bij: term -> term
@@ -23,6 +24,8 @@ sig
   val mk_bot: typ -> term
   val mk_int_empty: term * term -> term;
   val mk_sum_ctors: term list -> term list;
+
+  val strip_ex: term -> (string * typ) list * term
 
   val mk_conj_thms: int -> local_theory -> thm * thm
   val mk_case_tuple: (string * typ) list -> term -> term
@@ -63,6 +66,9 @@ structure MRBNF_Util : MRBNF_UTIL =
 struct
 
 open BNF_Util
+
+fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_ex t)
+  | strip_ex t = ([], t)
 
 fun swap (a, b) = (b, a)
 
@@ -199,6 +205,9 @@ fun mk_supp t = let val T = t |> fastype_of |> dest_funT |> fst
 fun mk_imsupp u =
   let val T = fastype_of u
   in Const (@{const_name imsupp}, T --> HOLogic.mk_setT (fst (dest_funT T))) $ u end;
+
+fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
+  (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
 
 fun mk_inv t =
   let

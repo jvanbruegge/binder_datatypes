@@ -142,6 +142,33 @@ lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow>
     set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
     Un_empty_right UN_single by auto
 
+lemma Inp_inject_same[simp]: "Inp x y e = Inp x' y e' \<longleftrightarrow> ((x::var) = x' \<and> e = e')"
+  apply (rule trans[OF Inp_inject])
+  apply (rule iffI)
+   apply (erule exE conjE)+
+   apply (rule conjI)
+    apply assumption
+   apply (frule term.rrename_cong_ids[of _ e])
+     apply assumption
+    apply (rule case_split[of "_ \<in> _", rotated])
+     apply (erule id_onD)
+     apply (rule DiffI[rotated])
+      apply assumption
+     apply assumption
+    apply (drule singletonD)
+    apply hypsubst
+    apply assumption
+   apply hypsubst
+   apply (erule sym)
+  apply (erule conjE)
+  apply (erule conjI)
+  apply (rule exI[of _ id])
+  apply (rule bij_id supp_id_bound id_on_id id_apply conjI)+
+  apply (rule trans)
+   apply (rule term.rrename_ids)
+  apply assumption
+  done
+
 lemma Res_inject: "(Res y e = Res y' e') \<longleftrightarrow>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
   \<and> id_on (FFVars_term e - {y}) f \<and> f y = y' \<and> rrename_term f e = e')"

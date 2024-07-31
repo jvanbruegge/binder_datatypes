@@ -12,10 +12,10 @@ thm imkSubst_affine
 lemma istep_affine:
 assumes "istep e e'" and "affine e"
 shows "affine e'"
-using assms proof (binder_induction e e' rule: strong_induct_istep'')
+using assms proof (binder_induction e e' avoiding: e e' rule: istep.strong_induct)
   case (Beta xs e1 es2)
   show ?case apply(rule imkSubst_affine) using Beta
-    unfolding affine_iApp_iff by auto
+    unfolding affine_iApp_iff by fastforce+
 next
   case (iAppL e1 e1' es2)
   then show ?case unfolding affine_iApp_iff using istep_FFVars by fastforce

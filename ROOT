@@ -40,6 +40,7 @@ session Binders in "thys" = Prelim +
 
 session Operations in "operations" = Binders +
   theories
+    Binder_Inductive
     Fixpoint
     Recursor
     VVSubst

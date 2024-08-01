@@ -17,14 +17,24 @@ local_setup \<open>fold (fn name => fn lthy =>
 ) [@{type_name sum}, @{type_name prod}]
 \<close>
 
+lemma type_copy_vimage2p_Grp_Rep_UNIV:
+   assumes "type_definition Rep Abs UNIV"
+  shows "BNF_Def.vimage2p f Rep (Grp h) = Grp (Abs \<circ> h \<circ> f)"
+  unfolding vimage2p_def Grp_def fun_eq_iff
+  by (auto simp: type_definition.Abs_inverse[OF assms UNIV_I]
+   type_definition.Rep_inverse[OF assms] dest: sym)
+
 lemma Grp_Rep: "type_definition Rep Abs top \<Longrightarrow> type_definition Rep2 Abs2 top \<Longrightarrow>
-  ((BNF_Def.Grp (Collect P) f)\<inverse>\<inverse> OO BNF_Def.Grp (Collect P) g) (Rep x) (Rep2 y) =
-  ((BNF_Def.Grp (Collect P) (Abs \<circ> f))\<inverse>\<inverse> OO BNF_Def.Grp (Collect P) (Abs2 \<circ> g)) x y"
+  ((BNF_Def.Grp A f)\<inverse>\<inverse> OO BNF_Def.Grp B g) (Rep x) (Rep2 y) =
+  ((BNF_Def.Grp A (Abs \<circ> f))\<inverse>\<inverse> OO BNF_Def.Grp B (Abs2 \<circ> g)) x y"
   unfolding relcompp_apply Grp_def conversep_def
   by (metis comp_def iso_tuple_UNIV_I type_definition_def)
-lemma type_copy_vimage2p_Grp_Rep_id: "type_definition Rep Abs UNIV \<Longrightarrow> BNF_Def.vimage2p id Rep (BNF_Def.Grp (Collect P) h) = BNF_Def.Grp {x. P x} (Abs \<circ> h)"
-  using type_copy_vimage2p_Grp_Rep[of _ _ id]
-  by auto
+lemma type_copy_vimage2p_Grp_Rep_id:
+  assumes type_copy: "type_definition Rep Abs UNIV"
+  shows "BNF_Def.vimage2p id Rep (BNF_Def.Grp A h) = BNF_Def.Grp A (Abs \<circ> h)"
+  unfolding vimage2p_def Grp_def fun_eq_iff
+  by (auto simp: type_definition.Abs_inverse[OF type_copy UNIV_I]
+   type_definition.Rep_inverse[OF type_copy] dest: sym)
 lemma type_definition_id: "type_definition id id top"
   unfolding type_definition_def
   by simp

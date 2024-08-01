@@ -27,14 +27,14 @@ sig
   val mrbnf_of: Proof.context -> string -> mrbnf option
   val mrbnf_of_global: theory -> string -> mrbnf option
   val mrbnf_of_bnf: BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
-  val bnf_of_mrbnf: mrbnf -> local_theory -> (BNF_Def.bnf * local_theory)
+  val bnf_of_mrbnf: mrbnf -> local_theory -> (BNF_Def.bnf option * local_theory)
   val as_mrbnf: string -> local_theory -> (mrbnf * local_theory) option
   val mrbnf_interpretation: string -> (mrbnf -> local_theory -> local_theory) -> theory -> theory
   val interpret_mrbnf: (string -> bool) -> mrbnf -> local_theory -> local_theory
   val register_mrbnf_raw: string -> mrbnf -> local_theory -> local_theory
   val register_mrbnf: (string -> bool) -> string -> mrbnf -> local_theory -> local_theory
   val register_bnf_as_mrbnf: string option -> BNF_Def.bnf -> local_theory -> (mrbnf * local_theory)
-  val register_mrbnf_as_bnf: mrbnf -> local_theory -> (BNF_Def.bnf * local_theory)
+  val register_mrbnf_as_bnf: mrbnf -> local_theory -> (BNF_Def.bnf option * local_theory)
 
   datatype var_type = Live_Var | Bound_Var | Free_Var | Dead_Var; (*Added Dead_Var for kill function*)
   val var_type_ord: var_type ord
@@ -3640,6 +3640,7 @@ fun register_bnf_as_mrbnf key bnf lthy =
   end;
 
 fun bnf_of_mrbnf mrbnf lthy =
+  if live_of_mrbnf mrbnf = 0 then (NONE, lthy) else
   let
     val var_types = var_types_of_mrbnf mrbnf;
     fun map_filter_live f xs = map_filter (fn (Live_Var, x) => SOME (f x) | (_, _) => NONE) (var_types ~~ xs);
@@ -3697,20 +3698,21 @@ fun bnf_of_mrbnf mrbnf lthy =
       mk_map_of_mrbnf deads lives lives' bounds frees mrbnf, cond_interlace (map Bound (n - 1 downto 0)) ids is_live
     ));
   in
-    BNF_Def.bnf_def BNF_Def.Do_Inline (K BNF_Def.Dont_Note) false I tacs wit_tac (SOME (frees @ bounds @ deads)) Binding.empty
+    apfst SOME (BNF_Def.bnf_def BNF_Def.Do_Inline (K BNF_Def.Dont_Note) false I tacs wit_tac (SOME (frees @ bounds @ deads)) Binding.empty
       Binding.empty Binding.empty [] (((((((name_of_mrbnf mrbnf, mk_T_of_mrbnf deads lives bounds frees mrbnf),
       mapx), live_sets), mk_bd_of_mrbnf deads bounds frees mrbnf), map snd (
         mk_wits_of_mrbnf (replicate nwits deads) (replicate nwits lives) (replicate nwits bounds) (replicate nwits frees) mrbnf)),
       SOME (mk_rel_of_mrbnf deads lives lives' bounds frees mrbnf)),
-      SOME (mk_pred_of_mrbnf deads lives bounds frees mrbnf)) lthy'
+      SOME (mk_pred_of_mrbnf deads lives bounds frees mrbnf)) lthy')
   end;
 
 fun register_mrbnf_as_bnf mrbnf lthy =
-  let val (bnf, lthy') = bnf_of_mrbnf mrbnf lthy
+  let val (bnf_opt, lthy') = bnf_of_mrbnf mrbnf lthy
       val name = fst (dest_Type (T_of_mrbnf mrbnf))
-      val lthy'' = BNF_Def.register_bnf_raw name bnf lthy'
-  in (bnf, lthy'')
-  end;
+      val lthy'' = case bnf_opt of
+        SOME bnf => BNF_Def.register_bnf_raw name bnf lthy'
+        | _ => lthy';
+  in (bnf_opt, lthy'') end
 
 fun as_mrbnf name lthy' =
   (case mrbnf_of lthy' name of

@@ -1352,7 +1352,9 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       rtac ctxt (le_rel_OO_of_mrbnf mrbnf RS @{thm vimage2p_relcompp_mono}) 1;
     fun rel_OO_Grp_tac ctxt =
       unfold_thms_tac ctxt (Abs_inverse' :: @{thms vimage2p_def o_apply}) THEN
-      EVERY1 [
+      let
+        val OO_cong = @{thm arg_cong2[of _ _ _ _ "(OO)", THEN fun_cong, THEN fun_cong]}
+      in EVERY1 [
         Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
           let
             val ((fs, Rs), _) = params
@@ -1365,30 +1367,26 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
         ) ctxt,
         REPEAT_DETERM o assume_tac ctxt,
         rtac ctxt (trans OF [@{thm Grp_Rep} OF [type_definition, type_definition]]),
-        Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
-          let
-            val (params', (_, y)) = split_last params
-            val (_, (_, x)) = split_last params'
-            val thm = infer_instantiate' context [NONE, NONE, SOME x, SOME y] (fun_cong RS fun_cong)
-          in rtac context thm 1 end
-        ) ctxt,
-        rtac ctxt (trans OF @{thms OO_cong}),
-        rtac ctxt @{thm conversep_cong},
+        rtac ctxt (trans OF [OO_cong]),
+        rtac ctxt @{thm arg_cong[of _ _ conversep]},
         rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep_id} OF [type_definition] RS sym),
         rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep_id} OF [type_definition] RS sym),
-        rtac ctxt (trans OF [@{thm vimage2p_relcompp_converse} OF @{thms type_definition_id} RS sym]),
+        rtac ctxt (trans OF [@{thm vimage2p_relcompp_converse} OF @{thms type_definition_id} RS sym RS fun_cong RS fun_cong]),
         rtac ctxt sym,
-        rtac ctxt (trans OF @{thms OO_cong}),
-        rtac ctxt @{thm conversep_cong},
-        rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep} OF [type_definition] RS sym),
-        rtac ctxt (@{thm type_copy_vimage2p_Grp_Rep} OF [type_definition] RS sym),
-        rtac ctxt (trans OF [@{thm vimage2p_relcompp_converse} OF [type_definition] RS sym]),
+        rtac ctxt (trans OF [OO_cong]),
+        rtac ctxt @{thm arg_cong[of _ _ conversep]},
+        REPEAT_DETERM o resolve_tac ctxt (map (fn thm => thm OF [type_definition] RS sym) @{thms type_copy_vimage2p_Grp_Rep type_copy_vimage2p_Grp_Rep_UNIV}),
+        rtac ctxt (trans OF [@{thm vimage2p_relcompp_converse} OF [type_definition] RS sym RS fun_cong RS fun_cong]),
         rtac ctxt refl
-      ];
-    fun pred_set_tac ctxt =
-      HEADGOAL (EVERY'
-        [rtac ctxt (pred_set_of_mrbnf mrbnf RS @{thm arg_cong[of _ _ "\<lambda>f. f \<circ> _"]} RS trans),
-        SELECT_GOAL (unfold_thms_tac ctxt (@{thms Ball_comp_iff conj_comp_iff})), rtac ctxt refl]);
+      ] end;
+    fun pred_set_tac ctxt = EVERY1 [
+      rtac ctxt (pred_set_of_mrbnf mrbnf RS @{thm arg_cong[of _ _ "\<lambda>f. f \<circ> _"]} RS trans),
+      K (unfold_thms_tac ctxt (@{thms Ball_comp_iff conj_comp_iff})),
+      rtac ctxt refl ORELSE' EVERY' [
+        K (unfold_thms_tac ctxt @{thms comp_def}),
+        rtac ctxt refl
+      ]
+    ];
     val mrbnf_wits = map (fn (I, t) =>
       fold Term.absdummy (map (nth As) I)
         (AbsA $ Term.list_comb (t, map Bound (0 upto length I - 1))))

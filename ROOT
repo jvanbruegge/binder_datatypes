@@ -38,7 +38,7 @@ session Binders in "thys" = Prelim +
     General_Customization
     Urban_Berghofer_Norrish_Rule_Induction
 
-session Operations in "operations" = Binders +
+session Operations in "operations" = Untyped_Lambda_Calculus +
   theories
     Binder_Inductive
     Fixpoint

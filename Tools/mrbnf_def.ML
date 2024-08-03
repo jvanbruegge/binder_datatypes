@@ -164,6 +164,7 @@ sig
   val supp_comp_bound_of_mrbnf: mrbnf -> thm
   val Un_bound_of_mrbnf: mrbnf -> thm
   val UNION_bound_of_mrbnf: mrbnf -> thm
+  val mr_rel_cong_of_mrbnf: mrbnf -> thm
   val mr_rel_cong0_of_mrbnf: mrbnf -> thm
   val mr_in_rel_of_mrbnf: mrbnf -> thm
   val mr_le_rel_OO_of_mrbnf: mrbnf -> thm
@@ -591,6 +592,7 @@ type mr_facts = {
   Un_bound: thm,
   UNION_bound: thm,
   mr_rel_cong0: thm lazy,
+  mr_rel_cong: thm lazy,
   mr_in_rel: thm lazy,
   mr_le_rel_OO: thm lazy,
   mr_map_transfer: thm lazy,
@@ -611,7 +613,7 @@ type mr_facts = {
 };
 
 fun mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_bound Un_bound
-    UNION_bound mr_rel_cong0 mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip mr_rel_map mr_rel_mono
+    UNION_bound mr_rel_cong0 mr_rel_cong mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip mr_rel_map mr_rel_mono
     mr_rel_mono_strong0 mr_rel_mono_strong mr_set_transfer mr_rel_Grp mr_rel_conversep mr_rel_OO
     mr_rel_OO_Grp mr_rel_transfer mr_rel_id mr_rel_set = {
   var_large = var_large,
@@ -622,6 +624,7 @@ fun mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_boun
   Un_bound = Un_bound,
   UNION_bound = UNION_bound,
   mr_rel_cong0 = mr_rel_cong0,
+  mr_rel_cong = mr_rel_cong,
   mr_in_rel = mr_in_rel,
   mr_le_rel_OO = mr_le_rel_OO,
   mr_map_transfer = mr_map_transfer,
@@ -649,6 +652,7 @@ fun map_mr_facts f {
   Un_bound,
   UNION_bound,
   mr_rel_cong0,
+  mr_rel_cong,
   mr_in_rel,
   mr_le_rel_OO,
   mr_map_transfer,
@@ -674,6 +678,7 @@ fun map_mr_facts f {
   Un_bound = f Un_bound,
   UNION_bound = f UNION_bound,
   mr_rel_cong0 = Lazy.map f mr_rel_cong0,
+  mr_rel_cong = Lazy.map f mr_rel_cong,
   mr_in_rel = Lazy.map f mr_in_rel,
   mr_le_rel_OO = Lazy.map f mr_le_rel_OO,
   mr_map_transfer = Lazy.map f mr_map_transfer,
@@ -959,6 +964,7 @@ val supp_comp_bound_of_mrbnf = #supp_comp_bound o #mr_facts o rep_mrbnf;
 val Un_bound_of_mrbnf = #Un_bound o #mr_facts o rep_mrbnf;
 val UNION_bound_of_mrbnf = #UNION_bound o #mr_facts o rep_mrbnf;
 val mr_rel_cong0_of_mrbnf = Lazy.force o #mr_rel_cong0 o #mr_facts o rep_mrbnf;
+val mr_rel_cong_of_mrbnf = Lazy.force o #mr_rel_cong o #mr_facts o rep_mrbnf;
 val mr_in_rel_of_mrbnf = Lazy.force o #mr_in_rel o #mr_facts o rep_mrbnf;
 val mr_le_rel_OO_of_mrbnf = Lazy.force o #mr_le_rel_OO o #mr_facts o rep_mrbnf;
 val mr_map_transfer_of_mrbnf = Lazy.force o #mr_map_transfer o #mr_facts o rep_mrbnf;
@@ -1277,6 +1283,7 @@ val UNIV_cinfiniteN = "UNIV_cinfinite";
 val supp_comp_boundN = "supp_comp_bound";
 val Un_boundN = "Un_bound";
 val UNION_boundN = "UNION_bound";
+val mr_rel_congN = "mr_rel_cong";
 val mr_in_relN = "mr_in_rel";
 val mr_le_rel_OON = "mr_le_rel_OO";
 val mr_map_transferN = "mr_map_transfer";
@@ -1414,6 +1421,7 @@ fun note_mrbnf_thms fact_policy qualify0 mrbnf_b mrbnf lthy =
            (UNION_boundN, [#UNION_bound mr_facts], []),
            (mr_le_rel_OON, [Lazy.force (#mr_le_rel_OO mr_facts)], []),
            (mr_rel_GrpN, [Lazy.force (#mr_rel_Grp mr_facts)], []),
+           (mr_rel_congN, [Lazy.force (#mr_rel_cong mr_facts)], []),
            (mr_rel_flipN, [Lazy.force (#mr_rel_flip mr_facts)], []),
            (mr_rel_mapN, Lazy.force (#mr_rel_map mr_facts), []),
            (mr_rel_monoN, [Lazy.force (#mr_rel_mono mr_facts)], []),
@@ -3126,6 +3134,38 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
 
         val mr_rel_cong0 = Lazy.lazy mk_mr_rel_cong0;
 
+        fun mk_mr_rel_cong () =
+          let
+            val prem0 = mk_Trueprop_eq (x, x_copy);
+            val prem1 = mk_Trueprop_eq (y, y_copy);
+            val fprems = @{map 4} (mk_map_cong_prem Logic.mk_implies x_copy) zs mrbnf_sets_As fs fs_copy;
+            val fprems = map_filter I (map2 (fn Live_Var => (fn _ => NONE) | _ => fn x => SOME x) var_types fprems)
+            val Rprems = @{map 6} (mk_rel_cong_prem Logic.mk_implies x_copy y_copy)
+              lzs lys mrbnf_sets_lAs mrbnf_sets_lBs Rs Rs_copy;
+            val eq = mk_Trueprop_eq (Term.list_comb (mrrelAsBs, fsRs) $ x $ y,
+              Term.list_comb (mrrelAsBs, fs_copyRs_copy) $ x_copy $ y_copy);
+            val goal = prems_fsfs_copy (Logic.list_implies (prem0 :: prem1 :: fprems @ Rprems, eq));
+          in
+            fold (Variable.add_free_names lthy) (eq :: prem0 :: prem1 :: fprems @ Rprems) []
+            |> (fn vars => Goal.prove_sorry lthy vars [] goal (fn {context = ctxt, ...} => EVERY1 [
+                K (unfold_thms_tac ctxt [mrbnf_rel_def]),
+                rtac ctxt (Lazy.force rel_cong),
+                rtac ctxt (Lazy.force map_cong),
+                REPEAT_DETERM o FIRST' [
+                  assume_tac ctxt,
+                  Goal.assume_rule_tac ctxt,
+                  rtac ctxt refl,
+                  EVERY' [
+                    EqSubst.eqsubst_asm_tac ctxt [0] (map Lazy.force set_map),
+                    REPEAT_DETERM o assume_tac ctxt,
+                    K (unfold_thms_tac ctxt @{thms image_id})
+                  ]
+                ]
+              ]))
+            |> Thm.close_derivation \<^here>
+          end;
+        val mr_rel_cong = Lazy.lazy mk_mr_rel_cong;
+
         fun mk_mr_rel_Grp () =
           let
             val lhs = Term.list_comb (mrrelAsBs, map2_VT mk_Grp (K I) As fs);
@@ -3489,7 +3529,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           pred_cong pred_cong_simp;
 
         val mr_facts = mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_bound
-          Un_bound UNION_bound mr_rel_cong0 mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip
+          Un_bound UNION_bound mr_rel_cong0 mr_rel_cong mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip
           mr_rel_map mr_rel_mono mr_rel_mono_strong0 mr_rel_mono_strong mr_set_transfer mr_rel_Grp
           mr_rel_conversep mr_rel_OO mr_rel_OO_Grp mr_rel_transfer mr_rel_id mr_rel_set;
 

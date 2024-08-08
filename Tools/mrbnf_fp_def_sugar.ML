@@ -13,8 +13,6 @@ sig
     rename_id: thm,
     rename_comp0: thm,
     rename_comp: thm,
-    rename_bij: thm,
-    rename_inv_simp: thm,
     FVars_ctors: thm list,
     FVars_renames: thm list,
     FVars_intross: thm list list,
@@ -62,6 +60,8 @@ sig
 
     rename_ctor: thm,
     rename_cong_id: thm,
+    rename_bij: thm,
+    rename_inv_simp: thm,
     fresh_co_induct_param: thm,
     fresh_co_induct: thm,
     fresh_induct_param_no_clash: thm option
@@ -104,8 +104,6 @@ type 'a fp_result_T = {
   rename_id: thm,
   rename_comp0: thm,
   rename_comp: thm,
-  rename_bij: thm,
-  rename_inv_simp: thm,
   FVars_ctors: thm list,
   FVars_renames: thm list,
   FVars_intross: thm list list,
@@ -114,7 +112,7 @@ type 'a fp_result_T = {
 };
 
 fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_id0, rename_id,
-  rename_comp0, rename_comp, rename_bij, rename_inv_simp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
+  rename_comp0, rename_comp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
   card_of_FVars_bound_UNIVs, FVars_intross, noclash } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
@@ -127,8 +125,6 @@ fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_
   rename_id = Morphism.thm phi rename_id,
   rename_comp0 = Morphism.thm phi rename_comp0,
   rename_comp = Morphism.thm phi rename_comp,
-  rename_bij = Morphism.thm phi rename_bij,
-  rename_inv_simp = Morphism.thm phi rename_inv_simp,
   FVars_ctors = map (Morphism.thm phi) FVars_ctors,
   FVars_renames = map (Morphism.thm phi) FVars_renames,
   FVars_intross = map (map (Morphism.thm phi)) FVars_intross,
@@ -198,13 +194,15 @@ type quotient_result = {
 
   rename_ctor: thm,
   rename_cong_id: thm,
+  rename_bij: thm,
+  rename_inv_simp: thm,
   fresh_co_induct_param: thm,
   fresh_co_induct: thm,
   fresh_induct_param_no_clash: thm option
 };
 
 fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
-abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename_cong_id,
+abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename_cong_id, rename_bij, rename_inv_simp,
 fresh_co_induct_param, nnoclash_noclash, fresh_induct_param_no_clash } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
@@ -219,6 +217,8 @@ fresh_co_induct_param, nnoclash_noclash, fresh_induct_param_no_clash } = {
   abs_ctor = Morphism.thm phi abs_ctor,
   rename_ctor = Morphism.thm phi rename_ctor,
   rename_cong_id = Morphism.thm phi rename_cong_id,
+  rename_bij = Morphism.thm phi rename_bij,
+  rename_inv_simp = Morphism.thm phi rename_inv_simp,
   fresh_co_induct_param = Morphism.thm phi fresh_co_induct_param,
   fresh_co_induct = Morphism.thm phi fresh_co_induct,
   fresh_induct_param_no_clash = Option.map (Morphism.thm phi) fresh_induct_param_no_clash

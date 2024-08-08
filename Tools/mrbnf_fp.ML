@@ -517,18 +517,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     );
     val rename_comp0s = mk_rename_comp0s lthy rename_comps renamesAs;
 
-    fun mk_rename_bij lthy rename_t rename_comp0 rename_id0 =
-      let val goal = HOLogic.mk_Trueprop (mk_bij (Term.list_comb (rename_t, ffs)));
-      in prove lthy ffs prem_terms_ffs goal (mk_rename_bij_tac rename_comp0 rename_id0) end;
-    val rename_bijs = @{map 3} (mk_rename_bij lthy) renamesAs rename_comp0s rename_id0s;
-
-    fun mk_rename_inv_simp lthy rename_t rename_comp0 rename_id0 =
-      let val goal = mk_Trueprop_eq (
-        mk_inv (Term.list_comb (rename_t, ffs)),
-        Term.list_comb (rename_t, map mk_inv ffs)
-      ) in prove lthy ffs prem_terms_ffs goal (mk_rename_inv_simp_tac rename_comp0 rename_id0) end;
-    val rename_inv_simps = @{map 3} (mk_rename_inv_simp lthy) renamesAs rename_comp0s rename_id0s;
-
     (* Define inductive predicate free *)
     fun mk_inductive i A z b_vec free_sets bound_sets lthy =
       let
@@ -2336,6 +2324,16 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
       (transpose FFVars_defss) rrename_defs Quotient_abs_reps Quotient_total_abs_eq_iffs alpha_bijs
       rename_ids alpha_refls;
 
+    fun mk_rename_bij lthy rename_t rename_comp0 rename_id0 =
+      let val goal = HOLogic.mk_Trueprop (mk_bij (Term.list_comb (rename_t, ffs)));
+      in prove lthy ffs prem_terms_ffs goal (mk_rename_bij_tac rename_comp0 rename_id0) end;
+
+    fun mk_rename_inv_simp lthy rename_t rename_comp0 rename_id0 =
+      let val goal = mk_Trueprop_eq (
+        mk_inv (Term.list_comb (rename_t, ffs)),
+        Term.list_comb (rename_t, map mk_inv ffs)
+      ) in prove lthy ffs prem_terms_ffs goal (mk_rename_inv_simp_tac rename_comp0 rename_id0) end;
+
     val rrename_bijs = @{map 3} (mk_rename_bij lthy) rrenamesAs rrename_comp0s rrename_id0s;
     val rrename_inv_simps = @{map 3} (mk_rename_inv_simp lthy) rrenamesAs rrename_comp0s rrename_id0s;
 
@@ -2379,8 +2377,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_id = nth rename_ids i,
           rename_comp0 = nth rename_comp0s i,
           rename_comp = nth rename_comps i,
-          rename_bij = nth rename_bijs i,
-          rename_inv_simp = nth rename_inv_simps i,
           FVars_ctors = nth (transpose FVars_ctorss) i,
           FVars_renames = nth (transpose FVars_renamess) i,
           FVars_intross = FVars_intross,
@@ -2421,8 +2417,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           rename_id = nth rrename_ids i,
           rename_comp0 = nth rrename_comp0s i,
           rename_comp = nth rrename_comps i,
-          rename_bij = nth rrename_bijs i,
-          rename_inv_simp = nth rrename_inv_simps i,
           FVars_ctors = nth (transpose FFVars_cctorss) i,
           FVars_renames = nth (transpose FFVars_rrenamess) i,
           FVars_intross = FFVars_intross,
@@ -2445,6 +2439,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
 
             rename_ctor = nth rrename_cctors i,
             rename_cong_id = nth rrename_cong_ids i,
+            rename_bij = nth rrename_bijs i,
+            rename_inv_simp = nth rrename_inv_simps i,
             fresh_co_induct_param = TT_fresh_co_induct_param,
             fresh_co_induct = TT_fresh_co_induct,
             fresh_induct_param_no_clash = TT_fresh_induct_param_no_clash_opt
@@ -2470,8 +2466,6 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("rename_ids", rename_ids),
        ("rename_comp0s", rename_comp0s),
        ("rename_comps", rename_comps),
-       ("rename_bijs", rename_bijs),
-       ("rename_inv_simps", rename_inv_simps),
        ("FVars_ctors", flat FVars_ctorss),
        ("FVars_rename_less", flat FVars_rename_less),
        ("FVars_renames", flat FVars_renamess),

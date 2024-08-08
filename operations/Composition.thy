@@ -1,6 +1,8 @@
-theory Fixpoint
-  imports "Binders.MRBNF_FP"
+theory Composition
+  imports "Binders.MRBNF_Composition"
 begin
+
+declare [[mrbnf_internals]]
 
 (* TODO: Show proofs as apply script *)
 ML \<open>
@@ -78,19 +80,13 @@ let
   val (bnf1, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf1 lthy
   val (bnf2, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf2 lthy
   val _ = @{print} "register"
-
-  (* Step 4: Create fixpoint of pre-MRBNF *)
-  val (res, lthy) = MRBNF_FP.construct_binder_fp MRBNF_Util.Least_FP [
-    ((name1, mrbnf1), 2), ((name2, mrbnf2), 2)
-  ] rel lthy;
-  val _ = @{print} "fixpoint"
 in lthy end
 \<close>
 print_theorems
+print_bnfs
 
 declare [[quick_and_dirty=false]]
 
-thm noclash_T1_def
 lemmas infinite_UNIV = cinfinite_imp_infinite[OF T1_pre.UNIV_cinfinite]
 
 end

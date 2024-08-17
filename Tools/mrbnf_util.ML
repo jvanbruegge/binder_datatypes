@@ -24,6 +24,7 @@ sig
   val mk_bot: typ -> term
   val mk_int_empty: term * term -> term;
   val mk_sum_ctors: term list -> term list;
+  val mk_minus: term * term -> term;
 
   val strip_ex: term -> (string * typ) list * term
 
@@ -71,6 +72,8 @@ fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T))
   | strip_ex t = ([], t)
 
 fun swap (a, b) = (b, a)
+
+val mk_minus = HOLogic.mk_binop @{const_name minus}
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let
@@ -304,5 +307,27 @@ fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
 fun mk_card_suc r =
   let val T = fst (BNF_Util.dest_relT (fastype_of r));
   in Const (\<^const_name>\<open>card_suc\<close>, BNF_Util.mk_relT (T, T) --> BNF_Util.mk_relT (mk_sucT T, mk_sucT T)) $ r end;
+
+local
+
+val parameter = Parse.position Parse.nat >> (fn (n, pos) =>
+  if n > 1 then n else error ("Bad parameter: " ^ string_of_int n ^ Position.here pos));
+
+fun indices n = map string_of_int (1 upto n);
+fun cons n = implode (map (fn a => " (x" ^ a ^ " :: xs" ^ a ^ ")") (indices n));
+fun vars x n = implode (map (fn a => " " ^ x ^ a) (indices n));
+
+in
+
+val _ = Theory.setup
+ (ML_Antiquotation.value \<^binding>\<open>map_filter\<close>
+    (Scan.lift parameter >> (fn n =>
+      "fn f =>\n\
+      \  let\n\
+      \    fun map_filter _" ^ replicate_string n " []" ^ " = []\n\
+      \      | map_filter f" ^ cons n ^ " = let val ys = map_filter f" ^ vars "xs" n ^ " in the_default ys (Option.map (fn y => y::ys) (f" ^ vars "x" n ^ ")) end\n\
+      \      | map_filter _" ^ replicate_string n " _" ^ " = raise ListPair.UnequalLengths\n" ^
+      "  in map_filter f end")))
+end;
 
 end;

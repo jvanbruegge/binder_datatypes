@@ -332,7 +332,10 @@ lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infini
 lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
   by (metis card_of_Un_singl_ordLess_infinite insert_is_Un)
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
+  unfolding id_on_def by simp
+
+(*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 

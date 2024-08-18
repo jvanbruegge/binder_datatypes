@@ -321,7 +321,7 @@ lemma FVars_raw_intros:
   "z2 \<in> set11_T1_pre x \<Longrightarrow> a \<in> FVars_raw_T21 z2 \<Longrightarrow> a \<notin> set5_T1_pre x \<Longrightarrow> a \<in> FVars_raw_T11 (raw_T1_ctor x)"
   "a \<in> set1_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
   "a \<in> set7_T2_pre x2 \<Longrightarrow> a \<notin> set5_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
-  "z \<in> set8_T2_pre x2 \<Longrightarrow> a \<in>FVars_raw_T11 z \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
+  "z \<in> set8_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T11 z \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
   "z \<in> set9_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T11 z \<Longrightarrow> a \<notin> set5_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
   "z2 \<in> set10_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T21 z2 \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
   "z2 \<in> set11_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T21 z2 \<Longrightarrow> a \<notin> set5_T2_pre x2 \<Longrightarrow> a \<in> FVars_raw_T21 (raw_T2_ctor x2)"
@@ -335,7 +335,7 @@ lemma FVars_raw_intros:
   "z \<in> set9_T2_pre x2 \<Longrightarrow> b \<in> FVars_raw_T12 z \<Longrightarrow> b \<notin> set6_T2_pre x2 \<Longrightarrow> b \<in> FVars_raw_T22 (raw_T2_ctor x2)"
   "z2 \<in> set10_T2_pre x2 \<Longrightarrow> b \<in> FVars_raw_T22 z2 \<Longrightarrow> b \<in> FVars_raw_T22 (raw_T2_ctor x2)"
   "z2 \<in> set11_T2_pre x2 \<Longrightarrow> b \<in> FVars_raw_T22 z2 \<Longrightarrow> b \<in> FVars_raw_T22 (raw_T2_ctor x2)"
-                     apply (unfold FVars_raw_defs mem_Collect_eq)
+                     apply (unfold FVars_raw_defs mem_Collect_eq Un_iff de_Morgan_disj)
                      apply (erule free1_raw_T1_free1_raw_T2.intros free2_raw_T1_free2_raw_T2.intros, (assumption+)?)+
   done
 
@@ -683,10 +683,10 @@ lemma FVars_raw_permute_leq:
     and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
-    "z \<in> FVars_raw_T11 x \<Longrightarrow> f1 z \<in> FVars_raw_T11 (permute_raw_T1 f1 f2 x)" (is "_ \<Longrightarrow> ?P11")
-    "z2 \<in> FVars_raw_T12 x \<Longrightarrow>  f2 z2 \<in> FVars_raw_T12 (permute_raw_T1 f1 f2 x)" (is "_ \<Longrightarrow> ?P12")
-    "z \<in> FVars_raw_T21 x2 \<Longrightarrow>  f1 z \<in> FVars_raw_T21 (permute_raw_T2 f1 f2 x2)" (is "_ \<Longrightarrow> ?P21")
-    "z2 \<in> FVars_raw_T22 x2 \<Longrightarrow>  f2 z2 \<in> FVars_raw_T22 (permute_raw_T2 f1 f2 x2)" (is "_ \<Longrightarrow> ?P22")
+    "free1_raw_T1 z x \<Longrightarrow> f1 z \<in> FVars_raw_T11 (permute_raw_T1 f1 f2 x)" (is "_ \<Longrightarrow> ?P11")
+    "free2_raw_T1 z2 x \<Longrightarrow> f2 z2 \<in> FVars_raw_T12 (permute_raw_T1 f1 f2 x)" (is "_ \<Longrightarrow> ?P12")
+    "free1_raw_T2 z x2 \<Longrightarrow> f1 z \<in> FVars_raw_T21 (permute_raw_T2 f1 f2 x2)" (is "_ \<Longrightarrow> ?P21")
+    "free2_raw_T2 z2 x2 \<Longrightarrow> f2 z2 \<in> FVars_raw_T22 (permute_raw_T2 f1 f2 x2)" (is "_ \<Longrightarrow> ?P22")
 proof -
   have x1: "(free1_raw_T1 z x \<longrightarrow> ?P11) \<and> (free1_raw_T2 z x2 \<longrightarrow> ?P21)"
     apply (rule free1_raw_T1_free1_raw_T2.induct[of _ _ _ x _ x2])
@@ -895,17 +895,13 @@ proof -
     done
 
   show
-    "z \<in> FVars_raw_T11 x \<Longrightarrow> ?P11"
-    "z2 \<in> FVars_raw_T12 x \<Longrightarrow> ?P12"
-    "z \<in> FVars_raw_T21 x2 \<Longrightarrow> ?P21"
-    "z2 \<in> FVars_raw_T22 x2 \<Longrightarrow> ?P22"
-       apply (subst (asm) FVars_raw_defs, erule CollectE)
+    "free1_raw_T1 z x \<Longrightarrow> ?P11"
+    "free2_raw_T1 z2 x \<Longrightarrow> ?P12"
+    "free1_raw_T2 z x2 \<Longrightarrow> ?P21"
+    "free2_raw_T2 z2 x2 \<Longrightarrow> ?P22"
        apply (erule mp[OF conjunct1[OF x1]])
-      apply (subst (asm) FVars_raw_defs, erule CollectE)
       apply (erule mp[OF conjunct1[OF x2]])
-     apply (subst (asm) FVars_raw_defs, erule CollectE)
      apply (erule mp[OF conjunct2[OF x1]])
-    apply (subst (asm) FVars_raw_defs, erule CollectE)
     apply (erule mp[OF conjunct2[OF x2]])
     done
 qed
@@ -921,7 +917,9 @@ lemma FVars_raw_permutes:
     "FVars_raw_T21 (permute_raw_T2 f1 f2 x2) = f1 ` FVars_raw_T21 x2"
     "FVars_raw_T22 (permute_raw_T2 f1 f2 x2) = f2 ` FVars_raw_T22 x2"
      apply (rule subset_antisym)
-      apply (rule subsetI)
+     apply (rule subsetI)
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
       apply (drule FVars_raw_permute_leq[rotated -1])
           prefer 5 (* 2 * nvars + 1 *)
           apply (subst (asm) permute_raw_comps)
@@ -933,11 +931,15 @@ lemma FVars_raw_permutes:
      apply (rule subsetI)
      apply (erule imageE)
      apply hypsubst
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
      apply (erule FVars_raw_permute_leq[rotated -1])
         apply (rule assms)+
     (* next goal, same tactic *)
     apply (rule subset_antisym)
      apply (rule subsetI)
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
      apply (drule FVars_raw_permute_leq[rotated -1])
          prefer 5 (* 2 * nvars + 1 *)
          apply (subst (asm) permute_raw_comps)
@@ -949,11 +951,15 @@ lemma FVars_raw_permutes:
     apply (rule subsetI)
     apply (erule imageE)
     apply hypsubst
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
     apply (erule FVars_raw_permute_leq[rotated -1])
        apply (rule assms)+
     (* next goal, same tactic *)
    apply (rule subset_antisym)
     apply (rule subsetI)
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
     apply (drule FVars_raw_permute_leq[rotated -1])
         prefer 5 (* 2 * nvars + 1 *)
         apply (subst (asm) permute_raw_comps)
@@ -965,11 +971,15 @@ lemma FVars_raw_permutes:
    apply (rule subsetI)
    apply (erule imageE)
    apply hypsubst
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
    apply (erule FVars_raw_permute_leq[rotated -1])
       apply (rule assms)+
     (* next goal, same tactic *)
   apply (rule subset_antisym)
    apply (rule subsetI)
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
    apply (drule FVars_raw_permute_leq[rotated -1])
        prefer 5 (* 2 * nvars + 1 *)
        apply (subst (asm) permute_raw_comps)
@@ -981,6 +991,8 @@ lemma FVars_raw_permutes:
   apply (rule subsetI)
   apply (erule imageE)
   apply hypsubst
+     apply (subst (asm) FVars_raw_defs)
+     apply (drule iffD1[OF mem_Collect_eq])
   apply (erule FVars_raw_permute_leq[rotated -1])
      apply (rule assms)+
   done
@@ -1015,31 +1027,7 @@ proof -
   show ?P22 by (rule conjunct2[OF x2])
 qed
 
-lemma FVars_raw_bd_UNIVs:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
-  shows
-    "|FVars_raw_T11 x| <o |UNIV::'a set|"
-    "|FVars_raw_T12 x| <o |UNIV::'b set|"
-    "|FVars_raw_T21 x2| <o |UNIV::'a set|"
-    "|FVars_raw_T22 x2| <o |UNIV::'b set|"
-     apply (rule ordLess_ordLeq_trans)
-      apply (rule FVars_raw_bds)
-     apply (rule var_T1_pre_class.large)
-    (* next goal, same tactic *)
-    apply (rule ordLess_ordLeq_trans)
-     apply (rule FVars_raw_bds)
-    apply (rule var_T1_pre_class.large)
-    (* next goal, same tactic *)
-   apply (rule ordLess_ordLeq_trans)
-    apply (rule FVars_raw_bds)
-   apply (rule var_T1_pre_class.large)
-    (* next goal, same tactic *)
-  apply (rule ordLess_ordLeq_trans)
-   apply (rule FVars_raw_bds)
-  apply (rule var_T1_pre_class.large)
-  done
-
+lemmas FVars_raw_bd_UNIVs = FVars_raw_bds[THEN ordLess_ordLeq_trans, OF var_T1_pre_class.large]
 
 lemma alpha_refls:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
@@ -1049,9 +1037,10 @@ proof -
   have x: "(\<forall>(x::('a, 'b, 'c, 'd) raw_T1) y. x = y \<longrightarrow> alpha_T1 x y) \<and> (\<forall>(x::('a, 'b, 'c, 'd) raw_T2) y. x = y \<longrightarrow> alpha_T2 x y)"
     apply (rule alpha_T1_alpha_T2.coinduct)
       (* REPEAT_DETERM *)
-    subgoal for x y
+    apply hypsubst_thin
+    apply (unfold triv_forall_equality)
+    subgoal for x
       apply (rule raw_T1.exhaust[of x])
-      apply (rule raw_T1.exhaust[of y])
       apply hypsubst_thin
       apply (rule exI)+
       apply (rule conjI, rule refl supp_id_bound bij_id id_on_id)+
@@ -1105,7 +1094,7 @@ proof -
       apply (rule exI[of _ "g2 \<circ> \<sigma>2 \<circ> inv f2"])
       apply (rule exI)+
       apply (rule conjI, rule permute_raw_simps, (rule supp_id_bound bij_id | assumption)+)+
-      apply (rule conjI, (rule bij_comp supp_comp_bound f_prems bij_imp_bij_inv supp_inv_bound infinite_UNIV | assumption)+)+
+      apply (rule conjI, (rule bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound infinite_UNIV | assumption)+)+
 
       apply (subst T1_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
       apply (unfold image_comp[unfolded comp_def])
@@ -1113,12 +1102,71 @@ proof -
       apply (unfold image_UN[symmetric])
       apply (subst image_set_diff[OF bij_is_inj, symmetric], assumption)+
 
-      apply (rule conjI[rotated])+
+       apply (unfold image_Un[symmetric])
+      (* REPEAT_DETERM *)
+      apply (rule conjI)
+       apply (rule id_onI)
+       apply (erule imageE)
+       apply hypsubst
+       apply (rule trans)
+        apply (rule comp_apply)
+       apply (subst inv_simp1)
+        apply assumption
+       apply (rule trans)
+        apply (rule comp_apply)
+       apply (rule trans)
+        apply (rule arg_cong[of _ _ g1])
+        apply (erule id_onD)
+        apply assumption
+       apply (rule sym)
+       apply (erule eq_onD)
+       apply ((erule UnE)+)?
+        (* REPEAT_DETERM *)
+       apply (erule DiffE)
+       apply (erule UN_E)?
+       apply (erule FVars_raw_intros)
+       apply assumption+
+       (* repeated *)
+       apply (erule DiffE)
+       apply (erule UN_E)?
+       apply (erule FVars_raw_intros)
+        apply assumption+
+       (* repeated *)
+       apply (erule DiffE)
+       apply (erule UN_E)?
+       apply (erule FVars_raw_intros)
+        apply assumption+
+        (* END REPEAT_DETERM *)
+        (* repeated *)
+      apply (rule conjI)
+      apply (rule id_onI)
+      apply (erule imageE)
+      apply hypsubst
+      apply (rule trans)
+       apply (rule comp_apply)
+      apply (subst inv_simp1)
+       apply assumption
+      apply (rule trans)
+       apply (rule comp_apply)
+      apply (rule trans)
+       apply (rule arg_cong[of _ _ g2])
+       apply (erule id_onD)
+       apply assumption
+      apply (rule sym)
+      apply (erule eq_onD)
+      apply ((erule UnE)+)?
+        (* REPEAT_DETERM *)
+       apply (erule DiffE)
+       apply (erule UN_E)?
+       apply (erule FVars_raw_intros)
+        apply assumption+
+        (* END REPEAT_DETERM *)
+
         apply (rule iffD2[OF T1_pre.mr_rel_map(1)])
-                      apply (rule f_prems supp_id_bound bij_id bij_comp bij_imp_bij_inv supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
+                      apply (rule supp_id_bound bij_id bij_comp bij_imp_bij_inv supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
         apply (unfold id_o o_id Grp_UNIV_id eq_OO)
         apply (rule iffD2[OF T1_pre.mr_rel_map(3)])
-                         apply (rule f_prems supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV bij_imp_bij_inv supp_inv_bound | assumption)+
+                         apply (rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV bij_imp_bij_inv supp_inv_bound | assumption)+
         apply (unfold comp_assoc inv_id id_o o_id Grp_UNIV_id conversep_eq OO_eq relcompp_conversep_Grp Grp_OO)
         apply (subst inv_o_simp1, assumption)+
         apply (unfold id_o o_id comp_assoc[symmetric])
@@ -1163,8 +1211,7 @@ proof -
                          apply (rule exI[of _ g2])
                          apply (rule conjI, assumption+)+
                          apply (unfold conj_assoc[symmetric])
-                         apply (rule conjI[rotated])
-                          apply assumption
+                         apply (erule conjI[rotated])
                          apply (unfold conj_assoc)
                          apply (rule conjI)
                           apply (rule refl)
@@ -1195,8 +1242,7 @@ proof -
                         apply (rule exI[of _ g2])
                         apply (rule conjI, assumption+)+
                         apply (unfold conj_assoc[symmetric])
-                        apply (rule conjI[rotated])
-                         apply assumption
+                        apply (erule conjI[rotated])
                         apply (unfold conj_assoc)
                         apply (rule conjI)
                          apply (rule trans)
@@ -1286,64 +1332,6 @@ proof -
                       apply assumption
         (* END REPEAT_DETERM *)
                      apply (rule supp_id_bound bij_id supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-        (* REPEAT_DETERM *)
-       apply ((unfold image_Un[symmetric])?)[1]
-       apply (rule id_onI)
-       apply (erule imageE)
-       apply hypsubst
-       apply (rule trans)
-        apply (rule comp_apply)
-       apply (subst inv_simp1)
-        apply assumption
-       apply (rule trans)
-        apply (rule comp_apply)
-       apply (rule trans)
-        apply (rule arg_cong[of _ _ g2])
-        apply (erule id_onD)
-        apply assumption
-       apply (rule sym)
-       apply (erule eq_onD)
-       apply ((erule UnE)+)?
-        (* REPEAT_DETERM *)
-       apply (erule DiffE)
-       apply (erule UN_E)
-       apply (erule FVars_raw_intros)
-        apply assumption+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-      apply (unfold image_Un[symmetric])[1]
-      apply (rule id_onI)
-      apply (erule imageE)
-      apply hypsubst
-      apply (rule trans)
-       apply (rule comp_apply)
-      apply (subst inv_simp1)
-       apply assumption
-      apply (rule trans)
-       apply (rule comp_apply)
-      apply (rule trans)
-       apply (rule arg_cong[of _ _ g1])
-       apply (erule id_onD)
-       apply assumption
-      apply (rule sym)
-      apply (erule eq_onD)
-      apply (erule UnE)+
-        (* REPEAT_DETERM *)
-       apply (erule DiffE)
-       apply (erule UN_E)?
-       apply (erule FVars_raw_intros)
-        apply assumption+
-        (* repeated *)
-      apply (erule DiffE)
-      apply (erule UN_E)?
-      apply (erule FVars_raw_intros)
-       apply assumption+
-        (* repeated *)
-      apply (erule DiffE)
-      apply (erule UN_E)?
-      apply (erule FVars_raw_intros)
-       apply assumption+
-        (* END REPEAT_DETERM *)
       done
         (* second type, same tactic *)
 
@@ -1797,9 +1785,7 @@ proof -
                           apply assumption
                           apply (rule FVars_raw_permutes)
                           apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
-                         apply (unfold image_comp)
-                         apply (subst inv_o_simp2)
-                          apply assumption
+                         apply (unfold image_comp inv_o_simp2)
                          apply (rule image_id)
         (* repeated *)
                         apply (rule ballI, rule ballI, rule impI, assumption)+
@@ -2670,8 +2656,6 @@ proof -
     done
 qed
 
-lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
-  unfolding id_on_def by simp
 
 lemma alpha_trans:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
@@ -3086,25 +3070,6 @@ proof -
      apply assumption+
     done
 qed
-
-lemma equivp_alphas: "equivp alpha_T1" "equivp alpha_T2"
-   apply (rule equivpI)
-     apply (rule reflpI)
-     apply (rule alpha_refls)
-    apply (rule sympI)
-    apply (erule alpha_syms)
-   apply (rule transpI)
-   apply (erule alpha_trans)
-   apply assumption
-  apply (rule equivpI)
-    apply (rule reflpI)
-    apply (rule alpha_refls)
-   apply (rule sympI)
-   apply (erule alpha_syms)
-  apply (rule transpI)
-  apply (erule alpha_trans)
-  apply assumption
-  done
 
 lemma raw_refreshs:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1'"

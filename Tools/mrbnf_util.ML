@@ -18,6 +18,7 @@ sig
   val mk_Int: term * term -> term
   val mk_infinite_regular_card_order: term -> term
   val mk_id_on: term -> term -> term
+  val mk_eq_on: term -> term -> term ->term
   val mk_card_suc: term -> term
   val mk_cmin: term * term -> term
   val mk_singleton: term -> term
@@ -25,6 +26,8 @@ sig
   val mk_int_empty: term * term -> term;
   val mk_sum_ctors: term list -> term list;
   val mk_minus: term * term -> term;
+  val mk_all: string * typ -> term -> term;
+  val mk_ex: string * typ -> term -> term;
 
   val strip_ex: term -> (string * typ) list * term
 
@@ -73,7 +76,9 @@ fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T))
 
 fun swap (a, b) = (b, a)
 
-val mk_minus = HOLogic.mk_binop @{const_name minus}
+val mk_minus = HOLogic.mk_binop @{const_name minus};
+fun mk_all (x, T) t = HOLogic.mk_all (x, T, t);
+fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let
@@ -225,6 +230,10 @@ val mk_Int = HOLogic.mk_binop @{const_name inf};
 
 fun mk_id_on t1 t2 = let val (T, ST) = fastype_of t1 |> `HOLogic.dest_setT;
   in Const (@{const_name id_on}, ST --> (T --> T) --> HOLogic.boolT) $ t1 $ t2 end;
+
+fun mk_eq_on A f1 f2 =
+  let val fT = fastype_of f1
+  in Const (@{const_name eq_on}, fastype_of A --> fT --> fT --> @{typ bool}) $ A $ f1 $ f2 end
 
 fun mk_bij t = t
   |> fastype_of

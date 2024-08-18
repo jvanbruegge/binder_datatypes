@@ -326,7 +326,10 @@ lemmas induct_forallI = allI[unfolded HOL.induct_forall_def[symmetric]]
 lemma induct_equal_refl: "HOL.induct_equal x x"
   unfolding HOL.induct_equal_def by (rule refl)
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
+  unfolding id_on_def by simp
+
+(*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 

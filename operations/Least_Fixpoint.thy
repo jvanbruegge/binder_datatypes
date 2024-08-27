@@ -3266,7 +3266,6 @@ lemma avoid_raw_freshs:
     (* END REPEAT_DETERM *)
   done
 
-
 lemma TT_Quotients:
   "Quotient alpha_T1 TT1_abs TT1_rep (\<lambda>x. (=) (TT1_abs x))"
   "Quotient alpha_T2 TT2_abs TT2_rep (\<lambda>x. (=) (TT2_abs x))"
@@ -3274,8 +3273,15 @@ lemma TT_Quotients:
     prefer 2
     apply (rule quot_type.Quotient)
     apply (rule type_definition_quot_type)
-     apply (rule type_definition_T1)
-    apply (rule equivp_alphas)
+    apply (rule type_definition_T1)
+    apply (rule equivpI)
+    apply (rule reflpI)
+    apply (rule alpha_refls)
+    apply (rule sympI)
+    apply (erule alpha_syms)
+    apply (rule transpI)
+    apply (erule alpha_trans)
+    apply assumption
    apply (rule QuotientI)
       apply (erule Quotient3_abs_rep)
      apply (rule alpha_refls)
@@ -3293,7 +3299,14 @@ lemma TT_Quotients:
    apply (rule quot_type.Quotient)
    apply (rule type_definition_quot_type)
     apply (rule type_definition_T2)
-   apply (rule equivp_alphas)
+    apply (rule equivpI)
+    apply (rule reflpI)
+    apply (rule alpha_refls)
+    apply (rule sympI)
+    apply (erule alpha_syms)
+    apply (rule transpI)
+    apply (erule alpha_trans)
+    apply assumption
   apply (rule QuotientI)
      apply (erule Quotient3_abs_rep)
     apply (rule alpha_refls)

@@ -270,16 +270,16 @@ proof-
   have 0: "|AA| <o r"
   "bij_betw uu AA BB" "AA \<inter> BB = {}" "AA \<inter> CC = {}" "BB \<inter> CC = {}"
      subgoal using AA bound card_of_diff ordLeq_ordLess_trans by blast
-     subgoal by (smt (verit, del_insts) AA AB BB DiffE DiffI Diff_Diff_Int bij_betw_iff_bijections 
+     subgoal by (smt (verit, del_insts) AA AB BB DiffE DiffI Diff_Diff_Int bij_betw_iff_bijections
                eq_on_def id_apply int)
      subgoal unfolding defs by auto
      subgoal unfolding defs by auto
      subgoal unfolding defs by auto .
   show ?thesis using ex_bij_betw_supp[OF i 0]
   apply safe subgoal for u apply(rule exI[of _ u], safe)
-    subgoal by (smt (verit, ccfv_SIG) AA AB CC DiffI Diff_Diff_Int bij_betw_cong 
-      eq_on_def id_apply imsupp_empty_IntD2 inf_commute int) 
-    subgoal by (smt (verit, best) AA CC DiffI Diff_Diff_Int Int_commute eq_on_def 
+    subgoal by (smt (verit, ccfv_SIG) AA AB CC DiffI Diff_Diff_Int bij_betw_cong
+      eq_on_def id_apply imsupp_empty_IntD2 inf_commute int)
+    subgoal by (smt (verit, best) AA CC DiffI Diff_Diff_Int Int_commute eq_on_def
       id_apply imsupp_empty_IntD2 int) . .
 qed
 
@@ -777,7 +777,7 @@ lemma cmin1:
   shows "cmin r s \<le>o r"
 unfolding cmin_def proof (cases "r <o s", unfold if_P if_not_P)
   case True
-  then show "r +c czero \<le>o r" by (simp add: assms(1) csum_czero1 ordIso_imp_ordLeq) 
+  then show "r +c czero \<le>o r" by (simp add: assms(1) csum_czero1 ordIso_imp_ordLeq)
 next
   case False
   have "Well_order r" "Well_order s" using assms by auto
@@ -791,10 +791,10 @@ lemma cmin2:
   shows "cmin r s \<le>o s"
 unfolding cmin_def proof (cases "r <o s", unfold if_P if_not_P)
   case True
-  then show "r +c czero \<le>o s" using assms(1) csum_czero1 ordIso_ordLeq_trans ordLess_imp_ordLeq by blast 
+  then show "r +c czero \<le>o s" using assms(1) csum_czero1 ordIso_ordLeq_trans ordLess_imp_ordLeq by blast
 next
   case False
-  then show "czero +c s \<le>o s" using ordIso_ordLeq_trans using assms(2) csum_czero2 ordIso_imp_ordLeq by blast 
+  then show "czero +c s \<le>o s" using ordIso_ordLeq_trans using assms(2) csum_czero2 ordIso_imp_ordLeq by blast
 qed
 
 lemma cmin_greater:
@@ -838,7 +838,7 @@ qed
 
 (*  *)
 
-definition natOf :: "nat list \<Rightarrow> nat" where 
+definition natOf :: "nat list \<Rightarrow> nat" where
 "natOf \<equiv> SOME f . inj f"
 
 lemma inject_natOf: "inj natOf"
@@ -847,43 +847,96 @@ by (metis ex_inj natOf_def someI_ex)
 lemma inj_natOf[simp]: "natOf p = natOf p \<longleftrightarrow> p = p"
 by (meson injD inject_natOf)
 
-(*    *)
-
 lemma ex_push_inwards: "(\<exists>x. P x \<and> (\<exists>y. Q x y)) \<longleftrightarrow> (\<exists>y. \<exists>x. Q x y \<and> P x)"
   by blast
 
 lemma ex_conjunct2: "\<exists>x. P x \<and> Q x \<Longrightarrow> \<exists>x. Q x"
   by auto
 
-lemma eextend_fresh: 
+lemma eextend_fresh:
   fixes A A' B::"'a set"
   assumes "|B| <o |UNIV::'a set|" "|A| <o |UNIV::'a set|" "infinite (UNIV::'a set)"
     "A' \<subseteq> A" "B \<inter> A' = {}"
-shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho>"
+shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> id_on A' \<rho> \<and> \<rho> \<circ> \<rho> = id"
 proof-
   have "|- (A \<union> B)| =o |UNIV::'a set|"
     using card_of_Un_diff_infinite[OF assms(3), unfolded Compl_eq_Diff_UNIV[symmetric]]
       assms(1) assms(2) assms(3) card_of_Un_ordLess_infinite by blast
-  hence "|B| <o |- (A \<union> B)|"  
+  hence "|B| <o |- (A \<union> B)|"
     using assms(1) ordIso_symmetric ordLess_ordIso_trans by blast
-  then obtain f where f: "inj_on f B" "f ` B \<subseteq> - (A \<union> B)" 
+  then obtain f where f: "inj_on f B" "f ` B \<subseteq> - (A \<union> B)"
     by (meson card_of_ordLeq ordLeq_iff_ordLess_or_ordIso)
-  define g where "g \<equiv> \<lambda>a. if a \<in> B then f a else a"
-  have g: "inj_on g (B \<union> A')" "g ` (B \<union> A') \<subseteq> - (A \<union> B) \<union> A'" using f 
-  unfolding g_def inj_on_def using assms(3,4) by auto
-  define C where C: "C = g ` (B \<union> A')"
-  have b: "bij_betw g (B \<union> A') C" unfolding C bij_betw_def using g by simp
 
-  have 0: "Cinfinite |UNIV::'a set|" "|B \<union> A'| <o |UNIV::'a set|" "eq_on ((B \<union> A') \<inter> C) g id"
-    subgoal by (simp add: assms(3) cinfinite_iff_infinite)
-    subgoal by (meson assms(1-4) card_of_Un_ordLess_infinite card_of_ordLess order.trans)
-    subgoal using assms(3) f unfolding eq_on_def C g_def by auto .
-    
-  show ?thesis using ex_bij_betw_supp'[OF 0(1,2) b 0(3)] apply safe
-  subgoal for \<rho> apply(rule exI[of _ \<rho>])
-  unfolding id_on_def apply auto
-   apply (metis ComplD UnCI eq_on_def f(2) g_def image_subset_iff)
-  by (metis Int_iff Un_Int_eq(1) assms(5) empty_iff eq_on_def g_def sup_commute) .
+  then have f1: "f ` B \<inter> B = {}" "f ` B \<inter> A = {}" by blast+
+
+  define g where "g \<equiv> \<lambda>a. if a \<in> B then f a else (if a \<in> f ` B then inv_into B f a else a)"
+  have 1: "g \<circ> g = id"
+    unfolding g_def comp_def id_def
+    apply (rule ext)
+    subgoal for x
+      apply (cases "x \<in> B")
+        apply (subst if_P, assumption)+
+        apply (subst if_not_P)
+        using f1 apply blast
+        apply (subst if_P)
+        apply (erule imageI)
+        apply (rule inv_into_f_f)
+        apply (rule f)
+      apply assumption
+      apply (subst if_not_P, assumption)+
+      apply (cases "x \<in> f ` B")
+        apply (subst if_P, assumption)+
+        apply (subst if_P)
+        apply (erule inv_into_into)
+        apply (erule f_inv_into_f)
+      apply (subst if_not_P, assumption)+
+      apply (rule refl)
+      done
+    done
+  then have 2: "bij g" using o_bij by blast
+
+  have 3: "id_on A' g" unfolding id_on_def g_def using f1 assms(4,5) by auto
+  have 4: "g ` B \<inter> A = {}" unfolding g_def using f1 by simp
+
+  have "supp g \<subseteq> B \<union> g ` B" unfolding g_def supp_def by auto
+  then have 5: "|supp g| <o |UNIV::'a set|"
+    by (meson assms(1,3) card_of_Un_ordLess_infinite card_of_image card_of_mono1 ordLeq_ordLess_trans)
+
+  show ?thesis using 1 2 3 4 5 by blast
 qed
+
+definition "suppGr f \<equiv> {(x, f x) | x. f x \<noteq> x}"
+
+lemma supp_incl_suppGr:
+  "suppGr f \<subseteq> suppGr g  \<Longrightarrow> supp f \<subseteq> supp g"
+  unfolding supp_def suppGr_def by auto
+
+lemma extend_id_on':
+assumes g: "bij g" "g o g = id" "id_on A g"
+and A': "A \<subseteq> A'"
+shows "\<exists>f. bij f \<and> suppGr f \<subseteq> suppGr g \<and> id_on A' f"
+proof-
+  define f where "f \<equiv> \<lambda>a. if a \<in> (A'-A) \<union> g ` (A' - A) then a else g a"
+  show ?thesis apply(rule exI[of _ f], intro conjI)
+    subgoal using g(1) unfolding bij_def inj_def f_def apply safe
+      subgoal by (metis (mono_tags, opaque_lifting) Un_iff comp_def g(2) id_apply image_iff)
+      subgoal by auto
+      subgoal by (smt (verit) \<open>\<And>y x. \<lbrakk>\<forall>x y. g x = g y \<longrightarrow> x = y; surj g;
+       (if x \<in> A' - A \<union> g ` (A' - A) then x else g x) = (if y \<in> A' - A \<union> g ` (A' - A) then y else g y)\<rbrakk>
+       \<Longrightarrow> x = y\<close> g(2) image_iff pointfree_idE) .
+    subgoal unfolding suppGr_def f_def by auto
+    subgoal using g(3) unfolding id_on_def f_def by auto .
+qed
+
+lemma extend_id_on:
+  "bij g \<Longrightarrow> |supp (g::'a \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
+   id_on (A - B1) g \<Longrightarrow> B2 \<subseteq> B1 \<Longrightarrow> g \<circ> g = id \<Longrightarrow>
+   \<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and> suppGr f \<subseteq> suppGr g \<and> id_on (A - B2) f"
+apply(drule extend_id_on'[of g "A - B1" "A-B2"])
+  subgoal .
+  subgoal by (meson card_of_diff ordLeq_ordLess_trans)
+  subgoal by auto
+  subgoal apply safe subgoal for f apply(rule exI[of _ f])
+  subgoal using supp_incl_suppGr[of f g] by (meson card_of_mono1 ordLeq_ordLess_trans) . . .
 
 end

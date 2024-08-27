@@ -94,6 +94,8 @@ inductive free_raw_term :: "'a::var_term_pre \<Rightarrow> 'a raw_term \<Rightar
 definition FVars_raw_term :: "'a::var_term_pre raw_term \<Rightarrow> 'a set" where
   "FVars_raw_term x \<equiv> { a. free_raw_term a x }"
 
+definition "suppGr f \<equiv> {(x, f x) | x. f x \<noteq> x}"
+
 coinductive alpha_term :: "'a::var_term_pre raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "\<lbrakk> bij g ; |supp g| <o |UNIV::'a set| ; suppGr f1 \<union> suppGr f2 \<subseteq> suppGr g ;
     bij f1 ; |supp f1| <o |UNIV::'a set| ; id_on (\<Union>(FVars_raw_term ` set4_term_pre x) - (set2_term_pre x \<union> set3_term_pre x)) f1 ;

@@ -1605,7 +1605,6 @@ proof -
     done
 qed
 
-lemmas alpha_bijs' = alpha_bijs[unfolded eq_on_def Ball_def[symmetric]]
 
 lemma alpha_bij_eqs:
   fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
@@ -3320,7 +3319,6 @@ lemma TT_Quotients:
   apply assumption
   done
 
-
 lemmas TT_total_abs_eq_iffs = TT_Quotients(1)[THEN Quotient_total_abs_eq_iff, OF reflpI[OF alpha_refls(1)]]
   TT_Quotients(2)[THEN Quotient_total_abs_eq_iff, OF reflpI[OF alpha_refls(2)]]
 lemmas TT_rep_abs = TT_Quotients(1)[THEN Quotient_rep_abs, OF alpha_refls(1)] TT_Quotients(2)[THEN Quotient_rep_abs, OF alpha_refls(2)]
@@ -4130,7 +4128,6 @@ lemma TT_inject0s:
     (* END REPEAT_DETERM *)
   done
 
-
 lemma avoid_freshs:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1'"
     and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2'"
@@ -4208,7 +4205,7 @@ lemma alpha_avoids:
   done
 
 lemma fresh_cases_T1:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1'"
+  fixes y::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
   assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
     and "\<And>(x::('a, 'b, 'c, 'd) T1'). y = T1_ctor x \<Longrightarrow> set5_T1_pre x \<inter> A = {} \<Longrightarrow> set6_T1_pre x \<inter> B = {} \<Longrightarrow> P"
   shows "P"
@@ -5335,409 +5332,21 @@ lemma permute_congs:
   shows
     "(\<And>a. a \<in> FVars_T11 x \<Longrightarrow> f1 a = g1 a) \<Longrightarrow> (\<And>a. a \<in> FVars_T12 x \<Longrightarrow> f2 a = g2 a) \<Longrightarrow> permute_T1 f1 f2 x = permute_T1 g1 g2 x"
     "(\<And>a. a \<in> FVars_T21 x2 \<Longrightarrow> f1 a = g1 a) \<Longrightarrow> (\<And>a. a \<in> FVars_T22 x2 \<Longrightarrow> f2 a = g2 a) \<Longrightarrow> permute_T2 f1 f2 x2 = permute_T2 g1 g2 x2"
-proof -
-have x: "((\<forall>a. a \<in> FVars_T11 x \<longrightarrow> f1 a = g1 a) \<longrightarrow> (\<forall>a. a \<in> FVars_T12 x \<longrightarrow> f2 a = g2 a) \<longrightarrow> permute_T1 f1 f2 x = permute_T1 g1 g2 x)
-      \<and> ((\<forall>a. a \<in> FVars_T21 x2 \<longrightarrow> f1 a = g1 a) \<longrightarrow> (\<forall>a. a \<in> FVars_T22 x2 \<longrightarrow> f2 a = g2 a) \<longrightarrow> permute_T2 f1 f2 x2 = permute_T2 g1 g2 x2)"
-      apply (rule fresh_induct_param[of UNIV "\<lambda>_. supp f1 \<union> supp g1" "\<lambda>_. supp f2 \<union> supp g2" "\<lambda>x _. _ x" "\<lambda>x _. _ x" x x2, unfolded ball_UNIV, THEN spec])
-      apply (rule var_T1_pre_class.Un_bound assms)+
-      subgoal premises prems for x
-      apply (rule impI)+
-      apply (rule trans)
-      apply (rule permute_simps)
-      apply (rule assms)+
-      apply (rule sym)
-      apply (rule trans)
-      apply (rule permute_simps)
-      apply (rule assms)+
-      apply (rule arg_cong[of _ _ T1_ctor])
-      apply (rule T1_pre.map_cong)
-      apply (rule assms supp_id_bound bij_id refl)+
-      (* for i in [~nvars - 1 .. ~2] *)
-      apply (rotate_tac -3)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply (erule sym)
-      (* repeated *)
-      apply (rotate_tac -2)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply (erule sym)
-      (* END for *)
-      apply (rule refl)+
-      (* REPEAT_DETERM *)
-      apply (drule prems)
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* repeated *)
-      apply (drule prems)
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* END REPEAT_DETERM *)
-      (* REPEAT_DETERM *)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply (erule sym)
-      apply (rotate_tac -1)
-      apply (drule prems)
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* END REPEAT_DETERM *)
-      (* REPEAT_DETERM *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* repeated *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* END for *)
-      apply (erule sym)
-      (* orelse *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply assumption
-      (* bound tac *)
-      apply (drule prems(5-))
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* end bound tac *)
-      (* repeated *)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply assumption
-      (* bound tac *)
-      apply (drule prems(5-))
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* end bound tac *)
-      apply (erule sym)
-      (* repeated *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* repeated *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* END for *)
-      apply (erule sym)
-      (* orelse *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply assumption
-      (* bound tac *)
-      apply (drule prems(5-))
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* end bound tac *)
-      (* repeated *)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply (erule sym)
-      done
-      (* second goal, same tactic *)
-      subgoal premises prems for x
-      apply (rule impI)+
-      apply (rule trans)
-      apply (rule permute_simps)
-      apply (rule assms)+
-      apply (rule sym)
-      apply (rule trans)
-      apply (rule permute_simps)
-      apply (rule assms)+
-      apply (rule arg_cong[of _ _ T2_ctor])
-      apply (rule T2_pre.map_cong)
-      apply (rule assms supp_id_bound bij_id refl)+
-      (* for i in [~nvars - 1 .. ~2] *)
-      apply (rotate_tac -3)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply (erule sym)
-      (* repeated *)
-      apply (rotate_tac -2)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply (erule sym)
-      (* END for *)
-      apply (rule refl)+
-      (* REPEAT_DETERM *)
-      apply (drule prems)
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* repeated *)
-      apply (drule prems)
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* END REPEAT_DETERM *)
-
-      (* REPEAT_DETERM *)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply (erule sym)
-      apply (rotate_tac -1)
-      apply (drule prems)
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* END REPEAT_DETERM *)
-      (* REPEAT_DETERM *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* repeated *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* END for *)
-      apply (erule sym)
-      (* orelse *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply assumption
-      (* bound tac *)
-      apply (drule prems(5-))
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* end bound tac *)
-      (* repeated *)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply assumption
-      (* bound tac *)
-      apply (drule prems(5-))
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* end bound tac *)
-      apply (erule sym)
-      (* repeated *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* repeated *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      (* END for *)
-      apply (erule sym)
-      (* orelse *)
-      apply (frule prems)
-      apply (rule UNIV_I)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 0)
-      apply (rule case_split[of "_ \<in> _", rotated])
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply assumption
-      (* bound tac *)
-      apply (drule prems(5-))
-      apply (unfold Un_iff de_Morgan_disj supp_def mem_Collect_eq not_not)[1]
-      apply (erule conjE)
-      apply (rule trans)
-      apply assumption
-      apply (rule sym)
-      apply assumption
-      (* end bound tac *)
-      (* repeated *)
-      (* REPEAT for i in [0 .. nvars - 1] *)
-      apply (erule impE)
-      apply (rule allI)
-      apply (rule impI)
-      apply (rotate_tac 1)
-      apply (erule allE)
-      apply (erule impE)
-      apply (erule FVars_intros)
-      apply assumption
-      apply assumption
-      apply (erule sym)
-      done
-      done
-
-  show "(\<And>a. a \<in> FVars_T11 x \<Longrightarrow> f1 a = g1 a) \<Longrightarrow> (\<And>a. a \<in> FVars_T12 x \<Longrightarrow> f2 a = g2 a) \<Longrightarrow> permute_T1 f1 f2 x = permute_T1 g1 g2 x"
-      "(\<And>a. a \<in> FVars_T21 x2 \<Longrightarrow> f1 a = g1 a) \<Longrightarrow> (\<And>a. a \<in> FVars_T22 x2 \<Longrightarrow> f2 a = g2 a) \<Longrightarrow> permute_T2 f1 f2 x2 = permute_T2 g1 g2 x2"
-      apply (rule conjunct1[OF x, THEN mp, THEN mp])
-      apply (rule allI impI | assumption)+
-      apply (rule conjunct2[OF x, THEN mp, THEN mp])
-      apply (rule allI impI | assumption)+
+   apply (unfold atomize_all atomize_imp eq_on_def[symmetric] permute_T1_def permute_T2_def FVars_defs)
+   apply (rule impI)+
+   apply (rule TT_total_abs_eq_iffs[THEN iffD2])
+   apply (rule alpha_bijs)
+             apply (rule assms)+
+     apply assumption+
+   apply (rule alpha_refls)
+    (* second goal, same tactic *)
+  apply (rule impI)+
+  apply (rule TT_total_abs_eq_iffs[THEN iffD2])
+  apply (rule alpha_bijs)
+            apply (rule assms)+
+    apply assumption+
+  apply (rule alpha_refls)
   done
-qed
 
 lemmas permute_cong_ids = permute_congs[OF _ _ _ _ bij_id supp_id_bound bij_id supp_id_bound, unfolded permute_ids id_apply]
 

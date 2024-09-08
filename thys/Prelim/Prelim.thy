@@ -18,7 +18,6 @@ lemma bij_bij_betw_inv: "bij u \<Longrightarrow> bij_betw u A B = bij_betw (inv 
 lemma conversep_def:
 "conversep r = (\<lambda> a b. r b a)" by auto
 
-
 lemma bij_comp2: "bij u \<Longrightarrow> bij v \<Longrightarrow> bij (\<lambda>a. v (u a))"
   unfolding o_def[symmetric] using bij_comp by blast
 
@@ -93,11 +92,20 @@ lemma eq_on_inv1: "bij f \<Longrightarrow> bij g \<Longrightarrow> eq_on A f g \
 lemma eq_on_inv2: "bij f \<Longrightarrow> bij g \<Longrightarrow> eq_on A f g \<Longrightarrow> eq_on (g ` A) (inv f) (inv g)"
   unfolding eq_on_def by (metis image_iff inv_simp1)
 
-lemma eq_on_comp: "eq_on (g1 ` A) f1 f2 \<Longrightarrow> eq_on A g1 g2 \<Longrightarrow> eq_on A (f1 \<circ> g1) (f2 \<circ> g2)"
+lemma eq_on_comp1: "eq_on A g1 g2 \<Longrightarrow> eq_on (g1 ` A) f1 f2 \<Longrightarrow> eq_on A (f1 \<circ> g1) (f2 \<circ> g2)"
+  unfolding eq_on_def by simp
+lemma eq_on_comp2: "eq_on A g1 g2 \<Longrightarrow> eq_on (g2 ` A) f1 f2 \<Longrightarrow> eq_on A (f1 \<circ> g1) (f2 \<circ> g2)"
   unfolding eq_on_def by simp
 
 lemma eq_on_image: "eq_on A f g \<Longrightarrow> f ` A = g ` A"
   unfolding eq_on_def by auto
+
+lemma eq_on_between: "bij f \<Longrightarrow> bij g \<Longrightarrow> bij f2 \<Longrightarrow> bij g2 \<Longrightarrow> eq_on A f g \<Longrightarrow>
+  eq_on B f2 g2 \<Longrightarrow> (inv g2 \<circ> g) ` A = B \<Longrightarrow> eq_on A (inv f2 \<circ> f) (inv g2 \<circ> g)"
+  unfolding eq_on_def by (metis bij_pointE comp_eq_dest_lhs imageI inv_simp1)
+
+lemma eq_on_inv_f_f: "bij f \<Longrightarrow> eq_on (f ` A) g1 g2 \<Longrightarrow> eq_on A (inv f \<circ> g1 \<circ> f) (inv f \<circ> g2 \<circ> f)"
+  unfolding eq_on_def by simp
 
 (* The support of f: *)
 definition supp :: "('a \<Rightarrow> 'a) => 'a set" where
@@ -346,6 +354,9 @@ lemma id_on_inv: "bij f \<Longrightarrow> id_on A f \<Longrightarrow> id_on A (i
 
 lemma id_on_antimono: "id_on A f \<Longrightarrow> B \<subseteq> A \<Longrightarrow> id_on B f"
   unfolding id_on_def by auto
+
+lemma id_on_inv_f_f: "bij f \<Longrightarrow> id_on (f ` A) g \<Longrightarrow> id_on A (inv f \<circ> g \<circ> f)"
+  unfolding id_on_def by simp
 
 lemma rel_set_image:
   "\<And> R f A B. rel_set R (f ` A) B = rel_set (\<lambda>x. R (f x)) A B"
@@ -983,5 +994,8 @@ proof -
     by (simp add: assms(1) bij_imp_inv)
   show ?thesis using 1 2 3 4 5 by blast
 qed
+
+lemma image_inv_iff: "bij f \<Longrightarrow> (A = f ` B) = (inv f ` A = B)"
+  by force
 
 end

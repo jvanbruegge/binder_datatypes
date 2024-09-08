@@ -2286,6 +2286,14 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             ]) lthy) handle ERROR _ => lthy;
           in Local_Theory.exit_global lthy end
         ) lthy;
+        val lthy = Local_Theory.background_theory (fn thy =>
+          let
+            val lthy = Named_Target.init [] (hd coclass) thy;
+            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+              ("large", covar_large)
+            ]) lthy) handle ERROR _ => lthy;
+          in Local_Theory.exit_global lthy end
+        ) lthy;
 
         val supp_comp_bound =
           let

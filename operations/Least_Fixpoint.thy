@@ -1605,7 +1605,6 @@ proof -
     done
 qed
 
-
 lemma alpha_bij_eqs:
   fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
     and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
@@ -1684,6 +1683,1809 @@ lemma alpha_bij_eq_invs:
              apply (rule assms bij_imp_bij_inv supp_inv_bound)+
   done
 
+lemma alpha_FVars_leqs1:
+  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
+  and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+shows
+  "(free1_raw_T1 a x \<longrightarrow> (\<forall>y. alpha_T1 x y \<longrightarrow> a \<in> FVars_raw_T11 y)) \<and> (free1_raw_T2 a x2 \<longrightarrow> (\<forall>y2. alpha_T2 x2 y2 \<longrightarrow> a \<in> FVars_raw_T21 y2))"
+  "(free2_raw_T1 a2 x \<longrightarrow> (\<forall>y. alpha_T1 x y \<longrightarrow> a2 \<in> FVars_raw_T12 y)) \<and> (free2_raw_T2 a2 x2 \<longrightarrow> (\<forall>y2. alpha_T2 x2 y2 \<longrightarrow> a2 \<in> FVars_raw_T22 y2))"
+    apply (rule free1_raw_T1_free1_raw_T2.induct)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold inv_id)
+    apply (rotate_tac -2)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    (* TRY EVERY *)
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    (* END TRY *)
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold inv_id)
+    apply (rotate_tac -2)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY *)
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    (* END TRY *)
+    (* END REPEAT_DETERM *)
+
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       (* END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       (* END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* END REPEAT_DETERM *)
+    (* second type, same tactic *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold inv_id)
+    apply (rotate_tac -2)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    (* TRY EVERY *)
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    (* END TRY *)
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold inv_id)
+    apply (rotate_tac -2)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY *)
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    (* END TRY *)
+    (* END REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       (* END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       (* END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* END REPEAT_DETERM *)
+
+    (* second goal, same proof again *)
+        apply (rule free2_raw_T1_free2_raw_T2.induct)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold inv_id)
+    apply (rotate_tac -2)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* END REPEAT_DETERM *)
+
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 1 1] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       (* END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (unfold image_id)?
+    (* TRY EVERY
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* END REPEAT_DETERM *)
+    (* second type, same tactic *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold inv_id)
+    apply (rotate_tac -2)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* repeated *)
+    (* END REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 1 1] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       (* END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
+    prefer 9 (* free + 2 * bound + 1 *)
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (drule alpha_bij_eq_invs[THEN iffD1, rotated -1], (rule supp_id_bound bij_id | assumption)+)?
+    apply (unfold inv_id)?
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound | assumption)+
+    apply (unfold image_id)?
+    (* TRY EVERY
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (rotate_tac -1)
+    apply (subst (asm) image_in_bij_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (subst (asm) inv_inv_eq)
+    apply (rule bij_comp bij_imp_bij_inv | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (unfold inv_simp1 inv_simp2)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule id_on_inv[THEN id_onD, rotated])
+       apply assumption
+       apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]])
+       apply (unfold id_on_Un)[1]
+       apply (erule conjE)+
+       apply (erule id_on_image[symmetric])
+       apply (rule iffD2[OF image_in_bij_eq])
+       apply assumption
+       apply (rule DiffI[rotated])
+       apply assumption
+       apply (rule UN_I)
+       apply assumption
+       apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+       apply assumption
+       apply assumption
+       END TRY *)
+       apply (erule FVars_raw_intros)
+       apply assumption+
+    (* END REPEAT_DETERM *)
+    done
+
+lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
+  unfolding id_on_def by simp
+
+lemma alpha_FVars_leqs2:
+  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
+  and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+shows
+  "(free1_raw_T1 a x \<longrightarrow> (\<forall>y. alpha_T1 y x \<longrightarrow> a \<in> FVars_raw_T11 y)) \<and> (free1_raw_T2 a x2 \<longrightarrow> (\<forall>y2. alpha_T2 y2 x2 \<longrightarrow> a \<in> FVars_raw_T21 y2))"
+  "(free2_raw_T1 a2 x \<longrightarrow> (\<forall>y. alpha_T1 y x \<longrightarrow> a2 \<in> FVars_raw_T12 y)) \<and> (free2_raw_T2 a2 x2 \<longrightarrow> (\<forall>y2. alpha_T2 y2 x2 \<longrightarrow> a2 \<in> FVars_raw_T22 y2))"
+  apply (rule free1_raw_T1_free1_raw_T2.induct)
+  (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    (* TRY EVERY *)
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    apply (rotate_tac -1)
+    (* END TRY *)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp1, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY *)
+    apply (rule bij_imp_bij_inv | assumption)+
+    apply (rule id_on_inv)
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ id_on, THEN iffD2])
+    apply (rule trans)
+    apply (rule arg_cong2[of _ _ _ _ minus])
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
+    apply (rule image_set_diff[symmetric, OF bij_is_inj])
+    apply assumption
+    apply (rule id_on_image_same)
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    (* END TRY *)
+    (* END REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    (* END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    (* END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* END REPEAT_DETERM *)
+    (* second type, same tactic *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    (* TRY EVERY *)
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    apply (rotate_tac -1)
+    (* END TRY *)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp1, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY *)
+    apply (rule bij_imp_bij_inv | assumption)+
+    apply (rule id_on_inv)
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ id_on, THEN iffD2])
+    apply (rule trans)
+    apply (rule arg_cong2[of _ _ _ _ minus])
+    apply (erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
+    apply (rule image_set_diff[symmetric, OF bij_is_inj])
+    apply assumption
+    apply (rule id_on_image_same)
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    (* END TRY *)
+    (* END REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T2_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    (* END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T2_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    (* END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* END REPEAT_DETERM *)
+    (* second goal, same tactic *)
+    apply (rule free2_raw_T1_free2_raw_T2.induct)
+  (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* END REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 1 1] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    (* END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T1.cases)
+    apply (drule iffD1[OF raw_T1.inject])
+    apply hypsubst
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold image_id)?
+    (* TRY EVERY
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* END REPEAT_DETERM *)
+    (* second type, same tactic *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    (* TRY EVERY
+    apply (drule DiffI[rotated])
+    apply assumption
+    apply (erule thin_rl)
+    apply (rotate_tac -1)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF id_on_image[symmetric]], rotated -1])
+    prefer 2
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)", OF image_set_diff[OF bij_is_inj]], rotated -1])
+    prefer 2
+    END TRY *)
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated -1])
+    apply (rule arg_cong2[of _ _ _ _ minus])?
+    apply ((rule arg_cong[of _ _ "(`) _"])?, erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+)+
+    apply (unfold image_comp)?
+    apply ((subst (asm) inv_o_simp2, assumption)+)?
+    apply (unfold image_id)
+    apply (erule DiffE)?
+    apply (erule FVars_raw_intros)
+    (* TRY EVERY
+    apply assumption
+    apply assumption
+    apply (erule id_on_antimono)
+    apply (rule subsetI)
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
+    apply assumption
+    END TRY *)
+    (* END REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T2_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 1 1] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    (* END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY
+    apply (subst (asm) FVars_raw_permutes)
+    apply assumption+
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T1_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* repeated *)
+    apply (rule allI impI)+
+    apply (erule alpha_T2.cases)
+    apply (drule iffD1[OF raw_T2.inject])
+    apply hypsubst
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD2, rotated -1])
+    apply assumption
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (erule bexE)
+    apply (erule allE)
+    apply (erule impE)
+    apply assumption
+    (* TRY EVERY *)
+    apply (subst (asm) FVars_raw_permutes)
+    apply (rule bij_id supp_id_bound | assumption)+
+    apply (unfold image_id)?
+    (* TRY EVERY
+    apply (erule imageE)
+    apply hypsubst
+    apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
+    apply (erule T2_pre.mr_rel_set[rotated -1])
+    apply (rule supp_id_bound bij_id | assumption)+
+    apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
+    apply assumption
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+    apply (erule id_onD)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
+    apply (rule DiffI)
+    apply (rule UN_I)
+    apply assumption+
+    END TRY *)
+    apply (erule FVars_raw_intros)
+    apply assumption+
+    (* END REPEAT_DETERM *)
+    done
+
 lemma alpha_FVars:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
     and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
@@ -1692,606 +3494,56 @@ lemma alpha_FVars:
     "alpha_T1 x y \<Longrightarrow> FVars_raw_T12 x = FVars_raw_T12 y"
     "alpha_T2 x2 y2 \<Longrightarrow> FVars_raw_T21 x2 = FVars_raw_T21 y2"
     "alpha_T2 x2 y2 \<Longrightarrow> FVars_raw_T22 x2 = FVars_raw_T22 y2"
-proof -
-  have x: "(\<forall>y. alpha_T1 x y \<longrightarrow> FVars_raw_T11 x = FVars_raw_T11 y \<and> FVars_raw_T12 x = FVars_raw_T12 y)
-    \<and> (\<forall>y2. alpha_T2 x2 y2 \<longrightarrow> FVars_raw_T21 x2 = FVars_raw_T21 y2 \<and> FVars_raw_T22 x2 = FVars_raw_T22 y2)"
-    apply (rule raw_T1_raw_T2.induct[of _ _ x x2])
-    subgoal premises IHs for x
-      apply (rule allI)
-      apply (rule impI)
-      apply (erule alpha_T1.cases)
-      apply (drule iffD1[OF raw_T1.inject])
-      apply hypsubst
-        (* REPEAT_DETERM *)
-      apply (rule conjI)?
-       apply (unfold FVars_raw_ctors)[1]
-       apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-           apply (rule sym)
-           apply (erule T1_pre.mr_rel_set[OF supp_id_bound supp_id_bound, unfolded image_id, rotated -1])
-               apply (rule supp_id_bound bij_id | assumption)+
-           (* REPEAT_DETERM *)
-           apply (rule sym)
-           apply (rule trans)
-           apply (rule arg_cong2[of _ _ _ _ minus])
-           apply (erule T1_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
-           apply (rule trans)
-           apply (rule image_set_diff[OF bij_is_inj, symmetric])
-           apply assumption
-           apply (rule id_on_image)
-           apply (erule id_on_antimono)
-           apply (rule subsetI)
-           apply (rotate_tac -1)
-           apply (erule contrapos_pp)
-           apply (unfold Un_iff de_Morgan_disj)[1]
-           apply (erule conjE)+
-           apply assumption
-           (* END REPEAT_DETERM *)
-        (* REPEAT_DETERM *)
-          apply (rule rel_set_UN_D)
-          apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                          apply (rule ballI)
-                          apply (rule ballI)
-                          apply (rule impI)
-                          apply (drule IHs)
-                          apply (erule allE)
-                          apply (erule impE)
-                          apply assumption
-                          apply (erule conjE)+
-                          apply assumption
-        (* repeated *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-                       apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-         apply (rule sym)
-         apply (rule trans)
-          apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-           apply (erule T1_pre.mr_rel_set[rotated -1])
-                 apply (rule supp_id_bound bij_id | assumption)+
-          prefer 2
-          apply (rule trans)
-           apply (rule image_set_diff[symmetric, OF bij_is_inj])
-           apply assumption
-           apply (erule id_on_image[OF id_on_antimono])
-         apply (rule subsetI)
-         apply (rotate_tac -1)
-         apply (erule contrapos_pp)
-         apply (unfold Un_iff de_Morgan_disj)[1]
-         apply (erule conjE)+
-         apply assumption
-         apply (unfold image_UN)[1]
-         apply (rule sym)
-         apply (rule rel_set_UN_D)
-         apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                         apply (rule ballI)
-                         apply (rule ballI)
-                         apply (rule impI)
-                         apply (drule IHs)
-                         apply (erule allE)
-                         apply (erule impE)
-                          apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                          apply assumption+
-                         apply (erule conjE)+
-                         apply (rule trans)
-                          apply (rule arg_cong[of _ _ "(`) _"])
-                          apply (rule trans)
-                          apply assumption
-                          apply (rule FVars_raw_permutes)
-                          apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
-                         apply (unfold image_comp inv_o_simp2)
-                         apply (rule image_id)
-        (* repeated *)
-                        apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* END REPEAT_DETERM *)
-                      apply (rule supp_id_bound bij_id | assumption)+
-        (* repeated *)
-        apply (rule rel_set_UN_D)
-        apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                       apply (rule ballI)
-                       apply (rule ballI)
-                       apply (rule impI)
-                       apply (drule IHs)
-                       apply (erule allE)
-                       apply (erule impE)
-                        apply assumption
-                       apply (erule conjE)+
-                       apply assumption
-        (* repeated *)
-                      apply (rule ballI, rule ballI, rule impI, assumption)+
-                     apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-       apply (rule sym)
-       apply (rule trans)
-        apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-         apply (erule T1_pre.mr_rel_set[rotated -1])
-               apply (rule supp_id_bound bij_id | assumption)+
-        prefer 2
-        apply (rule trans)
-         apply (rule image_set_diff[symmetric, OF bij_is_inj])
-         apply assumption
-        apply (erule id_on_image[OF id_on_antimono])
-       apply (rule subsetI)
-       apply (rotate_tac -1)
-       apply (erule contrapos_pp)
-       apply (unfold Un_iff de_Morgan_disj)[1]
-       apply (erule conjE)+
-       apply assumption
-       apply (unfold image_UN)[1]
-       apply (rule sym)
-       apply (rule rel_set_UN_D)
-       apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                         apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                     apply (rule ballI)
-                     apply (rule ballI)
-                     apply (rule impI)
-                     apply (drule IHs)
-                     apply (erule allE)
-                     apply (erule impE)
-                      apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                         apply (assumption | rule bij_id supp_id_bound)+
-                     apply (erule conjE)+
-                     apply (rule trans)
-                      apply (rule arg_cong[of _ _ "(`) _"])
-                      apply (rule trans)
-                       apply assumption
-                      apply (rule FVars_raw_permutes)
-                         apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound bij_id | assumption)+
-                     apply (unfold image_comp)
-                     apply (subst inv_o_simp2)
-                      apply assumption
-                     apply (rule image_id)
-        (* repeated *)
-                    apply ((rule ballI, rule ballI, rule impI, assumption)+)?
-        (* END REPEAT_DETERM *)
-                    apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* second conjunct *)
-      apply (rule conjI)?
-      apply (unfold FVars_raw_ctors)[1]
-      apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-          apply (rule sym)
-          apply (erule T1_pre.mr_rel_set[OF supp_id_bound supp_id_bound, unfolded image_id, rotated -1])
-              apply (rule supp_id_bound bij_id | assumption)+
-        (* REPEAT_DETERM *)
-         apply (rule rel_set_UN_D)
-         apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                          apply (rule ballI)
-                          apply (rule ballI)
-                          apply (rule impI)
-                          apply (drule IHs)
-                          apply (erule allE)
-                          apply (erule impE)
-                          apply assumption
-                          apply (erule conjE)+
-                          apply assumption
-        (* repeated *)
-                         apply (rule ballI, rule ballI, rule impI, assumption)+
-                      apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-        apply (rule sym)
-        apply (rule trans)
-         apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-          apply (erule T1_pre.mr_rel_set[rotated -1])
-                apply (rule supp_id_bound bij_id | assumption)+
-         prefer 2
-         apply (rule trans)
-          apply (rule image_set_diff[symmetric, OF bij_is_inj])
-          apply assumption
-         apply (erule id_on_image[OF id_on_antimono])
-         apply (rule Un_upper1 Un_upper2 subset_refl)+
-        apply (unfold image_UN)[1]
-        apply (rule sym)
-        apply (rule rel_set_UN_D)
-        apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                        apply (rule ballI)
-                        apply (rule ballI)
-                        apply (rule impI)
-                        apply (drule IHs)
-                        apply (erule allE)
-                        apply (erule impE)
-                         apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                          apply assumption+
-                        apply (erule conjE)+
-                        apply (rule trans)
-                         apply (rule arg_cong[of _ _ "(`) _"])
-                         apply (rule trans)
-                          apply assumption
-                         apply (rule FVars_raw_permutes)
-                          apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
-                        apply (unfold image_comp)
-                        apply (subst inv_o_simp2)
-                         apply assumption
-                        apply (rule image_id)
-        (* repeated *)
-                       apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* END REPEAT_DETERM *)
-                     apply (rule supp_id_bound bij_id | assumption)+
-        (* repeated *)
-       apply (rule rel_set_UN_D)
-       apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                         apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                      apply (rule ballI)
-                      apply (rule ballI)
-                      apply (rule impI)
-                      apply (drule IHs)
-                      apply (erule allE)
-                      apply (erule impE)
-                       apply assumption
-                      apply (erule conjE)+
-                      apply assumption
-        (* repeated *)
-                     apply (rule ballI, rule ballI, rule impI, assumption)+
-                    apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-      apply (rule sym)
-        (* TRY
-    apply (rule trans)
-    apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-    apply (erule T1_pre.mr_rel_set[rotated -1])
-    apply (rule supp_id_bound bij_id | assumption)+
-    prefer 2
-    apply (rule trans)
-    apply (rule image_set_diff[symmetric, OF bij_is_inj])
+    (* REPEAT_DETERM *)
+    apply (rule subset_antisym)
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs1[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs1[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
     apply assumption
-    apply (erule id_on_image[OF id_on_antimono])
-    apply (rule Un_upper1 Un_upper2)+*)
-      apply ((unfold image_UN)[1])?
-      apply (rule sym)
-      apply (rule rel_set_UN_D)
-      apply (erule T1_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T1_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                        apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                    apply (rule ballI)
-                    apply (rule ballI)
-                    apply (rule impI)
-                    apply (drule IHs)
-                    apply (erule allE)
-                    apply (erule impE)
-                     apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                        apply (assumption | rule bij_id supp_id_bound)+
-                    apply (erule conjE)+
-                    apply (rule trans, rule arg_cong[of _ _ "(`) _"])?
-                    apply (rule trans)
-                     apply assumption
-                    apply (rule trans)
-                     apply (rule FVars_raw_permutes)
-                        apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound bij_id | assumption)+
-                    apply (unfold image_comp inv_id)
-                    apply (subst inv_o_simp2, assumption)?
-                    apply (rule image_id)
-        (* repeated *)
-                   apply ((rule ballI, rule ballI, rule impI, assumption)+)?
-        (* END REPEAT_DETERM *)
-                   apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* END REPEAT_DETERM *)
-      done
-        (* second goal, same tactic *)
-    subgoal premises IHs for x
-      apply (rule allI)
-      apply (rule impI)
-      apply (erule alpha_T2.cases)
-      apply (drule iffD1[OF raw_T2.inject])
-      apply hypsubst
-        (* REPEAT_DETERM *)
-      apply (rule conjI)?
-       apply (unfold FVars_raw_ctors)[1]
-       apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-           apply (rule sym)
-           apply (erule T2_pre.mr_rel_set[OF supp_id_bound supp_id_bound, unfolded image_id, rotated -1])
-           apply (rule supp_id_bound bij_id | assumption)+
-         (* REPEAT_DETERM *)
-           apply (rule sym)
-           apply (rule trans)
-           apply (rule arg_cong2[of _ _ _ _ minus])
-           apply (erule T2_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
-           apply (rule trans)
-           apply (rule image_set_diff[OF bij_is_inj, symmetric])
-           apply assumption
-           apply (rule id_on_image)
-           apply (erule id_on_antimono)
-           apply (rule subsetI)
-           apply (rotate_tac -1)
-           apply (erule contrapos_pp)
-           apply (unfold Un_iff de_Morgan_disj)[1]
-           apply (erule conjE)+
-           apply assumption
-           (* END REPEAT_DETERM *)
-        (* REPEAT_DETERM *)
-          apply (rule rel_set_UN_D)
-          apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                          apply (rule ballI)
-                          apply (rule ballI)
-                          apply (rule impI)
-                          apply (drule IHs)
-                          apply (erule allE)
-                          apply (erule impE)
-                          apply assumption
-                          apply (erule conjE)+
-                          apply assumption
-        (* repeated *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-                       apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-         apply (rule sym)
-         apply (rule trans)
-          apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-           apply (erule T2_pre.mr_rel_set[rotated -1])
-                 apply (rule supp_id_bound bij_id | assumption)+
-          prefer 2
-          apply (rule trans)
-           apply (rule image_set_diff[symmetric, OF bij_is_inj])
-           apply assumption
-          apply (erule id_on_image[OF id_on_antimono])
-         apply (rule subsetI)
-         apply (rotate_tac -1)
-         apply (erule contrapos_pp)
-         apply (unfold Un_iff de_Morgan_disj)[1]
-         apply (erule conjE)+
-         apply assumption
-         apply (unfold image_UN)[1]
-         apply (rule sym)
-         apply (rule rel_set_UN_D)
-         apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                         apply (rule ballI)
-                         apply (rule ballI)
-                         apply (rule impI)
-                         apply (drule IHs)
-                         apply (erule allE)
-                         apply (erule impE)
-                          apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                          apply assumption+
-                         apply (erule conjE)+
-                         apply (rule trans)
-                          apply (rule arg_cong[of _ _ "(`) _"])
-                          apply (rule trans)
-                          apply assumption
-                          apply (rule FVars_raw_permutes)
-                          apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
-                         apply (unfold image_comp)
-                         apply (subst inv_o_simp2)
-                          apply assumption
-                         apply (rule image_id)
-        (* repeated *)
-                        apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* END REPEAT_DETERM *)
-                      apply (rule supp_id_bound bij_id | assumption)+
-        (* repeated *)
-        apply (rule rel_set_UN_D)
-        apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                       apply (rule ballI)
-                       apply (rule ballI)
-                       apply (rule impI)
-                       apply (drule IHs)
-                       apply (erule allE)
-                       apply (erule impE)
-                        apply assumption
-                       apply (erule conjE)+
-                       apply assumption
-        (* repeated *)
-                      apply (rule ballI, rule ballI, rule impI, assumption)+
-                     apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-       apply (rule sym)
-       apply (rule trans)
-        apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-         apply (erule T2_pre.mr_rel_set[rotated -1])
-               apply (rule supp_id_bound bij_id | assumption)+
-        prefer 2
-        apply (rule trans)
-         apply (rule image_set_diff[symmetric, OF bij_is_inj])
-         apply assumption
-        apply (erule id_on_image[OF id_on_antimono])
-       apply (rule subsetI)
-       apply (rotate_tac -1)
-       apply (erule contrapos_pp)
-       apply (unfold Un_iff de_Morgan_disj)[1]
-       apply (erule conjE)+
-       apply assumption
-       apply (unfold image_UN)[1]
-       apply (rule sym)
-       apply (rule rel_set_UN_D)
-       apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                         apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                     apply (rule ballI)
-                     apply (rule ballI)
-                     apply (rule impI)
-                     apply (drule IHs)
-                     apply (erule allE)
-                     apply (erule impE)
-                      apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                         apply (assumption | rule bij_id supp_id_bound)+
-                     apply (erule conjE)+
-                     apply (rule trans)
-                      apply (rule arg_cong[of _ _ "(`) _"])
-                      apply (rule trans)
-                       apply assumption
-                      apply (rule FVars_raw_permutes)
-                         apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound bij_id | assumption)+
-                     apply (unfold image_comp)
-                     apply (subst inv_o_simp2)
-                      apply assumption
-                     apply (rule image_id)
-        (* repeated *)
-                    apply ((rule ballI, rule ballI, rule impI, assumption)+)?
-        (* END REPEAT_DETERM *)
-                    apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* second conjunct *)
-      apply (rule conjI)?
-      apply (unfold FVars_raw_ctors)[1]
-      apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])+
-          apply (rule sym)
-          apply (erule T2_pre.mr_rel_set[OF supp_id_bound supp_id_bound, unfolded image_id, rotated -1])
-              apply (rule supp_id_bound bij_id | assumption)+
-        (* REPEAT_DETERM *)
-         apply (rule rel_set_UN_D)
-         apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                          apply (rule ballI)
-                          apply (rule ballI)
-                          apply (rule impI)
-                          apply (drule IHs)
-                          apply (erule allE)
-                          apply (erule impE)
-                          apply assumption
-                          apply (erule conjE)+
-                          apply assumption
-        (* repeated *)
-                         apply (rule ballI, rule ballI, rule impI, assumption)+
-                      apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-        apply (rule sym)
-        apply (rule trans)
-         apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-          apply (erule T2_pre.mr_rel_set[rotated -1])
-                apply (rule supp_id_bound bij_id | assumption)+
-         prefer 2
-         apply (rule trans)
-          apply (rule image_set_diff[symmetric, OF bij_is_inj])
-          apply assumption
-         apply (erule id_on_image[OF id_on_antimono])
-         apply (rule Un_upper1 Un_upper2 subset_refl)+
-        apply (unfold image_UN)[1]
-        apply (rule sym)
-        apply (rule rel_set_UN_D)
-        apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                          apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                        apply (rule ballI)
-                        apply (rule ballI)
-                        apply (rule impI)
-                        apply (drule IHs)
-                        apply (erule allE)
-                        apply (erule impE)
-                         apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                          apply assumption+
-                        apply (erule conjE)+
-                        apply (rule trans)
-                         apply (rule arg_cong[of _ _ "(`) _"])
-                         apply (rule trans)
-                          apply assumption
-                         apply (rule FVars_raw_permutes)
-                          apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
-                        apply (unfold image_comp)
-                        apply (subst inv_o_simp2)
-                         apply assumption
-                        apply (rule image_id)
-        (* repeated *)
-                       apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* END REPEAT_DETERM *)
-                     apply (rule supp_id_bound bij_id | assumption)+
-        (* repeated *)
-       apply (rule rel_set_UN_D)
-       apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                         apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                      apply (rule ballI)
-                      apply (rule ballI)
-                      apply (rule impI)
-                      apply (drule IHs)
-                      apply (erule allE)
-                      apply (erule impE)
-                       apply assumption
-                      apply (erule conjE)+
-                      apply assumption
-        (* repeated *)
-                     apply (rule ballI, rule ballI, rule impI, assumption)+
-                    apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* repeated *)
-      apply (rule sym)
-        (* TRY
-    apply (rule trans)
-    apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-    apply (erule T1_pre.mr_rel_set[rotated -1])
-    apply (rule supp_id_bound bij_id | assumption)+
-    prefer 2
-    apply (rule trans)
-    apply (rule image_set_diff[symmetric, OF bij_is_inj])
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs2[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs2[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
     apply assumption
-    apply (erule id_on_image[OF id_on_antimono])
-    apply (rule Un_upper1 Un_upper2)+*)
-      apply ((unfold image_UN)[1])?
-      apply (rule sym)
-      apply (rule rel_set_UN_D)
-      apply (erule T2_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF T2_pre.mr_rel_mono_strong[rotated -6]])
-        (* REPEAT_DETERM *)
-                        apply (rule ballI, rule ballI, rule impI, assumption)+
-        (* ORELSE *)
-                    apply (rule ballI)
-                    apply (rule ballI)
-                    apply (rule impI)
-                    apply (drule IHs)
-                    apply (erule allE)
-                    apply (erule impE)
-                     apply (erule alpha_bij_eq_invs[THEN iffD1, rotated -1])
-                        apply (assumption | rule bij_id supp_id_bound)+
-                    apply (erule conjE)+
-                    apply (rule trans, rule arg_cong[of _ _ "(`) _"])?
-                    apply (rule trans)
-                     apply assumption
-                    apply (rule trans)
-                     apply (rule FVars_raw_permutes)
-                        apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound bij_id | assumption)+
-                    apply (unfold image_comp inv_id)
-                    apply (subst inv_o_simp2, assumption)?
-                    apply (rule image_id)
-        (* repeated *)
-                   apply ((rule ballI, rule ballI, rule impI, assumption)+)?
-        (* END REPEAT_DETERM *)
-                   apply (rule supp_id_bound bij_id | assumption)+
-        (* END REPEAT_DETERM *)
-        (* END REPEAT_DETERM *)
-      done
+    (* repeated *)
+    apply (rule subset_antisym)
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs1[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs1[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+    apply assumption
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs2[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs2[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+    apply assumption
+    (* repeated *)
+    apply (rule subset_antisym)
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs1[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs1[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+    apply assumption
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs2[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs2[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+    apply assumption
+    (* repeated *)
+    apply (rule subset_antisym)
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs1[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs1[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+    apply assumption
+    apply (rule subsetI)
+    apply (erule alpha_FVars_leqs2[THEN conjunct1, THEN mp, THEN spec, THEN mp, rotated -1]
+        alpha_FVars_leqs2[THEN conjunct2, THEN mp, THEN spec, THEN mp, rotated -1])
+    apply (unfold FVars_raw_defs mem_Collect_eq)[1]
+    apply assumption
+    (* END REPEAT_DETERM *)
     done
-
-  show "alpha_T1 x y \<Longrightarrow> FVars_raw_T11 x = FVars_raw_T11 y" "alpha_T1 x y \<Longrightarrow> FVars_raw_T12 x = FVars_raw_T12 y"
-    "alpha_T2 x2 y2 \<Longrightarrow> FVars_raw_T21 x2 = FVars_raw_T21 y2" "alpha_T2 x2 y2 \<Longrightarrow> FVars_raw_T22 x2 = FVars_raw_T22 y2"
-       apply (drule conjunct1[OF x, THEN spec, THEN mp] conjunct2[OF x, THEN spec, THEN mp], (erule conjE)+, assumption)+
-    done
-qed
 
 lemma alpha_syms:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"

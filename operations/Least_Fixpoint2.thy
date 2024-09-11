@@ -362,7 +362,7 @@ proof -
       apply (rule exI[of _ "g \<circ> \<sigma> \<circ> inv f"])
       apply (rule exI)
       apply (rule exI[of _ "g \<circ> f2 \<circ> inv f"])
-      apply (rule exI)+
+      apply (rule exI)
       apply (rule conjI, rule permute_raw_simps, (rule supp_id_bound bij_id | assumption)+)+
       apply (rule conjI, (rule bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound infinite_UNIV | assumption)+)+
 

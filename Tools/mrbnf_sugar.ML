@@ -11,9 +11,23 @@ type spec = {
   tvsubst_b: binding
 };
 
+type binder_sugar = {
+  map_simps: thm list,
+  set_simpss: thm list list,
+  subst_simps: thm list option,
+  mrbnf: MRBNF_Def.mrbnf,
+  strong_induct: thm,
+  distinct: thm list,
+  ctors: (term * thm) list
+};
+
+val morph_binder_sugar: morphism -> binder_sugar -> binder_sugar;
+
+val binder_sugar_of: local_theory -> string -> binder_sugar option
+
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
   -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory
-val create_binder_datatype : spec -> local_theory -> local_theory
+val create_binder_datatype : spec -> local_theory -> binder_sugar * local_theory
 
 end
 
@@ -34,6 +48,43 @@ type spec = {
   map_b: binding,
   tvsubst_b: binding
 };
+
+type binder_sugar = {
+  map_simps: thm list,
+  set_simpss: thm list list,
+  subst_simps: thm list option,
+  mrbnf: MRBNF_Def.mrbnf,
+  strong_induct: thm,
+  distinct: thm list,
+  ctors: (term * thm) list
+};
+
+fun morph_binder_sugar phi { map_simps, set_simpss, subst_simps, mrbnf,
+  strong_induct, distinct, ctors } = {
+  map_simps = map (Morphism.thm phi) map_simps,
+  set_simpss = map (map (Morphism.thm phi)) set_simpss,
+  subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
+  mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
+  strong_induct = Morphism.thm phi strong_induct,
+  distinct = map (Morphism.thm phi) distinct,
+  ctors = map (map_prod (Morphism.term phi) (Morphism.thm phi)) ctors
+} : binder_sugar;
+
+structure Data = Generic_Data (
+  type T = binder_sugar Symtab.table;
+  val empty = Symtab.empty;
+  fun merge data : T = Symtab.merge (K true) data;
+);
+
+fun register_binder_sugar name sugar =
+  Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
+    (fn phi => Data.map (Symtab.update (name, morph_binder_sugar phi sugar)));
+
+fun binder_sugar_of_generic context =
+  Option.map (morph_binder_sugar (Morphism.transfer_morphism (Context.theory_of context)))
+  o Symtab.lookup (Data.get context);
+
+val binder_sugar_of = binder_sugar_of_generic o Context.Proof;
 
 fun add_nesting_mrbnf_names Us =
   let
@@ -641,6 +692,18 @@ fun create_binder_datatype (spec : spec) lthy =
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
 
+    val sugar = {
+      map_simps = map_simps,
+      set_simpss = set_simpss,
+      strong_induct = strong_induct,
+      subst_simps = Option.map snd tvsubst_opt,
+      mrbnf = mrbnf,
+      distinct = distinct,
+      ctors = ctors
+    } : binder_sugar;
+
+    val lthy = register_binder_sugar (fst (dest_Type qT)) sugar lthy;
+
     val notes =
       ([("strong_induct", [strong_induct], []),
         ("fresh_induct", [fresh_induct], []),
@@ -654,6 +717,6 @@ fun create_binder_datatype (spec : spec) lthy =
       ))
     val (_, lthy) = Local_Theory.notes notes lthy
 
-  in lthy end;
+  in (sugar, lthy) end;
 
 end

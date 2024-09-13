@@ -13,8 +13,6 @@ fun long_name ctxt name =
     Const (s, _) => s
   | _ => error ("Undeclared constant: " ^ quote name)
 
-datatype ('a, 'b) either = Inl of 'a | Inr of 'b
-
 fun collapse (Inl x) = x
   | collapse (Inr x) = x
 

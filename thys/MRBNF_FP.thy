@@ -329,9 +329,9 @@ lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on
 
 (*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
+*)
 end

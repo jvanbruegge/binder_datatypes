@@ -1773,8 +1773,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -1785,11 +1784,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -1823,8 +1824,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -1835,11 +1835,13 @@ shows
     apply assumption
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -1873,8 +1875,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -1885,11 +1886,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -1923,8 +1926,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -1939,7 +1941,9 @@ shows
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2047,13 +2051,13 @@ shows
     apply assumption
     (* END TRY *)
     (* END REPEAT_DETERM *)
+
     (* REPEAT_DETERM *)
     apply (rule allI impI)+
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2064,11 +2068,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
-    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2102,8 +2108,7 @@ shows
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2114,11 +2119,13 @@ shows
     apply assumption
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2152,8 +2159,7 @@ shows
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2164,11 +2170,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
-    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2202,8 +2210,7 @@ shows
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2214,11 +2221,13 @@ shows
     apply assumption
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2296,8 +2305,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2308,11 +2316,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2346,8 +2356,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2358,11 +2367,13 @@ shows
     apply assumption
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2396,8 +2407,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2408,11 +2418,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2446,8 +2458,7 @@ shows
     apply (erule alpha_T1.cases)
     apply (drule iffD1[OF raw_T1.inject])
     apply hypsubst
-    apply (frule T1_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T1_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2459,12 +2470,14 @@ shows
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
     apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
-    apply (unfold image_id)?
+    apply (unfold image_id)
     (* TRY EVERY
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2491,11 +2504,11 @@ shows
        apply assumption
        apply assumption
        END TRY *)
+       (* END TRY *)
        apply (erule FVars_raw_intros)
        apply assumption+
     (* END REPEAT_DETERM *)
-    (* second type, same tactic *)
-    (* REPEAT_DETERM *)
+    (* second type, same tactic *)    (* REPEAT_DETERM *)
     apply (rule allI impI)+
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
@@ -2533,15 +2546,14 @@ shows
     apply (erule conjE)+
     apply assumption
     END TRY *)
-    (* repeated *)
     (* END REPEAT_DETERM *)
+
     (* REPEAT_DETERM *)
     apply (rule allI impI)+
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2552,11 +2564,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
-    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2590,8 +2604,7 @@ shows
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2602,11 +2615,13 @@ shows
     apply assumption
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2640,8 +2655,7 @@ shows
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2652,11 +2666,13 @@ shows
     apply assumption
     (* TRY EVERY
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
-    apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
+    apply (drule T1_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-    apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
+    apply (erule T1_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2690,8 +2706,7 @@ shows
     apply (erule alpha_T2.cases)
     apply (drule iffD1[OF raw_T2.inject])
     apply hypsubst
-    apply (frule T2_pre.mr_rel_set(8-11)[rotated -1])
-    prefer 9 (* free + 2 * bound + 1 *)
+    apply (frule T2_pre.mr_set_transfer(8-11)[THEN rel_funD, rotated -1, THEN rel_setD1, rotated -1])
     apply assumption
     apply (rule supp_id_bound bij_id | assumption)+
     apply (erule bexE)
@@ -2702,13 +2717,15 @@ shows
     apply assumption
     (* TRY EVERY *)
     apply (subst (asm) FVars_raw_permutes)
-    apply (rule bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound | assumption)+
-    apply (unfold image_id)?
+    apply (rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound | assumption)+
+    apply (unfold image_id)
     (* TRY EVERY
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (drule T2_pre.mr_rel_flip[THEN iffD2, rotated -1])
     apply (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply ((rule arg_cong2[of _ _ _ _ "(\<union>)"])+)?
     apply (erule T2_pre.mr_rel_set[rotated -1], (rule bij_id supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
+    apply (unfold image_Un[symmetric])?
     apply (rotate_tac -1)
     apply (subst (asm) image_in_bij_eq)
     apply (rule bij_comp bij_imp_bij_inv | assumption)+
@@ -2735,13 +2752,11 @@ shows
        apply assumption
        apply assumption
        END TRY *)
+       (* END TRY *)
        apply (erule FVars_raw_intros)
        apply assumption+
     (* END REPEAT_DETERM *)
     done
-
-lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
-  unfolding id_on_def by simp
 
 lemma alpha_FVars_leqs2:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
@@ -2879,6 +2894,7 @@ shows
     apply (frule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1])
     apply (erule T1_pre.mr_rel_set[rotated -1])
     apply (rule supp_id_bound bij_id | assumption)+
+    apply (rotate_tac -1)
     apply (subst (asm) inj_image_mem_iff[OF bij_is_inj])
     apply assumption
     apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])

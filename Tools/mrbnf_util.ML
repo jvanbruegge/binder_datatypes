@@ -2,6 +2,8 @@ signature MRBNF_UTIL =
 sig
   include BNF_UTIL
 
+  datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+
   val filter_like: 'a list -> ('a -> bool) -> 'b list -> 'b list
   val cond_keep: 'a list -> bool list -> 'a list
   val cond_interlace: 'a list -> 'a list -> bool list -> 'a list
@@ -70,6 +72,8 @@ structure MRBNF_Util : MRBNF_UTIL =
 struct
 
 open BNF_Util
+
+datatype ('a, 'b) either = Inl of 'a | Inr of 'b
 
 fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_ex t)
   | strip_ex t = ([], t)

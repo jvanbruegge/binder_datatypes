@@ -333,12 +333,17 @@ lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |
 lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
   unfolding id_on_def by simp
 
+lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
+  unfolding id_on_def by simp
+
+
 (*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+*)
 
 lemma extend_fresh:
   fixes A B::"'a set"

@@ -273,8 +273,7 @@ next
 
 declare ty.intros[intro]
 
-binder_inductive ty where
-  SA_All binds x
+binder_inductive ty
 for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
          apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
       small_def typ.FFVars_rrenames typ.rrename_cong_ids

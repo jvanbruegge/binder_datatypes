@@ -13,9 +13,12 @@ fun long_name ctxt name =
     Const (s, _) => s
   | _ => error ("Undeclared constant: " ^ quote name)
 
-fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
+datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+
+fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
   let
-    val ({names, ...}, { def, preds, mono, induct, ... }) = Inductive.the_inductive_global no_defs_lthy (long_name no_defs_lthy pred_name);
+    val binds = the_default [] binds_opt;
+    val ({names, ...}, { def, preds, mono, induct, intrs, ... }) = Inductive.the_inductive_global no_defs_lthy (long_name no_defs_lthy pred_name);
 
     val param_Ts = Term.binder_types (fastype_of (hd preds));
 
@@ -49,19 +52,57 @@ fun binder_inductive_cmd ((pred_name, binds), perms_supps) no_defs_lthy =
 
     val param_Ts = map (Term.typ_subst_TVars subst) param_Ts;
 
-    val binds_vars = map2 (fn name => fn vars => Option.map (rpair vars) (
-      AList.lookup (op=) binds name
-    )) rule_names rule_varss;
+    fun collect_binders (Free _) = []
+      | collect_binders (Var _) = []
+      | collect_binders (Bound _) = []
+      | collect_binders (Const _) = []
+      | collect_binders (Abs (_, _, t)) = collect_binders t
+      | collect_binders (t as (t1 $ t2)) = case try (dest_Type o Term.body_type o fastype_of) t of
+        NONE => collect_binders t1 @ collect_binders t2
+        | SOME (T as (s, _)) => (case MRBNF_Sugar.binder_sugar_of no_defs_lthy s of
+            NONE => collect_binders t1
+            | SOME sugar =>
+              let val (ctor, args) = Term.strip_comb t
+              in case (map_filter I (map_index (fn (i, (t, _)) =>
+                  if (op=) (apply2 (fst o dest_Const) (t, ctor)) then
+                    SOME i else NONE
+                  ) (#ctors sugar))) of
+                [] => collect_binders t1
+                | ctor_idx::_ => (case nth (hd (#bsetss sugar)) ctor_idx of
+                  NONE => []
+                  | SOME t =>
+                    let
+                      val arg_Ts = Term.binder_types (fastype_of ctor);
+                      val var_Ts = Term.binder_types (fastype_of t);
+                      val t' = Term.subst_atomic_types (var_Ts ~~ arg_Ts) t;
+                    in [Term.subst_bounds (rev args, snd (Term.strip_abs t'))] end
+                  )
+              end
+            ) @ collect_binders t2;
 
-    val bind_ts_opt = map (Option.map (fn (binds, vars) =>
-      let val lthy = fold Variable.declare_term (map Free vars) no_defs_lthy
-      in map (fn bind =>
-        let val t = Syntax.read_term lthy bind
-        in case try HOLogic.dest_setT (fastype_of t) of
-          SOME _ => t
-          | NONE => mk_singleton t
+    val binds_vars = @{map 3} (fn name => fn vars => fn intro => case AList.lookup (op=) binds name of
+      SOME x => SOME (Inl x, vars)
+      | NONE =>
+        let
+          val intro = Logic.unvarify_global (Thm.prop_of intro);
+          val binders = distinct (op=) (collect_binders intro)
+        in case binders of
+          [] => NONE
+          | _ => SOME (Inr [foldl1 mk_Un binders], vars) (* TODO: multiple var kinds *)
         end
-      ) binds end
+    ) rule_names rule_varss intrs;
+
+    val bind_ts_opt = map (Option.map (fn (binds, vars) => case binds of
+      Inr ts => ts
+      | Inl binds =>
+        let val lthy = fold Variable.declare_term (map Free vars) no_defs_lthy
+        in map (fn bind =>
+          let val t = Syntax.read_term lthy bind
+          in case try HOLogic.dest_setT (fastype_of t) of
+            SOME _ => t
+            | NONE => mk_singleton t
+          end
+        ) binds end
     )) binds_vars;
 
     val bind_Ts = fold (fn NONE => I | SOME ts => union (op=) (map fastype_of ts)) bind_ts_opt [];
@@ -704,9 +745,9 @@ val parse_perm_supps =
     >> (fn ps => fold extract_perm_supp ps (NONE, NONE))
   || Scan.succeed (NONE, NONE);
 
-val binder_inductive_parser = Parse.name --| @{keyword where} --
-  Parse.enum1 "|" (Parse.name --| @{keyword binds} -- Parse.and_list Parse.term) --
-  parse_perm_supps
+val binder_inductive_parser = Parse.name -- Scan.option (
+    @{keyword where} |-- Parse.enum1 "|" (Parse.name --| @{keyword binds} -- Parse.and_list Parse.term)
+  ) -- parse_perm_supps
 
 val _ =
   Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>binder_inductive\<close> "derive strengthened induction theorems for inductive predicates"

@@ -11,9 +11,25 @@ type spec = {
   tvsubst_b: binding
 };
 
+type binder_sugar = {
+  map_simps: thm list,
+  set_simpss: thm list list,
+  subst_simps: thm list option,
+  bsetss: term option list list,
+  mrbnf: MRBNF_Def.mrbnf,
+  strong_induct: thm,
+  distinct: thm list,
+  ctors: (term * thm) list
+};
+
+val morph_binder_sugar: morphism -> binder_sugar -> binder_sugar;
+
+val binder_sugar_of: local_theory -> string -> binder_sugar option
+val register_binder_sugar: string -> binder_sugar -> local_theory -> local_theory
+
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
   -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory
-val create_binder_datatype : spec -> local_theory -> local_theory
+val create_binder_datatype : spec -> local_theory -> binder_sugar * local_theory
 
 end
 
@@ -34,6 +50,45 @@ type spec = {
   map_b: binding,
   tvsubst_b: binding
 };
+
+type binder_sugar = {
+  map_simps: thm list,
+  set_simpss: thm list list,
+  subst_simps: thm list option,
+  bsetss: term option list list,
+  mrbnf: MRBNF_Def.mrbnf,
+  strong_induct: thm,
+  distinct: thm list,
+  ctors: (term * thm) list
+};
+
+fun morph_binder_sugar phi { map_simps, set_simpss, subst_simps, mrbnf,
+  strong_induct, distinct, ctors, bsetss } = {
+  map_simps = map (Morphism.thm phi) map_simps,
+  set_simpss = map (map (Morphism.thm phi)) set_simpss,
+  subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
+  bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
+  mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
+  strong_induct = Morphism.thm phi strong_induct,
+  distinct = map (Morphism.thm phi) distinct,
+  ctors = map (map_prod (Morphism.term phi) (Morphism.thm phi)) ctors
+} : binder_sugar;
+
+structure Data = Generic_Data (
+  type T = binder_sugar Symtab.table;
+  val empty = Symtab.empty;
+  fun merge data : T = Symtab.merge (K true) data;
+);
+
+fun register_binder_sugar name sugar =
+  Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
+    (fn phi => Data.map (Symtab.update (name, morph_binder_sugar phi sugar)));
+
+fun binder_sugar_of_generic context =
+  Option.map (morph_binder_sugar (Morphism.transfer_morphism (Context.theory_of context)))
+  o Symtab.lookup (Data.get context);
+
+val binder_sugar_of = binder_sugar_of_generic o Context.Proof;
 
 fun add_nesting_mrbnf_names Us =
   let
@@ -270,7 +325,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val frees = map_filter (fn (x, MRBNF_Def.Free_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
 
     (* TODO: Use mrbnf sets here (only relevant for passive variables) *)
-    val set_simpss = map (fn FVars =>
+    val (bset_optss, set_simpss) = split_list (map (fn FVars =>
       let
         fun get_var vars = hd (filter (fn T =>
           Term.typ_subst_atomic replace T = HOLogic.dest_setT (range_type (fastype_of FVars))
@@ -280,7 +335,7 @@ fun create_binder_datatype (spec : spec) lthy =
         val rec_bounds = map (nth rec_vars) (the_default [] (
           Option.mapPartial (try (nth (#binding_rel spec))) (get_index bound bounds)
         ));
-      in map2 (fn (ctor, _) => fn (_, tys) =>
+      in split_list (map2 (fn (ctor, _) => fn (_, tys) =>
         let
           val (xs, _) = lthy
             |> mk_Frees "x" tys;
@@ -304,6 +359,10 @@ fun create_binder_datatype (spec : spec) lthy =
                )]
           );
 
+          val bset_opt = Option.map (
+            fold_rev (Term.absfree o dest_Free) xs o foldl1 MRBNF_Util.mk_Un
+          ) (case bsets of [] => NONE | _ => SOME bsets)
+
           val goal = Term.subst_atomic_types replace (mk_Trueprop_eq (
             FVars $ Term.list_comb (ctor, xs),
             case sets of
@@ -313,7 +372,7 @@ fun create_binder_datatype (spec : spec) lthy =
           val thms = @{thms sum.set_map prod.set_map comp_def UN_empty UN_empty2 Un_empty_left Un_empty_right
             UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un
           };
-        in Goal.prove_sorry lthy (names xs) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        in (bset_opt, Goal.prove_sorry lthy (names xs) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (
             thms @ map snd ctors @ #FVars_ctors quotient @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
             @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
@@ -335,9 +394,9 @@ fun create_binder_datatype (spec : spec) lthy =
               ]))
             ]
           ]
-        ]) end
-      ) ctors (#ctors spec)
-    end) (#FVars quotient);
+        ])) end
+      ) ctors (#ctors spec))
+    end) (#FVars quotient));
 
     val ctors_tys = ctors ~~ map snd (#ctors spec);
     val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
@@ -641,6 +700,19 @@ fun create_binder_datatype (spec : spec) lthy =
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
 
+    val sugar = {
+      map_simps = map_simps,
+      set_simpss = set_simpss,
+      strong_induct = strong_induct,
+      subst_simps = Option.map snd tvsubst_opt,
+      bsetss = bset_optss,
+      mrbnf = mrbnf,
+      distinct = distinct,
+      ctors = ctors
+    } : binder_sugar;
+
+    val lthy = register_binder_sugar (fst (dest_Type qT)) sugar lthy;
+
     val notes =
       ([("strong_induct", [strong_induct], []),
         ("fresh_induct", [fresh_induct], []),
@@ -654,6 +726,6 @@ fun create_binder_datatype (spec : spec) lthy =
       ))
     val (_, lthy) = Local_Theory.notes notes lthy
 
-  in lthy end;
+  in (sugar, lthy) end;
 
 end

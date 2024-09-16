@@ -229,8 +229,7 @@ lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<ci
   using prod.map_comp by auto
 
 declare [[ML_print_depth=10000]]
-binder_inductive Ty where
-  Ty_Abs binds x
+binder_inductive Ty
 for perms: "\<lambda>f \<Gamma>. map_prod f id |`| \<Gamma>" rrename_terms "\<lambda>_. id"
 and supps: "\<lambda>\<Gamma>. fst ` fset \<Gamma>" FFVars_terms "\<lambda>_. {}"
                    apply (auto simp: terms.rrename_id0s terms.rrename_comps terms.FFVars_rrenames

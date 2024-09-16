@@ -19,9 +19,7 @@ inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" 
 | AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
 
-binder_inductive stepD where
-  Beta binds x
-| Xi binds x
+binder_inductive stepD
 for perms: "\<lambda>_. id" rrename rrename and supps: "\<lambda>_. {}" FFVars_term FFVars_term
   apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
     small_def term.card_of_FFVars_bounds term.Un_bound emp_bound infinite_UNIV) [16]

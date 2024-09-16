@@ -59,33 +59,37 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
       | collect_binders (Abs (_, _, t)) = collect_binders t
       | collect_binders (t as (t1 $ t2)) = case try (dest_Type o Term.body_type o fastype_of) t of
         NONE => collect_binders t1 @ collect_binders t2
-        | SOME (T as (s, _)) => (case MRBNF_Sugar.binder_sugar_of no_defs_lthy s of
-            NONE => collect_binders t1
+        | SOME (s, _) => (case MRBNF_Sugar.binder_sugar_of no_defs_lthy s of
+            NONE => collect_binders t1 @ collect_binders t2
             | SOME sugar =>
               let val (ctor, args) = Term.strip_comb t
               in case (map_filter I (map_index (fn (i, (t, _)) =>
                   if (op=) (apply2 (fst o dest_Const) (t, ctor)) then
                     SOME i else NONE
                   ) (#ctors sugar))) of
-                [] => collect_binders t1
+                [] => collect_binders t1 @ collect_binders t2
                 | ctor_idx::_ => (case nth (hd (#bsetss sugar)) ctor_idx of
-                  NONE => []
+                  NONE => maps collect_binders args
                   | SOME t =>
                     let
                       val arg_Ts = Term.binder_types (fastype_of ctor);
                       val var_Ts = Term.binder_types (fastype_of t);
-                      val t' = Term.subst_atomic_types (var_Ts ~~ arg_Ts) t;
-                    in [Term.subst_bounds (rev args, snd (Term.strip_abs t'))] end
+                      val tyenv = Sign.typ_match (Proof_Context.theory_of no_defs_lthy)
+                        (var_Ts ---> @{typ bool}, arg_Ts ---> @{typ bool}) Vartab.empty;
+                      val t' = Envir.subst_term (tyenv, Vartab.empty) t;
+                    in [Term.subst_bounds (rev args, snd (Term.strip_abs t'))]
+                      @ maps collect_binders args
+                    end
                   )
               end
-            ) @ collect_binders t2;
+            );
 
     val binds_vars = @{map 3} (fn name => fn vars => fn intro => case AList.lookup (op=) binds name of
       SOME x => SOME (Inl x, vars)
       | NONE =>
         let
           val intro = Logic.unvarify_global (Thm.prop_of intro);
-          val binders = distinct (op=) (collect_binders intro)
+          val binders = distinct (op=) (collect_binders intro);
         in case binders of
           [] => NONE
           | _ => SOME (Inr [foldl1 mk_Un binders], vars) (* TODO: multiple var kinds *)

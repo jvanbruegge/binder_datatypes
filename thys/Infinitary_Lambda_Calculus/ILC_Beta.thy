@@ -24,9 +24,7 @@ inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
 | iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
 
-binder_inductive istep where
-  Beta binds "dsset xs"
-| Xi binds "dsset xs"
+binder_inductive istep
 for perms: irrename irrename and supps: FFVars FFVars
   unfolding isPerm_def  
   using small_Un small_def iterm.card_of_FFVars_bounds

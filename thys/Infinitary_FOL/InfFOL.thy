@@ -351,9 +351,7 @@ inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (in
 | AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
 
-binder_inductive deduct where
-  AllI binds "set\<^sub>k\<^sub>2 V"
-| AllE binds "set\<^sub>k\<^sub>2 V"
+binder_inductive deduct
 for perms: "\<lambda>f. map_set\<^sub>k (rrename_ifol' f)" rrename_ifol'
 and supps: "\<lambda>e1. \<Union>(FFVars_ifol' ` set\<^sub>k e1)" FFVars_ifol'
                apply (auto simp: ifol'.rrename_id0s set\<^sub>k.map_id0 set\<^sub>k.map_comp set\<^sub>k.set_map ifol'.rrename_comp0s ifol'.rrename_comps ifol'.FFVars_rrenames)[6]

@@ -12,12 +12,7 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
 binder_inductive trans where
-  InpE binds x
-| CloseLeftE binds x
-| Open binds x
-| ScopeFree binds x
-| ScopeBound binds "{x, y}"
-| ParLeft binds "bns \<alpha>"
+ ParLeft binds "bns \<alpha>"
 for perms: rrename rrename_commit and supps: FFVars FFVars_commit
          apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
       commit_internal.rrename_cong_ids(2) term.rrename_id0s map_prod.comp

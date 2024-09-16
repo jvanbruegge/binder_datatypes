@@ -25,6 +25,7 @@ type binder_sugar = {
 val morph_binder_sugar: morphism -> binder_sugar -> binder_sugar;
 
 val binder_sugar_of: local_theory -> string -> binder_sugar option
+val register_binder_sugar: string -> binder_sugar -> local_theory -> local_theory
 
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
   -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory

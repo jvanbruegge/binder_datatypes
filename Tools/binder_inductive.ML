@@ -15,6 +15,9 @@ fun long_name ctxt name =
 
 datatype ('a, 'b) either = Inl of 'a | Inr of 'b
 
+fun mk_insert x S =
+  Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
+
 fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
   let
     val binds = the_default [] binds_opt;
@@ -90,9 +93,16 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         let
           val intro = Logic.unvarify_global (Thm.prop_of intro);
           val binders = distinct (op=) (collect_binders intro);
-        in case binders of
+          val (xs, binders) = fold_rev (fn t => fn (a, b) => case t of
+            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (x::a, b)
+            | _ => (a, t::b)
+          ) binders ([], [])
+          val binder = case xs of
+            [] => []
+            | x::_ => [fold_rev mk_insert xs (mk_bot (fastype_of x))];
+        in case (binder @ binders) of
           [] => NONE
-          | _ => SOME (Inr [foldl1 mk_Un binders], vars) (* TODO: multiple var kinds *)
+          | xs => SOME (Inr [foldl1 mk_Un xs], vars) (* TODO: multiple var kinds *)
         end
     ) rule_names rule_varss intrs;
 

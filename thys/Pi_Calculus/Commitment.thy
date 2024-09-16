@@ -288,6 +288,28 @@ unfolding map_commit_pre_def unfolding toUnfold
 unfolding commit_internal.rrename_cctors(1)
 unfolding map_commit_internal_pre_def unfolding toUnfold by simp
 
+local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
+  ctors = [
+    (@{term Finp}, @{thm Finp_def}),
+    (@{term Fout}, @{thm Fout_def}),
+    (@{term Bout}, @{thm Bout_def}),
+    (@{term Tau}, @{thm Tau_def}),
+    (@{term Binp}, @{thm Binp_def})
+  ],
+  map_simps = [],
+  distinct = [],
+  bsetss = [[
+    NONE,
+    NONE,
+    SOME @{term "\<lambda>x1 x2 x3. {x2}"},
+    NONE,
+    SOME @{term "\<lambda>x1 x2 x3. {x2}"}
+  ]],
+  strong_induct = @{thm refl},
+  mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),
+  set_simpss = [],
+  subst_simps = NONE
+}\<close>
 
 (* Actions *)
 

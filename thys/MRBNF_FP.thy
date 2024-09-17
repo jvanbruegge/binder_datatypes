@@ -338,7 +338,7 @@ local
   open BNF_Util
 in
 
-fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms ctxt =
+fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim_thms ctxt =
   let
     val fresh = infer_instantiate' ctxt
       [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt Tsupp),
@@ -357,7 +357,8 @@ fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms ctxt
           HEADGOAL (EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs)) THEN
           SOLVE (HEADGOAL (SELECT_GOAL (mk_auto_tac (ctxt
             addsimps (simp_thms @ prems)
-            addSIs (ex_f :: id_onI :: intro_thms)) 0 4) THEN_ALL_NEW
+            addSIs (ex_f :: id_onI :: intro_thms)
+            addSEs elim_thms) 0 4) THEN_ALL_NEW
             SELECT_GOAL (print_tac ctxt "auto failed")))
         end;
   in

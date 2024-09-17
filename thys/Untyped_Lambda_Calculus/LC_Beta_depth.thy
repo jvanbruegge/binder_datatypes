@@ -42,6 +42,7 @@ for perms: "\<lambda>_. id" rrename rrename and supps: "\<lambda>_. {}" FFVars_t
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]]
       @{thms Lam_inject}
       @{thms prems(2)[simplified] Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
+      @{thms }
       @{context}\<close>)
     done
   done

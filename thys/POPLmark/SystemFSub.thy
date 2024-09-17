@@ -277,8 +277,8 @@ lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
 binder_inductive ty
-for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
-         apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
+  for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
+                    apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
       small_def typ.FFVars_rrenames typ.rrename_cong_ids
       typ.card_of_FFVars_bounds typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd
       intro!: context_map_cong_id infinite_UNIV) [16]
@@ -304,19 +304,20 @@ for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. do
         apply (rule exI)
         apply (rule exI[of _ "{z}"])
         apply (intro exI conjI)
-               apply (rule refl)+
-             apply (rule Forall_swap)
-            apply simp
+              apply (rule refl)+
             apply (rule Forall_swap)
+            apply simp
+           apply (rule Forall_swap)
            apply simp
           apply assumption+
          apply (frule prems(1)[rule_format, of "(\<Gamma>, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
-          apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "\<Gamma>, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
+         apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "\<Gamma>, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
            apply (auto simp: extend_eqvt)
         apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
           apply (drule ty_fresh_extend)
           apply (simp_all add: supp_swap_bound)
         apply (rule context_map_cong_id; auto)
+        done
       done
     done
   done

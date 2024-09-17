@@ -86,9 +86,26 @@ for perms: rrename rrename and supps: FFVars FFVars
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
     by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
-  subgoal for R B x1 x2
+  subgoal premises prems for R B P Q
+(*
+    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp P Q"}
+      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
+      [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "(\<lambda>f P. P) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
+       NONE,
+       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
+       NONE]
+      @{thms Res_inject Inp_inject term.FFVars_rrenames}
+      @{thms prems(2) term.rrename_cong_ids[symmetric]}
+      @{thms }
+      @{context}\<close>)
+*)
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
       ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
+    using prems
     apply (elim disj_forward exE; simp; clarsimp)
       apply (auto simp only: fst_conv snd_conv term.set)
     subgoal for x z P y Q

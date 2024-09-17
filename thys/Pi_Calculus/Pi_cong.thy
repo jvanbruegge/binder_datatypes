@@ -30,7 +30,6 @@ for perms: rrename_term rrename_term and supps: FFVars FFVars
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
-    thm prems
     apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp P Q"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
       [NONE,

@@ -275,7 +275,50 @@ declare ty.intros[intro]
 
 lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
+ML \<open>
+local
+  open BNF_Util
+in
 
+fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim_thms ctxt =
+  let
+    val fresh = infer_instantiate' ctxt
+      [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt Tsupp),
+       SOME (Thm.cterm_of ctxt (HOLogic.mk_binop \<^const_name>\<open>minus\<close> (Tsupp, B)))]
+      @{thm eextend_fresh};
+    val small_ctxt = ctxt addsimps small_thms;
+    fun case_tac NONE _ prems ctxt = SOLVE (auto_tac (ctxt addsimps map (simplify ctxt) prems addSIs map (simplify ctxt) prems))
+      | case_tac (SOME insts) params prems ctxt =
+        let
+          val prems = map (simplify ctxt) prems;
+          val f = hd params |> snd |> Thm.term_of;
+          val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
+          val args = tl params |> map (snd #> Thm.term_of);
+          val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt (i $ f $ a)) insts args;
+          val id_onI = nth prems 3 RS @{thm id_on_antimono};
+        in
+          HEADGOAL (EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs)) THEN
+print_tac ctxt "pre_auto" THEN
+          SOLVE (HEADGOAL (SELECT_GOAL (mk_auto_tac (ctxt
+            addsimps (simp_thms @ prems)
+            addSIs (ex_f :: id_onI :: intro_thms)
+            addSEs elim_thms) 0 4) THEN_ALL_NEW
+            SELECT_GOAL (print_tac ctxt "auto failed")))
+        end;
+  in
+    HEADGOAL (rtac ctxt (fresh RS exE) THEN'
+      rtac ctxt (G_thm RSN (2, cut_rl)) THEN' SELECT_GOAL (auto_tac small_ctxt) THEN'
+      REPEAT_DETERM_N 4 o simp_tac small_ctxt THEN'
+      REPEAT_DETERM o etac ctxt conjE THEN'
+      EVERY' [rtac ctxt exI, rtac ctxt conjI, assume_tac ctxt] THEN'
+      rtac ctxt (G_thm RSN (2, cut_rl)) THEN'
+      REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE conjE disj_forward}) THEN'
+      EVERY' (map (fn insts => Subgoal.FOCUS (fn focus =>
+        case_tac insts (#params focus) (#prems focus) (#context focus)) ctxt) instss))
+  end;
+
+end;
+\<close>
 binder_inductive ty
   for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
                     apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
@@ -291,7 +334,26 @@ binder_inductive ty
         typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
-  subgoal for R B \<Gamma> T1 T2
+  subgoal premises prems for R B \<Gamma> T1 T2
+(*
+    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp \<Gamma> T1 T2"}
+      @{thm prems(3)} @{thms emp_bound ID.set_bd Un_bound UN_bound typ.card_of_FFVars_bounds infinite_UNIV}
+      [NONE,
+       NONE,
+       NONE,
+       NONE,
+       SOME [@{term "(\<lambda>f \<Gamma>. \<Gamma>) :: (var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>"},
+             @{term "(\<lambda>f T. T) :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
+             @{term "(\<lambda>f T. T) :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
+             @{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}]]
+      @{thms typ_inject}
+      @{thms prems(2) typ.rrename_cong_ids[symmetric]}
+      @{thms }
+      @{context}\<close>)
+*)
+    using prems
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     apply (elim disj_forward exE; clarsimp)
      apply (((rule exI, rule conjI[rotated], assumption) |

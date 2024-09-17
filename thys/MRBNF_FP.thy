@@ -345,9 +345,13 @@ fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim
        SOME (Thm.cterm_of ctxt (HOLogic.mk_binop \<^const_name>\<open>minus\<close> (Tsupp, B)))]
       @{thm eextend_fresh};
     val small_ctxt = ctxt addsimps small_thms;
-    fun case_tac NONE _ prems ctxt = SOLVE (auto_tac (ctxt addsimps prems))
+    fun case_tac NONE _ prems ctxt =
+        let
+          val prems = map (simplify ctxt) prems;
+        in SOLVE (auto_tac (ctxt addsimps prems)) end
       | case_tac (SOME insts) params prems ctxt =
         let
+          val prems = map (simplify ctxt) prems;
           val f = hd params |> snd |> Thm.term_of;
           val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
           val args = tl params |> map (snd #> Thm.term_of);

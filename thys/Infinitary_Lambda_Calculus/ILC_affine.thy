@@ -21,8 +21,7 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
  \<Longrightarrow>
  affine (iApp e1 es2)"
 
-binder_inductive affine where
-  iLam binds "dsset xs"
+binder_inductive affine
 for perms: irrename and supps: FFVars
   apply standard unfolding isPerm_def induct_rulify_fallback
   using small_Un small_def iterm.card_of_FFVars_bounds

@@ -14,15 +14,12 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 | "Par P Q \<equiv>\<^sub>\<pi> Par Q P"
 | "Par (Par P Q) R \<equiv>\<^sub>\<pi> Par P (Par Q R)"
 | "Par P Zero \<equiv>\<^sub>\<pi> P"
-| cong_1: "x \<noteq> y \<Longrightarrow> Res x (Res y P) \<equiv>\<^sub>\<pi> Res y (Res x P)"
-| cong_2: "Res x Zero \<equiv>\<^sub>\<pi> Zero"
+| "x \<noteq> y \<Longrightarrow> Res x (Res y P) \<equiv>\<^sub>\<pi> Res y (Res x P)"
+| "Res x Zero \<equiv>\<^sub>\<pi> Zero"
 | "Bang P \<equiv>\<^sub>\<pi> Par P (Bang P)"
 | cong_3: "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
 
-binder_inductive cong where
-  cong_1 binds "{x, y}"
-| cong_2 binds x
-| cong_3 binds x
+binder_inductive cong
 for perms: rrename_term rrename_term and supps: FFVars FFVars
          apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
       small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV) [12]
@@ -63,14 +60,12 @@ proof-
 qed
 
 inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightarrow>)" 30) where
-  trans_1: "Par (Out x z P) (Inp x y Q) \<rightarrow> Par P (usub Q z y)"
+  "Par (Out x z P) (Inp x y Q) \<rightarrow> Par P (usub Q z y)"
 | "P \<rightarrow> Q \<Longrightarrow> Par P R \<rightarrow> Par P Q"
-| trans_2: "P \<rightarrow> Q \<Longrightarrow> Res x P \<rightarrow> Res x Q"
+| "P \<rightarrow> Q \<Longrightarrow> Res x P \<rightarrow> Res x Q"
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
-binder_inductive trans where
-  trans_1 binds y
-| trans_2 binds x
+binder_inductive trans
 for perms: rrename rrename and supps: FFVars FFVars
          apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
       small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV) [12]

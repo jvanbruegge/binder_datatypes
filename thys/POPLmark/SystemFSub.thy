@@ -276,9 +276,7 @@ declare ty.intros[intro]
 lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
-
-binder_inductive ty where
-  SA_All binds x
+binder_inductive ty
 for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
          apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
       small_def typ.FFVars_rrenames typ.rrename_cong_ids

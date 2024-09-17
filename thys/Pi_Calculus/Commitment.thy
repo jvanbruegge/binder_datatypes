@@ -288,7 +288,6 @@ unfolding map_commit_pre_def unfolding toUnfold
 unfolding commit_internal.rrename_cctors(1)
 unfolding map_commit_internal_pre_def unfolding toUnfold by simp
 
-
 (* Actions *)
 
 datatype (vars:'a) action = finp 'a 'a | fout 'a 'a | is_bout: bout 'a 'a | binp 'a 'a | tau
@@ -329,6 +328,31 @@ fun ns :: "act \<Rightarrow> var set" where
 
 abbreviation "bvars \<equiv> bns"
 abbreviation "fvars \<equiv> fns"
+
+local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
+  ctors = [
+    (@{term Finp}, @{thm Finp_def}),
+    (@{term Fout}, @{thm Fout_def}),
+    (@{term Bout}, @{thm Bout_def}),
+    (@{term Tau}, @{thm Tau_def}),
+    (@{term Binp}, @{thm Binp_def}),
+    (@{term Cmt}, @{thm refl})
+  ],
+  map_simps = [],
+  distinct = [],
+  bsetss = [[
+    NONE,
+    NONE,
+    SOME @{term "\<lambda>x1 x2 x3. {x2}"},
+    NONE,
+    SOME @{term "\<lambda>x1 x2 x3. {x2}"},
+    SOME @{term "\<lambda>x P. bns x"}
+  ]],
+  strong_induct = @{thm refl},
+  mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),
+  set_simpss = [],
+  subst_simps = NONE
+}\<close>
 
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
 

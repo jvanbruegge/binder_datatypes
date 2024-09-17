@@ -15,9 +15,7 @@ inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | Xi: "pstep e e' \<Longrightarrow> pstep (Lam x e) (Lam x e')"
 | PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
 
-binder_inductive pstep where
-  Xi binds x
-| PBeta binds x
+binder_inductive pstep
 for perms: rrename rrename and supps: FFVars FFVars
          apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
            small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV) [12]

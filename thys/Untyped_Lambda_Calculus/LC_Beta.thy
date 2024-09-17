@@ -19,9 +19,7 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
-binder_inductive step where
-  Beta binds x
-| Xi binds x
+binder_inductive step
 for perms: rrename rrename and supps: FFVars FFVars
    \<comment> \<open>properties of LS-Nominal sets\<close>
   apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def

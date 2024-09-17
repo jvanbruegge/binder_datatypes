@@ -181,7 +181,7 @@ fun create_binder_specs specs lthy =
     val (fake_T_names, fake_lthy) = fold_map add_fake_type specs lthy;
 
     val (specs, fake_lthy) = fold_map (create_binder_spec fake_T_names) specs fake_lthy;
-  in MRBNF_Sugar.create_binder_datatype (hd specs) lthy end;
+  in snd (MRBNF_Sugar.create_binder_datatype (hd specs) lthy) end;
 
 val _ =
   Outer_Syntax.local_theory @{command_keyword binder_datatype}

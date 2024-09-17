@@ -29,15 +29,26 @@ for perms: rrename_term rrename_term and supps: FFVars FFVars
       (auto simp: isPerm_def term.rrename_comps
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B x1 x2
-    apply simp
-    using fresh[of x1 x2] prems(2-) unfolding
-      (**)isPerm_def conj_assoc[symmetric] split_beta
-    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-    apply (elim disj_forward exE; simp)
-      apply ((rule exI, rule conjI[rotated], assumption) |
-        (((rule exI conjI)+)?, rule Res_refresh) |
-        (auto))+
+  subgoal premises prems for R B P Q
+    thm prems
+    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp P Q"}
+      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
+      [NONE,
+       NONE,
+       NONE,
+       NONE,
+       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
+       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
+       NONE,
+       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}]]
+      @{thms Res_inject term.FFVars_rrenames}
+      @{thms prems(2) term.rrename_cong_ids[symmetric]}
+      @{thms id_onD[rotated]}
+      @{context}\<close>)
     done
   done
 

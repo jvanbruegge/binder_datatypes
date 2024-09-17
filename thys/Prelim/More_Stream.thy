@@ -90,12 +90,12 @@ lemma theN_inj1: "sdistinct vs \<Longrightarrow> v \<in> sset vs \<Longrightarro
   snth vs i = snth vs (theN vs v) \<Longrightarrow> i = theN vs v"
 using theN[of v vs] unfolding sdistinct_def2 by fastforce
 
-lemma theN_inj[simp]: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
+lemma theN_inj: "sdistinct vs \<Longrightarrow> v1 \<in> sset vs \<Longrightarrow> v2 \<in> sset vs \<Longrightarrow>
   snth vs (theN vs v1) = snth vs (theN vs v2) \<Longrightarrow> v1 = v2"
 using theN_inj1 by (simp add: theN)
 
 lemma inj_on_theN: "sdistinct vs \<Longrightarrow> inj_on (theN vs) (sset vs)"
-unfolding inj_on_def by auto
+unfolding inj_on_def by (auto simp: theN_inj)
 
 lemma surj_theN: "sdistinct vs \<Longrightarrow> theN vs ` (sset vs) = UNIV"
 unfolding image_def by auto (metis sdistinct_def2 snth_sset theN)

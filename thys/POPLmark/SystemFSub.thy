@@ -273,6 +273,10 @@ next
 
 declare ty.intros[intro]
 
+lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
+  by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
+
+
 binder_inductive ty where
   SA_All binds x
 for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
@@ -289,7 +293,7 @@ for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. do
         typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
-  subgoal for R B x1 x2 x3
+  subgoal for R B \<Gamma> T1 T2
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     apply (elim disj_forward exE; clarsimp)
      apply (((rule exI, rule conjI[rotated], assumption) |
@@ -297,7 +301,7 @@ for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. do
           (auto))+) []
     subgoal premises prems for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
       using prems(3-)
-      using exists_fresh[of "[x]" x1 x2 x3] apply(elim exE conjE)
+      using exists_fresh[of "[x]"  \<Gamma> T1 T2] apply(elim exE conjE)
       subgoal for z
         apply (rule exI)
         apply (rule exI[of _ "{z}"])
@@ -307,16 +311,16 @@ for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. do
             apply simp
             apply (rule Forall_swap)
            apply simp
-           apply assumption+
-         apply (frule prems(1)[rule_format, of "(x1, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
-          apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "x1, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
+          apply assumption+
+         apply (frule prems(1)[rule_format, of "(\<Gamma>, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
+          apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "\<Gamma>, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
            apply (auto simp: extend_eqvt)
-        by (smt (verit, del_insts) Prelim.bij_swap Un_iff context_map_cong_id fst_conv fun_upd_apply id_apply infinite_var prems(1) rrename_swap_FFvars subsetD supp_swap_bound well_scoped(1) wf_ConsE wf_FFVars wf_context)
+        apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
+          apply (drule ty_fresh_extend)
+          apply (simp_all add: supp_swap_bound)
+        apply (rule context_map_cong_id; auto)
       done
     done
   done
-
-thm ty.strong_induct
-thm ty.equiv
 
 end

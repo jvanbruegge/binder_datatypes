@@ -19,12 +19,12 @@ lemma theN_inj1: "distinct vs \<Longrightarrow> v \<in> set vs \<Longrightarrow>
   nth vs i = nth vs (theN vs v) \<Longrightarrow> i = theN vs v"
 using theN[of v vs] unfolding distinct_def2 by fastforce
 
-lemma theN_inj[simp]: "distinct vs \<Longrightarrow> v1 \<in> set vs \<Longrightarrow> v2 \<in> set vs \<Longrightarrow>
+lemma theN_inj: "distinct vs \<Longrightarrow> v1 \<in> set vs \<Longrightarrow> v2 \<in> set vs \<Longrightarrow>
   nth vs (theN vs v1) = nth vs (theN vs v2) \<Longrightarrow> v1 = v2"
 using theN_inj1 by (simp add: theN)
 
 lemma inj_on_theN: "distinct vs \<Longrightarrow> inj_on (theN vs) (set vs)"
-unfolding inj_on_def by auto
+unfolding inj_on_def by (auto simp add: theN_inj)
 
 lemma surj_theN: "distinct vs \<Longrightarrow> theN vs ` (set vs) = {..<length vs}"
 unfolding image_def apply auto

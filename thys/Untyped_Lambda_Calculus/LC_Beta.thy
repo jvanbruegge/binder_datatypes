@@ -31,12 +31,63 @@ for perms: rrename rrename and supps: FFVars FFVars
       (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B x1 x2  \<comment> \<open>refreshability\<close>
-    using fresh[of x1 x2] prems(2-) unfolding isPerm_def conj_assoc[symmetric] split_beta
-    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-    apply (elim disj_forward exE; simp)
-     apply (metis Lam_eq_tvsubst Lam_inject_swap singletonD)
-    by blast
+  subgoal premises prems for R B t1 t2  \<comment> \<open>refreshability\<close>
+    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp t1 t2"}
+      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
+      [SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f e. e) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
+       NONE,
+       NONE,
+       SOME [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]]
+      @{thms Lam_inject}
+      @{thms prems(2) Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
+      @{context}\<close>)
+    done
+(*
+    apply (rule exE[OF eextend_fresh[of B "Tsupp t1 t2" "Tsupp t1 t2 - B"]])
+    subgoal apply (rule cut_rl[OF _ prems(3)]) by (auto simp add: emp_bound singl_bound)
+    subgoal by (simp add: term.Un_bound term.card_of_FFVars_bounds)
+    subgoal by (simp add: infinite)
+    subgoal by simp
+    subgoal by simp
+    apply (erule conjE)+
+    apply (rule exI, rule conjI, assumption)
+    apply (insert prems(3))
+    apply (elim disj_forward exE)
+    subgoal premises prems2 for xb xaa e1a e2a
+      apply (rule exI[of _ "xb xaa"])
+      apply (rule exI[of _ "rrename xb e1a"])
+      apply (rule exI[of _ "e2a"])
+      apply (auto simp: Lam_inject prems2
+          intro!: id_on_antimono[OF prems2(4)] prems(2) exI[of _ xb] Lam_eq_tvsubst term.rrename_cong_ids[symmetric])
+      using prems(4)
+      apply (auto intro!: id_on_antimono[OF prems(4)] simp: prems)
+apply (auto simp: )
+      done
+    subgoal for f e1 e1' e2
+      apply (rule exI[of _ "e1"])
+      apply (rule exI[of _ "e1'"])
+      apply (rule exI[of _ "e2"])
+      apply auto
+      done
+    subgoal for f e2 e2' e1
+      apply (rule exI[of _ "e2"])
+      apply (rule exI[of _ "e2'"])
+      apply (rule exI[of _ "e1"])
+      apply auto
+      done
+    subgoal for f e e' x
+      apply (rule exI[of _ "rrename f e"])
+      apply (rule exI[of _ "rrename f e'"])
+      apply (rule exI[of _ "f x"])
+      apply (auto simp add: Lam_inject id_on_def
+          intro!: prems(2) exI[of _ f] Lam_eq_tvsubst term.rrename_cong_ids[symmetric])
+      done
+    done
+*)
   done
 
 thm step.strong_induct

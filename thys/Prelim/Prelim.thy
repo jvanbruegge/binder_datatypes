@@ -63,7 +63,7 @@ lemma bij_iff1:
 definition id_on :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> bool" where
   "id_on A f \<equiv> \<forall> a. a \<in> A \<longrightarrow> f a = a"
 
-lemma id_on_id[simp,intro!]: "id_on A id"
+lemma id_on_id[simp]: "id_on A id"
   unfolding id_on_def by auto
 
 lemma id_on_insert[simp]: "id_on (insert x A) f \<longleftrightarrow> f x = x \<and> id_on A f"

@@ -15,6 +15,9 @@ fun long_name ctxt name =
 
 datatype ('a, 'b) either = Inl of 'a | Inr of 'b
 
+fun collapse (Inl x) = x
+  | collapse (Inr x) = x
+
 fun mk_insert x S =
   Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
 
@@ -38,9 +41,12 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         [] => ()
       | xs => error ("No such case(s) in inductive definition: " ^ commas_quote xs)
 
-    val perms_supps = case perms_supps of
-      (SOME a, SOME b) => (a, b)
-      | _ => error "Automatic generation of permute and support operators is not supported yet, specify them with for perms: ... and supps: ..."
+    val perms = case fst perms_supps of
+      SOME a => a
+      | NONE => []
+    val supps = case snd perms_supps of
+      SOME a => a
+      | NONE => []
     val def' = Thm.prop_of def;
     val svars = Term.add_tvars def' [];
     val fvars = fst (mk_TFrees' (map snd svars) no_defs_lthy);
@@ -143,6 +149,61 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
       ||>> apfst hd o mk_Frees "p" [rho]
       ||>> apfst hd o mk_Frees "P" [param_Ts @ [rho] ---> @{typ bool}];
 
+    fun mk_map_comb mr_bnf fs =
+      let
+        val mapx = case mr_bnf of
+          Inl mrbnf => MRBNF_Def.map_of_mrbnf mrbnf
+          | Inr (Inl bnf) => BNF_Def.map_of_bnf bnf
+          | Inr (Inr quot) => #rename quot
+        val Ts = fst (split_last (Term.binder_types (fastype_of mapx)));
+        val tyenv = Sign.typ_match (Proof_Context.theory_of no_defs_lthy) (
+          Ts ---> @{typ bool},
+          map fastype_of fs ---> @{typ bool}
+        ) Vartab.empty;
+        val mapx = Envir.subst_term (tyenv, Vartab.empty) mapx;
+      in Term.list_comb (mapx, fs) end
+
+    fun build_permute_for fs xs T =
+      let val idx = find_index (curry (op=) T) xs;
+      in if idx >= 0 then ([], nth fs idx) else
+      case T of
+      Type (s, Ts) =>
+        let val mr_bnf_opt = case MRBNF_Def.mrbnf_of no_defs_lthy s of
+          SOME mrbnf => SOME (Inl mrbnf)
+          | NONE => (case BNF_Def.bnf_of no_defs_lthy s of
+            SOME bnf => SOME (Inr (Inl bnf))
+            | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
+              SOME sugar => SOME (Inr (Inr (hd (#quotient_fps sugar))))
+              | NONE => NONE
+            ))
+        in case mr_bnf_opt of
+          NONE => ([], HOLogic.id_const T)
+          | SOME mr_bnf =>
+            let
+              val (mr_bnfs, fs) = split_list (map (build_permute_for fs xs) Ts);
+              val mr_bnfs = fold (union ((op=) o apply2 fst)) mr_bnfs [];
+              val perm = mk_map_comb mr_bnf fs
+            in (if member (op=) (map fst mr_bnfs) s then (mr_bnfs, perm) else ((s, mr_bnf) :: mr_bnfs, perm)) end
+        end
+      | _ => ([], HOLogic.id_const T)
+      end
+
+    val var_Ts = map HOLogic.dest_setT bind_Ts;
+    val (mr_bnfs', raw_perms) = split_list (map2 (fn s => fn T => if YXML.content_of s = "_" then
+      let
+        val (mr_bnfs, perm) = build_permute_for gs var_Ts T;
+      in (mr_bnfs, Inl (fold_rev (Term.absfree o dest_Free) gs perm)) end
+      else ([], Inr (Syntax.read_term no_defs_lthy s))
+    ) (perms @ replicate (length param_Ts - length perms) "_") param_Ts);
+    val mr_bnfs = map (map snd) mr_bnfs';
+
+    val raw_supps = map2 (fn s => fn x => if YXML.content_of s = "_" then
+      Inl (Term.absfree (dest_Free x) (case Binder_Induction.extract_vars no_defs_lthy (hd var_Ts) x of
+        (SOME t, _) => t
+        | (NONE, _) => mk_bot (fastype_of x))
+      ) else Inr (Syntax.read_term no_defs_lthy s)
+    ) (supps @ replicate (length param_Ts - length supps) "_") xs;
+
     fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
     val rules' = @{map 3} (fn vars => fn bind_ts => fn body => fold_rev mk_ex vars (
       foldr1 HOLogic.mk_conj (map2 (curry HOLogic.mk_eq) Bs bind_ts @ [body])
@@ -152,15 +213,12 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
       Term.incr_boundvars num_vars (fold_rev Term.abs (tl abs_vars) (foldr1 HOLogic.mk_disj rules'))
     ));
 
-    val absTs = map snd abs_vars
-    val all_vars = num_vars + length abs_vars;
+    val absTs = map snd abs_vars;
 
     val (G, II, II_op, II', II'_op, perms, supps, lthy) =
       let
         val b = Binding.name (short_type_name (hd names));
         val qualify = I;
-
-        val (raw_perms, raw_supps) = apply2 (map (Syntax.read_term no_defs_lthy)) perms_supps;
 
         val thy = Proof_Context.theory_of no_defs_lthy;
         fun mk_match mk_T ts = map2 (fn t => fn T =>
@@ -170,8 +228,8 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
           in Envir.subst_term (tyenv, Vartab.empty) t end
         ) ts param_Ts;
 
-        val perms = mk_match (fn T => args ---> (T --> T)) raw_perms;
-        val supps = mk_match (fn T => T --> hd bind_Ts) raw_supps;
+        val perms = mk_match (fn T => args ---> (T --> T)) (map collapse raw_perms);
+        val supps = mk_match (fn T => T --> hd bind_Ts) (map collapse raw_supps);
 
         val (((G, perms), supps), lthy) = no_defs_lthy
           |> snd o Local_Theory.begin_nested
@@ -241,15 +299,20 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
       Const (@{const_name finite}, T --> @{typ bool}) $ HOLogic.mk_UNIV (HOLogic.dest_setT T)
     ))) bind_Ts;
 
-    val supp_small_goals = map2 (fn x => fn (s, _) => HOLogic.mk_Trueprop (
+    val supp_small_goals = map2 (fn x => fn (s, _) => Logic.all x (HOLogic.mk_Trueprop (
       mk_ordLess (mk_card_of (s $ x)) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (hd bind_Ts))))
-    )) xs supps;
+    ))) xs supps;
 
     fun mk_ordLess_UNIV t = mk_ordLess (mk_card_of t) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (fastype_of t))));
-    val Bs_small_goal = Logic.mk_implies (
+
+    val B_small_goals = map (map (fn bind_t => fold (Logic.all o Free)
+      (Term.add_frees bind_t []) (HOLogic.mk_Trueprop (mk_ordLess_UNIV bind_t))
+    )) bind_ts;
+
+    val Bs_small_goal = fold_rev Logic.all (P :: Bs @ xs) (Logic.mk_implies (
       HOLogic.mk_Trueprop (Term.list_comb (fst G, P :: Bs @ xs)),
       HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (map mk_ordLess_UNIV Bs))
-    );
+    ));
 
     val perm_ts = map2 (fn perm => fn x => Term.list_comb (fst perm, gs) $ x) perms xs;
     val G_equiv_goal = fold_rev Logic.all ([P] @ Bs @ gs @ xs) (
@@ -286,10 +349,21 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
       )
     ));
 
+    val binders_specified = map (fn SOME (Inl _, _) => true | _ => false) binds_vars;
+    val perms_specified = map (fn Inl _ => false | _ => true) raw_perms;
+    val supps_specified = map (fn Inl _ => false | _ => true) raw_supps;
+    val one_specified = map2 (fn a => fn b => a orelse b) perms_specified supps_specified;
+    fun keep_perm xs = cond_keep xs perms_specified;
+    fun keep_supp xs = cond_keep xs supps_specified;
+    fun keep_both xs = cond_keep xs one_specified;
+    fun keep_binders xs = cond_keep xs binders_specified;
+
+    val defs = map snd (perms @ supps);
+
     val goals = map (single o rpair []) (
-      perm_id0_goals @ perm_comp_goals @ supp_seminat_goals
-      @ perm_support_goals @ supp_small_goals @ inf_UNIV_goals
-      @ [Bs_small_goal, G_equiv_goal, G_refresh_goal]
+      keep_perm perm_id0_goals @ keep_perm perm_comp_goals @ keep_both supp_seminat_goals
+      @ keep_both perm_support_goals @ keep_supp supp_small_goals @ flat (keep_binders B_small_goals)
+      @ [G_equiv_goal, G_refresh_goal]
     );
     fun after_qed thmss lthy =
       let
@@ -336,16 +410,128 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
           ]);
         val G_mmono = mk_mmono II_op (K (K all_tac))
 
-        val ((((((((perm_id0s, perm_comps), supp_seminats), perm_supports), supp_smalls), infinite_UNIVs), Bs_small), G_equiv), G_refresh) = map hd thmss
-          |> chop n
-          ||>> chop n
-          ||>> chop n
-          ||>> chop n
-          ||>> chop (num_vars * n)
-          ||>> chop num_vars
-          ||>> apfst hd o chop 1
+        val m = length (filter not perms_specified);
+        val m2 = length (filter not one_specified);
+        val m3 = length (filter not supps_specified);
+        val m4 = length (filter not binders_specified);
+        val (((((((perm_id0s, perm_comps), supp_seminats), perm_supports), supp_smalls), B_smalls), G_equiv), G_refresh) = map hd thmss
+          |> chop (n - m)
+          ||>> chop (n - m)
+          ||>> chop (n - m2)
+          ||>> chop (n - m2)
+          ||>> chop (num_vars * (n - m3))
+          ||>> chop (length bind_ts - m4)
           ||>> apfst hd o chop 1
           ||> hd;
+
+        fun map_id0_of_mr_bnf (Inl mrbnf) = MRBNF_Def.map_id0_of_mrbnf mrbnf
+          | map_id0_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.map_id0_of_bnf bnf
+          | map_id0_of_mr_bnf (Inr (Inr quot)) = #rename_id0 quot
+
+        fun prove_missing goals specified thms tac = fst (@{fold_map 4} (
+          fn true => (fn _ => fn _ => fn _ => fn acc => (hd acc, tl acc))
+          | false => fn goal => fn mr_bnfs => fn i => fn acc => (
+            Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} =>
+              Local_Defs.unfold0_tac ctxt defs THEN tac ctxt mr_bnfs i), acc)
+        ) specified goals mr_bnfs (0 upto length specified - 1) thms)
+
+        fun map_comp_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]
+          | map_comp_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_comp_of_bnf bnf, BNF_Def.map_comp0_of_bnf bnf RS sym]
+          | map_comp_of_mr_bnf (Inr (Inr quot)) = [#rename_comp quot, #rename_comp0 quot]
+
+        val perm_id0s = prove_missing perm_id0_goals perms_specified perm_id0s (fn ctxt => fn mr_bnfs => K (EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt (map map_id0_of_mr_bnf mr_bnfs)),
+          rtac ctxt refl
+        ]));
+        val perm_comps = prove_missing perm_comp_goals perms_specified perm_comps (fn ctxt => fn mr_bnfs => K (EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt (maps map_comp_of_mr_bnf mr_bnfs)),
+          rtac ctxt refl
+        ]));
+
+        fun set_map_of_mr_bnf (Inl mrbnf) = MRBNF_Def.set_map_of_mrbnf mrbnf
+          | set_map_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.set_map_of_bnf bnf
+          | set_map_of_mr_bnf (Inr (Inr quot)) = #FVars_renames quot
+
+        val supp_seminats = prove_missing supp_seminat_goals one_specified supp_seminats (fn ctxt => fn mr_bnfs => K (EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt (
+            @{thms image_comp[unfolded comp_def] image_UN[symmetric] image_Un[symmetric]}
+            @ maps set_map_of_mr_bnf mr_bnfs
+          )),
+          rtac ctxt @{thm subset_refl}
+        ]));
+
+        fun map_cong_id_of_mr_bnf (Inr (Inr quot)) = #rename_cong_id (#inner quot)
+          | map_cong_id_of_mr_bnf x =
+            let
+              val thm1 = case x of
+                Inl mrbnf => MRBNF_Def.map_cong0_of_mrbnf mrbnf
+                | Inr (Inl bnf) => BNF_Def.map_cong0_of_bnf bnf
+              val thm2 = case x of
+                Inl mrbnf => MRBNF_Def.map_id_of_mrbnf mrbnf
+                | Inr (Inl bnf) => BNF_Def.map_id_of_bnf bnf
+            in Local_Defs.unfold0 no_defs_lthy @{thms id_apply} (trans OF [thm1, thm2]) end
+
+        val perm_supports = prove_missing perm_support_goals one_specified perm_supports (fn ctxt => fn mr_bnfs => fn i =>
+          let
+            fun Uns_aux (Const (@{const_name sup}, _) $ t $ t') conjs = Uns_aux t (Uns_aux t' conjs)
+              | Uns_aux t conjs = t::conjs;
+            val Inl set = nth raw_supps i
+            val sets = Uns_aux (snd (Term.dest_abs_global set)) [];
+            val n = length sets;
+          in EVERY1 [
+            EVERY' (map (fn i => EVERY' [
+              REPEAT_DETERM o EVERY' [
+                resolve_tac ctxt (map map_cong_id_of_mr_bnf mr_bnfs),
+                REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
+              ],
+              dtac ctxt meta_spec,
+              dtac ctxt meta_mp,
+              K (prefer_tac 2),
+              assume_tac ctxt,
+              rtac ctxt (BNF_Util.mk_UnIN n i),
+              REPEAT_DETERM o (rtac ctxt @{thm UN_I} ORELSE' assume_tac ctxt)
+            ]) (1 upto n))
+        ] end);
+
+        val (Un_bound, UN_bound, var_large) =
+          let
+            val (context, facts) = (Proof_Context.theory_of #>
+              `Context.Theory ##> Proof_Context.init_global) lthy ||> Proof_Context.facts_of;
+            fun lookup name = the_single (#thms (the (
+              Facts.lookup context facts (Facts.intern facts name)
+            )));
+          in (lookup "Un_bound", lookup "UN_bound", lookup "large") end;
+
+        fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr quot)) = #card_of_FVars_bound_UNIVs quot
+          | set_bd_UNIVs_of_mr_bnfs x =
+            let val thms = case x of
+              Inl mrbnf => MRBNF_Def.set_bd_of_mrbnf mrbnf
+              | Inr (Inl bnf) => BNF_Def.set_bd_of_bnf bnf
+            in map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) thms end
+
+        val supp_smalls = prove_missing supp_small_goals supps_specified supp_smalls (fn ctxt => fn mr_bnfs => K (EVERY1 [
+          REPEAT_DETERM o resolve_tac ctxt ([Un_bound, UN_bound, var_large]
+            @ maps set_bd_UNIVs_of_mr_bnfs mr_bnfs
+          )
+        ]));
+
+        val infinite_UNIVs = map (fn goal => Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} => EVERY1 [
+          rtac ctxt @{thm large_imp_infinite},
+          rtac ctxt var_large
+        ])) inf_UNIV_goals;
+
+        val Bs_small = Goal.prove_sorry lthy [] [] Bs_small_goal (fn {context=ctxt, ...} => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt [snd G]),
+          REPEAT_DETERM o EVERY' [
+            TRY o etac ctxt disjE,
+            REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+            hyp_subst_tac ctxt,
+            REPEAT_DETERM o resolve_tac ctxt (
+              @{thms emp_bound iffD2[OF insert_bound]}
+              @ infinite_UNIVs
+            )
+          ]
+        ]);
 
         val Bsmalls = (* split_conj *) [Bs_small];
 
@@ -744,7 +930,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         ]) lthy);
       in lthy end
   in Proof.theorem NONE after_qed goals lthy
-    |> Proof.unfolding [[([snd G] @ map snd (perms @ supps), [])]]
+    |> Proof.unfolding [[(@{thms prod_sets_simps} @ [snd G] @ defs, [])]]
     |> Proof.refine_singleton (Method.Basic (fn ctxt => Method.SIMPLE_METHOD (TRYALL (rtac ctxt refl))))
   end
 

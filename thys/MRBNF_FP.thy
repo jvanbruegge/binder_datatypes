@@ -326,6 +326,12 @@ lemmas induct_forallI = allI[unfolded HOL.induct_forall_def[symmetric]]
 lemma induct_equal_refl: "HOL.induct_equal x x"
   unfolding HOL.induct_equal_def by (rule refl)
 
+lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infinite (UNIV::'a set)"
+  using infinite_iff_natLeq_ordLeq by blast
+
+lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
+  by (metis card_of_Un_singl_ordLess_infinite insert_is_Un)
+
 ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

@@ -102,6 +102,7 @@ for perms: rrename rrename and supps: FFVars FFVars
       @{thms prems(2) term.rrename_cong_ids[symmetric]}
       @{thms }
       @{context}\<close>)
+    find_theorems rrename usub
 *)
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
       ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]

@@ -275,50 +275,7 @@ declare ty.intros[intro]
 
 lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
-ML \<open>
-local
-  open BNF_Util
-in
 
-fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim_thms ctxt =
-  let
-    val fresh = infer_instantiate' ctxt
-      [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt Tsupp),
-       SOME (Thm.cterm_of ctxt (HOLogic.mk_binop \<^const_name>\<open>minus\<close> (Tsupp, B)))]
-      @{thm eextend_fresh};
-    val small_ctxt = ctxt addsimps small_thms;
-    fun case_tac NONE _ prems ctxt = SOLVE (auto_tac (ctxt addsimps map (simplify ctxt) prems addSIs map (simplify ctxt) prems))
-      | case_tac (SOME insts) params prems ctxt =
-        let
-          val prems = map (simplify ctxt) prems;
-          val f = hd params |> snd |> Thm.term_of;
-          val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
-          val args = tl params |> map (snd #> Thm.term_of);
-          val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt (i $ f $ a)) insts args;
-          val id_onI = nth prems 3 RS @{thm id_on_antimono};
-        in
-          HEADGOAL (EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs)) THEN
-print_tac ctxt "pre_auto" THEN
-          SOLVE (HEADGOAL (SELECT_GOAL (mk_auto_tac (ctxt
-            addsimps (simp_thms @ prems)
-            addSIs (ex_f :: id_onI :: intro_thms)
-            addSEs elim_thms) 0 4) THEN_ALL_NEW
-            SELECT_GOAL (print_tac ctxt "auto failed")))
-        end;
-  in
-    HEADGOAL (rtac ctxt (fresh RS exE) THEN'
-      rtac ctxt (G_thm RSN (2, cut_rl)) THEN' SELECT_GOAL (auto_tac small_ctxt) THEN'
-      REPEAT_DETERM_N 4 o simp_tac small_ctxt THEN'
-      REPEAT_DETERM o etac ctxt conjE THEN'
-      EVERY' [rtac ctxt exI, rtac ctxt conjI, assume_tac ctxt] THEN'
-      rtac ctxt (G_thm RSN (2, cut_rl)) THEN'
-      REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE conjE disj_forward}) THEN'
-      EVERY' (map (fn insts => Subgoal.FOCUS (fn focus =>
-        case_tac insts (#params focus) (#prems focus) (#context focus)) ctxt) instss))
-  end;
-
-end;
-\<close>
 binder_inductive ty
   for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
                     apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
@@ -327,7 +284,7 @@ binder_inductive ty
       intro!: context_map_cong_id infinite_UNIV) [16]
   using map_context_def typ.FFVars_rrenames apply fastforce
   subgoal by (smt (verit, best) emp_bound typ.set(1) typ.set_bd_UNIV)
-  subgoal for R B \<sigma> x1 x2 x3
+  subgoal for R B \<sigma> \<Gamma> T1 T2
     unfolding split_beta
     by (elim disj_forward exE)
       (auto simp add: isPerm_def supp_inv_bound

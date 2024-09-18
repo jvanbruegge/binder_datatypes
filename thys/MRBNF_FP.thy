@@ -333,6 +333,14 @@ ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
+lemma extend_fresh:
+  fixes A B::"'a set"
+  assumes "|B| <o |UNIV::'a set|" "|B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|" "infinite (UNIV::'a set)"
+  shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> \<rho> ` B \<inter> B = {} \<and> id_on (A - B) \<rho>"
+  using eextend_fresh[of B "A \<union> B" "A - B", OF assms(1,2,3), OF assms(1)]
+  unfolding Int_Un_distrib
+  by blast
+
 ML \<open>
 local
   open BNF_Util
@@ -341,14 +349,11 @@ in
 fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim_thms ctxt =
   let
     val fresh = infer_instantiate' ctxt
-      [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt Tsupp),
-       SOME (Thm.cterm_of ctxt (HOLogic.mk_binop \<^const_name>\<open>minus\<close> (Tsupp, B)))]
-      @{thm eextend_fresh};
+      [SOME (Thm.cterm_of ctxt B),
+       SOME (Thm.cterm_of ctxt Tsupp)]
+      @{thm extend_fresh};
     val small_ctxt = ctxt addsimps small_thms;
-    fun case_tac NONE _ prems ctxt =
-        let
-          val prems = map (simplify ctxt) prems;
-        in SOLVE (auto_tac (ctxt addsimps prems)) end
+    fun case_tac NONE _ prems ctxt = SOLVE (auto_tac (ctxt addsimps map (simplify ctxt) prems addSIs map (simplify ctxt) prems))
       | case_tac (SOME insts) params prems ctxt =
         let
           val prems = map (simplify ctxt) prems;
@@ -356,9 +361,10 @@ fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim
           val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
           val args = tl params |> map (snd #> Thm.term_of);
           val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt (i $ f $ a)) insts args;
-          val id_onI = nth prems 3 RS @{thm id_on_antimono};
+          val id_onI = nth prems 4 RS @{thm id_on_antimono};
         in
           HEADGOAL (EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs)) THEN
+print_tac ctxt "pre_auto" THEN
           SOLVE (HEADGOAL (SELECT_GOAL (mk_auto_tac (ctxt
             addsimps (simp_thms @ prems)
             addSIs (ex_f :: id_onI :: intro_thms)
@@ -368,7 +374,7 @@ fun refreshability_tac B Tsupp G_thm small_thms instss simp_thms intro_thms elim
   in
     HEADGOAL (rtac ctxt (fresh RS exE) THEN'
       rtac ctxt (G_thm RSN (2, cut_rl)) THEN' SELECT_GOAL (auto_tac small_ctxt) THEN'
-      REPEAT_DETERM_N 4 o simp_tac small_ctxt THEN'
+      REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
       REPEAT_DETERM o etac ctxt conjE THEN'
       EVERY' [rtac ctxt exI, rtac ctxt conjI, assume_tac ctxt] THEN'
       rtac ctxt (G_thm RSN (2, cut_rl)) THEN'

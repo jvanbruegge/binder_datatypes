@@ -255,9 +255,9 @@ structure Data = Generic_Data (
   fun merge data : T = Symtab.merge (K true) data;
 );
 
-val register_fp_results = fold (fn fp_result as { quotient_fps = ({ T = Type (s, _), ...} :: _), ...} =>
+val register_fp_results = fold (fn fp_result as { quotient_fps, ...} => fold (fn { T = Type (s, _), ...} =>
   Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
-    (fn phi => Data.map (Symtab.update (s, morph_fp_result phi fp_result))));
+    (fn phi => Data.map (Symtab.update (s, morph_fp_result phi fp_result)))) quotient_fps);
 
 fun fp_result_of_generic context =
   Option.map (morph_fp_result (Morphism.transfer_morphism (Context.theory_of context)))

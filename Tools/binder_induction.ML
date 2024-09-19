@@ -77,9 +77,14 @@ fun extract_vars ctxt var t =
             SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
             | NONE => (case BNF_Def.bnf_of ctxt name of
               SOME bnf => BNF_Def.sets_of_bnf bnf
-              | NONE => error ("Type is neither a set nor a (MR)BNF: " ^ name)
+              | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of ctxt name of
+                SOME sugar => #FVars (hd (filter (
+                  fn quot => fst (dest_Type (#T quot)) = name
+                ) (#quotient_fps sugar)))
+                | NONE => []
+              )
             );
-          val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts);
+          val subst = Term.subst_atomic_types (rev (map TVar (fold Term.add_tvars sets [])) ~~ Ts);
           val sets' = map_filter (fn (T, s) => if Term.exists_subtype (curry (op=) var) T then
             SOME (T, subst s) else NONE) (Ts ~~ sets);
           val (ts, ts') = split_list (map (fn (T, s) => extract_deep T (case fastype_of t of

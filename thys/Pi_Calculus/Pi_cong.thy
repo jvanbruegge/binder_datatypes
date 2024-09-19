@@ -2,7 +2,7 @@ theory Pi_cong
   imports Commitment
 begin
 
-abbreviation Tsupp :: "trm \<Rightarrow> trm \<Rightarrow> var set" where 
+abbreviation Tsupp :: "trm \<Rightarrow> trm \<Rightarrow> var set" where
   "Tsupp e1 e2 \<equiv> FFVars e1 \<union> FFVars e2"
 
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t :: trm) t2"
@@ -20,9 +20,6 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 | cong_3: "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
 
 binder_inductive cong
-for perms: rrename_term rrename_term and supps: FFVars FFVars
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-      small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV) [12]
   subgoal for R B \<sigma> x1 x2
     apply simp
     by (elim disj_forward case_prodE)
@@ -76,9 +73,6 @@ inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightar
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
 binder_inductive trans
-for perms: rrename rrename and supps: FFVars FFVars
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-      small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV) [12]
   subgoal for R B \<sigma> x1 x2
     apply simp
     apply (elim disj_forward exE)

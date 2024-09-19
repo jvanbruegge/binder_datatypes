@@ -328,8 +328,8 @@ binder_inductive ty
         apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
           apply (drule ty_fresh_extend)
           apply (simp_all add: supp_swap_bound)
-        apply (rule context_map_cong_id; auto)
-        done
+          by (metis image_eqI map_context_def map_context_swap_FFVars)
+      done
     done
   done
 

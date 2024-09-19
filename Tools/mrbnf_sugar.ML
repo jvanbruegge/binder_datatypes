@@ -16,6 +16,7 @@ type binder_sugar = {
   set_simpss: thm list list,
   subst_simps: thm list option,
   bsetss: term option list list,
+  bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm,
   distinct: thm list,
@@ -56,6 +57,7 @@ type binder_sugar = {
   set_simpss: thm list list,
   subst_simps: thm list option,
   bsetss: term option list list,
+  bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm,
   distinct: thm list,
@@ -63,11 +65,12 @@ type binder_sugar = {
 };
 
 fun morph_binder_sugar phi { map_simps, set_simpss, subst_simps, mrbnf,
-  strong_induct, distinct, ctors, bsetss } = {
+  strong_induct, distinct, ctors, bsetss, bset_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
+  bset_bounds = map (Morphism.thm phi) bset_bounds,
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
   strong_induct = Morphism.thm phi strong_induct,
   distinct = map (Morphism.thm phi) distinct,
@@ -706,6 +709,7 @@ fun create_binder_datatype (spec : spec) lthy =
       strong_induct = strong_induct,
       subst_simps = Option.map snd tvsubst_opt,
       bsetss = bset_optss,
+      bset_bounds = [],
       mrbnf = mrbnf,
       distinct = distinct,
       ctors = ctors

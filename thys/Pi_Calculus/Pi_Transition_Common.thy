@@ -5,7 +5,7 @@ begin
 hide_const inverse_class.inverse_divide trans
 no_notation inverse.inverse_divide (infixl "'/" 70)
 
-abbreviation Tsupp :: "trm \<Rightarrow> cmt \<Rightarrow> var set" where 
+abbreviation Tsupp :: "trm \<Rightarrow> cmt \<Rightarrow> var set" where
 "Tsupp e1 e2 \<equiv> FFVars e1 \<union> FFVars_commit e2"
 
 (* Supply of fresh variables: *)
@@ -18,11 +18,11 @@ lemma finite_vars: "finite (vars act)"
 lemma exists_fresh':
 "\<exists> z. z \<notin> set xs \<and> (\<forall>t \<in> set as. z \<notin> vars t) \<and> (z \<notin> Tsupp x1 x2)"
 proof-
-  have 0: "|set xs \<union> Tsupp x1 x2 \<union> \<Union> (vars ` (set as))| <o |UNIV::var set|" 
+  have 0: "|set xs \<union> Tsupp x1 x2 \<union> \<Union> (vars ` (set as))| <o |UNIV::var set|"
   unfolding ls_UNIV_iff_finite
   using finite_Tsupp finite_vars by blast
   then obtain x where "x \<notin> set xs \<union> Tsupp x1 x2 \<union> \<Union> (vars ` (set as))"
-  by (meson ex_new_if_finite finite_iff_le_card_var 
+  by (meson ex_new_if_finite finite_iff_le_card_var
     infinite_iff_natLeq_ordLeq var_term_pre_class.large)
   thus ?thesis by auto
 qed
@@ -64,6 +64,9 @@ lemma small_bns[simp]: "small (bns \<alpha>)"
   by (cases \<alpha>) auto
 
 lemma small_ns[simp]: "small (ns \<alpha>)"
+  by (cases \<alpha>) auto
+
+lemma fra_empty[simp]: "fra \<alpha> \<longleftrightarrow> bns \<alpha> = {}"
   by (cases \<alpha>) auto
 
 lemma exists_fresh:

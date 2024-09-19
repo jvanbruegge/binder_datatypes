@@ -11,16 +11,7 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
-lemma fra_empty[simp]: "fra \<alpha> \<longleftrightarrow> bns \<alpha> = {}"
-  by (cases \<alpha>) auto
-
 binder_inductive trans
-for perms: rrename rrename_commit and supps: FFVars FFVars_commit
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-      commit_internal.rrename_cong_ids(2) term.rrename_id0s map_prod.comp
-      commit_internal.rrename_id0s commit_internal.rrename_comps commit_internal.card_of_FFVars_bounds(2)
-      commit_internal.FFVars_rrenames(2)
-      small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV small_bns[unfolded small_def])[12]
   subgoal for R B \<sigma> x1 x2
     apply simp
     apply (elim disj_forward)
@@ -77,8 +68,6 @@ for perms: rrename rrename_commit and supps: FFVars FFVars_commit
         apply simp
         apply (smt (verit) Diff_disjoint Diff_empty FFVars_commit_Cmt Int_Un_eq(3) Un_empty Un_iff action.simps(65) action.simps(66) action.simps(68) action.simps(69) bns.simps(1) empty_bvars_vars_fvars insert_disjoint(2) insert_not_empty ns.elims term.set(8))
 
-          (*apply (smt (verit) Cmt.elims Diff_iff FFVars_commit_Cmt FFVars_commit_simps(5) Un_iff action.simps(65) action.simps(66) bns.simps(3) bns.simps(4) empty_bvars_vars_fvars fra.simps(4) fra.simps(5) ns.simps(3) ns.simps(4) prod.collapse singletonI term.set(8))
-*)
         subgoal for P a x P' y z1 z2
           apply (rule exI[of _ "swap P y z1"])
           apply (rule exI[of _ a])

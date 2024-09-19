@@ -1,5 +1,5 @@
 (*Beta reduction for the (untyped) lambda-calculus with applicative redex-depth counted *)
-theory LC_Beta_depth 
+theory LC_Beta_depth
 imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
 begin
 
@@ -20,9 +20,6 @@ inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" 
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
 
 binder_inductive stepD
-for perms: "\<lambda>_. id" rrename rrename and supps: "\<lambda>_. {}" FFVars_term FFVars_term
-  apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-    small_def term.card_of_FFVars_bounds term.Un_bound emp_bound infinite_UNIV) [16]
   subgoal for R B \<sigma> x1 x2 x3
     by (elim disj_forward exE case_prodE)
       (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp

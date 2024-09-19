@@ -228,18 +228,7 @@ inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Righ
 lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<circ> f3) (f2 \<circ> f4)"
   using prod.map_comp by auto
 
-declare [[ML_print_depth=10000]]
 binder_inductive Ty
-for perms: "\<lambda>f \<Gamma>. map_prod f id |`| \<Gamma>" rrename_terms "\<lambda>_. id"
-and supps: "\<lambda>\<Gamma>. fst ` fset \<Gamma>" FFVars_terms "\<lambda>_. {}"
-                   apply (auto simp: terms.rrename_id0s terms.rrename_comps terms.FFVars_rrenames
-      terms.rrename_cong_ids fset.set_bd ordLeq_ordLess_trans[OF card_of_image] emp_bound prod.map_comp
-      terms.set_bd_UNIV  cinfinite_imp_infinite terms.UNIV_cinfinite)[16]
-        apply (metis comp_apply id_apply map_prod_imageI)
-       apply (metis comp_apply id_apply map_prod_imageI)
-      apply force
-     apply force
-    apply force
   subgoal for R B \<sigma> x1 x2 x3
     apply (elim disj_forward)
       apply (auto simp: map_prod_comp0 terms.rrename_comps[OF _ _ bij_imp_bij_inv supp_inv_bound]

@@ -63,6 +63,39 @@ fun prep_inst ctxt align tune (tm, ts) =
 fun rule_instance ctxt inst rule =
   infer_instantiate ctxt (prep_inst ctxt align_left I (Thm.prop_of rule, inst)) rule;
 
+fun extract_vars ctxt var t =
+  let
+    val T = fastype_of t
+    fun extract_deep T t = if T = var then (SOME t, []) else (
+      if Term.is_TFree T then (NONE, [])
+    else case try HOLogic.dest_setT T of
+      SOME T => (NONE, if T = var then [t] else [])
+      | NONE =>
+        let
+          val (name, Ts) = Term.dest_Type T
+          val sets = case MRBNF_Def.mrbnf_of ctxt name of
+            SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
+            | NONE => (case BNF_Def.bnf_of ctxt name of
+              SOME bnf => BNF_Def.sets_of_bnf bnf
+              | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of ctxt name of
+                SOME sugar => #FVars (hd (filter (
+                  fn quot => fst (dest_Type (#T quot)) = name
+                ) (#quotient_fps sugar)))
+                | NONE => []
+              )
+            );
+          val subst = Term.subst_atomic_types (rev (map TVar (fold Term.add_tvars sets [])) ~~ Ts);
+          val sets' = map_filter (fn (T, s) => if Term.exists_subtype (curry (op=) var) T then
+            SOME (T, subst s) else NONE) (Ts ~~ sets);
+          val (ts, ts') = split_list (map (fn (T, s) => extract_deep T (case fastype_of t of
+            Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
+            | _ => s $ t)) sets');
+          val t = case ts of
+            [] => NONE
+            | _ => SOME (foldl1 MRBNF_Util.mk_Un (map_filter I ts))
+        in (t, flat ts') end);
+  in if T = var then (SOME (HOLogic.mk_set T [t]), []) else extract_deep T t end
+
 fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking opt_rule facts =
   let
     fun rule_cases ctxt rule cases =
@@ -137,36 +170,8 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           ) (0 upto length finsts - 1 ~~ finsts);
           val arbitrary = if length arbitrary = 0 then replicate (length P_vars) [] else arbitrary;
 
-          fun extract_vars var t =
-            let
-              val T = fastype_of t
-              fun extract_deep T t = if T = var then (SOME t, []) else (
-                if Term.is_TFree T then (NONE, [])
-              else case try HOLogic.dest_setT T of
-                SOME T => (NONE, if T = var then [t] else [])
-                | NONE =>
-                  let
-                    val (name, Ts) = Term.dest_Type T
-                    val sets = case MRBNF_Def.mrbnf_of ctxt name of
-                      SOME mrbnf => MRBNF_Def.sets_of_mrbnf mrbnf
-                      | NONE => (case BNF_Def.bnf_of ctxt name of
-                        SOME bnf => BNF_Def.sets_of_bnf bnf
-                        | NONE => error ("Type is neither a set nor a (MR)BNF: " ^ name)
-                      );
-                    val subst = Term.subst_atomic_types (rev (map TVar (Term.add_tvars (hd sets) [])) ~~ Ts);
-                    val sets' = map_filter (fn (T, s) => if Term.exists_subtype (curry (op=) var) T then
-                      SOME (T, subst s) else NONE) (Ts ~~ sets);
-                    val (ts, ts') = split_list (map (fn (T, s) => extract_deep T (case fastype_of t of
-                      Type (@{type_name set}, _) => MRBNF_Util.mk_UNION t s
-                      | _ => s $ t)) sets');
-                    val t = case ts of
-                      [] => NONE
-                      | _ => SOME (foldl1 MRBNF_Util.mk_Un (map_filter I ts))
-                  in (t, flat ts') end);
-            in if T = var then (SOME (HOLogic.mk_set T [t]), []) else extract_deep T t end
-
           val terms_rawss = map (fn var =>
-            apfst (map_filter I) (apsnd flat (split_list (map (extract_vars var) avoiding)))
+            apfst (map_filter I) (apsnd flat (split_list (map (extract_vars ctxt var) avoiding)))
           ) vars;
 
           val more_facts' = map (fn thm =>

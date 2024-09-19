@@ -277,17 +277,10 @@ lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
 binder_inductive ty
-  for perms: map_context rrename_typ rrename_typ and supps: "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>" FFVars_typ FFVars_typ
-                    apply (auto simp: o_def split_beta typ.rrename_comps fun_eq_iff isPerm_def image_Un
-      small_def typ.FFVars_rrenames typ.rrename_cong_ids
-      typ.card_of_FFVars_bounds typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd
-      intro!: context_map_cong_id infinite_UNIV) [16]
-  using map_context_def typ.FFVars_rrenames apply fastforce
-  subgoal by (smt (verit, best) emp_bound typ.set(1) typ.set_bd_UNIV)
   subgoal for R B \<sigma> \<Gamma> T1 T2
     unfolding split_beta
     by (elim disj_forward exE)
-      (auto simp add: isPerm_def supp_inv_bound
+      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ_vvsubst_rrename
         typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
@@ -335,8 +328,7 @@ binder_inductive ty
         apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
           apply (drule ty_fresh_extend)
           apply (simp_all add: supp_swap_bound)
-        apply (rule context_map_cong_id; auto)
-        done
+          by (metis image_eqI map_context_def map_context_swap_FFVars)
       done
     done
   done

@@ -352,11 +352,6 @@ inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (in
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
 
 binder_inductive deduct
-for perms: "\<lambda>f. map_set\<^sub>k (rrename_ifol' f)" rrename_ifol'
-and supps: "\<lambda>e1. \<Union>(FFVars_ifol' ` set\<^sub>k e1)" FFVars_ifol'
-               apply (auto simp: ifol'.rrename_id0s set\<^sub>k.map_id0 set\<^sub>k.map_comp set\<^sub>k.set_map ifol'.rrename_comp0s ifol'.rrename_comps ifol'.FFVars_rrenames)[6]
-         apply (metis UN_I ifol'.rrename_cong_ids set\<^sub>k.map_ident_strong)
-        apply (auto intro!: var_ifol'_pre_class.UN_bound simp: ifol'.rrename_cong_ids set\<^sub>k.set_bd ifol'.set_bd_UNIV infinite_UNIV small_set\<^sub>k\<^sub>2[unfolded small_def])[5]
   subgoal for R B \<sigma> x1 x2
     unfolding induct_rulify_fallback split_beta
     apply (elim disj_forward exE)

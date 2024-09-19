@@ -108,6 +108,7 @@ using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^su
       apply (rule ty.equiv)
        apply (rule bij_swap supp_swap_bound infinite_var)+
         apply (rule SA_All(6))
+        apply (unfold map_context_def[symmetric])
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
@@ -144,6 +145,7 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
       apply (rule ty.equiv)
        apply (rule bij_swap supp_swap_bound infinite_var)+
         apply (rule SA_All(6))
+        apply (unfold map_context_def[symmetric])
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_var)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])

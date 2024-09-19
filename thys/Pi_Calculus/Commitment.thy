@@ -329,6 +329,9 @@ fun ns :: "act \<Rightarrow> var set" where
 abbreviation "bvars \<equiv> bns"
 abbreviation "fvars \<equiv> fns"
 
+lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var_commit_pre set|"
+  by (metis Commitment.var_ID_class.large bns.elims finite_iff_le_card_var finite_ordLess_infinite2 insert_bound large_imp_infinite singl_bound)
+
 local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   ctors = [
     (@{term Finp}, @{thm Finp_def}),
@@ -348,6 +351,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
     SOME @{term "\<lambda>x1 x2 x3. {x2}"},
     SOME @{term "\<lambda>x P. bns x"}
   ]],
+  bset_bounds = @{thms bns_bound},
   strong_induct = @{thm refl},
   mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),
   set_simpss = [],

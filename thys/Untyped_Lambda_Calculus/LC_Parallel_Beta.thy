@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to parallel beta reduction
 for the (untyped) lambda-calculus *)
-theory LC_Parallel_Beta 
-imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP" 
+theory LC_Parallel_Beta
+imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP"
 begin
 
 abbreviation Tsupp where "Tsupp a b \<equiv> FFVars a \<union> FFVars b"
@@ -16,11 +16,7 @@ inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
 
 binder_inductive pstep
-for perms: rrename rrename and supps: FFVars FFVars
-         apply (auto simp: o_def split_beta term.rrename_comps fun_eq_iff isPerm_def
-           small_def term.card_of_FFVars_bounds term.Un_bound infinite_UNIV) [12]
   subgoal for \<sigma> R B x1 x2
-    unfolding split_beta
     by (elim disj_forward exE)
       (auto simp: isPerm_def
          term.rrename_comps rrename_tvsubst_comp

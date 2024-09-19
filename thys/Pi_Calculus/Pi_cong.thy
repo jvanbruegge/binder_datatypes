@@ -72,6 +72,11 @@ inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightar
 | "P \<rightarrow> Q \<Longrightarrow> Res x P \<rightarrow> Res x Q"
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
+lemma Inp_eq_usub: 
+  assumes il: "Inp x y Q = Inp x y' Q'"
+  shows "usub Q z y = usub Q' z y'"
+  by (metis (no_types, lifting) Inp_inject_swap Inp_refresh il usub_refresh)
+
 binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
@@ -81,7 +86,6 @@ binder_inductive trans
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
     by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
   subgoal premises prems for R B P Q
-(*
     apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp P Q"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
       [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
@@ -90,14 +94,15 @@ binder_inductive trans
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
              @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
        NONE,
-       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
+       SOME [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
        NONE]
       @{thms Res_inject Inp_inject term.FFVars_rrenames}
-      @{thms prems(2) term.rrename_cong_ids[symmetric]}
+      @{thms prems(2) Inp_eq_usub term.rrename_cong_ids[symmetric]}
       @{thms }
       @{context}\<close>)
-    find_theorems rrename usub
-*)
+(*
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
       ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
     using prems
@@ -117,6 +122,8 @@ binder_inductive trans
         apply simp
         by (meson Inp_refresh usub_refresh)
       done
+    done
+*)
     done
   done
 

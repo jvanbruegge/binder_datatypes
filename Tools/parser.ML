@@ -16,7 +16,7 @@ val parse_spec_arg = @{keyword "("} |-- BNF_Util.parse_binding_colon -- parse_se
   || parse_selector_typ >> pair Binding.empty
 
 val parse_binder_specs = Parse.enum1 "|" (Ctr_Sugar.parse_ctr_spec Parse.binding parse_spec_arg -- Parse.opt_mixfix
-  -- Scan.option (@{keyword binds} |-- (*Parse.enum1 ";"*) (Parse.list1 Parse.name --| @{keyword in} -- Parse.list1 Parse.name))
+  -- Scan.option (@{keyword binds} |-- (*Parse.enum1 ";"*) (Scan.repeat1 Parse.name --| @{keyword in} -- Scan.repeat1 Parse.name))
   )
 
 val parse_type_arg_constrained =

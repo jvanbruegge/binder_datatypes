@@ -285,8 +285,8 @@ binder_inductive ty
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
   subgoal premises prems for R B \<Gamma> T1 T2
-    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp \<Gamma> T1 T2"}
-      @{thm prems(3)} @{thms emp_bound ID.set_bd Un_bound UN_bound typ.card_of_FFVars_bounds infinite_UNIV}
+    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp \<Gamma> T1 T2"} @{thm prems(3)}
+      @{thms emp_bound ID.set_bd Un_bound UN_bound typ.card_of_FFVars_bounds infinite_UNIV}
       [NONE, NONE, NONE, NONE,
        SOME [@{term "(\<lambda>f \<Gamma>. \<Gamma>) :: (var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>"},
              @{term "(\<lambda>f T. T) :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
@@ -294,12 +294,9 @@ binder_inductive ty
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
              @{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
              @{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}]]
-      @{thms typ_inject image_iff}
-      @{thms typ.rrename_cong_ids context_map_cong_id map_idI}
+      @{thms typ_inject image_iff} @{thms typ.rrename_cong_ids context_map_cong_id map_idI}
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD}
-      @{thms prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thm prems(2)}
-      @{context}\<close>)
+      @{thms prems(1)[THEN ty_fresh_extend] id_onD} @{thm prems(2)} @{context}\<close>)
   done
 
 end

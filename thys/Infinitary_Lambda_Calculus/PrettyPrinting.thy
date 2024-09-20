@@ -47,8 +47,8 @@ term usub
 
 inductive ppr :: "trm \<Rightarrow> rtrm \<Rightarrow> bool" where
   Var_VAR: "x \<in> AVar \<Longrightarrow> ppr (Var x) (VAR x)"
-| App_APP: "ppr t T \<Longrightarrow> ppr s S  \<Longrightarrow> ppr (App t s) (APP T S)"
-| Lam_LAM: "y \<in> AVar \<Longrightarrow> y \<notin> {x} \<union> FFVars t \<union> Vars T \<Longrightarrow>  
+| App_APP: "ppr t T \<Longrightarrow> ppr s S \<Longrightarrow> ppr (App t s) (APP T S)"
+| Lam_LAM: "y \<in> AVar \<Longrightarrow> y \<notin> {x} \<union> FFVars t \<Longrightarrow>  
     ppr (usub t y x) T \<Longrightarrow> ppr (Lam x t) (LAM y T)"
 
 
@@ -62,7 +62,7 @@ fun Bperm :: "(var \<Rightarrow> var) \<Rightarrow> B \<Rightarrow> B" where
 "Bperm f = image (map_prod f f)"
 
 fun Bsupp :: "B \<Rightarrow> var set" where 
-"Bsupp XY = image fst XY \<union> image snd XY"
+"Bsupp XY = image fst XY \<comment> \<open>\<union> image snd XY \<close>"
 
 fun bnd :: "B \<Rightarrow> bool" where 
 "bnd XY \<longleftrightarrow> finite XY \<and> image snd XY \<subseteq> AVar"
@@ -118,15 +118,18 @@ apply standard unfolding isPerm_def Tperm_def  apply auto
   subgoal by (simp add: rrrename_cong)
   subgoal apply(rule ext) using image_iff by fastforce
   subgoal using finite_iff_le_card_var small_def by blast 
-  subgoal unfolding image_def by force
-  subgoal unfolding image_def by force
+  subgoal unfolding image_def by force 
+  (* subgoal unfolding image_def sledgehammer by force . *) sorry
   subgoal unfolding image_def by (metis (mono_tags, lifting) Un_iff fst_conv mem_Collect_eq snd_conv) 
   subgoal  
     by (smt (verit, del_insts) Un_iff fst_conv fst_map_prod imageI snd_conv snd_map_prod surj_pair) .
 
 
+
 lemma presBnd_imp: "presBnd \<sigma> \<Longrightarrow> \<sigma> ` AVar \<subseteq> AVar"
-unfolding presBnd_def apply auto subgoal for x apply(erule allE[of _ "{(undefined,x)}"]) by auto .
+unfolding presBnd_def apply auto subgoal for x apply(erule allE[of _ "{(undefined,x)}"])
+apply auto
+ by auto .
 
 (*
 lemma presBnd_presSuper: "presBnd = presSuper"
@@ -155,7 +158,7 @@ where
                     R (t,T) \<and> R (s,S))
          \<or> 
          (\<exists>y x t T. B = {(x,y)} \<and> fst tt = Lam x t \<and> snd tt = LAM y T \<and> 
-                    y \<in> AVar \<and> y \<notin> {x} \<union> FFVars t \<union> Vars T \<and> R (usub t y x,T))"
+                    y \<in> AVar \<and> y \<notin> {x} \<union> FFVars t \<and> R (usub t y x,T))"
  
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
@@ -268,8 +271,12 @@ lemma G_rrefresh:
 "(\<forall>tt. R tt \<longrightarrow> Ppr.II tt) \<Longrightarrow> 
  (\<forall>\<sigma> t. isPerm \<sigma> \<and> presBnd \<sigma> \<and> R tt \<longrightarrow> R (Tperm \<sigma> tt)) \<Longrightarrow> 
  G B R tt \<Longrightarrow> 
- \<exists>B'. Bsupp B' \<inter> Tsupp t = {} \<and> G B' R tt"
-apply(subgoal_tac "Ppr.II t") defer
+ \<exists>B'. Bsupp B' \<inter> Tsupp tt = {} \<and> G B' R tt"
+apply(cases tt) subgoal for t T apply apply simp
+apply(subgoal_tac "Ppr.II tt") defer
+
+
+term term (*
 apply (metis Ppr.GG_mmono2 Ppr.II.simps predicate1I)
 subgoal premises p using p apply-
 apply(frule G_bnd)

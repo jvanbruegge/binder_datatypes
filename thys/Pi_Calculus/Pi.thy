@@ -477,6 +477,11 @@ proof-
       using term_pre.supp_comp_bound by auto . .
 qed
 
+lemma Inp_eq_usub: 
+  assumes il: "Inp x y Q = Inp x y' Q'"
+  shows "usub Q z y = usub Q' z y'"
+  by (metis (no_types, lifting) Inp_inject_swap Inp_refresh il usub_refresh)
+
 lemma swap_commute:
 "{y,yy} \<inter> {x,xx} = {} \<Longrightarrow>
  swap (swap P y yy) x xx = swap (swap P x xx) y yy"

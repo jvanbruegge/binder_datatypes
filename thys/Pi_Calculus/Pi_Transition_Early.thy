@@ -21,8 +21,33 @@ binder_inductive trans
         | (rule exI[of _ "map_action \<sigma> _"])
         | (rule exI[of _ "rrename \<sigma> _"])
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
-
-  subgoal premises prems for R B x1 x2
+  subgoal premises prems for R B P Q
+    thm prems(3) prems(2)
+(*
+    apply (tactic \<open>refreshability_tac true @{term B} @{term "Tsupp P Q"}
+      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds commit_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
+      [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
+       NONE,
+       SOME [@{term "(\<lambda>f P. P) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "(\<lambda>f P. P) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
+             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
+       NONE,
+       NONE,
+       NONE,
+       NONE]
+      @{thms Res_inject Inp_inject term.FFVars_rrenames}
+      @{thms Inp_eq_usub term.rrename_cong_ids[symmetric]}
+      @{thms }
+      @{thms id_onD}
+      @{thm prems(2)}
+      @{context}\<close>)
+*)
   proof -
     define G where "G \<equiv> \<lambda>B p x1 x2.
                 (\<exists>a x P y. B = {x} \<and> x1 = Inp a x P \<and> x2 = Finp a y (P[y/x])) \<or>
@@ -33,12 +58,12 @@ binder_inductive trans
                 (\<exists>P a x P' y. B = {x, y} \<and> x1 = Res y P \<and> x2 = Bout a x (Res y P') \<and> p P (Bout a x P') \<and> y \<notin> {a, x} \<and> x \<notin> FFVars P \<union> {a}) \<or>
                 (\<exists>P \<alpha> P' Q. B = bvars \<alpha> \<and> x1 = P \<parallel> Q \<and> x2 = Cmt \<alpha> (P' \<parallel> Q) \<and> p P (Cmt \<alpha> P') \<and> bvars \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {})"
     { assume assms: "(\<forall>\<sigma> x1 x2. isPerm \<sigma> \<and> R x1 x2 \<longrightarrow> R (rrename \<sigma> x1) (rrename_commit \<sigma> x2))"
-      have "G B R x1 x2 \<Longrightarrow> \<exists>C. C \<inter> Tsupp x1 x2 = {} \<and> G C R x1 x2"
+      have "G B R P Q \<Longrightarrow> \<exists>C. C \<inter> Tsupp P Q = {} \<and> G C R P Q"
         unfolding G_def
           (**)isPerm_def conj_assoc[symmetric]
         unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
           ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
-        apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [] [@{term x1}, @{term x2}])\<close>; clarsimp)
+        apply (elim disj_forward exE; simp; tactic \<open>REPEAT_DETERM_N 2 (gen_fresh @{context} [] [] [@{term P}, @{term Q}])\<close>; clarsimp)
               apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
                | (erule (1) R_forw_subst[of R, OF _ assms[simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
                | (auto simp only: fst_conv snd_conv term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+)[2]

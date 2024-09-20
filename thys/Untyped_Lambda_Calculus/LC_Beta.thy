@@ -26,7 +26,7 @@ binder_inductive step
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B t1 t2  \<comment> \<open>refreshability\<close>
-    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp t1 t2"}
+    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp t1 t2"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
       [SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
              @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
@@ -36,11 +36,8 @@ binder_inductive step
        SOME [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
              @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]]
-      @{thms Lam_inject}
-      @{thms prems(2) Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms }
-      @{context}\<close>)
-    done
+      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
+      @{thms } @{thms } @{thm prems(2)} @{context}\<close>)
 (*
     apply (rule exE[OF eextend_fresh[of B "Tsupp t1 t2" "Tsupp t1 t2 - B"]])
     subgoal apply (rule cut_rl[OF _ prems(3)]) by (auto simp add: emp_bound singl_bound)

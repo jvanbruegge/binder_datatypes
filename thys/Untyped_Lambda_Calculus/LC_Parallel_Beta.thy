@@ -23,7 +23,7 @@ binder_inductive pstep
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B t1 t2
-    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp t1 t2"}
+    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp t1 t2"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
       [NONE,
        NONE,
@@ -36,10 +36,9 @@ binder_inductive pstep
              @{term "(\<lambda>f e. e) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]]
       @{thms Lam_inject}
-      @{thms prems(2) Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms }
+      @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
+      @{thms } @{thms } @{thm prems(2)}
       @{context}\<close>)
-    done
   done
 
 thm pstep.strong_induct

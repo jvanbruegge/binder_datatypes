@@ -27,7 +27,7 @@ binder_inductive cong
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
-    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp P Q"}
+    apply (tactic \<open>refreshability_tac true @{term B} @{term "Tsupp P Q"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
       [NONE,
        NONE,
@@ -42,8 +42,10 @@ binder_inductive cong
              @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
              @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}]]
       @{thms Res_inject term.FFVars_rrenames}
-      @{thms prems(2) term.rrename_cong_ids[symmetric]}
-      @{thms id_onD[rotated]}
+      @{thms term.rrename_cong_ids[symmetric]}
+      @{thms }
+      @{thms id_onD}
+      @{thm prems(2)}
       @{context}\<close>)
     done
   done
@@ -72,11 +74,6 @@ inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightar
 | "P \<rightarrow> Q \<Longrightarrow> Res x P \<rightarrow> Res x Q"
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
-lemma Inp_eq_usub: 
-  assumes il: "Inp x y Q = Inp x y' Q'"
-  shows "usub Q z y = usub Q' z y'"
-  by (metis (no_types, lifting) Inp_inject_swap Inp_refresh il usub_refresh)
-
 binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
@@ -86,7 +83,7 @@ binder_inductive trans
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
     by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
   subgoal premises prems for R B P Q
-    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp P Q"}
+    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp P Q"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
       [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
              @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
@@ -99,32 +96,11 @@ binder_inductive trans
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
        NONE]
       @{thms Res_inject Inp_inject term.FFVars_rrenames}
-      @{thms prems(2) Inp_eq_usub term.rrename_cong_ids[symmetric]}
+      @{thms Inp_eq_usub term.rrename_cong_ids[symmetric]}
       @{thms }
+      @{thms }
+      @{thm prems(2)}
       @{context}\<close>)
-(*
-    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib ex_simps(1,2)[symmetric]
-      ex_comm[where P = P for P :: "_ set \<Rightarrow> _ \<Rightarrow> _"]
-    using prems
-    apply (elim disj_forward exE; simp; clarsimp)
-      apply (auto simp only: fst_conv snd_conv term.set)
-    subgoal for x z P y Q
-      apply (rule exE[OF exists_fresh[of "[x, y, z]" P Q]])
-      subgoal for w
-        apply (rule exI[of _ w])
-        apply simp
-        by (meson Inp_refresh usub_refresh)
-      done
-    subgoal for x z P y Q
-      apply (rule exE[OF exists_fresh[of "[x, y, z]" P Q]])
-      subgoal for w
-        apply (rule exI[of _ w])
-        apply simp
-        by (meson Inp_refresh usub_refresh)
-      done
-    done
-*)
-    done
   done
 
 thm trans.strong_induct

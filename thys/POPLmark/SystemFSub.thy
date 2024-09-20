@@ -285,52 +285,21 @@ binder_inductive ty
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
   subgoal premises prems for R B \<Gamma> T1 T2
-(*
-    apply (tactic \<open>refreshability_tac @{term B} @{term "Tsupp \<Gamma> T1 T2"}
+    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp \<Gamma> T1 T2"}
       @{thm prems(3)} @{thms emp_bound ID.set_bd Un_bound UN_bound typ.card_of_FFVars_bounds infinite_UNIV}
-      [NONE,
-       NONE,
-       NONE,
-       NONE,
+      [NONE, NONE, NONE, NONE,
        SOME [@{term "(\<lambda>f \<Gamma>. \<Gamma>) :: (var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>"},
              @{term "(\<lambda>f T. T) :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
              @{term "(\<lambda>f T. T) :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
              @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
              @{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"},
              @{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}]]
-      @{thms typ_inject}
-      @{thms prems(2) typ.rrename_cong_ids[symmetric]}
-      @{thms }
+      @{thms typ_inject image_iff}
+      @{thms typ.rrename_cong_ids context_map_cong_id map_idI}
+      @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD}
+      @{thms prems(1)[THEN ty_fresh_extend] id_onD}
+      @{thm prems(2)}
       @{context}\<close>)
-*)
-    using prems
-    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-    apply (elim disj_forward exE; clarsimp)
-     apply (((rule exI, rule conjI[rotated], assumption) |
-          (((rule exI conjI)+)?, rule Forall_rrename) |
-          (auto))+) []
-    subgoal premises prems for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
-      using prems(3-)
-      using exists_fresh[of "[x]"  \<Gamma> T1 T2] apply(elim exE conjE)
-      subgoal for z
-        apply (rule exI)
-        apply (rule exI[of _ "{z}"])
-        apply (intro exI conjI)
-              apply (rule refl)+
-            apply (rule Forall_swap)
-            apply simp
-           apply (rule Forall_swap)
-           apply simp
-          apply assumption+
-         apply (frule prems(1)[rule_format, of "(\<Gamma>, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
-         apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "\<Gamma>, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
-           apply (auto simp: extend_eqvt)
-        apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
-          apply (drule ty_fresh_extend)
-          apply (simp_all add: supp_swap_bound)
-          by (metis image_eqI map_context_def map_context_swap_FFVars)
-      done
-    done
   done
 
 end

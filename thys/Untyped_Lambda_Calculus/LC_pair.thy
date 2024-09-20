@@ -13,7 +13,7 @@ declare [[mrbnf_internals]]
 binder_datatype 'a "term" =
   Var 'a
 | App "'a term" "'a term"
-| Lam xy ::"'a \<times> 'a" t::"'a term" binds xy in t
+| Lam "x::'a \<times> y::'a" t::"'a term" binds x y in t
 for
   vvsubst: vvsubst
   tvsubst: tvsubst 

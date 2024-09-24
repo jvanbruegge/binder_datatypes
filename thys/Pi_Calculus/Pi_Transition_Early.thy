@@ -11,6 +11,24 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
+lemma Bout_inject: "(Bout x y t = Bout x' y' t') \<longleftrightarrow>
+  x = x' \<and>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FFVars_term t - {y}) f \<and> f y = y' \<and> rrename_term f t = t')"
+  by (auto 0 4 simp: id_on_def intro!: exI[of _ "id(y:=y', y':=y)"] rrename_cong)
+declare Bout_inj[simp del]
+
+lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
+  by (cases \<alpha>) auto
+
+lemma vars_alt: "vars \<alpha> = bns \<alpha> \<union> fns \<alpha>"
+  by (cases \<alpha>) auto
+
+lemma Cmt_eqvt: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars_commit (Cmt \<alpha> P)) f \<Longrightarrow>
+  Cmt \<alpha> P = Cmt (map_action f \<alpha>) (rrename f P)"
+  by (cases \<alpha>)
+    (force simp: Bout_inject id_on_def intro!: exI[of _ f] term.rrename_cong_ids[symmetric] rrename_cong)+
+  
 binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
@@ -22,8 +40,34 @@ binder_inductive trans
         | (rule exI[of _ "rrename \<sigma> _"])
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
-    thm prems(3) prems(2)
 (*
+    apply (tactic \<open>refreshability_tac true
+      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]
+      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+       @{term "map_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"}]
+      [SOME [NONE, SOME 1, SOME 0, NONE],
+       NONE,
+       SOME [NONE, NONE, SOME 1, SOME 0, NONE, SOME 0],
+       SOME [SOME 0, NONE, SOME 1, SOME 0],
+       SOME [SOME 0, NONE, SOME 0, SOME 1],
+       SOME [SOME 0, NONE, SOME 1, SOME 0, SOME 1],
+       SOME [NONE, SOME 2, SOME 0, SOME 0]]
+      @{thm prems(3)} @{thm prems(2)} @{thms }
+      @{thms emp_bound singl_bound insert_bound card_of_minus_bound term.Un_bound term.card_of_FFVars_bounds commit_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
+      @{thms Res_inject Inp_inject Bout_inject FFVars_commit_Cmt ns_alt vars_alt}
+      @{thms Inp_eq_usub term.rrename_cong_ids arg_cong2[where f=Cmt] action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout]}
+      @{thms cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Bout _ _ _"] id_onD id_on_antimono
+             cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Fout _ _ _"]
+             cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Cmt _ _"]
+             cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1, of _ _ _ "Finp _ _ _"]} @{context}\<close>)
+*)
+    find_theorems "map_action _ _ = _"
+    thm cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Fout _ _ _"]
+
+thm cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1, of _ _ "Rout"]
+thm cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ "Bout _ _ _" "Bout _ _ _"]
+(*
+    thm prems(3) prems(2)
     apply (tactic \<open>refreshability_tac true @{term B} @{term "Tsupp P Q"}
       @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds commit_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
       [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
@@ -41,9 +85,9 @@ binder_inductive trans
        NONE,
        NONE,
        NONE]
-      @{thms Res_inject Inp_inject term.FFVars_rrenames}
-      @{thms Inp_eq_usub term.rrename_cong_ids[symmetric]}
-      @{thms }
+      @{thms Res_inject Inp_inject term.rrename_cong_ids}
+      @{thms Inp_eq_usub term.rrename_cong_ids}
+      @{thms cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1] id_onD id_on_antimono}
       @{thms id_onD}
       @{thm prems(2)}
       @{context}\<close>)
@@ -90,7 +134,7 @@ binder_inductive trans
            apply ((((rule exI conjI)+)?, (assumption | rule Inp_refresh Res_refresh usub_refresh arg_cong2[where f=Cmt, OF refl])
               | (erule (1) R_forw_subst[of R, OF _ assms[simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
               | (auto simp only: fst_conv snd_conv term.set FFVars_commit_simps FFVars_commit_Cmt act_var_simps))+) [1]
-        apply simp
+        apply (simp_all add: Bout_inj)
         apply (smt (verit) Diff_disjoint Diff_empty FFVars_commit_Cmt Int_Un_eq(3) Un_empty Un_iff action.simps(65) action.simps(66) action.simps(68) action.simps(69) bns.simps(1) empty_bvars_vars_fvars insert_disjoint(2) insert_not_empty ns.elims term.set(8))
 
         subgoal for P a x P' y z1 z2
@@ -109,7 +153,7 @@ binder_inductive trans
           apply simp
            apply (smt (verit, best) image_iff sw_diff sw_eqR)
           apply (rule conjI)
-           apply (erule (1) R_forw_subst[of R, OF _ assms[simplified, rule_format, OF conjI[OF isPerm_swap]]]; simp?)
+           apply (erule (1) R_forw_subst[of R, OF _ assms[simplified, rule_format, OF conjI[OF isPerm_swap]]]; (simp add: Bout_inj)?)
            apply (rule conjI)
             apply (smt (verit, best) image_iff sw_diff sw_eqR)
            apply (simp add: swap_commute term.rrename_comps[where w="swap P' y z1"] supp_comp_bound[OF _ _ infinite_UNIV]
@@ -127,8 +171,8 @@ binder_inductive trans
               apply simp
              apply simp
             apply (intro exI[of _ "swap P1' b z1"] conjI)
-              apply simp
-             apply simp
+              apply (simp add: Bout_inj)
+             apply (simp add: Bout_inj)
              apply (metis Bout_inj)
             apply simp
             done

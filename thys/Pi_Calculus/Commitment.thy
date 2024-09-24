@@ -219,23 +219,31 @@ lemma Bout_Tau_diff[simp]: "Bout x y P \<noteq> Tau P'"
 unfolding Bout_def Tau_def
 by (smt (verit) Inl_Inr_False Inr_inject commit_internal.TT_injects0(2) map_commit_pre_Inr_Inr_Inl_aux toUnfold(22))
 
-lemma Binp_Boutp_diff[simp]: "Binp x y P \<noteq> Bout x' y' P'"
+lemmas Tau_Bout_diff[simp] = Bout_Tau_diff[symmetric]
+
+lemma Binp_Bout_diff[simp]: "Binp x y P \<noteq> Bout x' y' P'"
   unfolding Binp_def Bout_def
   by (smt (verit) Inl_Inr_False Inr_inject commit_internal.TT_injects0(2) map_commit_pre_Inr_Inr_Inl_aux toUnfold(22))
+
+lemmas Bout_Binp_diff[simp] = Binp_Bout_diff[symmetric]
 
 lemma Binp_Finp_diff[simp]: "Binp x y P \<noteq> Finp x' y' P'"
   unfolding Binp_def Finp_def
   by (metis Abs_commit_pre_inj Inl_Inr_False commit_internal.TT_injects0(2) map_commit_pre_Inl_aux)
 
+lemmas Finp_Binp_diff[simp] = Binp_Finp_diff[symmetric]
+
 lemma Binp_Fout_diff[simp]: "Binp x y P \<noteq> Fout x' y' P'"
   unfolding Binp_def Fout_def
   by (metis Abs_commit_pre_inj Inl_Inr_False Inr_inject commit_internal.TT_injects0(2) map_commit_pre_Inr_Inl_aux)
+
+lemmas Fout_Binp_diff[simp] = Binp_Fout_diff[symmetric]
 
 lemma Binp_Tau_diff[simp]: "Binp x y P \<noteq> Tau P'"
   unfolding Binp_def Tau_def
   by (metis Abs_commit_pre_inj Inr_not_Inl commit_internal.TT_injects0(2) map_commit_pre_Inr_Inr_Inr_Inl_aux old.sum.inject(2))
 
-lemmas Tau_Bout_diff[simp] = Bout_Tau_diff[symmetric]
+lemmas Tau_Binp_diff[simp] = Binp_Tau_diff[symmetric]
 
 (* Supply of fresh variables *)
 

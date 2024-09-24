@@ -11,7 +11,7 @@ begin
 abbreviation Tsupp where "Tsupp a b \<equiv> FFVars a \<union> FFVars b"
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t1::trm) t2"
   unfolding prod.collapse
-  by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
+   by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
 
 inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
@@ -26,18 +26,18 @@ binder_inductive step
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B t1 t2  \<comment> \<open>refreshability\<close>
-    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp t1 t2"}
-      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      [SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f e. e) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
-       NONE,
-       NONE,
-       SOME [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]]
+    by (tactic \<open>refreshability_tac false
+      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
+      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
+      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [SOME 0, SOME 0, SOME 1]]
+      @{thm prems(3)} @{thm prems(2)} @{thms }
+      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
       @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms } @{thms } @{thm prems(2)} @{context}\<close>)
+      @{thms } @{context}\<close>)
+  done
+
+thm step.strong_induct step.equiv
+
 (*
     apply (rule exE[OF eextend_fresh[of B "Tsupp t1 t2" "Tsupp t1 t2 - B"]])
     subgoal apply (rule cut_rl[OF _ prems(3)]) by (auto simp add: emp_bound singl_bound)
@@ -80,10 +80,6 @@ apply (auto simp: )
       done
     done
 *)
-  done
-
-thm step.strong_induct
-thm step.equiv
 
 (* ALTERNATIVE manual instantiation without the automation provided by binder_inductive *)
 (*

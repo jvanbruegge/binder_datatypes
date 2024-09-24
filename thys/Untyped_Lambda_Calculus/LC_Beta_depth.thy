@@ -26,23 +26,14 @@ binder_inductive stepD
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B d t1 t2
-    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp d t1 t2"}
-      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      [SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f e. e) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
-       NONE,
-       NONE,
-       SOME [@{term "(\<lambda>f d. d) :: (var \<Rightarrow> var) \<Rightarrow> nat \<Rightarrow> nat"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]]
-      @{thms Lam_inject}
-      @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms }
-      @{thms }
-      @{thm prems(2)}
-      @{context}\<close>)
+    by (tactic \<open>refreshability_tac false
+      [@{term "(\<lambda>_. {}) :: nat \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
+      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
+      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [NONE, SOME 0, SOME 0, SOME 1]]
+      @{thm prems(3)} @{thm prems(2)} @{thms }
+      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
+      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
+      @{thms } @{context}\<close>)
   done
 
 thm stepD.strong_induct

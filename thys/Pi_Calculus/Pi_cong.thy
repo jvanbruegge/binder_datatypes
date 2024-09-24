@@ -27,27 +27,14 @@ binder_inductive cong
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
-    apply (tactic \<open>refreshability_tac true @{term B} @{term "Tsupp P Q"}
-      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
-      [NONE,
-       NONE,
-       NONE,
-       NONE,
-       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
-       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
-       NONE,
-       SOME [@{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}]]
-      @{thms Res_inject term.FFVars_rrenames}
-      @{thms term.rrename_cong_ids[symmetric]}
-      @{thms }
-      @{thms id_onD}
-      @{thm prems(2)}
-      @{context}\<close>)
-    done
+    by (tactic \<open>refreshability_tac false
+      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
+      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
+      [NONE, NONE, NONE, NONE, SOME [SOME 1, SOME 1, SOME 0], SOME [SOME 1], NONE, SOME [SOME 1, SOME 0, SOME 0]]
+      @{thm prems(3)} @{thm prems(2)} @{thms }
+      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
+      @{thms Res_inject term.FFVars_rrenames} @{thms term.rrename_cong_ids[symmetric]}
+      @{thms id_onD} @{context}\<close>)
   done
 
 thm cong.strong_induct
@@ -83,24 +70,14 @@ binder_inductive trans
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
     by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
   subgoal premises prems for R B P Q
-    by (tactic \<open>refreshability_tac false @{term B} @{term "Tsupp P Q"}
-      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
-      [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "(\<lambda>f P. P) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
-       NONE,
-       SOME [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
-       NONE]
-      @{thms Res_inject Inp_inject term.FFVars_rrenames}
-      @{thms Inp_eq_usub term.rrename_cong_ids[symmetric]}
-      @{thms }
-      @{thms }
-      @{thm prems(2)}
-      @{context}\<close>)
+    by (tactic \<open>refreshability_tac false
+      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
+      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
+      [SOME [NONE, NONE, NONE, SOME 1, SOME 0], NONE, SOME [SOME 0, SOME 0, SOME 1], NONE]
+      @{thm prems(3)} @{thm prems(2)} @{thms }
+      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
+      @{thms Res_inject Inp_inject term.FFVars_rrenames} @{thms Inp_eq_usub term.rrename_cong_ids[symmetric]}
+      @{thms } @{context}\<close>)
   done
 
 thm trans.strong_induct

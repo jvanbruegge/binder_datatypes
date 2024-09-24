@@ -5,6 +5,11 @@ imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LF
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
+inductive print :: "trm \<Rightarrow> string \<Rightarrow> bool" where
+  "print (Var (Variable x)) [char_of x]"
+| "print t1 s1 \<Longrightarrow> print t2 s2 \<Longrightarrow> print (App t1 t2) (''('' @ s1 @ '' '' @ s2 @ '')'')"
+| "Variable y \<notin> FFVars t - {x} \<Longrightarrow> print (swap t x (Variable y)) s \<Longrightarrow>
+    print (Lam x t) (''(%'' @ [char_of y] @ ''. '' @ s @ '')'')"
 
 (* *)
 

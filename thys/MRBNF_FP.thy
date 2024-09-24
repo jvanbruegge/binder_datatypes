@@ -342,9 +342,9 @@ ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 lemma extend_fresh:
   fixes A B::"'a set"
   assumes "|B| <o |UNIV::'a set|" "|B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|" "infinite (UNIV::'a set)"
-  shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> \<rho> ` B \<inter> B = {} \<and> id_on (A - B) \<rho>"
+  shows "\<exists>\<rho>. bij \<rho> \<and> |supp \<rho>| <o |UNIV::'a set| \<and> \<rho> ` B \<inter> A = {} \<and> \<rho> ` B \<inter> B = {} \<and> id_on (A - B) \<rho> \<and> (\<forall>x. \<rho> (\<rho> x) = x)"
   using eextend_fresh[of B "A \<union> B" "A - B", OF assms(1,2,3), OF assms(1)]
-  unfolding Int_Un_distrib
+  unfolding Int_Un_distrib fun_eq_iff o_apply id_apply
   by blast
 
 ML \<open>
@@ -353,41 +353,67 @@ local
   open BNF_FP_Util
 in
 
-fun refreshability_tac verbose B Tsupp G_thm small_thms instss simp_thms intro_thms elim_thms extend_thms eqvt_thm ctxt =
+fun refreshability_tac verbose supps renames instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
-    val fresh = infer_instantiate' ctxt
-      [SOME (Thm.cterm_of ctxt B),
-       SOME (Thm.cterm_of ctxt Tsupp)]
-      @{thm extend_fresh};
-    val small_ctxt = ctxt addsimps small_thms;
-    fun case_tac NONE _ prems ctxt = SOLVE (auto_tac (ctxt addsimps map (simplify ctxt) prems addSIs map (simplify ctxt) prems))
+    val n = length supps;
+    fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN' 
+        K (if verbose then print_tac ctxt "pre_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
       | case_tac (SOME insts) params prems ctxt =
         let
-          val eqvt_thm = eqvt_thm OF take 2 prems;
-          val extra_thms = prems RL (eqvt_thm :: extend_thms);
 val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
-val _ = extra_thms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
-          val f = hd params |> snd |> Thm.term_of;
-          val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
-          val args = tl params |> map (snd #> Thm.term_of);
-          val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt (i $ f $ a)) insts args;
-          val id_onI = nth prems 4 RS @{thm id_on_antimono};
+          fun mk_supp ts = @{map 2} (fn s => fn t => s $ t) supps ts |>
+            Library.foldl1 (HOLogic.mk_binop \<^const_name>\<open>sup\<close>)
+          val (defs, assms) = chop (n + 1) prems;
+          val Bts = defs
+            |> map (fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o Thm.prop_of);
+          val B = hd Bts;
+          val ts = tl Bts;
+          val other_tss = assms
+            |> filter (can (fn thm => thm RSN (3, eqvt_thm)))
+            |> map (snd o strip_comb o HOLogic.dest_Trueprop o Thm.prop_of);
+          val A = map mk_supp (ts :: other_tss)
+            |> Library.foldl1 (HOLogic.mk_binop \<^const_name>\<open>sup\<close>);
+          val fresh = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt A)]
+            @{thm extend_fresh};
+
+          fun case_inner_tac fs fprems ctxt =
+            let
+              val f = hd fs |> snd |> Thm.term_of;
+              val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
+              val ex_B' = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (mk_image f $ B))] exI;
+              val args = params |> map (snd #> Thm.term_of);
+              val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt
+                (case i of SOME i => nth renames i $ f $ a | NONE => a)) insts args;
+val _ = fprems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
+              val eqvt_thm = eqvt_thm OF take 2 fprems;
+              val extra_assms = assms RL (eqvt_thm :: extend_thms);
+              val id_onI = fprems RL @{thms id_on_antimono};
+val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
+            in
+              HEADGOAL (rtac ctxt ex_B' THEN' rtac ctxt conjI THEN'
+                REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
+                EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs) THEN'
+                Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
+                SELECT_GOAL (unfold_tac ctxt defs) THEN'
+                K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
+                SELECT_GOAL (mk_auto_tac (ctxt
+                  addsimps (simp_thms @ defs @ fprems)
+                  addSIs (ex_f :: intro_thms)
+                  addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
+            end;
+          val small_ctxt = ctxt addsimps small_thms;
         in
-          HEADGOAL (EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs) THEN'
-            Method.insert_tac ctxt (prems @ extra_thms) THEN'
-            hyp_subst_tac_thin true ctxt THEN'
-            K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
-            SELECT_GOAL (mk_auto_tac (ctxt
-              addsimps (simp_thms @ prems)
-              addSIs (ex_f :: id_onI :: intro_thms)
-              addSEs elim_thms) 0 4) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
+          HEADGOAL (rtac ctxt (fresh RS exE) THEN'
+          SELECT_GOAL (auto_tac (small_ctxt addsimps [hd prems])) THEN'
+          REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
+          SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
+          REPEAT_DETERM o etac ctxt conjE THEN'
+          Subgoal.SUBPROOF (fn focus =>
+            case_inner_tac (#params focus) (#prems focus) (#context focus)) ctxt)
         end;
   in
-    HEADGOAL (rtac ctxt (fresh RS exE) THEN'
-      rtac ctxt (G_thm RSN (2, cut_rl)) THEN' SELECT_GOAL (auto_tac small_ctxt) THEN'
-      REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
-      REPEAT_DETERM o etac ctxt conjE THEN'
-      EVERY' [rtac ctxt exI, rtac ctxt conjI, assume_tac ctxt] THEN'
+    unfold_tac ctxt @{thms conj_disj_distribL ex_disj_distrib} THEN
+    HEADGOAL (
       rtac ctxt (G_thm RSN (2, cut_rl)) THEN'
       REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE conjE disj_forward}) THEN'
       EVERY' (map (fn insts => Subgoal.SUBPROOF (fn focus =>

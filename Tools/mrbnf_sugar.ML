@@ -291,11 +291,17 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o rtac ctxt allI,
             TRY o rtac ctxt @{thm disjointI},
             rtac ctxt IH,
-            REPEAT_DETERM o FIRST' [
-              rtac ctxt @{thm UnI1} THEN' rtac ctxt @{thm singletonI},
-              rtac ctxt @{thm UnI2}
+            K (Local_Defs.unfold0_tac ctxt @{thms Un_iff singleton_iff HOL.simp_thms(6,29,30)}),
+            REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms UNIV_I UN_I singletonI TrueI}),
+            IF_UNSOLVED o EVERY' [
+              etac ctxt @{thm contrapos_pp},
+              K (print_tac ctxt "bar"),
+              K (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
+              REPEAT_DETERM o etac ctxt conjE,
+              assume_tac ctxt,
+              TRY o rtac ctxt @{thm UNIV_I},
+              K (print_tac ctxt "foo")
             ],
-            REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms UNIV_I UN_I singletonI}),
             IF_UNSOLVED o K no_tac
           ])) prems)
         ]) ctxt) (drop n prems))

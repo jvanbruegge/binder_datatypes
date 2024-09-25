@@ -54,8 +54,8 @@ by (simp add: assms ex_new_if_finite infinite_var)
 definition sw :: "var \<Rightarrow> var \<Rightarrow> var \<Rightarrow> var" where 
 "sw x y z \<equiv> if x = y then z else if x = z then y else x"
 
-lemma sw_eqL[simp,intro!]: "\<And> x y z. sw x x y = y"
-and sw_eqR[simp,intro!]: "\<And> x y z. sw x y x = y"
+lemma sw_eqL[simp]: "\<And> x y z. sw x x y = y"
+and sw_eqR[simp]: "\<And> x y z. sw x y x = y"
 and sw_diff[simp]: "\<And> x y z. x \<noteq> y \<Longrightarrow> x \<noteq> z \<Longrightarrow> sw x y z = x"
   unfolding sw_def by auto
 

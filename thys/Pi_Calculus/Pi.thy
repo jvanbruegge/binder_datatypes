@@ -37,7 +37,7 @@ lemma singl_bound: "|{a}| <o |UNIV::var set|"
 lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
 using finite_iff_le_card_var by blast
 
-lemma supp_id_update_le[simp,intro!]:
+lemma supp_id_update_le[simp]:
 "|supp (id(x := y))| <o |UNIV::var set|"
 by (metis finite.emptyI finite.insertI finite_card_var imsupp_id_fun_upd imsupp_supp_bound infinite_var)
 
@@ -273,7 +273,7 @@ lemma Abs_rrename:
 
 (* Bound properties (needed as auxiliaries): *)
 
-lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
+lemma supp_swap_bound[simp]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
 by (simp add: cinfinite_imp_infinite supp_swap_bound term.UNIV_cinfinite)
 
 

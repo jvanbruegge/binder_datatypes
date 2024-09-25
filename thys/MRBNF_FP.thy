@@ -357,7 +357,7 @@ fun refreshability_tac verbose supps renames instss G_thm eqvt_thm extend_thms s
   let
     val n = length supps;
     fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN' 
-        K (if verbose then print_tac ctxt "pre_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
+        K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
       | case_tac (SOME insts) params prems ctxt =
         let
 val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
@@ -398,13 +398,13 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                 K (if verbose then print_tac ctxt "pre_auto" else all_tac) THEN'
                 SELECT_GOAL (mk_auto_tac (ctxt
                   addsimps (simp_thms @ defs @ fprems)
-                  addSIs (ex_f :: intro_thms)
+                  addSIs (ex_f :: id_onI @ intro_thms)
                   addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
           val small_ctxt = ctxt addsimps small_thms;
         in
           HEADGOAL (rtac ctxt (fresh RS exE) THEN'
-          SELECT_GOAL (auto_tac (small_ctxt addsimps [hd prems])) THEN'
+          SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])) THEN'
           REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
           REPEAT_DETERM o etac ctxt conjE THEN'

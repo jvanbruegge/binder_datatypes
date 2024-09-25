@@ -24,11 +24,61 @@ lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
 lemma vars_alt: "vars \<alpha> = bns \<alpha> \<union> fns \<alpha>"
   by (cases \<alpha>) auto
 
-lemma Cmt_eqvt: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars_commit (Cmt \<alpha> P)) f \<Longrightarrow>
-  Cmt \<alpha> P = Cmt (map_action f \<alpha>) (rrename f P)"
+(*
+lemma Cmt_inject: "(Cmt \<alpha> t = Cmt \<alpha>' t') \<longleftrightarrow>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (fvars \<alpha> \<union> (FFVars t - bvars \<alpha>)) f \<and> map_action f \<alpha> = \<alpha>' \<and> rrename_term f t = t')"
+  apply (cases \<alpha>; cases \<alpha>')
+                      apply (auto simp: Bout_inject intro!: term.rrename_cong_ids[symmetric] elim!: id_onD)
+  sorry
+*)
+fun rrename_action where
+  "rrename_action f (finp x y) = finp x y"
+| "rrename_action f (fout x y) = fout x y"
+| "rrename_action f (bout x y) = bout x (f y)"
+| "rrename_action f (binp x y) = binp x (f y)"
+| "rrename_action f tau = tau"
+
+
+lemma bvars_rrename_action[simp]: "bvars (rrename_action f \<alpha>) = f ` bvars \<alpha>"
+  by (cases \<alpha>) auto
+
+lemma Cmt_rename_action: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P - bvars \<alpha>) f \<Longrightarrow>
+  Cmt \<alpha> P = Cmt (rrename_action f \<alpha>) (rrename f P)"
   by (cases \<alpha>)
     (force simp: Bout_inject id_on_def intro!: exI[of _ f] term.rrename_cong_ids[symmetric] rrename_cong)+
+
+lemma Cmt_rename_action_Par: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P \<union> FFVars Q - bvars \<alpha>) f \<Longrightarrow>
+  Cmt \<alpha> (P \<parallel> Q) = Cmt (rrename_action f \<alpha>) (rrename f P \<parallel> rrename f Q)"
+  by (subst Cmt_rename_action[of f]) auto
+
+lemma "R Paa (Cmt \<alpha>' P'a) \<Longrightarrow>
+    bvars \<alpha>' \<inter> (FFVars Paa \<union> FFVars Qaa) = {} \<Longrightarrow>
+    R (rrename xa Paa) (rrename_commit xa (Cmt \<alpha>' P'a)) \<Longrightarrow>
+    bij xa \<Longrightarrow>
+    |supp xa| <o |UNIV :: var set| \<Longrightarrow>
+    xa ` bvars \<alpha>' \<inter> bvars \<alpha>' = {} \<Longrightarrow>
+    xa ` bvars \<alpha>' \<inter> FFVars (Paa \<parallel> Qaa) = {} \<Longrightarrow>
+    xa ` bvars \<alpha>' \<inter> FFVars_commit (Cmt \<alpha>' (P'a \<parallel> Qaa)) = {} \<Longrightarrow>
+    xa ` bvars \<alpha>' \<inter> FFVars Paa = {} \<Longrightarrow>
+    xa ` bvars \<alpha>' \<inter> FFVars_commit (Cmt \<alpha>' P'a) = {} \<Longrightarrow>
+    id_on (Tsupp (Paa \<parallel> Qaa) (Cmt \<alpha>' (P'a \<parallel> Qaa)) \<union> Tsupp Paa (Cmt \<alpha>' P'a) - bvars \<alpha>')
+     xa \<Longrightarrow>
+    \<forall>x. xa (xa x) = x \<Longrightarrow>
+    xa ` bvars \<alpha>' = bvars (rrename_action xa \<alpha>') \<and>
+    Paa \<parallel> Qaa = Paa \<parallel> rrename xa Qaa \<and>
+    Cmt \<alpha>' (P'a \<parallel> Qaa) = Cmt (rrename_action xa \<alpha>') (rrename xa P'a \<parallel> rrename xa Qaa) \<and>
+    R Paa (Cmt (rrename_action xa \<alpha>') (rrename xa P'a)) \<and>
+    bvars (rrename_action xa \<alpha>') \<inter> FFVars Paa = {} \<and>
+    bvars (rrename_action xa \<alpha>') \<inter> FFVars (rrename xa Qaa) = {} "
+      apply (auto 0 10 simp: FFVars_commit_Cmt Int_Un_distrib intro!: exI[of _ xa] intro!: term.rrename_cong_ids[symmetric] Cmt_rename_action Cmt_rename_action_Par elim!: id_onD
+        cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Cmt _ _"] id_on_antimono)
+(*  apply (subst Cmt_rename_action[of xa])
+     apply (auto elim!: id_on_antimono)
+*)
+  done
   
+
 binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
@@ -44,7 +94,7 @@ binder_inductive trans
     apply (tactic \<open>refreshability_tac true
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]
       [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-       @{term "map_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"}]
+       @{term "rrename_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"}]
       [SOME [NONE, SOME 1, SOME 0, NONE],
        NONE,
        SOME [NONE, NONE, SOME 1, SOME 0, NONE, SOME 0],
@@ -55,42 +105,12 @@ binder_inductive trans
       @{thm prems(3)} @{thm prems(2)} @{thms }
       @{thms emp_bound singl_bound insert_bound card_of_minus_bound term.Un_bound term.card_of_FFVars_bounds commit_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
       @{thms Res_inject Inp_inject Bout_inject FFVars_commit_Cmt ns_alt vars_alt}
-      @{thms Inp_eq_usub term.rrename_cong_ids arg_cong2[where f=Cmt] action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout]}
+      @{thms Inp_eq_usub term.rrename_cong_ids term.rrename_cong_ids[symmetric] arg_cong2[where f=Cmt] action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout]
+         Cmt_rename_action Cmt_rename_action_Par}
       @{thms cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Bout _ _ _"] id_onD id_on_antimono
              cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Fout _ _ _"]
              cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Cmt _ _"]
              cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1, of _ _ _ "Finp _ _ _"]} @{context}\<close>)
-*)
-    find_theorems "map_action _ _ = _"
-    thm cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Fout _ _ _"]
-
-thm cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1, of _ _ "Rout"]
-thm cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ "Bout _ _ _" "Bout _ _ _"]
-(*
-    thm prems(3) prems(2)
-    apply (tactic \<open>refreshability_tac true @{term B} @{term "Tsupp P Q"}
-      @{thm prems(3)} @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds commit_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
-      [SOME [@{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}],
-       NONE,
-       SOME [@{term "(\<lambda>f P. P) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f x. x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "(\<lambda>f P. P) :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"},
-             @{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}],
-       NONE,
-       NONE,
-       NONE,
-       NONE]
-      @{thms Res_inject Inp_inject term.rrename_cong_ids}
-      @{thms Inp_eq_usub term.rrename_cong_ids}
-      @{thms cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1] id_onD id_on_antimono}
-      @{thms id_onD}
-      @{thm prems(2)}
-      @{context}\<close>)
 *)
   proof -
     define G where "G \<equiv> \<lambda>B p x1 x2.

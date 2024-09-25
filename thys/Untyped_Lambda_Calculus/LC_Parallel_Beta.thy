@@ -30,7 +30,7 @@ binder_inductive pstep
       @{thm prems(3)} @{thm prems(2)} @{thms }
       @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
       @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms } @{context}\<close>)
+      @{thms id_on_antimono} @{context}\<close>)
   done
 
 thm pstep.strong_induct

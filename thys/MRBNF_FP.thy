@@ -392,6 +392,7 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
             in
               HEADGOAL (rtac ctxt ex_B' THEN' rtac ctxt conjI THEN'
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
+                K (if verbose then print_tac ctxt "pre_inst" else all_tac) THEN'
                 EVERY' (map (fn x => rtac ctxt (infer_instantiate' ctxt [NONE, SOME x] exI)) xs) THEN'
                 Method.insert_tac ctxt (assms @ extra_assms @ fprems) THEN'
                 SELECT_GOAL (unfold_tac ctxt defs) THEN'

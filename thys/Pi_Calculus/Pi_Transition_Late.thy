@@ -21,7 +21,7 @@ binder_inductive trans
         | (rule exI[of _ "map_action \<sigma> _"] exI[of _ "rrename \<sigma> _"])
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
-    by (tactic \<open>refreshability_tac true
+    by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]
       [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
        @{term "rrename_bound_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"}]

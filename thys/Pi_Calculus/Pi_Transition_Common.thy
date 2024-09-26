@@ -81,4 +81,36 @@ proof-
   thus ?thesis by auto
 qed
 
+lemma Bout_inject: "(Bout x y t = Bout x' y' t') \<longleftrightarrow>
+  x = x' \<and>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FFVars_term t - {y}) f \<and> f y = y' \<and> rrename_term f t = t')"
+  by (auto 0 4 simp: id_on_def intro!: exI[of _ "id(y:=y', y':=y)"] rrename_cong)
+declare Bout_inj[simp del]
+
+lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
+  by (cases \<alpha>) auto
+
+lemma vars_alt: "vars \<alpha> = bns \<alpha> \<union> fns \<alpha>"
+  by (cases \<alpha>) auto
+
+fun rrename_bound_action where
+  "rrename_bound_action f (finp x y) = finp x y"
+| "rrename_bound_action f (fout x y) = fout x y"
+| "rrename_bound_action f (bout x y) = bout x (f y)"
+| "rrename_bound_action f (binp x y) = binp x (f y)"
+| "rrename_bound_action f tau = tau"
+
+lemma bvars_rrename_bound_action[simp]: "bvars (rrename_bound_action f \<alpha>) = f ` bvars \<alpha>"
+  by (cases \<alpha>) auto
+
+lemma Cmt_rrename_bound_action: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P - bvars \<alpha>) f \<Longrightarrow>
+  Cmt \<alpha> P = Cmt (rrename_bound_action f \<alpha>) (rrename f P)"
+  by (cases \<alpha>)
+    (force simp: Bout_inject id_on_def intro!: exI[of _ f] term.rrename_cong_ids[symmetric] rrename_cong)+
+
+lemma Cmt_rrename_bound_action_Par: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P \<union> FFVars Q - bvars \<alpha>) f \<Longrightarrow>
+  Cmt \<alpha> (P \<parallel> Q) = Cmt (rrename_bound_action f \<alpha>) (rrename f P \<parallel> rrename f Q)"
+  by (subst Cmt_rrename_bound_action[of f]) auto
+
 end

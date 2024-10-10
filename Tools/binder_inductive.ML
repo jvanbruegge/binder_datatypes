@@ -1,6 +1,7 @@
 signature BINDER_INDUCTIVE =
 sig
-
+  val binder_inductive_cmd: (string * (string * string list) list option) * (string list option * string list option)
+    -> local_theory -> Proof.state;
 end
 
 structure Binder_Inductive : BINDER_INDUCTIVE =
@@ -991,7 +992,7 @@ val binder_inductive_parser = Parse.name -- Scan.option (
   ) -- parse_perm_supps
 
 val _ =
-  Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>binder_inductive\<close> "derive strengthened induction theorems for inductive predicates"
+  Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>binder_inductive_split\<close> "derive strengthened induction theorems for inductive predicates"
     (binder_inductive_parser >> binder_inductive_cmd);
 
 end

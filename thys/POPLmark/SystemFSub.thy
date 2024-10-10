@@ -276,7 +276,7 @@ declare ty.intros[intro]
 lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
-binder_inductive ty
+binder_inductive_split ty
   subgoal for R B \<sigma> \<Gamma> T1 T2
     unfolding split_beta
     by (elim disj_forward exE)

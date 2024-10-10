@@ -9,7 +9,7 @@ lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t :: trm) t2"
   by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
 
 (* Structural congurence *)
-inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<^sub>\<pi>)" 40) where
+binder_inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<^sub>\<pi>)" 40) where
   "P = Q \<Longrightarrow> P \<equiv>\<^sub>\<pi> Q"
 | "Par P Q \<equiv>\<^sub>\<pi> Par Q P"
 | "Par (Par P Q) R \<equiv>\<^sub>\<pi> Par P (Par Q R)"
@@ -18,8 +18,6 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 | "Res x Zero \<equiv>\<^sub>\<pi> Zero"
 | "Bang P \<equiv>\<^sub>\<pi> Par P (Bang P)"
 | cong_3: "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
-
-binder_inductive cong
   subgoal for R B \<sigma> x1 x2
     apply simp
     by (elim disj_forward case_prodE)
@@ -55,13 +53,11 @@ proof-
   thus ?thesis by auto
 qed
 
-inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightarrow>)" 30) where
+binder_inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightarrow>)" 30) where
   "Par (Out x z P) (Inp x y Q) \<rightarrow> Par P (usub Q z y)"
 | "P \<rightarrow> Q \<Longrightarrow> Par P R \<rightarrow> Par P Q"
 | "P \<rightarrow> Q \<Longrightarrow> Res x P \<rightarrow> Res x Q"
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
-
-binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
     apply (elim disj_forward exE)

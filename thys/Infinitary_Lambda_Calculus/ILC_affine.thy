@@ -10,7 +10,7 @@ begin
 lemma Tvars_dsset: "(FFVars t - dsset xs) \<inter> dsset xs = {}" "|FFVars t - dsset xs| <o |UNIV::ivar set|"
 apply auto using card_of_minus_bound iterm.set_bd_UNIV by blast
 
-inductive affine  :: "itrm \<Rightarrow> bool" where
+binder_inductive affine  :: "itrm \<Rightarrow> bool" where
  iVar[simp,intro!]: "affine (iVar x)"
 |iLam: "affine e \<Longrightarrow> affine (iLam xs e)"
 |iApp:
@@ -20,8 +20,6 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
  (\<And>i j. i \<noteq> j \<Longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {})
  \<Longrightarrow>
  affine (iApp e1 es2)"
-
-binder_inductive affine
   unfolding isPerm_def induct_rulify_fallback
   subgoal for R B \<sigma> t
     apply(elim disjE)

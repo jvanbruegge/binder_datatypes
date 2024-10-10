@@ -13,13 +13,11 @@ lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t1::trm) t2"
   unfolding prod.collapse
    by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
 
-inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
 | AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
-
-binder_inductive step
   subgoal for \<sigma> R B t  \<comment> \<open>equivariance\<close>
     by (elim disj_forward case_prodE)
       (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp

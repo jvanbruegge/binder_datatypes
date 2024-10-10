@@ -9,13 +9,11 @@ abbreviation Tsupp where "Tsupp a b \<equiv> FFVars a \<union> FFVars b"
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t1 :: trm) t2"
   by (metis (no_types, lifting) exists_var finite_iff_le_card_var term.Un_bound term.set_bd_UNIV)
 
-inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
+binder_inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
   Refl: "pstep e e"
 | App: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App e1 e2) (App e1' e2')"
 | Xi: "pstep e e' \<Longrightarrow> pstep (Lam x e) (Lam x e')"
 | PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
-
-binder_inductive pstep
   subgoal for \<sigma> R B x1 x2
     by (elim disj_forward exE)
       (auto simp: isPerm_def

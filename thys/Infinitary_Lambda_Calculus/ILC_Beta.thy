@@ -18,13 +18,11 @@ lemma small_Tsupp: "small (Tsupp t1 t2)"
 lemma Tvars_dsset: "(Tsupp t1 t2 - dsset xs) \<inter> dsset xs = {}" "|Tsupp t1 t2 - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tsupp small_def)
 
-inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
+binder_inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
   Beta: "istep (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
 | iAppL: "istep e1 e1' \<Longrightarrow> istep (iApp e1 es2) (iApp e1' es2)"
 | iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
-
-binder_inductive istep
   subgoal for R B \<sigma> x1 x2
     apply (elim disj_forward exE conjE)
     subgoal for xs e1 es2

@@ -20,15 +20,40 @@ binder_inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
          term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B t1 t2
-    by (tactic \<open>refreshability_tac false
-      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [NONE, NONE, SOME [SOME 0, SOME 0, SOME 1], SOME [SOME 0, SOME 0, NONE, NONE, SOME 1]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms id_on_antimono} @{context}\<close>)
+  subgoal premises prems for R B x1 x2
+    using fresh[of x1 x2] prems(2-)
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE)
+     apply (((rule exI, rule conjI[rotated], assumption) |
+          (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
+          (auto split: if_splits))+) [3]
+    subgoal for xx e1 e1' e2 e2' x
+      apply (erule conjE)+
+      apply hypsubst_thin
+      apply (subst (asm) FFVars_tvsubst)
+      apply simp
+      apply (unfold term.set)
+      apply (unfold Un_iff de_Morgan_disj)
+      apply (erule conjE)+
+      apply (subst (2 3) ex_comm)
+      apply (rule exI)
+      apply (rule exI[of _ "{xx}"])
+      apply (rule conjI)
+       apply (rule exI)+
+       apply (rule conjI[OF refl])
+       apply (rule conjI)
+        apply simp
+        apply (rule conjI)
+         apply (rule Lam_refresh)
+         apply simp
+        apply (rule refl)
+       apply (rule conjI[rotated])+
+         apply assumption
+        apply auto[1]
+       apply (fastforce intro!: tvsubst_refresh)
+      apply simp
+      done
+    done
   done
 
 thm pstep.strong_induct

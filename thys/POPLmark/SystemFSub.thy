@@ -285,14 +285,34 @@ binder_inductive_split ty
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
   subgoal premises prems for R B \<Gamma> T1 T2
-    by (tactic \<open>refreshability_tac false
-      [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FFVars_typ :: type \<Rightarrow> var set"}, @{term "FFVars_typ :: type \<Rightarrow> var set"}]
-      [@{term "rrename_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0]]
-      @{thm prems(3)} @{thm prems(2)} @{thms  prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thms emp_bound insert_bound ID.set_bd Un_bound UN_bound typ.card_of_FFVars_bounds infinite_UNIV}
-      @{thms typ_inject image_iff} @{thms typ.rrename_cong_ids context_map_cong_id map_idI}
-      @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
+    using prems
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE; clarsimp)
+     apply (((rule exI, rule conjI[rotated], assumption) |
+          (((rule exI conjI)+)?, rule Forall_rrename) |
+          (auto))+) []
+    subgoal premises prems for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
+      using prems(3-)
+      using exists_fresh[of "[x]"  \<Gamma> T1 T2] apply(elim exE conjE)
+      subgoal for z
+        apply (rule exI)
+        apply (rule exI[of _ "{z}"])
+        apply (intro exI conjI)
+              apply (rule refl)+
+            apply (rule Forall_swap)
+            apply simp
+           apply (rule Forall_swap)
+           apply simp
+          apply assumption+
+         apply (frule prems(1)[rule_format, of "(\<Gamma>, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
+         apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "\<Gamma>, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
+           apply (auto simp: extend_eqvt)
+        apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
+          apply (drule ty_fresh_extend)
+          apply (simp_all add: supp_swap_bound)
+          by (metis (no_types, opaque_lifting) image_iff map_context_def map_context_swap_FFVars)
+      done
+    done
   done
 
 end

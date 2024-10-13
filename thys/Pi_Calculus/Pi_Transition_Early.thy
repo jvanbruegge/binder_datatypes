@@ -31,6 +31,7 @@ binder_inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
         | (rule exI[of _ "rrename \<sigma> _"])
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
+    (* This is a prototype implemetation of the refreshability heuristic mentioned in sections 5 and 6. *)  
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]
       [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},

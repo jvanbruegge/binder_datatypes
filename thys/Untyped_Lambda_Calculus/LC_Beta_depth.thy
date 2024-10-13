@@ -23,15 +23,12 @@ binder_inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow>
       (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B d t1 t2
-    by (tactic \<open>refreshability_tac false
-      [@{term "(\<lambda>_. {}) :: nat \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [NONE, SOME 0, SOME 0, SOME 1]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms } @{context}\<close>)
+  subgoal premises prems for R B x1 x2 x3
+    using fresh[of x2 x3] prems(2-)
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE; simp)
+     apply (metis Lam_eq_tvsubst Lam_refresh singletonD)
+    by blast
   done
 
 thm stepD.strong_induct

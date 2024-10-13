@@ -23,15 +23,12 @@ binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
       (auto simp: isPerm_def term.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B t1 t2  \<comment> \<open>refreshability\<close>
-    by (tactic \<open>refreshability_tac false
-      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [SOME 0, SOME 0, SOME 1]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms } @{context}\<close>)
+  subgoal premises prems for R B x1 x2  \<comment> \<open>refreshability\<close>
+    using fresh[of x1 x2] prems(2-) unfolding isPerm_def conj_assoc[symmetric] split_beta
+    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
+    apply (elim disj_forward exE; simp)
+     apply (metis Lam_eq_tvsubst Lam_inject_swap singletonD)
+    by blast
   done
 
 thm step.strong_induct step.equiv

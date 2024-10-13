@@ -29,7 +29,7 @@ binder_inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
     apply (elim disj_forward exE; simp)
      apply (metis Lam_eq_tvsubst Lam_inject_swap singletonD)
     by blast
-  done
+    done
 
 thm step.strong_induct step.equiv
 

@@ -25,7 +25,19 @@ fun mk_insert x S =
 fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
   let
     val binds = the_default [] binds_opt;
-    val ({names, ...}, { def, preds, mono, induct, intrs, ... }) = Inductive.the_inductive_global no_defs_lthy (long_name no_defs_lthy pred_name);
+
+    val (context, facts) = (Proof_Context.theory_of #>
+      `Context.Theory ##> Proof_Context.init_global) no_defs_lthy ||> Proof_Context.facts_of;
+    fun lookup name = the_single (#thms (the (
+      Facts.lookup context facts (Facts.intern facts name)
+    )));
+
+    val long_name = long_name no_defs_lthy pred_name;
+    val ({names, ...}, { preds, induct, intrs, ... }) = Inductive.the_inductive_global no_defs_lthy long_name;
+
+    (* TODO: remove, this is a hack until the Isabelle patch is merged *)
+    val def = lookup (long_name ^ "_def");
+    val operator = snd (Term.dest_comb (snd (Logic.dest_equals (Thm.prop_of def))));
 
     val param_Ts = Term.binder_types (fastype_of (hd preds));
 
@@ -231,7 +243,6 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         val thy = Proof_Context.theory_of no_defs_lthy;
         fun mk_match mk_T ts = map2 (fn t => fn T =>
           let
-            val _ = @{print} (Thm.cterm_of no_defs_lthy t, T, mk_T T)
             val t = Logic.varify_types_global t;
             val tyenv = Sign.typ_match thy (fastype_of t, mk_T T) Vartab.empty;
           in Envir.subst_term (tyenv, Vartab.empty) t end
@@ -382,6 +393,17 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
             (\<^Const>\<open>monotone_on predT predT' for
                 \<^Const>\<open>top \<^Type>\<open>set predT\<close>\<close> \<^Const>\<open>less_eq predT\<close> \<^Const>\<open>less_eq predT'\<close> t\<close>)
           end;
+
+        val mono = Goal.prove_sorry lthy [] [] (mk_mono operator) (fn {context=ctxt, ...} => EVERY1 [
+          rtac ctxt @{thm monoI},
+          REPEAT_DETERM o resolve_tac ctxt @{thms le_funI le_boolI'},
+          REPEAT_DETERM o FIRST' [
+            assume_tac ctxt,
+            resolve_tac ctxt (Inductive.get_monos ctxt),
+            etac ctxt @{thm le_funE},
+            dtac ctxt @{thm le_boolD}
+          ]
+        ]);
 
         val G_mono = Goal.prove_sorry lthy [] [] (mk_mono (fst G))
           (fn {context=ctxt,...} => EVERY1 [

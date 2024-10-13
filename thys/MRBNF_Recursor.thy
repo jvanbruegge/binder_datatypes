@@ -11,6 +11,8 @@ ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
+declare [[inductive_internals]]
+
 context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
 end

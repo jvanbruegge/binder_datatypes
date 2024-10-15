@@ -160,13 +160,14 @@ abbreviation in_context :: "var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>
 abbreviation well_scoped :: "type \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("_ closed'_in _" [55, 55] 60) where
   "well_scoped S \<Gamma> \<equiv> FFVars_typ S \<subseteq> dom \<Gamma>"
 
-inductive wf_ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("\<turnstile> _ ok" [70] 100) where
-  wf_Nil[intro]: "\<turnstile> [] ok"
-| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; \<turnstile> \<Gamma> ok \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,x<:T ok"
+hide_const wf
+inductive wf :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> bool"  where
+  wf_Nil[intro]: "wf []"
+| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; wf \<Gamma>\<rbrakk> \<Longrightarrow> wf (\<Gamma>,x<:T)"
 
 inductive_cases
-  wfE[elim]: "\<turnstile> \<Gamma> ok"
-  and wf_ConsE[elim!]: "\<turnstile> (a#\<Gamma>) ok"
+  wfE[elim]: "wf \<Gamma>"
+  and wf_ConsE[elim!]: "wf (a#\<Gamma>)"
 print_theorems
 
 lemma in_context_eqvt:
@@ -186,7 +187,7 @@ lemma closed_in_eqvt:
 
 lemma wf_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "\<turnstile> \<Gamma> ok \<Longrightarrow> \<turnstile> map_context f \<Gamma> ok"
+  shows "wf \<Gamma> \<Longrightarrow> wf (map_context f \<Gamma>)"
 unfolding map_context_def proof (induction \<Gamma>)
   case (Cons a \<Gamma>)
   then show ?case using assms apply auto
@@ -206,7 +207,7 @@ lemma fresh: "\<exists>xx. xx \<notin> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2"
 lemma swap_idemp[simp]: "id(X := X) = id" by auto
 lemma swap_left: "(id(X := Y, Y := X)) X = Y" by simp
 
-lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> X \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> X \<in> dom \<Gamma>"
+lemma wf_FFVars: "wf \<Gamma> \<Longrightarrow> X \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> X \<in> dom \<Gamma>"
   by (induction \<Gamma>) auto
 
 lemma finite_Tsupp: "finite (Tsupp \<Gamma> T\<^sub>1 T\<^sub>2)"
@@ -242,8 +243,8 @@ lemma isPerm_swap: "isPerm (id(X := Y, Y := X))"
 (* *)
 
 inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
-  SA_Top: "\<lbrakk> \<turnstile> \<Gamma> ok ; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
-| SA_Refl_TVar: "\<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
+  SA_Top: "\<lbrakk>wf \<Gamma>; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
+| SA_Refl_TVar: "\<lbrakk>wf \<Gamma>; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
 | SA_Trans_TVar: "\<lbrakk> X<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar X <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
 | SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: \<forall>X<:T\<^sub>1 .T\<^sub>2"
@@ -261,7 +262,7 @@ and
 and
   SA_AllEL: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
 
-lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
+lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> wf \<Gamma>"
   by (induction \<Gamma> S T rule: ty.induct)
 
 lemma well_scoped:

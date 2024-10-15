@@ -14,7 +14,7 @@ paper. It works with the latest released version Isabelle2024, which can be down
 After downloading Isabelle, a good starting point is to issue the following command
 
 ```
-/<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Untyped_Lambda_Calculus/LC_Beta
+/<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Untyped_Lambda_Calculus/LC_Beta.thy
 ```
 
 in the folder of the artifact. This will open Isabelle/jEdit and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle.

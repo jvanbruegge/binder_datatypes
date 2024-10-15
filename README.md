@@ -63,4 +63,5 @@ TODO:
 (the paper uses Lterm); ILterm vs. ilterm etc. 
 -- mention the NoLeastSupportCounterexample theory. 
 -- check in the browsable html files too
+-- say we always have theories dedicated to the specific datatypes
 

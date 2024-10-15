@@ -5,21 +5,21 @@ theory No_Least_Support_Counterexample
    "HOL-Cardinals.Cardinals"
 begin
 
-type_synonym atom = "nat suc" (* uncountable variable type *)
+type_synonym var = "nat suc" (* uncountable variable type *)
 
-definition cbij :: "(atom \<Rightarrow> atom) \<Rightarrow> bool" (* countable-support bijections *) where 
+definition cbij :: "(var \<Rightarrow> var) \<Rightarrow> bool" (* countable-support bijections *) where 
   "cbij \<sigma> \<equiv> bij \<sigma> \<and> countable {x. \<sigma> x \<noteq> x}"
 
-lemma card_of_atom: "|UNIV :: atom set| =o card_suc |UNIV :: nat set|"
+lemma card_of_var: "|UNIV :: var set| =o card_suc |UNIV :: nat set|"
   by (simp add: card_order_card_suc ordIso_symmetric)
 
 lemma card_suc_greater_set: "card_order r \<Longrightarrow> A \<le>o r \<Longrightarrow> A <o card_suc r"
   using card_suc_greater ordLeq_ordLess_trans by blast
 
-lemma countable_iff_le_card_atom: "countable A \<longleftrightarrow> |A| <o |UNIV::atom set|"
+lemma countable_iff_le_card_var: "countable A \<longleftrightarrow> |A| <o |UNIV::var set|"
   by (auto simp add: countable_card_of_nat card_suc_ordLess_imp_ordLeq card_suc_greater_set
-    ordLess_ordIso_trans[OF _ ordIso_symmetric[OF card_of_atom]]
-    dest: ordLess_ordIso_trans[OF _ card_of_atom])
+    ordLess_ordIso_trans[OF _ ordIso_symmetric[OF card_of_var]]
+    dest: ordLess_ordIso_trans[OF _ card_of_var])
 
 lemma countable_sset: "countable (sset s)"
   unfolding sset_range by auto
@@ -28,13 +28,13 @@ lemma stream_eq_nth: "xs = ys \<longleftrightarrow> (\<forall>i. snth xs i = snt
   by (metis smap_alt stream_smap_nats)
 
 lemma exists_subset_compl:
-  assumes "Cinfinite r" "r \<le>o |UNIV::atom set|" "|U \<union> S::atom set| <o r"
+  assumes "Cinfinite r" "r \<le>o |UNIV::var set|" "|U \<union> S::var set| <o r"
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
 proof -
   have 1: "|U| <o r" using assms(3) using card_of_Un1 ordLeq_ordLess_trans by blast
-  have "|-(U \<union> S)| =o |UNIV::atom set|" using assms(2,3)
-    by (metis boolean_algebra.disj_cancel_right card_of_UNIV card_of_atom countable_Un_iff
-      countable_iff_le_card_atom not_ordLess_ordIso ordLeq_iff_ordLess_or_ordIso ordLess_ordLeq_trans)
+  have "|-(U \<union> S)| =o |UNIV::var set|" using assms(2,3)
+    by (metis boolean_algebra.disj_cancel_right card_of_UNIV card_of_var countable_Un_iff
+      countable_iff_le_card_var not_ordLess_ordIso ordLeq_iff_ordLess_or_ordIso ordLess_ordLeq_trans)
   then have "|U| <o |-(U \<union> S)|" using ordLess_ordLeq_trans[OF 1 assms(2)] ordIso_symmetric ordLess_ordIso_trans by fast
   then obtain B where 1: "B \<subseteq> -(U \<union> S)" "|U| =o |B|"
     by (meson internalize_card_of_ordLeq2 ordLess_imp_ordLeq)
@@ -49,7 +49,7 @@ proof-
   obtain D where D: "D \<inter> B = {}" "D \<inter> A = {}" "D \<inter> A' = {}" and DA: "|D| =o |A|"
     using exists_subset_compl[of _ A "A' \<union> B"]
       Field_card_of Int_Un_distrib Int_commute Un_empty card_of_Card_order
-      card_of_UNIV cinfinite_def countable_Un_iff countable_iff_le_card_atom
+      card_of_UNIV cinfinite_def countable_Un_iff countable_iff_le_card_var
        ordIso_symmetric s(1-3) Cinfinite_card_suc Field_card_suc natLeq_Cinfinite natLeq_card_order
     by (smt (verit, ccfv_threshold))
   then obtain u where u: "bij_betw u A D"  
@@ -87,7 +87,8 @@ proof-
     subgoal using sv D(3) s(4) by auto . 
 qed
 
-definition "eq_ae s t = finite {i. snth s i \<noteq> snth t i}" (*almost everywhere equal streams*)
+(* Almost-everywhere equality of streams: *)
+definition "eq_ae s t = finite {i. snth s i \<noteq> snth t i}" 
 
 lemma eq_ae_suffix: "eq_ae s t = (\<exists>i. sdrop i s = sdrop i t)"
   unfolding eq_ae_def
@@ -107,6 +108,7 @@ next
       (metis add_diff_inverse_nat atLeast0LessThan lessThan_iff sdrop_snth)
 qed
 
+(* This is indeed an equivalence: *)
 lemma eq_ae_refl: "eq_ae s s"
   by (auto simp: eq_ae_def)
 
@@ -125,10 +127,12 @@ lemma eq_ae_trans: "eq_ae s t \<Longrightarrow> eq_ae t u \<Longrightarrow> eq_a
 lemma eq_ae_equivp: "equivp eq_ae"
   by (simp add: eq_ae_refl eq_ae_sym eq_ae_trans equivpI reflpI sympI transpI)
 
-quotient_type item = "atom stream" / eq_ae
+(* E is taken to be a quotient type, consisting of equivalence classes 
+of streams of variables under almost-everywhere-equality: *)
+quotient_type E = "var stream" / eq_ae
   by (rule eq_ae_equivp)
 
-lift_definition perm_item :: "(atom \<Rightarrow> atom) \<Rightarrow> item \<Rightarrow> item" (infix "\<bullet>" 65) is smap
+lift_definition perm_E :: "(var \<Rightarrow> var) \<Rightarrow> E \<Rightarrow> E" (infix "\<bullet>" 65) is smap
   unfolding eq_ae_suffix
   apply (elim exE)
   subgoal for f s t i
@@ -138,47 +142,52 @@ lift_definition perm_item :: "(atom \<Rightarrow> atom) \<Rightarrow> item \<Rig
 definition supports where
   "supports A t = (\<forall>\<sigma>. cbij \<sigma> \<longrightarrow> (\<forall>a\<in>A. \<sigma> a = a) \<longrightarrow> \<sigma> \<bullet> t = t)"
 
-(* next 3 lemmas show that item is a nominal set *)
-lemma perm_item_id: "id \<bullet> t = t"
+(* The next 3 lemmas show that "E" forms an aleph0-pre-nominal set *)
+lemma perm_E_id: "id \<bullet> t = t"
  by (transfer) (auto simp: eq_ae_refl stream.map_id)
-lemma perm_item_comp: "cbij \<sigma> \<Longrightarrow> cbij \<tau> \<Longrightarrow> (\<sigma> o \<tau>) \<bullet> t = \<sigma> \<bullet> (\<tau> \<bullet> t)"
+lemma perm_E_comp: "cbij \<sigma> \<Longrightarrow> cbij \<tau> \<Longrightarrow> (\<sigma> o \<tau>) \<bullet> t = \<sigma> \<bullet> (\<tau> \<bullet> t)"
   by (transfer) (auto simp: eq_ae_refl stream.map_comp)
 lemma countable_support: "\<exists>A. countable A \<and> supports A t"
   unfolding supports_def
-  apply transfer
+  apply transfer 
   subgoal for s
     by (auto simp: eq_ae_refl stream.map_ident cong: stream.map_cong intro: exI[of _ "sset s"] countable_sset)
   done
 
-definition "atom = (SOME f :: nat \<Rightarrow> atom. inj f)"
+(* Just like in the paper, we take xs to be some nonrepetitive (i.e,, injective) stream: *)
+definition "xs \<equiv> (SOME xs :: nat \<Rightarrow> var. inj xs)"
 
-lemma atom_inj[simp]: "atom x = atom y \<longleftrightarrow> x = y"
-  by (metis Cinfinite_card_suc Field_natLeq cinfinite_def infinite_countable_subset injD atom_def
+lemma xs_inj[simp]: "xs i = xs j \<longleftrightarrow> i = j"
+  by (metis Cinfinite_card_suc Field_natLeq cinfinite_def infinite_countable_subset injD xs_def
     natLeq_card_order natLeq_cinfinite someI_ex)
 
-lift_definition inats :: "item" is "smap atom nats" .
 
-lemma supports_inats: "supports (atom ` {n ..}) inats"
+(* This is the equivalence class of xs (under the almost-everywhere equality relation eq_ae): *)
+lift_definition cls_xs :: "E" is "smap xs nats" .
+
+(* The set xs!0,xs!1,... supports : *)
+lemma supports_cls_xs: "supports (xs ` {n ..}) cls_xs"
   unfolding supports_def
   by transfer
     (force simp: stream.map_comp eq_ae_suffix intro: stream.map_cong)
 
-(* assuming the existence of a minimal support set for any item we derive a contradiction *)
-lemma counterexample:
+(* Assuming the existence of a minimal support set for any E we derive a contradiction: 
+*)
+proposition counterexample:
   assumes minimal: "\<forall>t. \<exists>A. countable A \<and> supports A t \<and> (\<forall>B. countable B \<longrightarrow> supports B t \<longrightarrow> A \<subseteq> B)"
   shows False
 proof -
-  from minimal obtain A where "countable A" "supports A inats" "\<forall>B. countable B \<longrightarrow> supports B inats \<longrightarrow> A \<subseteq> B"
+  from minimal obtain A where "countable A" "supports A cls_xs" "\<forall>B. countable B \<longrightarrow> supports B cls_xs \<longrightarrow> A \<subseteq> B"
     by blast
-  then have *: "A \<subseteq> atom ` {n..}" for n
-    using supports_inats[of n] by auto
-  have "atom x \<notin> A" for x
-    using *[of "Suc x"] by auto
-  with countable_cbij[of "range atom" "range atom" A] \<open>countable A\<close> obtain \<sigma> where
-    "cbij \<sigma>" "\<sigma> ` range atom \<inter> range atom = {}" "\<forall>a\<in>A. \<sigma> a = a"
+  then have *: "A \<subseteq> xs ` {n..}" for n
+    using supports_cls_xs[of n] by auto
+  have "xs i \<notin> A" for i
+    using *[of "Suc i"] by auto
+  with countable_cbij[of "range xs" "range xs" A] \<open>countable A\<close> obtain \<sigma> where
+    "cbij \<sigma>" "\<sigma> ` range xs \<inter> range xs = {}" "\<forall>a\<in>A. \<sigma> a = a"
     by auto
   then show False
-    using \<open>supports A inats\<close>[unfolded supports_def, rule_format, where \<sigma> = \<sigma>]
+    using \<open>supports A cls_xs\<close>[unfolded supports_def, rule_format, where \<sigma> = \<sigma>]
     by transfer (auto simp: stream.map_comp o_def eq_ae_suffix stream_eq_nth)
 qed
 

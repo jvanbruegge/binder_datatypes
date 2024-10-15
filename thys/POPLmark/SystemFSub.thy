@@ -19,9 +19,6 @@ binder_datatype 'a "typ" =
   | Fun "'a typ" "'a typ"
   | Forall X::'a "'a typ" T::"'a typ" binds X in T
 
-instance var :: var_typ_pre apply standard
-  using Field_natLeq infinite_iff_card_of_nat infinite_var
-  by (auto simp add: regularCard_var)
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.rrename_ids[simp] typ.rrename_id0s[simp]
@@ -100,6 +97,10 @@ lemma Forall_swap: "y \<notin> FFVars_typ T2 - {x} \<Longrightarrow> Forall (x::
     apply (rule cinfinite_imp_infinite[OF typ.UNIV_cinfinite])
   by auto
 
+(* Monomorphising: *)
+instance var :: var_typ_pre apply standard
+  using Field_natLeq infinite_iff_card_of_nat infinite_var
+  by (auto simp add: regularCard_var)
 
 type_synonym type = "var typ"
 type_synonym \<Gamma>\<^sub>\<tau> = "(var \<times> type) list"

@@ -5,7 +5,7 @@ imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LF
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
-inductive print :: "trm \<Rightarrow> string \<Rightarrow> bool" where
+inductive print :: "lterm \<Rightarrow> string \<Rightarrow> bool" where
   "print (Var (Variable x)) [char_of x]"
 | "print t1 s1 \<Longrightarrow> print t2 s2 \<Longrightarrow> print (App t1 t2) (''('' @ s1 @ '' '' @ s2 @ '')'')"
 | "Variable y \<notin> FFVars t - {x} \<Longrightarrow> print (swap t x (Variable y)) s \<Longrightarrow>
@@ -16,7 +16,7 @@ inductive print :: "trm \<Rightarrow> string \<Rightarrow> bool" where
 primrec prime_var where
   "prime_var (Variable x) = prime x"
 
-inductive primal :: "trm \<Rightarrow> bool" where
+inductive primal :: "lterm \<Rightarrow> bool" where
   Var: "prime_var x \<Longrightarrow> primal (Var x)"
 | App: "primal e1 \<Longrightarrow> primal e2 \<Longrightarrow> primal (App e1 e2)"
 | Lam: "prime_var x \<Longrightarrow> primal e \<Longrightarrow> primal  (Lam x e)"

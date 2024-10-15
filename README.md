@@ -53,5 +53,6 @@ consists of the ML files implementing the support for datatypes with bindings).
 TODO:
 -- conventions: eg. Lterm the polymorphic type, lterm its monomorphic versions 
 (the paper uses Lterm); ILterm vs. ilterm etc. 
---
+-- mention the NoLeastSupportCounterexample theory. 
+-- add the browsable html files
 

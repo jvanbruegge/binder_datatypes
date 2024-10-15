@@ -88,14 +88,14 @@ proof-
 qed
 
 (* Almost-everywhere equality of streams: *)
-definition "eq_ae s t = finite {i. snth s i \<noteq> snth t i}" 
+definition "eq_ae xs ys = finite {i. snth xs i \<noteq> snth ys i}" 
 
-lemma eq_ae_suffix: "eq_ae s t = (\<exists>i. sdrop i s = sdrop i t)"
+lemma eq_ae_suffix: "eq_ae xs ys = (\<exists>i. sdrop i xs = sdrop i ys)"
   unfolding eq_ae_def
 proof (safe, goal_cases)
   case 1
   then show ?case
-    apply (intro exI[of _ "Max (insert 0 (Suc ` {i. s !! i \<noteq> t !! i}))"])
+    apply (intro exI[of _ "Max (insert 0 (Suc ` {i. xs !! i \<noteq> ys !! i}))"])
     apply (auto simp: Max.insert_remove smap_alt[of id, simplified stream.map_id id_apply]
       mono_Max_commute[symmetric, of Suc, simplified mono_def, simplified] sdrop_snth
       simp flip: snth.simps)
@@ -109,13 +109,13 @@ next
 qed
 
 (* This is indeed an equivalence: *)
-lemma eq_ae_refl: "eq_ae s s"
+lemma eq_ae_refl: "eq_ae us us"
   by (auto simp: eq_ae_def)
 
-lemma eq_ae_sym: "eq_ae s t \<Longrightarrow> eq_ae t s"
+lemma eq_ae_sym: "eq_ae us vs \<Longrightarrow> eq_ae vs us"
   by (auto simp: eq_ae_def elim: finite_subset[rotated])
 
-lemma eq_ae_trans: "eq_ae s t \<Longrightarrow> eq_ae t u \<Longrightarrow> eq_ae s u"
+lemma eq_ae_trans: "eq_ae us vs \<Longrightarrow> eq_ae vs ws \<Longrightarrow> eq_ae us ws"
   unfolding eq_ae_suffix
   apply (elim exE)
   subgoal for i j
@@ -154,41 +154,43 @@ lemma countable_support: "\<exists>A. countable A \<and> supports A t"
     by (auto simp: eq_ae_refl stream.map_ident cong: stream.map_cong intro: exI[of _ "sset s"] countable_sset)
   done
 
-(* Just like in the paper, we take xs to be some nonrepetitive (i.e,, injective) stream: *)
-definition "xs \<equiv> (SOME xs :: nat \<Rightarrow> var. inj xs)"
+(* Just like in the paper, we now take xs to be some nonrepetitive (i.e,, injective) stream: *)
+definition "f \<equiv> SOME f :: nat \<Rightarrow> var. inj f"
 
-lemma xs_inj[simp]: "xs i = xs j \<longleftrightarrow> i = j"
-  by (metis Cinfinite_card_suc Field_natLeq cinfinite_def infinite_countable_subset injD xs_def
+lemma f_inj[simp]: "f i = f j \<longleftrightarrow> i = j"
+  by (metis Cinfinite_card_suc Field_natLeq cinfinite_def infinite_countable_subset injD f_def
     natLeq_card_order natLeq_cinfinite someI_ex)
 
+definition "xs \<equiv> smap f nats"
+
+lemma snth_xs: "snth xs = f"  unfolding xs_def fun_eq_iff by auto
 
 (* This is the equivalence class of xs (under the almost-everywhere equality relation eq_ae): *)
-lift_definition cls_xs :: "E" is "smap xs nats" .
+lift_definition cls_xs :: "E" is "xs" .
 
-(* The set xs!0,xs!1,... supports : *)
-lemma supports_cls_xs: "supports (xs ` {n ..}) cls_xs"
+(* Any of the sets {xs!n,xs!(n+1),...} supports cls_xs: *)
+lemma supports_cls_xs: "supports (snth xs ` {n ..}) cls_xs"
   unfolding supports_def
   by transfer
-    (force simp: stream.map_comp eq_ae_suffix intro: stream.map_cong)
+    (force simp: xs_def stream.map_comp eq_ae_suffix intro: stream.map_cong)
 
-(* Assuming the existence of a minimal support set for any E we derive a contradiction: 
-*)
+(* Assuming the existence of a minimal support set for any E we derive a contradiction: *)
 proposition counterexample:
   assumes minimal: "\<forall>t. \<exists>A. countable A \<and> supports A t \<and> (\<forall>B. countable B \<longrightarrow> supports B t \<longrightarrow> A \<subseteq> B)"
   shows False
 proof -
   from minimal obtain A where "countable A" "supports A cls_xs" "\<forall>B. countable B \<longrightarrow> supports B cls_xs \<longrightarrow> A \<subseteq> B"
     by blast
-  then have *: "A \<subseteq> xs ` {n..}" for n
+  then have *: "A \<subseteq> snth xs ` {n..}" for n
     using supports_cls_xs[of n] by auto
-  have "xs i \<notin> A" for i
-    using *[of "Suc i"] by auto
-  with countable_cbij[of "range xs" "range xs" A] \<open>countable A\<close> obtain \<sigma> where
-    "cbij \<sigma>" "\<sigma> ` range xs \<inter> range xs = {}" "\<forall>a\<in>A. \<sigma> a = a"
+  have "snth xs i \<notin> A" for i
+    using *[of "Suc i"] unfolding xs_def by auto
+  with countable_cbij[of "range (snth xs)" "range (snth xs)" A] \<open>countable A\<close> obtain \<sigma> where
+    "cbij \<sigma>" "\<sigma> ` range (snth xs) \<inter> range (snth xs) = {}" "\<forall>a\<in>A. \<sigma> a = a"
     by auto
   then show False
     using \<open>supports A cls_xs\<close>[unfolded supports_def, rule_format, where \<sigma> = \<sigma>]
-    by transfer (auto simp: stream.map_comp o_def eq_ae_suffix stream_eq_nth)
+    by transfer (auto simp: xs_def stream.map_comp o_def eq_ae_suffix stream_eq_nth)
 qed
 
 end

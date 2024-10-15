@@ -11,13 +11,19 @@ paper. It works with the latest released version Isabelle2024, which can be down
 
 [https://isabelle.in.tum.de/website-Isabelle2024/](https://isabelle.in.tum.de/website-Isabelle2024/)
 
-After downloading Isabelle, a good starting point is to issue the following command
+After downloading Isabelle, a good starting point is to issue the following command while located in the base directory. 
 
 ```
 /<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Untyped_Lambda_Calculus/LC_Beta.thy
 ```
 
-in the folder of the artifact. This will open `Isabelle/jEdit` and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle. Using the`Isabelle/jEdit` menu, one can then browse through the subfolders of `thys` and open any other theories. 
+in the folder of the artifact. This will open `Isabelle/jEdit` and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle. Using the`Isabelle/jEdit` menu, one can then browse through the subdirectories of `thys` and open any other theories; or one can start directly with another theory, for example:
+
+```
+/<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Infinitary_Lambda_Calculus/Iso_LC_ILC.thy
+```
+
+(Again, when issuing the above, it is important to be located in the base directory, since the `ROOT` file is located there.) 
 
 To let Isabelle check all relevant theories (from the command line, i.e., without running Isabelle/jEdit), one can use the command
 
@@ -25,11 +31,13 @@ To let Isabelle check all relevant theories (from the command line, i.e., withou
 /<Isabelle/installation/path>/bin/isabelle build -vD .
 ```
 
+We also provide generated HTML documents (folder html) that allow one to browse the formalization
+without running Isabelle. The file html/index.html provides a good starting point. (These were produced using the above command with `briowser_info` option. We have included them in the repository for the reviewers' convenience.)
+
+
 ### Overview
 
-We also provide generated HTML documents (folder html) that allow one to browse the formalization
-without running Isabelle. The file html/index.html provides a good starting point. The
-formalization is organized into the following "sessions":
+The formalization is organized into the following "sessions":
 
 session | description
 ------- | -----------
@@ -54,5 +62,5 @@ TODO:
 -- conventions: eg. Lterm the polymorphic type, lterm its monomorphic versions 
 (the paper uses Lterm); ILterm vs. ilterm etc. 
 -- mention the NoLeastSupportCounterexample theory. 
--- add the browsable html files
+-- check in the browsable html files too
 

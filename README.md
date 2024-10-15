@@ -66,4 +66,5 @@ TODO:
 -- check in the browsable html files too
 -- say we always have theories dedicated to the specific datatypes
 --- say for the infinitary case automation is less well-developed
+-- For the support of a function, in the formalization we use the more customary notation "supp" (read "support") for what in the paper we call "core" (at the beginning of section 3). 
 

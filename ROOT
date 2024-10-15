@@ -68,12 +68,13 @@ session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untype
 
 session Infinitary_FOL in "thys/Infinitary_FOL" = Binders +
   theories
+    InfFmla
     InfFOL
 
 session Process_Calculus in "thys/Pi_Calculus" = Binders +
   theories
     Pi
-	  Commitment
+    Commitment
     Pi_Transition_Common
     Pi_Transition_Early
     Pi_Transition_Late

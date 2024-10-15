@@ -7,7 +7,7 @@ begin
 abbreviation Tsupp where "Tsupp a b \<equiv> FFVars a \<union> FFVars b"
 
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t1 :: lterm) t2"
-  by (metis (no_types, lifting) exists_var finite_iff_le_card_var Lterm.Un_bound Lterm.set_bd_UNIV)
+  by (metis (no_types, lifting) exists_var finite_iff_le_card_var ltermP.Un_bound ltermP.set_bd_UNIV)
 
 binder_inductive pstep :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
   Refl: "pstep e e"
@@ -17,7 +17,7 @@ binder_inductive pstep :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
   subgoal for \<sigma> R B x1 x2
     by (elim disj_forward exE)
       (auto simp: isPerm_def
-         Lterm.rrename_comps rrename_tvsubst_comp
+         ltermP.rrename_comps rrename_tvsubst_comp
          | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
          | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B x1 x2
@@ -32,7 +32,7 @@ binder_inductive pstep :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
       apply hypsubst_thin
       apply (subst (asm) FFVars_tvsubst)
       apply simp
-      apply (unfold Lterm.set)
+      apply (unfold ltermP.set)
       apply (unfold Un_iff de_Morgan_disj)
       apply (erule conjE)+
       apply (subst (2 3) ex_comm)

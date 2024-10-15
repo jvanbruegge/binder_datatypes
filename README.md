@@ -32,18 +32,16 @@ To let Isabelle check all relevant theories (from the command line, i.e., withou
 ```
 
 We also provide generated HTML documents (folder html) that allow one to browse the formalization
-without running Isabelle. The file html/index.html provides a good starting point. (These were produced using the above command with `browser_info` option, i.e., running 
+without running Isabelle. The file html/index.html provides a good starting point. These were produced using the above command with `browser_info` option, i.e., running 
 
 ```
 /<Isabelle/installation/path>/bin/isabelle build -vD . -o browser_info
 ```
 
-We have included them in the repository for the reviewers' convenience.)
-
 
 ### Overview
 
-The formalization is organized into the following "sessions":
+The formalization is organized into the following sessions:
 
 session | description
 ------- | -----------
@@ -80,7 +78,7 @@ consists of the ML files implementing the support for datatypes with bindings).
 
 ### Notations
 
-The formalization uses notations very close to those from the paper, but makes some exceptions in order to observe the HOL conventions. Thus, in the formalization we prefer to have the main types that we use start with a lowercase. For example, in Isabelle we use `lterm` for tne type of of lambda-terms, which in the paper is denoted by `LTerm`; similarly, the formalization uses `proc` for the type of pi-calculus processes, which in the paper is denoted by `Proc`; etc. 
+The formalization uses notations that very close to those from the paper, but makes some exceptions in order to observe the HOL conventions. Thus, in the formalization we prefer to have the main types that we use start with a lowercase. For example, in Isabelle we use `lterm` for tne type of of lambda-terms, which in the paper is denoted by `LTerm`; similarly, the formalization uses `proc` for the type of pi-calculus processes, which in the paper is denoted by `Proc`; etc. 
 
 Another specificity of the formalization is that the datatypes are defined at more generic/polymorphic types than defined in the paper, and later instantiated to the exact types from the paper.  Namely, instead of working with a fixed set of variables of suitable cardinality (which in the finitary case is just Aleph0), that set is kept as a parameter -- and in Isabelle, taking advantage of polymorphism, this is a type variable 'var of type class that specifies the cardinality constraint. (Our binder_datatype command automatically assigns 'var to have the suitable type class.) This allows more flexibility in case we want to nest the given datatype inside another datatype that perhaps requires larger sets of variables. But once the exact datatypes needed for a case study have been decided, one can instantiate 'var with a fixed type var of suitable cardinality. And this is what we do in all our example datatypes: first define the polymorphic version, then instantiate it to the monomorphic version (which matches exactly that used in the paper). We consistently use the suffix `P` for the polymorphic version. For example, we introduce `ltermP` as the type of lambda-terms polymorphic in the type of variables, then we take `lterm` to be the instance `var ltermP` for some fixed countable type of variabler `var`. (The paper's implementation section 9 and the appendix implementation section G contain some more ad hoc choices of names, e.g., `type` versus `typ`, which we have decided to amend as explained above -- and will of course update the paper accordingly.) 
 

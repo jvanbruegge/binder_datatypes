@@ -132,7 +132,7 @@ lemma subOf_inj[simp]: "super xs \<Longrightarrow> super ys \<Longrightarrow> su
 by (metis superOf_subOf)
 
 
-(* The set of supervariables "touched" by a set, or by an ILterm: *)
+(* The set of supervariables "touched" by a set, or by an iltermP: *)
 
 definition touchedSuper :: "ivar set \<Rightarrow> ivar dstream set" where 
 "touchedSuper X \<equiv> {xs. super xs \<and> X \<inter> dsset xs \<noteq> {}}"
@@ -459,7 +459,7 @@ next
   define A where A: "A = FFVars (iLm xs e)"
   have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
      "A \<inter> dsset xs' = {}" "bij_betw f (dsset xs) (dsset xs')" "dsmap f xs = xs'"
-    subgoal unfolding A using ILterm.set_bd_UNIV by blast
+    subgoal unfolding A using iltermP.set_bd_UNIV by blast
     subgoal unfolding A using touchedSuperT_def u  
       using super(1) touchedSuper_iLm by auto
     subgoal unfolding A by auto

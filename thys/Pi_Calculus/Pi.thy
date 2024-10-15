@@ -7,15 +7,15 @@ begin
 (* DATATYPE DECLARATION  *)
 
 declare [[mrbnf_internals]]
-binder_datatype 'var "Proc" =
+binder_datatype 'var "procP" =
   Zero
-| Sum "'var Proc" "'var Proc"
-| Par "'var Proc" "'var Proc" (infixl "\<parallel>" 300)
-| Bang "'var Proc"
-| Match 'var 'var "'var Proc"
-| Out 'var 'var "'var Proc"
-| Inp 'var x::'var t::"'var Proc" binds x in t
-| Res x::'var t::"'var Proc" binds x in t
+| Sum "'var procP" "'var procP"
+| Par "'var procP" "'var procP" (infixl "\<parallel>" 300)
+| Bang "'var procP"
+| Match 'var 'var "'var procP"
+| Out 'var 'var "'var procP"
+| Inp 'var x::'var t::"'var procP" binds x in t
+| Res x::'var t::"'var procP" binds x in t
 for
   vvsubst: vvsubst
   tvsubst: tvsubst
@@ -25,14 +25,14 @@ for
 
 
 (* Monomorphising: *)
-instance var :: var_Proc_pre apply standard
+instance var :: var_procP_pre apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var
   by (auto simp add: regularCard_var)
 
-type_synonym proc = "var Proc"
+type_synonym proc = "var procP"
 
 lemma singl_bound: "|{a}| <o |UNIV::var set|"
-  by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF Proc_pre.UNIV_cinfinite]])
+  by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF procP_pre.UNIV_cinfinite]])
 
 lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
 using finite_iff_le_card_var by blast
@@ -44,24 +44,24 @@ by (metis finite.emptyI finite.insertI finite_card_var imsupp_id_fun_upd imsupp_
 
 (* Some lighter notations: *)
 
-abbreviation "rrename \<equiv> rrename_Proc"
-abbreviation "FFVars \<equiv> FFVars_Proc"
+abbreviation "rrename \<equiv> rrename_procP"
+abbreviation "FFVars \<equiv> FFVars_procP"
 
 (* *)
 
 (* Enabling some simplification rules: *)
 
-lemmas Proc.rrename_ids[simp] Proc.rrename_cong_ids[simp]
-Proc.FFVars_rrenames[simp]
+lemmas procP.rrename_ids[simp] procP.rrename_cong_ids[simp]
+procP.FFVars_rrenames[simp]
 
-lemmas Proc_vvsubst_rrename[simp]
+lemmas procP_vvsubst_rrename[simp]
 
 
 (* Supply of fresh variables *)
 
 lemma finite_FFVars: "finite (FFVars P)"
 unfolding ls_UNIV_iff_finite[symmetric]
-by (simp add: Proc.set_bd_UNIV)
+by (simp add: procP.set_bd_UNIV)
 
 lemma exists_fresh:
 "\<exists> z. z \<notin> set xs \<and> (\<forall>P \<in> set Ps. z \<notin> FFVars P)"
@@ -71,7 +71,7 @@ proof-
   using finite_FFVars by blast
   then obtain x where "x \<notin> set xs \<union> \<Union> (FFVars ` (set Ps))"
   by (meson ex_new_if_finite finite_iff_le_card_var
-    infinite_iff_natLeq_ordLeq var_Proc_pre_class.large)
+    infinite_iff_natLeq_ordLeq var_procP_pre_class.large)
   thus ?thesis by auto
 qed
 
@@ -82,16 +82,16 @@ qed
 
 proposition rrename_simps[simp]:
   assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
-  shows "rrename_Proc f Zero = Zero"
-    "rrename_Proc f (Sum e1 e2) = Sum (rrename_Proc f e1) (rrename_Proc f e2)"
-    "rrename_Proc f (Par e1 e2) = Par (rrename_Proc f e1) (rrename_Proc f e2)"
-    "rrename_Proc f (Bang e) = Bang (rrename_Proc f e)"
-    "rrename_Proc f (Match x y e) = Match (f x) (f y) (rrename_Proc f e)"
-    "rrename_Proc f (Out x y e) = Out (f x) (f y) (rrename_Proc f e)"
-    "rrename_Proc f (Inp x y e) = Inp (f x) (f y) (rrename_Proc f e)"
-    "rrename_Proc f (Res x e) = Res (f x) (rrename_Proc f e)"
-  unfolding Zero_def Sum_def Par_def Bang_def Match_def Out_def Inp_def Res_def Proc.rrename_cctors[OF assms] map_Proc_pre_def comp_def
-    Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
+  shows "rrename_procP f Zero = Zero"
+    "rrename_procP f (Sum e1 e2) = Sum (rrename_procP f e1) (rrename_procP f e2)"
+    "rrename_procP f (Par e1 e2) = Par (rrename_procP f e1) (rrename_procP f e2)"
+    "rrename_procP f (Bang e) = Bang (rrename_procP f e)"
+    "rrename_procP f (Match x y e) = Match (f x) (f y) (rrename_procP f e)"
+    "rrename_procP f (Out x y e) = Out (f x) (f y) (rrename_procP f e)"
+    "rrename_procP f (Inp x y e) = Inp (f x) (f y) (rrename_procP f e)"
+    "rrename_procP f (Res x e) = Res (f x) (rrename_procP f e)"
+  unfolding Zero_def Sum_def Par_def Bang_def Match_def Out_def Inp_def Res_def procP.rrename_cctors[OF assms] map_procP_pre_def comp_def
+    Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
     apply (rule refl)+
   done
 
@@ -99,45 +99,45 @@ lemma rrename_cong:
 assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
 "(\<And>z. (z::var) \<in> FFVars P \<Longrightarrow> f z = g z)"
 shows "rrename f P = rrename g P"
-using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: Proc.strong_induct)
+using assms(5) apply(binder_induction P avoiding: "supp f" "supp g" rule: procP.strong_induct)
 using assms by auto (metis not_in_supp_alt)+
 
 (* Properties of the constructors *)
 
 proposition Sum_inject[simp]: "(Sum a b = Sum c d) = (a = c \<and> b = d)"
-unfolding Sum_def fun_eq_iff Proc.TT_injects0
-map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_Proc_pre_inject[OF UNIV_I UNIV_I]
+unfolding Sum_def fun_eq_iff procP.TT_injects0
+map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+Abs_procP_pre_inject[OF UNIV_I UNIV_I]
 by auto
 
 proposition Par_inject[simp]: "(Par a b = Par c d) = (a = c \<and> b = d)"
-unfolding Par_def fun_eq_iff Proc.TT_injects0
-map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_Proc_pre_inject[OF UNIV_I UNIV_I] by auto
+unfolding Par_def fun_eq_iff procP.TT_injects0
+map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+Abs_procP_pre_inject[OF UNIV_I UNIV_I] by auto
 
 proposition Bang_inject[simp]: "(Bang a = Bang b) = (a = b)"
-unfolding Bang_def fun_eq_iff Proc.TT_injects0
-map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_Proc_pre_inject[OF UNIV_I UNIV_I] by auto
+unfolding Bang_def fun_eq_iff procP.TT_injects0
+map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+Abs_procP_pre_inject[OF UNIV_I UNIV_I] by auto
 
 proposition Match_inject[simp]: "(Match x1 y1 a1 = Match x2 y2 a2) = (x1 = x2 \<and> y1 = y2 \<and> a1 = a2)"
-unfolding Match_def fun_eq_iff Proc.TT_injects0
-map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_Proc_pre_inject[OF UNIV_I UNIV_I] by auto
+unfolding Match_def fun_eq_iff procP.TT_injects0
+map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+Abs_procP_pre_inject[OF UNIV_I UNIV_I] by auto
 
 proposition Out_inject[simp]: "(Out x1 y1 a1 = Out x2 y2 a2) = (x1 = x2 \<and> y1 = y2 \<and> a1 = a2)"
-unfolding Out_def fun_eq_iff Proc.TT_injects0
-map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_Proc_pre_inject[OF UNIV_I UNIV_I] by auto
+unfolding Out_def fun_eq_iff procP.TT_injects0
+map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
+Abs_procP_pre_inject[OF UNIV_I UNIV_I] by auto
 
 lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow>
   x = x' \<and>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_Proc e - {y}) f \<and> f y = y' \<and> rrename_Proc f e = e')"
-  unfolding Proc.set
-  unfolding Inp_def Proc.TT_injects0 map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I]
-    map_sum_def sum.case map_prod_def prod.case id_def Abs_Proc_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
-    set3_Proc_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_Proc_pre_def
+  \<and> id_on (FFVars_procP e - {y}) f \<and> f y = y' \<and> rrename_procP f e = e')"
+  unfolding procP.set
+  unfolding Inp_def procP.TT_injects0 map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I]
+    map_sum_def sum.case map_prod_def prod.case id_def Abs_procP_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
+    set3_procP_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_procP_pre_def
     Un_empty_right UN_single by auto
 
 lemma Inp_inject_same[simp]: "Inp x y e = Inp x' y e' \<longleftrightarrow> ((x::var) = x' \<and> e = e')"
@@ -146,7 +146,7 @@ lemma Inp_inject_same[simp]: "Inp x y e = Inp x' y e' \<longleftrightarrow> ((x:
    apply (erule exE conjE)+
    apply (rule conjI)
     apply assumption
-   apply (frule Proc.rrename_cong_ids[of _ e])
+   apply (frule procP.rrename_cong_ids[of _ e])
      apply assumption
     apply (rule case_split[of "_ \<in> _", rotated])
      apply (erule id_onD)
@@ -163,62 +163,62 @@ lemma Inp_inject_same[simp]: "Inp x y e = Inp x' y e' \<longleftrightarrow> ((x:
   apply (rule exI[of _ id])
   apply (rule bij_id supp_id_bound id_on_id id_apply conjI)+
   apply (rule trans)
-   apply (rule Proc.rrename_ids)
+   apply (rule procP.rrename_ids)
   apply assumption
   done
 
 lemma Res_inject: "(Res y e = Res y' e') \<longleftrightarrow>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_Proc e - {y}) f \<and> f y = y' \<and> rrename_Proc f e = e')"
-  unfolding Proc.set
-  unfolding Res_def Proc.TT_injects0 map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I]
-    map_sum_def sum.case map_prod_def prod.case id_def Abs_Proc_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
-    set3_Proc_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_Proc_pre_def
+  \<and> id_on (FFVars_procP e - {y}) f \<and> f y = y' \<and> rrename_procP f e = e')"
+  unfolding procP.set
+  unfolding Res_def procP.TT_injects0 map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I]
+    map_sum_def sum.case map_prod_def prod.case id_def Abs_procP_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
+    set3_procP_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_procP_pre_def
     Un_empty_right UN_single by auto
 
-lemma bij_map_Proc_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_Proc_pre (id::var \<Rightarrow>var) f (rrename_Proc f) id)"
+lemma bij_map_procP_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_procP_pre (id::var \<Rightarrow>var) f (rrename_procP f) id)"
   apply (rule iffD2[OF bij_iff])
-    apply (rule exI[of _ "map_Proc_pre id (inv f) (rrename_Proc (inv f)) id"])
+    apply (rule exI[of _ "map_procP_pre id (inv f) (rrename_procP (inv f)) id"])
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
    apply assumption
   apply (rule conjI)
    apply (rule trans)
-    apply (rule Proc_pre.map_comp0[symmetric])
+    apply (rule procP_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 Proc.rrename_comp0s Proc.rrename_id0s
-  apply (rule Proc_pre.map_id0)
+  unfolding id_o inv_o_simp1 procP.rrename_comp0s procP.rrename_id0s
+  apply (rule procP_pre.map_id0)
   apply (rule trans)
-   apply (rule Proc_pre.map_comp0[symmetric])
+   apply (rule procP_pre.map_comp0[symmetric])
         apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp2 Proc.rrename_comp0s Proc.rrename_id0s
-  apply (rule Proc_pre.map_id0)
+  unfolding id_o inv_o_simp2 procP.rrename_comp0s procP.rrename_id0s
+  apply (rule procP_pre.map_id0)
   done
 
-lemma map_Proc_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow>
-inv (map_Proc_pre (id::_::var_Proc_pre \<Rightarrow> _) f (rrename_Proc f) id) = map_Proc_pre id (inv f) (rrename_Proc (inv f)) id"
+lemma map_procP_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow>
+inv (map_procP_pre (id::_::var_procP_pre \<Rightarrow> _) f (rrename_procP f) id) = map_procP_pre id (inv f) (rrename_procP (inv f)) id"
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
   apply assumption
   apply (rule inv_unique_comp)
    apply (rule trans)
-    apply (rule Proc_pre.map_comp0[symmetric])
+    apply (rule procP_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
    defer
   apply (rule trans)
-    apply (rule Proc_pre.map_comp0[symmetric])
+    apply (rule procP_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 inv_o_simp2 Proc.rrename_comp0s Proc.rrename_id0s Proc_pre.map_id0
+  unfolding id_o inv_o_simp1 inv_o_simp2 procP.rrename_comp0s procP.rrename_id0s procP_pre.map_id0
    apply (rule refl)+
   done
 
-lemma Abs_set3: "Proc_ctor v = Inp y (x::var) e \<Longrightarrow> \<exists>x' e'. Proc_ctor v = Inp y x' e' \<and> x' \<in> set2_Proc_pre v \<and> e' \<in> set3_Proc_pre v"
-  unfolding Inp_def Proc.TT_injects0
+lemma Abs_set3: "procP_ctor v = Inp y (x::var) e \<Longrightarrow> \<exists>x' e'. procP_ctor v = Inp y x' e' \<and> x' \<in> set2_procP_pre v \<and> e' \<in> set3_procP_pre v"
+  unfolding Inp_def procP.TT_injects0
   apply (erule exE)
   apply (erule conjE)+
   subgoal for f
-apply (drule iffD2[OF bij_imp_inv', rotated, of "map_Proc_pre id f (rrename_Proc f) id"])
-     apply (rule bij_map_Proc_pre)
+apply (drule iffD2[OF bij_imp_inv', rotated, of "map_procP_pre id f (rrename_procP f) id"])
+     apply (rule bij_map_procP_pre)
       apply assumption+
     apply (rule exI)
     apply (rule exI)
@@ -226,25 +226,25 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_Proc_pre id f (rrename_Proc
      apply (rule exI[of _ "id"])
      apply (rule conjI bij_id supp_id_bound id_on_id)+
     apply (drule sym)
-    unfolding Proc.rrename_id0s Proc_pre.map_id map_Proc_pre_inv_simp
-    unfolding map_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] map_sum_def sum.case
+    unfolding procP.rrename_id0s procP_pre.map_id map_procP_pre_inv_simp
+    unfolding map_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case
       map_prod_def prod.case id_def
     apply assumption
     apply (raw_tactic \<open>hyp_subst_tac @{context} 1\<close>)
-unfolding set2_Proc_pre_def set3_Proc_pre_def comp_def Abs_Proc_pre_inverse[OF UNIV_I] sum_set_simps
+unfolding set2_procP_pre_def set3_procP_pre_def comp_def Abs_procP_pre_inverse[OF UNIV_I] sum_set_simps
     map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
       ccpo_Sup_singleton Un_empty_right id_on_def image_single[symmetric]
-  unfolding Proc.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
+  unfolding procP.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
   unfolding image_single image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv], symmetric]
-    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF Proc.rrename_bijs[OF bij_imp_bij_inv supp_inv_bound]]
-  Proc.rrename_inv_simps[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
-  unfolding Proc.rrename_comps[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 Proc.rrename_ids
+    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF procP.rrename_bijs[OF bij_imp_bij_inv supp_inv_bound]]
+  procP.rrename_inv_simps[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
+  unfolding procP.rrename_comps[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 procP.rrename_ids
   apply (rule conjI bij_imp_bij_inv supp_inv_bound singletonI | assumption)+
   done
   done
 
 lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Inp y x e = Inp y x' e' \<and> x' \<notin> A"
-  apply (drule Proc.TT_fresh_nchotomys[of _ "Inp y x e"])
+  apply (drule procP.TT_fresh_nchotomys[of _ "Inp y x e"])
   apply (erule exE)
   apply (erule conjE)
    apply (drule sym)
@@ -266,13 +266,13 @@ lemma Abs_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
 
 lemma Abs_rrename:
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>
- (\<And>a'. a' \<in> FFVars_Proc e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Inp b a e = Inp b (\<sigma> a) (rrename_Proc \<sigma> e)"
+ (\<And>a'. a' \<in> FFVars_procP e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Inp b a e = Inp b (\<sigma> a) (rrename_procP \<sigma> e)"
   using Inp_inject id_on_def by blast
 
 (* Bound properties (needed as auxiliaries): *)
 
 lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
-by (simp add: cinfinite_imp_infinite supp_swap_bound Proc.UNIV_cinfinite)
+by (simp add: cinfinite_imp_infinite supp_swap_bound procP.UNIV_cinfinite)
 
 
 (* Swapping and unary substitution, as abbreviations: *)
@@ -286,20 +286,20 @@ lemma usub_swap_disj:
 assumes "{u,v} \<inter> {x,y} = {}"
 shows "usub (swap P u v) x y = swap (usub P x y) u v"
 proof-
-  note Proc_vvsubst_rrename[simp del]
+  note procP_vvsubst_rrename[simp del]
   show ?thesis using assms
-  apply(subst Proc_vvsubst_rrename[symmetric]) apply auto
-  apply(subst Proc.map_comp) apply auto
-  apply(subst Proc_vvsubst_rrename[symmetric]) apply auto
-  apply(subst Proc.map_comp) apply auto
-  apply(rule Proc.map_cong0)
-    using Proc_pre.supp_comp_bound by auto
+  apply(subst procP_vvsubst_rrename[symmetric]) apply auto
+  apply(subst procP.map_comp) apply auto
+  apply(subst procP_vvsubst_rrename[symmetric]) apply auto
+  apply(subst procP.map_comp) apply auto
+  apply(rule procP.map_cong0)
+    using procP_pre.supp_comp_bound by auto
 qed
 
 lemma rrename_o_swap:
 "rrename (id(y::var := yy, yy := y) o id(x := xx, xx := x)) P =
  swap (swap P x xx) y yy"
-apply(subst Proc.rrename_comps[symmetric])
+apply(subst procP.rrename_comps[symmetric])
 by auto
 
 (* *)
@@ -316,10 +316,10 @@ by (auto simp: sw_def)
 
 lemma FFVars_swap[simp]: "FFVars (swap P y x) =
  (\<lambda>u. sw u x y) ` (FFVars P)"
-apply(subst Proc.FFVars_rrenames) by (auto simp: sw_def)
+apply(subst procP.FFVars_rrenames) by (auto simp: sw_def)
 
 lemma FFVars_swap'[simp]: "{x::var,y} \<inter> FFVars P = {} \<Longrightarrow> swap P x y = P"
-apply(rule Proc.rrename_cong_ids) by auto
+apply(rule procP.rrename_cong_ids) by auto
 
 (* *)
 
@@ -377,7 +377,7 @@ by (metis Res_inject_swap fun_upd_twist)
 
 lemma FFVars_usub[simp]: "FFVars (usub P y x) =
  (if x \<in> FFVars P then FFVars P - {x} \<union> {y} else FFVars P)"
-apply(subst Proc.set_map) by auto
+apply(subst procP.set_map) by auto
 
 lemma usub_simps_free[simp]: "\<And>y x. usub Zero (y::var) x = Zero"
 "\<And>y x P Q. usub (Sum P Q) (y::var) x = Sum (usub P y x) (usub Q y x)"
@@ -389,7 +389,7 @@ by (auto simp: sb_def)
 
 lemma usub_Inp'[simp]:
 "v \<notin> {x,y} \<Longrightarrow> u \<noteq> v \<Longrightarrow> usub (Inp u v P) (y::var) x = Inp (sb u y x) v (usub P y x)"
-apply(subst Proc.map)
+apply(subst procP.map)
   subgoal by auto
   subgoal by (auto simp: imsupp_def supp_def)
   subgoal by auto
@@ -413,7 +413,7 @@ qed
 
 lemma usub_Res[simp]:
 "v \<notin> {x,y} \<Longrightarrow> usub (Res v P) (y::var) x = Res v (usub P y x)"
-apply(subst Proc.map)
+apply(subst procP.map)
   subgoal by auto
   subgoal by (auto simp: imsupp_def supp_def)
   subgoal by auto .
@@ -429,7 +429,7 @@ lemma rrename_usub[simp]:
 assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
 shows "rrename \<sigma> (usub P u (x::var)) = usub (rrename \<sigma> P) (\<sigma> u) (\<sigma> x)"
 using assms
-apply(binder_induction P avoiding: "supp \<sigma>" u x rule: Proc.strong_induct)
+apply(binder_induction P avoiding: "supp \<sigma>" u x rule: procP.strong_induct)
 using assms by (auto simp: sb_def)
 
 lemma sw_sb:
@@ -439,7 +439,7 @@ unfolding sb_def sw_def by auto
 
 lemma swap_usub:
 "swap (usub P (u::var) x) z1 z2 = usub (swap P z1 z2) (sw u z1 z2) (sw x z1 z2)"
-apply(binder_induction P avoiding: u x z1 z2 rule: Proc.strong_induct)
+apply(binder_induction P avoiding: u x z1 z2 rule: procP.strong_induct)
   subgoal
   apply(subst swap_simps) apply(subst usub_simps) by auto
   subgoal apply(subst swap_simps | subst usub_simps)+ by presburger
@@ -464,15 +464,15 @@ lemma usub_refresh:
 assumes "xx \<notin> FFVars P \<or> xx = x"
 shows "usub P u x = usub (swap P x xx) u xx"
 proof-
-  note Proc_vvsubst_rrename[simp del]
+  note procP_vvsubst_rrename[simp del]
   show ?thesis using assms
-  apply(subst Proc_vvsubst_rrename[symmetric]) apply simp
+  apply(subst procP_vvsubst_rrename[symmetric]) apply simp
     subgoal by auto
-    subgoal apply(subst Proc.map_comp)
+    subgoal apply(subst procP.map_comp)
       subgoal by auto
       subgoal by auto
-      subgoal apply(rule Proc.map_cong0)
-      using Proc_pre.supp_comp_bound by auto . .
+      subgoal apply(rule procP.map_cong0)
+      using procP_pre.supp_comp_bound by auto . .
 qed
 
 lemma Inp_eq_usub: 
@@ -483,6 +483,6 @@ lemma Inp_eq_usub:
 lemma swap_commute:
 "{y,yy} \<inter> {x,xx} = {} \<Longrightarrow>
  swap (swap P y yy) x xx = swap (swap P x xx) y yy"
-by (auto simp: Proc.rrename_comps rrename_cong Proc_pre.supp_comp_bound)
+by (auto simp: procP.rrename_comps rrename_cong procP_pre.supp_comp_bound)
 
 end

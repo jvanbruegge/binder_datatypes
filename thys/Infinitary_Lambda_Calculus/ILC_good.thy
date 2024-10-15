@@ -56,10 +56,10 @@ interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp 
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
-using ILterm.card_of_FFVars_bounds
-apply (auto simp: ILterm.rrename_id0s map_prod.comp
-ILterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
-apply (simp add: ILterm.set_bd_UNIV small_def) 
+using iltermP.card_of_FFVars_bounds
+apply (auto simp: iltermP.rrename_id0s map_prod.comp
+iltermP.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
+apply (simp add: iltermP.set_bd_UNIV small_def) 
 apply (simp add: comp_def dstream.map_comp)
 apply (simp add: dstream_map_ident_strong)
 unfolding bsmall_def touchedSuper_def  
@@ -110,15 +110,15 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
   apply(rule exI[of _ "irrename \<sigma> e"])  
   unfolding isPerm_def small_def Tperm_def presBnd_def
-  apply (simp add: ILterm.rrename_comps) by (metis option.simps(5)) . . 
+  apply (simp add: iltermP.rrename_comps) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3) 
   subgoal apply(elim exE) subgoal for e1 es2
   apply(rule exI[of _ "irrename \<sigma> e1"]) 
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
   unfolding isPerm_def small_def Tperm_def presBnd_presSuper 
-  apply (simp add: ILterm.rrename_comps image_def) 
-  by (metis inv_simp1 ILterm.rrename_bijs ILterm.rrename_inv_simps touchedSuperT_irrename) . . .
+  apply (simp add: iltermP.rrename_comps image_def) 
+  by (metis inv_simp1 iltermP.rrename_bijs iltermP.rrename_inv_simps touchedSuperT_irrename) . . .
 
 (* *)
 
@@ -345,13 +345,13 @@ and f: "finite (touchedSuper (IImsupp f))"
 shows "good (itvsubst f e)"
 using r proof (binder_induction e avoiding: "IImsupp f" rule: strong_induct_good')
   case (iLm ea xs)
-  show ?case using iLm apply(subst ILterm.subst)
+  show ?case using iLm apply(subst iltermP.subst)
       subgoal using s by blast
       subgoal using s by auto 
       subgoal apply(rule good.iLm) by auto .
 next
   case (iAp e1 es2)
-  then show ?case apply(subst ILterm.subst)
+  then show ?case apply(subst iltermP.subst)
       subgoal using s by auto
       subgoal apply(rule good.iAp)
         subgoal by auto

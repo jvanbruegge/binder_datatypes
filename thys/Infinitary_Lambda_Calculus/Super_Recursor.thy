@@ -20,7 +20,7 @@ proof-
   let ?A = "FFVars (iLm xs e)"
   have A: "|?A| <o |UNIV::ivar set|" 
   "?A \<inter> (dsset xs \<union> dsset zs) = {}"
-  using ILterm.set_bd_UNIV  
+  using iltermP.set_bd_UNIV  
   apply blast using ds by auto
   obtain f where f:  
   "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> bij_betw f (dsset xs) (dsset zs) \<and> 
@@ -108,7 +108,7 @@ proof-
   next
     case (iLm xs t)
     then show ?case using iiLm   
-      by simp (smt (verit) bij_o bsmall_supp_comp irrename_good ILterm.rrename_comps ILterm_pre.supp_comp_bound 
+      by simp (smt (verit) bij_o bsmall_supp_comp irrename_good iltermP.rrename_comps iltermP_pre.supp_comp_bound 
       presSuper_comp presSuper_def)
   qed
   thus ?thesis apply(elim allE[of _ id]) by auto
@@ -464,11 +464,11 @@ next
     using iLm_inject_super_strong'[OF bs bs1 xs xs1' zs 1(2) dzs1] by blast
 
     have if1': "bij (inv f1' o f1)" "|supp (inv f1' o f1)| <o |UNIV::ivar set|"
-    by (auto simp add: f1 f1' ILterm_pre.supp_comp_bound)
+    by (auto simp add: f1 f1' iltermP_pre.supp_comp_bound)
 
     have t1': "t1' = irrename (inv f1' o f1) t"  
     using f1f1' by (metis (mono_tags, lifting) bij_imp_bij_inv f1(1,2) f1'(1,2)
-       inv_o_simp1 supp_inv_bound ILterm.rrename_comps ILterm.rrename_ids)
+       inv_o_simp1 supp_inv_bound iltermP.rrename_comps iltermP.rrename_ids)
 
     have ps1: "presSuper (inv f1' \<circ> f1)" "bsmall (supp (inv f1' \<circ> f1))"
       subgoal by (simp add: f1'(1) f1'(2) f1'(3) f1(1) f1(2) f1(3) presSuper_comp presSuper_inv)
@@ -495,12 +495,12 @@ next
     using iLm_inject_super_strong'[OF bs bs2 xs xs2' zs 2(2) dzs2] by blast   
 
     have if2': "bij (inv f2' o f2)" "|supp (inv f2' o f2)| <o |UNIV::ivar set|"
-    by (auto simp add: f2 f2' ILterm_pre.supp_comp_bound)
+    by (auto simp add: f2 f2' iltermP_pre.supp_comp_bound)
 
     have t2': "t2' = irrename (inv f2' o f2) t"  
     using f2f2' 
     by (metis (mono_tags, lifting) bij_imp_bij_inv f2(1,2) f2'(1,2)
-      inv_o_simp1 ILterm.rrename_comps ILterm.rrename_ids supp_inv_bound)
+      inv_o_simp1 iltermP.rrename_comps iltermP.rrename_ids supp_inv_bound)
 
     have ps2: "presSuper (inv f2' \<circ> f2)" "bsmall (supp (inv f2' \<circ> f2))"
       subgoal by (simp add: f2'(1-3) f2(1-3) presSuper_comp presSuper_inv)
@@ -549,9 +549,9 @@ next
        "id_on (- (dsset xs2' \<union> dsset zs)) ff2' \<and> id_on (FFVars (iLm xs2' t2')) ff2'" 
     unfolding ff2'_def using f1 f2 f2'  
       subgoal by auto 
-      subgoal unfolding ff2'_def using f1 f2 f2' by (simp add: ILterm_pre.supp_comp_bound)
+      subgoal unfolding ff2'_def using f1 f2 f2' by (simp add: iltermP_pre.supp_comp_bound)
       subgoal  
-        by (simp add: f1(1) f1(2) f1(3) f2'(1) f2'(2) f2'(3) f2(1) f2(2) f2(3) ILterm_pre.supp_comp_bound presSuper_comp presSuper_inv)
+        by (simp add: f1(1) f1(2) f1(3) f2'(1) f2'(2) f2'(3) f2(1) f2(2) f2(3) iltermP_pre.supp_comp_bound presSuper_comp presSuper_inv)
       subgoal using bsmall_supp_comp bsmall_supp_inv f1(4) f2'(4) f2(1) f2(2) f2(3) f2(4) by auto
       subgoal apply(rule conjI)  
         subgoal unfolding ff2'_def using f1 f2 f2' eo2
@@ -569,7 +569,7 @@ next
 
     have rew2: "irrename ff2' (irrename (inv f2' \<circ> f2) t) = irrename f1 t" 
     by (smt (verit, best) bij_betw_comp_iff bij_is_inj f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2' 
-            ff2'_def if2(2) ILterm.rrename_comps ILterm.supp_comp_bound o_inv_o_cancel t2')
+            ff2'_def if2(2) iltermP.rrename_comps iltermP.supp_comp_bound o_inv_o_cancel t2')
 
     show "b1 = b2" unfolding 1(3) 2(3) 
     apply(rule iLmB_inject_super_strong'_rev[OF b12', of xs1' xs2' zs f1' ff2'])
@@ -648,7 +648,7 @@ next
     using 0(1,3) R_B by auto
 
     have "|dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'| <o |UNIV::ivar set|"
-    by (meson card_dsset_ivar ILterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (meson card_dsset_ivar iltermP.set_bd_UNIV var_stream_class.Un_bound)
   
     (* then obtain zs where zs: 
     "dsset zs \<inter> (dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t') = {}" 

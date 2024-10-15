@@ -8,10 +8,10 @@ begin
 (* *)
 
 abbreviation Tsupp :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightarrow> var set" where 
-"Tsupp d e1 e2 \<equiv> {} \<union> FFVars_Lterm e1 \<union> FFVars_Lterm e2"
+"Tsupp d e1 e2 \<equiv> {} \<union> FFVars_ltermP e1 \<union> FFVars_ltermP e2"
 
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp d e1 e2"
-by (metis Lm_avoid Lterm.card_of_FFVars_bounds Lterm.set(2) Un_empty_left)
+by (metis Lm_avoid ltermP.card_of_FFVars_bounds ltermP.set(2) Un_empty_left)
 
 binder_inductive stepD :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightarrow> bool" where
   Beta: "stepD 0 (Ap (Lm x e1) e2) (tvsubst (Vr(x:=e2)) e1)"
@@ -20,7 +20,7 @@ binder_inductive stepD :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightar
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lm x e) (Lm x e')"
   subgoal for R B \<sigma> x1 x2 x3
     by (elim disj_forward exE case_prodE)
-      (auto simp: isPerm_def Lterm.rrename_comps rrename_tvsubst_comp
+      (auto simp: isPerm_def ltermP.rrename_comps rrename_tvsubst_comp
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B x1 x2 x3

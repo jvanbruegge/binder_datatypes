@@ -55,25 +55,25 @@ assumes "\<And>i j. i \<noteq> j \<Longrightarrow> \<not> prefix (snth ps i) (sn
 shows "reneqv
          (tr (tvsubst (Vr(x:=e)) ee) q) 
          (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q))"
-proof (binder_induction ee arbitrary: q ps avoiding: x e rule: Lterm.strong_induct)
+proof (binder_induction ee arbitrary: q ps avoiding: x e rule: ltermP.strong_induct)
   case (Vr x q ps)
-  then show ?case apply(subst Lterm.subst(1))
+  then show ?case apply(subst ltermP.subst(1))
       subgoal by auto
       subgoal by auto (metis dsset_range empty_iff imkSubst_idle insert_iff rangeI reneqv_tr 
         subOf_superOf super_superOf touchedSuper_iVr tr_Vr) .
 next
   case (Ap t1 t2 q ps)
-  then show ?case apply(subst Lterm.subst(2))
+  then show ?case apply(subst ltermP.subst(2))
       subgoal by auto
       subgoal apply (simp add: reneqv_iAp_iff) apply safe
         using Ap.hyps(1,2) reneqv_trans reneqv_sym apply blast+    
         using Ap.hyps(2) reneqv_trans reneqv_sym by blast .
 next
   case (Lm y t q ps)
-  then show ?case apply(subst Lterm.subst(3))
+  then show ?case apply(subst ltermP.subst(3))
       subgoal by auto
       subgoal using IImsupp_Vr by fastforce
-      subgoal unfolding tr_Lm apply (subst ILterm.subst(3))
+      subgoal unfolding tr_Lm apply (subst iltermP.subst(3))
         subgoal by auto
         subgoal using uniformS_touchedSuper_IImsupp_imkSubst 
         subgoal apply(subgoal_tac "superOf y \<notin> touchedSuper (ILC.IImsupp (imkSubst (superOf x) (smap (tr e) ps)))")
@@ -193,11 +193,11 @@ proof-
   next
     case (iLm e xsa)
     then show ?case apply(subst tr'_iLm)
-      apply auto apply(subst ILterm.subst(3))
+      apply auto apply(subst iltermP.subst(3))
         subgoal by auto 
         subgoal apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
           using shd_sset super_touchedSuper_dsset by fastforce+
-        subgoal apply(subst Lterm.subst(3))
+        subgoal apply(subst ltermP.subst(3))
           subgoal by auto subgoal apply(rule IImsupp_Vr') 
           apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
            Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
@@ -212,7 +212,7 @@ proof-
     subgoal by auto
     subgoal by auto
     subgoal by auto
-    subgoal apply(subst ILterm.subst(2))
+    subgoal apply(subst iltermP.subst(2))
       subgoal by auto
       subgoal apply(subst tr'_iAp)
         subgoal using g good_imkSubst by auto

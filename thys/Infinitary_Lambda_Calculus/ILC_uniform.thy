@@ -160,19 +160,19 @@ next
   then show ?case using s rr by auto
 next
   case (iLm ea e'a xs)
-  then show ?case using iLm apply(subst ILterm.subst)
+  then show ?case using iLm apply(subst iltermP.subst)
     subgoal using s by auto
     subgoal using s by auto
-    apply(subst ILterm.subst)
+    apply(subst iltermP.subst)
     subgoal using s by auto
     subgoal using s by auto
     subgoal apply(rule reneqv.iLm) by auto .
 next
   case (iAp e1 e1' es2 es2')
   then show ?case using rr
-    apply(subst ILterm.subst)
+    apply(subst iltermP.subst)
     subgoal using s by auto
-    apply(subst ILterm.subst)
+    apply(subst iltermP.subst)
     subgoal using s by auto
     subgoal apply(rule reneqv.iAp) apply auto
       by (meson reneqv_trans reneqv_sym)+ .
@@ -307,7 +307,7 @@ unfolding uniform_iAp_iff unfolding uniform_def3 by auto
 (* Other properties: *)
 
 lemma uniform_iLm_imp: "uniform (iLm xs e) \<Longrightarrow> \<exists> xs' e'. super xs' \<and> uniform e' \<and> iLm xs e = iLm xs' e'"
-by (smt (verit, del_insts) ILterm.distinct(5) ILterm.distinct(6) reneqv.simps uniform_def2)
+by (smt (verit, del_insts) iltermP.distinct(5) iltermP.distinct(6) reneqv.simps uniform_def2)
 
 lemma super_bsmall: "super xs \<Longrightarrow> bsmall (dsset xs)"
 by (metis bsmall_def finite.emptyI finite_insert super_dsset_singl touchedSuper_def)
@@ -325,7 +325,7 @@ proof-
     subgoal using u bsmall_def touchedSuperT_def uniform_finite_touchedUponT by fastforce .
   hence BB: "finite (touchedSuper B)" unfolding bsmall_def by auto
   have BBB: "|B| <o |UNIV::ivar set|"  
-    by (metis B small_def assms(2) card_dsset_ivar ILterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (metis B small_def assms(2) card_dsset_ivar iltermP.set_bd_UNIV var_stream_class.Un_bound)
   obtain xs'' where xxs'': "super xs''" "B \<inter> dsset xs'' = {}" 
     by (smt (verit) Collect_cong Int_commute bsB bsmall_def super_infinite touchedSuper_def)
   obtain f where xs'': "xs'' = dsmap f xs'" and f: "bij_betw f (dsset xs') (dsset xs'')" "id_on (- dsset xs') f" 
@@ -343,7 +343,7 @@ proof-
     subgoal unfolding il xs'' iLm_inject apply(rule exI[of _ g], safe)
       subgoal by fact subgoal by fact
       subgoal using g(5) unfolding id_on_def apply simp  
-        by (metis B DiffI UnCI disjoint_iff il ILterm.set(3) xxs''(2))
+        by (metis B DiffI UnCI disjoint_iff il iltermP.set(3) xxs''(2))
       subgoal apply(rule dsmap_cong)
         subgoal by (simp add: g(1) inj_on_def)
         subgoal using bij_betw_def f(1) by blast
@@ -371,7 +371,7 @@ proof-
   have ss: "small (\<Union> (FFVars ` (sset es2)))" 
   unfolding small_def apply(rule var_prod_class.UN_bound)
     subgoal by (simp add: countable_card_ivar countable_sset)
-    subgoal using ILterm.set_bd_UNIV by blast .
+    subgoal using iltermP.set_bd_UNIV by blast .
 
   have bs: "bsmall (\<Union> (FFVars ` (sset es2)))"
   unfolding bsmall_def fves2 unfolding bsmall_def[symmetric]  
@@ -398,7 +398,7 @@ proof-
           subgoal by (simp add: SSupp_itvsubst_bound f(2))
           subgoal apply simp unfolding f(4)[symmetric] 
             by (metis (full_types) Diff_iff f(1) f(3) f(4) id_on_def il(1) imkSubst_def 
-            imkSubst_smap ILterm.set(3)) . . .
+            imkSubst_smap iltermP.set(3)) . . .
      subgoal using il(2) by auto .
 qed
           

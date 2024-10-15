@@ -161,13 +161,13 @@ bnf "'a set\<^sub>k\<^sub>2"
   done
 
 declare [[mrbnf_internals]]
-binder_datatype 'var Fmla
+binder_datatype 'var fmlaP
   = Eq 'var 'var 
-  | Neg "'var Fmla"
-  | Conj "'var Fmla set\<^sub>k\<^sub>1"
-  | All "(xs::'var) set\<^sub>k\<^sub>2" t::"'var Fmla" binds xs in t
+  | Neg "'var fmlaP"
+  | Conj "'var fmlaP set\<^sub>k\<^sub>1"
+  | All "(xs::'var) set\<^sub>k\<^sub>2" t::"'var fmlaP" binds xs in t
 
-definition Bot :: "'var::var_Fmla_pre Fmla" ("\<bottom>") where
+definition Bot :: "'var::var_fmlaP_pre fmlaP" ("\<bottom>") where
   "Bot \<equiv> Neg (Conj (Abs_set\<^sub>k\<^sub>1 bempty))"
 
 instance k::var_set\<^sub>k\<^sub>1
@@ -190,7 +190,7 @@ apply (rule card_of_Card_order)
 apply (rule kregular)
 done
 
-instance k::var_Fmla_pre
+instance k::var_fmlaP_pre
 apply standard
 apply (rule ordIso_ordLeq_trans[OF card_of_Field_natLeq])
 apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF kmax]])
@@ -200,28 +200,28 @@ apply (rule k1_Cinfinite)
 apply (rule kregular)
 done
 
-lemma Fmla_rrename_simps[simp]:
-fixes f::"'a::var_Fmla_pre \<Rightarrow> 'a"
-shows  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_Fmla f (Eq x1 x2) = Eq (f x1) (f x2)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_Fmla f (Neg x) = Neg (rrename_Fmla f x)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_Fmla f (Conj F) = Conj (map_set\<^sub>k\<^sub>1 (rrename_Fmla f) F)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_Fmla f (All x3 x4) = All (map_set\<^sub>k\<^sub>2 f x3) (rrename_Fmla f x4)"
-  apply (auto simp: Fmla_vvsubst_rrename[symmetric])[3]
-  apply (unfold All_def Fmla.rrename_cctors map_Fmla_pre_def comp_def Abs_Fmla_pre_inverse[OF UNIV_I]
+lemma fmlaP_rrename_simps[simp]:
+fixes f::"'a::var_fmlaP_pre \<Rightarrow> 'a"
+shows  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_fmlaP f (Eq x1 x2) = Eq (f x1) (f x2)"
+  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_fmlaP f (Neg x) = Neg (rrename_fmlaP f x)"
+  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_fmlaP f (Conj F) = Conj (map_set\<^sub>k\<^sub>1 (rrename_fmlaP f) F)"
+  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_fmlaP f (All x3 x4) = All (map_set\<^sub>k\<^sub>2 f x3) (rrename_fmlaP f x4)"
+  apply (auto simp: fmlaP_vvsubst_rrename[symmetric])[3]
+  apply (unfold All_def fmlaP.rrename_cctors map_fmlaP_pre_def comp_def Abs_fmlaP_pre_inverse[OF UNIV_I]
     map_sum.simps map_prod_simp
     )
   apply (rule refl)
   done
-lemma rrename_Bot_simp[simp]: "bij (f::'a::var_Fmla_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_Fmla f \<bottom> = \<bottom>"
-  unfolding Bot_def Fmla_rrename_simps map_set\<^sub>k\<^sub>1_def map_fun_def comp_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I]
+lemma rrename_Bot_simp[simp]: "bij (f::'a::var_fmlaP_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_fmlaP f \<bottom> = \<bottom>"
+  unfolding Bot_def fmlaP_rrename_simps map_set\<^sub>k\<^sub>1_def map_fun_def comp_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I]
   unfolding id_def map_bset_bempty
   by (rule refl)
 
 type_synonym var = k
-type_synonym fmla = "var Fmla"
+type_synonym fmla = "var fmlaP"
 
 abbreviation (input) subst :: "fmla \<Rightarrow> (var \<Rightarrow> var) \<Rightarrow> fmla" ("_\<lbrakk>_\<rbrakk>" [600, 600] 400) where
-  "subst t \<rho> \<equiv> vvsubst_Fmla \<rho> t"
+  "subst t \<rho> \<equiv> vvsubst_fmlaP \<rho> t"
 
 lift_definition kmember :: "'a \<Rightarrow> 'a set\<^sub>k \<Rightarrow> bool" (infix "\<in>\<^sub>k" 200) is "bmember" .
 lift_definition k1member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>1 \<Rightarrow> bool" (infix "\<in>\<^sub>k\<^sub>1" 200) is "bmember" .
@@ -239,49 +239,49 @@ lemma small_set\<^sub>k\<^sub>2[simp]: "small (set\<^sub>k\<^sub>2 (V :: k set\<
   apply (rule ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd])
   using var_set\<^sub>k\<^sub>2_class.large by force
 
-lemma in_k_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k \<Delta> \<Longrightarrow> rrename_Fmla \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_Fmla \<sigma>) \<Delta>"
+lemma in_k_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k \<Delta> \<Longrightarrow> rrename_fmlaP \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_fmlaP \<sigma>) \<Delta>"
 unfolding kmember_def map_fun_def id_o o_id map_set\<^sub>k_def
 unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
 apply transfer apply transfer by blast
 
-lemma in_k_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_Fmla \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_Fmla \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
+lemma in_k_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_fmlaP \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_fmlaP \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
   unfolding isPerm_def
   apply (erule conjE)
   apply (rule iffI)
   apply (drule in_k_equiv'[rotated])
   apply (rule bij_imp_bij_inv)
   apply assumption
-  apply (subst (asm) Fmla.rrename_comps)
+  apply (subst (asm) fmlaP.rrename_comps)
   apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
   apply (subst (asm) set\<^sub>k.map_comp)
-  apply (subst (asm) Fmla.rrename_comp0s)
+  apply (subst (asm) fmlaP.rrename_comp0s)
   apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
   apply (subst (asm) inv_o_simp1, assumption)+
-  apply (unfold Fmla.rrename_id0s set\<^sub>k.map_id)
+  apply (unfold fmlaP.rrename_id0s set\<^sub>k.map_id)
   apply (unfold id_def)[1]
   apply assumption
   apply (erule in_k_equiv'[rotated])
   apply assumption
   done
 
-lemma in_k1_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> rrename_Fmla \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_Fmla \<sigma>) F"
+lemma in_k1_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> rrename_fmlaP \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_fmlaP \<sigma>) F"
 apply (unfold k1member_def map_fun_def comp_def id_def map_set\<^sub>k\<^sub>1_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I])
 apply transfer apply transfer by blast
 
-lemma in_k1_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_Fmla \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_Fmla \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
+lemma in_k1_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_fmlaP \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_fmlaP \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
   unfolding isPerm_def
   apply (erule conjE)
   apply (rule iffI)
   apply (drule in_k1_equiv'[rotated])
   apply (rule bij_imp_bij_inv)
   apply assumption
-  apply (subst (asm) Fmla.rrename_comps)
+  apply (subst (asm) fmlaP.rrename_comps)
   apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
   apply (subst (asm) set\<^sub>k\<^sub>1.map_comp)
-  apply (subst (asm) Fmla.rrename_comp0s)
+  apply (subst (asm) fmlaP.rrename_comp0s)
   apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
   apply (subst (asm) inv_o_simp1, assumption)+
-  apply (unfold Fmla.rrename_id0s set\<^sub>k\<^sub>1.map_id)
+  apply (unfold fmlaP.rrename_id0s set\<^sub>k\<^sub>1.map_id)
   apply (unfold id_def)[1]
   apply assumption
   apply (erule in_k1_equiv'[rotated])
@@ -321,7 +321,7 @@ proof-
   apply (rule set\<^sub>k\<^sub>2.set_bd)
   using var_set\<^sub>k\<^sub>2_class.large by auto
   hence ss1: "|set\<^sub>k\<^sub>2 xs \<union> V| <o |UNIV::var set|"
-  by (meson assms(2) var_Fmla_pre_class.Un_bound)
+  by (meson assms(2) var_fmlaP_pre_class.Un_bound)
   obtain f xs' where f: "bij_betw f (set\<^sub>k\<^sub>2 xs) (set\<^sub>k\<^sub>2 xs')"
   "set\<^sub>k\<^sub>2 xs \<inter> set\<^sub>k\<^sub>2 xs' = {}" "V \<inter> set\<^sub>k\<^sub>2 xs' = {}" "map_set\<^sub>k\<^sub>2 f xs = xs'"
   using bij_betw_snth[OF ss1, of xs] by fastforce

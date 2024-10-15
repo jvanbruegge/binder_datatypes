@@ -428,18 +428,24 @@ fun create_binder_datatype (spec : spec) lthy =
 
     (* Term for variable substitution *)
     val x = length replace - #rec_vars spec;
-    val abs' =
+    val etas =
       let
+        val (fresh_tvars, _) = lthy
+          |> fold Variable.declare_typ (map snd (take x replace))
+          |> mk_TFrees (length replace - x);
         val (s, _) = dest_Const (#abs absinfo)
-        val pre_repT = Term.typ_subst_atomic (take x replace) fp_pre_T;
+        val replace' = take x replace @ map2 (fn (x, _) => fn T => (x, T)) (drop x replace) fresh_tvars;
+        val pre_repT = Term.typ_subst_atomic replace' fp_pre_T;
         val (n, Ts) = dest_Type (domain_type (fastype_of quotient_ctor));
-        val Ts' = take x Ts @ drop x (map (TFree o fst) (#vars spec));
-      in Const (s, pre_repT --> Type (n, Ts')) end;
-    val etas = map_filter (Option.map (Term.subst_atomic_types (take x replace))) (map_index (fn (i, (_, tys)) =>
-      if length tys = 1 andalso member (op=) frees (hd tys) then
-        SOME (Term.abs ("a", hd tys) (mk_ctor (i + 1) [Bound 0] abs'))
-      else NONE
-    ) (#ctors spec));
+        val Ts' = take x Ts @ fresh_tvars;
+        val abs' = Const (s, pre_repT --> Type (n, Ts'));
+
+        val etas = map_filter I (map_index (fn (i, (_, tys)) =>
+          if length tys = 1 andalso member (op=) frees (hd tys) then
+            SOME (Term.abs ("a", Term.typ_subst_atomic replace' (hd tys)) (mk_ctor (i + 1) [Bound 0] abs'))
+          else NONE
+        ) (#ctors spec));
+      in etas end;
 
     fun eta_free_tac ctxt = EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (

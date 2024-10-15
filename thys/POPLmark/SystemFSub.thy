@@ -312,7 +312,8 @@ make_binder_inductive ty
          apply (frule prems(1)[rule_format, of "(\<Gamma>,, X <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
          apply (drule prems(2)[rule_format, of "id(X := Z, Z := X)" "\<Gamma>,, X <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
            apply (auto simp: extend_eqvt)
-        apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
+        apply(rule cong[OF cong[OF cong], THEN iffD1, of R , OF refl, rotated -1, 
+          of _ "rrename_typ (id(X := Z, Z := X)) S\<^sub>2"]) 
           apply (drule ty_fresh_extend)
           apply (simp_all add: supp_swap_bound)
           by (metis (no_types, opaque_lifting) image_iff map_context_def map_context_swap_FFVars)

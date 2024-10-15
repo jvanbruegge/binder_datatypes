@@ -5,7 +5,8 @@ theory No_Least_Support_Counterexample
    "HOL-Cardinals.Cardinals"
 begin
 
-type_synonym var = "nat suc" (* uncountable variable type *)
+(* An uncountable variable type:  *)
+type_synonym var = "nat suc" 
 
 definition cbij :: "(var \<Rightarrow> var) \<Rightarrow> bool" (* countable-support bijections *) where 
   "cbij \<sigma> \<equiv> bij \<sigma> \<and> countable {x. \<sigma> x \<noteq> x}"

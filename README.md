@@ -17,7 +17,7 @@ After downloading Isabelle, a good starting point is to issue the following comm
 /<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Untyped_Lambda_Calculus/LC_Beta.thy
 ```
 
-in the folder of the artifact. This will open Isabelle/jEdit and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle.
+in the folder of the artifact. This will open `Isabelle/jEdit` and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle. Using the`Isabelle/jEdit` menu, one can then browse through the subfolders of `thys` and open any other theories. 
 
 To let Isabelle check all relevant theories (from the command line, i.e., without running Isabelle/jEdit), one can use the command
 

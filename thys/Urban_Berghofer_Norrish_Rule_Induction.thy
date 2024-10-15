@@ -8,7 +8,7 @@ imports Generic_Barendregt_Enhanced_Rule_Induction
 begin
 
 
-(* variable-variables and term-variables: *)
+(* variable-(meta)variables and term-(meta)variables: *)
 type_synonym vvar = nat 
 type_synonym tvar = nat 
 (* schematic terms *)
@@ -163,7 +163,6 @@ using it_Tperm by auto
 
 end (* locale UBN_Components *)
 
-(* TODO: eventually switch from 'T to "'T list" to better match UBN *)
 locale UBN = UBN_Components Tperm Tsupp Abs Op arity 
 for Tperm :: "('A :: infinite \<Rightarrow> 'A) \<Rightarrow> 'T \<Rightarrow> 'T" and Tsupp :: "'T \<Rightarrow> 'A set"
 (* *)
@@ -225,21 +224,6 @@ unfolding II_def G'_def ..
 lemma II_def2: "II = lfp (\<lambda>R t. \<exists>xs. G xs R t)"
 unfolding II_G' G'_G ..
 
-(* 
-type_synonym 'a V = "'a list"
-definition Vmap :: "('A \<Rightarrow> 'A) \<Rightarrow> 'A V \<Rightarrow> 'A V" where "Vmap \<equiv> map"
-definition Vfvars :: "'A V \<Rightarrow> 'A set" where "Vfvars \<equiv> set"
-
-lemma Vmap_comp: "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Vmap (\<sigma> o \<tau>) = Vmap \<sigma> o Vmap \<tau>"
-unfolding Vmap_def by auto
-
-lemma small_Vfvars: "small (Vfvars v)" 
-unfolding Vfvars_def small_def by (simp add: inf_A)
-
-lemma Vmap_Vfvars: "isPerm \<sigma> \<Longrightarrow> Vfvars (Vmap \<sigma> v) \<subseteq> \<sigma> ` (Vfvars v)"
-unfolding Vmap_def Vfvars_def by auto
-*)
-
 lemma G_mono: "R \<le> R' \<Longrightarrow> G B R t \<Longrightarrow> G B R' t"
 unfolding G_def le_fun_def by auto blast
  
@@ -281,7 +265,6 @@ and Tsupp = Tsupp_tuple and G = G apply standard
 using small_Tsupp_tuple Tperm_tuple_Tsupp_tuple Tperm_tuple_cong_id 
 G_equiv G_fresh_simple
 by (auto simp: Tperm_id Tperm_comp' G_mono)  
-
 
 
 

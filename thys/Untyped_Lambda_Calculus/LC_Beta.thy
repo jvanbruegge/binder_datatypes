@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Beta
-imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
+imports LC "Binders.Generic_Strong_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
 begin
 
 abbreviation Tsupp where "Tsupp a b \<equiv> FFVars a \<union> FFVars b"

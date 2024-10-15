@@ -1,6 +1,6 @@
 theory PrettyPrinting
 imports "Untyped_Lambda_Calculus.LC" (*BSmall*) "Prelim.Curry_LFP" (* ILC2 *)
-"Binders.Generic_Barendregt_Enhanced_Rule_Induction"
+"Binders.Generic_Strong_Rule_Induction"
 begin
 
 (* *)

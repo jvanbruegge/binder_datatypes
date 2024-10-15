@@ -1,7 +1,7 @@
 (* Here we instantiate the general enhanced rule induction to parallel beta reduction
 for the (untyped) lambda-calculus *)
 theory LC_Parallel_Beta
-imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP"
+imports LC "Binders.Generic_Strong_Rule_Induction" "Prelim.Curry_LFP"
 begin
 
 abbreviation Tsupp where "Tsupp a b \<equiv> FFVars a \<union> FFVars b"

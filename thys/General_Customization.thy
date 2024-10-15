@@ -1,4 +1,4 @@
-theory General_Customization
+theory Customization
 imports "MRBNF_Recursor"
 begin
 

@@ -1,7 +1,7 @@
 (* System F with SubTypeing  *)
 theory SystemFSub
   imports "Binders.MRBNF_Recursor"
-    "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
+    "Binders.Generic_Strong_Rule_Induction"
     "Prelim.Curry_LFP"
     "Prelim.FixedCountableVars"
     "Labeled_FSet"

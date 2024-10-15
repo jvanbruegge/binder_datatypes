@@ -2,7 +2,7 @@ theory ILC
   imports
  "Prelim.FixedUncountableVars"
  "Prelim.Swapping_vs_Permutation"
- "Binders.General_Customization"
+ "Binders.Customization"
  "Prelim.More_Stream"
 begin
 

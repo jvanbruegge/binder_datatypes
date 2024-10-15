@@ -3,7 +3,7 @@ theory LC
   "HOL-Library.FSet"
   "Prelim.FixedCountableVars"
   "Prelim.Swapping_vs_Permutation"
-  "Binders.General_Customization"
+  "Binders.Customization"
   "Prelim.More_List"
 begin
 

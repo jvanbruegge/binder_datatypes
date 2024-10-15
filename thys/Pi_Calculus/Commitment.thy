@@ -1,5 +1,5 @@
 theory Commitment
-imports Pi  "Prelim.Curry_LFP" "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
+imports Pi  "Prelim.Curry_LFP" "Binders.Generic_Strong_Rule_Induction"
 begin
 
 local_setup \<open>fn lthy =>

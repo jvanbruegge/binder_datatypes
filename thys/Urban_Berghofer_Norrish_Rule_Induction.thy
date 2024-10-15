@@ -3,7 +3,7 @@ for Barendregt-enhanced induction is a particular case
 of (the weak form of) our theorem. 
 *)
 theory Urban_Berghofer_Norrish_Rule_Induction 
-imports Generic_Barendregt_Enhanced_Rule_Induction 
+imports Generic_Strong_Rule_Induction 
   "Prelim.FixedCountableVars"
 begin
 

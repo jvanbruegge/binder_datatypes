@@ -1,6 +1,6 @@
 (*Beta reduction for the (untyped) lambda-calculus with applicative redex-depth counted *)
 theory LC_Beta_depth
-imports LC "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
+imports LC "Binders.Generic_Strong_Rule_Induction" "Prelim.Curry_LFP" "Prelim.More_Stream" LC_Head_Reduction
 begin
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)

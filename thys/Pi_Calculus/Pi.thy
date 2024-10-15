@@ -1,7 +1,7 @@
 (* the syntax of pi-calculus *)
 
 theory Pi
-  imports "Binders.General_Customization" "Prelim.FixedCountableVars"
+  imports "Binders.Customization" "Prelim.FixedCountableVars"
 begin
 
 (* DATATYPE DECLARATION  *)

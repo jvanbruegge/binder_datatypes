@@ -34,8 +34,8 @@ session Binders in "thys" = Prelim +
     MRBNF_Composition
     MRBNF_FP
     MRBNF_Recursor
-    Generic_Barendregt_Enhanced_Rule_Induction
-    General_Customization
+    Generic_Strong_Rule_Induction
+    Customization
     Urban_Berghofer_Norrish_Rule_Induction
     No_Least_Support_Counterexample
 

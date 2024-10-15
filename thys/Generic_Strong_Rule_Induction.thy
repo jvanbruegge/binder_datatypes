@@ -1,4 +1,4 @@
-theory Generic_Barendregt_Enhanced_Rule_Induction
+theory Generic_Strong_Rule_Induction
   imports "MRBNF_Recursor"
 begin
 

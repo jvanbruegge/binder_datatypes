@@ -13,12 +13,11 @@ declare supp_id_bound[simp]
 (*type_synonym label = nat*)
 
 declare [[mrbnf_internals]]
-binder_datatype 'a "Type" =
-    TyVar 'a
+binder_datatype 'var "Type" =
+    TyVar 'var
   | Top
-  | Fun "'a Type" "'a Type"
-  | Forall X::'a "'a Type" T::"'a Type" binds X in T
-
+  | Fun "'var Type" "'var Type"
+  | Forall X::'var "'var Type" T::"'var Type" binds X in T
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF Type.UNIV_cinfinite], simp]
 declare Type.rrename_ids[simp] Type.rrename_id0s[simp]

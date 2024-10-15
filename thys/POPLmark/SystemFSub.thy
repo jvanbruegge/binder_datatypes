@@ -17,7 +17,7 @@ binder_datatype 'a "typ" =
     TyVar 'a
   | Top
   | Fun "'a typ" "'a typ"
-  | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
+  | Forall X::'a "'a typ" T::"'a typ" binds X in T
 
 instance var :: var_typ_pre apply standard
   using Field_natLeq infinite_iff_card_of_nat infinite_var

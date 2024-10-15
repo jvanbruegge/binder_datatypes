@@ -32,7 +32,13 @@ To let Isabelle check all relevant theories (from the command line, i.e., withou
 ```
 
 We also provide generated HTML documents (folder html) that allow one to browse the formalization
-without running Isabelle. The file html/index.html provides a good starting point. (These were produced using the above command with `briowser_info` option. We have included them in the repository for the reviewers' convenience.)
+without running Isabelle. The file html/index.html provides a good starting point. (These were produced using the above command with `browser_info` option, i.e., running 
+
+```
+/<Isabelle/installation/path>/bin/isabelle build -vD . -o browser_info
+```
+
+We have included them in the repository for the reviewers' convenience.)
 
 
 ### Overview

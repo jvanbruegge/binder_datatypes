@@ -29,12 +29,12 @@ qed
 
 ML \<open>fun gen_fresh ctxt xs0 acts0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn {context = ctxt, params = cps, ...} =>
   let
-    val ps = map (Thm.Proc_of o snd) cps;
-    fun mk zs T = filter (fn t => fastype_of t = T) ps |> append zs |> HOLogic.mk_list T |> Thm.cProc_of ctxt;
+    val ps = map (Thm.term_of o snd) cps;
+    fun mk zs T = filter (fn t => fastype_of t = T) ps |> append zs |> HOLogic.mk_list T |> Thm.cterm_of ctxt;
     val xs = mk xs0 @{typ var};
     val acts = mk acts0 @{typ "var action"};
     (*val tss = map (mk ts0) [@{typ "var Proc"}, @{typ "var Com"}];*)
-    val thm = infer_instantiate' ctxt ([SOME xs, SOME acts] @ map (SOME o Thm.cProc_of ctxt) ts0) @{thm exists_fresh'} RS exE;
+    val thm = infer_instantiate' ctxt ([SOME xs, SOME acts] @ map (SOME o Thm.cterm_of ctxt) ts0) @{thm exists_fresh'} RS exE;
   in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
 
 lemma isPerm_swap: "isPerm (id(x := y, y := x))"

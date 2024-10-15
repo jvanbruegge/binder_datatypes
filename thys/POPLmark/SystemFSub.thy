@@ -216,7 +216,7 @@ lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A
 using finite_iff_le_card_var by blast
 
 lemma exists_fresh:
-"\<exists> Z. Z \<notin> set Zs \<and> z \<notin> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2"
+"\<exists> Z. Z \<notin> set Zs \<and> Z \<notin> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2"
 proof-
   have 0: "|set Zs \<union> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2| <o |UNIV::var set|"
   unfolding ls_UNIV_iff_finite
@@ -226,25 +226,27 @@ proof-
   thus ?thesis by auto
 qed
 
-lemma rrename_swap_FFvars[simp]: "x \<notin> FFVars_typ T \<Longrightarrow> xx \<notin> FFVars_typ T \<Longrightarrow>
-  rrename_typ (id(x := xx, xx := x)) T = T"
+lemma rrename_swap_FFvars[simp]: "X \<notin> FFVars_typ T \<Longrightarrow> Y \<notin> FFVars_typ T \<Longrightarrow>
+  rrename_typ (id(X := Y, Y := X)) T = T"
 apply(rule typ.rrename_cong_ids) by auto
 
 lemma map_context_swap_FFVars[simp]:
-"\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k) \<and>
-           xx \<noteq> fst k \<and> xx \<notin> FFVars_typ (snd k) \<Longrightarrow>
-    map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
+"\<forall>k\<in>set \<Gamma>. X \<noteq> fst k \<and> X \<notin> FFVars_typ (snd k) \<and>
+           Y \<noteq> fst k \<and> Y \<notin> FFVars_typ (snd k) \<Longrightarrow>
+    map_context (id(X := Y, Y := X)) \<Gamma> = \<Gamma>"
   unfolding map_context_def apply(rule map_idI) by auto
 
-lemma isPerm_swap: "isPerm (id(x := z, z := x))"
+lemma isPerm_swap: "isPerm (id(X := Y, Y := X))"
   unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)
+
+(* *)
 
 inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
   SA_Top: "\<lbrakk> \<turnstile> \<Gamma> ok ; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
 | SA_Refl_TVar: "\<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
-| SA_Trans_TVar: "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
+| SA_Trans_TVar: "\<lbrakk> X<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar X <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
-| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
+| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: \<forall>X<:T\<^sub>1 .T\<^sub>2"
 
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
@@ -293,12 +295,12 @@ binder_inductive_split ty
      apply (((rule exI, rule conjI[rotated], assumption) |
           (((rule exI conjI)+)?, rule Forall_rrename) |
           (auto))+) []
-    subgoal premises prems for T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2
+    subgoal premises prems for T\<^sub>1 S\<^sub>1 X S\<^sub>2 T\<^sub>2
       using prems(3-)
-      using exists_fresh[of "[x]"  \<Gamma> T1 T2] apply(elim exE conjE)
-      subgoal for z
+      using exists_fresh[of "[X]" \<Gamma> T1 T2] apply(elim exE conjE)
+      subgoal for Z
         apply (rule exI)
-        apply (rule exI[of _ "{z}"])
+        apply (rule exI[of _ "{Z}"])
         apply (intro exI conjI)
               apply (rule refl)+
             apply (rule Forall_swap)
@@ -306,8 +308,8 @@ binder_inductive_split ty
            apply (rule Forall_swap)
            apply simp
           apply assumption+
-         apply (frule prems(1)[rule_format, of "(\<Gamma>, x <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
-         apply (drule prems(2)[rule_format, of "id(x := z, z := x)" "\<Gamma>, x <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
+         apply (frule prems(1)[rule_format, of "(\<Gamma>, X <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
+         apply (drule prems(2)[rule_format, of "id(X := Z, Z := X)" "\<Gamma>, X <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
            apply (auto simp: extend_eqvt)
         apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
           apply (drule ty_fresh_extend)

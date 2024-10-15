@@ -30,10 +30,10 @@ lemma rrename_typ_simps[simp]:
   fixes f::"'a::var_typ_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows
-    "rrename_typ f (TyVar a) = TyVar (f a)"
+    "rrename_typ f (TyVar X) = TyVar (f X)"
     "rrename_typ f Top = Top"
     "rrename_typ f (Fun t1 t2) = Fun (rrename_typ f t1) (rrename_typ f t2)"
-    "rrename_typ f (Forall x T1 T2) = Forall (f x) (rrename_typ f T1) (rrename_typ f T2)"
+    "rrename_typ f (Forall Y T1 T2) = Forall (f Y) (rrename_typ f T1) (rrename_typ f T2)"
      apply (unfold TyVar_def Top_def Fun_def Forall_def)
      apply (rule trans)
       apply (rule typ.rrename_cctors)
@@ -58,9 +58,11 @@ lemma rrename_typ_simps[simp]:
   done
 
 lemma typ_inject:
-  "TyVar x = TyVar y \<longleftrightarrow> x = y"
+  "TyVar X = TyVar Y \<longleftrightarrow> X = Y"
   "Fun T1 T2 = Fun R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
-  "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var_typ_pre \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FFVars_typ T2 - {x}) f \<and> f x = y \<and> rrename_typ f T2 = R2)"
+  "Forall X T1 T2 = Forall Y R1 R2 \<longleftrightarrow> 
+   T1 = R1 \<and> (\<exists>f. bij (f::'a::var_typ_pre \<Rightarrow> 'a) \<and> 
+   |supp f| <o |UNIV::'a set| \<and> id_on (FFVars_typ T2 - {X}) f \<and> f X = Y \<and> rrename_typ f T2 = R2)"
     apply (unfold TyVar_def Fun_def Forall_def typ.TT_injects0
       set3_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
       cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_typ_pre_def
@@ -70,7 +72,7 @@ lemma typ_inject:
   by auto
 declare typ_inject(1,2)[simp]
 
-corollary Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
+corollary Forall_inject_same[simp]: "Forall X T1 T2 = Forall X S1 S2 \<longleftrightarrow> T1 = S1 \<and> T2 = S2"
   using typ_inject(3) typ.rrename_cong_ids
   by (metis (no_types, lifting) Diff_empty Diff_insert0 id_on_insert insert_Diff)
 
@@ -195,31 +197,31 @@ qed simp
 abbreviation Tsupp :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> var set" where
   "Tsupp \<Gamma> T\<^sub>1 T\<^sub>2 \<equiv> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FFVars_typ T\<^sub>1 \<union> FFVars_typ T\<^sub>2"
 
-lemma small_Tsupp: "small (Tsupp x1 x2 x3)"
+lemma small_Tsupp: "small (Tsupp \<Gamma> T\<^sub>1 T\<^sub>2)"
   by (auto simp: small_def typ.card_of_FFVars_bounds typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd)
 
-lemma fresh: "\<exists>xx. xx \<notin> Tsupp x1 x2 x3"
+lemma fresh: "\<exists>xx. xx \<notin> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2"
   by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tsupp small_def small_isPerm subsetI)
 
-lemma swap_idemp[simp]: "id(x := x) = id" by auto
-lemma swap_left: "(id(x := xx, xx := x)) x = xx" by simp
+lemma swap_idemp[simp]: "id(X := X) = id" by auto
+lemma swap_left: "(id(X := Y, Y := X)) X = Y" by simp
 
-lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> a \<in> dom \<Gamma>"
+lemma wf_FFVars: "\<turnstile> \<Gamma> ok \<Longrightarrow> X \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> X \<in> dom \<Gamma>"
   by (induction \<Gamma>) auto
 
-lemma finite_Tsupp: "finite (Tsupp x1 x2 x3)"
+lemma finite_Tsupp: "finite (Tsupp \<Gamma> T\<^sub>1 T\<^sub>2)"
   using finite_iff_le_card_var small_Tsupp small_def by meson
 
 lemma ls_UNIV_iff_finite: "|A| <o |UNIV::var set| \<longleftrightarrow> finite A"
 using finite_iff_le_card_var by blast
 
 lemma exists_fresh:
-"\<exists> z. z \<notin> set xs \<and> z \<notin> Tsupp x1 x2 x3"
+"\<exists> Z. Z \<notin> set Zs \<and> z \<notin> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2"
 proof-
-  have 0: "|set xs \<union> Tsupp x1 x2 x3| <o |UNIV::var set|"
+  have 0: "|set Zs \<union> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2| <o |UNIV::var set|"
   unfolding ls_UNIV_iff_finite
   using finite_Tsupp by blast
-  then obtain x where "x \<notin> set xs \<union> Tsupp x1 x2 x3"
+  then obtain Z where "Z \<notin> set Zs \<union> Tsupp \<Gamma> T\<^sub>1 T\<^sub>2"
   by (meson exists_fresh)
   thus ?thesis by auto
 qed

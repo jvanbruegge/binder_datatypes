@@ -45,7 +45,6 @@ session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
     LC_Beta_depth
     LC_Head_Reduction
     LC_Parallel_Beta
-    LC_Primal
 
 session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untyped_Lambda_Calculus +
   theories

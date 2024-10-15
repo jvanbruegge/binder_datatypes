@@ -7,7 +7,7 @@ begin
 
 
 (* *)
-definition B :: "(var term) set" where "B \<equiv> UNIV"
+definition B :: "lterm set" where "B \<equiv> UNIV"
 
 
 (* Restricting a (supervariable-preserving) ivar-permutation to a ver-permutation *)
@@ -96,21 +96,21 @@ lemma renB_comp: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar 
     bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<tau>) \<Longrightarrow> presSuper \<tau> \<Longrightarrow> 
     b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
 unfolding renB_def apply(subst restr_comp) 
-  by (auto simp add: bij_restr card_supp_restr term.rrename_comps)
+  by (auto simp add: bij_restr card_supp_restr Lterm.rrename_comps)
 
 lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    (\<forall>xs \<in> touchedSuper (FVarsB b). dsmap \<sigma> xs = xs) \<Longrightarrow> 
    renB \<sigma> b = b"
-unfolding renB_def FVarsB_def apply(rule term.rrename_cong_ids)
+unfolding renB_def FVarsB_def apply(rule Lterm.rrename_cong_ids)
 by (auto simp: bij_restr card_supp_restr restr_def touchedSuper_UN intro: restr_cong_id)
 
 lemma renB_FVarsB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    x \<in> FVarsB (renB \<sigma> b) \<longleftrightarrow> inv \<sigma> x \<in> FVarsB b"
 unfolding renB_def FVarsB_def apply safe
   subgoal by simp (metis (no_types, lifting) bij_restr card_supp_restr dstream.set_map image_in_bij_eq inv_simp2 
-    presSuper_def restr_def superOf_subOf super_superOf term.FFVars_rrenames)
+    presSuper_def restr_def superOf_subOf super_superOf Lterm.FFVars_rrenames)
   subgoal by simp (metis bij_restr card_supp_restr dstream.set_map image_in_bij_eq inv_simp1 presSuper_def 
-    restr_def superOf_subOf super_superOf term.FFVars_rrenames) .
+    restr_def superOf_subOf super_superOf Lterm.FFVars_rrenames) .
 
 lemma renB_iVarB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> 
@@ -168,7 +168,7 @@ by (auto simp add: renB_cong renB_FVarsB)
 
 (* END PRODUCT: *)
 
-definition tr' :: "itrm \<Rightarrow> trm" where "tr' = T'.rec"
+definition tr' :: "ilterm \<Rightarrow> lterm" where "tr' = T'.rec"
 
 lemma tr'_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> tr' (iVar x) = Var (subOf (fst (theSN x)))"
 using T'.rec_iVar unfolding tr'_def iVarB_def by auto

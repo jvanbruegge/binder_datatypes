@@ -4,7 +4,7 @@ imports ILC_Renaming_Equivalence
 begin
 
 
-definition uniform :: "ivar iterm \<Rightarrow> bool" 
+definition uniform :: "ilterm \<Rightarrow> bool" 
 where "uniform e \<equiv> \<exists>e'. reneqv e e'" 
 
 lemma uniform_finite_touchedUponT: "uniform e \<Longrightarrow> finite (touchedSuperT e)"
@@ -133,7 +133,7 @@ using reneqv_trans reneqv_sym uniform_def by blast
 
 corollary irrename_uniform:
 assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" "presSuper f"
-and r: "uniform (e::itrm)" 
+and r: "uniform (e::ilterm)" 
 shows "uniform (irrename f e)"
 using assms unfolding uniform_def3 
 by (intro irrename_reneqv) auto
@@ -160,19 +160,19 @@ next
   then show ?case using s rr by auto
 next
   case (iLam ea e'a xs)
-  then show ?case using iLam apply(subst iterm.subst)
+  then show ?case using iLam apply(subst ILterm.subst)
     subgoal using s by auto
     subgoal using s by auto
-    apply(subst iterm.subst)
+    apply(subst ILterm.subst)
     subgoal using s by auto
     subgoal using s by auto
     subgoal apply(rule reneqv.iLam) by auto .
 next
   case (iApp e1 e1' es2 es2')
   then show ?case using rr
-    apply(subst iterm.subst)
+    apply(subst ILterm.subst)
     subgoal using s by auto
-    apply(subst iterm.subst)
+    apply(subst ILterm.subst)
     subgoal using s by auto
     subgoal apply(rule reneqv.iApp) apply auto
       by (meson reneqv_trans reneqv_sym)+ .
@@ -307,7 +307,7 @@ unfolding uniform_iApp_iff unfolding uniform_def3 by auto
 (* Other properties: *)
 
 lemma uniform_iLam_imp: "uniform (iLam xs e) \<Longrightarrow> \<exists> xs' e'. super xs' \<and> uniform e' \<and> iLam xs e = iLam xs' e'"
-by (smt (verit, del_insts) iterm.distinct(5) iterm.distinct(6) reneqv.simps uniform_def2)
+by (smt (verit, del_insts) ILterm.distinct(5) ILterm.distinct(6) reneqv.simps uniform_def2)
 
 lemma super_bsmall: "super xs \<Longrightarrow> bsmall (dsset xs)"
 by (metis bsmall_def finite.emptyI finite_insert super_dsset_singl touchedSuper_def)
@@ -325,7 +325,7 @@ proof-
     subgoal using u bsmall_def touchedSuperT_def uniform_finite_touchedUponT by fastforce .
   hence BB: "finite (touchedSuper B)" unfolding bsmall_def by auto
   have BBB: "|B| <o |UNIV::ivar set|"  
-    by (metis B small_def assms(2) card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (metis B small_def assms(2) card_dsset_ivar ILterm.set_bd_UNIV var_stream_class.Un_bound)
   obtain xs'' where xxs'': "super xs''" "B \<inter> dsset xs'' = {}" 
     by (smt (verit) Collect_cong Int_commute bsB bsmall_def super_infinite touchedSuper_def)
   obtain f where xs'': "xs'' = dsmap f xs'" and f: "bij_betw f (dsset xs') (dsset xs'')" "id_on (- dsset xs') f" 
@@ -343,7 +343,7 @@ proof-
     subgoal unfolding il xs'' iLam_inject apply(rule exI[of _ g], safe)
       subgoal by fact subgoal by fact
       subgoal using g(5) unfolding id_on_def apply simp  
-        by (metis B DiffI UnCI disjoint_iff il iterm.set(3) xxs''(2))
+        by (metis B DiffI UnCI disjoint_iff il ILterm.set(3) xxs''(2))
       subgoal apply(rule dsmap_cong)
         subgoal by (simp add: g(1) inj_on_def)
         subgoal using bij_betw_def f(1) by blast
@@ -371,7 +371,7 @@ proof-
   have ss: "small (\<Union> (FFVars ` (sset es2)))" 
   unfolding small_def apply(rule var_prod_class.UN_bound)
     subgoal by (simp add: countable_card_ivar countable_sset)
-    subgoal using iterm.set_bd_UNIV by blast .
+    subgoal using ILterm.set_bd_UNIV by blast .
 
   have bs: "bsmall (\<Union> (FFVars ` (sset es2)))"
   unfolding bsmall_def fves2 unfolding bsmall_def[symmetric]  
@@ -398,7 +398,7 @@ proof-
           subgoal by (simp add: SSupp_itvsubst_bound f(2))
           subgoal apply simp unfolding f(4)[symmetric] 
             by (metis (full_types) Diff_iff f(1) f(3) f(4) id_on_def il(1) imkSubst_def 
-            imkSubst_smap iterm.set(3)) . . .
+            imkSubst_smap ILterm.set(3)) . . .
      subgoal using il(2) by auto .
 qed
           

@@ -105,7 +105,7 @@ by (meson bsmall_def finite_surj touchedSuper_supp)
 
 
 (* *)
-definition B :: "(nat list \<Rightarrow> ivar iterm) set" where "B \<equiv> {E. \<forall> p p'. reneqv (E p) (E p')}"
+definition B :: "(nat list \<Rightarrow> ilterm) set" where "B \<equiv> {E. \<forall> p p'. reneqv (E p) (E p')}"
 
 definition VarB where "VarB x p \<equiv> iVar (dsnth (superOf x) (natOf p))"
 definition LamB where "LamB x E p \<equiv> iLam (superOf x) (E p)"
@@ -137,13 +137,13 @@ unfolding renB_def B_def fun_eq_iff by auto
 lemma renB_comp: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
     bij \<tau> \<Longrightarrow> |supp \<tau>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB (\<tau> o \<sigma>) b = renB \<tau> (renB \<sigma> b)"
 unfolding renB_def B_def fun_eq_iff 
-by (simp add: bij_ext card_supp_ext ext_comp iterm.rrename_comps)
+by (simp add: bij_ext card_supp_ext ext_comp ILterm.rrename_comps)
 
 lemma renB_cong: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
    (\<forall>x \<in> FVarsB b. \<sigma> x = x) \<Longrightarrow> 
    renB \<sigma> b = b"
 unfolding renB_def B_def fun_eq_iff FVarsB_def apply safe
-apply(rule iterm.rrename_cong_ids)  
+apply(rule ILterm.rrename_cong_ids)  
   subgoal using bij_ext by auto
   subgoal using card_supp_ext by auto
   subgoal apply(rule ext_id_cong)  
@@ -158,7 +158,7 @@ unfolding FVarsB_def renB_def apply (auto simp: image_def)
     subgoal 
     apply(rule exI[of _ "{y. \<exists>x\<in>touchedSuper (ILC.FFVars (b p)). y = subOf x}"])
     apply auto apply(rule bexI[of _ "superOf (inv \<sigma> (subOf xs))"]) apply auto
-    apply(subst (asm) iterm.FFVars_rrenames)
+    apply(subst (asm) ILterm.FFVars_rrenames)
       subgoal using bij_ext by auto
       subgoal using card_supp_ext by auto
       subgoal unfolding touchedSuper_def 
@@ -172,7 +172,7 @@ unfolding FVarsB_def renB_def apply (auto simp: image_def)
       subgoal unfolding touchedSuper_def 
         by simp (smt (verit, best) Int_emptyD bij_betw_inv_into bij_ext card_supp_ext 
        dsmap_ext_superOf dstream.set_map ext_inv image_Int_empty inv_simp2 
-      iterm.FFVars_rrenames superOf_subOf) . .
+      ILterm.FFVars_rrenames superOf_subOf) . .
   
 lemma renB_VarB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VarB x) = VarB (\<sigma> x)"
 unfolding renB_def VarB_def fun_eq_iff 
@@ -218,7 +218,7 @@ by (auto simp add: renB_cong renB_FVarsB)
 
 (* END PRODUCT: *)
 
-definition tr :: "trm \<Rightarrow> nat list \<Rightarrow> itrm" where "tr = T.rec"
+definition tr :: "lterm \<Rightarrow> nat list \<Rightarrow> ilterm" where "tr = T.rec"
 
 
 (* NB: This is Mazza's Lemma 15(2) -- which in our case comes from 

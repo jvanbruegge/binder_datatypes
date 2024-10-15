@@ -47,7 +47,7 @@ lemmas reneqv_finite_touchedSuperT = reneqv_touchedSuperT[THEN conjunct2]
 
 (* INSTANTIATING THE CComponents LOCALE: *)
 
-type_synonym T = "itrm \<times> itrm"
+type_synonym T = "ilterm \<times> ilterm"
 
 definition Tperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
 "Tperm f \<equiv> map_prod (irrename f) (irrename f)"
@@ -61,11 +61,11 @@ interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp 
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
-using iterm.card_of_FFVars_bounds
-apply (auto simp: iterm.rrename_id0s map_prod.comp 
-iterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
-apply (simp add: iterm.set_bd_UNIV small_def)
-apply (simp add: iterm.set_bd_UNIV small_def)
+using ILterm.card_of_FFVars_bounds
+apply (auto simp: ILterm.rrename_id0s map_prod.comp 
+ILterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
+apply (simp add: ILterm.set_bd_UNIV small_def)
+apply (simp add: ILterm.set_bd_UNIV small_def)
 apply (simp add: comp_def dstream.map_comp)
 apply (simp add: dstream_map_ident_strong)
 unfolding bsmall_def touchedSuper_def  
@@ -116,15 +116,15 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "irrename \<sigma> e"]) 
   apply(rule exI[of _ "irrename \<sigma> e'"])  
   apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_def
-  apply (simp add: iterm.rrename_comps) by (metis option.simps(5)) . . 
+  apply (simp add: ILterm.rrename_comps) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3)
   subgoal apply(elim exE) subgoal for e1 e1' es2 es2'
   apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"]) 
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) apply(rule exI[of _ "smap (irrename \<sigma>) es2'"])
   apply(cases t) unfolding isPerm_def small_def Tperm_def 
-  apply (simp add: iterm.rrename_comps) 
-  by (metis image_in_bij_eq iterm.rrename_bijs iterm.rrename_inv_simps) . . .
+  apply (simp add: ILterm.rrename_comps) 
+  by (metis image_in_bij_eq ILterm.rrename_bijs ILterm.rrename_inv_simps) . . .
 
 
 

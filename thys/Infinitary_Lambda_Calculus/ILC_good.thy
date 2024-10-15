@@ -42,7 +42,7 @@ qed
 
 (* INSTANTIATING THE CComponents LOCALE: *)
 
-type_synonym T = "itrm"
+type_synonym T = "ilterm"
 
 definition Tperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" where 
 "Tperm f \<equiv> irrename f"
@@ -56,10 +56,10 @@ interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp 
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
-using iterm.card_of_FFVars_bounds
-apply (auto simp: iterm.rrename_id0s map_prod.comp
-iterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
-apply (simp add: iterm.set_bd_UNIV small_def) 
+using ILterm.card_of_FFVars_bounds
+apply (auto simp: ILterm.rrename_id0s map_prod.comp
+ILterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
+apply (simp add: ILterm.set_bd_UNIV small_def) 
 apply (simp add: comp_def dstream.map_comp)
 apply (simp add: dstream_map_ident_strong)
 unfolding bsmall_def touchedSuper_def  
@@ -110,15 +110,15 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "dsmap \<sigma> xs"]) 
   apply(rule exI[of _ "irrename \<sigma> e"])  
   unfolding isPerm_def small_def Tperm_def presBnd_def
-  apply (simp add: iterm.rrename_comps) by (metis option.simps(5)) . . 
+  apply (simp add: ILterm.rrename_comps) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3) 
   subgoal apply(elim exE) subgoal for e1 es2
   apply(rule exI[of _ "irrename \<sigma> e1"]) 
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) 
   unfolding isPerm_def small_def Tperm_def presBnd_presSuper 
-  apply (simp add: iterm.rrename_comps image_def) 
-  by (metis inv_simp1 iterm.rrename_bijs iterm.rrename_inv_simps touchedSuperT_irrename) . . .
+  apply (simp add: ILterm.rrename_comps image_def) 
+  by (metis inv_simp1 ILterm.rrename_bijs ILterm.rrename_inv_simps touchedSuperT_irrename) . . .
 
 (* *)
 
@@ -345,13 +345,13 @@ and f: "finite (touchedSuper (IImsupp f))"
 shows "good (itvsubst f e)"
 using r proof (binder_induction e avoiding: "IImsupp f" rule: strong_induct_good')
   case (iLam ea xs)
-  show ?case using iLam apply(subst iterm.subst)
+  show ?case using iLam apply(subst ILterm.subst)
       subgoal using s by blast
       subgoal using s by auto 
       subgoal apply(rule good.iLam) by auto .
 next
   case (iApp e1 es2)
-  then show ?case apply(subst iterm.subst)
+  then show ?case apply(subst ILterm.subst)
       subgoal using s by auto
       subgoal apply(rule good.iApp)
         subgoal by auto

@@ -55,25 +55,25 @@ assumes "\<And>i j. i \<noteq> j \<Longrightarrow> \<not> prefix (snth ps i) (sn
 shows "reneqv
          (tr (tvsubst (Var(x:=e)) ee) q) 
          (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q))"
-proof (binder_induction ee arbitrary: q ps avoiding: x e rule: term.strong_induct)
+proof (binder_induction ee arbitrary: q ps avoiding: x e rule: Lterm.strong_induct)
   case (Var x q ps)
-  then show ?case apply(subst term.subst(1))
+  then show ?case apply(subst Lterm.subst(1))
       subgoal by auto
       subgoal by auto (metis dsset_range empty_iff imkSubst_idle insert_iff rangeI reneqv_tr 
         subOf_superOf super_superOf touchedSuper_iVar tr_Var) .
 next
   case (App t1 t2 q ps)
-  then show ?case apply(subst term.subst(2))
+  then show ?case apply(subst Lterm.subst(2))
       subgoal by auto
       subgoal apply (simp add: reneqv_iApp_iff) apply safe
         using App.hyps(1,2) reneqv_trans reneqv_sym apply blast+    
         using App.hyps(2) reneqv_trans reneqv_sym by blast .
 next
   case (Lam y t q ps)
-  then show ?case apply(subst term.subst(3))
+  then show ?case apply(subst Lterm.subst(3))
       subgoal by auto
       subgoal using IImsupp_Var by fastforce
-      subgoal unfolding tr_Lam apply (subst iterm.subst(3))
+      subgoal unfolding tr_Lam apply (subst ILterm.subst(3))
         subgoal by auto
         subgoal using uniformS_touchedSuper_IImsupp_imkSubst 
         subgoal apply(subgoal_tac "superOf y \<notin> touchedSuper (ILC.IImsupp (imkSubst (superOf x) (smap (tr e) ps)))")
@@ -193,11 +193,11 @@ proof-
   next
     case (iLam e xsa)
     then show ?case apply(subst tr'_iLam)
-      apply auto apply(subst iterm.subst(3))
+      apply auto apply(subst ILterm.subst(3))
         subgoal by auto 
         subgoal apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
           using shd_sset super_touchedSuper_dsset by fastforce+
-        subgoal apply(subst term.subst(3))
+        subgoal apply(subst Lterm.subst(3))
           subgoal by auto subgoal apply(rule IImsupp_Var') 
           apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
            Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
@@ -212,7 +212,7 @@ proof-
     subgoal by auto
     subgoal by auto
     subgoal by auto
-    subgoal apply(subst iterm.subst(2))
+    subgoal apply(subst ILterm.subst(2))
       subgoal by auto
       subgoal apply(subst tr'_iApp)
         subgoal using g good_imkSubst by auto
@@ -436,7 +436,7 @@ apply(induct arbitrary: i j rule: ustepD.induct)
 he only "paralelizes" the definition in the iAppR case 
 (without acknowledging though that parallelization should happen hereditarily): 
  *)
-inductive ustepD' :: "nat \<Rightarrow> itrm \<Rightarrow> itrm \<Rightarrow> bool" where
+inductive ustepD' :: "nat \<Rightarrow> ilterm \<Rightarrow> ilterm \<Rightarrow> bool" where
   Beta: "uniform e \<Longrightarrow> hred e e' \<Longrightarrow> ustepD' 0 e e'"
 | iAppL: "uniformS es \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' (Suc d) (iApp e es) (iApp e' es)"
 | iAppR: "uniform e \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD' (Suc d) (iApp e es) (iApp e es')"

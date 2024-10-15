@@ -4,7 +4,7 @@ begin
 
 (* Head reduction in the infinitary calculus: *)
 
-definition hred :: "ivar iterm \<Rightarrow> ivar iterm \<Rightarrow> bool" where 
+definition hred :: "ilterm \<Rightarrow> ilterm \<Rightarrow> bool" where 
 "hred e e' \<equiv> \<exists> xs e1 es2. e = iApp (iLam xs e1) es2 \<and> e' = itvsubst (imkSubst xs es2) e1"
 
 lemma hred_irrename: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> hred e e' \<Longrightarrow> hred (irrename \<sigma> e) (irrename \<sigma> e')"
@@ -12,7 +12,7 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
   apply(rule exI[of _ "dsmap \<sigma> xs"])
   apply(rule exI[of _ "irrename \<sigma> e1"])  
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"])   
-  apply (simp add: iterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
+  apply (simp add: ILterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
   apply(subst imkSubst_smap_irrename_inv) unfolding isPerm_def apply auto 
   apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
   apply(subst itvsubst_comp) 
@@ -21,7 +21,7 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
     subgoal apply(rule itvsubst_cong)
       subgoal using SSupp_irrename_bound by blast
       subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv isPerm_def by auto
-   subgoal for x apply simp apply(subst iterm.subst(1))
+   subgoal for x apply simp apply(subst ILterm.subst(1))
       subgoal using card_SSupp_imkSubst_irrename_inv[unfolded isPerm_def] by auto
       subgoal by simp . . . .
 
@@ -73,7 +73,7 @@ proof-
     subgoal by fact
     subgoal apply(rule small_UN)
       subgoal by (simp add: countable_card_ivar countable_sset)
-      subgoal by (simp add: small_def iterm.set_bd_UNIV) . .
+      subgoal by (simp add: small_def ILterm.set_bd_UNIV) . .
   then obtain xs' e1' where 0: "iLam xs e1 = iLam xs' e1'" "dsset xs' \<inter> B = {}"
   using iLam_avoid by (meson small_def)
 
@@ -91,11 +91,11 @@ proof-
         apply(subst itvsubst_cong) apply auto 
         apply (simp add: SSupp_itvsubst_bound f(2))
         by (metis (full_types) "0"(1) "1"(1) Diff_iff f(1) f(3) id_on_def imkSubst_idle 
-          imkSubst_smap iterm.set(3)) . . 
+          imkSubst_smap ILterm.set(3)) . . 
 qed
 
 lemma hred_FFVars: "hred e e' \<Longrightarrow> FFVars e' \<subseteq> FFVars e"
-unfolding hred_def by auto (metis imkSubst_def iterm.set(1) singletonD snth_sset)+
+unfolding hred_def by auto (metis imkSubst_def ILterm.set(1) singletonD snth_sset)+
 
 lemma hred_determ: 
 "hred e e' \<Longrightarrow> hred e e'' \<Longrightarrow> e' = e''"

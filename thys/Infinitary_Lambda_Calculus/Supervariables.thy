@@ -132,7 +132,7 @@ lemma subOf_inj[simp]: "super xs \<Longrightarrow> super ys \<Longrightarrow> su
 by (metis superOf_subOf)
 
 
-(* The set of supervariables "touched" by a set, or by an iterm: *)
+(* The set of supervariables "touched" by a set, or by an ILterm: *)
 
 definition touchedSuper :: "ivar set \<Rightarrow> ivar dstream set" where 
 "touchedSuper X \<equiv> {xs. super xs \<and> X \<inter> dsset xs \<noteq> {}}"
@@ -154,7 +154,7 @@ lemma touchedSuper_UN':
 "touchedSuper (\<Union> KK) = \<Union> {touchedSuper K | K . K \<in> KK}"
 unfolding touchedSuper_def by auto
 
-definition touchedSuperT :: "itrm \<Rightarrow> ivar dstream set" where 
+definition touchedSuperT :: "ilterm \<Rightarrow> ivar dstream set" where 
 "touchedSuperT t \<equiv> touchedSuper (FFVars t)"
 
 lemma touchedSuper_iVar_singl: "touchedSuperT (iVar x) = {} \<or> (\<exists>xs. touchedSuperT (iVar x) = {xs})"
@@ -459,7 +459,7 @@ next
   define A where A: "A = FFVars (iLam xs e)"
   have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
      "A \<inter> dsset xs' = {}" "bij_betw f (dsset xs) (dsset xs')" "dsmap f xs = xs'"
-    subgoal unfolding A using iterm.set_bd_UNIV by blast
+    subgoal unfolding A using ILterm.set_bd_UNIV by blast
     subgoal unfolding A using touchedSuperT_def u  
       using super(1) touchedSuper_iLam by auto
     subgoal unfolding A by auto

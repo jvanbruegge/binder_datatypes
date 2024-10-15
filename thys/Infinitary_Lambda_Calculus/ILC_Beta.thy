@@ -8,17 +8,17 @@ begin
 
 (* *)
 
-abbreviation Tsupp :: "itrm \<Rightarrow> itrm \<Rightarrow> ivar set" where
+abbreviation Tsupp :: "ilterm \<Rightarrow> ilterm \<Rightarrow> ivar set" where
 "Tsupp e1 e2 \<equiv> FFVars e1 \<union> FFVars e2"
 
 lemma small_Tsupp: "small (Tsupp t1 t2)"
   unfolding small_def
-  by (auto intro!: var_iterm_pre_class.Un_bound iterm.card_of_FFVars_bounds)
+  by (auto intro!: var_ILterm_pre_class.Un_bound ILterm.card_of_FFVars_bounds)
 
 lemma Tvars_dsset: "(Tsupp t1 t2 - dsset xs) \<inter> dsset xs = {}" "|Tsupp t1 t2 - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tsupp small_def)
 
-binder_inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
+binder_inductive istep :: "ilterm \<Rightarrow> ilterm \<Rightarrow> bool" where
   Beta: "istep (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
 | iAppL: "istep e1 e1' \<Longrightarrow> istep (iApp e1 es2) (iApp e1' es2)"
 | iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
@@ -29,7 +29,7 @@ binder_inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
         apply(rule exI[of _ "dsmap \<sigma> xs"])
         apply(rule exI[of _ "irrename \<sigma> e1"])
         apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-        apply (simp add: iterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
+        apply (simp add: ILterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
         apply(subst imkSubst_smap_irrename_inv) unfolding isPerm_def apply auto
         apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
         apply(subst itvsubst_comp)
@@ -38,26 +38,26 @@ binder_inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
         subgoal apply(rule itvsubst_cong)
           subgoal using SSupp_irrename_bound by blast
           subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv isPerm_def by auto
-          subgoal for x apply simp apply(subst iterm.subst(1))
+          subgoal for x apply simp apply(subst ILterm.subst(1))
             subgoal using card_SSupp_imkSubst_irrename_inv[unfolded isPerm_def] by auto
             subgoal by simp . . .
       (* *)
   subgoal for e1 e1' es2
       apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"])
       apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-      by (simp add: iterm.rrename_comps)
+      by (simp add: ILterm.rrename_comps)
     (* *)
   subgoal for es2 i e2' e1
       apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
       apply(rule exI[of _ i])
       apply(rule exI[of _ "irrename \<sigma> e2'"])
       apply(rule exI[of _ "irrename \<sigma> e1"])
-      apply (simp add: iterm.rrename_comps) .
+      apply (simp add: ILterm.rrename_comps) .
     (* *)
   subgoal for e e' xs
       apply(rule exI[of _ "irrename \<sigma> e"]) apply(rule exI[of _ "irrename \<sigma> e'"])
       apply(rule exI[of _ "dsmap \<sigma> xs"])
-      by (simp add: iterm.rrename_comps) .
+      by (simp add: ILterm.rrename_comps) .
   subgoal premises prems for R B x1 x2
     using prems(2-) apply safe
     subgoal for xs e1 es2

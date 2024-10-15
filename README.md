@@ -48,3 +48,10 @@ merely bundles existing theories from Isabelle's standard library, and the Binde
 associated theories are placed directly in the directories src/thys and src/Tools (the latter
 consists of the ML files implementing the support for datatypes with bindings).
 
+
+
+TODO:
+-- conventions: eg. Lterm the polymorphic type, lterm its monomorphic versions 
+(the paper uses Lterm); ILterm vs. ilterm etc. 
+--
+

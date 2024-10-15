@@ -1,6 +1,6 @@
 (* The translations back and forth between the infinitary and finitary lambda-calculi *)
 theory ILC_relations_more
-imports (* ILC_uniform *) ILC_affine ILC_Beta ILC_UBeta_depth
+imports ILC_affine ILC_Beta ILC_UBeta_depth
 begin
 
 

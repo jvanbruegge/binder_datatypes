@@ -78,7 +78,7 @@ corollary Forall_inject_same[simp]: "Forall X T1 T2 = Forall X S1 S2 \<longleftr
 
 lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "
- (\<And>a'. a'\<in>FFVars_typ T2 - {x::'a::var_typ_pre} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Forall x T1 T2 = Forall (\<sigma> x) T1 (rrename_typ \<sigma> T2)"
+ (\<And>Y. Y\<in>FFVars_typ T2 - {X::'a::var_typ_pre} \<Longrightarrow> \<sigma> Y = Y) \<Longrightarrow> Forall X T1 T2 = Forall (\<sigma> X) T1 (rrename_typ \<sigma> T2)"
   apply (unfold Forall_def)
   apply (unfold typ.TT_injects0)
   apply (unfold set3_typ_pre_def set2_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps

@@ -2,7 +2,7 @@ theory Pi_Transition_Late
   imports Pi_Transition_Common
 begin
 
-binder_inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
+binder_inductive trans :: "proc \<Rightarrow> com \<Rightarrow> bool" where
   InpL: "trans (Inp a x P) (Binp a x P)"
 | ComLeftL: "\<lbrakk> trans P (Binp a x P') ; trans Q (Fout a y Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau ((P'[y/x]) \<parallel> Q'))"
 | CloseLeftL: "\<lbrakk> trans P (Binp a x P') ; trans Q (Bout a x Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau (Res x (P' \<parallel> Q')))"
@@ -14,15 +14,15 @@ binder_inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
     apply simp
     apply (elim disj_forward)
     by (auto simp: isPerm_def
-        term.rrename_comps action.map_comp action.map_id
+        Proc.rrename_comps action.map_comp action.map_id
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | (rule exI[of _ "map_action \<sigma> _"] exI[of _ "rrename \<sigma> _"])
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
     (* This is a prototype implemetation of the refreshability heuristic mentioned in sections 5 and 6. *)
     by (tactic \<open>refreshability_tac false
-      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
+      [@{term "FFVars :: proc \<Rightarrow> var set"}, @{term "FFVars_Com :: com \<Rightarrow> var set"}]
+      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> proc \<Rightarrow> proc"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
        @{term "rrename_bound_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"}]
       [SOME [NONE, SOME 1, SOME 0],
        SOME [NONE, NONE, SOME 1, SOME 0, NONE, NONE, NONE],
@@ -32,15 +32,15 @@ binder_inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
        SOME [SOME 0, NONE, SOME 1, SOME 0, SOME 1],
        SOME [NONE, SOME 2, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound insert_bound card_of_minus_bound term.Un_bound term.card_of_FFVars_bounds commit_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
-      @{thms Res_inject Inp_inject Bout_inject FFVars_commit_Cmt ns_alt vars_alt Int_Un_distrib}
-      @{thms Inp_eq_usub rrename_cong term.rrename_cong_ids term.rrename_cong_ids[symmetric] arg_cong2[where f=Cmt, OF _ refl] arg_cong2[where f=Cmt, OF refl]
+      @{thms emp_bound singl_bound insert_bound card_of_minus_bound Proc.Un_bound Proc.card_of_FFVars_bounds Com_internal.card_of_FFVars_bounds infinite_UNIV bns_bound}
+      @{thms Res_inject Inp_inject Bout_inject FFVars_Com_Cmt ns_alt vars_alt Int_Un_distrib}
+      @{thms Inp_eq_usub rrename_cong Proc.rrename_cong_ids Proc.rrename_cong_ids[symmetric] arg_cong2[where f=Cmt, OF _ refl] arg_cong2[where f=Cmt, OF refl]
           action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout] Cmt_rrename_bound_action Cmt_rrename_bound_action_Par}
       @{thms cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Bout _ _ _"] id_onD id_on_antimono
              cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Fout _ _ _"]
              cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Cmt _ _"]
              cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Binp _ _ _"]
-             cong[OF cong[OF refl[of R] term.rrename_cong_ids], THEN iffD1, rotated -1, of _ _ _ "Finp _ _ _"]} @{context}\<close>)
+             cong[OF cong[OF refl[of R] Proc.rrename_cong_ids], THEN iffD1, rotated -1, of _ _ _ "Finp _ _ _"]} @{context}\<close>)
   done
 print_theorems
 

@@ -37,6 +37,7 @@ session Binders in "thys" = Prelim +
     Generic_Barendregt_Enhanced_Rule_Induction
     General_Customization
     Urban_Berghofer_Norrish_Rule_Induction
+    No_Least_Support_Counterexample
 
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
   theories

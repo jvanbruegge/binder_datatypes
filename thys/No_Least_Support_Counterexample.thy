@@ -175,9 +175,9 @@ lemma supports_cls_xs: "supports (snth xs ` {n ..}) cls_xs"
   by transfer
     (force simp: xs_def stream.map_comp eq_ae_suffix intro: stream.map_cong)
 
-(* Assuming the existence of a minimal support set for any E we derive a contradiction: *)
+(* Assuming the existence of a minimal supporting set for each element of E, we derive a contradiction: *)
 proposition counterexample:
-  assumes minimal: "\<forall>t. \<exists>A. countable A \<and> supports A t \<and> (\<forall>B. countable B \<longrightarrow> supports B t \<longrightarrow> A \<subseteq> B)"
+  assumes minimal: "\<forall>e. \<exists>A. countable A \<and> supports A e \<and> (\<forall>B. countable B \<longrightarrow> supports B e \<longrightarrow> A \<subseteq> B)"
   shows False
 proof -
   from minimal obtain A where "countable A" "supports A cls_xs" "\<forall>B. countable B \<longrightarrow> supports B cls_xs \<longrightarrow> A \<subseteq> B"

@@ -27,7 +27,8 @@ binder_inductive step :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
     by blast
     done
 
-thm step.strong_induct step.equiv
+thm step.strong_induct 
+thm step.equiv
 
 (* Other properties: *)
 

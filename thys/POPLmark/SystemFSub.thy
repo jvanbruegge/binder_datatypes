@@ -109,9 +109,9 @@ definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>
 
 abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where
   "FFVars_ctxt xs \<equiv> \<Union>(FFVars_typ ` snd ` set xs)"
-abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,75,75] 71) where
+abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ ,, _ <: _" [57,75,75] 71) where
   "extend \<Gamma> x T \<equiv> (x, T)#\<Gamma>"
-abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" (infixl "(,)" 71) where
+abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" (infixl "(,,)" 71) where
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
 abbreviation empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") where "empty_context \<equiv> []"
 abbreviation dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "dom xs \<equiv> fst ` set xs"
@@ -163,7 +163,7 @@ abbreviation well_scoped :: "type \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarr
 hide_const wf
 inductive wf :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> bool"  where
   wf_Nil[intro]: "wf []"
-| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; wf \<Gamma>\<rbrakk> \<Longrightarrow> wf (\<Gamma>,x<:T)"
+| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; wf \<Gamma>\<rbrakk> \<Longrightarrow> wf (\<Gamma>,,x<:T)"
 
 inductive_cases
   wfE[elim]: "wf \<Gamma>"
@@ -177,7 +177,7 @@ lemma in_context_eqvt:
 
 lemma extend_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "map_context f (\<Gamma>,x<:T) = map_context f \<Gamma>,f x <: rrename_typ f T"
+  shows "map_context f (\<Gamma>,,x<:T) = map_context f \<Gamma>,,f x <: rrename_typ f T"
   using assms unfolding map_context_def by simp
 
 lemma closed_in_eqvt:
@@ -247,7 +247,7 @@ inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<R
 | SA_Refl_TVar: "\<lbrakk>wf \<Gamma>; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
 | SA_Trans_TVar: "\<lbrakk> X<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar X <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
-| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: \<forall>X<:T\<^sub>1 .T\<^sub>2"
+| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>,, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: \<forall>X<:T\<^sub>1 .T\<^sub>2"
 
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
@@ -278,7 +278,7 @@ next
 
 declare ty.intros[intro]
 
-lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
+lemma ty_fresh_extend: "\<Gamma>,, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
 make_binder_inductive ty
@@ -309,8 +309,8 @@ make_binder_inductive ty
            apply (rule Forall_swap)
            apply simp
           apply assumption+
-         apply (frule prems(1)[rule_format, of "(\<Gamma>, X <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
-         apply (drule prems(2)[rule_format, of "id(X := Z, Z := X)" "\<Gamma>, X <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
+         apply (frule prems(1)[rule_format, of "(\<Gamma>,, X <: T\<^sub>1)" "S\<^sub>2" "T\<^sub>2"])
+         apply (drule prems(2)[rule_format, of "id(X := Z, Z := X)" "\<Gamma>,, X <: T\<^sub>1" "S\<^sub>2" "T\<^sub>2", rotated 2])
            apply (auto simp: extend_eqvt)
         apply (erule cong[OF cong[OF cong], THEN iffD1, of R, OF refl, rotated -1]) back
           apply (drule ty_fresh_extend)

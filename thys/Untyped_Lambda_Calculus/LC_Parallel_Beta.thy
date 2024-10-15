@@ -11,9 +11,9 @@ lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t1 :: lterm) t2"
 
 binder_inductive pstep :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
   Refl: "pstep e e"
-| App: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App e1 e2) (App e1' e2')"
-| Xi: "pstep e e' \<Longrightarrow> pstep (Lam x e) (Lam x e')"
-| PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
+| Ap: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (Ap e1 e2) (Ap e1' e2')"
+| Xi: "pstep e e' \<Longrightarrow> pstep (Lm x e) (Lm x e')"
+| PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (Ap (Lm x e1) e2) (tvsubst (Vr(x:=e2')) e1')"
   subgoal for \<sigma> R B x1 x2
     by (elim disj_forward exE)
       (auto simp: isPerm_def
@@ -25,7 +25,7 @@ binder_inductive pstep :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     apply (elim disj_forward exE)
      apply (((rule exI, rule conjI[rotated], assumption) |
-          (((rule exI conjI)+)?, rule Lam_refresh tvsubst_refresh) |
+          (((rule exI conjI)+)?, rule Lm_refresh tvsubst_refresh) |
           (auto split: if_splits))+) [3]
     subgoal for xx e1 e1' e2 e2' x
       apply (erule conjE)+
@@ -44,7 +44,7 @@ binder_inductive pstep :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
        apply (rule conjI)
         apply simp
         apply (rule conjI)
-         apply (rule Lam_refresh)
+         apply (rule Lm_refresh)
          apply simp
         apply (rule refl)
        apply (rule conjI[rotated])+

@@ -298,7 +298,8 @@ unfolding map_commit_internal_pre_def unfolding toUnfold by simp
 
 (* Actions *)
 
-datatype (vars:'a) action = finp 'a 'a | fout 'a 'a | is_bout: bout 'a 'a | binp 'a 'a | tau
+datatype (vars:'var) action = 
+  finp 'var 'var | fout 'var 'var | is_bout: bout 'var 'var | binp 'var 'var | tau
 
 lemmas action.set_map[simp]
 

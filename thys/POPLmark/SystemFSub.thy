@@ -120,14 +120,17 @@ abbreviation disjoint :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<t
 
 lemma map_context_id[simp]: "map_context id = id"
   unfolding map_context_def by simp
+
 lemma map_context_comp0[simp]:
   assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
   shows "map_context f \<circ> map_context g = map_context (f \<circ> g)"
   apply (rule ext)
   unfolding map_context_def
   using assms by (auto simp: Type.rrename_comps)
+
 lemmas map_context_comp = trans[OF comp_apply[symmetric] fun_cong[OF map_context_comp0]]
 declare map_context_comp[simp]
+
 lemma context_dom_set[simp]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "dom (map_context f xs) = f ` dom xs"
@@ -137,10 +140,12 @@ lemma set_bd_UNIV: "|set xs| <o |UNIV::var set|"
     apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
   apply (rule var_Type_pre_class.large)
   done
+
 lemma context_set_bd_UNIV[simp]: "|dom xs| <o |UNIV::var set|"
   apply (rule ordLeq_ordLess_trans[OF card_of_image])
   apply (rule set_bd_UNIV)
   done
+
 lemma context_map_cong_id:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   and "\<And>a. a \<in> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<Longrightarrow> f a = a"
@@ -160,7 +165,7 @@ abbreviation in_context :: "var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>
 abbreviation well_scoped :: "type \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("_ closed'_in _" [55, 55] 60) where
   "well_scoped S \<Gamma> \<equiv> FFVars_Type S \<subseteq> dom \<Gamma>"
 
-hide_const wf
+
 inductive wf :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> bool"  where
   wf_Nil[intro]: "wf []"
 | wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; wf \<Gamma>\<rbrakk> \<Longrightarrow> wf (\<Gamma>,,x<:T)"

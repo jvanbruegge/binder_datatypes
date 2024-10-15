@@ -11,13 +11,13 @@ abbreviation Tsupp :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightarrow>
 "Tsupp d e1 e2 \<equiv> {} \<union> FFVars_Lterm e1 \<union> FFVars_Lterm e2"
 
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp d e1 e2"
-by (metis Lam_avoid Lterm.card_of_FFVars_bounds Lterm.set(2) Un_empty_left)
+by (metis Lm_avoid Lterm.card_of_FFVars_bounds Lterm.set(2) Un_empty_left)
 
 binder_inductive stepD :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightarrow> bool" where
-  Beta: "stepD 0 (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
-| AppL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1' e2)"
-| AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
-| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
+  Beta: "stepD 0 (Ap (Lm x e1) e2) (tvsubst (Vr(x:=e2)) e1)"
+| ApL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (Ap e1 e2) (Ap e1' e2)"
+| ApR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (Ap e1 e2) (Ap e1 e2')"
+| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lm x e) (Lm x e')"
   subgoal for R B \<sigma> x1 x2 x3
     by (elim disj_forward exE case_prodE)
       (auto simp: isPerm_def Lterm.rrename_comps rrename_tvsubst_comp
@@ -27,7 +27,7 @@ binder_inductive stepD :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightar
     using fresh[of x2 x3] prems(2-)
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     apply (elim disj_forward exE; simp)
-     apply (metis Lam_eq_tvsubst Lam_refresh singletonD)
+     apply (metis Lm_eq_tvsubst Lm_refresh singletonD)
     by blast
   done
 

@@ -15,13 +15,13 @@ shows "affine e'"
 using assms proof (binder_induction e e' avoiding: e e' rule: istep.strong_induct)
   case (Beta xs e1 es2)
   show ?case apply(rule imkSubst_affine) using Beta
-    unfolding affine_iApp_iff by fastforce+
+    unfolding affine_iAp_iff by fastforce+
 next
-  case (iAppL e1 e1' es2)
-  then show ?case unfolding affine_iApp_iff using istep_FFVars by fastforce
+  case (iApL e1 e1' es2)
+  then show ?case unfolding affine_iAp_iff using istep_FFVars by fastforce
 next
-  case (iAppR e1 es2 i e2')
-  then show ?case unfolding affine_iApp_iff using istep_FFVars
+  case (iApR e1 es2 i e2')
+  then show ?case unfolding affine_iAp_iff using istep_FFVars
   by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
 next
   case (Xi ea e'a xs)
@@ -34,11 +34,11 @@ assumes "istep e e'" and "affine e"
 shows "affine e'"
 using assms apply(induct rule: istep.induct)
   subgoal for xs e1 es2 apply(rule imkSubst_affine_strong) 
-    subgoal by (simp add: affine_iApp_iff) 
-    subgoal using affine_iApp_iff by auto
-    subgoal using affine_iApp_iff by auto .
-  subgoal unfolding affine_iApp_iff using istep_FFVars by fastforce
-    subgoal unfolding affine_iApp_iff using istep_FFVars 
+    subgoal by (simp add: affine_iAp_iff) 
+    subgoal using affine_iAp_iff by auto
+    subgoal using affine_iAp_iff by auto .
+  subgoal unfolding affine_iAp_iff using istep_FFVars by fastforce
+    subgoal unfolding affine_iAp_iff using istep_FFVars 
     by simp (smt (verit, ccfv_SIG) Int_subset_empty1 More_Stream.theN disjoint_iff snth_sset snth_supd_diff snth_supd_same)
     subgoal by auto . 
 
@@ -65,18 +65,18 @@ unfolding affineS_def sset_sflat sset_range image_def snth_sflat apply safe
   subgoal by (metis (no_types, lifting) Int_emptyD nat2_inj snth2.elims) .
 
 
-lemma affineS_smap2_iApp_iff: 
-"affineS (smap2 iApp es ess) \<longleftrightarrow> 
+lemma affineS_smap2_iAp_iff: 
+"affineS (smap2 iAp es ess) \<longleftrightarrow> 
  affineS es \<and> affineS (sflat ess) \<and> 
   (\<forall>i j k. ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth2 ess (j,k)) = {})"
 unfolding affineS_def sset_sflat sset_range image_def snth_sflat affineS_sflat Un_def Int_def apply safe
-  subgoal using affine_iApp_iff by fastforce
+  subgoal using affine_iAp_iff by fastforce
   subgoal by auto
-  subgoal by auto (metis affine_iApp_iff snth2.elims snth_sset)
+  subgoal by auto (metis affine_iAp_iff snth2.elims snth_sset)
   subgoal for ii jj x apply(cases "nat2 ii", cases "nat2 jj") apply auto  
-  by (metis Int_emptyD affine_iApp_iff nat2_inj snth_sset)
-  subgoal by auto (metis Int_emptyD affine_iApp_iff snth_sset)
-  subgoal apply(auto simp: affine_iApp_iff sset_range image_def)  
+  by (metis Int_emptyD affine_iAp_iff nat2_inj snth_sset)
+  subgoal by auto (metis Int_emptyD affine_iAp_iff snth_sset)
+  subgoal apply(auto simp: affine_iAp_iff sset_range image_def)  
     apply (metis nat2_nat1 snth2.simps)
     by (metis nat2_nat1 prod.inject snth2.simps)
   subgoal apply auto
@@ -85,7 +85,7 @@ unfolding affineS_def sset_sflat sset_range image_def snth_sflat affineS_sflat U
     by (smt (verit, ccfv_SIG) More_Stream.theN nat2_nat1 prod.inject snth2.simps) .
 
 
-lemma affineS_smap_iLam_iff: "affineS (smap (iLam xs) es) \<longleftrightarrow> 
+lemma affineS_smap_iLm_iff: "affineS (smap (iLm xs) es) \<longleftrightarrow> 
   (\<forall>i j. i \<noteq> j \<longrightarrow> affine (snth es i) \<and> ILC.FFVars (snth es i) \<inter> ILC.FFVars (snth es j) \<subseteq> dsset xs)"
 unfolding affineS_def by auto (metis More_Stream.theN nat.simps(3))
 
@@ -96,8 +96,8 @@ assumes "ustepD d es es'"
 shows "\<forall>i. affine (es !! i) \<longrightarrow> affine (es' !! i)"
 using assms apply(induct rule: ustepD.induct)
   subgoal for es es' unfolding stream_all2_iff_snth using hread_affine by auto
-  subgoal apply auto unfolding affine_iApp_iff using ustepD_FFVars by fastforce
-  subgoal apply auto unfolding affine_iApp_iff using ustepD_FFVars 
+  subgoal apply auto unfolding affine_iAp_iff using ustepD_FFVars by fastforce
+  subgoal apply auto unfolding affine_iAp_iff using ustepD_FFVars 
   apply (auto simp: snth_sflat sset_range image_def)
     apply (metis nat2_nat1 snth2.simps) 
     apply (metis Int_emptyD in_mono nat2_nat1 snth2.simps snth_sflat)

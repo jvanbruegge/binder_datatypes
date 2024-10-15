@@ -7,15 +7,15 @@ begin
 (* DATATYPE DECLARTION  *)
 
 declare [[mrbnf_internals]]
-binder_datatype 'a "term" =
+binder_datatype 'var "term" =
   Zero
-| Sum "'a term" "'a term"
-| Par "'a term" "'a term" (infixl "\<parallel>" 300)
-| Bang "'a term"
-| Match 'a 'a "'a term"
-| Out 'a 'a "'a term"
-| Inp 'a x::'a t::"'a term" binds x in t
-| Res x::'a t::"'a term" binds x in t
+| Sum "'var term" "'var term"
+| Par "'var term" "'var term" (infixl "\<parallel>" 300)
+| Bang "'var term"
+| Match 'var 'var "'var term"
+| Out 'var 'var "'var term"
+| Inp 'var x::'var t::"'var term" binds x in t
+| Res x::'var t::"'var term" binds x in t
 for
   vvsubst: vvsubst
   tvsubst: tvsubst

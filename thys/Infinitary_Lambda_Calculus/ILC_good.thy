@@ -6,13 +6,13 @@ begin
 
 (* *)
 inductive good where 
-iVar: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> good (iVar x)"
+iVr: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> good (iVr x)"
 |
-iLam: "super xs \<Longrightarrow> good e \<Longrightarrow> good (iLam xs e)"
+iLm: "super xs \<Longrightarrow> good e \<Longrightarrow> good (iLm xs e)"
 |
-iApp: "good e1 \<Longrightarrow> (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> good e2) \<Longrightarrow> 
+iAp: "good e1 \<Longrightarrow> (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> good e2) \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') 
-  \<Longrightarrow> good (iApp e1 es2)"
+  \<Longrightarrow> good (iAp e1 es2)"
 
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -22,21 +22,21 @@ iApp: "good e1 \<Longrightarrow> (\<forall>e2. e2 \<in> sset es2 \<longrightarro
 lemma good_finite_touchedSuperT: 
 "good e \<Longrightarrow> finite (touchedSuperT e)"
 proof(induct rule: good.induct)
-  case (iVar x)
+  case (iVr x)
   then show ?case  
-  by (metis finite.emptyI finite_singleton touchedSuper_iVar_singl)
+  by (metis finite.emptyI finite_singleton touchedSuper_iVr_singl)
 next
-  case (iLam xs e)
+  case (iLm xs e)
   then show ?case by auto
 next
-  case (iApp e1 es2)
+  case (iAp e1 es2)
   obtain e2 where e2: "e2 \<in> sset es2"  
   using shd_sset by blast+
   hence 0: "touchedSuperT ` sset es2 = {touchedSuperT e2}" 
-  using iApp(4) by blast
+  using iAp(4) by blast
   have "finite (\<Union> (touchedSuperT ` sset es2))" 
-  unfolding 0 using iApp(3) e2 by auto    
-  thus ?case using iApp by (metis finite_UnI touchedSuper_iApp)
+  unfolding 0 using iAp(3) e2 by auto    
+  thus ?case using iAp by (metis finite_UnI touchedSuper_iAp)
 qed
 
 
@@ -76,13 +76,13 @@ unfolding presBnd_def presSuper_def fun_eq_iff apply safe
 definition G :: "B \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>xxs R t.  
-         (\<exists>xs x. xxs = None \<and> t = iVar x \<and> 
+         (\<exists>xs x. xxs = None \<and> t = iVr x \<and> 
                  super xs \<and> x \<in> dsset xs) 
          \<or>
-         (\<exists>xs e. xxs = Some xs \<and> t = iLam xs e \<and>  
+         (\<exists>xs e. xxs = Some xs \<and> t = iLm xs e \<and>  
                     super xs \<and> R e)
          \<or> 
-         (\<exists>e1 es2. xxs = None \<and> t = iApp e1 es2 \<and> 
+         (\<exists>e1 es2. xxs = None \<and> t = iAp e1 es2 \<and> 
                    R e1 \<and> (\<forall>e. e \<in> sset es2 \<longrightarrow> R e) \<and> 
                    (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') )"
  
@@ -156,19 +156,19 @@ unfolding good_def Reneqv.II_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp]
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt apply(rule iffI)
   subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>iVar: \<close>
+    \<^cancel>\<open>iVr: \<close>
     subgoal for xs x apply(rule exI[of _ None]) apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close> 
+    \<^cancel>\<open>iLm: \<close> 
     subgoal for xs e apply(rule exI[of _ "Some xs"]) apply(rule disjI3_2) by auto 
-    \<^cancel>\<open>iApp: \<close>
+    \<^cancel>\<open>iAp: \<close>
     subgoal apply(rule exI[of _ None]) apply(rule disjI3_3) by auto .
     (* *)
   subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>iVar: \<close>
+    \<^cancel>\<open>iVr: \<close>
     subgoal apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close>
+    \<^cancel>\<open>iLm: \<close>
     subgoal apply(rule disjI3_2) by auto
-    \<^cancel>\<open>iApp: \<close>
+    \<^cancel>\<open>iAp: \<close>
     subgoal apply(rule disjI3_3) by auto . . .
   
 
@@ -217,12 +217,12 @@ unfolding G_def Tperm_def apply safe
     apply(rule exI[of _ "dsmap f xs"]) 
     apply(rule exI[of _ "irrename f e"])  
     unfolding presSuper_def apply simp apply(intro conjI)
-      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst irrename_eq_itvsubst_iVar)
+      subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst irrename_eq_itvsubst_iVr)
         subgoal unfolding isPerm_def by auto
         subgoal unfolding isPerm_def by auto
         subgoal unfolding id_on_def isPerm_def presBnd_def 
-        by (auto simp: irrename_eq_itvsubst_iVar split: option.splits) . . . .
+        by (auto simp: irrename_eq_itvsubst_iVr split: option.splits) . . . .
   (* *)
   subgoal for e1 es2 
   apply(rule exI[of _ None])  
@@ -248,21 +248,21 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm good.induct[no_vars] 
 
-corollary strong_induct_good[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_good[consumes 2, case_names iVr iLm iAp]: 
 assumes par: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
 and st: "good t"  
-and iVar: "\<And>xs x p. 
+and iVr: "\<And>xs x p. 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow>
-  R p (iVar x)"
-and iLam: "\<And>e xs p. 
+  R p (iVr x)"
+and iLm: "\<And>e xs p. 
   dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> good e \<Longrightarrow> (\<forall>p'. R p' e) \<Longrightarrow> 
-  R p (iLam xs e)" 
-and iApp: "\<And>e1 es2 p. 
+  R p (iLm xs e)" 
+and iAp: "\<And>e1 es2 p. 
   good e1 \<Longrightarrow> (\<forall>p'. R p' e1) \<Longrightarrow> 
   (\<forall>e. e \<in> sset es2 \<longrightarrow> good e \<and> (\<forall>p'. R p' e)) \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
-  R p (iApp e1 es2)"
+  R p (iAp e1 es2)"
 shows "R p t"
 unfolding good_I
 using par st 
@@ -270,27 +270,27 @@ unfolding bsmall_def[symmetric] apply(elim Reneqv.BE_iinduct[where R = "\<lambda
   subgoal unfolding good_I by simp
   subgoal for p B t apply(subst (asm) G_def) 
   unfolding good_I[symmetric] apply(elim disjE exE)
-    subgoal using iVar by auto 
-    subgoal using iLam by auto  
-    subgoal using iApp by auto . .
+    subgoal using iVr by auto 
+    subgoal using iLm by auto  
+    subgoal using iAp by auto . .
 
-corollary strong_induct_good'[consumes 1, case_names bsmall Bound iVar iLam iApp]: 
+corollary strong_induct_good'[consumes 1, case_names bsmall Bound iVr iLm iAp]: 
 assumes st: "good t" 
 and bsmall: "\<And>p. bsmall (Psupp p)"
 and "\<And>p. |Psupp p| <o |UNIV::ivar set|"
-and iVar: "\<And>xs x p. 
+and iVr: "\<And>xs x p. 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow>
-  R (iVar x) p"
-and iLam: "\<And>e xs p. 
+  R (iVr x) p"
+and iLm: "\<And>e xs p. 
   dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> good e \<Longrightarrow> (\<forall>p'. R e p') \<Longrightarrow> 
-  R (iLam xs e) p" 
-and iApp: "\<And>e1 es2 p. 
+  R (iLm xs e) p" 
+and iAp: "\<And>e1 es2 p. 
   good e1 \<Longrightarrow> (\<forall>p'. R e1 p') \<Longrightarrow>
   (\<And>e. e \<in> sset es2 \<Longrightarrow> \<forall>p'. R e p') \<Longrightarrow>
   (\<forall>e. e \<in> sset es2 \<longrightarrow> good e) \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
-  R (iApp e1 es2) p"
+  R (iAp e1 es2) p"
 shows "\<forall>p. R t p"
 using strong_induct_good[of Psupp t "\<lambda>p t. R t p"] assms unfolding small_def by auto
 
@@ -344,16 +344,16 @@ and s: "|SSupp f| <o |UNIV::ivar set|"
 and f: "finite (touchedSuper (IImsupp f))"  
 shows "good (itvsubst f e)"
 using r proof (binder_induction e avoiding: "IImsupp f" rule: strong_induct_good')
-  case (iLam ea xs)
-  show ?case using iLam apply(subst ILterm.subst)
+  case (iLm ea xs)
+  show ?case using iLm apply(subst ILterm.subst)
       subgoal using s by blast
       subgoal using s by auto 
-      subgoal apply(rule good.iLam) by auto .
+      subgoal apply(rule good.iLm) by auto .
 next
-  case (iApp e1 es2)
+  case (iAp e1 es2)
   then show ?case apply(subst ILterm.subst)
       subgoal using s by auto
-      subgoal apply(rule good.iApp)
+      subgoal apply(rule good.iAp)
         subgoal by auto
         subgoal by auto
         subgoal apply clarsimp subgoal for e2 e2' unfolding touchedSuperT_itvsubst[OF s] apply clarsimp
@@ -386,8 +386,8 @@ lemma good_imkSubst:
 assumes r: "good e" and xs: "super xs" and rr: "\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e'" 
 shows "good (itvsubst (imkSubst xs es) e)"
 apply(rule good_itvsubst[OF r])
-  subgoal by (metis bot.extremum iVar imkSubst_def insert_subset rr snth_sset) 
-  subgoal by (metis bot.extremum imkSubst_def insert_subset rr singleton_inject snth_sset touchedSuper_iVar xs)
+  subgoal by (metis bot.extremum iVr imkSubst_def insert_subset rr snth_sset) 
+  subgoal by (metis bot.extremum imkSubst_def insert_subset rr singleton_inject snth_sset touchedSuper_iVr xs)
   subgoal by simp
   subgoal using rr super_good_finite_touchedSuper_imkSubst xs by blast .
 

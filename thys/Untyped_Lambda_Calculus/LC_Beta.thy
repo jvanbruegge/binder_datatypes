@@ -10,10 +10,10 @@ lemma fresh: "\<exists>xx. xx \<notin> Tsupp (t1::lterm) t2"
    by (metis (no_types, lifting) exists_var finite_iff_le_card_var Lterm.Un_bound Lterm.set_bd_UNIV)
 
 binder_inductive step :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
-  Beta: "step (App (Lam x e1) e2) (tvsubst (Var(x:=e2)) e1)"
-| AppL: "step e1 e1' \<Longrightarrow> step (App e1 e2) (App e1' e2)"
-| AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
+  Beta: "step (Ap (Lm x e1) e2) (tvsubst (Vr(x:=e2)) e1)"
+| ApL: "step e1 e1' \<Longrightarrow> step (Ap e1 e2) (Ap e1' e2)"
+| ApR: "step e2 e2' \<Longrightarrow> step (Ap e1 e2) (Ap e1 e2')"
+| Xi: "step e e' \<Longrightarrow> step (Lm x e) (Lm x e')"
   subgoal for \<sigma> R B t  \<comment> \<open>equivariance\<close>
     by (elim disj_forward case_prodE)
       (auto simp: isPerm_def Lterm.rrename_comps rrename_tvsubst_comp
@@ -23,7 +23,7 @@ binder_inductive step :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
     using fresh[of x1 x2] prems(2-) unfolding isPerm_def conj_assoc[symmetric] split_beta
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     apply (elim disj_forward exE; simp)
-     apply (metis Lam_eq_tvsubst Lam_inject_swap singletonD)
+     apply (metis Lm_eq_tvsubst Lm_inject_swap singletonD)
     by blast
     done
 

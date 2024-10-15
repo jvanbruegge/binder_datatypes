@@ -11,15 +11,15 @@ lemma Tvars_dsset: "(FFVars t - dsset xs) \<inter> dsset xs = {}" "|FFVars t - d
 apply auto using card_of_minus_bound ILterm.set_bd_UNIV by blast
 
 binder_inductive affine  :: "ilterm \<Rightarrow> bool" where
- iVar[simp,intro!]: "affine (iVar x)"
-|iLam: "affine e \<Longrightarrow> affine (iLam xs e)"
-|iApp:
+ iVr[simp,intro!]: "affine (iVr x)"
+|iLm: "affine e \<Longrightarrow> affine (iLm xs e)"
+|iAp:
 "affine e1 \<Longrightarrow>
  (\<And>e2. e2 \<in> sset es2 \<Longrightarrow> affine e2) \<Longrightarrow>
  (\<And>e2. e2 \<in> sset es2 \<Longrightarrow> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
  (\<And>i j. i \<noteq> j \<Longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {})
  \<Longrightarrow>
- affine (iApp e1 es2)"
+ affine (iAp e1 es2)"
   unfolding isPerm_def induct_rulify_fallback
   subgoal for R B \<sigma> t
     apply(elim disjE)
@@ -68,7 +68,7 @@ binder_inductive affine  :: "ilterm \<Rightarrow> bool" where
           apply(rule exI[of _ "irrename f e"])
           apply(rule exI[of _ "dsmap f xs"])
           apply simp
-          subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto . . .
+          subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto . . .
         (* *)
     subgoal for e1 es2
       apply(rule exI[of _ "{}"])
@@ -83,35 +83,35 @@ binder_inductive affine  :: "ilterm \<Rightarrow> bool" where
 thm affine.strong_induct
 thm affine.equiv
 
-(* ... and equivariance gives us a nice iLam inversion rule: *)
+(* ... and equivariance gives us a nice iLm inversion rule: *)
 
-lemma affine_App_case:
-"affine (iApp e1 es2) \<Longrightarrow>
+lemma affine_Ap_case:
+"affine (iAp e1 es2) \<Longrightarrow>
  affine e1 \<and>
  (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<Longrightarrow>
  (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {})"
 apply(subst (asm) affine.simps) by auto
 
-lemma affine_iApp_iff:
-"affine (iApp e1 es2) \<longleftrightarrow>
+lemma affine_iAp_iff:
+"affine (iAp e1 es2) \<longleftrightarrow>
  (affine e1 \<and>
   (\<forall>e2. e2 \<in> sset es2 \<longrightarrow> affine e2 \<and> FFVars e1 \<inter> FFVars e2 = {}) \<and>
   (\<forall>i j. i \<noteq> j \<longrightarrow> FFVars (snth es2 i) \<inter> FFVars (snth es2 j) = {}))"
 apply(subst affine.simps) by auto
 
-lemma affine_iLam_case:
-assumes "affine (iLam xs e)"
+lemma affine_iLm_case:
+assumes "affine (iLm xs e)"
 shows "affine e"
 proof-
-  obtain xs' e' where 0: "iLam xs e = iLam xs' e'" and "affine e'"
+  obtain xs' e' where 0: "iLm xs e = iLm xs' e'" and "affine e'"
   using assms by (smt (verit, del_insts) affine.cases ILterm.distinct(2) ILterm.distinct(4))
-  thus ?thesis using 0 unfolding iLam_inject
-  by (metis iLam_inject affine.equiv)
+  thus ?thesis using 0 unfolding iLm_inject
+  by (metis iLm_inject affine.equiv)
 qed
 
-lemma affine_iLam_iff[simp]:
-"affine (iLam xs e) \<longleftrightarrow> affine e"
-using affine.simps affine_iLam_case by blast
+lemma affine_iLm_iff[simp]:
+"affine (iLm xs e) \<longleftrightarrow> affine e"
+using affine.simps affine_iLm_case by blast
 
 (* Other properties: *)
 
@@ -122,16 +122,16 @@ and fv: "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (f x) \<inter> FFVars 
 and r: "affine (e::ilterm)"
 shows "affine (itvsubst f e)"
 using r proof (binder_induction e avoiding: "IImsupp f" rule: affine.strong_induct)
-  case (iLam ea xs)
-  show ?case using iLam apply(subst ILterm.subst)
+  case (iLm ea xs)
+  show ?case using iLm apply(subst ILterm.subst)
       subgoal using f by auto
       subgoal by auto
-      subgoal apply(rule affine.iLam) by auto .
+      subgoal apply(rule affine.iLm) by auto .
 next
-  case (iApp e1 es2)
+  case (iAp e1 es2)
   then show ?case apply(subst ILterm.subst)
       subgoal using f by auto
-      subgoal apply(rule affine.iApp) using fv f
+      subgoal apply(rule affine.iAp) using fv f
       by auto (metis Int_emptyD)+ .
 qed (auto simp: f ILC.SSupp_IImsupp_bound af)
 
@@ -146,7 +146,7 @@ shows "affine (itvsubst f e)"
 proof-
   obtain xs and x::ivar where x: "x \<in> dsset xs"
     using dsset_range by blast
-  define t where "t = iLam xs (iVar x)"
+  define t where "t = iLm xs (iVr x)"
   have t: "FFVars t = {}" "affine t" unfolding t_def using x by (auto intro: affine.intros)
 
   have fve: "\<And>e. |FFVars e| <o |UNIV::ivar set|"
@@ -165,13 +165,13 @@ proof-
 
   define g where "g \<equiv> \<lambda>x. if x \<in> FFVars e then f x
                                            else if x \<in> \<Union> ((FFVars o f) ` (FFVars e)) then t
-                                           else iVar x"
+                                           else iVr x"
   have sg: "SSupp g \<subseteq> FFVars e \<union> \<Union> ((FFVars o f) ` (FFVars e))" unfolding g_def SSupp_def by auto
 
   have g: "|SSupp g| <o |UNIV::ivar set|" "\<And>x. affine (g x)"
   "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (g x) \<inter> FFVars (g y) = {}"
      subgoal using sg by (meson card_of_subset_bound ffv fve var_stream_class.Un_bound)
-     subgoal by (simp add: af affine.iVar g_def t(2))
+     subgoal by (simp add: af affine.iVr g_def t(2))
      subgoal using fv unfolding g_def by (simp add: fv t(1)) .
 
   have 0: "itvsubst f e = itvsubst g e" apply(rule itvsubst_cong)

@@ -10,10 +10,10 @@ begin
 (* DATATYPE DECLARTION  *)
 
 declare [[mrbnf_internals]]
-binder_datatype 'a "Lterm" =
-  Var 'a
-| App "'a Lterm" "'a Lterm"
-| Lam x::'a t::"'a Lterm" binds x in t
+binder_datatype 'var "Lterm" =
+  Vr 'var
+| Ap "'var Lterm" "'var Lterm"
+| Lm x::'var t::"'var Lterm" binds x in t
 for
   vvsubst: vvsubst
   tvsubst: tvsubst
@@ -83,9 +83,9 @@ lemma IImsupp_VVr_empty[simp]: "IImsupp VVr = {}"
   apply (rule refl)
   done
 
-(* VVr is here the Var constructor: *)
-lemma VVr_eq_Var[simp]: "VVr = Var"
-  unfolding VVr_def Var_def comp_def
+(* VVr is here the Vr constructor: *)
+lemma VVr_eq_Vr[simp]: "VVr = Vr"
+  unfolding VVr_def Vr_def comp_def
   tv\<eta>_Lterm_tvsubst_def
   by (rule refl)
 
@@ -127,10 +127,10 @@ lemma tvsubst_VVr_func[simp]: "tvsubst VVr t = t"
 
 proposition rrename_simps[simp]:
   assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
-  shows "rrename f (Var a) = Var (f a)"
-    "rrename f (App e1 e2) = App (rrename f e1) (rrename f e2)"
-    "rrename f (Lam x e) = Lam (f x) (rrename f e)"
-  unfolding Var_def App_def Lam_def Lterm.rrename_cctors[OF assms] map_Lterm_pre_def comp_def
+  shows "rrename f (Vr a) = Vr (f a)"
+    "rrename f (Ap e1 e2) = Ap (rrename f e1) (rrename f e2)"
+    "rrename f (Lm x e) = Lm (f x) (rrename f e)"
+  unfolding Vr_def Ap_def Lm_def Lterm.rrename_cctors[OF assms] map_Lterm_pre_def comp_def
     Abs_Lterm_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
     apply (rule refl)+
   done
@@ -163,38 +163,38 @@ proof-
     by auto metis .
 qed
 
-proposition App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
+proposition Ap_inject[simp]: "(Ap a b = Ap c d) = (a = c \<and> b = d)"
 proof
-  assume "App a b = App c d"
+  assume "Ap a b = Ap c d"
   then show "a = c \<and> b = d"
-    unfolding App_def fun_eq_iff Lterm.TT_injects0
+    unfolding Ap_def fun_eq_iff Lterm.TT_injects0
       map_Lterm_pre_def comp_def Abs_Lterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
       Abs_Lterm_pre_inject[OF UNIV_I UNIV_I]
     by blast
 qed simp
 
-proposition Var_inject[simp]: "(Var a = Var b) = (a = b)"
+proposition Vr_inject[simp]: "(Vr a = Vr b) = (a = b)"
   apply (rule iffI[rotated])
-   apply (rule arg_cong[of _ _ Var])
+   apply (rule arg_cong[of _ _ Vr])
   apply assumption
-  unfolding Var_def Lterm.TT_injects0 map_Lterm_pre_def comp_def map_sum_def sum.case Abs_Lterm_pre_inverse[OF UNIV_I]
+  unfolding Vr_def Lterm.TT_injects0 map_Lterm_pre_def comp_def map_sum_def sum.case Abs_Lterm_pre_inverse[OF UNIV_I]
   id_def Abs_Lterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
   apply (erule exE conjE)+
   apply assumption
   done
 
-lemma Lam_inject: "(Lam x e = Lam x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_Lterm (Lam x e)) f \<and> f x = x' \<and> rrename f e = e')"
+lemma Lm_inject: "(Lm x e = Lm x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FFVars_Lterm (Lm x e)) f \<and> f x = x' \<and> rrename f e = e')"
   unfolding Lterm.set
-  unfolding Lam_def Lterm.TT_injects0 map_Lterm_pre_def comp_def Abs_Lterm_pre_inverse[OF UNIV_I]
+  unfolding Lm_def Lterm.TT_injects0 map_Lterm_pre_def comp_def Abs_Lterm_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_Lterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_Lterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_Lterm_pre_def
     Un_empty_right UN_single
   apply (rule refl)
   done
 
-lemma Lam_same_inject[simp]: "Lam (x::var) e = Lam x e' \<longleftrightarrow> e = e'"
-unfolding Lam_inject apply safe
+lemma Lm_same_inject[simp]: "Lm (x::var) e = Lm x e' \<longleftrightarrow> e = e'"
+unfolding Lm_inject apply safe
 apply(rule Lterm.rrename_cong_ids[symmetric]) 
 unfolding id_on_def by auto
 
@@ -233,8 +233,8 @@ lemma map_Lterm_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarro
    apply (rule refl)+
   done
 
-lemma Lam_set3: "Lterm_ctor v = Lam (x::var) e \<Longrightarrow> \<exists>x' e'. Lterm_ctor v = Lam x' e' \<and> x' \<in> set2_Lterm_pre v \<and> e' \<in> set3_Lterm_pre v"
-  unfolding Lam_def Lterm.TT_injects0
+lemma Lm_set3: "Lterm_ctor v = Lm (x::var) e \<Longrightarrow> \<exists>x' e'. Lterm_ctor v = Lm x' e' \<and> x' \<in> set2_Lterm_pre v \<and> e' \<in> set3_Lterm_pre v"
+  unfolding Lm_def Lterm.TT_injects0
   apply (erule exE)
   apply (erule conjE)+
   subgoal for f
@@ -264,12 +264,12 @@ unfolding set2_Lterm_pre_def set3_Lterm_pre_def comp_def Abs_Lterm_pre_inverse[O
   done
   done
 
-lemma Lam_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Lam x e = Lam x' e' \<and> x' \<notin> A"
-  apply (drule Lterm.TT_fresh_nchotomys[of _ "Lam x e"])
+lemma Lm_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' e'. Lm x e = Lm x' e' \<and> x' \<notin> A"
+  apply (drule Lterm.TT_fresh_nchotomys[of _ "Lm x e"])
   apply (erule exE)
   apply (erule conjE)
    apply (drule sym)
-  apply (frule Lam_set3)
+  apply (frule Lm_set3)
   apply (erule exE conjE)+
   apply (rule exI)+
   apply (rule conjI)
@@ -285,9 +285,9 @@ lemma Lam_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
   apply assumption
   done
 
-lemma Lam_rrename:
+lemma Lm_rrename:
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>
- (\<And>a'. a' \<in>FFVars_Lterm e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Lam a e = Lam (\<sigma> a) (rrename \<sigma> e)"
+ (\<And>a'. a' \<in>FFVars_Lterm e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Lm a e = Lm (\<sigma> a) (rrename \<sigma> e)"
 by (metis rrename_simps(3) Lterm.rrename_cong_ids Lterm.set(3))
 
 
@@ -306,7 +306,7 @@ corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::lterm)))| <o |UN
   apply (rule Lterm.SSupp_VVr_bound)
   done
 
-lemma SSupp_upd_Var_bound[simp,intro!]: "|SSupp (Var(a:=(t::lterm)))| <o |UNIV::var set|"
+lemma SSupp_upd_Vr_bound[simp,intro!]: "|SSupp (Vr(a:=(t::lterm)))| <o |UNIV::var set|"
 using SSupp_upd_VVr_bound by auto
 
 lemma supp_swap_bound[simp,intro!]: "|supp (id(x::var := xx, xx := x))| <o |UNIV:: var set|"
@@ -348,11 +348,11 @@ using SSupp_tvsubst_bound[OF assms] unfolding o_def .
 
 (* *)
 
-lemma IImsupp_Var: "IImsupp (Var(x := e)) \<subseteq> FFVars e \<union> {x}"
+lemma IImsupp_Vr: "IImsupp (Vr(x := e)) \<subseteq> FFVars e \<union> {x}"
 unfolding LC.IImsupp_def LC.SSupp_def by auto
 
-lemma IImsupp_Var': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> IImsupp (Var(x := e))"
-using IImsupp_Var by auto 
+lemma IImsupp_Vr': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> IImsupp (Vr(x := e))"
+using IImsupp_Vr by auto 
 
 lemma IImsupp_rrename_su:
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o  |UNIV:: var set|"
@@ -383,37 +383,37 @@ using SSupp_rrename_bound[OF assms] unfolding o_def .
 
 (* *)
 lemma SSupp_update_rrename_bound:
-"|SSupp (Var(\<sigma> (x::var) := rrename \<sigma> e))| <o |UNIV::var set|"
-using SSupp_upd_Var_bound .
+"|SSupp (Vr(\<sigma> (x::var) := rrename \<sigma> e))| <o |UNIV::var set|"
+using SSupp_upd_Vr_bound .
 
 lemma IImsupp_rrename_update_su:
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "IImsupp (rrename \<sigma> \<circ> Var(x := e)) \<subseteq>
+shows "IImsupp (rrename \<sigma> \<circ> Vr(x := e)) \<subseteq>
        imsupp \<sigma> \<union> {x} \<union> FFVars_Lterm e"
 unfolding IImsupp_def SSupp_def imsupp_def supp_def by (auto split: if_splits)
 
 lemma IImsupp_rrename_update_bound:
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "|IImsupp (rrename \<sigma> \<circ> Var(x := e))| <o |UNIV::var set|"
+shows "|IImsupp (rrename \<sigma> \<circ> Vr(x := e))| <o |UNIV::var set|"
 using IImsupp_rrename_update_su[OF assms]
 by (meson Un_bound card_of_subset_bound imsupp_supp_bound infinite_var s(2) singl_bound Lterm.set_bd_UNIV)
 
 lemma SSupp_rrename_update_bound:
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "|SSupp (rrename \<sigma> \<circ> Var(x := e))| <o |UNIV::var set|"
+shows "|SSupp (rrename \<sigma> \<circ> Vr(x := e))| <o |UNIV::var set|"
 using IImsupp_rrename_update_bound[OF assms]
   by (metis (mono_tags) IImsupp_def finite_Un finite_iff_le_card_var)
 
 (* Action of swapping (a particular renaming) on variables *)
 
-lemma rrename_swap_Var1[simp]: "rrename (id(x := xx, xx := x)) (Var (x::var)) = Var xx"
+lemma rrename_swap_Vr1[simp]: "rrename (id(x := xx, xx := x)) (Vr (x::var)) = Vr xx"
 apply(subst rrename_simps(1)) by auto
-lemma rrename_swap_Var2[simp]: "rrename (id(x := xx, xx := x)) (Var (xx::var)) = Var x"
+lemma rrename_swap_Vr2[simp]: "rrename (id(x := xx, xx := x)) (Vr (xx::var)) = Vr x"
 apply(subst rrename_simps(1)) by auto
-lemma rrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> rrename (id(x := xx, xx := x)) (Var (z::var)) = Var z"
+lemma rrename_swap_Vr3[simp]: "z \<notin> {x,xx} \<Longrightarrow> rrename (id(x := xx, xx := x)) (Vr (z::var)) = Vr z"
 apply(subst rrename_simps(1)) by auto
-lemma rrename_swap_Var[simp]: "rrename (id(x := xx, xx := x)) (Var (z::var)) =
- Var (if z = x then xx else if z = xx then x else z)"
+lemma rrename_swap_Vr[simp]: "rrename (id(x := xx, xx := x)) (Vr (z::var)) =
+ Vr (if z = x then xx else if z = xx then x else z)"
 apply(subst rrename_simps(1)) by auto
 
 (* Compositionality properties of renaming and Lterm-for-variable substitution *)
@@ -452,33 +452,33 @@ qed
 
 (* Unary (Lterm-for-var) substitution versus renaming: *)
 
-lemma supp_SSupp_Var_le[simp]: "SSupp (Var \<circ> \<sigma>) = supp \<sigma>" 
+lemma supp_SSupp_Vr_le[simp]: "SSupp (Vr \<circ> \<sigma>) = supp \<sigma>" 
 unfolding supp_def SSupp_def by simp
 
-lemma rrename_eq_tvsubst_Var: 
+lemma rrename_eq_tvsubst_Vr: 
 assumes "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|" 
-shows "rrename \<sigma> = tvsubst (Var o \<sigma>)"
+shows "rrename \<sigma> = tvsubst (Vr o \<sigma>)"
 proof
   fix t
-  show "rrename \<sigma> t = tvsubst (Var o \<sigma>) t"
-  proof (binder_induction t avoiding: "IImsupp (Var \<circ> \<sigma>)" rule: Lterm.strong_induct)
+  show "rrename \<sigma> t = tvsubst (Vr o \<sigma>) t"
+  proof (binder_induction t avoiding: "IImsupp (Vr \<circ> \<sigma>)" rule: Lterm.strong_induct)
     case Bound
-    then show ?case using assms SSupp_IImsupp_bound by (metis supp_SSupp_Var_le)
+    then show ?case using assms SSupp_IImsupp_bound by (metis supp_SSupp_Vr_le)
   next
-    case (Lam x1 x2)
+    case (Lm x1 x2)
     then show ?case by (simp add: assms IImsupp_def disjoint_iff not_in_supp_alt)
   qed (auto simp: assms)
 qed
      
-lemma rrename_eq_tvsubst_Var': 
-"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> rrename \<sigma> e = tvsubst (Var o \<sigma>) e"
-using rrename_eq_tvsubst_Var by auto
+lemma rrename_eq_tvsubst_Vr': 
+"bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> rrename \<sigma> e = tvsubst (Vr o \<sigma>) e"
+using rrename_eq_tvsubst_Vr by auto
 
 (* Equivariance of unary substitution: *)
 
 lemma tvsubst_rrename_comp[simp]:
 assumes s[simp]: "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
-shows "tvsubst (rrename \<sigma> \<circ> Var(x := e2)) e1 = tvsubst (Var(\<sigma> x := rrename \<sigma> e2)) (rrename \<sigma> e1)"
+shows "tvsubst (rrename \<sigma> \<circ> Vr(x := e2)) e1 = tvsubst (Vr(\<sigma> x := rrename \<sigma> e2)) (rrename \<sigma> e1)"
 proof-
   note SSupp_rrename_update_bound[OF assms, unfolded comp_def, simplified, simp]
   note SSupp_update_rrename_bound[unfolded fun_upd_def, simplified, simp]
@@ -488,8 +488,8 @@ proof-
     subgoal by auto
     subgoal by simp
     subgoal for y t apply simp apply(subgoal_tac
-      "y \<notin> IImsupp ((\<lambda>a. rrename \<sigma> (if a = x then e2 else Var a))) \<and>
-      \<sigma> y \<notin> IImsupp (\<lambda>a. if a = \<sigma> x then rrename \<sigma> e2 else Var a)")
+      "y \<notin> IImsupp ((\<lambda>a. rrename \<sigma> (if a = x then e2 else Vr a))) \<and>
+      \<sigma> y \<notin> IImsupp (\<lambda>a. if a = \<sigma> x then rrename \<sigma> e2 else Vr a)")
       subgoal unfolding imsupp_def supp_def by simp
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
@@ -497,7 +497,7 @@ qed
 (* Unary substitution versus swapping: *)
 lemma tvsubst_refresh:
 assumes xx: "xx \<notin> FFVars_Lterm e1 - {x}"
-shows "tvsubst (Var((x::var) := e2)) e1 = tvsubst (Var(xx := e2)) (rrename (id(x := xx, xx := x)) e1)"
+shows "tvsubst (Vr((x::var) := e2)) e1 = tvsubst (Vr(xx := e2)) (rrename (id(x := xx, xx := x)) e1)"
 proof-
   show ?thesis using xx
   apply(induct e1 rule: Lterm.fresh_induct[where A = "{x,xx} \<union> FFVars_Lterm e2"])
@@ -505,7 +505,7 @@ proof-
     subgoal by simp
     subgoal by auto
     subgoal for y t apply simp apply(subgoal_tac
-      "y \<notin> IImsupp (Var(x := e2)) \<and> y \<notin> IImsupp (Var(xx := e2))")
+      "y \<notin> IImsupp (Vr(x := e2)) \<and> y \<notin> IImsupp (Vr(xx := e2))")
       subgoal unfolding imsupp_def supp_def by auto
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
@@ -542,9 +542,9 @@ by auto
 
 (* *)
 
-lemma swap_simps[simp]: "swap (Var z) (y::var) x = Var (sw z y x)"
-"swap (App t s) (y::var) x = App(swap t y x) (swap s y x)"
-"swap (Lam v t) (y::var) x = Lam (sw v y x) (swap t y x)"
+lemma swap_simps[simp]: "swap (Vr z) (y::var) x = Vr (sw z y x)"
+"swap (Ap t s) (y::var) x = Ap(swap t y x) (swap s y x)"
+"swap (Lm v t) (y::var) x = Lm (sw v y x) (swap t y x)"
 by (auto simp: sw_def)
 
 lemma FFVars_swap[simp]: "FFVars (swap t y x) =
@@ -556,28 +556,28 @@ apply(rule Lterm.rrename_cong_ids) by auto
 
 (* *)
 
-lemma Lam_inject_swap: "Lam v t = Lam v' t' \<longleftrightarrow>
+lemma Lm_inject_swap: "Lm v t = Lm v' t' \<longleftrightarrow>
   (v' \<notin> FFVars t \<or> v' = v) \<and> swap t v' v = t'"
-unfolding Lam_inject apply(rule iffI)
+unfolding Lm_inject apply(rule iffI)
   subgoal unfolding id_on_def apply auto
   apply(rule rrename_cong) by auto
   subgoal apply clarsimp
   apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
 
-lemma Lam_inject_swap': "Lam v t = Lam v' t' \<longleftrightarrow>
+lemma Lm_inject_swap': "Lm v t = Lm v' t' \<longleftrightarrow>
   (\<exists>z. (z \<notin> FFVars t \<or> z = v) \<and> (z \<notin> FFVars t' \<or> z = v') \<and>
        swap t z v = swap t' z v')"
-unfolding Lam_inject_swap apply(rule iffI)
+unfolding Lm_inject_swap apply(rule iffI)
   subgoal apply clarsimp apply(rule exI[of _ v']) by auto
-  subgoal by (smt (verit, del_insts) Lam_inject_swap)    .
+  subgoal by (smt (verit, del_insts) Lm_inject_swap)    .
 
-lemma Lam_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
-   Lam v t = Lam v' (swap t v' v)"
-using Lam_inject_swap by auto
+lemma Lm_refresh': "v' \<notin> FFVars t \<or> v' = v \<Longrightarrow>
+   Lm v t = Lm v' (swap t v' v)"
+using Lm_inject_swap by auto
 
-lemma Lam_refresh:
-"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> Lam x t = Lam xx (swap t x xx)"
-by (metis Lam_inject_swap fun_upd_twist)
+lemma Lm_refresh:
+"xx \<notin> FFVars t \<or> xx = x \<Longrightarrow> Lm x t = Lm xx (swap t x xx)"
+by (metis Lm_inject_swap fun_upd_twist)
 
 (* *)
 
@@ -585,18 +585,18 @@ lemma FFVars_usub[simp]: "FFVars (usub t y x) =
  (if x \<in> FFVars t then FFVars t - {x} \<union> {y} else FFVars t)"
 apply(subst Lterm.set_map) by auto
 
-lemma usub_simps_free[simp]: "\<And>y x. usub (Var z) (y::var) x = Var (sb z y x)"
-"\<And>y x t s. usub (App t s) (y::var) x = App (usub t y x) (usub s y x)"
+lemma usub_simps_free[simp]: "\<And>y x. usub (Vr z) (y::var) x = Vr (sb z y x)"
+"\<And>y x t s. usub (Ap t s) (y::var) x = Ap (usub t y x) (usub s y x)"
 by (auto simp: sb_def)
 
-lemma usub_Lam[simp]:
-"v \<notin> {x,y} \<Longrightarrow> usub (Lam v t) (y::var) x = Lam v (usub t y x)"
+lemma usub_Lm[simp]:
+"v \<notin> {x,y} \<Longrightarrow> usub (Lm v t) (y::var) x = Lm v (usub t y x)"
 apply(subst Lterm.map)
   subgoal by auto
   subgoal by (auto simp: imsupp_def supp_def)
   subgoal by auto .
 
-lemmas usub_simps = usub_simps_free usub_Lam
+lemmas usub_simps = usub_simps_free usub_Lm
 
 (* *)
 
@@ -663,7 +663,7 @@ unfolding nswapping_def apply auto
 apply (metis id_swapTwice rrename_o_swap Lterm.rrename_ids)
 by (metis id_swapTwice2 rrename_o_swap)
 
-lemma permutFvars_rrename_FFVar: "permutFvars (\<lambda>t f. rrename f (t::lterm)) FFVars"
+lemma permutFvars_rrename_FFVr: "permutFvars (\<lambda>t f. rrename f (t::lterm)) FFVars"
 unfolding permutFvars_def apply auto
   apply (simp add: finite_iff_le_card_var fsupp_def supp_def Lterm.rrename_comps) 
   apply (simp add: finite_iff_le_card_var fsupp_def supp_def)
@@ -689,12 +689,12 @@ by (simp add: fsupp_supp permut_rrename toPerm_toSwp)
 
 (* "making" the substitution function that maps each xs_i to es_i; only 
 meaningful if xs is non-repetitive *)
-definition "mkSubst xs es \<equiv> \<lambda>x. if distinct xs \<and> x \<in> set xs then nth es (theN xs x) else Var x"
+definition "mkSubst xs es \<equiv> \<lambda>x. if distinct xs \<and> x \<in> set xs then nth es (theN xs x) else Vr x"
 
 lemma mkSubst_nth[simp]: "distinct xs \<Longrightarrow> i < length xs \<Longrightarrow> mkSubst xs es (nth xs i) = nth es i"
 unfolding mkSubst_def by auto
 
-lemma mkSubst_idle[simp]: "\<not> distinct xs \<or> \<not> x \<in> set xs \<Longrightarrow> mkSubst xs es x = Var x"
+lemma mkSubst_idle[simp]: "\<not> distinct xs \<or> \<not> x \<in> set xs \<Longrightarrow> mkSubst xs es x = Vr x"
 unfolding mkSubst_def by auto
 
 lemma card_set_var: "|set xs| <o |UNIV::var set|"
@@ -743,8 +743,8 @@ unfolding mkSubst_map_rrename[OF assms, symmetric] using assms unfolding fun_eq_
 lemma card_SSupp_itvsubst_mkSubst_rrename_inv: 
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
  length es = length xs \<Longrightarrow> 
-|SSupp (tvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (Var \<circ> \<sigma>))| <o |UNIV::var set|"
-by (metis SSupp_tvsubst_bound SSupp_mkSubst mkSubst_map_rrename_inv supp_SSupp_Var_le)
+|SSupp (tvsubst (rrename \<sigma> \<circ> mkSubst xs es \<circ> inv \<sigma>) \<circ> (Vr \<circ> \<sigma>))| <o |UNIV::var set|"
+by (metis SSupp_tvsubst_bound SSupp_mkSubst mkSubst_map_rrename_inv supp_SSupp_Vr_le)
 
 lemma card_SSupp_mkSubst_rrename_inv: 
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
@@ -760,13 +760,13 @@ by (metis bij_distinct_smap distinct_Ex1 length_map mkSubst_nth nth_map)
 
 (* *)
 
-lemma Lam_eq_tvsubst: 
-assumes il: "Lam (x::var) e1 = Lam x' e1'"
-shows "tvsubst (Var (x:=e2)) e1 = tvsubst (Var (x':=e2)) e1'"
+lemma Lm_eq_tvsubst: 
+assumes il: "Lm (x::var) e1 = Lm x' e1'"
+shows "tvsubst (Vr (x:=e2)) e1 = tvsubst (Vr (x':=e2)) e1'"
 proof-
-  obtain f where f: "bij f" "|supp f| <o |UNIV::var set|" "id_on (FFVars (Lam x e1)) f" 
-  and 0: "x' = f x" "e1' = rrename f e1" using il[unfolded Lam_inject] by auto
-  show ?thesis unfolding 0 apply(subst rrename_eq_tvsubst_Var')
+  obtain f where f: "bij f" "|supp f| <o |UNIV::var set|" "id_on (FFVars (Lm x e1)) f" 
+  and 0: "x' = f x" "e1' = rrename f e1" using il[unfolded Lm_inject] by auto
+  show ?thesis unfolding 0 apply(subst rrename_eq_tvsubst_Vr')
     subgoal by fact subgoal by fact
     subgoal apply(subst tvsubst_comp)
       subgoal by simp
@@ -783,35 +783,35 @@ qed
 
 (* RECURSOR PREPARATIONS: *)
 
-thm Lam_inject[no_vars]
+thm Lm_inject[no_vars]
 
-lemma Lam_inject_strong:
-assumes "Lam (x::var) e = Lam x' e'"
+lemma Lm_inject_strong:
+assumes "Lm (x::var) e = Lm x' e'"
 shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::var set| \<and>  
-   id_on (- {x,x'}) f \<and> id_on (FFVars (Lam x e)) f \<and>
+   id_on (- {x,x'}) f \<and> id_on (FFVars (Lm x e)) f \<and>
    f x = x' \<and> rrename f e = e'" 
 apply(rule exI[of _ "id(x := x', x' := x)"])
-using assms unfolding Lam_inject_swap apply safe
+using assms unfolding Lm_inject_swap apply safe
 unfolding id_on_def by auto (metis fun_upd_twist)
 
 
-lemma Lam_inject_strong':
-assumes il: "Lam (x::var) e = Lam x' e'" and z: "z \<notin> FFVars (Lam x e) \<union> FFVars (Lam x' e')"
+lemma Lm_inject_strong':
+assumes il: "Lm (x::var) e = Lm x' e'" and z: "z \<notin> FFVars (Lm x e) \<union> FFVars (Lm x' e')"
 shows 
 "\<exists>f f'. 
-   bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFVars (Lam x e)) f \<and> f x = z \<and> 
-   bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFVars (Lam x' e')) f' \<and> f' x' = z \<and> 
+   bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFVars (Lm x e)) f \<and> f x = z \<and> 
+   bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFVars (Lm x' e')) f' \<and> f' x' = z \<and> 
    rrename f e = rrename f' e'"
 proof-
   define f where "f = id(x := z, z := x)"
-  have f: "bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFVars (Lam x e)) f \<and> f x = z"
+  have f: "bij f \<and> |supp f| <o |UNIV::var set| \<and> id_on (- {x,z}) f \<and> id_on (FFVars (Lm x e)) f \<and> f x = z"
   using z unfolding f_def id_on_def by auto
   define f' where "f' = id(x' := z, z := x')"
-  have f': "bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFVars (Lam x' e')) f' \<and> f' x' = z"
+  have f': "bij f' \<and> |supp f'| <o |UNIV::var set| \<and> id_on (- {x',z}) f' \<and> id_on (FFVars (Lm x' e')) f' \<and> f' x' = z"
   using z unfolding f'_def id_on_def by auto
  
-  obtain g where g: "bij g \<and> |supp g| <o |UNIV::var set| \<and> id_on (FFVars (Lam x e)) g \<and> g x = x'" and ge: "e' = rrename g e"
-  using il unfolding Lam_inject by auto
+  obtain g where g: "bij g \<and> |supp g| <o |UNIV::var set| \<and> id_on (FFVars (Lm x e)) g \<and> g x = x'" and ge: "e' = rrename g e"
+  using il unfolding Lm_inject by auto
 
   have ff': "rrename f e = rrename f' e'" 
   unfolding f_def f'_def ge unfolding f_def f'_def using g apply(subst Lterm.rrename_comps)
@@ -826,22 +826,22 @@ proof-
   using f f' ff' by auto
 qed
 
-lemma lterm_rrename_induct[case_names Var App Lam]:
-assumes VVar: "\<And>x. P (Var (x::var))"
-and AApp: "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (App e1 e2)" 
-and LLam: "\<And>x e. (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> P (rrename f e)) \<Longrightarrow> P (Lam x e)"
+lemma lterm_rrename_induct[case_names Vr Ap Lm]:
+assumes VVr: "\<And>x. P (Vr (x::var))"
+and AAp: "\<And>e1 e2. P e1 \<Longrightarrow> P e2 \<Longrightarrow> P (Ap e1 e2)" 
+and LLm: "\<And>x e. (\<And>f. bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> P (rrename f e)) \<Longrightarrow> P (Lm x e)"
 shows "P t"
 proof-
   have "\<forall>f. bij f \<and> |supp f| <o |UNIV::var set| \<longrightarrow> P (rrename f t)"
   proof(induct)
-    case (Var x)
-    then show ?case using VVar by auto
+    case (Vr x)
+    then show ?case using VVr by auto
   next
-    case (App t1 t2)
-    then show ?case using AApp by auto
+    case (Ap t1 t2)
+    then show ?case using AAp by auto
   next
-    case (Lam x t)
-    then show ?case using LLam
+    case (Lm x t)
+    then show ?case using LLm
       by simp (metis bij_o Lterm.rrename_comps Lterm_pre.supp_comp_bound)
   qed
   thus ?thesis apply(elim allE[of _ id]) by auto
@@ -851,18 +851,18 @@ qed
 
 locale LC_Rec = 
 fixes B :: "'b set"
-and VarB :: "var \<Rightarrow> 'b" 
-and AppB :: "'b \<Rightarrow> 'b \<Rightarrow> 'b"
-and LamB :: "var \<Rightarrow> 'b \<Rightarrow> 'b"
+and VrB :: "var \<Rightarrow> 'b" 
+and ApB :: "'b \<Rightarrow> 'b \<Rightarrow> 'b"
+and LmB :: "var \<Rightarrow> 'b \<Rightarrow> 'b"
 and renB :: "(var \<Rightarrow> var) \<Rightarrow> 'b \<Rightarrow> 'b"
 and FVarsB :: "'b \<Rightarrow> var set"
 assumes 
 (* closedness: *)
-VarB_B[simp,intro]: "\<And>x. VarB x \<in> B"
+VrB_B[simp,intro]: "\<And>x. VrB x \<in> B"
 and 
-AppB_B[simp,intro]: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> AppB b1 b2 \<in> B"
+ApB_B[simp,intro]: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> ApB b1 b2 \<in> B"
 and 
-LamB_B[simp,intro]: "\<And>x b. b \<in>  B \<Longrightarrow> LamB x b \<in> B"
+LmB_B[simp,intro]: "\<And>x b. b \<in>  B \<Longrightarrow> LmB x b \<in> B"
 and 
 renB_B[simp]: "\<And>\<sigma> b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB \<sigma> b \<in> B"
 and 
@@ -882,98 +882,98 @@ renB_FVarsB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<s
 *)
 and 
 (* *)
-renB_VarB[simp]: "\<And>\<sigma> x. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VarB x) = VarB (\<sigma> x)"
+renB_VrB[simp]: "\<And>\<sigma> x. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> renB \<sigma> (VrB x) = VrB (\<sigma> x)"
 and 
-renB_AppB[simp]: "\<And>\<sigma> b1 b2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> {b1,b2} \<subseteq> B \<Longrightarrow> 
-   renB \<sigma> (AppB b1 b2) = AppB (renB \<sigma> b1) (renB \<sigma> b2)"
+renB_ApB[simp]: "\<And>\<sigma> b1 b2. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> {b1,b2} \<subseteq> B \<Longrightarrow> 
+   renB \<sigma> (ApB b1 b2) = ApB (renB \<sigma> b1) (renB \<sigma> b2)"
 and 
-renB_LamB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> 
-   renB \<sigma> (LamB x b) = LamB (\<sigma> x) (renB \<sigma> b)"
+renB_LmB[simp]: "\<And>\<sigma> x b. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> 
+   renB \<sigma> (LmB x b) = LmB (\<sigma> x) (renB \<sigma> b)"
 (* *)
 and 
-FVarsB_VarB: "\<And>x. FVarsB (VarB x) \<subseteq> {x}"
+FVarsB_VrB: "\<And>x. FVarsB (VrB x) \<subseteq> {x}"
 and 
-FVarsB_AppB: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (AppB b1 b2) \<subseteq> FVarsB b1 \<union> FVarsB b2"
+FVarsB_ApB: "\<And>b1 b2. {b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (ApB b1 b2) \<subseteq> FVarsB b1 \<union> FVarsB b2"
 and 
-FVarsB_LamB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
+FVarsB_LmB: "\<And>x b. b \<in> B \<Longrightarrow> FVarsB (LmB x b) \<subseteq> FVarsB b - {x}"
 begin 
 
-lemma not_in_FVarsB_LamB: "b \<in> B \<Longrightarrow> x \<notin> FVarsB (LamB x b)"
-using FVarsB_LamB by auto
+lemma not_in_FVarsB_LmB: "b \<in> B \<Longrightarrow> x \<notin> FVarsB (LmB x b)"
+using FVarsB_LmB by auto
 
-lemma LamB_inject_strong_rev: 
+lemma LmB_inject_strong_rev: 
 assumes bb': "{b,b'} \<subseteq> B" and 
 x': "x' = x \<or> x' \<notin> FVarsB b" and 
 f: "bij f" "|supp f| <o |UNIV::var set|" 
 "id_on (- {x, x'}) f" "f x = x'" and r: "renB f b = b'"
-shows "LamB x b = LamB x' b'"
+shows "LmB x b = LmB x' b'"
 proof-
-  have id: "id_on (FVarsB (LamB x b)) f"
-  using f FVarsB_LamB bb' x' unfolding id_on_def by auto
-  have "LamB x b = renB f (LamB x b)"
-  apply(rule sym) apply(rule renB_cong) using f bb' FVarsB_LamB unfolding id_on_def 
+  have id: "id_on (FVarsB (LmB x b)) f"
+  using f FVarsB_LmB bb' x' unfolding id_on_def by auto
+  have "LmB x b = renB f (LmB x b)"
+  apply(rule sym) apply(rule renB_cong) using f bb' FVarsB_LmB unfolding id_on_def 
   using id unfolding id_on_def by auto
-  also have "\<dots> = LamB x' b'" apply(subst renB_LamB) using f r bb' by auto
+  also have "\<dots> = LmB x' b'" apply(subst renB_LmB) using f r bb' by auto
   finally show ?thesis .
 qed
 
-lemma LamB_inject_strong'_rev: 
+lemma LmB_inject_strong'_rev: 
 assumes bb': "{b,b'} \<subseteq> B"  
 and z: "z = x \<or> z \<notin> FVarsB b" "z = x' \<or> z \<notin> FVarsB b'"
 and f: "bij f" "|supp f| <o |UNIV::var set|" "id_on (- {x, z}) f" "f x = z" 
 and f': "bij f'" "|supp f'| <o |UNIV::var set|" "id_on (- {x', z}) f'" "f' x' = z" 
 and r: "renB f b = renB f' b'"
-shows "LamB x b = LamB x' b'" 
+shows "LmB x b = LmB x' b'" 
 proof-
   define c where c: "c = renB f b"
   have c': "c = renB f' b'" unfolding c r ..
-  have "LamB x b = LamB z c"  
-  apply(rule LamB_inject_strong_rev[of _ _ _ _ f]) 
-  using assms FVarsB_LamB id_on_def unfolding c by auto
-  also have "LamB z c = LamB x' b'"  
-  apply(rule sym, rule LamB_inject_strong_rev[of _ _ _ _ f']) 
-  using assms FVarsB_LamB id_on_def unfolding c by auto
+  have "LmB x b = LmB z c"  
+  apply(rule LmB_inject_strong_rev[of _ _ _ _ f]) 
+  using assms FVarsB_LmB id_on_def unfolding c by auto
+  also have "LmB z c = LmB x' b'"  
+  apply(rule sym, rule LmB_inject_strong_rev[of _ _ _ _ f']) 
+  using assms FVarsB_LmB id_on_def unfolding c by auto
   finally show ?thesis .
 qed
 
 (* NB: 
-We obtain a more general recursor if we replace renB_cong with LamB_inject_strong_rev; 
-and an even more general one if we replace it with LamB_inject_strong'_rev. 
+We obtain a more general recursor if we replace renB_cong with LmB_inject_strong_rev; 
+and an even more general one if we replace it with LmB_inject_strong'_rev. 
 *)
 
 definition morFromTrm where 
 "morFromTrm H \<equiv> 
  (\<forall>e. H e \<in> B) \<and>  
- (\<forall>x. H (Var x) = VarB x) \<and> 
- (\<forall>e1 e2. H (App e1 e2) = AppB (H e1) (H e2)) \<and> 
- (\<forall>x e. H (Lam x e) = LamB x (H e)) \<and> 
+ (\<forall>x. H (Vr x) = VrB x) \<and> 
+ (\<forall>e1 e2. H (Ap e1 e2) = ApB (H e1) (H e2)) \<and> 
+ (\<forall>x e. H (Lm x e) = LmB x (H e)) \<and> 
  (\<forall>\<sigma> e. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<longrightarrow> H (rrename \<sigma> e) = renB \<sigma> (H e)) \<and> 
  (\<forall>e. FVarsB (H e) \<subseteq> FFVars e)"
 
 (* *)
 
 inductive R where 
-Var: "R (Var x) (VarB x)"
+Vr: "R (Vr x) (VrB x)"
 |
-App: "R e1 b1 \<Longrightarrow> R e2 b2 \<Longrightarrow> R (App e1 e2) (AppB b1 b2)"
+Ap: "R e1 b1 \<Longrightarrow> R e2 b2 \<Longrightarrow> R (Ap e1 e2) (ApB b1 b2)"
 |
-Lam: "R e b \<Longrightarrow> R (Lam x e) (LamB x b)"
+Lm: "R e b \<Longrightarrow> R (Lm x e) (LmB x b)"
 
 (* *)
 
-lemma R_Var_elim[simp]: "R (Var x) b \<longleftrightarrow> b = VarB x"
+lemma R_Vr_elim[simp]: "R (Vr x) b \<longleftrightarrow> b = VrB x"
 apply safe
   subgoal using R.cases by fastforce
   subgoal by (auto intro: R.intros) .
 
-lemma R_App_elim: 
-assumes "R (App e1 e2) b"
-shows "\<exists>b1 b2. R e1 b1 \<and> R e2 b2 \<and> b = AppB b1 b2"
-by (metis App_inject R.simps assms Lterm.distinct(1) Lterm.distinct(4))
+lemma R_Ap_elim: 
+assumes "R (Ap e1 e2) b"
+shows "\<exists>b1 b2. R e1 b1 \<and> R e2 b2 \<and> b = ApB b1 b2"
+by (metis Ap_inject R.simps assms Lterm.distinct(1) Lterm.distinct(4))
 
-lemma R_Lam_elim: 
-assumes "R (Lam x e) b"
-shows "\<exists>x' e' b'. R e' b' \<and> Lam x e = Lam x' e' \<and> b = LamB x' b'"
+lemma R_Lm_elim: 
+assumes "R (Lm x e) b"
+shows "\<exists>x' e' b'. R e' b' \<and> Lm x e = Lm x' e' \<and> b = LmB x' b'"
 using assms by (cases rule: R.cases) auto
 
 lemma R_total: 
@@ -990,31 +990,31 @@ lemma R_main:
  (\<forall>b f. R e b \<and> bij f \<and> |supp f| <o |UNIV::var set|
         \<longrightarrow> R (rrename f e) (renB f b))"
 proof(induct e rule: lterm_rrename_induct)
-  case (Var x)
-  then show ?case using FVarsB_VarB by auto
+  case (Vr x)
+  then show ?case using FVarsB_VrB by auto
 next
-  case (App e1 e2)
+  case (Ap e1 e2)
   then show ?case apply safe 
-    subgoal by (metis R_App_elim)
-    subgoal by simp (smt (verit, del_insts) FVarsB_AppB R_App_elim 
+    subgoal by (metis R_Ap_elim)
+    subgoal by simp (smt (verit, del_insts) FVarsB_ApB R_Ap_elim 
       R_B Un_iff bot.extremum insert_Diff insert_subset)
-    subgoal apply(drule R_App_elim) 
-      by (smt (verit, del_insts) R.simps R_B bot.extremum insert_subset renB_AppB 
+    subgoal apply(drule R_Ap_elim) 
+      by (smt (verit, del_insts) R.simps R_B bot.extremum insert_subset renB_ApB 
       rrename_simps(2)) .
 next
-  case (Lam x t)
-  note Lamm = Lam[rule_format]
-  note Lam1 = Lamm[THEN conjunct1, rule_format]
-  note Lam2 = Lamm[THEN conjunct2, THEN conjunct1, rule_format]
-  note Lam3 = Lamm[THEN conjunct2, THEN conjunct2, rule_format, OF _ _ conjI, OF _ _ _ conjI]
-  note Lam33 = Lam3[of id, simplified]
+  case (Lm x t)
+  note Lmm = Lm[rule_format]
+  note Lm1 = Lmm[THEN conjunct1, rule_format]
+  note Lm2 = Lmm[THEN conjunct2, THEN conjunct1, rule_format]
+  note Lm3 = Lmm[THEN conjunct2, THEN conjunct2, rule_format, OF _ _ conjI, OF _ _ _ conjI]
+  note Lm33 = Lm3[of id, simplified]
 
   show ?case proof safe
-    fix b1 b2 assume RLam: "R (Lam x t) b1" "R (Lam x t) b2" 
+    fix b1 b2 assume RLm: "R (Lm x t) b1" "R (Lm x t) b2" 
     then obtain x1' t1' b1' x2' t2' b2'
-    where 1: "R t1' b1'" "Lam x t = Lam x1' t1'" "b1 = LamB x1' b1'"
-    and   2: "R t2' b2'" "Lam x t = Lam x2' t2'" "b2 = LamB x2' b2'"
-    using R_Lam_elim by metis
+    where 1: "R t1' b1'" "Lm x t = Lm x1' t1'" "b1 = LmB x1' b1'"
+    and   2: "R t2' b2'" "Lm x t = Lm x2' t2'" "b2 = LmB x2' b2'"
+    using R_Lm_elim by metis
 
     have b12': "{b1',b2'} \<subseteq> B"
     using 1(1,3) 2(1,3) R_B by auto
@@ -1027,12 +1027,12 @@ next
 
     obtain f1 f1' where 
     f1: "bij f1" "|supp f1| <o |UNIV::var set|"
-       "id_on (- {x, z}) f1 \<and> id_on (FFVars (Lam x t)) f1" and 
+       "id_on (- {x, z}) f1 \<and> id_on (FFVars (Lm x t)) f1" and 
     f1': "bij f1'" "|supp f1'| <o |UNIV::var set|"
-       "id_on (- {x1', z}) f1' \<and> id_on (FFVars (Lam x1' t1')) f1'"
+       "id_on (- {x1', z}) f1' \<and> id_on (FFVars (Lm x1' t1')) f1'"
     and z1: "f1 x = z" "f1' x1' = z"  
     and f1f1': "rrename f1 t = rrename f1' t1'"   
-    using z Lam_inject_strong'[OF 1(2), of z] by auto
+    using z Lm_inject_strong'[OF 1(2), of z] by auto
 
     have if1': "bij (inv f1' o f1)" "|supp (inv f1' o f1)| <o |UNIV::var set|"
     by (auto simp add: f1 f1' Lterm_pre.supp_comp_bound)
@@ -1042,16 +1042,16 @@ next
        inv_o_simp1 supp_inv_bound Lterm.rrename_comps Lterm.rrename_ids)
 
     have fvb1': "FVarsB b1' \<subseteq> FFVars t1'"
-    using Lam2[OF if1', unfolded t1'[symmetric], OF 1(1)] .
+    using Lm2[OF if1', unfolded t1'[symmetric], OF 1(1)] .
 
     obtain f2 f2' where 
     f2: "bij f2" "|supp f2| <o |UNIV::var set|"
-      "id_on (- {x, z}) f2 \<and> id_on (FFVars (Lam x t)) f2" and 
+      "id_on (- {x, z}) f2 \<and> id_on (FFVars (Lm x t)) f2" and 
     f2': "bij f2'" "|supp f2'| <o |UNIV::var set|"
-      "id_on (- {x2', z}) f2' \<and> id_on (FFVars (Lam x2' t2')) f2'"
+      "id_on (- {x2', z}) f2' \<and> id_on (FFVars (Lm x2' t2')) f2'"
     and z2: "f2 x = z" "f2' x2' = z"  
     and f2f2': "rrename f2 t = rrename f2' t2'"   
-    using z Lam_inject_strong'[OF 2(2), of z] by auto
+    using z Lm_inject_strong'[OF 2(2), of z] by auto
 
     have if2': "bij (inv f2' o f2)" "|supp (inv f2' o f2)| <o |UNIV::var set|"
     by (auto simp add: f2 f2' Lterm_pre.supp_comp_bound)
@@ -1061,12 +1061,12 @@ next
       inv_o_simp1 supp_inv_bound Lterm.rrename_comps Lterm.rrename_ids)
 
     have fvb2': "FVarsB b2' \<subseteq> FFVars t2'"
-    using Lam2[OF if2', unfolded t2'[symmetric], OF 2(1)] .
+    using Lm2[OF if2', unfolded t2'[symmetric], OF 2(1)] .
 
     define ff2' where "ff2' = f1 o (inv f2) o f2'"
 
     have ff2': "bij ff2'" "|supp ff2'| <o |UNIV::var set|"
-       "id_on (- {x2', z}) ff2' \<and> id_on (FFVars (Lam x2' t2')) ff2'" 
+       "id_on (- {x2', z}) ff2' \<and> id_on (FFVars (Lm x2' t2')) ff2'" 
     unfolding ff2'_def using f1 f2 f2'  
       subgoal by auto 
       subgoal unfolding ff2'_def using f1 f2 f2' by (simp add: Lterm_pre.supp_comp_bound)
@@ -1082,29 +1082,29 @@ next
     by (smt (verit, del_insts) bij_betw_imp_inj_on bij_imp_bij_inv bij_o f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2' ff2'_def o_inv_o_cancel supp_inv_bound Lterm.rrename_comps Lterm_pre.supp_comp_bound)
  
     show "b1 = b2" unfolding 1(3) 2(3) 
-    apply(rule LamB_inject_strong'_rev[OF b12', of z _ _ f1' ff2'])
+    apply(rule LmB_inject_strong'_rev[OF b12', of z _ _ f1' ff2'])
       subgoal using z fvb1' by auto
       subgoal using z fvb2' by auto
       subgoal using f1' by auto  subgoal using f1' by auto
       subgoal using f1' by auto  subgoal using z1 by auto
       subgoal using ff2' by auto  subgoal using ff2' by auto
       subgoal using ff2' by auto  subgoal using zz2 by auto 
-      subgoal apply(rule Lam1[OF f1(1,2)])  
-        subgoal using Lam3[OF if1' 1(1)[unfolded t1'] f1'(1,2), unfolded rew1] .
-        subgoal using Lam3[OF if2' 2(1)[unfolded t2'] ff2'(1,2), unfolded rew2] . . .
+      subgoal apply(rule Lm1[OF f1(1,2)])  
+        subgoal using Lm3[OF if1' 1(1)[unfolded t1'] f1'(1,2), unfolded rew1] .
+        subgoal using Lm3[OF if2' 2(1)[unfolded t2'] ff2'(1,2), unfolded rew2] . . .
   (* *)
   next
     fix b y 
-    assume R: "R (Lam x t) b" and yy: "y \<in> FVarsB b"
+    assume R: "R (Lm x t) b" and yy: "y \<in> FVarsB b"
     then obtain x' t' b'
-    where 0: "R t' b'" "Lam x t = Lam x' t'" "b = LamB x' b'" 
-    using R_Lam_elim by metis
+    where 0: "R t' b'" "Lm x t = Lm x' t'" "b = LmB x' b'" 
+    using R_Lm_elim by metis
 
     have b': "b' \<in>  B"
     using 0(1,3) R_B by auto
 
     have y: "y \<noteq> x'" "y \<in> FVarsB b'" using b' yy unfolding 0 
-    using FVarsB_LamB[OF b'] by auto
+    using FVarsB_LmB[OF b'] by auto
 
     have "|{x,x'} \<union> FFVars t \<union> FFVars t'| <o |UNIV::var set|"
     by (metis Un_insert_right singl_bound sup_bot_right Lterm.set_bd_UNIV var_Lterm_pre_class.Un_bound)
@@ -1114,26 +1114,26 @@ next
 
     obtain f where 
     f: "bij f" "|supp f| <o |UNIV::var set|"
-       "id_on (- {x, x'}) f \<and> id_on (FFVars (Lam x t)) f" 
+       "id_on (- {x, x'}) f \<and> id_on (FFVars (Lm x t)) f" 
     and z: "f x = x'"   
     and t': "t' = rrename f t" 
-    using  Lam_inject_strong[OF 0(2)] by auto
+    using  Lm_inject_strong[OF 0(2)] by auto
     
     have fvb't': "FVarsB b' \<subseteq> FFVars t'"
-    using Lam2[OF f(1,2), unfolded t'[symmetric], OF 0(1)] .
+    using Lm2[OF f(1,2), unfolded t'[symmetric], OF 0(1)] .
     have yt': "y \<in> FFVars t'" using fvb't' y(2) by auto
 
-    show "y \<in> FFVars (Lam x t)" using yt' y unfolding 0(2) by auto
+    show "y \<in> FFVars (Lm x t)" using yt' y unfolding 0(2) by auto
   (* *)
   next
     fix b and f :: "var\<Rightarrow>var"
 
-    assume "R (Lam x t) b" and f: "bij f" "|supp f| <o |UNIV::var set|"
+    assume "R (Lm x t) b" and f: "bij f" "|supp f| <o |UNIV::var set|"
 
    
     then obtain x' t' b'
-    where 0: "R t' b'" "Lam x t = Lam x' t'" "b = LamB x' b'" 
-    using R_Lam_elim by metis
+    where 0: "R t' b'" "Lm x t = Lm x' t'" "b = LmB x' b'" 
+    using R_Lm_elim by metis
 
 
     have b': "b' \<in>  B"
@@ -1147,21 +1147,21 @@ next
 
     obtain g where 
     g: "bij g" "|supp g| <o |UNIV::var set|"
-       "id_on (- {x, x'}) g \<and> id_on (FFVars (Lam x t)) g" 
+       "id_on (- {x, x'}) g \<and> id_on (FFVars (Lm x t)) g" 
     and z: "g x = x'"   
     and t': "t' = rrename g t" 
-    using Lam_inject_strong[OF 0(2)] by auto
+    using Lm_inject_strong[OF 0(2)] by auto
 
-    have RR: "R (Lam (f x') (rrename f t')) (LamB (f x') (renB f b'))"
-    apply(rule R.Lam) unfolding t' apply(rule Lam3)
+    have RR: "R (Lm (f x') (rrename f t')) (LmB (f x') (renB f b'))"
+    apply(rule R.Lm) unfolding t' apply(rule Lm3)
       subgoal by fact  subgoal by fact
       subgoal using 0(1) unfolding t' .
       subgoal by fact subgoal by fact .
 
-    show "R (rrename f (Lam x t)) (renB f b)" 
+    show "R (rrename f (Lm x t)) (renB f b)" 
     unfolding 0 using RR apply(subst rrename_simps) 
       subgoal using f by auto subgoal using f by auto
-      subgoal apply(subst renB_LamB)
+      subgoal apply(subst renB_LmB)
        using f b' by auto .  
   qed
 qed
@@ -1178,9 +1178,9 @@ by (simp add: R_total H_def someI_ex)
 lemma ex_morFromTrm: "\<exists>H. morFromTrm H"
 apply(rule exI[of _ H]) unfolding morFromTrm_def apply(intro conjI)
   subgoal using R_B R_F by auto
-  subgoal using R.Var R_F R_functional by blast
-  subgoal using R.App R_F R_functional by blast
-  subgoal using R.Lam R_F R_functional by blast
+  subgoal using R.Vr R_F R_functional by blast
+  subgoal using R.Ap R_F R_functional by blast
+  subgoal using R.Lm R_F R_functional by blast
   subgoal by (meson R_F R_functional R_subst)
   subgoal by (simp add: R_F R_FFVars) .
 
@@ -1192,13 +1192,13 @@ by (metis ex_morFromTrm rec_def someI_ex)
 lemma rec_B[simp,intro!]: "rec e \<in> B"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
-lemma rec_Var[simp]: "rec (Var x) = VarB x"
+lemma rec_Vr[simp]: "rec (Vr x) = VrB x"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
-lemma rec_App[simp]: "rec (App e1 e2) = AppB (rec e1) (rec e2)"
+lemma rec_Ap[simp]: "rec (Ap e1 e2) = ApB (rec e1) (rec e2)"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
-lemma rec_Lam[simp]: "rec (Lam x e) = LamB x (rec e)"
+lemma rec_Lm[simp]: "rec (Lm x e) = LmB x (rec e)"
 using morFromTrm_rec unfolding morFromTrm_def by auto
 
 lemma rec_rrename: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> 
@@ -1210,9 +1210,9 @@ using morFromTrm_rec unfolding morFromTrm_def by auto
 
 lemma rec_unique: 
 assumes "\<And>e. H e \<in> B" 
-"\<And>x. H (Var x) = VarB x" 
-"\<And>e1 e2. H (App e1 e2) = AppB (H e1) (H e2)"
-"\<And>x e. H (Lam x e) = LamB x (H e)"
+"\<And>x. H (Vr x) = VrB x" 
+"\<And>e1 e2. H (Ap e1 e2) = ApB (H e1) (H e2)"
+"\<And>x e. H (Lm x e) = LmB x (H e)"
 shows "H = rec"
 apply(rule ext) subgoal for e apply(induct e)
 using assms by auto .

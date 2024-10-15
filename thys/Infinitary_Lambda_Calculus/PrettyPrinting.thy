@@ -7,14 +7,14 @@ begin
 (* raw terms: *)
 datatype rtrm = VAR var | APP rtrm rtrm | LAM var rtrm
 
-fun Vars where 
-"Vars (VAR x) = {x}"
+fun Vrs where 
+"Vrs (VAR x) = {x}"
 |
-"Vars (APP T S) = Vars T \<union> Vars S"
+"Vrs (APP T S) = Vrs T \<union> Vrs S"
 |
-"Vars (LAM x T) = {x} \<union> Vars T"
+"Vrs (LAM x T) = {x} \<union> Vrs T"
 
-lemma finite_Vars[intro]: "finite (Vars T)"
+lemma finite_Vrs[intro]: "finite (Vrs T)"
 by (induct T, auto)
 
 fun rrrename where 
@@ -30,26 +30,26 @@ apply(rule ext) subgoal for T by (induct T, auto) .
 lemma rrrename_o[simp]: "rrrename (g o f) = rrrename g o rrrename f"
 apply(rule ext) subgoal for T by (induct T, auto) .
 
-lemma rrrename_Vars[simp]: "Vars (rrrename f T) = f ` (Vars T)"
+lemma rrrename_Vrs[simp]: "Vrs (rrrename f T) = f ` (Vrs T)"
 by (induct T, auto)
 
 lemma rrrename_cong: 
-"\<forall>x\<in>Vars T. f x = x \<Longrightarrow> rrrename f T = T"
+"\<forall>x\<in>Vrs T. f x = x \<Longrightarrow> rrrename f T = T"
 by (induct T, auto)
 
 
 (* ASCII-only variables: *)
-consts AVar :: "var set"
+consts AVr :: "var set"
 
-axiomatization where infinite_AVar: "infinite AVar"
+axiomatization where infinite_AVr: "infinite AVr"
 
 term usub
 
 inductive ppr :: "trm \<Rightarrow> rtrm \<Rightarrow> bool" where
-  Var_VAR: "x \<in> AVar \<Longrightarrow> ppr (Var x) (VAR x)"
-| App_APP: "ppr t T \<Longrightarrow> ppr s S \<Longrightarrow> ppr (App t s) (APP T S)"
-| Lam_LAM: "y \<in> AVar \<Longrightarrow> y \<notin> {x} \<union> FFVars t \<Longrightarrow>  
-    ppr (usub t y x) T \<Longrightarrow> ppr (Lam x t) (LAM y T)"
+  Vr_VAR: "x \<in> AVr \<Longrightarrow> ppr (Vr x) (VAR x)"
+| Ap_APP: "ppr t T \<Longrightarrow> ppr s S \<Longrightarrow> ppr (Ap t s) (APP T S)"
+| Lm_LAM: "y \<in> AVr \<Longrightarrow> y \<notin> {x} \<union> FFVars t \<Longrightarrow>  
+    ppr (usub t y x) T \<Longrightarrow> ppr (Lm x t) (LAM y T)"
 
 
 (* INSTANTIATING THE ABSTRACT SETTING: *)
@@ -65,7 +65,7 @@ fun Bsupp :: "B \<Rightarrow> var set" where
 "Bsupp XY = image fst XY \<comment> \<open>\<union> image snd XY \<close>"
 
 fun bnd :: "B \<Rightarrow> bool" where 
-"bnd XY \<longleftrightarrow> finite XY \<and> image snd XY \<subseteq> AVar"
+"bnd XY \<longleftrightarrow> finite XY \<and> image snd XY \<subseteq> AVr"
 
 
 fun bsmall :: "var set \<Rightarrow> bool"
@@ -76,21 +76,21 @@ where
 lemma ppr_touchedSuperT: 
 "ppr e1 e2 \<Longrightarrow> touchedSuperT e1 = touchedSuperT e2 \<and> finite (touchedSuperT e1) \<and> finite (touchedSuperT e2) "
 proof(induct rule: ppr.induct)
-  case (iVar xs x x')
+  case (iVr xs x x')
   then show ?case by auto 
 next
-  case (iLam xs e e')
+  case (iLm xs e e')
   then show ?case by auto
 next
-  case (iApp e1 e1' es2 es2')
+  case (iAp e1 e1' es2 es2')
   obtain e2 e2' where e2: "e2 \<in> sset es2" and e2': "e2' \<in> sset es2'" 
   using shd_sset by blast+
   hence 0: "touchedSuperT ` sset es2 = {touchedSuperT e2}" "touchedSuperT ` sset es2' = {touchedSuperT e2}"
-  using iApp(3) by auto
+  using iAp(3) by auto
   have "\<Union> (touchedSuperT ` sset es2) = \<Union> (touchedSuperT ` sset es2') \<and>
        finite (\<Union> (touchedSuperT ` sset es2)) \<and> finite (\<Union> (touchedSuperT ` sset es2'))" 
-  unfolding 0 using iApp(3) e2 e2' by auto    
-  thus ?case using iApp by simp
+  unfolding 0 using iAp(3) e2 e2' by auto    
+  thus ?case using iAp by simp
 qed
 
 lemmas ppr_touchedSuperT_eq = ppr_touchedSuperT[THEN conjunct1]
@@ -105,7 +105,7 @@ definition Tperm :: "(var \<Rightarrow> var) \<Rightarrow> T \<Rightarrow> T" wh
 "Tperm f \<equiv> map_prod (rrename f) (rrrename f)"
 
 fun Tsupp :: "T \<Rightarrow> var set" where 
-"Tsupp (e1,e2) = FFVars e1 \<union> Vars e2"
+"Tsupp (e1,e2) = FFVars e1 \<union> Vrs e2"
 
 
 
@@ -114,7 +114,7 @@ Tperm = Tperm and Tsupp = Tsupp
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  apply auto
   subgoal apply(rule ext) by (auto simp add: term.rrename_comps image_def)
-  subgoal by (simp add: Un_bound finite_Vars infinite_var small_def term.set_bd_UNIV)
+  subgoal by (simp add: Un_bound finite_Vrs infinite_var small_def term.set_bd_UNIV)
   subgoal by (simp add: rrrename_cong)
   subgoal apply(rule ext) using image_iff by fastforce
   subgoal using finite_iff_le_card_var small_def by blast 
@@ -126,7 +126,7 @@ apply standard unfolding isPerm_def Tperm_def  apply auto
 
 
 
-lemma presBnd_imp: "presBnd \<sigma> \<Longrightarrow> \<sigma> ` AVar \<subseteq> AVar"
+lemma presBnd_imp: "presBnd \<sigma> \<Longrightarrow> \<sigma> ` AVr \<subseteq> AVr"
 unfolding presBnd_def apply auto subgoal for x apply(erule allE[of _ "{(undefined,x)}"])
 apply auto
  by auto .
@@ -142,23 +142,23 @@ unfolding presBnd_def presSuper_def fun_eq_iff apply safe
 
 (*
 inductive ppr :: "trm \<Rightarrow> rtrm \<Rightarrow> bool" where
-  Var_VAR: "x \<in> AVar \<Longrightarrow> ppr (Var x) (VAR x)"
-| App_APP: "ppr t T \<Longrightarrow> ppr s S  \<Longrightarrow> ppr (App t s) (APP T S)"
-| Lam_LAM: "y \<notin> {x} \<union> FFVars t \<union> Vars T \<Longrightarrow>  
-    ppr (usub t y x) t' \<Longrightarrow> ppr (Lam x t) (LAM y T)"
+  Vr_VAR: "x \<in> AVr \<Longrightarrow> ppr (Vr x) (VAR x)"
+| Ap_APP: "ppr t T \<Longrightarrow> ppr s S  \<Longrightarrow> ppr (Ap t s) (APP T S)"
+| Lm_LAM: "y \<notin> {x} \<union> FFVars t \<union> Vrs T \<Longrightarrow>  
+    ppr (usub t y x) t' \<Longrightarrow> ppr (Lm x t) (LAM y T)"
 *)
 
 definition G :: "B \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>B R tt.  
-         (\<exists>x. B = {} \<and> fst tt = Var x \<and> snd tt = VAR x \<and> 
-              x \<in> AVar) 
+         (\<exists>x. B = {} \<and> fst tt = Vr x \<and> snd tt = VAR x \<and> 
+              x \<in> AVr) 
          \<or>
-         (\<exists>t T s S. B = {} \<and> fst tt = App t s \<and> snd tt = APP T S \<and> 
+         (\<exists>t T s S. B = {} \<and> fst tt = Ap t s \<and> snd tt = APP T S \<and> 
                     R (t,T) \<and> R (s,S))
          \<or> 
-         (\<exists>y x t T. B = {(x,y)} \<and> fst tt = Lam x t \<and> snd tt = LAM y T \<and> 
-                    y \<in> AVar \<and> y \<notin> {x} \<union> FFVars t \<and> R (usub t y x,T))"
+         (\<exists>y x t T. B = {(x,y)} \<and> fst tt = Lm x t \<and> snd tt = LAM y T \<and> 
+                    y \<in> AVr \<and> y \<notin> {x} \<union> FFVars t \<and> R (usub t y x,T))"
  
 
 (* VERIFYING THE HYPOTHESES FOR BARENDREGT-ENHANCED INDUCTION: *)
@@ -234,19 +234,19 @@ unfolding ppr_def Ppr.II_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lfp], si
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>Var_VAR: \<close>
+    \<^cancel>\<open>Vr_VAR: \<close>
     subgoal for x apply(rule exI[of _ "{}"]) apply(rule disjI3_1) by auto
-    \<^cancel>\<open>App_APP: \<close>
+    \<^cancel>\<open>Ap_APP: \<close>
     subgoal for t T s S apply(rule exI[of _ "{}"]) apply(rule disjI3_2) by auto 
-    \<^cancel>\<open>Lam_LAM: \<close>
+    \<^cancel>\<open>Lm_LAM: \<close>
     subgoal for y x t T apply(rule exI[of _ "{(x,y)}"]) apply(rule disjI3_3) by auto . 
     (* *)
   subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>iVar: \<close>
+    \<^cancel>\<open>iVr: \<close>
     subgoal apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close>
+    \<^cancel>\<open>iLm: \<close>
     subgoal apply(rule disjI3_2) by auto
-    \<^cancel>\<open>iApp: \<close>
+    \<^cancel>\<open>iAp: \<close>
     subgoal apply(rule disjI3_3) by auto . . .
   
 
@@ -303,12 +303,12 @@ unfolding G_def Tperm_def apply safe
     apply(rule exI[of _ "irrename f e"]) 
     apply(rule exI[of _ "irrename f e'"]) 
     apply(cases t) unfolding presSuper_def apply simp apply(intro conjI)
-      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst irrename_eq_itvsubst_iVar)
+      subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst irrename_eq_itvsubst_iVr)
         subgoal unfolding isPerm_def by auto
         subgoal unfolding isPerm_def by auto
-        subgoal by (smt (verit, best) Diff_iff Un_iff iLam_irrename id_on_def 
-           irrename_eq_itvsubst_iVar) . 
+        subgoal by (smt (verit, best) Diff_iff Un_iff iLm_irrename id_on_def 
+           irrename_eq_itvsubst_iVr) . 
         subgoal unfolding id_on_def isPerm_def presBnd_def by (auto split: option.splits) . . .
   (* *)
   subgoal for e1 e1' es2 es2'
@@ -337,20 +337,20 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm ppr.induct[no_vars] 
 
-corollary strong_induct_ppr[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_ppr[consumes 2, case_names iVr iLm iAp]: 
 assumes par: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
 and st: "ppr t1 t2"  
-and iVar: "\<And>xs x x' p. 
+and iVr: "\<And>xs x x' p. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
-  R p (iVar x) (iVar x')"
-and iLam: "\<And>e e' xs p. 
+  R p (iVr x) (iVr x')"
+and iLm: "\<And>e e' xs p. 
   dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> ppr e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
-  R p (iLam xs e) (iLam xs e')" 
-and iApp: "\<And>e1 e1' es2 es2' p. 
+  R p (iLm xs e) (iLm xs e')" 
+and iAp: "\<And>e1 e1' es2 es2' p. 
   ppr e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
   (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> ppr e e' \<and> (\<forall>p'. R p' e e')) \<Longrightarrow> 
-  R p (iApp e1 es2) (iApp e1' es2')"
+  R p (iAp e1 es2) (iAp e1' es2')"
 shows "R p t1 t2"
 unfolding ppr_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
@@ -360,44 +360,44 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
     subgoal unfolding ppr_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding ppr_I[symmetric] apply(elim disjE exE)
-      subgoal using iVar by auto 
-      subgoal using iLam by auto  
-      subgoal using iApp by auto . . .
+      subgoal using iVr by auto 
+      subgoal using iLm by auto  
+      subgoal using iAp by auto . . .
 
-corollary strong_induct_ppr''[consumes 1, case_names bsmall Bound iVar iLam iApp]:
+corollary strong_induct_ppr''[consumes 1, case_names bsmall Bound iVr iLm iAp]:
   assumes  "ppr t1 t2"
 and bsmall: "\<And>(p::'a). bsmall (PFVars p)"
 assumes bound: "\<And>(p::'a). |PFVars p| <o |UNIV::ivar set|"
-and iVar: "\<And>xs x x' p.
+and iVr: "\<And>xs x x' p.
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
-  R (iVar x) (iVar x') p"
-and iLam: "\<And>e e' xs p.
+  R (iVr x) (iVr x') p"
+and iLm: "\<And>e e' xs p.
   dsset xs \<inter> PFVars p = {} \<Longrightarrow>
   super xs \<Longrightarrow> ppr e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow>
-  R (iLam xs e) (iLam xs e') p"
-and iApp: "\<And>e1 e1' es2 es2' p.
+  R (iLm xs e) (iLm xs e') p"
+and iAp: "\<And>e1 e1' es2 es2' p.
   ppr e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow>
   (\<And>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<Longrightarrow> ppr e e') \<Longrightarrow>
   (\<And>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<Longrightarrow> \<forall>p'. R e e' p') \<Longrightarrow>
-  R (iApp e1 es2) (iApp e1' es2') p"
+  R (iAp e1 es2) (iAp e1' es2') p"
 shows "\<forall>(p::'a). R t1 t2 p"
 using assms strong_induct_ppr[of PFVars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] unfolding small_def by auto
 
 (* ... and with fixed parameters: *)
-corollary strong_induct_ppr'[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_ppr'[consumes 2, case_names iVr iLm iAp]: 
 assumes par: "small A \<and> bsmall A"
 and st: "ppr t1 t2"  
-and iVar: "\<And>xs x x'. 
+and iVr: "\<And>xs x x'. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
-  R (iVar x) (iVar x')"
-and iLam: "\<And>e e' xs. 
+  R (iVr x) (iVr x')"
+and iLm: "\<And>e e' xs. 
   dsset xs \<inter> A = {} \<Longrightarrow> 
   super xs \<Longrightarrow> ppr e e' \<Longrightarrow> R e e' \<Longrightarrow> 
-  R (iLam xs e) (iLam xs e')" 
-and iApp: "\<And>e1 e1' es2 es2'. 
+  R (iLm xs e) (iLm xs e')" 
+and iAp: "\<And>e1 e1' es2 es2'. 
   ppr e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
   (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> ppr e e' \<and> R e e') \<Longrightarrow> 
-  R (iApp e1 es2) (iApp e1' es2')"
+  R (iAp e1 es2) (iAp e1' es2')"
 shows "R t1 t2"
 apply(rule strong_induct_ppr[of "\<lambda>_::unit. A"]) using assms by auto
 

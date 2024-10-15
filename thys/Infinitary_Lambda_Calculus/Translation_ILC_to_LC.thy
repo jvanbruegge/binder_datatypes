@@ -69,20 +69,20 @@ using assms unfolding restr_def by (simp add: dstream_map_ident_strong)
 
 (* *)
 
-definition iVarB where "iVarB x \<equiv> Var (subOf (fst (theSN x)))"
-definition iLamB where "iLamB (xs::ivar dstream) b \<equiv> Lam (subOf xs) b"
-definition iAppB where "iAppB b1 bs2 \<equiv> App b1 (snth bs2 0)"
+definition iVrB where "iVrB x \<equiv> Vr (subOf (fst (theSN x)))"
+definition iLmB where "iLmB (xs::ivar dstream) b \<equiv> Lm (subOf xs) b"
+definition iApB where "iApB b1 bs2 \<equiv> Ap b1 (snth bs2 0)"
 definition renB where "renB f b \<equiv> rrename (restr f) b"
 definition FVarsB where "FVarsB b \<equiv> \<Union> ((dsset o superOf) ` (FFVars b))"
 
 
-lemma iVarB_B: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> iVarB x \<in> B"
+lemma iVrB_B: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> iVrB x \<in> B"
 unfolding B_def by auto
 
-lemma iAppB_B: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> iAppB b1 bs2 \<in> B"
+lemma iApB_B: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> iApB b1 bs2 \<in> B"
 unfolding B_def by auto
 
-lemma iLamB_B: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> iLamB xs b \<in> B"
+lemma iLmB_B: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> iLmB xs b \<in> B"
 unfolding B_def by auto
 
 lemma renB_B: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
@@ -112,10 +112,10 @@ unfolding renB_def FVarsB_def apply safe
   subgoal by simp (metis bij_restr card_supp_restr dstream.set_map image_in_bij_eq inv_simp1 presSuper_def 
     restr_def superOf_subOf super_superOf Lterm.FFVars_rrenames) .
 
-lemma renB_iVarB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_iVrB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> 
-  renB \<sigma> (iVarB x) = iVarB (\<sigma> x)"
-unfolding renB_def iVarB_def apply(subst rrename_simps)
+  renB \<sigma> (iVrB x) = iVrB (\<sigma> x)"
+unfolding renB_def iVrB_def apply(subst rrename_simps)
   subgoal by (auto simp add: bij_restr)
   subgoal by (auto simp add: card_supp_restr)
   subgoal unfolding restr_def apply(cases "theSN x", cases "theSN (\<sigma> x)") 
@@ -123,46 +123,46 @@ unfolding renB_def iVarB_def apply(subst rrename_simps)
      dstream.set_map dtheN image_in_bij_eq inv_simp2 mem_Collect_eq presSuper_def superOf_subOf 
      theSN_unique) .
 
-lemma renB_iAppB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_iApB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow>
-   renB \<sigma> (iAppB b1 bs2) = iAppB (renB \<sigma> b1) (smap (renB \<sigma>) bs2)"
-unfolding renB_def iAppB_def apply(subst rrename_simps)
+   renB \<sigma> (iApB b1 bs2) = iApB (renB \<sigma> b1) (smap (renB \<sigma>) bs2)"
+unfolding renB_def iApB_def apply(subst rrename_simps)
   subgoal by (auto simp add: bij_restr)
   subgoal by (auto simp add: card_supp_restr)
   subgoal by auto .
 
-lemma renB_iLamB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
+lemma renB_iLmB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    b \<in> B \<Longrightarrow> super xs \<Longrightarrow> 
-   renB \<sigma> (iLamB xs b) = iLamB (dsmap \<sigma> xs) (renB \<sigma> b)"
-unfolding renB_def iLamB_def apply(subst rrename_simps)
+   renB \<sigma> (iLmB xs b) = iLmB (dsmap \<sigma> xs) (renB \<sigma> b)"
+unfolding renB_def iLmB_def apply(subst rrename_simps)
   subgoal by (auto simp add: bij_restr)
   subgoal by (auto simp add: card_supp_restr)
   subgoal using restr_def superOf_subOf by auto .
 
-lemma FVarsB_iVarB: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuper (FVarsB (iVarB x)) \<subseteq> touchedSuper {x}"
-unfolding FVarsB_def iVarB_def apply(cases "theSN x") 
+lemma FVarsB_iVrB: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuper (FVarsB (iVrB x)) \<subseteq> touchedSuper {x}"
+unfolding FVarsB_def iVrB_def apply(cases "theSN x") 
   by auto (metis (mono_tags, lifting) Int_emptyD dtheN insert_subset mem_Collect_eq mk_disjoint_insert 
    singletonI superOf_subOf super_dsset_RSuper theSN_unique touchedSuper_def)
 
-(* Unlike FVarsB_iVarB, we have that 
-FVarsB_iAppB and FVarsB_iLamB actually even hold in a "raw", stronger version, with touchedSuper removed and with 
-FVarsB_iLamB formulated as follows: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLamB xs b) \<subseteq> FVarsB b - dsset xs" *)
-lemma FVarsB_iAppB: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> 
- touchedSuper (FVarsB (iAppB b1 bs2)) \<subseteq> 
+(* Unlike FVarsB_iVrB, we have that 
+FVarsB_iApB and FVarsB_iLmB actually even hold in a "raw", stronger version, with touchedSuper removed and with 
+FVarsB_iLmB formulated as follows: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow> FVarsB (iLmB xs b) \<subseteq> FVarsB b - dsset xs" *)
+lemma FVarsB_iApB: "b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow> 
+ touchedSuper (FVarsB (iApB b1 bs2)) \<subseteq> 
  touchedSuper (FVarsB b1) \<union> \<Union> ((touchedSuper o FVarsB) ` (sset bs2))"
-unfolding FVarsB_def iAppB_def touchedSuper_def by (fastforce simp: shd_sset)
+unfolding FVarsB_def iApB_def touchedSuper_def by (fastforce simp: shd_sset)
 
-lemma FVarsB_iLamB: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow>
-  touchedSuper (FVarsB (iLamB xs b)) \<subseteq> touchedSuper (FVarsB b) - {xs}"
-unfolding FVarsB_def iLamB_def touchedSuper_def
+lemma FVarsB_iLmB: "b \<in> B \<Longrightarrow> super xs \<Longrightarrow>
+  touchedSuper (FVarsB (iLmB xs b)) \<subseteq> touchedSuper (FVarsB b) - {xs}"
+unfolding FVarsB_def iLmB_def touchedSuper_def
 by auto (metis Int_emptyD subOf_superOf super_disj super_superOf)
 
 interpretation T' : ILC_SuperRec where 
-B = B and iVarB = iVarB and iAppB = iAppB and iLamB = iLamB and renB = renB and FVarsB = FVarsB
+B = B and iVrB = iVrB and iApB = iApB and iLmB = iLmB and renB = renB and FVarsB = FVarsB
 apply standard
-using iVarB_B iAppB_B iLamB_B renB_B renB_id renB_comp 
-renB_iVarB renB_iAppB renB_iLamB
-FVarsB_iVarB FVarsB_iAppB FVarsB_iLamB apply auto  
+using iVrB_B iApB_B iLmB_B renB_B renB_id renB_comp 
+renB_iVrB renB_iApB renB_iLmB
+FVarsB_iVrB FVarsB_iApB FVarsB_iLmB apply auto  
 by (auto simp add: renB_cong renB_FVarsB)  
 
 
@@ -170,16 +170,16 @@ by (auto simp add: renB_cong renB_FVarsB)
 
 definition tr' :: "ilterm \<Rightarrow> lterm" where "tr' = T'.rec"
 
-lemma tr'_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> tr' (iVar x) = Var (subOf (fst (theSN x)))"
-using T'.rec_iVar unfolding tr'_def iVarB_def by auto
+lemma tr'_iVr[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> tr' (iVr x) = Vr (subOf (fst (theSN x)))"
+using T'.rec_iVr unfolding tr'_def iVrB_def by auto
 
-lemma tr'_iLam[simp]: "super xs \<Longrightarrow> good e \<Longrightarrow> tr' (iLam xs e) = Lam (subOf xs) (tr' e)"
-using T'.rec_iLam unfolding tr'_def iLamB_def by auto
+lemma tr'_iLm[simp]: "super xs \<Longrightarrow> good e \<Longrightarrow> tr' (iLm xs e) = Lm (subOf xs) (tr' e)"
+using T'.rec_iLm unfolding tr'_def iLmB_def by auto
 
-lemma tr'_iApp[simp]: "good e1 \<Longrightarrow> (\<forall>e2\<in>sset es2. good e2) \<Longrightarrow> 
+lemma tr'_iAp[simp]: "good e1 \<Longrightarrow> (\<forall>e2\<in>sset es2. good e2) \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
-  tr' (iApp e1 es2) = App (tr' e1) (tr' (snth es2 0))"
-using T'.rec_iApp unfolding tr'_def iAppB_def by auto
+  tr' (iAp e1 es2) = Ap (tr' e1) (tr' (snth es2 0))"
+using T'.rec_iAp unfolding tr'_def iApB_def by auto
 
 lemma irrename_tr':
 "good e \<Longrightarrow> bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp f) \<Longrightarrow> presSuper f \<Longrightarrow>
@@ -202,8 +202,8 @@ apply(induct rule: reneqv.induct)
   subgoal by(auto intro: good.intros) 
   subgoal by(auto intro: good.intros) 
   subgoal apply(rule conjI)
-    subgoal apply(rule good.iApp) using reneqv_touchedSuperT_eq by blast+
-    subgoal apply(rule good.iApp) using reneqv_touchedSuperT_eq by blast+ . .
+    subgoal apply(rule good.iAp) using reneqv_touchedSuperT_eq by blast+
+    subgoal apply(rule good.iAp) using reneqv_touchedSuperT_eq by blast+ . .
 
 lemma uniform_good: "uniform e \<Longrightarrow> good e"
 using reneqv_good unfolding uniform_def3 by auto
@@ -217,13 +217,13 @@ unfolding uniformS_def4 using reneqv_good reneqv_touchedSuperT_eq by auto
 
 (* We recover Mazza's desired definition: *)
 
-thm tr'_iVar 
+thm tr'_iVr 
 
-lemma tr'_iLam_uniform[simp]: "super xs \<Longrightarrow> uniform e \<Longrightarrow> tr' (iLam xs e) = Lam (subOf xs) (tr' e)"
+lemma tr'_iLm_uniform[simp]: "super xs \<Longrightarrow> uniform e \<Longrightarrow> tr' (iLm xs e) = Lm (subOf xs) (tr' e)"
 using uniform_good by auto
 
-lemma tr'_iApp_uniform[simp]: "uniform e1 \<Longrightarrow> uniformS es2 \<Longrightarrow> 
-  tr' (iApp e1 es2) = App (tr' e1) (tr' (snth es2 0))"
+lemma tr'_iAp_uniform[simp]: "uniform e1 \<Longrightarrow> uniformS es2 \<Longrightarrow> 
+  tr' (iAp e1 es2) = Ap (tr' e1) (tr' (snth es2 0))"
 by (simp add: uniformS_good uniform_good)
 
 lemma irrename_tr'_uniform:

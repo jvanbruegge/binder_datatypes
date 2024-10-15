@@ -1,391 +1,50 @@
-theory InfFOL
-  imports "Binders.MRBNF_Recursor" "HOL-Cardinals.Bounded_Set" "Binders.Generic_Barendregt_Enhanced_Rule_Induction" "Prelim.Curry_LFP"
+theory InfFOL imports InfFmla 
 begin
 
-typedecl k1
-typedecl k2
-
-axiomatization where
-  k1_Cinfinite: "Cinfinite |UNIV::k1 set|"
-and k2_Cinfinite: "Cinfinite |UNIV::k2 set|"
-and k1_regular: "regularCard |UNIV::k1 set|"
-and k2_regular: "regularCard |UNIV::k2 set|"
-
-typedef 'a set\<^sub>k\<^sub>1 = "UNIV :: ('a set[k1]) set"
-  by simp
-typedef 'a set\<^sub>k\<^sub>2 = "UNIV :: ('a set[k2]) set"
-  by simp
-
-typedef k = "Field ( |UNIV::k1 set| +c |UNIV::k2 set| )"
-  by (simp add: csum_def)
-
-definition card_k :: "k rel" where
-  "card_k \<equiv> map_prod Abs_k Abs_k ` ( |UNIV::k1 set| +c |UNIV::k2 set| )"
-
-lemma Field_k: "Field card_k = (UNIV :: k set)"
-proof -
-  let ?r = "|UNIV::k1 set| +c |UNIV::k2 set|"
-  let ?ar = "\<lambda>x. Abs_k (Rep_k x)"
-  have 1: "\<And>P. (\<forall>x\<in>Field ?r. P x) = (\<forall>x. P (Rep_k x))" using Rep_k_induct Rep_k by blast
-  have 2: "\<And>P. (\<exists>x\<in>Field ?r. P x) = (\<exists>x. P (Rep_k x))" using Rep_k_cases Rep_k by blast
-  have 3: "\<And>A a b. (a, b) \<in> A \<Longrightarrow> (Abs_k a, Abs_k b) \<in> map_prod Abs_k Abs_k ` A" unfolding map_prod_def by auto
-  have "\<forall>x\<in>Field ?r. (\<exists>b\<in>Field ?r. (x, b) \<in> ?r) \<or> (\<exists>a\<in>Field ?r. (a, x) \<in> ?r)"
-    unfolding Field_def Range.simps Domain.simps Un_iff by blast
-  then have "\<forall>x. (\<exists>b. (Rep_k x, Rep_k b) \<in> ?r) \<or> (\<exists>a. (Rep_k a, Rep_k x) \<in> ?r)" unfolding 1 2 .
-  then have "\<forall>x. (\<exists>b. (?ar x, ?ar b) \<in> map_prod Abs_k Abs_k ` ?r) \<or> (\<exists>a. (?ar a, ?ar x) \<in> map_prod Abs_k Abs_k ` ?r)" using 3 by fast
-  then have "\<forall>x. (\<exists>b. (x, b) \<in> card_k) \<or> (\<exists>a. (a, x) \<in> card_k)" unfolding card_k_def Rep_k_inverse .
-  then show ?thesis unfolding Field_def Domain.simps Range.simps set_eq_iff Un_iff eqTrueI[OF UNIV_I] ex_simps simp_thms .
-qed
-
-lemma card_k_alt: "card_k = dir_image ( |UNIV::k1 set| +c |UNIV::k2 set| ) Abs_k"
-  unfolding card_k_def dir_image_def by auto
-
-lemma card_k_ordIso: " |UNIV::k1 set| +c |UNIV::k2 set| =o card_k"
-unfolding card_k_alt
-apply (rule dir_image_ordIso)
-apply (simp add: csum_def)
-apply (simp add: Abs_k_inject inj_on_def)
-done
-
-lemma kmax: "|UNIV::k set| =o |UNIV::k1 set| +c |UNIV::k2 set|"
-apply (rule ordIso_transitive[rotated])
-apply (rule ordIso_symmetric[OF card_k_ordIso])
-apply (unfold Field_k[symmetric])
-apply (rule card_of_Field_ordIso)
-using Card_order_csum Card_order_ordIso2 card_k_ordIso by auto
-
-lemma kregular: "regularCard |UNIV::k set|"
-apply (rule regularCard_ordIso)
-apply (rule ordIso_symmetric[OF kmax])
-apply (rule Cinfinite_csum1)
-apply (rule k1_Cinfinite)
-apply (rule regularCard_csum)
-apply (rule k1_Cinfinite)
-apply (rule k2_Cinfinite)
-apply (rule k1_regular)
-apply (rule k2_regular)
-done
-
-lemma k_Cinfinite: "Cinfinite |UNIV::k set|"
-apply (rule Cinfinite_cong)
-apply (rule ordIso_symmetric[OF kmax])
-apply (rule Cinfinite_csum1)
-apply (rule k1_Cinfinite)
-done
-
-typedef 'a set\<^sub>k = "UNIV :: ('a set[k]) set"
-  by simp
-
-declare [[bnf_internals]]
-setup_lifting type_definition_set\<^sub>k
-setup_lifting type_definition_set\<^sub>k\<^sub>1
-setup_lifting type_definition_set\<^sub>k\<^sub>2
-
-lift_definition map_set\<^sub>k :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a set\<^sub>k \<Rightarrow> 'b set\<^sub>k" is map_bset .
-lift_definition map_set\<^sub>k\<^sub>1 :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a set\<^sub>k\<^sub>1 \<Rightarrow> 'b set\<^sub>k\<^sub>1" is map_bset .
-lift_definition map_set\<^sub>k\<^sub>2 :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a set\<^sub>k\<^sub>2 \<Rightarrow> 'b set\<^sub>k\<^sub>2" is map_bset .
-
-lift_definition set\<^sub>k :: "'a set\<^sub>k \<Rightarrow> 'a set" is set_bset .
-lift_definition set\<^sub>k\<^sub>1 :: "'a set\<^sub>k\<^sub>1 \<Rightarrow> 'a set" is set_bset .
-lift_definition set\<^sub>k\<^sub>2 :: "'a set\<^sub>k\<^sub>2 \<Rightarrow> 'a set" is set_bset .
-
-lift_definition rel_set\<^sub>k :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a set\<^sub>k \<Rightarrow> 'b set\<^sub>k \<Rightarrow> bool" is rel_bset .
-lift_definition rel_set\<^sub>k\<^sub>1 :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a set\<^sub>k\<^sub>1 \<Rightarrow> 'b set\<^sub>k\<^sub>1 \<Rightarrow> bool" is rel_bset .
-lift_definition rel_set\<^sub>k\<^sub>2 :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'a set\<^sub>k\<^sub>2 \<Rightarrow> 'b set\<^sub>k\<^sub>2 \<Rightarrow> bool" is rel_bset .
-
-bnf "'a set\<^sub>k"
-  map: map_set\<^sub>k
-  sets: set\<^sub>k
-  bd: "|UNIV::k set|"
-  rel: rel_set\<^sub>k
-  apply transfer apply (simp add: bset.map_id0)
-  apply transfer apply (rule ext) apply (simp add: bset.map_comp)
-  apply transfer using bset.map_cong apply blast
-  apply transfer apply (rule ext) apply (simp add: map_bset.rep_eq)
-  apply (simp add: Field_natLeq csum_def)
-  apply (simp add: k_Cinfinite)
-  using BNF_Cardinal_Arithmetic.regularCard_csum k_Cinfinite kregular natLeq_Card_order natLeq_cinfinite regularCard_natLeq apply blast
-  apply transfer apply transfer
-  apply (erule ordLess_ordIso_trans)
-  apply (rule csum_absorb2)
-  apply (rule k_Cinfinite)
-  apply (rule natLeq_ordLeq_cinfinite)
-  apply (rule k_Cinfinite)
-  apply (rule predicate2I) apply transfer apply (simp add: bset.rel_compp)
-  apply transfer using bset.in_rel apply fastforce
-  done
-
-bnf "'a set\<^sub>k\<^sub>1"
-  map: map_set\<^sub>k\<^sub>1
-  sets: set\<^sub>k\<^sub>1
-  bd: "|UNIV::k1 set|"
-  rel: rel_set\<^sub>k\<^sub>1
-  apply transfer apply (simp add: bset.map_id0)
-  apply transfer apply (rule ext) apply (simp add: bset.map_comp)
-  apply transfer using bset.map_cong apply blast
-  apply transfer apply (rule ext) apply (simp add: map_bset.rep_eq)
-  apply (simp add: Field_natLeq csum_def)
-  apply (simp add: k1_Cinfinite)
-  using BNF_Cardinal_Arithmetic.regularCard_csum k1_Cinfinite k1_regular natLeq_Card_order natLeq_cinfinite regularCard_natLeq apply blast
-  apply transfer apply transfer
-  apply (erule ordLess_ordIso_trans)
-  apply (rule csum_absorb2)
-  apply (rule k1_Cinfinite)
-  apply (rule natLeq_ordLeq_cinfinite)
-  apply (rule k1_Cinfinite)
-  apply (rule predicate2I) apply transfer apply (simp add: bset.rel_compp)
-  apply transfer using bset.in_rel apply fastforce
-  done
-
-bnf "'a set\<^sub>k\<^sub>2"
-  map: map_set\<^sub>k\<^sub>2
-  sets: set\<^sub>k\<^sub>2
-  bd: "|UNIV::k2 set|"
-  rel: rel_set\<^sub>k\<^sub>2
-  apply transfer apply (simp add: bset.map_id0)
-  apply transfer apply (rule ext) apply (simp add: bset.map_comp)
-  apply transfer using bset.map_cong apply blast
-  apply transfer apply (rule ext) apply (simp add: map_bset.rep_eq)
-  apply (simp add: Field_natLeq csum_def)
-  apply (simp add: k2_Cinfinite)
-  using BNF_Cardinal_Arithmetic.regularCard_csum k2_Cinfinite k2_regular natLeq_Card_order natLeq_cinfinite regularCard_natLeq apply blast
-  apply transfer apply transfer
-  apply (erule ordLess_ordIso_trans)
-  apply (rule csum_absorb2)
-  apply (rule k2_Cinfinite)
-  apply (rule natLeq_ordLeq_cinfinite)
-  apply (rule k2_Cinfinite)
-  apply (rule predicate2I) apply transfer apply (simp add: bset.rel_compp)
-  apply transfer using bset.in_rel apply fastforce
-  done
-
-declare [[mrbnf_internals]]
-binder_datatype 'a ifol'
-  = Eq 'a 'a
-  | Neg "'a ifol'"
-  | Conj "'a ifol' set\<^sub>k\<^sub>1"
-  | All "(xs::'a) set\<^sub>k\<^sub>2" t::"'a ifol'" binds xs in t
-
-definition Bot :: "'a::var_ifol'_pre ifol'" ("\<bottom>") where
-  "Bot \<equiv> Neg (Conj (Abs_set\<^sub>k\<^sub>1 bempty))"
-
-instance k::var_set\<^sub>k\<^sub>1
-apply standard
-apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
-apply (rule set\<^sub>k\<^sub>1.bd_Card_order)
-apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF kmax]])
-apply (rule ordLeq_csum1)
-apply (rule card_of_Card_order)
-apply (rule kregular)
-done
-
-instance k::var_set\<^sub>k\<^sub>2
-apply standard
-apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
-apply (rule set\<^sub>k\<^sub>2.bd_Card_order)
-apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF kmax]])
-apply (rule ordLeq_csum2)
-apply (rule card_of_Card_order)
-apply (rule kregular)
-done
-
-instance k::var_ifol'_pre
-apply standard
-apply (rule ordIso_ordLeq_trans[OF card_of_Field_natLeq])
-apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF kmax]])
-apply (rule natLeq_ordLeq_cinfinite)
-apply (rule Cinfinite_csum1)
-apply (rule k1_Cinfinite)
-apply (rule kregular)
-done
-
-lemma ifol'_rrename_simps[simp]:
-fixes f::"'a::var_ifol'_pre \<Rightarrow> 'a"
-shows  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (Eq x1 x2) = Eq (f x1) (f x2)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (Neg x) = Neg (rrename_ifol' f x)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (Conj F) = Conj (map_set\<^sub>k\<^sub>1 (rrename_ifol' f) F)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (All x3 x4) = All (map_set\<^sub>k\<^sub>2 f x3) (rrename_ifol' f x4)"
-  apply (auto simp: ifol'_vvsubst_rrename[symmetric])[3]
-  apply (unfold All_def ifol'.rrename_cctors map_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
-    map_sum.simps map_prod_simp
-    )
-  apply (rule refl)
-  done
-lemma rrename_Bot_simp[simp]: "bij (f::'a::var_ifol'_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f \<bottom> = \<bottom>"
-  unfolding Bot_def ifol'_rrename_simps map_set\<^sub>k\<^sub>1_def map_fun_def comp_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I]
-  unfolding id_def map_bset_bempty
-  by (rule refl)
-
-type_synonym var = k
-type_synonym ifol = "var ifol'"
-
-abbreviation (input) subst :: "ifol \<Rightarrow> (var \<Rightarrow> var) \<Rightarrow> ifol" ("_\<lbrakk>_\<rbrakk>" [600, 600] 400) where
-  "subst t \<rho> \<equiv> vvsubst_ifol' \<rho> t"
-
-lift_definition kmember :: "'a \<Rightarrow> 'a set\<^sub>k \<Rightarrow> bool" (infix "\<in>\<^sub>k" 200) is "bmember" .
-lift_definition k1member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>1 \<Rightarrow> bool" (infix "\<in>\<^sub>k\<^sub>1" 200) is "bmember" .
-lift_definition k2member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>2 \<Rightarrow> bool" (infix "\<in>\<^sub>k\<^sub>2" 200) is "bmember" .
-
-lift_definition kinsert :: "'a set\<^sub>k \<Rightarrow> 'a \<Rightarrow> 'a set\<^sub>k" (infixl "," 600) is "\<lambda>xs x. binsert x xs" .
-
-instantiation k :: infinite begin
-instance apply standard
-  using cinfinite_iff_infinite var_set\<^sub>k\<^sub>2_class.cinfinite by blast
-end
-
-lemma small_set\<^sub>k\<^sub>2[simp]: "small (set\<^sub>k\<^sub>2 (V :: k set\<^sub>k\<^sub>2))"
-  unfolding small_def
-  apply (rule ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd])
-  using var_set\<^sub>k\<^sub>2_class.large by force
-
-lemma in_k_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k \<Delta> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta>"
-unfolding kmember_def map_fun_def id_o o_id map_set\<^sub>k_def
-unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
-apply transfer apply transfer by blast
-
-lemma in_k_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
-  unfolding isPerm_def
-  apply (erule conjE)
-  apply (rule iffI)
-  apply (drule in_k_equiv'[rotated])
-  apply (rule bij_imp_bij_inv)
-  apply assumption
-  apply (subst (asm) ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst (asm) set\<^sub>k.map_comp)
-  apply (subst (asm) ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst (asm) inv_o_simp1, assumption)+
-  apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-  apply (unfold id_def)[1]
-  apply assumption
-  apply (erule in_k_equiv'[rotated])
-  apply assumption
-  done
-
-lemma in_k1_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) F"
-apply (unfold k1member_def map_fun_def comp_def id_def map_set\<^sub>k\<^sub>1_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I])
-apply transfer apply transfer by blast
-
-lemma in_k1_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
-  unfolding isPerm_def
-  apply (erule conjE)
-  apply (rule iffI)
-  apply (drule in_k1_equiv'[rotated])
-  apply (rule bij_imp_bij_inv)
-  apply assumption
-  apply (subst (asm) ifol'.rrename_comps)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst (asm) set\<^sub>k\<^sub>1.map_comp)
-  apply (subst (asm) ifol'.rrename_comp0s)
-  apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
-  apply (subst (asm) inv_o_simp1, assumption)+
-  apply (unfold ifol'.rrename_id0s set\<^sub>k\<^sub>1.map_id)
-  apply (unfold id_def)[1]
-  apply assumption
-  apply (erule in_k1_equiv'[rotated])
-  apply assumption
-  done
-
-lemma kinsert_equiv[simp]: "map_set\<^sub>k f (kinsert xs x) = kinsert (map_set\<^sub>k f xs) (f x)"
-unfolding map_set\<^sub>k_def map_fun_def id_o o_id kinsert_def
-unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
-apply transfer apply transfer by blast
-
-lemma supp_o_bij: "bij \<sigma> \<Longrightarrow> supp (\<sigma> \<circ> f \<circ> inv \<sigma>) = \<sigma> ` supp f"
-  unfolding supp_def using bij_image_Collect_eq by fastforce
-
-lemma bij_betw_snth:
-assumes V: "|V::var set| <o |UNIV::var set|"
-shows "\<exists>f vs'. bij_betw f (set\<^sub>k\<^sub>2 vs) (set\<^sub>k\<^sub>2 vs') \<and> V \<inter> set\<^sub>k\<^sub>2 vs' = {} \<and> map_set\<^sub>k\<^sub>2 f vs = vs'"
-proof-
-  have "|UNIV - V| =o |UNIV::var set|" apply(rule card_of_Un_diff_infinite)
-  using V by (auto simp: infinite_UNIV)
-  hence "|set\<^sub>k\<^sub>2 vs| <o |UNIV - V|"
-  by (metis Field_card_of ordIso_symmetric ordLeq_iff_ordLess_or_ordIso ordLess_ordIso_trans ordLess_transitive set\<^sub>k\<^sub>2.set_bd var_set\<^sub>k\<^sub>2_class.large)
-  then obtain f where f: "inj_on f (set\<^sub>k\<^sub>2 vs)" "f ` (set\<^sub>k\<^sub>2 vs) \<subseteq> UNIV - V"
-  by (meson card_of_ordLeq ordLess_imp_ordLeq)
-  show ?thesis apply(intro exI[of _ f] exI[of _ "map_set\<^sub>k\<^sub>2 f vs"])
-  using f unfolding bij_betw_def using set\<^sub>k\<^sub>2.set_map by fastforce
-qed
-
-lemma refresh:
-  assumes V: "set\<^sub>k\<^sub>2 xs \<inter> V = {} " "|V| <o |UNIV::var set|"
-shows "\<exists>f xs'. bij (f::var\<Rightarrow>var) \<and> |supp f| <o |UNIV::var set| \<and>
-               set\<^sub>k\<^sub>2 xs' \<inter> set\<^sub>k\<^sub>2 xs = {} \<and> set\<^sub>k\<^sub>2 xs' \<inter> V = {} \<and>
-               map_set\<^sub>k\<^sub>2 f xs = xs' \<and> id_on V f"
-proof-
-  have ss: "|set\<^sub>k\<^sub>2 xs| <o |UNIV::var set|"
-  apply (rule ordLess_ordLeq_trans)
-  apply (rule set\<^sub>k\<^sub>2.set_bd)
-  using var_set\<^sub>k\<^sub>2_class.large by auto
-  hence ss1: "|set\<^sub>k\<^sub>2 xs \<union> V| <o |UNIV::var set|"
-  by (meson assms(2) var_ifol'_pre_class.Un_bound)
-  obtain f xs' where f: "bij_betw f (set\<^sub>k\<^sub>2 xs) (set\<^sub>k\<^sub>2 xs')"
-  "set\<^sub>k\<^sub>2 xs \<inter> set\<^sub>k\<^sub>2 xs' = {}" "V \<inter> set\<^sub>k\<^sub>2 xs' = {}" "map_set\<^sub>k\<^sub>2 f xs = xs'"
-  using bij_betw_snth[OF ss1, of xs] by fastforce
-  hence iif: "inj_on f (set\<^sub>k\<^sub>2 xs)" unfolding bij_betw_def by auto
-
-  obtain u where u: "bij u \<and>
-      |supp u| <o |UNIV::var set| \<and> bij_betw u (set\<^sub>k\<^sub>2 xs) (set\<^sub>k\<^sub>2 xs') \<and>
-      imsupp u \<inter> V = {} \<and>
-      eq_on (set\<^sub>k\<^sub>2 xs) u f"
-  using ex_bij_betw_supp_UNIV[OF _ ss f(1,2), of V] V(1) f(3)
-  using infinite_UNIV by blast
-  hence iiu: "inj_on u (set\<^sub>k\<^sub>2 xs)" unfolding bij_betw_def by auto
-
-  show ?thesis apply(intro exI[of _ u] exI[of _ xs'])
-  using u f iif iiu unfolding eq_on_def id_on_def imsupp_def supp_def
-  by (smt (verit) UnCI disjoint_iff mem_Collect_eq set\<^sub>k\<^sub>2.map_cong)
-qed
-
-lemma Int_Diff_empty: "A \<inter> (B - C) = {} \<Longrightarrow> A \<inter> C = {} \<Longrightarrow> A \<inter> B = {}"
-by blast
-
-binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (infix "\<turnstile>" 100) where
+binder_inductive deduct :: "fmla set\<^sub>k \<Rightarrow> fmla \<Rightarrow> bool" (infix "\<turnstile>" 100) where
   Hyp: "f \<in>\<^sub>k \<Delta> \<Longrightarrow> \<Delta> \<turnstile> f"
 | ConjI: "(\<And>f. f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> \<Delta> \<turnstile> f) \<Longrightarrow> \<Delta> \<turnstile> Conj F"
 | ConjE: "\<lbrakk> \<Delta> \<turnstile> Conj F ; f \<in>\<^sub>k\<^sub>1 F \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f"
 | NegI: "\<Delta>,f \<turnstile> \<bottom> \<Longrightarrow> \<Delta> \<turnstile> Neg f"
 | NegE: "\<lbrakk> \<Delta> \<turnstile> Neg f ; \<Delta> \<turnstile> f \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> \<bottom>"
-| AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
+| AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FFVars_Fmla ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
   subgoal for R B \<sigma> x1 x2
     unfolding induct_rulify_fallback split_beta
     apply (elim disj_forward exE)
-          apply (auto simp: ifol'.rrename_comps in_k_equiv in_k_equiv' isPerm_def ifol'.rrename_ids supp_inv_bound)
+          apply (auto simp: Fmla.rrename_comps in_k_equiv in_k_equiv' isPerm_def Fmla.rrename_ids supp_inv_bound)
          apply (rule exI)
          apply (rule conjI)
           apply (rule refl)
          apply (rule allI impI)+
          apply (unfold set\<^sub>k.map_comp)
-         apply (subst ifol'.rrename_comp0s)
+         apply (subst Fmla.rrename_comp0s)
              apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
          apply (subst inv_o_simp1, assumption)
-         apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
+         apply (unfold Fmla.rrename_id0s set\<^sub>k.map_id)
          apply (rotate_tac -1)
          apply (drule iffD2[OF in_k1_equiv, of "inv \<sigma>", rotated])
           apply (unfold isPerm_def)
           apply (assumption | rule conjI bij_imp_bij_inv supp_inv_bound)+
          apply (subst (asm) set\<^sub>k\<^sub>1.map_comp)
-         apply (subst (asm) ifol'.rrename_comp0s)
+         apply (subst (asm) Fmla.rrename_comp0s)
              apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
          apply (subst (asm) inv_o_simp1, assumption)
-         apply (unfold ifol'.rrename_id0s set\<^sub>k\<^sub>1.map_id)
+         apply (unfold Fmla.rrename_id0s set\<^sub>k\<^sub>1.map_id)
          apply (erule allE)
          apply (erule impE)
           apply assumption+
-        apply (subst ifol'.rrename_comp0s)
+        apply (subst Fmla.rrename_comp0s)
             apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
         apply (subst inv_o_simp1, assumption)
-        apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-        apply (metis bij_imp_bij_inv ifol'.rrename_comps ifol'.rrename_ids ifol'_rrename_simps(3) in_k1_equiv' inv_o_simp1 supp_inv_bound)
-       apply (metis ifol'.rrename_bijs ifol'.rrename_inv_simps inv_o_simp1 inv_simp1 set\<^sub>k.map_id)
-      apply (metis ifol'.rrename_bijs ifol'.rrename_inv_simps inv_o_simp1 inv_simp1 set\<^sub>k.map_id)
+        apply (unfold Fmla.rrename_id0s set\<^sub>k.map_id)
+        apply (metis bij_imp_bij_inv Fmla.rrename_comps Fmla.rrename_ids Fmla_rrename_simps(3) in_k1_equiv' inv_o_simp1 supp_inv_bound)
+       apply (metis Fmla.rrename_bijs Fmla.rrename_inv_simps inv_o_simp1 inv_simp1 set\<^sub>k.map_id)
+      apply (metis Fmla.rrename_bijs Fmla.rrename_inv_simps inv_o_simp1 inv_simp1 set\<^sub>k.map_id)
     subgoal for f V
-      apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
+      apply (rule exI[of _ "rrename_Fmla \<sigma> f"])
       apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
-      by (smt (verit, ccfv_threshold) bij_imp_bij_inv ifol'.rrename_comp0s ifol'.rrename_id0s ifol'.rrename_ids ifol'.set_map0 ifol'_vvsubst_rrename image_Int_empty image_Union image_comp inv_o_simp1 pointfree_idE set\<^sub>k.map_ident_strong set\<^sub>k.set_map set\<^sub>k\<^sub>2.set_map supp_inv_bound)
+      by (smt (verit, ccfv_threshold) bij_imp_bij_inv Fmla.rrename_comp0s Fmla.rrename_id0s Fmla.rrename_ids Fmla.set_map0 Fmla_vvsubst_rrename image_Int_empty image_Union image_comp inv_o_simp1 pointfree_idE set\<^sub>k.map_ident_strong set\<^sub>k.set_map set\<^sub>k\<^sub>2.set_map supp_inv_bound)
     subgoal for V f \<rho>
       apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
       apply (unfold set\<^sub>k\<^sub>2.set_map)
@@ -394,32 +53,32 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
       apply (unfold set\<^sub>k\<^sub>2.map_comp)
       apply (subst inv_o_simp1, assumption)
       apply (unfold set\<^sub>k\<^sub>2.map_id)
-      apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
-      apply (subst ifol'.rrename_comps)
+      apply (rule exI[of _ "rrename_Fmla \<sigma> f"])
+      apply (subst Fmla.rrename_comps)
           apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
       apply (subst inv_o_simp1, assumption)
-      apply (unfold ifol'.rrename_ids)
+      apply (unfold Fmla.rrename_ids)
       apply (rule exI[of _ "\<sigma> \<circ> \<rho> \<circ> inv \<sigma>"])
       apply (subgoal_tac "|supp \<rho>| <o |UNIV::k set|")
        prefer 2
        apply (erule card_of_subset_bound)
       apply (simp add: small_set\<^sub>k\<^sub>2[unfolded small_def])
-      apply (subst ifol'.map_comp0)
+      apply (subst Fmla.map_comp0)
         apply (rule supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
-      apply (subst ifol'.map_comp0)
+      apply (subst Fmla.map_comp0)
         apply (rule supp_inv_bound supp_comp_bound infinite_UNIV | assumption)+
       apply (subst supp_o_bij)
        apply assumption
       apply (subst comp_apply)
-      apply (unfold ifol'_vvsubst_rrename ifol'_vvsubst_rrename[OF bij_imp_bij_inv supp_inv_bound])
-      apply (subst ifol'.rrename_comps)
+      apply (unfold Fmla_vvsubst_rrename Fmla_vvsubst_rrename[OF bij_imp_bij_inv supp_inv_bound])
+      apply (subst Fmla.rrename_comps)
           apply (rule supp_inv_bound bij_imp_bij_inv | assumption)+
       apply (subst inv_o_simp1, assumption)
-      apply (unfold ifol'.rrename_ids comp_def)
+      apply (unfold Fmla.rrename_ids comp_def)
       apply (rule conjI)
        apply (rule refl)
       apply (rule conjI)
-      apply (metis ifol'.rrename_bijs ifol'.rrename_inv_simps inv_simp1 set\<^sub>k.map_ident_strong)
+      apply (metis Fmla.rrename_bijs Fmla.rrename_inv_simps inv_simp1 set\<^sub>k.map_ident_strong)
       apply (erule image_mono)
       done
     done
@@ -431,18 +90,18 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
      apply (elim exE conjE)
     apply simp
     subgoal for \<Delta> f V
-      apply (rule exE[OF refresh[of V "\<Union>(FFVars_ifol' ` set\<^sub>k \<Delta>) \<union> FFVars_ifol' (All V f)", unfolded ifol'.set
+      apply (rule exE[OF refresh[of V "\<Union>(FFVars_Fmla ` set\<^sub>k \<Delta>) \<union> FFVars_Fmla (All V f)", unfolded Fmla.set
               Un_Diff Diff_idemp
               ]])
         apply blast
-      apply (metis (no_types, lifting) ifol'.set(4) ifol'.set_bd_UNIV set\<^sub>k.set_bd var_ifol'_pre_class.UN_bound var_ifol'_pre_class.Un_bound)
+      apply (metis (no_types, lifting) Fmla.set(4) Fmla.set_bd_UNIV set\<^sub>k.set_bd var_Fmla_pre_class.UN_bound var_Fmla_pre_class.Un_bound)
       apply (erule exE conjE)+
       subgoal for g VV
-        apply (rule exI[of _ "map_set\<^sub>k (rrename_ifol' g) \<Delta>"])
+        apply (rule exI[of _ "map_set\<^sub>k (rrename_Fmla g) \<Delta>"])
         apply (rule exI[of _ "g ` set\<^sub>k\<^sub>2 V"])
         apply (rule conjI[rotated])
          apply (metis set\<^sub>k\<^sub>2.set_map)
-        apply (rule exI[of _ "rrename_ifol' g f"])
+        apply (rule exI[of _ "rrename_Fmla g f"])
         apply (rule exI[of _ VV])
         apply (rule conjI)
          apply (drule arg_cong[of _ _ set\<^sub>k\<^sub>2])
@@ -456,7 +115,7 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
          apply (rule trans)
           apply (rule id_apply)
          apply (rule sym)
-         apply (rule ifol'.rrename_cong_ids)
+         apply (rule Fmla.rrename_cong_ids)
            apply assumption+
          apply (erule id_onD)
          apply (rule UnI1)
@@ -469,7 +128,7 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
            apply assumption
           apply (rule conjI | assumption)+
 
-         apply (unfold set\<^sub>k.set_map image_comp[unfolded comp_def] ifol'.FFVars_rrenames
+         apply (unfold set\<^sub>k.set_map image_comp[unfolded comp_def] Fmla.FFVars_rrenames
             image_UN[symmetric]
             )[1]
          apply hypsubst
@@ -481,15 +140,15 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
          apply assumption
 
         apply (subst All_def)+
-        apply (unfold ifol'.TT_injects0)
+        apply (unfold Fmla.TT_injects0)
         apply (rule exI[of _ g])
         apply (rule conjI, assumption)+
         apply (rule conjI)
 
-         apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
+         apply (unfold set3_Fmla_pre_def comp_def Abs_Fmla_pre_inverse[OF UNIV_I]
             map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
-            Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
-            UN_singleton map_ifol'_pre_def
+            Un_empty_left Un_empty_right Union_empty UN_single set2_Fmla_pre_def set\<^sub>k\<^sub>2.set_map
+            UN_singleton map_Fmla_pre_def
             )
          apply (erule id_on_antimono)
          apply (rule Un_upper2)
@@ -501,22 +160,22 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
      apply (elim exE conjE)
     apply simp
     apply hypsubst_thin
-    apply (subst ifol'.set_map)
+    apply (subst Fmla.set_map)
     apply (meson card_of_subset_bound small_def small_set\<^sub>k\<^sub>2)
     apply (unfold triv_forall_equality)
 
     subgoal premises prems for V f \<rho>
     proof -
       define X where "X \<equiv> set\<^sub>k\<^sub>2 V"
-      let ?O = "\<Union> (FFVars_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` FFVars_ifol' f \<union> imsupp \<rho> \<union> X \<union> (FFVars_ifol' f - set\<^sub>k\<^sub>2 V)"
+      let ?O = "\<Union> (FFVars_Fmla ` set\<^sub>k \<Delta>) \<union> \<rho> ` FFVars_Fmla f \<union> imsupp \<rho> \<union> X \<union> (FFVars_Fmla f - set\<^sub>k\<^sub>2 V)"
       have osmall: "|?O| <o |UNIV::var set|"
-        apply (intro var_ifol'_pre_class.Un_bound)
-        apply (meson ifol'.set_bd_UNIV set\<^sub>k.set_bd var_ifol'_pre_class.UN_bound)
-        using ifol'.set_bd_UNIV small_def small_image apply blast
+        apply (intro var_Fmla_pre_class.Un_bound)
+        apply (meson Fmla.set_bd_UNIV set\<^sub>k.set_bd var_Fmla_pre_class.UN_bound)
+        using Fmla.set_bd_UNIV small_def small_image apply blast
         unfolding imsupp_def
-        apply (meson card_of_image card_of_subset_bound ordLeq_ordLess_trans prems(3) small_def small_set\<^sub>k\<^sub>2 var_ifol'_pre_class.Un_bound)
+        apply (meson card_of_image card_of_subset_bound ordLeq_ordLess_trans prems(3) small_def small_set\<^sub>k\<^sub>2 var_Fmla_pre_class.Un_bound)
         using X_def small_def small_set\<^sub>k\<^sub>2 apply blast
-        using card_of_minus_bound ifol'.set_bd_UNIV by blast
+        using card_of_minus_bound Fmla.set_bd_UNIV by blast
 
       obtain W' g where W': "W' \<inter> ?O = {}" "bij_betw g X W'"
       proof atomize_elim
@@ -547,14 +206,14 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
 
       have "|X \<union> W'| <o |UNIV::var set|" unfolding X_def using W'
         using small_set\<^sub>k\<^sub>2[unfolded small_def]
-        by (metis X_def bij_betw_imp_surj_on small_def small_image var_ifol'_pre_class.Un_bound)
+        by (metis X_def bij_betw_imp_surj_on small_def small_image var_Fmla_pre_class.Un_bound)
       moreover have "supp \<sigma> \<subseteq> X \<union> W'" using \<sigma>(2) unfolding id_on_def by (meson UnI1 UnI2 \<sigma>_def not_in_supp_alt subsetI)
       ultimately have \<sigma>_small: "|supp \<sigma>| <o |UNIV::var set|" using card_of_subset_bound by blast
 
-      define \<rho>' where "\<rho>' \<equiv> \<lambda>x. if x \<in> \<sigma> ` FFVars_ifol' f then (\<rho> \<circ> \<sigma>) x else x"
+      define \<rho>' where "\<rho>' \<equiv> \<lambda>x. if x \<in> \<sigma> ` FFVars_Fmla f then (\<rho> \<circ> \<sigma>) x else x"
       have "supp \<rho>' \<subseteq> supp (\<rho> \<circ> \<sigma>)" unfolding \<rho>'_def supp_def by auto
       then have \<rho>'_small: "|supp \<rho>'| <o |UNIV::var set|"
-        by (meson \<sigma>_small card_of_subset_bound ifol'_pre.supp_comp_bound prems(3) small_def small_set\<^sub>k\<^sub>2)
+        by (meson \<sigma>_small card_of_subset_bound Fmla_pre.supp_comp_bound prems(3) small_def small_set\<^sub>k\<^sub>2)
 
       show ?thesis using prems W'
         apply -
@@ -563,17 +222,17 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
         apply (rule conjI)
          apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
          apply (rule conjI[rotated])+
-           apply (rule exI[of _ "rrename_ifol' \<sigma> f"])
+           apply (rule exI[of _ "rrename_Fmla \<sigma> f"])
            apply (rule exI[of _ \<rho>'])
 
            apply (rule conjI)
-            apply (subst ifol'_vvsubst_rrename[symmetric])
+            apply (subst Fmla_vvsubst_rrename[symmetric])
               apply (rule \<sigma>_bij)
              apply (rule \<sigma>_small)
-            apply (subst ifol'.map_comp)
+            apply (subst Fmla.map_comp)
               apply (rule \<sigma>_small)
              apply (rule \<rho>'_small)
-            apply (rule ifol'.map_cong)
+            apply (rule Fmla.map_cong)
                apply (meson card_of_subset_bound small_def small_set\<^sub>k\<^sub>2)
               apply (rule supp_comp_bound)
                 apply (rule \<sigma>_small)
@@ -588,11 +247,11 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
              prefer 2
              apply assumption
             apply (rule sym)
-            apply (unfold All_def ifol'.TT_injects0)[1]
-            apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
+            apply (unfold All_def Fmla.TT_injects0)[1]
+            apply (unfold set3_Fmla_pre_def comp_def Abs_Fmla_pre_inverse[OF UNIV_I]
             map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
-            Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
-            UN_singleton map_ifol'_pre_def
+            Un_empty_left Un_empty_right Union_empty UN_single set2_Fmla_pre_def set\<^sub>k\<^sub>2.set_map
+            UN_singleton map_Fmla_pre_def
             )[1]
             apply (rule exI[of _ \<sigma>])
             apply (rule conjI, rule \<sigma>_bij)
@@ -603,7 +262,7 @@ binder_inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bo
             apply (rule refl)
 
            apply (unfold set\<^sub>k\<^sub>2.set_map)
-           apply (subgoal_tac "supp (\<rho> \<circ> \<sigma>) \<inter> \<sigma> ` FFVars_ifol' f \<subseteq> \<sigma> ` set\<^sub>k\<^sub>2 V")
+           apply (subgoal_tac "supp (\<rho> \<circ> \<sigma>) \<inter> \<sigma> ` FFVars_Fmla f \<subseteq> \<sigma> ` set\<^sub>k\<^sub>2 V")
             apply (smt (verit, best) IntI \<rho>'_def not_in_supp_alt subset_iff)
            apply (unfold supp_def imsupp_def)
         using X_def \<sigma>_def apply auto[1]

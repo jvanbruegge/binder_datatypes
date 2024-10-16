@@ -133,7 +133,7 @@ Most of our examples and case studies consist of three distinct types of theorie
     * In thys/Pi_Calculus, the theories Pi_Transition_Early.thy and Pi_Transition_Late.thy use the `binder-inductive` command to define and endow with strong rule induction the late and early transition relations discussed in Sect. 7.1; and the theory Pi_cong.thy does the same for both the structural-congruence and the transition relations for the variant of pi-calculus discussed in App. B. 
     * In thys/POPLmark, the theory SystemFSub.thy is dedicated to defining (in addition to some auxiliary concepts such as well-formedness of contexts) the typing relation for System-F-with-subtyping discussed in Sect. 7.2. Here, because (as discussed in Sects. 7.2 and 7.3) we want to make use of an inductively proved lemma before we prove Refreshability (a prerequisite for enabling strong rule induction), we make use of a more flexible version of `binding_inductive`: namely we introduce the typing relation as a standard inductive definition (using Isabelle's `inductive` command), then prove the lemma that we need, and at the end we "make" this predicate into a binder-aware inductive predicate (via our command `make_binder_inductive`), generating the strong induction theorem, here named `ty.strong_induct` (since the typing predicate is called `ty`). Note that, in general, a `binder_inductive` command is equivalent to an `inductive` command followed immediately by a `make_binder_inductive` command. We have implemented this finer-granularity `make_binder_inductive` command after the submission, so it is not yet documented in the paper. (In the previous version of the supplementary material we had a different (less convenient) solution, which inlined everything that needed to be proved as goals produced by `binder_inductive`.)
     * In thys/Infinitary_FOL, the theory InfFOL.thy introduces IFOL deduction again via `binder_inductive'.  
-    * In thys/Infinitary_Lambda_Calculus, we have several instantiations of the general strong induction theorem, Thm. 22. However, this is not done via the `binder_inductive` command, but by manually instantiating the locale coresponding to Thm. 22, namely `IInduct'. This is done for several inductive predicates needed by the Mazza case study: in  ILC_affine.thy and ILC_Renaming_Equivalence.thy for the `affine` predicate and the renaming equivalence relation from Sect. 8.3, in ILC_UBeta.thy for the uniform infinitary beta-reduction from App. E.3, and in ILC_good.thy for the `good` (auxiliary) predicate from App. E.6. (By contrast, the plain infinitary beta-reduction from App. E.1, located in ILC_Beta.thy and included just for illustration not for the case study, only requires Thm. 19 so it is serviced using `binder_inductive`.)
+    * In thys/Infinitary_Lambda_Calculus, we have several instantiations of the general strong induction theorem, Thm. 22. However, this is not done via the `binder_inductive` command, but by manually instantiating the locale coresponding to Thm. 22, namely `IInduct'. This is done for several inductive predicates needed by the Mazza case study: in  ILC_Renaming_Equivalence.thy for the renaming equivalence relation from Sect. 8.3, in ILC_UBeta.thy for the uniform infinitary beta-reduction from App. E.3, and in ILC_good.thy for the `good` (auxiliary) predicate from App. E.6. By contrast, the `affine` predicate in from App. E.3, located in ILC_affine.thy, and the plain infinitary beta-reduction from App. E.1, located in ILC_Beta.thy, only require Thm. 19 so they are handled using `binder_inductive`.
   
 (3) Proving facts specific to the case studies, namely: 
    * Theory thys/POPLmark/POPLmark_1A proves the transitivity of the typing relation for System-F-with-subtyping.  
@@ -149,7 +149,7 @@ As discussed in Sect. 9 and App. G, we have automated the production of binding-
    * The proof method `binder_induction` is implemented in XXX. TODO: One or two sentences. Point out the theorems where it is used. 
 
 
-### Mapping of the results from the paper to Isabelle theorem names
+### Mapping of the results from the the main paper to Isabelle theorem names
 
 Prop 1 --> subsumed by Prop. 2 (also generated and proved automatically by the standard inductive definition)
 
@@ -166,6 +166,14 @@ Prop 13 --> theorem `ty.strong_induct` (generated and proved by `binder_inductiv
 Prop 15 --> theorem `deduct.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinitary_FOL/InfFOL.thy
 
 Counterexample 16 --> theorem `counterexample` from No_Least_Support_Counterexample.thy
+
+Thm 19 --> theorem `strong_induct` (in locale `Induct`) from thys/Generic_Strong_Rule_Induction.thy. 
+
+Prop 20 --> theorem `affine.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinary_Lambda_Calculus/ILC_affine.thy 1234
+
+Thm 22 --> theorem `strong_iinduct` (in locale `IInduct`) from thys/Generic_Strong_Rule_Induction.thy. 
+
+
 
 
  

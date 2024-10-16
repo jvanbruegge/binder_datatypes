@@ -221,9 +221,15 @@ Lemma 36 --> the sublocale statement `sublocale NominalSet < LSNominalSet` from 
 All the facts shown here are generated automatically by our `binder_datatype` command. 
 
 
-##### Appendix E
+##### Appendix E 
 
-Thm 99 --> 
+We only indicate a selection only, namely the strong rule induction theorems and the main end results. 
+
+Prop 71 --> theorem `istep.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinitary_Lambda_Calculus/ILC_Beta.thy
+
+Prop 83 --> theorem `strong_induct_ustepD` from thys/Infinitary_Lambda_Calculus/ILC_UBeta.thy
+
+Thm. 99 --> 
 
 ##### Appendix F
 

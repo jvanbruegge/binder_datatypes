@@ -169,7 +169,9 @@ Counterexample 16 --> theorem `counterexample` from No_Least_Support_Counterexam
 
 Thm 19 --> theorem `strong_induct` (in locale `Induct`) from thys/Generic_Strong_Rule_Induction.thy. 
 
-Prop 20 --> theorem `affine.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinary_Lambda_Calculus/ILC_affine.thy 1234
+Prop 20 --> theorem `affine.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinary_Lambda_Calculus/ILC_affine.thy 
+
+Prop 21 --> theorem `strong_induct_reneqv` from ILC_Renaming_Equivalence.thy 
 
 Thm 22 --> theorem `strong_iinduct` (in locale `IInduct`) from thys/Generic_Strong_Rule_Induction.thy. 
 

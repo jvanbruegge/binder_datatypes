@@ -136,9 +136,9 @@ Most of our examples and case studies consist of three distinct types of theorie
     * In thys/Infinitary_Lambda_Calculus, we have several instantiations of the general strong induction theorem, Thm. 22. However, this is not done via the `binder_inductive` command, but by manually instantiating the locale coresponding to Thm. 22, namely `IInduct'. This is done for several inductive predicates needed by the Mazza case study: in  ILC_affine.thy and ILC_Renaming_Equivalence.thy for the `affine` predicate and the renaming equivalence relation from Sect. 8.3, in ILC_UBeta.thy for the uniform infinitary beta-reduction from App. E.3, and in ILC_good.thy for the `good` (auxiliary) predicate from App. E.6. (By contrast, the plain infinitary beta-reduction from App. E.1, located in ILC_Beta.thy and included just for illustration not for the case study, only requires Thm. 19 so it is serviced using `binder_inductive`.)
   
 (3) Proving facts specific to the case studies, namely: 
-   * Theory thys/POPLmark/POPLmark_1A proves the transitivity of the typing relation for System-F-with-subtyping 
+   * Theory thys/POPLmark/POPLmark_1A proves the transitivity of the typing relation for System-F-with-subtyping.  
    * Theory thys/Infinitary_Lambda_Calculus/Iso_LC_ILC.thy contains the main theorems pertaining to Mazza's isomorphism, after the theories Translation_LC_to_ILC.thy and Translation_ILC_to_LC.thy establish the back and forth translation between the finitary and infinitary calculi (via suitable binding-aware recursors). This follows quite faithfully the development described in App. E. 
-   * Theory thys/Urban_Berghofer_Norrish_Rule_Induction.thy, again following faithfully the development described in App. 9. 
+   * Theory thys/Urban_Berghofer_Norrish_Rule_Induction.thy  again follows faithfully the development described in App. A. 
    
    
 ### Tactics and automation using Isabelle/ML

@@ -143,8 +143,28 @@ Most of our examples and case studies consist of three distinct types of theorie
    
 ### Tactics and automation using Isabelle/ML
 
-As discussed in Sect. 9 and App. G, we have automated the production of binding-aware datatypes and inductive predicates (subject to strong rule induction) using Isabelle/ML, via the commands `binding_datatype`, `binder_inductive` (and its variant `make_binder_inductive`) and tactic `binder_induction`. 
+As discussed in Sect. 9 and App. G, we have automated the production of binding-aware datatypes and inductive predicates (subject to strong rule induction) using Isabelle/ML, via the commands `binding_datatype`, `binder_inductive` (and its variant `make_binder_inductive`) and proof method  `binder_induction`. 
    * The command `binding_datatype` is implemented in XXX. TODO: One or two sentences.  
    * The command `binder_inductive` and `make_binder_inductive` are  implemented in XXX. TODO: One or two sentences. 
-   * The tactic `binder_induction` is implemented in XXX. TODO: One or two sentences. Point out the theorems where it is used. 
+   * The proof method `binder_induction` is implemented in XXX. TODO: One or two sentences. Point out the theorems where it is used. 
+
+
+### Mapping of the results from the paper to Isabelle theorem names
+
+Prop 1 --> subsumed by Prop. 2 (also generated and proved automatically by the standard inductive definition)
+
+Prop 2 --> theorem `step.strong_induct` (generated and proved by `binder_inductive`) from thys/Untyped_Lambda_Calculus
+
+Thms 4 and 5 --> just recallections of the standard result (available in the Isabelle library)
+
+Thm 7 --> theorem `strong_iinduct` (in locale `IInduct`) from thys/Generic_Strong_Rule_Induction.thy. 
+
+Prop 12 --> theorems called `trans.strong_induct` (generated and proved by `binder_inductive`) from Pi_Transition_Early.thy and Pi_Transition_Late.thy
+
+
+ 
+
+
+
+
 

@@ -142,12 +142,9 @@ As discussed in Sect. 9 and App. G, we have automated the production of binding-
 
 ### Mapping of the results from the paper to Isabelle theorem names
 
-<<<<<<< HEAD
 
 #### For the main paper 
-=======
-#### For the main paper
->>>>>>> 95d030e998860a5f530840962ca4d04f702d273e
+
 
 ##### Appendix A
 
@@ -186,7 +183,7 @@ Thm. 29 --> just a recallection of the standard rule induction of the predicate 
 
 Thm. 33 --> this is infered from our Thm. 19 (theorem `strong_induct` in locale `Induct`) via a sublocale relationship: `UBN < UBN: Induct_simple` (the second `UBN` is just a label to avoid name clashes), which makes the theorem `strong_induct` available into the locale `UBN`
 
-<<<<<<< HEAD
+
 
 
 

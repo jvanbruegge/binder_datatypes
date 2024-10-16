@@ -157,9 +157,15 @@ Prop 2 --> theorem `step.strong_induct` (generated and proved by `binder_inducti
 
 Thms 4 and 5 --> just recallections of the standard result (available in the Isabelle library)
 
-Thm 7 --> theorem `strong_iinduct` (in locale `IInduct`) from thys/Generic_Strong_Rule_Induction.thy. 
+Thm 7 (already the strengthened version discussed in Sect. 7.3) --> theorem `strong_induct_nom` (in locale `Induct_nom`) from thys/Generic_Strong_Rule_Induction.thy. 
 
-Prop 12 --> theorems called `trans.strong_induct` (generated and proved by `binder_inductive`) from Pi_Transition_Early.thy and Pi_Transition_Late.thy
+Prop 12 --> theorems called `trans.strong_induct` (generated and proved by `binder_inductive`) from Pi_Transition_Early.thy and Pi_Transition_Late.thy. (As explained in the paper, Prop 12 actually shows a hybrid containing a selection of the more interesting rules for the two types of transitions.) 
+
+Prop 13 --> theorem `ty.strong_induct` (generated and proved by `binder_inductive`) from thys/POPLmark/SystemFSub.thy
+
+Prop 15 --> theorem `deduct.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinitary_FOL/InfFOL.thy
+
+Counterexample 16 --> theorem `counterexample` from No_Least_Support_Counterexample.thy
 
 
  

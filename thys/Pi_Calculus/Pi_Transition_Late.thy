@@ -44,4 +44,6 @@ binder_inductive trans :: "proc \<Rightarrow> com \<Rightarrow> bool" where
   done
 print_theorems
 
+thm trans.strong_induct
+
 end

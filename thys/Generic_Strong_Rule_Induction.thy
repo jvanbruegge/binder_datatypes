@@ -868,9 +868,13 @@ apply standard using G_refresh .
 (* This makes available the LS-nominal-set-theorem for nominal sets: *)
 context Induct_nom
 begin
-thm strong_iinduct
+lemmas strong_induct_nom = strong_iinduct[simplified]
 end
 
+print_statement Induct_nom.strong_induct_nom[unfolded
+  Induct_nom_def Induct1_nom_def NominalSet_def
+  Induct_nom_axioms_def Induct1_nom_axioms_def
+  conj_imp_eq_imp_imp, rule_format]
 
 print_statement Induct.strong_induct[unfolded
   Induct_def Induct1_def LSNominalSet_def

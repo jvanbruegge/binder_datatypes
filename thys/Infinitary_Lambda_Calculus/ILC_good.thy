@@ -266,7 +266,7 @@ and iAp: "\<And>e1 es2 p.
 shows "R p t"
 unfolding good_I
 using par st 
-unfolding bsmall_def[symmetric] apply(elim Reneqv.BE_iinduct[where R = "\<lambda>p t. R p t"])
+unfolding bsmall_def[symmetric] apply(elim Reneqv.strong_iinduct[where R = "\<lambda>p t. R p t"])
   subgoal unfolding good_I by simp
   subgoal for p B t apply(subst (asm) G_def) 
   unfolding good_I[symmetric] apply(elim disjE exE)

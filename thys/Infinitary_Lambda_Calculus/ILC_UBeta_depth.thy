@@ -361,7 +361,7 @@ shows "R p d t1 t2"
 unfolding ustepD_I
 apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
   subgoal by simp
-  subgoal using par st apply(elim Ustep.BE_iinduct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
+  subgoal using par st apply(elim Ustep.strong_iinduct[where R = "\<lambda>p (d,t1,t2). R p d t1 t2"])
     subgoal unfolding ustepD_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding ustepD_I[symmetric] apply(elim disjE exE)

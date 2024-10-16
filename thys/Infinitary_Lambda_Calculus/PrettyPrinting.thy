@@ -356,7 +356,7 @@ unfolding ppr_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
   subgoal by simp
   subgoal using par st 
-  unfolding bsmall_def[symmetric] apply(elim Ppr.BE_iinduct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
+  unfolding bsmall_def[symmetric] apply(elim Ppr.strong_iinduct[where R = "\<lambda>p (t1,t2). R p t1 t2"])
     subgoal unfolding ppr_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding ppr_I[symmetric] apply(elim disjE exE)

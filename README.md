@@ -108,7 +108,7 @@ The theory also contains less general versions of the first two of the above loc
 
 Most of our examples and case studies consist of three distinct types of theories:
 
-(1) Those introducing the relevant binding-aware datatypes, usually via our `binding_datatype` command described in Sect. 9 and App. G.1. and proving and customizing basic properties about them (such as properties of substitution and swapping). In particular, we have:
+(1) Those introducing the relevant binding-aware datatypes, usually via our `binder_datatype` command described in Sect. 9 and App. G.1. and proving and customizing basic properties about them (such as properties of substitution and swapping). In particular, we have:
 
 - theory thys/Untyped_Lambda_Calculus/LC.thy dedicated to (the definition and customization of) the datatype of lambda-terms described in Sect. 2 and App. D.1;
 - theory thys/Pi_Calculus/Pi.thy dedicated to the datatype of pi-calculus processes described in Sect. 7.1 and App. D.3;
@@ -116,7 +116,7 @@ Most of our examples and case studies consist of three distinct types of theorie
 - theory thys/Infinitary_FOL/InfFmla.thy dedicated to the datatype of infinitary FOL formulas described in Sect. 8.1 and App. D.4; here we work parametrically on two infinite regular cardinals `k1` and `k2`, which we axiomatize;
 - theory thys/Infinitary_Lambda_Calculus/ILC.thy dedicated to the datatype of infinitary lambda-terms described in Sect. 8.3 and App. D.2.
 
-An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that our parser currently does not yet cover the degenerate case of non-recursive binders).
+An exception to the rule of using `binder_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that our parser currently does not yet cover the degenerate case of non-recursive binders).
 
 (2) Those introducing the relevant binding-aware inductive predicates, usually via our `binder_inductive` command described in Sect. 9 and App. G.2) -- the exceptions being the instances of the binder-explicit Thm. 22, where we instantiate the locale manually. In particular, we have:
 
@@ -124,7 +124,7 @@ An exception to the rule of using `binding_datatype` is the (non-recursive) data
 
 * In thys/Pi_Calculus, the theories Pi_Transition_Early.thy and Pi_Transition_Late.thy use the `binder-inductive` command to define and endow with strong rule induction the late and early transition relations discussed in Sect. 7.1; and the theory Pi_cong.thy does the same for both the structural-congruence and the transition relations for the variant of pi-calculus discussed in App. B.
 
-* In thys/POPLmark, the theory SystemFSub.thy is dedicated to defining (in addition to some auxiliary concepts such as well-formedness of contexts) the typing relation for System-F-with-subtyping discussed in Sect. 7.2. Here, because (as discussed in Sects. 7.2 and 7.3) we want to make use of an inductively proved lemma before we prove Refreshability (a prerequisite for enabling strong rule induction), we make use of a more flexible version of `binding_inductive`: namely we introduce the typing relation as a standard inductive definition (using Isabelle's `inductive` command), then prove the lemma that we need, and at the end we "make" this predicate into a binder-aware inductive predicate (via our command `make_binder_inductive`), generating the strong induction theorem, here named `ty.strong_induct` (since the typing predicate is called `ty`). Note that, in general, a `binder_inductive` command is equivalent to an `inductive` command followed immediately by a `make_binder_inductive` command. We have implemented this finer-granularity `make_binder_inductive` command after the submission, so it is not yet documented in the paper. (In the previous version of the supplementary material we had a different (less convenient) solution, which inlined everything that needed to be proved as goals produced by `binder_inductive`.)
+* In thys/POPLmark, the theory SystemFSub.thy is dedicated to defining (in addition to some auxiliary concepts such as well-formedness of contexts) the typing relation for System-F-with-subtyping discussed in Sect. 7.2. Here, because (as discussed in Sects. 7.2 and 7.3) we want to make use of an inductively proved lemma before we prove Refreshability (a prerequisite for enabling strong rule induction), we make use of a more flexible version of `binder_inductive`: namely we introduce the typing relation as a standard inductive definition (using Isabelle's `inductive` command), then prove the lemma that we need, and at the end we "make" this predicate into a binder-aware inductive predicate (via our command `make_binder_inductive`), generating the strong induction theorem, here named `ty.strong_induct` (since the typing predicate is called `ty`). Note that, in general, a `binder_inductive` command is equivalent to an `inductive` command followed immediately by a `make_binder_inductive` command. We have implemented this finer-granularity `make_binder_inductive` command after the submission, so it is not yet documented in the paper. (In the previous version of the supplementary material we had a different (less convenient) solution, which inlined everything that needed to be proved as goals produced by `binder_inductive`.)
 
 * In thys/Infinitary_FOL, the theory InfFOL.thy introduces IFOL deduction again via `binder_inductive'.  
 
@@ -132,18 +132,18 @@ An exception to the rule of using `binding_datatype` is the (non-recursive) data
 
 (3) Proving facts specific to the case studies, namely:
 
-- Theory thys/POPLmark/POPLmark_1A proves the transitivity of the typing relation for System-F-with-subtyping.
+- Theory thys/POPLmark/POPLmark_1A.thy proves the transitivity of the typing relation for System-F-with-subtyping.
 - Theory thys/Infinitary_Lambda_Calculus/Iso_LC_ILC.thy contains the main theorems pertaining to Mazza's isomorphism, after the theories Translation_LC_to_ILC.thy and Translation_ILC_to_LC.thy establish the back and forth translation between the finitary and infinitary calculi (via suitable binding-aware recursors). This follows quite faithfully the development described in App. E.
 - Theory thys/Urban_Berghofer_Norrish_Rule_Induction.thy again follows faithfully the development described in App. A.
 
 ### Tactics and automation using Isabelle/ML
 
-As discussed in Sect. 9 and App. G, we have automated the production of binding-aware datatypes and inductive predicates (subject to strong rule induction) using Isabelle/ML, via the commands `binding_datatype`, `binder_inductive` (and its variant `make_binder_inductive`) and proof method `binder_induction`.
+As discussed in Sect. 9 and App. G, we have automated the production of binding-aware datatypes and inductive predicates (subject to strong rule induction) using Isabelle/ML, via the commands `binder_datatype`, `binder_inductive` (and its variant `make_binder_inductive`) and proof method `binder_induction`.
 
-- The command `binding_datatype` is implemented in XXX. TODO: One or two sentences.
-- The command `binder_inductive` and `make_binder_inductive` are implemented in XXX. TODO: One or two sentences.
-- The proof method `binder_induction` is implemented in XXX. TODO: One or two sentences. Point out the theorems where it is used.
-- todo: the tactic for heuristic too.
+- The command `binder_datatype` is implemented in `Tools/parser.ML`. However most of the ML code in this directory is used to construct a binder datatype. It also reuses the normal datatype construction code from HOL.
+- The command `binder_inductive` and `make_binder_inductive` are implemented in `Tools/binder_inductive.ML` and `Tools/binder_inductive_combined.ML`. The `binder_inductive` command just calls the normal Isabelle `inductive` command and immediately follows with a call to `make_binder_inductive`.
+- The proof method `binder_induction` is implemented in `Tools/binder_induction.ML`. It is adapted from the normal Isabelle induction proof method. For the given `avoiding:` clause it infers the set of free variables and uses that to instantiate the parameter rho in the `strong_induct` theorems.
+- The prototype implementation of the refreshability heuristic is defined inline in `thys/MRBNF_FP.thy`. Currently it requires all theorems to be passed manually, in a future version the required theorems will be inferred from the context.
 
 ### Mapping of the results from the paper to Isabelle theorem names
 

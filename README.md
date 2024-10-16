@@ -75,32 +75,32 @@ As sketched in the fourth paragraph of Sect. 9 and the first paragraph of App. G
 
 The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem corresponding to Thm. 22 is called `strong_iinduct`. It is built incrementally, from a previous `IInduct1` locale, which in turn extends a `CComponents` locale. The proof of the theorem follows the informal proof described in Sect. 4 (for Thm. 7), with the proof-mining and upgrades described in Sects. 7.3, 8.2 and 8.4 factored in. Overall, the cumulated assumptions of locale `IInduct` are those of Thm. 22, so these assumptions are of course no longer repeated when stating the theorem in the locale. But we can see the self-contained theorem with all assumptions if we type the following command outside the scope of the locale, which unfolds all the locale predicates:
 
-    ```
-    print_statement IInduct.strong_iinduct[unfolded
-          IInduct_def IInduct1_def CComponents_def
-          IInduct_axioms_def IInduct1_axioms_def
-          conj_imp_eq_imp_imp, rule_format]
-    ```
+```
+print_statement IInduct.strong_iinduct[unfolded
+      IInduct_def IInduct1_def CComponents_def
+      IInduct_axioms_def IInduct1_axioms_def
+      conj_imp_eq_imp_imp, rule_format]
+```
 
-    (We have added this printing command, and the other two shown below, at the end of the theory thys/Generic_Strong_Rule_Induction.thy.)
+(We have added this printing command, and the other two shown below, at the end of the theory thys/Generic_Strong_Rule_Induction.thy.)
 
-    The locale for Thm. 19 is called `Induct`. The fact that Thm. 19 is a particular case of (i.e., follows from)  Thm. 22 is captured by a sublocale relationship `sublocale Induct < IInduct`. Establishing this required us to prove that the assumptions of the `Induct` locale imply (the suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 18 from Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale:
+The locale for Thm. 19 is called `Induct`. The fact that Thm. 19 is a particular case of (i.e., follows from)  Thm. 22 is captured by a sublocale relationship `sublocale Induct < IInduct`. Establishing this required us to prove that the assumptions of the `Induct` locale imply (the suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 18 from Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale:
 
-    ```
-    print_statement Induct.strong_induct[unfolded
-         Induct_def Induct1_def LSNominalSet_def
-         Induct_axioms_def Induct1_axioms_def
-         conj_imp_eq_imp_imp, rule_format]
-    ```
+```
+print_statement Induct.strong_induct[unfolded
+     Induct_def Induct1_def LSNominalSet_def
+     Induct_axioms_def Induct1_axioms_def
+     conj_imp_eq_imp_imp, rule_format]
+```
 
-    Finally, the locale for Thm. 7 is called `Induct_nom`, and in turn is proved to be a sublocale of the `Induct` locale, reflecting the fact that Thm. 7 follows from Thm. 19.
+Finally, the locale for Thm. 7 is called `Induct_nom`, and in turn is proved to be a sublocale of the `Induct` locale, reflecting the fact that Thm. 7 follows from Thm. 19.
 
-    ```
-    Induct_nom.strong_induct_nom[unfolded
-          Induct_nom_def Induct1_nom_def NominalSet_def
-          Induct_nom_axioms_def Induct1_nom_axioms_def
-          conj_imp_eq_imp_imp, rule_format]
-    ```
+```
+Induct_nom.strong_induct_nom[unfolded
+      Induct_nom_def Induct1_nom_def NominalSet_def
+      Induct_nom_axioms_def Induct1_nom_axioms_def
+      conj_imp_eq_imp_imp, rule_format]
+```
 
 The theory also contains less general versions of the first two of the above locales, where the Refreshability assumption is replaced by the stronger Freshness assumption (introduced in Def. 6). The names of these Freshness-based versions have suffix `_simple` at the end, and we establish sublocale relationships between these and the Refreshability-based ones, namely `sublocale IInduct_simple < IInduct` and `sublocale Induct_simple < Induct`.
 
@@ -119,11 +119,16 @@ Most of our examples and case studies consist of three distinct types of theorie
 An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that our parser currently does not yet cover the degenerate case of non-recursive binders).
 
 (2) Those introducing the relevant binding-aware inductive predicates, usually via our `binder_inductive` command described in Sect. 9 and App. G.2) -- the exceptions being the instances of the binder-explicit Thm. 22, where we instantiate the locale manually. In particular, we have:
-_ In thys/Untyped_Lambda_Calculus, the theories LC_Beta.thy and LC_Parallel_Beta.thy, containing the inductive definitions of lambda-calculus beta-reduction and parallel beta-reduction respectively, referred to in Sects. 2 and 5. In particular, Prop. 2 from the paper (in the enhanced version described in Remark 8) is generated and proved via the `binder_inductive` command from LC_Beta.thy; it is called `step.strong_induct`. The corresponding theorem for parallel-beta is called `pstep.strong_induct`, which is generated and proved from the `binder-inductive` command from LC_Parallel_Beta.thy. A variant of parallel-beta decorated with the counting of the number applicative redexes (which is needed in the Mazza case study) is also defined in LG_Beta-depth.thy (and its strong rule induction follows the same course).
-_ In thys/Pi_Calculus, the theories Pi_Transition_Early.thy and Pi_Transition_Late.thy use the `binder-inductive` command to define and endow with strong rule induction the late and early transition relations discussed in Sect. 7.1; and the theory Pi_cong.thy does the same for both the structural-congruence and the transition relations for the variant of pi-calculus discussed in App. B.
-_ In thys/POPLmark, the theory SystemFSub.thy is dedicated to defining (in addition to some auxiliary concepts such as well-formedness of contexts) the typing relation for System-F-with-subtyping discussed in Sect. 7.2. Here, because (as discussed in Sects. 7.2 and 7.3) we want to make use of an inductively proved lemma before we prove Refreshability (a prerequisite for enabling strong rule induction), we make use of a more flexible version of `binding_inductive`: namely we introduce the typing relation as a standard inductive definition (using Isabelle's `inductive` command), then prove the lemma that we need, and at the end we "make" this predicate into a binder-aware inductive predicate (via our command `make_binder_inductive`), generating the strong induction theorem, here named `ty.strong_induct` (since the typing predicate is called `ty`). Note that, in general, a `binder_inductive` command is equivalent to an `inductive` command followed immediately by a `make_binder_inductive` command. We have implemented this finer-granularity `make_binder_inductive` command after the submission, so it is not yet documented in the paper. (In the previous version of the supplementary material we had a different (less convenient) solution, which inlined everything that needed to be proved as goals produced by `binder_inductive`.)
-_ In thys/Infinitary_FOL, the theory InfFOL.thy introduces IFOL deduction again via `binder_inductive'.  
-    * In thys/Infinitary_Lambda_Calculus, we have several instantiations of the general strong induction theorem, Thm. 22. However, this is not done via the `binder_inductive`command, but by manually instantiating the locale coresponding to Thm. 22, namely`IInduct'. This is done for several inductive predicates needed by the Mazza case study: in ILC_Renaming_Equivalence.thy for the renaming equivalence relation from Sect. 8.3, in ILC_UBeta.thy for the uniform infinitary beta-reduction from App. E.3, and in ILC_good.thy for the `good` (auxiliary) predicate from App. E.6. By contrast, the `affine` predicate in from App. E.3, located in ILC_affine.thy, and the plain infinitary beta-reduction from App. E.1, located in ILC_Beta.thy, only require Thm. 19 so they are handled using `binder_inductive`.
+
+* In thys/Untyped_Lambda_Calculus, the theories LC_Beta.thy and LC_Parallel_Beta.thy, containing the inductive definitions of lambda-calculus beta-reduction and parallel beta-reduction respectively, referred to in Sects. 2 and 5. In particular, Prop. 2 from the paper (in the enhanced version described in Remark 8) is generated and proved via the `binder_inductive` command from LC_Beta.thy; it is called `step.strong_induct`. The corresponding theorem for parallel-beta is called `pstep.strong_induct`, which is generated and proved from the `binder-inductive` command from LC_Parallel_Beta.thy. A variant of parallel-beta decorated with the counting of the number applicative redexes (which is needed in the Mazza case study) is also defined in LG_Beta-depth.thy (and its strong rule induction follows the same course).
+
+* In thys/Pi_Calculus, the theories Pi_Transition_Early.thy and Pi_Transition_Late.thy use the `binder-inductive` command to define and endow with strong rule induction the late and early transition relations discussed in Sect. 7.1; and the theory Pi_cong.thy does the same for both the structural-congruence and the transition relations for the variant of pi-calculus discussed in App. B.
+
+* In thys/POPLmark, the theory SystemFSub.thy is dedicated to defining (in addition to some auxiliary concepts such as well-formedness of contexts) the typing relation for System-F-with-subtyping discussed in Sect. 7.2. Here, because (as discussed in Sects. 7.2 and 7.3) we want to make use of an inductively proved lemma before we prove Refreshability (a prerequisite for enabling strong rule induction), we make use of a more flexible version of `binding_inductive`: namely we introduce the typing relation as a standard inductive definition (using Isabelle's `inductive` command), then prove the lemma that we need, and at the end we "make" this predicate into a binder-aware inductive predicate (via our command `make_binder_inductive`), generating the strong induction theorem, here named `ty.strong_induct` (since the typing predicate is called `ty`). Note that, in general, a `binder_inductive` command is equivalent to an `inductive` command followed immediately by a `make_binder_inductive` command. We have implemented this finer-granularity `make_binder_inductive` command after the submission, so it is not yet documented in the paper. (In the previous version of the supplementary material we had a different (less convenient) solution, which inlined everything that needed to be proved as goals produced by `binder_inductive`.)
+
+* In thys/Infinitary_FOL, the theory InfFOL.thy introduces IFOL deduction again via `binder_inductive'.  
+
+* In thys/Infinitary_Lambda_Calculus, we have several instantiations of the general strong induction theorem, Thm. 22. However, this is not done via the `binder_inductive` command, but by manually instantiating the locale coresponding to Thm. 22, namely `IInduct`. This is done for several inductive predicates needed by the Mazza case study: in ILC_Renaming_Equivalence.thy for the renaming equivalence relation from Sect. 8.3, in ILC_UBeta.thy for the uniform infinitary beta-reduction from App. E.3, and in ILC_good.thy for the `good` (auxiliary) predicate from App. E.6. By contrast, the `affine` predicate in from App. E.3, located in ILC_affine.thy, and the plain infinitary beta-reduction from App. E.1, located in ILC_Beta.thy, only require Thm. 19 so they are handled using `binder_inductive`.
 
 (3) Proving facts specific to the case studies, namely:
 

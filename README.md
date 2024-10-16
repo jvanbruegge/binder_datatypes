@@ -229,11 +229,11 @@ Prop 71 --> theorem `istep.strong_induct` (generated and proved by `binder_induc
 
 Prop 83 --> theorem `strong_induct_ustepD` from thys/Infinitary_Lambda_Calculus/ILC_UBeta.thy
 
-Thm. 99 --> 
+Thm 103 --> theorems `stepD_ustepD` and `ustepD_stepD` (and the variants `ustepD'_stepD` and `stepD_ustepD`, details provided as comments in the formalization) from thys/Infinitary_Lambda_Calculus/Iso_LC_ILC.thy
 
 ##### Appendix F
 
-
+Thm 109 --> 
 
 
 

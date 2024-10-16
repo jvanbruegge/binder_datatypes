@@ -201,17 +201,31 @@ Thm. 29 --> just a recallection of the standard rule induction of the predicate 
 
 Thm. 33 --> this is infered from our Thm. 19 (theorem `strong_induct` in locale `Induct`) via a sublocale relationship: `UBN < UBN: Induct_simple` (the second `UBN` is just a label to avoid name clashes), which makes the theorem `strong_induct` available into the locale `UBN`
 
+
 ##### Appendix B
 
 Prop 34 --> theorem `cong.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinitary_FOL/Pi_cong.thy
 
 Prop 35 --> theorem `trans.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinitary_FOL/Pi_trans.thy
 
+
+##### Appendix C
+
 Lemma 36 --> the sublocale statement `sublocale NominalSet < LSNominalSet` from thys/Generic_Strong_Rule_Induction.thy
 
 (We have not formalized Prop. 37; it is not used anywhere in the other results. Also, we have not formalized Prop 39, but have inlined its content whenever we needed it, e.g., when needed to take product or list extensions of LS-nominal sets.) 
 
 
+##### Appendix D
+
+All the facts shown here are generated automatically by our `binder_datatype` command. 
+
+
+##### Appendix E
+
+Thm 99 --> 
+
+##### Appendix F
 
 
 

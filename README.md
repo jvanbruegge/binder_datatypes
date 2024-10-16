@@ -195,6 +195,4 @@ Thm. 33 --> this is infered from our Thm. 19 (theorem `strong_induct` in locale 
 
 
 
-=======
-(NB: The Urban-Berghofer-Norrish result is formalized in an incremental sequence of locales that follows the same structere and naming as the locales for our main abstract results. `UBN` stands for the acronym of the author names.)
->>>>>>> 95d030e998860a5f530840962ca4d04f702d273e
+

@@ -145,8 +145,9 @@ As discussed in Sect. 9 and App. G, we have automated the production of binding-
 - The proof method `binder_induction` is implemented in `Tools/binder_induction.ML`. It is adapted from the normal Isabelle induction proof method. For the given `avoiding:` clause it infers the set of free variables and uses that to instantiate the parameter rho in the `strong_induct` theorems.
 - The prototype implementation of the refreshability heuristic is defined inline in `thys/MRBNF_FP.thy`. Currently it requires all theorems to be passed manually, in a future version the required theorems will be inferred from the context.
 
-### Mapping of the results from the paper to Isabelle theorem names
 
+
+### Mapping of the results from the paper to Isabelle theorem names
 
 #### For the main paper 
 

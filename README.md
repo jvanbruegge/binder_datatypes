@@ -118,9 +118,9 @@ The theory also contains less general versions of the first two of the above loc
 
 Most of our examples and case studies consist of three distinct types of theories:
 
-(1) Those introducing the relevant binding-aware datatypes, usually via our `binding_datatype` command described in Sect. 9 and App. G.1. and proving basic properties about them. In particular, we have:
-   * theory thys/Untyped_Lambda_Calculus/LC.thy dedicated to (the definition and customization of)  the datatype of lambda-terms described in Sect. 2 and App. D.1; 
-   * theory thys/Pi_Calculus/Pi.thy dedicated to the datatype of Pi-calculus processes described in Sect. 7.1 and App. D.3; 
+(1) Those introducing the relevant binding-aware datatypes, usually via our `binding_datatype` command described in Sect. 9 and App. G.1. and proving and customizing basic properties about them (such as properties of substitution and swapping). In particular, we have:
+   * theory thys/Untyped_Lambda_Calculus/LC.thy dedicated to (the definition and customization of) the datatype of lambda-terms described in Sect. 2 and App. D.1; 
+   * theory thys/Pi_Calculus/Pi.thy dedicated to the datatype of pi-calculus processes described in Sect. 7.1 and App. D.3; 
    * theory thys/POPLmark/SystemFSub_Types dedicated to the datatype of System-F-with-subtyping types described in Sect. 7.2; 
    * theory thys/Infinitary_FOL/InfFmla.thy dedicated to the datatype of infinitary FOL formulas described in Sect. 8.1 and App. D.4; 
    * theory thys/Infinitary_Lambda_Calculus/ILC.thy dedicated to the datatype of infinitary lambda-terms described in Sect. 8.3 and App. D.2. 

@@ -348,7 +348,7 @@ apply(rule extend_to_presBnd)
   subgoal by simp
   subgoal by fact .
 
-theorem BE_iinduct[consumes 2]:
+theorem strong_iinduct[consumes 2]:
 (* Parameters: *)
 fixes Psupp :: "'P \<Rightarrow> 'A set"
 assumes small_Psupp: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
@@ -446,6 +446,9 @@ proof-
 qed
 
 end (* context IInduct *)
+
+thm IInduct.strong_iinduct[unfolded 
+  IInduct_axioms_def IInduct_def IInduct1_def IInduct1_axioms_def CComponents_def]
 
 
 
@@ -614,7 +617,7 @@ context Induct
 begin
 
 
-thm BE_iinduct
+thm strong_iinduct
 
 (* Formulating the theorem in custom form: *)
 theorem strong_induct[consumes 2]:
@@ -626,7 +629,7 @@ assumes I: "I (t::'T)"
 and strong: "\<And> p B t. small B \<Longrightarrow> B \<inter> Psupp p = {} \<Longrightarrow> B \<inter> Tsupp t = {} \<Longrightarrow>
       G B (\<lambda>t'. I t' \<and> (\<forall>p'. R p' t')) t \<Longrightarrow> R p t"
 shows "R p t"
-apply(rule BE_iinduct[of Psupp _ R p, OF _ I[unfolded I_eq_II]])
+apply(rule strong_iinduct[of Psupp _ R p, OF _ I[unfolded I_eq_II]])
   subgoal using small_Psupp by auto
   subgoal for p B t apply(rule strong[of B p t])
   by (auto simp add: GG_def I_eq_II) .
@@ -865,7 +868,7 @@ apply standard using G_refresh .
 (* This makes available the LS-nominal-set-theorem for nominal sets: *)
 context Induct_nom
 begin
-thm BE_iinduct
+thm strong_iinduct
 end
 
 
@@ -874,7 +877,7 @@ print_statement Induct.strong_induct[unfolded
   Induct_axioms_def Induct1_axioms_def
   conj_imp_eq_imp_imp, rule_format]
 
-print_statement IInduct.BE_iinduct[unfolded
+print_statement IInduct.strong_iinduct[unfolded
   IInduct_def IInduct1_def CComponents_def
   IInduct_axioms_def IInduct1_axioms_def
   conj_imp_eq_imp_imp, rule_format]

@@ -152,4 +152,6 @@ make_binder_inductive ty
     done
   done
 
+thm ty.strong_induct
+
 end

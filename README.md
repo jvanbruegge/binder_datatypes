@@ -80,6 +80,35 @@ Another place where the formalization uses different notations is that of pi-cal
 
 ### Formalization of the abstract results
 
+As sketched in the fourth paragraph of Sect. 9 and the first paragraph of App. G.2, the general theorems have been formalized using Isabelle's locales, which are essentially persistent contexts that fix some type variables and term variables on them---allowing one to prove facts relative to these contexts. Locales corresponding to our three main theorems, Thm. 7, Thm. 19 and Thm. 22, are in theory thys/Generic_Strong_Rule_Induction.thy. 
+
+    The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem corresponding to Thm. 22 is called `strong_iinduct`. It is built incrementally, a previous `IInduct1` locale, which in turn extends a `CComponents` locale. The proof of the theorem follows the informal proof descrbed in Sect. 4 (for Thm. 7), with the proof-mining and upgrades described in Sects. 7.3, 8.2 and 8.4 factored in. Overall, the cumulated assumptions of locale `IInduct` are those of Thm. 22, so these assumptions are of course no longer repeated when stating the theorem in the locale. But we can see the full theorem with all assumptions if we type the following command outside the scope of the locale, which unfolds all the locale predicates:  
+    
+    ```
+    print_statement Induct.strong_induct[unfolded
+         Induct_def Induct1_def LSNominalSet_def
+         Induct_axioms_def Induct1_axioms_def
+         conj_imp_eq_imp_imp, rule_format]
+    ```
+    
+    The locale for Thm. 19 is called `Induct`. Since Thm. 19 follows from Thm. 22, we establish a sublocale relationship, between the two, `sublocale Induct < IInduct`. This required us to prove that the assumptions of the `Induct` locale imply (a suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale: 
+    
+        ```
+    print_statement IInduct.strong_iinduct[unfolded
+          IInduct_def IInduct1_def CComponents_def
+          IInduct_axioms_def IInduct1_axioms_def
+          conj_imp_eq_imp_imp, rule_format]
+       ```
+       
+    Finally, the locale for Thm. 7 is called `Induct_nom`, and is proved to be a sublocale of the `Induct` locale, reflecting the fact that Thm. 7 follows from Thm. 19. 
+    
+        ```
+    Induct_nom.strong_induct_nom[unfolded
+          Induct_nom_def Induct1_nom_def NominalSet_def
+          Induct_nom_axioms_def Induct1_nom_axioms_def
+          conj_imp_eq_imp_imp, rule_format]
+       ```
+    
 
 ### Formalization of the case studies 
 
@@ -91,30 +120,27 @@ Most of our examples and case studies consist of three distinct types of theorie
    * theory thys/POPLmark/SystemFSub_Types dedicated to the datatype of System-F-with-subtyping types described in Sect. 7.2; 
    * theory thys/Infinitary_FOL/InfFmla.thy dedicated to the datatype of infinitary FOL formulas described in Sect. 8.1 and App. D.4; 
    * theory thys/Infinitary_Lambda_Calculus/ILC.thy dedicated to the datatype of infinitary lambda-terms described in Sect. 8.3 and App. D.2. 
+   
    An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that we don't yet have a parser for the degenerate case of non-recursive binders). 
    
 (2) Those introducing the relevant binding-aware inductive predicates, via our `binder_inductive` command decsribed in Sect. 9 and App. G.2). In particular, we have:
+
     * In thys/Untyped_Lambda_Calculus, the theories LC_Beta.thy and LC_Parallel_Beta.thy, containing the inductive definition of lambda-calculus beta-reduction and parallel beta-reduction respectively, refered to in Sects. 2 and 5. In particular, Prop. 2 from the paper (in the enhanced version described in Remark 8) is generated and proved via the `binder_inductive` command from LC_Beta.thy; it is called `step.strong_induct`. The corresponding theorem for parallel-beta is called `pstep.strong_induct`, which is generated and proved from the `binder-inductive` command from LC_Parallel_Beta.thy. A variant of parallel-beta decorated with the counting of the number applicative redexes (which is needed in the Mazza case study) is also defined in LG_Beta-depth.thy (and its strong rule induction follows the same course).
     * In thys/Pi_Calculus, the theories Pi_Transition_Early.thy and Pi_Transition_Late.thy use the `binder-inductive` command to define and endow with strong rule induction the late and early transition relations discussed in Sect. 7.1; and the theory Pi_cong.thy does the same for both the structural-congruence and the transition relations for the variant of pi-calculus discussed in App. B. 
     * In thys/POPLmark/, the theory SystemFSub is dedicated to defining (in addition to some auxiliary concepts such as well-formedness of contexts) the typing relation for System F discussed in Sect. 7.2. Here, because (as discussed in Sects. 7.2 and 7.3) we want to make use of an inductively proved lemma before we prove refreshability (a prerequisite for our rule induction), we make use of a more flexible version of `binding_inductive`: namely we introduce the subtyping relation as a standard inductive definition (using Isabelle's standard `inductive` command), then prove what we need, and at the end we "make" this into a binder-aware inductive predicate (via command `make_binder_inductive`), generating the strong induction theorem, here named `ty.strong_induct`. (Note that, in general, a `binder_inductive` command is equivalent to an `inductive` command followed by a `make_binder_inductive` command. We have implemented these finer-granularity `make_binder_inductive` command after the submission, so it is not yet documented in the paper; in the previous version of the supplementary material we had a different (less convenient) solution, which inlined everything that needed to be proved as goals produced by `binder_inductive`.)
+    * In thys/Infinitary_FOL, ythe theory InfFOLintroduced IFOL deduction again via `binder_inductive'. 
+    * In thys/Infinitary_Lambda_Calculus, we have several `binding_inductive` definitions needed by the Mazza case study: in  ILC_affine.thy and ILC_Renaming_Equivalence.thy for the `affine` predicate renaming equivalence relation from Sect. 8.3, in ILC_Beta.thy for the plain infinitary beta-reduction from App. E.1, in ILC_UBeta.thy for the uniform infinitary beta-reduction from App. E.3, and ILC_good.thy for the `good` (auxiliary) predicate from App. E.6. 
   
+(3) Proving facts specific to the case studies, namely: 
+   * Theory thys/POPLmark/POPLmark_1A proves the transitivity of the typing relation for System-F-with-subtyping 
+   * Theory thys/Infinitary_Lambda_Calculus/Iso_LC_ILC.thy contains the main theorems pertaining to Mazza's isomorphism, after the theories Translation_LC_to_ILC.thy and Translation_ILC_to_LC.thy establish the back and forth translation between the finitary and infinitary calculi (via suitable binding-aware recursors). This follows quite faithfully the development described in App. E. 
+   * Theory thys/Urban_Berghofer_Norrish_Rule_Induction.thy, again following faithfully the development described in App. 9. 
+   
+   
+### Tactics and automation using Isabelle/ML
 
-(3) Proving facts specific to the case studies, such as transitivity of subtyping for System F or the Mazza's isomorphism between between lambda-calculus and uniform affine infinitary lambda-calculus.
-
-
-### Mapping to the concepts and results claimed in the paper
-
-
-
-
-
-TODO:
--- var for the type of variables (usually we use the notations from the paper, but lowercase following the convention in HOL)
--- conventions: eg. Lterm the polymorphic type, lterm its monomorphic versions 
-(the paper uses Lterm); ILterm vs. ilterm etc. 
--- mention the NoLeastSupportCounterexample theory. 
--- check in the browsable html files too
--- say we always have theories dedicated to the specific datatypes
---- say for the infinitary case automation is less well-developed
--- For the support of a function, in the formalization we use the more customary notation "supp" (read "support") for what in the paper we call "core" (at the beginning of section 3). 
+As discussed in Sect. 9 and App. G, we have automated the production of binding-aware datatypes and inductive predicates (subject to strong rule induction) using Isabelle/ML, via the commands `binding_datatype`, `binder_inductive` (and its variant `make_binder_inductive`) and tactic `binder_induction`. 
+   * The command `binding_datatype` is implemented in XXX. TODO: One or two sentences.  
+   * The command `binder_inductive` and `make_binder_inductive` are  implemented in XXX. TODO: One or two sentences. 
+   * The tactic `binder_induction` is implemented in XXX. TODO: One or two sentences. Point out the theorems where it is used. 
 

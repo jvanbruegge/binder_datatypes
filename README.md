@@ -85,22 +85,23 @@ As sketched in the fourth paragraph of Sect. 9 and the first paragraph of App. G
 The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem corresponding to Thm. 22 is called `strong_iinduct`. It is built incrementally, from a previous `IInduct1` locale, which in turn extends a `CComponents` locale. The proof of the theorem follows the informal proof described in Sect. 4 (for Thm. 7), with the proof-mining and upgrades described in Sects. 7.3, 8.2 and 8.4 factored in. Overall, the cumulated assumptions of locale `IInduct` are those of Thm. 22, so these assumptions are of course no longer repeated when stating the theorem in the locale. But we can see the self-contained theorem with all assumptions if we type the following command outside the scope of the locale, which unfolds all the locale predicates:  
     
     ```
-    print_statement Induct.strong_induct[unfolded
-         Induct_def Induct1_def LSNominalSet_def
-         Induct_axioms_def Induct1_axioms_def
-         conj_imp_eq_imp_imp, rule_format]
+    print_statement IInduct.strong_iinduct[unfolded
+          IInduct_def IInduct1_def CComponents_def
+          IInduct_axioms_def IInduct1_axioms_def
+          conj_imp_eq_imp_imp, rule_format]
     ```
     
     (We have added this printing command, and the other two shown below, at the end of the theory thys/Generic_Strong_Rule_Induction.thy.)
     
     The locale for Thm. 19 is called `Induct`. The fact that Thm. 19 is a particular case of (i.e., follows from)  Thm. 22 is captured by a sublocale relationship `sublocale Induct < IInduct`. Establishing this required us to prove that the assumptions of the `Induct` locale imply (the suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 18 from Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale: 
     
-        ```
-    print_statement IInduct.strong_iinduct[unfolded
-          IInduct_def IInduct1_def CComponents_def
-          IInduct_axioms_def IInduct1_axioms_def
-          conj_imp_eq_imp_imp, rule_format]
-       ```
+     
+    ```
+    print_statement Induct.strong_induct[unfolded
+         Induct_def Induct1_def LSNominalSet_def
+         Induct_axioms_def Induct1_axioms_def
+         conj_imp_eq_imp_imp, rule_format]
+    ```
        
     Finally, the locale for Thm. 7 is called `Induct_nom`, and is proved to be a sublocale of the `Induct` locale, reflecting the fact that Thm. 7 follows from Thm. 19. 
     

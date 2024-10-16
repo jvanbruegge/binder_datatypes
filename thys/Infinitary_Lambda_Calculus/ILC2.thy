@@ -1,5 +1,5 @@
 theory ILC2 
-imports ILC "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
+imports ILC "Binders.Generic_Strong_Rule_Induction"
 begin
 
 instance ivar :: uncountable_regular ..

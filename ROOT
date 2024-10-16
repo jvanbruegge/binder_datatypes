@@ -34,18 +34,10 @@ session Binders in "thys" = Prelim +
     MRBNF_Composition
     MRBNF_FP
     MRBNF_Recursor
-    Generic_Barendregt_Enhanced_Rule_Induction
-    General_Customization
+    Generic_Strong_Rule_Induction
+    Customization
     Urban_Berghofer_Norrish_Rule_Induction
-
-session Operations in "operations" = Untyped_Lambda_Calculus +
-  theories
-    Binder_Inductive
-    Fixpoint
-    Recursor
-    VVSubst
-    TVSubst
-    Sugar
+    No_Least_Support_Counterexample
 
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
   theories
@@ -54,7 +46,6 @@ session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
     LC_Beta_depth
     LC_Head_Reduction
     LC_Parallel_Beta
-    LC_Primal
 
 session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untyped_Lambda_Calculus +
   theories
@@ -78,12 +69,13 @@ session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untype
 
 session Infinitary_FOL in "thys/Infinitary_FOL" = Binders +
   theories
+    InfFmla
     InfFOL
 
 session Process_Calculus in "thys/Pi_Calculus" = Binders +
   theories
     Pi
-	  Commitment
+    Commitment
     Pi_Transition_Common
     Pi_Transition_Early
     Pi_Transition_Late

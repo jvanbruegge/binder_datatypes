@@ -1,7 +1,7 @@
 This is the artifact accompanying the paper:
 
 Barendregt Convenes with Knaster and Tarski: 
-Strong Rule Induction for Syntax with Bindings 
+Strong Rule Induction for Syntax with Bindings  
 
 ### How To Run?
 
@@ -66,7 +66,7 @@ The session structure resembles the directory structure: theories from session <
 in the directory src/thys/<SESSION>. Exceptions to this rule are the Isabelle_Prelim session which
 merely bundles existing theories from Isabelle's standard library, and the Binders session whose
 associated theories are placed directly in the directories src/thys and src/Tools (the latter
-consists of the ML files implementing the support for datatypes with bindings).
+consists of the ML files implementing the support for datatypes with bindings).  
 
 
 ### Notations
@@ -86,7 +86,7 @@ The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem correspondi
     
     ```
     print_statement IInduct.strong_iinduct[unfolded
-          IInduct_def IInduct1_def CComponents_def
+          IInduct_def IInduct1_def CComponents_def 
           IInduct_axioms_def IInduct1_axioms_def
           conj_imp_eq_imp_imp, rule_format]
     ```
@@ -114,7 +114,7 @@ The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem correspondi
 The theory also contains less general versions of the first two of the above locales, where the Refreshability assumption is replaced by the stronger Freshness assumption (introduced in Def. 6). The names of these Freshness-based versions have suffix `_simple` at the end, and we establish sublocale relationships between these and the Refreshability-based ones, namely `sublocale IInduct_simple < IInduct` and `sublocale Induct_simple < Induct`. 
 
 
-### Formalization of the case studies 
+### Formalization of the case studies   
 
 Most of our examples and case studies consist of three distinct types of theories:
 
@@ -147,6 +147,7 @@ As discussed in Sect. 9 and App. G, we have automated the production of binding-
    * The command `binding_datatype` is implemented in XXX. TODO: One or two sentences.  
    * The command `binder_inductive` and `make_binder_inductive` are  implemented in XXX. TODO: One or two sentences. 
    * The proof method `binder_induction` is implemented in XXX. TODO: One or two sentences. Point out the theorems where it is used. 
+   * todo: the tactic for heuristic too. 
 
 
 ### Mapping of the results from the the main paper to Isabelle theorem names

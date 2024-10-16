@@ -209,6 +209,14 @@ Prop 35 --> theorem `trans.strong_induct` (generated and proved by `binder_induc
 
 Lemma 36 --> the sublocale statement `sublocale NominalSet < LSNominalSet` from thys/Generic_Strong_Rule_Induction.thy
 
+(We have not formalized Prop. 37; it is not used anywhere in the other results. Also, we have not formalized Prop 39, but have inlined its content whenever we needed it, e.g., when needed to take product or list extensions of LS-nominal sets.) 
+
+
+
+
+
+
+
 
 
  

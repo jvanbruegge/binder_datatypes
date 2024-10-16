@@ -82,7 +82,7 @@ Another place where the formalization uses different notations is that of pi-cal
 
 As sketched in the fourth paragraph of Sect. 9 and the first paragraph of App. G.2, the general theorems have been formalized using Isabelle's locales, which are essentially persistent contexts that fix some type variables and term variables on them---and one can prove facts relative to these contexts. Locales corresponding to our three main theorems, Thm. 7, Thm. 19 and Thm. 22, are in the theory thys/Generic_Strong_Rule_Induction.thy. 
 
-The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem corresponding to Thm. 22 is called `strong_iinduct`. It is built incrementally, a previous `IInduct1` locale, which in turn extends a `CComponents` locale. The proof of the theorem follows the informal proof descrbed in Sect. 4 (for Thm. 7), with the proof-mining and upgrades described in Sects. 7.3, 8.2 and 8.4 factored in. Overall, the cumulated assumptions of locale `IInduct` are those of Thm. 22, so these assumptions are of course no longer repeated when stating the theorem in the locale. But we can see the full theorem with all assumptions if we type the following command outside the scope of the locale, which unfolds all the locale predicates:  
+The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem corresponding to Thm. 22 is called `strong_iinduct`. It is built incrementally, from a previous `IInduct1` locale, which in turn extends a `CComponents` locale. The proof of the theorem follows the informal proof described in Sect. 4 (for Thm. 7), with the proof-mining and upgrades described in Sects. 7.3, 8.2 and 8.4 factored in. Overall, the cumulated assumptions of locale `IInduct` are those of Thm. 22, so these assumptions are of course no longer repeated when stating the theorem in the locale. But we can see the self-contained theorem with all assumptions if we type the following command outside the scope of the locale, which unfolds all the locale predicates:  
     
     ```
     print_statement Induct.strong_induct[unfolded
@@ -90,6 +90,8 @@ The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem correspondi
          Induct_axioms_def Induct1_axioms_def
          conj_imp_eq_imp_imp, rule_format]
     ```
+    
+    (We have added this printing command, and the other two shown below, at the end of the theory thys/Generic_Strong_Rule_Induction.thy.)
     
     The locale for Thm. 19 is called `Induct`. Since Thm. 19 follows from Thm. 22, we establish a sublocale relationship, between the two, `sublocale Induct < IInduct`. This required us to prove that the assumptions of the `Induct` locale imply (a suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale: 
     

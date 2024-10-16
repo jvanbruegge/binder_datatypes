@@ -17,7 +17,7 @@ After downloading Isabelle, a good starting point is to issue the following comm
 /<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Untyped_Lambda_Calculus/LC_Beta.thy
 ```
 
-in the folder of the artifact. This will open `Isabelle/jEdit` and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle. Using the`Isabelle/jEdit` menu, one can then browse through the subdirectories of `thys` and open any other theories; or one can start directly with another theory, for example:
+in the folder of the artifact. This will open `Isabelle/jEdit` and load our formalization of beta reduction for the untyped lambda calculus and the associated strong rule induction principle. Using the `Isabelle/jEdit` menu, one can then browse through the subdirectories of `thys` and open any other theories; or one can start directly with another theory, for example:
 
 ```
 /<Isabelle/installation/path>/bin/isabelle jedit -d . -l Prelim thys/Infinitary_Lambda_Calculus/Iso_LC_ILC.thy
@@ -38,6 +38,7 @@ without running Isabelle. The file html/index.html provides a good starting poin
 /<Isabelle/installation/path>/bin/isabelle build -vD . -o browser_info
 ```
 
+The resulting html files are placed in `~/.isabelle/Isabelle2024/browser_info`.
 
 ### Overview
 
@@ -75,7 +76,7 @@ The formalization uses notations that are close to those from the paper, but mak
 
 Another specificity of the formalization is that the datatypes are defined to have more generic/polymorphic types than in the paper, after which they are instantiated to the exact types from the paper. Namely, instead of working with a fixed set of variables of suitable cardinality (which in the finitary case is just the cardinal of natural numbers aleph0), that set is kept as a parameter -- and in Isabelle, taking advantage of polymorphism, this is a type variable 'var of type class that specifies the cardinality constraint. (Our `binder_datatype` command automatically assigns 'var to have the suitable type class.) This allows more flexibility in case we want to nest the given datatype inside another datatype that perhaps requires larger collections of variables. But once the exact datatypes needed for a case study have been decided, one can instantiate 'var with a fixed type, var, of suitable cardinality. And this is what we do in all our example datatypes: First define the polymorphic version, then instantiate it to the monomorphic version (which matches the one described in the paper). We consistently use the suffix `P` for the polymorphic version. For example, we introduce `ltermP` as the type of lambda-terms polymorphic in the type of variables, then we take `lterm` to be the instance `var ltermP` for some fixed countable type of variables `var`. (The paper's implementation section 9 and the appendix implementation section G have some ad hoc choices of names, e.g., `type` versus `typ` and `term` versus `trm`, which we have decided to amend to the notation scheme explained above -- and will of course update the paper accordingly.) 
 
-Another place where the formalization uses different notations is that of pi-calculusm (Sect. 7.1). Namely we prefer ASCII notations with self-explanatory names, such as `Sum`, `Inp`, `Out` etc. The same is true for the dirrent versions of beta-reduction, where we use the notations `step`, `pstep` (for the parallel version) etc. instead of arrow notation. Finally, we sometimes inrtoduce small variations to help parsing, e.g., double comma rather than comma for context-append in System F subtyping (Sect. 7.2). 
+Another place where the formalization uses different notations is that of pi-calculusm (Sect. 7.1). Namely we prefer ASCII notations with self-explanatory names, such as `Sum`, `Inp`, `Out` etc. The same is true for the dirrent versions of beta-reduction, where we use the notations `step`, `pstep` (for the parallel version) etc. instead of arrow notation. Finally, we sometimes introduce small variations to help parsing, e.g., double comma rather than comma for context-append in System F subtyping (Sect. 7.2). 
 
 
 ### Formalization of the abstract results
@@ -125,7 +126,7 @@ Most of our examples and case studies consist of three distinct types of theorie
    * theory thys/Infinitary_FOL/InfFmla.thy dedicated to the datatype of infinitary FOL formulas described in Sect. 8.1 and App. D.4; here we work parametrically on two infinite regular cardinals `k1` and `k2`, which we axiomatize;
    * theory thys/Infinitary_Lambda_Calculus/ILC.thy dedicated to the datatype of infinitary lambda-terms described in Sect. 8.3 and App. D.2. 
    
-   An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that our parser does not yet cover the degenerate case of non-recursive binders). 
+   An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that our parser currently does not yet cover the degenerate case of non-recursive binders). 
    
 (2) Those introducing the relevant binding-aware inductive predicates, usually via our `binder_inductive` command described in Sect. 9 and App. G.2) -- the exceptions being the instances of the binder-explicit Thm. 22, where we instantiate the locale manually. In particular, we have:
     * In thys/Untyped_Lambda_Calculus, the theories LC_Beta.thy and LC_Parallel_Beta.thy, containing the inductive definitions of lambda-calculus beta-reduction and parallel beta-reduction respectively, referred to in Sects. 2 and 5. In particular, Prop. 2 from the paper (in the enhanced version described in Remark 8) is generated and proved via the `binder_inductive` command from LC_Beta.thy; it is called `step.strong_induct`. The corresponding theorem for parallel-beta is called `pstep.strong_induct`, which is generated and proved from the `binder-inductive` command from LC_Parallel_Beta.thy. A variant of parallel-beta decorated with the counting of the number applicative redexes (which is needed in the Mazza case study) is also defined in LG_Beta-depth.thy (and its strong rule induction follows the same course).

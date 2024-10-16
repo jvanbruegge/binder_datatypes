@@ -93,7 +93,7 @@ The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem correspondi
     
     (We have added this printing command, and the other two shown below, at the end of the theory thys/Generic_Strong_Rule_Induction.thy.)
     
-    The locale for Thm. 19 is called `Induct`. Since Thm. 19 follows from Thm. 22, we establish a sublocale relationship, between the two, `sublocale Induct < IInduct`. This required us to prove that the assumptions of the `Induct` locale imply (a suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale: 
+    The locale for Thm. 19 is called `Induct`. The fact that Thm. 19 is a particular case of (i.e., follows from)  Thm. 22 is captured by a sublocale relationship `sublocale Induct < IInduct`. Establishing this required us to prove that the assumptions of the `Induct` locale imply (the suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 18 from Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale: 
     
         ```
     print_statement IInduct.strong_iinduct[unfolded

@@ -224,7 +224,7 @@ All the facts shown here are generated automatically by our `binder_datatype` co
 
 ##### Appendix E 
 
-We only indicate a selection only, namely the strong rule induction theorems and the main end results. 
+We only indicate a selection, namely the strong rule induction theorems and the main end results. 
 
 Prop 71 --> theorem `istep.strong_induct` (generated and proved by `binder_inductive`) from thys/Infinitary_Lambda_Calculus/ILC_Beta.thy
 

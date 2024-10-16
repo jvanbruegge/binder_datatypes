@@ -94,7 +94,6 @@ The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem correspondi
     (We have added this printing command, and the other two shown below, at the end of the theory thys/Generic_Strong_Rule_Induction.thy.)
     
     The locale for Thm. 19 is called `Induct`. The fact that Thm. 19 is a particular case of (i.e., follows from)  Thm. 22 is captured by a sublocale relationship `sublocale Induct < IInduct`. Establishing this required us to prove that the assumptions of the `Induct` locale imply (the suitable instantiation of) those of the `IInduct` locale, and this allowed to us to make available in `Induct` (the same suitable instantiation of) the facts proved in `IInduct`. In short, we obtain Thm. 18 from Thm. 22 as a conseuqnece of this sublocale relationship; we named this theorem `strong_induct`. This theorem too can be contemplated outside of its locale: 
-    
      
     ```
     print_statement Induct.strong_induct[unfolded
@@ -103,15 +102,17 @@ The locale for Thm. 22 is called `IInduct`, and the Isabelle theorem correspondi
          conj_imp_eq_imp_imp, rule_format]
     ```
        
-    Finally, the locale for Thm. 7 is called `Induct_nom`, and is proved to be a sublocale of the `Induct` locale, reflecting the fact that Thm. 7 follows from Thm. 19. 
+    Finally, the locale for Thm. 7 is called `Induct_nom`, and in turn is proved to be a sublocale of the `Induct` locale, reflecting the fact that Thm. 7 follows from Thm. 19. 
     
-        ```
+    ```
     Induct_nom.strong_induct_nom[unfolded
           Induct_nom_def Induct1_nom_def NominalSet_def
           Induct_nom_axioms_def Induct1_nom_axioms_def
           conj_imp_eq_imp_imp, rule_format]
-       ```
+    ```
     
+The theory also contains less general versions of the first two of the above locales, where the Refreshability assumption is replaced by the stronger Freshness assumption (introduced in Def. 6). The names of these Freshness-based versions have suffix `_simple` at the end, and we establish sublocale relationships between these and the Refreshability-based ones, namely `sublocale IInduct_simple < IInduct` and `sublocale Induct_simple < Induct`. 
+
 
 ### Formalization of the case studies 
 

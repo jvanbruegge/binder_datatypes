@@ -125,7 +125,7 @@ Most of our examples and case studies consist of three distinct types of theorie
    * theory thys/Infinitary_FOL/InfFmla.thy dedicated to the datatype of infinitary FOL formulas described in Sect. 8.1 and App. D.4; 
    * theory thys/Infinitary_Lambda_Calculus/ILC.thy dedicated to the datatype of infinitary lambda-terms described in Sect. 8.3 and App. D.2. 
    
-   An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that we don't yet have a parser for the degenerate case of non-recursive binders). 
+   An exception to the rule of using `binding_datatype` is the (non-recursive) datatype of commitments for the pi-calculus (described in Sect. 7.1), for which we use some Isabelle/ML tactics to the same effect in thys/Pi_Calculus/Commitments.thy (the reason being that our parser does not yet cover the degenerate case of non-recursive binders). 
    
 (2) Those introducing the relevant binding-aware inductive predicates, usually via our `binder_inductive` command decsribed in Sect. 9 and App. G.2) -- the exception being the instances of the binder-explicit Thm. 22, where we instantiate the locale manually. In particular, we have:
 

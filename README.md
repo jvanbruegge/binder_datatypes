@@ -233,7 +233,7 @@ Thm 103 --> theorems `stepD_ustepD` and `ustepD_stepD` (and the variants `ustepD
 
 ##### Appendix F
 
-Thm 109 --> 
+Thm 109 --> theorems `ty_transitivity` and `ty_narrowing` from thys/POPLmark/POPLmark_1A.thy 
 
 
 

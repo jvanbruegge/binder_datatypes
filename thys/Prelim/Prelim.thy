@@ -18,7 +18,6 @@ lemma bij_bij_betw_inv: "bij u \<Longrightarrow> bij_betw u A B = bij_betw (inv 
 lemma conversep_def:
 "conversep r = (\<lambda> a b. r b a)" by auto
 
-
 lemma bij_comp2: "bij u \<Longrightarrow> bij v \<Longrightarrow> bij (\<lambda>a. v (u a))"
   unfolding o_def[symmetric] using bij_comp by blast
 
@@ -63,6 +62,9 @@ lemma bij_iff1:
 definition id_on :: "'a set \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> bool" where
   "id_on A f \<equiv> \<forall> a. a \<in> A \<longrightarrow> f a = a"
 
+lemma id_onI: "(\<And>a. a \<in> A \<Longrightarrow> f a = a) \<Longrightarrow> id_on A f"
+  unfolding id_on_def by blast
+
 lemma id_on_id[simp,intro!]: "id_on A id"
   unfolding id_on_def by auto
 
@@ -70,6 +72,9 @@ lemma id_on_insert[simp]: "id_on (insert x A) f \<longleftrightarrow> f x = x \<
   unfolding id_on_def by blast
 
 definition "eq_on A f g \<equiv> \<forall> a. a \<in> A \<longrightarrow> f a = g a"
+
+lemma eq_onI: "(\<And>a. a \<in> A \<Longrightarrow> f a = g a) \<Longrightarrow> eq_on A f g"
+  unfolding eq_on_def by simp
 
 lemma eq_on_refl[simp,intro!]: "eq_on A f f" unfolding eq_on_def by auto
 
@@ -80,6 +85,27 @@ lemma eq_on_trans: "eq_on A f g \<Longrightarrow> eq_on A g h \<Longrightarrow> 
 lemma eq_on_mono: "A \<subseteq> B \<Longrightarrow> eq_on B f g \<Longrightarrow> eq_on A f g" unfolding eq_on_def by auto
 
 lemma eq_on_emp[simp,intro!]: "eq_on {} f g" unfolding eq_on_def by auto
+
+lemma eq_on_inv1: "bij f \<Longrightarrow> bij g \<Longrightarrow> eq_on A f g \<Longrightarrow> eq_on (f ` A) (inv f) (inv g)"
+  unfolding eq_on_def by (metis image_iff inv_simp1)
+
+lemma eq_on_inv2: "bij f \<Longrightarrow> bij g \<Longrightarrow> eq_on A f g \<Longrightarrow> eq_on (g ` A) (inv f) (inv g)"
+  unfolding eq_on_def by (metis image_iff inv_simp1)
+
+lemma eq_on_comp1: "eq_on A g1 g2 \<Longrightarrow> eq_on (g1 ` A) f1 f2 \<Longrightarrow> eq_on A (f1 \<circ> g1) (f2 \<circ> g2)"
+  unfolding eq_on_def by simp
+lemma eq_on_comp2: "eq_on A g1 g2 \<Longrightarrow> eq_on (g2 ` A) f1 f2 \<Longrightarrow> eq_on A (f1 \<circ> g1) (f2 \<circ> g2)"
+  unfolding eq_on_def by simp
+
+lemma eq_on_image: "eq_on A f g \<Longrightarrow> f ` A = g ` A"
+  unfolding eq_on_def by auto
+
+lemma eq_on_between: "bij f \<Longrightarrow> bij g \<Longrightarrow> bij f2 \<Longrightarrow> bij g2 \<Longrightarrow> eq_on A f g \<Longrightarrow>
+  eq_on B f2 g2 \<Longrightarrow> (inv g2 \<circ> g) ` A = B \<Longrightarrow> eq_on A (inv f2 \<circ> f) (inv g2 \<circ> g)"
+  unfolding eq_on_def by (metis bij_pointE comp_eq_dest_lhs imageI inv_simp1)
+
+lemma eq_on_inv_f_f: "bij f \<Longrightarrow> eq_on (f ` A) g1 g2 \<Longrightarrow> eq_on A (inv f \<circ> g1 \<circ> f) (inv f \<circ> g2 \<circ> f)"
+  unfolding eq_on_def by simp
 
 (* The support of f: *)
 definition supp :: "('a \<Rightarrow> 'a) => 'a set" where
@@ -328,6 +354,9 @@ lemma id_on_inv: "bij f \<Longrightarrow> id_on A f \<Longrightarrow> id_on A (i
 
 lemma id_on_antimono: "id_on A f \<Longrightarrow> B \<subseteq> A \<Longrightarrow> id_on B f"
   unfolding id_on_def by auto
+
+lemma id_on_inv_f_f: "bij f \<Longrightarrow> id_on (f ` A) g \<Longrightarrow> id_on A (inv f \<circ> g \<circ> f)"
+  unfolding id_on_def by simp
 
 lemma rel_set_image:
   "\<And> R f A B. rel_set R (f ` A) B = rel_set (\<lambda>x. R (f x)) A B"
@@ -905,38 +934,68 @@ proof-
   show ?thesis using 1 2 3 4 5 by blast
 qed
 
-definition "suppGr f \<equiv> {(x, f x) | x. f x \<noteq> x}"
+lemma extend_id_on:
+  assumes g: "bij g" "|supp (g::'a \<Rightarrow> 'a)| <o |UNIV::'a set|" "id_on (A - B1) g" "g \<circ> g = id" "g ` B1 \<inter> B1 = {}"
+  and B: "B2 \<subseteq> B1"
+shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and> eq_on B2 f g \<and> id_on (A - B2) f \<and> f \<circ> f = id \<and> f ` B2 \<inter> B2 = {}"
+proof -
+  define f where "f \<equiv> \<lambda>a. if a \<in> B2 then g a else (if a \<in> g ` B2 then inv g a else a)"
+  have 1: "f \<circ> f = id" unfolding f_def comp_def id_def
+    apply (rule ext)
+    subgoal for x
+      apply (cases "x \<in> B2")
+       apply (cases "g x \<in> B2")
+        apply (unfold if_P if_not_P)
+      using g(4) apply (simp add: pointfree_idE)
+       apply (simp add: g(1))
+      apply (cases "x \<in> g ` B2")
+       apply (unfold if_P if_not_P)
+       apply (simp add: g(1) image_in_bij_eq)
+      apply (rule refl)
+      done
+    done
+  then have 2: "bij f" using o_bij by blast
+  have 3: "|supp f| <o |UNIV::'a set|" using g(2) unfolding f_def supp_def
+    by (smt (verit, best) Collect_mono card_of_subset_bound g(1) inv_simp1)
+  have 4: "eq_on B2 f g" unfolding eq_on_def f_def by auto
+  have 5: "id_on (A - B2) f" using g(2-5) unfolding id_on_def f_def
+    by (metis B DiffD1 DiffD2 DiffI IntE IntI bij_def equals0D g(1) image_Int inf.absorb_iff2 inv_unique_comp)
+  have 6: "f ` B2 \<inter> B2 = {}" unfolding f_def using g(4,5) B by auto
 
-lemma supp_incl_suppGr:
-  "suppGr f \<subseteq> suppGr g  \<Longrightarrow> supp f \<subseteq> supp g"
-  unfolding supp_def suppGr_def by auto
-
-lemma extend_id_on':
-assumes g: "bij g" "g o g = id" "id_on A g"
-and A': "A \<subseteq> A'"
-shows "\<exists>f. bij f \<and> suppGr f \<subseteq> suppGr g \<and> id_on A' f"
-proof-
-  define f where "f \<equiv> \<lambda>a. if a \<in> (A'-A) \<union> g ` (A' - A) then a else g a"
-  show ?thesis apply(rule exI[of _ f], intro conjI)
-    subgoal using g(1) unfolding bij_def inj_def f_def apply safe
-      subgoal by (metis (mono_tags, opaque_lifting) Un_iff comp_def g(2) id_apply image_iff)
-      subgoal by auto
-      subgoal by (smt (verit) \<open>\<And>y x. \<lbrakk>\<forall>x y. g x = g y \<longrightarrow> x = y; surj g;
-       (if x \<in> A' - A \<union> g ` (A' - A) then x else g x) = (if y \<in> A' - A \<union> g ` (A' - A) then y else g y)\<rbrakk>
-       \<Longrightarrow> x = y\<close> g(2) image_iff pointfree_idE) .
-    subgoal unfolding suppGr_def f_def by auto
-    subgoal using g(3) unfolding id_on_def f_def by auto .
+  show ?thesis using 1 2 3 4 5 6 by blast
 qed
 
-lemma extend_id_on:
-  "bij g \<Longrightarrow> |supp (g::'a \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
-   id_on (A - B1) g \<Longrightarrow> B2 \<subseteq> B1 \<Longrightarrow> g \<circ> g = id \<Longrightarrow>
-   \<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and> suppGr f \<subseteq> suppGr g \<and> id_on (A - B2) f"
-apply(drule extend_id_on'[of g "A - B1" "A-B2"])
-  subgoal .
-  subgoal by (meson card_of_diff ordLeq_ordLess_trans)
-  subgoal by auto
-  subgoal apply safe subgoal for f apply(rule exI[of _ f])
-  subgoal using supp_incl_suppGr[of f g] by (meson card_of_mono1 ordLeq_ordLess_trans) . . .
+lemma inv_invol: "f \<circ> f = id \<Longrightarrow> inv f = f"
+  using inv_unique_comp by blast
+
+lemma disjoint_invol:
+  fixes g::"'a \<Rightarrow> 'a"
+  assumes "bij g" "|supp g| <o |UNIV::'a set|" "A \<inter> B = {}" "g ` A = B" "id_on C g"
+  shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and> eq_on A f g \<and> f \<circ> f = id \<and> id_on C f"
+proof -
+  define f where "f \<equiv> \<lambda>a. if a \<in> A then g a else (if a \<in> B then inv g a else a)"
+  have 1: "f \<circ> f = id" unfolding f_def comp_def id_def
+    apply (rule ext)
+    subgoal for x
+      apply (cases "x \<in> A")
+      using assms(1,3,4) apply auto[1]
+      apply (unfold if_not_P)
+      apply (cases "x \<in> B")
+       apply (unfold if_P if_not_P)
+      using assms(1,4) apply force
+      apply (rule refl)
+      done
+    done
+  then have 2: "bij f" using o_bij by blast
+  have 3: "|supp f| <o |UNIV::'a set|" using assms(2) unfolding f_def supp_def
+    by (smt (verit) Collect_mono assms(1) bij_imp_inv' card_of_subset_bound)
+  have 4: "eq_on A f g" unfolding f_def eq_on_def by simp
+  have 5: "id_on C f" using assms(5) unfolding f_def id_on_def
+    by (simp add: assms(1) bij_imp_inv)
+  show ?thesis using 1 2 3 4 5 by blast
+qed
+
+lemma image_inv_iff: "bij f \<Longrightarrow> (A = f ` B) = (inv f ` A = B)"
+  by force
 
 end

@@ -75,16 +75,6 @@ corollary SSupp_upd_VVr_bound: "|SSupp_tvsubst (tvVVr_tvsubst(a:=(t::'a::var_ter
 lemma supp_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
   unfolding supp_def id_on_def by blast
 
-lemma rrename_simps[simp]:
-  assumes "bij (f::'a::var_terms_pre \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a set|"
-  shows "rrename_terms f (Var a) = Var (f a)"
-    "rrename_terms f (App e1 e2) = App (rrename_terms f e1) (rrename_terms f e2)"
-    "rrename_terms f (Abs x \<tau> e) = Abs (f x) \<tau> (rrename_terms f e)"
-  unfolding Var_def App_def Abs_def terms.rrename_cctors[OF assms] map_terms_pre_def comp_def
-    Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
-    apply (rule refl)+
-  done
-
 lemma App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
 proof
   assume "App a b = App c d"

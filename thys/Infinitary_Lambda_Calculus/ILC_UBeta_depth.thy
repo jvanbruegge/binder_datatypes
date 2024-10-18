@@ -189,7 +189,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def  
   apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap)
-    by (metis (no_types, lifting) comp_apply irrename_simps(3) presSuper_def stream.map_cong presBnd_presSuper) 
+    by (metis (no_types, lifting) comp_apply iterm.permute(3) presSuper_def stream.map_cong presBnd_presSuper) 
    . . . 
 
 

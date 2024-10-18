@@ -234,16 +234,6 @@ lemma itvsubst_VVr_func[simp]: "itvsubst VVr t = t"
       done
     done
 
-proposition irrename_simps[simp]:
-  assumes "bij (f::ivar \<Rightarrow> ivar)" "|supp f| <o |UNIV::ivar set|"
-  shows "irrename f (iVar a) = iVar (f a)"
-    "irrename f (iApp e1 es2) = iApp (irrename f e1) (smap (irrename f) es2)"
-    "irrename f (iLam xs e) = iLam (dsmap f xs) (irrename f e)"
-  unfolding iVar_def iApp_def iLam_def iterm.rrename_cctors[OF assms] map_iterm_pre_def comp_def
-    Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
-    apply (rule refl)+
-  done
-
 thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
 
 
@@ -258,7 +248,7 @@ next
   case (iLam x1 x2)
   thm iterm.subst
   then show ?case using f g apply simp
-    by (metis iLam.hyps(4) irrename_simps(3) iterm.map_cong0 iterm_vvsubst_rrename)
+    by (metis iLam.hyps(4) iterm.permute(3) iterm.map_cong0 iterm_vvsubst_rrename)
 qed (auto simp: f g)
 
 lemma itvsubst_cong:
@@ -396,7 +386,7 @@ lemma iLam_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>
 lemma iLam_irrename:
 "bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow>
  (\<And>a'. a' \<in> FFVars e - dsset (as::ivar dstream) \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> iLam as e = iLam (dsmap \<sigma> as) (irrename \<sigma> e)"
-by (metis irrename_simps(3) iterm.rrename_cong_ids iterm.set(3))
+by (metis iterm.permute(3) iterm.rrename_cong_ids iterm.set(3))
 
 
 (* Bound properties (needed as auxiliaries): *)
@@ -510,14 +500,14 @@ using SSupp_irrename_bound s(1) s(2) by auto
 (* Action of swapping (a particular renaming) on variables *)
 
 lemma irrename_swap_Var1[simp]: "irrename (id(x := xx, xx := x)) (iVar (x::ivar)) = iVar xx"
-apply(subst irrename_simps(1)) by auto
+apply(subst iterm.permute(1)) by auto
 lemma irrename_swap_Var2[simp]: "irrename (id(x := xx, xx := x)) (iVar (xx::ivar)) = iVar x"
-apply(subst irrename_simps(1)) by auto
+apply(subst iterm.permute(1)) by auto
 lemma irrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> irrename (id(x := xx, xx := x)) (iVar (z::ivar)) = iVar z"
-apply(subst irrename_simps(1)) by auto
+apply(subst iterm.permute(1)) by auto
 lemma irrename_swap_Var[simp]: "irrename (id(x := xx, xx := x)) (iVar (z::ivar)) =
  iVar (if z = x then xx else if z = xx then x else z)"
-apply(subst irrename_simps(1)) by auto
+apply(subst iterm.permute(1)) by auto
 
 (* Compositionality properties of renaming and term-for-variable substitution *)
 
@@ -1359,7 +1349,7 @@ next
 
     show "R (irrename f (iApp e1 es2)) (renB f b)"
     unfolding b using 0
-    using b12(1) b12(2) f(1) f(2) irrename_simps(2) renB_iAppB by auto
+    using b12(1) b12(2) f(1) f(2) iterm.permute(2) renB_iAppB by auto
   qed
 next
   case (iLam xs t)
@@ -1560,7 +1550,7 @@ next
       subgoal by fact subgoal by fact .
 
     show "R (irrename f (iLam xs t)) (renB f b)"
-    unfolding 0 using RR apply(subst irrename_simps)
+    unfolding 0 using RR apply(subst iterm.permute)
       subgoal using f by auto subgoal using f by auto
       subgoal apply(subst renB_iLamB) using f b' by auto .
   qed

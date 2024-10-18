@@ -349,6 +349,10 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
     (@{term Binp}, @{thm Binp_def}),
     (@{term Cmt}, @{thm refl})
   ],
+  permute_simps = @{thms
+    rrename_commit_Finp rrename_commit_Fout rrename_commit_Bout
+    rrename_commit_Binp rrename_commit_Tau
+  },
   map_simps = [],
   distinct = [],
   bsetss = [[

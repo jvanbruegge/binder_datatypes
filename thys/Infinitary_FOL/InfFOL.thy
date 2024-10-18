@@ -199,20 +199,8 @@ apply (rule k1_Cinfinite)
 apply (rule kregular)
 done
 
-lemma ifol'_rrename_simps[simp]:
-fixes f::"'a::var_ifol'_pre \<Rightarrow> 'a"
-shows  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (Eq x1 x2) = Eq (f x1) (f x2)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (Neg x) = Neg (rrename_ifol' f x)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (Conj F) = Conj (map_set\<^sub>k\<^sub>1 (rrename_ifol' f) F)"
-  "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f (All x3 x4) = All (map_set\<^sub>k\<^sub>2 f x3) (rrename_ifol' f x4)"
-  apply (auto simp: ifol'_vvsubst_rrename[symmetric])[3]
-  apply (unfold All_def ifol'.rrename_cctors map_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
-    map_sum.simps map_prod_simp
-    )
-  apply (rule refl)
-  done
 lemma rrename_Bot_simp[simp]: "bij (f::'a::var_ifol'_pre \<Rightarrow> 'a) \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' f \<bottom> = \<bottom>"
-  unfolding Bot_def ifol'_rrename_simps map_set\<^sub>k\<^sub>1_def map_fun_def comp_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I]
+  unfolding Bot_def ifol'.permute map_set\<^sub>k\<^sub>1_def map_fun_def comp_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I]
   unfolding id_def map_bset_bempty
   by (rule refl)
 
@@ -381,7 +369,7 @@ binder_inductive deduct
             apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+
         apply (subst inv_o_simp1, assumption)
         apply (unfold ifol'.rrename_id0s set\<^sub>k.map_id)
-        apply (metis bij_imp_bij_inv ifol'.rrename_comps ifol'.rrename_ids ifol'_rrename_simps(3) in_k1_equiv' inv_o_simp1 supp_inv_bound)
+        apply (metis bij_imp_bij_inv ifol'.rrename_comps ifol'.rrename_ids ifol'.permute(3) in_k1_equiv' inv_o_simp1 supp_inv_bound)
        apply (metis ifol'.rrename_bijs ifol'.rrename_inv_simps inv_o_simp1 inv_simp1 set\<^sub>k.map_id)
       apply (metis ifol'.rrename_bijs ifol'.rrename_inv_simps inv_o_simp1 inv_simp1 set\<^sub>k.map_id)
     subgoal for f V

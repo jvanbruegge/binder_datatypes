@@ -75,26 +75,6 @@ proof-
   thus ?thesis by auto
 qed
 
-
-
-(* *)
-(* Properties of renaming (variable-for-variable substitution) *)
-
-proposition rrename_simps[simp]:
-  assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
-  shows "rrename_term f Zero = Zero"
-    "rrename_term f (Sum e1 e2) = Sum (rrename_term f e1) (rrename_term f e2)"
-    "rrename_term f (Par e1 e2) = Par (rrename_term f e1) (rrename_term f e2)"
-    "rrename_term f (Bang e) = Bang (rrename_term f e)"
-    "rrename_term f (Match x y e) = Match (f x) (f y) (rrename_term f e)"
-    "rrename_term f (Out x y e) = Out (f x) (f y) (rrename_term f e)"
-    "rrename_term f (Inp x y e) = Inp (f x) (f y) (rrename_term f e)"
-    "rrename_term f (Res x e) = Res (f x) (rrename_term f e)"
-  unfolding Zero_def Sum_def Par_def Bang_def Match_def Out_def Inp_def Res_def term.rrename_cctors[OF assms] map_term_pre_def comp_def
-    Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
-    apply (rule refl)+
-  done
-
 lemma rrename_cong:
 assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
 "(\<And>z. (z::var) \<in> FFVars P \<Longrightarrow> f z = g z)"

@@ -406,7 +406,7 @@ next
 
     show "R (irrename f (iApp e1 es2)) (renB f b)"
     unfolding b using 0  
-    using gd b12(1) b12(2) f irrename_simps(2) renB_iAppB by auto
+    using gd b12(1) b12(2) f iterm.permute(2) renB_iAppB by auto
   qed
 next  
   case (iLam xs t)
@@ -669,7 +669,7 @@ next
       subgoal using f(3) presSuper_def xs' by blast .
 
     show "R (irrename f (iLam xs t)) (renB f b)" 
-    unfolding 0 using RR apply(subst irrename_simps) 
+    unfolding 0 using RR apply(subst iterm.permute) 
       subgoal using f by auto subgoal using f by auto
       subgoal apply(subst renB_iLamB) using xs' f b' by auto .  
   qed

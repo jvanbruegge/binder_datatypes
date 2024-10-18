@@ -123,16 +123,6 @@ lemma tvsubst_VVr_func[simp]: "tvsubst VVr t = t"
       unfolding id_def[symmetric] term_pre.map_id
       apply (rule refl)
       done
-    done
-
-proposition rrename_simps[simp]:
-  assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
-  shows "rrename f (Var a) = Var (f a)"
-    "rrename f (App e1 e2) = App (rrename f e1) (rrename f e2)"
-    "rrename f (Lam x e) = Lam (f x) (rrename f e)"
-  unfolding Var_def App_def Lam_def term.rrename_cctors[OF assms] map_term_pre_def comp_def
-    Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
-    apply (rule refl)+
   done
 
 lemma rrename_cong:
@@ -288,7 +278,7 @@ lemma Lam_avoid: "|A::var set| <o |UNIV::var set| \<Longrightarrow> \<exists>x' 
 lemma Lam_rrename:
 "bij (\<sigma>::var\<Rightarrow>var) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: var set| \<Longrightarrow>
  (\<And>a'. a' \<in>FFVars_term e - {a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Lam a e = Lam (\<sigma> a) (rrename \<sigma> e)"
-by (metis rrename_simps(3) term.rrename_cong_ids term.set(3))
+by (metis term.permute(3) term.rrename_cong_ids term.set(3))
 
 
 (* Bound properties (needed as auxiliaries): *)
@@ -407,14 +397,14 @@ using IImsupp_rrename_update_bound[OF assms]
 (* Action of swapping (a particular renaming) on variables *)
 
 lemma rrename_swap_Var1[simp]: "rrename (id(x := xx, xx := x)) (Var (x::var)) = Var xx"
-apply(subst rrename_simps(1)) by auto
+apply(subst term.permute(1)) by auto
 lemma rrename_swap_Var2[simp]: "rrename (id(x := xx, xx := x)) (Var (xx::var)) = Var x"
-apply(subst rrename_simps(1)) by auto
+apply(subst term.permute(1)) by auto
 lemma rrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> rrename (id(x := xx, xx := x)) (Var (z::var)) = Var z"
-apply(subst rrename_simps(1)) by auto
+apply(subst term.permute(1)) by auto
 lemma rrename_swap_Var[simp]: "rrename (id(x := xx, xx := x)) (Var (z::var)) =
  Var (if z = x then xx else if z = xx then x else z)"
-apply(subst rrename_simps(1)) by auto
+apply(subst term.permute(1)) by auto
 
 (* Compositionality properties of renaming and term-for-variable substitution *)
 
@@ -1003,7 +993,7 @@ next
       R_B Un_iff bot.extremum insert_Diff insert_subset)
     subgoal apply(drule R_App_elim) 
       by (smt (verit, del_insts) R.simps R_B bot.extremum insert_subset renB_AppB 
-      rrename_simps(2)) .
+      term.permute(2)) .
 next
   case (Lam x t)
   note Lamm = Lam[rule_format]
@@ -1162,7 +1152,7 @@ next
       subgoal by fact subgoal by fact .
 
     show "R (rrename f (Lam x t)) (renB f b)" 
-    unfolding 0 using RR apply(subst rrename_simps) 
+    unfolding 0 using RR apply(subst term.permute) 
       subgoal using f by auto subgoal using f by auto
       subgoal apply(subst renB_LamB)
        using f b' by auto .  

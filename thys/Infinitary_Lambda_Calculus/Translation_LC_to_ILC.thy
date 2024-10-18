@@ -181,7 +181,7 @@ using bij_ext card_supp_ext by (auto simp: ext_dstnth_superOf)
 lemma renB_AppB: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> {b1,b2} \<subseteq> B \<Longrightarrow> 
    renB \<sigma> (AppB b1 b2) = AppB (renB \<sigma> b1) (renB \<sigma> b2)"
 unfolding renB_def AppB_def fun_eq_iff apply safe 
-apply(subst irrename_simps) 
+apply(subst iterm.permute) 
 using bij_ext card_supp_ext  
 by auto (metis (mono_tags, lifting) comp_apply stream.map_comp stream.map_cong)
 

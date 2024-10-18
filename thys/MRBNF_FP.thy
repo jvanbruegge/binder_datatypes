@@ -2,11 +2,6 @@ theory MRBNF_FP
   imports "MRBNF_Composition"
 begin
 
-lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
-  using card_of_mono1 ordLeq_ordLess_trans by blast
-lemma card_of_minus_bound: "|A| <o r \<Longrightarrow> |A - B| <o r"
-  by (rule card_of_subset_bound[OF Diff_subset])
-
 lemma exists_subset_compl:
   assumes "Cinfinite r" "r \<le>o |UNIV::'b set|" "|U \<union> S::'b set| <o r"
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
@@ -118,10 +113,13 @@ lemmas exists_bij_betw_refl_def = exists_bij_betw_refl[unfolded eq_bij_betw_refl
 
 lemma imsupp_id_on: "imsupp u \<inter> A = {} \<Longrightarrow> id_on A u"
   unfolding imsupp_def supp_def id_on_def by blast
+lemma supp_id_on: "supp u \<inter> A = {} \<Longrightarrow> id_on A u"
+  unfolding supp_def id_on_def by blast
 
 lemma imsupp_image_subset: "u ` A \<inter> A = {} \<Longrightarrow> A \<subseteq> imsupp u"
   unfolding imsupp_def supp_def by auto
 
+lemma Int_subset_empty: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> A \<Longrightarrow> D \<subseteq> B \<Longrightarrow> C \<inter> D = {}" by blast
 lemma Int_subset_empty1: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> A \<Longrightarrow> C \<inter> B = {}" by blast
 lemma Int_subset_empty2: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> B \<Longrightarrow> A \<inter> C = {}" by blast
 lemma exists_map_prod_id: "(a, b) \<in> map_prod f id ` A \<Longrightarrow> \<exists>c. (c, b) \<in> A \<and> a = f c" by auto
@@ -332,12 +330,16 @@ lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infini
 lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
   by (metis card_of_Un_singl_ordLess_infinite insert_is_Un)
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
+  unfolding id_on_def by simp
+
+(*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+*)
 
 lemma extend_fresh:
   fixes A B::"'a set"

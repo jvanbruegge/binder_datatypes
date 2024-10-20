@@ -9,6 +9,7 @@ sig
     inner: 'a,
 
     inject: thm,
+    noclash_rename: thm,
     rename_id0: thm,
     rename_id: thm,
     rename_comp0: thm,
@@ -100,6 +101,7 @@ type 'a fp_result_T = {
   inner: 'a,
 
   inject: thm,
+  noclash_rename: thm,
   rename_id0: thm,
   rename_id: thm,
   rename_comp0: thm,
@@ -115,7 +117,7 @@ type 'a fp_result_T = {
 
 fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_id0, rename_id,
   rename_comp0, rename_comp, rename_bij, rename_inv_simp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
-  card_of_FVars_bound_UNIVs, FVars_intross, noclash } = {
+  card_of_FVars_bound_UNIVs, FVars_intross, noclash, noclash_rename } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
   rename = Morphism.term phi rename,
@@ -123,6 +125,7 @@ fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_
   noclash = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) noclash,
   inner = morph phi inner,
   inject = Morphism.thm phi inject,
+  noclash_rename = Morphism.thm phi noclash_rename,
   rename_id0 = Morphism.thm phi rename_id0,
   rename_id = Morphism.thm phi rename_id,
   rename_comp0 = Morphism.thm phi rename_comp0,

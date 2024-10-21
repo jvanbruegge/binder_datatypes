@@ -1538,7 +1538,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
             SELECT_GOALS (length As) (EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
               REPEAT_DETERM o resolve_tac ctxt (
-                @{thms cmin1 cmin2 card_of_Card_order}
+                @{thms ordLeq_refl cmin1 cmin2 card_of_Card_order}
                 @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) f'_prems
                 @ maps (fn mrbnf => [
                   MRBNF_Def.Un_bound_of_mrbnf mrbnf, MRBNF_Def.UNION_bound_of_mrbnf mrbnf

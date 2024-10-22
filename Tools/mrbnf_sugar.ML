@@ -427,7 +427,7 @@ fun create_binder_datatype (spec : spec) lthy =
       ])] end
     ) ctors_tys) ctors_tys));
 
-    (* TODO: map_bij (rename simps); injection *)
+    (* TODO: injection *)
 
     (* Term for variable substitution *)
     val x = length replace - #rec_vars spec;

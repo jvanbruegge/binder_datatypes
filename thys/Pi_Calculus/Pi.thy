@@ -20,9 +20,10 @@ for
   vvsubst: vvsubst
   tvsubst: tvsubst
 
+declare term.FFVars_rrenames[equiv_simps]
+
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)
-
 
 (* Monomorphising: *)
 instance var :: var_term_pre apply standard
@@ -407,7 +408,7 @@ lemmas usub_simps = usub_simps_free usub_Inp usub_Res
 
 
 
-lemma rrename_usub[simp]:
+lemma rrename_usub[simp, equiv]:
 assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
 shows "rrename \<sigma> (usub P u (x::var)) = usub (rrename \<sigma> P) (\<sigma> u) (\<sigma> x)"
 using assms
@@ -457,7 +458,7 @@ proof-
       using term_pre.supp_comp_bound by auto . .
 qed
 
-lemma Inp_eq_usub: 
+lemma Inp_eq_usub:
   assumes il: "Inp x y Q = Inp x y' Q'"
   shows "usub Q z y = usub Q' z y'"
   by (metis (no_types, lifting) Inp_inject_swap Inp_refresh il usub_refresh)
@@ -471,5 +472,10 @@ apply(subst term.rrename_comps)
 apply auto
 apply(rule rrename_cong)
 by (auto simp: term_pre.supp_comp_bound)
+
+lemma rrename_equiv[equiv]:
+  assumes "bij (f::var\<Rightarrow>var)" "|supp f| <o |UNIV::var set|"
+  shows "rrename f P = rrename f Q \<longleftrightarrow> P = Q"
+  by (simp add: assms(1,2) term.rrename_bijs)
 
 end

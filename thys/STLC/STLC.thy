@@ -200,11 +200,21 @@ no_notation Set.member  ("(_/ : _)" [51, 51] 50)
 definition fresh :: "'a::var_terms_pre \<Rightarrow> ('a * 'b) fset \<Rightarrow> bool" ("(_/ \<sharp> _)" [51, 51] 50) where
   "fresh x \<Gamma> \<equiv> x |\<notin>| fst |`| \<Gamma>"
 
-lemma isin_rename: "bij f \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id |`| \<Gamma> \<longleftrightarrow> (x, \<tau>) |\<in>| \<Gamma>"
-  by force
-
 abbreviation extend :: "('a * \<tau>) fset \<Rightarrow> 'a::var_terms_pre \<Rightarrow> \<tau> \<Rightarrow> ('a * \<tau>) fset" ("(_,_:_)" [52, 52, 52] 53) where
   "extend \<Gamma> a \<tau> \<equiv> finsert (a, \<tau>) \<Gamma>"
+
+lemma isin_rename[equiv]: "bij f \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id |`| \<Gamma> \<longleftrightarrow> (x, \<tau>) |\<in>| \<Gamma>"
+by force
+
+lemma fresh_rename[equiv]: "bij f \<Longrightarrow> f x \<sharp> map_prod f id |`| \<Gamma> \<longleftrightarrow> x \<sharp> \<Gamma>"
+unfolding fresh_def by force
+
+lemma extend_equiv[equiv_commute]:
+  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  assumes "bij f"
+  shows
+    "map_prod f id |`| (\<Gamma>,x:\<tau>) = (map_prod f id |`| \<Gamma>),f x:\<tau>"
+    by simp
 
 inductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" (infixr "\<^bold>\<longrightarrow>" 25) where
   ST_Beta: "App (Abs x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (tvVVr_tvsubst(x:=e2)) e"
@@ -219,16 +229,6 @@ lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<ci
   using prod.map_comp by auto
 
 binder_inductive Ty
-  subgoal for R B \<sigma> x1 x2 x3
-    apply (elim disj_forward)
-      apply (auto simp: map_prod_comp0 terms.rrename_comps[OF _ _ bij_imp_bij_inv supp_inv_bound]
-    terms.rrename_ids)
-     apply force
-    apply (rule exI)
-    apply (rule conjI)
-     apply (rule refl)
-    apply (simp add: terms.rrename_comps[OF _ _ bij_imp_bij_inv supp_inv_bound] terms.rrename_ids)
-    unfolding fresh_def by force
   subgoal for R B x1 x2 x3
     apply (rule exI[of _ B])
     unfolding fresh_def by auto
@@ -248,12 +248,9 @@ lemma provided:
     "map_prod f id |`| (\<Gamma>,x:\<tau>) = (map_prod f id |`| \<Gamma>),f x:\<tau>"
     (* freshness *)
     "\<lbrakk> x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<rbrakk> \<Longrightarrow> x \<notin> \<Union>(Basic_BNFs.fsts ` fset \<Gamma>)"
-   apply (simp add: assms isin_rename)
-  unfolding fresh_def
-     apply force
-  using assms(1) fimage_iff apply fastforce
-   apply simp
-  using fimage_iff by fastforce
+    using assms apply (auto simp only: equiv equiv_commute)
+    using fimage_iff
+    by (metis fresh_def fsts.cases)
 
 inductive_cases
   Ty_VarE[elim]: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Var x : \<tau>"

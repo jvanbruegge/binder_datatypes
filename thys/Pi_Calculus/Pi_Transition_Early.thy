@@ -23,15 +23,6 @@ lemma "B = bvars \<alpha>' \<Longrightarrow> P = Paa \<parallel> Qaa \<Longright
 *)
 
 binder_inductive trans
-  subgoal for R B \<sigma> x1 x2
-    apply simp
-    apply (elim disj_forward)
-    by (auto simp: isPerm_def
-        term.rrename_comps action.map_comp action.map_id
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | (rule exI[of _ "map_action \<sigma> _"])
-        | (rule exI[of _ "rrename \<sigma> _"])
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]

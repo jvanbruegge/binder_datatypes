@@ -102,7 +102,7 @@ lemma Forall_swap: "y \<notin> FFVars_typ T2 - {x} \<Longrightarrow> Forall (x::
 type_synonym type = "var typ"
 type_synonym \<Gamma>\<^sub>\<tau> = "(var \<times> type) list"
 
-definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
+abbreviation map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
   "map_context f \<equiv> map (map_prod f (rrename_typ f))"
 
 abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where
@@ -117,19 +117,18 @@ abbreviation disjoint :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<t
   "disjoint \<Gamma> \<Delta> \<equiv> dom \<Gamma> \<inter> dom \<Delta> = {}"
 
 lemma map_context_id[simp]: "map_context id = id"
-  unfolding map_context_def by simp
+  by simp
 lemma map_context_comp0[simp]:
   assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
   shows "map_context f \<circ> map_context g = map_context (f \<circ> g)"
   apply (rule ext)
-  unfolding map_context_def
   using assms by (auto simp: typ.rrename_comps)
 lemmas map_context_comp = trans[OF comp_apply[symmetric] fun_cong[OF map_context_comp0]]
 declare map_context_comp[simp]
 lemma context_dom_set[simp]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "dom (map_context f xs) = f ` dom xs"
-  unfolding map_context_def by force
+  by force
 lemma set_bd_UNIV: "|set xs| <o |UNIV::var set|"
   apply (rule ordLess_ordLeq_trans)
     apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
@@ -143,7 +142,6 @@ lemma context_map_cong_id:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   and "\<And>a. a \<in> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<Longrightarrow> f a = a"
 shows "map_context f \<Gamma> = \<Gamma>"
-  unfolding map_context_def
   apply (rule trans)
    apply (rule list.map_cong0[of _ _ id])
    apply (rule trans)
@@ -167,29 +165,29 @@ inductive_cases
   and wf_ConsE[elim!]: "\<turnstile> (a#\<Gamma>) ok"
 print_theorems
 
-lemma in_context_eqvt:
+lemma in_context_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_typ f T \<in> map_context f \<Gamma>"
-  using assms unfolding map_context_def by auto
+  using assms by auto
 
-lemma extend_eqvt:
+lemma extend_eqvt[equiv_commute]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "map_context f (\<Gamma>,x<:T) = map_context f \<Gamma>,f x <: rrename_typ f T"
-  using assms unfolding map_context_def by simp
+  using assms by simp
 
-lemma closed_in_eqvt:
+lemma closed_in_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "S closed_in \<Gamma> \<Longrightarrow> rrename_typ f S closed_in map_context f \<Gamma>"
-  using assms by (auto simp: typ.FFVars_rrenames)
+  using assms by (metis context_dom_set image_mono typ.FFVars_rrenames)
 
-lemma wf_eqvt:
+lemma wf_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "\<turnstile> \<Gamma> ok \<Longrightarrow> \<turnstile> map_context f \<Gamma> ok"
-unfolding map_context_def proof (induction \<Gamma>)
+proof (induction \<Gamma>)
   case (Cons a \<Gamma>)
   then show ?case using assms apply auto
     apply (metis fst_conv image_iff)
-    using closed_in_eqvt map_context_def by fastforce
+    using closed_in_eqvt by fastforce
 qed simp
 
 abbreviation Tsupp :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> var set" where
@@ -232,7 +230,7 @@ lemma map_context_swap_FFVars[simp]:
 "\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FFVars_typ (snd k) \<and>
            xx \<noteq> fst k \<and> xx \<notin> FFVars_typ (snd k) \<Longrightarrow>
     map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
-  unfolding map_context_def apply(rule map_idI) by auto
+  apply(rule map_idI) by auto
 
 lemma isPerm_swap: "isPerm (id(x := z, z := x))"
   unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)
@@ -277,13 +275,6 @@ lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
 binder_inductive ty
-  subgoal for R B \<sigma> \<Gamma> T1 T2
-    unfolding split_beta
-    by (elim disj_forward exE)
-      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ_vvsubst_rrename
-        typ.rrename_comps typ.FFVars_rrenames wf_eqvt extend_eqvt
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((rule exI[of _ "rrename_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FFVars_typ :: type \<Rightarrow> var set"}, @{term "FFVars_typ :: type \<Rightarrow> var set"}]

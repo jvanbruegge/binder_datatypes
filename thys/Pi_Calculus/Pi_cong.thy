@@ -17,15 +17,9 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 | "x \<noteq> y \<Longrightarrow> Res x (Res y P) \<equiv>\<^sub>\<pi> Res y (Res x P)"
 | "Res x Zero \<equiv>\<^sub>\<pi> Zero"
 | "Bang P \<equiv>\<^sub>\<pi> Par P (Bang P)"
-| cong_3: "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
+| "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
 
 binder_inductive cong
-  subgoal for R B \<sigma> x1 x2
-    apply simp
-    by (elim disj_forward case_prodE)
-      (auto simp: isPerm_def term.rrename_comps
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
@@ -61,14 +55,8 @@ inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightar
 | "P \<rightarrow> Q \<Longrightarrow> Res x P \<rightarrow> Res x Q"
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
+(* needs equiv_commute of vvsubst *)
 binder_inductive trans
-  subgoal for R B \<sigma> x1 x2
-    apply simp
-    apply (elim disj_forward exE)
-       apply  (auto simp: isPerm_def term.rrename_comps
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
-    by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]

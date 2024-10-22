@@ -1511,10 +1511,10 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
           |> mk_Frees "t" (map #T (#quotient_fps fp_res));
         fun mk_goals comb = @{map 3} (fn quotient => fn tvsubst => fn t =>
           let
-            val hs' = map_filter I (maps (map2 (fn f => Option.map (fn h => HOLogic.mk_comp (
+            val hs' = map_filter I (flat (map2 (fn quotient => map2 (fn f => Option.map (fn h => HOLogic.mk_comp (
               HOLogic.mk_comp (Term.list_comb (#rename quotient, fs), h),
               mk_inv f
-            ))) fs) hss);
+            ))) fs) (#quotient_fps fp_res) hss));
           in HOLogic.mk_eq (
             comb (Term.list_comb (#rename quotient, fs)) (Term.list_comb (fst tvsubst, some_hs)) t,
             comb (Term.list_comb (fst tvsubst, hs')) (Term.list_comb (#rename quotient, fs)) t
@@ -1532,7 +1532,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         val thms = split_conj (length mrbnfs) (Goal.prove_sorry lthy (names (fs @ some_hs @ ts)) (f_prems @ f'_prems) goal (fn {context=ctxt, prems} =>
           let val (f_prems, f'_prems) = chop (length f_prems) prems;
           in EVERY1 [
-            rtac ctxt (infer_instantiate' ctxt (
+            DETERM o rtac ctxt (infer_instantiate' ctxt (
               map (SOME o Thm.cterm_of ctxt) As @ replicate (length mrbnfs) NONE @ map (SOME o Thm.cterm_of ctxt) ts
             ) (#fresh_co_induct (#inner (hd (#quotient_fps fp_res))))),
             SELECT_GOALS (length As) (EVERY1 [
@@ -1546,7 +1546,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
                 @ maps #card_of_FVars_bound_UNIVs (#quotient_fps fp_res)
               )
             ]),
-            EVERY' (@{map 9} (fn mrbnf => fn quotient => fn defs => fn tvsubst_not_isVVr => fn isVVr_renames => fn SSupp_naturals => fn IImsupp_naturalss => fn rrename_VVrs => fn tvsubst_VVrs =>
+            EVERY' (@{map 7} (fn mrbnf => fn quotient => fn defs => fn tvsubst_not_isVVr => fn isVVr_renames => fn rrename_VVrs => fn tvsubst_VVrs =>
               let val n = length (map_filter I defs);
               in Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=IHs, ...} => EVERY1 [
                 REPEAT_DETERM_N n o rtac ctxt @{thm case_split[rotated]},
@@ -1565,13 +1565,13 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
                   assume_tac ctxt
                 ],
                 REPEAT_DETERM o EVERY' [
-                  EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) SSupp_naturals),
+                  EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) (flat SSupp_naturalss)),
                   rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_image]},
                   resolve_tac ctxt f'_prems
                 ],
                 REPEAT_DETERM o EVERY' [
                   REPEAT_DETERM1 o EVERY' [
-                    EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf @ flat (map_filter I IImsupp_naturalss)),
+                    EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf @ flat (map_filter I (flat IImsupp_naturalsss))),
                     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems)
                   ],
                   K (Local_Defs.unfold0_tac ctxt @{thms image_Un[symmetric]}),
@@ -1607,17 +1607,17 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
                   REPEAT_DETERM o resolve_tac ctxt f'_prems,
                   EqSubst.eqsubst_tac ctxt [0] (map_filter I tvsubst_VVrs),
                   REPEAT_DETERM o EVERY' [
-                    EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) SSupp_naturals),
+                    EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) (flat SSupp_naturalss)),
                     rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_image]},
                     resolve_tac ctxt f'_prems
                   ],
-                  K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
                   EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
                   resolve_tac ctxt f_prems,
                   rtac ctxt refl
                 ])) (rev defs))
               ]) ctxt end
-            ) mrbnfs (#quotient_fps fp_res) defss tvsubst_not_isVVrs isVVr_renamess SSupp_naturalss IImsupp_naturalsss rrename_VVrss tvsubst_VVrss)
+            ) mrbnfs (#quotient_fps fp_res) defss tvsubst_not_isVVrs isVVr_renamess rrename_VVrss tvsubst_VVrss)
           ] end
         ));
 

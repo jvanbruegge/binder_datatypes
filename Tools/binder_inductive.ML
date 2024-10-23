@@ -21,7 +21,9 @@ fun collapse (Inl x) = x
 fun mk_insert x S =
   Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
 
-fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
+datatype options = No_Equiv | No_Refresh
+
+fun binder_inductive_cmd (((options, pred_name), binds_opt), perms_supps) no_defs_lthy =
   let
     val binds = the_default [] binds_opt;
     val ({names, ...}, { def, preds, mono, induct, intrs, ... }) = Inductive.the_inductive_global no_defs_lthy (long_name no_defs_lthy pred_name);
@@ -370,12 +372,14 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
     fun keep_both xs = cond_keep xs one_specified;
     fun keep_binders xs = cond_keep xs binders_specified;
 
+    fun option x t f = if member (op=) options x then t else f;
+
     val defs = map snd (perms @ supps);
 
     val goals = map (single o rpair []) (
       keep_perm perm_id0_goals @ keep_perm perm_comp_goals @ keep_both supp_seminat_goals
       @ keep_both perm_support_goals @ keep_supp supp_small_goals @ flat (keep_binders B_small_goals)
-      @ [G_refresh_goal]
+      @ option No_Equiv [G_equiv_goal] [] @ [G_refresh_goal]
     );
     fun after_qed thmss lthy =
       let
@@ -426,13 +430,14 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         val m2 = length (filter not one_specified);
         val m3 = length (filter not supps_specified);
         val m4 = length (filter not binders_specified);
-        val ((((((perm_id0s, perm_comps), supp_seminats), perm_supports), supp_smalls), B_smalls), G_refresh) = map hd thmss
+        val (((((((perm_id0s, perm_comps), supp_seminats), perm_supports), supp_smalls), B_smalls), G_equivs), G_refresh) = map hd thmss
           |> chop (n - m)
           ||>> chop (n - m)
           ||>> chop (n - m2)
           ||>> chop (n - m2)
           ||>> chop (num_vars * (n - m3))
           ||>> chop (length bind_ts - m4)
+          ||>> chop (option No_Equiv 1 0)
           ||> hd;
 
         fun map_id0_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_id0_of_mrbnf mrbnf]
@@ -582,7 +587,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         val perm_ids = map (fn thm => thm RS fun_cong RS @{thm trans[OF _ id_apply]}) perm_id0s;
 
         val _ = @{print} (map snd perms)
-        val G_equiv =
+        val G_equiv = if member (op=) options No_Equiv then hd G_equivs else
           Goal.prove_sorry lthy [] [] G_equiv_goal (fn {context=ctxt, ...} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt [snd G]),
             REPEAT_DETERM o EVERY' [
@@ -1082,7 +1087,14 @@ val parse_perm_supps =
     >> (fn ps => fold extract_perm_supp ps (NONE, NONE))
   || Scan.succeed (NONE, NONE);
 
-val binder_inductive_parser = Parse.name -- Scan.option (
+val options_parser = Parse.group (fn () => "option")
+  ((Parse.reserved "no_auto_equiv" >> K No_Equiv)
+    || (Parse.reserved "no_auto_refresh" >> K No_Refresh))
+
+val config_parser = Scan.optional (@{keyword "("} |--
+  Parse.!!! (Parse.list1 options_parser) --| @{keyword ")"}) []
+
+val binder_inductive_parser = config_parser -- Parse.name -- Scan.option (
     @{keyword where} |-- Parse.enum1 "|" (Parse.name --| @{keyword binds} -- Parse.and_list Parse.term)
   ) -- parse_perm_supps
 

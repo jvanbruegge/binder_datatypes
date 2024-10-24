@@ -19,17 +19,12 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
-binder_inductive step
-  subgoal premises prems for R B t1 t2  \<comment> \<open>refreshability\<close>
-    by (tactic \<open>refreshability_tac true
-      [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [SOME 0, SOME 0, SOME 1]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms } @{context}\<close>)
-  done
+lemmas smalls = emp_bound singl_bound term.Un_bound infinite
+declare smalls[refresh_smalls]
+declare Lam_inject[refresh_simps]
+declare Lam_eq_tvsubst[refresh_intros] term.rrename_cong_ids[symmetric, refresh_intros]
+
+binder_inductive step .
 
 thm step.strong_induct step.equiv
 

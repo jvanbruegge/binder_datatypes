@@ -17,6 +17,7 @@ type binder_sugar = {
   permute_simps: thm list,
   subst_simps: thm list option,
   bsetss: term option list list,
+  permute_bounds: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm,
@@ -59,6 +60,7 @@ type binder_sugar = {
   permute_simps: thm list,
   subst_simps: thm list option,
   bsetss: term option list list,
+  permute_bounds: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm,
@@ -67,12 +69,13 @@ type binder_sugar = {
 };
 
 fun morph_binder_sugar phi { map_simps, permute_simps, set_simpss, subst_simps, mrbnf,
-  strong_induct, distinct, ctors, bsetss, bset_bounds } = {
+  strong_induct, distinct, ctors, bsetss, bset_bounds, permute_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
+  permute_bounds = map (map (Option.map (Morphism.term phi))) permute_bounds,
   bset_bounds = map (Morphism.thm phi) bset_bounds,
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
   strong_induct = Morphism.thm phi strong_induct,
@@ -334,8 +337,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val bounds = map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
     val frees = map_filter (fn (x, MRBNF_Def.Free_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
 
-    (* TODO: Use mrbnf sets here (only relevant for passive variables) *)
-    val (bset_optss, set_simpss) = split_list (map (fn FVars =>
+    val param_vars = map (fn FVars =>
       let
         fun get_var vars = hd (filter (fn T =>
           Term.typ_subst_atomic replace T = HOLogic.dest_setT (range_type (fastype_of FVars))
@@ -345,7 +347,12 @@ fun create_binder_datatype (spec : spec) lthy =
         val rec_bounds = map (nth rec_vars) (the_default [] (
           Option.mapPartial (try (nth (#binding_rel spec))) (get_index bound bounds)
         ));
-      in split_list (map2 (fn (ctor, _) => fn (_, tys) =>
+      in (free, bound, rec_bounds) end
+    ) (#FVars quotient);
+
+    (* TODO: Use mrbnf sets here (only relevant for passive variables) *)
+    val (bset_optss, set_simpss) = split_list (map2 (fn FVars => fn (free, bound, rec_bounds) =>
+      split_list (map2 (fn (ctor, _) => fn (_, tys) =>
         let
           val (xs, _) = lthy
             |> mk_Frees "x" tys;
@@ -406,9 +413,10 @@ fun create_binder_datatype (spec : spec) lthy =
           ]
         ])) end
       ) ctors (#ctors spec))
-    end) (#FVars quotient));
+    ) (#FVars quotient) param_vars);
 
     val ctors_tys = ctors ~~ map snd (#ctors spec);
+
     val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
       let
         val ((xs, ys), _) = names_lthy
@@ -653,10 +661,10 @@ fun create_binder_datatype (spec : spec) lthy =
         ];
       in mk_map_simps lthy true fs (SOME o MRBNF_Recursor.mk_supp_bound) (fn t => fn _ => SOME (mk_imsupp t)) (K []) [] mapx tac end;
 
+    val (fs, _) = lthy
+        |> mk_Frees "f" (map (fn a => a --> a) vars);
     val permute_simps =
       let
-        val (fs, _) = lthy
-          |> mk_Frees "f" (map (fn a => a --> a) vars);
         val Ts' = snd (dest_Type qT);
         val mapx = Term.subst_atomic_types (Ts' ~~ vars) (#rename quotient);
         fun tac ctxt prems = EVERY1 [
@@ -672,6 +680,27 @@ fun create_binder_datatype (spec : spec) lthy =
       in mk_map_simps lthy false fs (SOME o MRBNF_Recursor.mk_supp_bound) (K (K NONE))
         (single o HOLogic.mk_Trueprop o mk_bij) bounds mapx tac
       end;
+
+    val permute_boundss = map2 (fn (_, tys) => fn permute_simp =>
+      let
+        val (xs, _) = lthy
+          |> mk_Frees "x" (map (Term.typ_subst_atomic replace) tys);
+        val permute_args = Thm.prop_of permute_simp
+          |> Logic.strip_imp_concl
+          |> HOLogic.dest_Trueprop
+          |> snd o HOLogic.dest_eq
+          |> Logic.unvarify_global
+          |> snd o Term.strip_comb;
+
+        val bound = map (fn T =>
+          map (fn (_, bound, rec_bounds) => member (op=) (bound::rec_bounds) T) param_vars
+        ) tys;
+      in @{map 3} (fn x => fn t => fn bn => if not (exists I bn) then NONE else SOME (
+         fold_rev (fn (b, f) => fn t => Term.absfree (dest_Free f) (if b then t else
+           Term.subst_atomic [(f, HOLogic.id_const (domain_type (fastype_of f)))] t
+         )) (bn ~~ fs) (Term.absfree (dest_Free x) t)
+      )) xs permute_args bound end
+    ) ctors_tys permute_simps;
 
     val cmin_UNIV = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
     val Cinfinite_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (HOLogic.mk_conj (
@@ -751,6 +780,7 @@ fun create_binder_datatype (spec : spec) lthy =
       strong_induct = strong_induct,
       subst_simps = Option.map snd tvsubst_opt,
       bsetss = bset_optss,
+      permute_bounds = permute_boundss,
       bset_bounds = [],
       mrbnf = mrbnf,
       distinct = distinct,

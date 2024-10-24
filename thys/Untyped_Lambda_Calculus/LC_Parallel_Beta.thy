@@ -16,12 +16,6 @@ inductive pstep :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | PBeta: "pstep e1 e1' \<Longrightarrow> pstep e2 e2' \<Longrightarrow> pstep (App (Lam x e1) e2) (tvsubst (Var(x:=e2')) e1')"
 
 binder_inductive pstep
-  subgoal for \<sigma> R B x1 x2
-    by (elim disj_forward exE)
-      (auto simp: isPerm_def
-         term.rrename_comps rrename_tvsubst_comp
-         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B t1 t2
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]

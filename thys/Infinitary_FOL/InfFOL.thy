@@ -231,9 +231,7 @@ unfolding kmember_def map_fun_def id_o o_id map_set\<^sub>k_def
 unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
 apply transfer apply transfer by blast
 
-lemma in_k_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
-  unfolding isPerm_def
-  apply (erule conjE)
+lemma in_k_equiv[equiv]: "bij (\<sigma>::'a::var_ifol'_pre \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k \<Delta>"
   apply (rule iffI)
   apply (drule in_k_equiv'[rotated])
   apply (rule bij_imp_bij_inv)
@@ -251,13 +249,11 @@ lemma in_k_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<
   apply assumption
   done
 
-lemma in_k1_equiv': "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) F"
+lemma in_k1_equiv'[equiv]: "bij \<sigma> \<Longrightarrow> f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) F"
 apply (unfold k1member_def map_fun_def comp_def id_def map_set\<^sub>k\<^sub>1_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I])
 apply transfer apply transfer by blast
 
-lemma in_k1_equiv: "isPerm \<sigma> \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
-  unfolding isPerm_def
-  apply (erule conjE)
+lemma in_k1_equiv[equiv]: "bij (\<sigma>::'a::var_ifol'_pre \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow> rrename_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (rrename_ifol' \<sigma>) \<Delta> = f \<in>\<^sub>k\<^sub>1 \<Delta>"
   apply (rule iffI)
   apply (drule in_k1_equiv'[rotated])
   apply (rule bij_imp_bij_inv)
@@ -340,7 +336,7 @@ inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (in
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
 
 binder_inductive deduct
-  subgoal for R B \<sigma> x1 x2
+(*  subgoal for R B \<sigma> x1 x2
     unfolding induct_rulify_fallback split_beta
     apply (elim disj_forward exE)
           apply (auto simp: ifol'.rrename_comps in_k_equiv in_k_equiv' isPerm_def ifol'.rrename_ids supp_inv_bound)
@@ -412,8 +408,8 @@ binder_inductive deduct
       apply (metis ifol'.rrename_bijs ifol'.rrename_inv_simps inv_simp1 set\<^sub>k.map_ident_strong)
       apply (erule image_mono)
       done
-    done
-  subgoal premises prems for R B \<Delta> x2
+    done*)
+(*  subgoal premises prems for R B \<Delta> x2
     using prems(2-) unfolding induct_rulify_fallback split_beta
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
     apply (elim disj_forward)
@@ -602,7 +598,12 @@ binder_inductive deduct
         by (smt (verit) Int_iff Un_Int_eq(1) X_def \<sigma>_def bij_betw_apply disjoint_iff image_iff)
     qed
     done
-  done
+  done*)
+  sorry
+
+lemma all_mono_bij:
+  "bij f \<Longrightarrow> (\<And>x. P x \<longrightarrow> Q (f x)) \<Longrightarrow> (\<forall>x. P x) \<longrightarrow> (\<forall>x. Q x)"
+  by (metis bij_pointE)
 
 thm deduct.strong_induct
 thm deduct.equiv

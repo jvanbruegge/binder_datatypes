@@ -71,7 +71,6 @@ lemma inj_embed: "inj embed"
   unfolding embed_def
   by (rule someI_ex[OF ex_inj_infinite_regular_var_iterm_pre[where 'a='a]])
 
-
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)
 
@@ -831,11 +830,11 @@ unfolding imkSubst_def by auto
 lemma card_dsset_ivar: "|dsset xs| <o |UNIV::ivar set|"
 using countable_card_ivar countable_card_le_natLeq dsset_natLeq by auto
 
-lemma SSupp_imkSubst[simp,intro]: "|SSupp (imkSubst xs es)| <o |UNIV::ivar set|"
+lemma SSupp_imkSubst[simp,intro]: "|SSupp (imkSubst xs es)| <o |UNIV::'a::var_iterm_pre set|"
 proof-
   have "SSupp (imkSubst xs es) \<subseteq> dsset xs"
   unfolding SSupp_def by auto (metis imkSubst_idle)
-  thus ?thesis by (simp add: card_of_subset_bound card_dsset_ivar)
+  thus ?thesis by (simp add: card_of_subset_bound dsset_card_ls)
 qed
 
 lemma imkSubst_smap_irrename:
@@ -947,7 +946,16 @@ proof-
         imkSubst_idle imkSubst_smap iterm.set(3) not_imageI) . . .
 qed
 
-
+lemma irrename_itvsubst[equiv_commute]:
+  fixes \<sigma>::"ivar \<Rightarrow> ivar"
+  shows "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set|
+  \<Longrightarrow> irrename \<sigma> (itvsubst (imkSubst xs es2) e1) = itvsubst (imkSubst (dsmap \<sigma> xs) (smap (irrename \<sigma>) es2)) (irrename \<sigma> e1)"
+  apply (rule trans)
+   apply (rule box_equals[OF iterm.rrename_tvsubst[THEN fun_cong] comp_apply comp_apply])
+     apply assumption+
+   apply (rule SSupp_imkSubst)
+  apply (rule arg_cong2[OF _ refl, of _ _ itvsubst])
+  using imkSubst_smap_irrename[symmetric, of \<sigma>] by auto
 
 (* RECURSOR PREPARATIONS: *)
 

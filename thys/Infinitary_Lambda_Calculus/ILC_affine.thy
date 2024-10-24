@@ -22,7 +22,8 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
  affine (iApp e1 es2)"
 
 binder_inductive affine
-  unfolding isPerm_def induct_rulify_fallback
+
+  (*unfolding isPerm_def induct_rulify_fallback
   subgoal for R B \<sigma> t
     apply(elim disjE)
     subgoal apply(rule disjI3_1)
@@ -50,7 +51,7 @@ binder_inductive affine
         done
       done
     done
-  done
+  done*)
   subgoal premises prems for R B t
     using prems(2-)
      apply safe

@@ -337,8 +337,20 @@ fun ns :: "act \<Rightarrow> var set" where
 abbreviation "bvars \<equiv> bns"
 abbreviation "fvars \<equiv> fns"
 
+lemma ns_equiv[equiv]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+  \<sigma> x \<in> ns (map_action \<sigma> \<alpha>) \<longleftrightarrow> x \<in> ns \<alpha>"
+  by (cases \<alpha>) auto
+
 lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var_commit_pre set|"
   by (metis Commitment.var_ID_class.large bns.elims finite_iff_le_card_var finite_ordLess_infinite2 insert_bound large_imp_infinite singl_bound)
+
+lemma rrename_commit_Cmt[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+  rrename_commit \<sigma> (Cmt \<alpha> P) = Cmt (map_action \<sigma> \<alpha>) (rrename \<sigma> P)"
+  by (cases \<alpha>) auto
+
+lemma fra_equiv[equiv]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+  fra (map_action \<sigma> \<alpha>) = fra \<alpha>"
+  by (cases \<alpha>) auto
 
 local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   ctors = [
@@ -351,7 +363,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   ],
   permute_simps = @{thms
     rrename_commit_Finp rrename_commit_Fout rrename_commit_Bout
-    rrename_commit_Binp rrename_commit_Tau
+    rrename_commit_Tau rrename_commit_Binp rrename_commit_Cmt
   },
   map_simps = [],
   distinct = [],
@@ -372,12 +384,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
 
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
 
-lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = image \<sigma> (bvars act)"
-by (cases act, auto)
-
-lemma rrename_commit_Cmt[simp]:
-"bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
- rrename_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
+lemma bvars_map_action[simp, equiv_simps]: "bvars (map_action \<sigma> act) = image \<sigma> (bvars act)"
 by (cases act, auto)
 
 lemma bvars_act_bout: "bvars act = {} \<or> (\<exists>a b. act = bout a b) \<or> (\<exists>a b. act = binp a b)"

@@ -24,7 +24,7 @@ inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
 | iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
 
-binder_inductive istep
+binder_inductive (no_auto_equiv, no_auto_refresh) istep
   subgoal for R B \<sigma> x1 x2
     apply (elim disj_forward exE conjE)
     subgoal for xs e1 es2

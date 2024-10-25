@@ -347,13 +347,19 @@ lemma extend_fresh:
   unfolding Int_Un_distrib fun_eq_iff o_apply id_apply
   by blast
 
+named_theorems refresh_extends
+named_theorems refresh_smalls
+named_theorems refresh_simps
+named_theorems refresh_intros
+named_theorems refresh_elims
+
 ML \<open>
 local
   open BNF_Util
   open BNF_FP_Util
 in
 
-fun refreshability_tac verbose supps renames instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
+fun refreshability_tac_common verbose supps instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
     val n = length supps;
     fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN' 
@@ -375,15 +381,17 @@ val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
             |> Library.foldl1 (HOLogic.mk_binop \<^const_name>\<open>sup\<close>);
           val fresh = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt A)]
             @{thm extend_fresh};
+          val _ = (verbose ? @{print tracing}) fresh
 
           fun case_inner_tac fs fprems ctxt =
-            let
+            let 
+              val _ = (verbose ? @{print tracing}) fs
               val f = hd fs |> snd |> Thm.term_of;
               val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
               val ex_B' = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (mk_image f $ B))] exI;
               val args = params |> map (snd #> Thm.term_of);
               val xs = @{map 2} (fn i => fn a => Thm.cterm_of ctxt
-                (case i of SOME i => nth renames i $ f $ a | NONE => a)) insts args;
+                (case i of SOME t => t $ f $ a | NONE => a)) insts args;
 val _ = fprems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
               val eqvt_thm = eqvt_thm OF take 2 fprems;
               val extra_assms = assms RL (eqvt_thm :: extend_thms);
@@ -403,23 +411,39 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                   addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
           val small_ctxt = ctxt addsimps small_thms;
-        in
-          HEADGOAL (rtac ctxt (fresh RS exE) THEN'
-          SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])) THEN'
-          REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
-          SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
-          REPEAT_DETERM o etac ctxt conjE THEN'
+        in EVERY1 [
+          rtac ctxt (fresh RS exE),
+          if verbose then K (print_tac ctxt "after_fresh") else K all_tac,
+          SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])),
+          if verbose then K (print_tac ctxt "after_auto") else K all_tac,
+          REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt),
+          SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}),
+          REPEAT_DETERM o etac ctxt conjE,
+          if verbose then K (print_tac ctxt "pre_case_inner_tac") else K all_tac,
           Subgoal.SUBPROOF (fn focus =>
-            case_inner_tac (#params focus) (#prems focus) (#context focus)) ctxt)
-        end;
+            case_inner_tac (#params focus) (#prems focus) (#context focus)) ctxt
+        ] end;
   in
-    unfold_tac ctxt @{thms conj_disj_distribL ex_disj_distrib} THEN
-    HEADGOAL (
-      rtac ctxt (G_thm RSN (2, cut_rl)) THEN'
-      REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE conjE disj_forward}) THEN'
+    unfold_tac ctxt @{thms conj_disj_distribL ex_disj_distrib} THEN EVERY1 [
+      rtac ctxt (G_thm RSN (2, cut_rl)),
+      REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE conjE disj_forward}),
+      if verbose then K (print_tac ctxt "pre_case_tac") else K all_tac,
       EVERY' (map (fn insts => Subgoal.SUBPROOF (fn focus =>
-        case_tac insts (#params focus) (#prems focus) (#context focus)) ctxt) instss))
+        case_tac insts (#params focus) (#prems focus) (#context focus)) ctxt) instss)
+    ]
   end;
+
+fun refreshability_tac_internal verbose supps instss G_thm eqvt_thm smalls simps ctxt =
+  refreshability_tac_common verbose supps instss G_thm eqvt_thm
+    (Named_Theorems.get ctxt "MRBNF_FP.refresh_extends")
+    (smalls @ Named_Theorems.get ctxt "MRBNF_FP.refresh_smalls")
+    (simps @ Named_Theorems.get ctxt "MRBNF_FP.refresh_simps")
+    (Named_Theorems.get ctxt "MRBNF_FP.refresh_intros")
+    (Named_Theorems.get ctxt "MRBNF_FP.refresh_elims") ctxt;
+
+fun refreshability_tac verbose supps renames instss =
+  let val instss' = map (Option.map (map (Option.map (nth renames)))) instss
+  in refreshability_tac_common verbose supps instss' end
 
 end;
 \<close>

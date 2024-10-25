@@ -21,7 +21,7 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
  \<Longrightarrow>
  affine (iApp e1 es2)"
 
-binder_inductive affine
+binder_inductive (no_auto_equiv, no_auto_refresh) affine
   unfolding isPerm_def induct_rulify_fallback
   subgoal for R B \<sigma> t
     apply(elim disjE)

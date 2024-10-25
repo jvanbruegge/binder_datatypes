@@ -11,15 +11,7 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
-binder_inductive trans
-  subgoal for R B \<sigma> x1 x2
-    apply simp
-    apply (elim disj_forward)
-    by (auto simp: isPerm_def
-        term.rrename_comps action.map_comp action.map_id
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | (rule exI[of _ "map_action \<sigma> _"] exI[of _ "rrename \<sigma> _"])
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
+binder_inductive (no_auto_refresh) trans
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]

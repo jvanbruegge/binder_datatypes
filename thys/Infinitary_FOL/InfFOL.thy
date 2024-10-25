@@ -339,7 +339,7 @@ inductive deduct :: "ifol set\<^sub>k \<Rightarrow> ifol \<Rightarrow> bool" (in
 | AllI: "\<lbrakk> \<Delta> \<turnstile> f ; set\<^sub>k\<^sub>2 V \<inter> \<Union>(FFVars_ifol' ` set\<^sub>k \<Delta>) = {} \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> All V f"
 | AllE: "\<lbrakk> \<Delta> \<turnstile> All V f ; supp \<rho> \<subseteq> set\<^sub>k\<^sub>2 V \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f\<lbrakk>\<rho>\<rbrakk>"
 
-binder_inductive deduct
+binder_inductive (no_auto_equiv, no_auto_refresh) deduct
   subgoal for R B \<sigma> x1 x2
     unfolding induct_rulify_fallback split_beta
     apply (elim disj_forward exE)

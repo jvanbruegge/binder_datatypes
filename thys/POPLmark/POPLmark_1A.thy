@@ -4,6 +4,20 @@ begin
 
 (********************* Actual formalization ************************)
 
+declare ty.intros[intro]
+
+lemma well_scoped:
+  assumes "\<Gamma> \<turnstile> S <: T"
+  shows "S closed_in \<Gamma>" "T closed_in \<Gamma>"
+using assms proof (induction \<Gamma> S T rule: ty.induct)
+  case (SA_Trans_TVar x U \<Gamma> T) {
+  case 1 then show ?case using SA_Trans_TVar
+    by (metis fst_conv imageI singletonD subsetI sftypeP.set(1))
+next
+  case 2 then show ?case using SA_Trans_TVar by simp
+} qed auto
+
+
 lemma ty_refl: "\<lbrakk>wf \<Gamma> ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
 proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: sftypeP.strong_induct)
   case (TVr x \<Gamma>)

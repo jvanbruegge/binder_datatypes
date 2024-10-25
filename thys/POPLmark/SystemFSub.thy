@@ -93,24 +93,12 @@ and
 and
   SA_AllEL: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
 
+
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> wf \<Gamma>"
   by (induction \<Gamma> S T rule: ty.induct)
 
-lemma well_scoped:
-  assumes "\<Gamma> \<turnstile> S <: T"
-  shows "S closed_in \<Gamma>" "T closed_in \<Gamma>"
-using assms proof (induction \<Gamma> S T rule: ty.induct)
-case (SA_Trans_TVar x U \<Gamma> T) {
-  case 1 then show ?case using SA_Trans_TVar
-    by (metis fst_conv imageI singletonD subsetI sftypeP.set(1))
-next
-  case 2 then show ?case using SA_Trans_TVar by simp
-} qed auto
-
-declare ty.intros[intro]
-
 lemma ty_fresh_extend: "\<Gamma>,, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_sftypeP U"
-  by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
+by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
 make_binder_inductive ty
   subgoal for R B \<sigma> \<Gamma> T1 T2

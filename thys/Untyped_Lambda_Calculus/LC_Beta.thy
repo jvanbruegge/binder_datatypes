@@ -19,11 +19,6 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | AppR: "step e2 e2' \<Longrightarrow> step (App e1 e2) (App e1 e2')"
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
-lemmas smalls = emp_bound singl_bound term.Un_bound infinite
-declare smalls[refresh_smalls]
-declare Lam_inject[refresh_simps]
-declare Lam_eq_tvsubst[refresh_intros] term.rrename_cong_ids[symmetric, refresh_intros]
-
 binder_inductive step .
 
 thm step.strong_induct step.equiv

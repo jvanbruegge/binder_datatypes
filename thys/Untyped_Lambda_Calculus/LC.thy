@@ -1274,8 +1274,10 @@ using assms by auto .
 
 end (* context LC_Rec *)
 
-
-
-
+lemmas smalls = emp_bound singl_bound term.Un_bound infinite term.card_of_FFVars_bounds
+declare smalls[refresh_smalls]
+declare Lam_inject[refresh_simps]
+declare Lam_eq_tvsubst[refresh_intros] term.rrename_cong_ids[symmetric, refresh_intros]
+declare id_on_antimono[refresh_elims]
 
 end

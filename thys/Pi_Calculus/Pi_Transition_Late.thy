@@ -10,9 +10,8 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ScopeFree: "\<lbrakk> trans P (Cmt \<alpha> P') ; fra \<alpha> ; x \<notin> ns \<alpha> \<rbrakk> \<Longrightarrow> trans (Res x P) (Cmt \<alpha> (Res x P'))"
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
-thm equiv
-declare [[ML_print_depth=10000]]
-binder_inductive trans
+
+binder_inductive (no_auto_refresh) trans
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]

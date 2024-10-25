@@ -19,17 +19,7 @@ inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" 
 | AppR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (App e1 e2) (App e1 e2')"
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
 
-binder_inductive stepD
-  subgoal premises prems for R B d t1 t2
-    by (tactic \<open>refreshability_tac false
-      [@{term "(\<lambda>_. {}) :: nat \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
-      [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [SOME [SOME 1, SOME 0, NONE], NONE, NONE, SOME [NONE, SOME 0, SOME 0, SOME 1]]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite}
-      @{thms Lam_inject} @{thms Lam_eq_tvsubst term.rrename_cong_ids[symmetric]}
-      @{thms } @{context}\<close>)
-  done
+binder_inductive stepD .
 
 thm stepD.strong_induct
 thm stepD.equiv

@@ -19,7 +19,7 @@ inductive cong :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<equiv>\<
 | "Bang P \<equiv>\<^sub>\<pi> Par P (Bang P)"
 | "x \<notin> FFVars Q \<Longrightarrow> Res x (Par P Q) \<equiv>\<^sub>\<pi> Par (Res x P) Q"
 
-binder_inductive cong
+binder_inductive (no_auto_refresh) cong
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
@@ -56,7 +56,14 @@ inductive trans :: "trm \<Rightarrow> trm \<Rightarrow> bool" (infix "(\<rightar
 | "P \<equiv>\<^sub>\<pi> P' \<Longrightarrow> P' \<rightarrow> Q' \<Longrightarrow> Q' \<equiv>\<^sub>\<pi> Q \<Longrightarrow> P \<rightarrow> Q"
 
 (* needs equiv_commute of vvsubst *)
-binder_inductive trans
+binder_inductive (no_auto_equiv, no_auto_refresh) trans
+  subgoal for R B \<sigma> x1 x2
+    apply simp
+    apply (elim disj_forward exE)
+       apply  (auto simp: isPerm_def term.rrename_comps
+        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+        | ((rule exI[of _ "\<sigma> _"])+; auto))+
+    by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]

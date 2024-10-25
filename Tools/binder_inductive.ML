@@ -21,7 +21,7 @@ fun collapse (Inl x) = x
 fun mk_insert x S =
   Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
 
-datatype options = No_Equiv | No_Refresh
+datatype options = No_Equiv | No_Refresh | Verbose
 
 fun binder_inductive_cmd (((options, pred_name), binds_opt), perms_supps) no_defs_lthy =
   let
@@ -375,6 +375,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt), perms_supps) no_def
     fun option x t f = if member (op=) options x then t else f;
 
     val defs = map snd (perms @ supps);
+    val verbose = member (op=) options Verbose;
 
     val goals = map (single o rpair []) (
       keep_perm perm_id0_goals @ keep_perm perm_comp_goals @ keep_both supp_seminat_goals
@@ -655,7 +656,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt), perms_supps) no_def
               ) ctxt
             ]
           ]);
-        val _ = @{print} G_equiv
+        val _ = (verbose ? @{print}) G_equiv
 
         val G_refresh = if member (op=) options No_Refresh then hd (G_refreshs) else
           let
@@ -708,14 +709,14 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt), perms_supps) no_def
                 let val inner = map (AList.lookup (op=) perms) vars;
                 in if forall isNONE inner then NONE else SOME inner end
               ) var_rules permute_bounds;
-              val _ = @{print} (map (Option.map (map (Option.map (Thm.cterm_of lthy)))) matrix)
+              val _ = (verbose ? @{print}) (map (Option.map (map (Option.map (Thm.cterm_of lthy)))) matrix)
           in Goal.prove_sorry lthy [] [] G_refresh_goal (fn {context=ctxt, ...} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt (snd G :: map snd perms)),
             Subgoal.FOCUS (fn {context=ctxt, prems, ...} =>
-              refreshability_tac false (map fst supps) matrix (nth prems 2) (nth prems 1) supp_smalls (map snd supps) ctxt
+              refreshability_tac_internal verbose (map fst supps) matrix (nth prems 2) (nth prems 1) supp_smalls (map snd supps) ctxt
             ) ctxt
           ]) end;
-        val _ = @{print} G_refresh
+        val _ = (verbose ? @{print}) G_refresh
 
         fun mk_induct mono = Drule.rotate_prems ~1 (
           apply_n @{thm le_funD} n (@{thm lfp_induct} OF [mono])
@@ -1127,7 +1128,8 @@ val parse_perm_supps =
 
 val options_parser = Parse.group (fn () => "option")
   ((Parse.reserved "no_auto_equiv" >> K No_Equiv)
-    || (Parse.reserved "no_auto_refresh" >> K No_Refresh))
+    || (Parse.reserved "no_auto_refresh" >> K No_Refresh)
+    || (Parse.reserved "verbose" >> K Verbose))
 
 val config_parser = Scan.optional (@{keyword "("} |--
   Parse.!!! (Parse.list1 options_parser) --| @{keyword ")"}) []

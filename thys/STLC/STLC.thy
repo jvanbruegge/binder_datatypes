@@ -228,7 +228,10 @@ inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Righ
 lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<circ> f3) (f2 \<circ> f4)"
   using prod.map_comp by auto
 
-binder_inductive Ty
+declare singl_bound[refresh_smalls] terms.Un_bound[refresh_smalls]
+  cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite, refresh_smalls]
+
+binder_inductive (no_auto_refresh) Ty
   subgoal for R B x1 x2 x3
     apply (rule exI[of _ B])
     unfolding fresh_def by auto

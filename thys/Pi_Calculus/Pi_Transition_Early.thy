@@ -11,18 +11,7 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
-(*
-lemma "B = bvars \<alpha>' \<Longrightarrow> P = Paa \<parallel> Qaa \<Longrightarrow> Q = Cmt \<alpha>' (P'a \<parallel> Qaa) \<Longrightarrow> R Paa (Cmt \<alpha>' P'a) \<Longrightarrow>
-   bvars \<alpha>' \<inter> (FFVars Paa \<union> FFVars Qaa) = {} \<Longrightarrow>
-  \<exists>Pa \<alpha> P' Qa.
-       xa ` B = bvars \<alpha> \<and>
-       P = Pa \<parallel> Qa \<and>
-       Q = Cmt \<alpha> (P' \<parallel> Qa) \<and>
-       R Pa (Cmt \<alpha> P') \<and> bvars \<alpha> \<inter> FFVars Pa = {} \<and> bvars \<alpha> \<inter> FFVars Qa = {}"
-  apply (cases \<alpha>'; hypsubst_thin; unfold Cmt.simps bns.simps)
-*)
-
-binder_inductive trans
+binder_inductive (no_auto_refresh) trans
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars_commit :: cmt \<Rightarrow> var set"}]

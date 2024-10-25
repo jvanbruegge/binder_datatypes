@@ -375,6 +375,14 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
     SOME @{term "\<lambda>x1 x2 x3. {x2}"},
     SOME @{term "\<lambda>x P. bns x"}
   ]],
+  permute_bounds = [
+    [NONE, NONE, NONE],
+    [NONE, NONE, NONE],
+    [NONE, NONE, NONE],
+    [NONE],
+    [NONE, NONE, NONE],
+    [NONE, NONE]
+  ],
   bset_bounds = @{thms bns_bound},
   strong_induct = @{thm refl},
   mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),

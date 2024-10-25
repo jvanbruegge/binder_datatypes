@@ -359,13 +359,8 @@ local
   open BNF_FP_Util
 in
 
-fun refreshability_tac verbose supps instss G_thm eqvt_thm smalls simps ctxt =
+fun refreshability_tac_common verbose supps instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
-    val extend_thms = Named_Theorems.get ctxt "MRBNF_FP.refresh_extends";
-    val small_thms = smalls @ Named_Theorems.get ctxt "MRBNF_FP.refresh_smalls";
-    val simp_thms = simps @ Named_Theorems.get ctxt "MRBNF_FP.refresh_simps";
-    val intro_thms = Named_Theorems.get ctxt "MRBNF_FP.refresh_intros";
-    val elim_thms = Named_Theorems.get ctxt "MRBNF_FP.refresh_elims";
     val n = length supps;
     fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN' 
         K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
@@ -418,10 +413,13 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
           val small_ctxt = ctxt addsimps small_thms;
         in EVERY1 [
           rtac ctxt (fresh RS exE),
+          if verbose then K (print_tac ctxt "after_fresh") else K all_tac,
           SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])),
+          if verbose then K (print_tac ctxt "after_auto") else K all_tac,
           REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt),
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}),
           REPEAT_DETERM o etac ctxt conjE,
+          if verbose then K (print_tac ctxt "pre_case_inner_tac") else K all_tac,
           Subgoal.SUBPROOF (fn focus =>
             case_inner_tac (#params focus) (#prems focus) (#context focus)) ctxt
         ] end;
@@ -429,10 +427,23 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
     unfold_tac ctxt @{thms conj_disj_distribL ex_disj_distrib} THEN EVERY1 [
       rtac ctxt (G_thm RSN (2, cut_rl)),
       REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE conjE disj_forward}),
+      if verbose then K (print_tac ctxt "pre_case_tac") else K all_tac,
       EVERY' (map (fn insts => Subgoal.SUBPROOF (fn focus =>
         case_tac insts (#params focus) (#prems focus) (#context focus)) ctxt) instss)
     ]
   end;
+
+fun refreshability_tac_internal verbose supps instss G_thm eqvt_thm smalls simps ctxt =
+  refreshability_tac_common verbose supps instss G_thm eqvt_thm
+    (Named_Theorems.get ctxt "MRBNF_FP.refresh_extends")
+    (smalls @ Named_Theorems.get ctxt "MRBNF_FP.refresh_smalls")
+    (simps @ Named_Theorems.get ctxt "MRBNF_FP.refresh_simps")
+    (Named_Theorems.get ctxt "MRBNF_FP.refresh_intros")
+    (Named_Theorems.get ctxt "MRBNF_FP.refresh_elims") ctxt;
+
+fun refreshability_tac verbose supps renames instss =
+  let val instss' = map (Option.map (map (Option.map (nth renames)))) instss
+  in refreshability_tac_common verbose supps instss' end
 
 end;
 \<close>

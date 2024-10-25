@@ -274,7 +274,7 @@ declare ty.intros[intro]
 lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
-binder_inductive ty
+binder_inductive (no_auto_refresh) ty
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FFVars_typ :: type \<Rightarrow> var set"}, @{term "FFVars_typ :: type \<Rightarrow> var set"}]

@@ -3,14 +3,17 @@ theory SystemFSub
   imports "SystemFSub_Types"
 begin
 
+
 abbreviation in_context :: "var \<Rightarrow> sftype \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("_ <: _ \<in> _" [55,55,55] 60) where
   "x <: t \<in> \<Gamma> \<equiv> (x, t) \<in> set \<Gamma>"
+
 abbreviation well_scoped :: "sftype \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("_ closed'_in _" [55, 55] 60) where
   "well_scoped S \<Gamma> \<equiv> FFVars_sftypeP S \<subseteq> dom \<Gamma>"
 
+
 inductive wf :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> bool"  where
   wf_Nil[intro]: "wf []"
-| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; wf \<Gamma>\<rbrakk> \<Longrightarrow> wf (\<Gamma>,,x<:T)"
+| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; FFVars_sftypeP T \<subseteq> dom \<Gamma> ; wf \<Gamma>\<rbrakk> \<Longrightarrow> wf (\<Gamma>,,x<:T)"
 
 inductive_cases
   wfE[elim]: "wf \<Gamma>"
@@ -29,7 +32,7 @@ lemma extend_eqvt:
 
 lemma closed_in_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "S closed_in \<Gamma> \<Longrightarrow> rrename_sftypeP f S closed_in map_context f \<Gamma>"
+  shows "FFVars_sftypeP S \<subseteq> dom \<Gamma> \<Longrightarrow> FFVars_sftypeP (rrename_sftypeP f S) \<subseteq> dom (map_context f \<Gamma>)"
   using assms by (auto simp: sftypeP.FFVars_rrenames)
 
 lemma wf_eqvt:
@@ -74,8 +77,8 @@ qed
 (* *)
 
 inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> sftype \<Rightarrow> sftype \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
-  SA_Top: "\<lbrakk>wf \<Gamma>; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
-| SA_Refl_TVar: "\<lbrakk>wf \<Gamma>; TVr x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TVr x <: TVr x"
+  SA_Top: "\<lbrakk>wf \<Gamma>; FFVars_sftypeP S \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
+| SA_Refl_TVar: "\<lbrakk>wf \<Gamma>;  FFVars_sftypeP  (TVr x) \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TVr x <: TVr x"
 | SA_Trans_TVar: "\<lbrakk> X<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TVr X <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
 | SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>,, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: \<forall>X<:T\<^sub>1 .T\<^sub>2"

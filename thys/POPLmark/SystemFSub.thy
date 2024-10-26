@@ -17,29 +17,31 @@ inductive_cases
   and wf_ConsE[elim!]: "wf (a#\<Gamma>)"
 print_theorems
 
-lemma in_context_eqvt:
+lemma in_context_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_Type f T \<in> map_context f \<Gamma>"
-  using assms unfolding map_context_def by auto
+  using assms by auto
 
-lemma extend_eqvt:
+lemma extend_eqvt[equiv_commute]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "map_context f (\<Gamma>,,x<:T) = map_context f \<Gamma>,,f x <: rrename_Type f T"
-  using assms unfolding map_context_def by simp
+  using assms by simp
 
-lemma closed_in_eqvt:
+find_theorems "fst \<circ> map_prod _ _"
+
+lemma closed_in_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "S closed_in \<Gamma> \<Longrightarrow> rrename_Type f S closed_in map_context f \<Gamma>"
-  using assms by (auto simp: Type.FFVars_rrenames)
+  using assms context_dom_set by (auto simp: Type.FFVars_rrenames)
 
-lemma wf_eqvt:
+lemma wf_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "wf \<Gamma> \<Longrightarrow> wf (map_context f \<Gamma>)"
-unfolding map_context_def proof (induction \<Gamma>)
+proof (induction \<Gamma>)
   case (Cons a \<Gamma>)
   then show ?case using assms apply auto
     apply (metis fst_conv image_iff)
-    using closed_in_eqvt map_context_def by fastforce
+    using closed_in_eqvt by fastforce
 qed simp
 
 abbreviation Tsupp :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> var set" where
@@ -72,7 +74,6 @@ proof-
 qed
 
 (* *)
-
 inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
   SA_Top: "\<lbrakk>wf \<Gamma>; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
 | SA_Refl_TVar: "\<lbrakk>wf \<Gamma>; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
@@ -112,14 +113,7 @@ declare ty.intros[intro]
 lemma ty_fresh_extend: "\<Gamma>,, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FFVars_Type U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
-make_binder_inductive ty
-  subgoal for R B \<sigma> \<Gamma> T1 T2
-    unfolding split_beta
-    by (elim disj_forward exE)
-      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] Type_vvsubst_rrename
-        Type.rrename_comps Type.FFVars_rrenames wf_eqvt extend_eqvt
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((rule exI[of _ "rrename_Type \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
+make_binder_inductive (no_auto_refresh) ty
   subgoal premises prems for R B \<Gamma> T1 T2
     using prems
     unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
@@ -147,7 +141,7 @@ make_binder_inductive ty
           of _ "rrename_Type (id(X := Z, Z := X)) S\<^sub>2"]) 
           apply (drule ty_fresh_extend)
           apply (simp_all add: supp_swap_bound)
-          by (metis (no_types, opaque_lifting) image_iff map_context_def map_context_swap_FFVars)
+          by (metis (no_types, opaque_lifting) image_iff map_context_swap_FFVars)
       done
     done
   done

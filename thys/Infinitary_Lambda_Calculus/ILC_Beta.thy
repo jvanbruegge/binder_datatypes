@@ -18,7 +18,7 @@ lemma small_Tsupp: "small (Tsupp t1 t2)"
 lemma Tvars_dsset: "(Tsupp t1 t2 - dsset xs) \<inter> dsset xs = {}" "|Tsupp t1 t2 - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tsupp small_def)
 
-binder_inductive istep :: "ilterm \<Rightarrow> ilterm \<Rightarrow> bool" where
+binder_inductive (no_auto_equiv, no_auto_refresh) istep :: "ilterm \<Rightarrow> ilterm \<Rightarrow> bool" where
   Beta: "istep (iAp (iLm xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
 | iApL: "istep e1 e1' \<Longrightarrow> istep (iAp e1 es2) (iAp e1' es2)"
 | iApR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iAp e1 es2) (iAp e1 (supd es2 i e2'))"

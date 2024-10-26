@@ -13,19 +13,7 @@ binder_inductive step :: "lterm \<Rightarrow> lterm \<Rightarrow> bool" where
   Beta: "step (Ap (Lm x e1) e2) (tvsubst (Vr(x:=e2)) e1)"
 | ApL: "step e1 e1' \<Longrightarrow> step (Ap e1 e2) (Ap e1' e2)"
 | ApR: "step e2 e2' \<Longrightarrow> step (Ap e1 e2) (Ap e1 e2')"
-| Xi: "step e e' \<Longrightarrow> step (Lm x e) (Lm x e')"
-  subgoal for \<sigma> R B t  \<comment> \<open>equivariance\<close>
-    by (elim disj_forward case_prodE)
-      (auto simp: isPerm_def ltermP.rrename_comps rrename_tvsubst_comp
-         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-         | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B x1 x2  \<comment> \<open>refreshability\<close>
-    using fresh[of x1 x2] prems(2-) unfolding isPerm_def conj_assoc[symmetric] split_beta
-    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-    apply (elim disj_forward exE; simp)
-     apply (metis Lm_eq_tvsubst Lm_inject_swap singletonD)
-    by blast
-    done
+| Xi: "step e e' \<Longrightarrow> step (Lm x e) (Lm x e')" .
 
 thm step.strong_induct 
 thm step.equiv

@@ -20,6 +20,8 @@ for
   vvsubst: vvsubst
   tvsubst: tvsubst
 
+declare procP.FFVars_rrenames[equiv_simps]
+
 (****************************)
 (* DATATYPE-SPECIFIC CUSTOMIZATION  *)
 
@@ -79,21 +81,6 @@ qed
 
 (* *)
 (* Properties of renaming (variable-for-variable substitution) *)
-
-proposition rrename_simps[simp]:
-  assumes "bij (f::var \<Rightarrow> var)" "|supp f| <o |UNIV::var set|"
-  shows "rrename_procP f Zero = Zero"
-    "rrename_procP f (Sum e1 e2) = Sum (rrename_procP f e1) (rrename_procP f e2)"
-    "rrename_procP f (Par e1 e2) = Par (rrename_procP f e1) (rrename_procP f e2)"
-    "rrename_procP f (Bang e) = Bang (rrename_procP f e)"
-    "rrename_procP f (Match x y e) = Match (f x) (f y) (rrename_procP f e)"
-    "rrename_procP f (Out x y e) = Out (f x) (f y) (rrename_procP f e)"
-    "rrename_procP f (Inp x y e) = Inp (f x) (f y) (rrename_procP f e)"
-    "rrename_procP f (Res x e) = Res (f x) (rrename_procP f e)"
-  unfolding Zero_def Sum_def Par_def Bang_def Match_def Out_def Inp_def Res_def procP.rrename_cctors[OF assms] map_procP_pre_def comp_def
-    Abs_procP_pre_inverse[OF UNIV_I] map_sum_def sum.case map_prod_def prod.case id_def
-    apply (rule refl)+
-  done
 
 lemma rrename_cong:
 assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
@@ -425,7 +412,7 @@ lemmas usub_simps = usub_simps_free usub_Inp usub_Res
 
 
 
-lemma rrename_usub[simp]:
+lemma rrename_usub[simp, equiv]:
 assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
 shows "rrename \<sigma> (usub P u (x::var)) = usub (rrename \<sigma> P) (\<sigma> u) (\<sigma> x)"
 using assms
@@ -483,6 +470,11 @@ lemma Inp_eq_usub:
 lemma swap_commute:
 "{y,yy} \<inter> {x,xx} = {} \<Longrightarrow>
  swap (swap P y yy) x xx = swap (swap P x xx) y yy"
-by (auto simp: procP.rrename_comps rrename_cong procP_pre.supp_comp_bound)
+  by (auto simp: procP.rrename_comps rrename_cong procP_pre.supp_comp_bound)
+
+lemma rrename_equiv[equiv]:
+  assumes "bij (f::var\<Rightarrow>var)" "|supp f| <o |UNIV::var set|"
+  shows "rrename f P = rrename f Q \<longleftrightarrow> P = Q"
+  by (simp add: assms(1,2) procP.rrename_bijs)
 
 end

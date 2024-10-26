@@ -104,7 +104,7 @@ instance var :: var_Type_pre apply standard
 type_synonym type = "var Type"
 type_synonym \<Gamma>\<^sub>\<tau> = "(var \<times> type) list"
 
-definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
+abbreviation map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" where
   "map_context f \<equiv> map (map_prod f (rrename_Type f))"
 
 abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where
@@ -119,13 +119,12 @@ abbreviation disjoint :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<t
   "disjoint \<Gamma> \<Delta> \<equiv> dom \<Gamma> \<inter> dom \<Delta> = {}"
 
 lemma map_context_id[simp]: "map_context id = id"
-  unfolding map_context_def by simp
+  by simp
 
 lemma map_context_comp0[simp]:
   assumes "bij f" "|supp f| <o |UNIV::var set|" "bij g" "|supp g| <o |UNIV::var set|"
   shows "map_context f \<circ> map_context g = map_context (f \<circ> g)"
   apply (rule ext)
-  unfolding map_context_def
   using assms by (auto simp: Type.rrename_comps)
 
 lemmas map_context_comp = trans[OF comp_apply[symmetric] fun_cong[OF map_context_comp0]]
@@ -134,7 +133,7 @@ declare map_context_comp[simp]
 lemma context_dom_set[simp]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "dom (map_context f xs) = f ` dom xs"
-  unfolding map_context_def by force
+  by force
 lemma set_bd_UNIV: "|set xs| <o |UNIV::var set|"
   apply (rule ordLess_ordLeq_trans)
     apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
@@ -150,7 +149,6 @@ lemma context_map_cong_id:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   and "\<And>a. a \<in> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<Longrightarrow> f a = a"
 shows "map_context f \<Gamma> = \<Gamma>"
-  unfolding map_context_def
   apply (rule trans)
    apply (rule list.map_cong0[of _ _ id])
    apply (rule trans)
@@ -168,7 +166,7 @@ lemma map_context_swap_FFVars[simp]:
 "\<forall>k\<in>set \<Gamma>. X \<noteq> fst k \<and> X \<notin> FFVars_Type (snd k) \<and>
            Y \<noteq> fst k \<and> Y \<notin> FFVars_Type (snd k) \<Longrightarrow>
     map_context (id(X := Y, Y := X)) \<Gamma> = \<Gamma>"
-  unfolding map_context_def apply(rule map_idI) by auto
+  apply(rule map_idI) by auto
 
 lemma isPerm_swap: "isPerm (id(X := Y, Y := X))"
   unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)

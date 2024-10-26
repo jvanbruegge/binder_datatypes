@@ -115,7 +115,7 @@ unfolding renB_def FVarsB_def apply safe
 lemma renB_iVrB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
   super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> 
   renB \<sigma> (iVrB x) = iVrB (\<sigma> x)"
-unfolding renB_def iVrB_def apply(subst rrename_simps)
+unfolding renB_def iVrB_def apply(subst ltermP.permute)
   subgoal by (auto simp add: bij_restr)
   subgoal by (auto simp add: card_supp_restr)
   subgoal unfolding restr_def apply(cases "theSN x", cases "theSN (\<sigma> x)") 
@@ -126,7 +126,7 @@ unfolding renB_def iVrB_def apply(subst rrename_simps)
 lemma renB_iApB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    b1 \<in> B \<Longrightarrow> sset bs2 \<subseteq> B \<Longrightarrow>
    renB \<sigma> (iApB b1 bs2) = iApB (renB \<sigma> b1) (smap (renB \<sigma>) bs2)"
-unfolding renB_def iApB_def apply(subst rrename_simps)
+unfolding renB_def iApB_def apply(subst ltermP.permute)
   subgoal by (auto simp add: bij_restr)
   subgoal by (auto simp add: card_supp_restr)
   subgoal by auto .
@@ -134,7 +134,7 @@ unfolding renB_def iApB_def apply(subst rrename_simps)
 lemma renB_iLmB[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp \<sigma>) \<Longrightarrow> presSuper \<sigma> \<Longrightarrow> 
    b \<in> B \<Longrightarrow> super xs \<Longrightarrow> 
    renB \<sigma> (iLmB xs b) = iLmB (dsmap \<sigma> xs) (renB \<sigma> b)"
-unfolding renB_def iLmB_def apply(subst rrename_simps)
+unfolding renB_def iLmB_def apply(subst ltermP.permute)
   subgoal by (auto simp add: bij_restr)
   subgoal by (auto simp add: card_supp_restr)
   subgoal using restr_def superOf_subOf by auto .

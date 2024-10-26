@@ -17,19 +17,7 @@ binder_inductive stepD :: "nat \<Rightarrow> lterm \<Rightarrow> lterm \<Rightar
   Beta: "stepD 0 (Ap (Lm x e1) e2) (tvsubst (Vr(x:=e2)) e1)"
 | ApL: "stepD d e1 e1' \<Longrightarrow> stepD (Suc d) (Ap e1 e2) (Ap e1' e2)"
 | ApR: "stepD d e2 e2' \<Longrightarrow> stepD (Suc d) (Ap e1 e2) (Ap e1 e2')"
-| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lm x e) (Lm x e')"
-  subgoal for R B \<sigma> x1 x2 x3
-    by (elim disj_forward exE case_prodE)
-      (auto simp: isPerm_def ltermP.rrename_comps rrename_tvsubst_comp
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
-  subgoal premises prems for R B x1 x2 x3
-    using fresh[of x2 x3] prems(2-)
-    unfolding ex_push_inwards conj_disj_distribL ex_disj_distrib
-    apply (elim disj_forward exE; simp)
-     apply (metis Lm_eq_tvsubst Lm_refresh singletonD)
-    by blast
-  done
+| Xi: "stepD d e e' \<Longrightarrow> stepD d (Lm x e) (Lm x e')" .
 
 thm stepD.strong_induct
 thm stepD.equiv

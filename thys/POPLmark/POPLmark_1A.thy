@@ -4,10 +4,25 @@ begin
 
 (********************* Actual formalization ************************)
 
-lemma ty_refl: "\<lbrakk>wf \<Gamma> ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
-proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: Type.strong_induct)
-  case (TyVar x \<Gamma>)
-  then show ?case by blast
+declare ty.intros[intro]
+
+lemma well_scoped:
+  assumes "\<Gamma> \<turnstile> S <: T"
+  shows "FFVars_sftypeP S \<subseteq> dom \<Gamma>" "FFVars_sftypeP T \<subseteq> dom \<Gamma>"
+using assms proof (induction \<Gamma> S T rule: ty.induct)
+  case (SA_Trans_TVar x U \<Gamma> T) {
+  case 1 then show ?case using SA_Trans_TVar
+    by (metis fst_conv imageI singletonD subsetI sftypeP.set(1))
+next
+  case 2 then show ?case using SA_Trans_TVar by simp
+} qed auto
+
+declare SA_Refl_TVar[intro!]
+
+lemma ty_refl: "\<lbrakk>wf \<Gamma> ; FFVars_sftypeP T \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: T"
+proof (binder_induction T arbitrary: \<Gamma> avoiding: "dom \<Gamma>" rule: sftypeP.strong_induct)
+  case (TVr x \<Gamma>)
+  then show ?case by (simp add: SA_Refl_TVar)  
 qed (auto simp: Diff_single_insert SA_All wf_Cons)
 
 lemma ty_permute: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; wf \<Delta> ; set \<Gamma> = set \<Delta> \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> S <: T"
@@ -29,7 +44,7 @@ proof (induction \<Delta> rule: wf.induct)
     using wf_Cons by auto
 qed auto
 
-lemma weaken_closed: "\<lbrakk> S closed_in \<Gamma> ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> S closed_in \<Gamma>,,\<Delta>"
+lemma weaken_closed: "\<lbrakk> FFVars_sftypeP S \<subseteq> dom \<Gamma> ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> FFVars_sftypeP S \<subseteq> dom (\<Gamma>,,\<Delta>)"
   by auto
 
 lemma wf_concat_disjoint: "wf (\<Gamma>,, \<Delta>) \<Longrightarrow> \<Gamma> \<bottom> \<Delta>"
@@ -39,7 +54,7 @@ proof (induction \<Delta>)
     by (smt (verit, del_insts) Un_iff append_Cons disjoint_iff fst_conv image_iff inf.idem insertE list.inject list.simps(15) set_append set_empty2 wf.cases)
 qed simp
 
-lemma wf_insert: "\<lbrakk> wf (\<Gamma>,,\<Delta>); x \<notin> dom \<Gamma> ; x \<notin> dom \<Delta> ; T closed_in \<Gamma> \<rbrakk> \<Longrightarrow> wf (\<Gamma>,,x<:T,,\<Delta>)"
+lemma wf_insert: "\<lbrakk> wf (\<Gamma>,,\<Delta>); x \<notin> dom \<Gamma> ; x \<notin> dom \<Delta> ; FFVars_sftypeP T \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> wf (\<Gamma>,,x<:T,,\<Delta>)"
   by (induction \<Delta>) auto
 
 lemma ty_weakening:
@@ -50,7 +65,8 @@ using assms proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" \<Gamm
   then show ?case using ty.SA_Top weaken_closed wf_concat_disjoint by presburger
 next
   case (SA_Refl_TVar \<Gamma> x)
-  then show ?case using ty.SA_Refl_TVar weaken_closed wf_concat_disjoint by presburger
+  then show ?case using ty.SA_Refl_TVar weaken_closed wf_concat_disjoint  
+    by (meson ty_refl well_scoped(1))   
 next
   case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
   have 1: "wf (\<Gamma>,, x <: T\<^sub>1,, \<Delta>)"
@@ -60,7 +76,7 @@ next
   show ?case using ty_permute[OF _ 2] 1 SA_All by auto
 qed auto
 
-corollary ty_weakening_extend: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; X \<notin> dom \<Gamma> ; Q closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma>,,X<:Q \<turnstile> S <: T"
+corollary ty_weakening_extend: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; X \<notin> dom \<Gamma> ; FFVars_sftypeP Q \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma>,,X<:Q \<turnstile> S <: T"
   using ty_weakening[of _ _ _ "[(X, Q)]"] by (metis append_Cons append_Nil wf_Cons wf_context)
 
 lemma wf_concatD: "wf (\<Gamma>,, \<Delta>) \<Longrightarrow> wf \<Gamma>"
@@ -73,7 +89,7 @@ proof (induction \<Delta>)
     by (metis Pair_inject append_Nil fst_conv image_eqI set_ConsD wf_ConsE)
 qed auto
 
-lemma narrow_wf: "\<lbrakk> wf ((\<Gamma> ,, X <: Q),, \<Delta>) ; R closed_in \<Gamma> \<rbrakk> \<Longrightarrow> wf ((\<Gamma>,, X <: R),, \<Delta>)"
+lemma narrow_wf: "\<lbrakk> wf ((\<Gamma> ,, X <: Q),, \<Delta>) ; FFVars_sftypeP R \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> wf ((\<Gamma>,, X <: R),, \<Delta>)"
 proof (induction \<Delta>)
   case (Cons a \<Delta>)
   then have "wf (\<Gamma>,, X <: R,, \<Delta>)" by auto
@@ -83,24 +99,22 @@ proof (induction \<Delta>)
   then show ?case unfolding 1 using Cons 2 by auto
 qed auto
 
-(* todo for A: look at this and the next *)
-(* TODO: Automatically derive these from strong induction *)
 lemma SA_AllE1[consumes 2, case_names SA_Trans_TVar SA_All]:
   assumes "\<Gamma> \<turnstile> \<forall>X<:S\<^sub>1. S\<^sub>2 <: T" "X \<notin> dom \<Gamma>"
-    and Top: "\<And>\<Gamma>. \<lbrakk>wf \<Gamma>; \<forall>X<:S\<^sub>1. S\<^sub>2 closed_in \<Gamma> \<rbrakk> \<Longrightarrow> R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) Top"
+    and Top: "\<And>\<Gamma>. \<lbrakk>wf \<Gamma>;   FFVars_sftypeP (\<forall>X<:S\<^sub>1. S\<^sub>2) \<subseteq> dom \<Gamma> \<rbrakk> \<Longrightarrow> R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) Top"
     and Forall: "\<And>\<Gamma> T\<^sub>1 T\<^sub>2. \<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>,, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) (\<forall>X<:T\<^sub>1 . T\<^sub>2)"
   shows "R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) T"
 using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^sub>2" T avoiding: \<Gamma> "\<forall>X<:S\<^sub>1. S\<^sub>2" T rule: ty.strong_induct)
   case (SA_All \<Gamma> T\<^sub>1 R\<^sub>1 Y R\<^sub>2 T\<^sub>2)
-  have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_Type (id(Y:=X,X:=Y)) T\<^sub>2"
+  have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_sftypeP (id(Y:=X,X:=Y)) T\<^sub>2"
     apply (rule Forall_swap)
     using SA_All(6,9) well_scoped(2) by fastforce
-  have fresh: "X \<notin> FFVars_Type T\<^sub>1"
+  have fresh: "X \<notin> FFVars_sftypeP T\<^sub>1"
     by (meson SA_All(4,9) in_mono well_scoped(1))
-  have same: "R\<^sub>1 = S\<^sub>1" using SA_All(8) Type_inject(3) by blast
-  have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_Type (id(Y:=X,X:=Y)) R\<^sub>2"
+  have same: "R\<^sub>1 = S\<^sub>1" using SA_All(8) sftypeP_inject(3) by blast
+  have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_sftypeP (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
-    by (metis (no_types, lifting) SA_All(8) assms(1,2) in_mono sup.bounded_iff Type.set(4) well_scoped(1))
+    by (metis (no_types, lifting) SA_All(8) assms(1,2) in_mono sup.bounded_iff sftypeP.set(4) well_scoped(1))
   show ?case unfolding 1
     apply (rule Forall)
     using same SA_All(4) apply simp
@@ -119,27 +133,27 @@ qed (auto simp: Top)
 
 lemma SA_AllE2[consumes 2, case_names SA_Trans_TVar SA_All]:
   assumes "\<Gamma> \<turnstile> S <: \<forall>X<:T\<^sub>1. T\<^sub>2" "X \<notin> dom \<Gamma>"
-    and TyVar: "\<And>\<Gamma> x U. \<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: \<forall> X <: T\<^sub>1 . T\<^sub>2 ; R \<Gamma> U (\<forall>X<:T\<^sub>1. T\<^sub>2) \<rbrakk> \<Longrightarrow> R \<Gamma> (TyVar x) (\<forall> X <: T\<^sub>1 . T\<^sub>2)"
+    and TVr: "\<And>\<Gamma> x U. \<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: \<forall> X <: T\<^sub>1 . T\<^sub>2 ; R \<Gamma> U (\<forall>X<:T\<^sub>1. T\<^sub>2) \<rbrakk> \<Longrightarrow> R \<Gamma> (TVr x) (\<forall> X <: T\<^sub>1 . T\<^sub>2)"
     and Forall: "\<And>\<Gamma> S\<^sub>1 S\<^sub>2. \<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>,, X<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) (\<forall> X <: T\<^sub>1 . T\<^sub>2)"
   shows "R \<Gamma> S (\<forall>X<:T\<^sub>1. T\<^sub>2)"
 using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^sub>2" avoiding: \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^sub>2" rule: ty.strong_induct)
   case (SA_All \<Gamma> R\<^sub>1 S\<^sub>1 Y S\<^sub>2 R\<^sub>2)
-  have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_Type (id(Y:=X,X:=Y)) S\<^sub>2"
+  have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_sftypeP (id(Y:=X,X:=Y)) S\<^sub>2"
     apply (rule Forall_swap)
     using SA_All(6,9) well_scoped(1) by fastforce
   have fresh: "X \<notin> dom \<Gamma>" "Y \<notin> dom \<Gamma>"
     using SA_All(9) apply blast
     by (metis SA_All(6) fst_conv wf_ConsE wf_context)
-  have fresh2: "X \<notin> FFVars_Type T\<^sub>1" "Y \<notin> FFVars_Type T\<^sub>1"
-     apply (metis SA_All(4,8) in_mono fresh(1) Type_inject(3) well_scoped(1))
-    by (metis SA_All(4,8) in_mono fresh(2) Type_inject(3) well_scoped(1))
-  have same: "R\<^sub>1 = T\<^sub>1" using SA_All(8) Type_inject(3) by blast
-  have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_Type (id(Y:=X,X:=Y)) R\<^sub>2"
+  have fresh2: "X \<notin> FFVars_sftypeP T\<^sub>1" "Y \<notin> FFVars_sftypeP T\<^sub>1"
+     apply (metis SA_All(4,8) in_mono fresh(1) sftypeP_inject(3) well_scoped(1))
+    by (metis SA_All(4,8) in_mono fresh(2) sftypeP_inject(3) well_scoped(1))
+  have same: "R\<^sub>1 = T\<^sub>1" using SA_All(8) sftypeP_inject(3) by blast
+  have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_sftypeP (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
-    by (metis SA_All(8) Un_iff assms(1,2) in_mono Type.set(4) well_scoped(2))
+    by (metis SA_All(8) Un_iff assms(1,2) in_mono sftypeP.set(4) well_scoped(2))
   show ?case unfolding 1
     apply (rule Forall)
-     apply (metis SA_All(4,8) Type_inject(3))
+     apply (metis SA_All(4,8) sftypeP_inject(3))
     apply (rule iffD2[OF arg_cong3[OF _ refl, of _ _ _ _ ty], rotated -1])
       apply (rule ty.equiv)
        apply (rule bij_swap supp_swap_bound infinite_var)+
@@ -149,9 +163,9 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
     using fresh apply (metis bij_swap SA_All(4) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
       apply simp
-    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound Type.rrename_cong_ids)
+    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound sftypeP.rrename_cong_ids)
     using SA_All(8) x Forall_inject_same unfolding same by simp
-qed (auto simp: TyVar)
+qed (auto simp: TVr)
 
 lemma ty_transitivity : "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
   and ty_narrowing : "\<lbrakk> (\<Gamma> ,, X <: Q),, \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> (\<Gamma>,, X <: R),, \<Delta> \<turnstile> M <: N"
@@ -159,32 +173,32 @@ proof -
   have
     ty_trans: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
   and ty_narrow: "\<lbrakk> (\<Gamma>,, X <: Q),, \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q ; wf (\<Gamma>,, X <: R,, \<Delta>) ; 
-    M closed_in (\<Gamma>,, X <: R,, \<Delta>) ; N closed_in (\<Gamma>,, X <: R,, \<Delta>) \<rbrakk> \<Longrightarrow> (\<Gamma>,, X <: R),, \<Delta> \<turnstile> M <: N"
-  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T M N X R avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: Type.strong_induct)
-    case (TyVar Y \<Gamma> \<Delta> S T M N X R)
+   FFVars_sftypeP M \<subseteq> dom (\<Gamma>,, X <: R,, \<Delta>) ; FFVars_sftypeP N \<subseteq> dom (\<Gamma>,, X <: R,, \<Delta>) \<rbrakk> \<Longrightarrow> (\<Gamma>,, X <: R),, \<Delta> \<turnstile> M <: N"
+  proof (binder_induction Q arbitrary: \<Gamma> \<Delta> S T M N X R avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: sftypeP.strong_induct)
+    case (TVr Y \<Gamma> \<Delta> S T M N X R)
     {
       fix \<Gamma> S T
-      show ty_trans: "\<Gamma> \<turnstile> S <: TyVar Y \<Longrightarrow> \<Gamma> \<turnstile> TyVar Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
-        by (induction \<Gamma> S "TyVar Y" rule: ty.induct) auto
+      show ty_trans: "\<Gamma> \<turnstile> S <: TVr Y \<Longrightarrow> \<Gamma> \<turnstile> TVr Y <: T \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
+        by (induction \<Gamma> S "TVr Y" rule: ty.induct) auto
     } note ty_trans = this
     {
       case 2
       then show ?case
-      proof (binder_induction "\<Gamma>,, X <: TyVar Y,, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: ty.strong_induct)
+      proof (binder_induction "\<Gamma>,, X <: TVr Y,, \<Delta>" M N arbitrary: \<Delta> avoiding: X "dom \<Gamma>" "dom \<Delta>" rule: ty.strong_induct)
         case (SA_Trans_TVar Z U T \<Delta>')
         show ?case
         proof (cases "X = Z")
           case True
-          then have u: "U = TyVar Y" using SA_Trans_TVar(1,2) context_determ wf_context by blast
-          have "TyVar Y closed_in (\<Gamma>,, Z <: R,, \<Delta>')" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
-          then have "\<Gamma>,, Z <: R ,, \<Delta>' \<turnstile> TyVar Y <: T" using SA_Trans_TVar True u by auto
-          moreover have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> R <: TyVar Y" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
+          then have u: "U = TVr Y" using SA_Trans_TVar(1,2) context_determ wf_context by blast
+          have "FFVars_sftypeP (TVr Y) \<subseteq> dom (\<Gamma>,, Z <: R,, \<Delta>')" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+          then have "\<Gamma>,, Z <: R ,, \<Delta>' \<turnstile> TVr Y <: T" using SA_Trans_TVar True u by auto
+          moreover have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> R <: TVr Y" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
             by (metis SA_Trans_TVar(5) True wf_ConsE wf_concatD)
           ultimately have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> R <: T" using ty_trans by blast
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
           case False
-          have x: "U closed_in (\<Gamma>,, X <: R,, \<Delta>')" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          have x: "FFVars_sftypeP (U) \<subseteq> dom (\<Gamma>,, X <: R,, \<Delta>')" using SA_Trans_TVar(2) well_scoped(1) by fastforce
           show ?thesis
             apply (rule ty.SA_Trans_TVar)
             using SA_Trans_TVar False x by auto
@@ -220,7 +234,7 @@ proof -
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
           case False
-          have x: "U closed_in (\<Gamma>,, X <: R,, \<Delta>')" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          have x: "FFVars_sftypeP (U) \<subseteq> dom (\<Gamma>,, X <: R,, \<Delta>')" using SA_Trans_TVar(2) well_scoped(1) by fastforce
           show ?thesis
             apply (rule ty.SA_Trans_TVar)
             using SA_Trans_TVar False x by auto
@@ -252,7 +266,7 @@ proof -
           then show ?thesis by (meson left(1,3) ty.SA_Arrow ty.SA_Top well_scoped(1))
         next
           case right: (SA_Arrow U\<^sub>1 R\<^sub>1 R\<^sub>2 U\<^sub>2)
-          then show ?thesis using left by (metis Fun(1,3) SA_Arrow Type_inject(2))
+          then show ?thesis using left by (metis Fun(1,3) SA_Arrow sftypeP_inject(2))
         qed auto
       qed auto
     } note ty_trans = this
@@ -265,7 +279,7 @@ proof -
         proof (cases "X = Z")
           case True
           then have u: "U = (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using SA_Trans_TVar(1,2) context_determ wf_context by blast
-          have "(Q\<^sub>1 \<rightarrow> Q\<^sub>2) closed_in (\<Gamma>,, Z <: R,, \<Delta>')" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+          have "FFVars_sftypeP (Q\<^sub>1 \<rightarrow> Q\<^sub>2) \<subseteq> dom (\<Gamma>,, Z <: R,, \<Delta>')" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
           then have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> (Q\<^sub>1 \<rightarrow> Q\<^sub>2) <: T" using SA_Trans_TVar True u by auto
           moreover have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> R <: (Q\<^sub>1 \<rightarrow> Q\<^sub>2)" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
             by (metis SA_Trans_TVar(5) True wf_ConsE wf_concatD)
@@ -273,7 +287,7 @@ proof -
           then show ?thesis unfolding True u using ty.SA_Trans_TVar by auto
         next
           case False
-          have x: "U closed_in (\<Gamma>,, X <: R,, \<Delta>')" using SA_Trans_TVar(2) well_scoped(1) by fastforce
+          have x: "FFVars_sftypeP U \<subseteq> dom  (\<Gamma>,, X <: R,, \<Delta>')" using SA_Trans_TVar(2) well_scoped(1) by fastforce
           show ?thesis
             apply (rule ty.SA_Trans_TVar)
             using SA_Trans_TVar False x by auto
@@ -326,7 +340,7 @@ proof -
         proof (cases "Y = Z")
           case True
           then have u: "U = \<forall> X <: Q\<^sub>1 . Q\<^sub>2" using SA_Trans_TVar(1,2) context_determ wf_context by blast
-          have "\<forall> X <: Q\<^sub>1 . Q\<^sub>2 closed_in \<Gamma>,, Z <: R,, \<Delta>'" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
+          have "FFVars_sftypeP (\<forall> X <: Q\<^sub>1 . Q\<^sub>2) \<subseteq> dom (\<Gamma>,, Z <: R,, \<Delta>')" using SA_Trans_TVar(2) True u well_scoped(1) by fastforce
           then have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> \<forall> X <: Q\<^sub>1 . Q\<^sub>2 <: T" using SA_Trans_TVar True u by auto
           moreover have "\<Gamma>,, Z <: R,, \<Delta>' \<turnstile> R <: \<forall> X <: Q\<^sub>1 . Q\<^sub>2" using ty_weakening[OF ty_weakening_extend[OF SA_Trans_TVar(4)]]
             by (metis SA_Trans_TVar(5) True wf_ConsE wf_concatD)
@@ -394,10 +408,10 @@ proof -
 qed
 
 theorem ty_transitivity2: "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"
-proof (binder_induction Q arbitrary: \<Gamma> S T avoiding: "dom \<Gamma>" rule: Type.strong_induct)
-  case (TyVar x \<Gamma> S T)
+proof (binder_induction Q arbitrary: \<Gamma> S T avoiding: "dom \<Gamma>" rule: sftypeP.strong_induct)
+  case (TVr x \<Gamma> S T)
   then show ?case
-    by (induction \<Gamma> S "TyVar x") auto
+    by (induction \<Gamma> S "TVr x") auto
 next
   case (Fun x1 x2 \<Gamma> S T)
   from Fun(4,3) show ?case
@@ -411,8 +425,8 @@ next
       case (SA_Arrow \<Gamma> U\<^sub>1 R\<^sub>1 R\<^sub>2 U\<^sub>2)
       show ?case
         apply (rule ty.SA_Arrow)
-         apply (metis Fun(1) SA_Arrow(1,5,6,8) Type_inject(2))
-        by (metis Fun(2) SA_Arrow(3,5,7,8) Type_inject(2))
+         apply (metis Fun(1) SA_Arrow(1,5,6,8) sftypeP_inject(2))
+        by (metis Fun(2) SA_Arrow(3,5,7,8) sftypeP_inject(2))
     qed auto
   qed auto
 next
@@ -435,9 +449,9 @@ next
   qed blast
 qed auto
 
-(*
+
 corollary ty_narrowing2: "\<lbrakk> \<Gamma>,, X <: Q,, \<Delta> \<turnstile> M <: N ; \<Gamma> \<turnstile> R <: Q \<rbrakk> \<Longrightarrow> \<Gamma>,, X <: R,, \<Delta> \<turnstile> M <: N"
   using ty_narrowing_aux ty_transitivity2 by blast
-*)
+
 
 end

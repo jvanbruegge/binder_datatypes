@@ -23,17 +23,17 @@ print_theorems
 lemma in_context_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "x <: T \<in> \<Gamma> \<Longrightarrow> f x <: rrename_sftypeP f T \<in> map_context f \<Gamma>"
-  using assms unfolding map_context_def by auto
+  using assms by auto
 
 lemma extend_eqvt[equiv_commute]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "map_context f (\<Gamma>,,x<:T) = map_context f \<Gamma>,,f x <: rrename_sftypeP f T"
-  using assms unfolding map_context_def by simp
+  using assms by simp
 
 lemma closed_in_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
   shows "FFVars_sftypeP S \<subseteq> dom \<Gamma> \<Longrightarrow> FFVars_sftypeP (rrename_sftypeP f S) \<subseteq> dom (map_context f \<Gamma>)"
-  using assms by (auto simp: sftypeP.FFVars_rrenames)
+  using assms context_dom_set by (auto simp: sftypeP.FFVars_rrenames)
 
 lemma wf_eqvt[equiv]:
   assumes "bij f" "|supp f| <o |UNIV::var set|"

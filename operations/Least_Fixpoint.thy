@@ -4737,14 +4737,16 @@ lemma permute_simps:
     (* END REPEAT_DETERM *)
 done
 
-lemma permute_ids:
-  "permute_T1 id id x = x"
-  "permute_T2 id id x2 = x2"
+
+lemma permute_id0s:
+  "permute_T1 id id = id"
+  "permute_T2 id id = id"
   apply (unfold permute_T1_def permute_T2_def permute_raw_ids TT_abs_rep)
+  apply (unfold id_def[symmetric])
   apply (rule refl)+
   done
 
-lemmas permute_id0s = permute_ids[THEN trans[OF _ id_apply[symmetric]], abs_def, THEN meta_eq_to_obj_eq]
+lemmas permute_ids = trans[OF fun_cong[OF permute_id0s(1)] id_apply] trans[OF fun_cong[OF permute_id0s(2)] id_apply]
 
 lemma permute_comps:
   fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"

@@ -1223,7 +1223,7 @@ proof -
                apply assumption
               apply (rule supp_id_bound bij_id | assumption)+
               apply (unfold id_o o_id triv_forall_equality)
-              
+
     subgoal for g x f2 g' y f2' z
     apply (rule exI[of _ "g' \<circ> g"])
     apply (rule exI)
@@ -1524,12 +1524,12 @@ lemmas TT_rep_abs_syms = alpha_syms[OF TT_rep_abs]
 lemma TT_abs_ctors: "TT_abs (raw_term_ctor x) = term_ctor (map_term_pre id id id TT_abs TT_abs TT_abs x)"
   apply (unfold term_ctor_def)
   apply (rule TT_total_abs_eq_iffs[THEN iffD2])
-  apply (rule alpha_term.intros)
-         apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
-  apply (unfold permute_raw_ids term_pre.mr_rel_id[symmetric])
   apply (subst term_pre.map_comp)
     apply (rule supp_id_bound bij_id)+
   apply (unfold id_o o_id)
+  apply (rule alpha_term.intros)
+         apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
+  apply (unfold permute_raw_ids term_pre.mr_rel_id[symmetric])
   apply (rule iffD2[OF term_pre.rel_map(2)])
   apply (unfold comp_def)
   apply (rule term_pre.rel_refl_strong)
@@ -1584,10 +1584,12 @@ lemma permute_ids: "permute_term id x = x"
 
 lemmas permute_id0s = permute_ids[THEN trans[OF _ id_apply[symmetric]], abs_def, THEN meta_eq_to_obj_eq]
 
-lemma permute_comps:
+lemma permute_comp0s:
   fixes f::"'a::var_term_pre \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
-  shows "permute_term g (permute_term f x) = permute_term (g \<circ> f) x"
+  shows "permute_term g \<circ> permute_term f = permute_term (g \<circ> f)"
+  apply (rule ext)
+  apply (rule trans[OF comp_apply])
   apply (unfold permute_term_def)
   apply (subst permute_raw_comps[symmetric])
       apply (rule assms)+
@@ -1597,14 +1599,7 @@ lemma permute_comps:
   apply (rule TT_rep_abs)
   done
 
-lemma permute_comp0s:
-  fixes f::"'a::var_term_pre \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
-  shows "permute_term g \<circ> permute_term f = permute_term (g \<circ> f)"
-  apply (rule ext)
-  apply (rule trans[OF comp_apply])
-  apply (rule permute_comps[OF assms])
-  done
+lemmas permute_comps = trans[OF comp_apply[symmetric] fun_cong[OF  permute_comp0s]]
 
 lemma permute_bijs:
   fixes f::"'a::var_term_pre \<Rightarrow> 'a"

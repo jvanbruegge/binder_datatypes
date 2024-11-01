@@ -336,6 +336,8 @@ lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on
 lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
   unfolding id_on_def by simp
 
+lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
+  by auto
 
 (*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
@@ -362,7 +364,7 @@ in
 fun refreshability_tac verbose supps renames instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
     val n = length supps;
-    fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN' 
+    fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN'
         K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
       | case_tac (SOME insts) params prems ctxt =
         let

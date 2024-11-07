@@ -122,13 +122,13 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
     val plive_ids = map HOLogic.id_const plives;
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
-    val (raw_permutes, lthy) =
+    val (permute_raws, lthy) =
       let
-        val (raw_permutes, _) = @{fold_map 2} (fn raw => fn name => apfst hd o
+        val (permute_raws, _) = @{fold_map 2} (fn raw => fn name => apfst hd o
           mk_Frees ("permute_raw_" ^ name) [map (fn a => a --> a) frees ---> #T raw --> #T raw]
         ) raw_Ts T_names lthy;
 
-        val rec_ts = replicate_rec (map (fn perm => Term.list_comb (perm, fs)) raw_permutes);
+        val rec_ts = replicate_rec (map (fn perm => Term.list_comb (perm, fs)) permute_raws);
         val eqs = @{map 5} (fn mrbnf => fn perm => fn raw => fn x => fn deads =>
           fold_rev Logic.all (fs @ [x]) (mk_Trueprop_eq (
             Term.list_comb (perm, fs) $ (#ctor raw $ x),
@@ -137,16 +137,16 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
               (map HOLogic.id_const pbounds @ bound_fs) (fs @ map HOLogic.id_const pfrees @ bfree_fs) mrbnf $
                 (MRBNF_Def.mk_map_comb_of_mrbnf deads (plive_ids @ rec_ts) bound_ids free_ids mrbnf $ x)
           )))
-        ) mrbnfs raw_permutes raw_Ts raw_xs deadss;
+        ) mrbnfs permute_raws raw_Ts raw_xs deadss;
 
-        val ((_, (raw_permutes, _, (_, simps))), lthy) = BNF_LFP_Rec_Sugar.primrec_simple false
-          (map (fn T => (apfst Binding.name (dest_Free T), NoSyn)) raw_permutes) eqs lthy;
+        val ((_, (permute_raws, _, (_, simps))), lthy) = BNF_LFP_Rec_Sugar.primrec_simple false
+          (map (fn T => (apfst Binding.name (dest_Free T), NoSyn)) permute_raws) eqs lthy;
 
         val simp_goals = @{map 5} (fn mrbnf => fn perm => fn raw => fn x => fn deads => mk_Trueprop_eq (
           Term.list_comb (perm, fs) $ (#ctor raw $ x),
           #ctor raw $ (MRBNF_Def.mk_map_comb_of_mrbnf deads (plive_ids @ rec_ts)
             (map HOLogic.id_const pbounds @ bound_fs) (fs @ map HOLogic.id_const pfrees @ bfree_fs) mrbnf $ x)
-        )) mrbnfs raw_permutes raw_Ts raw_xs deadss;
+        )) mrbnfs permute_raws raw_Ts raw_xs deadss;
 
         val simps = @{map 4} (fn goal => fn simp => fn mrbnf => fn x => Goal.prove_sorry lthy (names (fs @ [x])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
           rtac ctxt trans,
@@ -156,7 +156,7 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
           rtac ctxt refl
         ])) simp_goals simps mrbnfs raw_xs;
-      in (raw_permutes ~~ simps, lthy) end
+      in (permute_raws ~~ simps, lthy) end
 
     val setss = map (fn mrbnf =>
       let val subst = Term.subst_atomic_types (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~
@@ -275,7 +275,7 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
                     (fn SOME h => h | NONE => HOLogic.id_const (fst (dest_funT (fastype_of f))))
                   ) fs rec_fs) $ Bound 0
                 ))
-              ) (transpose rec_bound_fss) (replicate_rec alphas) (replicate_rec raw_permutes) (replicate_rec raw_Ts)
+              ) (transpose rec_bound_fss) (replicate_rec alphas) (replicate_rec permute_raws) (replicate_rec raw_Ts)
             ) $ x $ y;
           in fold_rev (curry Logic.mk_implies) (f_prems @ map HOLogic.mk_Trueprop id_on_prems @ h_prems @ [HOLogic.mk_Trueprop mr_rel_prem]) (
             HOLogic.mk_Trueprop (alpha $ (#ctor raw $ x) $ (#ctor raw $ y))
@@ -320,7 +320,7 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
       preds = map (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi) (#preds res)
     };
 
-    val raw_permutes = map morph raw_permutes;
+    val permute_raws = map morph permute_raws;
     val is_freess = map (morph_result phi tyenv) is_freess;
     val FVars_rawss = map (map morph) FVars_rawss;
     val alphas = morph_result phi tyenv alphas;
@@ -361,11 +361,11 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
       mk_def_public (name ^ "_ctor") 1 (Term.absfree (dest_Free x) (TT_abs $ (#ctor raw $ (rep_map $ x))))
     ) T_names TT_abss raw_Ts rep_maps xs lthy;
 
-    val (permutes, lthy) = @{fold_map 5} (fn name => fn TT_abs => fn TT_rep => fn raw_permute => fn t =>
+    val (permutes, lthy) = @{fold_map 5} (fn name => fn TT_abs => fn TT_rep => fn permute_raw => fn t =>
       mk_def_public ("permute_" ^ name) (nvars + 1) (fold_rev Term.absfree (map dest_Free fs) (Term.absfree (dest_Free t) (
-        TT_abs $ (Term.list_comb (fst raw_permute, fs) $ (TT_rep $ t))
+        TT_abs $ (Term.list_comb (fst permute_raw, fs) $ (TT_rep $ t))
       )))
-    ) T_names TT_abss TT_reps raw_permutes ts lthy;
+    ) T_names TT_abss TT_reps permute_raws ts lthy;
 
     val (FVarsss, lthy) = @{fold_map 4} (fn name => fn TT_rep => fn t => mk_defs_public ("FVars_" ^ name) 1 o
       map (fn FVars => Term.absfree (dest_Free t) (fst FVars $ (TT_rep $ t)))
@@ -394,7 +394,7 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
             alpha $ (Term.list_comb (fst permute, fs) $ z) $ z',
             HOLogic.mk_mem (z', foldl1 mk_Un (map (fn s => s $ x) rec_sets))
           ]) (HOLogic.mk_Trueprop (subshape $ z $ (#ctor raw $ x)))
-        ) raw_permutes (#preds alphas) raw_zs raw_zs') raw_Ts raw_xs rec_setsss subshapess;
+        ) permute_raws (#preds alphas) raw_zs raw_zs') raw_Ts raw_xs rec_setsss subshapess;
       in Inductive.add_inductive flags
         (map (fn T => (apfst Binding.name (dest_Free T), NoSyn)) (flat subshapess)) []
         (map (pair Binding.empty_atts) (flat intros)) [] lthy
@@ -434,7 +434,7 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
     fun morph (t, thm) = (Envir.subst_term (tyenv, Vartab.empty) (Morphism.term phi t), Morphism.thm phi thm);
 
   in ((tvars, vars, vars'), (bounds, bfrees, bound_fs, bfree_fs), bfree_boundsss,
-    raw_permutes, is_freess, FVars_rawss, alphas, raw_avoids, quots, raw_Ts,
+    permute_raws, is_freess, FVars_rawss, alphas, raw_avoids, quots, raw_Ts,
     TT_abss, TT_reps, map morph ctors, map morph permutes, map (map morph) FVarsss, map morph avoids,
     morph_result phi tyenv subshapes, map morph raw_noclashs, map morph noclashs, lthy) end
 
@@ -442,7 +442,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
   let
     val ((((((frees, pfrees), plives), pbounds), deadss), (((((((fs, hss), raw_xs), raw_ys), aa), As), raw_zs), raw_zs'), ((xs, ts), zs)),
       (bounds, bfrees, bound_fs, bfree_fs), bfree_boundsss,
-      raw_permutes, is_freess, FVars_rawss, alphas, raw_avoids, quots, raw_Ts,
+      permute_raws, is_freess, FVars_rawss, alphas, raw_avoids, quots, raw_Ts,
       TT_abss, TT_reps, ctors, permutes, FVarsss, avoids, subshapes, raw_noclashs, noclashs,
       lthy) = define_fp_consts fp_kind mrbnf_ks binding_relation lthy;
 
@@ -460,11 +460,11 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
     val split_conj = split_conj n;
     val raw_induct = infer_instantiate' lthy (replicate n NONE @ map (SOME o Thm.cterm_of lthy) raw_zs) (#induct (hd raw_Ts));
 
-    val raw_permute_ids =
+    val permute_raw_ids =
       let
         val goal = foldr1 HOLogic.mk_conj (map2 (fn z => fn permute => HOLogic.mk_eq (
           Term.list_comb (fst permute, map HOLogic.id_const frees) $ z, z
-        )) raw_zs raw_permutes);
+        )) raw_zs permute_raws);
       in split_conj (Goal.prove_sorry lthy (names raw_zs) [] (HOLogic.mk_Trueprop goal) (fn {context=ctxt, ...} => EVERY1 [
         rtac ctxt raw_induct,
         EVERY' (@{map 3} (fn permute => fn mrbnf => fn raw => EVERY' [
@@ -478,12 +478,12 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
           REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
           REPEAT_DETERM o (resolve_tac ctxt @{thms refl trans[OF _ id_apply[symmetric]]} ORELSE' Goal.assume_rule_tac ctxt)
-        ]) raw_permutes mrbnfs raw_Ts)
+        ]) permute_raws mrbnfs raw_Ts)
       ])) end;
 
     val permute_raw_id0s = map (fn thm =>
       Local_Defs.unfold0 lthy @{thms id_def[symmetric]} (Local_Defs.abs_def_rule lthy thm) RS @{thm meta_eq_to_obj_eq}
-    ) raw_permute_ids;
+    ) permute_raw_ids;
 
     val (gs, _) = lthy
       |> mk_Frees "g" (map fastype_of fs);
@@ -494,12 +494,12 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
 
     val infinite_UNIV = @{thm cinfinite_imp_infinite} OF [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd mrbnfs)];
 
-    val raw_permute_comps =
+    val permute_raw_comps =
       let
         val goal = foldr1 HOLogic.mk_conj (map2 (fn permute => fn z => HOLogic.mk_eq (
           Term.list_comb (fst permute, gs) $ (Term.list_comb (fst permute, fs) $ z),
           Term.list_comb (fst permute, map2 (curry HOLogic.mk_comp) gs fs) $ z
-        )) raw_permutes raw_zs);
+        )) permute_raws raw_zs);
       in split_conj (Goal.prove_sorry lthy (names (fs @ gs @ raw_zs)) (f_prems @ g_prems) (HOLogic.mk_Trueprop goal) (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt raw_induct,
         EVERY' (map2 (fn permute => fn mrbnf => EVERY' [
@@ -515,10 +515,10 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           rtac ctxt (arg_cong OF [MRBNF_Def.map_cong0_of_mrbnf mrbnf]),
           REPEAT_DETERM o resolve_tac ctxt (@{thms bij_comp supp_comp_bound supp_id_bound bij_id} @ [infinite_UNIV] @ prems),
           REPEAT_DETERM o (resolve_tac ctxt @{thms refl trans[OF comp_apply]} ORELSE' Goal.assume_rule_tac ctxt)
-        ]) raw_permutes mrbnfs)
+        ]) permute_raws mrbnfs)
       ])) end;
 
-    val raw_permute_comp0s = map2 (fn thm => fn permute =>
+    val permute_raw_comp0s = map2 (fn thm => fn permute =>
       let val goal = mk_Trueprop_eq (
         HOLogic.mk_comp (Term.list_comb (fst permute, gs), Term.list_comb (fst permute, fs)),
         Term.list_comb (fst permute, map2 (curry HOLogic.mk_comp) gs fs)
@@ -527,7 +527,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         rtac ctxt @{thm trans[OF comp_apply]},
         rtac ctxt (thm OF prems)
       ]) end
-    ) raw_permute_comps raw_permutes;
+    ) permute_raw_comps permute_raws;
 
     fun replicate_rec xs = flat (map2 replicate rec_vars xs);
 
@@ -636,13 +636,13 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       ) (transpose FVars_rawss) is_freess
     ) raw_Ts raw_xs raw_bfree_setsss (mk_FVars_ctor_goalss raw_rec_setss (map #ctor raw_Ts) raw_xs raw_fsetss raw_bound_setsss raw_bfree_setsss FVars_rawss);
 
-    val FVars_raw_permute_leqss = transpose (@{map 6} (fn FVarss => fn is_frees => fn a => fn f => fn bfsets => fn FVars_ctors =>
+    val FVars_permute_raw_leqss = transpose (@{map 6} (fn FVarss => fn is_frees => fn a => fn f => fn bfsets => fn FVars_ctors =>
       let
         val goal = HOLogic.mk_Trueprop (
           foldr1 HOLogic.mk_conj (@{map 4} (fn FVars => fn is_free => fn permute => fn z =>
             HOLogic.mk_imp (is_free $ a $ z,
               HOLogic.mk_mem (f $ a, fst FVars $ (Term.list_comb (fst permute, fs) $ z))
-            )) FVarss (#preds is_frees) raw_permutes raw_zs)
+            )) FVarss (#preds is_frees) permute_raws raw_zs)
         );
         val m = 1 + nrecs + length bfsets;
       in split_conj (Goal.prove_sorry lthy (names (fs @ [a] @ raw_zs)) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
@@ -651,7 +651,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         ) (#induct is_frees))
         else rtac ctxt impI THEN' etac ctxt (#induct is_frees),
         REPEAT_DETERM o EVERY' (map (fn i => SELECT_GOAL (EVERY1 [
-          SELECT_GOAL (Local_Defs.unfold0_tac ctxt (FVars_ctors @ map (fn (_, thm) => thm OF prems) raw_permutes)),
+          SELECT_GOAL (Local_Defs.unfold0_tac ctxt (FVars_ctors @ map (fn (_, thm) => thm OF prems) permute_raws)),
           REPEAT_DETERM o EVERY' [
             EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf mrbnfs),
             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems)
@@ -677,7 +677,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       ])) RSS mp end
     ) (transpose FVars_rawss) is_freess aa fs (hd raw_bfree_setsss) (transpose FVars_raw_ctorss));
 
-    val FVars_raw_permutes = @{map 4} (fn z => fn permute =>
+    val FVars_permute_raws = @{map 4} (fn z => fn permute =>
       @{map 3} (fn f => fn thm => fn FVars => Goal.prove_sorry lthy (names (fs @ [z])) f_prems (mk_Trueprop_eq (
         fst FVars $ (Term.list_comb (fst permute, fs) $ z),
         mk_image f $ (fst FVars $ z)
@@ -688,13 +688,13 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         dtac ctxt @{thm iffD1[OF mem_Collect_eq]},
         dtac ctxt (Drule.rotate_prems ~1 thm),
         K (prefer_tac (2 * nvars + 1)),
-        EqSubst.eqsubst_asm_tac ctxt [0] raw_permute_comps,
+        EqSubst.eqsubst_asm_tac ctxt [0] permute_raw_comps,
         K (prefer_tac (4 * nvars + 1)),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_o_simp1},
           resolve_tac ctxt prems
         ],
-        K (Local_Defs.unfold0_tac ctxt raw_permute_ids),
+        K (Local_Defs.unfold0_tac ctxt permute_raw_ids),
         etac ctxt @{thm iffD2[OF image_in_bij_eq, rotated]},
         REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
         rtac ctxt subsetI,
@@ -704,7 +704,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         dtac ctxt @{thm iffD1[OF mem_Collect_eq]},
         etac ctxt (thm OF prems)
       ])) fs
-    ) raw_zs raw_permutes FVars_raw_permute_leqss FVars_rawss;
+    ) raw_zs permute_raws FVars_permute_raw_leqss FVars_rawss;
 
     val Un_bound = @{thm infinite_regular_card_order_Un} OF [
       MRBNF_Def.bd_infinite_regular_card_order_of_mrbnf (hd mrbnfs)
@@ -755,7 +755,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           resolve_tac ctxt @{thms refl supp_id_bound bij_id id_on_id eq_on_refl}
         ],
         K (Local_Defs.unfold0_tac ctxt (
-          (MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: raw_permute_ids
+          (MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: permute_raw_ids
         )),
         rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
         REPEAT_DETERM o resolve_tac ctxt @{thms refl disjI1}
@@ -783,7 +783,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
               )),
               alpha $ z $ z'
             )
-          ))) raw_zs raw_zs' xx yy raw_permutes (#preds alphas) eq_on_premss
+          ))) raw_zs raw_zs' xx yy permute_raws (#preds alphas) eq_on_premss
         ))) (fn {context=ctxt, ...} => EVERY1 [
           if n > 1 then rtac ctxt (#induct alphas)
           else REPEAT_DETERM o resolve_tac ctxt [allI, impI] THEN' etac ctxt (#induct alphas),
@@ -810,7 +810,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                 rtac ctxt exI,
                 REPEAT_DETERM o EVERY' [
                   rtac ctxt conjI,
-                  resolve_tac ctxt (map snd raw_permutes),
+                  resolve_tac ctxt (map snd permute_raws),
                   REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt)
                 ],
                 REPEAT_DETERM o EVERY' [
@@ -826,7 +826,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                 ],
                 K (Local_Defs.unfold0_tac ctxt @{thms image_comp[unfolded comp_def]}),
                 REPEAT_DETERM o EVERY' [
-                  EqSubst.eqsubst_tac ctxt [0] (flat FVars_raw_permutes),
+                  EqSubst.eqsubst_tac ctxt [0] (flat FVars_permute_raws),
                   REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt)
                 ],
                 K (Local_Defs.unfold0_tac ctxt @{thms image_UN[symmetric] image_Un[symmetric]}),
@@ -920,7 +920,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                   rtac ctxt conjI,
                   rtac ctxt refl ORELSE' EVERY' [
                     rtac ctxt trans,
-                    resolve_tac ctxt raw_permute_comps,
+                    resolve_tac ctxt permute_raw_comps,
                     REPEAT_DETERM o FIRST' [
                       assume_tac ctxt,
                       resolve_tac ctxt (infinite_UNIV :: @{thms supp_id_bound bij_id bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound})
@@ -930,7 +930,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                     K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id comp_assoc[symmetric]}),
                     rtac ctxt sym,
                     rtac ctxt trans,
-                    resolve_tac ctxt raw_permute_comps,
+                    resolve_tac ctxt permute_raw_comps,
                     REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
                     K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
                     rtac ctxt refl
@@ -944,7 +944,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                       rtac ctxt subsetI,
                       eresolve_tac ctxt (flat FVars_intross),
                       TRY o EVERY' [
-                        EqSubst.eqsubst_asm_tac ctxt [0] (flat FVars_raw_permutes),
+                        EqSubst.eqsubst_asm_tac ctxt [0] (flat FVars_permute_raws),
                         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound}),
                         K (Local_Defs.unfold0_tac ctxt @{thms image_id})
                       ],
@@ -971,7 +971,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           assume_tac ctxt,
           REPEAT_DETERM o resolve_tac ctxt (refl :: prems)
         ])
-      ) thms xx yy eq_on_premss (#preds alphas) raw_permutes end;
+      ) thms xx yy eq_on_premss (#preds alphas) permute_raws end;
 
     val alpha_bij_eqs = @{map 5} (fn alpha => fn z => fn z' => fn permute => fn thm =>
       Goal.prove_sorry lthy (names (fs @ [z, z'])) f_prems (mk_Trueprop_eq (
@@ -983,16 +983,16 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         dtac ctxt (Drule.rotate_prems ~1 thm),
         K (prefer_tac (5 * nvars + 1)),
         REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_asm_tac ctxt [0] raw_permute_comps,
+          EqSubst.eqsubst_asm_tac ctxt [0] permute_raw_comps,
           K (prefer_tac (4 * nvars + 1)),
           REPEAT_DETERM o (EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_o_simp1} THEN' resolve_tac ctxt prems)
         ],
-        K (Local_Defs.unfold0_tac ctxt raw_permute_ids),
+        K (Local_Defs.unfold0_tac ctxt permute_raw_ids),
         assume_tac ctxt,
         REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
         REPEAT_DETERM o rtac ctxt @{thm eq_on_refl}
       ])
-    ) (#preds alphas) raw_zs raw_zs' raw_permutes alpha_bijs;
+    ) (#preds alphas) raw_zs raw_zs' permute_raws alpha_bijs;
 
     val alpha_bij_eq_invs = @{map 5} (fn alpha => fn z => fn z' => fn permute => fn thm =>
       Goal.prove_sorry lthy (names (fs @ [z, z'])) f_prems (mk_Trueprop_eq (
@@ -1002,14 +1002,14 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         rtac ctxt trans,
         rtac ctxt (thm RS sym),
         K (prefer_tac (2 * nvars + 1)),
-        EqSubst.eqsubst_tac ctxt [0] raw_permute_comps,
+        EqSubst.eqsubst_tac ctxt [0] permute_raw_comps,
         K (prefer_tac (4 * nvars + 1)),
         REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1} THEN' resolve_tac ctxt prems),
-        K (Local_Defs.unfold0_tac ctxt raw_permute_ids),
+        K (Local_Defs.unfold0_tac ctxt permute_raw_ids),
         rtac ctxt refl,
         REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems)
       ])
-    ) (#preds alphas) raw_zs raw_zs' raw_permutes alpha_bij_eqs;
+    ) (#preds alphas) raw_zs raw_zs' permute_raws alpha_bij_eqs;
 
     fun id_on_tac ctxt = EVERY' [
       etac ctxt @{thm id_on_antimono},
@@ -1145,7 +1145,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
               etac ctxt impE,
               assume_tac ctxt,
               TRY o EVERY' [
-                EqSubst.eqsubst_asm_tac ctxt [0] (flat FVars_raw_permutes),
+                EqSubst.eqsubst_asm_tac ctxt [0] (flat FVars_permute_raws),
                 REPEAT_DETERM o FIRST' [
                   resolve_tac ctxt @{thms supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound},
                   assume_tac ctxt
@@ -1310,7 +1310,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           rtac ctxt @{thm trans[rotated]},
           eresolve_tac ctxt (flat alpha_FVarss),
           rtac ctxt sym,
-          resolve_tac ctxt (flat FVars_raw_permutes),
+          resolve_tac ctxt (flat FVars_permute_raws),
           REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
         ]
       ],
@@ -1446,17 +1446,17 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                     ] ORELSE' EVERY' [
                       REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] @{thms id_hid_o_hid},
                       K (Local_Defs.unfold0_tac ctxt @{thms hidden_id_def}),
-                      EqSubst.eqsubst_tac ctxt [0] (raw_permute_comps RSS sym),
+                      EqSubst.eqsubst_tac ctxt [0] (permute_raw_comps RSS sym),
                       REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
                       EqSubst.eqsubst_tac ctxt [0] alpha_bij_eq_invs,
                       REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
                       rtac ctxt exI,
                       rtac ctxt @{thm conjI[rotated]},
                       assume_tac ctxt,
-                      EqSubst.eqsubst_tac ctxt [0] raw_permute_comps,
+                      EqSubst.eqsubst_tac ctxt [0] permute_raw_comps,
                       REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_inv_bound bij_imp_bij_inv supp_id_bound bij_id}),
                       REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1} THEN' assume_tac ctxt),
-                      K (Local_Defs.unfold0_tac ctxt (@{thms inv_id id_o} @ raw_permute_ids)),
+                      K (Local_Defs.unfold0_tac ctxt (@{thms inv_id id_o} @ permute_raw_ids)),
                       assume_tac ctxt
                     ]
                   ]
@@ -1572,7 +1572,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                       fn NONE => HOLogic.id_const (fst (Term.dest_funT (fastype_of g)))
                        | SOME f => f
                     ) gs rec_bound_fs)
-                  ) (replicate_rec raw_permutes) (transpose rec_bound_fss);
+                  ) (replicate_rec permute_raws) (transpose rec_bound_fss);
                   val bfree_fs = flat (map2 replicate nbfrees gs);
 
                   val map_t = MRBNF_Def.mk_map_comb_of_mrbnf deads
@@ -1697,7 +1697,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         K (Local_Defs.unfold0_tac ctxt @{thms id_o}),
         resolve_tac ctxt (#intrs alphas),
         REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id id_on_id eq_on_refl},
-        K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: raw_permute_ids)),
+        K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: permute_raw_ids)),
         rtac ctxt (iffD2 OF [nth (MRBNF_Def.rel_map_of_mrbnf mrbnf) 1]),
         K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_apply}),
         rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
@@ -1723,7 +1723,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
         rtac ctxt (iffD2 OF [TT_total_abs_eq_iff]),
         rtac ctxt (alpha_bij_eq_inv OF prems RS iffD2),
-        EqSubst.eqsubst_tac ctxt [0] (map snd raw_permutes),
+        EqSubst.eqsubst_tac ctxt [0] (map snd permute_raws),
         REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
         EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
         REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound supp_id_bound bij_id} @ prems),
@@ -1738,7 +1738,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         resolve_tac ctxt (#intrs alphas),
         REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound id_on_id eq_on_refl},
         K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) ::
-          MRBNF_Def.rel_map_of_mrbnf mrbnf @ raw_permute_ids)
+          MRBNF_Def.rel_map_of_mrbnf mrbnf @ permute_raw_ids)
         ),
         rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
         REPEAT_DETERM o rtac ctxt refl,
@@ -1755,7 +1755,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         Term.list_comb (fst permute, map (HOLogic.id_const o fst o Term.dest_funT o fastype_of) fs),
         HOLogic.id_const (#abs_type (fst quot))
       )) (fn {context=ctxt, ...} => EVERY [
-        Local_Defs.unfold_tac ctxt (snd permute :: raw_permute_ids @ TT_abs_reps),
+        Local_Defs.unfold_tac ctxt (snd permute :: permute_raw_ids @ TT_abs_reps),
         Local_Defs.unfold_tac ctxt @{thms id_def[symmetric]},
         HEADGOAL (rtac ctxt refl)
       ])
@@ -1778,7 +1778,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         REPEAT_DETERM o resolve_tac ctxt prems,
         resolve_tac ctxt TT_rep_abss
       ])
-    ) permutes raw_permute_comps TT_total_abs_eq_iffs alpha_bij_eqs;
+    ) permutes permute_raw_comps TT_total_abs_eq_iffs alpha_bij_eqs;
 
     val permute_comps = map (fn thm => @{thm trans[OF comp_apply[symmetric]]} OF [fun_cong OF [thm]]) permute_comp0s;
 
@@ -1833,7 +1833,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       mk_card_of (HOLogic.mk_UNIV (fst (Term.dest_funT (fastype_of (nth fs i)))))
     ) (flat FVars_raw_bd_UNIVs);
 
-    val FVars_permutess = @{map 5} (fn z => fn permute => @{map 4} (fn f => fn FVars => fn alpha_FVars => fn FVars_raw_permute =>
+    val FVars_permutess = @{map 5} (fn z => fn permute => @{map 4} (fn f => fn FVars => fn alpha_FVars => fn FVars_permute_raw =>
       Goal.prove_sorry lthy (names (fs @ [z])) f_prems (mk_Trueprop_eq (
         fst FVars $ (Term.list_comb (fst permute, fs) $ z),
         mk_image f $ (fst FVars $ z)
@@ -1842,9 +1842,9 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         rtac ctxt trans,
         rtac ctxt alpha_FVars,
         resolve_tac ctxt TT_rep_abss,
-        rtac ctxt (FVars_raw_permute OF prems)
+        rtac ctxt (FVars_permute_raw OF prems)
       ])
-    ) fs) zs permutes FVarsss alpha_FVarss FVars_raw_permutes;
+    ) fs) zs permutes FVarsss alpha_FVarss FVars_permute_raws;
 
     val setss = mk_setss (map (#abs_type o fst) quots);
     val (fsetss, bound_setsss, bfree_setsss, rec_setss) = split_setss setss;
@@ -2052,7 +2052,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         resolve_tac ctxt (#intrs alphas),
         REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id id_on_id eq_on_refl},
         rtac ctxt (Drule.rotate_prems ~1 (hd (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) RS iffD2)),
-        K (Local_Defs.unfold_tac ctxt (@{thms id_o o_id Grp_OO} @ raw_permute_ids)),
+        K (Local_Defs.unfold_tac ctxt (@{thms id_o o_id Grp_OO} @ permute_raw_ids)),
         K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: @{thms comp_def})),
         rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
         REPEAT_DETERM o resolve_tac ctxt (@{thm id_apply} :: TT_rep_abss),
@@ -2093,7 +2093,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
           rtac ctxt (Drule.rotate_prems ~1 (nth (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf) 2 RS iffD2)),
           K (Local_Defs.unfold0_tac ctxt @{thms inv_id id_o o_id Grp_OO relcompp_conversep_Grp}),
-          K (Local_Defs.unfold0_tac ctxt (@{thms comp_def} @ [MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym] @ raw_permute_ids)),
+          K (Local_Defs.unfold0_tac ctxt (@{thms comp_def} @ [MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym] @ permute_raw_ids)),
           rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
           REPEAT_DETERM o resolve_tac ctxt (refl :: TT_rep_abs_syms),
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
@@ -2159,7 +2159,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
                 resolve_tac ctxt (map (fn alpha => infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt alpha)] @{thm rel_refl_eq}) (#preds alphas)),
                 resolve_tac ctxt alpha_refls,
                 rtac ctxt sym,
-                resolve_tac ctxt raw_permute_comps,
+                resolve_tac ctxt permute_raw_comps,
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   resolve_tac ctxt (infinite_UNIV :: @{thms supp_id_bound bij_id bij_comp supp_comp_bound})
@@ -2187,7 +2187,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           fold_rev (mk_all o dest_Free) (fs @ [z']) (fold_rev (curry HOLogic.mk_imp o HOLogic.dest_Trueprop) f_prems (
             HOLogic.mk_imp (alpha $ (Term.list_comb (fst permute, fs) $ z) $ z', P $ z')
           ))
-        ) raw_zs raw_zs' raw_permutes (#preds alphas) Ps);
+        ) raw_zs raw_zs' permute_raws (#preds alphas) Ps);
       in Goal.prove_sorry lthy (names (Ps @ raw_zs)) IHs (HOLogic.mk_Trueprop goal) (fn {context=ctxt, prems} => EVERY1 [
         DETERM o rtac ctxt (infer_instantiate' ctxt (replicate n NONE @ map (SOME o Thm.cterm_of ctxt) raw_zs) (#induct (hd raw_Ts))),
         EVERY' (@{map 3} (fn mrbnf => fn alpha_subshapes => fn raw => Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=IHs, ...} => EVERY1 [
@@ -2198,7 +2198,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
             eresolve_tac ctxt alpha_syms,
             rotate_tac ~2,
             etac ctxt @{thm thin_rl},
-            EqSubst.eqsubst_asm_tac ctxt [0] (map snd raw_permutes),
+            EqSubst.eqsubst_asm_tac ctxt [0] (map snd permute_raws),
             REPEAT_DETERM o assume_tac ctxt,
             eresolve_tac ctxt (#elims subshapes),
             dtac ctxt (#inject raw RS iffD1),
@@ -2212,7 +2212,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
             hyp_subst_tac ctxt,
             dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (thm RS iffD1)) alpha_bij_eq_invs),
             REPEAT_DETERM o assume_tac ctxt,
-            EqSubst.eqsubst_asm_tac ctxt [0] raw_permute_comps,
+            EqSubst.eqsubst_asm_tac ctxt [0] permute_raw_comps,
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound}),
             REPEAT_DETERM o etac ctxt UnE,
             REPEAT_DETERM o EVERY' [
@@ -2233,7 +2233,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         |> apply_n (conj_mp OF (@{thm _} :: replicate n @{thm bij_id}) RS (
           conj_mp OF (@{thm _} :: replicate n @{thm supp_id_bound})
         )) nvars
-        |> Local_Defs.unfold0 lthy raw_permute_ids
+        |> Local_Defs.unfold0 lthy permute_raw_ids
         |> apply_n (conj_mp OF (@{thm _} :: alpha_refls)) 1
     end;
 
@@ -2286,13 +2286,13 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         HOLogic.mk_mem (z, rec_set $ x), subshape $ (Term.list_comb (fst permute, fs) $ z) $ (#ctor raw $ x)
       ))) (fn {context=ctxt, prems} => EVERY1 [
         resolve_tac ctxt (map (Drule.rotate_prems ~2) (#intrs subshapes)),
-        EqSubst.eqsubst_tac ctxt [0] raw_permute_comps,
+        EqSubst.eqsubst_tac ctxt [0] permute_raw_comps,
         K (prefer_tac (4 * nvars + 1)),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
           resolve_tac ctxt prems
         ],
-        K (Local_Defs.unfold0_tac ctxt raw_permute_ids),
+        K (Local_Defs.unfold0_tac ctxt permute_raw_ids),
         resolve_tac ctxt alpha_refls,
         REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems),
         etac ctxt @{thm contrapos_pp},
@@ -2301,23 +2301,23 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         assume_tac ctxt,
         REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound bij_imp_bij_inv} @ prems)
       ])
-    ) (replicate_rec raw_zs) (replicate_rec shapes) (replicate_rec raw_permutes)) raw_Ts raw_xs subshapess raw_rec_setss;
+    ) (replicate_rec raw_zs) (replicate_rec shapes) (replicate_rec permute_raws)) raw_Ts raw_xs subshapess raw_rec_setss;
 
-    val set_subshapess = map (map (fn thm => Local_Defs.unfold0 lthy raw_permute_ids (
+    val set_subshapess = map (map (fn thm => Local_Defs.unfold0 lthy permute_raw_ids (
       thm OF (flat (replicate nvars @{thms bij_id supp_id_bound}))
     ))) set_subshape_permutess;
 
-    val permute_abss = @{map 6} (fn z => fn permute => fn raw_permute => fn abs => fn abs_eq_iff => fn alpha_bij_eq =>
+    val permute_abss = @{map 6} (fn z => fn permute => fn permute_raw => fn abs => fn abs_eq_iff => fn alpha_bij_eq =>
       Goal.prove_sorry lthy (names (fs @ [z])) f_prems (mk_Trueprop_eq (
         Term.list_comb (fst permute, fs) $ (abs $ z),
-        abs $ (Term.list_comb (fst raw_permute, fs) $ z)
+        abs $ (Term.list_comb (fst permute_raw, fs) $ z)
       )) (fn {context=ctxt, prems} => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt [snd permute]),
         rtac ctxt (abs_eq_iff RS iffD2),
         rtac ctxt (alpha_bij_eq RS iffD2 OF prems),
         resolve_tac ctxt TT_rep_abss
       ])
-    ) raw_zs permutes raw_permutes TT_abss TT_total_abs_eq_iffs alpha_bij_eqs;
+    ) raw_zs permutes permute_raws TT_abss TT_total_abs_eq_iffs alpha_bij_eqs;
 
     val (pT, lthy') = fold Variable.declare_typ (map TFree (Term.add_tfreesT (#T (hd raw_Ts)) [])) lthy
       |> apfst hd o mk_TFrees 1;
@@ -2358,7 +2358,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           rtac ctxt (abs_eq_iff RS iffD2),
           resolve_tac ctxt (#intrs alphas),
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id id_on_id eq_on_refl},
-          K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: raw_permute_ids)),
+          K (Local_Defs.unfold0_tac ctxt ((MRBNF_Def.mr_rel_id_of_mrbnf mrbnf RS sym) :: permute_raw_ids)),
           rtac ctxt (nth (MRBNF_Def.rel_map_of_mrbnf mrbnf) 1 RS iffD2),
           rtac ctxt (MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf),
           REPEAT_DETERM o rtac ctxt refl,
@@ -2562,7 +2562,101 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       rtac ctxt refl
     ])) xs mrbnfs deadss noclashs raw_noclashs;
 
-    val _ = @{print} nnoclash_noclashs
-  in error "foo" end
+    val raw_results = map (fn i =>
+      let val raw = nth raw_Ts i;
+      in {
+        T = #T raw,
+        ctor = #ctor raw,
+        permute = nth permute_raws i,
+        FVarss = map fst (nth FVars_rawss i),
+        noclash = nth raw_noclashs i,
+        inject = #inject raw,
+        permute_id0 = nth permute_raw_id0s i,
+        permute_id = nth permute_raw_ids i,
+        permute_comp0 = nth permute_raw_comp0s i,
+        permute_comp = nth permute_raw_comps i,
+        FVars_ctors = nth FVars_raw_ctorss i,
+        FVars_permutes = nth FVars_permute_raws i,
+        FVars_intross = nth FVars_raw_introsss i,
+        card_of_FVars_bounds = nth FVars_raw_bds i,
+        card_of_FVars_bound_UNIVs = nth FVars_raw_bd_UNIVs i,
+        inner = {
+          alpha = nth (#preds alphas) i,
+          exhaust = #exhaust raw,
+          alpha_refl = nth alpha_refls i,
+          alpha_sym = nth alpha_syms i,
+          alpha_trans = nth alpha_transs i,
+          alpha_bij = nth alpha_bijs i,
+          alpha_bij_eq = nth alpha_bij_eqs i,
+          alpha_bij_eq_inv = nth alpha_bij_eq_invs i,
+          alpha_FVarss = nth alpha_FVarss i,
+          alpha_intro = nth (#intrs alphas) i,
+          alpha_elim = nth (#elims alphas) i
+        }
+      } : MRBNF_FP_Def_Sugar.raw_result MRBNF_FP_Def_Sugar.fp_result_T end
+    ) (0 upto n - 1);
+
+    val quotient_results = map (fn i =>
+      let val quot = nth quots i;
+      in {
+        T = #abs_type (fst quot),
+        ctor = fst (nth ctors i),
+        permute = nth permutes i,
+        FVarss = map fst (nth FVarsss i),
+        noclash = nth noclashs i,
+        inject = nth TT_inject0s i,
+        permute_id0 = nth permute_id0s i,
+        permute_id = nth permute_ids i,
+        permute_comp0 = nth permute_comp0s i,
+        permute_comp = nth permute_comps i,
+        FVars_ctors = nth FVars_ctorss i,
+        FVars_permutes = nth FVars_permutess i,
+        FVars_intross = nth FVars_introsss i,
+        card_of_FVars_bounds = nth FVars_bds i,
+        card_of_FVars_bound_UNIVs = nth FVars_bd_UNIVs i,
+        inner = {
+          abs = nth TT_abss i,
+          rep = nth TT_reps i,
+          ctor_def = snd (nth ctors i),
+          permute_def = snd (nth permutes i),
+          FVars_defs = map snd (nth FVarsss i),
+          nnoclash_noclash = nth nnoclash_noclashs i,
+          total_abs_eq_iff = nth TT_total_abs_eq_iffs i,
+          abs_rep = nth TT_abs_reps i,
+          rep_abs = nth TT_rep_abss i,
+          rep_abs_sym = nth TT_rep_abs_syms i,
+          abs_ctor = nth TT_abs_ctors i,
+          permute_cong = nth permute_congs i,
+          permute_cong_id = nth permute_cong_ids i,
+          permute_bij = nth permute_bijs i,
+          permute_inv_simp = nth permute_inv_simps i
+        }
+      } : MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T end
+    ) (0 upto n - 1);
+
+    val least_fp_thms = {
+      subshape_rel = subshape_rel,
+      subshapess = subshapess,
+      wf_subshape = wf_subshape,
+      set_subshapess = set_subshapess,
+      set_subshape_permutess = set_subshape_permutess,
+      subshape_induct = subshape_induct,
+      existential_induct = existential_induct,
+      fresh_induct_param = fresh_induct_param
+    } : MRBNF_FP_Def_Sugar.least_fp_thms;
+
+    val fp_result = {
+      fp = fp_kind,
+      binding_relation = binding_relation,
+      rec_vars = rec_vars,
+      raw_fps = raw_results,
+      quotient_fps = quotient_results,
+      fp_thms = least_fp_thms,
+      pre_mrbnfs = mrbnfs
+    } : MRBNF_FP_Def_Sugar.fp_result;
+
+    val lthy = MRBNF_FP_Def_Sugar.register_fp_results [fp_result] lthy;
+
+  in (fp_result, lthy) end
 
 end

@@ -6719,13 +6719,36 @@ lemma nnoclash_noclashs:
 
 ML \<open>
 val fp_res = { fp = BNF_Util.Least_FP,
-    binding_relation = [[1, 3], [1]],
+    binding_relation = [[[1, 3]], [[1]]],
     rec_vars = [2, 2],
+    fp_thms = {
+      subshape_rel = @{term "{(x, y). case x of
+        Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
+      | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
+     } :: ((('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 + _) \<times> _) set"},
+     subshapess = [
+       [ @{term "subshape_T1_T1 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"},
+         @{term "subshape_T2_T1 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"}
+       ],
+       [ @{term "subshape_T1_T2 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
+         @{term "subshape_T2_T2 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
+       ]
+     ],
+     wf_subshape = @{thm wf_subshape},
+     set_subshapess = [@{thms set_subshapess(1-4)}, @{thms set_subshapess(5-8)}],
+     set_subshape_permutess = [@{thms set_subshape_permutess(1-4)}, @{thms set_subshape_permutess(5-8)}],
+     subshape_induct = @{thm subshape_induct},
+     existential_induct = @{thm existential_induct},
+     fresh_induct_param = @{thm fresh_induct_param}
+    },
     quotient_fps = [
       { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
         ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-        rename = @{term "permute_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-        FVars = [
+        permute = (
+          @{term "permute_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
+          @{thm permute_simps(1)}
+        ),
+        FVarss = [
           @{term "FVars_T11 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"},
           @{term "FVars_T12 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"}
         ],
@@ -6734,54 +6757,54 @@ val fp_res = { fp = BNF_Util.Least_FP,
           @{thm noclash_T1_def}
        ),
        inject = @{thm TT_inject0s(1)},
-       rename_id0 = @{thm permute_id0s(1)},
-       rename_id = @{thm permute_ids(1)},
-       rename_comp0 = @{thm permute_comp0s(1)},
-       rename_comp = @{thm permute_comps(1)},
+       permute_id0 = @{thm permute_id0s(1)},
+       permute_id = @{thm permute_ids(1)},
+       permute_comp0 = @{thm permute_comp0s(1)},
+       permute_comp = @{thm permute_comps(1)},
        FVars_ctors = @{thms FVars_ctors(1-2)},
-       FVars_renames = @{thms FVars_permutes(1-2)},
+       FVars_permutes = @{thms FVars_permutes(1-2)},
        FVars_intross = [@{thms FVars_intros(1-6)}, @{thms FVars_intros(13-17)}],
        card_of_FVars_bounds = @{thms FVars_bds(1-2)},
        card_of_FVars_bound_UNIVs = @{thms FVars_bd_UNIVs(1-2)},
        inner = {
          abs = @{term "TT1_abs :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
          rep = @{term "TT1_rep :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"},
+         permute_def = @{thm permute_T1_def},
          ctor_def = @{thm T1_ctor_def},
-         rename_def = @{thm permute_T1_def},
          FVars_defs = @{thms FVars_defs(1-2)},
          nnoclash_noclash = @{thm nnoclash_noclashs(1)},
-         alpha_quotient_sym = @{thm TT_rep_abs_syms(1)},
          total_abs_eq_iff = @{thm TT_total_abs_eq_iffs(1)},
          abs_rep = @{thm TT_abs_rep(1)},
          rep_abs = @{thm TT_rep_abs(1)},
+         rep_abs_sym = @{thm TT_rep_abs_syms(1)},
          abs_ctor = @{thm TT_abs_ctors(1)},
-         rename_ctor = @{thm permute_simps(1)},
-         rename_cong_id = @{thm permute_cong_ids(1)},
-         rename_bij = @{thm permute_bijs(1)},
-         rename_inv_simp = @{thm permute_inv_simps(1)},
-         fresh_co_induct_param = @{thm fresh_induct_param},
-         fresh_co_induct = @{thm refl}, (* TODO: check if needed *)
-         fresh_induct_param_no_clash = NONE
+         permute_cong = @{thm permute_congs(1)},
+         permute_cong_id = @{thm permute_cong_ids(1)},
+         permute_bij = @{thm permute_bijs(1)},
+         permute_inv_simp = @{thm permute_inv_simps(1)}
        }
      },
      { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-        ctor = @{term "T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-        rename = @{term "permute_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-        FVars = [
-          @{term "FVars_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"},
-          @{term "FVars_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"}
-        ],
-        noclash = (
-          @{term "noclash_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2' \<Rightarrow> _"},
-          @{thm noclash_T2_def}
+       ctor = @{term "T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
+       permute = (
+         @{term "permute_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
+         @{thm permute_simps(2)}
+       ),
+       FVarss = [
+         @{term "FVars_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"},
+         @{term "FVars_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"}
+       ],
+       noclash = (
+         @{term "noclash_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2' \<Rightarrow> _"},
+         @{thm noclash_T2_def}
        ),
        inject = @{thm TT_inject0s(2)},
-       rename_id0 = @{thm permute_id0s(2)},
-       rename_id = @{thm permute_ids(2)},
-       rename_comp0 = @{thm permute_comp0s(2)},
-       rename_comp = @{thm permute_comps(2)},
+       permute_id0 = @{thm permute_id0s(2)},
+       permute_id = @{thm permute_ids(2)},
+       permute_comp0 = @{thm permute_comp0s(2)},
+       permute_comp = @{thm permute_comps(2)},
        FVars_ctors = @{thms FVars_ctors(3-4)},
-       FVars_renames = @{thms FVars_permutes(3-4)},
+       FVars_permutes = @{thms FVars_permutes(3-4)},
        FVars_intross = [@{thms FVars_intros(7-12)}, @{thms FVars_intros(18-22)}],
        card_of_FVars_bounds = @{thms FVars_bds(3-4)},
        card_of_FVars_bound_UNIVs = @{thms FVars_bd_UNIVs(3-4)},
@@ -6789,29 +6812,29 @@ val fp_res = { fp = BNF_Util.Least_FP,
         abs = @{term "TT2_abs :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
         rep = @{term "TT2_rep :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"},
         ctor_def = @{thm T2_ctor_def},
-        rename_def = @{thm permute_T2_def},
+        permute_def = @{thm permute_T2_def},
         FVars_defs = @{thms FVars_defs(3-4)},
         nnoclash_noclash = @{thm nnoclash_noclashs(2)},
-        alpha_quotient_sym = @{thm TT_rep_abs_syms(2)},
         total_abs_eq_iff = @{thm TT_total_abs_eq_iffs(2)},
         abs_rep = @{thm TT_abs_rep(2)},
         rep_abs = @{thm TT_rep_abs(2)},
+        rep_abs_sym = @{thm TT_rep_abs_syms(2)},
         abs_ctor = @{thm TT_abs_ctors(2)},
-        rename_ctor = @{thm permute_simps(2)},
-        rename_cong_id = @{thm permute_cong_ids(2)},
-        rename_bij = @{thm permute_bijs(2)},
-        rename_inv_simp = @{thm permute_inv_simps(2)},
-        fresh_co_induct_param = @{thm fresh_induct_param},
-        fresh_co_induct = @{thm refl}, (* TODO: check if needed *)
-        fresh_induct_param_no_clash = NONE
+        permute_cong = @{thm permute_congs(2)},
+        permute_cong_id = @{thm permute_cong_ids(2)},
+        permute_bij = @{thm permute_bijs(2)},
+        permute_inv_simp = @{thm permute_inv_simps(2)}
      }
    }
  ],
  raw_fps = [
   { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
     ctor = @{term "raw_T1_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
-    rename = @{term "permute_raw_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
-    FVars = [
+    permute = (
+      @{term "permute_raw_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
+      @{thm permute_raw_simps(1)}
+    ),
+    FVarss = [
       @{term "FVars_raw_T11 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"},
       @{term "FVars_raw_T12 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"}
     ],
@@ -6820,86 +6843,65 @@ val fp_res = { fp = BNF_Util.Least_FP,
       @{thm noclash_raw_T1_def}
    ),
    inject = @{thm raw_T1.inject},
-   rename_id0 = @{thm permute_raw_id0s(1)},
-   rename_id = @{thm permute_raw_ids(1)},
-   rename_comp0 = @{thm permute_raw_comp0s(1)},
-   rename_comp = @{thm permute_raw_comps(1)},
+   permute_id0 = @{thm permute_raw_id0s(1)},
+   permute_id = @{thm permute_raw_ids(1)},
+   permute_comp0 = @{thm permute_raw_comp0s(1)},
+   permute_comp = @{thm permute_raw_comps(1)},
    FVars_ctors = @{thms FVars_raw_ctors(1-2)},
-   FVars_renames = @{thms FVars_raw_permutes(1-2)},
+   FVars_permutes = @{thms FVars_raw_permutes(1-2)},
    FVars_intross = [@{thms FVars_raw_intros(1-6)}, @{thms FVars_raw_intros(13-17)}],
    card_of_FVars_bounds = @{thms FVars_raw_bds(1-2)},
    card_of_FVars_bound_UNIVs = @{thms FVars_raw_bd_UNIVs(1-2)},
    inner = {
      alpha = @{term "alpha_T1 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _ \<Rightarrow> _"},
-     subshape_rel = SOME @{term "{(x, y). case x of
-        Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
-      | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
-     } :: ((('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 + _) \<times> _) set"},
      exhaust = @{thm raw_T1.exhaust},
-     rename_simp = @{thm permute_simps(1)},
      alpha_refl = @{thm alpha_refls(1)},
      alpha_sym = @{thm alpha_syms(1)},
      alpha_trans = @{thm alpha_trans(1)},
      alpha_bij = @{thm alpha_bijs(1)},
      alpha_bij_eq = @{thm alpha_bij_eqs(1)},
+     alpha_bij_eq_inv = @{thm alpha_bij_eq_invs(1)},
      alpha_FVarss = @{thms alpha_FVars(1-2)},
      alpha_intro = @{thm alpha_T1_alpha_T2.intros(1)},
-     alpha_elim = @{thm alpha_T1.cases},
-     subshapes = SOME [
-       @{term "subshape_T1_T1 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"},
-       @{term "subshape_T2_T1 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"}
-     ],
-     wf_subshape = SOME @{thm wf_subshape},
-     set_subshapess = SOME [@{thms set_subshapess(1-2)}, @{thms set_subshapess(3-4)}],
-     set_subshape_imagess = SOME [@{thms set_subshape_permutess(1-2)}, @{thms set_subshape_permutess(3-4)}],
-     subshape_induct = SOME @{thm subshape_induct}
+     alpha_elim = @{thm alpha_T1.cases}
    }
  },
  { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-    ctor = @{term "raw_T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-    rename = @{term "permute_raw_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-    FVars = [
-      @{term "FVars_raw_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
-      @{term "FVars_raw_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
-    ],
-    noclash = (
-      @{term "noclash_raw_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2' \<Rightarrow> _"},
-      @{thm noclash_raw_T2_def}
+   ctor = @{term "raw_T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
+   permute = (
+     @{term "permute_raw_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
+     @{thm permute_raw_simps(2)}
+   ),
+   FVarss = [
+     @{term "FVars_raw_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
+     @{term "FVars_raw_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
+   ],
+   noclash = (
+     @{term "noclash_raw_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2' \<Rightarrow> _"},
+     @{thm noclash_raw_T2_def}
    ),
    inject = @{thm raw_T2.inject},
-   rename_id0 = @{thm permute_raw_id0s(2)},
-   rename_id = @{thm permute_raw_ids(2)},
-   rename_comp0 = @{thm permute_raw_comp0s(2)},
-   rename_comp = @{thm permute_raw_comps(2)},
+   permute_id0 = @{thm permute_raw_id0s(2)},
+   permute_id = @{thm permute_raw_ids(2)},
+   permute_comp0 = @{thm permute_raw_comp0s(2)},
+   permute_comp = @{thm permute_raw_comps(2)},
    FVars_ctors = @{thms FVars_raw_ctors(3-4)},
-   FVars_renames = @{thms FVars_raw_permutes(3-4)},
+   FVars_permutes = @{thms FVars_raw_permutes(3-4)},
    FVars_intross = [@{thms FVars_raw_intros(7-12)}, @{thms FVars_raw_intros(18-22)}],
    card_of_FVars_bounds = @{thms FVars_raw_bds(3-4)},
    card_of_FVars_bound_UNIVs = @{thms FVars_raw_bd_UNIVs(3-4)},
    inner = {
      alpha = @{term "alpha_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _ \<Rightarrow> _"},
-     subshape_rel = SOME @{term "{(x, y). case x of
-        Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
-      | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
-     } :: ((('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 + _) \<times> _) set"},
      exhaust = @{thm raw_T2.exhaust},
-     rename_simp = @{thm permute_simps(2)},
      alpha_refl = @{thm alpha_refls(2)},
      alpha_sym = @{thm alpha_syms(2)},
      alpha_trans = @{thm alpha_trans(2)},
      alpha_bij = @{thm alpha_bijs(2)},
      alpha_bij_eq = @{thm alpha_bij_eqs(2)},
+     alpha_bij_eq_inv = @{thm alpha_bij_eq_invs(2)},
      alpha_FVarss = @{thms alpha_FVars(3-4)},
      alpha_intro = @{thm alpha_T1_alpha_T2.intros(2)},
-     alpha_elim = @{thm alpha_T2.cases},
-     subshapes = SOME [
-       @{term "subshape_T1_T2 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
-       @{term "subshape_T2_T2 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
-     ],
-     wf_subshape = SOME @{thm wf_subshape},
-     set_subshapess = SOME [@{thms set_subshapess(5-6)}, @{thms set_subshapess(7-8)}],
-     set_subshape_imagess = SOME [@{thms set_subshape_permutess(5-6)}, @{thms set_subshape_permutess(7-8)}],
-     subshape_induct = SOME @{thm subshape_induct}
+     alpha_elim = @{thm alpha_T2.cases}
    }
  } ],
  pre_mrbnfs = map (the o MRBNF_Def.mrbnf_of @{context}) ["Composition.T1_pre", "Composition.T2_pre"]

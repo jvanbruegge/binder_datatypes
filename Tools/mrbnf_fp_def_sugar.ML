@@ -3,18 +3,18 @@ sig
   type 'a fp_result_T = {
     T: typ,
     ctor: term,
-    rename: term,
-    FVars: term list,
+    permute: term * thm,
+    FVarss: term list,
     noclash: term * thm,
     inner: 'a,
 
     inject: thm,
-    rename_id0: thm,
-    rename_id: thm,
-    rename_comp0: thm,
-    rename_comp: thm,
+    permute_id0: thm,
+    permute_id: thm,
+    permute_comp0: thm,
+    permute_comp: thm,
     FVars_ctors: thm list,
-    FVars_renames: thm list,
+    FVars_permutes: thm list,
     FVars_intross: thm list list,
     card_of_FVars_bounds: thm list,
     card_of_FVars_bound_UNIVs: thm list
@@ -22,25 +22,17 @@ sig
 
   type raw_result = {
     alpha: term,
-    subshape_rel: term option,
-
     exhaust: thm,
-    rename_simp: thm,
 
     alpha_refl: thm,
     alpha_sym: thm,
     alpha_trans: thm,
     alpha_bij: thm,
     alpha_bij_eq: thm,
+    alpha_bij_eq_inv: thm,
     alpha_FVarss: thm list,
     alpha_intro: thm,
-    alpha_elim: thm,
-
-    subshapes: term list option,
-    wf_subshape: thm option,
-    set_subshapess: thm list list option,
-    set_subshape_imagess: thm list list option,
-    subshape_induct: thm option
+    alpha_elim: thm
   };
 
   type quotient_result = {
@@ -48,31 +40,40 @@ sig
     rep: term,
 
     ctor_def: thm,
-    rename_def: thm,
+    permute_def: thm,
     FVars_defs: thm list,
 
     nnoclash_noclash: thm,
-    alpha_quotient_sym: thm,
     total_abs_eq_iff: thm,
     abs_rep: thm,
     rep_abs: thm,
+    rep_abs_sym: thm,
     abs_ctor: thm,
 
-    rename_ctor: thm,
-    rename_cong_id: thm,
-    rename_bij: thm,
-    rename_inv_simp: thm,
-    fresh_co_induct_param: thm,
-    fresh_co_induct: thm,
-    fresh_induct_param_no_clash: thm option
+    permute_cong: thm,
+    permute_cong_id: thm,
+    permute_bij: thm,
+    permute_inv_simp: thm
+  };
+
+  type least_fp_thms = {
+    subshape_rel: term,
+    subshapess: term list list,
+    wf_subshape: thm,
+    set_subshapess: thm list list,
+    set_subshape_permutess: thm list list,
+    subshape_induct: thm,
+    existential_induct: thm,
+    fresh_induct_param: thm
   };
 
   type fp_result = {
     fp: BNF_Util.fp_kind,
-    binding_relation: int list list,
+    binding_relation: int list list list,
     rec_vars: int list,
     raw_fps: raw_result fp_result_T list,
     quotient_fps: quotient_result fp_result_T list,
+    fp_thms: least_fp_thms,
     pre_mrbnfs: MRBNF_Def.mrbnf list
   };
 
@@ -94,39 +95,39 @@ struct
 type 'a fp_result_T = {
   T: typ,
   ctor: term,
-  rename: term,
-  FVars: term list,
+  permute: term * thm,
+  FVarss: term list,
   noclash: term * thm,
   inner: 'a,
 
   inject: thm,
-  rename_id0: thm,
-  rename_id: thm,
-  rename_comp0: thm,
-  rename_comp: thm,
+  permute_id0: thm,
+  permute_id: thm,
+  permute_comp0: thm,
+  permute_comp: thm,
   FVars_ctors: thm list,
-  FVars_renames: thm list,
+  FVars_permutes: thm list,
   FVars_intross: thm list list,
   card_of_FVars_bounds: thm list,
   card_of_FVars_bound_UNIVs: thm list
 };
 
-fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_id0, rename_id,
-  rename_comp0, rename_comp, FVars_ctors, FVars_renames, card_of_FVars_bounds,
-  card_of_FVars_bound_UNIVs, FVars_intross, noclash } = {
+fun morph_fp_result_T morph phi { T, ctor, permute, FVarss, noclash, inner, inject,
+  permute_id0, permute_id, permute_comp0, permute_comp, FVars_ctors, FVars_permutes, FVars_intross,
+  card_of_FVars_bounds, card_of_FVars_bound_UNIVs } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
-  rename = Morphism.term phi rename,
-  FVars = map (Morphism.term phi) FVars,
+  permute = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) permute,
+  FVarss = map (Morphism.term phi) FVarss,
   noclash = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) noclash,
   inner = morph phi inner,
   inject = Morphism.thm phi inject,
-  rename_id0 = Morphism.thm phi rename_id0,
-  rename_id = Morphism.thm phi rename_id,
-  rename_comp0 = Morphism.thm phi rename_comp0,
-  rename_comp = Morphism.thm phi rename_comp,
+  permute_id0 = Morphism.thm phi permute_id0,
+  permute_id = Morphism.thm phi permute_id,
+  permute_comp0 = Morphism.thm phi permute_comp0,
+  permute_comp = Morphism.thm phi permute_comp,
   FVars_ctors = map (Morphism.thm phi) FVars_ctors,
-  FVars_renames = map (Morphism.thm phi) FVars_renames,
+  FVars_permutes = map (Morphism.thm phi) FVars_permutes,
   FVars_intross = map (map (Morphism.thm phi)) FVars_intross,
   card_of_FVars_bounds = map (Morphism.thm phi) card_of_FVars_bounds,
   card_of_FVars_bound_UNIVs = map (Morphism.thm phi) card_of_FVars_bound_UNIVs
@@ -134,47 +135,32 @@ fun morph_fp_result_T morph phi { T, ctor, rename, FVars, inner, inject, rename_
 
 type raw_result = {
   alpha: term,
-  subshape_rel: term option,
-
   exhaust: thm,
-  rename_simp: thm,
 
   alpha_refl: thm,
   alpha_sym: thm,
   alpha_trans: thm,
   alpha_bij: thm,
   alpha_bij_eq: thm,
+  alpha_bij_eq_inv: thm,
   alpha_FVarss: thm list,
   alpha_intro: thm,
-  alpha_elim: thm,
-
-  subshapes: term list option,
-  wf_subshape: thm option,
-  set_subshapess: thm list list option,
-  set_subshape_imagess: thm list list option,
-  subshape_induct: thm option
+  alpha_elim: thm
 };
 
-fun morph_raw_result phi { alpha, alpha_refl, alpha_sym, alpha_trans, alpha_bij, alpha_bij_eq,
-  alpha_FVarss, subshapes, wf_subshape, set_subshapess, set_subshape_imagess, subshape_induct,
-  alpha_intro, exhaust, rename_simp, alpha_elim, subshape_rel } = {
+fun morph_raw_result phi { alpha, exhaust, alpha_refl, alpha_sym, alpha_trans, alpha_bij,
+  alpha_bij_eq, alpha_bij_eq_inv, alpha_FVarss, alpha_intro, alpha_elim } = {
   alpha = Morphism.term phi alpha,
-  subshape_rel = Option.map (Morphism.term phi) subshape_rel,
   exhaust = Morphism.thm phi exhaust,
-  rename_simp = Morphism.thm phi rename_simp,
   alpha_refl = Morphism.thm phi alpha_refl,
   alpha_sym = Morphism.thm phi alpha_sym,
   alpha_trans = Morphism.thm phi alpha_trans,
   alpha_bij = Morphism.thm phi alpha_bij,
   alpha_bij_eq = Morphism.thm phi alpha_bij_eq,
+  alpha_bij_eq_inv = Morphism.thm phi alpha_bij_eq_inv,
   alpha_FVarss = map (Morphism.thm phi) alpha_FVarss,
   alpha_intro = Morphism.thm phi alpha_intro,
-  alpha_elim = Morphism.thm phi alpha_elim,
-  subshapes = Option.map (map (Morphism.term phi)) subshapes,
-  wf_subshape = Option.map (Morphism.thm phi) wf_subshape,
-  set_subshapess = Option.map (map (map (Morphism.thm phi))) set_subshapess,
-  set_subshape_imagess = Option.map (map (map (Morphism.thm phi))) set_subshape_imagess,
-  subshape_induct = Option.map (Morphism.thm phi) subshape_induct
+  alpha_elim = Morphism.thm phi alpha_elim
 } : raw_result;
 
 type quotient_result = {
@@ -182,61 +168,80 @@ type quotient_result = {
   rep: term,
 
   ctor_def: thm,
-  rename_def: thm,
+  permute_def: thm,
   FVars_defs: thm list,
 
   nnoclash_noclash: thm,
-  alpha_quotient_sym: thm,
   total_abs_eq_iff: thm,
   abs_rep: thm,
   rep_abs: thm,
+  rep_abs_sym: thm,
   abs_ctor: thm,
 
-  rename_ctor: thm,
-  rename_cong_id: thm,
-  rename_bij: thm,
-  rename_inv_simp: thm,
-  fresh_co_induct_param: thm,
-  fresh_co_induct: thm,
-  fresh_induct_param_no_clash: thm option
+  permute_cong: thm,
+  permute_cong_id: thm,
+  permute_bij: thm,
+  permute_inv_simp: thm
 };
 
-fun morph_quotient_result phi { abs, rep, alpha_quotient_sym, total_abs_eq_iff, abs_rep, rep_abs,
-abs_ctor, rename_def, FVars_defs, ctor_def, rename_ctor, fresh_co_induct, rename_cong_id, rename_bij, rename_inv_simp,
-fresh_co_induct_param, nnoclash_noclash, fresh_induct_param_no_clash } = {
+fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nnoclash_noclash,
+  total_abs_eq_iff, abs_rep, rep_abs, rep_abs_sym, abs_ctor, permute_cong, permute_cong_id,
+  permute_bij, permute_inv_simp } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
-  rename_def = Morphism.thm phi rename_def,
+  permute_def = Morphism.thm phi permute_def,
   FVars_defs = map (Morphism.thm phi) FVars_defs,
   nnoclash_noclash = Morphism.thm phi nnoclash_noclash,
-  alpha_quotient_sym = Morphism.thm phi alpha_quotient_sym,
   total_abs_eq_iff = Morphism.thm phi total_abs_eq_iff,
   abs_rep = Morphism.thm phi abs_rep,
   rep_abs = Morphism.thm phi rep_abs,
+  rep_abs_sym = Morphism.thm phi rep_abs_sym,
   abs_ctor = Morphism.thm phi abs_ctor,
-  rename_ctor = Morphism.thm phi rename_ctor,
-  rename_cong_id = Morphism.thm phi rename_cong_id,
-  rename_bij = Morphism.thm phi rename_bij,
-  rename_inv_simp = Morphism.thm phi rename_inv_simp,
-  fresh_co_induct_param = Morphism.thm phi fresh_co_induct_param,
-  fresh_co_induct = Morphism.thm phi fresh_co_induct,
-  fresh_induct_param_no_clash = Option.map (Morphism.thm phi) fresh_induct_param_no_clash
+  permute_cong = Morphism.thm phi permute_cong,
+  permute_cong_id = Morphism.thm phi permute_cong_id,
+  permute_bij = Morphism.thm phi permute_bij,
+  permute_inv_simp = Morphism.thm phi permute_inv_simp
 } : quotient_result;
+
+type least_fp_thms = {
+  subshape_rel: term,
+  subshapess: term list list,
+  wf_subshape: thm,
+  set_subshapess: thm list list,
+  set_subshape_permutess: thm list list,
+  subshape_induct: thm,
+  existential_induct: thm,
+  fresh_induct_param: thm
+};
+
+fun morph_least_fp_thms phi ({ subshape_rel, subshapess, wf_subshape, set_subshapess,
+  set_subshape_permutess, subshape_induct, existential_induct, fresh_induct_param }) = {
+  subshape_rel = Morphism.term phi subshape_rel,
+  subshapess = map (map (Morphism.term phi)) subshapess,
+  wf_subshape = Morphism.thm phi wf_subshape,
+  set_subshapess = map (map (Morphism.thm phi)) set_subshapess,
+  set_subshape_permutess = map (map (Morphism.thm phi)) set_subshape_permutess,
+  subshape_induct = Morphism.thm phi subshape_induct,
+  existential_induct = Morphism.thm phi existential_induct,
+  fresh_induct_param = Morphism.thm phi fresh_induct_param
+} : least_fp_thms;
 
 type fp_result = {
   fp: BNF_Util.fp_kind,
-  binding_relation: int list list,
+  binding_relation: int list list list,
   rec_vars: int list,
   raw_fps: raw_result fp_result_T list,
   quotient_fps: quotient_result fp_result_T list,
+  fp_thms: least_fp_thms,
   pre_mrbnfs: MRBNF_Def.mrbnf list
 };
 
-fun morph_fp_result phi ({ fp, binding_relation, rec_vars, raw_fps, quotient_fps, pre_mrbnfs }) = {
+fun morph_fp_result phi ({ fp, binding_relation, rec_vars, raw_fps, quotient_fps, fp_thms, pre_mrbnfs }) = {
   fp = fp, binding_relation = binding_relation, rec_vars = rec_vars,
   raw_fps = map (morph_fp_result_T morph_raw_result phi) raw_fps,
   quotient_fps = map (morph_fp_result_T morph_quotient_result phi) quotient_fps,
+  fp_thms = morph_least_fp_thms phi fp_thms,
   pre_mrbnfs = map (MRBNF_Def.morph_mrbnf phi) pre_mrbnfs
 } : fp_result;
 

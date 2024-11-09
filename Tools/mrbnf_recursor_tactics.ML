@@ -56,6 +56,7 @@ fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshap
     resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans}
   ],
   K (unfold_thms_tac ctxt @{thms image_id}),
+  TRY o (etac ctxt imageE THEN' hyp_subst_tac ctxt),
   eresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
   REPEAT_DETERM o FIRST' [
     assume_tac ctxt,

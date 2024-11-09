@@ -3,12 +3,13 @@ sig
   type 'a fp_result_T = {
     T: typ,
     ctor: term,
-    permute: term * thm,
+    permute: term,
     FVarss: term list,
     noclash: term * thm,
     inner: 'a,
 
     inject: thm,
+    permute_ctor: thm,
     permute_id0: thm,
     permute_id: thm,
     permute_comp0: thm,
@@ -71,6 +72,7 @@ sig
     fp: BNF_Util.fp_kind,
     binding_relation: int list list list,
     rec_vars: int list,
+    bfree_vars: int list,
     raw_fps: raw_result fp_result_T list,
     quotient_fps: quotient_result fp_result_T list,
     fp_thms: least_fp_thms,
@@ -95,12 +97,13 @@ struct
 type 'a fp_result_T = {
   T: typ,
   ctor: term,
-  permute: term * thm,
+  permute: term,
   FVarss: term list,
   noclash: term * thm,
   inner: 'a,
 
   inject: thm,
+  permute_ctor: thm,
   permute_id0: thm,
   permute_id: thm,
   permute_comp0: thm,
@@ -112,16 +115,17 @@ type 'a fp_result_T = {
   card_of_FVars_bound_UNIVs: thm list
 };
 
-fun morph_fp_result_T morph phi { T, ctor, permute, FVarss, noclash, inner, inject,
+fun morph_fp_result_T morph phi { T, ctor, permute, FVarss, noclash, inner, inject, permute_ctor,
   permute_id0, permute_id, permute_comp0, permute_comp, FVars_ctors, FVars_permutes, FVars_intross,
   card_of_FVars_bounds, card_of_FVars_bound_UNIVs } = {
   T = Morphism.typ phi T,
   ctor = Morphism.term phi ctor,
-  permute = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) permute,
+  permute = Morphism.term phi permute,
   FVarss = map (Morphism.term phi) FVarss,
   noclash = BNF_Util.map_prod (Morphism.term phi) (Morphism.thm phi) noclash,
   inner = morph phi inner,
   inject = Morphism.thm phi inject,
+  permute_ctor = Morphism.thm phi permute_ctor,
   permute_id0 = Morphism.thm phi permute_id0,
   permute_id = Morphism.thm phi permute_id,
   permute_comp0 = Morphism.thm phi permute_comp0,
@@ -231,14 +235,15 @@ type fp_result = {
   fp: BNF_Util.fp_kind,
   binding_relation: int list list list,
   rec_vars: int list,
+  bfree_vars: int list,
   raw_fps: raw_result fp_result_T list,
   quotient_fps: quotient_result fp_result_T list,
   fp_thms: least_fp_thms,
   pre_mrbnfs: MRBNF_Def.mrbnf list
 };
 
-fun morph_fp_result phi ({ fp, binding_relation, rec_vars, raw_fps, quotient_fps, fp_thms, pre_mrbnfs }) = {
-  fp = fp, binding_relation = binding_relation, rec_vars = rec_vars,
+fun morph_fp_result phi ({ fp, binding_relation, rec_vars, bfree_vars, raw_fps, quotient_fps, fp_thms, pre_mrbnfs }) = {
+  fp = fp, binding_relation = binding_relation, rec_vars = rec_vars, bfree_vars = bfree_vars,
   raw_fps = map (morph_fp_result_T morph_raw_result phi) raw_fps,
   quotient_fps = map (morph_fp_result_T morph_quotient_result phi) quotient_fps,
   fp_thms = morph_least_fp_thms phi fp_thms,

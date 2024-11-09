@@ -4407,46 +4407,44 @@ lemma f_swap_alpha:
             apply (unfold prod.case)
             apply (rule context_conjI)
           (* alpha_bij_tac *)
-             apply (rule alpha_bijs')
+             apply (rule alpha_bijs)
                        apply (erule eq_bij_betw_refl_prems)+
           (* repeat twice *)
-               apply (rule ballI)
                apply (unfold FVars_raw_permutes[OF f_prems])[1]
-               apply (erule imageE)
-               apply hypsubst
                apply (unfold eq_bij_betw_refl_def)[1]
                apply (erule conjE)+
                apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
                apply (erule conjE)+
+               apply (rule eq_onI)
                apply (drule UN_I)
-                apply assumption
+               apply (rotate_tac -1)
+               apply assumption
+               apply (unfold image_UN[symmetric])
                apply (rotate_tac -1)
                apply (rule trans)
-                apply (drule id_onD[rotated, OF imageI])
-                 apply assumption
-                apply assumption
+               apply (erule id_onD[rotated])
+               apply assumption
                apply (rule sym)
-               apply (erule id_onD[rotated, OF imageI])
+               apply (erule id_onD[rotated])
                apply assumption
           (* copied from above *)
-              apply (rule ballI)
-              apply (unfold FVars_raw_permutes[OF f_prems])[1]
-              apply (erule imageE)
-              apply hypsubst
-              apply (unfold eq_bij_betw_refl_def)[1]
-              apply (erule conjE)+
-              apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
-              apply (erule conjE)+
-              apply (drule UN_I)
+               apply (unfold FVars_raw_permutes[OF f_prems])[1]
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rule eq_onI)
+               apply (drule UN_I)
+               apply (rotate_tac -1)
                apply assumption
-              apply (rotate_tac -1)
-              apply (rule trans)
-               apply (drule id_onD[rotated, OF imageI])
-                apply assumption
+               apply (unfold image_UN[symmetric])
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated])
                apply assumption
-              apply (rule sym)
-              apply (erule id_onD[rotated, OF imageI])
-              apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated])
+               apply assumption
           (* end repeat twice *)
              apply (rule alpha_refls)
           (* end alpha_bij_tac *)
@@ -4511,10 +4509,10 @@ lemma f_swap_alpha:
            apply (subst permute_raw_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
            apply (rule context_conjI)
           (* binding alpha_bij_tac *)
-            apply (rule alpha_bijs')
+            apply (rule alpha_bijs)
                       apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
           (* repeat nvars *)
-              apply (rule ballI)
+               apply (rule eq_onI)
               apply (rule case_split[of "_ \<in> _"])
                apply (unfold eq_bij_betw_refl_def)[1]
                apply (erule conjE)+
@@ -4558,7 +4556,7 @@ lemma f_swap_alpha:
             id_onD[OF pick_id_on_images'(7)[OF f_prems suitable_prems(3) valid] imageI]
             id_onD[OF pick_id_on_images'(8)[OF f_prems suitable_prems(4) valid] imageI])
           (* copied from above, with f2 instead of f1 in id_onD *)
-             apply (rule ballI)
+             apply (rule eq_onI)
              apply (rule case_split[of "_ \<in> _"])
               apply (unfold eq_bij_betw_refl_def)[1]
               apply (erule conjE)+
@@ -4671,48 +4669,46 @@ lemma f_swap_alpha:
           apply (unfold prod.case)
           apply (rule context_conjI)
           (* alpha_bij_tac *)
-           apply (rule alpha_bijs')
-                     apply (erule eq_bij_betw_refl_prems)+
+             apply (rule alpha_bijs)
+                       apply (erule eq_bij_betw_refl_prems)+
           (* repeat twice *)
-             apply (rule ballI)
-             apply (unfold FVars_raw_permutes[OF f_prems])[1]
-             apply (erule imageE)
-             apply hypsubst
-             apply (unfold eq_bij_betw_refl_def)[1]
-             apply (erule conjE)+
-             apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
-             apply (erule conjE)+
-             apply (drule UN_I)
-              apply assumption
-             apply (rotate_tac -1)
-             apply (rule trans)
-              apply (drule id_onD[rotated, OF imageI])
+               apply (unfold FVars_raw_permutes[OF f_prems])[1]
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rule eq_onI)
+               apply (drule UN_I)
+               apply (rotate_tac -1)
                apply assumption
-              apply assumption
-             apply (rule sym)
-             apply (erule id_onD[rotated, OF imageI])
-             apply assumption
+               apply (unfold image_UN[symmetric])
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated])
+               apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated])
+               apply assumption
           (* copied from above *)
-            apply (rule ballI)
-            apply (unfold FVars_raw_permutes[OF f_prems])[1]
-            apply (erule imageE)
-            apply hypsubst
-            apply (unfold eq_bij_betw_refl_def)[1]
-            apply (erule conjE)+
-            apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
-            apply (erule conjE)+
-            apply (drule UN_I)
-             apply assumption
-            apply (rotate_tac -1)
-            apply (rule trans)
-             apply (drule id_onD[rotated, OF imageI])
-              apply assumption
-             apply assumption
-            apply (rule sym)
-            apply (erule id_onD[rotated, OF imageI])
-            apply assumption
+               apply (unfold FVars_raw_permutes[OF f_prems])[1]
+               apply (unfold eq_bij_betw_refl_def)[1]
+               apply (erule conjE)+
+               apply (drule imsupp_id_on_XX[OF valid suitable_prems f_prems])+
+               apply (erule conjE)+
+               apply (rule eq_onI)
+               apply (drule UN_I)
+               apply (rotate_tac -1)
+               apply assumption
+               apply (unfold image_UN[symmetric])
+               apply (rotate_tac -1)
+               apply (rule trans)
+               apply (erule id_onD[rotated])
+               apply assumption
+               apply (rule sym)
+               apply (erule id_onD[rotated])
+               apply assumption
           (* end repeat twice *)
-           apply (rule alpha_refls)
+             apply (rule alpha_refls)
           (* end alpha_bij_tac *)
             apply (rule allI)
             apply (rule impI)
@@ -4775,11 +4771,11 @@ lemma f_swap_alpha:
          apply (subst permute_raw_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
          apply (rule context_conjI)
           (* binding alpha_bij_tac *)
-          apply (rule alpha_bijs')
+          apply (rule alpha_bijs)
                     apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
 
           (* copied from above, binding case *)
-           apply (rule ballI)
+           apply (rule eq_onI)
            apply (rule case_split[of "_ \<in> _"])
             apply (unfold eq_bij_betw_refl_def)[1]
             apply (erule conjE)+
@@ -4829,7 +4825,7 @@ lemma f_swap_alpha:
             id_onD[OF pick_id_on_images'(7)[OF f_prems suitable_prems(3) valid] imageI]
             id_onD[OF pick_id_on_images'(8)[OF f_prems suitable_prems(4) valid] imageI])
           (* nonbinding recursive occurence *)
-            apply (rule ballI)
+            apply (rule eq_onI)
             apply (subst comp_def)+
             apply (unfold eq_bij_betw_refl_def)[1]
             apply (erule conjE)+
@@ -5511,11 +5507,11 @@ lemma f_swap_alpha:
                apply (unfold prod.case)
                apply (rule context_conjI)
               (* alpha_bij_tac *)
-                apply (rule alpha_bijs'[rotated -1])
+                apply (rule alpha_bijs[rotated -1])
                           apply (assumption | rule alpha_refls)
                          apply (erule eq_bij_betw_prems)+
               (* REPEAT_DETERM *)
-                 apply (rule ballI)
+                 apply (rule eq_onI)
                  apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -5540,7 +5536,7 @@ lemma f_swap_alpha:
                  apply (rule alpha_FVars)
                  apply assumption
               (* copied from above *)
-                apply (rule ballI)
+                apply (rule eq_onI)
                 apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -5651,9 +5647,9 @@ lemma f_swap_alpha:
               apply (rule context_conjI)
                apply (subst permute_raw_comps, (rule pick_prems pick'_prems | erule eq_bij_betw_prems)+)+
                apply (rule alpha_trans)
-                apply (rule alpha_bijs'[rotated -3]) (* -1 - nvars *)
+                apply (rule alpha_bijs[rotated -3]) (* -1 - nvars *)
               (* REPEAT_DETERM *)
-                          apply (rule ballI)
+                          apply (rule eq_onI)
                           apply (rule sym)
                           apply (rule case_split[of "_ \<in> _"])
                            apply (unfold eq_bij_betw_def)[1]
@@ -5741,7 +5737,7 @@ lemma f_swap_alpha:
                           apply (erule FVars_raw_intros)
                            apply assumption+
               (* copied from above *)
-                         apply (rule ballI)
+                         apply (rule eq_onI)
                          apply (rule sym)
                          apply (rule case_split[of "_ \<in> _"])
                           apply (unfold eq_bij_betw_def)[1]
@@ -5921,11 +5917,11 @@ lemma f_swap_alpha:
              apply (unfold prod.case)
              apply (rule context_conjI)
               (* alpha_bij_tac *)
-              apply (rule alpha_bijs'[rotated -1])
+              apply (rule alpha_bijs[rotated -1])
                         apply (assumption | rule alpha_refls)
                        apply (erule eq_bij_betw_prems)+
               (* REPEAT_DETERM *)
-               apply (rule ballI)
+               apply (rule eq_onI)
                apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -5950,7 +5946,7 @@ lemma f_swap_alpha:
                apply (rule alpha_FVars)
                apply assumption
               (* copied from above *)
-              apply (rule ballI)
+              apply (rule eq_onI)
               apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -6038,9 +6034,9 @@ lemma f_swap_alpha:
             apply (unfold id_o o_id)
             apply (rule context_conjI)
              apply (rule alpha_trans)
-              apply (rule alpha_bijs'[rotated -3]) (* -1 - nvars *)
+              apply (rule alpha_bijs[rotated -3]) (* -1 - nvars *)
               (* REPEAT_DETERM *)
-                       apply (rule ballI)
+                       apply (rule eq_onI)
                        apply (rule sym)
                        apply (rule case_split[of "_ \<in> _"])
                         apply (unfold eq_bij_betw_def)[1]
@@ -6128,7 +6124,7 @@ lemma f_swap_alpha:
                        apply (erule FVars_raw_intros)
                        apply assumption+
                        (* orelse *)
-                        apply (rule ballI)
+                        apply (rule eq_onI)
                         apply (unfold eq_bij_betw_def)[1]
                         apply (erule conjE)+
                         apply (subst (asm)
@@ -6652,10 +6648,10 @@ lemma f_swap_alpha:
             apply (unfold prod.case)
             apply (rule context_conjI)
           (* alpha_bij_tac *)
-             apply (rule alpha_bijs')
+             apply (rule alpha_bijs)
                        apply (erule eq_bij_betw_refl_prems)+
           (* repeat twice *)
-               apply (rule ballI)
+               apply (rule eq_onI)
                apply (unfold FVars_raw_permutes[OF f_prems])[1]
                apply (erule imageE)
                apply hypsubst
@@ -6674,7 +6670,7 @@ lemma f_swap_alpha:
                apply (erule id_onD[rotated, OF imageI])
                apply assumption
           (* copied from above *)
-              apply (rule ballI)
+              apply (rule eq_onI)
               apply (unfold FVars_raw_permutes[OF f_prems])[1]
               apply (erule imageE)
               apply hypsubst
@@ -6757,10 +6753,10 @@ lemma f_swap_alpha:
            apply (subst permute_raw_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
            apply (rule context_conjI)
           (* binding alpha_bij_tac *)
-            apply (rule alpha_bijs')
+            apply (rule alpha_bijs)
                       apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
           (* repeat twice *)
-              apply (rule ballI)
+              apply (rule eq_onI)
               apply (rule case_split[of "_ \<in> _"])
                apply (unfold eq_bij_betw_refl_def)[1]
                apply (erule conjE)+
@@ -6816,7 +6812,7 @@ lemma f_swap_alpha:
                apply (erule conjE)+
                apply assumption
           (* copied from above *)
-             apply (rule ballI)
+             apply (rule eq_onI)
              apply (rule case_split[of "_ \<in> _"])
               apply (unfold eq_bij_betw_refl_def)[1]
               apply (erule conjE)+
@@ -6930,10 +6926,10 @@ lemma f_swap_alpha:
           apply (unfold prod.case)
           apply (rule context_conjI)
           (* alpha_bij_tac *)
-           apply (rule alpha_bijs')
+           apply (rule alpha_bijs)
                      apply (erule eq_bij_betw_refl_prems)+
           (* repeat twice *)
-             apply (rule ballI)
+             apply (rule eq_onI)
              apply (unfold FVars_raw_permutes[OF f_prems])[1]
              apply (erule imageE)
              apply hypsubst
@@ -6952,7 +6948,7 @@ lemma f_swap_alpha:
              apply (erule id_onD[rotated, OF imageI])
              apply assumption
           (* copied from above *)
-            apply (rule ballI)
+            apply (rule eq_onI)
             apply (unfold FVars_raw_permutes[OF f_prems])[1]
             apply (erule imageE)
             apply hypsubst
@@ -7035,11 +7031,11 @@ lemma f_swap_alpha:
          apply (subst permute_raw_comps, (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+)+
          apply (rule context_conjI)
           (* binding alpha_bij_tac *)
-          apply (rule alpha_bijs')
+          apply (rule alpha_bijs)
                     apply (rule bij_comp supp_comp_bound infinite_UNIV pick_prems f_prems | erule eq_bij_betw_refl_prems)+
 
           (* copied from above, binding case *)
-           apply (rule ballI)
+           apply (rule eq_onI)
            apply (rule case_split[of "_ \<in> _"])
             apply (unfold eq_bij_betw_refl_def)[1]
             apply (erule conjE)+
@@ -7089,7 +7085,7 @@ lemma f_swap_alpha:
             id_onD[OF pick_id_on_images'(7)[OF f_prems suitable_prems(3) valid] imageI]
             id_onD[OF pick_id_on_images'(8)[OF f_prems suitable_prems(4) valid] imageI])
            (* nonbinding recursive occurence *)
-            apply (rule ballI)
+            apply (rule eq_onI)
             apply (subst comp_def)+
             apply (unfold eq_bij_betw_refl_def)[1]
             apply (erule conjE)+
@@ -7771,11 +7767,11 @@ lemma f_swap_alpha:
                apply (unfold prod.case)
                apply (rule context_conjI)
               (* alpha_bij_tac *)
-                apply (rule alpha_bijs'[rotated -1])
+                apply (rule alpha_bijs[rotated -1])
                           apply (assumption | rule alpha_refls)
                          apply (erule eq_bij_betw_prems)+
               (* REPEAT_DETERM *)
-                 apply (rule ballI)
+                 apply (rule eq_onI)
                  apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -7800,7 +7796,7 @@ lemma f_swap_alpha:
                  apply (rule alpha_FVars)
                  apply assumption
               (* copied from above *)
-                apply (rule ballI)
+                apply (rule eq_onI)
                 apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -7890,9 +7886,9 @@ lemma f_swap_alpha:
               apply (rule context_conjI)
                apply (subst permute_raw_comps, (rule pick_prems pick'_prems | erule eq_bij_betw_prems)+)+
                apply (rule alpha_trans)
-                apply (rule alpha_bijs'[rotated -3]) (* -1 - nvars *)
+                apply (rule alpha_bijs[rotated -3]) (* -1 - nvars *)
               (* REPEAT_DETERM *)
-                          apply (rule ballI)
+                          apply (rule eq_onI)
                           apply (rule sym)
                           apply (rule case_split[of "_ \<in> _"])
                            apply (unfold eq_bij_betw_def)[1]
@@ -7982,7 +7978,7 @@ lemma f_swap_alpha:
                           apply (erule FVars_raw_intros)
                            apply assumption+
               (* copied from above *)
-                         apply (rule ballI)
+                         apply (rule eq_onI)
                          apply (rule sym)
                          apply (rule case_split[of "_ \<in> _"])
                           apply (unfold eq_bij_betw_def)[1]
@@ -8159,11 +8155,11 @@ lemma f_swap_alpha:
              apply (unfold prod.case)
              apply (rule context_conjI)
               (* alpha_bij_tac *)
-              apply (rule alpha_bijs'[rotated -1])
+              apply (rule alpha_bijs[rotated -1])
                         apply (assumption | rule alpha_refls)
                        apply (erule eq_bij_betw_prems)+
               (* REPEAT_DETERM *)
-               apply (rule ballI)
+               apply (rule eq_onI)
                apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -8188,7 +8184,7 @@ lemma f_swap_alpha:
                apply (rule alpha_FVars)
                apply assumption
               (* copied from above *)
-              apply (rule ballI)
+              apply (rule eq_onI)
               apply (unfold eq_bij_betw_def alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable_prems valid], symmetric]
                 alpha_FVars(1,2)[OF alpha_ctor_picks(1)[OF suitable'_prems valid], symmetric]
                 alpha_FVars(3,4)[OF alpha_ctor_picks(2)[OF suitable_prems valid], symmetric]
@@ -8279,9 +8275,9 @@ lemma f_swap_alpha:
             apply (unfold id_o o_id)
             apply (rule context_conjI)
              apply (rule alpha_trans)
-              apply (rule alpha_bijs'[rotated -3]) (* -1 - nvars *)
+              apply (rule alpha_bijs[rotated -3]) (* -1 - nvars *)
               (* REPEAT_DETERM *)
-                       apply (rule ballI)
+                       apply (rule eq_onI)
                        apply (rule sym)
                        apply (rule case_split[of "_ \<in> _"])
                         apply (unfold eq_bij_betw_def)[1]
@@ -8372,7 +8368,7 @@ lemma f_swap_alpha:
                        apply (erule FVars_raw_intros)
                        apply assumption+
                        (* orelse *)
-                       apply (rule ballI)
+                       apply (rule eq_onI)
                         apply (unfold eq_bij_betw_def)[1]
                         apply (erule conjE)+
                         apply (subst (asm)

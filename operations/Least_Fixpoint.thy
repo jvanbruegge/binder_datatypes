@@ -6721,6 +6721,7 @@ ML \<open>
 val fp_res = { fp = BNF_Util.Least_FP,
     binding_relation = [[[1, 3]], [[1]]],
     rec_vars = [2, 2],
+    bfree_vars = [0],
     fp_thms = {
       subshape_rel = @{term "{(x, y). case x of
         Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
@@ -6744,10 +6745,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
     quotient_fps = [
       { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
         ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-        permute = (
-          @{term "permute_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-          @{thm permute_simps(1)}
-        ),
+        permute = @{term "permute_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
         FVarss = [
           @{term "FVars_T11 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"},
           @{term "FVars_T12 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"}
@@ -6757,6 +6755,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
           @{thm noclash_T1_def}
        ),
        inject = @{thm TT_inject0s(1)},
+       permute_ctor = @{thm permute_simps(1)},
        permute_id0 = @{thm permute_id0s(1)},
        permute_id = @{thm permute_ids(1)},
        permute_comp0 = @{thm permute_comp0s(1)},
@@ -6786,10 +6785,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
      },
      { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
        ctor = @{term "T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-       permute = (
-         @{term "permute_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-         @{thm permute_simps(2)}
-       ),
+       permute = @{term "permute_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
        FVarss = [
          @{term "FVars_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"},
          @{term "FVars_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"}
@@ -6799,6 +6795,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
          @{thm noclash_T2_def}
        ),
        inject = @{thm TT_inject0s(2)},
+       permute_ctor = @{thm permute_simps(2)},
        permute_id0 = @{thm permute_id0s(2)},
        permute_id = @{thm permute_ids(2)},
        permute_comp0 = @{thm permute_comp0s(2)},
@@ -6830,10 +6827,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
  raw_fps = [
   { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
     ctor = @{term "raw_T1_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
-    permute = (
-      @{term "permute_raw_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
-      @{thm permute_raw_simps(1)}
-    ),
+    permute = @{term "permute_raw_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
     FVarss = [
       @{term "FVars_raw_T11 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"},
       @{term "FVars_raw_T12 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"}
@@ -6843,6 +6837,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
       @{thm noclash_raw_T1_def}
    ),
    inject = @{thm raw_T1.inject},
+   permute_ctor = @{thm permute_raw_simps(1)},
    permute_id0 = @{thm permute_raw_id0s(1)},
    permute_id = @{thm permute_raw_ids(1)},
    permute_comp0 = @{thm permute_raw_comp0s(1)},
@@ -6868,10 +6863,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
  },
  { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
    ctor = @{term "raw_T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-   permute = (
-     @{term "permute_raw_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-     @{thm permute_raw_simps(2)}
-   ),
+   permute = @{term "permute_raw_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
    FVarss = [
      @{term "FVars_raw_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
      @{term "FVars_raw_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
@@ -6881,6 +6873,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
      @{thm noclash_raw_T2_def}
    ),
    inject = @{thm raw_T2.inject},
+   permute_ctor = @{thm permute_raw_simps(2)},
    permute_id0 = @{thm permute_raw_id0s(2)},
    permute_id = @{thm permute_raw_ids(2)},
    permute_comp0 = @{thm permute_raw_comp0s(2)},

@@ -183,7 +183,7 @@ lemma not_in_imsupp_same: "z \<notin> imsupp f \<Longrightarrow> f z = z"
   unfolding imsupp_def supp_def by blast
 lemma not_in_imsupp_same2: "z \<notin> imsupp f \<union> imsupp g \<Longrightarrow> f z = g z"
   using not_in_imsupp_same by (metis UnCI)
-lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> f ` A - B = f ` (A - B)"
+lemma Diff_image_not_in_imsupp: "B \<inter> imsupp f = {} \<Longrightarrow> f ` A - B = f ` (A - B)"
   unfolding supp_def imsupp_def by fastforce
 lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
   unfolding imsupp_def supp_def by fastforce

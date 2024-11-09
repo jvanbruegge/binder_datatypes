@@ -4865,10 +4865,10 @@ lemma FVars_bd_UNIVs:
   fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
     and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"
   shows
-    "|FVars_T11 x| <o |UNIV::'a set|"
-    "|FVars_T12 x| <o |UNIV::'b set|"
-    "|FVars_T21 x2| <o |UNIV::'a set|"
-    "|FVars_T22 x2| <o |UNIV::'b set|"
+    "|FVars_T11 x| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
+    "|FVars_T12 x| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
+    "|FVars_T21 x2| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
+    "|FVars_T22 x2| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
      apply (unfold FVars_defs)
      apply (rule FVars_raw_bd_UNIVs)+
    done
@@ -6388,7 +6388,7 @@ lemma existential_induct:
     done
   done
 
-lemma fresh_induct_param:
+lemma fresh_induct_param_raw:
   fixes K1::"'p \<Rightarrow> 'a::{var_T1_pre, var_T2_pre} set"
     and K2::"'p \<Rightarrow> 'b::{var_T1_pre, var_T2_pre} set"
   assumes "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K1 \<rho>| <o |UNIV::'a set|"
@@ -6518,7 +6518,7 @@ shows "\<forall>\<rho>\<in>Param. P1 z \<rho> \<and> P2 z2 \<rho>"
     done
   done
 
-lemma fresh_induct_param_noclash:
+lemma fresh_induct_param:
   fixes K1::"'p \<Rightarrow> 'a::{var_T1_pre, var_T2_pre} set"
     and K2::"'p \<Rightarrow> 'b::{var_T1_pre, var_T2_pre} set"
   assumes "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K1 \<rho>| <o |UNIV::'a set|"
@@ -6543,7 +6543,7 @@ lemma fresh_induct_param_noclash:
     \<rho> \<in> Param \<Longrightarrow> P2 (T2_ctor x) \<rho>"
     shows "\<forall>\<rho>\<in>Param. P1 z \<rho> \<and> P2 z2 \<rho>"
     apply (rule ballI)
-    apply (rule ballE[OF fresh_induct_param[of "UNIV \<times> UNIV \<times> Param"
+    apply (rule ballE[OF fresh_induct_param_raw[of "UNIV \<times> UNIV \<times> Param"
       "\<lambda>(x1, x2, \<rho>). FVars_T11 x1 \<union> FVars_T21 x2 \<union> K1 \<rho>"
       "\<lambda>(x1, x2, \<rho>). FVars_T12 x1 \<union> FVars_T22 x2 \<union> K2 \<rho>"
       "\<lambda>t (x1, x2, \<rho>). t = x1 \<longrightarrow> P1 t \<rho>" "\<lambda>t (x1, x2, \<rho>). t = x2 \<longrightarrow> P2 t \<rho>"
@@ -6673,6 +6673,35 @@ lemma fresh_induct_param_noclash:
     apply (erule impE[OF _ refl])+
     apply ((rule conjI)?, assumption)+
     done
+
+lemma fresh_induct:
+  assumes "|A1::'a::{var_T1_pre, var_T2_pre} set| <o |UNIV::'a set|"
+      "|A2::'b::{var_T1_pre, var_T2_pre} set| <o |UNIV::'b set|"
+  and IHs: "\<And>x.
+    (\<And>z. z \<in> set8_T1_pre x \<Longrightarrow> P1 z) \<Longrightarrow>
+    (\<And>z. z \<in> set9_T1_pre x \<Longrightarrow> P1 z) \<Longrightarrow>
+    (\<And>z. z \<in> set10_T1_pre x \<Longrightarrow> P2 z) \<Longrightarrow>
+    (\<And>z. z \<in> set11_T1_pre x \<Longrightarrow> P2 z) \<Longrightarrow>
+    set5_T1_pre x \<inter> A1 = {} \<Longrightarrow>
+    set6_T1_pre x \<inter> A2 = {} \<Longrightarrow>
+    noclash_T1 x \<Longrightarrow>
+    P1 (T1_ctor x)"
+  "\<And>x.
+    (\<And>z. z \<in> set8_T2_pre x \<Longrightarrow> P1 z) \<Longrightarrow>
+    (\<And>z. z \<in> set9_T2_pre x \<Longrightarrow> P1 z) \<Longrightarrow>
+    (\<And>z. z \<in> set10_T2_pre x \<Longrightarrow> P2 z) \<Longrightarrow>
+    (\<And>z. z \<in> set11_T2_pre x \<Longrightarrow> P2 z) \<Longrightarrow>
+    set5_T2_pre x \<inter> A1 = {} \<Longrightarrow>
+    set6_T2_pre x \<inter> A2 = {} \<Longrightarrow>
+    noclash_T2 x \<Longrightarrow>
+    P2 (T2_ctor x)"
+  shows "P1 z \<and> P2 z2"
+  apply (rule fresh_induct_param[of UNIV "\<lambda>_. A1" "\<lambda>_. A2" "\<lambda>x _. P1 x" "\<lambda>x _. P2 x", unfolded ball_UNIV, THEN spec])
+  apply (rule assms)+
+  apply assumption+
+  apply (rule assms)
+  apply assumption+
+  done
 
 lemma permute_congs:
   fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"

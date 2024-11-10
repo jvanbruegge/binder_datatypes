@@ -1,11 +1,13 @@
 theory Sugar
-  imports Fixpoint
+  imports Least_Fixpoint
 begin
 
 ML \<open>
-val res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Fixpoint.T1")
+val res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Least_Fixpoint.T1")
 \<close>
 
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
 
 local_setup \<open>fn lthy =>
@@ -15,6 +17,7 @@ let
   val lthy = @{fold 2} (fn (mrbnf, _) => fn quot =>
     MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T quot))) mrbnf
   ) ress (#quotient_fps res) lthy;
+  val _ = @{print} ress
 in lthy end
 \<close>
 print_theorems
@@ -23,13 +26,15 @@ print_mrbnfs
 class var = var_T1_pre + var_T2_pre
 
 definition Var_T1 :: "'var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where
-  "Var_T1 x \<equiv> T1_ctor (Abs_T1_pre (Inl (Inl x)))"
+  "Var_T1 x \<equiv> T1_ctor (Abs_T1_pre (Inl (Inl (Inl x))))"
 definition Arrow_T1 :: "('var::var, 'tyvar::var, 'a::var, 'b) T1" where
-  "Arrow_T1 \<equiv> T1_ctor (Abs_T1_pre (Inl (Inr (Inl ()))))"
+  "Arrow_T1 \<equiv> T1_ctor (Abs_T1_pre (Inl (Inl (Inr ()))))"
 definition TyVar_T1 :: "'tyvar \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where
-  "TyVar_T1 a \<equiv> T1_ctor (Abs_T1_pre (Inl (Inr (Inr a))))"
+  "TyVar_T1 a \<equiv> T1_ctor (Abs_T1_pre (Inl (Inr (Inl a))))"
 definition App_T1 :: "('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
-  "App_T1 t1 t2 \<equiv> T1_ctor (Abs_T1_pre (Inr (Inl (Inl (t1, t2)))))"
+  "App_T1 t1 t2 \<equiv> T1_ctor (Abs_T1_pre (Inl (Inr (Inr (t1, t2)))))"
+definition BFree_T1 :: "'var \<Rightarrow> ('var \<times> unit) list \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where
+  "BFree_T1 a ts \<equiv> T1_ctor (Abs_T1_pre (Inr (Inl (Inl (a, ts)))))"
 definition Lam_T1 :: "'var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
   "Lam_T1 x t \<equiv> T1_ctor (Abs_T1_pre (Inr (Inl (Inr (x, t)))))"
 definition TyLam_T1 :: "'tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where
@@ -50,11 +55,11 @@ definition TyLam_T2 :: "'tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightar
 definition Ext_T2 :: "'b \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T2" where
   "Ext_T2 b t \<equiv> T2_ctor (Abs_T2_pre (Inr (Inr (Inr (b, t)))))"
 
-lemmas T1_ctors_defs = Var_T1_def Arrow_T1_def TyVar_T1_def App_T1_def Lam_T1_def TyLam_T1_def Ext_T1_def
+lemmas T1_ctors_defs = Var_T1_def Arrow_T1_def TyVar_T1_def App_T1_def BFree_T1_def Lam_T1_def TyLam_T1_def Ext_T1_def
 lemmas T2_ctors_defs = Var_T2_def TyVar_T2_def App_T2_def Lam_T2_def TyLam_T2_def Ext_T2_def
 
-lemmas T1_pre_set_defs = set1_T1_pre_def set2_T1_pre_def set3_T1_pre_def set4_T1_pre_def set5_T1_pre_def set6_T1_pre_def set7_T1_pre_def set8_T1_pre_def set9_T1_pre_def set10_T1_pre_def
-lemmas T2_pre_set_defs = set1_T2_pre_def set2_T2_pre_def set3_T2_pre_def set4_T2_pre_def set5_T2_pre_def set6_T2_pre_def set7_T2_pre_def set8_T2_pre_def set9_T2_pre_def set10_T2_pre_def
+lemmas T1_pre_set_defs = set1_T1_pre_def set2_T1_pre_def set3_T1_pre_def set4_T1_pre_def set5_T1_pre_def set6_T1_pre_def set7_T1_pre_def set8_T1_pre_def set9_T1_pre_def set10_T1_pre_def set11_T1_pre_def
+lemmas T2_pre_set_defs = set1_T2_pre_def set2_T2_pre_def set3_T2_pre_def set4_T2_pre_def set5_T2_pre_def set6_T2_pre_def set7_T2_pre_def set8_T2_pre_def set9_T2_pre_def set10_T2_pre_def set11_T2_pre_def
 
 lemma T1_T2_strong_induct:
   fixes t1::"('var::var, 'tyvar::var, 'a::var, 'b) T1" and t2::"('var::var, 'tyvar::var, 'a::var, 'b) T2"
@@ -66,6 +71,7 @@ lemma T1_T2_strong_induct:
     "\<And>\<rho>. P Arrow_T1 \<rho>"
     "\<And>a \<rho>. P (TyVar_T1 a) \<rho>"
     "\<And>t1 t2 \<rho>. \<forall>\<rho>. P t1 \<rho> \<Longrightarrow> \<forall>\<rho>. P2 t2 \<rho> \<Longrightarrow> P (App_T1 t1 t2) \<rho>"
+    "\<And>a xs \<rho>. P (BFree_T1 a xs) \<rho>"
     "\<And>x t \<rho>. x \<notin> K1 \<rho> \<Longrightarrow> \<forall>\<rho>. P t \<rho> \<Longrightarrow> P (Lam_T1 x t) \<rho>"
     "\<And>a t \<rho>. a \<notin> K2 \<rho> \<Longrightarrow> \<forall>\<rho>. P t \<rho> \<Longrightarrow> P (TyLam_T1 a t) \<rho>"
     "\<And>a \<rho>. P (Ext_T1 a) \<rho>"
@@ -78,7 +84,7 @@ lemma T1_T2_strong_induct:
     "\<And>b t \<rho>. \<forall>\<rho>. P t \<rho> \<Longrightarrow> P2 (Ext_T2 b t) \<rho>"
   shows "\<forall>\<rho>. P t1 \<rho> \<and> P2 t2 \<rho>"
   apply (unfold ball_UNIV[symmetric])
-  apply (rule T1.TT_fresh_co_induct_param[of _ K1 K2 P P2 t1 t2])
+  apply (rule fresh_induct_param[of _ K1 K2 P P2 t1 t2])
      apply (rule assms(1,2)[THEN spec])+
   subgoal for v1 \<rho>
     apply (tactic \<open>resolve_tac @{context} [infer_instantiate' @{context} [SOME @{cterm v1}] (
@@ -126,7 +132,6 @@ lemma T1_T2_strong_induct:
        apply (rule IHs(4))
       (* REPEAT_DETERM *)
         apply (rule allI)
-        apply (rule disjointI)?
     subgoal premises prems
       apply (rule prems(1)) (* nonbinding occurence of T1 *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
@@ -151,17 +156,21 @@ lemma T1_T2_strong_induct:
       apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
       apply (rule IHs(5))
+        (* repeated *)
+      apply (subst unit_eq)?
+      apply (unfold sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right comp_def
+        UN_singleton sum_set_simps prod_set_simps UN_single UN_empty
+        T1_ctors_defs[symmetric] Abs_T1_pre_inverse[OF UNIV_I]
+        T1_pre_set_defs
+        )[1]
+      apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
+      apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right disjoint_single)?
+      apply (rule IHs(6))
       (* REPEAT_DETERM *)
-       apply (rule allI)?
-       apply (rule disjointI)?
-    subgoal premises prems
-      apply (rule prems(5)) (* bound var of type 'var *)
-      apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-      apply (rule singletonI UNIV_I UN_I)+
-      done
+      apply (rule allI)?
+      apply assumption
         (* repeated *)
       apply (rule allI)?
-      apply (rule disjointI)?
     subgoal premises prems
       apply (rule prems(2)) (* binding occurence of T1 *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
@@ -176,16 +185,11 @@ lemma T1_T2_strong_induct:
         T1_pre_set_defs
         )[1]
      apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
-     apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-     apply (rule IHs(6))
+     apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right disjoint_single)?
+     apply (rule IHs(7))
       (* REPEAT_DETERM *)
       apply (rule allI)?
-      apply (rule disjointI)?
-    subgoal premises prems
-      apply (rule prems(6)) (* bound var of type 'tyvar *)
-      apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-      apply (rule singletonI UNIV_I UN_I)+
-      done
+      apply assumption
         (* repeated *)
      apply (rule allI)?
      apply (rule disjointI)?
@@ -204,7 +208,7 @@ lemma T1_T2_strong_induct:
         )[1]
     apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
     apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-    apply (rule IHs(7))
+    apply (rule IHs(8))
       (* END REPEAT_DETERM *)
     done
 
@@ -221,7 +225,7 @@ lemma T1_T2_strong_induct:
         )[1]
          apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
          apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-         apply (rule IHs(8))
+         apply (rule IHs(9))
       (* repeated *)
         apply (subst unit_eq)?
         apply (unfold sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right comp_def
@@ -231,7 +235,7 @@ lemma T1_T2_strong_induct:
         )[1]
         apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
         apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-        apply (rule IHs(9))
+        apply (rule IHs(10))
       (* repeated *)
        apply (subst unit_eq)?
        apply (unfold sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right comp_def
@@ -241,11 +245,10 @@ lemma T1_T2_strong_induct:
         )[1]
        apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-       apply (rule IHs(10))
+       apply (rule IHs(11))
       (* repeated *)
       (* REPEAT_DETERM *)
         apply (rule allI)
-        apply (rule disjointI)?
     subgoal premises prems
       apply (rule prems(1)) (* nonbinding occurence of T1 *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
@@ -253,7 +256,6 @@ lemma T1_T2_strong_induct:
       done
         (* repeated *)
        apply (rule allI)
-       apply (rule disjointI)?
     subgoal premises prems
       apply (rule prems(3)) (* nonbinding occurence of T2 *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
@@ -268,19 +270,12 @@ lemma T1_T2_strong_induct:
         T2_pre_set_defs
         )[1]
        apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
-       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-      apply (rule IHs(11))
+       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right disjoint_single)?
+      apply (rule IHs(12))
       (* REPEAT_DETERM *)
-        apply (rule allI)?
-        apply (rule disjointI)?
-    subgoal premises prems
-      apply (rule prems(5)) (* bound var of type 'var *)
-       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-       apply (rule singletonI UNIV_I UN_I)+
-      done
+      apply assumption
         (* repeated *)
        apply (rule allI)?
-       apply (rule disjointI)?
     subgoal premises prems
       apply (rule prems(2)) (* binding occurence of T1 *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
@@ -295,16 +290,10 @@ lemma T1_T2_strong_induct:
         T2_pre_set_defs
         )[1]
        apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
-       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-      apply (rule IHs(12))
+       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right disjoint_single)?
+      apply (rule IHs(13))
       (* REPEAT_DETERM *)
-        apply (rule allI)?
-        apply (rule disjointI)?
-    subgoal premises prems
-      apply (rule prems(6)) (* bound var of type 'tyvar *)
-       apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-       apply (rule singletonI UNIV_I UN_I)+
-      done
+      apply assumption
         (* repeated *)
        apply (rule allI)?
        apply (rule disjointI)?
@@ -323,7 +312,7 @@ lemma T1_T2_strong_induct:
         )[1]
        apply (subst (asm) list.set_map, ((rule supp_id_bound bij_id)+)?)? (* For nested BNFs *)
        apply (unfold UN_empty UN_empty2 Un_empty_left Un_empty_right)?
-      apply (rule IHs(13))
+      apply (rule IHs(14))
       (* REPEAT_DETERM *)
        apply (rule allI)?
        apply (rule disjointI)?
@@ -345,21 +334,22 @@ lemmas set_simp_thms = sum.set_map prod.set_map comp_def UN_empty UN_empty2 Un_e
   UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un empty_Diff
 
 lemma set_T1_simps[simp]:
-  "FFVars_T11 (Var_T1 x) = {x}"
-  "FFVars_T11 Arrow_T1 = {}"
-  "FFVars_T11 (TyVar_T1 a) = {}"
-  "FFVars_T11 (App_T1 t1 t2) = FFVars_T11 t1 \<union> FFVars_T21 t2"
-  "FFVars_T11 (Lam_T1 x t) = FFVars_T11 t - {x}"
-  "FFVars_T11 (TyLam_T1 a t) = FFVars_T11 t"
-  "FFVars_T11 (Ext_T1 a) = {}"
+  "FVars_T11 (Var_T1 x) = {x}"
+  "FVars_T11 Arrow_T1 = {}"
+  "FVars_T11 (TyVar_T1 a) = {}"
+  "FVars_T11 (App_T1 t1 t2) = FVars_T11 t1 \<union> FVars_T21 t2"
+  "FVars_T11 (BFree_T1 x ts) = fst ` set ts - {x}"
+  "FVars_T11 (Lam_T1 x t) = FVars_T11 t - {x}"
+  "FVars_T11 (TyLam_T1 a t) = FVars_T11 t"
+  "FVars_T11 (Ext_T1 a) = {}"
 
-  "FFVars_T12 (Var_T1 x) = {}"
-  "FFVars_T12 Arrow_T1 = {}"
-  "FFVars_T12 (TyVar_T1 a) = {a}"
-  "FFVars_T12 (App_T1 t1 t2) = FFVars_T12 t1 \<union> FFVars_T22 t2"
-  "FFVars_T12 (Lam_T1 x t) = FFVars_T12 t"
-  "FFVars_T12 (TyLam_T1 a t) = FFVars_T12 t - {a}"
-  "FFVars_T12 (Ext_T1 a) = {}"
+  "FVars_T12 (Var_T1 x) = {}"
+  "FVars_T12 Arrow_T1 = {}"
+  "FVars_T12 (TyVar_T1 a) = {a}"
+  "FVars_T12 (App_T1 t1 t2) = FVars_T12 t1 \<union> FVars_T22 t2"
+  "FVars_T12 (Lam_T1 x t) = FVars_T12 t"
+  "FVars_T12 (TyLam_T1 a t) = FVars_T12 t - {a}"
+  "FVars_T12 (Ext_T1 a) = {}"
 
   "set3_T1 (Var_T1 x) = {}"
   "set3_T1 Arrow_T1 = {}"
@@ -376,27 +366,28 @@ lemma set_T1_simps[simp]:
   "set4_T1 (Lam_T1 x t) = set4_T1 t"
   "set4_T1 (TyLam_T1 a t) = set4_T1 t"
   "set4_T1 (Ext_T1 a) = {}"
-  apply (unfold set_simp_thms T1_ctors_defs T1.FFVars_cctors
+  apply (unfold set_simp_thms T1_ctors_defs FVars_ctors
       T1_pre_set_defs Abs_T1_pre_inverse[OF UNIV_I]
-      T1_set_simps
+      T1_set_simps list.set_map
   )
-                      apply (rule refl)+
+  apply (rule refl
+    | (unfold prod_sets_simps)[1])+
   done
 
 lemma set_T2_simps[simp]:
-  "FFVars_T21 (Var_T2 x) = {x}"
-  "FFVars_T21 (TyVar_T2 a) = {}"
-  "FFVars_T21 (App_T2 t1 t2) = FFVars_T11 t1 \<union> FFVars_T21 t2"
-  "FFVars_T21 (Lam_T2 x ts) = \<Union>(FFVars_T11 ` set ts)- {x}"
-  "FFVars_T21 (TyLam_T2 a t) = FFVars_T21 t"
-  "FFVars_T21 (Ext_T2 b t1) = FFVars_T11 t1"
+  "FVars_T21 (Var_T2 x) = {x}"
+  "FVars_T21 (TyVar_T2 a) = {}"
+  "FVars_T21 (App_T2 t1 t2) = FVars_T11 t1 \<union> FVars_T21 t2"
+  "FVars_T21 (Lam_T2 x ts) = \<Union>(FVars_T11 ` set ts)- {x}"
+  "FVars_T21 (TyLam_T2 a t) = FVars_T21 t"
+  "FVars_T21 (Ext_T2 b t1) = FVars_T11 t1"
 
-  "FFVars_T22 (Var_T2 x) = {}"
-  "FFVars_T22 (TyVar_T2 a) = {a}"
-  "FFVars_T22 (App_T2 t1 t2) = FFVars_T12 t1 \<union> FFVars_T22 t2"
-  "FFVars_T22 (Lam_T2 x ts) = \<Union>(FFVars_T12 ` set ts)"
-  "FFVars_T22 (TyLam_T2 a t) = FFVars_T22 t"
-  "FFVars_T22 (Ext_T2 b t1) = FFVars_T12 t1"
+  "FVars_T22 (Var_T2 x) = {}"
+  "FVars_T22 (TyVar_T2 a) = {a}"
+  "FVars_T22 (App_T2 t1 t2) = FVars_T12 t1 \<union> FVars_T22 t2"
+  "FVars_T22 (Lam_T2 x ts) = \<Union>(FVars_T12 ` set ts)"
+  "FVars_T22 (TyLam_T2 a t) = FVars_T22 t"
+  "FVars_T22 (Ext_T2 b t1) = FVars_T12 t1"
 
   "set3_T2 (Var_T2 x) = {}"
   "set3_T2 (TyVar_T2 a) = {}"
@@ -411,7 +402,7 @@ lemma set_T2_simps[simp]:
   "set4_T2 (Lam_T2 x ts) = \<Union>(set4_T1 ` set ts)"
   "set4_T2 (TyLam_T2 a t) = set4_T2 t"
   "set4_T2 (Ext_T2 b t1) = {b} \<union> set4_T1 t1"
-apply (unfold set_simp_thms T2_ctors_defs T1.FFVars_cctors
+apply (unfold set_simp_thms T2_ctors_defs FVars_ctors
       T2_pre_set_defs Abs_T2_pre_inverse[OF UNIV_I]
       T2_set_simps
   )
@@ -422,6 +413,7 @@ lemma T1_distinct[simp]:
   "Var_T1 x \<noteq> Arrow_T1"
   "Var_T1 x \<noteq> TyVar_T1 a"
   "Var_T1 x \<noteq> App_T1 t1 t2"
+  "Var_T1 x \<noteq> BFree_T1 x xs"
   "Var_T1 x \<noteq> Lam_T1 a1 t"
   "Var_T1 x \<noteq> TyLam_T1 a2 t1"
   "Var_T1 x \<noteq> Ext_T1 a3"
@@ -429,6 +421,7 @@ lemma T1_distinct[simp]:
   "Arrow_T1 \<noteq> Var_T1 x"
   "Arrow_T1 \<noteq> TyVar_T1 a"
   "Arrow_T1 \<noteq> App_T1 t1 t2"
+  "Arrow_T1 \<noteq> BFree_T1 x xs"
   "Arrow_T1 \<noteq> Lam_T1 a1 t"
   "Arrow_T1 \<noteq> TyLam_T1 a2 t1"
   "Arrow_T1 \<noteq> Ext_T1 a3"
@@ -436,21 +429,32 @@ lemma T1_distinct[simp]:
   "TyVar_T1 a \<noteq> Var_T1 x"
   "TyVar_T1 a \<noteq> Arrow_T1"
   "TyVar_T1 a \<noteq> App_T1 t1 t2"
+  "TyVar_T1 a \<noteq> BFree_T1 x xs"
   "TyVar_T1 a \<noteq> Lam_T1 a1 t"
   "TyVar_T1 a \<noteq> TyLam_T1 a2 t1"
   "TyVar_T1 a \<noteq> Ext_T1 a3"
 
   "App_T1 t1 t2 \<noteq> Var_T1 x"
   "App_T1 t1 t2 \<noteq> Arrow_T1"
+  "App_T1 t1 t2 \<noteq> BFree_T1 x xs"
   "App_T1 t1 t2 \<noteq> TyVar_T1 a"
   "App_T1 t1 t2 \<noteq> Lam_T1 a1 t"
   "App_T1 t1 t2 \<noteq> TyLam_T1 a2 t1"
   "App_T1 t1 t2 \<noteq> Ext_T1 a3"
 
+  "BFree_T1 x xs \<noteq> Var_T1 x"
+  "BFree_T1 x xs \<noteq> Arrow_T1"
+  "BFree_T1 x xs \<noteq> App_T1 t1 t2"
+  "BFree_T1 x xs \<noteq> TyVar_T1 a"
+  "BFree_T1 x xs \<noteq> Lam_T1 a1 t"
+  "BFree_T1 x xs \<noteq> TyLam_T1 a2 t1"
+  "BFree_T1 x xs \<noteq> Ext_T1 a3"
+
   "Lam_T1 a1 t \<noteq> Var_T1 x"
   "Lam_T1 a1 t \<noteq> Arrow_T1"
   "Lam_T1 a1 t \<noteq> TyVar_T1 a"
   "Lam_T1 a1 t \<noteq> App_T1 t1 t2"
+  "Lam_T1 a1 t \<noteq> BFree_T1 x xs"
   "Lam_T1 a1 t \<noteq> TyLam_T1 a2 t1"
   "Lam_T1 a1 t \<noteq> Ext_T1 a3"
 
@@ -458,6 +462,7 @@ lemma T1_distinct[simp]:
   "TyLam_T1 a2 t1 \<noteq> Arrow_T1"
   "TyLam_T1 a2 t1 \<noteq> TyVar_T1 a"
   "TyLam_T1 a2 t1 \<noteq> App_T1 t1 t2"
+  "TyLam_T1 a2 t1 \<noteq> BFree_T1 x xs"
   "TyLam_T1 a2 t1 \<noteq> Lam_T1 a1 t"
   "TyLam_T1 a2 t1 \<noteq> Ext_T1 a3"
 
@@ -465,10 +470,11 @@ lemma T1_distinct[simp]:
   "Ext_T1 a3 \<noteq> Arrow_T1"
   "Ext_T1 a3 \<noteq> TyVar_T1 a"
   "Ext_T1 a3 \<noteq> App_T1 t1 t2"
+  "Ext_T1 a3 \<noteq> BFree_T1 x xs"
   "Ext_T1 a3 \<noteq> Lam_T1 a1 t"
   "Ext_T1 a3 \<noteq> TyLam_T1 a2 t1"
                       apply (unfold comp_def map_sum.simps map_prod_simp sum.inject
-    T1_ctors_defs T1.TT_injects0 map_T1_pre_def
+    T1_ctors_defs TT_inject0s map_T1_pre_def
     Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I]
 )
                       apply (rule notI, (erule exE conjE sum.distinct[THEN notE])+)+
@@ -511,17 +517,17 @@ lemma T2_distinct[simp]:
   "Ext_T2 a3 t5 \<noteq> Lam_T2 x1 t3"
   "Ext_T2 a3 t5 \<noteq> TyLam_T2 a2 t4"
                       apply (unfold comp_def map_sum.simps map_prod_simp sum.inject
-    T2_ctors_defs T1.TT_injects0 map_T2_pre_def
+    T2_ctors_defs TT_inject0s map_T2_pre_def
     Abs_T2_pre_inverse[OF UNIV_I] Abs_T2_pre_inject[OF UNIV_I UNIV_I]
 )
                       apply (rule notI, (erule exE conjE sum.distinct[THEN notE])+)+
   done
 
-abbreviation eta11 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g, 'h, 'i, 'j) T1_pre" where
-  "eta11 x \<equiv> Abs_T1_pre (Inl (Inl x))"
-abbreviation eta12 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g, 'h, 'i, 'j) T1_pre" where
-  "eta12 x \<equiv> Abs_T1_pre (Inl (Inr (Inr x)))"
-abbreviation eta21 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g, 'h, 'i, 'j) T2_pre" where
+abbreviation eta11 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g::var, 'h, 'i, 'j, 'k) T1_pre" where
+  "eta11 x \<equiv> Abs_T1_pre (Inl (Inl (Inl x)))"
+abbreviation eta12 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g::var, 'h, 'i, 'j, 'k) T1_pre" where
+  "eta12 x \<equiv> Abs_T1_pre (Inl (Inr (Inl x)))"
+abbreviation eta21 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g::var, 'h, 'i, 'j, 'k) T2_pre" where
   "eta21 x \<equiv> Abs_T2_pre (Inl (Inl x))"
 
 lemma eta_frees:
@@ -592,12 +598,14 @@ lemma eta_compl_frees:
 lemma eta_naturals:
   fixes f1::"('x1::var \<Rightarrow> 'x1)" and f2::"('x2::var \<Rightarrow> 'x2)"
     and f3::"('x3::var \<Rightarrow> 'x3)" and f4::"('x4::var \<Rightarrow> 'x4)"
+    and f5::"('x5::var \<Rightarrow> 'x5)"
   assumes "|supp f1| <o |UNIV::'x1 set|" "|supp f2| <o |UNIV::'x2 set|"
       and "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
+      and "|supp f5| <o |UNIV::'x5 set|"
     shows
-      "map_T1_pre f1 f2 id id f3 f4 f5 f6 f7 f8 \<circ> eta11 = eta11 \<circ> f1"
-      "map_T1_pre f1 f2 id id f3 f4 f5 f6 f7 f8 \<circ> eta12 = eta12 \<circ> f2"
-      "map_T2_pre f1 f2 id id f3 f4 f5 f6 f7 f8 \<circ> eta21 = eta21 \<circ> f1"
+      "map_T1_pre f1 f2 id id f3 f4 f5 f6 f7 f8 f9 \<circ> eta11 = eta11 \<circ> f1"
+      "map_T1_pre f1 f2 id id f3 f4 f5 f6 f7 f8 f9 \<circ> eta12 = eta12 \<circ> f2"
+      "map_T2_pre f1 f2 id id f3 f4 f5 f6 f7 f8 f9 \<circ> eta21 = eta21 \<circ> f1"
     apply (unfold comp_def map_sum.simps Abs_T1_pre_inverse[OF UNIV_I]
       map_T1_pre_def map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I]
     )

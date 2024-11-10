@@ -1533,7 +1533,7 @@ lemma vvsubst_cctor_2:
   apply (rule conjI f_prems)+
   done
 
-lemma vvsubst_rrenames:
+lemma vvsubst_permutes:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
@@ -1655,7 +1655,7 @@ lemma rel_plain_cases:
     done
   done
 
-lemma rel_imp_rrename:
+lemma rel_imp_permute:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
     and x::"('var, 'tyvar, 'a::{var_T1_pre,var_T2_pre}, 'b) T1"
     and x2::"('var, 'tyvar, 'a, 'b) T2"
@@ -1813,7 +1813,7 @@ proof -
     done
 qed
 
-lemma rel_rrename:
+lemma rel_permute:
   fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
     and x::"('var, 'tyvar, 'a::{var_T1_pre,var_T2_pre}, 'b) T1"
     and x2::"('var, 'tyvar, 'a, 'b) T2"
@@ -1822,9 +1822,9 @@ lemma rel_rrename:
     "rel_T2 R (permute_T2 f1 f2 x2) (permute_T2 f1 f2 y2) = rel_T2 R x2 y2"
   subgoal
     apply (rule iffI)
-     apply (erule rel_imp_rrename[rotated -1])
+     apply (erule rel_imp_permute[rotated -1])
         apply (rule assms)+
-    apply (rule rel_imp_rrename[rotated -1])
+    apply (rule rel_imp_permute[rotated -1])
         apply (subst permute_comps)
                 prefer 9 (* 4 * nvars + 1 *)
                 apply (subst inv_o_simp1 permute_comps, (rule assms bij_imp_bij_inv supp_inv_bound)+)+
@@ -1834,9 +1834,9 @@ lemma rel_rrename:
     done
   subgoal
     apply (rule iffI)
-     apply (erule rel_imp_rrename[rotated -1])
+     apply (erule rel_imp_permute[rotated -1])
         apply (rule assms)+
-    apply (rule rel_imp_rrename[rotated -1])
+    apply (rule rel_imp_permute[rotated -1])
         apply (subst permute_comps)
                 prefer 9 (* 4 * nvars + 1 *)
                 apply (subst inv_o_simp1 permute_comps, (rule assms bij_imp_bij_inv supp_inv_bound)+)+
@@ -3528,7 +3528,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* repeated *)
@@ -3542,7 +3542,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* repeated *)
@@ -3556,7 +3556,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* repeated *)
@@ -3570,7 +3570,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* END REPEAT_DETERM *)
@@ -3682,7 +3682,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* repeated *)
@@ -3696,7 +3696,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* repeated *)
@@ -3710,7 +3710,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* repeated *)
@@ -3724,7 +3724,7 @@ proof -
                           apply (rule exI)+
                           apply (rule conjI[rotated])+
                           apply assumption
-                          apply (assumption | (rule rel_rrename[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
+                          apply (assumption | (rule rel_permute[THEN iffD2], (assumption | rule bij_id supp_id_bound)+))
                           apply (rule refl permute_ids[symmetric])
                           apply (rule supp_id_bound bij_id | assumption)+
         (* END REPEAT_DETERM *)
@@ -3867,7 +3867,7 @@ proof -
       apply (drule iffD1[OF T1_pre.mr_rel_map(1), rotated -1])
                     apply (rule assms supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV | assumption)+
       apply (unfold id_o o_id Grp_UNIV_id eq_OO)
-      apply (subst (asm) vvsubst_rrenames[symmetric] vvsubst_comp0s[symmetric], (assumption | rule supp_id_bound bij_id assms)+)+
+      apply (subst (asm) vvsubst_permutes[symmetric] vvsubst_comp0s[symmetric], (assumption | rule supp_id_bound bij_id assms)+)+
       apply (unfold id_o o_id)
       apply (drule T1_pre.mr_rel_mono_strong0[rotated -12])
                           apply (rule ballI, rule refl)+
@@ -4208,7 +4208,7 @@ proof -
           apply (rule T1_pre.map_comp)
                        apply (rule assms bij_id supp_id_bound | assumption)+
          apply (unfold id_o o_id comp_assoc[symmetric])[1]
-         apply (subst vvsubst_rrenames[symmetric] vvsubst_comp0s[symmetric], (assumption | rule assms bij_id supp_id_bound)+)+
+         apply (subst vvsubst_permutes[symmetric] vvsubst_comp0s[symmetric], (assumption | rule assms bij_id supp_id_bound)+)+
          apply (unfold id_o o_id)
          apply (rule T1_pre.map_cong0)
                             apply (rule assms refl supp_comp_bound bij_comp infinite_UNIV | assumption)+
@@ -4416,7 +4416,7 @@ proof -
       apply (drule iffD1[OF T2_pre.mr_rel_map(1), rotated -1])
                     apply (rule assms supp_id_bound bij_id supp_comp_bound infinite_UNIV | assumption)+
       apply (unfold id_o o_id Grp_UNIV_id eq_OO)
-      apply (subst (asm) vvsubst_rrenames[symmetric] vvsubst_comp0s[symmetric], (assumption | rule supp_id_bound bij_id assms)+)+
+      apply (subst (asm) vvsubst_permutes[symmetric] vvsubst_comp0s[symmetric], (assumption | rule supp_id_bound bij_id assms)+)+
       apply (unfold id_o o_id)
       apply (drule T2_pre.mr_rel_mono_strong0[rotated -12])
                           apply (rule ballI, rule refl)+
@@ -4757,7 +4757,7 @@ proof -
           apply (rule T2_pre.map_comp)
                        apply (rule assms bij_id supp_id_bound | assumption)+
          apply (unfold id_o o_id comp_assoc[symmetric])[1]
-         apply (subst vvsubst_rrenames[symmetric] vvsubst_comp0s[symmetric], (assumption | rule assms bij_id supp_id_bound)+)+
+         apply (subst vvsubst_permutes[symmetric] vvsubst_comp0s[symmetric], (assumption | rule assms bij_id supp_id_bound)+)+
          apply (unfold id_o o_id)
          apply (rule T2_pre.map_cong0)
                             apply (rule assms refl supp_comp_bound infinite_UNIV | assumption)+
@@ -5188,7 +5188,7 @@ mrbnf "('var, 'tyvar, 'a, 'b) T1"
   var_class: var_T1
   subgoal
     apply (rule trans)
-     apply (rule vvsubst_rrenames)
+     apply (rule vvsubst_permutes)
         apply (rule supp_id_bound bij_id)+
     apply (rule permute_id0s)
     done
@@ -5221,7 +5221,7 @@ mrbnf "('var, 'tyvar, 'a, 'b) T2"
   var_class: var_T1
   subgoal
     apply (rule trans)
-     apply (rule vvsubst_rrenames)
+     apply (rule vvsubst_permutes)
         apply (rule supp_id_bound bij_id)+
     apply (rule permute_id0s)
     done

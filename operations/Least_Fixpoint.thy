@@ -6769,7 +6769,8 @@ val fp_res = { fp = BNF_Util.Least_FP,
      set_subshape_permutess = [@{thms set_subshape_permutess(1-4)}, @{thms set_subshape_permutess(5-8)}],
      subshape_induct = @{thm subshape_induct},
      existential_induct = @{thm existential_induct},
-     fresh_induct_param = @{thm fresh_induct_param}
+     fresh_induct_param = @{thm fresh_induct_param},
+     fresh_induct = @{thm fresh_induct}
     },
     quotient_fps = [
       { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
@@ -6931,5 +6932,17 @@ val fp_res = { fp = BNF_Util.Least_FP,
 \<close>
 
 local_setup \<open>MRBNF_FP_Def_Sugar.register_fp_results [fp_res]\<close>
+
+(* Test of automation, disgarding result *)
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+local_setup \<open>fn lthy =>
+let
+  val (fp_res, _) = MRBNF_FP.construct_binder_fp BNF_Util.Least_FP
+    [(("TT1", hd (#pre_mrbnfs fp_res)), 2), (("TT2", nth (#pre_mrbnfs fp_res) 1), 2)]
+    [[([0], [1, 3])], [([], [1])]]
+    lthy
+  val _ = @{print} fp_res
+in lthy end
+\<close>
 
 end

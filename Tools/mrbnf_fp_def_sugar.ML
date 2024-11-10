@@ -65,7 +65,8 @@ sig
     set_subshape_permutess: thm list list,
     subshape_induct: thm,
     existential_induct: thm,
-    fresh_induct_param: thm
+    fresh_induct_param: thm,
+    fresh_induct: thm
   };
 
   type fp_result = {
@@ -216,11 +217,12 @@ type least_fp_thms = {
   set_subshape_permutess: thm list list,
   subshape_induct: thm,
   existential_induct: thm,
-  fresh_induct_param: thm
+  fresh_induct_param: thm,
+  fresh_induct: thm
 };
 
 fun morph_least_fp_thms phi ({ subshape_rel, subshapess, wf_subshape, set_subshapess,
-  set_subshape_permutess, subshape_induct, existential_induct, fresh_induct_param }) = {
+  set_subshape_permutess, subshape_induct, existential_induct, fresh_induct_param, fresh_induct }) = {
   subshape_rel = Morphism.term phi subshape_rel,
   subshapess = map (map (Morphism.term phi)) subshapess,
   wf_subshape = Morphism.thm phi wf_subshape,
@@ -228,7 +230,8 @@ fun morph_least_fp_thms phi ({ subshape_rel, subshapess, wf_subshape, set_subsha
   set_subshape_permutess = map (map (Morphism.thm phi)) set_subshape_permutess,
   subshape_induct = Morphism.thm phi subshape_induct,
   existential_induct = Morphism.thm phi existential_induct,
-  fresh_induct_param = Morphism.thm phi fresh_induct_param
+  fresh_induct_param = Morphism.thm phi fresh_induct_param,
+  fresh_induct = Morphism.thm phi fresh_induct
 } : least_fp_thms;
 
 type fp_result = {

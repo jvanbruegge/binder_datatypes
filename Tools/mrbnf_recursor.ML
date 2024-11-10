@@ -49,11 +49,11 @@ sig
     Uctor: term,
     validity: {
       pred: term,
-      valid_rrename: 'a,
+      valid_permute: 'a,
       valid_Uctor: 'a
     } option,
     axioms: {
-      rrename_Uctor: 'a,
+      permute_Uctor: 'a,
       FVars_subsets: 'a list
     }
   };
@@ -140,11 +140,11 @@ type 'a quotient_model = {
   Uctor: term,
   validity: {
     pred: term,
-    valid_rrename: 'a,
+    valid_permute: 'a,
     valid_Uctor: 'a
   } option,
   axioms: {
-    rrename_Uctor: 'a,
+    permute_Uctor: 'a,
     FVars_subsets: 'a list
   }
 };
@@ -200,7 +200,7 @@ fun mk_quotient_model quot substitution qmodel =
     Uctor = #Uctor qmodel,
     validity = Option.map (fn v => {
       pred = #pred v,
-      valid_Umap = #valid_rrename v,
+      valid_Umap = #valid_permute v,
       valid_Uctor = #valid_Uctor v
     }) (#validity qmodel),
     axioms = {
@@ -220,7 +220,7 @@ fun mk_quotient_model quot substitution qmodel =
           resolve_tac ctxt card_thms
         ]
       ],
-      Umap_Uctor = #rrename_Uctor (#axioms qmodel),
+      Umap_Uctor = #permute_Uctor (#axioms qmodel),
       UFVars_subsets = #FVars_subsets (#axioms qmodel)
     }
   } : (Proof.context -> tactic) model end;

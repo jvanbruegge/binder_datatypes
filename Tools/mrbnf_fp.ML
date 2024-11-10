@@ -2528,6 +2528,43 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         ]
       ]) end
 
+    val fresh_induct =
+      let
+        val (Ps, _) = lthy
+          |> mk_Frees "P" (map (fn quot => #abs_type (fst quot) --> @{typ bool}) quots);
+        val bound_prems = map (fn A => HOLogic.mk_Trueprop (
+          mk_ordLess (mk_card_of A) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (fastype_of A))))
+        )) As;
+        val IHs = @{map 6} (fn x => fn ctor => fn P => fn rec_sets => fn bsetss => fn noclash => Logic.all x (
+          fold_rev (curry Logic.mk_implies) (@{map 3} (fn rec_set => fn P => fn z => Logic.all z (
+            Logic.mk_implies (
+              HOLogic.mk_Trueprop (HOLogic.mk_mem (z, rec_set $ x)),
+              HOLogic.mk_Trueprop (P $ z)
+            )
+          )) rec_sets (replicate_rec Ps) (replicate_rec zs) @ map2 (fn A => fn bsets => HOLogic.mk_Trueprop (
+            mk_int_empty (foldl1 mk_Un (map (fn s => s $ x) bsets), A)
+          )) As bsetss) (Logic.mk_implies (
+            HOLogic.mk_Trueprop (fst noclash $ x),
+            HOLogic.mk_Trueprop (P $ (fst ctor $ x))
+          ))
+        )) xs ctors Ps rec_setss bound_setsss noclashs;
+        val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (map2 (fn P => fn z => P $ z) Ps zs));
+      in Goal.prove_sorry lthy (names (As @ Ps @ zs)) (bound_prems @ IHs) goal (fn {context=ctxt, prems} => EVERY1 [
+        rtac ctxt (Local_Defs.unfold0 ctxt @{thms ball_UNIV} (
+          infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) (
+            [HOLogic.mk_UNIV (fastype_of rho)]
+            @ map (Term.absfree (dest_Free rho)) As
+            @ map2 (fn P => fn z => fold_rev (Term.absfree o dest_Free) [z, rho] (P $ z)) Ps zs
+          )) fresh_induct_param
+        ) RS spec),
+        REPEAT_DETERM o resolve_tac ctxt (take nvars prems),
+        REPEAT_DETERM o EVERY' [
+          resolve_tac ctxt prems,
+          REPEAT_DETERM1 o Goal.assume_rule_tac ctxt,
+          REPEAT_DETERM o assume_tac ctxt
+        ]
+      ]) end;
+
     val permute_congs = @{map 5} (fn permute => fn z => fn FVarss => fn alpha_bij => fn abs_eq_iff =>
       let val goal = fold_rev (curry Logic.mk_implies) (
         @{map 4} (fn f => fn g => fn FVars => fn a => Logic.all a (Logic.mk_implies (
@@ -2644,7 +2681,8 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       set_subshape_permutess = set_subshape_permutess,
       subshape_induct = subshape_induct,
       existential_induct = existential_induct,
-      fresh_induct_param = fresh_induct_param
+      fresh_induct_param = fresh_induct_param,
+      fresh_induct = fresh_induct
     } : MRBNF_FP_Def_Sugar.least_fp_thms;
 
     val fp_result = {

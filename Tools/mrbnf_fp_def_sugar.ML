@@ -44,6 +44,7 @@ sig
     permute_def: thm,
     FVars_defs: thm list,
 
+    noclash_permute: thm,
     nnoclash_noclash: thm,
     total_abs_eq_iff: thm,
     abs_rep: thm,
@@ -178,6 +179,7 @@ type quotient_result = {
   FVars_defs: thm list,
 
   nnoclash_noclash: thm,
+  noclash_permute: thm,
   total_abs_eq_iff: thm,
   abs_rep: thm,
   rep_abs: thm,
@@ -192,12 +194,13 @@ type quotient_result = {
 
 fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nnoclash_noclash,
   total_abs_eq_iff, abs_rep, rep_abs, rep_abs_sym, abs_ctor, permute_cong, permute_cong_id,
-  permute_bij, permute_inv_simp } = {
+  permute_bij, permute_inv_simp, noclash_permute } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
   permute_def = Morphism.thm phi permute_def,
   FVars_defs = map (Morphism.thm phi) FVars_defs,
+  noclash_permute = Morphism.thm phi noclash_permute,
   nnoclash_noclash = Morphism.thm phi nnoclash_noclash,
   total_abs_eq_iff = Morphism.thm phi total_abs_eq_iff,
   abs_rep = Morphism.thm phi abs_rep,
@@ -297,6 +300,7 @@ fun note_fp_result (fp_res : fp_result) lthy =
     ];
 
     fun note_always (quot : quotient_result fp_result_T) = [
+      ("noclash_permute", [#noclash_permute (#inner quot)]),
       ("permute_id0", [#permute_id0 quot]),
       ("permute_id", [#permute_id quot]),
       ("permute_comp0", [#permute_comp0 quot]),

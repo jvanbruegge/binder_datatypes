@@ -19,7 +19,8 @@ sig
     VVrs: (term * thm) list,
     isVVrs: thm list,
     tvsubst_VVrs: thm list,
-    tvsubst_cctor_not_isVVr: thm
+    tvsubst_cctor_not_isVVr: thm,
+    tvsubst_permute: thm
   };
 
   val create_tvsubst_of_mrbnf: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
@@ -54,7 +55,8 @@ type tvsubst_result = {
   VVrs: (term * thm) list,
   isVVrs: thm list,
   tvsubst_VVrs: thm list,
-  tvsubst_cctor_not_isVVr: thm
+  tvsubst_cctor_not_isVVr: thm,
+  tvsubst_permute: thm
 };
 
 val names = map (fst o dest_Free);
@@ -1484,6 +1486,158 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
       )) (#FVarss quotient) hs (0 upto nvars - 1) in_IImsuppss
     ) (#quotient_fps fp_res) in_IImsuppsss hss defss;
 
+    val IImsupp_naturalsss = @{map 3} (fn quotient => @{map 3} (fn f => fn SSupp_natural => Option.map (fn def => map2 (fn f' => fn IImsupp =>
+      let
+        val g = Free ("g", #aT def --> #T quotient);
+        val goal = mk_Trueprop_eq (
+          fst IImsupp $ HOLogic.mk_comp (
+            HOLogic.mk_comp (Term.list_comb (#permute quotient, fs), g),
+            mk_inv f
+          ),
+          mk_image f' $ (fst IImsupp $ g)
+        );
+      in Goal.prove_sorry lthy (names (fs @ [g])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+        K (unfold_thms_tac ctxt (@{thms image_Un image_UN} @ [snd IImsupp])),
+        TRY o (rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]} THEN' rtac ctxt (the SSupp_natural OF prems)),
+        EqSubst.eqsubst_tac ctxt [0] [the SSupp_natural OF prems],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_comp comp_assoc}),
+        EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
+        resolve_tac ctxt prems,
+        K (Local_Defs.unfold0_tac ctxt @{thms o_id}),
+        K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+        EqSubst.eqsubst_tac ctxt [0] (maps #FVars_permutes (#quotient_fps fp_res)),
+        REPEAT_DETERM o resolve_tac ctxt (refl :: prems)
+      ]) end
+    ) fs (#IImsupps def))) fs) (#quotient_fps fp_res) SSupp_naturalss defss;
+
+    fun SELECT_GOALS n tac i st =
+      if Thm.nprems_of st = 1 andalso i = 1 then tac st
+      else (PRIMITIVE (Goal.restrict i n) THEN tac THEN PRIMITIVE (Goal.unrestrict i)) st;
+
+    val tvsubst_permutes =
+      let
+        val (ts, _) = lthy
+          |> mk_Frees "t" (map #T (#quotient_fps fp_res));
+        fun mk_goals comb = @{map 3} (fn quotient => fn tvsubst => fn t =>
+          let
+            val hs' = map_filter I (flat (map2 (fn quotient => map2 (fn f => Option.map (fn h => HOLogic.mk_comp (
+              HOLogic.mk_comp (Term.list_comb (#permute quotient, fs), h),
+              mk_inv f
+            ))) fs) (#quotient_fps fp_res) hss));
+          in HOLogic.mk_eq (
+            comb (Term.list_comb (#permute quotient, fs)) (Term.list_comb (fst tvsubst, some_hs)) t,
+            comb (Term.list_comb (fst tvsubst, hs')) (Term.list_comb (#permute quotient, fs)) t
+          ) end
+        ) (#quotient_fps fp_res) tvsubsts ts;
+        val As = map (fn i =>
+          foldl1 mk_Un (map2 (fn f => fn def =>
+            fst (nth (#IImsupps def) i) $ f
+          ) some_hs some_defs)
+        ) (0 upto nvars - 1);
+
+        val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (
+          mk_goals (fn t1 => fn t2 => fn t => t1 $ (t2 $ t))
+        ));
+        val thms = split_conj (length mrbnfs) (Goal.prove_sorry lthy (names (fs @ some_hs @ ts)) (f_prems @ f'_prems) goal (fn {context=ctxt, prems} =>
+          let val (f_prems, f'_prems) = chop (length f_prems) prems;
+          in EVERY1 [
+            DETERM o rtac ctxt (infer_instantiate' ctxt (
+              map (SOME o Thm.cterm_of ctxt) As @ replicate (length mrbnfs) NONE @ map (SOME o Thm.cterm_of ctxt) ts
+            ) (#fresh_induct (#fp_thms fp_res))),
+            SELECT_GOALS (length As) (EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
+              REPEAT_DETERM o resolve_tac ctxt (
+                @{thms ordLeq_refl cmin1 cmin2 card_of_Card_order}
+                @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) f'_prems
+                @ maps (fn mrbnf => [
+                  MRBNF_Def.Un_bound_of_mrbnf mrbnf, MRBNF_Def.UNION_bound_of_mrbnf mrbnf
+                ]) mrbnfs
+                @ maps #card_of_FVars_bound_UNIVs (#quotient_fps fp_res)
+              )
+            ]),
+            EVERY' (@{map 7} (fn mrbnf => fn quotient => fn defs => fn tvsubst_not_isVVr => fn isVVr_renames => fn rrename_VVrs => fn tvsubst_VVrs =>
+              let val n = length (map_filter I defs);
+              in Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=IHs, ...} => EVERY1 [
+                REPEAT_DETERM_N n o rtac ctxt @{thm case_split[rotated]},
+                EqSubst.eqsubst_tac ctxt [0] [#permute_ctor quotient OF f_prems],
+                EqSubst.eqsubst_tac ctxt [0] [Drule.rotate_prems (~1 - n) tvsubst_not_isVVr],
+                resolve_tac ctxt IHs,
+                REPEAT_DETERM o assume_tac ctxt,
+                REPEAT_DETERM o resolve_tac ctxt f'_prems,
+                REPEAT_DETERM o resolve_tac ctxt IHs,
+                EqSubst.eqsubst_tac ctxt [0] [Drule.rotate_prems (~1 - n) tvsubst_not_isVVr],
+                rtac ctxt (iffD2 OF [#noclash_permute (#inner quotient) OF f_prems]),
+                resolve_tac ctxt IHs,
+                REPEAT_DETERM o EVERY' [
+                  EqSubst.eqsubst_tac ctxt [0] [#permute_ctor quotient RS sym OF f_prems],
+                  EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) isVVr_renames),
+                  assume_tac ctxt
+                ],
+                REPEAT_DETERM o EVERY' [
+                  EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) (flat SSupp_naturalss)),
+                  rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_image]},
+                  resolve_tac ctxt f'_prems
+                ],
+                REPEAT_DETERM o EVERY' [
+                  REPEAT_DETERM1 o EVERY' [
+                    EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf @ flat (map_filter I (flat IImsupp_naturalsss))),
+                    REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems)
+                  ],
+                  K (Local_Defs.unfold0_tac ctxt @{thms image_Un[symmetric]}),
+                  rtac ctxt @{thm trans[OF image_Int[OF bij_is_inj, symmetric]]},
+                  resolve_tac ctxt f_prems,
+                  rtac ctxt @{thm iffD2[OF image_is_empty]},
+                  resolve_tac ctxt IHs
+                ],
+                rtac ctxt (trans OF [#permute_ctor quotient OF f_prems]),
+                rtac ctxt (mk_arg_cong lthy 1 (#ctor quotient)),
+                rtac ctxt (trans OF [MRBNF_Def.map_comp_of_mrbnf mrbnf]),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems),
+                rtac ctxt sym,
+                rtac ctxt (trans OF [MRBNF_Def.map_comp_of_mrbnf mrbnf]),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ f_prems),
+                K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+                rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
+                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id refl} @ f_prems),
+                REPEAT_DETERM o EVERY' [
+                  rtac ctxt @{thm trans[OF comp_apply]},
+                  rtac ctxt sym,
+                  rtac ctxt @{thm trans[OF comp_apply]},
+                  eresolve_tac ctxt IHs
+                ],
+                EVERY' (map_filter (Option.map (fn def => EVERY' [
+                  K (Local_Defs.unfold0_tac ctxt [snd (#isVVr def)]),
+                  etac ctxt exE,
+                  etac ctxt @{thm subst[OF sym]},
+                  EqSubst.eqsubst_tac ctxt [0] (map_filter I rrename_VVrs),
+                  REPEAT_DETERM o resolve_tac ctxt f_prems,
+                  EqSubst.eqsubst_tac ctxt [0] (map_filter I tvsubst_VVrs),
+                  REPEAT_DETERM o resolve_tac ctxt f'_prems,
+                  EqSubst.eqsubst_tac ctxt [0] (map_filter I tvsubst_VVrs),
+                  REPEAT_DETERM o EVERY' [
+                    EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (fn thm => thm OF f_prems)) (flat SSupp_naturalss)),
+                    rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_image]},
+                    resolve_tac ctxt f'_prems
+                  ],
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+                  EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
+                  resolve_tac ctxt f_prems,
+                  rtac ctxt refl
+                ])) (rev defs))
+              ]) ctxt end
+            ) mrbnfs (#quotient_fps fp_res) defss tvsubst_not_isVVrs isVVr_renamess permute_VVrss tvsubst_VVrss)
+          ] end
+        ));
+
+        val goals = map HOLogic.mk_Trueprop (mk_goals (fn t1 => fn t2 => fn _ => HOLogic.mk_comp (t1, t2)));
+      in map2 (fn thm => fn goal => Goal.prove_sorry lthy (names (fs @ some_hs)) (f_prems @ f'_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+        rtac ctxt ext,
+        rtac ctxt @{thm trans[OF comp_apply]},
+        rtac ctxt sym,
+        rtac ctxt @{thm trans[OF comp_apply]},
+        rtac ctxt (thm RS sym OF prems)
+      ])) thms goals end;
+
     (*val FFVars_tvsubsts = @{map 8} (fn FVars => fn i => fn f => fn tvsubst_VVr => fn FVars_VVr => fn not_isVVr_free => fn IImsupp_Diff => Option.map (fn def =>
       let
         val t = Free ("t", #T quotient);
@@ -1575,27 +1729,35 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
       @{thm meta_eq_to_obj_eq} OF [Local_Defs.unfold0 lthy (@{thms comp_def} @ eta_defs) VVr_def]
     )])) o #VVr))) defss;
 
-    val results = @{map 5} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => {
+    val results = @{map 6} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => fn tvsubst_permute => {
       tvsubst = fst tvsubst,
       SSupps = map_filter (Option.map (fst o #SSupp)) defs,
       IImsuppss = map_filter (Option.map (map fst o #IImsupps)) defs,
       VVrs = VVrs',
       isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
       tvsubst_VVrs = map_filter I tvsubst_VVrs,
-      tvsubst_cctor_not_isVVr = tvsubst_not_isVVr
-    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss';
+      tvsubst_cctor_not_isVVr = tvsubst_not_isVVr,
+      tvsubst_permute = tvsubst_permute
+    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss' tvsubst_permutes;
 
     (* TODO: Remove *)
     val notes =
       [("SSupp_VVr_empty", maps (map_filter I) SSupp_VVr_emptiess),
        ("SSupp_VVr_bound", maps (map_filter I) SSupp_VVr_boundss),
        ("in_IImsupp", flat (maps (map_filter I) in_IImsuppsss)),
+       ("is_VVr_rrename", maps (map_filter I) isVVr_renamess),
+       ("rrename_VVr", maps (map_filter I) permute_VVrss),
+       ("SSupp_natural", maps (map_filter I) SSupp_naturalss),
+       ("SSupp_comp_rename_bound", maps (map_filter (Option.map #SSupp_comp_rename_bound)) SSupp_compss),
+       ("SSupp_comp_bound", maps (map_filter (Option.map #SSupp_comp_bound)) SSupp_compss),
        ("eta_set_empties", flat (maps (map_filter I) eta_set_emptiess)),
        ("FVars_VVr", flat (maps (map_filter I) FVars_VVrss)),
        ("tvsubst_VVr", maps (map_filter I) tvsubst_VVrss),
        ("tvsubst_cctor_not_isVVr", tvsubst_not_isVVrs),
+       ("tvsubst_permutes", tvsubst_permutes),
        ("not_isVVr_free", maps (map_filter I) not_isVVr_freess),
-       ("IImsupp_Diff", maps (map_filter I) IImsupp_Diffss)
+       ("IImsupp_Diff", maps (map_filter I) IImsupp_Diffss),
+       ("IImsupp_natural", flat (maps (map_filter I) IImsupp_naturalsss))
        (*("FFVars_tvsubst", map_filter I FFVars_tvsubsts)*)
       ] |> (map (fn (thmN, thms) =>
         ((Binding.qualify true (short_type_name (fst (dest_Type (#T (hd (#quotient_fps fp_res))))))

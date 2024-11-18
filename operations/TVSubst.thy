@@ -56,6 +56,7 @@ definition IImsupp21_1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 
   "IImsupp21_1 f \<equiv> SSupp21 f \<union> \<Union>((FVars_T21 \<circ> f) ` SSupp21 f)"
 definition IImsupp21_2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2) \<Rightarrow> 'tyvar set" where
   "IImsupp21_2 f \<equiv> \<Union>((FVars_T22 \<circ> f) ` SSupp21 f)"
+lemmas IImsupp_defs = IImsupp11_1_def IImsupp11_2_def IImsupp12_1_def IImsupp12_2_def IImsupp21_1_def IImsupp21_2_def
 
 definition isVVr11 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> bool" where
   "isVVr11 x \<equiv> \<exists>a. x = VVr11 a"
@@ -203,7 +204,7 @@ lemma VVr_injs:
   apply assumption
   done
 
-lemma rrename_VVrs:
+lemma permute_VVrs:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
@@ -305,7 +306,7 @@ lemma SSupp_rename_subsets:
     apply (drule iffD1[OF arg_cong2[OF _ refl, of _ _ "(\<noteq>)"], rotated])
      apply (rule arg_cong[of _ _ "permute_T1 f1 f2"])
      apply assumption
-    apply (unfold rrename_VVrs[OF assms])
+    apply (unfold permute_VVrs[OF assms])
     apply (rule disjI2)
     apply (erule contrapos_np)
     apply (rule arg_cong[of _ _ VVr11])
@@ -318,7 +319,7 @@ lemma SSupp_rename_subsets:
    apply (drule iffD1[OF arg_cong2[OF _ refl, of _ _ "(\<noteq>)"], rotated])
     apply (rule arg_cong[of _ _ "permute_T1 f1 f2"])
     apply assumption
-   apply (unfold rrename_VVrs[OF assms])
+   apply (unfold permute_VVrs[OF assms])
    apply (rule disjI2)
    apply (erule contrapos_np)
    apply (rule arg_cong[of _ _ VVr12])
@@ -331,7 +332,7 @@ lemma SSupp_rename_subsets:
   apply (drule iffD1[OF arg_cong2[OF _ refl, of _ _ "(\<noteq>)"], rotated])
    apply (rule arg_cong[of _ _ "permute_T2 f1 f2"])
    apply assumption
-  apply (unfold rrename_VVrs[OF assms])
+  apply (unfold permute_VVrs[OF assms])
   apply (rule disjI2)
   apply (erule contrapos_np)
   apply (rule arg_cong[of _ _ VVr21])
@@ -627,7 +628,7 @@ lemma IImsupp_VVrs:
     done
   done
 
-lemma IImsupp_rrename_commute:
+lemma IImsupp_permute_commute:
   fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "imsupp f1 \<inter> IImsupp11_1 y = {} \<Longrightarrow> imsupp f2 \<inter> IImsupp11_2 y = {} \<Longrightarrow> permute_T1 f1 f2 \<circ> y = y \<circ> f1"
@@ -643,7 +644,7 @@ lemma IImsupp_rrename_commute:
          apply (rule arg_cong[of _ _ "permute_T1 f1 f2"])
          apply assumption
         apply (rule trans)
-         apply (rule rrename_VVrs)
+         apply (rule permute_VVrs)
             apply (rule f_prems)+
         apply (rule trans)
          apply (rule arg_cong[of _ _ VVr11])
@@ -696,7 +697,7 @@ lemma IImsupp_rrename_commute:
         prefer 3
         apply (erule IImsupp_VVrs)
         apply assumption
-       apply (rule rrename_VVrs)
+       apply (rule permute_VVrs)
           apply (rule f_prems)+
       apply (rule sym)
       apply (rule IImsupp_VVrs)
@@ -716,7 +717,7 @@ lemma IImsupp_rrename_commute:
          apply (rule arg_cong[of _ _ "permute_T1 f1 f2"])
          apply assumption
         apply (rule trans)
-         apply (rule rrename_VVrs)
+         apply (rule permute_VVrs)
             apply (rule f_prems)+
         apply (rule trans)
          apply (rule arg_cong[of _ _ VVr12])
@@ -770,7 +771,7 @@ lemma IImsupp_rrename_commute:
         prefer 3
         apply (erule IImsupp_VVrs)
         apply assumption
-       apply (rule rrename_VVrs)
+       apply (rule permute_VVrs)
           apply (rule f_prems)+
       apply (rule sym)
       apply (rule IImsupp_VVrs)
@@ -790,7 +791,7 @@ lemma IImsupp_rrename_commute:
          apply (rule arg_cong[of _ _ "permute_T2 f1 f2"])
          apply assumption
         apply (rule trans)
-         apply (rule rrename_VVrs)
+         apply (rule permute_VVrs)
             apply (rule f_prems)+
         apply (rule trans)
          apply (rule arg_cong[of _ _ VVr21])
@@ -844,7 +845,7 @@ lemma IImsupp_rrename_commute:
         prefer 3
         apply (erule IImsupp_VVrs)
         apply assumption
-       apply (rule rrename_VVrs)
+       apply (rule permute_VVrs)
           apply (rule f_prems)+
       apply (rule sym)
       apply (rule IImsupp_VVrs)
@@ -867,7 +868,7 @@ lemma compSS_cong_ids:
   subgoal
     apply (unfold compSS11_def)
     subgoal premises prems
-      apply (subst IImsupp_rrename_commute)
+      apply (subst IImsupp_permute_commute)
             apply (rule f_prems)+
         (* REPEAT_DETERM *)
         apply (rule trans[OF Int_commute])
@@ -913,7 +914,7 @@ lemma compSS_cong_ids:
   subgoal
     apply (unfold compSS12_def)
     subgoal premises prems
-      apply (subst IImsupp_rrename_commute)
+      apply (subst IImsupp_permute_commute)
             apply (rule f_prems)+
         (* REPEAT_DETERM *)
         apply (rule trans[OF Int_commute])
@@ -960,7 +961,7 @@ lemma compSS_cong_ids:
   subgoal
     apply (unfold compSS21_def)
     subgoal premises prems
-      apply (subst IImsupp_rrename_commute)
+      apply (subst IImsupp_permute_commute)
             apply (rule f_prems)+
         (* REPEAT_DETERM *)
         apply (rule trans[OF Int_commute])
@@ -1057,7 +1058,7 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
   apply (rule iffI)
    apply (erule exE)
    apply hypsubst_thin
-   apply (subst rrename_VVrs)
+   apply (subst permute_VVrs)
        apply (rule assms)+
    apply (rule exI)
    apply (rule refl)
@@ -1067,7 +1068,7 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
           apply (rule assms supp_inv_bound bij_imp_bij_inv)+
   apply (subst (asm) inv_o_simp1, rule assms)+
   apply (unfold permute_ids)
-  apply (subst (asm) rrename_VVrs)
+  apply (subst (asm) permute_VVrs)
       apply (rule supp_inv_bound bij_imp_bij_inv assms)+
   apply hypsubst_thin
   apply (rule exI)
@@ -1077,7 +1078,7 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
   apply (rule iffI)
    apply (erule exE)
    apply hypsubst_thin
-   apply (subst rrename_VVrs)
+   apply (subst permute_VVrs)
        apply (rule assms)+
    apply (rule exI)
    apply (rule refl)
@@ -1087,7 +1088,7 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
           apply (rule assms supp_inv_bound bij_imp_bij_inv)+
   apply (subst (asm) inv_o_simp1, rule assms)+
   apply (unfold permute_ids)
-  apply (subst (asm) rrename_VVrs)
+  apply (subst (asm) permute_VVrs)
       apply (rule supp_inv_bound bij_imp_bij_inv assms)+
   apply hypsubst_thin
   apply (rule exI)
@@ -1097,7 +1098,7 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
   apply (rule iffI)
    apply (erule exE)
    apply hypsubst_thin
-   apply (subst rrename_VVrs)
+   apply (subst permute_VVrs)
        apply (rule assms)+
    apply (rule exI)
    apply (rule refl)
@@ -1107,7 +1108,7 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
           apply (rule assms supp_inv_bound bij_imp_bij_inv)+
   apply (subst (asm) inv_o_simp1, rule assms)+
   apply (unfold permute_ids)
-  apply (subst (asm) rrename_VVrs)
+  apply (subst (asm) permute_VVrs)
       apply (rule supp_inv_bound bij_imp_bij_inv assms)+
   apply hypsubst_thin
   apply (rule exI)
@@ -1658,7 +1659,7 @@ lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (
    apply (drule sym)
   apply (erule subst)
    apply (unfold Pmap_def case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
-   apply (subst rrename_VVrs)
+   apply (subst permute_VVrs)
        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
    apply (unfold asVVr_VVrs compSS_defs comp_def)[1]
    apply (subst inv_simp1)
@@ -1674,7 +1675,7 @@ lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (
    apply (drule sym)
   apply (erule subst)
    apply (unfold Pmap_def case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
-   apply (subst rrename_VVrs)
+   apply (subst permute_VVrs)
        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
    apply (unfold asVVr_VVrs compSS_defs comp_def)[1]
    apply (subst inv_simp1)
@@ -1719,7 +1720,7 @@ lemma U2map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (
    apply (drule sym)
   apply (erule subst)
    apply (unfold Pmap_def case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
-   apply (subst rrename_VVrs)
+   apply (subst permute_VVrs)
        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
    apply (unfold asVVr_VVrs compSS_defs comp_def)[1]
    apply (subst inv_simp1)
@@ -2988,5 +2989,360 @@ lemma IImsupp_Diffs:
     apply assumption
     done
   done
+
+lemma IImsupp_naturals:
+  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows
+    "IImsupp11_1 (permute_T1 f1 f2 \<circ> g \<circ> inv f1) = f1 ` IImsupp11_1 g"
+    "IImsupp11_2 (permute_T1 f1 f2 \<circ> g \<circ> inv f1) = f2 ` IImsupp11_2 g"
+    "IImsupp12_1 (permute_T1 f1 f2 \<circ> g2 \<circ> inv f2) = f1 ` IImsupp12_1 g2"
+    "IImsupp12_2 (permute_T1 f1 f2 \<circ> g2 \<circ> inv f2) = f2 ` IImsupp12_2 g2"
+    "IImsupp21_1 (permute_T2 f1 f2 \<circ> g3 \<circ> inv f1) = f1 ` IImsupp21_1 g3"
+    "IImsupp21_2 (permute_T2 f1 f2 \<circ> g3 \<circ> inv f1) = f2 ` IImsupp21_2 g3"
+       apply (unfold IImsupp11_1_def image_Un image_UN)
+       apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
+        apply (rule SSupp_natural[OF assms])?
+       apply (subst SSupp_natural[OF assms])
+       apply (unfold image_comp comp_assoc)[1]
+       apply (subst inv_o_simp1, rule assms)
+       apply (unfold o_id)
+       apply (unfold comp_def)[1]
+       apply (subst FVars_permutes, (rule assms)+)
+       apply (rule refl)
+    (* next goal, same tactic *)
+      apply (unfold IImsupp11_2_def image_Un image_UN)
+      apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
+      apply (rule SSupp_natural[OF assms])?
+      apply (subst SSupp_natural[OF assms])
+      apply (unfold image_comp comp_assoc)[1]
+      apply (subst inv_o_simp1, rule assms)
+      apply (unfold o_id)
+      apply (unfold comp_def)[1]
+      apply (subst FVars_permutes, (rule assms)+)
+      apply (rule refl)
+    (* next goal, same tactic *)
+     apply (unfold IImsupp12_1_def image_Un image_UN)
+     apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
+     apply (rule SSupp_natural[OF assms])?
+     apply (subst SSupp_natural[OF assms])
+     apply (unfold image_comp comp_assoc)[1]
+     apply (subst inv_o_simp1, rule assms)
+     apply (unfold o_id)
+     apply (unfold comp_def)[1]
+     apply (subst FVars_permutes, (rule assms)+)
+     apply (rule refl)
+    (* next goal, same tactic *)
+    apply (unfold IImsupp12_2_def image_Un image_UN)
+    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
+     apply (rule SSupp_natural[OF assms])?
+    apply (subst SSupp_natural[OF assms])
+    apply (unfold image_comp comp_assoc)[1]
+    apply (subst inv_o_simp1, rule assms)
+    apply (unfold o_id)
+    apply (unfold comp_def)[1]
+    apply (subst FVars_permutes, (rule assms)+)
+    apply (rule refl)
+    (* next goal, same tactic *)
+   apply (unfold IImsupp21_1_def image_Un image_UN)
+   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
+    apply (rule SSupp_natural[OF assms])?
+   apply (subst SSupp_natural[OF assms])
+   apply (unfold image_comp comp_assoc)[1]
+   apply (subst inv_o_simp1, rule assms)
+   apply (unfold o_id)
+   apply (unfold comp_def)[1]
+   apply (subst FVars_permutes, (rule assms)+)
+   apply (rule refl)
+    (* next goal, same tactic *)
+  apply (unfold IImsupp21_2_def image_Un image_UN)
+  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
+  apply (rule SSupp_natural[OF assms])?
+  apply (subst SSupp_natural[OF assms])
+  apply (unfold image_comp comp_assoc)[1]
+  apply (subst inv_o_simp1, rule assms)
+  apply (unfold o_id)
+  apply (unfold comp_def)[1]
+  apply (subst FVars_permutes, (rule assms)+)
+  apply (rule refl)
+  done
+
+lemma tvsubst_permutes:
+  fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+    and g_prems: "|SSupp11 g11| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp12 g12| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp21 g21| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  shows
+    "permute_T1 f1 f2 \<circ> tvsubst_T1 g11 g12 g21 = tvsubst_T1 (permute_T1 f1 f2 \<circ> g11 \<circ> inv f1) (permute_T1 f1 f2 \<circ> g12 \<circ> inv f2) (permute_T2 f1 f2 \<circ> g21 \<circ> inv f1) \<circ> permute_T1 f1 f2"
+    "permute_T2 f1 f2 \<circ> tvsubst_T2 g11 g12 g21 = tvsubst_T2 (permute_T1 f1 f2 \<circ> g11 \<circ> inv f1) (permute_T1 f1 f2 \<circ> g12 \<circ> inv f2) (permute_T2 f1 f2 \<circ> g21 \<circ> inv f1) \<circ> permute_T2 f1 f2"
+proof -
+  have x: "\<And>t1 t2.
+    permute_T1 f1 f2 (tvsubst_T1 g11 g12 g21 t1) = tvsubst_T1 (permute_T1 f1 f2 \<circ> g11 \<circ> inv f1) (permute_T1 f1 f2 \<circ> g12 \<circ> inv f2) (permute_T2 f1 f2 \<circ> g21 \<circ> inv f1) (permute_T1 f1 f2 t1)
+  \<and> permute_T2 f1 f2 (tvsubst_T2 g11 g12 g21 t2) = tvsubst_T2 (permute_T1 f1 f2 \<circ> g11 \<circ> inv f1) (permute_T1 f1 f2 \<circ> g12 \<circ> inv f2) (permute_T2 f1 f2 \<circ> g21 \<circ> inv f1) (permute_T2 f1 f2 t2)"
+    subgoal for t1 t2
+      apply (rule fresh_induct[of "IImsupp11_1 g11 \<union> IImsupp12_1 g12 \<union> IImsupp21_1 g21" "IImsupp11_2 g11 \<union> IImsupp12_2 g12 \<union> IImsupp21_2 g21" _ _ t1 t2])
+         apply (unfold IImsupp_defs comp_def)[2]
+         apply (rule var_T1_pre_class.Un_bound var_T1_pre_class.UN_bound infinite_UNIV g_prems[THEN ordLess_ordLeq_trans]
+          FVars_bd_UNIVs cmin1 cmin2 card_of_Card_order)+
+      subgoal premises IHs for v
+        (* EVERY for VVrs of T1 *)
+        apply (rule case_split[rotated])
+         apply (rule case_split[rotated])
+          (* END EVERY *)
+          apply (subst permute_simps, (rule f_prems)+)
+          apply (subst tvsubst_T1_not_is_VVr[rotated -3])
+                  apply (rule IHs)
+                 apply assumption+
+               apply (rule g_prems)+
+            apply (rule IHs)+
+          apply (subst tvsubst_T1_not_is_VVr[rotated -3])
+                  apply (rule noclash_permutes[THEN iffD2])
+                      apply (rule f_prems)+
+                  apply (rule IHs)
+          (* REPEAT_DETERM *)
+                 apply (subst permute_simps[symmetric, OF f_prems])
+                 apply (subst isVVr_renames[OF f_prems, symmetric])
+                 apply assumption
+          (* repeated *)
+                apply (subst permute_simps[symmetric, OF f_prems])
+                apply (subst isVVr_renames[OF f_prems, symmetric])
+                apply assumption
+          (* END REPEAT_DETERM *)
+          (* REPEAT_DETERM *)
+               apply (subst SSupp_natural[OF f_prems])
+               apply (rule ordLeq_ordLess_trans[OF card_of_image])
+               apply (rule g_prems)
+          (* repeated *)
+              apply (subst SSupp_natural[OF f_prems])
+              apply (rule ordLeq_ordLess_trans[OF card_of_image])
+              apply (rule g_prems)
+          (* repeated *)
+             apply (subst SSupp_natural[OF f_prems])
+             apply (rule ordLeq_ordLess_trans[OF card_of_image])
+             apply (rule g_prems)
+          (* END REPEAT_DETERM *)
+          (* REPEAT_DETERM *)
+            apply (subst T1_pre.set_map IImsupp_naturals, (rule f_prems supp_id_bound bij_id)+)+
+            apply (unfold image_Un[symmetric])
+            apply (rule trans[OF image_Int[OF bij_is_inj, symmetric]])
+             apply (rule f_prems)
+            apply (rule iffD2[OF image_is_empty])
+            apply (rule IHs)
+          (* repeated *)
+           apply (subst T1_pre.set_map IImsupp_naturals, (rule f_prems supp_id_bound bij_id)+)+
+           apply (unfold image_Un[symmetric])
+           apply (rule trans[OF image_Int[OF bij_is_inj, symmetric]])
+            apply (rule f_prems)
+           apply (rule iffD2[OF image_is_empty])
+           apply (rule IHs)
+          (* END REPEAT_DETERM *)
+          apply (rule trans)
+           apply (rule permute_simps)
+              apply (rule f_prems)+
+          apply (rule arg_cong[of _ _ T1_ctor])
+          apply (rule trans[OF T1_pre.map_comp])
+                          apply (rule supp_id_bound bij_id f_prems)+
+          apply (rule sym)
+          apply (rule trans[OF T1_pre.map_comp])
+                          apply (rule supp_id_bound bij_id f_prems)+
+          apply (unfold id_o o_id)
+          apply (rule T1_pre.map_cong0)
+                            apply (rule supp_id_bound bij_id f_prems refl)+
+          (* REPEAT_DETERM *)
+             apply (rule trans[OF comp_apply])
+             apply (rule sym)
+             apply (rule trans[OF comp_apply])
+             apply (erule IHs)
+          (* repeated *)
+            apply (rule trans[OF comp_apply])
+            apply (rule sym)
+            apply (rule trans[OF comp_apply])
+            apply (erule IHs)
+          (* repeated *)
+           apply (rule trans[OF comp_apply])
+           apply (rule sym)
+           apply (rule trans[OF comp_apply])
+           apply (erule IHs)
+          (* repeated *)
+          apply (rule trans[OF comp_apply])
+          apply (rule sym)
+          apply (rule trans[OF comp_apply])
+          apply (erule IHs)
+          (* END REPEAT_DETERM *)
+
+(* EVERY' for VVr of T1 (reversed) *)
+         apply (unfold isVVr12_def)[1]
+         apply (erule exE)
+         apply (erule subst[OF sym])
+         apply (subst permute_VVrs[OF f_prems])
+         apply (subst tvsubst_VVrs[OF g_prems])
+         apply (subst tvsubst_VVrs)
+          (* REPEAT_DETERM *)
+            apply (subst SSupp_natural[OF f_prems])
+            apply (rule ordLeq_ordLess_trans[OF card_of_image])
+            apply (rule g_prems)
+          (* repeated *)
+           apply (subst SSupp_natural[OF f_prems])
+           apply (rule ordLeq_ordLess_trans[OF card_of_image])
+           apply (rule g_prems)
+          (* repeated *)
+          apply (subst SSupp_natural[OF f_prems])
+          apply (rule ordLeq_ordLess_trans[OF card_of_image])
+          apply (rule g_prems)
+          (* END REPEAT_DETERM *)
+         apply (unfold comp_def)[1]
+         apply (subst inv_simp1)
+          apply (rule f_prems)
+         apply (rule refl)
+          (* next VVr *)
+        apply (unfold isVVr11_def)[1]
+        apply (erule exE)
+        apply (erule subst[OF sym])
+        apply (subst permute_VVrs[OF f_prems])
+        apply (subst tvsubst_VVrs[OF g_prems])
+        apply (subst tvsubst_VVrs)
+          (* REPEAT_DETERM *)
+           apply (subst SSupp_natural[OF f_prems])
+           apply (rule ordLeq_ordLess_trans[OF card_of_image])
+           apply (rule g_prems)
+          (* repeated *)
+          apply (subst SSupp_natural[OF f_prems])
+          apply (rule ordLeq_ordLess_trans[OF card_of_image])
+          apply (rule g_prems)
+          (* repeated *)
+         apply (subst SSupp_natural[OF f_prems])
+         apply (rule ordLeq_ordLess_trans[OF card_of_image])
+         apply (rule g_prems)
+          (* END REPEAT_DETERM *)
+        apply (unfold comp_def)[1]
+        apply (subst inv_simp1)
+         apply (rule f_prems)
+        apply (rule refl)
+        done
+          (* second goal, same tactic *)
+      subgoal premises IHs for v
+        (* EVERY for VVrs of T1 *)
+        apply (rule case_split[rotated])
+          (* END EVERY *)
+         apply (subst permute_simps, (rule f_prems)+)
+         apply (subst tvsubst_T2_not_is_VVr[rotated -2])
+                apply (rule IHs)
+               apply assumption+
+              apply (rule g_prems)+
+           apply (rule IHs)+
+         apply (subst tvsubst_T2_not_is_VVr[rotated -2])
+                apply (rule noclash_permutes[THEN iffD2])
+                    apply (rule f_prems)+
+                apply (rule IHs)
+          (* REPEAT_DETERM *)
+               apply (subst permute_simps[symmetric, OF f_prems])
+               apply (subst isVVr_renames[OF f_prems, symmetric])
+               apply assumption
+          (* END REPEAT_DETERM *)
+          (* REPEAT_DETERM *)
+              apply (subst SSupp_natural[OF f_prems])
+              apply (rule ordLeq_ordLess_trans[OF card_of_image])
+              apply (rule g_prems)
+          (* repeated *)
+             apply (subst SSupp_natural[OF f_prems])
+             apply (rule ordLeq_ordLess_trans[OF card_of_image])
+             apply (rule g_prems)
+          (* repeated *)
+            apply (subst SSupp_natural[OF f_prems])
+            apply (rule ordLeq_ordLess_trans[OF card_of_image])
+            apply (rule g_prems)
+          (* END REPEAT_DETERM *)
+          (* REPEAT_DETERM *)
+           apply (subst T2_pre.set_map IImsupp_naturals, (rule f_prems supp_id_bound bij_id)+)+
+           apply (unfold image_Un[symmetric])
+           apply (rule trans[OF image_Int[OF bij_is_inj, symmetric]])
+            apply (rule f_prems)
+           apply (rule iffD2[OF image_is_empty])
+           apply (rule IHs)
+          (* repeated *)
+          apply (subst T2_pre.set_map IImsupp_naturals, (rule f_prems supp_id_bound bij_id)+)+
+          apply (unfold image_Un[symmetric])
+          apply (rule trans[OF image_Int[OF bij_is_inj, symmetric]])
+           apply (rule f_prems)
+          apply (rule iffD2[OF image_is_empty])
+          apply (rule IHs)
+          (* END REPEAT_DETERM *)
+         apply (rule trans)
+          apply (rule permute_simps)
+             apply (rule f_prems)+
+         apply (rule arg_cong[of _ _ T2_ctor])
+         apply (rule trans[OF T2_pre.map_comp])
+                         apply (rule supp_id_bound bij_id f_prems)+
+         apply (rule sym)
+         apply (rule trans[OF T2_pre.map_comp])
+                         apply (rule supp_id_bound bij_id f_prems)+
+         apply (unfold id_o o_id)
+         apply (rule T2_pre.map_cong0)
+                            apply (rule supp_id_bound bij_id f_prems refl)+
+          (* REPEAT_DETERM *)
+            apply (rule trans[OF comp_apply])
+            apply (rule sym)
+            apply (rule trans[OF comp_apply])
+            apply (erule IHs)
+          (* repeated *)
+           apply (rule trans[OF comp_apply])
+           apply (rule sym)
+           apply (rule trans[OF comp_apply])
+           apply (erule IHs)
+          (* repeated *)
+          apply (rule trans[OF comp_apply])
+          apply (rule sym)
+          apply (rule trans[OF comp_apply])
+          apply (erule IHs)
+          (* repeated *)
+         apply (rule trans[OF comp_apply])
+         apply (rule sym)
+         apply (rule trans[OF comp_apply])
+         apply (erule IHs)
+          (* END REPEAT_DETERM *)
+
+(* EVERY' for VVr of T1 (reversed) *)
+        apply (unfold isVVr21_def)[1]
+        apply (erule exE)
+        apply (erule subst[OF sym])
+        apply (subst permute_VVrs[OF f_prems])
+        apply (subst tvsubst_VVrs[OF g_prems])
+        apply (subst tvsubst_VVrs)
+          (* REPEAT_DETERM *)
+           apply (subst SSupp_natural[OF f_prems])
+           apply (rule ordLeq_ordLess_trans[OF card_of_image])
+           apply (rule g_prems)
+          (* repeated *)
+          apply (subst SSupp_natural[OF f_prems])
+          apply (rule ordLeq_ordLess_trans[OF card_of_image])
+          apply (rule g_prems)
+          (* repeated *)
+         apply (subst SSupp_natural[OF f_prems])
+         apply (rule ordLeq_ordLess_trans[OF card_of_image])
+         apply (rule g_prems)
+          (* END REPEAT_DETERM *)
+        apply (unfold comp_def)[1]
+        apply (subst inv_simp1)
+         apply (rule f_prems)
+        apply (rule refl)
+        done
+      done
+    done
+
+  show
+    "permute_T1 f1 f2 \<circ> tvsubst_T1 g11 g12 g21 = tvsubst_T1 (permute_T1 f1 f2 \<circ> g11 \<circ> inv f1) (permute_T1 f1 f2 \<circ> g12 \<circ> inv f2) (permute_T2 f1 f2 \<circ> g21 \<circ> inv f1) \<circ> permute_T1 f1 f2"
+    "permute_T2 f1 f2 \<circ> tvsubst_T2 g11 g12 g21 = tvsubst_T2 (permute_T1 f1 f2 \<circ> g11 \<circ> inv f1) (permute_T1 f1 f2 \<circ> g12 \<circ> inv f2) (permute_T2 f1 f2 \<circ> g21 \<circ> inv f1) \<circ> permute_T2 f1 f2"
+     apply (rule ext)
+     apply (rule trans[OF comp_apply])
+     apply (rule sym)
+     apply (rule trans[OF comp_apply])
+     apply (rule conjunct1[OF x, THEN sym])
+      (* repeated *)
+    apply (rule ext)
+    apply (rule trans[OF comp_apply])
+    apply (rule sym)
+    apply (rule trans[OF comp_apply])
+    apply (rule conjunct2[OF x, THEN sym])
+    done
+qed
 
 end

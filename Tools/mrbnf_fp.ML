@@ -2599,6 +2599,36 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       rtac ctxt refl
     ])) xs mrbnfs deadss noclashs raw_noclashs;
 
+    val noclash_permutes = @{map 5} (fn permute => fn mrbnf => fn noclash => fn x => fn deads =>
+      let
+        val goal = mk_Trueprop_eq (
+          fst noclash $ (MRBNF_Def.mk_map_comb_of_mrbnf deads
+            (map HOLogic.id_const plives @ replicate_rec (map (fn permute => Term.list_comb (fst permute, fs)) permutes))
+            (map HOLogic.id_const pbounds @ bound_fs)
+            (fs @ map HOLogic.id_const pfrees @ bfree_fs) mrbnf $ x),
+          fst noclash $ x
+        );
+      in Goal.prove_sorry lthy (names (fs @ [x])) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt [snd noclash]),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems)
+        ],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_comp[unfolded comp_def]}),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] (flat FVars_permutess),
+          REPEAT_DETERM o resolve_tac ctxt prems
+        ],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_Un[symmetric] image_UN[symmetric]}),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] @{thms image_Int[OF bij_is_inj, symmetric]},
+          resolve_tac ctxt prems
+        ],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_is_empty}),
+        rtac ctxt refl
+      ]) end
+    ) permutes mrbnfs noclashs xs deadss;
+
     val raw_results = map (fn i =>
       let val raw = nth raw_Ts i;
       in {
@@ -2659,6 +2689,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
           ctor_def = snd (nth ctors i),
           permute_def = snd (nth permutes i),
           FVars_defs = map snd (nth FVarsss i),
+          noclash_permute = nth noclash_permutes i,
           nnoclash_noclash = nth nnoclash_noclashs i,
           total_abs_eq_iff = nth TT_total_abs_eq_iffs i,
           abs_rep = nth TT_abs_reps i,

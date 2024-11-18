@@ -14,6 +14,7 @@ type spec = {
 type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
+  permute_simps: thm list,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -55,6 +56,7 @@ type spec = {
 type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
+  permute_simps: thm list,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -64,9 +66,10 @@ type binder_sugar = {
   ctors: (term * thm) list
 };
 
-fun morph_binder_sugar phi { map_simps, set_simpss, subst_simps, mrbnf,
+fun morph_binder_sugar phi { map_simps, permute_simps, set_simpss, subst_simps, mrbnf,
   strong_induct, distinct, ctors, bsetss, bset_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
+  permute_simps = map (Morphism.thm phi) permute_simps,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
@@ -505,10 +508,13 @@ fun create_binder_datatype (spec : spec) lthy =
       UN_single
     };
     val nvars = length vars;
-    fun mk_map_simps lthy fs mk_supp_bound_opt mk_imsupp mapx tac =
+    fun mk_map_simps lthy do_noclash fs mk_supp_bound_opt mk_imsupp_opt mk_extra_prems extra_apply_args mapx tac =
       let
         val mapx = Term.list_comb (mapx, fs);
-        val prems = map_filter (Option.map HOLogic.mk_Trueprop o mk_supp_bound_opt) fs;
+        val (prem_fs, prems) = split_list (map_filter (fn f => case mk_supp_bound_opt f of
+          NONE => NONE
+          | SOME t => SOME (f, HOLogic.mk_Trueprop t)
+        ) fs);
 
         fun mk_map (T as Type (n, Ts)) = (case MRBNF_Def.mrbnf_of lthy n of
               SOME mrbnf =>
@@ -524,7 +530,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 else Term.list_comb (inner_map, gs) end
               | NONE => HOLogic.id_const T)
             | mk_map (T as TFree _) =
-              (if member (op=) frees T then
+              (if member (op=) (frees @ extra_apply_args) T then
                 case List.find (fn Free (_, T') => domain_type T' = Term.typ_subst_atomic replace T) fs of
                   SOME t => t
                   | NONE => HOLogic.id_const T
@@ -576,16 +582,19 @@ fun create_binder_datatype (spec : spec) lthy =
               | NONE => replicate nvars NONE
             in map2 (fn b => fn FVars => map_filter I (map2 (mk_set (b::recs) FVars) tys xs)) vars FVars end;
           val bound_sets = mk_sets bounds [] NONE;
-          fun get_fs T = filter (fn t' => HOLogic.dest_setT (fastype_of (mk_imsupp t' T)) = T) fs;
+          fun get_fs T = filter (fn t' => case mk_imsupp_opt t' T of
+            NONE => false
+            | SOME t => HOLogic.dest_setT (fastype_of t) = T
+          ) fs;
           val imsupp_prems = maps (map_filter (fn t => case Term.subst_atomic_types replace t of
               (Const (@{const_name Set.insert}, _) $ (t as Free (_, T)) $ _) => (case get_fs T of
                 [] => NONE
-                | xs => SOME (HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, foldl1 mk_Un (map (fn f => mk_imsupp f T) xs))))))
+                | xs => SOME (HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, foldl1 mk_Un (map (fn f => the (mk_imsupp_opt f T)) xs))))))
               | t =>
                 let val T = HOLogic.dest_setT (fastype_of t);
                 in case get_fs T of
                   [] => NONE
-                  | xs => SOME (HOLogic.mk_Trueprop (mk_int_empty (t, foldl1 mk_Un (map (fn f => mk_imsupp f T) xs))))
+                  | xs => SOME (HOLogic.mk_Trueprop (mk_int_empty (t, foldl1 mk_Un (map (fn f => the (mk_imsupp_opt f T)) xs))))
                 end
           )) bound_sets;
 
@@ -594,14 +603,16 @@ fun create_binder_datatype (spec : spec) lthy =
           val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (#binding_rel spec))) rec_vars;
           val free_sets = collect_sets (mk_sets frees free_rec_vars (SOME (#FVars quotient)));
 
-          val noclash_prems = map_filter (Option.map HOLogic.mk_Trueprop) (map2 (fn a => fn b => case (a, b) of
-            (SOME (Const (@{const_name Set.insert}, _) $ x $ _), SOME (Const (@{const_name Set.insert}, _) $ y $ _)) =>
-              SOME (HOLogic.mk_not (HOLogic.mk_eq (x, y)))
-            | (SOME (Const (@{const_name Set.insert}, _) $ x $ _), SOME ys) => SOME (HOLogic.mk_not (HOLogic.mk_mem (x, ys)))
-            | (SOME xs, SOME (Const (@{const_name Set.insert}, _) $ y $ _)) => SOME (HOLogic.mk_not (HOLogic.mk_mem (y, xs)))
-            | (SOME free, SOME bound) => SOME (mk_int_empty (free, bound))
-            | _ => NONE
-          ) bound_sets' free_sets);
+          val noclash_prems = if do_noclash then
+            map_filter (Option.map HOLogic.mk_Trueprop) (map2 (fn a => fn b => case (a, b) of
+              (SOME (Const (@{const_name Set.insert}, _) $ x $ _), SOME (Const (@{const_name Set.insert}, _) $ y $ _)) =>
+                SOME (HOLogic.mk_not (HOLogic.mk_eq (x, y)))
+              | (SOME (Const (@{const_name Set.insert}, _) $ x $ _), SOME ys) => SOME (HOLogic.mk_not (HOLogic.mk_mem (x, ys)))
+              | (SOME xs, SOME (Const (@{const_name Set.insert}, _) $ y $ _)) => SOME (HOLogic.mk_not (HOLogic.mk_mem (y, xs)))
+              | (SOME free, SOME bound) => SOME (mk_int_empty (free, bound))
+              | _ => NONE
+            ) bound_sets' free_sets)
+          else [];
 
           val rhs = if length ts = 1 andalso member (op=) frees (hd tys)
             andalso fastype_of (hd ts) = range_type (fastype_of quotient_ctor)
@@ -609,7 +620,7 @@ fun create_binder_datatype (spec : spec) lthy =
           val goal = mk_Trueprop_eq (
             mapx $ Term.list_comb (ctor, xs), rhs
           );
-        in Goal.prove_sorry lthy (names (fs @ xs)) (prems @ imsupp_prems @ noclash_prems) goal (fn {context=ctxt, prems} =>
+        in Goal.prove_sorry lthy (names (fs @ xs)) (flat (map2 (fn p => fn f => mk_extra_prems f @ [p]) prems prem_fs) @ imsupp_prems @ noclash_prems) goal (fn {context=ctxt, prems} =>
           Local_Defs.unfold0_tac ctxt [ctor_def] THEN tac ctxt prems
         ) end
       ) ctors (#ctors spec) end;
@@ -640,7 +651,27 @@ fun create_binder_datatype (spec : spec) lthy =
           K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
           rtac ctxt refl
         ];
-      in mk_map_simps lthy fs (SOME o MRBNF_Recursor.mk_supp_bound) (fn t => fn _ => mk_imsupp t) mapx tac end;
+      in mk_map_simps lthy true fs (SOME o MRBNF_Recursor.mk_supp_bound) (fn t => fn _ => SOME (mk_imsupp t)) (K []) [] mapx tac end;
+
+    val permute_simps =
+      let
+        val (fs, _) = lthy
+          |> mk_Frees "f" (map (fn a => a --> a) vars);
+        val Ts' = snd (dest_Type qT);
+        val mapx = Term.subst_atomic_types (Ts' ~~ vars) (#rename quotient);
+        fun tac ctxt prems = EVERY1 [
+          rtac ctxt (trans OF [#rename_ctor (#inner quotient)]),
+          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
+            MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
+            #Abs_inverse (snd info) OF @{thms UNIV_I}
+          ])),
+          REPEAT_DETERM o resolve_tac ctxt prems,
+          K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
+          rtac ctxt refl
+        ];
+      in mk_map_simps lthy false fs (SOME o MRBNF_Recursor.mk_supp_bound) (K (K NONE))
+        (single o HOLogic.mk_Trueprop o mk_bij) bounds mapx tac
+      end;
 
     val cmin_UNIV = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
     val Cinfinite_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (HOLogic.mk_conj (
@@ -662,12 +693,12 @@ fun create_binder_datatype (spec : spec) lthy =
               domain_type (domain_type (fastype_of s)) = domain_type (fastype_of h)
             ) (#SSupps tvsubst_res));
             fun mk_supp_bound h = Option.map (fn s => mk_ordLess (mk_card_of s) cmin_UNIV) (mk_supp h);
-            fun mk_imsupp h T = foldl1 mk_Un (map_filter (fn f => Option.map (fn t => t $ f) (
+            fun mk_imsupp h T = SOME (foldl1 mk_Un (map_filter (fn f => Option.map (fn t => t $ f) (
               List.find (fn s => domain_type (fastype_of s) = fastype_of h
                 andalso domain_type (fastype_of s) = fastype_of f
                 andalso HOLogic.dest_setT (range_type (fastype_of s)) = T
               ) (flat (#IImsuppss tvsubst_res))
-            )) fs);
+            )) fs));
             fun tac ctxt prems = EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
               EVERY' [
@@ -706,7 +737,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 rtac ctxt refl
               ]
             ];
-          in mk_map_simps lthy fs mk_supp_bound mk_imsupp (#tvsubst tvsubst_res) tac end;
+          in mk_map_simps lthy true fs mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac end;
         in (lthy, SOME (tvsubst_res, tvsubst_simps)) end
       else (lthy, NONE);
 
@@ -716,6 +747,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val sugar = {
       map_simps = map_simps,
       set_simpss = set_simpss,
+      permute_simps = permute_simps,
       strong_induct = strong_induct,
       subst_simps = Option.map snd tvsubst_opt,
       bsetss = bset_optss,
@@ -733,6 +765,7 @@ fun create_binder_datatype (spec : spec) lthy =
         ("induct", [induct], [induct_attrib]),
         ("set", flat set_simpss, simp),
         ("map", map_simps, simp),
+        ("permute", permute_simps, simp),
         ("distinct", distinct, simp)
       ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)
       ) |> (map (fn (thmN, thms, attrs) =>

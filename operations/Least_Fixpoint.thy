@@ -6746,6 +6746,31 @@ lemma nnoclash_noclashs:
   apply (rule refl)
   done
 
+lemma noclash_permutes:
+  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows
+    "noclash_T1 (map_T1_pre f1 f2 id id f1 f2 f1 (permute_T1 f1 f2) (permute_T1 f1 f2) (permute_T2 f1 f2) (permute_T2 f1 f2) x) = noclash_T1 x"
+    "noclash_T2 (map_T2_pre f1 f2 id id f1 f2 f1 (permute_T1 f1 f2) (permute_T1 f1 f2) (permute_T2 f1 f2) (permute_T2 f1 f2) x2) = noclash_T2 x2"
+   apply (unfold noclash_T1_def)
+   apply (subst T1_pre.set_map, (rule supp_id_bound bij_id assms)+)+
+   apply (unfold image_comp[unfolded comp_def])
+   apply (subst FVars_permutes, (rule assms)+)+
+   apply (unfold image_Un[symmetric] image_UN[symmetric])
+   apply (subst image_Int[OF bij_is_inj, symmetric], rule assms)+
+   apply (unfold image_is_empty)
+   apply (rule refl)
+    (* repeated *)
+  apply (unfold noclash_T2_def)
+  apply (subst T2_pre.set_map, (rule supp_id_bound bij_id assms)+)+
+  apply (unfold image_comp[unfolded comp_def])
+  apply (subst FVars_permutes, (rule assms)+)+
+  apply (unfold image_Un[symmetric] image_UN[symmetric])
+  apply (subst image_Int[OF bij_is_inj, symmetric], rule assms)+
+  apply (unfold image_is_empty)
+  apply (rule refl)
+  done
+
 ML \<open>
 val fp_res = { fp = BNF_Util.Least_FP,
     binding_relation = [[[1, 3]], [[1]]],
@@ -6801,6 +6826,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
          permute_def = @{thm permute_T1_def},
          ctor_def = @{thm T1_ctor_def},
          FVars_defs = @{thms FVars_defs(1-2)},
+         noclash_permute = @{thm noclash_permutes(1)},
          nnoclash_noclash = @{thm nnoclash_noclashs(1)},
          total_abs_eq_iff = @{thm TT_total_abs_eq_iffs(1)},
          abs_rep = @{thm TT_abs_rep(1)},
@@ -6841,6 +6867,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
         ctor_def = @{thm T2_ctor_def},
         permute_def = @{thm permute_T2_def},
         FVars_defs = @{thms FVars_defs(3-4)},
+        noclash_permute = @{thm noclash_permutes(2)},
         nnoclash_noclash = @{thm nnoclash_noclashs(2)},
         total_abs_eq_iff = @{thm TT_total_abs_eq_iffs(2)},
         abs_rep = @{thm TT_abs_rep(2)},

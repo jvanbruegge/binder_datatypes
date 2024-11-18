@@ -237,14 +237,14 @@ fun define_tvsubst_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) (vars,
             |> apfst hd o mk_Frees "f" [aT --> qT]
             ||>> apfst hd o mk_Frees "t" [qT];
 
-          val (SSupp, lthy) = mk_def_public ("SSupp" ^ the suffix ^ "_" ^ Binding.name_of (#binding model))
+          val (SSupp, lthy) = mk_def_public ("SSupp" ^ the suffix ^ "_" ^ short_type_name (fst (dest_Type qT)))
             1 (Term.absfree (dest_Free h) (HOLogic.mk_Collect ("a", aT, HOLogic.mk_not (HOLogic.mk_eq (
               h $ Bound 0, fst VVr $ Bound 0
             )))
           )) lthy;
 
           val (IImsupps, lthy) = @{fold_map 2} (fn FVars => fn s =>
-            mk_def_public ("IImsupp" ^ the suffix ^ s ^ "_" ^ Binding.name_of (#binding model)) 1 (Term.absfree (dest_Free h) (
+            mk_def_public ("IImsupp" ^ the suffix ^ s ^ "_" ^ short_type_name (fst (dest_Type qT))) 1 (Term.absfree (dest_Free h) (
               let val UN = mk_UNION (fst SSupp $ h) (HOLogic.mk_comp (FVars, h));
               in if fastype_of (fst SSupp $ h) = range_type (fastype_of FVars) then
                 mk_Un (fst SSupp $ h, UN)

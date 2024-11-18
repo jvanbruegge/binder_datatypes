@@ -89,6 +89,7 @@ sig
 
   val fp_result_of: Proof.context -> string -> fp_result option
   val register_fp_results: fp_result list -> local_theory -> local_theory
+  val note_fp_result: fp_result -> local_theory -> local_theory
 
 end;
 
@@ -277,5 +278,58 @@ fun fp_result_of_generic context =
   o Symtab.lookup (Data.get context);
 
 val fp_result_of = fp_result_of_generic o Context.Proof;
+
+fun note_fp_result (fp_res : fp_result) lthy =
+  let
+    fun note_internals (quot : quotient_result fp_result_T) = [
+      ("permute_ctor", [#permute_ctor quot]),
+      ("FVars_ctor", #FVars_ctors quot),
+      ("FVars_intros", flat (#FVars_intross quot)),
+      ("FVars_bd", #card_of_FVars_bounds quot),
+      ("FVars_bd_UNIVs", #card_of_FVars_bound_UNIVs quot),
+      ("nnoclash_noclash", [#nnoclash_noclash (#inner quot)]),
+      ("total_abs_eq_iff", [#total_abs_eq_iff (#inner quot)]),
+      ("abs_rep", [#abs_rep (#inner quot)]),
+      ("rep_abs", [#rep_abs (#inner quot)]),
+      ("rep_abs_sym", [#rep_abs_sym (#inner quot)]),
+      ("abs_ctor", [#abs_ctor (#inner quot)]),
+      ("TT_inject0", [#inject quot])
+    ];
+
+    fun note_always (quot : quotient_result fp_result_T) = [
+      ("permute_id0", [#permute_id0 quot]),
+      ("permute_id", [#permute_id quot]),
+      ("permute_comp0", [#permute_comp0 quot]),
+      ("permute_comp", [#permute_comp quot]),
+      ("FVars_permute", #FVars_permutes quot),
+      ("permute_cong", [#permute_cong (#inner quot)]),
+      ("permute_cong_id", [#permute_cong_id (#inner quot)]),
+      ("permute_bij", [#permute_bij (#inner quot)]),
+      ("permute_inv_simp", [#permute_inv_simp (#inner quot)])
+    ];
+
+    fun note_quot (quot : quotient_result fp_result_T) =
+      (if Config.get lthy MRBNF_Def.mrbnf_internals then
+        note_internals quot
+        @ [
+          ("wf_subshape", [#wf_subshape (#fp_thms fp_res)]),
+          ("set_subshapes", flat (#set_subshapess (#fp_thms fp_res))),
+          ("set_subshape_permutes", flat (#set_subshape_permutess (#fp_thms fp_res))),
+          ("subshape_induct", [#subshape_induct (#fp_thms fp_res)]),
+          ("existential_induct", [#existential_induct (#fp_thms fp_res)]),
+          ("fresh_induct_param", [#fresh_induct_param (#fp_thms fp_res)]),
+          ("TT_fresh_induct", [#fresh_induct (#fp_thms fp_res)])
+        ]
+      else [])
+      @ note_always quot;
+
+    val notes = maps (fn quot => map (fn (thmN, thms) =>
+      ((Binding.qualify true (MRBNF_Util.short_type_name (fst (dest_Type (#T quot)))) (Binding.name thmN), []),
+        [(thms, [])]
+      )
+    ) (note_quot quot)) (#quotient_fps fp_res);
+
+    val (_, lthy) = Local_Theory.notes notes lthy;
+  in lthy end;
 
 end;

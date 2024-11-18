@@ -648,9 +648,607 @@ ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 
 local_setup \<open>fn lthy =>
 let
-  val (res', lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf I res [T1_model, T2_model] lthy
+  val (res', lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf I res [T1_model, T2_model] lthy;
+
+  val notes = [
+    ("VVr_defs", maps (map snd o #VVrs) res'),
+    ("tvsubst_VVrs", maps #tvsubst_VVrs res'),
+    ("tvsubst_not_is_VVr", map #tvsubst_cctor_not_isVVr res'),
+    ("isVVrs", maps #isVVrs res')
+  ] |> (map (fn (thmN, thms) =>
+    ((Binding.name thmN, []), [(thms, [])])
+  ));
+
+  val (noted, lthy) = Local_Theory.notes notes lthy
   val _ = @{print} res'
 in lthy end\<close>
 print_theorems
+
+lemmas prod_sum_simps = prod.set_map sum.set_map prod_set_simps sum_set_simps UN_empty UN_empty2
+  Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp UN_single
+lemmas map_id0_nesting = list.map_id0 prod.map_id0
+lemmas set_map_nesting = list.set_map prod.set_map
+
+lemma map_simps[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b" and f3::"'c::var \<Rightarrow> 'c" and f4::"'d \<Rightarrow> 'e"
+  assumes "|supp f1| <o |UNIV::'a set|" "|supp f2| <o |UNIV::'b set|" "|supp f3| <o |UNIV::'c set|"
+  shows
+    "vvsubst_T1 f1 f2 f3 f4 (Var_T1 a) = Var_T1 (f1 a)"
+    "vvsubst_T1 f1 f2 f3 f4 Arrow_T1 = Arrow_T1"
+    "vvsubst_T1 f1 f2 f3 f4 (TyVar_T1 b) = TyVar_T1 (f2 b)"
+    "vvsubst_T1 f1 f2 f3 f4 (App_T1 x1 x2) = App_T1 (vvsubst_T1 f1 f2 f3 f4 x1) (vvsubst_T2 f1 f2 f3 f4 x2)"
+    "a \<notin> imsupp f1 \<Longrightarrow> vvsubst_T1 f1 f2 f3 f4 (BFree_T1 a xs) = BFree_T1 a (map (map_prod f1 id) xs)"
+    "a \<notin> imsupp f1 \<Longrightarrow> vvsubst_T1 f1 f2 f3 f4 (Lam_T1 a x1) = Lam_T1 a (vvsubst_T1 f1 f2 f3 f4 x1)"
+    "b \<notin> imsupp f2 \<Longrightarrow> vvsubst_T1 f1 f2 f3 f4 (TyLam_T1 b x1) = TyLam_T1 b (vvsubst_T1 f1 f2 f3 f4 x1)"
+    "vvsubst_T1 f1 f2 f3 f4 (Ext_T1 c) = Ext_T1 (f3 c)"
+
+    "vvsubst_T2 f1 f2 f3 f4 (Var_T2 a) = Var_T2 (f1 a)"
+    "vvsubst_T2 f1 f2 f3 f4 (TyVar_T2 b) = TyVar_T2 (f2 b)"
+    "vvsubst_T2 f1 f2 f3 f4 (App_T2 x1 x2) = App_T2 (vvsubst_T1 f1 f2 f3 f4 x1) (vvsubst_T2 f1 f2 f3 f4 x2)"
+    "a \<notin> imsupp f1 \<Longrightarrow> vvsubst_T2 f1 f2 f3 f4 (Lam_T2 a xs2) = Lam_T2 a (map (vvsubst_T1 f1 f2 f3 f4) xs2)"
+    "b \<notin> imsupp f2 \<Longrightarrow> b \<notin> FVars_T22 x2 \<Longrightarrow> vvsubst_T2 f1 f2 f3 f4 (TyLam_T2 b x2) = TyLam_T2 b (vvsubst_T2 f1 f2 f3 f4 x2)"
+    "vvsubst_T2 f1 f2 f3 f4 (Ext_T2 d x1) = Ext_T2 (f4 d) (vvsubst_T1 f1 f2 f3 f4 x1)"
+               apply (unfold T1_ctors_defs T2_ctors_defs)
+
+               apply (rule trans[OF T1_cctor])
+                     apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+                     apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+               apply (unfold map_id0_nesting)?
+               apply ((unfold id_def)[1])?
+               apply (rule refl)
+    (* repeated *)
+              apply (rule trans[OF T1_cctor])
+                    apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+                    apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+              apply (unfold map_id0_nesting)?
+              apply ((unfold id_def)[1])?
+              apply (rule refl)
+    (* repeated *)
+             apply (rule trans[OF T1_cctor])
+                   apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+                   apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+             apply (unfold map_id0_nesting)?
+             apply ((unfold id_def)[1])?
+             apply (rule refl)
+    (* repeated *)
+            apply (rule trans[OF T1_cctor])
+                  apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+                  apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+            apply (unfold map_id0_nesting)?
+            apply ((unfold id_def)[1])?
+            apply (rule refl)
+    (* repeated *)
+           apply (rule trans[OF T1_cctor])
+                 apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+                 apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+           apply (unfold map_id0_nesting)?
+           apply ((unfold id_def)[1])?
+           apply (rule refl)
+    (* repeated *)
+          apply (rule trans[OF T1_cctor])
+                apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+                apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+          apply (unfold map_id0_nesting)?
+          apply ((unfold id_def)[1])?
+          apply (rule refl)
+    (* repeated *)
+         apply (rule trans[OF T1_cctor])
+               apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+               apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+         apply (unfold map_id0_nesting)?
+         apply ((unfold id_def)[1])?
+         apply (rule refl)
+    (* repeated *)
+        apply (rule trans[OF T1_cctor])
+              apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+              apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+        apply (unfold map_id0_nesting)?
+        apply ((unfold id_def)[1])?
+        apply (rule refl)
+    (* repeated for second type *)
+       apply (rule trans[OF T2_cctor])
+             apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+             apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+       apply (unfold map_id0_nesting)?
+       apply ((unfold id_def)[1])?
+       apply (rule refl)
+    (* repeated *)
+      apply (rule trans[OF T2_cctor])
+            apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+            apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+      apply (unfold map_id0_nesting)?
+      apply ((unfold id_def)[1])?
+      apply (rule refl)
+    (* repeated *)
+     apply (rule trans[OF T2_cctor])
+           apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+           apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+     apply (unfold map_id0_nesting)?
+     apply ((unfold id_def)[1])?
+     apply (rule refl)
+    (* repeated *)
+    apply (rule trans[OF T2_cctor])
+          apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+          apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+    apply (unfold map_id0_nesting)?
+    apply ((unfold id_def)[1])?
+    apply (rule refl)
+    (* repeated *)
+   apply (rule trans[OF T2_cctor])
+         apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+   apply (unfold map_id0_nesting)?
+   apply ((unfold id_def)[1])?
+   apply (rule refl)
+    (* repeated *)
+  apply (rule trans[OF T2_cctor])
+        apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+        apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+      supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
+      assms | assumption | (subst set_map_nesting, (unfold prod_sum_simps)?))+
+  apply (unfold map_id0_nesting)?
+  apply ((unfold id_def)[1])?
+  apply (rule refl)
+  done
+
+lemma permute_simps[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows
+    "permute_T1 f1 f2 (Var_T1 a) = Var_T1 (f1 a)"
+    "permute_T1 f1 f2 Arrow_T1 = Arrow_T1"
+    "permute_T1 f1 f2 (TyVar_T1 b) = TyVar_T1 (f2 b)"
+    "permute_T1 f1 f2 (App_T1 x1 x2) = App_T1 (permute_T1 f1 f2 x1) (permute_T2 f1 f2 x2)"
+    "permute_T1 f1 f2 (BFree_T1 a xs) = BFree_T1 (f1 a) (map (map_prod f1 id) xs)"
+    "permute_T1 f1 f2 (Lam_T1 a x1) = Lam_T1 (f1 a) (permute_T1 f1 f2 x1)"
+    "permute_T1 f1 f2 (TyLam_T1 b x1) = TyLam_T1 (f2 b) (permute_T1 f1 f2 x1)"
+    "permute_T1 f1 f2 (Ext_T1 c) = Ext_T1 c"
+
+    "permute_T2 f1 f2 (Var_T2 a) = Var_T2 (f1 a)"
+    "permute_T2 f1 f2 (TyVar_T2 b) = TyVar_T2 (f2 b)"
+    "permute_T2 f1 f2 (App_T2 x1 x2) = App_T2 (permute_T1 f1 f2 x1) (permute_T2 f1 f2 x2)"
+    "permute_T2 f1 f2 (Lam_T2 a xs2) = Lam_T2 (f1 a) (map (permute_T1 f1 f2) xs2)"
+    "permute_T2 f1 f2 (TyLam_T2 b x2) = TyLam_T2 (f2 b) (permute_T2 f1 f2 x2)"
+    "permute_T2 f1 f2 (Ext_T2 d x1) = Ext_T2 d (permute_T1 f1 f2 x1)"
+               apply (unfold T1_ctors_defs T2_ctors_defs)
+
+               apply (rule trans[OF permute_simps(1)])
+                   apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+                   apply (rule assms)+
+               apply ((subst id_apply)+)?
+               apply (rule refl)
+    (* repeated *)
+              apply (rule trans[OF permute_simps(1)])
+                  apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+                  apply (rule assms)+
+              apply ((subst id_apply)+)?
+              apply (rule refl)
+    (* repeated *)
+             apply (rule trans[OF permute_simps(1)])
+                 apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+                 apply (rule assms)+
+             apply ((subst id_apply)+)?
+             apply (rule refl)
+    (* repeated *)
+            apply (rule trans[OF permute_simps(1)])
+                apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+                apply (rule assms)+
+            apply ((subst id_apply)+)?
+            apply (rule refl)
+    (* repeated *)
+           apply (rule trans[OF permute_simps(1)])
+               apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+               apply (rule assms)+
+           apply ((subst id_apply)+)?
+           apply (rule refl)
+    (* repeated *)
+          apply (rule trans[OF permute_simps(1)])
+              apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+              apply (rule assms)+
+          apply ((subst id_apply)+)?
+          apply (rule refl)
+    (* repeated *)
+         apply (rule trans[OF permute_simps(1)])
+             apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+             apply (rule assms)+
+         apply ((subst id_apply)+)?
+         apply (rule refl)
+    (* repeated *)
+        apply (rule trans[OF permute_simps(1)])
+            apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I])
+            apply (rule assms)+
+        apply ((subst id_apply)+)?
+        apply (rule refl)
+    (* repeated for second type *)
+       apply (rule trans[OF permute_simps(2)])
+           apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I])
+           apply (rule assms)+
+       apply ((subst id_apply)+)?
+       apply (rule refl)
+    (* repeated *)
+      apply (rule trans[OF permute_simps(2)])
+          apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I])
+          apply (rule assms)+
+      apply ((subst id_apply)+)?
+      apply (rule refl)
+    (* repeated *)
+     apply (rule trans[OF permute_simps(2)])
+         apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I])
+         apply (rule assms)+
+     apply ((subst id_apply)+)?
+     apply (rule refl)
+    (* repeated *)
+    apply (rule trans[OF permute_simps(2)])
+        apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I])
+        apply (rule assms)+
+    apply ((subst id_apply)+)?
+    apply (rule refl)
+    (* repeated *)
+   apply (rule trans[OF permute_simps(2)])
+       apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I])
+       apply (rule assms)+
+   apply ((subst id_apply)+)?
+   apply (rule refl)
+    (* repeated *)
+  apply (rule trans[OF permute_simps(2)])
+      apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I])
+      apply (rule assms)+
+  apply ((subst id_apply)+)?
+  apply (rule refl)
+  done
+
+lemma tvsubst_simps[simp]:
+  fixes h1::"'a::var \<Rightarrow> ('a, 'b::var, 'c::var, 'd) T1" and h2::"'b \<Rightarrow> ('a, 'b, 'c, 'd) T1"
+    and h3::"'a \<Rightarrow> ('a, 'b, 'c, 'd) T2"
+  assumes "|SSupp11_T1 h1| <o cmin |UNIV::'a set| |UNIV::'b set|"
+          "|SSupp12_T1 h2| <o cmin |UNIV::'a set| |UNIV::'b set|"
+          "|SSupp2_T2 h3| <o cmin |UNIV::'a set| |UNIV::'b set|"
+  shows
+    "tvsubst_T1 h1 h2 h3 (Var_T1 a) = h1 a"
+    "tvsubst_T1 h1 h2 h3 Arrow_T1 = Arrow_T1"
+    "tvsubst_T1 h1 h2 h3 (TyVar_T1 b) = h2 b"
+    "tvsubst_T1 h1 h2 h3 (App_T1 x1 x2) = App_T1 (tvsubst_T1 h1 h2 h3 x1) (tvsubst_T2 h1 h2 h3 x2)"
+    "a \<notin> IImsupp11_1_T1 h1 \<union> IImsupp12_1_T1 h2 \<union> IImsupp2_1_T2 h3 \<Longrightarrow> tvsubst_T1 h1 h2 h3 (BFree_T1 a xs) = BFree_T1 a xs"
+    "a \<notin> IImsupp11_1_T1 h1 \<union> IImsupp12_1_T1 h2 \<union> IImsupp2_1_T2 h3 \<Longrightarrow> tvsubst_T1 h1 h2 h3 (Lam_T1 a x1) = Lam_T1 a (tvsubst_T1 h1 h2 h3 x1)"
+    "b \<notin> IImsupp11_2_T1 h1 \<union> IImsupp12_2_T1 h2 \<union> IImsupp2_2_T2 h3 \<Longrightarrow> tvsubst_T1 h1 h2 h3 (TyLam_T1 b x1) = TyLam_T1 b (tvsubst_T1 h1 h2 h3 x1)"
+    "tvsubst_T1 h1 h2 h3 (Ext_T1 c) = Ext_T1 c"
+
+    "tvsubst_T2 h1 h2 h3 (Var_T2 a) = h3 a"
+    "tvsubst_T2 h1 h2 h3 (TyVar_T2 b) = TyVar_T2 b"
+    "tvsubst_T2 h1 h2 h3 (App_T2 x1 x2) = App_T2 (tvsubst_T1 h1 h2 h3 x1) (tvsubst_T2 h1 h2 h3 x2)"
+    "a \<notin> IImsupp11_1_T1 h1 \<union> IImsupp12_1_T1 h2 \<union> IImsupp2_1_T2 h3 \<Longrightarrow> tvsubst_T2 h1 h2 h3 (Lam_T2 a xs2) = Lam_T2 a (map (tvsubst_T1 h1 h2 h3) xs2)"
+    "b \<notin> IImsupp11_2_T1 h1 \<union> IImsupp12_2_T1 h2 \<union> IImsupp2_2_T2 h3 \<Longrightarrow> b \<notin> FVars_T22 x2 \<Longrightarrow> tvsubst_T2 h1 h2 h3 (TyLam_T2 b x2) = TyLam_T2 b (tvsubst_T2 h1 h2 h3 x2)"
+    "tvsubst_T2 h1 h2 h3 (Ext_T2 d x1) = Ext_T2 d (tvsubst_T1 h1 h2 h3 x1)"
+               apply (unfold T1_ctors_defs T2_ctors_defs)
+
+  subgoal
+    apply (unfold VVr_defs[symmetric])
+      (* EVERY *)
+    apply (rule tvsubst_VVrs)
+      apply (rule assms)+
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+            apply (rule assms)+
+         apply (unfold prod_sum_simps T1_pre_set_defs isVVrs VVr_defs Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms)+
+      (* REPEAT_DETERM *)
+      apply (rule notI)
+      apply (erule exE)
+      apply (drule TT_inject0s[THEN iffD1])
+      apply (erule exE conjE)+
+      apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+      apply (erule sum.distinct[THEN notE])
+      (* repeated *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])
+      (* EVERY *)
+    apply (rule tvsubst_VVrs)
+      apply (rule assms)+
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+            apply (rule assms)+
+         apply (unfold prod_sum_simps T1_pre_set_defs isVVrs VVr_defs Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms)+
+      (* REPEAT_DETERM *)
+      apply (rule notI)
+      apply (erule exE)
+      apply (drule TT_inject0s[THEN iffD1])
+      apply (erule exE conjE)+
+      apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+      apply (erule sum.distinct[THEN notE])
+      (* repeated *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+            apply (rule assms)+
+         apply (unfold prod_sum_simps T1_pre_set_defs isVVrs VVr_defs Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+      apply (rule notI)
+      apply (erule exE)
+      apply (drule TT_inject0s[THEN iffD1])
+      apply (erule exE conjE)+
+      apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+      apply (erule sum.distinct[THEN notE])
+      (* repeated *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+            apply (rule assms)+
+         apply (unfold prod_sum_simps T1_pre_set_defs isVVrs VVr_defs Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+      apply (rule notI)
+      apply (erule exE)
+      apply (drule TT_inject0s[THEN iffD1])
+      apply (erule exE conjE)+
+      apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+      apply (erule sum.distinct[THEN notE])
+      (* repeated *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+            apply (rule assms)+
+         apply (unfold prod_sum_simps T1_pre_set_defs isVVrs VVr_defs Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+      apply (rule notI)
+      apply (erule exE)
+      apply (drule TT_inject0s[THEN iffD1])
+      apply (erule exE conjE)+
+      apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+      apply (erule sum.distinct[THEN notE])
+      (* repeated *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+            apply (rule assms)+
+         apply (unfold prod_sum_simps T1_pre_set_defs isVVrs VVr_defs Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
+         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+      apply (rule notI)
+      apply (erule exE)
+      apply (drule TT_inject0s[THEN iffD1])
+      apply (erule exE conjE)+
+      apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+      apply (erule sum.distinct[THEN notE])
+      (* repeated *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] Abs_T1_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])
+      (* EVERY *)
+    apply (rule tvsubst_VVrs)
+      apply (rule assms)+
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+           apply (rule assms)+
+        apply (unfold prod_sum_simps T2_pre_set_defs isVVrs VVr_defs Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+        apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] Abs_T2_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+           apply (rule assms)+
+        apply (unfold prod_sum_simps T2_pre_set_defs isVVrs VVr_defs Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+        apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] Abs_T2_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+           apply (rule assms)+
+        apply (unfold prod_sum_simps T2_pre_set_defs isVVrs VVr_defs Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+        apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] Abs_T2_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+           apply (rule assms)+
+        apply (unfold prod_sum_simps T2_pre_set_defs isVVrs VVr_defs Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+        apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] Abs_T2_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+      (* repeated *)
+  subgoal
+    apply (unfold VVr_defs[symmetric])?
+      (* ORELSE *)
+    apply (rule trans)
+     apply (rule tvsubst_not_is_VVr)
+           apply (rule assms)+
+        apply (unfold prod_sum_simps T2_pre_set_defs isVVrs VVr_defs Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
+        apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI assms
+        | assumption)+
+        (* REPEAT_DETERM *)
+     apply (rule notI)
+     apply (erule exE)
+     apply (drule TT_inject0s[THEN iffD1])
+     apply (erule exE conjE)+
+     apply (unfold comp_def map_sum.simps map_prod_simp sum.inject map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] Abs_T2_pre_inject[OF UNIV_I UNIV_I])
+     apply (erule sum.distinct[THEN notE])
+      (* END REPEAT_DETERM *)
+    apply (unfold map_id0_nesting)?
+    apply (unfold id_def)?
+    apply (rule refl)
+    done
+  done
 
 end

@@ -2698,6 +2698,8 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
 
     val lthy = MRBNF_FP_Def_Sugar.register_fp_results [fp_result] lthy;
 
+    val lthy = MRBNF_FP_Def_Sugar.note_fp_result fp_result lthy;
+
   in (fp_result, lthy) end
 
 end

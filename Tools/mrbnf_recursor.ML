@@ -3033,7 +3033,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
                           EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                           REPEAT_DETERM o FIRST' [
                             resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems),
-                            assume_tac ctxt
+                            assume_tac ctxt,
+                            resolve_tac ctxt card_thms
                           ]
                         ],
                         K (Local_Defs.unfold0_tac ctxt @{thms image_id}),

@@ -467,9 +467,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
         } : (Proof.context -> tactic) MRBNF_Recursor.model
     ) vvsubst_bs (#quotient_fps fp_res) Uctors model_tacss;
 
-    val lthy = Config.put Goal.quick_and_dirty true lthy;
     val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_result parameters models lthy;
-    val lthy = Config.put Goal.quick_and_dirty false lthy;
 
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
@@ -1913,7 +1911,6 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             ]
           ]) (#quotient_fps fp_res) mrbnfs vvsubst_cctors deadss pset_simpss)
         ]);
-        val lthy = Config.put Goal.quick_and_dirty false lthy;
 
         val goals' = @{map 4} (fn psets => fn vvsubst => fn rel => fn z => HOLogic.mk_imp (
           foldr1 HOLogic.mk_conj (@{map 5} (fn set => fn R => fn T => fn x => fn y =>
@@ -2100,7 +2097,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       class_thms Binding.empty Binding.empty Binding.empty []
       (((((((b, #T quot), fst vvsubst), sets), bd_of_mrbnf mrbnf), wits), rel_opt), NONE)
       end
-    ) (0 upto m - 1) vvsubsts (#quotient_fps fp_res) psetss mrbnfs deadss tacss witss (Config.put Goal.quick_and_dirty false lthy);
+    ) (0 upto m - 1) vvsubsts (#quotient_fps fp_res) psetss mrbnfs deadss tacss witss lthy;
 
     val lthy = fold (fn (mrbnf, quot) => MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T quot))) mrbnf) (xs ~~ #quotient_fps fp_res) lthy;
 

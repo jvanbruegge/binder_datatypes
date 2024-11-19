@@ -14,7 +14,7 @@ print_theorems
 lemma perm_id0s:
   "rrename id = id"
   "rrename id = id"
-  by (rule term.rrename_id0s)+
+  by (rule term.permute_id0)+
 
 lemma perm_comps:
   fixes \<sigma> :: "var \<Rightarrow> var"
@@ -22,7 +22,7 @@ lemma perm_comps:
   shows
     "rrename \<sigma> (rrename \<sigma>' x1) = rrename (\<sigma> \<circ> \<sigma>') x1"
     "rrename \<sigma> (rrename \<sigma>' x2) = rrename (\<sigma> \<circ> \<sigma>') x2"
-  by (rule term.rrename_comps assms)+
+  by (rule term.permute_comp assms)+
 
 lemma perm_supports:
   fixes \<sigma> :: "var \<Rightarrow> var"
@@ -30,7 +30,7 @@ lemma perm_supports:
   shows
     "(\<And>a. a \<in> FFVars x1 \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> rrename \<sigma> x1 = x1"
     "(\<And>a. a \<in> FFVars x2 \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> rrename \<sigma> x2 = x2"
-  by (rule term.rrename_cong_ids[OF assms], assumption)+
+  by (rule term.permute_cong_id[OF assms], assumption)+
 
 lemma supp_smalls:
   fixes x1 x2::"trm"
@@ -45,7 +45,7 @@ lemma supp_seminat:
   shows
     "FFVars (rrename \<sigma> x1) \<subseteq> \<sigma> ` FFVars x1"
     "FFVars (rrename \<sigma> x2) \<subseteq> \<sigma> ` FFVars x2"
-  using term.FFVars_rrenames assms by blast+
+  using term.FVars_permute assms by blast+
 
 text \<open>This is automatically derived from @{thm step_def} and the binder annotations\<close>
 thm step_def
@@ -60,7 +60,7 @@ lemma G_equiv:
   shows "G R B x1 x2 \<Longrightarrow> G (\<lambda>x1 x2. R (rrename (inv \<sigma>) x1) (rrename (inv \<sigma>) x2)) (\<sigma> ` B) (rrename \<sigma> x1) (rrename \<sigma> x2)"
   using assms apply -
   unfolding G_def
-  by (elim disj_forward) (auto simp: term.rrename_comps rrename_tvsubst_comp)
+  by (elim disj_forward) (auto simp: term.permute_comp rrename_tvsubst_comp)
 
 abbreviation "supp_T x1 x2 \<equiv> FFVars x1 \<union> FFVars x2"
 

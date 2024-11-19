@@ -468,7 +468,7 @@ next
     subgoal using f by auto .
   show ?thesis using extend_super2[OF super 0] apply safe
   subgoal for g apply(rule exI[of _ g]) using f unfolding A eq_on_def id_on_def 
-    by simp (metis dstream.map_cong irrename_cong) .
+    by simp (metis dstream.map_cong iterm.permute_cong) .
 qed
 
 

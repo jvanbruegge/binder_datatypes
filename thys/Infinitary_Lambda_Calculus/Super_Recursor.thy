@@ -108,7 +108,7 @@ proof-
   next
     case (iLam xs t)
     then show ?case using iiLam   
-      by simp (smt (verit) bij_o bsmall_supp_comp irrename_good iterm.rrename_comps iterm_pre.supp_comp_bound 
+      by simp (smt (verit) bij_o bsmall_supp_comp irrename_good iterm.permute_comp iterm_pre.supp_comp_bound 
       presSuper_comp presSuper_def)
   qed
   thus ?thesis apply(elim allE[of _ id]) by auto
@@ -468,7 +468,7 @@ next
 
     have t1': "t1' = irrename (inv f1' o f1) t"  
     using f1f1' by (metis (mono_tags, lifting) bij_imp_bij_inv f1(1,2) f1'(1,2)
-       inv_o_simp1 supp_inv_bound iterm.rrename_comps iterm.rrename_ids)
+       inv_o_simp1 supp_inv_bound iterm.permute_comp iterm.permute_id)
 
     have ps1: "presSuper (inv f1' \<circ> f1)" "bsmall (supp (inv f1' \<circ> f1))"
       subgoal by (simp add: f1'(1) f1'(2) f1'(3) f1(1) f1(2) f1(3) presSuper_comp presSuper_inv)
@@ -500,7 +500,7 @@ next
     have t2': "t2' = irrename (inv f2' o f2) t"  
     using f2f2' 
     by (metis (mono_tags, lifting) bij_imp_bij_inv f2(1,2) f2'(1,2)
-      inv_o_simp1 iterm.rrename_comps iterm.rrename_ids supp_inv_bound)
+      inv_o_simp1 iterm.permute_comp iterm.permute_id supp_inv_bound)
 
     have ps2: "presSuper (inv f2' \<circ> f2)" "bsmall (supp (inv f2' \<circ> f2))"
       subgoal by (simp add: f2'(1-3) f2(1-3) presSuper_comp presSuper_inv)
@@ -569,7 +569,7 @@ next
 
     have rew2: "irrename ff2' (irrename (inv f2' \<circ> f2) t) = irrename f1 t" 
     by (smt (verit, best) bij_betw_comp_iff bij_is_inj f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2' 
-            ff2'_def if2(2) iterm.rrename_comps iterm.supp_comp_bound o_inv_o_cancel t2')
+            ff2'_def if2(2) iterm.permute_comp iterm.supp_comp_bound o_inv_o_cancel t2')
 
     show "b1 = b2" unfolding 1(3) 2(3) 
     apply(rule iLamB_inject_super_strong'_rev[OF b12', of xs1' xs2' zs f1' ff2'])

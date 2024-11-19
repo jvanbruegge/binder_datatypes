@@ -6,11 +6,11 @@ hide_const inverse_class.inverse_divide trans
 no_notation inverse.inverse_divide (infixl "'/" 70)
 
 abbreviation Tsupp :: "trm \<Rightarrow> cmt \<Rightarrow> var set" where
-"Tsupp e1 e2 \<equiv> FFVars e1 \<union> FFVars_commit e2"
+"Tsupp e1 e2 \<equiv> FFVars e1 \<union> FVars_commit e2"
 
 (* Supply of fresh variables: *)
 lemma finite_Tsupp: "finite (Tsupp e1 e2)"
-  by (metis FFVars_commit_simps(5) finite_FFVars_commit finite_Un)
+  by (metis FVars_commit_simps(5) finite_FVars_commit finite_Un)
 
 lemma finite_vars: "finite (vars act)"
   by (cases act) auto
@@ -43,7 +43,7 @@ lemma isPerm_swap: "isPerm (id(x := y, y := x))"
 lemma R_forw_subst: "R x y \<Longrightarrow> (\<And>x y. R x y \<Longrightarrow> R (f x) (g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x) z"
   by blast
 
-lemma FFVars_commit_Cmt: "FFVars_commit (Cmt act P) = fvars act \<union> (FFVars P - bvars act)"
+lemma FVars_commit_Cmt: "FVars_commit (Cmt act P) = fvars act \<union> (FFVars P - bvars act)"
   by (cases act) auto
 
 lemma empty_bvars_vars_fvars: "bvars act = {} \<Longrightarrow> vars act = fvars act"
@@ -84,8 +84,8 @@ qed
 lemma Bout_inject: "(Bout x y t = Bout x' y' t') \<longleftrightarrow>
   x = x' \<and>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FFVars_term t - {y}) f \<and> f y = y' \<and> rrename_term f t = t')"
-  by (auto 0 4 simp: id_on_def intro!: exI[of _ "id(y:=y', y':=y)"] rrename_cong)
+  \<and> id_on (FVars_term t - {y}) f \<and> f y = y' \<and> permute_term f t = t')"
+  by (auto 0 4 simp: id_on_def intro!: exI[of _ "id(y:=y', y':=y)"] term.permute_cong)
 declare Bout_inj[simp del]
 
 lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
@@ -107,7 +107,7 @@ lemma bvars_rrename_bound_action[simp]: "bvars (rrename_bound_action f \<alpha>)
 lemma Cmt_rrename_bound_action: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> P = Cmt (rrename_bound_action f \<alpha>) (rrename f P)"
   by (cases \<alpha>)
-    (force simp: Bout_inject id_on_def intro!: exI[of _ f] term.rrename_cong_ids[symmetric] rrename_cong)+
+    (force simp: Bout_inject id_on_def intro!: exI[of _ f] term.permute_cong_id[symmetric] term.permute_cong)+
 
 lemma Cmt_rrename_bound_action_Par: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P \<union> FFVars Q - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> (P \<parallel> Q) = Cmt (rrename_bound_action f \<alpha>) (rrename f P \<parallel> rrename f Q)"

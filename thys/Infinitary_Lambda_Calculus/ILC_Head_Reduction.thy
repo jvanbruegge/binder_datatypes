@@ -12,7 +12,7 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
   apply(rule exI[of _ "dsmap \<sigma> xs"])
   apply(rule exI[of _ "irrename \<sigma> e1"])  
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"])   
-  apply (simp add: iterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
+  apply (simp add: iterm.permute_comp) apply(subst irrename_itvsubst_comp) apply auto
   apply(subst imkSubst_smap_irrename_inv) unfolding isPerm_def apply auto 
   apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
   apply(subst itvsubst_comp) 

@@ -44,6 +44,7 @@ sig
     permute_def: thm,
     FVars_defs: thm list,
 
+    fresh_cases: thm,
     noclash_permute: thm,
     nnoclash_noclash: thm,
     total_abs_eq_iff: thm,
@@ -178,6 +179,7 @@ type quotient_result = {
   permute_def: thm,
   FVars_defs: thm list,
 
+  fresh_cases: thm,
   nnoclash_noclash: thm,
   noclash_permute: thm,
   total_abs_eq_iff: thm,
@@ -194,12 +196,13 @@ type quotient_result = {
 
 fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nnoclash_noclash,
   total_abs_eq_iff, abs_rep, rep_abs, rep_abs_sym, abs_ctor, permute_cong, permute_cong_id,
-  permute_bij, permute_inv_simp, noclash_permute } = {
+  permute_bij, permute_inv_simp, noclash_permute, fresh_cases } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
   permute_def = Morphism.thm phi permute_def,
   FVars_defs = map (Morphism.thm phi) FVars_defs,
+  fresh_cases = Morphism.thm phi fresh_cases,
   noclash_permute = Morphism.thm phi noclash_permute,
   nnoclash_noclash = Morphism.thm phi nnoclash_noclash,
   total_abs_eq_iff = Morphism.thm phi total_abs_eq_iff,
@@ -292,6 +295,7 @@ fun note_fp_result (fp_res : fp_result) lthy =
       ("FVars_bd_UNIVs", #card_of_FVars_bound_UNIVs quot),
       ("nnoclash_noclash", [#nnoclash_noclash (#inner quot)]),
       ("total_abs_eq_iff", [#total_abs_eq_iff (#inner quot)]),
+      ("TT_fresh_cases", [#fresh_cases (#inner quot)]),
       ("abs_rep", [#abs_rep (#inner quot)]),
       ("rep_abs", [#rep_abs (#inner quot)]),
       ("rep_abs_sym", [#rep_abs_sym (#inner quot)]),

@@ -78,7 +78,7 @@ fun prove_model_axioms qualify res (models : (Proof.context -> tactic) tvsubst_m
 
     val mrbnfs = #pre_mrbnfs res;
     val nvars = length (#binding_relation res);
-    val pfree = MRBNF_Def.free_of_mrbnf (hd mrbnfs) - nvars - length (#bfree_vars fp_res);
+    val pfree = MRBNF_Def.free_of_mrbnf (hd mrbnfs) - nvars - length (#bfree_vars res);
     val plive = MRBNF_Def.live_of_mrbnf (hd mrbnfs) - foldl1 (op+) (#rec_vars res);
     val pbound = MRBNF_Def.bound_of_mrbnf (hd mrbnfs) - nvars;
 
@@ -98,7 +98,7 @@ fun prove_model_axioms qualify res (models : (Proof.context -> tactic) tvsubst_m
               ||>> chop plive
               ||>> chop pbound
               ||>> chop nvars
-              ||>> chop (length (#bfree_vars fp_res));
+              ||>> chop (length (#bfree_vars res));
 
             val names_lthy = fold (Variable.declare_constraints o Logic.mk_type o TFree) vars lthy;
             val ((((a, b), x), Bs), names_lthy) = names_lthy
@@ -114,7 +114,7 @@ fun prove_model_axioms qualify res (models : (Proof.context -> tactic) tvsubst_m
               |> fst
               |> chop nvars
               ||>> chop nvars
-              ||>> chop (length (#bfree_vars fp_res));
+              ||>> chop (length (#bfree_vars res));
             val fs = free_fs @ bound_fs @ bfree_fs @ live_fs;
 
             val lthy = snd (Local_Theory.begin_nested lthy);

@@ -730,7 +730,8 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
     )) (transpose FVars_rawss));
 
     val FVars_raw_bd_UNIVs = map (map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm,
-      @{thm ordIso_ordLeq_trans} OF [@{thm ordIso_symmetric[OF card_of_Field_natLeq]},
+      @{thm ordIso_ordLeq_trans} OF [
+        @{thm ordIso_symmetric[OF card_of_Field_ordIso]} OF [MRBNF_Def.bd_Card_order_of_mrbnf (hd mrbnfs)],
         #var_large (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))
       ]
     ])) FVars_raw_bds;
@@ -2686,6 +2687,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
         inner = {
           abs = nth TT_abss i,
           rep = nth TT_reps i,
+          fresh_cases = nth fresh_cases i,
           ctor_def = snd (nth ctors i),
           permute_def = snd (nth permutes i),
           FVars_defs = map snd (nth FVarsss i),

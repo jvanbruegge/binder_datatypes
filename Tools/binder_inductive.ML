@@ -152,7 +152,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         val mapx = case mr_bnf of
           Inl mrbnf => MRBNF_Def.map_of_mrbnf mrbnf
           | Inr (Inl bnf) => BNF_Def.map_of_bnf bnf
-          | Inr (Inr sugar) => #rename (hd (filter (fn quot =>
+          | Inr (Inr sugar) => #permute (hd (filter (fn quot =>
             fst (dest_Type (#T quot)) = name
           ) (#quotient_fps sugar)))
         val Ts = fst (split_last (Term.binder_types (fastype_of mapx)));
@@ -432,7 +432,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
 
         fun map_id0_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_id0_of_mrbnf mrbnf]
           | map_id0_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_id0_of_bnf bnf]
-          | map_id0_of_mr_bnf (Inr (Inr sugar)) = map #rename_id0 (#quotient_fps sugar)
+          | map_id0_of_mr_bnf (Inr (Inr sugar)) = map #permute_id0 (#quotient_fps sugar)
 
         fun prove_missing goals specified thms tac = fst (@{fold_map 4} (
           fn true => (fn _ => fn _ => fn _ => fn acc => (hd acc, tl acc))
@@ -444,7 +444,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         fun map_comp_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]
           | map_comp_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_comp_of_bnf bnf, BNF_Def.map_comp0_of_bnf bnf RS sym]
           | map_comp_of_mr_bnf (Inr (Inr sugar)) = maps (fn quot =>
-              [#rename_comp quot, #rename_comp0 quot]
+              [#permute_comp quot, #permute_comp0 quot]
             ) (#quotient_fps sugar)
 
         val perm_id0s = prove_missing perm_id0_goals perms_specified perm_id0s (fn ctxt => fn mr_bnfs => K (EVERY1 [
@@ -458,7 +458,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
 
         fun set_map_of_mr_bnf (Inl mrbnf) = MRBNF_Def.set_map_of_mrbnf mrbnf
           | set_map_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.set_map_of_bnf bnf
-          | set_map_of_mr_bnf (Inr (Inr sugar)) = maps #FVars_renames (#quotient_fps sugar)
+          | set_map_of_mr_bnf (Inr (Inr sugar)) = maps #FVars_permutes (#quotient_fps sugar)
 
         val supp_seminats = prove_missing supp_seminat_goals one_specified supp_seminats (fn ctxt => fn mr_bnfs => K (EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (
@@ -468,7 +468,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
           rtac ctxt @{thm subset_refl}
         ]));
 
-        fun map_cong_id_of_mr_bnf (Inr (Inr sugar)) = map (#rename_cong_id o #inner) (#quotient_fps sugar)
+        fun map_cong_id_of_mr_bnf (Inr (Inr sugar)) = map (#permute_cong_id o #inner) (#quotient_fps sugar)
           | map_cong_id_of_mr_bnf x =
             let
               val thm1 = case x of
@@ -510,6 +510,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
               Facts.lookup context facts (Facts.intern facts name)
             )));
           in (lookup "Un_bound", lookup "UN_bound", lookup "large") end;
+        val _ = @{print} var_large
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr sugar)) = maps #card_of_FVars_bound_UNIVs (#quotient_fps sugar)
           | set_bd_UNIVs_of_mr_bnfs x =

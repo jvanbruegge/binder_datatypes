@@ -13,7 +13,7 @@ abbreviation Tsupp :: "itrm \<Rightarrow> itrm \<Rightarrow> ivar set" where
 
 lemma small_Tsupp: "small (Tsupp t1 t2)"
   unfolding small_def
-  by (auto intro!: var_iterm_pre_class.Un_bound iterm.card_of_FFVars_bounds)
+  by (auto intro!: var_iterm_pre_class.Un_bound iterm.set_bd_UNIV)
 
 lemma Tvars_dsset: "(Tsupp t1 t2 - dsset xs) \<inter> dsset xs = {}" "|Tsupp t1 t2 - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tsupp small_def)
@@ -31,7 +31,7 @@ binder_inductive istep
         apply(rule exI[of _ "dsmap \<sigma> xs"])
         apply(rule exI[of _ "irrename \<sigma> e1"])
         apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-        apply (simp add: iterm.rrename_comps) apply(subst irrename_itvsubst_comp) apply auto
+        apply (simp add: iterm.permute_comp) apply(subst irrename_itvsubst_comp) apply auto
         apply(subst imkSubst_smap_irrename_inv) unfolding isPerm_def apply auto
         apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
         apply(subst itvsubst_comp)
@@ -47,19 +47,19 @@ binder_inductive istep
   subgoal for e1 e1' es2
       apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"])
       apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-      by (simp add: iterm.rrename_comps)
+      by (simp add: iterm.permute_comp)
     (* *)
   subgoal for es2 i e2' e1
       apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
       apply(rule exI[of _ i])
       apply(rule exI[of _ "irrename \<sigma> e2'"])
       apply(rule exI[of _ "irrename \<sigma> e1"])
-      apply (simp add: iterm.rrename_comps) .
+      apply (simp add: iterm.permute_comp) .
     (* *)
   subgoal for e e' xs
       apply(rule exI[of _ "irrename \<sigma> e"]) apply(rule exI[of _ "irrename \<sigma> e'"])
       apply(rule exI[of _ "dsmap \<sigma> xs"])
-      by (simp add: iterm.rrename_comps) .
+      by (simp add: iterm.permute_comp) .
   subgoal premises prems for R B x1 x2
     using prems(2-) apply safe
     subgoal for xs e1 es2

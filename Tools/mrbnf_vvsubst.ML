@@ -236,13 +236,13 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
     val nvars = length (#binding_relation fp_result);
     val (vars, passives) = chop nvars new_vars;
     val ((pfrees, plives), pbounds) = passives
-      |> chop (MRBNF_Def.free_of_mrbnf (hd mrbnfs) - length (#bfree_vars fp_res) - nvars)
+      |> chop (MRBNF_Def.free_of_mrbnf (hd mrbnfs) - length (#bfree_vars fp_result) - nvars)
       ||>> chop (MRBNF_Def.live_of_mrbnf (hd mrbnfs) - foldr1 (op+) (#rec_vars fp_result));
     val ((plives', plives''), _) = names_lthy
       |> mk_TFrees (length plives)
       ||>> mk_TFrees (length plives);
     val passives = (plives, plives', pbounds, pfrees);
-    val bfrees = map (nth vars) (#bfree_vars fp_res);
+    val bfrees = map (nth vars) (#bfree_vars fp_result);
 
     val fp_res = MRBNF_FP_Def_Sugar.substitute_vars (old_vars ~~ new_vars) fp_result;
     val names = map (short_type_name o fst o dest_Type o #T) (#quotient_fps fp_result);

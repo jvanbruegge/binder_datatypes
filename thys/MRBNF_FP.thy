@@ -339,13 +339,11 @@ lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
 lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
   by auto
 
-(*ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>*)
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
-(*ML_file \<open>../Tools/mrbnf_fp.ML\<close>
+ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-*)
 
 lemma extend_fresh:
   fixes A B::"'a set"
@@ -384,8 +382,11 @@ val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
           val fresh = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt A)]
             @{thm extend_fresh};
 
+          val _ = @{print} 1
+
           fun case_inner_tac fs fprems ctxt =
             let
+              val _ = @{print} fs
               val f = hd fs |> snd |> Thm.term_of;
               val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
               val ex_B' = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (mk_image f $ B))] exI;
@@ -397,6 +398,7 @@ val _ = fprems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
               val extra_assms = assms RL (eqvt_thm :: extend_thms);
               val id_onI = fprems RL @{thms id_on_antimono};
 val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
+          val _ = @{print}3 
             in
               HEADGOAL (rtac ctxt ex_B' THEN' rtac ctxt conjI THEN'
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
@@ -410,13 +412,15 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                   addSIs (ex_f :: id_onI @ intro_thms)
                   addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
-          val small_ctxt = ctxt addsimps small_thms;
+          val small_ctxt = ctxt addsimps small_thms addIs small_thms;
         in
           HEADGOAL (rtac ctxt (fresh RS exE) THEN'
           SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])) THEN'
+          K (print_tac ctxt "foo") THEN'
           REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
           REPEAT_DETERM o etac ctxt conjE THEN'
+          (if verbose then K (print_tac ctxt "pre_case_inner_tac") else K all_tac) THEN'
           Subgoal.SUBPROOF (fn focus =>
             case_inner_tac (#params focus) (#prems focus) (#context focus)) ctxt)
         end;

@@ -124,7 +124,7 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
       (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [((name, mrbnf), #rec_vars spec)] (#binding_rel spec) lthy;
+    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [((name, mrbnf), #rec_vars spec)] (map (map (fn i => ([], [i]))) (#binding_rel spec)) lthy;
   in ((res, fp_pre_T, mrbnf, absinfo), lthy) end
 
 fun create_binder_datatype (spec : spec) lthy =
@@ -266,7 +266,7 @@ fun create_binder_datatype (spec : spec) lthy =
         val goal = HOLogic.mk_Trueprop (mk_all (dest_Free rho) (P $ t $ rho));
         val thm = infer_instantiate' lthy (
           [NONE] @ map (SOME o Thm.cterm_of lthy) (Ks @ [P, t])
-        ) (#fresh_co_induct_param (#inner quotient));
+        ) (#fresh_induct_param (#fp_thms res));
 
         val absumprodE = BNF_FP_Util.mk_absumprodE (#type_definition (snd info)) (map (length o snd) (#ctors spec))
       in Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
@@ -278,7 +278,7 @@ fun create_binder_datatype (spec : spec) lthy =
         ) ctxt THEN_ALL_NEW hyp_subst_tac ctxt,
         K (Local_Defs.unfold0_tac ctxt (
           @{thms sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right comp_def
-            UN_singleton sum_set_simps prod_set_simps UN_single UN_empty
+            UN_singleton sum_set_simps prod_set_simps UN_single UN_empty disjoint_single
           } @ map (Thm.symmetric o snd) ctors
           @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
           @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
@@ -292,8 +292,9 @@ fun create_binder_datatype (spec : spec) lthy =
           rtac ctxt thm,
           REPEAT_DETERM o FIRST' (map (fn IH => SELECT_GOAL (EVERY1 [
             REPEAT_DETERM o rtac ctxt allI,
-            TRY o rtac ctxt @{thm disjointI},
+            TRY o rtac ctxt @{thm Int_subset_empty1},
             rtac ctxt IH,
+            TRY o rtac ctxt subsetI,
             K (Local_Defs.unfold0_tac ctxt @{thms Un_iff singleton_iff HOL.simp_thms(6,29,30)}),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms UNIV_I UN_I singletonI TrueI}),
             IF_UNSOLVED o EVERY' [
@@ -406,7 +407,7 @@ fun create_binder_datatype (spec : spec) lthy =
           ]
         ])) end
       ) ctors (#ctors spec))
-    end) (#FVars quotient));
+    end) (#FVarss quotient));
 
     val ctors_tys = ctors ~~ map snd (#ctors spec);
     val distinct = flat (flat (map_index (fn (i, ((ctor, ctor_def), tys1)) => map_index (fn (j, ((ctor2, ctor2_def), tys2)) =>
@@ -601,7 +602,7 @@ fun create_binder_datatype (spec : spec) lthy =
           val collect_sets = map (fn s => case s of [] => NONE | xs => SOME (Term.subst_atomic_types replace (foldl1 MRBNF_Util.mk_Un xs)))
           val bound_sets' = collect_sets bound_sets;
           val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (#binding_rel spec))) rec_vars;
-          val free_sets = collect_sets (mk_sets frees free_rec_vars (SOME (#FVars quotient)));
+          val free_sets = collect_sets (mk_sets frees free_rec_vars (SOME (#FVarss quotient)));
 
           val noclash_prems = if do_noclash then
             map_filter (Option.map HOLogic.mk_Trueprop) (map2 (fn a => fn b => case (a, b) of
@@ -658,9 +659,9 @@ fun create_binder_datatype (spec : spec) lthy =
         val (fs, _) = lthy
           |> mk_Frees "f" (map (fn a => a --> a) vars);
         val Ts' = snd (dest_Type qT);
-        val mapx = Term.subst_atomic_types (Ts' ~~ vars) (#rename quotient);
+        val mapx = Term.subst_atomic_types (Ts' ~~ vars) (#permute quotient);
         fun tac ctxt prems = EVERY1 [
-          rtac ctxt (trans OF [#rename_ctor (#inner quotient)]),
+          rtac ctxt (trans OF [#permute_ctor quotient]),
           K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
             MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
             #Abs_inverse (snd info) OF @{thms UNIV_I}

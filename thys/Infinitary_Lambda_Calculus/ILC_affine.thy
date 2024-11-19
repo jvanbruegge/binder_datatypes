@@ -37,7 +37,7 @@ binder_inductive affine
       subgoal apply(elim exE) subgoal for e xs
         apply(rule exI[of _ "irrename \<sigma> e"])
         apply(rule exI[of _ "dsmap \<sigma> xs"])
-        apply (simp add: iterm.rrename_comps)
+        apply (simp add: iterm.permute_comp)
         done
       done
     done
@@ -46,7 +46,7 @@ binder_inductive affine
       subgoal apply(elim exE) subgoal for e1 es2
         apply(rule exI[of _ "irrename \<sigma> e1"])
         apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-        apply (fastforce simp add: iterm.rrename_comps)
+        apply (fastforce simp add: iterm.permute_comp)
         done
       done
     done

@@ -32,14 +32,14 @@ lemma finite_set_option[simp]: "finite (set_option x)"
   by (cases x) auto
 
 interpretation CComponents where 
-Tperm = rrename_term and
-Tsupp = FFVars_term and
+Tperm = permute_term and
+Tsupp = FVars_term and
 Bperm = map_option and
 Bsupp = set_option and
 bnd = "pred_option prime_var" and
 bsmall = "\<lambda>_. True"
   apply standard
-  apply (auto simp add: term.rrename_id0s term.rrename_comp0s term.set_bd_UNIV
+  apply (auto simp add: term.permute_id0 term.permute_comp0 term.set_bd_UNIV
     isPerm_def small_def card_set_var
     option.map_id0 option.map_comp fun_eq_iff option.set_map
     intro!: option.map_ident_strong finite_card_var)
@@ -84,7 +84,7 @@ GG = G
     by (auto simp: G_def)
   subgoal for \<sigma> R x e
     unfolding presBnd_alt isPerm_def
-    by (auto simp: G_def term.rrename_comps)
+    by (auto simp: G_def term.permute_comp)
   subgoal
     by (auto simp: G_def)
   subgoal for x A B

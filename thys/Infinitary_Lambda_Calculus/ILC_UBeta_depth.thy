@@ -94,11 +94,11 @@ interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
-  using iterm.card_of_FFVars_bounds dsset_card_ls
+  using iterm.set_bd_UNIV dsset_card_ls
   apply (auto simp: dstream_map_ident_strong small_def
- dstream.map_comp iterm.rrename_id0s map_prod.comp iterm.rrename_comp0s infinite_UNIV fun_eq_iff stream.map_comp
+ dstream.map_comp iterm.permute_id0 map_prod.comp iterm.permute_comp0 infinite_UNIV fun_eq_iff stream.map_comp
     intro!: var_sum_class.UN_bound var_sum_class.Un_bound
-stream.map_ident_strong iterm.rrename_cong_ids split: option.splits)
+stream.map_ident_strong iterm.permute_cong_id split: option.splits)
           apply auto
  unfolding bsmall_def touchedSuper_def apply(frule super_dsset_singl) apply auto
   using super_Un_ddset_triv  
@@ -134,7 +134,7 @@ where
 lemma G_mmono: "R \<le> R' \<Longrightarrow> G xxs R t \<Longrightarrow> G xxs R' t"
 unfolding G_def by fastforce
 
-declare iterm.rrename_id0s[simp]
+declare iterm.permute_id0[simp]
 
 lemma smap2_smap: "smap2 f (smap g xs) (smap h ys) = smap2 (\<lambda>x y. f (g x) (h y)) xs ys"
 by (simp add: smap2_alt)
@@ -159,7 +159,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (irrename \<sigma>) es"])  
   apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_presSuper
-  apply (simp add: iterm.rrename_comps uniformS_irrename) unfolding stream_all2_iff_snth
+  apply (simp add: iterm.permute_comp uniformS_irrename) unfolding stream_all2_iff_snth
   using hred_irrename by auto . .
   (* *)
   subgoal apply(rule disjI4_2)
@@ -168,7 +168,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_presSuper
-  apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap uniformS_irrename  
+  apply (simp add: iterm.permute_comp0 stream.map_comp smap2_smap uniformS_irrename  
      uniformS_sflat irrename_reneqv) . . .
   (* *)
   subgoal apply(rule disjI4_3)
@@ -178,8 +178,8 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess"]) 
   apply(rule exI[of _ "smap (smap (irrename \<sigma>)) ess'"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def  
-  apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap smap_sflat) 
-  by (metis ILC_Renaming_Equivalence.presBnd_presSuper id_apply inv_o_simp1 iterm.rrename_bijs iterm.rrename_inv_simps smap_sflat stream.map_comp stream.map_id0 uniformS_irrename)
+  apply (simp add: iterm.permute_comp0 stream.map_comp smap2_smap smap_sflat) 
+  by (metis ILC_Renaming_Equivalence.presBnd_presSuper id_apply inv_o_simp1 iterm.permute_bij iterm.permute_inv_simp smap_sflat stream.map_comp stream.map_id0 uniformS_irrename)
   . .  
   (* *)
   subgoal apply(rule disjI4_4)
@@ -188,7 +188,7 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ d])
   apply(rule exI[of _ "smap (irrename \<sigma>) es"]) apply(rule exI[of _ "smap (irrename \<sigma>) es'"]) 
   apply(cases t) unfolding isPerm_def small_def Tperm_def  
-  apply (simp add: iterm.rrename_comp0s stream.map_comp smap2_smap)
+  apply (simp add: iterm.permute_comp0 stream.map_comp smap2_smap)
     by (metis (no_types, lifting) comp_apply iterm.permute(3) presSuper_def stream.map_cong presBnd_presSuper) 
    . . . 
 

@@ -92,13 +92,13 @@ lemma SA_AllE1[consumes 2, case_names SA_Trans_TVar SA_All]:
   shows "R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) T"
 using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^sub>2" T avoiding: \<Gamma> "\<forall>X<:S\<^sub>1. S\<^sub>2" T rule: ty.strong_induct)
   case (SA_All \<Gamma> T\<^sub>1 R\<^sub>1 Y R\<^sub>2 T\<^sub>2)
-  have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) T\<^sub>2"
+  have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. permute_typ (id(Y:=X,X:=Y)) T\<^sub>2"
     apply (rule Forall_swap)
     using SA_All(6,9) well_scoped(2) by fastforce
-  have fresh: "X \<notin> FFVars_typ T\<^sub>1"
+  have fresh: "X \<notin> FVars_typ T\<^sub>1"
     by (meson SA_All(4,9) in_mono well_scoped(1))
   have same: "R\<^sub>1 = S\<^sub>1" using SA_All(8) typ_inject(3) by blast
-  have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) R\<^sub>2"
+  have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. permute_typ (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
     by (metis (no_types, lifting) SA_All(8) assms(1,2) in_mono sup.bounded_iff typ.set(4) well_scoped(1))
   show ?case unfolding 1
@@ -125,17 +125,17 @@ lemma SA_AllE2[consumes 2, case_names SA_Trans_TVar SA_All]:
   shows "R \<Gamma> S (\<forall>X<:T\<^sub>1. T\<^sub>2)"
 using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^sub>2" avoiding: \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^sub>2" rule: ty.strong_induct)
   case (SA_All \<Gamma> R\<^sub>1 S\<^sub>1 Y S\<^sub>2 R\<^sub>2)
-  have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) S\<^sub>2"
+  have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. permute_typ (id(Y:=X,X:=Y)) S\<^sub>2"
     apply (rule Forall_swap)
     using SA_All(6,9) well_scoped(1) by fastforce
   have fresh: "X \<notin> dom \<Gamma>" "Y \<notin> dom \<Gamma>"
     using SA_All(9) apply blast
     by (metis SA_All(6) fst_conv wf_ConsE wf_context)
-  have fresh2: "X \<notin> FFVars_typ T\<^sub>1" "Y \<notin> FFVars_typ T\<^sub>1"
+  have fresh2: "X \<notin> FVars_typ T\<^sub>1" "Y \<notin> FVars_typ T\<^sub>1"
      apply (metis SA_All(4,8) in_mono fresh(1) typ_inject(3) well_scoped(1))
     by (metis SA_All(4,8) in_mono fresh(2) typ_inject(3) well_scoped(1))
   have same: "R\<^sub>1 = T\<^sub>1" using SA_All(8) typ_inject(3) by blast
-  have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. rrename_typ (id(Y:=X,X:=Y)) R\<^sub>2"
+  have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. permute_typ (id(Y:=X,X:=Y)) R\<^sub>2"
     apply (rule Forall_swap)
     by (metis SA_All(8) Un_iff assms(1,2) in_mono typ.set(4) well_scoped(2))
   show ?case unfolding 1
@@ -151,7 +151,7 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
     using fresh apply (metis bij_swap SA_All(4) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
       apply simp
-    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound typ.rrename_cong_ids)
+    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound typ.permute_cong_id)
     using SA_All(8) x Forall_inject_same unfolding same by simp
 qed (auto simp: TyVar)
 

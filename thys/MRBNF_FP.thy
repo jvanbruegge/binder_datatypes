@@ -382,11 +382,8 @@ val _ = prems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
           val fresh = infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt B), SOME (Thm.cterm_of ctxt A)]
             @{thm extend_fresh};
 
-          val _ = @{print} 1
-
           fun case_inner_tac fs fprems ctxt =
             let
-              val _ = @{print} fs
               val f = hd fs |> snd |> Thm.term_of;
               val ex_f = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt f)] exI;
               val ex_B' = infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (mk_image f $ B))] exI;
@@ -398,7 +395,6 @@ val _ = fprems |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
               val extra_assms = assms RL (eqvt_thm :: extend_thms);
               val id_onI = fprems RL @{thms id_on_antimono};
 val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
-          val _ = @{print}3 
             in
               HEADGOAL (rtac ctxt ex_B' THEN' rtac ctxt conjI THEN'
                 REPEAT_ALL_NEW (resolve_tac ctxt (conjI :: fprems)) THEN'
@@ -416,7 +412,6 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
         in
           HEADGOAL (rtac ctxt (fresh RS exE) THEN'
           SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])) THEN'
-          K (print_tac ctxt "foo") THEN'
           REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
           REPEAT_DETERM o etac ctxt conjE THEN'

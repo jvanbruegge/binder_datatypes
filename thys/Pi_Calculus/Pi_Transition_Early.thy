@@ -11,8 +11,6 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
-declare [[show_consts]]
-declare term.Un_bound[intro!]
 binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
@@ -24,7 +22,7 @@ binder_inductive trans
         | (rule exI[of _ "rrename \<sigma> _"])
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
-    by (tactic \<open>refreshability_tac true
+    by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FVars_commit :: cmt \<Rightarrow> var set"}]
       [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"},
        @{term "rrename_bound_action :: (var \<Rightarrow> var) \<Rightarrow> var action \<Rightarrow> var action"}]
@@ -36,7 +34,7 @@ binder_inductive trans
        SOME [SOME 0, NONE, SOME 1, SOME 0, SOME 1],
        SOME [NONE, SOME 2, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound insert_bound card_of_minus_bound var_term_pre_class.Un_bound term.set_bd_UNIV commit_internal.FVars_bd_UNIVs infinite_UNIV bns_bound}
+      @{thms emp_bound singl_bound insert_bound card_of_minus_bound var_term_pre_class.Un_bound term.set_bd_UNIV commit.FVars_bd_UNIVs infinite_UNIV bns_bound}
       @{thms Res_inject Inp_inject Bout_inject FVars_commit_Cmt ns_alt vars_alt Int_Un_distrib}
       @{thms Inp_eq_usub term.permute_cong_id term.permute_cong_id[symmetric] arg_cong2[where f=Cmt, OF _ refl] arg_cong2[where f=Cmt, OF refl]
           action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout] Cmt_rrename_bound_action Cmt_rrename_bound_action_Par}

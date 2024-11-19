@@ -510,7 +510,6 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
               Facts.lookup context facts (Facts.intern facts name)
             )));
           in (lookup "Un_bound", lookup "UN_bound", lookup "large") end;
-        val _ = @{print} var_large
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr sugar)) = maps #card_of_FVars_bound_UNIVs (#quotient_fps sugar)
           | set_bd_UNIVs_of_mr_bnfs x =

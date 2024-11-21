@@ -1,7 +1,9 @@
-This is the artifact accompanying the paper:
+This is an updated version of the artifact accompanying the paper:
 
 Barendregt Convenes with Knaster and Tarski:
 Strong Rule Induction for Syntax with Bindings
+
+The orignally reviewed version can be found [here](https://github.com/jvanbruegge/binder_datatypes/tree/POPL25_v1.2).
 
 ### How To Run?
 

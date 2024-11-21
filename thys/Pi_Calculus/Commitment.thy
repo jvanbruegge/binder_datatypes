@@ -2,7 +2,7 @@ theory Commitment
 imports Pi  "Prelim.Curry_LFP" "Binders.Generic_Barendregt_Enhanced_Rule_Induction"
 begin
 
-local_setup \<open>fn lthy =>
+(*local_setup \<open>fn lthy =>
 let
   val name1 = "commit_internal"
   val name2 = "commit"
@@ -41,27 +41,21 @@ let
     ((name1, mrbnf1), 1), ((name2, mrbnf2), 1)
   ] rel lthy;
 in lthy end
-\<close>
+\<close>*)
 print_theorems
 
+binder_datatype 'var commit =
+    Finp 'var 'var "'var term"
+  | Fout 'var 'var "'var term"
+  | Bout 'var x::'var "(t::'var) term" binds x in t
+  | Tau "'var term"
+  | Binp 'var x::'var "(t::'var) term" binds x in t
 
 (* Monomorphization: *)
 type_synonym cmt = "var commit"
 instance var :: var_commit_pre by standard
-instance var :: var_commit_internal_pre by standard
 
-definition Finp :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" where
-  "Finp x y t \<equiv> commit_ctor (Abs_commit_pre (Inl (x, y, t)))"
-definition Fout :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" where
-  "Fout x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inl (x, y, t))))"
-definition Bout :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" where
-  "Bout x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inl (x, y, commit_internal_ctor (Abs_commit_internal_pre t))))))"
-definition Tau :: "trm \<Rightarrow> cmt" where
-  "Tau t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inr (Inl t)))))"
-definition Binp :: "var \<Rightarrow> var \<Rightarrow> trm \<Rightarrow> cmt" where
-  "Binp x y t \<equiv> commit_ctor (Abs_commit_pre (Inr (Inr (Inr (Inr (x, y, commit_internal_ctor (Abs_commit_internal_pre t)))))))"
-
-lemmas toUnfold = set1_commit_internal_pre_def
+lemmas toUnfold =
   UN_empty UN_empty2 UN_single Un_empty_left Un_empty_right
   comp_def empty_Diff
   map_prod_simp prod_set_simps
@@ -69,181 +63,40 @@ lemmas toUnfold = set1_commit_internal_pre_def
   Sup_empty cSup_singleton
   (* *)
   Abs_commit_pre_inverse[OF UNIV_I]
-  set1_commit_pre_def set2_commit_pre_def set4_commit_pre_def set3_commit_pre_def
-  Abs_commit_internal_pre_inverse[OF UNIV_I]
-  set1_commit_internal_pre_def set2_commit_internal_pre_def
-  set3_commit_internal_pre_def set4_commit_internal_pre_def
-
-lemma FVars_commit_simps[simp]:
-  "FVars_commit (Finp x y t) = {x, y} \<union> FFVars t"
-  "FVars_commit (Fout x y t) = {x, y} \<union> FFVars t"
-  "FVars_commit (Binp x y t) = {x} \<union> (FFVars t - {y})"
-  "FVars_commit (Bout x y t) = {x} \<union> (FFVars t - {y})"
-  "FVars_commit (Tau t) = FFVars t"
-  apply (unfold Binp_def Bout_def Finp_def Fout_def Tau_def)
-  apply (unfold commit.FVars_ctor)
-  apply (unfold toUnfold)
-      apply (unfold commit_internal.FVars_ctor)
-  apply (unfold toUnfold)
-  apply auto
-  done
+  set1_commit_pre_def set2_commit_pre_def
 
 lemmas commit_pre.map_id0[simp]
-lemmas commit_pre_map_cong_id = commit_pre.map_cong[of _ _ "id::var\<Rightarrow>var" "id::var\<Rightarrow>var" _ _ _ id _ id, simplified]
-
-lemma map_commit_pre_Inl_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
- map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (permute_commit_internal f) id (Abs_commit_pre (Inl (x, y, P))) =
- Abs_commit_pre (Inl (x, y, P))"
-apply(rule commit_pre_map_cong_id) unfolding toUnfold by auto
-
-lemma map_commit_pre_Inr_Inl_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
- map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (permute_commit_internal f) id (Abs_commit_pre (Inr (Inl (x, y, P)))) =
- Abs_commit_pre (Inr (Inl (x, y, P)))"
-apply(rule commit_pre_map_cong_id) unfolding toUnfold by auto
-
-lemma map_commit_pre_Inr_Inr_Inl_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
- map_commit_pre id f (permute_commit_internal f) id
-          (Abs_commit_pre (Inr (Inr (Inl (x::var, y::var, commit_internal_ctor (Abs_commit_internal_pre P)))))) =
- Abs_commit_pre (Inr (Inr (Inl (x, f y, commit_internal_ctor (Abs_commit_internal_pre (rrename f P))))))"
-unfolding map_commit_pre_def toUnfold apply auto
-unfolding commit_internal.permute_ctor
-unfolding map_commit_internal_pre_def by (simp add: toUnfold(27))
-
-lemma map_commit_pre_Inr_Inr_Inr_Inl_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
- map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (permute_commit_internal f) id (Abs_commit_pre (Inr (Inr (Inr (Inl P))))) =
- Abs_commit_pre (Inr (Inr (Inr (Inl P))))"
-apply(rule commit_pre_map_cong_id) unfolding toUnfold by auto
-
-lemma map_commit_pre_Inr_Inr_Inr_Inr_aux: "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow>
- map_commit_pre (id::var\<Rightarrow>var) (f::var\<Rightarrow>var) (permute_commit_internal f) id (Abs_commit_pre (Inr (Inr (Inr (Inr (x::var, y::var, commit_internal_ctor (Abs_commit_internal_pre P))))))) =
- Abs_commit_pre (Inr (Inr (Inr (Inr (x, f y, commit_internal_ctor (Abs_commit_internal_pre (rrename f P)))))))"
-unfolding map_commit_pre_def toUnfold apply auto
-unfolding commit_internal.permute_ctor
-unfolding map_commit_internal_pre_def by (simp add: toUnfold(27))
+lemmas commit_pre_map_cong_id = commit_pre.map_cong[of _ _ _ id id id, simplified]
 
 lemma Abs_commit_pre_inj[simp]: "Abs_commit_pre k = Abs_commit_pre k' \<longleftrightarrow> k = k'"
-by (metis toUnfold(22))
-
-lemma Abs_commit_internal_pre_inj[simp]: "Abs_commit_internal_pre k = Abs_commit_internal_pre k' \<longleftrightarrow> k = k'"
-by (metis toUnfold(27))
+  by (metis toUnfold(21))
 
 lemma Finp_inj[simp]: "Finp x y P = Finp x' y' P' \<longleftrightarrow> x = x' \<and> y = y' \<and> P = P'"
-unfolding Finp_def unfolding commit.TT_inject0 apply simp
-unfolding toUnfold apply auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inl_aux) by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inl_aux) by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inl_aux) by auto
-  subgoal apply(rule exI[of _ id]) apply(subst map_commit_pre_Inl_aux) by auto .
+  unfolding Finp_def commit.TT_inject0 toUnfold map_commit_pre_def by auto
 
 lemma Fout_inj[simp]: "Fout x y P = Fout x' y' P' \<longleftrightarrow> x = x' \<and> y = y' \<and> P = P'"
-unfolding Fout_def unfolding commit.TT_inject0 apply simp
-unfolding toUnfold apply auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inl_aux) by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inl_aux) by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inl_aux) by auto
-  subgoal apply(rule exI[of _ id]) apply(subst map_commit_pre_Inr_Inl_aux) by auto .
+  unfolding Fout_def commit.TT_inject0 toUnfold map_commit_pre_def by auto
 
 lemma Bout_inj[simp]: "Bout x y P = Bout x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
-unfolding Bout_def unfolding commit.TT_inject0 apply simp
-unfolding toUnfold apply auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inl_aux) by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inl_aux)
-  unfolding id_on_def apply auto unfolding commit_internal.FVars_ctor toUnfold by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inl_aux)
-  unfolding id_on_def apply auto unfolding commit_internal.FVars_ctor toUnfold
-  unfolding commit_internal.TT_inject0 id_on_def
-  unfolding map_commit_internal_pre_def apply (auto simp: toUnfold id_on_def)
-  apply(rule term.permute_cong) by auto
+  unfolding Bout_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
+  apply (rule iffI)
+   apply (auto simp: id_on_def)[1]
+   apply (rule term.permute_cong)
+  apply auto
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
-  apply(subst map_commit_pre_Inr_Inr_Inl_aux) apply auto
-  unfolding commit_internal.FVars_ctor by (auto simp: toUnfold id_on_def)
-  subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
-  apply(subst map_commit_pre_Inr_Inr_Inl_aux) by auto .
+    by (auto simp: id_on_def) .
 
 lemma Binp_inj[simp]: "Binp x y P = Binp x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
-unfolding Binp_def unfolding commit.TT_inject0 apply simp
-unfolding toUnfold apply auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inr_aux) by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inr_aux)
-  unfolding id_on_def apply auto unfolding commit_internal.FVars_ctor toUnfold by auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inr_aux)
-  unfolding id_on_def apply auto unfolding commit_internal.FVars_ctor toUnfold
-  unfolding commit_internal.TT_inject0 id_on_def
-  unfolding map_commit_internal_pre_def apply (auto simp: toUnfold id_on_def)
-  apply(rule term.permute_cong) by auto
+unfolding Binp_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
+  apply (rule iffI)
+   apply (auto simp: id_on_def)[1]
+   apply (rule term.permute_cong)
+  apply auto
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
-  apply(subst map_commit_pre_Inr_Inr_Inr_Inr_aux) apply auto
-  unfolding commit_internal.FVars_ctor by (auto simp: toUnfold id_on_def)
-  subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
-  apply(subst map_commit_pre_Inr_Inr_Inr_Inr_aux) by auto .
+    by (auto simp: id_on_def) .
 
 lemma Tau_inj[simp]: "Tau P = Tau P' \<longleftrightarrow> P = P'"
-unfolding Tau_def unfolding commit.TT_inject0 apply simp
-unfolding toUnfold apply auto
-  subgoal for f apply(subst (asm) map_commit_pre_Inr_Inr_Inr_Inl_aux) by auto
-  subgoal apply(rule exI[of _ id]) apply(subst map_commit_pre_Inr_Inr_Inr_Inl_aux) by auto .
-
-(* *)
-
-lemma Finp_Fout_diff[simp]: "Finp x y P \<noteq> Fout x' y' P'"
-unfolding Finp_def Fout_def
-by (metis Abs_commit_pre_inj Inl_Inr_False commit.TT_inject0 map_commit_pre_Inl_aux)
-
-lemmas Fout_Finp_diff[simp] = Finp_Fout_diff[symmetric]
-
-lemma Finp_Bout_diff[simp]: "Finp x y P \<noteq> Bout x' y' P'"
-unfolding Finp_def Bout_def
-by (metis Abs_commit_pre_inj Inl_Inr_False commit.TT_inject0 map_commit_pre_Inl_aux)
-
-lemmas Bout_Finp_diff[simp] = Finp_Bout_diff[symmetric]
-
-lemma Finp_Tau_diff[simp]: "Finp x y P \<noteq> Tau P'"
-unfolding Finp_def Tau_def
-by (metis Abs_commit_pre_inj Inl_Inr_False commit.TT_inject0 map_commit_pre_Inl_aux)
-
-lemmas Tau_Finp_diff[simp] = Finp_Tau_diff[symmetric]
-
-lemma Fout_Bout_diff[simp]: "Fout x y P \<noteq> Bout x' y' P'"
-unfolding Fout_def Bout_def
-by (metis Abs_commit_pre_inj Inl_Inr_False commit.TT_inject0 map_commit_pre_Inr_Inl_aux sum.inject(2))
-
-lemmas Bout_Fout_diff[simp] = Fout_Bout_diff[symmetric]
-
-lemma Fout_Tau_diff[simp]: "Fout x y P \<noteq> Tau P'"
-unfolding Fout_def Tau_def
-by (metis Abs_commit_pre_inj Inl_Inr_False commit.TT_inject0 map_commit_pre_Inr_Inl_aux sum.inject(2))
-
-lemmas Tau_Fout_diff[simp] = Fout_Tau_diff[symmetric]
-
-lemma Bout_Tau_diff[simp]: "Bout x y P \<noteq> Tau P'"
-unfolding Bout_def Tau_def
-by (smt (verit) Inl_Inr_False Inr_inject commit.TT_inject0 map_commit_pre_Inr_Inr_Inl_aux toUnfold(22))
-
-lemmas Tau_Bout_diff[simp] = Bout_Tau_diff[symmetric]
-
-lemma Binp_Bout_diff[simp]: "Binp x y P \<noteq> Bout x' y' P'"
-  unfolding Binp_def Bout_def
-  by (smt (verit) Inl_Inr_False Inr_inject commit.TT_inject0 map_commit_pre_Inr_Inr_Inl_aux toUnfold(22))
-
-lemmas Bout_Binp_diff[simp] = Binp_Bout_diff[symmetric]
-
-lemma Binp_Finp_diff[simp]: "Binp x y P \<noteq> Finp x' y' P'"
-  unfolding Binp_def Finp_def
-  by (metis Abs_commit_pre_inj Inl_Inr_False commit.TT_inject0 map_commit_pre_Inl_aux)
-
-lemmas Finp_Binp_diff[simp] = Binp_Finp_diff[symmetric]
-
-lemma Binp_Fout_diff[simp]: "Binp x y P \<noteq> Fout x' y' P'"
-  unfolding Binp_def Fout_def
-  by (metis Abs_commit_pre_inj Inl_Inr_False Inr_inject commit.TT_inject0 map_commit_pre_Inr_Inl_aux)
-
-lemmas Fout_Binp_diff[simp] = Binp_Fout_diff[symmetric]
-
-lemma Binp_Tau_diff[simp]: "Binp x y P \<noteq> Tau P'"
-  unfolding Binp_def Tau_def
-  by (metis Abs_commit_pre_inj Inr_not_Inl commit.TT_inject0 map_commit_pre_Inr_Inr_Inr_Inl_aux old.sum.inject(2))
-
-lemmas Tau_Binp_diff[simp] = Binp_Tau_diff[symmetric]
+unfolding Tau_def commit.TT_inject0 toUnfold map_commit_pre_def by auto
 
 (* Supply of fresh variables *)
 
@@ -262,39 +115,6 @@ proof-
     infinite_iff_natLeq_ordLeq var_term_pre_class.large)
   thus ?thesis by auto
 qed
-
-(* *)
-
-lemma permute_commit_Finp[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
-  permute_commit \<sigma> (Finp a u P) = Finp (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-unfolding Finp_def unfolding commit.permute_ctor
-unfolding map_commit_pre_def unfolding toUnfold by simp
-
-lemma permute_commit_Fout[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
-  permute_commit \<sigma> (Fout a u P) = Fout (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-unfolding Fout_def unfolding commit.permute_ctor
-unfolding map_commit_pre_def unfolding toUnfold by simp
-
-lemma permute_commit_Bout[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
-  permute_commit \<sigma> (Bout a u P) = Bout (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-unfolding Bout_def unfolding commit.permute_ctor
-unfolding map_commit_pre_def unfolding toUnfold
-unfolding commit.permute_ctor commit_internal.permute_ctor
-unfolding map_commit_internal_pre_def unfolding toUnfold by simp
-
-lemma permute_commit_Binp[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
-  permute_commit \<sigma> (Binp a u P) = Binp (\<sigma> a) (\<sigma> u) (rrename \<sigma> P)"
-unfolding Binp_def unfolding commit.permute_ctor
-unfolding map_commit_pre_def unfolding toUnfold
-unfolding commit.permute_ctor commit_internal.permute_ctor
-unfolding map_commit_internal_pre_def unfolding toUnfold by simp
-
-lemma permute_commit_Tau[simp]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
-  permute_commit \<sigma> (Tau P) = Tau (rrename \<sigma> P)"
-unfolding Tau_def unfolding commit.permute_ctor
-unfolding map_commit_pre_def unfolding toUnfold
-unfolding commit.permute_ctor(1)
-unfolding map_commit_internal_pre_def unfolding toUnfold by simp
 
 (* Actions *)
 
@@ -349,10 +169,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
     (@{term Binp}, @{thm Binp_def}),
     (@{term Cmt}, @{thm refl})
   ],
-  permute_simps = @{thms
-    permute_commit_Finp permute_commit_Fout permute_commit_Bout
-    permute_commit_Binp permute_commit_Tau
-  },
+  permute_simps = @{thms commit.permute},
   map_simps = [],
   distinct = [],
   bsetss = [[

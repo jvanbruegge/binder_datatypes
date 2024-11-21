@@ -30,6 +30,7 @@ sig
   val mk_minus: term * term -> term;
   val mk_all: string * typ -> term -> term;
   val mk_ex: string * typ -> term -> term;
+  val mk_insert: term -> term -> term;
 
   val strip_ex: term -> (string * typ) list * term
 
@@ -83,6 +84,9 @@ fun swap (a, b) = (b, a)
 val mk_minus = HOLogic.mk_binop @{const_name minus};
 fun mk_all (x, T) t = HOLogic.mk_all (x, T, t);
 fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
+
+fun mk_insert x S =
+  Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let

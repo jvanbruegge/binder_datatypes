@@ -64,9 +64,9 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
 
     val names = maps (find_names o YXML.content_of o snd o snd) xs;
     fun mk_typedecl name = Typedecl.basic_typedecl {final = true} (Binding.name name, 0, NoSyn)
-    val (fake_names, lthy) = fold_map mk_typedecl names lthy;
+    val (fake_names, names_lthy) = fold_map mk_typedecl names lthy;
 
-    val (sels, Ts) = split_list (map (apsnd (Syntax.read_typ lthy) o snd) xs);
+    val (sels, Ts) = split_list (map (apsnd (Syntax.read_typ names_lthy) o snd) xs);
 
     fun fold_map_typ f (Type (n, Ts)) x =
       let val (Ts', x') = fold_map (fold_map_typ f) Ts x

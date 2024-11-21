@@ -10,7 +10,7 @@ abbreviation Tsupp :: "trm \<Rightarrow> cmt \<Rightarrow> var set" where
 
 (* Supply of fresh variables: *)
 lemma finite_Tsupp: "finite (Tsupp e1 e2)"
-  by (metis FVars_commit_simps(5) finite_FVars_commit finite_Un)
+  by (metis commit.set(4) finite_FVars_commit finite_Un)
 
 lemma finite_vars: "finite (vars act)"
   by (cases act) auto

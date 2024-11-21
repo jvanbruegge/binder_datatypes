@@ -41,7 +41,7 @@ thm cong.strong_induct
 thm cong.equiv
 
 lemma finite_Tsupp: "finite (Tsupp x1 x2)"
-  by (metis FVars_commit_simps(5) finite_FVars_commit finite_Un)
+  by (metis commit.set(4) finite_FVars_commit finite_Un)
 
 lemma exists_fresh:
   "\<exists> z. z \<notin> set xs \<and> (z \<notin> Tsupp x1 x2)"

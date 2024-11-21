@@ -370,7 +370,15 @@ fun create_binder_datatype (spec : spec) lthy =
                 | NONE => FVars $ t)
             | t => if member (op=) rec_vars (HOLogic.dest_setT (fastype_of t)) then mk_UNION t FVars else t
           ) (flat (map_filter I (map2 (fn T => fn x => get_sets T vars x) tys xs)));
-          val sets = get_set (free::subtract (op=) rec_bounds rec_vars)
+
+          val sets = get_set (free::subtract (op=) rec_bounds rec_vars);
+          fun incorporate xs = case xs of [] => I | (x::_) => cons (fold_rev mk_insert xs (mk_bot (fastype_of x)));
+          val (xtra, sets) = fold_rev (
+            fn Const (@{const_name insert}, _) $ t $ Const (@{const_name bot}, _) => (fn (xs, acc) => (t::xs, acc))
+            | t => fn (xs, acc) => ([], incorporate xs (t::acc))
+          ) sets ([], []);
+          val sets = incorporate xtra sets;
+
           val brec_sets = get_set (the_default [] (Option.map single bfree_opt) @ rec_bounds)
           val bsets = map (fn (t as Free _) => mk_singleton t | t => t) (
             flat (map_filter I (map2 (fn T => fn x => get_sets T [bound] x) tys xs))
@@ -396,7 +404,7 @@ fun create_binder_datatype (spec : spec) lthy =
               | _ => foldl1 MRBNF_Util.mk_Un sets
           ));
           val thms = @{thms sum.set_map prod.set_map comp_def UN_empty UN_empty2 Un_empty_left Un_empty_right
-            UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un
+            UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un Un_assoc[symmetric] insert_is_Un[of _ "{_}"]
           };
         in (bset_opt, Goal.prove_sorry lthy (names xs) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (

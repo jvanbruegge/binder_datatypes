@@ -16,9 +16,6 @@ fun long_name ctxt name =
 fun collapse (Inl x) = x
   | collapse (Inr x) = x
 
-fun mk_insert x S =
-  Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
-
 fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
   let
     val binds = the_default [] binds_opt;

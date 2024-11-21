@@ -174,7 +174,7 @@ lemma Abs_avoid: "|A::'a::var_terms_pre set| <o |UNIV::'a set| \<Longrightarrow>
    apply (rule trans)
     apply (rule sym)
     apply assumption
-  apply (rotate_tac 2)
+  apply (rotate_tac 3)
    apply assumption
   apply (drule iffD1[OF disjoint_iff])
   apply (erule allE)

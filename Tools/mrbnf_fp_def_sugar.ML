@@ -78,7 +78,7 @@ sig
     bfree_vars: int list,
     raw_fps: raw_result fp_result_T list,
     quotient_fps: quotient_result fp_result_T list,
-    fp_thms: least_fp_thms,
+    fp_thms: least_fp_thms option,
     pre_mrbnfs: MRBNF_Def.mrbnf list
   };
 
@@ -248,7 +248,7 @@ type fp_result = {
   bfree_vars: int list,
   raw_fps: raw_result fp_result_T list,
   quotient_fps: quotient_result fp_result_T list,
-  fp_thms: least_fp_thms,
+  fp_thms: least_fp_thms option,
   pre_mrbnfs: MRBNF_Def.mrbnf list
 };
 
@@ -256,7 +256,7 @@ fun morph_fp_result phi ({ fp, binding_relation, rec_vars, bfree_vars, raw_fps, 
   fp = fp, binding_relation = binding_relation, rec_vars = rec_vars, bfree_vars = bfree_vars,
   raw_fps = map (morph_fp_result_T morph_raw_result phi) raw_fps,
   quotient_fps = map (morph_fp_result_T morph_quotient_result phi) quotient_fps,
-  fp_thms = morph_least_fp_thms phi fp_thms,
+  fp_thms = Option.map (morph_least_fp_thms phi) fp_thms,
   pre_mrbnfs = map (MRBNF_Def.morph_mrbnf phi) pre_mrbnfs
 } : fp_result;
 
@@ -319,15 +319,15 @@ fun note_fp_result (fp_res : fp_result) lthy =
     fun note_quot (quot : quotient_result fp_result_T) =
       (if Config.get lthy MRBNF_Def.mrbnf_internals then
         note_internals quot
-        @ [
-          ("wf_subshape", [#wf_subshape (#fp_thms fp_res)]),
-          ("set_subshapes", flat (#set_subshapess (#fp_thms fp_res))),
-          ("set_subshape_permutes", flat (#set_subshape_permutess (#fp_thms fp_res))),
-          ("subshape_induct", [#subshape_induct (#fp_thms fp_res)]),
-          ("existential_induct", [#existential_induct (#fp_thms fp_res)]),
-          ("fresh_induct_param", [#fresh_induct_param (#fp_thms fp_res)]),
-          ("TT_fresh_induct", [#fresh_induct (#fp_thms fp_res)])
-        ]
+        @ the_default [] (Option.map (fn fp_thms => [
+          ("wf_subshape", [#wf_subshape fp_thms]),
+          ("set_subshapes", flat (#set_subshapess fp_thms)),
+          ("set_subshape_permutes", flat (#set_subshape_permutess fp_thms)),
+          ("subshape_induct", [#subshape_induct fp_thms]),
+          ("existential_induct", [#existential_induct fp_thms]),
+          ("fresh_induct_param", [#fresh_induct_param fp_thms]),
+          ("TT_fresh_induct", [#fresh_induct fp_thms])
+        ]) (#fp_thms fp_res))
       else [])
       @ note_always quot;
 

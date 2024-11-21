@@ -6776,7 +6776,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
     binding_relation = [[[1, 3]], [[1]]],
     rec_vars = [2, 2],
     bfree_vars = [0],
-    fp_thms = {
+    fp_thms = SOME {
       subshape_rel = @{term "{(x, y). case x of
         Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
       | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')

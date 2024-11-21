@@ -2,7 +2,7 @@ theory Pi_Transition_Early
   imports Pi_Transition_Common
 begin
 
-binder_inductive trans :: "proc \<Rightarrow> com \<Rightarrow> bool" where
+binder_inductive (no_auto_refresh) trans :: "proc \<Rightarrow> com \<Rightarrow> bool" where
   InpE: "trans (Inp a x P) (Finp a y (P[y/x]))"
 | ComLeftE: "\<lbrakk> trans P (Finp a x P') ; trans Q (Fout a x Q') \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau (P' \<parallel> Q'))"
 | CloseLeftE: "\<lbrakk> trans P (Finp a x P') ; trans Q (Bout a x Q') ; x \<notin> {a} \<union> FFVars P \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Tau (Res x (P' \<parallel> Q')))"
@@ -10,15 +10,6 @@ binder_inductive trans :: "proc \<Rightarrow> com \<Rightarrow> bool" where
 | ScopeFree: "\<lbrakk> trans P (Cmt \<alpha> P') ; fra \<alpha> ; x \<notin> ns \<alpha> \<rbrakk> \<Longrightarrow> trans (Res x P) (Cmt \<alpha> (Res x P'))"
 | ScopeBound: "\<lbrakk> trans P (Bout a x P') ; y \<notin> {a, x} ; x \<notin> FFVars P \<union> {a} \<rbrakk> \<Longrightarrow> trans (Res y P) (Bout a x (Res y P'))"
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
-  subgoal for R B \<sigma> x1 x2
-    apply simp
-    apply (elim disj_forward)
-    by (auto simp: isPerm_def
-        procP.rrename_comps action.map_comp action.map_id
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | (rule exI[of _ "map_action \<sigma> _"])
-        | (rule exI[of _ "rrename \<sigma> _"])
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
     (* This is a prototype implemetation of the refreshability heuristic mentioned in sections 5 and 6. *)  
     by (tactic \<open>refreshability_tac false

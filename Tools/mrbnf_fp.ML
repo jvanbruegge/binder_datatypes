@@ -2363,6 +2363,35 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
     val cctor_eq_intro_rrenames = map (fn thm => (thm RS iffD2)
       |> funpow fbound (fn thm => thm OF [exI]) OF [mk_conjIN (3*fbound + 1)]) TT_injects0;
 
+        fun mk_noclash_rename renames FVars_renames = @{map 4} (fn mrbnf => fn map_t => fn noclash => fn x =>
+      let
+        val goal = mk_Trueprop_eq (
+          fst noclash $ (comb_mrbnf_term ffs_ids (map (fn t => Term.list_comb (t, ffs)) renames) map_t $ x),
+          fst noclash $ x
+        );
+      in Goal.prove_sorry lthy (map (fst o dest_Free) (ffs @ [x])) prem_terms_ffs goal (fn {context=ctxt, prems} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt [snd noclash]),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems)
+        ],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_comp[unfolded comp_def]}),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] FVars_renames,
+          REPEAT_DETERM o resolve_tac ctxt prems
+        ],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_Un[symmetric] image_UN[symmetric]}),
+        REPEAT_DETERM o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] @{thms image_Int[OF bij_is_inj, symmetric]},
+          resolve_tac ctxt prems
+        ],
+        K (Local_Defs.unfold0_tac ctxt @{thms image_is_empty}),
+        rtac ctxt refl
+      ]) end
+    ) mrbnfs;
+    val noclash_renames = mk_noclash_rename renamesAs (flat FVars_renamess) mrbnf_maps_AsAs noclashs xs;
+    val nnoclash_rrenames = mk_noclash_rename rrenamesAs (flat FFVars_rrenamess) mrbnf_maps_BsBs nnoclashs vs;
+
     (* TODO: use giant map instead of x times (nth ... i) *)
     val (raw_ress, quot_ress) = split_list (map (fn i =>
       let
@@ -2375,6 +2404,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           noclash = nth noclashs i,
 
           inject = nth raw_injects i,
+          noclash_rename = nth noclash_renames i,
           rename_id0 = nth rename_id0s i,
           rename_id = nth rename_ids i,
           rename_comp0 = nth rename_comp0s i,
@@ -2417,6 +2447,7 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
           noclash = nth nnoclashs i,
 
           inject = nth TT_injects0 i,
+          noclash_rename = nth nnoclash_rrenames i,
           rename_id0 = nth rrename_id0s i,
           rename_id = nth rrename_ids i,
           rename_comp0 = nth rrename_comp0s i,
@@ -2491,6 +2522,8 @@ fun construct_binder_fp fp mrbnf_ks binding_relation lthy =
        ("alpha_avoids", alpha_avoids),
        ("equivp_alphas", equivp_alphas),
        ("nnoclash_noclashs", nnoclash_noclashs),
+       ("nnoclash_rrenames", nnoclash_rrenames),
+       ("noclash_renames", noclash_renames),
        ("TT_Quotients", TT_Quotients),
        ("TT_alpha_quotient_syms", alpha_quotient_syms),
        ("TT_Quotient_total_abs_eq_iffs", Quotient_total_abs_eq_iffs),

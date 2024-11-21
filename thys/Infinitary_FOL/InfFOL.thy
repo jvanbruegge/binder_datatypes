@@ -1,7 +1,7 @@
 theory InfFOL imports InfFmla
 begin
 
-binder_inductive deduct :: "fmla set\<^sub>k \<Rightarrow> fmla \<Rightarrow> bool" (infix "\<turnstile>" 100) where
+binder_inductive (no_auto_equiv, no_auto_refresh) deduct :: "fmla set\<^sub>k \<Rightarrow> fmla \<Rightarrow> bool" (infix "\<turnstile>" 100) where
   Hyp: "f \<in>\<^sub>k \<Delta> \<Longrightarrow> \<Delta> \<turnstile> f"
 | ConjI: "(\<And>f. f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> \<Delta> \<turnstile> f) \<Longrightarrow> \<Delta> \<turnstile> Conj F"
 | ConjE: "\<lbrakk> \<Delta> \<turnstile> Conj F ; f \<in>\<^sub>k\<^sub>1 F \<rbrakk> \<Longrightarrow> \<Delta> \<turnstile> f"

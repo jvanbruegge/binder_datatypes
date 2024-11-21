@@ -10,7 +10,7 @@ begin
 lemma Tvars_dsset: "(FFVars t - dsset xs) \<inter> dsset xs = {}" "|FFVars t - dsset xs| <o |UNIV::ivar set|"
 apply auto using card_of_minus_bound iltermP.set_bd_UNIV by blast
 
-binder_inductive affine  :: "ilterm \<Rightarrow> bool" where
+binder_inductive (no_auto_equiv, no_auto_refresh) affine  :: "ilterm \<Rightarrow> bool" where
  iVr[simp,intro!]: "affine (iVr x)"
 |iLm: "affine e \<Longrightarrow> affine (iLm xs e)"
 |iAp:

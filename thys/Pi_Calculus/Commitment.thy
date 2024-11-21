@@ -338,8 +338,21 @@ fun ns :: "act \<Rightarrow> var set" where
 abbreviation "bvars \<equiv> bns"
 abbreviation "fvars \<equiv> fns"
 
+lemma ns_equiv[equiv]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+  \<sigma> x \<in> ns (map_action \<sigma> \<alpha>) \<longleftrightarrow> x \<in> ns \<alpha>"
+  by (cases \<alpha>) auto
+
+lemma fra_equiv[equiv]: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+  fra (map_action \<sigma> \<alpha>) = fra \<alpha>"
+  by (cases \<alpha>) auto
+
 lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var_comP_pre set|"
   by (metis var_ID_class.large bns.elims finite_iff_le_card_var finite_ordLess_infinite2 insert_bound large_imp_infinite singl_bound)
+
+lemma rrename_comP_Cmt[simp]:
+"bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+ rrename_comP \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
+by (cases act, auto)
 
 local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.comP" {
   ctors = [
@@ -351,6 +364,10 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.comP" {
     (@{term Cmt}, @{thm refl})
   ],
   map_simps = [],
+  permute_simps = @{thms
+    rrename_comP_Finp rrename_comP_Fout rrename_comP_Bout
+    rrename_comP_Tau rrename_comP_Binp rrename_comP_Cmt
+  },
   distinct = [],
   bsetss = [[
     NONE,
@@ -360,6 +377,14 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.comP" {
     SOME @{term "\<lambda>x1 x2 x3. {x2}"},
     SOME @{term "\<lambda>x P. bns x"}
   ]],
+  permute_bounds = [
+    [NONE, NONE, NONE],
+    [NONE, NONE, NONE],
+    [NONE, NONE, NONE],
+    [NONE],
+    [NONE, NONE, NONE],
+    [NONE, NONE]
+  ],
   bset_bounds = @{thms bns_bound},
   strong_induct = @{thm refl},
   mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.comP_pre"),
@@ -369,12 +394,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.comP" {
 
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
 
-lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = image \<sigma> (bvars act)"
-by (cases act, auto)
-
-lemma rrename_comP_Cmt[simp]:
-"bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
- rrename_comP \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
+lemma bvars_map_action[simp, equiv_simps]: "bvars (map_action \<sigma> act) = image \<sigma> (bvars act)"
 by (cases act, auto)
 
 lemma bvars_act_bout: "bvars act = {} \<or> (\<exists>a b. act = bout a b) \<or> (\<exists>a b. act = binp a b)"

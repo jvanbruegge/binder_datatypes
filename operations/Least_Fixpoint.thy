@@ -128,11 +128,6 @@ where
 type_synonym ('a, 'b, 'c, 'd) raw_T1' = "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2) T1_pre"
 type_synonym ('a, 'b, 'c, 'd) raw_T2' = "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2) T2_pre"
 
-definition avoid_raw_T1 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1' \<Rightarrow> 'a set \<Rightarrow> 'b set \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1'" where
-  "avoid_raw_T1 x A1 A2 \<equiv> SOME y. set5_T1_pre y \<inter> A1 = {} \<and> set6_T1_pre y \<inter> A2 = {} \<and> alpha_T1 (raw_T1_ctor x) (raw_T1_ctor y)"
-definition avoid_raw_T2 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2' \<Rightarrow> 'a set \<Rightarrow> 'b set \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2'" where
-  "avoid_raw_T2 x A1 A2 \<equiv> SOME y. set5_T2_pre y \<inter> A1 = {} \<and> set6_T2_pre y \<inter> A2 = {} \<and> alpha_T2 (raw_T2_ctor x) (raw_T2_ctor y)"
-
 typedef ('a::"{var_T1_pre,var_T2_pre}", 'b::"{var_T1_pre,var_T2_pre}", 'c::"{var_T1_pre,var_T2_pre}", 'd) T1 = "(UNIV :: ('a, 'b, 'c, 'd) raw_T1 set) // {(x, y). alpha_T1 x y}"
   apply (rule exI)
   apply (rule quotientI)
@@ -172,13 +167,6 @@ definition FVars_T21 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pr
   where "FVars_T21 x \<equiv> FVars_raw_T21 (TT2_rep x)"
 definition FVars_T22 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> 'b set"
   where "FVars_T22 x \<equiv> FVars_raw_T22 (TT2_rep x)"
-
-definition avoid_T1 :: "('a, 'b, 'c, 'd) T1' \<Rightarrow> 'a set \<Rightarrow> 'b set \<Rightarrow> ('a::{var_T1_pre, var_T2_pre}, 'b::{var_T1_pre, var_T2_pre}, 'c::{var_T1_pre, var_T2_pre}, 'd) T1'"
-  where "avoid_T1 x A B \<equiv> map_T1_pre id id id id id id id TT1_abs TT1_abs TT2_abs TT2_abs (
-    avoid_raw_T1 (map_T1_pre id id id id id id id TT1_rep TT1_rep TT2_rep TT2_rep x) A B)"
-definition avoid_T2 :: "('a, 'b, 'c, 'd) T2' \<Rightarrow> 'a set \<Rightarrow> 'b set \<Rightarrow> ('a::{var_T1_pre, var_T2_pre}, 'b::{var_T1_pre, var_T2_pre}, 'c::{var_T1_pre, var_T2_pre}, 'd) T2'"
-  where "avoid_T2 x A B \<equiv> map_T2_pre id id id id id id id TT1_abs TT1_abs TT2_abs TT2_abs (
-    avoid_raw_T2 (map_T2_pre id id id id id id id TT1_rep TT1_rep TT2_rep TT2_rep x) A B)"
 
 lemmas FVars_defs = FVars_T11_def FVars_T12_def FVars_T21_def FVars_T22_def
 
@@ -4503,36 +4491,6 @@ lemma raw_refreshs:
     done
   done
 
-lemma avoid_raw_freshs:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1'"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2'"
-  assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
-  shows "set5_T1_pre (avoid_raw_T1 x A B) \<inter> A = {}" "set6_T1_pre (avoid_raw_T1 x A B) \<inter> B = {}"
-    "set5_T2_pre (avoid_raw_T2 x2 A B) \<inter> A = {}" "set6_T2_pre (avoid_raw_T2 x2 A B) \<inter> B = {}"
-     apply (unfold avoid_raw_T1_def avoid_raw_T2_def)
-    (* REPEAT_DETERM *)
-     apply (rule someI2_ex)
-      apply (rule raw_refreshs[OF assms])
-     apply (erule conjE)+
-     apply assumption
-    (* repeated *)
-    apply (rule someI2_ex)
-     apply (rule raw_refreshs[OF assms])
-    apply (erule conjE)+
-    apply assumption
-    (* repeated *)
-   apply (rule someI2_ex)
-    apply (rule raw_refreshs[OF assms])
-   apply (erule conjE)+
-   apply assumption
-    (* repeated *)
-  apply (rule someI2_ex)
-   apply (rule raw_refreshs[OF assms])
-  apply (erule conjE)+
-  apply assumption
-    (* END REPEAT_DETERM *)
-  done
-
 lemma TT_Quotients:
   "Quotient alpha_T1 TT1_abs TT1_rep (\<lambda>x. (=) (TT1_abs x))"
   "Quotient alpha_T2 TT2_abs TT2_rep (\<lambda>x. (=) (TT2_abs x))"
@@ -5388,143 +5346,242 @@ lemma TT_inject0s:
     (* END REPEAT_DETERM *)
   done
 
-lemma avoid_freshs:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1'"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2'"
-  assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
-  shows "set5_T1_pre (avoid_T1 x A B) \<inter> A = {}" "set6_T1_pre (avoid_T1 x A B) \<inter> B = {}"
-    "set5_T2_pre (avoid_T2 x2 A B) \<inter> A = {}" "set6_T2_pre (avoid_T2 x2 A B) \<inter> B = {}"
-     apply (unfold avoid_T1_def avoid_T2_def)
-    (* REPEAT_DETERM *)
-     apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)
-     apply (unfold image_id)
-     apply (rule avoid_raw_freshs[OF assms])
-    (* repeated *)
-    apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)
-    apply (unfold image_id)
-    apply (rule avoid_raw_freshs[OF assms])
-    (* repeated *)
-   apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)
-   apply (unfold image_id)
-   apply (rule avoid_raw_freshs[OF assms])
-    (* repeated *)
-  apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (unfold image_id)
-  apply (rule avoid_raw_freshs[OF assms])
-  done
-
-lemma alpha_avoids:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1'"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2'"
-  assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
-  shows "T1_ctor (avoid_T1 x A B) = T1_ctor x" "T2_ctor (avoid_T2 x2 A B) = T2_ctor x2"
-   apply (unfold avoid_T1_def avoid_T2_def avoid_raw_T1_def avoid_raw_T2_def)
-   apply (rule someI2_ex)
-    apply (rule raw_refreshs[OF assms])
-   apply (erule conjE)+
-   apply (unfold T1_ctor_def)
-   apply (subst T1_pre.map_comp)
-        apply (rule supp_id_bound bij_id)+
-   apply (unfold id_o o_id)
-   apply (drule TT_total_abs_eq_iffs[THEN iffD2])
-   apply (rule trans[rotated])
-    apply (rule sym)
-    apply assumption
-   apply (rule TT_total_abs_eq_iffs[THEN iffD2])
-   apply (rule alpha_T1_alpha_T2.intros)
-         apply (rule supp_id_bound bij_id id_on_id)+
-   apply (rule iffD2[OF T1_pre.mr_rel_map(1), rotated -1])
-                 apply (unfold id_o o_id Grp_UNIV_id eq_OO Grp_OO permute_raw_ids)
-                 apply (unfold comp_def)
-                 apply (rule iffD1[OF T1_pre.mr_rel_id[THEN fun_cong, THEN fun_cong]])
-                 apply (rule T1_pre.rel_refl_strong)
-                     apply (rule refl TT_rep_abs)+
-                apply (rule supp_id_bound bij_id)+
-    (* second goal, same tactic *)
-  apply (rule someI2_ex)
-   apply (rule raw_refreshs[OF assms])
-  apply (erule conjE)+
-  apply (unfold T2_ctor_def)
-  apply (subst T2_pre.map_comp)
-       apply (rule supp_id_bound bij_id)+
-  apply (unfold id_o o_id)
-  apply (drule TT_total_abs_eq_iffs[THEN iffD2])
-  apply (rule trans[rotated])
-   apply (rule sym)
-   apply assumption
-  apply (rule TT_total_abs_eq_iffs[THEN iffD2])
-  apply (rule alpha_T1_alpha_T2.intros)
-        apply (rule supp_id_bound bij_id id_on_id)+
-  apply (rule iffD2[OF T2_pre.mr_rel_map(1), rotated -1])
-                apply (unfold id_o o_id Grp_UNIV_id eq_OO Grp_OO permute_raw_ids)
-                apply (unfold comp_def)
-                apply (rule iffD1[OF T2_pre.mr_rel_id[THEN fun_cong, THEN fun_cong]])
-                apply (rule T2_pre.rel_refl_strong)
-                    apply (rule refl TT_rep_abs)+
-               apply (rule supp_id_bound bij_id)+
-  done
-
 lemma fresh_cases_T1:
   fixes y::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
   assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
-    and "\<And>(x::('a, 'b, 'c, 'd) T1'). y = T1_ctor x \<Longrightarrow> set5_T1_pre x \<inter> A = {} \<Longrightarrow> set6_T1_pre x \<inter> B = {} \<Longrightarrow> P"
+    and "\<And>(x::('a, 'b, 'c, 'd) T1'). y = T1_ctor x \<Longrightarrow> set5_T1_pre x \<inter> A = {} \<Longrightarrow> set6_T1_pre x \<inter> B = {} \<Longrightarrow> noclash_T1 x \<Longrightarrow> P"
   shows "P"
   apply (rule raw_T1.exhaust[of "TT1_rep y"])
-  apply (rule assms)
-    defer
-    apply (rule avoid_freshs[OF assms(1-2)])+
-  apply (rule trans[rotated])
-   apply (rule sym)
-   apply (rule alpha_avoids[OF assms(1-2)])
-  apply (unfold T1_ctor_def)
-  apply (rule TT_Quotients[THEN Quotient_rel_abs2])
-  apply (rule arg_cong2[OF _ refl, of _ _ alpha_T1, THEN iffD2])
-   apply assumption
-  apply (rule alpha_T1_alpha_T2.intros[rotated -1])
-        apply (subst T1_pre.map_comp)
-                    apply (rule supp_id_bound bij_id)+
-        apply (unfold id_o o_id)
-        apply (rule iffD2[OF T1_pre.mr_rel_map(3), rotated -1])
-                      apply (subst Grp_UNIV_id)+
-                      apply (unfold inv_id id_o o_id conversep_eq eq_OO Grp_OO relcompp_conversep_Grp)
-                      apply (unfold comp_def)
-                      apply (rule iffD1[OF T1_pre.mr_rel_id[THEN fun_cong, THEN fun_cong]])
-                      apply (unfold permute_raw_ids)
-                      apply (rule T1_pre.rel_refl_strong)
-                      apply (rule refl)
-                      apply (rule alpha_syms, rule TT_rep_abs)+
-                      apply (rule supp_id_bound bij_id id_on_id)+
+  subgoal for x
+    apply (rule exE[OF raw_refreshs(1)[of "A \<union> FVars_T11 y" "B \<union> FVars_T12 y" x]])
+      apply (rule assms(1-2) T1_pre.Un_bound FVars_bd_UNIVs)+
+    apply (erule conjE)+
+    subgoal for x'
+      apply (rule assms(3)[of "map_T1_pre id id id id id id id TT1_abs TT1_abs TT2_abs TT2_abs x'"])
+         apply (drule arg_cong[of _ _ TT1_abs])
+      apply (unfold TT_abs_rep)
+      apply hypsubst_thin
+      apply (unfold T1_ctor_def)
+      apply (subst T1_pre.map_comp)
+           apply (rule supp_id_bound bij_id)+
+      apply (unfold id_o o_id TT_total_abs_eq_iffs)
+      apply (erule alpha_trans)
+      apply (rule alpha_T1_alpha_T2.intros)
+            apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
+      apply (unfold permute_raw_ids T1_pre.mr_rel_id[symmetric])
+      apply (rule iffD2[OF T1_pre.rel_map(2)])
+      apply (unfold comp_def)
+      apply (rule T1_pre.rel_refl_strong)
+          apply (rule id_apply[symmetric] TT_rep_abs_syms)+
+        (* REPEAT_DETERM *)
+         apply (subst T1_pre.set_map)
+              apply (rule supp_id_bound bij_id)+
+         apply (unfold image_id)
+         apply (erule Int_subset_empty2)
+         apply (rule Un_upper1)
+        (* repeated *)
+        apply (subst T1_pre.set_map)
+             apply (rule supp_id_bound bij_id)+
+        apply (unfold image_id)
+        apply (erule Int_subset_empty2)
+        apply (rule Un_upper1)
+        (* END REPEAT_DETERM *)
+       apply (unfold noclash_T1_def)
+       apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+       apply (unfold image_id image_comp[unfolded comp_def])
+        (* REPEAT_DETERM *)
+       apply (rule conjI)?
+        apply (erule Int_subset_empty2)
+        apply (rule subset_trans[rotated])
+         apply (rule Un_upper2)
+        apply (unfold FVars_defs)[1]
+        apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+         apply (rule trans)
+          apply (erule arg_cong)
+         apply (erule alpha_FVars)
+        apply (unfold FVars_raw_ctors alpha_FVars(1-2)[OF TT_rep_abs(1)] alpha_FVars(3-4)[OF TT_rep_abs(2)])
+        apply (rule subsetI)
+        apply (erule UnE)+
+        (* REPEAT_DETERM *)
+          apply (rotate_tac -1)
+          apply (erule contrapos_pp)
+          apply (unfold Un_iff de_Morgan_disj)[1]
+          apply (erule conjE)+
+          apply assumption
+        (* repeated *)
+         apply (rotate_tac -1)
+         apply (erule contrapos_pp)
+         apply (unfold Un_iff de_Morgan_disj)[1]
+         apply (erule conjE)+
+         apply assumption
+        (* repeated *)
+        apply (rotate_tac -1)
+        apply (erule contrapos_pp)
+        apply (unfold Un_iff de_Morgan_disj)[1]
+        apply (erule conjE)+
+        apply assumption
+        (* END REPEAT_DETERM *)
+        (* repeated *)
+       apply (rule conjI)?
+       apply (erule Int_subset_empty2)
+       apply (rule subset_trans[rotated])
+        apply (rule Un_upper2)
+       apply (unfold FVars_defs)[1]
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+        apply (rule trans)
+         apply (erule arg_cong)
+        apply (rule alpha_FVars)
+        apply assumption
+       apply (unfold FVars_raw_ctors alpha_FVars(1-2)[OF TT_rep_abs(1)] alpha_FVars(3-4)[OF TT_rep_abs(2)])
+       apply (rule subsetI)
+       apply (erule UnE)+
+        (* REPEAT_DETERM *)
+          apply (rotate_tac -1)
+          apply (erule contrapos_pp)
+          apply (unfold Un_iff de_Morgan_disj)[1]
+          apply (erule conjE)+
+          apply assumption
+        (* repeated *)
+         apply (rotate_tac -1)
+         apply (erule contrapos_pp)
+         apply (unfold Un_iff de_Morgan_disj)[1]
+         apply (erule conjE)+
+         apply assumption
+        (* repeated *)
+        apply (rotate_tac -1)
+        apply (erule contrapos_pp)
+        apply (unfold Un_iff de_Morgan_disj)[1]
+        apply (erule conjE)+
+        apply assumption
+        (* repeated *)
+       apply (rotate_tac -1)
+       apply (erule contrapos_pp)
+       apply (unfold Un_iff de_Morgan_disj)[1]
+       apply (erule conjE)+
+       apply assumption
+        (* END REPEAT_DETERM *)
+      done
+    done
   done
+
 lemma fresh_cases_T2:
   fixes x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2'"
   assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
-    and "\<And>(x::('a, 'b, 'c, 'd) T2'). y = T2_ctor x \<Longrightarrow> set5_T2_pre x \<inter> A = {} \<Longrightarrow> set6_T2_pre x \<inter> B = {} \<Longrightarrow> P"
+    and "\<And>(x::('a, 'b, 'c, 'd) T2'). y = T2_ctor x \<Longrightarrow> set5_T2_pre x \<inter> A = {} \<Longrightarrow> set6_T2_pre x \<inter> B = {} \<Longrightarrow> noclash_T2 x \<Longrightarrow> P"
   shows "P"
   apply (rule raw_T2.exhaust[of "TT2_rep y"])
-  apply (rule assms)
-    defer
-    apply (rule avoid_freshs[OF assms(1-2)])+
-  apply (rule trans[rotated])
-   apply (rule sym)
-   apply (rule alpha_avoids[OF assms(1-2)])
-  apply (unfold T2_ctor_def)
-  apply (rule TT_Quotients[THEN Quotient_rel_abs2])
-  apply (rule arg_cong2[OF _ refl, of _ _ alpha_T2, THEN iffD2])
-   apply assumption
-  apply (rule alpha_T1_alpha_T2.intros[rotated -1])
-        apply (subst T2_pre.map_comp)
-                    apply (rule supp_id_bound bij_id)+
-        apply (unfold id_o o_id)
-        apply (rule iffD2[OF T2_pre.mr_rel_map(3), rotated -1])
-                      apply (subst Grp_UNIV_id)+
-                      apply (unfold inv_id id_o o_id conversep_eq eq_OO Grp_OO relcompp_conversep_Grp)
-                      apply (unfold comp_def)
-                      apply (rule iffD1[OF T2_pre.mr_rel_id[THEN fun_cong, THEN fun_cong]])
-                      apply (unfold permute_raw_ids)
-                      apply (rule T2_pre.rel_refl_strong)
-                      apply (rule refl)
-                      apply (rule alpha_syms, rule TT_rep_abs)+
-                      apply (rule supp_id_bound bij_id id_on_id)+
+  subgoal for x
+    apply (rule exE[OF raw_refreshs(2)[of "A \<union> FVars_T21 y" "B \<union> FVars_T22 y" x]])
+      apply (rule assms(1-2) T1_pre.Un_bound FVars_bd_UNIVs)+
+    apply (erule conjE)+
+    subgoal for x'
+      apply (rule assms(3)[of "map_T2_pre id id id id id id id TT1_abs TT1_abs TT2_abs TT2_abs x'"])
+         defer
+        (* REPEAT_DETERM *)
+         apply (subst T2_pre.set_map)
+              apply (rule supp_id_bound bij_id)+
+         apply (unfold image_id)
+         apply (erule Int_subset_empty2)
+         apply (rule Un_upper1)
+        (* repeated *)
+        apply (subst T2_pre.set_map)
+             apply (rule supp_id_bound bij_id)+
+        apply (unfold image_id)
+        apply (erule Int_subset_empty2)
+        apply (rule Un_upper1)
+        (* END REPEAT_DETERM *)
+       apply (unfold noclash_T2_def)
+       apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+       apply (unfold image_id image_comp[unfolded comp_def])
+        (* REPEAT_DETERM *)
+       apply (rule conjI)?
+        apply (erule Int_subset_empty2)
+        apply (rule subset_trans[rotated])
+         apply (rule Un_upper2)
+        apply (unfold FVars_defs)[1]
+        apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+         apply (rule trans)
+          apply (erule arg_cong)
+         apply (rule alpha_FVars)
+         apply assumption
+        apply (unfold FVars_raw_ctors alpha_FVars(1-2)[OF TT_rep_abs(1)] alpha_FVars(3-4)[OF TT_rep_abs(2)])
+        apply (rule subsetI)
+        apply (erule UnE)+
+        (* REPEAT_DETERM *)
+          apply (rotate_tac -1)
+          apply (erule contrapos_pp)
+          apply (unfold Un_iff de_Morgan_disj)[1]
+          apply (erule conjE)+
+          apply assumption
+        (* repeated *)
+         apply (rotate_tac -1)
+         apply (erule contrapos_pp)
+         apply (unfold Un_iff de_Morgan_disj)[1]
+         apply (erule conjE)+
+         apply assumption
+        (* repeated *)
+        apply (rotate_tac -1)
+        apply (erule contrapos_pp)
+        apply (unfold Un_iff de_Morgan_disj)[1]
+        apply (erule conjE)+
+        apply assumption
+        (* END REPEAT_DETERM *)
+        (* repeated *)
+       apply (rule conjI)?
+       apply (erule Int_subset_empty2)
+       apply (rule subset_trans[rotated])
+        apply (rule Un_upper2)
+       apply (unfold FVars_defs)[1]
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+        apply (rule trans)
+         apply (erule arg_cong)
+        apply (rule alpha_FVars)
+        apply assumption
+       apply (unfold FVars_raw_ctors alpha_FVars(1-2)[OF TT_rep_abs(1)] alpha_FVars(3-4)[OF TT_rep_abs(2)])
+       apply (rule subsetI)
+       apply (erule UnE)+
+        (* REPEAT_DETERM *)
+          apply (rotate_tac -1)
+          apply (erule contrapos_pp)
+          apply (unfold Un_iff de_Morgan_disj)[1]
+          apply (erule conjE)+
+          apply assumption
+        (* repeated *)
+         apply (rotate_tac -1)
+         apply (erule contrapos_pp)
+         apply (unfold Un_iff de_Morgan_disj)[1]
+         apply (erule conjE)+
+         apply assumption
+        (* repeated *)
+        apply (rotate_tac -1)
+        apply (erule contrapos_pp)
+        apply (unfold Un_iff de_Morgan_disj)[1]
+        apply (erule conjE)+
+        apply assumption
+        (* repeated *)
+       apply (rotate_tac -1)
+       apply (erule contrapos_pp)
+       apply (unfold Un_iff de_Morgan_disj)[1]
+       apply (erule conjE)+
+       apply assumption
+        (* END REPEAT_DETERM *)
+      apply (drule arg_cong[of _ _ TT2_abs])
+      apply (unfold TT_abs_rep)
+      apply hypsubst
+      apply (unfold T2_ctor_def)
+      apply (subst T2_pre.map_comp)
+           apply (rule supp_id_bound bij_id)+
+      apply (unfold id_o o_id TT_total_abs_eq_iffs)
+      apply (erule alpha_trans)
+      apply (rule alpha_T1_alpha_T2.intros)
+            apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
+      apply (unfold permute_raw_ids T2_pre.mr_rel_id[symmetric])
+      apply (rule iffD2[OF T2_pre.rel_map(2)])
+      apply (unfold comp_def)
+      apply (rule T2_pre.rel_refl_strong)
+          apply (rule id_apply[symmetric] TT_rep_abs_syms)+
+      done
+    done
   done
 lemmas fresh_cases = fresh_cases_T1 fresh_cases_T2
 
@@ -6388,7 +6445,7 @@ lemma existential_induct:
     done
   done
 
-lemma fresh_induct_param_raw:
+lemma fresh_induct_param:
   fixes K1::"'p \<Rightarrow> 'a::{var_T1_pre, var_T2_pre} set"
     and K2::"'p \<Rightarrow> 'b::{var_T1_pre, var_T2_pre} set"
   assumes "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K1 \<rho>| <o |UNIV::'a set|"
@@ -6400,6 +6457,7 @@ lemma fresh_induct_param_raw:
     (\<And>z \<rho>. z \<in> set11_T1_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P2 z \<rho>) \<Longrightarrow>
     set5_T1_pre x \<inter> K1 \<rho> = {} \<Longrightarrow>
     set6_T1_pre x \<inter> K2 \<rho> = {} \<Longrightarrow>
+    noclash_T1 x \<Longrightarrow>
     \<rho> \<in> Param \<Longrightarrow> P1 (T1_ctor x) \<rho>"
   "\<And>x \<rho>.
     (\<And>z \<rho>. z \<in> set8_T2_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P1 z \<rho>) \<Longrightarrow>
@@ -6408,6 +6466,7 @@ lemma fresh_induct_param_raw:
     (\<And>z \<rho>. z \<in> set11_T2_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P2 z \<rho>) \<Longrightarrow>
     set5_T2_pre x \<inter> K1 \<rho> = {} \<Longrightarrow>
     set6_T2_pre x \<inter> K2 \<rho> = {} \<Longrightarrow>
+    noclash_T2 x \<Longrightarrow>
     \<rho> \<in> Param \<Longrightarrow> P2 (T2_ctor x) \<rho>"
 shows "\<forall>\<rho>\<in>Param. P1 z \<rho> \<and> P2 z2 \<rho>"
   apply (rule existential_induct)
@@ -6517,162 +6576,6 @@ shows "\<forall>\<rho>\<in>Param. P1 z \<rho> \<and> P2 z2 \<rho>"
     apply assumption+
     done
   done
-
-lemma fresh_induct_param:
-  fixes K1::"'p \<Rightarrow> 'a::{var_T1_pre, var_T2_pre} set"
-    and K2::"'p \<Rightarrow> 'b::{var_T1_pre, var_T2_pre} set"
-  assumes "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K1 \<rho>| <o |UNIV::'a set|"
-      "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K2 \<rho>| <o |UNIV::'b set|"
-  and IHs: "\<And>x \<rho>.
-    (\<And>z \<rho>. z \<in> set8_T1_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P1 z \<rho>) \<Longrightarrow>
-    (\<And>z \<rho>. z \<in> set9_T1_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P1 z \<rho>) \<Longrightarrow>
-    (\<And>z \<rho>. z \<in> set10_T1_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P2 z \<rho>) \<Longrightarrow>
-    (\<And>z \<rho>. z \<in> set11_T1_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P2 z \<rho>) \<Longrightarrow>
-    set5_T1_pre x \<inter> K1 \<rho> = {} \<Longrightarrow>
-    set6_T1_pre x \<inter> K2 \<rho> = {} \<Longrightarrow>
-    noclash_T1 x \<Longrightarrow>
-    \<rho> \<in> Param \<Longrightarrow> P1 (T1_ctor x) \<rho>"
-  "\<And>x \<rho>.
-    (\<And>z \<rho>. z \<in> set8_T2_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P1 z \<rho>) \<Longrightarrow>
-    (\<And>z \<rho>. z \<in> set9_T2_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P1 z \<rho>) \<Longrightarrow>
-    (\<And>z \<rho>. z \<in> set10_T2_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P2 z \<rho>) \<Longrightarrow>
-    (\<And>z \<rho>. z \<in> set11_T2_pre x \<Longrightarrow> \<rho> \<in> Param \<Longrightarrow> P2 z \<rho>) \<Longrightarrow>
-    set5_T2_pre x \<inter> K1 \<rho> = {} \<Longrightarrow>
-    set6_T2_pre x \<inter> K2 \<rho> = {} \<Longrightarrow>
-    noclash_T2 x \<Longrightarrow>
-    \<rho> \<in> Param \<Longrightarrow> P2 (T2_ctor x) \<rho>"
-    shows "\<forall>\<rho>\<in>Param. P1 z \<rho> \<and> P2 z2 \<rho>"
-    apply (rule ballI)
-    apply (rule ballE[OF fresh_induct_param_raw[of "UNIV \<times> UNIV \<times> Param"
-      "\<lambda>(x1, x2, \<rho>). FVars_T11 x1 \<union> FVars_T21 x2 \<union> K1 \<rho>"
-      "\<lambda>(x1, x2, \<rho>). FVars_T12 x1 \<union> FVars_T22 x2 \<union> K2 \<rho>"
-      "\<lambda>t (x1, x2, \<rho>). t = x1 \<longrightarrow> P1 t \<rho>" "\<lambda>t (x1, x2, \<rho>). t = x2 \<longrightarrow> P2 t \<rho>"
-    ], rotated -1, of "(_, _, _)"])
-    apply (unfold mem_Times_iff fst_conv snd_conv case_prod_beta)
-    apply (rotate_tac -1)
-    apply (erule contrapos_np)
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* REPEAT_DETERM *)
-    apply (rule var_T1_pre_class.Un_bound FVars_bd_UNIVs)+
-    apply (erule conjE)+
-    apply (erule assms)
-    (* repeated *)
-    apply (rule var_T1_pre_class.Un_bound FVars_bd_UNIVs)+
-    apply (erule conjE)+
-    apply (erule assms)
-    (* END REPEAT_DETERM *)
-    (* REPEAT_DETERM *)
-    apply (rule impI)
-    subgoal premises prems for _ x \<rho>
-    apply (rule IHs)
-    (* REPEAT_DETERM *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* repeated *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* repeated *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* repeated *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* END REPEAT_DETERM *)
-    apply (insert prems(6-7))
-    apply (unfold Int_Un_distrib Un_empty)
-    apply ((erule conjE)+, assumption)+
-    apply (unfold FVars_ctors Int_Un_distrib Un_empty noclash_T1_def prems(9)[symmetric]
-      Diff_disjoint
-    )[1]
-    apply (erule conjE)+
-    apply ((rule conjI)+, assumption+)+
-    apply (insert prems(8))
-    apply (erule conjE)+
-    apply assumption
-    done
-    (* repeated *)
-    apply (rule impI)
-    subgoal premises prems for _ x \<rho>
-    apply (rule IHs)
-    (* REPEAT_DETERM *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* repeated *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* repeated *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* repeated *)
-    apply (drule prems(2-5)[of _ "(_, _, _)"])
-    prefer 2
-    apply (erule impE)
-    apply (unfold fst_conv snd_conv)
-    apply (rule refl)
-    apply assumption
-    apply (rule conjI UNIV_I)+
-    apply assumption
-    (* END REPEAT_DETERM *)
-    apply (insert prems(6-7))
-    apply (unfold Int_Un_distrib Un_empty)
-    apply ((erule conjE)+, assumption)+
-    apply (unfold FVars_ctors Int_Un_distrib Un_empty noclash_T2_def prems(9)[symmetric]
-      Diff_disjoint
-    )[1]
-    apply (erule conjE)+
-    apply ((rule conjI)+, assumption+)+
-    apply (insert prems(8))
-    apply (erule conjE)+
-    apply assumption
-    done
-    (* END REPEAT_DETERM *)
-    apply (erule conjE)+
-    apply (erule impE[OF _ refl])+
-    apply ((rule conjI)?, assumption)+
-    done
 
 lemma fresh_induct:
   assumes "|A1::'a::{var_T1_pre, var_T2_pre} set| <o |UNIV::'a set|"

@@ -1543,7 +1543,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
           in EVERY1 [
             DETERM o rtac ctxt (infer_instantiate' ctxt (
               map (SOME o Thm.cterm_of ctxt) As @ replicate (length mrbnfs) NONE @ map (SOME o Thm.cterm_of ctxt) ts
-            ) (#fresh_induct (#fp_thms fp_res))),
+            ) (#fresh_induct (the (#fp_thms fp_res)))),
             SELECT_GOALS (length As) (EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
               REPEAT_DETERM o resolve_tac ctxt (

@@ -5,7 +5,7 @@ type spec = {
   fp_b: binding,
   vars: ((string * sort) * MRBNF_Def.var_type) list,
   rec_vars: int,
-  binding_rel: int list list,
+  binding_rel: (int list * int list) list,
   ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
   tvsubst_b: binding
@@ -19,7 +19,7 @@ type binder_sugar = {
   bsetss: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
-  strong_induct: thm,
+  strong_induct: thm option,
   distinct: thm list,
   ctors: (term * thm) list
 };
@@ -47,7 +47,7 @@ type spec = {
   fp_b: binding,
   vars: ((string * sort) * MRBNF_Def.var_type) list,
   rec_vars: int,
-  binding_rel: int list list,
+  binding_rel: (int list * int list) list,
   ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
   tvsubst_b: binding
@@ -61,7 +61,7 @@ type binder_sugar = {
   bsetss: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
-  strong_induct: thm,
+  strong_induct: thm option,
   distinct: thm list,
   ctors: (term * thm) list
 };
@@ -75,7 +75,7 @@ fun morph_binder_sugar phi { map_simps, permute_simps, set_simpss, subst_simps, 
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
   bset_bounds = map (Morphism.thm phi) bset_bounds,
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
-  strong_induct = Morphism.thm phi strong_induct,
+  strong_induct = Option.map (Morphism.thm phi) strong_induct,
   distinct = map (Morphism.thm phi) distinct,
   ctors = map (map_prod (Morphism.term phi) (Morphism.thm phi)) ctors
 } : binder_sugar;
@@ -122,9 +122,12 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
     val pre_name = name ^ "_pre" (* ^ name *);
     val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
+    val (_, _, (mrbnfs, (accum, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
+      [] (#vars spec) (K (map fst (#vars spec))) NONE [mrbnf] (accum, lthy);
+    val mrbnf = hd mrbnfs;
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [((name, mrbnf), #rec_vars spec)] (map (map (fn i => ([], [i]))) (#binding_rel spec)) lthy;
+    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [((name, mrbnf), #rec_vars spec)] (map single (#binding_rel spec)) lthy;
   in ((res, fp_pre_T, mrbnf, absinfo), lthy) end
 
 fun create_binder_datatype (spec : spec) lthy =
@@ -133,6 +136,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res lthy;
     val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
 
+    val nrecs = fold (curry (op+)) (#rec_vars res) 0;
     val quotient_ctor = #ctor (hd (#quotient_fps res));
     val replace = map (TFree o fst) (#vars spec) ~~ snd (dest_Type (domain_type (fastype_of quotient_ctor)));
     val pre_repT = Term.typ_subst_atomic replace fp_pre_T;
@@ -200,7 +204,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val pre_mrbnf = hd (#pre_mrbnfs res);
     val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
 
-    val strong_induct =
+    val strong_induct_opt = Option.map (fn fp_thms =>
       let
         val (P, names_lthy) = names_lthy
           |> apfst hd o mk_Frees "P" [qT --> b --> @{typ bool}];
@@ -266,7 +270,7 @@ fun create_binder_datatype (spec : spec) lthy =
         val goal = HOLogic.mk_Trueprop (mk_all (dest_Free rho) (P $ t $ rho));
         val thm = infer_instantiate' lthy (
           [NONE] @ map (SOME o Thm.cterm_of lthy) (Ks @ [P, t])
-        ) (#fresh_induct_param (#fp_thms res));
+        ) (#fresh_induct_param fp_thms);
 
         val absumprodE = BNF_FP_Util.mk_absumprodE (#type_definition (snd info)) (map (length o snd) (#ctors spec))
       in Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
@@ -307,9 +311,10 @@ fun create_binder_datatype (spec : spec) lthy =
             IF_UNSOLVED o K no_tac
           ])) prems)
         ]) ctxt) (drop n prems))
-      ]) |> Rule_Cases.name (bound_names @ ctor_names) end;
+      ]) |> Rule_Cases.name (bound_names @ ctor_names) end
+    ) (#fp_thms res);
 
-    val fresh_induct =
+    val fresh_induct_opt = Option.map (fn strong_induct =>
       let
         val ((As, P), names_lthy') = names_lthy
           |> mk_Frees "A" (map (range_type o fastype_of) Ks)
@@ -320,12 +325,13 @@ fun create_binder_datatype (spec : spec) lthy =
         val thm' = Local_Defs.unfold0 lthy @{thms HOL.simp_thms(35) triv_forall_equality} (
           infer_instantiate' lthy (map (SOME o Thm.cterm_of lthy) (Ks' @ [P', t])) strong_induct
         );
-      in Morphism.thm phi thm' |> Rule_Cases.name (bound_names @ ctor_names) end;
+      in Morphism.thm phi thm' |> Rule_Cases.name (bound_names @ ctor_names) end
+    ) strong_induct_opt;
 
-    val induct = Local_Defs.unfold0 lthy
+    val induct_opt = Option.map (fn fresh_induct => Local_Defs.unfold0 lthy
       @{thms notin_empty_eq_True Int_empty_right HOL.simp_thms(6) HOL.True_implies_equals} (
       fold (K (fn thm => thm OF @{thms emp_bound})) (1 upto length vars) fresh_induct
-    ) |> Rule_Cases.name ctor_names;
+    ) |> Rule_Cases.name ctor_names) fresh_induct_opt;
 
     fun get_index x ys =
       let
@@ -333,7 +339,12 @@ fun create_binder_datatype (spec : spec) lthy =
           | go (y::ys) n = if x = y then SOME n else go ys (n + 1)
       in go ys 0 end;
     val bounds = map_filter (fn (x, MRBNF_Def.Bound_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
-    val frees = map_filter (fn (x, MRBNF_Def.Free_Var) => SOME (TFree x) | _ => NONE) (#vars spec);
+    fun take_while _ [] = []
+      | take_while f (x :: xs) = if f x then x :: take_while f xs else []
+    val frees = map (TFree o fst) (take_while (curry (op=) MRBNF_Def.Free_Var o snd) (#vars spec));
+    val bfrees = map (TFree o fst) (
+      take (length (#bfree_vars res)) (drop (length (#vars spec) - length (#bfree_vars res) - nrecs) (#vars spec))
+    );
 
     (* TODO: Use mrbnf sets here (only relevant for passive variables) *)
     val (bset_optss, set_simpss) = split_list (map (fn FVars =>
@@ -343,8 +354,9 @@ fun create_binder_datatype (spec : spec) lthy =
         ) vars);
         val free = get_var frees;
         val bound = get_var bounds;
+        val bfree_opt = try get_var bfrees;
         val rec_bounds = map (nth rec_vars) (the_default [] (
-          Option.mapPartial (try (nth (#binding_rel spec))) (get_index bound bounds)
+          Option.mapPartial (try (snd o nth (#binding_rel spec))) (get_index bound bounds)
         ));
       in split_list (map2 (fn (ctor, _) => fn (_, tys) =>
         let
@@ -352,11 +364,14 @@ fun create_binder_datatype (spec : spec) lthy =
             |> mk_Frees "x" tys;
 
           fun get_set vars = map (
-            fn (t as Free _) => if fastype_of t = free then mk_singleton t else FVars $ t
+            fn (t as Free _) => if fastype_of t = free then mk_singleton t else 
+              (case bfree_opt of
+                SOME a => (if fastype_of t = a then mk_singleton t else FVars $ t)
+                | NONE => FVars $ t)
             | t => if member (op=) rec_vars (HOLogic.dest_setT (fastype_of t)) then mk_UNION t FVars else t
           ) (flat (map_filter I (map2 (fn T => fn x => get_sets T vars x) tys xs)));
           val sets = get_set (free::subtract (op=) rec_bounds rec_vars)
-          val brec_sets = get_set rec_bounds
+          val brec_sets = get_set (the_default [] (Option.map single bfree_opt) @ rec_bounds)
           val bsets = map (fn (t as Free _) => mk_singleton t | t => t) (
             flat (map_filter I (map2 (fn T => fn x => get_sets T [bound] x) tys xs))
           );
@@ -531,7 +546,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 else Term.list_comb (inner_map, gs) end
               | NONE => HOLogic.id_const T)
             | mk_map (T as TFree _) =
-              (if member (op=) (frees @ extra_apply_args) T then
+              (if member (op=) (frees @ bfrees @ extra_apply_args) T then
                 case List.find (fn Free (_, T') => domain_type T' = Term.typ_subst_atomic replace T) fs of
                   SOME t => t
                   | NONE => HOLogic.id_const T
@@ -601,7 +616,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
           val collect_sets = map (fn s => case s of [] => NONE | xs => SOME (Term.subst_atomic_types replace (foldl1 MRBNF_Util.mk_Un xs)))
           val bound_sets' = collect_sets bound_sets;
-          val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (#binding_rel spec))) rec_vars;
+          val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (map snd (#binding_rel spec)))) rec_vars;
           val free_sets = collect_sets (mk_sets frees free_rec_vars (SOME (#FVarss quotient)));
 
           val noclash_prems = if do_noclash then
@@ -749,7 +764,7 @@ fun create_binder_datatype (spec : spec) lthy =
       map_simps = map_simps,
       set_simpss = set_simpss,
       permute_simps = permute_simps,
-      strong_induct = strong_induct,
+      strong_induct = strong_induct_opt,
       subst_simps = Option.map snd tvsubst_opt,
       bsetss = bset_optss,
       bset_bounds = [],
@@ -760,11 +775,14 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val lthy = register_binder_sugar (fst (dest_Type qT)) sugar lthy;
 
+    val note_inducts = Option.map (fn strong_induct => [
+      ("strong_induct", [strong_induct], []),
+      ("fresh_induct", [the fresh_induct_opt], []),
+      ("induct", [the induct_opt], [induct_attrib])
+    ]) strong_induct_opt;
     val notes =
-      ([("strong_induct", [strong_induct], []),
-        ("fresh_induct", [fresh_induct], []),
-        ("induct", [induct], [induct_attrib]),
-        ("set", flat set_simpss, simp),
+      (the_default [] note_inducts
+      @ [("set", flat set_simpss, simp),
         ("map", map_simps, simp),
         ("permute", permute_simps, simp),
         ("distinct", distinct, simp)

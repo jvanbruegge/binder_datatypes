@@ -94,6 +94,7 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
                     |> Symtab.map_entry "free" (cons T)
                     |> Symtab.map_entry "pfree" rm
                     |> Symtab.map_entry "plive" rm
+                    |> Symtab.map_entry "bfree" rm
                   , lthy)) end
                 | n => (nth (the (Symtab.lookup params "bound")) n, acc)
             else (orig_T, acc)
@@ -109,7 +110,14 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
                       let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
                       in (T', (Symtab.map_entry "brec" (cons T') params, lthy)) end
                     | x::_ => (x, acc))
-                  | _ => error "can only bind in recursive subterms"
+                  | _ => (if Term.is_TFree T then (case find_index (curry (op=) T) (the (Symtab.lookup params "bfree_var")) of
+                    ~1 => let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
+                          in (T', (params
+                            |> Symtab.map_entry "bfree_var" (cons T)
+                            |> Symtab.map_entry "bfree" (cons T')
+                          , lthy)) end
+                    | n => (nth (the (Symtab.lookup params "bfree")) n, (params, lthy))
+                  ) else error "can only bind in recursive subterms or type variables")
               else (T, acc)
             end
           | _ => (T, acc)
@@ -137,7 +145,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
       in resort_tfree_or_tvar @{sort type} (TFree (s, Typedecl.read_constraint lthy sort)) end;
 
     (* This should be just a record, but the lack of record update syntax in ML makes that way too painful *)
-    val params' = Symtab.make [("pfree", []), ("pbound", []), ("plive", []), ("dead", []), ("free", []), ("bound", []), ("rec", []), ("brec", [])];
+    val params' = Symtab.make [("pfree", []), ("pbound", []), ("plive", []), ("dead", []), ("free", []), ("bound", []), ("bfree", []), ("bfree_var", []), ("rec", []), ("brec", [])];
     val Ts = map (map_prod I prepare_type_arg) params;
 
     val lthy = fold (Variable.declare_typ o snd) Ts lthy;
@@ -152,12 +160,14 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     val brecs = flat "brec" MRBNF_Def.Live_Var
     val recs = flat "rec" MRBNF_Def.Live_Var
     val bounds = flat "bound" MRBNF_Def.Bound_Var;
+    val bfrees = flat "bfree" MRBNF_Def.Free_Var;
+    val frees = flat "free" MRBNF_Def.Free_Var;
     val vars =
-      flat "free" MRBNF_Def.Free_Var
+      frees
       @ flat "pfree" MRBNF_Def.Free_Var
       @ flat "plive" MRBNF_Def.Live_Var
       @ flat "pbound" MRBNF_Def.Bound_Var
-      @ bounds @ brecs @ recs;
+      @ bounds @ bfrees @ brecs @ recs;
 
     fun with_def bnd def = if Binding.is_empty bnd then
         Binding.suffix_name ("_" ^ Binding.name_of b) def
@@ -167,7 +177,12 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
       fp_b = b,
       ctors = ctors,
       vars = vars,
-      binding_rel = map (K (0 upto length brecs - 1)) bounds,
+      binding_rel = map (fn T =>
+        let
+          val i = find_index (curry (op=) (TFree (fst T))) (rev (the (Symtab.lookup params "bfree_var")));
+          val bfree = if i = ~1 then [] else [find_index (curry (op=) T) frees]
+        in (bfree, (0 upto length brecs - 1)) end
+      ) frees,
       rec_vars = length brecs + length recs,
       map_b = with_def vvsubst_b @{binding vvsubst},
       tvsubst_b = with_def tvsubst_b @{binding tvsubst}

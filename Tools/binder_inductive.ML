@@ -298,10 +298,6 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
         (mk_image (hd gs) $ (s $ x))
     )))) perms supps xs;
 
-    val inf_UNIV_goals = map (fn T => HOLogic.mk_Trueprop (HOLogic.mk_not (
-      Const (@{const_name finite}, T --> @{typ bool}) $ HOLogic.mk_UNIV (HOLogic.dest_setT T)
-    ))) bind_Ts;
-
     val supp_small_goals = map2 (fn x => fn (s, _) => Logic.all x (HOLogic.mk_Trueprop (
       mk_ordLess (mk_card_of (s $ x)) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (hd bind_Ts))))
     ))) xs supps;
@@ -506,7 +502,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
             fun lookup name = the_single (#thms (the (
               Facts.lookup context facts (Facts.intern facts name)
             )));
-          in (lookup "Un_bound", lookup "UN_bound", lookup "large") end;
+          in (lookup "Un_bound", lookup "UN_bound", lookup "large'") end;
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr sugar)) = maps #card_of_FVars_bound_UNIVs (#quotient_fps sugar)
           | set_bd_UNIVs_of_mr_bnfs x =
@@ -515,21 +511,17 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
               | Inr (Inl bnf) => BNF_Def.set_bd_of_bnf bnf
             in map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) thms end
 
-        val supp_smalls = prove_missing supp_small_goals supps_specified supp_smalls (fn ctxt => fn mr_bnfs => K (EVERY1 [
-          REPEAT_DETERM o resolve_tac ctxt (
-            @{thms emp_bound ordLeq_refl card_of_Card_order} @ [Un_bound, UN_bound, var_large]
-            @ maps set_bd_UNIVs_of_mr_bnfs mr_bnfs
-          )
-        ]));
-
         fun UNIV_cinfinite_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf]
           | UNIV_cinfinite_of_mr_bnf (Inr (Inr sugar)) = [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd (#pre_mrbnfs sugar))]
           | UNIV_cinfinite_of_mr_bnf _ = []
+        val infinite_UNIVs = map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs));
 
-        val infinite_UNIVs = map (fn goal => Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} => EVERY1 [
-          rtac ctxt @{thm cinfinite_imp_infinite},
-          resolve_tac ctxt (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs))
-        ])) inf_UNIV_goals;
+        val supp_smalls = prove_missing supp_small_goals supps_specified supp_smalls (fn ctxt => fn mr_bnfs => K (EVERY1 [
+          REPEAT_DETERM o resolve_tac ctxt (
+            @{thms emp_bound ordLeq_refl card_of_Card_order} @ [Un_bound, UN_bound, var_large]
+            @ maps set_bd_UNIVs_of_mr_bnfs mr_bnfs @ infinite_UNIVs
+          )
+        ]));
 
         val binder_mr_bnfs = map_filter (fn (s, _) => case MRBNF_Def.mrbnf_of lthy s of
           SOME mrbnf => SOME (Inl mrbnf)

@@ -1282,7 +1282,7 @@ val natLeq_boundN = "natLeq_bound";
 val UNIV_cinfiniteN = "UNIV_cinfinite";
 val supp_comp_boundN = "supp_comp_bound";
 val Un_boundN = "Un_bound";
-val UNION_boundN = "UNION_bound";
+val UNION_boundN = "UN_bound";
 val mr_rel_congN = "mr_rel_cong";
 val mr_in_relN = "mr_in_rel";
 val mr_le_rel_OON = "mr_le_rel_OO";
@@ -1708,7 +1708,10 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
     val ((class, var_large, var_regular), (mk_covar_type_class, mk_covar_large), lthy) = case classes_opt of
         SOME ((class, var_large, var_regular), (coclass, mk_covar_large)) =>
           ((class, unfold_bd_def var_large, var_regular), (K (pair coclass), fn (sort, lthy) => unfold_bd_def' lthy (mk_covar_large (sort, lthy))), lthy)
-      | NONE =>
+      | NONE => case mrbnf_bd_raw of
+        Const (@{const_name natLeq}, _) =>
+          ((@{sort var}, @{thm var_class.large}, @{thm var_class.regular}), (K (pair @{sort covar}), K @{thm covar_class.large}), lthy)
+        | _ =>
         let
           val (class, lthy) = case sort_opt of
             SOME class => (class, lthy)
@@ -2204,97 +2207,103 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           covar_large = covar_large
         };
 
-        val UNIV_cinfinite =
+        val (UNIV_cinfinite, Un_bound, UNION_bound, lthy) = case class of
+          @{sort var} => (@{thm var_class.UNIV_cinfinite}, @{thm var_class.Un_bound}, @{thm var_class.UN_bound}, lthy)
+          | _ =>
           let
-            val goal = TFree (Name.aT, class)
-              |> HOLogic.mk_UNIV
-              |> mk_card_of
-              |> mk_cinfinite
-              |> HOLogic.mk_Trueprop;
-          in
-            Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
-              EVERY1 [rtac ctxt @{thm cinfinite_mono}, rtac ctxt var_large, rtac ctxt conjunct1,
-                rtac ctxt bd_Cinfinite])
-            |> Thm.close_derivation \<^here>
-          end;
+            val UNIV_cinfinite =
+              let
+                val goal = TFree (Name.aT, class)
+                  |> HOLogic.mk_UNIV
+                  |> mk_card_of
+                  |> mk_cinfinite
+                  |> HOLogic.mk_Trueprop;
+              in
+                Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
+                  EVERY1 [rtac ctxt @{thm cinfinite_mono}, rtac ctxt var_large, rtac ctxt conjunct1,
+                    rtac ctxt bd_Cinfinite])
+                |> Thm.close_derivation \<^here>
+              end;
+
+            val Un_bound =
+              let
+                val (T, Tc) = lthy |> mk_TFrees 1 ||> fst o mk_TFrees' [class] |> apply2 hd;
+                val (A1, A2) = mk_Frees "A" (map HOLogic.mk_setT [T, T]) lthy |> dest_cons o fst ||> hd;
+                fun mk_card_bound t = Tc
+                  |> HOLogic.mk_UNIV
+                  |> mk_card_of
+                  |> mk_ordLess (mk_card_of t)
+                  |> HOLogic.mk_Trueprop;
+                val goal = [A1, A2, mk_union (A1, A2)]
+                  |> map mk_card_bound
+                  |> foldr1 Logic.mk_implies
+                  |> fold_rev Logic.all [A1, A2];
+              in
+                Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
+                  EVERY1 [rtac ctxt @{thm card_of_Un_ordLess_infinite},
+                    rtac ctxt (unfold_thms ctxt @{thms cinfinite_def Field_card_of} UNIV_cinfinite),
+                    REPEAT_DETERM_N 2 o assume_tac ctxt])
+                |> Thm.close_derivation \<^here>
+              end;
+
+            val UNION_bound =
+              let
+                val ((Ta, Tb), Tc) = lthy
+                  |> mk_TFrees 2
+                  |>> apsnd hd o dest_cons
+                  ||> hd o fst o mk_TFrees' [class];
+                val ((I, A), i) = lthy
+                  |> yield_singleton (mk_Frees "I") (HOLogic.mk_setT Ta)
+                  ||>> yield_singleton (mk_Frees "A") (Ta --> HOLogic.mk_setT Tb)
+                  ||> fst o yield_singleton (mk_Frees "i") Ta;
+                fun mk_card_bound t = Tc
+                  |> HOLogic.mk_UNIV
+                  |> mk_card_of
+                  |> mk_ordLess (mk_card_of t)
+                  |> HOLogic.mk_Trueprop;
+                val goal = [mk_card_bound I,
+                    (HOLogic.mk_mem (i, I) |> HOLogic.mk_Trueprop, A $ i |> mk_card_bound)
+                      |> Logic.mk_implies |> Logic.all i,
+                    mk_UNION I (A $ i |> Term.absfree (dest_Free i)) |> mk_card_bound]
+                  |> foldr1 Logic.mk_implies
+                  |> fold_rev Logic.all [I, A];
+                val bound_Card_order = thm_instantiate_terms lthy [SOME (HOLogic.mk_UNIV Tc)]
+                  @{thm card_of_Card_order};
+              in
+                Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
+                  EVERY1 [rtac ctxt @{thm regularCard_UNION}, rtac ctxt bound_Card_order,
+                    rtac ctxt UNIV_cinfinite, rtac ctxt var_regular, assume_tac ctxt,
+                    Goal.assume_rule_tac ctxt])
+                |> Thm.close_derivation \<^here>
+              end;
+
+            val lthy = Local_Theory.background_theory (fn thy =>
+              let
+                val lthy = Named_Target.init [] (hd coclass) thy;
+                val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+                  ("large", covar_large)
+                ]) lthy) handle ERROR _ => lthy;
+              in Local_Theory.exit_global lthy end
+            ) lthy;
+            val lthy = Local_Theory.background_theory (fn thy =>
+              let
+                val lthy = Named_Target.init [] (hd class) thy;
+                val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+                  ("Un_bound", Un_bound),
+                  ("UN_bound", UNION_bound),
+                  ("UNIV_cinfinite", UNIV_cinfinite),
+                  ("large'", var_large)
+                ]) lthy) handle ERROR _ => lthy;
+                val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+                  ("large", var_large_raw),
+                  ("regular", var_regular)
+                ]) lthy) handle ERROR _ => lthy;
+              in Local_Theory.exit_global lthy end
+            ) lthy;
+          in (UNIV_cinfinite, Un_bound, UNION_bound, lthy) end;
+
         val supp_the_inv_bound = @{thm supp_the_inv_bound_gen} OF
-          [conjI OF [UNIV_cinfinite, @{thm card_of_Card_order}]];
-
-        val Un_bound =
-          let
-            val (T, Tc) = lthy |> mk_TFrees 1 ||> fst o mk_TFrees' [class] |> apply2 hd;
-            val (A1, A2) = mk_Frees "A" (map HOLogic.mk_setT [T, T]) lthy |> dest_cons o fst ||> hd;
-            fun mk_card_bound t = Tc
-              |> HOLogic.mk_UNIV
-              |> mk_card_of
-              |> mk_ordLess (mk_card_of t)
-              |> HOLogic.mk_Trueprop;
-            val goal = [A1, A2, mk_union (A1, A2)]
-              |> map mk_card_bound
-              |> foldr1 Logic.mk_implies
-              |> fold_rev Logic.all [A1, A2];
-          in
-            Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
-              EVERY1 [rtac ctxt @{thm card_of_Un_ordLess_infinite},
-                rtac ctxt (unfold_thms ctxt @{thms cinfinite_def Field_card_of} UNIV_cinfinite),
-                REPEAT_DETERM_N 2 o assume_tac ctxt])
-            |> Thm.close_derivation \<^here>
-          end;
-
-        val UNION_bound =
-          let
-            val ((Ta, Tb), Tc) = lthy
-              |> mk_TFrees 2
-              |>> apsnd hd o dest_cons
-              ||> hd o fst o mk_TFrees' [class];
-            val ((I, A), i) = lthy
-              |> yield_singleton (mk_Frees "I") (HOLogic.mk_setT Ta)
-              ||>> yield_singleton (mk_Frees "A") (Ta --> HOLogic.mk_setT Tb)
-              ||> fst o yield_singleton (mk_Frees "i") Ta;
-            fun mk_card_bound t = Tc
-              |> HOLogic.mk_UNIV
-              |> mk_card_of
-              |> mk_ordLess (mk_card_of t)
-              |> HOLogic.mk_Trueprop;
-            val goal = [mk_card_bound I,
-                (HOLogic.mk_mem (i, I) |> HOLogic.mk_Trueprop, A $ i |> mk_card_bound)
-                  |> Logic.mk_implies |> Logic.all i,
-                mk_UNION I (A $ i |> Term.absfree (dest_Free i)) |> mk_card_bound]
-              |> foldr1 Logic.mk_implies
-              |> fold_rev Logic.all [I, A];
-            val bound_Card_order = thm_instantiate_terms lthy [SOME (HOLogic.mk_UNIV Tc)]
-              @{thm card_of_Card_order};
-          in
-            Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
-              EVERY1 [rtac ctxt @{thm regularCard_UNION}, rtac ctxt bound_Card_order,
-                rtac ctxt UNIV_cinfinite, rtac ctxt var_regular, assume_tac ctxt,
-                Goal.assume_rule_tac ctxt])
-            |> Thm.close_derivation \<^here>
-          end;
-
-        val lthy = Local_Theory.background_theory (fn thy =>
-          let
-            val lthy = Named_Target.init [] (hd coclass) thy;
-            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
-              ("large", covar_large)
-            ]) lthy) handle ERROR _ => lthy;
-          in Local_Theory.exit_global lthy end
-        ) lthy;
-        val lthy = Local_Theory.background_theory (fn thy =>
-          let
-            val lthy = Named_Target.init [] (hd class) thy;
-            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
-              ("Un_bound", Un_bound),
-              ("UN_bound", UNION_bound),
-              ("cinfinite", UNIV_cinfinite)
-            ]) lthy) handle ERROR _ => lthy;
-            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
-              ("large", var_large),
-              ("regular", var_regular)
-            ]) lthy) handle ERROR _ => lthy;
-          in Local_Theory.exit_global lthy end
-        ) lthy;
-
+            [conjI OF [UNIV_cinfinite, @{thm card_of_Card_order}]];
         val supp_comp_bound =
           let
             val Tc = lthy |> fst o mk_TFrees' [class] |> the_single;

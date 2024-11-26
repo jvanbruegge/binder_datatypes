@@ -7,22 +7,21 @@ abbreviation nonrep_fset :: "'a fset \<Rightarrow> bool" where "nonrep_fset _ \<
 definition nonrep_lfset :: "('a \<times> 'b) fset \<Rightarrow> bool" where
   "nonrep_lfset X = (nonrep_fset X \<and> (\<forall>x \<in> fset X. nonrep_pair x) \<and>
      (\<forall>x \<in> fset X. \<forall>y \<in> fset X. x \<noteq> y \<longrightarrow> Basic_BNFs.fsts x \<inter> Basic_BNFs.fsts y = {}))"
-  
+
 lemma nonrep_lfset_alt:
   "nonrep_lfset X = (\<forall>a b c. (a, b) |\<in>| X \<longrightarrow>  (a, c) |\<in>| X \<longrightarrow> b = c)"
   unfolding nonrep_lfset_def prod_set_defs by fastforce
 
 typedef ('a, 'b) G = "UNIV :: ('a \<times> 'b) fset set" by auto
+setup_lifting type_definition_G
 context notes [[bnf_internals]] begin
 copy_bnf ('a, 'b) G
 end
-setup_lifting type_definition_G
-
-lemma map_G_transfer[transfer_rule]:
+(*lemma map_G_transfer[transfer_rule]:
   "rel_fun (=) (rel_fun (=) (rel_fun (pcr_G (=) (=)) (pcr_G (=) (=)))) (\<lambda>f g. (|`|) (map_prod f g)) map_G"
   by (tactic \<open>Local_Defs.unfold_tac @{context}
       [BNF_Def.bnf_of @{context} @{type_name G} |> the |> BNF_Def.map_def_of_bnf]\<close>)
-    (simp add: rel_fun_def pcr_G_def cr_G_def prod.rel_eq fset.rel_eq relcompp_apply Abs_G_inverse)
+    (simp add: rel_fun_def pcr_G_def cr_G_def prod.rel_eq fset.rel_eq relcompp_apply Abs_G_inverse)*)
 
 lift_definition nonrep_G :: "('a, 'b) G \<Rightarrow> bool" is nonrep_lfset .
 
@@ -43,36 +42,20 @@ lemma nonrep_G_map_fst_snd_bij:
   apply (auto simp: nonrep_lfset_alt map_prod_def image_iff split_beta)
   by (metis fst_conv snd_conv)+
 
-class large_G =
-  assumes large: "|Field bd_G| \<le>o |UNIV :: 'a set|"
-    and regular: "regularCard |UNIV::'a set|"
-
-instantiation nat :: large_G begin
-instance proof
-qed (auto simp: stable_nat stable_regularCard)
-end
-
-(*instantiation prod ::  (type, large_G) large_G begin
-instance apply standard
-  apply (subst UNIV_prod, auto simp only: intro!: ordLeq_transitive[OF large card_of_Times2])
-  using var_prod_class.large
-  
-end*)
-
-typedef ('a, 'b) lfset = "{x :: ('a :: large_G, 'b) G . nonrep_G x}"
+typedef ('a, 'b) lfset = "{x :: ('a :: var, 'b) G . nonrep_G x}"
   unfolding mem_Collect_eq
   by transfer (auto simp: nonrep_lfset_alt)
 
-definition map_lfset :: "('a :: large_G \<Rightarrow> 'a :: large_G) \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b') lfset" where
+definition map_lfset :: "('a :: var \<Rightarrow> 'a :: var) \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b') lfset" where
   "map_lfset f g = Abs_lfset o map_G f g o Rep_lfset"
 
-definition labels :: "('a :: large_G, 'b) lfset \<Rightarrow> 'a set" where
+definition labels :: "('a :: var, 'b) lfset \<Rightarrow> 'a set" where
   "labels = set1_G o Rep_lfset"
 
-definition "values" :: "('a :: large_G, 'b) lfset \<Rightarrow> 'b set" where
+definition "values" :: "('a :: var, 'b) lfset \<Rightarrow> 'b set" where
   "values = set2_G o Rep_lfset"
 
-definition rel_lfset :: "('a :: large_G \<Rightarrow> 'a :: large_G) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b') lfset \<Rightarrow> bool" where
+definition rel_lfset :: "('a :: var \<Rightarrow> 'a :: var) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b') lfset \<Rightarrow> bool" where
   "rel_lfset f S = BNF_Def.vimage2p Rep_lfset Rep_lfset (rel_G (Grp f) S)"
 
 theorem lfset_map_id: "map_lfset id id = id"
@@ -96,7 +79,7 @@ theorem lfset_map_cong:
   shows "map_lfset u g p = map_lfset v h p"
   by (simp only: map_lfset_def o_apply labels_def values_def assms cong: G.map_cong)
 
-theorem lfset_set_bd: "|labels p| <o bd_G"  "|values p| <o bd_G"
+theorem lfset_set_bd: "|labels p| <o natLeq"  "|values p| <o natLeq"
   unfolding labels_def values_def o_apply by (rule G.set_bd)+
 
 theorem lfset_rel_eq:
@@ -130,25 +113,24 @@ theorem lfset_rel_compp_le:
   unfolding rel_lfset_def G.rel_compp Grp_o
   by (rule vimage2p_relcompp_mono[OF order_refl])
 
-mrbnf "('a :: large_G, 'b) lfset"
+mrbnf "('a :: var, 'b) lfset"
   map: map_lfset
   sets:
     bound: labels
     live: "values"
-  bd: "bd_G"
+  bd: "natLeq"
   rel: "rel_lfset id"
-  var_class: large_G
   subgoal by (rule ext, transfer) (simp add: lfset_map_id)
   subgoal apply (rule ext, transfer) by (simp add: lfset_map_comp)
-  subgoal apply transfer using lfset_map_cong by blast  
-  subgoal apply (rule ext, transfer) by (simp add: lfset_set1_map)  
+  subgoal apply transfer using lfset_map_cong by blast
+  subgoal apply (rule ext, transfer) by (simp add: lfset_set1_map)
   subgoal using lfset_set2_map by blast
   subgoal
     by (simp add: G.bd_card_order G.bd_cinfinite G.bd_regularCard infinite_regular_card_order_def)
   subgoal using lfset_set_bd(1) by blast
   subgoal using lfset_set_bd(2) by auto
   subgoal by (metis comp_id lfset_rel_compp_le)
-  subgoal apply transfer 
+  subgoal apply transfer
     apply (rule trans)
      apply (rule lfset_in_rel)
      apply (rule bij_id)
@@ -258,7 +240,7 @@ lemma rel_lfset_eq_transfer[transfer_rule]:
 
 end
 
-lift_definition lfin :: "('a \<times> 'b) \<Rightarrow> ('a::large_G, 'b) lfset \<Rightarrow> bool" (infix "\<in>\<in>" 50) is fmember .
+lift_definition lfin :: "('a \<times> 'b) \<Rightarrow> ('a::var, 'b) lfset \<Rightarrow> bool" (infix "\<in>\<in>" 50) is fmember .
 
 lemma lfin_map_lfset: "(a, b) \<in>\<in> map_lfset id g x \<longleftrightarrow> (\<exists>c. b = g c \<and> (a, c) \<in>\<in> x)"
   by transfer force
@@ -266,7 +248,7 @@ lemma lfin_map_lfset: "(a, b) \<in>\<in> map_lfset id g x \<longleftrightarrow> 
 lemma lfin_label_inject: "(a, b) \<in>\<in> x \<Longrightarrow> (a, c) \<in>\<in> x \<Longrightarrow> b = c"
   by transfer (auto simp: nonrep_lfset_alt)
 
-lift_definition lfempty :: "('a::large_G, 'b) lfset" is "{||} :: ('a \<times> 'b) fset"
+lift_definition lfempty :: "('a::var, 'b) lfset" is "{||} :: ('a \<times> 'b) fset"
   by (auto simp: nonrep_lfset_alt)
 
 lemma labels_lfempty[simp]: "labels lfempty = {}"
@@ -296,15 +278,15 @@ lemma values_lfin: "c \<in> values x \<Longrightarrow> \<exists>l. (l, c) \<in>\
 lemma pred_lfset_lfempty[simp]: "pred_lfset P lfempty = True"
   unfolding lfset.pred_set by auto
 
-lift_definition lfinsert :: "'a \<Rightarrow> 'b \<Rightarrow> ('a::large_G, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
+lift_definition lfinsert :: "'a \<Rightarrow> 'b \<Rightarrow> ('a::var, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>a b X. if \<exists>c. b \<noteq> c \<and> (a, c) |\<in>| X then X else finsert (a, b) X"
   by (auto simp: nonrep_lfset_alt split_beta split: if_splits) metis
 
-lift_definition lfupdate :: "('a::large_G, 'b) lfset \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset"
+lift_definition lfupdate :: "('a::var, 'b) lfset \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>X a b. finsert (a, b) (ffilter (\<lambda>(a', _). a \<noteq> a') X)"
   by (auto simp: nonrep_lfset_alt)
 
-lift_definition lfunion :: "('a::large_G, 'b) lfset \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
+lift_definition lfunion :: "('a::var, 'b) lfset \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>X Y. funion Y (ffilter (\<lambda>(a, _). a |\<notin>| fst |`| Y) X)"
   by (auto simp: nonrep_lfset_alt image_iff)
 
@@ -323,10 +305,10 @@ translations
 
 subsection \<open>Size setup\<close>
 
-lift_definition size_lfset :: "('a::large_G \<Rightarrow> nat) \<Rightarrow> ('b \<Rightarrow> nat) \<Rightarrow> ('a, 'b) lfset \<Rightarrow> nat" is
+lift_definition size_lfset :: "('a::var \<Rightarrow> nat) \<Rightarrow> ('b \<Rightarrow> nat) \<Rightarrow> ('a, 'b) lfset \<Rightarrow> nat" is
   "\<lambda>f g. size_fset (size_prod f g)" .
 
-instantiation lfset :: (large_G,type) size begin
+instantiation lfset :: (var,type) size begin
 definition size_lfset where
   size_lfset_overloaded_def: "size_lfset = Labeled_FSet.size_lfset (\<lambda>_. 0) (\<lambda>_. 0)"
 instance ..
@@ -369,7 +351,7 @@ lemma size_lfset_estimation'[termination_simp]:
   "x \<in> values X \<Longrightarrow> y \<le> f x \<Longrightarrow> y \<le> size_lfset (\<lambda>_. 0) f X"
   by transfer (auto simp del: size_fset_simps intro!: size_fset_estimation')
 
-lift_definition apply_lfset :: "('a::large_G, 'b \<Rightarrow> 'c) lfset \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'c) lfset"
+lift_definition apply_lfset :: "('a::var, 'b \<Rightarrow> 'c) lfset \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'c) lfset"
   is "\<lambda>F X. if fst |`| F |\<subseteq>| fst |`| X then (\<lambda>(a, f). (a, f (THE b. (a, b) |\<in>| X))) |`| F else {||}"
   by (force simp: nonrep_lfset_def)
 
@@ -395,7 +377,7 @@ lemma lfin_apply_lfset: "labels F \<subseteq> labels X \<Longrightarrow>
 
 lifting_update lfset.lifting
 lifting_forget lfset.lifting
-declare fun_cong[OF lfset_size_o_map, 
+declare fun_cong[OF lfset_size_o_map,
 unfolded id_def inj_on_def, simplified, termination_simp]
 
 hide_fact (open) FSet.bex_simps FSet.ball_simps

@@ -25,10 +25,6 @@ for
 
 
 (* Monomorphising: *)
-instance var :: var_term_pre apply standard
-  using Field_natLeq infinite_iff_card_of_nat infinite_var
-  by (auto simp add: regularCard_var)
-
 type_synonym trm = "var term"
 
 lemma singl_bound: "|{a}| <o |UNIV::var set|"
@@ -54,7 +50,7 @@ abbreviation "FFVars \<equiv> FVars_term"
 lemmas term.permute_id[simp] term.permute_cong_id[simp]
 term.FVars_permute[simp]
 
-lemmas term_vvsubst_permute[simp]
+lemmas term.vvsubst_permute[simp]
 
 
 (* Supply of fresh variables *)
@@ -70,8 +66,7 @@ proof-
   unfolding ls_UNIV_iff_finite
   using finite_FFVars by blast
   then obtain x where "x \<notin> set xs \<union> \<Union> (FFVars ` (set Ps))"
-  by (meson ex_new_if_finite finite_iff_le_card_var
-    infinite_iff_natLeq_ordLeq var_term_pre_class.large)
+    by (metis UNIV_eq_I finite_iff_le_card_var large_imp_infinite term_pre.var_large)
   thus ?thesis by auto
 qed
 
@@ -169,7 +164,7 @@ lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var
   done
 
 lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow>
-inv (map_term_pre (id::_::var_term_pre \<Rightarrow> _) f (permute_term f) id) = map_term_pre id (inv f) (permute_term (inv f)) id"
+inv (map_term_pre (id::_::var \<Rightarrow> _) f (permute_term f) id) = map_term_pre id (inv f) (permute_term (inv f)) id"
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
   apply assumption
@@ -257,11 +252,11 @@ lemma usub_swap_disj:
 assumes "{u,v} \<inter> {x,y} = {}"
 shows "usub (swap P u v) x y = swap (usub P x y) u v"
 proof-
-  note term_vvsubst_permute[simp del]
+  note term.vvsubst_permute[simp del]
   show ?thesis using assms
-  apply(subst term_vvsubst_permute[symmetric]) apply auto
+  apply(subst term.vvsubst_permute[symmetric]) apply auto
   apply(subst term.map_comp) apply auto
-  apply(subst term_vvsubst_permute[symmetric]) apply auto
+  apply(subst term.vvsubst_permute[symmetric]) apply auto
   apply(subst term.map_comp) apply auto
   apply(rule term.map_cong0)
     using term_pre.supp_comp_bound by auto
@@ -435,9 +430,9 @@ lemma usub_refresh:
 assumes "xx \<notin> FFVars P \<or> xx = x"
 shows "usub P u x = usub (swap P x xx) u xx"
 proof-
-  note term_vvsubst_permute[simp del]
+  note term.vvsubst_permute[simp del]
   show ?thesis using assms
-  apply(subst term_vvsubst_permute[symmetric]) apply simp
+  apply(subst term.vvsubst_permute[symmetric]) apply simp
     subgoal by auto
     subgoal apply(subst term.map_comp)
       subgoal by auto

@@ -50,8 +50,7 @@ proof-
     unfolding ls_UNIV_iff_finite
     using finite_Tsupp by blast
   then obtain x where "x \<notin> set xs \<union> Tsupp x1 x2"
-    by (meson ex_new_if_finite finite_iff_le_card_var
-        infinite_iff_natLeq_ordLeq var_term_pre_class.large)
+    using MRBNF_FP.exists_fresh by blast
   thus ?thesis by auto
 qed
 

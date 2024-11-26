@@ -2157,11 +2157,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       let
         val vname = short_type_name (fst (dest_Type (#T quot)));
         val notes =
-          [(vname ^ "_cctor", [vvsubst_cctor]),
-           (vname ^ "_vvsubst_permute", [vvsubst_permute]),
-           (vname ^ "_set_simps", pset_simps)
+          [("vvsubst_cctor", [vvsubst_cctor]),
+           ("vvsubst_permute", [vvsubst_permute]),
+           ("set_ctor_simps", pset_simps)
           ] |> (map (fn (thmN, thms) =>
-            ((Binding.name thmN, []), [(thms, [])])
+            ((Binding.qualify true vname (Binding.name thmN), []), [(thms, [])])
           ));
       in Local_Theory.notes notes lthy end
     ) (#quotient_fps fp_res) vvsubst_cctors vvsubst_permutes pset_simpss lthy;

@@ -204,9 +204,11 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           in ([class], Local_Theory.exit_global lthy) end
         ) lthy
       end;
-    val ((class, coclass), lthy) = lthy
-      |> mk_class "var_" sort
-      ||>> mk_class "covar_" cosort;
+    val ((class, coclass), lthy) = case sort of
+      @{sort var} => ((@{sort var}, @{sort covar}), lthy)
+      | _ => lthy
+        |> mk_class "var_" sort
+        ||>> mk_class "covar_" cosort;
 
     val ((((((oDs, iDss), As), As'), Fs), Bs), names_lthy) = lthy
       |> mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf outer))
@@ -475,7 +477,10 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       wit = wit_tac
     };
 
-    val class_thms =
+    val class_thms = case bd' of
+      Const (@{const_name natLeq}, _) =>
+        ((@{sort var}, @{thm var_class.large}, @{thm var_class.regular}), (@{sort covar}, K @{thm covar_class.large}))
+      | _ =>
       let
         val ifco = bd_infinite_regular_card_order_of_mrbnf
 
@@ -1409,36 +1414,33 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       wit = wit_tac
     };
 
-    fun mk_class prfx xs f lthy =
-      (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> f ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
-    val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) I lthy;
-
-    val class_thms = class_thms_of_mrbnf mrbnf;
-    val covar_large' = @{thm ordIso_ordLeq_trans} OF [
-      @{thm cardSuc_invar_ordIso[THEN iffD2]} OF [
-        @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order],
-        @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf],
-        @{thm ordIso_symmetric} OF [bd_ordIso]
-      ],
-      #covar_large class_thms
-    ]
-    val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) (fn ctxt =>
-      let val subclass_tac = Locale.intro_locales_tac {strict = true, eager = true} ctxt []
-      in Class_Declaration.prove_subclass subclass_tac (the_single class) ctxt end
-    ) lthy3;
-
-    val class_thms =
+    val (class_thms, lthy) = case mrbnf_bd' of
+      Const (@{const_name natLeq}, _) =>
+        (((@{sort var}, @{thm var_class.large}, @{thm var_class.regular}), (@{sort covar}, K @{thm covar_class.large})), lthy)
+      | _ =>
       let
+        fun mk_class prfx xs f lthy =
+          (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> f ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
+        val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) I lthy;
+
+        val class_thms = class_thms_of_mrbnf mrbnf;
+        val covar_large' = @{thm ordIso_ordLeq_trans} OF [
+          @{thm cardSuc_invar_ordIso[THEN iffD2]} OF [
+            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order],
+            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf],
+            @{thm ordIso_symmetric} OF [bd_ordIso]
+          ],
+          #covar_large class_thms
+        ]
+        val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) (fn ctxt =>
+          let val subclass_tac = Locale.intro_locales_tac {strict = true, eager = true} ctxt []
+          in Class_Declaration.prove_subclass subclass_tac (the_single class) ctxt end
+        ) lthy3;
         val var_large' = @{thm ordIso_ordLeq_trans} OF [
           @{thm card_of_cong} OF [@{thm ordIso_symmetric} OF [bd_ordIso]],
           #var_large class_thms
         ]
-      in
-        (
-          (class, var_large', #var_regular class_thms),
-          (coclass, K covar_large')
-        )
-      end
+      in (((class, var_large', #var_regular class_thms), (coclass, K covar_large')), lthy) end
 
     val (mrbnf', lthy') =
       mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) (SOME class_thms)

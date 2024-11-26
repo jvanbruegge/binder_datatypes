@@ -51,18 +51,18 @@ lemma tvsubst_VVr_func: "tvsubst tvVVr_tvsubst t = t"
     done
 
 lemma finite_singleton: "finite {x}" by blast
-lemma singl_bound: "|{a}| <o |UNIV::'a::var_terms_pre set|"
+lemma singl_bound: "|{a}| <o |UNIV::'a::var set|"
   by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite]])
 
 lemma SSupp_upd_bound:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a terms"
+  fixes f::"'a::var \<Rightarrow> 'a terms"
   shows "|SSupp_terms (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |SSupp_terms f| <o |UNIV::'a set|"
   unfolding SSupp_terms_def
   by (auto simp only: fun_upd_apply fset_simps singl_bound ordLeq_refl split: if_splits
       elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF terms_pre.Un_bound], rotated]
       intro: card_of_mono1)
 
-corollary SSupp_upd_VVr_bound: "|SSupp_terms (tvVVr_tvsubst(a:=(t::'a::var_terms_pre terms)))| <o |UNIV::'a set|"
+corollary SSupp_upd_VVr_bound: "|SSupp_terms (tvVVr_tvsubst(a:=(t::'a::var terms)))| <o |UNIV::'a set|"
   apply (rule iffD2[OF SSupp_upd_bound])
   apply (rule terms.SSupp_VVr_bound)
   done
@@ -88,7 +88,7 @@ lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
   apply (erule exE conjE)+
   apply assumption
   done
-lemma Abs_inject: "(Abs x \<tau> e = Abs x' \<tau>' e') = (\<exists>f. bij f \<and> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set|
+lemma Abs_inject: "(Abs x \<tau> e = Abs x' \<tau>' e') = (\<exists>f. bij f \<and> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<and> id_on (FVars_terms (Abs x \<tau> e)) f \<and> f x = x' \<and> \<tau> = \<tau>' \<and> permute_terms f e = e')"
   unfolding terms.set
   unfolding Abs_def terms.TT_inject0 map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I]
@@ -98,7 +98,7 @@ lemma Abs_inject: "(Abs x \<tau> e = Abs x' \<tau>' e') = (\<exists>f. bij f \<a
   apply (rule refl)
   done
 
-lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (permute_terms f) id)"
+lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij (map_terms_pre (id::_::var \<Rightarrow> _) f (permute_terms f) id)"
   apply (rule iffD2[OF bij_iff])
     apply (rule exI[of _ "map_terms_pre id (inv f) (permute_terms (inv f)) id"])
   apply (frule bij_imp_bij_inv)
@@ -117,7 +117,7 @@ lemma bij_map_terms_pre: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<
   apply (rule terms_pre.map_id0)
   done
 
-lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var_terms_pre \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_terms_pre (id::_::var_terms_pre \<Rightarrow> _) f (permute_terms f) id) = map_terms_pre id (inv f) (permute_terms (inv f)) id"
+lemma map_terms_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> inv (map_terms_pre (id::_::var \<Rightarrow> _) f (permute_terms f) id) = map_terms_pre id (inv f) (permute_terms (inv f)) id"
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
   apply assumption
@@ -164,7 +164,7 @@ unfolding set2_terms_pre_def set3_terms_pre_def comp_def Abs_terms_pre_inverse[O
   done
   done
 
-lemma Abs_avoid: "|A::'a::var_terms_pre set| <o |UNIV::'a set| \<Longrightarrow> \<exists>x' e'. Abs x \<tau> e = Abs x' \<tau> e' \<and> x' \<notin> A"
+lemma Abs_avoid: "|A::'a::var set| <o |UNIV::'a set| \<Longrightarrow> \<exists>x' e'. Abs x \<tau> e = Abs x' \<tau> e' \<and> x' \<notin> A"
   apply (erule terms.TT_fresh_cases[of _ "Abs x \<tau> e"])
    apply (drule sym)
   apply (frule Abs_set3)
@@ -190,20 +190,20 @@ lemma VVr_eq_Var: "tvVVr_tvsubst a = Var a"
 (* small step semantics *)
 no_notation Set.member  ("(_/ : _)" [51, 51] 50)
 
-definition fresh :: "'a::var_terms_pre \<Rightarrow> ('a * 'b) fset \<Rightarrow> bool" ("(_/ \<sharp> _)" [51, 51] 50) where
+definition fresh :: "'a::var \<Rightarrow> ('a * 'b) fset \<Rightarrow> bool" ("(_/ \<sharp> _)" [51, 51] 50) where
   "fresh x \<Gamma> \<equiv> x |\<notin>| fst |`| \<Gamma>"
 
 lemma isin_rename: "bij f \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id |`| \<Gamma> \<longleftrightarrow> (x, \<tau>) |\<in>| \<Gamma>"
   by force
 
-abbreviation extend :: "('a * \<tau>) fset \<Rightarrow> 'a::var_terms_pre \<Rightarrow> \<tau> \<Rightarrow> ('a * \<tau>) fset" ("(_,_:_)" [52, 52, 52] 53) where
+abbreviation extend :: "('a * \<tau>) fset \<Rightarrow> 'a::var \<Rightarrow> \<tau> \<Rightarrow> ('a * \<tau>) fset" ("(_,_:_)" [52, 52, 52] 53) where
   "extend \<Gamma> a \<tau> \<equiv> finsert (a, \<tau>) \<Gamma>"
 
-inductive Step :: "'a::var_terms_pre terms \<Rightarrow> 'a terms \<Rightarrow> bool" (infixr "\<^bold>\<longrightarrow>" 25) where
+inductive Step :: "'a::var terms \<Rightarrow> 'a terms \<Rightarrow> bool" (infixr "\<^bold>\<longrightarrow>" 25) where
   ST_Beta: "App (Abs x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (tvVVr_tvsubst(x:=e2)) e"
 | ST_App: "e1 \<^bold>\<longrightarrow> e1' \<Longrightarrow> App e1 e2 \<^bold>\<longrightarrow> App e1' e2"
 
-inductive Ty :: "('a::var_terms_pre * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> bool" ("_ \<turnstile>\<^sub>t\<^sub>y _ : _" [25, 25, 25] 26) where
+inductive Ty :: "('a::var * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> bool" ("_ \<turnstile>\<^sub>t\<^sub>y _ : _" [25, 25, 25] 26) where
   Ty_Var: "(x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y Var x : \<tau>"
 | Ty_App: "\<lbrakk> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 ; \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y App e1 e2 : \<tau>\<^sub>2"
 | Ty_Abs: "\<lbrakk> x \<sharp> \<Gamma> ; \<Gamma>,x:\<tau> \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau> e : \<tau> \<rightarrow> \<tau>\<^sub>2"
@@ -234,7 +234,7 @@ thm Ty.strong_induct
 thm Ty.equiv
 
 lemma provided:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  fixes f::"'a::var \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows
     (* equivariance *)
@@ -257,7 +257,7 @@ inductive_cases
 print_theorems
 
 lemma provided_strong:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a" and \<Gamma>::"('a \<times> \<tau>) fset"
+  fixes f::"'a::var \<Rightarrow> 'a" and \<Gamma>::"('a \<times> \<tau>) fset"
   shows "bij f \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> x \<sharp> \<Gamma> \<longleftrightarrow> f x \<sharp> map_prod f id |`| \<Gamma>"
   apply (rule iffI)
    apply (rule provided)
@@ -273,7 +273,7 @@ lemma provided_strong:
   done
 
 lemma Ty_fresh_induct:
-  fixes A::"'a::var_terms_pre set" and e::"'a terms"
+  fixes A::"'a::var set" and e::"'a terms"
   assumes "|A| <o |UNIV::'a set|" and x: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>"
     and Ty_Var: "\<And>x \<tau> \<Gamma>. (x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> P \<Gamma> (Var x) \<tau>"
     and Ty_App: "\<And>\<Gamma> e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2. \<Gamma> \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2 \<Longrightarrow> P \<Gamma> e1 (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> e2 \<tau>\<^sub>1 \<Longrightarrow> P \<Gamma> (App e1 e2) \<tau>\<^sub>2"
@@ -284,7 +284,7 @@ lemma Ty_fresh_induct:
 
 (* automate with binder_inductive_cases *)
 lemma Ty_AbsE:
-  fixes e::"'a::var_terms_pre terms" and A::"'a set"
+  fixes e::"'a::var terms" and A::"'a set"
   assumes "\<Gamma> \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>" "|A| <o |UNIV::'a set|"
     and "\<And>y e' \<tau>' \<tau>\<^sub>2. y \<notin> A \<Longrightarrow> Abs x \<tau>\<^sub>1 e = Abs y \<tau>' e' \<Longrightarrow> \<tau> = (\<tau>' \<rightarrow> \<tau>\<^sub>2) \<Longrightarrow> y \<sharp> \<Gamma> \<Longrightarrow> \<Gamma>,y:\<tau>' \<turnstile>\<^sub>t\<^sub>y e' : \<tau>\<^sub>2 \<Longrightarrow> P"
   shows P
@@ -303,11 +303,11 @@ lemma Ty_AbsE:
   done
 
 lemma rename_Ty:
-  fixes f::"'a::var_terms_pre \<Rightarrow> 'a"
+  fixes f::"'a::var \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "\<Gamma> \<turnstile>\<^sub>t\<^sub>y e : \<tau>' \<longleftrightarrow> map_prod f id |`| \<Gamma> \<turnstile>\<^sub>t\<^sub>y vvsubst f e : \<tau>'"
   apply (rule iffI)
-  apply (unfold terms_vvsubst_permute[OF assms])
+  apply (unfold terms.vvsubst_permute[OF assms])
    apply (rule Ty.equiv)
      apply (rule assms)+
    apply assumption
@@ -328,7 +328,7 @@ and "\<And>\<tau>\<^sub>2. \<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2
 shows "P"
   apply (rule Ty_AbsE)
     apply (rule assms(1))
-  apply (rule terms_pre.UNION_bound)
+  apply (rule terms_pre.UN_bound)
     apply (rule ordLess_ordLeq_trans)
      apply (rule fset.set_bd)
           apply (rule terms.var_large)
@@ -348,7 +348,7 @@ shows "P"
      apply (rule singl_bound)
     apply (rule iffD2[OF disjoint_single])
   apply (rule assms(2))
-apply (rule terms_pre.UNION_bound)
+apply (rule terms_pre.UN_bound)
          apply (rule ordLess_ordLeq_trans)
      apply (rule fset.set_bd)
           apply (rule terms.var_large)
@@ -421,7 +421,7 @@ apply (rule iffD1[OF fun_cong[OF fun_cong [OF fset.rel_eq]]])
     apply (rule singletonI)
    apply assumption
   apply (rule trans[rotated])
-   apply (rule fun_cong[OF terms_vvsubst_permute])
+   apply (rule fun_cong[OF terms.vvsubst_permute])
     apply assumption+
   apply (rule terms.map_cong0)
     apply assumption+
@@ -499,13 +499,13 @@ next
 qed
 
 theorem progress: "{||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> (\<exists>x \<tau> e'. e = Abs x \<tau> e') \<or> (\<exists>e'. e \<^bold>\<longrightarrow> e')"
-proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> rule: Ty.induct)
+proof (induction "{||} :: ('a::var * \<tau>) fset" e \<tau> rule: Ty.induct)
   case (Ty_App e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2)
   from Ty_App(2) show ?case using ST_Beta ST_App by blast
 qed auto
 
 theorem preservation: "\<lbrakk> {||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; e \<^bold>\<longrightarrow> e' \<rbrakk> \<Longrightarrow> {||} \<turnstile>\<^sub>t\<^sub>y e' : \<tau>"
-proof (induction "{||} :: ('a::var_terms_pre * \<tau>) fset" e \<tau> arbitrary: e' rule: Ty.induct)
+proof (induction "{||} :: ('a::var * \<tau>) fset" e \<tau> arbitrary: e' rule: Ty.induct)
   case (Ty_App e1 \<tau>\<^sub>1 \<tau>\<^sub>2 e2)
   from Ty_App(5) show ?case
   proof cases

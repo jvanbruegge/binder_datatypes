@@ -11,7 +11,6 @@ binder_datatype 'var commit =
 
 (* Monomorphization: *)
 type_synonym cmt = "var commit"
-instance var :: var_commit_pre by standard
 
 lemmas toUnfold =
   UN_empty UN_empty2 UN_single Un_empty_left Un_empty_right
@@ -69,8 +68,7 @@ proof-
   unfolding ls_UNIV_iff_finite
   using finite_FVars_commit by blast
   then obtain x where "x \<notin> set xs \<union> \<Union> (FVars_commit ` (set Cs))"
-  by (meson ex_new_if_finite finite_iff_le_card_var
-    infinite_iff_natLeq_ordLeq var_term_pre_class.large)
+    using MRBNF_FP.exists_fresh by blast
   thus ?thesis by auto
 qed
 
@@ -115,8 +113,8 @@ fun ns :: "act \<Rightarrow> var set" where
 abbreviation "bvars \<equiv> bns"
 abbreviation "fvars \<equiv> fns"
 
-lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var_commit_pre set|"
-  by (metis Commitment.var_ID_class.large bns.elims finite_iff_le_card_var finite_ordLess_infinite2 insert_bound large_imp_infinite singl_bound)
+lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var set|"
+  by (cases \<alpha>) (auto simp: emp_bound infinite_UNIV)
 
 local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   ctors = [

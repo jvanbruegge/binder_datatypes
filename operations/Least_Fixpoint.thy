@@ -15,7 +15,7 @@ typ "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k) T2_pre"
 
 (************* DEFINITIONS *****************)
 
-datatype ('a::"{var_T1_pre,var_T2_pre}", 'b::"{var_T1_pre,var_T2_pre}", 'c::"{var_T1_pre,var_T2_pre}", 'd) raw_T1 =
+datatype ('a::var, 'b::var, 'c::var, 'd) raw_T1 =
   raw_T1_ctor "('a, 'b, 'c, 'd, 'a, 'b, 'a,
     ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T1,
     ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2
@@ -26,10 +26,10 @@ datatype ('a::"{var_T1_pre,var_T2_pre}", 'b::"{var_T1_pre,var_T2_pre}", 'c::"{va
     ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2
   ) T2_pre"
 
-primrec permute_raw_T1 :: "('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b)
-  \<Rightarrow> ('a, 'b, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> ('a, 'b, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-  and permute_raw_T2 :: "('a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a) \<Rightarrow> ('b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b)
-  \<Rightarrow> ('a, 'b, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> ('a, 'b, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2" where
+primrec permute_raw_T1 :: "('a::var \<Rightarrow> 'a) \<Rightarrow> ('b::var \<Rightarrow> 'b)
+  \<Rightarrow> ('a, 'b, 'c::var, 'd) raw_T1 \<Rightarrow> ('a, 'b, 'c::var, 'd) raw_T1"
+  and permute_raw_T2 :: "('a::var \<Rightarrow> 'a) \<Rightarrow> ('b::var \<Rightarrow> 'b)
+  \<Rightarrow> ('a, 'b, 'c::var, 'd) raw_T2 \<Rightarrow> ('a, 'b, 'c::var, 'd) raw_T2" where
   "permute_raw_T1 f1 f2 (raw_T1_ctor x) = raw_T1_ctor (map_T1_pre f1 f2 id id f1 f2 f1 id id id id (
   map_T1_pre id id id id id id id (permute_raw_T1 f1 f2) (permute_raw_T1 f1 f2) (permute_raw_T2 f1 f2) (permute_raw_T2 f1 f2) x
 ))"
@@ -41,7 +41,7 @@ we need to separate recursion from other actions for primrec *)
 
 (* we can derive the desired simplification rule using composition of map *)
 lemma permute_raw_simps:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "permute_raw_T1 f1 f2 (raw_T1_ctor x) = raw_T1_ctor (map_T1_pre f1 f2 id id f1 f2 f1
@@ -65,8 +65,8 @@ lemma permute_raw_simps:
 
 (* binding_rel: [([0], [1,3]), ([], [1])] *)
 inductive
-  free1_raw_T1 :: "'a \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> bool"
-  and free1_raw_T2 :: "'a \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> bool"
+  free1_raw_T1 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> bool"
+  and free1_raw_T2 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> bool"
   where
     "a \<in> set1_T1_pre x \<Longrightarrow> free1_raw_T1 a (raw_T1_ctor x)"
   | "a \<in> set7_T1_pre x \<Longrightarrow> a \<notin> set5_T1_pre x \<Longrightarrow> free1_raw_T1 a (raw_T1_ctor x)"
@@ -82,8 +82,8 @@ inductive
   | "z \<in> set11_T2_pre x2 \<Longrightarrow> free1_raw_T2 a z \<Longrightarrow> a \<notin> set5_T2_pre x2 \<Longrightarrow> free1_raw_T2 a (raw_T2_ctor x2)"
 
 inductive
-  free2_raw_T1 :: "'b \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> bool"
-  and free2_raw_T2 :: "'b \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> bool"
+  free2_raw_T1 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> bool"
+  and free2_raw_T2 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> bool"
   where
     "a \<in> set2_T1_pre x \<Longrightarrow> free2_raw_T1 a (raw_T1_ctor x)"
   | "z \<in> set8_T1_pre x \<Longrightarrow> free2_raw_T1 a z \<Longrightarrow> free2_raw_T1 a (raw_T1_ctor x)"
@@ -96,19 +96,19 @@ inductive
   | "z \<in> set10_T2_pre x2 \<Longrightarrow> free2_raw_T2 a z \<Longrightarrow> free2_raw_T2 a (raw_T2_ctor x2)"
   | "z \<in> set11_T2_pre x2 \<Longrightarrow> free2_raw_T2 a z \<Longrightarrow> free2_raw_T2 a (raw_T2_ctor x2)"
 
-definition FVars_raw_T11 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> 'a set"
+definition FVars_raw_T11 :: "('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> 'a set"
   where "FVars_raw_T11 x \<equiv> { a. free1_raw_T1 a x }"
-definition FVars_raw_T12 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> 'b set"
+definition FVars_raw_T12 :: "('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> 'b set"
   where "FVars_raw_T12 x \<equiv> { a. free2_raw_T1 a x }"
-definition FVars_raw_T21 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> 'a set"
+definition FVars_raw_T21 :: "('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> 'a set"
   where "FVars_raw_T21 x \<equiv> { a. free1_raw_T2 a x }"
-definition FVars_raw_T22 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> 'b set"
+definition FVars_raw_T22 :: "('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> 'b set"
   where "FVars_raw_T22 x \<equiv> { a. free2_raw_T2 a x }"
 
 lemmas FVars_raw_defs = FVars_raw_T11_def FVars_raw_T12_def FVars_raw_T21_def FVars_raw_T22_def
 
-coinductive alpha_T1 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> bool"
-and alpha_T2 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2 \<Rightarrow> bool"
+coinductive alpha_T1 :: "('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> bool"
+and alpha_T2 :: "('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2 \<Rightarrow> bool"
 where
   "\<lbrakk> bij f1 ; |supp f1| <o |UNIV::'a set| ; bij f2 ; |supp f2| <o |UNIV::'b set| ;
   id_on ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x)) f1 ;
@@ -128,13 +128,13 @@ where
 type_synonym ('a, 'b, 'c, 'd) raw_T1' = "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2) T1_pre"
 type_synonym ('a, 'b, 'c, 'd) raw_T2' = "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2) T2_pre"
 
-typedef ('a::"{var_T1_pre,var_T2_pre}", 'b::"{var_T1_pre,var_T2_pre}", 'c::"{var_T1_pre,var_T2_pre}", 'd) T1 = "(UNIV :: ('a, 'b, 'c, 'd) raw_T1 set) // {(x, y). alpha_T1 x y}"
+typedef ('a::"var", 'b::"var", 'c::"var", 'd) T1 = "(UNIV :: ('a, 'b, 'c, 'd) raw_T1 set) // {(x, y). alpha_T1 x y}"
   apply (rule exI)
   apply (rule quotientI)
   apply (rule UNIV_I)
   done
 
-typedef ('a::"{var_T1_pre,var_T2_pre}", 'b::"{var_T1_pre,var_T2_pre}", 'c::"{var_T1_pre,var_T2_pre}", 'd) T2 = "(UNIV :: ('a, 'b, 'c, 'd) raw_T2 set) // {(x, y). alpha_T2 x y}"
+typedef ('a::"var", 'b::"var", 'c::"var", 'd) T2 = "(UNIV :: ('a, 'b, 'c, 'd) raw_T2 set) // {(x, y). alpha_T2 x y}"
   apply (rule exI)
   apply (rule quotientI)
   apply (rule UNIV_I)
@@ -149,28 +149,28 @@ abbreviation "TT2_rep \<equiv> quot_type.rep Rep_T2"
 type_synonym ('a, 'b, 'c, 'd) T1' = "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1, ('a, 'b, 'c, 'd) T1, ('a, 'b, 'c, 'd) T2, ('a, 'b, 'c, 'd) T2) T1_pre"
 type_synonym ('a, 'b, 'c, 'd) T2' = "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1, ('a, 'b, 'c, 'd) T1, ('a, 'b, 'c, 'd) T2, ('a, 'b, 'c, 'd) T2) T2_pre"
 
-definition T1_ctor :: "('a, 'b, 'c, 'd) T1' \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
+definition T1_ctor :: "('a, 'b, 'c, 'd) T1' \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"
   where "T1_ctor x \<equiv> TT1_abs (raw_T1_ctor (map_T1_pre id id id id id id id TT1_rep TT1_rep TT2_rep TT2_rep x))"
-definition T2_ctor :: "('a, 'b, 'c, 'd) T2' \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"
+definition T2_ctor :: "('a, 'b, 'c, 'd) T2' \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T2"
   where "T2_ctor x \<equiv> TT2_abs (raw_T2_ctor (map_T2_pre id id id id id id id TT1_rep TT1_rep TT2_rep TT2_rep x))"
 
-definition permute_T1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('a, 'b, 'c, 'd) T1 \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
+definition permute_T1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('a, 'b, 'c, 'd) T1 \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"
   where "permute_T1 f1 f2 x \<equiv> TT1_abs (permute_raw_T1 f1 f2 (TT1_rep x))"
-definition permute_T2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('a, 'b, 'c, 'd) T2 \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"
+definition permute_T2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('a, 'b, 'c, 'd) T2 \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T2"
   where "permute_T2 f1 f2 x \<equiv> TT2_abs (permute_raw_T2 f1 f2 (TT2_rep x))"
 
-definition FVars_T11 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> 'a set"
+definition FVars_T11 :: "('a::var, 'b::var, 'c::var, 'd) T1 \<Rightarrow> 'a set"
   where "FVars_T11 x \<equiv> FVars_raw_T11 (TT1_rep x)"
-definition FVars_T12 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> 'b set"
+definition FVars_T12 :: "('a::var, 'b::var, 'c::var, 'd) T1 \<Rightarrow> 'b set"
   where "FVars_T12 x \<equiv> FVars_raw_T12 (TT1_rep x)"
-definition FVars_T21 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> 'a set"
+definition FVars_T21 :: "('a::var, 'b::var, 'c::var, 'd) T2 \<Rightarrow> 'a set"
   where "FVars_T21 x \<equiv> FVars_raw_T21 (TT2_rep x)"
-definition FVars_T22 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> 'b set"
+definition FVars_T22 :: "('a::var, 'b::var, 'c::var, 'd) T2 \<Rightarrow> 'b set"
   where "FVars_T22 x \<equiv> FVars_raw_T22 (TT2_rep x)"
 
 lemmas FVars_defs = FVars_T11_def FVars_T12_def FVars_T21_def FVars_T22_def
 
-inductive subshape_T1_T1 :: "('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> bool"
+inductive subshape_T1_T1 :: "('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> bool"
   and subshape_T2_T1 :: "('a, 'b, 'c, 'd) raw_T2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> bool"
   and subshape_T1_T2 :: "('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2 \<Rightarrow> bool"
   and subshape_T2_T2 :: "('a, 'b, 'c, 'd) raw_T2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2 \<Rightarrow> bool"
@@ -183,25 +183,25 @@ inductive subshape_T1_T1 :: "('a, 'b, 'c, 'd) raw_T1 \<Rightarrow> ('a::{var_T1_
 lemmas subshape_intros = subshape_T1_T1_subshape_T2_T1_subshape_T1_T2_subshape_T2_T2.intros
 lemmas subshape_elims = subshape_T1_T1.cases subshape_T2_T1.cases subshape_T1_T2.cases subshape_T2_T2.cases
 
-definition noclash_raw_T1 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1' \<Rightarrow> bool"
+definition noclash_raw_T1 :: "('a::var, 'b::var, 'c::var, 'd) raw_T1' \<Rightarrow> bool"
   where "noclash_raw_T1 x \<equiv> set5_T1_pre x \<inter> (set1_T1_pre x \<union> \<Union>(FVars_raw_T11 ` set8_T1_pre x) \<union> \<Union>(FVars_raw_T21 ` set10_T1_pre x)) = {}
                         \<and> set6_T1_pre x \<inter> (set2_T1_pre x \<union> \<Union>(FVars_raw_T12 ` set8_T1_pre x) \<union> \<Union>(FVars_raw_T22 ` set10_T1_pre x) \<union> \<Union>(FVars_raw_T22 ` set11_T1_pre x)) = {}"
-definition noclash_raw_T2 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2' \<Rightarrow> bool"
+definition noclash_raw_T2 :: "('a::var, 'b::var, 'c::var, 'd) raw_T2' \<Rightarrow> bool"
   where "noclash_raw_T2 x \<equiv> set5_T2_pre x \<inter> (set1_T2_pre x \<union> \<Union>(FVars_raw_T11 ` set8_T2_pre x) \<union> \<Union>(FVars_raw_T21 ` set10_T2_pre x)) = {}
                         \<and> set6_T2_pre x \<inter> (set2_T2_pre x \<union> \<Union>(FVars_raw_T12 ` set8_T2_pre x) \<union> \<Union>(FVars_raw_T22 ` set10_T2_pre x) \<union> \<Union>(FVars_raw_T22 ` set11_T2_pre x)) = {}"
 
-definition noclash_T1 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1' \<Rightarrow> bool"
+definition noclash_T1 :: "('a::var, 'b::var, 'c::var, 'd) T1' \<Rightarrow> bool"
   where "noclash_T1 x \<equiv> set5_T1_pre x \<inter> (set1_T1_pre x \<union> \<Union>(FVars_T11 ` set8_T1_pre x) \<union> \<Union>(FVars_T21 ` set10_T1_pre x)) = {}
                         \<and> set6_T1_pre x \<inter> (set2_T1_pre x \<union> \<Union>(FVars_T12 ` set8_T1_pre x) \<union> \<Union>(FVars_T22 ` set10_T1_pre x) \<union> \<Union>(FVars_T22 ` set11_T1_pre x)) = {}"
-definition noclash_T2 :: "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2' \<Rightarrow> bool"
+definition noclash_T2 :: "('a::var, 'b::var, 'c::var, 'd) T2' \<Rightarrow> bool"
   where "noclash_T2 x \<equiv> set5_T2_pre x \<inter> (set1_T2_pre x \<union> \<Union>(FVars_T11 ` set8_T2_pre x) \<union> \<Union>(FVars_T21 ` set10_T2_pre x)) = {}
                         \<and> set6_T2_pre x \<inter> (set2_T2_pre x \<union> \<Union>(FVars_T12 ` set8_T2_pre x) \<union> \<Union>(FVars_T22 ` set10_T2_pre x) \<union> \<Union>(FVars_T22 ` set11_T2_pre x)) = {}"
 
 (************* PROOFS *****************)
 
 lemma permute_raw_ids:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows "permute_raw_T1 id id x = x" (is ?P1)
     "permute_raw_T2 id id x2 = x2" (is ?P2)
 proof -
@@ -237,10 +237,10 @@ qed
 lemmas permute_raw_id0s = permute_raw_ids[abs_def, unfolded id_def[symmetric], THEN meta_eq_to_obj_eq]
 
 lemma permute_raw_comps:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and g1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and g2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and g1::"'a::var \<Rightarrow> 'a" and g2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
     and "bij g1" "|supp g1| <o |UNIV::'a set|" "bij g2" "|supp g2| <o |UNIV::'b set|"
   shows
@@ -282,8 +282,8 @@ proof -
 qed
 
 lemma permute_raw_comp0s:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and g1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and g2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and g1::"'a::var \<Rightarrow> 'a" and g2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
     and "bij g1" "|supp g1| <o |UNIV::'a set|" "bij g2" "|supp g2| <o |UNIV::'b set|"
   shows
@@ -666,9 +666,9 @@ lemma FVars_raw_ctors:
   done
 
 lemma FVars_raw_permute_leq:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "free1_raw_T1 z x \<Longrightarrow> f1 z \<in> FVars_raw_T11 (permute_raw_T1 f1 f2 x)" (is "_ \<Longrightarrow> ?P11")
@@ -895,9 +895,9 @@ proof -
 qed
 
 lemma FVars_raw_permutes:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "FVars_raw_T11 (permute_raw_T1 f1 f2 x1) = f1 ` FVars_raw_T11 x1"
@@ -989,8 +989,8 @@ lemmas Un_bound = infinite_regular_card_order_Un[OF T1_pre.bd_infinite_regular_c
 lemmas UN_bound = regularCard_UNION_bound[OF T1_pre.bd_Cinfinite T1_pre.bd_regularCard]
 
 lemma FVars_raw_bds:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows
     "|FVars_raw_T11 x| <o natLeq" (is ?P11)
     "|FVars_raw_T12 x| <o natLeq" (is ?P12)
@@ -1015,11 +1015,11 @@ proof -
   show ?P22 by (rule conjunct2[OF x2])
 qed
 
-lemmas FVars_raw_bd_UNIVs = FVars_raw_bds[THEN ordLess_ordLeq_trans, OF var_T1_pre_class.large]
+lemmas FVars_raw_bd_UNIVs = FVars_raw_bds[THEN ordLess_ordLeq_trans, OF var_class.large']
 
 lemma alpha_refls:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows "alpha_T1 x x" "alpha_T2 x2 x2"
 proof -
   have x: "(\<forall>(x::('a, 'b, 'c, 'd) raw_T1) y. x = y \<longrightarrow> alpha_T1 x y) \<and> (\<forall>(x::('a, 'b, 'c, 'd) raw_T2) y. x = y \<longrightarrow> alpha_T2 x y)"
@@ -1054,10 +1054,10 @@ proof -
 qed
 
 lemma alpha_bijs:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and g1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and g2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and g1::"'a::var \<Rightarrow> 'a" and g2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
     and g_prems: "bij g1" "|supp g1| <o |UNIV::'a set|" "bij g2" "|supp g2| <o |UNIV::'b set|"
   shows
@@ -1594,9 +1594,9 @@ proof -
 qed
 
 lemma alpha_bij_eqs:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "alpha_T1 (permute_raw_T1 f1 f2 x) (permute_raw_T1 f1 f2 y) = alpha_T1 x y"
@@ -1643,9 +1643,9 @@ lemma alpha_bij_eqs:
   done
 
 lemma alpha_bij_eq_invs:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "alpha_T1 (permute_raw_T1 f1 f2 x) y = alpha_T1 x (permute_raw_T1 (inv f1) (inv f2) y)"
@@ -1672,8 +1672,8 @@ lemma alpha_bij_eq_invs:
   done
 
 lemma alpha_FVars_leqs1:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-  and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+  and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
 shows
   "(free1_raw_T1 a x \<longrightarrow> (\<forall>y. alpha_T1 x y \<longrightarrow> a \<in> FVars_raw_T11 y)) \<and> (free1_raw_T2 a x2 \<longrightarrow> (\<forall>y2. alpha_T2 x2 y2 \<longrightarrow> a \<in> FVars_raw_T21 y2))"
   "(free2_raw_T1 a2 x \<longrightarrow> (\<forall>y. alpha_T1 x y \<longrightarrow> a2 \<in> FVars_raw_T12 y)) \<and> (free2_raw_T2 a2 x2 \<longrightarrow> (\<forall>y2. alpha_T2 x2 y2 \<longrightarrow> a2 \<in> FVars_raw_T22 y2))"
@@ -2747,8 +2747,8 @@ shows
     done
 
 lemma alpha_FVars_leqs2:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-  and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+  and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
 shows
   "(free1_raw_T1 a x \<longrightarrow> (\<forall>y. alpha_T1 y x \<longrightarrow> a \<in> FVars_raw_T11 y)) \<and> (free1_raw_T2 a x2 \<longrightarrow> (\<forall>y2. alpha_T2 y2 x2 \<longrightarrow> a \<in> FVars_raw_T21 y2))"
   "(free2_raw_T1 a2 x \<longrightarrow> (\<forall>y. alpha_T1 y x \<longrightarrow> a2 \<in> FVars_raw_T12 y)) \<and> (free2_raw_T2 a2 x2 \<longrightarrow> (\<forall>y2. alpha_T2 y2 x2 \<longrightarrow> a2 \<in> FVars_raw_T22 y2))"
@@ -3491,8 +3491,8 @@ shows
     done
 
 lemma alpha_FVars:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows
     "alpha_T1 x y \<Longrightarrow> FVars_raw_T11 x = FVars_raw_T11 y"
     "alpha_T1 x y \<Longrightarrow> FVars_raw_T12 x = FVars_raw_T12 y"
@@ -3550,8 +3550,8 @@ lemma alpha_FVars:
     done
 
 lemma alpha_syms:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows
     "alpha_T1 x y \<Longrightarrow> alpha_T1 y x"
     "alpha_T2 x2 y2 \<Longrightarrow> alpha_T2 y2 x2"
@@ -3913,8 +3913,8 @@ qed
 
 
 lemma alpha_trans:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows
     "alpha_T1 x y \<Longrightarrow> alpha_T1 y z \<Longrightarrow> alpha_T1 x z"
     "alpha_T2 x2 y2 \<Longrightarrow> alpha_T2 y2 z2 \<Longrightarrow> alpha_T2 x2 z2"
@@ -4327,37 +4327,37 @@ proof -
 qed
 
 lemma raw_refreshs:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1'"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2'"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1'"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2'"
   assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
   shows
     "\<exists>y. set5_T1_pre y \<inter> A = {} \<and> set6_T1_pre y \<inter> B = {} \<and> alpha_T1 (raw_T1_ctor x) (raw_T1_ctor y)"
     "\<exists>y. set5_T2_pre y \<inter> A = {} \<and> set6_T2_pre y \<inter> B = {} \<and> alpha_T2 (raw_T2_ctor x2) (raw_T2_ctor y)"
    apply (rule exE[OF eextend_fresh[of "set5_T1_pre x" "A \<union> ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x))" "(set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x)"]])
         apply (rule T1_pre.set_bd_UNIV)
-       apply (rule var_T1_pre_class.Un_bound)
+       apply (rule var_class.Un_bound)
         apply (rule assms)
     (* REPEAT_DETERM *)
-       apply (rule var_T1_pre_class.Un_bound)+
+       apply (rule var_class.Un_bound)+
         apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-        apply (rule var_T1_pre_class.UN_bound)?
+        apply (rule var_class.UN_bound)?
          apply (rule ordLess_ordLeq_trans)
           apply (rule T1_pre.set_bd)
-         apply (rule var_T1_pre_class.large)
+         apply (rule var_class.large')
         apply (rule FVars_raw_bd_UNIVs)?
     (* repeated *)
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-       apply (rule var_T1_pre_class.UN_bound)
+       apply (rule var_class.UN_bound)
         apply (rule ordLess_ordLeq_trans)
          apply (rule T1_pre.set_bd)
-        apply (rule var_T1_pre_class.large)
+        apply (rule var_class.large')
         apply (rule FVars_raw_bd_UNIVs)
    (* repeated *)
       apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-      apply (rule var_T1_pre_class.UN_bound)?
+      apply (rule var_class.UN_bound)?
        apply (rule ordLess_ordLeq_trans)
         apply (rule T1_pre.set_bd)
-       apply (rule var_T1_pre_class.large)
+       apply (rule var_class.large')
       apply (rule FVars_raw_bd_UNIVs)?
     (* repeated *)
     (* END REPEAT_DETERM *)
@@ -4370,15 +4370,15 @@ lemma raw_refreshs:
     (* repeated *)
    apply (rule exE[OF eextend_fresh[of "set6_T1_pre x" "B \<union> (\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x)" "(\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x)"]])
         apply (rule T1_pre.set_bd_UNIV)
-       apply (rule var_T1_pre_class.Un_bound)
+       apply (rule var_class.Un_bound)
         apply (rule assms)
     (* REPEAT_DETERM *)
-       apply (rule var_T1_pre_class.Un_bound)?
+       apply (rule var_class.Un_bound)?
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-       apply (rule var_T1_pre_class.UN_bound)
+       apply (rule var_class.UN_bound)
         apply (rule ordLess_ordLeq_trans)
          apply (rule T1_pre.set_bd)
-        apply (rule var_T1_pre_class.large)
+        apply (rule var_class.large')
        apply (rule FVars_raw_bd_UNIVs)
     (* END REPEAT_DETERM *)
       apply (rule infinite_UNIV)
@@ -4415,29 +4415,29 @@ lemma raw_refreshs:
 (* second goal, same tactic *)
   apply (rule exE[OF eextend_fresh[of "set5_T2_pre x2" "A \<union> ((set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T21 ` set11_T2_pre x2) - set5_T2_pre x2))" "(set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T21 ` set11_T2_pre x2) - set5_T2_pre x2)"]])
        apply (rule T2_pre.set_bd_UNIV)
-      apply (rule var_T1_pre_class.Un_bound)
+      apply (rule var_class.Un_bound)
        apply (rule assms)
-      apply (rule var_T1_pre_class.Un_bound)+
+      apply (rule var_class.Un_bound)+
     (* REPEAT_DETERM *)
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-       apply (rule var_T1_pre_class.UN_bound)?
+       apply (rule var_class.UN_bound)?
         apply (rule ordLess_ordLeq_trans)
          apply (rule T2_pre.set_bd)
-        apply (rule var_T1_pre_class.large)
+        apply (rule var_class.large')
        apply (rule FVars_raw_bd_UNIVs)?
     (* repeated *)
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-       apply (rule var_T1_pre_class.UN_bound)?
+       apply (rule var_class.UN_bound)?
         apply (rule ordLess_ordLeq_trans)
          apply (rule T2_pre.set_bd)
-        apply (rule var_T1_pre_class.large)
+        apply (rule var_class.large')
        apply (rule FVars_raw_bd_UNIVs)?
     (* repeated *)
       apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-      apply (rule var_T1_pre_class.UN_bound)
+      apply (rule var_class.UN_bound)
        apply (rule ordLess_ordLeq_trans)
         apply (rule T2_pre.set_bd)
-       apply (rule var_T1_pre_class.large)
+       apply (rule var_class.large')
       apply (rule FVars_raw_bd_UNIVs)
     (* END REPEAT_DETERM *)
      apply (rule infinite_UNIV)
@@ -4448,15 +4448,15 @@ lemma raw_refreshs:
     (* repeated *)
   apply (rule exE[OF eextend_fresh[of "set6_T2_pre x2" "B \<union> (\<Union>(FVars_raw_T12 ` set9_T2_pre x2) - set6_T2_pre x2)" "(\<Union>(FVars_raw_T12 ` set9_T2_pre x2) - set6_T2_pre x2)"]])
        apply (rule T2_pre.set_bd_UNIV)
-      apply (rule var_T1_pre_class.Un_bound)
+      apply (rule var_class.Un_bound)
        apply (rule assms)
     (* REPEAT_DETERM *)
-      apply (rule var_T1_pre_class.Un_bound)?
+      apply (rule var_class.Un_bound)?
       apply (rule ordLeq_ordLess_trans[OF card_of_diff])
-      apply (rule var_T1_pre_class.UN_bound)
+      apply (rule var_class.UN_bound)
        apply (rule ordLess_ordLeq_trans)
         apply (rule T2_pre.set_bd)
-       apply (rule var_T1_pre_class.large)
+       apply (rule var_class.large')
       apply (rule FVars_raw_bd_UNIVs)
     (* END REPEAT_DETERM *)
      apply (rule infinite_UNIV)
@@ -4590,7 +4590,7 @@ lemma TT_abs_ctors:
   done
 
 lemma permute_simps:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "permute_T1 f1 f2 (T1_ctor x) = T1_ctor (map_T1_pre f1 f2 id id f1 f2 f1 (permute_T1 f1 f2) (permute_T1 f1 f2) (permute_T2 f1 f2) (permute_T2 f1 f2) x)"
@@ -4706,8 +4706,8 @@ lemma permute_id0s:
 lemmas permute_ids = trans[OF fun_cong[OF permute_id0s(1)] id_apply] trans[OF fun_cong[OF permute_id0s(2)] id_apply]
 
 lemma permute_comp0s:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and g1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and g2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and g1::"'a::var \<Rightarrow> 'a" and g2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
     and "bij g1" "|supp g1| <o |UNIV::'a set|" "bij g2" "|supp g2| <o |UNIV::'b set|"
   shows
@@ -4739,7 +4739,7 @@ lemmas permute_comps =
   trans[OF comp_apply[symmetric] fun_cong[OF permute_comp0s(2)]]
 
 lemma permute_bijs:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows "bij (permute_T1 f1 f2)" "bij (permute_T2 f1 f2)"
   apply (unfold bij_iff)
@@ -4773,7 +4773,7 @@ lemma permute_bijs:
   done
 
 lemma permute_inv_simps:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "inv (permute_T1 f1 f2) = permute_T1 (inv f1) (inv f2)"
@@ -4820,21 +4820,21 @@ lemma FVars_bds:
   done
 
 lemma FVars_bd_UNIVs:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) T2"
   shows
-    "|FVars_T11 x| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
-    "|FVars_T12 x| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
-    "|FVars_T21 x2| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
-    "|FVars_T22 x2| <o |UNIV::'x::{var_T1_pre,var_T2_pre} set|"
+    "|FVars_T11 x| <o |UNIV::'x::var set|"
+    "|FVars_T12 x| <o |UNIV::'x::var set|"
+    "|FVars_T21 x2| <o |UNIV::'x::var set|"
+    "|FVars_T22 x2| <o |UNIV::'x::var set|"
      apply (unfold FVars_defs)
      apply (rule FVars_raw_bd_UNIVs)+
    done
 
 lemma FVars_permutes:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "FVars_T11 (permute_T1 f1 f2 x) = f1 ` FVars_T11 x"
@@ -5189,12 +5189,12 @@ lemma FVars_intros:
   done
 
 lemma TT_inject0s:
-  "(T1_ctor x = T1_ctor y) = (\<exists>(f1::('a::{var_T1_pre, var_T2_pre} \<Rightarrow> 'a)) (f2::('b::{var_T1_pre, var_T2_pre} \<Rightarrow> 'b)).
+  "(T1_ctor x = T1_ctor y) = (\<exists>(f1::('a::var \<Rightarrow> 'a)) (f2::('b::var \<Rightarrow> 'b)).
     bij f1 \<and> |supp f1| <o |UNIV::'a set| \<and> bij f2 \<and> |supp f2| <o |UNIV::'b set|
     \<and> id_on ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_T21 ` set11_T1_pre x) - set5_T1_pre x)) f1
     \<and> id_on (\<Union>(FVars_T12 ` set9_T1_pre x) - set6_T1_pre x) f2
     \<and> map_T1_pre id id id id f1 f2 f1 id (permute_T1 f1 f2) id (permute_T2 f1 id) x = y)"
-  "(T2_ctor x2 = T2_ctor y2) = (\<exists>(f1::('a::{var_T1_pre, var_T2_pre} \<Rightarrow> 'a)) (f2::('b::{var_T1_pre, var_T2_pre} \<Rightarrow> 'b)).
+  "(T2_ctor x2 = T2_ctor y2) = (\<exists>(f1::('a::var \<Rightarrow> 'a)) (f2::('b::var \<Rightarrow> 'b)).
     bij f1 \<and> |supp f1| <o |UNIV::'a set| \<and> bij f2 \<and> |supp f2| <o |UNIV::'b set|
     \<and> id_on ((set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_T21 ` set11_T2_pre x2) - set5_T2_pre x2)) f1
     \<and> id_on (\<Union>(FVars_T12 ` set9_T2_pre x2) - set6_T2_pre x2) f2
@@ -5347,7 +5347,7 @@ lemma TT_inject0s:
   done
 
 lemma fresh_cases_T1:
-  fixes y::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
+  fixes y::"('a::var, 'b::var, 'c::var, 'd) T1"
   assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
     and "\<And>(x::('a, 'b, 'c, 'd) T1'). y = T1_ctor x \<Longrightarrow> set5_T1_pre x \<inter> A = {} \<Longrightarrow> set6_T1_pre x \<inter> B = {} \<Longrightarrow> noclash_T1 x \<Longrightarrow> P"
   shows "P"
@@ -5465,7 +5465,7 @@ lemma fresh_cases_T1:
   done
 
 lemma fresh_cases_T2:
-  fixes x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2'"
+  fixes x2::"('a::var, 'b::var, 'c::var, 'd) T2'"
   assumes "|A| <o |UNIV::'a set|" "|B| <o |UNIV::'b set|"
     and "\<And>(x::('a, 'b, 'c, 'd) T2'). y = T2_ctor x \<Longrightarrow> set5_T2_pre x \<inter> A = {} \<Longrightarrow> set6_T2_pre x \<inter> B = {} \<Longrightarrow> noclash_T2 x \<Longrightarrow> P"
   shows "P"
@@ -5586,8 +5586,8 @@ lemma fresh_cases_T2:
 lemmas fresh_cases = fresh_cases_T1 fresh_cases_T2
 
 lemma alpha_subshapess:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   shows
     "alpha_T1 x y \<Longrightarrow> subshape_T1_T1 z x \<Longrightarrow> subshape_T1_T1 z y"
     "alpha_T1 x y \<Longrightarrow> subshape_T2_T1 z2 x \<Longrightarrow> subshape_T2_T1 z2 y"
@@ -5838,8 +5838,8 @@ proof -
 qed
 
 lemma subshape_induct_raw:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "\<And>x. (\<And>y. subshape_T1_T1 y x \<Longrightarrow> P1 y) \<Longrightarrow> (\<And>y. subshape_T2_T1 y x \<Longrightarrow> P2 y) \<Longrightarrow> P1 x"
     "\<And>x. (\<And>y. subshape_T1_T2 y x \<Longrightarrow> P1 y) \<Longrightarrow> (\<And>y. subshape_T2_T2 y x \<Longrightarrow> P2 y) \<Longrightarrow> P2 x"
   shows "(\<forall>f1 f2 y. bij f1 \<longrightarrow> |supp f1| <o |UNIV::'a set| \<longrightarrow> bij f2 \<longrightarrow> |supp f2| <o |UNIV::'b set| \<longrightarrow> alpha_T1 (permute_raw_T1 f1 f2 x) y \<longrightarrow> P1 y)
@@ -6043,8 +6043,8 @@ lemma subshape_induct_raw:
   done
 
 lemma subshape_induct:
-  fixes x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"
+  fixes x::"('a::var, 'b::var, 'c::var, 'd) raw_T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) raw_T2"
   assumes "\<And>x. (\<And>y. subshape_T1_T1 y x \<Longrightarrow> P1 y) \<Longrightarrow> (\<And>y. subshape_T2_T1 y x \<Longrightarrow> P2 y) \<Longrightarrow> P1 x"
     "\<And>x. (\<And>y. subshape_T1_T2 y x \<Longrightarrow> P1 y) \<Longrightarrow> (\<And>y. subshape_T2_T2 y x \<Longrightarrow> P2 y) \<Longrightarrow> P2 x"
   shows "P1 x \<and> P2 x2"
@@ -6122,7 +6122,7 @@ lemma wf_subshape: "wf {(x, y). case x of
     done
 
 lemma set_subshape_permutess:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "z \<in> set8_T1_pre x \<Longrightarrow> subshape_T1_T1 (permute_raw_T1 f1 f2 z) (raw_T1_ctor x)"
@@ -6219,7 +6219,7 @@ lemma set_subshape_permutess:
 lemmas set_subshapess = set_subshape_permutess[OF bij_id supp_id_bound bij_id supp_id_bound, unfolded permute_raw_ids]
 
 lemma permute_abs:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "permute_T1 f1 f2 (TT1_abs x) = TT1_abs (permute_raw_T1 f1 f2 x)"
@@ -6446,8 +6446,8 @@ lemma existential_induct:
   done
 
 lemma fresh_induct_param:
-  fixes K1::"'p \<Rightarrow> 'a::{var_T1_pre, var_T2_pre} set"
-    and K2::"'p \<Rightarrow> 'b::{var_T1_pre, var_T2_pre} set"
+  fixes K1::"'p \<Rightarrow> 'a::var set"
+    and K2::"'p \<Rightarrow> 'b::var set"
   assumes "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K1 \<rho>| <o |UNIV::'a set|"
       "\<And>\<rho>. \<rho> \<in> Param \<Longrightarrow> |K2 \<rho>| <o |UNIV::'b set|"
   and IHs: "\<And>x \<rho>.
@@ -6578,8 +6578,8 @@ shows "\<forall>\<rho>\<in>Param. P1 z \<rho> \<and> P2 z2 \<rho>"
   done
 
 lemma fresh_induct:
-  assumes "|A1::'a::{var_T1_pre, var_T2_pre} set| <o |UNIV::'a set|"
-      "|A2::'b::{var_T1_pre, var_T2_pre} set| <o |UNIV::'b set|"
+  assumes "|A1::'a::var set| <o |UNIV::'a set|"
+      "|A2::'b::var set| <o |UNIV::'b set|"
   and IHs: "\<And>x.
     (\<And>z. z \<in> set8_T1_pre x \<Longrightarrow> P1 z) \<Longrightarrow>
     (\<And>z. z \<in> set9_T1_pre x \<Longrightarrow> P1 z) \<Longrightarrow>
@@ -6607,10 +6607,10 @@ lemma fresh_induct:
   done
 
 lemma permute_congs:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and g1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and g2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
-    and x::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"
-    and x2::"('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+    and g1::"'a::var \<Rightarrow> 'a" and g2::"'b::var \<Rightarrow> 'b"
+    and x::"('a::var, 'b::var, 'c::var, 'd) T1"
+    and x2::"('a::var, 'b::var, 'c::var, 'd) T2"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
     and "bij g1" "|supp g1| <o |UNIV::'a set|" "bij g2" "|supp g2| <o |UNIV::'b set|"
   shows
@@ -6650,7 +6650,7 @@ lemma nnoclash_noclashs:
   done
 
 lemma noclash_permutes:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "noclash_T1 (map_T1_pre f1 f2 id id f1 f2 f1 (permute_T1 f1 f2) (permute_T1 f1 f2) (permute_T2 f1 f2) (permute_T2 f1 f2) x) = noclash_T1 x"
@@ -6683,13 +6683,13 @@ val fp_res = { fp = BNF_Util.Least_FP,
       subshape_rel = @{term "{(x, y). case x of
         Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
       | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
-     } :: ((('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 + _) \<times> _) set"},
+     } :: ((('a::var, 'b::var, 'c::var, 'd) raw_T1 + _) \<times> _) set"},
      subshapess = [
-       [ @{term "subshape_T1_T1 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"},
-         @{term "subshape_T2_T1 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"}
+       [ @{term "subshape_T1_T1 :: _ => ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> _"},
+         @{term "subshape_T2_T1 :: _ => ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> _"}
        ],
-       [ @{term "subshape_T1_T2 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
-         @{term "subshape_T2_T2 :: _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
+       [ @{term "subshape_T1_T2 :: _ => ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> _"},
+         @{term "subshape_T2_T2 :: _ => ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> _"}
        ]
      ],
      wf_subshape = @{thm wf_subshape},
@@ -6701,15 +6701,15 @@ val fp_res = { fp = BNF_Util.Least_FP,
      fresh_induct = @{thm fresh_induct}
     },
     quotient_fps = [
-      { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-        ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-        permute = @{term "permute_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
+      { T = @{typ "('a::var, 'b::var, 'c::var, 'd) T1"},
+        ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"},
+        permute = @{term "permute_T1 :: _ => _ => _ => ('a::var, 'b::var, 'c::var, 'd) T1"},
         FVarss = [
-          @{term "FVars_T11 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"},
-          @{term "FVars_T12 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"}
+          @{term "FVars_T11 :: ('a::var, 'b::var, 'c::var, 'd) T1 \<Rightarrow> _"},
+          @{term "FVars_T12 :: ('a::var, 'b::var, 'c::var, 'd) T1 \<Rightarrow> _"}
         ],
         noclash = (
-          @{term "noclash_T1 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1' \<Rightarrow> _"},
+          @{term "noclash_T1 :: ('a::var, 'b::var, 'c::var, 'd) T1' \<Rightarrow> _"},
           @{thm noclash_T1_def}
        ),
        inject = @{thm TT_inject0s(1)},
@@ -6724,8 +6724,8 @@ val fp_res = { fp = BNF_Util.Least_FP,
        card_of_FVars_bounds = @{thms FVars_bds(1-2)},
        card_of_FVars_bound_UNIVs = @{thms FVars_bd_UNIVs(1-2)},
        inner = {
-         abs = @{term "TT1_abs :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1"},
-         rep = @{term "TT1_rep :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T1 \<Rightarrow> _"},
+         abs = @{term "TT1_abs :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"},
+         rep = @{term "TT1_rep :: ('a::var, 'b::var, 'c::var, 'd) T1 \<Rightarrow> _"},
          permute_def = @{thm permute_T1_def},
          ctor_def = @{thm T1_ctor_def},
          FVars_defs = @{thms FVars_defs(1-2)},
@@ -6743,15 +6743,15 @@ val fp_res = { fp = BNF_Util.Least_FP,
          permute_inv_simp = @{thm permute_inv_simps(1)}
        }
      },
-     { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-       ctor = @{term "T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-       permute = @{term "permute_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
+     { T = @{typ "('a::var, 'b::var, 'c::var, 'd) T2"},
+       ctor = @{term "T2_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T2"},
+       permute = @{term "permute_T2 :: _ => _ => _ => ('a::var, 'b::var, 'c::var, 'd) T2"},
        FVarss = [
-         @{term "FVars_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"},
-         @{term "FVars_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"}
+         @{term "FVars_T21 :: ('a::var, 'b::var, 'c::var, 'd) T2 \<Rightarrow> _"},
+         @{term "FVars_T22 :: ('a::var, 'b::var, 'c::var, 'd) T2 \<Rightarrow> _"}
        ],
        noclash = (
-         @{term "noclash_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2' \<Rightarrow> _"},
+         @{term "noclash_T2 :: ('a::var, 'b::var, 'c::var, 'd) T2' \<Rightarrow> _"},
          @{thm noclash_T2_def}
        ),
        inject = @{thm TT_inject0s(2)},
@@ -6766,8 +6766,8 @@ val fp_res = { fp = BNF_Util.Least_FP,
        card_of_FVars_bounds = @{thms FVars_bds(3-4)},
        card_of_FVars_bound_UNIVs = @{thms FVars_bd_UNIVs(3-4)},
        inner = {
-        abs = @{term "TT2_abs :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2"},
-        rep = @{term "TT2_rep :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) T2 \<Rightarrow> _"},
+        abs = @{term "TT2_abs :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T2"},
+        rep = @{term "TT2_rep :: ('a::var, 'b::var, 'c::var, 'd) T2 \<Rightarrow> _"},
         ctor_def = @{thm T2_ctor_def},
         permute_def = @{thm permute_T2_def},
         FVars_defs = @{thms FVars_defs(3-4)},
@@ -6787,15 +6787,15 @@ val fp_res = { fp = BNF_Util.Least_FP,
    }
  ],
  raw_fps = [
-  { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
-    ctor = @{term "raw_T1_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
-    permute = @{term "permute_raw_T1 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1"},
+  { T = @{typ "('a::var, 'b::var, 'c::var, 'd) raw_T1"},
+    ctor = @{term "raw_T1_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T1"},
+    permute = @{term "permute_raw_T1 :: _ => _ => _ => ('a::var, 'b::var, 'c::var, 'd) raw_T1"},
     FVarss = [
-      @{term "FVars_raw_T11 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"},
-      @{term "FVars_raw_T12 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _"}
+      @{term "FVars_raw_T11 :: ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> _"},
+      @{term "FVars_raw_T12 :: ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> _"}
     ],
     noclash = (
-      @{term "noclash_raw_T1 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1' \<Rightarrow> _"},
+      @{term "noclash_raw_T1 :: ('a::var, 'b::var, 'c::var, 'd) raw_T1' \<Rightarrow> _"},
       @{thm noclash_raw_T1_def}
    ),
    inject = @{thm raw_T1.inject},
@@ -6810,7 +6810,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
    card_of_FVars_bounds = @{thms FVars_raw_bds(1-2)},
    card_of_FVars_bound_UNIVs = @{thms FVars_raw_bd_UNIVs(1-2)},
    inner = {
-     alpha = @{term "alpha_T1 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T1 \<Rightarrow> _ \<Rightarrow> _"},
+     alpha = @{term "alpha_T1 :: ('a::var, 'b::var, 'c::var, 'd) raw_T1 \<Rightarrow> _ \<Rightarrow> _"},
      exhaust = @{thm raw_T1.exhaust},
      alpha_refl = @{thm alpha_refls(1)},
      alpha_sym = @{thm alpha_syms(1)},
@@ -6823,15 +6823,15 @@ val fp_res = { fp = BNF_Util.Least_FP,
      alpha_elim = @{thm alpha_T1.cases}
    }
  },
- { T = @{typ "('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-   ctor = @{term "raw_T2_ctor :: _ \<Rightarrow> ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
-   permute = @{term "permute_raw_T2 :: _ => _ => _ => ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2"},
+ { T = @{typ "('a::var, 'b::var, 'c::var, 'd) raw_T2"},
+   ctor = @{term "raw_T2_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) raw_T2"},
+   permute = @{term "permute_raw_T2 :: _ => _ => _ => ('a::var, 'b::var, 'c::var, 'd) raw_T2"},
    FVarss = [
-     @{term "FVars_raw_T21 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"},
-     @{term "FVars_raw_T22 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _"}
+     @{term "FVars_raw_T21 :: ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> _"},
+     @{term "FVars_raw_T22 :: ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> _"}
    ],
    noclash = (
-     @{term "noclash_raw_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2' \<Rightarrow> _"},
+     @{term "noclash_raw_T2 :: ('a::var, 'b::var, 'c::var, 'd) raw_T2' \<Rightarrow> _"},
      @{thm noclash_raw_T2_def}
    ),
    inject = @{thm raw_T2.inject},
@@ -6846,7 +6846,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
    card_of_FVars_bounds = @{thms FVars_raw_bds(3-4)},
    card_of_FVars_bound_UNIVs = @{thms FVars_raw_bd_UNIVs(3-4)},
    inner = {
-     alpha = @{term "alpha_T2 :: ('a::{var_T1_pre,var_T2_pre}, 'b::{var_T1_pre,var_T2_pre}, 'c::{var_T1_pre,var_T2_pre}, 'd) raw_T2 \<Rightarrow> _ \<Rightarrow> _"},
+     alpha = @{term "alpha_T2 :: ('a::var, 'b::var, 'c::var, 'd) raw_T2 \<Rightarrow> _ \<Rightarrow> _"},
      exhaust = @{thm raw_T2.exhaust},
      alpha_refl = @{thm alpha_refls(2)},
      alpha_sym = @{thm alpha_syms(2)},

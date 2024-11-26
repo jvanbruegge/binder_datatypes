@@ -97,7 +97,7 @@ apply standard unfolding isPerm_def Tperm_def
   using iterm.set_bd_UNIV dsset_card_ls
   apply (auto simp: dstream_map_ident_strong small_def
  dstream.map_comp iterm.permute_id0 map_prod.comp iterm.permute_comp0 infinite_UNIV fun_eq_iff stream.map_comp
-    intro!: var_sum_class.UN_bound var_sum_class.Un_bound
+    intro!: iterm.UN_bound iterm.Un_bound
 stream.map_ident_strong iterm.permute_cong_id split: option.splits)
           apply auto
  unfolding bsmall_def touchedSuper_def apply(frule super_dsset_singl) apply auto

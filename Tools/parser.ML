@@ -195,6 +195,9 @@ fun create_binder_specs specs lthy =
       Typedecl.basic_typedecl {final = true} (b, length params, Mixfix.reset_pos mixfix)
     val (fake_T_names, fake_lthy) = fold_map add_fake_type specs lthy;
 
+    val fake_lthy = Local_Theory.type_notation true Syntax.mode_input
+      [(@{typ "('a, 'b) var_selector"}, Infix (Input.string "::", 999, Position.no_range))] fake_lthy;
+
     val (specs, fake_lthy) = fold_map (create_binder_spec fake_T_names) specs fake_lthy;
   in snd (MRBNF_Sugar.create_binder_datatype (hd specs) lthy) end;
 

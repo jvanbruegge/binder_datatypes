@@ -216,11 +216,6 @@ lift_definition k2member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>2 \<Rightarro
 
 lift_definition kinsert :: "'a set\<^sub>k \<Rightarrow> 'a \<Rightarrow> 'a set\<^sub>k" (infixl "," 600) is "\<lambda>xs x. binsert x xs" .
 
-instantiation k :: infinite begin
-instance apply standard
-  using cinfinite_iff_infinite var_set\<^sub>k\<^sub>2_class.cinfinite by blast
-end
-
 lemma small_set\<^sub>k\<^sub>2[simp]: "small (set\<^sub>k\<^sub>2 (V :: k set\<^sub>k\<^sub>2))"
   unfolding small_def
   apply (rule ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd])
@@ -375,7 +370,7 @@ binder_inductive deduct
     subgoal for f V
       apply (rule exI[of _ "permute_ifol' \<sigma> f"])
       apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
-      by (smt (verit, ccfv_threshold) bij_imp_bij_inv ifol'.permute_comp0 ifol'.permute_id0 ifol'.permute_id ifol'.set_map0 ifol'_vvsubst_permute image_Int_empty image_Union image_comp inv_o_simp1 pointfree_idE set\<^sub>k.map_ident_strong set\<^sub>k.set_map set\<^sub>k\<^sub>2.set_map supp_inv_bound)
+      by (smt (verit, ccfv_threshold) bij_imp_bij_inv ifol'.permute_comp0 ifol'.permute_id0 ifol'.permute_id ifol'.set_map0 ifol'.vvsubst_permute image_Int_empty image_Union image_comp inv_o_simp1 pointfree_idE set\<^sub>k.map_ident_strong set\<^sub>k.set_map set\<^sub>k\<^sub>2.set_map supp_inv_bound)
     subgoal for V f \<rho>
       apply (rule exI[of _ "map_set\<^sub>k\<^sub>2 \<sigma> V"])
       apply (unfold set\<^sub>k\<^sub>2.set_map)
@@ -401,7 +396,7 @@ binder_inductive deduct
       apply (subst supp_o_bij)
        apply assumption
       apply (subst comp_apply)
-      apply (unfold ifol'_vvsubst_permute ifol'_vvsubst_permute[OF bij_imp_bij_inv supp_inv_bound])
+      apply (unfold ifol'.vvsubst_permute ifol'.vvsubst_permute[OF bij_imp_bij_inv supp_inv_bound])
       apply (subst ifol'.permute_comp)
           apply (rule supp_inv_bound bij_imp_bij_inv | assumption)+
       apply (subst inv_o_simp1, assumption)
@@ -557,7 +552,7 @@ binder_inductive deduct
            apply (rule exI[of _ \<rho>'])
 
            apply (rule conjI)
-            apply (subst ifol'_vvsubst_permute[symmetric])
+            apply (subst ifol'.vvsubst_permute[symmetric])
               apply (rule \<sigma>_bij)
              apply (rule \<sigma>_small)
             apply (subst ifol'.map_comp)

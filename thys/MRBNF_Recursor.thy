@@ -15,7 +15,7 @@ ML_file \<open>../Tools/binder_induction.ML\<close>
 end
 ML_file \<open>../Tools/binder_inductive.ML\<close>
 
-typedecl ('a, 'b) var_selector (infix "::" 999)
+typedecl ('a, 'b) var_selector
 
 ML_file "../Tools/parser.ML"
 

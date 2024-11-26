@@ -369,7 +369,7 @@ proof-
     by (metis e2 iApp_inject reneqvS_def reneqv_iApp_casesL u uniformS_def3 uniformS_touchedSuper uniform_def3)
 
   have ss: "small (\<Union> (FFVars ` (sset es2)))" 
-  unfolding small_def apply(rule var_prod_class.UN_bound)
+  unfolding small_def apply(rule iterm.UN_bound)
     subgoal by (simp add: countable_card_ivar countable_sset)
     subgoal using iterm.set_bd_UNIV by blast .
 

@@ -53,7 +53,6 @@ for
   vvsubst: ivvsubst
   tvsubst: itvsubst
 
-declare [[show_consts]]
 lemma ex_inj_infinite_regular_var_iterm_pre:
   "\<exists>f :: 'a :: countable \<Rightarrow> 'b :: var_iterm_pre. inj f"
   unfolding card_of_ordLeq[of UNIV UNIV, simplified]
@@ -61,7 +60,7 @@ lemma ex_inj_infinite_regular_var_iterm_pre:
   apply (rule ordLeq_transitive[OF countable_card_le_natLeq[THEN iffD1]])
   apply simp
   apply (rule natLeq_ordLeq_cinfinite)
-  apply (rule iterm_pre.bd_Cinfinite)
+  using cinfinite_def cinfinite_iff_infinite iterm_pre.bd_Cinfinite apply blast
   done
 
 definition embed :: "'a :: countable \<Rightarrow> 'b :: var_iterm_pre"
@@ -125,13 +124,14 @@ instance
   apply standard
      apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
      apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
-      apply (tactic \<open>resolve_tac @{context} [BNF_Def.bnf_of @{context} @{type_name stream} |> the |> BNF_Def.bd_Card_order_of_bnf] 1\<close>)
-     apply (simp add: bd_stream_def card_suc_least le_card_ivar natLeq_Cinfinite natLeq_card_order)
-    apply (rule regularCard_ivar)
-  using Field_natLeq infinite_iff_card_of_nat infinite_ivar apply auto[1]
-  apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
-  apply (simp add: Card_order_card_suc natLeq_card_order)
-  apply (metis card_of_Card_order card_of_card_order_on card_of_nat card_suc_alt card_suc_least countable_card_ivar countable_card_le_natLeq ordIso_imp_ordLeq)
+      apply (rule natLeq_Card_order)
+  using le_card_ivar ordLess_imp_ordLeq apply blast
+  using regularCard_ivar apply auto[1]
+   apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
+    apply (tactic \<open>resolve_tac @{context} [BNF_Def.bnf_of @{context} @{type_name stream} |> the |> BNF_Def.bd_Card_order_of_bnf] 1\<close>)
+   apply (simp add: bd_stream_def card_suc_least le_card_ivar natLeq_Cinfinite natLeq_card_order)
+   apply (metis card_of_Card_order card_of_card_order_on card_suc_alt card_suc_least countable_card_ivar countable_card_of_nat ordLeq_refl)
+  apply (metis Field_card_of card_of_UNIV card_of_card_order_on card_of_mono2 card_suc_alt card_suc_least countable_card_ivar countable_card_of_nat)
   done
 end
 
@@ -244,7 +244,7 @@ next
   case (iLam x1 x2)
   then show ?case  using f g apply simp
     by (smt (verit, ccfv_threshold) IImsupp_def SSupp_def UnCI insert_absorb insert_disjoint(2) mem_Collect_eq)
-qed (auto simp: IImsupp_def iterm.UNION_bound iterm.Un_bound iterm.set_bd_UNIV f g)
+qed (auto simp: IImsupp_def iterm.UN_bound iterm.Un_bound iterm.set_bd_UNIV f g)
 
 (* *)
 
@@ -393,7 +393,7 @@ by (simp add: cinfinite_imp_infinite supp_swap_bound iterm.UNIV_cinfinite)
 
 lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: ivar set|"
 unfolding IImsupp_def
-by (simp add: var_ID_class.Un_bound iterm.set_bd_UNIV var_iterm_pre_class.UN_bound)
+by (simp add: iterm.Un_bound iterm.set_bd_UNIV var_iterm_pre_class.UN_bound)
 
 (* *)
 
@@ -499,7 +499,7 @@ proof-
   show ?thesis
   apply(induct e rule: iterm.fresh_induct[where A = "IImsupp \<sigma> \<union> IImsupp \<tau>"])
     subgoal using Un_bound[OF s]
-      using var_ID_class.Un_bound SSupp_IImsupp_bound s(1) s(2) by blast
+      using iterm.Un_bound SSupp_IImsupp_bound s(1) s(2) by blast
     subgoal by simp
     subgoal by simp (metis (mono_tags, lifting) comp_apply stream.map_comp stream.map_cong)
     subgoal for xs t apply(subgoal_tac "dsset xs \<inter> IImsupp (\<lambda>a. itvsubst \<sigma> (\<tau> a)) = {}")
@@ -518,7 +518,7 @@ proof-
     subgoal by simp
     subgoal by simp (metis (mono_tags, lifting) comp_apply stream.map_comp stream.map_cong)
     subgoal for xs t apply simp apply(subgoal_tac "dsset xs \<inter> IImsupp (\<lambda>a. irrename  \<sigma> (\<tau> a)) = {}")
-      subgoal by simp (metis Int_Un_emptyI1 Int_Un_emptyI2 assms(2) b iterm.map(3) iterm.subst(3) iterm_vvsubst_permute s(2))
+      subgoal by simp (metis Int_Un_emptyI1 Int_Un_emptyI2 assms(2) b iterm.map(3) iterm.subst(3) iterm.vvsubst_permute s(2))
       subgoal using IImsupp_irrename_su' b s(1) by blast . .
 qed
 
@@ -597,11 +597,11 @@ lemma usub_swap_disj:
 assumes "{u,v} \<inter> {x,y} = {}"
 shows "usub (swap t u v) x y = swap (usub t x y) u v"
 proof-
-  note iterm_vvsubst_permute[simp del]
+  note iterm.vvsubst_permute[simp del]
   show ?thesis using assms
-  apply(subst iterm_vvsubst_permute[symmetric]) apply auto
+  apply(subst iterm.vvsubst_permute[symmetric]) apply auto
   apply(subst iterm.map_comp) apply auto
-  apply(subst iterm_vvsubst_permute[symmetric]) apply auto
+  apply(subst iterm.vvsubst_permute[symmetric]) apply auto
   apply(subst iterm.map_comp) apply auto
   apply(rule iterm.map_cong0)
   using iterm_pre.supp_comp_bound by auto
@@ -773,9 +773,9 @@ lemma usub_refresh:
 assumes "xx \<notin> FFVars t \<or> xx = x"
 shows "usub t u x = usub (swap t x xx) u xx"
 proof-
-  note iterm_vvsubst_permute[simp del]
+  note iterm.vvsubst_permute[simp del]
   show ?thesis using assms
-  apply(subst iterm_vvsubst_permute[symmetric]) apply simp
+  apply(subst iterm.vvsubst_permute[symmetric]) apply simp
     subgoal by auto
     subgoal apply(subst iterm.map_comp)
       subgoal by auto

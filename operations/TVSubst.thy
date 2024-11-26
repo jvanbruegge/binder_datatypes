@@ -8,79 +8,79 @@ consts eta12 :: "'tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'bvar, 'btyvar, 'va
 consts eta21 :: "'var \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'bvar, 'btyvar, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T2_pre"
 
 axiomatization where
-  eta_free11: "set1_T1_pre (eta11 a) = {a::'var::{var_T1_pre, var_T2_pre}}"
+  eta_free11: "set1_T1_pre (eta11 a) = {a::'var::var}"
 and eta_inj11: "eta11 a = eta11 a' \<Longrightarrow> a = a'"
-and eta_compl_free11: "x \<notin> range eta11 \<Longrightarrow> set1_T1_pre (x::('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'bvar::{var_T1_pre, var_T2_pre}, 'btyvar::{var_T1_pre, var_T2_pre}, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T1_pre) = {}"
-and eta_natural11: "|supp (f1::'x1::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x1)| <o |UNIV::'x1 set| \<Longrightarrow> |supp (f2::'x2::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x2)| <o |UNIV::'x2 set|
-                   \<Longrightarrow> bij f3 \<Longrightarrow> |supp (f3::'x3::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x3)| <o |UNIV::'x3 set| \<Longrightarrow> bij f4 \<Longrightarrow> |supp (f4::'x4::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x4)| <o |UNIV::'x4 set|
-                   \<Longrightarrow> |supp (f5::'x1::{var_T1_pre,var_T2_pre} \<Rightarrow> 'x1)| <o |UNIV::'x1 set|
+and eta_compl_free11: "x \<notin> range eta11 \<Longrightarrow> set1_T1_pre (x::('var::var, 'tyvar::var, 'a::var, 'b, 'bvar::var, 'btyvar::var, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T1_pre) = {}"
+and eta_natural11: "|supp (f1::'x1::var \<Rightarrow> 'x1)| <o |UNIV::'x1 set| \<Longrightarrow> |supp (f2::'x2::var \<Rightarrow> 'x2)| <o |UNIV::'x2 set|
+                   \<Longrightarrow> bij f3 \<Longrightarrow> |supp (f3::'x3::var \<Rightarrow> 'x3)| <o |UNIV::'x3 set| \<Longrightarrow> bij f4 \<Longrightarrow> |supp (f4::'x4::var \<Rightarrow> 'x4)| <o |UNIV::'x4 set|
+                   \<Longrightarrow> |supp (f5::'x1::var \<Rightarrow> 'x1)| <o |UNIV::'x1 set|
                    \<Longrightarrow> map_T1_pre f1 f2 id id f3 f4 f5 f6 f7 f8 f9 \<circ> eta11 = eta11 \<circ> f1"
 
-and eta_free12: "set2_T1_pre (eta12 b) = {b::'tyvar::{var_T1_pre, var_T2_pre}}"
+and eta_free12: "set2_T1_pre (eta12 b) = {b::'tyvar::var}"
 and eta_inj12: "eta12 b = eta12 b' \<Longrightarrow> b = b'"
-and eta_compl_free12: "x \<notin> range eta12 \<Longrightarrow> set2_T1_pre (x::('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'bvar::{var_T1_pre, var_T2_pre}, 'btyvar::{var_T1_pre, var_T2_pre}, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T1_pre) = {}"
-and eta_natural12: "|supp (f1::'x1::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x1)| <o |UNIV::'x1 set| \<Longrightarrow> |supp (f2::'x2::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x2)| <o |UNIV::'x2 set|
-                   \<Longrightarrow> bij f3 \<Longrightarrow> |supp (f3::'x3::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x3)| <o |UNIV::'x3 set| \<Longrightarrow> bij f4 \<Longrightarrow> |supp (f4::'x4::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x4)| <o |UNIV::'x4 set|
-                   \<Longrightarrow> |supp (f5::'x1::{var_T1_pre,var_T2_pre} \<Rightarrow> 'x1)| <o |UNIV::'x1 set|
+and eta_compl_free12: "x \<notin> range eta12 \<Longrightarrow> set2_T1_pre (x::('var::var, 'tyvar::var, 'a::var, 'b, 'bvar::var, 'btyvar::var, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T1_pre) = {}"
+and eta_natural12: "|supp (f1::'x1::var \<Rightarrow> 'x1)| <o |UNIV::'x1 set| \<Longrightarrow> |supp (f2::'x2::var \<Rightarrow> 'x2)| <o |UNIV::'x2 set|
+                   \<Longrightarrow> bij f3 \<Longrightarrow> |supp (f3::'x3::var \<Rightarrow> 'x3)| <o |UNIV::'x3 set| \<Longrightarrow> bij f4 \<Longrightarrow> |supp (f4::'x4::var \<Rightarrow> 'x4)| <o |UNIV::'x4 set|
+                   \<Longrightarrow> |supp (f5::'x1::var \<Rightarrow> 'x1)| <o |UNIV::'x1 set|
                    \<Longrightarrow> map_T1_pre f1 f2 id id f3 f4 f5 f6 f7 f8 f9 \<circ> eta12 = eta12 \<circ> f2"
 
-and eta_free21: "set1_T2_pre (eta21 c) = {c::'var::{var_T1_pre, var_T2_pre}}"
+and eta_free21: "set1_T2_pre (eta21 c) = {c::'var::var}"
 and eta_inj21: "eta21 c = eta21 c' \<Longrightarrow> c = c'"
-and eta_compl_free21: "y \<notin> range eta21 \<Longrightarrow> set1_T2_pre (y::('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'bvar::{var_T1_pre, var_T2_pre}, 'btyvar::{var_T1_pre, var_T2_pre}, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T2_pre) = {}"
-and eta_natural21: "|supp (f1::'x1::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x1)| <o |UNIV::'x1 set| \<Longrightarrow> |supp (f2::'x2::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x2)| <o |UNIV::'x2 set|
-                   \<Longrightarrow> bij f3 \<Longrightarrow> |supp (f3::'x3::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x3)| <o |UNIV::'x3 set| \<Longrightarrow> bij f4 \<Longrightarrow> |supp (f4::'x4::{var_T1_pre, var_T2_pre} \<Rightarrow> 'x4)| <o |UNIV::'x4 set|
-                   \<Longrightarrow> |supp (f5::'x1::{var_T1_pre,var_T2_pre} \<Rightarrow> 'x1)| <o |UNIV::'x1 set|
+and eta_compl_free21: "y \<notin> range eta21 \<Longrightarrow> set1_T2_pre (y::('var::var, 'tyvar::var, 'a::var, 'b, 'bvar::var, 'btyvar::var, 'var, 'rec1, 'brec1, 'rec2, 'brec2) T2_pre) = {}"
+and eta_natural21: "|supp (f1::'x1::var \<Rightarrow> 'x1)| <o |UNIV::'x1 set| \<Longrightarrow> |supp (f2::'x2::var \<Rightarrow> 'x2)| <o |UNIV::'x2 set|
+                   \<Longrightarrow> bij f3 \<Longrightarrow> |supp (f3::'x3::var \<Rightarrow> 'x3)| <o |UNIV::'x3 set| \<Longrightarrow> bij f4 \<Longrightarrow> |supp (f4::'x4::var \<Rightarrow> 'x4)| <o |UNIV::'x4 set|
+                   \<Longrightarrow> |supp (f5::'x1::var \<Rightarrow> 'x1)| <o |UNIV::'x1 set|
                    \<Longrightarrow> map_T2_pre f1 f2 id id f3 f4 f5 f6 f7 f8 f9 \<circ> eta21 = eta21 \<circ> f1"
 
-definition VVr11 :: "'var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1" where "VVr11 \<equiv> T1_ctor \<circ> eta11"
-definition VVr12 :: "'tyvar \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1" where "VVr12 \<equiv> T1_ctor \<circ> eta12"
-definition VVr21 :: "'var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2" where "VVr21 \<equiv> T2_ctor \<circ> eta21"
+definition VVr11 :: "'var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where "VVr11 \<equiv> T1_ctor \<circ> eta11"
+definition VVr12 :: "'tyvar \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where "VVr12 \<equiv> T1_ctor \<circ> eta12"
+definition VVr21 :: "'var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T2" where "VVr21 \<equiv> T2_ctor \<circ> eta21"
 lemmas VVr_defs = VVr11_def VVr12_def VVr21_def
 
-definition SSupp11 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'var set" where
+definition SSupp11 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> 'var set" where
   "SSupp11 f \<equiv> { x. f x \<noteq> VVr11 x }"
-definition SSupp12 :: "('tyvar \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'tyvar set" where
+definition SSupp12 :: "('tyvar \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> 'tyvar set" where
   "SSupp12 f \<equiv> { x. f x \<noteq> VVr12 x }"
-definition SSupp21 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2) \<Rightarrow> 'var set" where
+definition SSupp21 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T2) \<Rightarrow> 'var set" where
   "SSupp21 f \<equiv> { x. f x \<noteq> VVr21 x }"
 
-definition IImsupp11_1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'var set" where
+definition IImsupp11_1 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> 'var set" where
   "IImsupp11_1 f \<equiv> SSupp11 f \<union> \<Union>((FVars_T11 \<circ> f) ` SSupp11 f)"
-definition IImsupp11_2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'tyvar set" where
+definition IImsupp11_2 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> 'tyvar set" where
   "IImsupp11_2 f \<equiv> \<Union>((FVars_T12 \<circ> f) ` SSupp11 f)"
-definition IImsupp12_1 :: "('tyvar \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'var set" where
+definition IImsupp12_1 :: "('tyvar \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> 'var set" where
   "IImsupp12_1 f \<equiv> \<Union>((FVars_T11 \<circ> f) ` SSupp12 f)"
-definition IImsupp12_2 :: "('tyvar \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> 'tyvar set" where
+definition IImsupp12_2 :: "('tyvar \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> 'tyvar set" where
   "IImsupp12_2 f \<equiv> SSupp12 f \<union> \<Union>((FVars_T12 \<circ> f) ` SSupp12 f)"
-definition IImsupp21_1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2) \<Rightarrow> 'var set" where
+definition IImsupp21_1 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T2) \<Rightarrow> 'var set" where
   "IImsupp21_1 f \<equiv> SSupp21 f \<union> \<Union>((FVars_T21 \<circ> f) ` SSupp21 f)"
-definition IImsupp21_2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2) \<Rightarrow> 'tyvar set" where
+definition IImsupp21_2 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T2) \<Rightarrow> 'tyvar set" where
   "IImsupp21_2 f \<equiv> \<Union>((FVars_T22 \<circ> f) ` SSupp21 f)"
 lemmas IImsupp_defs = IImsupp11_1_def IImsupp11_2_def IImsupp12_1_def IImsupp12_2_def IImsupp21_1_def IImsupp21_2_def
 
-definition isVVr11 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> bool" where
+definition isVVr11 :: "('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> bool" where
   "isVVr11 x \<equiv> \<exists>a. x = VVr11 a"
-definition isVVr12 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> bool" where
+definition isVVr12 :: "('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> bool" where
   "isVVr12 x \<equiv> \<exists>a. x = VVr12 a"
-definition isVVr21 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> bool" where
+definition isVVr21 :: "('var::var, 'tyvar::var, 'a::var, 'b) T2 \<Rightarrow> bool" where
   "isVVr21 x \<equiv> \<exists>a. x = VVr21 a"
 
-definition asVVr11 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> 'var" where
+definition asVVr11 :: "('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> 'var" where
   "asVVr11 x \<equiv> (if isVVr11 x then SOME a. x = VVr11 a else undefined)"
-definition asVVr12 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1 \<Rightarrow> 'tyvar" where
+definition asVVr12 :: "('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> 'tyvar" where
   "asVVr12 x \<equiv> (if isVVr12 x then SOME a. x = VVr12 a else undefined)"
-definition asVVr21 :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T2 \<Rightarrow> 'var" where
+definition asVVr21 :: "('var::var, 'tyvar::var, 'a::var, 'b) T2 \<Rightarrow> 'var" where
   "asVVr21 x \<equiv> (if isVVr21 x then SOME a. x = VVr21 a else undefined)"
 
 type_synonym ('var, 'tyvar, 'a, 'b) SSfun11 = "'var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1"
 type_synonym ('var, 'tyvar, 'a, 'b) SSfun12 = "'tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1"
 type_synonym ('var, 'tyvar, 'a, 'b) SSfun21 = "'var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2"
 
-definition compSS11 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun11 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) SSfun11" where
+definition compSS11 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun11 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) SSfun11" where
   "compSS11 f1 f2 h \<equiv> permute_T1 f1 f2 \<circ> h \<circ> inv f1"
-definition compSS12 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun12 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) SSfun12" where
+definition compSS12 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun12 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) SSfun12" where
   "compSS12 f1 f2 h \<equiv> permute_T1 f1 f2 \<circ> h \<circ> inv f2"
-definition compSS21 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun21 \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) SSfun21" where
+definition compSS21 :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) SSfun21 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) SSfun21" where
   "compSS21 f1 f2 h \<equiv> permute_T2 f1 f2 \<circ> h \<circ> inv f1"
 lemmas compSS_defs = compSS11_def compSS12_def compSS21_def
 
@@ -88,7 +88,7 @@ type_synonym ('var, 'tyvar, 'a, 'b) P = "('var, 'tyvar, 'a, 'b) SSfun11 \<times>
 type_synonym ('var, 'tyvar, 'a, 'b) U1 = "('var, 'tyvar, 'a, 'b) T1"
 type_synonym ('var, 'tyvar, 'a, 'b) U2 = "('var, 'tyvar, 'a, 'b) T2"
 
-definition U1ctor :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1), ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
+definition U1ctor :: "('var::var, 'tyvar::var, 'a::var, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1), ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
   ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2), ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)) T1_pre \<Rightarrow> ('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1" where
   "U1ctor y p \<equiv> case p of (f1, f2, f3) \<Rightarrow> if isVVr11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) then
     f1 (asVVr11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y))) else (
@@ -96,33 +96,33 @@ definition U1ctor :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_
     f2 (asVVr12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y))) else (
   T1_ctor (map_T1_pre id id id id id id id ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) y)
 ))"
-definition U2ctor :: "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1), ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
+definition U2ctor :: "('var::var, 'tyvar::var, 'a::var, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1), ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
   ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2), ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)) T2_pre \<Rightarrow> ('var, 'tyvar, 'a, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2" where
   "U2ctor y p \<equiv> case p of (f1, f2, f3) \<Rightarrow> if isVVr21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) then
     f3 (asVVr21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y))) else (
   T2_ctor (map_T2_pre id id id id id id id ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) ((\<lambda>R. R (f1, f2, f3)) \<circ> snd) y)
 )"
 
-definition PFVars_1 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> 'var set" where
+definition PFVars_1 :: "('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> 'var set" where
   "PFVars_1 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> IImsupp11_1 f1 \<union> IImsupp12_1 f2 \<union> IImsupp21_1 f3"
-definition PFVars_2 :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> 'tyvar set" where
+definition PFVars_2 :: "('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> 'tyvar set" where
   "PFVars_2 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> IImsupp11_2 f1 \<union> IImsupp12_2 f2 \<union> IImsupp21_2 f3"
 
-definition Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) P" where
+definition Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) P" where
   "Pmap g1 g2 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> (compSS11 g1 g2 f1, compSS12 g1 g2 f2, compSS21 g1 g2 f3)"
 
-definition avoiding_set1 :: "'var::{var_T1_pre,var_T2_pre} set" where "avoiding_set1 \<equiv> {}"
-definition avoiding_set2 :: "'tyvar::{var_T1_pre,var_T2_pre} set" where "avoiding_set2 \<equiv> {}"
+definition avoiding_set1 :: "'var::var set" where "avoiding_set1 \<equiv> {}"
+definition avoiding_set2 :: "'tyvar::var set" where "avoiding_set2 \<equiv> {}"
 
-abbreviation "U1FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). FVars_T11 x"
-abbreviation "U1FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). FVars_T12 x"
-abbreviation "U2FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). FVars_T21 x"
-abbreviation "U2FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). FVars_T22 x"
+abbreviation "U1FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::var, 'tyvar::var, 'a::var, 'b) T1). FVars_T11 x"
+abbreviation "U1FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::var, 'tyvar::var, 'a::var, 'b) T1). FVars_T12 x"
+abbreviation "U2FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('var::var, 'tyvar::var, 'a::var, 'b) T2). FVars_T21 x"
+abbreviation "U2FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T2) (x::('var::var, 'tyvar::var, 'a::var, 'b) T2). FVars_T22 x"
 
-abbreviation "U1map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T1) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T1). permute_T1 f1 f2 x"
-abbreviation "U2map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T2) (x::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) T2). permute_T2 f1 f2 x"
+abbreviation "U1map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T1) (x::('var::var, 'tyvar::var, 'a::var, 'b) T1). permute_T1 f1 f2 x"
+abbreviation "U2map \<equiv> \<lambda>f1 f2 (_::('var, 'tyvar, 'a, 'b) T2) (x::('var::var, 'tyvar::var, 'a::var, 'b) T2). permute_T2 f1 f2 x"
 
-definition valid_P :: "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> bool" where
+definition valid_P :: "('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> bool" where
   "valid_P p \<equiv> case p of (f1, f2, f3) \<Rightarrow>
   |SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|
   \<and> |SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|
@@ -205,7 +205,7 @@ lemma VVr_injs:
   done
 
 lemma permute_VVrs:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "permute_T1 f1 f2 (VVr11 a) = VVr11 (f1 a)"
@@ -272,7 +272,7 @@ lemma SSupp_comp_subsets:
   done
 
 lemma SSupp_comp_bounds:
-  "|SSupp11 g| <o cmin |UNIV::'var::{var_T1_pre,var_T2_pre} set| |UNIV::'tyvar::{var_T1_pre,var_T2_pre} set| \<Longrightarrow> |supp (f::'var \<Rightarrow> 'var)| <o  cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |SSupp11 (g \<circ> f)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "|SSupp11 g| <o cmin |UNIV::'var::var set| |UNIV::'tyvar::var set| \<Longrightarrow> |supp (f::'var \<Rightarrow> 'var)| <o  cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |SSupp11 (g \<circ> f)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   "|SSupp12 g2| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o  cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |SSupp12 (g2 \<circ> f2)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   "|SSupp21 g3| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |supp f| <o  cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |SSupp21 (g3 \<circ> f)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   (* REPEAT_DETERM *)
@@ -293,7 +293,7 @@ lemma SSupp_comp_bounds:
   done
 
 lemma SSupp_rename_subsets:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "SSupp11 (permute_T1 f1 f2 \<circ> g) \<subseteq> SSupp11 g \<union> supp f1"
@@ -340,7 +340,7 @@ lemma SSupp_rename_subsets:
   done
 
 lemma SSupp_rename_bounds:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   shows "|SSupp11 g| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |SSupp11 (permute_T1 f1 f2 \<circ> g)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
     "|SSupp12 h| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> |SSupp12 (permute_T1 f1 f2 \<circ> h)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
@@ -364,7 +364,7 @@ lemma SSupp_rename_bounds:
   done
 
 lemma compSS_comp0s:
-  fixes f1 g1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes g_prems: "bij g1" "|supp g1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij g2" "|supp g2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
     and f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   shows
@@ -420,7 +420,7 @@ lemma Pmap_id0: "Pmap id id = id"
   done
 
 lemma Pmap_comp0:
-  fixes f1 g1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2 g2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes g_prems: "bij g1" "|supp g1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij g2" "|supp g2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   and f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
 shows
@@ -437,7 +437,7 @@ shows
   done
 
 lemma SSupp_natural:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "SSupp11 (permute_T1 f1 f2 \<circ> y \<circ> inv f1) = f1 ` SSupp11 y"
@@ -629,7 +629,7 @@ lemma IImsupp_VVrs:
   done
 
 lemma IImsupp_permute_commute:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "imsupp f1 \<inter> IImsupp11_1 y = {} \<Longrightarrow> imsupp f2 \<inter> IImsupp11_2 y = {} \<Longrightarrow> permute_T1 f1 f2 \<circ> y = y \<circ> f1"
     "imsupp f1 \<inter> IImsupp12_1 y2 = {} \<Longrightarrow> imsupp f2 \<inter> IImsupp12_2 y2 = {} \<Longrightarrow> permute_T1 f1 f2 \<circ> y2 = y2 \<circ> f2"
@@ -857,7 +857,7 @@ lemma IImsupp_permute_commute:
   done
 
 lemma compSS_cong_ids:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows "(\<And>a. a \<in> IImsupp11_1 h1 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> IImsupp11_2 h1 \<Longrightarrow> f2 a = a) \<Longrightarrow>
     compSS11 f1 f2 h1 = h1"
@@ -1048,7 +1048,7 @@ lemma asVVr_VVrs:
   done
 
 lemma isVVr_renames:
-fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "isVVr11 x = isVVr11 (permute_T1 f1 f2 x)"
@@ -1116,8 +1116,8 @@ fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{
   done
 
 lemma valid_Pmap: "valid_P p \<Longrightarrow>
-  bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
-  bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   valid_P (Pmap f1 f2 p)"
   apply (unfold valid_P_def Pmap_def case_prod_beta compSS_defs fst_conv snd_conv)
   apply (erule conjE)+
@@ -1129,7 +1129,7 @@ lemma valid_Pmap: "valid_P p \<Longrightarrow>
 (**************************************)
 
 lemma PFVars_Pmaps:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   shows "PFVars_1 (Pmap f1 f2 p) = f1 ` PFVars_1 p"
     "PFVars_2 (Pmap f1 f2 p) = f2 ` PFVars_2 p"
@@ -1226,7 +1226,7 @@ lemma PFVars_Pmaps:
   done
 
 lemma Pmap_cong_id:
-  fixes f1::"'var::{var_T1_pre, var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre, var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "bij f2" "|supp f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   shows "(\<And>a. a \<in> PFVars_1 p \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 p \<Longrightarrow> f2 a = a) \<Longrightarrow> Pmap f1 f2 p = p"
   apply (unfold PFVars_1_def PFVars_2_def Pmap_def case_prod_beta)
@@ -1238,7 +1238,7 @@ lemma Pmap_cong_id:
   done
 
 lemma small_PFVarss:
-  "valid_P p \<Longrightarrow> |PFVars_1 (p::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
+  "valid_P p \<Longrightarrow> |PFVars_1 (p::('var::var, 'tyvar::var, 'a::var, 'b) P)| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   "valid_P p \<Longrightarrow> |PFVars_2 p| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   subgoal
     apply (unfold PFVars_1_def case_prod_beta IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def valid_P_def)
@@ -1260,7 +1260,7 @@ lemma small_avoiding_sets:
    apply (rule cmin_greater card_of_Card_order emp_bound)+
   done
 
-lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U1FVars_1 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
@@ -1372,7 +1372,7 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
   done
   done
 
-lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
@@ -1475,7 +1475,7 @@ lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::
   done
   done
 
-lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U2FVars_1 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
@@ -1558,7 +1558,7 @@ lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::
   done
   done
 
-lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::var, 'tyvar::var, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U2FVars_2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T22 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
@@ -1636,7 +1636,7 @@ lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::{var
   done
   done
 
-lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   U1map f1 f2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p)
 = U1ctor (map_T1_pre f1 f2 id id f1 f2 f1
     (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if valid_P p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
@@ -1697,7 +1697,7 @@ lemma U1map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (
   apply (rule refl)
   done
 
-lemma U2map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+lemma U2map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   U2map f1 f2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p)
 = U2ctor (map_T2_pre f1 f2 id id f1 f2 f1
     (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if valid_P p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
@@ -1762,19 +1762,19 @@ ML \<open>
 val nvars:int = 2
 
 val parameters = {
-  P = @{typ "('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P"},
-  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"},
+  P = @{typ "('var::var, 'tyvar::var, 'a::var, 'b) P"},
+  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
   PFVarss = [
-    @{term "PFVars_1 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"},
-    @{term "PFVars_2 :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"}
+    @{term "PFVars_1 :: ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
+    @{term "PFVars_2 :: ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"}
   ],
   avoiding_sets = [
-    @{term "avoiding_set1 :: 'var::{var_T1_pre,var_T2_pre} set"},
-    @{term "avoiding_set2 :: 'tyvar::{var_T1_pre,var_T2_pre} set"}
+    @{term "avoiding_set1 :: 'var::var set"},
+    @{term "avoiding_set2 :: 'tyvar::var set"}
   ],
   min_bound = true,
   validity = SOME {
-    pred = @{term "valid_P :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) P \<Rightarrow> _"},
+    pred = @{term "valid_P :: ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
     valid_Pmap = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms valid_Pmap} THEN_ALL_NEW assume_tac ctxt)
   },
   axioms = {
@@ -1797,13 +1797,13 @@ val card_thms = @{thms ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 c
 ML \<open>
 val T1_model = {
   binding = @{binding tvsubst_T1},
-  U = @{typ "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1"},
+  U = @{typ "('var::var, 'tyvar::var, 'a::var, 'b) U1"},
   UFVarss = [
-    @{term "U1FVars_1 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"},
-    @{term "U1FVars_2 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"}
+    @{term "U1FVars_1 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> _"},
+    @{term "U1FVars_2 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> _"}
   ],
-  Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U1 \<Rightarrow> _"},
-  Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> _"},
+  Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> _"},
+  Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
   validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
   axioms = {
     Umap_id0 = fn ctxt => EVERY1 [
@@ -1820,13 +1820,13 @@ val T1_model = {
 
 val T2_model = {
   binding = @{binding vvsubst_T2},
-  U = @{typ "('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2"},
+  U = @{typ "('var::var, 'tyvar::var, 'a::var, 'b) U2"},
   UFVarss = [
-    @{term "U2FVars_1 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"},
-    @{term "U2FVars_2 :: _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"}
+    @{term "U2FVars_1 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> _"},
+    @{term "U2FVars_2 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> _"}
   ],
-  Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) U2 \<Rightarrow> _"},
-  Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::{var_T1_pre,var_T2_pre}, 'tyvar::{var_T1_pre,var_T2_pre}, 'a::{var_T1_pre,var_T2_pre}, 'b) P \<Rightarrow> _"},
+  Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> _"},
+  Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
   validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
   axioms = {
     Umap_id0 = fn ctxt => EVERY1 [
@@ -1864,9 +1864,9 @@ in lthy end\<close>
 print_theorems
 declare [[quick_and_dirty=false]]
 
-definition tvsubst_T1 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
+definition tvsubst_T1 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
   "tvsubst_T1 f1 f2 f3 t \<equiv> ff01_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
-definition tvsubst_T2 :: "('var \<Rightarrow> ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2" where
+definition tvsubst_T2 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2" where
   "tvsubst_T2 f1 f2 f3 t \<equiv> ff02_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
 
 type_synonym ('var, 'tyvar, 'a, 'b) U1_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T1_pre"
@@ -1878,8 +1878,8 @@ lemmas eta_natural' =
   eta_natural21[THEN fun_cong, unfolded comp_def]
 
 lemma eta_set_empties:
-  fixes a::"'var::{var_T1_pre, var_T2_pre}" and b::"'tyvar::{var_T1_pre, var_T2_pre}"
-  shows "set2_T1_pre (eta11 a :: ('var, 'tyvar, 'a::{var_T1_pre, var_T2_pre}, 'b) U1_pre) = {}"
+  fixes a::"'var::var" and b::"'tyvar::var"
+  shows "set2_T1_pre (eta11 a :: ('var, 'tyvar, 'a::var, 'b) U1_pre) = {}"
   "set5_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
   "set6_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
   "set7_T1_pre (eta11 a :: ('var, 'tyvar, 'a, 'b) U1_pre) = {}"
@@ -2561,7 +2561,7 @@ lemma tvsubst_VVrs:
     "|SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
     "|SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   shows
-    "tvsubst_T1 f1 f2 f3 (VVr11 a :: ('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) T1) = f1 a"
+    "tvsubst_T1 f1 f2 f3 (VVr11 a :: ('var::var, 'tyvar::var, 'a::var, 'b) T1) = f1 a"
     "tvsubst_T1 f1 f2 f3 (VVr12 b :: ('var, 'tyvar, 'a, 'b) T1) = f2 b"
     "tvsubst_T2 f1 f2 f3 (VVr21 a :: ('var, 'tyvar, 'a, 'b) T2) = f3 a"
     apply (unfold tvsubst_T1_def tvsubst_T2_def)
@@ -2646,7 +2646,7 @@ lemma tvsubst_VVrs:
   done
 
 lemma tvsubst_T1_not_is_VVr:
-  fixes x::"('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U1_pre"
+  fixes x::"('var::var, 'tyvar::var, 'a::var, 'b) U1_pre"
   assumes f_prems: "|SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   and empty_prems: "set5_T1_pre x \<inter> (IImsupp11_1 f1 \<union> IImsupp12_1 f2 \<union> IImsupp21_1 f3) = {}" "set6_T1_pre x \<inter> (IImsupp11_2 f1 \<union> IImsupp12_2 f2 \<union> IImsupp21_2 f3) = {}"
   and noclash: "noclash_T1 x"
@@ -2669,7 +2669,7 @@ shows
   apply (rule refl)
   done
 lemma tvsubst_T2_not_is_VVr:
-  fixes x::"('var::{var_T1_pre, var_T2_pre}, 'tyvar::{var_T1_pre, var_T2_pre}, 'a::{var_T1_pre, var_T2_pre}, 'b) U2_pre"
+  fixes x::"('var::var, 'tyvar::var, 'a::var, 'b) U2_pre"
   assumes f_prems: "|SSupp11 f1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp12 f2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp21 f3| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   and empty_prems: "set5_T2_pre x \<inter> (IImsupp11_1 f1 \<union> IImsupp12_1 f2 \<union> IImsupp21_1 f3) = {}" "set6_T2_pre x \<inter> (IImsupp11_2 f1 \<union> IImsupp12_2 f2 \<union> IImsupp21_2 f3) = {}"
   and noclash: "noclash_T2 x"
@@ -2991,7 +2991,7 @@ lemma IImsupp_Diffs:
   done
 
 lemma IImsupp_naturals:
-  fixes f1::"'a::{var_T1_pre,var_T2_pre} \<Rightarrow> 'a" and f2::"'b::{var_T1_pre,var_T2_pre} \<Rightarrow> 'b"
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows
     "IImsupp11_1 (permute_T1 f1 f2 \<circ> g \<circ> inv f1) = f1 ` IImsupp11_1 g"
@@ -3068,7 +3068,7 @@ lemma IImsupp_naturals:
   done
 
 lemma tvsubst_permutes:
-  fixes f1::"'var::{var_T1_pre,var_T2_pre} \<Rightarrow> 'var" and f2::"'tyvar::{var_T1_pre,var_T2_pre} \<Rightarrow> 'tyvar"
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
   assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     and g_prems: "|SSupp11 g11| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp12 g12| <o cmin |UNIV::'var set| |UNIV::'tyvar set|" "|SSupp21 g21| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   shows
@@ -3081,7 +3081,7 @@ proof -
     subgoal for t1 t2
       apply (rule fresh_induct[of "IImsupp11_1 g11 \<union> IImsupp12_1 g12 \<union> IImsupp21_1 g21" "IImsupp11_2 g11 \<union> IImsupp12_2 g12 \<union> IImsupp21_2 g21" _ _ t1 t2])
          apply (unfold IImsupp_defs comp_def)[2]
-         apply (rule var_T1_pre_class.Un_bound var_T1_pre_class.UN_bound infinite_UNIV g_prems[THEN ordLess_ordLeq_trans]
+         apply (rule var_class.Un_bound var_class.UN_bound infinite_UNIV g_prems[THEN ordLess_ordLeq_trans]
           FVars_bd_UNIVs cmin1 cmin2 card_of_Card_order)+
       subgoal premises IHs for v
         (* EVERY for VVrs of T1 *)

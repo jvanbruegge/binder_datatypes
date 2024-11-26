@@ -19,17 +19,13 @@ binder_datatype 'a "typ" =
   | Fun "'a typ" "'a typ"
   | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
 
-instance var :: var_typ_pre apply standard
-  using Field_natLeq infinite_iff_card_of_nat infinite_var
-  by (auto simp add: regularCard_var)
-
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.permute_id[simp] typ.permute_id0[simp]
 
 lemma typ_inject:
   "TyVar x = TyVar y \<longleftrightarrow> x = y"
   "Fun T1 T2 = Fun R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
-  "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var_typ_pre \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FVars_typ T2 - {x}) f \<and> f x = y \<and> permute_typ f T2 = R2)"
+  "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FVars_typ T2 - {x}) f \<and> f x = y \<and> permute_typ f T2 = R2)"
     apply (unfold TyVar_def Fun_def Forall_def typ.TT_inject0
       set3_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
       cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_typ_pre_def
@@ -45,7 +41,7 @@ corollary Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftr
 
 lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "
- (\<And>a'. a'\<in>FVars_typ T2 - {x::'a::var_typ_pre} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Forall x T1 T2 = Forall (\<sigma> x) T1 (permute_typ \<sigma> T2)"
+ (\<And>a'. a'\<in>FVars_typ T2 - {x::'a::var} \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> Forall x T1 T2 = Forall (\<sigma> x) T1 (permute_typ \<sigma> T2)"
   apply (unfold Forall_def)
   apply (unfold typ.TT_inject0)
   apply (unfold set3_typ_pre_def set2_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps
@@ -59,7 +55,7 @@ lemma Forall_rrename:
   apply (rule refl)
   done
 
-lemma Forall_swap: "y \<notin> FVars_typ T2 - {x} \<Longrightarrow> Forall (x::'a::var_typ_pre) T1 T2 = Forall y T1 (permute_typ (id(x:=y,y:=x)) T2)"
+lemma Forall_swap: "y \<notin> FVars_typ T2 - {x} \<Longrightarrow> Forall (x::'a::var) T1 T2 = Forall y T1 (permute_typ (id(x:=y,y:=x)) T2)"
   apply (rule trans)
    apply (rule Forall_rrename)
      apply (rule bij_swap[of x y])
@@ -101,8 +97,8 @@ lemma context_dom_set[simp]:
   unfolding map_context_def by force
 lemma set_bd_UNIV: "|set xs| <o |UNIV::var set|"
   apply (rule ordLess_ordLeq_trans)
-    apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
-  apply (rule var_typ_pre_class.large)
+   apply (tactic \<open>resolve_tac @{context} (BNF_Def.set_bd_of_bnf (the (BNF_Def.bnf_of @{context} @{type_name list}))) 1\<close>)
+  apply (rule typ_pre.var_large)
   done
 lemma context_set_bd_UNIV[simp]: "|dom xs| <o |UNIV::var set|"
   apply (rule ordLeq_ordLess_trans[OF card_of_image])
@@ -165,7 +161,7 @@ abbreviation Tsupp :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> ty
   "Tsupp \<Gamma> T\<^sub>1 T\<^sub>2 \<equiv> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<union> FVars_typ T\<^sub>1 \<union> FVars_typ T\<^sub>2"
 
 lemma small_Tsupp: "small (Tsupp x1 x2 x3)"
-  by (auto simp: small_def typ.set_bd_UNIV typ.Un_bound var_typ_pre_class.UN_bound set_bd_UNIV typ.set_bd)
+  by (auto simp: small_def typ.set_bd_UNIV typ.Un_bound var_class.UN_bound set_bd_UNIV typ.set_bd)
 
 lemma fresh: "\<exists>xx. xx \<notin> Tsupp x1 x2 x3"
   by (metis emp_bound equals0D imageI inf.commute inf_absorb2 small_Tsupp small_def small_isPerm subsetI)
@@ -249,7 +245,7 @@ binder_inductive ty
   subgoal for R B \<sigma> \<Gamma> T1 T2
     unfolding split_beta
     by (elim disj_forward exE)
-      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ_vvsubst_permute
+      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute
         typ.permute_comp typ.FVars_permute wf_eqvt extend_eqvt
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "permute_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
@@ -259,7 +255,7 @@ binder_inductive ty
       [@{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms  prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thms emp_bound insert_bound ID.set_bd Un_bound UN_bound typ.set_bd_UNIV infinite_UNIV}
+      @{thms emp_bound insert_bound ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
       @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done

@@ -41,7 +41,9 @@ session Binders in "thys" = Prelim +
 session Operations in "operations" = Untyped_Lambda_Calculus +
   theories
     Binder_Inductive
-    Fixpoint
+    Least_Fixpoint
+    Least_Fixpoint2
+    Greatest_Fixpoint
     Recursor
     VVSubst
     TVSubst

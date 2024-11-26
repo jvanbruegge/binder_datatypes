@@ -1307,9 +1307,12 @@ datatype inline_policy = Dont_Inline | Hardly_Inline | Smart_Inline | Do_Inline;
 datatype fact_policy = Dont_Note | Note_Some | Note_All;
 
 val mrbnf_internals = Attrib.setup_config_bool @{binding mrbnf_internals} (K false);
+val mrbnf_notes = Attrib.setup_config_bool @{binding mrbnf_notes} (K true);
 val mrbnf_timing = Attrib.setup_config_bool @{binding mrbnf_timing} (K false);
 
-fun user_policy policy ctxt = if Config.get ctxt mrbnf_internals then Note_All else policy;
+fun user_policy policy ctxt = if Config.get ctxt mrbnf_notes then
+  (if Config.get ctxt mrbnf_internals then Note_All else policy)
+  else Dont_Note;
 
 val smart_max_inline_term_size = 25; (*FUDGE*)
 
@@ -2269,6 +2272,14 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             |> Thm.close_derivation \<^here>
           end;
 
+        val lthy = Local_Theory.background_theory (fn thy =>
+          let
+            val lthy = Named_Target.init [] (hd coclass) thy;
+            val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
+              ("large", covar_large)
+            ]) lthy) handle ERROR _ => lthy;
+          in Local_Theory.exit_global lthy end
+        ) lthy;
         val lthy = Local_Theory.background_theory (fn thy =>
           let
             val lthy = Named_Target.init [] (hd class) thy;

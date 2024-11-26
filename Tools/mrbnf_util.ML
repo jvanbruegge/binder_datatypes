@@ -2,6 +2,8 @@ signature MRBNF_UTIL =
 sig
   include BNF_UTIL
 
+  datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+
   val filter_like: 'a list -> ('a -> bool) -> 'b list -> 'b list
   val cond_keep: 'a list -> bool list -> 'a list
   val cond_interlace: 'a list -> 'a list -> bool list -> 'a list
@@ -18,12 +20,17 @@ sig
   val mk_Int: term * term -> term
   val mk_infinite_regular_card_order: term -> term
   val mk_id_on: term -> term -> term
+  val mk_eq_on: term -> term -> term ->term
   val mk_card_suc: term -> term
   val mk_cmin: term * term -> term
   val mk_singleton: term -> term
   val mk_bot: typ -> term
   val mk_int_empty: term * term -> term;
   val mk_sum_ctors: term list -> term list;
+  val mk_minus: term * term -> term;
+  val mk_all: string * typ -> term -> term;
+  val mk_ex: string * typ -> term -> term;
+  val mk_insert: term -> term -> term;
 
   val strip_ex: term -> (string * typ) list * term
 
@@ -67,10 +74,19 @@ struct
 
 open BNF_Util
 
+datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+
 fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_ex t)
   | strip_ex t = ([], t)
 
 fun swap (a, b) = (b, a)
+
+val mk_minus = HOLogic.mk_binop @{const_name minus};
+fun mk_all (x, T) t = HOLogic.mk_all (x, T, t);
+fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
+
+fun mk_insert x S =
+  Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let
@@ -223,6 +239,10 @@ val mk_Int = HOLogic.mk_binop @{const_name inf};
 fun mk_id_on t1 t2 = let val (T, ST) = fastype_of t1 |> `HOLogic.dest_setT;
   in Const (@{const_name id_on}, ST --> (T --> T) --> HOLogic.boolT) $ t1 $ t2 end;
 
+fun mk_eq_on A f1 f2 =
+  let val fT = fastype_of f1
+  in Const (@{const_name eq_on}, fastype_of A --> fT --> fT --> @{typ bool}) $ A $ f1 $ f2 end
+
 fun mk_bij t = t
   |> fastype_of
   |> dest_funT
@@ -304,5 +324,27 @@ fun mk_sucT T = Type (\<^type_name>\<open>suc\<close>, [T])
 fun mk_card_suc r =
   let val T = fst (BNF_Util.dest_relT (fastype_of r));
   in Const (\<^const_name>\<open>card_suc\<close>, BNF_Util.mk_relT (T, T) --> BNF_Util.mk_relT (mk_sucT T, mk_sucT T)) $ r end;
+
+local
+
+val parameter = Parse.position Parse.nat >> (fn (n, pos) =>
+  if n > 1 then n else error ("Bad parameter: " ^ string_of_int n ^ Position.here pos));
+
+fun indices n = map string_of_int (1 upto n);
+fun cons n = implode (map (fn a => " (x" ^ a ^ " :: xs" ^ a ^ ")") (indices n));
+fun vars x n = implode (map (fn a => " " ^ x ^ a) (indices n));
+
+in
+
+val _ = Theory.setup
+ (ML_Antiquotation.value \<^binding>\<open>map_filter\<close>
+    (Scan.lift parameter >> (fn n =>
+      "fn f =>\n\
+      \  let\n\
+      \    fun map_filter _" ^ replicate_string n " []" ^ " = []\n\
+      \      | map_filter f" ^ cons n ^ " = let val ys = map_filter f" ^ vars "xs" n ^ " in the_default ys (Option.map (fn y => y::ys) (f" ^ vars "x" n ^ ")) end\n\
+      \      | map_filter _" ^ replicate_string n " _" ^ " = raise ListPair.UnequalLengths\n" ^
+      "  in map_filter f end")))
+end;
 
 end;

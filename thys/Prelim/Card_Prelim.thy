@@ -2,6 +2,11 @@ theory Card_Prelim
   imports "HOL-Cardinals.Cardinals" "HOL-Library.Countable_Set_Type" "HOL-Library.Infinite_Typeclass"
 begin
 
+lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
+  using card_of_mono1 ordLeq_ordLess_trans by blast
+lemma card_of_minus_bound: "|A| <o r \<Longrightarrow> |A - B| <o r"
+  by (rule card_of_subset_bound[OF Diff_subset])
+
 lemma regularCard_Un:
 assumes "Card_order r" and "cinfinite r" and "regularCard r"
  and "|A1| <o r" and "|A2| <o r"

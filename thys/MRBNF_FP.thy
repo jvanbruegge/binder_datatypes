@@ -2,11 +2,6 @@ theory MRBNF_FP
   imports "MRBNF_Composition"
 begin
 
-lemma card_of_subset_bound: "\<lbrakk> B \<subseteq> A ; |A| <o x \<rbrakk> \<Longrightarrow> |B| <o x"
-  using card_of_mono1 ordLeq_ordLess_trans by blast
-lemma card_of_minus_bound: "|A| <o r \<Longrightarrow> |A - B| <o r"
-  by (rule card_of_subset_bound[OF Diff_subset])
-
 lemma exists_subset_compl:
   assumes "Cinfinite r" "r \<le>o |UNIV::'b set|" "|U \<union> S::'b set| <o r"
   shows "\<exists>B. U \<inter> B = {} \<and> B \<inter> S = {} \<and> |U| =o |B|"
@@ -118,10 +113,13 @@ lemmas exists_bij_betw_refl_def = exists_bij_betw_refl[unfolded eq_bij_betw_refl
 
 lemma imsupp_id_on: "imsupp u \<inter> A = {} \<Longrightarrow> id_on A u"
   unfolding imsupp_def supp_def id_on_def by blast
+lemma supp_id_on: "supp u \<inter> A = {} \<Longrightarrow> id_on A u"
+  unfolding supp_def id_on_def by blast
 
 lemma imsupp_image_subset: "u ` A \<inter> A = {} \<Longrightarrow> A \<subseteq> imsupp u"
   unfolding imsupp_def supp_def by auto
 
+lemma Int_subset_empty: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> A \<Longrightarrow> D \<subseteq> B \<Longrightarrow> C \<inter> D = {}" by blast
 lemma Int_subset_empty1: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> A \<Longrightarrow> C \<inter> B = {}" by blast
 lemma Int_subset_empty2: "A \<inter> B = {} \<Longrightarrow> C \<subseteq> B \<Longrightarrow> A \<inter> C = {}" by blast
 lemma exists_map_prod_id: "(a, b) \<in> map_prod f id ` A \<Longrightarrow> \<exists>c. (c, b) \<in> A \<and> a = f c" by auto
@@ -185,7 +183,7 @@ lemma not_in_imsupp_same: "z \<notin> imsupp f \<Longrightarrow> f z = z"
   unfolding imsupp_def supp_def by blast
 lemma not_in_imsupp_same2: "z \<notin> imsupp f \<union> imsupp g \<Longrightarrow> f z = g z"
   using not_in_imsupp_same by (metis UnCI)
-lemma Diff_image_not_in_imsupp: "(\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> f ` A - B = f ` (A - B)"
+lemma Diff_image_not_in_imsupp: "B \<inter> imsupp f = {} \<Longrightarrow> f ` A - B = f ` (A - B)"
   unfolding supp_def imsupp_def by fastforce
 lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
   unfolding imsupp_def supp_def by fastforce
@@ -332,7 +330,15 @@ lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infini
 lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
   by (metis card_of_Un_singl_ordLess_infinite insert_is_Un)
 
-ML_file \<open>../Tools/mrbnf_fp_tactics.ML\<close>
+lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
+  unfolding id_on_def by simp
+
+lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
+  unfolding id_on_def by simp
+
+lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
+  by auto
+
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
@@ -356,7 +362,7 @@ in
 fun refreshability_tac verbose supps renames instss G_thm eqvt_thm extend_thms small_thms simp_thms intro_thms elim_thms ctxt =
   let
     val n = length supps;
-    fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN' 
+    fun case_tac NONE _ prems ctxt = HEADGOAL (Method.insert_tac ctxt prems THEN'
         K (if verbose then print_tac ctxt "pre_simple_auto" else all_tac)) THEN SOLVE (auto_tac ctxt)
       | case_tac (SOME insts) params prems ctxt =
         let
@@ -402,13 +408,14 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
                   addSIs (ex_f :: id_onI @ intro_thms)
                   addSEs elim_thms) 0 10) THEN_ALL_NEW (SELECT_GOAL (print_tac ctxt "auto failed")))
             end;
-          val small_ctxt = ctxt addsimps small_thms;
+          val small_ctxt = ctxt addsimps small_thms addIs small_thms;
         in
           HEADGOAL (rtac ctxt (fresh RS exE) THEN'
           SELECT_GOAL (auto_tac (small_ctxt addsimps [hd defs])) THEN'
           REPEAT_DETERM_N 2 o (asm_simp_tac small_ctxt) THEN'
           SELECT_GOAL (unfold_tac ctxt @{thms Int_Un_distrib Un_empty}) THEN'
           REPEAT_DETERM o etac ctxt conjE THEN'
+          (if verbose then K (print_tac ctxt "pre_case_inner_tac") else K all_tac) THEN'
           Subgoal.SUBPROOF (fn focus =>
             case_inner_tac (#params focus) (#prems focus) (#context focus)) ctxt)
         end;

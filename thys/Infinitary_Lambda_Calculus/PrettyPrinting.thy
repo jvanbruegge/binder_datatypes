@@ -113,7 +113,7 @@ interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp 
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  apply auto
-  subgoal apply(rule ext) by (auto simp add: term.rrename_comps image_def)
+  subgoal apply(rule ext) by (auto simp add: term.permute_comp image_def)
   subgoal by (simp add: Un_bound finite_Vars infinite_var small_def term.set_bd_UNIV)
   subgoal by (simp add: rrrename_cong)
   subgoal apply(rule ext) using image_iff by fastforce
@@ -184,14 +184,14 @@ unfolding G_def apply(drule presBnd_imp) apply(elim disjE)
   apply(rule exI[of _ "rrrename \<sigma> S"])  
   apply(cases tt) unfolding isPerm_def small_def Tperm_def 
   by simp (metis comp_apply id_apply inv_o_simp1 rrrename_id rrrename_o 
-    term.rrename_bijs term.rrename_inv_simps) . . 
+    term.permute_bij term.permute_inv_simp) . . 
   (* *)
   subgoal apply(rule disjI3_3)
   subgoal apply(elim exE) subgoal for y x t T
   apply(rule exI[of _ "\<sigma> y"]) apply(rule exI[of _ "\<sigma> x"]) 
   apply(rule exI[of _ "rrename \<sigma> t"]) apply(rule exI[of _ "rrrename \<sigma> T"]) 
   apply(cases tt) unfolding isPerm_def small_def Tperm_def apply simp 
-    by (metis comp_apply id_apply imageI inv_o_simp1 not_imageI rrrename_id rrrename_o subsetD term.rrename_bijs term.rrename_inv_simps)
+    by (metis comp_apply id_apply imageI inv_o_simp1 not_imageI rrrename_id rrrename_o subsetD term.permute_bij term.permute_inv_simp)
    . . .
 
 

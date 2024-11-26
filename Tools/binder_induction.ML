@@ -78,7 +78,7 @@ fun extract_vars ctxt var t =
             | NONE => (case BNF_Def.bnf_of ctxt name of
               SOME bnf => BNF_Def.sets_of_bnf bnf
               | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of ctxt name of
-                SOME sugar => #FVars (hd (filter (
+                SOME sugar => #FVarss (hd (filter (
                   fn quot => fst (dest_Type (#T quot)) = name
                 ) (#quotient_fps sugar)))
                 | NONE => []

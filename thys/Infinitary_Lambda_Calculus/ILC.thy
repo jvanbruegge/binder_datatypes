@@ -53,10 +53,11 @@ for
   vvsubst: ivvsubst
   tvsubst: itvsubst
 
+declare [[show_consts]]
 lemma ex_inj_infinite_regular_var_iterm_pre:
   "\<exists>f :: 'a :: countable \<Rightarrow> 'b :: var_iterm_pre. inj f"
   unfolding card_of_ordLeq[of UNIV UNIV, simplified]
-  apply (rule ordLeq_transitive[OF _ large])
+  apply (rule ordLeq_transitive[OF _ var_iterm_pre_class.large])
   apply (rule ordLeq_transitive[OF countable_card_le_natLeq[THEN iffD1]])
   apply simp
   apply (rule natLeq_ordLeq_cinfinite)
@@ -149,13 +150,13 @@ abbreviation "VVr \<equiv> tvVVr_itvsubst"
 lemmas VVr_def = tvVVr_itvsubst_def
 abbreviation "isVVr \<equiv> tvisVVr_itvsubst"
 lemmas isVVr_def = tvisVVr_itvsubst_def
-abbreviation "IImsupp \<equiv> IImsupp_itvsubst"
-lemmas IImsupp_def = IImsupp_itvsubst_def
-abbreviation "SSupp \<equiv> SSupp_itvsubst"
-lemmas SSupp_def = SSupp_itvsubst_def
-abbreviation "FFVars \<equiv> FFVars_iterm"
+abbreviation "IImsupp \<equiv> IImsupp_iterm"
+lemmas IImsupp_def = IImsupp_iterm_def
+abbreviation "SSupp \<equiv> SSupp_iterm"
+lemmas SSupp_def = SSupp_iterm_def
+abbreviation "FFVars \<equiv> FVars_iterm"
 
-abbreviation "irrename \<equiv> rrename_iterm"
+abbreviation "irrename \<equiv> permute_iterm"
 (* *)
 
 lemma FFVars_itvsubst[simp]:
@@ -163,7 +164,7 @@ lemma FFVars_itvsubst[simp]:
   shows "FFVars (itvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
   apply (binder_induction t avoiding: "IImsupp \<sigma>" rule: iterm.strong_induct)
   apply (rule iterm.fresh_induct[of "IImsupp \<sigma>"])
-     apply (auto simp: IImsupp_def assms intro!: Un_bound UN_bound iterm.card_of_FFVars_bounds)
+     apply (auto simp: IImsupp_def assms intro!: Un_bound UN_bound iterm.set_bd_UNIV)
   using iterm.FVars_VVr apply (fastforce simp add: SSupp_def)
   using iterm.FVars_VVr apply (auto simp add: SSupp_def Int_Un_distrib)
    apply (smt (verit) disjoint_insert(1) empty_iff insertE insert_absorb iterm.FVars_VVr mem_Collect_eq)
@@ -173,8 +174,8 @@ lemma FFVars_itvsubst[simp]:
 (* Enabling some simplification rules: *)
 lemmas iterm.tvsubst_VVr[simp]
 lemmas iterm.FVars_VVr[simp]
-iterm.rrename_ids[simp] iterm.rrename_cong_ids[simp]
-iterm.FFVars_rrenames[simp]
+iterm.permute_id[simp] iterm.permute_cong_id[simp]
+iterm.FVars_permute[simp]
 
 lemma singl_bound: "|{a}| <o |UNIV::ivar set|"
   by (simp add: finite_card_ivar)
@@ -202,7 +203,8 @@ lemma VVr_eq_Var[simp]: "VVr = iVar"
 (* Properties of term-for-variable substitution *)
 
 lemma itvsubst_VVr_func[simp]: "itvsubst VVr t = t"
-  apply (rule iterm.TT_plain_co_induct)
+  apply (rule iterm.TT_fresh_induct)
+  apply (rule emp_bound)
   subgoal for x
     apply (rule case_split[of "isVVr (iterm_ctor x)"])
      apply (unfold isVVr_def)[1]
@@ -218,11 +220,6 @@ lemma itvsubst_VVr_func[simp]: "itvsubst VVr t = t"
       unfolding IImsupp_VVr_empty
          apply (rule Int_empty_right)
       unfolding noclash_iterm_def Int_Un_distrib Un_empty
-        apply (rule conjI)
-         apply (rule iffD2[OF disjoint_iff], rule allI, rule impI, assumption)
-        apply (rule iffD2[OF disjoint_iff], rule allI, rule impI)
-      unfolding UN_iff Set.bex_simps
-        apply (rule ballI)
         apply assumption+
       apply (rule arg_cong[of _ _ iterm_ctor])
       apply (rule trans)
@@ -235,21 +232,6 @@ lemma itvsubst_VVr_func[simp]: "itvsubst VVr t = t"
     done
 
 thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
-
-
-lemma irrename_cong:
-assumes f: "bij f" "|supp f| <o |UNIV::ivar set|" and g: "bij g" "|supp g| <o |UNIV::ivar set|"
-and eq: "(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
-shows "irrename f P = irrename g P"
-using eq proof (binder_induction P avoiding: "supp f" "supp g" rule: iterm.strong_induct)
-  case (iApp x1 x2)
-  then show ?case using f g by simp (metis stream.map_cong0)
-next
-  case (iLam x1 x2)
-  thm iterm.subst
-  then show ?case using f g apply simp
-    by (metis iLam.hyps(4) iterm.permute(3) iterm.map_cong0 iterm_vvsubst_rrename)
-qed (auto simp: f g)
 
 lemma itvsubst_cong:
 assumes f: "|SSupp f| <o |UNIV::ivar set|" and g: "|SSupp g| <o |UNIV::ivar set|"
@@ -270,7 +252,7 @@ proposition iApp_inject[simp]: "(iApp a b = iApp c d) = (a = c \<and> b = d)"
 proof
   assume "iApp a b = iApp c d"
   then show "a = c \<and> b = d"
-    unfolding iApp_def fun_eq_iff iterm.TT_injects0
+    unfolding iApp_def fun_eq_iff iterm.TT_inject0
       map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
       Abs_iterm_pre_inject[OF UNIV_I UNIV_I]
     by auto
@@ -280,7 +262,7 @@ proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
   apply (rule iffI[rotated])
    apply (rule arg_cong[of _ _ iVar])
   apply assumption
-  unfolding iVar_def iterm.TT_injects0 map_iterm_pre_def comp_def map_sum_def sum.case Abs_iterm_pre_inverse[OF UNIV_I]
+  unfolding iVar_def iterm.TT_inject0 map_iterm_pre_def comp_def map_sum_def sum.case Abs_iterm_pre_inverse[OF UNIV_I]
   id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
   apply (erule exE conjE)+
   apply assumption
@@ -289,14 +271,14 @@ proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
 lemma iLam_inject: "(iLam xs e = iLam xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
   \<and> id_on (FFVars (iLam xs e)) f \<and> dsmap f xs = xs' \<and> irrename f e = e')"
   unfolding iterm.set
-  unfolding iLam_def iterm.TT_injects0 map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I]
+  unfolding iLam_def iterm.TT_inject0 map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I]
     map_sum_def sum.case map_prod_def prod.case id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_iterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_iterm_pre_def
     Un_empty_right UN_single by auto
 
 lemma iLam_same_inject[simp]: "iLam (xs::ivar dstream) e = iLam xs e' \<longleftrightarrow> e = e'"
 unfolding iLam_inject apply safe
-apply(rule iterm.rrename_cong_ids[symmetric])
+apply(rule iterm.permute_cong_id[symmetric])
 unfolding id_on_def by auto (metis bij_betw_def bij_imp_bij_betw dsnth_dsmap dtheN)
 
 lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set| \<Longrightarrow> bij (map_iterm_pre (id::ivar \<Rightarrow>ivar) f (irrename f) id)"
@@ -309,12 +291,12 @@ lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> iv
    apply (rule trans)
     apply (rule iterm_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 iterm.rrename_comp0s iterm.rrename_id0s
+  unfolding id_o inv_o_simp1 iterm.permute_comp0 iterm.permute_id0
   apply (rule iterm_pre.map_id0)
   apply (rule trans)
    apply (rule iterm_pre.map_comp0[symmetric])
         apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp2 iterm.rrename_comp0s iterm.rrename_id0s
+  unfolding id_o inv_o_simp2 iterm.permute_comp0 iterm.permute_id0
   apply (rule iterm_pre.map_id0)
   done
 
@@ -331,13 +313,13 @@ lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarro
   apply (rule trans)
     apply (rule iterm_pre.map_comp0[symmetric])
          apply (assumption | rule supp_id_bound)+
-  unfolding id_o inv_o_simp1 inv_o_simp2 iterm.rrename_comp0s iterm.rrename_id0s iterm_pre.map_id0
+  unfolding id_o inv_o_simp1 inv_o_simp2 iterm.permute_comp0 iterm.permute_id0 iterm_pre.map_id0
    apply (rule refl)+
   done
 
 lemma iLam_set3: "iterm_ctor v = iLam (xs::ivar dstream) e \<Longrightarrow>
  \<exists>xs' e'. iterm_ctor v = iLam xs' e' \<and> dsset xs' \<subseteq> set2_iterm_pre v \<and> e' \<in> set3_iterm_pre v"
-  unfolding iLam_def iterm.TT_injects0
+  unfolding iLam_def iterm.TT_inject0
   apply (erule exE)
   apply (erule conjE)+
   subgoal for f
@@ -350,7 +332,7 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_iterm_pre id f (irrename f)
      apply (rule exI[of _ "id"])
      apply (rule conjI bij_id supp_id_bound id_on_id)+
     apply (drule sym)
-    unfolding iterm.rrename_id0s iterm_pre.map_id map_term_pre_inv_simp
+    unfolding iterm.permute_id0 iterm_pre.map_id map_term_pre_inv_simp
     unfolding map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case
       map_prod_def prod.case id_def
     apply assumption
@@ -358,18 +340,16 @@ apply (drule iffD2[OF bij_imp_inv', rotated, of "map_iterm_pre id f (irrename f)
 unfolding set2_iterm_pre_def set3_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] sum_set_simps
     map_sum_def sum.case Union_empty Un_empty_left map_prod_def prod.case prod_set_simps
       ccpo_Sup_singleton Un_empty_right id_on_def image_single[symmetric]
-  unfolding iterm.FFVars_rrenames[OF bij_imp_bij_inv supp_inv_bound]
+  unfolding iterm.FVars_permute[OF bij_imp_bij_inv supp_inv_bound]
   unfolding image_single image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv], symmetric]
-    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF iterm.rrename_bijs[OF bij_imp_bij_inv supp_inv_bound]]
-  iterm.rrename_inv_simps[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
-  unfolding iterm.rrename_comps[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 iterm.rrename_ids
+    image_in_bij_eq[OF bij_imp_bij_inv] inv_inv_eq image_in_bij_eq[OF iterm.permute_bij[OF bij_imp_bij_inv supp_inv_bound]]
+  iterm.permute_inv_simp[OF bij_imp_bij_inv supp_inv_bound] inv_simp2
+  unfolding iterm.permute_comp[OF bij_imp_bij_inv supp_inv_bound] inv_o_simp2 iterm.permute_id
   apply (rule conjI bij_imp_bij_inv supp_inv_bound singletonI | assumption)+
   by auto .
 
 lemma iLam_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>xs' e'. iLam xs e = iLam xs' e' \<and> dsset xs' \<inter> A = {}"
-  apply (drule iterm.TT_fresh_nchotomys[of _ "iLam xs e"])
-  apply (erule exE)
-  apply (erule conjE)
+  apply (erule iterm.TT_fresh_cases[of _ "iLam xs e"])
    apply (drule sym)
   apply (frule iLam_set3)
   apply (erule exE conjE)+
@@ -378,7 +358,7 @@ lemma iLam_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>
    apply (rule trans)
     apply (rule sym)
     apply assumption
-  apply (rotate_tac 2)
+  apply (rotate_tac 3)
    apply assumption
   apply (drule iffD1[OF disjoint_iff])
   by auto
@@ -386,7 +366,7 @@ lemma iLam_avoid: "|A::ivar set| <o |UNIV::ivar set| \<Longrightarrow> \<exists>
 lemma iLam_irrename:
 "bij (\<sigma>::ivar\<Rightarrow>ivar) \<Longrightarrow> |supp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow>
  (\<And>a'. a' \<in> FFVars e - dsset (as::ivar dstream) \<Longrightarrow> \<sigma> a' = a') \<Longrightarrow> iLam as e = iLam (dsmap \<sigma> as) (irrename \<sigma> e)"
-by (metis iterm.permute(3) iterm.rrename_cong_ids iterm.set(3))
+by (metis iterm.permute(3) iterm.permute_cong_id iterm.set(3))
 
 
 (* Bound properties (needed as auxiliaries): *)
@@ -482,7 +462,7 @@ using SSupp_upd_iVar_bound .
 lemma IImsupp_irrename_update_su:
 assumes s[simp]: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o |UNIV::ivar set|"
 shows "IImsupp (irrename \<sigma> \<circ> iVar(x := e)) \<subseteq>
-       imsupp \<sigma> \<union> {x} \<union> FFVars_iterm e"
+       imsupp \<sigma> \<union> {x} \<union> FVars_iterm e"
 unfolding IImsupp_def SSupp_def imsupp_def supp_def by (auto split: if_splits)
 
 lemma IImsupp_irrename_update_bound:
@@ -538,7 +518,7 @@ proof-
     subgoal by simp
     subgoal by simp (metis (mono_tags, lifting) comp_apply stream.map_comp stream.map_cong)
     subgoal for xs t apply simp apply(subgoal_tac "dsset xs \<inter> IImsupp (\<lambda>a. irrename  \<sigma> (\<tau> a)) = {}")
-      subgoal by simp (metis Int_Un_emptyI1 Int_Un_emptyI2 assms(2) b iterm.map(3) iterm.subst(3) iterm_vvsubst_rrename s(2))
+      subgoal by simp (metis Int_Un_emptyI1 Int_Un_emptyI2 assms(2) b iterm.map(3) iterm.subst(3) iterm_vvsubst_permute s(2))
       subgoal using IImsupp_irrename_su' b s(1) by blast . .
 qed
 
@@ -617,11 +597,11 @@ lemma usub_swap_disj:
 assumes "{u,v} \<inter> {x,y} = {}"
 shows "usub (swap t u v) x y = swap (usub t x y) u v"
 proof-
-  note iterm_vvsubst_rrename[simp del]
+  note iterm_vvsubst_permute[simp del]
   show ?thesis using assms
-  apply(subst iterm_vvsubst_rrename[symmetric]) apply auto
+  apply(subst iterm_vvsubst_permute[symmetric]) apply auto
   apply(subst iterm.map_comp) apply auto
-  apply(subst iterm_vvsubst_rrename[symmetric]) apply auto
+  apply(subst iterm_vvsubst_permute[symmetric]) apply auto
   apply(subst iterm.map_comp) apply auto
   apply(rule iterm.map_cong0)
   using iterm_pre.supp_comp_bound by auto
@@ -630,7 +610,7 @@ qed
 lemma irrename_o_swap:
 "irrename (id(y::ivar := yy, yy := y) o id(x := xx, xx := x)) t =
  swap (swap t x xx) y yy"
-apply(subst iterm.rrename_comps[symmetric])
+apply(subst iterm.permute_comp[symmetric])
 by auto
 
 (* *)
@@ -641,10 +621,10 @@ lemma swap_simps[simp]: "swap (iVar z) (y::ivar) x = iVar (sw z y x)"
 unfolding sw_def by simp_all (metis eq_id_iff fun_upd_apply)
 
 lemma FFVars_swap[simp]: "FFVars (swap t y x) = (\<lambda>u. sw u x y) ` (FFVars t)"
-apply(subst iterm.FFVars_rrenames) by (auto simp: sw_def)
+apply(subst iterm.FVars_permute) by (auto simp: sw_def)
 
 lemma FFVars_swap'[simp]: "{x::ivar,y} \<inter> FFVars t = {} \<Longrightarrow> swap t x y = t"
-apply(rule iterm.rrename_cong_ids) by auto
+apply(rule iterm.permute_cong_id) by auto
 
 (* *)
 
@@ -793,9 +773,9 @@ lemma usub_refresh:
 assumes "xx \<notin> FFVars t \<or> xx = x"
 shows "usub t u x = usub (swap t x xx) u xx"
 proof-
-  note iterm_vvsubst_rrename[simp del]
+  note iterm_vvsubst_permute[simp del]
   show ?thesis using assms
-  apply(subst iterm_vvsubst_rrename[symmetric]) apply simp
+  apply(subst iterm_vvsubst_permute[symmetric]) apply simp
     subgoal by auto
     subgoal apply(subst iterm.map_comp)
       subgoal by auto
@@ -807,11 +787,11 @@ qed
 lemma swap_commute:
 "{y,yy} \<inter> {x,xx} = {} \<Longrightarrow>
  swap (swap t y yy) x xx = swap (swap t x xx) y yy"
-apply(subst iterm.rrename_comps)
+apply(subst iterm.permute_comp)
 apply auto
-apply(subst iterm.rrename_comps)
+apply(subst iterm.permute_comp)
 apply auto
-apply(rule irrename_cong)
+apply(rule iterm.permute_cong)
 by (auto simp: iterm_pre.supp_comp_bound)
 
 
@@ -917,7 +897,7 @@ proof
     apply (meson bij_betw_def bij_imp_bij_betw)
     apply (meson bij_betw_def bij_imp_bij_betw)
     by (smt (verit) Un_iff bf bij_betw_apply disjoint_iff_not_equal)
-  subgoal apply(rule irrename_cong)
+  subgoal apply(rule iterm.permute_cong)
     apply blast
     apply (metis supp_def)
     apply meson
@@ -1083,10 +1063,10 @@ proof-
    by (smt (verit) Int_emptyD ds dsmap.rep_eq dsnth_dsmap dsset.rep_eq dtheN g(6) o_apply)
 
    have 0: "irrename g e = irrename g' e'"
-   unfolding e' apply(subst iterm.rrename_comps)
+   unfolding e' apply(subst iterm.permute_comp)
      subgoal using h g' g by auto  subgoal using h g' g by auto
      subgoal using h g' g by auto  subgoal using h g' g by auto
-     subgoal apply(rule irrename_cong)
+     subgoal apply(rule iterm.permute_cong)
        subgoal using h g' g by auto  subgoal using h g' g by auto
        subgoal using h g' g by auto  subgoal using h g' g dstream.supp_comp_bound by blast
        subgoal for z apply auto using hid g(3,4,5) g'(3,4,5) unfolding id_on_def apply auto
@@ -1114,7 +1094,7 @@ proof-
   next
     case (iLam xs t)
     then show ?case using iiLam
-    by simp (metis bij_o iterm.rrename_comps iterm_pre.supp_comp_bound)
+    by simp (metis bij_o iterm.permute_comp iterm_pre.supp_comp_bound)
   qed
   thus ?thesis apply(elim allE[of _ id]) by auto
 qed
@@ -1391,7 +1371,7 @@ next
 
     have t1': "t1' = irrename (inv f1' o f1) t"
     using f1f1' by (metis (mono_tags, lifting) bij_imp_bij_inv f1(1,2) f1'(1,2)
-       inv_o_simp1 supp_inv_bound iterm.rrename_comps iterm.rrename_ids)
+       inv_o_simp1 supp_inv_bound iterm.permute_comp iterm.permute_id)
 
     have fvb1': "FVarsB b1' \<subseteq> FFVars t1'"
     using iLam2[OF if1', unfolded t1'[symmetric], OF 1(1)] .
@@ -1413,7 +1393,7 @@ next
     have t2': "t2' = irrename (inv f2' o f2) t"
     using f2f2'
     by (metis (mono_tags, lifting) bij_imp_bij_inv f2(1,2) f2'(1,2)
-      inv_o_simp1 iterm.rrename_comps iterm.rrename_ids supp_inv_bound)
+      inv_o_simp1 iterm.permute_comp iterm.permute_id supp_inv_bound)
 
     have fvb2': "FVarsB b2' \<subseteq> FFVars t2'"
     using iLam2[OF if2', unfolded t2'[symmetric], OF 2(1)] .
@@ -1473,7 +1453,7 @@ next
 
     have rew2: "irrename ff2' (irrename (inv f2' \<circ> f2) t) = irrename f1 t"
     by (smt (verit, best) bij_betw_comp_iff bij_is_inj f1(1) f1(2) f2'(1) f2'(2) f2(1) f2(2) f2f2'
-            ff2'_def if2(2) iterm.rrename_comps iterm.supp_comp_bound o_inv_o_cancel t2')
+            ff2'_def if2(2) iterm.permute_comp iterm.supp_comp_bound o_inv_o_cancel t2')
 
     show "b1 = b2" unfolding 1(3) 2(3)
     apply(rule iLamB_inject_strong'_rev[OF b12', of zs f1' _ ff2'])

@@ -23,7 +23,7 @@ binder_inductive cong
   subgoal for R B \<sigma> x1 x2
     apply simp
     by (elim disj_forward case_prodE)
-      (auto simp: isPerm_def term.rrename_comps
+      (auto simp: isPerm_def term.permute_comp
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
@@ -32,8 +32,8 @@ binder_inductive cong
       [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [NONE, NONE, NONE, NONE, SOME [SOME 1, SOME 1, SOME 0], SOME [SOME 1], NONE, SOME [SOME 1, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
-      @{thms Res_inject term.FFVars_rrenames} @{thms term.rrename_cong_ids[symmetric]}
+      @{thms emp_bound singl_bound term.Un_bound term.set_bd_UNIV infinite_UNIV}
+      @{thms Res_inject term.FVars_permute} @{thms term.permute_cong_id[symmetric]}
       @{thms id_onD} @{context}\<close>)
   done
 
@@ -41,7 +41,7 @@ thm cong.strong_induct
 thm cong.equiv
 
 lemma finite_Tsupp: "finite (Tsupp x1 x2)"
-  by (metis FFVars_commit_simps(5) finite_FFVars_commit finite_Un)
+  by (metis commit.set(4) finite_FVars_commit finite_Un)
 
 lemma exists_fresh:
   "\<exists> z. z \<notin> set xs \<and> (z \<notin> Tsupp x1 x2)"
@@ -65,18 +65,18 @@ binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
     apply (elim disj_forward exE)
-       apply  (auto simp: isPerm_def term.rrename_comps
+       apply  (auto simp: isPerm_def term.permute_comp
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
-    by (metis cong.equiv bij_imp_inv' term.rrename_bijs term.rrename_inv_simps)
+    by (metis cong.equiv bij_imp_inv' term.permute_bij term.permute_inv_simp)
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]
       [@{term "rrename :: (var \<Rightarrow> var) \<Rightarrow> trm \<Rightarrow> trm"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [SOME [NONE, NONE, NONE, SOME 1, SOME 0], NONE, SOME [SOME 0, SOME 0, SOME 1], NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound term.Un_bound term.card_of_FFVars_bounds infinite_UNIV}
-      @{thms Res_inject Inp_inject term.FFVars_rrenames} @{thms Inp_eq_usub term.rrename_cong_ids[symmetric]}
+      @{thms emp_bound singl_bound term.Un_bound term.set_bd_UNIV infinite_UNIV}
+      @{thms Res_inject Inp_inject term.FVars_permute} @{thms Inp_eq_usub term.permute_cong_id[symmetric]}
       @{thms } @{context}\<close>)
   done
 

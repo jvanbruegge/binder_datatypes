@@ -61,9 +61,9 @@ interpretation CComponents where
 Tperm = Tperm and Tsupp = Tsupp 
 and Bperm = Bperm and Bsupp = Bsupp and bnd = bnd and bsmall = bsmall
 apply standard unfolding isPerm_def Tperm_def  
-using iterm.card_of_FFVars_bounds
-apply (auto simp: iterm.rrename_id0s map_prod.comp 
-iterm.rrename_comp0s infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
+using iterm.set_bd_UNIV
+apply (auto simp: iterm.permute_id0 map_prod.comp 
+iterm.permute_comp0 infinite_UNIV bsmall_def intro!: ext small_Un split: option.splits)
 apply (simp add: iterm.set_bd_UNIV small_def)
 apply (simp add: iterm.set_bd_UNIV small_def)
 apply (simp add: comp_def dstream.map_comp)
@@ -116,15 +116,15 @@ unfolding G_def apply(elim disjE)
   apply(rule exI[of _ "irrename \<sigma> e"]) 
   apply(rule exI[of _ "irrename \<sigma> e'"])  
   apply(cases t) unfolding isPerm_def small_def Tperm_def presBnd_def
-  apply (simp add: iterm.rrename_comps) by (metis option.simps(5)) . . 
+  apply (simp add: iterm.permute_comp) by (metis option.simps(5)) . . 
   (* *)
   subgoal apply(rule disjI3_3)
   subgoal apply(elim exE) subgoal for e1 e1' es2 es2'
   apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"]) 
   apply(rule exI[of _ "smap (irrename \<sigma>) es2"]) apply(rule exI[of _ "smap (irrename \<sigma>) es2'"])
   apply(cases t) unfolding isPerm_def small_def Tperm_def 
-  apply (simp add: iterm.rrename_comps) 
-  by (metis image_in_bij_eq iterm.rrename_bijs iterm.rrename_inv_simps) . . .
+  apply (simp add: iterm.permute_comp) 
+  by (metis image_in_bij_eq iterm.permute_bij iterm.permute_inv_simp) . . .
 
 
 

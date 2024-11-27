@@ -135,26 +135,6 @@ proof-
     by auto metis .
 qed
 
-proposition App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
-proof
-  assume "App a b = App c d"
-  then show "a = c \<and> b = d"
-    unfolding App_def fun_eq_iff term.TT_inject0
-      map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-      Abs_term_pre_inject[OF UNIV_I UNIV_I]
-    by blast
-qed simp
-
-proposition Var_inject[simp]: "(Var a = Var b) = (a = b)"
-  apply (rule iffI[rotated])
-   apply (rule arg_cong[of _ _ Var])
-  apply assumption
-  unfolding Var_def term.TT_inject0 map_term_pre_def comp_def map_sum_def sum.case Abs_term_pre_inverse[OF UNIV_I]
-  id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject
-  apply (erule exE conjE)+
-  apply assumption
-  done
-
 lemma Lam_inject: "(Lam x e = Lam x' e') = (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
   \<and> id_on (FVars_term (Lam x e)) f \<and> f x = x' \<and> rrename f e = e')"
   unfolding term.set
@@ -164,11 +144,6 @@ lemma Lam_inject: "(Lam x e = Lam x' e') = (\<exists>f. bij f \<and> |supp (f::v
     Un_empty_right UN_single
   apply (rule refl)
   done
-
-lemma Lam_same_inject[simp]: "Lam (x::var) e = Lam x e' \<longleftrightarrow> e = e'"
-unfolding Lam_inject apply safe
-apply(rule term.permute_cong_id[symmetric])
-unfolding id_on_def by auto
 
 lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set| \<Longrightarrow> bij (map_term_pre (id::var \<Rightarrow>var) f (rrename f) id)"
   apply (rule iffD2[OF bij_iff])
@@ -940,7 +915,7 @@ apply safe
 lemma R_App_elim:
 assumes "R (App e1 e2) b"
 shows "\<exists>b1 b2. R e1 b1 \<and> R e2 b2 \<and> b = AppB b1 b2"
-by (metis App_inject R.simps assms term.distinct(1) term.distinct(4))
+by (metis term.inject(2) R.simps assms term.distinct(1) term.distinct(4))
 
 lemma R_Lam_elim:
 assumes "R (Lam x e) b"

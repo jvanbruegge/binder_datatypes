@@ -70,24 +70,6 @@ corollary SSupp_upd_VVr_bound: "|SSupp_terms (tvVVr_tvsubst(a:=(t::'a::var terms
 lemma supp_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
   unfolding supp_def id_on_def by blast
 
-lemma App_inject[simp]: "(App a b = App c d) = (a = c \<and> b = d)"
-proof
-  assume "App a b = App c d"
-  then show "a = c \<and> b = d"
-    unfolding App_def fun_eq_iff terms.TT_inject0
-      map_terms_pre_def comp_def Abs_terms_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-      Abs_terms_pre_inject[OF UNIV_I UNIV_I]
-    by blast
-qed simp
-lemma Var_inject[simp]: "(Var a = Var b) = (a = b)"
-  apply (rule iffI[rotated])
-   apply (rule arg_cong[of _ _ Var])
-  apply assumption
-  unfolding Var_def terms.TT_inject0 map_terms_pre_def comp_def map_sum_def sum.case Abs_terms_pre_inverse[OF UNIV_I]
-  id_def Abs_terms_pre_inject[OF UNIV_I UNIV_I] sum.inject
-  apply (erule exE conjE)+
-  apply assumption
-  done
 lemma Abs_inject: "(Abs x \<tau> e = Abs x' \<tau>' e') = (\<exists>f. bij f \<and> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<and> id_on (FVars_terms (Abs x \<tau> e)) f \<and> f x = x' \<and> \<tau> = \<tau>' \<and> permute_terms f e = e')"
   unfolding terms.set
@@ -211,19 +193,12 @@ inductive Ty :: "('a::var * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<
 lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<circ> f3) (f2 \<circ> f4)"
   using prod.map_comp by auto
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
 binder_inductive Ty
   subgoal for R B \<sigma> x1 x2 x3
     apply (elim disj_forward)
       apply (auto simp: map_prod_comp0 terms.permute_comp[OF _ _ bij_imp_bij_inv supp_inv_bound]
     terms.permute_id)
      apply force
-    apply (rule exI)
-    apply (rule conjI)
-     apply (rule refl)
-    apply (simp add: terms.permute_comp[OF _ _ bij_imp_bij_inv supp_inv_bound] terms.permute_id)
     unfolding fresh_def by force
   subgoal for R B x1 x2 x3
     apply (rule exI[of _ B])
@@ -512,7 +487,7 @@ proof (induction "{||} :: ('a::var * \<tau>) fset" e \<tau> arbitrary: e' rule: 
     case (ST_Beta x \<tau> e e2')
     then have "{||} \<turnstile>\<^sub>t\<^sub>y App (Abs x \<tau> e) e2 : \<tau>\<^sub>2" using Ty_App Ty.Ty_App by fastforce
     have "{||} \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2" using Ty_App ST_Beta
-      by (smt (verit, ccfv_SIG) Abs_inject App_inject Ty.cases \<tau>.inject terms.distinct(2, 4))
+      by (smt (verit, ccfv_SIG) Abs_inject terms.inject Ty.cases \<tau>.inject terms.distinct(2, 4))
     then have "{||},x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" by (auto elim: Ty_AbsE')
     then have "{||} \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := e2')) e : \<tau>\<^sub>2" using substitution ST_Beta(1) Ty_App(3) unfolding fresh_def by fastforce
     then show ?thesis using ST_Beta by simp

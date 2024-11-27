@@ -248,26 +248,6 @@ qed (auto simp: IImsupp_def iterm.UN_bound iterm.Un_bound iterm.set_bd_UNIV f g)
 
 (* *)
 
-proposition iApp_inject[simp]: "(iApp a b = iApp c d) = (a = c \<and> b = d)"
-proof
-  assume "iApp a b = iApp c d"
-  then show "a = c \<and> b = d"
-    unfolding iApp_def fun_eq_iff iterm.TT_inject0
-      map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-      Abs_iterm_pre_inject[OF UNIV_I UNIV_I]
-    by auto
-qed simp
-
-proposition iVar_inject[simp]: "(iVar a = iVar b) = (a = b)"
-  apply (rule iffI[rotated])
-   apply (rule arg_cong[of _ _ iVar])
-  apply assumption
-  unfolding iVar_def iterm.TT_inject0 map_iterm_pre_def comp_def map_sum_def sum.case Abs_iterm_pre_inverse[OF UNIV_I]
-  id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject
-  apply (erule exE conjE)+
-  apply assumption
-  done
-
 lemma iLam_inject: "(iLam xs e = iLam xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
   \<and> id_on (FFVars (iLam xs e)) f \<and> dsmap f xs = xs' \<and> irrename f e = e')"
   unfolding iterm.set
@@ -1230,7 +1210,7 @@ apply safe
 lemma R_iApp_elim:
 assumes "R (iApp e1 es2) b"
 shows "\<exists>b1 bs2. R e1 b1 \<and> stream_all2 R es2 bs2 \<and> b = iAppB b1 bs2"
-by (metis (no_types, lifting) R.cases assms iApp_inject iterm.distinct(3) iterm.distinct(6))
+by (metis (no_types, lifting) R.cases assms iterm.inject iterm.distinct(3) iterm.distinct(6))
 
 lemma R_iLam_elim:
 assumes "R (iLam xs e) b"

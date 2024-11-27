@@ -206,7 +206,7 @@ using uniformS_def3[unfolded reneqvS_def] .
 lemma uniformS_smap2_iApp_iff: 
 "uniformS (smap2 iApp es ess) \<longleftrightarrow> uniformS es \<and> uniformS (sflat ess)"
 unfolding uniformS_def4 sset_sflat sset_smap2 unfolding sset_range apply auto
-  apply (metis iApp_inject reneqv_iApp_casesR)
+  apply (metis iterm.inject reneqv_iApp_casesR)
   subgoal for i j i' j' apply(erule allE[of _ "iApp (es !! i) (ess !! i)"])
   apply(erule allE[of _ "iApp (es !! i') (ess !! i')"]) apply auto
   using reneqv_iApp_casesR by fastforce
@@ -366,7 +366,7 @@ proof-
   have u': "uniform (iLam xs e1)" using u uniform_iApp_iff by blast
 
   have fves2: "touchedSuper (\<Union> (FFVars ` (sset es2))) = touchedSuper (FFVars e2) "  
-    by (metis e2 iApp_inject reneqvS_def reneqv_iApp_casesL u uniformS_def3 uniformS_touchedSuper uniform_def3)
+    by (metis e2 iterm.inject reneqvS_def reneqv_iApp_casesL u uniformS_def3 uniformS_touchedSuper uniform_def3)
 
   have ss: "small (\<Union> (FFVars ` (sset es2)))" 
   unfolding small_def apply(rule iterm.UN_bound)

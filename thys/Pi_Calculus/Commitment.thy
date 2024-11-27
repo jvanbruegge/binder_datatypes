@@ -28,12 +28,6 @@ lemmas commit_pre_map_cong_id = commit_pre.map_cong[of _ _ _ id id id, simplifie
 lemma Abs_commit_pre_inj[simp]: "Abs_commit_pre k = Abs_commit_pre k' \<longleftrightarrow> k = k'"
   by (metis toUnfold(21))
 
-lemma Finp_inj[simp]: "Finp x y P = Finp x' y' P' \<longleftrightarrow> x = x' \<and> y = y' \<and> P = P'"
-  unfolding Finp_def commit.TT_inject0 toUnfold map_commit_pre_def by auto
-
-lemma Fout_inj[simp]: "Fout x y P = Fout x' y' P' \<longleftrightarrow> x = x' \<and> y = y' \<and> P = P'"
-  unfolding Fout_def commit.TT_inject0 toUnfold map_commit_pre_def by auto
-
 lemma Bout_inj[simp]: "Bout x y P = Bout x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
   unfolding Bout_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
   apply (rule iffI)
@@ -51,9 +45,6 @@ unfolding Binp_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre
   apply auto
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
     by (auto simp: id_on_def) .
-
-lemma Tau_inj[simp]: "Tau P = Tau P' \<longleftrightarrow> P = P'"
-unfolding Tau_def commit.TT_inject0 toUnfold map_commit_pre_def by auto
 
 (* Supply of fresh variables *)
 
@@ -138,6 +129,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   ]],
   bset_bounds = @{thms bns_bound},
   strong_induct = NONE,
+  inject = @{thms commit.inject},
   mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),
   set_simpss = [],
   subst_simps = NONE

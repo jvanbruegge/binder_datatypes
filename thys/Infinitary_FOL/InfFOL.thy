@@ -339,10 +339,6 @@ binder_inductive deduct
     unfolding induct_rulify_fallback split_beta
     apply (elim disj_forward exE)
           apply (auto simp: ifol'.permute_comp in_k_equiv in_k_equiv' isPerm_def ifol'.permute_id supp_inv_bound)
-         apply (rule exI)
-         apply (rule conjI)
-          apply (rule refl)
-         apply (rule allI impI)+
          apply (unfold set\<^sub>k.map_comp)
          apply (subst ifol'.permute_comp0)
              apply (assumption | rule bij_imp_bij_inv supp_inv_bound)+

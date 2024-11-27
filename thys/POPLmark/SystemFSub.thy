@@ -23,8 +23,6 @@ declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.permute_id[simp] typ.permute_id0[simp]
 
 lemma typ_inject:
-  "TyVar x = TyVar y \<longleftrightarrow> x = y"
-  "Fun T1 T2 = Fun R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
   "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FVars_typ T2 - {x}) f \<and> f x = y \<and> permute_typ f T2 = R2)"
     apply (unfold TyVar_def Fun_def Forall_def typ.TT_inject0
       set3_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
@@ -33,11 +31,6 @@ lemma typ_inject:
       sum.inject prod.inject map_prod_simp
     )
   by auto
-declare typ_inject(1,2)[simp]
-
-corollary Forall_inject_same[simp]: "Forall x T1 T2 = Forall x R1 R2 \<longleftrightarrow> T1 = R1 \<and> T2 = R2"
-  using typ_inject(3) typ.permute_cong_id
-  by (metis (no_types, lifting) Diff_empty Diff_insert0 id_on_insert insert_Diff)
 
 lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "

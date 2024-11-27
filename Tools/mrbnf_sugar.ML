@@ -21,6 +21,7 @@ type binder_sugar = {
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm option,
   distinct: thm list,
+  inject: thm list,
   ctors: (term * thm) list
 };
 
@@ -63,11 +64,12 @@ type binder_sugar = {
   mrbnf: MRBNF_Def.mrbnf,
   strong_induct: thm option,
   distinct: thm list,
+  inject: thm list,
   ctors: (term * thm) list
 };
 
 fun morph_binder_sugar phi { map_simps, permute_simps, set_simpss, subst_simps, mrbnf,
-  strong_induct, distinct, ctors, bsetss, bset_bounds } = {
+  strong_induct, distinct, inject, ctors, bsetss, bset_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
@@ -77,6 +79,7 @@ fun morph_binder_sugar phi { map_simps, permute_simps, set_simpss, subst_simps, 
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
   strong_induct = Option.map (Morphism.thm phi) strong_induct,
   distinct = map (Morphism.thm phi) distinct,
+  inject = map (Morphism.thm phi) inject,
   ctors = map (map_prod (Morphism.term phi) (Morphism.thm phi)) ctors
 } : binder_sugar;
 
@@ -451,7 +454,69 @@ fun create_binder_datatype (spec : spec) lthy =
       ])] end
     ) ctors_tys) ctors_tys));
 
-    (* TODO: map_bij (rename simps); injection *)
+    val inject = map_filter (fn ((ctor, ctor_def), tys) => if null tys then NONE else try (fn () =>
+      let
+        val tys' = map (Term.typ_subst_atomic replace) tys;
+        val ((xs, ys), _) = names_lthy
+          |> mk_Frees "x" tys'
+          ||>> mk_Frees "y" tys';
+        val ys' = @{map 3} (fn ty => fn x => fn y =>
+          if exists (member (op=) bounds o TFree) (Term.add_tfreesT ty []) then 
+            (if member (op=) bounds ty then x else raise TYPE ("typ contains binder", [ty], [])) else y
+        ) tys xs ys;
+        val xs_ys' = @{map_filter 2} (fn x => fn y' => if x = y' then NONE else SOME (x, y')) xs ys';
+
+        val goal = mk_Trueprop_eq (
+          HOLogic.mk_eq (Term.list_comb (ctor, xs), Term.list_comb (ctor, ys')),
+          foldr1 HOLogic.mk_conj (map HOLogic.mk_eq xs_ys')
+        );
+      in Goal.prove_sorry lthy (names (xs @ map snd xs_ys')) [] goal (fn {context=ctxt, ...} => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt [ctor_def, #inject quotient]),
+        K (Local_Defs.unfold0_tac ctxt (
+          @{thms map_sum.simps map_prod_simp comp_def sum_set_simps cSup_singleton Union_empty
+            Un_empty_left Un_empty_right Diff_empty UN_empty id_apply sum.inject prod.inject
+            prod_set_simps UN_single id_def[symmetric] UN_single UN_singleton
+          }
+          @ maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs
+          @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
+          @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+          @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I},
+            MRBNF_Def.map_def_of_mrbnf pre_mrbnf
+          ]
+        )),
+        rtac ctxt iffI,
+        SELECT_GOAL (EVERY1 [
+          REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+          REPEAT_DETERM o (TRY o rtac ctxt conjI THEN' assume_tac ctxt),
+          IF_UNSOLVED o EVERY' [
+            rotate_tac ~1,
+            dtac ctxt @{thm trans[rotated]},
+            rtac ctxt sym,
+            resolve_tac ctxt (#permute_cong_id (#inner quotient) :: map (fn mrbnf =>
+              trans OF [MRBNF_Def.map_cong_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]
+            ) fp_nesting_mrbnfs),
+            REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
+            TRY o rtac ctxt refl,
+            K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
+            REPEAT_DETERM o EVERY' [
+              dtac ctxt @{thm id_on_Diff},
+              rtac ctxt @{thm id_onI},
+              dtac ctxt @{thm singletonD},
+              hyp_subst_tac ctxt,
+              assume_tac ctxt,
+              etac ctxt @{thm id_onD},
+              REPEAT_DETERM o assume_tac ctxt
+            ]
+          ]
+        ]),
+        REPEAT_DETERM o rtac ctxt @{thm exI[of _ id]},
+        REPEAT_DETERM o etac ctxt conjE,
+        REPEAT_DETERM o (resolve_tac ctxt (
+          (trans OF [#permute_id quotient]) :: @{thms id_apply conjI supp_id_bound bij_id id_on_id}
+          @ map (fn mrbnf => trans OF [MRBNF_Def.map_id_of_mrbnf mrbnf]) fp_nesting_mrbnfs
+        ) ORELSE' assume_tac ctxt)
+      ]) end) ()
+    ) ctors_tys;
 
     (* Term for variable substitution *)
     val x = length replace - #rec_vars spec;
@@ -778,6 +843,7 @@ fun create_binder_datatype (spec : spec) lthy =
       bset_bounds = [],
       mrbnf = mrbnf,
       distinct = distinct,
+      inject = inject,
       ctors = ctors
     } : binder_sugar;
 
@@ -793,7 +859,8 @@ fun create_binder_datatype (spec : spec) lthy =
       @ [("set", flat set_simpss, simp),
         ("map", map_simps, simp),
         ("permute", permute_simps, simp),
-        ("distinct", distinct, simp)
+        ("distinct", distinct, simp),
+        ("inject", inject, simp)
       ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)
       ) |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])

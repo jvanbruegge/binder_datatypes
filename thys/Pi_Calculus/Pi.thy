@@ -72,32 +72,6 @@ qed
 
 (* Properties of the constructors *)
 
-proposition Sum_inject[simp]: "(Sum a b = Sum c d) = (a = c \<and> b = d)"
-unfolding Sum_def fun_eq_iff term.TT_inject0
-map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_term_pre_inject[OF UNIV_I UNIV_I]
-by auto
-
-proposition Par_inject[simp]: "(Par a b = Par c d) = (a = c \<and> b = d)"
-unfolding Par_def fun_eq_iff term.TT_inject0
-map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
-
-proposition Bang_inject[simp]: "(Bang a = Bang b) = (a = b)"
-unfolding Bang_def fun_eq_iff term.TT_inject0
-map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
-
-proposition Match_inject[simp]: "(Match x1 y1 a1 = Match x2 y2 a2) = (x1 = x2 \<and> y1 = y2 \<and> a1 = a2)"
-unfolding Match_def fun_eq_iff term.TT_inject0
-map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
-
-proposition Out_inject[simp]: "(Out x1 y1 a1 = Out x2 y2 a2) = (x1 = x2 \<and> y1 = y2 \<and> a1 = a2)"
-unfolding Out_def fun_eq_iff term.TT_inject0
-map_term_pre_def comp_def Abs_term_pre_inverse[OF UNIV_I] map_sum_def sum.case prod.map_id
-Abs_term_pre_inject[OF UNIV_I UNIV_I] by auto
-
 lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow>
   x = x' \<and>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
@@ -107,33 +81,6 @@ lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow>
     map_sum_def sum.case map_prod_def prod.case id_def Abs_term_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
     set3_term_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_term_pre_def
     Un_empty_right UN_single by auto
-
-lemma Inp_inject_same[simp]: "Inp x y e = Inp x' y e' \<longleftrightarrow> ((x::var) = x' \<and> e = e')"
-  apply (rule trans[OF Inp_inject])
-  apply (rule iffI)
-   apply (erule exE conjE)+
-   apply (rule conjI)
-    apply assumption
-   apply (frule term.permute_cong_id[of _ e])
-     apply assumption
-    apply (rule case_split[of "_ \<in> _", rotated])
-     apply (erule id_onD)
-     apply (rule DiffI[rotated])
-      apply assumption
-     apply assumption
-    apply (drule singletonD)
-    apply hypsubst
-    apply assumption
-   apply hypsubst
-   apply (erule sym)
-  apply (erule conjE)
-  apply (erule conjI)
-  apply (rule exI[of _ id])
-  apply (rule bij_id supp_id_bound id_on_id id_apply conjI)+
-  apply (rule trans)
-   apply (rule term.permute_id)
-  apply assumption
-  done
 
 lemma Res_inject: "(Res y e = Res y' e') \<longleftrightarrow>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|

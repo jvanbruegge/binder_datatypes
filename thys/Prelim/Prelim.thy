@@ -71,6 +71,9 @@ lemma id_on_id[simp,intro!]: "id_on A id"
 lemma id_on_insert[simp]: "id_on (insert x A) f \<longleftrightarrow> f x = x \<and> id_on A f"
   unfolding id_on_def by blast
 
+lemma id_on_Diff: "id_on (A - B) f \<Longrightarrow> id_on B f \<Longrightarrow> id_on A f"
+  unfolding id_on_def by blast
+
 definition "eq_on A f g \<equiv> \<forall> a. a \<in> A \<longrightarrow> f a = g a"
 
 lemma eq_onI: "(\<And>a. a \<in> A \<Longrightarrow> f a = g a) \<Longrightarrow> eq_on A f g"
@@ -539,7 +542,7 @@ definition "hidden_id = id"
 lemma id_hid_o_hid: "id = hidden_id o hidden_id"
   unfolding hidden_id_def by simp
 
-lemma emp_bound: "|{}::'a set| <o |UNIV::'b set|"
+lemma emp_bound[simp]: "|{}::'a set| <o |UNIV::'b set|"
   by (rule card_of_empty4[THEN iffD2, OF UNIV_not_empty])
 
 lemma regularCard_csum: "Cinfinite r \<Longrightarrow> Cinfinite s \<Longrightarrow> regularCard r \<Longrightarrow> regularCard s \<Longrightarrow> regularCard (r +c s)"

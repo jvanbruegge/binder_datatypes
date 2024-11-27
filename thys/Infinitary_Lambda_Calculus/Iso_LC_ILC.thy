@@ -427,7 +427,7 @@ lemma usetpD_snth_eq:
 "ustepD d ts ss \<Longrightarrow> snth ts i = snth ts j \<Longrightarrow> snth ss i = snth ss j"
 apply(induct arbitrary: i j rule: ustepD.induct)
   subgoal unfolding stream_all2_iff_snth using hred_determ by metis
-  subgoal by (metis iApp_inject snth_smap2)  
+  subgoal by (metis iterm.inject snth_smap2)  
   subgoal apply simp unfolding snth_sflat  
     by (metis nat2_nat1 snth2.simps stream_eq_nth)
   subgoal by (metis iLam_same_inject snth_smap) .

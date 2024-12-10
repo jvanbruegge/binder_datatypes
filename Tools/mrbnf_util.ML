@@ -11,6 +11,8 @@ sig
   val short_type_name: string -> string
   val swap: 'a * 'b -> 'b * 'a
 
+  val subst_typ_morphism: (typ * typ) list -> morphism
+
   val mk_supp: term -> term
   val mk_supp_bound: term -> term
   val mk_imsupp: term -> term
@@ -87,6 +89,12 @@ fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
 
 fun mk_insert x S =
   Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
+
+fun subst_typ_morphism subst = Morphism.morphism "subst_typ" {
+  binding = [], fact = [],
+  term = [K (Term.subst_atomic_types subst)],
+  typ = [K (Term.typ_subst_atomic subst)]
+};
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let

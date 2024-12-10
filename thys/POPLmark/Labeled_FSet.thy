@@ -13,15 +13,11 @@ lemma nonrep_lfset_alt:
   unfolding nonrep_lfset_def prod_set_defs by fastforce
 
 typedef ('a, 'b) G = "UNIV :: ('a \<times> 'b) fset set" by auto
+
 setup_lifting type_definition_G
 context notes [[bnf_internals]] begin
 copy_bnf ('a, 'b) G
 end
-(*lemma map_G_transfer[transfer_rule]:
-  "rel_fun (=) (rel_fun (=) (rel_fun (pcr_G (=) (=)) (pcr_G (=) (=)))) (\<lambda>f g. (|`|) (map_prod f g)) map_G"
-  by (tactic \<open>Local_Defs.unfold_tac @{context}
-      [BNF_Def.bnf_of @{context} @{type_name G} |> the |> BNF_Def.map_def_of_bnf]\<close>)
-    (simp add: rel_fun_def pcr_G_def cr_G_def prod.rel_eq fset.rel_eq relcompp_apply Abs_G_inverse)*)
 
 lift_definition nonrep_G :: "('a, 'b) G \<Rightarrow> bool" is nonrep_lfset .
 

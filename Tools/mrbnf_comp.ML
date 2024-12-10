@@ -31,11 +31,11 @@ sig
     MRBNF_Def.mrbnf list -> unfold_set * local_theory -> MRBNF_Def.mrbnf * (unfold_set * local_theory)
   val permute_mrbnf: (binding -> binding) -> int list -> int list -> MRBNF_Def.mrbnf ->
     (comp_cache * unfold_set) * local_theory -> MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
-  val normalize_mrbnfs: (int -> binding -> binding) -> (string * sort) option list ->
-    (string * sort) list list -> (string * sort) list -> ((string * sort) * MRBNF_Def.var_type) list ->
+  val normalize_mrbnfs: (int -> binding -> binding) -> typ option list ->
+    (string * sort) list list -> typ list -> ((string * sort) * MRBNF_Def.var_type) list ->
     ((string * sort) list list ->
     (string * sort) list) -> MRBNF_Def.mrbnf option ->  MRBNF_Def.mrbnf list -> (comp_cache * unfold_set) * local_theory ->
-    (int list list * (string * sort) list) * MRBNF_Def.mrbnf option * (MRBNF_Def.mrbnf list * ((comp_cache * unfold_set) * local_theory))
+    (int list * int list list * (string * sort) list) * MRBNF_Def.mrbnf option * (MRBNF_Def.mrbnf list * ((comp_cache * unfold_set) * local_theory))
   val compose_mrbnf: MRBNF_Def.inline_policy -> (int -> binding -> binding) ->
     ((string * sort) list list -> (string * sort) list) -> MRBNF_Def.mrbnf -> MRBNF_Def.mrbnf list ->
     typ list -> typ list list -> typ option list -> typ list list ->
@@ -1080,49 +1080,45 @@ fun lift_and_permute_mrbnf qualify ns src dest mrbnf =
   lift_mrbnf qualify ns mrbnf
   #> uncurry (permute_mrbnf qualify src dest);
 
-fun tfree_ord ((a, S), (b, S')) = case fast_string_ord (a, b) of
-  EQUAL => Term_Ord.sort_ord (S, S')
-  | ord => ord
-structure Vars = Table(type key = (string * sort) val ord = tfree_ord);
-
-fun map_option f (SOME x) = SOME (f x)
-  | map_option _ NONE = NONE
-
-fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum =
+fun normalize_mrbnfs qualify (oAs: typ option list) (Ass: (string * sort) list list) (Ds: typ list) Xs flatten_tyargs outer_opt mrbnfs accum =
   let
     val oAs' = case outer_opt of
       NONE => []
       | SOME outer => map_filter (fn (x, var_type) => case x of
-        SOME y => SOME (y, var_type)
+        SOME y => (case try dest_TFree y of
+          SOME _ => SOME (y, var_type)
+          | NONE => SOME (y, MRBNF_Def.Dead_Var)
+        )
         | NONE => NONE
       ) (oAs ~~ var_types_of_mrbnf outer);
-    val var_map = fold (fold (fn (A, var_type) => Vars.map_default (A, var_type) (fn var_type' =>
+    val var_map = fold (fold (fn (A, var_type) => Typtab.map_default (A, var_type) (fn var_type' =>
       case var_type_ord (var_type, var_type') of LESS => var_type | _ => var_type'
-    ))) (oAs' :: Xs :: map2 (fn As => fn mrbnf => As ~~ var_types_of_mrbnf mrbnf) Ass mrbnfs)
-      (Vars.make (Ds ~~ replicate (length Ds) MRBNF_Def.Dead_Var))
+    ))) (oAs' :: map (apfst TFree) Xs :: map2 (fn As => fn mrbnf => map TFree As ~~ var_types_of_mrbnf mrbnf) Ass mrbnfs)
+      (Typtab.make (Ds ~~ replicate (length Ds) MRBNF_Def.Dead_Var))
 
     val odemote_target_types = map (fn x => case x of
-      SOME y => the (Vars.lookup var_map y)
+      SOME y => the (Typtab.lookup var_map y)
       | NONE => Live_Var
     ) oAs;
     val (outer_opt', accum') = case outer_opt of
       NONE => (outer_opt, accum)
       | SOME outer => apfst SOME (demote_mrbnf (qualify 0) odemote_target_types outer accum)
 
-    val demote_target_types = map (map_filter (fn A => Vars.lookup var_map A)) Ass
+    val demote_target_types = map (map_filter (fn A => Typtab.lookup var_map (TFree A))) Ass
     val (inners', accum'') = @{fold_map 3} (demote_mrbnf o qualify)
       (1 upto length mrbnfs) demote_target_types mrbnfs accum'
 
     val oAs2 = filter (fn SOME A =>
-      let val var_type = the (Vars.lookup var_map A)
+      let val var_type = the (Typtab.lookup var_map A)
       in case var_type of
         Dead_Var => false | _ => true
       end
     | NONE => true) oAs
-    fun map_filter_killed f = map_filter (fn A => case Vars.lookup var_map A of
+    fun map_filter_killed f = map_filter (fn A => case Typtab.lookup var_map (TFree A) of
       SOME Dead_Var => NONE | SOME x => SOME (f A x) | NONE => SOME (f A Live_Var)
     );
-    val As = map_filter_killed pair (flatten_tyargs (map fst oAs' :: Ass))
+    val oAs'' = map_filter (try dest_TFree o fst) oAs';
+    val As = map_filter_killed pair (flatten_tyargs (oAs'' :: Ass))
     fun get_lifts vars = sort (fn (a, b) => var_type_ord (snd b, snd a)) (subtract (fn (a, b) => a = fst b) vars As)
     fun count_lifts As = fold (fn (_, var_type) => fn (n1, n2, n3) => case var_type of
       MRBNF_Def.Live_Var => (n1 + 1, n2, n3)
@@ -1132,11 +1128,11 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
     ) As (0, 0, 0)
 
     val Ass' = map (map_filter_killed K) Ass
-    val kill_poss = map (map_filter I o map_index (fn (i, A) => case the (Vars.lookup var_map A) of
+    val kill_poss = map (map_filter I o map_index (fn (i, A) => case the (Typtab.lookup var_map (TFree A)) of
       Dead_Var => SOME i | _ => NONE
     )) Ass
     val new_oDs = map_filter I (map_index (fn (i, x) => case x of
-      SOME y => (case the (Vars.lookup var_map y) of
+      SOME y => (case the (Typtab.lookup var_map y) of
         Dead_Var => SOME i | _ => NONE)
       | _ => NONE
     ) oAs)
@@ -1146,12 +1142,12 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
     val find_indices' = map (fn x => find_index (equal x) (map fst As))
     val srcs = map find_indices' (map2 (append o map fst) need_liftss Ass')
 
-    val oneed_lifts = filter (fn (_, var_type) => var_type <> MRBNF_Def.Live_Var) (get_lifts (map fst oAs'))
+    val oneed_lifts = filter (fn (_, var_type) => var_type <> MRBNF_Def.Live_Var) (get_lifts oAs'')
     val olift_ns = count_lifts oneed_lifts
     val odest = 0 upto length oAs2 + length oneed_lifts - 1
     val osrc =
       let
-        val vars = map (SOME o fst) oneed_lifts @ oAs2
+        val vars = map (SOME o fst) oneed_lifts @ map (Option.map dest_TFree) oAs2
         val As' = map_filter (fn (var, var_type) =>
           if var_type = MRBNF_Def.Free_Var orelse var_type = MRBNF_Def.Bound_Var then
             SOME var
@@ -1168,7 +1164,7 @@ fun normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs outer_opt mrbnfs accum
       NONE => (outer_opt', accum'')
       | SOME outer' => apfst SOME (lift_and_permute_mrbnf (qualify (length mrbnfs)) olift_ns osrc odest outer' accum'')
   in
-    ((kill_poss, map fst As),
+    ((new_oDs, kill_poss, map fst As),
       outer_opt'',
       @{fold_map 5} (lift_and_permute_mrbnf o qualify)
         (if length mrbnfs = 1 then [0] else 1 upto length mrbnfs)
@@ -1179,12 +1175,12 @@ fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss o
   let
     val b = name_of_mrbnf outer;
     val Ass = map (map Term.dest_TFree) tfreess;
-    val oAs = map (map_option Term.dest_TFree) otfrees
-    val Ds = fold (fold Term.add_tfreesT) (oDs :: Dss) [];
-    val ((kill_poss, As), outer', (inners', ((cache', unfold_set'), lthy'))) =
+    val oAs = otfrees
+    val Ds = distinct (op=) (flat (oDs :: Dss));
+    val ((okill_pos, kill_poss, As), outer', (inners', ((cache', unfold_set'), lthy'))) =
       normalize_mrbnfs qualify oAs Ass Ds Xs flatten_tyargs (SOME outer) inners accum;
-    val Ds =
-      oDs @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
+    val Ds = (oDs @ map (the o nth oAs) okill_pos)
+      @ flat (@{map 3} (uncurry append oo curry swap oo map o nth) tfreess kill_poss Dss);
     val As = map TFree As;
   in
     apfst (rpair (Ds, As))

@@ -17,7 +17,6 @@ binder_datatype 'a "typ" =
     TyVar 'a
   | Top
   | Fun "'a typ" "'a typ"
-  | Rec "(string, 'a typ) lfset"
   | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]

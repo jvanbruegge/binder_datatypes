@@ -28,6 +28,9 @@ open MRBNF_Util
 infix 0 RSS
 fun op RSS (thms, thm) = map (fn x => x RS thm) thms;
 
+fun mk_internal internal ctxt f =
+  if internal andalso not (Config.get ctxt MRBNF_Def.mrbnf_internals) then f else I;
+
 fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) list list) lthy =
   let
     val co = (fp_kind = BNF_Util.Greatest_FP);
@@ -288,9 +291,11 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
             replicate (nvars + length pfrees) @{thm supp_id_bound} @ flat (replicate (length pbounds) @{thms bij_id supp_id_bound})
           )
         ) mrbnfs;
-      in Inductive.add_inductive flags
-        (map (fn T => (apfst Binding.name (dest_Free T), NoSyn)) alphas) []
-        (map (pair Binding.empty_atts) intros) monos lthy
+      in lthy
+        |> Local_Theory.map_background_naming (mk_internal true lthy Name_Space.concealed)
+        |> Inductive.add_inductive flags
+          (map (fn T => (apfst Binding.name (dest_Free T), NoSyn)) alphas) []
+          (map (pair Binding.empty_atts) intros) monos
       end;
 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;

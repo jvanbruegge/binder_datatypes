@@ -16,6 +16,8 @@ sig
 
   val subst_typ_morphism: (typ * typ) list -> morphism
 
+  val subst_typ_morphism: (typ * typ) list -> morphism
+
   val mk_supp: term -> term
   val mk_supp_bound: term -> term
   val mk_imsupp: term -> term

@@ -16,8 +16,6 @@ sig
 
   val subst_typ_morphism: (typ * typ) list -> morphism
 
-  val subst_typ_morphism: (typ * typ) list -> morphism
-
   val mk_supp: term -> term
   val mk_supp_bound: term -> term
   val mk_imsupp: term -> term
@@ -93,6 +91,8 @@ fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T))
   | strip_ex t = ([], t)
 
 fun swap (a, b) = (b, a)
+fun partition _ [] = ([], [])
+  | partition f (x::xs) = (if f x then apfst else apsnd) (cons x) (partition f xs)
 
 fun partition _ [] = ([], [])
   | partition f (x::xs) = (if f x then apfst else apsnd) (cons x) (partition f xs)

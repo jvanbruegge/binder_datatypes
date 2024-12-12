@@ -99,6 +99,8 @@ Multithreading.parallel_proofs := 0
 ML \<open>
 val model_FType = {
   ops = [@{typ "'a::var FType"}],
+  bd = @{term natLeq},
+  var_class = @{class var},
   leader = 0,
   frees = [@{typ "'a::var"}],
   lives = [],
@@ -136,7 +138,7 @@ val model_FType = {
 \<close>
 
 ML \<open>
-val FType_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_FType @{context}
+val FType_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_FType @{context})
 \<close>
 
 
@@ -234,6 +236,8 @@ declare [[ML_print_depth=10000]]
 ML \<open>
 val model_ID = {
   ops = [@{typ "'a"}],
+  bd = @{term natLeq},
+  var_class = @{class var},
   leader = 0,
   frees = [@{typ "'a"}],
   lives = [],
@@ -271,12 +275,14 @@ val model_ID = {
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
 ML \<open>
-val id_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_ID @{context}
+val id_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_ID @{context})
 \<close>
 
 ML \<open>
 val model_L = {
   ops = [@{typ "'a1 * 'a1 * ('c1 + 'c2)"}],
+  bd = @{term natLeq},
+  var_class = @{class var},
   leader = 0,
   frees = [@{typ "'a1"}, @{typ "'a2"}],
   lives = [@{typ "'c1"}, @{typ "'c2"}],
@@ -335,12 +341,14 @@ val model_L = {
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
 ML \<open>
-val L_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L @{context}
+val L_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L @{context})
 \<close>
 
 ML \<open>
 val model_L1 = {
   ops = [@{typ "'a1 * 'a2"}],
+  bd = @{term natLeq},
+  var_class = @{class var},
   leader = 0,
   frees = [@{typ "'a1"}, @{typ "'a2"}],
   lives = [],
@@ -405,7 +413,7 @@ val model_L1 = {
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
 ML \<open>
-val L1_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L1 @{context}
+val L1_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L1 @{context})
 \<close>
 
 (* ML \<open>
@@ -484,6 +492,8 @@ val L2_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_No
 ML \<open>
 val model_L2 = {
   ops = [@{typ "'a1 * 'a2::var FType"}],
+  bd = @{term natLeq},
+  var_class = @{class var},
   leader = 0,
   frees = [@{typ 'a1}, @{typ "'a2::var"}],
   lives = [],
@@ -552,11 +562,9 @@ val model_L2 = {
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
 ML \<open>
-val L2_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L2 @{context}
+val L2_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L2 @{context})
 \<close>
 
-ML \<open>
-val x = BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv] @{context}
-\<close>
+local_setup \<open>snd o BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv]\<close>
 
 end

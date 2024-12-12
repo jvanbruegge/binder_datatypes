@@ -5,7 +5,7 @@ signature BMV_MONAD_DEF = sig
   type 'a bmv_monad_axioms = {
     Sb_Inj: 'a,
     Sb_comp_Injs: 'a list,
-    Sb_comp: 'a,  (* require typeclass on free vars to bound *)
+    Sb_comp: 'a,
     Sb_cong: 'a,
     (* TODO: Add Vrs_bd axiom *)
     Vrs_Injs: 'a list, (* TODO: One per Inj AND var kind *)
@@ -15,6 +15,8 @@ signature BMV_MONAD_DEF = sig
 
   type bmv_monad_model = {
     ops: typ list,
+    bd: term,
+    var_class: class,
     bmv_ops: bmv_monad list,
     frees: typ list,
     lives: typ list,
@@ -27,6 +29,8 @@ signature BMV_MONAD_DEF = sig
   }
 
   val ops_of_bmv_monad: bmv_monad -> typ list;
+  val bd_of_bmv_monad: bmv_monad -> term;
+  val var_class_of_bmv_monad: bmv_monad -> class;
   val leader_of_bmv_monad: bmv_monad -> int;
   val frees_of_bmv_monad: bmv_monad -> typ list;
   val lives_of_bmv_monad: bmv_monad -> typ list;
@@ -38,9 +42,9 @@ signature BMV_MONAD_DEF = sig
   val morph_bmv_monad: morphism -> bmv_monad -> bmv_monad;
 
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
-    -> (binding -> binding) -> bmv_monad_model -> local_theory -> bmv_monad
+    -> (binding -> binding) -> bmv_monad_model -> local_theory -> bmv_monad * local_theory
 
-  val compose_bmv_monad: (binding -> binding) -> bmv_monad -> bmv_monad list -> local_theory -> bmv_monad
+  val compose_bmv_monad: (binding -> binding) -> bmv_monad -> bmv_monad list -> local_theory -> bmv_monad * local_theory
 end
 
 structure BMV_Monad_Def : BMV_MONAD_DEF = struct
@@ -67,9 +71,10 @@ fun morph_bmv_axioms phi {
   Vrs_Sbs = map (Morphism.thm phi) Vrs_Sbs
 } : thm bmv_monad_axioms
 
-(* TODO: Add bound *)
 datatype bmv_monad = BMV of {
   ops: typ list,
+  bd: term,
+  var_class: class,
   leader: int,
   frees: typ list,
   lives: typ list,
@@ -80,11 +85,29 @@ datatype bmv_monad = BMV of {
   axioms: thm bmv_monad_axioms list
 }
 
+fun morph_bmv_monad phi (BMV {
+  ops, bd, var_class, leader, frees, lives, Injs, Sbs, Maps, Vrs, axioms
+}) = BMV {
+  ops = map (Morphism.typ phi) ops,
+  bd = Morphism.term phi bd,
+  leader = leader,
+  var_class = var_class,
+  frees = map (Morphism.typ phi) frees,
+  lives = map (Morphism.typ phi) lives,
+  Injs = map (map (Morphism.term phi)) Injs,
+  Sbs = map (Morphism.term phi) Sbs,
+  Maps = map (Option.map (Morphism.term phi)) Maps,
+  Vrs = map (map (Morphism.term phi)) Vrs,
+  axioms = map (morph_bmv_axioms phi) axioms
+}
+
 datatype supported_functor = Supported_Functor (* TODO *)
 
 fun Rep_bmv (BMV x) = x
 
 val ops_of_bmv_monad = #ops o Rep_bmv
+val bd_of_bmv_monad = #bd o Rep_bmv
+val var_class_of_bmv_monad = #var_class o Rep_bmv;
 val leader_of_bmv_monad = #leader o Rep_bmv
 val frees_of_bmv_monad = #frees o Rep_bmv
 val lives_of_bmv_monad = #lives o Rep_bmv
@@ -95,6 +118,8 @@ val Vrs_of_bmv_monad = #Vrs o Rep_bmv
 
 type bmv_monad_model = {
   ops: typ list,
+  bd: term,
+  var_class: class,
   frees: typ list,
   lives: typ list,
   bmv_ops: bmv_monad list,
@@ -106,19 +131,20 @@ type bmv_monad_model = {
   tacs: (Proof.context -> tactic) bmv_monad_axioms list
 }
 
-fun morph_bmv_monad phi (BMV {
-  ops, leader, frees, lives, Injs, Sbs, Maps, Vrs, axioms
-}) = BMV {
+fun morph_bmv_monad_model phi { ops, bd, var_class, frees, lives, bmv_ops, leader, Injs, Sbs, Maps, Vrs, tacs } = {
   ops = map (Morphism.typ phi) ops,
-  leader = leader,
+  bd = Morphism.term phi bd,
+  var_class = var_class,
   frees = map (Morphism.typ phi) frees,
   lives = map (Morphism.typ phi) lives,
+  bmv_ops = map (morph_bmv_monad phi) bmv_ops,
+  leader = leader,
   Injs = map (map (Morphism.term phi)) Injs,
   Sbs = map (Morphism.term phi) Sbs,
   Maps = map (Option.map (Morphism.term phi)) Maps,
   Vrs = map (map (Morphism.term phi)) Vrs,
-  axioms = map (morph_bmv_axioms phi) axioms
-}
+  tacs = tacs
+} : bmv_monad_model;
 
 fun prove_axioms (model: bmv_monad_model) lthy =
   let
@@ -215,10 +241,23 @@ fun prove_axioms (model: bmv_monad_model) lthy =
 
 fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lthy =
   let
+    val _ = let
+      val var_large = MRBNF_Def.get_class_assumption [#var_class model] "large" lthy;
+      val bd' = snd (dest_comb (dest_card_of (
+        fst (dest_ordLeq (HOLogic.dest_Trueprop (Thm.prop_of var_large)))
+      )));
+      in if bd' <> #bd model then error "var_class does not match bound" else () end
+    val frees = map (fn T => TFree (apsnd (
+      Sign.minimize_sort (Proof_Context.theory_of lthy) o cons (#var_class model)
+    ) (dest_TFree T))) (#frees model);
+    val model = morph_bmv_monad_model (MRBNF_Util.subst_typ_morphism (#frees model ~~ frees)) model;
+
     val axioms = prove_axioms model lthy;
 
     val bmv = BMV {
       ops = #ops model @ maps (#ops o Rep_bmv) (#bmv_ops model),
+      bd = #bd model,
+      var_class = #var_class model,
       leader = #leader model,
       frees = #frees model,
       lives = #lives model,
@@ -228,7 +267,7 @@ fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lth
       Maps = #Maps model @ maps (#Maps o Rep_bmv) (#bmv_ops model),
       axioms = axioms @ maps (#axioms o Rep_bmv) (#bmv_ops model)
     } : bmv_monad;
-  in bmv end
+  in (bmv, lthy) end
 
 (* Cleanup: Throw away op iff any:
 - not the leader

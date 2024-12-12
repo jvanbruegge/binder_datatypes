@@ -37,6 +37,10 @@ sig
   val mk_ex: string * typ -> term -> term;
   val mk_insert: term -> term -> term;
 
+  val dest_ordLess: term -> term * term;
+  val dest_ordLeq: term -> term * term;
+  val dest_card_of: term -> term;
+
   val strip_ex: term -> (string * typ) list * term
 
   val mk_conj_thms: int -> local_theory -> thm * thm * thm
@@ -109,6 +113,19 @@ fun subst_typ_morphism subst = Morphism.morphism "subst_typ" {
   term = [K (Term.subst_atomic_types subst)],
   typ = [K (Term.typ_subst_atomic subst)]
 };
+
+fun dest_ordLess t =
+  let val t' = case HOLogic.dest_mem t of
+    (t', Const (@{const_name ordLess}, _)) => t'
+    | _ => raise TERM ("dest_ordLess", [t])
+  in HOLogic.dest_prod t' end
+fun dest_ordLeq t =
+  let val t' = case HOLogic.dest_mem t of
+    (t', Const (@{const_name ordLeq}, _)) => t'
+    | _ => raise TERM ("dest_ordLeq", [t])
+  in HOLogic.dest_prod t' end
+fun dest_card_of (Const (@{const_name card_of}, _) $ t) = t
+  | dest_card_of t = raise TERM ("dest_card_of", [t])
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let

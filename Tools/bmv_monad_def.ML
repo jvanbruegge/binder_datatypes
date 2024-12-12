@@ -7,7 +7,7 @@ signature BMV_MONAD_DEF = sig
     Sb_comp_Injs: 'a list,
     Sb_comp: 'a,
     Sb_cong: 'a,
-    (* TODO: Add Vrs_bd axiom *)
+    Vrs_bds: 'a option list list,
     Vrs_Injs: 'a option list list,
     Vrs_Sbs: 'a option list list
     (* Add optional Map_Sb axiom (dependent on iff Map exists) *)
@@ -56,17 +56,19 @@ type 'a bmv_monad_axioms = {
   Sb_comp_Injs: 'a list,
   Sb_comp: 'a,
   Sb_cong: 'a,
+  Vrs_bds: 'a option list list,
   Vrs_Injs: 'a option list list,
   Vrs_Sbs: 'a option list list
 };
 
 fun morph_bmv_axioms phi {
-  Sb_Inj, Sb_comp_Injs, Sb_comp, Sb_cong, Vrs_Injs, Vrs_Sbs
+  Sb_Inj, Sb_comp_Injs, Sb_comp, Sb_cong, Vrs_bds, Vrs_Injs, Vrs_Sbs
 } = {
   Sb_Inj = Morphism.thm phi Sb_Inj,
   Sb_comp_Injs = map (Morphism.thm phi) Sb_comp_Injs,
   Sb_comp = Morphism.thm phi Sb_comp,
   Sb_cong = Morphism.thm phi Sb_cong,
+  Vrs_bds = map (map (Option.map (Morphism.thm phi))) Vrs_bds,
   Vrs_Injs = map (map (Option.map (Morphism.thm phi))) Vrs_Injs,
   Vrs_Sbs = map (map (Option.map (Morphism.thm phi))) Vrs_Sbs
 } : thm bmv_monad_axioms
@@ -200,6 +202,12 @@ fun prove_axioms (model: bmv_monad_model) lthy =
           ))
         )) (fn {context=ctxt, ...} => #Sb_comp tacs ctxt);
 
+        val Vrs_bds = map2 (map2 (@{map_option 2} (fn Vrs => fn tac =>
+          Goal.prove_sorry lthy [] [] (Logic.all x (HOLogic.mk_Trueprop (
+            mk_ordLess (mk_card_of (Vrs $ x)) (#bd model)
+          ))) (fn {context=ctxt, ...} => tac ctxt)
+        ))) Vrs (#Vrs_bds tacs);
+
         val Vrs_Injs = @{map 3} (fn Inj => map2 (@{map_option 2} (fn tac => fn Vrs =>
           let
             val a = the (List.find (fn a => fastype_of a = hd (binder_types (fastype_of Inj))) aa);
@@ -246,9 +254,10 @@ fun prove_axioms (model: bmv_monad_model) lthy =
         Sb_comp_Injs = Sb_comp_Injs,
         Sb_comp = Sb_comp,
         Vrs_Injs = Vrs_Injs,
+        Vrs_bds = Vrs_bds,
         Vrs_Sbs = Vrs_Sbs,
         Sb_cong = Sb_cong
-      } end
+      } : thm bmv_monad_axioms end
     ) (#ops model) (#Injs model) (#Sbs model) (#Vrs model) (#tacs model);
   in axioms end;
 

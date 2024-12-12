@@ -1,13 +1,16 @@
 signature BMV_MONAD_DEF = sig
   type bmv_monad
+  type supported_functor (* TODO *)
 
   type 'a bmv_monad_axioms = {
     Sb_Inj: 'a,
     Sb_comp_Injs: 'a list,
-    Sb_comp: 'a,
+    Sb_comp: 'a,  (* require typeclass on free vars to bound *)
     Sb_cong: 'a,
-    Vrs_Injs: 'a list,
+    (* TODO: Add Vrs_bd axiom *)
+    Vrs_Injs: 'a list, (* TODO: One per Inj AND var kind *)
     Vrs_Sbs: 'a list
+    (* Add optional Map_Sb axiom (dependent on iff Map exists) *)
   };
 
   type bmv_monad_model = {
@@ -16,7 +19,7 @@ signature BMV_MONAD_DEF = sig
     frees: typ list,
     lives: typ list,
     leader: int,
-    Injs: (term list * (term * int) list) list,
+    Injs: term list list,
     Sbs: term list,
     Maps: term option list,
     Vrs: term list list,
@@ -36,6 +39,8 @@ signature BMV_MONAD_DEF = sig
 
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
     -> (binding -> binding) -> bmv_monad_model -> local_theory -> bmv_monad
+
+  val compose_bmv_monad: (binding -> binding) -> bmv_monad -> bmv_monad list -> local_theory -> bmv_monad
 end
 
 structure BMV_Monad_Def : BMV_MONAD_DEF = struct
@@ -62,6 +67,7 @@ fun morph_bmv_axioms phi {
   Vrs_Sbs = map (Morphism.thm phi) Vrs_Sbs
 } : thm bmv_monad_axioms
 
+(* TODO: Add bound *)
 datatype bmv_monad = BMV of {
   ops: typ list,
   leader: int,
@@ -70,9 +76,11 @@ datatype bmv_monad = BMV of {
   Injs: term list list,
   Sbs: term list,
   Maps: term option list,
-  Vrs: term list list,
+  Vrs: term list list (*list*), (* TODO: Need Vr operator per Injection *)
   axioms: thm bmv_monad_axioms list
 }
+
+datatype supported_functor = Supported_Functor (* TODO *)
 
 fun Rep_bmv (BMV x) = x
 
@@ -91,7 +99,7 @@ type bmv_monad_model = {
   lives: typ list,
   bmv_ops: bmv_monad list,
   leader: int,
-  Injs: (term list * (term * int) list) list,
+  Injs: term list list,
   Sbs: term list,
   Maps: term option list,
   Vrs: term list list,
@@ -116,13 +124,13 @@ fun prove_axioms (model: bmv_monad_model) lthy =
   let
     val Ts = #ops model @ maps ops_of_bmv_monad (#bmv_ops model);
     val Sbs = #Sbs model @ maps Sbs_of_bmv_monad (#bmv_ops model);
-    val Injss = #Injs model @ map (rpair []) (maps Injs_of_bmv_monad (#bmv_ops model));
+    val Injss = #Injs model @ maps Injs_of_bmv_monad (#bmv_ops model);
     val Vrss = #Vrs model @ maps Vrs_of_bmv_monad (#bmv_ops model);
 
-    val axioms = @{map 5} (fn T => fn (own_Injs, other_Injs) => fn Sb => fn Vrs => fn tacs =>
+    val axioms = @{map 5} (fn T => fn Injs => fn Sb => fn Vrs => fn tacs =>
       let
-        val (other_Injs, other_idxs) = split_list other_Injs;
-        val Injs = own_Injs @ other_Injs;
+        val (own_Injs, other_Injs) = partition (fn Inj => body_type (fastype_of Inj) = T) Injs;
+        val other_idxs = map (fn Inj => find_index (fn T => body_type (fastype_of Inj) = T) Ts) other_Injs;
         val ((((rhos, rhos'), aa), x), _) = lthy
           |> mk_Frees "\<rho>" (map fastype_of Injs)
           ||>> mk_Frees "\<rho>'" (map fastype_of Injs)
@@ -160,7 +168,7 @@ fun prove_axioms (model: bmv_monad_model) lthy =
               HOLogic.mk_comp (Term.list_comb (Sb, map (fn Inj =>
                 case List.find (fn rho' => fastype_of rho' = fastype_of Inj) rhos' of
                   NONE => Inj | SOME t => t
-              ) (fst Injs @ map fst (snd Injs))), rho)
+              ) Injs), rho)
             ) other_rhos (map (nth Sbs) other_idxs) (map (nth Injss) other_idxs))
           ))
         )) (fn {context=ctxt, ...} => #Sb_comp tacs ctxt);
@@ -214,12 +222,29 @@ fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lth
       leader = #leader model,
       frees = #frees model,
       lives = #lives model,
-      Injs = map (fn (xs, ys) => xs @ map fst ys) (#Injs model) @ maps (#Injs o Rep_bmv) (#bmv_ops model),
+      Injs = #Injs model @ maps (#Injs o Rep_bmv) (#bmv_ops model),
       Sbs = #Sbs model @ maps (#Sbs o Rep_bmv) (#bmv_ops model),
       Vrs = #Vrs model @ maps (#Vrs o Rep_bmv) (#bmv_ops model),
       Maps = #Maps model @ maps (#Maps o Rep_bmv) (#bmv_ops model),
       axioms = axioms @ maps (#axioms o Rep_bmv) (#bmv_ops model)
     } : bmv_monad;
   in bmv end
+
+(* Cleanup: Throw away op iff any:
+- not the leader
+- does not appear in the codomain of any (=of any **other** SOp) Injection,
+*)
+
+fun compose_bmv_monad qualify outer inners lthy =
+  let
+    val _ = if length (lives_of_bmv_monad outer) <> length inners then
+      error "Outer needs exactly as many lives as there are inners" else ()
+
+    val ops' = map (Term.typ_subst_atomic (lives_of_bmv_monad outer ~~ map (fn bmv =>
+      nth (ops_of_bmv_monad bmv) (leader_of_bmv_monad bmv)
+    ) inners)) (ops_of_bmv_monad outer);
+
+    val _ = @{print} ops'
+  in error "unfinished" end;
 
 end

@@ -121,6 +121,7 @@ val model_FType = {
       K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def VVr_eq_Var}),
       REPEAT_DETERM o assume_tac ctxt
     ],
+    Vrs_bds = [[SOME (fn ctxt => resolve_tac ctxt @{thms FType.set_bd} 1)]],
     Vrs_Injs = [[SOME (fn ctxt => resolve_tac ctxt @{thms Vrs_Inj_FType} 1)]],
     Vrs_Sbs = [[SOME (fn ctxt => EVERY1 [
       resolve_tac ctxt @{thms Vrs_Sb_FType},
@@ -259,6 +260,7 @@ val model_ID = {
       K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_def}),
       resolve_tac ctxt [refl]
     ],
+    Vrs_bds = [[SOME (fn ctxt => resolve_tac ctxt @{thms ID.set_bd} 1)]],
     Vrs_Injs = [[SOME (fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_def}),
       resolve_tac ctxt [refl]
@@ -280,6 +282,9 @@ val model_ID = {
 ML \<open>
 val id_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_ID @{context})
 \<close>
+
+lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |insert x A| <o r"
+  by (metis Card_order_iff_ordLeq_card_of card_of_Field_ordIso card_of_Un_singl_ordLess_infinite1 cinfinite_def insert_is_Un ordLess_ordIso_trans ordLess_ordLeq_trans)
 
 ML \<open>
 val model_L = {
@@ -312,6 +317,12 @@ val model_L = {
       )),
       resolve_tac ctxt [refl]
     ],
+    Vrs_bds = [[SOME (fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
+      resolve_tac ctxt @{thms insert_bound},
+      resolve_tac ctxt @{thms natLeq_Cinfinite},
+      resolve_tac ctxt @{thms ID.set_bd}
+    ])]],
     Vrs_Injs = [],
     Vrs_Sbs = [[SOME (fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Sb_L_def case_prod_beta
@@ -384,6 +395,10 @@ val model_L1 = {
         :: @{thms Sb_L1_def id_apply}
       )),
       resolve_tac ctxt [refl]
+    ],
+    Vrs_bds = [
+      [SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1), NONE],
+      [NONE, SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1)]
     ],
     Vrs_Injs = [],
     Vrs_Sbs = [
@@ -464,6 +479,16 @@ val model_L2 = {
         :: @{thms Sb_L2_def id_apply Sb_comp_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]}
       )),
       resolve_tac ctxt [refl]
+    ],
+    Vrs_bds = [
+      [SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Vrs_L2_1_def} THEN resolve_tac ctxt @{thms ID.set_bd} 1), NONE],
+      [NONE, SOME (fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Vrs_L2_2_def}),
+        resolve_tac ctxt @{thms insert_bound},
+        resolve_tac ctxt @{thms natLeq_Cinfinite},
+        resolve_tac ctxt @{thms ID.set_bd}
+      ])],
+      [NONE, SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Vrs_L2_3_def} THEN resolve_tac ctxt @{thms FType.set_bd} 1)]
     ],
     Vrs_Injs = [],
     Vrs_Sbs = [

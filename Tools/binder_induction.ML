@@ -121,14 +121,6 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
       | NONE => error "Automatic detection of induction rule is not supported yet, please specify with rule:"
       );
 
-      fun dest_ordLess t =
-        let val t' = case HOLogic.dest_mem t of
-          (t', Const (@{const_name ordLess}, _)) => t'
-          | _ => raise TERM ("dest_ordLess", [t])
-        in HOLogic.dest_prod t' end
-      fun dest_card_of (Const (@{const_name card_of}, _) $ t) = t
-        | dest_card_of t = raise TERM ("dest_card_of", [t])
-
       fun strip_all (Const (@{const_name HOL.All}, _) $ t) = (case t of
         Abs (x, T, t) => let val a = Free (x, T)
           in apfst (curry (op::) a) (strip_all (Term.subst_bound (a, t))) end
@@ -153,8 +145,8 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val vars_prems = map (try (
             HOLogic.dest_Trueprop
             #> snd o strip_all
-            #> fst o dest_ordLess
-            #> dest_card_of
+            #> fst o MRBNF_Util.dest_ordLess
+            #> MRBNF_Util.dest_card_of
             #> fst o Term.strip_comb
             #> snd o Term.dest_Var
             #> HOLogic.dest_setT o range_type

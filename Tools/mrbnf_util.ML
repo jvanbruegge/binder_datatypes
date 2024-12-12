@@ -10,6 +10,7 @@ sig
   val cond_automap: ('a -> 'a) -> 'a list -> bool list -> 'a list
   val short_type_name: string -> string
   val swap: 'a * 'b -> 'b * 'a
+  val partition: ('a -> bool) -> 'a list -> 'a list * 'a list
 
   val subst_typ_morphism: (typ * typ) list -> morphism
 
@@ -82,6 +83,8 @@ fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T))
   | strip_ex t = ([], t)
 
 fun swap (a, b) = (b, a)
+fun partition _ [] = ([], [])
+  | partition f (x::xs) = (if f x then apfst else apsnd) (cons x) (partition f xs)
 
 val mk_minus = HOLogic.mk_binop @{const_name minus};
 fun mk_all (x, T) t = HOLogic.mk_all (x, T, t);

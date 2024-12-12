@@ -391,6 +391,7 @@ val parameter = Parse.position Parse.nat >> (fn (n, pos) =>
 
 fun indices n = map string_of_int (1 upto n);
 fun cons n = implode (map (fn a => " (x" ^ a ^ " :: xs" ^ a ^ ")") (indices n));
+fun some n = implode (map (fn a => " (SOME x" ^ a ^ ")") (indices n));
 fun vars x n = implode (map (fn a => " " ^ x ^ a) (indices n));
 
 in
@@ -404,6 +405,16 @@ val _ = Theory.setup
       \      | map_filter f" ^ cons n ^ " = let val ys = map_filter f" ^ vars "xs" n ^ " in the_default ys (Option.map (fn y => y::ys) (f" ^ vars "x" n ^ ")) end\n\
       \      | map_filter _" ^ replicate_string n " _" ^ " = raise ListPair.UnequalLengths\n" ^
       "  in map_filter f end")))
+
+val _ = Theory.setup
+ (ML_Antiquotation.value \<^binding>\<open>map_option\<close>
+    (Scan.lift parameter >> (fn n =>
+      "fn f =>\n\
+      \  let\n\
+      \    fun map_option _" ^ replicate_string n " NONE" ^ " = NONE\n\
+      \      | map_option f" ^ some n ^ " = SOME (f" ^ vars "x" n ^ ")\n\
+      \      | map_option _" ^ replicate_string n " _" ^ " = raise ListPair.UnequalLengths\n" ^
+      "  in map_option f end")))
 end;
 
 end;

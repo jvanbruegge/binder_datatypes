@@ -258,6 +258,8 @@ sig
   val mrbnf_cmd: ((((((((binding * string) * string) * (var_type * string) list) * string)
       * string list) * string option) * string option) * string option) * (Proof.context -> Plugin_Name.filter) ->
     Proof.context -> Proof.state
+
+  val get_class_assumption: string list -> string -> Proof.context -> thm;
 end;
 
 structure MRBNF_Def : MRBNF_DEF =
@@ -1620,14 +1622,13 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
       in bs ~~ set_rhss end;
     val bd_bind_def = (fn () => def_qualify (mk_prefix_binding bdN), bd_rhs);
 
-    val ((((mrbnf_map_term, raw_map_def),
+    val (((mrbnf_map_term, raw_map_def),
       (mrbnf_set_terms, raw_set_defs)),
-      _ (* (mrbnf_bd_term, raw_bd_def) *)), (lthy, lthy_old)) =
+      (lthy, lthy_old)) =
         no_defs_lthy
         |> Local_Theory.begin_nested |> snd
         |> maybe_define true map_bind_def
         ||>> apfst split_list o fold_map (maybe_define true) set_binds_defs
-        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy)) (* maybe_define true bd_bind_def*)
         ||> `Local_Theory.end_nested;
 
     val phi = Proof_Context.export_morphism lthy_old lthy;

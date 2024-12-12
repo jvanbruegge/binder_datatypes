@@ -103,7 +103,7 @@ val model_FType = {
   frees = [@{typ "'a::var"}],
   lives = [],
   bmv_ops = [],
-  Injs = [([@{term "TyVar :: 'a::var \<Rightarrow> _"}], [])],
+  Injs = [[@{term "TyVar :: 'a::var \<Rightarrow> _"}]],
   Sbs = [@{term "tvsubst_FType :: _ => 'a::var FType => _"}],
   Maps = [NONE],
   Vrs = [[@{term "FVars_FType :: _ => 'a::var set"}]],
@@ -213,20 +213,23 @@ definition Vrs_L2_M2_2 :: "('a1, 'a2::var) L2_M2 \<Rightarrow> 'a2 set" where
 definition Sb_L2 :: "('a1 \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2 FType) \<Rightarrow> ('a1, 'a2) L2 \<Rightarrow> ('a1, 'a2) L2" where
   "Sb_L2 \<equiv> \<lambda>f1 f2. map_prod (id f1) (tvsubst_FType f2)"
 definition Vrs_L2_1 :: "('a1, 'a2) L2 \<Rightarrow> 'a1 set" where
-  "Vrs_L2_1 \<equiv> Vrs_L1_M1_1 \<circ> fst" (* corresponds to L2_M1 and Inj_L2_M1_1 *)
+  "Vrs_L2_1 \<equiv> \<lambda>(x,x2). {x}" (* corresponds to L2_M1 and Inj_L2_M1_1 *)
 definition Vrs_L2_2 :: "('a1, 'a2::var) L2 \<Rightarrow> 'a2 set" where
-  "Vrs_L2_2 \<equiv> Vrs_L2_M2_2 \<circ> snd" (* corresponds to L2_M2 and Inj_L2_M2_2 *)
+  "Vrs_L2_2 \<equiv> \<lambda>(x,x2). FVars_FType x2" (* corresponds to L2_M2 and Inj_L2_M2_2 *)
 
 (* Composition *)
 type_synonym ('a1, 'a2) LC = "('a1, 'a2, ('a1, 'a2) L1, ('a1, 'a2) L2) L"
+typ "('a1, 'a2, 'c1, 'c2) L"
+typ "('a1, 'a2) L1"
+typ "('a1, 'a2) LC"
 type_synonym ('a1, 'a2) L_MC = "('a1, 'a2, ('a1, 'a2) L1, ('a1, 'a2) L2) L_M1"
 typ "('a1, 'a2) L_MC" (* is the same as LC_M1, so do not add *)
 
-type_synonym ('a1, 'a2) LC_M1 = "('a1, 'a2) L1_M1"
-type_synonym ('a1, 'a2) LC_M2 = "('a1, 'a2) L1_M2"
-type_synonym ('a1, 'a2) LC_M3 = "('a1, 'a2) L2_M2"
+typ "('a1, 'a2) L1_M1"
+typ "('a1, 'a2) L1_M2"
+typ "('a1, 'a2) L2_M2"
 
-
+declare [[ML_print_depth=10000]]
 
 ML \<open>
 val model_ID = {
@@ -236,7 +239,7 @@ val model_ID = {
   lives = [],
   bmv_ops = [],
   Maps = [NONE],
-  Injs = [([@{term "id :: 'a \<Rightarrow> _"}], [])],
+  Injs = [[@{term "id :: 'a \<Rightarrow> _"}]],
   Sbs = [@{term "id :: _ => 'a => 'a"}],
   Vrs = [[@{term "\<lambda>(x::'a). {x}"}]],
   tacs = [{
@@ -282,7 +285,7 @@ val model_L = {
       BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
   )) id_bmv],
   Maps = [SOME @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"}],
-  Injs = [([], [(@{term "id :: 'a1 \<Rightarrow> 'a1"}, 1)])],
+  Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}]],
   Sbs = [@{term "Sb_L :: _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L"}],
   Vrs = [[
     @{term "\<lambda>(x1::'a1, x2::'a1, p::'c1 + 'c2). {x1, x2}"}
@@ -352,7 +355,7 @@ val model_L1 = {
     )) id_bmv
   ],
   Maps = [NONE],
-  Injs = [([], [(@{term "id :: 'a1 \<Rightarrow> 'a1"}, 1), (@{term "id :: 'a2 \<Rightarrow> 'a2"}, 2)])],
+  Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}, @{term "id :: 'a2 \<Rightarrow> 'a2"}]],
   Sbs = [@{term "Sb_L1 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2) L1"}],
   Vrs = [[@{term "\<lambda>(x::'a1, x2::'a2). {x}"}, @{term "\<lambda>(x::'a1, x2::'a2). {x2}"}]],
   tacs = [{
@@ -405,16 +408,16 @@ ML \<open>
 val L1_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L1 @{context}
 \<close>
 
-ML \<open>
+(* ML \<open>
 val model_L2 = {
-  ops = [@{typ "'a1 * 'a2::var FType"}],
+  ops = [@{typ "'a2 * 'a2::var FType"}],
   leader = 0,
-  frees = [@{typ "'a1"}, @{typ "'a2::var"}],
+  frees = [@{typ "'a2::var"}],
   lives = [],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
-        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
+        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a2::var"}]
     )) id_bmv,
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
@@ -422,9 +425,9 @@ val model_L2 = {
     )) FType_bmv
   ],
   Maps = [NONE],
-  Injs = [([], [(@{term "id :: 'a1 \<Rightarrow> 'a1"}, 1), (@{term "TyVar :: 'a2::var \<Rightarrow> 'a2 FType"}, 2)])],
-  Sbs = [@{term "Sb_L2 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2::var) L2"}],
-  Vrs = [[@{term "\<lambda>(x::'a1, x2::'a2::var FType). {x}"}, @{term "\<lambda>(x::'a1, x2::'a2::var FType). FVars_FType x2"}]],
+  Injs = [([], [(@{term "id :: 'a2::var \<Rightarrow> 'a2"}, 1), (@{term "TyVar :: 'a2::var \<Rightarrow> 'a2 FType"}, 2)])],
+  Sbs = [@{term "Sb_L2 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a2, 'a2::var) L2"}],
+  Vrs = [[@{term "Vrs_L2_1 :: ('a2, 'a2::var) L2 \<Rightarrow> _"}, @{term "Vrs_L2_2 :: ('a2, 'a2::var) L2 \<Rightarrow> _"}]],
   tacs = [{
     Sb_Inj = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Sb_Inj_FType id_apply prod.map_id0}),
@@ -441,12 +444,12 @@ val model_L2 = {
     Vrs_Injs = [],
     Vrs_Sbs = [
       fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def case_prod_map_prod}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single id_apply}),
         resolve_tac ctxt [refl]
       ],
       fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_2_def case_prod_map_prod}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single id_apply}),
         resolve_tac ctxt @{thms Vrs_Sb_FType},
         K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]}),
@@ -454,7 +457,7 @@ val model_L2 = {
       ]
     ],
     Sb_cong = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def case_prod_beta id_apply}),
+      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def Vrs_L2_2_def case_prod_beta id_apply}),
       resolve_tac ctxt @{thms prod.map_cong0},
       eresolve_tac ctxt @{thms Basic_BNFs.fsts.cases},
       dresolve_tac ctxt @{thms meta_spec},
@@ -477,6 +480,83 @@ val model_L2 = {
 \<close>
 ML \<open>
 val L2_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L2 @{context}
+\<close> *)
+ML \<open>
+val model_L2 = {
+  ops = [@{typ "'a1 * 'a2::var FType"}],
+  leader = 0,
+  frees = [@{typ 'a1}, @{typ "'a2::var"}],
+  lives = [],
+  bmv_ops = [
+    BMV_Monad_Def.morph_bmv_monad (
+      MRBNF_Util.subst_typ_morphism (
+        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
+    )) id_bmv,
+    BMV_Monad_Def.morph_bmv_monad (
+      MRBNF_Util.subst_typ_morphism (
+        BMV_Monad_Def.frees_of_bmv_monad FType_bmv ~~ [@{typ "'a2::var"}]
+    )) FType_bmv
+  ],
+  Maps = [NONE],
+  Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}, @{term "TyVar :: 'a2::var \<Rightarrow> 'a2 FType"}]],
+  Sbs = [@{term "Sb_L2 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2::var) L2"}],
+  Vrs = [[@{term "Vrs_L2_1 :: ('a1, 'a2::var) L2 \<Rightarrow> _"}, @{term "Vrs_L2_2 :: ('a1, 'a2::var) L2 \<Rightarrow> _"}]],
+  tacs = [{
+    Sb_Inj = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Sb_Inj_FType id_apply prod.map_id0}),
+      resolve_tac ctxt [refl]
+    ],
+    Sb_comp_Injs = [],
+    Sb_comp = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (
+        (BNF_Def.map_comp0_of_bnf (the (BNF_Def.bnf_of @{context} "Product_Type.prod")) RS sym)
+        :: @{thms Sb_L2_def id_apply Sb_comp_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]}
+      )),
+      resolve_tac ctxt [refl]
+    ],
+    Vrs_Injs = [],
+    Vrs_Sbs = [
+      fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single id_apply}),
+        resolve_tac ctxt [refl]
+      ],
+      fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_2_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single id_apply}),
+        resolve_tac ctxt @{thms Vrs_Sb_FType},
+        K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]}),
+        assume_tac ctxt
+      ]
+    ],
+    Sb_cong = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def Vrs_L2_2_def case_prod_beta id_apply}),
+      resolve_tac ctxt @{thms prod.map_cong0},
+      eresolve_tac ctxt @{thms Basic_BNFs.fsts.cases},
+      dresolve_tac ctxt @{thms meta_spec},
+      dresolve_tac ctxt @{thms meta_mp},
+      resolve_tac ctxt @{thms singletonI},
+      hyp_subst_tac ctxt,
+      assume_tac ctxt,
+      eresolve_tac ctxt @{thms Basic_BNFs.snds.cases},
+      resolve_tac ctxt @{thms Sb_cong_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]},
+      REPEAT_DETERM o assume_tac ctxt,
+      rotate_tac ~3,
+      dresolve_tac ctxt @{thms meta_spec},
+      dresolve_tac ctxt @{thms meta_mp},
+      hyp_subst_tac ctxt,
+      assume_tac ctxt,
+      assume_tac ctxt
+    ]
+  } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
+} : BMV_Monad_Def.bmv_monad_model;
+\<close>
+ML \<open>
+val L2_bmv = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L2 @{context}
+\<close>
+
+ML \<open>
+val x = BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv] @{context}
 \<close>
 
 end

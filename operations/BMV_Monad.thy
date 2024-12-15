@@ -104,10 +104,11 @@ val model_FType = {
   leader = 0,
   frees = [@{typ "'a::var"}],
   lives = [],
+  lives' = [],
+  params = [NONE],
   bmv_ops = [],
   Injs = [[@{term "TyVar :: 'a::var \<Rightarrow> _"}]],
   Sbs = [@{term "tvsubst_FType :: _ => 'a::var FType => _"}],
-  Maps = [NONE],
   Vrs = [[[SOME @{term "FVars_FType :: _ => 'a::var set"}]]],
   tacs = [{
     Sb_Inj = fn ctxt => resolve_tac ctxt @{thms Sb_Inj_FType} 1,
@@ -245,8 +246,9 @@ val model_ID = {
   leader = 0,
   frees = [@{typ "'a"}],
   lives = [],
+  lives' = [],
   bmv_ops = [],
-  Maps = [NONE],
+  params = [NONE],
   Injs = [[@{term "id :: 'a \<Rightarrow> _"}]],
   Sbs = [@{term "id :: _ => 'a => 'a"}],
   Vrs = [[[SOME @{term "\<lambda>(x::'a). {x}"}]]],
@@ -294,11 +296,51 @@ val model_L = {
   leader = 0,
   frees = [@{typ "'a1"}],
   lives = [@{typ "'c1"}, @{typ "'c2"}],
+  lives' = [@{typ "'c1'"}, @{typ "'c2'"}],
   bmv_ops = [BMV_Monad_Def.morph_bmv_monad (
     MRBNF_Util.subst_typ_morphism (
       BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
   )) id_bmv],
-  Maps = [SOME @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"}],
+  params = [SOME {
+    model = {
+      Map = @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"},
+      Supps = [
+        @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setl p"},
+        @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setr p"}
+      ],
+      tacs = {
+        Map_id = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms sum.map_id0 id_apply}),
+          resolve_tac ctxt [ext],
+          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta prod.collapse}),
+          resolve_tac ctxt @{thms id_apply[symmetric]}
+        ],
+        Map_comp = fn ctxt => EVERY1 [
+          resolve_tac ctxt [ext],
+          resolve_tac ctxt @{thms trans[OF comp_apply]},
+          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv sum.map_comp}),
+          resolve_tac ctxt [refl]
+        ],
+        Supp_Map = replicate 2 (fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
+          resolve_tac ctxt [refl]
+        ]),
+        Map_cong = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv}),
+          K (Local_Defs.unfold0_tac ctxt @{thms prod.inject}),
+          REPEAT_DETERM o resolve_tac ctxt @{thms conjI[OF refl]},
+          resolve_tac ctxt @{thms sum.map_cong0},
+          REPEAT_DETERM o Goal.assume_rule_tac ctxt
+        ]
+      }
+    },
+    Map_Sb = fn ctxt => EVERY1 [
+      resolve_tac ctxt [ext],
+      K (Local_Defs.unfold0_tac ctxt @{thms comp_def Sb_L_def case_prod_map_prod}),
+      K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta id_apply map_prod_simp}),
+      resolve_tac ctxt [refl]
+    ]
+  }],
   Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}]],
   Sbs = [@{term "Sb_L :: _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L"}],
   Vrs = [[[
@@ -366,6 +408,7 @@ val model_L1 = {
   leader = 0,
   frees = [@{typ "'a1"}, @{typ "'a2"}],
   lives = [],
+  lives' = [],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
@@ -376,7 +419,7 @@ val model_L1 = {
         BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a2"}]
     )) id_bmv
   ],
-  Maps = [NONE],
+  params = [NONE],
   Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}, @{term "id :: 'a2 \<Rightarrow> 'a2"}]],
   Sbs = [@{term "Sb_L1 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2) L1"}],
   Vrs = [[
@@ -445,6 +488,7 @@ val model_L2 = {
   leader = 0,
   frees = [@{typ 'a1}, @{typ "'a2"}],
   lives = [],
+  lives' = [],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
@@ -459,7 +503,7 @@ val model_L2 = {
         BMV_Monad_Def.frees_of_bmv_monad FType_bmv ~~ [@{typ "'a2::var"}]
     )) FType_bmv
   ],
-  Maps = [NONE],
+  params = [NONE],
   Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}, @{term "id :: 'a2 \<Rightarrow> 'a2"}, @{term "TyVar :: 'a2::var \<Rightarrow> 'a2 FType"}]],
   Sbs = [@{term "Sb_L2 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2::var) L2"}],
   Vrs = [[

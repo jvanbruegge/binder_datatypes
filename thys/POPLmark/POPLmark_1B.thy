@@ -378,7 +378,7 @@ proof -
           using SA_All.hyps(7) well_scoped(2) apply fastforce
             using SA_All by (auto simp: 1)
           then show ?case using SA_All by auto
-      next
+        next
         case (SA_Rec X Y \<Delta>')
         then show ?case
           by (smt (verit) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))
@@ -431,8 +431,7 @@ proof -
         case (SA_Rec X Y)
         then show ?case
           by (smt (verit, ccfv_threshold) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))
-      qed blast+
-    }
+      qed blast+    }
   qed simp_all
 
   show "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T" using ty_trans by blast

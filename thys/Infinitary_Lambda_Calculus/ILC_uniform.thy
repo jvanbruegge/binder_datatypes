@@ -345,7 +345,7 @@ proof-
       subgoal using g(5) unfolding id_on_def apply simp  
         by (metis B DiffI UnCI disjoint_iff il iterm.set(3) xxs''(2))
       subgoal apply(rule dsmap_cong)
-        subgoal by (simp add: g(1) inj_on_def)
+        subgoal by (simp add: g(1) inj_on_def bij_implies_inject)
         subgoal using bij_betw_def f(1) by blast
         subgoal by (meson eq_on_def g(6)) . .
     subgoal using B xxs''(2) by blast . 

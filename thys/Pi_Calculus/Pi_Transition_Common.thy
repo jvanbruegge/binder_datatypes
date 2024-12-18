@@ -83,7 +83,7 @@ lemma Bout_inject: "(Bout x y t = Bout x' y' t') \<longleftrightarrow>
   x = x' \<and>
   (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
   \<and> id_on (FVars_term t - {y}) f \<and> f y = y' \<and> permute_term f t = t')"
-  by (auto 0 4 simp: id_on_def intro!: exI[of _ "id(y:=y', y':=y)"] term.permute_cong)
+  by (auto 0 4 simp: id_on_def bij_implies_inject intro!: exI[of _ "id(y:=y', y':=y)"] term.permute_cong)
 declare Bout_inj[simp del]
 
 lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
@@ -105,7 +105,7 @@ lemma bvars_rrename_bound_action[simp]: "bvars (rrename_bound_action f \<alpha>)
 lemma Cmt_rrename_bound_action: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> P = Cmt (rrename_bound_action f \<alpha>) (rrename f P)"
   by (cases \<alpha>)
-    (force simp: Bout_inject id_on_def intro!: exI[of _ f] term.permute_cong_id[symmetric] term.permute_cong)+
+    (force simp: Bout_inject id_on_def bij_implies_inject intro!: exI[of _ f] term.permute_cong_id[symmetric] term.permute_cong)+
 
 lemma Cmt_rrename_bound_action_Par: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P \<union> FFVars Q - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> (P \<parallel> Q) = Cmt (rrename_bound_action f \<alpha>) (rrename f P \<parallel> rrename f Q)"

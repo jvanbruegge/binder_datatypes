@@ -176,7 +176,7 @@ definition fresh :: "'a::var \<Rightarrow> ('a * 'b) fset \<Rightarrow> bool" ("
   "fresh x \<Gamma> \<equiv> x |\<notin>| fst |`| \<Gamma>"
 
 lemma isin_rename: "bij f \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id |`| \<Gamma> \<longleftrightarrow> (x, \<tau>) |\<in>| \<Gamma>"
-  by force
+  by (force simp: bij_implies_inject)
 
 abbreviation extend :: "('a * \<tau>) fset \<Rightarrow> 'a::var \<Rightarrow> \<tau> \<Rightarrow> ('a * \<tau>) fset" ("(_,_:_)" [52, 52, 52] 53) where
   "extend \<Gamma> a \<tau> \<equiv> finsert (a, \<tau>) \<Gamma>"
@@ -199,7 +199,7 @@ binder_inductive Ty
       apply (auto simp: map_prod_comp0 terms.permute_comp[OF _ _ bij_imp_bij_inv supp_inv_bound]
     terms.permute_id)
      apply force
-    unfolding fresh_def by force
+    unfolding fresh_def by (force simp: bij_implies_inject)
   subgoal for R B x1 x2 x3
     apply (rule exI[of _ B])
     unfolding fresh_def by auto
@@ -222,7 +222,7 @@ lemma provided:
    apply (simp add: assms isin_rename)
   unfolding fresh_def
      apply force
-  using assms(1) fimage_iff apply fastforce
+  using assms(1) fimage_iff apply (fastforce simp: bij_implies_inject)
    apply simp
   using fimage_iff by fastforce
 

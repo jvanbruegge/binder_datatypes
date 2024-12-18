@@ -13,9 +13,9 @@ mrbnf "'a ::uncountable_regular dstream"
   bd: "card_suc natLeq"
   var_class: uncountable_regular
   subgoal by (rule ext, transfer) simp
-  subgoal apply (rule ext, transfer) by (simp add: stream.map_comp inj_on_def)
+  subgoal apply (rule ext, transfer) by (simp add: stream.map_comp inj_on_def bij_implies_inject)
   subgoal apply transfer by (simp cong: stream.map_cong inj_on_cong)
-  subgoal apply (rule ext, transfer) by (simp add: inj_on_def)
+  subgoal apply (rule ext, transfer) by (simp add: inj_on_def bij_implies_inject)
   subgoal by (rule infinite_regular_card_order_card_suc[OF natLeq_card_order natLeq_Cinfinite])
   subgoal
     apply (rule card_suc_greater_set[OF natLeq_card_order])
@@ -537,7 +537,7 @@ proof-
   show ?thesis
   apply(induct e1 rule: iterm.fresh_induct[where A = "{x} \<union> FFVars e2 \<union> imsupp \<sigma>"])
     subgoal by (meson Un_bound imsupp_supp_bound infinite_ivar s(2) singl_bound iterm.set_bd_UNIV)
-    subgoal by auto
+    subgoal by (auto simp: bij_implies_inject)
     subgoal apply simp by (smt (verit, best) comp_apply stream.map_comp stream.map_cong)
 
     subgoal for ys t apply simp apply(subgoal_tac
@@ -545,7 +545,7 @@ proof-
       \<sigma> ` dsset ys \<inter> IImsupp (\<lambda>a. if a = \<sigma> x then irrename \<sigma> e2 else iVar a) = {}")
       subgoal
         by simp (metis (no_types, lifting) Int_Un_emptyI2 dstream_map_ident_strong imsupp_empty_IntD2)
-      subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by (auto split: if_splits)  . .
+      subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by (auto split: if_splits simp: bij_implies_inject)  . .
 qed
 
 (* Unary substitution versus swapping: *)
@@ -725,9 +725,9 @@ shows "irrename \<sigma> (usub t u (x::ivar)) = usub (irrename \<sigma> t) (\<si
 using assms
 apply(induct t rule: iterm.fresh_induct[where A = "{x,u} \<union> supp \<sigma>"])
   subgoal using assms by simp (meson le_UNIV_insert)
-  subgoal by (auto simp: sb_def)
+  subgoal by (auto simp: sb_def bij_implies_inject)
   subgoal using assms apply simp unfolding stream.map_comp apply(rule stream.map_cong0) by auto
-  subgoal using assms apply(subst usub_iLam) apply auto apply(subst usub_iLam) by auto .
+  subgoal using assms apply(subst usub_iLam) apply auto apply(subst usub_iLam) by (auto simp: bij_implies_inject) .
 
 lemma sw_sb:
 "sw (sb z u x) z1 z2 = sb (sw z z1 z2) (sw u z1 z2) (sw x z1 z2)"
@@ -809,7 +809,7 @@ proof(rule ext)
   proof(cases "x \<in> dsset xs")
     case False
     hence F: "\<not> \<sigma> x \<in> dsset (dsmap \<sigma> xs)"
-    using s by auto
+    using s by (auto simp: bij_implies_inject)
     thus ?thesis using F False
     unfolding o_def apply(subst imkSubst_idle)
       subgoal by auto

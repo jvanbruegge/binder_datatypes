@@ -33,7 +33,7 @@ lemma inj_tab: "inj tab" and surj_tab: "surj tab"
 using bij_tab unfolding bij_def by auto
 
 lemma tab_inj[simp]: "tab x = tab y \<longleftrightarrow> x = y"
-by (simp add: bij_tab)
+by (simp add: bij_tab bij_implies_inject)
 
 definition "untab \<equiv> inv tab"
 
@@ -43,7 +43,7 @@ lemma inj_untab: "inj untab" and surj_untab: "surj untab"
 using bij_untab unfolding bij_def by auto
 
 lemma untab_inj[simp]: "untab x = untab y \<longleftrightarrow> x = y"
-by (simp add: bij_untab)
+by (simp add: bij_untab bij_implies_inject)
 
 lemma tab_untab[simp]: "tab (untab x) = x"
 by (simp add: bij_tab untab_def)

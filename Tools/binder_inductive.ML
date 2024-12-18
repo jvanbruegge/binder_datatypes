@@ -201,8 +201,8 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
 
     val raw_supps = map2 (fn s => fn x => if YXML.content_of s = "_" then
       Inl (Term.absfree (dest_Free x) (case Binder_Induction.extract_vars no_defs_lthy (hd var_Ts) x of
-        (SOME t, _) => t
-        | (NONE, _) => mk_bot (hd var_Ts)) (* TODO: multiple var kinds *)
+        ([], _) => mk_bot (hd var_Ts)
+        | (ts, _) => foldl1 mk_Un ts) (* TODO: multiple var kinds *)
       ) else Inr (Syntax.read_term no_defs_lthy s)
     ) (supps @ replicate (length param_Ts - length supps) "_") xs;
 

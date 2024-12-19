@@ -66,8 +66,8 @@ next
   then show ?case apply(subst term.subst(2))
       subgoal by auto
       subgoal apply (simp add: reneqv_iApp_iff) apply safe
-        using App.hyps(1,2) reneqv_trans reneqv_sym apply blast+    
-        using App.hyps(2) reneqv_trans reneqv_sym by blast .
+        using App.IH(1,2) reneqv_trans reneqv_sym apply blast+    
+        using App.IH(2) reneqv_trans reneqv_sym by blast .
 next
   case (Lam y t q ps)
   then show ?case apply(subst term.subst(3))
@@ -84,7 +84,7 @@ next
             subgoal by simp  subgoal by (metis FFVars_tr UnI2 image_eqI subOf_superOf subset_eq) . . .
         subgoal apply(subst reneqv_iLam_iff)
           subgoal by auto
-          subgoal using Lam.hyps(2) by fastforce . . .
+          subgoal using Lam.fresh(2) by fastforce . . .
 qed
 
 (* difference from the above lemma (tr_tvsubst_Var_reneqv) 

@@ -196,7 +196,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                   | go t xs = (rev xs, subst_bounds (xs, t))
             in go t [] end
           fun mk_induct_equal (t1, t2) =
-            let val T = fastype_of t1
+            let val T = fastype_of t2
             in Const (@{const_name HOL.induct_equal}, T --> T --> @{typ bool}) $ t1 $ t2 end;
 
           val mk_induct_conj = HOLogic.mk_binop @{const_name HOL.induct_conj}
@@ -443,10 +443,10 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
                     rtac ctxt inner_prem ORELSE'
                     EVERY' [
-                      Method.insert_tac ctxt [Local_Defs.unfold0 ctxt @{thms induct_equal_eq} inner_prem],
+                      Method.insert_tac ctxt [inner_prem],
                       Simplifier.asm_full_simp_tac (Simplifier.add_cong @{thm imp_cong} (
                         (BNF_Util.ss_only @{thms
-                          split_paired_All HOL.simp_thms(42)
+                          split_paired_All HOL.simp_thms(42) HOL.induct_forall_def prod.inject induct_implies_equal_eq
                         } ctxt)
                         addsimprocs [@{simproc HOL.defined_All}]
                       ))

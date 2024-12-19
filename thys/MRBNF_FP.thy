@@ -324,6 +324,9 @@ lemmas induct_forallI = allI[unfolded HOL.induct_forall_def[symmetric]]
 lemma induct_equal_refl: "HOL.induct_equal x x"
   unfolding HOL.induct_equal_def by (rule refl)
 
+lemma induct_implies_equal_eq: "HOL.induct_implies (HOL.induct_equal x y) P = (x = y \<longrightarrow> P)"
+  unfolding HOL.induct_implies_def HOL.induct_equal_def ..
+
 lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infinite (UNIV::'a set)"
   using infinite_iff_natLeq_ordLeq by blast
 

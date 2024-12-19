@@ -145,7 +145,7 @@ lemma wf_eqvt:
   shows "\<turnstile> \<Gamma> ok \<Longrightarrow> \<turnstile> map_context f \<Gamma> ok"
 unfolding map_context_def proof (induction \<Gamma>)
   case (Cons a \<Gamma>)
-  then show ?case using assms apply auto
+  then show ?case using assms apply (auto simp: bij_implies_inject)
     apply (metis fst_conv image_iff)
     using closed_in_eqvt map_context_def by fastforce
 qed simp

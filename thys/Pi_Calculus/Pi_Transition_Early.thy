@@ -15,7 +15,7 @@ binder_inductive trans
   subgoal for R B \<sigma> x1 x2
     apply simp
     apply (elim disj_forward)
-    by (auto simp: isPerm_def
+    by (auto simp: isPerm_def bij_implies_inject
         term.permute_comp action.map_comp action.map_id
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | (rule exI[of _ "map_action \<sigma> _"])
@@ -35,7 +35,7 @@ binder_inductive trans
        SOME [NONE, SOME 2, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms }
       @{thms emp_bound singl_bound insert_bound card_of_minus_bound term.Un_bound term.set_bd_UNIV commit.FVars_bd_UNIVs infinite_UNIV bns_bound}
-      @{thms Res_inject Inp_inject Bout_inject FVars_commit_Cmt ns_alt vars_alt Int_Un_distrib}
+      @{thms bij_implies_inject Res_inject Inp_inject Bout_inject FVars_commit_Cmt ns_alt vars_alt Int_Un_distrib}
       @{thms Inp_eq_usub term.permute_cong_id term.permute_cong_id[symmetric] arg_cong2[where f=Cmt, OF _ refl] arg_cong2[where f=Cmt, OF refl]
           action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout] Cmt_rrename_bound_action Cmt_rrename_bound_action_Par}
       @{thms cong[OF cong[OF refl[of R] refl], THEN iffD1, rotated -1, of _ _ "Bout _ _ _"] id_onD id_on_antimono

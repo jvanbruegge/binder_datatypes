@@ -51,10 +51,10 @@ by (meson inj_on_distinct_smap distinct_smap)
 
 lemma bij_distinct_smap: 
 "bij f \<Longrightarrow> distinct xs \<Longrightarrow> distinct (map f xs)"
-by (simp add: inj_on_def inj_on_distinct_smap)
+by (simp add: inj_on_def inj_on_distinct_smap bij_implies_inject)
 
 lemma bij_distinct_smap'[simp]: 
 "bij f \<Longrightarrow> distinct (map f xs) \<longleftrightarrow> distinct xs"
-by (simp add: inj_on_def inj_on_distinct_smap)
+by (simp add: inj_on_def inj_on_distinct_smap bij_implies_inject)
 
 end

@@ -72,7 +72,7 @@ using assms unfolding ext_def by (auto split: prod.splits)
 
 lemma dsmap_ext_superOf: "bij \<sigma> \<Longrightarrow> dsmap (ext \<sigma>) (superOf x) = superOf (\<sigma> x)"
 unfolding dstream_eq_nth apply safe apply(subst dsnth_dsmap) 
-  subgoal by (simp add: bij_ext inj_on_def)
+  subgoal by (simp add: bij_ext inj_on_def bij_implies_inject)
   subgoal unfolding ext_def apply (auto split: prod.splits) 
     apply (metis subOf_superOf super_superOf theSN_unique)
     using super_superOf theSN theSN_ex by blast .
@@ -164,7 +164,7 @@ unfolding FVarsB_def renB_def apply (auto simp: image_def)
       subgoal unfolding touchedSuper_def 
       by auto (smt (verit, best) Int_iff bij_betw_apply bij_betw_def bij_betw_inv_into 
         bij_ext dsmap_ext_superOf dsset_dsmap empty_iff ext_inv inv_simp1 superOf_subOf) .
-    subgoal by (simp add: bij_ext inj_on_def) .
+    subgoal by (simp add: bij_ext inj_on_def bij_implies_inject) .
   subgoal for p xs
     apply(rule exI[of _ "{y. \<exists>x\<in>touchedSuper (ILC.FFVars (irrename (ext \<sigma>) (b p))). y = subOf x}"])
     apply auto apply(rule bexI[of _ "superOf (\<sigma> (subOf xs))"]) 

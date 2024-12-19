@@ -359,8 +359,8 @@ next
         subgoal apply clarsimp subgoal for e2 e2' unfolding touchedSuperT_itvsubst[OF s] apply clarsimp
         apply(rule UN_touchedSuperT_super_eq)
           subgoal using rr by auto
-          subgoal unfolding RSuper_def2 using good_FFVars_super by auto  
-          subgoal unfolding RSuper_def2 using good_FFVars_super by auto 
+          subgoal using good_FFVars_RSuper by presburger
+          subgoal using good_FFVars_RSuper by presburger
           subgoal unfolding touchedSuperT_def by blast . . . . 
 qed (auto simp: bsmall_def ILC.SSupp_IImsupp_bound s f rr)
 

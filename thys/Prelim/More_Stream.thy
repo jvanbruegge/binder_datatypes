@@ -134,11 +134,11 @@ by (meson inj_on_sdistinct_smap sdistinct_smap)
 
 lemma bij_sdistinct_smap: 
 "bij f \<Longrightarrow> sdistinct xs \<Longrightarrow> sdistinct (smap f xs)"
-by (simp add: inj_on_def inj_on_sdistinct_smap)
+by (simp add: inj_on_def inj_on_sdistinct_smap bij_implies_inject)
 
 lemma bij_sdistinct_smap'[simp]: 
 "bij f \<Longrightarrow> sdistinct (smap f xs) \<longleftrightarrow> sdistinct xs"
-by (simp add: inj_on_def inj_on_sdistinct_smap)
+by (simp add: inj_on_def inj_on_sdistinct_smap bij_implies_inject)
 
 
 lemma sdistinct_inj_snth: "sdistinct xs \<Longrightarrow> inj (snth xs)"
@@ -206,10 +206,10 @@ lemma bij_nat1: "bij nat1"
 by (simp add: bij_nat2 nat1_def)
 
 lemma nat2_inj[simp]: "nat2 u = nat2 v \<longleftrightarrow> u = v"
-using bij_nat2 by force
+using bij_nat2 by (force simp: bij_implies_inject)
 
 lemma nat1_inj[simp]: "nat1 u = nat1 v \<longleftrightarrow> u = v"
-using bij_nat1 by force
+using bij_nat1 by (force simp: bij_implies_inject)
 
 lemma nat1_nat2[simp]: "nat1 (nat2 u) = u"
 by (simp add: bij_nat2 nat1_def)

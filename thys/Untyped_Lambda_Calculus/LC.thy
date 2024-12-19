@@ -430,7 +430,7 @@ proof-
   show ?thesis
   apply(induct e1 rule: term.fresh_induct[where A = "{x} \<union> FVars_term e2 \<union> imsupp \<sigma>"])
     subgoal by (meson Un_bound imsupp_supp_bound infinite_var s(2) singl_bound term.set_bd_UNIV)
-    subgoal by auto
+    subgoal by (auto simp: bij_implies_inject)
     subgoal by simp
     subgoal for y t apply simp apply(subgoal_tac
       "y \<notin> IImsupp ((\<lambda>a. rrename \<sigma> (if a = x then e2 else Var a))) \<and>
@@ -503,8 +503,8 @@ apply(rule term.permute_cong_id) by auto
 lemma Lam_inject_swap: "Lam v t = Lam v' t' \<longleftrightarrow>
   (v' \<notin> FFVars t \<or> v' = v) \<and> swap t v' v = t'"
 unfolding Lam_inject apply(rule iffI)
-  subgoal unfolding id_on_def apply auto
-  apply(rule term.permute_cong) by auto
+  subgoal unfolding id_on_def apply (auto simp: bij_implies_inject)
+  apply(rule term.permute_cong) by (auto simp: bij_implies_inject)
   subgoal apply clarsimp
   apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
 
@@ -549,7 +549,7 @@ assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
 shows "rrename \<sigma> (usub t u (x::var)) = usub (rrename \<sigma> t) (\<sigma> u) (\<sigma> x)"
 using assms
 apply(binder_induction t avoiding: "supp \<sigma>" u x rule: term.strong_induct)
-using assms by (auto simp: sb_def)
+using assms by (auto simp: sb_def bij_implies_inject)
 
 lemma sw_sb:
 "sw (sb z u x) z1 z2 = sb (sw z z1 z2) (sw u z1 z2) (sw x z1 z2)"
@@ -663,7 +663,7 @@ proof(rule ext)
   proof(cases "distinct xs \<and> x \<in> set xs")
     case False
     hence F: "\<not> distinct (map \<sigma> xs) \<or> \<not> \<sigma> x \<in> set (map \<sigma> xs)"
-    using s by auto
+    using s by (auto simp: bij_implies_inject)
     thus ?thesis using F False
     unfolding o_def apply(subst mkSubst_idle)
       subgoal by auto
@@ -721,7 +721,7 @@ proof-
         subgoal by simp
         subgoal by (simp add: SSupp_tvsubst_bound f(2))
         subgoal apply simp
-     subgoal using f(1) f(3) id_onD by fastforce . . . .
+     subgoal using f(1) f(3) id_onD by (fastforce simp: bij_implies_inject) . . . .
 qed
 
 
@@ -765,7 +765,7 @@ proof-
     subgoal apply(rule term.permute_cong) using g
       subgoal by auto  subgoal by auto subgoal by auto
       subgoal using term_pre.supp_comp_bound by auto
-      subgoal using term_pre.supp_comp_bound z unfolding id_on_def by auto . .
+      subgoal using term_pre.supp_comp_bound z unfolding id_on_def by (auto simp: bij_implies_inject) . .
 
   show ?thesis
   apply(rule exI[of _ f]) apply(rule exI[of _ f'])

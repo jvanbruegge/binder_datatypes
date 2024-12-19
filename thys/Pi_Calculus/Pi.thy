@@ -239,8 +239,8 @@ apply(rule term.permute_cong_id) by auto
 lemma Inp_inject_swap: "Inp u v P = Inp u' v' P' \<longleftrightarrow>
   u = u' \<and> (v' \<notin> FFVars P \<or> v' = v) \<and> swap P v' v = P'"
 unfolding Inp_inject apply(rule iffI)
-  subgoal unfolding id_on_def apply auto
-  apply(rule term.permute_cong) by auto
+  subgoal unfolding id_on_def apply (auto simp: bij_implies_inject)
+  apply(rule term.permute_cong) by (auto simp: bij_implies_inject)
   subgoal apply clarsimp
   apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
 
@@ -266,8 +266,8 @@ using Inp_refresh'
 lemma Res_inject_swap: "Res v P = Res v' P' \<longleftrightarrow>
   (v' \<notin> FFVars P \<or> v' = v) \<and> swap P v' v = P'"
 unfolding Res_inject apply(rule iffI)
-  subgoal unfolding id_on_def apply auto
-  apply(rule term.permute_cong) by auto
+  subgoal unfolding id_on_def apply (auto simp: bij_implies_inject)
+  apply(rule term.permute_cong) by (auto simp: bij_implies_inject)
   subgoal apply clarsimp
   apply(rule exI[of _ "id(v':=v,v:=v')"]) unfolding id_on_def by auto .
 
@@ -343,7 +343,7 @@ assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::var set|"
 shows "rrename \<sigma> (usub P u (x::var)) = usub (rrename \<sigma> P) (\<sigma> u) (\<sigma> x)"
 using assms
 apply(binder_induction P avoiding: "supp \<sigma>" u x rule: term.strong_induct)
-using assms by (auto simp: sb_def)
+using assms by (auto simp: sb_def bij_implies_inject)
 
 lemma sw_sb:
 "sw (sb z u x) z1 z2 = sb (sw z z1 z2) (sw u z1 z2) (sw x z1 z2)"

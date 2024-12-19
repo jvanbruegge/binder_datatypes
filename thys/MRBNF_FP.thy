@@ -84,10 +84,10 @@ proof -
   obtain u::"'a \<Rightarrow> 'a" where x: "bij u" "|supp u| <o r" "bij_betw u (f1 (A x)) C" "imsupp u \<inter> g (A x) = {}"
     using ordIso_ex_bij_betw_supp[OF assms(1) 1(1) C(2) 3(1) u(2) 3(2)] by blast
 
-  have "bij_betw (inv R) (f1 (B y)) (f2 y)" unfolding bij_betw_def by (simp add: assms(3) inj_on_def w(3))
+  have "bij_betw (inv R) (f1 (B y)) (f2 y)" unfolding bij_betw_def by (simp add: assms(3) inj_on_def w(3) bij_implies_inject)
   moreover have "bij_betw h (f2 y) (f2 x)" using bij_imp_bij_betw assms(5,6) by auto
-  moreover have "bij_betw L (f2 x) (f1 (A x))" unfolding bij_betw_def by (simp add: assms(4) inj_on_def u(3))
-  ultimately have 4: "bij_betw (u \<circ> L \<circ> h \<circ> inv R) (f1 (B y)) C" using bij_betw_trans x(3) by blast
+  moreover have "bij_betw L (f2 x) (f1 (A x))" unfolding bij_betw_def by (simp add: assms(4) inj_on_def u(3) bij_implies_inject)
+  ultimately have 4: "bij_betw (u \<circ> L \<circ> h \<circ> inv R) (f1 (B y)) C" using bij_betw_trans x(3) by meson
 
   obtain w::"'a \<Rightarrow> 'a" where y: "bij w" "|supp w| <o r" "bij_betw w (f1 (B y)) C"
     "imsupp w \<inter> g (B y) = {}" "eq_on (f1 (B y)) w (u \<circ> L \<circ> h \<circ> inv R)"
@@ -150,7 +150,7 @@ lemma Int_Un_emptyI1: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inte
 lemma Int_Un_emptyI2: "A \<inter> (B \<union> C) = {} \<Longrightarrow> A \<inter> C = {}" by blast
 
 lemma imsupp_comp_image: "bij f \<Longrightarrow> imsupp (f \<circ> g \<circ> inv f) = f ` imsupp g"
-  apply (auto simp: supp_def imsupp_def bij_inv_eq_iff image_in_bij_eq)
+  apply (auto simp: supp_def imsupp_def bij_inv_eq_iff image_in_bij_eq bij_implies_inject)
   by (smt (verit, del_insts) imageI inv_simp1 mem_Collect_eq)
 
 lemma id_on_comp3: "c z = z \<Longrightarrow> b (c z) = c z \<Longrightarrow> a z = z \<Longrightarrow> (a \<circ> b \<circ> c) z = z"
@@ -158,7 +158,7 @@ lemma id_on_comp3: "c z = z \<Longrightarrow> b (c z) = c z \<Longrightarrow> a 
 lemma id_on_comp2: "b z = z \<Longrightarrow> a z = z \<Longrightarrow> (a \<circ> b) z = z" by simp
 lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z" by simp
 
-lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by force
+lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by (force simp: bij_implies_inject)
 
 lemma Un_bound:
   assumes inf: "infinite (UNIV :: 'a set)"
@@ -225,9 +225,9 @@ lemma comp_middle: "f (h z) = h z \<Longrightarrow> g (h z) = h z \<Longrightarr
 
 (* tvsubst helper lemmas *)
 lemma bij_not_eq_twice: "bij g \<Longrightarrow> g a \<noteq> a \<Longrightarrow> g (g a) \<noteq> g a"
-  by simp
+  by (simp add: bij_implies_inject)
 lemma bij_not_equal_iff: "bij f \<Longrightarrow> a \<noteq> b \<longleftrightarrow> f a \<noteq> f b"
-  by simp
+  by (simp add: bij_implies_inject)
 lemma bij_id_imsupp: "bij f \<Longrightarrow> f a = a \<Longrightarrow> a \<notin> imsupp f"
   unfolding imsupp_def supp_def
   by (simp add: bij_inv_eq_iff image_in_bij_eq)
@@ -323,6 +323,9 @@ lemmas induct_forallI = allI[unfolded HOL.induct_forall_def[symmetric]]
 
 lemma induct_equal_refl: "HOL.induct_equal x x"
   unfolding HOL.induct_equal_def by (rule refl)
+
+lemma induct_implies_equal_eq: "HOL.induct_implies (HOL.induct_equal x y) P = (x = y \<longrightarrow> P)"
+  unfolding HOL.induct_implies_def HOL.induct_equal_def ..
 
 lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infinite (UNIV::'a set)"
   using infinite_iff_natLeq_ordLeq by blast

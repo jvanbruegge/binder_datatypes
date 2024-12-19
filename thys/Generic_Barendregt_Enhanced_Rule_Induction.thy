@@ -148,13 +148,13 @@ lemma TTperm_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longright
 using TTperm_comp by fastforce
 
 lemma image_Tsupp_disj: "isPerm \<sigma> \<Longrightarrow> B \<inter> Tsupp t = {} \<Longrightarrow> image \<sigma> B \<inter> Tsupp (Tperm \<sigma> t) = {}"
-using TTsupp_seminat isPerm_bij by fastforce
+using TTsupp_seminat isPerm_bij by (fastforce simp: bij_implies_inject)
 
 lemma BBperm_comp': "isPerm \<sigma> \<Longrightarrow> isPerm \<tau> \<Longrightarrow> Bperm (\<sigma> o \<tau>) xs = Bperm \<sigma> (Bperm \<tau> xs)"
 using BBperm_comp by fastforce
 
 lemma image_Bsupp_disj: "isPerm \<sigma> \<Longrightarrow> B \<inter> Bsupp xs = {} \<Longrightarrow> image \<sigma> B \<inter> Bsupp (Bperm \<sigma> xs) = {}"
-using BBsupp_seminat isPerm_bij by fastforce
+using BBsupp_seminat isPerm_bij by (fastforce simp: bij_implies_inject)
 
 (* *)
 
@@ -734,7 +734,7 @@ unfolding supports_def proof safe
     subgoal unfolding \<tau>_def bij_def inj_def inj_on_def bij_betw_def
     by simp (metis bf bij_betw_imp_surj_on bij_betw_inv_into_left imageI)
     subgoal unfolding id_on_def \<tau>_def using V
-    by (auto simp add: isPerm_bij s) .
+    by (auto simp add: isPerm_bij s bij_implies_inject) .
   define \<sigma>' where "\<sigma>' \<equiv> \<tau> \<circ> \<sigma>"
   have s': "isPerm \<sigma>'" by (simp add: \<sigma>'_def isPerm_comp s tau(1))
   have bbs': "bij_betw \<sigma>' X (\<sigma>' ` X)" "bij_betw (inv \<sigma>') (\<sigma>' ` X) X" "X \<inter> (\<sigma>' ` (X-Y)) = {}"

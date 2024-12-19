@@ -27,7 +27,7 @@ lemma snd_o_is_snd:"snd \<circ> (\<lambda>(x, y). (f0 (x, y), y)) = snd"
 lemma fst_o_is_fst:"fst \<circ> (\<lambda>(x, y). (x, f0 (x, y))) = fst"
   by fastforce
 
-lemma bij_implies_inject[simp]: "bij f \<Longrightarrow> f a = f a' \<longleftrightarrow> a = a'"
+lemma bij_implies_inject: "bij f \<Longrightarrow> f a = f a' \<longleftrightarrow> a = a'"
   unfolding bij_def inj_on_def by auto
 
 lemma inv_simp1[simp]: "bij u \<Longrightarrow> inv u (u x) = x"
@@ -427,7 +427,7 @@ proof -
       unfolding imsupp_def supp_def by auto
     with g(1) have "g (f (inv g a)) = a" by auto
     ultimately show False using g(1) \<open>bij f\<close>
-      unfolding imsupp_def supp_def by auto
+      unfolding imsupp_def supp_def by (auto simp: bij_implies_inject)
   qed
   moreover
   { fix a
@@ -436,7 +436,7 @@ proof -
       unfolding imsupp_def[of "inv g"] supp_def by auto
     moreover
     from a g(4) \<open>bij f\<close> have "g (f a) = f a"
-      unfolding imsupp_def supp_def by auto
+      unfolding imsupp_def supp_def by (auto simp: bij_implies_inject)
     ultimately have "(g o f o inv g) a = f a"
       by simp
   }

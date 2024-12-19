@@ -31,18 +31,18 @@ lemma Abs_commit_pre_inj[simp]: "Abs_commit_pre k = Abs_commit_pre k' \<longleft
 lemma Bout_inj[simp]: "Bout x y P = Bout x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
   unfolding Bout_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
   apply (rule iffI)
-   apply (auto simp: id_on_def)[1]
+   apply (auto simp: id_on_def bij_implies_inject)[1]
    apply (rule term.permute_cong)
-  apply auto
+  apply (auto simp: bij_implies_inject)
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
     by (auto simp: id_on_def) .
 
 lemma Binp_inj[simp]: "Binp x y P = Binp x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
 unfolding Binp_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
   apply (rule iffI)
-   apply (auto simp: id_on_def)[1]
+   apply (auto simp: id_on_def bij_implies_inject)[1]
    apply (rule term.permute_cong)
-  apply auto
+  apply (auto simp: bij_implies_inject)
   subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
     by (auto simp: id_on_def) .
 

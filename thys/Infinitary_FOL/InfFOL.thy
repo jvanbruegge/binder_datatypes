@@ -276,7 +276,7 @@ unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
 apply transfer apply transfer by blast
 
 lemma supp_o_bij: "bij \<sigma> \<Longrightarrow> supp (\<sigma> \<circ> f \<circ> inv \<sigma>) = \<sigma> ` supp f"
-  unfolding supp_def using bij_image_Collect_eq by fastforce
+  unfolding supp_def using bij_image_Collect_eq by (fastforce simp: bij_implies_inject)
 
 lemma bij_betw_snth:
 assumes V: "|V::var set| <o |UNIV::var set|"

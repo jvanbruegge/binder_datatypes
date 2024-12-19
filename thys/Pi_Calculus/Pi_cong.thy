@@ -23,7 +23,7 @@ binder_inductive cong
   subgoal for R B \<sigma> x1 x2
     apply simp
     by (elim disj_forward case_prodE)
-      (auto simp: isPerm_def term.permute_comp
+      (auto simp: isPerm_def term.permute_comp bij_implies_inject
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
@@ -33,7 +33,7 @@ binder_inductive cong
       [NONE, NONE, NONE, NONE, SOME [SOME 1, SOME 1, SOME 0], SOME [SOME 1], NONE, SOME [SOME 1, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms }
       @{thms emp_bound singl_bound term.Un_bound term.set_bd_UNIV infinite_UNIV}
-      @{thms Res_inject term.FVars_permute} @{thms term.permute_cong_id[symmetric]}
+      @{thms Res_inject term.FVars_permute bij_implies_inject} @{thms term.permute_cong_id[symmetric]}
       @{thms id_onD} @{context}\<close>)
   done
 

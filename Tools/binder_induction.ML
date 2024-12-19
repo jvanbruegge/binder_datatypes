@@ -135,6 +135,12 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           | _ => strip_all t)
         | strip_all t = ([], t)
 
+      fun strip_pure_all (Const (@{const_name Pure.all}, _) $ t) = (case t of
+        Abs (x, T, t) => let val a = Free (x, T)
+          in apfst (curry (op::) a) (strip_all (Term.subst_bound (a, t))) end
+          | _ => strip_pure_all t)
+        | strip_pure_all t = ([], t)
+
     fun context_tac _ _ = Seq.single ruleq
       |> Seq.maps (Rule_Cases.consume defs_ctxt (flat defs) facts)
       |> Seq.map (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
@@ -204,7 +210,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             Const (@{const_name HOL.induct_implies}, @{typ bool} --> @{typ bool} --> @{typ bool}) $ t1 $ t2;
 
           val finsts' = map (map_filter I) insts;
-          val cases' = map (fn rule =>
+          val (nbound_prems, cases') = split_list (map (fn rule =>
             let
               val ((bvars, rho), rule) = apfst split_last (strip_pure_all rule)
               val bvars' = rev (map Free (fold Term.rename_wrt_term goals'' (map dest_Free bvars)));
@@ -251,7 +257,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
               | replace_induct (Abs (x, T, t)) = Abs (x, T, replace_induct t)
               | replace_induct t = t
 
-              val prems' = maps (fn prem =>
+              val (nbound_prems, prems') = apsnd flat (split_list (map (fn prem =>
                 let
                   val (lvars, prem) = strip_pure_all prem;
                   val (prems, concl) = apsnd HOLogic.dest_Trueprop (Logic.strip_horn prem);
@@ -285,17 +291,17 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                         SOME x => HOLogic.mk_not (HOLogic.mk_eq (z, x))
                         | NONE => HOLogic.mk_not (HOLogic.mk_mem (z, t))
                       ) (terms @ raws);
-                  in map HOLogic.mk_Trueprop prems' end
-                else [fold_rev Logic.all lvars (replace_induct prem)]
+                  in (length prems', map HOLogic.mk_Trueprop prems') end
+                else (0, [fold_rev Logic.all lvars (replace_induct prem)])
                 end
-              ) prems;
-            in Raw_Simplifier.rewrite_term (Proof_Context.theory_of ctxt)
-              @{thms triv_forall_equality} []
-              (fold_rev Logic.all (bvars' @ map Free arb) (
+              ) prems));
+            in (
+              fold (curry (op+)) nbound_prems 0,
+              fold_rev Logic.all (bvars' @ map Free arb) (
                 fold_rev (curry Logic.mk_implies) (prems' @ eq_prems) (Term.subst_atomic subst_ind goal)
               )
             ) end
-          ) cases_prems;
+          ) cases_prems);
 
           val bound_prems = flat (map2 (fn (_, raws) => fn var => map (fn raw =>
             let val prem = HOLogic.mk_Trueprop (
@@ -476,7 +482,15 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           );
           val names' = map (fn s => String.substring (s, 0, String.size s - 2)) names;
           val new_cases = map (fn s => ((s, []), [])) names'
-        in (((take (nmajor - more_consumes) cases @ new_cases @ drop (nmajor - more_consumes + nvars) cases, concls), (more_consumes, more_facts)), rule_thm) end
+          val case_names = @{map 3} (fn ((cn, _), concls) => fn n => fn case_ =>
+            let
+              val (hyps, _) = Logic.strip_horn (snd (strip_pure_all case_));
+              val hyps = if n > 0 then tl hyps else hyps;
+              val names = map (fn t => if Term.exists_subterm (member (op=) (map Var P_vars)) t then
+                "IH" else Rule_Cases.case_hypsN) hyps;
+            in ((cn, replicate n "fresh" @ names), concls) end
+          ) (drop (nmajor - more_consumes + nvars) cases) nbound_prems cases_prems;
+        in (((take (nmajor - more_consumes) cases @ new_cases @ case_names, concls), (more_consumes, more_facts)), rule_thm) end
       )
     |> Seq.maps (fn (((cases, concls), (more_consumes, more_facts)), rule) =>
         Induct.atomize_tac defs_ctxt i st

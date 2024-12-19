@@ -54,9 +54,9 @@ next
 next
   case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
   have 1: "\<turnstile> \<Gamma>, x <: T\<^sub>1, \<Delta> ok"
-    by (meson wf_insert SA_All.hyps(1,5,6,10) UnCI well_scoped(1))
+    by (meson wf_insert SA_All.fresh(1,5) SA_All.hyps(1,3) UnCI well_scoped(1))
   have 2: "\<turnstile> \<Gamma> , \<Delta> , x <: T\<^sub>1 ok"
-    by (metis SA_All.hyps(1,5,7,10) UnE image_Un set_append well_scoped(1) wf_Cons)
+    by (metis SA_All.fresh(1,5) SA_All.IH(1) SA_All.hyps(3) UnE image_Un set_append well_scoped(1) wf_Cons)
   show ?case using ty_permute[OF _ 2] 1 SA_All by auto
 qed auto
 

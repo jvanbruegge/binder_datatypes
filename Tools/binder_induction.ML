@@ -330,22 +330,29 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
           val rho = Free ("\<rho>", fastype_of avoiding_dynamic);
           val inst_rule = infer_instantiate ctxt (map fst P_vars ~~
-            @{map 4} (fn goal => fn inst => fn arb => fn defs => Thm.cterm_of ctxt (
-              fold_rev Term.absfree (map dest_Free inst) (Term.absfree (dest_Free rho) (
-                fold_rev mk_all arb (Induct.atomize_term ctxt (
-                  Logic.mk_implies (HOLogic.mk_Trueprop (mk_induct_equal (
-                    avoiding_dynamic, rho
-                  )), fold_rev (curry Logic.mk_implies) (map Thm.prop_of defs) goal)
+            @{map 4} (fn goal => fn inst => fn arb => fn defs =>
+              let
+                val goal' = fold_rev (curry Logic.mk_implies) (map Thm.prop_of defs) goal;
+                val rho = Free (hd (Term.rename_wrt_term goal' [dest_Free rho]))
+              in Thm.cterm_of ctxt (
+                fold_rev Term.absfree (map dest_Free inst) (Term.absfree (dest_Free rho) (
+                  fold_rev mk_all arb (Induct.atomize_term ctxt (
+                    Logic.mk_implies (HOLogic.mk_Trueprop (mk_induct_equal (
+                      avoiding_dynamic, rho
+                    )), goal')
+                  ))
                 ))
-              ))
-            )) goals'' finsts' arbitrary defs
+              ) end
+            ) goals'' finsts' arbitrary defs
           ) rule;
 
           val inst_concl = Thm.concl_of inst_rule;
           val inst_concls = Logic.dest_conjunction_list inst_concl;
           fun dest_induct_imp (Const (@{const_name HOL.induct_implies}, _) $ t1 $ t2) = (t2, t1)
 
-          fun to_pure_all (Const ("HOL.All", _) $ Abs (a, b, t)) = to_pure_all (subst_bound (Free (a, b), t))
+          fun to_pure_all (Const ("HOL.All", _) $ Abs (a, b, t)) =
+            let val x = Free (hd (Term.rename_wrt_term t [(a, b)]))
+            in to_pure_all (subst_bound (x, t)) end
             | to_pure_all t = dest_induct_imp t
           val (inst_concls', rho_imps) = split_list (map (to_pure_all o HOLogic.dest_Trueprop) inst_concls);
           val (def_conclss, inst_concls') = split_list (map2 (fn defs =>

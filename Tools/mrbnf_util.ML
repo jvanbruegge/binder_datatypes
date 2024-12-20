@@ -10,6 +10,9 @@ sig
   val cond_automap: ('a -> 'a) -> 'a list -> bool list -> 'a list
   val short_type_name: string -> string
   val swap: 'a * 'b -> 'b * 'a
+  val partition: ('a -> bool) -> 'a list -> 'a list * 'a list
+
+  val subst_typ_morphism: (typ * typ) list -> morphism
 
   val mk_supp: term -> term
   val mk_supp_bound: term -> term
@@ -31,6 +34,10 @@ sig
   val mk_all: string * typ -> term -> term;
   val mk_ex: string * typ -> term -> term;
   val mk_insert: term -> term -> term;
+
+  val dest_ordLess: term -> term * term;
+  val dest_ordLeq: term -> term * term;
+  val dest_card_of: term -> term;
 
   val strip_ex: term -> (string * typ) list * term
 
@@ -80,6 +87,8 @@ fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T))
   | strip_ex t = ([], t)
 
 fun swap (a, b) = (b, a)
+fun partition _ [] = ([], [])
+  | partition f (x::xs) = (if f x then apfst else apsnd) (cons x) (partition f xs)
 
 val mk_minus = HOLogic.mk_binop @{const_name minus};
 fun mk_all (x, T) t = HOLogic.mk_all (x, T, t);
@@ -87,6 +96,25 @@ fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
 
 fun mk_insert x S =
   Const (@{const_name Set.insert}, fastype_of x --> fastype_of S --> fastype_of S) $ x $ S;
+
+fun subst_typ_morphism subst = Morphism.morphism "subst_typ" {
+  binding = [], fact = [],
+  term = [K (Term.subst_atomic_types subst)],
+  typ = [K (Term.typ_subst_atomic subst)]
+};
+
+fun dest_ordLess t =
+  let val t' = case HOLogic.dest_mem t of
+    (t', Const (@{const_name ordLess}, _)) => t'
+    | _ => raise TERM ("dest_ordLess", [t])
+  in HOLogic.dest_prod t' end
+fun dest_ordLeq t =
+  let val t' = case HOLogic.dest_mem t of
+    (t', Const (@{const_name ordLeq}, _)) => t'
+    | _ => raise TERM ("dest_ordLeq", [t])
+  in HOLogic.dest_prod t' end
+fun dest_card_of (Const (@{const_name card_of}, _) $ t) = t
+  | dest_card_of t = raise TERM ("dest_card_of", [t])
 
 fun mk_def_t_syn syn public b qualify name n rhs lthy =
   let
@@ -332,6 +360,7 @@ val parameter = Parse.position Parse.nat >> (fn (n, pos) =>
 
 fun indices n = map string_of_int (1 upto n);
 fun cons n = implode (map (fn a => " (x" ^ a ^ " :: xs" ^ a ^ ")") (indices n));
+fun some n = implode (map (fn a => " (SOME x" ^ a ^ ")") (indices n));
 fun vars x n = implode (map (fn a => " " ^ x ^ a) (indices n));
 
 in
@@ -345,6 +374,16 @@ val _ = Theory.setup
       \      | map_filter f" ^ cons n ^ " = let val ys = map_filter f" ^ vars "xs" n ^ " in the_default ys (Option.map (fn y => y::ys) (f" ^ vars "x" n ^ ")) end\n\
       \      | map_filter _" ^ replicate_string n " _" ^ " = raise ListPair.UnequalLengths\n" ^
       "  in map_filter f end")))
+
+val _ = Theory.setup
+ (ML_Antiquotation.value \<^binding>\<open>map_option\<close>
+    (Scan.lift parameter >> (fn n =>
+      "fn f =>\n\
+      \  let\n\
+      \    fun map_option _" ^ replicate_string n " NONE" ^ " = NONE\n\
+      \      | map_option f" ^ some n ^ " = SOME (f" ^ vars "x" n ^ ")\n\
+      \      | map_option _" ^ replicate_string n " _" ^ " = raise ListPair.UnequalLengths\n" ^
+      "  in map_option f end")))
 end;
 
 end;

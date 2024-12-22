@@ -376,9 +376,9 @@ proof -
           using SA_All.hyps(7) well_scoped(1) apply fastforce
              apply (simp add: SA_All 1)
           using SA_All.hyps(7) well_scoped(2) apply fastforce
-            using SA_All by (auto simp: 1)
-          then show ?case using SA_All by auto
-        next
+          using SA_All by (auto simp: 1)
+        then show ?case using SA_All by auto
+      next
         case (SA_Rec X Y \<Delta>')
         then show ?case
           by (smt (verit) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))

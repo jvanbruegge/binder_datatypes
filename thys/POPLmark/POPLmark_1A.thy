@@ -23,7 +23,7 @@ next
   then show ?case by (meson SA_All ty.SA_All well_scoped(1) wf_Cons)
 next
   case (SA_Rec \<Gamma>' X Y \<Delta>)
-  then show ?case sorry
+  then show ?case by force
 qed auto
 
 lemma wf_concat: "\<lbrakk> \<turnstile> \<Delta> ok ; \<turnstile> \<Gamma> ok ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> ok"
@@ -66,7 +66,7 @@ next
   show ?case using ty_permute[OF _ 2] 1 SA_All by auto
 next
   case (SA_Rec \<Gamma>' X Y)
-  then show ?case sorry
+  then show ?case by force
 qed auto
 
 corollary ty_weakening_extend: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; X \<notin> dom \<Gamma> ; Q closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<^bold>,X<:Q \<turnstile> S <: T"
@@ -211,8 +211,9 @@ proof -
           by (smt (verit, del_insts) "1" SA_All.hyps(6-8) append_Cons fst_conv image_Un image_insert list.simps(15) set_append well_scoped(1) well_scoped(2))
         then show ?case using SA_All by auto
       next
-        case (SA_Rec X Ya \<Delta>')
-        then show ?case sorry
+        case (SA_Rec X Y \<Delta>')
+        then show ?case
+          by (smt (verit, del_insts) SA_RecER ty.SA_Rec ty_refl typ.distinct(4) well_scoped(2))
       qed (rule context_set_bd_UNIV | blast)+
     }
   next
@@ -250,8 +251,9 @@ proof -
           by (smt (verit, del_insts) "1" SA_All.hyps(6-8) append_Cons fst_conv image_Un image_insert list.simps(15) set_append well_scoped(1) well_scoped(2))
         then show ?case using SA_All by auto
       next
-        case (SA_Rec X Ya \<Delta>')
-        then show ?case sorry
+        case (SA_Rec X Y \<Delta>')
+        then show ?case
+          by (smt (verit) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))
       qed (rule context_set_bd_UNIV | blast)+
     }
   next
@@ -306,8 +308,9 @@ proof -
           by (smt (verit, del_insts) "1" SA_All.hyps(6-8) append_Cons fst_conv image_Un image_insert list.simps(15) set_append well_scoped(1) well_scoped(2))
         then show ?case using SA_All by auto
       next
-        case (SA_Rec X Ya \<Delta>')
-        then show ?case sorry
+        case (SA_Rec X Y \<Delta>')
+        then show ?case
+          by (smt (verit, ccfv_threshold) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))
       qed (rule context_set_bd_UNIV | blast)+
     }
   next
@@ -376,17 +379,59 @@ proof -
             using SA_All by (auto simp: 1)
           then show ?case using SA_All by auto
       next
-        case (SA_Rec X Ya \<Delta>')
-        then show ?case sorry
+        case (SA_Rec X Y \<Delta>')
+        then show ?case
+          by (smt (verit) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))
       qed (rule context_set_bd_UNIV | blast)+
     }
   next
-    case (Rec x \<Gamma> \<Delta> S T M N X R) {
+    case (Rec Y \<Gamma> \<Delta> S T M N X R)
+    {
+      fix \<Gamma> S T assume "\<Gamma> \<turnstile> S <: Rec Y" "\<Gamma> \<turnstile> Rec Y <: T"
+      then have "\<Gamma> \<turnstile> S <: T"
+        apply (induct \<Gamma> S "Rec Y")
+             apply (auto elim!: SA_RecEL[of _ Y T])
+         apply (meson SA_Rec SA_Top well_scoped(1))
+        apply (meson Rec.IH SA_Rec lfin_values subset_trans)
+        done
+    } note * = this
+    {
       case 1
-      then show ?case sorry
+      then show ?case by (rule *)
     next
       case 2
-      then show ?case sorry
+      then show ?case
+      proof (induction "(\<Gamma> \<^bold>, X <: Rec Y)\<^bold>, \<Delta>" M N arbitrary: \<Delta> rule: ty.induct)
+        case (SA_Trans_TVar XX U T)
+        show ?case
+        proof (cases "X = XX")
+          case True
+          then have "\<Gamma> \<^bold>, X <: R \<^bold>, \<Delta> \<turnstile> U <: T" using SA_Trans_TVar well_scoped(1)[where \<Gamma> = "\<Gamma> \<^bold>, X <: Rec Y \<^bold>, \<Delta>"]
+            by auto
+          moreover have "\<Gamma> \<^bold>, X <: R \<^bold>, \<Delta> \<turnstile> R <: U" using True SA_Trans_TVar
+            by (metis context_determ ty_weakening ty_weakening_extend wf_ConsE wf_concatD wf_context)
+          ultimately have "\<Gamma> \<^bold>, X <: R \<^bold>, \<Delta> \<turnstile> R <: T"
+            using 2(2) *[of "\<Gamma> \<^bold>, X <: R \<^bold>, \<Delta>" R T] True
+            using SA_Trans_TVar.hyps(1,2) context_determ wf_context by blast
+          then show ?thesis
+            using True by auto
+        next
+          case False
+          then show ?thesis
+            using SA_Trans_TVar well_scoped(1)[where \<Gamma> = "\<Gamma> \<^bold>, X <: Rec Y \<^bold>, \<Delta>"] by auto
+        qed
+      next
+        case (SA_Arrow T\<^sub>1 S\<^sub>1 S\<^sub>2 T\<^sub>2)
+        then show ?case by force
+      next
+        case (SA_All T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
+        then show ?case
+          by clarsimp (smt (verit, del_insts) Diff_single_insert append_Cons insert_commute narrow_wf ty.SA_All well_scoped(1) wf_context)
+      next
+        case (SA_Rec X Y)
+        then show ?case
+          by (smt (verit, ccfv_threshold) SA_RecER ty.SA_Rec ty_refl typ.distinct(17) well_scoped(2))
+      qed blast+
     }
   qed simp_all
 

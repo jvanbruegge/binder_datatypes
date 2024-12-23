@@ -1792,16 +1792,18 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
       resolve_tac ctxt permute_id0s
     ]))) permutes;
 
-    fun mk_bd_thms f_bd raw_thms = map2 (fn z => map_index (fn (i, FVars) => Goal.prove_sorry lthy (names [z]) [] (HOLogic.mk_Trueprop (
-      mk_ordLess (mk_card_of (fst FVars $ z)) (f_bd i)
+    fun mk_bd_thms bd raw_thms = map2 (fn z => map (fn FVars => Goal.prove_sorry lthy (names [z]) [] (HOLogic.mk_Trueprop (
+      mk_ordLess (mk_card_of (fst FVars $ z)) bd
     )) (fn {context=ctxt, ...} =>
       Local_Defs.unfold0_tac ctxt [snd FVars] THEN HEADGOAL (resolve_tac ctxt raw_thms)
     ))) zs FVarsss;
 
-    val FVars_bds = mk_bd_thms (K (MRBNF_Def.bd_of_mrbnf (hd mrbnfs))) (flat FVars_raw_bds);
-    val FVars_bd_UNIVs = mk_bd_thms (fn i =>
-      mk_card_of (HOLogic.mk_UNIV (fst (Term.dest_funT (fastype_of (nth fs i)))))
-    ) (flat FVars_raw_bd_UNIVs);
+    val (UNIV_T, _) = lthy
+      |> fold Variable.declare_typ (map (body_type o fastype_of) fs)
+      |> apfst hd o mk_TFrees' [Type.sort_of_atyp (body_type (fastype_of (hd fs)))];
+
+    val FVars_bds = mk_bd_thms (MRBNF_Def.bd_of_mrbnf (hd mrbnfs)) (flat FVars_raw_bds);
+    val FVars_bd_UNIVs = mk_bd_thms (mk_card_of (HOLogic.mk_UNIV UNIV_T)) (flat FVars_raw_bd_UNIVs);
 
     val FVars_permutess = @{map 5} (fn z => fn permute => @{map 4} (fn f => fn FVars => fn alpha_FVars => fn FVars_permute_raw =>
       Goal.prove_sorry lthy (names (fs @ [z])) f_prems (mk_Trueprop_eq (

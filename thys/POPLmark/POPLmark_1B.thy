@@ -1,4 +1,4 @@
-theory POPLmark_1A
+theory POPLmark_1B
 imports SystemFSub
 begin
 

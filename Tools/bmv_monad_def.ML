@@ -55,6 +55,13 @@ signature BMV_MONAD_DEF = sig
   val Maps_of_bmv_monad: bmv_monad -> term option list;
   val Supps_of_bmv_monad: bmv_monad -> term list option list;
   val Vrs_of_bmv_monad: bmv_monad -> term option list list list;
+  val axioms_of_bmv_monad: bmv_monad -> thm bmv_monad_axioms list;
+  val params_of_bmv_monad: bmv_monad -> {
+    Map: term,
+    Supps: term list,
+    axioms: thm supported_functor_axioms,
+    Map_Sb: thm
+  } option list;
 
   val morph_bmv_monad: morphism -> bmv_monad -> bmv_monad;
 
@@ -168,6 +175,8 @@ val Sbs_of_bmv_monad = #Sbs o Rep_bmv
 val Maps_of_bmv_monad = map (Option.map #Map) o #params o Rep_bmv
 val Supps_of_bmv_monad = map (Option.map #Supps) o #params o Rep_bmv
 val Vrs_of_bmv_monad = #Vrs o Rep_bmv
+val axioms_of_bmv_monad = #axioms o Rep_bmv
+val params_of_bmv_monad = #params o Rep_bmv
 
 type supported_functor_model = {
   Map: term,
@@ -424,7 +433,7 @@ fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lth
       frees = #frees model,
       lives = #lives model,
       lives' = #lives' model,
-      params = params,
+      params = params @ maps (#params o Rep_bmv) (#bmv_ops model),
       Injs = #Injs model @ maps (#Injs o Rep_bmv) (#bmv_ops model),
       Sbs = #Sbs model @ maps (#Sbs o Rep_bmv) (#bmv_ops model),
       Vrs = #Vrs model @ maps (#Vrs o Rep_bmv) (#bmv_ops model),
@@ -437,16 +446,166 @@ fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lth
 - does not appear in the codomain of any (=of any **other** SOp) Injection,
 *)
 
-fun compose_bmv_monad qualify outer inners lthy =
+fun compose_bmv_monad qualify (outer : bmv_monad) (inners : bmv_monad list) lthy =
   let
     val _ = if length (lives_of_bmv_monad outer) <> length inners then
       error "Outer needs exactly as many lives as there are inners" else ()
 
-    val ops' = map (Term.typ_subst_atomic (lives_of_bmv_monad outer ~~ map (fn bmv =>
-      nth (ops_of_bmv_monad bmv) (leader_of_bmv_monad bmv)
-    ) inners)) (ops_of_bmv_monad outer);
+    val bmvs = Typtab.make_distinct (flat (map (fn bmv => (#ops bmv ~~
+      ((#params bmv) ~~ (#Injs bmv) ~~ (#Sbs bmv) ~~ (#Vrs bmv) ~~ map SOME (#axioms bmv) ~~ replicate (length (#Sbs bmv)) (SOME bmv))
+    )) (map Rep_bmv inners)));
 
-    val _ = @{print} ops'
+    val outer_ops' = map (fn T => if Typtab.defined bmvs T then NONE else SOME T) (
+      map (Term.typ_subst_atomic (lives_of_bmv_monad outer ~~ map (fn bmv =>
+        nth (ops_of_bmv_monad bmv) (leader_of_bmv_monad bmv)
+      ) inners)) (ops_of_bmv_monad outer)
+    );
+
+    val ((Sbs, Injs), Vrs) = apfst split_list (split_list (@{map 5} (fn NONE => K (K (K (K ((NONE, NONE), NONE)))) | SOME T => (fn NONE => K (K (K ((NONE, NONE), NONE)))
+      | SOME param => fn Sb => fn Injs => fn Vrs =>
+      let
+        val ((Sbs, Ts), (Injss, Vrsss)) = apfst split_list (apsnd split_list (split_list (map (fn bmv =>
+          let fun pick xs = nth xs (leader_of_bmv_monad bmv)
+          in (
+            (pick (Sbs_of_bmv_monad bmv), pick (ops_of_bmv_monad bmv)),
+            (pick (Injs_of_bmv_monad bmv), pick (Vrs_of_bmv_monad bmv))
+          ) end
+        ) inners)));
+        val subst = (lives_of_bmv_monad outer @ lives'_of_bmv_monad outer) ~~ (Ts @ Ts);
+        val Injs' = distinct ((op=) o apply2 fastype_of) (Injs @ flat Injss);
+        val ((fs, x), _) = lthy
+          |> mk_Frees "f" (map fastype_of Injs')
+          ||>> apfst hd o mk_Frees "x" [T];
+
+        val Vrs' = @{fold 4} (fn i => fn inner => @{fold 2} (fn Inj => fn Vrs => fn tab =>
+          case Typtab.lookup tab (fastype_of Inj) of
+            NONE => tab
+            | SOME inner_tab =>
+              let val inner_tab' = @{fold 2} (fn NONE => K I | SOME Vrs => fn free =>
+                Typtab.map_default (free, [(i, Vrs)]) (cons (i, Vrs))
+              ) Vrs (frees_of_bmv_monad inner) inner_tab;
+              in Typtab.update (fastype_of Inj, inner_tab') tab end
+        )) (0 upto length inners) (outer :: inners) (Injs :: Injss) (Vrs :: Vrsss) (Typtab.make (map (rpair Typtab.empty o fastype_of) Injs'));
+
+        val frees = distinct (op=) (maps snd (Typtab.dest (Typtab.map (K Typtab.keys) Vrs')));
+
+        val Supps = map (Term.subst_atomic_types subst) (#Supps param)
+        val Vrs' = map (fn Inj => map (fn free => Option.mapPartial (fn xs =>
+          let
+            val Vrss = distinct (op=) (rev xs);
+            val Vrs' = the_default [] (Option.map (fn s =>
+              [Term.subst_atomic_types subst (s $ x)]
+            ) (AList.lookup (op=) Vrss 0))
+              @ @{map_filter 2} (fn i => fn Supp => Option.map (fn t =>
+                mk_UNION (Supp $ x) t
+              ) (AList.lookup (op=) Vrss i)) (1 upto length Supps) Supps;
+
+          in case Vrs' of
+            [] => NONE
+            | _ => SOME (Term.absfree (dest_Free x) (foldl1 mk_Un Vrs'))
+          end
+        ) (Typtab.lookup (the (Typtab.lookup Vrs' (fastype_of Inj))) free)) frees) Injs';
+
+        val find_fs = map (fn Inj =>
+          the (List.find (fn f => fastype_of f = fastype_of Inj) fs)
+        );
+      in ((
+        SOME (Term.subst_atomic_types subst (
+          fold_rev (Term.absfree o dest_Free) fs (HOLogic.mk_comp (
+            Term.list_comb (#Map param,
+              map2 (fn Sb => fn Injs => Term.list_comb (Sb, find_fs Injs)) Sbs Injss
+            ), Term.list_comb (Sb, find_fs Injs)
+          ))
+        )),
+        SOME Injs'),
+        SOME Vrs'
+      ) end
+    )) outer_ops' (#params (Rep_bmv outer)) (Sbs_of_bmv_monad outer) (Injs_of_bmv_monad outer) (Vrs_of_bmv_monad outer)));
+
+    fun drop_lead xs = map_filter I (nth_drop (leader_of_bmv_monad outer) xs);
+
+    val bmvs = @{fold 3} (fn T => fn Sb => fn Injs => Typtab.map_default (T,
+      (((((NONE, Injs), Sb), []), NONE), NONE)
+    ) I) (drop_lead outer_ops') (drop_lead Sbs) (drop_lead Injs) bmvs;
+
+    fun add_ops T Injs bmvs = T :: flat (map_filter I (fst (fold_map (fn Inj => fn bmvs =>
+      let val T = body_type (fastype_of Inj);
+      in case Typtab.lookup bmvs T of
+        NONE => (NONE, bmvs)
+        | SOME (((((_, Injs), _), _), _), _) =>
+          let val bmvs' = Typtab.delete T bmvs
+          in (SOME (add_ops T Injs bmvs'), bmvs') end
+      end
+    ) Injs bmvs)))
+
+    fun pick xs = nth xs (leader_of_bmv_monad outer)
+    val ops = add_ops (the (pick outer_ops')) (the (pick Injs)) bmvs;
+
+    val bmv_ops = map_filter (fn T => case Typtab.lookup bmvs T of
+      SOME (((((param, Injs), Sb), Vrs), SOME axioms), SOME bmv) => SOME (BMV {
+        ops = [T],
+        bd = #bd bmv,
+        var_class = #var_class bmv,
+        leader = 0,
+        frees = #frees bmv,
+        lives = #lives bmv,
+        lives' = #lives' bmv,
+        params = [param],
+        Injs = [Injs],
+        Sbs = [Sb],
+        Vrs = [Vrs],
+        axioms = [axioms]
+      }) | _ => NONE
+    ) ops;
+
+    val ops' = subtract (fn (bmv, T) => hd (ops_of_bmv_monad bmv) = T) bmv_ops ops;
+
+    val idxs = map (fn T => find_index (curry (op=) T) ops) ops';
+    val Vrs = map (the o nth Vrs) idxs;
+    val frees = distinct (op=) (maps frees_of_bmv_monad (outer :: inners));
+
+    val model = {
+      ops = ops',
+      bmv_ops = bmv_ops,
+      bd = bd_of_bmv_monad outer, (* TODO: compose bounds *)
+      var_class = var_class_of_bmv_monad outer,
+      frees = frees,
+      lives = distinct (op=) (maps lives_of_bmv_monad inners),
+      lives' = distinct (op=) (maps lives'_of_bmv_monad inners),
+      params = replicate (length ops') NONE,
+      leader = 0,
+      Injs = map (the o nth Injs) idxs,
+      Sbs = map (the o nth Sbs) idxs,
+      Vrs = Vrs,
+      tacs = map2 (fn axioms => fn param => {
+        Sb_Inj = fn ctxt => EVERY [
+          Local_Defs.unfold0_tac ctxt (#Sb_Inj axioms :: @{thms o_id}),
+          Local_Defs.unfold0_tac ctxt (
+            #Map_id (#axioms param)
+            :: maps (map #Sb_Inj o axioms_of_bmv_monad) inners
+          ),
+          rtac ctxt refl 1
+        ],
+        Sb_comp_Injs = map (fn thm => fn ctxt =>
+          print_tac ctxt "Sb_comp_Inj"
+        ) (#Sb_comp_Injs axioms),
+        Sb_comp = fn ctxt => print_tac ctxt "Sb_comp",
+        Vrs_bds = map (map (fn Vrs => SOME (fn ctxt =>
+          print_tac ctxt "Vrs_bds"
+        ))) Vrs,
+        Vrs_Injs = map (map (Option.map (fn thm => fn ctxt =>
+          print_tac ctxt "Vrs_Injs"
+        ))) (#Vrs_Injs axioms),
+        Vrs_Sbs = map (map (fn Vrs => SOME (fn ctxt =>
+          print_tac ctxt "Vrs_Sbs"
+        ))) Vrs,
+        Sb_cong = fn ctxt => print_tac ctxt "Sb_cong"
+      } : (Proof.context -> tactic) bmv_monad_axioms)
+      (map (nth (axioms_of_bmv_monad outer)) idxs)
+      (map (the o nth (params_of_bmv_monad outer)) idxs)
+    } : bmv_monad_model;
+
+    val (bmv, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model lthy
   in error "unfinished" end;
 
 end

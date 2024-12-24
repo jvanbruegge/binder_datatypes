@@ -304,29 +304,31 @@ val model_L = {
   params = [SOME {
     model = {
       Map = @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"},
+      (*Map = @{term "Map_L :: ('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" },*)
       Supps = [
         @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setl p"},
         @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setr p"}
       ],
       tacs = {
         Map_id = fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms sum.map_id0 id_apply}),
+          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def sum.map_id0 id_apply}),
           resolve_tac ctxt [ext],
           K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta prod.collapse}),
           resolve_tac ctxt @{thms id_apply[symmetric]}
         ],
         Map_comp = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def}),
           resolve_tac ctxt [ext],
           resolve_tac ctxt @{thms trans[OF comp_apply]},
           K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv sum.map_comp}),
           resolve_tac ctxt [refl]
         ],
         Supp_Map = replicate 2 (fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
+          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
           resolve_tac ctxt [refl]
         ]),
         Map_cong = fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv}),
+          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def case_prod_beta fst_conv snd_conv}),
           K (Local_Defs.unfold0_tac ctxt @{thms prod.inject}),
           REPEAT_DETERM o resolve_tac ctxt @{thms conjI[OF refl]},
           resolve_tac ctxt @{thms sum.map_cong0},
@@ -335,6 +337,7 @@ val model_L = {
       }
     },
     Map_Sb = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def}),
       resolve_tac ctxt [ext],
       K (Local_Defs.unfold0_tac ctxt @{thms comp_def Sb_L_def case_prod_map_prod}),
       K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta id_apply map_prod_simp}),

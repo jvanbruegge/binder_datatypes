@@ -1799,7 +1799,7 @@ fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
     ))) zs FVarsss;
 
     val (UNIV_T, _) = lthy
-      |> fold Variable.declare_typ (map (body_type o fastype_of) fs)
+      |> fold Variable.declare_typ (map (body_type o fastype_of) fs @ passives)
       |> apfst hd o mk_TFrees' [Type.sort_of_atyp (body_type (fastype_of (hd fs)))];
 
     val FVars_bds = mk_bd_thms (MRBNF_Def.bd_of_mrbnf (hd mrbnfs)) (flat FVars_raw_bds);

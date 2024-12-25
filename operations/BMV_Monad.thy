@@ -110,6 +110,7 @@ val model_FType = {
   Injs = [[@{term "TyVar :: 'a::var \<Rightarrow> _"}]],
   Sbs = [@{term "tvsubst_FType :: _ => 'a::var FType => _"}],
   Vrs = [[[SOME @{term "FVars_FType :: _ => 'a::var set"}]]],
+  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
     Sb_Inj = fn ctxt => resolve_tac ctxt @{thms Sb_Inj_FType} 1,
     Sb_comp_Injs = [fn ctxt => EVERY1 [
@@ -167,6 +168,10 @@ definition Vrs_L_2 :: "('a1, 'a2, 'c1, 'c2) L \<Rightarrow> 'a2 set" where
   "Vrs_L_2 \<equiv> \<lambda>x. {}" (* corresponds to nothing *)
 definition Map_L :: "('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" where
   "Map_L \<equiv> \<lambda>f1 f2 (a1, a2, p). (a1, a2, map_sum f1 f2 p)"
+definition Supp_L_1 :: "('a1, 'a2, 'c1, 'c2) L \<Rightarrow> 'c1 set" where
+  "Supp_L_1 \<equiv> \<lambda>(a1, a1', p). Basic_BNFs.setl p"
+definition Supp_L_2 :: "('a1, 'a2, 'c1, 'c2) L \<Rightarrow> 'c2 set" where
+  "Supp_L_2 \<equiv> \<lambda>(a1, a1', p). Basic_BNFs.setr p"
 
 (* and its minion *)
 definition Inj_L_M1_1 :: "'a1 \<Rightarrow> 'a1" where "Inj_L_M1_1 \<equiv> id"
@@ -252,6 +257,7 @@ val model_ID = {
   Injs = [[@{term "id :: 'a \<Rightarrow> _"}]],
   Sbs = [@{term "id :: _ => 'a => 'a"}],
   Vrs = [[[SOME @{term "\<lambda>(x::'a). {x}"}]]],
+  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
     Sb_Inj = fn ctxt => resolve_tac ctxt @{thms id_apply} 1,
     Sb_comp_Injs = [fn ctxt => EVERY1 [
@@ -303,11 +309,15 @@ val model_L = {
   )) id_bmv],
   params = [SOME {
     model = {
-      Map = @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"},
-      (*Map = @{term "Map_L :: ('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" },*)
-      Supps = [
+      (*Map = @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"},*)
+      Map = @{term "Map_L :: ('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" },
+      (*Supps = [
         @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setl p"},
         @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setr p"}
+      ],*)
+      Supps = [
+        @{term "Supp_L_1 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"},
+        @{term "Supp_L_2 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"}
       ],
       tacs = {
         Map_id = fn ctxt => EVERY1 [
@@ -324,11 +334,15 @@ val model_L = {
           resolve_tac ctxt [refl]
         ],
         Supp_Map = replicate 2 (fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
+          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def Supp_L_1_def Supp_L_2_def case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
           resolve_tac ctxt [refl]
         ]),
+        Supp_bd = replicate 2 (fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Supp_L_1_def Supp_L_2_def}),
+          resolve_tac ctxt @{thms sum.set_bd}
+        ]),
         Map_cong = fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def case_prod_beta fst_conv snd_conv}),
+          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def Supp_L_1_def Supp_L_2_def case_prod_beta fst_conv snd_conv}),
           K (Local_Defs.unfold0_tac ctxt @{thms prod.inject}),
           REPEAT_DETERM o resolve_tac ctxt @{thms conjI[OF refl]},
           resolve_tac ctxt @{thms sum.map_cong0},
@@ -342,13 +356,25 @@ val model_L = {
       K (Local_Defs.unfold0_tac ctxt @{thms comp_def Sb_L_def case_prod_map_prod}),
       K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta id_apply map_prod_simp}),
       resolve_tac ctxt [refl]
-    ]
+    ],
+    Supp_Sb = replicate 2 (fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms case_prod_map_prod id_apply Sb_L_def Supp_L_1_def Supp_L_2_def}),
+      resolve_tac ctxt [refl]
+    ]),
+    Map_Vrs = [[SOME (fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def Map_L_def case_prod_beta fst_conv snd_conv}),
+      resolve_tac ctxt [refl]
+    ])]]
   }],
   Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}]],
   Sbs = [@{term "Sb_L :: _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L"}],
-  Vrs = [[[
+  (*Vrs = [[[
     SOME @{term "\<lambda>(x1::'a1, x2::'a1, p::'c1 + 'c2). {x1, x2}"}
+  ]]],*)
+  Vrs = [[[
+    SOME @{term "Vrs_L_1 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"}
   ]]],
+  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
     Sb_Inj = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Sb_L_def prod.map_id0}),
@@ -363,21 +389,21 @@ val model_L = {
       resolve_tac ctxt [refl]
     ],
     Vrs_bds = [[SOME (fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta}),
+      K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def case_prod_beta}),
       resolve_tac ctxt @{thms insert_bound},
       resolve_tac ctxt @{thms natLeq_Cinfinite},
       resolve_tac ctxt @{thms ID.set_bd}
     ])]],
     Vrs_Injs = [],
     Vrs_Sbs = [[SOME (fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L_def case_prod_beta
+      K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def Sb_L_def case_prod_beta
         Product_Type.fst_map_prod Product_Type.snd_map_prod
         UN_insert UN_empty Un_empty_right insert_is_Un[symmetric]
       }),
       resolve_tac ctxt [refl]
     ])]],
     Sb_cong = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L_def case_prod_beta}),
+      K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def Sb_L_def case_prod_beta}),
       resolve_tac ctxt @{thms prod.map_cong0},
       dresolve_tac ctxt @{thms meta_spec},
       dresolve_tac ctxt @{thms meta_mp},
@@ -425,10 +451,15 @@ val model_L1 = {
   params = [NONE],
   Injs = [[@{term "id :: 'a1 \<Rightarrow> 'a1"}, @{term "id :: 'a2 \<Rightarrow> 'a2"}]],
   Sbs = [@{term "Sb_L1 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2) L1"}],
-  Vrs = [[
+  (*Vrs = [[
     [SOME @{term "\<lambda>(x::'a1, x2::'a2). {x}"}, NONE],
     [NONE, SOME @{term "\<lambda>(x::'a1, x2::'a2). {x2}"}]
+  ]],*)
+  Vrs = [[
+    [SOME @{term "Vrs_L1_1 :: ('a1, 'a2) L1 \<Rightarrow> _"}, NONE],
+    [NONE, SOME @{term "Vrs_L1_2 :: ('a1, 'a2) L1 \<Rightarrow> _"}]
   ]],
+  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
     Sb_Inj = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Sb_L1_def prod.map_id0}),
@@ -443,24 +474,24 @@ val model_L1 = {
       resolve_tac ctxt [refl]
     ],
     Vrs_bds = [
-      [SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1), NONE],
-      [NONE, SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1)]
+      [SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1), NONE],
+      [NONE, SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_2_def case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1)]
     ],
     Vrs_Injs = [],
     Vrs_Sbs = [
       [SOME (fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L1_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def Sb_L1_def case_prod_map_prod}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single}),
         resolve_tac ctxt [refl]
       ]), NONE],
       [NONE, SOME (fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L1_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_2_def Sb_L1_def case_prod_map_prod}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single}),
         resolve_tac ctxt [refl]
       ])]
     ],
     Sb_cong = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L1_def case_prod_beta}),
+      K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def Vrs_L1_2_def Sb_L1_def case_prod_beta}),
       resolve_tac ctxt @{thms prod.map_cong0},
       eresolve_tac ctxt @{thms Basic_BNFs.fsts.cases},
       dresolve_tac ctxt @{thms meta_spec},
@@ -514,6 +545,7 @@ val model_L2 = {
     [NONE, SOME @{term "Vrs_L2_2 :: ('a1, 'a2::var) L2 \<Rightarrow> _"}],
     [NONE, SOME @{term "Vrs_L2_3 :: ('a1, 'a2::var) L2 \<Rightarrow> _"}]
   ]],
+  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
     Sb_Inj = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Sb_Inj_FType id_apply prod.map_id0}),

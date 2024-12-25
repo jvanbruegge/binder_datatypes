@@ -5,6 +5,7 @@ signature BMV_MONAD_DEF = sig
     Map_id: 'a,
     Map_comp: 'a,
     Supp_Map: 'a list,
+    Supp_bd: 'a list,
     Map_cong: 'a
   };
 
@@ -35,16 +36,20 @@ signature BMV_MONAD_DEF = sig
     lives': typ list,
     params: {
       model: supported_functor_model,
-      Map_Sb: Proof.context -> tactic
+      Map_Sb: Proof.context -> tactic,
+      Supp_Sb: (Proof.context -> tactic) list,
+      Map_Vrs: (Proof.context -> tactic) option list list
     } option list,
     Injs: term list list,
     Sbs: term list,
     Vrs: term option list list list,
+    bd_infinite_regular_card_order: Proof.context -> tactic,
     tacs: (Proof.context -> tactic) bmv_monad_axioms list
   }
 
   val ops_of_bmv_monad: bmv_monad -> typ list;
   val bd_of_bmv_monad: bmv_monad -> term;
+  val bd_infinite_regular_card_order_of_bmv_monad: bmv_monad -> thm;
   val var_class_of_bmv_monad: bmv_monad -> class;
   val leader_of_bmv_monad: bmv_monad -> int;
   val frees_of_bmv_monad: bmv_monad -> typ list;
@@ -60,7 +65,9 @@ signature BMV_MONAD_DEF = sig
     Map: term,
     Supps: term list,
     axioms: thm supported_functor_axioms,
-    Map_Sb: thm
+    Map_Sb: thm,
+    Supp_Sb: thm list,
+    Map_Vrs: thm option list list
   } option list;
 
   val morph_bmv_monad: morphism -> bmv_monad -> bmv_monad;
@@ -101,13 +108,15 @@ type 'a supported_functor_axioms = {
   Map_id: 'a,
   Map_comp: 'a,
   Supp_Map: 'a list,
+  Supp_bd: 'a list,
   Map_cong: 'a
 };
 
-fun morph_supported_functor_axioms phi { Map_id, Map_comp, Supp_Map, Map_cong } = {
+fun morph_supported_functor_axioms phi { Map_id, Map_comp, Supp_Map, Supp_bd, Map_cong } = {
   Map_id = Morphism.thm phi Map_id,
   Map_comp = Morphism.thm phi Map_comp,
   Supp_Map = map (Morphism.thm phi) Supp_Map,
+  Supp_bd = map (Morphism.thm phi) Supp_bd,
   Map_cong = Morphism.thm phi Map_cong
 } : thm supported_functor_axioms;
 
@@ -129,23 +138,29 @@ datatype bmv_monad = BMV of {
     Map: term,
     Supps: term list,
     axioms: thm supported_functor_axioms,
-    Map_Sb: thm
+    Map_Sb: thm,
+    Supp_Sb: thm list,
+    Map_Vrs: thm option list list
   } option list,
   Injs: term list list,
   Sbs: term list,
   Vrs: term option list list list,
+  bd_infinite_regular_card_order: thm,
   axioms: thm bmv_monad_axioms list
 }
 
-fun morph_bmv_param phi { Map, Supps, axioms, Map_Sb } = {
+fun morph_bmv_param phi { Map, Supps, axioms, Map_Sb, Supp_Sb, Map_Vrs } = {
   Map = Morphism.term phi Map,
   Supps = map (Morphism.term phi) Supps,
   axioms = morph_supported_functor_axioms phi axioms,
-  Map_Sb = Morphism.thm phi Map_Sb
+  Map_Sb = Morphism.thm phi Map_Sb,
+  Supp_Sb = map (Morphism.thm phi) Supp_Sb,
+  Map_Vrs = map (map (Option.map (Morphism.thm phi))) Map_Vrs
 };
 
 fun morph_bmv_monad phi (BMV {
-  ops, bd, var_class, leader, frees, lives, lives', params, Injs, Sbs, Vrs, axioms
+  ops, bd, var_class, leader, frees, lives, lives', params, Injs, Sbs, Vrs, axioms,
+  bd_infinite_regular_card_order
 }) = BMV {
   ops = map (Morphism.typ phi) ops,
   bd = Morphism.term phi bd,
@@ -158,7 +173,8 @@ fun morph_bmv_monad phi (BMV {
   Injs = map (map (Morphism.term phi)) Injs,
   Sbs = map (Morphism.term phi) Sbs,
   Vrs = map (map (map (Option.map (Morphism.term phi)))) Vrs,
-  axioms = map (morph_bmv_axioms phi) axioms
+  axioms = map (morph_bmv_axioms phi) axioms,
+  bd_infinite_regular_card_order = Morphism.thm phi bd_infinite_regular_card_order
 }
 
 fun Rep_bmv (BMV x) = x
@@ -177,6 +193,7 @@ val Supps_of_bmv_monad = map (Option.map #Supps) o #params o Rep_bmv
 val Vrs_of_bmv_monad = #Vrs o Rep_bmv
 val axioms_of_bmv_monad = #axioms o Rep_bmv
 val params_of_bmv_monad = #params o Rep_bmv
+val bd_infinite_regular_card_order_of_bmv_monad = #bd_infinite_regular_card_order o Rep_bmv
 
 type supported_functor_model = {
   Map: term,
@@ -199,33 +216,41 @@ type bmv_monad_model = {
   lives': typ list,
   params: {
     model: supported_functor_model,
-    Map_Sb: Proof.context -> tactic
+    Map_Sb: Proof.context -> tactic,
+    Supp_Sb: (Proof.context -> tactic) list,
+    Map_Vrs: (Proof.context -> tactic) option list list
   } option list,
   bmv_ops: bmv_monad list,
   leader: int,
   Injs: term list list,
   Sbs: term list,
   Vrs: term option list list list,
+  bd_infinite_regular_card_order: Proof.context -> tactic,
   tacs: (Proof.context -> tactic) bmv_monad_axioms list
 }
 
-fun morph_bmv_monad_model phi ({ ops, bd, var_class, frees, lives, lives', params, bmv_ops, leader, Injs, Sbs, Vrs, tacs }: bmv_monad_model) = {
+fun morph_bmv_monad_model phi ({ ops, bd, var_class, frees, lives, lives', params, bmv_ops, leader,
+  Injs, Sbs, Vrs, tacs, bd_infinite_regular_card_order }: bmv_monad_model
+) = {
   ops = map (Morphism.typ phi) ops,
   bd = Morphism.term phi bd,
   var_class = var_class,
   frees = map (Morphism.typ phi) frees,
   lives = map (Morphism.typ phi) lives,
   lives' = map (Morphism.typ phi) lives',
-  params = map (Option.map (fn { model, Map_Sb } => {
+  params = map (Option.map (fn { model, Map_Sb, Supp_Sb, Map_Vrs } => {
     model = morph_supported_functor_model phi model,
-    Map_Sb = Map_Sb
+    Map_Sb = Map_Sb,
+    Supp_Sb = Supp_Sb,
+    Map_Vrs = Map_Vrs
   })) params,
   bmv_ops = map (morph_bmv_monad phi) bmv_ops,
   leader = leader,
   Injs = map (map (Morphism.term phi)) Injs,
   Sbs = map (Morphism.term phi) Sbs,
   Vrs = map (map (map (Option.map (Morphism.term phi)))) Vrs,
-  tacs = tacs
+  tacs = tacs,
+  bd_infinite_regular_card_order = bd_infinite_regular_card_order
 } : bmv_monad_model;
 
 val mk_small_prems = map2 (fn rho => fn Inj => HOLogic.mk_Trueprop (mk_ordLess
@@ -342,7 +367,7 @@ fun prove_axioms (model: bmv_monad_model) lthy =
     ) (#ops model) (#Injs model) (#Sbs model) (#Vrs model) (#tacs model);
   in axioms end;
 
-fun prove_params (model: bmv_monad_model) lthy = @{map 4} (fn T => fn Sb => fn Injs => Option.map (fn param =>
+fun prove_params (model: bmv_monad_model) lthy = @{map 5} (fn T => fn Sb => fn Injs => fn Vrs => Option.map (fn param =>
   let
     val (Cs, _) = lthy
       |> mk_TFrees (length (#lives model));
@@ -373,6 +398,10 @@ fun prove_params (model: bmv_monad_model) lthy = @{map 4} (fn T => fn Sb => fn I
       ))) (fn {context=ctxt, ...} => tac ctxt)
     ) (#Supps pmodel) fs (#Supp_Map (#tacs pmodel));
 
+    val Supp_bds = map2 (fn Supp => fn tac => Goal.prove_sorry lthy [] [] (Logic.all x (HOLogic.mk_Trueprop (
+      mk_ordLess (mk_card_of (Supp $ x)) (#bd model)
+    ))) (fn {context=ctxt, ...} => tac ctxt)) (#Supps pmodel) (#Supp_bd (#tacs pmodel));
+
     val (gs', _) = lthy
       |> mk_Frees "g" (map fastype_of fs);
     val Map_cong = Goal.prove_sorry lthy [] [] (fold_rev Logic.all (fs @ gs' @ [x]) (
@@ -395,6 +424,19 @@ fun prove_params (model: bmv_monad_model) lthy = @{map 4} (fn T => fn Sb => fn I
         ), Term.list_comb (#Map pmodel, fs))
       ))
     )) (fn {context=ctxt, ...} => #Map_Sb param ctxt);
+
+    val Map_Vrs = map2 (map2 (@{map_option 2} (fn Vrs => fn tac =>
+      Goal.prove_sorry lthy [] [] (fold_rev Logic.all (fs @ [x]) (mk_Trueprop_eq (
+        Term.subst_atomic_types (#lives model ~~ #lives' model) Vrs $ (Term.list_comb (#Map pmodel, fs) $ x),
+        Vrs $ x
+      ))) (fn {context=ctxt, ...} => tac ctxt)
+    ))) Vrs (#Map_Vrs param);
+
+    val Supp_Sb = map2 (fn Supp => fn tac =>
+      Goal.prove_sorry lthy [] [] (fold_rev Logic.all (rhos @ [x]) (mk_Trueprop_eq (
+        Supp $ (Term.list_comb (Sb, rhos) $ x), Supp $ x
+      ))) (fn {context=ctxt, ...} => tac ctxt)
+    ) (#Supps pmodel) (#Supp_Sb param);
   in {
     Map = #Map pmodel,
     Supps = #Supps pmodel,
@@ -402,11 +444,14 @@ fun prove_params (model: bmv_monad_model) lthy = @{map 4} (fn T => fn Sb => fn I
       Map_id = Map_id,
       Map_comp = Map_comp,
       Supp_Map = Supp_Maps,
+      Supp_bd = Supp_bds,
       Map_cong = Map_cong
-    },
-    Map_Sb = Map_Sb
+    } : thm supported_functor_axioms,
+    Map_Sb = Map_Sb,
+    Supp_Sb = Supp_Sb,
+    Map_Vrs = Map_Vrs
   } end
-)) (#ops model) (#Sbs model) (#Injs model) (#params model);
+)) (#ops model) (#Sbs model) (#Injs model) (#Vrs model) (#params model);
 
 fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lthy =
   let
@@ -425,6 +470,10 @@ fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lth
     val axioms = prove_axioms model lthy;
     val params = prove_params model lthy;
 
+    val bd_irco = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (
+      mk_infinite_regular_card_order (#bd model)
+    )) (fn {context=ctxt, ...} => #bd_infinite_regular_card_order model ctxt);
+
     val bmv = BMV {
       ops = #ops model @ maps (#ops o Rep_bmv) (#bmv_ops model),
       bd = #bd model,
@@ -437,7 +486,8 @@ fun bmv_monad_def inline_policy fact_policy qualify (model: bmv_monad_model) lth
       Injs = #Injs model @ maps (#Injs o Rep_bmv) (#bmv_ops model),
       Sbs = #Sbs model @ maps (#Sbs o Rep_bmv) (#bmv_ops model),
       Vrs = #Vrs model @ maps (#Vrs o Rep_bmv) (#bmv_ops model),
-      axioms = axioms @ maps (#axioms o Rep_bmv) (#bmv_ops model)
+      axioms = axioms @ maps (#axioms o Rep_bmv) (#bmv_ops model),
+      bd_infinite_regular_card_order = bd_irco
     } : bmv_monad;
   in (bmv, lthy) end
 
@@ -554,7 +604,8 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : bmv_monad list) lthy
         Injs = [Injs],
         Sbs = [Sb],
         Vrs = [Vrs],
-        axioms = [axioms]
+        axioms = [axioms],
+        bd_infinite_regular_card_order = #bd_infinite_regular_card_order bmv
       }) | _ => NONE
     ) ops;
 
@@ -562,22 +613,25 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : bmv_monad list) lthy
 
     val idxs = map (fn T => find_index (curry (op=) T) ops) ops';
     val Vrs = map (the o nth Vrs) idxs;
+    val Injs = map (the o nth Injs) idxs;
     val frees = distinct (op=) (maps frees_of_bmv_monad (outer :: inners));
+    val outer_Vrs = map (nth (Vrs_of_bmv_monad outer)) idxs;
 
     val model = {
       ops = ops',
       bmv_ops = bmv_ops,
       bd = bd_of_bmv_monad outer, (* TODO: compose bounds *)
+      bd_infinite_regular_card_order = fn ctxt => rtac ctxt (bd_infinite_regular_card_order_of_bmv_monad outer) 1,
       var_class = var_class_of_bmv_monad outer,
       frees = frees,
       lives = distinct (op=) (maps lives_of_bmv_monad inners),
       lives' = distinct (op=) (maps lives'_of_bmv_monad inners),
       params = replicate (length ops') NONE,
       leader = 0,
-      Injs = map (the o nth Injs) idxs,
+      Injs = Injs,
       Sbs = map (the o nth Sbs) idxs,
       Vrs = Vrs,
-      tacs = map2 (fn axioms => fn param => {
+      tacs = @{map 5} (fn axioms => fn param => fn Injs => fn Vrs => fn outer_Vrs => {
         Sb_Inj = fn ctxt => EVERY [
           Local_Defs.unfold0_tac ctxt (#Sb_Inj axioms :: @{thms o_id}),
           Local_Defs.unfold0_tac ctxt (
@@ -589,23 +643,100 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : bmv_monad list) lthy
         Sb_comp_Injs = map (fn thm => fn ctxt =>
           print_tac ctxt "Sb_comp_Inj"
         ) (#Sb_comp_Injs axioms),
-        Sb_comp = fn ctxt => print_tac ctxt "Sb_comp",
-        Vrs_bds = map (map (fn Vrs => SOME (fn ctxt =>
-          print_tac ctxt "Vrs_bds"
-        ))) Vrs,
+        Sb_comp = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
+          rtac ctxt trans,
+          rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<circ>)"]},
+          SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
+          rtac ctxt trans,
+          rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
+          rtac ctxt (#Map_Sb param RS sym),
+          REPEAT_DETERM o assume_tac ctxt,
+          SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
+          rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<circ>)"]},
+          rtac ctxt (#Sb_comp axioms),
+          REPEAT_DETERM o assume_tac ctxt,
+          K (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
+          rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
+          rtac ctxt trans,
+          rtac ctxt (#Map_comp (#axioms param)),
+          rtac ctxt ext,
+          rtac ctxt (#Map_cong (#axioms param)),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] (maps (map #Sb_comp o axioms_of_bmv_monad) inners),
+            REPEAT_DETERM o assume_tac ctxt,
+            rtac ctxt refl
+          ]
+        ],
+        Vrs_bds = map (map (Option.map (K (fn ctxt => EVERY1 [
+          REPEAT_DETERM o resolve_tac ctxt (
+            map (fn thm =>
+              thm OF [bd_infinite_regular_card_order_of_bmv_monad outer]
+            ) @{thms infinite_regular_card_order_Un infinite_regular_card_order_UN}
+            @ maps (map_filter I) (#Vrs_bds axioms)
+            @ maps (maps (maps (map_filter I) o #Vrs_bds) o axioms_of_bmv_monad) inners
+            @ #Supp_bd (#axioms param)
+          )
+        ])))) Vrs,
         Vrs_Injs = map (map (Option.map (fn thm => fn ctxt =>
           print_tac ctxt "Vrs_Injs"
         ))) (#Vrs_Injs axioms),
-        Vrs_Sbs = map (map (fn Vrs => SOME (fn ctxt =>
-          print_tac ctxt "Vrs_Sbs"
-        ))) Vrs,
-        Sb_cong = fn ctxt => print_tac ctxt "Sb_cong"
+        Vrs_Sbs = map (map (Option.map (K (fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms UN_Un}),
+          REPEAT_DETERM o rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]},
+          TRY o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] [#Map_Sb param],
+            REPEAT_DETERM1 o assume_tac ctxt,
+            SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+            rtac ctxt trans,
+            resolve_tac ctxt (maps (map_filter I) (#Vrs_Sbs axioms)),
+            REPEAT_DETERM1 o assume_tac ctxt,
+            EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) (#Map_Vrs param)),
+            rtac ctxt refl
+          ],
+          K (Local_Defs.unfold0_tac ctxt (@{thms comp_def} @ #Supp_Map (#axioms param) @ #Supp_Sb param)),
+          K (Local_Defs.unfold0_tac ctxt (@{thms image_comp[unfolded comp_def] UN_UN_flatten}
+            @ maps (maps (maps (map_filter I) o #Vrs_Sbs) o axioms_of_bmv_monad) inners
+          )),
+          REPEAT_DETERM o rtac ctxt refl
+        ])))) Vrs,
+        Sb_cong = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+          Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
+            EqSubst.eqsubst_tac ctxt [0] [Drule.rotate_prems (~(length (
+              maps (map_filter I) outer_Vrs
+            ))) (#Sb_cong axioms)],
+            resolve_tac ctxt prems,
+            etac ctxt @{thm contrapos_pp},
+            SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
+            REPEAT_DETERM o etac ctxt conjE,
+            assume_tac ctxt,
+            REPEAT_DETERM o resolve_tac ctxt prems,
+            rtac ctxt (#Map_cong (#axioms param)),
+            K (Local_Defs.unfold0_tac ctxt (#Supp_Sb param)),
+            EVERY' (map (fn inner => EVERY' [
+              resolve_tac ctxt (map #Sb_cong (axioms_of_bmv_monad inner)),
+              REPEAT_DETERM o EVERY' [
+                REPEAT_DETERM o resolve_tac ctxt prems,
+                rotate_tac ~1,
+                etac ctxt @{thm contrapos_pp},
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms bex_simps(8) Un_iff UN_iff de_Morgan_disj}),
+                REPEAT_DETERM o etac ctxt conjE,
+                dtac ctxt @{thm bspec[rotated]},
+                assume_tac ctxt,
+                assume_tac ctxt
+              ]
+            ]) inners)
+          ]) ctxt
+        ]
       } : (Proof.context -> tactic) bmv_monad_axioms)
       (map (nth (axioms_of_bmv_monad outer)) idxs)
       (map (the o nth (params_of_bmv_monad outer)) idxs)
+      Injs Vrs outer_Vrs
     } : bmv_monad_model;
 
     val (bmv, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model lthy
-  in error "unfinished" end;
+    val _ = @{print} bmv
+  in (bmv, lthy) end;
 
 end

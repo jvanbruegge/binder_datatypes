@@ -591,6 +591,9 @@ lemma infinite_regular_card_order_Un: "infinite_regular_card_order r \<Longright
   using infinite_regular_card_order.Card_order regularCard_Un infinite_regular_card_order_def
   by blast
 
+lemma infinite_regular_card_order_UN: "infinite_regular_card_order r \<Longrightarrow> |A| <o r \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> |B a| <o r) \<Longrightarrow> |\<Union>(B ` A)| <o r"
+  by (simp add: infinite_regular_card_order.Card_order infinite_regular_card_order_def regularCard_UNION_bound)
+
 lemma infinite_regular_card_order_ordLess_cprod: "infinite_regular_card_order r \<Longrightarrow> infinite_regular_card_order p \<Longrightarrow> |x| <o r \<Longrightarrow> |x| <o p *c r"
   using ordLess_ordLeq_trans[OF _ ordLeq_cprod2[OF infinite_regular_card_order.Cnotzero]] infinite_regular_card_order.Card_order
   by blast

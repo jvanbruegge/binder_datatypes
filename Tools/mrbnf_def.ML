@@ -3802,8 +3802,18 @@ fun mrbnf_cmd (raw_csts, raw_plugins) =
       | SOME tac => (mk_triv_wit_thms tac, []));
   in
     lthy
-    |> Proof.theorem NONE (uncurry (register_mrbnf plugins key) oo after_qed mk_wit_thms)
-      (map (single o rpair []) goals @ nontriv_wit_goals)
+    |> Proof.theorem NONE (fn thmss => fn lthy =>
+      let
+        val (mrbnf, lthy) = after_qed mk_wit_thms thmss lthy;
+        val lthy = register_mrbnf plugins key mrbnf lthy;
+        val (bnf_opt, lthy) = case BNF_Def.bnf_of lthy key of
+          SOME _ => (NONE, lthy)
+          | NONE => bnf_of_mrbnf mrbnf lthy;
+        val lthy = case bnf_opt of
+          NONE => lthy
+          | SOME bnf => BNF_Def.register_bnf plugins key bnf lthy
+      in lthy end
+    ) (map (single o rpair []) goals @ nontriv_wit_goals)
     |> Proof.unfolding ([[(@{thm OO_Grp_alt} :: @{thm mem_Collect_eq} :: defs, [])]])
     |> Proof.refine_singleton (Method.Basic (fn ctxt =>
       Method.SIMPLE_METHOD (TRYALL (rtac ctxt refl))))

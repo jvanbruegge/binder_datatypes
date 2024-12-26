@@ -72,6 +72,10 @@ signature BMV_MONAD_DEF = sig
 
   val morph_bmv_monad: morphism -> bmv_monad -> bmv_monad;
 
+  val register_pbmv_monad: string -> bmv_monad -> local_theory -> local_theory;
+  val pbmv_monad_of_generic: Context.generic -> string -> bmv_monad option;
+  val pbmv_monad_of: Proof.context -> string -> bmv_monad option;
+
   val pbmv_monad_of_bnf: BNF_Def.bnf -> local_theory -> bmv_monad * local_theory
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
     -> (binding -> binding) -> bmv_monad_model -> local_theory -> (bmv_monad * thm list) * local_theory
@@ -254,6 +258,22 @@ fun morph_bmv_monad_model phi ({ ops, bd, var_class, frees, lives, lives', param
   tacs = tacs,
   bd_infinite_regular_card_order = bd_infinite_regular_card_order
 } : bmv_monad_model;
+
+structure Data = Generic_Data (
+  type T = bmv_monad Symtab.table;
+  val empty = Symtab.empty;
+  fun merge data : T = Symtab.merge (K true) data;
+);
+
+fun register_pbmv_monad name bmv =
+  Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
+    (fn phi => Data.map (Symtab.update (name, morph_bmv_monad phi bmv)));
+
+fun pbmv_monad_of_generic context =
+  Option.map (morph_bmv_monad (Morphism.transfer_morphism (Context.theory_of context)))
+  o Symtab.lookup (Data.get context);
+
+val pbmv_monad_of = pbmv_monad_of_generic o Context.Proof;
 
 val mk_small_prems = map2 (fn rho => fn Inj => HOLogic.mk_Trueprop (mk_ordLess
   (mk_card_of (HOLogic.mk_Collect ("a", fst (dest_funT (fastype_of Inj)),
@@ -612,11 +632,13 @@ fun pbmv_monad_of_bnf bnf lthy =
       ||>> mk_TFrees' (map Type.sort_of_atyp (BNF_Def.deads_of_bnf bnf))
     val T = BNF_Def.mk_T_of_bnf deads lives bnf;
     val n = BNF_Def.live_of_bnf bnf;
-    val _ = @{print} ()
+    val var_class = case BNF_Def.bd_of_bnf bnf of
+      @{term natLeq} => @{class var}
+      | _ => error "TODO: other var classes"
    in apfst fst (bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I {
      ops = [T],
      bd = BNF_Def.bd_of_bnf bnf,
-     var_class = @{class type},
+     var_class = var_class,
      leader = 0,
      frees = [],
      lives = lives,
@@ -905,7 +927,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : bmv_monad list) lthy
       Injs Vrs outer_Vrs
     } : bmv_monad_model;
 
-    val (res, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model lthy
+    val (res, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) qualify model lthy
   in (res, lthy) end;
 
 end

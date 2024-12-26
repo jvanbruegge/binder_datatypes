@@ -10,7 +10,7 @@ begin
 declare bij_swap[simp]
 declare supp_id_bound[simp]
 
-(*type_synonym label = nat*)
+type_synonym label = string
 
 declare [[mrbnf_internals]]
 binder_datatype 'a "typ" =
@@ -18,6 +18,7 @@ binder_datatype 'a "typ" =
   | Top
   | Fun "'a typ" "'a typ"
   | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
+  | Rec "(label, 'a typ) lfset"
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.permute_id[simp] typ.permute_id0[simp]
@@ -65,9 +66,9 @@ definition map_context :: "(var \<Rightarrow> var) \<Rightarrow> \<Gamma>\<^sub>
 
 abbreviation FFVars_ctxt :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where
   "FFVars_ctxt xs \<equiv> \<Union>(FVars_typ ` snd ` set xs)"
-abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ , _ <: _" [57,75,75] 71) where
+abbreviation extend :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var \<Rightarrow> type \<Rightarrow> \<Gamma>\<^sub>\<tau>" ("_ \<^bold>, _ <: _" [57,75,75] 71) where
   "extend \<Gamma> x T \<equiv> (x, T)#\<Gamma>"
-abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" (infixl "(,)" 71) where
+abbreviation concat :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau>" (infixl "(\<^bold>,)" 71) where
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
 abbreviation empty_context :: "\<Gamma>\<^sub>\<tau>" ("\<emptyset>") where "empty_context \<equiv> []"
 abbreviation dom :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> var set" where "dom xs \<equiv> fst ` set xs"
@@ -118,7 +119,7 @@ abbreviation well_scoped :: "type \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarr
 
 inductive wf_ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("\<turnstile> _ ok" [70] 100) where
   wf_Nil[intro]: "\<turnstile> [] ok"
-| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; \<turnstile> \<Gamma> ok \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>,x<:T ok"
+| wf_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; T closed_in \<Gamma> ; \<turnstile> \<Gamma> ok \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>\<^bold>,x<:T ok"
 
 inductive_cases
   wfE[elim]: "\<turnstile> \<Gamma> ok"
@@ -132,7 +133,7 @@ lemma in_context_eqvt:
 
 lemma extend_eqvt:
   assumes "bij f" "|supp f| <o |UNIV::var set|"
-  shows "map_context f (\<Gamma>,x<:T) = map_context f \<Gamma>,f x <: permute_typ f T"
+  shows "map_context f (\<Gamma>\<^bold>,x<:T) = map_context f \<Gamma>\<^bold>,f x <: permute_typ f T"
   using assms unfolding map_context_def by simp
 
 lemma closed_in_eqvt:
@@ -200,7 +201,8 @@ inductive ty :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> type \<Rightarrow> type \<R
 | SA_Refl_TVar: "\<lbrakk> \<turnstile> \<Gamma> ok ; TyVar x closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: TyVar x"
 | SA_Trans_TVar: "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
-| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
+| SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>\<^bold>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
+| SA_Rec: "\<lbrakk> \<turnstile> \<Gamma> ok; labels X \<subseteq> labels Y; \<And>x T. (x, T) \<in>\<in> Y \<Longrightarrow> \<exists>S. (x, S) \<in>\<in> X \<and> \<Gamma> \<turnstile> S <: T\<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> Rec X <: Rec Y"
 
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
@@ -214,6 +216,10 @@ and
   SA_AllER: "\<Gamma> \<turnstile> S <: \<forall>Z<:T\<^sub>1. T\<^sub>2"
 and
   SA_AllEL: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
+and
+  SA_RecEL: "\<Gamma> \<turnstile> Rec X <: T"
+and
+  SA_RecER: "\<Gamma> \<turnstile> T <: Rec X"
 
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Gamma> S T rule: ty.induct)
@@ -222,16 +228,43 @@ lemma well_scoped:
   assumes "\<Gamma> \<turnstile> S <: T"
   shows "S closed_in \<Gamma>" "T closed_in \<Gamma>"
 using assms proof (induction \<Gamma> S T rule: ty.induct)
-case (SA_Trans_TVar x U \<Gamma> T) {
-  case 1 then show ?case using SA_Trans_TVar
-    by (metis fst_conv imageI singletonD subsetI typ.set(1))
+  case (SA_Trans_TVar x U \<Gamma> T)
+  {
+    case 1 then show ?case using SA_Trans_TVar
+      by (metis fst_conv imageI singletonD subsetI typ.set(1))
+  next
+    case 2 then show ?case using SA_Trans_TVar by simp
+  }
 next
-  case 2 then show ?case using SA_Trans_TVar by simp
-} qed auto
+  case (SA_Rec \<Gamma> X Y)
+  {
+    case 1
+    then show ?case unfolding typ.set
+    proof safe
+      fix x T
+      assume "T \<in> values X" "x \<in> FVars_typ T"
+      from \<open>T \<in> values X\<close> obtain l where "(l, T) \<in>\<in> X"
+        by (meson values_lfin)
+      with SA_Rec(2) obtain U where "(l, U) \<in>\<in> Y"
+        including lfset.lifting
+        by transfer auto
+      with SA_Rec(3) obtain T' where "(l, T') \<in>\<in> X" "T' closed_in \<Gamma>"
+        by blast
+      moreover from \<open>Pair l T \<in>\<in> X\<close> \<open>(l, T') \<in>\<in> X\<close> have "T = T'"
+        by (simp add: lfin_label_inject)
+      ultimately show "x \<in> dom \<Gamma>" using \<open>x \<in> FVars_typ T\<close>
+        by auto
+    qed
+  next
+    case 2
+    then show ?case unfolding typ.set
+      by (auto dest!: values_lfin SA_Rec(3))
+  }
+qed auto
 
 declare ty.intros[intro]
 
-lemma ty_fresh_extend: "\<Gamma>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
+lemma ty_fresh_extend: "\<Gamma>\<^bold>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
 binder_inductive ty
@@ -239,14 +272,15 @@ binder_inductive ty
     unfolding split_beta
     by (elim disj_forward exE)
       (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute
-        typ.permute_comp typ.FVars_permute wf_eqvt extend_eqvt
+        typ.permute_comp typ.FVars_permute wf_eqvt extend_eqvt lfset.set_map lfin_map_lfset induct_rulify_fallback
         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+        | ((drule spec2)+, (drule mp)?, assumption)
         | ((rule exI[of _ "permute_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FVars_typ :: type \<Rightarrow> var set"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
       [@{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0]]
+      [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0], NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms  prems(1)[THEN ty_fresh_extend] id_onD}
       @{thms emp_bound insert_bound ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
       @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}

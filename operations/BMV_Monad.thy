@@ -638,3 +638,10 @@ local_setup \<open>fn lthy =>
     val _ = @{print} comp_bmv
   in lthy end
 \<close>
+
+local_setup \<open>fn lthy =>
+  let
+    val (bmv, lthy) = BMV_Monad_Def.pbmv_monad_of_bnf (the (BNF_Def.bnf_of lthy "Sum_Type.sum")) lthy;
+    val _ = @{print} bmv
+  in lthy end
+\<close>

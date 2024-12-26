@@ -72,6 +72,7 @@ signature BMV_MONAD_DEF = sig
 
   val morph_bmv_monad: morphism -> bmv_monad -> bmv_monad;
 
+  val pbmv_monad_of_bnf: BNF_Def.bnf -> local_theory -> bmv_monad * local_theory
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
     -> (binding -> binding) -> bmv_monad_model -> local_theory -> (bmv_monad * thm list) * local_theory
 
@@ -602,6 +603,63 @@ fun bmv_monad_def const_policy fact_policy qualify (model: bmv_monad_model) lthy
       bd_infinite_regular_card_order = bd_irco
     } : bmv_monad;
   in ((bmv, unfold_set), lthy) end
+
+fun pbmv_monad_of_bnf bnf lthy =
+  let
+    val (((lives, lives'), deads), _) = lthy
+      |> mk_TFrees (BNF_Def.live_of_bnf bnf)
+      ||>> mk_TFrees (BNF_Def.live_of_bnf bnf)
+      ||>> mk_TFrees' (map Type.sort_of_atyp (BNF_Def.deads_of_bnf bnf))
+    val T = BNF_Def.mk_T_of_bnf deads lives bnf;
+    val n = BNF_Def.live_of_bnf bnf;
+    val _ = @{print} ()
+   in apfst fst (bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I {
+     ops = [T],
+     bd = BNF_Def.bd_of_bnf bnf,
+     var_class = @{class type},
+     leader = 0,
+     frees = [],
+     lives = lives,
+     lives' = lives',
+     bmv_ops = [],
+     params = [SOME {
+       model = {
+         Map = BNF_Def.mk_map_of_bnf deads lives lives' bnf,
+         Supps = BNF_Def.mk_sets_of_bnf (replicate n deads) (replicate n lives) bnf,
+         tacs = {
+           Map_id = fn ctxt => rtac ctxt (BNF_Def.map_id0_of_bnf bnf) 1,
+           Map_comp = fn ctxt => rtac ctxt (BNF_Def.map_comp0_of_bnf bnf RS sym) 1,
+           Supp_Map = map (fn thm => fn ctxt => rtac ctxt thm 1) (BNF_Def.set_map_of_bnf bnf),
+           Supp_bd = map (fn thm => fn ctxt => rtac ctxt thm 1) (BNF_Def.set_bd_of_bnf bnf),
+           Map_cong = fn ctxt => EVERY1 [
+             rtac ctxt (BNF_Def.map_cong0_of_bnf bnf),
+             REPEAT_DETERM o Goal.assume_rule_tac ctxt
+           ]
+         }
+       },
+       Map_Sb = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms id_o o_id} THEN rtac ctxt refl 1,
+       Supp_Sb = replicate n (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms id_apply} THEN rtac ctxt refl 1),
+       Map_Vrs = []
+     }],
+     Injs = [[]],
+     Sbs = [HOLogic.id_const T],
+     Vrs = [[]],
+     bd_infinite_regular_card_order = fn ctxt => EVERY1 [
+       rtac ctxt @{thm infinite_regular_card_order.intro},
+       rtac ctxt (BNF_Def.bd_card_order_of_bnf bnf),
+       rtac ctxt (BNF_Def.bd_cinfinite_of_bnf bnf),
+       rtac ctxt (BNF_Def.bd_regularCard_of_bnf bnf)
+     ],
+     tacs = [{
+       Sb_Inj = fn ctxt => rtac ctxt refl 1,
+       Sb_comp_Injs = [],
+       Sb_comp = fn ctxt => rtac ctxt @{thm id_o} 1,
+       Vrs_bds = [],
+       Vrs_Injs = [],
+       Vrs_Sbs = [],
+       Sb_cong = fn ctxt => rtac ctxt refl 1
+     }]
+   } lthy) end
 
 (* Cleanup: Throw away op iff any:
 - not the leader

@@ -139,9 +139,12 @@ val model_FType = {
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
-
 ML \<open>
-val FType_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_FType @{context})
+val lthy = Unsynchronized.ref (NONE : local_theory option)
+\<close>
+local_setup \<open>fn x => (lthy := SOME x ; x)\<close>
+ML \<open>
+val FType_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_FType (the (!lthy)))
 \<close>
 
 
@@ -241,6 +244,9 @@ typ "('a1, 'a2) L1_M1"
 typ "('a1, 'a2) L1_M2"
 typ "('a1, 'a2) L2_M2"
 
+lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |insert x A| <o r"
+  by (metis Card_order_iff_ordLeq_card_of card_of_Field_ordIso card_of_Un_singl_ordLess_infinite1 cinfinite_def insert_is_Un ordLess_ordIso_trans ordLess_ordLeq_trans)
+
 declare [[ML_print_depth=10000]]
 
 ML \<open>
@@ -287,15 +293,9 @@ val model_ID = {
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
-ML \<open>
-val id_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_ID @{context})
-\<close>
-
-lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |insert x A| <o r"
-  by (metis Card_order_iff_ordLeq_card_of card_of_Field_ordIso card_of_Un_singl_ordLess_infinite1 cinfinite_def insert_is_Un ordLess_ordIso_trans ordLess_ordLeq_trans)
 
 ML \<open>
-val model_L = {
+val mk_model_L = fn id_bmv => {
   ops = [@{typ "'a1 * 'a1 * ('c1 + 'c2)"}],
   bd = @{term natLeq},
   var_class = @{class var},
@@ -425,12 +425,9 @@ val model_L = {
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
-ML \<open>
-val L_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L @{context})
-\<close>
 
 ML \<open>
-val model_L1 = {
+val mk_model_L1 = fn id_bmv => {
   ops = [@{typ "'a1 * 'a2"}],
   bd = @{term natLeq},
   var_class = @{class var},
@@ -510,12 +507,9 @@ val model_L1 = {
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
-ML \<open>
-val L1_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L1 @{context})
-\<close>
 
 ML \<open>
-val model_L2 = {
+val mk_model_L2 = fn id_bmv => fn FType_bmv => {
   ops = [@{typ "('a1, 'a2) L2"}],
   bd = @{term natLeq},
   var_class = @{class var},
@@ -631,10 +625,16 @@ val model_L2 = {
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
 } : BMV_Monad_Def.bmv_monad_model;
 \<close>
-ML \<open>
-val L2_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_L2 @{context})
+
+local_setup \<open>fn lthy =>
+  let
+    val ((id_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "ID_") model_ID lthy;
+    val ((FType_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "FType_") model_FType lthy;
+    val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L_") (mk_model_L id_bmv) lthy;
+    val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") (mk_model_L1 id_bmv) lthy;
+    val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") (mk_model_L2 id_bmv FType_bmv) lthy;
+
+    val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv] lthy
+    val _ = @{print} comp_bmv
+  in lthy end
 \<close>
-
-local_setup \<open>snd o BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv]\<close>
-
-end

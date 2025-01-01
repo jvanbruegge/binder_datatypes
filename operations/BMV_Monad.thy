@@ -1,6 +1,9 @@
 theory BMV_Monad
   imports "Binders.MRBNF_Recursor"
+  keywords "pbmv_monad" :: thy_goal
 begin
+
+
 
 declare [[mrbnf_internals]]
 binder_datatype 'a FType
@@ -92,61 +95,33 @@ qed (auto simp: assms(1-2))
 
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
+pbmv_monad ID: 'a
+  frees: 'a
+  Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
+  Injs: "id :: 'a \<Rightarrow> 'a"
+  Vrs: "\<lambda>(x::'a). {x}"
+  bd: natLeq
+  by (auto simp: ID.set_bd infinite_regular_card_order_natLeq)
+
+pbmv_monad "'a::var FType"
+  frees: "'a::var"
+  Sbs: tvsubst_FType
+  Injs: TyVar
+  Vrs: FVars_FType
+  bd: natLeq
+         apply (rule infinite_regular_card_order_natLeq)
+        apply (rule Sb_Inj_FType)
+       apply (rule Sb_comp_Inj_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
+      apply (rule Sb_comp_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
+     apply (rule FType.set_bd)
+    apply (rule Vrs_Inj_FType)
+   apply (rule Vrs_Sb_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
+  apply (rule Sb_cong_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
+  done
+
 ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
-
-ML \<open>
-val model_FType = {
-  ops = [@{typ "'a::var FType"}],
-  bd = @{term natLeq},
-  var_class = @{class var},
-  leader = 0,
-  frees = [@{typ "'a::var"}],
-  lives = [],
-  lives' = [],
-  params = [NONE],
-  bmv_ops = [],
-  Injs = [[@{term "TyVar :: 'a::var \<Rightarrow> _"}]],
-  Sbs = [@{term "tvsubst_FType :: _ => 'a::var FType => _"}],
-  Vrs = [[[SOME @{term "FVars_FType :: _ => 'a::var set"}]]],
-  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
-  tacs = [{
-    Sb_Inj = fn ctxt => resolve_tac ctxt @{thms Sb_Inj_FType} 1,
-    Sb_comp_Injs = [fn ctxt => EVERY1 [
-      resolve_tac ctxt @{thms Sb_comp_Inj_FType},
-      K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def VVr_eq_Var}),
-      assume_tac ctxt
-    ]],
-    Sb_comp = fn ctxt => EVERY1 [
-      resolve_tac ctxt @{thms Sb_comp_FType},
-      K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def VVr_eq_Var}),
-      REPEAT_DETERM o assume_tac ctxt
-    ],
-    Vrs_bds = [[SOME (fn ctxt => resolve_tac ctxt @{thms FType.set_bd} 1)]],
-    Vrs_Injs = [[SOME (fn ctxt => resolve_tac ctxt @{thms Vrs_Inj_FType} 1)]],
-    Vrs_Sbs = [[SOME (fn ctxt => EVERY1 [
-      resolve_tac ctxt @{thms Vrs_Sb_FType},
-      K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def VVr_eq_Var}),
-      assume_tac ctxt
-    ])]],
-    Sb_cong = fn ctxt => EVERY1 [
-      resolve_tac ctxt @{thms Sb_cong_FType},
-      K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def VVr_eq_Var}),
-      REPEAT_DETERM o assume_tac ctxt,
-      Goal.assume_rule_tac ctxt
-    ]
-  } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
-} : BMV_Monad_Def.bmv_monad_model;
-\<close>
-ML \<open>
-val lthy = Unsynchronized.ref (NONE : local_theory option)
-\<close>
-local_setup \<open>fn x => (lthy := SOME x ; x)\<close>
-ML \<open>
-val FType_bmv = fst (BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I model_FType (the (!lthy)))
-\<close>
-
 
 (* *)
 type_synonym ('a1, 'a2, 'c1, 'c2) L = "'a1 * 'a1 * ('c1 + 'c2)" (* PBMV *)
@@ -250,52 +225,12 @@ lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |i
 declare [[ML_print_depth=10000]]
 
 ML \<open>
-val model_ID = {
-  ops = [@{typ "'a"}],
-  bd = @{term natLeq},
-  var_class = @{class var},
-  leader = 0,
-  frees = [@{typ "'a"}],
-  lives = [],
-  lives' = [],
-  bmv_ops = [],
-  params = [NONE],
-  Injs = [[@{term "id :: 'a \<Rightarrow> _"}]],
-  Sbs = [@{term "id :: _ => 'a => 'a"}],
-  Vrs = [[[SOME @{term "\<lambda>(x::'a). {x}"}]]],
-  bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
-  tacs = [{
-    Sb_Inj = fn ctxt => resolve_tac ctxt @{thms id_apply} 1,
-    Sb_comp_Injs = [fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_def}),
-      resolve_tac ctxt [refl]
-    ]],
-    Sb_comp = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_def}),
-      resolve_tac ctxt [refl]
-    ],
-    Vrs_bds = [[SOME (fn ctxt => resolve_tac ctxt @{thms ID.set_bd} 1)]],
-    Vrs_Injs = [[SOME (fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_def}),
-      resolve_tac ctxt [refl]
-    ])]],
-    Vrs_Sbs = [[SOME (fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms UN_single id_def}),
-      resolve_tac ctxt [refl]
-    ])]],
-    Sb_cong = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms comp_def id_def}),
-      dresolve_tac ctxt @{thms meta_spec},
-      dresolve_tac ctxt @{thms meta_mp},
-      resolve_tac ctxt @{thms singletonI},
-      assume_tac ctxt
-    ]
-  } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
-} : BMV_Monad_Def.bmv_monad_model;
+val id_bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Monad.ID")
+val FType_bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Monad.FType")
 \<close>
 
 ML \<open>
-val mk_model_L = fn id_bmv => {
+val model_L = {
   ops = [@{typ "'a1 * 'a1 * ('c1 + 'c2)"}],
   bd = @{term natLeq},
   var_class = @{class var},
@@ -308,47 +243,45 @@ val mk_model_L = fn id_bmv => {
       BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
   )) id_bmv],
   params = [SOME {
-    model = {
-      (*Map = @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"},*)
-      Map = @{term "Map_L :: ('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" },
-      (*Supps = [
-        @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setl p"},
-        @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setr p"}
-      ],*)
-      Supps = [
-        @{term "Supp_L_1 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"},
-        @{term "Supp_L_2 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"}
+    (*Map = @{term "\<lambda>(f1::'c1 => 'c1') (f2::'c2 => 'c2') (a1::'a1, a2::'a1, p). (a1, a2, map_sum f1 f2 p)"},*)
+    Map = @{term "Map_L :: ('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" },
+    (*Supps = [
+      @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setl p"},
+      @{term "\<lambda>(a1::'a1, a2::'a1, p::('c1+'c2)). Basic_BNFs.setr p"}
+    ],*)
+    Supps = [
+      @{term "Supp_L_1 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"},
+      @{term "Supp_L_2 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"}
+    ],
+    axioms = {
+      Map_id = fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def sum.map_id0 id_apply}),
+        resolve_tac ctxt [ext],
+        K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta prod.collapse}),
+        resolve_tac ctxt @{thms id_apply[symmetric]}
       ],
-      tacs = {
-        Map_id = fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def sum.map_id0 id_apply}),
-          resolve_tac ctxt [ext],
-          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta prod.collapse}),
-          resolve_tac ctxt @{thms id_apply[symmetric]}
-        ],
-        Map_comp = fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def}),
-          resolve_tac ctxt [ext],
-          resolve_tac ctxt @{thms trans[OF comp_apply]},
-          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv sum.map_comp}),
-          resolve_tac ctxt [refl]
-        ],
-        Supp_Map = replicate 2 (fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def Supp_L_1_def Supp_L_2_def case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
-          resolve_tac ctxt [refl]
-        ]),
-        Supp_bd = replicate 2 (fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Supp_L_1_def Supp_L_2_def}),
-          resolve_tac ctxt @{thms sum.set_bd}
-        ]),
-        Map_cong = fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def Supp_L_1_def Supp_L_2_def case_prod_beta fst_conv snd_conv}),
-          K (Local_Defs.unfold0_tac ctxt @{thms prod.inject}),
-          REPEAT_DETERM o resolve_tac ctxt @{thms conjI[OF refl]},
-          resolve_tac ctxt @{thms sum.map_cong0},
-          REPEAT_DETERM o Goal.assume_rule_tac ctxt
-        ]
-      }
+      Map_comp = fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def}),
+        resolve_tac ctxt [ext],
+        resolve_tac ctxt @{thms trans[OF comp_apply]},
+        K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta fst_conv snd_conv sum.map_comp}),
+        resolve_tac ctxt [refl]
+      ],
+      Supp_Map = replicate 2 (fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def Supp_L_1_def Supp_L_2_def case_prod_beta fst_conv snd_conv sum_set_simps sum.set_map}),
+        resolve_tac ctxt [refl]
+      ]),
+      Supp_bd = replicate 2 (fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Supp_L_1_def Supp_L_2_def}),
+        resolve_tac ctxt @{thms sum.set_bd}
+      ]),
+      Map_cong = fn ctxt => EVERY1 [
+        K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def Supp_L_1_def Supp_L_2_def case_prod_beta fst_conv snd_conv}),
+        K (Local_Defs.unfold0_tac ctxt @{thms prod.inject}),
+        REPEAT_DETERM o resolve_tac ctxt @{thms conjI[OF refl]},
+        resolve_tac ctxt @{thms sum.map_cong0},
+        REPEAT_DETERM o Goal.assume_rule_tac ctxt
+      ]
     },
     Map_Sb = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Map_L_def}),
@@ -423,11 +356,11 @@ val mk_model_L = fn id_bmv => {
       resolve_tac ctxt [refl]
     ]
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
-} : BMV_Monad_Def.bmv_monad_model;
+} : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_model;
 \<close>
 
 ML \<open>
-val mk_model_L1 = fn id_bmv => {
+val model_L1 = {
   ops = [@{typ "'a1 * 'a2"}],
   bd = @{term natLeq},
   var_class = @{class var},
@@ -505,11 +438,11 @@ val mk_model_L1 = fn id_bmv => {
       assume_tac ctxt
     ]
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
-} : BMV_Monad_Def.bmv_monad_model;
+} : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_model;
 \<close>
 
 ML \<open>
-val mk_model_L2 = fn id_bmv => fn FType_bmv => {
+val model_L2 = {
   ops = [@{typ "('a1, 'a2) L2"}],
   bd = @{term natLeq},
   var_class = @{class var},
@@ -623,16 +556,14 @@ val mk_model_L2 = fn id_bmv => fn FType_bmv => {
       assume_tac ctxt
     ]
   } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_axioms]
-} : BMV_Monad_Def.bmv_monad_model;
+} : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_model;
 \<close>
 
 local_setup \<open>fn lthy =>
   let
-    val ((id_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "ID_") model_ID lthy;
-    val ((FType_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "FType_") model_FType lthy;
-    val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L_") (mk_model_L id_bmv) lthy;
-    val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") (mk_model_L1 id_bmv) lthy;
-    val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") (mk_model_L2 id_bmv FType_bmv) lthy;
+    val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L_") model_L lthy;
+    val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") model_L1 lthy;
+    val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") model_L2 lthy;
 
     val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv] lthy
     val _ = @{print} comp_bmv

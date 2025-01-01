@@ -1,6 +1,7 @@
 theory BMV_Monad
   imports "Binders.MRBNF_Recursor"
-  keywords "pbmv_monad" :: thy_goal
+  keywords "print_pbmv_monads" :: diag and
+   "pbmv_monad" :: thy_goal
 begin
 
 
@@ -95,7 +96,9 @@ qed (auto simp: assms(1-2))
 
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
-pbmv_monad ID: 'a
+local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
+
+pbmv_monad ID: "'a"
   frees: 'a
   Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
   Injs: "id :: 'a \<Rightarrow> 'a"
@@ -118,6 +121,8 @@ pbmv_monad "'a::var FType"
    apply (rule Vrs_Sb_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
   apply (rule Sb_cong_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
   done
+
+print_pbmv_monads
 
 ML \<open>
 Multithreading.parallel_proofs := 0
@@ -567,12 +572,5 @@ local_setup \<open>fn lthy =>
 
     val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv] lthy
     val _ = @{print} comp_bmv
-  in lthy end
-\<close>
-
-local_setup \<open>fn lthy =>
-  let
-    val (bmv, lthy) = BMV_Monad_Def.pbmv_monad_of_bnf (the (BNF_Def.bnf_of lthy "Sum_Type.sum")) lthy;
-    val _ = @{print} bmv
   in lthy end
 \<close>

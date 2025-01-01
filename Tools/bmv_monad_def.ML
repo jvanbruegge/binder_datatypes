@@ -77,6 +77,7 @@ signature BMV_MONAD_DEF = sig
   val pbmv_monad_of: Proof.context -> string -> bmv_monad option;
 
   val pbmv_monad_of_bnf: BNF_Def.bnf -> local_theory -> bmv_monad * local_theory
+  val register_bnf_as_pbmv_monad: string -> local_theory -> local_theory
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
     -> (binding -> binding) -> (Proof.context -> tactic) bmv_monad_model -> local_theory -> (bmv_monad * thm list) * local_theory
 
@@ -701,7 +702,14 @@ fun pbmv_monad_of_bnf bnf lthy =
        Vrs_Sbs = [],
        Sb_cong = fn ctxt => rtac ctxt refl 1
      }]
-   } lthy) end
+   } lthy) end;
+
+fun register_bnf_as_pbmv_monad name lthy =
+  let
+    val bnf = the (BNF_Def.bnf_of lthy name);
+    val (bmv, lthy) = pbmv_monad_of_bnf bnf lthy;
+    val lthy = register_pbmv_monad name bmv lthy;
+  in lthy end
 
 (* Cleanup: Throw away op iff any:
 - not the leader
@@ -1017,7 +1025,32 @@ fun pbmv_monad_cmd (((((((b, ops), frees), Sbs), Injs), Vrs), param_opt), bd) lt
     ) goals
   )) lthy
     |> Proof.refine_singleton (Method.Basic (fn ctxt => Method.SIMPLE_METHOD (TRYALL (rtac ctxt refl))))
-  end
+  end;
+
+fun print_pbmv_monads ctxt =
+  let
+    fun pretty_mrbnf (key, BMV {ops, frees, lives, bd, ...}) =
+      Pretty.big_list
+        (Pretty.string_of (Pretty.block ([Pretty.str key, Pretty.str ":", Pretty.brk 1] @
+          map (Pretty.quote o Syntax.pretty_typ ctxt) ops)))
+        ([Pretty.block [Pretty.str "frees:", Pretty.brk 1, Pretty.str (string_of_int (length frees)),
+            Pretty.brk 3, Pretty.list "[" "]" (List.map (Syntax.pretty_typ ctxt) frees)]] @
+          (if length lives > 0 then
+            [Pretty.block [Pretty.str "live:", Pretty.brk 1, Pretty.str (string_of_int (length lives)),
+              Pretty.brk 3, Pretty.list "[" "]" (List.map (Syntax.pretty_typ ctxt) lives)]]
+          else []) @
+          [Pretty.block [Pretty.str ("bd:"), Pretty.brk 1,
+            Pretty.quote (Syntax.pretty_term ctxt bd)]]);
+  in
+    Pretty.big_list "Registered parametrized bounded multi-variate monads:"
+      (map pretty_mrbnf (sort_by fst (Symtab.dest (Data.get (Context.Proof ctxt)))))
+    |> Pretty.writeln
+  end;
+
+val _ =
+  Outer_Syntax.command @{command_keyword print_pbmv_monads}
+    "print all parametrized bounded multi-variate monads"
+    (Scan.succeed (Toplevel.keep (print_pbmv_monads o Toplevel.context_of)));
 
 val _ = Outer_Syntax.local_theory_to_proof @{command_keyword pbmv_monad}
   "register a parametrized bounded multi-variate monad"

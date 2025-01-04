@@ -99,7 +99,6 @@ ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
 
 pbmv_monad ID: "'a"
-  frees: 'a
   Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
   Injs: "id :: 'a \<Rightarrow> 'a"
   Vrs: "\<lambda>(x::'a). {x}"
@@ -107,7 +106,6 @@ pbmv_monad ID: "'a"
   by (auto simp: ID.set_bd infinite_regular_card_order_natLeq)
 
 pbmv_monad "'a::var FType"
-  frees: "'a::var"
   Sbs: tvsubst_FType
   Injs: TyVar
   Vrs: FVars_FType
@@ -122,11 +120,39 @@ pbmv_monad "'a::var FType"
   apply (rule Sb_cong_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
   done
 
-print_pbmv_monads
+typedef ('a1, 'a2, 'c1, 'c2) L = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
+  by (rule exI, rule UNIV_I)
+
+(*pbmv_monad "('a1, 'a2, 'c1, 'c2) L"
+  frees: 'a1 'a2
+  Sbs: "\<lambda>f x. Abs_L (map_prod f (map_prod f id) (Rep_L x))"
+  Injs: "id :: 'a1 \<Rightarrow> 'a1"
+  Vrs: "\<lambda>x. case Rep_L x of (x1, x2, _) \<Rightarrow> {x1, x2}"
+  bd: natLeq
+  lives: 'c1 'c2*)
+
+ML_file \<open>../Tools/pbmv_monad_comp.ML\<close>
 
 ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
+declare [[ML_print_depth=1000]]
+local_setup \<open>fn lthy =>
+  let
+    val (bmv, (thms, lthy)) = PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) I
+      @{typ "'a1 * 'a1 * (('a1 * 'a2) + ('a1 * 'a2 * 'a2 * 'a2 FType))"}
+      ([], lthy)
+
+    val _ = @{print} (map (map (map (Option.map (Thm.cterm_of lthy o
+      Raw_Simplifier.rewrite_term (Proof_Context.theory_of lthy)
+      (@{thms } @ thms) []
+    )))) (
+      BMV_Monad_Def.Vrs_of_bmv_monad (the bmv)
+    ))
+
+    val _ = @{print} bmv
+  in lthy end\<close>
+print_pbmv_monads
 
 (* *)
 type_synonym ('a1, 'a2, 'c1, 'c2) L = "'a1 * 'a1 * ('c1 + 'c2)" (* PBMV *)
@@ -570,7 +596,7 @@ local_setup \<open>fn lthy =>
     val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") model_L1 lthy;
     val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") model_L2 lthy;
 
-    val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [L1_bmv, L2_bmv] lthy
+    val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [MRBNF_Util.Inl L1_bmv, MRBNF_Util.Inl L2_bmv] lthy
     val _ = @{print} comp_bmv
   in lthy end
 \<close>

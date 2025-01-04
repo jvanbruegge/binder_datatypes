@@ -3,6 +3,7 @@ sig
   include BNF_UTIL
 
   datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+  val map_sum: ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) either -> ('c, 'd) either
 
   val filter_like: 'a list -> ('a -> bool) -> 'b list -> 'b list
   val cond_keep: 'a list -> bool list -> 'a list
@@ -82,6 +83,9 @@ struct
 open BNF_Util
 
 datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+
+fun map_sum f _ (Inl x) = Inl (f x)
+  | map_sum _ g (Inr x) = Inr (g x)
 
 fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_ex t)
   | strip_ex t = ([], t)

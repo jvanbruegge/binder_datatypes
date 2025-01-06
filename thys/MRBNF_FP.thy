@@ -346,7 +346,7 @@ lemma induct_implies_equal_eq: "HOL.induct_implies (HOL.induct_equal x y) P = (x
 lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infinite (UNIV::'a set)"
   using infinite_iff_natLeq_ordLeq by blast
 
-lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
+lemma insert_bound_UNIV: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
   by (metis card_of_Un_singl_ordLess_infinite insert_is_Un)
 
 lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"

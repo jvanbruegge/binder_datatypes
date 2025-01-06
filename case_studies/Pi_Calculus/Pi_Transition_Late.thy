@@ -25,7 +25,7 @@ binder_inductive trans
        SOME [SOME 0, NONE, SOME 1, SOME 0, SOME 1],
        SOME [NONE, SOME 2, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound singl_bound insert_bound card_of_minus_bound term.Un_bound term.FVars_bd_UNIVs commit.FVars_bd_UNIVs infinite_UNIV bns_bound}
+      @{thms emp_bound singl_bound insert_bound_UNIV card_of_minus_bound term.Un_bound term.FVars_bd_UNIVs commit.FVars_bd_UNIVs infinite_UNIV bns_bound}
       @{thms bij_implies_inject Res_inject Inp_inject Bout_inject Binp_inject FVars_commit_Cmt ns_alt vars_alt Int_Un_distrib}
       @{thms Inp_eq_usub term.permute_cong term.permute_cong_id term.permute_cong_id[symmetric] arg_cong2[where f=Cmt, OF _ refl] arg_cong2[where f=Cmt, OF refl]
           action.map_ident_strong cong[OF arg_cong2[OF _ refl] refl, of _ _ Bout] Cmt_rrename_bound_action Cmt_rrename_bound_action_Par}

@@ -34,6 +34,7 @@ signature BMV_MONAD_DEF = sig
     var_class: class,
     bmv_ops: bmv_monad list,
     frees: typ list,
+    deads: typ list,
     leader: int,
     lives: typ list,
     lives': typ list,
@@ -53,6 +54,7 @@ signature BMV_MONAD_DEF = sig
   val frees_of_bmv_monad: bmv_monad -> typ list;
   val lives_of_bmv_monad: bmv_monad -> typ list;
   val lives'_of_bmv_monad: bmv_monad -> typ list;
+  val deads_of_bmv_monad: bmv_monad -> typ list;
   val Injs_of_bmv_monad: bmv_monad -> term list list;
   val Sbs_of_bmv_monad: bmv_monad -> term list;
   val Maps_of_bmv_monad: bmv_monad -> term option list;
@@ -169,6 +171,7 @@ datatype bmv_monad = BMV of {
   frees: typ list,
   lives: typ list,
   lives': typ list,
+  deads: typ list,
   params: thm bmv_monad_param option list,
   Injs: term list list,
   Sbs: term list,
@@ -178,7 +181,7 @@ datatype bmv_monad = BMV of {
 }
 
 fun morph_bmv_monad phi (BMV {
-  ops, bd, var_class, leader, frees, lives, lives', params, Injs, Sbs, Vrs, axioms,
+  ops, bd, var_class, leader, frees, lives, lives',  deads, params, Injs, Sbs, Vrs, axioms,
   bd_infinite_regular_card_order
 }) = BMV {
   ops = map (Morphism.typ phi) ops,
@@ -188,6 +191,7 @@ fun morph_bmv_monad phi (BMV {
   frees = map (Morphism.typ phi) frees,
   lives = map (Morphism.typ phi) lives,
   lives' = map (Morphism.typ phi) lives',
+  deads = map (Morphism.typ phi) deads,
   params = map (Option.map (morph_bmv_monad_param phi (Morphism.thm phi))) params,
   Injs = map (map (Morphism.term phi)) Injs,
   Sbs = map (Morphism.term phi) Sbs,
@@ -205,6 +209,7 @@ val leader_of_bmv_monad = #leader o Rep_bmv
 val frees_of_bmv_monad = #frees o Rep_bmv
 val lives_of_bmv_monad = #lives o Rep_bmv
 val lives'_of_bmv_monad = #lives' o Rep_bmv
+val deads_of_bmv_monad = #deads o Rep_bmv
 val Injs_of_bmv_monad = #Injs o Rep_bmv
 val Sbs_of_bmv_monad = #Sbs o Rep_bmv
 val Maps_of_bmv_monad = map (Option.map #Map) o #params o Rep_bmv
@@ -221,6 +226,7 @@ type 'a bmv_monad_model = {
   frees: typ list,
   lives: typ list,
   lives': typ list,
+  deads: typ list,
   params: 'a bmv_monad_param option list,
   bmv_ops: bmv_monad list,
   leader: int,
@@ -232,7 +238,7 @@ type 'a bmv_monad_model = {
 }
 
 fun morph_bmv_monad_model phi f ({ ops, bd, var_class, frees, lives, lives', params, bmv_ops, leader,
-  Injs, Sbs, Vrs, tacs, bd_infinite_regular_card_order }
+  Injs, Sbs, Vrs, tacs, bd_infinite_regular_card_order, deads }
 ) = {
   ops = map (Morphism.typ phi) ops,
   bd = Morphism.term phi bd,
@@ -240,6 +246,7 @@ fun morph_bmv_monad_model phi f ({ ops, bd, var_class, frees, lives, lives', par
   frees = map (Morphism.typ phi) frees,
   lives = map (Morphism.typ phi) lives,
   lives' = map (Morphism.typ phi) lives',
+  deads = map (Morphism.typ phi) deads,
   params = map (Option.map (morph_bmv_monad_param phi f)) params,
   bmv_ops = map (morph_bmv_monad phi) bmv_ops,
   leader = leader,
@@ -282,8 +289,8 @@ fun mk_bmv_monad_axioms ops bd Sb Injs Vrs bmv_ops lthy =
 
     val axioms = @{map 4} (fn T => fn Injs => fn Sb => fn Vrs =>
       let
-        val (own_Injs, other_Injs) = partition (fn Inj => member (op=) ops (body_type (fastype_of Inj))) Injs;
-        val is_own_Inj = map (member (op=) ops o body_type o fastype_of) Injs;
+        val (own_Injs, other_Injs) = partition (fn Inj => body_type (fastype_of Inj) = T) Injs;
+        val is_own_Inj = map (curry (op=) T o body_type o fastype_of) Injs;
         val other_idxs = map (fn Inj => find_index (fn T => body_type (fastype_of Inj) = T) Ts) other_Injs;
         val ((((rhos, rhos'), aa), x), _) = lthy
           |> mk_Frees "\<rho>" (map fastype_of Injs)
@@ -539,6 +546,7 @@ fun define_bmv_monad_consts const_policy fact_policy qualify (model: 'a bmv_mona
       frees = #frees model,
       lives = #lives model,
       lives' = #lives' model,
+      deads = #deads model,
       bmv_ops = #bmv_ops model,
       params = params,
       Injs = Injs,
@@ -572,6 +580,7 @@ fun mk_bmv_monad const_policy fact_policy (model: thm bmv_monad_model) lthy =
       frees = #frees model,
       lives = #lives model,
       lives' = #lives' model,
+      deads = #deads model,
       params = #params model @ maps (#params o Rep_bmv) (#bmv_ops model),
       Injs = #Injs model @ maps (#Injs o Rep_bmv) (#bmv_ops model),
       Sbs = #Sbs model @ maps (#Sbs o Rep_bmv) (#bmv_ops model),
@@ -619,6 +628,7 @@ fun mk_thm_model (model: 'a bmv_monad_model) params axioms bd_irco = {
   frees = #frees model,
   lives = #lives model,
   lives' = #lives' model,
+  deads = #deads model,
   bmv_ops = #bmv_ops model,
   params = params,
   Injs = #Injs model,
@@ -666,6 +676,7 @@ fun pbmv_monad_of_bnf bnf lthy =
      frees = [],
      lives = lives,
      lives' = lives',
+     deads = deads,
      bmv_ops = [],
      params = [SOME {
        Map = BNF_Def.mk_map_of_bnf deads lives lives' bnf,
@@ -848,6 +859,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
         frees = #frees bmv,
         lives = #lives bmv,
         lives' = #lives' bmv,
+        deads = #deads bmv,
         params = [param],
         Injs = [Injs],
         Sbs = [Sb],
@@ -867,6 +879,9 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
     val frees = distinct (op=) (maps frees_of_bmv_monad (outer :: inners'));
     val outer_Vrs = map (nth (Vrs_of_bmv_monad outer)) idxs;
 
+    val vars = distinct (op=) (map TFree (fold Term.add_tfreesT (ops' @ maps ops_of_bmv_monad inners') []));
+    val lives = distinct (op=) (maps lives_of_bmv_monad inners');
+
     val model = {
       ops = ops',
       bmv_ops = bmv_ops,
@@ -874,8 +889,9 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
       bd_infinite_regular_card_order = fn ctxt => rtac ctxt (bd_infinite_regular_card_order_of_bmv_monad outer) 1,
       var_class = var_class_of_bmv_monad outer,
       frees = frees,
-      lives = distinct (op=) (maps lives_of_bmv_monad inners'),
+      lives = lives,
       lives' = distinct (op=) (maps lives'_of_bmv_monad inners'),
+      deads = subtract (op=) (lives @ frees) vars,
       params = replicate (length ops') NONE,
       leader = 0,
       Injs = Injs,
@@ -1014,16 +1030,25 @@ fun pbmv_monad_cmd ((((((b, ops), Sbs), Injs), Vrs), param_opt), bd) lthy =
   let
     val ops = map (Syntax.read_typ lthy) ops;
     val bd = Syntax.read_term lthy bd;
-    val Sbs = map (Syntax.read_term lthy) Sbs;
+    val Sbs = map2 (fn Sb => fn T => Term.subst_atomic_types (
+      map (apply2 TFree) (Term.add_tfreesT (body_type (fastype_of Sb)) [] ~~ Term.add_tfreesT T [])
+      @ map (apply2 TFree) (Term.add_tfreesT (snd (split_last (binder_types (fastype_of Sb)))) [] ~~ Term.add_tfreesT T [])
+    ) Sb) (map (Syntax.read_term lthy) Sbs) ops;
     val frees = distinct (op=) (maps (
       map (fst o dest_funT) o fst o split_last o binder_types o fastype_of
     ) Sbs);
     val Injs = map (map (Syntax.read_term lthy)) Injs;
     val Vrs = map (map (map (fn "_" => NONE | t => SOME (Syntax.read_term lthy t)))) Vrs;
+    val Vrs = map2 (fn T => map (map (Option.map (fn Vrs => Term.subst_atomic_types (
+      map (apply2 TFree) (Term.add_tfreesT (fst (dest_funT (fastype_of Vrs))) [] ~~ Term.add_tfreesT T [])
+    ) Vrs)))) ops Vrs;
 
     val b = if Binding.is_empty b then fst (dest_Type (hd ops)) else Local_Theory.full_name lthy b
 
     val goals = mk_bmv_monad_axioms ops bd Sbs Injs Vrs [] lthy;
+
+    val vars = distinct (op=) (map TFree (fold Term.add_tfreesT ops []));
+    val lives = [];
 
     fun after_qed thmss lthy =
       let
@@ -1036,6 +1061,7 @@ fun pbmv_monad_cmd ((((((b, ops), Sbs), Injs), Vrs), param_opt), bd) lthy =
           frees = frees,
           lives = [],
           lives' = [],
+          deads = subtract (op=) (lives @ frees) vars,
           bmv_ops = [],
           params = replicate (length ops) NONE,
           Injs = Injs,
@@ -1109,10 +1135,10 @@ val _ =
 
 val _ = Outer_Syntax.local_theory_to_proof @{command_keyword pbmv_monad}
   "register a parametrized bounded multi-variate monad"
-  (parse_opt_binding_colon -- Scan.repeat1 (Scan.unless (Parse.reserved "Sbs") Parse.typ) --|
-    (Parse.reserved "Sbs" -- @{keyword ":"}) -- Scan.repeat1 (Scan.unless (Parse.reserved "Injs") Parse.term) --|
-    (Parse.reserved "Injs" -- @{keyword ":"}) -- Parse.list (Scan.repeat1 (Scan.unless (Parse.reserved "Vrs") Parse.term)) --|
-    (Parse.reserved "Vrs" -- @{keyword ":"}) -- Parse.and_list (Parse.list (
+  (parse_opt_binding_colon -- Parse.and_list1 Parse.typ --|
+    (Parse.reserved "Sbs" -- @{keyword ":"}) -- Parse.and_list1 Parse.term --|
+    (Parse.reserved "Injs" -- @{keyword ":"}) -- Parse.and_list1 (Scan.repeat1 (Scan.unless (Parse.reserved "Vrs") Parse.term)) --|
+    (Parse.reserved "Vrs" -- @{keyword ":"}) -- Parse.and_list1 (Parse.list1 (
       Scan.repeat1 (Scan.unless (Parse.reserved "Map" || Parse.reserved "bd") (Parse.term || Parse.reserved "_"))
     )) --
     Scan.optional (

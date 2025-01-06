@@ -4,8 +4,6 @@ theory BMV_Monad
    "pbmv_monad" :: thy_goal
 begin
 
-
-
 declare [[mrbnf_internals]]
 binder_datatype 'a FType
   = TyVar 'a
@@ -94,6 +92,8 @@ using assms(3) proof (binder_induction t avoiding: "IImsupp_FType \<rho>''" "IIm
     by (smt (verit, ccfv_threshold) CollectI IImsupp_FType_def SSupp_FType_def Un_iff)
 qed (auto simp: assms(1-2))
 
+declare [[ML_print_depth=1000]]
+
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
 local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
@@ -120,27 +120,34 @@ pbmv_monad "'a::var FType"
   apply (rule Sb_cong_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
   done
 
-typedef ('a1, 'a2, 'c1, 'c2) L = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
+typedef ('a1, 'a2, 'c1, 'c2) L' = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
   by (rule exI, rule UNIV_I)
 
-(*pbmv_monad "('a1, 'a2, 'c1, 'c2) L"
-  frees: 'a1 'a2
-  Sbs: "\<lambda>f x. Abs_L (map_prod f (map_prod f id) (Rep_L x))"
-  Injs: "id :: 'a1 \<Rightarrow> 'a1"
-  Vrs: "\<lambda>x. case Rep_L x of (x1, x2, _) \<Rightarrow> {x1, x2}"
+declare [[ML_print_depth=1000]]
+pbmv_monad "('a1, 'a2, 'c1, 'c2) L'"                         and 'a1
+  Sbs: "\<lambda>f x. Abs_L' (map_prod f (map_prod f id) (Rep_L' x))" and "id :: ('a1 \<Rightarrow> 'a1) \<Rightarrow> 'a1 \<Rightarrow> 'a1"
+  Injs: "id :: 'a1 \<Rightarrow> 'a1"                                  and "id :: 'a1 \<Rightarrow> 'a1"
+  Vrs: "\<lambda>x. case Rep_L' x of (x1, x2, _) \<Rightarrow> {x1, x2}"        and "\<lambda>x. {x}"
   bd: natLeq
-  lives: 'c1 'c2*)
+              apply (rule infinite_regular_card_order_natLeq)
+             apply (auto simp: Abs_L'_inject Abs_L'_inverse Rep_L'_inverse prod.map_comp comp_def
+      id_def case_prod_beta insert_bound[OF natLeq_Cinfinite]
+      Cinfinite_gt_empty[OF natLeq_Cinfinite]
+      )[4]
+         apply (unfold Abs_L'_inject[OF UNIV_I UNIV_I] case_prod_beta)[1]
+         apply (metis (no_types, lifting) fst_map_prod insertCI prod.collapse snd_map_prod)
+        apply (auto simp: insert_bound[OF natLeq_Cinfinite] Cinfinite_gt_empty[OF natLeq_Cinfinite])
+  done
 
 ML_file \<open>../Tools/pbmv_monad_comp.ML\<close>
 
 ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
-declare [[ML_print_depth=1000]]
 local_setup \<open>fn lthy =>
   let
     val (bmv, (thms, lthy)) = PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) I
-      @{typ "'a1 * 'a1 * (('a1 * 'a2) + ('a1 * 'a2 * 'a2 * 'a2 FType))"}
+      @{typ "'a1 * 'a1 * (('a1 * 'a2) + ('a1 * ('a2 * ('a2 * 'a2 FType))))"}
       ([], lthy)
 
     val _ = @{print} (map (map (map (Option.map (Thm.cterm_of lthy o
@@ -250,11 +257,6 @@ typ "('a1, 'a2) L1_M1"
 typ "('a1, 'a2) L1_M2"
 typ "('a1, 'a2) L2_M2"
 
-lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |insert x A| <o r"
-  by (metis Card_order_iff_ordLeq_card_of card_of_Field_ordIso card_of_Un_singl_ordLess_infinite1 cinfinite_def insert_is_Un ordLess_ordIso_trans ordLess_ordLeq_trans)
-
-declare [[ML_print_depth=10000]]
-
 ML \<open>
 val id_bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Monad.ID")
 val FType_bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Monad.FType")
@@ -269,6 +271,7 @@ val model_L = {
   frees = [@{typ "'a1"}],
   lives = [@{typ "'c1"}, @{typ "'c2"}],
   lives' = [@{typ "'c1'"}, @{typ "'c2'"}],
+  deads = [],
   bmv_ops = [BMV_Monad_Def.morph_bmv_monad (
     MRBNF_Util.subst_typ_morphism (
       BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
@@ -399,6 +402,7 @@ val model_L1 = {
   frees = [@{typ "'a1"}, @{typ "'a2"}],
   lives = [],
   lives' = [],
+  deads = [],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
@@ -481,6 +485,7 @@ val model_L2 = {
   frees = [@{typ 'a1}, @{typ "'a2"}],
   lives = [],
   lives' = [],
+  deads = [],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (

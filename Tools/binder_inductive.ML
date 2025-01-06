@@ -547,7 +547,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             hyp_subst_tac ctxt,
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms emp_bound iffD2[OF insert_bound] ordLeq_refl}
+              @{thms emp_bound iffD2[OF insert_bound_UNIV] ordLeq_refl}
               @ infinite_UNIVs @ [Un_bound, UN_bound]
               @ maps (fn thm => [thm, @{thm ordLess_ordLeq_trans} OF [thm]]) (
                 maps set_bd_UNIVs_of_mr_bnfs binder_mr_bnfs

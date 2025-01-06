@@ -876,7 +876,7 @@ lemma permute_tusubst[equiv]:
   apply (rule trans)
    apply (rule trans[OF comp_apply[symmetric] typ.tvsubst_permutes[THEN fun_cong]])
      apply (rule assms)+
-  apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_mono1 emp_bound infinite_UNIV insert_bound ordLeq_ordLess_trans)
+  apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_mono1 emp_bound infinite_UNIV insert_bound_UNIV ordLeq_ordLess_trans)
   apply (unfold fun_upd_def comp_def)
   apply (rule arg_cong2[OF _ refl, of _ _ tvsubst_typ])
   apply (rule ext)
@@ -974,8 +974,8 @@ lemma SSupp_Var_upd_bound[simp]: "|SSupp_trm (Var(x := v::('tv::var, 'v::var) tr
   apply (rule cmin_greater)
      apply (rule card_of_Card_order)+
    apply (unfold fun_upd_def SSupp_trm_def tvVVr_tvsubst_trm_def tv\<eta>_trm_tvsubst_trm_def comp_def Var_def[symmetric])
-  using infinite_UNIV insert_bound apply fastforce
-  using infinite_UNIV insert_bound apply fastforce
+  using infinite_UNIV insert_bound_UNIV apply fastforce
+  using infinite_UNIV insert_bound_UNIV apply fastforce
   done
 
 lemma vvsubst_tvsubst_pat: "
@@ -1109,8 +1109,8 @@ lemma SSupp_typ_TyVar_upd_bound[simp]: "|SSupp_typ ((TyVar :: _ \<Rightarrow> ('
   apply (unfold fun_upd_def SSupp_typ_def tvVVr_tvsubst_typ_def tv\<eta>_typ_tvsubst_typ_def comp_def TyVar_def[symmetric])
   apply (rule cmin_greater)
      apply (rule card_of_Card_order)+
-  using infinite_UNIV insert_bound apply fastforce
-  using infinite_UNIV insert_bound apply fastforce
+  using infinite_UNIV insert_bound_UNIV apply fastforce
+  using infinite_UNIV insert_bound_UNIV apply fastforce
   done
 
 lemma emp_bound_cmin[simp]: "|{}| <o cmin |UNIV::'a::var set| |UNIV::'b set|"
@@ -1260,7 +1260,7 @@ binder_inductive typing
     subgoal for \<Gamma>' x T1 t T2
       apply (rule disjI2, rule disjI1)
       apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{x} \<union> FVars t \<union> Inr -` dom \<Gamma>"]])
-       apply (auto simp: insert_bound infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV) []
+       apply (auto simp: insert_bound_UNIV infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV) []
       apply (meson finite_set cinfinite_imp_infinite finite_imageI finite_ordLess_infinite2 finite_vimageI inj_Inr lfset.UNIV_cinfinite)
       subgoal for y
         apply (rule exI[of _ "{}"]; simp)
@@ -1279,7 +1279,7 @@ binder_inductive typing
     subgoal for \<Gamma>' X T1 t T2
       apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
       apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{X} \<union> FVars_typ T1  \<union> FVars_typ T2 \<union> FTVars t \<union> FFVars_ctxt \<Gamma> \<union> Inl -` dom \<Gamma>"]])
-       apply (auto simp: insert_bound infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
+       apply (auto simp: insert_bound_UNIV infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
       apply (meson finite_set cinfinite_imp_infinite finite_imageI finite_ordLess_infinite2 finite_vimageI inj_Inl lfset.UNIV_cinfinite)
       subgoal for Y
         apply (rule exI[of _ "{Y}"]; simp add: TAbs_inject)
@@ -1298,14 +1298,14 @@ binder_inductive typing
     subgoal for \<Gamma>' t X T11 T12 T2
       apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
       apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{X} \<union> FVars_typ T11  \<union> FVars_typ T12  \<union> FVars_typ T2 \<union> FTVars t \<union> FFVars_ctxt \<Gamma> \<union> Inl -` dom \<Gamma>"]])
-       apply (auto simp: insert_bound infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
+       apply (auto simp: insert_bound_UNIV infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
       apply (meson finite_set cinfinite_imp_infinite finite_imageI finite_ordLess_infinite2 finite_vimageI inj_Inl lfset.UNIV_cinfinite)
       subgoal for Y
         apply (rule exI[of _ "{Y}"]; simp add: TAbs_inject)
         apply (intro conjI)
           apply (metis imageI setl.cases)
          apply (subst FVars_tvsubst_typ)
-          apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_Un_singl_ordLess_infinite emp_bound infinite_UNIV insert_bound sup.orderE)
+          apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_Un_singl_ordLess_infinite emp_bound infinite_UNIV insert_bound_UNIV sup.orderE)
          apply auto []
         apply (rule exI[of _ "T11"])
         apply (rule exI[of _ "permute_typ (X \<leftrightarrow> Y) T12"])

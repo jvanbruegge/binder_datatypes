@@ -258,8 +258,6 @@ sig
   val mrbnf_cmd: ((((((((binding * string) * string) * (var_type * string) list) * string)
       * string list) * string option) * string option) * string option) * (Proof.context -> Plugin_Name.filter) ->
     Proof.context -> Proof.state
-
-  val get_class_assumption: string list -> string -> Proof.context -> thm;
 end;
 
 structure MRBNF_Def : MRBNF_DEF =

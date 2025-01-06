@@ -251,12 +251,8 @@ lemma ty_fresh_extend: "\<Gamma>\<^bold>, x <: U \<turnstile> S <: T \<Longright
 declare wf_eqvt[unfolded map_context_def, equiv]
 declare lfin_equiv[equiv]
 
-declare closed_in_eqvt[unfolded map_context_def, equiv]
-declare in_context_eqvt[unfolded map_context_def, equiv]
-
-thm equiv
-thm equiv_sym
-thm equiv_forward
+lemmas [equiv] = wf_eqvt[unfolded map_context_def] lfin_equiv
+  closed_in_eqvt[unfolded map_context_def] in_context_eqvt[unfolded map_context_def]
 
 lemma typ_inject: "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FVars_typ T2 - {x}) f \<and> f x = y \<and> permute_typ f T2 = R2)"
   by (smt (z3) Forall_rrename Swapping.bij_swap Swapping.supp_swap_bound id_on_def id_on_swap infinite_UNIV swap_simps(1) typ.inject(3))
@@ -269,7 +265,7 @@ binder_inductive ty
       [@{term "permute_typ :: ('a::var \<Rightarrow> 'a) \<Rightarrow> 'a typ \<Rightarrow> 'a typ"}, @{term "(\<lambda>f x. f x) :: ('a::var \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"}]
       [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0], NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thms emp_bound insert_bound ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
+      @{thms emp_bound insert_bound_UNIV ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
       @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done
@@ -309,8 +305,8 @@ lemma SSupp_typ_fun_upd_le: "SSupp_typ (f(X := T)) \<subseteq> insert X (SSupp_t
 
 lemma SSupp_typ_fun_upd_bound[simp]: "|SSupp_typ (f(X := T))| <o |UNIV :: 'a::var set| \<longleftrightarrow> |SSupp_typ f| <o |UNIV :: 'a set|"
   apply safe
-   apply (metis SSupp_typ_fun_upd_le card_of_mono1 fun_upd_idem_iff fun_upd_upd infinite_UNIV insert_bound ordLeq_ordLess_trans)
-  apply (meson SSupp_typ_fun_upd_le card_of_mono1 infinite_UNIV insert_bound ordLeq_ordLess_trans)
+   apply (metis SSupp_typ_fun_upd_le card_of_mono1 fun_upd_idem_iff fun_upd_upd infinite_UNIV insert_bound_UNIV ordLeq_ordLess_trans)
+  apply (meson SSupp_typ_fun_upd_le card_of_mono1 infinite_UNIV insert_bound_UNIV ordLeq_ordLess_trans)
   done
 
 lemma permute_typ_eq_tvsubst_typ_TyVar:

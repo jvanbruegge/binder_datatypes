@@ -248,7 +248,7 @@ binder_inductive ty
       [@{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0]]
       @{thm prems(3)} @{thm prems(2)} @{thms  prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thms emp_bound insert_bound ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
+      @{thms emp_bound insert_bound_UNIV ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
       @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done

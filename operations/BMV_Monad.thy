@@ -121,13 +121,15 @@ pbmv_monad "'a::var FType"
   done
 
 typedef ('a1, 'a2, 'c1, 'c2) L' = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
-  by (rule exI, rule UNIV_I)
+  by (rule UNIV_witness)
 
 declare [[ML_print_depth=1000]]
-pbmv_monad "('a1, 'a2, 'c1, 'c2) L'"                         and 'a1
+pbmv_monad "('a1, 'a2, 'c1, 'c2) L'"                          and 'a1
   Sbs: "\<lambda>f x. Abs_L' (map_prod f (map_prod f id) (Rep_L' x))" and "id :: ('a1 \<Rightarrow> 'a1) \<Rightarrow> 'a1 \<Rightarrow> 'a1"
-  Injs: "id :: 'a1 \<Rightarrow> 'a1"                                  and "id :: 'a1 \<Rightarrow> 'a1"
-  Vrs: "\<lambda>x. case Rep_L' x of (x1, x2, _) \<Rightarrow> {x1, x2}"        and "\<lambda>x. {x}"
+  Injs: "id :: 'a1 \<Rightarrow> 'a1"                                    and "id :: 'a1 \<Rightarrow> 'a1"
+  Vrs: "\<lambda>x. case Rep_L' x of (x1, x2, _) \<Rightarrow> {x1, x2}"         and "\<lambda>x. {x}"
+  Map: "\<lambda>f1 f2 x. Abs_L' (map_prod id (map_prod id (map_sum f1 f2)) (Rep_L' x))"
+  Supps: "\<lambda>x. case Rep_L' x of (_, _, y) \<Rightarrow> Basic_BNFs.setl y" "\<lambda>x. case Rep_L' x of (_, _, y) \<Rightarrow> Basic_BNFs.setr y"
   bd: natLeq
               apply (rule infinite_regular_card_order_natLeq)
              apply (auto simp: Abs_L'_inject Abs_L'_inverse Rep_L'_inverse prod.map_comp comp_def
@@ -136,8 +138,16 @@ pbmv_monad "('a1, 'a2, 'c1, 'c2) L'"                         and 'a1
       )[4]
          apply (unfold Abs_L'_inject[OF UNIV_I UNIV_I] case_prod_beta)[1]
          apply (metis (no_types, lifting) fst_map_prod insertCI prod.collapse snd_map_prod)
-        apply (auto simp: insert_bound[OF natLeq_Cinfinite] Cinfinite_gt_empty[OF natLeq_Cinfinite])
+         apply (auto simp: insert_bound[OF natLeq_Cinfinite] Cinfinite_gt_empty[OF natLeq_Cinfinite]
+            sum.map_id0 Rep_L'_inverse Abs_L'_inverse Abs_L'_inject prod.map_comp sum.map_comp comp_def
+            id_def[symmetric] case_prod_beta sum.set_map sum.set_bd
+         )
+  apply (rule prod.map_cong0[OF refl])+
+  apply (rule sum.map_cong0)
+  apply (auto elim!: snds.cases)
   done
+
+print_pbmv_monads
 
 ML_file \<open>../Tools/pbmv_monad_comp.ML\<close>
 
@@ -147,7 +157,7 @@ Multithreading.parallel_proofs := 0
 local_setup \<open>fn lthy =>
   let
     val (bmv, (thms, lthy)) = PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) I
-      @{typ "'a1 * 'a1 * (('a1 * 'a2) + ('a1 * ('a2 * ('a2 * 'a2 FType))))"}
+      @{typ "('a1, 'a2, 'a1 * 'a2,  'a1 * 'a2 * 'a2 * 'a2 FType) L'"}
       ([], lthy)
 
     val _ = @{print} (map (map (map (Option.map (Thm.cterm_of lthy o

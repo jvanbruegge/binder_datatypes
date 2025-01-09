@@ -379,39 +379,42 @@ fun mk_bmv_monad_axioms ops bd Sb Injs Vrs bmv_ops lthy =
     ) ops Injs Sb Vrs;
   in axioms end;
 
-fun mk_param_axioms (model: 'a bmv_monad_model) lthy = @{map 5} (fn T => fn Sb => fn Injs => fn Vrs => Option.map (fn param =>
+fun mk_param_axiom Map Supps Sb Injs Vrs bd lthy =
   let
+    val (f_Ts, T) = split_last (binder_types (fastype_of Map));
+    val (lives, lives') = split_list (map dest_funT f_Ts);
+
     val (Cs, _) = lthy
-      |> mk_TFrees (length (#lives model));
+      |> mk_TFrees (length lives);
     val ((((fs, gs), rhos), x), _) = lthy
-      |> mk_Frees "f" (map2 (curry (op-->)) (#lives model) (#lives' model))
-      ||>> mk_Frees "g" (map2 (curry (op-->)) (#lives' model) Cs)
+      |> mk_Frees "f" (map2 (curry (op-->)) lives lives')
+      ||>> mk_Frees "g" (map2 (curry (op-->)) lives' Cs)
       ||>> mk_Frees "\<rho>" (map fastype_of Injs)
       ||>> apfst hd o mk_Frees "x" [T];;
 
-    val Map_id = Term.subst_atomic_types (#lives' model ~~ #lives model) (
+    val Map_id = Term.subst_atomic_types (lives' ~~ lives) (
       mk_Trueprop_eq (
-        Term.list_comb (#Map param, map HOLogic.id_const (#lives model)), HOLogic.id_const T
+        Term.list_comb (Map, map HOLogic.id_const lives), HOLogic.id_const T
       )
     );
 
     val Map_comp = fold_rev Logic.all (fs @ gs) (mk_Trueprop_eq (
       HOLogic.mk_comp (Term.list_comb (
-        Term.subst_atomic_types ((#lives model @ #lives' model) ~~ (#lives' model @ Cs)) (#Map param), gs
-      ), Term.list_comb (#Map param, fs)),
-      Term.list_comb (Term.subst_atomic_types (#lives' model ~~ Cs) (#Map param), map2 (curry HOLogic.mk_comp) gs fs)
+        Term.subst_atomic_types ((lives @ lives') ~~ (lives' @ Cs)) Map, gs
+      ), Term.list_comb (Map, fs)),
+      Term.list_comb (Term.subst_atomic_types (lives' ~~ Cs) Map, map2 (curry HOLogic.mk_comp) gs fs)
     ));
 
     val Supp_Maps = map2 (fn Supp => fn f =>
       fold_rev Logic.all (fs @ [x]) (mk_Trueprop_eq (
-        Term.subst_atomic_types (#lives model ~~ #lives' model) Supp $ (Term.list_comb (#Map param, fs) $ x),
+        Term.subst_atomic_types (lives ~~ lives') Supp $ (Term.list_comb (Map, fs) $ x),
         mk_image f $ (Supp $ x)
       ))
-    ) (#Supps param) fs;
+    ) Supps fs;
 
     val Supp_bds = map (fn Supp => Logic.all x (HOLogic.mk_Trueprop (
-      mk_ordLess (mk_card_of (Supp $ x)) (#bd model)
-    ))) (#Supps param);
+      mk_ordLess (mk_card_of (Supp $ x)) bd
+    ))) Supps;
 
     val (gs', _) = lthy
       |> mk_Frees "g" (map fastype_of fs);
@@ -422,23 +425,23 @@ fun mk_param_axioms (model: 'a bmv_monad_model) lthy = @{map 5} (fn T => fn Sb =
           HOLogic.mk_Trueprop (HOLogic.mk_mem (a, Supp $ x)),
           mk_Trueprop_eq (f $ a, g $ a)
         )) end
-      ) (#Supps param) fs gs') (mk_Trueprop_eq (
-        Term.list_comb (#Map param, fs) $ x,
-        Term.list_comb (#Map param, gs') $ x
+      ) Supps fs gs') (mk_Trueprop_eq (
+        Term.list_comb (Map, fs) $ x,
+        Term.list_comb (Map, gs') $ x
       )));
 
     val Map_Sb = fold_rev Logic.all (fs @ rhos) (
       fold_rev (curry Logic.mk_implies) (mk_small_prems rhos Injs) (mk_Trueprop_eq (
-        HOLogic.mk_comp (Term.list_comb (#Map param, fs), Term.list_comb (Sb, rhos)),
+        HOLogic.mk_comp (Term.list_comb (Map, fs), Term.list_comb (Sb, rhos)),
         HOLogic.mk_comp (Term.list_comb (
-          Term.subst_atomic_types (#lives model ~~ #lives' model) Sb, rhos
-        ), Term.list_comb (#Map param, fs))
+          Term.subst_atomic_types (lives ~~ lives') Sb, rhos
+        ), Term.list_comb (Map, fs))
       ))
     );
 
     val Map_Vrs = map (map (Option.map (fn Vrs =>
       fold_rev Logic.all (fs @ [x]) (mk_Trueprop_eq (
-        Term.subst_atomic_types (#lives model ~~ #lives' model) Vrs $ (Term.list_comb (#Map param, fs) $ x),
+        Term.subst_atomic_types (lives ~~ lives') Vrs $ (Term.list_comb (Map, fs) $ x),
         Vrs $ x
       ))
     ))) Vrs;
@@ -447,10 +450,10 @@ fun mk_param_axioms (model: 'a bmv_monad_model) lthy = @{map 5} (fn T => fn Sb =
       fold_rev Logic.all (rhos @ [x]) (mk_Trueprop_eq (
         Supp $ (Term.list_comb (Sb, rhos) $ x), Supp $ x
       ))
-    ) (#Supps param);
+    ) Supps;
   in {
-    Map = #Map param,
-    Supps = #Supps param,
+    Map = Map,
+    Supps = Supps,
     axioms = {
       Map_id = Map_id,
       Map_comp = Map_comp,
@@ -461,8 +464,7 @@ fun mk_param_axioms (model: 'a bmv_monad_model) lthy = @{map 5} (fn T => fn Sb =
     Map_Sb = Map_Sb,
     Supp_Sb = Supp_Sb,
     Map_Vrs = Map_Vrs
-  }: term bmv_monad_param end
-)) (#ops model) (#Sbs model) (#Injs model) (#Vrs model) (#params model);
+  }: term bmv_monad_param end;
 
 val smart_max_inline_term_size = 25; (*FUDGE*)
 
@@ -601,7 +603,9 @@ fun prove_axioms (model: (Proof.context -> tactic) bmv_monad_model) defs lthy =
 
 fun prove_params (model: (Proof.context -> tactic) bmv_monad_model) defs lthy =
   let
-    val goals = mk_param_axioms model lthy;
+    val goals = @{map 4} (fn Sb => fn Vrs => fn Injs => Option.map (fn param =>
+      mk_param_axiom (#Map param) (#Supps param) Sb Injs Vrs (#bd model) lthy
+    )) (#Sbs model) (#Vrs model) (#Injs model) (#params model)
     val tacs' = map (Option.map (morph_bmv_monad_param Morphism.identity (fn tac => fn goal =>
       Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, ...} =>
        Local_Defs.unfold0_tac ctxt defs THEN tac ctxt
@@ -734,23 +738,31 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
 
     val filter_bmvs = map_filter (fn Inl x => SOME x | _ => NONE);
 
-    val frees = fold (fn a =>
-      let val (n, s) = dest_TFree a
-      in Symtab.map_default (n, s) (curry (Sign.inter_sort (Proof_Context.theory_of lthy)) s) end
-    ) (frees_of_bmv_monad outer @ maps frees_of_bmv_monad (filter_bmvs inners)) Symtab.empty;
+    fun vars_of_bmv_monad bmv = @{fold 2} (fn T => fn param => case param of
+      SOME param => Term.add_tfrees (#Map param)
+      | NONE => Term.add_tfreesT T
+    ) (ops_of_bmv_monad bmv) (params_of_bmv_monad bmv) [];
+
+    fun sum_collapse (Inl x) = x
+      | sum_collapse (Inr x) = x
+
+    val vars = fold (fn (n, s) =>
+      Symtab.map_default (n, s) (curry (Sign.inter_sort (Proof_Context.theory_of lthy)) s)
+    ) (vars_of_bmv_monad outer @ maps (
+      sum_collapse o map_sum vars_of_bmv_monad (fn T => Term.add_tfreesT T [])
+    ) inners) Symtab.empty;
 
     fun mk_sign_morph bmv =
-      morph_bmv_monad (MRBNF_Util.subst_typ_morphism (map (fn a =>
-        let val (n, _) = dest_TFree a;
-        in (a, TFree (n, the (Symtab.lookup frees n))) end
-      ) (frees_of_bmv_monad bmv))) bmv;
+      morph_bmv_monad (MRBNF_Util.subst_typ_morphism (map (fn (n, s) =>
+        (TFree (n, s), TFree (n, the (Symtab.lookup vars n)))
+      ) (vars_of_bmv_monad bmv))) bmv;
     fun mk_T_morph T =
-      let val vars = Term.add_tfreesT T [];
-      in Term.typ_subst_atomic (map (fn x =>
-        (TFree x, the_default (TFree x) (Option.map (TFree o pair (fst x)) (Symtab.lookup frees (fst x))))
-      ) vars) T end
+      Term.typ_subst_atomic (map (fn x =>
+        (TFree x, the_default (TFree x) (Option.map (TFree o pair (fst x)) (Symtab.lookup vars (fst x))))
+      ) (Term.add_tfreesT T [])) T
     val outer = mk_sign_morph outer;
     val inners = map (map_sum mk_sign_morph mk_T_morph) inners;
+    val inners' = filter_bmvs inners;
 
     val bmvs = Typtab.make_distinct (flat (map (fn bmv => (#ops bmv ~~
       ((#params bmv) ~~ (#Injs bmv) ~~ (#Sbs bmv) ~~ (#Vrs bmv) ~~ map SOME (#axioms bmv) ~~ replicate (length (#Sbs bmv)) (SOME bmv))
@@ -848,6 +860,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
     ) Injs bmvs)));
 
     fun pick xs = nth xs (leader_of_bmv_monad outer)
+
     val ops = add_ops (the (pick outer_ops')) (the (pick Injs)) bmvs;
 
     val bmv_ops = map_filter (fn T => case Typtab.lookup bmvs T of
@@ -870,8 +883,6 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
     ) ops;
 
     val ops' = subtract (fn (bmv, T) => hd (ops_of_bmv_monad bmv) = T) bmv_ops ops;
-
-    val inners' = filter_bmvs inners;
 
     val idxs = map (fn T => find_index (curry (op=) T) ops) ops';
     val Vrs = map (the o nth Vrs) idxs;
@@ -1048,49 +1059,125 @@ fun pbmv_monad_cmd ((((((b, ops), Sbs), Injs), Vrs), param_opt), bd) lthy =
     val goals = mk_bmv_monad_axioms ops bd Sbs Injs Vrs [] lthy;
 
     val vars = distinct (op=) (map TFree (fold Term.add_tfreesT ops []));
-    val lives = [];
+
+    val names_lthy = lthy
+      |> fold Variable.declare_typ vars
+
+    val (lives, lives', params) = case param_opt of
+      NONE => ([], [], replicate (length ops) NONE)
+      | SOME (Maps, Suppss) =>
+        let
+          val Maps = map (fn "_" => NONE | s => SOME (Syntax.read_term lthy s)) Maps;
+          val Suppss = map (fn [] => NONE | xs => SOME (map (Syntax.read_term lthy) xs)) Suppss;
+
+          val lives = the_default [] (Option.map (fn Map =>
+            let
+              val Map = Term.subst_atomic_types (map (apply2 TFree) (
+                Term.add_tfreesT (snd (split_last (binder_types (fastype_of Map)))) []
+                ~~ Term.add_tfreesT (hd ops) []
+              )) Map;
+            in map (fst o dest_funT) (fst (split_last (binder_types (fastype_of Map)))) end
+          ) (hd Maps));
+          val (lives', _) = names_lthy
+            |> mk_TFrees' (map Type.sort_of_atyp lives);
+
+          val Maps = map2 (fn T => Option.map (fn Map =>
+            let
+              val l' = map (snd o dest_funT) (fst (split_last (binder_types (fastype_of Map))));
+              val TA = snd (split_last (binder_types (fastype_of Map)));
+              val Map = Term.subst_atomic_types (map (apply2 TFree) (
+                Term.add_tfreesT TA [] ~~ Term.add_tfreesT T []
+              )) Map;
+              val TA = snd (split_last (binder_types (fastype_of Map)));
+              val TB = body_type (fastype_of Map);
+              val old_vars = map TFree (Term.add_tfreesT TB []);
+            in Term.subst_atomic_types (
+              (l' ~~ lives') @ (
+                subtract (op=) l' old_vars ~~ subtract (op=) lives (map TFree (Term.add_tfreesT TA []))
+              )
+            ) Map end
+          )) ops (Maps @ replicate (length ops - length Maps) NONE);
+
+          val Suppss = map2 (fn T => Option.map (map (fn Supp => Term.subst_atomic_types (map (apply2 TFree) (
+            Term.add_tfreesT (hd (binder_types (fastype_of Supp))) [] ~~ Term.add_tfreesT T []
+          )) Supp))) ops (Suppss @ replicate (length ops - length Suppss) NONE);
+
+        in (lives, lives', @{map 5} (fn Sb => fn Injs => fn Vrs => @{map_option 2} (fn Map => fn Supps =>
+            mk_param_axiom Map Supps Sb Injs Vrs bd lthy
+          )) Sbs Injs Vrs Maps Suppss
+        ) end;
 
     fun after_qed thmss lthy =
       let
         val thms = map hd thmss;
+        val bd_irco = hd thms;
+
+        val chop_many = fold_map (fold_map (
+          fn NONE => (fn thms => (NONE, thms))
+          | SOME _ => fn thms => (SOME (hd thms), tl thms)
+        ));
+
+        val ((axioms, params), _) = apfst split_list (@{fold_map 2} (fn goal => fn param => fn thms =>
+          let
+            val (((((((Sb_Inj, Sb_comp_Injs), Sb_comp), Vrs_bds), Vrs_Injs), Vrs_Sbs), Sb_cong), thms) = thms
+              |> apfst hd o chop 1
+              ||>> chop (length (#Sb_comp_Injs goal))
+              ||>> apfst hd o chop 1
+              ||>> chop_many (#Vrs_bds goal)
+              ||>> chop_many (#Vrs_Injs goal)
+              ||>> chop_many (#Vrs_Sbs goal)
+              ||>> apfst hd o chop 1;
+            val (param, thms) = case param of NONE => (NONE, thms) | SOME goals =>
+              let val ((((((((Map_id, Map_comp), Supp_maps), Supp_bds), Map_cong), Map_Sb), Supp_Sb), Map_Vrs), thms) = thms
+                |> apfst hd o chop 1
+                ||>> apfst hd o chop 1
+                ||>> chop (length (#Supps goals))
+                ||>> chop (length (#Supps goals))
+                ||>> apfst hd o chop 1
+                ||>> apfst hd o chop 1
+                ||>> chop (length (#Supps goals))
+                ||>> chop_many (#Map_Vrs goals)
+              in (SOME ({
+                Map = #Map goals,
+                Supps = #Supps goals,
+                axioms = {
+                  Map_id = Map_id,
+                  Map_comp = Map_comp,
+                  Supp_Map = Supp_maps,
+                  Supp_bd = Supp_bds,
+                  Map_cong = Map_cong
+                },
+                Map_Sb = Map_Sb,
+                Supp_Sb = Supp_Sb,
+                Map_Vrs = Map_Vrs
+              } : thm bmv_monad_param), thms) end;
+          in (({
+            Sb_Inj = Sb_Inj,
+            Sb_comp_Injs = Sb_comp_Injs,
+            Sb_comp = Sb_comp,
+            Vrs_bds = Vrs_bds,
+            Vrs_Injs = Vrs_Injs,
+            Vrs_Sbs = Vrs_Sbs,
+            Sb_cong = Sb_cong
+          }: thm bmv_monad_axioms, param), thms) end
+        ) goals params (tl thms));
+
         val model = {
           ops = ops,
           bd = bd,
           var_class = @{class var}, (* TODO: change *)
           leader = 0,
           frees = frees,
-          lives = [],
-          lives' = [],
+          lives = lives,
+          lives' = lives',
           deads = subtract (op=) (lives @ frees) vars,
           bmv_ops = [],
-          params = replicate (length ops) NONE,
+          params = params,
           Injs = Injs,
           Sbs = Sbs,
           Vrs = Vrs,
-          bd_infinite_regular_card_order = hd thms,
-          tacs = fst (fold_map (fn goal => fn thms =>
-            let
-              val chop_many = fold_map (fold_map (
-                fn NONE => (fn thms => (NONE, thms))
-                | SOME _ => fn thms => (SOME (hd thms), tl thms)
-              ));
-              val ((((((Sb_Inj, Sb_comp_Injs), Sb_comp), Vrs_bds), Vrs_Injs), Vrs_Sbs), thms) = thms
-                |> apfst hd o chop 1
-                ||>> chop (length (#Sb_comp_Injs goal))
-                ||>> apfst hd o chop 1
-                ||>> chop_many (#Vrs_bds goal)
-                ||>> chop_many (#Vrs_Injs goal)
-                ||>> chop_many (#Vrs_Sbs goal);
-            in ({
-              Sb_Inj = Sb_Inj,
-              Sb_comp_Injs = Sb_comp_Injs,
-              Sb_comp = Sb_comp,
-              Vrs_bds = Vrs_bds,
-              Vrs_Injs = Vrs_Injs,
-              Vrs_Sbs = Vrs_Sbs,
-              Sb_cong = hd thms
-            }: thm bmv_monad_axioms, thms) end
-          ) goals (tl thms))
+          bd_infinite_regular_card_order = bd_irco,
+          tacs = axioms
         } : thm bmv_monad_model;
 
         val (bmv, lthy) = mk_bmv_monad BNF_Def.Smart_Inline (K BNF_Def.Note_Some) model lthy;
@@ -1099,10 +1186,14 @@ fun pbmv_monad_cmd ((((((b, ops), Sbs), Injs), Vrs), param_opt), bd) lthy =
       in lthy end;
   in Proof.theorem NONE after_qed (map (single o rpair []) (
     [HOLogic.mk_Trueprop (mk_infinite_regular_card_order bd)]
-    @ maps (fn goal => #Sb_Inj goal :: #Sb_comp_Injs goal @ [#Sb_comp goal]
+    @ flat (map2 (fn goal => fn param => #Sb_Inj goal :: #Sb_comp_Injs goal @ [#Sb_comp goal]
       @ maps (map_filter I) (#Vrs_bds goal @ #Vrs_Injs goal @ #Vrs_Sbs goal)
-      @ [#Sb_cong goal]
-    ) goals
+      @ [#Sb_cong goal] @ the_default [] (Option.map (fn param =>
+        [#Map_id (#axioms param), #Map_comp (#axioms param)] @ #Supp_Map (#axioms param)
+        @ #Supp_bd (#axioms param) @ [#Map_cong (#axioms param), #Map_Sb param]
+        @ #Supp_Sb param @ maps (map_filter I) (#Map_Vrs param)
+      ) param)
+    ) goals params)
   )) lthy
     |> Proof.refine_singleton (Method.Basic (fn ctxt => Method.SIMPLE_METHOD (TRYALL (rtac ctxt refl))))
   end;
@@ -1142,8 +1233,11 @@ val _ = Outer_Syntax.local_theory_to_proof @{command_keyword pbmv_monad}
       Scan.repeat1 (Scan.unless (Parse.reserved "Map" || Parse.reserved "bd") (Parse.term || Parse.reserved "_"))
     )) --
     Scan.optional (
-      (Parse.reserved "Map" -- @{keyword ":"}) |-- Scan.repeat1 (Scan.unless (Parse.reserved "Supps") Parse.term) --|
-      (Parse.reserved "Supps" -- @{keyword ":"}) -- Parse.list (Scan.repeat1 (Scan.unless (Parse.reserved "bd") Parse.term))
+      (Parse.reserved "Map" -- @{keyword ":"}) |-- Parse.and_list1 (Parse.term || Parse.reserved "_") --|
+      (Parse.reserved "Supps" -- @{keyword ":"}) -- Parse.and_list1 (
+        Scan.repeat1 (Scan.unless (Parse.reserved "bd") Parse.term)
+        || (Parse.reserved "_" >> K [])
+      )
       >> SOME
     ) NONE --|
     (Parse.reserved "bd" -- @{keyword ":"}) -- Parse.term

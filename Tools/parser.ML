@@ -155,7 +155,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     ) (cons T)) Ts params';
 
     val (ctors, (lthy, params)) = fold_map (create_ctor_spec T_names) ctors (lthy, params);
-    fun flat s t = rev (map (rpair t o dest_TFree) (the (Symtab.lookup params s)));
+    fun flat s t = map (rpair t o dest_TFree) (the (Symtab.lookup params s));
 
     val brecs = flat "brec" MRBNF_Def.Live_Var
     val recs = flat "rec" MRBNF_Def.Live_Var

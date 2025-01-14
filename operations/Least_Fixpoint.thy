@@ -6865,12 +6865,24 @@ val fp_res = { fp = BNF_Util.Least_FP,
 
 local_setup \<open>MRBNF_FP_Def_Sugar.register_fp_results [fp_res]\<close>
 
-(* Test of automation, disgarding result *)
+(* Test of automation, discarding result *)
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 local_setup \<open>fn lthy =>
 let
   val (fp_res, _) = MRBNF_FP.construct_binder_fp BNF_Util.Least_FP
-    [(("TT1", hd (#pre_mrbnfs fp_res)), 2), (("TT2", nth (#pre_mrbnfs fp_res) 1), 2)]
+    [{
+      FVars = replicate 2 NONE,
+      T_name = "TT1",
+      nrecs = 2,
+      permute = NONE,
+      pre_mrbnf = hd (#pre_mrbnfs fp_res)
+    }, {
+      FVars = replicate 2 NONE,
+      T_name = "TT2",
+      nrecs = 2,
+      permute = NONE,
+      pre_mrbnf = nth (#pre_mrbnfs fp_res) 1
+    }]
     [[([0], [1, 3])], [([], [1])]]
     lthy
   val _ = @{print} fp_res

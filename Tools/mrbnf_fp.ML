@@ -1,17 +1,24 @@
 signature MRBNF_FP =
 sig
+  type mrbnf_fp_model = {
+    T_name: string,
+    pre_mrbnf: MRBNF_Def.mrbnf,
+    nrecs: int,
+    permute: string option,
+    FVars: string option list
+  };
+
   val construct_binder_fp:
-    BNF_Util.fp_kind ->
-    ((string * MRBNF_Def.mrbnf) * int) list -> (* ((name of type, pre_mrbnf), number of rec vars)
-                                                The pre_mrbnf needs to have the variables in order:
-                                                  - m free positions
-                                                  - x passive free positions
-                                                  - y passive live positions
-                                                  - z passive bound positions
-                                                  - m' bound positions (where m' \<ge> m)
-                                                  - m'' bound free positions
-                                                  - n recursive live positions
-                                                *)
+    BNF_Util.fp_kind -> mrbnf_fp_model list ->
+      (* The pre_mrbnf needs to have the variables in order:
+          - m free positions
+          - x passive free positions
+          - y passive live positions
+          - z passive bound positions
+          - m' bound positions (where m' \<ge> m)
+          - m'' bound free positions
+          - n recursive live positions
+       *)
     (int list * int list) list list -> (* one list (length m) per variable kind containing a list of bound positions
                                           for that variable kind containing
                                             - `fst`: a list of indices of bound-free positions this position is bound in
@@ -31,18 +38,26 @@ fun op RSS (thms, thm) = map (fn x => x RS thm) thms;
 fun mk_internal internal ctxt f =
   if internal andalso not (Config.get ctxt MRBNF_Def.mrbnf_internals) then f else I;
 
-fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) list list) lthy =
+type mrbnf_fp_model = {
+  T_name: string,
+  pre_mrbnf: MRBNF_Def.mrbnf,
+  nrecs: int,
+  permute: string option,
+  FVars: string option list
+};
+
+fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (int list * int list) list list) lthy =
   let
     val co = (fp_kind = BNF_Util.Greatest_FP);
-    val mrbnfs = map (snd o fst) mrbnf_ks;
+    val mrbnfs = map #pre_mrbnf models;
     val (bound_freesss, binding_relation) = split_list (map split_list binding_relation);
-    val rec_vars = map snd mrbnf_ks;
+    val rec_vars = map #nrecs models;
     val nrecs = fold (curry (op+)) rec_vars 0;
     val nbfrees = map (fn xs => length (fold (union (op=)) xs [])) bound_freesss;
     val nbfree = fold (curry (op+)) nbfrees 0;
     val free = MRBNF_Def.free_of_mrbnf (hd mrbnfs) - nbfree;
     val nvars = length binding_relation;
-    val T_names = map (fst o fst) mrbnf_ks;
+    val T_names = map #T_name models;
     (* TODO: error handling *)
 
     val npre_args = MRBNF_Def.live_of_mrbnf (hd mrbnfs) + MRBNF_Def.free_of_mrbnf (hd mrbnfs) + MRBNF_Def.bound_of_mrbnf (hd mrbnfs);
@@ -60,22 +75,24 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
     val bfreess = map2 replicate nbfrees frees;
     val bfrees = flat bfreess;
 
-    fun replicate_rec xs = flat (map2 (fn (_, k) => replicate k) mrbnf_ks xs);
+    fun replicate_rec xs = flat (map2 replicate rec_vars xs);
     val mk_recs = replicate_rec o map (fn n => Type (n, frees @ passives));
 
     val (raw_Ts, lthy) =
       let
-        val T_long_names = map (fn ((n, _), _) => Local_Theory.full_name lthy (Binding.name (prefix "raw_" n))) mrbnf_ks;
+        val T_long_names = map (fn { T_name, ...} =>
+          Local_Theory.full_name lthy (Binding.name (prefix "raw_" T_name))
+        ) models;
         val args = map (fn T => (T, Type.sort_of_atyp T)) (frees @ passives);
-        val T_specs = map (fn ((n, mrbnf), _) => ((((
+        val T_specs = map (fn { T_name=n, pre_mrbnf, ... } => ((((
           (map (pair NONE) args, Binding.name ("raw_" ^ n)), NoSyn),
           [(((Binding.empty, Binding.name ("raw_" ^ n ^ "_ctor")),
-           [(Binding.empty, Type (fst (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)),
+           [(Binding.empty, Type (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf)),
              frees @ passives @ bounds @ bfrees @ mk_recs T_long_names
            ))]), NoSyn)
           ]),
           (Binding.empty, Binding.empty, Binding.empty)), []
-        )) mrbnf_ks;
+        )) models;
         val lthy = BNF_FP_Def_Sugar.co_datatypes fp_kind (if co
           then BNF_GFP.construct_gfp else BNF_LFP.construct_lfp
         ) ((K false, false), T_specs) lthy;
@@ -124,12 +141,14 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
     val free_ids = map HOLogic.id_const (frees @ pfrees @ bfrees);
     val plive_ids = map HOLogic.id_const plives;
 
+    val permute_names = map2 (fn name => the_default ("permute_" ^ name) o #permute) T_names models;
+
     val (_, lthy) = Local_Theory.begin_nested lthy;
     val (permute_raws, lthy) =
       let
         val (permute_raws, _) = @{fold_map 2} (fn raw => fn name => apfst hd o
-          mk_Frees ("permute_raw_" ^ name) [map (fn a => a --> a) frees ---> #T raw --> #T raw]
-        ) raw_Ts T_names lthy;
+          mk_Frees (name ^ "_raw") [map (fn a => a --> a) frees ---> #T raw --> #T raw]
+        ) raw_Ts permute_names lthy;
 
         val rec_ts = replicate_rec (map (fn perm => Term.list_comb (perm, fs)) permute_raws);
         val eqs = @{map 5} (fn mrbnf => fn perm => fn raw => fn x => fn deads =>
@@ -221,13 +240,16 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
         end
       ) (transpose is_freess) aa binding_relation (transpose free_setss) (transpose bound_setsss) (transpose bfree_setsss) bfree_boundsss lthy end;
 
+    val FVars_namess = map2 (fn name =>
+      fn [x] => [the_default ("FVars_" ^ name) x]
+      | xs => map2 (fn i => the_default ("FVars_" ^ name ^ "_" ^ string_of_int i)) (1 upto length xs) xs
+    ) T_names (map #FVars models);
     val mk_def_public = mk_def_t true Binding.empty I
-    val mk_defs_public = mk_defs_t true Binding.empty I
-    val (FVars_rawss, lthy) = @{fold_map 3} (fn name => fn preds => fn z => mk_defs_public ("FVars_raw_" ^ name) 1
-      (map2 (fn a => fn pred =>
-        Term.absfree (dest_Free z) (HOLogic.mk_Collect (fst (dest_Free a), snd (dest_Free a), pred $ Bound 0 $ z))
-      ) aa preds)
-    ) T_names (transpose (map #preds is_freess)) raw_zs lthy;
+    val (FVars_rawss, lthy) = @{fold_map 3} (fn z => @{fold_map 3} (fn a => fn pred => fn name =>
+      mk_def_public (name ^ "_raw") 1 (Term.absfree (dest_Free z) (
+        HOLogic.mk_Collect (fst (dest_Free a), snd (dest_Free a), pred $ Bound 0 $ z)
+      ))
+    ) aa) raw_zs (transpose (map #preds is_freess)) FVars_namess lthy;
 
     val nbounds = map length (hd bound_setsss);
     val rec_bound_fss = @{map 4} (fn nbound => fn f => fn rec_boundss => fst o fold_map (fn rec_bounds => fn hs =>
@@ -354,14 +376,14 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
     ) T_names TT_abss raw_Ts rep_maps xs lthy;
 
     val (permutes, lthy) = @{fold_map 5} (fn name => fn TT_abs => fn TT_rep => fn permute_raw => fn t =>
-      mk_def_public ("permute_" ^ name) (nvars + 1) (fold_rev Term.absfree (map dest_Free fs) (Term.absfree (dest_Free t) (
+      mk_def_public name (nvars + 1) (fold_rev Term.absfree (map dest_Free fs) (Term.absfree (dest_Free t) (
         TT_abs $ (Term.list_comb (fst permute_raw, fs) $ (TT_rep $ t))
       )))
-    ) T_names TT_abss TT_reps permute_raws ts lthy;
+    ) permute_names TT_abss TT_reps permute_raws ts lthy;
 
-    val (FVarsss, lthy) = @{fold_map 4} (fn name => fn TT_rep => fn t => mk_defs_public ("FVars_" ^ name) 1 o
-      map (fn FVars => Term.absfree (dest_Free t) (fst FVars $ (TT_rep $ t)))
-    ) T_names TT_reps ts FVars_rawss lthy;
+    val (FVarsss, lthy) = @{fold_map 4} (fn TT_rep => fn t => @{fold_map 2} (fn name => fn FVars =>
+      mk_def_public name 1 (Term.absfree (dest_Free t) (fst FVars $ (TT_rep $ t)))
+    )) TT_reps ts FVars_namess FVars_rawss lthy;
 
     val rec_setsss = map (fst o fold_map chop rec_vars) rec_setss;
 
@@ -422,20 +444,20 @@ fun define_fp_consts fp_kind mrbnf_ks (binding_relation : (int list * int list) 
     TT_abss, TT_reps, map morph ctors, map morph permutes, map (map morph) FVarsss,
     Option.map (morph_result phi tyenv) subshapes_opt, map morph raw_noclashs, map morph noclashs, lthy) end
 
-fun construct_binder_fp fp_kind mrbnf_ks binding_relation lthy =
+fun construct_binder_fp fp_kind models binding_relation lthy =
   let
     val ((((((frees, pfrees), plives), pbounds), deadss), (((((((fs, hss), raw_xs), raw_ys), aa), As), raw_zs), raw_zs'), ((xs, ts), zs)),
       (bounds, bfrees, bound_fs, bfree_fs), bfree_boundsss,
       permute_raws, is_freess, FVars_rawss, alphas, quots, raw_Ts,
       TT_abss, TT_reps, ctors, permutes, FVarsss, subshapes_opt, raw_noclashs, noclashs,
-      lthy) = define_fp_consts fp_kind mrbnf_ks binding_relation lthy;
+      lthy) = define_fp_consts fp_kind models binding_relation lthy;
 
-    val n = length mrbnf_ks;
+    val n = length models;
     val nvars = length frees;
-    val rec_vars = map snd mrbnf_ks;
+    val rec_vars = map #nrecs models;
     val nrecs = foldr1 (op+) rec_vars;
     val names = map (fst o dest_Free);
-    val mrbnfs = map (snd o fst) mrbnf_ks;
+    val mrbnfs = map #pre_mrbnf models;
     val passives = pfrees @ plives @ pbounds;
     val npassive = length passives;
 

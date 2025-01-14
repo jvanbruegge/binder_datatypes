@@ -8,7 +8,9 @@ type spec = {
   binding_rel: (int list * int list) list,
   ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
-  tvsubst_b: binding
+  tvsubst_b: binding,
+  permute_b: binding option,
+  FVars_bs: binding option list
 };
 
 type binder_sugar = {
@@ -51,7 +53,9 @@ type spec = {
   binding_rel: (int list * int list) list,
   ctors: ((string * mixfix) * typ list) list,
   map_b: binding,
-  tvsubst_b: binding
+  tvsubst_b: binding,
+  permute_b: binding option,
+  FVars_bs: binding option list
 };
 
 type binder_sugar = {
@@ -130,7 +134,13 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
     val mrbnf = hd mrbnfs;
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [((name, mrbnf), #rec_vars spec)] (map single (#binding_rel spec)) lthy;
+    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [{
+      T_name = name,
+      pre_mrbnf = mrbnf,
+      nrecs = #rec_vars spec,
+      permute = Option.map Binding.name_of (#permute_b spec),
+      FVars = map (Option.map Binding.name_of) (#FVars_bs spec)
+    }] (map single (#binding_rel spec)) lthy;
   in ((res, fp_pre_T, mrbnf, absinfo), lthy) end
 
 fun create_binder_datatype (spec : spec) lthy =
@@ -367,7 +377,7 @@ fun create_binder_datatype (spec : spec) lthy =
             |> mk_Frees "x" tys;
 
           fun get_set vars = map (
-            fn (t as Free _) => if fastype_of t = free then mk_singleton t else 
+            fn (t as Free _) => if fastype_of t = free then mk_singleton t else
               (case bfree_opt of
                 SOME a => (if fastype_of t = a then mk_singleton t else FVars $ t)
                 | NONE => FVars $ t)
@@ -461,7 +471,7 @@ fun create_binder_datatype (spec : spec) lthy =
           |> mk_Frees "x" tys'
           ||>> mk_Frees "y" tys';
         val ys' = @{map 3} (fn ty => fn x => fn y =>
-          if exists (member (op=) bounds o TFree) (Term.add_tfreesT ty []) then 
+          if exists (member (op=) bounds o TFree) (Term.add_tfreesT ty []) then
             (if member (op=) bounds ty then x else raise TYPE ("typ contains binder", [ty], [])) else y
         ) tys xs ys;
         val xs_ys' = @{map_filter 2} (fn x => fn y' => if x = y' then NONE else SOME (x, y')) xs ys';

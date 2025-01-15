@@ -191,7 +191,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
       end
 
     val var_Ts = map HOLogic.dest_setT bind_Ts;
-    val (mr_bnfs', raw_perms) = split_list (map2 (fn s => fn T => if YXML.content_of s = "_" then
+    val (mr_bnfs', raw_perms) = split_list (map2 (fn s => fn T => if XML.content_of (YXML.parse_body s) = "_" then
       let
         val (mr_bnfs, perm) = build_permute_for gs var_Ts T;
       in (mr_bnfs, Inl (fold_rev (Term.absfree o dest_Free) gs perm)) end
@@ -199,7 +199,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt), perms_supps) no_defs_lthy =
     ) (perms @ replicate (length param_Ts - length perms) "_") param_Ts);
     val mr_bnfs = map (map snd) mr_bnfs';
 
-    val raw_supps = map2 (fn s => fn x => if YXML.content_of s = "_" then
+    val raw_supps = map2 (fn s => fn x => if XML.content_of (YXML.parse_body s) = "_" then
       Inl (Term.absfree (dest_Free x) (case Binder_Induction.extract_vars no_defs_lthy (hd var_Ts) x of
         ([], _) => mk_bot (hd var_Ts)
         | (ts, _) => foldl1 mk_Un ts) (* TODO: multiple var kinds *)

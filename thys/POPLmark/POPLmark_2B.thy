@@ -9,8 +9,18 @@ binder_datatype (FTVars: 'tv, FVars: 'v) trm = Var 'v
   | TApp "('tv, 'v) trm" "'tv typ"
 
 print_theorems
-(*TODO bindings FVars not used*)
 type_synonym "term" = "(var, var) trm"
+
+(*TODO1 bindings FVars not used*)
+(*TODO2 wrong types for Abs and TAbs (above interpreted as ('v, 'tv) trm)*)
+
+term Abs 
+term TAbs
+
+(*swapped because of TODO2*)
+abbreviation "FTVars \<equiv> FVars_trm2"
+abbreviation "FVars \<equiv> FVars_trm1"
+
 
 inductive "value" where
   "value (Abs x T t)"
@@ -40,6 +50,28 @@ lemma SSupp_typ_fun_upd_bound[simp]: "|SSupp_typ (f(X := T))| <o |UNIV :: var se
   apply (meson SSupp_typ_fun_upd_le card_of_mono1 infinite_UNIV insert_bound ordLeq_ordLess_trans)
   done
 
+lemma Abs_inject:
+  fixes t u :: "('v :: var, 'tv :: var) trm"
+  shows "Abs x T t = Abs y U u \<longleftrightarrow> T = U \<and> (\<exists>f. bij (f::'v::var \<Rightarrow> 'v) \<and> |supp f| <o |UNIV::'v set| \<and> id_on (FVars t - {x}) f \<and> f x = y \<and> permute_trm f id t = u)"
+    apply (unfold Abs_def trm.TT_inject0
+      set3_trm_pre_def set4_trm_pre_def set5_trm_pre_def comp_def Abs_trm_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
+      cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_trm_pre_def
+      prod.map_id set2_typ_pre_def prod_set_simps prod.set_map UN_single Abs_trm_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject map_prod_simp typ.map_id
+    )
+  apply safe
+  subgoal for f g
+    apply (rule exI[of _ f])
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  subgoal for f
+    apply (rule exI[of _ f])
+    apply (rule exI[of _ id])
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  done
+
+(*TODO: issue multiple type variables*)
 binder_inductive typing
 subgoal for R B \<sigma> \<Gamma> T1 T2
     unfolding split_beta
@@ -51,16 +83,20 @@ subgoal for R B \<sigma> \<Gamma> T1 T2
         | ((drule spec2)+, (drule mp)?, assumption)
         | ((rule exI[of _ "permute_typ \<sigma> _"])+, (rule conjI)?))+
   subgoal premises prems for R B \<Gamma> \<Delta> t T
-
-    find_consts name: FVars
+    sorry
+(*
     apply (tactic \<open>refreshability_tac true
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars_trm1 t \<union> FVars_trm2 t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
       [@{term "\<lambda>f. permute_trm f f :: term \<Rightarrow> term"}, @{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [NONE, SOME [NONE, SOME 2, NONE, NONE, SOME 0, NONE], NONE, NONE, NONE, NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms }
       @{thms emp_bound insert_bound ID.set_bd trm.Un_bound trm.UN_bound trm.set_bd_UNIV typ.set_bd_UNIV infinite_UNIV}
-      @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
-      @{thms } @{context}\<close>)
+      @{thms Abs_inject image_iff} @{thms trm.permute_cong}
+      @{thms id_onD} @{context}\<close>)
+*)
   done
+print_theorems
+
+
 
 end

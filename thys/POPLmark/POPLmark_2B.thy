@@ -9,7 +9,6 @@ binder_datatype (FTVars: 'tv, FVars: 'v) trm = Var 'v
   | TApp "('tv, 'v) trm" "'tv typ"
 
 print_theorems
-type_synonym "term" = "(var, var) trm"
 
 (*TODO1 bindings FVars not used*)
 (*TODO2 wrong types for Abs and TAbs (above interpreted as ('v, 'tv) trm)*)
@@ -72,8 +71,14 @@ lemma Abs_inject:
   done
 
 (*TODO: issue multiple type variables*)
-binder_inductive typing
-subgoal for R B \<sigma> \<Gamma> T1 T2
+declare [[ML_print_depth=10000]]
+binder_inductive typing where
+  TAbs binds x
+| TTAbs binds _ and X
+| TTApp binds _ and X
+
+
+(*subgoal for R B \<sigma> \<Gamma> T1 T2
     unfolding split_beta
     by (elim disj_forward exE)
       (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute trm.vvsubst_permute in_context_eqvt ty.equiv[folded map_context_def]
@@ -86,7 +91,7 @@ subgoal for R B \<sigma> \<Gamma> T1 T2
     sorry
 (*
     apply (tactic \<open>refreshability_tac true
-      [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars_trm1 t \<union> FVars_trm2 t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
+      [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars t \<union> FTVars t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
       [@{term "\<lambda>f. permute_trm f f :: term \<Rightarrow> term"}, @{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [NONE, SOME [NONE, SOME 2, NONE, NONE, SOME 0, NONE], NONE, NONE, NONE, NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms }
@@ -95,8 +100,4 @@ subgoal for R B \<sigma> \<Gamma> T1 T2
       @{thms id_onD} @{context}\<close>)
 *)
   done
-print_theorems
-
-
-
 end

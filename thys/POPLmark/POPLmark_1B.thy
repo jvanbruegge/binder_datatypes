@@ -53,10 +53,10 @@ lemma ty_weakening:
 shows "\<Gamma> \<^bold>, \<Delta> \<turnstile> S <: T"
 using assms proof (binder_induction \<Gamma> S T avoiding: "dom \<Delta>" \<Gamma> S T rule: ty.strong_induct)
   case (SA_Top \<Gamma> S)
-  then show ?case using ty.SA_Top weaken_closed wf_concat_disjoint by presburger
+  then show ?case using ty.SA_Top weaken_closed wf_concat_disjoint by meson
 next
   case (SA_Refl_TVar \<Gamma> x)
-  then show ?case using ty.SA_Refl_TVar weaken_closed wf_concat_disjoint by presburger
+  then show ?case using ty.SA_Refl_TVar weaken_closed wf_concat_disjoint by meson
 next
   case (SA_All \<Gamma> T\<^sub>1 S\<^sub>1 x S\<^sub>2 T\<^sub>2)
   have 1: "\<turnstile> \<Gamma> \<^bold>, x <: T\<^sub>1 \<^bold>, \<Delta> ok"
@@ -115,13 +115,13 @@ using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^su
     using same SA_All(5) apply simp
     apply (rule iffD2[OF arg_cong3[OF _ _ refl, of _ _ _ _ ty], rotated -1])
       apply (rule ty.equiv)
-       apply (rule bij_swap supp_swap_bound infinite_var)+
+       apply (rule bij_swap supp_swap_bound infinite_UNIV)+
         apply (rule SA_All(7))
         apply (unfold map_context_def[symmetric])
      apply (subst extend_eqvt)
-       apply (rule bij_swap supp_swap_bound infinite_var)+
+       apply (rule bij_swap supp_swap_bound infinite_UNIV)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using SA_All(1,10) apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
+    using SA_All(1,10) apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_UNIV supp_swap_bound wf_FFVars wf_context)
       apply simp
     using fresh SA_All(4) apply simp
     using x SA_All(9) unfolding same by simp
@@ -152,15 +152,15 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
      apply (metis SA_All(5,9) typ_inject)
     apply (rule iffD2[OF arg_cong3[OF _ refl, of _ _ _ _ ty], rotated -1])
       apply (rule ty.equiv)
-       apply (rule bij_swap supp_swap_bound infinite_var)+
+       apply (rule bij_swap supp_swap_bound infinite_UNIV)+
         apply (rule SA_All(7))
         apply (unfold map_context_def[symmetric])
      apply (subst extend_eqvt)
-       apply (rule bij_swap supp_swap_bound infinite_var)+
+       apply (rule bij_swap supp_swap_bound infinite_UNIV)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using fresh apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_var supp_swap_bound wf_FFVars wf_context)
+    using fresh apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_UNIV supp_swap_bound wf_FFVars wf_context)
       apply simp
-    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_var supp_swap_bound typ.permute_cong_id)
+    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_UNIV supp_swap_bound typ.permute_cong_id)
     using SA_All(9) x unfolding same by simp
 qed (auto simp: TyVar)
 

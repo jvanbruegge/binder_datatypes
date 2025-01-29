@@ -231,12 +231,10 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
 
     val raw_supps = map2 (fn x => map2 (fn var_T => fn s => if s = "_" then
       Inl (Term.absfree (dest_Free x) (case Binder_Induction.extract_vars no_defs_lthy var_T x of
-        ([], _) => mk_bot (hd var_Ts)
+        ([], _) => mk_bot var_T
         | (ts, _) => foldl1 mk_Un ts)
       ) else Inr (Syntax.read_term no_defs_lthy s)
     ) var_Ts) xs (supps @ replicate (length param_Ts - length supps) (replicate num_vars "_"));
-
-    val _ = @{print} (map (map (Thm.cterm_of no_defs_lthy o collapse)) raw_supps)
 
     fun mk_ex (x, T) t = HOLogic.mk_exists (x, T, t);
     val rules' = @{map 3} (fn vars => fn bind_ts => fn body => fold_rev mk_ex vars (
@@ -324,15 +322,17 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
       ) gs As supps) (mk_Trueprop_eq (Term.list_comb (p, gs) $ x, x))
     )) perms xs suppss;
 
-    val supp_seminat_goalss = @{map 3} (fn (p, _) => fn x => map (fn (s, _) => fold_rev Logic.all (gs @ [x]) (
-      fold_rev (curry Logic.mk_implies) g_prems (HOLogic.mk_Trueprop (mk_leq
-        (s $ (Term.list_comb (p, gs) $ x))
-        (mk_image (hd gs) $ (s $ x))
-    ))))) perms xs suppss;
+    val supp_seminat_goalss = @{map 3} (fn (p, _) => fn x => map2 (fn g => fn (s, _) =>
+      fold_rev Logic.all (gs @ [x]) (
+        fold_rev (curry Logic.mk_implies) g_prems (HOLogic.mk_Trueprop (mk_leq
+          (s $ (Term.list_comb (p, gs) $ x))
+          (mk_image g $ (s $ x))
+      )))
+    ) gs) perms xs suppss;
 
-    val supp_small_goalss = map2 (fn x => map (fn (s, _) => Logic.all x (HOLogic.mk_Trueprop (
-      mk_ordLess (mk_card_of (s $ x)) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (hd bind_Ts))))
-    )))) xs suppss;
+    val supp_small_goalss = map2 (fn x => map2 (fn bind_T => fn (s, _) => Logic.all x (HOLogic.mk_Trueprop (
+      mk_ordLess (mk_card_of (s $ x)) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT bind_T)))
+    ))) bind_Ts) xs suppss;
 
     fun mk_ordLess_UNIV t = mk_ordLess (mk_card_of t) (mk_card_of (HOLogic.mk_UNIV (HOLogic.dest_setT (fastype_of t))));
 
@@ -443,14 +443,14 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             RS @{thm le_boolD}
             RS @{thm mp}
         );
-        val G_mono' = mk_mono' (n + 1) G_mono;
+        val G_mono' = mk_mono' (n + length var_Ts) G_mono;
         val mono' = mk_mono' n mono;
 
         fun mk_mmono II_op tac = Goal.prove_sorry lthy [] [] (mk_mono II_op)
           (fn {context=ctxt, ...} => EVERY1 [
             rtac ctxt @{thm monoI},
             REPEAT_DETERM o resolve_tac ctxt @{thms le_funI le_boolI'},
-            rtac ctxt @{thm ex_mono},
+            REPEAT_DETERM o rtac ctxt @{thm ex_mono},
             rtac ctxt impI,
             tac ctxt,
             etac ctxt G_mono',
@@ -514,7 +514,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
             ],
             REPEAT_DETERM o rtac ctxt @{thm id_apply},
-            REPEAT_DETERM_N 2 o etac ctxt thin_rl,
+            REPEAT_DETERM_N (2 * length var_Ts) o etac ctxt thin_rl,
             rotate_tac j,
             dtac ctxt meta_spec,
             dtac ctxt meta_mp,
@@ -586,7 +586,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             hyp_subst_tac ctxt,
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms emp_bound iffD2[OF insert_bound] ordLeq_refl}
+              @{thms conjI emp_bound iffD2[OF insert_bound] ordLeq_refl}
               @ infinite_UNIVs @ [Un_bound, UN_bound]
               @ maps (fn thm => [thm, @{thm ordLess_ordLeq_trans} OF [thm]]) (
                 maps set_bd_UNIVs_of_mr_bnfs binder_mr_bnfs
@@ -636,7 +636,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           REPEAT_DETERM o EVERY' [
             TRY o etac ctxt @{thm disj_forward},
             REPEAT_DETERM o etac ctxt exE,
-            etac ctxt conjE,
+            REPEAT_DETERM_N (length var_Ts) o etac ctxt conjE,
             REPEAT_DETERM o rtac ctxt exI,
             assume_tac ctxt
           ],
@@ -676,11 +676,14 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           ],
           K (Local_Defs.unfold0_tac ctxt perm_ids),
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono]],
-          rtac ctxt exI,
+          REPEAT_DETERM_N (length var_Ts) o rtac ctxt exI,
           assume_tac ctxt
         ]);
 
-        val G_mmono' = mk_mmono II'_op (fn ctxt => etac ctxt conjE THEN' etac ctxt conjI);
+        val G_mmono' = mk_mmono II'_op (fn ctxt => EVERY' [
+          REPEAT_DETERM o etac ctxt conjE,
+          REPEAT_DETERM o etac ctxt conjI
+        ]);
         val II'_induct = mk_induct G_mmono';
 
         val II'_imp_II = Goal.prove_sorry lthy (names xs) [] (Logic.mk_implies (
@@ -691,15 +694,15 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           etac ctxt II'_induct,
           REPEAT_DETERM o rtac ctxt @{thm le_funI},
           rtac ctxt @{thm le_boolI},
-          dtac ctxt @{thm ex_conjunct2},
+          REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
           focus_IH_tac ctxt,
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono]],
-          rtac ctxt exI,
+          REPEAT_DETERM o rtac ctxt exI,
           assume_tac ctxt
         ]);
 
         val supp_int_equivs = @{map 5} (fn B => fn g => fn supp_t => fn supp_t' => fn supp_seminats =>
-          Goal.prove_sorry lthy (names (B :: g :: xs)) (mk_g_prems [g]) (Logic.mk_implies (
+          Goal.prove_sorry lthy (names (B :: gs @ xs)) g_prems (Logic.mk_implies (
             HOLogic.mk_Trueprop (mk_int_empty (B, supp_t)),
             HOLogic.mk_Trueprop (mk_int_empty (
               mk_image g $ B, supp_t'
@@ -713,7 +716,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           assume_tac ctxt,
           K (Local_Defs.unfold0_tac ctxt @{thms image_Un}),
           REPEAT_DETERM o rtac ctxt @{thm Un_mono},
-          REPEAT_DETERM o resolve_tac ctxt (map (fn thm => thm OF prems) supp_seminats)
+          REPEAT_DETERM o (resolve_tac ctxt supp_seminats THEN_ALL_NEW resolve_tac ctxt prems)
         ])) Bs gs supp_ts (mk_supp_ts perm_ts suppss) (transpose supp_seminatss);
 
         val II'_equiv = Goal.prove_sorry lthy (names (gs @ xs)) g_prems (Logic.mk_implies (
@@ -730,10 +733,10 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           ],
           K (Local_Defs.unfold0_tac ctxt perm_ids),
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono']],
-          rtac ctxt exI,
-          rtac ctxt @{thm conjI[rotated]},
+          REPEAT_DETERM o rtac ctxt exI,
+          REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
           assume_tac ctxt,
-          eresolve_tac ctxt (map (fn thm => thm OF prems) supp_int_equivs)
+          REPEAT_DETERM o eresolve_tac ctxt (map (fn thm => thm OF prems) supp_int_equivs)
         ]);
 
         val II_eq_II' = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (fst II, fst II')) (fn {context=ctxt, ...} => EVERY1 [
@@ -747,12 +750,12 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           etac ctxt II'_imp_II,
           etac ctxt (Drule.rotate_prems ~1 II'_equiv),
           REPEAT_DETERM o assume_tac ctxt,
-          etac ctxt exE,
+          REPEAT_DETERM o etac ctxt exE,
           EqSubst.eqsubst_tac ctxt [0] [snd II'],
-          etac ctxt conjE,
+          REPEAT_DETERM o etac ctxt conjE,
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono']],
-          rtac ctxt exI,
-          etac ctxt conjI,
+          REPEAT_DETERM o rtac ctxt exI,
+          REPEAT_DETERM o etac ctxt conjI,
           K (Local_Defs.unfold0_tac ctxt [snd II']),
           assume_tac ctxt
         ]);
@@ -798,8 +801,10 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             rtac ctxt trans,
             resolve_tac ctxt perm_comps,
             REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
-            EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp2},
-            resolve_tac ctxt prems,
+            REPEAT_DETERM o EVERY' [
+              EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp2},
+              resolve_tac ctxt prems
+            ],
             resolve_tac ctxt perm_ids
           ])
         ) perms xs;
@@ -851,19 +856,21 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             REPEAT_DETERM o resolve_tac ctxt [allI, impI],
             K (Local_Defs.unfold_tac ctxt @{thms inf_apply inf_bool_def}),
-            EVERY' (@{map 4} (fn i => fn thm => fn K => fn extend_fresh => EVERY' [
+            EVERY' (@{map 4} (fn i => fn thm => fn K_t => fn extend_fresh => EVERY' [
               dtac ctxt (Drule.rotate_prems ~1 thm),
-              rotate_tac (~(2 * (i + 1))),
-              assume_tac ctxt,
-              assume_tac ctxt,
+              EVERY' (map (fn j => EVERY' [
+                rotate_tac (~(2 * j)),
+                assume_tac ctxt,
+                assume_tac ctxt
+              ]) (length var_Ts downto 1)),
               dtac ctxt (Drule.rotate_prems ~1 (
-                infer_instantiate' ctxt (replicate (n + 1) NONE @ [SOME (Thm.cterm_of ctxt K)]) extend_fresh
+                infer_instantiate' ctxt (replicate (n + 1) NONE @ [SOME (Thm.cterm_of ctxt K_t)]) extend_fresh
               )),
               SELECT_GOAL (Local_Defs.unfold_tac ctxt [II_eq_II' RS sym]),
               rtac ctxt (Drule.rotate_prems ~1 II_equiv),
               EqSubst.eqsubst_tac ctxt [0] [snd II],
               EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono]],
-              rtac ctxt exI,
+              REPEAT_DETERM o rtac ctxt exI,
               SELECT_GOAL (Local_Defs.unfold_tac ctxt [Thm.symmetric (snd II)]),
               etac ctxt G_mono',
               REPEAT_DETERM o rtac ctxt @{thm le_funI},
@@ -877,10 +884,11 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             ]) (0 upto num_vars - 1) supp_int_equivs Ks extend_freshs),
             REPEAT_DETERM o eresolve_tac ctxt [conjE, exE],
             rtac ctxt step,
-            assume_tac ctxt,
-            assume_tac ctxt,
+            REPEAT_DETERM o assume_tac ctxt,
             K (Local_Defs.unfold0_tac ctxt @{thms image_comp}),
-            rtac ctxt (Drule.rotate_prems ~1 (iffD2 OF [mk_arg_cong lthy (n + 2) (fst G) OF [refl, refl]])),
+            rtac ctxt (Drule.rotate_prems ~1 (iffD2 OF [
+              mk_arg_cong lthy (n + length var_Ts + 1) (fst G) OF (refl::replicate (length var_Ts) refl)
+            ])),
             rtac ctxt (G_equiv RS G_mono'),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ infinite_UNIVs)),
             REPEAT_DETERM o rtac ctxt @{thm le_funI},
@@ -906,8 +914,10 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
               REPEAT_DETERM o assume_tac ctxt,
               resolve_tac ctxt perm_supports,
               REPEAT_DETERM o assume_tac ctxt,
-              etac ctxt @{thm id_onD},
-              etac ctxt (mk_UnIN n i)
+              REPEAT_DETERM o EVERY' [
+                etac ctxt @{thm id_onD},
+                etac ctxt (mk_UnIN n i)
+              ]
             ]) (1 upto n))
           ] end
         );
@@ -952,10 +962,10 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             val prem = snd (replace_IHs (Logic.list_implies (assms, concl')));
             val fresh_prems = case bind_opt of
               NONE => []
-              | SOME xss => flat (transpose (map2 (fn K => map (fn xs => case try dest_singleton xs of
+              | SOME xss => flat (map2 (fn K => map (fn xs => case try dest_singleton xs of
                 NONE => mk_int_empty (xs, K $ p)
                 | SOME x => HOLogic.mk_not (HOLogic.mk_mem (x, K $ p))
-              )) Ks (transpose xss)));
+              )) Ks xss);
             val prem = fold_rev Logic.all (map Free params @ [p]) (
               fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop) fresh_prems prem
             );

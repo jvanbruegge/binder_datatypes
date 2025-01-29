@@ -7,25 +7,13 @@ binder_datatype (FTVars: 'tv, FVars: 'v) trm = Var 'v
   | App "('tv, 'v) trm" "('tv, 'v) trm"
   | TAbs X::'tv "'tv typ" t::"('tv, 'v) trm" binds X in t
   | TApp "('tv, 'v) trm" "'tv typ"
-
 print_theorems
-
-(*TODO1 bindings FVars not used*)
-(*TODO2 wrong types for Abs and TAbs (above interpreted as ('v, 'tv) trm)*)
-
-term Abs 
-term TAbs
-
-(*swapped because of TODO2*)
-abbreviation "FTVars \<equiv> FVars_trm2"
-abbreviation "FVars \<equiv> FVars_trm1"
-
 
 inductive "value" where
   "value (Abs x T t)"
 | "value (TAbs X T t)"
 
-inductive typing :: "\<Gamma>\<^sub>\<tau> \<Rightarrow> \<Gamma>\<^sub>\<tau> \<Rightarrow> term \<Rightarrow> type \<Rightarrow> bool" ("_ \<^bold>| _ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,29,30] 30) where
+inductive typing :: "('a, 'b::var) \<Gamma> \<Rightarrow> 'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> ('a, 'b) trm \<Rightarrow> 'a typ \<Rightarrow> bool" ("_ \<^bold>| _ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,29,30] 30) where
   TVar: "(x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> Var x \<^bold>: T"
 | TAbs: "\<Gamma> \<^bold>, x <: T1 \<^bold>| \<Delta> \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> Abs x T1 t \<^bold>: T1 \<rightarrow> T2"
 | TApp: "\<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t1 \<^bold>: T11 \<rightarrow> T12 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t2 \<^bold>: T11 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> App t1 t2 \<^bold>: T12"
@@ -50,8 +38,8 @@ lemma SSupp_typ_fun_upd_bound[simp]: "|SSupp_typ (f(X := T))| <o |UNIV :: var se
   done
 
 lemma Abs_inject:
-  fixes t u :: "('v :: var, 'tv :: var) trm"
-  shows "Abs x T t = Abs y U u \<longleftrightarrow> T = U \<and> (\<exists>f. bij (f::'v::var \<Rightarrow> 'v) \<and> |supp f| <o |UNIV::'v set| \<and> id_on (FVars t - {x}) f \<and> f x = y \<and> permute_trm f id t = u)"
+  fixes t u :: "('tv :: var, 'v :: var) trm"
+  shows "Abs x T t = Abs y U u \<longleftrightarrow> T = U \<and> (\<exists>f. bij (f::'v::var \<Rightarrow> 'v) \<and> |supp f| <o |UNIV::'v set| \<and> id_on (FVars t - {x}) f \<and> f x = y \<and> permute_trm id f t = u)"
     apply (unfold Abs_def trm.TT_inject0
       set3_trm_pre_def set4_trm_pre_def set5_trm_pre_def comp_def Abs_trm_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
       cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_trm_pre_def
@@ -60,44 +48,38 @@ lemma Abs_inject:
     )
   apply safe
   subgoal for f g
-    apply (rule exI[of _ f])
     apply (auto simp: id_on_def intro!: trm.permute_cong)
     done
   subgoal for f
-    apply (rule exI[of _ f])
     apply (rule exI[of _ id])
     apply (auto simp: id_on_def intro!: trm.permute_cong)
     done
   done
 
-(*TODO: issue multiple type variables*)
-declare [[ML_print_depth=10000]]
-binder_inductive typing where
-  TAbs binds x
-| TTAbs binds _ and X
-| TTApp binds _ and X
-
-
-(*subgoal for R B \<sigma> \<Gamma> T1 T2
+binder_inductive typing
+  subgoal for R B1 B2 \<sigma>1 \<sigma>2 \<Gamma> \<Delta> t T
     unfolding split_beta
-    by (elim disj_forward exE)
-      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute trm.vvsubst_permute in_context_eqvt ty.equiv[folded map_context_def]
+    apply (elim disj_forward exE)
+    (*by  (auto simp add: supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute trm.vvsubst_permute in_context_eqvt ty.equiv[folded map_context_def]
         typ.permute_comp trm.permute_comp typ.FVars_permute trm.FVars_permute trm.permute_id wf_eqvt extend_eqvt lfset.set_map lfin_map_lfset induct_rulify_fallback
         fun_eq_iff typ.tvsubst_permutes[THEN fun_cong, simplified] intro!: arg_cong[where f = "\<lambda>f. tvsubst_typ f _"]
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
+        | ((rule exI[of _ "\<sigma>1 _"] exI)+, (rule conjI)?, rule refl)
         | ((drule spec2)+, (drule mp)?, assumption)
-        | ((rule exI[of _ "permute_typ \<sigma> _"])+, (rule conjI)?))+
-  subgoal premises prems for R B \<Gamma> \<Delta> t T
-    sorry
-(*
-    apply (tactic \<open>refreshability_tac true
+        | ((rule exI[of _ "permute_typ \<sigma>1 _"])+, (rule conjI)?)
+        | ((rule exI[of _ "permute_trm \<sigma>1 \<sigma>2 _"])+, (rule conjI)?))+
+    *) sorry
+  subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
+    (*apply (tactic \<open>refreshability_tac true
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars t \<union> FTVars t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
       [@{term "\<lambda>f. permute_trm f f :: term \<Rightarrow> term"}, @{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
       [NONE, SOME [NONE, SOME 2, NONE, NONE, SOME 0, NONE], NONE, NONE, NONE, NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms }
       @{thms emp_bound insert_bound ID.set_bd trm.Un_bound trm.UN_bound trm.set_bd_UNIV typ.set_bd_UNIV infinite_UNIV}
       @{thms Abs_inject image_iff} @{thms trm.permute_cong}
-      @{thms id_onD} @{context}\<close>)
-*)
+      @{thms id_onD} @{context}\<close>)*)
+    sorry
   done
+
+thm typing.strong_induct
+
 end

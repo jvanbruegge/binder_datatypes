@@ -57,20 +57,20 @@ lemma Forall_swap: "y \<notin> FVars_typ T2 - {x} \<Longrightarrow> Forall (x::'
     apply (rule cinfinite_imp_infinite[OF typ.UNIV_cinfinite])
   by auto
 
-type_synonym 'a \<Gamma>\<^sub>\<tau> = "('a \<times> 'a typ) list"
+type_synonym ('a, 'b) \<Gamma> = "('b \<times> 'a typ) list"
+type_synonym 'a \<Gamma>\<^sub>\<tau> = "('a, 'a) \<Gamma>"
 
 definition map_context :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a \<Gamma>\<^sub>\<tau>" where
   "map_context f \<equiv> map (map_prod f (permute_typ f))"
-
 abbreviation FFVars_ctxt :: "'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a set" where
   "FFVars_ctxt xs \<equiv> \<Union>(FVars_typ ` snd ` set xs)"
-abbreviation extend :: "'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a \<Rightarrow> 'a typ \<Rightarrow> 'a \<Gamma>\<^sub>\<tau>" ("_ \<^bold>, _ <: _" [57,75,75] 71) where
+abbreviation extend :: "('a::var, 'b::var) \<Gamma> \<Rightarrow> 'b \<Rightarrow> 'a typ \<Rightarrow> ('a, 'b) \<Gamma>" ("_ \<^bold>, _ <: _" [57,75,75] 71) where
   "extend \<Gamma> x T \<equiv> (x, T)#\<Gamma>"
-abbreviation concat :: "'a \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a \<Gamma>\<^sub>\<tau>" (infixl "(\<^bold>,)" 71) where
+abbreviation concat :: "('a, 'b) \<Gamma> \<Rightarrow> ('a, 'b) \<Gamma> \<Rightarrow> ('a, 'b) \<Gamma>" (infixl "(\<^bold>,)" 71) where
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
-abbreviation empty_context :: "'a \<Gamma>\<^sub>\<tau>" ("\<emptyset>") where "empty_context \<equiv> []"
-abbreviation dom :: "'a \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a set" where "dom xs \<equiv> fst ` set xs"
-abbreviation disjoint :: "'a \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" (infixl "(\<bottom>)" 71) where
+abbreviation empty_context :: "('a, 'b) \<Gamma>" ("\<emptyset>") where "empty_context \<equiv> []"
+abbreviation dom :: "('a, 'b) \<Gamma> \<Rightarrow> 'b set" where "dom xs \<equiv> fst ` set xs"
+abbreviation disjoint :: "('a, 'b) \<Gamma> \<Rightarrow> ('a, 'b) \<Gamma> \<Rightarrow> bool" (infixl "(\<bottom>)" 71) where
   "disjoint \<Gamma> \<Delta> \<equiv> dom \<Gamma> \<inter> dom \<Delta> = {}"
 
 lemma map_context_id[simp]: "map_context id = id"

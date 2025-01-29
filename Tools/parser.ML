@@ -36,14 +36,15 @@ val parse_type_args_named_constrained =
 
 val parse_subst_binding = Parse.name --| \<^keyword>\<open>:\<close> -- Parse.binding;
 
-fun extract_map_rel_pred ("vvsubst", m) = (fn (_, r) => (m, r))
-  | extract_map_rel_pred ("tvsubst", r) = (fn (m, _) => (m, r))
+fun extract_map_rel_pred ("vvsubst", m) = (fn (_, r, p) => (m, r, p))
+  | extract_map_rel_pred ("tvsubst", r) = (fn (m, _, p) => (m, r, p))
+  | extract_map_rel_pred ("permute", p) = (fn (m, r, _) => (m, r, p))
   | extract_map_rel_pred (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"vvsubst\" or \"tvsubst\")");
 
 val parse_subst_bindings =
   @{keyword for} |-- Scan.repeat parse_subst_binding
-    >> (fn ps => fold extract_map_rel_pred ps (Binding.empty, Binding.empty))
-  || Scan.succeed (Binding.empty, Binding.empty);
+    >> (fn ps => fold extract_map_rel_pred ps (Binding.empty, Binding.empty, Binding.empty))
+  || Scan.succeed (Binding.empty, Binding.empty, Binding.empty);
 
 val parse_binder_datatype = Parse.and_list1 (
   parse_type_args_named_constrained -- Parse.binding -- Parse.opt_mixfix --
@@ -138,7 +139,7 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
     val spec = ((Binding.name_of name, mixfix), Ts)
    in (spec, (lthy, params)) end
 
-fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsubst_b)) lthy =
+fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsubst_b, permute_b)) lthy =
   let
     fun prepare_type_arg (T, sort) =
       let val TFree (s, _) = Syntax.parse_typ lthy T
@@ -150,12 +151,13 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
 
     val lthy = fold (Variable.declare_typ o snd) Ts lthy;
 
+    val FVars_bs = map (snd o fst) Ts;
     val params = fold_rev (fn ((ann, _), T) => Symtab.map_entry (case ann of
       NONE => "plive" | SOME MRBNF_Def.Free_Var => "pfree" | SOME MRBNF_Def.Bound_Var => "plive" | _ => "dead"
     ) (cons T)) Ts params';
 
     val (ctors, (lthy, params)) = fold_map (create_ctor_spec T_names) ctors (lthy, params);
-    fun flat s t = rev (map (rpair t o dest_TFree) (the (Symtab.lookup params s)));
+    fun flat s t = map (rpair t o dest_TFree) (the (Symtab.lookup params s));
 
     val brecs = flat "brec" MRBNF_Def.Live_Var
     val recs = flat "rec" MRBNF_Def.Live_Var
@@ -172,6 +174,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     fun with_def bnd def = if Binding.is_empty bnd then
         Binding.suffix_name ("_" ^ Binding.name_of b) def
       else bnd
+    fun without_def bnd = if Binding.is_empty bnd then NONE else SOME bnd
 
     val spec = {
       fp_b = b,
@@ -185,7 +188,9 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
       ) frees,
       rec_vars = length brecs + length recs,
       map_b = with_def vvsubst_b @{binding vvsubst},
-      tvsubst_b = with_def tvsubst_b @{binding tvsubst}
+      tvsubst_b = with_def tvsubst_b @{binding tvsubst},
+      permute_b = without_def permute_b,
+      FVars_bs = map without_def FVars_bs
     } : MRBNF_Sugar.spec;
   in (spec, lthy) end
 

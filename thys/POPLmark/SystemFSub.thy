@@ -267,18 +267,29 @@ lemma ty_fresh_extend: "\<Gamma>\<^bold>, x <: U \<turnstile> S <: T \<Longright
 ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
-thm UN_I
 
-declare [[ML_print_depth=1000]]
+lemma induct_forall_forward[equiv_forward 3]: "HOL.induct_forall P \<Longrightarrow> (\<And>x. P x \<Longrightarrow> Q (f x)) \<Longrightarrow> bij f \<Longrightarrow> HOL.induct_forall Q"
+  unfolding HOL.induct_forall_def by (metis bij_pointE)
+lemma induct_implies_forward[equiv_forward]: "HOL.induct_implies P1 P2 \<Longrightarrow> (Q1 \<Longrightarrow> P1) \<Longrightarrow> (P2 \<Longrightarrow> Q2) \<Longrightarrow> HOL.induct_implies Q1 Q2"
+  unfolding HOL.induct_implies_def by blast
+lemma ex_forward'[equiv_forward 3]: "\<exists>x. P x \<Longrightarrow> (\<And>x. P x \<Longrightarrow> Q (f x)) \<Longrightarrow> \<exists>x. Q x"
+  by blast
+declare conj_forward[equiv_forward] disj_forward[equiv_forward]
+
+declare [[ML_print_depth=10000]]
+
+declare wf_eqvt[unfolded map_context_def, equiv]
+declare lfin_equiv[equiv]
+declare closed_in_eqvt[unfolded map_context_def, equiv]
+declare in_context_eqvt[unfolded map_context_def, equiv]
+declare extend_eqvt[unfolded map_context_def, equiv]
+declare typ.permute[equiv]
+
+thm equiv
+thm equiv_sym
+thm equiv_forward
+
 binder_inductive ty
-  subgoal for R B \<sigma> \<Gamma> T1 T2
-    unfolding split_beta
-    by (elim disj_forward exE)
-      (auto simp add: isPerm_def supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute
-        typ.permute_comp typ.FVars_permute wf_eqvt extend_eqvt lfset.set_map lfin_map_lfset induct_rulify_fallback
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((drule spec2)+, (drule mp)?, assumption)
-        | ((rule exI[of _ "permute_typ \<sigma> _"])+, (rule conjI)?, rule in_context_eqvt))+
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>(\<Gamma>::('a::var \<times> 'a typ) list). dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FVars_typ :: 'a typ \<Rightarrow> 'a::var set"}, @{term "FVars_typ :: 'a::var typ \<Rightarrow> 'a::var set"}]
@@ -290,5 +301,6 @@ binder_inductive ty
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done
 
+print_theorems
 
 end

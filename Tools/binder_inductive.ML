@@ -16,7 +16,49 @@ fun long_name ctxt name =
 fun collapse (Inl x) = x
   | collapse (Inr x) = x
 
-fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) list option), perms_supps) no_defs_lthy =
+structure Equiv_Data = Generic_Data
+(
+  type T = thm Item_Net.T;
+  val empty: T = Thm.item_net_intro;
+  val merge : T * T -> T = Item_Net.merge;
+)
+structure Equiv_Sym_Data = Generic_Data
+(
+  type T = thm Item_Net.T;
+  val empty: T = Thm.item_net_intro;
+  val merge : T * T -> T = Item_Net.merge;
+)
+structure Equiv_Forward_Data = Generic_Data
+(
+  type T = (thm * int) Item_Net.T;
+  val empty: T = Item_Net.init (Thm.eq_thm_prop o apply2 fst) (single o Thm.concl_of o fst);
+  val merge: T * T -> T = Item_Net.merge;
+)
+
+fun equiv_thms' context =
+  rev (map (Thm.transfer'' context) (Item_Net.content (Equiv_Data.get context)));
+fun equiv_sym_thms' context =
+  rev (map (Thm.transfer'' context) (Item_Net.content (Equiv_Sym_Data.get context)));
+fun equiv_forward_thms' context =
+  rev (map (apfst (Thm.transfer'' context)) (Item_Net.content (Equiv_Forward_Data.get context)));
+
+val equiv_thms = equiv_thms' o Context.Proof
+val equiv_sym_thms = equiv_sym_thms' o Context.Proof
+val equiv_forward_thms = equiv_forward_thms' o Context.Proof
+
+fun get_mr_bnfs lthy (Type (s, Ts)) = (case MRBNF_FP_Def_Sugar.fp_result_of lthy s of
+  SOME sugar => [(s, Inr (Inr sugar))]
+  | NONE => (case MRBNF_Def.mrbnf_of lthy s of
+    SOME mrbnf => (s, MRBNF_Util.Inl mrbnf) :: maps (get_mr_bnfs lthy) Ts
+    | NONE => (case BNF_Def.bnf_of lthy s of
+      SOME bnf => (s, Inr (MRBNF_Util.Inl bnf)) :: maps (get_mr_bnfs lthy) Ts
+      | NONE => maps (get_mr_bnfs lthy) Ts
+  )))
+  | get_mr_bnfs _ _ = [];
+
+datatype options = No_Equiv | Verbose
+
+fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string list list) list option), perms_supps) no_defs_lthy =
   let
     val binds = the_default [] binds_opt;
     val ({names, ...}, { def, preds, mono, induct, intrs, ... }) = Inductive.the_inductive_global no_defs_lthy (long_name no_defs_lthy pred_name);
@@ -55,6 +97,11 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
       ||> split_list o map strip_ex;
 
     val param_Ts = map (Term.typ_subst_TVars subst) param_Ts;
+
+    (* TODO: Nested sugars? *)
+    val param_sugars = map (fn T => Option.mapPartial (fn s =>
+      MRBNF_Sugar.binder_sugar_of no_defs_lthy s
+    ) (try (fn () => fst (dest_Type T)) ())) param_Ts;
 
     val param_frees = map_filter (fn T => Option.map MRBNF_Def.frees_of_mrbnf (
         Option.map (fn mrbnf => MRBNF_Def.morph_mrbnf
@@ -188,7 +235,9 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
           map fastype_of fs ---> @{typ bool}
         ) Vartab.empty;
         val mapx = Envir.subst_term (tyenv, Vartab.empty) mapx;
-      in Term.list_comb (mapx, fs) end
+      in if forall (fn Const (@{const_name id}, _) => true | _ => false) fs then
+        HOLogic.id_const (body_type (fastype_of mapx))
+      else Term.list_comb (mapx, fs) end
 
     fun build_permute_for fs xs T =
       let val idx = find_index (curry (op=) T) xs;
@@ -393,16 +442,18 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
 
     fun keep_rights xs = map_filter (fn Inr x => SOME x | _ => NONE) xs;
 
+    fun option x t f = if member (op=) options x then t else f;
+
     val goals = map (single o rpair []) (
       keep_rights perm_id0_goals @ keep_rights perm_comp_goals @ maps keep_rights supp_seminat_goalss
       @ keep_rights perm_support_goals @ maps keep_rights supp_small_goalss @ flat (keep_rights B_small_goalss)
-      @ [G_equiv_goal, G_refresh_goal]
+      @ option No_Equiv [G_equiv_goal] [] @ [G_refresh_goal]
     );
     fun after_qed thmss lthy =
       let
         fun with_thms (Inl t) thms = (Inl t, thms)
           | with_thms (Inr _) thms = (Inr (hd thms), tl thms);
-      
+
         val (((((((perm_id0s, perm_comps), supp_seminatss), perm_supports), supp_smallss), B_smallss), G_equiv), G_refresh) = map hd thmss
           |> fold_map with_thms perm_id0_goals
           ||>> fold_map with_thms perm_comp_goals
@@ -413,7 +464,7 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             let val (xs, ys) = chop (length xs) thms;
             in (Inr xs, ys) end
           ) B_small_goalss
-          ||>> apply2 hd o chop 1;
+          ||>> apsnd hd o chop (option No_Equiv 1 0)
 
         fun mk_mono t =
           let val (predT, predT') = dest_funT (fastype_of t);
@@ -661,6 +712,129 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             REPEAT_DETERM o (TRY o rtac ctxt conjI THEN' assume_tac ctxt)
           ]
         ]);
+
+        fun strip_all (Const (@{const_name Pure.all}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_all t)
+          | strip_all t = ([], t)
+
+        val G_equiv = if not (null G_equiv) then hd G_equiv else
+          Goal.prove_sorry lthy [] [] G_equiv_goal (fn {context=ctxt, ...} =>
+            let
+              val (forward, forward_quant) = apfst (map fst) (
+                partition (curry (op=) 0 o snd) (equiv_forward_thms ctxt)
+              );
+              val forward_quant_concls = map (Thm.concl_of o fst) forward_quant;
+            in EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt [snd G]),
+            REPEAT_DETERM o EVERY' [
+              TRY o etac ctxt @{thm disj_forward},
+              REPEAT_DETERM o etac ctxt exE,
+              REPEAT_DETERM_N (length param_Ts + length var_Ts) o EVERY' [
+                etac ctxt conjE,
+                etac ctxt @{thm subst[OF sym]}
+              ],
+              Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
+                let
+                  val ((Rs, fs), args) = map (Thm.term_of o snd) params
+                    |> apsnd (drop (length var_Ts)) o chop 1
+                    ||>> apsnd (drop (length param_Ts)) o chop (length var_Ts);
+
+                  fun forward_quant_tac ctxt = SUBGOAL (fn (goal, i) =>
+                    let
+                      val concl = Logic.strip_imp_concl (snd (strip_all goal));
+                      val x = find_index (fn t => Term.could_unify (t, concl)) forward_quant_concls;
+                    in if x < 0 then no_tac else
+                      let
+                        fun dest_AbsT (Abs (_, T, _)) = T
+                        val (thm, j) = nth forward_quant x;
+                        val T = dest_AbsT (snd (Term.dest_comb (HOLogic.dest_Trueprop concl)))
+                        val (_, t) = build_permute_for fs var_Ts T;
+                        val t = case t of
+                          Const (@{const_name id}, T) => Term.abs ("x", fst (dest_funT T)) (Bound 0)
+                          | _ => t;
+                        val thm = infer_instantiate' ctxt (
+                          replicate (j - 1) NONE @ [SOME (Thm.cterm_of ctxt t)]
+                        ) thm;
+                      in ematch_tac ctxt [thm] i end
+                    end
+                  );
+
+                  val (_, ts) = apfst (map snd o flat) (split_list (map (fn x => case find_index (curry (op=) (fastype_of x)) param_Ts of
+                    ~1 => (case find_index (curry (op=) (fastype_of x)) var_Ts of
+                      ~1 => apsnd (fn t => t $ x) (build_permute_for fs var_Ts (fastype_of x))
+                      | n => ([], nth fs n $ x))
+                    | n => ([], Term.list_comb (fst (nth perms n), fs) $ x)
+                  ) args));
+
+                  val mr_bnfs = map snd (
+                    distinct ((op=) o apply2 fst) (maps (get_mr_bnfs lthy o fastype_of) args)
+                  );
+                  fun map_comps_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]
+                    | map_comps_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_comp_of_bnf bnf, BNF_Def.map_comp0_of_bnf bnf RS sym]
+                    | map_comps_of_mr_bnf (Inr (Inr sugar)) = map #permute_comp (#quotient_fps sugar) @ map #permute_comp0 (#quotient_fps sugar)
+                  val map_comps = maps map_comps_of_mr_bnf mr_bnfs;
+                  fun map_ids_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_id0_of_mrbnf mrbnf, MRBNF_Def.map_id_of_mrbnf mrbnf]
+                    | map_ids_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_id0_of_bnf bnf, BNF_Def.map_id_of_bnf bnf]
+                    | map_ids_of_mr_bnf (Inr (Inr sugar)) = map #permute_id0 (#quotient_fps sugar) @ map #permute_id (#quotient_fps sugar)
+                  val map_ids = maps map_ids_of_mr_bnf mr_bnfs;
+                  val set_maps = maps set_map_of_mr_bnf mr_bnfs;
+                  fun permute_bijs_of_mr_bnf (Inr (Inr sugar)) = map (#permute_bij o #inner) (#quotient_fps sugar)
+                    | permute_bijs_of_mr_bnf _ = []
+                in EVERY1 [
+                  EVERY' (map (fn t => rtac ctxt (
+                    infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt t)] exI
+                  )) ts),
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map snd perms)),
+                  REPEAT_DETERM_N (length var_Ts) o EVERY' [
+                    rtac ctxt conjI,
+                    resolve_tac ctxt @{thms image_empty image_single[symmetric]}
+                  ],
+                  K (print_tac ctxt "1"),
+                  REPEAT_DETERM_N (length param_Ts) o EVERY' [
+                    rtac ctxt conjI,
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
+                    TRY o resolve_tac ctxt (refl :: equiv_thms ctxt), (* TRY will result in a better error *)
+                    REPEAT_DETERM o assume_tac ctxt
+                  ],
+                  K (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
+                  K (print_tac ctxt "2"),
+                  TRY o REPEAT_ALL_NEW (ematch_tac ctxt forward ORELSE' forward_quant_tac ctxt),
+                  option Verbose (K (print_tac ctxt "forwarded")) (K all_tac),
+                  K (Local_Defs.unfold0_tac ctxt (@{thm id_def[symmetric]} :: equiv_sym_thms ctxt)),
+                  REPEAT_DETERM o FIRST' [
+                    assume_tac ctxt,
+                    resolve_tac ctxt (@{thms bij_id supp_id_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs),
+                    eresolve_tac ctxt (flat (map_filter (Option.map (map (Drule.rotate_prems ~1)) o
+                      try (fn thm => [thm RS iffD2, thm RS iffD1])
+                    ) (equiv_thms ctxt))),
+                    SELECT_GOAL (EVERY [
+                      REPEAT_DETERM1 (SOMEGOAL (EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps)
+                      ])),
+                      REPEAT_DETERM (FIRST1 [
+                        assume_tac ctxt,
+                        resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}
+                      ]),
+                      Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids),
+                      assume_tac ctxt 1
+                    ]),
+                    (* TODO: unfold set_map together with equiv_sym *)
+                    SELECT_GOAL (EVERY1 [
+                      REPEAT_DETERM1 o EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] (@{thms id_apply image_id} @ set_maps),
+                        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound})
+                      ],
+                      IF_UNSOLVED o (eresolve_tac ctxt (flat (map_filter (Option.map (map (Drule.rotate_prems ~1)) o
+                        try (fn thm => [thm RS iffD2, thm RS iffD1])
+                      ) (equiv_thms ctxt))) THEN_ALL_NEW assume_tac ctxt),
+                      IF_UNSOLVED o K no_tac
+                    ])
+                  ],
+                  IF_UNSOLVED o K (print_tac ctxt "equivariance proof failed:")
+                ] end
+              ) ctxt
+            ],
+            IF_UNSOLVED o K (print_tac ctxt "equivariance_tac failed")
+          ] end);
 
         val II_equiv = Goal.prove_sorry lthy (names (gs @ xs)) g_prems (Logic.mk_implies (
           HOLogic.mk_Trueprop (Term.list_comb (fst II, xs)),
@@ -935,8 +1109,6 @@ fun binder_inductive_cmd ((pred_name, binds_opt: (string * string list list) lis
             REPEAT_DETERM o assume_tac ctxt
         ]);
 
-        fun strip_all (Const (@{const_name Pure.all}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_all t)
-          | strip_all t = ([], t)
         fun strip_imp t = (Logic.strip_imp_prems t, Logic.strip_imp_concl t);
 
         fun replace_IHs (t as Free (x, _)) = if x = fst (dest_Free P) then (n, P') else (~1, t)
@@ -1023,12 +1195,119 @@ val parse_perm_supps =
     >> (fn ps => fold extract_perm_supp ps (NONE, NONE))
   || Scan.succeed (NONE, NONE);
 
-val binder_inductive_parser = Parse.name -- Scan.option (
+val options_parser = Parse.group (fn () => "option") (
+  (Parse.reserved "no_auto_equiv" >> K No_Equiv)
+  || (Parse.reserved "verbose" >> K Verbose)
+)
+
+val config_parser = Scan.optional (@{keyword "("} |--
+  Parse.!!! (Parse.list1 options_parser) --| @{keyword ")"}) []
+
+val binder_inductive_parser = config_parser -- Parse.name -- Scan.option (
     @{keyword where} |-- Parse.enum1 "|" (Parse.name --| @{keyword binds} -- Parse.and_list (Scan.repeat (Parse.underscore || Parse.term)))
   ) -- parse_perm_supps
 
 val _ =
   Outer_Syntax.local_theory_to_proof \<^command_keyword>\<open>binder_inductive\<close> "derive strengthened induction theorems for inductive predicates"
     (binder_inductive_parser >> binder_inductive_cmd);
+
+val _ = Theory.local_setup (fn lthy =>
+  let
+    val add = Thm.declaration_attribute (fn thm => fn context =>
+      let
+        val is_eq = Option.mapPartial (try HOLogic.dest_eq) (
+          try HOLogic.dest_Trueprop (Thm.concl_of thm)
+        );
+        val (thm', commute_opt) = case is_eq of
+          SOME (lhs, rhs) =>
+            let
+              val prems = Thm.prems_of thm
+              val fs = fold Term.add_vars prems [];
+              val vars_lhs = Term.add_vars lhs [];
+              fun inter' (xs, ys) = not (null (inter (op=) xs ys));
+              val commute = if inter' (vars_lhs, Term.add_vars rhs []) andalso inter' (vars_lhs, fs) then
+                SOME (thm RS sym)
+              else NONE
+            in (thm, commute) end
+          | NONE =>
+            let
+              open MRBNF_Util
+              val lthy = Context.proof_of context;
+              val prop = Logic.unvarify_global (Thm.full_prop_of thm);
+              val (f_prems, rhs) = split_last (Logic.strip_imp_prems prop);
+              val lhs = Logic.strip_imp_concl prop;
+              val goal = fold_rev (curry Logic.mk_implies) f_prems (HOLogic.mk_Trueprop (HOLogic.mk_eq (
+                apply2 HOLogic.dest_Trueprop (lhs, rhs)
+              )));
+              val fs = rev (fold_rev Term.add_frees f_prems []);
+              val vars = rev (Term.add_frees goal []);
+              val params = subtract (op=) (map Free fs) (map Free vars);
+
+              val mr_bnfs = map snd (
+                distinct ((op=) o apply2 fst) (maps (get_mr_bnfs lthy o fastype_of) params)
+              );
+              fun map_comps_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]
+                | map_comps_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_comp_of_bnf bnf, BNF_Def.map_comp0_of_bnf bnf RS sym]
+                | map_comps_of_mr_bnf (Inr (Inr sugar)) = map #permute_comp (#quotient_fps sugar) @ map #permute_comp0 (#quotient_fps sugar)
+              val map_comps = maps map_comps_of_mr_bnf mr_bnfs;
+              fun map_id0s_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_id0_of_mrbnf mrbnf]
+                | map_id0s_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_id0_of_bnf bnf]
+                | map_id0s_of_mr_bnf (Inr (Inr sugar)) = map #permute_id0 (#quotient_fps sugar)
+
+              val thm' = Goal.prove_sorry lthy (map fst vars) [] goal (fn {context=ctxt, ...} => EVERY1 [
+                rtac ctxt iffI,
+                defer_tac,
+                etac ctxt (Drule.rotate_prems ~1 thm),
+                REPEAT_DETERM o assume_tac ctxt,
+                dtac ctxt (Drule.rotate_prems ~1 thm),
+                K (prefer_tac (length f_prems + 1)),
+                SELECT_GOAL (REPEAT_DETERM (SOMEGOAL (EVERY' [
+                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps),
+                  REPEAT_DETERM o eq_assume_tac
+                ]))),
+                K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2} @ maps map_id0s_of_mr_bnf mr_bnfs)),
+                REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound}),
+                IF_UNSOLVED o (K (print_tac ctxt "strengthening failed:"))
+              ])
+            in (thm', NONE) end
+        val context = Equiv_Data.map (Item_Net.update (Thm.trim_context thm')) context;
+      in the_default context (Option.map (fn thm => Equiv_Sym_Data.map (
+        Item_Net.update (Thm.trim_context thm)
+      ) context) commute_opt) end);
+    val del = Thm.declaration_attribute (fn thm => fn context =>
+      let
+        val concl2 = HOLogic.dest_Trueprop (Thm.concl_of thm);
+        val context = Equiv_Data.map (Item_Net.filter (fn thm' =>
+          let
+            val concl1 = HOLogic.dest_Trueprop (Thm.concl_of thm')
+          in case try HOLogic.dest_eq concl1 of
+            SOME _ => not (concl1 aconv concl2)
+            | NONE => not (concl1 aconv fst (HOLogic.dest_eq concl2))
+           end
+        )) context;
+      in Equiv_Sym_Data.map (Item_Net.remove (thm RS sym)) context end)
+
+    val lthy' = lthy
+      |> Local_Theory.add_thms_dynamic (@{binding equiv}, equiv_thms')
+      |> Local_Theory.add_thms_dynamic (@{binding equiv_sym}, equiv_sym_thms')
+      |> Attrib.local_setup @{binding equiv} (Attrib.add_del add del) "Register equivariance theorems"
+  in lthy' end
+)
+
+val _ = Theory.local_setup (fn lthy =>
+  let
+    fun add idx = Thm.declaration_attribute (fn thm => Equiv_Forward_Data.map (Item_Net.update (Thm.trim_context thm, idx)));
+    val del = Thm.declaration_attribute (fn thm => Equiv_Forward_Data.map (Item_Net.filter (fn (thm', _) =>
+      not (Thm.concl_of thm aconv Thm.concl_of thm')
+    )))
+
+    val attr = Scan.lift (Scan.optional Parse.nat 0 :-- (fn idx =>
+      Args.add >> K (add idx) || Args.del >> K del || Scan.succeed (add idx)
+    )) >> snd;
+  in lthy
+    |> Local_Theory.add_thms_dynamic (@{binding equiv_forward}, map fst o equiv_forward_thms')
+    |> Attrib.local_setup @{binding equiv_forward} attr "Register forward theorems for equivariance proofs"
+  end
+);
 
 end

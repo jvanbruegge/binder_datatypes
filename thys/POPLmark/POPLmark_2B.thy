@@ -56,18 +56,19 @@ lemma Abs_inject:
     done
   done
 
-binder_inductive typing
-  subgoal for R B1 B2 \<sigma>1 \<sigma>2 \<Gamma> \<Delta> t T
-    unfolding split_beta
-    apply (elim disj_forward exE)
-    (*by  (auto simp add: supp_inv_bound map_context_def[symmetric] typ.vvsubst_permute trm.vvsubst_permute in_context_eqvt ty.equiv[folded map_context_def]
-        typ.permute_comp trm.permute_comp typ.FVars_permute trm.FVars_permute trm.permute_id wf_eqvt extend_eqvt lfset.set_map lfin_map_lfset induct_rulify_fallback
-        fun_eq_iff typ.tvsubst_permutes[THEN fun_cong, simplified] intro!: arg_cong[where f = "\<lambda>f. tvsubst_typ f _"]
-        | ((rule exI[of _ "\<sigma>1 _"] exI)+, (rule conjI)?, rule refl)
-        | ((drule spec2)+, (drule mp)?, assumption)
-        | ((rule exI[of _ "permute_typ \<sigma>1 _"])+, (rule conjI)?)
-        | ((rule exI[of _ "permute_trm \<sigma>1 \<sigma>2 _"])+, (rule conjI)?))+
-    *) sorry
+declare trm.permute[equiv]
+
+lemma in_context_equiv[equiv]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "(x, T) \<in> set \<Gamma> \<Longrightarrow> (f2 x, permute_typ f1 T) \<in> set (map (map_prod f2 (permute_typ f1)) \<Gamma>)"
+  using assms by auto
+
+thm equiv
+
+(* TODO use permute_typ in trm.permute *)
+
+binder_inductive (verbose) typing
   subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
     (*apply (tactic \<open>refreshability_tac true
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars t \<union> FTVars t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
@@ -79,7 +80,5 @@ binder_inductive typing
       @{thms id_onD} @{context}\<close>)*)
     sorry
   done
-
-thm typing.strong_induct
 
 end

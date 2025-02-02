@@ -12,8 +12,8 @@ ML_file \<open>../Tools/mrbnf_sugar.ML\<close>
 
 context begin
 ML_file \<open>../Tools/binder_induction.ML\<close>
-end
 ML_file \<open>../Tools/binder_inductive.ML\<close>
+end
 
 typedecl ('a, 'b) var_selector
 

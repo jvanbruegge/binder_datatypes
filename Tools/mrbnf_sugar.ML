@@ -867,6 +867,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
+    val equiv = @{attributes [simp, equiv]}
 
     val sugar = {
       map_simps = map_simps,
@@ -894,7 +895,7 @@ fun create_binder_datatype (spec : spec) lthy =
       (the_default [] note_inducts
       @ [("set", flat set_simpss, simp),
         ("map", map_simps, simp),
-        ("permute", permute_simps, simp),
+        ("permute", permute_simps, equiv),
         ("distinct", distinct, simp),
         ("inject", inject, simp)
       ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)

@@ -56,8 +56,6 @@ lemma Abs_inject:
     done
   done
 
-declare trm.permute[equiv]
-
 lemma in_context_equiv[equiv]:
   fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
@@ -81,8 +79,8 @@ lemma permute_tusubst[equiv]:
     done
   done
 
-declare ty.equiv[equiv]
 thm equiv
+thm equiv_sym
 
 binder_inductive typing
   subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T

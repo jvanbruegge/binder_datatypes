@@ -66,8 +66,6 @@ lemma in_context_equiv[equiv]:
 
 thm equiv
 
-(* TODO use permute_typ in trm.permute *)
-
 binder_inductive (verbose) typing
   subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
     (*apply (tactic \<open>refreshability_tac true

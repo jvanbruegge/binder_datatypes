@@ -64,9 +64,27 @@ lemma in_context_equiv[equiv]:
   shows "(x, T) \<in> set \<Gamma> \<Longrightarrow> (f2 x, permute_typ f1 T) \<in> set (map (map_prod f2 (permute_typ f1)) \<Gamma>)"
   using assms by auto
 
+lemma permute_tusubst[equiv]:
+  fixes f::"'a::var \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "permute_typ f (tvsubst_typ (TyVar(X := T2)) T1) = tvsubst_typ (TyVar(f X := permute_typ f T2)) (permute_typ f T1)"
+  apply (rule trans)
+   apply (rule trans[OF comp_apply[symmetric] typ.tvsubst_permutes[THEN fun_cong]])
+     apply (rule assms)+
+  apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_mono1 emp_bound infinite_UNIV insert_bound ordLeq_ordLess_trans)
+  apply (unfold fun_upd_def comp_def)
+  apply (rule arg_cong2[OF _ refl, of _ _ tvsubst_typ])
+  apply (rule ext)
+  subgoal for x
+    apply (cases "x = f X")
+    using assms apply auto
+    done
+  done
+
+declare ty.equiv[equiv]
 thm equiv
 
-binder_inductive (verbose) typing
+binder_inductive typing
   subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
     (*apply (tactic \<open>refreshability_tac true
       [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars t \<union> FTVars t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]

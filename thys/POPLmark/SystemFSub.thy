@@ -132,9 +132,15 @@ lemma in_context_eqvt:
 
 lemma extend_eqvt:
   fixes f::"'a::var \<Rightarrow> 'a"
-  assumes "bij f" "|supp f| <o |UNIV::'a::var set|"
-  shows "map_context f (\<Gamma>\<^bold>,x<:T) = map_context f \<Gamma>\<^bold>,f x <: permute_typ f T"
-  using assms unfolding map_context_def by simp
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows "map_context f (\<Gamma>\<^bold>,x<:T) = map_context f \<Gamma>\<^bold>, f x <: permute_typ f T"
+  unfolding map_context_def by simp
+
+lemma extend_equiv[equiv]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "bij f2"
+  shows "map (map_prod f1 (permute_typ f2)) (\<Gamma>\<^bold>,x<:T) = map (map_prod f1 (permute_typ f2)) \<Gamma>\<^bold>, f1 x <: permute_typ f2 T"
+  by simp
 
 lemma closed_in_eqvt:
   assumes "bij (f::'a \<Rightarrow> 'a)" "|supp f| <o |UNIV::'a::var set|"
@@ -282,7 +288,6 @@ declare wf_eqvt[unfolded map_context_def, equiv]
 declare lfin_equiv[equiv]
 declare closed_in_eqvt[unfolded map_context_def, equiv]
 declare in_context_eqvt[unfolded map_context_def, equiv]
-declare extend_eqvt[unfolded map_context_def, equiv]
 declare typ.permute[equiv]
 
 thm equiv

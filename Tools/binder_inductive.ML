@@ -788,7 +788,6 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     rtac ctxt conjI,
                     resolve_tac ctxt @{thms image_empty image_single[symmetric]}
                   ],
-                  K (print_tac ctxt "1"),
                   REPEAT_DETERM_N (length param_Ts) o EVERY' [
                     rtac ctxt conjI,
                     SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
@@ -796,7 +795,6 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     REPEAT_DETERM o assume_tac ctxt
                   ],
                   K (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
-                  K (print_tac ctxt "2"),
                   TRY o REPEAT_ALL_NEW (ematch_tac ctxt forward ORELSE' forward_quant_tac ctxt),
                   option Verbose (K (print_tac ctxt "forwarded")) (K all_tac),
                   K (Local_Defs.unfold0_tac ctxt (@{thm id_def[symmetric]} :: equiv_sym_thms ctxt)),

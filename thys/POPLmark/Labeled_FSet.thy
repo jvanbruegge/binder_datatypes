@@ -244,6 +244,9 @@ lemma lfin_map_lfset: "(a, b) \<in>\<in> map_lfset id g x \<longleftrightarrow> 
 lemma lfin_label_inject: "(a, b) \<in>\<in> x \<Longrightarrow> (a, c) \<in>\<in> x \<Longrightarrow> b = c"
   by transfer (auto simp: nonrep_lfset_alt)
 
+lemma lfin_equiv: "bij f \<Longrightarrow> (a, b) \<in>\<in> x \<Longrightarrow> (a, f b) \<in>\<in> map_lfset id f x"
+  unfolding lfin_map_lfset by blast
+
 lift_definition lfempty :: "('a::var, 'b) lfset" is "{||} :: ('a \<times> 'b) fset"
   by (auto simp: nonrep_lfset_alt)
 

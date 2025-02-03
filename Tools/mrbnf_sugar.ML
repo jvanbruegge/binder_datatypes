@@ -17,6 +17,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
+  map_permute: thm,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -62,6 +63,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
+  map_permute: thm,
   subst_simps: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
@@ -72,10 +74,11 @@ type binder_sugar = {
   ctors: (term * thm) list
 };
 
-fun morph_binder_sugar phi { map_simps, permute_simps, set_simpss, subst_simps, mrbnf,
+fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, subst_simps, mrbnf,
   strong_induct, distinct, inject, ctors, bsetss, bset_bounds } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
+  map_permute = Morphism.thm phi map_permute,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
@@ -607,7 +610,7 @@ fun create_binder_datatype (spec : spec) lthy =
       UN_single
     };
     val nvars = length vars;
-    fun mk_map_simps lthy do_noclash fs mk_supp_bound_opt mk_imsupp_opt mk_extra_prems extra_apply_args mapx tac =
+    fun mk_map_simps lthy do_permute do_noclash fs mk_supp_bound_opt mk_imsupp_opt mk_extra_prems extra_apply_args mapx tac =
       let
         val mapx = Term.list_comb (mapx, fs);
         val (prem_fs, prems) = split_list (map_filter (fn f => case mk_supp_bound_opt f of
@@ -626,6 +629,20 @@ fun create_binder_datatype (spec : spec) lthy =
                   val gs = map mk_map Ts;
                 in if forall (fn Const ("Fun.id", _) => true | _ => false) gs then
                   HOLogic.id_const T
+                else if do_permute andalso forall (fn Const ("Fun.id", _) => true | Free _ => true | _ => false) gs then
+                  case MRBNF_FP_Def_Sugar.fp_result_of lthy n of
+                    NONE => Term.list_comb (inner_map, gs)
+                    | SOME sugar =>
+                      let
+                        val quot = the (List.find (fn sugar => fst (dest_Type (#T sugar)) = n) (#quotient_fps sugar));
+                        val permute = Term.subst_atomic_types (
+                          snd (dest_Type (#T quot)) ~~ Ts
+                        ) (#permute quot);
+                        val gs' = map (fn T => case List.find (fn g => fastype_of g = Term.typ_subst_atomic replace T) gs of
+                          SOME g => g
+                          | NONE => HOLogic.id_const (body_type T)
+                        ) (fst (split_last (binder_types (fastype_of permute))));
+                      in Term.list_comb (permute, gs') end
                 else Term.list_comb (inner_map, gs) end
               | NONE => HOLogic.id_const T)
             | mk_map (T as TFree _) =
@@ -750,7 +767,11 @@ fun create_binder_datatype (spec : spec) lthy =
           K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
           rtac ctxt refl
         ];
-      in mk_map_simps lthy true fs (SOME o MRBNF_Recursor.mk_supp_bound) (fn t => fn _ => SOME (mk_imsupp t)) (K []) [] mapx tac end;
+      in mk_map_simps lthy false true fs (SOME o MRBNF_Recursor.mk_supp_bound) (fn t => fn _ => SOME (mk_imsupp t)) (K []) [] mapx tac end;
+
+    val nesting_binder_sugars = map_filter (fn mrbnf => binder_sugar_of lthy
+      (fst (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)))
+    ) fp_nesting_mrbnfs;
 
     val permute_simps =
       let
@@ -765,10 +786,14 @@ fun create_binder_datatype (spec : spec) lthy =
             #Abs_inverse (snd info) OF @{thms UNIV_I}
           ])),
           REPEAT_DETERM o resolve_tac ctxt prems,
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] (map #map_permute nesting_binder_sugars),
+            REPEAT_DETERM o resolve_tac ctxt prems
+          ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
           rtac ctxt refl
         ];
-      in mk_map_simps lthy false fs (SOME o MRBNF_Recursor.mk_supp_bound) (K (K NONE))
+      in mk_map_simps lthy true false fs (SOME o MRBNF_Recursor.mk_supp_bound) (K (K NONE))
         (single o HOLogic.mk_Trueprop o mk_bij) bounds mapx tac
       end;
 
@@ -836,17 +861,19 @@ fun create_binder_datatype (spec : spec) lthy =
                 rtac ctxt refl
               ]
             ];
-          in mk_map_simps lthy true fs mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac end;
+          in mk_map_simps lthy false true fs mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac end;
         in (lthy, SOME (tvsubst_res, tvsubst_simps)) end
       else (lthy, NONE);
 
     val simp = @{attributes [simp]}
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
+    val equiv = @{attributes [simp, equiv]}
 
     val sugar = {
       map_simps = map_simps,
       set_simpss = set_simpss,
       permute_simps = permute_simps,
+      map_permute = #vvsubst_permute vvsubst_res,
       strong_induct = strong_induct_opt,
       subst_simps = Option.map snd tvsubst_opt,
       bsetss = bset_optss,
@@ -868,7 +895,7 @@ fun create_binder_datatype (spec : spec) lthy =
       (the_default [] note_inducts
       @ [("set", flat set_simpss, simp),
         ("map", map_simps, simp),
-        ("permute", permute_simps, simp),
+        ("permute", permute_simps, equiv),
         ("distinct", distinct, simp),
         ("inject", inject, simp)
       ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)

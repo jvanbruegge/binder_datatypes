@@ -12,14 +12,6 @@ inductive trans :: "trm \<Rightarrow> cmt \<Rightarrow> bool" where
 | ParLeft: "\<lbrakk> trans P (Cmt \<alpha> P') ; bns \<alpha> \<inter> (FFVars P \<union> FFVars Q) = {} \<rbrakk> \<Longrightarrow> trans (P \<parallel> Q) (Cmt \<alpha> (P' \<parallel> Q))"
 
 binder_inductive trans
-  subgoal for R B \<sigma> x1 x2
-    apply simp
-    apply (elim disj_forward)
-    by (auto simp: isPerm_def bij_implies_inject
-        term.permute_comp action.map_comp action.map_id
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | (rule exI[of _ "map_action \<sigma> _"] exI[of _ "rrename \<sigma> _"])
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B P Q
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FVars_commit :: cmt \<Rightarrow> var set"}]

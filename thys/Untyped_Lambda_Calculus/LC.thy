@@ -394,7 +394,6 @@ proof-
       subgoal using IImsupp_rrename_su' b s(1) by blast . .
 qed
 
-
 (* Unary (term-for-var) substitution versus renaming: *)
 
 lemma supp_SSupp_Var_le[simp]: "SSupp (Var \<circ> \<sigma>) = supp \<sigma>"
@@ -438,6 +437,15 @@ proof-
       subgoal unfolding imsupp_def supp_def by simp
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
+
+declare term.tvsubst_permutes[THEN fun_cong, unfolded comp_def, equiv]
+declare tvsubst_rrename_comp[unfolded comp_def, equiv]
+
+lemma permute_fun_upd[equiv]:
+  fixes f::"var \<Rightarrow> var"
+  assumes "bij f" "|supp f| <o |UNIV::var set|"
+  shows "rrename f ((Var(x := e)) y) = ((Var(f x := rrename f e)) (f y))"
+  using assms by (simp add: bij_implies_inject)
 
 (* Unary substitution versus swapping: *)
 lemma tvsubst_refresh:

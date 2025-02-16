@@ -60,17 +60,26 @@ val _ = Theory.local_setup (fn lthy =>
   let
     val add = Thm.declaration_attribute (fn thm => fn context =>
       let
-        val is_eq = Option.mapPartial (try HOLogic.dest_eq) (
+        val is_eq = Option.mapPartial (fn x =>
+          let
+            val b = forall (fn t => case HOLogic.dest_Trueprop t of
+              (Const (@{const_name bij_betw}, _) $ _ $ _ $ _) => true
+              | (Const (@{const_name Set.member}, _) $ _ $ Const (@{const_name ordLess}, _)) => true
+              | _ => false
+            ) (Thm.prems_of thm);
+          in if b then SOME x else NONE end
+        ) (Option.mapPartial (try HOLogic.dest_eq) (
           try HOLogic.dest_Trueprop (Thm.concl_of thm)
-        );
+        ));
         val (thm', commute_opt) = case is_eq of
           SOME (lhs, rhs) =>
             let
               val prems = Thm.prems_of thm
               val fs = fold Term.add_vars prems [];
               val vars_lhs = Term.add_vars lhs [];
+              val vars_rhs = Term.add_vars rhs [];
               fun inter' (xs, ys) = not (null (inter (op=) xs ys));
-              val commute = if inter' (vars_lhs, Term.add_vars rhs []) andalso inter' (vars_lhs, fs) then
+              val commute = if inter' (vars_lhs, vars_rhs) andalso inter' (vars_lhs, fs) andalso inter' (vars_rhs, fs) then
                 SOME (thm RS sym)
               else NONE
             in (thm, commute) end
@@ -107,10 +116,10 @@ val _ = Theory.local_setup (fn lthy =>
                 dtac ctxt (Drule.rotate_prems ~1 thm),
                 K (prefer_tac (length f_prems + 1)),
                 SELECT_GOAL (REPEAT_DETERM (SOMEGOAL (EVERY' [
-                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps),
+                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ map_comps),
                   REPEAT_DETERM o eq_assume_tac
                 ]))),
-                K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2} @ maps map_id0s_of_mr_bnf mr_bnfs)),
+                K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2 image_inv_f_f[OF bij_is_inj]} @ maps map_id0s_of_mr_bnf mr_bnfs)),
                 REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound}),
                 IF_UNSOLVED o (K (print_tac ctxt "strengthening failed:"))
               ])

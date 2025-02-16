@@ -22,35 +22,6 @@ inductive affine  :: "itrm \<Rightarrow> bool" where
  affine (iApp e1 es2)"
 
 binder_inductive affine
-  unfolding isPerm_def induct_rulify_fallback
-  subgoal for R B \<sigma> t
-    apply(elim disjE)
-    subgoal apply(rule disjI3_1)
-      subgoal apply(elim exE) subgoal for x
-        apply(rule exI[of _ "\<sigma> x"])
-        apply auto
-        done
-      done
-    done
-    (* *)
-    subgoal apply(rule disjI3_2)
-      subgoal apply(elim exE) subgoal for e xs
-        apply(rule exI[of _ "irrename \<sigma> e"])
-        apply(rule exI[of _ "dsmap \<sigma> xs"])
-        apply (simp add: iterm.permute_comp)
-        done
-      done
-    done
-    (* *)
-    subgoal apply(rule disjI3_3)
-      subgoal apply(elim exE) subgoal for e1 es2
-        apply(rule exI[of _ "irrename \<sigma> e1"])
-        apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-        apply (fastforce simp add: iterm.permute_comp bij_implies_inject)
-        done
-      done
-    done
-  done
   subgoal premises prems for R B t
     using prems(2-)
      apply safe

@@ -10,11 +10,6 @@ inductive stepD :: "nat \<Rightarrow> trm \<Rightarrow> trm \<Rightarrow> bool" 
 | Xi: "stepD d e e' \<Longrightarrow> stepD d (Lam x e) (Lam x e')"
 
 binder_inductive stepD
-  subgoal for R B \<sigma> x1 x2 x3
-    by (elim disj_forward exE case_prodE)
-      (auto simp: isPerm_def term.permute_comp rrename_tvsubst_comp
-        | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-        | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B d t1 t2
     by (tactic \<open>refreshability_tac false
       [@{term "(\<lambda>_. {}) :: nat \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]

@@ -519,29 +519,31 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val perm_supports = prove_missing perm_supports (fn ctxt => fn mr_bnfs => fn i =>
           let val supps = nth suppss i;
-          in rtac ctxt @{thm id_apply} 1 ORELSE EVERY1 (map (fn j => REPEAT_DETERM o EVERY' [
+          in rtac ctxt @{thm id_apply} 1 ORELSE EVERY1 (map (fn j => REPEAT_DETERM o SELECT_GOAL (EVERY1 [
             REPEAT_DETERM o EVERY' [
               resolve_tac ctxt (maps map_cong_id_of_mr_bnf mr_bnfs),
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
             ],
             REPEAT_DETERM o rtac ctxt @{thm id_apply},
             REPEAT_DETERM_N (2 * length var_Ts) o etac ctxt thin_rl,
-            rotate_tac j,
-            dtac ctxt meta_spec,
-            dtac ctxt meta_mp,
-            K (prefer_tac 2),
-            assume_tac ctxt,
-            REPEAT_DETERM o EVERY' [
-              dtac ctxt @{thm UN_I},
+            IF_UNSOLVED o EVERY' [
+              rotate_tac j,
+              dtac ctxt meta_spec,
+              dtac ctxt meta_mp,
+              K (prefer_tac 2),
               assume_tac ctxt,
-              etac ctxt thin_rl,
-              rotate_tac ~1
-            ],
-            etac ctxt @{thm contrapos_pp},
-            SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
-            REPEAT_DETERM o etac ctxt conjE,
-            assume_tac ctxt
-        ]) (0 upto length supps)) end);
+              REPEAT_DETERM o EVERY' [
+                dtac ctxt @{thm UN_I},
+                assume_tac ctxt,
+                etac ctxt thin_rl,
+                rotate_tac ~1
+              ],
+              etac ctxt @{thm contrapos_pp},
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
+              REPEAT_DETERM o etac ctxt conjE,
+              assume_tac ctxt
+            ]
+        ])) (0 upto length supps)) end);
 
         val (Un_bound, UN_bound, var_large) =
           let
@@ -689,7 +691,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
               TRY o etac ctxt @{thm disj_forward},
               REPEAT_DETERM o etac ctxt exE,
               REPEAT_DETERM_N (length param_Ts + length var_Ts) o EVERY' [
-                etac ctxt conjE,
+                TRY o etac ctxt conjE,
                 etac ctxt @{thm subst[OF sym]}
               ],
               Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
@@ -740,52 +742,66 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   fun permute_bijs_of_mr_bnf (Inr (Inr sugar)) = map (#permute_bij o #inner) (#quotient_fps sugar)
                     | permute_bijs_of_mr_bnf _ = []
                 in EVERY1 [
-                  EVERY' (map (fn t => rtac ctxt (
+                  option Verbose (K (print_tac ctxt "begin")) (K all_tac),
+                  EVERY' (map_filter (try (fn t => rtac ctxt (
                     infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt t)] exI
-                  )) ts),
+                  ))) ts),
                   SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map snd perms)),
+                  option Verbose (K (print_tac ctxt "before vars")) (K all_tac),
                   REPEAT_DETERM_N (length var_Ts) o EVERY' [
                     rtac ctxt conjI,
-                    resolve_tac ctxt @{thms image_empty image_single[symmetric]}
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt (Equivariance.equiv_sym_thms ctxt)),
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms image_insert image_empty image_Un}),
+                    TRY o resolve_tac ctxt (@{thms refl image_empty image_single[symmetric]}
+                      @ map (fn thm => thm RS sym) set_maps
+                    ),
+                    REPEAT_DETERM o (rtac ctxt refl ORELSE' assume_tac ctxt)
                   ],
+                  option Verbose (K (print_tac ctxt "after vars")) (K all_tac),
                   REPEAT_DETERM_N (length param_Ts) o EVERY' [
-                    rtac ctxt conjI,
-                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
-                    TRY o resolve_tac ctxt (refl :: Equivariance.equiv_thms ctxt), (* TRY will result in a better error *)
-                    REPEAT_DETERM o assume_tac ctxt
+                    TRY o rtac ctxt conjI,
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms id_def[symmetric] id_apply} @ map_ids)),
+                    REPEAT_DETERM o EVERY' [
+                      EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt),
+                      REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt)
+                    ],
+                    TRY o rtac ctxt refl
                   ],
                   K (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
+                  option Verbose (K (print_tac ctxt "pre_forward")) (K all_tac),
                   TRY o REPEAT_ALL_NEW (ematch_tac ctxt forward ORELSE' forward_quant_tac ctxt),
                   option Verbose (K (print_tac ctxt "forwarded")) (K all_tac),
-                  K (Local_Defs.unfold0_tac ctxt (@{thm id_def[symmetric]} :: Equivariance.equiv_sym_thms ctxt)),
+                  K (Local_Defs.unfold0_tac ctxt (@{thms id_def[symmetric]}
+                    @ Equivariance.equiv_sym_thms ctxt
+                  )),
                   REPEAT_DETERM o FIRST' [
                     assume_tac ctxt,
-                    resolve_tac ctxt (@{thms bij_id supp_id_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs),
+                    resolve_tac ctxt (@{thms refl bij_id supp_id_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs),
                     eresolve_tac ctxt (flat (map_filter (Option.map (map (Drule.rotate_prems ~1)) o
                       try (fn thm => [thm RS iffD2, thm RS iffD1])
-                    ) (Equivariance.equiv_thms ctxt))),
+                    ) (Equivariance.equiv_thms ctxt @ @{thms bij_implies_inject}))),
+                    etac ctxt @{thm notin_Un_forward},
+                    EqSubst.eqsubst_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
+                    EqSubst.eqsubst_asm_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
                     SELECT_GOAL (EVERY [
-                      REPEAT_DETERM1 (SOMEGOAL (EVERY' [
-                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps)
+                      REPEAT_DETERM (SOMEGOAL (EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps @ @{thms inv_simp1})
                       ])),
                       REPEAT_DETERM (FIRST1 [
                         assume_tac ctxt,
                         resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}
                       ]),
-                      Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids),
-                      assume_tac ctxt 1
+                      Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o} @ map_ids),
+                      assume_tac ctxt 1 ORELSE (REPEAT_DETERM1 (EVERY1 [
+                        EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt),
+                        REPEAT_DETERM1 o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound})
+                      ]))
                     ]),
-                    (* TODO: unfold set_map together with equiv_sym *)
                     SELECT_GOAL (EVERY1 [
-                      REPEAT_DETERM1 o EVERY' [
-                        EqSubst.eqsubst_tac ctxt [0] (@{thms id_apply image_id} @ set_maps),
-                        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound})
-                      ],
-                      IF_UNSOLVED o (eresolve_tac ctxt (flat (map_filter (Option.map (map (Drule.rotate_prems ~1)) o
-                        try (fn thm => [thm RS iffD2, thm RS iffD1])
-                      ) (Equivariance.equiv_thms ctxt))) THEN_ALL_NEW assume_tac ctxt),
+                      asm_full_simp_tac ctxt,
                       IF_UNSOLVED o K no_tac
-                    ])
+                    ]),
+                    CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp2})
                   ],
                   IF_UNSOLVED o K (print_tac ctxt "equivariance proof failed:")
                 ] end

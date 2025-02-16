@@ -193,13 +193,24 @@ inductive Ty :: "('a::var * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<
 lemma map_prod_comp0: "map_prod f1 f2 \<circ> map_prod f3 f4 = map_prod (f1 \<circ> f3) (f2 \<circ> f4)"
   using prod.map_comp by auto
 
-binder_inductive Ty
-  subgoal for R B \<sigma> x1 x2 x3
-    apply (elim disj_forward)
-      apply (auto simp: map_prod_comp0 terms.permute_comp[OF _ _ bij_imp_bij_inv supp_inv_bound]
-    terms.permute_id)
+lemma equiv[equiv]:
+  fixes f::"'a::var \<Rightarrow> 'a"
+  assumes "bij f" "|supp f| <o |UNIV::'a set|"
+  shows
+    (* equivariance *)
+    "(x, \<tau>) |\<in>| \<Gamma> \<Longrightarrow> (f x, \<tau>) |\<in>| map_prod f id |`| \<Gamma>"
+    "x \<sharp> \<Gamma> \<Longrightarrow> f x \<sharp> map_prod f id |`| \<Gamma>"
+    (* equivariance of extend *)
+    "map_prod f id |`| (\<Gamma>,x:\<tau>) = (map_prod f id |`| \<Gamma>),f x:\<tau>"
+    (* freshness *)
+   apply (simp add: assms isin_rename)
+  unfolding fresh_def
      apply force
-    unfolding fresh_def by (force simp: bij_implies_inject)
+  using assms(1) fimage_iff apply (fastforce simp: bij_implies_inject)
+  apply simp
+  done
+
+binder_inductive Ty
   subgoal for R B x1 x2 x3
     apply (rule exI[of _ B])
     unfolding fresh_def by auto

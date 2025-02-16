@@ -11,11 +11,6 @@ inductive step :: "trm \<Rightarrow> trm \<Rightarrow> bool" where
 | Xi: "step e e' \<Longrightarrow> step (Lam x e) (Lam x e')"
 
 binder_inductive step
-  subgoal for \<sigma> R B t  \<comment> \<open>equivariance\<close>
-    by (elim disj_forward case_prodE)
-      (auto simp: isPerm_def term.permute_comp rrename_tvsubst_comp
-         | ((rule exI[of _ "\<sigma> _"] exI)+, (rule conjI)?, rule refl)
-         | ((rule exI[of _ "\<sigma> _"])+; auto))+
   subgoal premises prems for R B t1 t2  \<comment> \<open>refreshability\<close>
     by (tactic \<open>refreshability_tac false
       [@{term "FFVars :: trm \<Rightarrow> var set"}, @{term "FFVars :: trm \<Rightarrow> var set"}]

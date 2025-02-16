@@ -117,6 +117,7 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
     (@{term Cmt}, @{thm refl})
   ],
   permute_simps = @{thms commit.permute},
+  map_permute = @{thm commit.vvsubst_permute},
   map_simps = [],
   distinct = [],
   bsetss = [[
@@ -138,10 +139,12 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"
 
 lemma bvars_map_action[simp]: "bvars (map_action \<sigma> act) = image \<sigma> (bvars act)"
-by (cases act, auto)
+  by (cases act, auto)
+lemma bvars_equiv[equiv]: "bij \<sigma> \<Longrightarrow> image \<sigma> (bvars act) = bvars (map_action \<sigma> act)"
+  by simp
 
-lemma permute_commit_Cmt[simp]:
-"bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
+lemma permute_commit_Cmt[simp, equiv]:
+"bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow>
  permute_commit \<sigma> (Cmt act P) = Cmt (map_action \<sigma> act) (rrename \<sigma> P)"
 by (cases act, auto)
 
@@ -153,5 +156,7 @@ lemma fra_eqvt[simp]: "fra (map_action \<sigma> act) = fra act"
 
 lemma ns_map_action[simp]: "ns (map_action \<sigma> \<alpha>) = \<sigma> ` ns \<alpha>"
   by (cases \<alpha>) auto
+lemma ns_equiv[equiv]: "bij \<sigma> \<Longrightarrow> \<sigma> ` ns \<alpha> = ns (map_action \<sigma> \<alpha>)"
+  by simp
 
 end

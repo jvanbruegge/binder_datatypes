@@ -272,6 +272,7 @@ lemma ty_fresh_extend: "\<Gamma>\<^bold>, x <: U \<turnstile> S <: T \<Longright
 
 declare wf_eqvt[unfolded map_context_def, equiv]
 declare lfin_equiv[equiv]
+
 declare closed_in_eqvt[unfolded map_context_def, equiv]
 declare in_context_eqvt[unfolded map_context_def, equiv]
 
@@ -279,7 +280,7 @@ thm equiv
 thm equiv_sym
 thm equiv_forward
 
-binder_inductive ty
+binder_inductive (verbose) ty
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>(\<Gamma>::('a::var \<times> 'a typ) list). dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FVars_typ :: 'a typ \<Rightarrow> 'a::var set"}, @{term "FVars_typ :: 'a::var typ \<Rightarrow> 'a::var set"}]
@@ -290,7 +291,5 @@ binder_inductive ty
       @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done
-
-print_theorems
 
 end

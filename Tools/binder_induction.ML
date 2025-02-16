@@ -213,7 +213,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val (nbound_prems, cases') = split_list (map (fn rule =>
             let
               val ((bvars, rho), rule) = apfst split_last (strip_pure_all rule)
-              val bvars' = rev (map Free (fold Term.rename_wrt_term goals'' (map dest_Free bvars)));
+              val bvars' = map Free (fold Term.variant_bounds goals'' (map dest_Free bvars));
               val rule = Term.subst_atomic (bvars ~~ bvars') rule;
               val (prems, outer_concl) = Logic.strip_horn rule;
               val (P_var, P_args) = apsnd (fst o split_last) (Term.strip_comb (HOLogic.dest_Trueprop outer_concl));
@@ -333,7 +333,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             @{map 4} (fn goal => fn inst => fn arb => fn defs =>
               let
                 val goal' = fold_rev (curry Logic.mk_implies) (map Thm.prop_of defs) goal;
-                val rho = Free (hd (Term.rename_wrt_term goal' [dest_Free rho]))
+                val rho = Free (hd (Term.variant_bounds goal' [dest_Free rho]))
               in Thm.cterm_of ctxt (
                 fold_rev Term.absfree (map dest_Free inst) (Term.absfree (dest_Free rho) (
                   fold_rev mk_all arb (Induct.atomize_term ctxt (
@@ -351,7 +351,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           fun dest_induct_imp (Const (@{const_name HOL.induct_implies}, _) $ t1 $ t2) = (t2, t1)
 
           fun to_pure_all (Const ("HOL.All", _) $ Abs (a, b, t)) =
-            let val x = Free (hd (Term.rename_wrt_term t [(a, b)]))
+            let val x = Free (hd (Term.variant_bounds t [(a, b)]))
             in to_pure_all (subst_bound (x, t)) end
             | to_pure_all t = dest_induct_imp t
           val (inst_concls', rho_imps) = split_list (map (to_pure_all o HOLogic.dest_Trueprop) inst_concls);

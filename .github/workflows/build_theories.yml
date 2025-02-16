@@ -9,13 +9,11 @@ on:
       - ready_for_review
   push:
     branches: [ master ]
-    paths-ignore:
-      - 'OUTDATED/**'
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: jvanbruegge/isabelle:2024-bnf_lift
+      image: ghcr.io/jvanbruegge/docker-isabelle:2025-RC2
       options: "--user root"
 
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft

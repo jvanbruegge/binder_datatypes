@@ -63,7 +63,7 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
           else (if x = ":" then find_names' xs curr true else find_names' xs [] false)
     fun find_names s = find_names' (Symbol.explode s) [] false
 
-    val names = maps (find_names o YXML.content_of o snd o snd) xs;
+    val names = maps (find_names o XML.content_of o YXML.parse_body o snd o snd) xs;
     fun mk_typedecl name = Typedecl.basic_typedecl {final = true} (Binding.name name, 0, NoSyn)
     val (fake_names, names_lthy) = fold_map mk_typedecl names lthy;
 

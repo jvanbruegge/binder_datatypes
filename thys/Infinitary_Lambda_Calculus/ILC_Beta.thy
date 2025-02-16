@@ -24,42 +24,10 @@ inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
 | iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
 
+declare iterm.tvsubst_permutes[THEN fun_cong, unfolded comp_def, equiv]
+declare imkSubst_smap_irrename[symmetric, THEN fun_cong, unfolded comp_def, equiv]
+
 binder_inductive istep
-  subgoal for R B \<sigma> x1 x2
-    apply (elim disj_forward exE conjE)
-    subgoal for xs e1 es2
-        apply(rule exI[of _ "dsmap \<sigma> xs"])
-        apply(rule exI[of _ "irrename \<sigma> e1"])
-        apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-        apply (simp add: iterm.permute_comp) apply(subst irrename_itvsubst_comp) apply auto
-        apply(subst imkSubst_smap_irrename_inv) unfolding isPerm_def apply auto
-        apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
-        apply(subst itvsubst_comp)
-        subgoal by (metis SSupp_imkSubst imkSubst_smap_irrename_inv)
-        subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI)
-        subgoal apply(rule itvsubst_cong)
-          subgoal using SSupp_irrename_bound by blast
-          subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv isPerm_def by auto
-          subgoal for x apply simp apply(subst iterm.subst(1))
-            subgoal using card_SSupp_imkSubst_irrename_inv[unfolded isPerm_def] by auto
-            subgoal by simp . . .
-      (* *)
-  subgoal for e1 e1' es2
-      apply(rule exI[of _ "irrename \<sigma> e1"]) apply(rule exI[of _ "irrename \<sigma> e1'"])
-      apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-      by (simp add: iterm.permute_comp)
-    (* *)
-  subgoal for es2 i e2' e1
-      apply(rule exI[of _ "smap (irrename \<sigma>) es2"])
-      apply(rule exI[of _ i])
-      apply(rule exI[of _ "irrename \<sigma> e2'"])
-      apply(rule exI[of _ "irrename \<sigma> e1"])
-      apply (simp add: iterm.permute_comp) .
-    (* *)
-  subgoal for e e' xs
-      apply(rule exI[of _ "irrename \<sigma> e"]) apply(rule exI[of _ "irrename \<sigma> e'"])
-      apply(rule exI[of _ "dsmap \<sigma> xs"])
-      by (simp add: iterm.permute_comp) .
   subgoal premises prems for R B x1 x2
     using prems(2-) apply safe
     subgoal for xs e1 es2

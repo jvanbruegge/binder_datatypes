@@ -200,34 +200,47 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
       else Term.list_comb (mapx, fs) end
 
     fun build_permute_for fs xs T =
-      let val idx = find_index (curry (op=) T) xs;
-      in if idx >= 0 then ([], nth fs idx) else
-      case T of
-      Type (s, Ts) =>
-        let val mr_bnf_opt = case MRBNF_Def.mrbnf_of no_defs_lthy s of
-          SOME mrbnf => SOME (Inl mrbnf)
-          | NONE => (case BNF_Def.bnf_of no_defs_lthy s of
-            SOME bnf => SOME (Inr (Inl bnf))
-            | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
-              SOME sugar => SOME (Inr (Inr sugar))
-              | NONE => NONE
-            ))
-        in case mr_bnf_opt of
-          NONE => ([], HOLogic.id_const T)
-          | SOME mr_bnf =>
-            let
-              val (mr_bnfs, fs) = split_list (map (build_permute_for fs xs) Ts);
-              val final = not (exists (fn Free _ => false | Const (@{const_name id}, _) => false | _ => true) fs);
-              val mr_bnf = if final then case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
-                SOME sugar => Inr (Inr sugar)
-                | NONE => mr_bnf
-              else mr_bnf;
-              val mr_bnfs = fold (union ((op=) o apply2 fst)) mr_bnfs [];
-              val perm = mk_map_comb s mr_bnf fs
-            in (if member (op=) (map fst mr_bnfs) s then (mr_bnfs, perm) else ((s, mr_bnf) :: mr_bnfs, perm)) end
+      let fun go fs xs T =
+        let val idx = find_index (curry (op=) T) xs;
+        in if idx >= 0 then ([], nth fs idx) else
+        case T of
+        Type (s, Ts) =>
+          let val mr_bnf_opt = case MRBNF_Def.mrbnf_of no_defs_lthy s of
+            SOME mrbnf => SOME (Inl mrbnf)
+            | NONE => (case BNF_Def.bnf_of no_defs_lthy s of
+              SOME bnf => SOME (Inr (Inl bnf))
+              | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
+                SOME sugar => SOME (Inr (Inr sugar))
+                | NONE => NONE
+              ))
+          in case mr_bnf_opt of
+            NONE => ([], HOLogic.id_const T)
+            | SOME mr_bnf =>
+              let
+                val (mr_bnfs, fs) = split_list (map (build_permute_for fs xs) Ts);
+                val final = not (exists (fn Free _ => false | Const (@{const_name id}, _) => false | _ => true) fs);
+                val mr_bnf = if final then case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
+                  SOME sugar => Inr (Inr sugar)
+                  | NONE => mr_bnf
+                else mr_bnf;
+                val mr_bnfs = fold (union ((op=) o apply2 fst)) mr_bnfs [];
+                val perm = mk_map_comb s mr_bnf fs
+              in (if member (op=) (map fst mr_bnfs) s then (mr_bnfs, perm) else ((s, mr_bnf) :: mr_bnfs, perm)) end
+          end
+        | _ => ([], HOLogic.id_const T)
         end
-      | _ => ([], HOLogic.id_const T)
-      end
+      in case try dest_funT T of
+        NONE => go fs xs T
+        | SOME (T1, T2) =>
+          let
+            val (mr_bnfs1, perm1) = go fs xs T1;
+            val (mr_bnfs2, perm2) = go (map mk_inv fs) xs T2;
+          in (union ((op=) o apply2 fst) mr_bnfs1 mr_bnfs2,
+            Term.abs ("g", T) (Term.abs ("x", T1)
+              (perm1 $ (Bound 1 $ (perm2 $ Bound 0)))
+            )
+          ) end
+      end;
 
     val var_Ts = map HOLogic.dest_setT bind_Ts;
     val (mr_bnfs', raw_perms) = split_list (map2 (fn s => fn T => if s = "_" then
@@ -767,6 +780,10 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     ],
                     TRY o rtac ctxt refl
                   ],
+                  REPEAT_DETERM o SELECT_GOAL (EVERY [
+                    auto_tac ctxt,
+                    IF_UNSOLVED no_tac
+                  ]),
                   K (Local_Defs.unfold0_tac ctxt (@{thm id_apply} :: map_ids)),
                   option Verbose (K (print_tac ctxt "pre_forward")) (K all_tac),
                   TRY o REPEAT_ALL_NEW (ematch_tac ctxt forward ORELSE' forward_quant_tac ctxt),
@@ -794,12 +811,15 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                       Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o} @ map_ids),
                       assume_tac ctxt 1 ORELSE (REPEAT_DETERM1 (EVERY1 [
                         EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt),
-                        REPEAT_DETERM1 o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound})
+                        REPEAT_DETERM1 o FIRST' [
+                          assume_tac ctxt,
+                          resolve_tac ctxt (@{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs)
+                        ]
                       ]))
                     ]),
-                    SELECT_GOAL (EVERY1 [
-                      asm_full_simp_tac ctxt,
-                      IF_UNSOLVED o K no_tac
+                    SELECT_GOAL (EVERY [
+                      auto_tac ctxt,
+                      IF_UNSOLVED no_tac
                     ]),
                     CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp2})
                   ],

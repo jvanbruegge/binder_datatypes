@@ -1006,14 +1006,16 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             EVERY' (map (fn Inr _ => rtac ctxt refl | Inl inner => EVERY' [
               resolve_tac ctxt (map #Sb_cong (axioms_of_bmv_monad inner)),
               REPEAT_DETERM o EVERY' [
-                REPEAT_DETERM o resolve_tac ctxt prems,
-                rotate_tac ~1,
-                etac ctxt @{thm contrapos_pp},
-                SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms bex_simps(8) Un_iff UN_iff de_Morgan_disj}),
-                REPEAT_DETERM o etac ctxt conjE,
-                dtac ctxt @{thm bspec[rotated]},
-                assume_tac ctxt,
-                assume_tac ctxt
+                REPEAT_DETERM o resolve_tac ctxt (take (2 * length vars) prems),
+                FIRST' (map (fn thm => EVERY' [
+                  rtac ctxt thm,
+                  REPEAT_DETERM o FIRST' [
+                    rtac ctxt @{thm UnI2} THEN' etac ctxt @{thm UN_I},
+                    rtac ctxt @{thm UnI1}
+                  ],
+                  REPEAT_DETERM o etac ctxt @{thm UN_I},
+                  assume_tac ctxt
+                ]) (drop (2 * length vars) prems))
               ]
             ]) inners),
             rtac ctxt (#Sb_cong axioms),

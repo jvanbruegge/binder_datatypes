@@ -123,7 +123,6 @@ pbmv_monad "'a::var FType"
 typedef ('a1, 'a2, 'c1, 'c2) L' = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
   by (rule UNIV_witness)
 
-declare [[ML_print_depth=1000]]
 pbmv_monad "('a1, 'a2, 'c1, 'c2) L'"                          and 'a1
   Sbs: "\<lambda>f x. Abs_L' (map_prod f (map_prod f id) (Rep_L' x))" and "id :: ('a1 \<Rightarrow> 'a1) \<Rightarrow> 'a1 \<Rightarrow> 'a1"
   Injs: "id :: 'a1 \<Rightarrow> 'a1"                                    and "id :: 'a1 \<Rightarrow> 'a1"
@@ -615,3 +614,4 @@ local_setup \<open>fn lthy =>
     val _ = @{print} comp_bmv
   in lthy end
 \<close>
+end

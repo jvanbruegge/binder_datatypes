@@ -943,7 +943,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
           rtac ctxt ext,
           rtac ctxt (#Map_cong (#axioms param)),
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (maps (map #Sb_comp o axioms_of_bmv_monad) inners'),
+            EqSubst.eqsubst_tac ctxt [0] (@{thm id_o} :: maps (map #Sb_comp o axioms_of_bmv_monad) inners'),
             REPEAT_DETERM o assume_tac ctxt,
             rtac ctxt refl
           ]
@@ -1005,17 +1005,17 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             K (Local_Defs.unfold0_tac ctxt (#Supp_Sb param)),
             EVERY' (map (fn Inr _ => rtac ctxt refl | Inl inner => EVERY' [
               resolve_tac ctxt (map #Sb_cong (axioms_of_bmv_monad inner)),
-              REPEAT_DETERM o EVERY' [
+              REPEAT_DETERM1 o EVERY' [
                 REPEAT_DETERM o resolve_tac ctxt (take (2 * length vars) prems),
                 FIRST' (map (fn thm => EVERY' [
-                  rtac ctxt thm,
+                  TRY o rtac ctxt thm,
                   REPEAT_DETERM o FIRST' [
                     rtac ctxt @{thm UnI2} THEN' etac ctxt @{thm UN_I},
                     rtac ctxt @{thm UnI1}
                   ],
                   REPEAT_DETERM o etac ctxt @{thm UN_I},
                   assume_tac ctxt
-                ]) (drop (2 * length vars) prems))
+                ]) (@{thm refl} :: drop (2 * length vars) prems))
               ]
             ]) inners),
             rtac ctxt (#Sb_cong axioms),

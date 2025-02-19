@@ -263,6 +263,7 @@ structure Data = Generic_Data (
   fun merge data : T = Symtab.merge (K true) data;
 );
 
+(* TODO: prefix with theory *)
 fun register_pbmv_monad name bmv =
   Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
     (fn phi => Data.map (Symtab.update (name, morph_bmv_monad phi bmv)));
@@ -1202,18 +1203,27 @@ fun pbmv_monad_cmd ((((((b, ops), Sbs), Injs), Vrs), param_opt), bd) lthy =
 
 fun print_pbmv_monads ctxt =
   let
-    fun pretty_mrbnf (key, BMV {ops, frees, lives, bd, Sbs, ...}) =
+    val and_list = Library.separate (Pretty.keyword2 " and ")
+    fun map_filter_end [] _ = []
+      | map_filter_end (SOME x::xs) ys = ys @ [SOME x] @ map_filter_end xs ys
+      | map_filter_end (NONE::xs) ys = map_filter_end xs (NONE::ys)
+    fun pretty_mrbnf (key, bmv as BMV {ops, frees, lives, bd, Sbs, ...}) =
       Pretty.big_list
         (Pretty.string_of (Pretty.block ([Pretty.str key, Pretty.str ":", Pretty.brk 1] @
-          map (Pretty.quote o Syntax.pretty_typ ctxt) ops)))
+          and_list (map (Pretty.quote o Syntax.pretty_typ ctxt) ops))))
         ([Pretty.block [Pretty.str "frees:", Pretty.brk 1, Pretty.str (string_of_int (length frees)),
             Pretty.brk 3, Pretty.list "[" "]" (List.map (Syntax.pretty_typ ctxt) frees)]] @
           (if length lives > 0 then
             [Pretty.block [Pretty.str "live:", Pretty.brk 1, Pretty.str (string_of_int (length lives)),
               Pretty.brk 3, Pretty.list "[" "]" (List.map (Syntax.pretty_typ ctxt) lives)]]
           else []) @
-          [ Pretty.block ([Pretty.str "Sb:", Pretty.brk 1] @ map (Pretty.quote o Syntax.pretty_term ctxt) Sbs),
-            Pretty.block [Pretty.str ("bd:"), Pretty.brk 1,
+          [ Pretty.block ([Pretty.str "Sb:", Pretty.brk 1] @ and_list (map (Pretty.quote o Syntax.pretty_term ctxt) Sbs))
+          ] @ (case map_filter I (Maps_of_bmv_monad bmv) of [] => [] | _ => [
+            Pretty.block ([Pretty.str "Map:", Pretty.brk 1] @ and_list (map (fn x => case x of
+              NONE => Pretty.str "_" | SOME y => Pretty.quote (Syntax.pretty_term ctxt y)) (
+                map_filter_end (Maps_of_bmv_monad bmv) []
+              )))
+          ]) @ [Pretty.block [Pretty.str ("bd:"), Pretty.brk 1,
             Pretty.quote (Syntax.pretty_term ctxt bd)]]);
   in
     Pretty.big_list "Registered parametrized bounded multi-variate monads:"

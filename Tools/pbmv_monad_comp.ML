@@ -4,7 +4,7 @@ signature PBMV_MONAD_COMP = sig
   val mk_id_bmv_monad: string * sort -> BMV_Monad_Def.bmv_monad
 
   val pbmv_monad_of_typ: bool -> BNF_Def.inline_policy -> (theory -> BNF_Def.fact_policy)
-    -> (binding -> binding) -> typ -> (thm list * local_theory)
+    -> (string * sort) list -> (binding -> binding) -> typ -> (thm list * local_theory)
     -> BMV_Monad_Def.bmv_monad option * (thm list * local_theory)
 end
 
@@ -18,9 +18,10 @@ fun mk_id_bmv_monad free = BMV_Monad_Def.morph_bmv_monad (
   MRBNF_Util.subst_typ_morphism [(hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv_monad), TFree free)]
 ) id_bmv_monad;
 
-fun pbmv_monad_of_typ _ _ _ _ (TFree x) accum = (SOME (mk_id_bmv_monad x), accum)
-  | pbmv_monad_of_typ _ _ _ _ (TVar _) _ = error "unexpected schematic variable"
-  | pbmv_monad_of_typ optim const_policy inline_policy qualify' (T as Type (n, Ts)) (accum, lthy) =
+fun pbmv_monad_of_typ _ _ _ xs _ (TFree x) accum = if member (op=) xs x
+    then (NONE, accum) else (SOME (mk_id_bmv_monad x), accum)
+  | pbmv_monad_of_typ _ _ _ _ _ (TVar _) _ = error "unexpected schematic variable"
+  | pbmv_monad_of_typ optim const_policy inline_policy xs qualify' (T as Type (n, Ts)) (accum, lthy) =
     let val (bmv_opt, lthy) = case BMV_Monad_Def.pbmv_monad_of lthy n of
       SOME bmv => (SOME bmv, lthy)
       | NONE => case BNF_Def.bnf_of lthy n of
@@ -53,7 +54,7 @@ fun pbmv_monad_of_typ _ _ _ _ (TFree x) accum = (SOME (mk_id_bmv_monad x), accum
           val live_Ts = BMV_Monad_Def.lives_of_bmv_monad bmv;
 
           val qualifies = map qualify (1 upto length live_Ts);
-          val (bmv_opts, (accum, lthy)) = @{fold_map 2} (pbmv_monad_of_typ optim const_policy inline_policy) qualifies live_Ts (accum, lthy)
+          val (bmv_opts, (accum, lthy)) = @{fold_map 2} (pbmv_monad_of_typ optim const_policy inline_policy xs) qualifies live_Ts (accum, lthy)
           val bmvs = map2 (fn T => fn NONE => Inr T | SOME bmv => Inl bmv) live_Ts bmv_opts;
         in if exists Option.isSome bmv_opts then
           let val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad (qualify 0) bmv bmvs lthy;

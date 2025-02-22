@@ -155,7 +155,7 @@ Multithreading.parallel_proofs := 0
 \<close>
 local_setup \<open>fn lthy =>
   let
-    val (bmv, (thms, lthy)) = PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) I
+    val (bmv, (thms, lthy)) = PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) [] I
       @{typ "('a1, 'a2, 'a1 * 'a2,  'a1 * 'a2 * 'a2 * 'a2 FType) L'"}
       ([], lthy)
 

@@ -263,7 +263,6 @@ structure Data = Generic_Data (
   fun merge data : T = Symtab.merge (K true) data;
 );
 
-(* TODO: prefix with theory *)
 fun register_pbmv_monad name bmv =
   Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
     (fn phi => Data.map (Symtab.update (name, morph_bmv_monad phi bmv)));
@@ -1203,7 +1202,7 @@ fun pbmv_monad_cmd ((((((b, ops), Sbs), Injs), Vrs), param_opt), bd) lthy =
 
 fun print_pbmv_monads ctxt =
   let
-    val and_list = Library.separate (Pretty.keyword2 " and ")
+    val and_list = Library.separate (Pretty.block [Pretty.brk 1, Pretty.keyword2 "and", Pretty.brk 1])
     fun map_filter_end [] _ = []
       | map_filter_end (SOME x::xs) ys = ys @ [SOME x] @ map_filter_end xs ys
       | map_filter_end (NONE::xs) ys = map_filter_end xs (NONE::ys)

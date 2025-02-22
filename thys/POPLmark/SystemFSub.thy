@@ -270,24 +270,17 @@ declare ty.intros[intro]
 lemma ty_fresh_extend: "\<Gamma>\<^bold>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
-declare wf_eqvt[unfolded map_context_def, equiv]
-declare lfin_equiv[equiv]
+lemmas [equiv] = wf_eqvt[unfolded map_context_def] lfin_equiv
+  closed_in_eqvt[unfolded map_context_def] in_context_eqvt[unfolded map_context_def]
 
-declare closed_in_eqvt[unfolded map_context_def, equiv]
-declare in_context_eqvt[unfolded map_context_def, equiv]
-
-thm equiv
-thm equiv_sym
-thm equiv_forward
-
-binder_inductive (verbose) ty
+binder_inductive ty
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>(\<Gamma>::('a::var \<times> 'a typ) list). dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FVars_typ :: 'a typ \<Rightarrow> 'a::var set"}, @{term "FVars_typ :: 'a::var typ \<Rightarrow> 'a::var set"}]
       [@{term "permute_typ :: ('a::var \<Rightarrow> 'a) \<Rightarrow> 'a typ \<Rightarrow> 'a typ"}, @{term "(\<lambda>f x. f x) :: ('a::var \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"}]
       [NONE, NONE, NONE, NONE, SOME [NONE, NONE, NONE, SOME 1, SOME 0, SOME 0], NONE]
       @{thm prems(3)} @{thm prems(2)} @{thms prems(1)[THEN ty_fresh_extend] id_onD}
-      @{thms emp_bound insert_bound ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
+      @{thms emp_bound insert_bound_UNIV ID.set_bd typ.Un_bound typ.UN_bound typ.set_bd_UNIV infinite_UNIV}
       @{thms typ_inject image_iff} @{thms typ.permute_cong_id context_map_cong_id map_idI}
       @{thms cong[OF cong[OF cong[OF refl[of R]] refl] refl, THEN iffD1, rotated -1] id_onD} @{context}\<close>)
   done

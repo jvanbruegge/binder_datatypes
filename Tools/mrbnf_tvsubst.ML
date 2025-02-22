@@ -1744,6 +1744,8 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
     val notes =
       [("SSupp_VVr_empty", maps (map_filter I) SSupp_VVr_emptiess),
        ("SSupp_VVr_bound", maps (map_filter I) SSupp_VVr_boundss),
+       ("compSS_comp0", maps (map_filter I) compSS_comp0ss),
+       ("compSS_cong_id", maps (map_filter I) compSS_cong_idss),
        ("in_IImsupp", flat (maps (map_filter I) in_IImsuppsss)),
        ("is_VVr_rrename", maps (map_filter I) isVVr_renamess),
        ("rrename_VVr", maps (map_filter I) permute_VVrss),

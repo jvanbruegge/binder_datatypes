@@ -270,11 +270,8 @@ declare ty.intros[intro]
 lemma ty_fresh_extend: "\<Gamma>\<^bold>, x <: U \<turnstile> S <: T \<Longrightarrow> x \<notin> dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis (no_types, lifting) UnE fst_conv snd_conv subsetD wf_ConsE wf_FFVars wf_context)
 
-declare wf_eqvt[unfolded map_context_def, equiv]
-declare lfin_equiv[equiv]
-
-declare closed_in_eqvt[unfolded map_context_def, equiv]
-declare in_context_eqvt[unfolded map_context_def, equiv]
+lemmas [equiv] = wf_eqvt[unfolded map_context_def] lfin_equiv
+  closed_in_eqvt[unfolded map_context_def] in_context_eqvt[unfolded map_context_def]
 
 binder_inductive ty
   subgoal premises prems for R B \<Gamma> T1 T2

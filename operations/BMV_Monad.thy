@@ -101,23 +101,26 @@ local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name su
 pbmv_monad ID: "'a"
   Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
   Injs: "id :: 'a \<Rightarrow> 'a"
+  SSupps: "supp :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a set"
   Vrs: "\<lambda>(x::'a). {x}"
   bd: natLeq
-  by (auto simp: ID.set_bd infinite_regular_card_order_natLeq)
+  by (auto simp: ID.set_bd infinite_regular_card_order_natLeq supp_def)
 
 pbmv_monad "'a::var FType"
   Sbs: tvsubst_FType
   Injs: TyVar
+  SSupps: SSupp_FType
   Vrs: FVars_FType
   bd: natLeq
          apply (rule infinite_regular_card_order_natLeq)
         apply (rule Sb_Inj_FType)
-       apply (rule Sb_comp_Inj_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
-      apply (rule Sb_comp_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
+        apply (rule Sb_comp_Inj_FType; assumption)
+       apply ((unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def)[1], rule refl)
+      apply (rule Sb_comp_FType; assumption)
      apply (rule FType.set_bd)
     apply (rule Vrs_Inj_FType)
-   apply (rule Vrs_Sb_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
-  apply (rule Sb_cong_FType[unfolded SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]]; assumption)
+   apply (rule Vrs_Sb_FType; assumption)
+  apply (rule Sb_cong_FType; assumption)
   done
 
 typedef ('a1, 'a2, 'c1, 'c2) L' = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"

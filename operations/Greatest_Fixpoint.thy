@@ -15,7 +15,7 @@ ML \<open>
   val ctor_T1_Ts = [
   [@{typ 'var}],
   [@{typ 'rec}, @{typ 'rec}],
-  [@{typ 'b1}, @{typ "'brec1"}, @{typ 'b2}, @{typ "'brec2"}]
+  [@{typ 'b}, @{typ "'brec"}]
   ]
   \<close>
 
@@ -32,7 +32,7 @@ declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
   let
   val Xs = map dest_TFree []
-  val resBs = map dest_TFree [@{typ 'var}, @{typ 'b1}, @{typ 'b2}, @{typ 'brec1}, @{typ 'brec2}, @{typ 'rec}]
+  val resBs = map dest_TFree [@{typ 'var}, @{typ 'b}, @{typ 'brec}, @{typ 'rec}]
 
   fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
   val qualify1 = Binding.prefix_name (name1 ^ "_pre_")
@@ -40,8 +40,7 @@ local_setup \<open>fn lthy =>
 
   (* Step 1: Create pre-MRBNF *)
   val ((mrbnf1, tys1), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline qualify1 flatten_tyargs Xs []
-  [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'b1}, MRBNF_Def.Bound_Var),
-  (dest_TFree @{typ 'b2}, MRBNF_Def.Bound_Var)] T1
+  [(dest_TFree @{typ 'var}, MRBNF_Def.Free_Var), (dest_TFree @{typ 'b}, MRBNF_Def.Bound_Var)] T1
   (accum, lthy)
   val _ = @{print} "comp"
 
@@ -57,20 +56,27 @@ local_setup \<open>fn lthy =>
 print_theorems
 print_mrbnfs
 
+(*
+set1_term_pre := top-most free variables
+set2_term_pre := top-most bound variables
+set3_term_pre := recursive occurences that bind variables
+set4_term_pre := recursive non-binding occurences
+*)
+
 declare [[quick_and_dirty=false]]
 
 lemmas infinite_UNIV = cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]
 
 (********************** BINDER FIXPOINT CONSTRUCTION **************************************)
 
-typ "('a, 'b1, 'b2, 'brec1, 'brec2, 'rec) term_pre"
+typ "('a, 'b, 'brec, 'rec) term_pre"
 
-codatatype ('a::var) raw_term = raw_term_ctor "('a, 'a, 'a, 'a raw_term, 'a raw_term, 'a raw_term) term_pre"
+codatatype ('a::var) raw_term = raw_term_ctor "('a, 'a, 'a raw_term, 'a raw_term) term_pre"
 
 (* this definition is specific for codatatypes *)
 primcorec permute_raw_term :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a raw_term \<Rightarrow> 'a raw_term" where
-  "permute_raw_term f x = raw_term_ctor (map_term_pre id id id (permute_raw_term f) (permute_raw_term f) (permute_raw_term f) (
-    map_term_pre f f f id id id (un_raw_term_ctor x)
+  "permute_raw_term f x = raw_term_ctor (map_term_pre id id (permute_raw_term f) (permute_raw_term f) (
+    map_term_pre f f id id (un_raw_term_ctor x)
     ))"
 
 (* this lemma is specific to codatatype *)
@@ -100,9 +106,8 @@ lemma permute_raw_simps:
 
 inductive free_raw_term :: "'a::var \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "a \<in> set1_term_pre x \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
-| "z \<in> set4_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> a \<notin> set2_term_pre x \<union> set3_term_pre x \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
-| "z \<in> set5_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> a \<notin> set3_term_pre x \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
-| "z \<in> set6_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
+| "z \<in> set3_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> a \<notin> set2_term_pre x \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
+| "z \<in> set4_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
 
 definition FVars_raw_term :: "'a::var raw_term \<Rightarrow> 'a set" where
   "FVars_raw_term x \<equiv> { a. free_raw_term a x }"
@@ -125,15 +130,10 @@ coinductive alpha_term :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightarr
 (* this definition is specific to codatatypes *)
 coinductive alpha_term' :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "\<lbrakk> bij g ; |supp g| <o |UNIV::'a set| ;
-    id_on (\<Union>(FVars_raw_term ` set4_term_pre x) - (set2_term_pre x \<union> set3_term_pre x)) g ;
-    bij f2 ; |supp f2| <o |UNIV::'a set| ; id_on (\<Union>(FVars_raw_term ` set5_term_pre x) - set3_term_pre x) f2 ;
-    eq_on (set3_term_pre x) f2 g ;
+    id_on (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x) g ;
     bij g' ; |supp g'| <o |UNIV::'a set| ;
-    id_on (\<Union>(FVars_raw_term ` set4_term_pre y) - (set2_term_pre y \<union> set3_term_pre y)) g' ;
-    bij f2' ; |supp f2'| <o |UNIV::'a set| ; id_on (\<Union>(FVars_raw_term ` set5_term_pre y) - set3_term_pre y) f2' ;
-    eq_on (set3_term_pre y) f2' g' ;
-    mr_rel_term_pre id (inv g' \<circ> g) (inv g' \<circ> g) (\<lambda>x y. alpha_term' (permute_raw_term g x) (permute_raw_term g' y))
-    (\<lambda>x y. alpha_term' (permute_raw_term f2 x) (permute_raw_term f2' y)) alpha_term' x y
+    id_on (\<Union>(FVars_raw_term ` set3_term_pre y) - set2_term_pre y) g' ;
+    mr_rel_term_pre id (inv g' \<circ> g) (\<lambda>x y. alpha_term' (permute_raw_term g x) (permute_raw_term g' y)) alpha_term' x y
     \<rbrakk> \<Longrightarrow> alpha_term' (raw_term_ctor x) (raw_term_ctor y)"
   monos conj_context_mono term_pre.mr_rel_mono[OF supp_id_bound] bij_comp bij_imp_bij_inv supp_comp_bound[OF _ _ infinite_UNIV] supp_inv_bound
 

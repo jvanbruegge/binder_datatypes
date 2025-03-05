@@ -438,8 +438,7 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 
-declare term.tvsubst_permutes[THEN fun_cong, unfolded comp_def, equiv]
-declare tvsubst_rrename_comp[unfolded comp_def, equiv]
+lemmas [equiv] = term.tvsubst_permutes[THEN fun_cong, unfolded comp_def] tvsubst_rrename_comp[unfolded comp_def]
 
 lemma permute_fun_upd[equiv]:
   fixes f::"var \<Rightarrow> var"

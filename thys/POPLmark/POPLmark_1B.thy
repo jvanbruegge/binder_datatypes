@@ -23,7 +23,7 @@ next
   then show ?case by (meson SA_All ty.SA_All well_scoped(1) wf_Cons)
 next
   case (SA_Rec \<Gamma>' X Y \<Delta>)
-  then show ?case by force
+  then show ?case by (metis ty.SA_Rec)
 qed auto
 
 lemma wf_concat: "\<lbrakk> \<turnstile> \<Delta> ok ; \<turnstile> \<Gamma> ok ; \<Gamma> \<bottom> \<Delta> \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> ok"
@@ -66,7 +66,7 @@ next
   show ?case using ty_permute[OF _ 2] 1 SA_All by auto
 next
   case (SA_Rec \<Gamma>' X Y)
-  then show ?case by force
+  then show ?case by (metis ty.SA_Rec weaken_closed wf_concat_disjoint)
 qed auto
 
 corollary ty_weakening_extend: "\<lbrakk> \<Gamma> \<turnstile> S <: T ; X \<notin> dom \<Gamma> ; Q closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<^bold>,X<:Q \<turnstile> S <: T"
@@ -467,7 +467,7 @@ proof -
     then show ?case by (metis Cons_eq_appendI narrow_wf ty.SA_All well_scoped(1) wf_context)
   next
     case (SA_Rec X Y)
-    then show ?case by (meson ty.SA_Rec)
+    then show ?case by (meson ty.SA_Rec ty_narrowing)
   qed (auto simp: ty.intros)
 qed
 

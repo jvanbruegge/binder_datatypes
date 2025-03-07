@@ -62,9 +62,9 @@ type_synonym 'a \<Gamma>\<^sub>\<tau> = "('a, 'a) \<Gamma>"
 
 definition map_context :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a \<Gamma>\<^sub>\<tau>" where
   "map_context f \<equiv> map (map_prod f (permute_typ f))"
-abbreviation FFVars_ctxt :: "'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a set" where
+abbreviation FFVars_ctxt :: "('a::var, 'b) \<Gamma> \<Rightarrow> 'a set" where
   "FFVars_ctxt xs \<equiv> \<Union>(FVars_typ ` snd ` set xs)"
-abbreviation extend :: "('a::var, 'b::var) \<Gamma> \<Rightarrow> 'b \<Rightarrow> 'a typ \<Rightarrow> ('a, 'b) \<Gamma>" ("_ \<^bold>, _ <: _" [57,75,75] 71) where
+abbreviation extend :: "('a, 'b) \<Gamma> \<Rightarrow> 'b \<Rightarrow> 'a typ \<Rightarrow> ('a, 'b) \<Gamma>" ("_ \<^bold>, _ <: _" [57,75,75] 71) where
   "extend \<Gamma> x T \<equiv> (x, T)#\<Gamma>"
 abbreviation concat :: "('a, 'b) \<Gamma> \<Rightarrow> ('a, 'b) \<Gamma> \<Rightarrow> ('a, 'b) \<Gamma>" (infixl "(\<^bold>,)" 71) where
   "concat \<Gamma> \<Delta> \<equiv> \<Delta> @ \<Gamma>"
@@ -122,7 +122,6 @@ inductive wf_ty :: "'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> bool" ("\<turnst
 inductive_cases
   wfE[elim]: "\<turnstile> \<Gamma> ok"
   and wf_ConsE[elim!]: "\<turnstile> (a#\<Gamma>) ok"
-print_theorems
 
 lemma in_context_eqvt:
   fixes f::"'a::var \<Rightarrow> 'a"

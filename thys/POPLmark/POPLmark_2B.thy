@@ -13,13 +13,38 @@ inductive "value" where
   "value (Abs x T t)"
 | "value (TAbs X T t)"
 
-inductive typing :: "('a, 'b::var) \<Gamma> \<Rightarrow> 'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> ('a, 'b) trm \<Rightarrow> 'a typ \<Rightarrow> bool" ("_ \<^bold>| _ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,29,30] 30) where
-  TVar: "(x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> Var x \<^bold>: T"
-| TAbs: "\<Gamma> \<^bold>, x <: T1 \<^bold>| \<Delta> \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> Abs x T1 t \<^bold>: T1 \<rightarrow> T2"
-| TApp: "\<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t1 \<^bold>: T11 \<rightarrow> T12 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t2 \<^bold>: T11 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> App t1 t2 \<^bold>: T12"
-| TTAbs: "\<Gamma> \<^bold>| \<Delta> \<^bold>, X <: T1 \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> TAbs X T1 t \<^bold>:  \<forall>X <: T1. T2"
-| TTApp: "\<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t1 \<^bold>: \<forall>X <: T11. T12 \<Longrightarrow> \<Delta> \<turnstile> T2 <: T11 \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> TApp t1 T2 \<^bold>: tvsubst_typ (TyVar(X := T2)) T12"
-| TSub: "\<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t \<^bold>: S \<Longrightarrow> \<Delta> \<turnstile> S <: T \<Longrightarrow> \<Gamma> \<^bold>| \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
+type_synonym ('tv, 'v) \<Gamma>\<^sub>t = "('tv, 'tv + 'v) \<Gamma>"
+
+inductive wf_ctxt :: "('tv::var, 'v::var) \<Gamma>\<^sub>t \<Rightarrow> bool" ("\<turnstile> _ OK" [70] 100) where
+  wf_ctxt_Nil[intro]: "\<turnstile> [] OK"
+| wf_ctxt_Cons[intro!]: "\<lbrakk> x \<notin> dom \<Gamma> ; FVars_typ T \<subseteq> Inl -` dom \<Gamma>; \<turnstile> \<Gamma> OK \<rbrakk> \<Longrightarrow> \<turnstile> \<Gamma>\<^bold>,x<:T OK"
+
+inductive_cases
+  wf_ctxtE[elim]: "\<turnstile> \<Gamma> OK"
+  and wf_ctxt_ConsE[elim!]: "\<turnstile> (a#\<Gamma>) OK"
+
+definition proj_ctxt :: "('tv::var, 'v::var) \<Gamma>\<^sub>t \<Rightarrow> 'tv \<Gamma>\<^sub>\<tau>" where
+  "proj_ctxt = List.map_filter (\<lambda>(x, T). case x of Inl X \<Rightarrow> Some (X, T) | _ \<Rightarrow> None)"
+
+lemma wf_ty_proj_ctxt: "\<turnstile> \<Gamma> OK \<Longrightarrow> \<turnstile> proj_ctxt \<Gamma> ok"
+  apply (induct \<Gamma>)
+   apply (auto simp: proj_ctxt_def map_filter_def vimage_def image_def split_beta subset_eq split: sum.splits)
+  apply fastforce
+  apply (metis Inl_inject Inr_Inl_False prod.exhaust_sel)
+  done
+
+inductive typing :: "('tv::var, 't::var) \<Gamma>\<^sub>t \<Rightarrow> ('tv, 't) trm \<Rightarrow> 'tv typ \<Rightarrow> bool" ("_ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,30] 30) where
+  TVar: "\<turnstile> \<Gamma> OK \<Longrightarrow> (Inr x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Var x \<^bold>: T"
+| TAbs: "\<Gamma> \<^bold>, Inr x <: T1 \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Abs x T1 t \<^bold>: T1 \<rightarrow> T2"
+| TApp: "\<Gamma> \<^bold>\<turnstile> t1 \<^bold>: T11 \<rightarrow> T12 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t2 \<^bold>: T11 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> App t1 t2 \<^bold>: T12"
+| TTAbs: "\<Gamma> \<^bold>, Inl X <: T1 \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> TAbs X T1 t \<^bold>:  \<forall>X <: T1. T2"
+| TTApp: "\<Gamma> \<^bold>\<turnstile> t1 \<^bold>: \<forall>X <: T11. T12 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T2 <: T11 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> TApp t1 T2 \<^bold>: tvsubst_typ (TyVar(X := T2)) T12"
+| TSub: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: S \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> S <: T \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t \<^bold>: T"
+
+lemma typing_wf_ctxt: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Gamma> OK"
+  by (induct rule: typing.induct) auto
+lemma typing_wf_ty: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> proj_ctxt \<Gamma> ok"
+  by (rule wf_ty_proj_ctxt) (rule typing_wf_ctxt)
 
 lemma VVr_eq_TyVar[simp]: "tvVVr_tvsubst_typ a = TyVar a"
   unfolding tvVVr_tvsubst_typ_def Var_def comp_def tv\<eta>_typ_tvsubst_typ_def TyVar_def
@@ -56,6 +81,26 @@ lemma Abs_inject:
     done
   done
 
+lemma TAbs_inject:
+  fixes t u :: "('tv :: var, 'v :: var) trm"
+  shows "TAbs X T t = TAbs Y U u \<longleftrightarrow> T = U \<and> (\<exists>f. bij (f::'tv::var \<Rightarrow> 'tv) \<and> |supp f| <o |UNIV::'tv set| \<and> id_on (FTVars t - {X}) f \<and> f X = Y \<and> permute_trm f id t = u)"
+    apply (unfold TAbs_def trm.TT_inject0
+      set3_trm_pre_def set4_trm_pre_def set5_trm_pre_def comp_def Abs_trm_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
+      cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_trm_pre_def
+      prod.map_id set2_typ_pre_def prod_set_simps prod.set_map UN_single Abs_trm_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject map_prod_simp typ.map_id
+    )
+  apply safe
+  subgoal for f g
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  subgoal for f
+    apply (rule exI)
+    apply (rule exI[of _ id])
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  done
+
 lemma in_context_equiv[equiv]:
   fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
@@ -79,22 +124,62 @@ lemma permute_tusubst[equiv]:
     done
   done
 
-thm equiv
-thm equiv_sym
+lemma wf_ctxt_FFVars: "\<turnstile> \<Gamma> OK \<Longrightarrow> a \<in> FFVars_ctxt \<Gamma> \<Longrightarrow> Inl a \<in> dom \<Gamma>"
+  by (induction \<Gamma>) auto
+lemma typing_fresh_ty_extend: "\<Gamma> \<^bold>, Inl x <: U \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> x \<notin> Inl -` dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
+  by (metis Pair_inject UnE subset_vimage_iff typing_wf_ctxt vimageD wf_ctxt_FFVars wf_ctxt_ConsE)
 
+(*
 binder_inductive typing
   subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
-    (*apply (tactic \<open>refreshability_tac true
-      [@{term "\<lambda>\<Gamma>. dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "\<lambda>\<Delta>. dom \<Delta> \<union> FFVars_ctxt \<Delta>"}, @{term "\<lambda>t :: term. FVars t \<union> FTVars t"}, @{term "FVars_typ :: type \<Rightarrow> var set"}]
-      [@{term "\<lambda>f. permute_trm f f :: term \<Rightarrow> term"}, @{term "permute_typ :: (var \<Rightarrow> var) \<Rightarrow> type \<Rightarrow> type"}, @{term "(\<lambda>f x. f x) :: (var \<Rightarrow> var) \<Rightarrow> var \<Rightarrow> var"}]
-      [NONE, SOME [NONE, SOME 2, NONE, NONE, SOME 0, NONE], NONE, NONE, NONE, NONE]
-      @{thm prems(3)} @{thm prems(2)} @{thms }
-      @{thms emp_bound insert_bound ID.set_bd trm.Un_bound trm.UN_bound trm.set_bd_UNIV typ.set_bd_UNIV infinite_UNIV}
-      @{thms Abs_inject image_iff} @{thms trm.permute_cong}
-      @{thms id_onD} @{context}\<close>)
-    sorry*)
+    unfolding ex_simps conj_disj_distribL ex_disj_distrib
+    using prems(3)
+    apply -
+    apply (elim disjE conjE exE; hypsubst_thin)
+    subgoal for x T' \<Gamma>' \<Delta>'
+      by auto
+    subgoal for \<Gamma>' x T1 \<Delta>'' t T2
+      apply (rule disjI2, rule disjI1)
+      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{x} \<union> FVars t \<union> dom \<Gamma>"]])
+       apply (auto simp: insert_bound infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV) []
+      subgoal for y
+        apply (rule exI[of _ "{}"]; simp)
+        apply (rule exI[of _ "{y}"]; simp add: Abs_inject)
+        apply (rule exI[of _ "permute_trm id (id(x := y, y := x)) t"] conjI exI[of _ "id(x := y, y := x)"])+
+          apply (simp_all add: id_on_def)
+        apply (frule prems(1)[THEN typing_wf_trm])
+        apply (frule prems(1)[THEN typing_wf_ty])
+        apply (frule prems(2)[of id "id(x := y, y := x)", rotated -1])
+        apply (auto 0 10 simp: image_iff intro!: map_idI
+          elim!: arg_cong[where f = "\<lambda>x. R x _ _ _", THEN iffD1, rotated])
+        done
+      done
+    subgoal for \<Gamma>' \<Delta>'' t T' _ u
+      by auto
+    subgoal for \<Gamma>' \<Delta>' X T1 t T2
+      apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
+      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{X} \<union> FVars_typ T1  \<union> FVars_typ T2 \<union> FTVars t \<union> dom \<Delta> \<union> FFVars_ctxt \<Delta> \<union> FFVars_ctxt \<Gamma>"]])
+       apply (auto simp: insert_bound infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
+      subgoal for Y
+        apply (rule exI[of _ "{Y}"]; simp add: TAbs_inject)
+        apply (rule exI[of _ "permute_trm (id(X := Y, Y := X)) id t"] conjI exI[of _ "id(X := Y, Y := X)"])+
+          apply (simp_all add: id_on_def) [2]
+        apply (rule exI[of _ "permute_typ (id(X := Y, Y := X)) T2"])
+        apply (frule prems(1)[THEN typing_fresh_extend])
+        apply (frule prems(2)[of "(id(X := Y, Y := X))" id, rotated -1])
+            apply (auto 0 10 simp add: typ_inject id_on_def dom_def subset_eq image_iff
+            intro!: map_idI typ.permute_cong_id exI[of _ "id(X := Y, Y := X)"]
+            elim!: arg_cong2[where f = "\<lambda>x y. R x y _ _", THEN iffD1, rotated 2])
+        done
+        apply (simp add: rev_image_eqI)
+        find_theorems "permute_typ _ ?x = ?x"
+        apply (rule context_map_cong_id[unfolded map_context_def, simplified])
+        thm context_map_cong_id[unfolded map_context_def, simplified]
+        thm arg_cong2[where f = "\<lambda>x y. R x y _ _", THEN iffD1, rotated 2]
+        apply (rule exI[of _ "{}"]; simp add: Abs_inject)
+      apply (rule exI[of _ "{}"]; simp)
     apply (tactic \<open>Skip_Proof.cheat_tac @{context} 1\<close>)
     done
   done
-
+*)
 end

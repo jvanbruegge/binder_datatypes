@@ -44,6 +44,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
     val supps = case snd perms_supps of
       SOME a => a
       | NONE => []
+
     val def' = Thm.prop_of def;
     val svars = Term.add_tvars def' [];
     val fvars = fst (mk_TFrees' (map snd svars) no_defs_lthy);
@@ -109,11 +110,13 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   ) (map (fn xs => nth xs ctor_idx) (#bsetss sugar))) end
             );
 
+    val unvarify_global = Term.map_aterms (fn Var ((x, 0), T) => Free (x, T) | _ => raise Same.SAME)
+
     val binds_vars = @{map 3} (fn name => fn vars => fn intro => case AList.lookup (op=) binds name of
       SOME x => SOME (Inl x, vars)
       | NONE =>
         let
-          val intro = Logic.unvarify_global (Thm.prop_of intro);
+          val intro = unvarify_global (Term.subst_TVars subst (Thm.prop_of intro));
           val binderss = map (distinct (op=)) (collect_binders intro);
           val xs_binders = map (fn binders => fold_rev (fn t => fn (a, b) => case t of
             Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (x::a, b)
@@ -131,7 +134,6 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           ) xs_binders
         in if forall null binders then NONE else SOME (Inr binders, vars) end
     ) rule_names rule_varss intrs;
-
     val bind_ts_opt = map (Option.map (fn (binds, vars) => case binds of
       Inr ts => ts
       | Inl binds =>
@@ -802,8 +804,14 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     EqSubst.eqsubst_asm_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
                     SELECT_GOAL (EVERY [
                       REPEAT_DETERM (SOMEGOAL (EVERY' [
-                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps @ @{thms inv_simp1})
+                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps @ @{thms inv_simp1}),
+                        REPEAT_DETERM o FIRST' [
+                          assume_tac ctxt,
+                          resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}
+                        ]
                       ])),
+                      Local_Defs.unfold_tac ctxt (Equivariance.equiv_sym_thms ctxt),
+                      option Verbose (print_tac ctxt "after equiv_sym") all_tac,
                       REPEAT_DETERM (FIRST1 [
                         assume_tac ctxt,
                         resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}

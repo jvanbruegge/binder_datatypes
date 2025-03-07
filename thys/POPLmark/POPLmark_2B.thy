@@ -33,6 +33,31 @@ lemma wf_ty_proj_ctxt: "\<turnstile> \<Gamma> OK \<Longrightarrow> \<turnstile> 
   apply (metis Inl_inject Inr_Inl_False prod.exhaust_sel)
   done
 
+lemma wf_ctxt_equiv[equiv]:
+  fixes \<sigma>1::"'tv::var \<Rightarrow> 'tv" and \<sigma>2::"'v::var \<Rightarrow> 'v"
+  assumes "bij \<sigma>1" "|supp \<sigma>1| <o |UNIV::'tv set|" "bij \<sigma>2" "|supp \<sigma>2| <o |UNIV::'v set|"
+  shows "\<turnstile> \<Gamma> OK \<Longrightarrow> \<turnstile> map (map_prod (map_sum \<sigma>1 \<sigma>2) (permute_typ \<sigma>1)) \<Gamma> OK"
+proof (induction \<Gamma> rule: wf_ctxt.induct)
+  case (wf_ctxt_Cons x \<Gamma> T)
+  have 1: "bij (map_sum \<sigma>1 \<sigma>2)"
+    apply (rule o_bij)
+     apply (rule trans)
+      apply (rule ext)
+      apply (rule trans[OF comp_apply])
+      apply (rule sum.map_comp[of "inv \<sigma>1" "inv \<sigma>2"])
+     apply (auto simp: assms sum.map_id sum.map_comp)
+    done
+  show ?case
+    apply simp
+    apply (rule wf_ctxt.wf_ctxt_Cons)
+      apply (unfold list.set_map image_comp)[1]
+      apply (insert wf_ctxt_Cons(1))[1]
+      apply (simp add: "1" bij_implies_inject image_iff)
+     apply (auto simp: assms typ.FVars_permute)
+    using image_iff wf_ctxt_Cons(2) apply fastforce
+    by (rule wf_ctxt_Cons(4))
+qed auto
+
 inductive typing :: "('tv::var, 't::var) \<Gamma>\<^sub>t \<Rightarrow> ('tv, 't) trm \<Rightarrow> 'tv typ \<Rightarrow> bool" ("_ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,30] 30) where
   TVar: "\<turnstile> \<Gamma> OK \<Longrightarrow> (Inr x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Var x \<^bold>: T"
 | TAbs: "\<Gamma> \<^bold>, Inr x <: T1 \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Abs x T1 t \<^bold>: T1 \<rightarrow> T2"
@@ -107,6 +132,20 @@ lemma in_context_equiv[equiv]:
   shows "(x, T) \<in> set \<Gamma> \<Longrightarrow> (f2 x, permute_typ f1 T) \<in> set (map (map_prod f2 (permute_typ f1)) \<Gamma>)"
   using assms by auto
 
+lemma in_context_equiv_Inr[equiv]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "(Inr (f2 x), permute_typ f1 T) \<in> map_prod (map_sum f1 f2) (permute_typ f1) ` set \<Gamma> \<longleftrightarrow> (Inr x, T) \<in> set \<Gamma>"
+  using assms apply auto
+  subgoal for y T'
+    apply (rule sum.exhaust[of y])
+     apply auto
+    by (metis bij_pointE typ.permute_bij)
+  by (metis map_prod_imageI map_sum.simps(2))
+lemma map_sum_equiv[equiv]:
+  "bij f2 \<Longrightarrow> map_sum f1 f2 (Inr x) = Inr (f2 x)"
+  by simp
+
 lemma permute_tusubst[equiv]:
   fixes f::"'a::var \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
@@ -129,9 +168,10 @@ lemma wf_ctxt_FFVars: "\<turnstile> \<Gamma> OK \<Longrightarrow> a \<in> FFVars
 lemma typing_fresh_ty_extend: "\<Gamma> \<^bold>, Inl x <: U \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> x \<notin> Inl -` dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis Pair_inject UnE subset_vimage_iff typing_wf_ctxt vimageD wf_ctxt_FFVars wf_ctxt_ConsE)
 
-(*
-binder_inductive typing
-  subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
+declare [[ML_print_depth=10000]]
+binder_inductive (no_auto_equiv) typing
+  sorry
+  (*subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
     apply -
@@ -180,6 +220,6 @@ binder_inductive typing
       apply (rule exI[of _ "{}"]; simp)
     apply (tactic \<open>Skip_Proof.cheat_tac @{context} 1\<close>)
     done
-  done
-*)
+  done*)
+
 end

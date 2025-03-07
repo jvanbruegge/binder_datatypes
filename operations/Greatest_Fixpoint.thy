@@ -8,7 +8,7 @@ declare [[mrbnf_internals]]
 binder_codatatype 'a term =
 Var 'a
 | App "'a term" "'a term"
-| Lam2 x::'a t::"'a term" x2::'a t2::"'a term" binds x in t, binds x2 in t t2
+| Lam x::'a t::"'a term" binds x in t
 *)
 
 ML \<open>
@@ -79,11 +79,12 @@ primcorec permute_raw_term :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a raw_t
     map_term_pre f f id id (un_raw_term_ctor x)
     ))"
 
+
 (* this lemma is specific to codatatype *)
 lemma permute_raw_sels:
   fixes f::"'a::var \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "un_raw_term_ctor (permute_raw_term f x) = map_term_pre f f f (permute_raw_term f) (permute_raw_term f) (permute_raw_term f) (un_raw_term_ctor x)"
+  shows "un_raw_term_ctor (permute_raw_term f x) = map_term_pre f f (permute_raw_term f) (permute_raw_term f) (un_raw_term_ctor x)"
   apply (rule trans)
    apply (rule permute_raw_term.simps)
   apply (subst term_pre.map_comp)
@@ -96,7 +97,7 @@ lemma permute_raw_sels:
 lemma permute_raw_simps:
   fixes f::"'a::var \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
-  shows "permute_raw_term f (raw_term_ctor x) = raw_term_ctor (map_term_pre f f f (permute_raw_term f) (permute_raw_term f) (permute_raw_term f) x)"
+  shows "permute_raw_term f (raw_term_ctor x) = raw_term_ctor (map_term_pre f f (permute_raw_term f) (permute_raw_term f) x)"
   apply (rule raw_term.expand)
   apply (rule trans)
    apply (rule permute_raw_sels[OF assms])
@@ -116,14 +117,12 @@ definition FVars_raw_term :: "'a::var raw_term \<Rightarrow> 'a set" where
 primrec set_term_level :: "nat \<Rightarrow> 'a::var raw_term \<Rightarrow> 'a set" where
   "set_term_level 0 t = {}"
 | "set_term_level (Suc n) t = (case t of raw_term_ctor x \<Rightarrow>
-set1_term_pre x \<union> (\<Union>y\<in>set4_term_pre x. set_term_level n y) \<union> (\<Union>y\<in>set5_term_pre x. set_term_level n y) \<union> (\<Union>y\<in>set6_term_pre x. set_term_level n y))"
+set1_term_pre x \<union> (\<Union>y\<in>set3_term_pre x. set_term_level n y) \<union> (\<Union>y\<in>set4_term_pre x. set_term_level n y))"
 
 coinductive alpha_term :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "\<lbrakk> bij g ; |supp g| <o |UNIV::'a set| ;
-    id_on (\<Union>(FVars_raw_term ` set4_term_pre x) - (set2_term_pre x \<union> set3_term_pre x)) g ;
-    bij f2 ; |supp f2| <o |UNIV::'a set| ; id_on (\<Union>(FVars_raw_term ` set5_term_pre x) - set3_term_pre x) f2 ;
-    eq_on (set3_term_pre x) f2 g ;
-    mr_rel_term_pre id g g (\<lambda>x. alpha_term (permute_raw_term g x)) (\<lambda>x. alpha_term (permute_raw_term f2 x)) alpha_term x y
+    id_on (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x) g ;
+    mr_rel_term_pre id g (\<lambda>x. alpha_term (permute_raw_term g x)) alpha_term x y
     \<rbrakk> \<Longrightarrow> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
   monos conj_context_mono term_pre.mr_rel_mono[OF supp_id_bound]
 
@@ -137,10 +136,10 @@ coinductive alpha_term' :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightar
     \<rbrakk> \<Longrightarrow> alpha_term' (raw_term_ctor x) (raw_term_ctor y)"
   monos conj_context_mono term_pre.mr_rel_mono[OF supp_id_bound] bij_comp bij_imp_bij_inv supp_comp_bound[OF _ _ infinite_UNIV] supp_inv_bound
 
-type_synonym 'a raw_term_pre = "('a, 'a, 'a, 'a raw_term, 'a raw_term, 'a raw_term) term_pre"
+type_synonym 'a raw_term_pre = "('a, 'a, 'a raw_term, 'a raw_term) term_pre"
 
 definition avoid_raw_term :: "'a::var raw_term_pre \<Rightarrow> 'a set \<Rightarrow> 'a raw_term_pre" where
-  "avoid_raw_term x A \<equiv> SOME y. (set2_term_pre y \<union> set3_term_pre y) \<inter> A = {} \<and> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
+  "avoid_raw_term x A \<equiv> SOME y. set2_term_pre y \<inter> A = {} \<and> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
 
 typedef ('a::var) "term" = "(UNIV::'a raw_term set) // { (x, y). alpha_term x y }"
   apply (rule exI)
@@ -151,14 +150,14 @@ typedef ('a::var) "term" = "(UNIV::'a raw_term set) // { (x, y). alpha_term x y 
 abbreviation "TT_abs \<equiv> quot_type.abs alpha_term Abs_term"
 abbreviation "TT_rep \<equiv> quot_type.rep Rep_term"
 
-type_synonym 'a term_pre' = "('a, 'a, 'a, 'a term, 'a term, 'a term) term_pre"
+type_synonym 'a term_pre' = "('a, 'a, 'a term, 'a term) term_pre"
 
 (* this definition is specific to codatatypes *)
 definition un_term_ctor :: "'a::var term \<Rightarrow> 'a term_pre'" where
-  "un_term_ctor x \<equiv> map_term_pre id id id TT_abs TT_abs TT_abs (un_raw_term_ctor (TT_rep x))"
+  "un_term_ctor x \<equiv> map_term_pre id id TT_abs TT_abs (un_raw_term_ctor (TT_rep x))"
 
 definition term_ctor :: "'a::var term_pre' \<Rightarrow> 'a term" where
-  "term_ctor x \<equiv> TT_abs (raw_term_ctor (map_term_pre id id id TT_rep TT_rep TT_rep x))"
+  "term_ctor x \<equiv> TT_abs (raw_term_ctor (map_term_pre id id TT_rep TT_rep x))"
 
 definition permute_term :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a term \<Rightarrow> 'a term" where
   "permute_term f x \<equiv> TT_abs (permute_raw_term f (TT_rep x))"
@@ -167,14 +166,14 @@ definition FVars_term :: "'a::var term \<Rightarrow> 'a set" where
   "FVars_term x \<equiv> FVars_raw_term (TT_rep x)"
 
 definition avoid_term :: "'a::var term_pre' \<Rightarrow> 'a set \<Rightarrow> 'a term_pre'" where
-  "avoid_term x A \<equiv> map_term_pre id id id TT_abs TT_abs TT_abs (
-avoid_raw_term (map_term_pre id id id TT_rep TT_rep TT_rep x) A)"
+  "avoid_term x A \<equiv> map_term_pre id id TT_abs TT_abs (
+avoid_raw_term (map_term_pre id id TT_rep TT_rep x) A)"
 
 definition noclash_raw_term :: "'a::var raw_term_pre \<Rightarrow> bool" where
-  "noclash_raw_term x \<equiv> (set2_term_pre x \<union> set3_term_pre x) \<inter> (set1_term_pre x \<union> \<Union>(FVars_raw_term ` set6_term_pre x)) = {}"
+  "noclash_raw_term x \<equiv> set2_term_pre x \<inter> (set1_term_pre x \<union> \<Union>(FVars_raw_term ` set4_term_pre x)) = {}"
 
 definition noclash_term :: "'a::var term_pre' \<Rightarrow> bool" where
-  "noclash_term x \<equiv> (set2_term_pre x \<union> set3_term_pre x) \<inter> (set1_term_pre x \<union> \<Union>(FVars_term ` set6_term_pre x)) = {}"
+  "noclash_term x \<equiv> set2_term_pre x \<inter> (set1_term_pre x \<union> \<Union>(FVars_term ` set4_term_pre x)) = {}"
 
 (****************** PROOFS ******************)
 
@@ -182,7 +181,7 @@ definition noclash_term :: "'a::var term_pre' \<Rightarrow> bool" where
 lemma raw_term_coinduct:
   fixes lhs rhs::"'a::var raw_term \<Rightarrow> 'a raw_term"
   assumes
-    "\<And>z. rel_term_pre (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z) (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z) (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z)
+    "\<And>z. rel_term_pre (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z) (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z)
 (un_raw_term_ctor (lhs z)) (un_raw_term_ctor (rhs z))"
   shows "lhs x = rhs x"
   apply (rule raw_term.coinduct[of "\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z"])
@@ -238,16 +237,15 @@ lemma permute_raw_comp0s:
 
 lemma FVars_raw_intros:
   "a \<in> set1_term_pre x \<Longrightarrow> a \<in> FVars_raw_term (raw_term_ctor x)"
-  "z \<in> set4_term_pre x \<Longrightarrow> a \<in> FVars_raw_term z \<Longrightarrow> a \<notin> set2_term_pre x \<union> set3_term_pre x \<Longrightarrow> a \<in> FVars_raw_term (raw_term_ctor x)"
-  "z \<in> set5_term_pre x \<Longrightarrow> a \<in> FVars_raw_term z \<Longrightarrow> a \<notin> set3_term_pre x \<Longrightarrow> a \<in> FVars_raw_term (raw_term_ctor x)"
-  "z \<in> set6_term_pre x \<Longrightarrow> a \<in> FVars_raw_term z \<Longrightarrow> a \<in> FVars_raw_term (raw_term_ctor x)"
+  "z \<in> set3_term_pre x \<Longrightarrow> a \<in> FVars_raw_term z \<Longrightarrow> a \<notin> set2_term_pre x \<Longrightarrow> a \<in> FVars_raw_term (raw_term_ctor x)"
+  "z \<in> set4_term_pre x \<Longrightarrow> a \<in> FVars_raw_term z \<Longrightarrow> a \<in> FVars_raw_term (raw_term_ctor x)"
      apply (unfold FVars_raw_term_def mem_Collect_eq)
      apply (erule free_raw_term.intros | assumption)+
   done
 
 lemma FVars_raw_ctors:
-  "FVars_raw_term (raw_term_ctor x) = set1_term_pre x \<union> (\<Union>(FVars_raw_term ` set4_term_pre x) - (set2_term_pre x \<union> set3_term_pre x))
-    \<union> (\<Union>(FVars_raw_term ` set5_term_pre x) - set3_term_pre x) \<union> \<Union>(FVars_raw_term ` set6_term_pre x)"
+  "FVars_raw_term (raw_term_ctor x) = set1_term_pre x \<union> (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x)
+    \<union> (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x) \<union> \<Union>(FVars_raw_term ` set4_term_pre x)"
   apply (rule subset_antisym)
    apply (unfold FVars_raw_term_def)[1]
    apply (rule subsetI)
@@ -266,14 +264,6 @@ lemma FVars_raw_ctors:
       apply (rule UN_I)
        apply (unfold mem_Collect_eq)
        apply assumption+
-    (* repeated *)
-    apply (drule iffD1[OF raw_term.inject])
-    apply hypsubst_thin
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 3] 1\<close>)
-    apply (rule DiffI)
-     apply (rule UN_I)
-      apply (unfold mem_Collect_eq)
-      apply assumption+
     (* repeated *)
    apply (drule iffD1[OF raw_term.inject])
    apply hypsubst_thin
@@ -309,18 +299,7 @@ lemma FVars_raw_permute_leq:
     apply (rule DiffI)?
      apply (rule imageI | (rule UN_I, assumption))
      apply assumption
-    apply (unfold image_Un[symmetric])[1]
     apply (rule iffD2[OF arg_cong[OF inj_image_mem_iff[OF bij_is_inj]]], rule assms, assumption)?
-    (* repeated *)
-   apply (unfold permute_raw_simps[OF assms] FVars_raw_ctors)[1]
-   apply (subst term_pre.set_map, (rule assms supp_id_bound bij_id)+)+
-   apply (unfold image_comp[unfolded comp_def])
-   apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 3] 1\<close>)
-   apply (rule DiffI)?
-    apply (rule imageI | (rule UN_I, assumption))
-    apply assumption
-   apply ((unfold image_Un[symmetric])[1])?
-   apply (rule iffD2[OF arg_cong[OF inj_image_mem_iff[OF bij_is_inj]]], rule assms, assumption)?
     (* repeated *)
   apply (unfold permute_raw_simps[OF assms] FVars_raw_ctors)[1]
   apply (subst term_pre.set_map, (rule assms supp_id_bound bij_id)+)+
@@ -383,27 +362,33 @@ lemma set_level_overapprox: "free_raw_term z x \<Longrightarrow> z \<in> (\<Unio
   apply (erule free_raw_term.induct)
      apply (erule UN_E)?
      apply (rule UN_I)
-      apply (rule UNIV_I)
+     apply (rule UNIV_I)
+  thm set_term_level.simps
      apply (subst set_term_level.simps(2))
-     apply (unfold raw_term.case)
-     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 1] 1\<close>)
-     apply assumption
+    apply (unfold raw_term.case)
+    apply blast (* TODO(ozkutuk): is there a weaker tactic I can use here? *)
+     (* apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 1] 1\<close>)
+     apply assumption *)
     (* repeated *)
     apply (erule UN_E)?
     apply (rule UN_I)
      apply (rule UNIV_I)
     apply (subst set_term_level.simps(2))
-    apply (unfold raw_term.case)
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 2] 1\<close>)
+   apply (unfold raw_term.case)
+  apply fast
+    (* apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 2] 1\<close>)
     apply (rule UN_I)
      apply assumption
-    apply assumption
+    apply assumption *)
     (* repeated *)
    apply (erule UN_E)?
    apply (rule UN_I)
     apply (rule UNIV_I)
    apply (subst set_term_level.simps(2))
-   apply (unfold raw_term.case)
+  apply (unfold raw_term.case)
+  apply fast
+  done
+(*
    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 3] 1\<close>)
    apply (rule UN_I)
     apply assumption
@@ -419,6 +404,7 @@ lemma set_level_overapprox: "free_raw_term z x \<Longrightarrow> z \<in> (\<Unio
    apply assumption
   apply assumption
   done
+*)
 
 (* this proof is specific to codatatypes *)
 lemma FVars_raw_bds: "|FVars_raw_term x| <o card_suc natLeq"
@@ -482,10 +468,8 @@ proof -
     apply (erule alpha_term.cases)
     apply hypsubst
     apply (unfold triv_forall_equality)
-    subgoal for f g \<sigma> x f2 y
+    subgoal for f g \<sigma> x y
       apply (rule exI[of _ "g \<circ> \<sigma> \<circ> inv f"])
-      apply (rule exI)
-      apply (rule exI[of _ "g \<circ> f2 \<circ> inv f"])
       apply (rule exI)+
       apply (rule conjI, rule permute_raw_simps, (rule supp_id_bound bij_id | assumption)+)+
       apply (rule conjI, (rule bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound infinite_UNIV | assumption)+)+
@@ -514,34 +498,6 @@ proof -
        apply (erule FVars_raw_intros)
         apply assumption+
 
-      apply (rule conjI, (rule bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound infinite_UNIV | assumption)+)+
-
-      apply (rule conjI)
-       apply (rule id_onI)
-       apply (erule imageE)
-       apply hypsubst
-       apply (rule trans[OF comp_apply])
-       apply (rule trans[OF arg_cong[OF inv_simp1]])
-        apply assumption
-       apply (rule trans[OF comp_apply])
-       apply (rule trans[OF arg_cong[of _ _ g]])
-        apply (erule id_onD)
-        apply assumption
-       apply (rule sym)
-       apply (erule eq_onD)
-       apply (erule DiffE)
-       apply (erule UN_E)
-       apply (erule FVars_raw_intros)
-        apply assumption+
-
-      apply (rule conjI)
-       apply (rule eq_on_comp1)
-        apply (rule eq_on_refl)
-       apply (unfold image_comp inv_o_simp1 image_id)[1]
-       apply (rule eq_on_comp1)
-        apply assumption
-       apply (rule eq_on_refl)
-
       apply (rule iffD2[OF term_pre.mr_rel_map(1)])
                 apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV bij_imp_bij_inv supp_inv_bound)+
       apply (unfold id_o o_id)
@@ -552,7 +508,7 @@ proof -
       apply (unfold id_o o_id comp_assoc[symmetric])
       apply (subst inv_o_simp1, assumption)+
       apply (unfold id_o o_id)
-      apply (erule term_pre.mr_rel_mono_strong0[rotated -7])
+      apply (erule term_pre.mr_rel_mono_strong0[rotated -5])
         (* REPEAT_DETERM *)
                      apply (rule ballI)
                      apply (rule trans)
@@ -587,27 +543,6 @@ proof -
                           apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV bij_imp_bij_inv supp_inv_bound)+
                       apply (rule refl)
                      apply assumption+
-        (* repeated *)
-                 apply (rule ballI)
-                 apply (rule ballI)
-                 apply (rule impI)
-                 apply (rule disjI1)
-                 apply (rule exI)+
-                 apply (rule conjI[rotated])+
-                        apply assumption
-                       apply (rule eq_on_refl)
-                      apply (rule refl)
-                     apply (rule trans)
-                      apply (rule permute_raw_comps)
-                         apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV bij_imp_bij_inv supp_inv_bound)+
-                     apply (unfold comp_assoc)
-                     apply (subst inv_o_simp1, assumption)
-                     apply (unfold o_id)
-                     apply (rule trans)
-                      apply (rule permute_raw_comps[symmetric])
-                         apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound infinite_UNIV bij_imp_bij_inv supp_inv_bound)+
-                     apply (rule refl)
-                    apply assumption+
         (* repeated, rec free case *)
                 apply (rule ballI)
                 apply (rule ballI)

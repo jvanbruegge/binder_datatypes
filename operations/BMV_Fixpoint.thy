@@ -72,12 +72,13 @@ lemma typedef_Rep_comp: "type_definition Rep Abs UNIV \<Longrightarrow> Rep ((Ab
 
 definition "Sb_FTerm_pre \<equiv> \<lambda>(f1::'v::var \<Rightarrow> 'v) (f2::'tv::var \<Rightarrow> 'tv FType). (Abs_FTerm_pre :: _ \<Rightarrow> ('tv, 'v, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre) \<circ> (map_sum (id f1) (map_sum id (BMV_Fixpoint.sum2.sum2.sum.Sb_0 f2) \<circ> id) \<circ> id) \<circ> Rep_FTerm_pre"
 definition "Vrs1_FTerm_pre \<equiv> \<lambda>x. \<Union>x\<in>Basic_BNFs.setl (Rep_FTerm_pre x). {x}"
-definition "Vrs2_FTerm_pre \<equiv> \<lambda>x. \<Union>x\<in>Basic_BNFs.setr (Rep_FTerm_pre x). \<Union> (BMV_Fixpoint.sum2.sum2.sum.Vrs_0_0_0 ` Basic_BNFs.setr x)"
+definition "Vrs2_FTerm_pre \<equiv> \<lambda>x. \<Union>y\<in>Basic_BNFs.setr (Rep_FTerm_pre x). \<Union> (sum2.sum2.sum.Vrs_0_0 ` Basic_BNFs.setr y)"
 
 (* Transfer pbmv structure of pre-datatype to sealed version *)
 pbmv_monad "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v::var" and "'tv::var FType"
   Sbs: "Sb_FTerm_pre :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "id :: ('v \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> 'v" and "tvsubst_FType :: ('tv::var \<Rightarrow> 'tv FType) \<Rightarrow> 'tv FType \<Rightarrow> 'tv FType"
   Injs: "id :: 'v::var \<Rightarrow> 'v" "TyVar :: 'tv::var \<Rightarrow> 'tv FType" and "id :: 'v::var \<Rightarrow> 'v" and "TyVar :: 'tv::var \<Rightarrow> 'tv FType"
+  SSupps: "supp :: _ \<Rightarrow> 'v::var set" "SSupp_FType :: _ \<Rightarrow> 'tv::var set" and "supp :: _ \<Rightarrow> 'v::var set" and "SSupp_FType :: _ \<Rightarrow> 'tv::var set"
   Vrs: "Vrs1_FTerm_pre :: ('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre \<Rightarrow> _", "Vrs2_FTerm_pre :: ('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre \<Rightarrow> _" and "\<lambda>(x::'v). {x}" and "Vrs_FType_1 :: _ \<Rightarrow> 'tv::var set"
   Map: "\<lambda>(f1::'c \<Rightarrow> 'c') (f2::'d \<Rightarrow> 'd'). map_FTerm_pre id id id id f1 f2"
   Supps: "set5_FTerm_pre :: _ \<Rightarrow> 'c set" "set6_FTerm_pre :: _ \<Rightarrow> 'd set"
@@ -94,6 +95,8 @@ pbmv_monad "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v:
     apply (rule trans[OF Rep_FTerm_pre_inverse])
     apply (rule id_apply[symmetric])
     done
+                      apply (tactic \<open>Local_Defs.unfold0_tac @{context} (maps (map snd) (BMV_Monad_Def.SSupps_of_bmv_monad bmv))\<close>, rule refl)[1]
+                      apply (tactic \<open>Local_Defs.unfold0_tac @{context} (maps (map snd) (BMV_Monad_Def.SSupps_of_bmv_monad bmv))\<close>, rule refl)[1]
   subgoal
     apply (rule trans[OF comp_assoc_middle])
      apply (rule Abs_FTerm_pre_inverse[OF UNIV_I])
@@ -189,16 +192,18 @@ pbmv_monad "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v:
     apply (rule refl)
     done
       (********************* BMV Structure of minions, no transfer needed *)
-               apply (tactic \<open>resolve_tac @{context} (map #Sb_Inj axioms) 1\<close>)
-              apply (tactic \<open>resolve_tac @{context} (maps #Sb_comp_Injs axioms) 1\<close>; assumption)
-             apply (tactic \<open>resolve_tac @{context} (map #Sb_comp axioms) 1\<close>; assumption)
-            apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_bds) axioms) 1\<close>; assumption)
-           apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_Injs) axioms) 1\<close>; assumption)
-          apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_Sbs) axioms) 1\<close>; assumption)
-         apply (tactic \<open>resolve_tac @{context} (map #Sb_cong axioms) 1\<close>; assumption)
+                 apply (tactic \<open>resolve_tac @{context} (map #Sb_Inj axioms) 1\<close>)
+                apply (tactic \<open>resolve_tac @{context} (maps #Sb_comp_Injs axioms) 1\<close>; assumption)
+               apply (tactic \<open>Local_Defs.unfold0_tac @{context} (maps (map snd) (BMV_Monad_Def.SSupps_of_bmv_monad bmv))\<close>, rule refl)[1]
+              apply (tactic \<open>resolve_tac @{context} (map #Sb_comp axioms) 1\<close>; assumption)
+             apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_bds) axioms) 1\<close>; assumption)
+            apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_Injs) axioms) 1\<close>; assumption)
+           apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_Sbs) axioms) 1\<close>; assumption)
+          apply (tactic \<open>resolve_tac @{context} (map #Sb_cong axioms) 1\<close>; assumption)
     (* also for FType *)
-        apply (tactic \<open>resolve_tac @{context} (map #Sb_Inj axioms) 1\<close>)
-       apply (tactic \<open>resolve_tac @{context} (maps #Sb_comp_Injs axioms) 1\<close>; assumption)
+         apply (tactic \<open>resolve_tac @{context} (map #Sb_Inj axioms) 1\<close>)
+        apply (tactic \<open>resolve_tac @{context} (maps #Sb_comp_Injs axioms) 1\<close>; assumption)
+       apply (tactic \<open>Local_Defs.unfold0_tac @{context} (maps (map snd) (BMV_Monad_Def.SSupps_of_bmv_monad bmv))\<close>, rule refl)[1]
       apply (tactic \<open>resolve_tac @{context} (map #Sb_comp axioms) 1\<close>; assumption)
      apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_bds) axioms) 1\<close>; assumption)
     apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_Injs) axioms) 1\<close>; assumption)
@@ -234,11 +239,71 @@ lemma set4_Sb: "set4_FTerm_pre (Sb_FTerm_pre f1 f2 x) = set4_FTerm_pre x"
   apply (rule refl)
   done
 
+ML \<open>
+val bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Fixpoint.FTerm_pre")
+val axioms = BMV_Monad_Def.axioms_of_bmv_monad bmv
+val laxioms = hd axioms
+val param = the (hd (BMV_Monad_Def.params_of_bmv_monad bmv))
+\<close>
+
+lemma Map_is_Sb: "vvsubst_FType f = Sb_FType (Inj_FType_1 \<circ> f)"
+
+  sorry
+
+corollary permute_Sb:
+  fixes f::"'tv::var \<Rightarrow> 'tv"
+  assumes "bij f" "|supp f| <o |UNIV::'tv set|"
+  shows "permute_FType f = Sb_FType (Inj_FType_1 \<circ> f)"
+  apply (rule trans)
+   apply (rule FType.vvsubst_permute[symmetric])
+    apply (rule assms)+
+  apply (rule Map_is_Sb)
+  done
+
+lemma Inj_inj: "Inj_FType_1 a = Inj_FType_1 b \<longleftrightarrow> a = b"
+  apply (rule iffI)
+   apply (drule arg_cong[of _ _ Vrs_FType_1])
+   apply (unfold Vrs_Inj_FType)
+   apply (erule singleton_inject)
+  apply hypsubst_thin
+  apply (rule refl)
+  done
+
 lemma permute_Sb_FType:
   fixes f::"'tv::var \<Rightarrow> 'tv"
   assumes "bij f" "|supp f| <o |UNIV::'tv set|" "|SSupp_FType g| <o |UNIV::'tv set|"
   shows "Sb_FType (permute_FType f \<circ> g \<circ> inv f) = permute_FType f \<circ> Sb_FType g \<circ> permute_FType (inv f)"
-  apply (rule ext)
+  apply (subst permute_Sb, (rule assms bij_imp_bij_inv supp_inv_bound)+)+
+  apply (unfold comp_assoc)
+  apply (subst Sb_comp_FType[symmetric])
+    apply (unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def[symmetric])[2]
+    apply (rule card_of_subset_bound)
+     apply (rule subsetI)
+     apply (erule CollectE)
+     apply (erule contrapos_np)
+     apply (rule iffD2[OF Inj_inj])
+     apply (erule iffD1[OF not_in_supp_alt])
+    apply (rule assms)
+   prefer 2
+   apply (rule arg_cong2[OF refl _, of _ _ "(\<circ>)"])
+   apply (subst Sb_comp_FType)
+     prefer 3
+     apply (unfold comp_assoc[symmetric])
+     apply (subst Sb_comp_Inj_FType)
+      apply (rule assms)
+     apply (rule refl)
+    apply (rule assms)
+    apply (unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def[symmetric])[2]
+    apply (rule card_of_subset_bound)
+     apply (rule subsetI)
+     apply (erule CollectE)
+     apply (erule contrapos_np)
+     apply (rule iffD2[OF Inj_inj])
+    apply (erule iffD1[OF not_in_supp_alt])
+   apply (rule supp_inv_bound)
+    apply (rule assms)+
+  sorry
+  (*apply (rule ext)
   apply (rule trans[OF _ comp_apply[symmetric]])
   subgoal for x
     apply (subgoal_tac "|SSupp_FType (permute_FType f \<circ> g \<circ> inv f)| <o |UNIV|")
@@ -308,12 +373,33 @@ lemma permute_Sb_FType:
     apply (unfold comp_def)
     apply assumption
     done
-  done
+  done*)
+
+lemma Map_is_Sb_FTerm_pre: "map_FTerm_pre f1 f2 id id id id = Sb_FTerm_pre (id \<circ> f2) (TyVar \<circ> f1)"
+  sorry
+
+
 
 lemma Map_Sb':
   fixes f1::"'x1::var \<Rightarrow> 'x1" and f2::"'x2::var \<Rightarrow> 'x2" and f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
-  assumes "bij f1" "|supp f1| <o |UNIV::'x1 set|" "bij f2" "|supp f2| <o |UNIV::'x2 set|" "|{a. g2 a \<noteq> Inj_FType_1 a}| <o |UNIV::'x1 set|"
+  assumes "bij f1" "|supp f1| <o |UNIV::'x1 set|" "bij f2" "|supp f2| <o |UNIV::'x2 set|"
+      "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
+      "|{a. g1 a \<noteq> id a}| <o |UNIV::'x2 set|" "|{a. g2 a \<noteq> Inj_FType_1 a}| <o |UNIV::'x1 set|"
   shows "map_FTerm_pre f1 f2 f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre (f2 \<circ> g1 \<circ> inv f2) (permute_FType f1 \<circ> g2 \<circ> inv f1) \<circ> map_FTerm_pre f1 f2 f3 f4 f5 f6"
+  apply (rule trans)
+  apply (rule trans)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
+    apply (rule trans)
+     prefer 2
+     apply (rule FTerm_pre.map_comp0[of f1 f2 id id id id f3 f4 _ id _ id])
+                apply (rule assms bij_id supp_id_bound)+
+    apply (unfold id_o o_id)
+    apply (rule refl)
+   apply (unfold comp_assoc Map_is_Sb_FTerm_pre)[1]
+   apply (rule trans)
+    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+    apply (tactic \<open>resolve_tac @{context} [#Sb_comp laxioms] 1\<close>)
+
   apply (rule ext)
   apply (subgoal_tac "|SSupp_FType g2| <o |UNIV::'x1 set|")
    prefer 2
@@ -331,13 +417,6 @@ lemma Map_Sb':
   apply (unfold FType.permute_id)
   apply (rule refl)
   done
-
-ML \<open>
-val bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Fixpoint.FTerm_pre")
-val axioms = BMV_Monad_Def.axioms_of_bmv_monad bmv
-val laxioms = hd axioms
-val param = the (hd (BMV_Monad_Def.params_of_bmv_monad bmv))
-\<close>
 
 (* Substitution axioms *)
 abbreviation \<eta> :: "'v::var \<Rightarrow> ('tv::var, 'v::var, 'a::var, 'b::var, 'c, 'd) FTerm_pre" where
@@ -1035,6 +1114,7 @@ lemma permute_Uctor:
   apply (subst if_P inv_o_simp1 trans[OF comp_apply[symmetric] Pmap_comp0[THEN fun_cong]], (rule valid_Pmap bij_imp_bij_inv supp_inv_bound | assumption)+)+
   apply (unfold trans[OF Pmap_id0[THEN fun_cong] id_apply])
   apply (unfold Pmap_def case_prod_beta snd_conv compSS_FType_def)
+
   apply (subst trans[OF comp_apply[symmetric] Map_Sb'[THEN fun_cong]])
       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
   apply (unfold id_o o_id inv_o_simp2)
@@ -1258,7 +1338,7 @@ lemma eta_set_empties:
   done
 
 lemma tvsubst_VVr:
-  assumes    
+  assumes
     "|SSupp_FTerm f1| <o cmin |UNIV::'tv set| |UNIV::'v set|"
     "|SSupp_FType f2| <o cmin |UNIV::'tv set| |UNIV::'v set|"
   shows "tvsubst_FTerm f1 f2 (VVr a :: ('tv::var, 'v::var) FTerm) = f1 a"

@@ -134,6 +134,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           ) xs_binders
         in if forall null binders then NONE else SOME (Inr binders, vars) end
     ) rule_names rule_varss intrs;
+
     val bind_ts_opt = map (Option.map (fn (binds, vars) => case binds of
       Inr ts => ts
       | Inl binds =>
@@ -804,14 +805,8 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     EqSubst.eqsubst_asm_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
                     SELECT_GOAL (EVERY [
                       REPEAT_DETERM (SOMEGOAL (EVERY' [
-                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps @ @{thms inv_simp1}),
-                        REPEAT_DETERM o FIRST' [
-                          assume_tac ctxt,
-                          resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}
-                        ]
+                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps @ @{thms inv_simp1})
                       ])),
-                      Local_Defs.unfold_tac ctxt (Equivariance.equiv_sym_thms ctxt),
-                      option Verbose (print_tac ctxt "after equiv_sym") all_tac,
                       REPEAT_DETERM (FIRST1 [
                         assume_tac ctxt,
                         resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}

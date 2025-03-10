@@ -1442,7 +1442,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
        ("rrename_VVr", maps (map_filter I) permute_VVrss),
        ("SSupp_natural", maps (map_filter I) SSupp_naturalss),
        ("SSupp_comp_rename_bound", maps (map_filter (Option.map #SSupp_comp_rename_bound)) SSupp_compss),
-       ("SSupp_comp_bound", maps (map_filter (Option.map #SSupp_comp_bound)) SSupp_compss),
+       (*("SSupp_comp_bound", maps (map_filter (Option.map #SSupp_comp_bound)) SSupp_compss),*)
        ("eta_set_empties", flat (maps (map_filter I) eta_set_emptiess)),
        ("FVars_VVr", flat (maps (map_filter I) FVars_VVrss)),
        ("tvsubst_VVr", maps (map_filter I) tvsubst_VVrss),

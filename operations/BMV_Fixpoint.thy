@@ -260,15 +260,6 @@ corollary permute_Sb:
   apply (rule Map_is_Sb)
   done
 
-lemma Inj_inj: "Inj_FType_1 a = Inj_FType_1 b \<longleftrightarrow> a = b"
-  apply (rule iffI)
-   apply (drule arg_cong[of _ _ Vrs_FType_1])
-   apply (unfold Vrs_Inj_FType)
-   apply (erule singleton_inject)
-  apply hypsubst_thin
-  apply (rule refl)
-  done
-
 lemma permute_Sb_FType:
   fixes f::"'tv::var \<Rightarrow> 'tv"
   assumes "bij f" "|supp f| <o |UNIV::'tv set|" "|SSupp_FType g| <o |UNIV::'tv set|"
@@ -276,15 +267,11 @@ lemma permute_Sb_FType:
   apply (subst permute_Sb, (rule assms bij_imp_bij_inv supp_inv_bound)+)+
   apply (unfold comp_assoc)
   apply (subst Sb_comp_FType[symmetric])
-    apply (unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def[symmetric])[2]
-    apply (rule card_of_subset_bound)
-     apply (rule subsetI)
-     apply (erule CollectE)
-     apply (erule contrapos_np)
-     apply (rule iffD2[OF Inj_inj])
-     apply (erule iffD1[OF not_in_supp_alt])
+    apply (rule FType.SSupp_comp_bound)
+     apply (rule FType.SSupp_Inj_bound)
     apply (rule assms)
-   prefer 2
+   apply (rule FType.SSupp_comp_bound)
+    apply (rule assms supp_inv_bound)+
    apply (rule arg_cong2[OF refl _, of _ _ "(\<circ>)"])
    apply (subst Sb_comp_FType)
      prefer 3
@@ -293,87 +280,9 @@ lemma permute_Sb_FType:
       apply (rule assms)
      apply (rule refl)
     apply (rule assms)
-    apply (unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def[symmetric])[2]
-    apply (rule card_of_subset_bound)
-     apply (rule subsetI)
-     apply (erule CollectE)
-     apply (erule contrapos_np)
-     apply (rule iffD2[OF Inj_inj])
-    apply (erule iffD1[OF not_in_supp_alt])
-   apply (rule supp_inv_bound)
-    apply (rule assms)+
-  sorry
-  (*apply (rule ext)
-  apply (rule trans[OF _ comp_apply[symmetric]])
-  subgoal for x
-    apply (subgoal_tac "|SSupp_FType (permute_FType f \<circ> g \<circ> inv f)| <o |UNIV|")
-     prefer 2
-     apply (subst FType.SSupp_natural)
-    apply (rule assms ordLeq_ordLess_trans[OF card_of_image])+
-    apply (binder_induction x avoiding: "IImsupp_FType (permute_FType f \<circ> g \<circ> inv f)" rule: FType.strong_induct)
-       apply (unfold IImsupp_FType_def)[1]
-       apply (rule FType.Un_bound)
-        apply (subst FType.SSupp_natural)
-          apply (rule assms)+
-        apply (rule ordLeq_ordLess_trans[OF card_of_image])
-        apply (rule assms)
-    apply (rule FType.UN_bound)
-        apply (subst FType.SSupp_natural)
-          apply (rule assms)+
-        apply (rule ordLeq_ordLess_trans[OF card_of_image])
-        apply (rule assms)
-       apply (unfold comp_def)[1]
-       apply (rule FType.set_bd_UNIV)
-
-    apply (rule trans)
-       apply (rule FType.subst)
-       apply assumption
-      apply (unfold comp_def)[1]
-      apply (rule arg_cong[of _ _ "permute_FType _"])
-      apply (rule sym)
-      apply (rule trans)
-       apply (subst FType.permute)
-    apply (rule assms bij_imp_bij_inv supp_inv_bound)+
-       apply (rule FType.subst)
-       apply (rule assms)
-      apply (rule refl)
-
-     apply (rule trans)
-      apply (rule FType.subst)
-      apply assumption
-     apply (subst FType.permute)
-       apply (rule assms bij_imp_bij_inv supp_inv_bound)+
-    apply (unfold comp_def)[1]
-     apply (subst FType.subst)
-      apply (rule assms)
-     apply (subst FType.permute)
-       apply (rule assms)+
-     apply (rule arg_cong2[of _ _ _ _ TyApp])
-      apply assumption+
-
-     apply (rule trans)
-     apply (rule FType.subst)
-      apply assumption+
-    apply (subst FType.permute)
-       apply (rule assms bij_imp_bij_inv supp_inv_bound)+
-    apply (rule trans[OF _ comp_apply[symmetric]])
-    apply (subst FType.subst)
-      apply (rule assms)
-     apply (subst (asm) FType.IImsupp_natural)
-       apply (rule assms)+
-     apply (subst (asm) image_in_bij_eq)
-      apply (rule assms)
-     apply assumption
-    apply (subst FType.permute)
-      apply (rule assms)+
-    apply (subst inv_simp2[of f])
-     apply (rule assms)
-    apply (rule arg_cong2[of _ _ _ _ TyAll])
-     apply (rule refl)
-    apply (unfold comp_def)
-    apply assumption
-    done
-  done*)
+   apply (rule FType.SSupp_comp_bound)
+   apply (rule FType.SSupp_Inj_bound assms supp_inv_bound)+
+  done
 
 lemma Map_is_Sb_FTerm_pre: "map_FTerm_pre f1 f2 id id id id = Sb_FTerm_pre (id \<circ> f2) (TyVar \<circ> f1)"
   sorry
@@ -384,7 +293,7 @@ lemma Map_Sb':
   fixes f1::"'x1::var \<Rightarrow> 'x1" and f2::"'x2::var \<Rightarrow> 'x2" and f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
   assumes "bij f1" "|supp f1| <o |UNIV::'x1 set|" "bij f2" "|supp f2| <o |UNIV::'x2 set|"
       "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
-      "|{a. g1 a \<noteq> id a}| <o |UNIV::'x2 set|" "|{a. g2 a \<noteq> Inj_FType_1 a}| <o |UNIV::'x1 set|"
+      "|supp g1| <o |UNIV::'x2 set|" "|SSupp_FType g2| <o |UNIV::'x1 set|"
   shows "map_FTerm_pre f1 f2 f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre (f2 \<circ> g1 \<circ> inv f2) (permute_FType f1 \<circ> g2 \<circ> inv f1) \<circ> map_FTerm_pre f1 f2 f3 f4 f5 f6"
   apply (rule trans)
   apply (rule trans)
@@ -399,6 +308,7 @@ lemma Map_Sb':
    apply (rule trans)
     apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
     apply (tactic \<open>resolve_tac @{context} [#Sb_comp laxioms] 1\<close>)
+  apply (rule assms)+
 
   apply (rule ext)
   apply (subgoal_tac "|SSupp_FType g2| <o |UNIV::'x1 set|")

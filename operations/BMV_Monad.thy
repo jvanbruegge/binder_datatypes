@@ -98,13 +98,14 @@ ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
 local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
 
-pbmv_monad ID: "'a"
-  Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
-  Injs: "id :: 'a \<Rightarrow> 'a"
-  SSupps: "supp :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a set"
-  Vrs: "\<lambda>(x::'a). {x}"
+pbmv_monad ID: "'a::var"
+  Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a::var"
+  Injs: "id :: 'a \<Rightarrow> 'a::var"
+  SSupps: "supp :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a::var set"
+  Vrs: "\<lambda>(x::'a::var). {x}"
   bd: natLeq
   by (auto simp: ID.set_bd infinite_regular_card_order_natLeq supp_def)
+print_theorems
 
 pbmv_monad "'a::var FType"
   Sbs: tvsubst_FType
@@ -122,14 +123,15 @@ pbmv_monad "'a::var FType"
    apply (rule Vrs_Sb_FType; assumption)
   apply (rule Sb_cong_FType; assumption)
   done
+print_theorems
 
 typedef ('a1, 'a2, 'c1, 'c2) L' = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
   by (rule UNIV_witness)
 
-pbmv_monad "('a1, 'a2, 'c1, 'c2) L'"                          and 'a1
-  Sbs: "\<lambda>f x. Abs_L' (map_prod f (map_prod f id) (Rep_L' x))" and "id :: ('a1 \<Rightarrow> 'a1) \<Rightarrow> 'a1 \<Rightarrow> 'a1"
-  Injs: "id :: 'a1 \<Rightarrow> 'a1"                                    and "id :: 'a1 \<Rightarrow> 'a1"
-  Vrs: "\<lambda>x. case Rep_L' x of (x1, x2, _) \<Rightarrow> {x1, x2}"         and "\<lambda>x. {x}"
+pbmv_monad "('a1::var, 'a2, 'c1, 'c2) L'"                          and "'a1::var"
+  Sbs: "\<lambda>f x. Abs_L' (map_prod (f::'a1::var \<Rightarrow> 'a1) (map_prod f id) (Rep_L' x))" and "id :: ('a1 \<Rightarrow> 'a1) \<Rightarrow> 'a1 \<Rightarrow> 'a1::var"
+  Injs: "id :: 'a1::var \<Rightarrow> 'a1"                                    and "id :: 'a1 \<Rightarrow> 'a1::var"
+  Vrs: "\<lambda>x. case Rep_L' x of (x1, x2, _) \<Rightarrow> {x1::'a1::var, x2}"         and "\<lambda>x. {x::'a1::var}"
   Map: "\<lambda>f1 f2 x. Abs_L' (map_prod id (map_prod id (map_sum f1 f2)) (Rep_L' x))"
   Supps: "\<lambda>x. case Rep_L' x of (_, _, y) \<Rightarrow> Basic_BNFs.setl y" "\<lambda>x. case Rep_L' x of (_, _, y) \<Rightarrow> Basic_BNFs.setr y"
   bd: natLeq
@@ -626,14 +628,11 @@ val model_L2 = {
 } : (Proof.context -> tactic) BMV_Monad_Def.bmv_monad_model;
 \<close>
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
 local_setup \<open>fn lthy =>
   let
-    val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L_") model_L lthy;
-    val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") model_L1 lthy;
-    val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") model_L2 lthy;
+    val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L_") (SOME (Binding.name "L")) model_L lthy;
+    val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") (SOME (Binding.name "L1")) model_L1 lthy;
+    val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") (SOME (Binding.name "L2")) model_L2 lthy;
 
     val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [MRBNF_Util.Inl L1_bmv, MRBNF_Util.Inl L2_bmv] lthy
     val _ = @{print} comp_bmv

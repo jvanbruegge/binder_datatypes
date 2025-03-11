@@ -27,6 +27,8 @@ sig
     (string * sort) list -> ((string * sort) * MRBNF_Def.var_type) list -> typ -> (comp_cache * unfold_set) * local_theory ->
     (MRBNF_Def.mrbnf * (typ list * typ list)) * ((comp_cache * unfold_set) * local_theory)
 
+  val demote_mrbnf: (binding -> binding) -> MRBNF_Def.var_type list -> MRBNF_Def.mrbnf
+    -> (comp_cache * unfold_set) * local_theory -> MRBNF_Def.mrbnf * ((comp_cache * unfold_set) * local_theory)
   val clean_compose_mrbnf: MRBNF_Def.inline_policy -> (binding -> binding) -> binding -> MRBNF_Def.mrbnf ->
     MRBNF_Def.mrbnf list -> unfold_set * local_theory -> MRBNF_Def.mrbnf * (unfold_set * local_theory)
   val permute_mrbnf: (binding -> binding) -> int list -> int list -> MRBNF_Def.mrbnf ->

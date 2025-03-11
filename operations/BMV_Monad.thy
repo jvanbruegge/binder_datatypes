@@ -1,7 +1,8 @@
 theory BMV_Monad
   imports "Binders.MRBNF_Recursor"
   keywords "print_pbmv_monads" :: diag and
-   "pbmv_monad" :: thy_goal
+   "pbmv_monad" :: thy_goal and
+   "mrsbnf" :: thy_goal
 begin
 
 declare [[mrbnf_internals]]
@@ -92,6 +93,30 @@ using assms(3) proof (binder_induction t avoiding: "IImsupp_FType \<rho>''" "IIm
     by (smt (verit, ccfv_threshold) CollectI IImsupp_FType_def SSupp_FType_def Un_iff)
 qed (auto simp: assms(1-2))
 
+lemma map_is_Sb_FType:
+  fixes f::"'tyvar::var \<Rightarrow> 'tyvar"
+  assumes "|supp f| <o |UNIV::'tyvar set|"
+  shows "vvsubst_FType f = Sb_FType (Inj_FType_1 \<circ> f)"
+  apply (rule ext)
+  subgoal for x
+  proof (binder_induction x avoiding: "imsupp f" rule: FType.strong_induct)
+    case Bound
+    then show ?case using imsupp_supp_bound infinite_UNIV assms by blast
+  next
+    case (TyAll x1 x2)
+    then have 1: "x1 \<notin> SSupp_FType (Inj_FType_1 \<circ> f)"
+      by (simp add: SSupp_FType_def VVr_eq_Var not_in_imsupp_same)
+    then have "x1 \<notin> IImsupp_FType (Inj_FType_1 \<circ> f)"
+      unfolding IImsupp_FType_def Un_iff de_Morgan_disj
+      apply (rule conjI)
+      apply (insert 1)
+      apply (erule contrapos_nn)
+      apply (erule UN_E)
+      by (metis FType.set(1) TyAll.fresh comp_apply in_imsupp not_in_imsupp_same singletonD)
+    then show ?case using assms TyAll by (auto simp: FType.SSupp_comp_bound_old)
+  qed (auto simp: FType.SSupp_comp_bound_old assms)
+  done
+
 declare [[ML_print_depth=1000]]
 
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
@@ -106,6 +131,24 @@ pbmv_monad ID: "'a::var"
   bd: natLeq
   by (auto simp: ID.set_bd infinite_regular_card_order_natLeq supp_def)
 print_theorems
+
+ML_file \<open>../Tools/mrsbnf_def.ML\<close>
+
+local_setup \<open>fn lthy =>
+let
+  val (id_mrbnf, (_, lthy)) = MRBNF_Comp.demote_mrbnf I [MRBNF_Def.Free_Var] MRBNF_Comp.ID_mrbnf ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
+  val (id_mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def (K BNF_Def.Note_Some) I (SOME "BMV_Monad.ID") [id_mrbnf]
+     (the (BMV_Monad_Def.pbmv_monad_of lthy "BMV_Monad.ID")) [{
+      map_Sb = NONE,
+      map_is_Sb = fn ctxt => EVERY [
+        Local_Defs.unfold0_tac ctxt @{thms id_def comp_def BNF_Composition.id_bnf_def},
+        resolve_tac ctxt [refl] 1
+      ],
+      set_Sb = []
+    }] lthy;
+  val lthy = MRSBNF_Def.register_mrsbnf "BMV_Monad.ID" id_mrsbnf lthy
+in lthy end
+\<close>
 
 pbmv_monad "'a::var FType"
   Sbs: tvsubst_FType
@@ -122,6 +165,11 @@ pbmv_monad "'a::var FType"
     apply (rule Vrs_Inj_FType)
    apply (rule Vrs_Sb_FType; assumption)
   apply (rule Sb_cong_FType; assumption)
+  done
+print_theorems
+
+mrsbnf "'a::var FType"
+  apply (rule map_is_Sb_FType; assumption)
   done
 print_theorems
 

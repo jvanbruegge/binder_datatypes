@@ -210,6 +210,7 @@ pbmv_monad "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v:
    apply (tactic \<open>resolve_tac @{context} (maps (maps (map_filter I) o #Vrs_Sbs) axioms) 1\<close>; assumption)
   apply (tactic \<open>resolve_tac @{context} (map #Sb_cong axioms) 1\<close>; assumption)
   done
+print_theorems
 print_pbmv_monads
 
 lemma set1_Vrs: "set1_FTerm_pre x = Vrs2_FTerm_pre x"
@@ -286,45 +287,58 @@ lemma permute_Sb_FType:
 
 lemma Map_is_Sb_FTerm_pre: "map_FTerm_pre f1 f2 id id id id = Sb_FTerm_pre (id \<circ> f2) (TyVar \<circ> f1)"
   sorry
+lemma Map_is_Sb_ID: "id f1 = id (id \<circ> f1)"
+  by simp
 
-
+lemma Map_Sb:
+  fixes f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
+  assumes "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
+      "|supp g1| <o |UNIV::'x2 set|" "|SSupp_FType g2| <o |UNIV::'x1 set|"
+    shows "map_FTerm_pre id id f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre g1 g2 \<circ> map_FTerm_pre id id f3 f4 f5 f6"
+  sorry
 
 lemma Map_Sb':
   fixes f1::"'x1::var \<Rightarrow> 'x1" and f2::"'x2::var \<Rightarrow> 'x2" and f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
   assumes "bij f1" "|supp f1| <o |UNIV::'x1 set|" "bij f2" "|supp f2| <o |UNIV::'x2 set|"
       "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
       "|supp g1| <o |UNIV::'x2 set|" "|SSupp_FType g2| <o |UNIV::'x1 set|"
-  shows "map_FTerm_pre f1 f2 f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre (f2 \<circ> g1 \<circ> inv f2) (permute_FType f1 \<circ> g2 \<circ> inv f1) \<circ> map_FTerm_pre f1 f2 f3 f4 f5 f6"
-  apply (rule trans)
+  shows "map_FTerm_pre f1 f2 f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre (id f2 \<circ> g1 \<circ> inv f2) (permute_FType f1 \<circ> g2 \<circ> inv f1) \<circ> map_FTerm_pre f1 f2 f3 f4 f5 f6"
   apply (rule trans)
     apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
     apply (rule trans)
      prefer 2
-     apply (rule FTerm_pre.map_comp0[of f1 f2 id id id id f3 f4 _ id _ id])
+     apply (rule FTerm_pre.map_comp0[of id id f3 f4 f1 f2 id id id _ id])
                 apply (rule assms bij_id supp_id_bound)+
     apply (unfold id_o o_id)
     apply (rule refl)
    apply (unfold comp_assoc Map_is_Sb_FTerm_pre)[1]
    apply (rule trans)
     apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-    apply (tactic \<open>resolve_tac @{context} [#Sb_comp laxioms] 1\<close>)
-  apply (rule assms)+
-
-  apply (rule ext)
-  apply (subgoal_tac "|SSupp_FType g2| <o |UNIV::'x1 set|")
-   prefer 2
-   apply (unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def[symmetric])[1]
-  apply (rule assms)
-  apply (tactic \<open>Local_Defs.unfold0_tac @{context} @{thms
-    comp_apply map_FTerm_pre_def bmv_defs Sb_FTerm_pre_def Abs_FTerm_pre_inverse[OF UNIV_I] o_id id_apply
-    sum.map_comp prod.map_comp
-  }\<close>)
-  apply (subst permute_Sb_FType, (rule assms | assumption)+)+
-  apply (unfold comp_def)
-  apply (unfold sum.map_comp id_apply prod.map_comp comp_def)
-  apply (subst inv_simp1, rule assms)+
-  apply (subst FType.vvsubst_permute FType.permute_comp inv_o_simp1, (rule assms bij_imp_bij_inv supp_inv_bound)+)+
-  apply (unfold FType.permute_id)
+  apply (rule trans)
+   apply (rule Map_Sb)
+          apply (rule assms)+
+    apply (rule trans)
+     apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+     apply (rule trans)
+     apply (rule ext)
+     apply (rule FTerm_pre.map_cong0[rotated -6])
+                      apply ((rule inv_o_simp1[symmetric, THEN fun_cong], rule assms) | rule id_o[symmetric, THEN fun_cong, of f3] id_o[symmetric, THEN fun_cong, of f4] id_o[symmetric, THEN fun_cong, of f5] id_o[symmetric, THEN fun_cong, of f6])+
+                 apply (rule assms supp_id_bound bij_id supp_comp_bound supp_inv_bound infinite_UNIV bij_comp)+
+     apply (rule FTerm_pre.map_comp0)
+                apply (rule assms supp_id_bound bij_id supp_inv_bound)+
+    apply (rule trans[OF comp_assoc[symmetric]])
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
+    apply (subst Map_is_Sb_FTerm_pre)
+    apply (rule FTerm_pre.Sb_comp)
+       apply (rule FTerm_pre.SSupp_comp_bound FTerm_pre.SSupp_Inj_bound supp_inv_bound assms)+
+   apply (unfold comp_assoc[symmetric])
+   apply (subst FTerm_pre.Sb_comp_Inj, rule assms)+
+  apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
+  apply (rule trans)
+  apply (rule FTerm_pre.Sb_comp)
+      apply (rule FTerm_pre.SSupp_comp_bound FTerm_pre.SSupp_Inj_bound supp_inv_bound assms)+
+  apply (unfold comp_assoc[symmetric])
+  apply (subst permute_Sb[symmetric] Map_is_Sb_ID[symmetric], ((rule assms)+)?)+
   apply (rule refl)
   done
 

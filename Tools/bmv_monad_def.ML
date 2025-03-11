@@ -641,13 +641,19 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
     val bmv_name = implode (tl (maps (fn x => [".", x]) (tl_maybe (String.tokens (fn c => c = #".") (Binding.name_of bmv_b)))));
     val axioms = axioms_of_bmv_monad bmv;
     val facts = facts_of_bmv_monad bmv;
+    val lfacts = nth facts (leader_of_bmv_monad bmv);
     fun note_unless_dont_note (noted, lthy) =
       let val notes =
-        [("Inj_inj", maps #Inj_inj facts, []),
-         ("SSupp_Inj", maps #SSupp_Inj facts, []),
-         ("SSupp_Inj_bound", maps #SSupp_Inj_bound facts, []),
-         ("SSupp_comp_subset", maps #SSupp_comp_subset facts, []),
-         ("SSupp_comp_bound", maps #SSupp_comp_bound facts, [])
+        [
+         ("Sb_Inj", map #Sb_Inj axioms, []),
+         ("Sb_comp_Inj", maps #Sb_comp_Injs axioms, []),
+         ("Sb_comp", map #Sb_comp axioms, []),
+         ("Sb_cong", map #Sb_cong axioms, []),
+         ("Inj_inj", #Inj_inj lfacts, []),
+         ("SSupp_Inj", #SSupp_Inj lfacts, []),
+         ("SSupp_Inj_bound", #SSupp_Inj_bound lfacts, []),
+         ("SSupp_comp_subset", #SSupp_comp_subset lfacts, []),
+         ("SSupp_comp_bound", #SSupp_comp_bound lfacts, [])
         ] |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true bmv_name (Binding.name thmN)), attrs), [(thms, [])]));
       in Local_Theory.notes notes lthy |>> append noted end
     val fact_policy = fact_policy lthy;

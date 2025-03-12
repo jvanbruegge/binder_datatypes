@@ -221,6 +221,18 @@ mrsbnf "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v::var
     apply (unfold id_def[symmetric] sum.map_id prod.map_id comp_def)
     apply (rule refl)
     done
+  subgoal for x
+    apply (unfold set1_FTerm_pre_def Vrs2_FTerm_pre_def sum.set_map UN_empty2 Un_empty_left
+      prod.set_map Un_empty_right comp_def bmv_defs
+    )
+    apply (rule refl)
+    done
+  subgoal for x
+    apply (unfold set2_FTerm_pre_def Vrs1_FTerm_pre_def sum.set_map UN_empty2 Un_empty_left
+      prod.set_map Un_empty_right comp_def bmv_defs
+    )
+    apply (rule refl)
+    done
   subgoal for f3 f4 f5 f6 g1 g2
     apply (rule ext)
     apply (unfold map_FTerm_pre_def comp_def Sb_FTerm_pre_def bmv_defs FType.map_id0 Abs_FTerm_pre_inverse[OF UNIV_I])
@@ -260,19 +272,6 @@ mrsbnf "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v::var
   apply (rule FType.map_is_Sb; assumption)
   done
 print_theorems
-
-lemma set1_Vrs: "set1_FTerm_pre x = Vrs2_FTerm_pre x"
-  apply (unfold set1_FTerm_pre_def Vrs2_FTerm_pre_def sum.set_map UN_empty2 Un_empty_left
-    prod.set_map Un_empty_right comp_def bmv_defs
-  )
-  apply (rule refl)
-  done
-lemma set2_Vrs: "set2_FTerm_pre x = Vrs1_FTerm_pre x"
-  apply (unfold set2_FTerm_pre_def Vrs1_FTerm_pre_def sum.set_map UN_empty2 Un_empty_left
-    prod.set_map Un_empty_right comp_def bmv_defs
-  )
-  apply (rule refl)
-  done
 
 ML \<open>
 val bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Fixpoint.FTerm_pre")
@@ -758,7 +757,7 @@ lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_FTerm_pre y \<inter> PFVa
     apply (subst FTerm_pre.set_map, (rule bij_id supp_id_bound)+)+
     apply (unfold image_id image_comp comp_def prod.collapse)
     apply (rule Un_mono')+
-      apply (unfold FTerm_pre.set_Sb set1_Vrs set2_Vrs)
+      apply (unfold FTerm_pre.set_Sb FTerm_pre.set_Vrs)
       apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] Vrs_Sb 1\<close>)
         apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
       apply (unfold PFVars_1_def case_prod_beta IImsupp_FType_def SSupp_FType_def
@@ -850,7 +849,7 @@ lemma FVars_subset: "valid_P p \<Longrightarrow> set4_FTerm_pre y \<inter> PFVar
     apply (subst FTerm_pre.set_map, (rule bij_id supp_id_bound)+)+
     apply (unfold image_id image_comp comp_def prod.collapse)
     apply (rule Un_mono')+
-      apply (unfold set1_Vrs set2_Vrs)
+      apply (unfold FTerm_pre.set_Vrs)
       apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] Vrs_Sb 1\<close>)
       apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
       apply (unfold PFVars_2_def case_prod_beta IImsupp_FTerm2_def SSupp_FType_def
@@ -1325,6 +1324,5 @@ lemma FTerm_subst:
       )[1]
   apply (rule refl)
   done
-
 
 end

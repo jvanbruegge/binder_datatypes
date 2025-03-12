@@ -3,6 +3,7 @@ signature MRSBNF_DEF = sig
 
   type 'a mrsbnf_axioms = {
     map_is_Sb: 'a,
+    set_Vrs: 'a list,
     map_Sb: 'a option,
     set_Sb: 'a list
   };
@@ -44,12 +45,14 @@ open MRBNF_Util
 
 type 'a mrsbnf_axioms = {
   map_is_Sb: 'a,
+  set_Vrs: 'a list,
   map_Sb: 'a option,
   set_Sb: 'a list
 }
 
-fun map_mrsbnf_axioms (f:'a -> 'b) ({ map_is_Sb, map_Sb, set_Sb }: 'a mrsbnf_axioms) = {
+fun map_mrsbnf_axioms (f:'a -> 'b) ({ map_is_Sb, set_Vrs, map_Sb, set_Sb }: 'a mrsbnf_axioms) = {
   map_is_Sb = f map_is_Sb,
+  set_Vrs = map f set_Vrs,
   map_Sb = Option.map f map_Sb,
   set_Sb = map f set_Sb
 }: 'b mrsbnf_axioms;
@@ -57,13 +60,14 @@ fun map_mrsbnf_axioms (f:'a -> 'b) ({ map_is_Sb, map_Sb, set_Sb }: 'a mrsbnf_axi
 val morph_mrsbnf_axioms = map_mrsbnf_axioms o Morphism.thm
 
 fun apply_mrsbnf_axioms ({
-  map_is_Sb=f1, map_Sb=f2, set_Sb=f3s
+  map_is_Sb=f1, map_Sb=f2, set_Sb=f3s, set_Vrs=f4s
 }: ('a -> 'b) mrsbnf_axioms) ({
-  map_is_Sb, map_Sb, set_Sb
+  map_is_Sb, map_Sb, set_Sb, set_Vrs
 }: 'a mrsbnf_axioms) = {
   map_is_Sb = f1 map_is_Sb,
   map_Sb = Option.map (fn t => the f2 t) map_Sb,
-  set_Sb = map2 (curry (op|>)) set_Sb f3s
+  set_Sb = map2 (curry (op|>)) set_Sb f3s,
+  set_Vrs = map2 (curry (op|>)) set_Vrs f4s
 }: 'b mrsbnf_axioms
 
 type mrsbnf_facts = {
@@ -103,7 +107,7 @@ fun morph_mrsbnf phi (MRSBNF {
 val id_bmv_monad = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Monad.ID");
 
 fun mk_id_bmv_monad free = BMV_Monad_Def.morph_bmv_monad (
-  MRBNF_Util.subst_typ_morphism [(hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv_monad), TFree free)]
+  MRBNF_Util.subst_typ_morphism [(hd (hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv_monad)), TFree free)]
 ) id_bmv_monad;
 
 fun Rep_mrsbnf (MRSBNF x) = x
@@ -141,6 +145,7 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
     fun note_unless_dont_note (noted, lthy) =
       let val notes =
         [("map_is_Sb", map #map_is_Sb axioms, []),
+         ("set_Vrs", maps #set_Vrs axioms, []),
          ("set_Sb", maps #set_Sb axioms, []),
          ("map_Sb'", maps (the_default [] o Option.map single o #map_Sb) axioms, []),
          ("SSupp_map_subset", maps (map_filter I o #SSupp_map_subset) facts, []),
@@ -448,7 +453,7 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
       ) mrbnfs (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.Maps_of_bmv_monad bmv);
     end;
 
-    val axioms = @{map 4} (fn mrbnf => fn Sb => fn Injs => fn SSupps =>
+    val axioms = @{map 6} (fn mrbnf => fn Sb => fn Injs => fn SSupps => fn Vrs => fn bmv_frees =>
       let
         val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
         val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
@@ -502,22 +507,37 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
             HOLogic.mk_comp (Term.subst_atomic_types (As ~~ As') Sb_t, map_t)
           )))) end;
 
+        val sets = MRBNF_Def.sets_of_mrbnf mrbnf;
+        val (live_sets, bound_sets, free_sets) = MRBNF_Def.deinterlace sets var_types;
+
         val set_Sbs =
           let
-            val sets = MRBNF_Def.sets_of_mrbnf mrbnf;
-
-            val (live_sets, bound_sets, free_sets) = MRBNF_Def.deinterlace sets var_types;
             val sets' = flat (MRBNF_Def.interlace (map single live_sets) (map single bound_sets)
               (replicate free [] @ map single (drop free free_sets)) var_types);
           in map (fn set => fold_rev Logic.all (gs @ [x]) (fold_rev (curry Logic.mk_implies) g_prems (
             mk_Trueprop_eq (set $ (Term.list_comb (Sb, gs) $ x), set $ x)
           ))) sets' end;
+
+        val Vrs' = bmv_frees ~~ transpose Vrs;
+        val set_Vrs = map (fn set =>
+          let
+            val aT = HOLogic.dest_setT (fastype_of (set $ x));
+            val Vrs = the (AList.lookup (op=) Vrs' aT);
+            val Vrs' = map_filter (Option.map (fn Vrs => Vrs $ x)) Vrs;
+          in Logic.all x (mk_Trueprop_eq (set $ x, case Vrs' of
+            [] => mk_bot aT
+            | _ => foldl1 mk_Un Vrs'
+          )) end
+        ) (take free free_sets);
       in {
         map_is_Sb = map_is_Sb,
+        set_Vrs = set_Vrs,
         map_Sb = map_Sb,
         set_Sb = set_Sbs
       }: term mrsbnf_axioms end
-    ) mrbnfs (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.Injs_of_bmv_monad bmv) (BMV_Monad_Def.SSupps_of_bmv_monad bmv);
+    ) mrbnfs (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.Injs_of_bmv_monad bmv)
+      (BMV_Monad_Def.SSupps_of_bmv_monad bmv) (BMV_Monad_Def.Vrs_of_bmv_monad bmv)
+      (BMV_Monad_Def.frees_of_bmv_monad bmv);
 
   in (axioms, (deads, As, As', Bs, Fs, fs), mrbnfs, bmv) end
 
@@ -545,7 +565,7 @@ fun pbmv_monad_of_typ _ _ _ xs _ (TFree x) accum = if member (op=) xs x
         | NONE => (NONE, lthy);
     in case bmv_opt of
       NONE => (NONE, (accum, lthy))
-      | SOME bmv => if null (BMV_Monad_Def.lives_of_bmv_monad bmv) then
+      | SOME bmv => if null (nth (BMV_Monad_Def.lives_of_bmv_monad bmv) (BMV_Monad_Def.leader_of_bmv_monad bmv)) then
           let val T = nth (BMV_Monad_Def.ops_of_bmv_monad bmv) (BMV_Monad_Def.leader_of_bmv_monad bmv)
           in (SOME (BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism (
             rev (map TFree (Term.add_tfreesT T []) @ map TVar (Term.add_tvarsT T [])) ~~ Ts
@@ -563,9 +583,9 @@ fun pbmv_monad_of_typ _ _ _ xs _ (TFree x) accum = if member (op=) xs x
             MRBNF_Util.subst_typ_morphism (snd (dest_Type T) ~~ Ts)
           ) bmv;
           val bmv = BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism (
-             BMV_Monad_Def.lives'_of_bmv_monad bmv ~~ BMV_Monad_Def.lives_of_bmv_monad bmv
+             nth (BMV_Monad_Def.lives'_of_bmv_monad bmv) leader ~~ nth (BMV_Monad_Def.lives_of_bmv_monad bmv) leader
           )) bmv;
-          val live_Ts = BMV_Monad_Def.lives_of_bmv_monad bmv;
+          val live_Ts = nth (BMV_Monad_Def.lives_of_bmv_monad bmv) leader;
 
           val qualifies = map qualify (1 upto length live_Ts);
           val (bmv_opts, (accum, lthy)) = @{fold_map 2} (pbmv_monad_of_typ optim const_policy inline_policy xs) qualifies live_Ts (accum, lthy)
@@ -605,12 +625,14 @@ fun mrsbnf_cmd (b, Ts) lthy =
           | chop_opt (SOME _) thms = (SOME (hd thms), tl thms)
 
         val axioms = fst (fold_map (fn goals => fn thms =>
-          let val (((map_is_Sb, map_Sb), set_Sb), thms) = thms
+          let val ((((map_is_Sb, set_Vrs), map_Sb), set_Sb), thms) = thms
             |> apfst hd o chop 1
+            ||>> chop (length (#set_Vrs goals))
             ||>> chop_opt (#map_Sb goals)
-            ||>> chop (length (#set_Sb goals))
+            ||>> chop (length (#set_Sb goals));
           in ({
             map_is_Sb = map_is_Sb,
+            set_Vrs = set_Vrs,
             map_Sb = map_Sb,
             set_Sb = set_Sb
           }: thm mrsbnf_axioms, thms) end
@@ -621,7 +643,7 @@ fun mrsbnf_cmd (b, Ts) lthy =
       in lthy end
 
   in Proof.theorem NONE after_qed (map (single o rpair []) (maps (fn goals =>
-    #map_is_Sb goals :: the_default [] (Option.map single (#map_Sb goals)) @ #set_Sb goals
+    #map_is_Sb goals :: #set_Vrs goals @ the_default [] (Option.map single (#map_Sb goals)) @ #set_Sb goals
   ) goals)) lthy
     |> Proof.refine_singleton (Method.Basic (fn ctxt => Method.SIMPLE_METHOD (TRYALL (rtac ctxt refl))))
   end

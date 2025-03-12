@@ -189,13 +189,14 @@ fun mk_quotient_model quot substitution qmodel =
   let
     fun mk_subst f = if null substitution then I else f substitution;
     val subst = mk_subst Term.subst_atomic_types;
+    val substT = mk_subst Term.typ_subst_atomic;
     val Ts = fst (split_last (binder_types (fastype_of (#permute quot))));
   in {
-    U = mk_subst Term.typ_subst_atomic (#T quot),
+    U = substT (#T quot),
     binding = #binding qmodel,
-    UFVarss = map (Term.abs ("t", #T quot) o subst) (#FVarss quot),
-    Umap = fold_rev Term.abs (map (pair "f") Ts) (
-      Term.abs ("t", #T quot) (Term.list_comb (subst (#permute quot), map Bound (length Ts downto 1)))
+    UFVarss = map (Term.abs ("t", substT (#T quot)) o subst) (#FVarss quot),
+    Umap = fold_rev Term.abs (map (pair "f" o substT) Ts) (
+      Term.abs ("t", substT (#T quot)) (Term.list_comb (subst (#permute quot), map Bound (length Ts downto 1)))
     ),
     Uctor = #Uctor qmodel,
     validity = Option.map (fn v => {

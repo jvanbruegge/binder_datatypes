@@ -128,49 +128,80 @@ lemma wf_ctxt_FFVars: "\<turnstile> \<Gamma> OK \<Longrightarrow> a \<in> FFVars
   by (induction \<Gamma>) auto
 lemma typing_fresh_ty_extend: "\<Gamma> \<^bold>, Inl x <: U \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> x \<notin> Inl -` dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis Pair_inject UnE subset_vimage_iff typing_wf_ctxt vimageD wf_ctxt_FFVars wf_ctxt_ConsE)
-
 (*
-binder_inductive typing
-  subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
+binder_inductive (no_auto_equiv) typing
+  subgoal premises prems for R B1 B2 \<sigma>1 \<sigma>2 \<Gamma> t T
+    using prems(5)
+    sorry
+  subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
     apply -
     apply (elim disjE conjE exE; hypsubst_thin)
-    subgoal for x T' \<Gamma>' \<Delta>'
+    subgoal for x T' \<Gamma>'
       by auto
-    subgoal for \<Gamma>' x T1 \<Delta>'' t T2
+    subgoal for \<Gamma>' x T1 t T2
       apply (rule disjI2, rule disjI1)
-      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{x} \<union> FVars t \<union> dom \<Gamma>"]])
+      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{x} \<union> FVars t \<union> Inr -` dom \<Gamma>"]])
        apply (auto simp: insert_bound infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV) []
+      apply (meson finite_set cinfinite_imp_infinite finite_imageI finite_ordLess_infinite2 finite_vimageI inj_Inr lfset.UNIV_cinfinite)
       subgoal for y
         apply (rule exI[of _ "{}"]; simp)
         apply (rule exI[of _ "{y}"]; simp add: Abs_inject)
+        apply (rule conjI)
+        apply (metis imageI setr.cases)
         apply (rule exI[of _ "permute_trm id (id(x := y, y := x)) t"] conjI exI[of _ "id(x := y, y := x)"])+
-          apply (simp_all add: id_on_def)
-        apply (frule prems(1)[THEN typing_wf_trm])
+         apply (simp_all add: id_on_def setr.simps)
+        apply (frule prems(1)[THEN typing_wf_ctxt])
         apply (frule prems(1)[THEN typing_wf_ty])
         apply (frule prems(2)[of id "id(x := y, y := x)", rotated -1])
-        apply (auto 0 10 simp: image_iff intro!: map_idI
-          elim!: arg_cong[where f = "\<lambda>x. R x _ _ _", THEN iffD1, rotated])
+        apply (auto simp: image_iff intro!: list.map_ident_strong sum.map_ident_strong
+          elim!: arg_cong[where f = "\<lambda>x. R x _ _", THEN iffD1, rotated])
+        apply (metis fst_conv setr.cases)+
         done
       done
-    subgoal for \<Gamma>' \<Delta>'' t T' _ u
+    subgoal for \<Gamma>' t T' _ u
       by auto
-    subgoal for \<Gamma>' \<Delta>' X T1 t T2
+    subgoal for \<Gamma>' X T1 t T2
       apply (rule disjI2, rule disjI2, rule disjI2, rule disjI1)
-      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{X} \<union> FVars_typ T1  \<union> FVars_typ T2 \<union> FTVars t \<union> dom \<Delta> \<union> FFVars_ctxt \<Delta> \<union> FFVars_ctxt \<Gamma>"]])
+      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{X} \<union> FVars_typ T1  \<union> FVars_typ T2 \<union> FTVars t \<union> FFVars_ctxt \<Gamma> \<union> Inl -` dom \<Gamma>"]])
        apply (auto simp: insert_bound infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
+      apply (meson finite_set cinfinite_imp_infinite finite_imageI finite_ordLess_infinite2 finite_vimageI inj_Inl lfset.UNIV_cinfinite)
       subgoal for Y
         apply (rule exI[of _ "{Y}"]; simp add: TAbs_inject)
+        apply (rule conjI)
+        apply (metis imageI setl.cases)
         apply (rule exI[of _ "permute_trm (id(X := Y, Y := X)) id t"] conjI exI[of _ "id(X := Y, Y := X)"])+
           apply (simp_all add: id_on_def) [2]
         apply (rule exI[of _ "permute_typ (id(X := Y, Y := X)) T2"])
-        apply (frule prems(1)[THEN typing_fresh_extend])
+        apply (frule prems(1)[THEN typing_fresh_ty_extend])
         apply (frule prems(2)[of "(id(X := Y, Y := X))" id, rotated -1])
-            apply (auto 0 10 simp add: typ_inject id_on_def dom_def subset_eq image_iff
-            intro!: map_idI typ.permute_cong_id exI[of _ "id(X := Y, Y := X)"]
-            elim!: arg_cong2[where f = "\<lambda>x y. R x y _ _", THEN iffD1, rotated 2])
+            apply (auto simp add: typ_inject id_on_def dom_def subset_eq image_iff
+            intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id exI[of _ "id(X := Y, Y := X)"]
+            elim!: arg_cong2[where f = "\<lambda>x y. R x y _", THEN iffD1, rotated 2])
+           apply (metis fst_conv setl.cases)
+          apply (metis fst_conv setl.cases)
+         apply fastforce
+        apply fastforce
         done
+      done
+    subgoal for \<Gamma>' t X T11 T12 T2
+      apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
+      apply (rule exE[OF MRBNF_FP.exists_fresh[where A="{X} \<union> FVars_typ T11  \<union> FVars_typ T12  \<union> FVars_typ T2 \<union> FTVars t \<union> FFVars_ctxt \<Gamma> \<union> Inl -` dom \<Gamma>"]])
+       apply (auto simp: insert_bound infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.set_bd_UNIV trm.set_bd_UNIV) []
+      apply (meson finite_set cinfinite_imp_infinite finite_imageI finite_ordLess_infinite2 finite_vimageI inj_Inl lfset.UNIV_cinfinite)
+      subgoal for Y
+        apply (rule exI[of _ "{Y}"]; simp add: TAbs_inject)
+        apply (intro conjI)
+          apply (metis imageI setl.cases)
+
+        apply (subst typ.subst)
+        find_theorems tvsubst_typ
+        apply (rule exI[of _ "T11"] conjI exI[of _ "id(X := Y, Y := X)"])+
+          apply (simp_all add: id_on_def) [2]
+      apply simp
+    sorry
+  sorry
         apply (simp add: rev_image_eqI)
         find_theorems "permute_typ _ ?x = ?x"
         apply (rule context_map_cong_id[unfolded map_context_def, simplified])

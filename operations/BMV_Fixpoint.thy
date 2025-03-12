@@ -41,7 +41,7 @@ local_setup \<open>fn lthy =>
     }] [[([], [0])], [([], [0])]] lthy
 
     (* Step 5: Prove BMV structure of pre-MRBNF by composition *)
-    val (bmv, (thms, lthy)) = apfst the (PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some)
+    val (bmv, (thms, lthy)) = apfst the (MRSBNF_Def.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some)
       (map dest_TFree [@{typ 'btv}, @{typ 'bv}, @{typ 'c}, @{typ 'd}])
       I @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"} ([], lthy))
 
@@ -213,6 +213,54 @@ pbmv_monad "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v:
 print_theorems
 print_pbmv_monads
 
+mrsbnf "('tv::var, 'v::var, 'btv::var, 'bv::var, 'c, 'd) FTerm_pre" and "'v::var" and "'tv::var FType"
+  subgoal for f1 f2
+    apply (rule ext)
+    apply (unfold map_FTerm_pre_def comp_def Sb_FTerm_pre_def bmv_defs id_def)
+    apply (subst FType.map_is_Sb, assumption+)+
+    apply (unfold id_def[symmetric] sum.map_id prod.map_id comp_def)
+    apply (rule refl)
+    done
+  subgoal for f3 f4 f5 f6 g1 g2
+    apply (rule ext)
+    apply (unfold map_FTerm_pre_def comp_def Sb_FTerm_pre_def bmv_defs FType.map_id0 Abs_FTerm_pre_inverse[OF UNIV_I])
+    apply (unfold id_def)
+    apply (unfold sum.map_id prod.map_id comp_def sum.map_comp prod.map_comp)
+    apply (rule refl)
+    done
+  subgoal for g1 g2
+    apply (unfold Sb_FTerm_pre_def bmv_defs comp_def id_apply set3_FTerm_pre_def
+        prod.set_map sum.set_map UN_empty2 Un_empty_left Un_empty_right
+        Abs_FTerm_pre_inverse[OF UNIV_I] UN_simps(10)
+        )
+    apply (rule refl)
+    done
+  subgoal for g1 g2
+    apply (unfold Sb_FTerm_pre_def bmv_defs comp_def id_apply set4_FTerm_pre_def
+        prod.set_map sum.set_map UN_empty2 Un_empty_left Un_empty_right
+        Abs_FTerm_pre_inverse[OF UNIV_I] UN_simps(10)
+        )
+    apply (rule refl)
+    done
+  subgoal for g1 g2
+    apply (unfold Sb_FTerm_pre_def bmv_defs comp_def id_apply set5_FTerm_pre_def
+        prod.set_map sum.set_map UN_empty2 Un_empty_left Un_empty_right
+        Abs_FTerm_pre_inverse[OF UNIV_I] UN_simps(10)
+        )
+    apply (rule refl)
+    done
+  subgoal for g1 g2
+    apply (unfold Sb_FTerm_pre_def bmv_defs comp_def id_apply set6_FTerm_pre_def
+        prod.set_map sum.set_map UN_empty2 Un_empty_left Un_empty_right
+        Abs_FTerm_pre_inverse[OF UNIV_I] UN_simps(10)
+        )
+    apply (rule refl)
+    done
+   apply (rule ID.map_is_Sb; assumption)
+  apply (rule FType.map_is_Sb; assumption)
+  done
+print_theorems
+
 lemma set1_Vrs: "set1_FTerm_pre x = Vrs2_FTerm_pre x"
   apply (unfold set1_FTerm_pre_def Vrs2_FTerm_pre_def sum.set_map UN_empty2 Un_empty_left
     prod.set_map Un_empty_right comp_def bmv_defs
@@ -225,20 +273,6 @@ lemma set2_Vrs: "set2_FTerm_pre x = Vrs1_FTerm_pre x"
   )
   apply (rule refl)
   done
-lemma set3_Sb: "set3_FTerm_pre (Sb_FTerm_pre f1 f2 x) = set3_FTerm_pre x"
-  apply (unfold Sb_FTerm_pre_def bmv_defs comp_def id_apply set3_FTerm_pre_def
-    prod.set_map sum.set_map UN_empty2 Un_empty_left Un_empty_right
-    Abs_FTerm_pre_inverse[OF UNIV_I] UN_simps(10)
-  )
-  apply (rule refl)
-  done
-lemma set4_Sb: "set4_FTerm_pre (Sb_FTerm_pre f1 f2 x) = set4_FTerm_pre x"
-  apply (unfold Sb_FTerm_pre_def bmv_defs comp_def id_apply set4_FTerm_pre_def
-    prod.set_map sum.set_map UN_empty2 Un_empty_left Un_empty_right
-    Abs_FTerm_pre_inverse[OF UNIV_I] UN_simps(10)
-  )
-  apply (rule refl)
-  done
 
 ML \<open>
 val bmv = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Fixpoint.FTerm_pre")
@@ -246,101 +280,6 @@ val axioms = BMV_Monad_Def.axioms_of_bmv_monad bmv
 val laxioms = hd axioms
 val param = the (hd (BMV_Monad_Def.params_of_bmv_monad bmv))
 \<close>
-
-lemma Map_is_Sb: "vvsubst_FType f = Sb_FType (Inj_FType_1 \<circ> f)"
-
-  sorry
-
-corollary permute_Sb:
-  fixes f::"'tv::var \<Rightarrow> 'tv"
-  assumes "bij f" "|supp f| <o |UNIV::'tv set|"
-  shows "permute_FType f = Sb_FType (Inj_FType_1 \<circ> f)"
-  apply (rule trans)
-   apply (rule FType.vvsubst_permute[symmetric])
-    apply (rule assms)+
-  apply (rule Map_is_Sb)
-  done
-
-lemma permute_Sb_FType:
-  fixes f::"'tv::var \<Rightarrow> 'tv"
-  assumes "bij f" "|supp f| <o |UNIV::'tv set|" "|SSupp_FType g| <o |UNIV::'tv set|"
-  shows "Sb_FType (permute_FType f \<circ> g \<circ> inv f) = permute_FType f \<circ> Sb_FType g \<circ> permute_FType (inv f)"
-  apply (subst permute_Sb, (rule assms bij_imp_bij_inv supp_inv_bound)+)+
-  apply (unfold comp_assoc)
-  apply (subst Sb_comp_FType[symmetric])
-    apply (rule FType.SSupp_comp_bound)
-     apply (rule FType.SSupp_Inj_bound)
-    apply (rule assms)
-   apply (rule FType.SSupp_comp_bound)
-    apply (rule assms supp_inv_bound)+
-   apply (rule arg_cong2[OF refl _, of _ _ "(\<circ>)"])
-   apply (subst Sb_comp_FType)
-     prefer 3
-     apply (unfold comp_assoc[symmetric])
-     apply (subst Sb_comp_Inj_FType)
-      apply (rule assms)
-     apply (rule refl)
-    apply (rule assms)
-   apply (rule FType.SSupp_comp_bound)
-   apply (rule FType.SSupp_Inj_bound assms supp_inv_bound)+
-  done
-
-lemma Map_is_Sb_FTerm_pre: "map_FTerm_pre f1 f2 id id id id = Sb_FTerm_pre (id \<circ> f2) (TyVar \<circ> f1)"
-  sorry
-lemma Map_is_Sb_ID: "id f1 = id (id \<circ> f1)"
-  by simp
-
-lemma Map_Sb:
-  fixes f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
-  assumes "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
-      "|supp g1| <o |UNIV::'x2 set|" "|SSupp_FType g2| <o |UNIV::'x1 set|"
-    shows "map_FTerm_pre id id f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre g1 g2 \<circ> map_FTerm_pre id id f3 f4 f5 f6"
-  sorry
-
-lemma Map_Sb':
-  fixes f1::"'x1::var \<Rightarrow> 'x1" and f2::"'x2::var \<Rightarrow> 'x2" and f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
-  assumes "bij f1" "|supp f1| <o |UNIV::'x1 set|" "bij f2" "|supp f2| <o |UNIV::'x2 set|"
-      "bij f3" "|supp f3| <o |UNIV::'x3 set|" "bij f4" "|supp f4| <o |UNIV::'x4 set|"
-      "|supp g1| <o |UNIV::'x2 set|" "|SSupp_FType g2| <o |UNIV::'x1 set|"
-  shows "map_FTerm_pre f1 f2 f3 f4 f5 f6 \<circ> Sb_FTerm_pre g1 g2 = Sb_FTerm_pre (id f2 \<circ> g1 \<circ> inv f2) (permute_FType f1 \<circ> g2 \<circ> inv f1) \<circ> map_FTerm_pre f1 f2 f3 f4 f5 f6"
-  apply (rule trans)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-    apply (rule trans)
-     prefer 2
-     apply (rule FTerm_pre.map_comp0[of id id f3 f4 f1 f2 id id id _ id])
-                apply (rule assms bij_id supp_id_bound)+
-    apply (unfold id_o o_id)
-    apply (rule refl)
-   apply (unfold comp_assoc Map_is_Sb_FTerm_pre)[1]
-   apply (rule trans)
-    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-  apply (rule trans)
-   apply (rule Map_Sb)
-          apply (rule assms)+
-    apply (rule trans)
-     apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-     apply (rule trans)
-     apply (rule ext)
-     apply (rule FTerm_pre.map_cong0[rotated -6])
-                      apply ((rule inv_o_simp1[symmetric, THEN fun_cong], rule assms) | rule id_o[symmetric, THEN fun_cong, of f3] id_o[symmetric, THEN fun_cong, of f4] id_o[symmetric, THEN fun_cong, of f5] id_o[symmetric, THEN fun_cong, of f6])+
-                 apply (rule assms supp_id_bound bij_id supp_comp_bound supp_inv_bound infinite_UNIV bij_comp)+
-     apply (rule FTerm_pre.map_comp0)
-                apply (rule assms supp_id_bound bij_id supp_inv_bound)+
-    apply (rule trans[OF comp_assoc[symmetric]])
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-    apply (subst Map_is_Sb_FTerm_pre)
-    apply (rule FTerm_pre.Sb_comp)
-       apply (rule FTerm_pre.SSupp_comp_bound FTerm_pre.SSupp_Inj_bound supp_inv_bound assms)+
-   apply (unfold comp_assoc[symmetric])
-   apply (subst FTerm_pre.Sb_comp_Inj, rule assms)+
-  apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-  apply (rule trans)
-  apply (rule FTerm_pre.Sb_comp)
-      apply (rule FTerm_pre.SSupp_comp_bound FTerm_pre.SSupp_Inj_bound supp_inv_bound assms)+
-  apply (unfold comp_assoc[symmetric])
-  apply (subst permute_Sb[symmetric] Map_is_Sb_ID[symmetric], ((rule assms)+)?)+
-  apply (rule refl)
-  done
 
 (* Substitution axioms *)
 abbreviation \<eta> :: "'v::var \<Rightarrow> ('tv::var, 'v::var, 'a::var, 'b::var, 'c, 'd) FTerm_pre" where
@@ -783,6 +722,9 @@ lemma small_PFVarss:
 lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_FTerm_pre y \<inter> PFVars_1 p = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set5_FTerm_pre y \<union> set6_FTerm_pre y \<Longrightarrow> FTVars (pu p) \<subseteq> FTVars t \<union> PFVars_1 p) \<Longrightarrow>
   FTVars (Uctor y p) \<subseteq> FTVars (FTerm_ctor (map_FTerm_pre id id id id fst fst y)) \<union> PFVars_1 p"
+  apply (frule iffD1[OF meta_eq_to_obj_eq[OF valid_P_def]])
+  apply (unfold case_prod_beta)
+  apply (erule conjE)+
   subgoal premises prems
     apply (unfold Uctor_def case_prod_beta)
     apply (rule case_split)
@@ -809,33 +751,16 @@ lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_FTerm_pre y \<inter> PFVa
     apply (unfold if_not_P)
     apply (erule thin_rl)
 
-    apply (subgoal_tac "|{ a. id a \<noteq> id a }| <o |UNIV::'v set|")
-     prefer 2
-      apply (rule card_of_subset_bound[OF _ emp_bound])
-      apply (rule subset_emptyI)
-      apply (drule CollectD)
-      apply (rotate_tac -1)
-      apply (erule contrapos_np)
-     apply (rule refl)
-    apply (subgoal_tac "|{ a. snd p a \<noteq> TyVar a }| <o |UNIV::'tv set|")
-     prefer 2
-     apply (insert prems(1))[1]
-     apply (unfold valid_P_def case_prod_beta SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric] comp_def)[1]
-     apply (erule conjE)
-     apply (erule ordLess_ordLeq_trans)
-     apply (rule cmin1)
-    apply (rule card_of_Card_order)+
+    apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] [Map_Sb'] 1\<close>)
+      apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
 
-     apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] [Map_Sb'] 1\<close>)
-       apply assumption
-    apply assumption
-    apply (unfold FTerm.FVars_ctor)
+    apply (unfold FTerm.FVars_ctor prod.collapse)
     apply (subst FTerm_pre.set_map, (rule bij_id supp_id_bound)+)+
     apply (unfold image_id image_comp comp_def prod.collapse)
     apply (rule Un_mono')+
-      apply (unfold set3_Sb set4_Sb set1_Vrs set2_Vrs)
+      apply (unfold FTerm_pre.set_Sb set1_Vrs set2_Vrs)
       apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] Vrs_Sb 1\<close>)
-        apply assumption+
+        apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
       apply (unfold PFVars_1_def case_prod_beta IImsupp_FType_def SSupp_FType_def
         tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric] comp_def
       )[1]
@@ -856,6 +781,8 @@ lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_FTerm_pre y \<inter> PFVa
       apply hypsubst
       apply assumption
 
+     apply (subst FTerm_pre.set_Sb)
+      apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
       apply (rule Diff_Un_disjunct)
       apply (rule prems)
@@ -888,6 +815,9 @@ lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_FTerm_pre y \<inter> PFVa
 lemma FVars_subset: "valid_P p \<Longrightarrow> set4_FTerm_pre y \<inter> PFVars_2 p = {} \<Longrightarrow>
   (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set5_FTerm_pre y \<union> set6_FTerm_pre y \<Longrightarrow> FVars (pu p) \<subseteq> FVars t \<union> PFVars_2 p) \<Longrightarrow>
   FVars (Uctor y p) \<subseteq> FVars (FTerm_ctor (map_FTerm_pre id id id id fst fst y)) \<union> PFVars_2 p"
+  apply (frule iffD1[OF meta_eq_to_obj_eq[OF valid_P_def]])
+  apply (unfold case_prod_beta)
+  apply (erule conjE)+
   subgoal premises prems
     apply (unfold Uctor_def case_prod_beta)
     apply (rule case_split)
@@ -914,33 +844,15 @@ lemma FVars_subset: "valid_P p \<Longrightarrow> set4_FTerm_pre y \<inter> PFVar
     apply (unfold if_not_P)
     apply (erule thin_rl)
 
-    apply (subgoal_tac "|{ a. id a \<noteq> id a }| <o |UNIV::'v set|")
-     prefer 2
-      apply (rule card_of_subset_bound[OF _ emp_bound])
-      apply (rule subset_emptyI)
-      apply (drule CollectD)
-      apply (rotate_tac -1)
-      apply (erule contrapos_np)
-     apply (rule refl)
-    apply (subgoal_tac "|{ a. snd p a \<noteq> TyVar a }| <o |UNIV::'tv set|")
-     prefer 2
-     apply (insert prems(1))[1]
-     apply (unfold valid_P_def case_prod_beta SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric] comp_def)[1]
-     apply (erule conjE)
-     apply (erule ordLess_ordLeq_trans)
-     apply (rule cmin1)
-    apply (rule card_of_Card_order)+
-
-     apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] [Map_Sb'] 1\<close>)
-       apply assumption
-    apply assumption
-    apply (unfold FTerm.FVars_ctor)
+    apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] [Map_Sb'] 1\<close>)
+      apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
+    apply (unfold FTerm.FVars_ctor prod.collapse)
     apply (subst FTerm_pre.set_map, (rule bij_id supp_id_bound)+)+
     apply (unfold image_id image_comp comp_def prod.collapse)
     apply (rule Un_mono')+
-      apply (unfold set3_Sb set4_Sb set1_Vrs set2_Vrs)
+      apply (unfold set1_Vrs set2_Vrs)
       apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] Vrs_Sb 1\<close>)
-        apply assumption+
+      apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
       apply (unfold PFVars_2_def case_prod_beta IImsupp_FTerm2_def SSupp_FType_def
         tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric] comp_def
       )[1]
@@ -952,6 +864,8 @@ lemma FVars_subset: "valid_P p \<Longrightarrow> set4_FTerm_pre y \<inter> PFVar
       apply hypsubst
       apply assumption
 
+     apply (subst FTerm_pre.set_Sb)
+      apply (rule FTerm_pre.SSupp_Inj_bound prems(4,5)[THEN ordLess_ordLeq_trans] cmin1 cmin2 card_of_Card_order)+
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
       apply (rule Diff_Un_disjunct)
       apply (rule prems)
@@ -988,6 +902,9 @@ lemma permute_Uctor:
     (\<lambda>(t, pu). (permute_FTerm f1 f2 t, \<lambda>p. if valid_P p then permute_FTerm f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
     (\<lambda>(t, pu). (permute_FTerm f1 f2 t, \<lambda>p. if valid_P p then permute_FTerm f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
   y) (Pmap f1 f2 p)"
+  apply (frule iffD1[OF meta_eq_to_obj_eq[OF valid_P_def]])
+  apply (subst (asm) case_prod_beta)
+  apply (erule conjE)+
   apply (unfold Uctor_def)
   apply (subst FTerm_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
   apply (unfold id_o_commute[of f1] id_o_commute[of f2] fst_o_f comp_assoc comp_def[of snd] snd_conv case_prod_beta prod.collapse)
@@ -1012,25 +929,9 @@ lemma permute_Uctor:
    apply (rule FTerm.permute_ctor)
       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
 
-  apply (subgoal_tac "|{ a. id a \<noteq> id a }| <o |UNIV::'v set|")
-   prefer 2
-   apply (rule card_of_subset_bound[OF _ emp_bound])
-   apply (rule subset_emptyI)
-   apply (drule CollectD)
-   apply (rotate_tac -1)
-   apply (erule contrapos_np)
-   apply (rule refl)
-  apply (subgoal_tac "|{ a. snd p a \<noteq> TyVar a }| <o |UNIV::'tv set|")
-   prefer 2
-   apply (unfold valid_P_def case_prod_beta SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric] comp_def)[1]
-   apply (erule conjE)
-   apply (erule ordLess_ordLeq_trans)
-   apply (rule cmin1)
-    apply (rule card_of_Card_order)+
-
-     apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] [Map_Sb'] 1\<close>)
-       apply assumption
-   apply assumption
+  apply (tactic \<open>EqSubst.eqsubst_tac @{context} [0] [Map_Sb'] 1\<close>)
+    apply (rule FTerm_pre.SSupp_Inj_bound cmin1 cmin2 card_of_Card_order
+      | erule ordLess_ordLeq_trans)+
 
   apply (subst FTerm_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
   apply (unfold id_o o_id)
@@ -1039,10 +940,11 @@ lemma permute_Uctor:
   apply (unfold trans[OF Pmap_id0[THEN fun_cong] id_apply])
   apply (unfold Pmap_def case_prod_beta snd_conv compSS_FType_def)
 
-  apply (subst trans[OF comp_apply[symmetric] Map_Sb'[THEN fun_cong]])
-      apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+  apply (subst trans[OF comp_apply[symmetric] FTerm_pre.map_Sb_strong(1)[THEN fun_cong]])
+  apply (assumption | rule cmin1 cmin2 card_of_Card_order FTerm_pre.SSupp_Inj_bound | erule ordLess_ordLeq_trans)+
   apply (unfold id_o o_id inv_o_simp2)
-  apply (unfold comp_def)
+  apply (subst FType.vvsubst_permute, (assumption | rule cmin1 cmin2 card_of_Card_order FTerm_pre.SSupp_Inj_bound | erule ordLess_ordLeq_trans)+)
+  apply (unfold comp_def BNF_Composition.id_bnf_def inv_simp2 id_def)
   apply (rule refl)
   done
 

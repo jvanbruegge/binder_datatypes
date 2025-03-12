@@ -91,6 +91,8 @@ signature BMV_MONAD_DEF = sig
   val pbmv_monad_of_generic: Context.generic -> string -> bmv_monad option;
   val pbmv_monad_of: Proof.context -> string -> bmv_monad option;
 
+  val id_mrbnf: MRBNF_Def.mrbnf;
+
   val pbmv_monad_of_bnf: BNF_Def.bnf -> local_theory -> bmv_monad * local_theory
   val register_bnf_as_pbmv_monad: string -> local_theory -> local_theory
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
@@ -103,6 +105,8 @@ end
 structure BMV_Monad_Def : BMV_MONAD_DEF = struct
 
 open MRBNF_Util
+
+val id_mrbnf = the (MRBNF_Def.mrbnf_of @{context} "BMV_Monad.ID");
 
 type 'a bmv_monad_axioms = {
   Sb_Inj: 'a,
@@ -642,6 +646,8 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
     val axioms = axioms_of_bmv_monad bmv;
     val facts = facts_of_bmv_monad bmv;
     val lfacts = nth facts (leader_of_bmv_monad bmv);
+    val params = params_of_bmv_monad bmv;
+
     fun note_unless_dont_note (noted, lthy) =
       let val notes =
         [
@@ -649,12 +655,15 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
          ("Sb_comp_Inj", maps #Sb_comp_Injs axioms, []),
          ("Sb_comp", map #Sb_comp axioms, []),
          ("Sb_cong", map #Sb_cong axioms, []),
+         ("Map_Sb", map_filter (Option.map #Map_Sb) params, []),
          ("Inj_inj", #Inj_inj lfacts, []),
          ("SSupp_Inj", #SSupp_Inj lfacts, []),
          ("SSupp_Inj_bound", #SSupp_Inj_bound lfacts, []),
          ("SSupp_comp_subset", #SSupp_comp_subset lfacts, []),
          ("SSupp_comp_bound", #SSupp_comp_bound lfacts, [])
-        ] |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true bmv_name (Binding.name thmN)), attrs), [(thms, [])]));
+        ]
+        |> filter_out (null o #2)
+        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true bmv_name (Binding.name thmN)), attrs), [(thms, [])]));
       in Local_Theory.notes notes lthy |>> append noted end
     val fact_policy = fact_policy lthy;
   in ([], lthy)

@@ -5,6 +5,14 @@ theory BMV_Monad
    "mrsbnf" :: thy_goal
 begin
 
+local_setup \<open>fn lthy =>
+  let
+    val (id_mrbnf, (_, lthy)) = MRBNF_Comp.demote_mrbnf I [MRBNF_Def.Free_Var] MRBNF_Comp.ID_mrbnf
+      ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
+    val lthy = MRBNF_Def.register_mrbnf_raw "BMV_Monad.ID" id_mrbnf lthy
+  in lthy end
+\<close>
+
 declare [[mrbnf_internals]]
 binder_datatype 'a FType
   = TyVar 'a
@@ -134,21 +142,9 @@ print_theorems
 
 ML_file \<open>../Tools/mrsbnf_def.ML\<close>
 
-local_setup \<open>fn lthy =>
-let
-  val (id_mrbnf, (_, lthy)) = MRBNF_Comp.demote_mrbnf I [MRBNF_Def.Free_Var] MRBNF_Comp.ID_mrbnf ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
-  val (id_mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def (K BNF_Def.Note_Some) I (SOME "BMV_Monad.ID") [id_mrbnf]
-     (the (BMV_Monad_Def.pbmv_monad_of lthy "BMV_Monad.ID")) [{
-      map_Sb = NONE,
-      map_is_Sb = fn ctxt => EVERY [
-        Local_Defs.unfold0_tac ctxt @{thms id_def comp_def BNF_Composition.id_bnf_def},
-        resolve_tac ctxt [refl] 1
-      ],
-      set_Sb = []
-    }] lthy;
-  val lthy = MRSBNF_Def.register_mrsbnf "BMV_Monad.ID" id_mrsbnf lthy
-in lthy end
-\<close>
+mrsbnf ID: "'a::var"
+  unfolding id_def comp_def BNF_Composition.id_bnf_def by (rule refl)
+print_theorems
 
 pbmv_monad "'a::var FType"
   Sbs: tvsubst_FType
@@ -201,14 +197,12 @@ pbmv_monad "('a1::var, 'a2, 'c1, 'c2) L'"                          and "'a1::var
 
 print_pbmv_monads
 
-ML_file \<open>../Tools/pbmv_monad_comp.ML\<close>
-
 ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
 local_setup \<open>fn lthy =>
   let
-    val (bmv, (thms, lthy)) = PBMV_Monad_Comp.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) [] I
+    val (bmv, (thms, lthy)) = MRSBNF_Def.pbmv_monad_of_typ true BNF_Def.Smart_Inline (K BNF_Def.Note_Some) [] I
       @{typ "('a1, 'a2, 'a1 * 'a2,  'a1 * 'a2 * 'a2 * 'a2 FType) L'"}
       ([], lthy)
 

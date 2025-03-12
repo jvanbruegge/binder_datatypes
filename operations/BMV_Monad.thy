@@ -143,7 +143,8 @@ print_theorems
 ML_file \<open>../Tools/mrsbnf_def.ML\<close>
 
 mrsbnf ID: "'a::var"
-  unfolding id_def comp_def BNF_Composition.id_bnf_def by (rule refl)
+  unfolding id_def comp_def BNF_Composition.id_bnf_def
+  by (rule refl)
 print_theorems
 
 pbmv_monad "'a::var FType"
@@ -323,13 +324,13 @@ val model_L = {
   ops = [@{typ "'a1 * 'a1 * ('c1 + 'c2)"}],
   var_class = @{class var},
   leader = 0,
-  frees = [@{typ "'a1"}],
-  lives = [@{typ "'c1"}, @{typ "'c2"}],
-  lives' = [@{typ "'c1'"}, @{typ "'c2'"}],
-  deads = [],
+  frees = [[@{typ "'a1"}]],
+  lives = [[@{typ "'c1"}, @{typ "'c2"}]],
+  lives' = [[@{typ "'c1'"}, @{typ "'c2'"}]],
+  deads = [[]],
   bmv_ops = [BMV_Monad_Def.morph_bmv_monad (
     MRBNF_Util.subst_typ_morphism (
-      BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
+      hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv) ~~ [@{typ "'a1"}]
   )) id_bmv],
   consts = {
     bd = @{term natLeq},
@@ -460,18 +461,18 @@ val model_L1 = {
   ops = [@{typ "'a1 * 'a2"}],
   var_class = @{class var},
   leader = 0,
-  frees = [@{typ "'a1"}, @{typ "'a2"}],
-  lives = [],
-  lives' = [],
-  deads = [],
+  frees = [[@{typ "'a1"}, @{typ "'a2"}]],
+  lives = [[]],
+  lives' = [[]],
+  deads = [[]],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
-        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
+        hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv) ~~ [@{typ "'a1"}]
     )) id_bmv,
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
-        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a2"}]
+        hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv) ~~ [@{typ "'a2"}]
     )) id_bmv
   ],
   consts = {
@@ -548,22 +549,22 @@ val model_L2 = {
   ops = [@{typ "('a1, 'a2) L2"}],
   var_class = @{class var},
   leader = 0,
-  frees = [@{typ 'a1}, @{typ "'a2"}],
-  lives = [],
-  lives' = [],
-  deads = [],
+  frees = [[@{typ 'a1}, @{typ "'a2"}]],
+  lives = [[]],
+  lives' = [[]],
+  deads = [[]],
   bmv_ops = [
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
-        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a1"}]
+        hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv) ~~ [@{typ "'a1"}]
     )) id_bmv,
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
-        BMV_Monad_Def.frees_of_bmv_monad id_bmv ~~ [@{typ "'a2"}]
+        hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv) ~~ [@{typ "'a2"}]
     )) id_bmv,
     BMV_Monad_Def.morph_bmv_monad (
       MRBNF_Util.subst_typ_morphism (
-        BMV_Monad_Def.frees_of_bmv_monad FType_bmv ~~ [@{typ "'a2::var"}]
+        hd (BMV_Monad_Def.frees_of_bmv_monad FType_bmv) ~~ [@{typ "'a2::var"}]
     )) FType_bmv
   ],
   consts = {

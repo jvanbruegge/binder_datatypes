@@ -631,7 +631,7 @@ val vars = map TVar (rev (Term.add_tvarsT (#T quot) []));
 \<close>
 
 ML \<open>
-val model = MRBNF_Recursor.mk_quotient_model quot (vars ~~ [@{typ "'tv::var"}, @{typ "'v::var"}]) {
+val model = MRBNF_Recursor.mk_quotient_model quot (vars ~~ [@{typ "'tv::var"}, @{typ "'v::var"}]) [] {
   binding = @{binding "tvsubst"},
   Uctor = @{term "Uctor :: _ \<Rightarrow> ('tv::var, 'v::var) P \<Rightarrow> _"},
   validity = NONE,

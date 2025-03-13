@@ -1141,7 +1141,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
     } : (Proof.context -> tactic) MRBNF_Recursor.parameter;
 
     val rec_models = fst (@{fold_map 5} (fn quotient => fn mrbnf => fn model => fn Uctor => fn defs => fn n =>
-      (MRBNF_Recursor.mk_quotient_model quotient [] {
+      (MRBNF_Recursor.mk_quotient_model quotient [] [] {
         binding = #binding model,
         Uctor = fst Uctor,
         validity = NONE,

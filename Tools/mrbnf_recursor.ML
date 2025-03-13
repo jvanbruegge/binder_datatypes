@@ -76,7 +76,8 @@ sig
   val mk_supp_bound: term -> term;
 
   val mk_quotient_model: MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T
-    -> (typ * typ) list -> (Proof.context -> tactic) quotient_model -> (Proof.context -> tactic) model
+    -> (typ * typ) list -> (typ * typ) list -> (Proof.context -> tactic) quotient_model
+    -> (Proof.context -> tactic) model
   val create_binding_recursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> (Proof.context -> tactic) parameter -> (Proof.context -> tactic) model list
     -> local_theory -> recursor_result list * local_theory;
@@ -185,18 +186,22 @@ fun addPred pred_opt d = case pred_opt of
 
 val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
 
-fun mk_quotient_model quot substitution qmodel =
+fun mk_quotient_model quot substitution codomain_substitution qmodel =
   let
     fun mk_subst f = if null substitution then I else f substitution;
+    fun mk_cosubst f = if null codomain_substitution then I else f codomain_substitution;
+
     val subst = mk_subst Term.subst_atomic_types;
     val substT = mk_subst Term.typ_subst_atomic;
+    val cosubst = mk_cosubst Term.subst_atomic_types;
+    val cosubstT = mk_cosubst Term.typ_subst_atomic;
     val Ts = fst (split_last (binder_types (fastype_of (#permute quot))));
   in {
-    U = substT (#T quot),
+    U = cosubstT (substT (#T quot)),
     binding = #binding qmodel,
-    UFVarss = map (Term.abs ("t", substT (#T quot)) o subst) (#FVarss quot),
-    Umap = fold_rev Term.abs (map (pair "f" o substT) Ts) (
-      Term.abs ("t", substT (#T quot)) (Term.list_comb (subst (#permute quot), map Bound (length Ts downto 1)))
+    UFVarss = map (Term.abs ("t", substT (#T quot)) o cosubst o subst) (#FVarss quot),
+    Umap = fold_rev Term.abs (map (pair "f" o cosubstT o substT) Ts) (
+      Term.abs ("t", substT (#T quot)) (Term.list_comb (cosubst (subst (#permute quot)), map Bound (length Ts downto 1)))
     ),
     Uctor = #Uctor qmodel,
     validity = Option.map (fn v => {

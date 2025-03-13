@@ -905,13 +905,13 @@ proof -
 qed
 
 lemma raw_refreshs:
-  fixes x::"('a::covar, 'a, 'a, 'a raw_term, 'a raw_term, 'a raw_term) term_pre"
+  fixes x::"('a::covar, 'a, 'a raw_term, 'a raw_term) term_pre"
   assumes "|A| <o |UNIV::'a set|"
-  shows "\<exists>y. (set2_term_pre y \<union> set3_term_pre y) \<inter> A = {} \<and> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
+  shows "\<exists>y. set2_term_pre y \<inter> A = {} \<and> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
 
-  apply (rule exE[OF eextend_fresh[of "set2_term_pre x \<union> set3_term_pre x"
-          "(A \<union> (set2_term_pre x \<union> set3_term_pre x)) \<union> ((\<Union>(FVars_raw_term ` set4_term_pre x) \<union> \<Union>(FVars_raw_term ` set5_term_pre x)) - (set2_term_pre x \<union> set3_term_pre x))"
-          "(\<Union>(FVars_raw_term ` set4_term_pre x) \<union> \<Union>(FVars_raw_term ` set5_term_pre x)) - (set2_term_pre x \<union> set3_term_pre x)"
+  apply (rule exE[OF eextend_fresh[of "set2_term_pre x"
+          "A \<union> set2_term_pre x \<union> ((\<Union>(FVars_raw_term ` set3_term_pre x)) - set2_term_pre x)"
+          "(\<Union>(FVars_raw_term ` set3_term_pre x)) - set2_term_pre x"
           ]])
        apply (rule var_class.Un_bound term_pre.set_bd_UNIV assms ordLeq_ordLess_trans[OF card_of_diff]
       term_pre.set_bd[THEN ordLess_ordLeq_trans] var_class.UN_bound var_class.large' FVars_raw_bd_UNIVs infinite_UNIV
@@ -919,31 +919,10 @@ lemma raw_refreshs:
     apply (rule Un_upper2)
    apply (rule Diff_disjoint)
   apply (erule conjE)+
-  apply (unfold Un_Diff)
 
   subgoal for g
-    apply (rule exE[OF extend_id_on[of g "\<Union> (FVars_raw_term ` set5_term_pre x)" "set2_term_pre x \<union> set3_term_pre x" "set3_term_pre x"]])
-          apply assumption+
-        apply (erule id_on_antimono)
-        apply (rule Un_upper2)
-       apply assumption
-      apply (erule Int_subset_empty2)
-      apply (rule subset_trans[rotated])
-       apply (rule Un_upper1)
-      apply (rule Un_upper2)
-
-     apply (rule subsetI)
-     apply (rotate_tac -1)
-     apply (erule contrapos_pp)
-     apply (unfold Un_iff de_Morgan_disj)[1]
-     apply (erule conjE)+
-     apply assumption
-    apply (erule conjE)+
-
-    subgoal for f2
-      apply (rule exI[of _ "map_term_pre id g g (permute_raw_term g) (permute_raw_term f2) id x"])
+      apply (rule exI[of _ "map_term_pre id g (permute_raw_term g) id x"])
       apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
-      apply (unfold image_Un[symmetric])
       apply (rule conjI)
        apply (erule Int_subset_empty2)
        apply (unfold Un_assoc)[1]
@@ -957,12 +936,9 @@ lemma raw_refreshs:
                           apply (rule alpha_refls)+
                        apply (rule supp_id_bound bij_id | assumption)+
 
-          apply (erule id_on_antimono)
-          apply (rule Un_upper1)
-         apply assumption+
+
       done
     done
-  done
 
 lemma avoid_raw_freshs:
   fixes x::"'a::covar raw_term_pre"

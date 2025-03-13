@@ -168,8 +168,19 @@ lemma wf_ctxt_FFVars: "\<turnstile> \<Gamma> OK \<Longrightarrow> a \<in> FFVars
 lemma typing_fresh_ty_extend: "\<Gamma> \<^bold>, Inl x <: U \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> x \<notin> Inl -` dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis Pair_inject UnE subset_vimage_iff typing_wf_ctxt vimageD wf_ctxt_FFVars wf_ctxt_ConsE)
 
+lemma [equiv]:
+  fixes \<sigma> :: "'a :: var \<Rightarrow> 'a" and \<tau> :: "'b :: var \<Rightarrow> 'b"
+  shows "bij \<sigma> \<Longrightarrow>
+    |supp \<sigma>| <o |UNIV :: 'a ::var set| \<Longrightarrow>
+    bij \<tau> \<Longrightarrow>
+    |supp \<tau>| <o |UNIV :: 'b ::var set| \<Longrightarrow>
+    Ra(map (map_prod (map_sum (inv \<sigma>) (inv \<tau>)) (permute_typ (inv \<sigma>))) (map (map_prod (map_sum \<sigma> \<tau>) (permute_typ \<sigma>)) \<Gamma>' \<^bold>, Inr (\<tau> xa) <: permute_typ \<sigma> T1))
+     (permute_trm (inv \<sigma>) (inv \<tau>) (permute_trm \<sigma> \<tau> ta)) (permute_typ (inv \<sigma>) (permute_typ \<sigma> T2)) = 
+    R (\<Gamma>' \<^bold>, Inr xa <: T1) ta T2"
+  sorry
+
 declare [[ML_print_depth=10000]]
-binder_inductive (no_auto_equiv) typing
+binder_inductive typing
   sorry
   (*subgoal premises prems for R B1 B2 \<Gamma> \<Delta> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib

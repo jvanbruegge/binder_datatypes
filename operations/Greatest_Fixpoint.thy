@@ -363,48 +363,31 @@ lemma set_level_overapprox: "free_raw_term z x \<Longrightarrow> z \<in> (\<Unio
      apply (erule UN_E)?
      apply (rule UN_I)
      apply (rule UNIV_I)
-  thm set_term_level.simps
      apply (subst set_term_level.simps(2))
     apply (unfold raw_term.case)
-    apply blast (* TODO(ozkutuk): is there a weaker tactic I can use here? *)
-     (* apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 1] 1\<close>)
-     apply assumption *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 1] 1\<close>)
+     apply assumption
     (* repeated *)
     apply (erule UN_E)?
     apply (rule UN_I)
      apply (rule UNIV_I)
     apply (subst set_term_level.simps(2))
    apply (unfold raw_term.case)
-  apply fast
-    (* apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 2] 1\<close>)
+   apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
     apply (rule UN_I)
      apply assumption
-    apply assumption *)
+    apply assumption
     (* repeated *)
    apply (erule UN_E)?
    apply (rule UN_I)
     apply (rule UNIV_I)
    apply (subst set_term_level.simps(2))
   apply (unfold raw_term.case)
-  apply fast
-  done
-(*
-   apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 3] 1\<close>)
-   apply (rule UN_I)
-    apply assumption
-   apply assumption
-    (* repeated *)
-  apply (erule UN_E)?
-  apply (rule UN_I)
-   apply (rule UNIV_I)
-  apply (subst set_term_level.simps(2))
-  apply (unfold raw_term.case)
-  apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 4] 1\<close>)
+  apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
   apply (rule UN_I)
    apply assumption
   apply assumption
   done
-*)
 
 (* this proof is specific to codatatypes *)
 lemma FVars_raw_bds: "|FVars_raw_term x| <o card_suc natLeq"

@@ -245,7 +245,7 @@ lemma FVars_raw_intros:
 
 lemma FVars_raw_ctors:
   "FVars_raw_term (raw_term_ctor x) = set1_term_pre x \<union> (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x)
-    \<union> (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x) \<union> \<Union>(FVars_raw_term ` set4_term_pre x)"
+    \<union> \<Union>(FVars_raw_term ` set4_term_pre x)"
   apply (rule subset_antisym)
    apply (unfold FVars_raw_term_def)[1]
    apply (rule subsetI)
@@ -254,12 +254,12 @@ lemma FVars_raw_ctors:
     (* REPEAT_DETERM *)
       apply (drule iffD1[OF raw_term.inject])
       apply hypsubst_thin
-      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 1] 1\<close>)
+      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 1] 1\<close>)
       apply assumption
     (* repeated *)
      apply (drule iffD1[OF raw_term.inject])
      apply hypsubst_thin
-     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 2] 1\<close>)
+     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
      apply (rule DiffI)
       apply (rule UN_I)
        apply (unfold mem_Collect_eq)
@@ -267,7 +267,7 @@ lemma FVars_raw_ctors:
     (* repeated *)
    apply (drule iffD1[OF raw_term.inject])
    apply hypsubst_thin
-   apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 4] 1\<close>)
+   apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
    apply (rule UN_I)
     apply (unfold mem_Collect_eq)
     apply assumption+
@@ -286,7 +286,7 @@ lemma FVars_raw_permute_leq:
      apply (unfold permute_raw_simps[OF assms] FVars_raw_ctors)[1]
      apply (subst term_pre.set_map, (rule assms supp_id_bound bij_id)+)+
      apply (unfold image_comp[unfolded comp_def])
-     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 1] 1\<close>)
+     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 1] 1\<close>)
      apply (rule DiffI)?
      apply (rule imageI | (rule UN_I, assumption))
      apply assumption
@@ -295,7 +295,7 @@ lemma FVars_raw_permute_leq:
     apply (unfold permute_raw_simps[OF assms] FVars_raw_ctors)[1]
     apply (subst term_pre.set_map, (rule assms supp_id_bound bij_id)+)+
     apply (unfold image_comp[unfolded comp_def])
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 2] 1\<close>)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 2] 1\<close>)
     apply (rule DiffI)?
      apply (rule imageI | (rule UN_I, assumption))
      apply assumption
@@ -304,7 +304,7 @@ lemma FVars_raw_permute_leq:
   apply (unfold permute_raw_simps[OF assms] FVars_raw_ctors)[1]
   apply (subst term_pre.set_map, (rule assms supp_id_bound bij_id)+)+
   apply (unfold image_comp[unfolded comp_def])
-  apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 4] 1\<close>)
+  apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 3 3] 1\<close>)
   apply (rule DiffI)?
   apply (rule imageI | (rule UN_I, assumption))
   apply assumption

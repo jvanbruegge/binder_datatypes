@@ -986,6 +986,9 @@ lemma VVr_eq_TyVar[simp]: "tvVVr_tvsubst_typ a = TyVar a"
 lemma SSupp_typ_TyVar[simp]: "SSupp_typ TyVar = {}"
   unfolding SSupp_typ_def by simp
 
+lemma IImsupp_typ_TyVar[simp]: "IImsupp_typ TyVar = {}"
+  unfolding IImsupp_typ_def by simp
+
 lemma SSupp_typ_fun_upd_le: "SSupp_typ (f(X := T)) \<subseteq> insert X (SSupp_typ f)"
   unfolding SSupp_typ_def by auto
 
@@ -1120,6 +1123,10 @@ lemma SSupp_typ_tvsubst_typ_bound:
   shows "|SSupp_typ (tvsubst_typ f \<circ> g)| <o |UNIV :: 'a set|"
   using SSupp_typ_tvsubst_typ[of f g] assms
   by (simp add: card_of_subset_bound lfset.Un_bound)
+
+lemma tvsubst_typ_TyVar[simp]: "tvsubst_typ TyVar T = T"
+  by (binder_induction T avoiding: T rule: typ.strong_induct)
+    (auto simp: IImsupp_typ_def intro!: trans[OF lfset.map_cong lfset.map_id])
 
 lemma tvsubst_typ_comp:
   fixes f g ::"'a::var \<Rightarrow> 'a typ"
@@ -1284,11 +1291,11 @@ binder_inductive (no_auto_equiv) typing
   done
 
 inductive step where
-  "value v \<Longrightarrow> step (App (Abs x T t) v) (tvsubst (Var(x := v)) TyVar t)"
-| "step (TApp (TAbs X T t) T2) (tvsubst Var (TyVar(X := T2)) t)"
-| "step t t' \<Longrightarrow> step (App t u) (App t' u)"
-| "value v \<Longrightarrow> step t t' \<Longrightarrow> step (App v t) (App v t')"
-| "step t t' \<Longrightarrow> step (TApp t T) (TApp t' T)"
+  AppAbs: "value v \<Longrightarrow> step (App (Abs x T t) v) (tvsubst (Var(x := v)) TyVar t)"
+| TAppTAbs: "step (TApp (TAbs X T t) T2) (tvsubst Var (TyVar(X := T2)) t)"
+| AppCong1: "step t t' \<Longrightarrow> step (App t u) (App t' u)"
+| AppCong2: "value v \<Longrightarrow> step t t' \<Longrightarrow> step (App v t) (App v t')"
+| TAppCong: "step t t' \<Longrightarrow> step (TApp t T) (TApp t' T)"
 
 lemma proj_ctxt_empty[simp]: "proj_ctxt \<emptyset> = \<emptyset>"
   unfolding proj_ctxt_def map_filter_def
@@ -1304,9 +1311,258 @@ lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longri
   by (induction \<Gamma> t T rule: typing.induct)
     (auto intro!: value.intros intro: step.intros elim!: value.cases dest!: canonical_closed_Fun canonical_closed_Forall)
 
-thm progress
+thm progress[no_vars]
+
+lemma SSupp_trm_Var[simp]: "SSupp_trm Var = {}"
+  unfolding SSupp_trm_def tvVVr_tvsubst_trm_def tv\<eta>_trm_tvsubst_trm_def Var_def by auto
+lemma SSupp_trm_Var_bound[simp]:
+  "|SSupp_trm (Var :: _ \<Rightarrow> ('tv::var, 't::var) trm)| <o cmin |UNIV::'tv set| |UNIV::'t set|"
+  by (auto simp: cmin_greater)
+lemma SSupp_trm_fun_upd: "SSupp_trm (f(x:=t)) \<subseteq> insert x (SSupp_trm f)"
+  unfolding SSupp_trm_def by auto
+lemma SSupp_trm_fun_upd_bound[simp]:
+  fixes t :: "('tv::var, 't::var) trm"
+  shows  "|SSupp_trm f| <o cmin |UNIV::'tv set| |UNIV::'t set| \<Longrightarrow>
+    |SSupp_trm (f(x:=t))| <o cmin |UNIV::'tv set| |UNIV::'t set|"
+  by (rule ordLeq_ordLess_trans[OF card_of_mono1[OF SSupp_trm_fun_upd]])
+    (metis Cnotzero_UNIV cmin_greater finite.insertI finite_ordLess_infinite2 infinite_UNIV infinite_card_of_insert
+      ordIso_ordLess_trans)
+
+lemma set_proj_ctxt_eq: "set \<Gamma> = set \<Delta> \<Longrightarrow> set (proj_ctxt \<Gamma>) = set (proj_ctxt \<Delta>)"
+  by (auto simp: proj_ctxt_def map_filter_def)
+
+lemma typing_permute: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Delta> OK \<Longrightarrow> set \<Gamma> = set \<Delta> \<Longrightarrow> \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
+  apply (binder_induction \<Gamma> t T arbitrary: \<Delta> avoiding: \<Gamma> t T \<Delta> rule: typing.strong_induct)
+       apply (simp_all add: TVar)
+      apply (metis TAbs list.simps(15) typing_wf_ctxt wf_ctxt_Cons wf_ctxt_ConsE)
+     apply (metis TApp)
+    apply (metis TTAbs list.simps(15) typing_wf_ctxt wf_ctxt_Cons wf_ctxt_ConsE)
+   apply (metis TTApp set_proj_ctxt_eq ty_permute wf_ty_proj_ctxt)
+  apply (metis TSub set_proj_ctxt_eq ty_permute typing_wf_ty)
+  done
+
+lemma proj_ctxt_concat[simp]: "proj_ctxt (\<Gamma> \<^bold>, \<Delta>) = proj_ctxt \<Gamma> \<^bold>, proj_ctxt \<Delta>"
+  by (auto simp: proj_ctxt_def map_filter_def)
+
+lemma proj_ctxt_extend_Inl[simp]: "proj_ctxt (\<Gamma> \<^bold>, Inl x <: U) = proj_ctxt \<Gamma> \<^bold>, x <: U"
+  by (auto simp: proj_ctxt_def map_filter_def)
+
+lemma proj_ctxt_extend_Inr[simp]: "proj_ctxt (\<Gamma> \<^bold>, Inr x <: U) = proj_ctxt \<Gamma>"
+  by (auto simp: proj_ctxt_def map_filter_def)
+
+lemma typing_weaken1: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, x <: U OK \<Longrightarrow> \<Gamma> \<^bold>, x <: U \<^bold>\<turnstile> t \<^bold>: T"
+proof (binder_induction \<Gamma> t T avoiding: \<Gamma> t T x U rule: typing.strong_induct)
+  case (TAbs \<Gamma> z T1 u T2)
+  then have "\<turnstile> \<Gamma> \<^bold>, Inr z <: T1 \<^bold>, x <: U OK" "\<turnstile> \<Gamma> \<^bold>, x <: U \<^bold>, Inr z <: T1 OK"
+    by (cases x; auto dest!: typing_wf_ctxt)+
+  with TAbs show ?case
+    by (intro typing.TAbs) (auto elim: typing_permute)
+next
+  case (TTApp \<Gamma> t1 X T11 T12 T2)
+  then show ?case
+  proof (cases x)
+    case (Inl a)
+    with TTApp show ?thesis
+      by (smt (verit) proj_ctxt_extend_Inl ty_weakening_extend typing.simps typing_wf_ty wf_ConsE)
+  qed (auto intro: typing.TTApp)
+next
+  case (TTAbs \<Gamma> X T1 t T2)
+  then have "\<turnstile> \<Gamma> \<^bold>, Inl X <: T1 \<^bold>, x <: U OK" "\<turnstile> \<Gamma> \<^bold>, x <: U \<^bold>, Inl X <: T1 OK"
+    by (cases x; auto dest!: typing_wf_ctxt)+
+  with TTAbs show ?case
+    by (intro typing.TTAbs) (auto elim: typing_permute)
+next
+  case (TSub \<Gamma> t S T)
+  then show ?case
+  proof (cases x)
+    case (Inl a)
+    with TSub show ?thesis
+      by (smt (verit) proj_ctxt_extend_Inl ty_weakening_extend typing.simps typing_wf_ty wf_ConsE)
+  qed (auto intro: typing.TSub)
+qed (auto intro: typing.intros)
+
+lemma typing_weaken: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> \<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
+proof (induct \<Delta>)
+  case (Cons xT \<Delta>)
+  then show ?case
+    by (auto simp: typing_weaken1 wf_ctxt_Cons)
+qed simp
+
+lemma wf_ctxt_weaken: "\<turnstile> \<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK"
+  by (induct \<Delta>) auto
+lemma wf_ctxt_notin: "\<turnstile> \<Gamma> \<^bold>, x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> x \<notin> dom \<Gamma> \<and> x \<notin> dom \<Delta>"
+  by (induct \<Delta>) auto
+
+lemma typing_tvsubst: "\<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> q \<^bold>: Q \<Longrightarrow> \<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> tvsubst (Var(x := q)) TyVar t \<^bold>: T"
+proof (binder_induction "\<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta>" t T arbitrary: \<Gamma> \<Delta> avoiding: \<Gamma> \<Delta> x q Q t T rule: typing.strong_induct)
+  case (TVar y T \<Gamma> \<Delta>)
+  then have "\<turnstile> \<Gamma> \<^bold>, \<Delta> OK" "Inr x \<notin> dom \<Gamma>" "Inr x \<notin> dom \<Delta>"
+    by (auto dest: wf_ctxt_weaken wf_ctxt_notin)
+  with TVar show ?case
+    by (auto simp add: cmin_greater image_iff intro!: typing.TVar elim: typing_weaken)
+next
+  case (TAbs x T1 t T2 \<Gamma> \<Delta>)
+  then show ?case
+    by (subst tvsubst_simps)
+      (auto simp: cmin_greater IImsupp_2_trm_def simp flip: append_Cons dest!: set_mp[OF SSupp_trm_fun_upd] intro!: typing.TAbs)
+next
+  case (TApp t1 T11 T12 t2 \<Gamma> \<Delta>)
+  then show ?case
+    by (auto simp: cmin_greater intro!: typing.TApp)
+next
+  case (TTAbs X T1 t T2 \<Gamma> \<Delta>)
+  then show ?case
+    by (subst tvsubst_simps) (auto simp: cmin_greater IImsupp_1_trm_def simp flip: append_Cons intro!: typing.TTAbs)
+next
+  case (TTApp t1 X T11 T12 T2 \<Gamma> \<Delta>)
+  then show ?case 
+    by (auto simp: cmin_greater intro!: typing.TTApp)
+next
+  case (TSub t S T \<Gamma> \<Delta>)
+  then show ?case
+    by (fastforce intro: typing.TSub)
+qed
+
+lemma Abs_inject_permute: "x \<notin> FVars u \<Longrightarrow> Abs x T t = Abs y U u \<longleftrightarrow> (T = U \<and> t = permute_trm id (id(x := y, y := x)) u)"
+  by (auto simp: Abs_inject trm.permute_comp supp_comp_bound infinite_UNIV bij_implies_inject id_on_def
+     trm.FVars_permute
+     intro!: trm.permute_cong_id[symmetric] trm.permute_cong_id exI[of _ "id(x := y, y := x)"])
+
+lemma TAbs_inject_permute: "X \<notin> FTVars u \<Longrightarrow> TAbs X T t = TAbs Y U u \<longleftrightarrow> (T = U \<and> t = permute_trm (id(X := Y, Y := X)) id u)"
+  by (auto simp: TAbs_inject trm.permute_comp supp_comp_bound infinite_UNIV bij_implies_inject id_on_def
+     trm.FVars_permute
+     intro!: trm.permute_cong_id[symmetric] trm.permute_cong_id exI[of _ "id(X := Y, Y := X)"])
+
+lemma typing_AbsD: "\<Gamma> \<^bold>\<turnstile> Abs x S1 s2 \<^bold>: T \<Longrightarrow> x \<notin> Inr -` dom \<Gamma> \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T <: U1 \<rightarrow> U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
+   (\<exists>S2. (\<Gamma> \<^bold>, Inr x <: S1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<turnstile> S2 <: U2))"
+proof (binder_induction \<Gamma> "Abs x S1 s2" T avoiding: \<Gamma> x S1 s2 T U1 U2 rule: typing.strong_induct)
+  case (TAbs \<Gamma> y T1 t' T2)
+  then show ?case
+    apply (auto simp: Abs_inject_permute elim!: SA_ArrEL intro!: exI[of _ T2])
+    apply (frule typing.equiv[of id "id(y := x, x := y)", rotated 4])
+        apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
+          intro!: list.map_ident_strong sum.map_ident_strong trm.permute_cong_id
+          elim!: arg_cong2[where f="\<lambda>\<Gamma> t. \<Gamma> \<^bold>, Inr x <: S1 \<^bold>\<turnstile> t \<^bold>: T2", THEN iffD1, rotated 2])
+    done
+next
+  case (TSub \<Gamma> S T)
+  then show ?case
+    using ty_transitivity2 by blast
+qed auto
+
+lemma typing_TAbsD: "\<Gamma> \<^bold>\<turnstile> TAbs X S1 s2 \<^bold>: T \<Longrightarrow> X \<notin> Inl -` dom \<Gamma> \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T <: \<forall>X <: U1. U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
+   (\<exists>S2. (\<Gamma> \<^bold>, Inl X <: U1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<^bold>, X <: U1 \<turnstile> S2 <: U2))"
+proof (binder_induction \<Gamma> "TAbs X S1 s2" T avoiding: \<Gamma> X S1 s2 T U1 U2 rule: typing.strong_induct)
+  case (TTAbs \<Gamma> Y T1 t' T2)
+  then show ?case
+    apply (auto simp: TAbs_inject_permute typ_inject elim!: SA_AllEL intro!: exI[of _ T2])
+    apply (frule typing.equiv[of "id(Y := X, X := Y)" id, rotated 4])
+        apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
+          intro!: list.map_ident_strong sum.map_ident_strong trm.permute_cong_id
+          elim!: arg_cong2[where f="\<lambda>\<Gamma> t. \<Gamma> \<^bold>, Inl X <: U1 \<^bold>\<turnstile> t \<^bold>: T2", THEN iffD1, rotated 2])
+     defer
+    sorry
+next
+  case (TSub \<Gamma> S T)
+  then show ?case
+    using ty_transitivity2 by blast
+qed auto
+
+lemma set_proj_ctxt[simp]: "set (proj_ctxt \<Gamma>) = {(x, T). (Inl x, T) \<in> set \<Gamma>}"
+  by (force simp: proj_ctxt_def map_filter_def image_iff split: sum.splits prod.splits)
+  
+lemma typing_well_scoped: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> T closed_in proj_ctxt \<Gamma>"
+proof (binder_induction \<Gamma> t T avoiding: \<Gamma> T t rule: typing.strong_induct)
+  case (TVar \<Gamma> x T)
+  then show ?case
+    by (induct \<Gamma>) (fastforce simp: image_iff subset_eq)+
+next
+  case (TAbs \<Gamma> x T1 t T2)
+  then show ?case
+    apply (auto simp: image_iff subset_eq)
+    by (smt (verit, ccfv_SIG) image_iff in_mono prod.inject surjective_pairing typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
+next
+  case (TTAbs \<Gamma> X T1 t T2)
+  then show ?case 
+    apply (auto simp: image_iff subset_eq)
+    by (smt (verit, ccfv_SIG) image_iff in_mono prod.inject surjective_pairing typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
+next
+  case (TTApp \<Gamma> t1 X T11 T12 T2)
+  then show ?case
+    apply (auto simp: image_iff subset_eq)
+    apply (subst (asm) (1 2) FVars_tvsubst)
+    apply auto
+     apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_subset_bound typ.set(1) typ.set_bd_UNIV)
+     apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_subset_bound typ.set(1) typ.set_bd_UNIV)
+    apply (auto split: if_splits)
+    apply (drule well_scoped(1))
+    apply (auto simp: image_iff subset_eq)
+    done
+next
+  case TSub
+  then show ?case
+    using well_scoped(2) by blast
+qed auto
+
+binder_inductive (no_auto_equiv) step
+  sorry
+
+lemma ty_tvsubst_typ: "\<Gamma> \<^bold>, X <: Q \<^bold>, \<Delta> \<turnstile> S <: T \<Longrightarrow> \<Gamma> \<turnstile> P <: Q \<Longrightarrow>
+  \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X:=P)))) \<Delta> \<turnstile> tvsubst_typ (TyVar(X:=P)) S <: tvsubst_typ (TyVar(X:=P)) T"
+  apply (binder_induction "\<Gamma> \<^bold>, X <: Q \<^bold>, \<Delta>" S T avoiding: \<Gamma> X Q \<Delta> S T P rule: ty.strong_induct)
+  sorry
+
+lemma typing_tvsubst_typ: "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> P <: Q \<Longrightarrow>
+  \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X:=P)))) \<Delta> \<^bold>\<turnstile> tvsubst Var (TyVar(X := P)) t \<^bold>: tvsubst_typ (TyVar(X:=P)) T"
+  sorry
+
+lemma ty_refl': "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma>; T = U \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: U"
+  using ty_refl by blast
 
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
-  sorry
+proof (binder_induction \<Gamma> t T arbitrary: t' avoiding: \<Gamma> T t t' rule: typing.strong_induct)
+  case (TApp \<Gamma> t1 T11 T12 t2 t')
+  from TApp(3,1,2,4-) show ?case
+    apply (binder_induction "App t1 t2" t' avoiding: \<Gamma> rule: step.strong_induct)
+    subgoal for v x T t
+      apply clarsimp
+      apply (frule typing_AbsD)
+        apply fastforce
+       apply (rule ty_refl)
+      using typing_wf_ty apply blast
+      using typing_well_scoped apply blast
+      apply safe
+      apply (drule typing_tvsubst[where \<Delta>=\<emptyset>, simplified])
+       apply (erule (1) TSub[rotated])
+      apply (erule (1) TSub)
+      done
+       apply (auto intro: typing.intros)
+    done
+next
+  case (TTApp \<Gamma> t1 X T11 T12 T2 t')
+  from TTApp(8,1-7,9) show ?case
+    apply (binder_induction "TApp t1 T2" t' avoiding: \<Gamma> rule: step.strong_induct)
+        prefer 2
+    subgoal for Y T t U
+      apply clarsimp
+      apply (cases "X = Y")
+       apply simp
+      apply (frule typing_TAbsD)
+        apply fastforce
+      apply (rule ty_refl)
+      using typing_wf_ty apply blast
+      using typing_well_scoped apply blast
+      apply (erule conjE exE)+
+       apply (rule typing_tvsubst_typ[where \<Delta>=\<emptyset>, simplified])
+       apply (rule Forall_swap)
+       apply (auto) []
+      apply safe
+       apply (drule typing_tvsubst_typ[where \<Delta>=\<emptyset>, simplified])
+      apply assumption
+       apply (erule TSub)
+      sorry
+    apply (force intro: typing.intros)+
+    done
+qed (auto elim: step.cases intro: typing.TSub)
 
 end

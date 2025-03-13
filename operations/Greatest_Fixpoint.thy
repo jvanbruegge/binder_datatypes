@@ -828,10 +828,9 @@ proof -
     apply (unfold id_o o_id)
 
     apply (unfold triv_forall_equality)
-    subgoal for g x f2 g' y f2' z
+    subgoal for g x g' y z
       apply (rule exI[of _ "g' \<circ> g"])
       apply (rule exI)
-      apply (rule exI[of _ "f2' \<circ> f2"])
       apply (rule exI)
       apply (rule conjI, rule refl)+
       apply (rule conjI, (rule bij_comp supp_comp_bound infinite_UNIV | assumption)+)+
@@ -843,10 +842,8 @@ proof -
        apply (rule equalityD2)
        apply (rule trans)
         apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-         apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
           apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
         prefer 2
-        apply (unfold image_Un[symmetric])
         apply (rule trans)
          apply (rule image_set_diff[symmetric, OF bij_is_inj])
          apply assumption
@@ -854,7 +851,7 @@ proof -
        apply (unfold image_UN)
        apply (rule sym)
        apply (rule rel_set_UN_D)
-       apply (erule term_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF term_pre.mr_rel_mono_strong[rotated -4]])
+       apply (erule term_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF term_pre.mr_rel_mono_strong[rotated -3]])
         (* REPEAT_DETERM *)
                    apply (rule ballI)
                    apply (rule ballI)
@@ -869,55 +866,9 @@ proof -
         (* END REPEAT_DETERM *)
                 apply (rule supp_id_bound bij_id | assumption)+
 
-      apply (rule conjI, (rule bij_comp supp_comp_bound infinite_UNIV | assumption)+)+
 
-      apply (rule conjI)
-       apply (rule id_on_comp[rotated])
-        apply assumption
-       apply (erule id_on_antimono)
-       apply (rule equalityD2)
-       apply (rule trans)
-        apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-         apply (rule trans)
-          apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
-         apply (rule sym)
-         apply (erule eq_on_image)
-        prefer 2
-        apply (rule trans)
-         apply (rule image_set_diff[symmetric, OF bij_is_inj])
-         apply assumption
-        apply (erule id_on_image)
-       apply (unfold image_UN)
-       apply (rule sym)
-       apply (rule rel_set_UN_D)
-       apply (erule term_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF term_pre.mr_rel_mono_strong[rotated -4]])
-        (* REPEAT_DETERM *)
-                   apply (rule ballI, rule ballI, rule imp_refl)+
-        (* ORELSE *)
-                  apply (rule ballI)
-                  apply (rule ballI)
-                  apply (rule impI)
-                  apply (drule alpha_FVars)
-                  apply (erule trans[rotated])
-                  apply (rule sym)
-                  apply (rule FVars_raw_permutes)
-                   apply assumption+
-        (* ORELSE *)
-                 apply (rule ballI, rule ballI, rule imp_refl)+
-        (* END REPEAT_DETERM *)
-                apply (rule supp_id_bound bij_id | assumption)+
-
-      apply (rule conjI)
-       apply (rule eq_on_comp1)
-        apply assumption
-       apply (erule eq_on_mono[rotated])
-       apply (rule equalityD1)
-       apply (rule trans)
-        apply (erule eq_on_image)
-       apply (rule sym)
-       apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound | assumption)+)+
-
-      apply (erule term_pre.mr_rel_mono_strong[rotated -4])
+  
+      apply (erule term_pre.mr_rel_mono_strong[rotated -3])
         (* REPEAT_DETERM *)
              apply (rule ballI)
              apply (rule ballI)
@@ -931,19 +882,6 @@ proof -
                  apply assumption+
              apply (rule iffD2[OF alpha_bij_eqs])
                apply assumption+
-        (* repeated *)
-            apply (rule ballI)
-            apply (rule ballI)
-            apply (rule impI)
-            apply (rule disjI1)
-            apply (erule relcomppE)
-            apply (rule exI)
-            apply (rule conjI[rotated])
-             apply assumption
-            apply (subst permute_raw_comps[symmetric])
-                apply assumption+
-            apply (rule iffD2[OF alpha_bij_eqs])
-              apply assumption+
         (* repeated, free rec case *)
            apply (rule ballI)
            apply (rule ballI)

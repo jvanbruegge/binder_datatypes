@@ -459,7 +459,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
     }) (#quotient_fps fp_res) Uctors mrbnfs;
 
     val models = @{map 4} (fn b => fn quot => fn Uctor => fn tacs =>
-      MRBNF_Recursor.mk_quotient_model quot substitution {
+      MRBNF_Recursor.mk_quotient_model quot [] substitution {
         binding = b,
         Uctor = fst Uctor,
         validity = NONE,

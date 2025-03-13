@@ -756,18 +756,11 @@ lemma alpha_syms:
   apply (rule conjI, rule refl)+
   apply (rule conjI[rotated])+
          apply (rule iffD1[OF term_pre.mr_rel_flip, rotated -1])
-               apply (unfold inv_id)
-               apply (erule term_pre.mr_rel_mono_strong0[rotated -7])
+         apply (unfold inv_id)
+               apply (erule term_pre.mr_rel_mono_strong0[rotated -5])
                       apply (rule ballI, rule refl)+
                       apply (rule ballI, rule inv_inv_eq[THEN fun_cong, symmetric], assumption)+
     (* REPEAT_DETERM *)
-                      apply (rule ballI)
-                      apply (rule ballI)
-                      apply (rule impI)
-                      apply (rule conversepI)
-                      apply (rule disjI1)
-                      apply (assumption | (erule alpha_bij_eq_invs[THEN iffD1, rotated -1], assumption+))
-    (* repeated *)
                       apply (rule ballI)
                       apply (rule ballI)
                       apply (rule impI)
@@ -785,11 +778,9 @@ lemma alpha_syms:
                       apply (unfold inv_inv_eq)
                       apply (assumption | rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound)+
 
-        apply (rule iffD2[OF arg_cong[of _ _ eq_on, THEN fun_cong, THEN fun_cong]])
-         apply (erule term_pre.mr_rel_set[rotated -1])
+        apply (rule iffD2[OF arg_cong[THEN fun_cong, THEN fun_cong]]) 
+     apply (erule term_pre.mr_rel_set[rotated -1])
              apply (rule supp_id_bound | assumption)+
-        apply (rule eq_on_inv2)
-          apply assumption+
 
        apply (rule id_on_inv)
         apply assumption+
@@ -798,23 +789,19 @@ lemma alpha_syms:
        apply (rule equalityD1)
        apply (rule trans)
         apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-         apply (rule trans)
           apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
          apply (rule sym)
-         apply (erule eq_on_image)
         prefer 2
         apply (rule trans)
          apply (rule image_set_diff[OF bij_is_inj, symmetric])
          apply assumption
         apply (erule id_on_image)
        apply (unfold image_UN)[1]
-       apply (rule sym)
+
        apply (rule rel_set_UN_D)
-       apply (erule term_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF term_pre.mr_rel_mono_strong[rotated -4]])
-    (* REPEAT_DETERM *)
-                   apply (rule ballI, rule ballI, rule imp_refl)+
-    (* ORELSE *)
-                  apply (rule ballI)
+       apply (erule term_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF term_pre.mr_rel_mono_strong[rotated -3]])
+
+              apply (rule ballI)
                   apply (rule ballI)
                   apply (rule impI)
                   apply (drule alpha_FVars)
@@ -822,43 +809,9 @@ lemma alpha_syms:
                   apply (rule sym)
                   apply (rule FVars_raw_permutes)
                    apply assumption+
-    (* ORELSE *)
-                 apply (rule ballI, rule ballI, rule imp_refl)+
-    (* END REPEAT_DETERM *)
-                apply (rule supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv | assumption)+
 
-    apply (rule id_on_inv)
-     apply assumption+
-    apply (rule id_on_antimono)
-     apply assumption
-    apply (rule equalityD1)
-    apply (rule trans)
-     apply (rule arg_cong2[of _ _ _ _ minus, rotated])
-      apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-       apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_id | assumption)+)+
-     prefer 2
-     apply (unfold image_Un[symmetric])[1]
-     apply (rule trans)
-      apply (rule image_set_diff[OF bij_is_inj, symmetric])
-      apply assumption
-     apply (erule id_on_image)
-    apply (unfold image_UN)[1]
-    apply (rule sym)
-    apply (rule rel_set_UN_D)
-    apply (erule term_pre.mr_set_transfer[THEN rel_funD, rotated -1, OF term_pre.mr_rel_mono_strong[rotated -4]])
-    (* REPEAT_DETERM *)
-                apply (rule ballI)
-                apply (rule ballI)
-                apply (rule impI)
-                apply (drule alpha_FVars)
-                apply (erule trans[rotated])
-                apply (rule sym)
-                apply (rule FVars_raw_permutes)
-                 apply assumption+
-    (* ORELSE *)
-               apply (rule ballI, rule ballI, rule imp_refl)+
-    (* END REPEAT_DETERM *)
-             apply (rule supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv | assumption)+
+                 apply (rule ballI, rule ballI, rule imp_refl)+
+                apply (rule supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv | assumption)+
   done
 
 lemma alpha_trans: "alpha_term x y \<Longrightarrow> alpha_term y z \<Longrightarrow> alpha_term x z"

@@ -1196,7 +1196,8 @@ lemma typing_equiv_aux[equiv]:
     apply (auto simp: typ.permute_comp trm.permute_comp trm.permute_id sum.map_comp sum.map_id supp_inv_bound intro!: list.map_ident_strong)
   done
 
-binder_inductive typing
+binder_inductive (no_auto_equiv) typing
+  subgoal sorry
   subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -1282,6 +1283,30 @@ binder_inductive typing
     done
   done
 
-thm ty.strong_induct
+inductive step where
+  "value v \<Longrightarrow> step (App (Abs x T t) v) (tvsubst (Var(x := v)) TyVar t)"
+| "step (TApp (TAbs X T t) T2) (tvsubst Var (TyVar(X := T2)) t)"
+| "step t t' \<Longrightarrow> step (App t u) (App t' u)"
+| "value v \<Longrightarrow> step t t' \<Longrightarrow> step (App v t) (App v t')"
+| "step t t' \<Longrightarrow> step (TApp t T) (TApp t' T)"
+
+lemma proj_ctxt_empty[simp]: "proj_ctxt \<emptyset> = \<emptyset>"
+  unfolding proj_ctxt_def map_filter_def
+  by auto
+
+lemma canonical_closed_Fun[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T \<Longrightarrow> \<Gamma> = \<emptyset> \<Longrightarrow> T = T11 \<rightarrow> T12 \<Longrightarrow> value v \<Longrightarrow> \<exists>x S11 t. v = Abs x S11 t"
+  by (induction \<Gamma> v T arbitrary: T11 T12 rule: typing.induct) (auto elim: value.cases ty.cases)
+
+lemma canonical_closed_Forall[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T \<Longrightarrow> \<Gamma> = \<emptyset> \<Longrightarrow> T = Forall X T11 T12 \<Longrightarrow> value v \<Longrightarrow> \<exists>X S11 t. v = TAbs X S11 t"
+  by (induction \<Gamma> v T arbitrary: X T11 T12 rule: typing.induct) (auto elim: value.cases ty.cases)
+
+lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> = [] \<Longrightarrow> value t \<or> (\<exists>t'. step t t')"
+  by (induction \<Gamma> t T rule: typing.induct)
+    (auto intro!: value.intros intro: step.intros elim!: value.cases dest!: canonical_closed_Fun canonical_closed_Forall)
+
+thm progress
+
+lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
+  sorry
 
 end

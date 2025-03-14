@@ -247,6 +247,8 @@ sig
         (typ list -> term list -> term) *
         (typ list -> typ list -> term))) * local_theory
 
+  val get_class_assumption: sort -> string -> local_theory -> thm
+
   val mrbnf_def: inline_policy -> (Proof.context -> fact_policy) -> bool -> (binding -> binding) ->
     mrbnf_def_tactics -> typ list option ->
     ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->

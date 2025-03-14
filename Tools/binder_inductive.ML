@@ -561,14 +561,11 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             ]
         ])) (0 upto length supps)) end);
 
-        val (Un_bound, UN_bound, var_large) =
-          let
-            val (context, facts) = (Proof_Context.theory_of #>
-              `Context.Theory ##> Proof_Context.init_global) lthy ||> Proof_Context.facts_of;
-            fun lookup name = the_single (#thms (the (
-              Facts.lookup context facts (Facts.intern facts name)
-            )));
-          in (lookup "Un_bound", lookup "UN_bound", lookup "large'") end;
+        val var_class = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy))
+          (map (Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs)
+        val Un_bound = MRBNF_Def.get_class_assumption [hd var_class] "Un_bound" lthy;
+        val UN_bound = MRBNF_Def.get_class_assumption [hd var_class] "UN_bound" lthy;
+        val var_large = MRBNF_Def.get_class_assumption [hd var_class] "large'" lthy;
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr sugar)) = maps #card_of_FVars_bound_UNIVs (#quotient_fps sugar)
           | set_bd_UNIVs_of_mr_bnfs x =
@@ -757,7 +754,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   val set_maps = maps set_map_of_mr_bnf mr_bnfs;
                   fun permute_bijs_of_mr_bnf (Inr (Inr sugar)) = map (#permute_bij o #inner) (#quotient_fps sugar)
                     | permute_bijs_of_mr_bnf _ = []
-                in EVERY1 [
+                in DETERM (EVERY1 [
                   option Verbose (K (print_tac ctxt "begin")) (K all_tac),
                   EVERY' (map_filter (try (fn t => rtac ctxt (
                     infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt t)] exI
@@ -777,12 +774,12 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   REPEAT_DETERM_N (length param_Ts) o EVERY' [
                     TRY o rtac ctxt conjI,
                     SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms id_def[symmetric] id_apply} @ map_ids)),
-                    REPEAT_DETERM o EVERY' [
+                    SELECT_GOAL (REPEAT_DETERM (rtac ctxt refl 1 ORELSE EVERY1 [
                       EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt),
                       REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt)
-                    ],
-                    TRY o rtac ctxt refl
+                    ]))
                   ],
+                  option Verbose (K (print_tac ctxt "pre_auto")) (K all_tac),
                   REPEAT_DETERM o SELECT_GOAL (EVERY [
                     auto_tac ctxt,
                     IF_UNSOLVED no_tac
@@ -803,31 +800,29 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     etac ctxt @{thm notin_Un_forward},
                     EqSubst.eqsubst_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
                     EqSubst.eqsubst_asm_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
-                    SELECT_GOAL (EVERY [
-                      REPEAT_DETERM (SOMEGOAL (EVERY' [
-                        EqSubst.eqsubst_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2} @ map_comps @ @{thms inv_simp1})
-                      ])),
-                      REPEAT_DETERM (FIRST1 [
-                        assume_tac ctxt,
-                        resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound bij_id supp_id_bound}
-                      ]),
-                      Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o} @ map_ids),
-                      assume_tac ctxt 1 ORELSE (REPEAT_DETERM1 (EVERY1 [
-                        EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt),
-                        REPEAT_DETERM1 o FIRST' [
+                    SELECT_GOAL (EVERY1 [
+                      option Verbose (K (print_tac ctxt "inductive equiv")) (K all_tac),
+                      REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] (
+                          @{thms inv_o_simp1 inv_simp1 id_apply}
+                          @ map_ids @ map_comps
+                          @ Equivariance.equiv_thms ctxt
+                        ),
+                        REPEAT_DETERM o FIRST' [
                           assume_tac ctxt,
-                          resolve_tac ctxt (@{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs)
+                          resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound}
                         ]
-                      ]))
+                      ]),
+                      IF_UNSOLVED o K no_tac
                     ]),
                     SELECT_GOAL (EVERY [
                       auto_tac ctxt,
                       IF_UNSOLVED no_tac
-                    ]),
-                    CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp2})
+                    ])(*,
+                    CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp2})*)
                   ],
                   IF_UNSOLVED o K (print_tac ctxt "equivariance proof failed:")
-                ] end
+                ]) end
               ) ctxt
             ],
             IF_UNSOLVED o K (print_tac ctxt "equivariance_tac failed")

@@ -2041,9 +2041,70 @@ next
     done
 qed auto
 
+lemma proj_ctxt_map[simp]: "proj_ctxt (map (map_prod id f) \<Delta>) = map (map_prod id f) (proj_ctxt \<Delta>)"
+  by (auto simp: proj_ctxt_def map_filter_def filter_map o_def split_beta
+    intro!: list.map_cong filter_cong split: sum.splits)
+
+lemma wf_ctxt_extend_tvsubst_typ_aux: 
+  "\<turnstile> \<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> OK \<Longrightarrow> FVars_typ P \<subseteq> Inl -` dom \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta> OK"
+  by (induct \<Delta>)
+    (auto 0 4 simp: image_iff FVars_tvsubst_typ image_Un split: if_splits)
+
+lemma wf_ctxt_extend_tvsubst_typ: 
+  "\<turnstile> \<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> OK \<Longrightarrow> P closed_in proj_ctxt \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta> OK"
+  by (erule wf_ctxt_extend_tvsubst_typ_aux) (force simp: subset_eq image_iff)
+
+lemma wf_ctxt_weaken_ext: "\<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> \<turnstile> \<Gamma> OK"
+  by (induct \<Delta>) auto
+
+lemma wf_ctxt_closed: "\<turnstile> \<Gamma> OK \<Longrightarrow> (Inr x, T) \<in> set \<Gamma> \<Longrightarrow> FVars_typ T \<subseteq> Inl -` dom \<Gamma>"
+  by (induct \<Gamma>) auto
+
+lemma tvsubst_typ_tvsubst_typ:
+  "X \<noteq> Y \<Longrightarrow> Y \<notin> FVars_typ T \<Longrightarrow>
+   tvsubst_typ (TyVar(X := T)) (tvsubst_typ (TyVar(Y := U)) Q) =
+   tvsubst_typ (TyVar(Y := tvsubst_typ (TyVar(X := T)) U)) (tvsubst_typ (TyVar(X := T)) Q)"
+  by (subst (1 2) tvsubst_typ_comp)
+    (auto simp: SSupp_typ_tvsubst_typ_bound intro!: tvsubst_typ_cong
+       sym[OF trans[OF tvsubst_typ_cong tvsubst_typ_TyVar]])
+
 lemma typing_tvsubst_typ: "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> P <: Q \<Longrightarrow>
   \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X:=P)))) \<Delta> \<^bold>\<turnstile> tvsubst Var (TyVar(X := P)) t \<^bold>: tvsubst_typ (TyVar(X:=P)) T"
-  sorry
+proof (binder_induction "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta>" t T arbitrary: \<Delta> avoiding: \<Gamma> X Q \<Delta> t T P rule: typing.strong_induct)
+  case (TVar x T \<Delta>)
+  then have "(Inr x, T) \<in> set \<Gamma> \<Longrightarrow> tvsubst_typ (TyVar(X := P)) T = T"
+    by (intro trans[OF tvsubst_typ_cong tvsubst_typ_TyVar])
+      (auto dest!: wf_ctxt_closed[rotated] dest: wf_ctxt_notin wf_ctxt_weaken_ext)
+  with TVar show ?case by (force dest: well_scoped(1) simp: wf_ctxt_extend_tvsubst_typ image_iff intro!: typing.TVar)
+next
+  case (TTAbs Y T1 t T2 \<Delta>)
+  with IImsupp_fun_upd[of X P] show ?case by (auto 0 3 simp: subset_eq intro: typing.TTAbs)
+next
+  case (TTApp t1 Z T11 T12 T2 \<Delta>)
+  have "T11 closed_in proj_ctxt (\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta>)"
+    using TTApp.hyps(12) well_scoped(2) by blast
+  moreover
+  let ?XP = "(TyVar(X := P))"
+  note TTApp(11)[OF TTApp(13)]
+  moreover note TTApp(12)[simplified, THEN ty_tvsubst_typ[OF _ TTApp(13)]]
+  ultimately have "\<Gamma> \<^bold>, map (map_prod id (tvsubst_typ ?XP)) \<Delta> \<^bold>\<turnstile>
+    TApp (tvsubst Var ?XP t1) (tvsubst_typ ?XP T2) \<^bold>:
+    tvsubst_typ (TyVar(Z := tvsubst_typ ?XP T2)) (tvsubst_typ ?XP T12)"
+    using IImsupp_fun_upd[of X P] TTApp(1-9)
+    apply (intro typing.TTApp)
+     apply (auto simp: FVars_tvsubst_typ)
+    apply (subst (asm) typ.subst)
+       apply (auto simp: FVars_tvsubst_typ)
+    apply (drule set_mp, assumption)
+    apply auto
+    done
+  with TTApp(1-9) show ?case
+    by (subst tvsubst_typ_tvsubst_typ) auto
+next
+  case (TSub t S T \<Delta>)
+  then show ?case
+    by (force intro: typing.TSub ty_tvsubst_typ)
+qed (auto intro: typing.intros)
 
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
 proof (binder_induction \<Gamma> t T arbitrary: t' avoiding: \<Gamma> T t t' rule: typing.strong_induct)

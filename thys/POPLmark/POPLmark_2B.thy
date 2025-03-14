@@ -1465,63 +1465,67 @@ qed auto
 lemma swap_swap[simp]: "id(Y := X, X := Y) \<circ> id(Y := X, X := Y) = id"
   by auto
 
-lemma typing_TAbsD: "\<Gamma> \<^bold>\<turnstile> TAbs X S1 s2 \<^bold>: T \<Longrightarrow> X \<notin> Inl -` dom \<Gamma> \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T <: \<forall>X <: U1. U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
+lemma dom_proj_ctxt: "dom (proj_ctxt \<Gamma>) \<subseteq> Inl -` dom \<Gamma>"
+  by (auto simp: proj_ctxt_def map_filter_def image_iff split: sum.splits intro!: bexI[of _ "(_, _)"])
+
+lemma typing_TAbsD: "\<Gamma> \<^bold>\<turnstile> TAbs X S1 s2 \<^bold>: T \<Longrightarrow> X \<notin> Inl -` dom \<Gamma> \<Longrightarrow> X \<notin> FFVars_ctxt \<Gamma> \<Longrightarrow> X \<notin> FVars_typ U1 \<Longrightarrow>
+   proj_ctxt \<Gamma> \<turnstile> T <: \<forall>X <: U1. U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
    (\<exists>S2. (\<Gamma> \<^bold>, Inl X <: U1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<^bold>, X <: U1 \<turnstile> S2 <: U2))"
 proof (binder_induction \<Gamma> "TAbs X S1 s2" T avoiding: \<Gamma> X S1 s2 T U1 U2 rule: typing.strong_induct)
   case (TTAbs \<Gamma> Y T1 t' T2)
   from TTAbs(1-9,11-) show ?case
-    apply (auto simp: TAbs_inject_permute intro!: exI[of _ T2])
-      apply (auto simp add: typ_inject  elim!: SA_AllEL) []
-     apply (erule SA_AllEL)
-      apply simp
-     apply (drule Forall_swapD)+
-     apply (erule exE conjE)+
-    apply hypsubst_thin
-     apply auto
-    subgoal for Z
-      apply (frule ty.equiv[of "id(Y := Z, Z := Y)" "proj_ctxt \<Gamma> \<^bold>, Z <: U1", rotated 2])
-        apply (auto simp: typ.permute_comp) [3]
-      apply (rule TSub)
-      thm ty.equiv
-     apply (frule typing.equiv[of "id(Y := X, X := Y)" id, rotated 4])
-         apply (auto simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
+    apply (auto simp: TAbs_inject_permute)
+     apply (auto simp add: typ_inject elim!: SA_AllEL) []
+    apply (frule typing.equiv[of "id(Y := X, X := Y)" id, rotated 4])
+    apply (auto simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
           trm.permute_id) [5]
-    apply (subgoal_tac "map (map_prod (map_sum (id(Y := X, X := Y)) id)
+    apply (erule SA_AllER)
+     apply simp
+    apply (drule Forall_swapD)+
+    apply (erule exE conjE)+
+    apply hypsubst_thin
+    apply (rule exI[of _ "permute_typ (id(Y := X, X := Y)) T2"])
+    apply (rule conjI)
+     apply (subgoal_tac "map (map_prod (map_sum (id(Y := X, X := Y)) id)
           (permute_typ (id(Y := X, X := Y)))) \<Gamma> = \<Gamma>")
-    apply simp
-     apply (rule TSub)
+      apply simp
       apply (rule typing_narrowing[where \<Delta>="[]", simplified])
-          apply assumption
-      sorry
-(*
-    subgoal sorry
-    apply auto
-    apply assumption
-    find_theorems typing name: weaken
-    oops
-    thm ty_narrowing2[where \<Delta>="[]", simplified]
-    apply (rule ty_narrowing2[where \<Delta>="[]", simplified])
-         apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
-          trm.permute_id
-          intro!: list.map_ident_strong sum.map_ident_strong trm.permute_cong_id typ.permute_cong_id
-          elim!: arg_cong3[where h="\<lambda>\<Gamma> U T. \<Gamma> \<^bold>, Inl X <: U \<^bold>\<turnstile> s2 \<^bold>: T", THEN iffD1, rotated 3]) [5]
-    apply (metis fst_conv)
-    apply (metis Domain.DomainI setl.cases)
-    apply (metis snd_conv)
-    apply (metis (no_types, opaque_lifting) Domain_fst UN_I image_iff snd_conv typing_wf_ctxt wf_ctxt_ConsE wf_ctxt_FFVars)
-    sledgehammer
-    thm TSub
-    subgoal for f g
-      apply (drule sym[of "g X"])
-      apply (subgoal_tac "permute_typ f T2 = permute_typ g T2")
-       apply auto
-     defer
-*)
-    sorry
+       apply assumption
+      apply (metis (no_types, lifting) Pair_inject rrename_swap_FFvars subset_eq typing_wf_ctxt vimageE
+        wf_ctxt_ConsE)
+     apply (auto intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id) []
+        apply (metis fst_conv)
+       apply (metis Domain.DomainI setl.cases)
+      apply (metis snd_conv)
+     apply (metis snd_conv)
+    apply simp
+    subgoal for Z
+      apply (frule wf_context[where \<Gamma> = "_ \<^bold>, Z <: U1"])
+      apply (frule ty.equiv[of "id(X := Z, Z := X)" "_ \<^bold>, Z <: U1", rotated 2])
+        apply (auto split: if_splits simp: typ.permute_comp)
+      apply (subgoal_tac "permute_typ (id(X := Z, Z := X)) U1 = U1")
+      apply (subgoal_tac "map (map_prod (id(X := Z, Z := X)) (permute_typ (id(X := Z, Z := X)))) (proj_ctxt \<Gamma>) = proj_ctxt \<Gamma>")
+        apply (subgoal_tac "permute_typ (id(X := Z, Z := X) \<circ> id(Y := Z, Z := Y)) T2 = permute_typ (id(Y := X, X := Y)) T2")
+         apply (auto intro!: typ.permute_cong list.map_ident_strong sum.map_ident_strong typ.permute_cong_id
+           simp: supp_comp_bound supp_swap_bound infinite_UNIV)
+         apply (smt (z3) Diff_iff TTAbs.hyps(15) empty_iff in_mono insert_iff le_sup_iff typ.set(4)
+          well_scoped(1))
+      apply (smt (verit, ccfv_threshold) Diff_iff TTAbs.hyps(15) empty_iff fst_conv in_mono insert_iff
+          le_sup_iff typ.set(4) well_scoped(1) wf_ConsE wf_context)
+      apply (metis Domain.DomainI fst_conv fst_eq_Domain proj_ctxt_extend_Inl typing_wf_ctxt wf_ConsE
+          wf_ctxt_Cons wf_ctxt_ConsE wf_ty_proj_ctxt)
+      apply (metis Domain.DomainI fst_eq_Domain)
+      apply (metis Domain.DomainI fst_eq_Domain)
+        apply (metis Domain.DomainI fst_eq_Domain)
+      apply (metis (no_types, opaque_lifting) TTAbs.hyps(12) UN_I dom_proj_ctxt rev_image_eqI split_pairs2
+          subset_eq wf_FFVars)
+      apply (metis (no_types, opaque_lifting) UN_I image_iff sndI wf_FFVars)
+      done
+    done
 next
   case (TSub \<Gamma> S T)
   then show ?case
-    using ty_transitivity2 by blast
+    using ty_transitivity2 by fast
 qed auto
 
 lemma set_proj_ctxt[simp]: "set (proj_ctxt \<Gamma>) = {(x, T). (Inl x, T) \<in> set \<Gamma>}"
@@ -1597,12 +1601,12 @@ proof (binder_induction \<Gamma> t T arbitrary: t' avoiding: \<Gamma> T t t' rul
 next
   case (TTApp \<Gamma> t1 X T11 T12 T2 t')
   from TTApp(8,1-7,9) show ?case
-    apply (binder_induction "TApp t1 T2" t' avoiding: \<Gamma> X T12 rule: step.strong_induct)
+    apply (binder_induction "TApp t1 T2" t' avoiding: \<Gamma> X T11 T12 rule: step.strong_induct)
         prefer 2
     subgoal for Y T t U
       apply clarsimp
       apply (frule typing_TAbsD[where ?U1.0 = T11 and ?U2.0 = "permute_typ (id(Y := X, X := Y)) T12"])
-        apply fastforce
+        apply (fastforce+) [3]
        apply (subst Forall_swap[of X _ Y])
         apply (auto simp: typ.FVars_permute typ.permute_comp) [2]
       apply (rule ty_refl)

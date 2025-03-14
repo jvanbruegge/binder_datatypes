@@ -57,6 +57,11 @@ lemma Forall_swap: "y \<notin> FVars_typ T2 - {x} \<Longrightarrow> Forall (x::'
     apply (rule cinfinite_imp_infinite[OF typ.UNIV_cinfinite])
   by auto
 
+lemma Forall_swapD: "Forall (x::'a::var) T1 T2 = Forall y T1' T2' \<Longrightarrow> T1 = T1' \<and> T2' = permute_typ (id(x:=y,y:=x)) T2"
+  unfolding typ_inject
+  apply (auto intro!: typ.permute_cong simp: id_on_def)
+  by (meson bij_implies_inject)
+
 type_synonym ('a, 'b) \<Gamma> = "('b \<times> 'a typ) list"
 type_synonym 'a \<Gamma>\<^sub>\<tau> = "('a, 'a) \<Gamma>"
 

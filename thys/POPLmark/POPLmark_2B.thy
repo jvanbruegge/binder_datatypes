@@ -1388,6 +1388,18 @@ proof (induct \<Delta>)
     by (auto simp: typing_weaken1 wf_ctxt_Cons)
 qed simp
 
+lemma typing_narrowing: "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> P <: Q \<Longrightarrow> \<Gamma> \<^bold>, Inl X <: P \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
+proof (binder_induction "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta>" t T arbitrary: \<Delta> avoiding: X \<Gamma> \<Delta> P Q t T rule: typing.strong_induct)
+  case (TVar x T \<Delta>)
+  from TVar(1,3) have "\<turnstile> \<Gamma> \<^bold>, Inl X <: P \<^bold>, \<Delta> OK"
+    apply (induct \<Delta>)
+     apply (auto simp: image_Un rev_image_eqI dest!: well_scoped(1))
+    apply (metis (no_types, opaque_lifting) Pair_inject proj_ctxt_extend_Inl subset_eq wf_ConsE wf_ctxt_Cons wf_ty_proj_ctxt)
+    done
+  with TVar show ?case
+    by (auto intro: typing.TVar)
+qed (auto simp flip: append_Cons simp: ty_narrowing2 intro: typing.intros)
+
 lemma wf_ctxt_weaken: "\<turnstile> \<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK"
   by (induct \<Delta>) auto
 lemma wf_ctxt_notin: "\<turnstile> \<Gamma> \<^bold>, x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> x \<notin> dom \<Gamma> \<and> x \<notin> dom \<Delta>"
@@ -1437,7 +1449,7 @@ lemma typing_AbsD: "\<Gamma> \<^bold>\<turnstile> Abs x S1 s2 \<^bold>: T \<Long
    (\<exists>S2. (\<Gamma> \<^bold>, Inr x <: S1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<turnstile> S2 <: U2))"
 proof (binder_induction \<Gamma> "Abs x S1 s2" T avoiding: \<Gamma> x S1 s2 T U1 U2 rule: typing.strong_induct)
   case (TAbs \<Gamma> y T1 t' T2)
-  then show ?case
+  from TAbs(1-4,6-) show ?case
     apply (auto simp: Abs_inject_permute elim!: SA_ArrEL intro!: exI[of _ T2])
     apply (frule typing.equiv[of id "id(y := x, x := y)", rotated 4])
         apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
@@ -1450,17 +1462,61 @@ next
     using ty_transitivity2 by blast
 qed auto
 
+lemma swap_swap[simp]: "id(Y := X, X := Y) \<circ> id(Y := X, X := Y) = id"
+  by auto
+
 lemma typing_TAbsD: "\<Gamma> \<^bold>\<turnstile> TAbs X S1 s2 \<^bold>: T \<Longrightarrow> X \<notin> Inl -` dom \<Gamma> \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T <: \<forall>X <: U1. U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
    (\<exists>S2. (\<Gamma> \<^bold>, Inl X <: U1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<^bold>, X <: U1 \<turnstile> S2 <: U2))"
 proof (binder_induction \<Gamma> "TAbs X S1 s2" T avoiding: \<Gamma> X S1 s2 T U1 U2 rule: typing.strong_induct)
   case (TTAbs \<Gamma> Y T1 t' T2)
-  then show ?case
-    apply (auto simp: TAbs_inject_permute typ_inject elim!: SA_AllEL intro!: exI[of _ T2])
-    apply (frule typing.equiv[of "id(Y := X, X := Y)" id, rotated 4])
-        apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
-          intro!: list.map_ident_strong sum.map_ident_strong trm.permute_cong_id
-          elim!: arg_cong2[where f="\<lambda>\<Gamma> t. \<Gamma> \<^bold>, Inl X <: U1 \<^bold>\<turnstile> t \<^bold>: T2", THEN iffD1, rotated 2])
+  from TTAbs(1-9,11-) show ?case
+    apply (auto simp: TAbs_inject_permute intro!: exI[of _ T2])
+      apply (auto simp add: typ_inject  elim!: SA_AllEL) []
+     apply (erule SA_AllEL)
+      apply simp
+     apply (drule Forall_swapD)+
+     apply (erule exE conjE)+
+    apply hypsubst_thin
+     apply auto
+    subgoal for Z
+      apply (frule ty.equiv[of "id(Y := Z, Z := Y)" "proj_ctxt \<Gamma> \<^bold>, Z <: U1", rotated 2])
+        apply (auto simp: typ.permute_comp) [3]
+      apply (rule TSub)
+      thm ty.equiv
+     apply (frule typing.equiv[of "id(Y := X, X := Y)" id, rotated 4])
+         apply (auto simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
+          trm.permute_id) [5]
+    apply (subgoal_tac "map (map_prod (map_sum (id(Y := X, X := Y)) id)
+          (permute_typ (id(Y := X, X := Y)))) \<Gamma> = \<Gamma>")
+    apply simp
+     apply (rule TSub)
+      apply (rule typing_narrowing[where \<Delta>="[]", simplified])
+          apply assumption
+      sorry
+(*
+    subgoal sorry
+    apply auto
+    apply assumption
+    find_theorems typing name: weaken
+    oops
+    thm ty_narrowing2[where \<Delta>="[]", simplified]
+    apply (rule ty_narrowing2[where \<Delta>="[]", simplified])
+         apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
+          trm.permute_id
+          intro!: list.map_ident_strong sum.map_ident_strong trm.permute_cong_id typ.permute_cong_id
+          elim!: arg_cong3[where h="\<lambda>\<Gamma> U T. \<Gamma> \<^bold>, Inl X <: U \<^bold>\<turnstile> s2 \<^bold>: T", THEN iffD1, rotated 3]) [5]
+    apply (metis fst_conv)
+    apply (metis Domain.DomainI setl.cases)
+    apply (metis snd_conv)
+    apply (metis (no_types, opaque_lifting) Domain_fst UN_I image_iff snd_conv typing_wf_ctxt wf_ctxt_ConsE wf_ctxt_FFVars)
+    sledgehammer
+    thm TSub
+    subgoal for f g
+      apply (drule sym[of "g X"])
+      apply (subgoal_tac "permute_typ f T2 = permute_typ g T2")
+       apply auto
      defer
+*)
     sorry
 next
   case (TSub \<Gamma> S T)
@@ -1541,26 +1597,26 @@ proof (binder_induction \<Gamma> t T arbitrary: t' avoiding: \<Gamma> T t t' rul
 next
   case (TTApp \<Gamma> t1 X T11 T12 T2 t')
   from TTApp(8,1-7,9) show ?case
-    apply (binder_induction "TApp t1 T2" t' avoiding: \<Gamma> rule: step.strong_induct)
+    apply (binder_induction "TApp t1 T2" t' avoiding: \<Gamma> X T12 rule: step.strong_induct)
         prefer 2
     subgoal for Y T t U
       apply clarsimp
-      apply (cases "X = Y")
-       apply simp
-      apply (frule typing_TAbsD)
+      apply (frule typing_TAbsD[where ?U1.0 = T11 and ?U2.0 = "permute_typ (id(Y := X, X := Y)) T12"])
         apply fastforce
+       apply (subst Forall_swap[of X _ Y])
+        apply (auto simp: typ.FVars_permute typ.permute_comp) [2]
       apply (rule ty_refl)
       using typing_wf_ty apply blast
       using typing_well_scoped apply blast
-      apply (erule conjE exE)+
-       apply (rule typing_tvsubst_typ[where \<Delta>=\<emptyset>, simplified])
+      apply (subst Forall_eq_tvsubst_typ[of _ _ _ Y "permute_typ (id(X := Y, Y := X)) T12"])
        apply (rule Forall_swap)
-       apply (auto) []
-      apply safe
-       apply (drule typing_tvsubst_typ[where \<Delta>=\<emptyset>, simplified])
-      apply assumption
+       apply simp
+      apply (erule exE conjE)+
+      apply (rule typing_tvsubst_typ[where \<Delta>=\<emptyset>, simplified])
        apply (erule TSub)
-      sorry
+       apply (simp add: fun_upd_twist)
+      apply assumption
+      done
     apply (force intro: typing.intros)+
     done
 qed (auto elim: step.cases intro: typing.TSub)

@@ -1580,19 +1580,6 @@ lemma alpha'_imp_alpha: "alpha_term' x y \<Longrightarrow> alpha_term x y"
 
              apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
 
-
-        apply (rule arg_cong[THEN fun_cong, THEN fun_cong, THEN iffD2])
-         apply (rule iffD1[OF inj_image_eq_iff[OF bij_is_inj], rotated])
-          apply (rule trans)
-           apply (rule sym)
-           apply (erule term_pre.mr_rel_set[rotated -1])
-               apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-          apply (rule iffD1[OF inj_image_eq_iff[OF bij_is_inj], rotated])
-       apply (rule sym)
-(* TODO(ozkutuk): I wrote these two rules myself, is that a problem? *)
-       apply (rule image_id)
-  apply (rule bij_id)+
-
     apply (rule id_on_comp[rotated])
      apply assumption
     apply (rule id_on_inv)

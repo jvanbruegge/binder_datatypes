@@ -1576,19 +1576,19 @@ inductive match for \<sigma> where
 | MPRec: "nonrep_PRec PP \<Longrightarrow> labels PP \<subseteq> labels VV \<Longrightarrow>
     (\<And>l P v. (l, P) \<in>\<in> PP \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> match \<sigma> P v) \<Longrightarrow> match \<sigma> (PRec PP) (Rec VV)"
 
-definition "restrict \<sigma> A x = (if x \<in> A then \<sigma> x else Var x)"
+definition "restrict \<sigma> A v x = (if x \<in> A then \<sigma> x else v x)"
 
 lemma match_cong: "match \<sigma> p v \<Longrightarrow> (\<forall>x \<in> PVars p. \<sigma> x = \<tau> x) \<Longrightarrow> match \<tau> p v"
   by (induct p v rule: match.induct)
     (force simp: restrict_def values_lfin_iff Ball_def Bex_def intro!: match.intros)+
 
-lemma match_restrict: "match \<sigma> p v \<Longrightarrow> match (restrict \<sigma> (PVars p)) p v"
+lemma match_restrict: "match \<sigma> p v \<Longrightarrow> match (restrict \<sigma> (PVars p) Var) p v"
   by (erule match_cong) (auto simp: restrict_def)
 
 inductive step where
   AppAbs: "value v \<Longrightarrow> step (App (Abs x T t) v) (tvsubst (Var(x := v)) TyVar t)"
 | TAppTAbs: "step (TApp (TAbs X T t) T2) (tvsubst Var (TyVar(X := T2)) t)"
-| LetV: "value v \<Longrightarrow> match \<sigma> p v \<Longrightarrow> step (Let p v u) (tvsubst (restrict \<sigma> (PVars p)) TyVar u)"
+| LetV: "value v \<Longrightarrow> match \<sigma> p v \<Longrightarrow> step (Let p v u) (tvsubst (restrict \<sigma> (PVars p) Var) TyVar u)"
 | ProjRec: "\<forall>v \<in> values VV. value v \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> step (Proj (Rec VV) l) v"
 | AppCong1: "step t t' \<Longrightarrow> step (App t u) (App t' u)"
 | AppCong2: "value v \<Longrightarrow> step t t' \<Longrightarrow> step (App v t) (App v t')"
@@ -2186,6 +2186,11 @@ lemma SSupp_trm_Var_comp: "SSupp_trm (Var o \<sigma>) = supp \<sigma>"
   unfolding SSupp_trm_def supp_def
   by auto
 
+lemma finite_FVars[simp]: "finite (FVars t)"
+  by (induct t) auto
+lemma finite_FTVars[simp]: "finite (FTVars t)"
+  by (induct t) auto
+
 lemma permute_trm_eq_tvsubst:
   fixes \<sigma> :: "'v :: var \<Rightarrow> 'v" and \<tau> :: "'tv :: var \<Rightarrow> 'tv" and t :: "('tv :: var, 'v :: var) trm"
   assumes [simp]:
@@ -2218,19 +2223,65 @@ proof -
     done
 qed
 
+lemma permute_trm_eq_tvsubst':
+  fixes \<sigma> :: "'v :: var \<Rightarrow> 'v" and \<tau> :: "'tv :: var \<Rightarrow> 'tv" and t :: "('tv :: var, 'v :: var) trm"
+  assumes [simp]:
+    "bij \<sigma>"
+    "|supp \<sigma>| <o |UNIV::'v set|"
+    "bij \<tau>"
+    "|supp \<tau>| <o |UNIV::'tv set|"
+  shows "permute_trm \<tau> \<sigma> t = tvsubst (restrict (Var o \<sigma>) (FVars t) Var) (restrict (TyVar o \<tau>) (FTVars t) TyVar) t"
+proof -
+  have [simp]: "|SSupp_trm (restrict (Var o \<sigma>) (FVars t) Var)| <o cmin |UNIV::'tv set| |UNIV::'v set|"
+    "|SSupp_typ (restrict (TyVar o \<tau>) (FTVars t) TyVar)| <o cmin |UNIV::'tv set| |UNIV::'v set|"
+    by (auto simp: restrict_def SSupp_trm_def SSupp_typ_def infinite_UNIV intro!: cmin_greater)
+  show ?thesis
+    apply (binder_induction t avoiding: "supp \<sigma>" "supp \<tau>" t rule: trm.strong_induct)
+          apply (auto simp: permute_typ_eq_tvsubst_typ_TyVar lfset.set_map intro!: lfset.map_cong0)
+     apply (subst tvsubst_simps)
+             apply (auto simp: IImsupp_2_trm_def SSupp_trm_Var_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<sigma>\<close>] restrict_def)
+    apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater) [2]
+    apply (subst tvsubst_simps)
+         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
+               apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater bij_implies_inject supp_def[symmetric] split: if_splits intro!: tvsubst_typ_cong tvsubst_cong lfset.map_cong)
+    apply (subst tvsubst_simps)
+         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
+           apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater bij_implies_inject supp_def[symmetric] split: if_splits intro!: tvsubst_typ_cong tvsubst_cong lfset.map_cong)
+    apply (subst tvsubst_simps)
+         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
+               apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater bij_implies_inject supp_def[symmetric] vvsubst_pat_tvsubst_pat split: if_splits intro!: tvsubst_typ_cong tvsubst_cong lfset.map_cong tvsubst_pat_cong arg_cong3[where h=Let])
+    apply (metis DiffD2 Diff_triv assms(1) bij_implies_inject not_in_supp_alt)
+     apply (metis DiffD2 Diff_triv assms(1) bij_implies_inject not_in_supp_alt)
+    apply (meson disjoint_iff_not_equal not_in_supp_alt)
+    apply (meson disjoint_iff_not_equal not_in_supp_alt)
+    done
+qed
+
 lemma supp_swap_bound_cmin: "|supp (id(x := y, y := x))| <o cmin |UNIV :: 'a::var set| |UNIV :: 'b::var set|"
   by (rule ordLeq_ordLess_trans[OF card_of_mono1[of _ "{x, y}"]])
     (auto simp: supp_def cmin_greater infinite_UNIV)
 
-lemma SSupp_trm_restrict[simp]: "SSupp_trm (restrict \<sigma> A) = SSupp_trm \<sigma> \<inter> A"
+lemma SSupp_trm_restrict[simp]: "SSupp_trm (restrict \<sigma> A Var) = SSupp_trm \<sigma> \<inter> A"
   unfolding SSupp_trm_def restrict_def
   by auto
 
-lemma FVars_restrict: "FVars (restrict \<sigma> A a) = (if a \<in> A then FVars (\<sigma> a) else {a})"
+lemma SSupp_typ_restrict[simp]: "SSupp_typ (restrict \<sigma> A TyVar) = SSupp_typ \<sigma> \<inter> A"
+  unfolding SSupp_typ_def restrict_def
+  by auto
+
+lemma FVars_restrict: "FVars (restrict \<sigma> A Var a) = (if a \<in> A then FVars (\<sigma> a) else {a})"
   by (auto simp: restrict_def)
 
 lemma match_FVars: "match \<sigma> p v \<Longrightarrow> x \<in> PVars p \<Longrightarrow> FVars (\<sigma> x) \<subseteq> FVars v"
   by (induct p v rule: match.induct) (force simp: values_lfin_iff labels_lfin_iff Bex_def)+
+
+lemma match_permute: 
+  "match \<sigma> (p :: ('tv::var, 'v::var) pat) v \<Longrightarrow> bij \<rho> \<Longrightarrow> |supp \<rho>| <o |UNIV :: 'v::var set| \<Longrightarrow> (\<forall>x. \<rho> (\<rho> x) = x) \<Longrightarrow>
+   match (\<sigma> \<circ> \<rho>) (vvsubst_pat id \<rho> p) v"
+  apply (induct p v rule: match.induct)
+   apply (auto simp: id_def[symmetric] lfset.set_map lfin_map_lfset nonrep_PRec_def
+     pat.set_map intro!: match.intros)
+  by (metis Int_emptyD)
 
 binder_inductive (no_auto_equiv) step
   subgoal sorry
@@ -2303,12 +2354,20 @@ binder_inductive (no_auto_equiv) step
         apply (intro conjI)
            apply (rule Let_inject[THEN iffD2]; simp)
            apply (rule exI[of _ \<rho>])
-           apply (auto simp add: id_on_def pat.set_map permute_trm_eq_tvsubst)
-         apply (subst permute_trm_eq_tvsubst)
-             apply (auto intro!: cmin_greater)
-        sledgehammer
-        find_theorems tvsubst permute_trm
-      sorry
+           apply (auto simp add: id_on_def pat.set_map match_permute)
+         apply (subst permute_trm_eq_tvsubst')
+            apply (auto)
+        apply (subst tvsubst_comp)
+            apply (auto simp: infinite_UNIV intro!: cmin_greater)
+        apply (rule tvsubst_cong)
+             apply (auto  simp: infinite_UNIV restrict_def intro: cmin_greater intro!: SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
+        apply (subst tvsubst_simps)
+           apply (auto simp: infinite_UNIV restrict_def intro!: cmin_greater)
+        apply (subst tvsubst_simps)
+          apply (auto simp: infinite_UNIV restrict_def intro!: cmin_greater)
+        done
+        apply (auto simp: infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV)
+      done
     subgoal for VV l v
       by auto
     subgoal for t t' u
@@ -2322,7 +2381,31 @@ binder_inductive (no_auto_equiv) step
     subgoal 
       by auto
     subgoal for t t' p u
-      sorry
+      apply (rule disjI2)+
+      apply (rule mp[OF _ extend_fresh[where B="PVars p" and A="FVars t \<union> FVars t' \<union> FVars u"]])
+      apply (rule impI)
+         apply (erule exE conjE)+
+      subgoal for \<rho>
+      apply (rule exI[of _ "{}"]; simp)
+      apply (rule exI[of _ "\<rho> ` PVars p"]; simp)
+        apply (rule conjI)
+        apply auto []
+        apply (rule exI[of _ t])
+        apply (rule exI[of _ t'])
+        apply (rule exI[of _ "vvsubst_pat id \<rho> p"])
+        apply (rule conjI)
+        apply (simp add: pat.set_map)
+        apply (rule exI[of _ "permute_trm id \<rho> u"])
+        apply (intro conjI)
+           apply (rule Let_inject[THEN iffD2]; simp)
+           apply (rule exI[of _ \<rho>])
+           apply (auto simp add: id_on_def pat.set_map match_permute)
+           apply (rule Let_inject[THEN iffD2]; simp)
+           apply (rule exI[of _ \<rho>])
+           apply (auto simp add: id_on_def pat.set_map match_permute)
+        done
+        apply (auto simp: infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV)
+      done
     done
   done
 

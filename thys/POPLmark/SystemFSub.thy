@@ -421,4 +421,7 @@ lemma vvsubst_typ_tvsubst_typ:
     (auto simp: SSupp_typ_TyVar_comp IImsupp_typ_TyVar_comp
       assms imsupp_supp_bound infinite_UNIV intro: lfset.map_cong)
 
+lemma finite_FVars_typ[simp]:"finite (FVars_typ T)"
+  by (induct T) auto
+
 end

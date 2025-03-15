@@ -213,6 +213,9 @@ fun PPTVars where
   "PPTVars (PPVar v T) = FVars_typ T"
 | "PPTVars (PPRec X) = (\<Union>P \<in> values X. PPTVars P)"
 
+lemma finite_PPTVars: "finite (PPTVars P)"
+  by (induct P) auto
+
 lemma PPVars_vvsubst_rawpat[simp]: "PPVars (vvsubst_rawpat \<tau> \<sigma> P) = \<sigma> ` PPVars P"
   by (induct P) (auto simp: lfset.set_map)
 
@@ -421,5 +424,7 @@ lemma PTVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PTVars (PRec P) = (\<U
 
 lemma finite_PVars[simp]: "finite (PVars P)"
   by (auto simp: PVars_def finite_PPVars)
+lemma finite_PVars[simp]: "finite (PTVars P)"
+  by (auto simp: PTVars_def finite_PPTVars)
 
 end

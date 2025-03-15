@@ -1361,7 +1361,7 @@ lemma pat_typing_equiv[equiv]:
   apply (induct p T \<Delta> rule: pat_typing.induct)
    apply (auto simp: assms typ.vvsubst_permute map_concat lfin_map_lfset
      intro!: pat_typing.intros)
-  apply (auto simp: nonrep_PRec_def lfin_map_lfset vvsubst_pat_tvsubst_pat assms PVars_tvsubst_pat)
+  apply (auto simp: nonrep_PRec_def lfset.set_map lfin_map_lfset vvsubst_pat_tvsubst_pat assms PVars_tvsubst_pat)
   apply (metis Int_emptyD assms(3) bij_implies_inject)
   done
 
@@ -1398,12 +1398,21 @@ lemma HELP2[equiv]:
       trm.permute_comp trm.permute_id[unfolded id_def])
   done
 
-lemma "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> dom \<Delta> \<subseteq> Inr ` PVars p"
+lemma pat_typing_dom: "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> dom \<Delta> = Inr ` PVars p"
   apply (induct p T \<Delta> rule: pat_typing.induct)
-   apply (auto simp: set_labelist image_iff)
-  sledgehammer
+   apply (auto simp: set_labelist image_iff set_eq_iff labels_lfin_iff Bex_def values_lfin_iff)
+   apply (smt (verit, del_insts) fstI image_iff image_subset_iff)+
+  done
 
-binder_inductive typing
+lemma wf_ctxt_concat_disjoint: "\<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> \<Gamma> \<bottom> \<Delta>"
+proof (induction \<Delta>)
+  case (Cons a \<Delta>)
+  then show ?case
+    by (cases a) auto
+qed simp
+
+binder_inductive (no_auto_equiv) typing
+  subgoal sorry
   subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -1537,14 +1546,13 @@ binder_inductive typing
             apply (cases "x \<in> PVars p")
             subgoal
               apply (cases z; auto)
-              sorry
+              apply (drule pat_typing_dom)
+              apply (drule wf_ctxt_concat_disjoint)
+              apply auto
+              done
             apply (metis (mono_tags, lifting) Diff_iff Un_iff fst_conv id_on_def imageI setr.cases
                 vimage_eq)
-         apply (simp add: id_on_def image_Un Int_Un_distrib Int_Un_distrib2 image_iff vimage_def) []
-          apply (cases z; auto)
-          apply (subgoal_tac "x \<in> \<sigma> ` PVars p")
-           apply auto
-          apply (metis (no_types, opaque_lifting) Int_emptyD fst_conv imageI)
+            done
           done
         done
       apply (auto intro!: typ.Un_bound simp: finite_vimageI pat.set_bd_UNIV trm.set_bd_UNIV infinite_UNIV card_of_minus_bound)

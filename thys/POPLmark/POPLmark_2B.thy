@@ -1,5 +1,5 @@
 theory POPLmark_2B
-  imports Pattern
+  imports Pattern "HOL-Library.List_Lexorder" "HOL-Library.Char_ord"
 begin
 
 binder_datatype (FTVars: 'tv, FVars: 'v) trm =
@@ -974,6 +974,7 @@ lemma tvsubst_simps[simp]:
 inductive "value" where
   "value (Abs x T t)"
 | "value (TAbs X T t)"
+| "value (Rec X)"
 
 lemma value_equiv[equiv]:
   fixes \<sigma>1::"'tv::var \<Rightarrow> 'tv" and \<sigma>2::"'v::var \<Rightarrow> 'v"
@@ -1027,6 +1028,10 @@ proof (induction \<Gamma> rule: wf_ctxt.induct)
     by (rule wf_ctxt_Cons(4))
 qed auto
 
+inductive pat_typing :: "('tv :: var, 't :: var) pat \<Rightarrow> 'tv typ \<Rightarrow> ('tv, 't) \<Gamma>\<^sub>t \<Rightarrow> bool" ("\<turnstile> _ : _ \<rightarrow> _" [30,29,30] 30) where
+  PVar: "\<turnstile> PVar x T : T \<rightarrow> \<emptyset> \<^bold>, Inr x <: T"
+| PRec: "(\<And>l P T. (l, P) \<in>\<in> PP \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<turnstile> P : T \<rightarrow> \<Delta> l) \<Longrightarrow> \<turnstile> PRec PP : TRec TT \<rightarrow> List.concat (map \<Delta> (labelist TT))"
+
 inductive typing :: "('tv::var, 't::var) \<Gamma>\<^sub>t \<Rightarrow> ('tv, 't) trm \<Rightarrow> 'tv typ \<Rightarrow> bool" ("_ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,30] 30) where
   TVar: "\<turnstile> \<Gamma> OK \<Longrightarrow> (Inr x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Var x \<^bold>: T"
 | TAbs: "\<Gamma> \<^bold>, Inr x <: T1 \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Abs x T1 t \<^bold>: T1 \<rightarrow> T2"
@@ -1034,6 +1039,9 @@ inductive typing :: "('tv::var, 't::var) \<Gamma>\<^sub>t \<Rightarrow> ('tv, 't
 | TTAbs: "\<Gamma> \<^bold>, Inl X <: T1 \<^bold>\<turnstile> t \<^bold>: T2 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> TAbs X T1 t \<^bold>:  \<forall>X <: T1. T2"
 | TTApp: "\<Gamma> \<^bold>\<turnstile> t1 \<^bold>: \<forall>X <: T11. T12 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T2 <: T11 \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> TApp t1 T2 \<^bold>: tvsubst_typ (TyVar(X := T2)) T12"
 | TSub: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: S \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> S <: T \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t \<^bold>: T"
+| TRec: "\<turnstile> \<Gamma> OK \<Longrightarrow> rel_lfset id (\<lambda>t T. \<Gamma> \<^bold>\<turnstile> t \<^bold>: T) XX TT \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Rec XX \<^bold>: TRec TT"
+| TProj: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: TRec TT \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Proj t l \<^bold>: T"
+| TLet: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> \<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> u \<^bold>: U  \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Let p t u \<^bold>: U"
 
 lemmas [simp] = map_filter_simps
 
@@ -1323,7 +1331,8 @@ lemma extend_equiv_sum[equiv]:
   by simp
 lemmas [equiv] = map_sum.simps map_prod_simp
 
-binder_inductive typing
+binder_inductive (no_auto_equiv) typing
+  subgoal sorry
   subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -1405,6 +1414,28 @@ binder_inductive typing
     subgoal
       apply (rule disjI2)
       apply force
+      done
+    subgoal
+      apply (rule disjI2)
+      apply force
+      done
+    subgoal
+      apply (rule disjI2)
+      apply force
+      done
+    subgoal for \<Gamma>' t T' p \<Delta> u U
+      apply (rule disjI2)+
+      apply (rule mp[OF _ extend_fresh[where A="PVars p" and B="Inr -` dom \<Gamma> \<union> FVars t \<union> (FVars u - PVars p)"]])
+      apply (rule impI)
+         apply (erule exE conjE)+
+      subgoal for \<sigma>
+        apply (rule exI[of _ "{}"]; simp)
+        apply (rule exI[of _ "\<sigma> ` PVars p"]; simp)
+        apply (rule conjI)
+         apply (auto simp: id_on_def) []
+        sledgehammer
+        sorry
+      apply (auto intro!: typ.Un_bound simp: finite_vimageI pat.set_bd_UNIV trm.set_bd_UNIV infinite_UNIV card_of_minus_bound)
       done
     done
   done

@@ -18,7 +18,7 @@ binder_datatype 'a "typ" =
   | Top
   | Fun "'a typ" "'a typ"
   | Forall \<alpha>::'a "'a typ" t::"'a typ" binds \<alpha> in t
-  | Rec "(label, 'a typ) lfset"
+  | TRec "(label, 'a typ) lfset"
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.permute_id[simp] typ.permute_id0[simp]
@@ -209,9 +209,9 @@ inductive ty :: "'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a typ \<Rightarrow
 | SA_Trans_TVar: "\<lbrakk> x<:U \<in> \<Gamma> ; \<Gamma> \<turnstile> U <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TyVar x <: T"
 | SA_Arrow: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma> \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S\<^sub>1 \<rightarrow> S\<^sub>2 <: T\<^sub>1 \<rightarrow> T\<^sub>2"
 | SA_All: "\<lbrakk> \<Gamma> \<turnstile> T\<^sub>1 <: S\<^sub>1 ; \<Gamma>\<^bold>, x<:T\<^sub>1 \<turnstile> S\<^sub>2 <: T\<^sub>2 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<forall>x<:S\<^sub>1. S\<^sub>2 <: \<forall>x<:T\<^sub>1 .T\<^sub>2"
-| SA_Rec: "\<lbrakk> \<turnstile> \<Gamma> ok; labels Y \<subseteq> labels X;
+| SA_TRec: "\<lbrakk> \<turnstile> \<Gamma> ok; labels Y \<subseteq> labels X;
     \<And>x T. (x, T) \<in>\<in> X \<Longrightarrow> T closed_in \<Gamma> ;
-    \<And>x T. (x, T) \<in>\<in> Y \<Longrightarrow> \<exists>S. (x, S) \<in>\<in> X \<and> \<Gamma> \<turnstile> S <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> Rec X <: Rec Y"
+    \<And>x T. (x, T) \<in>\<in> Y \<Longrightarrow> \<exists>S. (x, S) \<in>\<in> X \<and> \<Gamma> \<turnstile> S <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> TRec X <: TRec Y"
 
 inductive_cases
   SA_TopE[elim!]: "\<Gamma> \<turnstile> Top <: T"
@@ -226,9 +226,9 @@ and
 and
   SA_AllEL: "\<Gamma> \<turnstile> \<forall>Z<:S\<^sub>1. S\<^sub>2 <: T "
 and
-  SA_RecEL: "\<Gamma> \<turnstile> Rec X <: T"
+  SA_TRecEL: "\<Gamma> \<turnstile> TRec X <: T"
 and
-  SA_RecER: "\<Gamma> \<turnstile> T <: Rec X"
+  SA_TRecER: "\<Gamma> \<turnstile> T <: TRec X"
 
 lemma wf_context: "\<Gamma> \<turnstile> S <: T \<Longrightarrow> \<turnstile> \<Gamma> ok"
   by (induction \<Gamma> S T rule: ty.induct)
@@ -245,7 +245,7 @@ using assms proof (induction \<Gamma> S T rule: ty.induct)
     case 2 then show ?case using SA_Trans_TVar by simp
   }
 next
-  case (SA_Rec \<Gamma> Y X)
+  case (SA_TRec \<Gamma> Y X)
   {
     case 1
     then show ?case unfolding typ.set
@@ -254,12 +254,12 @@ next
       assume a: "T \<in> values X" "x \<in> FVars_typ T"
       from \<open>T \<in> values X\<close> obtain l where 1: "(l, T) \<in>\<in> X"
         by (meson values_lfin)
-      then show "x \<in> dom \<Gamma>" using SA_Rec(3) a by fast
+      then show "x \<in> dom \<Gamma>" using SA_TRec(3) a by fast
     qed
   next
     case 2
     then show ?case unfolding typ.set
-      by (auto dest!: values_lfin SA_Rec(4))
+      by (auto dest!: values_lfin SA_TRec(4))
   }
 qed auto
 

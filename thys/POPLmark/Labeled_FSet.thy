@@ -48,6 +48,17 @@ definition map_lfset :: "('a :: var \<Rightarrow> 'a :: var) \<Rightarrow> ('b \
 definition labels :: "('a :: var, 'b) lfset \<Rightarrow> 'a set" where
   "labels = set1_G o Rep_lfset"
 
+lemma finite_labels[simp]: "finite (labels S)"
+  unfolding labels_def o_def set1_G_def
+  by auto
+
+definition labelist :: "('a :: {var, linorder}, 'b) lfset \<Rightarrow> 'a list" where
+  "labelist S = sorted_list_of_set (labels S)"
+
+lemma set_labelist: "set (labelist S) = labels S"
+  unfolding labelist_def
+  by auto
+
 definition "values" :: "('a :: var, 'b) lfset \<Rightarrow> 'b set" where
   "values = set2_G o Rep_lfset"
 
@@ -264,9 +275,6 @@ lemma lfin_lfempty[simp]: "x \<in>\<in> lfempty = False"
 
 lemma lfin_values: "(l, c) \<in>\<in> x \<Longrightarrow> c \<in> values x"
   by transfer force
-
-lemma finite_labels[simp]: "finite (labels x)"
-  by transfer auto
 
 lemma finite_values[simp]: "finite (values x)"
   by transfer auto

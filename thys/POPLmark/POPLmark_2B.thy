@@ -875,6 +875,9 @@ lemma tvsubst_simps[simp]:
     "tvsubst f1 f2 (App t1 t2) = App (tvsubst f1 f2 t1) (tvsubst f1 f2 t2)"
     "X \<notin> IImsupp_1_trm f1 \<Longrightarrow> X \<notin> IImsupp_typ f2 \<Longrightarrow> X \<notin> FVars_typ T \<Longrightarrow> tvsubst f1 f2 (TAbs X T t) = TAbs X (tvsubst_typ f2 T) (tvsubst f1 f2 t)"
     "tvsubst f1 f2 (TApp t T) = TApp (tvsubst f1 f2 t) (tvsubst_typ f2 T)"
+    "tvsubst f1 f2 (Rec XX) = Rec (map_lfset id (tvsubst f1 f2) XX)"
+    "tvsubst f1 f2 (Proj t l) = Proj (tvsubst f1 f2 t) l"
+    "PVars p \<inter> IImsupp_2_trm f1 = {} \<Longrightarrow> PVars p \<inter> FVars t = {} \<Longrightarrow> tvsubst f1 f2 (Let p t u) = Let (tvsubst_pat f2 id p) (tvsubst f1 f2 t) (tvsubst f1 f2 u)"
   subgoal
     apply (unfold Var_def VVr_def[unfolded comp_def, symmetric, THEN meta_eq_to_obj_eq, THEN fun_cong])
     apply (rule tvsubst_VVr)
@@ -918,6 +921,42 @@ lemma tvsubst_simps[simp]:
     done
   subgoal
   apply (unfold TApp_def)
+  apply (rule trans[OF tvsubst_not_is_VVr])
+        apply (rule assms)+
+      apply (unfold set3_trm_pre_def set4_trm_pre_def sum.set_map UN_empty UN_empty2 Un_empty_left comp_def
+        Abs_trm_pre_inverse[OF UNIV_I] sum_set_simps UN_single prod.set_map prod_set_simps Un_empty_right
+        noclash_trm_def set1_trm_pre_def set6_trm_pre_def set2_trm_pre_def isVVr_def VVr_def
+        Abs_trm_pre_inject[OF UNIV_I UNIV_I] trm.TT_inject0 set5_trm_pre_def map_trm_pre_def
+        map_prod_simp map_sum.simps
+      )[4]
+       apply (auto split: sum.splits simp: tvsubst_trm_pre_def trm.TT_inject0 map_trm_pre_def Abs_trm_pre_inverse typ.map_id)
+    done
+  subgoal
+  apply (unfold Rec_def)
+  apply (rule trans[OF tvsubst_not_is_VVr])
+        apply (rule assms)+
+      apply (unfold set3_trm_pre_def set4_trm_pre_def sum.set_map UN_empty UN_empty2 Un_empty_left comp_def
+        Abs_trm_pre_inverse[OF UNIV_I] sum_set_simps UN_single prod.set_map prod_set_simps Un_empty_right
+        noclash_trm_def set1_trm_pre_def set6_trm_pre_def set2_trm_pre_def isVVr_def VVr_def
+        Abs_trm_pre_inject[OF UNIV_I UNIV_I] trm.TT_inject0 set5_trm_pre_def map_trm_pre_def
+        map_prod_simp map_sum.simps
+      )[4]
+       apply (auto split: sum.splits simp: tvsubst_trm_pre_def trm.TT_inject0 map_trm_pre_def Abs_trm_pre_inverse typ.map_id)
+    done
+  subgoal
+  apply (unfold Proj_def)
+  apply (rule trans[OF tvsubst_not_is_VVr])
+        apply (rule assms)+
+      apply (unfold set3_trm_pre_def set4_trm_pre_def sum.set_map UN_empty UN_empty2 Un_empty_left comp_def
+        Abs_trm_pre_inverse[OF UNIV_I] sum_set_simps UN_single prod.set_map prod_set_simps Un_empty_right
+        noclash_trm_def set1_trm_pre_def set6_trm_pre_def set2_trm_pre_def isVVr_def VVr_def
+        Abs_trm_pre_inject[OF UNIV_I UNIV_I] trm.TT_inject0 set5_trm_pre_def map_trm_pre_def
+        map_prod_simp map_sum.simps
+      )[4]
+       apply (auto split: sum.splits simp: tvsubst_trm_pre_def trm.TT_inject0 map_trm_pre_def Abs_trm_pre_inverse typ.map_id)
+    done
+  subgoal
+  apply (unfold Let_def)
   apply (rule trans[OF tvsubst_not_is_VVr])
         apply (rule assms)+
       apply (unfold set3_trm_pre_def set4_trm_pre_def sum.set_map UN_empty UN_empty2 Un_empty_left comp_def

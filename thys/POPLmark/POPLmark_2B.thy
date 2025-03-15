@@ -1712,7 +1712,6 @@ lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longri
 lemma set_proj_ctxt_eq: "set \<Gamma> = set \<Delta> \<Longrightarrow> set (proj_ctxt \<Gamma>) = set (proj_ctxt \<Delta>)"
   by (auto simp: proj_ctxt_def map_filter_def)
 
-<<<<<<< Updated upstream
 lemma wf_ctxt_extend_permute: "\<turnstile> \<Gamma> \<^bold>, \<Gamma>' OK \<Longrightarrow> set \<Gamma> = set \<Delta> \<Longrightarrow> \<turnstile> \<Delta> OK \<Longrightarrow> \<turnstile> \<Delta> \<^bold>, \<Gamma>' OK"
   by (induct \<Gamma>') auto
 
@@ -1737,6 +1736,17 @@ lemma proj_ctxt_extend_Inl[simp]: "proj_ctxt (\<Gamma> \<^bold>, Inl x <: U) = p
 
 lemma proj_ctxt_extend_Inr[simp]: "proj_ctxt (\<Gamma> \<^bold>, Inr x <: U) = proj_ctxt \<Gamma>"
   by (auto simp: proj_ctxt_def map_filter_def)
+
+lemma dom_proj_ctxt: "dom (proj_ctxt \<Gamma>) = Inl -` dom \<Gamma>"
+proof (induct \<Gamma>)
+  case (Cons a \<Gamma>)
+  then show ?case
+    by (cases a; cases "fst a") auto
+qed simp
+
+lemma wf_ctxt_insert_middle:
+  "\<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> dom \<Delta> \<Longrightarrow> U closed_in proj_ctxt \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, x <: U \<^bold>, \<Delta> OK"
+  by (induct \<Delta>) (auto simp: dom_proj_ctxt)
 
 lemma typing_weaken1: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, x <: U OK \<Longrightarrow> \<Gamma> \<^bold>, x <: U \<^bold>\<turnstile> t \<^bold>: T"
 proof (binder_induction \<Gamma> t T avoiding: \<Gamma> t T x U rule: typing.strong_induct)
@@ -1772,10 +1782,20 @@ next
   then show ?case
     by (auto intro!: typing.TRec elim: lfset.rel_mono_strong)
 next
-  case (TLet \<Gamma> t T p \<Delta> u U)
-  then show ?case
-    apply (auto intro!: typing.TLet)
-    sorry
+  case (TLet \<Gamma> t T p \<Delta> u U')
+  then have "\<turnstile> \<Gamma> \<^bold>, \<Delta> \<^bold>, x <: U OK"
+     apply (auto simp add: image_Un Domain.DomainI fst_eq_Domain dest!: typing_wf_ctxt pat_typing_dom)
+    apply (metis Domain.DomainI Int_emptyD image_iff singletonI sum_set_simps(4))
+    done
+  moreover from TLet have "\<turnstile> \<Gamma> \<^bold>, x <: U \<^bold>, \<Delta> OK"
+    apply (auto simp add: image_Un Domain.DomainI fst_eq_Domain dest!: typing_wf_ctxt pat_typing_dom)
+    apply (erule wf_ctxt_insert_middle)
+      apply (auto simp: wf_ctxt_insert_middle)
+    apply (metis Domain.DomainI Int_emptyD image_iff singletonI sum_set_simps(4))
+    apply (metis Un_iff dom_proj_ctxt fst_eq_Domain sup.orderE)
+    done
+  ultimately show ?case using TLet
+    by (auto intro!: typing.TLet elim: typing_permute)
 qed (auto intro: typing.intros)
 
 lemma typing_weaken: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> \<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
@@ -1796,14 +1816,26 @@ proof (binder_induction "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta>" t T a
   with TVar show ?case
     by (auto intro: typing.TVar)
 next
-  case (TRec \<Gamma>' XX TT)
-  then show ?case sorry
+  case (TRec \<Gamma>' XX \<Delta>)
+  from TRec(1,3) have "\<turnstile> \<Gamma> \<^bold>, Inl X <: P \<^bold>, \<Delta> OK"
+    apply (induct \<Delta>)
+     apply (auto simp: image_Un rev_image_eqI dest!: well_scoped(1))
+    apply (metis (no_types, opaque_lifting) Pair_inject proj_ctxt_extend_Inl subset_eq wf_ConsE wf_ctxt_Cons wf_ty_proj_ctxt)
+    done
+  with TRec show ?case
+    by (auto simp: ty_narrowing2 elim!: lfset.rel_mono_strong intro!: typing.TRec)
 qed (auto simp flip: append_Cons simp: ty_narrowing2 intro: typing.intros)
 
 lemma wf_ctxt_weaken: "\<turnstile> \<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK"
   by (induct \<Delta>) auto
 lemma wf_ctxt_notin: "\<turnstile> \<Gamma> \<^bold>, x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> x \<notin> dom \<Gamma> \<and> x \<notin> dom \<Delta>"
   by (induct \<Delta>) auto
+
+lemma tvVVr_tvsubst_trm_Var[simp]: "tvVVr_tvsubst_trm x = Var x"
+  by (auto simp: tvVVr_tvsubst_trm_def VVr_def Var_def tv\<eta>_trm_tvsubst_trm_def)
+
+lemma IImsupp_2_trm_unary: "IImsupp_2_trm (Var(x := q)) \<subseteq> insert x (FVars q)"
+  by (auto simp: IImsupp_2_trm_def SSupp_trm_def)
 
 lemma typing_tvsubst: "\<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> q \<^bold>: Q \<Longrightarrow> \<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> tvsubst (Var(x := q)) TyVar t \<^bold>: T"
 proof (binder_induction "\<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta>" t T arbitrary: \<Gamma> \<Delta> avoiding: \<Gamma> \<Delta> x q Q t T rule: typing.strong_induct)
@@ -1833,6 +1865,20 @@ next
   case (TSub t S T \<Gamma> \<Delta>)
   then show ?case
     by (fastforce intro: typing.TSub)
+next
+  case (TRec XX TT \<Gamma> \<Delta>)
+  then show ?case
+    by (auto simp: wf_ctxt_weaken lfset.rel_map elim!: lfset.rel_mono_strong intro!: typing.TRec)
+next
+  case (TProj ta TT l Ta \<Gamma> \<Delta>)
+  then show ?case
+    by (auto intro!: typing.TProj)
+next
+  case (TLet t T p \<Delta>' u U \<Gamma> \<Delta>)
+  then show ?case
+    by (subst tvsubst_simps)
+      (auto simp: vvsubst_pat_tvsubst_pat[of id id, simplified, symmetric]
+          simp flip: append_assoc intro!: typing.TLet dest!: set_mp[OF IImsupp_2_trm_unary])
 qed
 
 lemma Abs_inject_permute: "x \<notin> FVars u \<Longrightarrow> Abs x T t = Abs y U u \<longleftrightarrow> (T = U \<and> t = permute_trm id (id(x := y, y := x)) u)"
@@ -1864,9 +1910,6 @@ qed auto
 
 lemma swap_swap[simp]: "id(Y := X, X := Y) \<circ> id(Y := X, X := Y) = id"
   by auto
-
-lemma dom_proj_ctxt: "dom (proj_ctxt \<Gamma>) \<subseteq> Inl -` dom \<Gamma>"
-  by (auto simp: proj_ctxt_def map_filter_def image_iff split: sum.splits intro!: bexI[of _ "(_, _)"])
 
 lemma typing_TAbsD: "\<Gamma> \<^bold>\<turnstile> TAbs X S1 s2 \<^bold>: T \<Longrightarrow> X \<notin> Inl -` dom \<Gamma> \<Longrightarrow> X \<notin> FFVars_ctxt \<Gamma> \<Longrightarrow> X \<notin> FVars_typ U1 \<Longrightarrow>
    proj_ctxt \<Gamma> \<turnstile> T <: \<forall>X <: U1. U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
@@ -2016,9 +2059,6 @@ proof -
     subgoal by (metis singletonD typ.FVars_VVr typ.in_IImsupp)
     sorry
 qed
-
-lemma tvVVr_tvsubst_trm_VVr: "tvVVr_tvsubst_trm x = VVr x"
-  by (auto simp: tvVVr_tvsubst_trm_def VVr_def tv\<eta>_trm_tvsubst_trm_def)
 
 lemma SSupp_trm_tvsubst:
   fixes f h :: "'v \<Rightarrow> ('tv :: var, 'v :: var) trm" and g ::"'tv::var \<Rightarrow> 'tv typ"

@@ -1744,6 +1744,9 @@ proof (induct \<Gamma>)
     by (cases a; cases "fst a") auto
 qed simp
 
+lemma set_proj_ctxt: "set (proj_ctxt \<Gamma>) = {(x, T). (Inl x, T) \<in> set \<Gamma>}"
+  by (force simp: proj_ctxt_def map_filter_def image_iff split: sum.splits prod.splits)
+
 lemma wf_ctxt_insert_middle:
   "\<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> x \<notin> dom \<Gamma> \<Longrightarrow> x \<notin> dom \<Delta> \<Longrightarrow> U closed_in proj_ctxt \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, x <: U \<^bold>, \<Delta> OK"
   by (induct \<Delta>) (auto simp: dom_proj_ctxt)
@@ -1970,9 +1973,6 @@ next
   then show ?case
     using ty_transitivity2 by fast
 qed auto
-
-lemma set_proj_ctxt[simp]: "set (proj_ctxt \<Gamma>) = {(x, T). (Inl x, T) \<in> set \<Gamma>}"
-  by (force simp: proj_ctxt_def map_filter_def image_iff split: sum.splits prod.splits)
   
 lemma typing_well_scoped: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> T closed_in proj_ctxt \<Gamma>"
 proof (binder_induction \<Gamma> t T avoiding: \<Gamma> T t rule: typing.strong_induct)
@@ -2067,7 +2067,7 @@ lemma SSupp_trm_tvsubst:
     "|SSupp_typ g| <o cmin |UNIV::'tv set| |UNIV::'v set|"
   shows "SSupp_trm (tvsubst f g \<circ> h) \<subseteq> SSupp_trm f \<union> SSupp_trm h"
   unfolding SSupp_trm_def
-  using assms by (auto simp: tvVVr_tvsubst_trm_VVr tvsubst_VVr)
+  using assms by (auto simp: tvsubst_VVr)
 
 lemma IImsupp_1_trm_tvsubst:
   fixes f h :: "'v \<Rightarrow> ('tv :: var, 'v :: var) trm" and g ::"'tv::var \<Rightarrow> 'tv typ"
@@ -2169,9 +2169,7 @@ qed
 
 lemma SSupp_trm_Var_comp: "SSupp_trm (Var o \<sigma>) = supp \<sigma>"
   unfolding SSupp_trm_def supp_def
-  apply (auto simp: tvVVr_tvsubst_trm_VVr Var_def VVr_def)
-  apply (metis (no_types, lifting) VVr_def asVVr_VVr comp_def)
-  done
+  by auto
 
 lemma permute_trm_eq_tvsubst:
   fixes \<sigma> :: "'v :: var \<Rightarrow> 'v" and \<tau> :: "'tv :: var \<Rightarrow> 'tv" and t :: "('tv :: var, 'v :: var) trm"
@@ -2204,7 +2202,8 @@ lemma supp_swap_bound_cmin: "|supp (id(x := y, y := x))| <o cmin |UNIV :: 'a::va
   by (rule ordLeq_ordLess_trans[OF card_of_mono1[of _ "{x, y}"]])
     (auto simp: supp_def cmin_greater infinite_UNIV)
 
-binder_inductive step
+binder_inductive (no_auto_equiv) step
+  subgoal sorry
   subgoal premises prems for R B1 B2 t u
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -2254,7 +2253,14 @@ binder_inductive step
              apply (auto simp: fun_upd_comp SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
         done
       done
-      apply auto
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
     done
   done
 
@@ -2323,10 +2329,10 @@ next
   then show ?case
     by (subst (1 2) typ.subst) (auto dest!: IImsupp_fun_upd[THEN set_mp])
 next
-  case (SA_Rec YY XX \<Delta>)
+  case (SA_TRec YY XX \<Delta>)
   then show ?case
     apply simp
-    apply (intro ty.SA_Rec)
+    apply (intro ty.SA_TRec)
        apply (auto simp: wf_ty_extend_tvsubst_typ lfset.set_map image_Un image_image lfin_map_lfset
         FVars_tvsubst_typ split: if_splits dest: well_scoped(1))
        apply (meson subset_iff well_scoped(1))
@@ -2347,7 +2353,7 @@ lemma wf_ctxt_extend_tvsubst_typ_aux:
 
 lemma wf_ctxt_extend_tvsubst_typ: 
   "\<turnstile> \<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> OK \<Longrightarrow> P closed_in proj_ctxt \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta> OK"
-  by (erule wf_ctxt_extend_tvsubst_typ_aux) (force simp: subset_eq image_iff)
+  by (erule wf_ctxt_extend_tvsubst_typ_aux) (force simp: subset_eq image_iff dom_proj_ctxt)
 
 lemma wf_ctxt_weaken_ext: "\<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> \<turnstile> \<Gamma> OK"
   by (induct \<Delta>) auto
@@ -2391,7 +2397,7 @@ next
     apply (subst (asm) typ.subst)
        apply (auto simp: FVars_tvsubst_typ)
     apply (drule set_mp, assumption)
-    apply auto
+    apply (auto simp: set_proj_ctxt)
     done
   with TTApp(1-9) show ?case
     by (subst tvsubst_typ_tvsubst_typ) auto
@@ -2399,6 +2405,15 @@ next
   case (TSub t S T \<Delta>)
   then show ?case
     by (force intro: typing.TSub ty_tvsubst_typ)
+next
+  case (TRec XX TT \<Delta>)
+  then show ?case sorry
+next
+  case (TProj ta TT l Ta \<Delta>)
+  then show ?case sorry
+next
+  case (TLet ta Ta p \<Delta>' u U \<Delta>)
+  then show ?case sorry
 qed (auto intro: typing.intros)
 
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
@@ -2445,6 +2460,15 @@ next
       done
     apply (force intro: typing.intros)+
     done
+next
+  case (TRec \<Gamma>' XX TT t')
+  then show ?case sorry
+next
+  case (TProj \<Gamma>' ta TT l Ta t')
+  then show ?case sorry
+next
+  case (TLet \<Gamma>' ta Ta p \<Delta> u U t')
+  then show ?case sorry
 qed (auto elim: step.cases intro: typing.TSub)
 
 end

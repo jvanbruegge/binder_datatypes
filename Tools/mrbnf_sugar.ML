@@ -436,7 +436,7 @@ fun create_binder_datatype (spec : spec) lthy =
             rtac ctxt @{thm set_eqI},
             rtac ctxt @{thm iffI},
             REPEAT_DETERM o EVERY' [
-              TRY o etac ctxt @{thm UnE},
+              REPEAT_DETERM o etac ctxt @{thm UnE},
               SELECT_GOAL (REPEAT_DETERM1 (FIRST1 [
                 etac ctxt @{thm UnI2},
                 rtac ctxt @{thm UnI1},

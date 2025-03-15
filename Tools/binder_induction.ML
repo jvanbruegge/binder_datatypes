@@ -195,7 +195,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
             case try (HOLogic.dest_setT o range_type) T of
               NONE => false
               | SOME T => member (op=) vars T
-          ) (fold_rev Term.add_vars cases_prems [])));
+          ) (fold Term.add_vars (take nvars (drop nmajor prems)) [])));
 
           fun strip_pure_all t =
             let fun go (Const ("Pure.all", _) $ Abs (x, T, t)) xs = go t (Free (x, T)::xs)

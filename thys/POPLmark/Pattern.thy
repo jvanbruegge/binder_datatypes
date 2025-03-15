@@ -254,14 +254,6 @@ lift_definition PVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'v set" is
 lift_definition PTVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'tv set" is
   "PPTVars" .
 
-lemma labels_lfin_iff: "l \<in> labels x \<longleftrightarrow> (\<exists>c. (l, c) \<in>\<in> x)"
-  including lfset.lifting
-  by transfer force
-
-lemma values_lfin_iff: "c \<in> values x \<longleftrightarrow> (\<exists>l. (l, c) \<in>\<in> x)"
-  including lfset.lifting
-  by transfer force
-
 lemma PVars_tvsubst_pat: "bij \<sigma> \<Longrightarrow> PVars (tvsubst_pat \<tau> \<sigma> P) = \<sigma> ` PVars P"
   by transfer auto
 

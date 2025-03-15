@@ -1629,10 +1629,74 @@ lemma canonical_closed_TRec[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<
       value.cases values_lfin_iff)
   done
 
-lemma "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> value v \<Longrightarrow> \<exists>\<sigma>. match \<sigma> p v"
-  apply (induct p T \<Delta> rule: pat_typing.induct)
-   apply (meson MPVar)
-  oops
+lemma TRec_typingD[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> Rec XX \<^bold>: TRec TT \<Longrightarrow> \<Gamma> = \<emptyset> \<Longrightarrow> (l, v) \<in>\<in> XX \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<emptyset> \<^bold>\<turnstile> v \<^bold>: T"
+  apply (induction \<Gamma> "Rec XX" "TRec TT" arbitrary: XX TT T rule: typing.induct)
+apply (auto simp: lfset.in_rel[of id, simplified, unfolded lfset.map_id] lfset.set_map elim: value.cases ty.cases)
+   apply (erule SA_TRecER; auto)
+   apply (drule meta_spec2, drule meta_mp, assumption)
+  apply (erule exE conjE)+
+   apply ((drule meta_spec)+, drule meta_mp, rule refl, drule meta_mp, rule refl, drule meta_mp, assumption)
+   apply (drule meta_mp, assumption)
+   apply (drule meta_mp, assumption)
+   apply (erule TSub)
+   apply simp
+  apply (auto simp: lfin_map_lfset)
+  by (metis (no_types, lifting) fst_conv lfin_label_inject prod_in_Collect_iff subset_eq values_lfin_iff)
+
+lemma match_unique_on_PVars: "match \<sigma> P v \<Longrightarrow> match \<sigma>' P v \<Longrightarrow> x \<in> PVars P \<Longrightarrow> \<sigma> x = \<sigma>' x"
+  apply (induct P v rule: match.induct)
+   apply simp_all
+   apply (erule match.cases; auto simp: PVar_def PRec_def Rep_pat[simplified] lfin_map_lfset dest!: Abs_pat_inject[simplified, THEN iffD1, rotated 2] split: if_splits)
+   apply (erule match.cases; auto simp: PVar_def PRec_def Rep_pat[simplified] lfin_map_lfset nonrep_PRec_alt dest!: Abs_pat_inject[simplified, THEN iffD1, rotated 2] split: if_splits)
+  apply (smt (verit, ccfv_threshold) Rep_pat_inverse labels_lfin_iff lfin_map_lfset subset_eq values_lfin_iff)
+  done
+
+lemma pat_typing_ex_match: 
+  fixes p :: "('tv::var, 't::var) pat" and v :: "('tv::var, 't::var) trm"
+  shows "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> \<emptyset> \<^bold>\<turnstile> v \<^bold>: T \<Longrightarrow> value v \<Longrightarrow> \<exists>\<sigma>. match \<sigma> p v"
+proof (induct p T \<Delta> arbitrary: v rule: pat_typing.induct)
+  case (PRec PP TT \<Delta> xs)
+  from canonical_closed_TRec[OF PRec(6,7)]
+  obtain XX where XX: "v = Rec XX" "labels TT \<subseteq> labels XX" "\<forall>v\<in>values XX. value v"
+    by blast
+  define \<sigma> where "\<sigma> = (\<lambda>x. if \<exists>l P. (l, P) \<in>\<in> PP \<and> x \<in> PVars P then
+    (SOME \<sigma>. match \<sigma> (lflookup PP (lfrlookup PP (\<lambda>P. x \<in> PVars P))) (lflookup XX (lfrlookup PP (\<lambda>P. x \<in> PVars P)))) x else Var x)"
+  show ?case
+    unfolding XX
+    apply (rule exI[of _ \<sigma>])
+    apply (rule MPRec[OF PRec(1) ord_eq_le_trans[OF PRec(2) XX(2)]])
+    subgoal for l P v'
+    apply (frule PRec(4)[of _ _ _ v'])
+       apply (rule lflookup_lfin)
+    using PRec(2) labels_lfin_iff apply blast
+      apply (rule TRec_typingD)
+        apply (rule PRec(6)[unfolded XX])
+       apply assumption
+      apply (rule lflookup_lfin)
+    using PRec(2) labels_lfin_iff apply blast
+     apply (simp add: XX(3) lfin_values)
+    apply (erule exE)
+    apply (rule match_cong)
+    apply assumption
+    apply (rule ballI)
+    apply (unfold \<sigma>_def)
+    apply (subst if_P)
+     apply blast
+    subgoal for \<sigma> x
+      apply (subgoal_tac "lfrlookup PP (\<lambda>P. x \<in> PVars P) = l")
+      apply (simp add: lflookup_eq)
+    apply (rule match_unique_on_PVars)
+         apply assumption
+        apply (metis tfl_some)
+      apply assumption
+      apply (rule lfrlookup_eq)
+        apply assumption
+      apply assumption
+      apply (metis Int_emptyD PRec(1) lflookup_eq nonrep_PRec_def)
+      done
+    done
+  done
+qed (meson MPVar)
 
 lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> = [] \<Longrightarrow> value t \<or> (\<exists>t'. step t t')"
   apply (induction \<Gamma> t T rule: typing.induct)
@@ -1642,21 +1706,26 @@ lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longri
      dest!: canonical_closed_Fun canonical_closed_Forall canonical_closed_TRec)
   apply (metis RecCong fstI lfin_map_lfset values_lfin_iff)
      apply (meson ProjRec)
+    apply (drule (1) pat_typing_ex_match; auto intro!: value.intros intro: step.intros)+
   done
 
 lemma set_proj_ctxt_eq: "set \<Gamma> = set \<Delta> \<Longrightarrow> set (proj_ctxt \<Gamma>) = set (proj_ctxt \<Delta>)"
   by (auto simp: proj_ctxt_def map_filter_def)
 
-end
+lemma wf_ctxt_extend_permute: "\<turnstile> \<Gamma> \<^bold>, \<Gamma>' OK \<Longrightarrow> set \<Gamma> = set \<Delta> \<Longrightarrow> \<turnstile> \<Delta> OK \<Longrightarrow> \<turnstile> \<Delta> \<^bold>, \<Gamma>' OK"
+  by (induct \<Gamma>') auto
 
 lemma typing_permute: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Delta> OK \<Longrightarrow> set \<Gamma> = set \<Delta> \<Longrightarrow> \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
   apply (binder_induction \<Gamma> t T arbitrary: \<Delta> avoiding: \<Gamma> t T \<Delta> rule: typing.strong_induct)
-       apply (simp_all add: TVar)
-      apply (metis TAbs list.simps(15) typing_wf_ctxt wf_ctxt_Cons wf_ctxt_ConsE)
-     apply (metis TApp)
-    apply (metis TTAbs list.simps(15) typing_wf_ctxt wf_ctxt_Cons wf_ctxt_ConsE)
-   apply (metis TTApp set_proj_ctxt_eq ty_permute wf_ty_proj_ctxt)
-  apply (metis TSub set_proj_ctxt_eq ty_permute typing_wf_ty)
+          apply (simp_all add: TVar)
+         apply (metis TAbs list.simps(15) typing_wf_ctxt wf_ctxt_Cons wf_ctxt_ConsE)
+        apply (metis TApp)
+       apply (metis TTAbs list.simps(15) typing_wf_ctxt wf_ctxt_Cons wf_ctxt_ConsE)
+      apply (metis TTApp set_proj_ctxt_eq ty_permute wf_ty_proj_ctxt)
+     apply (metis TSub set_proj_ctxt_eq ty_permute typing_wf_ty)
+    apply (simp add: TRec lfset.rel_mono_strong)
+   apply (metis TProj)
+  apply (metis TLet set_append typing_wf_ctxt wf_ctxt_extend_permute)
   done
 
 lemma proj_ctxt_concat[simp]: "proj_ctxt (\<Gamma> \<^bold>, \<Delta>) = proj_ctxt \<Gamma> \<^bold>, proj_ctxt \<Delta>"
@@ -1697,6 +1766,15 @@ next
     with TSub show ?thesis
       by (smt (verit) proj_ctxt_extend_Inl ty_weakening_extend typing.simps typing_wf_ty wf_ConsE)
   qed (auto intro: typing.TSub)
+next
+  case (TRec \<Gamma> XX TT)
+  then show ?case
+    by (auto intro!: typing.TRec elim: lfset.rel_mono_strong)
+next
+  case (TLet \<Gamma> t T p \<Delta> u U)
+  then show ?case
+    apply (auto intro!: typing.TLet)
+    sorry
 qed (auto intro: typing.intros)
 
 lemma typing_weaken: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK \<Longrightarrow> \<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T"

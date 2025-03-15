@@ -385,6 +385,30 @@ lemma lfin_apply_lfset: "labels F \<subseteq> labels X \<Longrightarrow>
 lemma labelist_map_lfset[simp]: "labelist (map_lfset id g S) = labelist S"
   by (auto simp: labelist_def lfset.set_map supp_id_bound)
 
+lemma labels_lfin_iff: "l \<in> labels x \<longleftrightarrow> (\<exists>c. (l, c) \<in>\<in> x)"
+  by transfer force
+
+lemma values_lfin_iff: "c \<in> values x \<longleftrightarrow> (\<exists>l. (l, c) \<in>\<in> x)"
+  by transfer force
+
+definition lflookup :: "('a, 'b) lfset \<Rightarrow> 'a \<Rightarrow> 'b" where
+  "lflookup X a = (THE b. (a, b) \<in>\<in> X)"
+
+lemma lflookup_lfin: "a \<in> labels X \<Longrightarrow> (a, lflookup X a) \<in>\<in> X"
+  unfolding lflookup_def
+  by (rule theI') (auto simp: labels_lfin_iff lfin_label_inject)
+
+lemma lflookup_eq: "(a, b) \<in>\<in> X \<Longrightarrow> lflookup X a = b"
+  unfolding lflookup_def
+  by (auto simp: labels_lfin_iff lfin_label_inject)
+
+definition lfrlookup :: "('a, 'b) lfset \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'a" where
+  "lfrlookup X P = (THE a. \<exists>b. (a, b) \<in>\<in> X \<and> P b)"
+
+lemma lfrlookup_eq:
+  "(a::_::var, b) \<in>\<in> X \<Longrightarrow> P b \<Longrightarrow> (\<And>c d. (c, d) \<in>\<in> X \<Longrightarrow> P d \<Longrightarrow> a = c \<and> b = d) \<Longrightarrow> lfrlookup X P = a"
+  unfolding lfrlookup_def by blast
+
 lifting_update lfset.lifting
 lifting_forget lfset.lifting
 declare fun_cong[OF lfset_size_o_map,

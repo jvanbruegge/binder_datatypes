@@ -561,11 +561,20 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             ]
         ])) (0 upto length supps)) end);
 
-        val var_class = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy))
-          (map (Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs)
-        val Un_bound = MRBNF_Def.get_class_assumption [hd var_class] "Un_bound" lthy;
-        val UN_bound = MRBNF_Def.get_class_assumption [hd var_class] "UN_bound" lthy;
-        val var_large = MRBNF_Def.get_class_assumption [hd var_class] "large'" lthy;
+        val (Un_bound, UN_bound, var_large) = case map_filter (try Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs of
+          [] =>
+            let
+              val (context, facts) = (Proof_Context.theory_of #>
+                `Context.Theory ##> Proof_Context.init_global) lthy ||> Proof_Context.facts_of;
+              fun lookup name = the_single (#thms (the (
+                Facts.lookup context facts (Facts.intern facts name)
+              )));
+            in (lookup "Un_bound", lookup "UN_bound", lookup "large'") end
+          | sort =>
+            let
+              val var_class = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) sort;
+              fun assm name = MRBNF_Def.get_class_assumption [hd var_class] name lthy;
+            in (assm "Un_bound", assm "UN_bound", assm "large'") end;
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr sugar)) = maps #card_of_FVars_bound_UNIVs (#quotient_fps sugar)
           | set_bd_UNIVs_of_mr_bnfs x =
@@ -793,12 +802,12 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   )),
                   REPEAT_DETERM o FIRST' [
                     assume_tac ctxt,
-                    resolve_tac ctxt (@{thms refl bij_id supp_id_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs),
+                    resolve_tac ctxt (@{thms refl bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs),
                     eresolve_tac ctxt (flat (map_filter (Option.map (map (Drule.rotate_prems ~1)) o
                       try (fn thm => [thm RS iffD2, thm RS iffD1])
                     ) (Equivariance.equiv_thms ctxt @ @{thms bij_implies_inject}))),
                     etac ctxt @{thm notin_Un_forward},
-                    EqSubst.eqsubst_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
+                    EqSubst.eqsubst_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps @ Equivariance.equiv_thms ctxt),
                     EqSubst.eqsubst_asm_tac ctxt [0] (@{thms id_apply image_id image_Un[symmetric] image_UN[symmetric] image_comp[unfolded comp_def]} @ set_maps),
                     SELECT_GOAL (EVERY1 [
                       option Verbose (K (print_tac ctxt "inductive equiv")) (K all_tac),
@@ -810,7 +819,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                         ),
                         REPEAT_DETERM o FIRST' [
                           assume_tac ctxt,
-                          resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound}
+                          resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs)
                         ]
                       ]),
                       IF_UNSOLVED o K no_tac

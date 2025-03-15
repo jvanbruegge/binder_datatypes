@@ -23,7 +23,6 @@ ML \<open>
   val T1 = BNF_FP_Util.mk_sumprodT_balanced ctor_T1_Ts
   val name1 = "term";
   val rel = [[([], [0]), ([], [0, 1])]];
-  Multithreading.parallel_proofs := 4
   \<close>
 
 declare [[quick_and_dirty]]

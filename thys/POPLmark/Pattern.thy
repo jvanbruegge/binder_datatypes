@@ -312,7 +312,6 @@ lemma vvsubst_pat_id[simp]: "vvsubst_pat id id P = P"
     done
   done
 
-declare [[quick_and_dirty]]
 mrbnf "('tv :: var, 'v :: var) pat"
   map: vvsubst_pat
   sets:
@@ -373,7 +372,6 @@ mrbnf "('tv :: var, 'v :: var) pat"
   subgoal by simp
   subgoal by simp
   done
-declare [[quick_and_dirty=false]]
 
 lemma vvsubst_pat_PVar[simp]:
   "bij g \<Longrightarrow> vvsubst_pat f g (PVar x T) = PVar (g x) (vvsubst_typ f T)"

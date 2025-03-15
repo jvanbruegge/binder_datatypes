@@ -24,8 +24,9 @@ inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
 | iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
 | Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
 
-declare iterm.tvsubst_permutes[THEN fun_cong, unfolded comp_def, equiv]
-declare imkSubst_smap_irrename[symmetric, THEN fun_cong, unfolded comp_def, equiv]
+lemmas [equiv] =
+  iterm.tvsubst_permutes[THEN fun_cong, unfolded comp_def]
+  imkSubst_smap_irrename[symmetric, THEN fun_cong, unfolded comp_def]
 
 binder_inductive istep
   subgoal premises prems for R B x1 x2

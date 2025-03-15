@@ -1030,7 +1030,7 @@ qed auto
 
 inductive pat_typing :: "('tv :: var, 't :: var) pat \<Rightarrow> 'tv typ \<Rightarrow> ('tv, 't) \<Gamma>\<^sub>t \<Rightarrow> bool" ("\<turnstile> _ : _ \<rightarrow> _" [30,29,30] 30) where
   PVar: "\<turnstile> PVar x T : T \<rightarrow> \<emptyset> \<^bold>, Inr x <: T"
-| PRec: "nonrep_PRec PP \<Longrightarrow> (\<And>l P T. (l, P) \<in>\<in> PP \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<turnstile> P : T \<rightarrow> \<Delta> l) \<Longrightarrow> xs = labelist TT \<Longrightarrow> \<turnstile> PRec PP : TRec TT \<rightarrow> List.concat (map \<Delta> xs)"
+| PRec: "nonrep_PRec PP \<Longrightarrow> labels PP = labels TT \<Longrightarrow> (\<And>l P T. (l, P) \<in>\<in> PP \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<turnstile> P : T \<rightarrow> \<Delta> l) \<Longrightarrow> xs = labelist TT \<Longrightarrow> \<turnstile> PRec PP : TRec TT \<rightarrow> List.concat (map \<Delta> xs)"
 
 inductive typing :: "('tv::var, 't::var) \<Gamma>\<^sub>t \<Rightarrow> ('tv, 't) trm \<Rightarrow> 'tv typ \<Rightarrow> bool" ("_ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,30] 30) where
   TVar: "\<turnstile> \<Gamma> OK \<Longrightarrow> (Inr x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Var x \<^bold>: T"
@@ -1400,7 +1400,8 @@ lemma HELP2[equiv]:
 
 lemma "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> dom \<Delta> \<subseteq> Inr ` PVars p"
   apply (induct p T \<Delta> rule: pat_typing.induct)
-  apply (auto simp: set_labelist)
+   apply (auto simp: set_labelist image_iff)
+  sledgehammer
 
 binder_inductive typing
   subgoal premises prems for R B1 B2 \<Gamma> t T

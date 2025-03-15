@@ -32,7 +32,6 @@ val T2 = BNF_FP_Util.mk_sumprodT_balanced ctor_T2_Ts
 val name1 = "T1";
 val name2 = "T2";
 val rel = [[1,3], [1]];
-Multithreading.parallel_proofs := 4
 \<close>
 
 declare [[quick_and_dirty]]

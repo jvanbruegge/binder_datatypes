@@ -2552,13 +2552,18 @@ next
     by (force intro: typing.TSub ty_tvsubst_typ)
 next
   case (TRec XX TT \<Delta>)
-  then show ?case sorry
+  then show ?case
+    by (auto simp: well_scoped(1) wf_ctxt_extend_tvsubst_typ lfset.rel_map elim: lfset.rel_mono_strong intro!: typing.TRec)
 next
   case (TProj ta TT l Ta \<Delta>)
-  then show ?case sorry
+  then show ?case
+    by (auto intro!: typing.TProj simp: lfin_map_lfset)
 next
   case (TLet ta Ta p \<Delta>' u U \<Delta>)
-  then show ?case sorry
+  then show ?case
+    apply (subst tvsubst_simps)
+        apply (auto intro!: typing.TLet)
+    sorry
 qed (auto intro: typing.intros)
 
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
@@ -2607,7 +2612,11 @@ next
     done
 next
   case (TRec \<Gamma>' XX TT t')
-  then show ?case sorry
+  then show ?case
+    apply -
+    apply (erule step.cases)
+             apply (auto intro: typing.TSub)
+    sorry
 next
   case (TProj \<Gamma>' ta TT l Ta t')
   then show ?case sorry

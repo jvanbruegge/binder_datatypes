@@ -2049,7 +2049,12 @@ proof -
     subgoal using IImsupp_typ_def SSupp_typ_def by fastforce
     subgoal by (metis ex_in_conv trm.FVars_VVr(1) trm.in_IImsupp(1))
     subgoal by (metis singletonD typ.FVars_VVr typ.in_IImsupp)
-    sorry
+         apply (subst (asm) tvsubst_simps)
+             apply (auto simp: PTVars_tvsubst_pat)
+         apply (metis (mono_tags, lifting) Diff_iff IImsupp_2_trm_def IntI SSupp_trm_def Un_iff empty_iff mem_Collect_eq
+        trm.FVars_VVr(1))
+        apply (subst tvsubst_simps; auto simp: PTVars_tvsubst_pat)+
+    done
 qed
 
 lemma SSupp_trm_tvsubst:
@@ -2122,17 +2127,20 @@ proof -
     using assms(2,4) cmin1 ordLess_ordLeq_trans by blast+
   show ?thesis
     apply (binder_induction t avoiding: "IImsupp_1_trm f" "IImsupp_2_trm f" "IImsupp_typ g" "IImsupp_1_trm f'" "IImsupp_2_trm f'" "IImsupp_typ g'" t rule: trm.strong_induct)
-              apply (auto simp: IImsupp_typ_bound IImsupp_1_trm_bound IImsupp_2_trm_bound lfset.set_map
-        SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound tvsubst_typ_comp FVars_tvsubst_typ
+                 apply (auto simp: IImsupp_typ_bound IImsupp_1_trm_bound IImsupp_2_trm_bound lfset.set_map lfset.map_comp
+        SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound tvsubst_typ_comp FVars_tvsubst_typ intro!: lfset.map_cong
         dest!: set_mp[OF IImsupp_2_trm_tvsubst, rotated 2] set_mp[OF IImsupp_1_trm_tvsubst, rotated 2] set_mp[OF IImsupp_typ_tvsubst_typ, rotated 1])
-     apply (subst tvsubst_simps)
-    apply (auto simp: SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound dest: set_mp[OF IImsupp_2_trm_tvsubst, rotated 2])
-    apply (subst (1 2) tvsubst_simps)
-         apply (auto simp: SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound FVars_tvsubst_typ tvsubst_typ_comp
-   dest!: set_mp[OF IImsupp_2_trm_tvsubst, rotated 2] set_mp[OF IImsupp_1_trm_tvsubst, rotated 2] set_mp[OF IImsupp_typ_tvsubst_typ, rotated 1])
+      apply (subst tvsubst_simps)
+         apply (auto simp: SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound dest: set_mp[OF IImsupp_2_trm_tvsubst, rotated 2])
+     apply (subst (1 2) tvsubst_simps)
+               apply (auto simp: SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound FVars_tvsubst_typ tvsubst_typ_comp
+        dest!: set_mp[OF IImsupp_2_trm_tvsubst, rotated 2] set_mp[OF IImsupp_1_trm_tvsubst, rotated 2] set_mp[OF IImsupp_typ_tvsubst_typ, rotated 1])
     using typ.in_IImsupp apply force
-    subgoal sorry
-    subgoal sorry
+    apply (subst (1 2) tvsubst_simps)
+           apply (auto simp: SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound dest: set_mp[OF IImsupp_2_trm_tvsubst, rotated 2])
+    apply (subst tvsubst_simps)
+        apply (auto simp: SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound FVars_tvsubst PVars_tvsubst_pat tvsubst_pat_comp)
+    apply (metis Int_Un_emptyI1 disjoint_iff_not_equal singletonD trm.FVars_VVr(2) trm.in_IImsupp(2))
     done
 qed
 
@@ -2155,7 +2163,10 @@ proof -
     apply (metis (mono_tags, lifting) IImsupp_2_trm_def SSupp_trm_def Un_iff mem_Collect_eq)
       apply (metis (mono_tags, lifting) IImsupp_typ_def SSupp_typ_def Un_iff mem_Collect_eq)
      apply blast
-    subgoal sorry
+    apply (subst (1 2) tvsubst_simps)
+           apply (auto 0 0 intro!: tvsubst_pat_cong arg_cong3[where h=Let])
+    apply (metis (mono_tags, lifting) DiffD2 Diff_triv Int_Un_emptyI1)
+    apply (metis (mono_tags, lifting) DiffD2 Diff_triv IImsupp_2_trm_def Int_Un_emptyI1 SSupp_trm_def mem_Collect_eq)
     done
 qed
 
@@ -2186,7 +2197,12 @@ proof -
     apply (subst tvsubst_simps)
          apply (auto simp: IImsupp_1_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
      apply (meson not_in_supp_alt)
-    subgoal sorry
+    apply (subst tvsubst_simps)
+        apply (auto simp: IImsupp_2_trm_def SSupp_trm_Var_comp not_in_supp_alt vvsubst_pat_tvsubst_pat
+           Int_commute[of _ "supp _"] id_on_def SSupp_typ_TyVar_comp dest!: supp_id_on
+           intro!: arg_cong3[where h=Let] tvsubst_pat_cong)
+    apply (meson not_in_supp_alt)
+    apply (meson assms(1) bij_implies_inject not_in_supp_alt)
     done
 qed
 

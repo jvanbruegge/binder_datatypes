@@ -813,16 +813,16 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                       option Verbose (K (print_tac ctxt "inductive equiv")) (K all_tac),
                       REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [
                         EqSubst.eqsubst_tac ctxt [0] (
-                          @{thms inv_o_simp1 inv_simp1 id_apply}
+                          @{thms inv_o_simp1 inv_simp1 id_apply id_o o_id}
                           @ map_ids @ map_comps
                           @ Equivariance.equiv_thms ctxt
                         ),
                         REPEAT_DETERM o FIRST' [
                           assume_tac ctxt,
-                          resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs)
+                          resolve_tac ctxt (@{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound} @ maps permute_bijs_of_mr_bnf mr_bnfs)
                         ]
                       ]),
-                      IF_UNSOLVED o K no_tac
+                      IF_UNSOLVED o K (option Verbose (print_tac ctxt "inductive equiv end") all_tac THEN no_tac)
                     ]),
                     SELECT_GOAL (EVERY [
                       auto_tac ctxt,

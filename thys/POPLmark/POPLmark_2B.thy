@@ -1375,6 +1375,11 @@ lemma extend_equiv_sum[equiv]:
   assumes "bij f1" "bij f2"
   shows "map (map_prod (map_sum f1 f2) (permute_typ f1)) (\<Gamma>\<^bold>,x<:T) = map (map_prod (map_sum f1 f2) (permute_typ f1)) \<Gamma>\<^bold>, map_sum f1 f2 x <: permute_typ f1 T"
   by simp
+lemma concat_equiv_sum[equiv]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "bij f2"
+  shows "map (map_prod (map_sum f1 f2) (permute_typ f1)) (\<Gamma>\<^bold>,\<Delta>) = map (map_prod (map_sum f1 f2) (permute_typ f1)) \<Gamma>\<^bold>, map (map_prod (map_sum f1 f2) (permute_typ f1)) \<Delta>"
+  by simp
 lemmas [equiv] = map_sum.simps map_prod_simp
 
 lemma pat_typing_equiv[equiv]:
@@ -1404,24 +1409,6 @@ lemma HELP1[equiv]: "bij \<sigma>1a \<Longrightarrow>
        typ.permute_comp typ.permute_id[unfolded id_def] supp_inv_bound
        trm.permute_comp trm.permute_id[unfolded id_def] lfset.rel_map
        elim!: lfset.rel_mono_strong)
-(*
-lemma HELP2[equiv]:
-  "bij \<sigma>1a \<Longrightarrow>
-    |supp \<sigma>1a| <o |UNIV :: 'tv::var set| \<Longrightarrow>
-    bij \<sigma>2a \<Longrightarrow>
-    |supp \<sigma>2a| <o |UNIV :: 'v::var set| \<Longrightarrow>
-    Ra (map (map_prod (map_sum (inv \<sigma>1a) (inv \<sigma>2a)) (permute_typ (inv \<sigma>1a)))
-         (map (map_prod (map_sum \<sigma>1a \<sigma>2a) (permute_typ \<sigma>1a)) \<Gamma>' \<^bold>,
-          map (map_prod (map_sum \<sigma>1a \<sigma>2a) (permute_typ \<sigma>1a)) \<Delta>'))
-     (permute_trm (inv \<sigma>1a) (inv \<sigma>2a) (permute_trm \<sigma>1a \<sigma>2a ua))
-     (permute_typ (inv \<sigma>1a) (permute_typ \<sigma>1a Ua)) \<longleftrightarrow>
-    Ra (\<Gamma>' \<^bold>, \<Delta>') (ua :: ('tv, 'v) trm) Ua"
-  apply (rule arg_cong3[where h=Ra])
-  apply (auto simp: o_def prod.map_comp sum.map_comp sum.map_ident
-      typ.permute_comp typ.permute_id[unfolded id_def] supp_inv_bound
-      trm.permute_comp trm.permute_id[unfolded id_def])
-  done
-*)
 
 lemma pat_typing_dom: "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> dom \<Delta> = Inr ` PVars p"
   apply (induct p T \<Delta> rule: pat_typing.induct)
@@ -1436,8 +1423,7 @@ proof (induction \<Delta>)
     by (cases a) auto
 qed simp
 
-binder_inductive (no_auto_equiv) typing
-  subgoal sorry
+binder_inductive typing
   subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)

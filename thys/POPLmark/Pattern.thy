@@ -202,12 +202,29 @@ fun vvsubst_rawpat where
   "vvsubst_rawpat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (vvsubst_typ \<tau> T)"
 | "vvsubst_rawpat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (vvsubst_rawpat \<tau> \<sigma>) X)"
 
+fun tvsubst_rawpat where
+  "tvsubst_rawpat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (tvsubst_typ \<tau> T)"
+| "tvsubst_rawpat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (tvsubst_rawpat \<tau> \<sigma>) X)"
+
 fun PPTVars where
   "PPTVars (PPVar v T) = FVars_typ T"
 | "PPTVars (PPRec X) = (\<Union>P \<in> values X. PPTVars P)"
 
 lemma PPVars_vvsubst_rawpat[simp]: "PPVars (vvsubst_rawpat \<tau> \<sigma> P) = \<sigma> ` PPVars P"
   by (induct P) (auto simp: lfset.set_map)
+
+lemma PPVars_tvsubst_rawpat[simp]: "PPVars (tvsubst_rawpat \<tau> \<sigma> P) = \<sigma> ` PPVars P"
+  by (induct P) (auto simp: lfset.set_map)
+
+lemma PPTVars_vvsubst_rawpat[simp]:
+  fixes P :: "('tv::var, 'v::var) rawpat"
+  shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> PPTVars (vvsubst_rawpat \<tau> \<sigma> P) = \<tau> ` PPTVars P"
+  by (induct P) (auto simp: lfset.set_map typ.set_map)
+
+lemma PPTVars_tvsubst_rawpat[simp]: 
+  fixes P :: "('tv::var, 'v::var) rawpat"
+  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> PPTVars (tvsubst_rawpat \<tau> \<sigma> P) = (\<Union>x \<in> PPTVars P. FVars_typ (\<tau> x))"
+  by (induct P) (auto simp: lfset.set_map FVars_tvsubst_typ)
 
 lemma nonrep_rawpat_vvsubst_rawpat:
   "bij \<sigma> \<Longrightarrow> nonrep_rawpat P \<Longrightarrow> nonrep_rawpat (vvsubst_rawpat \<tau> \<sigma> P)"
@@ -216,9 +233,20 @@ lemma nonrep_rawpat_vvsubst_rawpat:
   apply (metis Int_emptyD bij_implies_inject)
   done
 
-lift_definition permute_pat :: "('tv \<Rightarrow> 'tv) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
+lift_definition vvsubst_pat :: "('tv \<Rightarrow> 'tv) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
   "\<lambda>\<tau> \<sigma>. if bij \<sigma> then vvsubst_rawpat \<tau> \<sigma> else id"
   by (auto simp: nonrep_rawpat_vvsubst_rawpat)
+
+lemma nonrep_rawpat_tvsubst_rawpat:
+  "bij \<sigma> \<Longrightarrow> nonrep_rawpat P \<Longrightarrow> nonrep_rawpat (tvsubst_rawpat \<tau> \<sigma> P)"
+  apply (induct P)
+   apply (auto simp: lfin_map_lfset lfin_values nonrep_PPRec_def)
+  apply (metis Int_emptyD bij_implies_inject)
+  done
+
+lift_definition tvsubst_pat :: "('tv \<Rightarrow> 'tv typ) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
+  "\<lambda>\<tau> \<sigma>. if bij \<sigma> then tvsubst_rawpat \<tau> \<sigma> else id"
+  by (auto simp: nonrep_rawpat_tvsubst_rawpat)
 
 lift_definition PVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'v set" is
   "PPVars" .
@@ -230,7 +258,53 @@ lemma values_lfin_iff: "c \<in> values x \<longleftrightarrow> (\<exists>l. (l, 
   including lfset.lifting
   by transfer force
 
-lemma permute_pat_id[simp]: "permute_pat id id P = P"
+lemma PVars_tvsubst_pat: "bij \<sigma> \<Longrightarrow> PVars (tvsubst_pat \<tau> \<sigma> P) = \<sigma> ` PVars P"
+  by transfer auto
+
+lemma PTVars_tvsubst_pat:
+  fixes P :: "('tv::var, 'v::var) pat"
+  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> PTVars (tvsubst_pat \<tau> \<sigma> P) = (\<Union>x \<in> PTVars P. FVars_typ (\<tau> x))"
+  by transfer auto
+
+lemma vvsubst_rawpat_tvsubst_rawpat:
+  fixes P :: "('tv::var, 'v::var) rawpat"
+  shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+    vvsubst_rawpat \<tau> \<sigma> P = tvsubst_rawpat (TyVar o \<tau>) \<sigma> P"
+  by (induct P) (auto simp: vvsubst_typ_tvsubst_typ intro!: lfset.map_cong)
+
+lemma vvsubst_pat_tvsubst_pat:
+  fixes P :: "('tv::var, 'v::var) pat"
+  shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+    vvsubst_pat \<tau> \<sigma> P = tvsubst_pat (TyVar o \<tau>) \<sigma> P"
+  by transfer (auto simp: vvsubst_rawpat_tvsubst_rawpat)
+
+lemma tvsubst_rawpat_comp:
+  fixes P :: "('tv::var, 'v::var) rawpat"
+  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+    tvsubst_rawpat \<tau> \<sigma> (tvsubst_rawpat \<tau>' \<sigma>' P) = tvsubst_rawpat (tvsubst_typ \<tau> o \<tau>') (\<sigma> o \<sigma>') P"
+  by (induct P) (auto simp: tvsubst_typ_comp lfset.map_comp intro!: lfset.map_cong)
+
+lemma tvsubst_rawpat_cong:
+  fixes P :: "('tv::var, 'v::var) rawpat"
+  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+  (\<forall>x \<in> PPTVars P. \<tau> x = \<tau>' x) \<Longrightarrow> (\<forall>x \<in> PPVars P. \<sigma> x = \<sigma>' x) \<Longrightarrow>  
+  tvsubst_rawpat \<tau> \<sigma> P = tvsubst_rawpat \<tau>' \<sigma>' P"
+  by (induct P) (auto intro!: lfset.map_cong tvsubst_typ_cong)
+
+lemma tvsubst_pat_comp:
+  fixes P :: "('tv::var, 'v::var) pat"
+  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
+    tvsubst_pat \<tau> \<sigma> (tvsubst_pat \<tau>' \<sigma>' P) = tvsubst_pat (tvsubst_typ \<tau> o \<tau>') (\<sigma> o \<sigma>') P"
+  by transfer (auto simp: tvsubst_rawpat_comp)
+
+lemma tvsubst_pat_cong:
+  fixes P :: "('tv::var, 'v::var) pat"
+  shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
+  (\<forall>x \<in> PTVars P. \<tau> x = \<tau>' x) \<Longrightarrow> (\<forall>x \<in> PVars P. \<sigma> x = \<sigma>' x) \<Longrightarrow>  
+  tvsubst_pat \<tau> \<sigma> P = tvsubst_pat \<tau>' \<sigma>' P"
+  by transfer (auto simp: tvsubst_rawpat_cong)
+
+lemma vvsubst_pat_id[simp]: "vvsubst_pat id id P = P"
   apply transfer
   subgoal for P
     apply (induct P)
@@ -238,8 +312,9 @@ lemma permute_pat_id[simp]: "permute_pat id id P = P"
     done
   done
 
+declare [[quick_and_dirty]]
 mrbnf "('tv :: var, 'v :: var) pat"
-  map: permute_pat
+  map: vvsubst_pat
   sets:
     free: PTVars
     bound: "PVars"
@@ -297,7 +372,8 @@ mrbnf "('tv :: var, 'v :: var) pat"
     done
   subgoal by simp
   subgoal by simp
-  oops
   done
+
+declare [[quick_and_dirty=false]]
 
 end

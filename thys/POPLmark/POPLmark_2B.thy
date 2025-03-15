@@ -1,5 +1,5 @@
 theory POPLmark_2B
-imports POPLmark_1B
+  imports Pattern
 begin
 
 binder_datatype (FTVars: 'tv, FVars: 'v) trm =
@@ -8,17 +8,21 @@ binder_datatype (FTVars: 'tv, FVars: 'v) trm =
   | App "('tv, 'v) trm" "('tv, 'v) trm"
   | TAbs X::'tv "'tv typ" t::"('tv, 'v) trm" binds X in t
   | TApp "('tv, 'v) trm" "'tv typ"
+  | Rec "(label, ('tv, 'v) trm) lfset"
+  | Proj "('tv, 'v) trm" label
+  | Let "('tv, p::'v) pat" "('tv, 'v) trm" t::"('tv, 'v) trm" binds p in t
 print_theorems
 
 definition tvsubst_trm_pre :: "('tv::var \<Rightarrow> 'tv typ) \<Rightarrow> ('tv, 'v::var, 'tv, 'v, 'a, 'b) trm_pre \<Rightarrow> ('tv, 'v, 'tv, 'v, 'a, 'b) trm_pre" where
   "tvsubst_trm_pre f x \<equiv> Abs_trm_pre (case Rep_trm_pre x of
-    Inl (Inr (x, T, t)) \<Rightarrow> Inl (Inr (x, tvsubst_typ f T, t))
-  | Inr (Inr (Inl (x, T, t))) \<Rightarrow> Inr (Inr (Inl (x, tvsubst_typ f T, t)))
-  | Inr (Inr (Inr (t, T))) \<Rightarrow> Inr (Inr (Inr (t, tvsubst_typ f T)))
+    Inl (Inl (Inr (x, T, t))) \<Rightarrow> Inl (Inl (Inr (x, tvsubst_typ f T, t)))
+  | Inl (Inr (Inr (x, T, t))) \<Rightarrow> Inl (Inr (Inr (x, tvsubst_typ f T, t)))
+  | Inr (Inl (Inl (t, T))) \<Rightarrow> Inr (Inl (Inl (t, tvsubst_typ f T)))
+  | Inr (Inr (Inr (p, t, u))) \<Rightarrow> Inr (Inr (Inr (tvsubst_pat f id p, t, u)))
   | x \<Rightarrow> x
   )"
 abbreviation \<eta> :: "'v \<Rightarrow> ('tv::var, 'v::var, 'btv::var, 'bv::var, 'a, 'b) trm_pre" where
-  "\<eta> a \<equiv> Abs_trm_pre (Inl (Inl a))"
+  "\<eta> a \<equiv> Abs_trm_pre (Inl (Inl (Inl a)))"
 
 lemma eta_free: "set2_trm_pre (\<eta> a) = {a}"
   apply (unfold set2_trm_pre_def sum.set_map UN_empty2 Un_empty_left Un_empty_right prod.set_map comp_def
@@ -368,28 +372,18 @@ lemma sets_tvsubst_trm_pre:
 sum.set_map UN_single UN_singleton UN_empty2 Un_empty_right Un_empty_left prod.set_map tvsubst_trm_pre_def
   comp_def Abs_trm_pre_inverse[OF UNIV_I]
   )
-  by (auto split: sum.splits)
+  by (auto simp: PVars_tvsubst_pat split: sum.splits)
 
-lemma map_subst: "tvsubst_trm_pre g (map_trm_pre id f2 f3 f4 f5 f6 x) = map_trm_pre id f2 f3 f4 f5 f6 (tvsubst_trm_pre g x)"
+lemma map_subst: "|SSupp_typ (g::'tv \<Rightarrow> _)| <o cmin |UNIV::'tv::var set| |UNIV::'v::var set| \<Longrightarrow> bij f4 \<Longrightarrow>
+  tvsubst_trm_pre g (map_trm_pre id f2 f3 f4 f5 f6 x) = map_trm_pre id f2 f3 f4 f5 f6 (tvsubst_trm_pre g x)"
   apply (unfold tvsubst_trm_pre_def map_trm_pre_def comp_def Abs_trm_pre_inverse[OF UNIV_I] case_sum_map_sum
     typ.map_id0 case_prod_map_prod
   )
   apply (auto split: sum.split)
+  apply (subst (1 2) vvsubst_pat_tvsubst_pat; simp)
+  apply (subst (1 2) tvsubst_pat_comp; (auto simp: o_def intro: ordLess_ordLeq_trans[OF _ cmin1])?)
+  apply (subst (1) typ.subst; (auto simp: o_def intro: ordLess_ordLeq_trans[OF _ cmin1])?)
   done
-
-lemma FVars_tvsubst_typ:
-  assumes "|SSupp_typ (g::'tv \<Rightarrow> _)| <o |UNIV::'tv::var set|"
-  shows "FVars_typ (tvsubst_typ g x) = \<Union>((FVars_typ \<circ> g) ` FVars_typ x)"
-proof (binder_induction x avoiding: x "IImsupp_typ g" rule: typ.strong_induct)
-  case Bound
-  then show ?case unfolding IImsupp_typ_def using var_class.Un_bound var_class.UN_bound typ.set_bd_UNIV assms
-    by (metis type_copy_set_bd)
-next
-  case (Forall x1 x2 x3)
-  then show ?case apply (auto simp: assms)
-    using IImsupp_typ_def SSupp_typ_def typ.FVars_VVr apply fastforce
-    by (metis singletonD typ.FVars_VVr typ.in_IImsupp)
-qed (auto simp: lfset.set_map assms)
 
 lemma FVars_tvsubst_typ_cmin:
   assumes "|SSupp_typ (g::'tv \<Rightarrow> _)| <o cmin |UNIV::'tv::var set| |UNIV::'v::var set|"
@@ -430,7 +424,10 @@ lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_trm_pre y \<inter> PFVars
     apply (unfold if_not_P)
     apply (erule thin_rl)
 
-    apply (unfold prod.collapse trm.FVars_ctor sets_tvsubst_trm_pre map_subst)
+    apply (unfold prod.collapse trm.FVars_ctor sets_tvsubst_trm_pre)
+    apply (subst map_subst)
+      apply (rule prems(5))
+    apply simp
     apply (subst trm_pre.set_map, (rule bij_id supp_id_bound)+)+
     apply (unfold image_id image_comp comp_def prod.collapse)
     apply (rule Un_mono')+
@@ -442,12 +439,15 @@ lemma FTVars_subset: "valid_P p \<Longrightarrow> set3_trm_pre y \<inter> PFVars
         SSupp_trm_def tvVVr_tvsubst_trm_def tv\<eta>_trm_tvsubst_trm_def VVr_def[symmetric] typ.set_map
       )
       using prems(4,5) apply (auto split: sum.splits simp: FVars_tvsubst_typ_cmin)
-        apply (metis singletonD typ.set(1))+
+        apply (metis singletonD typ.set(1))
+        apply (metis singletonD typ.set(1))
+       apply (metis singletonD typ.set(1))
+      apply (subst (asm) PTVars_tvsubst_pat; (auto intro: ordLess_ordLeq_trans[OF _ cmin1])?)
+       apply (metis singletonD typ.set(1))
       done
     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
       apply (rule Diff_Un_disjunct)
       apply (rule prems)
-    apply (unfold sets_tvsubst_trm_pre)
      apply (rule Diff_mono[OF _ subset_refl])
      apply (unfold UN_extend_simps(2))
       (* REPEAT_DETERM *)
@@ -570,7 +570,9 @@ lemma permute_Uctor:
   apply (rule trans)
    apply (rule trm.permute_ctor)
       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-  apply (unfold map_subst)
+  apply (subst map_subst)
+    apply assumption
+  apply simp
 
   apply (subst trm_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
   apply (unfold id_o o_id)
@@ -587,7 +589,20 @@ lemma permute_Uctor:
   apply (unfold typ.vvsubst_permute)
   apply (frule ordLess_ordLeq_trans)
    apply (rule cmin1 card_of_Card_order)+
-  apply (auto split: sum.splits simp: Abs_trm_pre_inject trans[OF comp_apply[symmetric] typ.tvsubst_permutes[THEN fun_cong]] comp_def)
+  using typ.SSupp_natural[of f1 "snd p"] SSupp_typ_TyVar_comp[of f1]
+    SSupp_typ_tvsubst_typ_bound[of "TyVar o f1" "snd p"]
+    SSupp_typ_tvsubst_typ_bound[of "permute_typ f1 o snd p o inv f1" "TyVar o f1"]
+  apply (auto split: sum.splits simp: Abs_trm_pre_inject trans[OF comp_apply[symmetric] typ.tvsubst_permutes[THEN fun_cong]] comp_def
+      vvsubst_pat_tvsubst_pat)
+  apply (subst (1 2) tvsubst_pat_comp)
+       apply (auto simp: o_def intro!: tvsubst_pat_cong)
+    apply (meson card_of_image ordLeq_ordLess_trans)
+  using ordLeq_ordLess_trans[of "|SSupp_typ (\<lambda>uub. permute_typ f1 (snd p (inv f1 uub)))|"
+      "|SSupp_typ (snd p)|" "|top|"]
+   apply force
+  apply (subst typ.subst)
+   apply (auto simp: permute_typ_eq_tvsubst_typ_TyVar o_def)
+   apply (meson card_of_image ordLeq_ordLess_trans)
   done
 
 ML \<open>
@@ -1003,25 +1018,6 @@ lemma ty_proj_ctxt_equiv[equiv]:
    apply (rule assms)+
   done
 
-lemma VVr_eq_TyVar[simp]: "tvVVr_tvsubst_typ a = TyVar a"
-  unfolding tvVVr_tvsubst_typ_def Var_def comp_def tv\<eta>_typ_tvsubst_typ_def TyVar_def
-  by (rule refl)
-
-lemma SSupp_typ_TyVar[simp]: "SSupp_typ TyVar = {}"
-  unfolding SSupp_typ_def by simp
-
-lemma IImsupp_typ_TyVar[simp]: "IImsupp_typ TyVar = {}"
-  unfolding IImsupp_typ_def by simp
-
-lemma SSupp_typ_fun_upd_le: "SSupp_typ (f(X := T)) \<subseteq> insert X (SSupp_typ f)"
-  unfolding SSupp_typ_def by auto
-
-lemma SSupp_typ_fun_upd_bound[simp]: "|SSupp_typ (f(X := T))| <o |UNIV :: 'a::var set| \<longleftrightarrow> |SSupp_typ f| <o |UNIV :: 'a set|"
-  apply safe
-   apply (metis SSupp_typ_fun_upd_le card_of_mono1 fun_upd_idem_iff fun_upd_upd infinite_UNIV insert_bound ordLeq_ordLess_trans)
-  apply (meson SSupp_typ_fun_upd_le card_of_mono1 infinite_UNIV insert_bound ordLeq_ordLess_trans)
-  done
-
 lemma SSupp_typ_fun_upd_bound'[simp]: "|SSupp_typ (f(X := T))| <o cmin |UNIV :: 'a::var set| |UNIV :: 'b::var set| \<longleftrightarrow> |SSupp_typ f| <o cmin |UNIV :: 'a set| |UNIV :: 'b::var set|"
   apply safe
   apply (metis Cnotzero_UNIV SSupp_typ_fun_upd_bound SSupp_typ_fun_upd_le card_of_mono1 cmin_greater
@@ -1098,96 +1094,6 @@ lemma wf_ctxt_FFVars: "\<turnstile> \<Gamma> OK \<Longrightarrow> a \<in> FFVars
   by (induction \<Gamma>) auto
 lemma typing_fresh_ty_extend: "\<Gamma> \<^bold>, Inl x <: U \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> x \<notin> Inl -` dom \<Gamma> \<union> FFVars_ctxt \<Gamma> \<and> x \<notin> FVars_typ U"
   by (metis Pair_inject UnE subset_vimage_iff typing_wf_ctxt vimageD wf_ctxt_FFVars wf_ctxt_ConsE)
-
-lemma SSupp_typ_TyVar_comp: "SSupp_typ (TyVar o \<sigma>) = supp \<sigma>"
-  unfolding SSupp_typ_def supp_def by auto
-
-lemma IImsupp_typ_TyVar_comp: "IImsupp_typ (TyVar o \<sigma>) = imsupp \<sigma>"
-  unfolding IImsupp_typ_def imsupp_def SSupp_typ_TyVar_comp by auto
-
-lemma permute_typ_eq_tvsubst_typ_TyVar:
-assumes "bij (\<sigma>::'a\<Rightarrow>'a)" "|supp \<sigma>| <o |UNIV::'a::var set|"
-shows "permute_typ \<sigma> = tvsubst_typ (TyVar o \<sigma>)"
-proof
-  fix T
-  show "permute_typ \<sigma> T = tvsubst_typ (TyVar o \<sigma>) T"
-  proof (binder_induction T avoiding: "IImsupp_typ (TyVar \<circ> \<sigma>)" T rule: typ.strong_induct)
-    case Bound
-    then show ?case using assms
-      by (auto simp: IImsupp_typ_def infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.SSupp_comp_bound)
-  next
-    case (Forall X T1 T2)
-    then show ?case
-      by (subst typ.subst)
-        (auto simp: assms infinite_UNIV SSupp_typ_TyVar_comp IImsupp_typ_TyVar_comp
-          typ_inject id_on_def FVars_tvsubst_typ supp_inv_bound imsupp_def not_in_supp_alt
-          intro!: exI[of _ id])
-  qed (auto simp: assms infinite_UNIV SSupp_typ_TyVar_comp intro: lfset.map_cong)
-qed
-
-lemma permute_typ_eq_tvsubst_typ_TyVar':
-"bij (\<sigma>::'a::var\<Rightarrow>'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow> permute_typ \<sigma> T = tvsubst_typ (TyVar o \<sigma>) T"
-  using permute_typ_eq_tvsubst_typ_TyVar by metis
-
-lemma IImsupp_typ_bound:
-  fixes f ::"'a::var \<Rightarrow> 'a typ"
-  assumes "|SSupp_typ f| <o |UNIV::'a set|"
-  shows "|IImsupp_typ f| <o |UNIV::'a set|"
-  unfolding IImsupp_typ_def using assms
-  by (simp add: lfset.UN_bound lfset.Un_bound typ.set_bd_UNIV)
-
-lemma SSupp_typ_tvsubst_typ:
-  fixes f g ::"'a::var \<Rightarrow> 'a typ"
-  assumes "|SSupp_typ f| <o |UNIV::'a set|"
-  shows "SSupp_typ (tvsubst_typ f \<circ> g) \<subseteq> SSupp_typ f \<union> SSupp_typ g"
-  using assms by (auto simp: SSupp_typ_def)
-
-lemma IImsupp_typ_tvsubst_typ:
-  fixes f g ::"'a::var \<Rightarrow> 'a typ"
-  assumes "|SSupp_typ f| <o |UNIV::'a set|"
-  shows "IImsupp_typ (tvsubst_typ f \<circ> g) \<subseteq> IImsupp_typ f \<union> IImsupp_typ g"
-  using assms using SSupp_typ_tvsubst_typ[of f g]
-  apply (auto simp: IImsupp_typ_def FVars_tvsubst_typ)
-  by (metis (mono_tags, lifting) SSupp_typ_def Un_iff mem_Collect_eq singletonD sup.orderE typ.FVars_VVr)
-
-lemma SSupp_typ_tvsubst_typ_bound:
-  fixes f g ::"'a::var \<Rightarrow> 'a typ"
-  assumes "|SSupp_typ f| <o |UNIV::'a set|"
-  assumes "|SSupp_typ g| <o |UNIV::'a set|"
-  shows "|SSupp_typ (tvsubst_typ f \<circ> g)| <o |UNIV :: 'a set|"
-  using SSupp_typ_tvsubst_typ[of f g] assms
-  by (simp add: card_of_subset_bound lfset.Un_bound)
-
-lemma tvsubst_typ_TyVar[simp]: "tvsubst_typ TyVar T = T"
-  by (binder_induction T avoiding: T rule: typ.strong_induct)
-    (auto simp: IImsupp_typ_def intro!: trans[OF lfset.map_cong lfset.map_id])
-
-lemma tvsubst_typ_comp:
-  fixes f g ::"'a::var \<Rightarrow> 'a typ"
-  assumes "|SSupp_typ f| <o |UNIV::'a set|"
-  assumes "|SSupp_typ g| <o |UNIV::'a set|"
-  shows "tvsubst_typ g (tvsubst_typ f T) = tvsubst_typ (tvsubst_typ g o f) T"
-proof (binder_induction T avoiding: "IImsupp_typ f" "IImsupp_typ g" T rule: typ.strong_induct)
-  case (Forall X T U)
-  then show ?case
-    apply (subst typ.subst; simp add: assms)
-    apply (subst typ.subst; (simp add: assms FVars_tvsubst_typ)?)
-    apply (metis VVr_eq_TyVar singletonD typ.in_IImsupp typ.set(1))
-    apply (subst typ.subst; (simp add: assms SSupp_typ_tvsubst_typ_bound)?)
-    using IImsupp_typ_tvsubst_typ assms(2) by blast
-qed (auto simp: assms SSupp_typ_tvsubst_typ_bound IImsupp_typ_bound lfset.map_comp intro: lfset.map_cong)
-
-lemma tvsubst_typ_cong:
-  fixes f g ::"'a::var \<Rightarrow> 'a typ"
-  assumes "|SSupp_typ f| <o |UNIV::'a set|"
-  assumes "|SSupp_typ g| <o |UNIV::'a set|"
-  shows "(\<forall>x \<in> FVars_typ T. f x = g x) \<Longrightarrow> tvsubst_typ f T = tvsubst_typ g T"
-proof (binder_induction T avoiding: "IImsupp_typ f" "IImsupp_typ g" T rule: typ.strong_induct)
-  case (Forall X T U)
-  then show ?case
-    apply (subst (1 2) typ.subst; simp add: assms)
-    by (metis (mono_tags, lifting) DiffI IImsupp_typ_def SSupp_typ_def Un_iff mem_Collect_eq singletonD)
-qed (auto simp: assms IImsupp_typ_bound intro: lfset.map_cong)
 
 lemma SSupp_typ_TyVar_bound[simp]: "|SSupp_typ (TyVar :: 'tv \<Rightarrow> _)| <o cmin |UNIV::'tv::var set| |UNIV::'v::var set|"
   apply (rule cmin_greater)

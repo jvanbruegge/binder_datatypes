@@ -1227,13 +1227,20 @@ next
     by (metis SSupp_typ_TyVar_bound tvsubst_simps(5) tvsubst_typ_TyVar)
 next
   case (Rec x)
-  then show ?case sorry
+  then show ?case
+    by (auto simp: cmin_greater intro: lfset.map_cong)
 next
   case (Proj x1 x2)
-  then show ?case sorry
+  then show ?case
+    by (auto simp: cmin_greater)
 next
   case (Let x1 x2 x3)
-  then show ?case sorry
+  then show ?case
+    apply (subst tvsubst_simps)
+        apply (auto simp: cmin_greater) [4]
+    apply (subst trm.subst)
+       apply (auto simp: cmin_greater vvsubst_pat_tvsubst_pat[of id id, simplified, symmetric]) [4]
+    done
 qed
 
 lemma SSupp_Var_upd_bound[simp]: "|SSupp_trm (Var(x := v::('tv::var, 'v::var) trm))| <o cmin |UNIV::'tv set| |UNIV::'v set|"
@@ -1319,10 +1326,18 @@ using assms proof (binder_induction t avoiding: X T t "imsupp f1" "imsupp f2" ru
     using permute_tusubst by blast
 next
   case (Rec x)
-  then show ?case sorry
+  then show ?case
+    by (auto simp: lfset.map_comp intro!: lfset.map_cong)
 next
   case (Let x1 x2 x3)
-  then show ?case sorry
+  then show ?case
+    apply simp
+    apply (subst (1 2) tvsubst_simps)
+           apply (auto simp: vvsubst_pat_tvsubst_pat tvsubst_pat_comp
+      SSupp_typ_TyVar_comp SSupp_typ_tvsubst_typ_bound PVars_tvsubst_pat trm.FVars_permute bij_implies_inject
+      permute_typ_eq_tvsubst_typ_TyVar
+        intro!: arg_cong[where f="\<lambda>p. Let p _ _"] tvsubst_pat_cong)
+    done
 qed (auto simp: permute_tusubst imsupp_supp_bound infinite_UNIV assms)
 
 lemma Forall_eq_tvsubst_typ:

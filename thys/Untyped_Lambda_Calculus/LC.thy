@@ -438,8 +438,29 @@ proof-
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 
-declare term.tvsubst_permutes[THEN fun_cong, unfolded comp_def, equiv]
-declare tvsubst_rrename_comp[unfolded comp_def, equiv]
+lemma tvsubst_inv:
+  assumes "bij (\<sigma>::var\<Rightarrow>var)" "|supp \<sigma>| <o |UNIV::var set|"
+  shows "tvsubst (rrename \<sigma> \<circ> (Var(x := e2)) \<circ> inv \<sigma>) (rrename \<sigma> e1) = tvsubst (rrename \<sigma> \<circ> (Var(x := e2))) e1"
+proof -
+  have 1: "|SSupp_term (rrename \<sigma> \<circ> (Var(x := e2)))| <o |UNIV::var set|"
+    using term.SSupp_comp_bound SSupp_rrename_update_bound assms(1,2) by blast
+  then have 2: "|SSupp_term (rrename \<sigma> \<circ> (Var(x := e2)) \<circ> inv \<sigma>)| <o |UNIV::var set|"
+    using term.SSupp_comp_bound assms by force
+  show ?thesis using assms 1 2
+  proof (binder_induction e1 avoiding: "imsupp \<sigma>" x e2 e1 rule: term.strong_induct)
+    case Bound
+    then show ?case using imsupp_supp_bound infinite_UNIV assms by blast
+  next
+    case (Lam x1 x2)
+    then show ?case apply auto
+      by (metis (mono_tags, lifting) IImsupp_Var' SSupp_update_rrename_bound bij_not_equal_iff not_imageI term.FVars_permute term.IImsupp_natural term.subst(3))
+  qed auto
+qed
+
+lemmas [equiv] =
+  term.tvsubst_permutes[THEN fun_cong, unfolded comp_def]
+  tvsubst_rrename_comp[unfolded comp_def]
+  tvsubst_inv[unfolded comp_def]
 
 lemma permute_fun_upd[equiv]:
   fixes f::"var \<Rightarrow> var"

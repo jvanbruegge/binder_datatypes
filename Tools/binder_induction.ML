@@ -457,12 +457,15 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     rtac ctxt inner_prem ORELSE'
                     EVERY' [
                       Method.insert_tac ctxt [inner_prem],
-                      Simplifier.asm_full_simp_tac (Simplifier.add_cong @{thm imp_cong} (
-                        (BNF_Util.ss_only @{thms
-                          split_paired_All HOL.simp_thms(42) HOL.induct_forall_def prod.inject induct_implies_equal_eq
-                        } ctxt)
-                        addsimprocs [@{simproc HOL.defined_All}]
-                      ))
+                      let
+                        val simpset = Simplifier.add_cong @{thm imp_cong} (
+                          (BNF_Util.ss_only @{thms
+                            split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
+                            disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single]
+                          } ctxt)
+                          addsimprocs [@{simproc HOL.defined_All}]
+                        )
+                      in Simplifier.asm_full_simp_tac simpset end
                     ],
                     REPEAT_DETERM o assume_tac ctxt
                   ]) (map (fn thm => case try (fn () => repeat_spec thm RS @{thm induct_mp[OF _ induct_equal_refl]}) () of

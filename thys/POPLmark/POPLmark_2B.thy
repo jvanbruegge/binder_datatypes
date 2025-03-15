@@ -1712,6 +1712,7 @@ lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longri
 lemma set_proj_ctxt_eq: "set \<Gamma> = set \<Delta> \<Longrightarrow> set (proj_ctxt \<Gamma>) = set (proj_ctxt \<Delta>)"
   by (auto simp: proj_ctxt_def map_filter_def)
 
+<<<<<<< Updated upstream
 lemma wf_ctxt_extend_permute: "\<turnstile> \<Gamma> \<^bold>, \<Gamma>' OK \<Longrightarrow> set \<Gamma> = set \<Delta> \<Longrightarrow> \<turnstile> \<Delta> OK \<Longrightarrow> \<turnstile> \<Delta> \<^bold>, \<Gamma>' OK"
   by (induct \<Gamma>') auto
 
@@ -1794,6 +1795,9 @@ proof (binder_induction "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta>" t T a
     done
   with TVar show ?case
     by (auto intro: typing.TVar)
+next
+  case (TRec \<Gamma>' XX TT)
+  then show ?case sorry
 qed (auto simp flip: append_Cons simp: ty_narrowing2 intro: typing.intros)
 
 lemma wf_ctxt_weaken: "\<turnstile> \<Gamma> \<^bold>, Inr x <: Q \<^bold>, \<Delta> OK \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, \<Delta> OK"

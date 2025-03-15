@@ -92,6 +92,10 @@ proof (unfold nonrep_rawpat_def, safe, goal_cases LR)
     by (metis LR(3,5) \<open>z' \<notin> PPVars (PPRec X)\<close> lfin_values rawpat.set_intros(2))
 qed
 
+lemma lfset_eq_iff: "X = Y \<longleftrightarrow> (\<forall>x P. (x, P) \<in>\<in> X \<longleftrightarrow> (x, P) \<in>\<in> Y)"
+  including lfset.lifting
+  by transfer auto
+
 lemma nonrep_rawpat_PRecI:
   assumes
     "(\<forall>x P. (x, P) \<in>\<in> X \<longrightarrow> nonrep_rawpat P)"
@@ -100,11 +104,66 @@ lemma nonrep_rawpat_PRecI:
   using assms
   unfolding nonrep_rawpat_def
 proof (safe, goal_cases RL)
-  case (RL Q)
-  then obtain Y where "Q = PPRec Y"
-    by (cases Q; simp)
-  with RL(3) have "rel_lfset id (rel_rawpat top) X Y" by auto
-  then show ?case sorry
+  case (RL QQ)
+  then obtain Y where "QQ = PPRec Y"
+    by (cases QQ; simp)
+  with RL(3) have *: "rel_lfset id (rel_rawpat top) X Y" by auto
+  { fix x P
+    assume xP: "(x, P) \<in>\<in> X"
+    with * obtain Q where "(x, Q) \<in>\<in> Y" "rel_rawpat top P Q"
+      including lfset.lifting
+      by (atomize_elim, transfer) (force simp: rel_fset_alt)
+    moreover
+    from assms(1) xP \<open>rel_rawpat top P Q\<close> obtain f where "map_rawpat f P = Q"
+      unfolding nonrep_rawpat_def by blast
+    then obtain g where "supp g \<subseteq> PPVars P" "map_rawpat g P = Q"
+      by (atomize_elim, intro exI[of _ "\<lambda>x. if x \<in> PPVars P then f x else x"])
+        (auto simp: supp_def intro: rawpat.map_cong)
+    ultimately have "\<exists>f. (x, map_rawpat f P) \<in>\<in> Y \<and> supp f \<subseteq> PPVars P"
+      by auto
+  } note pick_ex = this
+  define pick where "pick = (\<lambda>x (P :: ('tv::var, 'v::var) rawpat). SOME f. (x, map_rawpat f P) \<in>\<in> Y \<and> supp f \<subseteq> PPVars P)"
+  have pick: "(x, map_rawpat (pick x P) P) \<in>\<in> Y" "supp (pick x P) \<subseteq> PPVars P" if "(x, P) \<in>\<in> X" for x P
+    using someI_ex[OF pick_ex[OF that]] unfolding pick_def
+    by (auto simp: Eps_case_prod)
+  define pick_part where "pick_part = (\<lambda>z. THE (x, P). (x, P) \<in>\<in> X \<and> z \<in> PPVars P)"
+  have pick_part: "pick_part z \<in>\<in> X \<and> z \<in> PPVars (snd (pick_part z))" if "\<exists>x P. (x, P) \<in>\<in> X \<and> z \<in> PPVars P" for z
+    using that assms(2) unfolding pick_part_def
+    apply -
+    apply (rule the1I2)
+     apply auto
+     apply blast
+    by (metis Int_emptyD lfin_label_inject)
+  define pick1 where "pick1 = (\<lambda>z. if \<exists>x P. (x, P) \<in>\<in> X \<and> z \<in> PPVars P then case_prod pick (pick_part z) z else z)"
+  show ?case
+    unfolding \<open>QQ = PPRec Y\<close>
+    apply (auto intro!: exI[of _ pick1] simp: pick1_def lfset_eq_iff lfin_map_lfset)
+    subgoal for x P
+      apply (subgoal_tac "\<exists>P'. (x, P') \<in>\<in> X \<and> rel_rawpat top P' P")
+       apply auto
+       apply (frule pick)
+      subgoal for P'
+        apply (rule exI[of _ P'])
+        apply auto
+        apply (rule sym)
+        apply (rule trans[OF rawpat.map_cong[OF refl]])
+         apply (rule if_P)
+         apply (auto simp: split_beta)
+        apply (rule trans[OF rawpat.map_cong[OF refl], of _ _ "pick x P'"])
+        apply (metis Int_emptyD assms(2) lfin_label_inject pick_part surjective_pairing)
+        apply (simp add: lfin_label_inject)
+        done
+      subgoal
+        using *
+        including lfset.lifting
+        by transfer (force simp: rel_fset_alt)
+      done
+    subgoal for x P
+      apply (frule pick)
+      using
+        \<open>\<And>x P. (x, P) \<in>\<in> Y \<Longrightarrow> \<exists>c. P = map_rawpat (\<lambda>z. if \<exists>x P. (x, P) \<in>\<in> X \<and> z \<in> PPVars P then (case pick_part z of (x, xa) \<Rightarrow> pick x xa) z else z) c \<and> (x, c) \<in>\<in> X\<close>
+        lfin_label_inject by fastforce
+    done
 qed
 
 lemma nonrep_rawpat_PRec[simp]: "nonrep_rawpat (PPRec X :: ('tv::var, 'v::var) rawpat) \<longleftrightarrow>
@@ -123,6 +182,5 @@ lift_definition PVar :: "'v \<Rightarrow> 'tv typ \<Rightarrow> ('tv::var, 'v::v
 lift_definition PRec :: "(label, ('tv::var, 'v::var) pat) lfset \<Rightarrow> ('tv::var, 'v::var) pat" is PPRec
   by auto
 *)
-end
 
 end

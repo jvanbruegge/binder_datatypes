@@ -38,7 +38,7 @@ lemma nonrep_G_map_fst_snd_bij:
   apply (auto simp: nonrep_lfset_alt map_prod_def image_iff split_beta)
   by (metis fst_conv snd_conv)+
 
-typedef ('a, 'b) lfset = "{x :: ('a :: var, 'b) G . nonrep_G x}"
+typedef ('a, 'b) lfset = "{x :: ('a, 'b) G . nonrep_G x}"
   unfolding mem_Collect_eq
   by transfer (auto simp: nonrep_lfset_alt)
 
@@ -236,7 +236,7 @@ lemma rel_lfset_eq_transfer[transfer_rule]:
 
 end
 
-lift_definition lfin :: "('a \<times> 'b) \<Rightarrow> ('a::var, 'b) lfset \<Rightarrow> bool" (infix "\<in>\<in>" 50) is fmember .
+lift_definition lfin :: "('a \<times> 'b) \<Rightarrow> ('a, 'b) lfset \<Rightarrow> bool" (infix "\<in>\<in>" 50) is fmember .
 
 lemma lfin_map_lfset: "(a, b) \<in>\<in> map_lfset id g x \<longleftrightarrow> (\<exists>c. b = g c \<and> (a, c) \<in>\<in> x)"
   by transfer force
@@ -277,15 +277,15 @@ lemma values_lfin: "c \<in> values x \<Longrightarrow> \<exists>l. (l, c) \<in>\
 lemma pred_lfset_lfempty[simp]: "pred_lfset P lfempty = True"
   unfolding lfset.pred_set by auto
 
-lift_definition lfinsert :: "'a \<Rightarrow> 'b \<Rightarrow> ('a::var, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
+lift_definition lfinsert :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>a b X. if \<exists>c. b \<noteq> c \<and> (a, c) |\<in>| X then X else finsert (a, b) X"
   by (auto simp: nonrep_lfset_alt split_beta split: if_splits) metis
 
-lift_definition lfupdate :: "('a::var, 'b) lfset \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset"
+lift_definition lfupdate :: "('a, 'b) lfset \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>X a b. finsert (a, b) (ffilter (\<lambda>(a', _). a \<noteq> a') X)"
   by (auto simp: nonrep_lfset_alt)
 
-lift_definition lfunion :: "('a::var, 'b) lfset \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
+lift_definition lfunion :: "('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>X Y. funion Y (ffilter (\<lambda>(a, _). a |\<notin>| fst |`| Y) X)"
   by (auto simp: nonrep_lfset_alt image_iff)
 

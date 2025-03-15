@@ -4,6 +4,9 @@ begin
 
 datatype ('tv::var, PPVars: 'v) rawpat = PPVar 'v "'tv typ" | PPRec "(label, ('tv, 'v) rawpat) lfset"
 
+lemma finite_PPVars: "finite (PPVars P)"
+  by (induct P) auto
+
 definition nonrep_rawpat :: "('tv::var, 'v::var) rawpat \<Rightarrow> bool" where
   "nonrep_rawpat P = (\<forall>Q :: ('tv, 'v) rawpat. rel_rawpat top P Q \<longrightarrow> (\<exists>f. Q = map_rawpat f P))"
 
@@ -415,5 +418,8 @@ lemma PTVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PTVars (PRec P) = (\<U
    apply (subst (asm) Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
    apply (subst Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
   done
+
+lemma finite_PVars[simp]: "finite (PVars P)"
+  by (auto simp: PVars_def finite_PPVars)
 
 end

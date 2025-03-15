@@ -2210,6 +2210,16 @@ lemma supp_swap_bound_cmin: "|supp (id(x := y, y := x))| <o cmin |UNIV :: 'a::va
   by (rule ordLeq_ordLess_trans[OF card_of_mono1[of _ "{x, y}"]])
     (auto simp: supp_def cmin_greater infinite_UNIV)
 
+lemma SSupp_trm_restrict[simp]: "SSupp_trm (restrict \<sigma> A) = SSupp_trm \<sigma> \<inter> A"
+  unfolding SSupp_trm_def restrict_def
+  by auto
+
+lemma FVars_restrict: "FVars (restrict \<sigma> A a) = (if a \<in> A then FVars (\<sigma> a) else {a})"
+  by (auto simp: restrict_def)
+
+lemma match_FVars: "match \<sigma> p v \<Longrightarrow> x \<in> PVars p \<Longrightarrow> FVars (\<sigma> x) \<subseteq> FVars v"
+  by (induct p v rule: match.induct) (force simp: values_lfin_iff labels_lfin_iff Bex_def)+
+
 binder_inductive (no_auto_equiv) step
   subgoal sorry
   subgoal premises prems for R B1 B2 t u
@@ -2261,14 +2271,46 @@ binder_inductive (no_auto_equiv) step
              apply (auto simp: fun_upd_comp SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
         done
       done
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
+    subgoal for v \<sigma> p u
+      apply (rule disjI2, rule disjI2, rule disjI1)
+      apply (rule mp[OF _ extend_fresh[where B="PVars p" and A="FVars v \<union> FVars u"]])
+      apply (rule impI)
+         apply (erule exE conjE)+
+      subgoal for \<rho>
+        apply (rule exI[of _ "{}"]; simp)
+        apply (rule exI[of _ "\<rho> ` PVars p"]; simp)
+        apply (rule conjI)
+        apply (subst FVars_tvsubst)
+           apply (auto simp: FVars_restrict infinite_UNIV intro!: cmin_greater finite_ordLess_infinite2 dest: match_FVars) [3]
+        apply (rule exI[of _ v])
+        apply (rule exI[of _ "\<sigma> o \<rho>"])
+        apply (rule exI[of _ "vvsubst_pat id \<rho> p"])
+        apply (rule conjI)
+        apply (simp add: pat.set_map)
+        apply (rule exI[of _ "permute_trm id \<rho> u"])
+        apply (intro conjI)
+           apply (rule Let_inject[THEN iffD2]; simp)
+           apply (rule exI[of _ \<rho>])
+           apply (auto simp add: id_on_def pat.set_map permute_trm_eq_tvsubst)
+         apply (subst permute_trm_eq_tvsubst)
+             apply (auto intro!: cmin_greater)
+        sledgehammer
+        find_theorems tvsubst permute_trm
+      sorry
+    subgoal for VV l v
+      by auto
+    subgoal for t t' u
+      by auto
+    subgoal 
+      by auto
+    subgoal 
+      by auto
+    subgoal 
+      by auto
+    subgoal 
+      by auto
+    subgoal for t t' p u
+      sorry
     done
   done
 

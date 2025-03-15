@@ -1030,7 +1030,7 @@ qed auto
 
 inductive pat_typing :: "('tv :: var, 't :: var) pat \<Rightarrow> 'tv typ \<Rightarrow> ('tv, 't) \<Gamma>\<^sub>t \<Rightarrow> bool" ("\<turnstile> _ : _ \<rightarrow> _" [30,29,30] 30) where
   PVar: "\<turnstile> PVar x T : T \<rightarrow> \<emptyset> \<^bold>, Inr x <: T"
-| PRec: "(\<And>l P T. (l, P) \<in>\<in> PP \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<turnstile> P : T \<rightarrow> \<Delta> l) \<Longrightarrow> \<turnstile> PRec PP : TRec TT \<rightarrow> List.concat (map \<Delta> (labelist TT))"
+| PRec: "nonrep_PRec PP \<Longrightarrow> (\<And>l P T. (l, P) \<in>\<in> PP \<Longrightarrow> (l, T) \<in>\<in> TT \<Longrightarrow> \<turnstile> P : T \<rightarrow> \<Delta> l) \<Longrightarrow> xs = labelist TT \<Longrightarrow> \<turnstile> PRec PP : TRec TT \<rightarrow> List.concat (map \<Delta> xs)"
 
 inductive typing :: "('tv::var, 't::var) \<Gamma>\<^sub>t \<Rightarrow> ('tv, 't) trm \<Rightarrow> 'tv typ \<Rightarrow> bool" ("_ \<^bold>\<turnstile> _ \<^bold>: _" [30,29,30] 30) where
   TVar: "\<turnstile> \<Gamma> OK \<Longrightarrow> (Inr x, T) \<in> set \<Gamma> \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> Var x \<^bold>: T"
@@ -1109,6 +1109,28 @@ lemma TAbs_inject:
     done
   subgoal for f
     apply (rule exI)
+    apply (rule exI[of _ id])
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  done
+
+lemma Let_inject:
+  fixes t t' u u' :: "('tv :: var, 'v :: var) trm"
+  shows "Let p t u = Let p' t' u' \<longleftrightarrow> t = t' \<and> (\<exists>f. bij (f::'v::var \<Rightarrow> 'v) \<and> |supp f| <o |UNIV::'v set| \<and> id_on (FVars u - PVars p) f \<and> vvsubst_pat id f p = p' \<and> permute_trm id f u = u')"
+    apply (unfold Let_def trm.TT_inject0
+      set3_trm_pre_def set4_trm_pre_def set5_trm_pre_def comp_def Abs_trm_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
+      cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_trm_pre_def
+      prod.map_id set2_typ_pre_def prod_set_simps prod.set_map UN_single Abs_trm_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject map_prod_simp typ.map_id
+    )
+  apply safe
+  subgoal for f g
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  subgoal for f g
+    apply (auto simp: id_on_def intro!: trm.permute_cong)
+    done
+  subgoal for f
     apply (rule exI[of _ id])
     apply (auto simp: id_on_def intro!: trm.permute_cong)
     done
@@ -1331,8 +1353,56 @@ lemma extend_equiv_sum[equiv]:
   by simp
 lemmas [equiv] = map_sum.simps map_prod_simp
 
-binder_inductive (no_auto_equiv) typing
-  subgoal sorry
+lemma pat_typing_equiv[equiv]:
+  assumes "bij f" "|supp f| <o |UNIV :: 'tv::var set|"
+    "bij g" "|supp g| <o |UNIV :: 'v::var set|"
+  shows "\<turnstile> (p :: ('tv, 'v) pat) : T \<rightarrow> \<Delta> \<Longrightarrow>
+    \<turnstile> vvsubst_pat f g p : permute_typ f T \<rightarrow> map (map_prod (map_sum f g) (permute_typ f)) \<Delta>"
+  apply (induct p T \<Delta> rule: pat_typing.induct)
+   apply (auto simp: assms typ.vvsubst_permute map_concat lfin_map_lfset
+     intro!: pat_typing.intros)
+  apply (auto simp: nonrep_PRec_def lfin_map_lfset vvsubst_pat_tvsubst_pat assms PVars_tvsubst_pat)
+  apply (metis Int_emptyD assms(3) bij_implies_inject)
+  done
+
+lemma HELP1[equiv]: "bij \<sigma>1a \<Longrightarrow>
+    |supp \<sigma>1a| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+    bij \<sigma>2a \<Longrightarrow>
+    |supp \<sigma>2a| <o |UNIV :: 'v::var set| \<Longrightarrow>
+    rel_lfset id
+     (\<lambda>x2 x3.
+         Ra (map (map_prod (map_sum (inv \<sigma>1a) (inv \<sigma>2a)) (permute_typ (inv \<sigma>1a)))
+              (map (map_prod (map_sum \<sigma>1a \<sigma>2a) (permute_typ \<sigma>1a)) \<Gamma>'))
+          (permute_trm (inv \<sigma>1a) (inv \<sigma>2a) x2) (permute_typ (inv \<sigma>1a) x3))
+     (map_lfset id (permute_trm \<sigma>1a \<sigma>2a) XXa) (map_lfset id (permute_typ \<sigma>1a) TTa) \<longleftrightarrow>
+    rel_lfset id (Ra \<Gamma>') (XXa :: (string, ('tv, 'v) trm) lfset) TTa"
+  by (auto simp: o_def prod.map_comp sum.map_comp sum.map_ident
+       typ.permute_comp typ.permute_id[unfolded id_def] supp_inv_bound
+       trm.permute_comp trm.permute_id[unfolded id_def] lfset.rel_map
+       elim!: lfset.rel_mono_strong)
+
+lemma HELP2[equiv]:
+  "bij \<sigma>1a \<Longrightarrow>
+    |supp \<sigma>1a| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+    bij \<sigma>2a \<Longrightarrow>
+    |supp \<sigma>2a| <o |UNIV :: 'v::var set| \<Longrightarrow>
+    Ra (map (map_prod (map_sum (inv \<sigma>1a) (inv \<sigma>2a)) (permute_typ (inv \<sigma>1a)))
+         (map (map_prod (map_sum \<sigma>1a \<sigma>2a) (permute_typ \<sigma>1a)) \<Gamma>' \<^bold>,
+          map (map_prod (map_sum \<sigma>1a \<sigma>2a) (permute_typ \<sigma>1a)) \<Delta>'))
+     (permute_trm (inv \<sigma>1a) (inv \<sigma>2a) (permute_trm \<sigma>1a \<sigma>2a ua))
+     (permute_typ (inv \<sigma>1a) (permute_typ \<sigma>1a Ua)) \<longleftrightarrow>
+    Ra (\<Gamma>' \<^bold>, \<Delta>') (ua :: ('tv, 'v) trm) Ua"
+  apply (rule arg_cong3[where h=Ra])
+  apply (auto simp: o_def prod.map_comp sum.map_comp sum.map_ident
+      typ.permute_comp typ.permute_id[unfolded id_def] supp_inv_bound
+      trm.permute_comp trm.permute_id[unfolded id_def])
+  done
+
+lemma "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> dom \<Delta> \<subseteq> Inr ` PVars p"
+  apply (induct p T \<Delta> rule: pat_typing.induct)
+  apply (auto simp: set_labelist)
+
+binder_inductive typing
   subgoal premises prems for R B1 B2 \<Gamma> t T
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -1425,16 +1495,57 @@ binder_inductive (no_auto_equiv) typing
       done
     subgoal for \<Gamma>' t T' p \<Delta> u U
       apply (rule disjI2)+
-      apply (rule mp[OF _ extend_fresh[where A="PVars p" and B="Inr -` dom \<Gamma> \<union> FVars t \<union> (FVars u - PVars p)"]])
+      apply (rule mp[OF _ extend_fresh[where B="PVars p" and A="Inr -` dom \<Gamma> \<union> FVars t \<union> FVars u"]])
       apply (rule impI)
          apply (erule exE conjE)+
       subgoal for \<sigma>
         apply (rule exI[of _ "{}"]; simp)
         apply (rule exI[of _ "\<sigma> ` PVars p"]; simp)
         apply (rule conjI)
-         apply (auto simp: id_on_def) []
-        sledgehammer
-        sorry
+        subgoal
+         apply (simp add: id_on_def image_Un Int_Un_distrib Int_Un_distrib2 image_iff vimage_def) []
+          apply auto
+          apply (metis (no_types, lifting) Int_emptyD fst_conv image_eqI setr.cases)
+          done
+        apply (rule exI[of _ t])
+        apply (rule exI[of _ T'])
+        apply (rule exI[of _ "vvsubst_pat id \<sigma> p"])
+        apply (rule conjI)
+        apply (simp add: pat.set_map)
+        apply (rule exI[of _ "map (map_prod (map_sum id \<sigma>) id) \<Delta>"])
+        apply (rule exI[of _ "permute_trm id \<sigma> u"])
+        apply (intro conjI)
+        subgoal
+          apply (subst Let_inject; simp)
+          apply (rule exI[of _ "\<sigma>"]; simp)
+          apply (auto simp: id_on_def)
+          done
+          apply assumption
+        subgoal
+          apply (drule pat_typing_equiv[of id \<sigma>, rotated 4])
+          apply auto
+          done
+        subgoal
+          apply (frule prems(1)[THEN typing_wf_ctxt[of "\<Gamma> \<^bold>, \<Delta>"]])
+          apply (drule prems(2)[of id \<sigma> "\<Gamma> \<^bold>, \<Delta>", rotated 4])
+              apply auto [4]
+          apply (subgoal_tac "map (map_prod (map_sum id \<sigma>) id) \<Gamma> = \<Gamma>")
+           apply simp
+          apply (auto intro!: list.map_ident_strong sum.map_ident_strong)
+          subgoal for z U x
+            apply (cases "x \<in> PVars p")
+            subgoal
+              apply (cases z; auto)
+              sorry
+            apply (metis (mono_tags, lifting) Diff_iff Un_iff fst_conv id_on_def imageI setr.cases
+                vimage_eq)
+         apply (simp add: id_on_def image_Un Int_Un_distrib Int_Un_distrib2 image_iff vimage_def) []
+          apply (cases z; auto)
+          apply (subgoal_tac "x \<in> \<sigma> ` PVars p")
+           apply auto
+          apply (metis (no_types, opaque_lifting) Int_emptyD fst_conv imageI)
+          done
+        done
       apply (auto intro!: typ.Un_bound simp: finite_vimageI pat.set_bd_UNIV trm.set_bd_UNIV infinite_UNIV card_of_minus_bound)
       done
     done

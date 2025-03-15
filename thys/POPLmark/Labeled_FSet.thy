@@ -382,6 +382,9 @@ lemma lfin_apply_lfset: "labels F \<subseteq> labels X \<Longrightarrow>
     done
   done
 
+lemma labelist_map_lfset[simp]: "labelist (map_lfset id g S) = labelist S"
+  by (auto simp: labelist_def lfset.set_map supp_id_bound)
+
 lifting_update lfset.lifting
 lifting_forget lfset.lifting
 declare fun_cong[OF lfset_size_o_map,

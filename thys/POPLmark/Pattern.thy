@@ -373,7 +373,53 @@ mrbnf "('tv :: var, 'v :: var) pat"
   subgoal by simp
   subgoal by simp
   done
-
 declare [[quick_and_dirty=false]]
+
+lemma vvsubst_pat_PVar[simp]:
+  "bij g \<Longrightarrow> vvsubst_pat f g (PVar x T) = PVar (g x) (vvsubst_typ f T)"
+  by transfer auto
+
+definition "nonrep_PRec X = (\<forall>x y P Q. x \<noteq> y \<longrightarrow> (x, P) \<in>\<in> X \<longrightarrow> (y, Q) \<in>\<in> X \<longrightarrow> PVars P \<inter> PVars Q = {})"
+
+lemma nonrep_PRec_alt: "nonrep_PRec X = nonrep_PPRec (map_lfset id Rep_pat X)"
+  unfolding nonrep_PRec_def nonrep_PPRec_def
+  apply (auto simp: PVars_def)
+   apply (metis Int_emptyD lfin_map_lfset)
+  apply (meson Int_emptyD lfin_map_lfset)
+  done
+
+lemma vvsubst_pat_PRec[simp]:
+  "bij g \<Longrightarrow> nonrep_PRec P \<Longrightarrow> vvsubst_pat f g (PRec P) = PRec (map_lfset id (vvsubst_pat f g) P)"
+  unfolding PRec_def vvsubst_pat_def nonrep_PRec_alt
+  apply (auto simp: lfset.map_comp o_def map_fun_def id_def[symmetric])
+     apply (subst (1 2) Abs_pat_inverse)
+  using Rep_pat nonrep_rawpat_vvsubst_rawpat apply blast
+  apply (auto) []
+      apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
+     apply (subst Abs_pat_inject)
+  apply (metis (mono_tags, lifting) Rep_pat lfin_map_lfset mem_Collect_eq nonrep_rawpat_PRec
+      nonrep_rawpat_vvsubst_rawpat)
+  apply (smt (verit, best) Abs_pat_inverse Rep_pat lfin_map_lfset lfset.map_cong_id
+      mem_Collect_eq nonrep_rawpat_PRec nonrep_rawpat_vvsubst_rawpat)
+     apply (auto simp: lfset.map_comp intro!: lfset.map_cong) []
+  apply (smt (z3) Abs_pat_inverse Rep_pat lfin_map_lfset mem_Collect_eq nonrep_PPRec_def
+      nonrep_rawpat_PRec nonrep_rawpat_vvsubst_rawpat
+      vvsubst_rawpat.simps(2))
+  done
+
+lemma PVars_PVar[simp]: "PVars (PVar x T) = {x}"
+  by (auto simp: PVars_def PVar_def Abs_pat_inverse)
+lemma PVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PVars (PRec P) = (\<Union>x \<in> values P. PVars x)"
+  apply (auto simp: PVars_def PRec_def Abs_pat_inverse nonrep_PRec_alt lfin_map_lfset lfset.set_map Rep_pat[simplified])
+   apply (subst (asm) Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
+   apply (subst Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
+  done
+lemma PTVars_PVar[simp]: "PTVars (PVar x T) = FVars_typ T"
+  by (auto simp: PTVars_def PVar_def Abs_pat_inverse)
+lemma PTVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PTVars (PRec P) = (\<Union>x \<in> values P. PTVars x)"
+  apply (auto simp: PTVars_def PRec_def Abs_pat_inverse nonrep_PRec_alt lfin_map_lfset lfset.set_map Rep_pat[simplified])
+   apply (subst (asm) Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
+   apply (subst Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
+  done
 
 end

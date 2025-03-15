@@ -767,10 +767,6 @@ val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Least_Fixpoint.T1"
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
 local_setup \<open>fn lthy =>
 let
   val qualify = I

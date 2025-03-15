@@ -1988,6 +1988,15 @@ next
   case TSub
   then show ?case
     using well_scoped(2) by blast
+next
+  case (TRec \<Gamma>' XX TT)
+  then show ?case sorry
+next
+  case (TProj \<Gamma>' t TT l Ta)
+  then show ?case sorry
+next
+  case (TLet \<Gamma>' t Ta p \<Delta> u U)
+  then show ?case sorry
 qed auto
 
 lemma ty_refl': "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma>; T = U \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: U"

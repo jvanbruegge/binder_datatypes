@@ -2017,13 +2017,19 @@ proof -
   have [simp]: "|SSupp_typ g| <o |UNIV::'tv set|"
     using assms(2) cmin1 ordLess_ordLeq_trans by blast
   show ?thesis
-  apply (binder_induction t avoiding: "IImsupp_1_trm f" "IImsupp_2_trm f" "IImsupp_typ g" t rule: trm.strong_induct)
-           apply (auto simp: IImsupp_typ_bound IImsupp_1_trm_bound IImsupp_2_trm_bound lfset.set_map)
+    apply (binder_induction t avoiding: "IImsupp_1_trm f" "IImsupp_2_trm f" "IImsupp_typ g" t rule: trm.strong_induct)
+              apply (auto simp: IImsupp_typ_bound IImsupp_1_trm_bound IImsupp_2_trm_bound lfset.set_map)
     using IImsupp_2_trm_def SSupp_trm_def trm.FVars_VVr(2) apply fastforce
        apply (metis singletonD trm.FVars_VVr(2) trm.in_IImsupp(2))
-    subgoal sorry
-    subgoal sorry
-    subgoal sorry
+      apply (subst (asm) tvsubst_simps)
+          apply (auto simp: PVars_tvsubst_pat)
+      apply (metis (mono_tags, lifting) Diff_iff IImsupp_2_trm_def Int_iff SSupp_trm_def Un_iff mem_Collect_eq
+        singletonD trm.FVars_VVr(2))
+     apply (subst tvsubst_simps)
+         apply (auto simp: PVars_tvsubst_pat)
+    apply (subst tvsubst_simps)
+        apply (auto simp: PVars_tvsubst_pat)
+    apply (metis disjoint_iff_not_equal singletonD trm.FVars_VVr(2) trm.in_IImsupp(2))
     done
 qed
 

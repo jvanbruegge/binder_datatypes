@@ -1964,25 +1964,25 @@ lemma typing_well_scoped: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrig
 proof (binder_induction \<Gamma> t T avoiding: \<Gamma> T t rule: typing.strong_induct)
   case (TVar \<Gamma> x T)
   then show ?case
-    by (induct \<Gamma>) (fastforce simp: image_iff subset_eq)+
+    by (induct \<Gamma>) (auto simp: dom_proj_ctxt)
 next
   case (TAbs \<Gamma> x T1 t T2)
   then show ?case
-    apply (auto simp: image_iff subset_eq)
-    by (smt (verit, ccfv_SIG) image_iff in_mono prod.inject surjective_pairing typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
+    apply (auto simp: dom_proj_ctxt)
+    by (smt (verit, ccfv_SIG) in_mono prod.inject typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
 next
   case (TTAbs \<Gamma> X T1 t T2)
   then show ?case 
-    apply (auto simp: image_iff subset_eq)
-    by (smt (verit, ccfv_SIG) image_iff in_mono prod.inject surjective_pairing typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
+    apply (auto simp: dom_proj_ctxt)
+    by (smt (verit, ccfv_SIG) in_mono prod.inject typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
 next
   case (TTApp \<Gamma> t1 X T11 T12 T2)
   then show ?case
-    apply (auto simp: image_iff subset_eq)
+    apply (auto simp: dom_proj_ctxt)
     apply (subst (asm) (1 2) FVars_tvsubst_typ)
     apply (auto split: if_splits)
     apply (drule well_scoped(1))
-    apply (auto simp: image_iff subset_eq)
+    apply (auto simp: dom_proj_ctxt)
     done
 next
   case TSub
@@ -1990,13 +1990,16 @@ next
     using well_scoped(2) by blast
 next
   case (TRec \<Gamma>' XX TT)
-  then show ?case sorry
+  then show ?case
+    by (force simp: dom_proj_ctxt lfset.set_map lfset.in_rel[of id, simplified, unfolded lfset.map_id])
 next
   case (TProj \<Gamma>' t TT l Ta)
-  then show ?case sorry
+  then show ?case
+    by (force simp: dom_proj_ctxt values_lfin_iff)
 next
   case (TLet \<Gamma>' t Ta p \<Delta> u U)
-  then show ?case sorry
+  then show ?case
+    by (auto simp: dom_proj_ctxt image_Un subset_eq dest!: pat_typing_dom)
 qed auto
 
 lemma ty_refl': "\<lbrakk> \<turnstile> \<Gamma> ok ; T closed_in \<Gamma>; T = U \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> T <: U"

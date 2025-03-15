@@ -3018,9 +3018,10 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             val lhs = Term.list_comb (mrrelAsAs, map_VT HOLogic.eq_const HOLogic.id_const As');
             val goal = HOLogic.mk_eq (lhs, HOLogic.eq_const CA') |> HOLogic.mk_Trueprop;
           in
-            Goal.prove_sorry lthy [] [] goal (fn {context = ctxt, prems = _} =>
-              unfold_tac ctxt [mrbnf_rel_def, Lazy.force map_id, Lazy.force rel_eq])
-            |> Thm.close_derivation \<^here>
+            prove_sorry "mr_rel_eq" lthy [] [] goal (fn {context = ctxt, prems = _} => EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt [mrbnf_rel_def, Lazy.force map_id]),
+              rtac ctxt (Lazy.force rel_eq)
+            ]) |> Thm.close_derivation \<^here>
           end;
 
         val mr_rel_eq = Lazy.lazy mk_mr_rel_eq;
@@ -3072,11 +3073,13 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
             val vars = map (fst o dest_Free) (fsRs @ [x, y]);
             val goal = mk_Trueprop_eq (lhs, rhs);
           in
-            Goal.prove_sorry lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} =>
-              unfold_thms_tac ctxt [mrbnf_rel_def] THEN
-              HEADGOAL (rtac ctxt (trans OF [rel_OO_Grp OF assms])) THEN
-              unfold_tac ctxt [rel_OO_Grp OF assms, @{thm OO_Grp_alt}, @{thm mem_Collect_eq}, @{thm conj_assoc}]
-            ) |> Thm.close_derivation \<^here>
+            prove_sorry "mr_in_rel" lthy vars prem_terms_fs goal (fn {context = ctxt, prems = assms} => EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt [mrbnf_rel_def]),
+              rtac ctxt (trans OF [rel_OO_Grp OF assms]),
+              rtac ctxt @{thm trans[OF OO_Grp_alt[THEN fun_cong, THEN fun_cong]]},
+              K (Local_Defs.unfold0_tac ctxt @{thms mem_Collect_eq conj_assoc}),
+              rtac ctxt refl
+            ]) |> Thm.close_derivation \<^here>
           end;
 
         val mr_in_rel = Lazy.lazy mk_mr_in_rel;

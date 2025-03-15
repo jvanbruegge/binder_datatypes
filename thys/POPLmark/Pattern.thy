@@ -166,9 +166,15 @@ proof (safe, goal_cases RL)
     done
 qed
 
+definition "nonrep_PPRec X = (\<forall>x y P Q. x \<noteq> y \<longrightarrow> (x, P) \<in>\<in> X \<longrightarrow> (y, Q) \<in>\<in> X \<longrightarrow> PPVars P \<inter> PPVars Q = {})"
+
+lemma nonrep_PPRec_lfemtpy[simp]: "nonrep_PPRec lfempty"
+  unfolding nonrep_PPRec_def by auto
+
 lemma nonrep_rawpat_PRec[simp]: "nonrep_rawpat (PPRec X :: ('tv::var, 'v::var) rawpat) \<longleftrightarrow>
   ((\<forall>x P. (x, P) \<in>\<in> X \<longrightarrow> nonrep_rawpat P) \<and>
-  (\<forall>x y P Q. x \<noteq> y \<longrightarrow> (x, P) \<in>\<in> X \<longrightarrow> (y, Q) \<in>\<in> X \<longrightarrow> PPVars P \<inter> PPVars Q = {}))"
+  nonrep_PPRec X)"
+  unfolding nonrep_PPRec_def
   using nonrep_rawpat_PRecI[of X] nonrep_rawpat_PRecD1[of X] nonrep_rawpat_PRecD2[of X] by blast
 
 typedef ('tv::var, 'v::var) pat = "{p :: ('tv, 'v) rawpat. nonrep_rawpat p}"
@@ -178,9 +184,120 @@ setup_lifting type_definition_pat
 
 lift_definition PVar :: "'v \<Rightarrow> 'tv typ \<Rightarrow> ('tv::var, 'v::var) pat" is PPVar
   by auto
-(*
-lift_definition PRec :: "(label, ('tv::var, 'v::var) pat) lfset \<Rightarrow> ('tv::var, 'v::var) pat" is PPRec
-  by auto
-*)
+
+definition PRec :: "(label, ('tv::var, 'v::var) pat) lfset \<Rightarrow> ('tv::var, 'v::var) pat" where
+  "PRec X = (if nonrep_PPRec (map_lfset id Rep_pat X) then Abs_pat (PPRec (map_lfset id Rep_pat X)) else Abs_pat (PPRec lfempty))"
+
+lemma PRec_transfer[transfer_rule]: "rel_fun (rel_lfset id cr_pat) cr_pat (\<lambda>X. if nonrep_PPRec X then PPRec X else PPRec lfempty) PRec"
+  apply (auto simp: PRec_def rel_fun_def cr_pat_def lfset.map_comp Abs_pat_inverse
+    lfset.in_rel[of id, simplified, unfolded lfset.map_id])
+  apply (subst Abs_pat_inverse)
+     apply (auto simp: Abs_pat_inverse lfin_map_lfset Rep_pat Collect_prod_beta subset_eq
+       intro!: lfset.map_cong)
+  using Rep_pat apply blast
+  apply (simp_all add: lfset.map_cong_id)
+  done
+
+fun vvsubst_rawpat where
+  "vvsubst_rawpat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (vvsubst_typ \<tau> T)"
+| "vvsubst_rawpat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (vvsubst_rawpat \<tau> \<sigma>) X)"
+
+fun PPTVars where
+  "PPTVars (PPVar v T) = FVars_typ T"
+| "PPTVars (PPRec X) = (\<Union>P \<in> values X. PPTVars P)"
+
+lemma PPVars_vvsubst_rawpat[simp]: "PPVars (vvsubst_rawpat \<tau> \<sigma> P) = \<sigma> ` PPVars P"
+  by (induct P) (auto simp: lfset.set_map)
+
+lemma nonrep_rawpat_vvsubst_rawpat:
+  "bij \<sigma> \<Longrightarrow> nonrep_rawpat P \<Longrightarrow> nonrep_rawpat (vvsubst_rawpat \<tau> \<sigma> P)"
+  apply (induct P)
+   apply (auto simp: lfin_map_lfset lfin_values nonrep_PPRec_def)
+  apply (metis Int_emptyD bij_implies_inject)
+  done
+
+lift_definition permute_pat :: "('tv \<Rightarrow> 'tv) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
+  "\<lambda>\<tau> \<sigma>. if bij \<sigma> then vvsubst_rawpat \<tau> \<sigma> else id"
+  by (auto simp: nonrep_rawpat_vvsubst_rawpat)
+
+lift_definition PVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'v set" is
+  "PPVars" .
+
+lift_definition PTVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'tv set" is
+  "PPTVars" .
+
+lemma values_lfin_iff: "c \<in> values x \<longleftrightarrow> (\<exists>l. (l, c) \<in>\<in> x)"
+  including lfset.lifting
+  by transfer force
+
+lemma permute_pat_id[simp]: "permute_pat id id P = P"
+  apply transfer
+  subgoal for P
+    apply (induct P)
+     apply (force simp: typ.map_id values_lfin_iff intro!: trans[OF lfset.map_cong_id lfset.map_id])+
+    done
+  done
+
+mrbnf "('tv :: var, 'v :: var) pat"
+  map: permute_pat
+  sets:
+    free: PTVars
+    bound: "PVars"
+  bd: "natLeq"
+  rel: "(=)"
+  subgoal
+    apply (rule ext)
+    apply simp
+    done
+  subgoal for f1 f2 g1 g2
+    apply (rule ext)
+    apply (transfer fixing: f1 f2 g1 g2)
+    subgoal for P
+      apply (induct P)
+       apply (force simp: typ.map_comp lfset.map_comp values_lfin_iff intro!: lfset.map_cong)+
+      done
+    done
+  subgoal for P f1 f2 g1 g2
+    apply (transfer fixing: f1 f2 g1 g2)
+    subgoal for P
+      apply (induct P)
+       apply (fastforce simp: values_lfin_iff Bex_def intro!: typ.map_cong lfset.map_cong)+
+      done
+    done
+  subgoal for f g
+    apply (rule ext)
+    apply (transfer fixing: f g)
+    subgoal for P
+      apply (induct P)
+       apply (fastforce simp: typ.set_map lfset.set_map values_lfin_iff)+
+      done
+    done
+  subgoal for f g
+    apply (rule ext)
+    apply (transfer fixing: f g)
+    subgoal for P
+      apply (induct P)
+       apply (fastforce simp: typ.set_map lfset.set_map values_lfin_iff)+
+      done
+    done
+  subgoal by (simp add: infinite_regular_card_order_natLeq)
+  subgoal for P
+    apply transfer
+    subgoal for P
+    apply (induct P)
+       apply (force simp: typ.FVars_bd lfset.set_bd values_lfin_iff intro!: stable_UNION[OF stable_natLeq])+
+      done
+    done
+  subgoal for P
+    apply transfer
+    subgoal for P
+    apply (induct P)
+       apply (force simp: typ.FVars_bd lfset.set_bd ID.set_bd values_lfin_iff intro!: stable_UNION[OF stable_natLeq])+
+      done
+    done
+  subgoal by simp
+  subgoal by simp
+  oops
+  done
 
 end

@@ -1561,10 +1561,24 @@ binder_inductive (no_auto_equiv) typing
     done
   done
 
+inductive match for \<sigma> where
+  MPVar: "\<sigma> X = v \<Longrightarrow> match \<sigma> (PVar X T) v"
+| MPRec: "nonrep_PRec PP \<Longrightarrow> labels PP \<subseteq> labels VV \<Longrightarrow>
+    (\<And>l P v. (l, P) \<in>\<in> PP \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> match \<sigma> P v) \<Longrightarrow> match \<sigma> (PRec PP) (Rec VV)"
+
+definition "restrict \<sigma> A x = (if x \<in> A then \<sigma> x else Var x)"
+
+lemma match_cong: "match \<sigma> p v \<Longrightarrow> (\<forall>x \<in> PVars p. \<sigma> x = \<tau> x) \<Longrightarrow> match \<tau> p v"
+  by (induct p v rule: match.induct)
+    (force simp: restrict_def values_lfin_iff Ball_def Bex_def intro!: match.intros)+
+
+lemma match_restrict: "match \<sigma> p v \<Longrightarrow> match (restrict \<sigma> (PVars p)) p v"
+  by (erule match_cong) (auto simp: restrict_def)
+
 inductive step where
   AppAbs: "value v \<Longrightarrow> step (App (Abs x T t) v) (tvsubst (Var(x := v)) TyVar t)"
 | TAppTAbs: "step (TApp (TAbs X T t) T2) (tvsubst Var (TyVar(X := T2)) t)"
-| LetV: "value v \<Longrightarrow> match p v \<sigma> \<Longrightarrow> step (Let p v u) (tvsubst \<sigma> TyVar u)"
+| LetV: "value v \<Longrightarrow> match \<sigma> p v \<Longrightarrow> step (Let p v u) (tvsubst (restrict \<sigma> (PVars p)) TyVar u)"
 | ProjRec: "\<forall>v \<in> values VV. value v \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> step (Proj (Rec VV) l) v"
 | AppCong1: "step t t' \<Longrightarrow> step (App t u) (App t' u)"
 | AppCong2: "value v \<Longrightarrow> step t t' \<Longrightarrow> step (App v t) (App v t')"
@@ -1591,6 +1605,11 @@ lemma canonical_closed_TRec[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<
       value.cases values_lfin_iff)
   done
 
+lemma "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> value v \<Longrightarrow> \<exists>\<sigma>. match \<sigma> p v"
+  apply (induct p T \<Delta> rule: pat_typing.induct)
+   apply (meson MPVar)
+  oops
+
 lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> = [] \<Longrightarrow> value t \<or> (\<exists>t'. step t t')"
   apply (induction \<Gamma> t T rule: typing.induct)
           apply (auto 0 2
@@ -1598,7 +1617,7 @@ lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longri
      intro!: value.intros intro: step.intros elim!: value.cases
      dest!: canonical_closed_Fun canonical_closed_Forall canonical_closed_TRec)
   apply (metis RecCong fstI lfin_map_lfset values_lfin_iff)
-  apply (meson ProjRec)
+     apply (meson ProjRec)
   done
 
 lemma set_proj_ctxt_eq: "set \<Gamma> = set \<Delta> \<Longrightarrow> set (proj_ctxt \<Gamma>) = set (proj_ctxt \<Delta>)"

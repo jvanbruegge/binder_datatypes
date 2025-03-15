@@ -974,14 +974,14 @@ lemma tvsubst_simps[simp]:
 inductive "value" where
   "value (Abs x T t)"
 | "value (TAbs X T t)"
-| "value (Rec X)"
+| "(\<forall>v \<in> values XX. value v) \<Longrightarrow> value (Rec XX)"
 
 lemma value_equiv[equiv]:
   fixes \<sigma>1::"'tv::var \<Rightarrow> 'tv" and \<sigma>2::"'v::var \<Rightarrow> 'v"
   assumes "bij \<sigma>1" "|supp \<sigma>1| <o |UNIV::'tv set|" "bij \<sigma>2" "|supp \<sigma>2| <o |UNIV::'v set|"
   shows "value x \<Longrightarrow> value (permute_trm \<sigma>1 \<sigma>2 x)"
   apply (induction rule: value.induct)
-  using assms by (auto intro: value.intros)
+  using assms by (auto simp: lfset.set_map intro!: value.intros)
 
 type_synonym ('tv, 'v) \<Gamma>\<^sub>t = "('tv, 'tv + 'v) \<Gamma>"
 
@@ -1380,7 +1380,7 @@ lemma HELP1[equiv]: "bij \<sigma>1a \<Longrightarrow>
        typ.permute_comp typ.permute_id[unfolded id_def] supp_inv_bound
        trm.permute_comp trm.permute_id[unfolded id_def] lfset.rel_map
        elim!: lfset.rel_mono_strong)
-
+(*
 lemma HELP2[equiv]:
   "bij \<sigma>1a \<Longrightarrow>
     |supp \<sigma>1a| <o |UNIV :: 'tv::var set| \<Longrightarrow>
@@ -1397,6 +1397,7 @@ lemma HELP2[equiv]:
       typ.permute_comp typ.permute_id[unfolded id_def] supp_inv_bound
       trm.permute_comp trm.permute_id[unfolded id_def])
   done
+*)
 
 lemma pat_typing_dom: "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> dom \<Delta> = Inr ` PVars p"
   apply (induct p T \<Delta> rule: pat_typing.induct)
@@ -1563,9 +1564,14 @@ binder_inductive (no_auto_equiv) typing
 inductive step where
   AppAbs: "value v \<Longrightarrow> step (App (Abs x T t) v) (tvsubst (Var(x := v)) TyVar t)"
 | TAppTAbs: "step (TApp (TAbs X T t) T2) (tvsubst Var (TyVar(X := T2)) t)"
+| LetV: "value v \<Longrightarrow> match p v \<sigma> \<Longrightarrow> step (Let p v u) (tvsubst \<sigma> TyVar u)"
+| ProjRec: "\<forall>v \<in> values VV. value v \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> step (Proj (Rec VV) l) v"
 | AppCong1: "step t t' \<Longrightarrow> step (App t u) (App t' u)"
 | AppCong2: "value v \<Longrightarrow> step t t' \<Longrightarrow> step (App v t) (App v t')"
 | TAppCong: "step t t' \<Longrightarrow> step (TApp t T) (TApp t' T)"
+| ProjCong: "step t t' \<Longrightarrow> step (Proj t l) (Proj t' l)"
+| RecCong: "step t t' \<Longrightarrow> (l, t) \<in>\<in> XX \<Longrightarrow> step (Rec XX) (Rec (XX\<lbrace>l := t'\<rbrace>))"
+| LetCong: "step t t' \<Longrightarrow> step (Let p t u) (Let p t' u)"
 
 lemma proj_ctxt_empty[simp]: "proj_ctxt \<emptyset> = \<emptyset>"
   unfolding proj_ctxt_def map_filter_def
@@ -1577,14 +1583,28 @@ lemma canonical_closed_Fun[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<^
 lemma canonical_closed_Forall[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T \<Longrightarrow> \<Gamma> = \<emptyset> \<Longrightarrow> T = Forall X T11 T12 \<Longrightarrow> value v \<Longrightarrow> \<exists>X S11 t. v = TAbs X S11 t"
   by (induction \<Gamma> v T arbitrary: X T11 T12 rule: typing.induct) (auto elim: value.cases ty.cases)
 
-lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> = [] \<Longrightarrow> value t \<or> (\<exists>t'. step t t')"
-  by (induction \<Gamma> t T rule: typing.induct)
-    (auto intro!: value.intros intro: step.intros elim!: value.cases dest!: canonical_closed_Fun canonical_closed_Forall)
+lemma canonical_closed_TRec[OF _ refl refl]: "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T \<Longrightarrow> \<Gamma> = \<emptyset> \<Longrightarrow> T = TRec TT \<Longrightarrow> value v \<Longrightarrow> \<exists>XX. v = Rec XX \<and> labels TT \<subseteq> labels XX \<and> (\<forall>v \<in> values XX. value v)"
+  apply (induction \<Gamma> v T arbitrary: TT rule: typing.induct)
+          apply (auto simp: lfset.in_rel[of id, simplified, unfolded lfset.map_id] lfset.set_map elim: value.cases ty.cases)
+   apply (smt (verit) SA_TRecER order.trans empty_iff list.set(1))
+  apply (metis (no_types, opaque_lifting) fstI lfin_map_lfset trm.distinct(37,39) trm.inject(6)
+      value.cases values_lfin_iff)
+  done
 
-thm progress[no_vars]
+lemma progress[OF _ refl]: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<Gamma> = [] \<Longrightarrow> value t \<or> (\<exists>t'. step t t')"
+  apply (induction \<Gamma> t T rule: typing.induct)
+          apply (auto 0 2
+     simp: subset_eq labels_lfin_iff Ball_def lfset.set_map lfset.in_rel[of id, simplified, unfolded lfset.map_id]
+     intro!: value.intros intro: step.intros elim!: value.cases
+     dest!: canonical_closed_Fun canonical_closed_Forall canonical_closed_TRec)
+  apply (metis RecCong fstI lfin_map_lfset values_lfin_iff)
+  apply (meson ProjRec)
+  done
 
 lemma set_proj_ctxt_eq: "set \<Gamma> = set \<Delta> \<Longrightarrow> set (proj_ctxt \<Gamma>) = set (proj_ctxt \<Delta>)"
   by (auto simp: proj_ctxt_def map_filter_def)
+
+end
 
 lemma typing_permute: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> \<turnstile> \<Delta> OK \<Longrightarrow> set \<Gamma> = set \<Delta> \<Longrightarrow> \<Delta> \<^bold>\<turnstile> t \<^bold>: T"
   apply (binder_induction \<Gamma> t T arbitrary: \<Delta> avoiding: \<Gamma> t T \<Delta> rule: typing.strong_induct)

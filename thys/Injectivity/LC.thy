@@ -70,33 +70,122 @@ qed
 
 definition "sameShape (xs::'a list) (ys::'a list) \<equiv> list_all2 (\<lambda>_ _. True) xs ys"
 
+(* can also have generic proofs: *)
+lemma sameShape_refl: "sameShape xs xs" 
+  by (simp add: list.rel_refl sameShape_def)
+lemma sameShape_sym: "sameShape xs ys \<Longrightarrow> sameShape ys xs" 
+  by (simp add: list_all2_conv_all_nth sameShape_def)
+lemma sameShape_trans: "sameShape xs ys \<Longrightarrow> sameShape ys zs \<Longrightarrow> sameShape xs zs" 
+by (simp add: list_all2_conv_all_nth sameShape_def)
+
 hide_const linear
 definition "linear xs \<equiv> \<forall>ys. sameShape xs ys \<longrightarrow> (\<exists>f. map f xs = ys)"
 
 (* generic for free BNFs: *)
-lemma strong_cong: "map f xs = map g xs \<Longrightarrow> x \<in>  set xs \<Longrightarrow> f x = g x"
-by fastforce
+lemma cong_rev: "map f xs = map g xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> f x = g x"
+  by fastforce
 
-definition "match xs ys \<equiv> SOME f. map f xs = ys"
+lemma cong_rev_id: "map f xs = xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> f x = x"
+  using cong_rev[of f xs id] by auto
+
+lemma linear_imp: 
+  assumes "linear xs" "sameShape xs ys"
+  shows "\<exists>f. map f xs = ys \<and> (\<forall>x. x\<notin>set xs \<longrightarrow> f x = x)"
+proof-
+  obtain f where f: "map f xs = ys" using assms unfolding linear_def by auto
+  define g where "g \<equiv> \<lambda>x. if x \<in> set xs then f x else x"
+  show ?thesis apply(rule exI[of _ g])
+    using f unfolding g_def by auto
+qed
+
+definition "match xs ys \<equiv> SOME f. map f xs = ys \<and> (\<forall>x. x\<notin>set xs \<longrightarrow> f x = x)"
 
 lemma match:
-"linear xs \<Longrightarrow> sameShape xs ys \<Longrightarrow> map (match xs ys) xs = ys"
-  apply (unfold match_def)
-  apply (rule someI2_ex[of "\<lambda>f. map f xs = ys"])
-   apply (unfold linear_def)
-  apply (erule allE)
-   apply (erule impE)
-    apply assumption+
-  done
+"linear xs \<Longrightarrow> sameShape xs ys \<Longrightarrow> 
+  map (match xs ys) xs = ys \<and> (\<forall>x. x\<notin>set xs \<longrightarrow> match xs ys x = x)"
+  by (smt (verit, del_insts) linear_imp match_def someI_ex)
+
+lemmas map_match = match[THEN conjunct1]
+lemma not_set_match: "linear xs \<Longrightarrow> sameShape xs ys \<Longrightarrow> x\<notin>set xs \<Longrightarrow> match xs ys x = x"
+  using match by auto
 
 lemma match_unique:
 assumes "linear xs" "sameShape xs ys" "map f xs = ys" "x \<in> set xs"
 shows "f x = match xs ys x" 
-  using match[OF assms(1,2), THEN sym] apply(subst (asm) assms(3)[symmetric]) 
-  using assms(4) strong_cong by auto
+  using map_match[OF assms(1,2), THEN sym] apply(subst (asm) assms(3)[symmetric]) 
+  using assms(4) cong_rev by auto
 
-lemma "sameShape xs ys \<Longrightarrow> linear xs \<Longrightarrow> linear ys
-  \<Longrightarrow> bij_betw (match xs ys) (set xs) (set ys)"
+lemma match_eq_id:
+assumes "linear xs" "map f xs = xs" "x \<in> set xs"
+shows "match xs xs x = x"  
+by (metis assms(1,3) id_apply list.map_id0 match_unique sameShape_refl)
+
+lemma image_match_set: 
+assumes "sameShape xs ys" "linear xs"  
+shows "match xs ys ` (set xs) = set ys"
+  by (simp add: assms(1,2) image_set match)
+
+lemma match_set: 
+assumes "sameShape xs ys" "linear xs" "x \<in> set xs"
+shows "match xs ys x \<in> set ys"
+  using assms image_match_set by auto
+
+lemma match_set_disj: 
+assumes "sameShape xs ys" "linear xs" "set xs \<inter> set ys = {}" 
+shows "match xs ys x \<in> set ys \<longleftrightarrow> x \<in> set xs"
+  apply safe
+  subgoal using not_set_match assms sledgehammer
+  subgoal using match_set assms by metis .
+
+lemma match_id: 
+assumes "linear xs"  
+shows "match xs xs = id"
+  by (meson assms eq_id_iff match match_eq_id sameShape_refl)
+
+lemma match_id2: 
+assumes "linear xs"  
+shows "match xs xs x = x" 
+  by (simp add: assms match_id) 
+
+lemma match_id: 
+assumes l: "linear xs" "linear ys" and s: "sameShape xs ys" "sameShape ys zs"
+shows "match ys zs o match xs ys = match xs zs"
+proof(rule ext)
+  have ss: "sameShape xs zs"  
+    using s(1,2) sameShape_trans by blast
+  fix x show "(match ys zs \<circ> match xs ys) x = match xs zs x"
+    
+  proof (cases "x \<in> set xs")
+    case True note x = True
+    hence "match xs ys x \<in> set ys"  
+      by (simp add: l(1) match_set s) 
+    show ?thesis 
+      apply(rule match_unique[OF l(1) ss _ x])
+      unfolding map_comp_map[symmetric] unfolding o_def
+      apply(subst map_match[OF l(1) s(1)])
+      apply(subst map_match[OF l(2) s(2)])
+      ..
+  next
+    case False
+    thus ?thesis unfolding o_def sledgehammer
+
+
+lemma bij_betw_match: 
+assumes 1: "sameShape xs ys" and 2: "linear xs" "linear ys" and 3: "x \<in> set xs"
+shows "match xs ys (match ys xs x) = x"
+proof-
+  have "(match xs ys o match ys xs) x = x"
+    apply(rule cong_rev_id[OF _ 3])
+    unfolding map_comp_map[symmetric] unfolding o_def
+    unfolding find_theorems map name: comp using  match
+  
+
+lemma bij_betw_match: 
+assumes "sameShape xs ys" "linear xs" "linear ys"
+shows "bij_betw (match xs ys) (set xs) (set ys)"
+proof-
+  {fix x assume x: "x \<in> set xs"
+   have ""
 
 corollary linear_swap:
   assumes "list_all2 (\<lambda>_ _. True) xs ys" "linear xs" "set xs \<inter> set ys = {}"

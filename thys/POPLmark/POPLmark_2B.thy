@@ -1949,8 +1949,7 @@ proof (binder_induction \<Gamma> "TAbs X S1 s2" T avoiding: \<Gamma> X S1 s2 T U
       apply (metis Domain.DomainI fst_eq_Domain)
       apply (metis Domain.DomainI fst_eq_Domain)
         apply (metis Domain.DomainI fst_eq_Domain)
-      apply (metis (no_types, opaque_lifting) TTAbs.hyps(12) UN_I dom_proj_ctxt rev_image_eqI split_pairs2
-          subset_eq wf_FFVars)
+      apply (metis (no_types, opaque_lifting) TTAbs.hyps(12) UN_I dom_proj_ctxt rev_image_eqI split_pairs2 wf_FFVars)
       apply (metis (no_types, opaque_lifting) UN_I image_iff sndI wf_FFVars)
       done
     done
@@ -2531,6 +2530,15 @@ lemma tvsubst_typ_tvsubst_typ:
     (auto simp: SSupp_typ_tvsubst_typ_bound intro!: tvsubst_typ_cong
        sym[OF trans[OF tvsubst_typ_cong tvsubst_typ_TyVar]])
 
+lemma pat_typing_tvsubst_typ: "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow>
+  \<turnstile> tvsubst_pat (TyVar(X := P)) id p : tvsubst_typ (TyVar(X := P)) T \<rightarrow>
+    map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta>"
+  apply (induct p T \<Delta> rule: pat_typing.induct)
+   apply (fastforce simp flip: id_def simp del: fun_upd_apply simp add: map_concat lfset.set_map lfin_map_lfset
+     nonrep_PRec_def PVars_tvsubst_pat
+     intro!: pat_typing.intros)+
+  done
+
 lemma typing_tvsubst_typ: "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> P <: Q \<Longrightarrow>
   \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X:=P)))) \<Delta> \<^bold>\<turnstile> tvsubst Var (TyVar(X := P)) t \<^bold>: tvsubst_typ (TyVar(X:=P)) T"
 proof (binder_induction "\<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta>" t T arbitrary: \<Delta> avoiding: \<Gamma> X Q \<Delta> t T P rule: typing.strong_induct)
@@ -2578,9 +2586,8 @@ next
 next
   case (TLet ta Ta p \<Delta>' u U \<Delta>)
   then show ?case
-    apply (subst tvsubst_simps)
-        apply (auto intro!: typing.TLet)
-    sorry
+    by (subst tvsubst_simps)
+      (auto intro!: typing.TLet pat_typing_tvsubst_typ)
 qed (auto intro: typing.intros)
 
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"

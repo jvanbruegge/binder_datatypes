@@ -378,6 +378,9 @@ mrbnf "('tv :: var, 'v :: var) pat"
 lemma vvsubst_pat_PVar[simp]:
   "bij g \<Longrightarrow> vvsubst_pat f g (PVar x T) = PVar (g x) (vvsubst_typ f T)"
   by transfer auto
+lemma tvsubst_pat_PVar[simp]:
+  "bij g \<Longrightarrow> tvsubst_pat f g (PVar x T) = PVar (g x) (tvsubst_typ f T)"
+  by transfer auto
 
 definition "nonrep_PRec X = (\<forall>x y P Q. x \<noteq> y \<longrightarrow> (x, P) \<in>\<in> X \<longrightarrow> (y, Q) \<in>\<in> X \<longrightarrow> PVars P \<inter> PVars Q = {})"
 
@@ -407,6 +410,25 @@ lemma vvsubst_pat_PRec[simp]:
       vvsubst_rawpat.simps(2))
   done
 
+lemma tvsubst_pat_PRec[simp]:
+  "bij g \<Longrightarrow> nonrep_PRec P \<Longrightarrow> tvsubst_pat f g (PRec P) = PRec (map_lfset id (tvsubst_pat f g) P)"
+  unfolding PRec_def tvsubst_pat_def nonrep_PRec_alt
+  apply (auto simp: lfset.map_comp o_def map_fun_def id_def[symmetric])
+     apply (subst (1 2) Abs_pat_inverse)
+  using Rep_pat nonrep_rawpat_tvsubst_rawpat apply blast
+  apply (auto) []
+      apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
+     apply (subst Abs_pat_inject)
+  apply (metis (mono_tags, lifting) Rep_pat lfin_map_lfset mem_Collect_eq nonrep_rawpat_PRec
+      nonrep_rawpat_tvsubst_rawpat)
+  apply (smt (verit, best) Abs_pat_inverse Rep_pat lfin_map_lfset lfset.map_cong_id
+      mem_Collect_eq nonrep_rawpat_PRec nonrep_rawpat_tvsubst_rawpat)
+     apply (auto simp: lfset.map_comp intro!: lfset.map_cong) []
+  apply (smt (z3) Abs_pat_inverse Rep_pat lfin_map_lfset mem_Collect_eq nonrep_PPRec_def
+      nonrep_rawpat_PRec nonrep_rawpat_tvsubst_rawpat
+      tvsubst_rawpat.simps(2))
+  done
+
 lemma PVars_PVar[simp]: "PVars (PVar x T) = {x}"
   by (auto simp: PVars_def PVar_def Abs_pat_inverse)
 lemma PVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PVars (PRec P) = (\<Union>x \<in> values P. PVars x)"
@@ -424,7 +446,7 @@ lemma PTVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PTVars (PRec P) = (\<U
 
 lemma finite_PVars[simp]: "finite (PVars P)"
   by (auto simp: PVars_def finite_PPVars)
-lemma finite_PVars[simp]: "finite (PTVars P)"
+lemma finite_PTVars[simp]: "finite (PTVars P)"
   by (auto simp: PTVars_def finite_PPTVars)
 
 end

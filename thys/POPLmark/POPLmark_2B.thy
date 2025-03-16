@@ -2819,38 +2819,46 @@ next
     done
 next
   case (TLet \<Gamma> t T p \<Delta> u U t')
-  then show ?case
-    apply -
-    apply (erule step.cases)
+  from TLet(7,1-6,8-) show ?case
+    apply (binder_induction "Let p t u" t' avoiding: \<Gamma> p t u t' rule: step.strong_induct)
              apply (auto simp: Let_inject)
-     apply (rule pat_typing_tvsubst)
-        apply (rule pat_typing_equiv; simp)
-       apply simp
-    subgoal for \<sigma> \<rho>
-      apply (frule typing.equiv[of id \<rho> "\<Gamma> \<^bold>, \<Delta>", rotated 4])
-          apply auto [4]
-      apply (subgoal_tac "map (map_prod (map_sum id \<rho>) id) \<Gamma> = \<Gamma>")
-       apply (auto simp: PVars_vvsubst_pat FVars_tvsubst intro!: list.map_ident_strong sum.map_ident_strong)
-      apply (subst (asm) FVars_tvsubst)
-        apply (auto simp: PVars_vvsubst_pat)
+    subgoal for \<sigma> p' u' \<rho>
+      apply (rule rev_mp[OF ex_avoiding_bij[of \<rho> "FVars u' - PVars p'" "PVars p \<union> PVars p'" "Inr -` dom \<Gamma>"]]; (simp add: infinite_UNIV)?)
+      subgoal by (fastforce simp: pat.set_map)
       subgoal
-        apply (auto intro!: cmin_greater)
-        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        by (metis List.finite_set finite_imageI finite_ordLess_infinite2 finite_vimageI
+            infinite_UNIV inj_Inr)
+      apply (rule impI)
+      apply (erule exE conjE)+
+      subgoal for \<rho>'
+        apply clarsimp
+        apply (subgoal_tac "vvsubst_pat id \<rho> p' = vvsubst_pat id \<rho>' p'")
+        apply (subgoal_tac "permute_trm id \<rho> u' = permute_trm id \<rho>' u'")
+        subgoal
+        apply simp
+      apply (rule pat_typing_tvsubst)
+      apply (drule pat_typing_equiv[of id "inv \<rho>'", rotated 4]; (simp add: supp_inv_bound pat.map_comp)?)
+       apply assumption
+      apply (frule typing.equiv[of id "inv \<rho>'" "\<Gamma> \<^bold>, \<Delta>", rotated 4])
+          apply (auto simp: supp_inv_bound)
+          apply (subgoal_tac "map (map_prod (map_sum id (inv \<rho>')) id) \<Gamma> = \<Gamma>")
+          apply (auto simp: supp_inv_bound trm.permute_comp trm.permute_id) []
+          apply (intro list.map_ident_strong sum.map_ident_strong prod.map_ident_strong; simp?)
+          using imsupp_id_on[of "inv \<rho>'" "Inr -` SystemFSub.dom \<Gamma>"]
+          apply (force simp: imsupp_inv id_on_def image_iff elim!: setr.cases)
+          done
+        subgoal
+          apply (auto 0 0 simp: id_on_def intro!: trm.permute_cong) []
+          apply (metis (no_types, lifting) PVars_vvsubst_pat TLet.fresh(1) UN_I
+              disjoint_iff_not_equal image_eqI setr.intros)
+          done
+        subgoal
+          apply (auto 0 0 simp: id_on_def intro!: pat.map_cong) []
+          apply (metis (no_types, lifting) PVars_vvsubst_pat TLet.fresh(1) UN_I
+              disjoint_iff_not_equal image_eqI setr.intros)
+          done
         done
-      subgoal sorry
       done
-      apply assumption
-    subgoal for \<sigma> \<rho>
-      apply (subst (asm) FVars_tvsubst)
-        apply (auto simp: PVars_vvsubst_pat)
-      subgoal
-        apply (auto intro!: cmin_greater)
-        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-        done
-      apply (auto simp: PVars_vvsubst_pat id_on_def)
-      sorry
     apply (metis Let_inject typing.TLet)
     done
 qed (auto elim: step.cases intro: typing.TSub)

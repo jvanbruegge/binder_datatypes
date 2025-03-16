@@ -23,10 +23,10 @@ lemma Lam_Inj_current: "Lam xs t = Lam xs' t' \<longleftrightarrow> (\<exists>f.
   |supp f| <o |UNIV::'a set| \<and> map f xs = xs' \<and> permute_term f t = t')"
   sorry
 
-definition swap_list :: "'a list \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> 'a)" where
-  "swap_list xs ys \<equiv> (SOME f. f \<circ> f = id \<and> supp f = set xs \<union> set ys \<and> map f xs = ys)"
+definition swap :: "'a list \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> 'a)" where
+  "swap xs ys \<equiv> (SOME f. f \<circ> f = id \<and> supp f = set xs \<union> set ys \<and> map f xs = ys)"
 
-lemma swap_list_ex:
+lemma swap_ex:
   assumes "bij f" "map f xs = ys" "set xs \<inter> set ys = {}"
   shows "\<exists>f. f \<circ> f = id \<and> supp f = set xs \<union> set ys \<and> map f xs = ys"
 proof -
@@ -55,45 +55,56 @@ proof -
   ultimately show ?thesis by blast
 qed
 
-corollary swap_list:
+corollary swap:
  assumes "bij f" "map f xs = ys" "set xs \<inter> set ys = {}"
- shows "swap_list xs ys \<circ> swap_list xs ys = id" "supp (swap_list xs ys) = set xs \<union> set ys" "map (swap_list xs ys) xs = ys"
+ shows "swap xs ys \<circ> swap xs ys = id" "supp (swap xs ys) = set xs \<union> set ys" "map (swap xs ys) xs = ys"
 proof -
-  have "swap_list xs ys \<circ> swap_list xs ys = id \<and> supp (swap_list xs ys) = set xs \<union> set ys \<and> map (swap_list xs ys) xs = ys"
-    apply (unfold swap_list_def)
+  have "swap xs ys \<circ> swap xs ys = id \<and> supp (swap xs ys) = set xs \<union> set ys \<and> map (swap xs ys) xs = ys"
+    apply (unfold swap_def)
     apply (rule someI2_ex[of "\<lambda>f. f \<circ> f = id \<and> supp f = set xs \<union> set ys \<and> map f xs = ys"])
-     apply (rule swap_list_ex[OF assms])
+     apply (rule swap_ex[OF assms])
     by assumption
-  then show "swap_list xs ys \<circ> swap_list xs ys = id" "supp (swap_list xs ys) = set xs \<union> set ys" "map (swap_list xs ys) xs = ys"
+  then show "swap xs ys \<circ> swap xs ys = id" "supp (swap xs ys) = set xs \<union> set ys" "map (swap xs ys) xs = ys"
     by auto
 qed
 
-definition "linear_list (xs::'a list) \<equiv>
-  \<forall>(ys::'a list). list_all2 (\<lambda>_ _. True) xs ys \<longrightarrow> (\<exists>f. map f xs = ys)"
+definition "sameShape (xs::'a list) (ys::'a list) \<equiv> list_all2 (\<lambda>_ _. True) xs ys"
 
-definition "match_list xs ys \<equiv> SOME f. map f xs = ys"
+hide_const linear
+definition "linear xs \<equiv> \<forall>ys. sameShape xs ys \<longrightarrow> (\<exists>f. map f xs = ys)"
 
-lemma match_list:
-  fixes xs ys::"'a list"
-  shows "list_all2 (\<lambda>_ _. True) xs ys \<Longrightarrow> linear_list xs \<Longrightarrow> map (match_list xs ys) xs = ys"
-  apply (unfold match_list_def)
+(* generic for free BNFs: *)
+lemma strong_cong: "map f xs = map g xs \<Longrightarrow> x \<in>  set xs \<Longrightarrow> f x = g x"
+by fastforce
+
+definition "match xs ys \<equiv> SOME f. map f xs = ys"
+
+lemma match:
+"linear xs \<Longrightarrow> sameShape xs ys \<Longrightarrow> map (match xs ys) xs = ys"
+  apply (unfold match_def)
   apply (rule someI2_ex[of "\<lambda>f. map f xs = ys"])
-   apply (unfold linear_list_def)
+   apply (unfold linear_def)
   apply (erule allE)
    apply (erule impE)
     apply assumption+
   done
 
-lemma "list_all2 (\<lambda>_ _. True) xs ys \<Longrightarrow> linear_list xs \<Longrightarrow> linear_list ys
-  \<Longrightarrow> bij_betw (match_list xs ys) (set xs) (set ys)"
+lemma match_unique:
+assumes "linear xs" "sameShape xs ys" "map f xs = ys" "x \<in> set xs"
+shows "f x = match xs ys x" 
+  using match[OF assms(1,2), THEN sym] apply(subst (asm) assms(3)[symmetric]) 
+  using assms(4) strong_cong by auto
 
-corollary linear_swap_list:
-  assumes "list_all2 (\<lambda>_ _. True) xs ys" "linear_list xs" "set xs \<inter> set ys = {}"
-  shows "swap_list xs ys \<circ> swap_list xs ys = id" "supp (swap_list xs ys) = set xs \<union> set ys" "map (swap_list xs ys) xs = ys"
+lemma "sameShape xs ys \<Longrightarrow> linear xs \<Longrightarrow> linear ys
+  \<Longrightarrow> bij_betw (match xs ys) (set xs) (set ys)"
+
+corollary linear_swap:
+  assumes "list_all2 (\<lambda>_ _. True) xs ys" "linear xs" "set xs \<inter> set ys = {}"
+  shows "swap xs ys \<circ> swap xs ys = id" "supp (swap xs ys) = set xs \<union> set ys" "map (swap xs ys) xs = ys"
 proof -
   obtain f where f: "bij f" "map f xs = ys"
     apply (atomize_elim)
-    using assms(1-3) unfolding linear_list_def
+    using assms(1-3) unfolding linear_def
     apply -
     apply (erule allE)
     apply (erule impE)
@@ -102,17 +113,17 @@ proof -
     apply (erule conjE)+
     apply hypsubst
     sorry
-  then show "swap_list xs ys \<circ> swap_list xs ys = id" "supp (swap_list xs ys) = set xs \<union> set ys" "map (swap_list xs ys) xs = ys"
-    using swap_list[OF f assms(4)] by auto
+  then show "swap xs ys \<circ> swap xs ys = id" "supp (swap xs ys) = set xs \<union> set ys" "map (swap xs ys) xs = ys"
+    using swap[OF f assms(4)] by auto
 qed
 
 lemma Lam_Inj: "Lam xs t = Lam xs' t' \<longleftrightarrow> (\<exists>ys t''.
   set xs \<inter> set ys = {} \<and> set xs' \<inter> set ys = {} \<and>
-  swap_list xs ys \<circ> swap_list xs ys = id
-  \<and> supp (swap_list xs ys) = set xs \<union> set ys \<and>
-  map (swap_list xs ys) xs = ys
-  \<and> map (swap_list xs' ys) xs' = ys
-  \<and> permute_term (swap_list xs ys) t = t'' \<and> permute_term (swap_list xs' ys) t' = t''
+  swap xs ys \<circ> swap xs ys = id
+  \<and> supp (swap xs ys) = set xs \<union> set ys \<and>
+  map (swap xs ys) xs = ys
+  \<and> map (swap xs' ys) xs' = ys
+  \<and> permute_term (swap xs ys) t = t'' \<and> permute_term (swap xs' ys) t' = t''
 )"
 
 end

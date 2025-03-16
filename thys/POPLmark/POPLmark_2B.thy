@@ -1637,7 +1637,7 @@ lemma match_unique_on_PVars: "match \<sigma> P v \<Longrightarrow> match \<sigma
   apply (smt (verit, ccfv_threshold) Rep_pat_inverse labels_lfin_iff lfin_map_lfset subset_eq values_lfin_iff)
   done
 
-lemma pat_typing_ex_match: 
+lemma pat_typing_ex_match:
   fixes p :: "('tv::var, 't::var) pat" and v :: "('tv::var, 't::var) trm"
   shows "\<turnstile> p : T \<rightarrow> \<Delta> \<Longrightarrow> \<emptyset> \<^bold>\<turnstile> v \<^bold>: T \<Longrightarrow> value v \<Longrightarrow> \<exists>\<sigma>. match \<sigma> p v"
 proof (induct p T \<Delta> arbitrary: v rule: pat_typing.induct)
@@ -1848,7 +1848,7 @@ next
     by (subst tvsubst_simps) (auto simp: cmin_greater IImsupp_1_trm_def simp flip: append_Cons intro!: typing.TTAbs)
 next
   case (TTApp t1 X T11 T12 T2 \<Gamma> \<Delta>)
-  then show ?case 
+  then show ?case
     by (auto simp: cmin_greater intro!: typing.TTApp)
 next
   case (TSub t S T \<Gamma> \<Delta>)
@@ -1975,7 +1975,7 @@ next
   then show ?case
     using ty_transitivity2 by blast
 qed auto
-  
+
 lemma typing_well_scoped: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> T closed_in proj_ctxt \<Gamma>"
 proof (binder_induction \<Gamma> t T avoiding: \<Gamma> T t rule: typing.strong_induct)
   case (TVar \<Gamma> x T)
@@ -1988,7 +1988,7 @@ next
     by (smt (verit, ccfv_SIG) in_mono prod.inject typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
 next
   case (TTAbs \<Gamma> X T1 t T2)
-  then show ?case 
+  then show ?case
     apply (auto simp: dom_proj_ctxt)
     by (smt (verit, ccfv_SIG) in_mono prod.inject typing_wf_ctxt vimage_eq wf_ctxt_ConsE)
 next
@@ -2291,7 +2291,7 @@ lemma FVars_restrict: "FVars (restrict \<sigma> A Var a) = (if a \<in> A then FV
 lemma match_FVars: "match \<sigma> p v \<Longrightarrow> x \<in> PVars p \<Longrightarrow> FVars (\<sigma> x) \<subseteq> FVars v"
   by (induct p v rule: match.induct) (force simp: values_lfin_iff labels_lfin_iff Bex_def)+
 
-lemma match_permute: 
+lemma match_permute:
   "match \<sigma> (p :: ('tv::var, 'v::var) pat) v \<Longrightarrow> bij \<rho> \<Longrightarrow> |supp \<rho>| <o |UNIV :: 'v::var set| \<Longrightarrow> (\<forall>x. \<rho> (\<rho> x) = x) \<Longrightarrow>
    match (\<sigma> \<circ> \<rho>) (vvsubst_pat id \<rho> p) v"
   apply (induct p v rule: match.induct)
@@ -2388,13 +2388,13 @@ binder_inductive (no_auto_equiv) step
       by auto
     subgoal for t t' u
       by auto
-    subgoal 
+    subgoal
       by auto
-    subgoal 
+    subgoal
       by auto
-    subgoal 
+    subgoal
       by auto
-    subgoal 
+    subgoal
       by auto
     subgoal for t t' p u
       apply (rule disjI2)+
@@ -2425,7 +2425,7 @@ binder_inductive (no_auto_equiv) step
     done
   done
 
-lemma wf_ty_extend_tvsubst_typ: 
+lemma wf_ty_extend_tvsubst_typ:
   "\<turnstile> \<Gamma> \<^bold>, X <: Q \<^bold>, \<Delta> ok \<Longrightarrow> P closed_in \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta> ok"
   apply (induct \<Delta>)
    apply auto []
@@ -2507,12 +2507,12 @@ lemma proj_ctxt_map[simp]: "proj_ctxt (map (map_prod id f) \<Delta>) = map (map_
   by (auto simp: proj_ctxt_def map_filter_def filter_map o_def split_beta
     intro!: list.map_cong filter_cong split: sum.splits)
 
-lemma wf_ctxt_extend_tvsubst_typ_aux: 
+lemma wf_ctxt_extend_tvsubst_typ_aux:
   "\<turnstile> \<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> OK \<Longrightarrow> FVars_typ P \<subseteq> Inl -` dom \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta> OK"
   by (induct \<Delta>)
     (auto 0 4 simp: image_iff FVars_tvsubst_typ image_Un split: if_splits)
 
-lemma wf_ctxt_extend_tvsubst_typ: 
+lemma wf_ctxt_extend_tvsubst_typ:
   "\<turnstile> \<Gamma> \<^bold>, Inl X <: Q \<^bold>, \<Delta> OK \<Longrightarrow> P closed_in proj_ctxt \<Gamma> \<Longrightarrow> \<turnstile> \<Gamma> \<^bold>, map (map_prod id (tvsubst_typ (TyVar(X := P)))) \<Delta> OK"
   by (erule wf_ctxt_extend_tvsubst_typ_aux) (force simp: subset_eq image_iff dom_proj_ctxt)
 
@@ -2706,7 +2706,7 @@ next
         apply (subst (asm) tvsubst_comp)
            apply (auto 0 0 intro!: cmin_greater) [3]
             apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))      
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
           apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
          apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
         apply (erule arg_cong[where f="\<lambda>t. typing _ t _", THEN iffD1, rotated])
@@ -2714,7 +2714,7 @@ next
              apply (auto 0 0 simp: permute_typ_eq_tvsubst_typ_TyVar[of id, simplified, symmetric]) [5]
            apply (subst SSupp_trm_tvsubst_bound)
               apply (auto 0 0 intro!: cmin_greater) [5]
-               apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2)) 
+               apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
              apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
             apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
             apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))

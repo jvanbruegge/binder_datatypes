@@ -289,6 +289,10 @@ lift_definition lfinsert :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset \<
   is "\<lambda>a b X. if \<exists>c. b \<noteq> c \<and> (a, c) |\<in>| X then X else finsert (a, b) X"
   by (auto simp: nonrep_lfset_alt split_beta split: if_splits) metis
 
+lift_definition lfdelete :: "'a \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b) lfset"
+  is "\<lambda>a. ffilter (\<lambda>(x, y). x \<noteq> a)"
+  by (auto simp: nonrep_lfset_alt split_beta split: if_splits)
+
 lift_definition lfupdate :: "('a, 'b) lfset \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b) lfset"
   is "\<lambda>X a b. finsert (a, b) (ffilter (\<lambda>(a', _). a \<noteq> a') X)"
   by (auto simp: nonrep_lfset_alt)

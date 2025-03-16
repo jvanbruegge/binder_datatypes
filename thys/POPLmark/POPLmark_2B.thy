@@ -2590,13 +2590,151 @@ next
       (auto intro!: typing.TLet pat_typing_tvsubst_typ)
 qed (auto intro: typing.intros)
 
+lemma pat_distinct[simp]:
+  "nonrep_PRec PP \<Longrightarrow> PVar x T \<noteq> PRec PP"
+  "nonrep_PRec PP \<Longrightarrow> PRec PP \<noteq> PVar x T"
+  unfolding PVar_def PRec_def
+   apply (auto simp: nonrep_PRec_alt dest!: Abs_pat_inject[THEN iffD1, rotated 2])
+  apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)+
+  done
+
+lemma restrict_empty[simp]: "restrict \<sigma> {} v = v"
+  unfolding restrict_def by auto
+
+lemma tvsubst_pat_id[simp]: "tvsubst_pat TyVar id p = p"
+  using vvsubst_pat_tvsubst_pat[of id id p, symmetric]
+  by auto
+  find_theorems tvsubst_pat TyVar
+
+lemma tvsubst_id[simp]: "tvsubst Var TyVar t = t"
+  apply (binder_induction t avoiding: t rule: trm.strong_induct)
+         apply (auto intro!: trans[OF lfset.map_cong_id lfset.map_id])
+  apply (subst tvsubst_simps)
+      apply auto
+  done
+
+lemma labels_lfdelete[simp]: "labels (lfdelete l S) = labels S - {l}"
+  including lfset.lifting
+  by transfer auto
+
+lemma distinct_labelist[simp]: "distinct (labelist S)"
+  by (simp add: labelist_def)
+
+lemma labelist_lfdelete[simp]: "labelist (lfdelete l S) = filter ((\<noteq>) l) (labelist S)"
+  by (simp add: distinct_remove1_removeAll labelist_def removeAll_filter_not_eq
+      sorted_list_of_set.sorted_key_list_of_set_remove)
+
+lemma lfin_lfdelete: "(l, x) \<in>\<in> lfdelete l' S \<Longrightarrow> (l, x) \<in>\<in> S"
+  including lfset.lifting
+  by transfer auto
+
+lemma lfin_lfdeleteI: "(l', x) \<in>\<in> S \<Longrightarrow> l \<noteq> l' \<Longrightarrow> (l', x) \<in>\<in> lfdelete l S"
+  including lfset.lifting
+  by transfer auto
+
+lemma nonrep_PRec_lfdelete[simp]: "nonrep_PRec PP \<Longrightarrow> nonrep_PRec (lfdelete l PP)"
+  unfolding nonrep_PRec_def PVars_def
+  by (auto simp: lfin_lfdelete)
+
 lemma pat_typing_tvsubst:
   assumes "\<turnstile> p : T \<rightarrow> \<Delta>" "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T" "\<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> u \<^bold>: U" "match \<sigma> p v"
   shows "\<Gamma> \<^bold>\<turnstile> tvsubst (restrict \<sigma> (PVars p) Var) TyVar u \<^bold>: U"
   using assms
-  apply (induct p T \<Delta> rule: pat_typing.induct)
-  apply (auto elim!: match.cases)
-  sorry
+proof (induct p T \<Delta> arbitrary: \<Gamma> v u U rule: pat_typing.induct)
+  case (PVar x T)
+  then show ?case
+    apply (auto elim!: match.cases)
+    apply (drule typing_tvsubst[where \<Delta>=\<emptyset>, simplified])
+     apply assumption
+    apply (erule arg_cong[where f="\<lambda>\<sigma>. _ \<^bold>\<turnstile> tvsubst \<sigma> _ _ \<^bold>: _", THEN iffD1, rotated])
+    apply (auto simp: restrict_def)
+    done
+next
+  case (PRec PP TT \<Delta> xs)
+  then show ?case
+    apply (auto elim!: match.cases)
+    apply (frule typing_RecD[OF _ ty_refl])
+      apply (simp add: typing_wf_ty)
+     apply (meson typing_well_scoped)
+    apply hypsubst_thin
+    subgoal premises prems for VV
+      using prems(1,3,5-)
+      apply (induct "labelist TT" arbitrary: TT PP VV u)
+      apply (frule arg_cong[where f=set], unfold set_labelist)
+        apply auto []
+      apply (frule arg_cong[where f=set], unfold set_labelist)
+      apply (drule sym)
+      apply auto
+      subgoal premises prems for l ls TT PP VV u
+        apply (subgoal_tac "l \<in> labels TT \<and> l \<in> labels PP \<and> l \<in> labels VV")
+         defer
+        using prems(2, 4-) apply auto []
+        apply (auto simp: labels_lfin_iff)
+        subgoal for T P v
+          apply (subgoal_tac " \<Gamma> \<^bold>, List.concat (map \<Delta> ls) \<^bold>\<turnstile> tvsubst (restrict \<sigma> (PVars P) Var) TyVar u \<^bold>: U")
+          defer
+          using prems(3)[of l P T "\<Gamma> \<^bold>, List.concat (map \<Delta> ls)" v u U] prems(4-)
+           apply (auto elim!: meta_mp intro!: typing_weaken dest: typing_wf_ctxt wf_ctxt_weaken_ext)
+        using prems(1)[of "lfdelete l TT" "lfdelete l PP" "tvsubst (restrict \<sigma> (PVars P) Var) TyVar u" "lfdelete l VV"] prems(2,4-)
+        apply auto
+        apply (drule meta_mp)
+        apply (rule sym)
+        using distinct_labelist[of TT]
+         apply (auto simp add: filter_id_conv) []
+        apply (drule meta_mp)
+         apply (rule prems(3))
+             apply (erule lfin_lfdelete)
+            apply (erule lfin_lfdelete)
+           apply assumption
+          apply assumption
+        apply assumption
+        apply (drule meta_mp)
+        apply (meson lfin_lfdelete)
+        apply (drule meta_mp)
+         apply (meson lfin_lfdelete)
+         apply blast
+        apply (subst (asm) tvsubst_comp)
+           apply (auto intro!: cmin_greater) [3]
+            apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))      
+          apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+         apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        apply (erule arg_cong[where f="\<lambda>t. typing _ t _", THEN iffD1, rotated])
+        apply (rule tvsubst_cong)
+             apply (auto simp: permute_typ_eq_tvsubst_typ_TyVar[of id, simplified, symmetric]) [5]
+           apply (subst SSupp_trm_tvsubst_bound)
+              apply (auto intro!: cmin_greater) [5]
+               apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2)) 
+             apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
+            apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+            apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+             apply (metis PVars_PRec card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+          apply (metis PVars_PRec card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+         apply (auto simp: restrict_def nonrep_PRec_def values_lfin_iff)
+        subgoal sorry
+        subgoal for x P' l'
+          apply (subst tvsubst_simps)
+            apply (auto intro!: cmin_greater) [2]
+          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
+          apply (auto simp: restrict_def)
+          apply (cases "l = l'")
+          apply (metis lfin_label_inject)
+          apply (meson lfin_lfdeleteI values_lfin_iff)
+          done
+        subgoal for x
+          apply (subst tvsubst_simps)
+            apply (auto intro!: cmin_greater) [2]
+          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
+          apply (auto simp: restrict_def)
+          apply (metis lfin_lfdelete values_lfin_iff)
+          done
+        done
+      done
+    done
+  done
+qed
 
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
 proof (binder_induction \<Gamma> t T arbitrary: t' avoiding: \<Gamma> T t t' rule: typing.strong_induct)

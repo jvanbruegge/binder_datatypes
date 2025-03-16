@@ -188,6 +188,9 @@ setup_lifting type_definition_pat
 lift_definition PVar :: "'v \<Rightarrow> 'tv typ \<Rightarrow> ('tv::var, 'v::var) pat" is PPVar
   by auto
 
+lemma PVar_inject[simp]: "PVar X T = PVar Y U \<longleftrightarrow> X = Y \<and> T = U"
+  by transfer auto
+
 definition PRec :: "(label, ('tv::var, 'v::var) pat) lfset \<Rightarrow> ('tv::var, 'v::var) pat" where
   "PRec X = (if nonrep_PPRec (map_lfset id Rep_pat X) then Abs_pat (PPRec (map_lfset id Rep_pat X)) else Abs_pat (PPRec lfempty))"
 
@@ -260,7 +263,15 @@ lift_definition PVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'v set" is
 lift_definition PTVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'tv set" is
   "PPTVars" .
 
+lemma PVars_vvsubst_pat: "bij \<sigma> \<Longrightarrow> PVars (vvsubst_pat \<tau> \<sigma> P) = \<sigma> ` PVars P"
+  by transfer auto
+
 lemma PVars_tvsubst_pat: "bij \<sigma> \<Longrightarrow> PVars (tvsubst_pat \<tau> \<sigma> P) = \<sigma> ` PVars P"
+  by transfer auto
+
+lemma PTVars_vvsubst_pat:
+  fixes P :: "('tv::var, 'v::var) pat"
+  shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> PTVars (vvsubst_pat \<tau> \<sigma> P) = \<tau> ` PTVars P"
   by transfer auto
 
 lemma PTVars_tvsubst_pat:
@@ -389,6 +400,15 @@ lemma nonrep_PRec_alt: "nonrep_PRec X = nonrep_PPRec (map_lfset id Rep_pat X)"
   apply (auto simp: PVars_def)
    apply (metis Int_emptyD lfin_map_lfset)
   apply (meson Int_emptyD lfin_map_lfset)
+  done
+
+lemma PRec_inject[simp]: "nonrep_PRec PP \<Longrightarrow> nonrep_PRec UU \<Longrightarrow> PRec PP = PRec UU \<longleftrightarrow> PP = UU"
+  unfolding PRec_def
+  apply (auto simp: nonrep_PRec_alt)
+  apply (subst (asm) Abs_pat_inject)
+    apply (auto simp: Rep_pat_inject elim!: lfset.inj_map_strong[rotated])
+  apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
+  apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
   done
 
 lemma vvsubst_pat_PRec[simp]:

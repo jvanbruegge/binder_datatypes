@@ -2590,6 +2590,14 @@ next
       (auto intro!: typing.TLet pat_typing_tvsubst_typ)
 qed (auto intro: typing.intros)
 
+lemma pat_typing_tvsubst:
+  assumes "\<turnstile> p : T \<rightarrow> \<Delta>" "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T" "\<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> u \<^bold>: U" "match \<sigma> p v"
+  shows "\<Gamma> \<^bold>\<turnstile> tvsubst (restrict \<sigma> (PVars p) Var) TyVar u \<^bold>: U"
+  using assms
+  apply (induct p T \<Delta> rule: pat_typing.induct)
+  apply (auto elim!: match.cases)
+  sorry
+
 lemma preservation: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> step t t' \<Longrightarrow> \<Gamma> \<^bold>\<turnstile> t' \<^bold>: T"
 proof (binder_induction \<Gamma> t T arbitrary: t' avoiding: \<Gamma> T t t' rule: typing.strong_induct)
   case (TApp \<Gamma> t1 T11 T12 t2 t')
@@ -2635,7 +2643,7 @@ next
     apply (force intro: typing.intros)+
     done
 next
-  case (TRec \<Gamma>' XX TT t')
+  case (TRec \<Gamma> XX TT t')
   then show ?case
     apply -
     apply (erule step.cases)
@@ -2643,8 +2651,8 @@ next
       lfin_map_lfset values_lfin_iff subset_eq Ball_def)
     by (smt (z3) fst_conv lfin_lfupdate lfupdate_idle map_lfset_lfupdate snd_conv)
 next
-  case (TProj \<Gamma>' ta TT l Ta t')
-  then have "\<turnstile> proj_ctxt \<Gamma>' ok" "TRec TT closed_in proj_ctxt \<Gamma>'"
+  case (TProj \<Gamma> ta TT l Ta t')
+  then have "\<turnstile> proj_ctxt \<Gamma> ok" "TRec TT closed_in proj_ctxt \<Gamma>"
     by (force dest: typing_wf_ty typing_well_scoped)+
   with TProj show ?case
     apply -
@@ -2652,8 +2660,25 @@ next
     apply (auto intro: typing.TProj dest!: typing_RecD[OF _ ty_refl])
     done
 next
-  case (TLet \<Gamma>' ta Ta p \<Delta> u U t')
-  then show ?case sorry
+  case (TLet \<Gamma> ta Ta p \<Delta> u U t')
+  then show ?case
+    apply -
+    apply (erule step.cases)
+             apply auto
+     apply (rule pat_typing_tvsubst)
+        apply (rule pat_typing_equiv; simp)
+       apply simp
+    subgoal for \<sigma> \<rho>
+      apply (frule typing.equiv[of id \<rho> "\<Gamma> \<^bold>, \<Delta>", rotated 4])
+          apply auto [4]
+      apply (subgoal_tac "map (map_prod (map_sum id \<rho>) id) \<Gamma> = \<Gamma>")
+       apply (auto simp: PVars_vvsubst_pat FVars_tvsubst intro!: list.map_ident_strong sum.map_ident_strong)
+      apply (subst (asm) FVars_tvsubst)
+      apply (auto simp: PVars_vvsubst_pat)
+      sorry
+    apply assumption
+    apply (metis Let_inject typing.TLet)
+    done
 qed (auto elim: step.cases intro: typing.TSub)
 
 end

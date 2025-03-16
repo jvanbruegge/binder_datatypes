@@ -94,4 +94,7 @@ session Process_Calculus in "thys/Pi_Calculus" = Binders +
 session System_Fsub in "thys/POPLmark" = Binders +
   theories
     SystemFSub
+    Labeled_FSet
+    Pattern
     POPLmark_1B
+    POPLmark_2B

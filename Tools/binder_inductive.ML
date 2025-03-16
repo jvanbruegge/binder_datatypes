@@ -236,8 +236,8 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
         NONE => go fs xs T
         | SOME (T1, T2) =>
           let
-            val (mr_bnfs1, perm1) = go fs xs T1;
-            val (mr_bnfs2, perm2) = go (map mk_inv fs) xs T2;
+            val (mr_bnfs1, perm1) = go fs xs T2;
+            val (mr_bnfs2, perm2) = go (map mk_inv fs) xs T1;
           in (union ((op=) o apply2 fst) mr_bnfs1 mr_bnfs2,
             Term.abs ("g", T) (Term.abs ("x", T1)
               (perm1 $ (Bound 1 $ (perm2 $ Bound 0)))
@@ -763,6 +763,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   val set_maps = maps set_map_of_mr_bnf mr_bnfs;
                   fun permute_bijs_of_mr_bnf (Inr (Inr sugar)) = map (#permute_bij o #inner) (#quotient_fps sugar)
                     | permute_bijs_of_mr_bnf _ = []
+                  val _ = option Verbose (fn () => (@{print} ("exI", map (Thm.cterm_of lthy) ts); ())) (K ()) ();
                 in DETERM (EVERY1 [
                   option Verbose (K (print_tac ctxt "begin")) (K all_tac),
                   EVERY' (map_filter (try (fn t => rtac ctxt (
@@ -783,9 +784,17 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                   REPEAT_DETERM_N (length param_Ts) o EVERY' [
                     TRY o rtac ctxt conjI,
                     SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms id_def[symmetric] id_apply} @ map_ids)),
-                    SELECT_GOAL (REPEAT_DETERM (rtac ctxt refl 1 ORELSE EVERY1 [
-                      EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt),
-                      REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt)
+                    SELECT_GOAL (REPEAT_DETERM (FIRST1 [
+                      rtac ctxt refl,
+                      EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] (Equivariance.equiv_thms ctxt @ set_maps),
+                        REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt)
+                      ],
+                      CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp1 inv_simp2}),
+                      SELECT_GOAL (EVERY [
+                        auto_tac ctxt,
+                        IF_UNSOLVED no_tac
+                      ])
                     ]))
                   ],
                   option Verbose (K (print_tac ctxt "pre_auto")) (K all_tac),
@@ -826,9 +835,9 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                     ]),
                     SELECT_GOAL (EVERY [
                       auto_tac ctxt,
-                      IF_UNSOLVED no_tac
-                    ])(*,
-                    CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp2})*)
+                      IF_UNSOLVED (option Verbose (print_tac ctxt "auto end") all_tac THEN no_tac)
+                    ]),
+                    CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inv_simp2 inv_simp1})
                   ],
                   IF_UNSOLVED o K (print_tac ctxt "equivariance proof failed:")
                 ]) end

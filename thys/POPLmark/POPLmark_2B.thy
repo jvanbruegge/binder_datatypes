@@ -1251,20 +1251,116 @@ lemma SSupp_Var_upd_bound[simp]: "|SSupp_trm (Var(x := v::('tv::var, 'v::var) tr
   using infinite_UNIV insert_bound apply fastforce
   done
 
-lemma permute_tusubst_trm_trm[equiv]:
+lemma vvsubst_tvsubst_pat: "
+  bij f1 \<Longrightarrow> |supp (f1::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'b::var \<Rightarrow> 'b)| <o |UNIV::'b set| \<Longrightarrow>
+  |SSupp_typ g1| <o |UNIV::'a set| \<Longrightarrow>
+vvsubst_pat f1 f2 (tvsubst_pat g1 id x1) = tvsubst_pat (permute_typ f1 \<circ> g1 \<circ> inv f1) id (vvsubst_pat f1 f2 x1)"
+  apply transfer
+  apply auto
+  subgoal premises prems for f1 f2 g1 x
+    apply (induction x)
+    using typ.tvsubst_permutes[THEN fun_cong, OF prems(1,2,5), unfolded comp_def]
+    by (auto simp: typ.vvsubst_permute[OF prems(1-2)] lfset.map_comp lfset.map_cong)
+  done
+
+lemma permute_tvsubst:
   fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
-  shows "permute_trm f1 f2 (tvsubst (Var(x := v)) TyVar t) = tvsubst (Var(f2 x := permute_trm f1 f2 v)) TyVar (permute_trm f1 f2 t)"
-  apply (subst tvsubst_eq_tvsubst_trm)
-   apply (rule SSupp_Var_upd_bound)
-  apply (subst tvsubst_eq_tvsubst_trm)
-   apply (rule SSupp_Var_upd_bound)
-  apply (rule trans)
-   apply (rule trm.tvsubst_permutes[OF assms SSupp_Var_upd_bound, THEN fun_cong, unfolded comp_def])
-  apply (rule arg_cong2[OF _ refl, of _ _ tvsubst_trm])
-  apply (unfold fun_upd_def)
-  apply (rule ext)
-  using assms by auto
+    "|SSupp_trm g1| <o cmin |UNIV::'a set| |UNIV::'b set|" "|SSupp_typ g2| <o cmin |UNIV::'a set| |UNIV::'b set|"
+  shows "permute_trm f1 f2 (tvsubst g1 g2 t) = tvsubst (permute_trm f1 f2 \<circ> g1 \<circ> inv f2) (permute_typ f1 \<circ> g2 \<circ> inv f1) (permute_trm f1 f2 t)"
+proof -
+  have 1: "|SSupp_trm (permute_trm f1 f2 \<circ> g1 \<circ> inv f2)| <o cmin |UNIV::'a set| |UNIV::'b set|"
+    apply (subst trm.SSupp_natural)
+        apply (rule assms)+
+    apply (rule ordLeq_ordLess_trans[OF card_of_image])
+    apply (rule assms)
+    done
+  have 2: "|SSupp_typ (permute_typ f1 \<circ> g2 \<circ> inv f1)| <o cmin |UNIV::'a set| |UNIV::'b set|"
+    apply (subst typ.SSupp_natural)
+      apply (rule assms)+
+    apply (rule ordLeq_ordLess_trans[OF card_of_image])
+    apply (rule assms)
+    done
+  have 3: "\<And>g. |SSupp_typ g| <o cmin |UNIV::'a set| |UNIV::'b set| \<Longrightarrow> |SSupp_typ g| <o |UNIV::'a set|"
+    apply (drule ordLess_ordLeq_trans)
+     apply (rule cmin1)
+      apply (rule card_of_Card_order)+
+    apply assumption
+    done
+  note a = assms 1 2 3 trans[OF trans[OF comp_apply[symmetric] typ.tvsubst_permutes[THEN fun_cong]] comp_apply]  
+  show ?thesis
+  proof (binder_induction t avoiding: "imsupp f1" "imsupp f2" "IImsupp_1_trm g1" "IImsupp_2_trm g1" "IImsupp_typ g2" t rule: trm.strong_induct)  
+    case Bound2
+    then show ?case unfolding IImsupp_1_trm_def comp_def
+      apply (rule var_class.UN_bound)
+      apply (rule ordLess_ordLeq_trans)
+        apply (rule assms)
+       apply (rule cmin1)
+        apply (rule card_of_Card_order)+
+      apply (rule trm.set_bd_UNIV)
+      done
+  next
+    case Bound3
+    then show ?case unfolding IImsupp_typ_def comp_def
+      apply (rule var_class.Un_bound)
+      apply (rule ordLess_ordLeq_trans)
+        apply (rule assms)
+       apply (rule cmin1)
+        apply (rule card_of_Card_order)+
+      apply (rule var_class.UN_bound)
+      apply (rule ordLess_ordLeq_trans)
+        apply (rule assms)
+       apply (rule cmin1)
+        apply (rule card_of_Card_order)+
+      apply (rule typ.set_bd_UNIV)
+      done
+  next
+    case Bound5
+    then show ?case unfolding IImsupp_2_trm_def comp_def
+      apply (rule var_class.Un_bound)
+      apply (rule ordLess_ordLeq_trans)
+        apply (rule assms)
+       apply (rule cmin2)
+        apply (rule card_of_Card_order)+
+      apply (rule var_class.UN_bound)
+      apply (rule ordLess_ordLeq_trans)
+        apply (rule assms)
+       apply (rule cmin2)
+        apply (rule card_of_Card_order)+
+      apply (rule trm.set_bd_UNIV)
+      done
+  next
+    case (Abs x1 x2 x3)
+    then show ?case
+      using a apply (auto simp: trm.IImsupp_natural bij_implies_inject)
+      apply (subst tvsubst_simps)
+         apply assumption+
+       apply (auto simp: trm.IImsupp_natural bij_implies_inject)
+      done
+  next
+    case (TAbs x1 x2 x3)
+    then show ?case using a apply auto
+      apply (subst tvsubst_simps)
+      by (auto simp: bij_implies_inject trm.IImsupp_natural typ.IImsupp_natural typ.FVars_permute)
+  next
+    case (TApp x1 x2)
+    then show ?case using a by auto
+  next
+    case (Let x1 x2 x3)
+    then show ?case using a
+      apply (auto simp: trm.set_map Int_Un_distrib)
+      apply (subst tvsubst_simps)
+          apply assumption+
+        apply (auto simp: pat.set_map trm.IImsupp_natural bij_implies_inject trm.FVars_permute
+          tvsubst_pat_comp
+        )
+      apply (subst vvsubst_tvsubst_pat)
+           apply assumption+
+      apply (rule refl)
+      done
+  qed (auto simp: imsupp_supp_bound infinite_UNIV assms 1 2 3 lfset.map_comp lfset.map_cong)
+qed
+lemmas [equiv] = permute_tvsubst[unfolded comp_def]
 
 lemma SSupp_trm_Var[simp]: "SSupp_trm Var = {}"
   unfolding SSupp_trm_def tvVVr_tvsubst_trm_def tv\<eta>_trm_tvsubst_trm_def Var_def by auto
@@ -1308,37 +1404,39 @@ lemma IImsupp_fun_upd_permute[simp]:
     imsupp_def supp_def
   using assms by (auto simp: typ.FVars_permute)
 
+lemma permute_TyVar[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|"
+  shows "permute_typ f1 \<circ> TyVar \<circ> inv f1 = TyVar"
+  using assms by (auto simp: comp_def)
+lemma permute_Var[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "permute_trm f1 f2 \<circ> Var \<circ> inv f2 = Var"
+  using assms by (auto simp: comp_def)
+
+lemma fun_upd_comp_TyVar[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|"
+  shows "permute_typ f1 \<circ> TyVar(X := T) \<circ> inv f1 = (TyVar(f1 X := permute_typ f1 T))"
+  using assms by (auto simp: comp_def fun_upd_def split!: if_splits)
+lemma fun_upd_comp_Var[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "permute_trm f1 f2 \<circ> Var(x := v) \<circ> inv f2 = (Var(f2 x := permute_trm f1 f2 v))"
+  using assms by (auto simp: comp_def fun_upd_def split!: if_splits)
+
+lemma permute_tusubst_trm_trm[equiv]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "permute_trm f1 f2 (tvsubst (Var(x := v)) TyVar t) = tvsubst (Var(f2 x := permute_trm f1 f2 v)) TyVar (permute_trm f1 f2 t)"
+  using assms by (auto simp: permute_tvsubst)
+
 lemma permute_tusubst_trm_typ[equiv]:
   fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows "permute_trm f1 f2 (tvsubst Var (TyVar(X := T)) t) = tvsubst Var (TyVar(f1 X := permute_typ f1 T)) (permute_trm f1 f2 t)"
-using assms proof (binder_induction t avoiding: X T t "imsupp f1" "imsupp f2" rule: trm.strong_induct)
-  case (TAbs x1 x2 x3)
-  then show ?case
-    apply auto
-    apply (subst tvsubst_simps)
-         apply auto
-    using IImsupp_fun_upd apply blast
-    apply (subst tvsubst_simps)
-         apply (auto simp: typ.FVars_permute bij_implies_inject)
-      apply (unfold imsupp_def supp_def)[1]
-    using IImsupp_fun_upd_permute TAbs.fresh(4) assms(2) apply fastforce
-    using permute_tusubst by blast
-next
-  case (Rec x)
-  then show ?case
-    by (auto simp: lfset.map_comp intro!: lfset.map_cong)
-next
-  case (Let x1 x2 x3)
-  then show ?case
-    apply simp
-    apply (subst (1 2) tvsubst_simps)
-           apply (auto simp: vvsubst_pat_tvsubst_pat tvsubst_pat_comp
-      SSupp_typ_TyVar_comp SSupp_typ_tvsubst_typ_bound PVars_tvsubst_pat trm.FVars_permute bij_implies_inject
-      permute_typ_eq_tvsubst_typ_TyVar
-        intro!: arg_cong[where f="\<lambda>p. Let p _ _"] tvsubst_pat_cong)
-    done
-qed (auto simp: permute_tusubst imsupp_supp_bound infinite_UNIV assms)
+using assms by (auto simp: permute_tvsubst)
 
 lemma Forall_eq_tvsubst_typ:
 assumes il: "Forall (X :: 'a ::var) T2 T1 = Forall Y T2 T1'"
@@ -2277,9 +2375,21 @@ lemma supp_swap_bound_cmin: "|supp (id(x := y, y := x))| <o cmin |UNIV :: 'a::va
   by (rule ordLeq_ordLess_trans[OF card_of_mono1[of _ "{x, y}"]])
     (auto simp: supp_def cmin_greater infinite_UNIV)
 
-lemma SSupp_trm_restrict[simp]: "SSupp_trm (restrict \<sigma> A Var) = SSupp_trm \<sigma> \<inter> A"
+lemma SSupp_trm_restrict: "SSupp_trm (restrict \<sigma> A Var) = SSupp_trm \<sigma> \<inter> A"
   unfolding SSupp_trm_def restrict_def
   by auto
+
+lemma Int_bound2: "|B| <o r \<Longrightarrow> |A \<inter> B| <o r"
+  using card_of_subset_bound inf_sup_ord(2) by blast
+
+lemma SSupp_trm_restrict_bound[simp]:
+  fixes \<sigma>::"'a::var \<Rightarrow> ('b::var, 'a) trm" and p::"('b, 'a) pat"
+  shows "|SSupp_trm (restrict \<sigma> (PVars p) Var)| <o cmin |UNIV::'b set| |UNIV::'a set|"
+  apply (subst SSupp_trm_restrict)
+  apply (rule cmin_greater)
+  apply (rule card_of_Card_order)+
+   apply (rule Int_bound2, rule pat.set_bd_UNIV)+
+  done
 
 lemma SSupp_typ_restrict[simp]: "SSupp_typ (restrict \<sigma> A TyVar) = SSupp_typ \<sigma> \<inter> A"
   unfolding SSupp_typ_def restrict_def
@@ -2299,8 +2409,97 @@ lemma match_permute:
      pat.set_map intro!: match.intros)
   by (metis Int_emptyD)
 
-binder_inductive (no_auto_equiv) step
-  subgoal sorry
+lemma nonrep_lfmap[simp]:
+  fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "nonrep_PRec (map_lfset id (vvsubst_pat f1 f2) PP) = nonrep_PRec PP"
+proof -
+  have 1: "bij (vvsubst_pat f1 f2)"
+    apply (rule o_bij)
+     apply (rule trans)
+      apply (rule pat.map_comp0[symmetric])
+           prefer 7
+           apply (subst inv_o_simp1, rule assms)+
+           apply (rule pat.map_id0)
+          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
+    apply (rule trans)
+      apply (rule pat.map_comp0[symmetric])
+          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
+           apply (subst inv_o_simp2, rule assms)+
+    apply (rule pat.map_id0)
+    done
+  then show ?thesis
+    apply (unfold nonrep_PRec_def)
+    apply (rule iffI)
+     apply (rule allI impI)+
+     apply (erule allE)+
+     apply (erule impE)
+      prefer 2
+      apply (erule impE)
+       apply (erule lfin_equiv[OF 1])
+      apply (erule impE)
+    apply (rotate_tac -1)
+       apply (erule lfin_equiv[OF 1])
+      apply (auto simp: pat.set_map assms)[2]
+    apply (rule allI impI)+
+    apply (erule allE)+
+    apply (erule impE)
+    apply assumption
+     apply (erule impE)
+      apply (rule equiv(14)[THEN iffD1, OF 1])
+      apply (subst pat.map_comp[of "inv f1" "inv f2"])
+           apply (rule supp_inv_bound bij_imp_bij_inv assms)+
+    using assms apply (unfold inv_o_simp2 pat.map_id)
+    apply assumption
+     apply (erule impE)
+      apply (rule equiv(14)[THEN iffD1, OF 1])
+      apply (subst pat.map_comp[of "inv f1" "inv f2"])
+           apply (rule supp_inv_bound bij_imp_bij_inv assms)+
+    using assms apply (unfold inv_o_simp2 pat.map_id)
+     apply assumption
+    by (auto simp: pat.set_map supp_inv_bound)
+qed
+
+lemma restrict_equiv:
+fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "permute_trm f1 f2 (restrict \<sigma> (PVars p) Var x) = restrict (permute_trm f1 f2 \<circ> \<sigma> \<circ> inv f2) (PVars (vvsubst_pat f1 f2 p)) Var (f2 x)"
+  using assms by transfer (auto simp: restrict_def bij_implies_inject)
+lemma match_equiv_aux:
+fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "match \<sigma> p v \<Longrightarrow> match (permute_trm f1 f2 \<circ> \<sigma> \<circ> inv f2) (vvsubst_pat f1 f2 p) (permute_trm f1 f2 v)"
+proof (induction rule: match.induct)
+  case (MPVar X v T)
+  then show ?case
+    using assms by (auto intro: match.intros)
+next
+  case (MPRec PP VV)
+  then show ?case
+    using assms apply (auto simp: lfset.set_map intro!: match.intros)
+    by (metis (no_types, lifting) lfin_map_lfset)
+qed
+lemma match_equiv:
+fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "match (permute_trm f1 f2 \<circ> \<sigma> \<circ> inv f2) (vvsubst_pat f1 f2 p) (permute_trm f1 f2 v) = match \<sigma> p v"
+  apply (rule iffI)
+   apply (drule match_equiv_aux[of "inv f1" "inv f2", rotated -1])
+  using assms apply (auto simp: supp_inv_bound comp_assoc[symmetric] trm.permute_comp0 trm.permute_id0 pat.map_comp trm.permute_comp)
+   apply (auto simp: comp_assoc)[1]
+  apply (erule match_equiv_aux)
+     apply (rule assms)+
+  apply assumption
+  done
+
+lemma Ball_value[equiv]:
+fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
+  assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
+  shows "Ball (permute_trm f1 f2 ` values V) value = Ball (values V) value"
+  using assms by (auto simp: equiv(26))
+lemmas [equiv] = restrict_equiv[unfolded comp_def] match_equiv[unfolded comp_def] map_lfset_lfupdate
+
+binder_inductive step
   subgoal premises prems for R B1 B2 t u
     unfolding ex_simps conj_disj_distribL ex_disj_distrib
     using prems(3)
@@ -2374,13 +2573,13 @@ binder_inductive (no_auto_equiv) step
          apply (subst permute_trm_eq_tvsubst')
             apply (auto)
         apply (subst tvsubst_comp)
-            apply (auto simp: infinite_UNIV intro!: cmin_greater)
+            apply (auto simp: infinite_UNIV SSupp_trm_restrict intro!: cmin_greater)
         apply (rule tvsubst_cong)
-             apply (auto  simp: infinite_UNIV restrict_def intro: cmin_greater intro!: SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
+             apply (auto  simp: infinite_UNIV SSupp_trm_restrict restrict_def intro: cmin_greater intro!: SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
         apply (subst tvsubst_simps)
-           apply (auto simp: infinite_UNIV restrict_def intro!: cmin_greater)
+           apply (auto simp: infinite_UNIV SSupp_trm_restrict restrict_def intro!: cmin_greater)
         apply (subst tvsubst_simps)
-          apply (auto simp: infinite_UNIV restrict_def intro!: cmin_greater)
+          apply (auto simp: infinite_UNIV SSupp_trm_restrict restrict_def intro!: cmin_greater)
         done
         apply (auto simp: infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV)
       done
@@ -2705,27 +2904,23 @@ next
         apply fast
         apply (subst (asm) tvsubst_comp)
            apply (auto 0 0 intro!: cmin_greater) [3]
-            apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-          apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-         apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
+        apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
         apply (erule arg_cong[where f="\<lambda>t. typing _ t _", THEN iffD1, rotated])
         apply (rule tvsubst_cong)
              apply (auto 0 0 simp: permute_typ_eq_tvsubst_typ_TyVar[of id, simplified, symmetric]) [5]
            apply (subst SSupp_trm_tvsubst_bound)
               apply (auto 0 0 intro!: cmin_greater) [5]
-               apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-             apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-            apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-            apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-             apply (metis PVars_PRec card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
-          apply (metis PVars_PRec card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
+            apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
+           apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict pat.set_bd_UNIV(2))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict pat.set_bd_UNIV(2))
          apply (auto simp: restrict_def nonrep_PRec_def values_lfin_iff)
         subgoal for x P' l'
           apply (rule trans[OF tvsubst_cong tvsubst_id])
-            apply (auto 0 0 simp: restrict_def intro!: cmin_greater)
-          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+               apply (auto 0 0 simp: restrict_def intro!: cmin_greater)
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
           apply (cases "l = l'")
            apply simp
           using match_FVars[of \<sigma> P v x]
@@ -2735,8 +2930,8 @@ next
         subgoal for x P' l'
           apply (subst tvsubst_simps)
             apply (auto 0 0 intro!: cmin_greater) [2]
-          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
           apply (auto simp: restrict_def)
           apply (cases "l = l'")
           apply (metis lfin_label_inject)
@@ -2745,8 +2940,8 @@ next
         subgoal for x
           apply (subst tvsubst_simps)
             apply (auto 0 0 intro!: cmin_greater) [2]
-          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
           apply (auto simp: restrict_def)
           apply (metis lfin_lfdelete values_lfin_iff)
           done

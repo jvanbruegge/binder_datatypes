@@ -278,7 +278,7 @@ thm equiv
 thm equiv_sym
 thm equiv_forward
 
-binder_inductive (verbose) ty
+binder_inductive ty
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false
       [@{term "\<lambda>(\<Gamma>::('a::var \<times> 'a typ) list). dom \<Gamma> \<union> FFVars_ctxt \<Gamma>"}, @{term "FVars_typ :: 'a typ \<Rightarrow> 'a::var set"}, @{term "FVars_typ :: 'a::var typ \<Rightarrow> 'a::var set"}]

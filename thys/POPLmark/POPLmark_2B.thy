@@ -2637,7 +2637,7 @@ lemma nonrep_PRec_lfdelete[simp]: "nonrep_PRec PP \<Longrightarrow> nonrep_PRec 
   by (auto simp: lfin_lfdelete)
 
 lemma pat_typing_tvsubst:
-  assumes "\<turnstile> p : T \<rightarrow> \<Delta>" "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T" "\<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> u \<^bold>: U" "match \<sigma> p v"
+  assumes "\<turnstile> p : T \<rightarrow> \<Delta>" "\<Gamma> \<^bold>\<turnstile> v \<^bold>: T" "\<Gamma> \<^bold>, \<Delta> \<^bold>\<turnstile> u \<^bold>: U" "match \<sigma> p v" "PVars p \<inter> FVars v = {}"
   shows "\<Gamma> \<^bold>\<turnstile> tvsubst (restrict \<sigma> (PVars p) Var) TyVar u \<^bold>: U"
   using assms
 proof (induct p T \<Delta> arbitrary: \<Gamma> v u U rule: pat_typing.induct)
@@ -2668,9 +2668,14 @@ next
       subgoal premises prems for l ls TT PP VV u
         apply (subgoal_tac "l \<in> labels TT \<and> l \<in> labels PP \<and> l \<in> labels VV")
          defer
-        using prems(2, 4-) apply auto []
+        using prems(2,4-) apply auto []
         apply (auto simp: labels_lfin_iff)
         subgoal for T P v
+          apply (subgoal_tac "PVars P \<inter> FVars v = {}")
+           defer
+          subgoal
+            using prems(5)
+            by (force dest: Int_emptyD simp: Ball_def values_lfin_iff)
           apply (subgoal_tac " \<Gamma> \<^bold>, List.concat (map \<Delta> ls) \<^bold>\<turnstile> tvsubst (restrict \<sigma> (PVars P) Var) TyVar u \<^bold>: U")
           defer
           using prems(3)[of l P T "\<Gamma> \<^bold>, List.concat (map \<Delta> ls)" v u U] prems(4-)
@@ -2687,23 +2692,28 @@ next
             apply (erule lfin_lfdelete)
            apply assumption
           apply assumption
+         apply assumption
         apply assumption
+        apply (drule meta_mp)
+        subgoal premises prems
+          using prems(8)
+          by (force dest: Int_emptyD simp: values_lfin_iff intro!: lfin_values dest!: lfin_lfdelete)
         apply (drule meta_mp)
         apply (meson lfin_lfdelete)
         apply (drule meta_mp)
          apply (meson lfin_lfdelete)
-         apply blast
+        apply fast
         apply (subst (asm) tvsubst_comp)
-           apply (auto intro!: cmin_greater) [3]
+           apply (auto 0 0 intro!: cmin_greater) [3]
             apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
            apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))      
           apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
          apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
         apply (erule arg_cong[where f="\<lambda>t. typing _ t _", THEN iffD1, rotated])
         apply (rule tvsubst_cong)
-             apply (auto simp: permute_typ_eq_tvsubst_typ_TyVar[of id, simplified, symmetric]) [5]
+             apply (auto 0 0 simp: permute_typ_eq_tvsubst_typ_TyVar[of id, simplified, symmetric]) [5]
            apply (subst SSupp_trm_tvsubst_bound)
-              apply (auto intro!: cmin_greater) [5]
+              apply (auto 0 0 intro!: cmin_greater) [5]
                apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2)) 
              apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
             apply (meson Cnotzero_UNIV card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
@@ -2711,12 +2721,22 @@ next
              apply (metis PVars_PRec card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
           apply (metis PVars_PRec card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
          apply (auto simp: restrict_def nonrep_PRec_def values_lfin_iff)
-        subgoal sorry
+        subgoal for x P' l'
+          apply (rule trans[OF tvsubst_cong tvsubst_id])
+            apply (auto 0 0 simp: restrict_def intro!: cmin_greater)
+          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+          apply (cases "l = l'")
+           apply simp
+          using match_FVars[of \<sigma> P v x]
+          apply (smt (verit) Int_emptyD Union_iff image_iff lfin_lfdelete subset_iff values_lfin_iff)
+          apply fast
+          done
         subgoal for x P' l'
           apply (subst tvsubst_simps)
-            apply (auto intro!: cmin_greater) [2]
-          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
+            apply (auto 0 0 intro!: cmin_greater) [2]
+          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
           apply (auto simp: restrict_def)
           apply (cases "l = l'")
           apply (metis lfin_label_inject)
@@ -2724,9 +2744,9 @@ next
           done
         subgoal for x
           apply (subst tvsubst_simps)
-            apply (auto intro!: cmin_greater) [2]
-          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
-           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(5))
+            apply (auto 0 0 intro!: cmin_greater) [2]
+          apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
+           apply (metis PVars_PRec card_of_subset_bound inf_le2 nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
           apply (auto simp: restrict_def)
           apply (metis lfin_lfdelete values_lfin_iff)
           done
@@ -2798,11 +2818,11 @@ next
     apply (auto intro: typing.TProj dest!: typing_RecD[OF _ ty_refl])
     done
 next
-  case (TLet \<Gamma> ta Ta p \<Delta> u U t')
+  case (TLet \<Gamma> t T p \<Delta> u U t')
   then show ?case
     apply -
     apply (erule step.cases)
-             apply auto
+             apply (auto simp: Let_inject)
      apply (rule pat_typing_tvsubst)
         apply (rule pat_typing_equiv; simp)
        apply simp
@@ -2812,9 +2832,25 @@ next
       apply (subgoal_tac "map (map_prod (map_sum id \<rho>) id) \<Gamma> = \<Gamma>")
        apply (auto simp: PVars_vvsubst_pat FVars_tvsubst intro!: list.map_ident_strong sum.map_ident_strong)
       apply (subst (asm) FVars_tvsubst)
-      apply (auto simp: PVars_vvsubst_pat)
+        apply (auto simp: PVars_vvsubst_pat)
+      subgoal
+        apply (auto intro!: cmin_greater)
+        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        done
+      subgoal sorry
+      done
+      apply assumption
+    subgoal for \<sigma> \<rho>
+      apply (subst (asm) FVars_tvsubst)
+        apply (auto simp: PVars_vvsubst_pat)
+      subgoal
+        apply (auto intro!: cmin_greater)
+        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        apply (metis PVars_vvsubst_pat card_of_subset_bound inf_le2 pat.set_bd_UNIV(2))
+        done
+      apply (auto simp: PVars_vvsubst_pat id_on_def)
       sorry
-    apply assumption
     apply (metis Let_inject typing.TLet)
     done
 qed (auto elim: step.cases intro: typing.TSub)

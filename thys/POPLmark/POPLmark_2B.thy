@@ -1959,6 +1959,23 @@ next
   then show ?case
     using ty_transitivity2 by fast
 qed auto
+
+lemma typing_RecD: "\<Gamma> \<^bold>\<turnstile> Rec VV \<^bold>: S \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> S <: TRec TT \<Longrightarrow> labels TT \<subseteq> labels VV \<and>
+   (\<forall>l v T. (l, v) \<in>\<in> VV \<longrightarrow> (l, T) \<in>\<in> TT \<longrightarrow> \<Gamma> \<^bold>\<turnstile> v \<^bold>: T)"
+proof (binder_induction \<Gamma> "Rec VV" S avoiding: \<Gamma> S rule: typing.strong_induct)
+  case (TRec \<Gamma>' XX TTa)
+  then show ?case
+    apply (auto simp: simp: lfset.in_rel[of id, simplified, unfolded lfset.map_id]
+      lfin_map_lfset lfset.set_map values_lfin_iff subset_eq Ball_def)
+     apply (metis SA_TRecER in_mono labelist_map_lfset set_labelist typ.distinct(17) typ.inject(4))
+    apply (metis SA_TRecER[of "proj_ctxt \<Gamma>'" "TRec TTa" TT] TSub[of \<Gamma>'] lfin_label_inject[of _ _ TTa]
+        lfin_map_lfset[of _ "snd (_, _)" snd] snd_conv typ.distinct(17)[of TTa] typ.inject(4)[of TTa])
+    done
+next
+  case (TSub \<Gamma> S T)
+  then show ?case
+    using ty_transitivity2 by blast
+qed auto
   
 lemma typing_well_scoped: "\<Gamma> \<^bold>\<turnstile> t \<^bold>: T \<Longrightarrow> T closed_in proj_ctxt \<Gamma>"
 proof (binder_induction \<Gamma> t T avoiding: \<Gamma> T t rule: typing.strong_induct)
@@ -2615,11 +2632,18 @@ next
   then show ?case
     apply -
     apply (erule step.cases)
-             apply (auto intro: typing.TSub)
-    sorry
+             apply (auto intro!:typing.TRec  simp: lfset.in_rel[of id, simplified, unfolded lfset.map_id]
+      lfin_map_lfset values_lfin_iff subset_eq Ball_def)
+    by (smt (z3) fst_conv lfin_lfupdate lfupdate_idle map_lfset_lfupdate snd_conv)
 next
   case (TProj \<Gamma>' ta TT l Ta t')
-  then show ?case sorry
+  then have "\<turnstile> proj_ctxt \<Gamma>' ok" "TRec TT closed_in proj_ctxt \<Gamma>'"
+    by (force dest: typing_wf_ty typing_well_scoped)+
+  with TProj show ?case
+    apply -
+    apply (erule step.cases)
+    apply (auto intro: typing.TProj dest!: typing_RecD[OF _ ty_refl])
+    done
 next
   case (TLet \<Gamma>' ta Ta p \<Delta> u U t')
   then show ?case sorry

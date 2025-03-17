@@ -56,11 +56,18 @@ qed
   
   
 
-(* generic for free BNFs: *)
+(* generic for rigid BNFs: *)
+abbreviation "any \<equiv> undefined"
+definition "rigid (dummy::'a) \<equiv> \<forall>(f::'a\<Rightarrow>'a) (g::'a\<Rightarrow>'a) (xs::('a :: var) list) (x::'a). map f xs = map g xs \<and> x \<in> set xs \<longrightarrow> f x = g x"
+(* lists are rigid, but I will not use this, to emphasize where rigidity is needed: *)
 lemma cong_rev: "map f xs = map g xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> f x = g x"
-  by fastforce
+  (* by fastforce *) oops
 
-lemma cong_rev_id: "map f xs = xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> f x = x"
+lemma cong_rev: "rigid (any::'a::var) \<Longrightarrow> map f xs = map g xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> f x = g x"
+unfolding rigid_def by fastforce
+
+
+lemma cong_rev_id: "rigid (any::'a::var) \<Longrightarrow> map f (xs::'a list) = xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> f x = x"
   using cong_rev[of f xs id] by auto
 
 definition "match (xs::('a :: var) list) ys \<equiv> SOME f. map f xs = ys \<and> (supp f \<subseteq> set xs)"
@@ -104,9 +111,9 @@ shows "match xs ys x \<in> set ys"
   using assms image_match_set by auto
 
 lemma match_id: 
-assumes "linear xs" "x \<in> set xs"
+assumes "rigid (any::'a::var)" "linear (xs::'a list)" "x \<in> set xs"
 shows "match xs xs x = x"
-by (meson assms(1,2) cong_rev_id map_match sameShape_refl)
+by (meson assms cong_rev_id map_match sameShape_refl)
 
 lemma match_trans: 
 assumes l: "linear xs" "linear ys" and s: "sameShape xs ys" "sameShape ys zs" 
@@ -127,15 +134,16 @@ proof-
 qed 
 
 lemma match_rev: 
-assumes l: "linear xs" "linear ys" and s: "sameShape xs ys" and x: "x \<in> set xs"
+assumes r: "rigid (any::'a::var)" and 
+l: "linear (xs::'a list)" "linear ys" and s: "sameShape xs ys" and x: "x \<in> set xs"
 shows "match ys xs (match xs ys x) = x"
   apply(subst match_trans[OF l s sameShape_sym[OF s] x])
-  apply(rule match_id[OF l(1) x]) .   
+  apply(rule match_id[OF r l(1) x]) .   
 
 lemma bij_betw_match: 
-assumes "sameShape xs ys" "linear xs" "linear ys"
+assumes "rigid (any::'a::var)" "sameShape (xs::'a list) ys" "linear xs" "linear ys"
 shows "bij_betw (match xs ys) (set xs) (set ys)"
-by (smt (verit, best) assms(1,2,3) bij_betwI' match_rev match_set sameShape_sym)
+by (smt (verit, best) assms bij_betwI' match_rev match_set sameShape_sym)
 
 lemma inj_on_linear: 
 assumes l: "linear (xs::('a::var) list)" and i: "inj_on f (set xs)"
@@ -183,13 +191,13 @@ lemma swap_sym: "set xs \<inter> set ys = {} \<Longrightarrow> swap xs ys = swap
   unfolding supp_def swap_def fun_eq_iff by auto
 
 lemma swap_idem: 
-assumes "linear xs" "linear ys" "sameShape xs ys" "set xs \<inter> set ys = {}"
+assumes "rigid (any::'a::var)" "linear (xs::'a list)" "linear ys" "sameShape xs ys" "set xs \<inter> set ys = {}"
 shows "swap xs ys o swap xs ys = id"
 apply(rule ext)
 using assms unfolding swap_def 
 by simp (meson Int_emptyD match_rev match_set sameShape_sym)
 
-lemma bij_swap: "linear xs \<Longrightarrow> linear ys \<Longrightarrow> sameShape xs ys \<Longrightarrow> set xs \<inter> set ys = {} \<Longrightarrow> 
+lemma bij_swap: "rigid (any::'a::var) \<Longrightarrow> linear (xs::'a list) \<Longrightarrow> linear ys \<Longrightarrow> sameShape xs ys \<Longrightarrow> set xs \<inter> set ys = {} \<Longrightarrow> 
 bij (swap xs ys)"
   using o_bij swap_idem by blast
 
@@ -226,7 +234,7 @@ lemma Lam_Inj_sym: "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow>
 (* Getting rid of f and f' with the help of linearity (we can only do this 
 from the symmetric version! because we need disjointness in order to swap)*)
 lemma Lam_Inj_sym_linear: 
-assumes "linear (xs::'a::var list)" "linear xs'"
+assumes "rigid (any::'a::var)" "linear (xs::'a::var list)" "linear xs'"
 shows "Lam xs t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys.
   set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
@@ -237,7 +245,6 @@ proof safe
   "linear ys" "sameShape ys xs" "sameShape ys xs'"
   "permute_term (swap xs ys) t = permute_term (swap xs' ys) t'"
   hence ss: "set ys \<inter> set xs = {}" "set ys \<inter> set xs' = {}" by auto
-  (* define sw where "sw \<equiv> \<lambda>z. if z \<in>" *)
   show "Lam xs t = Lam xs' t'"
   unfolding Lam_Inj_sym apply(rule exI[of _ ys]) 
   apply(rule exI[of _ "swap xs ys"]) apply(rule exI[of _ "swap xs' ys"])
@@ -266,22 +273,22 @@ next
 
   have p1: "permute_term (swap xs ys) t = permute_term f t" 
   apply(rule term.permute_cong) 
-    subgoal by (metis Int_Un_emptyI1 bij_swap assms(1) bij_linear f(1,4) 
+    subgoal by (metis Int_Un_emptyI1 bij_swap assms(1,2) bij_linear f(1,4) 
        sameShape_map1 ss swap_sym)
     subgoal using card_supp_swap .
     subgoal by fact
     subgoal by fact
     subgoal by (metis (full_types) Diff_iff Int_Un_empty Int_Un_emptyI1 Int_commute 
-     Int_emptyD assms(1) bij_linear cong_rev f(1,4,5) map_swap1 sameShape_map2 ss swap_def) .
+     Int_emptyD assms(1,2) bij_linear cong_rev f(1,4,5) map_swap1 sameShape_map2 ss swap_def) .
   have p2: "permute_term (swap xs' ys) t' = permute_term f' t'"
   apply(rule term.permute_cong) 
-    subgoal by (metis Int_Un_empty LC.bij_swap Un_commute assms(2) bij_linear f'(1,3) 
+    subgoal by (metis Int_Un_empty LC.bij_swap Un_commute assms(1,3) bij_linear f'(1,3) 
       sameShape_map1 ss swap_sym)
     subgoal using card_supp_swap .
     subgoal by fact
     subgoal by fact
     subgoal by (metis (full_types) Diff_iff Int_Un_empty Int_Un_emptyI2 Int_commute 
-      Int_emptyD assms(2) bij_linear cong_rev f'(1,3,4) map_swap1 sameShape_map2 ss swap_def) .
+      Int_emptyD assms(1,3) bij_linear cong_rev f'(1,3,4) map_swap1 sameShape_map2 ss swap_def) .
   show "\<exists>ys. set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
          linear ys \<and>
          sameShape ys xs \<and>
@@ -293,7 +300,7 @@ qed
 
 (* And a version that works for renaming with matching: *)
 lemma Lam_Inj_sym_linear_vvsubst: 
-assumes "linear (xs::('a::var) list)" "linear xs'"
+assumes "rigid (any::'a::var)" "linear (xs::('a::var) list)" "linear xs'"
 shows "Lam xs t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys.
   set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
@@ -304,7 +311,7 @@ proof-
    "linear xs" "linear ys" "sameShape ys xs"
    hence "vvsubst (match xs ys) t = permute_term (swap xs ys) t"
    apply(subst term.vvsubst_permute[symmetric])
-     subgoal by (metis Int_Un_emptyI1 LC.bij_swap swap_sym)
+     subgoal by (metis assms(1) Int_Un_emptyI1 LC.bij_swap swap_sym)
      subgoal using card_supp_swap .
      subgoal apply(rule term.map_cong)
        subgoal using card_supp_match sameShape_sym by blast
@@ -317,9 +324,10 @@ proof-
   apply(intro ex_cong1) by fastforce 
 qed
 
-(* Most user-friendly (lightest) versions -- do not make sense for lists, but works for linear types: *)
+(* Most user-friendly (lightest) versions -- 
+do not make sense for lists, but work for linear types: *)
 corollary Lam_Inj_sym_linearType: 
-assumes linearType: "\<And>(xs::'a::var list). linear xs"
+assumes rigidType: "rigid (any::'a::var)" and linearType: "\<And>(xs::'a::var list). linear xs"
 shows "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys.
   set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
@@ -328,7 +336,7 @@ shows "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow>
   apply(subst Lam_Inj_sym_linear) using assms by auto
 
 corollary Lam_Inj_sym_linearType_vvsubst: 
-assumes linearType: "\<And>(xs::'a::var list). linear xs"
+assumes rigidType: "rigid (any::'a::var)" and linearType: "\<And>(xs::'a::var list). linear xs"
 shows "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys.
   set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 

@@ -109,13 +109,22 @@ shows "bij_betw (match xs ys) (set xs) (set ys)"
 by (smt (verit, best) assms(1,2,3) bij_betwI' match_rev match_set sameShape_sym)
 
 lemma inj_on_linear: 
-assumes "linear xs" "inj_on f (set xs)"
-shows "linear (map f xs)"
-sorry
+assumes l: "linear (xs::('a::var) list)" and i: "inj_on f (set xs)"
+shows "linear (map (f::'a\<Rightarrow>'a) xs)"
+unfolding linear_def proof safe
+  fix ys assume "sameShape (map f xs) ys"
+  hence ss: "sameShape xs ys" 
+    using sameShape_map2 sameShape_trans by blast
+  then obtain h where m: "map h xs = ys" using l unfolding linear_def by auto
+  show "\<exists>g. map g (map f xs) = ys"
+  apply(rule exI[of _ "h o inv_into (set xs) f"])
+  apply simp unfolding m[symmetric] apply(rule map_cong)
+  using i by auto
+qed
 
 lemma bij_linear: 
-assumes 1: "linear xs" and 2: "bij f"
-shows "linear (map f xs)"
+assumes 1: "linear (xs::('a::var) list)" and 2: "bij f"
+shows "linear (map (f::'a\<Rightarrow>'a) xs)"
 apply(rule inj_on_linear[OF 1])
 using assms by (metis bij_not_equal_iff inj_onCI) 
 
@@ -135,7 +144,7 @@ lemma finite_supp_swap: "finite (supp (swap (xs::'a list) ys))"
 by (meson List.finite_set finite_UnI finite_subset supp_swap)
 
 lemma card_supp_swap: "|supp (swap (xs::'a list) ys)| <o |UNIV::'a set|"
-  sorry
+sorry 
 
 lemma imsupp_swap: "linear xs \<Longrightarrow> linear ys \<Longrightarrow> sameShape xs ys \<Longrightarrow> imsupp (swap xs ys) \<subseteq> set xs \<union> set ys"
 unfolding imsupp_def supp_def swap_def 
@@ -165,15 +174,18 @@ by (metis inf.commute map_swap1 sameShape_sym swap_sym)
 
 (* Current: *)
 lemma Lam_Inj: "Lam xs t = Lam xs' t' \<longleftrightarrow> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and>
-  |supp f| <o |UNIV::'a set| \<and> map f xs = xs' \<and> permute_term f t = t')"
+  |supp f| <o |UNIV::'a set| \<and> map f xs = xs' \<and> 
+  (\<forall>x\<in> FVars_term t - set xs. f x = x) \<and> permute_term f t = t')"
   sorry
 
 (* Symmetric variant (with existential ys): *)
 lemma Lam_Inj_sym: "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys f f'.
-  set ys \<inter> set xs = {} \<and> set ys \<inter> set xs' = {} \<and>
+  set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and>
   bij f \<and> |supp f| <o |UNIV::'a set| \<and> supp f \<subseteq> set xs \<union> set ys \<and> map f xs = ys \<and> 
-  bij f' \<and> |supp f'| <o |UNIV::'a set| \<and> supp f' \<subseteq> set xs' \<union> set ys \<and> map f' xs' = ys \<and>
+     (\<forall>x\<in> FVars_term t - set xs. f x = x) \<and> 
+  bij f' \<and> |supp f'| <o |UNIV::'a set| \<and> supp f' \<subseteq> set xs' \<union> set ys \<and> map f' xs' = ys \<and> 
+     (\<forall>x\<in> FVars_term t' - set xs'. f' x = x) \<and> 
   permute_term f t = permute_term f' t')"
   sorry
 
@@ -183,42 +195,45 @@ lemma Lam_Inj_sym_linear:
 assumes "linear (xs::'a::var list)" "linear xs'"
 shows "Lam xs t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys.
-  set ys \<inter> set xs = {} \<and> set ys \<inter> set xs' = {} \<and> 
+  set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
   linear ys \<and> sameShape ys xs \<and> sameShape ys xs' \<and>  
   permute_term (swap xs ys) t = permute_term (swap xs' ys) t')"
 proof safe
-  fix ys assume 0: "set ys \<inter> set xs = {}" "set ys \<inter> set xs' = {}"
+  fix ys assume 0: "set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {}"
   "linear ys" "sameShape ys xs" "sameShape ys xs'"
   "permute_term (swap xs ys) t = permute_term (swap xs' ys) t'"
+  hence ss: "set ys \<inter> set xs = {}" "set ys \<inter> set xs' = {}" by auto
   show "Lam xs t = Lam xs' t'"
   unfolding Lam_Inj_sym apply(rule exI[of _ ys]) 
   apply(rule exI[of _ "swap xs ys"]) apply(rule exI[of _ "swap xs' ys"])
-  using 0 assms apply (intro conjI)
-    subgoal by assumption
-    subgoal by assumption
+  using 0 ss assms apply (intro conjI)
+    subgoal by assumption  
     subgoal using bij_swap swap_sym by metis
     subgoal using card_supp_swap .
     subgoal using supp_swap .
     subgoal using map_swap2 swap_sym by metis
+    subgoal using bij_swap swap_sym sorry (* need to work with a trimmed quasi-swap instead *)
     subgoal using bij_swap swap_sym by metis
     subgoal using card_supp_swap .
     subgoal using supp_swap by metis
     subgoal using map_swap2 swap_sym by metis
+    subgoal using bij_swap swap_sym sorry
     subgoal by assumption .
 next
   assume "Lam xs t = Lam xs' t'" 
   then obtain ys f f' where 
-  ss: "set ys \<inter> set xs = {}" "set ys \<inter> set xs' = {}" and 
-  f: "bij f" "|supp f| <o |UNIV::'a set|" "supp f \<subseteq> set xs \<union> set ys" "map f xs = ys" and 
+  ss: "set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {}" and 
+  f: "bij f" "|supp f| <o |UNIV::'a set|" "supp f \<subseteq> set xs \<union> set ys" "map f xs = ys" 
+    "\<forall>x\<in>FVars_term t - set xs. f x = x" and 
   f': "bij f'" "|supp f'| <o |UNIV::'a set|" "supp f' \<subseteq> set xs' \<union> set ys \<and> map f' xs' = ys" and 
+    "\<forall>x\<in>FVars_term t' - set xs'. f' x = x" and
   p: "permute_term f t = permute_term f' t'" unfolding Lam_Inj_sym by blast
 
   have p1: "permute_term (swap xs ys) t = permute_term f t" 
   apply(rule term.permute_cong) sorry
   have p2: "permute_term (swap xs' ys) t' = permute_term f' t'" sorry
 
-  show "\<exists>ys. set ys \<inter> set xs = {} \<and>
-         set ys \<inter> set xs' = {} \<and>
+  show "\<exists>ys. set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
          linear ys \<and>
          sameShape ys xs \<and>
          sameShape ys xs' \<and> permute_term (swap xs ys) t = permute_term (swap xs' ys) t'"
@@ -232,7 +247,7 @@ corollary Lam_Inj_sym_linearType:
 assumes linearType: "\<And>(xs::'a::var list). linear xs"
 shows "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow> 
 (\<exists>ys.
-  set ys \<inter> set xs = {} \<and> set ys \<inter> set xs' = {} \<and> 
+  set ys \<inter> (set xs \<union> set xs' \<union> FVars_term t \<union> FVars_term t') = {} \<and> 
   sameShape ys xs \<and> sameShape ys xs' \<and>  
   permute_term (swap xs ys) t = permute_term (swap xs' ys) t')"
 apply(subst Lam_Inj_sym_linear) using assms by auto

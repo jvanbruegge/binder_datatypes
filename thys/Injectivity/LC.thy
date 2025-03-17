@@ -214,10 +214,13 @@ by (metis inf.commute map_swap1 sameShape_sym swap_sym)
 (****)
 
 (* Current: *)
-lemma Lam_Inj: "Lam xs t = Lam xs' t' \<longleftrightarrow> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and>
+lemma Lam_Inj: "Lam xs t = Lam xs' t' \<longleftrightarrow> 
+(\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and>
   |supp f| <o |UNIV::'a set| \<and> map f xs = xs' \<and> 
   (\<forall>x\<in> FVars_term t - set xs. f x = x) \<and> permute_term f t = t')"
   sorry
+(* todo: double-check that this is exactly what we get... 
+*)
 
 (* Symmetric variant (with existential ys): *)
 lemma Lam_Inj_sym: "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow> 
@@ -230,6 +233,13 @@ lemma Lam_Inj_sym: "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow>
   permute_term f t = permute_term f' t')"
   sorry
 (* TODO: revive/adapt Jan's proof *)
+
+lemma Lam_Inj_vvsubst: "Lam xs t = Lam xs' t' \<longleftrightarrow> 
+(\<exists>f. inj_on (f::'a::var \<Rightarrow> 'a) (set xs) \<and>
+  |supp f| <o |UNIV::'a set| \<and> map f xs = xs' \<and> 
+  (\<forall>x\<in> FVars_term t - set xs. f x = x) \<and> vvsubst f t = t')"
+  sorry
+(* todo: easy from Lam_inj *)
 
 (* Getting rid of f and f' with the help of linearity (we can only do this 
 from the symmetric version! because we need disjointness in order to swap)*)
@@ -324,6 +334,12 @@ proof-
   apply(intro ex_cong1) by fastforce 
 qed
 
+lemma Lam_Inj_linear_vvsubst: 
+assumes "rigid (any::'a::var)" "linear (xs::('a::var) list)" "linear xs'"
+shows "Lam xs t = Lam xs' t' \<longleftrightarrow> 
+(sameShape xs xs' \<and> t' = vvsubst (match xs xs') t)"
+sorry
+
 (* Most user-friendly (lightest) versions -- 
 do not make sense for lists, but work for linear types: *)
 corollary Lam_Inj_sym_linearType: 
@@ -343,6 +359,13 @@ shows "Lam (xs::'a::var list) t = Lam xs' t' \<longleftrightarrow>
   sameShape ys xs \<and> sameShape ys xs' \<and>  
   vvsubst (match xs ys) t = vvsubst (match xs' ys) t')"
 apply(subst Lam_Inj_sym_linear_vvsubst) using assms by auto
+
+corollary Lam_Inj_linearType_vvsubst: 
+assumes "rigid (any::'a::var)" and linearType: "\<And>(xs::'a::var list). linear xs"
+shows "Lam xs t = Lam xs' t' \<longleftrightarrow> 
+(sameShape xs xs' \<and> t' = vvsubst (match xs xs') t)"
+using Lam_Inj_linear_vvsubst[OF assms(1)] sorry
+(* apply(subst Lam_Inj_linear_vvsubst[OF assms(1)]) using assms by auto *)
 
 (* The above instantiates nicely to:
 -- lambda-terms

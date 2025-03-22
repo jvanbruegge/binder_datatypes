@@ -184,71 +184,12 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
       ||>> apfst hd o mk_Frees "p" [rho]
       ||>> apfst hd o mk_Frees "P" [param_Ts @ [rho] ---> @{typ bool}];
 
-    fun mk_map_comb name mr_bnf fs =
-      let
-        val mapx = case mr_bnf of
-          Inl mrbnf => MRBNF_Def.map_of_mrbnf mrbnf
-          | Inr (Inl bnf) => BNF_Def.map_of_bnf bnf
-          | Inr (Inr sugar) => #permute (hd (filter (fn quot =>
-            fst (dest_Type (#T quot)) = name
-          ) (#quotient_fps sugar)))
-        val Ts = fst (split_last (Term.binder_types (fastype_of mapx)));
-        val tyenv = Sign.typ_match (Proof_Context.theory_of no_defs_lthy) (
-          Ts ---> @{typ bool},
-          map fastype_of fs ---> @{typ bool}
-        ) Vartab.empty;
-        val mapx = Envir.subst_term (tyenv, Vartab.empty) mapx;
-      in if forall (fn Const (@{const_name id}, _) => true | _ => false) fs then
-        HOLogic.id_const (body_type (fastype_of mapx))
-      else Term.list_comb (mapx, fs) end
 
-    fun build_permute_for fs xs T =
-      let fun go fs xs T =
-        let val idx = find_index (curry (op=) T) xs;
-        in if idx >= 0 then ([], nth fs idx) else
-        case T of
-        Type (s, Ts) =>
-          let val mr_bnf_opt = case MRBNF_Def.mrbnf_of no_defs_lthy s of
-            SOME mrbnf => SOME (Inl mrbnf)
-            | NONE => (case BNF_Def.bnf_of no_defs_lthy s of
-              SOME bnf => SOME (Inr (Inl bnf))
-              | NONE => (case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
-                SOME sugar => SOME (Inr (Inr sugar))
-                | NONE => NONE
-              ))
-          in case mr_bnf_opt of
-            NONE => ([], HOLogic.id_const T)
-            | SOME mr_bnf =>
-              let
-                val (mr_bnfs, fs) = split_list (map (build_permute_for fs xs) Ts);
-                val final = not (exists (fn Free _ => false | Const (@{const_name id}, _) => false | _ => true) fs);
-                val mr_bnf = if final then case MRBNF_FP_Def_Sugar.fp_result_of no_defs_lthy s of
-                  SOME sugar => Inr (Inr sugar)
-                  | NONE => mr_bnf
-                else mr_bnf;
-                val mr_bnfs = fold (union ((op=) o apply2 fst)) mr_bnfs [];
-                val perm = mk_map_comb s mr_bnf fs
-              in (if member (op=) (map fst mr_bnfs) s then (mr_bnfs, perm) else ((s, mr_bnf) :: mr_bnfs, perm)) end
-          end
-        | _ => ([], HOLogic.id_const T)
-        end
-      in case try dest_funT T of
-        NONE => go fs xs T
-        | SOME (T1, T2) =>
-          let
-            val (mr_bnfs1, perm1) = go fs xs T2;
-            val (mr_bnfs2, perm2) = go (map mk_inv fs) xs T1;
-          in (union ((op=) o apply2 fst) mr_bnfs1 mr_bnfs2,
-            Term.abs ("g", T) (Term.abs ("x", T1)
-              (perm1 $ (Bound 1 $ (perm2 $ Bound 0)))
-            )
-          ) end
-      end;
 
     val var_Ts = map HOLogic.dest_setT bind_Ts;
     val (mr_bnfs', raw_perms) = split_list (map2 (fn s => fn T => if s = "_" then
       let
-        val (mr_bnfs, perm) = build_permute_for gs var_Ts T;
+        val (mr_bnfs, perm) = MRBNF_Sugar.build_permute_for no_defs_lthy gs var_Ts T;
       in (mr_bnfs, Inl (fold_rev (Term.absfree o dest_Free) gs perm)) end
       else ([], Inr (Syntax.read_term no_defs_lthy s))
     ) (perms @ replicate (length param_Ts - length perms) "_") param_Ts);
@@ -731,7 +672,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
                         fun dest_AbsT (Abs (_, T, _)) = T
                         val (thm, j) = nth forward_quant x;
                         val T = dest_AbsT (snd (Term.dest_comb (HOLogic.dest_Trueprop concl)))
-                        val (_, t) = build_permute_for fs var_Ts T;
+                        val (_, t) = MRBNF_Sugar.build_permute_for no_defs_lthy fs var_Ts T;
                         val t = case t of
                           Const (@{const_name id}, T) => Term.abs ("x", fst (dest_funT T)) (Bound 0)
                           | _ => t;
@@ -744,7 +685,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
                   val (_, ts) = apfst (map snd o flat) (split_list (map (fn x => case find_index (curry (op=) (fastype_of x)) param_Ts of
                     ~1 => (case find_index (curry (op=) (fastype_of x)) var_Ts of
-                      ~1 => apsnd (fn t => t $ x) (build_permute_for fs var_Ts (fastype_of x))
+                      ~1 => apsnd (fn t => t $ x) (MRBNF_Sugar.build_permute_for no_defs_lthy fs var_Ts (fastype_of x))
                       | n => ([], nth fs n $ x))
                     | n => ([], Term.list_comb (fst (nth perms n), fs) $ x)
                   ) args));

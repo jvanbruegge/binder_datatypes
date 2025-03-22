@@ -1,5 +1,5 @@
 theory MRBNF_Recursor
-  imports MRBNF_FP
+  imports MRBNF_FP Swapping
   keywords "binder_datatype" :: thy_defn
     and "binder_inductive" :: thy_goal_defn
     and "binds"

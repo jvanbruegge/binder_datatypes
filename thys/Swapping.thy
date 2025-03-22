@@ -11,7 +11,7 @@ lemma bij_swap[simp]: "bij (a \<leftrightarrow> b)"
 lemma supp_swap: "supp (a \<leftrightarrow> b) \<subseteq> {a, b}"
   by (metis insert_iff not_in_supp_alt subsetI swap_def)
 
-lemma supp_swap_bound: "infinite (UNIV::'a set) \<Longrightarrow> |supp (a \<leftrightarrow> b)| <o |UNIV::'a set|"
+lemma supp_swap_bound[simp]: "infinite (UNIV::'a set) \<Longrightarrow> |supp (a \<leftrightarrow> b)| <o |UNIV::'a set|"
   using card_of_subset_bound[OF supp_swap] by (metis finite.emptyI finite_insert finite_ordLess_infinite2)
 
 lemma swap_simps[simp]: "(a \<leftrightarrow> b) a = b" "(a \<leftrightarrow> b) b = a"

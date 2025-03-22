@@ -16,9 +16,11 @@ lemma card_ivar_dstream_nat: "|UNIV:: ivar set| =o |UNIV :: (nat \<times> ivar) 
 proof-
   have "|UNIV :: (nat \<times> ivar) set| =o |(UNIV::nat set) \<times> (UNIV:: ivar set)|" by auto
   also have "|(UNIV::nat set) \<times> (UNIV:: ivar set)| =o |UNIV:: ivar set|"
-  apply(subst card_of_Times_infinite_simps)   
-  using More_Stream.infinite  
-  using More_Stream.infinite infinite_iff_card_of_nat by auto 
+  apply(subst card_of_Times_infinite_simps)
+  using More_Stream.infinite infinite_iff_card_of_nat
+     apply auto[2]
+  using Field_natLeq var_class.large apply force
+  by (rule TrueI)
   finally show ?thesis using ordIso_symmetric by auto
 qed
  
@@ -115,7 +117,7 @@ using card_super
 by (meson card_of_nat card_var countable_card_of_nat ordIso_iff_ordLeq ordIso_transitive ordIso_transitive)
  
 lemma super_infinite: "infinite {xs . super xs}"
-using card_super infinite_var by auto
+using card_super infinite_var card_of_ordIso_finite by blast
 
 lemma bij_superOf: "bij_betw superOf UNIV {xs. super xs}"
 by (smt (verit) UNIV_I bij_betwI' mem_Collect_eq superOf_inj super_imp_superOf super_superOf)

@@ -70,10 +70,10 @@ proof-
   using super_disj[OF xs xsa] by auto
 
   show ?thesis apply(rule exI[of _ "irrename f ea'"]) apply(intro conjI)
-    subgoal unfolding ee' unfolding iLam_inject apply(rule exI[of _ f]) apply(intro conjI)
+    subgoal unfolding ee' unfolding iterm.inject apply(rule exI[of _ f]) apply(intro conjI)
       subgoal by fact
       subgoal by fact
-      subgoal apply simp using f(5) fv unfolding id_on_def by auto
+      subgoal using f(5) fv unfolding id_on_def by auto
       subgoal by fact
       subgoal .. . 
     subgoal unfolding e using f(1) f(2) f(3) r irrename_reneqv by blast . 
@@ -340,7 +340,7 @@ proof-
   show ?thesis apply(intro exI[of _ xs''] exI[of _ "irrename g e'"], safe)
     subgoal by fact
     subgoal using e' g(1) g(2) g(3) irrename_uniform by presburger
-    subgoal unfolding il xs'' iLam_inject apply(rule exI[of _ g], safe)
+    subgoal unfolding il xs'' iterm.inject apply(rule exI[of _ g], safe)
       subgoal by fact subgoal by fact
       subgoal using g(5) unfolding id_on_def apply simp  
         by (metis B DiffI UnCI disjoint_iff il iterm.set(3) xxs''(2))
@@ -382,7 +382,7 @@ proof-
   using bs ss u' uniform_iLam_imp_avoid by blast
 
   obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (ILC.FFVars (iLam xs e1)) f" 
-  "dsmap f xs = xs'" "irrename f e1 = e1'" using il[unfolded iLam_inject] by auto
+  "dsmap f xs = xs'" "irrename f e1 = e1'" using il[unfolded iterm.inject] by auto
   
   show ?thesis apply(intro exI[of _ xs'] exI[of _ "irrename f e1"], safe)
     subgoal by fact

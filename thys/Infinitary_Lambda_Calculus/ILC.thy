@@ -233,6 +233,8 @@ lemma itvsubst_VVr_func[simp]: "itvsubst VVr t = t"
 
 thm iterm.strong_induct[of "\<lambda>\<rho>. A" "\<lambda>t \<rho>. P t", rule_format, no_vars]
 
+lemmas iterm.inject(3)[simp del]
+
 lemma itvsubst_cong:
 assumes f: "|SSupp f| <o |UNIV::ivar set|" and g: "|SSupp g| <o |UNIV::ivar set|"
 and eq: "(\<And>z. (z::ivar) \<in> FFVars P \<Longrightarrow> f z = g z)"
@@ -248,16 +250,8 @@ qed (auto simp: IImsupp_def iterm.UN_bound iterm.Un_bound iterm.set_bd_UNIV f g)
 
 (* *)
 
-lemma iLam_inject: "(iLam xs e = iLam xs' e') = (\<exists>f. bij f \<and> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set|
-  \<and> id_on (FFVars (iLam xs e)) f \<and> dsmap f xs = xs' \<and> irrename f e = e')"
-  unfolding iterm.set
-  unfolding iLam_def iterm.TT_inject0 map_iterm_pre_def comp_def Abs_iterm_pre_inverse[OF UNIV_I]
-    map_sum_def sum.case map_prod_def prod.case id_def Abs_iterm_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
-    set3_iterm_pre_def sum_set_simps Union_empty Un_empty_left prod_set_simps cSup_singleton set2_iterm_pre_def
-    Un_empty_right UN_single by auto
-
 lemma iLam_same_inject[simp]: "iLam (xs::ivar dstream) e = iLam xs e' \<longleftrightarrow> e = e'"
-unfolding iLam_inject apply safe
+unfolding iterm.inject apply safe
 apply(rule iterm.permute_cong_id[symmetric])
 unfolding id_on_def by auto (metis bij_betw_def bij_imp_bij_betw dsnth_dsmap dtheN)
 
@@ -368,9 +362,6 @@ corollary SSupp_upd_VVr_bound[simp,intro!]: "|SSupp (VVr(a:=(t::itrm)))| <o |UNI
 lemma SSupp_upd_iVar_bound[simp,intro!]: "|SSupp (iVar(a:=(t::itrm)))| <o |UNIV::ivar set|"
 using SSupp_upd_VVr_bound by auto
 
-lemma supp_swap_bound[simp,intro!]: "|supp (id(x::ivar := xx, xx := x))| <o |UNIV:: ivar set|"
-by (simp add: cinfinite_imp_infinite supp_swap_bound iterm.UNIV_cinfinite)
-
 lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: ivar set|"
 unfolding IImsupp_def
 by (simp add: iterm.Un_bound iterm.set_bd_UNIV var_iterm_pre_class.UN_bound)
@@ -459,13 +450,15 @@ using SSupp_irrename_bound s(1) s(2) by auto
 
 (* Action of swapping (a particular renaming) on variables *)
 
-lemma irrename_swap_Var1[simp]: "irrename (id(x := xx, xx := x)) (iVar (x::ivar)) = iVar xx"
+lemmas infinite_UNIV[simp]
+
+lemma irrename_swap_Var1[simp]: "irrename (x \<leftrightarrow> xx) (iVar (x::ivar)) = iVar xx"
 apply(subst iterm.permute(1)) by auto
-lemma irrename_swap_Var2[simp]: "irrename (id(x := xx, xx := x)) (iVar (xx::ivar)) = iVar x"
+lemma irrename_swap_Var2[simp]: "irrename (x \<leftrightarrow> xx) (iVar (xx::ivar)) = iVar x"
 apply(subst iterm.permute(1)) by auto
-lemma irrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> irrename (id(x := xx, xx := x)) (iVar (z::ivar)) = iVar z"
+lemma irrename_swap_Var3[simp]: "z \<notin> {x,xx} \<Longrightarrow> irrename (x \<leftrightarrow> xx) (iVar (z::ivar)) = iVar z"
 apply(subst iterm.permute(1)) by auto
-lemma irrename_swap_Var[simp]: "irrename (id(x := xx, xx := x)) (iVar (z::ivar)) =
+lemma irrename_swap_Var[simp]: "irrename (x \<leftrightarrow> xx) (iVar (z::ivar)) =
  iVar (if z = x then xx else if z = xx then x else z)"
 apply(subst iterm.permute(1)) by auto
 
@@ -551,7 +544,7 @@ qed
 (* Unary substitution versus swapping: *)
 lemma itvsubst_Var_irrename:
 assumes xx: "xx \<notin> FFVars e1 - {x}"
-shows "itvsubst (iVar((x::ivar) := e2)) e1 = itvsubst (iVar(xx := e2)) (irrename (id(x := xx, xx := x)) e1)"
+shows "itvsubst (iVar((x::ivar) := e2)) e1 = itvsubst (iVar(xx := e2)) (irrename (x \<leftrightarrow> xx) e1)"
 proof-
   show ?thesis using xx
   apply(induct e1 rule: iterm.fresh_induct[where A = "{x,xx} \<union> FFVars e2"])
@@ -561,21 +554,21 @@ proof-
     subgoal for ys t apply simp apply(subgoal_tac
       "dsset ys \<inter> IImsupp (iVar(x := e2)) = {} \<and> dsset ys \<inter> IImsupp (iVar(xx := e2)) = {}")
       subgoal
-        by simp (metis SSupp_upd_iVar_bound dstream_map_ident_strong fun_upd_apply id_apply iterm.subst(3))
+        by simp (metis SSupp_upd_iVar_bound dstream_map_ident_strong iterm.subst(3) swap_simps(3))
       subgoal unfolding IImsupp_def imsupp_def SSupp_def supp_def by auto . .
 qed
 
 (* *)
 
 (* Swapping and unary substitution, as abbreviations: *)
-abbreviation "swap t (x::ivar) y \<equiv> irrename (id(x:=y,y:=x)) t"
+abbreviation "iswap t (x::ivar) y \<equiv> irrename (x \<leftrightarrow> y) t"
 abbreviation "usub t (y::ivar) x \<equiv> ivvsubst (id(x:=y)) t"
 
 (* *)
 
 lemma usub_swap_disj:
 assumes "{u,v} \<inter> {x,y} = {}"
-shows "usub (swap t u v) x y = swap (usub t x y) u v"
+shows "usub (iswap t u v) x y = iswap (usub t x y) u v"
 proof-
   note iterm.vvsubst_permute[simp del]
   show ?thesis using assms
@@ -584,27 +577,28 @@ proof-
   apply(subst iterm.vvsubst_permute[symmetric]) apply auto
   apply(subst iterm.map_comp) apply auto
   apply(rule iterm.map_cong0)
-  using iterm_pre.supp_comp_bound by auto
+    using iterm_pre.supp_comp_bound apply (auto simp: iterm_pre.supp_comp_bound)
+    by (smt (verit, ccfv_threshold) swap_simps(1,2,3))
 qed
 
 lemma irrename_o_swap:
-"irrename (id(y::ivar := yy, yy := y) o id(x := xx, xx := x)) t =
- swap (swap t x xx) y yy"
+"irrename ((y::ivar) \<leftrightarrow> yy o x \<leftrightarrow> xx) t =
+ iswap (iswap t x xx) y yy"
 apply(subst iterm.permute_comp[symmetric])
 by auto
 
 (* *)
 
-lemma swap_simps[simp]: "swap (iVar z) (y::ivar) x = iVar (sw z y x)"
-"swap (iApp t ss) (y::ivar) x = iApp (swap t y x) (smap (\<lambda>s. swap s y x) ss)"
-"swap (iLam vs t) (y::ivar) x = iLam (dsmap (\<lambda>v. sw v y x) vs) (swap t y x)"
-unfolding sw_def by simp_all (metis eq_id_iff fun_upd_apply)
+lemma iswap_simps[simp]: "iswap (iVar z) (y::ivar) x = iVar ((x \<leftrightarrow> y) z)"
+"iswap (iApp t ss) (y::ivar) x = iApp (iswap t y x) (smap (\<lambda>s. iswap s y x) ss)"
+"iswap (iLam vs t) (y::ivar) x = iLam (dsmap (y \<leftrightarrow> x) vs) (iswap t y x)"
+ by simp_all
 
-lemma FFVars_swap[simp]: "FFVars (swap t y x) = (\<lambda>u. sw u x y) ` (FFVars t)"
-apply(subst iterm.FVars_permute) by (auto simp: sw_def)
+lemma FFVars_swap[simp]: "FFVars (iswap t y x) = (x \<leftrightarrow> y) ` (FFVars t)"
+apply(subst iterm.FVars_permute) by (auto simp: swap_sym)
 
-lemma FFVars_swap'[simp]: "{x::ivar,y} \<inter> FFVars t = {} \<Longrightarrow> swap t x y = t"
-apply(rule iterm.permute_cong_id) by auto
+lemma FFVars_swap'[simp]: "{x::ivar,y} \<inter> FFVars t = {} \<Longrightarrow> iswap t x y = t"
+apply(rule iterm.permute_cong_id) apply auto by (metis swap_def)
 
 (* *)
 
@@ -673,7 +667,7 @@ proof-
     subgoal using f unfolding V_def by auto
     subgoal using f by auto
     subgoal using f unfolding V_def id_on_def by auto
-    subgoal unfolding iLam_inject apply(rule exI[of _ f]) using f unfolding V_def by auto .
+    subgoal unfolding iterm.inject apply(rule exI[of _ f]) using f unfolding V_def by auto .
 qed
 
 lemma iLam_refresh:
@@ -730,30 +724,28 @@ apply(induct t rule: iterm.fresh_induct[where A = "{x,u} \<union> supp \<sigma>"
   subgoal using assms apply(subst usub_iLam) apply auto apply(subst usub_iLam) by (auto simp: bij_implies_inject) .
 
 lemma sw_sb:
-"sw (sb z u x) z1 z2 = sb (sw z z1 z2) (sw u z1 z2) (sw x z1 z2)"
-unfolding sb_def sw_def by auto
+"(z1 \<leftrightarrow> z2) (sb z u x) = sb ((z1 \<leftrightarrow> z2) z) ((z1 \<leftrightarrow> z2) u) ((z1 \<leftrightarrow> z2) x)"
+unfolding sb_def swap_def by auto
 
 lemma swap_usub:
-"swap (usub t (u::ivar) x) z1 z2 = usub (swap t z1 z2) (sw u z1 z2) (sw x z1 z2)"
+"iswap (usub t (u::ivar) x) z1 z2 = usub (iswap t z1 z2) ((z1 \<leftrightarrow> z2) u) ((z1 \<leftrightarrow> z2) x)"
 apply(induct t rule: iterm.fresh_induct[where A = "{x,u,z1,z2}"])
   subgoal by (meson emp_bound le_UNIV_insert)
   subgoal
-  apply(subst swap_simps) apply(subst usub_simps) by (auto simp: sb_def)
-  subgoal apply(subst swap_simps | subst usub_simps)+
-  unfolding stream.map_comp
-  by (smt (verit, best) comp_apply stream.map_cong0)
-  subgoal apply(subst swap_simps | subst usub_simps)+
+  apply(subst iswap_simps) apply(subst usub_simps) apply (auto simp: sb_def swap_sym) sledgehammer
+    by (metis swap_def)+
+  apply (meson Swapping.bij_swap Swapping.supp_swap_bound infinite_UNIV irrename_usub)
+  subgoal apply(subst iswap_simps | subst usub_simps)+
     subgoal by auto
-    subgoal apply(subst swap_simps | subst usub_simps)+
-      subgoal unfolding sw_def sb_def apply simp
+    subgoal apply(subst iswap_simps | subst usub_simps)+
+      subgoal unfolding swap_def sb_def apply simp
         by (smt (verit) dstream_map_ident_strong)
       unfolding sw_sb by presburger . .
 
 lemma usub_refresh:
 assumes "xx \<notin> FFVars t \<or> xx = x"
-shows "usub t u x = usub (swap t x xx) u xx"
+shows "usub t u x = usub (iswap t x xx) u xx"
 proof-
-  note iterm.vvsubst_permute[simp del]
   show ?thesis using assms
   apply(subst iterm.vvsubst_permute[symmetric]) apply simp
     subgoal by auto
@@ -761,18 +753,20 @@ proof-
       subgoal by auto
       subgoal by auto
       subgoal apply(rule iterm.map_cong0)
-      using iterm_pre.supp_comp_bound by auto . .
+      using iterm_pre.supp_comp_bound apply (auto simp: iterm.supp_comp_bound)
+      by (smt (verit, best) swap_simps(3))+ . .
 qed
 
 lemma swap_commute:
 "{y,yy} \<inter> {x,xx} = {} \<Longrightarrow>
- swap (swap t y yy) x xx = swap (swap t x xx) y yy"
+ iswap (iswap t y yy) x xx = iswap (iswap t x xx) y yy"
 apply(subst iterm.permute_comp)
 apply auto
 apply(subst iterm.permute_comp)
 apply auto
 apply(rule iterm.permute_cong)
-by (auto simp: iterm_pre.supp_comp_bound)
+      apply (auto simp: iterm_pre.supp_comp_bound)
+  by (metis swap_def)
 
 
 (*   *)
@@ -846,10 +840,6 @@ by (metis bij_betw_def bij_imp_bij_betw dsmap_alt dtheN imkSubst_dsnth)
 
 (* *)
 
-thm iLam_inject[no_vars]
-
-thm ex_avoiding_bij
-
 lemma iLam_inject_avoid:
 assumes X: "|X::ivar set| <o |UNIV::ivar set|" "X \<inter> dsset xs = {}" "X \<inter> dsset xs' = {}"
 shows
@@ -860,7 +850,7 @@ proof
   assume "iLam xs e = iLam xs' e'"
   then obtain f where
   f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs e)) f" "dsmap f xs = xs'" "irrename f e = e'"
-  unfolding iLam_inject by auto
+  unfolding iterm.inject by auto
   have bf: "bij_betw f (dsset xs) (dsset xs')"
   using f unfolding bij_betw_def bij_def inj_on_def
   using dstream.set_map f by blast
@@ -883,7 +873,7 @@ proof
     apply meson
     using f(2) apply force
     by (smt (verit) Diff_iff Int_emptyD UnCI bf bij_betw_iff_bijections iterm.set(3)) . .
-qed(unfold iLam_inject, auto)
+qed(unfold iterm.inject, auto)
 
 
 (* *)
@@ -893,7 +883,7 @@ assumes il: "iLam (xs::ivar dstream) e1 = iLam xs' e1'"
 shows "itvsubst (imkSubst xs es2) e1 = itvsubst (imkSubst xs' es2) e1'"
 proof-
   obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (ILC.FFVars (iLam xs e1)) f"
-  and 0: "xs' = dsmap f xs" "e1' = irrename f e1" using il[unfolded iLam_inject] by auto
+  and 0: "xs' = dsmap f xs" "e1' = irrename f e1" using il[unfolded iterm.inject] by auto
   show ?thesis unfolding 0 apply(subst irrename_eq_itvsubst_iVar')
     subgoal by fact subgoal by fact
     subgoal apply(subst itvsubst_comp)
@@ -911,8 +901,6 @@ qed
 
 (* RECURSOR PREPARATIONS: *)
 
-thm iLam_inject[no_vars]
-
 lemma iLam_inject_strong:
 assumes il: "iLam (xs::ivar dstream) e = iLam xs' e'"
 and ds: "dsset xs \<inter> dsset xs' = {}"
@@ -923,7 +911,7 @@ shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and>
 proof-
   obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|"  "dsmap f xs = xs'"
   and ff: "id_on (FFVars (iLam xs e)) f" "irrename f e = e'"
-  using assms unfolding iLam_inject by auto
+  using assms unfolding iterm.inject by auto
   have bf: "bij_betw f (dsset xs) (dsset xs')"
   by (metis bij_imp_bij_betw dstream.set_map f)
   have bif: "bij_betw (inv f) (dsset xs') (dsset xs)"
@@ -949,8 +937,8 @@ proof-
         using ds by simp (metis Int_emptyD bij_betw_apply)
       subgoal using f
         by (meson \<open>bij g\<close> \<open>|supp g| <o |UNIV|\<close> dstream.map_cong g_def)
-      subgoal by (metis f ff \<open>bij g\<close> \<open>dsmap g xs = xs'\<close> \<open>id_on (FFVars (iLam xs e)) g\<close>
-        \<open>|supp g| <o |UNIV|\<close> iLam_inject iLam_same_inject) .
+      subgoal
+        by (metis \<open>bij g\<close> \<open>dsmap g xs = xs'\<close> \<open>id_on (FFVars (iLam xs e)) g\<close> \<open>|supp g| <o |UNIV|\<close> iLam_same_inject il iterm.inject(3) iterm.set(3)) .
 qed
 
 
@@ -1033,7 +1021,7 @@ proof-
 
    obtain h where h: "bij h" "|supp h| <o |UNIV::ivar set|"
    and hid: "id_on (FFVars (iLam xs e)) h" "dsmap h xs = xs'" and e': "e' = irrename h e"
-   using il unfolding iLam_inject by auto
+   using il unfolding iterm.inject by auto
 
    have 000: "dsmap (g' o h) xs = dsmap g xs"
      by (metis dstream.map_comp g'(1) g'(2) g'(6) g(6) h(1) h(2) hid(2))
@@ -1472,7 +1460,7 @@ next
     "id_on (FFVars (iLam xs t)) f "
     and zs: "dsmap f xs = xs'"
     and t': "t' = irrename f t"
-    using 0(2) unfolding iLam_inject by auto
+    using 0(2) unfolding iterm.inject by auto
 
     have fvb't': "FVarsB b' \<subseteq> FFVars t'"
     using iLam2[OF f(1,2), unfolded t'[symmetric], OF 0(1)] .
@@ -1501,7 +1489,7 @@ next
     obtain g where g: "bij g" "|supp g| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs t)) g"
     and z: "dsmap g xs = xs'"
     and t': "t' = irrename g t"
-    using 0(2) unfolding iLam_inject by auto
+    using 0(2) unfolding iterm.inject by auto
 
     have RR: "R (iLam (dsmap f xs') (irrename f t')) (iLamB (dsmap f xs') (renB f b'))"
     apply(rule R.iLam) unfolding t' apply(rule iLam3)

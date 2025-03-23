@@ -429,6 +429,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val bfrees = map (TFree o fst) (
       take (length (#bfree_vars res)) (drop (length (#vars spec) - length (#bfree_vars res) - nrecs) (#vars spec))
     );
+    val rec_bounds = map (nth rec_vars) (distinct (op=) (maps snd (#binding_rel spec)));
 
     (* TODO: Use mrbnf sets here (only relevant for passive variables) *)
     val ((bset_optss, setsss), set_simpss) = apfst split_list (split_list (map (fn FVars =>
@@ -546,26 +547,34 @@ fun create_binder_datatype (spec : spec) lthy =
 
         val sets = if null bound_tys then [] else map (fn f =>
           the (List.find (fn t => HOLogic.dest_setT (fastype_of t) = body_type (fastype_of f))
-            (map (Term.subst_atomic_types replace o hd) setss)
+            (map (Term.subst_atomic_types replace o hd o filter (fn t => case t of
+              Const (@{const_name minus}, _) $ _ $ _ => true
+              | _ => false
+            )) setss)
           )
         ) fs;
         val id_ons = map2 mk_id_on sets fs;
 
-        val (mr_bnfs, permutes) = if null bound_tys then (NONE, NONE) else
-          map_prod SOME SOME (split_list (map (fn T =>
+        val (mr_bnfs, permutes) = split_list (map (fn T =>
+          let val tfrees = map TFree (Term.add_tfreesT T []);
+          in if null (inter (op=) (bounds @ rec_bounds @ bfrees) tfrees) then (NONE, NONE) else map_prod SOME SOME (
             build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (Term.typ_subst_atomic replace T)
-          ) tys));
-        val mr_bnfs = Option.map (map snd o Library.distinct ((op=) o apply2 fst) o flat) mr_bnfs;
+          ) end
+        ) tys);
+        val mr_bnfs = Library.distinct ((op=) o apply2 fst) (flat (map_filter I mr_bnfs));
+
+        val vvsubst_permutes = map_filter (Option.map #vvsubst_permute o MRBNF_VVSubst.vvsubst_result_of lthy o fst) mr_bnfs;
+
+        val mr_bnfs = map snd mr_bnfs;
         fun map_cong0_of_mr_bnf (Inl mrbnf) = [Drule.rotate_prems (2 * MRBNF_Def.free_of_mrbnf mrbnf + 4 * MRBNF_Def.bound_of_mrbnf mrbnf) (MRBNF_Def.map_cong0_of_mrbnf mrbnf)]
           | map_cong0_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_cong0_of_bnf bnf]
           | map_cong0_of_mr_bnf (Inr (Inr sugar)) = map (fn quot => Drule.rotate_prems (4 * length (#FVarss quot)) (#permute_cong (#inner quot))) (#quotient_fps sugar);
 
         val rhs = fold_rev (mk_ex o dest_Free) fs (fold_rev (curry HOLogic.mk_conj)
           (maps (fn f => [mk_bij f, mk_supp_bound f]) fs @ id_ons)
-          (foldr1 HOLogic.mk_conj (case permutes of
-            NONE => map2 (curry HOLogic.mk_eq) xs ys
-            | SOME permutes => (@{map 3} (fn x => fn y => fn t => HOLogic.mk_eq (t $ x, y)) xs ys permutes)
-          ))
+          (foldr1 HOLogic.mk_conj (@{map 3} (fn x => fn y => fn t => HOLogic.mk_eq (
+            the_default I (Option.map (fn t => fn t' => t $ t') t) x, y
+          )) xs ys permutes))
         );
 
         val goal = mk_Trueprop_eq (
@@ -620,11 +629,12 @@ fun create_binder_datatype (spec : spec) lthy =
           ] else rtac ctxt refl ORELSE' EVERY' [
             rtac ctxt iffI,
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+            K (Local_Defs.unfold0_tac ctxt vvsubst_permutes),
             REPEAT_DETERM o rtac ctxt exI,
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
             hyp_subst_tac ctxt,
             REPEAT_DETERM o EVERY' [
-              resolve_tac ctxt (maps map_cong0_of_mr_bnf (the mr_bnfs)),
+              resolve_tac ctxt (maps map_cong0_of_mr_bnf mr_bnfs),
               REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [
                 rtac ctxt @{thm trans[OF id_apply]},
                 rtac ctxt sym,
@@ -638,10 +648,11 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
             REPEAT_DETERM o FIRST' [
               resolve_tac ctxt @{thms supp_id_bound bij_id id_on_empty id_on_id},
-              assume_tac ctxt
+              assume_tac ctxt,
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map (fn thm => thm RS sym) vvsubst_permutes)) THEN' assume_tac ctxt
             ]
           ]
-        ])
+        ]);
 
         val binder_xs = @{map_filter 3} (fn T => fn x => fn y =>
           Option.map (fn b => (b, (x, y))) (List.find (curry (op=) T) bounds)
@@ -653,22 +664,35 @@ fun create_binder_datatype (spec : spec) lthy =
         val inject' = if not (null binder_xs) andalso Library.distinct ((op=) o apply2 fst) binder_xs = binder_xs then
           let
             val fs = map (mk_swap o snd) binder_xs;
-            val (xs', ys') = split_list (@{map_filter 2} (fn x => fn y =>
-              if member (op=) (map (fst o snd) binder_xs) x then NONE else SOME (x, y)
-            ) xs ys);
-            val (mr_bnfs, permutes) = split_list (map (fn x =>
-              build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (fastype_of x)
-            ) xs');
-            val freshs = map2 (fn f => fn id_on =>
-              let val [x, y] = snd (Term.strip_comb f);
+            val (xs', (ys', Ts')) = apsnd split_list (split_list (@{map_filter 3} (fn x => fn y => fn T =>
+              if member (op=) (map (fst o snd) binder_xs) x then NONE else SOME (x, (y, T))
+            ) xs ys tys));
+            val (mr_bnfs, permutes) = split_list (map2 (fn x => fn T =>
+              if null (inter (op=) (bounds @ rec_bounds @ bfrees) (map TFree (Term.add_tfreesT T []))) then (NONE, NONE)
+              else map_prod SOME SOME (build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (fastype_of x))
+            ) xs' Ts');
+            val mr_bnfs = map_filter I mr_bnfs;
+            val id_on_sets = map_filter (fn id_on =>
+              let val set = hd (snd (Term.strip_comb id_on));
+              in case set of
+                Const (@{const_name minus}, _) $ A $ _ => SOME A
+                | _ => NONE
+              end
+            ) id_ons;
+
+            val freshs = map_filter (fn f => Option.map (fn set =>
+              let
+                val [x, y] = snd (Term.strip_comb f);
               in HOLogic.mk_disj (
-                HOLogic.mk_not (HOLogic.mk_mem (y, hd (snd (Term.strip_comb (hd (snd (Term.strip_comb id_on))))))),
+                HOLogic.mk_not (HOLogic.mk_mem (y, set)),
                 HOLogic.mk_eq (x, y)
               ) end
-            ) fs id_ons;
+            ) (List.find (fn s => HOLogic.dest_setT (fastype_of s) = body_type (fastype_of f)) id_on_sets)) fs;
 
             val rhs =  foldr1 HOLogic.mk_conj (
-              freshs @ @{map 3} (fn x => fn y => fn t => HOLogic.mk_eq (t $ x, y)) xs' ys' permutes
+              freshs @ @{map 3} (fn x => fn y => fn t => HOLogic.mk_eq (
+                the_default I (Option.map (fn t => fn t' => t $ t') t) x, y
+              )) xs' ys' permutes
             );
             val goal = mk_Trueprop_eq (
               HOLogic.mk_eq (Term.list_comb (ctor, xs), Term.list_comb (ctor, ys)), rhs

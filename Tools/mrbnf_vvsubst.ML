@@ -5,6 +5,9 @@ sig
     vvsubst_permute: thm
   };
 
+  val vvsubst_result_of: local_theory -> string -> vvsubst_result option
+  val register_vvsubst_result: string -> vvsubst_result -> local_theory -> local_theory
+
   val mrbnf_of_quotient_fixpoint: binding list -> (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> local_theory -> (MRBNF_Def.mrbnf * vvsubst_result) list * local_theory
 end
@@ -21,6 +24,27 @@ type vvsubst_result = {
   vvsubst_ctor: thm,
   vvsubst_permute: thm
 };
+
+fun morph_vvsubst_result phi { vvsubst_ctor, vvsubst_permute } = {
+  vvsubst_ctor = Morphism.thm phi vvsubst_ctor,
+  vvsubst_permute = Morphism.thm phi vvsubst_permute
+};
+
+structure Data = Generic_Data (
+  type T = vvsubst_result Symtab.table;
+  val empty = Symtab.empty;
+  fun merge data : T = Symtab.merge (K true) data;
+);
+
+fun register_vvsubst_result name sugar =
+  Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
+    (fn phi => Data.map (Symtab.update (name, morph_vvsubst_result phi sugar)));
+
+fun vvsubst_result_of_generic context =
+  Option.map (morph_vvsubst_result (Morphism.transfer_morphism (Context.theory_of context)))
+  o Symtab.lookup (Data.get context);
+
+val vvsubst_result_of = vvsubst_result_of_generic o Context.Proof;
 
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));
@@ -2170,6 +2194,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       vvsubst_ctor = t1,
       vvsubst_permute = t2
     }) vvsubst_cctors vvsubst_permutes;
+
+    val lthy = @{fold 2} (register_vvsubst_result o fst o dest_Type o #T) (#quotient_fps fp_res) ress lthy;
 
   in ((xs ~~ ress), lthy) end;
 

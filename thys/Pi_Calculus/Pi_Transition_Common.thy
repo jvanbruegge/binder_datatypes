@@ -37,7 +37,8 @@ ML \<open>fun gen_fresh ctxt xs0 acts0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn 
   in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
 
 lemma isPerm_swap: "isPerm (id(x := y, y := x))"
-  by (auto simp: isPerm_def MRBNF_FP.supp_swap_bound infinite_UNIV)
+  unfolding isPerm_def
+  by (simp add: MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)
 
 lemma R_forw_subst: "R x y \<Longrightarrow> (\<And>x y. R x y \<Longrightarrow> R (f x) (g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x) z"
   by blast
@@ -79,13 +80,6 @@ proof-
   thus ?thesis by auto
 qed
 
-lemma Bout_inject: "(Bout x y t = Bout x' y' t') \<longleftrightarrow>
-  x = x' \<and>
-  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
-  \<and> id_on (FVars_term t - {y}) f \<and> f y = y' \<and> permute_term f t = t')"
-  by (auto 0 4 simp: id_on_def bij_implies_inject intro!: exI[of _ "id(y:=y', y':=y)"] term.permute_cong)
-declare Bout_inj[simp del]
-
 lemma ns_alt: "ns \<alpha> = bns \<alpha> \<union> fns \<alpha>"
   by (cases \<alpha>) auto
 
@@ -104,8 +98,9 @@ lemma bvars_rrename_bound_action[simp]: "bvars (rrename_bound_action f \<alpha>)
 
 lemma Cmt_rrename_bound_action: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> P = Cmt (rrename_bound_action f \<alpha>) (rrename f P)"
-  by (cases \<alpha>)
-    (force simp: Bout_inject id_on_def bij_implies_inject intro!: exI[of _ f] term.permute_cong_id[symmetric] term.permute_cong)+
+  apply (cases \<alpha>)
+  by (auto simp: Bout_inject Binp_inject swap_apply_fresh_bij2 id_on_def bij_implies_inject intro!: exI[of _ f] term.permute_cong_id[symmetric] term.permute_cong)+
+  
 
 lemma Cmt_rrename_bound_action_Par: "bij (f :: var \<Rightarrow> var) \<Longrightarrow> |supp f| <o |UNIV :: var set| \<Longrightarrow> id_on (FFVars P \<union> FFVars Q - bvars \<alpha>) f \<Longrightarrow>
   Cmt \<alpha> (P \<parallel> Q) = Cmt (rrename_bound_action f \<alpha>) (rrename f P \<parallel> rrename f Q)"

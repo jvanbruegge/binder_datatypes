@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory General_Customization</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory General_Customization</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="General_Customization.html"><span>General_Customization</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><span class="quoted"><span>"</span><a href="MRBNF_Recursor.html"><span>MRBNF_Recursor</span></a><span>"</span></span><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemma</span></span></span><span> </span><span class="entity_def" id="General_Customization.id_upd_same|fact"><span class="entity_def" id="General_Customization.id_upd_same|thm"><span>id_upd_same</span></span></span><span class="main"><span>[</span></span><span class="operator"><span>simp</span></span><span class="main"><span>]</span></span><span class="main"><span>:</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><a class="entity_ref" href="../../HOL/HOL/Fun.html#Fun.id|const"><span class="const"><span>id</span></span></a><span class="main"><a class="entity_ref" href="../../HOL/HOL/Fun.html#Fun.fun_upd|const"><span>(</span></a></span><span class="free"><span>y</span></span><span> </span><span class="main"><span>:=</span></span><span> </span><span class="free"><span>y</span></span><span class="main"><a class="entity_ref" href="../../HOL/HOL/Fun.html#Fun.fun_upd|const"><span>)</span></a></span><span> </span><span class="main"><a class="entity_ref" href="../../HOL/HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><a class="entity_ref" href="../../HOL/HOL/Fun.html#Fun.id|const"><span class="const"><span>id</span></span></a><span>"</span></span></span><span>
+  </span><span class="keyword1"><span class="command"><span>by</span></span></span><span> </span><a class="entity_ref" href="../../HOL/HOL/ISABELLE_HOME/src/Provers/clasimp.ML.html#HOL.auto|method"><span class="operator"><span>auto</span></span></a><span>
+
+</span><span class="keyword1"><span class="command"><span>lemmas</span></span></span><span> </span><a class="entity_ref" href="../Prelim/Prelim.html#Prelim.supp_inv_bound|fact"><span>supp_inv_bound</span></a><span class="main"><span>[</span></span><span class="operator"><span>simp</span></span><span class="main"><span>]</span></span><span>
+</span><span class="keyword1"><span class="command"><span>lemmas</span></span></span><span> </span><a class="entity_ref" href="Swapping.html#Swapping.bij_swap|fact"><span>bij_swap</span></a><span class="main"><span>[</span></span><span class="operator"><span>simp</span></span><span class="main"><span>]</span></span><span>
+</span><span class="keyword1"><span class="command"><span>lemmas</span></span></span><span> </span><a class="entity_ref" href="../Prelim/Prelim.html#Prelim.supp_id_bound|fact"><span>supp_id_bound</span></a><span class="main"><span>[</span></span><span class="operator"><span>simp</span></span><span class="main"><span>]</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemma</span></span></span><span> </span><span class="entity_def" id="General_Customization.fvars_subset_id_on|fact"><span class="entity_def" id="General_Customization.fvars_subset_id_on|thm"><span>fvars_subset_id_on</span></span></span><span class="main"><span>:</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><a class="entity_ref" href="../Prelim/Prelim.html#Prelim.supp|const"><span class="const"><span>supp</span></span></a><span> </span><span class="free"><span>f</span></span><span> </span><span class="main"><a class="entity_ref" href="../../HOL/HOL/Set.html#Set.subset_eq|const"><span>⊆</span></a></span><span> </span><span class="free"><span>A</span></span><span> </span><span class="main"><span>⟹</span></span><span> </span><a class="entity_ref" href="../Prelim/Prelim.html#Prelim.id_on|const"><span class="const"><span>id_on</span></span></a><span> </span><span class="main"><span>(</span></span><span class="free"><span>B</span></span><span> </span><span class="main"><a class="entity_ref" href="../../HOL/HOL/Groups.html#Groups.minus_class.minus|const"><span>-</span></a></span><span> </span><span class="free"><span>A</span></span><span class="main"><span>)</span></span><span> </span><span class="free"><span>f</span></span><span>"</span></span></span><span>
+  </span><span class="keyword1"><span class="command"><span>unfolding</span></span></span><span> </span><a class="entity_ref" href="../Prelim/Prelim.html#Prelim.supp_def|fact"><span>supp_def</span></a><span> </span><a class="entity_ref" href="../Prelim/Prelim.html#Prelim.id_on_def|fact"><span>id_on_def</span></a><span> </span><span class="keyword1"><span class="command"><span>by</span></span></span><span> </span><a class="entity_ref" href="../../HOL/HOL/ISABELLE_HOME/src/Provers/blast.ML.html#HOL.blast|method"><span class="operator"><span>blast</span></span></a><span>
+</span><span class="comment1"><span>(* lemma finite_singleton: "finite {x}" by blast *)</span></span><span>
+
+
+
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span></pre>
+</body>
+
+</html>

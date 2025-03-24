@@ -1664,7 +1664,7 @@ inductive match for \<sigma> where
     (\<And>l P v. (l, P) \<in>\<in> PP \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> match \<sigma> P v) \<Longrightarrow> match \<sigma> (PRec PP) (Rec VV)"
 
 definition "restrict \<sigma> A v x = (if x \<in> A then \<sigma> x else v x)"
-
+       
 lemma match_cong: "match \<sigma> p v \<Longrightarrow> (\<forall>x \<in> PVars p. \<sigma> x = \<tau> x) \<Longrightarrow> match \<tau> p v"
   by (induct p v rule: match.induct)
     (force simp: restrict_def values_lfin_iff Ball_def Bex_def intro!: match.intros)+

@@ -498,7 +498,7 @@ proof (induction "{||} :: ('a::var * \<tau>) fset" e \<tau> arbitrary: e' rule: 
     case (ST_Beta x \<tau> e e2')
     then have "{||} \<turnstile>\<^sub>t\<^sub>y App (Abs x \<tau> e) e2 : \<tau>\<^sub>2" using Ty_App Ty.Ty_App by fastforce
     have "{||} \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2" using Ty_App ST_Beta
-      by (smt (verit, ccfv_SIG) Abs_inject terms.inject Ty.cases \<tau>.inject terms.distinct(2, 4))
+      by (metis Ty_AbsE' \<tau>.inject all_not_fin_conv bot_fset.rep_eq image_is_empty terms.inject(2))
     then have "{||},x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" by (auto elim: Ty_AbsE')
     then have "{||} \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := e2')) e : \<tau>\<^sub>2" using substitution ST_Beta(1) Ty_App(3) unfolding fresh_def by fastforce
     then show ?thesis using ST_Beta by simp

@@ -401,22 +401,14 @@ binder_inductive deduct
           apply (erule bij_is_inj)
          apply (rule iffD2[OF image_is_empty])
          apply assumption
-
-        apply (subst All_def)+
-        apply (unfold ifol'.TT_inject0)
         apply (rule exI[of _ g])
         apply (rule conjI, assumption)+
         apply (rule conjI)
-
-         apply (unfold set3_ifol'_pre_def comp_def Abs_ifol'_pre_inverse[OF UNIV_I]
-            map_sum.simps map_prod_simp sum_set_simps prod_set_simps Un_empty cSup_singleton
-            Un_empty_left Un_empty_right Union_empty UN_single set2_ifol'_pre_def set\<^sub>k\<^sub>2.set_map
-            UN_singleton map_ifol'_pre_def
-            )
          apply (erule id_on_antimono)
          apply (rule Un_upper2)
         apply hypsubst
-        apply (rule refl)
+        apply (rule conjI)
+        apply (rule refl)+
         done
       done
 

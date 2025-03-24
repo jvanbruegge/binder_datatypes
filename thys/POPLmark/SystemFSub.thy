@@ -7,7 +7,6 @@ theory SystemFSub
     "Labeled_FSet"
 begin
 
-declare bij_swap[simp]
 declare supp_id_bound[simp]
 
 type_synonym label = string
@@ -22,16 +21,6 @@ binder_datatype 'a "typ" =
 
 declare supp_swap_bound[OF cinfinite_imp_infinite[OF typ.UNIV_cinfinite], simp]
 declare typ.permute_id[simp] typ.permute_id0[simp]
-
-lemma typ_inject:
-  "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FVars_typ T2 - {x}) f \<and> f x = y \<and> permute_typ f T2 = R2)"
-    apply (unfold TyVar_def Fun_def Forall_def typ.TT_inject0
-      set3_typ_pre_def comp_def Abs_typ_pre_inverse[OF UNIV_I] map_sum.simps sum_set_simps
-      cSup_singleton Un_empty_left Un_empty_right Union_empty image_empty empty_Diff map_typ_pre_def
-      prod.map_id set2_typ_pre_def prod_set_simps prod.set_map UN_single Abs_typ_pre_inject[OF UNIV_I UNIV_I]
-      sum.inject prod.inject map_prod_simp
-    )
-  by auto
 
 lemma Forall_rrename:
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|" shows "
@@ -49,18 +38,9 @@ lemma Forall_rrename:
   apply (rule refl)
   done
 
-lemma Forall_swap: "y \<notin> FVars_typ T2 - {x} \<Longrightarrow> Forall (x::'a::var) T1 T2 = Forall y T1 (permute_typ (id(x:=y,y:=x)) T2)"
-  apply (rule trans)
-   apply (rule Forall_rrename)
-     apply (rule bij_swap[of x y])
-    apply (rule supp_swap_bound)
-    apply (rule cinfinite_imp_infinite[OF typ.UNIV_cinfinite])
-  by auto
-
-lemma Forall_swapD: "Forall (x::'a::var) T1 T2 = Forall y T1' T2' \<Longrightarrow> T1 = T1' \<and> T2' = permute_typ (id(x:=y,y:=x)) T2"
-  unfolding typ_inject
-  apply (auto intro!: typ.permute_cong simp: id_on_def)
-  by (meson bij_implies_inject)
+lemma Forall_swapD: "Forall (x::'a::var) T1 T2 = Forall y T1' T2' \<Longrightarrow> T1 = T1' \<and> T2' = permute_typ (x \<leftrightarrow> y) T2"
+  unfolding typ.inject
+  by (auto intro!: typ.permute_cong simp: id_on_def)
 
 type_synonym ('a, 'b) \<Gamma> = "('b \<times> 'a typ) list"
 type_synonym 'a \<Gamma>\<^sub>\<tau> = "('a, 'a) \<Gamma>"
@@ -191,17 +171,17 @@ proof-
 qed
 
 lemma rrename_swap_FFvars[simp]: "x \<notin> FVars_typ T \<Longrightarrow> xx \<notin> FVars_typ T \<Longrightarrow>
-  permute_typ (id(x := xx, xx := x)) T = T"
-apply(rule typ.permute_cong_id) by auto
+  permute_typ (x \<leftrightarrow> xx) T = T"
+apply(rule typ.permute_cong_id) apply auto by (metis swap_def)
 
 lemma map_context_swap_FFVars[simp]:
 "\<forall>k\<in>set \<Gamma>. x \<noteq> fst k \<and> x \<notin> FVars_typ (snd k) \<and>
            xx \<noteq> fst k \<and> xx \<notin> FVars_typ (snd k) \<Longrightarrow>
-    map_context (id(x := xx, xx := x)) \<Gamma> = \<Gamma>"
+    map_context (x \<leftrightarrow> xx) \<Gamma> = \<Gamma>"
   unfolding map_context_def apply(rule map_idI) by auto
 
-lemma isPerm_swap: "isPerm (id(x := z, z := x))"
-  unfolding isPerm_def by (auto simp: supp_swap_bound infinite_UNIV)
+lemma isPerm_swap: "isPerm (x \<leftrightarrow> xx)"
+  unfolding isPerm_def by (auto simp: infinite_UNIV)
 
 inductive ty :: "'a::var \<Gamma>\<^sub>\<tau> \<Rightarrow> 'a typ \<Rightarrow> 'a typ \<Rightarrow> bool" ("_ \<turnstile> _ <: _" [55,55,55] 60) where
   SA_Top: "\<lbrakk> \<turnstile> \<Gamma> ok ; S closed_in \<Gamma> \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: Top"
@@ -278,6 +258,10 @@ thm equiv
 thm equiv_sym
 thm equiv_forward
 
+lemma typ_inject: "Forall x T1 T2 = Forall y R1 R2 \<longleftrightarrow> T1 = R1 \<and> (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (FVars_typ T2 - {x}) f \<and> f x = y \<and> permute_typ f T2 = R2)"
+  by (smt (z3) Forall_rrename Swapping.bij_swap Swapping.supp_swap_bound id_on_def id_on_swap infinite_UNIV swap_simps(1) typ.inject(3))
+
+lemmas typ.inject(3)[simp del]
 binder_inductive ty
   subgoal premises prems for R B \<Gamma> T1 T2
     by (tactic \<open>refreshability_tac false

@@ -25,6 +25,16 @@ lemma swap_inv[simp]: "inv (a \<leftrightarrow> b) = (a \<leftrightarrow> b)"
   by (smt (verit, ccfv_threshold) inv_equality swap_simps(1,2,3))
 lemma swap_same[simp]: "(a \<leftrightarrow> a) x = x"
   by (simp add: swap_def)
+lemma swap_id[simp]: "(a \<leftrightarrow> a) = id"
+  by fastforce
+lemma swap_twice[simp]: "(X \<leftrightarrow> Y) ((Y \<leftrightarrow> X) x) = x"
+  unfolding swap_def by presburger
+lemma swap_twice'[simp]: "(X \<leftrightarrow> Y) ((X \<leftrightarrow> Y) x) = x"
+  unfolding swap_def by presburger
+lemma swap_o_twice[simp]: "(X \<leftrightarrow> Y) \<circ> (Y \<leftrightarrow> X) = id"
+  unfolding comp_def swap_twice by (simp add: id_def)
+lemma swap_o_twice'[simp]: "(X \<leftrightarrow> Y) \<circ> (X \<leftrightarrow> Y) = id"
+  unfolding comp_def swap_twice by (simp add: id_def)
 
 lemma swap_apply_fresh_bij: "bij f \<Longrightarrow> (z \<noteq> x \<Longrightarrow> f z = z) \<Longrightarrow> z \<noteq> y \<Longrightarrow> (f x \<leftrightarrow> y) (f z) = (x \<leftrightarrow> y) z"
   by (simp add: bij_implies_inject swap_def)

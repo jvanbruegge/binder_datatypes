@@ -101,15 +101,16 @@ lemma SA_AllE1[consumes 2, case_names SA_Trans_TVar SA_All]:
   shows "R \<Gamma> (\<forall>X<:S\<^sub>1. S\<^sub>2) T"
 using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^sub>2" T avoiding: \<Gamma> "\<forall>X<:S\<^sub>1. S\<^sub>2" T rule: ty.strong_induct)
   case (SA_All \<Gamma> T\<^sub>1 R\<^sub>1 Y R\<^sub>2 T\<^sub>2)
-  have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. permute_typ (id(Y:=X,X:=Y)) T\<^sub>2"
-    apply (rule Forall_swap)
-    using SA_All(7,10) well_scoped(2) by fastforce
+  have 1: "\<forall>Y<:T\<^sub>1 . T\<^sub>2 = \<forall>X<:T\<^sub>1. permute_typ (X \<leftrightarrow> Y) T\<^sub>2"
+    unfolding typ.inject
+    using SA_All(10,7) well_scoped(2) by (fastforce simp: swap_sym)
   have fresh: "X \<notin> FVars_typ T\<^sub>1"
     by (meson SA_All(5,10) in_mono well_scoped(1))
   have same: "R\<^sub>1 = S\<^sub>1" using SA_All(9) typ_inject by blast
-  have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. permute_typ (id(Y:=X,X:=Y)) R\<^sub>2"
-    apply (rule Forall_swap)
-    by (metis (no_types, lifting) SA_All(9) assms(1,2) in_mono sup.bounded_iff typ.set(4) well_scoped(1))
+  have x: "\<forall>Y<:S\<^sub>1. R\<^sub>2 = \<forall>X<:S\<^sub>1. permute_typ (X \<leftrightarrow> Y) R\<^sub>2"
+    unfolding typ.inject
+    apply (auto simp: swap_sym)
+    using SA_All.hyps(9) typ.inject(3) by blast
   show ?case unfolding 1
     apply (rule Forall)
     using same SA_All(5) apply simp
@@ -121,10 +122,12 @@ using assms(1,2) proof (binder_induction \<Gamma> "\<forall>X<:S\<^sub>1. S\<^su
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_UNIV)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using SA_All(1,10) apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_UNIV supp_swap_bound wf_FFVars wf_context)
+    apply (metis SA_All.hyps(1,10,5) Swapping.bij_swap Swapping.supp_swap_bound context_map_cong_id infinite_UNIV swap_simps(3) ty_fresh_extend ty_weakening_extend well_scoped(2))
+    using SA_All(1,10)
       apply simp
     using fresh SA_All(4) apply simp
-    using x SA_All(9) unfolding same by simp
+    using x SA_All(9) unfolding same
+    by (metis typ.inject(3))
 qed (auto simp: Top)
 
 lemma SA_AllE2[consumes 2, case_names SA_Trans_TVar SA_All]:
@@ -134,9 +137,9 @@ lemma SA_AllE2[consumes 2, case_names SA_Trans_TVar SA_All]:
   shows "R \<Gamma> S (\<forall>X<:T\<^sub>1. T\<^sub>2)"
 using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^sub>2" avoiding: \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^sub>2" rule: ty.strong_induct)
   case (SA_All \<Gamma> R\<^sub>1 S\<^sub>1 Y S\<^sub>2 R\<^sub>2)
-  have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. permute_typ (id(Y:=X,X:=Y)) S\<^sub>2"
-    apply (rule Forall_swap)
-    using SA_All(7,10) well_scoped(1) by fastforce
+  have 1: "\<forall>Y<:S\<^sub>1. S\<^sub>2 = \<forall>X<:S\<^sub>1. permute_typ (Y \<leftrightarrow> X) S\<^sub>2"
+    unfolding typ.inject
+    using SA_All.hyps(10,7) well_scoped(1) by fastforce
   have fresh: "X \<notin> dom \<Gamma>" "Y \<notin> dom \<Gamma>"
     using SA_All(10) apply blast
     by (metis SA_All(7) fst_conv wf_ConsE wf_context)
@@ -144,9 +147,9 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
      apply (metis SA_All(5,9) in_mono fresh(1) typ_inject well_scoped(1))
     by (metis SA_All(5,9) in_mono fresh(2) typ_inject well_scoped(1))
   have same: "R\<^sub>1 = T\<^sub>1" using SA_All(9) typ_inject by blast
-  have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. permute_typ (id(Y:=X,X:=Y)) R\<^sub>2"
-    apply (rule Forall_swap)
-    by (metis SA_All(9) Un_iff assms(1,2) in_mono typ.set(4) well_scoped(2))
+  have x: "\<forall>Y<:T\<^sub>1 . R\<^sub>2 = \<forall>X<:T\<^sub>1. permute_typ (Y \<leftrightarrow> X) R\<^sub>2"
+    unfolding typ.inject apply auto
+    using SA_All.hyps(9) typ.inject(3) by blast
   show ?case unfolding 1
     apply (rule Forall)
      apply (metis SA_All(5,9) typ_inject)
@@ -158,10 +161,12 @@ using assms(1,2) proof (binder_induction \<Gamma> S "\<forall>X<:T\<^sub>1. T\<^
      apply (subst extend_eqvt)
        apply (rule bij_swap supp_swap_bound infinite_UNIV)+
      apply (rule arg_cong3[of _ _ _ _ _ _ extend])
-    using fresh apply (metis bij_swap SA_All(5) Un_iff context_map_cong_id fun_upd_apply id_apply infinite_UNIV supp_swap_bound wf_FFVars wf_context)
+    apply (metis SA_All.hyps(5) Swapping.bij_swap Swapping.supp_swap_bound Un_iff context_map_cong_id infinite_UNIV local.fresh(1,2) swap_def wf_FFVars wf_context)
+    using fresh
       apply simp
-    using fresh2 unfolding same apply (metis bij_swap fun_upd_apply id_apply infinite_UNIV supp_swap_bound typ.permute_cong_id)
-    using SA_All(9) x unfolding same by simp
+    using fresh2 unfolding same apply simp
+    using SA_All(9) x unfolding same
+    using Forall_swapD by blast
 qed (auto simp: TyVar)
 
 lemma ty_transitivity : "\<lbrakk> \<Gamma> \<turnstile> S <: Q ; \<Gamma> \<turnstile> Q <: T \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> S <: T"

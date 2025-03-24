@@ -547,7 +547,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
         val sets = if null bound_tys then [] else map (fn f =>
           the (List.find (fn t => HOLogic.dest_setT (fastype_of t) = body_type (fastype_of f))
-            (map (Term.subst_atomic_types replace o hd o filter (fn t => case t of
+            (maps (map (Term.subst_atomic_types replace) o filter (fn t => case t of
               Const (@{const_name minus}, _) $ _ $ _ => true
               | _ => false
             )) setss)

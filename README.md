@@ -1,9 +1,5 @@
 This is the artifact accompanying the paper:
 
-Barendregt Convenes with Knaster and Tarski: Strong Rule Induction for Syntax with Bindings 
-
-and
-
 Animating MRBNFs: Truly Modular Binding-Aware Datatypes in Isabelle/HOL
 
 ### How To Run?
@@ -38,13 +34,11 @@ session | description
 ------- | -----------
 Isabelle_Prelim|administrative session bundling standard Isabelle libraries we use
 Prelim|miscellaneous extensions to standard libraries, and bindings-specific infrastructure (e.g., countable and uncountable types we use for variables)
-Binders|main metatheory including the formalization our Thms 19 (called strong_induct in the formalization) and 22 (BE_iinduct) in Generic_Barendregt_Enhanced_Rule_Induction (Sect 4, 7.3, 8.2, 8.4 and App. G.2), the proof that our results generalize existing results from the literature in Urban_Berghofer_Norrish_Rule_Induction (App. A), and the binding-aware datatype automation in MRBNF_Composition and MRBNF_Recursor and the various ML files, App. G)
+Binders|main metatheory including the formalization of MRBNFs, the composition, fixpoint and recursor constructions (section 4).
 Operations|detailed proof examples for automation of the metatheory
-Untyped_Lambda_Calculus|formalization of the untyped lambda calculus including beta reduction and parallel beta reduction (Sect 2)
-Process_Calculus|formalization of the pi calculus transition relation and the  associated strong rule induction principle (Sect 7.1 and App. D.3)
-System_Fsub|formalization of System F with subtyping, the associated strong rule induction principles, and the POPLmark challenge 1A, (Sect 7.2 and App. F)
-Infinitary_Lambda_Calculus|formalization of Mazza's isomorphism between the untyped lambda calculus and the affine uniform infinitary lambda calculus in Iso_LC_ILC (Sect 8.3 and App. E)
-Infinitary_FOL|formalization of the infinitary first-order logic deduction relation and the associated strong rule induction principle (Sect 8.1 and App. D.4)
+Untyped_Lambda_Calculus|formalization of the untyped lambda calculus (section 3.2)
+System_Fsub|formalization of System F with subtyping and the POPLmark challenge 1B and 2B, (section 5.2)
+Infinitary_Lambda_Calculus|formalization of Mazza's isomorphism between the untyped lambda calculus and the affine uniform infinitary lambda calculus in Iso_LC_ILC (sections 3.3 and 5.1)
 
 The session structure resembles the directory structure: theories from session <SESSION> are placed
 in the directory src/thys/<SESSION>. Exceptions to this rule are the Isabelle_Prelim session which

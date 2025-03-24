@@ -1,17 +1,18 @@
 This is the artifact accompanying the paper:
 
-Barendregt Convenes with Knaster and Tarski: 
-Strong Rule Induction for Syntax with Bindings 
+Barendregt Convenes with Knaster and Tarski: Strong Rule Induction for Syntax with Bindings 
+
+and
+
+Animating MRBNFs: Truly Modular Binding-Aware Datatypes in Isabelle/HOL
 
 ### How To Run?
 
 The artifact contains the tool support for defining binding datatypes and proving strong rule
 induction principles we developed in Isabelle/HOL as well as the case studies we report on in the
-paper. It works with the latest released version Isabelle2024, which can be downloaded here:
+paper. It works with the latest released version Isabelle2025, which can be downloaded here:
 
-[https://isabelle.in.tum.de/website-Isabelle2024/](https://isabelle.in.tum.de/website-Isabelle2024/)
-
-The version needs to be patched with this patch: https://gist.github.com/jvanbruegge/a0488d59aac502dec8df8b692c7eacfe
+[https://isabelle.in.tum.de/website-Isabelle2025/](https://isabelle.in.tum.de/website-Isabelle2025/)
 
 After downloading Isabelle, a good starting point is to issue the following command
 

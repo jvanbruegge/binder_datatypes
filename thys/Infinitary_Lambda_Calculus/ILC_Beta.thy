@@ -9,7 +9,7 @@ begin
 (* *)
 
 abbreviation Tsupp :: "itrm \<Rightarrow> itrm \<Rightarrow> ivar set" where
-"Tsupp e1 e2 \<equiv> FFVars e1 \<union> FFVars e2"
+"Tsupp e1 e2 \<equiv> iFV e1 \<union> iFV e2"
 
 lemma small_Tsupp: "small (Tsupp t1 t2)"
   unfolding small_def
@@ -19,10 +19,10 @@ lemma Tvars_dsset: "(Tsupp t1 t2 - dsset xs) \<inter> dsset xs = {}" "|Tsupp t1 
 apply auto by (meson card_of_minus_bound small_Tsupp small_def)
 
 inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
-  Beta: "istep (iApp (iLam xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
-| iAppL: "istep e1 e1' \<Longrightarrow> istep (iApp e1 es2) (iApp e1' es2)"
-| iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iApp e1 es2) (iApp e1 (supd es2 i e2'))"
-| Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
+  Beta: "istep (iAp (iLm xs e1) es2) (itvsubst (imkSubst xs es2) e1)"
+| iAppL: "istep e1 e1' \<Longrightarrow> istep (iAp e1 es2) (iAp e1' es2)"
+| iAppR: "istep (snth es2 i) e2' \<Longrightarrow> istep (iAp e1 es2) (iAp e1 (supd es2 i e2'))"
+| Xi: "istep e e' \<Longrightarrow> istep (iLm xs e) (iLm xs e')"
 
 lemmas [equiv] =
   iterm.tvsubst_permutes[THEN fun_cong, unfolded comp_def]
@@ -42,8 +42,8 @@ binder_inductive istep
           apply(rule exI[of _ "irrename f e1"])
           apply(rule exI[of _ "es2"])
           apply simp apply(intro conjI)
-          subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
-          subgoal apply(subst irrename_eq_itvsubst_iVar)
+          subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
+          subgoal apply(subst irrename_eq_itvsubst_iVr)
             subgoal unfolding isPerm_def by auto
             subgoal unfolding isPerm_def by auto
             subgoal apply(subst itvsubst_comp)
@@ -79,8 +79,8 @@ binder_inductive istep
                     apply(rule exI[of _ "irrename f e'"])
                     apply(rule exI[of _ "dsmap f xs"])
                     apply simp apply(intro conjI)
-                    subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
-                    subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
+                    subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
+                    subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
                     . . . .
                   done
 
@@ -90,10 +90,10 @@ thm istep.equiv
 (* Other properties: *)
 
 lemma SSupp_If_small[simp]: "|A :: ivar set| <o |UNIV :: ivar set| \<Longrightarrow>
-  |SSupp (\<lambda>x. if x \<in> A then f x else iVar x)| <o |UNIV :: ivar set|"
+  |SSupp (\<lambda>x. if x \<in> A then f x else iVr x)| <o |UNIV :: ivar set|"
   by (smt (verit, del_insts) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq subsetI)
 
-lemma istep_FFVars: "istep e e' \<Longrightarrow> ILC.FFVars e' \<subseteq> ILC.FFVars e"
+lemma istep_iFV: "istep e e' \<Longrightarrow> ILC.iFV e' \<subseteq> ILC.iFV e"
   by(induct rule: istep.induct) (auto simp: imkSubst_def card_dsset_ivar)
 
 

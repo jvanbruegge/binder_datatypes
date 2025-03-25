@@ -62,18 +62,18 @@ using card_supp_restr[OF assms] unfolding finite_iff_le_card_var .
 
 lemma restr_cong_id: 
 assumes "bij f" "|supp f| <o |UNIV::ivar set|" "bsmall (supp f)" "presSuper f"
-and "\<And>y x. y \<in> FFVars e \<Longrightarrow> x \<in> dsset (superOf y) \<Longrightarrow> f x = x" "z \<in> LC.FFVars e"
+and "\<And>y x. y \<in> FV e \<Longrightarrow> x \<in> dsset (superOf y) \<Longrightarrow> f x = x" "z \<in> LC.FV e"
 shows "restr f z = z"
 using assms unfolding restr_def by (simp add: dstream_map_ident_strong)
 
 
 (* *)
 
-definition iVarB where "iVarB x \<equiv> Var (subOf (fst (theSN x)))"
-definition iLamB where "iLamB (xs::ivar dstream) b \<equiv> Lam (subOf xs) b"
-definition iAppB where "iAppB b1 bs2 \<equiv> App b1 (snth bs2 0)"
+definition iVarB where "iVarB x \<equiv> Vr(subOf (fst (theSN x)))"
+definition iLamB where "iLamB (xs::ivar dstream) b \<equiv> Lm (subOf xs) b"
+definition iAppB where "iAppB b1 bs2 \<equiv> Ap b1 (snth bs2 0)"
 definition renB where "renB f b \<equiv> rrename (restr f) b"
-definition FVarsB where "FVarsB b \<equiv> \<Union> ((dsset o superOf) ` (FFVars b))"
+definition FVarsB where "FVarsB b \<equiv> \<Union> ((dsset o superOf) ` (FV b))"
 
 
 lemma iVarB_B: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> iVarB x \<in> B"
@@ -170,27 +170,27 @@ by (auto simp add: renB_cong renB_FVarsB)
 
 definition tr' :: "itrm \<Rightarrow> trm" where "tr' = T'.rec"
 
-lemma tr'_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> tr' (iVar x) = Var (subOf (fst (theSN x)))"
-using T'.rec_iVar unfolding tr'_def iVarB_def by auto
+lemma tr'_iVr[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> tr' (iVr x) = Vr(subOf (fst (theSN x)))"
+using T'.rec_iVr unfolding tr'_def iVarB_def by auto
 
-lemma tr'_iLam[simp]: "super xs \<Longrightarrow> good e \<Longrightarrow> tr' (iLam xs e) = Lam (subOf xs) (tr' e)"
-using T'.rec_iLam unfolding tr'_def iLamB_def by auto
+lemma tr'_iLm[simp]: "super xs \<Longrightarrow> good e \<Longrightarrow> tr' (iLm xs e) = Lm (subOf xs) (tr' e)"
+using T'.rec_iLm unfolding tr'_def iLamB_def by auto
 
-lemma tr'_iApp[simp]: "good e1 \<Longrightarrow> (\<forall>e2\<in>sset es2. good e2) \<Longrightarrow> 
+lemma tr'_iAp[simp]: "good e1 \<Longrightarrow> (\<forall>e2\<in>sset es2. good e2) \<Longrightarrow> 
   (\<forall>e2 e2'. {e2,e2'} \<subseteq> sset es2 \<longrightarrow> touchedSuperT e2 = touchedSuperT e2') \<Longrightarrow> 
-  tr' (iApp e1 es2) = App (tr' e1) (tr' (snth es2 0))"
-using T'.rec_iApp unfolding tr'_def iAppB_def by auto
+  tr' (iAp e1 es2) = Ap (tr' e1) (tr' (snth es2 0))"
+using T'.rec_iAp unfolding tr'_def iAppB_def by auto
 
 lemma irrename_tr':
 "good e \<Longrightarrow> bij f \<Longrightarrow> |supp f| <o |UNIV::ivar set| \<Longrightarrow> bsmall (supp f) \<Longrightarrow> presSuper f \<Longrightarrow>
  tr' (irrename f e) = rrename (restr f) (tr' e)"
 using T'.rec_irrename unfolding tr'_def renB_def by auto
 
-lemma FFVars_tr': 
-assumes "good e" "x \<in> LC.FFVars (tr' e)"
-shows "dsset (superOf x) \<inter> ILC.FFVars e \<noteq> {}"
+lemma iFV_tr': 
+assumes "good e" "x \<in> LC.FV (tr' e)"
+shows "dsset (superOf x) \<inter> ILC.iFV e \<noteq> {}"
 proof-
-  have "superOf x \<in> touchedSuper (ILC.FFVars e)"
+  have "superOf x \<in> touchedSuper (ILC.iFV e)"
   using assms using T'.FVarsB_rec  FVarsB_def unfolding tr'_def  by (auto simp: touchedSuper_Union)
   thus ?thesis unfolding touchedSuper_def by auto
 qed
@@ -202,8 +202,8 @@ apply(induct rule: reneqv.induct)
   subgoal by(auto intro: good.intros) 
   subgoal by(auto intro: good.intros) 
   subgoal apply(rule conjI)
-    subgoal apply(rule good.iApp) using reneqv_touchedSuperT_eq by blast+
-    subgoal apply(rule good.iApp) using reneqv_touchedSuperT_eq by blast+ . .
+    subgoal apply(rule good.iAp) using reneqv_touchedSuperT_eq by blast+
+    subgoal apply(rule good.iAp) using reneqv_touchedSuperT_eq by blast+ . .
 
 lemma uniform_good: "uniform e \<Longrightarrow> good e"
 using reneqv_good unfolding uniform_def3 by auto
@@ -217,13 +217,13 @@ unfolding uniformS_def4 using reneqv_good reneqv_touchedSuperT_eq by auto
 
 (* We recover Mazza's desired definition: *)
 
-thm tr'_iVar 
+thm tr'_iVr
 
-lemma tr'_iLam_uniform[simp]: "super xs \<Longrightarrow> uniform e \<Longrightarrow> tr' (iLam xs e) = Lam (subOf xs) (tr' e)"
+lemma tr'_iLm_uniform[simp]: "super xs \<Longrightarrow> uniform e \<Longrightarrow> tr' (iLm xs e) = Lm (subOf xs) (tr' e)"
 using uniform_good by auto
 
 lemma tr'_iApp_uniform[simp]: "uniform e1 \<Longrightarrow> uniformS es2 \<Longrightarrow> 
-  tr' (iApp e1 es2) = App (tr' e1) (tr' (snth es2 0))"
+  tr' (iAp e1 es2) = Ap (tr' e1) (tr' (snth es2 0))"
 by (simp add: uniformS_good uniform_good)
 
 lemma irrename_tr'_uniform:
@@ -231,10 +231,10 @@ lemma irrename_tr'_uniform:
  tr' (irrename f e) = rrename (restr f) (tr' e)"
 using uniform_good irrename_tr' by auto
 
-lemma FFVars_tr'_uniform: 
-assumes "uniform e" "x \<in> LC.FFVars (tr' e)"
-shows "dsset (superOf x) \<inter> ILC.FFVars e \<noteq> {}"
-using assms FFVars_tr'  uniform_good by auto
+lemma iFV_tr'_uniform: 
+assumes "uniform e" "x \<in> LC.FV (tr' e)"
+shows "dsset (superOf x) \<inter> ILC.iFV e \<noteq> {}"
+using assms iFV_tr'  uniform_good by auto
 
 
 

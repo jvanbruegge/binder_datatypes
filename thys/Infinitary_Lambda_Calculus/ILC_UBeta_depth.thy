@@ -7,9 +7,9 @@ begin
 
 inductive ustepD :: "nat \<Rightarrow> itrm stream \<Rightarrow> itrm stream \<Rightarrow> bool" where
   Beta: "uniformS es \<Longrightarrow> stream_all2 hred es es' \<Longrightarrow> ustepD 0 es es'"
-| iAppL: "uniformS (sflat ess) \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD (Suc d) (smap2 iApp es ess) (smap2 iApp es' ess)"
-| iAppR: "uniformS es \<Longrightarrow> ustepD d (sflat ess) (sflat ess') \<Longrightarrow> ustepD (Suc d) (smap2 iApp es ess) (smap2 iApp es ess')"
-| Xi: "super xs \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD d (smap (iLam xs) es) (smap (iLam xs) es')"
+| iAppL: "uniformS (sflat ess) \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD (Suc d) (smap2 iAp es ess) (smap2 iAp es' ess)"
+| iAppR: "uniformS es \<Longrightarrow> ustepD d (sflat ess) (sflat ess') \<Longrightarrow> ustepD (Suc d) (smap2 iAp es ess) (smap2 iAp es ess')"
+| Xi: "super xs \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD d (smap (iLm xs) es) (smap (iLm xs) es')"
 
 thm ustepD_def
 
@@ -27,15 +27,15 @@ next
   then show ?case unfolding uniformS_smap2_iApp_iff by auto
 next
   case Xi
-  then show ?case using uniformS_smap2_iLam_iff by auto
+  then show ?case using uniformS_smap2_iLm_iff by auto
 qed
 
 lemma hred_def2: 
 assumes t: "uniform t"
 shows 
 "hred t tt \<longleftrightarrow> 
-   (\<exists>xs e1 es2. super xs \<and> t = iApp (iLam xs e1) es2 \<and> tt = itvsubst (imkSubst xs es2) e1)"
-unfolding hred_def by (metis iLam_switch_to_super t)
+   (\<exists>xs e1 es2. super xs \<and> t = iAp (iLm xs e1) es2 \<and> tt = itvsubst (imkSubst xs es2) e1)"
+unfolding hred_def by (metis iLm_switch_to_super t)
 
 lemma hred_reneqv': 
 assumes r: "reneqv e ee" "hred e e'"
@@ -44,7 +44,7 @@ proof-
   have u: "uniform e" using r unfolding uniform_def by auto
   show ?thesis using r
   unfolding hred_def2[OF u] 
-  apply(auto dest!: reneqv_iApp_casesL reneqv_iLam_casesL) 
+  apply(auto dest!: reneqv_iApp_casesL reneqv_iLm_casesL) 
   by (metis hred_def r(1) reneqv_head_reduction)
 qed
 
@@ -82,7 +82,7 @@ definition Tperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" 
 "Tperm f \<equiv> map_prod id (map_prod (smap (irrename f)) (smap (irrename f)))"
 
 fun Tsupp :: "T \<Rightarrow> ivar set" where 
-"Tsupp (d,es1,es2) = \<Union> (FFVars ` (sset es1)) \<union> \<Union> (FFVars ` (sset es2))"
+"Tsupp (d,es1,es2) = \<Union> (iFV ` (sset es1)) \<union> \<Union> (iFV ` (sset es2))"
 
 
 lemma card_sset_le[simp,intro!]: "|sset xs| <o |UNIV::ivar set|"
@@ -119,13 +119,13 @@ where
          (\<exists>es es'. xxs = None \<and> fst t = 0 \<and> fst (snd t) = es \<and> snd (snd t) = es' \<and> 
                    uniformS es \<and> stream_all2 hred es es')
          \<or>
-         (\<exists>d es es' ess. xxs = None \<and> fst t = Suc d \<and> fst (snd t) = smap2 iApp es ess \<and> snd (snd t) = smap2 iApp es' ess \<and> 
+         (\<exists>d es es' ess. xxs = None \<and> fst t = Suc d \<and> fst (snd t) = smap2 iAp es ess \<and> snd (snd t) = smap2 iAp es' ess \<and> 
                        uniformS (sflat ess) \<and> R (d, es, es')) 
          \<or>
-         (\<exists>es d ess ess'. xxs = None \<and> fst t = Suc d \<and> fst (snd t) = smap2 iApp es ess \<and> snd (snd t) = smap2 iApp es ess' \<and> 
+         (\<exists>es d ess ess'. xxs = None \<and> fst t = Suc d \<and> fst (snd t) = smap2 iAp es ess \<and> snd (snd t) = smap2 iAp es ess' \<and> 
                         uniformS es \<and> R (d, sflat ess, sflat ess'))
          \<or>
-         (\<exists>xs d es es'. xxs = Some xs \<and> fst t = d \<and> fst (snd t) = smap (iLam xs) es \<and> snd (snd t) = smap (iLam xs) es' \<and> 
+         (\<exists>xs d es es'. xxs = Some xs \<and> fst t = d \<and> fst (snd t) = smap (iLm xs) es \<and> snd (snd t) = smap (iLm xs) es' \<and> 
                       super xs \<and> R (d, es, es'))"
 
 
@@ -319,9 +319,9 @@ unfolding G_def Tperm_def apply safe
     apply(rule exI[of _ "smap (irrename f) es'"]) 
     apply(cases t) unfolding presSuper_def apply simp apply(intro conjI)
       subgoal unfolding stream.map_comp apply(rule stream.map_cong0) 
-        apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
+        apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
       subgoal unfolding stream.map_comp apply(rule stream.map_cong0) 
-        apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto 
+        apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto 
       subgoal unfolding isPerm_def presBnd_presSuper presSuper_def by auto 
   . . . . . 
       
@@ -349,14 +349,14 @@ and Beta: "\<And>d es es' p.
   R p d es es'"
 and iAppL: "\<And>d es es' ess p. 
   ustepD d es es' \<Longrightarrow> (\<forall>p'. R p' d es es') \<Longrightarrow> 
-  R p (Suc d) (smap2 iApp es ess) (smap2 iApp es' ess)"
+  R p (Suc d) (smap2 iAp es ess) (smap2 iAp es' ess)"
 and iAppR: "\<And>d ess ess' es p. 
   ustepD d (sflat ess) (sflat ess') \<Longrightarrow> (\<forall>p'. R p' d (sflat ess) (sflat ess')) \<Longrightarrow> 
-  R p (Suc d) (smap2 iApp es ess) (smap2 iApp es ess')"
+  R p (Suc d) (smap2 iAp es ess) (smap2 iAp es ess')"
 and Xi: "\<And>d es es' xs p. 
   dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   ustepD d es es' \<Longrightarrow> (\<forall>p'. R p' d es es') \<Longrightarrow> 
-  R p d (smap (iLam xs) es) (smap (iLam xs) es')" 
+  R p d (smap (iLm xs) es) (smap (iLm xs) es')" 
 shows "R p d t1 t2"
 unfolding ustepD_I
 apply(subgoal_tac "case (d,t1,t2) of (d, t1, t2) \<Rightarrow> R p d t1 t2")
@@ -388,9 +388,9 @@ so its rule induction covers both beta and Xi. *)
 
 thm hred_eq_avoid
 
-lemma ustepD_FFVars: "ustepD d es es' \<Longrightarrow> (\<forall>i. FFVars (snth es' i) \<subseteq> FFVars (snth es i))"
+lemma ustepD_iFV: "ustepD d es es' \<Longrightarrow> (\<forall>i. iFV (snth es' i) \<subseteq> iFV (snth es i))"
 apply(induct rule: ustepD.induct) 
-using hred_FFVars apply (auto simp: sset_smap2 sset_range snth_sflat stream_all2_iff_snth )
+using hred_iFV apply (auto simp: sset_smap2 sset_range snth_sflat stream_all2_iff_snth )
 by (metis in_mono nat2_nat1 snth2.simps)
           
  

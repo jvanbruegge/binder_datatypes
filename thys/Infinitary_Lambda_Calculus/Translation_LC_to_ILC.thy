@@ -107,25 +107,25 @@ by (meson bsmall_def finite_surj touchedSuper_supp)
 (* *)
 definition B :: "(nat list \<Rightarrow> ivar iterm) set" where "B \<equiv> {E. \<forall> p p'. reneqv (E p) (E p')}"
 
-definition VarB where "VarB x p \<equiv> iVar (dsnth (superOf x) (natOf p))"
-definition LamB where "LamB x E p \<equiv> iLam (superOf x) (E p)"
-definition AppB where "AppB E1 E2 p \<equiv> iApp (E1 (p @ [0])) (smap (\<lambda>n. E2 (p @ [Suc n])) nats)"
+definition VarB where "VarB x p \<equiv> iVr(dsnth (superOf x) (natOf p))"
+definition LamB where "LamB x E p \<equiv> iLm (superOf x) (E p)"
+definition AppB where "AppB E1 E2 p \<equiv> iAp (E1 (p @ [0])) (smap (\<lambda>n. E2 (p @ [Suc n])) nats)"
 definition renB where "renB f E p \<equiv> irrename (ext f) (E p)"
-definition FVarsB where "FVarsB E \<equiv> \<Union> {subOf ` touchedSuper (ILC.FFVars (E p)) | p . True}"
+definition FVarsB where "FVarsB E \<equiv> \<Union> {subOf ` touchedSuper (ILC.iFV (E p)) | p . True}"
 
 
 lemma VarB_B: "VarB x \<in> B"
 unfolding VarB_def B_def 
-by (auto simp add: dsset_range intro: reneqv.iVar[of "superOf x"])
+by (auto simp add: dsset_range intro: reneqv.iVr[of "superOf x"])
 
-find_theorems uniform iApp
-find_theorems reneqv iApp
+find_theorems uniform iAp
+find_theorems reneqv iAp
 
 lemma AppB_B: "{b1,b2} \<subseteq> B \<Longrightarrow> AppB b1 b2 \<in> B"
 unfolding AppB_def B_def by (auto simp: reneqv_iApp_iff) 
 
 lemma LamB_B: "b \<in>  B \<Longrightarrow> LamB x b \<in> B"
-unfolding LamB_def B_def by (auto simp: reneqv_iLam_iff) 
+unfolding LamB_def B_def by (auto simp: reneqv_iLm_iff) 
 
 lemma renB_B: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::var set| \<Longrightarrow> b \<in> B \<Longrightarrow> renB \<sigma> b \<in> B"
 unfolding renB_def B_def 
@@ -156,7 +156,7 @@ unfolding FVarsB_def renB_def apply (auto simp: image_def)
   subgoal for p xs 
   apply(subgoal_tac "inj_on (ext (inv \<sigma>)) (dsset xs)")
     subgoal 
-    apply(rule exI[of _ "{y. \<exists>x\<in>touchedSuper (ILC.FFVars (b p)). y = subOf x}"])
+    apply(rule exI[of _ "{y. \<exists>x\<in>touchedSuper (ILC.iFV (b p)). y = subOf x}"])
     apply auto apply(rule bexI[of _ "superOf (inv \<sigma> (subOf xs))"]) apply auto
     apply(subst (asm) iterm.FVars_permute)
       subgoal using bij_ext by auto
@@ -166,7 +166,7 @@ unfolding FVarsB_def renB_def apply (auto simp: image_def)
         bij_ext dsmap_ext_superOf dsset_dsmap empty_iff ext_inv inv_simp1 superOf_subOf) .
     subgoal by (simp add: bij_ext inj_on_def bij_implies_inject) .
   subgoal for p xs
-    apply(rule exI[of _ "{y. \<exists>x\<in>touchedSuper (ILC.FFVars (irrename (ext \<sigma>) (b p))). y = subOf x}"])
+    apply(rule exI[of _ "{y. \<exists>x\<in>touchedSuper (ILC.iFV (irrename (ext \<sigma>) (b p))). y = subOf x}"])
     apply auto apply(rule bexI[of _ "superOf (\<sigma> (subOf xs))"]) 
       subgoal by (simp add: bij_imp_inv') 
       subgoal unfolding touchedSuper_def 
@@ -196,14 +196,14 @@ by auto (metis disjoint_iff dsset_range range_eqI subOf_superOf super_disj super
 
 lemma FVarsB_AppB: "{b1,b2} \<subseteq> B \<Longrightarrow> FVarsB (AppB b1 b2) \<subseteq> FVarsB b1 \<union> FVarsB b2"
 unfolding FVarsB_def AppB_def B_def apply auto  
-subgoal for p xa apply(rule exI[of _ "subOf ` touchedSuper (ILC.FFVars (b1 p))"]) 
+subgoal for p xa apply(rule exI[of _ "subOf ` touchedSuper (ILC.iFV (b1 p))"]) 
 using reneqv_touchedSuperT apply (auto simp: image_def touchedSuperT_def touchedSuper_def)  
   apply (metis (mono_tags, lifting) Int_emptyD mem_Collect_eq)
   by blast .
 
 lemma FVarsB_LamB: "b \<in> B \<Longrightarrow> FVarsB (LamB x b) \<subseteq> FVarsB b - {x}"
 unfolding FVarsB_def LamB_def  
-  using touchedSuperT_def touchedSuper_iLam apply auto 
+  using touchedSuperT_def touchedSuper_iLm apply auto 
   by (auto simp add: touchedSuper_def)
 
 
@@ -231,21 +231,21 @@ using T.rec_B by (simp add: B_def tr_def)
 lemma uniform_tr[simp,intro]: "uniform (tr e p)"
 unfolding uniform_def3 by auto
 
-lemma tr_Var[simp]: "tr (Var x) p = iVar (dsnth (superOf x) (natOf p))"
-using T.rec_Var unfolding tr_def VarB_def by auto
+lemma tr_Var[simp]: "tr (Vr x) p = iVr(dsnth (superOf x) (natOf p))"
+using T.rec_Vr unfolding tr_def VarB_def by auto
 
-lemma tr_Lam[simp]: "tr (Lam x e) p = iLam (superOf x) (tr e p)"
-using T.rec_Lam unfolding tr_def LamB_def by auto
+lemma tr_Lam[simp]: "tr (Lm x e) p = iLm (superOf x) (tr e p)"
+using T.rec_Lm unfolding tr_def LamB_def by auto
 
-lemma tr_App[simp]: "tr (App e1 e2) p = iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
-using T.rec_App unfolding tr_def AppB_def by auto
+lemma tr_App[simp]: "tr (Ap e1 e2) p = iAp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)"
+using T.rec_Ap unfolding tr_def AppB_def by auto
 
 lemma rrename_tr:
 "bij f \<Longrightarrow> |supp f| <o |UNIV::var set| \<Longrightarrow> tr (rrename f e) p = irrename (ext f) (tr e p)"
 using T.rec_rrename unfolding tr_def renB_def by auto
 
-lemma FFVars_tr: 
-"subOf ` touchedSuper (ILC.FFVars (tr e p)) \<subseteq> LC.FFVars e"
+lemma iFV_tr: 
+"subOf ` touchedSuper (ILC.iFV (tr e p)) \<subseteq> LC.FV e"
 using T.FVarsB_rec unfolding tr_def FVarsB_def by auto
 
 (* *)

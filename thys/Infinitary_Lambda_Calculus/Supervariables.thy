@@ -157,11 +157,11 @@ lemma touchedSuper_UN':
 unfolding touchedSuper_def by auto
 
 definition touchedSuperT :: "itrm \<Rightarrow> ivar dstream set" where 
-"touchedSuperT t \<equiv> touchedSuper (FFVars t)"
+"touchedSuperT t \<equiv> touchedSuper (iFV t)"
 
-lemma touchedSuper_iVar_singl: "touchedSuperT (iVar x) = {} \<or> (\<exists>xs. touchedSuperT (iVar x) = {xs})"
+lemma touchedSuper_iVr_singl: "touchedSuperT (iVr x) = {} \<or> (\<exists>xs. touchedSuperT (iVr x) = {xs})"
 proof-
-  {fix xs xs' assume "{xs,xs'} \<subseteq> touchedSuperT (iVar x)" and "xs \<noteq> xs'"
+  {fix xs xs' assume "{xs,xs'} \<subseteq> touchedSuperT (iVr x)" and "xs \<noteq> xs'"
    hence False unfolding touchedSuperT_def touchedSuper_def  
      by auto (meson Int_emptyD super_disj)
   }
@@ -169,14 +169,14 @@ proof-
     by auto (metis insertI1 insert_absorb subsetI subset_singletonD)
 qed
 
-lemma touchedSuper_iVar[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuperT (iVar x) = {xs}"
+lemma touchedSuper_iVr[simp]: "super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> touchedSuperT (iVr x) = {xs}"
 unfolding touchedSuperT_def touchedSuper_def by auto (meson Int_emptyD super_disj)
 
-lemma touchedSuper_iLam[simp]: "super ys \<Longrightarrow> touchedSuperT (iLam ys e) = touchedSuperT e - {ys}"
+lemma touchedSuper_iLm[simp]: "super ys \<Longrightarrow> touchedSuperT (iLm ys e) = touchedSuperT e - {ys}"
 unfolding touchedSuperT_def touchedSuper_def 
 by auto (auto simp: Diff_Int_distrib2 Int_emptyD super_disj)
 
-lemma touchedSuper_iApp[simp]: "touchedSuperT (iApp e es) = touchedSuperT e \<union> \<Union> (touchedSuperT ` (sset es))"
+lemma touchedSuper_iAp[simp]: "touchedSuperT (iAp e es) = touchedSuperT e \<union> \<Union> (touchedSuperT ` (sset es))"
 unfolding touchedSuperT_def touchedSuper_def by auto
 
 lemma super_dsset_singl: 
@@ -248,7 +248,7 @@ unfolding supp_inv by (simp add: touchedSuper_image)
 (* *)
 
 lemma touchedSuper_IImsupp_imkSubst: 
-"super xs \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> {xs} \<union> touchedSuper (\<Union> (FFVars ` (sset es)))"
+"super xs \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> {xs} \<union> touchedSuper (\<Union> (iFV ` (sset es)))"
 unfolding touchedSuper_def IImsupp_def SSupp_def imkSubst_def apply auto 
 apply (meson disjoint_iff imkSubst_idle super_disj)
 apply (metis Int_emptyD UN_I snth_sset) . 
@@ -311,7 +311,7 @@ proof-
     subgoal unfolding \<rho>_def eq_on_def by auto 
     subgoal unfolding \<rho>_def id_on_def apply simp 
       by (metis bij_betw_apply dsnth_dsmap dtheN f(1) f(2) g(2) i(1) i(2) 
-       singleton_insert_inj_eq touchedSuper_iVar xs ys) .
+       singleton_insert_inj_eq touchedSuper_iVr xs ys) .
 qed
 
 lemma extend_super2: 
@@ -368,7 +368,7 @@ proof-
       using assms(4) assms(5) ys(2) by auto 
     subgoal using f unfolding id_on_def \<rho>_def apply simp 
       by (metis dsnth_dsmap dsset_dsmap dtheN g(2) i(1) i(2) 
-       image_eqI singleton_insert_inj_eq touchedSuper_iVar xs ys(1)) .
+       image_eqI singleton_insert_inj_eq touchedSuper_iVr xs ys(1)) .
 qed
 
 
@@ -438,32 +438,32 @@ by (metis dtheN prod.collapse subsetD superOf_subOf super_dsset_RSuper theSN_uni
 
 (* *)
 
-lemma iLam_inject_super: 
+lemma iLm_inject_super: 
 assumes u: "finite (touchedSuperT e)" and 
-eq: "iLam xs e = iLam xs' e'" and super: "super xs" "super xs'"
+eq: "iLm xs e = iLm xs' e'" and super: "super xs" "super xs'"
 shows "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> presSuper f \<and> finite (touchedSuper (supp f)) \<and> 
-       id_on (ILC.FFVars (iLam xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
+       id_on (ILC.iFV (iLm xs e)) f \<and> id_on (- (dsset xs \<union> dsset xs')) f \<and> 
        id_on (dsset xs) (f o f) \<and>
        dsmap f xs = xs' \<and> irrename f e = e'"
 proof(cases "xs = xs'")
   case True
   thus ?thesis apply(intro exI[of _ id]) 
   apply (auto simp add: presSuper_def) 
-  using eq iLam_same_inject unfolding touchedSuper_def supp_def by auto
+  using eq iLm_same_inject unfolding touchedSuper_def supp_def by auto
 next
   case False
   hence ds: "dsset xs \<inter> dsset xs' = {}" using super  
     using super_disj by blast
-  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> 
+  obtain f where f: "bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (iFV (iLm xs e)) f \<and> 
      id_on (dsset xs) (f \<circ> f) \<and> 
-     dsmap f xs = xs' \<and> irrename f e = e'" using iLam_inject_strong[OF eq ds] by auto
+     dsmap f xs = xs' \<and> irrename f e = e'" using iLm_inject_strong[OF eq ds] by auto
   hence i: "inj_on f (dsset xs)" unfolding bij_def inj_on_def by auto
-  define A where A: "A = FFVars (iLam xs e)"
+  define A where A: "A = iFV (iLm xs e)"
   have 0: "|A| <o |UNIV::ivar set|" "finite (touchedSuper A)" "A \<inter> dsset xs = {}"
      "A \<inter> dsset xs' = {}" "bij_betw f (dsset xs) (dsset xs')" "dsmap f xs = xs'"
     subgoal unfolding A using iterm.set_bd_UNIV by blast
     subgoal unfolding A using touchedSuperT_def u  
-      using super(1) touchedSuper_iLam by auto
+      using super(1) touchedSuper_iLm by auto
     subgoal unfolding A by auto
     subgoal unfolding A eq by auto
     subgoal using f unfolding bij_def bij_betw_def inj_on_def using i by auto

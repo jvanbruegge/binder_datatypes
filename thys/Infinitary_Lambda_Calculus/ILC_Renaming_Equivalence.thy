@@ -6,13 +6,13 @@ begin
 
 (* *)
 inductive reneqv where
- iVar: "super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> reneqv (iVar x) (iVar x')"
-|iLam: "super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> reneqv (iLam xs e) (iLam xs e')"
-|iApp: 
+ iVr: "super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> reneqv (iVr x) (iVr x')"
+|iLm: "super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> reneqv (iLm xs e) (iLm xs e')"
+|iAp: 
 "reneqv e1 e1' \<Longrightarrow>
  (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e') 
  \<Longrightarrow>
- reneqv (iApp e1 es2) (iApp e1' es2')"
+ reneqv (iAp e1 es2) (iAp e1' es2')"
 
 thm reneqv_def
 
@@ -24,21 +24,21 @@ thm reneqv_def
 lemma reneqv_touchedSuperT: 
 "reneqv e1 e2 \<Longrightarrow> touchedSuperT e1 = touchedSuperT e2 \<and> finite (touchedSuperT e1) \<and> finite (touchedSuperT e2) "
 proof(induct rule: reneqv.induct)
-  case (iVar xs x x')
+  case (iVr xs x x')
   then show ?case by auto 
 next
-  case (iLam xs e e')
+  case (iLm xs e e')
   then show ?case by auto
 next
-  case (iApp e1 e1' es2 es2')
+  case (iAp e1 e1' es2 es2')
   obtain e2 e2' where e2: "e2 \<in> sset es2" and e2': "e2' \<in> sset es2'" 
   using shd_sset by blast+
   hence 0: "touchedSuperT ` sset es2 = {touchedSuperT e2}" "touchedSuperT ` sset es2' = {touchedSuperT e2}"
-  using iApp(3) by auto
+  using iAp(3) by auto
   have "\<Union> (touchedSuperT ` sset es2) = \<Union> (touchedSuperT ` sset es2') \<and>
        finite (\<Union> (touchedSuperT ` sset es2)) \<and> finite (\<Union> (touchedSuperT ` sset es2'))" 
-  unfolding 0 using iApp(3) e2 e2' by auto    
-  thus ?case using iApp by simp
+  unfolding 0 using iAp(3) e2 e2' by auto    
+  thus ?case using iAp by simp
 qed
 
 lemmas reneqv_touchedSuperT_eq = reneqv_touchedSuperT[THEN conjunct1]
@@ -53,7 +53,7 @@ definition Tperm :: "(ivar \<Rightarrow> ivar) \<Rightarrow> T \<Rightarrow> T" 
 "Tperm f \<equiv> map_prod (irrename f) (irrename f)"
 
 fun Tsupp :: "T \<Rightarrow> ivar set" where 
-"Tsupp (e1,e2) = FFVars e1 \<union> FFVars e2"
+"Tsupp (e1,e2) = iFV e1 \<union> iFV e2"
 
 
 
@@ -82,13 +82,13 @@ unfolding presBnd_def presSuper_def fun_eq_iff apply safe
 definition G :: "B \<Rightarrow> (T \<Rightarrow> bool) \<Rightarrow> T \<Rightarrow> bool"
 where
 "G \<equiv> \<lambda>xxs R t.  
-         (\<exists>xs x x'. xxs = None \<and> fst t = iVar x \<and> snd t = iVar x' \<and> 
+         (\<exists>xs x x'. xxs = None \<and> fst t = iVr x \<and> snd t = iVr x' \<and> 
                     super xs \<and> {x,x'} \<subseteq> dsset xs) 
          \<or>
-         (\<exists>xs e e'. xxs = Some xs \<and> fst t = iLam xs e \<and> snd t = iLam xs e' \<and> 
+         (\<exists>xs e e'. xxs = Some xs \<and> fst t = iLm xs e \<and> snd t = iLm xs e' \<and> 
                     super xs \<and> R (e,e'))
          \<or> 
-         (\<exists>e1 e1' es2 es2'. xxs = None \<and> fst t = iApp e1 es2 \<and> snd t = iApp e1' es2' \<and> 
+         (\<exists>e1 e1' es2 es2'. xxs = None \<and> fst t = iAp e1 es2 \<and> snd t = iAp e1' es2' \<and> 
                             R (e1,e1') \<and> (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> R (e,e')))"
  
 
@@ -164,19 +164,19 @@ unfolding reneqv_def Reneqv.II_def lfp_curry2 apply(rule arg_cong2[of _ _ _ _ lf
 unfolding fun_eq_iff G_def apply clarify
 subgoal for R tt1 tt2 apply(rule iffI)
   subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>iVar: \<close>
+    \<^cancel>\<open>iVr: \<close>
     subgoal for xs x x' apply(rule exI[of _ None]) apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close> 
+    \<^cancel>\<open>iLm: \<close> 
     subgoal for xs e e' apply(rule exI[of _ "Some xs"]) apply(rule disjI3_2) by auto 
-    \<^cancel>\<open>iApp: \<close>
+    \<^cancel>\<open>iAp: \<close>
     subgoal apply(rule exI[of _ None]) apply(rule disjI3_3) by auto .
     (* *)
   subgoal apply(elim disjE exE conjE)
-    \<^cancel>\<open>iVar: \<close>
+    \<^cancel>\<open>iVr: \<close>
     subgoal apply(rule disjI3_1) by auto
-    \<^cancel>\<open>iLam: \<close>
+    \<^cancel>\<open>iLm: \<close>
     subgoal apply(rule disjI3_2) by auto
-    \<^cancel>\<open>iApp: \<close>
+    \<^cancel>\<open>iAp: \<close>
     subgoal apply(rule disjI3_3) by auto . . .
   
 
@@ -230,12 +230,12 @@ unfolding G_def Tperm_def apply safe
     apply(rule exI[of _ "irrename f e"]) 
     apply(rule exI[of _ "irrename f e'"]) 
     apply(cases t) unfolding presSuper_def apply simp apply(intro conjI)
-      subgoal apply(subst iLam_irrename[of "f"]) unfolding id_on_def by auto
-      subgoal apply(subst irrename_eq_itvsubst_iVar)
+      subgoal apply(subst iLm_irrename[of "f"]) unfolding id_on_def by auto
+      subgoal apply(subst irrename_eq_itvsubst_iVr)
         subgoal unfolding isPerm_def by auto
         subgoal unfolding isPerm_def by auto
-        subgoal by (smt (verit, best) Diff_iff Un_iff iLam_irrename id_on_def 
-           irrename_eq_itvsubst_iVar) . 
+        subgoal by (smt (verit, best) Diff_iff Un_iff iLm_irrename id_on_def 
+           irrename_eq_itvsubst_iVr) . 
         subgoal unfolding id_on_def isPerm_def presBnd_def by (auto split: option.splits) . . .
   (* *)
   subgoal for e1 e1' es2 es2'
@@ -264,20 +264,20 @@ apply standard using III_bsmall G_rrefresh by auto
 (* FROM ABSTRACT BACK TO CONCRETE: *)
 thm reneqv.induct[no_vars] 
 
-corollary strong_induct_reneqv[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_reneqv[consumes 2, case_names iVriLm iAp]: 
 assumes par: "\<And>p. small (Psupp p) \<and> bsmall (Psupp p)"
 and st: "reneqv t1 t2"  
-and iVar: "\<And>xs x x' p. 
+and iVr: "\<And>xs x x' p. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
-  R p (iVar x) (iVar x')"
-and iLam: "\<And>e e' xs p. 
+  R p (iVr x) (iVr x')"
+and iLm: "\<And>e e' xs p. 
   dsset xs \<inter> Psupp p = {} \<Longrightarrow> 
   super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> (\<forall>p'. R p' e e') \<Longrightarrow> 
-  R p (iLam xs e) (iLam xs e')" 
-and iApp: "\<And>e1 e1' es2 es2' p. 
+  R p (iLm xs e) (iLm xs e')" 
+and iAp: "\<And>e1 e1' es2 es2' p. 
   reneqv e1 e1' \<Longrightarrow> (\<forall>p'. R p' e1 e1') \<Longrightarrow> 
   (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e' \<and> (\<forall>p'. R p' e e')) \<Longrightarrow> 
-  R p (iApp e1 es2) (iApp e1' es2')"
+  R p (iAp e1 es2) (iAp e1' es2')"
 shows "R p t1 t2"
 unfolding reneqv_I
 apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
@@ -287,44 +287,44 @@ apply(subgoal_tac "case (t1,t2) of (t1, t2) \<Rightarrow> R p t1 t2")
     subgoal unfolding reneqv_I by simp
     subgoal for p B t apply(subst (asm) G_def) 
     unfolding reneqv_I[symmetric] apply(elim disjE exE)
-      subgoal using iVar by auto 
-      subgoal using iLam by auto  
-      subgoal using iApp by auto . . .
+      subgoal using iVr by auto 
+      subgoal using iLm by auto  
+      subgoal using iAp by auto . . .
 
-corollary strong_induct_reneqv''[consumes 1, case_names bsmall Bound iVar iLam iApp]:
+corollary strong_induct_reneqv''[consumes 1, case_names bsmall Bound iVr iLm iAp]:
   assumes  "reneqv t1 t2"
 and bsmall: "\<And>(p::'a). bsmall (PFVars p)"
 assumes bound: "\<And>(p::'a). |PFVars p| <o |UNIV::ivar set|"
-and iVar: "\<And>xs x x' p.
+and iVr: "\<And>xs x x' p.
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
-  R (iVar x) (iVar x') p"
-and iLam: "\<And>e e' xs p.
+  R (iVr x) (iVr x') p"
+and iLm: "\<And>e e' xs p.
   dsset xs \<inter> PFVars p = {} \<Longrightarrow>
   super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> (\<forall>p'. R e e' p') \<Longrightarrow>
-  R (iLam xs e) (iLam xs e') p"
-and iApp: "\<And>e1 e1' es2 es2' p.
+  R (iLm xs e) (iLm xs e') p"
+and iAp: "\<And>e1 e1' es2 es2' p.
   reneqv e1 e1' \<Longrightarrow> (\<forall>p'. R e1 e1' p') \<Longrightarrow>
   (\<And>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<Longrightarrow> reneqv e e') \<Longrightarrow>
   (\<And>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<Longrightarrow> \<forall>p'. R e e' p') \<Longrightarrow>
-  R (iApp e1 es2) (iApp e1' es2') p"
+  R (iAp e1 es2) (iAp e1' es2') p"
 shows "\<forall>(p::'a). R t1 t2 p"
 using assms strong_induct_reneqv[of PFVars t1 t2 "\<lambda>p t1 t2. R t1 t2 p"] unfolding small_def by auto
 
 (* ... and with fixed parameters: *)
-corollary strong_induct_reneqv'[consumes 2, case_names iVar iLam iApp]: 
+corollary strong_induct_reneqv'[consumes 2, case_names iVriLm iAp]: 
 assumes par: "small A \<and> bsmall A"
 and st: "reneqv t1 t2"  
-and iVar: "\<And>xs x x'. 
+and iVr: "\<And>xs x x'. 
   super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow>
-  R (iVar x) (iVar x')"
-and iLam: "\<And>e e' xs. 
+  R (iVr x) (iVr x')"
+and iLm: "\<And>e e' xs. 
   dsset xs \<inter> A = {} \<Longrightarrow> 
   super xs \<Longrightarrow> reneqv e e' \<Longrightarrow> R e e' \<Longrightarrow> 
-  R (iLam xs e) (iLam xs e')" 
-and iApp: "\<And>e1 e1' es2 es2'. 
+  R (iLm xs e) (iLm xs e')" 
+and iAp: "\<And>e1 e1' es2 es2'. 
   reneqv e1 e1' \<Longrightarrow> R e1 e1' \<Longrightarrow> 
   (\<forall>e e'. {e,e'} \<subseteq> sset es2 \<union> sset es2' \<longrightarrow> reneqv e e' \<and> R e e') \<Longrightarrow> 
-  R (iApp e1 es2) (iApp e1' es2')"
+  R (iAp e1 es2) (iAp e1' es2')"
 shows "R t1 t2"
 apply(rule strong_induct_reneqv[of "\<lambda>_::unit. A"]) using assms by auto
 

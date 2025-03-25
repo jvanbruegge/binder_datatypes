@@ -6,39 +6,39 @@ imports Translation_LC_to_ILC Translation_ILC_to_LC ILC_affine
 begin
 
 
-lemma tr_FFVars_super: 
-"x \<in> ILC.FFVars (tr e p) \<Longrightarrow> \<exists>xs p'. super xs \<and> x = dsnth xs (natOf p')"
+lemma tr_iFV_super: 
+"x \<in> ILC.iFV (tr e p) \<Longrightarrow> \<exists>xs p'. super xs \<and> x = dsnth xs (natOf p')"
 apply(induct e arbitrary: p x)  
   subgoal using super_superOf by fastforce
   subgoal by auto
   subgoal by auto .
 
-lemma tr_FFVars_prefix: 
-"x \<in> ILC.FFVars (tr e p) \<Longrightarrow> super xs \<Longrightarrow> x = dsnth xs (natOf p') \<Longrightarrow> prefix p p'"
+lemma tr_iFV_prefix: 
+"x \<in> ILC.iFV (tr e p) \<Longrightarrow> super xs \<Longrightarrow> x = dsnth xs (natOf p') \<Longrightarrow> prefix p p'"
 apply(induct e arbitrary: p x xs) apply safe
   subgoal by simp (metis dsnth.rep_eq dsset.rep_eq dtheN_dsnth injD 
      inject_natOf insert_absorb insert_disjoint(1) prefix_order.order_refl snth_sset super_disj super_superOf)
   subgoal by simp (metis append_prefixD) 
   subgoal by auto .
 
-lemma not_prefix_FFVars_tr_disjoint: 
-"\<not> prefix p p' \<Longrightarrow> \<not> prefix p' p \<Longrightarrow> ILC.FFVars (tr e p) \<inter> ILC.FFVars (tr e' p') = {}"
-by (metis disjoint_iff prefix_same_cases tr_FFVars_prefix tr_FFVars_super)
+lemma not_prefix_iFV_tr_disjoint: 
+"\<not> prefix p p' \<Longrightarrow> \<not> prefix p' p \<Longrightarrow> ILC.iFV (tr e p) \<inter> ILC.iFV (tr e' p') = {}"
+by (metis disjoint_iff prefix_same_cases tr_iFV_prefix tr_iFV_super)
 
 
 (* Mazza's lemma 15(1) (remember that 15(2) comes for free from our recursor) *) thm reneqv_tr
 lemma affine_tr: "affine (tr e p)"
 apply(induct e arbitrary: p)
   apply auto unfolding affine_iApp_iff apply auto 
-  apply (metis Zero_not_Suc append1_eq_conv append_eq_append_conv length_append_singleton prefix_def tr_FFVars_prefix tr_FFVars_super)
-  by (metis Cons_prefix_Cons Int_emptyD Suc_inject not_prefix_FFVars_tr_disjoint same_prefix_prefix)
+  apply (metis Zero_not_Suc append1_eq_conv append_eq_append_conv length_append_singleton prefix_def tr_iFV_prefix tr_iFV_super)
+  by (metis Cons_prefix_Cons Int_emptyD Suc_inject not_prefix_iFV_tr_disjoint same_prefix_prefix)
 
 
 (* Mazza Lemma 16 *)
 lemma reneqv_tr': "reneqv s t \<Longrightarrow> tr' s = tr' t"
 apply(induct rule: reneqv.induct)
   subgoal by simp (metis dtheN prod.collapse subsetD super_dsset_RSuper theSN_unique)
-  subgoal using tr'_iLam_uniform by (metis uniform_def uniform_def2)
+  subgoal using tr'_iLm_uniform by (metis uniform_def uniform_def2)
   subgoal for s t apply(subst tr'_iApp_uniform)
     subgoal unfolding uniform_def by auto
     subgoal unfolding uniformS_def4 by auto
@@ -53,26 +53,26 @@ lemma tr_tvsubst_Var_reneqv:
 (* This assumption made by Mazza is not needed: 
 assumes "\<And>i j. i \<noteq> j \<Longrightarrow> \<not> prefix (snth ps i) (snth ps j)" *)
 shows "reneqv
-         (tr (tvsubst (Var(x:=e)) ee) q) 
+         (tr (tvsubst (Vr(x:=e)) ee) q) 
          (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q))"
 proof (binder_induction ee arbitrary: q ps avoiding: x e rule: term.strong_induct)
-  case (Var x q ps)
+  case (Vr x q ps)
   then show ?case apply(subst term.subst(1))
       subgoal by auto
       subgoal by auto (metis dsset_range empty_iff imkSubst_idle insert_iff rangeI reneqv_tr 
-        subOf_superOf super_superOf touchedSuper_iVar tr_Var) .
+        subOf_superOf super_superOf touchedSuper_iVr tr_Var) .
 next
-  case (App t1 t2 q ps)
+  case (Ap t1 t2 q ps)
   then show ?case apply(subst term.subst(2))
       subgoal by auto
       subgoal apply (simp add: reneqv_iApp_iff) apply safe
-        using App.IH(1,2) reneqv_trans reneqv_sym apply blast+    
-        using App.IH(2) reneqv_trans reneqv_sym by blast .
+        using Ap.IH(1,2) reneqv_trans reneqv_sym apply blast+    
+        using Ap.IH(2) reneqv_trans reneqv_sym by blast .
 next
-  case (Lam y t q ps)
+  case (Lm y t q ps)
   then show ?case apply(subst term.subst(3))
       subgoal by auto
-      subgoal using IImsupp_Var by fastforce
+      subgoal using IImsupp_Vr by fastforce
       subgoal unfolding tr_Lam apply (subst iterm.subst(3))
         subgoal by auto
         subgoal using uniformS_touchedSuper_IImsupp_imkSubst 
@@ -81,34 +81,34 @@ next
           subgoal  apply(rule uniformS_touchedSuper_IImsupp_imkSubst'[where e = "tr e (shd ps)"]) 
             subgoal by auto   subgoal by auto
             subgoal apply auto  by (meson image_eqI shd_sset)
-            subgoal by simp  subgoal by (metis FFVars_tr UnI2 image_eqI subOf_superOf subset_eq) . . .
-        subgoal apply(subst reneqv_iLam_iff)
+            subgoal by simp  subgoal by (metis iFV_tr image_eqI subOf_superOf subset_eq) . . .
+        subgoal apply(subst reneqv_iLm_iff)
           subgoal by auto
-          subgoal using Lam.fresh(2) by fastforce . . .
+          subgoal using Lm.fresh(2) by fastforce . . .
 qed
 
 (* difference from the above lemma (tr_tvsubst_Var_reneqv) 
 is that we have a different position q' *)
 lemma tr_tvsubst_Var_reneqv':  
 shows "reneqv
-         (tr (tvsubst (Var(x:=e)) ee) q) 
+         (tr (tvsubst (Vr(x:=e)) ee) q) 
          (itvsubst (imkSubst (superOf x) (smap (tr e) ps)) (tr ee q'))"
 using reneqv_trans tr_tvsubst_Var_reneqv by blast
 
 (* *)
 
-lemma FFVars_touchedSuperT_imkSubst_UN_incl: 
+lemma iFV_touchedSuperT_imkSubst_UN_incl: 
 assumes xs: "super xs" and 0: "touchedSuperT e2 = touchedSuperT e2'"
 and 1: "(\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
-shows "(\<Union>x\<in>ILC.FFVars e2. touchedSuperT (imkSubst xs ts x)) \<subseteq>
-       (\<Union>x'\<in>ILC.FFVars e2'. touchedSuperT (imkSubst xs ts x'))"
+shows "(\<Union>x\<in>ILC.iFV e2. touchedSuperT (imkSubst xs ts x)) \<subseteq>
+       (\<Union>x'\<in>ILC.iFV e2'. touchedSuperT (imkSubst xs ts x'))"
 proof safe
   fix x y
-  assume x: "x \<in> ILC.FFVars e2" and y: "y \<in> touchedSuperT (imkSubst xs ts x)"
-  show "y \<in> (\<Union>x'\<in>ILC.FFVars e2'. touchedSuperT (imkSubst xs ts x'))"
+  assume x: "x \<in> ILC.iFV e2" and y: "y \<in> touchedSuperT (imkSubst xs ts x)"
+  show "y \<in> (\<Union>x'\<in>ILC.iFV e2'. touchedSuperT (imkSubst xs ts x'))"
   proof(cases "x \<in> dsset xs")
     case True note xx = True
-    then obtain x' where x': "x' \<in> ILC.FFVars e2'" "x' \<in> dsset xs" 
+    then obtain x' where x': "x' \<in> ILC.iFV e2'" "x' \<in> dsset xs" 
     using xs 0 x unfolding touchedSuperT_def touchedSuper_def by auto
     obtain i where xi: "x = dsnth xs i" using xx by (metis dtheN)
     hence ii: "imkSubst xs ts x = snth ts i" by simp
@@ -119,27 +119,27 @@ proof safe
     thus ?thesis using x' by auto
   next
     case False note xx = False
-    hence ii: "imkSubst xs ts x = iVar x" by simp
+    hence ii: "imkSubst xs ts x = iVr x" by simp
     obtain xs1 where xs1: "super xs1" "xs1 \<noteq> xs" "x \<in> dsset xs1"
     using xx touchedSuperT_def touchedSuper_def y by auto   
-    obtain x' where x': "x'\<in>ILC.FFVars e2'" "x' \<in> dsset xs1"
+    obtain x' where x': "x'\<in>ILC.iFV e2'" "x' \<in> dsset xs1"
     using 0 x xs1 unfolding touchedSuperT_def touchedSuper_def by auto
     hence "x' \<notin> dsset xs" using xs1 by (metis IntI empty_iff super_disj xs)
-    hence ii': "imkSubst xs ts x' = iVar x'" by simp
+    hence ii': "imkSubst xs ts x' = iVr x'" by simp
     have y': "y \<in> touchedSuperT (imkSubst xs ts x')" 
-    using touchedSuper_iVar x'(2) xs1(1) xs1(3) y unfolding ii ii' by auto
+    using touchedSuper_iVr x'(2) xs1(1) xs1(3) y unfolding ii ii' by auto
     show ?thesis using y' x'(1) by auto
   qed
 qed
 
-lemma FFVars_touchedSuperT_imkSubst_UN: 
+lemma iFV_touchedSuperT_imkSubst_UN: 
 assumes xs: "super xs" and 0: "touchedSuperT e2 = touchedSuperT e2'"
 and 1: "(\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
-shows "(\<Union>x\<in>ILC.FFVars e2. touchedSuperT (imkSubst xs ts x)) =
-       (\<Union>x'\<in>ILC.FFVars e2'. touchedSuperT (imkSubst xs ts x'))"
+shows "(\<Union>x\<in>ILC.iFV e2. touchedSuperT (imkSubst xs ts x)) =
+       (\<Union>x'\<in>ILC.iFV e2'. touchedSuperT (imkSubst xs ts x'))"
 apply standard
-  subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto
-  subgoal apply(rule FFVars_touchedSuperT_imkSubst_UN_incl) using assms by auto .  
+  subgoal apply(rule iFV_touchedSuperT_imkSubst_UN_incl) using assms by auto
+  subgoal apply(rule iFV_touchedSuperT_imkSubst_UN_incl) using assms by auto .  
 
 
 (* Lemma 18 from Mazza: *)
@@ -159,7 +159,7 @@ ts's.
 lemma tr'_itvsubst_good_uniformS: 
 assumes txs: "super xs" "uniformS ts" and t: "uniform t" 
 shows "tr' (itvsubst (imkSubst xs ts) t) = 
-       tvsubst (Var((subOf xs):=(tr' (snth ts 0)))) (tr' t)"
+       tvsubst (Vr((subOf xs):=(tr' (snth ts 0)))) (tr' t)"
 proof-
   have t: "good t" using t  
     by (simp add: uniform_good)
@@ -167,59 +167,59 @@ proof-
     using snth_sset by blast
   have g: "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')"
   using txs(2) uniformS_good by auto
-  have "touchedSuper (\<Union> (ILC.FFVars ` sset ts)) = touchedSuper (ILC.FFVars t2)"
+  have "touchedSuper (\<Union> (ILC.iFV ` sset ts)) = touchedSuper (ILC.iFV t2)"
   using t2 g apply auto unfolding touchedSuperT_def  
   apply (smt (verit, ccfv_SIG) touchedSuper_UN UN_iff image_iff)
    by (metis UN_iff touchedSuper_Union)
-  hence 0: "touchedSuper (dsset xs \<union> \<Union> (ILC.FFVars ` sset ts)) = 
-    touchedSuper (dsset xs) \<union> touchedSuper (ILC.FFVars t2)"
+  hence 0: "touchedSuper (dsset xs \<union> \<Union> (ILC.iFV ` sset ts)) = 
+    touchedSuper (dsset xs) \<union> touchedSuper (ILC.iFV t2)"
   unfolding touchedSuper_Un by auto
   
   (* NB: while good t is needed for induction, 
     the "uniformS t assumption cannot be replaced by the following: 
      "(\<forall>e2\<in>sset ts. good e2) \<and> (\<forall>e2 e2'. {e2, e2'} \<subseteq> sset ts \<longrightarrow> touchedSuperT e2 = touchedSuperT e2')" 
-      because this would fail to prove the Var case (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
+      because this would fail to prove the Vrcase (where, as Mazza also notes, the lemma reneqv_tr' is essential). 
   *)
   from t txs show ?thesis proof (binder_induction t avoiding: xs ts rule: strong_induct_good')
     case bsmall
     then show ?case unfolding bsmall_def 0
       by (metis g bsmall_def finite_Un good_finite_touchedSuperT super_bsmall t2 touchedSuperT_def txs(1))
   next
-    case (iVar ys x)
+    case (iVr ys x)
     then show ?case apply auto 
       apply (metis bot.extremum imkSubst_def insert_subset 
        reneqvS_def reneqv_tr' shd_sset snth_sset sup.idem super_subOf_theN_eq uniformS_def3)
-      by (metis dtheN fst_conv imkSubst_idle snd_conv theSN' theSN_ex tr'_iVar)
+      by (metis dtheN fst_conv imkSubst_idle snd_conv theSN' theSN_ex tr'_iVr)
   next
-    case (iLam e xsa)
-    then show ?case apply(subst tr'_iLam)
+    case (iLm e xsa)
+    then show ?case apply(subst tr'_iLm)
       apply auto apply(subst iterm.subst(3))
         subgoal by auto 
         subgoal apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
           using shd_sset super_touchedSuper_dsset by fastforce+
         subgoal apply(subst term.subst(3))
-          subgoal by auto subgoal apply(rule IImsupp_Var') 
-          apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
-           Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
+          subgoal by auto subgoal apply(rule IImsupp_Vr') 
+          apply simp by (metis (no_types, lifting) iFV_tr'
+           Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
            superOf_subOf super_touchedSuper_dsset touchedSuper_emp uniformS_good)      
-          subgoal apply(subst tr'_iLam) 
+          subgoal apply(subst tr'_iLm) 
             subgoal by auto
             subgoal using g good_imkSubst by auto
             subgoal by auto . . .
   next
-    case (iApp e1 es2)
-    then show ?case apply(subst tr'_iApp)
+    case (iAp e1 es2)
+    then show ?case apply(subst tr'_iAp)
     subgoal by auto
     subgoal by auto
     subgoal by auto
     subgoal apply(subst iterm.subst(2))
       subgoal by auto
-      subgoal apply(subst tr'_iApp)
+      subgoal apply(subst tr'_iAp)
         subgoal using g good_imkSubst by auto
         subgoal using g good_imkSubst by auto
         subgoal apply clarsimp  apply (simp add: touchedSuperT_itvsubst ) 
         apply(drule uniformS_good) subgoal for e2 e2'  
-        by (metis FFVars_touchedSuperT_imkSubst_UN) .
+        by (metis iFV_touchedSuperT_imkSubst_UN) .
         subgoal using shd_sset by fastforce . . .
   qed
 qed
@@ -229,7 +229,7 @@ qed
 (* Theorem 19(1): *)
 lemma tr'_tr: "tr' (tr e p) = e"
 apply(induct e arbitrary: p) 
-  subgoal for x p apply simp apply(subst tr'_iVar[of "superOf x"]) 
+  subgoal for x p apply simp apply(subst tr'_iVr[of "superOf x"]) 
     subgoal by auto
     subgoal by (simp add: dsset_range)
     subgoal by (metis fst_eqD subOf_superOf super_superOf theSN theSN_ex) .
@@ -245,7 +245,7 @@ structural induction does not take
 care of the supervariable assumptiin in the lambda-case. But this 
 time regular induction works, no need fresh induction like before. 
 Note also that "uniform t" is also needed in the induction, otherwise 
-the iApp case does not go through. 
+the iAp case does not go through. 
 *)
 lemma tr_tr': 
 assumes t: "uniform t"
@@ -255,18 +255,18 @@ have tt: "good t" using uniform_good[OF t] .
 show ?thesis using tt t
 apply(induct arbitrary: p rule: good.induct) 
   subgoal for xs x p apply clarsimp  
-    apply(rule reneqv.iVar[of xs]) 
+    apply(rule reneqv.iVr[of xs]) 
     by auto (metis dsset_range rangeI subsetD superOf_subOf super_dsset_RSuper 
        super_subOf_theN_eq theSN') 
-  subgoal for xs t p apply(subst tr'_iLam) 
+  subgoal for xs t p apply(subst tr'_iLm) 
     subgoal by simp
     subgoal by simp
-    subgoal apply simp apply(rule reneqv.iLam) by auto .
-  subgoal for t1 ts p apply(subst tr'_iApp) 
+    subgoal apply simp apply(rule reneqv.iLm) by auto .
+  subgoal for t1 ts p apply(subst tr'_iAp) 
     subgoal by simp
     subgoal by simp
     subgoal by simp
-    subgoal apply simp apply(rule reneqv.iApp) 
+    subgoal apply simp apply(rule reneqv.iAp) 
       subgoal unfolding uniform_iApp_iff by auto
       subgoal unfolding sset_range image_def  
       by simp (smt (verit, ccfv_threshold) bot.extremum insert_subset reneqv_trans 
@@ -280,8 +280,8 @@ lemma tr'_hred_red:
 assumes ttt: "hred t tt" and t: "uniform t"
 shows "red (tr' t) (tr' tt)"
 using ttt t unfolding red_def hred_def2[OF t] 
-by (metis reneqv_iApp_iff tr'_iApp_uniform tr'_iLam_uniform tr'_itvsubst_good_uniformS 
-   uniformS_def4 uniform_def3 uniform_iLam_iff)
+by (metis reneqv_iApp_iff tr'_iApp_uniform tr'_iLm_uniform tr'_itvsubst_good_uniformS 
+   uniformS_def4 uniform_def3 uniform_iLm_iff)
 
 lemma tr'_hred_red2: 
 assumes "uniformS ts" "stream_all2 hred ts ts'"
@@ -303,8 +303,8 @@ proof(induct arbitrary: ps rule: stepD.induct)
    "smap (\<lambda>p. itvsubst (imkSubst (superOf x) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) (tr e1 (p @ [0]))) ps"] conjI)
     subgoal apply simp apply(rule ustepD.Beta)
       subgoal unfolding uniformS_def4 apply clarsimp
-      apply(rule reneqv.iApp) 
-        subgoal apply(rule reneqv.iLam) using reneqv_tr by auto
+      apply(rule reneqv.iAp) 
+        subgoal apply(rule reneqv.iLm) using reneqv_tr by auto
         subgoal by auto . 
       subgoal unfolding stream_all2_iff_snth hred_def by auto .
     subgoal unfolding stream_all2_iff_snth apply auto subgoal for i 
@@ -314,27 +314,27 @@ proof(induct arbitrary: ps rule: stepD.induct)
     unfolding reneqvS_def by auto . .    
 next
   case (AppL d e1 e1' e2 ps) 
-  have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
-    = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
+  have 0: "smap (\<lambda>p. iAp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
+    = smap2 iAp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
   by (auto simp: stream_eq_nth)
   define qs where qs: "qs = smap (\<lambda>p. p @ [0]) ps"
   obtain tts where tts: "ustepD d (smap (tr e1) qs) tts" 
   "stream_all2 reneqv tts (smap (tr e1') qs)" using AppL(2)[of qs] by auto
-  define tts' where "tts' = smap2 iApp tts
+  define tts' where "tts' = smap2 iAp tts
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
     subgoal unfolding 0 apply(rule ustepD.iAppL)
       subgoal unfolding uniformS_sflat by auto
       subgoal using tts(1) unfolding qs unfolding stream.map_comp o_def . .
     subgoal unfolding stream_all2_iff_snth apply auto
-    apply(rule reneqv.iApp)
+    apply(rule reneqv.iAp)
       subgoal using tts(2) unfolding stream_all2_iff_snth qs by auto
       subgoal by auto . .   
 next
   case (AppR d e2 e2' e1 ps)   
-  have 0: "smap (\<lambda>p. iApp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
-    = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
+  have 0: "smap (\<lambda>p. iAp (tr e1 (p @ [0])) (smap (\<lambda>n. tr e2 (p @ [Suc n])) nats)) ps 
+    = smap2 iAp (smap (\<lambda>p. tr e1 (p @ [0])) ps) 
       (smap (\<lambda>p. smap (\<lambda>n. tr e2 (p @ [Suc n])) nats) ps)" 
   by (auto simp: stream_eq_nth)
 
@@ -354,13 +354,13 @@ next
   have 222: "\<And> i j. ttss !! i !! j = tts !! (nat1 (i,j))"
   unfolding 22 by (simp add: snth_sflat)
 
-  define tts' where "tts' = smap2 iApp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
+  define tts' where "tts' = smap2 iAp (smap (\<lambda>p. tr e1 (p @ [0])) ps) ttss"  
   show ?case apply simp apply(intro exI[of _ tts'] conjI) unfolding tts'_def
     subgoal unfolding 0 apply(rule ustepD.iAppR)
       subgoal unfolding uniformS_def4 by auto
       subgoal using tts(1) unfolding 22 33 . .
     subgoal unfolding stream_all2_iff_snth apply auto
-    apply(rule reneqv.iApp)
+    apply(rule reneqv.iAp)
       subgoal unfolding stream_all2_iff_snth by auto
       subgoal unfolding sset_range image_def  
       unfolding 222 using tts(1,2) unfolding stream_all2_iff_snth    
@@ -369,12 +369,12 @@ next
   case (Xi d e e' x)
   then obtain tts where tts: "ustepD d (smap (tr e) ps) tts" "stream_all2 reneqv tts (smap (tr e') ps)"
   by auto
-  have 0: "smap (\<lambda>p. iLam (superOf x) (tr e p)) ps = 
-           smap (iLam (superOf x)) (smap (tr e) ps)"
+  have 0: "smap (\<lambda>p. iLm (superOf x) (tr e p)) ps = 
+           smap (iLm (superOf x)) (smap (tr e) ps)"
   unfolding stream_eq_nth by auto
-  show ?case apply(intro exI[of _ "smap (iLam (superOf x)) tts"] conjI)
+  show ?case apply(intro exI[of _ "smap (iLm (superOf x)) tts"] conjI)
     subgoal apply simp unfolding 0 apply(rule ustepD.Xi) using tts(1) by auto
-    subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLam) .
+    subgoal using tts(2) unfolding stream_all2_iff_snth by (auto intro: reneqv.iLm) .
 qed
 
 
@@ -410,10 +410,10 @@ next
 next
   case (Xi xs d es es')
   then show ?case unfolding stream_all2_iff_snth apply clarsimp subgoal for i
-    apply(subst tr'_iLam_uniform)
+    apply(subst tr'_iLm_uniform)
       subgoal by simp
       subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
-      subgoal apply(subst tr'_iLam_uniform)
+      subgoal apply(subst tr'_iLm_uniform)
         subgoal by simp
         subgoal using snth_sset uniformS_sset_uniform ustepD_uniformS by blast
       subgoal apply(rule stepD.Xi) by auto . . .
@@ -427,10 +427,10 @@ lemma usetpD_snth_eq:
 "ustepD d ts ss \<Longrightarrow> snth ts i = snth ts j \<Longrightarrow> snth ss i = snth ss j"
 apply(induct arbitrary: i j rule: ustepD.induct)
   subgoal unfolding stream_all2_iff_snth using hred_determ by metis
-  subgoal by (metis iterm.inject snth_smap2)  
+  subgoal by (metis iterm.inject(2) snth_smap2)  
   subgoal apply simp unfolding snth_sflat  
     by (metis nat2_nat1 snth2.simps stream_eq_nth)
-  subgoal by (metis iLam_same_inject snth_smap) .
+  subgoal by (metis iLm_same_inject snth_smap) .
 
 (* Closer to how Mazza defines things informally, namely
 he only "paralelizes" the definition in the iAppR case 
@@ -438,9 +438,9 @@ he only "paralelizes" the definition in the iAppR case
  *)
 inductive ustepD' :: "nat \<Rightarrow> itrm \<Rightarrow> itrm \<Rightarrow> bool" where
   Beta: "uniform e \<Longrightarrow> hred e e' \<Longrightarrow> ustepD' 0 e e'"
-| iAppL: "uniformS es \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' (Suc d) (iApp e es) (iApp e' es)"
-| iAppR: "uniform e \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD' (Suc d) (iApp e es) (iApp e es')"
-| Xi: "super xs \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' d (iLam xs e) (iLam xs e')"
+| iAppL: "uniformS es \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' (Suc d) (iAp e es) (iAp e' es)"
+| iAppR: "uniform e \<Longrightarrow> ustepD d es es' \<Longrightarrow> ustepD' (Suc d) (iAp e es) (iAp e es')"
+| Xi: "super xs \<Longrightarrow> ustepD' d e e' \<Longrightarrow> ustepD' d (iLm xs e) (iLm xs e')"
 
 
 lemma uniformS_sconst: "uniformS (sconst e) \<longleftrightarrow> uniform e"
@@ -449,10 +449,10 @@ unfolding uniformS_def4 uniform_def3 by auto
 lemma stream_all2_sconst: "stream_all2 R (sconst a) (sconst b) \<longleftrightarrow> R a b"
 unfolding stream_all2_iff_snth by auto
 
-lemma sconst_iApp: "sconst (iApp e es) = smap2 iApp (sconst e) (sconst es)"
+lemma sconst_iAp: "sconst (iAp e es) = smap2 iAp (sconst e) (sconst es)"
 unfolding stream_eq_nth by auto
 
-lemma sconst_iLam: "sconst (iLam xs e) = smap (iLam xs) (sconst e)"
+lemma sconst_iLm: "sconst (iLm xs e) = smap (iLm xs) (sconst e)"
 unfolding stream_eq_nth by auto
 
 lemma snth_sflat_scons: "snth (sflat (sconst es)) k = snth es (snd (nat2 k))"
@@ -473,16 +473,16 @@ using 1 proof(induct arbitrary: f rule: ustepD.induct)
   by auto
 next
   case (iAppL ess d es es' f)
-  have 0: "\<And> es ess. smap (\<lambda>i. smap2 iApp es ess !! f i) nats = 
-                      smap2 iApp (smap (\<lambda>i. es !! f i) nats) (smap (\<lambda>i. ess !! f i) nats)"
+  have 0: "\<And> es ess. smap (\<lambda>i. smap2 iAp es ess !! f i) nats = 
+                      smap2 iAp (smap (\<lambda>i. es !! f i) nats) (smap (\<lambda>i. ess !! f i) nats)"
   unfolding stream_eq_nth by auto
   show ?case unfolding 0 apply(rule ustepD.iAppL)
     subgoal using iAppL(1) unfolding uniformS_sflat by auto
     subgoal using iAppL(3) . .
 next
   case (iAppR es d ess ess' f)
-  have 0: "\<And> es ess. smap (\<lambda>i. smap2 iApp es ess !! f i) nats = 
-                      smap2 iApp (smap (\<lambda>i. es !! f i) nats) (smap (\<lambda>i. ess !! f i) nats)"
+  have 0: "\<And> es ess. smap (\<lambda>i. smap2 iAp es ess !! f i) nats = 
+                      smap2 iAp (smap (\<lambda>i. es !! f i) nats) (smap (\<lambda>i. ess !! f i) nats)"
   unfolding stream_eq_nth by auto
   define g where g: "g \<equiv> \<lambda>k. nat1 (case nat2 k of (i,j) \<Rightarrow> (f i, j))"
   have 1: "\<And> ess j. snth (sflat (smap (\<lambda>i. ess !! f i) nats)) j = snth (smap (\<lambda>i. sflat ess !! g i) nats) j"
@@ -494,8 +494,8 @@ next
     subgoal using iAppR(3) unfolding 1 . .
 next
   case (Xi xs d es es' f)
-  have 0: "\<And> xs es. smap (\<lambda>i. smap (iLam xs) es !! f i) nats = 
-                     smap (iLam xs) (smap (\<lambda>i. es !! f i) nats)"
+  have 0: "\<And> xs es. smap (\<lambda>i. smap (iLm xs) es !! f i) nats = 
+                     smap (iLm xs) (smap (\<lambda>i. es !! f i) nats)"
   unfolding stream_eq_nth by auto
   show ?case unfolding 0 apply(rule ustepD.Xi)
     subgoal using Xi(1) unfolding uniformS_sflat by auto
@@ -512,16 +512,16 @@ lemma ustepD'_ustepD_sconst:
 "ustepD' d e e' \<Longrightarrow> ustepD d (sconst e) (sconst e')"
 apply(induct rule: ustepD'.induct)
   subgoal apply(rule ustepD.Beta) unfolding uniformS_sconst stream_all2_sconst by auto 
-  subgoal unfolding sconst_iApp apply(rule ustepD.iAppL) 
+  subgoal unfolding sconst_iAp apply(rule ustepD.iAppL) 
   unfolding uniformS_sflat unfolding uniformS_def4  
   by fastforce
-  subgoal for e d es es' unfolding sconst_iApp apply(rule ustepD.iAppR) 
+  subgoal for e d es es' unfolding sconst_iAp apply(rule ustepD.iAppR) 
   unfolding uniformS_def4 uniform_def3  
     subgoal by auto
     subgoal (* this requires ustepD_sflat_sconst , which would not easily go by induction, 
      so I was led to the shuffling generalization usetpD_snth_shuffle *)
     using ustepD_sflat_sconst by auto .
-  subgoal unfolding sconst_iLam apply(rule ustepD.Xi) 
+  subgoal unfolding sconst_iLm apply(rule ustepD.Xi) 
   unfolding uniformS_def4 uniform_def3 by fastforce+ .
 
 (* For the converse direction (from ustepD t ustepD') we need another consequence of 

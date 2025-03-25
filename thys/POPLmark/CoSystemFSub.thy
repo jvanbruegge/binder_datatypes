@@ -8,25 +8,25 @@ begin
 
 ML \<open>
 val ctors = [
-  (("TyVar", NoSyn), [@{typ 'var}]),
+  (("TVr", NoSyn), [@{type 'var}]),
   (("Top", NoSyn), []),
-  (("Fun", NoSyn), [@{typ 'rec}, @{typ 'rec}]),
-  (("Forall", NoSyn), [@{typ 'bvar}, @{typ 'rec}, @{typ 'brec}])
+  (("Arr", NoSyn), [@{type 'rec}, @{type 'rec}]),
+  (("All", NoSyn), [@{type 'bvar}, @{type 'rec}, @{type 'brec}])
 ]
 
 val spec = {
-  fp_b = @{binding "typ"},
+  fp_b = @{binding "type"},
   vars = [
-    (dest_TFree @{typ 'var}, MRBNF_Def.Free_Var),
-    (dest_TFree @{typ 'bvar}, MRBNF_Def.Bound_Var),
-    (dest_TFree @{typ 'brec}, MRBNF_Def.Live_Var),
-    (dest_TFree @{typ 'rec}, MRBNF_Def.Live_Var)
+    (dest_TFree @{type 'var}, MRBNF_Def.Free_Var),
+    (dest_TFree @{type 'bvar}, MRBNF_Def.Bound_Var),
+    (dest_TFree @{type 'brec}, MRBNF_Def.Live_Var),
+    (dest_TFree @{type 'rec}, MRBNF_Def.Live_Var)
   ],
   binding_rel = [[0]],
   rec_vars = 2,
   ctors = ctors,
-  map_b = @{binding vvsubst_typ},
-  tvsubst_b = @{binding tvsubst_typ}
+  map_b = @{binding vvsubst_type},
+  tvsubst_b = @{binding substT}
 }
 \<close>
 

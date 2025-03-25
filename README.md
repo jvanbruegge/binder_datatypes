@@ -37,8 +37,8 @@ Prelim|miscellaneous extensions to standard libraries, and bindings-specific inf
 Binders|main metatheory including the formalization of MRBNFs, the composition, fixpoint and recursor constructions (section 4).
 Operations|detailed proof examples for automation of the metatheory
 Untyped_Lambda_Calculus|formalization of the untyped lambda calculus (section 3.2)
-System_Fsub|formalization of System F with subtyping and the POPLmark challenge 1B and 2B, (section 5.2)
-Infinitary_Lambda_Calculus|formalization of Mazza's isomorphism between the untyped lambda calculus and the affine uniform infinitary lambda calculus in Iso_LC_ILC (sections 3.3 and 5.1)
+System_Fsub|formalization of System F with subtyping and the POPLmark challenge 1B and 2B, (section 6)
+Infinitary_Lambda_Calculus|formalization of Mazza's isomorphism between the untyped lambda calculus and the affine uniform infinitary lambda calculus in Iso_LC_ILC (sections 3.3 and 5)
 
 The session structure resembles the directory structure: theories from session <SESSION> are placed
 in the directory src/thys/<SESSION>. Exceptions to this rule are the Isabelle_Prelim session which

@@ -8,7 +8,7 @@ begin
 inductive print :: "trm \<Rightarrow> string \<Rightarrow> bool" where
   "print (Var (Variable x)) [char_of x]"
 | "print t1 s1 \<Longrightarrow> print t2 s2 \<Longrightarrow> print (App t1 t2) (''('' @ s1 @ '' '' @ s2 @ '')'')"
-| "Variable y \<notin> FFVars t - {x} \<Longrightarrow> print (swap t x (Variable y)) s \<Longrightarrow>
+| "Variable y \<notin> FFVars t - {x} \<Longrightarrow> print (sswap t x (Variable y)) s \<Longrightarrow>
     print (Lam x t) (''(%'' @ [char_of y] @ ''. '' @ s @ '')'')"
 
 (* *)
@@ -66,9 +66,11 @@ proof -
     done
   then show ?thesis
     apply -
-    apply (rule exI[of _ "id(a := b, b := a)"])
+    apply (rule exI[of _ "a \<leftrightarrow> b"])
     apply (auto simp: isPerm_def presBnd_alt assms(1,4) set_mp[OF assms(3)] id_on_def)
-    done
+      apply (metis assms(1) swap_def)
+     apply (metis assms(1) swap_def)
+    by (metis assms(3,4) subsetD swap_simps(3))
 qed
 
 interpretation Step: IInduct where
@@ -84,7 +86,8 @@ GG = G
     by (auto simp: G_def)
   subgoal for \<sigma> R x e
     unfolding presBnd_alt isPerm_def
-    by (auto simp: G_def term.permute_comp)
+    apply (auto simp: G_def term.permute_comp)
+    by (metis inv_simp1 term.permute_bij term.permute_inv_simp)+
   subgoal
     by (auto simp: G_def)
   subgoal for x A B

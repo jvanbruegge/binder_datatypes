@@ -78,8 +78,8 @@ shows "affine e"
 proof-
   obtain xs' e' where 0: "iLam xs e = iLam xs' e'" and "affine e'"
   using assms by (smt (verit, del_insts) affine.cases iterm.distinct(2) iterm.distinct(4))
-  thus ?thesis using 0 unfolding iLam_inject
-  by (metis iLam_inject affine.equiv)
+  thus ?thesis using 0 unfolding iterm.inject
+  by (metis iterm.inject(3) affine.equiv)
 qed
 
 lemma affine_iLam_iff[simp]:

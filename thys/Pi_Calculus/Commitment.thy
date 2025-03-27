@@ -25,27 +25,6 @@ lemmas toUnfold =
 lemmas commit_pre.map_id0[simp]
 lemmas commit_pre_map_cong_id = commit_pre.map_cong[of _ _ _ id id id, simplified]
 
-lemma Abs_commit_pre_inj[simp]: "Abs_commit_pre k = Abs_commit_pre k' \<longleftrightarrow> k = k'"
-  by (metis toUnfold(21))
-
-lemma Bout_inj[simp]: "Bout x y P = Bout x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
-  unfolding Bout_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
-  apply (rule iffI)
-   apply (auto simp: id_on_def bij_implies_inject)[1]
-   apply (rule term.permute_cong)
-  apply (auto simp: bij_implies_inject)
-  subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
-    by (auto simp: id_on_def) .
-
-lemma Binp_inj[simp]: "Binp x y P = Binp x' y' P' \<longleftrightarrow> x = x' \<and> ((y' \<notin> FFVars P \<or> y' = y) \<and> P' = swap P y y')"
-unfolding Binp_def commit.TT_inject0 toUnfold map_commit_pre_def set3_commit_pre_def apply simp
-  apply (rule iffI)
-   apply (auto simp: id_on_def bij_implies_inject)[1]
-   apply (rule term.permute_cong)
-  apply (auto simp: bij_implies_inject)
-  subgoal apply(rule exI[of _ "(id(y:=y',y':=y))"])
-    by (auto simp: id_on_def) .
-
 (* Supply of fresh variables *)
 
 lemma finite_FVars_commit: "finite (FVars_commit (C::var commit))"
@@ -158,5 +137,28 @@ lemma ns_map_action[simp]: "ns (map_action \<sigma> \<alpha>) = \<sigma> ` ns \<
   by (cases \<alpha>) auto
 lemma ns_equiv[equiv]: "bij \<sigma> \<Longrightarrow> \<sigma> ` ns \<alpha> = ns (map_action \<sigma> \<alpha>)"
   by simp
+
+lemma Inp_inject: "(Inp x y e = Inp x' y' e') \<longleftrightarrow>
+  x = x' \<and>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FVars_term e - {y}) f \<and> f y = y' \<and> permute_term f e = e')"
+  by (smt (z3) Abs_rrename Pi.supp_swap_bound Swapping.bij_swap id_onD id_on_swap swap_simps(1) term.inject(6))
+lemma Res_inject: "(Res y e = Res y' e') \<longleftrightarrow>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FVars_term e - {y}) f \<and> f y = y' \<and> permute_term f e = e')"
+  by (smt (verit) Pi.supp_swap_bound Swapping.bij_swap id_onD id_on_swap swap_simps(1) term.inject(7) term.permute(8) term.permute_cong_id term.set(8))
+lemma Bout_inject: "(Bout x y t = Bout x' y' t') \<longleftrightarrow>
+  x = x' \<and>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FVars_term t - {y}) f \<and> f y = y' \<and> permute_term f t = t')"
+  by (smt (z3) Res_inject commit.inject(3) term.inject(7))
+lemma Binp_inject: "(Binp x y t = Binp x' y' t') \<longleftrightarrow>
+  x = x' \<and>
+  (\<exists>f. bij f \<and> |supp (f::var \<Rightarrow> var)| <o |UNIV::var set|
+  \<and> id_on (FVars_term t - {y}) f \<and> f y = y' \<and> permute_term f t = t')"
+  by (smt (z3) Res_inject commit.inject(5) term.inject(7))
+
+lemmas commit.inject(3,5)[simp del]
+lemmas term.inject(6,7)[simp del]
 
 end

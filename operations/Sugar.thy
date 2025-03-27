@@ -1,5 +1,5 @@
 theory Sugar
-  imports Least_Fixpoint
+  imports Least_Fixpoint "Binders.Swapping"
 begin
 
 ML \<open>
@@ -524,20 +524,187 @@ lemma T2_distinct[simp]:
 lemmas map_id0_nesting = list.map_id0 prod.map_id0
 lemmas set_map_nesting = list.set_map prod.set_map
 
-lemma T1_inject[simp]:
+lemma T1_inject_aux:
+  "(BFree_T1 x xs = BFree_T1 y ys) = (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> id_on (\<Union>(Basic_BNFs.fsts ` set xs) - {x}) f \<and> f x = y \<and> map (map_prod f id) xs = ys)"
+  "(Lam_T1 x x3 = Lam_T1 y y3) = (\<exists>f. bij (f::'a::var \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and>
+     id_on (FVars_T11 x3 - {x}) f \<and> f x = y \<and> permute_T1 f id x3 = y3)"
+  "(TyLam_T1 x2 x3 = TyLam_T1 y2 y3) = (\<exists>f.
+     bij (f::'b::var \<Rightarrow> 'b) \<and> |supp f| <o |UNIV::'b set| \<and>
+     id_on (FVars_T12 x3 - {x2}) f \<and> f x2 = y2 \<and> permute_T1 id f x3 = y3)"
+    apply (unfold T1_ctors_defs TT_inject0s)
+    apply (unfold map_T1_pre_def comp_def set5_T1_pre_def set7_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I]
+      sum.set_map UN_empty UN_empty2 Un_empty_left Un_empty_right prod.set_map UN_singleton UN_single
+      set9_T1_pre_def sum_set_simps prod_set_simps empty_Diff list.set_map set11_T1_pre_def sum.map_id0
+      prod.map_id0 map_sum.simps map_prod_simp set6_T1_pre_def Diff_empty Abs_T1_pre_inject[OF UNIV_I UNIV_I]
+      sum.inject prod.inject
+      )
+    (* apply (rule refl) ORELSE *)
+    (* REPEAT_DETERM *)
+    apply (rule iffI)
+    (* REPEAT twice *)
+     apply (erule exE conjE)+
+     apply (rule exI)+
+     apply (rule conjI[rotated])+
+         apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    (* repeated *)
+    apply (erule exE conjE)+
+    apply (rule exI)+
+    apply (rule conjI[rotated])+
+           apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    (* END REPEAT twice *)
+   apply (rule iffI)
+    (* REPEAT twice *)
+    apply (erule exE conjE)+
+    apply (rule exI)+
+    apply (rule conjI[rotated])+
+        apply hypsubst_thin
+        apply (rule permute_congs[rotated -2])
+                 apply (rule refl)
+    (* ORELSE *)
+                apply (rule trans[OF id_apply])
+                apply (rule sym)
+                apply (erule id_onD)
+                apply assumption
+    (* END *)
+               apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    (* repeated *)
+   apply (erule exE conjE)+
+   apply (rule exI)+
+   apply (rule conjI[rotated])+
+          apply (rule supp_id_bound bij_id id_on_empty id_on_id | assumption)+
+    (* END REPEAT twice *)
+    (* repeated *)
+  apply (rule iffI)
+    (* REPEAT twice *)
+   apply (erule exE conjE)+
+   apply (rule exI)+
+   apply (rule conjI[rotated])+
+       apply hypsubst_thin
+       apply (rule permute_congs[rotated -2])
+                apply (rule trans[OF id_apply])
+                apply (rule sym)
+                apply (erule id_onD)
+                apply assumption
+    (* ORELSE *)
+               apply (rule refl)
+    (* END *)
+              apply (rule supp_id_bound bij_id id_on_empty | assumption)+
+    (* repeated *)
+  apply (erule exE conjE)+
+  apply (rule exI)+
+  apply (rule conjI[rotated])+
+         apply (rule supp_id_bound bij_id id_on_empty id_on_id | assumption)+
+    (* END REPEAT twice *)
+  done
+
+lemma T1_inject:
+  "(BFree_T1 x xs = BFree_T1 y ys) = ((y \<notin> \<Union>(Basic_BNFs.fsts ` set xs) \<or> x = y) \<and> map (map_prod (x \<leftrightarrow> y) id) xs = ys)"
+"(Lam_T1 x x3 = Lam_T1 y y3) = ((y \<notin> FVars_T11 x3 \<or> x = y) \<and> permute_T1 (x \<leftrightarrow> y) id x3 = y3)"
+  "(TyLam_T1 x2 x3 = TyLam_T1 y2 y3) = ((y2 \<notin> FVars_T12 x3 \<or> x2 = y2) \<and> permute_T1 id (x2 \<leftrightarrow> y2) x3 = y3)"
+  apply (unfold T1_inject_aux)
+  apply (rule iffI)
+   apply (erule exE conjE)+
+   apply hypsubst_thin
+   apply (rule conjI)
+    apply (rule case_split)
+     apply (erule disjI2)
+    apply (rule disjI1)
+    apply (rotate_tac -1)
+    apply (erule contrapos_nn)
+    apply (erule id_on_image_Diff[rotated, symmetric])
+  apply assumption+
+   apply (rule list.map_cong0)
+  apply (rule prod.map_cong0)
+    apply (rule swap_apply_fresh_bij2)
+     apply assumption
+    apply (erule id_onD)
+    apply (rule DiffI)
+     apply (rule UN_I | assumption)+
+    apply (unfold singleton_iff)
+    apply assumption
+   apply (rule refl)
+  apply (erule conjE)
+  apply (rule exI)
+  apply (rule conjI[rotated])+
+      apply assumption
+     apply (rule swap_simps)
+    apply (erule id_on_swap)
+   apply (rule supp_swap_bound)
+   apply (rule infinite_UNIV)
+    apply (rule bij_swap)
+
+  apply (rule iffI)
+   apply (erule exE conjE)+
+   apply hypsubst_thin
+   apply (rule conjI)
+    apply (rule case_split)
+     apply (erule disjI2)
+    apply (rule disjI1)
+    apply (rotate_tac -1)
+    apply (erule contrapos_nn)
+    apply (erule id_on_image_Diff[rotated, symmetric])
+  apply assumption+
+    apply (rule permute_congs)
+  apply (rule bij_swap supp_swap_bound infinite_UNIV bij_id supp_id_bound | assumption)+
+    apply (rule swap_apply_fresh_bij2)
+     apply assumption
+    apply (erule id_onD)
+    apply (rule DiffI)
+     apply (rule UN_I | assumption)+
+    apply (unfold singleton_iff)
+    apply assumption
+   apply (rule refl)
+  apply (erule conjE)
+  apply (rule exI)
+  apply (rule conjI[rotated])+
+      apply assumption
+     apply (rule swap_simps)
+    apply (erule id_on_swap)
+   apply (rule supp_swap_bound)
+   apply (rule infinite_UNIV)
+   apply (rule bij_swap)
+
+  apply (rule iffI)
+   apply (erule exE conjE)+
+   apply hypsubst_thin
+   apply (rule conjI)
+    apply (rule case_split)
+     apply (erule disjI2)
+    apply (rule disjI1)
+    apply (rotate_tac -1)
+    apply (erule contrapos_nn)
+    apply (erule id_on_image_Diff[rotated, symmetric])
+  apply assumption+
+    apply (rule permute_congs)
+  apply (rule bij_swap supp_swap_bound infinite_UNIV bij_id supp_id_bound refl | assumption)+
+    apply (rule swap_apply_fresh_bij2)
+     apply assumption
+    apply (erule id_onD)
+    apply (rule DiffI)
+     apply (rule UN_I | assumption)+
+    apply (unfold singleton_iff)
+    apply assumption
+  apply (erule conjE)
+  apply (rule exI)
+  apply (rule conjI[rotated])+
+      apply assumption
+     apply (rule swap_simps)
+    apply (erule id_on_swap)
+   apply (rule supp_swap_bound)
+   apply (rule infinite_UNIV)
+   apply (rule bij_swap)
+  done
+
+lemma T1_inject'[simp]:
   "(Var_T1 x = Var_T1 y) = (x = y)"
   "(TyVar_T1 x2 = TyVar_T1 y2) = (x2 = y2)"
   "(App_T1 x3 x4 = App_T1 y3 y4) = (x3 = y3 \<and> x4 = y4)"
-  "(BFree_T1 x xs = BFree_T1 x ys) = (xs = ys)"
-  "(Lam_T1 x x3 = Lam_T1 x y3) = (x3 = y3)"
-  "(TyLam_T1 x2 x3 = TyLam_T1 x2 y3) = (x3 = y3)"
   "(Ext_T1 x5 = Ext_T1 y5) = (x5 = y5)"
         apply (unfold T1_ctors_defs TT_inject0s)
         apply (unfold map_T1_pre_def comp_def map_sum.simps map_prod_simp Abs_T1_pre_inverse[OF UNIV_I]
       set_simp_thms T1_pre_set_defs id_apply Abs_T1_pre_inject[OF UNIV_I UNIV_I] sum.inject prod.inject
       set_map_nesting
       )
-        apply (unfold id_def[symmetric])
     (* REPEAT_DETERM *)
         apply (rule iffI)
          apply (erule exE conjE)+
@@ -561,98 +728,9 @@ lemma T1_inject[simp]:
       apply (rule conjI bij_id supp_id_bound id_on_id | assumption)+
     (* repeated *)
      apply (rule iffI)
-      apply (erule exE conjE)+
-      apply hypsubst_thin
-      apply (rule sym)
-      apply ((rule trans[OF list.map_cong[OF refl] list.map_id] trans[OF prod.map_cong[OF refl] prod.map_id], rule trans[rotated, OF id_apply[symmetric]])+)?
-       apply (drule id_on_Diff)
-        apply (rule id_onI)
-        apply (drule singletonD)
-        apply hypsubst
-        apply assumption
-       apply (erule id_onD)
-       apply (rule UN_I)
-        apply assumption+
-      apply (rule refl)
-     apply (rule exI[of _ id])+
-     apply ((erule conjE)+)?
-     apply (unfold list.map_id0 prod.map_id0)
-     apply (rule conjI bij_id supp_id_bound id_on_id trans[OF id_apply] refl | assumption)+
-    (* repeated *)
-    apply (rule iffI)
-     apply (erule exE conjE)+
-     apply hypsubst_thin
-     apply (rule sym)
-     apply ((rule trans[OF list.map_cong[OF refl] list.map_id] trans[OF prod.map_cong[OF refl] prod.map_id], rule trans[rotated, OF id_apply[symmetric]])+)?
-     apply (rule permute_cong_ids)
-          apply assumption+
-    (* REPEAT_DETERM *)
-      apply (drule id_on_Diff)
-       apply (rule id_onI)
-       apply (drule singletonD)
-       apply hypsubst
-       apply assumption
-      apply (erule id_onD)
-      apply (rule UN_I)?
-      apply assumption+
-    (* repeated *)
-     apply (drule id_on_Diff)
-      apply (rule id_onI)
-      apply (drule singletonD)
-      apply hypsubst
-      apply assumption
-     apply (erule id_onD)
-     apply (rule UN_I)?
-     apply assumption+
-    (* END REPEAT_DETERM *)
-    apply (rule exI[of _ id])+
-    apply ((erule conjE)+)?
-    apply (unfold list.map_id0 prod.map_id0 permute_id0s)?
-    apply (rule conjI bij_id supp_id_bound id_on_id trans[OF id_apply] refl | assumption)+
-    (* repeated *)
-   apply (rule iffI)
-    apply (erule exE conjE)+
-    apply hypsubst_thin
-    apply (rule sym)
-    apply ((rule trans[OF list.map_cong[OF refl] list.map_id] trans[OF prod.map_cong[OF refl] prod.map_id], rule trans[rotated, OF id_apply[symmetric]])+)?
-    apply (rule permute_cong_ids)
-         apply assumption+
-    (* REPEAT_DETERM *)
-     apply (drule id_on_Diff)
-      apply (rule id_onI)
-      apply (drule singletonD)
-      apply hypsubst
-      apply assumption
-     apply (erule id_onD)
-     apply (rule UN_I)?
-     apply assumption+
-    (* repeated *)
-    apply (drule id_on_Diff)
-     apply (rule id_onI)
-     apply (drule singletonD)
-     apply hypsubst
-     apply assumption
-    apply (erule id_onD)
-    apply (rule UN_I)?
-    apply assumption+
-    (* END REPEAT_DETERM *)
-   apply (rule exI[of _ id])+
-   apply ((erule conjE)+)?
-   apply (unfold list.map_id0 prod.map_id0 permute_id0s)?
-   apply (rule conjI bij_id supp_id_bound id_on_id trans[OF id_apply] refl | assumption)+
-    (* repeated *)
-  apply (rule iffI)
    apply (erule exE conjE)+
-   apply hypsubst_thin
-   apply (rule sym)
-   apply ((rule trans[OF list.map_cong[OF refl] list.map_id] trans[OF prod.map_cong[OF refl] prod.map_id], rule trans[rotated, OF id_apply[symmetric]])+)?
-   apply (rule permute_cong_ids, assumption+)?
-   apply (rule refl)?
-  apply (rule exI[of _ id])+
-  apply ((erule conjE)+)?
-  apply (unfold list.map_id0 prod.map_id0 permute_id0s)?
-  apply (rule conjI bij_id supp_id_bound id_on_id trans[OF id_apply] refl | assumption)+
-    (* END REPEAT_DETERM *)
+   apply assumption
+  apply (rule exI bij_id supp_id_bound id_on_id conjI | assumption)+
   done
 
 abbreviation eta11 :: "'a \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd, 'e::var, 'f::var, 'g::var, 'h, 'i, 'j, 'k) T1_pre" where

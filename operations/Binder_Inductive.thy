@@ -60,7 +60,9 @@ lemma G_equiv:
   shows "G R B x1 x2 \<Longrightarrow> G (\<lambda>x1 x2. R (rrename (inv \<sigma>) x1) (rrename (inv \<sigma>) x2)) (\<sigma> ` B) (rrename \<sigma> x1) (rrename \<sigma> x2)"
   using assms apply -
   unfolding G_def
-  by (elim disj_forward) (auto simp: term.permute_comp rrename_tvsubst_comp)
+  apply (elim disj_forward) apply (auto simp: term.permute_comp rrename_tvsubst_comp)
+  sledgehammer
+  by (metis inv_simp1 term.permute_bij term.permute_inv_simp)
 
 abbreviation "supp_T x1 x2 \<equiv> FFVars x1 \<union> FFVars x2"
 

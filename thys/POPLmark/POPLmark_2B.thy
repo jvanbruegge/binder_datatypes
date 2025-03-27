@@ -710,11 +710,11 @@ lemma eta_set_empties:
             prefer 7
             apply (erule swap_fresh)
             apply assumption
-           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound bij_swap infinite_UNIV)+
      apply (rule sym)
      apply (rule trans)
       apply (rule fun_cong[OF eta_natural, unfolded comp_def])
-           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound bij_swap infinite_UNIV)+
      apply (unfold id_def)
      apply (rule refl)
     apply (erule FalseE)
@@ -732,11 +732,11 @@ lemma eta_set_empties:
             prefer 7
             apply (erule swap_fresh)
             apply assumption
-           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
      apply (rule sym)
      apply (rule trans)
       apply (rule fun_cong[OF eta_natural, unfolded comp_def])
-           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
      apply (unfold id_def)
      apply (rule refl)
     apply (erule FalseE)
@@ -754,11 +754,11 @@ lemma eta_set_empties:
             prefer 7
             apply (erule swap_fresh)
             apply assumption
-           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
      apply (rule sym)
      apply (rule trans)
       apply (rule eta_natural')
-           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
      apply (unfold id_def)
      apply (rule refl)
     apply (erule FalseE)
@@ -1335,13 +1335,13 @@ proof -
       using a apply (auto simp: trm.IImsupp_natural bij_implies_inject)
       apply (subst tvsubst_simps)
          apply assumption+
-       apply (auto simp: trm.IImsupp_natural bij_implies_inject)
+       apply (auto simp: trm.IImsupp_natural bij_implies_inject trm.permute_id)
       done
   next
     case (TAbs x1 x2 x3)
     then show ?case using a apply auto
       apply (subst tvsubst_simps)
-      by (auto simp: bij_implies_inject trm.IImsupp_natural typ.IImsupp_natural typ.FVars_permute)
+      by (auto simp: bij_implies_inject trm.IImsupp_natural typ.IImsupp_natural typ.FVars_permute trm.permute_id)
   next
     case (TApp x1 x2)
     then show ?case using a by auto
@@ -1356,7 +1356,8 @@ proof -
         )
       apply (subst vvsubst_tvsubst_pat)
            apply assumption+
-      apply (rule refl)
+      apply (rule exI[of _ id])
+      apply (auto simp: trm.permute_id)
       done
   qed (auto simp: imsupp_supp_bound infinite_UNIV assms 1 2 3 lfset.map_comp lfset.map_cong)
 qed
@@ -1539,15 +1540,12 @@ binder_inductive typing
         apply (rule exI[of _ "{y}"]; simp add: Abs_inject)
         apply (rule conjI)
         apply (metis imageI setr.cases)
-        apply (rule exI[of _ "permute_trm id (id(x := y, y := x)) t"] conjI exI[of _ "id(x := y, y := x)"])+
-         apply (simp_all add: id_on_def setr.simps)
         apply (frule prems(1)[THEN typing_wf_ctxt])
         apply (frule prems(1)[THEN typing_wf_ty])
-        apply (frule prems(2)[of id "id(x := y, y := x)", rotated -1])
+        apply (frule prems(2)[of id "x \<leftrightarrow> y", rotated -1])
         apply (auto simp: image_iff intro!: list.map_ident_strong sum.map_ident_strong
           elim!: arg_cong[where f = "\<lambda>x. R x _ _", THEN iffD1, rotated])
-        apply (metis fst_conv setr.cases)+
-        done
+        by (metis fst_conv setr.cases swap_simps(3))
       done
     subgoal for \<Gamma>' t T' _ u
       by auto
@@ -1560,19 +1558,15 @@ binder_inductive typing
         apply (rule exI[of _ "{Y}"]; simp add: TAbs_inject)
         apply (rule conjI)
         apply (metis imageI setl.cases)
-        apply (rule exI[of _ "permute_trm (id(X := Y, Y := X)) id t"] conjI exI[of _ "id(X := Y, Y := X)"])+
-          apply (simp_all add: id_on_def) [2]
-        apply (rule exI[of _ "permute_typ (id(X := Y, Y := X)) T2"])
+        apply (rule exI[of _ "permute_typ (X \<leftrightarrow> Y) T2"])
         apply (frule prems(1)[THEN typing_fresh_ty_extend])
-        apply (drule prems(2)[of "(id(X := Y, Y := X))" id, rotated -1])
+        apply (drule prems(2)[of "X \<leftrightarrow> Y" id, rotated -1])
             apply (auto simp add: typ_inject id_on_def dom_def subset_eq image_iff
-            intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id exI[of _ "id(X := Y, Y := X)"]
+            intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id exI[of _ "X \<leftrightarrow> Y"]
             elim!: arg_cong2[where f = "\<lambda>x y. R x y _", THEN iffD1, rotated 2])
-           apply (metis fst_conv setl.cases)
-          apply (metis fst_conv setl.cases)
-         apply fastforce
-        apply fastforce
-        done
+          apply (metis swap_def)
+         apply (metis fst_conv setl.cases swap_def)
+        by (metis snd_conv swap_def)
       done
     subgoal for \<Gamma>' t X T11 T12 T2
       apply (rule disjI2, rule disjI2, rule disjI2, rule disjI2, rule disjI1)
@@ -1587,18 +1581,14 @@ binder_inductive typing
           apply (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_Un_singl_ordLess_infinite emp_bound infinite_UNIV insert_bound sup.orderE)
          apply auto []
         apply (rule exI[of _ "T11"])
-        apply (rule exI[of _ "permute_typ (id(X := Y, Y := X)) T12"])
+        apply (rule exI[of _ "permute_typ (X \<leftrightarrow> Y) T12"])
         apply (frule prems(1))
             apply auto
          apply (rule Forall_eq_tvsubst_typ)
          apply (simp add: typ_inject)
-         apply (rule exI[of _ "id(X := Y, Y := X)"]; simp add: id_on_def)
-        apply (erule cong[where f="R _ _",THEN iffD1, rotated 2])
-         apply (rule arg_cong2[where f=R])
-          apply (auto intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id trm.permute_cong_id)
-         apply (simp add: typ_inject)
-        apply (rule exI[of _ "id(X := Y, Y := X)"]; simp add: id_on_def)
-        done
+         apply (rule exI[of _ "X \<leftrightarrow> Y"]; simp add: id_on_def)
+         apply (simp add: swap_def)
+        by (metis typ.inject(3))
       done
     subgoal
       apply (rule disjI2)
@@ -1635,7 +1625,6 @@ binder_inductive typing
         apply (rule exI[of _ "permute_trm id \<sigma> u"])
         apply (intro conjI)
         subgoal
-          apply (subst Let_inject; simp)
           apply (rule exI[of _ "\<sigma>"]; simp)
           apply (auto simp: id_on_def)
           done
@@ -1675,7 +1664,7 @@ inductive match for \<sigma> where
     (\<And>l P v. (l, P) \<in>\<in> PP \<Longrightarrow> (l, v) \<in>\<in> VV \<Longrightarrow> match \<sigma> P v) \<Longrightarrow> match \<sigma> (PRec PP) (Rec VV)"
 
 definition "restrict \<sigma> A v x = (if x \<in> A then \<sigma> x else v x)"
-
+       
 lemma match_cong: "match \<sigma> p v \<Longrightarrow> (\<forall>x \<in> PVars p. \<sigma> x = \<tau> x) \<Longrightarrow> match \<tau> p v"
   by (induct p v rule: match.induct)
     (force simp: restrict_def values_lfin_iff Ball_def Bex_def intro!: match.intros)+
@@ -1968,15 +1957,17 @@ next
           simp flip: append_assoc intro!: typing.TLet dest!: set_mp[OF IImsupp_2_trm_unary])
 qed
 
-lemma Abs_inject_permute: "x \<notin> FVars u \<Longrightarrow> Abs x T t = Abs y U u \<longleftrightarrow> (T = U \<and> t = permute_trm id (id(x := y, y := x)) u)"
-  by (auto simp: Abs_inject trm.permute_comp supp_comp_bound infinite_UNIV bij_implies_inject id_on_def
+lemma Abs_inject_permute: "x \<notin> FVars u \<Longrightarrow> Abs x T t = Abs y U u \<longleftrightarrow> (T = U \<and> t = permute_trm id (x \<leftrightarrow> y) u)"
+  apply (auto simp: Abs_inject trm.permute_comp supp_comp_bound infinite_UNIV bij_implies_inject id_on_def
      trm.FVars_permute
-     intro!: trm.permute_cong_id[symmetric] trm.permute_cong_id exI[of _ "id(x := y, y := x)"])
+     intro!: trm.permute_cong_id[symmetric] trm.permute_cong_id exI[of _ "x \<leftrightarrow> y"])
+  by (metis swap_def)
 
-lemma TAbs_inject_permute: "X \<notin> FTVars u \<Longrightarrow> TAbs X T t = TAbs Y U u \<longleftrightarrow> (T = U \<and> t = permute_trm (id(X := Y, Y := X)) id u)"
-  by (auto simp: TAbs_inject trm.permute_comp supp_comp_bound infinite_UNIV bij_implies_inject id_on_def
+lemma TAbs_inject_permute: "X \<notin> FTVars u \<Longrightarrow> TAbs X T t = TAbs Y U u \<longleftrightarrow> (T = U \<and> t = permute_trm (X \<leftrightarrow> Y) id u)"
+  apply (auto simp: TAbs_inject trm.permute_comp supp_comp_bound infinite_UNIV bij_implies_inject id_on_def
      trm.FVars_permute
-     intro!: trm.permute_cong_id[symmetric] trm.permute_cong_id exI[of _ "id(X := Y, Y := X)"])
+     intro!: trm.permute_cong_id[symmetric] trm.permute_cong_id exI[of _ "X \<leftrightarrow> Y"])
+  by (metis swap_def)
 
 lemma typing_AbsD: "\<Gamma> \<^bold>\<turnstile> Abs x S1 s2 \<^bold>: T \<Longrightarrow> x \<notin> Inr -` dom \<Gamma> \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> T <: U1 \<rightarrow> U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
    (\<exists>S2. (\<Gamma> \<^bold>, Inr x <: S1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<turnstile> S2 <: U2))"
@@ -1984,29 +1975,37 @@ proof (binder_induction \<Gamma> "Abs x S1 s2" T avoiding: \<Gamma> x S1 s2 T U1
   case (TAbs \<Gamma> y T1 t' T2)
   from TAbs(1-4,6-) show ?case
     apply (auto simp: Abs_inject_permute elim!: SA_ArrEL intro!: exI[of _ T2])
-    apply (frule typing.equiv[of id "id(y := x, x := y)", rotated 4])
+    apply (frule typing.equiv[of id "y \<leftrightarrow> x", rotated 4])
         apply (auto 0 4 simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
           intro!: list.map_ident_strong sum.map_ident_strong trm.permute_cong_id
           elim!: arg_cong2[where f="\<lambda>\<Gamma> t. \<Gamma> \<^bold>, Inr x <: S1 \<^bold>\<turnstile> t \<^bold>: T2", THEN iffD1, rotated 2])
-    done
+    by (metis Domain.DomainI fst_conv swap_def)
 next
   case (TSub \<Gamma> S T)
   then show ?case
     using ty_transitivity2 by blast
 qed auto
 
-lemma swap_swap[simp]: "id(Y := X, X := Y) \<circ> id(Y := X, X := Y) = id"
-  by auto
-
 lemma typing_TAbsD: "\<Gamma> \<^bold>\<turnstile> TAbs X S1 s2 \<^bold>: T \<Longrightarrow> X \<notin> Inl -` dom \<Gamma> \<Longrightarrow> X \<notin> FFVars_ctxt \<Gamma> \<Longrightarrow> X \<notin> FVars_typ U1 \<Longrightarrow>
    proj_ctxt \<Gamma> \<turnstile> T <: \<forall>X <: U1. U2 \<Longrightarrow> proj_ctxt \<Gamma> \<turnstile> U1 <: S1 \<and>
    (\<exists>S2. (\<Gamma> \<^bold>, Inl X <: U1 \<^bold>\<turnstile> s2 \<^bold>: S2) \<and> (proj_ctxt \<Gamma> \<^bold>, X <: U1 \<turnstile> S2 <: U2))"
 proof (binder_induction \<Gamma> "TAbs X S1 s2" T avoiding: \<Gamma> X S1 s2 T U1 U2 rule: typing.strong_induct)
   case (TTAbs \<Gamma> Y T1 t' T2)
+  have 1[simp]: "permute_typ (X \<leftrightarrow> Y) S1 = S1"
+    by (metis (no_types, lifting) TTAbs.hyps(11,12,4,9) rrename_swap_FFvars snd_conv subsetD trm.inject(4) typing_wf_ctxt wf_ctxt_ConsE)
+  have 2[simp]: "map (map_prod (map_sum (X \<leftrightarrow> Y) id) (permute_typ (X \<leftrightarrow> Y))) \<Gamma> = \<Gamma>"
+    apply (auto intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id)
+     apply (metis TTAbs.hyps(1,12) UN_I fst_eqD imageI setl.simps swap_simps(3) vimageI)
+    by (metis TTAbs.hyps(13,2) UN_I image_eqI snd_conv swap_def)
+  have 3[simp]: "FVars_typ T2 \<subseteq> dom (proj_ctxt \<Gamma>) \<union> {Y}"
+    by (metis Diff_subset_conv TTAbs.hyps(15) le_sup_iff sup_commute typ.set(4) well_scoped(1))
+  have 4[simp]: "X \<notin> dom (proj_ctxt \<Gamma>)"
+    by (metis TTAbs.hyps(12) dom_proj_ctxt)
+
   from TTAbs(1-9,11-) show ?case
     apply (auto simp: TAbs_inject_permute)
      apply (auto simp add: typ_inject elim!: SA_AllEL) []
-    apply (frule typing.equiv[of "id(Y := X, X := Y)" id, rotated 4])
+    apply (frule typing.equiv[of "X \<leftrightarrow> Y" id, rotated 4])
     apply (auto simp: trm.permute_comp supp_comp_bound infinite_UNIV setr.simps Domain.DomainI fst_eq_Domain
           trm.permute_id) [5]
     apply (erule SA_AllER)
@@ -2014,42 +2013,25 @@ proof (binder_induction \<Gamma> "TAbs X S1 s2" T avoiding: \<Gamma> X S1 s2 T U
     apply (drule Forall_swapD)+
     apply (erule exE conjE)+
     apply hypsubst_thin
-    apply (rule exI[of _ "permute_typ (id(Y := X, X := Y)) T2"])
+    apply (rule exI)
+     apply (simp add: swap_sym)
     apply (rule conjI)
-     apply (subgoal_tac "map (map_prod (map_sum (id(Y := X, X := Y)) id)
-          (permute_typ (id(Y := X, X := Y)))) \<Gamma> = \<Gamma>")
-      apply simp
-      apply (rule typing_narrowing[where \<Delta>="[]", simplified])
+     apply (rule typing_narrowing[where \<Delta>="[]", simplified])
        apply assumption
-      apply (metis (no_types, lifting) Pair_inject rrename_swap_FFvars subset_eq typing_wf_ctxt vimageE
-        wf_ctxt_ConsE)
-     apply (auto intro!: list.map_ident_strong sum.map_ident_strong typ.permute_cong_id) []
-        apply (metis fst_conv)
-       apply (metis Domain.DomainI setl.cases)
-      apply (metis snd_conv)
-     apply (metis snd_conv)
-    apply simp
-    subgoal for Z
+      apply assumption
+    subgoal for S1 Z S2
       apply (frule wf_context[where \<Gamma> = "_ \<^bold>, Z <: U1"])
-      apply (frule ty.equiv[of "id(X := Z, Z := X)" "_ \<^bold>, Z <: U1", rotated 2])
+      apply (frule ty.equiv[of "X \<leftrightarrow> Z" "_ \<^bold>, Z <: U1", rotated 2])
         apply (auto split: if_splits simp: typ.permute_comp)
-      apply (subgoal_tac "permute_typ (id(X := Z, Z := X)) U1 = U1")
-      apply (subgoal_tac "map (map_prod (id(X := Z, Z := X)) (permute_typ (id(X := Z, Z := X)))) (proj_ctxt \<Gamma>) = proj_ctxt \<Gamma>")
-        apply (subgoal_tac "permute_typ (id(X := Z, Z := X) \<circ> id(Y := Z, Z := Y)) T2 = permute_typ (id(Y := X, X := Y)) T2")
-         apply (auto intro!: typ.permute_cong list.map_ident_strong sum.map_ident_strong typ.permute_cong_id
-           simp: supp_comp_bound supp_swap_bound infinite_UNIV)
-         apply (smt (z3) Diff_iff TTAbs.hyps(15) empty_iff in_mono insert_iff le_sup_iff typ.set(4)
-          well_scoped(1))
-      apply (smt (verit, ccfv_threshold) Diff_iff TTAbs.hyps(15) empty_iff fst_conv in_mono insert_iff
-          le_sup_iff typ.set(4) well_scoped(1) wf_ConsE wf_context)
-      apply (metis Domain.DomainI fst_conv fst_eq_Domain proj_ctxt_extend_Inl typing_wf_ctxt wf_ConsE
-          wf_ctxt_Cons wf_ctxt_ConsE wf_ty_proj_ctxt)
-      apply (metis Domain.DomainI fst_eq_Domain)
-      apply (metis Domain.DomainI fst_eq_Domain)
-        apply (metis Domain.DomainI fst_eq_Domain)
-      apply (metis (no_types, opaque_lifting) TTAbs.hyps(12) UN_I dom_proj_ctxt rev_image_eqI split_pairs2 wf_FFVars)
-      apply (metis (no_types, opaque_lifting) UN_I image_iff sndI wf_FFVars)
-      done
+      apply (subgoal_tac "permute_typ (X \<leftrightarrow> Z) U1 = U1")
+      apply (subgoal_tac "map (map_prod (X \<leftrightarrow> Z) (permute_typ (X \<leftrightarrow> Z))) (proj_ctxt \<Gamma>) = proj_ctxt \<Gamma>")
+      apply (subgoal_tac "permute_typ (X \<leftrightarrow> Z \<circ> Z \<leftrightarrow> Y) T2 = permute_typ (X \<leftrightarrow> Y) T2")
+apply (auto intro!: typ.permute_cong list.map_ident_strong sum.map_ident_strong typ.permute_cong_id
+           simp: supp_comp_bound infinite_UNIV)
+      apply (metis (no_types, lifting) "3" TTAbs.hyps(12) Un_empty_right Un_insert_right dom_proj_ctxt in_mono insertE swap_def)
+        apply (metis Domain.DomainI TTAbs.hyps(12) dom_proj_ctxt fst_eq_Domain swap_def)
+       apply (metis (no_types, opaque_lifting) "4" UN_I image_eqI split_pairs2 swap_simps(3) wf_FFVars)
+      by (metis swap_def ty_fresh_extend)
     done
 next
   case (TSub \<Gamma> S T)
@@ -2284,14 +2266,16 @@ proof -
     using assms(2,4) cmin1 ordLess_ordLeq_trans by blast+
   from cong show ?thesis
     apply (binder_induction t avoiding: "IImsupp_1_trm f" "IImsupp_2_trm f" "IImsupp_typ g" "IImsupp_1_trm f'" "IImsupp_2_trm f'" "IImsupp_typ g'" t rule: trm.strong_induct)
-              apply (auto simp: IImsupp_typ_bound IImsupp_1_trm_bound IImsupp_2_trm_bound
+              apply (auto simp: IImsupp_typ_bound IImsupp_1_trm_bound IImsupp_2_trm_bound trm.permute_id
         SSupp_typ_tvsubst_typ_bound' SSupp_trm_tvsubst_bound intro!: tvsubst_typ_cong lfset.map_cong0)
     apply (metis (mono_tags, lifting) IImsupp_2_trm_def SSupp_trm_def Un_iff mem_Collect_eq)
       apply (metis (mono_tags, lifting) IImsupp_typ_def SSupp_typ_def Un_iff mem_Collect_eq)
      apply blast
     apply (subst (1 2) tvsubst_simps)
            apply (auto 0 0 intro!: tvsubst_pat_cong arg_cong3[where h=Let])
-    apply (metis (mono_tags, lifting) DiffD2 Diff_triv Int_Un_emptyI1)
+     apply (metis (mono_tags, lifting) DiffD2 Diff_triv Int_Un_emptyI1)
+    apply (rule exI[of _ id])
+    apply (auto simp: tvsubst_pat_cong trm.permute_id)
     apply (metis (mono_tags, lifting) DiffD2 Diff_triv IImsupp_2_trm_def Int_Un_emptyI1 SSupp_trm_def mem_Collect_eq)
     done
 qed
@@ -2304,6 +2288,14 @@ lemma finite_FVars[simp]: "finite (FVars t)"
   by (induct t) auto
 lemma finite_FTVars[simp]: "finite (FTVars t)"
   by (induct t) auto
+
+lemma tvsubst_pat_id[simp]: "tvsubst_pat TyVar id x = x"
+  apply (rule trans)
+     apply (rule arg_cong3[OF _ refl refl, of _ _ tvsubst_pat])
+     apply (rule o_id[symmetric])
+  apply (unfold vvsubst_pat_tvsubst_pat[symmetric, OF supp_id_bound] pat.map_id)
+  apply (rule refl)
+  done
 
 lemma permute_trm_eq_tvsubst:
   fixes \<sigma> :: "'v :: var \<Rightarrow> 'v" and \<tau> :: "'tv :: var \<Rightarrow> 'tv" and t :: "('tv :: var, 'v :: var) trm"
@@ -2333,10 +2325,20 @@ proof -
            Int_commute[of _ "supp _"] id_on_def SSupp_typ_TyVar_comp dest!: supp_id_on
            intro!: arg_cong3[where h=Let] tvsubst_pat_cong)
     apply (meson not_in_supp_alt)
-    apply (meson assms(1) bij_implies_inject not_in_supp_alt)
-    done
+     apply (meson assms(1) bij_implies_inject not_in_supp_alt)
+    apply (rule exI[of _ id])
+    apply (auto simp: trm.permute_id supp_inv_bound vvsubst_pat_tvsubst_pat[symmetric])
+    by (simp add: pat.map_cong)
 qed
 
+lemma SSupp_restrict: "SSupp_typ (restrict f A TyVar) \<subseteq> SSupp_typ f"
+  unfolding restrict_def
+  by (simp add: Collect_mono_iff SSupp_typ_def)
+lemma SSupp_restrict_Var: "SSupp_trm (restrict f A Var) \<subseteq> SSupp_trm f"
+  unfolding restrict_def
+  by (simp add: Collect_mono SSupp_trm_def)
+
+lemmas trm.inject(8)[simp del]
 lemma permute_trm_eq_tvsubst':
   fixes \<sigma> :: "'v :: var \<Rightarrow> 'v" and \<tau> :: "'tv :: var \<Rightarrow> 'tv" and t :: "('tv :: var, 'v :: var) trm"
   assumes [simp]:
@@ -2356,24 +2358,24 @@ proof -
              apply (auto simp: IImsupp_2_trm_def SSupp_trm_Var_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<sigma>\<close>] restrict_def)
     apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater) [2]
     apply (subst tvsubst_simps)
-         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
+         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>] trm.permute_id)
                apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater bij_implies_inject supp_def[symmetric] split: if_splits intro!: tvsubst_typ_cong tvsubst_cong lfset.map_cong)
     apply (subst tvsubst_simps)
-         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
+         apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>] trm.permute_id)
            apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater bij_implies_inject supp_def[symmetric] split: if_splits intro!: tvsubst_typ_cong tvsubst_cong lfset.map_cong)
     apply (subst tvsubst_simps)
          apply (auto simp: IImsupp_1_trm_def IImsupp_2_trm_def IImsupp_typ_def SSupp_typ_TyVar_comp not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>])
                apply (auto simp: SSupp_trm_def SSupp_typ_def restrict_def infinite_UNIV cmin_greater bij_implies_inject supp_def[symmetric] vvsubst_pat_tvsubst_pat split: if_splits intro!: tvsubst_typ_cong tvsubst_cong lfset.map_cong tvsubst_pat_cong arg_cong3[where h=Let])
     apply (metis DiffD2 Diff_triv assms(1) bij_implies_inject not_in_supp_alt)
      apply (metis DiffD2 Diff_triv assms(1) bij_implies_inject not_in_supp_alt)
-    apply (meson disjoint_iff_not_equal not_in_supp_alt)
+     apply (meson disjoint_iff_not_equal not_in_supp_alt)
     apply (meson disjoint_iff_not_equal not_in_supp_alt)
     done
 qed
 
-lemma supp_swap_bound_cmin: "|supp (id(x := y, y := x))| <o cmin |UNIV :: 'a::var set| |UNIV :: 'b::var set|"
+lemma supp_swap_bound_cmin: "|supp (x \<leftrightarrow> y)| <o cmin |UNIV :: 'a::var set| |UNIV :: 'b::var set|"
   by (rule ordLeq_ordLess_trans[OF card_of_mono1[of _ "{x, y}"]])
-    (auto simp: supp_def cmin_greater infinite_UNIV)
+    (auto simp: supp_def swap_def cmin_greater infinite_UNIV)
 
 lemma SSupp_trm_restrict: "SSupp_trm (restrict \<sigma> A Var) = SSupp_trm \<sigma> \<inter> A"
   unfolding SSupp_trm_def restrict_def
@@ -2516,16 +2518,14 @@ binder_inductive step
         apply (rule exI[of _ "{y}"])
         apply (rule conjI)
          apply (auto simp: FVars_tvsubst)
-        apply (rule exI[of _ T])
-        apply (rule exI[of _ "permute_trm id (id(x := y, y := x)) t"])
-        apply (auto simp: Abs_inject id_on_def intro!: exI[of _ "id(x := y, y := x)"])
         apply (subst permute_trm_eq_tvsubst)
             apply (simp_all add: supp_swap_bound_cmin supp_id)
         apply (subst tvsubst_comp)
-           apply (auto simp: fun_upd_comp)
+           apply (auto simp: fun_upd_comp SSupp_trm_Var_comp supp_swap_bound_cmin)
         apply (rule tvsubst_cong)
-             apply (auto simp: fun_upd_comp SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
-        done
+             apply (auto simp: fun_upd_comp SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound' SSupp_trm_Var_comp supp_swap_bound_cmin)
+         apply (metis swap_simps(3))
+        by (metis swap_def)
       done
     subgoal for X T t T2
       apply (rule disjI2, rule disjI1)
@@ -2538,15 +2538,13 @@ binder_inductive step
         apply (rule exI[of _ "{}"])
         apply (rule conjI)
          apply auto
-        apply (rule exI[of _ T])
-        apply (rule exI[of _ "permute_trm (id(X := Y, Y := X)) id t"])
-        apply (auto simp: TAbs_inject id_on_def intro!: exI[of _ "id(X := Y, Y := X)"])
         apply (subst permute_trm_eq_tvsubst)
             apply (simp_all add: supp_swap_bound_cmin supp_id)
         apply (subst tvsubst_comp)
-           apply (auto simp: fun_upd_comp)
+           apply (auto simp: fun_upd_comp SSupp_typ_TyVar_comp supp_swap_bound_cmin)
         apply (rule tvsubst_cong)
-             apply (auto simp: fun_upd_comp SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound')
+             apply (auto simp: fun_upd_comp SSupp_trm_tvsubst_bound SSupp_typ_tvsubst_typ_bound'  SSupp_typ_TyVar_comp supp_swap_bound_cmin)
+        apply (metis swap_def)+
         done
       done
     subgoal for v \<sigma> p u
@@ -2800,11 +2798,6 @@ lemma pat_distinct[simp]:
 lemma restrict_empty[simp]: "restrict \<sigma> {} v = v"
   unfolding restrict_def by auto
 
-lemma tvsubst_pat_id[simp]: "tvsubst_pat TyVar id p = p"
-  using vvsubst_pat_tvsubst_pat[of id id p, symmetric]
-  by auto
-  find_theorems tvsubst_pat TyVar
-
 lemma tvsubst_id[simp]: "tvsubst Var TyVar t = t"
   apply (binder_induction t avoiding: t rule: trm.strong_induct)
          apply (auto intro!: trans[OF lfset.map_cong_id lfset.map_id])
@@ -2977,16 +2970,11 @@ next
         prefer 2
     subgoal for Y T t U
       apply clarsimp
-      apply (frule typing_TAbsD[where ?U1.0 = T11 and ?U2.0 = "permute_typ (id(Y := X, X := Y)) T12"])
-        apply (fastforce+) [3]
-       apply (subst Forall_swap[of X _ Y])
-        apply (auto simp: typ.FVars_permute typ.permute_comp) [2]
-      apply (rule ty_refl)
-      using typing_wf_ty apply blast
-      using typing_well_scoped apply blast
-      apply (subst Forall_eq_tvsubst_typ[of _ _ _ Y "permute_typ (id(X := Y, Y := X)) T12"])
-       apply (rule Forall_swap)
-       apply simp
+      apply (frule typing_TAbsD[where ?U1.0 = T11 and ?U2.0 = "permute_typ (X \<leftrightarrow> Y) T12"])
+          apply (fastforce+) [3]
+      apply (metis ty_refl typ.inject(3) typing_well_scoped typing_wf_ctxt wf_ty_proj_ctxt)
+      apply (subst Forall_eq_tvsubst_typ[of _ _ _ Y "permute_typ (X \<leftrightarrow> Y) T12"])
+      using typ.inject(3) apply blast
       apply (erule exE conjE)+
       apply (rule typing_tvsubst_typ[where \<Delta>=\<emptyset>, simplified])
        apply (erule TSub)

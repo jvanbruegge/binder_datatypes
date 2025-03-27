@@ -53,7 +53,8 @@ assumes "|I| <o |UNIV::ivar set|" and "\<And>i. i \<in> I \<Longrightarrow> smal
 shows "small (\<Union> (As ` I))"
 using assms unfolding small_def 
 apply(intro ordLess_ordIso_trans[OF regularCard_UNION, of "|UNIV::ivar set|"])
-using assms regularCard_ivar infinite_UNIV cinfinite_iff_infinite by auto
+using assms regularCard_ivar infinite_UNIV cinfinite_iff_infinite apply auto
+  using var_class.UNIV_cinfinite by blast
 
 (* The following captures the freshness assumption for beta (coming from the "parameter" 
 predicate hred as part of ustepD. So fresh induction will use both 
@@ -78,7 +79,7 @@ proof-
   using iLam_avoid by (meson small_def)
 
   obtain f where f: "bij f" "|supp f| <o |UNIV::ivar set|" "id_on (FFVars (iLam xs e1)) f" 
-  and 1: "xs' = dsmap f xs" "e1' = irrename f e1" using 0(1) unfolding iLam_inject by auto
+  and 1: "xs' = dsmap f xs" "e1' = irrename f e1" using 0(1) unfolding iterm.inject by auto
   show ?thesis apply(intro exI[of _ xs'] exI[of _ e1'] exI[of _ es2]) apply(intro conjI)
     subgoal using 0(2) unfolding B by auto
     subgoal using 0(2) unfolding B by auto

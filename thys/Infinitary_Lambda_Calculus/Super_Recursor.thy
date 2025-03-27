@@ -6,10 +6,6 @@ begin
 
 (* RECURSOR PREPARATIONS: *)
 
-thm iLam_inject[no_vars]
-thm iLam_inject_super
-
-
 lemmas iLam_inject_super_strong = iLam_inject_super
 [unfolded touchedSuperT_def bsmall_def[symmetric]]
 
@@ -27,7 +23,7 @@ proof-
   dsmap f xs = zs \<and> id_on (FFVars (iLam xs e)) f"
   using ex_dsmap''[OF ds(1) A] by auto
   show ?thesis apply(rule exI[of _ "irrename f e"])
-  unfolding iLam_inject apply(rule exI[of _ f])
+  unfolding iterm.inject apply(rule exI[of _ f])
   using f unfolding id_on_def by auto
 qed
 

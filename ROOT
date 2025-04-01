@@ -50,6 +50,8 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     Sugar
 
 session Tests in "tests" = Binders +
+  directories
+    "../thys/LetRec"
   theories
     Regression_Tests
 

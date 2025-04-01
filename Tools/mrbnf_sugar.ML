@@ -636,13 +636,21 @@ fun create_binder_datatype (spec : spec) lthy =
             hyp_subst_tac ctxt,
             REPEAT_DETERM o EVERY' [
               resolve_tac ctxt (maps map_cong0_of_mr_bnf mr_bnfs),
-              REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [
-                rtac ctxt @{thm trans[OF id_apply]},
-                rtac ctxt sym,
-                etac ctxt @{thm id_onD},
-                REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm UN_I})
-              ]),
-              REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt)
+              REPEAT_DETERM o FIRST' [
+                resolve_tac ctxt @{thms refl supp_id_bound bij_id},
+                assume_tac ctxt,
+                EVERY' [
+                  rtac ctxt @{thm trans[OF id_apply]},
+                  rtac ctxt sym,
+                  etac ctxt @{thm id_onD},
+                  REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm UN_I})
+                ],
+                SELECT_GOAL (EVERY1 [
+                  K (Local_Defs.unfold0_tac ctxt @{thms image_Un image_single[symmetric] Union_Un_distrib cSup_singleton}),
+                  assume_tac ctxt,
+                  IF_UNSOLVED o K no_tac
+                ])
+              ]
             ],
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             REPEAT_DETERM o rtac ctxt exI,

@@ -1114,7 +1114,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
             resolve_tac ctxt prems,
             K (unfold_thms_tac ctxt @{thms prod.collapse}),
             resolve_tac ctxt prems,
-            eresolve_tac ctxt @{thms UnI1 UnI2}
+            eresolve_tac ctxt @{thms UnI1 UnI2} ORELSE' assume_tac ctxt
           ]
         ]) ctxt
       ] end;

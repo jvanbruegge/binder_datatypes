@@ -49,6 +49,10 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     TVSubst
     Sugar
 
+session Tests in "tests" = Binders +
+  theories
+    Regression_Tests
+
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
   theories
     LC

@@ -230,6 +230,10 @@ fun create_binder_datatype (spec : spec) lthy =
 
     fun mk_ctor k xs abs = abs $ mk_sumprod_balanced (domain_type (fastype_of abs)) (length (#ctors spec)) k xs;
 
+    val quotient = hd (#quotient_fps res)
+    val qT = #T quotient;
+    val qualify = Binding.qualify false (short_type_name (fst (dest_Type qT)));
+
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
     val (ctors, (_, lthy)) = fold_map (fn ((name, syn), Ts) => fn (i, lthy) =>
@@ -237,7 +241,7 @@ fun create_binder_datatype (spec : spec) lthy =
         val Ts' = map (Term.typ_subst_atomic replace) Ts;
         val (xs, _) = mk_Frees Name.uu Ts' lthy;
         val rhs = fold_rev Term.absfree (map dest_Free xs) (quotient_ctor $ mk_ctor i xs abs);
-        val (ctor, lthy) = mk_def_t_syn syn false Binding.empty I name (length Ts') rhs lthy;
+        val (ctor, lthy) = mk_def_t_syn syn false Binding.empty qualify name (length Ts') rhs lthy;
       in (ctor, (i + 1, lthy)) end
     ) (#ctors spec) (1, lthy);
 
@@ -256,9 +260,6 @@ fun create_binder_datatype (spec : spec) lthy =
     )); *) (map (TFree o fst) (#vars spec))
 
     val names_lthy = fold Variable.declare_typ (map (TFree o fst) (#vars spec)) lthy;
-
-    val quotient = hd (#quotient_fps res)
-    val qT = #T quotient;
 
     val (b, names_lthy) = apfst hd (mk_TFrees (length vars) names_lthy);
     val (((Ks, rho), t), names_lthy) = names_lthy

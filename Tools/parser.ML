@@ -152,18 +152,31 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
     val lthy = fold (Variable.declare_typ o snd) Ts lthy;
 
     val FVars_bs = map (snd o fst) Ts;
-    val params = fold_rev (fn ((ann, _), T) => Symtab.map_entry (case ann of
+    val params = fold (fn ((ann, _), T) => Symtab.map_entry (case ann of
       NONE => "plive" | SOME MRBNF_Def.Free_Var => "pfree" | SOME MRBNF_Def.Bound_Var => "plive" | _ => "dead"
     ) (cons T)) Ts params';
 
     val (ctors, (lthy, params)) = fold_map (create_ctor_spec T_names) ctors (lthy, params);
-    fun flat s t = map (rpair t o dest_TFree) (the (Symtab.lookup params s));
+
+    fun sort_by_params xs ys = split_list (sort (fn ((a, _), (b, _)) =>
+      let fun f x = find_index (fn T => TFree (fst x) = snd T) Ts;
+      in case (f a, f b) of
+        (~1, ~1) => EQUAL
+        | (~1, _) => GREATER
+        | (_, ~1) => LESS
+        | (n, m) => int_ord (n, m)
+      end
+    ) (xs ~~ ys));
+    fun flat s t = rev (map (rpair t o dest_TFree) (the (Symtab.lookup params s)));
 
     val brecs = flat "brec" MRBNF_Def.Live_Var
     val recs = flat "rec" MRBNF_Def.Live_Var
     val bounds = flat "bound" MRBNF_Def.Bound_Var;
     val bfrees = flat "bfree" MRBNF_Def.Free_Var;
     val frees = flat "free" MRBNF_Def.Free_Var;
+
+    val (frees, bounds) = sort_by_params frees bounds;
+
     val vars =
       frees
       @ flat "pfree" MRBNF_Def.Free_Var

@@ -103,7 +103,15 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
           | _ => (T, acc)
         ) T #-> fold_map_typ (fn T => fn acc as (params, lthy) => case T of
           Type (@{type_name var_selector}, [Type (sel, []), T]) =>
-            let val sel = MRBNF_Util.short_type_name sel;
+            let
+              val sel = MRBNF_Util.short_type_name sel;
+              fun mk_bfree params T lthy = case find_index (curry (op=) T) (the (Symtab.lookup params "bfree_var")) of
+                ~1 => let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
+                      in (T', (params
+                        |> Symtab.map_entry "bfree_var" (cons T)
+                        |> Symtab.map_entry "bfree" (cons T')
+                      , lthy)) end
+                | n => (nth (the (Symtab.lookup params "bfree")) n, (params, lthy))
             in if member (op=) ts sel then
                 case try (member (op=) T_names o fst o dest_Type) T of
                   SOME true => (case the (Symtab.lookup params "brec") of
@@ -111,14 +119,16 @@ fun create_ctor_spec T_names ((((sel, name), xs), mixfix), binds) (lthy, params)
                       let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
                       in (T', (Symtab.map_entry "brec" (cons T') params, lthy)) end
                     | x::_ => (x, acc))
-                  | _ => (if Term.is_TFree T then (case find_index (curry (op=) T) (the (Symtab.lookup params "bfree_var")) of
-                    ~1 => let val (T', lthy) = apfst hd (BNF_Util.mk_TFrees 1 lthy);
-                          in (T', (params
-                            |> Symtab.map_entry "bfree_var" (cons T)
-                            |> Symtab.map_entry "bfree" (cons T')
-                          , lthy)) end
-                    | n => (nth (the (Symtab.lookup params "bfree")) n, (params, lthy))
-                  ) else error "can only bind in recursive subterms or type variables")
+                  | _ => (if Term.is_TFree T then (mk_bfree params T lthy) else case T of
+                    Type (s, Ts) =>
+                      let
+                        val (Ts', (params, lthy)) = fold_map (fn T => fn (params, lthy) => case Symtab.lookup params "free" of
+                          SOME _ => mk_bfree params T lthy
+                          | NONE => (T, (params, lthy))
+                        ) Ts (params, lthy);
+                      in (Type (s, Ts'), (params, lthy)) end
+                    | _ => error "type variable is not a var position"
+                  )
               else (T, acc)
             end
           | _ => (T, acc)

@@ -1175,7 +1175,7 @@ lemma FVars_intros:
   done
 
 lemma TT_inject0s:
-  "(term_ctor x = term_ctor y) \<longleftrightarrow> (\<exists>(g::'a::var \<Rightarrow> 'a) f2.
+  "(term_ctor x = term_ctor y) \<longleftrightarrow> (\<exists>(g::'a::var \<Rightarrow> 'a).
 bij g \<and> |supp g| <o |UNIV::'a set| \<and>
 id_on (\<Union>(FVars_term ` set3_term_pre x) - set2_term_pre x) g \<and>
 map_term_pre id g (permute_term g) id x = y)"

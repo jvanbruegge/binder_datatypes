@@ -196,7 +196,7 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
       binding_rel = map (fn T =>
         let
           val i = find_index (curry (op=) (TFree (fst T))) (rev (the (Symtab.lookup params "bfree_var")));
-          val bfree = if i = ~1 then [] else [find_index (curry (op=) T) frees]
+          val bfree = if i = ~1 then [] else [i]
         in (bfree, (0 upto length brecs - 1)) end
       ) frees,
       rec_vars = length brecs + length recs,

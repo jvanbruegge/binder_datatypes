@@ -1027,13 +1027,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
     fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs)
     (* TODO: fix for multiple bounds *)
     val FVars_UNss = @{map 3} (fn (lsets, bsets, fsets) => fn x => fn idxs =>
-      @{map 4} (fn j => fn bset => fn rel => fn FVarss => (
-        if member (op=) (#bfree_vars fp_res) j then [mk_minus (nth fsets (j + nvars) $ x, bset $ x)] else [],
+      fst (@{fold_map 4} (fn j => fn bset => fn rel => fn FVarss => fn n => ((
+        if member (op=) (#bfree_vars fp_res) j then [mk_minus (nth fsets (n + nvars) $ x, bset $ x)] else [],
         @{map 3} (fn lset => fn i => fn FVars =>
           let val UN = mk_UNION (lset $ x) FVars;
           in if member (op=) (hd rel) i then mk_minus (UN, bset $ x) else UN end
         ) lsets idxs (replicate_rec FVarss)
-      )) (0 upto nvars - 1) bsets (#binding_relation fp_res) (transpose (map #FVarss (#raw_fps fp_res)))
+      ), if member (op=) (#bfree_vars fp_res) j then n + 1 else n)) (0 upto nvars - 1) bsets (#binding_relation fp_res) (transpose (map #FVarss (#raw_fps fp_res))) 0)
     ) pre_setss xs rec_idxss;
 
     val addPred = addPred (Option.map #pred (#validity params)) p;

@@ -432,6 +432,11 @@ fun create_binder_datatype (spec : spec) lthy =
     );
     val rec_bounds = map (nth rec_vars) (distinct (op=) (maps snd (#binding_rel spec)));
 
+    val set_simp_thms = @{thms sum.set_map prod.set_map comp_def UN_empty UN_empty2 Un_empty_left Un_empty_right
+      UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un Un_assoc[symmetric] insert_is_Un[of _ "{_}"]
+      empty_Diff
+    };
+
     (* TODO: Use mrbnf sets here (only relevant for passive variables) *)
     val ((bset_optss, setsss), set_simpss) = apfst split_list (split_list (map (fn FVars =>
       let
@@ -489,19 +494,16 @@ fun create_binder_datatype (spec : spec) lthy =
               [] => Const (@{const_name bot}, HOLogic.mk_setT free)
               | _ => foldl1 MRBNF_Util.mk_Un sets
           ));
-          val thms = @{thms sum.set_map prod.set_map comp_def UN_empty UN_empty2 Un_empty_left Un_empty_right
-            UN_singleton UN_single sum_set_simps prod_set_simps Diff_empty UN_Un Un_assoc[symmetric] insert_is_Un[of _ "{_}"]
-          };
         in ((bset_opt, sets), Goal.prove_sorry lthy (names xs) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (
-            thms @ map snd ctors @ #FVars_ctors quotient @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+            set_simp_thms @ map snd ctors @ #FVars_ctors quotient @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
             @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
           )),
           REPEAT_DETERM o EVERY' [
             EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
             REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
           ],
-          K (Local_Defs.unfold0_tac ctxt thms),
+          K (Local_Defs.unfold0_tac ctxt set_simp_thms),
           rtac ctxt refl ORELSE' EVERY' [
             rtac ctxt @{thm set_eqI},
             rtac ctxt @{thm iffI},
@@ -584,10 +586,8 @@ fun create_binder_datatype (spec : spec) lthy =
         val inject = Goal.prove_sorry lthy (names (xs @ ys)) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt [ctor_def, #inject quotient]),
           K (Local_Defs.unfold0_tac ctxt (
-            @{thms map_sum.simps map_prod_simp comp_def sum_set_simps cSup_singleton Union_empty
-              Un_empty_left Un_empty_right Diff_empty UN_empty id_apply sum.inject prod.inject
-              prod_set_simps UN_single id_def[symmetric] UN_single UN_singleton
-            }
+            @{thms map_sum.simps map_prod_simp sum.inject prod.inject id_apply}
+            @ set_simp_thms
             @ maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs
             @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
             @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
@@ -646,7 +646,7 @@ fun create_binder_datatype (spec : spec) lthy =
                   REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm UN_I})
                 ],
                 SELECT_GOAL (EVERY1 [
-                  K (Local_Defs.unfold0_tac ctxt @{thms image_Un image_single[symmetric] Union_Un_distrib cSup_singleton}),
+                  K (Local_Defs.unfold0_tac ctxt (@{thms image_Un image_single[symmetric] Union_Un_distrib} @ set_simp_thms)),
                   assume_tac ctxt,
                   IF_UNSOLVED o K no_tac
                 ])

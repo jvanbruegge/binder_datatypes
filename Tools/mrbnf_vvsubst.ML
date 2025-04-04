@@ -1394,7 +1394,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
                 eresolve_tac ctxt (flat (#FVars_intross quot @ pset_intross))
               ],
               REPEAT_DETERM o rtac ctxt refl,
-              TRY o EVERY' [
+              REPEAT_DETERM o EVERY' [
                 rtac ctxt @{thm case_split[of "_ \<in> _", rotated]},
                 dtac ctxt @{thm DiffI},
                 assume_tac ctxt,

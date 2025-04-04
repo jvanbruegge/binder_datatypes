@@ -191,11 +191,12 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
 
     val bfree_setsss = map (fst o fold_map chop nbfrees) rest;
 
-    val bfree_boundsss = map2 (fn n => fn bound_freess =>
+    val bfree_boundsss = fst (@{fold_map 2} (fn n => fn bound_freess => fn m => (
       map (fn i => map_filter I (
-        map_index (fn (j, ks) => if member (op=) ks i then SOME j else NONE) bound_freess
-      )) (0 upto n - 1)
-    ) nbfrees bound_freesss;
+        map_index (fn (j, ks) => if member (op=) ks (i + m) then SOME j else NONE) bound_freess
+      )) (0 upto n - 1),
+      m + n
+    )) nbfrees bound_freesss 0);
 
     val (is_freess, lthy) =
       let

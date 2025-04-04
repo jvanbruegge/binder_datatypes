@@ -2,16 +2,22 @@ theory Regression_Tests
   imports "Binders.MRBNF_Recursor" "../thys/LetRec/DAList_MRBNF"
 begin
 
-(* types have the GitHub issue number as postfix *)
+(* #68 *)
+binder_datatype 'a trm =
+  Var 'a
+| Abs x::'a t::"'a trm" binds x in t
 
-binder_datatype 'a trm_68 =
+(* #69 *)
+binder_datatype 'a LLC =
   Var 'a
-| Abs x::'a t::"'a trm_68" binds x in t
-  
-binder_datatype 'a LLC_69 =
-  Var 'a
-  | App "'a LLC_69" "'a LLC_69"
-  | Abs x::'a t::"'a LLC_69" binds x in t
-  | Let "(x::'a, t::'a LLC_69) alist" u::"'a LLC_69" binds x in t u
+  | App "'a LLC" "'a LLC"
+  | Abs x::'a t::"'a LLC" binds x in t
+  | Let "(x::'a, t::'a LLC) alist" u::"'a LLC" binds x in t u
+
+(* #70 *)
+datatype ('tv, 'ev, 'rv) type = Type 'tv 'ev 'rv
+binder_datatype ('tv, 'ev, 'rv) type_scheme =
+  TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme" binds X in \<sigma>
+  | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" "('tv, A::'ev, B::'rv) type" binds \<epsilon> \<rho> in A B
 
 end

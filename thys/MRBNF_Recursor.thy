@@ -47,4 +47,17 @@ typedecl ('a, 'b) var_selector
 
 ML_file "../Tools/parser.ML"
 
+context begin
+ML \<open>
+local
+  fun unfold_meth ths ctxt = SIMPLE_METHOD (CHANGED_PROP (Local_Defs.unfold0_tac ctxt ths));
+in
+  val _ = Theory.local_setup (
+    Method.local_setup @{binding unfold0} (Attrib.thms >> unfold_meth)
+     "unfolding without eta-expansion"
+   )
+end
+\<close>
+end
+
 end

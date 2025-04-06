@@ -108,12 +108,15 @@ lemmas Udtor_Umap = alpha_Udtor[folded FFVarsBD_def]
 lemmas FVars_term_Udtor = UFVars_Udtor[folded FFVarsBD_def]
 
 lemma Umap_id[simp,intro!]: "Umap id d = d"
-  by (simp add: Umap_id0)
+  by (subst Umap_id0) (rule id_apply)
 
 lemma Umap_comp:
   "bij (u::'a\<Rightarrow>'a) \<Longrightarrow> |supp u| <o |UNIV::('a::var) set| \<Longrightarrow> bij v \<Longrightarrow> |supp v| <o |UNIV::'a set| \<Longrightarrow>
  Umap (u o v) d = Umap u (Umap v d)"
-  by (metis Umap_comp0 comp_apply)
+  apply (subst Umap_comp0[symmetric])
+      apply assumption+
+  apply (rule comp_apply)
+  done
 
 lemma Umap_Udtor_strong:
   assumes u: "bij (u::'a::var\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
@@ -123,27 +126,54 @@ lemma Umap_Udtor_strong:
    (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
    (Udtor d)" (is "?L = ?R")
 proof
-  show "?L \<subseteq> ?R" using Umap_Udtor[OF assms] .
+  show "?L \<subseteq> ?R"
+    by (insert Umap_Udtor[OF assms]) assumption
 next
-  have iu: "bij (inv u)" "|supp (inv u)| <o |UNIV::'a set|" using u by(simp_all add: supp_inv_bound)
+  have iu: "bij (inv u)" "|supp (inv u)| <o |UNIV::'a set|"
+    subgoal
+      by (rule bij_imp_bij_inv) (rule u)
+    subgoal
+      by (rule supp_inv_bound) (rule u)+
+    done
   define dd where "dd \<equiv> Umap u d"
   have d: "d = Umap (inv u) dd"
-    using u unfolding dd_def by(simp add: Umap_comp[symmetric] supp_inv_bound)
-  have [simp]: "Umap u \<circ> (Umap (inv u)) = id" unfolding fun_eq_iff
-    by (simp add: u iu Umap_comp[symmetric])
-  show "?R \<subseteq> ?L" unfolding dd_def[symmetric] d using Umap_Udtor[OF iu, of dd]
-    apply (auto simp: u iu term_pre.map_comp map_sum.comp
-        permute_comp0s permute_id0s Umap_comp[symmetric] map_sum.id term_pre.map_id0)
+    apply (unfold dd_def)
+    apply (subst Umap_comp[OF iu u, symmetric])
+    apply (subst inv_o_simp1)
+     apply (rule u)
+    apply (rule Umap_id[symmetric])
+    done
+  have Umap_comp_inv_id: "Umap u \<circ> (Umap (inv u)) = id"
+    apply (unfold fun_eq_iff)
+    apply (rule allI)
+    apply (subst id_apply)
+    apply (subst comp_apply)
+    apply (subst Umap_comp[OF u iu, symmetric])
+    apply (subst inv_o_simp2[OF u(1)])
+    apply (rule Umap_id)
+    done
+  show "?R \<subseteq> ?L"
+    apply (unfold dd_def[symmetric] d)
+    apply (subst Umap_comp[OF u iu, symmetric])
+    apply (subst inv_o_simp2[OF u(1)])
+    apply (subst Umap_id)
+    apply (rule image_subsetI)
+    apply (insert Umap_Udtor[OF iu, of dd])
     apply (drule subsetD)
      apply assumption
     apply (erule imageE)
     apply hypsubst
-apply (auto simp: u iu term_pre.map_comp map_sum.comp
-        permute_comp0s permute_id0s Umap_comp[symmetric] map_sum.id term_pre.map_id0 sum.map_ident permute_ids[unfolded id_def])
-    apply (unfold sum.map_ident id_def term_pre.map_ident)
+    apply(subst term_pre.map_comp[OF iu(2) iu u(2) u])
+    apply (subst inv_o_simp2[OF u(1)])+
+    apply (subst map_sum.comp)+
+    apply (subst permute_comp0s[OF iu u])+
+    apply (subst inv_o_simp2[OF u(1)])+
+    apply (subst permute_id0s)+
+    apply (subst Umap_comp_inv_id)+
+    apply (subst map_sum.id)+
+    apply (subst term_pre.map_id)
     apply assumption
     done
-
 qed
 
 

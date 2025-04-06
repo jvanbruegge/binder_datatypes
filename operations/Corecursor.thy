@@ -203,17 +203,24 @@ lemmas raw_Umap_comp = Umap_comp
 
 lemma FVarsBD_FFVarsBD:
   "raw_UFVarsBD X = FFVarsBD (map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X)"
-  unfolding raw_UFVarsBD_def FFVarsBD_def raw_UFVars_def2
-  apply(simp add: raw_UFVars_def2 case_sum_map_sum supp_id_bound term_pre.set_map)
-  unfolding o_def id_def ..
-
-term rel_term_pre
-term mr_rel_term_pre
+  apply (unfold raw_UFVarsBD_def FFVarsBD_def raw_UFVars_def2)
+  apply (subst term_pre.set_map[OF supp_id_bound bij_id supp_id_bound])+
+  apply (subst image_id)
+  apply (subst UN_simps(10))
+  apply (subst case_sum_map_sum)
+  apply (subst comp_id)
+  apply (subst comp_def)
+  apply (rule refl)
+  done
 
 lemmas supp_comp_bound = supp_comp_bound[OF _ _ infinite_UNIV]
 
-lemma abs_rep_id[simp]: "TT_abs o TT_rep = id"
-  using TT_abs_rep by fastforce
+lemma abs_rep_id: "TT_abs o TT_rep = id"
+  apply (unfold comp_def)
+  apply (subst TT_abs_rep)
+  apply (fold id_def)
+  apply (rule refl)
+  done
 
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
@@ -231,7 +238,7 @@ proof-
     "XX' \<equiv> map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X'"
   have 0: "{XX,XX'} \<subseteq> Udtor d" using assms unfolding XX_def XX'_def Utor_def
     by (auto simp: Umap_comp[symmetric] map_sum.comp TT_abs_rep map_sum.id
-        supp_id_bound term_pre.map_comp term_pre.map_id)
+        supp_id_bound term_pre.map_comp term_pre.map_id abs_rep_id)
   then obtain u where u: "bij u" "|supp u| <o |UNIV::'a set|" "id_on (FFVarsBD XX) u"
     and m: "map_term_pre id u (map_sum (permute_term u) (Umap u)) id XX = XX'"
     using Udtor_Umap[OF 0] by auto
@@ -267,7 +274,7 @@ lemma raw_UFVars_Utor:
 proof-
   define XX where "XX \<equiv> map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X"
   have 0: "XX \<in> Udtor d" using assms unfolding XX_def Utor_def
-    by (auto simp: term_pre.map_comp map_sum.comp TT_abs_rep map_sum.id term_pre.map_id supp_id_bound)
+    by (auto simp: term_pre.map_comp map_sum.comp TT_abs_rep map_sum.id term_pre.map_id supp_id_bound abs_rep_id)
   show ?thesis using FVars_term_Udtor[OF 0] unfolding FVarsBD_FFVarsBD XX_def
     apply (simp add: term_pre.set_map raw_UFVars_def2 case_sum_map_sum supp_id_bound) unfolding raw_UFVars_def2 o_def
       map_sum.simps id_def by simp

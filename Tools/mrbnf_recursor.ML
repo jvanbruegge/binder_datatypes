@@ -3071,7 +3071,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       ]
                     ] end,
                     (* rec sets *)
-                    REPEAT_DETERM o the_default (K all_tac) (Option.map (fn fp_thms => EVERY' [
+                    REPEAT_DETERM o the_default (K no_tac) (Option.map (fn fp_thms => EVERY' [
                       REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
                       rtac ctxt @{thm relcomppI},
                       SELECT_GOAL (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),

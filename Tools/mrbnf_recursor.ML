@@ -2288,7 +2288,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   ||>> chop (2 * nvars)
                   ||>> apsnd hd o chop nvars;
                 val IHs = map (apply_n mp mp_n o apply_n spec spec_n) IHs;
-                fun chop_rec xs = fst (fold_map (K (chop nvars)) (1 upto n) xs)
+                fun chop_rec m xs = fst (fold_map (K (chop (m * nvars))) (1 upto n) xs)
 
                 val valid_Pmap_opt = Option.map (fn v =>
                   #valid_Pmap v OF (valid_prems @ maps (fn ps => [
@@ -2311,9 +2311,9 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 val ((hs, x), x') = rest
                   |> chop nvars
                   ||>> apply2 hd o chop 1;
-                val pickss = chop_rec picks;
-                val suitable_premss = chop_rec suitable_prems;
-                val suitable'_premss = chop_rec suitable'_prems;
+                val pickss = chop_rec 1 picks;
+                val suitable_premss = chop_rec 1 suitable_prems;
+                val suitable'_premss = chop_rec 1 suitable'_prems;
 
                 val exists_bij_betw's = @{map 3} (fn bset => fn pick => fn f =>
                   let
@@ -2780,15 +2780,15 @@ fun create_binding_recursor qualify fp_res params models lthy =
                 K (unfold_thms_tac ctxt [snd rec_f OF (suitable_prems @ valid_prems), snd rec_f OF (suitable'_prems @ valid_prems)]),
                 Subgoal.FOCUS_PARAMS (fn {context=ctxt, ...} =>
                   let
-                    val pick_bijss = chop_rec (every_other pick_prems);
-                    val pick'_bijss = chop_rec (every_other pick'_prems);
+                    val pick_bijss = chop_rec 1 (every_other pick_prems);
+                    val pick'_bijss = chop_rec 1 (every_other pick'_prems);
                     val exists_bij_betw2s = @{map 7} (fn bset => fn pick_bij => fn pick'_bij => fn h_bij => fn FVars => fn PFVars => fn avoiding_set =>
                       let
                         val cbset = SOME (Thm.cterm_of ctxt bset);
                         fun mk_map_t xx picks =
                           let
                             (* TODO: fix for multiple bounds *)
-                            val pickss = chop_rec picks;
+                            val pickss = chop_rec 1 picks;
                             val pick_ts = map (fn pick => pick $ xx $ p) (nth pickss (i - 1));
                             val live_ts = @{map 4} (fn i => fn raw => fn t => fn rec_f =>
                               let val rename_t = if not (member (op=) (maps hd (#binding_relation fp_res)) i) then t else
@@ -2819,6 +2819,17 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       | (thm, _) => SOME (Drule.rotate_prems ~1 thm)
                     ) (MRBNF_Def.mr_rel_set_of_mrbnf mrbnf ~~ MRBNF_Def.var_types_of_mrbnf mrbnf);
                     val mr_rel_sets = map (fn thm => Local_Defs.unfold0 ctxt @{thms image_id} (thm OF [mr_rel_prem])) mr_rel_sets';
+
+                    val pick_prems = nth (chop_rec 2 pick_prems) (i - 1);
+                    val pick'_prems = nth (chop_rec 2 pick'_prems) (i - 1);
+
+                    val set_map_picks = if #min_bound params andalso nvars > 1 then [] else
+                      maps (fn thm => map (fn prems => Local_Defs.unfold0 ctxt @{thms image_id} (thm OF (
+                        replicate (nvars + length pfrees) @{thm supp_id_bound}
+                        @ flat (replicate (length pbounds) @{thms bij_id supp_id_bound})
+                        @ prems
+                        @ map (nth (every_other (tl prems))) (#bfree_vars fp_res)
+                      ))) [pick_prems, pick'_prems]) (MRBNF_Def.set_map_of_mrbnf mrbnf)
                   in EVERY1 [
                     EVERY' (map (fn thm => EVERY' [
                       rtac ctxt (exE OF [thm]),
@@ -2853,20 +2864,17 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       REPEAT_DETERM o etac ctxt conjE,
                       assume_tac ctxt
                     ],
-                    REPEAT_DETERM_N (2 * nvars) o EVERY' [
-                      REPEAT_DETERM o EVERY' [
-                        EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
-                      ],
-                      SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                      REPEAT_DETERM o etac ctxt conjE,
-                      REPEAT_DETERM o EVERY' [
-                        EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
-                      ],
-                      K (unfold_thms_tac ctxt @{thms image_id}),
-                      assume_tac ctxt
-                    ],
+                    REPEAT_DETERM_N (2 * nvars) o SELECT_GOAL (EVERY1 [
+                      eresolve_tac ctxt @{thms eq_bij_betw_freshE},
+                      K (Local_Defs.unfold0_tac ctxt (flat set_map_idss @ set_map_picks)),
+                      assume_tac ctxt ORELSE' EVERY' [
+                        REPEAT_DETERM o EVERY' [
+                          EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
+                        ],
+                        assume_tac ctxt
+                      ]
+                    ]),
                     defer_tac,
                     TRY o EVERY' [
                       resolve_tac ctxt valid_prems,
@@ -2927,69 +2935,69 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       eresolve_tac ctxt @{thms eq_bij_betw_prems},
                       resolve_tac ctxt card_thms
                     ],
-                    REPEAT_DETERM o FIRST' [
-                      (* comp = id for free position *)
-                      EVERY' [
-                        rtac ctxt ballI,
-                        rtac ctxt trans,
-                        rtac ctxt @{thm id_apply},
-                        rtac ctxt sym,
-                        rtac ctxt trans,
-                        rtac ctxt @{thm comp_apply},
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                        REPEAT_DETERM o etac ctxt conjE,
-                        REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
-                        SELECT_GOAL (unfold_thms_tac ctxt (flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
-                          alpha_FVars OF [alpha_pick OF (suitable_prems @ valid_prems)] RS sym,
-                          alpha_FVars OF [alpha_pick OF (suitable'_prems @ valid_prems)] RS sym
-                        ]) (#alpha_FVarss (#inner raw))) alpha_ctor_picks (#raw_fps fp_res)))),
-                        rtac ctxt trans,
-                        rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
-                        etac ctxt @{thm id_onD},
-                        rtac ctxt UnI1,
-                        rtac ctxt UnI1,
-                        eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                        etac ctxt @{thm id_onD[OF id_on_inv, rotated]},
-                        rtac ctxt UnI1,
-                        rtac ctxt UnI1,
-                        EqSubst.eqsubst_asm_tac ctxt [0] (map (fn thm => thm RS sym) mr_rel_sets),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
-                        eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                        assume_tac ctxt
+                    (* comp = id for free position *)
+                    REPEAT_DETERM_N nvars o EVERY' [
+                      rtac ctxt ballI,
+                      rtac ctxt trans,
+                      rtac ctxt @{thm id_apply},
+                      rtac ctxt sym,
+                      rtac ctxt trans,
+                      rtac ctxt @{thm comp_apply},
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
+                      REPEAT_DETERM o etac ctxt conjE,
+                      REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
+                      SELECT_GOAL (unfold_thms_tac ctxt (flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
+                        alpha_FVars OF [alpha_pick OF (suitable_prems @ valid_prems)] RS sym,
+                        alpha_FVars OF [alpha_pick OF (suitable'_prems @ valid_prems)] RS sym
+                      ]) (#alpha_FVarss (#inner raw))) alpha_ctor_picks (#raw_fps fp_res)))),
+                      rtac ctxt trans,
+                      rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
+                      etac ctxt @{thm id_onD},
+                      rtac ctxt UnI1,
+                      rtac ctxt UnI1,
+                      eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                      etac ctxt @{thm id_onD[OF id_on_inv, rotated]},
+                      rtac ctxt UnI1,
+                      rtac ctxt UnI1,
+                      EqSubst.eqsubst_asm_tac ctxt [0] (map (fn thm => thm RS sym) mr_rel_sets),
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
+                      eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                      assume_tac ctxt
+                    ],
+                    (* passive bound/free position *)
+                    REPEAT_DETERM o (rtac ctxt ballI THEN' rtac ctxt refl),
+                    (* passive live position *)
+                    REPEAT_DETERM o EVERY' [
+                      rtac ctxt ballI,
+                      rtac ctxt ballI,
+                      rtac ctxt impI,
+                      assume_tac ctxt
+                    ],
+                    let val bound_tac = EVERY' [
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_assoc[symmetric]}),
+                      EqSubst.eqsubst_tac ctxt [0] @{thms o_inv_distrib[symmetric]},
+                      eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                      resolve_tac ctxt pick'_prems,
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_assoc}),
+                      rtac ctxt sym,
+                      rtac ctxt trans,
+                      rtac ctxt @{thm comp_apply},
+                      rtac ctxt @{thm iffD2[OF bij_imp_inv']},
+                      REPEAT_DETERM o FIRST' [
+                        resolve_tac ctxt (@{thms bij_comp} @ pick'_prems),
+                        eresolve_tac ctxt @{thms eq_bij_betw_prems}
                       ],
-                      (* passive bound/free position *)
-                      (rtac ctxt ballI THEN' rtac ctxt refl),
-                      (* passive live position *)
-                      EVERY' [
-                        rtac ctxt ballI,
-                        rtac ctxt ballI,
-                        rtac ctxt impI,
-                        assume_tac ctxt
-                      ],
+                      rtac ctxt @{thm trans[rotated]},
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
+                      REPEAT_DETERM o eresolve_tac ctxt @{thms eq_onD conjE},
+                      assume_tac ctxt,
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
+                      rtac ctxt refl
+                    ] in EVERY' [
                       (* comp = id for bound position *)
-                      let val bound_tac = EVERY' [
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_assoc[symmetric]}),
-                        EqSubst.eqsubst_tac ctxt [0] @{thms o_inv_distrib[symmetric]},
-                        eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                        resolve_tac ctxt pick'_prems,
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_assoc}),
-                        rtac ctxt sym,
-                        rtac ctxt trans,
-                        rtac ctxt @{thm comp_apply},
-                        rtac ctxt @{thm iffD2[OF bij_imp_inv']},
-                        REPEAT_DETERM o FIRST' [
-                          resolve_tac ctxt (@{thms bij_comp} @ pick'_prems),
-                          eresolve_tac ctxt @{thms eq_bij_betw_prems}
-                        ],
-                        rtac ctxt @{thm trans[rotated]},
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                        REPEAT_DETERM o eresolve_tac ctxt @{thms eq_onD conjE},
-                        assume_tac ctxt,
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
-                        rtac ctxt refl
-                      ] in (rtac ctxt ballI THEN' bound_tac) ORELSE'
+                      REPEAT_DETERM_N nvars o (rtac ctxt ballI THEN' bound_tac), (* TODO: fix for multiple bounds *)
                       (* comp = id for bound free position *)
-                      EVERY' [
+                      REPEAT_DETERM_N (length bfrees) o EVERY' [
                         rtac ctxt @{thm ballI},
                         rtac ctxt @{thm case_split[of "_ \<in> _"]},
                         bound_tac,
@@ -3034,22 +3042,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         )) (nth suitable_premss (i - 1)) pick_id_on'ss)),
                         assume_tac ctxt,
                         rtac ctxt @{thm trans[OF comp_apply]},
-                        SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms eq_bij_betw_def}),
-                        REPEAT_DETERM o etac ctxt conjE,
+                        etac ctxt @{thm eq_bij_betw_imsuppE},
+                        REPEAT_DETERM_N (nvars - 1) o etac ctxt @{thm thin_rl},
                         REPEAT_DETERM1 o EVERY' [
                           EqSubst.eqsubst_asm_tac ctxt [0] (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
                           resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
                           resolve_tac ctxt (maps (fn thm => [thm OF (suitable_prems @ valid_prems), thm OF (suitable'_prems @ valid_prems)]) alpha_ctor_picks)
                         ],
-                        REPEAT_DETERM o EVERY' [
-                          EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
-                          REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems),
-                            assume_tac ctxt,
-                            resolve_tac ctxt card_thms
-                          ]
-                        ],
-                        K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
                         rtac ctxt trans,
                         rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
                         etac ctxt @{thm imsupp_id_on[THEN id_onD]},
@@ -3069,319 +3068,319 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         etac ctxt @{thm DiffE},
                         eresolve_tac ctxt (flat (#FVars_intross raw)),
                         assume_tac ctxt
-                      ] end,
-                      (* rec sets *)
-                      the_default (K no_tac) (Option.map (fn fp_thms => EVERY' [
-                        REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
-                        rtac ctxt @{thm relcomppI},
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
-                        rtac ctxt refl,
-                        K (unfold_thms_tac ctxt @{thms prod.case}),
-                        rtac ctxt @{thm context_conjI},
-                        FIRST' [
-                          (* nonbinding rec set *)
-                          EVERY' [
-                            resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_bij o #inner) (#raw_fps fp_res)),
-                            assume_tac ctxt ORELSE' resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                            REPEAT_DETERM o (eresolve_tac ctxt @{thms eq_bij_betw_prems} ORELSE' resolve_tac ctxt card_thms),
-                            REPEAT_DETERM1 o EVERY' [
-                              rtac ctxt @{thm eq_onI},
-                              SELECT_GOAL (unfold_thms_tac ctxt (@{thms eq_bij_betw_def} @ flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
-                                alpha_FVars OF [alpha_pick OF (suitable_prems @ valid_prems)] RS sym,
-                                alpha_FVars OF [alpha_pick OF (suitable'_prems @ valid_prems)] RS sym
-                              ]) (#alpha_FVarss (#inner raw))) alpha_ctor_picks (#raw_fps fp_res)))),
-                              REPEAT_DETERM o etac ctxt conjE,
-                              REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
-                              rtac ctxt trans,
-                              etac ctxt @{thm id_onD},
-                              rtac ctxt UnI1,
-                              rtac ctxt UnI1,
-                              eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                              assume_tac ctxt,
-                              rtac ctxt sym,
-                              etac ctxt @{thm id_onD},
-                              rtac ctxt UnI1,
-                              rtac ctxt UnI1,
-                              eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
-                              assume_tac ctxt,
-                              rtac ctxt sym,
-                              resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
-                              assume_tac ctxt
-                            ]
-                          ],
-                          (* binding rec set *)
-                          EVERY' [
-                            REPEAT_DETERM o EVERY' [
-                              EqSubst.eqsubst_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
-                              REPEAT_DETERM o FIRST' [
-                                resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems),
-                                eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                                resolve_tac ctxt card_thms
-                              ]
-                            ],
-                            K (unfold_thms_tac ctxt @{thms id_o o_id}),
-                            resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
-                            resolve_tac ctxt (map (Drule.rotate_prems (~1 - nvars) o #alpha_bij o #inner) (#raw_fps fp_res)),
-                            REPEAT_DETERM o FIRST' [
-                              EVERY' [
-                                rtac ctxt @{thm eq_onI},
-                                SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                                REPEAT_DETERM o etac ctxt conjE,
-                                REPEAT_DETERM1 o EVERY' [
-                                  EqSubst.eqsubst_asm_tac ctxt [0] (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
-                                  resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
-                                  resolve_tac ctxt alpha_ctor_picks,
-                                  REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ suitable'_prems @ valid_prems)
-                                ],
-                                REPEAT_DETERM1 o dtac ctxt @{thm imsupp_id_on},
-                                etac ctxt @{thm id_on_eq},
-                                assume_tac ctxt,
-                                REPEAT_DETERM o rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<union>)"]},
-                                resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
-                                resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_intro o #inner) (#raw_fps fp_res)),
-                                rtac ctxt mr_rel_prem,
-                                REPEAT_DETERM o resolve_tac ctxt (h_prems @ h_id_ons),
-                                rtac ctxt UnI1,
-                                rtac ctxt UnI1,
-                                eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                                assume_tac ctxt
-                              ],
-                              EVERY' [
-                                rtac ctxt @{thm eq_onI},
-                                rtac ctxt sym,
-                                rtac ctxt @{thm case_split[of "_ \<in> _"]},
-                                SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                                REPEAT_DETERM o etac ctxt conjE,
-                                etac ctxt @{thm eq_onD},
-                                assume_tac ctxt,
-                                forward_tac ctxt @{thms DiffI[rotated]},
-                                rtac ctxt @{thm UN_I},
-                                assume_tac ctxt,
-                                assume_tac ctxt,
-                                rotate_tac ~1,
-                                Method.insert_tac ctxt h_id_ons,
-                                K (unfold_thms_tac ctxt @{thms id_on_Un}),
-                                REPEAT_DETERM o etac ctxt conjE,
-                                rtac ctxt trans,
-                                rtac ctxt @{thm id_on_comp3},
-                                etac ctxt @{thm id_onD[rotated]},
-                                assume_tac ctxt,
-                                dresolve_tac ctxt (map (fn thm =>
-                                  Drule.rotate_prems ~1 (thm RS sym RS @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]}) OF @{thms imageI}
-                                ) (maps #FVars_permutes (#raw_fps fp_res))),
-                                K (prefer_tac (2 * nvars + 1)),
-                                dresolve_tac ctxt (map (fn thm => Drule.rotate_prems 1 (
-                                  thm RS @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]}
-                                )) (maps (#alpha_FVarss o #inner) (#raw_fps fp_res))),
-                                assume_tac ctxt,
-                                dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<notin>)"], rotated]},
-                                resolve_tac ctxt (map (fn thm => thm OF [iffD2 OF [
-                                  MRBNF_Def.mr_rel_flip_of_mrbnf mrbnf, mr_rel_prem
-                                ]]) mr_rel_sets'),
-                                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv} @ h_prems),
-                                dtac ctxt @{thm not_imageI[rotated]},
-                                resolve_tac ctxt h_prems,
-                                SELECT_GOAL (unfold_thms_tac ctxt @{thms image_comp}),
-                                EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_o_simp2},
-                                resolve_tac ctxt h_prems,
-                                K (unfold_thms_tac ctxt @{thms image_id}),
-                                dtac ctxt @{thm DiffI[rotated]},
-                                eresolve_tac ctxt (maps (map (fn t =>
-                                  Drule.rotate_prems 1 (infer_instantiate' ctxt [NONE, NONE, NONE, SOME (Thm.cterm_of ctxt t)] @{thm UN_I})
-                                ) o #FVarss) (#raw_fps fp_res)),
-                                assume_tac ctxt,
-                                rotate_tac ~1,
-                                eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                                  @{thm id_onD} OF [thm OF (p::valid_prems)]
-                                )) (nth suitable'_premss (i - 1)) pick_id_on'ss)),
-                                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
-                                SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                                REPEAT_DETERM o etac ctxt conjE,
-                                REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
-                                etac ctxt @{thm id_onD},
-                                rtac ctxt @{thm UnI1},
-                                rtac ctxt @{thm UnI1},
-                                rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]},
-                                rtac ctxt sym,
-                                resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
-                                resolve_tac ctxt (map (Drule.rotate_prems 1 o #alpha_trans o #inner) (#raw_fps fp_res)),
-                                resolve_tac ctxt (map (fn thm => thm OF (suitable'_prems @ valid_prems)) alpha_ctor_picks),
-                                resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_intro o #inner) (#raw_fps fp_res)),
-                                REPEAT_DETERM o resolve_tac ctxt (mr_rel_prem :: h_prems @ h_id_ons),
-                                eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                                assume_tac ctxt,
-                                assume_tac ctxt,
-                                rtac ctxt sym,
-                                rtac ctxt @{thm id_on_comp2},
-                                eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                                  @{thm id_onD} OF [thm OF (p::valid_prems)]
-                                )) (nth suitable_premss (i - 1)) pick_id_on'ss)),
-                                SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
-                                REPEAT_DETERM o etac ctxt conjE,
-                                REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
-                                etac ctxt @{thm id_onD},
-                                rtac ctxt @{thm UnI1},
-                                rtac ctxt @{thm UnI1},
-                                rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]},
-                                rtac ctxt sym,
-                                resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
-                                resolve_tac ctxt (map (fn thm => thm OF (suitable_prems @ valid_prems)) alpha_ctor_picks),
-                                eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
-                                assume_tac ctxt,
-                                assume_tac ctxt
-                              ]
-                            ],
-                            resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                            REPEAT_DETERM o FIRST' [
-                              resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ pick'_prems @ h_prems),
-                              eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                              resolve_tac ctxt card_thms
-                            ],
-                            resolve_tac ctxt (map (fn raw =>
-                              infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (#alpha (#inner raw)))] @{thm iffD2[OF arg_cong2[OF _ refl]]}
-                            ) (#raw_fps fp_res)),
+                      ]
+                    ] end,
+                    (* rec sets *)
+                    REPEAT_DETERM o the_default (K all_tac) (Option.map (fn fp_thms => EVERY' [
+                      REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+                      rtac ctxt @{thm relcomppI},
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
+                      rtac ctxt refl,
+                      K (unfold_thms_tac ctxt @{thms prod.case}),
+                      rtac ctxt @{thm context_conjI},
+                      FIRST' [
+                        (* nonbinding rec set *)
+                        EVERY' [
+                          resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_bij o #inner) (#raw_fps fp_res)),
+                          assume_tac ctxt ORELSE' resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+                          REPEAT_DETERM o (eresolve_tac ctxt @{thms eq_bij_betw_prems} ORELSE' resolve_tac ctxt card_thms),
+                          REPEAT_DETERM1 o EVERY' [
+                            rtac ctxt @{thm eq_onI},
+                            SELECT_GOAL (unfold_thms_tac ctxt (@{thms eq_bij_betw_def} @ flat (map2 (fn alpha_pick => fn raw => maps (fn alpha_FVars => [
+                              alpha_FVars OF [alpha_pick OF (suitable_prems @ valid_prems)] RS sym,
+                              alpha_FVars OF [alpha_pick OF (suitable'_prems @ valid_prems)] RS sym
+                            ]) (#alpha_FVarss (#inner raw))) alpha_ctor_picks (#raw_fps fp_res)))),
+                            REPEAT_DETERM o etac ctxt conjE,
+                            REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
                             rtac ctxt trans,
-                            resolve_tac ctxt (map (fn raw =>
-                              mk_arg_cong lthy (nvars + 1) (#permute raw)
-                            ) (#raw_fps fp_res)),
-                            K (prefer_tac (nvars + 2)),
-                            resolve_tac ctxt (map (fn raw => #permute_comp raw RS sym) (#raw_fps fp_res)),
-                            REPEAT_DETERM_N nvars o EVERY' [
-                              K (prefer_tac (4 * nvars + 1)),
-                              resolve_tac ctxt @{thms refl o_id[symmetric]}
-                            ],
-                            REPEAT_DETERM o FIRST' [
-                              resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems),
-                              eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                              resolve_tac ctxt card_thms
-                            ],
-                            rtac ctxt refl,
-                            resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                            REPEAT_DETERM o FIRST' [
-                              resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems),
-                              eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                              resolve_tac ctxt card_thms
-                            ],
+                            etac ctxt @{thm id_onD},
+                            rtac ctxt UnI1,
+                            rtac ctxt UnI1,
+                            eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                            assume_tac ctxt,
+                            rtac ctxt sym,
+                            etac ctxt @{thm id_onD},
+                            rtac ctxt UnI1,
+                            rtac ctxt UnI1,
+                            eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                            rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
+                            assume_tac ctxt,
+                            rtac ctxt sym,
+                            resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
                             assume_tac ctxt
                           ]
                         ],
+                        (* binding rec set *)
                         EVERY' [
-                          rtac ctxt allI,
-                          rtac ctxt impI,
-                          rtac ctxt trans,
-                          eresolve_tac ctxt (the_default [] valid_PUmap'_If),
-                          REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems}
-                        ] ORELSE' rtac ctxt ext,
-                        rtac ctxt trans,
-                        resolve_tac ctxt (map (fn IH => IH RS conjunct1 RS sym) IHs),
-                        eresolve_tac ctxt (flat (#set_subshapess fp_thms) @ map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
-                        REPEAT_DETERM o FIRST' [
-                          resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ suitable_prems),
-                          eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                          assume_tac ctxt,
-                          resolve_tac ctxt card_thms
-                        ],
-                        REPEAT_DETERM o EVERY' [
-                          SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def Int_Un_distrib Un_empty}),
-                          REPEAT_DETERM o etac ctxt conjE,
-                          assume_tac ctxt
-                        ],
-                        TRY o EVERY' [
+                          REPEAT_DETERM o EVERY' [
+                            EqSubst.eqsubst_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
+                            REPEAT_DETERM o FIRST' [
+                              resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems),
+                              eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                              resolve_tac ctxt card_thms
+                            ]
+                          ],
+                          K (unfold_thms_tac ctxt @{thms id_o o_id}),
+                          resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
+                          resolve_tac ctxt (map (Drule.rotate_prems (~1 - nvars) o #alpha_bij o #inner) (#raw_fps fp_res)),
+                          REPEAT_DETERM o FIRST' [
+                            EVERY' [
+                              rtac ctxt @{thm eq_onI},
+                              SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
+                              REPEAT_DETERM o etac ctxt conjE,
+                              REPEAT_DETERM1 o EVERY' [
+                                EqSubst.eqsubst_asm_tac ctxt [0] (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
+                                resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
+                                resolve_tac ctxt alpha_ctor_picks,
+                                REPEAT_DETERM o resolve_tac ctxt (suitable_prems @ suitable'_prems @ valid_prems)
+                              ],
+                              REPEAT_DETERM1 o dtac ctxt @{thm imsupp_id_on},
+                              etac ctxt @{thm id_on_eq},
+                              assume_tac ctxt,
+                              REPEAT_DETERM o rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<union>)"]},
+                              resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
+                              resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_intro o #inner) (#raw_fps fp_res)),
+                              rtac ctxt mr_rel_prem,
+                              REPEAT_DETERM o resolve_tac ctxt (h_prems @ h_id_ons),
+                              rtac ctxt UnI1,
+                              rtac ctxt UnI1,
+                              eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                              assume_tac ctxt
+                            ],
+                            EVERY' [
+                              rtac ctxt @{thm eq_onI},
+                              rtac ctxt sym,
+                              rtac ctxt @{thm case_split[of "_ \<in> _"]},
+                              SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
+                              REPEAT_DETERM o etac ctxt conjE,
+                              etac ctxt @{thm eq_onD},
+                              assume_tac ctxt,
+                              forward_tac ctxt @{thms DiffI[rotated]},
+                              rtac ctxt @{thm UN_I},
+                              assume_tac ctxt,
+                              assume_tac ctxt,
+                              rotate_tac ~1,
+                              Method.insert_tac ctxt h_id_ons,
+                              K (unfold_thms_tac ctxt @{thms id_on_Un}),
+                              REPEAT_DETERM o etac ctxt conjE,
+                              rtac ctxt trans,
+                              rtac ctxt @{thm id_on_comp3},
+                              etac ctxt @{thm id_onD[rotated]},
+                              assume_tac ctxt,
+                              dresolve_tac ctxt (map (fn thm =>
+                                Drule.rotate_prems ~1 (thm RS sym RS @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]}) OF @{thms imageI}
+                              ) (maps #FVars_permutes (#raw_fps fp_res))),
+                              K (prefer_tac (2 * nvars + 1)),
+                              dresolve_tac ctxt (map (fn thm => Drule.rotate_prems 1 (
+                                thm RS @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]}
+                              )) (maps (#alpha_FVarss o #inner) (#raw_fps fp_res))),
+                              assume_tac ctxt,
+                              dtac ctxt @{thm iffD1[OF arg_cong2[OF refl, of _ _ "(\<notin>)"], rotated]},
+                              resolve_tac ctxt (map (fn thm => thm OF [iffD2 OF [
+                                MRBNF_Def.mr_rel_flip_of_mrbnf mrbnf, mr_rel_prem
+                              ]]) mr_rel_sets'),
+                              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv} @ h_prems),
+                              dtac ctxt @{thm not_imageI[rotated]},
+                              resolve_tac ctxt h_prems,
+                              SELECT_GOAL (unfold_thms_tac ctxt @{thms image_comp}),
+                              EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_o_simp2},
+                              resolve_tac ctxt h_prems,
+                              K (unfold_thms_tac ctxt @{thms image_id}),
+                              dtac ctxt @{thm DiffI[rotated]},
+                              eresolve_tac ctxt (maps (map (fn t =>
+                                Drule.rotate_prems 1 (infer_instantiate' ctxt [NONE, NONE, NONE, SOME (Thm.cterm_of ctxt t)] @{thm UN_I})
+                              ) o #FVarss) (#raw_fps fp_res)),
+                              assume_tac ctxt,
+                              rotate_tac ~1,
+                              eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
+                                @{thm id_onD} OF [thm OF (p::valid_prems)]
+                              )) (nth suitable'_premss (i - 1)) pick_id_on'ss)),
+                              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
+                              SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
+                              REPEAT_DETERM o etac ctxt conjE,
+                              REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
+                              etac ctxt @{thm id_onD},
+                              rtac ctxt @{thm UnI1},
+                              rtac ctxt @{thm UnI1},
+                              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]},
+                              rtac ctxt sym,
+                              resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
+                              resolve_tac ctxt (map (Drule.rotate_prems 1 o #alpha_trans o #inner) (#raw_fps fp_res)),
+                              resolve_tac ctxt (map (fn thm => thm OF (suitable'_prems @ valid_prems)) alpha_ctor_picks),
+                              resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_intro o #inner) (#raw_fps fp_res)),
+                              REPEAT_DETERM o resolve_tac ctxt (mr_rel_prem :: h_prems @ h_id_ons),
+                              eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                              assume_tac ctxt,
+                              assume_tac ctxt,
+                              rtac ctxt sym,
+                              rtac ctxt @{thm id_on_comp2},
+                              eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
+                                @{thm id_onD} OF [thm OF (p::valid_prems)]
+                              )) (nth suitable_premss (i - 1)) pick_id_on'ss)),
+                              SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def}),
+                              REPEAT_DETERM o etac ctxt conjE,
+                              REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
+                              etac ctxt @{thm id_onD},
+                              rtac ctxt @{thm UnI1},
+                              rtac ctxt @{thm UnI1},
+                              rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"]]},
+                              rtac ctxt sym,
+                              resolve_tac ctxt (maps (#alpha_FVarss o #inner) (#raw_fps fp_res)),
+                              resolve_tac ctxt (map (fn thm => thm OF (suitable_prems @ valid_prems)) alpha_ctor_picks),
+                              eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
+                              assume_tac ctxt,
+                              assume_tac ctxt
+                            ]
+                          ],
                           resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                          EqSubst.eqsubst_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
                           REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                            resolve_tac ctxt (@{thms bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ pick'_prems @ h_prems),
                             eresolve_tac ctxt @{thms eq_bij_betw_prems},
                             resolve_tac ctxt card_thms
-                          ]
-                        ],
-                        rtac ctxt trans,
-                        resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
-                        eresolve_tac ctxt (flat (#set_subshapess fp_thms) @ map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
-                        REPEAT_DETERM o FIRST' [
-                          eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                          assume_tac ctxt,
-                          resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ card_thms)
-                        ],
-                        REPEAT_DETERM_N m o resolve_tac ctxt suitable_prems,
-                        REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
-                        K (prefer_tac (3 * nvars + 2)),
-                        rtac ctxt trans,
-                        resolve_tac ctxt (map (fn thm => thm RS conjunct1) IHs),
-                        eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
-                        K (prefer_tac (5 * nvars + 2 * m + 2 + length validP_prems)),
-                        rtac ctxt @{thm trans[rotated]},
-                        resolve_tac ctxt (map (fn thm => fun_cong OF [fun_cong OF [thm]]) PUmap'_alphas),
-                        TRY o EVERY' [
-                          resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
-                        ],
-                        assume_tac ctxt,
-                        resolve_tac ctxt PUmap'_congs,
-                        resolve_tac ctxt (maps (fn raw => [#permute_comp raw RS sym, #permute_id raw]) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
-                        TRY o EVERY' [
-                          EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
-                          eresolve_tac ctxt (the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
+                          ],
+                          resolve_tac ctxt (map (fn raw =>
+                            infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt (#alpha (#inner raw)))] @{thm iffD2[OF arg_cong2[OF _ refl]]}
+                          ) (#raw_fps fp_res)),
+                          rtac ctxt trans,
+                          resolve_tac ctxt (map (fn raw =>
+                            mk_arg_cong lthy (nvars + 1) (#permute raw)
+                          ) (#raw_fps fp_res)),
+                          K (prefer_tac (nvars + 2)),
+                          resolve_tac ctxt (map (fn raw => #permute_comp raw RS sym) (#raw_fps fp_res)),
+                          REPEAT_DETERM_N nvars o EVERY' [
+                            K (prefer_tac (4 * nvars + 1)),
+                            resolve_tac ctxt @{thms refl o_id[symmetric]}
+                          ],
                           REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound},
-                            eresolve_tac ctxt @{thms eq_bij_betw_prems}
-                          ]
-                        ],
-                        resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
-                        eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
-                        REPEAT_DETERM o FIRST' [
-                          eresolve_tac ctxt (@{thms eq_bij_betw_prems} @ the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
-                          resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)
-                        ],
-                        REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order}),
-                        EqSubst.eqsubst_tac ctxt [0] (maps (fn raw => [#permute_comp raw RS sym, #permute_id raw]) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
-                        TRY o EVERY' [
+                            resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems),
+                            eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                            resolve_tac ctxt card_thms
+                          ],
+                          rtac ctxt refl,
                           resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
-                        ],
-                        assume_tac ctxt,
-                        REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)),
-                        REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
-                        REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                        REPEAT_DETERM o EVERY' [
-                          SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def Int_Un_distrib Un_empty}),
-                          REPEAT_DETERM o etac ctxt conjE,
+                          REPEAT_DETERM o FIRST' [
+                            resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ h_prems @ pick'_prems),
+                            eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                            resolve_tac ctxt card_thms
+                          ],
                           assume_tac ctxt
-                        ],
-                        resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                        REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order},
-                        EqSubst.eqsubst_tac ctxt [0] (map #permute_id (#raw_fps fp_res)) ORELSE' EVERY' [
-                          EqSubst.eqsubst_asm_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
-                          REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ h_prems @ pick_prems @ pick'_prems),
-                            eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                            resolve_tac ctxt card_thms
-                          ]
-                        ],
-                        resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
-                        SELECT_GOAL (unfold_thms_tac ctxt @{thms id_o o_id}),
+                        ]
+                      ],
+                      EVERY' [
+                        rtac ctxt allI,
+                        rtac ctxt impI,
+                        rtac ctxt trans,
+                        eresolve_tac ctxt (the_default [] valid_PUmap'_If),
+                        REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems}
+                      ] ORELSE' rtac ctxt ext,
+                      rtac ctxt trans,
+                      resolve_tac ctxt (map (fn IH => IH RS conjunct1 RS sym) IHs),
+                      eresolve_tac ctxt (flat (#set_subshapess fp_thms) @ map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
+                      REPEAT_DETERM o FIRST' [
+                        resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ suitable_prems),
+                        eresolve_tac ctxt @{thms eq_bij_betw_prems},
                         assume_tac ctxt,
-                        K (unfold_thms_tac ctxt @{thms comp_assoc}),
-                        TRY o EVERY' [
-                          EqSubst.eqsubst_tac ctxt [0] (map (fn raw => #permute_comp raw RS sym) (#raw_fps fp_res)),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms)
-                        ],
-                        REPEAT_DETERM o EVERY' [
-                          resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
-                          REPEAT_DETERM o FIRST' [
-                            resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems),
-                            eresolve_tac ctxt @{thms eq_bij_betw_prems},
-                            resolve_tac ctxt card_thms
-                          ]
-                        ],
-                        resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
+                        resolve_tac ctxt card_thms
+                      ],
+                      REPEAT_DETERM o EVERY' [
+                        SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def Int_Un_distrib Un_empty}),
+                        REPEAT_DETERM o etac ctxt conjE,
                         assume_tac ctxt
-                      ]) (#fp_thms fp_res))
-                    ]
+                      ],
+                      TRY o EVERY' [
+                        resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+                        EqSubst.eqsubst_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
+                        REPEAT_DETERM o FIRST' [
+                          resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems),
+                          eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                          resolve_tac ctxt card_thms
+                        ]
+                      ],
+                      rtac ctxt trans,
+                      resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
+                      eresolve_tac ctxt (flat (#set_subshapess fp_thms) @ map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
+                      REPEAT_DETERM o FIRST' [
+                        eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                        assume_tac ctxt,
+                        resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick_prems @ card_thms)
+                      ],
+                      REPEAT_DETERM_N m o resolve_tac ctxt suitable_prems,
+                      REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
+                      K (prefer_tac (3 * nvars + 2)),
+                      rtac ctxt trans,
+                      resolve_tac ctxt (map (fn thm => thm RS conjunct1) IHs),
+                      eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
+                      K (prefer_tac (5 * nvars + 2 * m + 2 + length validP_prems)),
+                      rtac ctxt @{thm trans[rotated]},
+                      resolve_tac ctxt (map (fn thm => fun_cong OF [fun_cong OF [thm]]) PUmap'_alphas),
+                      TRY o EVERY' [
+                        resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
+                      ],
+                      assume_tac ctxt,
+                      resolve_tac ctxt PUmap'_congs,
+                      resolve_tac ctxt (maps (fn raw => [#permute_comp raw RS sym, #permute_id raw]) (#raw_fps fp_res)),
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
+                      TRY o EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] @{thms if_P},
+                        eresolve_tac ctxt (the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
+                        REPEAT_DETERM o FIRST' [
+                          resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound},
+                          eresolve_tac ctxt @{thms eq_bij_betw_prems}
+                        ]
+                      ],
+                      resolve_tac ctxt (map (fn thm => thm RS conjunct2) IHs),
+                      eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
+                      REPEAT_DETERM o FIRST' [
+                        eresolve_tac ctxt (@{thms eq_bij_betw_prems} @ the_default [] (Option.map (single o #valid_Pmap) (#validity params))),
+                        resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)
+                      ],
+                      REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order}),
+                      EqSubst.eqsubst_tac ctxt [0] (maps (fn raw => [#permute_comp raw RS sym, #permute_id raw]) (#raw_fps fp_res)),
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
+                      TRY o EVERY' [
+                        resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick'_prems @ card_thms)
+                      ],
+                      assume_tac ctxt,
+                      REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)),
+                      REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
+                      REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                      REPEAT_DETERM o EVERY' [
+                        SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_def Int_Un_distrib Un_empty}),
+                        REPEAT_DETERM o etac ctxt conjE,
+                        assume_tac ctxt
+                      ],
+                      resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
+                      REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order},
+                      EqSubst.eqsubst_tac ctxt [0] (map #permute_id (#raw_fps fp_res)) ORELSE' EVERY' [
+                        EqSubst.eqsubst_asm_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
+                        REPEAT_DETERM o FIRST' [
+                          resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp} @ [infinite_UNIV] @ h_prems @ pick_prems @ pick'_prems),
+                          eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                          resolve_tac ctxt card_thms
+                        ]
+                      ],
+                      resolve_tac ctxt (map (#alpha_trans o #inner) (#raw_fps fp_res)),
+                      SELECT_GOAL (unfold_thms_tac ctxt @{thms id_o o_id}),
+                      assume_tac ctxt,
+                      K (unfold_thms_tac ctxt @{thms comp_assoc}),
+                      TRY o EVERY' [
+                        EqSubst.eqsubst_tac ctxt [0] (map (fn raw => #permute_comp raw RS sym) (#raw_fps fp_res)),
+                        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms)
+                      ],
+                      REPEAT_DETERM o EVERY' [
+                        resolve_tac ctxt (map (fn raw => iffD2 OF [#alpha_bij_eq (#inner raw)]) (#raw_fps fp_res)),
+                        REPEAT_DETERM o FIRST' [
+                          resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems),
+                          eresolve_tac ctxt @{thms eq_bij_betw_prems},
+                          resolve_tac ctxt card_thms
+                        ]
+                      ],
+                      resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
+                      assume_tac ctxt
+                    ]) (#fp_thms fp_res))
                   ] end
                 ) ctxt
               ] end

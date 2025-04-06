@@ -100,6 +100,20 @@ qed
 
 lemmas exists_bij_betw_def = exists_bij_betw[unfolded eq_bij_betw_def[symmetric]]
 
+lemma eq_bij_betw_freshE:
+  "eq_bij_betw r u w g A B x y f1 f2 h L R
+  \<Longrightarrow> (w ` f1 (B y) \<inter> f1 (B y) = {} \<Longrightarrow> w ` X \<inter> X = {})
+  \<Longrightarrow> w ` X \<inter> X = {}"
+  "eq_bij_betw r u w g A B x y f1 f2 h L R
+  \<Longrightarrow> (u ` f1 (A x) \<inter> f1 (A x) = {} \<Longrightarrow> u ` X \<inter> X = {})
+  \<Longrightarrow> u ` X \<inter> X = {}"
+  unfolding eq_bij_betw_def by simp_all
+
+lemma eq_bij_betw_imsuppE: "eq_bij_betw r u w g A B x y f1 f2 h L R
+  \<Longrightarrow> (bij u \<Longrightarrow> imsupp u \<inter> g (A x) = {} \<Longrightarrow> imsupp w \<inter> g (B y) = {} \<Longrightarrow> inv u (w X) = X)
+  \<Longrightarrow> inv u (w X) = X"
+  by (simp add: eq_bij_betw_def)
+
 definition eq_bij_betw_refl where
  "eq_bij_betw_refl r u w g A B x y f1 f2 L R \<equiv>
     bij u \<and> |supp u| <o r \<and> imsupp u \<inter> g (A x) = {} \<and> u ` f1 (A x) \<inter> f1 (A x) = {}

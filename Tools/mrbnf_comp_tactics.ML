@@ -83,15 +83,19 @@ fun mr_mk_comp_map_cong0_tac ctxt set'_eq_sets comp_set_alts map_cong0s outer iv
       end
     ) ctxt);
 
-fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G =
-  EVERY' (map (rtac ctxt) [@{thm ext}, sym, @{thm trans[OF o_apply]},
-      Gmap_comp0 RS sym RS @{thm comp_eq_dest_lhs} RS trans]) 1 THEN
-  REPEAT_DETERM_N (2 * (free_of_mrbnf G  + 2 * bound_of_mrbnf G)) (assume_tac ctxt 1) THEN
-  (rtac ctxt Gmap_cong0 THEN_ALL_NEW (
-    (rtac ctxt (supp_comp_bound_of_mrbnf G) THEN_ALL_NEW assume_tac ctxt) ORELSE'
-    (rtac ctxt @{thm bij_comp} THEN_ALL_NEW assume_tac ctxt) ORELSE' rtac ctxt refl ORELSE'
-    SELECT_GOAL all_tac)) 1  THEN
-    EVERY' (map  (fn thm => (rtac ctxt (thm RS fun_cong RS sym)) THEN_ALL_NEW assume_tac ctxt) map_comp0s) 1
+fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G = EVERY1 [
+    rtac ctxt ext,
+    rtac ctxt sym,
+    rtac ctxt @{thm trans[OF comp_apply]},
+    rtac ctxt (Gmap_comp0 RS sym RS @{thm comp_eq_dest_lhs} RS trans),
+    REPEAT_DETERM o assume_tac ctxt,
+    rtac ctxt Gmap_cong0,
+    REPEAT_DETERM o FIRST' [
+      resolve_tac ctxt @{thms supp_id_bound bij_id refl},
+      assume_tac ctxt,
+      resolve_tac ctxt (map (fn thm => thm RS fun_cong RS sym) map_comp0s)
+    ]
+  ]
 
 fun mr_mk_comp_map_id0_tac ctxt Gmap_id0 Gmap_cong0 map_id0s =
   rtac ctxt @{thm ext} 1 THEN

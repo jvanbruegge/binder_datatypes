@@ -842,6 +842,11 @@ next
   then show "r <o czero +c s2" using assms(4) ordLess_ordIso_trans by blast
 qed
 
+lemma cmin_Card_order:
+  assumes "Card_order s1" "Card_order s2"
+  shows "Card_order (cmin s1 s2)"
+  by (simp add: Card_order_csum cmin_def)
+
 lemma cmin_Cinfinite:
   assumes "Cinfinite s1" "Cinfinite s2"
   shows "Cinfinite (cmin s1 s2)"

@@ -52,7 +52,7 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
 
 session Tests in "tests" = Binders +
   directories
-    "../thys/LetRec"
+    "fixtures"
   theories
     Regression_Tests
 

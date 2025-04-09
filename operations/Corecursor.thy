@@ -206,7 +206,7 @@ lemma FVarsBD_FFVarsBD:
   apply (unfold raw_UFVarsBD_def FFVarsBD_def raw_UFVars_def2)
   apply (subst term_pre.set_map[OF supp_id_bound bij_id supp_id_bound])+
   apply (subst image_id)
-  apply (subst UN_simps(10))
+  apply (subst image_image)
   apply (subst case_sum_map_sum)
   apply (subst comp_id)
   apply (subst comp_def)
@@ -236,32 +236,121 @@ proof-
   define XX XX' where
     "XX \<equiv> map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X" and
     "XX' \<equiv> map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X'"
-  have 0: "{XX,XX'} \<subseteq> Udtor d" using assms unfolding XX_def XX'_def Utor_def
-    by (auto simp: Umap_comp[symmetric] map_sum.comp TT_abs_rep map_sum.id
-        supp_id_bound term_pre.map_comp term_pre.map_id abs_rep_id)
-  then obtain u where u: "bij u" "|supp u| <o |UNIV::'a set|" "id_on (FFVarsBD XX) u"
+  have unmap_set2: "{f A, f B} = f ` {A, B}" for f A B
+    apply (subst image_insert)
+    apply (subst image_insert)
+    apply (subst image_empty)
+    apply (rule refl)
+    done
+  have 0: "{XX,XX'} \<subseteq> Udtor d"
+    apply (unfold XX_def XX'_def)
+    apply (insert assms[unfolded Utor_def])
+    apply (subst unmap_set2[of _ X X'])
+    apply (erule subset_imageE)
+    subgoal premises prems
+      apply (subst prems(2))
+      apply (subst image_image)
+      apply (subst term_pre.map_comp)
+        apply (rule supp_id_bound)
+       apply (rule bij_id)
+      apply (subst map_sum.comp)+
+      apply (subst id_comp)+
+      apply (subst abs_rep_id)+
+      apply (subst map_sum.id)+
+      apply (subst term_pre.map_id0)
+      apply (subst image_id)
+      apply (rule prems(1))
+      done
+    done
+  obtain u where u: "bij u" "|supp u| <o |UNIV::'a set|" "id_on (FFVarsBD XX) u"
     and m: "map_term_pre id u (map_sum (permute_term u) (Umap u)) id XX = XX'"
-    using Udtor_Umap[OF 0] by auto
-  have [simp]: "asSS (asBij u) = u"  "asSS u = u" using u unfolding asSS_def by auto
+    apply (rule exE)
+    apply (rule Udtor_Umap[OF 0])
+    apply (erule conjE)+
+    subgoal premises prems
+      apply (rule prems(1)[OF prems(2-5)])
+      done
+    done
   show ?thesis
-  proof(rule exI[of _ u], safe )
-    show "id_on (raw_UFVarsBD X) u"
-      using u(3) unfolding id_on_def XX_def FVarsBD_FFVarsBD by auto
-    show "mr_rel_term_pre id u  (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. raw_Umap u d = d')) (rel_sum alpha_term (=)) X X'"
-      using m unfolding XX_def XX'_def
+    apply (rule exI[of _ u])
+    apply (rule conjI, rule u)+
+    apply (rule conjI)
+    apply (unfold id_on_def FVarsBD_FFVarsBD)
+    apply (rule u(3)[unfolded XX_def id_on_def])
+    using m[unfolded XX_def XX'_def]
  apply(simp add: u term_pre.map_comp term_pre.map_id map_sum.comp permute_term_def term_pre.rel_eq[symmetric]
       term_pre.mr_rel_map term_pre.mr_rel_id supp_id_bound)
-      apply(erule term_pre.mr_rel_mono_strong[rotated -3]) apply (auto simp: u supp_id_bound)
-      unfolding Grp_def apply auto
+    apply(erule term_pre.mr_rel_mono_strong[rotated -3])
+        apply (auto simp: u supp_id_bound)
+     apply (unfold Grp_def)
+    (* apply (erule conjE)+
+    thm trans[THEN conjI] conjI[OF trans]
+    thm sym[THEN trans]
+    apply (drule sym[THEN trans])
+    find_theorems name:eq name:trans *)
+    apply auto
       subgoal for d1 d2
-        apply(cases d1) apply (cases d2) apply auto
-        using TT_total_abs_eq_iffs permute_abs u(1,2) apply fastforce
-        by (smt (z3) id_def map_sum.simps(2) rel_sum.intros(2) rel_sum_simps(3) sum.exhaust sum.rel_map(2))
+        apply(rule sumE[of d1])
+         apply (rule sumE[of d2])
+          apply hypsubst_thin
+          prefer 2
+          apply hypsubst_thin
+          apply (subst (asm) map_sum.simps)+
+          apply (erule sum.distinct[THEN notE])
+         apply (rule rel_sum.intros)
+         apply (subst (asm) map_sum.simps)+
+         apply (drule Inl_inject)
+         apply (subst (asm) comp_apply)
+         apply (subst (asm) permute_abs[OF u(1-2)])
+         apply (subst (asm) TT_total_abs_eq_iffs)
+         apply (rule alpha_syms)
+         apply assumption
+        apply hypsubst_thin
+        apply (subst (asm) map_sum.simps)
+        apply (rule sumE[of d2])
+         apply hypsubst_thin
+          apply (subst (asm) map_sum.simps)+
+          apply (erule sum.distinct[THEN notE])
+        apply hypsubst_thin
+        apply (rule rel_sum.intros(2))
+        apply (subst (asm) map_sum.simps(2))
+        apply (subst (asm) id_apply)
+        apply (rule Inr_inject)
+        apply (rule sym)
+        apply assumption
+        done
       subgoal for d1 d2
-        apply(cases d1) apply(cases d2) apply auto
-        using TT_total_abs_eq_iffs apply fastforce
-        apply(cases d2) by auto .
-  qed(insert u, auto)
+        apply (rule sumE[of d1])
+        apply (rule sumE[of d2])
+        subgoal
+          apply hypsubst_thin
+          apply (subst (asm) map_sum.simps(1))+
+          apply (drule Inl_inject)
+          apply (subst (asm) TT_total_abs_eq_iffs)
+          apply (drule alpha_syms)
+          apply (rule rel_sum.intros(1))
+          apply assumption
+          done
+        subgoal
+          apply hypsubst_thin
+          apply (subst (asm) map_sum.simps)+
+          apply (erule sum.distinct[THEN notE])
+          done
+        subgoal
+          apply(rule sumE[of d2])
+           apply hypsubst_thin
+          apply (subst (asm) map_sum.simps)+
+           apply (erule sum.distinct[THEN notE])
+        apply hypsubst_thin
+        apply (rule rel_sum.intros(2))
+        apply (subst (asm) map_sum.simps)+
+        apply (subst (asm) id_apply)+
+        apply (rule Inr_inject)
+        apply (rule sym)
+          apply assumption
+          done
+        done
+      done
 qed
 
 lemma Utor_ne:

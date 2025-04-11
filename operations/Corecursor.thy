@@ -73,14 +73,20 @@ axiomatization where
   image
     (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
     (Udtor d)"
-  and
-  Umap_id0: "Umap id = id"
 and Umap_comp0: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> Umap f \<circ> Umap g = Umap (f \<circ> g)"
 and Umap_cong0: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
 (*and Umap_UFVars: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> UFVars (Umap f d) = f ` UFVars d"*)
+
+lemma Umap_id0: "Umap id = id"
+  apply (rule ext)
+  apply (rule trans[OF _ id_apply[symmetric]])
+  apply (rule Umap_cong0)
+    apply (rule bij_id supp_id_bound)+
+  apply (rule id_apply)
+  done
 
 (*
 D \<Rightarrow> U
@@ -108,7 +114,9 @@ lemmas Udtor_Umap = alpha_Udtor[folded FFVarsBD_def]
 lemmas FVars_term_Udtor = UFVars_Udtor[folded FFVarsBD_def]
 
 lemma Umap_id[simp,intro!]: "Umap id d = d"
-  by (subst Umap_id0) (rule id_apply)
+  apply (rule trans[OF Umap_id0[THEN fun_cong]])
+  apply (rule id_apply)
+  done
 
 lemma Umap_comp:
   "bij (u::'a\<Rightarrow>'a) \<Longrightarrow> |supp u| <o |UNIV::('a::var) set| \<Longrightarrow> bij v \<Longrightarrow> |supp v| <o |UNIV::'a set| \<Longrightarrow>
@@ -124,58 +132,34 @@ lemma Umap_Udtor_strong:
     "Udtor (Umap u d) =
  image
    (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
-   (Udtor d)" (is "?L = ?R")
-proof
-  show "?L \<subseteq> ?R"
-    by (insert Umap_Udtor[OF assms]) assumption
-next
-  have iu: "bij (inv u)" "|supp (inv u)| <o |UNIV::'a set|"
-    subgoal
-      by (rule bij_imp_bij_inv) (rule u)
-    subgoal
-      by (rule supp_inv_bound) (rule u)+
+   (Udtor d)"
+proof -
+  have x: "d = Umap (inv u) (Umap u d)"
+    apply (rule sym)
+    apply (rule trans[OF Umap_comp[symmetric]])
+        apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id0[THEN fun_cong]])
+    apply (rule id_apply)
     done
-  define dd where "dd \<equiv> Umap u d"
-  have d: "d = Umap (inv u) dd"
-    apply (unfold dd_def)
-    apply (subst Umap_comp[OF iu u, symmetric])
-    apply (subst inv_o_simp1)
-     apply (rule u)
-    apply (rule Umap_id[symmetric])
-    done
-  have Umap_comp_inv_id: "Umap u \<circ> (Umap (inv u)) = id"
-    apply (unfold fun_eq_iff)
-    apply (rule allI)
-    apply (subst id_apply)
-    apply (subst comp_apply)
-    apply (subst Umap_comp[OF u iu, symmetric])
-    apply (subst inv_o_simp2[OF u(1)])
-    apply (rule Umap_id)
-    done
-  show "?R \<subseteq> ?L"
-    apply (unfold dd_def[symmetric] d)
-    apply (subst Umap_comp[OF u iu, symmetric])
-    apply (subst inv_o_simp2[OF u(1)])
-    apply (subst Umap_id)
-    apply (rule image_subsetI)
-    apply (insert Umap_Udtor[OF iu, of dd])
-    apply (drule subsetD)
-     apply assumption
-    apply (erule imageE)
-    apply hypsubst
-    apply(subst term_pre.map_comp[OF iu(2) iu u(2) u])
-    apply (subst inv_o_simp2[OF u(1)])+
-    apply (subst map_sum.comp)+
-    apply (subst permute_comp0s[OF iu u])+
-    apply (subst inv_o_simp2[OF u(1)])+
-    apply (subst permute_id0s)+
-    apply (subst Umap_comp_inv_id)+
-    apply (subst map_sum.id)+
-    apply (subst term_pre.map_id)
-    apply assumption
-    done
-qed
-
+    show ?thesis
+  apply (rule subset_antisym)
+       apply (rule Umap_Udtor[OF assms])
+      apply (subst x)
+      apply (rule image_subsetI)
+      apply (drule Umap_Udtor[THEN subsetD, rotated -1])
+        apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+      apply (erule imageE)
+      apply hypsubst
+      apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
+       apply (rule term_pre.map_comp)
+             apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+      apply (unfold map_sum.comp)
+      apply (subst inv_o_simp2 permute_comp0s Umap_comp0, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
+      apply (unfold Umap_id0 permute_id0s map_sum.id term_pre.map_id)
+      apply assumption
+      done
+  qed
 
 (*************************************)
 (* The raw-term-based model infrastructure *)
@@ -226,132 +210,53 @@ definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" whe
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
 
 lemma DTOR_mapD:
-  assumes "{X,X'} \<subseteq> Utor d"
-  shows "\<exists>u. bij (u::'a::var\<Rightarrow>'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD X) u \<and>
+  shows "{X,X'} \<subseteq> Utor d \<Longrightarrow> \<exists>u. bij (u::'a::var\<Rightarrow>'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD X) u \<and>
      mr_rel_term_pre id u
        (rel_sum (\<lambda> t t'. alpha_term (permute_raw_term u t) t') (\<lambda> d d'. raw_Umap u d = d'))
 (rel_sum alpha_term (=))
      X X'"
-proof-
-  define XX XX' where
-    "XX \<equiv> map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X" and
-    "XX' \<equiv> map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X'"
-  have unmap_set2: "{f A, f B} = f ` {A, B}" for f A B
-    apply (subst image_insert)
-    apply (subst image_insert)
-    apply (subst image_empty)
-    apply (rule refl)
-    done
-  have 0: "{XX,XX'} \<subseteq> Udtor d"
-    apply (unfold XX_def XX'_def)
-    apply (insert assms[unfolded Utor_def])
-    apply (subst unmap_set2[of _ X X'])
-    apply (erule subset_imageE)
-    subgoal premises prems
-      apply (subst prems(2))
-      apply (subst image_image)
-      apply (subst term_pre.map_comp)
-        apply (rule supp_id_bound)
-       apply (rule bij_id)
-      apply (subst map_sum.comp)+
-      apply (subst id_comp)+
-      apply (subst abs_rep_id)+
-      apply (subst map_sum.id)+
-      apply (subst term_pre.map_id0)
-      apply (subst image_id)
-      apply (rule prems(1))
-      done
-    done
-  obtain u where u: "bij u" "|supp u| <o |UNIV::'a set|" "id_on (FFVarsBD XX) u"
-    and m: "map_term_pre id u (map_sum (permute_term u) (Umap u)) id XX = XX'"
-    apply (rule exE)
-    apply (rule Udtor_Umap[OF 0])
-    apply (erule conjE)+
-    subgoal premises prems
-      apply (rule prems(1)[OF prems(2-5)])
-      done
-    done
-  show ?thesis
-    apply (rule exI[of _ u])
-    apply (rule conjI, rule u)+
-    apply (rule conjI)
-    apply (unfold id_on_def FVarsBD_FFVarsBD)
-    apply (rule u(3)[unfolded XX_def id_on_def])
-    using m[unfolded XX_def XX'_def]
- apply(simp add: u term_pre.map_comp term_pre.map_id map_sum.comp permute_term_def term_pre.rel_eq[symmetric]
-      term_pre.mr_rel_map term_pre.mr_rel_id supp_id_bound)
-    apply(erule term_pre.mr_rel_mono_strong[rotated -3])
-        apply (auto simp: u supp_id_bound)
-     apply (unfold Grp_def)
-    (* apply (erule conjE)+
-    thm trans[THEN conjI] conjI[OF trans]
-    thm sym[THEN trans]
-    apply (drule sym[THEN trans])
-    find_theorems name:eq name:trans *)
-    apply auto
-      subgoal for d1 d2
-        apply(rule sumE[of d1])
-         apply (rule sumE[of d2])
-          apply hypsubst_thin
-          prefer 2
-          apply hypsubst_thin
-          apply (subst (asm) map_sum.simps)+
-          apply (erule sum.distinct[THEN notE])
-         apply (rule rel_sum.intros)
-         apply (subst (asm) map_sum.simps)+
-         apply (drule Inl_inject)
-         apply (subst (asm) comp_apply)
-         apply (subst (asm) permute_abs[OF u(1-2)])
-         apply (subst (asm) TT_total_abs_eq_iffs)
-         apply (rule alpha_syms)
-         apply assumption
-        apply hypsubst_thin
-        apply (subst (asm) map_sum.simps)
-        apply (rule sumE[of d2])
-         apply hypsubst_thin
-          apply (subst (asm) map_sum.simps)+
-          apply (erule sum.distinct[THEN notE])
-        apply hypsubst_thin
-        apply (rule rel_sum.intros(2))
-        apply (subst (asm) map_sum.simps(2))
-        apply (subst (asm) id_apply)
-        apply (rule Inr_inject)
-        apply (rule sym)
-        apply assumption
-        done
-      subgoal for d1 d2
-        apply (rule sumE[of d1])
-        apply (rule sumE[of d2])
-        subgoal
-          apply hypsubst_thin
-          apply (subst (asm) map_sum.simps(1))+
-          apply (drule Inl_inject)
-          apply (subst (asm) TT_total_abs_eq_iffs)
-          apply (drule alpha_syms)
-          apply (rule rel_sum.intros(1))
-          apply assumption
-          done
-        subgoal
-          apply hypsubst_thin
-          apply (subst (asm) map_sum.simps)+
-          apply (erule sum.distinct[THEN notE])
-          done
-        subgoal
-          apply(rule sumE[of d2])
-           apply hypsubst_thin
-          apply (subst (asm) map_sum.simps)+
-           apply (erule sum.distinct[THEN notE])
-        apply hypsubst_thin
-        apply (rule rel_sum.intros(2))
-        apply (subst (asm) map_sum.simps)+
-        apply (subst (asm) id_apply)+
-        apply (rule Inr_inject)
-        apply (rule sym)
-          apply assumption
-          done
-        done
-      done
-qed
+  apply (drule image_mono[of _ _ "map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id)"])
+  apply (unfold image_insert image_empty Utor_def image_comp)
+  apply (subst (asm) term_pre.map_comp0[symmetric], (rule supp_id_bound bij_id)+)
+  apply (unfold id_o map_sum.comp abs_rep_id map_sum.id term_pre.map_id0 image_id)
+  apply (drule alpha_Udtor)
+  apply (erule exE conjE)+
+  apply (subst (asm) term_pre.set_map term_pre.map_comp, (rule supp_id_bound bij_id | assumption)+)+
+  apply (unfold image_id id_o o_id map_sum.comp)
+  apply (drule term_pre.mr_rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+  apply (subst (asm) term_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
+  apply (unfold id_o o_id)
+  apply (subst (asm) term_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
+  apply (unfold inv_id id_o o_id relcompp_conversep_Grp)
+  apply (unfold Grp_OO)
+  apply (rule exI)+
+  apply (rule conjI[rotated])+
+     apply (erule term_pre.mr_rel_mono_strong0[rotated -5])
+              apply (rule ballI, rule refl)+
+          (* REPEAT_DETERM *)
+            apply (rule ballI impI)+
+            apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+            apply (unfold sum.rel_map comp_def id_apply)[1]
+            apply (erule sum.rel_mono_strong)
+             apply (subst (asm) permute_abs, assumption+)?
+             apply (drule TT_total_abs_eq_iffs[THEN iffD1])
+             apply assumption
+            apply assumption
+    (* repeated *)
+            apply (rule ballI impI)+
+            apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+            apply (unfold sum.rel_map comp_def id_apply)[1]
+            apply (erule sum.rel_mono_strong)
+             apply (subst (asm) permute_abs, assumption+)?
+             apply (drule TT_total_abs_eq_iffs[THEN iffD1])
+             apply assumption
+           apply assumption
+      (* END REPEAT_DETERM *)
+          apply (rule supp_id_bound bij_id | assumption)+
+    apply (unfold raw_UFVarsBD_def raw_UFVars_def2 image_comp[unfolded comp_def] case_sum_map_sum o_id)
+    apply (unfold comp_def)
+    apply assumption+
+  done
 
 lemma Utor_ne:
   "Utor d \<noteq> {}"

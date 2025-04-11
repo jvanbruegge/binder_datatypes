@@ -1498,7 +1498,13 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
       (case mrbnf_opt of
         NONE => ((DEADID_mrbnf, ([T], [])), accum)
       | SOME (mrbnf, lthy') =>
-        if forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
+        let
+          val mrbnf' = MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism
+            (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts)
+          ) mrbnf;
+          val _ = case inter (op=) (map (TFree o fst) var_types) (MRBNF_Def.deads_of_mrbnf mrbnf') of
+            [] => () | xs => raise TYPE ("Variables declared as not dead, but type forces deadness: " ^ C, xs, [])
+        in if forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
           andalso Library.inter (fn (a, b) => fst a = fst b andalso snd a <> snd b)
             (map dest_TFree Ts ~~ var_types_of_mrbnf mrbnf) var_types = []
         then
@@ -1543,7 +1549,7 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
             val Xs' = map (swap o `(the_default MRBNF_Def.Live_Var o AList.lookup (op=) var_types)) Xs
           in
             compose_mrbnf const_policy qualify flatten_tyargs mrbnf inners oDs Dss oAs Ass Xs' (accum', lthy'')
-          end)
+          end end)
       |> tap check_bad_dead
     end;
 

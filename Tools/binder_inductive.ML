@@ -523,7 +523,8 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             in map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) thms end
 
         fun UNIV_cinfinite_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf]
-          | UNIV_cinfinite_of_mr_bnf (Inr (Inr sugar)) = []
+          | UNIV_cinfinite_of_mr_bnf (Inr (Inr sugar)) = (case MRBNF_Def.mrbnf_of lthy (fst (dest_Type (#T sugar))) of
+            SOME mrbnf => [MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf] | NONE => [])
           | UNIV_cinfinite_of_mr_bnf _ = []
         val infinite_UNIVs = map (fn thm => @{thm cinfinite_imp_infinite} OF [thm]) (maps UNIV_cinfinite_of_mr_bnf (flat mr_bnfs));
 

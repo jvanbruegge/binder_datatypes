@@ -293,8 +293,8 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
             ) rec_boundss rec_sets (replicate_rec FVars_raws) hs)) fs bsetss rec_boundsss (transpose FVars_rawss) hss));
 
             val mr_rel_prem = Term.list_comb (
-              MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts bounds (frees @ pfrees @ bfrees) mrbnf,
-              map HOLogic.id_const (frees @ pfrees) @ map HOLogic.eq_const plives @ bound_fs @ bfree_fs
+              MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ bounds) (frees @ pfrees @ bfrees) mrbnf,
+              map HOLogic.id_const (frees @ pfrees) @ map HOLogic.eq_const plives @ map HOLogic.id_const pbounds @ bound_fs @ bfree_fs
               @ @{map 4} (fn rec_fs => fn alpha => fn permute => fn raw =>
                 if null (map_filter I rec_fs) then alpha else Term.abs ("x", #T raw) (alpha $ (
                   Term.list_comb (fst permute, map2 (fn f =>
@@ -1341,11 +1341,13 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         rtac ctxt (Drule.rotate_prems ~1 (iffD1 OF [MRBNF_Def.mr_rel_flip_of_mrbnf mrbnf])),
         K (Local_Defs.unfold0_tac ctxt @{thms inv_id conversep_eq}),
         etac ctxt (Drule.rotate_prems (~nargs - 1) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
-        REPEAT_DETERM o (rtac ctxt ballI THEN' rtac ctxt refl),
-        REPEAT_DETERM o EVERY' [
-          rtac ctxt ballI,
-          rtac ctxt ballI,
-          rtac ctxt @{thm imp_refl}
+        REPEAT_DETERM o FIRST' [
+          rtac ctxt ballI THEN' rtac ctxt refl,
+          EVERY' [
+            rtac ctxt ballI,
+            rtac ctxt ballI,
+            rtac ctxt @{thm imp_refl}
+          ]
         ],
         REPEAT_DETERM o EVERY' [
           rtac ctxt ballI,

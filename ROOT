@@ -51,10 +51,13 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     Sugar
 
 session Tests in "tests" = Binders +
+  sessions
+    System_Fsub
   directories
     "fixtures"
   theories
     Regression_Tests
+    Binder_Datatype_Tests
 
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
   theories

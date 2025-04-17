@@ -1185,7 +1185,8 @@ fun raw_compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss o
   in
     apfst (rpair (Ds, As))
       (apsnd (apfst (pair cache'))
-        (clean_compose_mrbnf const_policy (qualify 0) b (the outer') inners' (unfold_set', lthy')))
+        (if null inners' then (the outer', (unfold_set', lthy')) else
+          clean_compose_mrbnf const_policy (qualify 0) b (the outer') inners' (unfold_set', lthy')))
   end;
 
 fun compose_mrbnf const_policy qualify flatten_tyargs outer inners oDs Dss otfrees tfreess Xs

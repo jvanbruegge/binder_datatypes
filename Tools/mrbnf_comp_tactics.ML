@@ -254,15 +254,22 @@ fun mr_mk_rel_OO_Grp_tac ctxt set'_eq_sets in_alt outer inners =
     rtac ctxt refl,
     REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
     K (unfold_thms_tac ctxt [in_alt]),
-    REPEAT_DETERM o EVERY' [
-      EqSubst.eqsubst_tac ctxt [0] (map (unfold_thms ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer]) [
-        MRBNF_Def.mr_rel_Grp_of_mrbnf outer RS sym,
-        MRBNF_Def.mr_rel_conversep_of_mrbnf outer RS sym,
-        MRBNF_Def.mr_rel_OO_of_mrbnf outer RS sym
-      ]),
-      REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt)
-    ],
+    rtac ctxt sym,
+    rtac ctxt trans,
+    rtac ctxt @{thm arg_cong2[of _ _ _ _ "(OO)", THEN fun_cong, THEN fun_cong]},
+    rtac ctxt trans,
+    rtac ctxt @{thm arg_cong[of _ _ conversep]},
+    rtac ctxt (unfold_thms ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer] (MRBNF_Def.mr_rel_Grp_of_mrbnf outer RS sym)),
+    REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt),
+    rtac ctxt (unfold_thms ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer] (MRBNF_Def.mr_rel_conversep_of_mrbnf outer RS sym)),
+    REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt),
+    rtac ctxt (unfold_thms ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer] (MRBNF_Def.mr_rel_Grp_of_mrbnf outer RS sym)),
+    REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt),
+    rtac ctxt trans,
+    rtac ctxt (unfold_thms ctxt [MRBNF_Def.mr_rel_def_of_mrbnf outer] (MRBNF_Def.mr_rel_OO_of_mrbnf outer RS sym RS fun_cong RS fun_cong)),
+    REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound supp_inv_bound bij_imp_bij_inv} ORELSE' assume_tac ctxt),
     K (unfold_thms_tac ctxt @{thms inv_id id_o o_id}),
+    rtac ctxt sym,
     rtac ctxt (fun_cong OF [fun_cong OF [MRBNF_Def.rel_cong0_of_mrbnf outer]]),
     EVERY' (map (fn mrbnf => EVERY' [
       rtac ctxt ext,

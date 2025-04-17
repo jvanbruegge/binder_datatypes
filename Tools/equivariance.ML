@@ -8,7 +8,7 @@ sig
   val equiv_sym_thms: local_theory -> thm list
   val equiv_forward_thms: local_theory -> (thm * int) list
 
-  val get_mr_bnfs: local_theory -> typ -> (string * (MRBNF_Def.mrbnf, (BNF_Def.bnf, MRBNF_FP_Def_Sugar.fp_result) MRBNF_Util.either) MRBNF_Util.either) list
+  val get_mr_bnfs: local_theory -> typ -> (string * (MRBNF_Def.mrbnf, (BNF_Def.bnf, MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T) MRBNF_Util.either) MRBNF_Util.either) list
 end
 
 structure Equivariance : EQUIVARIANCE =
@@ -47,7 +47,7 @@ val equiv_sym_thms = equiv_sym_thms' o Context.Proof
 val equiv_forward_thms = equiv_forward_thms' o Context.Proof
 
 fun get_mr_bnfs lthy (Type (s, Ts)) = (case MRBNF_FP_Def_Sugar.fp_result_of lthy s of
-  SOME sugar => [(s, Inr (Inr sugar))]
+  SOME sugar => [(s, Inr (Inr (hd (filter (curry (op=) s o fst o dest_Type o #T) (#quotient_fps sugar)))))]
   | NONE => (case MRBNF_Def.mrbnf_of lthy s of
     SOME mrbnf => (s, MRBNF_Util.Inl mrbnf) :: maps (get_mr_bnfs lthy) Ts
     | NONE => (case BNF_Def.bnf_of lthy s of
@@ -102,11 +102,11 @@ val _ = Theory.local_setup (fn lthy =>
               );
               fun map_comps_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_comp_of_mrbnf mrbnf, MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]
                 | map_comps_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_comp_of_bnf bnf, BNF_Def.map_comp0_of_bnf bnf RS sym]
-                | map_comps_of_mr_bnf (Inr (Inr sugar)) = map #permute_comp (#quotient_fps sugar) @ map #permute_comp0 (#quotient_fps sugar)
+                | map_comps_of_mr_bnf (Inr (Inr quot)) = [#permute_comp quot, #permute_comp0 quot]
               val map_comps = maps map_comps_of_mr_bnf mr_bnfs;
-              fun map_id0s_of_mr_bnf (Inl mrbnf) = [MRBNF_Def.map_id0_of_mrbnf mrbnf]
-                | map_id0s_of_mr_bnf (Inr (Inl bnf)) = [BNF_Def.map_id0_of_bnf bnf]
-                | map_id0s_of_mr_bnf (Inr (Inr sugar)) = map #permute_id0 (#quotient_fps sugar)
+              fun map_id0s_of_mr_bnf (Inl mrbnf) = MRBNF_Def.map_id0_of_mrbnf mrbnf
+                | map_id0s_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.map_id0_of_bnf bnf
+                | map_id0s_of_mr_bnf (Inr (Inr quot)) = #permute_id0 quot
 
               val thm' = Goal.prove_sorry lthy (map fst vars) [] goal (fn {context=ctxt, ...} => EVERY1 [
                 rtac ctxt iffI,
@@ -119,7 +119,7 @@ val _ = Theory.local_setup (fn lthy =>
                   EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ map_comps),
                   REPEAT_DETERM o eq_assume_tac
                 ]))),
-                K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2 image_inv_f_f[OF bij_is_inj]} @ maps map_id0s_of_mr_bnf mr_bnfs)),
+                K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2 image_inv_f_f[OF bij_is_inj]} @ map map_id0s_of_mr_bnf mr_bnfs)),
                 REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound}),
                 IF_UNSOLVED o (K (print_tac ctxt "strengthening failed:"))
               ])

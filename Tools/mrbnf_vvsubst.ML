@@ -2,7 +2,9 @@ signature MRBNF_VVSUBST =
 sig
   type vvsubst_result = {
     vvsubst_ctor: thm,
-    vvsubst_permute: thm
+    vvsubst_permute: thm,
+    psets: (term * thm) list,
+    pset_ctors: thm list
   };
 
   val vvsubst_result_of: local_theory -> string -> vvsubst_result option
@@ -22,13 +24,17 @@ open MRBNF_Def
 
 type vvsubst_result = {
   vvsubst_ctor: thm,
-  vvsubst_permute: thm
+  vvsubst_permute: thm,
+  psets: (term * thm) list,
+  pset_ctors: thm list
 };
 
-fun morph_vvsubst_result phi { vvsubst_ctor, vvsubst_permute } = {
+fun morph_vvsubst_result phi { vvsubst_ctor, vvsubst_permute, psets, pset_ctors } = {
   vvsubst_ctor = Morphism.thm phi vvsubst_ctor,
-  vvsubst_permute = Morphism.thm phi vvsubst_permute
-};
+  vvsubst_permute = Morphism.thm phi vvsubst_permute,
+  psets = map (map_prod (Morphism.term phi) (Morphism.thm phi)) psets,
+  pset_ctors = map (Morphism.thm phi) pset_ctors
+}: vvsubst_result;
 
 structure Data = Generic_Data (
   type T = vvsubst_result Symtab.table;
@@ -70,9 +76,9 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
       ||>> mk_Frees "v" (map #T (#quotient_fps fp_res))
       ||>> mk_Frees "f" (map (fn a => a --> a) vars)
       ||>> mk_Frees "R" (map2 (fn a => fn b => a --> b --> @{typ bool}) plives plives')
-    val ((free_ps, bound_ps), live_ps) = ps
+    val ((free_ps, live_ps), bound_ps) = ps
       |> chop (length frees)
-      ||>> chop (length pbounds);
+      ||>> chop (length plives);
     val npassive = length plives + length pfrees + length pbounds;
     val nvars = length (#binding_relation fp_res)
 
@@ -110,6 +116,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
         (replicate m (plives @ replicate_rec (map #T (#raw_fps fp_res))))
         (replicate m bounds) (replicate m (frees @ bfrees))
     ) ms deadss mrbnfs;
+
     val (((pre_psets, bsetss), bfree_setss), rec_setss) = drop nvars (transpose mrbnf_setss)
       |> chop npassive
       ||>> apfst transpose o chop nvars
@@ -120,7 +127,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
         val namess = mk_pset_names (#raw_fps fp_res);
         val setss = map2 (fn raw => map2 (fn var => fn n =>
           Free (n, #T raw --> HOLogic.mk_setT var)
-        ) (pfrees @ pbounds @ plives)) (#raw_fps fp_res) namess;
+        ) (pfrees @ plives @ pbounds)) (#raw_fps fp_res) namess;
 
         val m = length (#quotient_fps fp_res);
         val (funs, lthy) = @{fold_map 2} (fn sets => fn psets => fn lthy =>
@@ -129,6 +136,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
               set $ (#ctor raw $ x),
               foldl1 mk_Un (pset $ x :: map2 (fn rset => mk_UNION (rset $ x)) rec_sets (replicate_rec sets))
             )) sets psets (#raw_fps fp_res) rec_setss xs;
+
             val lthy = snd (Function.add_function
               (map (fn f => (Binding.concealed (Binding.name (fst (dest_Free f))), NONE, NoSyn)) sets)
               (map (fn eq => (((Binding.concealed Binding.empty, []), eq), [], [])) eqs)
@@ -175,10 +183,12 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
             (replicate m (plives @ replicate_rec (map #T (#quotient_fps fp_res))))
             (replicate m bounds) (replicate m (frees @ bfrees))
         ) ms deadss mrbnfs;
+
         val (((pre_psets, bsetss), bfree_setss), rec_setss) = drop nvars (transpose mrbnf_setss)
           |> chop npassive
           ||>> apfst transpose o chop nvars
           ||>> apply2 transpose o chop (length (#bfree_vars fp_res));
+        val bfree_setss = if null bfree_setss then replicate (length mrbnfs) [] else bfree_setss;
 
         val rels = map (fn quot => Free ("rel_" ^ short_type_name (fst (dest_Type (#T quot))),
           fold_rev (curry (op-->)) (map2 (fn a => fn b => a --> b --> @{typ bool}) plives plives')
@@ -200,6 +210,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
             in [mk_bij f, mk_supp_bound f, mk_id_on (foldl1 mk_Un recs) f] end
           ) (0 upto nvars - 1) (transpose (map #FVarss (#quotient_fps fp_res))) fs (#binding_relation fp_res)
         ) rec_setss qxs bfree_setss bsetss;
+
         val rel_prems = @{map 5} (fn deads => fn mrbnf => fn rec_sets => fn x => fn y =>
           let
             val rel = Term.list_comb (
@@ -220,6 +231,7 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
               (map HOLogic.id_const frees @ map (nth fs) (#bfree_vars fp_res)) mrbnf;
           in rel $ (map_t $ x) $ y end
         ) deadss mrbnfs rec_setss qxs ys;
+
         val subst' = Term.subst_atomic_types (plives ~~ plives')
         val intros = @{map 6} (fn quot => fn f_prems => fn rel_prem => fn rel => fn x => fn y =>
           fold_rev (curry Logic.mk_implies) (map HOLogic.mk_Trueprop (f_prems @ [rel_prem]))
@@ -859,7 +871,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             ],
             rtac ctxt trans,
             rtac ctxt vvsubst_cctor,
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound} @ prems),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems),
             REPEAT_DETERM o assume_tac ctxt,
             rtac ctxt sym,
             rtac ctxt trans,
@@ -935,6 +947,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       ) (#quotient_fps fp_res) mrbnfs deadss ts ts' xs xs' (#preds info) (#elims info)
     ) rels_opt;
 
+    val mutual = length mrbnfs > 1;
     fun apply_n thm n = fold (K (fn t => thm OF [t])) (0 upto n - 1);
     val rel_permutes_opt = Option.map (fn info =>
       let
@@ -953,7 +966,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           ) ts ts' goals)
         );
         val thm = Goal.prove_sorry lthy (names fs') fs'_prems goal (fn {context=ctxt, prems} => EVERY1 [
-          rtac ctxt (#induct info),
+          if mutual then rtac ctxt (#induct info) else EVERY' [
+            REPEAT_DETERM o rtac ctxt allI,
+            rtac ctxt impI,
+            etac ctxt (#induct info)
+          ],
           EVERY' (@{map 3} (fn plain_cases => fn quot => fn mrbnf => EVERY' [
             etac ctxt plain_cases,
             EVERY' (map (fn f => EVERY' [
@@ -1512,7 +1529,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
 
         val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj goals);
         val thm = Goal.prove_sorry lthy (names (Rs @ Ss)) [] goal (fn {context=ctxt, ...} => EVERY1 [
-          rtac ctxt (#induct info),
+          if mutual then rtac ctxt (#induct info) else EVERY' [
+            REPEAT_DETERM o rtac ctxt allI,
+            rtac ctxt impI,
+            etac ctxt (#induct info)
+          ],
           EVERY' (@{map 2} (fn quot => fn mrbnf => EVERY' [
             REPEAT_DETERM o eresolve_tac ctxt [conjE, exE],
             hyp_subst_tac ctxt,
@@ -1573,7 +1594,10 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
               TRY o rtac ctxt @{thm iffD2[OF Grp_OO]},
               rtac ctxt disjI1,
               rtac ctxt conjI,
-              rtac ctxt refl,
+              REPEAT_DETERM1 o EVERY' [
+                TRY o rtac ctxt conjI,
+                rtac ctxt refl
+              ],
               etac ctxt @{thm relcomppE},
               TRY o dtac ctxt @{thm iffD1[OF Grp_OO]},
               REPEAT_DETERM o rtac ctxt exI,
@@ -1683,12 +1707,12 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           ))) goals ts ts'
           @ ts
         )) (#fresh_induct_param (the (#fp_thms fp_res)));
-        val induct = Drule.rotate_prems ~3 (apply_n conj_spec (nvars + 1) (induct RS bspec) RS conj_mp);
+        val induct = Drule.rotate_prems (~1 - length mrbnfs) (apply_n conj_spec (nvars + 1) (induct RS bspec) RS conj_mp);
 
         val in_rel1 = Goal.prove_sorry lthy (names (Rs @ free_fs @ pbound_fs @ ts @ ts')) f_prems goal (fn {context=ctxt, prems=f_prems} => EVERY1 [
           DETERM o rtac ctxt induct,
-          K (rtac ctxt refl 2),
-          K (rtac ctxt refl 2),
+          K (unfold_thms_tac ctxt @{thms mem_Collect_eq}),
+          REPEAT_DETERM o K (rtac ctxt refl 2),
           K (unfold_thms_tac ctxt @{thms prod.case mem_Collect_eq fst_conv snd_conv}),
           REPEAT_DETERM o resolve_tac ctxt (conjI :: f_prems),
           K (unfold_thms_tac ctxt @{thms case_prod_beta}),
@@ -1740,15 +1764,14 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             ],
             K (unfold_thms_tac ctxt @{thms id_o o_id}),
             dtac ctxt (Drule.rotate_prems (~1 - total_vars) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
-            REPEAT_DETERM o (rtac ctxt ballI THEN' rtac ctxt refl),
-            REPEAT_DETERM o EVERY' [
-              rtac ctxt ballI,
-              rtac ctxt ballI,
-              rtac ctxt impI,
-              rotate_tac ~1,
-              assume_tac ctxt
+            REPEAT_DETERM_N (total_vars - nrecs) o FIRST' [
+              rtac ctxt ballI THEN' rtac ctxt refl,
+              EVERY' [
+                rtac ctxt ballI,
+                rtac ctxt ballI,
+                rtac ctxt @{thm imp_refl}
+              ]
             ],
-            REPEAT_DETERM o (rtac ctxt ballI THEN' rtac ctxt refl),
             DETERM o EVERY' (map (fn i => EVERY' [
               REPEAT_DETERM o rtac ctxt ballI,
               rtac ctxt impI,
@@ -1816,20 +1839,23 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
               REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
             ],
             K (unfold_thms_tac ctxt @{thms image_id}),
-            REPEAT_DETERM o rtac ctxt @{thm Un_least},
-            assume_tac ctxt,
-            REPEAT_DETERM o EVERY' [
-              rtac ctxt @{thm UN_least},
-              etac ctxt imageE,
-              hyp_subst_tac ctxt,
-              rotate_tac ~1,
-              dtac ctxt @{thm set_mp[rotated]},
+            REPEAT_DETERM1 o EVERY' [
+              TRY o rtac ctxt conjI,
+              REPEAT_DETERM o rtac ctxt @{thm Un_least},
               assume_tac ctxt,
-              SELECT_GOAL (unfold_thms_tac ctxt (@{thms mem_Collect_eq Collect_prod_beta case_prod_beta} @ map snd (the picks_opt))),
-              rtac ctxt @{thm someI2_ex},
-              assume_tac ctxt,
-              REPEAT_DETERM o etac ctxt conjE,
-              assume_tac ctxt
+              REPEAT_DETERM o EVERY' [
+                rtac ctxt @{thm UN_least},
+                etac ctxt imageE,
+                hyp_subst_tac ctxt,
+                rotate_tac ~1,
+                dtac ctxt @{thm set_mp[rotated]},
+                assume_tac ctxt,
+                SELECT_GOAL (unfold_thms_tac ctxt (@{thms mem_Collect_eq Collect_prod_beta case_prod_beta} @ map snd (the picks_opt))),
+                rtac ctxt @{thm someI2_ex},
+                assume_tac ctxt,
+                REPEAT_DETERM o etac ctxt conjE,
+                assume_tac ctxt
+              ]
             ],
             rtac ctxt meta_mp,
             rtac ctxt conjI,
@@ -2014,7 +2040,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           EVERY' (@{map 4} (fn quot => fn mrbnf => fn vvsubst_cctor => fn rel_intro =>
             let
               val map_comp_split = MRBNF_Def.map_comp_of_mrbnf mrbnf OF (
-                f_prems @ flat (replicate (MRBNF_Def.bound_of_mrbnf mrbnf) @{thms bij_id supp_id_bound})
+                f_prems
+                @ flat (replicate (MRBNF_Def.bound_of_mrbnf mrbnf - length pbounds) @{thms bij_id supp_id_bound})
                 @ map (nth f_prems) (#bfree_vars fp_res)
                 @ replicate (length frees) @{thm supp_id_bound}
                 @ flat (replicate (MRBNF_Def.bound_of_mrbnf mrbnf) @{thms bij_id supp_id_bound})
@@ -2061,11 +2088,19 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
                     EVERY' [
                       forward_tac ctxt prems,
                       etac ctxt impE,
-                      dtac ctxt @{thm bspec[rotated]},
-                      assume_tac ctxt,
-                      SELECT_GOAL (unfold_thms_tac ctxt @{thms case_prod_beta}),
-                      assume_tac ctxt,
-                      assume_tac ctxt
+                      REPEAT_DETERM o etac ctxt conjE,
+                      REPEAT_DETERM o EVERY' [
+                        TRY o rtac ctxt conjI,
+                        SELECT_GOAL (unfold_thms_tac ctxt @{thms case_prod_beta}),
+                        etac ctxt @{lemma "z \<in> A \<Longrightarrow> \<forall>x\<in>A. f x \<subseteq> B \<Longrightarrow> f z \<subseteq> B"
+                          by (erule bspec, assumption)
+                        },
+                        assume_tac ctxt
+                      ],
+                      REPEAT_DETERM1 o EVERY' [
+                        TRY o rtac ctxt conjI,
+                        assume_tac ctxt
+                      ]
                     ]
                   ]
                 ]
@@ -2126,7 +2161,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
           K (unfold_thms_tac ctxt @{thms id_o o_id}),
           resolve_tac ctxt (the_default [] (Option.map snd in_rels_opt)),
-          REPEAT_DETERM o assume_tac ctxt
+          REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt conjI)
         ],
         EVERY' [
           K (unfold_thms_tac ctxt (@{thms conversep_eq eq_OO Grp_UNIV_id} @ [vvsubst_id0])),
@@ -2190,10 +2225,12 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       in Local_Theory.notes notes lthy end
     ) (#quotient_fps fp_res) vvsubst_cctors vvsubst_permutes pset_simpss lthy;
 
-    val ress = map2 (fn t1 => fn t2 => {
+    val ress = @{map 4} (fn t1 => fn t2 => fn psets => fn pset_simps => {
       vvsubst_ctor = t1,
-      vvsubst_permute = t2
-    }) vvsubst_cctors vvsubst_permutes;
+      vvsubst_permute = t2,
+      psets = psets,
+      pset_ctors = pset_simps
+    }: vvsubst_result) vvsubst_cctors vvsubst_permutes psetss pset_simpss;
 
     val lthy = @{fold 2} (register_vvsubst_result o fst o dest_Type o #T) (#quotient_fps fp_res) ress lthy;
 

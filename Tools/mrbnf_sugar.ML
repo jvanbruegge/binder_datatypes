@@ -922,10 +922,12 @@ fun create_binder_datatype (spec : spec) lthy =
                 else Term.list_comb (inner_map, gs) end
               | NONE => HOLogic.id_const T)
             | mk_map (T as TFree _) =
-              (if member ((op=) o apply2 (fst o dest_TFree)) (frees @ bfrees @ passives @ extra_apply_args) T then
+              (if member ((op=) o apply2 (fst o dest_TFree)) (frees @ bfrees
+                @ map (TFree o fst) (take (length passives) (drop (length vars) (#vars spec))) @ extra_apply_args
+              ) T then
                 case List.find (fn Free (_, T') => domain_type T' = Term.typ_subst_atomic replace T) fs of
                   SOME t => t
-                  | NONE => HOLogic.id_const T
+                  | NONE => HOLogic.id_const (Term.typ_subst_atomic replace T)
               else if member (op=) rec_vars T then
                 mapx
               else HOLogic.id_const (Term.typ_subst_atomic replace T))

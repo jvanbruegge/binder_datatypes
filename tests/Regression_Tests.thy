@@ -1,5 +1,6 @@
 theory Regression_Tests
   imports "Binders.MRBNF_Recursor" "../thys/LetRec/DAList_MRBNF"
+     "System_Fsub.Pattern"
 begin
 
 (* #68 *)
@@ -24,5 +25,11 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme =
 binder_datatype ('tv, 'ev, 'rv) type_scheme2 =
   TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme2" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type" binds \<epsilon> \<rho> in T
+
+(* #72 *)
+binder_datatype (FVars: 'v, FTVars: 'tv) trm2 =
+    Var 'v
+  | Let "('tv, p::'v) pat" "('v, 'tv) trm2" t::"('v, 'tv) trm2" binds p in t
+
 
 end

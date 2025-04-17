@@ -506,7 +506,9 @@ fun prove_model_axioms qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) params (m
                 (replicate count (plives @ As)) (replicate count bounds) (replicate count frees) mrbnf
             );
 
-            fun topBind i = nth (map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) mrbnf_sets) i;
+            fun topBind i = nth (drop (length pbounds) (
+              map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) mrbnf_sets
+            )) i;
 
             fun mk_goal i =
               let
@@ -622,7 +624,9 @@ fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) param
         val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
           (fst (dest_funT (fastype_of (hd sets))), pre_T) Vartab.empty;
         val sets = map (Envir.subst_term (tyenv, Vartab.empty)) sets;
-        val bsets = map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (MRBNF_Def.var_types_of_mrbnf mrbnf ~~ sets)
+        val bsets = drop (length pbounds) (
+          map_filter (fn (MRBNF_Def.Bound_Var, x) => SOME x | _ => NONE) (MRBNF_Def.var_types_of_mrbnf mrbnf ~~ sets)
+        );
         val rhss = @{map 5} (fn var => fn FVars => fn PFVars => fn avoiding_set => fn bset =>
           let
             val f_T = var --> var;
@@ -2964,14 +2968,16 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
                       assume_tac ctxt
                     ],
-                    (* passive bound/free position *)
-                    REPEAT_DETERM o (rtac ctxt ballI THEN' rtac ctxt refl),
-                    (* passive live position *)
-                    REPEAT_DETERM o EVERY' [
-                      rtac ctxt ballI,
-                      rtac ctxt ballI,
-                      rtac ctxt impI,
-                      assume_tac ctxt
+                    REPEAT_DETERM o FIRST' [
+                      (* passive bound/free position *)
+                      rtac ctxt ballI THEN' rtac ctxt refl,
+                      (* passive live position *)
+                      EVERY' [
+                        rtac ctxt ballI,
+                        rtac ctxt ballI,
+                        rtac ctxt impI,
+                        assume_tac ctxt
+                      ]
                     ],
                     let val bound_tac = EVERY' [
                       SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_assoc[symmetric]}),

@@ -163,7 +163,8 @@ fun create_binder_spec T_names ((((params, b), mixfix), ctors), (vvsubst_b, tvsu
 
     val FVars_bs = map (snd o fst) Ts;
     val params = fold (fn ((ann, _), T) => Symtab.map_entry (case ann of
-      NONE => "plive" | SOME MRBNF_Def.Free_Var => "pfree" | SOME MRBNF_Def.Bound_Var => "plive" | _ => "dead"
+      NONE => "plive" | SOME MRBNF_Def.Free_Var => "pfree"
+      | SOME MRBNF_Def.Bound_Var => "pbound" | _ => "dead"
     ) (cons T)) Ts params';
 
     val (ctors, (lthy, params)) = fold_map (create_ctor_spec T_names) ctors (lthy, params);

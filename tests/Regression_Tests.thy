@@ -37,4 +37,8 @@ binder_datatype ('a, 'b, 'c, 'd) trm3 =
   | App "('a, 'b, 'c, 'd) trm3" "('a, 'b, 'c, 'd) trm3"
   | Lam a::'a b::'b c::'c d::'d e::"('a, 'b, 'c, 'd) trm3" binds a b c d in e
 
+(* #74 *)
+binder_datatype 'a trm4 = V 'a | Lm x::'a t::"'a trm4" binds x in t
+binder_datatype 'a foo = Foo 'a | Bind "(x::'a) trm4" t::"'a foo" binds x in t
+
 end

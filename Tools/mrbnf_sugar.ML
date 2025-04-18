@@ -591,7 +591,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val injects = @{map_filter 2} (fn ((ctor, ctor_def), tys) => fn setss => if null tys then NONE else
       let
-        val bound_tys = inter (op=) bounds (map TFree (fold Term.add_tfreesT tys []));
+        val bound_tys = inter (op=) bounds (rev (map TFree (fold Term.add_tfreesT tys [])));
         val tys' = map (Term.typ_subst_atomic replace) tys;
         val (((xs, ys), fs), _) = names_lthy
           |> mk_Frees "x" tys'
@@ -706,7 +706,7 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o rtac ctxt exI,
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
             REPEAT_DETERM o FIRST' [
-              resolve_tac ctxt @{thms supp_id_bound bij_id id_on_empty id_on_id},
+              resolve_tac ctxt @{thms supp_id_bound bij_id id_on_empty id_on_id conjI},
               assume_tac ctxt,
               SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map (fn thm => thm RS sym) vvsubst_permutes)) THEN' assume_tac ctxt
             ]

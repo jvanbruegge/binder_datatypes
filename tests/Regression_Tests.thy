@@ -31,5 +31,10 @@ binder_datatype (FVars: 'v, FTVars: 'tv) trm2 =
     Var 'v
   | Let "('tv, p::'v) pat" "('v, 'tv) trm2" t::"('v, 'tv) trm2" binds p in t
 
+(* #75 *)
+binder_datatype ('a, 'b, 'c, 'd) trm3 =
+    Var 'a
+  | App "('a, 'b, 'c, 'd) trm3" "('a, 'b, 'c, 'd) trm3"
+  | Lam a::'a b::'b c::'c d::'d e::"('a, 'b, 'c, 'd) trm3" binds a b c d in e
 
 end

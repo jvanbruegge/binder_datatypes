@@ -405,6 +405,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
       mk_SSupp_bound = fn t => mk_ordLess (mk_card_of (fst (#SSupp def) $ t)) card
     })) (#etas model)) models defss;
 
+    val card_thms = @{thms card_of_Card_order cmin_Card_order ordLeq_refl cmin2 ordLeq_transitive[OF cmin1]};
     val (SSupp_VVr_emptiess, SSupp_VVr_boundss) = split_list (map (split_list o map (traverse_pair o Option.map (fn def =>
       let
         val empty = Goal.prove_sorry lthy [] [] (mk_Trueprop_eq (fst (#SSupp def) $ fst (#VVr def), mk_bot (#aT def))) (fn {context=ctxt, ...} => EVERY1 [
@@ -413,7 +414,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         ]);
         val bound = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (#mk_SSupp_bound def (fst (#VVr def)))) (fn {context=ctxt, ...} => EVERY1 [
           K (unfold_thms_tac ctxt [empty]),
-          REPEAT_DETERM o resolve_tac ctxt @{thms emp_bound cmin_greater card_of_Card_order}
+          REPEAT_DETERM o resolve_tac ctxt (@{thms emp_bound cmin_greater} @ card_thms)
         ]);
       in (empty, bound) end
     ))) defss);
@@ -546,7 +547,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         )))) (fn {context=ctxt, prems} => EVERY1 [
           rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_mono1]},
           rtac ctxt SSupp_comp_rename_subset,
-          REPEAT_DETERM o resolve_tac ctxt (Un_bound :: prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
+          REPEAT_DETERM o resolve_tac ctxt (Un_bound :: prems @ card_thms @ @{thms ordLess_ordLeq_trans})
         ]);
       in {
         SSupp_comp_subset = SSupp_comp_subset,
@@ -568,7 +569,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         K (unfold_thms_tac ctxt [snd (#compSS def)]),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] (@{thms o_inv_distrib} @ [#permute_comp0 quotient RS sym]),
-          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order})
+          REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ card_thms @ @{thms ordLess_ordLeq_trans})
         ],
         K (unfold_thms_tac ctxt @{thms id_o o_id}),
         rtac ctxt ext,
@@ -910,7 +911,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) compSS_cong_idss),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
-          resolve_tac ctxt (prems @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
+          resolve_tac ctxt (prems @ card_thms @ @{thms ordLess_ordLeq_trans}),
           eresolve_tac ctxt @{thms UnI2 UnI1},
           rtac ctxt UnI1
         ]
@@ -929,14 +930,14 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         EqSubst.eqsubst_tac ctxt [0] (maps #FVars_permutes (#quotient_fps fp_res)),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
-          resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+          resolve_tac ctxt (card_thms @ @{thms ordLess_ordLeq_trans})
         ],
         K (unfold_thms_tac ctxt @{thms image_UN[symmetric]}),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) SSupp_naturalss),
           REPEAT_DETERM o FIRST' [
             assume_tac ctxt,
-            resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+            resolve_tac ctxt (card_thms @ @{thms ordLess_ordLeq_trans})
           ]
         ],
         K (unfold_thms_tac ctxt @{thms image_comp}),
@@ -957,7 +958,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         assume_tac ctxt,
         resolve_tac ctxt ([Un_bound, UNION_bound]
           @ maps #card_of_FVars_bound_UNIVs (#quotient_fps fp_res)
-          @ @{thms cmin_greater card_of_Card_order}
+          @ @{thms cmin_greater card_of_Card_order cmin_Card_order}
         )
       ]
     ];
@@ -972,7 +973,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
-          resolve_tac ctxt @{thms supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+          resolve_tac ctxt (card_thms @ @{thms supp_id_bound bij_id ordLess_ordLeq_trans})
         ]
       ],
       Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
@@ -985,14 +986,14 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         REPEAT_DETERM o FIRST' [
           resolve_tac ctxt @{thms supp_id_bound bij_id},
           assume_tac ctxt,
-          resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+          resolve_tac ctxt (card_thms @ @{thms ordLess_ordLeq_trans})
         ]
       ],
       REPEAT_DETERM o EVERY' [
         EqSubst.eqsubst_tac ctxt [0] ((#permute_ctor quotient RS sym) :: maps (map_filter I) isVVr_renamess),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
-          resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+          resolve_tac ctxt (card_thms @ @{thms ordLess_ordLeq_trans})
         ]
       ],
       REPEAT_DETERM o EVERY' [
@@ -1011,7 +1012,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
         EqSubst.eqsubst_tac ctxt [0] (maps (map_filter I) permute_VVrss),
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
-          resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+          resolve_tac ctxt (card_thms @ @{thms ordLess_ordLeq_trans})
         ],
         SELECT_GOAL (unfold_thms_tac ctxt (@{thms comp_def} @ map (snd o #compSS) some_defs
           @ maps (map_filter I) asVVr_VVrss
@@ -1024,13 +1025,13 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
       rtac ctxt (#permute_ctor quotient),
       REPEAT_DETERM o FIRST' [
         assume_tac ctxt,
-        resolve_tac ctxt @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+        resolve_tac ctxt (card_thms @ @{thms ordLess_ordLeq_trans})
       ],
       REPEAT_DETERM o EVERY' [
         EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
         REPEAT_DETERM o FIRST' [
           assume_tac ctxt,
-          resolve_tac ctxt @{thms supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+          resolve_tac ctxt (card_thms @ @{thms supp_id_bound bij_id ordLess_ordLeq_trans})
         ]
       ],
       K (unfold_thms_tac ctxt @{thms id_o o_id}),
@@ -1547,7 +1548,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
             SELECT_GOALS (length As) (EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
               REPEAT_DETERM o resolve_tac ctxt (
-                @{thms ordLeq_refl cmin1 cmin2 card_of_Card_order}
+                @{thms ordLeq_refl cmin1 cmin2 ordLeq_transitive[OF cmin1] cmin_Card_order card_of_Card_order}
                 @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm]) f'_prems
                 @ maps (fn mrbnf => [
                   MRBNF_Def.Un_bound_of_mrbnf mrbnf, MRBNF_Def.UNION_bound_of_mrbnf mrbnf

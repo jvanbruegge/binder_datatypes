@@ -184,7 +184,7 @@ fun addPred pred_opt d = case pred_opt of
     p
   )) | NONE => I
 
-val card_thms = @{thms supp_id_bound_cmin ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
+val card_thms = @{thms cmin_greater[OF _ card_of_Card_order _ supp_id_bound] cmin_Card_order ordLeq_refl ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order ordLeq_transitive[OF cmin1]}
 
 fun mk_quotient_model quot substitution codomain_substitution qmodel =
   let
@@ -2113,8 +2113,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
     val regularCard_UNIV = #var_regular (MRBNF_Def.class_thms_of_mrbnf (hd (#pre_mrbnfs fp_res)));
     val (Cinfinite_card, regularCard_card) = if #min_bound params then
       fold_rev (fn Cinf => fn (a1, a2) => (
-        @{thm cmin_Cinfinite} OF [Cinf, a1],
-        @{thm cmin_regularCard} OF [regularCard_UNIV, a2, Cinf, a1]
+        @{thm cmin_Cinfinite} OF [a1, Cinf],
+        @{thm cmin_regularCard} OF [a2, regularCard_UNIV, a1, Cinf]
       )) (replicate (nvars - 1) Cinfinite_UNIV) (Cinfinite_UNIV, regularCard_UNIV)
       else (Cinfinite_UNIV, regularCard_UNIV);
     val Un_bound = @{thm regularCard_Un} OF [conjunct2 OF [Cinfinite_card], conjunct1 OF [Cinfinite_card], regularCard_card];
@@ -2267,7 +2267,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             |> apply_n conj_spec spec_n
             |> apply_n conj_mp mp_n
           ) (#fp_thms fp_res);
-        in EVERY1 [
+        in DETERM (EVERY1 [
           the_default (Method.insert_tac ctxt prems) (Option.map (rtac ctxt) induct),
           REPEAT_DETERM_N n o defer_tac,
           REPEAT_DETERM o resolve_tac ctxt prems,
@@ -2350,11 +2350,11 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   K (prefer_tac 2),
                   resolve_tac ctxt (#small_PFVarss (#axioms params)),
                   TRY o resolve_tac ctxt valid_prems,
-                  SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
+                  SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order cmin_Card_order}
                     @ #card_of_FVars_bound_UNIVs raw
                   ) 1)),
                   resolve_tac ctxt (#small_avoiding_sets (#axioms params)),
-                  SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order}
+                  SELECT_GOAL (REPEAT_DETERM (resolve_tac ctxt (@{thms cmin_greater card_of_Card_order cmin_Card_order}
                     @ MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf
                   ) 1))
                 ];
@@ -2448,7 +2448,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
                     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound} @ f_prems @ [infinite_UNIV] @ pick_prems @ card_thms),
                     rtac ctxt refl,
-                    REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl card_of_Card_order cmin1 cmin2}
+                    REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound_cmin cmin_Card_order ordLeq_refl cmin1 cmin2 card_of_Card_order ordLeq_transitive[OF cmin1]}
                   ]) [int_empty_XXls, int_empty_XXrs])
                 ]) exists_bij_betws),
                 REPEAT_DETERM o etac ctxt exE,
@@ -2763,7 +2763,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   REPEAT_DETERM o (eresolve_tac ctxt @{thms eq_bij_betw_refl_prems} ORELSE' resolve_tac ctxt card_thms),
                   eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms))),
                   REPEAT_DETERM o FIRST' [
-                    resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound imsupp_id_empty} @ [infinite_UNIV] @ f_prems @ pick_prems @ suitable_prems),
+                    resolve_tac ctxt (@{thms supp_id_bound bij_id cmin_greater[OF _ card_of_Card_order _ supp_id_bound] bij_comp supp_comp_bound imsupp_id_empty} @ [infinite_UNIV] @ f_prems @ pick_prems @ suitable_prems),
                     eresolve_tac ctxt @{thms eq_bij_betw_refl_prems},
                     assume_tac ctxt,
                     resolve_tac ctxt card_thms
@@ -2858,7 +2858,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         ],
                         K (unfold_thms_tac ctxt @{thms image_id}),
                         rtac ctxt refl,
-                        REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl card_of_Card_order cmin1 cmin2}
+                        REPEAT_DETERM o resolve_tac ctxt @{thms cmin_greater[OF _ card_of_Card_order _ supp_id_bound] ordLeq_refl card_of_Card_order cmin_Card_order cmin1 cmin2 ordLeq_transitive[OF cmin1]}
                       ]) [suitable'_prems, suitable_prems])
                     ]) exists_bij_betw2s),
                     REPEAT_DETERM o etac ctxt exE,
@@ -3342,7 +3342,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV] @ pick'_prems @ h_prems @ card_thms)
                       ],
                       REPEAT_DETERM o resolve_tac ctxt suitable'_prems,
-                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order}),
+                      REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order cmin_Card_order}),
                       EqSubst.eqsubst_tac ctxt [0] (maps (fn raw => [#permute_comp raw RS sym, #permute_id raw]) (#raw_fps fp_res)),
                       REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems @ pick'_prems @ card_thms),
                       TRY o EVERY' [
@@ -3359,7 +3359,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                         assume_tac ctxt
                       ],
                       resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)),
-                      REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order},
+                      REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound cmin_greater[OF _ card_of_Card_order _ supp_id_bound] bij_id trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left] cmin_greater card_of_Card_order cmin_Card_order},
                       EqSubst.eqsubst_tac ctxt [0] (map #permute_id (#raw_fps fp_res)) ORELSE' EVERY' [
                         EqSubst.eqsubst_asm_tac ctxt [0] (map #permute_comp (#raw_fps fp_res)),
                         REPEAT_DETERM o FIRST' [
@@ -3394,7 +3394,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
           ]) (1 upto n) ys map_id_fsts (#raw_fps fp_res) (#pre_mrbnfs fp_res) rec_fs PU_setss pre_setss XXls XXrs deadss
           PUmap'_alphas alpha_ctor_picks int_empty_XXlss int_empty_XXrss Uctor'_congs
           Uctor's imsupp_id_on_XXlss imsupp_id_on_XXrss PUmap's pick_id_onsss' pick_id_on_image'sss)
-        ] end
+        ]) end
       ) end;
 
     val exists_suitabless = map2 (fn mrbnf => map (fn suitable =>
@@ -3404,13 +3404,13 @@ fun create_binding_recursor qualify fp_res params models lthy =
         REPEAT_DETERM o resolve_tac ctxt @{thms choice allI},
         resolve_tac ctxt @{thms exists_suitable_aux exists_suitable_aux[of _ True, unfolded HOL.simp_thms(15)]},
         rtac ctxt Cinfinite_card,
-        REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl cmin1 cmin2 card_of_Card_order},
+        REPEAT_DETERM o resolve_tac ctxt @{thms ordLeq_refl cmin1 cmin2 ordLeq_transitive[OF cmin1] cmin_Card_order card_of_Card_order},
         REPEAT_DETERM o FIRST' [
           resolve_tac ctxt (@{thms ordLeq_ordLess_trans[OF card_of_diff]}
             @ (Un_bound :: MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
             @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
             @ #small_PFVarss (#axioms params) @ #small_avoiding_sets (#axioms params)
-            @ @{thms cmin_greater card_of_Card_order}
+            @ @{thms cmin_greater card_of_Card_order cmin_Card_order}
           ),
           assume_tac ctxt
         ]
@@ -3438,7 +3438,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
         );
       in Goal.prove_sorry lthy (names (flat (pickss @ pick'ss) @ [t, t', p])) (validP_prems @ suitable_prems @ map HOLogic.mk_Trueprop suitable'_prems) goal (fn {context=ctxt, prems} => EVERY1 [
         resolve_tac ctxt (map (fn thm => thm RS conjunct2) f_swap_alphas),
-        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ @{thms cmin_greater card_of_Card_order}),
+        REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems @ @{thms cmin_greater card_of_Card_order cmin_Card_order}),
         K (unfold_thms_tac ctxt @{thms imsupp_id}),
         REPEAT_DETERM o rtac ctxt @{thm Int_empty_left},
         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt (map (#alpha_refl o #inner) (#raw_fps fp_res)))

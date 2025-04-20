@@ -710,11 +710,11 @@ lemma eta_set_empties:
             prefer 7
             apply (erule swap_fresh)
             apply assumption
-           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
      apply (rule sym)
      apply (rule trans)
       apply (rule fun_cong[OF eta_natural, unfolded comp_def])
-           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
      apply (unfold id_def)
      apply (rule refl)
     apply (erule FalseE)
@@ -732,11 +732,11 @@ lemma eta_set_empties:
             prefer 7
             apply (erule swap_fresh)
             apply assumption
-           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
      apply (rule sym)
      apply (rule trans)
       apply (rule fun_cong[OF eta_natural, unfolded comp_def])
-           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
      apply (unfold id_def)
      apply (rule refl)
     apply (erule FalseE)
@@ -754,11 +754,11 @@ lemma eta_set_empties:
             prefer 7
             apply (erule swap_fresh)
             apply assumption
-           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
      apply (rule sym)
      apply (rule trans)
       apply (rule eta_natural')
-           apply (rule supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)+
+           apply (rule supp_id_bound bij_id supp_swap_bound bij_swap infinite_UNIV)+
      apply (unfold id_def)
      apply (rule refl)
     apply (erule FalseE)

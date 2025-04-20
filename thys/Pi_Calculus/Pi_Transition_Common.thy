@@ -36,10 +36,6 @@ ML \<open>fun gen_fresh ctxt xs0 acts0 ts0 = HEADGOAL (Subgoal.FOCUS_PARAMS (fn 
     val thm = infer_instantiate' ctxt ([SOME xs, SOME acts] @ map (SOME o Thm.cterm_of ctxt) ts0) @{thm exists_fresh'} RS exE;
   in HEADGOAL (resolve_tac ctxt [thm]) end) ctxt)\<close>
 
-lemma isPerm_swap: "isPerm (id(x := y, y := x))"
-  unfolding isPerm_def
-  by (simp add: MRBNF_FP.supp_swap_bound Prelim.bij_swap infinite_UNIV)
-
 lemma R_forw_subst: "R x y \<Longrightarrow> (\<And>x y. R x y \<Longrightarrow> R (f x) (g y)) \<Longrightarrow> z = g y \<Longrightarrow> R (f x) z"
   by blast
 

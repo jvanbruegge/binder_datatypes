@@ -478,12 +478,6 @@ lemma rel_set_UN_D: "rel_set (\<lambda>x y. X x = Y y) A B \<Longrightarrow> (\<
 lemma relcompp_conversep_Grp: "R OO conversep (Grp f) = (\<lambda>x y. R x (f y))"
   unfolding fun_eq_iff Grp_def by auto
 
-lemma bij_swap: "bij (id (x := y, y := x))"
-  unfolding bij_def inj_def by (auto simp: image_iff)
-
-lemma supp_swap_le: "supp (id (x := y, y := x)) \<subseteq> {x, y}"
-  unfolding supp_def by auto
-
 lemma not_in_supp_alt: "x \<notin> supp f \<longleftrightarrow> f x = x"
   unfolding supp_def by auto
 

@@ -1229,11 +1229,11 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
             K (prefer_tac (free + 2 * bound + 1)),
             etac ctxt @{thm swap_fresh},
             assume_tac ctxt,
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap} @ [infinite_UNIV]),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_swap_bound bij_swap} @ [infinite_UNIV]),
             rtac ctxt sym,
             rtac ctxt trans,
             rtac ctxt eta_natural',
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id MRBNF_FP.supp_swap_bound Prelim.bij_swap} @ [infinite_UNIV]),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_swap_bound bij_swap} @ [infinite_UNIV]),
             K (unfold_thms_tac ctxt @{thms id_def}),
             rtac ctxt refl
           ] else EVERY' [

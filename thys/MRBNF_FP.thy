@@ -201,6 +201,8 @@ lemma Diff_image_not_in_imsupp: "B \<inter> imsupp f = {} \<Longrightarrow> f ` 
   unfolding supp_def imsupp_def by fastforce
 lemma ball_not_eq_imsupp: "x \<in> B \<Longrightarrow> x \<notin> A \<Longrightarrow> (\<And>x. x \<in> B \<Longrightarrow> x \<notin> imsupp f) \<Longrightarrow> \<forall>xa\<in>A. x \<noteq> f xa"
   unfolding imsupp_def supp_def by fastforce
+lemma notin_Un: "x \<notin> A \<union> B \<longleftrightarrow> x \<notin> A \<and> x \<notin> B"
+  by simp
 
 definition compSS :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a)" where
   "compSS f g \<equiv> f \<circ> g \<circ> inv f"

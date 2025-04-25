@@ -2,47 +2,61 @@ theory Corecursor
   imports Greatest_Fixpoint
 begin
 
+(* helper lemmas *)
 
-(* Norrish's notation: *)
-(*definition swapping :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> ('c \<Rightarrow> 'a set) \<Rightarrow> bool" where
-  "swapping swp fvars \<equiv>
-  swp id = id \<and>
-  (\<forall> u v. bij u \<and> |supp u| <o |UNIV::'a set| \<and> bij v \<and> |supp v| <o |UNIV::'a set|
-      \<longrightarrow> swp (u o v) = swp u o swp v) \<and>
-  (\<forall> u c. bij u \<and> |supp u| <o |UNIV::'a set| \<and>
-      (\<forall> a. a \<in> fvars c \<longrightarrow> u a = a) \<longrightarrow> swp u c = c) \<and>
-  (\<forall> u c a. bij u \<and> |supp u| <o |UNIV::'a set|
-     \<longrightarrow> (u a \<in> fvars (swp u c) \<longleftrightarrow> a \<in> fvars c))"*)
+lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
+  by (auto simp: rel_set_def)
 
-(* Need to factor in terms in the "swapping" condition for 'a D -- a heavily restricted
-"swapping" condition, only assuming functoriality and nothing else;
-in particular nothing about freshness.  *)
-(*abbreviation swappingD :: "(('a::vvar_TT \<Rightarrow> 'a) \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> bool" where
-  "swappingD swp  \<equiv>
-  (\<forall> c. swp id c = c) \<and>
-  (\<forall> u v c. bij u \<and> |supp u| <o bound (any::'a) \<and> bij v \<and> |supp v| <o bound (any::'a)
-    \<longrightarrow>  swp (u o v) c = swp u (swp v c))"*)
+(* Definitions *)
 
-(* The following will not be used in the development, but motivates the
-chosen axioms for DDTOR by showing that the terms satisfy them for their natural destructor.  *)
-definition udtor :: "'a::var term \<Rightarrow> ('a, 'a, 'a term, 'a term) term_pre set" where
-  "udtor t \<equiv> {x . t = term_ctor x}"
+definition suitable' ::  "('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre set) \<Rightarrow> ('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> bool" where
+  "suitable' Utor pick \<equiv> \<forall> d. pick d \<in> Utor d"
+definition f' :: "('u \<Rightarrow> ('a::var,'a,'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> 'u => 'a raw_term" where
+  "f' pick \<equiv> corec_raw_term pick"
+definition pick0 :: "('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre set) \<Rightarrow> 'u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre" where
+  "pick0 Utor \<equiv> SOME pick. suitable' Utor pick"
+definition f0' :: "('u \<Rightarrow> ('a, 'a::var, 'a term + 'u, 'a term + 'u) term_pre set) \<Rightarrow> 'u \<Rightarrow> 'a raw_term" where
+  "f0' Udtor \<equiv> f' (pick0 (\<lambda>(d::'u). map_term_pre id id (map_sum TT_rep id) (map_sum TT_rep id) ` Udtor d))"
+definition COREC :: "('u \<Rightarrow> ('a, 'a::var, 'a term + 'u, 'a term + 'u) term_pre set) \<Rightarrow> 'u \<Rightarrow> 'a term" where
+  "COREC Udtor d = TT_abs (f0' Udtor d)"
 
-(*lemma ddtor_ne:
-  "ddtor t \<noteq> {}"
-  unfolding ddtor_def by (auto simp add: TT_nchotomy)
-*)
+lemma COREC:
+  assumes Udtor_ne: "\<And>d. Udtor d \<noteq> {}"
+  and
+  alpha_Udtor: "\<And>X X' d. {X,X'} \<subseteq> Udtor d \<Longrightarrow>
+\<exists>u. bij (u::'a::var \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on ((\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X) u \<and>
+     map_term_pre id u (map_sum (permute_term u) (Umap u)) id X = X'"
+  and
+  (* The dual of the first block of assumptions from Norrish's paper:   *)
+  UFVars_Udtor:
+  "\<And> d X. X \<in> Udtor d \<Longrightarrow>
+  set1_term_pre X \<union> (\<Union>z \<in> set4_term_pre X. case_sum FVars_term UFVars z) \<union>
+   ((\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X) \<subseteq>
+  UFVars d"
+  and
+  (* The dual of the third block: *)
+  Umap_Udtor: "\<And>u d.
+  bij (u::'a\<Rightarrow>'a) \<Longrightarrow> |supp u| <o |UNIV::'a::var set| \<Longrightarrow>
+  Udtor (Umap u d) \<subseteq>
+  image
+    (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
+    (Udtor d)"
+and Umap_comp0: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> Umap f \<circ> Umap g = Umap (f \<circ> g)"
+and Umap_cong0: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
+shows "X \<in> Udtor d \<Longrightarrow> COREC Udtor d = term_ctor (map_term_pre id id (case_sum id (COREC Udtor)) (case_sum id (COREC Udtor)) X)"
+"bij u \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> COREC Udtor (Umap u d) = permute_term u (COREC Udtor d)"
+"FVars_term (COREC Udtor d) \<subseteq> UFVars d"
+proof -
+  show "X \<in> Udtor d \<Longrightarrow> COREC Udtor d = term_ctor (map_term_pre id id (case_sum id (COREC Udtor)) (case_sum id (COREC Udtor)) X)"
+    sorry
+  show "bij u \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> COREC Udtor (Umap u d) = permute_term u (COREC Udtor d)"
+    sorry
+  show "FVars_term (COREC Udtor d) \<subseteq> UFVars d"
+    sorry
+qed
 
-(*lemma ddtor_map_TT:
-  assumes "{x,x'} \<subseteq> ddtor t"
-  shows "\<exists>u. bij (u::'a\<Rightarrow>'a) \<and> |supp u| <o bound(any::'a::vvar_TT) \<and> id_on (FFVarsB x) u \<and> map_F id u id (map_TT u) x = x'"
-  using assms TT_inject0 by (auto simp: ddtor_def)
-
-lemma FFVars_ddtor:
-  assumes "x \<in> ddtor t"
-  shows "FFVars t = set1_F x \<union> (\<Union>z \<in> set4_term_pre x. FFVars z) \<union> FFVarsB x"
-  using assms by (auto simp: ddtor_def FFVars_simps)
-    (****)*)
 
 (* The domain type: *)
 typedecl 'a U
@@ -277,23 +291,21 @@ lemma Utor_abs_Udtor: "X \<in> Utor d \<Longrightarrow> map_term_pre id id (map_
   apply assumption
   done
 
-lemma raw_UFVars_def2_comp: "FVars_raw_term = FVars_term \<circ> TT_abs"
+(*lemma raw_UFVars_def2_comp: "FVars_raw_term = FVars_term \<circ> TT_abs"
   apply (unfold raw_UFVars_def2)
   apply (unfold comp_apply)
   apply (rule refl)
   done
+*)
 
 lemma aux_raw_UFVars_Utor: "case_sum FVars_term raw_UFVars ` set4_term_pre (map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X) =
        case_sum FVars_raw_term raw_UFVars ` set4_term_pre X"
-  apply (unfold raw_UFVars_def2_comp)
-  (* what could be a good way to do this without specifying the
-     exact subst position? *)
-  apply (subst (50) o_id[symmetric])
-  apply (subst case_sum_o_map_sum[symmetric])
-  apply (subst image_comp[symmetric])
-  apply (rule image_cong[OF _ refl])
-  apply (rule term_pre.set_map)
-  apply (rule supp_id_bound | rule bij_id)+
+  apply (unfold raw_UFVars_def2)
+  apply (subst term_pre.set_map)
+     apply (rule supp_id_bound bij_id)+
+  apply (unfold image_comp case_sum_o_map_sum o_id)
+  apply (unfold comp_def)
+  apply (rule refl)
   done
 
 lemma raw_UFVars_Utor:
@@ -305,11 +317,6 @@ lemma raw_UFVars_Utor:
   apply (subst (asm) image_id)
   apply assumption
   done
-
-lemma rel_set_reflI:
-  "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
-  by (unfold rel_set_def Bex_def)
-     (rule ballI exI conjI | assumption)+
 
 lemma raw_Umap_Utor:
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
@@ -354,10 +361,11 @@ lemma raw_Umap_Utor:
 
 (*    *)
 
-definition suitable ::  "('a::var U \<Rightarrow> ('a,'a,'a raw_term + 'a U,'a raw_term + 'a U) term_pre) \<Rightarrow> bool" where
+
+definition suitable ::  "('a U \<Rightarrow> ('a::var, 'a, 'a raw_term + 'a U,'a raw_term + 'a U) term_pre) \<Rightarrow> bool" where
   "suitable pick \<equiv> \<forall> d. pick d \<in> Utor d"
 
-definition f :: "('a::var U \<Rightarrow> ('a,'a,'a raw_term + 'a U,'a raw_term + 'a U) term_pre) \<Rightarrow> 'a U => 'a raw_term" where
+definition f :: "('a U \<Rightarrow> ('a::var,'a,'a raw_term + 'a U,'a raw_term + 'a U) term_pre) \<Rightarrow> 'a U => 'a raw_term" where
   "f pick \<equiv> corec_raw_term pick"
 
 thm raw_term.corec[of "pick o Utor", unfolded f_def[symmetric]]
@@ -383,7 +391,8 @@ lemma suitable_FVarsD:
 
 (*  *)
 
-lemma f_FVarsD_td:
+(* maybe unnecessary *)
+(*lemma f_FVarsD_td:
   assumes "raw_term_ctor x = f pick d"
   shows "t \<in> set3_term_pre x \<Longrightarrow> (\<exists>td. t = case_sum id (f pick) td \<and> td \<in> set3_term_pre (pick d))"
         "t \<in> set4_term_pre x \<Longrightarrow> (\<exists>td. t = case_sum id (f pick) td \<and> td \<in> set4_term_pre (pick d))"
@@ -401,6 +410,7 @@ lemma f_FVarsD_td:
   apply (rule conjI)
    apply assumption+
   done
+*)
 
 lemma f_FVarsD_aux:
   assumes "free_raw_term a t"
@@ -428,46 +438,70 @@ lemma f_FVarsD:
   shows "FVars_raw_term (f pick d) \<subseteq> raw_UFVars d"
   apply (rule subsetI)
   apply (unfold FVars_raw_term_def mem_Collect_eq)
-  subgoal
-(* TODO: this seems to work, but requires additional work to be done in each subgoal
-since the implications and universal quantifiers are now object-level instead of meta-level *)
-    (* apply (erule free_raw_term.induct[where P = "\<lambda>x y. \<forall>d. y = f pick d \<longrightarrow> x \<in> raw_UFVars d", THEN allE]) *)
-     apply (induction _ "(f pick d)" arbitrary: d rule: free_raw_term.induct)
-    subgoal premises prems
- apply (rule le_supE[OF suitable_FVarsD[OF assms, unfolded Un_assoc]])
+    apply (erule free_raw_term.induct[of _ _ "\<lambda>x y. \<forall>d. y = f pick d \<longrightarrow> x \<in> raw_UFVars d", THEN spec, THEN mp[OF _ refl]])
+
+      apply (rule allI)
+      apply (rule impI)
+      apply (rule le_supE[OF suitable_FVarsD[OF assms, unfolded Un_assoc]])
       apply (erule subsetD)
-      apply (insert prems(1)[unfolded f_ctor[OF prems(2)]])
-      apply (subst (asm) term_pre.set_map(1)[OF supp_id_bound bij_id supp_id_bound, unfolded image_id])
+      apply (drule f_ctor)
+      apply hypsubst
+      apply (subst (asm) term_pre.set_map)
+        apply (rule supp_id_bound bij_id)+
+      apply (unfold image_id)
       apply assumption
-      done
-    subgoal premises prems
-apply (rule rev_subsetD[OF _ suitable_FVarsD[OF assms]])
-      apply (unfold raw_UFVarsBD_def)
-      apply (rule UnI2)
-      apply (rule f_FVarsD_td(1)[OF prems(5,1), THEN exE])
-      apply (rule DiffI)
-       apply (erule conjE)
-       apply (drule f_FVarsD_aux[OF prems(2), rotated])
-      apply (erule prems(3))
-      apply (erule UN_I)
+
+      (* REPEAT_DETERM *)
+    apply (rule allI)
+     apply (rule impI)
+     apply (frule f_ctor)
+    apply hypsubst
+     apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)+
+     apply (unfold image_id)?
+     apply (erule imageE)
+     apply hypsubst
+     apply (drule f_FVarsD_aux)
+       apply (erule allE)
+       apply (erule impE)
+        apply assumption
        apply assumption
-      apply (insert prems(4)[unfolded f_ctor[OF prems(5)]])
-      apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)
-      apply (subst (asm) image_id)
-      apply assumption
-      done
-    subgoal premises prems
-      apply (rule rev_subsetD[OF _ suitable_FVarsD[OF assms]])
-      apply (rule UnI1)
+      apply (rule refl)
+     apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
+      apply (unfold Un_assoc)
       apply (rule UnI2)
-      apply (rule f_FVarsD_td(2)[OF prems(4,1), THEN exE])
-      apply (erule conjE)
-      apply (drule f_FVarsD_aux[OF prems(2), rotated])
-      apply (erule prems(3))
-      apply (erule UN_I)
+      apply (unfold Un_assoc[symmetric])?
+      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 2] 1\<close>) (* normally: Use goal number here *)
+      apply (rule DiffI[rotated], assumption)?
+      apply (rule UN_I)
+       apply assumption
       apply assumption
-      done
-    done
+     apply (rule assms)
+  (* repeated *)
+    apply (rule allI)
+     apply (rule impI)
+     apply (frule f_ctor)
+    apply hypsubst
+     apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)+
+     apply (unfold image_id)?
+     apply (erule imageE)
+     apply hypsubst
+     apply (drule f_FVarsD_aux)
+       apply (erule allE)
+       apply (erule impE)
+        apply assumption
+       apply assumption
+      apply (rule refl)
+     apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
+      apply (unfold Un_assoc)
+      apply (rule UnI2)
+      apply (unfold Un_assoc[symmetric])?
+      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 1] 1\<close>) (* normally: Use goal number here *)
+      apply (rule DiffI[rotated], assumption)?
+      apply (rule UN_I)
+       apply assumption
+      apply assumption
+     apply (rule assms)
+  (* END REPEAT_DETERM *)
   done
 
 lemma rel_F_suitable_mapD:
@@ -527,91 +561,20 @@ lemma alpha_coinduct2[consumes 1, case_names C]:
  (\<lambda>t t'. \<phi> t t' \<or> alpha_term t t')
        x x'"
   shows "alpha_term t t'"
-  apply(rule alpha_term.coinduct[of \<phi>, OF 0]) (*
-  apply (drule arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, THEN 1, rotated -1])
-      prefer 3
-      apply (erule exE)
-      apply (rule exI)+
-      apply (rule conjI[rotated])
-       apply (rule conjI[rotated])
-      apply assumption
-  using raw_term.nchotomy
-     apply (rule exE)
-  thm allI
-      apply (rule allE[OF raw_term.nchotomy])
-      apply simp
-  apply assumption
-  prefer 2
-    using allE[OF raw_term.nchotomy]
-    thm exE
-  apply (rule raw_term.nchotomy)
-  thm exE[OF 1, rotated]
-     apply (rule exE[OF 1, rotated])
-      prefer 2
-  thm exE[OF 1]
-
-
-
-        apply (rule prems)
-       apply (insert prems)
-       apply (insert 1)
-      apply (rule prems)
-    apply (rule exI)
-    apply (rule exI)
-    thm arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, THEN 1, rotated -1, THEN exE]
-    apply (drule arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, THEN 1, rotated -1])
-      prefer 3
-      apply safe
-    thm exE
-    subgoal premises prems
-      apply (rule exI)+
-      apply (rule conjI[rotated])+
-      prefer 4
-      using prems(2) 
-    apply (drule arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, THEN 1, rotated -1])
-      prefer 3
-      apply (rule exI)+
-      apply (erule exE)
-
-*)
-  (*apply (rule exI)+
-  apply (rule conjI[rotated])
-   apply (rule conjI[rotated])
-  using assms(2) arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, OF _ _ assms(1), THEN 1, THEN exE]*)
-  (* subgoal premises prems for x1 x2
-    apply (rule exI)+
-    apply (rule conjI[rotated])
-     apply (rule conjI[rotated])
-      apply (rule exE)
-       apply (rule arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, OF _ _ prems, THEN 1])
-        prefer 3
-        apply (rule conjI)
-         apply (erule conjE)+
-         apply blast (* TODO fix *)
-
-         apply (rotate_tac 1)
-    apply (erule TrueE)
-    apply assumption
-    using arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, OF _ _ prems, THEN 1]
-    thm 1 prems arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1, OF _ _ prems, THEN 1]
-    thm prems trans fun_cong arg_cong2[of _  _ _ _ "\<phi>", THEN iffD1] iffD1
-    apply (rule exI)+
-    apply (rule conjI)
-     prefer 2
-     apply (rule conjI)
-      prefer 2
-      apply (rule exE[OF 1])
-    apply
+  apply(rule alpha_term.coinduct[of \<phi>, OF 0])  
+  subgoal for x1 x2
+    apply (rule raw_term.exhaust[of x1])
+    apply (rule raw_term.exhaust[of x2])
+    apply hypsubst_thin
+    apply (drule 1)
     apply (erule exE)
-    apply (rule 1)
-    using 1 prems *)
-  using 1 apply auto subgoal for t1 t2
-    apply (cases t1)
-    apply (cases t2)
-    apply auto
+    apply (rule exI)+
+    apply (rule conjI, rule refl)+
+    apply assumption
     done
   done
 
+thm alpha_bijs[rotated -1, OF alpha_refls] (* TODO: Maybe use this directly *)
 lemma alpha_cong:
   fixes u v :: "'a::var \<Rightarrow> 'a"
   assumes u: "bij u" "|supp u| <o |UNIV::'a set|" and v: "bij v" "|supp v| <o |UNIV::'a set|" 

@@ -91,7 +91,7 @@ fun mr_mk_comp_map_comp0_tac ctxt Gmap_comp0 Gmap_cong0 map_comp0s G = EVERY1 [
     REPEAT_DETERM o assume_tac ctxt,
     rtac ctxt Gmap_cong0,
     REPEAT_DETERM o FIRST' [
-      resolve_tac ctxt @{thms supp_id_bound bij_id refl},
+      resolve_tac ctxt (@{thms supp_id_bound bij_id bij_comp refl} @ [MRBNF_Def.supp_comp_bound_of_mrbnf G]),
       assume_tac ctxt,
       resolve_tac ctxt (map (fn thm => thm RS fun_cong RS sym) map_comp0s)
     ]

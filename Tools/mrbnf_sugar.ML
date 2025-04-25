@@ -422,15 +422,17 @@ fun create_binder_datatype (spec : spec) lthy =
         K (Local_Defs.unfold0_tac ctxt (
           @{thms sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right comp_def
             UN_singleton sum_set_simps prod_set_simps UN_single UN_empty disjoint_single
+            Int_Un_distrib2 Un_empty
           } @ map (Thm.symmetric o snd) ctors
           @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
           @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
         )),
+        K (ALLGOALS (REPEAT_DETERM o etac ctxt conjE)),
         K (TRYALL (REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_asm_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
         ])),
-        K (Local_Defs.unfold0_tac ctxt @{thms UN_empty UN_empty2 Un_empty_left Un_empty_right}),
+        K (Local_Defs.unfold0_tac ctxt @{thms UN_empty UN_empty2 UN_singleton Un_empty_left Un_empty_right}),
         EVERY' (map (fn thm => Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
           rtac ctxt thm,
           REPEAT_DETERM o FIRST' (map (fn IH => SELECT_GOAL (EVERY1 [
@@ -683,30 +685,32 @@ fun create_binder_datatype (spec : spec) lthy =
             K (Local_Defs.unfold0_tac ctxt vvsubst_permutes),
             REPEAT_DETERM o rtac ctxt exI,
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
-            hyp_subst_tac ctxt,
-            REPEAT_DETERM o EVERY' [
-              resolve_tac ctxt (map map_cong0_of_mr_bnf mr_bnfs),
-              REPEAT_DETERM o FIRST' [
-                resolve_tac ctxt @{thms refl supp_id_bound bij_id},
-                assume_tac ctxt,
-                EVERY' [
-                  rtac ctxt @{thm trans[OF id_apply]},
-                  rtac ctxt sym,
-                  etac ctxt @{thm id_onD},
-                  REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm UN_I})
-                ],
-                SELECT_GOAL (EVERY1 [
-                  K (Local_Defs.unfold0_tac ctxt (@{thms image_Un image_single[symmetric] Union_Un_distrib} @ set_simp_thms)),
+            REPEAT_DETERM o (assume_tac ctxt ORELSE' EVERY' [
+              hyp_subst_tac ctxt,
+              rtac ctxt refl ORELSE' (REPEAT_DETERM1 o EVERY' [
+                resolve_tac ctxt (map map_cong0_of_mr_bnf mr_bnfs),
+                REPEAT_DETERM o FIRST' [
+                  resolve_tac ctxt @{thms refl supp_id_bound bij_id},
                   assume_tac ctxt,
-                  IF_UNSOLVED o K no_tac
-                ])
-              ]
-            ],
+                  EVERY' [
+                    rtac ctxt @{thm trans[OF id_apply]},
+                    rtac ctxt sym,
+                    etac ctxt @{thm id_onD},
+                    REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm UN_I})
+                  ],
+                  SELECT_GOAL (EVERY1 [
+                    K (Local_Defs.unfold0_tac ctxt (@{thms image_Un image_single[symmetric] Union_Un_distrib} @ set_simp_thms)),
+                    assume_tac ctxt,
+                    IF_UNSOLVED o K no_tac
+                  ])
+                ]
+              ])
+            ]),
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             REPEAT_DETERM o rtac ctxt exI,
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
             REPEAT_DETERM o FIRST' [
-              resolve_tac ctxt @{thms supp_id_bound bij_id id_on_empty id_on_id conjI},
+              resolve_tac ctxt @{thms refl supp_id_bound bij_id id_on_empty id_on_id conjI},
               assume_tac ctxt,
               SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map (fn thm => thm RS sym) vvsubst_permutes)) THEN' assume_tac ctxt
             ]
@@ -879,7 +883,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val thms = @{thms prod.set_map sum.set_map prod_set_simps sum_set_simps UN_empty UN_empty2
       Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
-      UN_single
+      UN_single Int_Un_distrib Int_Un_distrib2 Un_empty notin_Un
     };
     val nvars = length vars;
     fun mk_map_simps lthy do_permute do_noclash plives' fs mk_supp_bound_opt mk_imsupp_opt mk_extra_prems extra_apply_args mapx tac =
@@ -980,32 +984,26 @@ fun create_binder_datatype (spec : spec) lthy =
             NONE => false
             | SOME t => HOLogic.dest_setT (fastype_of t) = T
           ) fs;
-          val imsupp_prems = maps (map_filter (fn t => case Term.subst_atomic_types replace t of
-              (Const (@{const_name Set.insert}, _) $ (t as Free (_, T)) $ _) => (case get_fs T of
-                [] => NONE
-                | xs => SOME (HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, foldl1 mk_Un (map (fn f => the (mk_imsupp_opt f T)) xs))))))
+          val imsupp_prems = maps (maps (fn t => case Term.subst_atomic_types replace t of
+              (Const (@{const_name Set.insert}, _) $ (t as Free (_, T)) $ _) =>
+                map (fn f => HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (t, the (mk_imsupp_opt f T))))) (get_fs T)
               | t =>
                 let val T = HOLogic.dest_setT (fastype_of t);
-                in case get_fs T of
-                  [] => NONE
-                  | xs => SOME (HOLogic.mk_Trueprop (mk_int_empty (t, foldl1 mk_Un (map (fn f => the (mk_imsupp_opt f T)) xs))))
-                end
+                in map (fn f => HOLogic.mk_Trueprop (mk_int_empty (t, the (mk_imsupp_opt f T)))) (get_fs T) end
           )) bound_sets;
 
-          val collect_sets = map (fn s => case s of [] => NONE | xs => SOME (Term.subst_atomic_types replace (foldl1 MRBNF_Util.mk_Un xs)))
-          val bound_sets' = collect_sets bound_sets;
           val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (map snd (#binding_rel spec)))) rec_vars;
-          val free_sets = collect_sets (mk_sets frees free_rec_vars (SOME (#FVarss quotient)));
+          val free_sets = map (map (Term.subst_atomic_types replace)) (mk_sets frees free_rec_vars (SOME (#FVarss quotient)));
+
+          val bound_sets' = map (map (Term.subst_atomic_types replace)) bound_sets;
 
           val noclash_prems = if do_noclash then
-            map_filter (Option.map HOLogic.mk_Trueprop) (map2 (fn a => fn b => case (a, b) of
-              (SOME (Const (@{const_name Set.insert}, _) $ x $ _), SOME (Const (@{const_name Set.insert}, _) $ y $ _)) =>
-                SOME (HOLogic.mk_not (HOLogic.mk_eq (x, y)))
-              | (SOME (Const (@{const_name Set.insert}, _) $ x $ _), SOME ys) => SOME (HOLogic.mk_not (HOLogic.mk_mem (x, ys)))
-              | (SOME xs, SOME (Const (@{const_name Set.insert}, _) $ y $ _)) => SOME (HOLogic.mk_not (HOLogic.mk_mem (y, xs)))
-              | (SOME free, SOME bound) => SOME (mk_int_empty (free, bound))
-              | _ => NONE
-            ) bound_sets' free_sets)
+            maps (map HOLogic.mk_Trueprop) (map2 (fn fsets => maps (fn b => map (fn fset => case (fset, b) of
+              (Const (@{const_name Set.insert}, _) $ x $ _, Const (@{const_name Set.insert}, _) $ y $ _) => HOLogic.mk_not (HOLogic.mk_eq (y, x))
+              | (Const (@{const_name Set.insert}, _) $ x $ _, ys) => HOLogic.mk_not (HOLogic.mk_mem (x, ys))
+              | (xs, Const (@{const_name Set.insert}, _) $ y $ _) => HOLogic.mk_not (HOLogic.mk_mem (y, xs))
+              | (free, bound) => mk_int_empty (bound, free)
+            ) fsets)) free_sets bound_sets')
           else [];
 
           val rhs = if length ts = 1 andalso member (op=) frees (hd tys)
@@ -1035,8 +1033,10 @@ fun create_binder_datatype (spec : spec) lthy =
             #Abs_inverse (snd info) OF @{thms UNIV_I},
             snd (#noclash (hd (#quotient_fps res)))
           ])),
+          REPEAT_DETERM o etac ctxt conjE,
           REPEAT_DETERM o FIRST' [
             resolve_tac ctxt (@{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+              trans[OF Int_commute iffD2[OF disjoint_single]]
               supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
             } @ prems),
             EVERY' [
@@ -1124,8 +1124,9 @@ fun create_binder_datatype (spec : spec) lthy =
                   K (Local_Defs.unfold0_tac ctxt thms)
                 ])),
                 REPEAT_DETERM o resolve_tac ctxt (
-                  @{thms Int_empty_left Int_empty_right iffD2[OF disjoint_single] iffD2[OF notin_empty_eq_True TrueI] conjI} @ prems
-                ),
+                  @{thms conjI Int_empty_left Int_empty_right iffD2[OF disjoint_single]
+                  trans[OF Int_commute iffD2[OF disjoint_single]] iffD2[OF notin_empty_eq_True TrueI] conjI
+                } @ prems),
                 REPEAT_DETERM o EVERY' [
                   rtac ctxt @{thm notI},
                   etac ctxt exE,

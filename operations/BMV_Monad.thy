@@ -204,6 +204,46 @@ lemma Vrs_Un: "FVars_LM t = Vrs_1 t \<union> Vrs_2 t"
      apply auto
   done
 
+lemma IImsupp_Diff_Vrs_1: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Union>a\<in>A - B. Vrs_1 (h a)) = (\<Union>a\<in>A. Vrs_1 (h a)) - B"
+apply (rule set_eqI)
+  apply (rule iffI)
+   apply (erule UN_E)
+   apply (erule DiffE)
+  subgoal for x a
+    apply (rule case_split[of "h a = Var a"])
+     apply simp
+    apply (rule DiffI)
+     apply (rule UN_I)
+      apply assumption
+     apply assumption
+    apply (drule LM.in_IImsupp[unfolded VVr_eq_Var_LM Vrs_Un])
+     apply (erule UnI1)
+    apply blast
+    done
+  apply (erule DiffE)
+  apply (erule UN_E)
+  subgoal for x a
+    apply (rule case_split[of "h a = Var a"])
+    apply fastforce
+  apply (rule UN_I[rotated])
+   apply assumption
+  apply (rule DiffI)
+     apply assumption
+    apply (frule LM.in_IImsupp[unfolded VVr_eq_Var_LM Vrs_Un])
+     apply (erule UnI1)
+apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+    apply (erule impE)
+     prefer 2
+     apply assumption
+    apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM)
+    apply (rule UnI1)
+    apply (rule CollectI)
+    apply assumption
+    done
+  done
+
 lemma IImsupp_Diff_Vrs_2: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Union>a\<in>A - B. Vrs_2 (h a)) = (\<Union>a\<in>A. Vrs_2 (h a)) - B"
   apply (rule set_eqI)
   apply (rule iffI)
@@ -232,17 +272,46 @@ lemma IImsupp_Diff_Vrs_2: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Uni
    apply assumption
   apply (rule DiffI)
      apply assumption
-    apply (drule LM.in_IImsupp[unfolded VVr_eq_Var_LM Vrs_Un])
+    apply (frule LM.in_IImsupp[unfolded VVr_eq_Var_LM Vrs_Un])
      apply (erule UnI2)
-    
+apply (drule trans[OF Int_commute])
+     apply (drule iffD1[OF disjoint_iff])
+     apply (erule allE)
+    apply (erule impE)
+     prefer 2
+     apply assumption
+    apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM)
+    apply (rule UnI1)
+    apply (rule CollectI)
+    apply assumption
+    done
+  done
 
-lemma FVars_tvsubst_LM:
+lemma Vrs_1_Sb_LM:
+  fixes f1::"'a::var \<Rightarrow> 'a"
+  assumes "|supp f1| <o |UNIV::'a set|" "|SSupp_LM f2| <o |UNIV::'a set|"
+  shows "Vrs_1 (Sb_LM f1 f2 t) = f1 ` Vrs_1 t \<union> (\<Union>x\<in>Vrs_2 t. Vrs_1 (f2 x))"
+proof (binder_induction t avoiding: "imsupp f1" "IImsupp_LM f2" rule: LM.strong_induct)
+  case (Lam x1 x2)
+  then show ?case
+    apply simp
+    apply (unfold Un_Diff)
+    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
+     apply (simp add: imsupp_def supp_def)
+     apply fastforce
+    apply (rule sym)
+    apply (rule IImsupp_Diff_Vrs_1)
+    apply blast
+    done
+qed (auto simp: assms imsupp_supp_bound infinite_UNIV)
+
+lemma Vrs_2_Sb_LM:
   fixes f1::"'a::var \<Rightarrow> 'a"
   assumes "|supp f1| <o |UNIV::'a set|" "|SSupp_LM f2| <o |UNIV::'a set|"
   shows "Vrs_2 (Sb_LM f1 f2 t) = (\<Union>x\<in>Vrs_2 t. Vrs_2 (f2 x))"
 proof (binder_induction t avoiding: "imsupp f1" "IImsupp_LM f2" rule: LM.strong_induct)
   case (Lst x)
-  then show ?case apply auto sorry
+  then show ?case by auto
 next
   case (App x1 x2)
   then show ?case by simp
@@ -252,10 +321,9 @@ next
     apply (subst Sb_LM_simp4)
       apply assumption+
     apply (unfold Vrs_2_simp4 Lam)
-    thm LM.IImsupp_Diff[no_vars]
-
-    sorry
-qed (auto simp: assms imsupp_supp_bound infinite_UNIV )
+    apply (rule IImsupp_Diff_Vrs_2[symmetric])
+    by blast
+qed (auto simp: assms imsupp_supp_bound infinite_UNIV)
 
 lemma IImsupp_o: "IImsupp_LM (Sb_LM g \<rho>' \<circ> \<rho>) \<subseteq> imsupp g \<union> IImsupp_LM \<rho>' \<union> IImsupp_LM \<rho>"
   apply (rule subsetI)

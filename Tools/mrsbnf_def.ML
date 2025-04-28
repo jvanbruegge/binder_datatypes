@@ -16,9 +16,6 @@ signature MRSBNF_DEF = sig
     map_Sb_strong: thm
   };
 
-  val id_bmv_monad: BMV_Monad_Def.bmv_monad
-  val mk_id_bmv_monad: string * sort -> BMV_Monad_Def.bmv_monad
-
   val bmv_monad_of_mrsbnf: mrsbnf -> BMV_Monad_Def.bmv_monad
   val mrbnfs_of_mrsbnf: mrsbnf -> MRBNF_Def.mrbnf list
   val axioms_of_mrsbnf: mrsbnf -> thm mrsbnf_axioms list
@@ -28,15 +25,13 @@ signature MRSBNF_DEF = sig
 
   val mrsbnf_def: (theory -> BNF_Def.fact_policy) -> (binding -> binding) -> string option
     -> MRBNF_Def.mrbnf list -> BMV_Monad_Def.bmv_monad -> (Proof.context -> tactic) mrsbnf_axioms list
-    -> local_theory -> mrsbnf * local_theory
+    -> local_theory -> mrsbnf * local_theory;
+
+  val mrsbnf_of_bnf: BNF_Def.bnf -> local_theory -> mrsbnf * local_theory;
 
   val register_mrsbnf: string -> mrsbnf -> local_theory -> local_theory;
   val mrsbnf_of_generic: Context.generic -> string -> mrsbnf option;
   val mrsbnf_of: Proof.context -> string -> mrsbnf option;
-
-  val pbmv_monad_of_typ: bool -> BNF_Def.inline_policy -> (theory -> BNF_Def.fact_policy)
-    -> (string * sort) list -> (binding -> binding) -> typ -> (thm list * local_theory)
-    -> BMV_Monad_Def.bmv_monad option * (thm list * local_theory)
 end
 
 structure MRSBNF_Def : MRSBNF_DEF = struct
@@ -104,12 +99,6 @@ fun morph_mrsbnf phi (MRSBNF {
   facts = map (morph_mrsbnf_facts phi) facts
 }
 
-val id_bmv_monad = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Monad.ID");
-
-fun mk_id_bmv_monad free = BMV_Monad_Def.morph_bmv_monad (
-  MRBNF_Util.subst_typ_morphism [(hd (hd (BMV_Monad_Def.frees_of_bmv_monad id_bmv_monad)), TFree free)]
-) id_bmv_monad;
-
 fun Rep_mrsbnf (MRSBNF x) = x
 
 val bmv_monad_of_mrsbnf = #pbmv_monad o Rep_mrsbnf
@@ -123,9 +112,9 @@ structure Data = Generic_Data (
   fun merge data : T = Symtab.merge (K true) data;
 );
 
-fun register_mrsbnf name bmv =
+fun register_mrsbnf name mrsbnf =
   Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
-    (fn phi => Data.map (Symtab.update (name, morph_mrsbnf phi bmv)));
+    (fn phi => Data.map (Symtab.update (name, morph_mrsbnf phi mrsbnf)));
 
 fun mrsbnf_of_generic context =
   Option.map (morph_mrsbnf (Morphism.transfer_morphism (Context.theory_of context)))
@@ -136,7 +125,7 @@ val mrsbnf_of = mrsbnf_of_generic o Context.Proof;
 fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
   let
     val bmv = bmv_monad_of_mrsbnf mrsbnf;
-    val name = case name_opt of
+    fun name () = case name_opt of
       NONE => fst (dest_Type (nth (BMV_Monad_Def.ops_of_bmv_monad bmv) (BMV_Monad_Def.leader_of_bmv_monad bmv)))
       | SOME b => b;
     val axioms = axioms_of_mrsbnf mrsbnf;
@@ -155,7 +144,7 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
          ("map_Sb_strong", map #map_Sb_strong facts, [])
         ]
         |> filter_out (null o #2)
-        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true (short_type_name name) (Binding.name thmN)), attrs), [(thms, [])]));
+        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true (short_type_name (name ())) (Binding.name thmN)), attrs), [(thms, [])]));
       in Local_Theory.notes notes lthy |>> append noted end
     val fact_policy = fact_policy (Proof_Context.theory_of lthy);
   in ([], lthy)
@@ -362,28 +351,33 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
             REPEAT_DETERM o resolve_tac ctxt prems,
             rtac ctxt trans,
             rtac ctxt (#Sb_comp bmv_axioms),
-            REPEAT_DETERM o resolve_tac ctxt (prems @ #SSupp_comp_bound bmv_facts @ #SSupp_Inj_bound bmv_facts),
-            REPEAT_DETERM o EVERY' [
-              EqSubst.eqsubst_tac ctxt [0] (map (fn ax => #map_is_Sb ax RS sym) axioms'),
-              REPEAT_DETERM o resolve_tac ctxt prems
-            ],
-            if count = 0 then K all_tac else rtac ctxt refl,
-            rtac ctxt sym,
-            rtac ctxt trans,
-            rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
-            rtac ctxt (#Sb_comp_right facts),
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound}
-              @ maps (map_filter I o #SSupp_map_bound) facts' @ prems @ #SSupp_comp_bound bmv_facts
-            ),
-            K (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
-            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym],
-            REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv} @ prems),
-            REPEAT_DETERM o EVERY' [
-              EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
-              resolve_tac ctxt prems
-            ],
-            K (Local_Defs.unfold0_tac ctxt (MRBNF_Def.map_id0_of_mrbnf mrbnf :: @{thms id_o o_id})),
-            rtac ctxt refl
+            EVERY' [
+              rtac ctxt refl,
+              rtac ctxt refl
+            ] ORELSE' EVERY' [
+              REPEAT_DETERM o resolve_tac ctxt (prems @ #SSupp_comp_bound bmv_facts @ #SSupp_Inj_bound bmv_facts),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_tac ctxt [0] (map (fn ax => #map_is_Sb ax RS sym) axioms'),
+                REPEAT_DETERM o resolve_tac ctxt prems
+              ],
+              if count = 0 then K all_tac else rtac ctxt refl,
+              rtac ctxt sym,
+              rtac ctxt trans,
+              rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
+              rtac ctxt (#Sb_comp_right facts),
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_inv_bound}
+                @ maps (map_filter I o #SSupp_map_bound) facts' @ prems @ #SSupp_comp_bound bmv_facts
+              ),
+              K (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
+              EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym],
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_inv_bound bij_imp_bij_inv} @ prems),
+              REPEAT_DETERM o EVERY' [
+                EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
+                resolve_tac ctxt prems
+              ],
+              K (Local_Defs.unfold0_tac ctxt (MRBNF_Def.map_id0_of_mrbnf mrbnf :: @{thms id_o o_id})),
+              rtac ctxt refl
+            ]
           ]) end;
       in {
         SSupp_map_subset = #SSupp_map_subset facts,
@@ -552,51 +546,16 @@ fun mrsbnf_def fact_policy qualify name_opt mrbnfs bmv tacs lthy =
     val (axioms, vars, mrbnfs, bmv) = prove_axioms mrbnfs bmv tacs lthy;
   in mk_mrsbnf fact_policy qualify vars name_opt mrbnfs bmv axioms lthy end
 
-fun pbmv_monad_of_typ _ _ _ xs _ (TFree x) accum = if member (op=) xs x
-    then (NONE, accum) else (SOME (mk_id_bmv_monad x), accum)
-  | pbmv_monad_of_typ _ _ _ _ _ (TVar _) _ = error "unexpected schematic variable"
-  | pbmv_monad_of_typ optim const_policy inline_policy xs qualify' (T as Type (n, Ts)) (accum, lthy) =
-    let val (bmv_opt, lthy) = case BMV_Monad_Def.pbmv_monad_of lthy n of
-      SOME bmv => (SOME bmv, lthy)
-      | NONE => case BNF_Def.bnf_of lthy n of
-        SOME bnf =>
-          let val (bmv, lthy) = BMV_Monad_Def.pbmv_monad_of_bnf bnf lthy
-          in (SOME bmv, BMV_Monad_Def.register_pbmv_monad n bmv lthy) end
-        | NONE => (NONE, lthy);
-    in case bmv_opt of
-      NONE => (NONE, (accum, lthy))
-      | SOME bmv => if null (nth (BMV_Monad_Def.lives_of_bmv_monad bmv) (BMV_Monad_Def.leader_of_bmv_monad bmv)) then
-          let val T = nth (BMV_Monad_Def.ops_of_bmv_monad bmv) (BMV_Monad_Def.leader_of_bmv_monad bmv)
-          in (SOME (BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism (
-            rev (map TFree (Term.add_tfreesT T []) @ map TVar (Term.add_tvarsT T [])) ~~ Ts
-          )) bmv), (accum, lthy)) end
-        else let
-          val name = Long_Name.base_name n;
-
-          fun qualify i =
-              let val namei = name ^ nonzero_string_of_int i;
-              in qualify' o Binding.qualify true namei end;
-
-          val leader = BMV_Monad_Def.leader_of_bmv_monad bmv;
-          val T = nth (BMV_Monad_Def.ops_of_bmv_monad bmv) leader;
-          val bmv = BMV_Monad_Def.morph_bmv_monad (
-            MRBNF_Util.subst_typ_morphism (snd (dest_Type T) ~~ Ts)
-          ) bmv;
-          val bmv = BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism (
-             nth (BMV_Monad_Def.lives'_of_bmv_monad bmv) leader ~~ nth (BMV_Monad_Def.lives_of_bmv_monad bmv) leader
-          )) bmv;
-          val live_Ts = nth (BMV_Monad_Def.lives_of_bmv_monad bmv) leader;
-
-          val qualifies = map qualify (1 upto length live_Ts);
-          val (bmv_opts, (accum, lthy)) = @{fold_map 2} (pbmv_monad_of_typ optim const_policy inline_policy xs) qualifies live_Ts (accum, lthy)
-          val bmvs = map2 (fn T => fn NONE => Inr T | SOME bmv => Inl bmv) live_Ts bmv_opts;
-        in if exists Option.isSome bmv_opts then
-          let val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad (qualify 0) bmv bmvs lthy;
-          in (SOME bmv, (unfold_set @ accum, lthy)) end
-        else
-          (NONE, (accum, lthy))
-        end
-    end;
+fun mrsbnf_of_bnf bnf lthy =
+  let
+    val (mrbnf, lthy) = MRBNF_Def.mrbnf_of_bnf bnf lthy;
+    val (bmv, lthy) = BMV_Monad_Def.pbmv_monad_of_bnf bnf lthy;
+  in mrsbnf_def (K BNF_Def.Dont_Note) I NONE [mrbnf] bmv [{
+    map_Sb = SOME (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms id_o o_id} THEN rtac ctxt refl 1),
+    map_is_Sb = fn ctxt => rtac ctxt (BNF_Def.map_id0_of_bnf bnf) 1,
+    set_Sb = replicate (BNF_Def.live_of_bnf bnf) (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms id_apply} THEN rtac ctxt refl 1),
+    set_Vrs = []
+  }] lthy end;
 
 fun mrsbnf_cmd (b, Ts) lthy =
   let

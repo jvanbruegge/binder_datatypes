@@ -868,27 +868,6 @@ fun create_binder_datatype (spec : spec) lthy =
       K (Local_Defs.unfold0_tac ctxt (@{thms sum.inject} @ [#Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}])),
       assume_tac ctxt
     ];
-    fun eta_compl_free_tac ctxt = EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt (
-        @{thms comp_def sum.set_map UN_empty2 Un_empty_right Un_empty_left UN_singleton}
-        @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
-      )),
-      Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
-        rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#Abs_cases (snd info))) 1
-      ) ctxt,
-      hyp_subst_tac ctxt,
-      K (Local_Defs.unfold0_tac ctxt (@{thms image_iff bex_UNIV}
-        @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}]
-      )),
-      etac ctxt @{thm contrapos_np},
-      dtac ctxt @{thm iffD2[OF ex_in_conv]},
-      etac ctxt exE,
-      REPEAT_DETERM o etac ctxt @{thm UN_E},
-      REPEAT_DETERM o eresolve_tac ctxt @{thms setl.cases setr.cases},
-      hyp_subst_tac ctxt,
-      rtac ctxt exI,
-      rtac ctxt refl
-    ];
     fun eta_natural_tac ctxt = EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps}
         @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, MRBNF_Def.map_def_of_mrbnf pre_mrbnf]
@@ -899,7 +878,6 @@ fun create_binder_datatype (spec : spec) lthy =
     val tvsubst_axioms = {
       eta_free = eta_free_tac,
       eta_inj = eta_inj_tac,
-      eta_compl_free = eta_compl_free_tac,
       eta_natural = eta_natural_tac
     };
     val tvsubst_model = {
@@ -999,7 +977,8 @@ fun create_binder_datatype (spec : spec) lthy =
           val gs = map mk_map tys;
           val ts = map2 (fn g => fn x => case g of
             Const ("Fun.id", _) => x
-            | _ => g $ x
+            | _ => let val T = body_type (fastype_of g)
+                   in if fastype_of x = T orelse T = qT then g $ x else x end
           ) gs xs;
 
           fun mk_sets vars recs FVars_opt =

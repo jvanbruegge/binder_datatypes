@@ -271,6 +271,19 @@ lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
 
 lemma finite_singleton: "finite {x}" by blast
 
+lemma UN_Diff_distrib:
+assumes "(\<forall>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<longrightarrow> V (h a) \<subseteq> {a})"
+shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+using assms apply safe
+  apply blast
+  apply (metis Int_emptyD singletonD subset_eq)
+  by fastforce
+
+lemma UN_Diff_distrib':
+  assumes "\<And>a. V (g a) \<subseteq> {a}" "\<And>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<Longrightarrow> h a = g a"
+  shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+apply(rule UN_Diff_distrib) using assms by metis
+
 lemma ex_avoiding_bij:
   fixes f :: "'a \<Rightarrow> 'a" and I D A :: "'a set"
   assumes  "|supp f| <o |UNIV :: 'a set|" "bij f" "infinite (UNIV :: 'a set)"

@@ -207,16 +207,21 @@ lemma Vrs_Un: "FVars_LM t = Vrs_1 t \<union> Vrs_2 t"
 
 (* *)
 lemma syntax_independent: 
-assumes "\<And>a. V (g a) \<subseteq> {a}" "(\<forall>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<longrightarrow> h a = g a)"
+assumes "(\<forall>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<longrightarrow> V (h a) \<subseteq> {a})"
 shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
 using assms apply safe
-  apply blast  
+  apply blast   
   apply (metis Int_emptyD singletonD subset_eq)  
   by fastforce 
 
+(* better for instantiation: *)
+lemma syntax_independent': 
+assumes "\<And>a. V (g a) \<subseteq> {a}" "(\<forall>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<longrightarrow> h a = g a)"
+shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+apply(rule syntax_independent) using assms by metis
 
 lemma IImsupp_Diff_Vrs_1: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Union>a\<in>A - B. Vrs_1 (h a)) = (\<Union>a\<in>A. Vrs_1 (h a)) - B"
-apply(rule syntax_independent[where g = Var]) unfolding IImsupp_LM_def SSupp_LM_def Vrs_Un by auto  
+apply(rule syntax_independent'[where g = Var]) unfolding IImsupp_LM_def SSupp_LM_def Vrs_Un by auto  
 (* apply (rule set_eqI)
   apply (rule iffI)
    apply (erule UN_E)
@@ -258,7 +263,7 @@ apply (drule trans[OF Int_commute])
 *)
 
 lemma IImsupp_Diff_Vrs_2: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Union>a\<in>A - B. Vrs_2 (h a)) = (\<Union>a\<in>A. Vrs_2 (h a)) - B"
-apply(rule syntax_independent[where g = Var]) unfolding IImsupp_LM_def SSupp_LM_def Vrs_Un by auto  
+apply(rule syntax_independent'[where g = Var]) unfolding IImsupp_LM_def SSupp_LM_def Vrs_Un by auto  
 (* 
   apply (rule set_eqI)
   apply (rule iffI)

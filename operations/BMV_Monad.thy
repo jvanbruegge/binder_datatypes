@@ -28,7 +28,7 @@ abbreviation Inj_FType_1 :: "'tyvar::var \<Rightarrow> 'tyvar FType" where "Inj_
 abbreviation Sb_FType :: "('tyvar::var \<Rightarrow> 'tyvar FType) \<Rightarrow> 'tyvar FType \<Rightarrow> 'tyvar FType" where "Sb_FType \<equiv> tvsubst_FType"
 abbreviation Vrs_FType_1 :: "'tyvar::var FType \<Rightarrow> 'tyvar set" where "Vrs_FType_1 \<equiv> FVars_FType"
 
-lemma VVr_eq_Var: "tvVVr_tvsubst_FType = TyVar"
+lemma VVr_eq_Var_FType: "tvVVr_tvsubst_FType = TyVar"
   unfolding tvVVr_tvsubst_FType_def TyVar_def comp_def tv\<eta>_FType_tvsubst_FType_def by (rule refl)
 
 lemma SSupp_Inj_FType[simp]: "SSupp_FType Inj_FType_1 = {}" unfolding SSupp_FType_def tvVVr_tvsubst_FType_def TyVar_def tv\<eta>_FType_tvsubst_FType_def by simp
@@ -97,8 +97,8 @@ lemma Sb_cong_FType:
   shows "Sb_FType \<rho>'' t = Sb_FType \<rho>' t"
 using assms(3) proof (binder_induction t avoiding: "IImsupp_FType \<rho>''" "IImsupp_FType \<rho>'" rule: FType.strong_induct)
   case (TyAll x1 x2)
-  then show ?case using assms apply auto
-    by (smt (verit, ccfv_threshold) CollectI IImsupp_FType_def SSupp_FType_def Un_iff)
+  then show ?case using assms apply (auto simp: FType.permute_id)
+    by (metis (mono_tags, lifting) CollectI IImsupp_FType_def SSupp_FType_def Un_iff)
 qed (auto simp: assms(1-2))
 
 lemma map_is_Sb_FType:
@@ -113,7 +113,7 @@ lemma map_is_Sb_FType:
   next
     case (TyAll x1 x2)
     then have 1: "x1 \<notin> SSupp_FType (Inj_FType_1 \<circ> f)"
-      by (simp add: SSupp_FType_def VVr_eq_Var not_in_imsupp_same)
+      by (simp add: SSupp_FType_def VVr_eq_Var_FType not_in_imsupp_same)
     then have "x1 \<notin> IImsupp_FType (Inj_FType_1 \<circ> f)"
       unfolding IImsupp_FType_def Un_iff de_Morgan_disj
       apply (rule conjI)
@@ -131,23 +131,16 @@ ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
 local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
 
-pbmv_monad ID: "'a::var"
-  Sbs: "id :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a::var"
-  Injs: "id :: 'a \<Rightarrow> 'a::var"
-  SSupps: "supp :: ('a \<Rightarrow> 'a) \<Rightarrow> 'a::var set"
-  Vrs: "\<lambda>(x::'a::var). {x}"
-  bd: natLeq
-  by (auto simp: ID.set_bd infinite_regular_card_order_natLeq supp_def)
-print_theorems
-
 ML_file \<open>../Tools/mrsbnf_def.ML\<close>
 
-mrsbnf ID: "'a::var"
-  unfolding id_def comp_def BNF_Composition.id_bnf_def
-  by (rule refl)
-print_theorems
+local_setup \<open>fn lthy =>
+  let
+    val (live_id_mrsbnf, lthy) = MRSBNF_Def.mrsbnf_of_bnf (the (BNF_Def.bnf_of lthy "BNF_Composition.ID")) lthy;
+    val lthy = MRSBNF_Def.register_mrsbnf "BNF_Composition.ID" live_id_mrsbnf lthy;
+  in lthy end
+\<close>
 
-pbmv_monad "'a::var FType"
+pbmv_monad "'tv::var FType"
   Sbs: tvsubst_FType
   Injs: TyVar
   SSupps: SSupp_FType
@@ -169,6 +162,149 @@ mrsbnf "'a::var FType"
   apply (rule map_is_Sb_FType; assumption)
   done
 print_theorems
+
+binder_datatype 'a LM =
+  Var 'a
+  | Lst "'a list"
+  | App "'a LM" "'a LM"
+  | Lam x::'a t::"'a LM" binds x in t
+thm LM.subst
+
+axiomatization Vrs_1 :: "'a::var LM \<Rightarrow> 'a set" where
+  Vrs_1_simp1[simp]: "Vrs_1 (Var x) = {}"
+    and Vrs_1_simp2[simp]: "Vrs_1 (Lst xs) = set xs"
+    and Vrs_1_simp3[simp]: "Vrs_1 (App t1 t2) = Vrs_1 t1 \<union> Vrs_1 t2"
+    and Vrs_1_simp4[simp]: "Vrs_1 (Lam x t) = Vrs_1 t - {x}"
+axiomatization Vrs_2 :: "'a::var LM \<Rightarrow> 'a set" where
+  Vrs_2_simp1[simp]: "Vrs_2 (Var x) = {x}"
+    and Vrs_2_simp2[simp]: "Vrs_2 (Lst xs) = {}"
+    and Vrs_2_simp3[simp]: "Vrs_2 (App t1 t2) = Vrs_2 t1 \<union> Vrs_2 t2"
+    and Vrs_2_simp4[simp]: "Vrs_2 (Lam x t) = Vrs_2 t - {x}"
+
+axiomatization Sb_LM :: "('a::var \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a LM) \<Rightarrow> 'a LM \<Rightarrow> 'a LM" where
+  Sb_LM_simp1[simp]: "Sb_LM f1 f2 (Var x) = f2 x"
+  and Sb_LM_simp2[simp]: "Sb_LM f1 f2 (Lst xs) = Lst (map f1 xs)"
+  and Sb_LM_simp3[simp]: "Sb_LM f1 f2 (App t1 t2) = App (Sb_LM f1 f2 t1) (Sb_LM f1 f2 t2)"
+  and Sb_LM_simp4[simp]: "x \<notin> imsupp f1 \<Longrightarrow> x \<notin> IImsupp_LM f2 \<Longrightarrow> Sb_LM f1 f2 (Lam x t) = Lam x (Sb_LM f1 f2 t)"
+
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
+lemma VVr_eq_Var_LM[simp]: "tvVVr_tvsubst_LM = Var"
+  apply (unfold tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def comp_def Var_def)
+  apply (rule refl)
+  done
+lemma IImsupp_SSupp_bound[simp]: "( |IImsupp_LM (f::'a::var \<Rightarrow> _)| <o |UNIV::'a set| ) \<longleftrightarrow> ( |SSupp_LM f| <o |UNIV::'a set| )"
+  apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM)
+  by (meson LM.set_bd_UNIV UN_bound card_of_Un1 ordLeq_ordLess_trans type_copy_set_bd var_class.Un_bound)
+
+lemma Vrs_Un: "FVars_LM t = Vrs_1 t \<union> Vrs_2 t"
+  apply (induction t rule: LM.induct)
+     apply auto
+  done
+
+lemma IImsupp_Diff_Vrs_2: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Union>a\<in>A - B. Vrs_2 (h a)) = (\<Union>a\<in>A. Vrs_2 (h a)) - B"
+  apply (rule set_eqI)
+  apply (rule iffI)
+   apply (erule UN_E)
+   apply (erule DiffE)
+  subgoal for x a
+    apply (rule case_split[of "h a = Var a"])
+     apply simp
+     apply (rule bexI[of _ a])
+      apply simp
+     apply assumption
+    apply (rule DiffI)
+     apply (rule UN_I)
+      apply assumption
+     apply assumption
+    apply (drule LM.in_IImsupp[unfolded VVr_eq_Var_LM Vrs_Un])
+     apply (erule UnI2)
+    apply blast
+    done
+  apply (erule DiffE)
+  apply (erule UN_E)
+  subgoal for x a
+    apply (rule case_split[of "h a = Var a"])
+    apply fastforce
+  apply (rule UN_I[rotated])
+   apply assumption
+  apply (rule DiffI)
+     apply assumption
+    apply (drule LM.in_IImsupp[unfolded VVr_eq_Var_LM Vrs_Un])
+     apply (erule UnI2)
+    
+
+lemma FVars_tvsubst_LM:
+  fixes f1::"'a::var \<Rightarrow> 'a"
+  assumes "|supp f1| <o |UNIV::'a set|" "|SSupp_LM f2| <o |UNIV::'a set|"
+  shows "Vrs_2 (Sb_LM f1 f2 t) = (\<Union>x\<in>Vrs_2 t. Vrs_2 (f2 x))"
+proof (binder_induction t avoiding: "imsupp f1" "IImsupp_LM f2" rule: LM.strong_induct)
+  case (Lst x)
+  then show ?case apply auto sorry
+next
+  case (App x1 x2)
+  then show ?case by simp
+next
+  case (Lam x1 x2)
+  then show ?case
+    apply (subst Sb_LM_simp4)
+      apply assumption+
+    apply (unfold Vrs_2_simp4 Lam)
+    thm LM.IImsupp_Diff[no_vars]
+
+    sorry
+qed (auto simp: assms imsupp_supp_bound infinite_UNIV )
+
+lemma IImsupp_o: "IImsupp_LM (Sb_LM g \<rho>' \<circ> \<rho>) \<subseteq> imsupp g \<union> IImsupp_LM \<rho>' \<union> IImsupp_LM \<rho>"
+  apply (rule subsetI)
+  apply (unfold IImsupp_LM_def)
+  apply (erule UnE)
+   apply (unfold SSupp_LM_def VVr_eq_Var_LM mem_Collect_eq comp_def)[1]
+  subgoal for x
+    apply (rule case_split[of "\<rho> x = Var x"])
+     apply simp
+    by blast
+  apply (erule UN_E)
+  apply (unfold SSupp_LM_def VVr_eq_Var_LM mem_Collect_eq comp_def)[1]
+  
+
+  sorry
+
+pbmv_monad "'b::var LM"
+  Sbs: Sb_LM
+  RVrs: Vrs_1
+  Injs: Var
+  Vrs: Vrs_2
+  SSupps: SSupp_LM
+  bd: natLeq
+          apply (rule infinite_regular_card_order_natLeq)
+  
+         apply (rule ext)
+  subgoal for x
+    apply (rule LM.induct[of _ x])
+       apply auto
+    apply (rule trans[OF Sb_LM_simp4])
+    by (auto simp: imsupp_def supp_def IImsupp_LM_def SSupp_LM_def tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def Var_def)
+        apply fastforce
+
+       apply (unfold SSupp_LM_def tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def Var_def comp_def)[1]
+       apply (rule refl)
+
+      apply (rule ext)
+      apply (rule trans[OF comp_apply])
+  subgoal premises prems for g \<rho>' f \<rho> x
+    apply (binder_induction x avoiding: "imsupp g" "imsupp f" "IImsupp_LM \<rho>" "IImsupp_LM \<rho>'" rule: LM.strong_induct)
+           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_LM_def LM.set_bd_UNIV intro!: var_class.Un_bound var_class.UN_bound)[7]
+    apply (auto simp: prems)
+    apply (subst Sb_LM_simp4)
+      apply (rule contra_subsetD[OF imsupp_o])
+      apply blast
+     apply (rule contra_subsetD[OF IImsupp_o])
+     apply blast
+    apply (rule refl)
+    done
 
 typedef ('a1, 'a2, 'c1, 'c2) L' = "UNIV :: ('a1 * 'a1 * ('c1 + 'c2)) set"
   by (rule UNIV_witness)

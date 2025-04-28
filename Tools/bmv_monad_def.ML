@@ -334,10 +334,11 @@ fun pbmv_monad_of_generic context =
 
 val pbmv_monad_of = pbmv_monad_of_generic o Context.Proof;
 
-val mk_small_prems = map2 (fn rho => fn SSupp => HOLogic.mk_Trueprop (mk_ordLess
+fun mk_small_prems fs rhos SSupps = map (HOLogic.mk_Trueprop o mk_supp_bound) fs
+  @ map2 (fn rho => fn SSupp => HOLogic.mk_Trueprop (mk_ordLess
   (mk_card_of (the SSupp $ rho))
   (mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of rho))))
-));
+)) rhos SSupps;
 
 fun mk_bmv_monad_axioms ops consts SSupp_defs bmv_ops lthy =
   let
@@ -351,30 +352,37 @@ fun mk_bmv_monad_axioms ops consts SSupp_defs bmv_ops lthy =
         val (own_Injs, other_Injs) = partition (fn Inj => body_type (fastype_of Inj) = T) Injs;
         val is_own_Inj = map (curry (op=) T o body_type o fastype_of) Injs;
         val other_idxs = map (fn Inj => find_index (fn T => body_type (fastype_of Inj) = T) Ts) other_Injs;
-        val ((((rhos, rhos'), aa), x), _) = lthy
-          |> mk_Frees "\<rho>" (map fastype_of Injs)
+
+        val f_Ts = filter ((op=) o dest_funT) (fst (split_last (binder_types (fastype_of Sb))));
+
+        val ((((((fs, gs), rhos), rhos'), aa), x), _) = lthy
+          |> mk_Frees "f" f_Ts
+          ||>> mk_Frees "g" f_Ts
+          ||>> mk_Frees "\<rho>" (map fastype_of Injs)
           ||>> mk_Frees "\<rho>'" (map fastype_of Injs)
           ||>> mk_Frees "a" (map (fst o dest_funT o fastype_of) Injs)
           ||>> apfst hd o mk_Frees "x" [T];
         val nown = length own_Injs;
         val (own_rhos, other_rhos) = chop nown rhos;
 
-        val Sb_Inj = mk_Trueprop_eq (Term.list_comb (Sb, Injs), HOLogic.id_const T);
+        val f_ids = map (HOLogic.id_const o fst o dest_funT o fastype_of) fs;
 
-        val small_prems = mk_small_prems rhos SSupps;
-        val small_prems' = mk_small_prems rhos' SSupps;
+        val Sb_Inj = mk_Trueprop_eq (Term.list_comb (Sb, f_ids @ Injs), HOLogic.id_const T);
+
+        val small_prems = mk_small_prems fs rhos SSupps;
+        val small_prems' = mk_small_prems gs rhos' SSupps;
 
         val Sb_comp_Injs = map2 (fn Inj => fn rho =>
-          fold_rev Logic.all rhos (fold_rev (curry Logic.mk_implies) small_prems (mk_Trueprop_eq (
-            HOLogic.mk_comp (Term.list_comb (Sb, rhos), Inj), rho
+          fold_rev Logic.all (fs @ rhos) (fold_rev (curry Logic.mk_implies) small_prems (mk_Trueprop_eq (
+            HOLogic.mk_comp (Term.list_comb (Sb, fs @ rhos), Inj), rho
           )))
         ) own_Injs own_rhos;
 
-        val Sb_comp = fold_rev Logic.all (rhos' @ rhos) (
+        val Sb_comp = fold_rev Logic.all (gs @ rhos' @ fs @ rhos) (
           fold_rev (curry Logic.mk_implies) (small_prems @ small_prems') (mk_Trueprop_eq (
-            HOLogic.mk_comp (Term.list_comb (Sb, rhos'), Term.list_comb (Sb, rhos)),
-            Term.list_comb (Sb, map (fn rho => HOLogic.mk_comp (
-              Term.list_comb (Sb, rhos'), rho
+            HOLogic.mk_comp (Term.list_comb (Sb, gs @ rhos'), Term.list_comb (Sb, fs @ rhos)),
+            Term.list_comb (Sb, map2 (curry HOLogic.mk_comp) gs fs @ map (fn rho => HOLogic.mk_comp (
+              Term.list_comb (Sb, gs @ rhos'), rho
             )) own_rhos @ @{map 3} (fn rho => fn Sb => fn Injs =>
               HOLogic.mk_comp (Term.list_comb (Sb, map (fn Inj =>
                 case List.find (fn rho' => fastype_of rho' = fastype_of Inj) rhos' of
@@ -405,15 +413,15 @@ fun mk_bmv_monad_axioms ops consts SSupp_defs bmv_ops lthy =
             val Vrs' = hd (map_filter (Option.mapPartial (fn t =>
               if HOLogic.dest_setT (body_type (fastype_of t)) = var then SOME t else NONE
             )) (nth (nth Vrss idx) idx'));
-          in fold_rev Logic.all (rhos @ [x]) (
+          in fold_rev Logic.all (fs @ rhos @ [x]) (
             fold_rev (curry Logic.mk_implies) small_prems (mk_Trueprop_eq (
-              Vrs $ (Term.list_comb (Sb, rhos) $ x),
+              Vrs $ (Term.list_comb (Sb, fs @ rhos) $ x),
               mk_UNION (Vrs $ x) (Term.abs ("a", var) (Vrs' $ (rho $ Bound 0)))
             ))
           ) end
         ))) rhos Vrs;
 
-        val Sb_cong = fold_rev Logic.all (rhos @ rhos' @ [x]) (
+        val Sb_cong = fold_rev Logic.all (fs @ rhos @ gs @ rhos' @ [x]) (
           fold_rev (curry Logic.mk_implies) (small_prems @ small_prems' @ flat (@{map 3} (fn rho => fn rho' => map_filter (Option.map (fn Vrs =>
             let val a = the (List.find (fn t => fastype_of t = HOLogic.dest_setT (body_type (fastype_of Vrs))) aa)
             in Logic.all a (Logic.mk_implies (
@@ -421,8 +429,8 @@ fun mk_bmv_monad_axioms ops consts SSupp_defs bmv_ops lthy =
               mk_Trueprop_eq (rho $ a, rho' $ a)
             )) end
           ))) rhos rhos' Vrs)) (mk_Trueprop_eq (
-            Term.list_comb (Sb, rhos) $ x,
-            Term.list_comb (Sb, rhos') $ x
+            Term.list_comb (Sb, fs @ rhos) $ x,
+            Term.list_comb (Sb, gs @ rhos') $ x
           )
         ));
 
@@ -451,11 +459,14 @@ fun mk_param_axiom Map Supps SSupps Sb Injs Vrs bd lthy =
     val (f_Ts, T) = split_last (binder_types (fastype_of Map));
     val (lives, lives') = split_list (map dest_funT f_Ts);
 
+    val h_Ts = filter ((op=) o dest_funT) (fst (split_last (binder_types (fastype_of Sb))));
+
     val (Cs, _) = lthy
       |> mk_TFrees (length lives);
-    val ((((fs, gs), rhos), x), _) = lthy
+    val (((((fs, gs), hs), rhos), x), _) = lthy
       |> mk_Frees "f" (map2 (curry (op-->)) lives lives')
       ||>> mk_Frees "g" (map2 (curry (op-->)) lives' Cs)
+      ||>> mk_Frees "f" h_Ts
       ||>> mk_Frees "\<rho>" (map fastype_of Injs)
       ||>> apfst hd o mk_Frees "x" [T];;
 
@@ -498,7 +509,7 @@ fun mk_param_axiom Map Supps SSupps Sb Injs Vrs bd lthy =
       )));
 
     val Map_Sb = fold_rev Logic.all (fs @ rhos) (
-      fold_rev (curry Logic.mk_implies) (mk_small_prems rhos SSupps) (mk_Trueprop_eq (
+      fold_rev (curry Logic.mk_implies) (mk_small_prems hs rhos SSupps) (mk_Trueprop_eq (
         HOLogic.mk_comp (Term.list_comb (Map, fs), Term.list_comb (Sb, rhos)),
         HOLogic.mk_comp (Term.list_comb (
           Term.subst_atomic_types (lives ~~ lives') Sb, rhos
@@ -636,13 +647,13 @@ fun define_bmv_monad_consts const_policy fact_policy qualify leader ops lives' (
 
 fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
   let
-    val bmv_b = case bmv_b_opt of
+    fun bmv_b () = case bmv_b_opt of
       NONE => Binding.name (short_type_name (fst (dest_Type (nth (ops_of_bmv_monad bmv) (leader_of_bmv_monad bmv)))))
       | SOME b => b;
     fun tl_maybe (_::x::xs) = x::xs
       | tl_maybe xs = xs
 
-    val bmv_name = implode (tl (maps (fn x => [".", x]) (tl_maybe (String.tokens (fn c => c = #".") (Binding.name_of bmv_b)))));
+    fun bmv_name () = implode (tl (maps (fn x => [".", x]) (tl_maybe (String.tokens (fn c => c = #".") (Binding.name_of (bmv_b ()))))));
     val axioms = axioms_of_bmv_monad bmv;
     val facts = facts_of_bmv_monad bmv;
     val lfacts = nth facts (leader_of_bmv_monad bmv);
@@ -663,7 +674,7 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
          ("SSupp_comp_bound", #SSupp_comp_bound lfacts, [])
         ]
         |> filter_out (null o #2)
-        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true bmv_name (Binding.name thmN)), attrs), [(thms, [])]));
+        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true (bmv_name ()) (Binding.name thmN)), attrs), [(thms, [])]));
       in Local_Theory.notes notes lthy |>> append noted end
     val fact_policy = fact_policy lthy;
   in ([], lthy)
@@ -1243,19 +1254,43 @@ fun pbmv_monad_cmd (((((((b, ops), Sbs), Injs), SSupps_opt), Vrs), param_opt), b
       map (apply2 TFree) (Term.add_tfreesT (body_type (fastype_of Sb)) [] ~~ Term.add_tfreesT T [])
       @ map (apply2 TFree) (Term.add_tfreesT (snd (split_last (binder_types (fastype_of Sb)))) [] ~~ Term.add_tfreesT T [])
     ) Sb) (map (Syntax.read_term lthy) Sbs) ops;
-    val frees = map (distinct (op=) o map (fst o dest_funT) o fst o split_last o binder_types o fastype_of) Sbs;
-    val Injs = map (map (Syntax.read_term lthy)) Injs;
+
+    val f_Tss = map (fst o split_last o binder_types o fastype_of) Sbs;
+
+    val frees = map (distinct (op=) o map (fst o dest_funT)) f_Tss;
+    val Injs = map (map (fn s =>
+      let
+        val t = Syntax.read_term lthy s;
+        val T = case List.find (curry (op=) (fst (dest_Type (body_type (fastype_of t)))) o fst o dest_Type) ops of
+          NONE => raise TYPE ("An injection needs to return one of the operators of the BMV Monad, but "
+            ^ Syntax.string_of_term lthy t ^ " has type " ^ Syntax.string_of_typ lthy (fastype_of t) ^ ", operators are:", ops, [])
+          | SOME T => T;
+      in Term.subst_atomic_types (map (apply2 TFree) (Term.add_tfreesT (body_type (fastype_of t)) [] ~~ Term.add_tfreesT T [])) t end
+    )) (the_default (replicate (length ops) []) Injs);
+
+    val _ = @{map 4} (fn Sb => fn T => fn Injs => fn f_Ts => map (fn f_T => case List.find (curry (op=) f_T o fastype_of) Injs of
+      NONE => raise TYPE ("Expected injection of type " ^ Syntax.string_of_typ lthy f_T ^ " for operator " ^ Syntax.string_of_typ lthy T
+          ^ ". Substitution has type " ^ Syntax.string_of_typ lthy (fastype_of Sb) ^ ", but got injections:", map fastype_of Injs, [])
+      | _ => ()
+    ) (filter_out ((op=) o dest_funT) f_Ts)) Sbs ops Injs f_Tss;
+
     val SSupps = case SSupps_opt of
-      SOME SSupps => map (map (fn "_" => NONE | t => SOME (Syntax.read_term lthy t))) SSupps
+      SOME SSupps => map2 (fn Injs => fn SSupps => map2 (fn "_" => K NONE | t => fn Inj =>
+        let
+          val t = Syntax.read_term lthy t;
+          val t' = Term.subst_atomic_types (map (apply2 TFree) (Term.add_tfreesT (fst (dest_funT (fastype_of t))) [] ~~ Term.add_tfreesT (fastype_of Inj) [])) t;
+        in SOME t' end
+      ) (SSupps @ replicate (length Injs - length SSupps) "_") Injs) Injs (SSupps @ replicate (length Injs - length SSupps) [])
       | NONE => map (map (K NONE)) Injs;
-    val Vrs = map (map (map (fn "_" => NONE | t => SOME (Syntax.read_term lthy t)))) Vrs;
+
+    val Vrs = map (map (map (fn "_" => NONE | t => SOME (Syntax.read_term lthy t)))) (the_default [] Vrs);
     val Vrs = map2 (fn T => map (map (Option.map (fn Vrs => Term.subst_atomic_types (
       map (apply2 TFree) (Term.add_tfreesT (fst (dest_funT (fastype_of Vrs))) [] ~~ Term.add_tfreesT T [])
     ) Vrs)))) ops Vrs;
 
     val b = if Binding.is_empty b then fst (dest_Type (hd ops)) else Local_Theory.full_name lthy b
 
-    val vars = distinct (op=) (map TFree (fold Term.add_tfreesT ops []));
+    val vars = distinct (op=) (rev (map TFree (fold Term.add_tfreesT ops [])));
 
     val names_lthy = lthy
       |> fold Variable.declare_typ vars
@@ -1400,6 +1435,7 @@ fun pbmv_monad_cmd (((((((b, ops), Sbs), Injs), SSupps_opt), Vrs), param_opt), b
 
         val lthy = register_pbmv_monad b bmv lthy;
       in lthy end;
+    val _ = @{print} "foo"
   in Proof.theorem NONE after_qed (map (single o rpair []) (
     [HOLogic.mk_Trueprop (mk_infinite_regular_card_order bd)]
     @ flat (@{map 3} (fn goal => fn SSupp_eq_goals => fn param => #Sb_Inj goal :: #Sb_comp_Injs goal @ map_filter I SSupp_eq_goals @ [#Sb_comp goal]
@@ -1453,12 +1489,12 @@ val _ =
 val _ = Outer_Syntax.local_theory_to_proof @{command_keyword pbmv_monad}
   "register a parametrized bounded multi-variate monad"
   (parse_opt_binding_colon -- Parse.and_list1 Parse.typ --|
-    (Parse.reserved "Sbs" -- @{keyword ":"}) -- Parse.and_list1 Parse.term --|
-    (Parse.reserved "Injs" -- @{keyword ":"}) -- Parse.and_list1 (Scan.repeat1 (Scan.unless (Parse.reserved "Vrs" || Parse.reserved "SSupps") Parse.term)) --
-    (Scan.option ((Parse.reserved "SSupps" -- @{keyword ":"}) |-- Parse.and_list1 (Scan.repeat1 (Scan.unless (Parse.reserved "Vrs") (Parse.underscore || Parse.term))))) --|
-    (Parse.reserved "Vrs" -- @{keyword ":"}) -- Parse.and_list1 (Parse.list1 (
+    (Parse.reserved "Sbs" -- @{keyword ":"}) -- Parse.and_list1 Parse.term --
+    (Scan.option ((Parse.reserved "Injs" -- @{keyword ":"}) |-- Parse.and_list1 (Scan.repeat1 (Scan.unless (Parse.reserved "Vrs" || Parse.reserved "SSupps" || Parse.reserved "Map") Parse.term)))) --
+    (Scan.option ((Parse.reserved "SSupps" -- @{keyword ":"}) |-- Parse.and_list1 (Scan.repeat1 (Scan.unless (Parse.reserved "Vrs" || Parse.reserved "Map") (Parse.underscore || Parse.term))))) --
+    (Scan.option ((Parse.reserved "Vrs" -- @{keyword ":"}) |-- Parse.and_list1 (Parse.list1 (
       Scan.repeat1 (Scan.unless (Parse.reserved "Map" || Parse.reserved "bd") (Parse.underscore || Parse.term))
-    )) --
+    )))) --
     Scan.optional (
       (Parse.reserved "Map" -- @{keyword ":"}) |-- Parse.and_list1 (Parse.underscore || Parse.term) --|
       (Parse.reserved "Supps" -- @{keyword ":"}) -- Parse.and_list1 (

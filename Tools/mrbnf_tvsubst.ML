@@ -3,7 +3,6 @@ sig
   type 'a eta_axioms = {
     eta_free: 'a,
     eta_inj: 'a,
-    eta_compl_free: 'a,
     eta_natural: 'a
   };
 
@@ -39,7 +38,6 @@ open MRBNF_Recursor
 type 'a eta_axioms = {
   eta_free: 'a,
   eta_inj: 'a,
-  eta_compl_free: 'a,
   eta_natural: 'a
 };
 
@@ -134,15 +132,6 @@ fun prove_model_axioms qualify res (models : (Proof.context -> tactic) tvsubst_m
               (Logic.mk_implies (mk_Trueprop_eq (fst eta $ a, fst eta $ b), mk_Trueprop_eq (a, b)))
               (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_inj tacs context);
 
-            val eta_compl_free = Goal.prove_sorry lthy [] []
-              (Logic.all x (Logic.mk_implies (
-                HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_mem (
-                  x, mk_image (fst eta) $ HOLogic.mk_UNIV aT
-                ))),
-                mk_Trueprop_eq (set' $ x, mk_bot aT)
-              )))
-              (fn {context, ...} => unfold_thms_tac context [snd eta] THEN #eta_compl_free tacs context);
-
             val f_prems = map mk_supp_bound free_fs
               @ maps (fn f => [mk_bij f, mk_supp_bound f]) bound_fs
               @ map mk_supp_bound bfree_fs;
@@ -168,7 +157,6 @@ fun prove_model_axioms qualify res (models : (Proof.context -> tactic) tvsubst_m
           in ((eta, {
             eta_free = eta_free,
             eta_inj = eta_inj,
-            eta_compl_free = eta_compl_free,
             eta_natural = eta_natural
           }), lthy) end
         ) eta_opt in (Option.map fst eta_opt', (i + 1, the_default lthy (Option.map snd eta_opt'))) end)
@@ -1078,24 +1066,6 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
     val bfrees = map (nth vars) (#bfree_vars fp_res);
     val f'_prems = map2 (fn h => fn def => HOLogic.mk_Trueprop (#mk_SSupp_bound def h)) rhos some_defs;
 
-    val not_isVVr_freess = @{map 4} (fn sets => fn quotient => fn preT => map2 (fn fset => Option.map (fn def =>
-      let
-        val x = Free ("x", preT);
-        val goal = Logic.mk_implies (
-          HOLogic.mk_Trueprop (HOLogic.mk_not (fst (#isVVr def) $ (#ctor quotient $ x))),
-          mk_Trueprop_eq (fset $ x, mk_bot (#aT def))
-        )
-      in Goal.prove_sorry lthy (names [x]) [] goal (fn {context=ctxt, ...} => EVERY1 [
-        rtac ctxt (#eta_compl_free (#axioms def)),
-        K (unfold_thms_tac ctxt (@{thms image_iff Set.bex_simps not_ex comp_def} @ [snd (#isVVr def), snd (#VVr def)])),
-        rtac ctxt allI,
-        etac ctxt allE,
-        etac ctxt @{thm contrapos_nn},
-        hyp_subst_tac ctxt,
-        rtac ctxt refl
-      ]) end
-    )) (take nvars sets)) setss (#quotient_fps fp_res) preTs defss;
-
     val in_IImsuppsss = map2 (fn quotient => map (Option.map (fn def => map2 (fn FVars => fn IImsupp =>
       let
         val a = Free ("a", #aT def);
@@ -1448,7 +1418,6 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
        ("tvsubst_VVr", maps (map_filter I) tvsubst_VVrss),
        ("tvsubst_cctor_not_isVVr", tvsubst_not_isVVrs),
        ("tvsubst_permutes", tvsubst_permutes),
-       ("not_isVVr_free", maps (map_filter I) not_isVVr_freess),
        ("IImsupp_permute_commute", maps (map_filter I) IImsupp_imsupp_permute_commutess),
        ("IImsupp_Diff", maps (map_filter I) IImsupp_Diffss),
        ("IImsupp_natural", flat (maps (map_filter I) IImsupp_naturalsss))

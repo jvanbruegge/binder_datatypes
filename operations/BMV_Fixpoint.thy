@@ -9,6 +9,42 @@ type_synonym ('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre' =
   + 'bv * 'tv FType * 'c \<comment>\<open>Lam x::'v \<open>'tv FType\<close> t::\<open>('tv, 'v) FTerm\<close> binds x in t\<close>
   + 'btv * 'c            \<comment>\<open>TyLam a::'tv t::\<open>('tv, 'v) FTerm\<close> binds a in t\<close>"
 
+ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local_setup \<open>fn lthy =>
   let
     val Xs = map dest_TFree []
@@ -986,7 +1022,7 @@ val vars = map TVar (rev (Term.add_tvarsT (#T quot) []));
 \<close>
 
 ML \<open>
-val model = MRBNF_Recursor.mk_quotient_model quot (vars ~~ [@{typ "'tv::var"}, @{typ "'v::var"}]) {
+val model = MRBNF_Recursor.mk_quotient_model quot (vars ~~ [@{typ "'tv::var"}, @{typ "'v::var"}]) [] {
   binding = @{binding "tvsubst_FTerm"},
   Uctor = @{term "Uctor :: _ \<Rightarrow> ('tv::var, 'v::var) P \<Rightarrow> _"},
   validity = NONE,

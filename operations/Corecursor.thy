@@ -9,54 +9,166 @@ lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightar
 
 (* Definitions *)
 
+locale COREC =
+  fixes Udtor :: "'u \<Rightarrow> ('a::var, 'a, 'a term + 'u, 'a term + 'u) term_pre set"
+  and Umap :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
+  and UFVars :: "'u \<Rightarrow> 'a::var set"
+  and valid_U :: "'u \<Rightarrow> bool"
+  assumes Udtor_ne: "\<And>d. valid_U d \<Longrightarrow> Udtor d \<noteq> {}"
+    and alpha_Udtor: "\<And>X X' d. valid_U d \<Longrightarrow> {X,X'} \<subseteq> Udtor d \<Longrightarrow>
+\<exists>u. bij (u::'a::var \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on ((\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X) u \<and>
+     map_term_pre id u (map_sum (permute_term u) (Umap u)) id X = X'"
+    and
+    (* The dual of the first block of assumptions from Norrish's paper:   *)
+    UFVars_Udtor:
+    "\<And> d X. valid_U d \<Longrightarrow> X \<in> Udtor d \<Longrightarrow>
+  set1_term_pre X \<union> (\<Union>z \<in> set4_term_pre X. case_sum FVars_term UFVars z) \<union>
+   ((\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X) \<subseteq>
+  UFVars d"
+    and
+    (* The dual of the third block: *)
+    Umap_Udtor: "\<And>u d. valid_U d \<Longrightarrow>
+  bij (u::'a\<Rightarrow>'a) \<Longrightarrow> |supp u| <o |UNIV::'a::var set| \<Longrightarrow>
+  Udtor (Umap u d) \<subseteq>
+  image
+    (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
+    (Udtor d)"
+    and Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
+    and Umap_cong0: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
+    and valid_Umap: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> valid_U d \<Longrightarrow> valid_U (Umap f d)"
+    and valid_Udtor: "\<And>x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow> pred_term_pre (pred_sum (\<lambda>_. True) valid_U)  (pred_sum (\<lambda>_. True) valid_U) x"
+begin
+
 definition suitable' ::  "('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre set) \<Rightarrow> ('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> bool" where
   "suitable' Utor pick \<equiv> \<forall> d. pick d \<in> Utor d"
 definition f' :: "('u \<Rightarrow> ('a::var,'a,'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> 'u => 'a raw_term" where
   "f' pick \<equiv> corec_raw_term pick"
 definition pick0' :: "('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre set) \<Rightarrow> 'u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre" where
   "pick0' Utor \<equiv> SOME pick. suitable' Utor pick"
-definition f0' :: "('u \<Rightarrow> ('a, 'a::var, 'a term + 'u, 'a term + 'u) term_pre set) \<Rightarrow> 'u \<Rightarrow> 'a raw_term" where
-  "f0' Udtor \<equiv> f' (pick0' (\<lambda>(d::'u). map_term_pre id id (map_sum TT_rep id) (map_sum TT_rep id) ` Udtor d))"
-definition COREC :: "('u \<Rightarrow> ('a, 'a::var, 'a term + 'u, 'a term + 'u) term_pre set) \<Rightarrow> 'u \<Rightarrow> 'a term" where
-  "COREC Udtor d = TT_abs (f0' Udtor d)"
+definition f0' :: "'u \<Rightarrow> 'a raw_term" where
+  "f0' \<equiv> f' (pick0' (\<lambda>(d::'u). map_term_pre id id (map_sum TT_rep id) (map_sum TT_rep id) ` Udtor d))"
+definition COREC :: "'u \<Rightarrow> 'a term" where
+  "COREC d = TT_abs (f0' d)"
 
-lemma COREC:
-  assumes Udtor_ne: "\<And>d. Udtor d \<noteq> {}"
-    and
-    alpha_Udtor: "\<And>X X' d. {X,X'} \<subseteq> Udtor d \<Longrightarrow>
-\<exists>u. bij (u::'a::var \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on ((\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X) u \<and>
-     map_term_pre id u (map_sum (permute_term u) (Umap u)) id X = X'"
-    and
-    (* The dual of the first block of assumptions from Norrish's paper:   *)
-    UFVars_Udtor:
-    "\<And> d X. X \<in> Udtor d \<Longrightarrow>
-  set1_term_pre X \<union> (\<Union>z \<in> set4_term_pre X. case_sum FVars_term UFVars z) \<union>
-   ((\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X) \<subseteq>
-  UFVars d"
-    and
-    (* The dual of the third block: *)
-    Umap_Udtor: "\<And>u d.
-  bij (u::'a\<Rightarrow>'a) \<Longrightarrow> |supp u| <o |UNIV::'a::var set| \<Longrightarrow>
-  Udtor (Umap u d) \<subseteq>
-  image
-    (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
-    (Udtor d)"
-    and Umap_comp0: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
-  \<Longrightarrow> Umap f \<circ> Umap g = Umap (f \<circ> g)"
-    and Umap_cong0: "bij f \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
-  \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
-  shows "X \<in> Udtor d \<Longrightarrow> COREC Udtor d = term_ctor (map_term_pre id id (case_sum id (COREC Udtor)) (case_sum id (COREC Udtor)) X)"
-    "bij u \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> COREC Udtor (Umap u d) = permute_term u (COREC Udtor d)"
-    "FVars_term (COREC Udtor d) \<subseteq> UFVars d"
+lemma Umap_id: "valid_U d \<Longrightarrow> Umap id d = d"
+  apply (rule Umap_cong0)
+  apply assumption
+    apply (rule bij_id supp_id_bound)+
+  apply (rule id_apply)
+  done
+
+lemma valid_Udtor': "\<And>x z r. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow> z \<in> set3_term_pre x \<union> set4_term_pre x \<Longrightarrow> r \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U r"
+  apply (drule valid_Udtor)
+   apply assumption
+  apply (erule UnE)
+  (* REPEAT_DETERM *)
+   apply (unfold term_pre.pred_set)
+   apply (erule conjE)
+  apply (rotate_tac 2)
+   apply (drule bspec[rotated])
+    apply assumption
+   apply (unfold sum.pred_set)
+   apply (erule conjE)
+   apply (erule bspec)
+   apply assumption
+  (* repeated *)
+   apply (erule conjE)
+  apply (rotate_tac 2)
+   apply (drule bspec[rotated])
+    apply assumption
+   apply (erule conjE)
+   apply (erule bspec)
+  apply assumption
+  done
+
+lemma Umap_Udtor_strong:
+  assumes u: "bij (u::'a::var\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+    and "valid_U d"
+  shows
+    "Udtor (Umap u d) =
+ image
+   (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
+   (Udtor d)"
 proof -
-  show "X \<in> Udtor d \<Longrightarrow> COREC Udtor d = term_ctor (map_term_pre id id (case_sum id (COREC Udtor)) (case_sum id (COREC Udtor)) X)"
-    sorry
-  show "bij u \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> COREC Udtor (Umap u d) = permute_term u (COREC Udtor d)"
-    sorry
-  show "FVars_term (COREC Udtor d) \<subseteq> UFVars d"
-    sorry
+  have x: "d = Umap (inv u) (Umap u d)"
+    apply (rule sym)
+    apply (rule trans[OF Umap_comp])
+         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id])
+     apply (rule assms)
+    apply (rule refl)
+    done
+  show ?thesis
+    apply (rule subset_antisym)
+     apply (rule Umap_Udtor[OF assms(3,1,2)])
+    apply (subst x)
+    apply (rule image_subsetI)
+    apply (drule Umap_Udtor[THEN subsetD, rotated -1])
+       apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
+     apply (rule term_pre.map_comp)
+          apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (unfold map_sum.comp)
+    apply (subst inv_o_simp2 permute_comp0s Umap_comp, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
+    apply (unfold comp_def)
+    apply (unfold Umap_id permute_id0s map_sum.id term_pre.map_id)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule term_pre.map_cong[rotated -5])
+               apply (rule refl)
+              apply (rule refl)
+             apply (rule refl)
+      (* REPEAT_DETERM *)
+            apply (rule sum.map_cong0[OF refl])
+            apply (drule valid_Udtor'[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule arg_cong2[OF _ refl, of _ _ Umap])
+             apply (rule inv_o_simp2)
+             apply (rule assms)
+            apply (rule Umap_id)
+            apply assumption
+      (* repeated *)
+           apply (rule sum.map_cong0[OF refl])
+           apply (drule valid_Udtor'[rotated])
+              apply (erule UnI2 UnI1)
+             apply assumption
+            apply (rule valid_Umap)
+              apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+           apply (rule trans)
+            apply (rule Umap_comp)
+                apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+           apply (rule trans)
+            apply (rule arg_cong2[OF _ refl, of _ _ Umap])
+            apply (rule inv_o_simp2)
+            apply (rule assms)
+           apply (rule Umap_id)
+           apply assumption
+      (* END REPEAT_DETERM *)
+          apply (rule supp_id_bound bij_id)+
+    apply (unfold Umap_id permute_id0s map_sum.id term_pre.map_id id_def[symmetric])
+    apply assumption
+    done
 qed
 
+lemma COREC_DDTOR: "valid_U d \<Longrightarrow> X \<in> Udtor d \<Longrightarrow> COREC d = term_ctor (map_term_pre id id (case_sum id COREC) (case_sum id COREC) X)"
+  sorry
+
+  lemma COREC_mmapD: "valid_U d \<Longrightarrow> bij u \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> COREC (Umap u d) = permute_term u (COREC d)"
+    sorry
+  lemma  COREC_FFVarsD: "valid_U d \<Longrightarrow> FVars_term (COREC d) \<subseteq> UFVars d"
+    sorry
+end
 
 (* The domain type: *)
 typedecl 'a U
@@ -681,6 +793,17 @@ lemma f_swap_alpha:
   assumes p: "suitable pick" and p': "suitable pick'"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
   shows "alpha_term (permute_raw_term u (f pick d)) (f pick' (raw_Umap u d))"
+  apply (rule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. bij u \<and> |supp u| <o |UNIV::'a set| \<and>
+   tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
+   apply (rule exI)+
+   apply (rule conjI[rotated])+
+      apply (rule refl)+
+    apply (rule assms)+
+
+  apply (erule exE conjE)+
+(* TODO *)
+
+
 proof-
   let ?\<phi> = "\<lambda> tL tR. \<exists> u d. bij u \<and> |supp u| <o |UNIV::'a set| \<and>
    tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"
@@ -978,5 +1101,7 @@ theorem ff0_FFVarsD:
   apply (unfold ff0_def FVars_term_def alpha_FVars[OF TT_rep_abs])
   apply (rule f0_FVarsD)
   done
+
+hide_const f
 
 end

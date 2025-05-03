@@ -471,7 +471,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                       REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
                       rtac ctxt inner_prem ORELSE'
                       EVERY' [
-                        Method.insert_tac ctxt [inner_prem],
+                        Method.insert_tac ctxt inner_prems,
                         let
                           val simpset = Simplifier.add_cong @{thm imp_cong} (
                             (BNF_Util.ss_only @{thms

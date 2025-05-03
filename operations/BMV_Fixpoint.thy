@@ -9,8 +9,7 @@ type_synonym ('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre' =
   + 'bv * 'tv FType * 'c \<comment>\<open>Lam x::'v \<open>'tv FType\<close> t::\<open>('tv, 'v) FTerm\<close> binds x in t\<close>
   + 'btv * 'c            \<comment>\<open>TyLam a::'tv t::\<open>('tv, 'v) FTerm\<close> binds a in t\<close>"
 
-ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
-
+(*ML_file \<open>../Tools/mrsbnf_comp.ML\<close>*)
 
 
 

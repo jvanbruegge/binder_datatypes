@@ -119,7 +119,8 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           val intro = unvarify_global (Term.subst_TVars subst (Thm.prop_of intro));
           val binderss = map (distinct (op=)) (collect_binders intro);
           val xs_binders = map (fn binders => fold_rev (fn t => fn (a, b) => case t of
-            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (x::a, b)
+            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (case x of
+              Bound _ => (a, b) | _ => (x::a, b))
             | _ => (a, t::b)
           ) binders ([], [])) binderss;
           val binders = map (fn (xs, binders) =>

@@ -174,6 +174,7 @@ lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z
 
 lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by (force simp: bij_implies_inject)
 
+(* TODO: Remove *)
 lemma Un_bound:
   assumes inf: "infinite (UNIV :: 'a set)"
     and "|A1| <o |UNIV::'a set|" and "|A2| <o |UNIV::'a set|"

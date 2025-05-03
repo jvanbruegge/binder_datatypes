@@ -512,6 +512,9 @@ lemma supp_inv_bound:
 lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |insert x A| <o r"
   by (metis Card_order_iff_ordLeq_card_of card_of_Field_ordIso card_of_Un_singl_ordLess_infinite1 cinfinite_def insert_is_Un ordLess_ordIso_trans ordLess_ordLeq_trans)
 
+lemma single_bound: "Cinfinite r \<Longrightarrow> |{x}| <o r"
+  by (simp add: Cinfinite_gt_empty insert_bound)
+
 lemma Un_Cinfinite_ordLess: "|A| <o r \<Longrightarrow> |B| <o r \<Longrightarrow> Cinfinite r \<Longrightarrow> |A \<union> B| <o r"
   using Un_Cinfinite_bound_strict .
  (* apply (simp add: cinfinite_def) *)

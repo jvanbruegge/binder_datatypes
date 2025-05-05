@@ -1,5 +1,5 @@
 theory VVSubst
-  imports "./Least_Fixpoint"
+  imports "./Recursor"
 begin
 
 (********************************)
@@ -13,7 +13,7 @@ type_synonym ('var, 'tyvar, 'a, 'c) U2 = "('var, 'tyvar, 'a, 'c) T2"
 type_synonym ('var, 'tyvar, 'a, 'b, 'c) rec_T1 = "('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1)"
 type_synonym ('var, 'tyvar, 'a, 'b, 'c) rec_T2 = "('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2)"
 
-abbreviation validP :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> bool" where
+abbreviation validP :: "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> bool" where
   "validP p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow>
     |supp f1| <o |UNIV::'var set| \<and> |supp f2| <o |UNIV::'tyvar set| \<and>
     |supp f3| <o |UNIV::'a set|"
@@ -29,12 +29,12 @@ definition U2ctor :: "('var::var, 'tyvar::var, 'a::var, 'b, 'var, 'tyvar, 'var, 
       ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) x
   )"
 
-abbreviation PFVars_1 :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> 'var set" where
+abbreviation PFVars_1 :: "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> 'var set" where
   "PFVars_1 p \<equiv> case p of (f1, f2, _, _) \<Rightarrow> imsupp f1"
-abbreviation PFVars_2 :: "('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> 'tyvar set" where
+abbreviation PFVars_2 :: "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> 'tyvar set" where
   "PFVars_2 p \<equiv> case p of (f1, f2, _, _) \<Rightarrow> imsupp f2"
 
-abbreviation Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'b,'c) P" where
+abbreviation Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'b,'c) P" where
   "Pmap g1 g2 p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow> (compSS g1 f1, compSS g2 f2, f3, f4)"
 
 abbreviation U1map :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::var, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1" where
@@ -145,8 +145,9 @@ lemma PFVars_Pmap:
    apply assumption
   apply (rule refl)
   done
+
 lemma small_PFVars:
-  fixes p::"('var::var, 'tyvar::var, 'a, 'b, 'c) P"
+  fixes p::"('var::var, 'tyvar::var, 'a::var, 'b, 'c) P"
   shows "validP p \<Longrightarrow> |PFVars_1 p| <o |UNIV::'var set|" "validP p \<Longrightarrow> |PFVars_2 p| <o |UNIV::'tyvar set|"
    apply (unfold case_prod_beta)
    apply (erule conjE)+
@@ -665,127 +666,24 @@ lemma valid_Pmap:
   apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
   done
 
-ML \<open>
-val nvars:int = 2
-
-val parameters_struct = {
-  P = @{typ "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P"},
-  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> _"},
-  PFVarss = [
-    @{term "PFVars_1 :: ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> _"},
-    @{term "PFVars_2 :: ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> _"}
-  ],
-  avoiding_sets = [
-    @{term "{} :: 'var::var set"},
-    @{term "{} :: 'tyvar::var set"}
-  ],
-  validity = SOME {
-    pred = @{term "validP::('var::var, 'tyvar::var, 'a::var, 'b, 'c) P => bool"},
-    valid_Pmap = fn ctxt => resolve_tac ctxt @{thms valid_Pmap} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)
-  },
-  min_bound = false,
-  axioms = {
-    Pmap_id0 = fn ctxt => EVERY1 [
-      resolve_tac ctxt [trans],
-      resolve_tac ctxt @{thms fun_cong[OF Pmap_id0]},
-      resolve_tac ctxt @{thms id_apply}
-    ],
-    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms Pmap_comp0} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmap} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVars} 1 THEN assume_tac ctxt 1),
-    small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms emp_bound} 1)
-  }
-};
-\<close>
-
-ML \<open>
-val T1_model = {
-  binding = @{binding vvsubst_T1},
-  U = @{typ "('var::var, 'tyvar::var, 'a::var, 'c) U1"},
-  UFVarss = [
-    @{term "U1FVars_1 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U1 \<Rightarrow> _"},
-    @{term "U1FVars_2 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U1 \<Rightarrow> _"}
-  ],
-  Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U1 \<Rightarrow> _"},
-  Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> _"},
-  validity = NONE : {
-    pred: term,
-    valid_Umap: Proof.context -> tactic,
-    valid_Uctor: Proof.context -> tactic
-  } option,
-  axioms = {
-    Umap_id0 = fn ctxt => EVERY1 [
-      resolve_tac ctxt [trans],
-      resolve_tac ctxt @{thms permute_id0s[THEN fun_cong]},
-      resolve_tac ctxt @{thms id_apply}
-    ],
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms permute_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms permute_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    Umap_Uctor = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms if_True}),
-      resolve_tac ctxt @{thms U1map_Uctor},
-      REPEAT_DETERM o assume_tac ctxt
-    ],
-    UFVars_subsets = replicate nvars (fn ctxt => EVERY1 [
-      resolve_tac ctxt @{thms U1FVars_subsets},
-      REPEAT_DETERM o (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)
-    ])
-  }
-};
-
-val T2_model = {
-  binding = @{binding vvsubst_T2},
-  U = @{typ "('var::var, 'tyvar::var, 'a::var, 'c) U2"},
-  UFVarss = [
-    @{term "U2FVars_1 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U2 \<Rightarrow> _"},
-    @{term "U2FVars_2 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U2 \<Rightarrow> _"}
-  ],
-  Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U2 \<Rightarrow> _"},
-  Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> _"},
-  validity = NONE : {
-    pred: term,
-    valid_Umap: Proof.context -> tactic,
-    valid_Uctor: Proof.context -> tactic
-  } option,
-  axioms = {
-    Umap_id0 = fn ctxt => EVERY1 [
-      resolve_tac ctxt [trans],
-      resolve_tac ctxt @{thms permute_id0s[THEN fun_cong]},
-      resolve_tac ctxt @{thms id_apply}
-    ],
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms permute_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms permute_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subsets} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
-  }
-};
-
-val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Least_Fixpoint.T1")
-\<close>
-
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
-local_setup \<open>fn lthy =>
-let
-  val qualify = I
-  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters_struct [T1_model, T2_model] lthy
-
-  val notes =
-    [ ("rec_Uctors", map #rec_Uctor ress)
-    ] |> (map (fn (thmN, thms) =>
-      ((Binding.qualify true "T1" (Binding.name thmN), []), [(thms, [])])
-    ));
-  val (_, lthy) = Local_Theory.notes notes lthy
-  val _ = @{print} ress
-in lthy end\<close>
-print_theorems
+interpretation vvsubst: QREC Pmap PFVars_1 PFVars_2 U1ctor U2ctor validP
+  apply (unfold_locales)
+               apply (rule trans[OF Pmap_id0[THEN fun_cong] id_apply])
+              apply (rule Pmap_comp0; assumption)
+             apply (rule Pmap_cong_id; assumption)
+            apply (rule PFVars_Pmap; assumption)+
+          apply (rule small_PFVars; assumption)+
+        apply (rule valid_Pmap; assumption)
+       apply (rule U1map_Uctor; assumption)
+      apply (rule U1FVars_subsets[unfolded Un_empty_right]; assumption)+
+    apply (rule U2map_Uctor; assumption)
+   apply (rule U2FVars_subsets[unfolded Un_empty_right]; assumption)+
+  done
 
 definition vvsubst_T1 :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1" where
-  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> ff01_vvsubst_T1_vvsubst_T2 t (f1, f2, f3, f4)"
+  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> vvsubst.ff0_T1 t (f1, f2, f3, f4)"
 definition vvsubst_T2 :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2" where
-  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> ff02_vvsubst_T1_vvsubst_T2 t (f1, f2, f3, f4)"
+  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> vvsubst.ff0_T2 t (f1, f2, f3, f4)"
 
 definition pick1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<times> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T1" where
   "pick1 R f1 f2 f3 xy \<equiv> SOME z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = fst xy \<and> vvsubst_T1 f1 f2 f3 snd z = snd xy"
@@ -1490,7 +1388,7 @@ lemma vvsubst_cctor_1:
   shows "vvsubst_T1 f1 f2 f3 f4 (T1_ctor x) = T1_ctor (map_T1_pre f1 f2 f3 f4 id id f1 (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) x)"
   apply (unfold vvsubst_T1_def vvsubst_T2_def)
   apply (rule trans)
-   apply (rule T1.rec_Uctors)
+   apply (rule vvsubst.ff0_cctors)
      apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
   apply (rule conjI f_prems)+
      apply (rule trans[OF Int_commute], rule int_empties)+
@@ -1514,7 +1412,7 @@ lemma vvsubst_cctor_2:
     (* same tactic as above *)
   apply (unfold vvsubst_T1_def vvsubst_T2_def)
   apply (rule trans)
-   apply (rule T1.rec_Uctors)
+   apply (rule vvsubst.ff0_cctors)
      apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
   apply (rule conjI f_prems)+
      apply (rule trans[OF Int_commute], rule int_empties)+

@@ -2,73 +2,64 @@ theory Recursor
   imports "./Least_Fixpoint"
 begin
 
-typedecl ('var, 'tyvar, 'a, 'b) U1
-typedecl ('var, 'tyvar, 'a, 'b) U2
+locale REC =
+  fixes Pmap :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> 'p \<Rightarrow> 'p"
+  and PFVars_1 :: "'p \<Rightarrow> 'var set"
+  and PFVars_2 :: "'p \<Rightarrow> 'tyvar set"
+  and avoiding_set1 :: "'var set"
+  and avoiding_set2 :: "'tyvar set"
 
-typedecl ('var, 'tyvar) P
+  and U1map :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::var, 'b) T1 \<Rightarrow> 'u1 \<Rightarrow> 'u1"
+  and U2map :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> 'u2 \<Rightarrow> 'u2"
+  and U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> 'u1 \<Rightarrow> 'var set"
+  and U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> 'u1 \<Rightarrow> 'tyvar set"
+  and U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> 'u2 \<Rightarrow> 'var set"
+  and U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> 'u2 \<Rightarrow> 'tyvar set"
 
-consts Pmap :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar) P"
-consts PFVars_1 :: "('var::var, 'tyvar::var) P \<Rightarrow> 'var set"
-consts PFVars_2 :: "('var::var, 'tyvar::var) P \<Rightarrow> 'tyvar set"
-consts avoiding_set1 :: "'var::var set"
-consts avoiding_set2 :: "'tyvar::var set"
+  and U1ctor :: "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var,
+    ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> 'u1), ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> 'u1),
+    ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> 'u2), ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> 'u2)
+  ) T1_pre \<Rightarrow> 'p \<Rightarrow> 'u1"
+  and U2ctor :: "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var,
+    ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> 'u1), ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> 'u1),
+    ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> 'u2), ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> 'u2)
+  ) T2_pre \<Rightarrow> 'p \<Rightarrow> 'u2"
 
-consts U1map :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1"
-consts U2map :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2"
+  and validP :: "'p \<Rightarrow> bool"
+  and validU1 :: "'u1 \<Rightarrow> bool"
+  and validU2 :: "'u2 \<Rightarrow> bool"
 
-consts U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a, 'b) U1 \<Rightarrow> 'var set"
-consts U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a, 'b) U1 \<Rightarrow> 'tyvar set"
-consts U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::var, 'tyvar::var, 'a, 'b) U2 \<Rightarrow> 'var set"
-consts U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::var, 'tyvar::var, 'a, 'b) U2 \<Rightarrow> 'tyvar set"
-
-consts U1ctor :: "('var::var, 'tyvar::var, 'a, 'b, 'var, 'tyvar, 'var,
-  ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
-  ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
-  ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2),
-  ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)
-) T1_pre \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1"
-consts U2ctor :: "('var::var, 'tyvar::var, 'a, 'b, 'var, 'tyvar, 'var,
-  ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
-  ('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1),
-  ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2),
-  ('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)
-) T2_pre \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2"
-
-consts validP :: "('var, 'tyvar) P \<Rightarrow> bool"
-consts validU1 :: "('var, 'tyvar, 'a, 'b) U1 \<Rightarrow> bool"
-consts validU2 :: "('var, 'tyvar, 'a, 'b) U2 \<Rightarrow> bool"
-
-axiomatization where
+assumes
   (* parameter axioms *)
   Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
-  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
-  and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   (\<And>a. a \<in> PFVars_1 d \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 d \<Longrightarrow> f2 a = a) \<Longrightarrow>
   Pmap f1 f2 d = d"
-  and PFVars_Pmap_1: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and PFVars_Pmap_1: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   PFVars_1 (Pmap f1 f2 d) = f1 ` PFVars_1 d"
-  and PFVars_Pmap_2: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and PFVars_Pmap_2: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   PFVars_2 (Pmap f1 f2 d) = f2 ` PFVars_2 d"
   and small_PFVars_1: "validP d \<Longrightarrow> |PFVars_1 d| <o |UNIV::'var set|"
   and small_PFVars_2: "validP d \<Longrightarrow> |PFVars_2 d| <o |UNIV::'tyvar set|"
   and small_avoiding_set1: "|avoiding_set1::'var set| <o |UNIV::'var set|"
   and small_avoiding_set2: "|avoiding_set2::'tyvar set| <o |UNIV::'tyvar set|"
   (* closure of validP under Pmap *)
-  and valid_Pmap: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and valid_Pmap: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
                   validP (Pmap f1 f2 d)"
   (* model 1 axioms *)
   and U1map_id0: "validU1 u1 \<Longrightarrow> U1map id id (t1::('var, 'tyvar, 'a, 'b) T1) u1 = u1"
-  and U1map_comp0: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and U1map_comp0: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   U1map (g1 \<circ> f1) (g2 \<circ> f2) t1 x1 = (U1map g1 g2 t1 \<circ> U1map f1 f2 t1) u1"
-  and U1map_cong_id: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and U1map_cong_id: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   (\<And>a. a \<in> U1FVars_1 t1 u1 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> U1FVars_2 t1 u1 \<Longrightarrow> f2 a = a) \<Longrightarrow>
   U1map f1 f2 t1 u1 = u1"
   and U1map_Uctor: "validP p \<Longrightarrow>
     pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
-   bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+   bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   U1map f1 f2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p)
 = U1ctor (map_T1_pre f1 f2 id id f1 f2 f1
     (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
@@ -78,17 +69,17 @@ axiomatization where
  y) (Pmap f1 f2 p)"
   and U1FVars_subset_1: "validP p \<Longrightarrow>
   pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
-  set5_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  set5_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U1FVars_1 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
   and U1FVars_subset_2: "validP p \<Longrightarrow>
-  pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>set6_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>set6_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
   (* closure of validU1 under Umap and Uctor *)
-  and validU1_Umap: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and validU1_Umap: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
                      validU1 (U1map f1 f2  (t1::('var, 'tyvar, 'a, 'b) T1) u1)"
   and validU1_Uctor: "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y
         \<Longrightarrow> validP p \<Longrightarrow> validU1 (U1ctor y p)"
@@ -121,10 +112,11 @@ axiomatization where
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y2 \<union> set11_T2_pre y2 \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U2FVars_2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) (U2ctor y2 p) \<subseteq> FVars_T22 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) \<union> PFVars_2 p \<union> avoiding_set2"
   (* closure of validU2 under Umap and Uctor *)
-  and validU2_Umap: "validU2 u2 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  and validU2_Umap: "validU2 u2 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
                      validU2 (U2map f1 f2  (t2::('var, 'tyvar, 'a, 'b) T2) u2)"
   and validU2_Uctor: "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y2
         \<Longrightarrow> validP p \<Longrightarrow> validU2 (U2ctor y2 p)"
+begin
 print_theorems
 
 lemmas U1FVars_subsets = U1FVars_subset_1 U1FVars_subset_2
@@ -134,31 +126,31 @@ lemmas U2FVars_subsets = U2FVars_subset_1 U2FVars_subset_2
 (*                            DEFINITIONS                             *)
 (**********************************************************************)
 
-type_synonym ('var, 'tyvar, 'a, 'b) pre_T1 = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var,
-  ('var, 'tyvar, 'a, 'b) raw_T1, ('var, 'tyvar, 'a, 'b) raw_T1,
-  ('var, 'tyvar, 'a, 'b) raw_T2, ('var, 'tyvar, 'a, 'b) raw_T2
+type_synonym ('var', 'tyvar', 'a', 'b') pre_T1 = "('var', 'tyvar', 'a', 'b', 'var', 'tyvar', 'var',
+  ('var', 'tyvar', 'a', 'b') raw_T1, ('var', 'tyvar', 'a', 'b') raw_T1,
+  ('var', 'tyvar', 'a', 'b') raw_T2, ('var', 'tyvar', 'a', 'b') raw_T2
 ) T1_pre"
-type_synonym ('var, 'tyvar, 'a, 'b) pre_T2 = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var,
-  ('var, 'tyvar, 'a, 'b) raw_T1, ('var, 'tyvar, 'a, 'b) raw_T1,
-  ('var, 'tyvar, 'a, 'b) raw_T2, ('var, 'tyvar, 'a, 'b) raw_T2
+type_synonym ('var', 'tyvar', 'a', 'b') pre_T2 = "('var', 'tyvar', 'a', 'b', 'var', 'tyvar', 'var',
+  ('var', 'tyvar', 'a', 'b') raw_T1, ('var', 'tyvar', 'a', 'b') raw_T1,
+  ('var', 'tyvar', 'a', 'b') raw_T2, ('var', 'tyvar', 'a', 'b') raw_T2
 ) T2_pre"
 
-definition suitable11 :: "(('var::var, 'tyvar::var, 'a::var, 'b) pre_T1 \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> 'var \<Rightarrow> 'var) \<Rightarrow> bool" where
+definition suitable11 :: "(('var, 'tyvar, 'a, 'b) pre_T1 \<Rightarrow> 'p \<Rightarrow> 'var \<Rightarrow> 'var) \<Rightarrow> bool" where
   "suitable11 \<equiv> \<lambda>pick. \<forall>x p. validP p \<longrightarrow> bij (pick x p) \<and> |supp (pick x p)| <o |UNIV::'var set|
   \<and> imsupp (pick x p) \<inter> ((FVars_raw_T11 (raw_T1_ctor x) \<union> PFVars_1 p \<union> avoiding_set1) - set5_T1_pre x) = {}
   \<and> (pick x p) ` set5_T1_pre x \<inter> (FVars_raw_T11 (raw_T1_ctor x) \<union> PFVars_1 p \<union> avoiding_set1) = {}"
 
-definition suitable12 :: "(('var::var, 'tyvar::var, 'a::var, 'b) pre_T1 \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> 'tyvar \<Rightarrow> 'tyvar) \<Rightarrow> bool" where
+definition suitable12 :: "(('var, 'tyvar, 'a, 'b) pre_T1 \<Rightarrow> 'p \<Rightarrow> 'tyvar \<Rightarrow> 'tyvar) \<Rightarrow> bool" where
   "suitable12 \<equiv> \<lambda>pick. \<forall>x p. validP p \<longrightarrow> bij (pick x p) \<and> |supp (pick x p)| <o |UNIV::'tyvar set|
   \<and> imsupp (pick x p) \<inter> ((FVars_raw_T12 (raw_T1_ctor x) \<union> PFVars_2 p \<union> avoiding_set2) - set6_T1_pre x) = {}
   \<and> (pick x p) ` set6_T1_pre x \<inter> (FVars_raw_T12 (raw_T1_ctor x) \<union> PFVars_2 p \<union> avoiding_set2) = {}"
 
-definition suitable21 :: "(('var::var, 'tyvar::var, 'a::var, 'b) pre_T2 \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> 'var \<Rightarrow> 'var) \<Rightarrow> bool" where
+definition suitable21 :: "(('var, 'tyvar, 'a, 'b) pre_T2 \<Rightarrow> 'p \<Rightarrow> 'var \<Rightarrow> 'var) \<Rightarrow> bool" where
   "suitable21 \<equiv> \<lambda>pick. \<forall>x p. validP p \<longrightarrow> bij (pick x p) \<and> |supp (pick x p)| <o |UNIV::'var set|
   \<and> imsupp (pick x p) \<inter> ((FVars_raw_T21 (raw_T2_ctor x) \<union> PFVars_1 p \<union> avoiding_set1) - set5_T2_pre x) = {}
   \<and> (pick x p) ` set5_T2_pre x \<inter> (FVars_raw_T21 (raw_T2_ctor x) \<union> PFVars_1 p \<union> avoiding_set1) = {}"
 
-definition suitable22 :: "(('var::var, 'tyvar::var, 'a::var, 'b) pre_T2 \<Rightarrow> ('var, 'tyvar) P \<Rightarrow> 'tyvar \<Rightarrow> 'tyvar) \<Rightarrow> bool" where
+definition suitable22 :: "(('var, 'tyvar, 'a, 'b) pre_T2 \<Rightarrow> 'p \<Rightarrow> 'tyvar \<Rightarrow> 'tyvar) \<Rightarrow> bool" where
   "suitable22 \<equiv> \<lambda>pick. \<forall>x p. validP p \<longrightarrow> bij (pick x p) \<and> |supp (pick x p)| <o |UNIV::'tyvar set|
   \<and> imsupp (pick x p) \<inter> ((FVars_raw_T22 (raw_T2_ctor x) \<union> PFVars_2 p \<union> avoiding_set2) - set6_T2_pre x) = {}
   \<and> (pick x p) ` set6_T2_pre x \<inter> (FVars_raw_T22 (raw_T2_ctor x) \<union> PFVars_2 p \<union> avoiding_set2) = {}"
@@ -168,32 +160,32 @@ lemmas suitable_defs = suitable11_def suitable12_def suitable21_def suitable22_d
 abbreviation "abs_T1 \<equiv> quot_type.abs alpha_T1 Abs_T1"
 abbreviation "abs_T2 \<equiv> quot_type.abs alpha_T2 Abs_T2"
 
-definition U1map' :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::var, 'b) raw_T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1" where
+definition U1map' :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) raw_T1 \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
   "U1map' f1 f2 x \<equiv> U1map f1 f2 (abs_T1 x)"
-definition U2map' :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::var, 'b) raw_T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2" where
+definition U2map' :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) raw_T2 \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
   "U2map' f1 f2 x \<equiv> U2map f1 f2 (abs_T2 x)"
 
-definition U1FVars_1' :: "('var, 'tyvar, 'a, 'b) raw_T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> 'var set" where
+definition U1FVars_1' :: "('var, 'tyvar, 'a, 'b) raw_T1 \<Rightarrow> 'u1 \<Rightarrow> 'var set" where
   "U1FVars_1' t \<equiv> U1FVars_1 (abs_T1 t)"
-definition U1FVars_2' :: "('var, 'tyvar, 'a, 'b) raw_T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> 'tyvar set" where
+definition U1FVars_2' :: "('var, 'tyvar, 'a, 'b) raw_T1 \<Rightarrow> 'u1 \<Rightarrow> 'tyvar set" where
   "U1FVars_2' t \<equiv> U1FVars_2 (abs_T1 t)"
-definition U2FVars_1' :: "('var, 'tyvar, 'a, 'b) raw_T2 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> 'var set" where
+definition U2FVars_1' :: "('var, 'tyvar, 'a, 'b) raw_T2 \<Rightarrow> 'u2 \<Rightarrow> 'var set" where
   "U2FVars_1' t \<equiv> U2FVars_1 (abs_T2 t)"
-definition U2FVars_2' :: "('var, 'tyvar, 'a, 'b) raw_T2 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> 'tyvar set" where
+definition U2FVars_2' :: "('var, 'tyvar, 'a, 'b) raw_T2 \<Rightarrow> 'u2 \<Rightarrow> 'tyvar set" where
   "U2FVars_2' t \<equiv> U2FVars_2 (abs_T2 t)"
 
-definition PU1map :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1 \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1) \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1)" where
+definition PU1map :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('p \<Rightarrow> 'u1) \<Rightarrow> ('p \<Rightarrow> 'u1)" where
   "PU1map f1 f2 t \<equiv> \<lambda>pu p. U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))"
-definition PU2map :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T2 \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2) \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)" where
+definition PU2map :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('p \<Rightarrow> 'u2) \<Rightarrow> ('p \<Rightarrow> 'u2)" where
   "PU2map f1 f2 t \<equiv> \<lambda>pu p. U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p))"
-definition PU1map' :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) raw_T1 \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1) \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U1)" where
+definition PU1map' :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) raw_T1 \<Rightarrow> ('p \<Rightarrow> 'u1) \<Rightarrow> ('p \<Rightarrow> 'u1)" where
   "PU1map' f1 f2 t \<equiv> \<lambda>pu p. U1map' f1 f2 t (pu (Pmap (inv f1) (inv f2) p))"
-definition PU2map' :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) raw_T2 \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2) \<Rightarrow> (('var, 'tyvar) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2)" where
+definition PU2map' :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a, 'b) raw_T2 \<Rightarrow> ('p \<Rightarrow> 'u2) \<Rightarrow> ('p \<Rightarrow> 'u2)" where
   "PU2map' f1 f2 t \<equiv> \<lambda>pu p. U2map' f1 f2 t (pu (Pmap (inv f1) (inv f2) p))"
 
-definition U1ctor' :: "_ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1" where
+definition U1ctor' :: "_ \<Rightarrow> _ \<Rightarrow> 'u1" where
   "U1ctor' y \<equiv> U1ctor (map_T1_pre id id id id id id id (map_prod abs_T1 id) (map_prod abs_T1 id) (map_prod abs_T2 id) (map_prod abs_T2 id) y)"
-definition U2ctor' :: "_ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2" where
+definition U2ctor' :: "_ \<Rightarrow> _ \<Rightarrow> 'u2" where
   "U2ctor' y \<equiv> U2ctor (map_T2_pre id id id id id id id (map_prod abs_T1 id) (map_prod abs_T1 id) (map_prod abs_T2 id) (map_prod abs_T2 id) y)"
 
 lemma suitable_bij:
@@ -206,7 +198,7 @@ lemma suitable_bij:
   done
 
 lemma suitable_supp_bound:
-  "suitable11 pick1 \<Longrightarrow> validP p \<Longrightarrow> |supp (pick1 x (p::('var::var, 'tyvar::var) P))| <o |UNIV::'var set|"
+  "suitable11 pick1 \<Longrightarrow> validP p \<Longrightarrow> |supp (pick1 x (p::'p))| <o |UNIV::'var set|"
   "suitable12 pick2 \<Longrightarrow> validP p \<Longrightarrow> |supp (pick2 x p)| <o |UNIV::'tyvar set|"
   "suitable21 pick3 \<Longrightarrow> validP p \<Longrightarrow> |supp (pick3 x' p)| <o |UNIV::'var set|"
   "suitable22 pick4 \<Longrightarrow> validP p \<Longrightarrow> |supp (pick4 x' p)| <o |UNIV::'tyvar set|"
@@ -214,8 +206,8 @@ lemma suitable_supp_bound:
      apply ((erule allE)+, erule impE, assumption, (erule conjE)+, assumption)+
   done
 
-function f_T1 :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1"
-  and f_T2 :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var, 'tyvar, 'a, 'b) U2" where
+function f_T1 :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> 'u1"
+  and f_T2 :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> 'u2" where
   "f_T1 pick1 pick2 pick3 pick4 (raw_T1_ctor x) p = (if suitable11 pick1 \<and> suitable12 pick2 \<and> suitable21 pick3 \<and> suitable22 pick4 \<and> validP p then
   U1ctor' (map_T1_pre id id id id id id id
     (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined)) (\<lambda>t. (t, \<lambda>p. if validP p then f_T1 pick1 pick2 pick3 pick4 t p else undefined))
@@ -558,7 +550,7 @@ lemma pick_id_ons':
   done
 
 lemma pick_id_on_images:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "suitable11 pick1 \<Longrightarrow> validP p \<Longrightarrow> id_on (f1 ` ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x))) (pick1 (map_T1_pre f1 f2 id id f1 f2 f1 (permute_raw_T1 f1 f2) (permute_raw_T1 f1 f2) (permute_raw_T2 f1 f2) (permute_raw_T2 f1 f2) x) p)"
@@ -601,7 +593,7 @@ lemma pick_id_on_images:
   done
 
 lemma pick_id_on_images':
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "suitable11 pick1 \<Longrightarrow> validP p \<Longrightarrow> id_on (f1 ` (set7_T1_pre x - set5_T1_pre x)) (pick1 (map_T1_pre f1 f2 id id f1 f2 f1 (permute_raw_T1 f1 f2) (permute_raw_T1 f1 f2) (permute_raw_T2 f1 f2) (permute_raw_T2 f1 f2) x) p)"
@@ -619,7 +611,7 @@ lemma pick_id_on_images':
 (* lower axioms to raw type *)
 lemma U1map'_U1ctor': "validP p \<Longrightarrow>
   pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
-  bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   U1map' f1 f2 (raw_T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor' y p)
 = U1ctor' (map_T1_pre f1 f2 id id f1 f2 f1
     (\<lambda>(t, pu). (permute_raw_T1 f1 f2 t, \<lambda>p. if validP p then PU1map' f1 f2 t pu p else undefined))
@@ -687,7 +679,7 @@ lemma U1map'_U1ctor': "validP p \<Longrightarrow>
   done
 lemma U2map'_Uctor': "validP p \<Longrightarrow>
   pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y2 \<Longrightarrow>
-  bij f1 \<Longrightarrow> |supp (f1::'var::var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar::var \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   U2map' f1 f2 (raw_T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) (U2ctor' y2 p)
 = U2ctor' (map_T2_pre f1 f2 id id f1 f2 f1
     (\<lambda>(t, pu). (permute_raw_T1 f1 f2 t, \<lambda>p. if validP p then PU1map' f1 f2 t pu p else undefined))
@@ -762,13 +754,13 @@ lemmas FVars_def2s =
 
 lemma U1FVars'_subsets: "validP p \<Longrightarrow>
   pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
-  set5_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  set5_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_raw_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_raw_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U1FVars_1' (raw_T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor' y p) \<subseteq> FVars_raw_T11 (raw_T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
   "validP p \<Longrightarrow>
   pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y \<Longrightarrow>
-  set6_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
+  set6_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_2' t (pu p) \<subseteq> FVars_raw_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_2' t (pu p) \<subseteq> FVars_raw_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
   U1FVars_2' (raw_T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor' y p) \<subseteq> FVars_raw_T12 (raw_T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
@@ -845,7 +837,7 @@ lemma U1FVars'_subsets: "validP p \<Longrightarrow>
 
 lemma U2FVars'_subsets: "validP p \<Longrightarrow>
   pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y2 \<Longrightarrow>
-  set5_T2_pre (y2::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
+  set5_T2_pre (y2::(_, _, 'a, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y2 \<union> set9_T2_pre y2 \<Longrightarrow> U1FVars_1' t (pu p) \<subseteq> FVars_raw_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y2 \<union> set11_T2_pre y2 \<Longrightarrow> U2FVars_1' t (pu p) \<subseteq> FVars_raw_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
   U2FVars_1' (raw_T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) (U2ctor' y2 p) \<subseteq> FVars_raw_T21 (raw_T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) \<union> PFVars_1 p \<union> avoiding_set1"
@@ -928,7 +920,7 @@ lemma U2FVars'_subsets: "validP p \<Longrightarrow>
   done
 
 lemma Pmap_imsupp_empty:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p" "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     "imsupp f1 \<inter> PFVars_1 p = {}" "imsupp f2 \<inter> PFVars_2 p = {}"
   shows "Pmap f1 f2 p = p"
@@ -937,7 +929,7 @@ lemma Pmap_imsupp_empty:
   done
 
 lemma U1ctor_rename:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p" "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
     "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
@@ -986,7 +978,7 @@ lemma U1ctor_rename:
   apply (erule id_onD[OF imsupp_id_on, rotated], assumption)
   done
 lemma U2ctor_rename:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p" "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
     "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
@@ -1037,7 +1029,7 @@ lemma U2ctor_rename:
   done
 
 lemma U1ctor_cong:
-  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1 g1::"'var \<Rightarrow> 'var" and f2 g2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p"
     "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
     "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
@@ -1159,7 +1151,7 @@ lemma U1ctor_cong:
   done
 
 lemma U2ctor_cong:
-  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1 g1::"'var \<Rightarrow> 'var" and f2 g2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p"
     "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
     "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
@@ -1285,7 +1277,7 @@ lemmas T1_pre_set_map_ids = T1_pre.set_map[OF supp_id_bound supp_id_bound supp_i
 lemmas T2_pre_set_map_ids = T2_pre.set_map[OF supp_id_bound supp_id_bound supp_id_bound bij_id supp_id_bound bij_id supp_id_bound supp_id_bound, unfolded image_id]
 
 lemma U1ctor'_cong:
-  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1 g1::"'var \<Rightarrow> 'var" and f2 g2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p"
     "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
     "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
@@ -1585,7 +1577,7 @@ lemma U1ctor'_cong:
   done
 
 lemma U2ctor'_cong:
-  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1 g1::"'var \<Rightarrow> 'var" and f2 g2::"'tyvar \<Rightarrow> 'tyvar"
   assumes "validP p"
     "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y"
     "pred_T2_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y'"
@@ -1970,7 +1962,7 @@ lemma alpha_ctor_picks2:
 lemmas alpha_ctor_picks = alpha_ctor_picks1 alpha_ctor_picks2
 
 lemma mk_pick_prems:
-  fixes pick1::"_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> 'var::var" and pick2::"_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> 'tyvar::var"
+  fixes pick1::"_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> 'var" and pick2::"_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> 'tyvar"
   assumes suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4" "validP p"
   shows "bij (pick1 x p)" "|supp (pick1 x p)| <o |UNIV::'var set|" "bij (pick2 x p)" "|supp (pick2 x p)| <o |UNIV::'tyvar set|"
     "bij (pick3 x' p)" "|supp (pick3 x' p)| <o |UNIV::'var set|" "bij (pick4 x' p)" "|supp (pick4 x' p)| <o |UNIV::'tyvar set|"
@@ -1979,7 +1971,7 @@ lemma mk_pick_prems:
   done
 
 lemma int_empties1:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -2122,7 +2114,7 @@ proof -
 qed
 
 lemma int_empties2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -2210,7 +2202,7 @@ proof -
 qed
 
 lemma int_empties3:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -2354,7 +2346,7 @@ proof -
 qed
 
 lemma int_empties4:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -2876,7 +2868,7 @@ proof -
 qed
 
 lemma XXl_U1FVars':
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
     assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -2967,7 +2959,7 @@ proof -
 qed
 
 lemma XXl_U1FVars'_2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
     assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3058,7 +3050,7 @@ proof -
 qed
 
 lemma XXl_U2FVars':
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
     assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3149,7 +3141,7 @@ proof -
 qed
 
 lemma XXl_U2FVars'_2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3241,7 +3233,7 @@ proof -
 qed
 
 lemma XXr_U1FVars':
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3292,7 +3284,7 @@ lemma XXr_U1FVars':
   done
 
 lemma XXr_U1FVars'_2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3343,7 +3335,7 @@ lemma XXr_U1FVars'_2:
   done
 
 lemma XXr_U2FVars':
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3395,7 +3387,7 @@ lemma XXr_U2FVars':
   done
 
 lemma XXr_U2FVars'_2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p" "validP p'"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3447,7 +3439,7 @@ lemma XXr_U2FVars'_2:
   done
 
 lemma imsupp_id_on_XXl1:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3499,7 +3491,7 @@ proof -
 qed
 
 lemma imsupp_id_on_XXl2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3551,7 +3543,7 @@ proof -
 qed
 
 lemma imsupp_id_on_XXl3:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3604,7 +3596,7 @@ proof -
 qed
 
 lemma imsupp_id_on_XXl4:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3658,7 +3650,7 @@ proof -
 qed
 
 lemma imsupp_id_on_XXr1:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3700,7 +3692,7 @@ lemma imsupp_id_on_XXr1:
   done
 
 lemma imsupp_id_on_XXr2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3742,7 +3734,7 @@ lemma imsupp_id_on_XXr2:
   done
 
 lemma imsupp_id_on_XXr3:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3784,7 +3776,7 @@ lemma imsupp_id_on_XXr3:
   done
 
 lemma imsupp_id_on_XXr4:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3831,7 +3823,7 @@ lemmas imsupp_id_on_XX = imsupp_id_on_XXl1 imsupp_id_on_XXl2 imsupp_id_on_XXl3 i
 lemmas imsupp_id_empty = trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
 
 lemma valid_PUmap':
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes  f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
     "pred_fun validP validU1 h \<Longrightarrow> pred_fun validP validU1 (PU1map' f1 f2 g h)"
@@ -3860,7 +3852,7 @@ lemma valid_PUmap':
   done
 
 lemma valid_XXl1:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3897,7 +3889,7 @@ lemma valid_XXl1:
   done
 
 lemma valid_XXl2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3934,7 +3926,7 @@ lemma valid_XXl2:
   done
 
 lemma valid_XXr1:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3949,7 +3941,7 @@ lemma valid_XXr1:
       apply (rule ballI impI TrueI valid_f[OF suitable_prems] pred_fun_If)+
   done
 lemma valid_XXr2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
@@ -3967,7 +3959,7 @@ lemmas valid_XXl = valid_XXl1 valid_XXl2
 lemmas valid_XXr = valid_XXr1 valid_XXr2
 
 lemma valid_PUmap'_If:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
   shows
@@ -3985,7 +3977,7 @@ lemma valid_PUmap'_If:
   done
 
 lemma PUmap'_cong:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   shows
     "g = g' \<Longrightarrow> h (Pmap (inv f1) (inv f2) p) = h' (Pmap (inv f1) (inv f2) p) \<Longrightarrow> PU1map' f1 f2 g h p = PU1map' f1 f2 g' h' p"
     "g2 = g2' \<Longrightarrow> h2 (Pmap (inv f1) (inv f2) p) = h2' (Pmap (inv f1) (inv f2) p) \<Longrightarrow> PU2map' f1 f2 g2 h2 p = PU2map' f1 f2 g2' h2' p"
@@ -3994,7 +3986,7 @@ lemma PUmap'_cong:
   done
 
 lemma f_swap_alpha:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and suitable_prems: "suitable11 pick1" "suitable12 pick2" "suitable21 pick3" "suitable22 pick4"
     and suitable'_prems: "suitable11 pick1'" "suitable12 pick2'" "suitable21 pick3'" "suitable22 pick4'"
@@ -8961,7 +8953,7 @@ lemma ff0_cctors:
   done
 
 lemma ff0_swaps:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  fixes f1::"'var \<Rightarrow> 'var" and f2::"'tyvar \<Rightarrow> 'tyvar"
   assumes valid: "validP p"
     and f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
     and imsupp_prems: "imsupp f1 \<inter> avoiding_set1 = {}" "imsupp f2 \<inter> avoiding_set2 = {}"
@@ -8994,5 +8986,7 @@ lemmas ff0_UFVarss = f0_UFVars'(1)[of _ "rep_T1 _", unfolded U1FVars_1'_def TT_a
   f0_UFVars'(2)[of _ "rep_T1 _", unfolded U1FVars_2'_def TT_abs_rep ff0_T1_def[symmetric] FVars_def2s]
   f0_UFVars'(3)[of _ "rep_T2 _", unfolded U2FVars_1'_def TT_abs_rep ff0_T2_def[symmetric] FVars_def2s]
   f0_UFVars'(4)[of _ "rep_T2 _", unfolded U2FVars_2'_def TT_abs_rep ff0_T2_def[symmetric] FVars_def2s]
+
+end
 
 end

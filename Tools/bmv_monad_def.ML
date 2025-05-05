@@ -93,10 +93,8 @@ signature BMV_MONAD_DEF = sig
   val pbmv_monad_of_generic: Context.generic -> string -> bmv_monad option;
   val pbmv_monad_of: Proof.context -> string -> bmv_monad option;
 
-  val id_mrbnf: MRBNF_Def.mrbnf;
-
-  val pbmv_monad_of_bnf: BNF_Def.bnf -> local_theory -> bmv_monad * local_theory
-  val register_bnf_as_pbmv_monad: string -> local_theory -> local_theory
+  val pbmv_monad_of_mrbnf: MRBNF_Def.mrbnf -> local_theory -> bmv_monad * local_theory
+  val register_mrbnf_as_pbmv_monad: string -> local_theory -> local_theory
   val note_bmv_monad_thms: (Proof.context -> BNF_Def.fact_policy) -> (binding -> binding)
     -> binding option -> bmv_monad -> local_theory -> (string * thm list) list * local_theory
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
@@ -109,8 +107,6 @@ end
 structure BMV_Monad_Def : BMV_MONAD_DEF = struct
 
 open MRBNF_Util
-
-val id_mrbnf = the (MRBNF_Def.mrbnf_of @{context} "BMV_Monad.ID");
 
 type 'a bmv_monad_axioms = {
   Sb_Inj: 'a,
@@ -539,11 +535,11 @@ fun mk_param_axiom Map Supps SSupps Sb Injs RVrs Vrs bd lthy =
       ))
     ) (RVrs @ Vrs);
 
-    val Supp_Sb = map (fn Supp =>
-      fold_rev Logic.all (rhos @ hs @ [x]) (mk_Trueprop_eq (
+    val Supp_Sb = map (fn Supp => fold_rev Logic.all (rhos @ hs @ [x]) (
+      fold_rev (curry Logic.mk_implies) (mk_small_prems hs rhos SSupps) (mk_Trueprop_eq (
         Supp $ (Term.list_comb (Sb, hs @ rhos) $ x), Supp $ x
       ))
-    ) Supps;
+    )) Supps;
   in {
     axioms = {
       Map_id = Map_id,
@@ -899,75 +895,139 @@ fun bmv_monad_def const_policy fact_policy qualify bmv_b_opt (model: (Proof.cont
     val model = mk_thm_model model params axioms SSupp_eq bd_irco;
   in apfst (rpair unfold_set) (mk_bmv_monad const_policy fact_policy qualify SSupp_defs bmv_b_opt model lthy) end
 
-fun pbmv_monad_of_bnf bnf lthy =
+fun pbmv_monad_of_mrbnf mrbnf lthy =
   let
-    val (((lives, lives'), deads), _) = lthy
-      |> mk_TFrees (BNF_Def.live_of_bnf bnf)
-      ||>> mk_TFrees (BNF_Def.live_of_bnf bnf)
-      ||>> mk_TFrees' (map Type.sort_of_atyp (BNF_Def.deads_of_bnf bnf))
-    val T = BNF_Def.mk_T_of_bnf deads lives bnf;
-    val n = BNF_Def.live_of_bnf bnf;
-    val var_class = case BNF_Def.bd_of_bnf bnf of
+    val (((((lives, lives'), frees), bounds), deads), names_lthy) = lthy
+      |> mk_TFrees (MRBNF_Def.live_of_mrbnf mrbnf)
+      ||>> mk_TFrees (MRBNF_Def.live_of_mrbnf mrbnf)
+      ||>> mk_TFrees' (map Type.sort_of_atyp (MRBNF_Def.frees_of_mrbnf mrbnf))
+      ||>> mk_TFrees' (map Type.sort_of_atyp (MRBNF_Def.bounds_of_mrbnf mrbnf))
+      ||>> mk_TFrees' (map Type.sort_of_atyp (MRBNF_Def.deads_of_mrbnf mrbnf));
+
+    val ((fs, gs), _) = names_lthy
+      |> mk_Frees "f" (map (fn a => a --> a) frees)
+      ||>> mk_Frees "g" (map2 (curry (op-->)) lives lives');
+    val T = MRBNF_Def.mk_T_of_mrbnf deads lives bounds frees mrbnf;
+    val n = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf;
+    val var_class = case MRBNF_Def.bd_of_mrbnf mrbnf of
       @{term natLeq} => @{class var}
       | _ => error "TODO: other var classes"
+
+    val (lsets, _, fsets) = MRBNF_Def.deinterlace (MRBNF_Def.mk_sets_of_mrbnf
+      (replicate n deads) (replicate n lives) (replicate n bounds) (replicate n frees) mrbnf
+    ) (MRBNF_Def.var_types_of_mrbnf mrbnf);
+
+    val Sb = if null fs then HOLogic.id_const T else
+      fold_rev (Term.absfree o dest_Free) fs (Term.list_comb (
+        MRBNF_Def.mk_map_of_mrbnf deads lives lives bounds frees mrbnf,
+        MRBNF_Def.interlace (map HOLogic.id_const lives) (map HOLogic.id_const bounds) fs (MRBNF_Def.var_types_of_mrbnf mrbnf)
+      ));
+    val Map = if null lives then NONE else SOME (
+      fold_rev (Term.absfree o dest_Free) gs (Term.list_comb (
+        MRBNF_Def.mk_map_of_mrbnf deads lives lives' bounds frees mrbnf,
+        MRBNF_Def.interlace gs (map HOLogic.id_const bounds) (map HOLogic.id_const frees) (MRBNF_Def.var_types_of_mrbnf mrbnf)
+      ))
+    );
    in apfst fst (bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I NONE {
      ops = [T],
      var_class = var_class,
      leader = 0,
-     frees = [[]],
+     frees = [frees],
      lives = [lives],
      lives' = [lives'],
-     deads = [deads],
+     deads = [bounds @ deads],
      bmv_ops = [],
      consts = {
-       bd = BNF_Def.bd_of_bnf bnf,
+       bd = MRBNF_Def.bd_of_mrbnf mrbnf,
        Injs = [[]],
        SSupps = [[]],
-       Sbs = [HOLogic.id_const T],
+       Sbs = [Sb],
        Vrs = [[]],
-       RVrs = [[]],
-       params = [SOME {
-         Map = BNF_Def.mk_map_of_bnf deads lives lives' bnf,
-         Supps = BNF_Def.mk_sets_of_bnf (replicate n deads) (replicate n lives) bnf
-       }]
+       RVrs = [fsets],
+       params = [Option.map (fn Map => {
+         Map = Map,
+         Supps = lsets
+       }) Map]
      },
-     params = [SOME {
+     params = [Option.map (fn _ => {
        axioms = {
-         Map_id = fn ctxt => rtac ctxt (BNF_Def.map_id0_of_bnf bnf) 1,
-         Map_comp = fn ctxt => rtac ctxt (BNF_Def.map_comp0_of_bnf bnf RS sym) 1,
-         Supp_Map = map (fn thm => fn ctxt => rtac ctxt thm 1) (BNF_Def.set_map_of_bnf bnf),
-         Supp_bd = map (fn thm => fn ctxt => rtac ctxt thm 1) (BNF_Def.set_bd_of_bnf bnf),
+         Map_id = fn ctxt => rtac ctxt (MRBNF_Def.map_id0_of_mrbnf mrbnf) 1,
+         Map_comp = fn ctxt => EVERY1 [
+           rtac ctxt (trans OF [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]),
+           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+           rtac ctxt refl
+         ],
+         Supp_Map = map (fn _ => fn ctxt => EVERY1 [
+           resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
+           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+         ]) lsets,
+         Supp_bd = map (fn _ => fn ctxt => resolve_tac ctxt (MRBNF_Def.set_bd_of_mrbnf mrbnf) 1) lsets,
          Map_cong = fn ctxt => EVERY1 [
-           rtac ctxt (BNF_Def.map_cong0_of_bnf bnf),
-           REPEAT_DETERM o Goal.assume_rule_tac ctxt
+           rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
+           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+           REPEAT_DETERM o (rtac ctxt refl ORELSE' Goal.assume_rule_tac ctxt)
          ]
        },
-       Map_Sb = fn ctxt => Local_Defs.unfold0_tac ctxt @{thms id_o o_id} THEN rtac ctxt refl 1,
-       Supp_Sb = replicate n (fn ctxt => Local_Defs.unfold0_tac ctxt @{thms id_apply} THEN rtac ctxt refl 1),
-       Map_Vrs = []
-     }],
-     bd_infinite_regular_card_order = fn ctxt => EVERY1 [
-       rtac ctxt @{thm infinite_regular_card_order.intro},
-       rtac ctxt (BNF_Def.bd_card_order_of_bnf bnf),
-       rtac ctxt (BNF_Def.bd_cinfinite_of_bnf bnf),
-       rtac ctxt (BNF_Def.bd_regularCard_of_bnf bnf)
-     ],
+       Map_Sb = fn ctxt => EVERY1 [
+         K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+         rtac ctxt refl ORELSE' EVERY' [
+           rtac ctxt (trans OF [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]),
+           REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
+           rtac ctxt sym,
+           rtac ctxt (trans OF [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]),
+           REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
+           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+           rtac ctxt refl
+         ]
+       ],
+       Supp_Sb = map (fn _ => fn ctxt => EVERY1 [
+         K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
+         rtac ctxt refl ORELSE' EVERY' [
+           rtac ctxt trans,
+           resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
+           REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
+           rtac ctxt @{thm image_id}
+         ]
+       ]) lsets,
+       Map_Vrs = map (fn _ => fn ctxt => EVERY1 [
+         rtac ctxt trans,
+         resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
+         REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound},
+         rtac ctxt @{thm image_id}
+       ]) fsets
+     }) Map],
+     bd_infinite_regular_card_order = fn ctxt => rtac ctxt (MRBNF_Def.bd_infinite_regular_card_order_of_mrbnf mrbnf) 1,
      SSupp_eq = [[]],
      tacs = [{
-       Sb_Inj = fn ctxt => rtac ctxt refl 1,
+       Sb_Inj = fn ctxt => resolve_tac ctxt [refl, MRBNF_Def.map_id0_of_mrbnf mrbnf] 1,
        Sb_comp_Injs = [],
-       Sb_comp = fn ctxt => rtac ctxt @{thm id_o} 1,
-       Vrs_bds = [],
+       Sb_comp = fn ctxt => EVERY1 [
+         TRY o EVERY' [
+           rtac ctxt (trans OF [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]),
+           REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
+         ],
+         K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+         rtac ctxt refl
+       ],
+       Vrs_bds = map (fn _ => fn ctxt => resolve_tac ctxt (MRBNF_Def.set_bd_of_mrbnf mrbnf) 1) fsets,
        Vrs_Injs = [],
-       Vrs_Sbs = [],
-       Sb_cong = fn ctxt => rtac ctxt refl 1
+       Vrs_Sbs = map (fn _ => fn ctxt => EVERY1 [
+         resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
+         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
+       ]) fsets,
+       Sb_cong = fn ctxt => rtac ctxt refl 1 ORELSE EVERY1 [
+         rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
+         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
+         REPEAT_DETERM o (rtac ctxt refl ORELSE' Goal.assume_rule_tac ctxt)
+       ]
      }]
    } lthy) end;
 
-fun register_bnf_as_pbmv_monad name lthy =
+fun register_mrbnf_as_pbmv_monad name lthy =
   let
-    val bnf = the (BNF_Def.bnf_of lthy name);
-    val (bmv, lthy) = pbmv_monad_of_bnf bnf lthy;
+    val mrbnf = the (MRBNF_Def.mrbnf_of lthy name);
+    val (bmv, lthy) = pbmv_monad_of_mrbnf mrbnf lthy;
     val lthy = register_pbmv_monad name bmv lthy;
   in lthy end
 
@@ -980,7 +1040,6 @@ fun slice_bmv_monad n bmv =
   let
     fun f xs = nth xs n;
     val Sb = f (Sbs_of_bmv_monad bmv);
-    val vars = map TFree (Term.add_tfrees Sb []);
   in BMV {
     ops = [f (ops_of_bmv_monad bmv)],
     var_class = var_class_of_bmv_monad bmv,
@@ -1230,8 +1289,9 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             ),
             K (prefer_tac 2),
             rtac ctxt (#Map_cong (#axioms param)),
-            K (Local_Defs.unfold0_tac ctxt (#Supp_Sb param)),
             EVERY' (map (fn Inr _ => rtac ctxt refl | Inl inner => EVERY' [
+              EqSubst.eqsubst_asm_tac ctxt [0] (#Supp_Sb param),
+              REPEAT_DETERM o resolve_tac ctxt prems,
               resolve_tac ctxt (map #Sb_cong (axioms_of_bmv_monad inner)),
               REPEAT_DETERM o resolve_tac ctxt (take (2 * length Injs) prems),
               REPEAT_DETERM o (rtac ctxt refl ORELSE' EVERY' [

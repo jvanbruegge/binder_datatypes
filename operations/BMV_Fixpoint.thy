@@ -9,9 +9,19 @@ type_synonym ('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre' =
   + 'bv * 'tv FType * 'c \<comment>\<open>Lam x::'v \<open>'tv FType\<close> t::\<open>('tv, 'v) FTerm\<close> binds x in t\<close>
   + 'btv * 'c            \<comment>\<open>TyLam a::'tv t::\<open>('tv, 'v) FTerm\<close> binds a in t\<close>"
 
-(*ML_file \<open>../Tools/mrsbnf_comp.ML\<close>*)
+ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
 
+local_setup \<open>fn lthy =>
+let
+  val ((mrsbnf, tys), (_, lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)
+    I [] (map (apfst dest_TFree) [(@{typ 'v}, MRBNF_Def.Free_Var),
+      (@{typ 'btv}, MRBNF_Def.Bound_Var), (@{typ 'bv}, MRBNF_Def.Bound_Var)])
+    @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"}
+    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
 
+  val _ = @{print} mrsbnf
+in lthy end
+\<close>
 
 
 

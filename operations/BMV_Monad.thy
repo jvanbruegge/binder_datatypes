@@ -5,14 +5,6 @@ theory BMV_Monad
     "mrsbnf" :: thy_goal
 begin
 
-local_setup \<open>fn lthy =>
-  let
-    val (id_mrbnf, (_, lthy)) = MRBNF_Comp.demote_mrbnf I [MRBNF_Def.Free_Var] MRBNF_Comp.ID_mrbnf
-      ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-    val lthy = MRBNF_Def.register_mrbnf_raw "BMV_Monad.ID" id_mrbnf lthy
-  in lthy end
-\<close>
-
 declare [[mrbnf_internals]]
 binder_datatype 'a FType
   = TyVar 'a
@@ -129,9 +121,15 @@ declare [[ML_print_depth=1000]]
 
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
-local_setup \<open>fold BMV_Monad_Def.register_bnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
+local_setup \<open>fold BMV_Monad_Def.register_mrbnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
 
 ML_file \<open>../Tools/mrsbnf_def.ML\<close>
+
+local_setup \<open>fn lthy =>
+let
+  val (mrsbnf, _) = MRSBNF_Def.mrsbnf_of_mrbnf (the (MRBNF_Def.mrbnf_of lthy @{type_name FType_pre})) lthy;
+  val _ = @{print} mrsbnf
+in lthy end\<close>
 
 pbmv_monad "'tv::var FType"
   Sbs: tvsubst_FType

@@ -53,7 +53,7 @@ assumes
   and U1map_id0: "validU1 u1 \<Longrightarrow> U1map id id (t1::('var, 'tyvar, 'a, 'b) T1) u1 = u1"
   and U1map_comp0: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
-  U1map (g1 \<circ> f1) (g2 \<circ> f2) t1 x1 = (U1map g1 g2 t1 \<circ> U1map f1 f2 t1) u1"
+  U1map (g1 \<circ> f1) (g2 \<circ> f2) t1 u1 = (U1map g1 g2 t1 \<circ> U1map f1 f2 t1) u1"
   and U1map_cong_id: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   (\<And>a. a \<in> U1FVars_1 t1 u1 \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> U1FVars_2 t1 u1 \<Longrightarrow> f2 a = a) \<Longrightarrow>
   U1map f1 f2 t1 u1 = u1"
@@ -8986,6 +8986,129 @@ lemmas ff0_UFVarss = f0_UFVars'(1)[of _ "rep_T1 _", unfolded U1FVars_1'_def TT_a
   f0_UFVars'(2)[of _ "rep_T1 _", unfolded U1FVars_2'_def TT_abs_rep ff0_T1_def[symmetric] FVars_def2s]
   f0_UFVars'(3)[of _ "rep_T2 _", unfolded U2FVars_1'_def TT_abs_rep ff0_T2_def[symmetric] FVars_def2s]
   f0_UFVars'(4)[of _ "rep_T2 _", unfolded U2FVars_2'_def TT_abs_rep ff0_T2_def[symmetric] FVars_def2s]
+
+end
+
+locale QREC =
+  fixes Pmap :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> 'p \<Rightarrow> 'p"
+  and PFVars_1 :: "'p \<Rightarrow> 'var set"
+  and PFVars_2 :: "'p \<Rightarrow> 'tyvar set"
+
+  and U1ctor :: "('var, 'tyvar, 'a::var, 'b, 'var, 'tyvar, 'var,
+    ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1), ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1),
+    ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2), ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2)
+  ) T1_pre \<Rightarrow> 'p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1"
+  and U2ctor :: "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var,
+    ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1), ('var, 'tyvar, 'a, 'b) T1 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1),
+    ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2), ('var, 'tyvar, 'a, 'b) T2 \<times> ('p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2)
+  ) T2_pre \<Rightarrow> 'p \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2"
+
+  and validP :: "'p \<Rightarrow> bool"
+assumes
+  (* parameter axioms *)
+  Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
+  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
+  and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  (\<And>a. a \<in> PFVars_1 d \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 d \<Longrightarrow> f2 a = a) \<Longrightarrow>
+  Pmap f1 f2 d = d"
+  and PFVars_Pmap_1: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  PFVars_1 (Pmap f1 f2 d) = f1 ` PFVars_1 d"
+  and PFVars_Pmap_2: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  PFVars_2 (Pmap f1 f2 d) = f2 ` PFVars_2 d"
+  and small_PFVars_1: "validP d \<Longrightarrow> |PFVars_1 d| <o |UNIV::'var set|"
+  and small_PFVars_2: "validP d \<Longrightarrow> |PFVars_2 d| <o |UNIV::'tyvar set|"
+  (* closure of validP under Pmap *)
+  and valid_Pmap: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+                  validP (Pmap f1 f2 d)"
+  (* model 1 axioms *)
+  and permute_U1ctor: "validP p \<Longrightarrow>
+   bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  permute_T1 f1 f2 (U1ctor y p)
+= U1ctor (map_T1_pre f1 f2 id id f1 f2 f1
+    (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then permute_T1 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then permute_T1 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then permute_T2 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then permute_T2 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+ y) (Pmap f1 f2 p)"
+  and FVars_subset_11: "validP p \<Longrightarrow>
+  set5_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> PFVars_1 p = {} \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> FVars_T11 (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> FVars_T21 (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p) \<Longrightarrow>
+  FVars_T11 (U1ctor y p) \<subseteq> FVars_T11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p"
+  and FVars_subset_12: "validP p \<Longrightarrow>
+  set6_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> PFVars_2 p = {} \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> FVars_T12 (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> FVars_T22 (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p) \<Longrightarrow>
+  FVars_T12 (U1ctor y p) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p"
+  (* model 2 axioms *)
+  and permute_U2ctor: "validP p \<Longrightarrow>
+  bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  permute_T2 f1 f2 (U2ctor y2 p)
+= U2ctor (map_T2_pre f1 f2 id id f1 f2 f1
+    (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then permute_T1 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then permute_T1 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then permute_T2 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+    (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then permute_T2 f1 f2 (pu (Pmap (inv f1) (inv f2) p)) else undefined))
+ y2) (Pmap f1 f2 p)"
+  and FVars_subset_21: "validP p \<Longrightarrow>
+  set5_T2_pre (y2::(_, _, 'a, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> PFVars_1 p = {} \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y2 \<union> set9_T2_pre y2 \<Longrightarrow> FVars_T11 (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y2 \<union> set11_T2_pre y2 \<Longrightarrow> FVars_T21 (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p) \<Longrightarrow>
+  FVars_T21 (U2ctor y2 p) \<subseteq> FVars_T21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) \<union> PFVars_1 p"
+  and FVars_subset_22: "validP p \<Longrightarrow>
+  set6_T2_pre y2 \<inter> PFVars_2 p = {} \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y2 \<union> set9_T2_pre y2 \<Longrightarrow> FVars_T12 (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p) \<Longrightarrow>
+  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y2 \<union> set11_T2_pre y2 \<Longrightarrow> FVars_T22 (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p) \<Longrightarrow>
+  FVars_T22 (U2ctor y2 p) \<subseteq> FVars_T22 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y2)) \<union> PFVars_2 p"
+begin
+
+interpretation rec: REC Pmap PFVars_1 PFVars_2 "{}" "{}" "\<lambda>f1 f2 _ t. permute_T1 f1 f2 t" "\<lambda>f1 f2 _ t. permute_T2 f1 f2 t" "\<lambda>_. FVars_T11" "\<lambda>_. FVars_T12" "\<lambda>_. FVars_T21" "\<lambda>_. FVars_T22" U1ctor U2ctor validP "\<lambda>_. True" "\<lambda>_. True"
+  apply (unfold_locales)
+                      apply (erule Pmap_id0)
+                      apply (rule Pmap_comp0; assumption)
+                      apply (rule Pmap_cong_id; assumption)
+                      apply (rule PFVars_Pmap_1; assumption)
+                      apply (rule PFVars_Pmap_2; assumption)
+                      apply (erule small_PFVars_1)
+                     apply (erule small_PFVars_2)
+                    apply (rule emp_bound)+
+                  apply (erule valid_Pmap; assumption)
+                 apply (rule permute_ids)
+  subgoal
+    apply (rule trans[OF _ comp_apply[symmetric]])
+    apply (rule permute_comps[symmetric])
+           apply assumption+
+    done
+               apply (unfold Un_empty_right)
+               apply (rule permute_cong_ids; assumption)
+              apply (rule permute_U1ctor; assumption)
+             apply (rule FVars_subset_11; assumption)
+            apply (rule FVars_subset_12; assumption)
+           apply (rule TrueI)
+          apply (rule TrueI)
+         apply (rule permute_ids)
+  subgoal
+    apply (rule trans[OF _ comp_apply[symmetric]])
+    apply (rule permute_comps[symmetric])
+           apply assumption+
+    done
+       apply (unfold Un_empty_right)?
+       apply (rule permute_cong_ids; assumption)
+      apply (rule permute_U2ctor; assumption)
+     apply (rule FVars_subset_21; assumption)
+    apply (rule FVars_subset_22; assumption)
+   apply (rule TrueI)
+  apply (rule TrueI)
+  done
+
+abbreviation "ff0_T1 \<equiv> rec.ff0_T1"
+abbreviation "ff0_T2 \<equiv> rec.ff0_T2"
+
+lemmas ff0_cctors = rec.ff0_cctors
+lemmas ff0_swaps = rec.ff0_swaps
+lemmas ff0_UFVarss = rec.ff0_UFVarss
 
 end
 

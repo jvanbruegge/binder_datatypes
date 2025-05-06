@@ -1,5 +1,5 @@
 theory TVSubst
-  imports "./Least_Fixpoint"
+  imports "./Recursor"
 begin
 
 (* Free variable injections *)
@@ -110,9 +110,6 @@ definition PFVars_2 :: "('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> 't
 
 definition Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> ('var, 'tyvar, 'a, 'b) P" where
   "Pmap g1 g2 p \<equiv> case p of (f1, f2, f3) \<Rightarrow> (compSS11 g1 g2 f1, compSS12 g1 g2 f2, compSS21 g1 g2 f3)"
-
-definition avoiding_set1 :: "'var::var set" where "avoiding_set1 \<equiv> {}"
-definition avoiding_set2 :: "'tyvar::var set" where "avoiding_set2 \<equiv> {}"
 
 abbreviation "U1FVars_1 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::var, 'tyvar::var, 'a::var, 'b) T1). FVars_T11 x"
 abbreviation "U1FVars_2 \<equiv> \<lambda>(_::('var, 'tyvar, 'a, 'b) T1) (x::('var::var, 'tyvar::var, 'a::var, 'b) T1). FVars_T12 x"
@@ -1253,18 +1250,10 @@ lemma small_PFVarss:
     done
   done
 
-lemma small_avoiding_sets:
-  "|avoiding_set1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  "|avoiding_set2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-   apply (unfold avoiding_set1_def avoiding_set2_def)
-   apply (rule cmin_greater card_of_Card_order emp_bound)+
-  done
-
-lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
-  U1FVars_1 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
-  apply (unfold avoiding_set1_def Un_empty_right case_prod_beta)
+lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> PFVars_1 p = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p) \<Longrightarrow>
+  U1FVars_1 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p"
   subgoal premises prems
     apply (unfold U1ctor_def case_prod_beta)
     (* REPEAT_DETERM *)
@@ -1372,11 +1361,10 @@ lemma U1FVars_subset_1: "valid_P p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::
   done
   done
 
-lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
-  U1FVars_2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
-  apply (unfold avoiding_set2_def Un_empty_right)
+lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> PFVars_2 p = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p) \<Longrightarrow>
+  U1FVars_2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p"
   subgoal premises prems
   apply (unfold U1ctor_def case_prod_beta)
   apply (rule case_split)
@@ -1475,11 +1463,10 @@ lemma U1FVars_subset_2: "valid_P p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::
   done
   done
 
-lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> avoiding_set1) = {} \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> avoiding_set1) \<Longrightarrow>
-  U2FVars_1 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> avoiding_set1"
-  apply (unfold avoiding_set1_def Un_empty_right)
+lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> PFVars_1 p = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p) \<Longrightarrow>
+  U2FVars_1 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p"
   subgoal premises prems
   apply (unfold U2ctor_def case_prod_beta)
   apply (rule case_split)
@@ -1558,11 +1545,10 @@ lemma U2FVars_subset_1: "valid_P p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::
   done
   done
 
-lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::var, 'tyvar::var, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> avoiding_set2) = {} \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
-  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> avoiding_set2) \<Longrightarrow>
-  U2FVars_2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T22 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> avoiding_set2"
-  apply (unfold avoiding_set2_def Un_empty_right)
+lemma U2FVars_subset_2: "valid_P p \<Longrightarrow> set6_T2_pre (y::('var::var, 'tyvar::var, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> PFVars_2 p = {} \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p) \<Longrightarrow>
+  (\<And>t pu p. valid_P p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p) \<Longrightarrow>
+  U2FVars_2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T22 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p"
   subgoal premises prems
   apply (unfold U2ctor_def case_prod_beta)
   apply (rule case_split)
@@ -1741,133 +1727,26 @@ lemma U2map_Uctor: "valid_P p \<Longrightarrow> bij f1 \<Longrightarrow> |supp (
   apply (rule refl)
   done
 
-(* parameter axioms *)
-thm Pmap_id0
-thm Pmap_comp0
-thm Pmap_cong_id
-thm PFVars_Pmaps
-thm small_PFVarss
-thm small_avoiding_sets
-thm valid_Pmap
-
-(* model1 axioms *)
-thm U1map_Uctor
-thm U1FVars_subset_1 U1FVars_subset_2
-
-(* model2 axioms *)
-thm U2map_Uctor
-thm U2FVars_subset_1 U2FVars_subset_2
-
-ML \<open>
-val nvars:int = 2
-
-val parameters = {
-  P = @{typ "('var::var, 'tyvar::var, 'a::var, 'b) P"},
-  Pmap = @{term "Pmap :: _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
-  PFVarss = [
-    @{term "PFVars_1 :: ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
-    @{term "PFVars_2 :: ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"}
-  ],
-  avoiding_sets = [
-    @{term "avoiding_set1 :: 'var::var set"},
-    @{term "avoiding_set2 :: 'tyvar::var set"}
-  ],
-  min_bound = true,
-  validity = SOME {
-    pred = @{term "valid_P :: ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
-    valid_Pmap = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms valid_Pmap} THEN_ALL_NEW assume_tac ctxt)
-  },
-  axioms = {
-    Pmap_id0 = fn ctxt => EVERY1 [
-      resolve_tac ctxt [trans],
-      resolve_tac ctxt @{thms fun_cong[OF Pmap_id0]},
-      resolve_tac ctxt @{thms id_apply}
-    ],
-    Pmap_comp0 = fn ctxt => resolve_tac ctxt @{thms fun_cong[OF Pmap_comp0[symmetric]]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    Pmap_cong_id = fn ctxt => resolve_tac ctxt @{thms Pmap_cong_id} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1),
-    PFVars_Pmaps = replicate nvars (fn ctxt => resolve_tac ctxt @{thms PFVars_Pmaps} 1 THEN REPEAT_DETERM (assume_tac ctxt 1)),
-    small_PFVarss = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_PFVarss} 1 THEN assume_tac ctxt 1),
-    small_avoiding_sets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms small_avoiding_sets} 1)
-  }
-};
-
-val card_thms = @{thms ordLess_ordLeq_trans[of _ "cmin _ _" "|_|"] cmin1 cmin2 card_of_Card_order}
-\<close>
-
-ML \<open>
-val T1_model = {
-  binding = @{binding tvsubst_T1},
-  U = @{typ "('var::var, 'tyvar::var, 'a::var, 'b) U1"},
-  UFVarss = [
-    @{term "U1FVars_1 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> _"},
-    @{term "U1FVars_2 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> _"}
-  ],
-  Umap = @{term "U1map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U1 \<Rightarrow> _"},
-  Uctor = @{term "U1ctor::_ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
-  validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
-  axioms = {
-    Umap_id0 = fn ctxt => EVERY1 [
-      resolve_tac ctxt [trans],
-      resolve_tac ctxt @{thms permute_id0s[THEN fun_cong]},
-      resolve_tac ctxt @{thms id_apply}
-    ],
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms permute_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
-    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms permute_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
-    Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U1map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U1FVars_subset_1 U1FVars_subset_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
-  }
-};
-
-val T2_model = {
-  binding = @{binding vvsubst_T2},
-  U = @{typ "('var::var, 'tyvar::var, 'a::var, 'b) U2"},
-  UFVarss = [
-    @{term "U2FVars_1 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> _"},
-    @{term "U2FVars_2 :: _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> _"}
-  ],
-  Umap = @{term "U2map::_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) U2 \<Rightarrow> _"},
-  Uctor = @{term "U2ctor::_ \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) P \<Rightarrow> _"},
-  validity = NONE : { pred: term, valid_Umap: Proof.context -> tactic, valid_Uctor: Proof.context -> tactic } option,
-  axioms = {
-    Umap_id0 = fn ctxt => EVERY1 [
-      resolve_tac ctxt [trans],
-      resolve_tac ctxt @{thms permute_id0s[THEN fun_cong]},
-      resolve_tac ctxt @{thms id_apply}
-    ],
-    Umap_comp0 = fn ctxt => resolve_tac ctxt @{thms permute_comp0s[symmetric, THEN fun_cong]} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
-    Umap_cong_id = fn ctxt => resolve_tac ctxt @{thms permute_cong_ids} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1 ORELSE resolve_tac ctxt card_thms 1),
-    Umap_Uctor = fn ctxt => resolve_tac ctxt @{thms U2map_Uctor} 1 THEN REPEAT_DETERM (assume_tac ctxt 1),
-    UFVars_subsets = replicate nvars (fn ctxt => resolve_tac ctxt @{thms U2FVars_subset_1 U2FVars_subset_2} 1 THEN REPEAT_DETERM (assume_tac ctxt 1 ORELSE Goal.assume_rule_tac ctxt 1))
-  }
-};
-
-val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Least_Fixpoint.T1")
-\<close>
-
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-
-declare [[quick_and_dirty]]
-local_setup \<open>fn lthy =>
-let
-  val qualify = I
-  val (ress, lthy) = MRBNF_Recursor.create_binding_recursor qualify fp_res parameters [T1_model, T2_model] lthy
-
-  val notes =
-    [ ("rec_Uctors", map #rec_Uctor ress)
-    ] |> (map (fn (thmN, thms) =>
-      ((Binding.qualify true "T1" (Binding.name thmN), []), [(thms, [])])
-    ));
-  val (_, lthy) = Local_Theory.notes notes lthy
-  val _ = @{print} ress
-in lthy end\<close>
-print_theorems
-declare [[quick_and_dirty=false]]
+interpretation tvsubst: QREC_cmin Pmap PFVars_1 PFVars_2 U1ctor U2ctor valid_P
+  apply unfold_locales
+               apply (rule trans[OF Pmap_id0[THEN fun_cong] id_apply])
+              apply (erule Pmap_comp0[symmetric, THEN fun_cong]; assumption)
+             apply (erule Pmap_cong_id; assumption)
+            apply (erule PFVars_Pmaps; assumption)+
+          apply (erule small_PFVarss)+
+        apply (erule valid_Pmap; assumption)+
+       apply (erule U1map_Uctor; assumption)
+      apply (erule U1FVars_subset_1; assumption)
+     apply (erule U1FVars_subset_2; assumption)
+       apply (erule U2map_Uctor; assumption)
+      apply (erule U2FVars_subset_1; assumption)
+  apply (erule U2FVars_subset_2; assumption)
+  done
 
 definition tvsubst_T1 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1" where
-  "tvsubst_T1 f1 f2 f3 t \<equiv> ff01_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
+  "tvsubst_T1 f1 f2 f3 t \<equiv> tvsubst.REC_T1 t (f1, f2, f3)"
 definition tvsubst_T2 :: "('var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1) \<Rightarrow> ('tyvar \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1) \<Rightarrow> ('var \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2" where
-  "tvsubst_T2 f1 f2 f3 t \<equiv> ff02_tvsubst_T1_vvsubst_T2 t (f1, f2, f3)"
+  "tvsubst_T2 f1 f2 f3 t \<equiv> tvsubst.REC_T2 t (f1, f2, f3)"
 
 type_synonym ('var, 'tyvar, 'a, 'b) U1_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T1_pre"
 type_synonym ('var, 'tyvar, 'a, 'b) U2_pre = "('var, 'tyvar, 'a, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U1, ('var, 'tyvar, 'a, 'b) U2, ('var, 'tyvar, 'a, 'b) U2) T2_pre"
@@ -2568,7 +2447,7 @@ lemma tvsubst_VVrs:
   subgoal
     apply (unfold VVr_defs comp_def)[1]
     apply (rule trans)
-     apply (rule T1.rec_Uctors)
+     apply (rule tvsubst.REC_ctors)
         apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]
         apply (rule conjI assms cmin_greater card_of_Card_order emp_bound)+
        apply (unfold eta_set_empties noclash_T1_def U1ctor_def prod.case Un_empty)
@@ -2586,11 +2465,11 @@ lemma tvsubst_VVrs:
     done
   subgoal
     apply (rule trans)
-     apply (rule arg_cong2[OF _ refl, of _ _ ff01_tvsubst_T1_vvsubst_T2])
+     apply (rule arg_cong2[OF _ refl, of _ _ tvsubst.REC_T1])
      apply (unfold VVr_defs comp_def)[1]
      apply (rule refl)
     apply (rule trans)
-     apply (rule T1.rec_Uctors)
+     apply (rule tvsubst.REC_ctors)
         apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]
         apply (rule conjI assms cmin_greater card_of_Card_order emp_bound)+
        apply (unfold eta_set_empties noclash_T1_def U1ctor_def prod.case Un_empty)
@@ -2623,11 +2502,11 @@ lemma tvsubst_VVrs:
     done
   subgoal
     apply (rule trans)
-     apply (rule arg_cong2[OF _ refl, of _ _ ff02_tvsubst_T1_vvsubst_T2])
+     apply (rule arg_cong2[OF _ refl, of _ _ tvsubst.REC_T2])
      apply (unfold VVr_defs comp_def)[1]
      apply (rule refl)
     apply (rule trans)
-     apply (rule T1.rec_Uctors)
+     apply (rule tvsubst.REC_ctors)
         apply (unfold valid_P_def prod.case Supp_VVr_empty)[1]
         apply (rule conjI assms cmin_greater card_of_Card_order emp_bound)+
        apply (unfold eta_set_empties noclash_T2_def U2ctor_def prod.case Un_empty)
@@ -2655,10 +2534,10 @@ shows
   "tvsubst_T1 f1 f2 f3 (T1_ctor x) = T1_ctor (map_T1_pre id id id id id id id (tvsubst_T1 f1 f2 f3) (tvsubst_T1 f1 f2 f3) (tvsubst_T2 f1 f2 f3) (tvsubst_T2 f1 f2 f3) x)"
   apply (unfold tvsubst_T1_def tvsubst_T2_def)
    apply (rule trans)
-    apply (rule T1.rec_Uctors)
+    apply (rule tvsubst.REC_ctors)
        apply (unfold valid_P_def prod.case)[1]
        apply (rule conjI f_prems)+
-      apply (unfold PFVars_1_def PFVars_2_def avoiding_set1_def avoiding_set2_def prod.case Un_empty_right)
+      apply (unfold PFVars_1_def PFVars_2_def prod.case Un_empty_right)
      apply (rule empty_prems noclash)+
   apply (unfold U1ctor_def prod.case)
   apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
@@ -2678,10 +2557,10 @@ shows
   "tvsubst_T2 f1 f2 f3 (T2_ctor x) = T2_ctor (map_T2_pre id id id id id id id (tvsubst_T1 f1 f2 f3) (tvsubst_T1 f1 f2 f3) (tvsubst_T2 f1 f2 f3) (tvsubst_T2 f1 f2 f3) x)"
   apply (unfold tvsubst_T1_def tvsubst_T2_def)
    apply (rule trans)
-    apply (rule T1.rec_Uctors)
+    apply (rule tvsubst.REC_ctors)
        apply (unfold valid_P_def prod.case)[1]
        apply (rule conjI f_prems)+
-      apply (unfold PFVars_1_def PFVars_2_def avoiding_set1_def avoiding_set2_def prod.case Un_empty_right)
+      apply (unfold PFVars_1_def PFVars_2_def prod.case Un_empty_right)
      apply (rule empty_prems noclash)+
   apply (unfold U2ctor_def prod.case)
   apply (subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)+

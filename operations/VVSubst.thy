@@ -6,51 +6,6 @@ begin
 (******* Definitions ************)
 (********************************)
 
-type_synonym ('var, 'tyvar, 'a, 'b, 'c) P = "('var \<Rightarrow> 'var) \<times> ('tyvar \<Rightarrow> 'tyvar) \<times> ('a \<Rightarrow> 'a) \<times> ('b \<Rightarrow> 'c)"
-type_synonym ('var, 'tyvar, 'a, 'c) U1 = "('var, 'tyvar, 'a, 'c) T1"
-type_synonym ('var, 'tyvar, 'a, 'c) U2 = "('var, 'tyvar, 'a, 'c) T2"
-
-type_synonym ('var, 'tyvar, 'a, 'b, 'c) rec_T1 = "('var, 'tyvar, 'a, 'b) T1 \<times> (('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1)"
-type_synonym ('var, 'tyvar, 'a, 'b, 'c) rec_T2 = "('var, 'tyvar, 'a, 'b) T2 \<times> (('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2)"
-
-abbreviation validP :: "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> bool" where
-  "validP p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow>
-    |supp f1| <o |UNIV::'var set| \<and> |supp f2| <o |UNIV::'tyvar set| \<and>
-    |supp f3| <o |UNIV::'a set|"
-
-definition U1ctor :: "('var::var, 'tyvar::var, 'a::var, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b, 'c) rec_T1, ('var, 'tyvar, 'a, 'b, 'c) rec_T1, ('var, 'tyvar, 'a, 'b, 'c) rec_T2, ('var, 'tyvar, 'a, 'b, 'c) rec_T2) T1_pre \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1" where
-  "U1ctor x p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow>
-    T1_ctor (map_T1_pre f1 f2 f3 f4 id id f1
-      ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) x
-  )"
-definition U2ctor :: "('var::var, 'tyvar::var, 'a::var, 'b, 'var, 'tyvar, 'var, ('var, 'tyvar, 'a, 'b, 'c) rec_T1, ('var, 'tyvar, 'a, 'b, 'c) rec_T1, ('var, 'tyvar, 'a, 'b, 'c) rec_T2, ('var, 'tyvar, 'a, 'b, 'c) rec_T2) T2_pre \<Rightarrow> ('var, 'tyvar, 'a, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2" where
-  "U2ctor x p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow>
-    T2_ctor (map_T2_pre f1 f2 f3 f4 id id f1
-      ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) ((\<lambda>R. R p) \<circ> snd) x
-  )"
-
-abbreviation PFVars_1 :: "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> 'var set" where
-  "PFVars_1 p \<equiv> case p of (f1, f2, _, _) \<Rightarrow> imsupp f1"
-abbreviation PFVars_2 :: "('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> 'tyvar set" where
-  "PFVars_2 p \<equiv> case p of (f1, f2, _, _) \<Rightarrow> imsupp f2"
-
-abbreviation Pmap :: "('var \<Rightarrow> 'var) \<Rightarrow> ('tyvar \<Rightarrow> 'tyvar) \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b, 'c) P \<Rightarrow> ('var, 'tyvar, 'a, 'b,'c) P" where
-  "Pmap g1 g2 p \<equiv> case p of (f1, f2, f3, f4) \<Rightarrow> (compSS g1 f1, compSS g2 f2, f3, f4)"
-
-abbreviation U1map :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::var, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U1" where
-  "U1map f1 f2 t \<equiv> \<lambda>u. permute_T1 f1 f2 u"
-abbreviation U2map :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('var, 'tyvar, 'a::var, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) U2" where
-  "U2map f1 f2 t \<equiv> \<lambda>u. permute_T2 f1 f2 u"
-
-abbreviation U1FVars_1 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U1 \<Rightarrow> 'var set" where
-  "U1FVars_1 t u \<equiv> FVars_T11 u"
-abbreviation U1FVars_2 :: "('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U1 \<Rightarrow> 'tyvar set" where
-  "U1FVars_2 t u \<equiv> FVars_T12 u"
-abbreviation U2FVars_1 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U2 \<Rightarrow> 'var set" where
-  "U2FVars_1 t u \<equiv> FVars_T21 u"
-abbreviation U2FVars_2 :: "('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'c) U2 \<Rightarrow> 'tyvar set" where
-  "U2FVars_2 t u \<equiv> FVars_T22 u"
-
 function set3_raw_T1 :: "('var::var, 'tyvar::var, 'a::var, 'b) raw_T1 \<Rightarrow> 'a set"
   and set3_raw_T2 :: "('var::var, 'tyvar::var, 'a::var, 'b) raw_T2 \<Rightarrow> 'a set" where
   "set3_raw_T1 (raw_T1_ctor x) = set3_T1_pre x \<union> \<Union>(set3_raw_T1 ` set8_T1_pre x) \<union> \<Union>(set3_raw_T1 ` set9_T1_pre x)  \<union> \<Union>(set3_raw_T2 ` set10_T1_pre x) \<union> \<Union>(set3_raw_T2 ` set11_T1_pre x)"
@@ -104,586 +59,447 @@ coinductive rel_T1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('
     \<Longrightarrow> rel_T2 R (T2_ctor x2) (T2_ctor y2)"
 
 (********************************)
-(******* Axiom Proofs ***********)
+(* Define vvsubst via recursor **)
 (********************************)
-lemma Pmap_id0: "Pmap id id = id"
-  apply (unfold compSS_def prod.collapse id_def[symmetric] case_prod_beta id_o o_id inv_id)
-  apply (rule refl)
-  done
+context
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar" and f3::"'a::var \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c"
+  assumes f_prems: "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
+begin
 
-lemma Pmap_comp0:
-  fixes f1 g1::"'var::var \<Rightarrow> 'var" and f2 g2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-          "bij g1" "|supp g1| <o |UNIV::'var set|" "bij g2" "|supp g2| <o |UNIV::'tyvar set|"
-        shows "validP p \<Longrightarrow> Pmap (g1 \<circ> f1) (g2 \<circ> f2) p = (Pmap g1 g2 \<circ> Pmap f1 f2) p"
-  apply (unfold case_prod_beta)
-  apply (erule conjE)+
-  apply (subst compSS_comp0[symmetric], (rule infinite_UNIV assms | assumption)+)+
-  apply (unfold comp_def case_prod_beta fst_conv snd_conv)
-  apply (rule refl)
-  done
-lemma Pmap_cong_id:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows "validP p \<Longrightarrow> (\<And>a. a \<in> PFVars_1 p \<Longrightarrow> f1 a = a) \<Longrightarrow> (\<And>a. a \<in> PFVars_2 p \<Longrightarrow> f2 a = a) \<Longrightarrow> Pmap f1 f2 p = p"
-  apply (unfold case_prod_beta fst_conv snd_conv)
-  apply (erule conjE)+
-  apply (subst compSS_cong_id, (rule assms | assumption)+)+
-  apply (unfold prod.collapse)
-  apply (rule refl)
-  done
-lemma PFVars_Pmap:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows
-    "validP p \<Longrightarrow> PFVars_1 (Pmap f1 f2 p) = f1 ` PFVars_1 p"
-    "validP p \<Longrightarrow> PFVars_2 (Pmap f1 f2 p) = f2 ` PFVars_2 p"
-   apply (unfold case_prod_beta fst_conv snd_conv)
-  apply (erule conjE)+
-   apply (subst imsupp_compSS, (rule infinite_UNIV assms refl | assumption)+)+
-   apply (erule conjE)+
-   apply assumption
-  apply (rule refl)
-  done
-
-lemma small_PFVars:
-  fixes p::"('var::var, 'tyvar::var, 'a::var, 'b, 'c) P"
-  shows "validP p \<Longrightarrow> |PFVars_1 p| <o |UNIV::'var set|" "validP p \<Longrightarrow> |PFVars_2 p| <o |UNIV::'tyvar set|"
-   apply (unfold case_prod_beta)
-   apply (erule conjE)+
-   apply (rule iffD2[OF imsupp_supp_bound] infinite_UNIV | assumption)+
-  apply (erule conjE)+
-  apply assumption
-  done
-
-lemma U1map_Uctor:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows "validP p \<Longrightarrow> U1map f1 f2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst t)) (U1ctor y p) =
-    U1ctor (map_T1_pre f1 f2 id id f1 f2 f1
-      (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-      (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-      (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-      (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-    y) (Pmap f1 f2 p)"
-  apply (unfold U1ctor_def case_prod_beta fst_conv snd_conv)
-  apply (erule conjE)+
-  apply (rule trans)
-   apply (rule permute_simps)
-      apply (rule assms)+
-  apply (subst T1_pre.map_comp)
-              apply (rule bij_id supp_id_bound assms | assumption)+
-  apply (subst T1_pre.map_comp)
-              apply (unfold compSS_def)
-              apply (rule bij_id supp_id_bound assms supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-  apply (unfold id_o o_id)
-  apply (unfold comp_assoc comp_def[of snd] comp_def[of fst] fst_conv snd_conv)
-  apply (subst inv_o_simp1, rule assms)+
-  apply (unfold id_o o_id)
-  apply (rule arg_cong[of _ _ T1_ctor])
-  apply (rule T1_pre.map_cong)
-                      apply (rule supp_comp_bound assms infinite_UNIV supp_id_bound bij_id refl | assumption)+
-    (* REPEAT_DETERM *)
-     apply (rule trans[OF comp_apply])
-     apply (rule sym)
-     apply (rule trans[OF comp_apply])
-     apply (unfold fst_conv snd_conv)
-     apply (rule trans[OF if_P])
-      apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-     apply (unfold comp_def)[1]
-     apply (subst inv_simp1 inv_inv_eq, rule assms)+
-     apply (unfold prod.collapse)
-     apply (rule refl)
-    (* repeated *)
-    apply (rule trans[OF comp_apply])
-    apply (rule sym)
-    apply (rule trans[OF comp_apply])
-    apply (unfold fst_conv snd_conv)
-    apply (rule trans[OF if_P])
-     apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-    apply (unfold comp_def)[1]
-    apply (subst inv_simp1 inv_inv_eq, rule assms)+
-    apply (unfold prod.collapse)
-    apply (rule refl)
-    (* repeated *)
-   apply (rule trans[OF comp_apply])
-   apply (rule sym)
-   apply (rule trans[OF comp_apply])
-   apply (unfold fst_conv snd_conv)
-   apply (rule trans[OF if_P])
-    apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-   apply (unfold comp_def)[1]
-   apply (subst inv_simp1 inv_inv_eq, rule assms)+
-   apply (unfold prod.collapse)
-   apply (rule refl)
-    (* repeated *)
-  apply (rule trans[OF comp_apply])
-  apply (rule sym)
-  apply (rule trans[OF comp_apply])
-  apply (unfold fst_conv snd_conv)
-  apply (rule trans[OF if_P])
-   apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-  apply (unfold comp_def)[1]
-  apply (subst inv_simp1 inv_inv_eq, rule assms)+
-  apply (unfold prod.collapse)
-  apply (rule refl)
-    (* END REPEAT_DETERM *)
-  done
-lemma U2map_Uctor:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows "validP p \<Longrightarrow> U2map f1 f2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst t)) (U2ctor y p) =
-    U2ctor (map_T2_pre f1 f2 id id f1 f2 f1
-      (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-      (\<lambda>(t, pu). (permute_T1 f1 f2 t, \<lambda>p. if validP p then U1map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-      (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-      (\<lambda>(t, pu). (permute_T2 f1 f2 t, \<lambda>p. if validP p then U2map f1 f2 t (pu (Pmap (inv f1) (inv f2) p)) else undefined))
-    y) (Pmap f1 f2 p)"
-  apply (unfold U2ctor_def case_prod_beta fst_conv snd_conv)
-  apply (erule conjE)+
-  apply (rule trans)
-   apply (rule permute_simps)
-      apply (rule assms)+
-  apply (subst T2_pre.map_comp)
-              apply (rule bij_id supp_id_bound assms | assumption)+
-  apply (subst T2_pre.map_comp)
-              apply (unfold compSS_def)
-              apply (rule bij_id supp_id_bound assms supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-  apply (unfold id_o o_id)
-  apply (unfold comp_assoc comp_def[of snd] comp_def[of fst] fst_conv snd_conv)
-  apply (subst inv_o_simp1, rule assms)+
-  apply (unfold id_o o_id)
-  apply (rule arg_cong[of _ _ T2_ctor])
-  apply (rule T2_pre.map_cong)
-                      apply (rule supp_comp_bound assms infinite_UNIV supp_id_bound bij_id refl | assumption)+
-    (* REPEAT_DETERM *)
-     apply (rule trans[OF comp_apply])
-     apply (rule sym)
-     apply (rule trans[OF comp_apply])
-     apply (unfold fst_conv snd_conv)
-     apply (rule trans[OF if_P])
-      apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-     apply (unfold comp_def)[1]
-     apply (subst inv_simp1 inv_inv_eq, rule assms)+
-     apply (unfold prod.collapse)
-     apply (rule refl)
-    (* repeated *)
-    apply (rule trans[OF comp_apply])
-    apply (rule sym)
-    apply (rule trans[OF comp_apply])
-    apply (unfold fst_conv snd_conv)
-    apply (rule trans[OF if_P])
-     apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-    apply (unfold comp_def)[1]
-    apply (subst inv_simp1 inv_inv_eq, rule assms)+
-    apply (unfold prod.collapse)
-    apply (rule refl)
-    (* repeated *)
-   apply (rule trans[OF comp_apply])
-   apply (rule sym)
-   apply (rule trans[OF comp_apply])
-   apply (unfold fst_conv snd_conv)
-   apply (rule trans[OF if_P])
-    apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-   apply (unfold comp_def)[1]
-   apply (subst inv_simp1 inv_inv_eq, rule assms)+
-   apply (unfold prod.collapse)
-   apply (rule refl)
-    (* repeated *)
-  apply (rule trans[OF comp_apply])
-  apply (rule sym)
-  apply (rule trans[OF comp_apply])
-  apply (unfold fst_conv snd_conv)
-  apply (rule trans[OF if_P])
-   apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-  apply (unfold comp_def)[1]
-  apply (subst inv_simp1 inv_inv_eq, rule assms)+
-  apply (unfold prod.collapse)
-  apply (rule refl)
-    (* END REPEAT_DETERM *)
-  done
-
-lemma U1FVars_subsets:
-  "validP p \<Longrightarrow> set5_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_1 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
-  U1FVars_1 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T11 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> {}"
-  "validP p \<Longrightarrow> set6_T1_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> (PFVars_2 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
-  U1FVars_2 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) (U1ctor y p) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> {}"
-   apply (unfold case_prod_beta U1ctor_def Un_empty_right FVars_ctors)
-  apply (erule conjE)+
-  subgoal premises prems
-    apply (subst T1_pre.set_map, (rule bij_id supp_id_bound prems)+)+
-    apply (unfold image_id image_comp comp_def)
-    apply (rule Un_mono')+
-      (* REPEAT_DETERM FIRST' *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-       *)
-       apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-      (* repeated *)
-      (* TRY *)
-        apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-        apply (rule Diff_Un_disjunct)
-        apply (rule prems)
-        apply (rule Diff_mono[OF _ subset_refl])
-       apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-      (* orelse *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-        apply (rule UN_extend_simps(2))
-       apply (rule subset_If)
-        apply (unfold UN_empty' prod.collapse)
-        apply (rule empty_subsetI)
-       apply (rule UN_mono[OF subset_refl])
-       apply (rule prems)
-        apply (unfold prod.collapse)
-        apply (rule conjI prems)+
-       apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule Diff_Un_disjunct)
-       apply (rule prems)
-      apply (rule Diff_mono[OF _ subset_refl])
-      (* *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule UN_extend_simps(2))
-      apply (rule subset_If)
-       apply (unfold UN_empty' prod.collapse)
-       apply (rule empty_subsetI)
-      apply (rule UN_mono[OF subset_refl])
-      apply (rule prems)
-      apply (unfold prod.collapse)
-       apply (rule conjI prems)+
-      apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-      apply (rule UN_extend_simps(2))
-     apply (rule subset_If)
-      apply (unfold UN_empty' prod.collapse)
-      apply (rule empty_subsetI)
-     apply (rule UN_mono[OF subset_refl])
-     apply (rule prems)
-     apply (unfold prod.collapse)
-      apply (rule conjI prems)+
-     apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY *)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (rule Diff_Un_disjunct)
-     apply (rule prems)
-    apply (rule Diff_mono[OF _ subset_refl])
-      (* *)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (rule UN_extend_simps(2))
-    apply (rule subset_If)
-     apply (unfold UN_empty' prod.collapse)
-     apply (rule empty_subsetI)
-    apply (rule UN_mono[OF subset_refl])
-    apply (rule prems)
-    apply (unfold prod.collapse)
-    apply (rule conjI prems)+
-    apply (((rule UnI1)?, assumption) | rule UnI2)+
-    done
-  apply (erule conjE)+
-  subgoal premises prems
-    apply (subst T1_pre.set_map, (rule bij_id supp_id_bound prems)+)+
-    apply (unfold image_id image_comp comp_def)
-    apply (rule Un_mono')+
-      (* REPEAT_DETERM FIRST' *)
-        apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-      (* orelse *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-        apply (rule UN_extend_simps(2))
-       apply (rule subset_If)
-        apply (unfold UN_empty' prod.collapse)
-        apply (rule empty_subsetI)
-       apply (rule UN_mono[OF subset_refl])
-       apply (rule prems)
-       apply (unfold prod.collapse)
-        apply (rule conjI prems)+
-       apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule Diff_Un_disjunct)
-       apply (rule prems)
-      apply (rule Diff_mono[OF _ subset_refl])
-      (* *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule UN_extend_simps(2))
-      apply (rule subset_If)
-       apply (unfold UN_empty' prod.collapse)
-       apply (rule empty_subsetI)
-      apply (rule UN_mono[OF subset_refl])
-      apply (rule prems)
-      apply (unfold prod.collapse)
-       apply (rule conjI prems)+
-      apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-      apply (rule UN_extend_simps(2))
-     apply (rule subset_If)
-      apply (unfold UN_empty' prod.collapse)
-      apply (rule empty_subsetI)
-     apply (rule UN_mono[OF subset_refl])
-     apply (rule prems)
-     apply (unfold prod.collapse)
-      apply (rule conjI prems)+
-     apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (rule UN_extend_simps(2))
-    apply (rule subset_If)
-     apply (unfold UN_empty' prod.collapse)
-     apply (rule empty_subsetI)
-    apply (rule UN_mono[OF subset_refl])
-    apply (rule prems)
-    apply (unfold prod.collapse)
-     apply (rule conjI prems)+
-    apply (((rule UnI1)?, assumption) | rule UnI2)+
-    done
-  done
-
-lemma U2FVars_subsets:
-  "validP p \<Longrightarrow> set5_T2_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_1 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_1 t (pu p) \<subseteq> FVars_T11 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_1 t (pu p) \<subseteq> FVars_T21 t \<union> PFVars_1 p \<union> {}) \<Longrightarrow>
-  U2FVars_1 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T21 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_1 p \<union> {}"
-  "validP p \<Longrightarrow> set6_T2_pre (y::(_, _, 'a::var, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> (PFVars_2 p \<union> {}) = {} \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set8_T2_pre y \<union> set9_T2_pre y \<Longrightarrow> U1FVars_2 t (pu p) \<subseteq> FVars_T12 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
-  (\<And>t pu p. validP p \<Longrightarrow> (t, pu) \<in> set10_T2_pre y \<union> set11_T2_pre y \<Longrightarrow> U2FVars_2 t (pu p) \<subseteq> FVars_T22 t \<union> PFVars_2 p \<union> {}) \<Longrightarrow>
-  U2FVars_2 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) (U2ctor y p) \<subseteq> FVars_T22 (T2_ctor (map_T2_pre id id id id id id id fst fst fst fst y)) \<union> PFVars_2 p \<union> {}"
-   apply (unfold case_prod_beta U2ctor_def Un_empty_right FVars_ctors)
-  apply (erule conjE)+
-  subgoal premises prems
-    apply (subst T2_pre.set_map, (rule bij_id supp_id_bound prems)+)+
-    apply (unfold image_id image_comp comp_def)
-    apply (rule Un_mono')+
-      (* REPEAT_DETERM FIRST' *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-        apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-      (* repeated *)
-      (* TRY *)
-        apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-        apply (rule Diff_Un_disjunct)
-        apply (rule prems)
-        apply (rule Diff_mono[OF _ subset_refl])
-        apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-      (* orelse *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-        apply (rule UN_extend_simps(2))
-       apply (rule subset_If)
-        apply (unfold UN_empty' prod.collapse)
-        apply (rule empty_subsetI)
-       apply (rule UN_mono[OF subset_refl])
-       apply (rule prems)
-       apply (unfold prod.collapse)
-        apply (rule conjI prems)+
-       apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule Diff_Un_disjunct)
-       apply (rule prems)
-      apply (rule Diff_mono[OF _ subset_refl])
-      (* *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule UN_extend_simps(2))
-      apply (rule subset_If)
-       apply (unfold UN_empty' prod.collapse)
-       apply (rule empty_subsetI)
-      apply (rule UN_mono[OF subset_refl])
-      apply (rule prems)
-      apply (unfold prod.collapse)
-       apply (rule conjI prems)+
-      apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-      apply (rule UN_extend_simps(2))
-     apply (rule subset_If)
-      apply (unfold UN_empty' prod.collapse)
-      apply (rule empty_subsetI)
-     apply (rule UN_mono[OF subset_refl])
-     apply (rule prems)
-     apply (unfold prod.collapse)
-      apply (rule conjI prems)+
-     apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY *)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (rule Diff_Un_disjunct)
-     apply (rule prems)
-    apply (rule Diff_mono[OF _ subset_refl])
-      (* *)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (rule UN_extend_simps(2))
-    apply (rule subset_If)
-     apply (unfold UN_empty' prod.collapse)
-     apply (rule empty_subsetI)
-    apply (rule UN_mono[OF subset_refl])
-    apply (rule prems)
-    apply (unfold prod.collapse)
-     apply (rule conjI prems)+
-    apply (((rule UnI1)?, assumption) | rule UnI2)+
-    done
-  apply (erule conjE)+
-  subgoal premises prems
-    apply (subst T2_pre.set_map, (rule bij_id supp_id_bound prems)+)+
-    apply (unfold image_id image_comp comp_def)
-    apply (rule Un_mono')+
-      (* REPEAT_DETERM FIRST' *)
-        apply (rule iffD1[OF arg_cong2[OF refl Un_commute, of "(\<subseteq>)"] image_imsupp_subset])
-      (* orelse *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-        apply (rule UN_extend_simps(2))
-       apply (rule subset_If)
-        apply (unfold UN_empty' prod.collapse)
-        apply (rule empty_subsetI)
-       apply (rule UN_mono[OF subset_refl])
-       apply (rule prems)
-       apply (unfold prod.collapse)
-        apply (rule conjI prems)+
-       apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule Diff_Un_disjunct)
-       apply (rule prems)
-      apply (rule Diff_mono[OF _ subset_refl])
-      (* *)
-      apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule UN_extend_simps(2))
-      apply (rule subset_If)
-       apply (unfold UN_empty' prod.collapse)
-       apply (rule empty_subsetI)
-      apply (rule UN_mono[OF subset_refl])
-      apply (rule prems)
-      apply (unfold prod.collapse)
-       apply (rule conjI prems)+
-      apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-          apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-     apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-      apply (rule UN_extend_simps(2))
-     apply (rule subset_If)
-      apply (unfold UN_empty' prod.collapse)
-      apply (rule empty_subsetI)
-     apply (rule UN_mono[OF subset_refl])
-     apply (rule prems)
-     apply (unfold prod.collapse)
-      apply (rule conjI prems)+
-     apply (((rule UnI1)?, assumption) | rule UnI2)+
-      (* copied from above *)
-      (* TRY
-          apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-       apply (rule Diff_Un_disjunct)
-          apply (rule prems)
-          apply (rule Diff_mono[OF _ subset_refl])
-        *)
-    apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
-     apply (rule UN_extend_simps(2))
-    apply (rule subset_If)
-     apply (unfold UN_empty' prod.collapse)
-     apply (rule empty_subsetI)
-    apply (rule UN_mono[OF subset_refl])
-    apply (rule prems)
-    apply (unfold prod.collapse)
-     apply (rule conjI prems)+
-    apply (((rule UnI1)?, assumption) | rule UnI2)+
-    done
-  done
-
-lemma valid_Pmap:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows "validP p \<Longrightarrow> validP (Pmap f1 f2 p)"
-  apply (unfold case_prod_beta fst_conv snd_conv compSS_def)
-  apply (erule conjE)+
-  apply (rule conjI supp_comp_bound supp_inv_bound assms infinite_UNIV | assumption)+
-  done
-
-interpretation vvsubst: QREC Pmap PFVars_1 PFVars_2 U1ctor U2ctor validP
+interpretation vvsubst: QREC_fixed "imsupp f1" "imsupp f2"
+  "\<lambda>x. T1_ctor (map_T1_pre f1 f2 f3 f4 id id f1 snd snd snd snd x)" "\<lambda>x. T2_ctor (map_T2_pre f1 f2 f3 f4 id id f1 snd snd snd snd x)"
   apply (unfold_locales)
-               apply (rule trans[OF Pmap_id0[THEN fun_cong] id_apply])
-              apply (rule Pmap_comp0; assumption)
-             apply (rule Pmap_cong_id; assumption)
-            apply (rule PFVars_Pmap; assumption)+
-          apply (rule small_PFVars; assumption)+
-        apply (rule valid_Pmap; assumption)
-       apply (rule U1map_Uctor; assumption)
-      apply (rule U1FVars_subsets[unfolded Un_empty_right]; assumption)+
-    apply (rule U2map_Uctor; assumption)
-   apply (rule U2FVars_subsets[unfolded Un_empty_right]; assumption)+
+
+         apply (rule iffD2[OF imsupp_supp_bound], rule infinite_UNIV, rule f_prems)+
+
+       apply (rule trans)
+        apply (rule permute_simps)
+           apply assumption+
+       apply (subst T1_pre.map_comp, (assumption | rule f_prems supp_id_bound bij_id)+)+
+       apply (unfold id_o o_id)
+       apply (rule arg_cong[of _ _ T1_ctor])
+       apply (rule T1_pre.map_cong0)
+                      apply (rule supp_comp_bound f_prems infinite_UNIV | assumption)+
+                 apply (erule imsupp_commute[THEN fun_cong] | rule refl)+
+          apply (unfold comp_def snd_conv case_prod_beta)
+          apply (rule refl)+
+
+  subgoal premises prems for y
+      apply (unfold FVars_ctors)[1]
+      apply (rule Un_mono')+
+    (* REPEAT_DETERM *)
+           apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+           apply (unfold image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+           apply (rule subset_trans[OF image_imsupp_subset equalityD1[OF Un_commute]])
+      (* repeated *)
+           apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+          apply (unfold image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+          apply (rule subset_trans[OF image_imsupp_subset equalityD1[OF Un_commute]])
+      (* END REPEAT_DETERM *)
+      (* REPEAT_DETERM *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+       apply (erule UnI1 UnI2 | rule UnI1)+
+      (* repeated *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* END REPEAT_DETERM *)
+    done
+
+  (* same proof again *)
+
+  subgoal premises prems for y
+      apply (unfold FVars_ctors)[1]
+      apply (rule Un_mono')+
+    (* REPEAT_DETERM *)
+           apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+           apply (unfold image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+           apply (rule subset_trans[OF image_imsupp_subset equalityD1[OF Un_commute]])
+      (* END REPEAT_DETERM *)
+      (* REPEAT_DETERM *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+       apply (erule UnI1 UnI2 | rule UnI1)+
+      (* repeated *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T1_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* END REPEAT_DETERM *)
+    done
+
+  (* same three proofs again, but for T2 *)
+       apply (rule trans)
+        apply (rule permute_simps)
+           apply assumption+
+       apply (subst T2_pre.map_comp, (assumption | rule f_prems supp_id_bound bij_id)+)+
+       apply (unfold id_o o_id)
+       apply (rule arg_cong[of _ _ T2_ctor])
+       apply (rule T2_pre.map_cong0)
+                      apply (rule supp_comp_bound f_prems infinite_UNIV | assumption)+
+                 apply (erule imsupp_commute[THEN fun_cong] | rule refl)+
+          apply (unfold comp_def snd_conv case_prod_beta)
+          apply (rule refl)+
+
+  subgoal premises prems for y
+      apply (unfold FVars_ctors)[1]
+      apply (rule Un_mono')+
+    (* REPEAT_DETERM *)
+           apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+           apply (unfold image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+           apply (rule subset_trans[OF image_imsupp_subset equalityD1[OF Un_commute]])
+      (* repeated *)
+           apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+          apply (unfold image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+          apply (rule subset_trans[OF image_imsupp_subset equalityD1[OF Un_commute]])
+      (* END REPEAT_DETERM *)
+      (* REPEAT_DETERM *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+       apply (erule UnI1 UnI2 | rule UnI1)+
+      (* repeated *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* END REPEAT_DETERM *)
+    done
+
+  (* same proof again *)
+
+  subgoal premises prems for y
+      apply (unfold FVars_ctors)[1]
+      apply (rule Un_mono')+
+    (* REPEAT_DETERM *)
+           apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+           apply (unfold image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+           apply (rule subset_trans[OF image_imsupp_subset equalityD1[OF Un_commute]])
+      (* END REPEAT_DETERM *)
+      (* REPEAT_DETERM *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+       apply (erule UnI1 UnI2 | rule UnI1)+
+      (* repeated *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* repeated *)
+         apply (subst T2_pre.set_map, (rule supp_id_bound bij_id f_prems)+)+
+    apply (unfold image_comp image_id)
+          apply (subst Diff_Un_disjunct, rule prems, rule Diff_mono[OF _ subset_refl])?
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+          apply (rule UN_extend_simps(2))
+         apply (rule subset_If)
+      apply (unfold UN_empty' prod.collapse)
+      apply (rule empty_subsetI)
+       apply (rule UN_mono[OF subset_refl])
+       apply (unfold comp_def)[1]
+       apply (rule prems)
+       apply (unfold prod.collapse)
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    (* END REPEAT_DETERM *)
+    done
   done
 
-definition vvsubst_T1 :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1" where
-  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> vvsubst.REC_T1 t (f1, f2, f3, f4)"
-definition vvsubst_T2 :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2" where
-  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> vvsubst.REC_T2 t (f1, f2, f3, f4)"
+definition "vvsubst_T1 \<equiv> vvsubst.REC_T1"
+definition "vvsubst_T2 \<equiv> vvsubst.REC_T2"
+
+lemma vvsubst_cctor_1:
+    assumes int_empties:  "set5_T1_pre x \<inter> imsupp f1 = {}" "set6_T1_pre x \<inter> imsupp f2 = {}"
+    and noclash_prems: "noclash_T1 x"
+  shows "vvsubst_T1 (T1_ctor x) = T1_ctor (map_T1_pre f1 f2 f3 f4 id id f1 vvsubst_T1 vvsubst_T1 vvsubst_T2 vvsubst_T2 x)"
+  apply (unfold vvsubst_T1_def vvsubst_T2_def)
+  apply (rule trans)
+   apply (rule vvsubst.REC_ctors)
+  apply (rule int_empties)+
+   apply (rule noclash_prems)
+  apply (subst T1_pre.map_comp)
+          apply (rule supp_id_bound bij_id f_prems)+
+  apply (unfold id_o o_id)
+  apply (unfold comp_def snd_conv prod.case)
+  apply (rule refl)
+  done
+
+lemma vvsubst_cctor_2:
+    assumes int_empties:  "set5_T2_pre x \<inter> imsupp f1 = {}" "set6_T2_pre x \<inter> imsupp f2 = {}"
+    and noclash_prems: "noclash_T2 x"
+  shows "vvsubst_T2 (T2_ctor x) = T2_ctor (map_T2_pre f1 f2 f3 f4 id id f1 vvsubst_T1 vvsubst_T1 vvsubst_T2 vvsubst_T2 x)"
+    (* same tactic as above *)
+  apply (unfold vvsubst_T1_def vvsubst_T2_def)
+  apply (rule trans)
+   apply (rule vvsubst.REC_ctors)
+  apply (rule int_empties)+
+   apply (rule noclash_prems)
+  apply (subst T2_pre.map_comp)
+          apply (rule supp_id_bound bij_id f_prems)+
+  apply (unfold id_o o_id)
+  apply (unfold comp_def snd_conv prod.case)
+  apply (rule refl)
+  done
+
+end
+
+lemma vvsubst_permutes:
+  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
+  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
+  shows
+    "vvsubst_T1 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T1 f1 f2"
+    "vvsubst_T2 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T2 f1 f2"
+proof -
+  have x: "\<And>(x::('var, 'tyvar, 'a, 'b) T1) (y::('var, 'tyvar, 'a, 'b) T2). vvsubst_T1 f1 f2 id id x = permute_T1 f1 f2 x \<and> vvsubst_T2 f1 f2 id id y = permute_T2 f1 f2 y"
+  subgoal for x y
+      apply (rule fresh_induct[of _ _ _ _ x y])
+        (* REPEAT_DETERM *)
+         apply (rule iffD2[OF imsupp_supp_bound])
+          apply (rule infinite_UNIV)
+         apply (rule f_prems)
+        (* copied from above *)
+        apply (rule iffD2[OF imsupp_supp_bound])
+         apply (rule infinite_UNIV)
+        apply (rule f_prems)
+        (* END REPEAT_DETERM *)
+        (* SUBGOAL 1 *)
+       apply (rule trans)
+        apply (rule vvsubst_cctor_1 vvsubst_cctor_2)
+             apply (rule f_prems supp_id_bound bij_id)+
+        apply assumption+
+       apply (rule sym)
+       apply (rule trans)
+        apply (rule permute_simps)
+           apply (rule f_prems)+
+      apply (rule arg_cong[OF T1_pre.map_cong])
+                          apply (rule f_prems supp_id_bound bij_id refl)+
+        (* REPEAT_DETERM *)
+            apply (rule trans[OF _ id_apply[symmetric]])
+            apply (erule id_onD[OF imsupp_id_on, rotated])
+            apply (subst Int_commute, assumption)
+        (* copied from above *)
+           apply (rule trans[OF _ id_apply[symmetric]])
+           apply (erule id_onD[OF imsupp_id_on, rotated])
+           apply (subst Int_commute, assumption)
+        (* ORELSE *)
+          apply (rule refl)+
+          (* ORELSE *)
+          apply (rule sym, assumption)+
+        (* SUBGOAL 2, same tactic as above *)
+      apply (rule trans)
+       apply (rule vvsubst_cctor_1 vvsubst_cctor_2)
+            apply (rule f_prems supp_id_bound bij_id)+
+       apply assumption+
+      apply (rule sym)
+      apply (rule trans)
+       apply (rule permute_simps)
+          apply (rule f_prems)+
+      apply (rule arg_cong[of _ _ T2_ctor])
+      apply (rule T2_pre.map_cong)
+                          apply (rule f_prems supp_id_bound bij_id refl)+
+        (* REPEAT_DETERM *)
+           apply (rule trans[OF _ id_apply[symmetric]])
+           apply (erule id_onD[OF imsupp_id_on, rotated])
+           apply (subst Int_commute, assumption)
+           (* repeated *)
+           apply (rule trans[OF _ id_apply[symmetric]])
+           apply (erule id_onD[OF imsupp_id_on, rotated])
+           apply (subst Int_commute, assumption)
+           (* END REPEAT_DETERM *)
+           apply (rule refl)+
+        (* ORELSE *)
+         apply (rule sym, assumption)+
+      done
+    done
+  show "vvsubst_T1 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T1 f1 f2"
+    apply (rule ext)
+    apply (rule conjunct1[OF x])
+    done
+
+  show "vvsubst_T2 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T2 f1 f2"
+    apply (rule ext)
+    apply (rule conjunct2[OF x])
+    done
+qed
 
 definition pick1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<times> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T1" where
   "pick1 R f1 f2 f3 xy \<equiv> SOME z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = fst xy \<and> vvsubst_T1 f1 f2 f3 snd z = snd xy"
@@ -1379,134 +1195,6 @@ lemma set4_T2_intros:
    apply assumption
   apply assumption
   done
-
-lemma vvsubst_cctor_1:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar" and f3::"'a::var \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c"
-  assumes f_prems: "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
-    and int_empties:  "imsupp f1 \<inter> set5_T1_pre x = {}" "imsupp f2 \<inter> set6_T1_pre x = {}"
-    and noclash_prems: "noclash_T1 x"
-  shows "vvsubst_T1 f1 f2 f3 f4 (T1_ctor x) = T1_ctor (map_T1_pre f1 f2 f3 f4 id id f1 (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) x)"
-  apply (unfold vvsubst_T1_def vvsubst_T2_def)
-  apply (rule trans)
-   apply (rule vvsubst.REC_ctors)
-     apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
-  apply (rule conjI f_prems)+
-     apply (rule trans[OF Int_commute], rule int_empties)+
-   apply (rule noclash_prems)
-  apply (subst T1_pre.map_comp)
-          apply (rule supp_id_bound bij_id f_prems)+
-  apply (unfold id_o o_id)
-  apply (unfold comp_def snd_conv prod.case)
-  apply (rule mp[unfolded atomize_imp[symmetric]])
-  apply (subst if_P, assumption)+
-   apply (rule refl)
-  apply (rule conjI f_prems)+
-  done
-
-lemma vvsubst_cctor_2:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar" and f3::"'a::var \<Rightarrow> 'a" and f4::"'b \<Rightarrow> 'c"
-  assumes f_prems: "|supp f1| <o |UNIV::'var set|" "|supp f2| <o |UNIV::'tyvar set|" "|supp f3| <o |UNIV::'a set|"
-    and int_empties:  "imsupp f1 \<inter> set5_T2_pre x = {}" "imsupp f2 \<inter> set6_T2_pre x = {}"
-    and noclash_prems: "noclash_T2 x"
-  shows "vvsubst_T2 f1 f2 f3 f4 (T2_ctor x) = T2_ctor (map_T2_pre f1 f2 f3 f4 id id f1 (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) x)"
-    (* same tactic as above *)
-  apply (unfold vvsubst_T1_def vvsubst_T2_def)
-  apply (rule trans)
-   apply (rule vvsubst.REC_ctors)
-     apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
-  apply (rule conjI f_prems)+
-     apply (rule trans[OF Int_commute], rule int_empties)+
-   apply (rule noclash_prems)
-  apply (subst T2_pre.map_comp)
-          apply (rule supp_id_bound bij_id f_prems)+
-  apply (unfold id_o o_id)
-  apply (unfold comp_def snd_conv prod.case)
-  apply (rule mp[unfolded atomize_imp[symmetric]])
-  apply (subst if_P, assumption)+
-   apply (rule refl)
-  apply (rule conjI f_prems)+
-  done
-
-lemma vvsubst_permutes:
-  fixes f1::"'var::var \<Rightarrow> 'var" and f2::"'tyvar::var \<Rightarrow> 'tyvar"
-  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'var set|" "bij f2" "|supp f2| <o |UNIV::'tyvar set|"
-  shows
-    "vvsubst_T1 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T1 f1 f2"
-    "vvsubst_T2 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T2 f1 f2"
-proof -
-  have x: "\<And>(x::('var, 'tyvar, 'a, 'b) T1) (y::('var, 'tyvar, 'a, 'b) T2). vvsubst_T1 f1 f2 id id x = permute_T1 f1 f2 x \<and> vvsubst_T2 f1 f2 id id y = permute_T2 f1 f2 y"
-  subgoal for x y
-      apply (rule fresh_induct[of _ _ _ _ x y])
-        (* REPEAT_DETERM *)
-         apply (rule iffD2[OF imsupp_supp_bound])
-          apply (rule infinite_UNIV)
-         apply (rule f_prems)
-        (* copied from above *)
-        apply (rule iffD2[OF imsupp_supp_bound])
-         apply (rule infinite_UNIV)
-        apply (rule f_prems)
-        (* END REPEAT_DETERM *)
-        (* SUBGOAL 1 *)
-       apply (rule trans)
-        apply (rule vvsubst_cctor_1 vvsubst_cctor_2)
-             apply (rule f_prems supp_id_bound bij_id)+
-          apply (subst Int_commute, assumption)+
-        apply assumption
-       apply (rule sym)
-       apply (rule trans)
-        apply (rule permute_simps)
-           apply (rule f_prems)+
-      apply (rule arg_cong[OF T1_pre.map_cong])
-                          apply (rule f_prems supp_id_bound bij_id refl)+
-        (* REPEAT_DETERM *)
-            apply (rule trans[OF _ id_apply[symmetric]])
-            apply (erule id_onD[OF imsupp_id_on, rotated])
-            apply (subst Int_commute, assumption)
-        (* copied from above *)
-           apply (rule trans[OF _ id_apply[symmetric]])
-           apply (erule id_onD[OF imsupp_id_on, rotated])
-           apply (subst Int_commute, assumption)
-        (* ORELSE *)
-          apply (rule refl)+
-          (* ORELSE *)
-          apply (rule sym, assumption)+
-        (* SUBGOAL 2, same tactic as above *)
-      apply (rule trans)
-       apply (rule vvsubst_cctor_1 vvsubst_cctor_2)
-            apply (rule f_prems supp_id_bound bij_id)+
-         apply (subst Int_commute, assumption)+
-       apply assumption
-      apply (rule sym)
-      apply (rule trans)
-       apply (rule permute_simps)
-          apply (rule f_prems)+
-      apply (rule arg_cong[of _ _ T2_ctor])
-      apply (rule T2_pre.map_cong)
-                          apply (rule f_prems supp_id_bound bij_id refl)+
-        (* REPEAT_DETERM *)
-           apply (rule trans[OF _ id_apply[symmetric]])
-           apply (erule id_onD[OF imsupp_id_on, rotated])
-           apply (subst Int_commute, assumption)
-           (* repeated *)
-           apply (rule trans[OF _ id_apply[symmetric]])
-           apply (erule id_onD[OF imsupp_id_on, rotated])
-           apply (subst Int_commute, assumption)
-           (* END REPEAT_DETERM *)
-           apply (rule refl)+
-        (* ORELSE *)
-         apply (rule sym, assumption)+
-      done
-    done
-  show "vvsubst_T1 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T1 f1 f2"
-    apply (rule ext)
-    apply (rule conjunct1[OF x])
-    done
-
-  show "vvsubst_T2 f1 f2 (id::'a::var \<Rightarrow> 'a) (id::'b \<Rightarrow> 'b) = permute_T2 f1 f2"
-    apply (rule ext)
-    apply (rule conjunct2[OF x])
-    done
-qed
 
 lemma rel_plain_cases:
   "rel_T1 R x y \<Longrightarrow> (\<And>x' y'. x = T1_ctor x' \<Longrightarrow> y = T1_ctor y' \<Longrightarrow> rel_T1_pre R (rel_T1 R) (rel_T1 R) (rel_T2 R) (rel_T2 R) x' y' \<Longrightarrow> P) \<Longrightarrow> P"
@@ -2443,8 +2131,7 @@ proof -
        apply (rule conjI)
         apply (subst vvsubst_cctor_1)
               apply (rule f_prems)+
-           apply (rule trans[OF Int_commute], assumption)+
-         apply assumption
+         apply assumption+
 
         apply (unfold FVars_ctors image_Un image_UN)
         apply (subst T1_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
@@ -2488,8 +2175,7 @@ proof -
       (* second function *)
        apply (subst vvsubst_cctor_1)
              apply (rule f_prems)+
-          apply (rule trans[OF Int_commute], assumption)+
-        apply assumption
+        apply assumption+
 
        apply (unfold FVars_ctors image_Un image_UN)
        apply (subst T1_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
@@ -2528,8 +2214,7 @@ proof -
       apply (rule conjI)
        apply (subst vvsubst_cctor_2)
              apply (rule f_prems)+
-          apply (rule trans[OF Int_commute], assumption)+
-        apply assumption
+        apply assumption+
 
        apply (unfold FVars_ctors image_Un image_UN)
        apply (subst T2_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
@@ -2574,8 +2259,7 @@ proof -
       (* second function *)
       apply (subst vvsubst_cctor_2)
             apply (rule f_prems)+
-         apply (rule trans[OF Int_commute], assumption)+
-       apply assumption
+       apply assumption+
 
       apply (unfold FVars_ctors image_Un image_UN)
       apply (subst T2_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
@@ -2653,8 +2337,7 @@ proof -
       (* END REPEAT_DETERM *)
      apply (subst vvsubst_cctor_1)
            apply (rule f_prems)+
-        apply (rule trans[OF Int_commute], assumption)+
-      apply assumption
+      apply assumption+
      apply (unfold set3_T1_simp)
      apply (subst T1_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
      apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2664,8 +2347,7 @@ proof -
       (* second type *)
     apply (subst vvsubst_cctor_2)
           apply (rule f_prems)+
-        apply (rule trans[OF Int_commute], assumption)+
-     apply assumption
+     apply assumption+
     apply (unfold set3_T2_simp)
     apply (subst T2_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
     apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2706,8 +2388,7 @@ proof -
       (* END REPEAT_DETERM *)
      apply (subst vvsubst_cctor_1)
            apply (rule f_prems)+
-        apply (rule trans[OF Int_commute], assumption)+
-      apply assumption
+      apply assumption+
      apply (unfold set4_T1_simp)
      apply (subst T1_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
      apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2717,8 +2398,7 @@ proof -
       (* second type *)
     apply (subst vvsubst_cctor_2)
           apply (rule f_prems)+
-        apply (rule trans[OF Int_commute], assumption)+
-     apply assumption
+     apply assumption+
     apply (unfold set4_T2_simp)
     apply (subst T2_pre.set_map, (rule f_prems supp_id_bound bij_id)+)+
     apply (unfold image_Un image_UN image_comp[unfolded comp_def])
@@ -2755,12 +2435,10 @@ proof -
           apply (rule vvsubst_cctor_1)
                apply (rule supp_comp_bound f_prems g_prems infinite_UNIV)+
         (* REPEAT_DETERM *)
-            apply (rule trans[OF Int_commute])
             apply (rule Int_subset_empty2[rotated])
              apply (rule imsupp_o)
             apply assumption
         (* repeated *)
-           apply (rule trans[OF Int_commute])
            apply (rule Int_subset_empty2[rotated])
             apply (rule imsupp_o)
            apply assumption
@@ -2771,12 +2449,10 @@ proof -
          apply (subst vvsubst_cctor_1)
                apply (rule f_prems)+
         (* REPEAT_DETERM *)
-            apply (rule trans[OF Int_commute])
             apply (rule Int_subset_empty2[rotated])
              apply (rule Un_upper2)
             apply assumption
         (* repeated *)
-           apply (rule trans[OF Int_commute])
            apply (rule Int_subset_empty2[rotated])
             apply (rule Un_upper2)
            apply assumption
@@ -2791,7 +2467,6 @@ proof -
             apply (subst T1_pre.set_map)
                    apply (rule f_prems supp_id_bound bij_id)+
             apply (unfold image_id)
-            apply (rule trans[OF Int_commute])
             apply (rule Int_subset_empty2[rotated])
              apply (rule Un_upper1)
             apply assumption
@@ -2799,7 +2474,6 @@ proof -
            apply (subst T1_pre.set_map)
                   apply (rule f_prems supp_id_bound bij_id)+
            apply (unfold image_id)
-           apply (rule trans[OF Int_commute])
            apply (rule Int_subset_empty2[rotated])
             apply (rule Un_upper1)
            apply assumption
@@ -2843,12 +2517,10 @@ proof -
          apply (rule vvsubst_cctor_2)
               apply (rule supp_comp_bound f_prems g_prems infinite_UNIV)+
         (* REPEAT_DETERM *)
-           apply (rule trans[OF Int_commute])
            apply (rule Int_subset_empty2[rotated])
             apply (rule imsupp_o)
            apply assumption
         (* repeated *)
-          apply (rule trans[OF Int_commute])
           apply (rule Int_subset_empty2[rotated])
            apply (rule imsupp_o)
           apply assumption
@@ -2859,12 +2531,10 @@ proof -
         apply (subst vvsubst_cctor_2)
               apply (rule f_prems)+
         (* REPEAT_DETERM *)
-           apply (rule trans[OF Int_commute])
            apply (rule Int_subset_empty2[rotated])
             apply (rule Un_upper2)
            apply assumption
         (* repeated *)
-          apply (rule trans[OF Int_commute])
           apply (rule Int_subset_empty2[rotated])
            apply (rule Un_upper2)
           apply assumption
@@ -2879,7 +2549,6 @@ proof -
            apply (subst T2_pre.set_map)
                   apply (rule f_prems supp_id_bound bij_id)+
            apply (unfold image_id)
-           apply (rule trans[OF Int_commute])
            apply (rule Int_subset_empty2[rotated])
             apply (rule Un_upper1)
            apply assumption
@@ -2887,7 +2556,6 @@ proof -
           apply (subst T2_pre.set_map)
                  apply (rule f_prems supp_id_bound bij_id)+
           apply (unfold image_id)
-          apply (rule trans[OF Int_commute])
           apply (rule Int_subset_empty2[rotated])
            apply (rule Un_upper1)
           apply assumption
@@ -3004,12 +2672,10 @@ proof -
         apply (rule vvsubst_cctor_1)
              apply (rule f_prems)+
       (* REPEAT_DETERM *)
-          apply (rule trans[OF Int_commute])
           apply (rule Int_subset_empty2[rotated])
            apply (rule Un_upper1)
           apply assumption
       (* repeated *)
-         apply (rule trans[OF Int_commute])
          apply (rule Int_subset_empty2[rotated])
           apply (rule Un_upper1)
          apply assumption
@@ -3021,12 +2687,10 @@ proof -
         apply (rule vvsubst_cctor_1)
              apply (rule g_prems)+
       (* REPEAT_DETERM *)
-          apply (rule trans[OF Int_commute])
           apply (rule Int_subset_empty2[rotated])
            apply (rule Un_upper2)
           apply assumption
       (* repeated *)
-         apply (rule trans[OF Int_commute])
          apply (rule Int_subset_empty2[rotated])
           apply (rule Un_upper2)
          apply assumption
@@ -3162,12 +2826,10 @@ proof -
        apply (rule vvsubst_cctor_2)
             apply (rule f_prems)+
       (* REPEAT_DETERM *)
-         apply (rule trans[OF Int_commute])
          apply (rule Int_subset_empty2[rotated])
           apply (rule Un_upper1)
          apply assumption
       (* repeated *)
-        apply (rule trans[OF Int_commute])
         apply (rule Int_subset_empty2[rotated])
          apply (rule Un_upper1)
         apply assumption
@@ -3179,12 +2841,10 @@ proof -
        apply (rule vvsubst_cctor_2)
             apply (rule g_prems)+
       (* REPEAT_DETERM *)
-         apply (rule trans[OF Int_commute])
          apply (rule Int_subset_empty2[rotated])
           apply (rule Un_upper2)
          apply assumption
       (* repeated *)
-        apply (rule trans[OF Int_commute])
         apply (rule Int_subset_empty2[rotated])
          apply (rule Un_upper2)
         apply assumption
@@ -3748,8 +3408,6 @@ proof -
       apply (rule impI)
       apply (subst (asm) vvsubst_cctor_1)
             apply (rule assms | assumption)+
-         apply (rule trans[OF Int_commute], assumption)+
-      apply assumption
       apply (erule rel_plain_cases)
       apply (drule TT_inject0s[THEN iffD1])
       apply (erule exE conjE)+
@@ -3935,7 +3593,7 @@ proof -
            apply (rule vvsubst_cctor_1)
                 apply (rule supp_id_bound bij_id)+
              apply (unfold imsupp_id)
-             apply (rule Int_empty_left)+
+             apply (rule Int_empty_right)+
            apply assumption
           apply (subst T1_pre.map_comp)
                apply (rule supp_id_bound bij_id)+
@@ -3995,13 +3653,11 @@ proof -
             apply (subst T1_pre.set_map)
                  apply (rule supp_id_bound bij_id)+
             apply (unfold image_id)
-             apply (rule trans[OF Int_commute])
         apply assumption
           (* repeated *)
             apply (subst T1_pre.set_map)
                  apply (rule supp_id_bound bij_id)+
             apply (unfold image_id)
-             apply (rule trans[OF Int_commute])
         apply assumption
           (* END REPEAT_DETERM *)
           apply assumption
@@ -4106,7 +3762,6 @@ proof -
          apply (unfold id_o o_id)
          apply (rule T1_pre.map_cong0)
                             apply (rule assms refl supp_comp_bound bij_comp infinite_UNIV | assumption)+
-
 (* REPEAT_DETERM *)
             apply (rule trans[OF comp_apply])
             apply (rotate_tac -1)
@@ -4297,8 +3952,6 @@ proof -
       apply (rule impI)
       apply (subst (asm) vvsubst_cctor_2)
             apply (rule assms | assumption)+
-         apply (rule trans[OF Int_commute], assumption)+
-      apply assumption
       apply (erule rel_plain_cases)
       apply (drule TT_inject0s[THEN iffD1])
       apply (erule exE conjE)+
@@ -4484,7 +4137,7 @@ proof -
            apply (rule vvsubst_cctor_2)
                 apply (rule supp_id_bound bij_id)+
              apply (unfold imsupp_id)
-             apply (rule Int_empty_left)+
+             apply (rule Int_empty_right)+
            apply assumption
           apply (subst T2_pre.map_comp)
                apply (rule supp_id_bound bij_id)+
@@ -4544,13 +4197,11 @@ proof -
             apply (subst T2_pre.set_map)
                  apply (rule supp_id_bound bij_id)+
             apply (unfold image_id)
-             apply (rule trans[OF Int_commute])
         apply assumption
           (* repeated *)
             apply (subst T2_pre.set_map)
                  apply (rule supp_id_bound bij_id)+
             apply (unfold image_id)
-             apply (rule trans[OF Int_commute])
         apply assumption
           (* END REPEAT_DETERM *)
           apply assumption
@@ -4872,14 +4523,12 @@ proof -
         (* REPEAT twice *)
        apply (subst vvsubst_cctor_1)
              apply (rule assms)+
-          apply (rule trans[OF Int_commute], assumption)+
-        apply assumption
+        apply assumption+
         (* repeated *)
 
        apply (subst vvsubst_cctor_1)
              apply (rule assms)+
-          apply (rule trans[OF Int_commute], assumption)+
-        apply assumption
+        apply assumption+
         (* END REPEAT twice *)
        apply (rule rel_T1_rel_T2.intros)
              apply (rule bij_id supp_id_bound id_on_id)+
@@ -4947,14 +4596,12 @@ proof -
         (* REPEAT twice *)
       apply (subst vvsubst_cctor_2)
             apply (rule assms)+
-         apply (rule trans[OF Int_commute], assumption)+
-       apply assumption
+       apply assumption+
         (* repeated *)
 
       apply (subst vvsubst_cctor_2)
             apply (rule assms)+
-         apply (rule trans[OF Int_commute], assumption)+
-       apply assumption
+       apply assumption+
         (* END REPEAT twice *)
       apply (rule rel_T1_rel_T2.intros)
             apply (rule bij_id supp_id_bound id_on_id)+

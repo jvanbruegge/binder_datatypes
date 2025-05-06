@@ -681,9 +681,9 @@ interpretation vvsubst: QREC Pmap PFVars_1 PFVars_2 U1ctor U2ctor validP
   done
 
 definition vvsubst_T1 :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T1" where
-  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> vvsubst.ff0_T1 t (f1, f2, f3, f4)"
+  "vvsubst_T1 f1 f2 f3 f4 t \<equiv> vvsubst.REC_T1 t (f1, f2, f3, f4)"
 definition vvsubst_T2 :: "('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'c) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T2 \<Rightarrow> ('var, 'tyvar, 'a, 'c) T2" where
-  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> vvsubst.ff0_T2 t (f1, f2, f3, f4)"
+  "vvsubst_T2 f1 f2 f3 f4 t \<equiv> vvsubst.REC_T2 t (f1, f2, f3, f4)"
 
 definition pick1 :: "('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('var::var \<Rightarrow> 'var) \<Rightarrow> ('tyvar::var \<Rightarrow> 'tyvar) \<Rightarrow> ('a::var \<Rightarrow> 'a) \<Rightarrow> ('var, 'tyvar, 'a, 'b) T1 \<times> ('var, 'tyvar, 'a, 'c) T1 \<Rightarrow> ('var, 'tyvar, 'a, 'b \<times> 'c) T1" where
   "pick1 R f1 f2 f3 xy \<equiv> SOME z. set4_T1 z \<subseteq> {(x, y). R x y} \<and> vvsubst_T1 id id id fst z = fst xy \<and> vvsubst_T1 f1 f2 f3 snd z = snd xy"
@@ -1388,7 +1388,7 @@ lemma vvsubst_cctor_1:
   shows "vvsubst_T1 f1 f2 f3 f4 (T1_ctor x) = T1_ctor (map_T1_pre f1 f2 f3 f4 id id f1 (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T1 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) (vvsubst_T2 f1 f2 f3 f4) x)"
   apply (unfold vvsubst_T1_def vvsubst_T2_def)
   apply (rule trans)
-   apply (rule vvsubst.ff0_cctors)
+   apply (rule vvsubst.REC_ctors)
      apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
   apply (rule conjI f_prems)+
      apply (rule trans[OF Int_commute], rule int_empties)+
@@ -1412,7 +1412,7 @@ lemma vvsubst_cctor_2:
     (* same tactic as above *)
   apply (unfold vvsubst_T1_def vvsubst_T2_def)
   apply (rule trans)
-   apply (rule vvsubst.ff0_cctors)
+   apply (rule vvsubst.REC_ctors)
      apply (unfold U1ctor_def U2ctor_def prod.case Un_empty_left Un_empty_right)
   apply (rule conjI f_prems)+
      apply (rule trans[OF Int_commute], rule int_empties)+

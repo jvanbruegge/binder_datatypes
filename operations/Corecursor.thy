@@ -392,7 +392,6 @@ lemma f_FVarsD_aux:
   apply assumption
   done
 
-(* TODO: apply-scriptify *)
 lemma valid_pick_set3: "suitable pick \<Longrightarrow> xc \<in> set3_term_pre (pick xb) \<Longrightarrow> valid_U xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U xc"
   apply (unfold suitable_def Utor_def)
   apply (erule allE)
@@ -407,9 +406,24 @@ lemma valid_pick_set3: "suitable pick \<Longrightarrow> xc \<in> set3_term_pre (
    apply simp
   apply hypsubst_thin
   apply (subst pred_sum.simps)
-  by (smt (verit, del_insts) UnCI id_apply image_iff insertCI sum.set_map(2) sum_set_simps(4) valid_Udtor')
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI1)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+  apply assumption
+  done
 
-(* TODO: apply-scriptify *)
 lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> set4_term_pre (pick xb) \<Longrightarrow> valid_U xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U xc"
   apply (unfold suitable_def Utor_def)
   apply (erule allE)
@@ -424,7 +438,23 @@ lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> set4_term_pre (
    apply simp
   apply hypsubst_thin
   apply (subst pred_sum.simps)
-  by (smt (verit, del_insts) UnCI id_apply image_iff insertCI sum.set_map(2) sum_set_simps(4) valid_Udtor')
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI2)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+  apply assumption
+  done
 
 lemma f_FVarsD:
   assumes p: "suitable pick"
@@ -611,12 +641,12 @@ lemma OO_alpha_permute:
   apply assumption
   done
 
-(* TODO *)
-lemma some_lemma:
+lemma set3_setr_valid:
   assumes "suitable pick"
 and "valid_U d"
-shows "z \<in> set3_term_pre (pick d) \<Longrightarrow> x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U x"
-  by (metis assms(1,2) sum.pred_set valid_pick_set3)
+and "z \<in> set3_term_pre (pick d)"
+shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U x"
+  by (rule valid_pick_set3[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
 
 lemma rel_F_suitable_mapD:
   assumes valid_d: "valid_U d"
@@ -664,7 +694,7 @@ lemma rel_F_suitable_mapD:
              apply (rule refl)
             apply (subst OO_raw_Umap[OF u])
                apply assumption+
-             apply (erule some_lemma[OF pp'(1) valid_d])
+             apply (erule set3_setr_valid[OF pp'(1) valid_d])
              apply assumption
             apply (rule refl)
             apply (rule ballI)+

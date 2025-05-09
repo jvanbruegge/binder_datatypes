@@ -174,6 +174,7 @@ lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z
 
 lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by (force simp: bij_implies_inject)
 
+(* TODO: Remove *)
 lemma Un_bound:
   assumes inf: "infinite (UNIV :: 'a set)"
     and "|A1| <o |UNIV::'a set|" and "|A2| <o |UNIV::'a set|"
@@ -268,6 +269,19 @@ lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
   by blast
 
 lemma finite_singleton: "finite {x}" by blast
+
+lemma UN_Diff_distrib:
+assumes "(\<forall>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<longrightarrow> V (h a) \<subseteq> {a})"
+shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+using assms apply safe
+  apply blast
+  apply (metis Int_emptyD singletonD subset_eq)
+  by fastforce
+
+lemma UN_Diff_distrib':
+  assumes "\<And>a. V (g a) \<subseteq> {a}" "\<And>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<Longrightarrow> h a = g a"
+  shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+apply(rule UN_Diff_distrib) using assms by metis
 
 lemma ex_avoiding_bij:
   fixes f :: "'a \<Rightarrow> 'a" and I D A :: "'a set"

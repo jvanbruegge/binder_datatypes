@@ -119,7 +119,8 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           val intro = unvarify_global (Term.subst_TVars subst (Thm.prop_of intro));
           val binderss = map (distinct (op=)) (collect_binders intro);
           val xs_binders = map (fn binders => fold_rev (fn t => fn (a, b) => case t of
-            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (x::a, b)
+            Const (@{const_name insert}, _) $ x $ Const (@{const_name bot}, _) => (case x of
+              Bound _ => (a, b) | _ => (x::a, b))
             | _ => (a, t::b)
           ) binders ([], [])) binderss;
           val binders = map (fn (xs, binders) =>
@@ -552,7 +553,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
             hyp_subst_tac ctxt,
             REPEAT_DETERM o resolve_tac ctxt (
-              @{thms conjI emp_bound iffD2[OF insert_bound] ordLeq_refl}
+              @{thms conjI emp_bound iffD2[OF insert_bound_UNIV] ordLeq_refl}
               @ infinite_UNIVs @ [Un_bound, UN_bound]
               @ maps (fn thm => [thm, @{thm ordLess_ordLeq_trans} OF [thm]]) (
                 maps set_bd_UNIVs_of_mr_bnfs binder_mr_bnfs

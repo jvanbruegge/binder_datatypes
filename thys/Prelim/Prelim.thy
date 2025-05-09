@@ -506,6 +506,12 @@ lemma supp_inv_bound:
   unfolding supp_inv[OF b]
   using s card_of_image ordLeq_ordLess_trans by blast
 
+lemma insert_bound: "Cinfinite r \<Longrightarrow> |A| <o r \<Longrightarrow> |insert x A| <o r"
+  by (metis Card_order_iff_ordLeq_card_of card_of_Field_ordIso card_of_Un_singl_ordLess_infinite1 cinfinite_def insert_is_Un ordLess_ordIso_trans ordLess_ordLeq_trans)
+
+lemma single_bound: "Cinfinite r \<Longrightarrow> |{x}| <o r"
+  by (simp add: Cinfinite_gt_empty insert_bound)
+
 lemma Un_Cinfinite_ordLess: "|A| <o r \<Longrightarrow> |B| <o r \<Longrightarrow> Cinfinite r \<Longrightarrow> |A \<union> B| <o r"
   using Un_Cinfinite_bound_strict .
  (* apply (simp add: cinfinite_def) *)
@@ -587,6 +593,9 @@ lemma infinite_regular_card_order_natLeq:
 lemma infinite_regular_card_order_Un: "infinite_regular_card_order r \<Longrightarrow> |A| <o r \<Longrightarrow> |B| <o r \<Longrightarrow> |A \<union> B| <o r"
   using infinite_regular_card_order.Card_order regularCard_Un infinite_regular_card_order_def
   by blast
+
+lemma infinite_regular_card_order_UN: "infinite_regular_card_order r \<Longrightarrow> |A| <o r \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> |B a| <o r) \<Longrightarrow> |\<Union>(B ` A)| <o r"
+  by (simp add: infinite_regular_card_order.Card_order infinite_regular_card_order_def regularCard_UNION_bound)
 
 lemma infinite_regular_card_order_ordLess_cprod: "infinite_regular_card_order r \<Longrightarrow> infinite_regular_card_order p \<Longrightarrow> |x| <o r \<Longrightarrow> |x| <o p *c r"
   using ordLess_ordLeq_trans[OF _ ordLeq_cprod2[OF infinite_regular_card_order.Cnotzero]] infinite_regular_card_order.Card_order

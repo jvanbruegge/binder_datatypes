@@ -1062,12 +1062,11 @@ thm f0_Utor f0_mapD f0_FVarsD
 
 (*******************)
 (* End product: *)
-definition ff0 :: "'u \<Rightarrow> 'a term" where "ff0 d = TT_abs (f0 d)"
 
-theorem ff0_DDTOR:
+theorem COREC_DDTOR:
   assumes "X \<in> Udtor d" "valid_U d"
-  shows "ff0 d = term_ctor (map_term_pre id id (case_sum id ff0) (case_sum id ff0) X)"
-  apply (unfold ff0_def term_ctor_def)
+  shows "COREC d = term_ctor (map_term_pre id id (case_sum id COREC) (case_sum id COREC) X)"
+  apply (unfold COREC_def term_ctor_def)
   apply (unfold o_def[symmetric])
   apply (subst term_pre.map_comp, (rule supp_id_bound bij_id)+)
   apply (unfold TT_total_abs_eq_iffs)
@@ -1116,10 +1115,10 @@ theorem ff0_DDTOR:
   apply (rule TT_rep_abs_syms)
   done
 
-lemma ff0_mmapD:
+lemma COREC_mmapD:
   assumes "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a::var set|" and "valid_U d"
-  shows "ff0 (Umap u d) = permute_term u (ff0 d)"
-  apply (unfold ff0_def permute_term_def)
+  shows "COREC (Umap u d) = permute_term u (COREC d)"
+  apply (unfold COREC_def permute_term_def)
   apply (unfold TT_total_abs_eq_iffs)
   apply (rule alpha_trans)
    apply (rule f0_mapD[OF assms])
@@ -1128,19 +1127,12 @@ lemma ff0_mmapD:
   apply (rule TT_rep_abs)
   done
 
-theorem ff0_FFVarsD:
-  "valid_U d \<Longrightarrow> FVars_term (ff0 d) \<subseteq> UFVars d"
-  apply (unfold ff0_def FVars_term_def alpha_FVars[OF TT_rep_abs])
+theorem COREC_FFVarsD:
+  "valid_U d \<Longrightarrow> FVars_term (COREC d) \<subseteq> UFVars d"
+  apply (unfold COREC_def FVars_term_def alpha_FVars[OF TT_rep_abs])
   apply (erule f0_FVarsD)
   done
 
-lemma COREC_DDTOR: "valid_U d \<Longrightarrow> X \<in> Udtor d \<Longrightarrow> COREC d = term_ctor (map_term_pre id id (case_sum id COREC) (case_sum id COREC) X)"
-  sorry
-
-  lemma COREC_mmapD: "valid_U d \<Longrightarrow> bij u \<Longrightarrow> |supp u| <o |UNIV::'a set| \<Longrightarrow> COREC (Umap u d) = permute_term u (COREC d)"
-    sorry
-  lemma  COREC_FFVarsD: "valid_U d \<Longrightarrow> FVars_term (COREC d) \<subseteq> UFVars d"
-    sorry
 end
 
 end

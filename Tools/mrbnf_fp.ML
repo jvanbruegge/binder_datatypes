@@ -80,7 +80,8 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
     (* TODO: error handling *)
 
     val npre_args = MRBNF_Def.live_of_mrbnf (hd mrbnfs) + MRBNF_Def.free_of_mrbnf (hd mrbnfs) + MRBNF_Def.bound_of_mrbnf (hd mrbnfs);
-    val sort = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) (map MRBNF_Def.coclass_of_mrbnf mrbnfs)
+    val sort = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) (map 
+      (if co then MRBNF_Def.coclass_of_mrbnf else MRBNF_Def.class_of_mrbnf) mrbnfs)
     val (tvars as ((((frees, pfrees), plives), pbounds), deadss), _) = lthy
       |> mk_TFrees' (replicate nvars sort)
       ||>> mk_TFrees' (replicate (free - nvars) sort)

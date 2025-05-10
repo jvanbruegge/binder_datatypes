@@ -1511,6 +1511,8 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
       ]) end
     ) fs (#IImsupps def))) fs) (#quotient_fps fp_res) SSupp_naturalss defss;
 
+    val fp_thms = Option.map (fn Inl x => x | Inr _ => error "wrong fp kind") (#fp_thms fp_res);
+
     fun SELECT_GOALS n tac i st =
       if Thm.nprems_of st = 1 andalso i = 1 then tac st
       else (PRIMITIVE (Goal.restrict i n) THEN tac THEN PRIMITIVE (Goal.unrestrict i)) st;
@@ -1544,7 +1546,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models lthy =
           in EVERY1 [
             DETERM o rtac ctxt (infer_instantiate' ctxt (
               map (SOME o Thm.cterm_of ctxt) As @ replicate (length mrbnfs) NONE @ map (SOME o Thm.cterm_of ctxt) ts
-            ) (#fresh_induct (the (#fp_thms fp_res)))),
+            ) (#fresh_induct (the fp_thms))),
             SELECT_GOALS (length As) (EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
               REPEAT_DETERM o resolve_tac ctxt (

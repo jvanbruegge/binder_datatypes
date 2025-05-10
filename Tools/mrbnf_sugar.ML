@@ -336,7 +336,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val pre_mrbnf = hd (#pre_mrbnfs res);
     val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
 
-    val strong_induct_opt = Option.map (fn fp_thms =>
+    val strong_induct_opt = Option.mapPartial (fn Inr _ => NONE | Inl fp_thms =>
       let
         val (P, names_lthy) = names_lthy
           |> apfst hd o mk_Frees "P" [qT --> b --> @{typ bool}];
@@ -412,7 +412,7 @@ fun create_binder_datatype (spec : spec) lthy =
         ) (#fresh_induct_param fp_thms);
 
         val absumprodE = BNF_FP_Util.mk_absumprodE (#type_definition (snd info)) (map (length o snd) (#ctors spec))
-      in Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
+      in SOME (Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt @{thms ball_UNIV[symmetric]}),
         rtac ctxt thm,
         EVERY' (map (fn p => rtac ctxt (@{thm spec} OF [p])) (take n prems)),
@@ -452,7 +452,7 @@ fun create_binder_datatype (spec : spec) lthy =
             IF_UNSOLVED o K no_tac
           ])) prems)
         ]) ctxt) (drop n prems))
-      ]) |> Rule_Cases.name (bound_names @ ctor_names) end
+      ]) |> Rule_Cases.name (bound_names @ ctor_names)) end
     ) (#fp_thms res);
 
     val fresh_induct_opt = Option.map (fn strong_induct =>

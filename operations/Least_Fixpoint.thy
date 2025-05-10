@@ -6679,7 +6679,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
     binding_relation = [[[1, 3]], [[1]]],
     rec_vars = [2, 2],
     bfree_vars = [0],
-    fp_thms = SOME {
+    fp_thms = SOME (MRBNF_Util.Inl {
       subshape_rel = @{term "{(x, y). case x of
         Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
       | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
@@ -6699,7 +6699,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
      existential_induct = @{thm existential_induct},
      fresh_induct_param = @{thm fresh_induct_param},
      fresh_induct = @{thm fresh_induct}
-    },
+    }),
     quotient_fps = [
       { T = @{typ "('a::var, 'b::var, 'c::var, 'd) T1"},
         ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"},
@@ -6866,7 +6866,6 @@ val fp_res = { fp = BNF_Util.Least_FP,
 local_setup \<open>MRBNF_FP_Def_Sugar.register_fp_results [fp_res]\<close>
 
 (* Test of automation, discarding result *)
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 local_setup \<open>fn lthy =>
 let
   val (fp_res, _) = MRBNF_FP.construct_binder_fp BNF_Util.Least_FP

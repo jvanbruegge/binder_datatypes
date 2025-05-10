@@ -3,6 +3,8 @@ sig
   include BNF_UTIL
 
   datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+  val map_sum: ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) either -> ('c, 'd) either
+  val either: ('a -> 'c) -> ('b -> 'c) -> ('a, 'b) either -> 'c
 
   val filter_like: 'a list -> ('a -> bool) -> 'b list -> 'b list
   val cond_keep: 'a list -> bool list -> 'a list
@@ -79,6 +81,12 @@ open BNF_Util
 
 datatype ('a, 'b) either = Inl of 'a | Inr of 'b
 
+fun map_sum f _ (Inl x) = Inl (f x)
+  | map_sum _ g (Inr y) = Inr (g y)
+
+fun either f _ (Inl x) = f x
+  | either _ g (Inr y) = g y
+
 fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_ex t)
   | strip_ex t = ([], t)
 
@@ -133,6 +141,9 @@ fun mk_arg_cong ctxt 1 t = infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_
     val goal = Logic.list_implies (@{map 2} (curry mk_Trueprop_eq) xs ys,
       mk_Trueprop_eq (list_comb (t, xs), list_comb (t, ys)));
     val vars = Variable.add_free_names ctxt goal [];
+    val vars = case t of
+      Free (x, _) => subtract (op=) [x] vars
+      | _ => vars;
   in
     Goal.prove_sorry ctxt vars [] goal (fn {context = ctxt, prems = _} =>
       HEADGOAL (hyp_subst_tac ctxt THEN' rtac ctxt refl))

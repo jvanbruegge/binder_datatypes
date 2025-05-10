@@ -789,6 +789,8 @@ fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) param
           Function_Common.default_config (mk_f_pat_complete_tac (map #inject (#raw_fps fp_res))) lthy
         );
 
+        val fp_thms = Option.map (fn Inl x => x | Inr _ => error "wrong fp type") (#fp_thms fp_res);
+
         fun mk_relation T =
           let
             val T' = fst (dest_relT T)
@@ -799,7 +801,7 @@ fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) param
             ) Ts);
             val funs = map2 (fn snds => fn T => foldl1 HOLogic.mk_comp (fst_const T :: rev snds)) sndss Ts';
             val map_sum = foldr1 (uncurry mk_map_sum) funs;
-          in mk_inv_image (#subshape_rel (the (#fp_thms fp_res))) map_sum end;
+          in mk_inv_image (#subshape_rel (the fp_thms)) map_sum end;
 
         val pick_prems = maps ((fn suitable_def =>
           let
@@ -818,7 +820,7 @@ fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) param
             (flat (#set_subshape_permutess fp_thms))
             (flat (#set_subshapess fp_thms))
             (maps set_map_of_mrbnf (#pre_mrbnfs fp_res)) pick_prems lthy
-          ) (#fp_thms fp_res))
+          ) fp_thms)
         ) lthy;
 
         val f_simps = @{map 5} (fn lhs => fn map_t => fn model_const => fn x => fn mrbnf =>
@@ -1808,6 +1810,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
     val n = length models;
     val (conj_spec, conj_mp) = mk_conj_thms n lthy;
 
+    val fp_thms = Option.map (fn Inl x => x | Inr _ => error "wrong fp type") (#fp_thms fp_res);
+
     val valid_f_opts = if exists (Option.isSome o #validity) models then
       let
         val validP = the_default (pred_True (#P params)) (Option.map #pred (#validity params));
@@ -1817,7 +1821,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
         ) rec_fs models ts));
         val thm = Goal.prove_sorry lthy (names (flat pickss @ ts)) suitable_prems goal (fn {context=ctxt, prems=suitable_prems} => EVERY1 [
           rtac ctxt (infer_instantiate' ctxt (replicate n NONE @ map (SOME o Thm.cterm_of ctxt) ts) (
-            #subshape_induct (the (#fp_thms fp_res))
+            #subshape_induct (the fp_thms)
           )),
           EVERY' (@{map 5} (fn raw => fn rec_f => fn Uctor' => fn model => fn mrbnf => EVERY' [
             rtac ctxt @{thm pred_funI},
@@ -1845,7 +1849,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     @ prems @ mk_pick_prems [] suitable_prems
                     @ @{thms supp_id_bound bij_id}
                   ),
-                  eresolve_tac ctxt (flat (#set_subshapess (the (#fp_thms fp_res)) @ (#set_subshape_permutess (the (#fp_thms fp_res)))))
+                  eresolve_tac ctxt (flat (#set_subshapess (the fp_thms) @ (#set_subshape_permutess (the fp_thms))))
                 ]
               ]) ctxt
             ]
@@ -1881,7 +1885,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
           in EVERY1 [
             the_default (Method.insert_tac ctxt validP_prems) (Option.map (fn fp_thms =>
               rtac ctxt (mp (conj_spec OF [infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) insts) (#subshape_induct fp_thms)]))
-            ) (#fp_thms fp_res)),
+            ) fp_thms),
             REPEAT_DETERM o resolve_tac ctxt validP_prems,
             EVERY' (@{map 5} (fn raw => fn mrbnf => fn alpha_ctor_pick => fn rec_f => fn t => EVERY' [
               TRY o rtac ctxt allI,
@@ -1953,7 +1957,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms)) @ flat (#set_subshapess fp_thms)),
                       REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms) ORELSE' assume_tac ctxt)
                     ]
-                  ]) (#fp_thms fp_res))
+                  ]) fp_thms)
                 ]) end
               ) ctxt
             ]) (#raw_fps fp_res) (#pre_mrbnfs fp_res) alpha_ctor_picks rec_fs ts)
@@ -2017,7 +2021,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   if not left then K all_tac else EVERY' [
                     EqSubst.eqsubst_tac ctxt [0] [hd IHs RS sym],
                     TRY o resolve_tac ctxt valid_prems,
-                    eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess (the (#fp_thms fp_res)))) @ flat (#set_subshapess (the (#fp_thms fp_res)))),
+                    eresolve_tac ctxt (map (Drule.rotate_prems ~1) (flat (#set_subshape_permutess fp_thms)) @ flat (#set_subshapess fp_thms)),
                     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ valid_prems @ card_thms),
                     TRY o EVERY' [
                       EqSubst.eqsubst_tac ctxt [0] [#permute_comp raw'],
@@ -2036,8 +2040,8 @@ fun create_binding_recursor qualify fp_res params models lthy =
             ) end
           ) (#FVarss raw') (#PFVarss params) (#avoiding_sets params)
         ) ts pus (fst (fold_map chop (#rec_vars fp_res) lsets)) subshapes (#raw_fps fp_res) rec_fs PUmap's UFVars'ss f_UFVars'ss
-      ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) (#subshapess (the (#fp_thms fp_res))) PU_setss XXs
-    ) (#fp_thms fp_res)) (true, false) (XXls, XXrs);
+      ) xs (#raw_fps fp_res) (#pre_mrbnfs fp_res) (#subshapess fp_thms) PU_setss XXs
+    ) fp_thms) (true, false) (XXls, XXrs);
 
     val nrecs = foldr1 (op+) (#rec_vars fp_res);
     val (imsupp_id_on_XXlss, imsupp_id_on_XXrss) = apply2 (
@@ -2266,7 +2270,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
             |> infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) insts)
             |> apply_n conj_spec spec_n
             |> apply_n conj_mp mp_n
-          ) (#fp_thms fp_res);
+          ) fp_thms;
         in DETERM (EVERY1 [
           the_default (Method.insert_tac ctxt prems) (Option.map (rtac ctxt) induct),
           REPEAT_DETERM_N n o defer_tac,
@@ -2479,7 +2483,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                   )) (nth (the XXr_UFVars'sss) (i - 1))),
                   assume_tac ctxt,
                   resolve_tac ctxt valid_prems
-                ]) (#fp_thms fp_res)),
+                ]) fp_thms),
                 defer_tac,
                 (* mr_rel_goal *)
                 REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] [snd XXl, snd XXr],
@@ -2779,7 +2783,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                     ],
                     assume_tac ctxt
                   ]
-                ]) (#fp_thms fp_res)))),
+                ]) fp_thms))),
                 (*    f picks t = f picks' t' *)
                 K (unfold_thms_tac ctxt [snd rec_f OF (suitable_prems @ valid_prems), snd rec_f OF (suitable'_prems @ valid_prems)]),
                 Subgoal.FOCUS_PARAMS (fn {context=ctxt, ...} =>
@@ -3386,7 +3390,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
                       ],
                       resolve_tac ctxt (map (#alpha_sym o #inner) (#raw_fps fp_res)),
                       assume_tac ctxt
-                    ]) (#fp_thms fp_res))
+                    ]) fp_thms)
                   ] end
                 ) ctxt
               ] end

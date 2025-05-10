@@ -6866,7 +6866,6 @@ val fp_res = { fp = BNF_Util.Least_FP,
 local_setup \<open>MRBNF_FP_Def_Sugar.register_fp_results [fp_res]\<close>
 
 (* Test of automation, discarding result *)
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 local_setup \<open>fn lthy =>
 let
   val (fp_res, _) = MRBNF_FP.construct_binder_fp BNF_Util.Least_FP

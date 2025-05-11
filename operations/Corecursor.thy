@@ -10,6 +10,8 @@ lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightar
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
 
+lemma not_imageE: "f a \<notin> f ` A \<Longrightarrow> a \<notin> A"
+  by blast
 
 (* Definitions *)
 
@@ -761,148 +763,313 @@ lemma alpha_cong:
 
 (* The "monster lemma": swapping and "pick"-irrelevance covered in one shot: *)
 
+lemma f_swap_alpha_aux1:
+  assumes p: "suitable pick"
+    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
+    and "FVarsB x \<subseteq> u ` raw_UFVarsBD (pick d)"
+    and id_on_pick: "id_on (raw_UFVarsBD (pick d)) y"
+  shows "id_on (FVarsB x) (u \<circ> y \<circ> inv u)"
+  apply (rule id_on_antimono)
+   apply (unfold id_on_def)[1]
+   apply (rule allI)
+   apply (rule impI)
+   apply (drule imageI[of _ "u ` raw_UFVarsBD (pick d)" "inv u"])
+   apply (unfold image_inv_f_f[OF bij_is_inj[OF u(1)]])
+   apply (subst comp_assoc)
+   apply (subst comp_apply)
+   apply (subst comp_apply)
+   apply (rule allE[OF id_on_pick[unfolded id_on_def]])
+   apply (erule impE)
+    apply assumption
+   apply (drule arg_cong[of _ _ "u"])
+   apply (subst (asm) surj_f_inv_f[OF bij_is_surj[OF u(1)]])
+   apply assumption
+  apply (rule assms)
+  done
+
+(* TODO: use rel_F_suitable_mapD directly? *)
+lemma f_swap_alpha_v_exists:
+  assumes p: "suitable pick" and p': "suitable pick'"
+    and valid_d: "valid_U d"
+    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
+  shows "\<exists>v. bij v \<and> |supp v| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD (pick d)) v \<and>
+mr_rel_term_pre u (u \<circ> v)
+       (rel_sum (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t)) (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)))
+       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d))
+     (pick d) (pick' (raw_Umap u d))"
+  by (rule rel_F_suitable_mapD[OF valid_d p p' u])
+
+lemma FVars_raw_permutes':
+  "bij (g::'a \<Rightarrow> 'a) \<Longrightarrow> |supp g| <o |UNIV::'a set| \<Longrightarrow> FVars_raw_term \<circ> permute_raw_term g = image g \<circ> FVars_raw_term"
+  using FVars_raw_permutes by fastforce
+
+lemma
+  assumes p: "suitable pick" and p': "suitable pick'"
+    and valid_d: "valid_U d"
+    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
+  shows "mr_rel_term_pre u u
+       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d. (=) (raw_Umap u d)))
+       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d))
+     (pick d) (pick' (raw_Umap u d))"
+(* TODO: to be continued... *)
+  oops
+
+lemma f_swap_alpha_aux:
+  assumes p: "suitable pick" and p': "suitable pick'"
+    and valid_d: "valid_U d"
+  assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
+  shows "\<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
+   tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d) \<Longrightarrow> alpha_term tL tR"
+  apply (erule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
+   tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
+  (* apply (rule exE[OF f_swap_alpha_v_exists[OF p p' valid_d u]]) *)
+  apply (erule exE conjE)+
+  apply (rule exI)+
+  thm f_swap_alpha_v_exists[OF p p' valid_d u]
+  thm exE[OF f_swap_alpha_v_exists[OF p p' valid_d u]]
+  apply (rule conjI[rotated])+
+     prefer 4
+     apply (rule bij_comp)
+      apply (rule bij_imp_bij_inv)
+  apply assumption
+     apply (rule bij_comp)
+  apply (rule bij_id)
+     apply assumption
+  prefer 3
+    apply (rule supp_comp_bound)
+     apply (rule supp_inv_bound)
+      apply assumption+
+    apply (subst o_id)
+  apply assumption
+   prefer 2
+(* subgoal'ing here, otherwise schematic variable gets huge *)
+  subgoal for x x' u d
+   apply (rule f_swap_alpha_aux1[OF p, of _ _ d])
+     apply assumption+
+    prefer 2
+  apply (rule id_on_id)
+   apply (subst (asm) f_simps[of "pick"])
+   apply (subst (asm) permute_raw_simps, assumption+)
+   apply (subst (asm) raw_term.inject)
+   apply hypsubst
+   apply (subst term_pre.set_map, assumption+)
+   apply (subst term_pre.set_map, (rule bij_id supp_id_bound)+)
+   apply (subst term_pre.set_map, assumption+)
+    apply (subst term_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (subst (asm) term_pre.map_comp, (rule bij_id supp_id_bound | assumption)+)
+    apply (subst image_id)
+    apply (unfold o_id)
+   apply (subst Diff_subset_conv)
+   apply (subst image_comp)
+    apply (subst FVars_raw_permutes', assumption+)
+    apply (subst image_comp[symmetric])
+    apply (subst image_Un[symmetric])
+    apply (subst image_Union[symmetric])
+    apply (rule image_mono)
+   apply (unfold raw_UFVarsBD_def)
+    apply (subst Un_Diff_cancel)
+    apply (rule le_supI2)
+    apply (subst image_comp)
+    apply (subst o_case_sum)
+   apply (unfold o_id)
+
+    apply (rule UN_mono)
+     apply (rule subset_refl)
+    subgoal for x
+      apply (rule sumE[of x])
+       apply hypsubst_thin
+       apply (unfold sum.simps)
+       apply (rule subset_refl)
+       apply hypsubst_thin
+      apply (unfold sum.simps)
+      apply (subst comp_apply)
+      apply (rule f_FVarsD[OF p])
+      apply (drule valid_pick_set3[OF p _])
+      apply assumption
+      apply (unfold pred_sum_inject)
+      apply assumption
+      done
+    done
+  apply (unfold o_id)
+
+
+
+
+  apply (erule exE conjE)+
+*)
+proof(induction rule: alpha_coinduct2)
+  case (C xL xR)
+  then obtain u d
+    where u: "bij u" "|supp u| <o |UNIV::'a set|"
+      and valid_d': "valid_U d"
+      and xL: "xL = map_term_pre u u (permute_raw_term u \<circ> case_sum id (f pick)) (permute_raw_term u \<circ> case_sum id (f pick)) (pick d)"
+      and xR: "xR = map_term_pre id id (case_sum id (f pick')) (case_sum id (f pick')) (pick' (raw_Umap u d))"
+    using f_simps[of "pick"] f_simps[of "pick'"] by (auto simp: u permute_raw_simps term_pre.map_comp supp_id_bound)
+    
+  obtain v where v: "bij v" "|supp v| <o |UNIV::'a set|" and iv: "id_on (raw_UFVarsBD (pick d)) v"
+    and rv:
+    "mr_rel_term_pre u (u \<circ> v)
+       (rel_sum (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t)) (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)))
+       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d))
+     (pick d) (pick' (raw_Umap u d)) "
+    using rel_F_suitable_mapD[OF valid_d' p p' u] by blast
+
+  define w where "w \<equiv> u o v o inv u"
+
+  have w: "bij w" "|supp w| <o |UNIV::'a set|"
+     apply (unfold w_def)
+     apply (rule bij_comp)
+      apply (rule bij_imp_bij_inv)
+      apply (rule u)
+     apply (rule bij_comp)
+    apply (rule v)
+     apply (rule u)
+    apply (rule supp_comp_bound)
+     apply (rule supp_inv_bound)
+      apply (rule u)
+     apply (rule u)
+    apply (rule supp_comp_bound)
+    apply (rule v)
+    apply (rule u)
+    done
+
+  have fv_xL: "FVarsB xL \<subseteq> u ` (raw_UFVarsBD (pick d))"
+    apply (unfold xL)
+    apply (unfold term_pre.set_map[OF u(2) u])
+    apply (subst Diff_subset_conv)
+    apply (subst image_comp)
+    apply (subst comp_assoc[symmetric])
+    apply (subst FVars_raw_permutes'[OF u])
+    apply (subst comp_assoc)
+    apply (subst image_comp[symmetric])
+    apply (subst image_Un[symmetric])
+    apply (subst image_Union[symmetric])
+    apply (rule image_mono)
+    apply (unfold raw_UFVarsBD_def)
+    apply (subst Un_Diff_cancel)
+    apply (rule le_supI2)
+    apply (subst o_case_sum)
+    apply (unfold o_id)
+    apply (rule UN_mono)
+     apply (rule subset_refl)
+    subgoal for x
+      apply (rule sumE[of x])
+       apply hypsubst_thin
+       apply (unfold sum.simps)
+       apply (rule subset_refl)
+       apply hypsubst_thin
+      apply (unfold sum.simps)
+      apply (subst comp_apply)
+      apply (rule f_FVarsD[OF p])
+      apply (drule valid_pick_set3[OF p _ valid_d'])
+      apply (unfold pred_sum_inject)
+      apply assumption
+      done
+  have fv_p'd: "raw_UFVarsBD (pick d) \<subseteq> raw_UFVars d"
+    apply (rule subset_trans[OF _ raw_UFVars_Utor[OF valid_d' p[unfolded suitable_def, THEN spec, THEN mp, OF valid_d']]])
+    apply (rule Un_upper2)
+    done
+  have iw: "id_on (FVarsB xL) w"
+    apply (rule id_on_antimono)
+    apply (unfold w_def id_on_def)
+    apply (rule allI)
+     apply (rule impI)
+     apply (drule imageI[of _ "u ` raw_UFVarsBD (pick d)" "inv u"])
+     apply (unfold image_inv_f_f[OF bij_is_inj[OF u(1)]])
+    apply (subst comp_assoc)
+    apply (subst comp_apply)
+     apply (subst comp_apply)
+     apply (rule allE[OF iv[unfolded id_on_def]])
+     apply (erule impE)
+    apply assumption
+    apply (drule arg_cong[of _ _ "u"])
+    apply (subst (asm) surj_f_inv_f[OF bij_is_surj[OF u(1)]])
+    apply assumption
+    apply (rule fv_xL)
+    done
+  show ?case
+  proof (rule exI[of _ w], safe)
+    show "mr_rel_term_pre id w
+     (\<lambda>t t'.
+         (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> permute_raw_term w t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or>
+         alpha_term (permute_raw_term w t) t')
+     (\<lambda>t t'. (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or> alpha_term t t') xL xR" unfolding xL xR
+      apply(simp add: w u term_pre.mr_rel_map Grp_def OO_def supp_comp_bound supp_inv_bound permute_raw_comps supp_id_bound)
+    proof(rule term_pre.mr_rel_mono_strong0[OF _ _ _ _ _ _ rv], auto)
+      fix a assume "a \<in> set2_term_pre (pick d)"
+      thus "u (v a) = w (u a)"
+        unfolding w_def by (simp add: u v)
+    next
+      fix ttdL ttdR assume ttdLin: "ttdL \<in> set4_term_pre (pick d)"
+        and ttdRin: "ttdR \<in> set4_term_pre (pick' (raw_Umap u d))"
+        and r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d) ttdL ttdR"
+        and na: "\<not> alpha_term (permute_raw_term u (case_sum id (f pick) ttdL)) (case_sum id (f pick') ttdR)"
+      have "ttdL \<noteq> Inl tL" for tL
+        by (metis id_apply na old.sum.exhaust old.sum.simps(5) r rel_sum_simps(1,2))
+      then obtain dd where ttdL: "ttdL = Inr dd" by (cases ttdL, auto)
+      hence ttdR: "ttdR = Inr (raw_Umap u dd)" using r by(cases ttdR, auto)
+      have fv_dd: "raw_UFVars dd \<subseteq> raw_UFVars d" 
+        apply (rule subset_trans[OF _ raw_UFVars_Utor[OF valid_d' p[unfolded suitable_def, THEN spec, THEN mp, OF valid_d']]])
+        apply (rule subsetI)
+        apply (rule UnI1)
+        apply (rule UnI2)
+        apply (insert ttdLin[unfolded ttdL])
+        by force
+      show "\<exists>uu dd. valid_U dd \<and>
+             bij uu \<and>
+             |supp uu| <o |UNIV::'a set| \<and>
+             permute_raw_term u (case_sum id (f pick) ttdL) = permute_raw_term uu (f pick dd) \<and>
+             case_sum id (f pick') ttdR = f pick' (raw_Umap uu dd)"
+        apply (insert ttdL ttdR)
+        apply hypsubst
+        apply (unfold sum.case)
+        apply (rule exI)+
+        apply (rule conjI[rotated])+
+            prefer 2
+            apply (rule refl)+
+          apply (rule u)+
+        by (metis p pred_sum_inject(2) ttdLin valid_d' valid_pick_set4)
+    next
+      fix ttdL ttdR assume ttdLin: "ttdL \<in> set3_term_pre (pick d)"
+        and ttdRin: "ttdR \<in> set3_term_pre (pick' (raw_Umap u d))"
+        and r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t)) (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)) ttdL ttdR"
+        and na: "\<not> alpha_term (permute_raw_term (w \<circ> u) (case_sum id (f pick) ttdL)) (case_sum id (f pick') ttdR)"
+      have uvw: "u \<circ> v = w \<circ> u" unfolding w_def by (auto simp: u)
+      have "ttdL \<noteq> Inl tL" for tL
+        by (metis id_apply na old.sum.exhaust old.sum.simps(5) r rel_sum_simps(1,2) uvw)
+      then obtain dd where ttdL: "ttdL = Inr dd" by (cases ttdL, auto)
+      hence ttdR: "ttdR = Inr (raw_Umap (u \<circ> v) dd)" using r by (cases ttdR, auto)
+      show "\<exists>uu dd. valid_U dd \<and> bij uu \<and> |supp uu| <o |UNIV::'a set| \<and>
+              permute_raw_term (w \<circ> u) (case_sum id (f pick) ttdL) = permute_raw_term uu (f pick dd) \<and>
+                     case_sum id (f pick') ttdR = f pick' (raw_Umap uu dd)"
+        apply (insert ttdL ttdR)
+        apply hypsubst
+        apply (unfold sum.case uvw)
+        apply (rule exI)+
+        apply (rule conjI[rotated])+
+            prefer 2
+            apply (rule refl)+
+          apply (rule supp_comp_bound, (rule u w)+)
+         apply (rule bij_comp, (rule u w)+)
+        by (metis p pred_sum_inject(2) ttdLin valid_d' valid_pick_set3)
+    qed(simp_all add: w u v supp_comp_bound)
+  next
+    show "bij w" by (rule w)
+  next
+    show "|supp w| <o |UNIV::'a set|"
+      by (rule w)
+  next
+    show "id_on (FVarsB xL) w"
+      by (rule iw)
+  qed
+qed
+
 lemma f_swap_alpha:
   assumes p: "suitable pick" and p': "suitable pick'"
    and valid_d: "valid_U d"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
   shows "alpha_term (permute_raw_term u (f pick d)) (f pick' (raw_Umap u d))"
-(*
-  apply (rule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
-   tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
-   apply (rule exI)+
-   apply (rule conjI[rotated])+
-      apply (rule refl)+
-    apply (rule assms)+
-
-  apply (erule exE conjE)+
-(* TODO *)
-*)
-
-proof-
-  let ?\<phi> = "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
-   tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"
-  {fix tL tR assume "?\<phi> tL tR"
-    hence "alpha_term tL tR"
-    proof(induction rule: alpha_coinduct2)
-      case (C xL xR)
-      term xL
-      term un_raw_term_ctor
-      then obtain u d
-        where u: "bij u" "|supp u| <o |UNIV::'a set|"
-          and valid_d': "valid_U d"
-          and "raw_term_ctor xL = permute_raw_term u (f pick d)" "raw_term_ctor xR = f pick' (raw_Umap u d)" by auto
-      hence xL: "xL = map_term_pre u u (permute_raw_term u \<circ> case_sum id (f pick)) (permute_raw_term u \<circ> case_sum id (f pick)) (pick d)"
-        and xR: "xR = map_term_pre id id (case_sum id (f pick')) (case_sum id (f pick')) (pick' (raw_Umap u d))"
-        using f_simps[of "pick"] f_simps[of "pick'"]
-        by (auto simp: u permute_raw_simps term_pre.map_comp supp_id_bound)
-          (*  *)
-      obtain v where v: "bij v" "|supp v| <o |UNIV::'a set|" and iv: "id_on (raw_UFVarsBD (pick d)) v"
-        and rv:
-        "mr_rel_term_pre u (u \<circ> v)
-       (rel_sum (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t)) (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)))
-       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d))
-     (pick d) (pick' (raw_Umap u d)) "
-        using rel_F_suitable_mapD[OF valid_d' p p' u(1,2)] by blast
-      define w where "w \<equiv> u o v o inv u"
-      have w: "bij w" "|supp w| <o |UNIV::'a set|" by (simp_all add: w_def u v supp_comp_bound supp_inv_bound)
-
-      have fv_xL: "FVarsB xL \<subseteq> u ` (raw_UFVarsBD (pick d))"
-        using f_FVarsD[OF p] unfolding xL apply (auto simp: u term_pre.set_map FVars_raw_permutes raw_UFVarsBD_def)
-        subgoal for td a 
-          apply (cases td)
-          apply fastforce
-          apply (metis DiffI Union_iff image_eqI old.sum.simps(6) p pred_sum_inject(2) subsetD valid_d' valid_pick_set3)
-          done
-        done
-      have fv_p'd: "raw_UFVarsBD (pick d) \<subseteq> raw_UFVars d"
-        apply (rule subset_trans[OF _ raw_UFVars_Utor[OF valid_d' p[unfolded suitable_def, THEN spec, THEN mp, OF valid_d']]])
-        apply (rule Un_upper2)
-        done
-      have "id_on (u ` (raw_UFVarsBD (pick d))) w"
-        using iv fv_p'd unfolding id_on_def xL w_def eq_on_def id_on_def by (auto simp: term_pre.set_map u)
-      hence iw: "id_on (FVarsB xL) w" using fv_xL unfolding id_on_def by auto
-      show ?case
-      proof (rule exI[of _ w], safe)
-        show "mr_rel_term_pre id w
-     (\<lambda>t t'.
-         (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> permute_raw_term w t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or>
-         alpha_term (permute_raw_term w t) t')
-     (\<lambda>t t'. (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or> alpha_term t t') xL xR" unfolding xL xR
-          apply(simp add: w u term_pre.mr_rel_map Grp_def OO_def supp_comp_bound supp_inv_bound permute_raw_comps supp_id_bound)
-        proof(rule term_pre.mr_rel_mono_strong0[OF _ _ _ _ _ _ rv], auto)
-          fix a assume "a \<in> set2_term_pre (pick d)"
-          thus "u (v a) = w (u a)"
-            unfolding w_def by (simp add: u v)
-        next
-          fix ttdL ttdR assume ttdLin: "ttdL \<in> set4_term_pre (pick d)"
-            and ttdRin: "ttdR \<in> set4_term_pre (pick' (raw_Umap u d))"
-            and r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d) ttdL ttdR"
-            and na: "\<not> alpha_term (permute_raw_term u (case_sum id (f pick) ttdL)) (case_sum id (f pick') ttdR)"
-          {fix tL assume 000: "ttdL = Inl tL"
-            then obtain tR where "ttdR = Inl tR"
-              and  "alpha_term (permute_raw_term u tL) tR" "\<not> alpha_term (permute_raw_term u tL) tR" using r na by (cases ttdR, auto)
-            moreover have "alpha_term (permute_raw_term u tL) (permute_raw_term u tL)"
-              apply(rule alpha_cong) by (auto simp: u)
-            ultimately have False using alpha_trans alpha_syms by blast
-          }
-          then obtain dd where ttdL: "ttdL = Inr dd" by (cases ttdL, auto)
-          hence ttdR: "ttdR = Inr (raw_Umap u dd)" using r by(cases ttdR, auto)
-          have fv_dd: "raw_UFVars dd \<subseteq> raw_UFVars d" 
-            apply (rule subset_trans[OF _ raw_UFVars_Utor[OF valid_d' p[unfolded suitable_def, THEN spec, THEN mp, OF valid_d']]])
-            apply (rule subsetI)
-            apply (rule UnI1)
-            apply (rule UnI2)
-            apply (insert ttdLin[unfolded ttdL])
-            by force
-          show "\<exists>uu dd. valid_U dd \<and>
-             bij uu \<and>
-             |supp uu| <o |UNIV::'a set| \<and>
-             permute_raw_term u (case_sum id (f pick) ttdL) = permute_raw_term uu (f pick dd) \<and>
-             case_sum id (f pick') ttdR = f pick' (raw_Umap uu dd)"
-            apply (insert ttdL ttdR)
-            apply hypsubst
-            apply (unfold sum.case)
-            apply (rule exI)+
-            apply (rule conjI[rotated])+
-                prefer 2
-                apply (rule refl)+
-              apply (rule u)+
-            by (metis p pred_sum_inject(2) ttdLin valid_d' valid_pick_set4)
-        next
-          fix ttdL ttdR assume ttdLin: "ttdL \<in> set3_term_pre (pick d)"
-            and ttdRin: "ttdR \<in> set3_term_pre (pick' (raw_Umap u d))"
-            and r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t)) (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)) ttdL ttdR"
-            and na: "\<not> alpha_term (permute_raw_term (w \<circ> u) (case_sum id (f pick) ttdL)) (case_sum id (f pick') ttdR)"
-          have uvw: "u \<circ> v = w \<circ> u" unfolding w_def by (auto simp: u)
-          {fix tL assume 000: "ttdL = Inl tL"
-            then obtain tR where "ttdR = Inl tR"
-              and  "alpha_term (permute_raw_term (u \<circ> v) tL) tR" "\<not> alpha_term (permute_raw_term (w \<circ> u) tL) tR"
-              using r na by (cases ttdR, auto)
-            moreover have "alpha_term (permute_raw_term (u \<circ> v) tL) (permute_raw_term (w \<circ> u) tL)"
-              unfolding uvw using alpha_refls .
-            ultimately have False using alpha_trans alpha_syms by blast
-          }
-          then obtain dd where ttdL: "ttdL = Inr dd" by (cases ttdL, auto)
-          hence ttdR: "ttdR = Inr (raw_Umap (u \<circ> v) dd)" using r by (cases ttdR, auto)
-          show "\<exists>uu dd. valid_U dd \<and> bij uu \<and> |supp uu| <o |UNIV::'a set| \<and>
-              permute_raw_term (w \<circ> u) (case_sum id (f pick) ttdL) = permute_raw_term uu (f pick dd) \<and>
-                     case_sum id (f pick') ttdR = f pick' (raw_Umap uu dd)"
-apply (insert ttdL ttdR)
-            apply hypsubst
-            apply (unfold sum.case uvw)
-            apply (rule exI)+
-            apply (rule conjI[rotated])+
-                prefer 2
-                apply (rule refl)+
-            apply (rule supp_comp_bound, (rule u w)+)
-             apply (rule bij_comp, (rule u w)+)
-            by (metis p pred_sum_inject(2) ttdLin valid_d' valid_pick_set3)
-        qed(simp_all add: w u v supp_comp_bound)
-      qed(simp_all add: w iw)
-    qed
-  }
-  thus ?thesis using assms by blast
-qed
+  using assms f_swap_alpha_aux by blast
 
 lemma f_alpha:
   assumes p: "suitable pick" and p': "suitable pick'" and valid_d: "valid_U d"

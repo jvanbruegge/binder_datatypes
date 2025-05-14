@@ -3,6 +3,8 @@ sig
   include BNF_UTIL
 
   datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+  val map_sum: ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) either -> ('c, 'd) either
+  val either: ('a -> 'c) -> ('b -> 'c) -> ('a, 'b) either -> 'c
 
   val filter_like: 'a list -> ('a -> bool) -> 'b list -> 'b list
   val cond_keep: 'a list -> bool list -> 'a list
@@ -37,7 +39,7 @@ sig
 
   val strip_ex: term -> (string * typ) list * term
 
-  val mk_conj_thms: int -> local_theory -> thm * thm
+  val mk_conj_thms: int -> local_theory -> thm * thm * thm
   val mk_case_tuple: (string * typ) list -> term -> term
   val split_conj: int -> thm -> thm list
 
@@ -78,6 +80,12 @@ struct
 open BNF_Util
 
 datatype ('a, 'b) either = Inl of 'a | Inr of 'b
+
+fun map_sum f _ (Inl x) = Inl (f x)
+  | map_sum _ g (Inr y) = Inr (g y)
+
+fun either f _ (Inl x) = f x
+  | either _ g (Inr y) = g y
 
 fun strip_ex (Const (@{const_name Ex}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_ex t)
   | strip_ex t = ([], t)
@@ -133,6 +141,9 @@ fun mk_arg_cong ctxt 1 t = infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_
     val goal = Logic.list_implies (@{map 2} (curry mk_Trueprop_eq) xs ys,
       mk_Trueprop_eq (list_comb (t, xs), list_comb (t, ys)));
     val vars = Variable.add_free_names ctxt goal [];
+    val vars = case t of
+      Free (x, _) => subtract (op=) [x] vars
+      | _ => vars;
   in
     Goal.prove_sorry ctxt vars [] goal (fn {context = ctxt, prems = _} =>
       HEADGOAL (hyp_subst_tac ctxt THEN' rtac ctxt refl))
@@ -144,16 +155,21 @@ fun split_conj n thm = if n = 1 then [thm]
     (K (fn thm => (thm RS conjunct1, thm RS conjunct2))) (1 upto n - 1) thm
   in thms @ [thm] end;
 
-fun mk_conj_thms n lthy = if n = 1 then (spec, mp) else
+val imp_forward1 = @{lemma "(P \<Longrightarrow> Q) \<Longrightarrow> (Q \<longrightarrow> Z) \<Longrightarrow> (P \<longrightarrow> Z)"
+  by blast
+}
+
+fun mk_conj_thms n lthy = if n = 1 then (spec, mp, imp_forward1) else
   let
     val (Ts, _) = mk_TFrees n lthy;
     val ((Ps1, xs), _) = lthy
       |> mk_Frees "P" (map (fn a => a --> @{typ bool}) Ts)
       ||>> mk_Frees "x" Ts;
 
-    val ((Ps2, Qs), _) = lthy
+    val (((Ps2, Qs), Zs), _) = lthy
       |> mk_Frees "P" (map (K @{typ bool}) Ts)
-      ||>> mk_Frees "Q" (map (K @{typ bool}) Ts);
+      ||>> mk_Frees "Q" (map (K @{typ bool}) Ts)
+      ||>> mk_Frees "Z" (map (K @{typ bool}) Ts);
 
     val conj_spec_goal = Logic.mk_implies (
       HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (
@@ -180,7 +196,19 @@ fun mk_conj_thms n lthy = if n = 1 then (spec, mp) else
         assume_tac ctxt
       ]
     ]);
-  in (conj_spec, conj_mp) end;
+
+    val conj_imp_forward1_goal = fold_rev (curry Logic.mk_implies) (
+      map (Logic.mk_implies o apply2 HOLogic.mk_Trueprop) (Ps2 ~~ Qs) @ [HOLogic.mk_Trueprop (
+        foldr1 HOLogic.mk_conj (map2 (curry HOLogic.mk_imp) Qs Zs)
+      )]
+    ) (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (map2 (curry HOLogic.mk_imp) Ps2 Zs)));
+    val conj_imp_forward1 = Goal.prove_sorry lthy (map (fst o dest_Free) (Ps2 @ Qs @ Zs)) [] conj_imp_forward1_goal (fn {context=ctxt, ...} => REPEAT_DETERM (EVERY1 [
+      TRY o etac ctxt @{thm conj_forward},
+      etac ctxt @{thm imp_forward},
+      Goal.assume_rule_tac ctxt,
+      assume_tac ctxt
+    ]))
+  in (conj_spec, conj_mp, conj_imp_forward1) end;
 
 fun mk_case_tuple [] t = t
   | mk_case_tuple [(s, T)] t = Term.absfree (s, T) t

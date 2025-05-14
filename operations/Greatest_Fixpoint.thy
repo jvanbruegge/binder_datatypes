@@ -77,8 +77,7 @@ primcorec permute_raw_term :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a raw_t
   "permute_raw_term f x = raw_term_ctor (map_term_pre id id (permute_raw_term f) (permute_raw_term f) (
     map_term_pre f f id id (un_raw_term_ctor x)
     ))"
-
-
+print_theorems
 (* this lemma is specific to codatatype *)
 lemma permute_raw_sels:
   fixes f::"'a::var \<Rightarrow> 'a"
@@ -86,7 +85,7 @@ lemma permute_raw_sels:
   shows "un_raw_term_ctor (permute_raw_term f x) = map_term_pre f f (permute_raw_term f) (permute_raw_term f) (un_raw_term_ctor x)"
   apply (rule trans)
    apply (rule permute_raw_term.simps)
-  apply (subst term_pre.map_comp)
+  apply (rule trans[OF term_pre.map_comp])
       apply (rule supp_id_bound bij_id assms)+
   apply (unfold id_o o_id)
   apply (rule refl)
@@ -712,7 +711,7 @@ apply assumption+ *)
      prefer 2
      apply (erule arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD2, rotated])
       apply (rule sym, erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound | assumption)+)+
-   
+
     (* repeated, rec free case *)
   apply (rule allI impI)+
   apply (erule alpha_term.cases)
@@ -777,7 +776,7 @@ lemma alpha_syms:
                       apply (unfold inv_inv_eq)
                       apply (assumption | rule supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound)+
 
-        apply (rule iffD2[OF arg_cong[THEN fun_cong, THEN fun_cong]]) 
+        apply (rule iffD2[OF arg_cong[THEN fun_cong, THEN fun_cong]])
      apply (erule term_pre.mr_rel_set[rotated -1])
              apply (rule supp_id_bound | assumption)+
 
@@ -866,7 +865,7 @@ proof -
                 apply (rule supp_id_bound bij_id | assumption)+
 
 
-  
+
       apply (erule term_pre.mr_rel_mono_strong[rotated -3])
         (* REPEAT_DETERM *)
              apply (rule ballI)
@@ -1359,10 +1358,7 @@ lemma alpha_imp_alpha': "alpha_term x y \<Longrightarrow> alpha_term' x y"
     (* REPEAT_DETERM *)
                       apply ((rule ballI impI)+, erule disjI1)
                       apply (rule ballI impI)+
-                      apply (rule disjI1)
-                      apply (rule alpha_trans)
-                      apply assumption
-                      apply (rule alpha_refls)
+                      apply (erule disjI1)
     (* END REPEAT_DETERM *)
                       apply (unfold inv_id id_o o_id)
                       apply (rule supp_id_bound eq_on_refl id_on_id bij_id | assumption)+
@@ -1386,10 +1382,10 @@ lemma alpha'_bij_eqs:
     apply (subst (asm) FVars_raw_permutes, (rule assms)+)+
     apply (unfold image_UN[symmetric] image_Un[symmetric])
     apply (subst (asm) image_set_diff[symmetric, OF bij_is_inj], rule assms)+
-    apply (drule iffD1[OF term_pre.mr_rel_map(1)[rotated -1], rotated -1])
-              apply (rule assms supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+    apply (drule iffD1[OF term_pre.mr_rel_map(1), rotated -1])
+          apply (rule assms supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
     apply (unfold id_o o_id Grp_OO)
-    apply (drule iffD1[OF term_pre.mr_rel_map(3)[rotated -1], rotated -1])
+    apply (drule iffD1[OF term_pre.mr_rel_map(3), rotated -1])
                apply (rule assms supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
     apply (unfold relcompp_conversep_Grp)
     apply (subst (asm) inv_o_simp1, rule assms)+
@@ -1462,18 +1458,18 @@ lemma alpha'_bij_eq_invs:
   done
 
 lemma alpha'_FVars_leq: "a \<in> FVars_raw_term x \<Longrightarrow> \<forall>y. alpha_term' x y \<longrightarrow> a \<in> FVars_raw_term y"
-  apply (subst (asm) FVars_raw_term_def)
-  apply (drule iffD1[OF mem_Collect_eq])
+  apply (unfold FVars_raw_term_def mem_Collect_eq)
   apply (erule free_raw_term.induct)
      apply (rule allI impI)+
      apply (erule alpha_term'.cases)
      apply (drule iffD1[OF raw_term.inject])
      apply hypsubst
-     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+    apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
+     apply (rule trans[OF image_id[symmetric]])
       apply (rule sym)
-      apply (erule term_pre.mr_rel_set[OF supp_id_bound, rotated -1, unfolded image_id])
-         apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-     apply (erule FVars_raw_intros)
+      apply (erule term_pre.mr_rel_set[rotated -1])
+      apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+     apply (erule free_raw_term.intros)
 
 (* REPEAT_DETERM *)
     apply (rule allI impI)+
@@ -1489,7 +1485,9 @@ lemma alpha'_FVars_leq: "a \<in> FVars_raw_term x \<Longrightarrow> \<forall>y. 
       apply assumption+
     apply (erule allE)
     apply (erule impE)
-     apply assumption
+    apply assumption
+
+  apply (unfold iffD1[OF set_eq_iff, OF FVars_raw_term_def[THEN meta_eq_to_obj_eq], THEN spec, unfolded mem_Collect_eq, symmetric])[1]
     apply (subst (asm) FVars_raw_permutes, (rule bij_imp_bij_inv supp_inv_bound | assumption)+)+
     apply (unfold image_comp)
 
@@ -1545,7 +1543,7 @@ lemma alpha'_FVars_leq: "a \<in> FVars_raw_term x \<Longrightarrow> \<forall>y. 
   apply (erule allE)
   apply (erule impE)
    apply assumption
-  apply (erule FVars_raw_intros)
+  apply (erule free_raw_term.intros)
   apply assumption
   done
 
@@ -1556,23 +1554,15 @@ lemma alpha'_imp_alpha: "alpha_term' x y \<Longrightarrow> alpha_term x y"
   apply (rule exI)+
   apply (rule conjI, rule refl)+
   apply (rule conjI[rotated])+
-         apply (erule term_pre.mr_rel_mono_strong[rotated -3])
-(* REPEAT_DETERM *)
+     apply (erule term_pre.mr_rel_mono_strong[rotated -3])
+    (* REPEAT_DETERM *)
                 apply (rule ballI impI disjI1)+
                 apply (rule alpha'_bij_eq_invs[THEN iffD2, rotated -1])
                   apply (drule alpha'_bij_eq_invs[THEN iffD1, rotated -1])
                     apply assumption+
                   apply (subst (asm) permute_raw_comps)
-                      apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
-                  apply (rule arg_cong2[OF refl, of _ _ alpha_term', THEN iffD2, rotated])
-                   apply assumption
-                  apply (rule arg_cong2[OF _ refl, of _ _ permute_raw_term])
-                  apply (rule trans)
-                   apply (rule o_inv_distrib)
-                    prefer 3
-                    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-                    apply (rule inv_inv_eq)
-                    apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+               apply (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+
+           apply (subst o_inv_distrib inv_inv_eq, (rule bij_imp_bij_inv bij_comp supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
     (* repeated *)
               apply (rule ballI impI disjI1)+
               apply assumption
@@ -1613,12 +1603,11 @@ lemma alpha'_imp_alpha: "alpha_term' x y \<Longrightarrow> alpha_term x y"
     apply hypsubst
     apply (rotate_tac -1)
     apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
-      apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)+
-    apply (unfold image_Un[symmetric] comp_def)[1]
+      apply (erule term_pre.mr_rel_set[rotated -1], (rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound infinite_UNIV | assumption)+)
+    apply (unfold image_comp[symmetric])[1]
     apply (erule imageE)
     apply hypsubst
     apply (unfold inv_simp2)
-    apply (rule imageI)
     apply assumption
 
    apply (rule supp_inv_bound supp_comp_bound infinite_UNIV bij_comp bij_imp_bij_inv | assumption)+
@@ -1630,51 +1619,31 @@ lemma alpha'_eq_alpha: "alpha_term' x y = alpha_term x y"
   apply (erule alpha_imp_alpha')
   done
 
-lemma existential_coinduct:
+lemma existential_coinduct[THEN mp, rotated -1]:
   fixes x y::"'a::covar term"
-  shows "R x y \<Longrightarrow> (\<And>x y. R (term_ctor x) (term_ctor y) \<Longrightarrow> \<exists>z w.
+  assumes "\<And>x y. R (term_ctor x) (term_ctor y) \<Longrightarrow> \<exists>z w.
     term_ctor z = term_ctor x \<and> term_ctor w = term_ctor y \<and>
-    mr_rel_term_pre id id (\<lambda>x y. R x y \<or> x = y) (\<lambda>x y. R x y \<or> x = y) z w)
-    \<Longrightarrow> x = y"
+    rel_term_pre (\<lambda>x y. R x y \<or> x = y) (\<lambda>x y. R x y \<or> x = y) z w"
+  shows "R x y \<longrightarrow> x = y"
   apply (rule fresh_cases[OF emp_bound, of x])
   apply (rule fresh_cases[OF emp_bound, of y])
   apply hypsubst_thin
   apply (erule thin_rl[of "_ = _"])+
-  apply (erule mp[rotated])
-  subgoal premises prems for x y
-    apply (rule impI)
-    apply (subst term_ctor_def)+
-    apply (rule iffD2[OF TT_total_abs_eq_iffs])
-    apply (rule alpha'_eq_alpha[THEN iffD1])
+  apply (unfold term_ctor_def TT_total_abs_eq_iffs)
+  apply (unfold term_ctor_def[symmetric] alpha'_eq_alpha[symmetric])
+  apply (rule impI)
     apply (rule alpha_term'.coinduct[of "\<lambda>x y. \<forall>x' y'. x = raw_term_ctor x' \<and> y = raw_term_ctor y' \<longrightarrow> R (term_ctor (map_term_pre id id TT_abs TT_abs x')) (term_ctor (map_term_pre id id TT_abs TT_abs y'))"])
      apply (rule allI impI)+
      apply (erule conjE)
      apply (drule iffD1[OF raw_term.inject])+
      apply hypsubst
      apply (subst term_pre.map_comp, (rule supp_id_bound bij_id)+)+
-     apply (unfold id_o o_id)
-     apply (erule arg_cong2[of _ _ _ _ R, THEN iffD2, rotated -1])
-      (* REPEAT DETERM *)
-      apply (rule arg_cong[of _ _ term_ctor])
-      apply (rule trans[rotated])
-       apply (rule term_pre.map_ident)
-      apply (unfold comp_def)[1]
-      apply (rule term_pre.map_cong0)
-                     apply (unfold id_def[symmetric])
-                     apply (rule supp_id_bound bij_id)+
-           apply (rule id_apply TT_abs_rep)+
-      (* repeated *)
-     apply (rule arg_cong[of _ _ term_ctor])
-     apply (rule trans[rotated])
-      apply (rule term_pre.map_ident)
-     apply (unfold comp_def)[1]
-     apply (rule term_pre.map_cong0)
-                    apply (unfold id_def[symmetric])
-                    apply (rule supp_id_bound bij_id)+
-          apply (rule id_apply TT_abs_rep)+
-      (* END REPEAT_DETERM *)
+   apply (unfold id_o o_id)
+   apply (unfold comp_def TT_abs_rep id_def[symmetric] term_pre.map_id)[1]
+  apply assumption
     apply (erule thin_rl)
 
+  apply (unfold triv_forall_equality)
     subgoal for x1 x2
       apply (rule raw_term.exhaust[of x1])
       apply (rule raw_term.exhaust[of x2])
@@ -1684,7 +1653,7 @@ lemma existential_coinduct:
        apply (rule conjI)
         apply (rule refl)+
 
-      apply (drule prems)
+      apply (drule assms)
       apply (erule exE conjE)+
       apply (drule sym)
       apply (drule sym)
@@ -1695,7 +1664,7 @@ lemma existential_coinduct:
       apply hypsubst
 
       apply (subst (asm) term_pre.map_comp term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
-      apply (unfold id_o o_id image_id image_comp[unfolded comp_def])
+      apply (unfold id_o o_id image_id image_comp[unfolded comp_def] term_pre.mr_rel_id)
       apply (drule term_pre.mr_rel_map(1)[THEN iffD1, rotated -1])
                 apply (rule supp_id_bound bij_id | assumption)+
       apply (unfold id_o o_id Grp_OO)
@@ -1728,20 +1697,14 @@ lemma existential_coinduct:
                           apply (rule TT_total_abs_eq_iffs[THEN iffD2])
                           apply (rule alpha_term.intros)
                           apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
-                          apply (unfold comp_def)[1]
-                          apply (rule iffD2[OF term_pre.mr_rel_map(1)])
-                          apply (rule supp_id_bound bij_id)+
-                          apply (unfold Grp_OO id_o o_id term_pre.mr_rel_id[symmetric] permute_raw_ids)
+                          apply (unfold comp_def term_pre.mr_rel_id[symmetric] term_pre.rel_map permute_raw_ids)[1]
                           apply (rule term_pre.rel_refl_strong)
                           apply (rule TT_rep_abs)+
         (* repeated *)
                           apply (rule TT_total_abs_eq_iffs[THEN iffD2])
                           apply (rule alpha_term.intros)
                           apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
-                          apply (unfold comp_def)[1]
-                          apply (rule iffD2[OF term_pre.mr_rel_map(1)])
-                          apply (rule supp_id_bound bij_id)+
-                          apply (unfold Grp_OO id_o o_id term_pre.mr_rel_id[symmetric] permute_raw_ids)
+                          apply (unfold comp_def term_pre.mr_rel_id[symmetric] term_pre.rel_map permute_raw_ids)[1]
                           apply (rule term_pre.rel_refl_strong)
                           apply (rule TT_rep_abs)+
         (* END REPEAT_DETERM *)
@@ -1757,7 +1720,7 @@ lemma existential_coinduct:
                           apply (rule alpha_bij_eqs[THEN iffD2])
                           apply assumption+
                           apply (rule TT_rep_abs)
-      
+
         (* repeated, rec free case *)
                          apply (rule ballI impI)+
                          apply (erule disj_forward)
@@ -1818,11 +1781,10 @@ lemma existential_coinduct:
                apply (rule alpha_FVars)
                apply (rule TT_rep_abs)
               apply assumption+
-        
+
         (* END REPEAT_DETERM *)
       done
     done
-  done
 
 lemma fresh_coinduct_param:
   fixes K::"'p \<Rightarrow> 'a::covar set"
@@ -1831,7 +1793,7 @@ lemma fresh_coinduct_param:
     and IH: "\<And>x y \<rho>. R (term_ctor x) (term_ctor y) \<rho> \<Longrightarrow>
       set2_term_pre x \<inter> K \<rho> = {} \<Longrightarrow>
       set2_term_pre y \<inter> K \<rho> = {} \<Longrightarrow>
-      \<rho> \<in> Param \<Longrightarrow> mr_rel_term_pre id id (\<lambda>x y. (\<exists>\<rho>\<in>Param. R x y \<rho>) \<or> x = y) (\<lambda>x y. (\<exists>\<rho>\<in>Param. R x y \<rho>) \<or> x = y) x y"
+      \<rho> \<in> Param \<Longrightarrow> rel_term_pre (\<lambda>x y. (\<exists>\<rho>\<in>Param. R x y \<rho>) \<or> x = y) (\<lambda>x y. (\<exists>\<rho>\<in>Param. R x y \<rho>) \<or> x = y) x y"
   shows "x = y"
   apply (rule existential_coinduct[of "\<lambda>x y. \<exists>\<rho>\<in>Param. R x y \<rho>" x y, OF rel])
   apply (erule bexE)
@@ -1844,11 +1806,25 @@ lemma fresh_coinduct_param:
            apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ R, THEN iffD2])
              apply (erule sym)+
            apply assumption+
-     apply (rule bound)
-     apply assumption
-    apply (rule bound)
-    apply assumption
+     apply (erule bound)+
     done
   done
+
+(* Test of automation, discarding result *)
+local_setup \<open>fn lthy =>
+let
+  val (fp_res, _) = MRBNF_FP.construct_binder_fp BNF_Util.Greatest_FP
+    [{
+      FVars = [NONE],
+      T_name = "tterm",
+      nrecs = 2,
+      permute = NONE,
+      pre_mrbnf = the (MRBNF_Def.mrbnf_of lthy @{type_name term_pre})
+    }]
+    [[([], [0])]]
+    lthy
+  val _ = @{print} fp_res
+in lthy end
+\<close>
 
 end

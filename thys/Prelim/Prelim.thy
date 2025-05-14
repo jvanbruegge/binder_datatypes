@@ -100,6 +100,9 @@ lemma eq_on_comp1: "eq_on A g1 g2 \<Longrightarrow> eq_on (g1 ` A) f1 f2 \<Longr
 lemma eq_on_comp2: "eq_on A g1 g2 \<Longrightarrow> eq_on (g2 ` A) f1 f2 \<Longrightarrow> eq_on A (f1 \<circ> g1) (f2 \<circ> g2)"
   unfolding eq_on_def by simp
 
+lemma id_on_image_comp: "bij g \<Longrightarrow> id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> (inv g \<circ> f) ` A = B \<Longrightarrow> A = B"
+  unfolding id_on_def by fastforce
+
 lemma eq_on_image: "eq_on A f g \<Longrightarrow> f ` A = g ` A"
   unfolding eq_on_def by auto
 

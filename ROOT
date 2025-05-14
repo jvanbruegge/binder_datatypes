@@ -53,6 +53,7 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
 session Tests in "tests" = Binders +
   sessions
     System_Fsub
+    Operations
   directories
     "fixtures"
   theories

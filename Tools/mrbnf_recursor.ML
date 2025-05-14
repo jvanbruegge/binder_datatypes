@@ -1808,7 +1808,7 @@ fun create_binding_recursor qualify fp_res params models lthy =
     ) (#UFVarss model)) (#raw_fps fp_res) (#quotient_fps fp_res) models ts ts' UFVars'ss;
 
     val n = length models;
-    val (conj_spec, conj_mp) = mk_conj_thms n lthy;
+    val (conj_spec, conj_mp, _) = mk_conj_thms n lthy;
 
     val fp_thms = Option.map (fn Inl x => x | Inr _ => error "wrong fp type") (#fp_thms fp_res);
 

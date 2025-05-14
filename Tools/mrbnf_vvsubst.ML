@@ -580,7 +580,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           in fn (t, thm) => (Envir.subst_term (tyenv, Vartab.empty) (Morphism.term phi t), Morphism.thm phi thm) end
       in (SOME (map morph picks), lthy) end;
 
-    val (conj_spec, conj_mp) = mk_conj_thms (length (#raw_fps fp_res)) lthy;
+    val (conj_spec, conj_mp, _) = mk_conj_thms (length (#raw_fps fp_res)) lthy;
 
     val fs' = take nvars fs;
     val fs'_prems = maps (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) fs';

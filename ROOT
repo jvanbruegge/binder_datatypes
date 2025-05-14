@@ -58,6 +58,7 @@ session Tests in "tests" = Binders +
     "fixtures"
   theories
     Regression_Tests
+    Fixpoint_Tests
     Binder_Datatype_Tests
 
 session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +

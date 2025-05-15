@@ -78,7 +78,6 @@ assumes
   and r2_FVars_bd2: "\<And>(x::('var, 'tyvar, 'a, 'b) raw_T2). |FVars_raw_T22 x| <o r2"
 
   (* parameter axioms *)
-  and Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
   and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
   Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
@@ -97,7 +96,6 @@ assumes
   and valid_Pmap: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
                   validP (Pmap f1 f2 d)"
   (* model 1 axioms *)
-  and U1map_id0: "validU1 u1 \<Longrightarrow> U1map id id (t1::('var, 'tyvar, 'a, 'b) T1) u1 = u1"
   and U1map_comp0: "validU1 u1 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
   U1map (g1 \<circ> f1) (g2 \<circ> f2) t1 u1 = (U1map g1 g2 t1 \<circ> U1map f1 f2 t1) u1"
@@ -132,7 +130,6 @@ assumes
   and validU1_Uctor: "pred_T1_pre (\<lambda>_. True) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU1 \<circ> snd) (pred_fun validP validU2 \<circ> snd) (pred_fun validP validU2 \<circ> snd) y
         \<Longrightarrow> validP p \<Longrightarrow> validU1 (U1ctor y p)"
   (* model 2 axioms *)
-  and U2map_id0: "validU2 u2 \<Longrightarrow> U2map id id (t2::('var, 'tyvar, 'a, 'b) T2) u2 = u2"
   and U2map_comp0: "validU2 u2 \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o r1 \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o r2 \<Longrightarrow>
   U2map (g1 \<circ> f1) (g2 \<circ> f2) t2 u2 = (U2map g1 g2 t2 \<circ> U2map f1 f2 t2) u2"
@@ -545,8 +542,12 @@ definition XXr2 where
 (**********************************************************************)
 (*                               PROOFS                               *)
 (**********************************************************************)
-thm imsupp_id_on
-thm imsupp_def supp_def
+
+lemma Pmap_id: "validP d \<Longrightarrow> Pmap id id d = d"
+  apply (erule Pmap_cong_id)
+       apply (rule bij_id supp_id_bound' r1_Cinfinite r2_Cinfinite id_apply)+
+  done
+
 lemma pick_id_ons:
   "suitable11 pick1 \<Longrightarrow> validP p \<Longrightarrow> id_on ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x)) (pick1 x p)"
   "suitable12 pick2 \<Longrightarrow> validP p \<Longrightarrow> id_on (\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x) (pick2 x p)"
@@ -4166,7 +4167,7 @@ lemma f_swap_alpha:
          apply (subst trans[OF comp_apply[symmetric] Pmap_comp0[symmetric]])
                  apply (rule valid f_prems bij_imp_bij_inv supp_inv_bound)+
          apply (subst inv_o_simp2, rule f_prems)+
-         apply (unfold Pmap_id0[OF valid])
+         apply (unfold Pmap_id[OF valid])
          apply (subst T1_pre.map_comp)
                     apply (rule supp_id_bound bij_id f_prems' pick_prems)+
          apply (unfold id_o o_id)
@@ -6401,7 +6402,7 @@ lemma f_swap_alpha:
                   apply (rule valid)
                  apply (rule f_prems bij_imp_bij_inv supp_inv_bound)+
          apply (subst inv_o_simp2, rule f_prems)+
-         apply (unfold Pmap_id0[OF valid])
+         apply (unfold Pmap_id[OF valid])
          apply (subst T2_pre.map_comp)
                     apply (rule supp_id_bound bij_id f_prems' pick_prems)+
          apply (unfold id_o o_id)
@@ -9072,8 +9073,7 @@ locale REC =
 
 assumes
   (* parameter axioms *)
-  Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
-  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
   and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
@@ -9166,7 +9166,6 @@ interpretation rec: REC_internal "|UNIV::'var set|" "|UNIV::'tyvar set|"
                       apply (rule ordLeq_refl card_of_Card_order conjI T1_pre.UNIV_cinfinite var_class.regular
         T1_pre.set_bd_UNIV T2_pre.set_bd_UNIV FVars_raw_bd_UNIVs
         )+
-                      apply (erule Pmap_id0)
                       apply (rule Pmap_comp0; assumption)
                       apply (rule Pmap_cong_id; assumption)
                       apply (rule PFVars_Pmap_1; assumption)
@@ -9176,7 +9175,6 @@ interpretation rec: REC_internal "|UNIV::'var set|" "|UNIV::'tyvar set|"
                     apply (rule small_avoiding_set1)
                    apply (rule small_avoiding_set2)
                   apply (erule valid_Pmap; assumption)
-                 apply (erule U1map_id0)
                 apply (erule U1map_comp0; assumption)
                apply (erule U1map_cong_id; assumption)
               apply (erule U1map_Uctor; assumption)
@@ -9184,7 +9182,6 @@ interpretation rec: REC_internal "|UNIV::'var set|" "|UNIV::'tyvar set|"
             apply (erule U1FVars_subset_2; assumption)
            apply (erule validU1_Umap; assumption)
           apply (erule validU1_Uctor; assumption)
-         apply (erule U2map_id0)
         apply (erule U2map_comp0; assumption)
        apply (erule U2map_cong_id; assumption)
       apply (erule U2map_Uctor; assumption)
@@ -9232,8 +9229,7 @@ locale REC_cmin =
 
 assumes
   (* parameter axioms *)
-  Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
-  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
   and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
@@ -9326,7 +9322,6 @@ interpretation rec: REC_internal "cmin |UNIV::'var set| |UNIV::'tyvar set|" "cmi
                       apply (rule cmin1 cmin2 card_of_Card_order cmin_Cinfinite conjI T1_pre.UNIV_cinfinite cmin_regularCard var_class.regular
       cmin_greater T1_pre.set_bd_UNIV FVars_raw_bd_UNIVs T2_pre.set_bd_UNIV
       )+
-                      apply (erule Pmap_id0)
                       apply (rule Pmap_comp0; assumption)
                       apply (rule Pmap_cong_id; assumption)
                       apply (rule PFVars_Pmap_1; assumption)
@@ -9336,7 +9331,6 @@ interpretation rec: REC_internal "cmin |UNIV::'var set| |UNIV::'tyvar set|" "cmi
                     apply (rule small_avoiding_set1)
                    apply (rule small_avoiding_set2)
                   apply (erule valid_Pmap; assumption)
-                 apply (erule U1map_id0)
                 apply (erule U1map_comp0; assumption)
                apply (erule U1map_cong_id; assumption)
               apply (erule U1map_Uctor; assumption)
@@ -9344,7 +9338,6 @@ interpretation rec: REC_internal "cmin |UNIV::'var set| |UNIV::'tyvar set|" "cmi
             apply (erule U1FVars_subset_2; assumption)
            apply (erule validU1_Umap; assumption)
           apply (erule validU1_Uctor; assumption)
-         apply (erule U2map_id0)
         apply (erule U2map_comp0; assumption)
        apply (erule U2map_cong_id; assumption)
       apply (erule U2map_Uctor; assumption)
@@ -9383,8 +9376,7 @@ locale QREC =
   and validP :: "'p \<Rightarrow> bool"
 assumes
   (* parameter axioms *)
-  Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
-  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
+  Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
   Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
   and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o |UNIV::'var set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o |UNIV::'tyvar set| \<Longrightarrow>
@@ -9447,7 +9439,6 @@ begin
 
 interpretation rec: REC Pmap PFVars_1 PFVars_2 avoiding_set1 avoiding_set2 "\<lambda>f1 f2 _ t. permute_T1 f1 f2 t" "\<lambda>f1 f2 _ t. permute_T2 f1 f2 t" "\<lambda>_. FVars_T11" "\<lambda>_. FVars_T12" "\<lambda>_. FVars_T21" "\<lambda>_. FVars_T22" U1ctor U2ctor validP "\<lambda>_. True" "\<lambda>_. True"
   apply (unfold_locales)
-                      apply (erule Pmap_id0)
                       apply (rule Pmap_comp0; assumption)
                       apply (rule Pmap_cong_id; assumption)
                       apply (rule PFVars_Pmap_1; assumption)
@@ -9772,8 +9763,7 @@ locale QREC_cmin =
   and validP :: "'p \<Rightarrow> bool"
 assumes
   (* parameter axioms *)
-  Pmap_id0: "validP d \<Longrightarrow> Pmap id id d = d"
-  and Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  Pmap_comp0: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   bij g1 \<Longrightarrow> |supp (g1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij g2 \<Longrightarrow> |supp (g2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   Pmap (g1 \<circ> f1) (g2 \<circ> f2) d = (Pmap g1 g2 \<circ> Pmap f1 f2) d"
   and Pmap_cong_id: "validP d \<Longrightarrow> bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
@@ -9836,7 +9826,6 @@ begin
 
 interpretation rec: REC_cmin Pmap PFVars_1 PFVars_2 avoiding_set1 avoiding_set2 "\<lambda>f1 f2 _ t. permute_T1 f1 f2 t" "\<lambda>f1 f2 _ t. permute_T2 f1 f2 t" "\<lambda>_. FVars_T11" "\<lambda>_. FVars_T12" "\<lambda>_. FVars_T21" "\<lambda>_. FVars_T22" U1ctor U2ctor validP "\<lambda>_. True" "\<lambda>_. True"
   apply (unfold_locales)
-                      apply (erule Pmap_id0)
                       apply (rule Pmap_comp0; assumption)
                       apply (rule Pmap_cong_id; assumption)
                       apply (rule PFVars_Pmap_1; assumption)

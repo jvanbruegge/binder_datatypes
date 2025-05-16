@@ -358,7 +358,7 @@ lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 lemma extend_fresh:
@@ -445,6 +445,6 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
   end;
 
 end;
-\<close>
+\<close>*)
 
 end

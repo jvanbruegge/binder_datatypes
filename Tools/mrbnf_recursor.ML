@@ -615,7 +615,7 @@ fun create_binding_recursor qualify fp_res lthy =
         );
       in (fp_res, (pfrees, pbounds, plives)) end;
 
-    val (((r_names, pT), uTs), name_ctxt) = Name.make_context (map (fst o dest_TFree) vars)
+    val (((r_names, pT), uTs), _) = Name.make_context (map (fst o dest_TFree) vars)
       |> fold_map Name.variant (mk_names "'r" vars)
       ||>> apfst (TFree o rpair @{sort type}) o Name.variant "'p"
       ||>> apfst (map (TFree o rpair @{sort type})) o fold_map Name.variant (mk_names "'u" (replicate (length (#quotient_fps fp_res)) ()));
@@ -826,6 +826,24 @@ fun create_binding_recursor qualify fp_res lthy =
       ] end
     ) (mk_names "UFVars" (1 upto length uTs)) Umaps UFVarsss Uctors (#quotient_fps fp_res) uTs validUs (#pre_mrbnfs fp_res) ys us ts;
 
+    fun mk_params lthy param_goals = {
+      Pmap_comp0 = hd (Proof_Context.get_thms lthy (fst (nth param_goals 0))),
+      Pmap_cong_id = hd (Proof_Context.get_thms lthy (fst (nth param_goals 1))),
+      PFVars_Pmap = Proof_Context.get_thms lthy (fst (nth param_goals 2)),
+      small_PFVarss = Proof_Context.get_thms lthy (fst (nth param_goals 3)),
+      valid_Pmap = hd (Proof_Context.get_thms lthy (fst (nth param_goals 4))),
+      small_avoiding_sets = Proof_Context.get_thms lthy (fst (nth param_goals 5))
+    };
+
+    fun mk_model_axiomss lthy = map (fn [Umap_comp0, Umap_cong_id, Umap_Uctor, Umap_subsets, valid_Umap, valid_Uctor] => {
+      Umap_comp0 = hd (Proof_Context.get_thms lthy (fst Umap_comp0)),
+      Umap_cong_id = hd (Proof_Context.get_thms lthy (fst Umap_cong_id)),
+      Umap_Uctor = hd (Proof_Context.get_thms lthy (fst Umap_Uctor)),
+      UFVars_subsets = Proof_Context.get_thms lthy (fst Umap_subsets),
+      valid_Umap = hd (Proof_Context.get_thms lthy (fst valid_Umap)),
+      valid_Uctor = hd (Proof_Context.get_thms lthy (fst valid_Uctor))
+    } | _ => error "impossible");
+
     val lthy = Local_Theory.background_theory (fn thy =>
       let
         fun mk_lname s = qualify (Binding.prefix_name (s ^ "_") (Binding.conglomerate (map Binding.name T_names)));
@@ -856,7 +874,7 @@ fun create_binding_recursor qualify fp_res lthy =
             let val (b, T) = dest_Free t;
             in (Binding.name b, SOME T, NoSyn) end
           ) (rs @ [Pmap] @ PFVarss @ [validP] @ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ validUs)),
-          Element.Assumes (map (fn (b, ts) => ((Binding.name b, []), map (rpair []) ts)) (
+          Element.Assumes (map (fn (b, ts) => ((Binding.concealed (Binding.name b), []), map (rpair []) ts)) (
             flat r_goalss @ param_goals @ flat model_goalss
           ))
         ] thy;
@@ -871,24 +889,8 @@ fun create_binding_recursor qualify fp_res lthy =
           regularCard = hd (Proof_Context.get_thms lthy (fst regularCard)),
           set_bds = Proof_Context.get_thms lthy (fst set_bds)
         } | _ => error "impossible") r_goalss;
-
-        val params = {
-          Pmap_comp0 = hd (Proof_Context.get_thms lthy (fst (nth param_goals 0))),
-          Pmap_cong_id = hd (Proof_Context.get_thms lthy (fst (nth param_goals 1))),
-          PFVars_Pmap = Proof_Context.get_thms lthy (fst (nth param_goals 2)),
-          small_PFVarss = Proof_Context.get_thms lthy (fst (nth param_goals 3)),
-          valid_Pmap = hd (Proof_Context.get_thms lthy (fst (nth param_goals 4))),
-          small_avoiding_sets = Proof_Context.get_thms lthy (fst (nth param_goals 5))
-        };
-
-        val model_axiomss = map (fn [Umap_comp0, Umap_cong_id, Umap_Uctor, Umap_subsets, valid_Umap, valid_Uctor] => {
-          Umap_comp0 = hd (Proof_Context.get_thms lthy (fst Umap_comp0)),
-          Umap_cong_id = hd (Proof_Context.get_thms lthy (fst Umap_cong_id)),
-          Umap_Uctor = hd (Proof_Context.get_thms lthy (fst Umap_Uctor)),
-          UFVars_subsets = Proof_Context.get_thms lthy (fst Umap_subsets),
-          valid_Umap = hd (Proof_Context.get_thms lthy (fst valid_Umap)),
-          valid_Uctor = hd (Proof_Context.get_thms lthy (fst valid_Uctor))
-        } | _ => error "impossible") model_goalss;
+        val params = mk_params lthy param_goals;
+        val model_axiomss = mk_model_axiomss lthy model_goalss;
 
         val ((suitabless, Umap's, UFVars'ss, PUmap's, PUmaps, Uctor's, rec_fs, pick0ss,
           f0s, ff0s, XXls, XXrs), lthy) = define_recursor_consts qualify fp_res (map Binding.name T_names) rs
@@ -3537,27 +3539,84 @@ fun create_binding_recursor qualify fp_res lthy =
         ))
         val (_, lthy) = Local_Theory.notes notes lthy
 
+        val thy = Local_Theory.exit_global lthy; (* End REC_internal *)
 
-        val _ = @{print} REC_ctors
-        val _ = Syntax.string_of_typ
+        fun mk_REC_locale own_name bds thy =
+          let
+            val param_goals = mk_param_goals bds;
+            val model_goalss = mk_model_goalss bds;
 
-      in Local_Theory.exit_global lthy end
+            val (REC_name, lthy) = Expression.add_locale (mk_lname own_name) Binding.empty [] ([], []) [
+              Element.Fixes (map (fn t =>
+                let val (b, T) = dest_Free t;
+                in (Binding.name b, SOME T, NoSyn) end
+              ) ([Pmap] @ PFVarss @ [validP] @ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ validUs)),
+              Element.Assumes (map (fn (b, ts) => ((Binding.concealed (Binding.name b), []), map (rpair []) ts)) (
+                param_goals @ flat model_goalss
+              ))
+            ] thy;
+
+            val params = mk_params lthy param_goals;
+            val model_axiomss = mk_model_axiomss lthy model_goalss;
+
+            val state = Interpretation.isar_interpretation ([ (name,
+              (("REC", true), (Expression.Positional (map SOME bds), []))
+            )], []) lthy;
+
+            val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => METHOD (fn thms => EVERY1 [
+              K (Locale.intro_locales_tac {strict = false, eager = true} ctxt thms),
+              REPEAT_DETERM o resolve_tac ctxt (
+                @{thms ordLeq_refl card_of_Card_order cmin_Cinfinite cmin_regularCard cmin2 ordLeq_transitive[OF cmin1] cmin_greater conjI}
+                @ [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd mrbnfs), #var_regular (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))]
+                @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
+                @ maps MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnfs
+              ),
+              rtac ctxt (#Pmap_comp0 params) THEN_ALL_NEW assume_tac ctxt,
+              rtac ctxt (#Pmap_cong_id params) THEN_ALL_NEW (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt),
+              REPEAT_DETERM o (resolve_tac ctxt (#PFVars_Pmap params) THEN_ALL_NEW assume_tac ctxt),
+              REPEAT_DETERM o eresolve_tac ctxt (#small_PFVarss params),
+              etac ctxt (#valid_Pmap params) THEN_ALL_NEW assume_tac ctxt,
+              REPEAT_DETERM o resolve_tac ctxt (#small_avoiding_sets params),
+              EVERY' (map (fn model_axioms => EVERY' [
+                rtac ctxt (#Umap_comp0 model_axioms) THEN_ALL_NEW assume_tac ctxt,
+                rtac ctxt (#Umap_cong_id model_axioms) THEN_ALL_NEW (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt),
+                rtac ctxt (#Umap_Uctor model_axioms) THEN_ALL_NEW assume_tac ctxt,
+                REPEAT_DETERM o (resolve_tac ctxt (#UFVars_subsets model_axioms) THEN_ALL_NEW (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)),
+                etac ctxt (#valid_Umap model_axioms) THEN_ALL_NEW assume_tac ctxt,
+                etac ctxt (#valid_Uctor model_axioms) THEN_ALL_NEW assume_tac ctxt
+              ]) model_axiomss)
+            ])), Position.no_range), NONE) state;
+
+            val REC_ts = map (fn thm => fst (Term.dest_comb (snd (Term.dest_comb (
+              HOLogic.dest_Trueprop (Thm.prop_of thm)
+            ))))) (Proof_Context.get_thms lthy "REC.REC_valid");
+            val (RECs, lthy) = @{fold_map 2} (fn T_name =>
+              mk_def_t true Binding.empty qualify ("REC_" ^ T_name) 0
+            ) T_names REC_ts lthy;
+
+            fun get_notes defs lthy = map (fn name => (name,
+              map (Local_Defs.unfold lthy (map Thm.symmetric defs)) (
+                Proof_Context.get_thms lthy ("REC." ^ name)
+              )
+            ));
+
+            val notes = get_notes (map snd RECs) lthy [
+              "REC_valid", "REC_ctor", "REC_swap", "REC_UFVars"
+            ] |> (map (fn (thmN, thms) =>
+              (((Binding.name thmN), []), [(thms, [])])
+            ))
+            val (_, lthy) = Local_Theory.notes notes lthy
+
+          in Local_Theory.exit_global lthy end;  (* End REC *)
+
+        val UNIVs = map (mk_card_of o HOLogic.mk_UNIV) vars;
+        val thy = mk_REC_locale "REC" UNIVs thy;
+
+        val cmin = foldl1 mk_cmin UNIVs;
+        val thy = mk_REC_locale "REC_cmin" (replicate nvars cmin) thy;
+
+      in thy end
     ) lthy;
-    (*
-
-
-
-
-
-
-    val unfold_defs = Local_Defs.unfold0 lthy defs;
-  in (@{map 5} (fn ff0 => fn ff0_valid => fn ff0_cctor => fn ff0_swap => fn ff0_UFVarss => {
-    rec_fun = fst ff0,
-    rec_Uctor = unfold_defs ff0_cctor,
-    rec_swap = unfold_defs ff0_swap,
-    rec_valid = Option.map unfold_defs ff0_valid,
-    rec_UFVarss = map unfold_defs ff0_UFVarss
-  }) ff0s ff0_valids ff0_cctors ff0_swaps ff0_UFVarsss, lthy) end;*)
 in lthy end;
 
 end

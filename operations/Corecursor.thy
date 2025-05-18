@@ -803,16 +803,12 @@ lemma FVars_raw_permutes':
   "bij (g::'a \<Rightarrow> 'a) \<Longrightarrow> |supp g| <o |UNIV::'a set| \<Longrightarrow> FVars_raw_term \<circ> permute_raw_term g = image g \<circ> FVars_raw_term"
   using FVars_raw_permutes by fastforce
 
-lemma
-  assumes p: "suitable pick" and p': "suitable pick'"
-    and valid_d: "valid_U d"
-    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
-  shows "mr_rel_term_pre u u
-       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d. (=) (raw_Umap u d)))
-       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d))
-     (pick d) (pick' (raw_Umap u d))"
-(* TODO: to be continued... *)
-  oops
+lemma f_swap_alpha_xL:
+  assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
+    and x: "raw_term_ctor x = permute_raw_term u (f pick d)"
+  shows "x = map_term_pre u u (permute_raw_term u \<circ> case_sum id (f pick)) (permute_raw_term u \<circ> case_sum id (f pick)) (pick d)"
+  using f_simps[of "pick"] x
+  by (auto simp: u permute_raw_simps term_pre.map_comp supp_id_bound)
 
 lemma f_swap_alpha_aux:
   assumes p: "suitable pick" and p': "suitable pick'"
@@ -823,9 +819,13 @@ lemma f_swap_alpha_aux:
   apply (erule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
    tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
   (* apply (rule exE[OF f_swap_alpha_v_exists[OF p p' valid_d u]]) *)
+
   apply (erule exE conjE)+
+  apply (frule f_swap_alpha_v_exists[OF p p'])
+    apply assumption+
+  apply (erule exE)
   apply (rule exI)+
-  thm f_swap_alpha_v_exists[OF p p' valid_d u]
+  thm f_swap_alpha_v_exists[OF p p']
   thm exE[OF f_swap_alpha_v_exists[OF p p' valid_d u]]
   apply (rule conjI[rotated])+
      prefer 4
@@ -833,49 +833,65 @@ lemma f_swap_alpha_aux:
       apply (rule bij_imp_bij_inv)
   apply assumption
      apply (rule bij_comp)
-  apply (rule bij_id)
+      prefer 2
+      apply assumption
+     apply (erule conjE)
+  apply (rotate_tac -2)
      apply assumption
-  prefer 3
+    prefer 3
     apply (rule supp_comp_bound)
      apply (rule supp_inv_bound)
-      apply assumption+
-    apply (subst o_id)
-  apply assumption
+      apply assumption
+     apply assumption
+    apply (rule supp_comp_bound)
+     apply (erule conjE)+
+     apply assumption
+    apply assumption
    prefer 2
-(* subgoal'ing here, otherwise schematic variable gets huge *)
-  subgoal for x x' u d
-   apply (rule f_swap_alpha_aux1[OF p, of _ _ d])
-     apply assumption+
-    prefer 2
-  apply (rule id_on_id)
-   apply (subst (asm) f_simps[of "pick"])
-   apply (subst (asm) permute_raw_simps, assumption+)
-   apply (subst (asm) raw_term.inject)
-   apply hypsubst
-   apply (subst term_pre.set_map, assumption+)
-   apply (subst term_pre.set_map, (rule bij_id supp_id_bound)+)
-   apply (subst term_pre.set_map, assumption+)
-    apply (subst term_pre.set_map, (rule bij_id supp_id_bound)+)
-    apply (subst (asm) term_pre.map_comp, (rule bij_id supp_id_bound | assumption)+)
-    apply (subst image_id)
-    apply (unfold o_id)
-   apply (subst Diff_subset_conv)
-   apply (subst image_comp)
-    apply (subst FVars_raw_permutes', assumption+)
-    apply (subst image_comp[symmetric])
+
+    apply (rule id_on_antimono)
+    apply (unfold id_on_def)
+    apply (rule allI)
+     apply (rule impI)
+    apply (subst comp_assoc)
+    apply (subst comp_apply)
+    apply (subst comp_apply)
+    apply (frule bij_inv_rev[THEN iffD1, THEN sym])
+     prefer 2
+     apply assumption
+    apply (erule conjE)+
+    apply (erule allE)
+    apply (erule impE)
+     prefer 2
+     apply assumption
+    apply (rule image_inv_f_f[OF bij_is_inj, THEN arg_cong2[OF refl, of _ _ "(\<in>)"], THEN iffD1])
+  prefer 2
+     apply (erule imageI)
+    apply assumption
+  thm f_swap_alpha_xL[of _ _ "pick"]
+   apply (subst f_swap_alpha_xL[of _ _ "pick"])
+      apply assumption+
+   apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
+    apply (subst Diff_subset_conv)
+    apply (subst image_comp)
+    apply (subst comp_assoc[symmetric])
+   apply (subst FVars_raw_permutes', assumption+)
+    apply (subst comp_assoc)
+   apply (subst image_comp[symmetric])
+   apply (subst f_swap_alpha_xL[of _ _ "pick"])
+      apply assumption+
+   apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
     apply (subst image_Un[symmetric])
     apply (subst image_Union[symmetric])
     apply (rule image_mono)
-   apply (unfold raw_UFVarsBD_def)
+    apply (unfold raw_UFVarsBD_def)
     apply (subst Un_Diff_cancel)
     apply (rule le_supI2)
-    apply (subst image_comp)
     apply (subst o_case_sum)
-   apply (unfold o_id)
-
+    apply (unfold o_id)
     apply (rule UN_mono)
      apply (rule subset_refl)
-    subgoal for x
+    subgoal for _ _ _ _ _ x
       apply (rule sumE[of x])
        apply hypsubst_thin
        apply (unfold sum.simps)
@@ -884,15 +900,11 @@ lemma f_swap_alpha_aux:
       apply (unfold sum.simps)
       apply (subst comp_apply)
       apply (rule f_FVarsD[OF p])
-      apply (drule valid_pick_set3[OF p _])
+      apply (drule valid_pick_set3[OF p])
       apply assumption
       apply (unfold pred_sum_inject)
       apply assumption
       done
-    done
-  apply (unfold o_id)
-
-
 
 
   apply (erule exE conjE)+
@@ -965,26 +977,20 @@ proof(induction rule: alpha_coinduct2)
       apply (unfold pred_sum_inject)
       apply assumption
       done
-  have fv_p'd: "raw_UFVarsBD (pick d) \<subseteq> raw_UFVars d"
-    apply (rule subset_trans[OF _ raw_UFVars_Utor[OF valid_d' p[unfolded suitable_def, THEN spec, THEN mp, OF valid_d']]])
-    apply (rule Un_upper2)
     done
   have iw: "id_on (FVarsB xL) w"
     apply (rule id_on_antimono)
     apply (unfold w_def id_on_def)
     apply (rule allI)
      apply (rule impI)
-     apply (drule imageI[of _ "u ` raw_UFVarsBD (pick d)" "inv u"])
-     apply (unfold image_inv_f_f[OF bij_is_inj[OF u(1)]])
     apply (subst comp_assoc)
     apply (subst comp_apply)
      apply (subst comp_apply)
-     apply (rule allE[OF iv[unfolded id_on_def]])
-     apply (erule impE)
-    apply assumption
-    apply (drule arg_cong[of _ _ "u"])
-    apply (subst (asm) surj_f_inv_f[OF bij_is_surj[OF u(1)]])
-    apply assumption
+     apply (rule bij_inv_rev[THEN iffD1, THEN sym, OF u(1)])
+     apply (rule iv[unfolded id_on_def, THEN spec, THEN mp])
+     apply (rule image_inv_f_f[OF bij_is_inj, THEN arg_cong2[OF refl, of _ _ "(\<in>)"], THEN iffD1])
+      apply (rule u)
+    apply (erule imageI)
     apply (rule fv_xL)
     done
   show ?case

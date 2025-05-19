@@ -1616,7 +1616,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
 
         val fp_thms = Option.map (fn Inl x => x | Inr _ => error "wrong fp type") (#fp_thms fp_res);
 
-        val valid_f =
+        val valid_f_opt = if nrecs > 0 then
           let
             val goal = HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (@{map 3} (fn rec_f => fn validU => fn t =>
               mk_pred_fun validP validU
@@ -1659,7 +1659,8 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                 ]
               ]) (#raw_fps fp_res) rec_fs Uctor's model_axiomss (#pre_mrbnfs fp_res))
             ]);
-          in split_conj n thm end;
+          in SOME (split_conj n thm) end
+        else NONE;
 
         fun mk_all (a, b) c = HOLogic.mk_all (a, b, c)
 
@@ -1722,7 +1723,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
                         rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
                         REPEAT_DETERM o resolve_tac ctxt (@{thms ballI impI TrueI iffD2[OF comp_apply] pred_fun_If}
-                          @ valid_f @ suitable_prems
+                          @ the_default [] valid_f_opt @ suitable_prems
                         )
                       ],
                       EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
@@ -1967,7 +1968,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                     resolve_tac ctxt valid_PUmap's,
                     REPEAT_DETERM o resolve_tac ctxt prems
                   ],
-                  resolve_tac ctxt valid_f,
+                  TRY o resolve_tac ctxt (the_default [] valid_f_opt),
                   REPEAT_DETERM o resolve_tac ctxt prems
                 ]
               ]
@@ -2177,7 +2178,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                       rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
                       REPEAT_DETERM o resolve_tac ctxt (
                         @{thms ballI impI TrueI pred_fun_If}
-                        @ map (fn thm => thm OF suitable_prems) valid_f
+                        @ map (fn thm => thm OF suitable_prems) (the_default [] valid_f_opt)
                       )
                     ],
                     REPEAT_DETERM o resolve_tac ctxt (f_prems @ imsupp_prems),
@@ -2668,7 +2669,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                           SELECT_GOAL (unfold_thms_tac ctxt @{thms comp_def}),
                           rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
                           rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
-                          REPEAT_DETERM o resolve_tac ctxt (@{thms ballI impI TrueI pred_fun_If} @ valid_f @ suitable_prems @ suitable'_prems)
+                          REPEAT_DETERM o resolve_tac ctxt (@{thms ballI impI TrueI pred_fun_If} @ the_default [] valid_f_opt @ suitable_prems @ suitable'_prems)
                         ],
                         REPEAT_DETERM o eresolve_tac ctxt @{thms eq_bij_betw_prems},
                         REPEAT_DETERM o EVERY' [
@@ -3349,16 +3350,17 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
         ) RS conjunct1) f_swap_alphas f0s;
 
         (* Final result lemmas *)
-        val REC_valids = @{map 5} (fn ff0 => fn f0 => fn quot => fn x => fn validU =>
+        val REC_valids = if nrecs > 0 then SOME (@{map 5} (fn ff0 => fn f0 => fn quot => fn x => fn validU =>
           let
             val ff_t = fst ff0 $ (#ctor quot $ x);
             val goal = mk_pred_fun validP validU $ ff_t;
           in Goal.prove_sorry lthy (names [x]) [] (HOLogic.mk_Trueprop goal) (fn {context=ctxt, ...} => EVERY1 [
             K (unfold_thms_tac ctxt [snd ff0, snd f0]),
-            resolve_tac ctxt valid_f,
+            resolve_tac ctxt (the valid_f_opt),
             REPEAT_DETERM o resolve_tac ctxt (flat suitable_pick0ss)
           ]) end
-        ) ff0s f0s (#quotient_fps fp_res) xs' validUs;
+        ) ff0s f0s (#quotient_fps fp_res) xs' validUs)
+        else NONE;
 
         val REC_ctors = @{map 7} (fn ff0 => fn quot => fn mrbnf => fn Uctor => fn x => fn deads => fn (_, bsets, _) =>
           let
@@ -3431,11 +3433,12 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
         ))) (#quotient_fps fp_res) f0_UFVars'ss;
 
         val notes = [
-          ("REC_valid", REC_valids),
+          ("REC_valid", the_default [] REC_valids),
           ("REC_ctor", REC_ctors),
           ("REC_swap", REC_swaps),
           ("REC_UFVars", flat REC_UFVarsss)
-        ] |> (map (fn (thmN, thms) =>
+        ] |> filter_out (null o snd)
+          |> (map (fn (thmN, thms) =>
           (((Binding.name thmN), []), [(thms, [])])
         ))
         val (_, lthy) = Local_Theory.notes notes lthy
@@ -3488,22 +3491,20 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
               ]) model_axiomss)
             ])), Position.no_range), NONE) state;
 
-            val REC_ts = map (fn thm => fst (Term.dest_comb (snd (Term.dest_comb (
-              HOLogic.dest_Trueprop (Thm.prop_of thm)
-            ))))) (Proof_Context.get_thms lthy "REC.REC_valid");
             val (RECs, lthy) = @{fold_map 2} (fn T_name =>
               mk_def_t true Binding.empty (Binding.concealed o qualify) ("REC_" ^ T_name) 0
-            ) T_names REC_ts lthy;
+            ) T_names (get_RECs false "REC" lthy) lthy;
 
             fun get_notes defs lthy = map (fn name => (name,
               map (Local_Defs.unfold lthy (map Thm.symmetric defs)) (
-                Proof_Context.get_thms lthy ("REC." ^ name)
+                the_default [] (try (Proof_Context.get_thms lthy) ("REC." ^ name))
               )
             ));
 
             val notes = get_notes (map snd RECs) lthy [
               "REC_valid", "REC_ctor", "REC_swap", "REC_UFVars"
-            ] |> (map (fn (thmN, thms) =>
+            ] |> filter_out (null o snd)
+              |> (map (fn (thmN, thms) =>
               (((Binding.name thmN), []), [(thms, [])])
             ))
             val (_, lthy) = Local_Theory.notes notes lthy
@@ -3591,12 +3592,9 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
               ]) model_axiomss (#quotient_fps fp_res))
             ])), Position.no_range), NONE) state;
 
-            val REC_ts = map (fn thm => fst (Term.dest_comb (snd (Term.dest_comb (
-              HOLogic.dest_Trueprop (Thm.prop_of thm)
-            ))))) (Proof_Context.get_thms lthy "REC.REC_valid");
             val (RECs, lthy) = @{fold_map 2} (fn T_name =>
               mk_def_t true Binding.empty (Binding.concealed o qualify) ("REC_" ^ T_name) 0
-            ) T_names REC_ts lthy;
+            ) T_names (get_RECs false "REC" lthy) lthy;
 
             fun get_notes defs lthy = map (fn (name, new_name) => (new_name,
               map (Local_Defs.unfold lthy (map Thm.symmetric defs)) (

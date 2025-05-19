@@ -1452,6 +1452,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
        ("tvsubst_cctor_not_isVVr", tvsubst_not_isVVrs),
        ("tvsubst_permutes", tvsubst_permutes),
        ("not_isVVr_free", maps (map_filter I) not_isVVr_freess),
+       ("IImsupp_permute_commute", maps (map_filter I) IImsupp_imsupp_permute_commutess),
        ("IImsupp_Diff", maps (map_filter I) IImsupp_Diffss),
        ("IImsupp_natural", flat (maps (map_filter I) IImsupp_naturalsss))
        (*("FFVars_tvsubst", map_filter I FFVars_tvsubsts)*)

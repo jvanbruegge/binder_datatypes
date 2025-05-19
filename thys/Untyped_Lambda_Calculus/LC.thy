@@ -790,13 +790,13 @@ shows "P t"
 proof-
   have "\<forall>f. bij f \<and> |supp f| <o |UNIV::var set| \<longrightarrow> P (rrename f t)"
   proof(induct)
-    case (Var x)
+    case (1 x)
     then show ?case using VVar by auto
   next
-    case (App t1 t2)
+    case (2 t1 t2)
     then show ?case using AApp by auto
   next
-    case (Lam x t)
+    case (3 x t)
     then show ?case using LLam
       by simp (metis bij_o term.permute_comp term_pre.supp_comp_bound)
   qed

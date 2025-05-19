@@ -853,14 +853,14 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
       )), []))
     )], []) lthy;
 
-    val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => METHOD (fn thms => EVERY1 [
-      K (Locale.intro_locales_tac {strict = false, eager = true} ctxt thms),
+    val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => SIMPLE_METHOD (EVERY1 [
+      rtac ctxt (the (fst (Locale.intros_of (Proof_Context.theory_of lthy) QREC_cmin_fixed_name))),
       REPEAT_DETERM o SELECT_GOAL (EVERY1 [
         SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thm comp_def} :: maps (map snd o #IImsupps) some_defs)),
         REPEAT_DETERM1 o FIRST' [
           assume_tac ctxt,
           resolve_tac ctxt ([Un_bound, UNION_bound] @ rho_prems
-            @ @{thms cmin_greater card_of_Card_order}
+            @ @{thms cmin_greater cmin_Card_order card_of_Card_order}
             @ maps #card_of_FVars_bound_UNIVs (#quotient_fps fp_res)
           )
         ]
@@ -940,6 +940,12 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
         REPEAT_DETERM o rtac ctxt @{thm Un_mono'},
         REPEAT_DETERM o rtac ctxt @{thm Un_upper1},
         REPEAT_DETERM o EVERY' [
+          TRY o EVERY' [
+            rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]]},
+            rtac ctxt @{thm Diff_Un_disjunct},
+            resolve_tac ctxt prems,
+            rtac ctxt @{thm Diff_mono[OF _ subset_refl]}
+          ],
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms UN_extend_simps(2)}),
           rtac ctxt @{thm subset_If},
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms UN_empty'}),
@@ -947,19 +953,13 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
           rtac ctxt @{thm UN_mono[OF subset_refl]},
           resolve_tac ctxt prems,
           K (Local_Defs.unfold0_tac ctxt @{thms prod.collapse}),
-          eresolve_tac ctxt @{thms UnI1 UnI2},
-          TRY o EVERY' [
-            rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]]},
-            rtac ctxt @{thm Diff_Un_disjunct},
-            resolve_tac ctxt prems,
-            rtac ctxt @{thm Diff_mono[OF _ subset_refl]}
-          ]
+          eresolve_tac ctxt @{thms UnI1 UnI2} ORELSE' assume_tac ctxt
         ]
       ]) ctxt) mrbnfs (#quotient_fps fp_res) defss rhoss)
     ])), Position.no_range), NONE) state;
 
     val (tvsubsts, lthy) = @{fold_map 2} (fn model =>
-      mk_def_t true Binding.empty qualify (Binding.name_of (#binding model)) 0
+      mk_def_t true Binding.empty I (Binding.name_of (#binding model)) 0
     ) models (MRBNF_Recursor.get_RECs true "tvsubst" lthy) lthy;
 
     val tvsubst_not_isVVrs = @{map 5} (fn i => fn mrbnf => fn quotient => fn sets => fn preT =>
@@ -1006,7 +1006,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
         let val a = Free ("a", #aT def);
         in Goal.prove_sorry lthy (names [a]) [] (
           mk_Trueprop_eq (fst tvsubst $ (fst (#VVr def) $ a), the f $ a)
-        ) (fn {context=ctxt, prems} => EVERY1 [
+        ) (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt [snd tvsubst, snd (#VVr def), @{thm comp_def}]),
           rtac ctxt trans,
           resolve_tac ctxt (Proof_Context.get_thms lthy "tvsubst.REC_ctor"),

@@ -219,7 +219,9 @@ fun define_vvsubst_consts qualify names (fp_res : MRBNF_FP_Def_Sugar.fp_result) 
     val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
     val phi = Proof_Context.export_morphism old_lthy lthy;
 
-    val (morph, phi') =
+    val (morph, phi') = case (rels_opt, psetss) of
+      (NONE, []::_) => (map_prod (Morphism.term phi) (Morphism.thm phi), phi)
+    | _ =>
       let
         val t = the_default (fst (hd (hd psetss))) (Option.map (hd o #preds) rels_opt);
         val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
@@ -345,8 +347,8 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       )), []))
     )], []) lthy;
 
-    val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => METHOD (fn thms => EVERY1 [
-      K (Locale.intro_locales_tac {strict = false, eager = true} ctxt thms),
+    val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => SIMPLE_METHOD (EVERY1 [
+      rtac ctxt (the (fst (Locale.intros_of (Proof_Context.theory_of lthy) QREC_fixed_name))),
       REPEAT_DETERM o EVERY' [
         rtac ctxt (@{thm iffD2[OF imsupp_supp_bound]} OF [infinite_UNIV]),
         resolve_tac ctxt f_prems
@@ -393,7 +395,11 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
             resolve_tac ctxt prems,
             SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms prod.collapse}),
-            REPEAT_DETERM o (eresolve_tac ctxt @{thms UnI1 UnI2} ORELSE' rtac ctxt @{thm UnI1})
+            REPEAT_DETERM o FIRST' [
+              assume_tac ctxt,
+              eresolve_tac ctxt @{thms UnI1 UnI2},
+              rtac ctxt @{thm UnI1}
+            ]
           ])
         ]
       ])) ctxt

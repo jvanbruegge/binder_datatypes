@@ -483,7 +483,8 @@ fun every_other [] = []
 
 fun create_binding_recursor qualify fp_res no_defs_lthy =
   let
-    val tvars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps fp_res))) []));
+    val tvars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps fp_res))) []))
+      @ map TFree (rev (Term.add_tfreesT (#T (hd (#quotient_fps fp_res))) []));
     val (vars', names_lthy) = no_defs_lthy
       |> mk_TFrees' (map Type.sort_of_atyp tvars);
 
@@ -792,7 +793,6 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
           f0s, ff0s, XXls, XXrs), lthy) = define_recursor_consts qualify fp_res (map Binding.name T_names) rs
           pT Pmap PFVarss avoiding_sets validP uTs Uctors Umaps UFVarsss (map #ordLeq r_axioms)
           vars passives lthy;
-
 
         val pick_Tss = map (map (fst o dest_funT o fastype_of o fst)) suitabless;
 
@@ -3467,7 +3467,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => METHOD (fn thms => EVERY1 [
               K (Locale.intro_locales_tac {strict = false, eager = true} ctxt thms),
               REPEAT_DETERM o resolve_tac ctxt (
-                @{thms ordLeq_refl card_of_Card_order cmin_Cinfinite cmin_regularCard cmin2 ordLeq_transitive[OF cmin1] cmin_greater conjI}
+                @{thms ordLeq_refl card_of_Card_order cmin_Card_order cmin_Cinfinite cmin_regularCard cmin2 ordLeq_transitive[OF cmin1] cmin_greater conjI}
                 @ [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd mrbnfs), #var_regular (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))]
                 @ maps #card_of_FVars_bound_UNIVs (#raw_fps fp_res)
                 @ maps MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnfs
@@ -3575,14 +3575,14 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   etac ctxt @{thm ordLess_ordLeq_trans},
-                  resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLeq_transitive[OF cmin1]}
+                  resolve_tac ctxt @{thms cmin1 cmin2 cmin_Card_order card_of_Card_order ordLeq_transitive[OF cmin1]}
                 ],
                 rtac ctxt (#permute_cong_id (#inner quot)),
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   Goal.assume_rule_tac ctxt,
                   etac ctxt @{thm ordLess_ordLeq_trans},
-                  resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLeq_transitive[OF cmin1]}
+                  resolve_tac ctxt @{thms cmin1 cmin2 cmin_Card_order card_of_Card_order ordLeq_transitive[OF cmin1]}
                 ],
                 rtac ctxt (#Umap_Uctor model_axioms) THEN_ALL_NEW assume_tac ctxt,
                 REPEAT_DETERM o (resolve_tac ctxt (#UFVars_subsets model_axioms) THEN_ALL_NEW (assume_tac ctxt ORELSE' Goal.assume_rule_tac ctxt)),
@@ -3740,7 +3740,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
               K (Locale.intro_locales_tac {strict = false, eager = true} ctxt thms),
               K (Local_Defs.unfold_tac ctxt @{thms comp_def image_empty if_True}),
               REPEAT_DETERM o resolve_tac ctxt (
-                @{thms refl emp_bound TrueI Cinfinite_gt_empty cmin_Cinfinite conjI card_of_Card_order}
+                @{thms refl emp_bound TrueI Cinfinite_gt_empty cmin_Card_order cmin_Cinfinite conjI card_of_Card_order}
                 @ small_avoiding_sets
                 @ [MRBNF_Def.UNIV_cinfinite_of_mrbnf (hd (#pre_mrbnfs fp_res))]
               ),
@@ -3752,7 +3752,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                   EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
                   REPEAT_DETERM o FIRST' [
                     assume_tac ctxt,
-                    resolve_tac ctxt @{thms supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}
+                    resolve_tac ctxt @{thms supp_id_bound bij_id ordLess_ordLeq_trans cmin_Card_order cmin1 cmin2 card_of_Card_order ordLeq_transitive[OF cmin1]}
                   ]
                 ],
                 SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms prod.map_comp comp_def case_prod_beta fst_map_prod snd_map_prod map_prod_simp id_apply}),
@@ -3761,7 +3761,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                 rtac ctxt (MRBNF_Def.map_cong0_of_mrbnf mrbnf),
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
-                  resolve_tac ctxt @{thms refl supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order},
+                  resolve_tac ctxt @{thms refl supp_id_bound bij_id ordLess_ordLeq_trans cmin_Card_order cmin1 cmin2 card_of_Card_order ordLeq_transitive[OF cmin1]},
                   EVERY' [
                     Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
                       case try (infer_instantiate' ctxt [SOME (snd (snd (split_last params)))]) @{thm prod.exhaust} of

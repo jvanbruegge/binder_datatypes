@@ -223,9 +223,6 @@ fun define_tvsubst_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) (vars,
         | _ => map2 (fn i => mk_ss (string_of_int i) o #etas) (1 upto length models) models
       end;
 
-    val (fs, _) = lthy
-      |> mk_Frees "f" (map (fn a => a --> a) vars);
-
     val (_, lthy) = Local_Theory.begin_nested lthy;
 
     val (defss, lthy) = @{fold_map 3} (fn quot => fn model => fn suffix =>
@@ -720,11 +717,6 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
       (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf
     ) mrbnfs;
 
-    val (_, lthy) = Local_Theory.begin_nested lthy;
-
-    val (rhos, _) = no_defs_lthy
-      |> mk_Frees "\<rho>" (map (domain_type o fastype_of o fst o #SSupp) some_defs);
-
     val eta_naturalss' = map (fn model =>
       map (Option.map (fn eta => Local_Defs.unfold0 lthy @{thms comp_def} (
         fun_cong OF [#eta_natural (snd eta)]
@@ -802,6 +794,11 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
         ]) end
       ) sets' end
     ))) (#pre_mrbnfs fp_res) defss;
+
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+
+    val (rhos, _) = no_defs_lthy
+      |> mk_Frees "\<rho>" (map (domain_type o fastype_of o fst o #SSupp) some_defs);
 
     val lthy = snd (Proof_Context.add_fixes (map (fn Free (x, T) => (Binding.name x, SOME T, NoSyn)) rhos) lthy);
 

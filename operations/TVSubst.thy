@@ -1548,7 +1548,7 @@ interpretation tvsubst: QREC_cmin_fixed "IImsupp11_1 f1 \<union> IImsupp12_1 f2 
 
   subgoal for g1 g2 y
   apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-  apply (unfold id_o_commute[of g1] id_o_commute[of g2] fst_o_f comp_assoc comp_def[of snd] snd_conv case_prod_beta prod.collapse)
+  apply (unfold id_o_commute[of g1] id_o_commute[of g2] Product_Type.fst_comp_map_prod Product_Type.snd_comp_map_prod)
   apply (subst T1_pre.map_comp[symmetric], (rule supp_id_bound bij_id | assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
   apply (subst permute_simps[symmetric] isVVr_renames[symmetric], (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
     (* REPEAT_DETERM *)
@@ -1594,12 +1594,36 @@ interpretation tvsubst: QREC_cmin_fixed "IImsupp11_1 f1 \<union> IImsupp12_1 f2 
       apply (rule subsetI)
     apply (erule UnI1 UnI2 | rule UnI1)+
     (* END REPEAT_DETERM *)
-  apply (rule trans)
-   apply (rule permute_simps)
-      apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-  apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-  apply (unfold id_o o_id)
-  apply (unfold comp_def)
+  apply (rule refl)
+    done
+
+subgoal for g1 g2 y
+  apply (subst T2_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+  apply (unfold id_o_commute[of g1] id_o_commute[of g2] Product_Type.fst_comp_map_prod Product_Type.snd_comp_map_prod)
+  apply (subst T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id | assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+  apply (subst permute_simps[symmetric] isVVr_renames[symmetric], (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+    (* REPEAT_DETERM *)
+  apply (rule case_split)
+   apply (subst if_P)
+    apply assumption
+   apply (unfold if_P if_not_P)
+   apply (unfold isVVr21_def)[1]
+   apply (erule exE)
+     apply (rotate_tac -1)
+  apply (erule subst[OF sym])
+   apply (unfold fst_conv snd_conv asVVr_VVrs)[1]
+   apply (subst permute_VVrs)
+       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+     apply (unfold asVVr_VVrs)[1]
+    apply (rule IImsupp_permute_commute[THEN fun_cong, unfolded comp_def])
+          apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+      apply (erule Int_subset_empty2)
+      apply (rule subsetI)
+    apply (erule UnI1 UnI2 | rule UnI1)+
+      apply (erule Int_subset_empty2)
+      apply (rule subsetI)
+    apply (erule UnI1 UnI2 | rule UnI1)+
+    (* END REPEAT_DETERM *)
   apply (rule refl)
   done
 
@@ -1795,42 +1819,6 @@ interpretation tvsubst: QREC_cmin_fixed "IImsupp11_1 f1 \<union> IImsupp12_1 f2 
     apply (erule UnI2 UnI1 | rule UnI1)+
     done
 
-  subgoal for g1 g2 y
-  apply (subst T2_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-  apply (unfold id_o_commute[of g1] id_o_commute[of g2] fst_o_f comp_assoc comp_def[of snd] snd_conv case_prod_beta prod.collapse)
-  apply (subst T2_pre.map_comp[symmetric], (rule supp_id_bound bij_id | assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-  apply (subst permute_simps[symmetric] isVVr_renames[symmetric], (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-    (* REPEAT_DETERM *)
-  apply (rule case_split)
-   apply (subst if_P)
-    apply assumption
-   apply (unfold if_P if_not_P)
-   apply (unfold isVVr21_def)[1]
-   apply (erule exE)
-     apply (rotate_tac -1)
-  apply (erule subst[OF sym])
-   apply (unfold fst_conv snd_conv asVVr_VVrs)[1]
-   apply (subst permute_VVrs)
-       apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-     apply (unfold asVVr_VVrs)[1]
-    apply (rule IImsupp_permute_commute[THEN fun_cong, unfolded comp_def])
-          apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-      apply (erule Int_subset_empty2)
-      apply (rule subsetI)
-    apply (erule UnI1 UnI2 | rule UnI1)+
-      apply (erule Int_subset_empty2)
-      apply (rule subsetI)
-    apply (erule UnI1 UnI2 | rule UnI1)+
-    (* END REPEAT_DETERM *)
-  apply (rule trans)
-   apply (rule permute_simps)
-      apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-  apply (subst T2_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-  apply (unfold id_o o_id)
-  apply (unfold comp_def)
-  apply (rule refl)
-  done
-
   subgoal premises prems
     (* REPEAT_DETERM *)
     apply (rule case_split)
@@ -1985,7 +1973,7 @@ shows
   "tvsubst_T1 (T1_ctor x) = T1_ctor (map_T1_pre id id id id id id id tvsubst_T1 tvsubst_T1 tvsubst_T2 tvsubst_T2 x)"
   apply (unfold tvsubst_T1_def tvsubst_T2_def)
    apply (rule trans)
-    apply (rule tvsubst.REC_ctors)
+    apply (rule tvsubst.REC_ctor)
      apply (rule empty_prems noclash)+
   apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
   apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T1_pre.map_id)
@@ -2002,7 +1990,7 @@ shows
   "tvsubst_T2 (T2_ctor x) = T2_ctor (map_T2_pre id id id id id id id tvsubst_T1 tvsubst_T1 tvsubst_T2 tvsubst_T2 x)"
   apply (unfold tvsubst_T1_def tvsubst_T2_def)
    apply (rule trans)
-    apply (rule tvsubst.REC_ctors)
+    apply (rule tvsubst.REC_ctor)
      apply (rule empty_prems noclash)+
   apply (subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)+
   apply (unfold id_o o_id comp_def[of fst] fst_conv id_def[symmetric] T2_pre.map_id)
@@ -2019,7 +2007,7 @@ lemma tvsubst_VVrs:
   subgoal
     apply (unfold VVr_defs comp_def)[1]
     apply (rule trans)
-     apply (rule tvsubst.REC_ctors)
+     apply (rule tvsubst.REC_ctor)
        apply (unfold eta_set_empties noclash_T1_def prod.case Un_empty)
        apply (rule Int_empty_left conjI)+
     apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
@@ -2039,7 +2027,7 @@ lemma tvsubst_VVrs:
      apply (unfold VVr_defs comp_def)[1]
      apply (rule refl)
     apply (rule trans)
-     apply (rule tvsubst.REC_ctors)
+     apply (rule tvsubst.REC_ctor)
        apply (unfold eta_set_empties noclash_T1_def prod.case Un_empty)
        apply (rule Int_empty_left conjI)+
     apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)+
@@ -2074,7 +2062,7 @@ lemma tvsubst_VVrs:
      apply (unfold VVr_defs comp_def)[1]
      apply (rule refl)
     apply (rule trans)
-     apply (rule tvsubst.REC_ctors)
+     apply (rule tvsubst.REC_ctor)
        apply (unfold eta_set_empties noclash_T2_def prod.case Un_empty)
        apply (rule Int_empty_left conjI)+
     apply ((subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)+)

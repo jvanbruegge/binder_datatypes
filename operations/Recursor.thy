@@ -9505,8 +9505,8 @@ assumes
   imsupp f1 \<inter> avoiding_set1 = {} \<Longrightarrow> imsupp f2 \<inter> avoiding_set2 = {} \<Longrightarrow>
   permute_T1 f1 f2 (U1ctor y)
 = U1ctor (map_T1_pre f1 f2 id id f1 f2 f1
-    (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t')) (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t'))
-    (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t')) (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t'))
+    (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2)) (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2))
+    (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2)) (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2))
  y)"
   and FVars_subset_11: "
   set5_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> avoiding_set1 = {} \<Longrightarrow>
@@ -9524,8 +9524,8 @@ assumes
   imsupp f1 \<inter> avoiding_set1 = {} \<Longrightarrow> imsupp f2 \<inter> avoiding_set2 = {} \<Longrightarrow>
   permute_T2 f1 f2 (U2ctor y2)
 = U2ctor (map_T2_pre f1 f2 id id f1 f2 f1
-    (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t')) (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t'))
-    (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t')) (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t'))
+    (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2)) (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2))
+    (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2)) (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2))
  y2)"
   and FVars_subset_21: "
   set5_T2_pre (y2::(_, _, 'a, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> avoiding_set1 = {} \<Longrightarrow>
@@ -9547,13 +9547,41 @@ interpretation rec: QREC "\<lambda>_ _ x. x" "\<lambda>_. {}" "\<lambda>_. {}" a
                  apply (unfold comp_def image_empty)[10]
                  apply (rule refl emp_bound small_avoiding_set1 small_avoiding_set2 TrueI)+
 
+       apply (unfold if_P)
        apply (rule trans)
         apply (rule permute_U1ctor)
-           apply assumption+
+             apply assumption+
        apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id)+)+
-       apply (unfold id_o o_id)
-       apply (unfold comp_def case_prod_beta fst_map_prod snd_map_prod if_True map_prod_simp id_apply)[1]
-       apply (rule refl)
+       apply (unfold id_o o_id map_prod.comp)
+       apply (unfold comp_def case_prod_beta map_prod_simp id_apply)[1]
+       apply (unfold id_def[symmetric])
+       apply (rule arg_cong[of _ _ U1ctor])
+       apply (rule T1_pre.map_cong0)
+                      apply (assumption | rule supp_id_bound bij_id refl)+
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
 
       apply (unfold Un_empty_left Un_empty_right)
       apply (rule subset_trans)
@@ -9615,9 +9643,36 @@ interpretation rec: QREC "\<lambda>_ _ x. x" "\<lambda>_. {}" "\<lambda>_. {}" a
         apply (rule permute_U2ctor)
            apply assumption+
        apply (subst T2_pre.map_comp, (assumption | rule supp_id_bound bij_id)+)+
-       apply (unfold id_o o_id)
-       apply (unfold comp_def case_prod_beta fst_map_prod snd_map_prod if_True map_prod_simp id_apply)[1]
-       apply (rule refl)
+       apply (unfold id_o o_id map_prod.comp)
+    apply (unfold comp_def case_prod_beta fst_map_prod snd_map_prod if_True map_prod_simp id_apply)[1]
+ apply (unfold id_def[symmetric])
+       apply (rule arg_cong[of _ _ U2ctor])
+       apply (rule T2_pre.map_cong0)
+                      apply (assumption | rule supp_id_bound bij_id refl)+
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
 
       apply (rule subset_trans)
        apply (rule FVars_subset_21)
@@ -9886,15 +9941,22 @@ locale QREC_cmin_fixed =
 assumes
   small_avoiding_set1: "|avoiding_set1| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
   and small_avoiding_set2: "|avoiding_set2| <o cmin |UNIV::'var set| |UNIV::'tyvar set|"
-  (* model 1 axioms *)
   and permute_U1ctor: "
    bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
   imsupp f1 \<inter> avoiding_set1 = {} \<Longrightarrow> imsupp f2 \<inter> avoiding_set2 = {} \<Longrightarrow>
   permute_T1 f1 f2 (U1ctor y)
 = U1ctor (map_T1_pre f1 f2 id id f1 f2 f1
-    (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t')) (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t'))
-    (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t')) (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t'))
+    (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2)) (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2))
+    (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2)) (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2))
  y)"
+  and permute_U2ctor: "
+  bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
+  imsupp f1 \<inter> avoiding_set1 = {} \<Longrightarrow> imsupp f2 \<inter> avoiding_set2 = {} \<Longrightarrow>
+  permute_T2 f1 f2 (U2ctor y2)
+= U2ctor (map_T2_pre f1 f2 id id f1 f2 f1
+    (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2)) (map_prod (permute_T1 f1 f2) (permute_T1 f1 f2))
+    (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2)) (map_prod (permute_T2 f1 f2) (permute_T2 f1 f2))
+ y2)"
   and FVars_subset_11: "
   set5_T1_pre (y::(_, _, 'a, 'b, _, _, _, _, _, _, _) T1_pre) \<inter> avoiding_set1 = {} \<Longrightarrow>
   (\<And>t t'. (t, t') \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> FVars_T11 t' \<subseteq> FVars_T11 t \<union> avoiding_set1) \<Longrightarrow>
@@ -9905,15 +9967,6 @@ assumes
   (\<And>t t'. (t, t') \<in> set8_T1_pre y \<union> set9_T1_pre y \<Longrightarrow> FVars_T12 t' \<subseteq> FVars_T12 t \<union> avoiding_set2) \<Longrightarrow>
   (\<And>t t'. (t, t') \<in> set10_T1_pre y \<union> set11_T1_pre y \<Longrightarrow> FVars_T22 t' \<subseteq> FVars_T22 t \<union> avoiding_set2) \<Longrightarrow>
   FVars_T12 (U1ctor y) \<subseteq> FVars_T12 (T1_ctor (map_T1_pre id id id id id id id fst fst fst fst y)) \<union> avoiding_set2"
-  (* model 2 axioms *)
-  and permute_U2ctor: "
-  bij f1 \<Longrightarrow> |supp (f1::'var \<Rightarrow> 'var)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'tyvar \<Rightarrow> 'tyvar)| <o cmin |UNIV::'var set| |UNIV::'tyvar set| \<Longrightarrow>
-  imsupp f1 \<inter> avoiding_set1 = {} \<Longrightarrow> imsupp f2 \<inter> avoiding_set2 = {} \<Longrightarrow>
-  permute_T2 f1 f2 (U2ctor y2)
-= U2ctor (map_T2_pre f1 f2 id id f1 f2 f1
-    (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t')) (\<lambda>(t, t'). (permute_T1 f1 f2 t, permute_T1 f1 f2 t'))
-    (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t')) (\<lambda>(t, t'). (permute_T2 f1 f2 t, permute_T2 f1 f2 t'))
- y2)"
   and FVars_subset_21: "
   set5_T2_pre (y2::(_, _, 'a, 'b, _, _, _, _, _, _, _) T2_pre) \<inter> avoiding_set1 = {} \<Longrightarrow>
   (\<And>t t'. (t, t') \<in> set8_T2_pre y2 \<union> set9_T2_pre y2 \<Longrightarrow> FVars_T11 t' \<subseteq> FVars_T11 t \<union> avoiding_set1) \<Longrightarrow>
@@ -9932,15 +9985,42 @@ interpretation rec: QREC_cmin "\<lambda>_ _ x. x" "\<lambda>_. {}" "\<lambda>_. 
   "\<lambda>_. True"
   apply unfold_locales
                  apply (unfold comp_def image_empty)[10]
-                 apply (rule refl Cinfinite_gt_empty cmin_Cinfinite conjI T1_pre.UNIV_cinfinite card_of_Card_order small_avoiding_set1 small_avoiding_set2 TrueI)+
+                apply (rule refl Cinfinite_gt_empty cmin_Cinfinite conjI T1_pre.UNIV_cinfinite card_of_Card_order small_avoiding_set1 small_avoiding_set2 TrueI)+
 
        apply (rule trans)
         apply (rule permute_U1ctor)
-           apply assumption+
+             apply assumption+
        apply (subst T1_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-       apply (unfold id_o o_id)
+       apply (unfold id_o o_id map_prod.comp)
        apply (unfold comp_def case_prod_beta fst_map_prod snd_map_prod if_True map_prod_simp id_apply)[1]
-       apply (rule refl)
+       apply (unfold id_def[symmetric])
+       apply (rule arg_cong[of _ _ U1ctor])
+       apply (rule T1_pre.map_cong0)
+                      apply (assumption | rule supp_id_bound bij_id refl ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
 
       apply (unfold Un_empty_left Un_empty_right)
       apply (rule subset_trans)
@@ -10002,9 +10082,36 @@ interpretation rec: QREC_cmin "\<lambda>_ _ x. x" "\<lambda>_. {}" "\<lambda>_. 
         apply (rule permute_U2ctor)
            apply assumption+
        apply (subst T2_pre.map_comp, (assumption | rule supp_id_bound bij_id ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
-       apply (unfold id_o o_id)
+       apply (unfold id_o o_id map_prod.comp)
        apply (unfold comp_def case_prod_beta fst_map_prod snd_map_prod if_True map_prod_simp id_apply)[1]
-       apply (rule refl)
+       apply (unfold id_def[symmetric])
+       apply (rule arg_cong[of _ _ U2ctor])
+       apply (rule T2_pre.map_cong0)
+                      apply (assumption | rule supp_id_bound bij_id refl ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
+  subgoal for _ _ _ _ z
+    apply (rule prod.exhaust[of z])
+    apply hypsubst_thin
+    apply (unfold map_prod_simp fst_conv snd_conv)
+    apply (rule refl)
+    done
 
       apply (rule subset_trans)
        apply (rule FVars_subset_21)
@@ -10066,7 +10173,7 @@ interpretation rec: QREC_cmin "\<lambda>_ _ x. x" "\<lambda>_. {}" "\<lambda>_. 
 definition "REC_T1 \<equiv> \<lambda>t. rec.REC_T1 t ()"
 definition "REC_T2 \<equiv> \<lambda>t. rec.REC_T2 t ()"
 
-lemma REC_ctors:
+lemma REC_ctor:
   "set5_T1_pre x \<inter> avoiding_set1 = {} \<Longrightarrow>
   set6_T1_pre x \<inter> avoiding_set2 = {} \<Longrightarrow>
   noclash_T1 x \<Longrightarrow>

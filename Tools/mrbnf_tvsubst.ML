@@ -847,7 +847,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
       ) end
     ) defss rhoss (#pre_mrbnfs fp_res) (#quotient_fps fp_res);
 
-    val state = Interpretation.isar_interpretation ([ (QREC_cmin_fixed_name,
+    val state = Interpretation.interpretation ([ (QREC_cmin_fixed_name,
       (("tvsubst", true), (Expression.Positional (map SOME (
         avoiding_sets @ Uctors
       )), []))

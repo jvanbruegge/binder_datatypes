@@ -76,13 +76,11 @@ interpretation vvsubst: QREC_fixed "imsupp f1" "imsupp f2"
         apply (rule permute_simps)
            apply assumption+
        apply (subst T1_pre.map_comp, (assumption | rule f_prems supp_id_bound bij_id)+)+
-       apply (unfold id_o o_id)
+       apply (unfold id_o o_id Product_Type.snd_comp_map_prod)
        apply (rule arg_cong[of _ _ T1_ctor])
        apply (rule T1_pre.map_cong0)
                       apply (rule supp_comp_bound f_prems infinite_UNIV | assumption)+
                  apply (erule imsupp_commute[THEN fun_cong] | rule refl)+
-          apply (unfold comp_def snd_conv case_prod_beta)
-          apply (rule refl)+
 
   subgoal premises prems for y
       apply (unfold FVars_ctors)[1]
@@ -232,13 +230,11 @@ interpretation vvsubst: QREC_fixed "imsupp f1" "imsupp f2"
         apply (rule permute_simps)
            apply assumption+
        apply (subst T2_pre.map_comp, (assumption | rule f_prems supp_id_bound bij_id)+)+
-       apply (unfold id_o o_id)
+       apply (unfold id_o o_id Product_Type.snd_comp_map_prod)
        apply (rule arg_cong[of _ _ T2_ctor])
        apply (rule T2_pre.map_cong0)
                       apply (rule supp_comp_bound f_prems infinite_UNIV | assumption)+
                  apply (erule imsupp_commute[THEN fun_cong] | rule refl)+
-          apply (unfold comp_def snd_conv case_prod_beta)
-          apply (rule refl)+
 
   subgoal premises prems for y
       apply (unfold FVars_ctors)[1]
@@ -1030,6 +1026,7 @@ lemma set4_T2_simp: "set4_T2 (T2_ctor x) = set4_T2_pre x \<union> \<Union>(set4_
   apply (unfold image_id image_comp[unfolded comp_def])
   apply (rule refl)
   done
+lemmas set_simps = set3_T1_simp set4_T1_simp set3_T2_simp set4_T2_simp
 
 lemma set3_T1_intros:
   "a \<in> set3_T1_pre x \<Longrightarrow> a \<in> set3_T1 (T1_ctor x)"

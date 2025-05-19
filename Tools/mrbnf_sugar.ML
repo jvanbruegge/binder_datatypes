@@ -145,13 +145,13 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
     val mrbnf = hd mrbnfs;
     val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
-    val (res, lthy) = MRBNF_FP.construct_binder_fp fp [{
+    val (res, lthy) = MRBNF_FP.construct_binder_fp fp ([{
       T_name = name,
       pre_mrbnf = mrbnf,
       nrecs = #rec_vars spec,
       permute = Option.map Binding.name_of (#permute_b spec),
       FVars = map (Option.map Binding.name_of) (take (length (#binding_rel spec)) (#FVars_bs spec))
-    }] (map single (#binding_rel spec)) lthy;
+    }] |> @{print warning}) ((map single (#binding_rel spec)) |> @{print warning}) lthy;
   in ((res, fp_pre_T, mrbnf, absinfo), lthy) end
 
 fun mr_bnf_of lthy prefer_quot s =

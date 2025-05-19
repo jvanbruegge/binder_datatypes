@@ -21,6 +21,7 @@ consts set3_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'c set"
 consts set4_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'd set"
 consts rrel_F :: "('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> ('a, 'b, 'c', 'd') F \<Rightarrow> bool"
 
+declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 mrbnf "('a :: var, 'b :: var, 'c, 'd) F"
   map: map_F
@@ -221,6 +222,34 @@ lift_definition rrel_F'_orig :: "('a4 \<Rightarrow> 'a4' \<Rightarrow> bool) \<R
 lemma F'_map_id: "map_F' id id id id = id"
   by (rule ext) (simp add: F.map_id asSS_def map_F'_def Rep_F'_inverse)
 
+ML \<open>
+open BNF_Util BNF_Tactics
+
+
+fun mk_map_comp_tac map_F'_def Abs_F'_inverse Rep_F' F_map_comp0 nonrep2_mapF_bij_2 ctxt =
+  HEADGOAL (Subgoal.FOCUS
+    (fn {prems = prems as [supp_u1, supp_v1, bij_u2, supp_u2, bij_v2, supp_v2, bij_u3, _, bij_v3, _],
+      context = ctxt, ...} =>
+    let
+      val _ = prems |> map @{print tracing}
+      val supp_comp = @{thm eqTrueI[OF supp_comp_bound[OF _ _ infinite_UNIV]]}
+      val bij_comp = @{thm eqTrueI[OF bij_comp]}
+    in
+      unfold_thms_tac ctxt ([map_F'_def,
+        supp_comp OF [supp_u1, supp_v1],
+        supp_comp OF [supp_u2, supp_v2],
+        bij_comp OF [bij_u2, bij_v2],
+        bij_comp OF [bij_u3, bij_v3]] @ map (fn thm => thm RS @{thm eqTrueI}) prems @
+        @{thms asSS_def asBij_def if_True}) THEN
+      HEADGOAL (rtac ctxt ext) THEN
+      unfold_thms_tac ctxt [F_map_comp0 OF [supp_u1, bij_u2, supp_u2, supp_v1, bij_v2, supp_v2]] THEN
+      unfold_thms_tac ctxt [o_apply] THEN
+      HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse], K (print_tac ctxt "foo"),
+        rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+        rtac ctxt refl])
+    end) ctxt)
+\<close>
+
 lemma F'_map_comp1_:
   fixes u1 v1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 v2 :: "'a2::var \<Rightarrow> 'a2"
@@ -229,9 +258,30 @@ lemma F'_map_comp1_:
   assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" "bij v2" "|supp v2| <o |UNIV :: 'a2 set|"
   assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|" "bij v3" "|supp v3| <o |UNIV :: 'a3 set|"
   shows "map_F' (v1 o u1) (v2 o u2) (v3 o u3) (g o f) = map_F' v1 v2 v3 g o map_F' u1 u2 u3 f"
-  using assms by (intro ext)
-    (simp add: F.map_comp assms asBij_def asSS_def supp_comp_bound supp_id_bound infinite_UNIV
-      map_F'_def nonrep2_mapF_bij_2[OF assms(1,3,4,7)] Rep_F'[simplified] Abs_F'_inverse)
+  using assms apply -
+  apply (tactic \<open>mk_map_comp_tac @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm F.map_comp0} @{thm nonrep2_mapF_bij_2} @{context} THEN
+    print_tac @{context} "end" THEN no_tac\<close>)
+  subgoal premises prems
+    apply (unfold map_F'_def asBij_def asSS_def
+        eqTrueI[OF supp_comp_bound[OF assms(1,2) infinite_UNIV]]
+        eqTrueI[OF supp_comp_bound[OF assms(4,6) infinite_UNIV]]
+        eqTrueI[OF bij_comp[OF assms(3,5)]]
+        eqTrueI[OF bij_comp[OF assms(7,9)]]
+        eqTrueI[OF assms(5)] eqTrueI[OF assms(2)] eqTrueI[OF assms(3)] eqTrueI[OF assms(1)] eqTrueI[OF assms(4)] eqTrueI[OF assms(6)]
+        eqTrueI[OF assms(7)] eqTrueI[OF assms(9)]
+        if_True)
+    apply (rule ext)
+    apply (unfold F.map_comp0[OF assms(1,3,4,2,5,6)])
+    apply (unfold o_apply)
+    apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+      (*  apply (rule  nonrep2_mapF_bij_2[OF assms(1,3,4,7)])*)
+     apply (rule nonrep2_mapF_bij_2; (rule assms Rep_F'[unfolded mem_Collect_eq])?)
+    apply (rule refl)
+    done
+  done
+
+
 
 lemma F'_set1_map_:
   fixes u1 :: "'a1::var \<Rightarrow> 'a1"
@@ -352,9 +402,17 @@ lemma F'_in_rel:
     subgoal
       by(rule Rep_F'_inverse)
     subgoal
-      apply (auto simp: supp_id_bound F.map_comp intro!: F.map_cong)
-      sorry
+      apply (frule Abs_F'_inject[THEN iffD2, rotated 2, of "map_F u1 u2 snd snd z"])
+        apply (simp_all add: Rep_F'[simplified]) [2]
+      apply (subst (asm) Rep_F'_inverse)
+      apply (erule trans[rotated])
+      apply (rule cut_rl)
+       apply (rule Abs_F'_inject[THEN iffD2, rotated 2])
+      apply assumption
+        apply (auto simp: supp_id_bound F.map_comp Rep_F'[simplified] elim!: trans[rotated]
+          intro!: F.map_cong)
       done
+    done
   subgoal for z
     apply (rule exI[of _ "map_F id id (\<lambda>x. (x, u3 x)) id (Rep_F' z)"])
     apply (simp add: Abs_F'_inverse Rep_F'[simplified]
@@ -370,8 +428,6 @@ lemma F'_strong:
   shows "rrel_F' (inf R Q) x x'" 
   using assms F_strong[of "(=)" _ _ _ "(=)"] 
   by(simp add: rrel_F'_def mr_rel_F_def F.map_id)
-
-find_theorems "(\<And>x. _  = _)  \<Longrightarrow> _ = _ "
 
 mrbnf "('a::var, 'b::var, 'c::var, 'd) F'"
   map: map_F'

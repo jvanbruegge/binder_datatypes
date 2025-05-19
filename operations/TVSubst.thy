@@ -1538,11 +1538,11 @@ interpretation tvsubst: QREC_cmin_fixed "IImsupp11_1 f1 \<union> IImsupp12_1 f2 
   apply unfold_locales
 
   subgoal
-    apply (unfold case_prod_beta IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def)
+    apply (unfold IImsupp11_1_def IImsupp12_1_def IImsupp21_1_def comp_def)
     apply (assumption | rule Un_bound UNION_bound FVars_bd_UNIVs cmin_greater card_of_Card_order f_prems f_prems[THEN ordLess_ordLeq_trans] cmin1 cmin2)+
     done
   subgoal
-    apply (unfold case_prod_beta IImsupp11_2_def IImsupp12_2_def IImsupp21_2_def comp_def)
+    apply (unfold IImsupp11_2_def IImsupp12_2_def IImsupp21_2_def comp_def)
     apply (assumption | rule Un_bound UNION_bound FVars_bd_UNIVs cmin_greater card_of_Card_order f_prems f_prems[THEN ordLess_ordLeq_trans] cmin1 cmin2)+
     done
 
@@ -1560,7 +1560,7 @@ interpretation tvsubst: QREC_cmin_fixed "IImsupp11_1 f1 \<union> IImsupp12_1 f2 
    apply (erule exE)
      apply (rotate_tac -1)
   apply (erule subst[OF sym])
-   apply (unfold case_prod_beta fst_conv snd_conv asVVr_VVrs)[1]
+   apply (unfold asVVr_VVrs)[1]
    apply (subst permute_VVrs)
        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
      apply (unfold asVVr_VVrs)[1]

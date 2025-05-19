@@ -1,69 +1,12 @@
 signature MRBNF_RECURSOR =
 sig
-  type 'a parameter_axioms = {
-    Pmap_id0: 'a,
-    Pmap_comp0: 'a,
-    Pmap_cong_id: 'a,
-    PFVars_Pmaps: 'a list,
-    small_PFVarss: 'a list,
-    small_avoiding_sets: 'a list
-  };
-
-  type 'a parameter = {
-    P: typ,
-    PFVarss: term list,
-    Pmap: term,
-    avoiding_sets: term list,
-    validity: {
-      pred: term,
-      valid_Pmap: 'a
-    } option,
-    axioms: 'a parameter_axioms,
-    min_bound: bool
-  };
-
-  type 'a model_axioms = {
-    Umap_id0: 'a,
-    Umap_comp0: 'a,
-    Umap_cong_id: 'a,
-    Umap_Uctor: 'a,
-    UFVars_subsets: 'a list
-  };
-
-  type 'a model = {
-    binding: binding,
-    U: typ,
-    UFVarss: term list,
-    Umap: term,
-    Uctor: term,
-    validity: {
-      pred: term,
-      valid_Umap: 'a,
-      valid_Uctor: 'a
-    } option,
-    axioms: 'a model_axioms
-  };
-
-  type 'a quotient_model = {
-    binding: binding,
-    Uctor: term,
-    validity: {
-      pred: term,
-      valid_permute: 'a,
-      valid_Uctor: 'a
-    } option,
-    axioms: {
-      permute_Uctor: 'a,
-      FVars_subsets: 'a list
-    }
-  };
-
   type recursor_result = {
-    rec_fun: term,
-    rec_Uctor: thm,
-    rec_swap: thm,
-    rec_valid: thm option,
-    rec_UFVarss: thm list
+    REC: string,
+    REC_cmin: string,
+    QREC: string,
+    QREC_cmin: string,
+    QREC_fixed: string,
+    QREC_cmin_fixed: string
   };
 
   val chop_f_prems: 'a list -> 'a list list;
@@ -71,7 +14,8 @@ sig
   val mk_supp_bound: term -> term;
 
   val create_binding_recursor: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
-    -> local_theory -> (*recursor_result list * *) local_theory;
+    -> local_theory -> recursor_result * local_theory;
+  val get_RECs: bool -> string -> local_theory -> term list;
 end
 
 structure MRBNF_Recursor : MRBNF_RECURSOR =
@@ -83,70 +27,13 @@ open MRBNF_Def
 open MRBNF_Recursor_Tactics
 open BNF_Tactics
 
-type 'a parameter_axioms = {
-  Pmap_id0: 'a,
-  Pmap_comp0: 'a,
-  Pmap_cong_id: 'a,
-  PFVars_Pmaps: 'a list,
-  small_PFVarss: 'a list,
-  small_avoiding_sets: 'a list
-};
-
-type 'a parameter = {
-  P: typ,
-  PFVarss: term list,
-  Pmap: term,
-  avoiding_sets: term list,
-  validity: {
-    pred: term,
-    valid_Pmap: 'a
-  } option,
-  axioms: 'a parameter_axioms,
-  min_bound: bool
-};
-
-type 'a model_axioms = {
-  Umap_id0: 'a,
-  Umap_comp0: 'a,
-  Umap_cong_id: 'a,
-  Umap_Uctor: 'a,
-  UFVars_subsets: 'a list
-};
-
-type 'a model = {
-  binding: binding,
-  U: typ,
-  UFVarss: term list,
-  Umap: term,
-  Uctor: term,
-  validity: {
-    pred: term,
-    valid_Umap: 'a,
-    valid_Uctor: 'a
-  } option,
-  axioms: 'a model_axioms
-};
-
-type 'a quotient_model = {
-  binding: binding,
-  Uctor: term,
-  validity: {
-    pred: term,
-    valid_permute: 'a,
-    valid_Uctor: 'a
-  } option,
-  axioms: {
-    permute_Uctor: 'a,
-    FVars_subsets: 'a list
-  }
-};
-
 type recursor_result = {
-  rec_fun: term,
-  rec_Uctor: thm,
-  rec_swap: thm,
-  rec_valid: thm option,
-  rec_UFVarss: thm list
+  REC: string,
+  REC_cmin: string,
+  QREC: string,
+  QREC_cmin: string,
+  QREC_fixed: string,
+  QREC_cmin_fixed: string
 };
 
 fun mk_supp_bound h = mk_ordLess (mk_card_of (mk_supp h)) (
@@ -254,6 +141,10 @@ fun mk_inv_image R f =
 fun mk_names _ [] = []
   | mk_names s [_] = [s]
   | mk_names s xs = map (fn i => s ^ string_of_int i) (1 upto length xs)
+
+fun get_RECs fixed name lthy = map (fst o Term.dest_comb o (if fixed then I else fst o Term.dest_comb) o
+  fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o snd o Logic.strip_horn o Thm.prop_of
+) (Proof_Context.get_thms lthy (name ^ ".REC_ctor"))
 
 fun define_recursor_consts qualify (fp_res : MRBNF_FP_Def_Sugar.fp_result) fp_bs rs
   pT Pmap PFVarss avoiding_sets validP
@@ -615,7 +506,10 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
         );
       in (fp_res, (pfrees, pbounds, plives)) end;
 
-    val (((r_names, pT), uTs), _) = Name.make_context (map (fst o dest_TFree) vars)
+    val (plives', names_lthy) = names_lthy
+      |> mk_TFrees (length plives);
+
+    val (((r_names, pT), uTs), _) = Name.make_context (map (fst o dest_TFree) (vars @ plives'))
       |> fold_map Name.variant (mk_names "'r" vars)
       ||>> apfst (TFree o rpair @{sort type}) o Name.variant "'p"
       ||>> apfst (map (TFree o rpair @{sort type})) o fold_map Name.variant (mk_names "'u" (replicate (length (#quotient_fps fp_res)) ()));
@@ -846,7 +740,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
       valid_Uctor = hd (Proof_Context.get_thms lthy (fst valid_Uctor))
     } | _ => error "impossible");
 
-    val lthy = Local_Theory.background_theory (fn thy =>
+    val (recursor_result, lthy) = Local_Theory.background_theory_result (fn thy =>
       let
         fun mk_lname s = qualify (Binding.prefix_name (s ^ "_") (Binding.conglomerate (map Binding.name T_names)));
 
@@ -1603,10 +1497,10 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                 K (unfold_thms_tac ctxt @{thms Int_Un_distrib Un_empty}),
                 REPEAT_DETERM o rtac ctxt conjI,
                 K (prefer_tac 2),
-                rtac ctxt @{thm iffD2[OF image_Int_empty]},
+                rtac ctxt @{thm iffD2[OF image_Int_empty_inv]},
                 resolve_tac ctxt prems,
                 EqSubst.eqsubst_tac ctxt [0] (map (fn thm => thm RS sym) (#PFVars_Pmap params)),
-                TRY o resolve_tac ctxt validP_prems,
+                resolve_tac ctxt validP_prems,
                 K (prefer_tac (2 * nvars + 1)),
                 Method.insert_tac ctxt (take m prems),
                 K (unfold_thms_tac ctxt (maps (map snd) suitabless)),
@@ -3627,11 +3521,11 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             val param_goals = mk_param_goals bds;
             val Umaps = map (fn quot =>
               fold_rev (Term.absfree o dest_Free) fs (Term.abs ("_", #T quot) (
-                Term.list_comb (#permute quot, fs)
+                Term.subst_atomic_types (plives ~~ plives') (Term.list_comb (#permute quot, fs))
               ))
             ) (#quotient_fps fp_res);
             val UFVarsss = map (fn quot => map (fn FVars =>
-              Term.abs ("_", #T quot) FVars
+              Term.abs ("_", #T quot) (Term.subst_atomic_types (plives ~~ plives') FVars)
             ) (#FVarss quot)) (#quotient_fps fp_res);
 
             val model_goalss = map (take 2 o drop 2) (mk_model_goalss false bds Umaps UFVarsss
@@ -3639,7 +3533,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             );
 
             val subst = Term.subst_atomic_types (
-              uTs ~~ map #T (#quotient_fps fp_res)
+              uTs ~~ map (Term.typ_subst_atomic (plives ~~ plives') o #T) (#quotient_fps fp_res)
             );
             val Uctors = map subst Uctors;
 
@@ -3662,7 +3556,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             val state = Interpretation.isar_interpretation ([ (parent_name,
               (("REC", true), (Expression.Positional (map SOME (
                 [Pmap] @ PFVarss @ [validP] @ avoiding_sets @ Umaps @ flat UFVarsss @ Uctors @ map (fn quot =>
-                  Term.abs ("_", #T quot) @{term True}
+                  Term.abs ("_", Term.typ_subst_atomic (plives ~~ plives') (#T quot)) @{term True}
                 ) (#quotient_fps fp_res)
               )), []))
             )], []) lthy;
@@ -3730,28 +3624,28 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             val (Uctors, _) = no_defs_lthy
               |> mk_Frees "Uctor" (map2 (fn mrbnf => fn quot => MRBNF_Def.mk_T_of_mrbnf
                 (MRBNF_Def.deads_of_mrbnf mrbnf) (plives @ flat (map2 (fn T => fn n =>
-                  replicate n (HOLogic.mk_prodT (T, T))
+                  replicate n (HOLogic.mk_prodT (T, Term.typ_subst_atomic (plives ~~ plives') T))
                 ) (map #T (#quotient_fps fp_res)) (#rec_vars fp_res))) bounds frees mrbnf
-                --> #T quot
+                --> Term.typ_subst_atomic (plives ~~ plives') (#T quot)
               ) (#pre_mrbnfs fp_res) (#quotient_fps fp_res));
 
             val (((ys', ts), ts'), _) = lthy
               |> mk_Frees "y" (map (domain_type o fastype_of) Uctors)
               ||>> mk_Frees "t" (map #T (#quotient_fps fp_res))
-              ||>> mk_Frees "t'" (map #T (#quotient_fps fp_res));
+              ||>> mk_Frees "t'" (map (Term.typ_subst_atomic (plives ~~ plives') o #T) (#quotient_fps fp_res));
 
             val (ys, _) = lthy
               |> mk_Frees "y" (map (domain_type o
-                Term.typ_subst_atomic ((pT, HOLogic.unitT) :: (uTs ~~ map #T (#quotient_fps fp_res)))
+                Term.typ_subst_atomic ((pT, HOLogic.unitT) :: (uTs ~~ map (Term.typ_subst_atomic (plives ~~ plives') o #T) (#quotient_fps fp_res)))
               ) pre_Ts)
 
             val permute_Uctor_goals = @{map 4} (fn Uctor => fn quot => fn y => fn mrbnf => fold_rev Logic.all (fs @ [y]) (add_f_prems bds fs (
               fold_rev (curry Logic.mk_implies) (map2 (fn f => fn set => HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, set))) fs avoiding_sets) (mk_Trueprop_eq (
-                Term.list_comb (#permute quot, fs) $ (Uctor $ y),
+                Term.list_comb (Term.subst_atomic_types (plives ~~ plives') (#permute quot), fs) $ (Uctor $ y),
                 Uctor $ (MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
                   (map HOLogic.id_const plives @ replicate_rec (map (fn quot =>
                     let val t = Term.list_comb (#permute quot, fs)
-                    in mk_map_prod t t end
+                    in mk_map_prod t (Term.subst_atomic_types (plives ~~ plives') t) end
                   ) (#quotient_fps fp_res))) (map HOLogic.id_const pbounds @ fs)
                   (fs @ map HOLogic.id_const pfrees @ bfree_fs) mrbnf $ y
                 )
@@ -3760,7 +3654,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
 
             val FVars_subset_goalss = @{map 4} (fn mrbnf => fn y => fn quot => fn Uctor =>
               let
-                val As = replicate_rec (map (fn quot => HOLogic.mk_prodT (#T quot, #T quot)) (#quotient_fps fp_res));
+                val As = replicate_rec (map (fn quot => HOLogic.mk_prodT (#T quot, Term.typ_subst_atomic (plives ~~ plives') (#T quot))) (#quotient_fps fp_res));
                 val count = MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf;
                 val mrbnf_sets = (
                   MRBNF_Def.var_types_of_mrbnf mrbnf
@@ -3796,13 +3690,13 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         fold_rev Logic.all [t, t'] (Logic.mk_implies (
                           HOLogic.mk_Trueprop (HOLogic.mk_mem (HOLogic.mk_tuple [t, t'], recSets_Un)),
                           HOLogic.mk_Trueprop (mk_leq
-                            (nth (#FVarss quot) i $ t')
+                            (Term.subst_atomic_types (plives ~~ plives') (nth (#FVarss quot) i) $ t')
                             (mk_Un (nth (#FVarss quot) i $ t, A))
                           )
                         ))
                       )) ts ts' (#quotient_fps fp_res) recSets_Uns)
                     (HOLogic.mk_Trueprop (mk_leq
-                      (nth (#FVarss quot) i $ (Uctor $ y))
+                      (Term.subst_atomic_types (plives ~~ plives') (nth (#FVarss quot) i) $ (Uctor $ y))
                       (mk_Un (nth (#FVarss quot) i $ (#ctor quot $ (mapF_ap $ y)), A))
                     )))
                   end;
@@ -3830,7 +3724,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             val Uctors' = @{map 3} (fn mrbnf => fn Uctor => fn y => Term.absfree (dest_Free y) (Term.abs ("_", HOLogic.unitT) (
               Uctor $ (MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
                 (map HOLogic.id_const plives @ replicate_rec (map (fn quot =>
-                  mk_map_prod (HOLogic.id_const (#T quot)) (Term.abs ("f", HOLogic.unitT --> #T quot) (Bound 0 $ HOLogic.unit))
+                  mk_map_prod (HOLogic.id_const (#T quot)) (Term.abs ("f", HOLogic.unitT --> Term.typ_subst_atomic (plives ~~ plives') (#T quot)) (Bound 0 $ HOLogic.unit))
                 ) (#quotient_fps fp_res))) (map HOLogic.id_const bounds) (map HOLogic.id_const frees) mrbnf $ y)
             ))) (#pre_mrbnfs fp_res) Uctors ys;
 
@@ -3907,14 +3801,10 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
               ]) permute_Uctors (#pre_mrbnfs fp_res) Uctors)
             ])), Position.no_range), NONE) state;
 
-            val REC_ts = map (fst o Term.dest_comb o fst o Term.dest_comb o
-              fst o HOLogic.dest_eq o HOLogic.dest_Trueprop o snd o Logic.strip_horn o Thm.prop_of
-            ) (Proof_Context.get_thms lthy "REC.REC_ctor");
-
             val (RECs, lthy) = @{fold_map 3} (fn T_name => fn t => fn quot =>
               mk_def_t true Binding.empty (Binding.concealed o qualify) ("REC_" ^ T_name) 0
               (Term.abs ("t", #T quot) (t $ Bound 0 $ HOLogic.unit))
-            ) T_names REC_ts (#quotient_fps fp_res) lthy;
+            ) T_names (get_RECs false "REC" lthy) (#quotient_fps fp_res) lthy;
 
             val mrbnf' = hd (#pre_mrbnfs fp_res);
             val nargs = MRBNF_Def.free_of_mrbnf mrbnf' + MRBNF_Def.bound_of_mrbnf mrbnf' + MRBNF_Def.live_of_mrbnf mrbnf';
@@ -3954,7 +3844,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
               let
                 val empty_prems = map2 (fn f => fn set => HOLogic.mk_Trueprop (mk_int_empty (mk_imsupp f, set))) fs avoiding_sets;
                 val goal = add_f_prems bds fs (fold_rev (curry Logic.mk_implies) empty_prems (mk_Trueprop_eq (
-                  Term.list_comb (#permute quot, fs) $ (fst REC $ t),
+                  Term.list_comb (Term.subst_atomic_types (plives ~~ plives') (#permute quot), fs) $ (fst REC $ t),
                   fst REC $ (Term.list_comb (#permute quot, fs) $ t)
                 )));
               in Goal.prove_sorry lthy (names (fs @ [t])) [] goal (fn {context=ctxt, ...} => EVERY1 [
@@ -3968,7 +3858,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
 
             val REC_FVarss = @{map 3} (fn REC => fn quot => fn t => map2 (fn FVars => fn avoiding_set =>
               Goal.prove_sorry lthy (names [t]) [] (HOLogic.mk_Trueprop (mk_leq
-                (FVars $ (fst REC $ t)) (mk_Un (FVars $ t, avoiding_set))
+                (Term.subst_atomic_types (plives ~~ plives') FVars $ (fst REC $ t)) (mk_Un (FVars $ t, avoiding_set))
               )) (fn {context=ctxt, ...} => EVERY1 [
                 K (Local_Defs.unfold0_tac ctxt (map snd RECs)),
                 resolve_tac ctxt (map (Local_Defs.unfold0 ctxt @{thms Un_empty_right}) (Proof_Context.get_thms lthy "REC.REC_FVars")),
@@ -3990,8 +3880,16 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
         val (QREC_fixed_name, thy) = mk_QREC_fixed_locale "QREC_fixed" QREC_name UNIVs thy;
         val (QREC_cmin_fixed_name, thy) = mk_QREC_fixed_locale "QREC_cmin_fixed" QREC_cmin_name cmins thy;
 
-      in thy end
+        val result = {
+          REC = REC_name,
+          REC_cmin = REC_cmin_name,
+          QREC = QREC_name,
+          QREC_cmin = QREC_cmin_name,
+          QREC_fixed = QREC_fixed_name,
+          QREC_cmin_fixed = QREC_cmin_fixed_name
+        };
+      in (result, thy) end
     ) no_defs_lthy;
-in lthy end;
+in (recursor_result, lthy) end;
 
 end

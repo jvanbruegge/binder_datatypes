@@ -2075,7 +2075,7 @@ proof -
     apply (unfold Int_Un_distrib Un_empty)[1]
     apply (rule conjI)+
       prefer 2
-      apply (rule iffD2[OF image_Int_empty])
+      apply (rule iffD2[OF image_Int_empty_inv])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric])
            apply (rule valid)
@@ -2139,7 +2139,7 @@ proof -
     apply (unfold Int_Un_distrib Un_empty)[1]
     apply (rule conjI)+
       prefer 2
-      apply (rule iffD2[OF image_Int_empty])
+      apply (rule iffD2[OF image_Int_empty_inv])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric] PFVars_Pmap_2[symmetric])
            apply (rule valid)
@@ -2307,7 +2307,7 @@ proof -
     apply (unfold Int_Un_distrib Un_empty)[1]
     apply (rule conjI)+
       prefer 2
-      apply (rule iffD2[OF image_Int_empty])
+      apply (rule iffD2[OF image_Int_empty_inv])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric])
            apply (rule valid)
@@ -2371,7 +2371,7 @@ proof -
     apply (unfold Int_Un_distrib Un_empty)[1]
     apply (rule conjI)+
       prefer 2
-      apply (rule iffD2[OF image_Int_empty])
+      apply (rule iffD2[OF image_Int_empty_inv])
        apply (rule f_prems)
       apply (subst PFVars_Pmap_1[symmetric] PFVars_Pmap_2[symmetric])
            apply (rule valid)

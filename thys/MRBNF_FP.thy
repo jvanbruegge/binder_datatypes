@@ -285,7 +285,7 @@ lemma ex_avoiding_bij:
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
 
-lemma image_Int_empty: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
+lemma image_Int_empty_inv: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
   by force
 lemma eq_bij_betw_refl_prems:
   assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"
@@ -358,8 +358,8 @@ lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
-(*ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
+ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
+(*ML_file \<open>../Tools/mrbnf_recursor.ML\<close>*)
 
 lemma extend_fresh:
   fixes A B::"'a set"
@@ -445,6 +445,6 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
   end;
 
 end;
-\<close>*)
+\<close>
 
 end

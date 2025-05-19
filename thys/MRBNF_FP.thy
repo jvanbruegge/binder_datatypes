@@ -359,7 +359,7 @@ ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 
 ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-(*ML_file \<open>../Tools/mrbnf_recursor.ML\<close>*)
+ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
 
 lemma extend_fresh:
   fixes A B::"'a set"

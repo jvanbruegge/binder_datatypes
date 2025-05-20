@@ -3,7 +3,7 @@ sig
 
   val mk_f_pat_complete_tac: thm list -> Proof.context -> tactic
   val mk_f_termination_tac: (typ -> term) -> thm -> thm list -> thm list -> thm list
-    -> thm list -> Proof.context -> tactic
+    -> thm list -> thm list -> Proof.context -> tactic
 
   val mk_Umap'_CTOR_tac: MRBNF_Def.mrbnf -> thm -> thm -> thm -> thm -> thm -> thm -> thm -> thm
     -> thm -> term -> Proof.context -> thm list-> tactic
@@ -41,7 +41,7 @@ fun mk_f_pat_complete_tac raw_injects ctxt = EVERY [
   ])
 ];
 
-fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshapes set_maps prems ctxt = EVERY1 [
+fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshapes set_maps prems r_ordLeqs ctxt = EVERY1 [
   Function_Relation.relation_tac ctxt mk_relation,
   rtac ctxt @{thm wf_inv_image},
   rtac ctxt wf_subshape,
@@ -53,7 +53,7 @@ fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshap
   REPEAT_DETERM o FIRST' [
     assume_tac ctxt,
     eresolve_tac ctxt prems,
-    resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order cmin_Card_order ordLeq_transitive[OF cmin1] ordLess_ordLeq_trans}
+    resolve_tac ctxt (@{thms bij_id supp_id_bound} @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [@{thm _}, thm]) r_ordLeqs)
   ],
   K (unfold_thms_tac ctxt @{thms image_id}),
   TRY o (etac ctxt imageE THEN' hyp_subst_tac ctxt),
@@ -61,7 +61,7 @@ fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshap
   REPEAT_DETERM o FIRST' [
     assume_tac ctxt,
     eresolve_tac ctxt prems,
-    resolve_tac ctxt @{thms bij_id supp_id_bound cmin1 cmin2 card_of_Card_order cmin_Card_order ordLeq_transitive[OF cmin1] ordLess_ordLeq_trans}
+    resolve_tac ctxt (@{thms bij_id supp_id_bound} @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [@{thm _}, thm]) r_ordLeqs)
   ]
 ]);
 

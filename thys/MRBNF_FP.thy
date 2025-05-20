@@ -285,7 +285,7 @@ lemma ex_avoiding_bij:
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
 
-lemma image_Int_empty: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
+lemma image_Int_empty_inv: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
   by force
 lemma eq_bij_betw_refl_prems:
   assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"

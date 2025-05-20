@@ -732,7 +732,7 @@ lemma swap_usub:
 apply(induct t rule: iterm.fresh_induct[where A = "{x,u,z1,z2}"])
   subgoal by (meson emp_bound le_UNIV_insert)
   subgoal
-  apply(subst iswap_simps) apply(subst usub_simps) apply (auto simp: sb_def swap_sym) sledgehammer
+  apply(subst iswap_simps) apply(subst usub_simps) apply (auto simp: sb_def swap_sym)
     by (metis swap_def)+
   apply (meson Swapping.bij_swap Swapping.supp_swap_bound infinite_UNIV irrename_usub)
   subgoal apply(subst iswap_simps | subst usub_simps)+
@@ -1054,13 +1054,13 @@ shows "P t"
 proof-
   have "\<forall>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<longrightarrow> P (irrename f t)"
   proof(induct)
-    case (iVar x)
+    case (1 x)
     then show ?case using iiVar by auto
   next
-    case (iApp t1 t2)
+    case (2 t1 t2)
     then show ?case using iiApp by auto
   next
-    case (iLam xs t)
+    case (3 xs t)
     then show ?case using iiLam
     by simp (metis bij_o iterm.permute_comp iterm_pre.supp_comp_bound)
   qed
@@ -1208,18 +1208,18 @@ using assms by (cases rule: R.cases) auto
 lemma R_total:
 "\<exists>b. R e b"
 proof(induct e)
-  case (iVar x)
+  case (1 x)
   then show ?case by (auto intro: R.intros)
 next
-  case (iApp e1 es2)
+  case (2 e1 es2)
   then obtain b1 where r1: "R e1 b1" by auto
-  from iApp obtain B where r2: "\<forall>e2 \<in> sset es2. R e2 (B e2)" by metis
+  from 2 obtain B where r2: "\<forall>e2 \<in> sset es2. R e2 (B e2)" by metis
   show ?case apply(rule exI[of _ "iAppB b1 (smap B es2)"])
   apply(rule R.iApp)
     subgoal by fact
     subgoal by (simp add: r2 stream_all2_iff_snth) .
 next
-  case (iLam x1 e)
+  case (3 x1 e)
   then show ?case by (auto intro: R.intros)
 qed
 

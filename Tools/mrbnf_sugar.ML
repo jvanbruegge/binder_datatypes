@@ -251,7 +251,10 @@ fun build_set_for _ aT x (TFree (s, _)) = if s = fst (dest_TFree aT) then SOME (
 fun create_binder_datatype (spec : spec) lthy =
   let
     val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
-    val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res lthy;
+
+    val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
+
+    val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
     val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
 
     val nrecs = fold (curry (op+)) (#rec_vars res) 0;
@@ -1087,7 +1090,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) then
       let
-        val (tvsubst_ress, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (Binding.prefix_name "tv") res [tvsubst_model] lthy;
+        val (tvsubst_ress, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (Binding.prefix_name "tv") res [tvsubst_model] (#QREC_cmin_fixed recursor_result) lthy;
         val tvsubst_res = hd tvsubst_ress;
         val tvsubst_simps =
           let

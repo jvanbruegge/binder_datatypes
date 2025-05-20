@@ -613,12 +613,16 @@ fun create_binder_datatype (spec : spec) lthy =
         ) fs;
         val id_ons = map2 mk_id_on sets fs;
 
+        val rec_non_bound = subtract (op=) rec_bounds rec_vars;
+        val replace' = filter_out (member (op=) rec_non_bound o fst) replace;
+
         val (mr_bnfs, permutes) = split_list (map (fn T =>
           let val tfrees = map TFree (Term.add_tfreesT T []);
           in if null (inter (op=) (bounds @ rec_bounds @ bfrees) tfrees) then (NONE, NONE) else map_prod SOME SOME (
-            build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (Term.typ_subst_atomic replace T)
+            build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (Term.typ_subst_atomic replace' T)
           ) end
         ) tys);
+        val permutes = map (Option.map (Term.subst_atomic_types (filter (member (op=) rec_non_bound o fst) replace))) permutes;
         val mr_bnfs = Library.distinct ((op=) o apply2 fst) (flat (map_filter I mr_bnfs));
 
         val vvsubst_permutes = map_filter (Option.map #vvsubst_permute o MRBNF_VVSubst.vvsubst_result_of lthy o fst) mr_bnfs;

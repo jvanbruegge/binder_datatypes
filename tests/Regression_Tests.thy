@@ -68,4 +68,11 @@ binder_datatype ('v, 'tv, 'ev, 'rv) expr =
   | Let x::'v "('v, 'tv, 'ev, 'rv) expr"  e::"('v, 'tv, 'ev, 'rv) expr" binds x in e
   | RApp "('v, 'tv, 'ev, 'rv) expr" "'rv list"  "('v, 'tv, 'ev, 'rv) expr"
 
+(* #86 *)
+binder_datatype 'a "term" =
+  Var 'a
+| App "'a term" "'a term"
+| Lam x::'a t::"'a term" binds x in t
+| Let "(xs::'a, 'a term) alist" t::"'a term" binds xs in t
+
 end

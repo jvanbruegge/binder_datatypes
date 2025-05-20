@@ -58,6 +58,7 @@ session Tests in "tests" = Binders +
     "fixtures"
   theories
     Regression_Tests
+    Case_Study_Regression_Tests
     Fixpoint_Tests
     Binder_Datatype_Tests
 

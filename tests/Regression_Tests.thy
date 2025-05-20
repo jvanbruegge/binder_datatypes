@@ -1,6 +1,5 @@
 theory Regression_Tests
   imports "Binders.MRBNF_Recursor" "../thys/LetRec/DAList_MRBNF" "HOL-Library.FSet"
-     "System_Fsub.Pattern"
 begin
 
 (* #68 *)
@@ -25,11 +24,6 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme =
 binder_datatype ('tv, 'ev, 'rv) type_scheme2 =
   TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme2" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type" binds \<epsilon> \<rho> in T
-
-(* #72 *)
-binder_datatype (FVars: 'v, FTVars: 'tv) trm2 =
-    Var 'v
-  | Let "('tv, p::'v) pat" "('v, 'tv) trm2" t::"('v, 'tv) trm2" binds p in t
 
 (* #75 *)
 binder_datatype ('a, 'b, 'c, 'd) trm3 =
@@ -67,5 +61,12 @@ binder_datatype ('v, 'tv, 'ev, 'rv) expr =
   | Assert "('ev, 'rv) constraint"  "('v, 'tv, 'ev, 'rv) expr"
   | Let x::'v "('v, 'tv, 'ev, 'rv) expr"  e::"('v, 'tv, 'ev, 'rv) expr" binds x in e
   | RApp "('v, 'tv, 'ev, 'rv) expr" "'rv list"  "('v, 'tv, 'ev, 'rv) expr"
+
+(* #86 *)
+binder_datatype 'a "term" =
+  Var 'a
+| App "'a term" "'a term"
+| Lam x::'a t::"'a term" binds x in t
+| Let "(xs::'a, 'a term) alist" t::"'a term" binds xs in t
 
 end

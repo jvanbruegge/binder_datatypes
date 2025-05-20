@@ -69,4 +69,16 @@ binder_datatype 'a "term" =
 | Lam x::'a t::"'a term" binds x in t
 | Let "(xs::'a, 'a term) alist" t::"'a term" binds xs in t
 
+(* #84 *)
+lemma
+  fixes f::"'a::var \<Rightarrow> 'a" and t::"'a term"
+  assumes "|A::'a set| <o |UNIV::'a set|"
+  shows "True \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> (\<exists>a. t = Var a) \<or> (\<exists>t1 t2. t = App t1 t2)
+  \<or> (\<exists>x t1. t = Lam x t1) \<or> (\<exists>xs t1. t = Let xs t1)"
+using assms proof (binder_induction t avoiding: A "imsupp f" "supp f" t rule: term.strong_induct)
+(* this case used to not provide "|supp f| <o |UNIV|" as fact, making it impossible to prove the goal *)
+  case Bound2
+  then show ?case using imsupp_supp_bound infinite_UNIV by blast
+qed blast+
+
 end

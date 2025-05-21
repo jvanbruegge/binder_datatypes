@@ -13,6 +13,9 @@ definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" whe
 lemma not_imageE: "f a \<notin> f ` A \<Longrightarrow> a \<notin> A"
   by blast
 
+lemma not_Inl_is_Inr: "(\<And>l. x \<noteq> Inl l) \<Longrightarrow> \<exists>r. x = Inr r"
+  by (metis sum.collapse)
+
 (* Definitions *)
 
 locale COREC =
@@ -810,6 +813,49 @@ lemma f_swap_alpha_xL:
   using f_simps[of "pick"] x
   by (auto simp: u permute_raw_simps term_pre.map_comp supp_id_bound)
 
+(* TODO: use f_ctor directly *)
+lemma f_swap_alpha_xR:
+  assumes "raw_term_ctor x = f pick' (raw_Umap u d)"
+  shows "x = map_term_pre id id (case_sum id (f pick')) (case_sum id (f pick')) (pick' (raw_Umap u d))"
+  by (rule f_ctor[OF assms])
+
+lemma l_is_inr:
+  assumes
+    r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d) ttdL ttdR"
+    and na: "\<not> alpha_term (permute_raw_term u (case_sum id (f pick) ttdL)) (case_sum id (f pick') ttdR)"
+  shows "\<exists>tL. ttdL = Inr tL"
+  apply (rule sumE[of ttdR])
+   apply (insert r na)
+   apply hypsubst_thin
+   apply (subst (asm) sum.case)+
+   apply (unfold id_apply)
+   apply (rule sumE[of ttdL])
+    apply hypsubst_thin
+    apply (subst (asm) rel_sum_simps)
+  apply (subst (asm) sum.case)
+   apply (drule cnf.clause2raw_notE)
+     apply assumption
+  apply (erule FalseE)
+   apply hypsubst_thin
+   apply (rule exI)
+   apply (rule refl)
+  apply (rule sumE[of ttdL])
+   apply hypsubst_thin
+   apply (subst (asm) rel_sum_simps)
+   apply (erule FalseE)
+  apply hypsubst_thin
+  apply (rule exI)
+  apply (rule refl)
+  done
+
+lemma r_is_Umap:
+  assumes
+    r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d) ttdL ttdR"
+    and ttdL: "ttdL = Inr x"
+  shows "ttdR = Inr (raw_Umap u x)"
+  using r rel_sum.cases ttdL by blast
+    
+
 lemma f_swap_alpha_aux:
   assumes p: "suitable pick" and p': "suitable pick'"
     and valid_d: "valid_U d"
@@ -868,7 +914,7 @@ lemma f_swap_alpha_aux:
   prefer 2
      apply (erule imageI)
     apply assumption
-  thm f_swap_alpha_xL[of _ _ "pick"]
+  thm f_swap_alpha_xL[of _ _ "pick", rotated -1]
    apply (subst f_swap_alpha_xL[of _ _ "pick"])
       apply assumption+
    apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
@@ -905,6 +951,64 @@ lemma f_swap_alpha_aux:
       apply (unfold pred_sum_inject)
       apply assumption
       done
+    apply (erule conjE)+
+    apply (rotate_tac -6)
+    apply (drule f_swap_alpha_xL[of _ _ "pick", rotated -1], assumption+)
+    apply (drule f_swap_alpha_xR)
+    apply hypsubst
+    apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
+    apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound bij_id)+)
+      apply (subst relcompp_conversep_Grp)+
+      apply (subst Grp_OO)+
+    apply (unfold id_o inv_id)
+    apply (subst (2) comp_assoc)
+    apply (subst inv_o_simp1, assumption)
+    apply (unfold o_id)
+    apply (subst comp_apply)+
+    apply (subst permute_raw_comps, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
+    apply (erule term_pre.mr_rel_mono_strong0[rotated -5])
+             apply (rule ballI)
+             apply (rule refl)
+            apply (rule ballI)
+            apply (rule refl)
+           apply (rule ballI)+
+           apply (rule impI)
+           apply (subst permute_raw_comps)
+               prefer 5
+               apply (subst (2) comp_assoc)
+               apply (subst inv_o_simp1)
+                prefer 7
+                apply (rule ballI)+
+                apply (rule impI)
+                apply (rotate_tac -1)
+                apply (frule l_is_inr)
+                 prefer 2
+                 apply (erule exE)
+                 apply hypsubst
+                 apply (subst sum.case)
+                 apply (rule disjI1)
+                 apply (rule exI)+
+                 apply (drule r_is_Umap)
+                  apply (rule refl)
+                 apply hypsubst
+                 apply (subst sum.case)
+                 apply (rule conjI[rotated])+
+                     apply (rule refl)+
+                   apply assumption+
+    (* TODO don't use metis *)
+                 apply (metis p pred_sum_inject(2) valid_pick_set4)
+
+    thm r_is_Umap
+                apply (drule l_is_inr)
+    prefer 2
+    using l_not_inl
+
+
+                prefer 2
+                apply (unfold o_id)
+                apply (rule disjI1)
+                apply (rule exI)+
+                apply (rule conjI[rotated])+ *)
 
 
   apply (erule exE conjE)+
@@ -999,8 +1103,15 @@ proof(induction rule: alpha_coinduct2)
      (\<lambda>t t'.
          (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> permute_raw_term w t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or>
          alpha_term (permute_raw_term w t) t')
-     (\<lambda>t t'. (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or> alpha_term t t') xL xR" unfolding xL xR
-      apply(simp add: w u term_pre.mr_rel_map Grp_def OO_def supp_comp_bound supp_inv_bound permute_raw_comps supp_id_bound)
+     (\<lambda>t t'. (\<exists>u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and> t = permute_raw_term u (f pick d) \<and> t' = f pick' (raw_Umap u d)) \<or> alpha_term t t') xL xR"
+      apply (unfold xL xR) 
+      apply (subst term_pre.mr_rel_map, (rule u w supp_id_bound)+)
+      apply (subst term_pre.mr_rel_map, (rule u w supp_id_bound bij_id supp_comp_bound bij_comp)+)
+      apply (subst relcompp_conversep_Grp)+
+      apply (subst Grp_OO)+
+      apply (unfold id_o inv_id)
+      apply (subst comp_apply)+
+      apply (subst permute_raw_comps, (rule u w)+)+
     proof(rule term_pre.mr_rel_mono_strong0[OF _ _ _ _ _ _ rv], auto)
       fix a assume "a \<in> set2_term_pre (pick d)"
       thus "u (v a) = w (u a)"
@@ -1011,16 +1122,26 @@ proof(induction rule: alpha_coinduct2)
         and r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d) ttdL ttdR"
         and na: "\<not> alpha_term (permute_raw_term u (case_sum id (f pick) ttdL)) (case_sum id (f pick') ttdR)"
       have "ttdL \<noteq> Inl tL" for tL
-        by (metis id_apply na old.sum.exhaust old.sum.simps(5) r rel_sum_simps(1,2))
+        apply (rule sumE[of ttdR])
+         apply (rule ccontr)
+         apply (subst (asm) not_not)
+         apply (insert r na)
+         apply hypsubst_thin
+        apply (subst (asm) sum.case)+
+         apply (subst (asm) rel_sum_simps)
+         apply (unfold id_apply)
+         apply (erule cnf.clause2raw_notE)
+         apply assumption
+        apply (rule sumE[of ttdL])
+         apply hypsubst_thin
+         apply (subst (asm) rel_sum_simps)
+         apply (erule FalseE)
+        apply hypsubst_thin
+        apply (rule sum.distinct)
+        done
       then obtain dd where ttdL: "ttdL = Inr dd" by (cases ttdL, auto)
-      hence ttdR: "ttdR = Inr (raw_Umap u dd)" using r by(cases ttdR, auto)
-      have fv_dd: "raw_UFVars dd \<subseteq> raw_UFVars d" 
-        apply (rule subset_trans[OF _ raw_UFVars_Utor[OF valid_d' p[unfolded suitable_def, THEN spec, THEN mp, OF valid_d']]])
-        apply (rule subsetI)
-        apply (rule UnI1)
-        apply (rule UnI2)
-        apply (insert ttdLin[unfolded ttdL])
-        by force
+      hence ttdR: "ttdR = Inr (raw_Umap u dd)"
+        using r by(cases ttdR, auto)
       show "\<exists>uu dd. valid_U dd \<and>
              bij uu \<and>
              |supp uu| <o |UNIV::'a set| \<and>

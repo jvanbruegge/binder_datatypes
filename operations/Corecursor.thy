@@ -854,7 +854,6 @@ lemma r_is_Umap:
     and ttdL: "ttdL = Inr x"
   shows "ttdR = Inr (raw_Umap u x)"
   using r rel_sum.cases ttdL by blast
-    
 
 lemma f_swap_alpha_aux:
   assumes p: "suitable pick" and p': "suitable pick'"
@@ -991,12 +990,19 @@ lemma f_swap_alpha_aux:
                  apply (drule r_is_Umap)
                   apply (rule refl)
                  apply hypsubst
-                 apply (subst sum.case)
+                 apply (unfold sum.case)
                  apply (rule conjI[rotated])+
                      apply (rule refl)+
                    apply assumption+
-    (* TODO don't use metis *)
-                 apply (metis p pred_sum_inject(2) valid_pick_set4)
+                 apply (drule valid_pick_set4[rotated])
+                   apply assumption
+                  apply (rule p)
+                 apply (unfold pred_sum_inject)
+                 apply assumption
+    
+    thm sum.pred_set
+
+    thm valid_pick_set4
 
     thm r_is_Umap
                 apply (drule l_is_inr)

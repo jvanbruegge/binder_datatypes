@@ -913,15 +913,15 @@ lemma tvsubst_eq_tvsubst_trm:
   shows "tvsubst g TyVar t = tvsubst_trm g t"
 using assms proof (binder_induction t avoiding: t "IImsupp_1_trm g" "IImsupp_2_trm g" rule: trm.strong_induct)
   case Bound1
-  then show ?case unfolding IImsupp_1_trm_def comp_def
-    apply (rule var_class.UN_bound assms card_of_Card_order)+
+  show ?case unfolding IImsupp_1_trm_def comp_def
+  apply (rule var_class.UN_bound assms card_of_Card_order)+
      apply (rule ordLess_ordLeq_trans[OF _ cmin1])
        apply (rule assms card_of_Card_order)+
     apply (rule trm.set_bd_UNIV)
     done
 next
   case Bound2
-  then show ?case unfolding IImsupp_2_trm_def comp_def
+  show ?case unfolding IImsupp_2_trm_def comp_def
     apply (rule var_class.UN_bound var_class.Un_bound assms card_of_Card_order)+
      apply (rule ordLess_ordLeq_trans[OF _ cmin2])
        apply (rule assms card_of_Card_order)+

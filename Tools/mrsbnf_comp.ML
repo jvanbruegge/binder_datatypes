@@ -1,5 +1,11 @@
 signature MRSBNF_COMP = sig
 
+  val compose_mrsbnfs: BNF_Def.inline_policy -> (theory -> BNF_Def.fact_policy)
+    -> (int -> binding -> binding) -> MRSBNF_Def.mrsbnf -> MRSBNF_Def.mrsbnf list
+    -> typ list -> typ list list -> typ option list -> typ list list -> ((string * sort) * MRBNF_Def.var_type) list
+    -> (MRBNF_Comp.comp_cache * MRBNF_Comp.unfold_set) * local_theory
+    -> MRSBNF_Def.mrsbnf * ((MRBNF_Comp.comp_cache * MRBNF_Comp.unfold_set) * local_theory)
+
   val mrsbnf_of_typ: bool -> (theory -> BNF_Def.fact_policy)
     -> (binding -> binding) -> (string * sort) list -> ((string * sort) * MRBNF_Def.var_type) list
     -> typ -> ((MRBNF_Comp.comp_cache * MRBNF_Comp.unfold_set) * local_theory)
@@ -24,6 +30,56 @@ fun mrsbnf_of lthy s = case MRSBNF_Def.mrsbnf_of lthy s of
 fun is_Inl (Inl _) = true
   | is_Inl _ = false
 
+fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs Ass Xs (accum, lthy) =
+  let
+    val outer_bmv = MRSBNF_Def.bmv_monad_of_mrsbnf outer;
+    val inner_bmvs = map MRSBNF_Def.bmv_monad_of_mrsbnf inners;
+    val leader = BMV_Monad_Def.leader_of_bmv_monad outer_bmv;
+
+    val _ = @{print} ("outer", BMV_Monad_Def.ops_of_bmv_monad outer_bmv)
+    val _ = @{print} ("inners", map BMV_Monad_Def.ops_of_bmv_monad inner_bmvs)
+
+    
+    val _ = @{print} ("vars", oAs, Ass)
+
+    val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad (qualify 0) (MRSBNF_Def.bmv_monad_of_mrsbnf outer)
+      (map (Inl o MRSBNF_Def.bmv_monad_of_mrsbnf) inners) oAs (map SOME Ass) lthy;
+    
+    val outer_mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf outer) leader;
+    val inner_mrbnfs = map (fn mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) leader) inners;
+
+    val ((mrbnf, tys), (unfold_set, lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline
+      qualify (distinct (op=) o flat) outer_mrbnf inner_mrbnfs oDs Dss oAs Ass Xs (accum, lthy);
+
+    val outer_axioms = MRSBNF_Def.axioms_of_mrsbnf outer;
+
+    (* TODO: Carry over minion mrbnfs from inners *)
+    val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def fact_policy (qualify 0) NONE
+      (map_index (fn (i, x) => if i = leader then mrbnf else x) (MRSBNF_Def.mrbnfs_of_mrsbnf outer))
+      bmv (map_index (fn (i, x) => if i <> leader then {
+        map_Sb = Option.map (fn thm => fn ctxt => HEADGOAL (rtac ctxt thm THEN_ALL_NEW assume_tac ctxt)) (#map_Sb x),
+        map_is_Sb = fn ctxt => HEADGOAL (rtac ctxt (#map_is_Sb x) THEN_ALL_NEW assume_tac ctxt),
+        set_Sb = map (fn thm => fn ctxt => HEADGOAL (rtac ctxt thm THEN_ALL_NEW assume_tac ctxt)) (#set_Sb x),
+        set_Vrs = map (fn thm => fn ctxt => rtac ctxt thm 1) (#set_Vrs x)
+      } else {
+        map_Sb = if MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf > length (BMV_Monad_Def.frees_of_bmv_monad bmv) then
+          SOME (fn ctxt => EVERY1 [
+            K (print_tac ctxt "map_Sb")
+          ]) else NONE,
+        map_is_Sb = fn ctxt => EVERY1 [
+          K (print_tac ctxt "map_is_Sb")
+        ],
+        set_Sb = replicate (MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf) (fn ctxt => EVERY1 [
+          K (print_tac ctxt "set_Sb")
+        ]),
+        set_Vrs = replicate (length (BMV_Monad_Def.frees_of_bmv_monad bmv)) (fn ctxt => EVERY1 [
+          K (print_tac ctxt "set_Vrs")
+        ])
+      }) outer_axioms) lthy;
+
+    val _ = @{print} mrbnf
+  in error "foo" end
+
 fun mrsbnf_of_typ _ _ qualify Ds0 var_types (T as TFree T') accum =
   (if member (op =) Ds0 T' then ((Inr MRBNF_Comp.DEADID_mrbnf, ([T], [])), accum) else
       (case map_filter (fn a => if fst a = T' then SOME (snd a) else NONE) var_types of
@@ -44,11 +100,12 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types (T as TFree T') accum =
       if optim andalso forall is_TFree Ts then
         let
           val mrbnf = case outer of
-            Inl mrsbnf => hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf)
+            Inl mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf))
             | Inr mrbnf => mrbnf;
-          val mrbnf' = MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism (
+          val phi = MRBNF_Util.subst_typ_morphism (
             snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts
-          )) mrbnf;
+          );
+          val mrbnf' = MRBNF_Def.morph_mrbnf phi mrbnf;
           val deads = MRBNF_Def.deads_of_mrbnf mrbnf';
           val _ = case filter (Option.isSome o AList.lookup (op=) var_types o dest_TFree) deads of
             T'::_ => error ("Variable " ^ Syntax.string_of_typ lthy T' ^ " is forced dead by type " ^ Syntax.string_of_typ lthy T ^ " but was specified as other usage")
@@ -99,19 +156,23 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types (T as TFree T') accum =
               (if length Ts' = 1 then [0] else 1 upto length Ts') Ts' (accum, lthy));
 
           val _ = @{print} T
+          val _ = @{print} Ts'
           val Xs = rev (Term.add_tfreesT T []);
           val Xs' = map (swap o `(the_default MRBNF_Def.Live_Var o AList.lookup (op=) var_types)) Xs
+
         in if exists is_Inl inners orelse is_Inl outer then
           let
             val (outer', lthy) = case outer of
               Inl mrsbnf => (mrsbnf, lthy)
               | Inr mrbnf => MRSBNF_Def.mrsbnf_of_mrbnf mrbnf lthy
-            val (inners', lthy) = fold_map (fn Inl mrsbnf => (fn lthy => (mrsbnf, lthy))
+            val (inners', lthy) = fold_map (fn Inl mrsbnf => pair mrsbnf
               | Inr mrbnf => MRSBNF_Def.mrsbnf_of_mrbnf mrbnf
             ) inners lthy;
-            val _ = @{print} (outer' :: inners')
-            val _ = ()
-          in error "TODO: compose mrsbnfs" end
+            (*val _ = @{print} (outer' :: inners')*)
+            val (mrsbnf, accum) = compose_mrsbnfs BNF_Def.Smart_Inline const_policy qualify outer' inners'
+              oDs Dss oAs Ass Xs' (accum, lthy);
+            val _ = @{print} mrsbnf
+          in error "bar" end
         else
           apfst (apfst Inr) (MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline qualify (distinct (op=) o flat)
             mrbnf (map (fn Inr x => x | _ => error "impossible") inners) oDs Dss oAs Ass Xs' (accum, lthy)

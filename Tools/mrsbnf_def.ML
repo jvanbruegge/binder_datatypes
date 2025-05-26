@@ -420,6 +420,10 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
       facts = facts'
     };
 
+    val mrsbnf = morph_mrsbnf (MRBNF_Util.subst_typ_morphism (
+      map (fn T => (T, Logic.varifyT_global T)) (deads @ As @ As' @ Bs @ Fs)
+    )) mrsbnf;
+
     val (_, lthy) = note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy;
   in (mrsbnf, lthy) end;
 

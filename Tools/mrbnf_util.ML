@@ -19,6 +19,8 @@ sig
   val mk_supp: term -> term
   val mk_supp_bound: term -> term
   val mk_imsupp: term -> term
+  val mk_SSupp: term -> term
+  val mk_IImsupp: term -> term -> term
   val mk_inv: term -> term
   val mk_bij: term -> term
   val mk_Un: term * term -> term
@@ -280,6 +282,16 @@ fun mk_supp t = let val T = t |> fastype_of |> dest_funT |> fst
 fun mk_imsupp u =
   let val T = fastype_of u
   in Const (@{const_name imsupp}, T --> HOLogic.mk_setT (fst (dest_funT T))) $ u end;
+
+fun mk_SSupp Inj =
+  let val (a, T) = Term.dest_funT (fastype_of Inj)
+  in \<^Const>\<open>SSupp a T for Inj\<close> end;
+
+fun mk_IImsupp Inj Vr =
+  let
+    val (a, T) = Term.dest_funT (fastype_of Inj);
+    val b = HOLogic.dest_setT (body_type (fastype_of Vr));
+  in \<^Const>\<open>IImsupp a T b for Inj Vr\<close> end
 
 fun mk_supp_bound f = mk_ordLess (mk_card_of (mk_supp f))
   (mk_card_of (HOLogic.mk_UNIV (fst (dest_funT (fastype_of f)))));

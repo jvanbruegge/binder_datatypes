@@ -11,6 +11,10 @@ type_synonym ('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre' =
 
 ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
 
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 local_setup \<open>fn lthy =>
 let
   val ((mrsbnf, tys), (_, lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)

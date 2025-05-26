@@ -318,9 +318,6 @@ lemma eq_bij_betw_prems:
 lemma id_on_eq: "id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> A = B \<Longrightarrow> x \<in> A \<Longrightarrow> f x = g x"
   unfolding id_on_def by simp
 
-lemma notin_supp: "x \<notin> supp f \<Longrightarrow> f x = x"
-  unfolding supp_def by blast
-
 lemmas imsupp_id_empty = trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
 
 lemma pred_fun_If: "pred_fun P Q f \<Longrightarrow> pred_fun P Q (\<lambda>x. if P x then f x else undefined)"

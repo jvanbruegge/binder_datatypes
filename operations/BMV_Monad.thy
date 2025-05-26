@@ -159,7 +159,6 @@ binder_datatype 'a LM =
   | Lst "'a list"
   | App "'a LM" "'a LM"
   | Lam x::'a t::"'a LM" binds x in t
-thm LM.subst
 
 axiomatization Vrs_1 :: "'a::var LM \<Rightarrow> 'a set" where
   Vrs_1_simp1[simp]: "Vrs_1 (Var x) = {}"

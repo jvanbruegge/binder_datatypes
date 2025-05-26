@@ -1,5 +1,5 @@
 theory Linearize
-  imports "Binders.MRBNF_Composition"
+  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
 begin
 
 (* This theory we start with an MRBNF F, which is assumed (in the imported theory 
@@ -571,8 +571,35 @@ lemma F'_in_rel:
      apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21))
      apply (elim exE CollectE conjE)
     subgoal for z
+      apply (tactic \<open>
+        let
+          val ctxt = @{context};
+          val cz = @{cterm z};
+          val z = Thm.term_of cz;
+          val zT = fastype_of z;
+          val which = 0;
+          val Abs_F' = @{term Abs_F'}
+          val mrbnf = MRBNF_Def.mrbnf_of ctxt @{type_name F} |> the;
+          val subst = Sign.typ_match (Proof_Context.theory_of ctxt)
+            (MRBNF_Def.T_of_mrbnf mrbnf, zT) Vartab.empty;
+          val deads = MRBNF_Def.deads_of_mrbnf mrbnf |> map (Envir.subst_type subst) |> @{print};
+          val frees = MRBNF_Def.frees_of_mrbnf mrbnf |> map (Envir.subst_type subst) |> @{print};
+          val bounds = MRBNF_Def.bounds_of_mrbnf mrbnf |> map (Envir.subst_type subst) |> @{print};
+          val lives = MRBNF_Def.lives_of_mrbnf mrbnf |> map (Envir.subst_type subst) |> @{print};
+          val map_F = MRBNF_Def.mk_map_comb_of_mrbnf deads
+            (map_index (uncurry (fn i => if i = which then BNF_Util.fst_const else HOLogic.id_const)) lives)
+            (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+            mrbnf $ z |> @{print};
+          val Ts = fastype_of map_F |> dest_Type |> snd;
+          val Us = domain_type (fastype_of Abs_F') |> dest_Type |> snd;
+          val ct = Thm.cterm_of ctxt (subst_atomic_types (Us ~~ Ts) Abs_F' $ map_F) |> @{print};
+        in
+          HEADGOAL (BNF_Util.rtac ctxt (infer_instantiate' ctxt [NONE, SOME ct] exI))
+        end
+        \<close>)
+(*
       apply (rule exI[of _ "Abs_F' (map_F id id fst id z)"])
-
+*)
 (*apply (simp only: F.map_comp[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound]
           nonrep2_map_F_rev[OF bij_id supp_id_bound, of fst] Abs_F'_inverse[unfolded mem_Collect_eq] Rep_F'[unfolded mem_Collect_eq, of x] 
 mem_Collect_eq comp_id id_comp)*)

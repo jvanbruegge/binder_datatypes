@@ -10,11 +10,8 @@ lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightar
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
 
-lemma not_imageE: "f a \<notin> f ` A \<Longrightarrow> a \<notin> A"
-  by blast
-
-lemma not_Inl_is_Inr: "(\<And>l. x \<noteq> Inl l) \<Longrightarrow> \<exists>r. x = Inr r"
-  by (metis sum.collapse)
+lemma flip_lambda_equality: "(\<lambda>d. (=) (g x d)) = (\<lambda>d d'. d' = g x d)"
+  by (subst (2) eq_commute) (rule refl)
 
 (* Definitions *)
 
@@ -752,18 +749,6 @@ lemma alpha_coinduct2[consumes 1, case_names C]:
     done
   done
 
-thm alpha_bijs[rotated -1, OF alpha_refls] (* TODO: Maybe use this directly *)
-lemma alpha_cong:
-  fixes u v :: "'a::var \<Rightarrow> 'a"
-  assumes u: "bij u" "|supp u| <o |UNIV::'a set|" and v: "bij v" "|supp v| <o |UNIV::'a set|" 
-  assumes uv: "\<And> a. a \<in> FVars_raw_term t \<Longrightarrow> u a = v a"
-  shows "alpha_term (permute_raw_term u t) (permute_raw_term v t)" 
-  apply (rule alpha_bijs | rule assms)+
-   apply (rule eq_onI)
-   apply (erule uv)
-  apply (rule alpha_refls)
-  done
-
 (* The "monster lemma": swapping and "pick"-irrelevance covered in one shot: *)
 
 lemma f_swap_alpha_aux1:
@@ -790,34 +775,27 @@ lemma f_swap_alpha_aux1:
   apply (rule assms)
   done
 
-(* TODO: use rel_F_suitable_mapD directly? *)
-lemma f_swap_alpha_v_exists:
-  assumes p: "suitable pick" and p': "suitable pick'"
-    and valid_d: "valid_U d"
-    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
-  shows "\<exists>v. bij v \<and> |supp v| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD (pick d)) v \<and>
-mr_rel_term_pre u (u \<circ> v)
-       (rel_sum (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t)) (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)))
-       (rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d))
-     (pick d) (pick' (raw_Umap u d))"
-  by (rule rel_F_suitable_mapD[OF valid_d p p' u])
-
 lemma FVars_raw_permutes':
   "bij (g::'a \<Rightarrow> 'a) \<Longrightarrow> |supp g| <o |UNIV::'a set| \<Longrightarrow> FVars_raw_term \<circ> permute_raw_term g = image g \<circ> FVars_raw_term"
-  using FVars_raw_permutes by fastforce
+  apply (subst comp_def)+
+  apply (subst FVars_raw_permutes)
+    apply assumption+
+  apply (rule refl)
+  done
 
 lemma f_swap_alpha_xL:
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
     and x: "raw_term_ctor x = permute_raw_term u (f pick d)"
   shows "x = map_term_pre u u (permute_raw_term u \<circ> case_sum id (f pick)) (permute_raw_term u \<circ> case_sum id (f pick)) (pick d)"
-  using f_simps[of "pick"] x
-  by (auto simp: u permute_raw_simps term_pre.map_comp supp_id_bound)
-
-(* TODO: use f_ctor directly *)
-lemma f_swap_alpha_xR:
-  assumes "raw_term_ctor x = f pick' (raw_Umap u d)"
-  shows "x = map_term_pre id id (case_sum id (f pick')) (case_sum id (f pick')) (pick' (raw_Umap u d))"
-  by (rule f_ctor[OF assms])
+  apply (insert x)
+  apply (subst (asm) f_simps[of "pick"])
+  apply (subst (asm) permute_raw_simps[OF u])
+  apply (subst (asm) raw_term.inject)
+  apply hypsubst_thin
+  apply (subst term_pre.map_comp, (rule supp_id_bound bij_id u)+)
+  apply (unfold o_id)
+  apply (rule refl)
+  done
 
 lemma l_is_inr:
   assumes
@@ -853,9 +831,20 @@ lemma r_is_Umap:
     r: "rel_sum (\<lambda>t. alpha_term (permute_raw_term u t)) (\<lambda>d d'. d' = raw_Umap u d) ttdL ttdR"
     and ttdL: "ttdL = Inr x"
   shows "ttdR = Inr (raw_Umap u x)"
-  using r rel_sum.cases ttdL by blast
-
-lemma flip_lambda_equality: "(\<lambda>d. (=) (raw_Umap x d)) = (\<lambda>d d'. d' = raw_Umap x d)" by blast
+  apply (insert r ttdL)
+  apply hypsubst_thin
+  apply (unfold rel_sum.simps)
+  apply (erule disjE)
+   apply (erule exE)+
+   apply (erule conjE)
+   apply (subst (asm) Inr_Inl_False)
+   apply (erule FalseE)
+  apply (erule exE)+
+  apply (erule conjE)+
+  apply (subst (asm) sum.inject)
+  apply hypsubst_thin
+  apply (rule refl)
+  done
 
 lemma f_swap_alpha_aux:
   assumes p: "suitable pick" and p': "suitable pick'"
@@ -866,7 +855,7 @@ lemma f_swap_alpha_aux:
   apply (erule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
    tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
   apply (erule exE conjE)+
-  apply (frule f_swap_alpha_v_exists[OF p p'])
+  apply (frule rel_F_suitable_mapD[OF _ p p'])
     apply assumption+
   apply (erule exE)
   apply (rule exI)+
@@ -950,7 +939,7 @@ lemma f_swap_alpha_aux:
   apply (erule conjE)+
   apply (rotate_tac -6)
   apply (drule f_swap_alpha_xL[of _ _ "pick", rotated -1], assumption+)
-  apply (drule f_swap_alpha_xR)
+  apply (drule f_ctor)
   apply hypsubst
   apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
   apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound bij_id)+)
@@ -970,21 +959,18 @@ lemma f_swap_alpha_aux:
          apply (rule ballI)+
          apply (rule impI)
          apply (subst permute_raw_comps)
-             prefer 5
-             apply (subst (2) comp_assoc)
-             apply (subst inv_o_simp1)
-              prefer 7
+             prefer 6
+
               apply (rule ballI)+
               apply (rule impI)
               apply (rotate_tac -1)
               apply (subst disj_commute)
-              apply (rule verit_and_neg)
+             apply (rule verit_and_neg)
               apply (frule l_is_inr[of _ _ _ pick "pick'"])
                apply assumption
               apply (erule exE)
               apply hypsubst
               apply (subst sum.case)+
-
               apply (rule exI)+
               apply (drule r_is_Umap)
                apply (rule refl)
@@ -998,11 +984,13 @@ lemma f_swap_alpha_aux:
                apply (rule p)
               apply (unfold pred_sum_inject)
               apply assumption
-             prefer 2
+
+             prefer 5
+
+             apply (subst (2) comp_assoc)
              apply (subst (3) comp_assoc)
-             apply (subst inv_o_simp1)
+             apply (unfold inv_o_simp1)
               apply (unfold o_id)
-              prefer 2
               apply (rotate_tac -1)
               apply (subst disj_commute)
               apply (rule verit_and_neg)
@@ -1012,7 +1000,6 @@ lemma f_swap_alpha_aux:
               apply (erule exE)
               apply hypsubst
               apply (subst sum.case)+
-
               apply (rule exI)+
               apply (drule r_is_Umap)
                apply (rule refl)
@@ -1034,7 +1021,12 @@ lemma f_swap_alpha:
    and valid_d: "valid_U d"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
   shows "alpha_term (permute_raw_term u (f pick d)) (f pick' (raw_Umap u d))"
-  using assms f_swap_alpha_aux by blast
+  apply (rule f_swap_alpha_aux[OF assms])
+  apply (rule exI)+
+  apply (rule conjI[rotated])+
+      apply (rule refl)+
+    apply (rule assms)+
+  done
 
 lemma f_alpha:
   assumes p: "suitable pick" and p': "suitable pick'" and valid_d: "valid_U d"
@@ -1134,7 +1126,6 @@ lemma f0_Utor_aux:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-  thm suitable_pick0[unfolded suitable_def, THEN spec, THEN mp]
     apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
     apply assumption
    apply (rule assms(1)[unfolded Utor_def, THEN imageE])

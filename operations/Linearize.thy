@@ -241,30 +241,30 @@ lemma nonrep2_map_F_rev:
     subgoal for x' R
       apply (frule F.mr_rel_map(2)[OF supp_id_bound bij_id supp_id_bound supp_id_bound u, of R "(=)" x x' id g])
       apply (rotate_tac) (*maybe we can later make that a drule and remove the rotate*)
-        apply (subst (asm) (2) trans[OF o_id id_o[symmetric]])
-    apply (subst (asm) Grp_UNIV_id)
-        apply (subst (asm) trans[OF eq_OO OO_eq[symmetric]])
-        apply (subst (asm) trans[OF OO_eq eq_OO[symmetric]])
-    apply (subst (asm) eq_alt)
+      apply (subst (asm) (2) trans[OF o_id id_o[symmetric]])
+      apply (subst (asm) Grp_UNIV_id)
+      apply (subst (asm) trans[OF eq_OO OO_eq[symmetric]])
+      apply (subst (asm) trans[OF OO_eq eq_OO[symmetric]])
+      apply (subst (asm) eq_alt)
       apply (fold F.mr_rel_map(1)[OF supp_id_bound u supp_id_bound bij_id supp_id_bound])
 
-    apply (insert assms(3)[unfolded nonrep2_def sameShape1_def])
-    apply (elim allE impE)
-     apply (rule exI)
+      apply (insert assms(3)[unfolded nonrep2_def sameShape1_def])
+      apply (elim allE impE)
+       apply (rule exI)
        apply (assumption)
       apply (erule thin_rl)
       apply (erule exE)
       apply (unfold F.map_comp[OF supp_id_bound u(1,2) supp_id_bound bij_id supp_id_bound] o_id id_o)
 
       apply (drule conjI[OF sym UNIV_I[of x']])
-(* maybe this can be shortened *)
+        (* maybe this can be shortened *)
       apply (drule iffD1[OF Grp_def[symmetric, of "map_F id u id g" UNIV, THEN fun_cong, THEN fun_cong]])
       apply (drule iffD2[OF F.mr_rel_Grp[OF supp_id_bound u(1,2), of UNIV id UNIV g, unfolded Grp_def
               eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric], 
               folded Grp_def, THEN fun_cong, THEN fun_cong]])
 
 
-      
+
 (*     
     map_F id u id g x' = map_F id u f g x    
     rel_F id u (Grp id) (Grp g) x' (map_F id u f g x)         (here)
@@ -273,19 +273,38 @@ lemma nonrep2_map_F_rev:
 *)
 
       apply (drule rel_F_exchange[of "Grp _" "(Grp g OO conversep (Grp g))", rotated])
+
+       prefer 2
       subgoal for f
-        sorry
-      subgoal for f
-       apply(intro exI) 
-       apply (unfold eq_alt)
-      apply (unfold F.mr_rel_Grp[OF supp_id_bound bij_id supp_id_bound])
-    apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21))
-       apply (fold UNIV_def)
-       apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21))
-      apply (subst id_apply)
-       apply (rule sym)
-       apply (assumption)
+        apply(intro exI) 
+        apply (unfold eq_alt)
+        apply (unfold F.mr_rel_Grp[OF supp_id_bound bij_id supp_id_bound])
+        apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21))
+        apply (fold UNIV_def)
+        apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21))
+        apply (subst id_apply)
+        apply (rule sym)
+        apply (assumption)
         done
+
+      apply (subst F.mr_rel_flip[OF bij_id supp_id_bound bij_id supp_id_bound, simplified, symmetric])
+      apply (unfold F.mr_rel_map(3)[OF supp_id_bound u bij_id supp_id_bound u] Grp_def)
+      apply (subst (asm) inv_o_simp1[OF bij_id])
+      apply (subst (asm) inv_o_simp1[OF u(1)])
+      apply (subst (asm) id_apply)
+      apply (unfold eqTrueI[OF UNIV_I] simp_thms(21))
+      apply (subst (asm) eq_commute)
+      apply (subst (asm) eq_OO)
+      apply (unfold conversep_def) 
+      apply (elim F.mr_rel_mono_strong0[rotated 6]; (rule supp_id_bound bij_id)?)
+         apply (rule ballI; rule refl)
+        apply (rule ballI; rule refl)
+       apply (intro ballI impI)
+       apply (assumption)
+      apply (intro ballI impI)
+      apply (unfold OO_def)
+      apply (elim exE conjE)
+      apply (intro exI conjI; assumption)
       done
 
     done
@@ -296,84 +315,84 @@ lemma nonrep2_map_F_rev_orig:
   assumes u: "bij u" "|supp u| <o |UNIV :: 'a2 set|" 
   assumes "nonrep2 (map_F id u id g x)"
   shows "nonrep2 x"
-    apply (unfold nonrep2_def sameShape1_def)
-    apply (intro allI impI)
+  apply (unfold nonrep2_def sameShape1_def)
+  apply (intro allI impI)
   apply (elim exE)
   subgoal for x' R
   proof -
-  let ?y = "map_F id u id g x"  let ?y' = "map_F id u id g x'"
-  assume r: "rel_F id id R (=) x x'"
-  hence "rel_F id id R (=) ?y ?y'" 
-    apply -
+    let ?y = "map_F id u id g x"  let ?y' = "map_F id u id g x'"
+    assume r: "rel_F id id R (=) x x'"
+    hence "rel_F id id R (=) ?y ?y'" 
+      apply -
       apply (drule F.mr_rel_map(2)[OF supp_id_bound bij_id supp_id_bound supp_id_bound u, of R "(=)" x x' id g])
-        apply (subst (asm) (2) trans[OF o_id id_o[symmetric]])
-    apply (subst (asm) Grp_UNIV_id)
-        apply (subst (asm) trans[OF eq_OO OO_eq[symmetric]])
-        apply (subst (asm) trans[OF OO_eq eq_OO[symmetric]])
-    apply (subst (asm) eq_alt)
-    apply (fold F.mr_rel_map(1)[OF supp_id_bound u supp_id_bound bij_id supp_id_bound])
-    apply (assumption)
-    done
-  then obtain f where "?y' = map_F id id f id ?y" 
-    apply (atomize_elim)
-    apply (insert assms(3)[unfolded nonrep2_def sameShape1_def])
-    apply (elim allE impE)
-     apply (rule exI)
+      apply (subst (asm) (2) trans[OF o_id id_o[symmetric]])
+      apply (subst (asm) Grp_UNIV_id)
+      apply (subst (asm) trans[OF eq_OO OO_eq[symmetric]])
+      apply (subst (asm) trans[OF OO_eq eq_OO[symmetric]])
+      apply (subst (asm) eq_alt)
+      apply (fold F.mr_rel_map(1)[OF supp_id_bound u supp_id_bound bij_id supp_id_bound])
+      apply (assumption)
+      done
+    then obtain f where "?y' = map_F id id f id ?y" 
+      apply (atomize_elim)
+      apply (insert assms(3)[unfolded nonrep2_def sameShape1_def])
+      apply (elim allE impE)
+       apply (rule exI)
        apply (assumption)
       apply (erule exE)
-    apply (unfold F.map_comp[OF supp_id_bound u(1,2) supp_id_bound bij_id supp_id_bound] o_id id_o)
-    apply (rule exI)
-    apply (assumption)
-    done
-  hence y':"?y' = map_F id u f g x"
-    apply -
-    apply (unfold F.map_comp[OF supp_id_bound u(1,2) supp_id_bound bij_id supp_id_bound] o_id id_o)
-    apply (assumption)
-    done
-  hence "rel_F id u (Grp id) (Grp g) x' (map_F id u f g x)"
-    apply -
-    apply (unfold F.mr_rel_Grp[OF supp_id_bound u(1,2), of UNIV id UNIV g, unfolded Grp_def
-eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric], folded Grp_def])
-    apply (unfold Grp_def)
-    apply (rule conjI)
-    apply (drule sym)
-     apply (assumption)
-    apply (rule UNIV_I)
-    done
-  hence "rel_F id id (Grp f) (Grp g OO conversep (Grp g)) x x'" (* We are here*)
-    apply (subst F.mr_rel_flip[OF bij_id supp_id_bound bij_id supp_id_bound, simplified, symmetric])
-    apply (unfold F.mr_rel_map(3)[OF supp_id_bound u bij_id supp_id_bound u] Grp_def)
-    apply (subst (asm) inv_o_simp1[OF bij_id])
-    apply (subst (asm) inv_o_simp1[OF u(1)])
-    apply (subst (asm) id_apply)
-    apply (unfold eqTrueI[OF UNIV_I] simp_thms(21))
-    apply (subst (asm) eq_commute)
-    apply (subst (asm) eq_OO)
-    apply (unfold conversep_def) 
-    apply (elim F.mr_rel_mono_strong0[rotated 6]; (rule supp_id_bound bij_id)?)
-    apply (rule ballI; rule refl)
-    apply (rule ballI; rule refl)
-     apply (intro ballI impI)
-    apply (assumption)
-    apply (intro ballI impI)
-    apply (unfold OO_def)
-    apply (elim exE conjE)
-    apply (intro exI conjI; assumption)
-    done
-  thm rel_F_exchange[OF this r]  rel_F_exchange[rotated, OF r, of "Grp f" "(Grp g OO conversep (Grp g))"] this r
-  from this (*rel_F_exchange[OF this r]*)
-  have "rel_F id id (Grp f) (=) x x'"
-    by (rule rel_F_exchange[rotated, OF r, of "Grp f" "(Grp g OO conversep (Grp g))"] )
-  thus "\<exists>f. x' = map_F id id f id x"
-    apply(intro exI) 
-    apply (unfold eq_alt F.mr_rel_Grp[OF supp_id_bound bij_id supp_id_bound])
-    apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21))
-    apply (fold UNIV_def)
-    apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21) id_apply)
-    apply (rule sym)
-    apply (assumption)
-    done
-qed
+      apply (unfold F.map_comp[OF supp_id_bound u(1,2) supp_id_bound bij_id supp_id_bound] o_id id_o)
+      apply (rule exI)
+      apply (assumption)
+      done
+    hence y':"?y' = map_F id u f g x"
+      apply -
+      apply (unfold F.map_comp[OF supp_id_bound u(1,2) supp_id_bound bij_id supp_id_bound] o_id id_o)
+      apply (assumption)
+      done
+    hence "rel_F id u (Grp id) (Grp g) x' (map_F id u f g x)"
+      apply -
+      apply (unfold F.mr_rel_Grp[OF supp_id_bound u(1,2), of UNIV id UNIV g, unfolded Grp_def
+            eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric], folded Grp_def])
+      apply (unfold Grp_def)
+      apply (rule conjI)
+       apply (drule sym)
+       apply (assumption)
+      apply (rule UNIV_I)
+      done
+    hence "rel_F id id (Grp f) (Grp g OO conversep (Grp g)) x x'" (* We are here*)
+      apply (subst F.mr_rel_flip[OF bij_id supp_id_bound bij_id supp_id_bound, simplified, symmetric])
+      apply (unfold F.mr_rel_map(3)[OF supp_id_bound u bij_id supp_id_bound u] Grp_def)
+      apply (subst (asm) inv_o_simp1[OF bij_id])
+      apply (subst (asm) inv_o_simp1[OF u(1)])
+      apply (subst (asm) id_apply)
+      apply (unfold eqTrueI[OF UNIV_I] simp_thms(21))
+      apply (subst (asm) eq_commute)
+      apply (subst (asm) eq_OO)
+      apply (unfold conversep_def) 
+      apply (elim F.mr_rel_mono_strong0[rotated 6]; (rule supp_id_bound bij_id)?)
+         apply (rule ballI; rule refl)
+        apply (rule ballI; rule refl)
+       apply (intro ballI impI)
+       apply (assumption)
+      apply (intro ballI impI)
+      apply (unfold OO_def)
+      apply (elim exE conjE)
+      apply (intro exI conjI; assumption)
+      done
+    thm rel_F_exchange[OF this r]  rel_F_exchange[rotated, OF r, of "Grp f" "(Grp g OO conversep (Grp g))"] this r
+    from this (*rel_F_exchange[OF this r]*)
+    have "rel_F id id (Grp f) (=) x x'"
+      by (rule rel_F_exchange[rotated, OF r, of "Grp f" "(Grp g OO conversep (Grp g))"] )
+    thus "\<exists>f. x' = map_F id id f id x"
+      apply(intro exI) 
+      apply (unfold eq_alt F.mr_rel_Grp[OF supp_id_bound bij_id supp_id_bound])
+      apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21))
+      apply (fold UNIV_def)
+      apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21) id_apply)
+      apply (rule sym)
+      apply (assumption)
+      done
+  qed
   done
 
 
@@ -388,9 +407,9 @@ lemma nonrep2_mapF_bij:
     apply (drule iffD1[OF F.mr_rel_map(1)[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound, of R' "(=)" g id x y']])
     apply (unfold o_id Grp_UNIV_id eq_OO)
     apply (drule iffD1[OF F.mr_rel_map(3)[OF supp_id_bound bij_id supp_id_bound bij_id supp_id_bound bij_id supp_id_bound,
-        of "Grp g OO R' OO conversep (Grp g)" "(=)" x "inv g" id y', symmetric,
-        unfolded Grp_UNIV_id conversep_eq OO_eq inv_id comp_id relcompp_assoc converse_relcompp[symmetric] Grp_o[symmetric]
-        inv_o_simp2[OF g]]])
+            of "Grp g OO R' OO conversep (Grp g)" "(=)" x "inv g" id y', symmetric,
+            unfolded Grp_UNIV_id conversep_eq OO_eq inv_id comp_id relcompp_assoc converse_relcompp[symmetric] Grp_o[symmetric]
+            inv_o_simp2[OF g]]])
     apply (drule x[unfolded nonrep2_def sameShape1_def, rule_format, OF exI])
     apply (erule exE)
     apply (unfold F.map_comp[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound])
@@ -403,7 +422,7 @@ lemma nonrep2_mapF_bij:
     apply (rule exI[of "_" "g o _ o inv g"])
     apply (unfold o_assoc[symmetric] inv_o_simp1[OF g] o_id)
     apply (assumption)
-  done
+    done
   done
 
 

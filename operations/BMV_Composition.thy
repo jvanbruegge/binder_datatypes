@@ -6,6 +6,8 @@ begin
 
 lemma image_const_empty: "x \<noteq> y \<Longrightarrow> (\<lambda>_. x) ` A = (\<lambda>_. y) ` B \<Longrightarrow> A = {} \<and> B = {}"
   by fast
+lemma cong': "f x = g x \<Longrightarrow> x = y \<Longrightarrow> f x = g y"
+  by simp
 
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
@@ -97,11 +99,14 @@ frees: 'b, 'c, 'd
 lives: 'h
 *)
 
-lemma cong': "f x = g x \<Longrightarrow> x = y \<Longrightarrow> f x = g y"
-  by simp
+ML \<open>
+val T1 = the (BMV_Monad_Def.pbmv_monad_of @{context} @{type_name T1});
+val T2 = the (BMV_Monad_Def.pbmv_monad_of @{context} @{type_name T2});
+val T3 = the (BMV_Monad_Def.pbmv_monad_of @{context} @{type_name T3});
+\<close>
 
 (* Demoting T3 *)
-pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a::var, 'c::var) T4"
+pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a, 'c) T4"
   Sbs: "\<lambda>f1 \<rho>1 \<rho>2 \<rho>4. Sb_T3 \<rho>1 \<rho>2 Inj_2_T3 \<rho>4 \<circ> Map_T3 f1 id" and Sb_T4
   RVrs: set_1_T3
   Injs: Inj_1_T3 Inj_1_T4 Inj_2_T4 and Inj_1_T4 Inj_2_T4
@@ -114,6 +119,7 @@ pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a::var, 'c::var) T4"
                       apply (rule refl)
                       apply (unfold comp_assoc T3.Map_Inj)
                       apply (rule T3.Sb_comp_Inj; (assumption | rule SSupp_Inj_bound))+
+                     
                       apply (rule trans)
                       apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
                       apply (rule trans[OF comp_assoc[symmetric]])
@@ -218,6 +224,20 @@ pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a::var, 'c::var) T4"
     apply (rule T3.Vrs_Sb; assumption)+
   apply (rule T3.Sb_cong; assumption)
   done
+print_theorems
+
+(* Same demotion, but automated *)
+local_setup \<open>fn lthy =>
+let
+  open BMV_Monad_Def
+  val ((bmv, _), lthy) = demote_bmv_monad BNF_Def.Smart_Inline
+    (K BNF_Def.Note_Some) (Binding.prefix_name "demote") (SOME @{binding T3''})
+     T3
+    { frees = [false, true, false], lives = [Free_Var, Live_Var] }
+    lthy
+  val lthy = register_pbmv_monad "BMV_Composition.T3''" bmv lthy
+in lthy end
+\<close>
 print_theorems
 
 abbreviation "Vrs_1_T \<equiv> Vrs_2_T1"
@@ -443,16 +463,10 @@ pbmv_monad T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and
   done
 print_theorems
 
-ML \<open>
-val T1 = the (BMV_Monad_Def.pbmv_monad_of @{context} @{type_name T1});
-val T2 = the (BMV_Monad_Def.pbmv_monad_of @{context} @{type_name T2});
-val T3 = the (BMV_Monad_Def.pbmv_monad_of @{context} "BMV_Composition.T3'");
-\<close>
-
 local_setup \<open>fn lthy =>
 let
   open MRBNF_Util
-  val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I T1 [Inl T2, Inr @{typ "'g set"}, Inl T3]
+  val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad (Binding.prefix_name "comp") T1 [Inl T2, Inr @{typ "'g set"}, Inl T3]
     { frees = [@{typ 'b}, @{typ 'c}, @{typ 'g}], deads = [@{typ 'f}] }
     [ SOME { frees = [@{typ 'd}, @{typ 'b}], lives = [], deads = [@{typ 'a}, @{typ 'e}] },
       NONE,

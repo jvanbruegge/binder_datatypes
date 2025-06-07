@@ -4,11 +4,6 @@ theory BMV_Composition
    "pbmv_monad" :: thy_goal
 begin
 
-lemma image_const_empty: "x \<noteq> y \<Longrightarrow> (\<lambda>_. x) ` A = (\<lambda>_. y) ` B \<Longrightarrow> A = {} \<and> B = {}"
-  by fast
-lemma cong': "f x = g x \<Longrightarrow> x = y \<Longrightarrow> f x = g y"
-  by simp
-
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
 (* live, free, free, live, live, dead, free *)
@@ -56,6 +51,7 @@ consts Inj_2_T4 :: "'b \<Rightarrow> ('a::var, 'b::var) T4"
 ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
+
 declare [[goals_limit=1000]]
 pbmv_monad "('a, 'b, 'c, 'd, 'e, 'f, 'g) T1"
   Sbs: Sb_T1
@@ -119,7 +115,7 @@ pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a, 'c) T4"
                       apply (rule refl)
                       apply (unfold comp_assoc T3.Map_Inj)
                       apply (rule T3.Sb_comp_Inj; (assumption | rule SSupp_Inj_bound))+
-                     
+
                       apply (rule trans)
                       apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
                       apply (rule trans[OF comp_assoc[symmetric]])
@@ -137,13 +133,14 @@ pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a, 'c) T4"
                       apply (subst T3.Sb_comp_Inj, (assumption | rule SSupp_Inj_bound)+)+
                       apply (rule refl)
 
-                      apply (rule T3.Supp_bd T3.Vrs_bd T3.Vrs_Inj)+
+                      apply (rule T3.Supp_bd T3.Vrs_bd T3.Vrs_Inj T3.Supp_Inj)+
 
   subgoal for f \<rho>1 \<rho>2 \<rho>3 x
     apply (unfold comp_def)
     apply (subst T3.Supp_Sb)
-    apply (assumption | rule SSupp_Inj_bound)+
-    apply (rule T3.Supp_Map)
+        apply (assumption | rule SSupp_Inj_bound)+
+    apply (unfold T3.Vrs_Map T3.Supp_Map T3.Supp_Inj UN_empty2 Un_empty_left Un_empty_right)
+    apply (rule refl)
     done
   subgoal for f \<rho>1 \<rho>2 \<rho>3 x
     apply (unfold comp_def)
@@ -210,13 +207,7 @@ pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a, 'c) T4"
 
                     apply (unfold comp_def)[1]
                     apply (subst T3.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)
-                    apply (rule trans)
-                     apply (rule T3.Supp_Map)
-                    apply (rule image_id)
-  apply (rule trans)
-                     apply (rule T3.Supp_Map)
-                   apply (rule image_id)
-                  apply (unfold T3.Vrs_Map)
+                    apply (unfold T3.Supp_Map image_id T3.Vrs_Map T3.Supp_Inj UN_empty2 Un_empty_left Un_empty_right)
                   apply (rule refl)+
              apply (rule T3.Sb_comp_Inj; assumption)+
            apply (rule T3.Sb_comp; assumption)
@@ -318,21 +309,39 @@ pbmv_monad T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and
     done
 
   apply (unfold T1.Supp_Inj UN_empty)
-  apply (rule refl T1.Vrs_bd T2.Vrs_bd T3.Vrs_bd T1.Vrs_Inj T3'.Vrs_bd infinite_regular_card_order_Un infinite_regular_card_order_UN infinite_regular_card_order_natLeq T1.Supp_bd)+
+  apply (rule refl Un_empty_left Un_empty_right T1.Vrs_bd T2.Vrs_bd T3.Vrs_bd T1.Vrs_Inj T3'.Vrs_bd infinite_regular_card_order_Un infinite_regular_card_order_UN infinite_regular_card_order_natLeq T1.Supp_bd)+
 
                       apply (unfold0 comp_apply)[1]
                       apply (rule trans)
                       apply (rule T1.Vrs_Sb)
                       apply (assumption | rule SSupp_Inj_bound)+
-                      apply (unfold T1.Vrs_Map)[1]
+                      apply (unfold T1.Vrs_Map T1.Vrs_Inj UN_empty2 Un_empty_left Un_empty_right)[1]
                       apply (rule refl)
 
                       apply (unfold0 comp_apply)[1]
                       apply (subst T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-                      apply (unfold T1.Supp_Map image_comp[unfolded comp_def] T2.Vrs_Sb image_UN)[1]
-                      apply (subst T3'.Vrs_Sb, (assumption | rule SSupp_Inj_bound)+)+
-                      apply (unfold image_Un image_UN)[1]
-                      apply (rule refl)
+                      apply (unfold T1.Supp_Map T1.Vrs_Map T1.Vrs_Inj T2.Vrs_Sb T1.Supp_Inj
+                        image_Un image_UN image_comp[unfolded comp_def] UN_empty2 Union_UN_swap
+                        Un_empty_right Un_empty_left UN_Un Union_Un_distrib UN_UN_flatten UN_Un_distrib
+                      )[1]
+                      apply (subst T3'.Vrs_Sb T2.Vrs_Sb, (assumption | rule SSupp_Inj_bound)+)+
+                      apply (unfold Un_assoc[symmetric] Un_Union_image)[1]
+                      apply (rule set_eqI)
+                      apply (rule iffI)
+                      apply (unfold Un_iff)[1]
+                      apply (rotate_tac -1)
+                      apply (erule contrapos_pp)
+                      apply (unfold de_Morgan_disj)[1]
+                      apply (erule conjE)+
+                      apply (rule conjI)+
+                      apply assumption+
+                      apply (unfold Un_iff)[1]
+                      apply (rotate_tac -1)
+                      apply (erule contrapos_pp)
+                      apply (unfold de_Morgan_disj)[1]
+                      apply (erule conjE)+
+                      apply (rule conjI)+
+                      apply assumption+
 
   subgoal for f1 f2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5 x
     apply (unfold0 comp_apply)
@@ -345,37 +354,103 @@ pbmv_monad T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and
   subgoal for f1 f2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5 x
     apply (unfold0 comp_apply)
     apply (subst T1.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold T1.Vrs_Map T1.Vrs_Inj T1.Supp_Map image_comp[unfolded comp_def] UN_empty2 Un_empty_right)
+    apply (unfold T1.Vrs_Map T1.Vrs_Inj T1.Supp_Map image_comp[unfolded comp_def] UN_empty2 Un_empty_right
+      UN_Un T1.Supp_Inj
+    )
     apply (subst T2.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold UN_UN_flatten)
-    apply (rule refl)
+    apply (unfold UN_UN_flatten UN_Un)[1]
+    apply (rule set_eqI)
+    apply (unfold Un_iff)[1]
+    apply (rule iffI)
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
     done
 
   subgoal for f1 f2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5 x
     apply (unfold0 comp_apply)
     apply (subst T1.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold T1.Vrs_Map T1.Vrs_Inj comp_apply T1.Supp_Map image_comp[unfolded comp_def] UN_empty2 Un_empty_right)
-    apply (subst T3.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold UN_UN_flatten T3.Vrs_Map T3.Vrs_Inj UN_empty2 Un_empty_right)
-    apply (rule refl)
+    apply (unfold T1.Supp_Map T1.Vrs_Map T1.Vrs_Inj T1.Supp_Inj
+      image_Un image_UN image_comp[unfolded comp_def] UN_empty2 Union_UN_swap
+      Un_empty_right Un_empty_left UN_Un Union_Un_distrib UN_UN_flatten UN_Un_distrib
+    )[1]
+    apply (subst T3'.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
+    apply (rule set_eqI)
+    apply (unfold Un_iff)[1]
+    apply (rule iffI)
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
     done
 
   subgoal for f1 f2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5 x
     apply (unfold0 comp_apply)
     apply (subst T1.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold T1.Vrs_Map T1.Vrs_Inj comp_apply T1.Supp_Map image_comp[unfolded comp_def] UN_empty2 Un_empty_right)
-    apply (subst T3.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold UN_UN_flatten T3.Vrs_Map T3.Vrs_Inj UN_empty2 Un_empty_right UN_Un_distrib)
-    apply (rule refl)
+    apply (unfold T1.Supp_Map T1.Vrs_Map T1.Vrs_Inj T2.Vrs_Sb T1.Supp_Inj
+      image_Un image_UN image_comp[unfolded comp_def] UN_empty2 Union_UN_swap
+      Un_empty_right Un_empty_left UN_Un Union_Un_distrib UN_UN_flatten UN_Un_distrib
+    )[1]
+    apply (subst T3'.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
+    apply (unfold UN_Un_distrib)[1]
+    apply (rule set_eqI)
+    apply (unfold Un_iff)[1]
+    apply (rule iffI)
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
     done
 
   subgoal for f1 f2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5 x
     apply (unfold0 comp_apply)
     apply (subst T1.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold T1.Vrs_Map T1.Vrs_Inj comp_apply T1.Supp_Map image_comp[unfolded comp_def] UN_empty2 Un_empty_right)
-    apply (subst T3.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-    apply (unfold UN_UN_flatten T3.Vrs_Map T3.Vrs_Inj UN_empty2 Un_empty_right UN_Un_distrib)
-    apply (rule refl)
+    apply (unfold T1.Supp_Map T1.Vrs_Map T1.Vrs_Inj T2.Vrs_Sb T1.Supp_Inj
+      image_Un image_UN image_comp[unfolded comp_def] UN_empty2 Union_UN_swap
+      Un_empty_right Un_empty_left UN_Un Union_Un_distrib UN_UN_flatten UN_Un_distrib
+    )[1]
+    apply (subst T3'.Vrs_Sb T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
+    apply (unfold UN_Un_distrib)[1]
+    apply (rule set_eqI)
+    apply (unfold Un_iff)[1]
+    apply (rule iffI)
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
+     apply (rotate_tac -1)
+     apply (erule contrapos_pp)
+     apply (unfold de_Morgan_disj)[1]
+     apply (erule conjE)+
+     apply (rule conjI)+
+    apply assumption+
     done
 
   subgoal premises prems for f1 f2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5 g1 g2 \<rho>'1 \<rho>'2 \<rho>'3 \<rho>'4 \<rho>'5 x
@@ -455,8 +530,27 @@ pbmv_monad T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and
 
   apply (unfold0 comp_apply)[1]
           apply (subst T1.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
-          apply (unfold T1.Supp_Map image_comp[unfolded comp_def] T3'.Supp_Sb)[1]
-          apply (rule refl)
+          apply (unfold T1.Supp_Map T1.Vrs_Map T1.Vrs_Inj T1.Supp_Inj
+            image_Un image_UN image_comp[unfolded comp_def] UN_empty2 Union_UN_swap
+            Un_empty_right Un_empty_left UN_Un Union_Un_distrib UN_UN_flatten UN_Un_distrib
+          )[1]
+          apply (subst T3'.Supp_Sb, (assumption | rule SSupp_Inj_bound)+)+
+          apply (unfold UN_Un_distrib)[1]
+          apply (rule set_eqI)
+          apply (unfold Un_iff)[1]
+          apply (rule iffI)
+          apply (rotate_tac -1)
+          apply (erule contrapos_pp)
+           apply (unfold de_Morgan_disj)
+           apply (erule conjE)+
+           apply (rule conjI)+
+             apply assumption+
+          apply (rotate_tac -1)
+          apply (erule contrapos_pp)
+           apply (unfold de_Morgan_disj)
+           apply (erule conjE)+
+           apply (rule conjI)+
+             apply assumption+
 
          apply (unfold T1.Vrs_Map T1.Supp_Map image_id image_comp[unfolded comp_def] T3'.Vrs_Map T1.Map_Inj)
          apply (rule refl)+

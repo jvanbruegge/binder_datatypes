@@ -1012,4 +1012,9 @@ qed
 lemma image_inv_iff: "bij f \<Longrightarrow> (A = f ` B) = (inv f ` A = B)"
   by force
 
+lemma image_const_empty: "x \<noteq> y \<Longrightarrow> (\<lambda>_. x) ` A = (\<lambda>_. y) ` B \<Longrightarrow> A = {} \<and> B = {}"
+  by fast
+lemma cong': "f x = g x \<Longrightarrow> x = y \<Longrightarrow> f x = g y"
+  by simp
+
 end

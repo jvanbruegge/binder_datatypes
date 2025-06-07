@@ -9,7 +9,7 @@ begin
 
 (* DATATYPE DECLARTION  *)
 
-declare [[mrbnf_internals]]
+(*declare [[mrbnf_internals]]*)
 binder_datatype 'a "term" =
   Var 'a
 | App "'a term" "'a term"

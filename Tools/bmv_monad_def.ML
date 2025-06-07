@@ -1115,7 +1115,7 @@ fun pbmv_monad_of_mrbnf mrbnf lthy =
          rtac ctxt refl
        ],
        Vrs_bds = map (fn _ => fn ctxt => resolve_tac ctxt (MRBNF_Def.set_bd_of_mrbnf mrbnf) 1) fsets,
-       Vrs_Injss = [],
+       Vrs_Injss = replicate (length fsets) [],
        Vrs_Sbs = map (fn _ => fn ctxt => EVERY1 [
          resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
          REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
@@ -1858,7 +1858,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   eresolve_tac ctxt [UnI1, UnI2],
-                  rtac ctxt UnI2
+                  rtac ctxt UnI1
                 ]
               ]
             ]) inners),
@@ -1866,7 +1866,9 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             K (Local_Defs.unfold0_tac ctxt (#Vrs_Map param)),
             REPEAT_DETERM o FIRST' [
               assume_tac ctxt,
-              resolve_tac ctxt (@{thms SSupp_Inj_bound refl} @ prems)
+              resolve_tac ctxt (@{thms SSupp_Inj_bound refl} @ prems),
+              eresolve_tac ctxt [UnI1, UnI2],
+              rtac ctxt UnI1
             ]
           ]) ctxt
         ]

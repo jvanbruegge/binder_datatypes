@@ -31,7 +31,7 @@ lemma SSupp_IImsupp_bound[simp]:
   shows "|IImsupp_FType \<rho>| <o |UNIV::'tyvar set|"
   unfolding IImsupp_FType_def using assms by (auto simp: FType.Un_bound FType.UN_bound FType.set_bd_UNIV)
 
-lemma SSupp_comp_subset:
+lemma SSupp_comp_subset_FType:
   fixes \<rho> \<rho>'::"'tyvar::var \<Rightarrow> 'tyvar FType"
   assumes "|SSupp_FType \<rho>| <o |UNIV::'tyvar set|"
   shows "SSupp_FType (tvsubst_FType \<rho> \<circ> \<rho>') \<subseteq> SSupp_FType \<rho> \<union> SSupp_FType \<rho>'"
@@ -41,11 +41,11 @@ lemma SSupp_comp_subset:
   apply (unfold mem_Collect_eq)
   apply simp
   using assms(1) by force
-lemma SSupp_comp_bound[simp]:
+lemma SSupp_comp_bound_FType[simp]:
   fixes \<rho> \<rho>'::"'tyvar::var \<Rightarrow> 'tyvar FType"
   assumes "|SSupp_FType \<rho>| <o |UNIV::'tyvar set|" "|SSupp_FType \<rho>'| <o |UNIV::'tyvar set|"
   shows "|SSupp_FType (tvsubst_FType \<rho> \<circ> \<rho>')| <o |UNIV::'tyvar set|"
-  using assms SSupp_comp_subset by (metis card_of_subset_bound var_class.Un_bound)
+  using assms SSupp_comp_subset_FType by (metis card_of_subset_bound var_class.Un_bound)
 
 lemma Sb_Inj_FType: "Sb_FType Inj_FType_1 = id"
   apply (rule ext)
@@ -135,12 +135,11 @@ pbmv_monad "'tv::var FType"
   Sbs: tvsubst_FType
   Injs: TyVar
   Vrs: FVars_FType
-  SSupps: SSupp_FType
   bd: natLeq
          apply (rule infinite_regular_card_order_natLeq)
         apply (rule Sb_Inj_FType)
+       apply (unfold SSupp_def SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def[unfolded comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]], symmetric])
         apply (rule Sb_comp_Inj_FType; assumption)
-       apply ((unfold SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def comp_def TyVar_def)[1], rule refl)
       apply (rule Sb_comp_FType; assumption)
      apply (rule FType.set_bd)
     apply (rule Vrs_Inj_FType)
@@ -327,9 +326,9 @@ pbmv_monad "'b::var LM"
   RVrs: Vrs_1
   Injs: Var
   Vrs: Vrs_2
-  SSupps: SSupp_LM
   bd: natLeq
           apply (rule infinite_regular_card_order_natLeq)
+  apply (unfold SSupp_def[of Var, unfolded SSupp_LM_def[unfolded tvVVr_tvsubst_LM_def comp_def tv\<eta>_LM_tvsubst_LM_def Var_def[symmetric], symmetric]])
 
          apply (rule ext)
   subgoal for x
@@ -337,10 +336,7 @@ pbmv_monad "'b::var LM"
        apply auto
     apply (rule trans[OF Sb_LM_simp4])
     by (auto simp: imsupp_def supp_def IImsupp_LM_def SSupp_LM_def tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def Var_def)
-        apply fastforce
-
-       apply (unfold SSupp_LM_def tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def Var_def comp_def)[1]
-       apply (rule refl)
+         apply fastforce
 
       apply (rule ext)
       apply (rule trans[OF comp_apply])
@@ -358,7 +354,8 @@ pbmv_monad "'b::var LM"
     done
 
        apply (rule Vrs_1_bd)
-      apply (rule Vrs_2_bd)
+       apply (rule Vrs_2_bd)
+      apply (rule Vrs_1_simp1)
      apply (rule Vrs_2_simp1)
   apply (rule Vrs_1_Sb_LM; assumption)
    apply (rule Vrs_2_Sb_LM; assumption)
@@ -381,7 +378,6 @@ lemma vvsubst_Sb:
     apply (rule refl)
     done
   done
-
 
 mrsbnf "'b::var LM"
    apply (rule vvsubst_Sb; assumption)
@@ -531,7 +527,6 @@ val model_L = {
     RVrs = [[@{term "Vrs_L_1 :: ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> _"}]],
     Injs = [[]],
     Vrs = [[]],
-    SSupps = [[]],
     params = [SOME {
       Map = @{term "Map_L :: ('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1, 'a2, 'c1, 'c2) L \<Rightarrow> ('a1, 'a2, 'c1', 'c2') L" },
       Supps = [
@@ -540,7 +535,6 @@ val model_L = {
       ]
     }]
   },
-  SSupp_eq = [[]],
   params = [SOME {
     axioms = {
       Map_id = fn ctxt => EVERY1 [
@@ -579,11 +573,12 @@ val model_L = {
       K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta id_apply map_prod_simp}),
       resolve_tac ctxt [refl]
     ],
+    Map_Injs = [],
     Supp_Sb = replicate 2 (fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms case_prod_map_prod id_apply Sb_L_def Supp_L_1_def Supp_L_2_def}),
       resolve_tac ctxt [refl]
     ]),
-    Map_Vrs = [fn ctxt => EVERY1 [
+    Vrs_Map = [fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def Map_L_def case_prod_beta fst_conv snd_conv}),
       resolve_tac ctxt [refl]
     ]]
@@ -608,7 +603,7 @@ val model_L = {
       resolve_tac ctxt @{thms natLeq_Cinfinite},
       resolve_tac ctxt @{thms ID.set_bd}
     ]],
-    Vrs_Injs = [],
+    Vrs_Injss = [],
     Vrs_Sbs = [fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def Sb_L_def case_prod_beta
         Product_Type.fst_map_prod Product_Type.snd_map_prod image_insert image_empty
@@ -659,10 +654,8 @@ val model_L1 = {
       @{term "Vrs_L1_1 :: ('a1, 'a2) L1 \<Rightarrow> _"},
       @{term "Vrs_L1_2 :: ('a1, 'a2) L1 \<Rightarrow> _"}
     ]],
-    params = [NONE],
-    SSupps = [[]]
+    params = [NONE]
   },
-  SSupp_eq = [[]],
   params = [NONE],
   bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
@@ -682,7 +675,7 @@ val model_L1 = {
       fn ctxt => Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1,
       fn ctxt => Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_2_def case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1
     ],
-    Vrs_Injs = [],
+    Vrs_Injss = [],
     Vrs_Sbs = [
       fn ctxt => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def Sb_L1_def case_prod_map_prod}),
@@ -738,17 +731,12 @@ val model_L2 = {
       @{term "Vrs_L2_2 :: ('a1, 'a2::var) L2 \<Rightarrow> _"}
     ]],
     Injs = [[@{term "TyVar :: 'a2::var \<Rightarrow> 'a2 FType"}]],
-    SSupps = [[SOME @{term "SSupp_FType :: ('a2::var \<Rightarrow> 'a2 FType) \<Rightarrow> 'a2 set"}]],
     Sbs = [@{term "Sb_L2 :: _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> ('a1, 'a2::var) L2"}],
     Vrs = [[
       @{term "Vrs_L2_3 :: ('a1, 'a2::var) L2 \<Rightarrow> _"}
     ]],
     params = [NONE]
   },
-  SSupp_eq = [[SOME (fn ctxt =>
-    Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]}
-    THEN resolve_tac ctxt [refl] 1
-  )]],
   params = [NONE],
   bd_infinite_regular_card_order = fn ctxt => resolve_tac ctxt @{thms infinite_regular_card_order_natLeq} 1,
   tacs = [{
@@ -760,7 +748,7 @@ val model_L2 = {
     Sb_comp = fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (
         (BNF_Def.map_comp0_of_bnf (the (BNF_Def.bnf_of @{context} "Product_Type.prod")) RS sym)
-        :: @{thms Sb_L2_def id_apply Sb_comp_FType}
+        :: @{thms Sb_L2_def id_apply Sb_comp_FType SSupp_def[of TyVar, unfolded SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric], symmetric]]}
       )),
       resolve_tac ctxt [refl]
     ],
@@ -774,20 +762,20 @@ val model_L2 = {
       ],
       fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Vrs_L2_3_def} THEN resolve_tac ctxt @{thms FType.set_bd} 1
     ],
-    Vrs_Injs = [],
+    Vrs_Injss = [[]],
     Vrs_Sbs = [
       fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def case_prod_map_prod SSupp_def[of TyVar, unfolded SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric], symmetric]]}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single id_apply image_insert image_empty}),
         resolve_tac ctxt [refl]
       ],
       fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_2_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_2_def case_prod_map_prod SSupp_def[of TyVar, unfolded SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric], symmetric]]}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta insert_is_Un[symmetric] UN_insert UN_empty Un_empty_right id_apply  image_insert image_empty}),
         resolve_tac ctxt [refl]
       ],
       fn ctxt => EVERY1 [
-        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_3_def case_prod_map_prod}),
+        K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_3_def case_prod_map_prod SSupp_def[of TyVar, unfolded SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric], symmetric]]}),
         K (Local_Defs.unfold0_tac ctxt @{thms case_prod_beta UN_single id_apply}),
         resolve_tac ctxt @{thms Vrs_Sb_FType},
         K (Local_Defs.unfold0_tac ctxt @{thms SSupp_FType_def tvVVr_tvsubst_FType_def[unfolded comp_def] tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric]}),
@@ -795,7 +783,7 @@ val model_L2 = {
       ]
     ],
     Sb_cong = fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def Vrs_L2_2_def Vrs_L2_3_def case_prod_beta id_apply}),
+      K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def Vrs_L2_2_def Vrs_L2_3_def case_prod_beta id_apply SSupp_def[of TyVar, unfolded SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric], symmetric]]}),
       resolve_tac ctxt @{thms prod.map_cong0},
       eresolve_tac ctxt @{thms Basic_BNFs.fsts.cases},
       dresolve_tac ctxt @{thms meta_spec},
@@ -838,14 +826,29 @@ val model_L2 = {
 \<close>
 
 local_setup \<open>fn lthy =>
+let
+  val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Note_Some) (Binding.prefix_name "L_") (SOME (Binding.name "L")) model_L lthy;
+  val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Note_Some) (Binding.prefix_name "L1_") (SOME (Binding.name "L1")) model_L1 lthy;
+  val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Note_Some) (Binding.prefix_name "L2_") (SOME (Binding.name "L2")) model_L2 lthy;
+
+  val lthy = BMV_Monad_Def.register_pbmv_monad "BMV_Monad.L" L_bmv lthy
+  val lthy = BMV_Monad_Def.register_pbmv_monad "BMV_Monad.L1" L1_bmv lthy
+  val lthy = BMV_Monad_Def.register_pbmv_monad "BMV_Monad.L2" L2_bmv lthy
+in lthy end
+\<close>
+
+local_setup \<open>fn lthy =>
   let
-    val ((L_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L_") (SOME (Binding.name "L")) model_L lthy;
-    val ((L1_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L1_") (SOME (Binding.name "L1")) model_L1 lthy;
-    val ((L2_bmv, _), lthy) = BMV_Monad_Def.bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) (Binding.prefix_name "L2_") (SOME (Binding.name "L2")) model_L2 lthy;
+    val L_bmv = the (BMV_Monad_Def.pbmv_monad_of lthy "BMV_Monad.L");
+    val L1_bmv = the (BMV_Monad_Def.pbmv_monad_of lthy "BMV_Monad.L1");
+    val L2_bmv = the (BMV_Monad_Def.pbmv_monad_of lthy "BMV_Monad.L2");
 
-    val (_, lthy) = @{fold_map 2} (BMV_Monad_Def.note_bmv_monad_thms (K BNF_Def.Note_All) I o SOME o Binding.name) ["L", "L1", "L2"] [L_bmv, L1_bmv, L2_bmv] lthy;
-
-    val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [MRBNF_Util.Inl L1_bmv, MRBNF_Util.Inl L2_bmv] lthy
+    val ((comp_bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad I L_bmv [MRBNF_Util.Inl L1_bmv, MRBNF_Util.Inl L2_bmv]
+      { deads = [], frees = [@{typ "'a1"}] }
+      [ SOME { deads = [], lives = [], frees = [@{typ "'a1"}, @{typ "'a2"}] },
+        SOME { deads = [], lives = [], frees = [@{typ 'a1}, @{typ "'a2"}] }
+      ]
+      lthy
     val _ = @{print} comp_bmv
   in lthy end
 \<close>

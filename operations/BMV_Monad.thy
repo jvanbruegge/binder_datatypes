@@ -603,7 +603,7 @@ val model_L = {
       resolve_tac ctxt @{thms natLeq_Cinfinite},
       resolve_tac ctxt @{thms ID.set_bd}
     ]],
-    Vrs_Injss = [],
+    Vrs_Injss = [[]],
     Vrs_Sbs = [fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L_1_def Sb_L_def case_prod_beta
         Product_Type.fst_map_prod Product_Type.snd_map_prod image_insert image_empty
@@ -675,7 +675,7 @@ val model_L1 = {
       fn ctxt => Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1,
       fn ctxt => Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_2_def case_prod_beta} THEN resolve_tac ctxt @{thms ID.set_bd} 1
     ],
-    Vrs_Injss = [],
+    Vrs_Injss = [[], []],
     Vrs_Sbs = [
       fn ctxt => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt @{thms Vrs_L1_1_def Sb_L1_def case_prod_map_prod}),
@@ -762,7 +762,7 @@ val model_L2 = {
       ],
       fn ctxt => Local_Defs.unfold0_tac ctxt @{thms case_prod_beta Vrs_L2_3_def} THEN resolve_tac ctxt @{thms FType.set_bd} 1
     ],
-    Vrs_Injss = [[]],
+    Vrs_Injss = [[], [], []],
     Vrs_Sbs = [
       fn ctxt => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt @{thms Sb_L2_def Vrs_L2_1_def case_prod_map_prod SSupp_def[of TyVar, unfolded SSupp_FType_def[unfolded tvVVr_tvsubst_FType_def comp_def tv\<eta>_FType_tvsubst_FType_def TyVar_def[symmetric], symmetric]]}),

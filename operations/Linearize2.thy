@@ -64,9 +64,6 @@ fun mk_inf_apply_2_set_tac ctxt =
     rtac ctxt refl
   ])
 \<close>
-lemma inf_apply_2_set: "{(x, y). inf A B x y} = {(x, y). inf (A x y) (B x y)}"
-  by (tactic \<open>mk_inf_apply_2_set_tac @{context}\<close>)
-
 
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 
 The relator is closed under intersections. *)
@@ -112,7 +109,7 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
           rtac ctxt conjI THEN_ALL_NEW
           resolve_tac ctxt prems)) THEN
         HEADGOAL (rtac ctxt exI) THEN
-        unfold_thms_tac ctxt @{thms inf_apply_2_set inf_bool_def} THEN
+        unfold_thms_tac ctxt @{thms inf_fun_def inf_bool_def} THEN
         HEADGOAL (rtac ctxt conjI) THEN
   
         HEADGOAL (Method.insert_tac ctxt prems) THEN

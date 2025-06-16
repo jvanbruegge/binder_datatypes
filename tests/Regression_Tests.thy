@@ -62,8 +62,6 @@ binder_datatype ('v, 'tv, 'ev, 'rv) expr =
   | Let x::'v "('v, 'tv, 'ev, 'rv) expr"  e::"('v, 'tv, 'ev, 'rv) expr" binds x in e
   | RApp "('v, 'tv, 'ev, 'rv) expr" "'rv list"  "('v, 'tv, 'ev, 'rv) expr"
 
-print_locale REC_expr
-
 (* #86 *)
 binder_datatype 'a "term" =
   Var 'a

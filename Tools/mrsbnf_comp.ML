@@ -34,29 +34,63 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
   let
     val outer_bmv = MRSBNF_Def.bmv_monad_of_mrsbnf outer;
     val inner_bmvs = map MRSBNF_Def.bmv_monad_of_mrsbnf inners;
-    val leader = BMV_Monad_Def.leader_of_bmv_monad outer_bmv;
+    fun leader f bmv = nth (f bmv) (BMV_Monad_Def.leader_of_bmv_monad bmv);
 
-    val _ = @{print} ("outer", BMV_Monad_Def.ops_of_bmv_monad outer_bmv)
-    val _ = @{print} ("inners", map BMV_Monad_Def.ops_of_bmv_monad inner_bmvs)
+    fun separate_vars vars bmv =
+      let
+        val Ts = (case leader BMV_Monad_Def.ops_of_bmv_monad bmv of
+          Type (_, Ts) => Ts
+          | T => [T]
+        ) ~~ vars;
+        fun lookup f = map_filter (Option.join o AList.lookup (op=) Ts) (leader f bmv);
+      in {
+        frees = lookup BMV_Monad_Def.frees_of_bmv_monad,
+        deads = lookup BMV_Monad_Def.deads_of_bmv_monad,
+        lives = lookup BMV_Monad_Def.lives_of_bmv_monad
+      } end;
 
-    
-    val _ = @{print} ("vars", oAs, Ass)
+    val oAs' = let val x = separate_vars oAs outer_bmv in { frees = #frees x, deads = #deads x } end;
+    val Ass' = map2 (separate_vars o map SOME) Ass inner_bmvs;
 
     val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad (qualify 0) (MRSBNF_Def.bmv_monad_of_mrsbnf outer)
-      (map (Inl o MRSBNF_Def.bmv_monad_of_mrsbnf) inners) oAs (map SOME Ass) lthy;
-    
+      (map (Inl o MRSBNF_Def.bmv_monad_of_mrsbnf) inners) oAs' (map SOME Ass') lthy;
+
+    val leader = BMV_Monad_Def.leader_of_bmv_monad outer_bmv;
     val outer_mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf outer) leader;
     val inner_mrbnfs = map (fn mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) leader) inners;
 
-    val ((mrbnf, tys), (unfold_set, lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline
+    val ((mrbnf, tys), (unfold_set', lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline
       qualify (distinct (op=) o flat) outer_mrbnf inner_mrbnfs oDs Dss oAs Ass Xs (accum, lthy);
 
+    val mrbnf =
+      let
+        val T = hd (BMV_Monad_Def.ops_of_bmv_monad bmv);
+        val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (MRBNF_Def.T_of_mrbnf mrbnf, T) Vartab.empty;
+        val phi = MRBNF_Util.subst_typ_morphism (map (fn (x, (s, T)) => (TVar (x, s), T)) (Vartab.dest tyenv));
+      in MRBNF_Def.morph_mrbnf phi mrbnf end
     val outer_axioms = MRSBNF_Def.axioms_of_mrsbnf outer;
 
+    val mrbnfs = mrbnf :: map_filter (fn mrsbnf =>
+      let
+        val bmv' = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
+        val leader = BMV_Monad_Def.leader_of_bmv_monad bmv';
+        val mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) leader;
+        fun find_match T = case T of
+          T as Type _ => map_filter (fn T' => Option.map (fn tyenv =>
+            MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism (
+              map (fn (x, (s, T)) => (TVar (x, s), T)) (Vartab.dest tyenv)
+            )) mrbnf
+          ) (try (Sign.typ_match (Proof_Context.theory_of lthy) (T, T')) Vartab.empty))
+            (BMV_Monad_Def.ops_of_bmv_monad bmv)
+          | _ => []
+      in case find_match (MRBNF_Def.T_of_mrbnf mrbnf) of
+        [] => NONE | x::_ => SOME x
+      end
+    ) inners;
+
     (* TODO: Carry over minion mrbnfs from inners *)
-    val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def fact_policy (qualify 0) NONE
-      (map_index (fn (i, x) => if i = leader then mrbnf else x) (MRSBNF_Def.mrbnfs_of_mrsbnf outer))
-      bmv (map_index (fn (i, x) => if i <> leader then {
+    val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_def fact_policy (qualify 0) NONE mrbnfs bmv
+      (map_index (fn (i, x) => if i <> 0 then {
         map_Sb = Option.map (fn thm => fn ctxt => HEADGOAL (rtac ctxt thm THEN_ALL_NEW assume_tac ctxt)) (#map_Sb x),
         map_is_Sb = fn ctxt => HEADGOAL (rtac ctxt (#map_is_Sb x) THEN_ALL_NEW assume_tac ctxt),
         set_Sb = map (fn thm => fn ctxt => HEADGOAL (rtac ctxt thm THEN_ALL_NEW assume_tac ctxt)) (#set_Sb x),
@@ -69,7 +103,7 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
         map_is_Sb = fn ctxt => EVERY1 [
           K (print_tac ctxt "map_is_Sb")
         ],
-        set_Sb = replicate (MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf) (fn ctxt => EVERY1 [
+        set_Sb = replicate (MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.live_of_mrbnf mrbnf) (fn ctxt => EVERY1 [
           K (print_tac ctxt "set_Sb")
         ]),
         set_Vrs = replicate (length (BMV_Monad_Def.frees_of_bmv_monad bmv)) (fn ctxt => EVERY1 [

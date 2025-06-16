@@ -12,7 +12,7 @@ typedecl ('a, 'b, 'c, 'd, 'e, 'f, 'g) T1
 typedecl ('a, 'b, 'c, 'd) T2
 (* free, free, free, live, dead, live *)
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) T3
-(* free, live *)
+(* free, free *)
 typedecl ('a, 'b) T4
 
 consts Sb_T1 :: "('b::var \<Rightarrow> 'b) \<Rightarrow> ('c::var \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f, 'g) T1) \<Rightarrow> ('g::var \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f, 'g) T1) \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f, 'g) T1 \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f, 'g) T1"

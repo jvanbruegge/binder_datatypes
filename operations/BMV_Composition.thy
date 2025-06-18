@@ -216,6 +216,7 @@ pbmv_monad T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a, 'c) T4"
   apply (rule T3.Sb_cong; assumption)
   done
 print_theorems
+print_pbmv_monads
 
 (* Same demotion, but automated *)
 local_setup \<open>fn lthy =>
@@ -568,6 +569,5 @@ let
     ] lthy
 in lthy end
 \<close>
-
 
 end

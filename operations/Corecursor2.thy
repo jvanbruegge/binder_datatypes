@@ -251,83 +251,251 @@ lemma valid_Udtor':
   (* END REPEAT_DETERM *)
   done
 
-lemma Umap_Udtor_strong:
-  assumes u: "bij (u::'a::var\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
-    and "valid_U d"
+lemma Umap_Udtor1_strong:
+  assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
+    and v: "bij v" "|supp v| <o |UNIV::'b set|"
+    and valid1: "valid_U1 d"
   shows
-    "Udtor (Umap u d) =
+    "Udtor1 (Umap1 u v d) =
  image
-   (map_term_pre u u (map_sum (permute_term u) (Umap u)) (map_sum (permute_term u) (Umap u)))
-   (Udtor d)"
+(map_T1_pre u v id id u v u (map_sum (permute_T1 u v) (Umap1 u v)) (map_sum (permute_T1 u v) (Umap1 u v))
+      (map_sum (permute_T2 u v) (Umap2 u v)) (map_sum (permute_T2 u v) (Umap2 u v)))
+   (Udtor1 d)"
 proof -
-  have x: "d = Umap (inv u) (Umap u d)"
+  have x: "d = Umap1 (inv u) (inv v) (Umap1 u v d)"
     apply (rule sym)
-    apply (rule trans[OF Umap_comp])
+    apply (rule trans[OF Umap_comp1])
          apply (rule bij_imp_bij_inv supp_inv_bound assms)+
     apply (subst inv_o_simp1, rule assms)+
-    apply (rule trans[OF Umap_id])
+    apply (rule trans[OF Umap_id(1)])
      apply (rule assms)
     apply (rule refl)
     done
   show ?thesis
     apply (rule subset_antisym)
-     apply (rule Umap_Udtor[OF assms(3,1,2)])
+     apply (rule Umap_Udtor1[OF valid1 u v])
     apply (subst x)
     apply (rule image_subsetI)
-    apply (drule Umap_Udtor[THEN subsetD, rotated -1])
-       apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap)+
+    apply (drule Umap_Udtor1[THEN subsetD, rotated -1])
+       apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap1)+
     apply (erule imageE)
     apply hypsubst
     apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
-     apply (rule term_pre.map_comp)
-          apply (rule bij_imp_bij_inv supp_inv_bound assms)+
-    apply (unfold map_sum.comp)
-    apply (subst inv_o_simp2 permute_comp0s Umap_comp, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
+     apply (rule T1_pre.map_comp)
+          apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound assms)+
+                  apply (unfold map_sum.comp)
+    apply (subst inv_o_simp2 T1.permute_comp0 T2.permute_comp0, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
+    apply (unfold comp_id)?
     apply (unfold comp_def)
-    apply (unfold Umap_id permute_id0s map_sum.id term_pre.map_id)
+    apply (unfold Umap_id T1.permute_id0 T2.permute_id0 map_sum.id)
     apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
-     apply (rule term_pre.map_cong[rotated -5])
-               apply (rule refl)
-              apply (rule refl)
-             apply (rule refl)
+     apply (rule T1_pre.map_cong[rotated -12])
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
       (* REPEAT_DETERM *)
             apply (rule sum.map_cong0[OF refl])
             apply (drule valid_Udtor'[rotated])
                apply (erule UnI2 UnI1)
               apply assumption
-             apply (rule valid_Umap)
+             apply (rule valid_Umap1)
                apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
             apply (rule trans)
-             apply (rule Umap_comp)
+             apply (rule Umap_comp1 Umap_comp2)
                  apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-            apply (rule trans)
-             apply (rule arg_cong2[OF _ refl, of _ _ Umap])
-             apply (rule inv_o_simp2)
-             apply (rule assms)
+                        apply (rule trans)
+(* TODO: this "arg_cong3" should be generalized to the number of args Umap* takes
+         in the ML code *)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
+             apply (rule inv_o_simp2, rule assms)+
             apply (rule Umap_id)
             apply assumption
       (* repeated *)
-           apply (rule sum.map_cong0[OF refl])
-           apply (drule valid_Udtor'[rotated])
-              apply (erule UnI2 UnI1)
-             apply assumption
-            apply (rule valid_Umap)
-              apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-           apply (rule trans)
-            apply (rule Umap_comp)
-                apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-           apply (rule trans)
-            apply (rule arg_cong2[OF _ refl, of _ _ Umap])
-            apply (rule inv_o_simp2)
-            apply (rule assms)
-           apply (rule Umap_id)
-           apply assumption
+            apply (rule sum.map_cong0[OF refl])
+            apply (drule valid_Udtor'[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap1)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                       apply (rule trans)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+                       apply assumption
+      (* repeated *)
+                      apply (rule sum.map_cong0[OF refl])
+(* TODO: we need to explicitly pick the 2nd lemma here in valid_Udtor',
+         because the first one also matches but leads to a dead end.
+         Can we somehow make it so that it wouldn't be necessary to explicitly
+         pick here? *)
+            apply (drule valid_Udtor'(2)[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap1)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                      apply (rule trans)
+(* TODO: we need to alternate between Umap1 and Umap2 here between repeats,
+can we rewrite this so that it wouldn't be necessary? *)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+                      apply assumption
+      (* repeated *)
+                      apply (rule sum.map_cong0[OF refl])
+            apply (drule valid_Udtor'(2)[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap1)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                     apply (rule trans)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+            apply assumption
       (* END REPEAT_DETERM *)
-          apply (rule supp_id_bound bij_id)+
-    apply (unfold Umap_id permute_id0s map_sum.id term_pre.map_id id_def[symmetric])
+                      apply (rule supp_id_bound bij_id)+
+      apply (unfold Umap_id T1.permute_id0 map_sum.id T1_pre.map_id id_def[symmetric])
     apply assumption
     done
 qed
+
+lemma Umap_Udtor2_strong:
+  assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
+    and v: "bij v" "|supp v| <o |UNIV::'b set|"
+    and valid2: "valid_U2 d"
+  shows
+    "Udtor2 (Umap2 u v d) =
+ image
+(map_T2_pre u v id id u v u (map_sum (permute_T1 u v) (Umap1 u v)) (map_sum (permute_T1 u v) (Umap1 u v))
+      (map_sum (permute_T2 u v) (Umap2 u v)) (map_sum (permute_T2 u v) (Umap2 u v)))
+   (Udtor2 d)"
+proof -
+  have x: "d = Umap2 (inv u) (inv v) (Umap2 u v d)"
+    apply (rule sym)
+    apply (rule trans[OF Umap_comp2])
+         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id(2)])
+     apply (rule assms)
+    apply (rule refl)
+    done
+  show ?thesis
+    apply (rule subset_antisym)
+     apply (rule Umap_Udtor2[OF valid2 u v])
+    apply (subst x)
+    apply (rule image_subsetI)
+    apply (drule Umap_Udtor2[THEN subsetD, rotated -1])
+       apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap2)+
+    apply (erule imageE)
+    apply hypsubst
+    apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
+     apply (rule T2_pre.map_comp)
+          apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound assms)+
+                  apply (unfold map_sum.comp)
+    apply (subst inv_o_simp2 T1.permute_comp0 T2.permute_comp0, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
+    apply (unfold comp_id)?
+    apply (unfold comp_def)
+    apply (unfold Umap_id T1.permute_id0 T2.permute_id0 map_sum.id)
+    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+     apply (rule T2_pre.map_cong[rotated -12])
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+                        apply (rule refl)
+      (* REPEAT_DETERM *)
+            apply (rule sum.map_cong0[OF refl])
+            apply (drule valid_Udtor'[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap2)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                        apply (rule trans)
+(* TODO: this "arg_cong3" should be generalized to the number of args Umap* takes
+         in the ML code *)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+            apply assumption
+      (* repeated *)
+            apply (rule sum.map_cong0[OF refl])
+            apply (drule valid_Udtor'[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap2)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                       apply (rule trans)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+                       apply assumption
+      (* repeated *)
+                      apply (rule sum.map_cong0[OF refl])
+(* TODO: we need to explicitly pick the 4th lemma here in valid_Udtor',
+         because the 3rd one also matches but leads to a dead end.
+         Can we somehow make it so that it wouldn't be necessary to explicitly
+         pick here? *)
+            apply (drule valid_Udtor'(4)[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap2)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                      apply (rule trans)
+(* TODO: we need to alternate between Umap1 and Umap2 here between repeats,
+can we rewrite this so that it wouldn't be necessary? *)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+                      apply assumption
+      (* repeated *)
+                      apply (rule sum.map_cong0[OF refl])
+            apply (drule valid_Udtor'(4)[rotated])
+               apply (erule UnI2 UnI1)
+              apply assumption
+             apply (rule valid_Umap2)
+               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+            apply (rule trans)
+             apply (rule Umap_comp1 Umap_comp2)
+                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                     apply (rule trans)
+             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
+             apply (rule inv_o_simp2, rule assms)+
+            apply (rule Umap_id)
+            apply assumption
+      (* END REPEAT_DETERM *)
+                      apply (rule supp_id_bound bij_id)+
+      apply (unfold Umap_id T1.permute_id0 map_sum.id T2_pre.map_id id_def[symmetric])
+    apply assumption
+    done
+qed
+
+lemmas Umap_Udtor_strong = Umap_Udtor1_strong Umap_Udtor2_strong
 
 definition FFVarsBD :: "('a::var, 'a, 'a term + 'u, 'a term + 'u) term_pre \<Rightarrow> 'a set" where
   "FFVarsBD X \<equiv> (\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X"

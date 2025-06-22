@@ -1629,7 +1629,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
         distinct ((op=) o apply2 (leader ops_of_bmv_monad)) (outer :: inners')
       )
     );
-    val new_minions = map_filter (AList.lookup (op=) new_minions o body_type o fastype_of) new_Injs;
+    val new_minions = map_filter (AList.lookup (op=) new_minions) (distinct (op=) (map (body_type o fastype_of) new_Injs));
     val axiomss = map (leader axioms_of_bmv_monad) inners';
 
     val T = leader ops_of_bmv_monad outer;
@@ -1661,23 +1661,29 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             rtac ctxt refl
           ],
           Map_comp = fn ctxt => EVERY1 [
-            K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ [#Map_comp (#axioms param)] @
+            rtac ctxt (trans OF [#Map_comp (#axioms param)]),
+            rtac ctxt ext,
+            rtac ctxt (#Map_cong (#axioms param)),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms refl id_o[THEN fun_cong]} @ map (fn thm => thm RS fun_cong) (
               map_filter (Option.map (#Map_comp o #axioms) o leader params_of_bmv_monad) inners'
-            )),
-            rtac ctxt refl
+            ))
           ],
           Supp_Map = map (fn _ => fn ctxt => EVERY1 [
-            K (Local_Defs.unfold0_tac ctxt (@{thms image_comp[unfolded comp_def] image_UN}
-              @ #Supp_Map (#axioms param) @
-              flat (map_filter (Option.map (#Supp_Map o #axioms) o leader params_of_bmv_monad) inners')
-            )),
-            rtac ctxt refl
+            K (Local_Defs.unfold0_tac ctxt @{thms image_Un image_UN}),
+            REPEAT_DETERM o rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]},
+            REPEAT_DETERM o EVERY' [
+              EqSubst.eqsubst_tac ctxt [0] (#Supp_Map (#axioms param)),
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms image_comp[unfolded comp_def] image_Un image_UN}),
+              rtac ctxt @{thm UN_cong},
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms image_UN[symmetric]}),
+              resolve_tac ctxt (flat (map_filter (Option.map (#Supp_Map o #axioms) o leader params_of_bmv_monad) inners'))
+            ]
           ]) Supps,
           Supp_bd = map (fn _ => fn ctxt => REPEAT_DETERM (resolve_tac ctxt (
-            @{thms infinite_regular_card_order_UN infinite_regular_card_order_Un}
-            @ [bd_infinite_regular_card_order_of_bmv_monad outer]
+            flat (map_filter (Option.map (#Supp_bd o #axioms) o leader params_of_bmv_monad) inners')
             @ #Supp_bd (#axioms param)
-            @ flat (map_filter (Option.map (#Supp_bd o #axioms) o leader params_of_bmv_monad) inners')
+            @ @{thms infinite_regular_card_order_UN infinite_regular_card_order_Un}
+            @ [bd_infinite_regular_card_order_of_bmv_monad outer]
           ) 1)) Supps,
           Map_cong = fn ctxt => Subgoal.FOCUS_PREMS (fn {context=ctxt, prems, ...} => EVERY1 [
             rtac ctxt (#Map_cong (#axioms param)),
@@ -1687,7 +1693,11 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
                 rtac ctxt (#Map_cong (#axioms param)),
                 REPEAT_DETERM o EVERY' [
                   resolve_tac ctxt prems,
-                  etac ctxt @{thm UN_I},
+                  etac ctxt @{thm UN_I} ORELSE' REPEAT_DETERM o FIRST' [
+                    rtac ctxt @{thm UnI2} THEN' etac ctxt @{thm UN_I},
+                    rtac ctxt @{thm UnI1} THEN' etac ctxt @{thm UN_I},
+                    rtac ctxt @{thm UnI1}
+                  ],
                   assume_tac ctxt
                 ]
               ]
@@ -1728,10 +1738,10 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             @ #Supp_Map (#axioms param) @ #Vrs_Map param @ flat (#Supp_Injss facts)
           )),
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (flat (map_filter (Option.map #Supp_Sb o leader params_of_bmv_monad) inners')),
+            EqSubst.eqsubst_tac ctxt [0] (flat (maps (map_filter (Option.map #Supp_Sb) o params_of_bmv_monad) inners')),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm SSupp_Inj_bound})
           ],
-          K (Local_Defs.unfold0_tac ctxt @{thms image_Un Union_UN_swap image_UN UN_empty2 Un_empty_left Un_empty_right UN_UN_flatten UN_Un_distrib Un_assoc[symmetric]}),
+          K (Local_Defs.unfold0_tac ctxt @{thms id_apply image_Un Union_UN_swap image_UN UN_empty2 Un_empty_left Un_empty_right UN_UN_flatten UN_Un_distrib Un_assoc[symmetric]}),
           rtac ctxt refl ORELSE' EVERY' [
             rtac ctxt @{thm set_eqI},
             K (Local_Defs.unfold0_tac ctxt @{thms Un_iff}),
@@ -1845,7 +1855,7 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             ) (outer :: inners'))
           )),
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (maps (#Vrs_Sbs o leader axioms_of_bmv_monad) inners'
+            EqSubst.eqsubst_tac ctxt [0] (maps (maps #Vrs_Sbs o axioms_of_bmv_monad) inners'
               @ #Supp_Sb param @ flat (map_filter (Option.map #Supp_Sb o leader params_of_bmv_monad) inners')
             ),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm SSupp_Inj_bound})

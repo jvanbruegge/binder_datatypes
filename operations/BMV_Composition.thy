@@ -26,10 +26,10 @@ consts Vrs_3_T1 :: "('a, 'b::var, 'c::var, 'd, 'e, 'f, 'g::var) T1 \<Rightarrow>
 consts Inj_1_T1 :: "'c \<Rightarrow> ('a, 'b::var, 'c::var, 'd, 'e, 'f, 'g::var) T1"
 consts Inj_2_T1 :: "'g \<Rightarrow> ('a, 'b::var, 'c::var, 'd, 'e, 'f, 'g::var) T1"
 
-consts Sb_T2 :: "('d::var \<Rightarrow> 'd) \<Rightarrow> ('b::var \<Rightarrow> ('a, 'b, 'c, 'd) T2) \<Rightarrow> ('a, 'b, 'c, 'd) T2 \<Rightarrow> ('a, 'b, 'c, 'd) T2"
-consts Vrs_1_T2 :: "('a, 'b::var, 'c, 'd::var) T2 \<Rightarrow> 'd set"
-consts Vrs_2_T2 :: "('a, 'b::var, 'c, 'd::var) T2 \<Rightarrow> 'b set"
-consts Inj_T2 :: "'b \<Rightarrow> ('a, 'b::var, 'c, 'd::var) T2"
+consts Sb_T2 :: "('d::var \<Rightarrow> 'd) \<Rightarrow> ('b::var \<Rightarrow> ('a::var, 'b, 'c, 'd) T2) \<Rightarrow> ('a, 'b, 'c, 'd) T2 \<Rightarrow> ('a, 'b, 'c, 'd) T2"
+consts Vrs_1_T2 :: "('a::var, 'b::var, 'c, 'd::var) T2 \<Rightarrow> 'd set"
+consts Vrs_2_T2 :: "('a::var, 'b::var, 'c, 'd::var) T2 \<Rightarrow> 'b set"
+consts Inj_T2 :: "'b \<Rightarrow> ('a::var, 'b::var, 'c, 'd::var) T2"
 
 consts Sb_T3 :: "('a::var \<Rightarrow> ('a::var, 'b, 'c::var, 'd, 'e, 'f) T3) \<Rightarrow> ('a::var \<Rightarrow> ('a::var, 'c::var) T4) \<Rightarrow> ('b::var \<Rightarrow> ('a::var, 'b, 'c::var, 'd, 'e, 'f) T3) \<Rightarrow> ('c::var \<Rightarrow> ('a, 'c) T4) \<Rightarrow> ('a::var, 'b, 'c::var, 'd, 'e, 'f) T3 \<Rightarrow> ('a::var, 'b, 'c::var, 'd, 'e, 'f) T3"
 consts Map_T3 :: "('d \<Rightarrow> 'd') \<Rightarrow> ('f \<Rightarrow> 'f') \<Rightarrow> ('a::var, 'b, 'c::var, 'd, 'e, 'f) T3 \<Rightarrow> ('a, 'b, 'c, 'd', 'e, 'f') T3"
@@ -65,7 +65,7 @@ pbmv_monad "('a, 'b, 'c, 'd, 'e, 'f, 'g) T1"
   done
 print_theorems
 
-pbmv_monad "('a, 'b, 'c, 'd) T2"
+pbmv_monad "('a::var, 'b, 'c, 'd) T2"
   Sbs: Sb_T2
   RVrs: Vrs_1_T2
   Injs: Inj_T2
@@ -563,7 +563,7 @@ let
   open MRBNF_Util
   val ((bmv, unfold_set), lthy) = BMV_Monad_Def.compose_bmv_monad (Binding.prefix_name "comp") T1 [Inl T2, Inr @{typ "'g set"}, Inl T3]
     { frees = [@{typ 'b}, @{typ 'c}, @{typ 'g}], deads = [@{typ 'f}] }
-    [ SOME { frees = [@{typ 'd}, @{typ 'b}], lives = [], deads = [@{typ 'a}, @{typ 'e}] },
+    [ SOME { frees = [@{typ 'd}, @{typ 'b}], lives = [], deads = [@{typ "'a::var"}, @{typ 'e}] },
       NONE,
       SOME { frees = [@{typ 'b}, @{typ 'a}, @{typ 'c}], lives = [@{typ 'd}, @{typ 'h}], deads = [@{typ 'e}] }
     ] lthy

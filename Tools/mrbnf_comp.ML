@@ -1034,9 +1034,6 @@ fun raw_lift_mrbnf qualify (n1, n2, n3) mrbnf (accum as (unfold_set, lthy)) =
 
     fun le_rel_OO_tac ctxt = rtac ctxt (le_rel_OO_of_mrbnf mrbnf) 1;
 
-    fun mr_mk_simple_rel_OO_Grp_tac ctxt rel_OO_Grp in_alt_thm =
-      HEADGOAL (rtac ctxt (trans OF [rel_OO_Grp, in_alt_thm RS @{thm OO_Grp_cong} RS sym]));
-
     fun rel_OO_Grp_tac ctxt = unfold_thms_tac ctxt (the_list in_alt_thm_opt)
       THEN rtac ctxt (rel_OO_Grp_of_mrbnf mrbnf) 1
         THEN TRYALL (assume_tac ctxt);

@@ -296,6 +296,26 @@ lemma ex_avoiding_bij:
   apply (rule conjI avoiding_bij assms)+
   done
 
+lemma ex_distinct_bijs: "A \<noteq> {} \<Longrightarrow> |A| <o |UNIV::'a set| \<Longrightarrow> \<exists>(f::'a::infinite \<Rightarrow> 'a) g. bij f \<and> |supp f| <o |UNIV::'a set| \<and> bij g \<and> |supp g| <o |UNIV::'a set| \<and> f ` A \<noteq> g ` A"
+proof -
+  assume a: "A \<noteq> {}" "|A| <o |UNIV::'a set|"
+  then obtain x where "x \<in> A" by blast
+  obtain y where "x \<noteq> y" "y \<notin> A" by (metis \<open>x \<in> A\<close> a(2) exists_fresh)
+  obtain z where "z \<noteq> y" "z \<notin> A"
+    by (metis UNIV_eq_I Un_empty_left Un_insert_left a(2) card_of_Un_singl_ordLess_infinite infinite_UNIV insertCI ordLess_irreflexive)
+
+  let ?f = "x \<leftrightarrow> y"
+  let ?g = "x \<leftrightarrow> z"
+
+  have "?f ` A \<noteq> ?g ` A"
+    by (metis Swapping.bij_swap \<open>x \<in> A\<close> \<open>z \<noteq> y\<close> \<open>z \<notin> A\<close> imageI image_in_bij_eq swap_fresh swap_inv swap_simps(3))
+  then show ?thesis
+    apply -
+    apply (rule exI[of _ ?f])
+    apply (rule exI[of _ ?g])
+    by (simp add: infinite_UNIV)
+qed
+
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
 

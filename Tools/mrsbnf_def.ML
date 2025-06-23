@@ -64,13 +64,21 @@ fun apply_mrsbnf_axioms ({
   map_is_Sb=f1, map_Sb=f2, set_Sb=f3s, set_Vrs=f4s, map_Injs=f5s
 }: ('a -> 'b) mrsbnf_axioms) ({
   map_is_Sb, map_Sb, set_Sb, set_Vrs, map_Injs
-}: 'a mrsbnf_axioms) = {
+}: 'a mrsbnf_axioms) =
+let
+  fun checkLength name xs ys = if length xs <> length ys then error (
+    "UnequalLength: " ^ name ^ " (" ^ string_of_int (length xs) ^ " vs. " ^ string_of_int (length ys) ^ ")"
+  ) else ()
+  val _ = checkLength "set_Sb" set_Sb f3s
+  val _ = checkLength "set_Vrs" set_Vrs f4s
+  val _ = Option.map (fn map_Injs => checkLength "map_Injs" map_Injs (the f5s)) map_Injs
+in {
   map_is_Sb = f1 map_is_Sb,
   map_Sb = Option.map (fn t => the f2 t) map_Sb,
   map_Injs = Option.map (fn ts => map2 (curry (op|>)) ts (the f5s)) map_Injs,
   set_Sb = map2 (curry (op|>)) set_Sb f3s,
   set_Vrs = map2 (curry (op|>)) set_Vrs f4s
-}: 'b mrsbnf_axioms
+}: 'b mrsbnf_axioms end
 
 type mrsbnf_facts = {
   SSupp_map_subset: thm option list,
@@ -803,6 +811,8 @@ fun prove_axioms mrbnfs bmv tacs lthy =
   let
     val (goals, vars, mrbnfs, bmv) = mk_mrsbnf_axioms mrbnfs bmv lthy;
     val tacs' = map (map_mrsbnf_axioms (fn tac => fn goal => Goal.prove_sorry lthy [] [] goal (tac o #context))) tacs;
+    val _ = if length tacs' = length goals then () else
+      error ("Expected " ^ string_of_int (length goals) ^ " sets of axiom tactics, but got " ^ string_of_int (length tacs'))
   in (map2 apply_mrsbnf_axioms tacs' goals, vars, mrbnfs, bmv) end
 
 fun mrsbnf_def fact_policy qualify name_opt mrbnfs bmv tacs lthy =

@@ -17,24 +17,33 @@ Multithreading.parallel_proofs := 0
 
 local_setup \<open>fn lthy =>
 let
-  val ((mrsbnf, tys), (_, lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)
+  val ((mrsbnf, tys), ((bmv_unfolds, (_, mrbnf_unfolds)), lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)
     I [] (map (apfst dest_TFree) [(@{typ 'v}, MRBNF_Def.Free_Var),
       (@{typ 'btv}, MRBNF_Def.Bound_Var), (@{typ 'bv}, MRBNF_Def.Bound_Var)])
     @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"}
-    ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
+    (([], (MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds)), lthy);
 
-  val _ = @{print} mrsbnf
+  val unfold_defs = Thm.cterm_of lthy o Raw_Simplifier.rewrite_term (Proof_Context.theory_of lthy) bmv_unfolds []
+  val unfold_defs' = Local_Defs.unfold0 lthy (bmv_unfolds @ #map_unfolds mrbnf_unfolds)
+  val mrsbnf = case mrsbnf of MRBNF_Util.Inl x => x | _ => error "impossible"
+  val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
+
+  val _ = @{print} (map unfold_defs (BMV_Monad_Def.Sbs_of_bmv_monad bmv))
+  val _ = @{print} (map (map unfold_defs' o #set_Vrs) (MRSBNF_Def.axioms_of_mrsbnf mrsbnf))
+
+  val (_, lthy) = BMV_Monad_Def.note_bmv_monad_thms (K BNF_Def.Note_All) I (SOME @{binding FTerm_pre'}) bmv lthy
+
+  val notes = [
+      ("bmv_defs", bmv_unfolds)
+    ] |> (map (fn (thmN, thms) =>
+      ((Binding.name thmN, []), [(thms, [])])
+    ));
+
+    val (noted, lthy) = Local_Theory.notes notes lthy
+
 in lthy end
 \<close>
-
-
-
-
-
-
-
-
-
+print_theorems
 
 
 

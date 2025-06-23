@@ -7,13 +7,13 @@ sig
   | No_Warn_Wits
   | No_Warn_Transfer
   val linearize_mrbnf:
-    ((((linearize_mrbnf_option list * (binding option * (string * sort option)) list) *
-      string) * term list option) * thm list option) * (binding * binding * binding) ->
+    (((((linearize_mrbnf_option list * (binding option * (string * sort option)) list) *
+      binding) * typ) * term list option) * string) * (binding * binding * binding) ->
       ({context: Proof.context, prems: thm list} -> tactic) list ->
       local_theory -> local_theory
   val linearize_mrbnf_cmd:
-     ((((linearize_mrbnf_option list * (binding option * (string * string option)) list) *
-       string) * string list) * (Facts.ref * Token.src list) list option) *
+     (((((linearize_mrbnf_option list * (binding option * (string * string option)) list) *
+       binding) * string) * string list) * string) *
        (binding * binding * binding) -> local_theory -> Proof.state
 end
 
@@ -289,7 +289,7 @@ fun mk_transfer_thms quiet bnf_F bnf_G name consts thm Tss defs lthy = let
   end;
 
 
-(** typedef_bnf **)
+(** linearize **)
 
 fun mk_typedef_transfer_tacs bnf_F bnf_G thms old_defs
   map_raw rel_raw pred_raw sets_raw = let
@@ -331,12 +331,24 @@ fun mk_typedef_transfer_tacs bnf_F bnf_G thms old_defs
   in {map={raw=map_raw,tac=map_tac},rel={raw=rel_raw,tac=rel_tac},
       sets={raws=sets_raw,tacs=set_tacs},pred=SOME{raw=pred_raw,tac=pred_tac}} end;
 
-fun typedef_bnf thm wits specs map_b rel_b pred_b opts lthy =
+fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
   let
+    val set_bs = map fst specs;
+    val vars = map snd specs;
+    val name = Binding.name_of b;
+(*
+    val mrbnf = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
+      (Binding.prefix_name name) flat [] [] [] repT
+      ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
+      |> @{print};
+*)
+    val mrbnf = repT |> dest_Type |> fst |> MRBNF_Def.mrbnf_of lthy |> the |> @{print};
+
     val plugins =
       get_first (fn Plugins_Option f => SOME (f lthy) | _ => NONE) (rev opts)
         |> the_default Plugin_Name.default_filter;
 
+    val thm = TrueI;
     (* extract Rep Abs F RepT AbsT *)
     val (Rep_G, Abs_G, F) = strip3 thm;
     val typ_Abs_G = dest_funT (fastype_of Abs_G);
@@ -634,92 +646,48 @@ fun typedef_bnf thm wits specs map_b rel_b pred_b opts lthy =
 
 local
 
-fun prepare_common prepare_name prepare_sort prepare_term prepare_thm
-    (((((plugins, raw_specs), raw_absT_name), raw_wits), xthms_opt), (map_b, rel_b, pred_b)) lthy =
+fun prepare_common prepare_sort prepare_typ prepare_term
+    ((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvar), (map_b, rel_b, pred_b)) lthy =
   let
-    val absT_name = prepare_name lthy raw_absT_name;
+    val _ = b
+      |> @{print};
+    val repT = prepare_typ lthy raw_repT
+      |> @{print};
 
-    fun bad_input input =
-      Pretty.chunks [Pretty.para ("Expected theorem(s) of either form:"),
-      Pretty.item [Pretty.enum "," "" "" [Syntax.pretty_term lthy @{term "Quotient R Abs Rep T"},
-        Syntax.pretty_term lthy @{term "reflp R"}]],
-      Pretty.item [Syntax.pretty_term lthy @{term "Quotient R Abs Rep T"}],
-      Pretty.item [Syntax.pretty_term lthy @{term "type_definition Rep Abs A"}],
-      Pretty.para ("Got"), Pretty.enum "," "" "" (map (Thm.pretty_thm lthy) input)]
-      |> Pretty.string_of
-      |> error;
+    val _ = on_tvar
+      |> @{print};
 
-    fun no_refl qthm =
-      Pretty.chunks [Pretty.para ("Could not find a reflexivity rule for the Quotient theorem:"),
-      Pretty.item [Thm.pretty_thm lthy qthm],
-      Pretty.para ("Try supplying a reflexivity theorem manually or registering it in setup_lifting.")]
-      |> Pretty.string_of
-      |> error;
-
-    fun find_equiv_thm_via_Quotient qthm =
-      let
-        val refl_thms = Lifting_Info.get_reflexivity_rules lthy
-         |> map (unfold_thms lthy @{thms reflp_eq[symmetric]});
-      in
-        (case refl_thms RL [qthm RS @{thm Quotient_reflp_imp_equivp}] of
-          [] => no_refl qthm
-        | thm :: _ => thm)
-      end;
-
-    val (lift_thm, equiv_thm) =
-      (case Option.map (prepare_thm lthy) xthms_opt of
-        SOME (thms as [qthm, _]) =>
-          (case try (fn thms => @{thm Quotient_reflp_imp_equivp} OF thms) thms of
-            SOME equiv_thm => (qthm RS @{thm Quotient_Quotient3}, Quotient equiv_thm)
-          | NONE => bad_input thms)
-      | SOME [thm] =>
-          (case try (fn thm => thm RS @{thm Quotient_Quotient3}) thm of
-            SOME qthm => (qthm, Quotient (find_equiv_thm_via_Quotient thm))
-          | NONE => if can (fn thm => thm RS @{thm type_definition.Rep}) thm
-              then (thm, Typedef)
-              else bad_input [thm])
-      | NONE => (case Lifting_Info.lookup_quotients lthy absT_name of
-            SOME {quot_thm = qthm, ...} =>
-              (case [qthm] RL @{thms Quotient_eq_onp_typedef Quotient_eq_onp_type_copy} of
-                thm :: _ => (thm, Typedef)
-              | _ => (qthm RS @{thm Quotient_Quotient3},
-                 Quotient (find_equiv_thm_via_Quotient qthm)))
-          | NONE => (Typedef.get_info lthy absT_name |> hd |> snd |> #type_definition, Typedef))
-      | SOME thms => bad_input thms);
     val wits = (Option.map o map) (prepare_term lthy) raw_wits;
     val specs =
-      map (apsnd (apsnd (the_default @{sort type} o Option.map (prepare_sort lthy)))) raw_specs;
+      map (apsnd (apsnd (the_default @{sort type} o Option.map (prepare_sort lthy)))) raw_specs
+      |> @{print};
   in
-    typedef_bnf lift_thm wits specs map_b rel_b pred_b plugins lthy
+    linearize b repT on_tvar wits specs map_b rel_b pred_b plugins lthy
   end;
 
-fun prepare_linearize_mrbnf prepare_name prepare_sort prepare_term prepare_thm =
+fun prepare_linearize_mrbnf prepare_sort prepare_typ prepare_term =
   (fn (goals, after_qed, definitions, lthy) =>
     lthy
     |> Proof.theorem NONE after_qed (map (single o rpair []) goals)
     |> Proof.refine_singleton
         (Method.Basic (fn ctxt => SIMPLE_METHOD (unfold_thms_tac ctxt definitions)))
     |> Proof.refine_singleton (Method.primitive_text (K I))) oo
-  prepare_common prepare_name prepare_sort prepare_term prepare_thm o apfst (apfst (apsnd SOME));
+  prepare_common prepare_sort prepare_typ prepare_term o apfst (apfst (apsnd SOME));
 
-fun prepare_solve prepare_name prepare_typ prepare_sort prepare_thm tacs =
+fun prepare_solve prepare_sort prepare_typ prepare_term tacs =
   (fn (goals, after_qed, definitions, lthy) =>
     lthy
     |> after_qed (map2 (fn goal => fn tac => [Goal.prove_sorry lthy [] [] goal
         (fn (ctxtprems as {context = ctxt, prems = _}) =>
           unfold_thms_tac ctxt definitions THEN tac ctxtprems)])
       goals (tacs (length goals)))) oo
-  prepare_common prepare_name prepare_typ prepare_sort prepare_thm;
+  prepare_common prepare_sort prepare_typ prepare_term;
 
 in
 
-val linearize_mrbnf_cmd =
-  prepare_linearize_mrbnf
-    (dest_Type_name oo Proof_Context.read_type_name {proper = true, strict = false})
-    Syntax.read_sort Syntax.read_term Attrib.eval_thms;
+val linearize_mrbnf_cmd = prepare_linearize_mrbnf Syntax.read_sort Syntax.read_typ Syntax.read_term;
 
-fun linearize_mrbnf args tacs =
-  prepare_solve (K I) (K I) (K I) (K I) (K tacs) args;
+fun linearize_mrbnf args tacs = prepare_solve (K I) (K I) (K I) (K tacs) args;
 
 end;
 
@@ -744,7 +712,7 @@ fun parse_common_opts p =
 
 val parse_lift_opts = Parse.reserved "no_warn_wits" >> K No_Warn_Wits |> parse_common_opts;
 
-val parse_xthms = Scan.option (Parse.reserved "via" |-- Parse.thms1);
+val parse_on_clause = Parse.reserved "on" |-- Parse.type_ident;
 
 in
 
@@ -754,8 +722,9 @@ val _ =
   Outer_Syntax.local_theory_to_proof @{command_keyword linearize_mrbnf}
     "register a quotient type/subtype of a bounded natural functor (BNF) as a BNF"
 (* generalize Parse.type_const? *)
-    ((parse_lift_opts -- parse_type_args_named_constrained -- Parse.type_const (*-- Parse.typ*) -- 
-      parse_wits -- parse_xthms -- parse_map_rel_pred_bindings) >> linearize_mrbnf_cmd);
+    ((parse_lift_opts -- parse_type_args_named_constrained -- Parse.binding --
+      (\<^keyword>\<open>=\<close> |-- Parse.typ) -- 
+      parse_wits -- parse_on_clause -- parse_map_rel_pred_bindings) >> linearize_mrbnf_cmd);
 
 end;
 

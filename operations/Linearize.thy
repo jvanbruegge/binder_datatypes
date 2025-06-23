@@ -62,6 +62,8 @@ open BNF_Util BNF_Tactics MRBNF_Def
 fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_set2_strong F_in_rel ctxt =
   let
     val id_prems = MRBNF_Comp_Tactics.mk_id_prems mrbnf;
+    val var_types = var_types_of_mrbnf mrbnf;
+    val nr_lives = length (filter (fn v => v = MRBNF_Def.Live_Var) var_types);
   in
     HEADGOAL (
       forward_tac ctxt [F_mr_rel_mono_strong0 OF flat (replicate 2 id_prems)] THEN_ALL_NEW (
@@ -79,7 +81,7 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
     HEADGOAL (etac ctxt exE) THEN
     HEADGOAL (etac ctxt exE) THEN
     HEADGOAL (etac ctxt @{thm alt_ex1E}) THEN
-    REPEAT_DETERM_N 7 (HEADGOAL (etac ctxt conjE)) THEN
+    REPEAT_DETERM_N (3+2*nr_lives) (HEADGOAL (etac ctxt conjE)) THEN
     HEADGOAL (Subgoal.FOCUS
       (fn {prems, context = ctxt, params, ...} => 
         HEADGOAL (Method.insert_tac ctxt [
@@ -96,8 +98,8 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
         HEADGOAL (rtac ctxt conjI) THEN
         HEADGOAL (Method.insert_tac ctxt prems) THEN
         HEADGOAL (hyp_subst_tac_thin true ctxt) THEN
-        HEADGOAL (rtac ctxt conjI) THEN
-        REPEAT_DETERM_N 2 (HEADGOAL (EVERY' [
+        REPEAT_DETERM_N nr_lives (HEADGOAL (EVERY' [
+          TRY o rtac ctxt conjI,
           rtac ctxt @{thm subrelI},
           rtac ctxt CollectI,
           rtac ctxt @{thm case_prodI},
@@ -127,24 +129,33 @@ lemma F_strong:
   apply (unfold F.in_rel[OF supp_id_bound bij_id supp_id_bound, unfolded id_apply F.map_id OO_Grp_alt]
       id_def[symmetric] mem_Collect_eq)
   apply (elim exE alt_ex1E)
-  apply (erule conjE)+
+  apply (erule conjE)
+  apply (erule conjE)
+  apply (erule conjE)
+  apply (erule conjE)
+  apply (erule conjE)
+  apply (erule conjE)
+  apply (erule conjE)
   subgoal premises subprems for z l r
+    thm subprems
     apply (insert spec2[OF subprems(1), of r z]
         spec2[OF subprems(1), of l z]; (erule impE); (erule impE))
-       apply (rule conjI; rule conjI; rule subprems)+
+       apply (rule conjI; rule conjI; rule subprems)
+       apply (rule conjI; rule conjI; rule subprems)
+       apply (rule conjI; rule conjI; rule subprems)
     apply (rule exI)
     apply (unfold inf_fun_def inf_bool_def)
     apply (rule conjI)
      apply (insert subprems) []
      apply (hypsubst_thin)
-     apply (rule conjI)
-      apply (rule subrelI, 
+    apply ((rule conjI)?,
+        rule subrelI, 
         rule CollectI, 
         rule case_prodI, 
         (rule conjI; erule rev_subsetD[THEN iffD1[OF prod_in_Collect_iff]]),
         assumption, assumption)+
     apply (rule conjI)
-    apply(rule subprems)+
+    apply (rule subprems)+
     done
   done
 
@@ -234,7 +245,7 @@ fun mk_nonrep2_map_F_tac mrbnf nonrep_def sameShape_def F_map_comp F_mr_rel_map 
             TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
           K (unfold_tac ctxt [switch id_o o_id, @{thm Grp_UNIV_id}]),
           K (unfold_tac ctxt [switch @{thm OO_eq} @{thm eq_OO}]),  
-          EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] [switch @{thm eq_OO} @{thm OO_eq}], (*move all (=) to the right except for lin_live_pos*)
+          EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] [switch @{thm eq_OO} @{thm OO_eq}], (*move all (=) to the left except for lin_live_pos*)
           K (unfold_tac ctxt @{thms eq_alt}),   
           EqSubst.eqsubst_tac ctxt [0] @{thms Grp_UNIV_id}
         ]) THEN
@@ -251,25 +262,27 @@ fun mk_nonrep2_map_F_tac mrbnf nonrep_def sameShape_def F_map_comp F_mr_rel_map 
           etac ctxt exE,
           etac ctxt conjE,
           etac ctxt CollectE,
-          etac ctxt conjE,
-          etac ctxt conjE,
-          hyp_subst_tac_thin true ctxt
+          etac ctxt conjE
         ]) THEN
+        REPEAT_DETERM_N (nr_lives-1) (HEADGOAL (
+          etac ctxt conjE)) THEN
+        HEADGOAL (hyp_subst_tac_thin true ctxt) THEN
         HEADGOAL (Subgoal.FOCUS 
           (fn {prems = subprems, context = ctxt, params, ...} => 
             HEADGOAL (EVERY' [
               Method.insert_tac ctxt [nth subprems 0],
               etac ctxt allE,
               etac ctxt impE,
-              rtac ctxt (infer_instantiate' ctxt [NONE, SOME (snd (nth params 1))] exI)
+              rtac ctxt (infer_instantiate' ctxt [NONE, SOME (snd (nth params 1))] exI),
+              EqSubst.eqsubst_tac ctxt [1] [nth F_rel_maps 0],
+              EqSubst.eqsubst_tac ctxt [1] [nth F_rel_maps 1]
             ]) THEN
-            REPEAT_DETERM_N nr_lives (HEADGOAL (EqSubst.eqsubst_tac ctxt [1] F_rel_maps)) THEN
-            HEADGOAL (EVERY' [
-              rtac ctxt F_rel_refl_strong THEN_ALL_NEW
+            HEADGOAL (rtac ctxt F_rel_refl_strong) THEN
+            REPEAT_DETERM_N nr_lives (HEADGOAL (
                 (dresolve_tac ctxt (map (fn p => subsetD OF [p] RS @{thm Collect_case_prodD}) (drop 1 subprems)) THEN'
                   (assume_tac ctxt ORELSE' 
-                  (rtac ctxt sym THEN' assume_tac ctxt))),
-
+                  (rtac ctxt sym THEN' assume_tac ctxt))))) THEN
+            HEADGOAL (EVERY' [
               etac ctxt exE,
               EqSubst.eqsubst_tac ctxt [0] [F_map_comp] THEN_ALL_NEW
                 TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
@@ -334,10 +347,9 @@ lemma nonrep2_map_F:
        apply (rule exI[of _ R])
       apply (subst F.rel_map)
        apply (subst F.rel_map)
-      apply (rule F.rel_refl_strong; 
-              (drule subsetD[OF subprems(2), THEN Collect_case_prodD] subsetD[OF subprems(3), THEN Collect_case_prodD]; 
-                (assumption)?; (rule sym; assumption)?)
-            )
+       apply (rule F.rel_refl_strong)
+         apply (drule subsetD[OF subprems(2), THEN Collect_case_prodD] subsetD[OF subprems(3), THEN Collect_case_prodD]; 
+                (assumption)?; (rule sym; assumption)?)+
       apply (elim exE)
       apply (subst F.map_comp; (rule prems bij_id supp_id_bound)?)
       apply (subst (1 2) trans[OF id_o o_id[symmetric]])
@@ -922,7 +934,8 @@ open BNF_Util BNF_Tactics
 fun mk_rrel_F_map_F3_tac F_rel_map F_rel_mono_strong Grp_def ctxt =
     unfold_thms_tac ctxt ([F_rel_map, Grp_def, eqTrueI OF @{thms UNIV_I}] @ @{thms id_apply simp_thms(21)}) THEN
     HEADGOAL (rtac ctxt @{thm iffI}) THEN
-    ALLGOALS (EVERY' [etac ctxt F_rel_mono_strong, etac ctxt sym, assume_tac ctxt])
+    ALLGOALS (etac ctxt F_rel_mono_strong THEN_ALL_NEW
+       (assume_tac ctxt ORELSE' etac ctxt sym))
 \<close>
 
 lemma rrel_F_map_F3:
@@ -932,7 +945,7 @@ lemma rrel_F_map_F3:
     THEN print_tac @{context} "done" THEN no_tac\<close>)
   apply (unfold F.rel_map(1) Grp_def id_apply eqTrueI[OF UNIV_I] simp_thms(21))
   apply (rule iffI)
-   apply (erule F.rel_mono_strong, erule sym, assumption)+
+   apply (erule F.rel_mono_strong; (assumption?,(erule sym)?))+
   done
 
 
@@ -958,8 +971,8 @@ lemma asSS: "|supp u| <o |UNIV :: 'a set| \<Longrightarrow> asSS (u :: 'a \<Righ
 ML \<open>
 open BNF_Util BNF_Tactics MRBNF_Def
 
-fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 
-  rrel_F_map_F3 F_in_rel F_map_comp nonrep2_map_F_rev Rep_F'_inverse F_map_cong F_set_maps cx ctxt =
+fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 
+  rrel_F_map_F3 F_in_rel F_map_comp nonrep2_map_F_rev Rep_F'_inverse F_map_cong set_F'_defs F_set_maps cx ctxt =
   HEADGOAL (Subgoal.FOCUS
     (fn {prems, context = ctxt,...} =>
       let
@@ -975,7 +988,7 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
         val sb_prems = mk_sb_prems prems var_types 1;
         val nr_lives = length (filter (fn v => v = Live_Var) var_types);
       in
-        unfold_thms_tac ctxt ([rrel_F'_def, set4_F'_def, map_F'_def, o_apply] @ @{thms asSS_def asBij_def if_True} @ 
+        unfold_thms_tac ctxt ([rrel_F'_def, map_F'_def, o_apply] @ set_F'_defs @ @{thms asSS_def asBij_def if_True} @ 
           map (fn thm => thm RS eqTrueI) (prems @ @{thms supp_id_bound bij_id})) THEN
         HEADGOAL (EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse])THEN
         HEADGOAL (rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems)) THEN
@@ -984,13 +997,13 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
         unfold_thms_tac ctxt ((eqTrueI OF @{thms UNIV_I}):: @{thms Grp_def simp_thms(21)}) THEN
         HEADGOAL (rtac ctxt iffI) THEN
         (* 1st Subgoal *)
-        REPEAT_DETERM_N 5 (HEADGOAL (eresolve_tac ctxt [exE, conjE, CollectE])) THEN
+        REPEAT_DETERM_N (3+nr_lives) (HEADGOAL (eresolve_tac ctxt [exE, conjE, CollectE])) THEN
         HEADGOAL (Subgoal.FOCUS
           (fn {prems = subprems, context = ctxt, ...} =>
               (* setup *)
               HEADGOAL (EVERY' [
                 rtac ctxt exI,
-                EqSubst.eqsubst_tac ctxt [1, 2, 3] [Abs_F'_inverse],
+                EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (nr_lives+1)) [Abs_F'_inverse],
                 Method.insert_tac ctxt [unfold_thms ctxt [(nth subprems 0 RS sym)] (infer_instantiate' ctxt [SOME cx] Rep_F')],
                 EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => if i < lin_pos-1 then 4+2*i else 4+2*(i+1)) (length var_types-1)) 
                   [@{thm o_id} RS sym],
@@ -1002,15 +1015,18 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
                 assume_tac ctxt
               ]) THEN
               (* solve *)
-              HEADGOAL (EVERY' [
-                EqSubst.eqsubst_tac ctxt [1, 2] [F_map_comp] THEN_ALL_NEW
-                  TRY o resolve_tac ctxt (prems @ @{thms bij_id supp_id_bound}),
-                K (unfold_thms_tac ctxt @{thms id_o o_id}),
-                rtac ctxt conjI,
-                EqSubst.eqsubst_tac ctxt [0] F_set_maps THEN_ALL_NEW (*something has to be repeated forall non-lin_pos lives*)
+              HEADGOAL (EqSubst.eqsubst_tac ctxt [1, 2] [F_map_comp] THEN_ALL_NEW
+                  TRY o resolve_tac ctxt (prems @ @{thms bij_id supp_id_bound})) THEN
+              unfold_thms_tac ctxt @{thms id_o o_id} THEN
+              HEADGOAL (rtac ctxt conjI) THEN
+              REPEAT_DETERM_N (nr_lives-1) (HEADGOAL (EVERY' [
+                TRY o rtac ctxt conjI,
+                EqSubst.eqsubst_tac ctxt [0] F_set_maps THEN_ALL_NEW 
                   TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
                 EqSubst.eqsubst_tac ctxt [0] @{thms image_id},
-                resolve_tac ctxt subprems,
+                resolve_tac ctxt subprems
+              ])) THEN
+              HEADGOAL (EVERY' [
                 EqSubst.eqsubst_tac ctxt [2, 4] [Rep_F'_inverse RS sym],
                 rtac ctxt conjI,
                 rtac ctxt (arg_cong OF [nth subprems 0]),
@@ -1026,7 +1042,7 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
             ) 
           ctxt) THEN
         (* 2nd Subgoal *)
-        REPEAT_DETERM_N 3 (HEADGOAL (eresolve_tac ctxt [exE, conjE])) THEN
+        REPEAT_DETERM_N (1+nr_lives) (HEADGOAL (eresolve_tac ctxt [exE, conjE])) THEN
         HEADGOAL (hyp_subst_tac_thin true ctxt) THEN
         HEADGOAL (Subgoal.FOCUS
           (fn {prems = subprems, context = ctxt, ...} =>
@@ -1045,7 +1061,7 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
               EqSubst.eqsubst_tac ctxt [0] [F_map_comp] THEN_ALL_NEW
                 TRY o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ prems),
               K (unfold_thms_tac ctxt @{thms o_id}),
-              EqSubst.eqsubst_tac ctxt [1, 2] @{thms o_def},
+              K (unfold_thms_tac ctxt @{thms o_def}),
               rtac ctxt F_map_cong THEN_ALL_NEW
                 TRY o resolve_tac ctxt (refl::prems),
               rtac ctxt @{thm snd_conv},
@@ -1054,9 +1070,11 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
             REPEAT_DETERM_N (nr_lives) (
               HEADGOAL (EqSubst.eqsubst_tac ctxt [0] F_set_maps THEN_ALL_NEW
                 TRY o resolve_tac ctxt @{thms bij_id supp_id_bound})) THEN
+            unfold_tac ctxt @{thms image_ident} THEN
+            REPEAT_DETERM_N (nr_lives-1) (
+              HEADGOAL (rtac ctxt conjI THEN_ALL_NEW
+                TRY o resolve_tac ctxt subprems)) THEN
             HEADGOAL (EVERY' [
-              EqSubst.eqsubst_tac ctxt [0] @{thms image_ident},
-              rtac ctxt conjI,
               rtac ctxt subsetI,
               etac ctxt imageE,
               rtac ctxt CollectI,
@@ -1067,7 +1085,6 @@ fun mk_in_rel_tac mrbnf rrel_F'_def set4_F'_def map_F'_def Abs_F'_inverse Rep_F'
               rtac ctxt (trans OF [sym]),
               assume_tac ctxt,
               etac ctxt arg_cong,
-              resolve_tac ctxt subprems,
               EqSubst.eqsubst_tac ctxt [0] [F_map_comp] THEN_ALL_NEW
                 TRY o resolve_tac ctxt @{thms supp_id_bound bij_id},
               K (unfold_thms_tac ctxt @{thms o_def id_def fst_conv}),
@@ -1089,9 +1106,9 @@ lemma F'_in_rel:
     (\<exists>z. set4_F' z \<subseteq> {(x, y). R x y} \<and> map_F' id id id fst z = x \<and> map_F' u1 u2 u3 snd z = y)"
   using assms apply -
   apply (tactic \<open>mk_in_rel_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm rrel_F'_def} 
-    @{thm set4_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
+    @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm rrel_F_map_F3} @{thm F.in_rel}
-    @{thm F.map_comp} @{thm nonrep2_map_F_rev} @{thm Rep_F'_inverse} @{thm F.map_cong} @{thms F.set_map}
+    @{thm F.map_comp} @{thm nonrep2_map_F_rev} @{thm Rep_F'_inverse} @{thm F.map_cong} @{thms set4_F'_def} @{thms F.set_map}
     @{cterm x} @{context}
     THEN print_tac @{context} "done" THEN no_tac\<close>)
   subgoal premises prems
@@ -1149,9 +1166,10 @@ lemma F'_in_rel:
       apply (subst (1 2) F.map_comp; (rule supp_id_bound bij_id prems)?)
       apply (unfold o_id id_o)
       apply (rule conjI)
-       apply (subst F.set_map; (rule supp_id_bound bij_id)?)
-       apply (subst image_id)
-       apply (rule subprems)
+      apply ((rule conjI)?,
+        (subst F.set_map; (rule supp_id_bound bij_id)?),
+        subst image_id,
+        rule subprems)+
       apply (subst (2 4) Rep_F'_inverse[symmetric])
       apply (rule conjI)
        apply (rule arg_cong[OF subprems(1)])
@@ -1179,14 +1197,14 @@ lemma F'_in_rel:
          apply (rule nonrep2_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
         apply (subst F.map_comp; (rule bij_id supp_id_bound prems)?) (*having the id prems before the actual prems is important!*)
         apply (unfold o_id)
-        apply (subst (1 2) o_def)
+        apply (unfold o_def)
         apply (rule F.map_cong; (rule prems refl)?)
         apply (rule snd_conv)
 
        apply (rule CollectI)
        apply (subst F.set_map; (rule bij_id supp_id_bound)?)+
-       apply (subst image_ident)
-       apply (rule conjI) 
+       apply (unfold image_ident)
+       apply (rule conjI; (rule subprems)?)+
         apply (rule subsetI)
         apply (erule imageE)
         apply (rule CollectI)
@@ -1196,8 +1214,7 @@ lemma F'_in_rel:
         apply (erule conjE)
         apply (rule trans[OF sym])
          apply (assumption)
-        apply (erule arg_cong) 
-       apply (rule subprems)
+        apply (erule arg_cong)
 
       apply (subst F.map_comp; (rule supp_id_bound bij_id)?)
       apply (unfold o_def fst_conv id_def)

@@ -1,56 +1,44 @@
-theory Linearize2
+theory Linearize3
   imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
-  keywords
-  "linearize_mrbnf" :: thy_goal_defn
 begin
-
-lemma Quotient_Quotient3: "Quotient R Abs Rep T \<Longrightarrow> Quotient3 R Abs Rep"
-  unfolding Quotient_def Quotient3_def by blast
-
-lemma Quotient_reflp_imp_equivp: "Quotient R Abs Rep T \<Longrightarrow> reflp R \<Longrightarrow> equivp R"
-  using Quotient_symp Quotient_transp equivpI by blast
-
-ML_file "../Tools/mrbnf_linearize.ML"
-
-
 
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) F
 consts map_F :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
-  ('c :: var \<Rightarrow> 'c) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e :: var \<Rightarrow> 'e) \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) F \<Rightarrow> ('a', 'b, 'c, 'd', 'e, 'f) F"
-consts set1_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'a set"
-consts set2_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'b set"
-consts set3_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'c set"
-consts set4_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'd set"
-consts set5_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'e set"
-consts rrel_F :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c :: var, 'd, 'e::var, 'f) F \<Rightarrow> ('a', 'b, 'c, 'd', 'e, 'f) F \<Rightarrow> bool"
-             
+  ('c  \<Rightarrow> 'c') \<Rightarrow> ('e \<Rightarrow> 'e') \<Rightarrow> ('f :: var \<Rightarrow> 'f) \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) F \<Rightarrow> ('a', 'b, 'c', 'd, 'e', 'f) F"
+consts set1_F :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> 'a set"
+consts set2_F :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> 'b set"
+consts set3_F :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> 'c set"
+consts set5_F :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> 'e set"
+consts set6_F :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> 'f set"
+consts rrel_F :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'e' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F  \<Rightarrow> ('a', 'b, 'c', 'd, 'e', 'f) F \<Rightarrow> bool"
+
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F"
   map: map_F
-  sets: live: set1_F bound: set2_F free: set3_F live: set4_F bound: set5_F
+  sets: live: set1_F free: set2_F live: set3_F live: set5_F bound: set6_F
   bd: natLeq
   rel: rrel_F
   var_class: var
   sorry
 
-
 (* we linearize this MRBNF on position 1*)
-ML \<open>val lin_pos = 1\<close>
+ML \<open>val lin_pos = 3\<close>
 
 axiomatization where
   (* The next property assumes preservation of pullbacks on the third position. 
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
    without uniqueness.  *)
   F_rel_map_set2_strong: 
-  "\<And> R S (x :: ('a,'b :: var,'c :: var,'d,'e::var,'f) F) y.
-    rrel_F R S x y =
+  "\<And> R S T (x :: ('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F) y.
+    rrel_F R S T x y =
       (\<exists>!z. set1_F z \<subseteq> {(x, y). R x y} \<and>
-            set4_F z \<subseteq> {(x, y). S x y} \<and> map_F fst id id fst id z = x \<and> map_F snd id id snd id z = y)"
+            set3_F z \<subseteq> {(x, y). S x y} \<and> set5_F z \<subseteq> {(x, y). T x y} \<and> 
+            map_F fst id fst fst id z = x \<and> map_F snd id snd snd id z = y)"
   and
   (* The next property assumes that nonrepetitive elements exist: *)
-  ex_nonrep: "\<exists>x. \<forall>x'. (\<exists> R. rrel_F R (=) x x') \<longrightarrow> (\<exists> f. x' = map_F f id id id id x)"
+  ex_nonrep: "\<exists>x. \<forall>x'. (\<exists> R. rrel_F (=) R (=) x x') \<longrightarrow> (\<exists> f. x' = map_F id id f id id x)"
 
 abbreviation "rel_F \<equiv> mr_rel_F"
 
@@ -114,10 +102,11 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
 \<close>
 
 lemma F_strong:
-  "rel_F R1 id id R4 id x y \<Longrightarrow> rel_F Q1 id id Q4 id x y \<Longrightarrow> rel_F  (inf R1 Q1) id id (inf R4 Q4) id x y"
+  "rel_F R1 id R3 R5 id x y \<Longrightarrow> rel_F Q1 id Q3 Q5 id x y \<Longrightarrow> rel_F (inf R1 Q1) id (inf R3 Q3) (inf R5 Q5) id x y"
   by (tactic \<open>mk_F_strong_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm F.map_id} @{thm mr_rel_F_def} @{thm F.mr_rel_mono_strong0}
     @{thm F_rel_map_set2_strong} @{thm F.in_rel} @{context} 
     THEN print_tac @{context} "done"\<close>)
+
 
 ML \<open>
 open BNF_Util BNF_Tactics
@@ -147,9 +136,9 @@ fun mk_rel_F_exchange_tac mrbnf F_mr_rel_mono_strong0 F_strong ctxt =
 (* Another important consequence: the following "exchange"-property, which could be read: 
 Since the atoms have a fixed position, we can permute the relations: *)
 lemma rel_F_exchange: 
-  fixes x :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F" and x' :: "('a', 'b, 'c, 'd', 'e, 'f) F"
-  assumes "rel_F R1 id id R4 id x x'" and "rel_F Q1 id id Q4 id x x'"
-  shows "rel_F R1 id id Q4 id x x'" 
+  fixes x :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F" and x' :: "('a', 'b, 'c', 'd, 'e', 'f) F"
+  assumes "rel_F R1 id R3 R5 id x x'" and "rel_F Q1 id Q3 Q5 id x x'"
+  shows "rel_F Q1 id R3 Q5 id x x'" 
   using assms apply -
   by (tactic \<open>mk_rel_F_exchange_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) 
     @{thm F.mr_rel_mono_strong0} @{thm F_strong} @{context} 
@@ -157,11 +146,11 @@ lemma rel_F_exchange:
 
 (* Then notion of two items having the same shape (w.r.t. the 1st position): *)
 (* these definitions are lin_pos dependent *)
-definition sameShape1 :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F \<Rightarrow> ('a1,'a2,'a3,'a4,'a5,'a6) F \<Rightarrow> bool" where 
-  "sameShape1 x x' \<equiv> \<exists> R. rel_F R id id (=) id x x'"
+definition sameShape1 :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> ('a,'b,'c,'d,'e,'f) F \<Rightarrow> bool" where 
+  "sameShape1 x x' \<equiv> \<exists> R. rel_F (=) id R (=) id x x'"
 
-definition nonrep2 :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F \<Rightarrow> bool" where 
-  "nonrep2 x \<equiv> \<forall> x'. sameShape1 x x' \<longrightarrow> (\<exists> f. x' = map_F f id id id id x)"
+definition nonrep2 :: "('a, 'b :: var, 'c , 'd, 'e, 'f :: var) F \<Rightarrow> bool" where 
+  "nonrep2 x \<equiv> \<forall> x'. sameShape1 x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id id x)"
 
 
 ML\<open>
@@ -251,13 +240,12 @@ fun mk_nonrep2_map_F_tac mrbnf nonrep_def sameShape_def F_map_comp F_mr_rel_map 
 \<close>
 
 lemma nonrep2_map_F:
-  fixes x :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F"
-    and u2 :: "'a2 \<Rightarrow> 'a2" and v3 :: "'a3\<Rightarrow>'a3" and u5 :: "'a5\<Rightarrow>'a5" and g :: "'a4 \<Rightarrow> 'b4"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" 
-    and "|supp v3| <o |UNIV :: 'a3 set|" 
-    and "bij u5" "|supp u5| <o |UNIV :: 'a5 set|" 
+  fixes x :: "('a1, 'a2 :: var, 'a3 , 'a4, 'a5, 'a6 :: var) F"
+    and v2 :: "'a2 \<Rightarrow> 'a2" and u6 :: "'a6 \<Rightarrow> 'a6" and g1 :: "'a1 \<Rightarrow> 'b1" and g5 :: "'a5 \<Rightarrow> 'b5"
+  assumes "|supp v2| <o |UNIV :: 'a2 set|"
+    and "bij u6" "|supp u6| <o |UNIV :: 'a6 set|" 
   assumes "nonrep2 x"
-  shows "nonrep2 (map_F id u2 v3 g u5 x)"
+  shows "nonrep2 (map_F g1 v2 id g5 u6 x)"
   using assms apply -
   by (tactic \<open>mk_nonrep2_map_F_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm nonrep2_def} 
     @{thm sameShape1_def} @{thm F.map_comp}  @{thm F.mr_rel_map(1)} @{thm mr_rel_F_def} @{thm F.rel_compp} 
@@ -356,10 +344,9 @@ fun mk_nonrep2_map_F_rev_tac mrbnf nonrep_def sameShape_def F_mr_rel_map1 F_mr_r
 
 (* Here we need pullback preservation: *)
 lemma nonrep2_map_F_rev:
-  fixes x :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F" and u2 :: "'a2\<Rightarrow>'a2" and u5 :: "'a5\<Rightarrow>'a5"  and g :: "'a4 \<Rightarrow> 'a4'"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" 
-    and "bij u5" "|supp u5| <o |UNIV :: 'a5 set|" 
-  assumes "nonrep2 (map_F id u2 id g u5 x)"
+  fixes x :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F" and u6 :: "'a6\<Rightarrow>'a6" and f :: "'a1 \<Rightarrow> 'a1'" and g :: "'a5 \<Rightarrow> 'a5'"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|" 
+  assumes "nonrep2 (map_F f id id g u6 x)"
   shows "nonrep2 x"
   using assms apply -
   by (tactic \<open>mk_nonrep2_map_F_rev_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm nonrep2_def} @{thm sameShape1_def} @{thm F.mr_rel_map(1)}
@@ -423,9 +410,9 @@ fun mk_nonrep2_map_bij_tac mrbnf nonrep_def sameShape_def F_mr_rel_map1 F_mr_rel
 \<close>
 
 lemma nonrep2_mapF_bij:
-  fixes x :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F" and g::"'a1\<Rightarrow>'a1"
+  fixes x :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F" and g::"'a3\<Rightarrow>'a3"
   assumes g: "bij g" and x: "nonrep2 x"
-  shows "nonrep2 (map_F g id id id id x)" (is "nonrep2 ?x'")
+  shows "nonrep2 (map_F id id g id id x)" (is "nonrep2 ?x'")
   using assms apply -
   by (tactic \<open>mk_nonrep2_map_bij_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm nonrep2_def}
     @{thm sameShape1_def} @{thm F.mr_rel_map(1)} @{thm F.mr_rel_map(3)} @{thm F.map_id} @{thm F.map_comp} @{context}
@@ -448,38 +435,38 @@ fun mk_nonrep2_mapF_bij_2_tac mrbnf nonrep2_mapF_bij nonrep2_map_F F_map_comp ct
 \<close>
 
 lemma nonrep2_mapF_bij_2:
-  fixes x :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F"
-    and g :: "'a1 \<Rightarrow> 'a1" and u2 :: "'a2\<Rightarrow>'a2" and v3::"'a3\<Rightarrow>'a3" and f::"'a4\<Rightarrow>'a4'" and u5::"'a5\<Rightarrow>'a5"
-  assumes u2: "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" and v3: "|supp v3| <o |UNIV :: 'a3 set|"
-    and u5: "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
+  fixes x :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F"
+    and f :: "'a1 \<Rightarrow> 'a1'" and v2 :: "'a2\<Rightarrow>'a2" and g::"'a3\<Rightarrow>'a3" and h::"'a5\<Rightarrow>'a5'" and u6::"'a6\<Rightarrow>'a6"
+  assumes v2: "|supp v2| <o |UNIV :: 'a2 set|" 
+    and u6: "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
     and g: "bij g" and x: "nonrep2 x"
-  shows "nonrep2 (map_F g u2 v3 f u5 x)" 
+  shows "nonrep2 (map_F f v2 g h u6 x)" 
   using assms apply -
   by (tactic \<open>mk_nonrep2_mapF_bij_2_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) 
     @{thm nonrep2_mapF_bij} @{thm nonrep2_map_F} @{thm F.map_comp} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 
-typedef ('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' = "{x :: ('a1,'a2,'a3,'a4,'a5,'a6) F. nonrep2 x}"
+typedef ('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' = "{x :: ('a1,'a2,'a3,'a4,'a5,'a6) F. nonrep2 x}"
   apply (unfold mem_Collect_eq nonrep2_def sameShape1_def mr_rel_F_def F.map_id id_apply)
   apply (unfold id_def[symmetric])
   by (rule ex_nonrep)
 
-definition set1_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a1 set" where "set1_F' = set1_F o Rep_F'"
-definition set2_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a2 set" where "set2_F' = set2_F o Rep_F'"
-definition set3_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a3 set" where "set3_F' = set3_F o Rep_F'"
-definition set4_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a4 set" where "set4_F' = set4_F o Rep_F'"
-definition set5_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a5 set" where "set5_F' = set5_F o Rep_F'"
+definition set1_F' :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' \<Rightarrow> 'a1 set" where "set1_F' = set1_F o Rep_F'"
+definition set2_F' :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' \<Rightarrow> 'a2 set" where "set2_F' = set2_F o Rep_F'"
+definition set3_F' :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' \<Rightarrow> 'a3 set" where "set3_F' = set3_F o Rep_F'"
+definition set5_F' :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' \<Rightarrow> 'a5 set" where "set5_F' = set5_F o Rep_F'"
+definition set6_F' :: "('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' \<Rightarrow> 'a6 set" where "set6_F' = set6_F o Rep_F'"
 
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
-definition map_F' :: "('a1::var \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a3::var \<Rightarrow> 'a3) \<Rightarrow> ('a4 \<Rightarrow> 'a4') \<Rightarrow> ('a5::var \<Rightarrow> 'a5)
-  \<Rightarrow> ('a1,'a2,'a3,'a4,'a5,'a6) F' \<Rightarrow> ('a1,'a2,'a3,'a4','a5,'a6) F'"
-  where "map_F' f u2 v3 g u5 = Abs_F' o map_F (asBij f) (asSS (asBij u2)) (asSS v3) g (asSS (asBij u5)) o Rep_F'"
+definition map_F' :: "('a1 \<Rightarrow> 'a1') \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a3::var \<Rightarrow> 'a3) \<Rightarrow> ('a5 \<Rightarrow> 'a5') \<Rightarrow> ('a6::var \<Rightarrow> 'a6)
+  \<Rightarrow> ('a1,'a2,'a3,'a4,'a5,'a6) F' \<Rightarrow> ('a1','a2,'a3,'a4,'a5','a6) F'"
+  where "map_F' f v2 g h u6 = Abs_F' o map_F f (asSS v2) (asBij g) h (asSS (asBij u6)) o Rep_F'"
 
-definition rrel_F' :: "('a4 \<Rightarrow> 'a4' \<Rightarrow> bool) \<Rightarrow> ('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> ('a1,'a2,'a3,'a4','a5,'a6) F' \<Rightarrow> bool"
-  where "rrel_F' R x x' = rrel_F (=) R (Rep_F' x) (Rep_F' x')"
+definition rrel_F' :: "('a1 \<Rightarrow> 'a1' \<Rightarrow> bool) \<Rightarrow> ('a5 \<Rightarrow> 'a5' \<Rightarrow> bool) \<Rightarrow> ('a1,'a2::var,'a3,'a4,'a5,'a6::var) F' \<Rightarrow> ('a1','a2,'a3,'a4,'a5','a6) F' \<Rightarrow> bool"
+  where "rrel_F' R Q x x' = rrel_F R (=) Q (Rep_F' x) (Rep_F' x')"
 
 (* Verifying the axioms of a MRBNF for F':  *)
 ML \<open>
@@ -533,15 +520,13 @@ fun mk_map_comp_tac mrbnf map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 F_
 
 
 lemma F'_map_comp1_:
-  fixes u1 v1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 v2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 v3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 v5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|" "bij v1" "|supp v1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" "bij v2" "|supp v2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|" "|supp v3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|" "bij v5" "|supp v5| <o |UNIV :: 'a5 set|"
-  shows "map_F' (v1 o u1) (v2 o u2) (v3 o u3) (g o f) (v5 o u5) = map_F' v1 v2 v3 g v5 o map_F' u1 u2 u3 f u5"
+  fixes u6 v6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|" "|supp v2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|" "bij v3" "|supp v3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|" "bij v6" "|supp v6| <o |UNIV :: 'a6 set|"
+  shows "map_F' (f' o f) (v2 o u2) (v3 o u3) (g' o g) (v6 o u6) = map_F' f' v2 v3 g' v6 o map_F' f u2 u3 g u6"
   using assms apply -
   by (tactic \<open>mk_map_comp_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.map_comp0} @{context} 
@@ -565,74 +550,64 @@ fun mk_set_map_tac set_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_
 \<close>
 
 lemma F'_set1_map_:
-  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
-  shows "set1_F' (map_F' u1 u2 u3 f u5 b) = u1 ` set1_F' b"
+  fixes u6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
+  shows "set1_F' (map_F' f u2 u3 g u6 b) = f ` set1_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set1_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(1)} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 lemma F'_set2_map_:
-  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
-  shows "set2_F' (map_F' u1 u2 u3 f u5 b) = u2 ` set2_F' b"
+  fixes u6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
+  shows "set2_F' (map_F' f u2 u3 g u6 b) = u2 ` set2_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set2_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(2)} @{context}\<close>)
 
 lemma F'_set3_map_:
-  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
-  shows "set3_F' (map_F' u1 u2 u3 f u5 b) = u3 ` set3_F' b"
+  fixes u6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
+  shows "set3_F' (map_F' f u2 u3 g u6 b) = u3 ` set3_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set3_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(3)} @{context}\<close>)
 
-lemma F'_set4_map_:
-  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
-  fixes u2 :: "'a2::var \<Rightarrow> 'a2"
-  fixes u3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
-  shows "set4_F' (map_F' u1 u2 u3 f u5 b) = f ` set4_F' b"
-  using assms apply -
-  by (tactic \<open>mk_set_map_tac @{thm set4_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
-    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(4)} @{context}\<close>)
-
 lemma F'_set5_map_:
-  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
-  shows "set5_F' (map_F' u1 u2 u3 f u5 b) = u5 ` set5_F' b"
+  fixes u6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
+  shows "set5_F' (map_F' f u2 u3 g u6 b) = g ` set5_F' b"
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set5_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
+    @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(4)} @{context}\<close>)
+
+lemma F'_set6_map_:
+  fixes u2 :: "'a2::var \<Rightarrow> 'a2"
+  fixes u3 :: "'a3::var \<Rightarrow> 'a3"
+  fixes u6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
+  shows "set6_F' (map_F' f u2 u3 g u6 b) = u6 ` set6_F' b"
+  using assms apply -
+  by (tactic \<open>mk_set_map_tac @{thm set6_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(5)} @{context}\<close>)
 
 
@@ -655,23 +630,21 @@ fun mk_map_cong_tac map_F'_def F_map_cong set_F'_defs ctxt =
 \<close>
 
 lemma F'_map_cong_[fundef_cong]:
-  fixes u1 v1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 v2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 v3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 v5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes "bij u1" "|supp u1| <o |UNIV :: 'a1 set|" "bij v1" "|supp v1| <o |UNIV :: 'a1 set|"
-  assumes "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" "bij v2" "|supp v2| <o |UNIV :: 'a2 set|"
-  assumes "|supp u3| <o |UNIV :: 'a3 set|" "|supp v3| <o |UNIV :: 'a3 set|"
-  assumes "bij u5" "|supp u5| <o |UNIV :: 'a5 set|" "bij v5" "|supp v5| <o |UNIV :: 'a5 set|"
-    and "\<forall> a \<in> set1_F' x. u1 a = v1 a"
+  fixes u6 v6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes "|supp u2| <o |UNIV :: 'a2 set|" "|supp v2| <o |UNIV :: 'a2 set|"
+  assumes "bij u3" "|supp u3| <o |UNIV :: 'a3 set|" "bij v3" "|supp v3| <o |UNIV :: 'a3 set|"
+  assumes "bij u6" "|supp u6| <o |UNIV :: 'a6 set|" "bij v6" "|supp v6| <o |UNIV :: 'a6 set|"
+    and "\<forall> a \<in> set1_F' x. f a = f' a"
     and "\<forall> a \<in> set2_F' x. u2 a = v2 a"
     and "\<forall> a \<in> set3_F' x. u3 a = v3 a"
-    and "\<forall> a \<in> set4_F' x. f a = g a"
-    and "\<forall> a \<in> set5_F' x. u5 a = v5 a"
-  shows "map_F' u1 u2 u3 f u5 x = map_F' v1 v2 v3 g v5 x"
+    and "\<forall> a \<in> set5_F' x. g a = g' a"
+    and "\<forall> a \<in> set6_F' x. u6 a = v6 a"
+  shows "map_F' f u2 u3 g u6 x = map_F' f' v2 v3 g' v6 x"
   using assms apply -
   by (tactic \<open>mk_map_cong_tac @{thm map_F'_def} @{thm F.map_cong} 
-    @{thms set1_F'_def set2_F'_def set3_F'_def set4_F'_def set5_F'_def} @{context} 
+    @{thms set1_F'_def set2_F'_def set3_F'_def set5_F'_def set6_F'_def} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 (* This tactic is applicable to all 4 of the following <F'_setx_bd> lemmas*)
@@ -689,10 +662,10 @@ lemma F'_set2_bd: "\<And>b. |set2_F' b| <o natLeq"
   by (tactic \<open>mk_set_bd_tac @{thm set2_F'_def} @{thm F.set_bd(2)} @{context}\<close>)
 lemma F'_set3_bd: "\<And>b. |set3_F' b| <o natLeq"
   by (tactic \<open>mk_set_bd_tac @{thm set3_F'_def} @{thm F.set_bd(3)} @{context}\<close>)
-lemma F'_set4_bd: "\<And>b. |set4_F' b| <o natLeq"
-  by (tactic \<open>mk_set_bd_tac @{thm set4_F'_def} @{thm F.set_bd(4)} @{context}\<close>)
 lemma F'_set5_bd: "\<And>b. |set5_F' b| <o natLeq"
-  by (tactic \<open>mk_set_bd_tac @{thm set5_F'_def} @{thm F.set_bd(5)} @{context}\<close>)
+  by (tactic \<open>mk_set_bd_tac @{thm set5_F'_def} @{thm F.set_bd(4)} @{context}\<close>)
+lemma F'_set6_bd: "\<And>b. |set6_F' b| <o natLeq"
+  by (tactic \<open>mk_set_bd_tac @{thm set6_F'_def} @{thm F.set_bd(5)} @{context}\<close>)
 
 ML \<open>
 open BNF_Util BNF_Tactics
@@ -709,7 +682,7 @@ fun mk_rel_comp_leq_tac rrel_F'_def F_rel_compp ctxt =
   ])
 \<close>
 
-lemma F'_rel_comp_leq_: "rrel_F' Q OO rrel_F' R \<le> rrel_F' (Q OO R)"
+lemma F'_rel_comp_leq_: "rrel_F' Q Q' OO rrel_F' R R' \<le> rrel_F' (Q OO R) (Q' OO R')"
   by (tactic \<open>mk_rel_comp_leq_tac @{thm rrel_F'_def} @{thm F.rel_compp} @{context}
     THEN print_tac @{context} "done"\<close>)
 
@@ -724,8 +697,8 @@ fun mk_rrel_F_map_F3_tac F_rel_map F_rel_mono_strong Grp_def ctxt =
 \<close>
 
 lemma rrel_F_map_F3:
-  fixes x :: "('a,'b::var,'c::var,'d,'e::var,'f) F"
-  shows "rrel_F (Grp (f :: 'a \<Rightarrow> 'a)) R x y = rrel_F (=) R (map_F f id id id id x) y"
+  fixes x :: "('a,'b::var,'c,'d,'e,'f::var) F"
+  shows "rrel_F R (Grp (f :: 'c \<Rightarrow> 'c)) Q x y = rrel_F R (=) Q (map_F id id f id id x) y"
   by (tactic \<open>mk_rrel_F_map_F3_tac @{thm F.rel_map(1)} @{thm F.rel_mono_strong} @{thm Grp_def} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
@@ -870,21 +843,20 @@ fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_map
 
 
 lemma F'_in_rel:
-  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
   fixes u2 :: "'a2::var \<Rightarrow> 'a2"
   fixes u3 :: "'a3::var \<Rightarrow> 'a3"
-  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
-  assumes u1: "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
-    and u2: "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" 
-    and u3: "|supp u3| <o |UNIV :: 'a3 set|"
-    and u5: "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
-  shows "rrel_F' R (map_F' u1 u2 u3 id u5 x) y =
-    (\<exists>z. set4_F' z \<subseteq> {(x, y). R x y} \<and> map_F' id id id fst id z = x \<and> map_F' u1 u2 u3 snd u5 z = y)"
+  fixes u6 :: "'a6::var \<Rightarrow> 'a6"
+  assumes u2: "|supp u2| <o |UNIV :: 'a2 set|" 
+    and u3: "bij u3" "|supp u3| <o |UNIV :: 'a3 set|"
+    and u6: "bij u6" "|supp u6| <o |UNIV :: 'a6 set|"
+  shows "rrel_F' R Q (map_F' id u2 u3 id u6 x) y =
+    (\<exists>z. (set1_F' z \<subseteq> {(x, y). R x y} \<and> set5_F' z \<subseteq> {(x, y). Q x y}) \<and> map_F' fst id id fst id z = x \<and> map_F' snd u2 u3 snd u6 z = y)"
   using assms apply -
   by (tactic \<open>mk_in_rel_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm rrel_F'_def} 
     @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm rrel_F_map_F3} @{thm F.in_rel}
-    @{thm F.map_comp} @{thm nonrep2_map_F_rev} @{thm Rep_F'_inverse} @{thm F.map_cong} @{thms set4_F'_def} @{thms F.set_map}
+    @{thm F.map_comp} @{thm nonrep2_map_F_rev} @{thm Rep_F'_inverse} @{thm F.map_cong} 
+    @{thms set1_F'_def set5_F'_def} @{thms F.set_map}
     @{cterm x} @{context}
     THEN print_tac @{context} "done"\<close>)
 
@@ -902,17 +874,17 @@ fun mk_strong_tac rrel_F'_def mr_rel_F_def F_strong F_map_id ctxt =
 \<close>
 
 lemma F'_strong:
-  assumes "rrel_F' R x x'" 
-    and "rrel_F' Q x x'"
-  shows "rrel_F' (inf R Q) x x'" 
+  assumes "rrel_F' R Q x x'" 
+    and "rrel_F' R' Q' x x'"
+  shows "rrel_F' (inf R R') (inf Q Q') x x'" 
   using assms apply -
   by (tactic \<open>mk_strong_tac @{thm rrel_F'_def} @{thm mr_rel_F_def} @{thm F_strong} @{thm F.map_id} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 
-mrbnf "('a :: var, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F'"
+mrbnf "('a :: var, 'b :: var, 'c :: var, 'd, 'e , 'f:: var) F'"
   map: map_F'
-  sets: bound: set1_F' bound: set2_F' free: set3_F' live: set4_F' bound: set5_F'
+  sets: live: set1_F' free: set2_F' bound: set3_F' live: set5_F' bound: set6_F'
   bd: natLeq
   rel: rrel_F'
   var_class: var
@@ -935,20 +907,20 @@ mrbnf "('a :: var, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F'"
     by(rule refl)
   subgoal premises prems 
     apply (rule ext)
-    apply (unfold o_apply F'_set4_map_[OF prems]) 
+    apply (unfold o_apply F'_set5_map_[OF prems]) 
     by(rule refl)
   subgoal premises prems 
     apply (rule ext)
-    apply (unfold o_apply F'_set5_map_[OF prems]) 
+    apply (unfold o_apply F'_set6_map_[OF prems]) 
     by(rule refl)
   subgoal by (rule infinite_regular_card_order_natLeq)
   subgoal by (rule F'_set1_bd)
   subgoal by (rule F'_set2_bd)
   subgoal by (rule F'_set3_bd)
-  subgoal by (rule F'_set4_bd)
   subgoal by (rule F'_set5_bd)
+  subgoal by (rule F'_set6_bd)
   subgoal by (rule F'_rel_comp_leq_)
-  subgoal premises prems by (rule F'_in_rel[OF prems])
+  subgoal premises prems by (rule F'_in_rel; rule prems)
   done        
 
 end

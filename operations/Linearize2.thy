@@ -4,15 +4,7 @@ theory Linearize2
   "linearize_mrbnf" :: thy_goal_defn
 begin
 
-lemma Quotient_Quotient3: "Quotient R Abs Rep T \<Longrightarrow> Quotient3 R Abs Rep"
-  unfolding Quotient_def Quotient3_def by blast
-
-lemma Quotient_reflp_imp_equivp: "Quotient R Abs Rep T \<Longrightarrow> reflp R \<Longrightarrow> equivp R"
-  using Quotient_symp Quotient_transp equivpI by blast
-
 ML_file "../Tools/mrbnf_linearize.ML"
-
-
 
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) F
 consts map_F :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
@@ -34,6 +26,8 @@ mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F"
   rel: rrel_F
   var_class: var
   sorry
+
+linearize_mrbnf ('a, F'bset: 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
 
 
 (* we linearize this MRBNF on position 1*)

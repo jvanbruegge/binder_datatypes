@@ -89,6 +89,7 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
         [] => NONE | x::_ => SOME (x, SOME (nth (MRSBNF_Def.axioms_of_mrsbnf mrsbnf) i))
       ) mrbnfs (0 upto length mrbnfs - 1) end
     ) inners);
+    val (mrbnfs, axioms') = split_list (distinct ((op=) o apply2 (MRBNF_Def.T_of_mrbnf o fst)) (mrbnfs ~~ axioms'));
 
     val mrbnfs = map (fn mrbnf =>
       let
@@ -196,7 +197,7 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
               infer_instantiate' ctxt (map (Option.map (fn t =>
                 let
                   val t' = case t of
-                    Const (@{const_name id}, Type("fun", [TVar ((n, i), s), _])) =>
+                    Const (@{const_name id}, Type ("fun", [TVar ((n, i), s), _])) =>
                       HOLogic.id_const (TVar ((n, i+1), s))
                     | t => t
                 in Thm.cterm_of lthy t' end
@@ -261,14 +262,16 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
                 REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm SSupp_Inj_bound})
               ],
               K (Local_Defs.unfold0_tac ctxt (#Vrs_Map (the (BMV_Monad_Def.leader BMV_Monad_Def.params_of_bmv_monad outer_bmv)))),
-              K (Local_Defs.unfold0_tac ctxt (map_filter #Map_map (MRSBNF_Def.facts_of_mrsbnf outer))),
+              K (Local_Defs.unfold0_tac ctxt (no_reflexive (map_filter #Map_map (MRSBNF_Def.facts_of_mrsbnf outer)))),
               REPEAT_DETERM o EVERY' [
                 EqSubst.eqsubst_tac ctxt [0] thms,
                 REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
               ],
               K (Local_Defs.unfold0_tac ctxt @{thms image_comp[unfolded comp_def] image_Un}),
               REPEAT_DETERM o EVERY' [
-                EqSubst.eqsubst_tac ctxt [0] (maps (maps #set_Sb o MRSBNF_Def.axioms_of_mrsbnf) inners),
+                EqSubst.eqsubst_tac ctxt [0] (maps (maps (map (
+                  Local_Defs.unfold0 ctxt (flat (#set_unfoldss (snd mrbnf_unfolds)))
+                ) o #set_Sb) o MRSBNF_Def.axioms_of_mrsbnf) inners),
                 REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm SSupp_Inj_bound})
               ],
               K (Local_Defs.unfold_tac ctxt (
@@ -295,13 +298,30 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
         ]),
         set_Vrs = replicate (length (BMV_Monad_Def.leader BMV_Monad_Def.frees_of_bmv_monad bmv)) (fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (bmv_unfolds @ #map_unfolds (snd mrbnf_unfolds) @ flat (#set_unfoldss (snd mrbnf_unfolds)))),
-          REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf outer_mrbnf),
-            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
-          ],
-          K (Local_Defs.unfold_tac ctxt (
-            @{thms UN_empty2 Un_empty_right Un_empty_left image_id Un_assoc[symmetric] Un_Union_image}
-            @ no_reflexive (flat (maps (map #set_Vrs o MRSBNF_Def.axioms_of_mrsbnf) inners))
+          SUBGOAL (fn (goal, _) =>
+            let
+              val outer_set_maps = @{map_filter 2} (fn MRBNF_Def.Live_Var => SOME | _ => K NONE) (MRBNF_Def.var_types_of_mrbnf outer_mrbnf) (MRBNF_Def.set_map_of_mrbnf outer_mrbnf);
+              fun strip_all (Const (@{const_name Pure.all}, _) $ Abs (x, T, t)) = apfst (cons (x, T)) (strip_all t)
+                | strip_all t = ([], t)
+              val T = snd (snd (split_last (fst (strip_all goal))))
+              val thms = map (fn thm =>
+                let
+                  val arg = Var (hd (Term.add_vars (Thm.prop_of thm) []));
+                  val tyenv = Sign.typ_match (Proof_Context.theory_of ctxt)
+                    (fastype_of arg, T) Vartab.empty;
+                  val insts = map (fn (x, (s, T)) => ((x, s), Thm.ctyp_of ctxt T)) (Vartab.dest tyenv)
+                in instantiate_normalize (TVars.make insts, Vars.empty) thm end
+              ) outer_set_maps;
+            in REPEAT_DETERM (EVERY1 [
+              EqSubst.eqsubst_tac ctxt [0] thms,
+              REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+            ]) end
+          ),
+          K (Local_Defs.unfold_tac ctxt (@{thms UN_empty2 Un_empty_right Un_empty_left image_id
+            Un_assoc[symmetric] Un_Union_image UN_singleton Un_absorb
+          } @ no_reflexive (map (Local_Defs.unfold0 ctxt (
+              flat (#set_unfoldss (snd mrbnf_unfolds))
+            )) (flat (maps (map #set_Vrs o MRSBNF_Def.axioms_of_mrsbnf) inners)))
           )),
           rtac ctxt refl
         ])
@@ -325,7 +345,7 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types (T as TFree T') (accum:(thm list * (
   | mrsbnf_of_typ optim const_policy qualify' Ds0 var_types (T as Type (n, Ts)) ((bmv_unfolds:thm list, accum), lthy) = (case mrsbnf_of lthy n of
     NONE => ((Inr MRBNF_Comp.DEADID_mrbnf, ([T], [])), ((bmv_unfolds, accum), lthy))
     | SOME (outer, lthy) =>
-      if optim andalso forall is_TFree Ts then
+      if optim andalso forall is_TFree Ts andalso length Ts = length (subtract (op=) Ds0 (Term.add_tfreesT T [])) then
         let
           val mrbnf = case outer of
             Inl mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf))
@@ -339,8 +359,7 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types (T as TFree T') (accum:(thm list * (
             T'::_ => error ("Variable " ^ Syntax.string_of_typ lthy T' ^ " is forced dead by type " ^ Syntax.string_of_typ lthy T ^ " but was specified as other usage")
             | [] => ()
           val Ts' = subtract (op=) deads Ts;
-          val _ = @{print} T
-          val _ = @{print} Ts'
+
           val var_types = map (AList.lookup (op=) var_types o dest_TFree) Ts';
           val var_types = @{map 3} (fn req => fn var_type => fn T => if member (op=) Ds0 (dest_TFree T) then
             MRBNF_Def.Dead_Var else the_default var_type req
@@ -384,8 +403,6 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types (T as TFree T') (accum:(thm list * (
               (fn i => mrsbnf_of_typ optim const_policy (qualify i) Ds0 var_types)
               (if length Ts' = 1 then [0] else 1 upto length Ts') Ts' ((bmv_unfolds, accum), lthy));
 
-          val _ = @{print} T
-          val _ = @{print} Ts'
           val Xs = rev (Term.add_tfreesT T []);
           val Xs' = map (swap o `(the_default MRBNF_Def.Live_Var o AList.lookup (op=) var_types)) Xs
 

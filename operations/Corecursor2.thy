@@ -76,9 +76,9 @@ and alpha_Udtor2: "\<And>X X' d. valid_U2 d \<Longrightarrow> {X,X'} \<subseteq>
     (* The dual of the first block of assumptions from Norrish's paper:   *)
     UFVars11_Udtor:
     "\<And> d X. valid_U1 d \<Longrightarrow> X \<in> Udtor1 d \<Longrightarrow>
-  set1_T1_pre X \<union> (set7_T1_pre X - set5_T1_pre X)
-  \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set8_T1_pre X) \<union> (\<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) - set5_T1_pre X)
-  \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X) - set5_T1_pre X)
+  set1_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set8_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set10_T1_pre X) \<union> (set7_T1_pre X
+   \<union> (\<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X))
+   \<union> (\<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X)
    \<subseteq> UFVars11 d"
   and UFVars12_Udtor:
     "\<And> d X. valid_U1 d \<Longrightarrow> X \<in> Udtor1 d \<Longrightarrow>
@@ -497,23 +497,60 @@ qed
 
 lemmas Umap_Udtor_strong = Umap_Udtor1_strong Umap_Udtor2_strong
 
-definition FFVarsBD :: "('a::var, 'a, 'a term + 'u, 'a term + 'u) term_pre \<Rightarrow> 'a set" where
-  "FFVarsBD X \<equiv> (\<Union>z \<in> set3_term_pre X. case_sum FVars_term UFVars z) - set2_term_pre X"
+term FVars_T1_1
+term FVars_T1_2
+term set1_T1_pre
+term set8_T1_pre
+term UFVars21
 
-lemmas Udtor_Umap = alpha_Udtor[folded FFVarsBD_def]
-lemmas FVars_term_Udtor = UFVars_Udtor[folded FFVarsBD_def]
+definition FFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
+  "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+
+definition FFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre \<Rightarrow> 'b set" where
+  "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
+
+definition FFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T2_pre \<Rightarrow> 'a set" where
+  "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+
+definition FFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T2_pre \<Rightarrow> 'b set" where
+  "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
+
+lemmas FFVarsBD1 = FFVarsBD11_def FFVarsBD12_def
+lemmas FFVarsBD2 = FFVarsBD21_def FFVarsBD22_def
+
+lemmas Udtor_Umap = alpha_Udtor1[folded FFVarsBD1] alpha_Udtor2[folded FFVarsBD2]
+
+thm UFVars11_Udtor FFVarsBD1
+lemmas FVars_T1_Udtor = UFVars11_Udtor[folded FFVarsBD1]
 
 (*************************************)
 (* The raw-term-based model infrastructure *)
 
-definition Utor :: "'u \<Rightarrow> ('a::var, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre set" where
-  "Utor d \<equiv>  map_term_pre id id (map_sum TT_rep id) (map_sum TT_rep id) ` (Udtor d)"
+abbreviation "T1_abs \<equiv> quot_type.abs alpha_T1 Abs_T1"
+abbreviation "T1_rep \<equiv> quot_type.rep Rep_T1"
+abbreviation "T2_abs \<equiv> quot_type.abs alpha_T2 Abs_T2"
+abbreviation "T2_rep \<equiv> quot_type.rep Rep_T2"
 
-abbreviation raw_Umap :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u" where
-  "raw_Umap \<equiv> Umap"
+definition Utor1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre set" where
+  "Utor1 d \<equiv>  map_T1_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor1 d)"
 
-abbreviation raw_UFVars :: "'u \<Rightarrow> 'a::var set" where
-  "raw_UFVars \<equiv> UFVars"
+definition Utor2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre set" where
+  "Utor2 d \<equiv>  map_T2_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor2 d)"
+
+abbreviation raw_Umap1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
+  "raw_Umap1 \<equiv> Umap1"
+
+abbreviation raw_Umap2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
+  "raw_Umap2 \<equiv> Umap2"
+
+abbreviation raw_UFVars11 :: "'u1 \<Rightarrow> 'a set" where
+  "raw_UFVars11 \<equiv> UFVars11"
+abbreviation raw_UFVars12 :: "'u1 \<Rightarrow> 'b set" where
+  "raw_UFVars12 \<equiv> UFVars12"
+abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
+  "raw_UFVars21 \<equiv> UFVars21"
+abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
+  "raw_UFVars22 \<equiv> UFVars22"
 
 definition raw_UFVarsBD :: "('a::var, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre \<Rightarrow> 'a set" where
   "raw_UFVarsBD X \<equiv> \<Union>(case_sum FVars_raw_term raw_UFVars ` set3_term_pre X) - set2_term_pre X"

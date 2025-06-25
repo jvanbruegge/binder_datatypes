@@ -82,7 +82,21 @@ definition supp :: "(var \<Rightarrow> var) \<Rightarrow> var set" where
 "supp \<sigma> = {a . \<sigma> a \<noteq> a}"
 
 definition small :: "(var \<Rightarrow> var) \<Rightarrow> bool" where 
-"small \<sigma> \<equiv> countable (supp \<sigma>)"
+"small \<sigma> \<equiv> countable (supp \<sigma>)" 
+
+(* nominal-like structures: *)
+definition nom :: "((var \<Rightarrow> var) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> var set) \<Rightarrow> bool" where 
+"nom perm Vrs \<equiv> 
+ (\<forall>\<sigma>1 \<sigma>2. small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
+ perm (\<sigma>1 o \<sigma>2) = perm \<sigma>1 o perm \<sigma>2) 
+ \<and>
+ (\<forall>\<sigma>1 \<sigma>2 e'. 
+  small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<and>  
+  (\<forall>a\<in>Vrs e'. \<sigma>1 a = \<sigma>2 a) \<longrightarrow> 
+  perm \<sigma>1 e' = perm \<sigma>2 e')"
+
+
+(*****)
 
 typedecl ('x1, 'x2) G
 consts Gren :: "(var \<Rightarrow> var) \<Rightarrow> (var \<Rightarrow> var) \<Rightarrow> ('x1, 'x2) G \<Rightarrow> ('x1, 'x2) G"
@@ -112,9 +126,119 @@ consts EVrs :: "E \<Rightarrow> var set"
 definition Edtor :: "E \<Rightarrow> ((E,E) G) set" where 
 "Edtor e = {u . Ector u = e}"
 
+
+(* *)
+type_synonym E' = E 
+
+
+definition dtorNeC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> bool" where 
+"dtorNeC dtor \<equiv> \<forall>e U. dtor e = Inl U \<longrightarrow> U \<noteq> {}"
+
+definition dtorPermC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> bool" 
+where "dtorPermC dtor perm \<equiv> 
+\<forall>\<sigma> e. small \<sigma> \<and> bij \<sigma> \<and> 
+  (\<forall> U. dtor e = Inl U \<longrightarrow> (\<exists>U'. dtor (perm \<sigma> e) = Inl U' \<and> U' \<subseteq> Gren \<sigma> \<sigma> ` U))
+  \<and> 
+  (\<forall>e1. dtor e = Inr e1 \<longrightarrow> (\<exists>e1'. dtor (perm \<sigma> e) = Inr e1' \<and> e1' =  Eperm \<sigma> e1))"
+
+definition dtorVrsGrenC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> ('E' \<Rightarrow> var set) \<Rightarrow> bool" 
+where
+"dtorVrsGrenC dtor Vrs \<equiv> 
+ (\<forall>e U u1 u2. dtor e = Inl U \<and> {u1,u2} \<subseteq> U \<longrightarrow> 
+   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
+        supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
+                 (\<Union> {Vrs e | e . e \<in> GSupp1 u1}) \<union> 
+                 (\<Union> {Vrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
+        u2 = Gren id \<sigma> u1))"
+
+definition dtorVrsC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> ('E' \<Rightarrow> var set) \<Rightarrow> bool" 
+where
+"dtorVrsC dtor Vrs \<equiv> 
+ (\<forall>e.  
+  (\<forall>U. dtor e = Inl U \<longrightarrow> 
+       (\<forall>u\<in>U. GVrs1 u \<union> 
+              (\<Union> {Vrs e | e . e \<in> GSupp1 u}) \<union> 
+              (\<Union> {Vrs e - GVrs2 u | e . e \<in> GSupp1 u}) 
+              \<subseteq> 
+              Vrs e)) 
+  \<and>  
+  (\<forall>e1. dtor e = Inr e1 \<longrightarrow> Vrs e \<subseteq> EVrs e1)
+)"
+
+(* Full-recursion comodel: I keep E' as an abbreviation for E to avoid confusion: *)
+locale Comodel =
+fixes (* no set V, as we need no Barendregt convention here *)
+Edtor' :: "E' \<Rightarrow> ((E',E')G) set + E" 
+and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
+and EVrs' :: "E' \<Rightarrow> var set" 
+begin 
+
+definition comodel :: bool
+where 
+"comodel \<equiv> 
+nom Eperm' EVrs' 
+\<and>
+dtorNeC Edtor' 
+\<and>
+dtorPermC Edtor' Eperm' 
+\<and>
+dtorVrsGrenC Edtor' EVrs'
+\<and>
+dtorVrsC Edtor' EVrs'"
+
+
+definition corec :: "E \<Rightarrow> E'" where 
+"corec = undefined"
+
+lemma corec_Edtor_Inl:
+assumes "comodel"
+shows "Edtor' e = Inl U \<Longrightarrow> Gmap corec corec ` U  \<subseteq> Edtor (corec e)"
+sorry
+
+lemma corec_Edtor_Inr:
+assumes "comodel"
+shows "Edtor' e = Inr e1 \<Longrightarrow> corec e = e1"
+sorry
+
+lemma corec_Eperm:
+assumes "comodel"
+shows "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> supp \<sigma> \<inter> V = {} \<Longrightarrow> 
+ corec (Eperm' \<sigma> e') = Eperm \<sigma> (corec e')"
+sorry
+
+lemma rec_EVrs:
+assumes "comodel"
+shows "EVrs' e' \<subseteq> EVrs (corec e')"
+sorry
+
+lemma corec_unique: (* to double check if we have this *)
+assumes "comodel"
+assumes "\<And> e U. Edtor' e = Inl U \<Longrightarrow> Gmap corec corec ` U  \<subseteq> Edtor (corec e)"
+and "\<And>e e1. Edtor' e = Inr e1 \<Longrightarrow> corec e = e1"
+shows "f = corec"
+sorry
+
+end (* locale Comodel *)
+
+
+(****)
 (* Full-recursion Barendregt-enriched model, but for codomain equal to E; 
 I keep E' as an abbreviation to avoid confusion. *)
-type_synonym E' = E 
+
+definition ctorPermM :: "var set \<Rightarrow> (('E' \<times> E,'E' \<times> E) G \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+\<Rightarrow> bool" where 
+"ctorPermM V ctor perm \<equiv> 
+(\<forall>u'u \<sigma>. small \<sigma> \<and> bij \<sigma> \<and> supp \<sigma> \<inter> V = {} \<longrightarrow> 
+       perm \<sigma> (ctor u'u) = 
+       ctor (Gmap (map_prod (perm \<sigma>) (Eperm \<sigma>)) (map_prod (perm \<sigma>) (Eperm \<sigma>)) u'u))"
+
+definition ctorVarsM :: "var set \<Rightarrow> (('E' \<times> E,'E' \<times> E) G \<Rightarrow> 'E') \<Rightarrow> ('E' \<Rightarrow> var set)
+\<Rightarrow> bool" where 
+"ctorVarsM V ctor Vrs \<equiv> (\<forall>u'u. Vrs (ctor u'u) - V \<subseteq> 
+     GVrs1 u'u \<union> 
+     (\<Union> {Vrs e' \<union> EVrs e | e' e . (e',e) \<in> GSupp1 u'u}) \<union> 
+     (\<Union> {Vrs e' \<union> EVrs e - GVrs2 u'u | e' e . (e',e) \<in> GSupp1 u'u}) 
+)"
 
 locale Model =
 fixes V :: "var set" 
@@ -122,28 +246,10 @@ fixes V :: "var set"
 and Ector' :: "(E' \<times> E,E' \<times> E) G \<Rightarrow> E'" 
 and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
 and EVrs' ::"E' \<Rightarrow> var set" 
+assumes nom: "nom Eperm' EVrs'"
+and ctorPermM: "ctorPermM V Ector' Eperm'"
+and ctorVarsM: "ctorVarsM V Ector' EVrs'"
 begin 
-
-definition model :: bool
-where 
-"model \<equiv> 
-(\<forall>\<sigma>1 \<sigma>2. small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
- Eperm' (\<sigma>1 o \<sigma>2) = Eperm' \<sigma>1 o Eperm' \<sigma>2)
-\<and>
-(\<forall>\<sigma>1 \<sigma>2 e'. 
-  small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<and>  
-  (\<forall>a\<in>EVrs' e'. \<sigma>1 a = \<sigma>2 a) \<longrightarrow> 
-  Eperm' \<sigma>1 e' = Eperm' \<sigma>2 e')
-\<and>
-(\<forall>u'u \<sigma>. small \<sigma> \<and> bij \<sigma> \<and> supp \<sigma> \<inter> V = {} \<longrightarrow> 
-       Eperm' \<sigma> (Ector' u'u) = 
-       Ector' (Gmap (map_prod (Eperm' \<sigma>) (Eperm \<sigma>)) (map_prod (Eperm' \<sigma>) (Eperm \<sigma>)) u'u))
-\<and>
-(\<forall>u'u. EVrs' (Ector' u'u) - V \<subseteq> 
-     GVrs1 u'u \<union> 
-     (\<Union> {EVrs' e' \<union> EVrs e | e' e . (e',e) \<in> GSupp1 u'u}) \<union> 
-     (\<Union> {EVrs' e' \<union> EVrs e - GVrs2 u'u | e' e . (e',e) \<in> GSupp1 u'u}) 
-)"
 
 
 definition rec :: "E \<Rightarrow> E'" where 
@@ -168,6 +274,87 @@ shows "EVrs' (rec e) - V \<subseteq> EVrs e"
 sorry
 
 end (* locale Model *)
+
+(******)
+
+
+consts \<phi> :: "('e,'e) G \<Rightarrow> bool"
+axiomatization where \<phi>_Gmap: "\<And> u f g. \<phi> u \<longrightarrow> \<phi> (Gmap f g u)"
+
+definition ctor0PermM :: "var set \<Rightarrow> ((E,E) G \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+ \<Rightarrow> bool" where 
+"ctor0PermM V ctor0 perm \<equiv> 
+(\<forall>u \<sigma>. \<phi> u \<and> 
+       small \<sigma> \<and> bij \<sigma> \<and> supp \<sigma> \<inter> V = {} \<longrightarrow> 
+       perm \<sigma> (ctor0 u) = 
+       ctor0 (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
+
+definition ctor1PermM :: "var set \<Rightarrow> (('E','E') G \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+ \<Rightarrow> bool" where 
+"ctor1PermM V ctor1 perm \<equiv> 
+(\<forall>u' \<sigma>. \<not> \<phi> u' \<and> 
+       small \<sigma> \<and> bij \<sigma> \<and> supp \<sigma> \<inter> V = {} \<longrightarrow> 
+       perm \<sigma> (ctor1 u') = 
+       ctor1 (Gmap (perm \<sigma>) (perm \<sigma>) u'))"
+
+definition ctor0VarsM :: "var set \<Rightarrow> ((E,E) G \<Rightarrow> 'E') \<Rightarrow> ('E' \<Rightarrow> var set)
+\<Rightarrow> bool" where 
+"ctor0VarsM V ctor Vrs \<equiv> 
+ \<forall>u. \<phi> u \<longrightarrow> 
+     Vrs (ctor u) - V \<subseteq> 
+     GVrs1 u \<union> 
+     (\<Union> {EVrs e | e . e \<in> GSupp1 u}) \<union> 
+     (\<Union> {EVrs e - GVrs2 u | e . e \<in> GSupp1 u})"
+
+definition ctor1VarsM :: "var set \<Rightarrow> (('E','E') G \<Rightarrow> 'E') \<Rightarrow> ('E' \<Rightarrow> var set)
+\<Rightarrow> bool" where 
+"ctor1VarsM V ctor Vrs \<equiv>  
+ \<forall>u. \<not> \<phi> u \<longrightarrow> 
+     Vrs (ctor u) - V \<subseteq> 
+     GVrs1 u \<union> 
+     (\<Union> {Vrs e' | e' . e' \<in> GSupp1 u}) \<union> 
+     (\<Union> {Vrs e' - GVrs2 u | e' . e' \<in> GSupp1 u})"
+
+locale Special_Model = Model + 
+fixes \<phi> :: "(E' \<times> E,E' \<times> E) G \<Rightarrow> bool"
+and Ector0' :: "(E,E) G \<Rightarrow> E'" 
+and Ector1' :: "(E',E') G \<Rightarrow> E'" 
+assumes nom: "nom Eperm' EVrs'"
+and ctor0PermM: "ctor0PermM V Ector0' Eperm'" and 
+    ctor1PermM: "ctor1PermM V Ector0' Eperm'"
+and ctor0VarsM: "ctor0VarsM V Ector0' EVrs'" and 
+    ctor1VarsM: "ctor1VarsM V Ector1' EVrs'"
+begin
+
+
+lemma rec_Ector_\<phi>:
+assumes "\<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
+and "countable V" and "model"
+shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
+ rec (Ector u) = Ector0' u"
+apply(subst rec_Ector)
+  subgoal using assms by simp
+  subgoal using assms by simp
+  subgoal using assms by simp
+  subgoal apply(subst \<phi>_Ector'_Ector0')
+    subgoal using assms by simp
+    subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
+
+lemma rec_Ector_not_\<phi>:
+assumes "\<not> \<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
+and "countable V" and "model"
+shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
+ rec (Ector u) = Ector1' (Gmap rec rec u)"
+apply(subst rec_Ector)
+  subgoal using assms by simp
+  subgoal using assms by simp
+  subgoal using assms by simp
+  subgoal apply(subst not_\<phi>_Ector'_Ector1')
+    subgoal using assms by simp
+    subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
+
+end (* locale Special_Model *)
+
 
 
 locale Special_Model = Model + 
@@ -223,68 +410,7 @@ end (* locale Special_Model *)
 
 (****)
 
-locale Comodel =
-fixes (* no set V, as we need no Barendregt convention here *)
-Edtor' :: "E' \<Rightarrow> ((E',E')G) set + E'" 
-and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
-and EVrs' :: "E' \<Rightarrow> var set" 
-begin 
 
-definition comodel :: bool
-where 
-"comodel \<equiv> 
-(\<forall>\<sigma>1 \<sigma>2. small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
- Eperm' (\<sigma>1 o \<sigma>2) = Eperm' \<sigma>1 o Eperm' \<sigma>2)
-\<and>
-(\<forall>\<sigma>1 \<sigma>2 e'. 
-  small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<and>  
-  (\<forall>a\<in>EVrs' e'. \<sigma>1 a = \<sigma>2 a) \<longrightarrow> 
-  Eperm' \<sigma>1 e' = Eperm' \<sigma>2 e')
-\<and>
-(\<forall>e U. Edtor' e = Inl U \<longrightarrow> U \<noteq> {})
-\<and>
-(\<forall>e U u1 u2. Edtor' e = Inl U \<and> {u1,u2} \<subseteq> U \<longrightarrow> 
-   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-        supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
-                 (\<Union> {EVrs' e | e . e \<in> GSupp1 u1}) \<union> 
-                 (\<Union> {EVrs' e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
-        u2 = Gren id \<sigma> u1)) 
-\<and>
-(\<forall>e u U. Edtor' e = Inl U \<and> u \<in> U \<longrightarrow> 
-  GVrs1 u \<union> 
-  (\<Union> {EVrs' e | e . e \<in> GSupp1 u}) \<union> 
-  (\<Union> {EVrs' e - GVrs2 u | e . e \<in> GSupp1 u}) 
-  \<subseteq> 
-  EVrs' e)"
-
-
-
-
-definition corec :: "E \<Rightarrow> E'" where 
-"corec = undefined"
-
-lemma corec_Edtor_Inl:
-assumes "comodel"
-shows "Edtor' e' = Inl U' \<Longrightarrow> Gmap corec corec ` U  \<subseteq> Edtor (corec e')"
-sorry
-
-lemma corec_Edtor_Inr:
-assumes "comodel"
-shows "Edtor' e' = Inr e1' \<Longrightarrow> corec e' = e1'"
-sorry
-
-lemma corec_Eperm:
-assumes "comodel"
-shows "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> supp \<sigma> \<inter> V = {} \<Longrightarrow> 
- corec (Eperm' \<sigma> e') = Eperm \<sigma> (corec e')"
-sorry
-
-lemma rec_EVrs:
-assumes "comodel"
-shows "EVrs' e' \<subseteq> EVrs (corec e')"
-sorry
-
-end (* locale Comodel *)
 
 
 (* TODO: 

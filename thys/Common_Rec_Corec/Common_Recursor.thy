@@ -494,8 +494,11 @@ and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'"
 and EVrs' ::"E' \<Rightarrow> var set" + 
 assumes Ector_\<phi>_inj: "\<And>u1 u2. \<phi> u1 \<Longrightarrow> \<comment> \<open>\<phi> u2 \<Longrightarrow>  \<close> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
 and Eperm'_Eperm: "Eperm' = Eperm"
+and EVrs'_EVrs: "EVrs' = EVrs"
+(* 
 and EVrs'_\<phi>: "\<And>u. \<phi> u \<Longrightarrow> EVrs' (Ector u) = EVrs (Ector0' u)"
-and EVrs'_not\<phi>: "\<And>u. \<not> \<phi> u \<Longrightarrow> EVrs' (Ector u) = EVrs (Ector u)"
+and EVrs'_not\<phi>: "\<And>u. \<not> \<phi> u \<Longrightarrow> EVrs' (Ector u) = EVrs (Ector1' u)"
+*)
 and Ector1_Ector: "\<And>u v. \<not> \<phi> u \<Longrightarrow> \<not> \<phi> v \<Longrightarrow> Ector u = Ector v \<Longrightarrow> Ector1' u = Ector1' v"
 (* Ector1 is less injective that Ector outside \<phi>*)
 begin 
@@ -546,8 +549,6 @@ unfolding dtorNeC_def apply(rule Ector_exhaust, safe)
     subgoal unfolding Edtor'_not\<phi> using Edtor1'_NE by simp . .
 
 
-
-
 lemma dtorPermC: "dtorPermC Edtor' Eperm'"
 unfolding Eperm'_Eperm
 unfolding dtorPermC_def apply(rule allI) apply(rule Ector_exhaust)
@@ -570,31 +571,41 @@ unfolding dtorPermC_def apply(rule allI) apply(rule Ector_exhaust)
           subgoal apply auto sorry (* did not factor in the Barendregt yet into the produced comodel *)
           subgoal unfolding Edtor_Eperm apply(rule Edtor_Eperm)  by auto . . . . . 
 
-
-
-lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs''"
-unfolding dtorVrsGrenC_def apply(rule Ector_exhaust) apply safe
+lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs'"
+unfolding dtorVrsGrenC_def EVrs'_EVrs apply(rule Ector_exhaust) apply safe
   subgoal for u U u1 u2 apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> by simp
     subgoal unfolding Edtor'_not\<phi>  apply simp unfolding Edtor1'_Ector
-    apply clarify using Edtor_EVrs_Gren[of u1 "Ector1' u" u2] apply clarsimp
-    subgoal for \<sigma> apply(rule exI[of _ \<sigma>]) apply auto 
-    using Edtor'_not\<phi> EVrs'_not\<phi>  sorry . . .
+    apply clarify using Edtor_EVrs_Gren[of u1 "Ector1' u" u2] by simp . .
 
+(* This one only works if we union with V *)
+lemma Ector1'_Ector_EVrs: "\<not> \<phi> u \<Longrightarrow> EVrs (Ector1' u) \<subseteq> V \<union> EVrs (Ector u)"
+apply(rule subset_trans[OF ctor1VarsM[unfolded ctor1VarsM_def EVrs'_EVrs, rule_format]])
+  subgoal .
+  subgoal unfolding EVrs_Ector by auto .
+  
+(* In both cases, the symmetric difference is contained in V *)
+lemma Ector0'_Ector_EVrs: "\<phi> u \<Longrightarrow> EVrs (Ector u) \<subseteq> V \<union> EVrs (Ector0' u)"
+using ctor0VarsM[unfolded ctor0VarsM_def EVrs'_EVrs, rule_format]
+apply(rule subset_trans[OF ctor0VarsM[unfolded ctor0VarsM_def EVrs'_EVrs, rule_format]])
+  subgoal .
+  subgoal unfolding EVrs_Ector by auto .
+sorry
 
 lemma dtorVrsC: "dtorVrsC Edtor' EVrs'"
+unfolding EVrs'_EVrs
 unfolding dtorVrsC_def apply(rule Ector_exhaust) apply (intro conjI)
   subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> by simp
     subgoal unfolding Edtor'_not\<phi> apply simp unfolding Edtor1'_Ector
-    apply clarify using Edtor_EVrs[of _ "Ector1' u"]  apply simp
-    subgoal for ua apply(subgoal_tac "V = {}") defer
-      subgoal sorry (* Barendregt again *)
-      subgoal unfolding EVrs_Ector apply-
-      using ctor1VarsM[unfolded ctor1VarsM_def, rule_format] apply simp  
-       sorry  . . . 
+    apply clarify subgoal for ua apply(rotate_tac) apply(frule Edtor_EVrs)  apply simp 
+    using Ector1'_Ector_EVrs  apply(subgoal_tac "V = {}") defer
+      subgoal sorry  (* Barendregt *)
+      subgoal by (metis (lifting) Un_empty_left order_trans) . . .
   subgoal for u apply(cases "\<phi> u")
-    subgoal unfolding Edtor'_\<phi> EVrs'_\<phi> by simp
+    subgoal unfolding Edtor'_\<phi> apply simp apply(subgoal_tac "V = {}") defer
+      subgoal sorry  (* Barendregt *) 
+      subgoal using Ector0'_Ector_EVrs by auto .
     subgoal unfolding Edtor'_not\<phi> by simp . .
 
 

@@ -172,20 +172,21 @@ end (* locale Model *)
 
 locale Special_Model = Model + 
 fixes \<phi> :: "(E' \<times> E,E' \<times> E) G \<Rightarrow> bool"
-and Ector'' :: "(E,E) G \<Rightarrow> E'" 
+and Ector0' :: "(E,E) G \<Rightarrow> E'" 
+and Ector1' :: "(E',E') G \<Rightarrow> E'" 
 assumes 
-\<phi>_Ector'_Ector'': 
-"\<And>u'u. \<phi> u'u \<Longrightarrow> Ector' u'u = Ector'' (Gmap snd snd u'u)"
+\<phi>_Ector'_Ector0': 
+"\<And>u'u. \<phi> u'u \<Longrightarrow> Ector' u'u = Ector0' (Gmap snd snd u'u)"
 and 
-not_\<phi>_Ector'_Ector: 
-"\<And>u'u. \<not> \<phi> u'u \<Longrightarrow> Ector' u'u = Ector (Gmap fst fst u'u)"
+not_\<phi>_Ector'_Ector1': 
+"\<And>u'u. \<not> \<phi> u'u \<Longrightarrow> Ector' u'u = Ector1' (Gmap fst fst u'u)"
 (* Probably will also be needed: this \<phi> case: has no bound variables, 
 and no recursive components, i.e., is a base case
 and 
 "\<And>u'u. \<phi> u'u \<Longrightarrow> GVrs2 u'u = {}  \<and> GSupp2 u'u = {} \<and> GSupp1 u'u = {}"
 *)
 (* will probably also need some equivariance of \<phi>: to phrase the model conditions 
-as conditions on \<phi> and Ector'' instead of Ector'
+as conditions on \<phi> and Ector0' instead of Ector'
 *)
 begin
 
@@ -194,12 +195,12 @@ lemma rec_Ector_\<phi>:
 assumes "\<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
 and "countable V" and "model"
 shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector'' u"
+ rec (Ector u) = Ector0' u"
 apply(subst rec_Ector)
   subgoal using assms by simp
   subgoal using assms by simp
   subgoal using assms by simp
-  subgoal apply(subst \<phi>_Ector'_Ector'')
+  subgoal apply(subst \<phi>_Ector'_Ector0')
     subgoal using assms by simp
     subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
 
@@ -207,12 +208,12 @@ lemma rec_Ector_not_\<phi>:
 assumes "\<not> \<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
 and "countable V" and "model"
 shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector (Gmap rec rec u)"
+ rec (Ector u) = Ector1' (Gmap rec rec u)"
 apply(subst rec_Ector)
   subgoal using assms by simp
   subgoal using assms by simp
   subgoal using assms by simp
-  subgoal apply(subst not_\<phi>_Ector'_Ector)
+  subgoal apply(subst not_\<phi>_Ector'_Ector1')
     subgoal using assms by simp
     subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
 

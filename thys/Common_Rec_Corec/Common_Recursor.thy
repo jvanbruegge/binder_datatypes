@@ -109,9 +109,13 @@ consts GSupp2 :: "('x1, 'x2) G \<Rightarrow> 'x2 set"
 axiomatization where 
 Gmap_id[simp]: "Gmap id id = id"
 and 
-Gmap_o: "\<And>f1 f2 g1 g2. Gmap (f1 o f2) (g1 o g2) = Gmap f1 g1 o Gmap f2 g2"
+Gmap_o: "\<And>f1 g1 f2 g2. Gmap (f1 o g1) (f2 o g2) = Gmap f1 f2 o Gmap g1 g2"
+and GSupp1_Gmap: "\<And> f1 f2 u. GSupp1 (Gmap f1 f2 u) = f1 ` (GSupp1 u)"
+and GSupp2_Gmap: "\<And> f1 f2 u. GSupp2 (Gmap f1 f2 u) = f2 ` (GSupp2 u)"
+and GVrs1_Gmap: "\<And> f1 f2 u. GVrs1 (Gmap f1 f2 u) = GVrs1 u"
+and GVrs2_Gmap: "\<And> f1 f2 u. GVrs2 (Gmap f1 f2 u) = GVrs2 u"
 
-lemma Gmap_comp: "Gmap f1 g1 (Gmap f2 g2 u) = Gmap (f1 o f2) (g1 o g2) u"
+lemma Gmap_comp: "Gmap f1 f2 (Gmap g1 g2 u) = Gmap (f1 o g1) (f2 o g2) u"
 unfolding Gmap_o by simp
 
 lemma Gmap_id'[simp]: "Gmap (\<lambda>x. x) (\<lambda>x. x) = id"
@@ -213,9 +217,9 @@ sorry
 
 lemma corec_unique: (* to double check if we have this *)
 assumes "comodel"
-assumes "\<And> e U. Edtor' e = Inl U \<Longrightarrow> Gmap corec corec ` U  \<subseteq> Edtor (corec e)"
-and "\<And>e e1. Edtor' e = Inr e1 \<Longrightarrow> corec e = e1"
-shows "f = corec"
+assumes "\<And> e U. Edtor' e = Inl U \<Longrightarrow> Gmap H H ` U  \<subseteq> Edtor (corec e)"
+and "\<And>e e1. Edtor' e = Inr e1 \<Longrightarrow> H e = e1"
+shows "H = corec"
 sorry
 
 end (* locale Comodel *)
@@ -256,21 +260,30 @@ definition rec :: "E \<Rightarrow> E'" where
 "rec = undefined"
 
 lemma rec_Ector:
-assumes "countable V" and "model"
+assumes "countable V" 
 shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
  rec (Ector u) = 
  Ector' (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)"
 sorry
 
 lemma rec_Eperm:
-assumes "countable V" and "model"
+assumes "countable V"  
 shows "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> supp \<sigma> \<inter> V = {} \<Longrightarrow> 
  rec (Eperm \<sigma> e) = Eperm' \<sigma> (rec  e)"
 sorry
 
 lemma rec_EVrs:
-assumes "countable V" and "model"
+assumes "countable V"  
 shows "EVrs' (rec e) - V \<subseteq> EVrs e"
+sorry
+
+
+lemma rec_unique:
+assumes "countable V" 
+assumes "\<And>u. GVrs2 u \<inter> V = {} \<Longrightarrow>
+ H (Ector u) = 
+ Ector' (Gmap (\<lambda>e. (H  e, e)) (\<lambda>e. (H e, e)) u)"
+shows "H = rec" 
 sorry
 
 end (* locale Model *)
@@ -279,7 +292,7 @@ end (* locale Model *)
 
 
 consts \<phi> :: "('e,'e) G \<Rightarrow> bool"
-axiomatization where \<phi>_Gmap: "\<And> u f g. \<phi> u \<longrightarrow> \<phi> (Gmap f g u)"
+axiomatization where \<phi>_Gmap: "\<And> u f g. \<phi> (Gmap f g u) \<longleftrightarrow> \<phi> u"
 
 definition ctor0PermM :: "var set \<Rightarrow> ((E,E) G \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
  \<Rightarrow> bool" where 
@@ -315,96 +328,110 @@ definition ctor1VarsM :: "var set \<Rightarrow> (('E','E') G \<Rightarrow> 'E') 
      (\<Union> {Vrs e' | e' . e' \<in> GSupp1 u}) \<union> 
      (\<Union> {Vrs e' - GVrs2 u | e' . e' \<in> GSupp1 u})"
 
-locale Special_Model = Model + 
-fixes \<phi> :: "(E' \<times> E,E' \<times> E) G \<Rightarrow> bool"
-and Ector0' :: "(E,E) G \<Rightarrow> E'" 
+locale Special_Model = 
+fixes 
+Ector0' :: "(E,E) G \<Rightarrow> E'" 
 and Ector1' :: "(E',E') G \<Rightarrow> E'" 
 assumes nom: "nom Eperm' EVrs'"
 and ctor0PermM: "ctor0PermM V Ector0' Eperm'" and 
-    ctor1PermM: "ctor1PermM V Ector0' Eperm'"
+    ctor1PermM: "ctor1PermM V Ector1' Eperm'"
 and ctor0VarsM: "ctor0VarsM V Ector0' EVrs'" and 
     ctor1VarsM: "ctor1VarsM V Ector1' EVrs'"
 begin
 
+(* 1. Recursion principle by associating a model to a special-model: *)
 
+definition Ector' :: "(E' \<times> E,E' \<times> E) G \<Rightarrow> E'" where 
+"Ector' u'u \<equiv> if \<phi> u'u then Ector0' (Gmap snd snd u'u) else Ector1' (Gmap fst fst u'u)"
+
+lemma Ector'_\<phi>[simp]: "\<phi> u'u \<Longrightarrow> Ector' u'u = Ector0' (Gmap snd snd u'u)"
+unfolding Ector'_def by auto
+
+lemma Ector'_not\<phi>[simp]: "\<not> \<phi> u'u \<Longrightarrow> Ector' u'u =Ector1' (Gmap fst fst u'u)"
+unfolding Ector'_def by auto
+
+lemma ctorPermM: "ctorPermM V Ector' Eperm'"
+unfolding ctorPermM_def apply safe
+  subgoal for u'u \<sigma> apply(cases "\<phi> u'u")
+    subgoal unfolding Ector'_\<phi>  
+    apply(subst ctor0PermM[unfolded ctor0PermM_def, rule_format, 
+      where V = V and Eperm' = Eperm' and \<sigma> = \<sigma>])
+      subgoal using \<phi>_Gmap by auto
+      subgoal apply(subst Ector'_\<phi> )
+        subgoal using \<phi>_Gmap by auto
+        subgoal unfolding Gmap_comp unfolding o_def by simp . .
+    subgoal unfolding Ector'_not\<phi>  
+    apply(subst ctor1PermM[unfolded ctor1PermM_def, rule_format, 
+      where V = V and Eperm' = Eperm' and \<sigma> = \<sigma>])
+      subgoal using \<phi>_Gmap by auto
+      subgoal apply(subst Ector'_not\<phi> )
+        subgoal using \<phi>_Gmap by auto
+        subgoal unfolding Gmap_comp unfolding o_def by simp . . . .
+
+lemma ctorVarsM: "ctorVarsM V Ector' EVrs'"
+unfolding ctorVarsM_def apply(intro allI)
+  subgoal for u'u apply(cases "\<phi> u'u")
+    subgoal unfolding Ector'_\<phi>   
+    apply(rule subset_trans[OF ctor0VarsM[unfolded ctor0VarsM_def, rule_format, 
+      where V = V]]) 
+      subgoal using \<phi>_Gmap by auto
+      subgoal unfolding GSupp1_Gmap GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap  
+      by auto blast+ .
+    subgoal unfolding Ector'_not\<phi>   
+    apply(rule subset_trans[OF ctor1VarsM[unfolded ctor1VarsM_def, rule_format, 
+      where V = V]]) 
+      subgoal using \<phi>_Gmap by auto
+      subgoal unfolding GSupp1_Gmap GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap  
+      by auto blast+ . . .
+
+
+(* specia models form models: *)
+sublocale Model where Ector' = Ector' and Eperm' = Eperm' and EVrs' = EVrs 
+apply standard 
+using nom ctorPermM ctorVarsM by auto 
+
+
+(* and now we customize their recursion theorems: *)
+thm rec_Ector rec_Eperm rec_unique 
+(* NB: these stay the same: *) thm rec_EVrs rec_unique
+
+ 
 lemma rec_Ector_\<phi>:
-assumes "\<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
-and "countable V" and "model"
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector0' u"
-apply(subst rec_Ector)
+assumes "\<phi> u" and "countable V"  
+shows "GVrs2 u \<inter> V = {} \<Longrightarrow> rec (Ector u) = Ector0' u"
+apply(subst rec_Ector[where V = V])
   subgoal using assms by simp
   subgoal using assms by simp
-  subgoal using assms by simp
-  subgoal apply(subst \<phi>_Ector'_Ector0')
-    subgoal using assms by simp
-    subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
+  subgoal using assms apply(subst Ector'_\<phi>)
+    subgoal using \<phi>_Gmap by auto
+    subgoal unfolding Gmap_comp unfolding o_def by simp . .
 
 lemma rec_Ector_not_\<phi>:
-assumes "\<not> \<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
-and "countable V" and "model"
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector1' (Gmap rec rec u)"
-apply(subst rec_Ector)
+assumes "\<not> \<phi> u" and "countable V" 
+shows "GVrs2 u \<inter> V = {} \<Longrightarrow> rec (Ector u) = Ector1' (Gmap rec rec u)"
+apply(subst rec_Ector[where V = V])
   subgoal using assms by simp
   subgoal using assms by simp
-  subgoal using assms by simp
-  subgoal apply(subst not_\<phi>_Ector'_Ector1')
-    subgoal using assms by simp
-    subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
+  subgoal using assms apply(subst Ector'_not\<phi>)
+    subgoal using \<phi>_Gmap by auto
+    subgoal unfolding Gmap_comp unfolding o_def by simp . .
+
+lemma rec_unique':
+assumes "countable V" 
+assumes "\<And>u. GVrs2 u \<inter> V = {} \<Longrightarrow>
+ (\<phi> u \<longrightarrow> H (Ector u) = Ector0' u)
+ \<and>
+ (\<not> \<phi> u \<longrightarrow> H (Ector u) = Ector1' (Gmap H H u))"
+shows "H = rec" 
+sorry
+
+
+(* 2. Corecursion principle by associating a comodel to a special-model: *)
 
 end (* locale Special_Model *)
 
 
 
-locale Special_Model = Model + 
-fixes \<phi> :: "(E' \<times> E,E' \<times> E) G \<Rightarrow> bool"
-and Ector0' :: "(E,E) G \<Rightarrow> E'" 
-and Ector1' :: "(E',E') G \<Rightarrow> E'" 
-assumes 
-\<phi>_Ector'_Ector0': 
-"\<And>u'u. \<phi> u'u \<Longrightarrow> Ector' u'u = Ector0' (Gmap snd snd u'u)"
-and 
-not_\<phi>_Ector'_Ector1': 
-"\<And>u'u. \<not> \<phi> u'u \<Longrightarrow> Ector' u'u = Ector1' (Gmap fst fst u'u)"
-(* Probably will also be needed: this \<phi> case: has no bound variables, 
-and no recursive components, i.e., is a base case
-and 
-"\<And>u'u. \<phi> u'u \<Longrightarrow> GVrs2 u'u = {}  \<and> GSupp2 u'u = {} \<and> GSupp1 u'u = {}"
-*)
-(* will probably also need some equivariance of \<phi>: to phrase the model conditions 
-as conditions on \<phi> and Ector0' instead of Ector'
-*)
-begin
-
-
-lemma rec_Ector_\<phi>:
-assumes "\<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
-and "countable V" and "model"
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector0' u"
-apply(subst rec_Ector)
-  subgoal using assms by simp
-  subgoal using assms by simp
-  subgoal using assms by simp
-  subgoal apply(subst \<phi>_Ector'_Ector0')
-    subgoal using assms by simp
-    subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
-
-lemma rec_Ector_not_\<phi>:
-assumes "\<not> \<phi> (Gmap (\<lambda>e. (rec  e, e)) (\<lambda>e. (rec e, e)) u)" 
-and "countable V" and "model"
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector1' (Gmap rec rec u)"
-apply(subst rec_Ector)
-  subgoal using assms by simp
-  subgoal using assms by simp
-  subgoal using assms by simp
-  subgoal apply(subst not_\<phi>_Ector'_Ector1')
-    subgoal using assms by simp
-    subgoal apply(subst Gmap_comp) unfolding o_def by simp . .
-
-end (* locale Special_Model *)
 
 
 

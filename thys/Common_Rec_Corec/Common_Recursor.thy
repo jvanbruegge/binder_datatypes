@@ -309,7 +309,6 @@ Vrs (ctor u) \<subseteq> V \<union>
 
 locale Model =
 fixes V :: "var set" 
- (* "\<times> E" is the full-recursion bit in addition to iteration *)
 and Ector' :: "(E,E) G \<Rightarrow> E'" 
 and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
 and EVrs' ::"E' \<Rightarrow> var set" 
@@ -495,7 +494,7 @@ and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'"
 and EVrs' ::"E' \<Rightarrow> var set" + 
 assumes Ector_\<phi>_inj: "\<And>u1 u2. \<phi> u1 \<Longrightarrow> \<comment> \<open>\<phi> u2 \<Longrightarrow>  \<close> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
 and Eperm'_Eperm: "Eperm' = Eperm"
-and EVrs'_EVrs: "\<And>e. EVrs' e = EVrs e \<union> V"
+and EVrs'_EVrs: "EVrs' = EVrs"
 (* and \<phi>_GVrs2: "\<And>u::(E,E) G. \<phi> u \<Longrightarrow> GVrs2 u = {}" (* no binders in items satisfying \<phi> *) *)
 (* 
 and EVrs'_\<phi>: "\<And>u. \<phi> u \<Longrightarrow> EVrs' (Ector u) = EVrs (Ector0' u)"
@@ -575,14 +574,16 @@ unfolding dtorNeC_def apply(rule Ector_exhaust, safe)
     subgoal unfolding Edtor'_\<phi> by simp
     subgoal unfolding Edtor'_not\<phi> using Edtor1'_NE by simp . .
 
+definition "EVrs'' e = EVrs e \<union> V"
+
+
 lemma dtorPermC: "dtorPermC Edtor' Eperm'"
 unfolding Eperm'_Eperm
 unfolding dtorPermC_def apply(rule allI) apply(rule Ector_exhaust)
-  subgoal for \<sigma> u 
-apply(cases "\<phi> u")
+  subgoal for \<sigma> u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> apply safe 
     unfolding Eperm_Ector apply(subst Edtor'_\<phi>)
-      subgoal using \<phi>_Gmap \<phi>_Gren by fastforce
+      subgoal using \<phi>_Gmap \<phi>_Gren by metis
       subgoal apply auto 
       apply(subst ctor0PermM[unfolded ctorPermM_def Eperm'_Eperm, rule_format])
         subgoal .
@@ -622,8 +623,10 @@ unfolding Edtor'_not\<phi> apply safe
 
 
 
-lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs'"
-unfolding dtorVrsGrenC_def  apply(rule Ector_exhaust) apply safe
+
+
+lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs''"
+unfolding dtorVrsGrenC_def EVrs'_EVrs EVrs''_def  apply(rule Ector_exhaust) apply safe
   subgoal for u U u1 u2 apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> by simp
     subgoal unfolding Edtor'_not\<phi>  apply simp
@@ -660,13 +663,13 @@ sorry
 (* Needs to be an axiom: call that expression FreeVars u, and use it in the other axioms:  *)
 lemma blah: "\<not> \<phi> u \<Longrightarrow>
     GVrs2 u \<inter> V = {} \<Longrightarrow> GVrs2 uu \<inter> V = {} \<Longrightarrow>
-    Ector' u = Ector uu \<Longrightarrow>
+    Ector1' u = Ector uu \<Longrightarrow>
     GVrs1 uu \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp1 uu} \<union> \<Union> {EVrs e' - GVrs2 uu |e'. e' \<in> GSupp1 uu} \<subseteq> 
     GVrs1 u \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp1 u} \<union> \<Union> {EVrs e' - GVrs2 u |e'. e' \<in> GSupp1 u} \<union> V"
-sorry
+sorry  (* This can replace one axiom for ECtor1' (since it makes it redundant *)
 
-lemma dtorVrsC: "dtorVrsC Edtor' EVrs'"
-unfolding EVrs'_EVrs
+lemma dtorVrsC: "dtorVrsC Edtor' EVrs''"
+unfolding EVrs'_EVrs EVrs''_def
 unfolding dtorVrsC_def apply(rule Ector_exhaust) apply (intro conjI)
   subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> by simp
@@ -681,6 +684,10 @@ unfolding dtorVrsC_def apply(rule Ector_exhaust) apply (intro conjI)
     subgoal unfolding Edtor'_not\<phi> by simp . .
     
 
+lemma nom: "nom Eperm' EVrs''"
+unfolding nom_def apply safe
+  subgoal for \<sigma>1 \<sigma>2 unfolding Eperm'_Eperm sorry
+  subgoal for \<sigma>1 \<sigma>2 e unfolding Eperm'_Eperm EVrs''_def
 
 
 end (* locale Special_Model *)

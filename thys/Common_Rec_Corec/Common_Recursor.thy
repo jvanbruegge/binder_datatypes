@@ -583,13 +583,16 @@ lemma Ector1'_Ector_EVrs: "\<not> \<phi> u \<Longrightarrow> EVrs (Ector1' u) \<
 apply(rule subset_trans[OF ctor1VarsM[unfolded ctor1VarsM_def EVrs'_EVrs, rule_format]])
   subgoal .
   subgoal unfolding EVrs_Ector by auto .
-  
-(* In both cases, the symmetric difference is contained in V *)
-lemma Ector0'_Ector_EVrs: "\<phi> u \<Longrightarrow> EVrs (Ector u) \<subseteq> V \<union> EVrs (Ector0' u)"
-using ctor0VarsM[unfolded ctor0VarsM_def EVrs'_EVrs, rule_format]
+
+lemma Ector0'_Ector_EVrs: "\<phi> u \<Longrightarrow> EVrs (Ector0' u) \<subseteq> V \<union> EVrs (Ector u)"
 apply(rule subset_trans[OF ctor0VarsM[unfolded ctor0VarsM_def EVrs'_EVrs, rule_format]])
   subgoal .
   subgoal unfolding EVrs_Ector by auto .
+
+(* For Ector0' need to axiomatize the converse too. 
+So in both cases, the symmetric difference is contained in V. Could go with this in 
+an alternative axiomatization of Special_Model_Plus which does not go throgu Special_Model *)
+lemma Ector0'_Ector_EVrs_rev: "\<phi> u \<Longrightarrow> EVrs (Ector u) \<subseteq> V \<union> EVrs (Ector0' u)"
 sorry
 
 lemma dtorVrsC: "dtorVrsC Edtor' EVrs'"
@@ -605,7 +608,7 @@ unfolding dtorVrsC_def apply(rule Ector_exhaust) apply (intro conjI)
   subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> apply simp apply(subgoal_tac "V = {}") defer
       subgoal sorry  (* Barendregt *) 
-      subgoal using Ector0'_Ector_EVrs by auto .
+      subgoal using Ector0'_Ector_EVrs_rev by auto .
     subgoal unfolding Edtor'_not\<phi> by simp . .
 
 

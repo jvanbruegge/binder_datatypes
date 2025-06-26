@@ -515,9 +515,9 @@ lemma \<phi>_Some_Ector': "\<phi> (SOME ua. Ector ua = Ector u) \<longleftrighta
 by (metis (mono_tags, lifting) Ector_\<phi>_inj tfl_some) 
 
 definition Edtor1' :: "E' \<Rightarrow> ((E',E')G) set" where 
-"Edtor1' e \<equiv> \<Union> {Edtor (Ector1' u) | u . \<not> \<phi> u \<and> Ector u = e}"
+"Edtor1' e \<equiv> \<Union> {{u1 . GVrs2 u1 \<inter> V = {} \<and> Ector u1 = Ector1' u} | u . \<not> \<phi> u \<and> Ector u = e}"
 
-lemma Edtor1'_Ector: "\<not> \<phi> u \<Longrightarrow> Edtor1' (Ector u) = Edtor (Ector1' u)" 
+lemma Edtor1'_Ector: "\<not> \<phi> u \<Longrightarrow> Edtor1' (Ector u) = {u1 . GVrs2 u1 \<inter> V = {} \<and> Ector u1 = Ector1' u}" 
 unfolding Edtor1'_def Edtor_def apply auto using Ector1_Ector by blast
 
 
@@ -540,7 +540,7 @@ unfolding in_Edtor_Ector by (auto simp: Let_def \<phi>_Some_Ector')
 
 (* *)
 lemma Edtor1'_NE: "\<not> \<phi> u \<Longrightarrow> Edtor1' (Ector u) \<noteq> {}"
-unfolding Edtor1'_def using Edtor_NE by auto
+unfolding Edtor1'_def using Edtor_NE apply auto sorry (* this will be crucial *)
 
 lemma dtorNeC: "dtorNeC Edtor'"
 unfolding dtorNeC_def apply(rule Ector_exhaust, safe)
@@ -569,7 +569,8 @@ unfolding dtorPermC_def apply(rule allI) apply(rule Ector_exhaust)
         subgoal apply(subst ctor1PermM[unfolded ctor1PermM_def, 
           unfolded Eperm'_Eperm, rule_format, symmetric])
           subgoal apply auto sorry (* did not factor in the Barendregt yet into the produced comodel *)
-          subgoal unfolding Edtor_Eperm apply(rule Edtor_Eperm)  by auto . . . . . 
+          subgoal unfolding Edtor_Eperm apply (auto simp: image_def) (* a fresh renaming property needed *)
+          apply auto    apply(rule Edtor_Eperm)  by auto . . . . . 
 
 lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs'"
 unfolding dtorVrsGrenC_def EVrs'_EVrs apply(rule Ector_exhaust) apply safe

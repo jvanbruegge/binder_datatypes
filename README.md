@@ -2,6 +2,8 @@ This is the artifact accompanying the paper:
 
 Animating MRBNFs: Truly Modular Binding-Aware Datatypes in Isabelle/HOL
 
+For the live development version of this artifact visit https://github.com/jvanbruegge/binder_datatypes
+
 ### How To Run?
 
 The artifact contains the tool support for defining binding datatypes and proving strong rule

@@ -84,6 +84,25 @@ definition supp :: "(var \<Rightarrow> var) \<Rightarrow> var set" where
 definition small :: "(var \<Rightarrow> var) \<Rightarrow> bool" where 
 "small \<sigma> \<equiv> countable (supp \<sigma>)" 
 
+lemma supp_id[simp,intro]: "supp id = {}" unfolding supp_def by auto
+lemma small_id[simp,intro]: "small id" unfolding small_def by auto
+lemma supp_id'[simp,intro]: "supp (\<lambda>a. a) = {}" unfolding supp_def by auto
+lemma small_id'[simp,intro]: "small (\<lambda>a. a)" unfolding small_def by auto
+
+lemma supp_o: "supp (\<sigma> o \<tau>) \<subseteq> supp \<sigma> \<union> supp \<tau>" unfolding supp_def by auto
+lemma small_o[simp]: "small \<sigma> \<Longrightarrow> small \<tau> \<Longrightarrow> small (\<sigma> o \<tau>)" 
+unfolding small_def using supp_o by (metis countable_Un_iff countable_subset)
+
+lemma supp_inv[simp]: "bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> supp (inv \<sigma>) = supp \<sigma>" 
+unfolding supp_def by (metis bij_inv_eq_iff)
+lemma small_inv[simp]: "bij \<sigma> \<Longrightarrow> small (inv \<sigma>) \<longleftrightarrow> small \<sigma>" 
+unfolding small_def by (metis bij_betw_inv_into inv_inv_eq small_def supp_inv)
+
+thm bij_id[intro]
+thm bij_comp[simp]
+thm bij_imp_bij_inv[simp]
+find_theorems bij "inv _"
+
 (* nominal-like structures: *)
 definition nom :: "((var \<Rightarrow> var) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> var set) \<Rightarrow> bool" where 
 "nom perm Vrs \<equiv> 
@@ -138,7 +157,6 @@ proof-
   apply(rule Gmap_cong) using assms by auto
 qed
   
-
 lemma Gmap_comp: "Gmap f1 f2 (Gmap g1 g2 u) = Gmap (f1 o g1) (f2 o g2) u"
 unfolding Gmap_o by simp
 
@@ -151,16 +169,35 @@ consts Ector :: "(E,E) G \<Rightarrow> E"
 consts Eperm :: "(var \<Rightarrow> var) \<Rightarrow> E \<Rightarrow> E"
 consts EVrs :: "E \<Rightarrow> var set"
 
-axiomatization where Ector_surj: "\<And>e. \<exists>u. Ector u = e"
+axiomatization where Ector_surj_fresh: "\<And>e A. countable A \<Longrightarrow> \<exists>u. Ector u = e \<and> GVrs2 u \<inter> A = {}"
+(* Corresponds to ctorPermM *)
+and Eperm_Ector: "\<And>\<sigma> u. small \<sigma> \<Longrightarrow> bij \<sigma>  \<Longrightarrow> 
+       Eperm \<sigma> (Ector u) = 
+       Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
+(* Corresponds to ctorVarsM *)
+and EVrs_Ector: "\<And>u. EVrs (Ector u) =
+     GVrs1 u \<union> 
+     (\<Union> {EVrs e' | e' . e' \<in> GSupp1 u}) \<union> 
+     (\<Union> {EVrs e' - GVrs2 u | e' . e' \<in> GSupp1 u})"
+and (* Next two correspond to nom *)
+Eperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+    Eperm (\<sigma>1 \<circ> \<sigma>2) e = Eperm \<sigma>1 (Eperm \<sigma>2 p)"
+and 
+Eperm_cong: 
+"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+ (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Eperm \<sigma>1 e = Eperm \<sigma>2 e"
+and 
+Ector_eq_imp: 
+"\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
+   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
+        supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
+                 (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
+                 (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
+        u2 = Gren id \<sigma> u1)"
 
-definition Edtor :: "E \<Rightarrow> ((E,E) G) set" where 
-"Edtor e = {u . Ector u = e}"
 
-lemma in_Edtor_Ector: "v \<in> Edtor (Ector u) \<longleftrightarrow> Ector v = Ector u"
-unfolding Edtor_def by auto
-
-lemma Edtor_NE: "Edtor e \<noteq> {}"
-unfolding Edtor_def using Ector_surj by auto
+lemma Ector_surj: "\<exists>u. Ector u = e"
+using Ector_surj_fresh[of "{}"] by auto
 
 lemma Ector_exhaust: "(\<And>u. P (Ector u)) \<Longrightarrow> (\<forall>e. P e)"
 by (metis Ector_surj)
@@ -169,38 +206,41 @@ lemma Ector_exhaust': "(\<And>u. e = Ector u \<Longrightarrow> P e) \<Longrighta
 by (metis Ector_surj)
 
 lemma nom: "nom Eperm EVrs"
-sorry
+unfolding nom_def apply safe 
+  subgoal using Eperm_comp by auto 
+  subgoal using Eperm_cong by blast .
 
-(* Corresponds to ctorPermM *)
-lemma Eperm_Ector: "small \<sigma> \<Longrightarrow> bij \<sigma>  \<Longrightarrow> 
-       Eperm \<sigma> (Ector u') = 
-       Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u'))"
-sorry
+(* 
+definition Edtor :: "E \<Rightarrow> ((E,E) G) set" where 
+"Edtor e = {u . Ector u = e}"
 
-(* Corresponds to ctorVarsM *)
-lemma EVrs_Ector: "EVrs (Ector u) =
-     GVrs1 u \<union> 
-     (\<Union> {EVrs e' | e' . e' \<in> GSupp1 u}) \<union> 
-     (\<Union> {EVrs e' - GVrs2 u | e' . e' \<in> GSupp1 u})"
-sorry
+lemma in_Edtor_Ector: "v \<in> Edtor (Ector u) \<longleftrightarrow> Ector v = Ector u"
+unfolding Edtor_def by auto
+
+lemma Edtor_NE: "Edtor e \<noteq> {}"
+unfolding Edtor_def using Ector_surj by auto
+*)
+
+
+
+
 
 (* *)
+(* 
 lemma Edtor_Eperm: "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> 
   Edtor (Eperm \<sigma> e) \<subseteq> Gren \<sigma> \<sigma> ` (Gmap (Eperm \<sigma>) (Eperm \<sigma>) ` (Edtor e))"
-unfolding Edtor_def image_def using Eperm_Ector apply auto sorry
+unfolding Edtor_def image_def using Eperm_Ector apply safe
+  subgoal for u apply(rule Ector_exhaust'[of e]) subgoal for ua apply auto
+  apply(rule bexI[of _ "Gmap (Eperm \<sigma>) (Eperm \<sigma>) ua"]) apply auto
+*)
+  
+
 (* proof using constructor property and inverse permutatiobs *)
 
 
 
-lemma Edtor_eq_imp: 
-"Ector u1 = Ector u2 \<Longrightarrow>
-   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-        supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
-                 (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
-                 (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
-        u2 = Gren id \<sigma> u1)"
-sorry
 
+(* 
 lemma Edtor_EVrs: 
 "u\<in>Edtor e \<Longrightarrow> 
  GVrs1 u \<union> 
@@ -209,6 +249,7 @@ lemma Edtor_EVrs:
  \<subseteq> 
  EVrs e" 
 sorry
+*)
 
 
 (* *)
@@ -308,6 +349,17 @@ consts PVrs :: "P \<Rightarrow> var set"
 axiomatization where nomP: "nom Pperm PVrs"
 and countable_PVrs: "\<And>p. countable (PVrs p)"
 and PVrs_Pperm: "\<And> \<sigma> p. bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> u) = \<sigma> ` PVrs u"
+
+
+
+lemma Pperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+Pperm (\<sigma>1 \<circ> \<sigma>2) p = Pperm \<sigma>1 (Pperm \<sigma>2 p)"
+using nomP[unfolded nom_def] by auto
+
+lemma Pperm_cong: 
+"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+ (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Pperm \<sigma>1 p = Pperm \<sigma>2 p"
+using nomP[unfolded nom_def] by auto
 
 definition lift :: "((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> (P\<Rightarrow>'E') \<Rightarrow> (P=>'E'))" where 
 "lift perm \<sigma> pe p \<equiv> perm \<sigma> (pe (Pperm (inv \<sigma>) p))"
@@ -552,7 +604,7 @@ unfolding Edtor1'_def Edtor_def apply auto using Ector1_Ector by blast
 
 
 fun Edtor' :: "P\<times>E' \<Rightarrow> ((P\<times>E',P\<times>E')G)set + E" where 
-"Edtor' (p,e) = (let u = (SOME u. u \<in> Edtor e) in 
+"Edtor' (p,e) = (let u = (SOME u. e = Ector u) in 
   if \<phi> u then Inr (Ector0' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p) else Inl (Edtor1' (p,e)))"
 declare Edtor'.simps[simp del]
 lemmas Edtor'_def = Edtor'.simps
@@ -560,14 +612,15 @@ lemmas Edtor'_def = Edtor'.simps
 lemma Edtor'_\<phi>: 
 assumes "\<phi> u"
 shows "Edtor' (p, Ector u) = Inr (Ector0' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p)"
-using assms unfolding Edtor'_def
-unfolding in_Edtor_Ector by (auto simp: Let_def \<phi>_Some_Ector)
+using assms unfolding Edtor'_def 
+by (smt (verit, ccfv_threshold) Eps_cong \<phi>_Some_Ector)
+
 
 lemma Edtor'_not\<phi>: 
 assumes "\<not> \<phi> u"
 shows "Edtor' (p, Ector u) = Inl (Edtor1' (p, Ector u))"
 using assms unfolding Edtor'_def 
-unfolding in_Edtor_Ector by (auto simp: Let_def \<phi>_Some_Ector')  
+by (smt (verit) Ector_\<phi> tfl_some)  
 
 (* *)
 lemma Edtor1'_NE: 
@@ -710,7 +763,7 @@ subgoal for p e U u1 u2   apply(rule Ector_exhaust'[of e]) apply safe
     subgoal unfolding Edtor'_not\<phi>  apply simp
     apply(subgoal_tac "GVrs2 u \<inter> PVrs p = {}") defer subgoal sorry (* OK *)
     unfolding Edtor1'_Ector apply auto 
-    using Edtor_eq_imp[of "Gmap snd snd u1" "Gmap snd snd u2"]
+    using Ector_eq_imp[of "Gmap snd snd u1" "Gmap snd snd u2"]
     unfolding EVrs''_def EVrs'_EVrs apply auto subgoal for \<sigma> 
     apply(rule exI[of _ \<sigma>]) unfolding GVrs1_Gmap  GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap apply(intro conjI)
       subgoal . subgoal .
@@ -807,23 +860,7 @@ apply(rule Ector_exhaust'[of e]) apply clarify apply (intro conjI)
     subgoal unfolding Edtor'_not\<phi> by simp . . . .
 
 
-lemma Eperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
-Eperm (\<sigma>1 \<circ> \<sigma>2) e = Eperm \<sigma>1 (Eperm \<sigma>2 p)"
-sorry 
 
-lemma Eperm_cong: 
-"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
- (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Eperm \<sigma>1 e = Eperm \<sigma>2 e"
-sorry
-
-lemma Pperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
-Pperm (\<sigma>1 \<circ> \<sigma>2) p = Pperm \<sigma>1 (Pperm \<sigma>2 p)"
-using nomP[unfolded nom_def] by auto
-
-lemma Pperm_cong: 
-"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
- (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Pperm \<sigma>1 p = Pperm \<sigma>2 p"
-using nomP[unfolded nom_def] by auto
     
 
 lemma nom: "nom Eperm'' EVrs''"
@@ -840,7 +877,7 @@ sublocale Comodel where Edtor' = Edtor' and Eperm' = Eperm'' and EVrs' = EVrs''
 apply standard using nom dtorNeC dtorPermC dtorVrsGrenC dtorVrsC by auto
 
 
- thm rec_Ector 1234
+ thm rec_Ector 
 thm corec_Edtor_Inl 
 
 

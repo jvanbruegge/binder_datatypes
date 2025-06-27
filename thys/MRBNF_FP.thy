@@ -389,6 +389,14 @@ lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
 lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
   by auto
 
+lemma type_copy_Rep_o_Abs_o: "type_definition Rep Abs UNIV \<Longrightarrow> Rep \<circ> (Abs \<circ> f) = f"
+  by (metis comp_assoc fun.map_id type_copy_Rep_o_Abs)
+lemma type_copy_Abs_o_Rep_o: "type_definition Rep Abs UNIV \<Longrightarrow> Abs \<circ> (Rep \<circ> f) = f"
+  by (simp add: type_definition_def type_copy_Rep_o_Abs_o)
+
+lemma type_copy_Map_Sb: "type_definition Rep Abs UNIV \<Longrightarrow> type_definition Rep' Abs' UNIV \<Longrightarrow> Map \<circ> Sb = Sb' \<circ> Map \<Longrightarrow> Abs' \<circ> Map \<circ> Rep \<circ> (Abs \<circ> Sb \<circ> Rep) = Abs' \<circ> Sb' \<circ> Rep' \<circ> (Abs' \<circ> Map \<circ> Rep)"
+  by (metis (no_types, lifting) rewriteR_comp_comp type_copy_Rep_o_Abs_o)
+
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 

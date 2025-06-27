@@ -120,6 +120,10 @@ and GVrs1_Gren: "\<And> \<sigma>1 \<sigma>2 u.
   small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> GVrs1 (Gren \<sigma>1 \<sigma>2 u) = \<sigma>1 ` (GVrs1 u)"
 and GVrs2_Gren: "\<And> \<sigma>1 \<sigma>2 u. 
   small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> GVrs2 (Gren \<sigma>1 \<sigma>2 u) = \<sigma>2 ` (GVrs2 u)"
+and GSupp1_Gren: "\<And> \<sigma>1 \<sigma>2 u. 
+  small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> GSupp1 (Gren \<sigma>1 \<sigma>2 u) = GSupp1 u"
+and GSupp2_Gren: "\<And> \<sigma>1 \<sigma>2 u. 
+  small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> GSupp2 (Gren \<sigma>1 \<sigma>2 u) = GSupp2 u"
 
 lemma Gmap_comp: "Gmap f1 f2 (Gmap g1 g2 u) = Gmap (f1 o g1) (f2 o g2) u"
 unfolding Gmap_o by simp
@@ -147,7 +151,7 @@ unfolding Edtor_def using Ector_surj by auto
 lemma Ector_exhaust: "(\<And>u. P (Ector u)) \<Longrightarrow> (\<forall>e. P e)"
 by (metis Ector_surj)
 
-lemma Ector_exhaust': "(\<And>u. P (Ector u)) \<Longrightarrow> P e"
+lemma Ector_exhaust': "(\<And>u. e = Ector u \<Longrightarrow> P e) \<Longrightarrow> P e"
 by (metis Ector_surj)
 
 lemma nom: "nom Eperm EVrs"
@@ -288,57 +292,65 @@ end (* locale Comodel *)
 (* Iteration Barendregt-enriched model (full-recursion not needed), but for codomain equal to E; 
 I keep E' as an abbreviation to avoid confusion. *)
 
-definition ctorPermM :: "var set \<Rightarrow> (('E','E') G \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
-\<Rightarrow> ('E','E') G
-\<Rightarrow> bool" where 
-"ctorPermM V ctor perm u \<equiv> 
-(\<forall>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> supp \<sigma> \<inter> V = {} \<longrightarrow> 
-       perm \<sigma> (ctor u) = 
-       ctor (Gren \<sigma> \<sigma> (Gmap (perm \<sigma>) (perm \<sigma>) u)))"
+typedecl P 
+consts Pperm :: "(var \<Rightarrow> var) \<Rightarrow> P \<Rightarrow> P" 
+consts PVrs :: "P \<Rightarrow> var set"
+axiomatization where nomP: "nom Pperm PVrs"
+and countable_PVrs: "\<And>p. countable (PVrs p)"
+and PVrs_Pperm: "\<And> \<sigma> p. bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> u) = \<sigma> ` PVrs u"
 
-definition ctorVarsM :: "var set \<Rightarrow> (('E','E') G \<Rightarrow> 'E') \<Rightarrow> ('E' \<Rightarrow> var set) 
-\<Rightarrow> ('E','E') G
+definition lift :: "((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> (P\<Rightarrow>'E') \<Rightarrow> (P=>'E'))" where 
+"lift perm \<sigma> pe p \<equiv> perm \<sigma> (pe (Pperm (inv \<sigma>) p))"
+
+definition ctorPermM :: "((P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P \<Rightarrow>'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+\<Rightarrow> (P\<Rightarrow>'E',P\<Rightarrow>'E') G
 \<Rightarrow> bool" where 
-"ctorVarsM V ctor Vrs u \<equiv> 
-Vrs (ctor u) \<subseteq> V \<union> 
+"ctorPermM ctor perm u \<equiv> 
+(\<forall>\<sigma> p. small \<sigma> \<and> bij \<sigma>  \<longrightarrow> 
+       perm \<sigma> (ctor u p) = 
+       ctor (Gren \<sigma> \<sigma> (Gmap (lift perm \<sigma>) (lift perm \<sigma>) u)) (Pperm \<sigma> p))"
+
+definition ctorVarsM :: "((P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P\<Rightarrow>'E') \<Rightarrow> ('E' \<Rightarrow> var set) 
+\<Rightarrow> (P\<Rightarrow>'E',P\<Rightarrow>'E') G
+\<Rightarrow> bool" where 
+"ctorVarsM ctor Vrs u \<equiv> 
+\<forall>p. Vrs (ctor u p) \<subseteq> PVrs p \<union> 
      GVrs1 u \<union> 
-     (\<Union> {Vrs e | e . e \<in> GSupp1 u}) \<union> 
-     (\<Union> {Vrs e - GVrs2 u | e . e \<in> GSupp1 u})"
+     (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp1 u}) \<union> 
+     (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u})"
 
 
 
 locale Model =
-fixes V :: "var set" 
-and Ector' :: "(E,E) G \<Rightarrow> E'" 
+fixes Ector' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" 
 and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
 and EVrs' ::"E' \<Rightarrow> var set" 
-assumes countable_V: "countable V"
-and nom: "nom Eperm' EVrs'"
-and ctorPermM: "\<And>u. ctorPermM V Ector' Eperm' u"
-and ctorVarsM: "\<And>u. ctorVarsM V Ector' EVrs' u"
+assumes nom: "nom Eperm' EVrs'"
+and ctorPermM: "\<And>u. ctorPermM Ector' Eperm' u"
+and ctorVarsM: "\<And>u. ctorVarsM Ector' EVrs' u"
 begin 
 
 
-definition rec :: "E \<Rightarrow> E'" where 
+definition rec :: "E \<Rightarrow> P\<Rightarrow>E'" where 
 "rec = undefined"
 
 lemma rec_Ector:
-assumes "countable V" 
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow>  
- rec (Ector u) = Ector' (Gmap rec rec u)"
+shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>  
+ rec (Ector u) p = Ector' (Gmap rec rec u) p"
 sorry
 
 lemma rec_Eperm:
-"small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> supp \<sigma> \<inter> V = {} \<Longrightarrow> rec (Eperm \<sigma> e) = Eperm' \<sigma> (rec  e)"
+"small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow>  
+ rec (Eperm \<sigma> e) p = Eperm' \<sigma> (rec e (Pperm (inv \<sigma>) p))"
 sorry
 
 lemma rec_EVrs: 
-"EVrs' (rec e) - V \<subseteq> EVrs e"
+"EVrs' (rec e p) \<subseteq> PVrs p \<union> EVrs e"
 sorry
 
 
 lemma rec_unique:
-assumes "\<And>u. GVrs2 u \<inter> V = {} \<Longrightarrow> H (Ector u) = Ector' (Gmap H H  u)"
+assumes "\<And>u. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p"
 shows "H = rec" 
 sorry
 
@@ -389,22 +401,20 @@ definition ctor1VarsM :: "var set \<Rightarrow> (('E','E') G \<Rightarrow> 'E') 
 
 
 locale Special_Model = 
-fixes V :: "var set" 
-and Ector0' :: "(E,E) G \<Rightarrow> E'" 
-and Ector1' :: "(E',E') G \<Rightarrow> E'" 
+fixes Ector0' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" 
+and Ector1' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" 
 and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
 and EVrs' ::"E' \<Rightarrow> var set" 
-assumes countable_V: "countable V"
-and nom: "nom Eperm' EVrs'"
-and ctor0PermM: "\<And>u. \<phi> u \<Longrightarrow> ctorPermM V Ector0' Eperm' u" and 
-    ctor1PermM: "\<And>u. \<not> \<phi> u \<Longrightarrow> ctorPermM V Ector1' Eperm' u"
-and ctor0VarsM: "\<And>u. \<phi> u \<Longrightarrow> ctorVarsM V Ector0' EVrs' u" and 
-    ctor1VarsM: "\<And>u. \<not> \<phi> u \<Longrightarrow> ctorVarsM V Ector1' EVrs' u"
+assumes nom: "nom Eperm' EVrs'"
+and ctor0PermM: "\<And>u. \<phi> u \<Longrightarrow> ctorPermM Ector0' Eperm' u" and 
+    ctor1PermM: "\<And>u. \<not> \<phi> u \<Longrightarrow> ctorPermM Ector1' Eperm' u"
+and ctor0VarsM: "\<And>u. \<phi> u \<Longrightarrow> ctorVarsM Ector0' EVrs' u" and 
+    ctor1VarsM: "\<And>u. \<not> \<phi> u \<Longrightarrow> ctorVarsM Ector1' EVrs' u"
 begin
 
 (* 1. Recursion principle by associating a model to a special-model: *)
 
-definition Ector' :: "(E,E) G \<Rightarrow> E'" where 
+definition Ector' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" where 
 "Ector' u \<equiv> if \<phi> u then Ector0' u else Ector1' u"
 
 lemma Ector'_\<phi>[simp]: "\<phi> u \<Longrightarrow> Ector' u = Ector0' u"
@@ -413,7 +423,7 @@ unfolding Ector'_def by auto
 lemma Ector'_not\<phi>[simp]: "\<not> \<phi> u \<Longrightarrow> Ector' u = Ector1' u"
 unfolding Ector'_def by auto
 
-lemma ctorPermM: "ctorPermM V Ector' Eperm' u"
+lemma ctorPermM: "ctorPermM Ector' Eperm' u"
 unfolding ctorPermM_def apply safe
   subgoal for \<sigma> apply(cases "\<phi> u")
     subgoal unfolding Ector'_\<phi>  
@@ -431,13 +441,13 @@ unfolding ctorPermM_def apply safe
         subgoal using \<phi>_Gmap \<phi>_Gren by fastforce
         subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . . . .
 
-lemma ctorVarsM: "ctorVarsM V Ector' EVrs' u"
+lemma ctorVarsM: "ctorVarsM Ector' EVrs' u"
 unfolding ctorVarsM_def  
   apply(cases "\<phi> u")
-    subgoal unfolding Ector'_\<phi>   
+    subgoal unfolding Ector'_\<phi>  apply(intro allI)  
     apply(rule subset_trans[OF ctor0VarsM[unfolded ctorVarsM_def, rule_format]])
     by auto 
-    subgoal unfolding Ector'_not\<phi>   
+    subgoal unfolding Ector'_not\<phi> apply(intro allI) 
     apply(rule subset_trans[OF ctor1VarsM[unfolded ctorVarsM_def, rule_format]]) 
     using \<phi>_Gmap by auto . 
 
@@ -445,7 +455,7 @@ unfolding ctorVarsM_def
 (* specia models form models: *)
 sublocale Model where Ector' = Ector' and Eperm' = Eperm' and EVrs' = EVrs' 
 apply standard 
-using countable_V nom ctorPermM ctorVarsM by auto 
+using nom ctorPermM ctorVarsM by auto 
 
 
 (* and now we customize their recursion theorems: *)
@@ -455,29 +465,27 @@ thm rec_Ector rec_Eperm rec_unique
  
 lemma rec_Ector_\<phi>:
 assumes "\<phi> u"    
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow> rec (Ector u) = Ector0' (Gmap rec rec u)"
-apply(subst rec_Ector)
-  subgoal using countable_V by simp
+shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> rec (Ector u) p = Ector0' (Gmap rec rec u) p"
+apply(subst rec_Ector) 
   subgoal using assms by simp
   subgoal using assms apply(subst Ector'_\<phi>)
     subgoal using \<phi>_Gmap by auto
     subgoal unfolding Gmap_comp unfolding o_def by simp . .
 
 lemma rec_Ector_not_\<phi>:
-assumes "\<not> \<phi> u" and "countable V" 
-shows "GVrs2 u \<inter> V = {} \<Longrightarrow> rec (Ector u) = Ector1' (Gmap rec rec u)"
+assumes "\<not> \<phi> u"  
+shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> rec (Ector u) p = Ector1' (Gmap rec rec u) p"
 apply(subst rec_Ector)
-  subgoal using assms by simp
-  subgoal using assms by simp
+  subgoal using assms by simp 
   subgoal using assms apply(subst Ector'_not\<phi>)
     subgoal using \<phi>_Gmap by auto
     subgoal unfolding Gmap_comp unfolding o_def by simp . .
 
 lemma rec_unique':
-assumes "\<And>u. GVrs2 u \<inter> V = {} \<Longrightarrow>
- (\<phi> u \<longrightarrow> H (Ector u) = Ector0' (Gmap H H u))
+assumes "\<And>u p. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>
+ (\<phi> u \<longrightarrow> H (Ector u) p = Ector0' (Gmap H H u) p)
  \<and>
- (\<not> \<phi> u \<longrightarrow> H (Ector u) = Ector1' (Gmap H H u))"
+ (\<not> \<phi> u \<longrightarrow> H (Ector u) p = Ector1' (Gmap H H u) p)"
 shows "H = rec" 
 apply(rule rec_unique) 
 using assms by (simp add: Ector'_def \<phi>_Gmap)  
@@ -486,10 +494,9 @@ using assms by (simp add: Ector'_def \<phi>_Gmap)
 end (* locale Special_Model *)
 
 
-locale Special_Model_Plus = Special_Model V Ector0' Ector1' Eperm' EVrs'
-for V :: "var set" and 
-Ector0' :: "(E,E) G \<Rightarrow> E'" 
-and Ector1' :: "(E',E') G \<Rightarrow> E'"
+locale Special_Model_Plus = Special_Model Ector0' Ector1' Eperm' EVrs'
+for Ector0' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" 
+and Ector1' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'"
 and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'" 
 and EVrs' ::"E' \<Rightarrow> var set" + 
 assumes Ector_\<phi>_inj: "\<And>u1 u2. \<phi> u1 \<Longrightarrow> \<comment> \<open>\<phi> u2 \<Longrightarrow>  \<close> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
@@ -500,8 +507,10 @@ and EVrs'_EVrs: "EVrs' = EVrs"
 and EVrs'_\<phi>: "\<And>u. \<phi> u \<Longrightarrow> EVrs' (Ector u) = EVrs (Ector0' u)"
 and EVrs'_not\<phi>: "\<And>u. \<not> \<phi> u \<Longrightarrow> EVrs' (Ector u) = EVrs (Ector1' u)"
 *)
-and Ector1_Ector: "\<And>u u1. \<not> \<phi> u \<Longrightarrow> \<not> \<phi> u1 \<Longrightarrow> 
-   GVrs2 u \<inter> V = {} \<Longrightarrow> GVrs2 u1 \<inter> V = {} \<Longrightarrow> Ector u = Ector u1 \<Longrightarrow> Ector1' u = Ector1' u1"
+and Ector1_Ector: "\<And>u u1 p. \<not> \<phi> u \<Longrightarrow> \<not> \<phi> u1 \<Longrightarrow> 
+   GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u1 \<inter> PVrs p = {} \<Longrightarrow> 
+   Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u) = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u1) \<Longrightarrow> 
+   Ector1' u p = Ector1' u1 p"
 (* Ector1 is less injective that Ector outside \<phi>, and assuming freshness *)
 begin 
 
@@ -517,19 +526,47 @@ lemma \<phi>_Some_Ector': "\<phi> (SOME ua. Ector ua = Ector u) \<longleftrighta
 by (metis (mono_tags, lifting) Ector_\<phi>_inj tfl_some) 
 
 
-definition Edtor1' :: "E' \<Rightarrow> ((E',E')G) set" where 
-"Edtor1' e \<equiv> 
-\<Union> {{u1 . Ector u1 = Ector1' u \<and> GVrs2 u1 \<inter> V = {}} | u . 
-                       \<not> \<phi> u \<and> Ector u = e \<and> GVrs2 u \<inter> V = {}}"
+fun Edtor1' :: "P\<times>E' \<Rightarrow> ((P\<times>E',P\<times>E')G) set" where 
+"Edtor1' (p,e) =
+\<Union> { {u1 . Ector (Gmap snd snd u1) = Ector1' u p \<and> 
+          GSupp1 (Gmap fst fst u1) \<union>  GSupp2 (Gmap fst fst u1) \<subseteq> {p} \<and> 
+          GVrs2 u1 \<inter> PVrs p = {}} | 
+       u . \<not> \<phi> u \<and> Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u) = e \<and> GVrs2 u \<inter> PVrs p = {}}"
+declare Edtor1'.simps[simp del]
+lemmas Edtor1'_def = Edtor1'.simps
+
+(* A \<Rightarrow> (P\<Rightarrow>A)*)
+
+lemma in_Edtor1'_Ector_aux: 
+assumes "\<not> \<phi> u" "GVrs2 u \<inter> PVrs p = {}" 
+shows "u1 \<in> Edtor1' (p,Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)) \<longleftrightarrow> 
+  (Ector (Gmap snd snd u1) = Ector1' u p \<and> 
+   GSupp1 (Gmap fst fst u1) \<union> GSupp2 (Gmap fst fst u1) \<subseteq> {p} \<and> 
+   GVrs2 u1 \<inter> PVrs p = {})"
+using assms unfolding Edtor1'_def apply auto apply(rule Ector1_Ector) by auto
 
 lemma in_Edtor1'_Ector: 
-assumes "\<not> \<phi> u" "GVrs2 u \<inter> V = {}" 
-shows "u' \<in> Edtor1' (Ector u) \<longleftrightarrow> Ector u' = Ector1' u \<and> GVrs2 u' \<inter> V = {}"
-using assms unfolding Edtor1'_def by (auto dest: Ector1_Ector) 
+assumes "\<not> \<phi> u" "GVrs2 u \<inter> PVrs p = {}" 
+shows "u1 \<in> Edtor1' (p,Ector u) \<longleftrightarrow> 
+  (Ector (Gmap snd snd u1) = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p \<and> 
+   GSupp1 (Gmap fst fst u1) \<union> GSupp2 (Gmap fst fst u1) \<subseteq> {p} \<and> 
+   GVrs2 u1 \<inter> PVrs p = {})"
+proof-
+  define v where v: "v \<equiv> Gmap (\<lambda>e (p::P). e) (\<lambda>e (p::P). e) u"
+  have u: "u = Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) v"
+  unfolding v Gmap_comp o_def by simp
+  show ?thesis using assms apply(subst u)  
+    by (simp add: GVrs2_Gmap \<phi>_Gmap in_Edtor1'_Ector_aux v)
+qed
+
+ 
 
 lemma Edtor1'_Ector: 
-assumes "\<not> \<phi> u" "GVrs2 u \<inter> V = {}" 
-shows "Edtor1' (Ector u) = {u' . Ector u' = Ector1' u \<and> GVrs2 u' \<inter> V = {}}"
+assumes "\<not> \<phi> u" "GVrs2 u \<inter> PVrs p = {}" 
+shows "Edtor1' (p,Ector u) = 
+  {u1 . Ector (Gmap snd snd u1) = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p \<and> 
+        GSupp1 (Gmap fst fst u1) \<union> GSupp2 (Gmap fst fst u1) \<subseteq> {p} \<and> 
+        GVrs2 u1 \<inter> PVrs p = {}}"
 using in_Edtor1'_Ector[OF assms] by auto
 
 (*
@@ -538,93 +575,141 @@ unfolding Edtor1'_def Edtor_def apply auto using Ector1_Ector by blast
 *)
 
 
-definition Edtor' :: "E' \<Rightarrow> ((E',E')G) set + E" where 
-"Edtor' e \<equiv> let u = (SOME u. u \<in> Edtor e) in 
-  if \<phi> u then Inr (Ector0' u) else Inl (Edtor1' e)"
-
+fun Edtor' :: "P\<times>E' \<Rightarrow> ((P\<times>E',P\<times>E')G)set + E" where 
+"Edtor' (p,e) = (let u = (SOME u. u \<in> Edtor e) in 
+  if \<phi> u then Inr (Ector0' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p) else Inl (Edtor1' (p,e)))"
+declare Edtor'.simps[simp del]
+lemmas Edtor'_def = Edtor'.simps
 
 lemma Edtor'_\<phi>: 
 assumes "\<phi> u"
-shows "Edtor' (Ector u) = Inr (Ector0' u)"
+shows "Edtor' (p, Ector u) = Inr (Ector0' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p)"
 using assms unfolding Edtor'_def
 unfolding in_Edtor_Ector by (auto simp: Let_def \<phi>_Some_Ector)
 
 lemma Edtor'_not\<phi>: 
 assumes "\<not> \<phi> u"
-shows "Edtor' (Ector u) = Inl (Edtor1' (Ector u))"
+shows "Edtor' (p, Ector u) = Inl (Edtor1' (p, Ector u))"
 using assms unfolding Edtor'_def 
 unfolding in_Edtor_Ector by (auto simp: Let_def \<phi>_Some_Ector')  
 
 (* *)
 lemma Edtor1'_NE: 
 assumes \<phi>: "\<not> \<phi> u" 
-shows "Edtor1' (Ector u) \<noteq> {}"
+shows "Edtor1' (p, Ector u) \<noteq> {}"
+(*
 proof-
-  obtain u0 where u0u: "Ector u0 = Ector u" and g: "GVrs2 u0 \<inter> V = {}" using countable_V sorry
+  obtain u0 where u0u: "Ector u0 = Ector u" and g: "GVrs2 u0 \<inter> PVrs p = {}" using countable_PVrs sorry
   hence \<phi>: "\<not> \<phi> u0" using \<phi> using Ector_\<phi> by blast
-  obtain u1 where "Ector u1 = Ector1' u0" "GVrs2 u1 \<inter> V = {}" using countable_V sorry
+  obtain u1 where "Ector u1 = Ector1' u0" "GVrs2 u1 \<inter> PVrs p = {}" using countable_PVrs sorry
   then have "u1 \<in> Edtor1' (Ector u)" 
   unfolding u0u[symmetric] apply(subst in_Edtor1'_Ector[OF \<phi> g]) by auto
   thus ?thesis by auto
 qed
+*)
+sorry
 
 lemma dtorNeC: "dtorNeC Edtor'"
-unfolding dtorNeC_def apply(rule Ector_exhaust, safe)
-  subgoal for u U apply(cases "\<phi> u")
+unfolding dtorNeC_def apply safe
+  subgoal for p e U  apply(rule Ector_exhaust'[of e]) apply simp
+  subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> by simp
-    subgoal unfolding Edtor'_not\<phi> using Edtor1'_NE by simp . .
+    subgoal unfolding Edtor'_not\<phi> using Edtor1'_NE by simp . . .
 
-definition "EVrs'' e = EVrs e \<union> V"
+fun EVrs'' where "EVrs'' (p,e) = EVrs e \<union> PVrs p"
+declare EVrs''.simps[simp del]
+lemmas EVrs''_def = EVrs''.simps
+
+fun Eperm'' where "Eperm'' \<sigma> (p,e) = (Pperm \<sigma> p, Eperm \<sigma> e)"
+declare Eperm''.simps[simp del]
+lemmas Eperm''_def = Eperm''.simps
+
+lemma snd_EPerm''[simp]: "snd \<circ> Eperm'' \<sigma> = Eperm \<sigma> o snd"
+unfolding fun_eq_iff by (simp add: Eperm''_def)
+
+lemma fst_EPerm''[simp]: "fst \<circ> Eperm'' \<sigma> = Pperm \<sigma> o fst"
+unfolding fun_eq_iff by (simp add: Eperm''_def)
 
 
-lemma dtorPermC: "dtorPermC Edtor' Eperm'"
-unfolding Eperm'_Eperm
-unfolding dtorPermC_def apply(rule allI) apply(rule Ector_exhaust)
-  subgoal for \<sigma> u apply(cases "\<phi> u")
+lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm \<sigma> o (\<lambda>e p. e)"
+unfolding fun_eq_iff o_def lift_def by simp
+
+lemma Eperm_inv_iff: "bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
+sorry
+
+
+lemma dtorPermC: "dtorPermC Edtor' Eperm''"
+unfolding dtorPermC_def apply clarify subgoal for \<sigma> p e
+unfolding Eperm''_def unfolding Eperm'_Eperm 
+apply(rule Ector_exhaust'[of e], simp)
+  subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> apply safe 
     unfolding Eperm_Ector apply(subst Edtor'_\<phi>)
       subgoal using \<phi>_Gmap \<phi>_Gren by metis
       subgoal apply auto 
       apply(subst ctor0PermM[unfolded ctorPermM_def Eperm'_Eperm, rule_format])
-        subgoal .
-        subgoal apply auto sorry
-        subgoal .. . .
-    subgoal 
-apply(subgoal_tac "GVrs2 u \<inter> V = {} \<and> \<sigma> ` GVrs2 u \<inter> V = {}") 
+        subgoal by (simp add: \<phi>_Gmap)
+        subgoal by simp
+        subgoal unfolding Gmap_comp Gmap_Gren unfolding lift_def o_def .. . .
+     subgoal 
+     apply(subgoal_tac "GVrs2 u \<inter> PVrs p = {} \<and> \<sigma> ` GVrs2 u \<inter> PVrs p = {}") 
         defer subgoal sorry (* OK *)
-unfolding Edtor'_not\<phi> apply safe 
-    unfolding Eperm_Ector apply(subst Edtor'_not\<phi>)
+     unfolding Edtor'_not\<phi> apply safe 
+     unfolding Eperm_Ector apply(subst Edtor'_not\<phi>)
       subgoal using \<phi>_Gmap \<phi>_Gren by metis
-      subgoal apply simp 
+      subgoal apply simp  
       apply(subst Edtor1'_Ector)
         subgoal using \<phi>_Gmap \<phi>_Gren by metis
-        subgoal unfolding GVrs2_Gmap GVrs2_Gren by auto
-        subgoal unfolding image_def apply clarsimp apply(subst Edtor1'_Ector)
-        apply auto   
-            subgoal for u0
-             apply(subst (asm) ctor1PermM[unfolded ctorPermM_def, 
-          unfolded Eperm'_Eperm, rule_format, symmetric])
-            subgoal .
-            subgoal apply auto sorry (* did not factor in the Barendregt yet into the produced comodel *)
-            subgoal apply(rule exI[of _ "Gren (inv \<sigma>) (inv \<sigma>) u0"]) apply safe
-              defer subgoal sorry (* OK *)
-              apply(rule exI[of _ "Gren (inv \<sigma>) (inv \<sigma>) (Gmap (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) u0)"])
-              apply safe
-                subgoal apply(subst Eperm_Ector[symmetric])
-                  subgoal sorry (* OK *)
-                  subgoal sorry (* OK *)
-                  subgoal sorry (* OK *) .
-                subgoal sorry
-                subgoal apply(subst Gmap_Gren)
-                  subgoal sorry (* OK *)
-                  subgoal sorry (* OK *)
-                    subgoal apply(subst Gmap_comp) sorry (* OK *) . . . . . . . .
-                
+        subgoal unfolding GVrs2_Gmap GVrs2_Gren PVrs_Pperm  
+          by (metis bij_is_inj image_Int image_empty)
+        subgoal unfolding image_def apply auto apply(subst Edtor1'_Ector)
+        apply auto subgoal for u0
+        apply(rule exI[of _ "Gren (inv \<sigma>) (inv \<sigma>) u0"]) apply safe
+          prefer 2 subgoal sorry (* OK *)
+          subgoal 
+          apply(rule exI[of _ "Gren (inv \<sigma>) (inv \<sigma>) (Gmap (Eperm'' (inv \<sigma>)) (Eperm'' (inv \<sigma>)) u0)"])
+          apply safe
+            subgoal unfolding Gmap_comp Gmap_Gren apply(subst Gmap_Gren)
+              subgoal sorry (* OK *)
+              subgoal sorry (* OK *)
+              subgoal unfolding Gmap_comp apply simp 
+              unfolding Gmap_o apply(subst o_def)
+              apply(subst Eperm_Ector[symmetric])
+                subgoal sorry (* OK *)
+                subgoal sorry (* OK *)
+                subgoal 
+                unfolding Gmap_o[symmetric] triv_Eperm_lift unfolding Gmap_o
+                unfolding o_def
+                apply(subst (asm) ctor1PermM[unfolded ctorPermM_def, rule_format, unfolded Eperm'_Eperm, 
+                            symmetric])
+                  subgoal by (simp add: \<phi>_Gmap)
+                  subgoal by simp
+                  subgoal apply(subst Eperm_inv_iff) by auto . . .
+              subgoal for e' unfolding GSupp1_Gmap apply auto subgoal for b apply(subst (asm) GSupp1_Gren)
+                subgoal sorry (* OK*)
+                subgoal sorry (* OK*)
+                subgoal unfolding GSupp1_Gmap apply(auto simp: Eperm''_def) subgoal for pp ee 
+                apply(subgoal_tac "pp = Pperm \<sigma> p")
+                  subgoal apply auto sorry (* OK*)
+                  subgoal by auto . . . .
+              subgoal for pp unfolding GSupp2_Gmap apply auto apply(subst (asm) GSupp2_Gren)
+                subgoal sorry (* OK*)
+                subgoal sorry (* OK*)
+                subgoal for ee unfolding GSupp2_Gmap apply(auto simp: Eperm''_def) subgoal for p' e'
+                apply(subgoal_tac "p' = Pperm \<sigma> p")
+                  subgoal apply auto sorry (* OK*)
+                  subgoal by auto . . . 
+              subgoal for a apply(subst (asm) GVrs2_Gren)
+                subgoal sorry (* OK*) subgoal sorry (* OK*)
+                subgoal unfolding GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap apply auto  subgoal for a
+                apply(subgoal_tac "a \<in> \<sigma> ` PVrs p") 
+                  subgoal by (metis IntI PVrs_Pperm empty_iff)
+                  subgoal sorry (* OK *) . . .
+             subgoal apply(subst Gmap_Gren[symmetric])
+               subgoal sorry (* OK *) subgoal sorry (* OK *)
+               subgoal unfolding Gmap_comp sorry (* OK *) . . . . . . . . .
 
-
-
-
-
+             
 lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs''"
 unfolding dtorVrsGrenC_def EVrs'_EVrs EVrs''_def  apply(rule Ector_exhaust) apply safe
   subgoal for u U u1 u2 apply(cases "\<phi> u")

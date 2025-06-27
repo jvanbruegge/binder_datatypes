@@ -303,12 +303,27 @@ shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>
   using assms apply - unfolding Edtor'_\<phi> apply simp unfolding crec_def apply simp 
   sorry (* should be OK if recursive components are missing for \<phi>: so needs to be a base case*)
 
-
+definition "uncurry f \<equiv> \<lambda>(a,b). f a b"
 
 lemma rec_Ector_not_\<phi>:
-assumes "\<not> \<phi> u"  
-shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> crec (Ector u) p = Ector1' (Gmap crec crec u) p"
-  using C.corec_Edtor_Inl[of "(Ector u,p)"]
+assumes f: "\<not> \<phi> u"  and g : "GVrs2 u \<inter> PVrs p = {}"
+shows "crec (Ector u) p = Ector1' (Gmap crec crec u) p"
+proof-
+  have "Edtor' (Ector u, p) = Inl (Edtor1' (Ector u, p))" 
+  and 1: "Gmap C.corec C.corec ` (Edtor1' (Ector u, p)) \<subseteq> Edtor (C.corec (Ector u, p))"
+    using f g  by (auto simp add: C.corec_Edtor_Inl Edtor'_not\<phi>)
+  hence 2: "\<And>v. Ector (Gmap fst fst v) = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p \<and>
+          GSupp1 (Gmap snd snd v) \<union> GSupp2 (Gmap snd snd v) \<subseteq> {p} \<and> GVrs2 v \<inter> PVrs p = {}
+   \<Longrightarrow> Ector (Gmap C.corec C.corec v) = C.corec (Ector u, p)" 
+    using f g unfolding Edtor_def  Edtor1'_Ector  
+    using in_Edtor1'_Ector by fastforce
+  show ?thesis unfolding crec_def apply simp apply(subst 2[symmetric, of "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) u"])
+     defer subgoal unfolding Gmap_comp unfolding curry_def o_def sorry
+    subgoal apply safe
+      subgoal unfolding Gmap_comp o_def apply simp sorry
+  hence blah using assms apply - unfolding in_Edtor1'_Ector
+
+  from C.corec_Edtor_Inl[of "(Ector u,p)"]
   using assms apply - unfolding Edtor'_not\<phi> apply simp unfolding crec_def apply simp 
   unfolding Edtor_def image_def Edtor1'_Ector subset_eq apply auto sorry
   apply(subgoal_tac "Gmap (\<lambda>e p. e) (\<lambda>e p. e) u = Gmap (curry C.corec) (curry C.corec) u")

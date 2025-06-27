@@ -58,7 +58,8 @@ sig
   val mk_abs: typ -> term -> term
   val mk_rep: typ -> term -> term
   val seal_mrbnf: (binding -> binding) -> unfold_set -> binding -> bool -> typ list -> typ list ->
-    MRBNF_Def.mrbnf -> local_theory -> (MRBNF_Def.mrbnf * (typ list * absT_info)) * local_theory
+    MRBNF_Def.mrbnf -> (string * Typedef.info) option -> local_theory
+    -> (MRBNF_Def.mrbnf * (string * Typedef.info) * (typ list * absT_info)) * local_theory
 end;
 
 structure MRBNF_Comp : MRBNF_COMP =
@@ -1038,10 +1039,11 @@ fun normalize_mrbnfs qualify (oAs: typ option list) (Ass: (string * sort) list l
         )
         | NONE => NONE
       ) (oAs ~~ var_types_of_mrbnf outer);
+    val Ds' = map TFree (fold_rev Term.add_tfreesT Ds []);
     val var_map = fold (fold (fn (A, var_type) => Typtab.map_default (A, var_type) (fn var_type' =>
       case var_type_ord (var_type, var_type') of LESS => var_type | _ => var_type'
     ))) (oAs' :: map (apfst TFree) Xs :: map2 (fn As => fn mrbnf => map TFree As ~~ var_types_of_mrbnf mrbnf) Ass mrbnfs)
-      (Typtab.make (Ds ~~ replicate (length Ds) MRBNF_Def.Dead_Var))
+      (Typtab.make (Ds' ~~ replicate (length Ds') MRBNF_Def.Dead_Var))
 
     val odemote_target_types = map (fn x => case x of
       SOME y => the (Typtab.lookup var_map y)
@@ -1184,7 +1186,7 @@ fun mk_abs_or_rep _ absU (Const (@{const_name BNF_Composition.id_bnf}, _)) =
     in Term.subst_atomic_types (Ts ~~ Us) abs end;
 val mk_abs = mk_abs_or_rep range_type;
 val mk_rep = mk_abs_or_rep domain_type;
-fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
+fun maybe_typedef info_opt force_out_of_line (b, As, mx) set opt_morphs tac lthy =
   let
     val threshold = Config.get lthy typedef_threshold;
     val repT = HOLogic.dest_setT (fastype_of set);
@@ -1192,21 +1194,23 @@ fun maybe_typedef force_out_of_line (b, As, mx) set opt_morphs tac lthy =
       (threshold >= 0 andalso Term.size_of_typ repT >= threshold);
   in
     if out_of_line then
-      typedef (b, As, mx) set opt_morphs tac lthy
-      |>> (fn (T_name, ({Rep_name, Abs_name, ...},
+      (case info_opt of
+        SOME info => (info, lthy)
+        | NONE => typedef (b, As, mx) set opt_morphs tac lthy)
+      |>> (fn info as (T_name, ({Rep_name, Abs_name, ...},
           {type_definition, Abs_inverse, Abs_inject, Abs_cases, ...}) : Typedef.info) =>
-        (Type (T_name, map TFree As),
-          (Rep_name, Abs_name, type_definition, Abs_inverse, Abs_inject, Abs_cases)))
+        (SOME info, (Type (T_name, map TFree As),
+          (Rep_name, Abs_name, type_definition, Abs_inverse, Abs_inject, Abs_cases))))
     else
-      ((repT,
+      ((NONE, (repT,
         (@{const_name BNF_Composition.id_bnf}, @{const_name BNF_Composition.id_bnf},
          @{thm BNF_Composition.type_definition_id_bnf_UNIV},
          @{thm type_definition.Abs_inverse[OF BNF_Composition.type_definition_id_bnf_UNIV]},
          @{thm type_definition.Abs_inject[OF BNF_Composition.type_definition_id_bnf_UNIV]},
-         @{thm type_definition.Abs_cases[OF BNF_Composition.type_definition_id_bnf_UNIV]})), lthy)
+         @{thm type_definition.Abs_cases[OF BNF_Composition.type_definition_id_bnf_UNIV]}))), lthy)
   end;
 
-fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds mrbnf lthy =
+fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds mrbnf info_opt lthy =
   let
     val live = live_of_mrbnf mrbnf;
     val frees = frees_of_mrbnf mrbnf;
@@ -1214,11 +1218,14 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val nwits = nwits_of_mrbnf mrbnf;
     val nondead = live + length bounds + length frees;
     val var_types = var_types_of_mrbnf mrbnf;
-    val ((As, As'), lthy1) = apfst (`(map TFree))
-      (Variable.invent_types (replicate live @{sort type}) (fold Variable.declare_typ all_Ds lthy));
-    val (Xs, lthy2) = apfst (map TFree) (Variable.invent_types (replicate live @{sort type}) lthy1);
-    val (Bs, lthy3) = apfst (map TFree) (Variable.invent_types (map (snd o Term.dest_TVar) bounds) lthy2);
-    val (Fs, lthy4) = apfst (map TFree) (Variable.invent_types (map (snd o Term.dest_TVar) frees) lthy3);
+
+    val ((((As, Xs), Bs), Fs), _) = lthy
+      |> fold Variable.declare_typ all_Ds
+      |> mk_TFrees live
+      ||>> mk_TFrees live
+      ||>> mk_TFrees' (map Type.sort_of_atyp bounds)
+      ||>> mk_TFrees' (map Type.sort_of_atyp frees)
+
     val ((((fs, fs'), (Rs, Rs')), (Ps, Ps')), _(*names_lthy*)) = lthy
       |> mk_Frees' "f" (map2 (curry op -->) (interlace As Bs Fs var_types) (interlace Xs Bs Fs var_types))
       ||>> mk_Frees' "R" (map2 mk_pred2T As Xs)
@@ -1226,12 +1233,18 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val repTA = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
     val T_bind = qualify b;
     val repTA_tfrees = Term.add_tfreesT repTA [];
-    val all_TA_params_in_order = fold_rev Term.add_tfreesT all_Ds (interlace As' (map dest_TFree Bs) (map dest_TFree Fs) var_types);
+    val all_TA_params_in_order = case info_opt of
+      NONE => fold_rev Term.add_tfreesT all_Ds (interlace (map dest_TFree As) (map dest_TFree Bs) (map dest_TFree Fs) var_types)
+      | SOME (_, ({ rep_type, abs_type, ...} ,_)) =>
+        let
+          val subst = (op~~) (apply2 (fn T => map TFree (Term.add_tfreesT T [])) (rep_type, repTA))
+        in map dest_TFree (snd (dest_Type (Term.typ_subst_atomic subst abs_type))) end
+
     val TA_params =
       (if force_out_of_line then all_TA_params_in_order
        else inter (op =) repTA_tfrees all_TA_params_in_order);
-    val ((TA, (Rep_name, Abs_name, type_definition, Abs_inverse, Abs_inject, _)), lthy) =
-      maybe_typedef force_out_of_line (T_bind, TA_params, NoSyn) (HOLogic.mk_UNIV repTA) NONE
+    val ((info_opt, (TA, (Rep_name, Abs_name, type_definition, Abs_inverse, Abs_inject, _))), lthy) =
+      maybe_typedef info_opt force_out_of_line (T_bind, TA_params, NoSyn) (HOLogic.mk_UNIV repTA) NONE
         (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt @{thm UNIV_I}] 1) lthy;
     val repTB = mk_T_of_mrbnf Ds Xs Bs Fs mrbnf;
     val TB = Term.typ_subst_atomic (As ~~ Xs) TA;
@@ -1257,8 +1270,8 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val bdT_bind = qualify (Binding.suffix_name ("_" ^ bdTN) b);
     val params = Term.add_tfreesT bd_repT [];
     val all_deads = map TFree (fold_rev Term.add_tfreesT all_Ds []);
-    val ((bdT, (_, Abs_bd_name, type_definition_bdT, _, Abs_bdT_inject, Abs_bdT_cases)), lthy) =
-      maybe_typedef false (bdT_bind, params, NoSyn) (HOLogic.mk_UNIV bd_repT) NONE
+    val ((_, (bdT, (_, Abs_bd_name, type_definition_bdT, _, Abs_bdT_inject, Abs_bdT_cases))), lthy) =
+      maybe_typedef NONE false (bdT_bind, params, NoSyn) (HOLogic.mk_UNIV bd_repT) NONE
         (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt @{thm UNIV_I}] 1) lthy;
     val (mrbnf_bd', bd_ordIso, bd_infinite_regular_card_order) =
       if bdT = bd_repT then (mrbnf_bd, bd_Card_order_of_mrbnf mrbnf RS @{thm ordIso_refl},
@@ -1419,7 +1432,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       |> Local_Theory.notes notes
       ||> (if repTA = TA then I else register_mrbnf_raw (fst (dest_Type TA)) mrbnf'')
   in
-    ((morph_mrbnf (substitute_noted_thm noted) mrbnf'', (all_deads, absT_info)), lthy'')
+    ((morph_mrbnf (substitute_noted_thm noted) mrbnf'', the info_opt, (all_deads, absT_info)), lthy'')
   end;
 
 exception BAD_DEAD of typ * typ;

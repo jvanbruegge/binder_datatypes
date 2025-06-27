@@ -4,6 +4,17 @@ begin
 
 (* Prelims: *)
 
+lemma tri_Un1: "A \<subseteq> B \<union> C \<Longrightarrow> A \<union> B \<subseteq> B \<union> C" by auto
+lemma tri_Un3: "A \<union> A' \<union> A'' \<subseteq> B \<union> C \<Longrightarrow> B \<union> A \<union> A' \<union> A'' \<subseteq> B \<union> C" by auto
+
+lemma A_Int_Un_emp: "A \<inter> (B \<union> C) = {} \<longleftrightarrow> A \<inter> B = {} \<and> A \<inter> C = {}" by auto
+
+lemma bij_inv_Un_triv: "bij \<sigma> \<Longrightarrow> \<sigma> ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv \<sigma> ` B = {}"
+  by (metis bij_def empty_is_image image_Int image_inv_f_f surj_imp_inj_inv)
+
+lemma bij_in_inv_Un_triv: "bij \<sigma> \<Longrightarrow> inv \<sigma> a \<in> B \<longleftrightarrow> a \<in> \<sigma> ` B"
+  by (metis bij_inv_eq_iff imageE image_eqI)
+
 lemma incl_Un_triv3: "A1 \<union> A2 \<union> A3 \<subseteq> A \<Longrightarrow> A1 \<subseteq> A \<and> A2 \<subseteq> A \<and> A3 \<subseteq> A" by auto
 
 lemma incl_Un3_triv3: "A1 \<subseteq> B1 \<Longrightarrow> A2 \<subseteq> B2 \<union> P \<Longrightarrow> A3 \<subseteq> B3 \<union> P \<Longrightarrow> A1 \<union> A2 \<union> A3 \<subseteq> B1 \<union> B2 \<union> B3 \<union> P" 
@@ -108,14 +119,21 @@ unfolding supp_def by (metis bij_inv_eq_iff)
 lemma small_inv[simp]: "bij \<sigma> \<Longrightarrow> small (inv \<sigma>) \<longleftrightarrow> small \<sigma>" 
 unfolding small_def by (metis bij_betw_inv_into inv_inv_eq small_def supp_inv)
 
-thm bij_id[intro]
-thm bij_comp[simp]
-thm bij_imp_bij_inv[simp]
-find_theorems bij "inv _"
+declare bij_id[intro]
+lemmas bij_id'[simp,intro]=bij_id[unfolded id_def]
+declare bij_comp[simp]
+declare bij_imp_bij_inv[simp]
+find_theorems bij "_ o inv _"
+lemma bij_inv_id1[simp]: "bij f \<Longrightarrow> f o inv f = id" unfolding fun_eq_iff 
+  by (simp add: bij_def surj_iff)
+lemma bij_inv_id2[simp]: "bij f \<Longrightarrow> inv f o f = id" unfolding fun_eq_iff 
+by (simp add: bij_def surj_iff)
 
 (* nominal-like structures: *)
 definition nom :: "((var \<Rightarrow> var) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> var set) \<Rightarrow> bool" where 
 "nom perm Vrs \<equiv> 
+ perm id = id 
+ \<and> 
  (\<forall>\<sigma>1 \<sigma>2. small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
  perm (\<sigma>1 o \<sigma>2) = perm \<sigma>1 o perm \<sigma>2) 
  \<and>
@@ -123,6 +141,8 @@ definition nom :: "((var \<Rightarrow> var) \<Rightarrow> 'E \<Rightarrow> 'E) \
   small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<and>  
   (\<forall>a\<in>Vrs e'. \<sigma>1 a = \<sigma>2 a) \<longrightarrow> 
   perm \<sigma>1 e' = perm \<sigma>2 e')"
+(* NB: Only if functiins are constrained to be bijective: identity 
+ and congruence can be replaced by id_congruence. *)
 
 
 (*****)
@@ -139,6 +159,13 @@ axiomatization where
 Gmap_id[simp]: "Gmap id id = id"
 and 
 Gmap_o: "\<And>f1 g1 f2 g2. Gmap (f1 o g1) (f2 o g2) = Gmap f1 f2 o Gmap g1 g2"
+and 
+Gren_id[simp]: "Gren id id = id"
+and 
+Gren_o: "\<And>\<sigma>1 \<tau>1 \<sigma>2 \<tau>2. 
+  small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+  small \<tau>1 \<Longrightarrow> bij \<tau>1 \<Longrightarrow> small \<tau>2 \<Longrightarrow> bij \<tau>2 \<Longrightarrow> 
+  Gren (\<sigma>1 o \<tau>1) (\<sigma>2 o \<tau>2) = Gren \<sigma>1 \<sigma>2 o Gren \<tau>1 \<tau>2"
 and GSupp1_Gmap: "\<And> f1 f2 u. GSupp1 (Gmap f1 f2 u) = f1 ` (GSupp1 u)"
 and GSupp2_Gmap: "\<And> f1 f2 u. GSupp2 (Gmap f1 f2 u) = f2 ` (GSupp2 u)"
 and GVrs1_Gmap: "\<And> f1 f2 u. GVrs1 (Gmap f1 f2 u) = GVrs1 u"
@@ -168,11 +195,30 @@ proof-
 qed
   
 lemma Gmap_comp: "Gmap f1 f2 (Gmap g1 g2 u) = Gmap (f1 o g1) (f2 o g2) u"
-unfolding Gmap_o by simp
+  unfolding Gmap_o by simp
+
+lemma Gren_comp: "\<And>\<sigma>1 \<tau>1 \<sigma>2 \<tau>2 u. 
+  small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+  small \<tau>1 \<Longrightarrow> bij \<tau>1 \<Longrightarrow> small \<tau>2 \<Longrightarrow> bij \<tau>2 \<Longrightarrow> 
+  Gren \<sigma>1 \<sigma>2 (Gren \<tau>1 \<tau>2 u) = Gren (\<sigma>1 o \<tau>1) (\<sigma>2 o \<tau>2) u"
+  unfolding Gren_o by simp
 
 lemma Gmap_id'[simp]: "Gmap (\<lambda>x. x) (\<lambda>x. x) = id"
-using Gmap_id unfolding id_def .
+  using Gmap_id unfolding id_def .
 
+lemma snd_single_Gmap: "snd ` GSupp1 u \<subseteq> {p} \<Longrightarrow> snd ` GSupp2 u \<subseteq> {p}
+\<Longrightarrow> Gmap (\<lambda>(e,p'). (e,p)) (\<lambda>(e,p'). (e,p)) u = u"
+apply(rule Gmap_cong_id) by auto
+
+lemma snd_single_Gmap': 
+assumes "snd ` GSupp1 u \<subseteq> {p}" "snd ` GSupp2 u \<subseteq> {p}"
+shows "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst u) = u"
+apply(rule sym) apply(subst snd_single_Gmap[symmetric, of _ p])
+  subgoal by fact subgoal by fact
+  subgoal unfolding Gmap_comp o_def  
+    by (meson Gmap_cong case_prod_beta) .
+
+(* *)
 typedecl E
 
 consts Ector :: "(E,E) G \<Rightarrow> E"
@@ -189,7 +235,9 @@ and EVrs_Ector: "\<And>u. EVrs (Ector u) =
      GVrs1 u \<union> 
      (\<Union> {EVrs e' | e' . e' \<in> GSupp1 u}) \<union> 
      (\<Union> {EVrs e' - GVrs2 u | e' . e' \<in> GSupp1 u})"
-and (* Next two correspond to nom *)
+and (* Next three correspond to nom *)
+Eperm_id[simp]: "Eperm id = id"
+and 
 Eperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
     Eperm (\<sigma>1 \<circ> \<sigma>2) e = Eperm \<sigma>1 (Eperm \<sigma>2 p)"
 and 
@@ -213,10 +261,17 @@ lemma Ector_exhaust: "(\<And>u. P (Ector u)) \<Longrightarrow> (\<forall>e. P e)
 by (metis Ector_surj)
 
 lemma Ector_exhaust': "(\<And>u. e = Ector u \<Longrightarrow> P e) \<Longrightarrow> P e"
-by (metis Ector_surj)
+  by (metis Ector_surj)
+
+lemma Ector_exhaust_fresh: "countable A \<Longrightarrow> (\<And>u. e = Ector u \<Longrightarrow> GVrs2 u \<inter> A = {} \<Longrightarrow> P e) \<Longrightarrow> P e"
+  by (metis Ector_surj_fresh)
+
+lemma Eperm_inv_iff: "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
+  sorry
 
 lemma nom: "nom Eperm EVrs"
-unfolding nom_def apply safe 
+  unfolding nom_def apply safe 
+  apply simp
   subgoal using Eperm_comp by auto 
   subgoal using Eperm_cong by blast .
 
@@ -250,17 +305,26 @@ axiomatization where nomP: "nom Pperm PVrs"
 and countable_PVrs: "\<And>p. countable (PVrs p)"
 and PVrs_Pperm: "\<And> \<sigma> p. bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> u) = \<sigma> ` PVrs u"
 
+lemma Pperm_id[simp]: "Pperm id = id" 
+using nomP[unfolded nom_def] by auto
+
 lemma Pperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
-Pperm (\<sigma>1 \<circ> \<sigma>2) p = Pperm \<sigma>1 (Pperm \<sigma>2 p)"
+Pperm \<sigma>1 (Pperm \<sigma>2 p) = Pperm (\<sigma>1 \<circ> \<sigma>2) p"
 using nomP[unfolded nom_def] by auto
 
 lemma Pperm_cong: 
 "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
  (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Pperm \<sigma>1 p = Pperm \<sigma>2 p"
-using nomP[unfolded nom_def] by auto
+  using nomP[unfolded nom_def] by auto
+
+lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> countable (PVrs p \<union> inv \<sigma> ` PVrs p)"
+  by (simp add: countable_PVrs)
 
 definition lift :: "((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> (P\<Rightarrow>'E') \<Rightarrow> (P=>'E'))" where 
 "lift perm \<sigma> pe p \<equiv> perm \<sigma> (pe (Pperm (inv \<sigma>) p))"
+
+lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm \<sigma> o (\<lambda>e p. e)"
+  unfolding fun_eq_iff o_def lift_def by simp
 
 definition ctorPermM :: "((P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P \<Rightarrow>'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
 \<Rightarrow> (P\<Rightarrow>'E',P\<Rightarrow>'E') G
@@ -278,7 +342,6 @@ definition ctorVarsM :: "((P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> 
      GVrs1 u \<union> 
      (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp1 u}) \<union> 
      (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u})"
-
 
 
 

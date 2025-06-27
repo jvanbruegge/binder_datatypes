@@ -67,7 +67,7 @@ lemma corec_Edtor_Inr:
 sorry
 
 lemma corec_Eperm:
-"small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> supp \<sigma> \<inter> V = {} \<Longrightarrow> 
+"small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow>   
  corec (Eperm' \<sigma> e') = Eperm \<sigma> (corec e')"
 sorry
 

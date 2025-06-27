@@ -143,7 +143,7 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
     val (_, _, (mrbnfs, (accum, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
       [] (#vars spec) (K (map fst (#vars spec))) NONE [mrbnf] (accum, lthy);
     val mrbnf = hd mrbnfs;
-    val ((mrbnf, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf lthy;
+    val ((mrbnf, _, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf NONE lthy;
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
     val (res, lthy) = MRBNF_FP.construct_binder_fp fp [{
       T_name = name,

@@ -558,6 +558,147 @@ pbmv_monad T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and
   done
 print_theorems
 
+(* Sealing of composed bmv *)
+typedef ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T' =
+  "UNIV :: (('a, 'b, 'e, 'd) T2, 'b, 'c, 'g set, ('b, 'a, 'c, 'd, 'e, 'h) T3, 'f, 'g) T1 set"
+  by (rule UNIV_witness)
+
+definition "Sb_T' \<equiv> \<lambda>h1 h2 \<rho>1 \<rho>2 \<rho>3 \<rho>4 \<rho>5. Abs_T' \<circ> (Sb_T1 h1 (Rep_T' \<circ> \<rho>1) Inj_2_T1 \<circ> Map_T1 (Sb_T2 h2 \<rho>2) id (Sb_T3 \<rho>3 \<rho>4 Inj_2_T3 \<rho>5 \<circ> Map_T3 h2 id)) \<circ> Rep_T'"
+definition "RVrs_1_T' \<equiv> \<lambda>x. Vrs_1_T1 (Rep_T' x)"
+definition "RVrs_2_T' \<equiv> \<lambda>x. \<Union> (Vrs_1_T2 ` set_1_T1 (Rep_T' x)) \<union> \<Union> (set_1_T3 ` set_3_T1 (Rep_T' x))"
+definition "Inj_T' \<equiv> Abs_T' \<circ> Inj_1_T1"
+definition "Vrs_1_T' \<equiv> \<lambda>x. Vrs_2_T1 (Rep_T' x)"
+definition "Vrs_2_T' \<equiv> \<lambda>x. \<Union> (Vrs_2_T2 ` set_1_T1 (Rep_T' x))"
+definition "Vrs_3_T' \<equiv> \<lambda>x. \<Union> (Vrs_1_T3 ` set_3_T1 (Rep_T' x))"
+definition "Vrs_4_T' \<equiv> \<lambda>x. \<Union> (Vrs_2_T3 ` set_3_T1 (Rep_T' x))"
+definition "Vrs_5_T' \<equiv> \<lambda>x. \<Union> (Vrs_4_T3 ` set_3_T1 (Rep_T' x))"
+definition "Map_T' \<equiv> \<lambda>f. Abs_T' \<circ> Map_T1 id id (Map_T3 id f) \<circ> Rep_T'"
+definition "Supp_T' \<equiv> \<lambda>x. \<Union> (set_2_T3 ` set_3_T1 (Rep_T' x))"
+
+lemmas defs = Sb_T'_def RVrs_1_T'_def RVrs_2_T'_def Inj_T'_def Vrs_1_T'_def Vrs_2_T'_def Vrs_3_T'_def
+  Vrs_4_T'_def Vrs_5_T'_def Map_T'_def Supp_T'_def
+
+pbmv_monad "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T'" and "('a, 'b, 'e, 'd) T2" and T3': "('b, 'a, 'c, 'd, 'e, 'h) T3"
+  Sbs: Sb_T'
+  RVrs: RVrs_1_T' RVrs_2_T'
+  Injs: Inj_T' Inj_T2 Inj_1_T3 Inj_1_T4 Inj_2_T4
+  Vrs: Vrs_1_T' Vrs_2_T' Vrs_3_T' Vrs_4_T' Vrs_5_T'
+  Maps: Map_T'
+  Supps: Supp_T'
+  bd: natLeq
+                      apply (unfold SSupp_type_copy[OF type_definition_T'] defs)
+
+                      apply (rule infinite_regular_card_order_natLeq)
+
+                      apply (unfold type_copy_Rep_o_Abs_o[OF type_definition_T'] T.Sb_Inj(1) o_id)[1]
+                      apply (rule type_copy_Abs_o_Rep)
+                      apply (rule type_definition_T')
+
+                      apply (rule trans[OF comp_assoc])
+                      apply (unfold type_copy_Rep_o_Abs_o[OF type_definition_T'])
+                      apply (rule trans[OF comp_assoc])
+                      apply (rule trans)
+                      apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+                      apply (rule T.Sb_comp_Inj)
+                      apply assumption+
+                      apply (rule type_copy_Abs_o_Rep_o)
+                      apply (rule type_definition_T')
+
+                      apply (rule trans)
+                      apply (rule type_copy_map_comp0[symmetric])
+                      apply (rule type_definition_T')
+                      apply (rule T.Sb_comp[symmetric]; assumption)
+                      apply (unfold  comp_assoc[of Rep_T', symmetric] id_o comp_assoc[of _ Rep_T'] type_copy_Rep_o_Abs[OF type_definition_T'])[1]
+                      apply (rule refl)
+
+                      apply (rule T.Vrs_bd)+
+
+                      apply ((unfold comp_def Abs_T'_inverse[OF UNIV_I])[1], rule T.Vrs_Inj)+
+
+                      apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                      apply (rule trans)
+                      apply (rule T.Vrs_Sb; assumption)
+                      apply (unfold comp_def)[1]
+                      apply (rule refl)
+
+                      apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                      apply (rule trans)
+                      apply (rule T.Vrs_Sb; assumption)
+                      apply (unfold comp_def)[1]
+                      apply (rule refl)
+
+                      apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                      apply (rule trans)
+                      apply (rule T.Vrs_Sb; assumption)
+                      apply (unfold comp_def)[1]
+                      apply (rule refl)
+
+                     apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                     apply (rule trans)
+                      apply (rule T.Vrs_Sb; assumption)
+                     apply (unfold comp_def)[1]
+                     apply (rule refl)
+
+                    apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                    apply (rule trans)
+                     apply (rule T.Vrs_Sb; assumption)
+                    apply (unfold comp_def)[1]
+                    apply (rule refl)
+
+                   apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                   apply (rule trans)
+                    apply (rule T.Vrs_Sb; assumption)
+                   apply (unfold comp_def)[1]
+                   apply (rule refl)
+
+                  apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+                  apply (rule trans)
+                   apply (rule T.Vrs_Sb; assumption)
+                  apply (unfold comp_def)[1]
+                  apply (rule refl)
+                 apply (rule type_copy_map_cong0)
+                 apply (rule T.Sb_cong)
+                      apply assumption+
+                     apply (unfold0 comp_apply)[1]
+                     apply (rule arg_cong[of _ _ Rep_T'])
+                     apply assumption+
+
+                apply (unfold T.Map_id(1) o_id)[1]
+                apply (rule type_copy_Abs_o_Rep)
+                apply (rule type_definition_T')
+
+               apply (rule type_copy_map_comp0[symmetric])
+                apply (rule type_definition_T')
+               apply (rule T.Map_comp(1)[symmetric])
+
+              apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+              apply (rule T.Supp_Map)
+
+             apply (rule T.Supp_bd)
+
+            apply (rule type_copy_map_cong0)
+            apply (rule T.Map_cong)
+            apply assumption
+
+           apply (rule type_copy_Map_Sb)
+             apply (rule type_definition_T')+
+           apply (unfold comp_assoc[of _ Rep_T'] comp_assoc[of Abs_T'] type_copy_Rep_o_Abs_o[OF type_definition_T'])
+           apply (rule T.Map_Sb; assumption)
+
+          apply (unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1]
+          apply (rule trans)
+           apply (rule T.Supp_Sb; assumption)
+          apply (unfold comp_def)[1]
+          apply (rule refl)
+
+         apply ((unfold0 comp_apply[of _ Rep_T'] comp_apply[of Abs_T'] Abs_T'_inverse[OF UNIV_I])[1], (rule T.Vrs_Map))+
+
+  apply (unfold T.Map_Inj)
+  apply (rule refl)
+
+  done
+print_theorems
+
 local_setup \<open>fn lthy =>
 let
   open MRBNF_Util
@@ -567,6 +708,11 @@ let
       NONE,
       SOME { frees = [@{typ 'b}, @{typ 'a}, @{typ 'c}], lives = [@{typ 'd}, @{typ 'h}], deads = [@{typ 'e}] }
     ] lthy
+
+  val ((bmv, _, _, _), lthy) = BMV_Monad_Def.seal_bmv_monad I unfold_set @{binding T''}
+    [@{typ "'a::var"}, @{typ "'b::var"}, @{typ "'c::var"}, @{typ "'d::var"}, @{typ 'e}, @{typ 'f}, @{typ "'g::var"}, @{typ 'h}]
+    bmv NONE lthy
+  val _ = @{print} bmv
 in lthy end
 \<close>
 

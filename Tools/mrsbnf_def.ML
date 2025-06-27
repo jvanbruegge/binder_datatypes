@@ -32,6 +32,8 @@ signature MRSBNF_DEF = sig
 
   val mrsbnf_of_mrbnf: MRBNF_Def.mrbnf -> local_theory -> mrsbnf * local_theory;
 
+  val note_mrsbnf_thms: (theory -> BNF_Def.fact_policy) -> (binding -> binding) -> string option -> mrsbnf
+    -> local_theory -> (string * thm list) list * local_theory
   val register_mrsbnf: string -> mrsbnf -> local_theory -> local_theory;
   val mrsbnf_of_generic: Context.generic -> string -> mrsbnf option;
   val mrsbnf_of: Proof.context -> string -> mrsbnf option;
@@ -149,6 +151,7 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
       | SOME b => b;
     val axioms = axioms_of_mrsbnf mrsbnf;
     val facts = facts_of_mrsbnf mrsbnf;
+    val unfolds = BMV_Monad_Def.unfolds_of_bmv_monad bmv;
 
     fun note_unless_dont_note (noted, lthy) =
       let val notes =
@@ -158,6 +161,7 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
          ("map_Sb", maps (the_default [] o Option.map single o #map_Sb) axioms, []),
          ("SSupp_map_subset", maps (map_filter I o #SSupp_map_subset) facts, []),
          ("SSupp_map_bound", maps (map_filter I o #SSupp_map_bound) facts, []),
+         ("map_Inj_raw", maps (the_default [] o #map_Injs) axioms, []),
          ("map_Inj", maps (map_filter I o #map_Inj) facts, []),
          ("Sb_comp_right", map #Sb_comp_right facts, []),
          ("map_Sb_strong", map #map_Sb_strong facts, []),
@@ -165,7 +169,9 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
          ("set_Inj", flat (maps #set_Injs facts), [])
         ]
         |> filter_out (null o #2)
-        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true (short_type_name (name ())) (Binding.name thmN)), attrs), [(thms, [])]));
+        |> map (fn (thmN, thms, attrs) => ((qualify (Binding.qualify true (short_type_name (name ())) (Binding.name thmN)), attrs), [
+          (map (Local_Defs.unfold0 lthy unfolds) thms, [])
+        ]));
       in Local_Theory.notes notes lthy |>> append noted end
     val fact_policy = fact_policy (Proof_Context.theory_of lthy);
   in ([], lthy)
@@ -636,8 +642,6 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
     val mrsbnf = morph_mrsbnf (MRBNF_Util.subst_typ_morphism (
       map (fn T => (T, Logic.varifyT_global T)) (deads @ As @ As' @ Bs @ Fs)
     )) mrsbnf;
-
-    val (_, lthy) = note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy;
   in (mrsbnf, lthy) end;
 
 fun mk_mrsbnf_axioms mrbnfs bmv lthy =
@@ -946,6 +950,7 @@ fun mrsbnf_cmd b_Ts lthy =
         ) goals thms);
 
         val (mrsbnf, lthy) = mk_mrsbnf (K BNF_Def.Note_Some) I vars (SOME name) mrbnfs bmv axioms lthy;
+        val (_, lthy) = note_mrsbnf_thms (K BNF_Def.Note_Some) I (SOME name) mrsbnf lthy;
         val lthy = register_mrsbnf name mrsbnf lthy;
       in lthy end
 

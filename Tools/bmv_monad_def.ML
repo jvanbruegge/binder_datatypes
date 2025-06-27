@@ -108,6 +108,10 @@ signature BMV_MONAD_DEF = sig
     -> { frees: typ list, deads: typ list }
     -> { frees: typ list, deads: typ list, lives: typ list } option list -> local_theory
     -> (bmv_monad * thm list) * local_theory
+
+  val seal_bmv_monad: (binding -> binding) -> thm list -> binding -> typ list -> bmv_monad
+    -> (string * Typedef.info) option -> local_theory
+    -> (bmv_monad * thm list * thm list * (string * Typedef.info)) * local_theory
 end
 
 structure BMV_Monad_Def : BMV_MONAD_DEF = struct
@@ -726,6 +730,7 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
     val axioms = axioms_of_bmv_monad bmv;
     val facts = facts_of_bmv_monad bmv;
     val params = params_of_bmv_monad bmv;
+    val unfolds = unfolds_of_bmv_monad bmv;
 
     fun note_unless_dont_note (noted, lthy) =
       let val notes =
@@ -754,7 +759,9 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
          ("SSupp_Sb_bound", maps #SSupp_Sb_bounds facts, [])
         ]
         |> filter_out (null o #2)
-        |> map (fn (thmN, thms, attrs) => ((Binding.qualify true (bmv_name ()) (Binding.name thmN), attrs), [(thms, [])]));
+        |> map (fn (thmN, thms, attrs) => ((Binding.qualify true (bmv_name ()) (Binding.name thmN), attrs), [
+          (map (Local_Defs.unfold0 lthy unfolds) thms, [])
+        ]));
       in Local_Theory.notes notes lthy |>> append noted end
     val fact_policy = fact_policy lthy;
   in ([], lthy)
@@ -1895,6 +1902,12 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
               ) (#Supp_Map (#axioms param));
             in Local_Defs.unfold0_tac ctxt (@{thms UN_simps(10)} @ thms) end
           ),
+          REPEAT_DETERM o EVERY' [
+            EqSubst.eqsubst_tac ctxt [0] (maps (maps #Vrs_Sbs o axioms_of_bmv_monad) inners'
+              @ #Supp_Sb param @ flat (map_filter (Option.map #Supp_Sb o leader params_of_bmv_monad) inners')
+            ),
+            REPEAT_DETERM o (assume_tac ctxt ORELSE' rtac ctxt @{thm SSupp_Inj_bound})
+          ],
           K (Local_Defs.unfold0_tac ctxt (
             @{thms image_Un image_UN image_comp[unfolded comp_def] UN_empty2 Union_UN_swap Un_assoc[symmetric]
               Un_empty_right Un_empty_left UN_Un Union_Un_distrib UN_UN_flatten UN_Un_distrib id_bnf_apply}
@@ -1968,6 +1981,248 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
     ) (outer :: inners')));
     val (res, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) qualify (SOME name) model lthy
   in (res, lthy) end;
+
+fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
+  let
+    val rep_T = leader ops_of_bmv_monad bmv;
+    val ((T_name, info), lthy) = (case info_opt of
+      SOME info => (info, lthy)
+      | NONE => BNF_Util.typedef (name, map dest_TFree tys, NoSyn)
+        (HOLogic.mk_UNIV rep_T) NONE (fn ctxt => rtac ctxt @{thm UNIV_witness} 1) lthy)
+
+    val T = #abs_type (fst info);
+    val abs = Const (#Abs_name (fst info), rep_T --> #abs_type (fst info));
+    val rep = Const (#Rep_name (fst info), #abs_type (fst info) -->  rep_T);
+
+    val (((fs, rhos), gs), _) = lthy
+      |> mk_Frees "f" (map ((fn a => a --> a) o HOLogic.dest_setT o body_type o fastype_of) (leader RVrs_of_bmv_monad bmv))
+      ||>> mk_Frees "\<rho>" (map ((fn T' => if body_type T' = rep_T then domain_type T' --> T else T') o fastype_of) (leader Injs_of_bmv_monad bmv))
+      ||>> mk_Frees "g" (the_default [] (Option.map (fst o split_last o binder_types o fastype_of) (leader Maps_of_bmv_monad bmv)))
+
+    val mk_def_t = mk_def_t false Binding.empty qualify
+    val mk_defs_t = mk_defs_t false Binding.empty qualify
+
+    fun mk_name s = s ^ "_" ^ short_type_name T_name
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+
+    val ((((Sb, RVrs), Injs), Vrs), lthy) = lthy
+      |> mk_def_t (mk_name "Sb") 0 (fold_rev (Term.absfree o dest_Free) (fs @ rhos) (
+        HOLogic.mk_comp (HOLogic.mk_comp (abs, Term.list_comb (leader Sbs_of_bmv_monad bmv,
+          fs @ map (fn rho => if body_type (fastype_of rho) = T then HOLogic.mk_comp (rep, rho) else rho) rhos
+        )), rep)))
+      ||>> mk_defs_t (mk_name "RVrs") 0 (map (fn RVrs => HOLogic.mk_comp (RVrs, rep)) (leader RVrs_of_bmv_monad bmv))
+      ||>> mk_defs_t (mk_name "Inj") 0 (map_filter (fn Inj =>
+        if body_type (fastype_of Inj) = rep_T then SOME (HOLogic.mk_comp (abs, Inj)) else NONE
+      ) (leader Injs_of_bmv_monad bmv))
+      ||>> mk_defs_t (mk_name "Vrs") 0 (map (fn Vrs => HOLogic.mk_comp (Vrs, rep)) (leader Vrs_of_bmv_monad bmv));
+
+    val subst = Term.subst_atomic_types (leader lives_of_bmv_monad bmv ~~ leader lives'_of_bmv_monad bmv);
+    val ((Map_opt, Supps_opt), lthy) = case leader Maps_of_bmv_monad bmv of
+      NONE => ((NONE, NONE), lthy)
+      | SOME Map =>
+        lthy
+        |> apfst SOME o mk_def_t (mk_name "Map") 0 (fold_rev (Term.absfree o dest_Free) gs (
+          HOLogic.mk_comp (HOLogic.mk_comp (subst abs, Term.list_comb (Map, gs)), rep)
+        ))
+        ||>> apfst SOME o mk_defs_t (mk_name "Supp") 0 (map (fn Supp => HOLogic.mk_comp (Supp, rep)) (the (leader Supps_of_bmv_monad bmv)))
+
+    
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+
+    val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (apply2 fastype_of (
+      Morphism.term phi (fst (the_default Sb Map_opt)), (fst (the_default Sb Map_opt))
+    )) Vartab.empty;
+    val morph = map_prod (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi) (Morphism.thm phi);
+
+    val Sb = morph Sb;
+    val RVrs = map morph RVrs;
+    val Injs = map morph Injs;
+    val Vrs = map morph Vrs;
+    val Map_opt = Option.map morph Map_opt;
+    val Supps_opt = Option.map (map morph) Supps_opt;
+
+    val Inj_defs = map snd Injs;
+    val Injs = fst (fold_map (fn Inj => fn Injs => if body_type (fastype_of Inj) = rep_T then
+      (fst (hd Injs), tl Injs) else (Inj, Injs)
+    ) (leader Injs_of_bmv_monad bmv) Injs);
+
+    val defs = snd Sb :: map snd RVrs @ Inj_defs @ map snd Vrs @ the_default [] (Option.map (fn Map => snd Map :: map snd (the Supps_opt)) Map_opt);
+
+    val consts = {
+      bd = bd_of_bmv_monad bmv,
+      Injs = [Injs],
+      Sbs = [fst Sb],
+      Vrs = [map fst Vrs],
+      RVrs = [map fst RVrs],
+      params = [Option.map (fn Map => { Map = fst Map, Supps = map fst (the Supps_opt) }) Map_opt]
+    }: bmv_monad_consts;
+
+    val axioms = leader axioms_of_bmv_monad bmv;
+    val params = leader params_of_bmv_monad bmv;
+    val copy = #type_definition (snd info);
+
+    val model = {
+      ops = [T],
+      bmv_ops = map_filter (fn i => if i = leader_of_bmv_monad bmv then NONE else SOME (slice_bmv_monad i bmv)) (0 upto length (ops_of_bmv_monad bmv) - 1),
+      bd_infinite_regular_card_order = fn ctxt => rtac ctxt (bd_infinite_regular_card_order_of_bmv_monad bmv) 1,
+      var_class = var_class_of_bmv_monad bmv,
+      frees = [leader frees_of_bmv_monad bmv],
+      lives = [leader lives_of_bmv_monad bmv],
+      lives' = [leader lives'_of_bmv_monad bmv],
+      deads = [leader deads_of_bmv_monad bmv],
+      consts = consts,
+      leader = 0,
+      params = [Option.map (fn Supps => {
+        axioms = {
+          Map_id = fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ [snd (the Map_opt), #Map_id (#axioms (the params))])),
+            rtac ctxt @{thm type_copy_Abs_o_Rep},
+            rtac ctxt copy
+          ],
+          Map_comp = fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt [snd (the Map_opt)]),
+            rtac ctxt @{thm type_copy_map_comp0[symmetric]},
+            rtac ctxt copy,
+            rtac ctxt (#Map_comp (#axioms (the params)) RS sym)
+          ],
+          Supp_Map = map (fn _ => fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt ([snd (the Map_opt), #Abs_inverse (snd info) OF @{thms UNIV_I},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (subst rep))] @{thm comp_apply},
+            infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (subst abs))] @{thm comp_apply}
+            ] @ map snd Supps)),
+            resolve_tac ctxt (#Supp_Map (#axioms (the params)))
+          ]) Supps,
+          Supp_bd = map (fn _ => fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt ([
+              infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply}
+            ] @ map snd Supps)),
+            resolve_tac ctxt (#Supp_bd (#axioms (the params)))
+          ]) Supps,
+          Map_cong = fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt ([snd (the Map_opt)] @ map snd Supps)),
+            rtac ctxt @{thm type_copy_map_cong0},
+            rtac ctxt (#Map_cong (#axioms (the params))),
+            K (Local_Defs.unfold0_tac ctxt [infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply}]),
+            REPEAT_DETERM o Goal.assume_rule_tac ctxt
+          ]
+        },
+        Map_Sb = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt ([snd (the Map_opt), snd Sb, @{thm SSupp_type_copy} OF [copy]] @ Inj_defs)),
+          rtac ctxt @{thm type_copy_Map_Sb},
+          rtac ctxt copy,
+          rtac ctxt copy,
+          K (Local_Defs.unfold_tac ctxt [
+            @{thm type_copy_Rep_o_Abs_o} OF [copy],
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_assoc},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (subst rep))] @{thm comp_assoc},
+            infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (subst abs))] @{thm comp_assoc}
+          ]),
+          rtac ctxt (#Map_Sb (the params)) THEN_ALL_NEW assume_tac ctxt
+        ],
+        Supp_Sb = map (fn _ => fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt ([
+            snd Sb, @{thm SSupp_type_copy} OF [copy], #Abs_inverse (snd info) OF @{thms UNIV_I},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply},
+            infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt abs)] @{thm comp_apply}
+          ] @ Inj_defs @ map snd Supps @ map snd Vrs @ map snd RVrs)),
+          rtac ctxt trans,
+          resolve_tac ctxt (#Supp_Sb (the params)) THEN_ALL_NEW assume_tac ctxt,
+          K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+          rtac ctxt refl
+        ]) Supps,
+        Vrs_Map = map (fn _ => fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt ([
+            snd (the Map_opt), #Abs_inverse (snd info) OF @{thms UNIV_I},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt (subst rep))] @{thm comp_apply},
+            infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt (subst abs))] @{thm comp_apply}
+          ] @ map snd Vrs @ map snd RVrs)),
+          resolve_tac ctxt (#Vrs_Map (the params))
+        ]) (RVrs @ Vrs),
+        Map_Injs = map_filter (fn Inj => if body_type (fastype_of Inj) <> T then NONE else
+          SOME (fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt ([snd (the Map_opt),
+              @{thm type_copy_Rep_o_Abs_o} OF [copy],
+              infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_assoc}
+            ] @ Inj_defs)),
+            rtac ctxt @{thm trans[OF comp_assoc]},
+            rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<circ>)"]},
+            resolve_tac ctxt (#Map_Injs (the params))
+          ])
+        ) Injs
+      }) Supps_opt],
+      tacs = [{
+        Sb_Inj = fn ctxt => EVERY1 [          
+          K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @
+            [snd Sb, #Sb_Inj axioms, @{thm type_copy_Rep_o_Abs_o} OF [copy]]
+            @ Inj_defs
+          )),
+          rtac ctxt @{thm type_copy_Abs_o_Rep},
+          rtac ctxt copy
+        ],
+        Sb_comp_Injs = map_filter (fn Inj => if body_type (fastype_of Inj) <> T then NONE else
+          SOME (fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt ([snd Sb, @{thm SSupp_type_copy} OF [copy]] @ Inj_defs)),
+            rtac ctxt @{thm trans[OF comp_assoc]},
+            K (Local_Defs.unfold0_tac ctxt [@{thm type_copy_Rep_o_Abs_o} OF [copy]]),
+            rtac ctxt @{thm trans[OF comp_assoc]},
+            rtac ctxt trans,
+            rtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<circ>)"]},
+            resolve_tac ctxt (#Sb_comp_Injs axioms),
+            REPEAT_DETERM o assume_tac ctxt,
+            rtac ctxt (@{thm type_copy_Abs_o_Rep_o} OF [copy])
+          ])
+        ) Injs,
+        Sb_comp = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt ([snd Sb, @{thm SSupp_type_copy} OF [copy]] @ Inj_defs)),
+          rtac ctxt trans,
+          rtac ctxt @{thm type_copy_map_comp0[symmetric]},
+          rtac ctxt copy,
+          rtac ctxt (#Sb_comp axioms RS sym) THEN_ALL_NEW assume_tac ctxt,
+          K (Local_Defs.unfold0_tac ctxt (@{thms comp_assoc} @ [@{thm type_copy_Rep_o_Abs_o} OF [copy]])),
+          rtac ctxt refl
+        ],
+        Vrs_bds = map (K (fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt (@{thms comp_def} @ map snd Vrs @ map snd RVrs)),
+          resolve_tac ctxt (#Vrs_bds axioms)
+        ])) (RVrs @ Vrs),
+        Vrs_Injss = map (K (map_filter (fn Inj => if body_type (fastype_of Inj) <> T then NONE else
+          SOME (fn ctxt => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt (@{thms comp_def} @ map snd Vrs @ map snd RVrs @ Inj_defs @ [#Abs_inverse (snd info) OF @{thms UNIV_I}])),
+            resolve_tac ctxt (flat (#Vrs_Injss axioms))
+          ])
+        ) Injs)) (RVrs @ Vrs),
+        Vrs_Sbs = map (K (fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt ([
+            snd Sb, @{thm SSupp_type_copy} OF [copy], #Abs_inverse (snd info) OF @{thms UNIV_I},
+            infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt rep)] @{thm comp_apply},
+            infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt abs)] @{thm comp_apply}
+          ] @ Inj_defs @ map snd Vrs @ map snd RVrs)),
+          rtac ctxt trans,
+          resolve_tac ctxt (#Vrs_Sbs axioms) THEN_ALL_NEW assume_tac ctxt,
+          K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+          rtac ctxt refl
+        ])) (RVrs @ Vrs),
+        Sb_cong = fn ctxt => EVERY1 [
+          K (Local_Defs.unfold0_tac ctxt ([snd Sb, @{thm SSupp_type_copy} OF [copy]] @ Inj_defs @ map snd Vrs @ map snd RVrs)),
+          rtac ctxt @{thm type_copy_map_cong0},
+          rtac ctxt (#Sb_cong axioms),
+          REPEAT_DETERM o assume_tac ctxt,
+          K (Local_Defs.unfold0_tac ctxt @{thms comp_apply}),
+          REPEAT_DETERM o FIRST' [
+            Goal.assume_rule_tac ctxt,
+            rtac ctxt (mk_arg_cong lthy 1 rep)
+          ]
+        ]
+      }]
+    } : (Proof.context -> tactic) bmv_monad_model;
+
+    val ((bmv, _), lthy) = bmv_monad_def BNF_Def.Hardly_Inline (K BNF_Def.Note_Some) qualify NONE model lthy;
+    val new_unfolds = map (Local_Defs.unfold0 lthy unfolds) defs;
+
+  in ((bmv, new_unfolds, defs, (T_name, info)), lthy) end
 
 fun pbmv_monad_cmd ((((((b_ops, Sbs), RVrs), Injs), Vrs), param_opt), bd) lthy =
   let

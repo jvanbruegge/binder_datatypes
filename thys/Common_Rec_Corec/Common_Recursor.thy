@@ -124,6 +124,20 @@ and GSupp1_Gren: "\<And> \<sigma>1 \<sigma>2 u.
   small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> GSupp1 (Gren \<sigma>1 \<sigma>2 u) = GSupp1 u"
 and GSupp2_Gren: "\<And> \<sigma>1 \<sigma>2 u. 
   small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> GSupp2 (Gren \<sigma>1 \<sigma>2 u) = GSupp2 u"
+and Gmap_cong: "\<And> f1 f2 g1 g2 u. (\<And>e. e \<in> GSupp1 u \<Longrightarrow> f1 e = g1 e) \<Longrightarrow> 
+    (\<And>e. e \<in> GSupp2 u \<Longrightarrow> f2 e = g2 e) \<Longrightarrow> 
+    Gmap f1 f2 u = Gmap g1 g2 u"
+
+lemma Gmap_cong_id: 
+assumes "\<And>e. e \<in> GSupp1 u \<Longrightarrow> f1 e = e" 
+and "\<And>e. e \<in> GSupp2 u \<Longrightarrow> f2 e = e" 
+shows "Gmap f1 f2 u = u"
+proof-
+  have u: "u = Gmap id id u" by simp
+  show ?thesis apply(rule sym) apply(subst u)
+  apply(rule Gmap_cong) using assms by auto
+qed
+  
 
 lemma Gmap_comp: "Gmap f1 f2 (Gmap g1 g2 u) = Gmap (f1 o g1) (f2 o g2) u"
 unfolding Gmap_o by simp
@@ -178,8 +192,8 @@ unfolding Edtor_def image_def using Eperm_Ector apply auto sorry
 
 
 
-lemma Edtor_EVrs_Gren: 
-"u1 \<in> Edtor e \<Longrightarrow> u2 \<in> Edtor e \<Longrightarrow>
+lemma Edtor_eq_imp: 
+"Ector u1 = Ector u2 \<Longrightarrow>
    (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
         supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
                  (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
@@ -638,6 +652,7 @@ lemma Eperm_inv_iff: "bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e
 sorry
 
 
+(* This one OK, all sorries doable: *)
 lemma dtorPermC: "dtorPermC Edtor' Eperm''"
 unfolding dtorPermC_def apply clarify subgoal for \<sigma> p e
 unfolding Eperm''_def unfolding Eperm'_Eperm 
@@ -709,18 +724,56 @@ apply(rule Ector_exhaust'[of e], simp)
                subgoal sorry (* OK *) subgoal sorry (* OK *)
                subgoal unfolding Gmap_comp sorry (* OK *) . . . . . . . . .
 
-             
+lemma fst_single_Gmap: "fst ` GSupp1 u \<subseteq> {p} \<Longrightarrow> fst ` GSupp2 u \<subseteq> {p}
+\<Longrightarrow> Gmap (\<lambda>(p',e). (p,e)) (\<lambda>(p',e). (p,e)) u = u"
+apply(rule Gmap_cong_id) by auto
+
+lemma fst_single_Gmap': 
+assumes "fst ` GSupp1 u \<subseteq> {p}" "fst ` GSupp2 u \<subseteq> {p}"
+shows "Gmap (Pair p) (Pair p) (Gmap snd snd u) = u"
+apply(rule sym) apply(subst fst_single_Gmap[symmetric, of _ p])
+  subgoal by fact subgoal by fact
+  subgoal unfolding Gmap_comp o_def  
+    by (meson Gmap_cong case_prod_beta) .
+
+(* This one OK, all sorries doable: *)         
 lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs''"
-unfolding dtorVrsGrenC_def EVrs'_EVrs EVrs''_def  apply(rule Ector_exhaust) apply safe
-  subgoal for u U u1 u2 apply(cases "\<phi> u")
+unfolding dtorVrsGrenC_def EVrs'_EVrs EVrs''_def apply safe 
+subgoal for p e U u1 u2   apply(rule Ector_exhaust'[of e]) apply safe
+  subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi> by simp
     subgoal unfolding Edtor'_not\<phi>  apply simp
-    apply(subgoal_tac "GVrs2 u \<inter> V = {}") defer subgoal sorry (* OK *)
-    unfolding Edtor1'_Ector
-    apply clarify using Edtor_EVrs_Gren[of u1 "Ector1' u" u2] 
-    unfolding Edtor_def EVrs'_EVrs apply auto subgoal for \<sigma> 
-    apply(rule exI[of _ \<sigma>]) apply auto  
-      by blast . . .
+    apply(subgoal_tac "GVrs2 u \<inter> PVrs p = {}") defer subgoal sorry (* OK *)
+    unfolding Edtor1'_Ector apply auto 
+    using Edtor_eq_imp[of "Gmap snd snd u1" "Gmap snd snd u2"]
+    unfolding EVrs''_def EVrs'_EVrs apply auto subgoal for \<sigma> 
+    apply(rule exI[of _ \<sigma>]) unfolding GVrs1_Gmap  GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap apply(intro conjI)
+      subgoal . subgoal .
+      subgoal apply(subgoal_tac "\<Union> {EVrs e |e. e \<in> snd ` GSupp1 u1} \<union> 
+        \<Union> {EVrs e - GVrs2 u1 |e. e \<in> snd ` GSupp1 u1}  
+    \<subseteq> \<Union> {EVrs b \<union> PVrs a |a b. (a, b) \<in> GSupp1 u1} \<union>
+       \<Union> {EVrs b \<union> PVrs a - GVrs2 u1 |a b. (a, b) \<in> GSupp1 u1}")
+         subgoal by (smt (verit, ccfv_threshold) Diff_iff Un_iff diff_shunt subsetI)
+         subgoal by auto blast+ .  
+
+ apply(subst (asm) Gmap_Gren[of id \<sigma>,symmetric]) subgoal sorry (* OK *) subgoal sorry (* OK *)
+    subgoal sorry (* OK *) subgoal sorry (* OK *)
+  apply(subst (asm) Gmap_Gren[of id \<sigma>,symmetric]) subgoal sorry (* OK *) subgoal sorry (* OK *)
+    subgoal sorry (* OK *) subgoal sorry (* OK *)
+    apply(subst fst_single_Gmap'[symmetric, of _ p]) 
+      subgoal by auto subgoal by auto
+      subgoal apply(subgoal_tac "Gmap (Pair p) (Pair p) (Gmap snd snd u2) = 
+          Gmap (Pair p) (Pair p) (Gmap snd snd (Gren id \<sigma> u1))")
+        subgoal unfolding Gmap_comp o_def id_def apply simp
+        apply(rule Gmap_cong_id)
+          subgoal apply(subst (asm) GSupp1_Gren) subgoal sorry (* OK *) subgoal sorry (* OK *)
+            subgoal sorry (* OK *) subgoal sorry (* OK *)
+            subgoal by auto .
+          subgoal apply(subst (asm) GSupp2_Gren) subgoal sorry (* OK *) subgoal sorry (* OK *)
+            subgoal sorry (* OK *) subgoal sorry (* OK *)
+            subgoal by auto . .
+        subgoal by simp . . . . . .
+
 
 
 lemma tri_Un: "A \<union> A' \<union> A'' \<subseteq> B \<union> C \<Longrightarrow> B \<union> A \<union> A' \<union> A'' \<subseteq> B \<union> C" by auto

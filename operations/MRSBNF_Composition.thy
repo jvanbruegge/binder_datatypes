@@ -89,16 +89,17 @@ mrsbnf T3': "('a, 'b, 'c, 'd, 'e, 'f) T3" and "('a, 'c) T4"
 
 local_setup \<open>fn lthy =>
 let
-  val ((mrbnf, tys), ((_, unfolds), lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline (Binding.prefix_name o string_of_int) (distinct (op=) o flat)
+  val Xs = map dest_TFree [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ 'g}, @{typ 'h}]
+  val ((mrbnf, tys), ((_, unfolds), lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Do_Inline (Binding.prefix_name o string_of_int) (fn xss => inter (op=) (flat xss) Xs)
     (the (MRBNF_Def.mrbnf_of lthy @{type_name T1})) [
       the (MRBNF_Def.mrbnf_of lthy @{type_name T2}),
       MRBNF_Comp.DEADID_mrbnf,
       the (MRBNF_Def.mrbnf_of lthy "MRSBNF_Composition.T3'")
     ] [@{typ 'f}] [
       [@{typ 'e}],
-      [@{typ 'g}],
+      [@{typ "'g::var set"}],
       [@{typ 'e}]
-    ] [NONE, SOME @{typ "'b"}, SOME @{typ "'c"}, NONE, NONE, SOME @{typ "'g"}] [
+    ] [NONE, SOME @{typ "'b"}, SOME @{typ "'c"}, NONE, NONE, SOME @{typ "'g::var"}] [
       [@{typ 'a}, @{typ 'b}, @{typ 'd}],
       [],
       [@{typ 'b}, @{typ 'a}, @{typ 'c}, @{typ 'd}, @{typ 'h}]
@@ -109,61 +110,67 @@ let
   val (_, lthy) = Local_Theory.notes defs lthy
 
   val lthy = MRBNF_Def.register_mrbnf_raw "MRSBNF_Composition.T" mrbnf lthy;
+
+  val info = hd (Typedef.get_info lthy "BMV_Composition.T'");
+  val ((mrbnf, info, (Ds, absT_info)), lthy) = MRBNF_Comp.seal_mrbnf I unfolds Binding.empty
+    true (fst tys) (fst tys) mrbnf (SOME ("BMV_Composition.T'", info)) lthy;
+
+  val lthy = MRBNF_Def.register_mrbnf_raw "MRSBNF_Composition.T'" mrbnf lthy;
 in lthy end
 \<close>
 
 mrsbnf T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and T3': "('b, 'a, 'c, 'd, 'e, 'h) T3" and "('a, 'c) T4"
-  apply (unfold comp_defs)
-             apply (rule trans)
-              apply (rule T1.map_is_Sb)
-                apply (assumption | rule supp_id_bound)+
-             apply (unfold id_o o_id)
-             apply (rule sym)
-             apply (rule trans[OF comp_assoc])
-             apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-             apply (rule trans)
-              apply (rule T1.Map_comp)
-             apply (unfold id_o o_id)
-             apply (rule ext)
-             apply (rule sym)
-             apply (rule T1.Map_cong)
-               apply (rule T2.map_is_Sb[THEN fun_cong]; assumption)
-              apply (rule refl)
-             apply (rule T3'.map_is_Sb[THEN fun_cong]; assumption)
+                    apply (unfold comp_defs)
+                    apply (rule trans)
+                     apply (rule T1.map_is_Sb)
+                      apply (assumption | rule supp_id_bound)+
+                    apply (unfold id_o o_id)
+                    apply (rule sym)
+                    apply (rule trans[OF comp_assoc])
+                    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+                    apply (rule trans)
+                     apply (rule T1.Map_comp)
+                    apply (unfold id_o o_id)
+                    apply (rule ext)
+                    apply (rule sym)
+                    apply (rule T1.Map_cong)
+                      apply (rule T2.map_is_Sb[THEN fun_cong]; assumption)
+                     apply (rule refl)
+                    apply (rule T3'.map_is_Sb[THEN fun_cong]; assumption)
 
 
-         apply (rule trans)
-          apply (rule trans[OF comp_assoc[symmetric]])
-          apply (rule trans)
-          apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
-          apply (rule T1.map_Sb)
-            apply (assumption | rule SSupp_Inj_bound)+
-          apply (rule trans[OF comp_assoc])
-          apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-          apply (unfold T1.Map_map)[1]
-          apply (rule T1.map_comp0[symmetric])
-               apply (rule supp_id_bound)+
-         apply (unfold id_o o_id)
-         apply (rule sym)
-         apply (rule trans)
-            apply (rule trans[OF comp_assoc])
-          apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
-          apply (unfold T1.Map_map)[1]
-          apply (rule T1.map_comp0[symmetric])
-               apply (rule supp_id_bound)+
-         apply (unfold id_o o_id)
-         apply (rule arg_cong2[of _ _ _ _ "(\<circ>)"])
-          apply (unfold T1.Map_map[symmetric] T1.Map_Inj)[1]
-          apply (rule refl)
-  apply (rule sym)
-  apply (rule ext)
-         apply (rule T1.map_cong0)
-                    apply (rule supp_id_bound)+
+                   apply (rule trans)
+                    apply (rule trans[OF comp_assoc[symmetric]])
+                    apply (rule trans)
+                     apply (rule arg_cong2[OF _ refl, of _ _ "(\<circ>)"])
+                     apply (rule T1.map_Sb)
+                      apply (assumption | rule SSupp_Inj_bound)+
+                    apply (rule trans[OF comp_assoc])
+                    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+                    apply (unfold T1.Map_map)[1]
+                    apply (rule T1.map_comp0[symmetric])
+                      apply (rule supp_id_bound)+
+                   apply (unfold id_o o_id)
+                   apply (rule sym)
+                   apply (rule trans)
+                    apply (rule trans[OF comp_assoc])
+                    apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+                    apply (unfold T1.Map_map)[1]
+                    apply (rule T1.map_comp0[symmetric])
+                      apply (rule supp_id_bound)+
+                   apply (unfold id_o o_id)
+                   apply (rule arg_cong2[of _ _ _ _ "(\<circ>)"])
+                    apply (unfold T1.Map_map[symmetric] T1.Map_Inj)[1]
+                    apply (rule refl)
+                   apply (rule sym)
+                   apply (rule ext)
+                   apply (rule T1.map_cong0)
+                      apply (rule supp_id_bound)+
                       apply (rule T2.map_Sb[THEN fun_cong])
                       apply assumption+
                       apply (rule refl)+
-          apply (rule T3'.map_Sb[THEN fun_cong])
-             apply assumption+
+                    apply (rule T3'.map_Sb[THEN fun_cong])
+                      apply assumption+
                    apply (rule refl)
 
                   apply (unfold T1.Map_map[symmetric])[1]
@@ -172,22 +179,22 @@ mrsbnf T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and T3'
   subgoal for x
     apply (subst T1.set_map, (rule supp_id_bound)+)+
     apply (unfold UN_empty2 Un_empty_left Un_empty_right Un_assoc[symmetric]
-      T3'.set_Vrs(1) (* need to filter reflexive theorems *) Un_Union_image
-    )
+        T3'.set_Vrs(1) (* need to filter reflexive theorems *) Un_Union_image
+        )
     apply (rule refl)
     done
   subgoal for x
     apply (subst T1.set_map, (rule supp_id_bound)+)+
     apply (unfold UN_empty2 Un_empty_left Un_empty_right Un_assoc[symmetric]
-      T3'.set_Vrs(1) Un_Union_image
-    )
+        T3'.set_Vrs(1) Un_Union_image
+        )
     apply (rule refl)
     done
   subgoal for x
     apply (subst T1.set_map, (rule supp_id_bound)+)+
     apply (unfold UN_empty2 Un_empty_left Un_empty_right Un_assoc[symmetric]
-      T3'.set_Vrs(1) Un_Union_image
-    )
+        T3'.set_Vrs(1) Un_Union_image
+        )
     apply (rule refl)
     done
 
@@ -213,10 +220,10 @@ mrsbnf T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and T3'
      apply (unfold Un_iff de_Morgan_disj)[1]
      apply (erule conjE)+
      apply ((rule conjI)+, assumption+)+
-     apply (rotate_tac -1)
-     apply (erule contrapos_pp)
-     apply (unfold Un_iff de_Morgan_disj)[1]
-     apply (erule conjE)+
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
     apply ((rule conjI)+, assumption+)+
     done
 
@@ -243,42 +250,89 @@ mrsbnf T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and T3'
      apply (unfold Un_iff de_Morgan_disj)[1]
      apply (erule conjE)+
      apply ((rule conjI)+, assumption+)+
-     apply (rotate_tac -1)
-     apply (erule contrapos_pp)
-     apply (unfold Un_iff de_Morgan_disj)[1]
-     apply (erule conjE)+
+    apply (rotate_tac -1)
+    apply (erule contrapos_pp)
+    apply (unfold Un_iff de_Morgan_disj)[1]
+    apply (erule conjE)+
     apply ((rule conjI)+, assumption+)+
     done
 
             apply (rule T2.map_is_Sb; assumption)
            apply (rule T2.map_Sb; assumption)
-          apply (rule ext)
-          apply (rule trans[OF comp_apply])
-          apply (rule trans)
-           apply (rule T2.map_Inj)
-              apply (assumption | rule supp_id_bound bij_id)+
-          apply (rule arg_cong[OF id_apply])
+          apply (rule T2.map_Inj_raw; assumption)
          apply (rule T2.set_Sb; assumption)
 
         apply (rule T3'.map_is_Sb; assumption)
        apply (rule T3'.map_Sb; assumption)
-          apply (rule ext)
-          apply (rule trans[OF comp_apply])
-          apply (rule trans)
-           apply (rule T3'.map_Inj)
-              apply (assumption | rule supp_id_bound bij_id)+
-          apply (rule arg_cong[OF id_apply])
+      apply (rule ext)
+      apply (rule trans[OF comp_apply])
+      apply (rule trans)
+       apply (rule T3'.map_Inj)
+           apply (assumption | rule supp_id_bound bij_id)+
+      apply (rule arg_cong[OF id_apply])
      apply (rule T3'.set_Vrs)
-   apply (rule T3'.set_Sb; assumption)+
+    apply (rule T3'.set_Sb; assumption)+
   apply (rule T3'.map_is_Sb; assumption)
   done
 print_theorems
+
+(* Sealing of mrsbnf *)
+mrsbnf "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T'" and "('a, 'b, 'e, 'd) T2" and T3': "('b, 'a, 'c, 'd, 'e, 'h) T3" and "('a, 'c) T4"
+                    apply (unfold defs SSupp_type_copy[OF type_definition_T'])
+
+                    apply (rule type_copy_map_comp0 type_copy_map_cong0)
+                     apply (rule type_definition_T')
+                    apply (unfold comp_assoc[of Abs_T'] type_copy_Rep_o_Abs_o[OF type_definition_T'])[1]
+                    apply (rule T.map_is_Sb[unfolded comp_defs]; assumption)
+
+                   apply (rule type_copy_Map_Sb)
+                     apply (rule type_definition_T')
+                    apply (rule type_definition_T')
+                   apply (unfold comp_assoc[of Abs_T'] comp_assoc[of _ Rep_T'] type_copy_Rep_o_Abs_o[OF type_definition_T'])[1]
+                   apply (rule T.map_Sb[unfolded comp_defs]; assumption)
+
+                  apply (rule trans[OF comp_assoc])+
+                  apply (rule arg_cong2[OF refl, of _ _ "(\<circ>)"])
+                  apply (unfold type_copy_Rep_o_Abs_o[OF type_definition_T'])[1]
+                  apply (rule T.map_Inj_raw[unfolded comp_defs]; assumption)
+
+                 apply (rule trans[OF comp_apply], rule T.set_Vrs[unfolded comp_defs])+
+
+              apply (unfold comp_apply[of Abs_T'] comp_apply[of _ Rep_T'] Abs_T'_inverse[OF UNIV_I])[1]
+              apply (rule trans)
+               apply (rule T.set_Sb[unfolded comp_defs]; assumption)
+              apply (unfold comp_def)[1]
+              apply (rule refl)
+
+             apply (unfold comp_apply[of Abs_T'] comp_apply[of _ Rep_T'] Abs_T'_inverse[OF UNIV_I])[1]
+             apply (rule trans)
+              apply (rule T.set_Sb[unfolded comp_defs]; assumption)
+             apply (unfold comp_def)[1]
+             apply (rule refl)
+
+            apply (rule T2.map_is_Sb; assumption)
+           apply (rule T2.map_Sb; assumption)
+          apply (rule T2.map_Inj_raw; assumption)
+         apply (rule T2.set_Sb; assumption)
+
+        apply (rule T3'.map_is_Sb; assumption)
+       apply (rule T3'.map_Sb; assumption)
+      apply (rule ext)
+      apply (rule trans[OF comp_apply])
+      apply (rule trans)
+       apply (rule T3'.map_Inj)
+           apply (assumption | rule supp_id_bound bij_id)+
+      apply (rule arg_cong[OF id_apply])
+     apply (rule T3'.set_Vrs)
+    apply (rule T3'.set_Sb; assumption)+
+  apply (rule T3'.map_is_Sb; assumption)
+  done
 
 ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
 local_setup \<open>fn lthy =>
 let
   val (deadid, lthy) = MRSBNF_Def.mrsbnf_of_mrbnf MRBNF_Comp.DEADID_mrbnf lthy
-  val ((mrsbnf, _), (_, lthy)) = MRSBNF_Comp.compose_mrsbnfs BNF_Def.Do_Inline (K BNF_Def.Note_Some)
+  val ((mrsbnf, tys), ((bmv_unfolds, (_, mrbnf_unfolds)), lthy)) = MRSBNF_Comp.compose_mrsbnfs BNF_Def.Do_Inline (K BNF_Def.Note_Some)
     (Binding.suffix_name o string_of_int) (the (MRSBNF_Def.mrsbnf_of lthy @{type_name T1}))
     [
       the (MRSBNF_Def.mrsbnf_of lthy @{type_name T2}),
@@ -286,13 +340,19 @@ let
       the (MRSBNF_Def.mrsbnf_of lthy "MRSBNF_Composition.T3'")
     ] [@{typ 'f}] [
       [@{typ 'e}],
-      [@{typ 'g}],
+      [@{typ "'g::var"}],
       [@{typ 'e}]
-    ] [NONE, SOME @{typ "'b"}, SOME @{typ "'c"}, NONE, NONE, SOME @{typ "'g"}] [
+    ] [NONE, SOME @{typ "'b"}, SOME @{typ "'c"}, NONE, NONE, SOME @{typ "'g::var"}] [
       [@{typ "'a"}, @{typ 'b}, @{typ 'd}],
       [],
       [@{typ 'b}, @{typ 'a}, @{typ 'c}, @{typ 'd}, @{typ 'h}]
-    ] [] (([], (MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds)), lthy)
+    ] [] (distinct (op=) o flat) (([], (MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds)), lthy)
+
+  val ((mrsbnf, _), lthy) = MRSBNF_Comp.seal_mrsbnf I (bmv_unfolds, mrbnf_unfolds) @{binding "T''"}
+    (subtract ((op=) o apply2 (fst o dest_TFree)) (fst tys) [@{typ 'a}, @{typ 'b}, @{typ 'c}, @{typ 'd}, @{typ 'e}, @{typ 'f}, @{typ "'g"}, @{typ 'h}])
+    (fst tys) mrsbnf NONE lthy;
+
+  val _ = @{print} mrsbnf
 in lthy end\<close>
 
 end

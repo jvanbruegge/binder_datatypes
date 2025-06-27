@@ -34,4 +34,7 @@ qed
 lemma SSupp_comp_bound: "infinite (UNIV::'a set) \<Longrightarrow> |SSupp Inj g| <o |UNIV::'a set| \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> |SSupp Inj (g \<circ> f)| <o |UNIV::'a set|"
   using card_of_subset_bound[OF SSupp_comp_subset] card_of_Un_ordLess_infinite by fast
 
+lemma SSupp_type_copy: "type_definition Rep Abs UNIV \<Longrightarrow> SSupp (Abs \<circ> Inj) \<rho> = SSupp Inj (Rep \<circ> \<rho>)"
+  unfolding SSupp_def by (metis UNIV_I comp_apply type_definition_def)
+
 end

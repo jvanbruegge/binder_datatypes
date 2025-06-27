@@ -814,7 +814,7 @@ unfolding dtorVrsC_def apply(rule Ector_exhaust) apply (intro conjI)
     subgoal unfolding Edtor'_not\<phi> apply simp 
     apply(subgoal_tac "GVrs2 u \<inter> V = {}") defer subgoal sorry (* OK *)
     unfolding Edtor1'_Ector unfolding EVrs_Ector using blah apply auto 
-    apply (smt (verit, ccfv_threshold) Diff_iff UnE Union_iff diff_shunt empty_iff mem_Collect_eq)
+    apply (ssmt (verit, ccfv_threshold) Diff_iff UnE Union_iff diff_shunt empty_iff mem_Collect_eq)
     by (smt (verit, ccfv_threshold) Diff_iff UnE Union_iff diff_shunt empty_iff mem_Collect_eq) .
   subgoal for u apply(cases "\<phi> u")
     subgoal unfolding Edtor'_\<phi>  

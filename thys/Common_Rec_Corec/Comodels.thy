@@ -76,7 +76,7 @@ lemma corec_EVrs:
 sorry
 
 lemma corec_unique: 
-assumes "\<And> e U. Edtor' e = Inl U \<Longrightarrow> Gmap H H ` U  \<subseteq> Edtor (corec e)"
+assumes "\<And> e U. Edtor' e = Inl U \<Longrightarrow> Gmap H H ` U  \<subseteq> Edtor (H e)"
 and "\<And>e e1. Edtor' e = Inr e1 \<Longrightarrow> H e = e1"
 shows "H = corec"
 sorry

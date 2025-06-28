@@ -3,11 +3,7 @@ theory Models
 begin
 
 
-(****)
 (* Iteration dynamic-Barendregt-enriched model (full-recursion not needed): *)
-
-
-(* Iteration model *)
 locale Model =
 fixes Ector' :: "(P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P \<Rightarrow> 'E'" 
 and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E'" 
@@ -35,7 +31,6 @@ lemma rec_EVrs:
 "EVrs' (rec e p) \<subseteq> PVrs p \<union> EVrs e"
 sorry
 
-
 lemma rec_unique:
 assumes "\<And>u. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p"
 shows "H = rec" 
@@ -43,12 +38,5 @@ sorry
 
 end (* locale Model *)
 
-(******)
-
-
-
-
-
- 
 
 end

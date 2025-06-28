@@ -4,6 +4,13 @@ begin
 
 (* Prelims: *)
 
+term curry
+definition "uncurry f \<equiv> \<lambda>(a,b). f a b" 
+lemma uncorry_apply[simp]: "uncurry f (a,b) = f a b"
+  unfolding uncurry_def by auto
+
+lemma fst_comp_id[simp]: "fst \<circ> (\<lambda>e. (e, p)) = id" by auto
+
 lemma tri_Un1: "A \<subseteq> B \<union> C \<Longrightarrow> A \<union> B \<subseteq> B \<union> C" by auto
 lemma tri_Un3: "A \<union> A' \<union> A'' \<subseteq> B \<union> C \<Longrightarrow> B \<union> A \<union> A' \<union> A'' \<subseteq> B \<union> C" by auto
 

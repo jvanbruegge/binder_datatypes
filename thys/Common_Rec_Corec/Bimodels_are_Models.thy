@@ -2,10 +2,11 @@ theory Bimodels_are_Models
   imports Bimodels Models
 begin
 
+(* Producing a recursion principle for bimodels by organizing them as models.  *)
+
 context Bimodel 
 begin 
-(* Recursion principle for bimodels: obtained 
-by associating a model to a bimodel: *)
+
 
 definition Ector' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" where 
 "Ector' u \<equiv> if \<phi> u then Ector0' u else Ector1' u"

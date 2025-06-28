@@ -2,11 +2,13 @@ theory Bimodels_are_Comodels
   imports Bimodels Comodels
 begin
 
+(* Inferring a recursion from a corecursion principle by organizing
+bimodels as comodels, and then showing how the corecursion principle 
+from comodels gives rise to a *recursion* principle for bimodels 
+(the same clauses as the ones coming from models)  *)
+
 context Bimodel 
 begin 
-
-(* Corecursion principle by associating a comodel to a bimodel: *)
-
 
 fun Edtor1' :: "E'\<times>P \<Rightarrow> ((E'\<times>P,E'\<times>P)G) set" where 
 "Edtor1' (e,p) =

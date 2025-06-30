@@ -624,13 +624,16 @@ proof-
       "id_on (GVrs1 u' \<union> (\<Union> (EFVars ` GSupp1 u') - GVrs2 u')) \<sigma>"
   and sig_sub: "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u') = 
       Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v)"  
-  unfolding Ector_inject by auto
-  hence u': "u' = 
+  unfolding Ector_inject by auto 
+  have u': "u' = 
   Gsub id (inv \<sigma>) (Gmap (Eperm (inv \<sigma>)) id (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v)))"
   using sig_sub sorry
-  have 0: "GVrs1 u' \<union> (\<Union> (EFVars ` GSupp1 u') - GVrs2 u') = 
+  (*have 0: "GVrs1 u' \<union> (\<Union> (EFVars ` GSupp1 u') - GVrs2 u') = 
     GVrs1 v \<union> (\<Union> (EFVars ` GSupp1 v) - GVrs2 v)"
-  sorry
+  unfolding u'  apply auto apply(subst (asm) G.Vrs_Sb) unfolding G.Vrs_Map apply auto
+  subgoal sorry apply(subst (asm) G.Vrs_Sb) unfolding G.Vrs_Map apply auto
+  subgoal sorry sledgehammer
+  *)
   have sig_rho: "imsupp \<sigma> \<inter> Sp \<delta> \<rho> \<rho>' = {}" sorry (* by choosing different \<delta> \<rho> \<rho>' and using congruence *)
 
   have 1: "Gmap (Eperm (inv \<sigma>) \<circ> Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v = 
@@ -638,19 +641,23 @@ proof-
   apply(rule G.Map_cong)
     subgoal for u apply simp sorry (* from parameterized recursion *)
     subgoal by simp .
-  show ?thesis apply(rule exI[of _ "Gmap (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) v"])
+  show ?thesis apply(rule exI[of _ "Gsub id (inv \<sigma>) (Gmap (Eperm (inv \<sigma>)) id v)"])
   apply safe
-    subgoal for a apply(subst (asm) G.Vrs_Map(2)) using fr' by auto
+    subgoal for a apply(subst (asm) G.Vrs_Sb(2)) subgoal sorry subgoal sorry
+    apply(subst (asm) G.Vrs_Map(2)) using fr' 
+    using not_in_imsupp_same sig(1) sig_rho by fastforce 
     subgoal unfolding u' apply(subst Gmap_Gsub[where ?f1.0 = "Eperm (inv \<sigma>)"])
       subgoal sorry subgoal sorry
       subgoal apply(subst Gsub_comp) subgoal sorry subgoal sorry subgoal sorry
       unfolding Gmap_comp apply simp
       unfolding 1 apply(subst G.Sb_cong) apply auto
       subgoal sorry subgoal sorry subgoal sorry subgoal sorry
-      unfolding G.Vrs_Map
       apply(subst Gmap_Gsub[symmetric]) subgoal sorry subgoal sorry
       apply(subst Gmap_Gsub[symmetric]) subgoal sorry subgoal sorry
-      using G.Map_comp sorry . . 
+      apply(subst Gmap_Gsub[symmetric]) subgoal sorry subgoal sorry
+      apply(subst Gmap_Gsub[symmetric]) subgoal sorry subgoal sorry
+      unfolding Gmap_comp apply simp apply(subst Gsub_comp) 
+      subgoal sorry subgoal sorry subgoal sorry apply simp . . .  
 qed
       
 

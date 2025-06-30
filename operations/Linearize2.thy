@@ -160,6 +160,8 @@ mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F"
   var_class: var
   sorry
 
+ML \<open>MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the |> MRBNF_Def.var_types_of_mrbnf\<close>
+
 typedef 'a foo = "{x::'a \<times> 'a list. snd x = []}"
   by simp
 

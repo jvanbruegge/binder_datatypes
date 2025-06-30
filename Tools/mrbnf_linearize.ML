@@ -130,22 +130,24 @@ fun prepare_wits is_quotient RepT wits opts alphas wits_F var_as var_as' sets lt
 fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
   let
     val set_bs = map fst specs;
-    val vars = map snd specs;
+    val tfrees = map (TFree o snd) specs;
+    val on_tfree = TFree (on_tvar, @{sort type});
+    val idx = find_index (fn x => x = on_tfree) tfrees;
 
     val (F_name, F_vars) = dest_Type repT ||> map dest_TFree |> @{print};  
 
-    val mrbnf' = F_name |> MRBNF_Def.mrbnf_of lthy |> the
+    val mrbnf = F_name |> MRBNF_Def.mrbnf_of lthy |> the
 
     val alpha0s = map TFree F_vars;
 
     fun flatten_tyargs Ass =
       map dest_TFree alpha0s
       |> filter (fn T => exists (fn Ts => member op= Ts T) Ass);
-
+(*
     val ((mrbnf,(Ds, As)), (_,lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name F_name) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-
+*)
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
 
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf |> @{print};
@@ -158,33 +160,44 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val nr_lives = MRBNF_Def.live_of_mrbnf mrbnf;
     val nr_frees = MRBNF_Def.free_of_mrbnf mrbnf;
     val nr_bounds = MRBNF_Def.bound_of_mrbnf mrbnf;
+    val class = MRBNF_Def.class_of_mrbnf mrbnf;
+
+    val (((((Ds, As), As'), Fs), Bs), names_lthy) = lthy
+      |> mk_TFrees' (map Type.sort_of_atyp deads)
+      ||>> mk_TFrees nr_lives
+      ||>> mk_TFrees nr_lives
+      ||>> mk_TFrees' (replicate nr_frees class)
+      ||>> mk_TFrees' (replicate nr_bounds class);
+    val ABFs = MRBNF_Def.interlace As Bs Fs var_types |> @{print};
+
+    val on_A = ()
 
     fun select_one types types' pos = map_index (fn (i, (t, t')) => if i = pos then t' else t) (types ~~ types')
 
     fun get_lin_pos [] _ = ~1
-      | get_lin_pos (v::vars) i = if (dest_TVar v |> fst |> fst) = on_tvar then i else get_lin_pos vars (i+1) 
+      | get_lin_pos (v::vars) i = if (dest_TFree v |> fst) = on_tvar then i else get_lin_pos vars (i+1) 
 
-    val lin_pos = get_lin_pos all_vars 0 |> @{print} (*while in Linearize.thy I had lin_pos starting at 1, it is here more reasonable to start at 0 *)
-    val lin_live_pos = get_lin_pos lives 0 |> @{print};
+    val lin_pos = get_lin_pos ABFs 0 |> @{print} (*while in Linearize.thy I had lin_pos starting at 1, it is here more reasonable to start at 0 *)
+    val lin_live_pos = get_lin_pos As 0 |> @{print};
 
     (*ex_nonrep *)
-    val map_lives' = select_one lives lives' lin_live_pos;
+    val map_As' = select_one As As' lin_live_pos;
 
-    val map_F = MRBNF_Def.mk_map_of_mrbnf deads lives map_lives' bounds frees mrbnf;
+    val map_F = MRBNF_Def.mk_map_of_mrbnf Ds As map_As' Bs Fs mrbnf;
     val (typ_fs, typ_F_F') = fastype_of map_F |> strip_typeN (length var_types);
     val typ_F = typ_F_F' |> domain_type;
     val typ_F' = typ_F_F' |> range_type;
     val typ_f = nth typ_fs lin_pos;
     val (var_f, lthy) = mk_Frees "f" [typ_f] lthy |>> the_single;
     val (var_x, lthy) = mk_Frees "x" [typ_F] lthy |>> the_single;
-    val map_funs = map_index (fn (i, t) => if i = lin_pos then var_f else HOLogic.id_const t) all_vars;
+    val map_funs = map_index (fn (i, t) => if i = lin_pos then var_f else HOLogic.id_const t) ABFs;
     val map_f_x = Term.list_comb (map_F, map_funs @ [var_x]);
 
-    val rrel_F = MRBNF_Def.mk_rel_of_mrbnf deads lives map_lives' bounds frees mrbnf;
-    val typ_R = [nth lives lin_live_pos, nth lives' lin_live_pos] ---> HOLogic.boolT;
+    val rrel_F = MRBNF_Def.mk_rel_of_mrbnf Ds As map_As' Bs Fs mrbnf;
+    val typ_R = [nth As lin_live_pos, nth As' lin_live_pos] ---> HOLogic.boolT;
     val (var_R, lthy) = mk_Frees "R" [typ_R] lthy |>> the_single;
     val (var_x', lthy) = mk_Frees "x'" [typ_F'] lthy |>> the_single;
-    val var_Rs = map_index (fn (i, t) => if i = lin_live_pos then var_R else HOLogic.eq_const t) lives
+    val var_Rs = map_index (fn (i, t) => if i = lin_live_pos then var_R else HOLogic.eq_const t) As
     val rrel_R_x_x' = Term.list_comb (rrel_F, var_Rs @ [var_x, var_x']);
 
     val ex_f = HOLogic.mk_exists (dest_Free var_f |> fst, typ_f, 
@@ -196,7 +209,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val Tp_ex_nonrep = HOLogic.mk_Trueprop ex_nonrep |> @{print}
 
     (*F_rel_map_set2_strong (maybe rename?)*)
-    val typ_Rs = map (fn (t, t') => [t, t'] ---> HOLogic.boolT) (lives ~~ lives')
+    val typ_Rs = map (fn (t, t') => [t, t'] ---> HOLogic.boolT) (As ~~ As')
     val (var_Rs, lthy) = mk_Frees "R" typ_Rs lthy |> @{print};
     val lives_pair = map (fn var_R => 
       let 
@@ -206,25 +219,25 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
       end
       ) var_Rs
 
-    val typ_z = MRBNF_Def.mk_T_of_mrbnf deads lives_pair bounds frees mrbnf;
+    val typ_z = MRBNF_Def.mk_T_of_mrbnf Ds lives_pair Bs Fs mrbnf;
     val (var_z, lthy) = mk_Frees "z" [typ_z] lthy |>> the_single;
 
-    val map_fst_z = MRBNF_Def.mk_map_comb_of_mrbnf deads (map BNF_Util.fst_const lives_pair) 
-      (map HOLogic.id_const bounds) (map HOLogic.id_const frees) mrbnf $ var_z;
+    val map_fst_z = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.fst_const lives_pair) 
+      (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf $ var_z;
     val typ_y = fastype_of map_fst_z;
     val (var_y, lthy) = mk_Frees "y" [typ_y] lthy |>> the_single;
     val map_eq_y = HOLogic.mk_eq (map_fst_z, var_y);
 
-    val map_snd_z = MRBNF_Def.mk_map_comb_of_mrbnf deads (map BNF_Util.snd_const lives_pair) 
-      (map HOLogic.id_const bounds) (map HOLogic.id_const frees) mrbnf $ var_z;
+    val map_snd_z = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.snd_const lives_pair) 
+      (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf $ var_z;
     val typ_y' = fastype_of map_snd_z;
     val (var_y', lthy) = mk_Frees "y'" [typ_y'] lthy |>> the_single;
     val map_eq_y' = HOLogic.mk_eq (map_snd_z, var_y');
     val map_eq_conj = HOLogic.mk_conj (map_eq_y, map_eq_y');
     
     val count = nr_lives + nr_frees + nr_bounds;
-    val set_Fs = MRBNF_Def.mk_sets_of_mrbnf (replicate count deads) (replicate count lives_pair) 
-      (replicate count bounds) (replicate count frees) mrbnf;
+    val set_Fs = MRBNF_Def.mk_sets_of_mrbnf (replicate count Ds) (replicate count lives_pair) 
+      (replicate count Bs) (replicate count Fs) mrbnf;
     val set_Fs_live = filter (fn (_, vtype) => vtype = MRBNF_Def.Live_Var) (set_Fs ~~ var_types) |> map fst;
     val (set_map_conj, lthy) = fold (fn (set, var_R) => (fn (conj, lthy) =>
       let 
@@ -247,9 +260,9 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val ex1_z = Const ("HOL.Ex1", (typ_z --> HOLogic.boolT) --> HOLogic.boolT) $ 
       absfree (dest_Free var_z |> fst, typ_z) set_map_conj;
 
-    val rrel_F_R = MRBNF_Def.mk_rel_of_mrbnf deads 
+    val rrel_F_R = MRBNF_Def.mk_rel_of_mrbnf Ds 
       (map (fst o HOLogic.dest_prodT) lives_pair) 
-      (map (snd o HOLogic.dest_prodT) lives_pair) bounds frees mrbnf
+      (map (snd o HOLogic.dest_prodT) lives_pair) Bs Fs mrbnf
     val rrel_R_y_y' = Term.list_comb (rrel_F_R, var_Rs @ [var_y, var_y']);
     val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_y_y', ex1_z);
     val all_y_y' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_y' |> Logic.all var_y;
@@ -271,9 +284,9 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val (var_R, lthy) = mk_Frees "R" [typ_R] lthy |>> the_single;
         val (var_x, lthy) = mk_Frees "x" [typ_F] lthy |>> the_single;
         val (var_x', lthy) = mk_Frees "x'" [typ_F'] lthy |>> the_single;
-        val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf deads lives map_lives' bounds frees mrbnf |> @{print}
+        val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As map_As' Bs Fs mrbnf |> @{print}
         val mr_rel_args = map_index (fn (i, (t, vt)) => if i = lin_pos then var_R else 
-          (if vt = MRBNF_Def.Live_Var then HOLogic.eq_const t else HOLogic.id_const t)) (all_vars ~~ var_types)
+          (if vt = MRBNF_Def.Live_Var then HOLogic.eq_const t else HOLogic.id_const t)) (ABFs ~~ var_types)
         val mr_rel_F_R_x_x' = Term.list_comb (mr_rel_F, mr_rel_args @ [var_x, var_x']);
         val ex_R = HOLogic.mk_exists (dest_Free var_R |> fst, typ_R, mr_rel_F_R_x_x') |> @{print};
         val ss_rhs = ex_R;

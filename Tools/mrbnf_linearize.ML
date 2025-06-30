@@ -143,7 +143,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
       |> filter (fn T => exists (fn Ts => member op= Ts T) Ass);
 
     val ((mrbnf,(Ds, As)), (_,lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
-      (Binding.prefix_name F_name) flatten_tyargs F_vars [] [] repT
+      (Binding.prefix_name F_name) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
 
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};

@@ -165,7 +165,9 @@ typedef 'a foo = "{x::'a \<times> 'a list. snd x = []}"
 
 lift_bnf_2 (no_warn_wits, no_warn_transfer) 'a foo
   by auto
-
+(*
+binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t
+*)
 linearize_mrbnf ('a, F'bset: 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
   sorry
 

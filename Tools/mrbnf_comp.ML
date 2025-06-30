@@ -1500,6 +1500,8 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
         NONE => ((DEADID_mrbnf, ([T], [])), accum)
       | SOME (mrbnf, lthy') =>
         let
+          val _ = @{print tracing} (MRBNF_Def.T_of_mrbnf mrbnf);
+          val _ = @{print tracing} Ts;
           val mrbnf' = MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism
             (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts)
           ) mrbnf;

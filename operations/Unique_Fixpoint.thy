@@ -534,19 +534,33 @@ lemma
   apply (auto intro!: infinite_UNIV imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
+(*
+lemma "GVrs2 u' \<inter> EFVars e = {} \<Longrightarrow> \<exists>u. e = Ector u \<and> GVrs2 u = GVrs2 u'"
+*)
+
+lemma Esub_inversion:
+  assumes 
+   "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
+   "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set|"
+   "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
+  shows
+  "GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>' \<union> EFVars e) = {} \<Longrightarrow>
+  Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap \<rho> \<rho>' u') \<and> GVrs2 u' = GVrs2 u"
+  sorry
+
 lemma 
   assumes
-   "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' x)"
+   "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
    "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
    "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set|"
    "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
   shows "
-    z \<in> \<delta> ` EFVrs x \<union>
-    ((\<Union>x\<in>EFVrs\<eta> x. EFVrs (\<rho> x)) \<union>
-     (\<Union>x\<in>EFVrs\<eta>' x. EFVrs (\<rho>' x)))"
+    z \<in> \<delta> ` EFVrs e \<union>
+    ((\<Union>x\<in>EFVrs\<eta> e. EFVrs (\<rho> x)) \<union>
+     (\<Union>x\<in>EFVrs\<eta>' e. EFVrs (\<rho>' x)))"
   using assms
   unfolding EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq Un_iff UN_iff bex_simps
-  apply (induct "Esub \<delta> \<rho> \<rho>' x" arbitrary: x \<delta> \<rho> \<rho>' rule: Efreee_strong_induct[rotated, consumes 1])
+  apply (induct "Esub \<delta> \<rho> \<rho>' e" arbitrary: e \<delta> \<rho> \<rho>' rule: Efreee_strong_induct[rotated, consumes 1])
   subgoal for u e \<delta> \<rho> \<rho>'
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
      apply (auto simp: Esub_Ector) []

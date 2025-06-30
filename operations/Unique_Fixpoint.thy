@@ -10,18 +10,16 @@ binder_datatype 'a expr =
 
 thm subshape_expr_expr.intros
 
-lemma
+lemma tvsubst_expr_unique:
   assumes "|SSupp_expr (\<rho> :: 'a::var \<Rightarrow> 'a expr)| <o |UNIV::'a set|"
     "|A| <o |UNIV::'a set|"
-    "\<And>a. h (Var a) = \<rho> a"
+    "\<And>a. a \<in> B \<Longrightarrow> h (Var a) = \<rho> a"
     "\<And>u. set2_expr_pre u \<inter> A = {} \<Longrightarrow>
        set2_expr_pre u \<inter> IImsupp_expr \<rho> = {} \<Longrightarrow>
        noclash_expr u \<Longrightarrow>
        (\<forall>a. expr_ctor u \<noteq> Var a) \<Longrightarrow>
        h (expr_ctor u) = expr_ctor (map_expr_pre id id h h u)"
-  shows "h = tvsubst_expr \<rho>"
-  apply (rule ext)
-  subgoal for e
+  shows "FVars_expr e \<subseteq> B \<Longrightarrow> h e = tvsubst_expr \<rho> e"
     apply (binder_induction e avoiding: A "IImsupp_expr \<rho>" e rule: expr.strong_induct)
     subgoal
       apply (rule assms(2))
@@ -37,6 +35,7 @@ lemma
     subgoal for x
       using expr.tvsubst_VVr[OF assms(1), of x]
       apply (subst assms(3))
+      apply simp
       apply (simp add: tvVVr_tvsubst_expr_def Var_def tv\<eta>_expr_tvsubst_expr_def)
       done
     subgoal for x t
@@ -49,6 +48,7 @@ lemma
           apply (simp_all add: assms(1) noclash_expr_def expr.TT_inject0 tvisVVr_tvsubst_expr_def tvVVr_tvsubst_expr_def tv\<eta>_expr_tvsubst_expr_def
             set1_expr_pre_def set2_expr_pre_def set3_expr_pre_def set4_expr_pre_def map_expr_pre_def
             Abs_expr_pre_inverse Abs_expr_pre_inject)
+      subgoal sorry
       done
     subgoal for t u
       unfolding App_def
@@ -568,7 +568,9 @@ lemma
       subgoal for x
         apply (cases "inv \<sigma> x \<in> GVrs2 u'")
          apply (metis imsupp_empty_IntD1)
-         apply (erule notE)
+        apply (cases "\<delta> (inv \<sigma> x) \<in> GVrs2 u'")
+         apply blast
+        
          apply (rule exI conjI[rotated])+
          apply assumption
         
@@ -577,7 +579,13 @@ lemma
     apply (auto simp: id_on_def)
     oops
 
-definition "restrict fv x \<delta>2 \<delta>1 a  = (if a \<in> fv x then \<delta>2 a else \<delta>1 a)"
+definition "restrict \<delta>1 \<delta>2 \<iota> a  = (if \<delta>1 a = \<delta>2 a then \<delta>1 a else \<iota> a)"
+
+definition Ein where
+  "Ein A B B' = {x. EFVrs x \<subseteq> A \<and> EFVrs\<eta> x \<subseteq> B \<and> EFVrs\<eta>' x \<subseteq> B'}"
+
+lemma Ein_mono: "A1 \<subseteq> A2 \<Longrightarrow> B1 \<subseteq> B2 \<Longrightarrow> B1' \<subseteq> B2' \<Longrightarrow> Ein A1 B1 B1' \<subseteq> Ein A2 B2 B2'"
+  unfolding Ein_def by auto
 
 pbmv_monad "'a::var E"
   Sbs: Esub
@@ -627,20 +635,25 @@ pbmv_monad "'a::var E"
   subgoal for \<delta> \<rho> \<rho>' x sorry
   subgoal for \<delta>1 \<rho>1 \<rho>1' \<delta>2 \<rho>2 \<rho>2' x
     apply (rule box_equals[rotated])
-    apply (rule Esub_unique_fresh[where A = "imsupp \<delta>2 \<union> IImsupp (Ector \<circ> \<eta>) EFVrs\<eta> \<rho>2 \<union> IImsupp (Ector \<circ> \<eta>') EFVrs\<eta>' \<rho>2' \<union> EFVars x" and
-       h="\<lambda>y. Esub (restrict EFVrs x \<delta>1 id)
-                   (restrict EFVrs\<eta> x \<rho>1 (Ector o \<eta>))
-                   (restrict EFVrs\<eta>' x \<rho>1' (Ector o \<eta>')) y", THEN fun_cong])
-            prefer 8
-    apply (rule Esub_unique_fresh[where A = "imsupp \<delta>2 \<union> IImsupp (Ector \<circ> \<eta>) EFVrs\<eta> \<rho>2 \<union> IImsupp (Ector \<circ> \<eta>') EFVrs\<eta>' \<rho>2' \<union> EFVars x" and
-       h="\<lambda>y. Esub (restrict EFVrs x \<delta>2 id)
-                   (restrict EFVrs\<eta> x \<rho>2 (Ector o \<eta>))
-                   (restrict EFVrs\<eta>' x \<rho>2' (Ector o \<eta>')) y", THEN fun_cong])
-                  prefer 15
-    subgoal
-         apply (rule arg_cong2[THEN cong, THEN cong, where f2 = Esub])
-         apply (auto simp: restrict_def fun_eq_iff)
-      done
+      apply (rule fun_cong[of _ _ x])
+    apply (rule Esub_unique_fresh[where A = "imsupp \<delta>2 \<union> IImsupp (Ector \<circ> \<eta>) EFVrs\<eta> \<rho>2 \<union> IImsupp (Ector \<circ> \<eta>') EFVrs\<eta>' \<rho>2' \<union> {x. \<delta>1 x \<noteq> \<delta>2 x \<or> \<rho>1 x \<noteq> \<rho>2 x \<or> \<rho>1' x \<noteq> \<rho>2' x}" and
+       h="Esub (restrict \<delta>1 \<delta>2 id)
+                   (restrict \<rho>1 \<rho>2 (Ector o \<eta>))
+                   (restrict \<rho>1' \<rho>2'  (Ector o \<eta>'))"])
+           apply (auto 0 0 simp: Esub_Ector imsupp_supp_bound infinite_UNIV IImsupp_bound Un_bound Int_Un_distrib
+             EFVrs\<eta>_Ector_eta EFVrs\<eta>'_Ector_eta' supp_id_bound G.Vrs_Map restrict_def
+             dest: Ele_EFVrs\<eta> Ele_EFVrs\<eta>')
+    subgoal sorry
+       apply (subst Esub_Ector)
+    subgoal sorry
+    subgoal sorry
+    subgoal sorry
+       apply (auto simp: restrict_def)[]
+    subgoal sorry
+    apply (subst Esub_unique_fresh[where A = "imsupp \<delta>2 \<union> IImsupp (Ector \<circ> \<eta>) EFVrs\<eta> \<rho>2 \<union> IImsupp (Ector \<circ> \<eta>') EFVrs\<eta>' \<rho>2' \<union> EFVars x" and
+       h="\<lambda>y. Esub (restrict \<delta>2 \<delta>1)
+                   (restrict \<rho>2 \<rho>1)
+                   (restrict \<rho>2' \<rho>1') y", symmetric, THEN fun_cong])
            apply (auto 0 0 simp: Esub_Ector imsupp_supp_bound infinite_UNIV IImsupp_bound Un_bound Int_Un_distrib
              EFVrs\<eta>_Ector_eta EFVrs\<eta>'_Ector_eta' supp_id_bound G.Vrs_Map restrict_def
              dest: Ele_EFVrs\<eta> Ele_EFVrs\<eta>')
@@ -685,6 +698,19 @@ pbmv_monad "'a::var E"
     apply (subst (asm) G.Vrs_Map)
     apply (simp add: restrict_def)
     done
+apply (rule Esub_unique_fresh[where A = "imsupp \<delta>2 \<union> IImsupp (Ector \<circ> \<eta>) EFVrs\<eta> \<rho>2 \<union> IImsupp (Ector \<circ> \<eta>') EFVrs\<eta>' \<rho>2' \<union> EFVars x" and
+       h="\<lambda>y. Esub (restrict \<delta>2 \<delta>1)
+                   (restrict \<rho>2 \<rho>1)
+                   (restrict \<rho>2' \<rho>1') y", THEN fun_cong])
+           apply (auto 0 0 simp: Esub_Ector imsupp_supp_bound infinite_UNIV IImsupp_bound Un_bound Int_Un_distrib
+             EFVrs\<eta>_Ector_eta EFVrs\<eta>'_Ector_eta' supp_id_bound G.Vrs_Map restrict_def
+             dest: Ele_EFVrs\<eta> Ele_EFVrs\<eta>')
+    apply (subst Esub_Ector)
+  subgoal sorry
+  subgoal sorry
+  subgoal sorry
+    apply (simp add: restrict_def)
+
          apply (rule arg_cong2[THEN cong, THEN cong, where f2 = Esub])
         apply (auto simp: restrict_def fun_eq_iff)
         subgoal sorry

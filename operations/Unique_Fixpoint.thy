@@ -2,6 +2,7 @@ theory Unique_Fixpoint
   imports "Binders.MRBNF_Recursor" "../operations/BMV_Monad"
 begin
 
+declare supp_id_bound[simp, intro]
 
 binder_datatype 'a expr =
     Var 'a
@@ -113,7 +114,8 @@ typedecl 'a E
 consts Ector :: "('a :: var, 'a, 'a E, 'a E) G \<Rightarrow> 'a E"
 consts Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
 
-lemma Eperm_id: "Eperm id = id"
+
+lemma Eperm_id[simp]: "Eperm id = id"
   sorry
 
 lemma Eperm_comp:
@@ -122,12 +124,29 @@ lemma Eperm_comp:
   Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
   sorry
 
+
+
 inductive Efree for a where 
   "a \<in> GVrs1 u \<Longrightarrow> Efree a (Ector u)"
 | "e \<in> GSupp1 u \<Longrightarrow> Efree a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efree a (Ector u)"
 | "e \<in> GSupp2 u \<Longrightarrow> Efree a e \<Longrightarrow> Efree a (Ector u)"
 
 definition "EFVars e = {a. Efree a e}"
+(* consts EFVars :: "('a :: var E) \<Rightarrow> 'a set" 
+this one should be axiomatized not defined, so we need no Efree. *)
+
+lemma Eperm_cong:
+  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+   bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow> 
+  (\<forall>a\<in>EFVars u. \<sigma> a = \<tau> a) \<Longrightarrow> 
+  Eperm \<sigma> u = Eperm \<tau> u"
+  sorry
+
+lemma Eperm_cong_id:
+  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>  
+  (\<forall>a\<in>EFVars u. \<sigma> a = a) \<Longrightarrow> 
+  Eperm \<sigma> u = u"
+  apply(rule Eperm_cong[where \<tau> = id, simplified]) by auto
 
 lemma Ector_fresh_cases: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> (\<And>u. e = Ector u \<Longrightarrow> GVrs2 u \<inter> A = {} \<Longrightarrow> P) \<Longrightarrow> P"
   sorry
@@ -135,7 +154,8 @@ lemma Ector_fresh_cases: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow
 lemma Ector_inject: "(Ector x = Ector y) =
 (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and>
      |supp \<sigma>| <o |UNIV :: 'a set| \<and>
-     id_on (\<Union> (EFVars ` GSupp1 x) - GVrs2 x) \<sigma> \<and>
+     id_on (GVrs1 x \<comment> \<open>AtoD: this was needed too!\<close> \<union> 
+            (\<Union> (EFVars ` GSupp1 x) - GVrs2 x)) \<sigma> \<and>
      Gsub id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
   sorry
 
@@ -533,6 +553,207 @@ lemma
    apply assumption
   apply (auto intro!: infinite_UNIV imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
+
+thm Efreee_strong_induct[where V = V]
+
+find_theorems Ector Esub
+
+thm Esub_Ector(3)[no_vars]
+
+definition "Sp \<delta> \<rho> \<rho>' \<equiv>
+imsupp \<delta> \<union> IImsupp (Ector \<circ> \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector \<circ> \<eta>') EFVrs\<eta>' \<rho>'"
+
+definition "smBj \<delta> \<rho> \<rho>' \<equiv> |supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set| \<and> 
+   |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set| \<and> 
+   |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
+ 
+lemma Esub_Ector_3: "smBj \<delta> \<rho> \<rho>' \<Longrightarrow> GVrs2 u \<inter> Sp \<delta> \<rho> \<rho>' = {} \<Longrightarrow> 
+\<forall>a. u \<noteq> \<eta> a \<Longrightarrow>
+\<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
+Esub \<delta> \<rho> \<rho>' (Ector u) = Ector (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u))"
+apply(rule Esub_Ector(3)) unfolding smBj_def Sp_def by auto
+
+lemma Gsub_Gmap_cong: 
+assumes "|supp \<sigma>1| <o |UNIV::('a::var) set|"
+"|supp \<sigma>2| <o |UNIV::('a::var) set|"
+"|supp \<tau>1| <o |UNIV::('a::var) set|"
+"|supp \<tau>2| <o |UNIV::('a::var) set|"
+"\<And>a1. a1 \<in> GVrs1 (u::('a,'a,'b,'c) G) \<Longrightarrow> \<sigma>1 a1 = \<tau>1 a1"
+"\<And>a2. a2 \<in> GVrs2 u \<Longrightarrow> \<sigma>2 a2 = \<tau>2 a2" 
+"\<And>a1. a1 \<in> GSupp1 u \<Longrightarrow> f1 a1 = g1 a1"
+"\<And>a2. a2 \<in> GSupp2 u \<Longrightarrow> f2 a2 = g2 a2"
+shows "Gsub \<sigma>1 \<sigma>2 (Gmap f1 f2 u) = Gsub \<tau>1 \<tau>2 (Gmap g1 g2 u)" 
+proof-
+  have 0: "Gmap f1 f2 u = Gmap g1 g2 u"
+  apply(rule G.Map_cong) using assms by auto
+  show ?thesis unfolding 0 apply(rule G.Sb_cong)
+  using assms by (auto simp: G.Vrs_Map)   
+qed
+
+
+
+
+lemma Gmap_Gsub: "|supp (\<sigma>1::'a\<Rightarrow>'a)| <o |UNIV::'a::var set| \<Longrightarrow> 
+ |supp (\<sigma>2::'a\<Rightarrow>'a)| <o |UNIV::'a::var set| \<Longrightarrow> 
+Gmap f1 f2 (Gsub \<sigma>1 \<sigma>2 u) = Gsub \<sigma>1 \<sigma>2 (Gmap f1 f2 u)"
+using G.Map_Sb[unfolded o_def fun_eq_iff, rule_format] .  
+
+lemma Gmap_comp: "Gmap f1 f2 (Gmap g1 g2 (u::('a::var,'a,'b,'c)G)) = Gmap (f1 o g1) (f2 o g2) u"
+using G.Map_comp[unfolded o_def fun_eq_iff, rule_format] unfolding o_def .
+
+lemma Gsub_comp: "|supp (\<sigma>1::'a\<Rightarrow>'a)| <o |UNIV::'a::var set| \<Longrightarrow> 
+ |supp (\<sigma>2::'a\<Rightarrow>'a)| <o |UNIV::'a::var set| \<Longrightarrow> 
+ |supp (\<tau>1::'a\<Rightarrow>'a)| <o |UNIV::'a::var set| \<Longrightarrow> 
+ |supp (\<tau>2::'a\<Rightarrow>'a)| <o |UNIV::'a::var set| \<Longrightarrow> 
+Gsub \<tau>1 \<tau>2 (Gsub \<sigma>1 \<sigma>2 u) = Gsub (\<tau>1 o \<sigma>1) (\<tau>2 o \<sigma>2) u"
+using G.Sb_comp[unfolded o_def fun_eq_iff, rule_format] unfolding o_def .   
+
+lemma 
+assumes sm: "smBj \<delta> \<rho> \<rho>'" and fr: "GVrs2 u' \<inter> Sp \<delta> \<rho> \<rho>' = {}"
+and sb: "Esub \<delta> \<rho> \<rho>' e = Ector u'"  
+and u_nonEta: "\<forall>a. u \<noteq> \<eta> a" "\<forall>a. u \<noteq> \<eta>' a"
+shows "\<exists>u. GVrs2 u \<inter> Sp \<delta> \<rho> \<rho>' = {} \<and> 
+   u' = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u)"
+proof-
+  obtain v where fr': "GVrs2 v \<inter> Sp \<delta> \<rho> \<rho>' = {}" and e: "e = Ector v" sorry
+  have v_nonEta: "\<forall>a. v \<noteq> \<eta> a" "\<forall>a. v \<noteq> \<eta>' a" sorry
+  have "Ector u' = Ector (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v))"
+  using sb unfolding e apply(subst (asm) Esub_Ector_3) 
+  using fr' sm v_nonEta by auto
+  then obtain \<sigma> where sig: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|"
+      "id_on (GVrs1 u' \<union> (\<Union> (EFVars ` GSupp1 u') - GVrs2 u')) \<sigma>"
+  and sig_sub: "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u') = 
+      Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v)"  
+  unfolding Ector_inject by auto
+  hence u': "u' = 
+  Gsub id (inv \<sigma>) (Gmap (Eperm (inv \<sigma>)) id (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v)))"
+  using sig_sub sorry
+  have 0: "GVrs1 u' \<union> (\<Union> (EFVars ` GSupp1 u') - GVrs2 u') = 
+    GVrs1 v \<union> (\<Union> (EFVars ` GSupp1 v) - GVrs2 v)"
+  sorry
+  have sig_rho: "imsupp \<sigma> \<inter> Sp \<delta> \<rho> \<rho>' = {}" sorry (* by choosing different \<delta> \<rho> \<rho>' and using congruence *)
+
+  have 1: "Gmap (Eperm (inv \<sigma>) \<circ> Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') v = 
+           Gmap (Esub \<delta> \<rho> \<rho>' o Eperm (inv \<sigma>)) (Esub \<delta> \<rho> \<rho>') v"
+  apply(rule G.Map_cong)
+    subgoal for u apply simp sorry (* from parameterized recursion *)
+    subgoal by simp .
+  show ?thesis apply(rule exI[of _ "Gmap (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) v"])
+  apply safe
+    subgoal for a apply(subst (asm) G.Vrs_Map(2)) using fr' by auto
+    subgoal unfolding u' apply(subst Gmap_Gsub[where ?f1.0 = "Eperm (inv \<sigma>)"])
+      subgoal sorry subgoal sorry
+      subgoal apply(subst Gsub_comp) subgoal sorry subgoal sorry subgoal sorry
+      unfolding Gmap_comp apply simp
+      unfolding 1 apply(subst G.Sb_cong) apply auto
+      subgoal sorry subgoal sorry subgoal sorry subgoal sorry
+      unfolding G.Vrs_Map
+      apply(subst Gmap_Gsub[symmetric]) subgoal sorry subgoal sorry
+      apply(subst Gmap_Gsub[symmetric]) subgoal sorry subgoal sorry
+      using G.Map_comp sorry . . 
+qed
+      
+
+ 
+
+lemma 
+  assumes
+   "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
+   "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
+   "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set|"
+   "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
+  shows "
+    z \<in> \<delta> ` EFVrs e \<union>
+    ((\<Union>a\<in>EFVrs\<eta> e. EFVrs (\<rho> a)) \<union>
+     (\<Union>a\<in>EFVrs\<eta>' e. EFVrs (\<rho>' a)))"
+  using assms
+  unfolding EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq Un_iff UN_iff bex_simps
+proof(induct "Esub \<delta> \<rho> \<rho>' e" arbitrary: e \<delta> \<rho> \<rho>' rule: 
+   Efreee_strong_induct[where V = V, rotated, consumes 1])
+  fix u e \<delta> \<rho> \<rho>'
+  assume gvrs: "GVrs2 u \<inter> V = {}" "z \<in> GVrs1 u"
+  and noEta: "\<forall>a. u \<noteq> \<eta> a" "\<forall>a'. u \<noteq> \<eta>' a'"
+  and sb: "Ector u = Esub \<delta> \<rho> \<rho>' e"
+  and small: "|supp \<delta>| <o |UNIV|" "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV|"
+  "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV|"
+  have blah using Esub_Ector(3)
+
+  show "z \<in> \<delta> ` {a. Efreee a e} \<or>
+       (\<exists>x. Efree\<eta> x e \<and> Efreee z (\<rho> x)) \<or> (\<exists>x. Efree\<eta>' x e \<and> Efreee z (\<rho>' x))"
+  apply(rule disjI1) unfolding image_def apply simp slsedgehammer
+
+
+
+
+term term (*
+  subgoal for u e \<delta> \<rho> \<rho>'
+    apply (cases "\<exists>a. e = Ector (\<eta> a)")
+     apply (auto simp: Esub_Ector) []
+    apply (metis Efree\<eta>.intros(1) Efreee.intros(1))
+    apply (cases "\<exists>a. e = Ector (\<eta>' a)")
+     apply (auto simp: Esub_Ector) []
+     apply (metis Efree\<eta>'.intros(1) Efreee.intros(1))
+    apply (rule Ector_fresh_cases[of "imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>'" e])
+     apply (auto simp: infinite_UNIV Un_bound imsupp_supp_bound assms) []
+     apply (hypsubst_thin)
+    apply (subst (asm) Esub_Ector)
+            apply (auto simp: Ector_eta_inj Ector_eta'_inj)
+    apply (drule sym[of "Ector u"])
+    apply (subst (asm) Ector_inject[of _ u])
+    apply (auto simp: assms G.Vrs_Sb G.Vrs_Map supp_id_bound G.Map_comp[THEN fun_cong, simplified]
+        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified])
+    apply (metis Efreee.intros(1) image_eqI mem_Collect_eq)
+    done
+  subgoal for e' u e \<delta> \<rho> \<rho>'
+    apply (cases "\<exists>a. e = Ector (\<eta> a)")
+     apply (auto simp: Esub_Ector assms) []
+    apply (metis Efree\<eta>.intros(1) Efreee.intros(2))
+    apply (cases "\<exists>a. e = Ector (\<eta>' a)")
+     apply (auto simp: Esub_Ector assms) []
+     apply (metis Efree\<eta>'.intros(1) Efreee.intros(2))
+    apply (rule Ector_fresh_cases[of "imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>' \<union> GVrs2 u" e])
+     apply (auto simp: infinite_UNIV Un_bound imsupp_supp_bound assms G.Vrs_bd) []
+    subgoal sorry
+     apply (hypsubst_thin)
+    apply (subst (asm) Esub_Ector)
+            apply (auto simp: Ector_eta_inj Ector_eta'_inj) [8]
+    apply (drule sym[of "Ector u"])
+    apply (subst (asm) Ector_inject[of _ u])
+    apply (erule exE conjE)+
+    apply hypsubst_thin
+    apply (simp add: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map supp_id_bound G.Map_comp[THEN fun_cong, simplified]
+        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
+        Eperm_Esub Eperm_Esub[THEN fun_cong, simplified] Int_Un_distrib)
+    apply (erule imageE conjE)+
+    apply hypsubst_thin
+    subgoal for u' \<sigma> e''
+    apply (drule meta_spec)+
+    apply (drule meta_mp)
+    apply (rule refl)
+    apply (drule meta_mp)
+       apply (meson supp_comp_bound supp_inv_bound infinite_UNIV)
+    apply (drule meta_mp)
+      subgoal
+      sorry
+    apply (drule meta_mp)
+    subgoal sorry
+    apply (elim disj_forward)
+    subgoal
+      apply (erule imageE CollectE)+
+      apply (unfold o_apply mem_Collect_eq image_iff Bex_def)
+      subgoal for x
+        apply (cases "inv \<sigma> x \<in> GVrs2 u'")
+         apply (metis imsupp_empty_IntD1)
+        apply (cases "\<delta> (inv \<sigma> x) \<in> GVrs2 u'")
+         apply blast
+        
+         apply (rule exI conjI[rotated])+
+         apply assumption
+        
+        sorry
+      done
+    apply (auto simp: id_on_def)
+    oops
 
 lemma 
   assumes

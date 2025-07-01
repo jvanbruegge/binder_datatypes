@@ -25,12 +25,13 @@ print_theorems
 definition GVrs :: "('a::var,'a,'c1,'c2) G \<Rightarrow> 'a set" where 
 "GVrs u \<equiv> GFVrs1 u \<union> GFVrs2 u"
 
+(* In this case the flat version, Gren, happens to be the same as Gsub. *)
 definition Gren :: 
 "('a1 :: var \<Rightarrow> 'a1) \<Rightarrow> ('a2 :: var \<Rightarrow> 'a2) \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G" where 
 "Gren \<rho>1 \<rho>2 u \<equiv> Gsub \<rho>1 \<rho>2 u"
 
 (* *)
-(*TODO: infer MrBNF properties for GVrs and Gren *)
+(*TODO: infer any useful MrBNF properties for GVrs and Gren *)
 (* *)
 
 consts \<eta> :: "'a1 :: var \<Rightarrow> ('a1, 'a2 :: var, 'c1, 'c2) G"
@@ -64,9 +65,13 @@ Eperm_comp:
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
   Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
 and 
+Eperm_Ector:
+"\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+  Eperm \<sigma> (Ector u) = Ector (Gmap (Eperm \<sigma>) (Eperm \<sigma>) (Gren \<sigma> \<sigma> u))"
+and 
 EVrs_Eperm:
-"\<And>\<delta> u. |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow> 
-  EVrs (Eperm \<delta> u) \<subseteq> \<delta> ` EVrs u"
+"\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp (\<sigma> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow> 
+  EVrs (Eperm \<sigma> u) \<subseteq> \<sigma> ` EVrs u"
 and 
 EVrs_Ector:
 "\<And>u. EVrs (Ector u::('a::var) E) \<subseteq> 
@@ -111,7 +116,7 @@ lemma Efreee_strong_induct: "|V| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efr
 (\<And>e u. GFVrs2 u \<inter> V = {} \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GFVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
 (\<And>e u. GFVrs2 u \<inter> V = {} \<Longrightarrow> e \<in> GSupp2 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P x"
   sorry
-(* TODO: actually infer this *)
+(* TODO: actually infer this using our strong rule induct machinery *)
 
 inductive Efree\<eta> for a where 
   "Efree\<eta> a (Ector (\<eta> a))"

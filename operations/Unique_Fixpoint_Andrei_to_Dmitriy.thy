@@ -1,4 +1,4 @@
-theory Unique_Fixpoint_Andrei
+theory Unique_Fixpoint_Andrei_to_Dmitriy
   imports "Binders.MRBNF_Recursor" "../operations/BMV_Monad"
 begin
 

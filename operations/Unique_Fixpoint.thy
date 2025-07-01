@@ -2,7 +2,7 @@ theory Unique_Fixpoint
   imports "Binders.MRBNF_Recursor" "../operations/BMV_Monad"
 begin
 
-
+(*
 binder_datatype 'a expr =
     Var 'a
   | Lam x::'a t::"'a expr" binds x in t
@@ -12,7 +12,6 @@ thm subshape_expr_expr.intros
 
 thm expr.strong_induct
 
-(*
 lemma tvsubst_expr_unique:
   assumes 
     B: "|- B| <o |UNIV :: 'a set|" and
@@ -144,10 +143,12 @@ inductive Efreee for a where
 | "e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efreee a (Ector u)"
 | "e \<in> GSupp2 u \<Longrightarrow> Efreee a e \<Longrightarrow> Efreee a (Ector u)"
 
-lemma Efreee_strong_induct: "|V| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efreee a x \<Longrightarrow>
-(\<And>u. GVrs2 u \<inter> V = {} \<Longrightarrow> a \<in> GVrs1 u \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> P (Ector u)) \<Longrightarrow>
-(\<And>e u. GVrs2 u \<inter> V = {} \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
-(\<And>e u. GVrs2 u \<inter> V = {} \<Longrightarrow> e \<in> GSupp2 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P x"
+definition "Enoclash u = (GVrs2 u \<inter> EFVars (Ector u) = {})"
+
+lemma Efreee_strong_induct: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efreee a e \<Longrightarrow>
+(\<And>u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> a \<in> GVrs1 u \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> P (Ector u)) \<Longrightarrow>
+(\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
+(\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp2 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P e"
   sorry
 
 inductive Efree\<eta> for a where 
@@ -155,10 +156,10 @@ inductive Efree\<eta> for a where
 | "e \<in> GSupp1 u \<Longrightarrow> Efree\<eta> a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efree\<eta> a (Ector u)"
 | "e \<in> GSupp2 u \<Longrightarrow> Efree\<eta> a e \<Longrightarrow> Efree\<eta> a (Ector u)"
 
-lemma Efree\<eta>_strong_induct: "|V| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efree\<eta> a x \<Longrightarrow>
+lemma Efree\<eta>_strong_induct: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efree\<eta> a x \<Longrightarrow>
 P (Ector (\<eta> a)) \<Longrightarrow>
-(\<And>e u. GVrs2 u \<inter> V = {} \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efree\<eta> a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
-(\<And>e u. e \<in> GSupp2 u \<Longrightarrow> Efree\<eta> a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P x"
+(\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efree\<eta> a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
+(\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp2 u \<Longrightarrow> Efree\<eta> a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P x"
   sorry
 
 inductive Efree\<eta>' for a where 
@@ -166,10 +167,10 @@ inductive Efree\<eta>' for a where
 | "e \<in> GSupp1 u \<Longrightarrow> Efree\<eta>' a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efree\<eta>' a (Ector u)"
 | "e \<in> GSupp2 u \<Longrightarrow> Efree\<eta>' a e \<Longrightarrow> Efree\<eta>' a (Ector u)"
 
-lemma Efree\<eta>'_strong_induct: "|V| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efree\<eta>' a x \<Longrightarrow>
+lemma Efree\<eta>'_strong_induct: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efree\<eta>' a x \<Longrightarrow>
 P (Ector (\<eta>' a)) \<Longrightarrow>
-(\<And>e u. GVrs2 u \<inter> V = {} \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efree\<eta>' a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
-(\<And>e u. e \<in> GSupp2 u \<Longrightarrow> Efree\<eta>' a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P x"
+(\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efree\<eta>' a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
+(\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp2 u \<Longrightarrow> Efree\<eta>' a e \<Longrightarrow> P e \<Longrightarrow> P (Ector u)) \<Longrightarrow> P x"
   sorry
 
 definition "EFVrs e = {a. Efreee a e}"
@@ -425,19 +426,26 @@ lemma EFVrs\<eta>'_Ector_eta': "EFVrs\<eta>' (Ector (\<eta>' a)) = {a}"
   done
 
 lemma Efree_alt:
+  "Efree a e \<longleftrightarrow> a \<in> EFVars e"
   "Efreee a e \<longleftrightarrow> a \<in> EFVrs e"
   "Efree\<eta> a e \<longleftrightarrow> a \<in> EFVrs\<eta> e"
   "Efree\<eta>' a e \<longleftrightarrow> a \<in> EFVrs\<eta>' e"
-  unfolding EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def by auto
+  unfolding EFVars_def EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def by auto
 
 lemma Efreee_Efree: "Efreee a e \<Longrightarrow> Efree a e"
   by (induct e pred: Efreee) (auto intro: Efree.intros)
-
 lemma Efree\<eta>_Efree: "Efree\<eta> a e \<Longrightarrow> Efree a e"
   by (induct e pred: Efree\<eta>) (auto intro: Efree.intros)
-
 lemma Efree\<eta>'_Efree: "Efree\<eta>' a e \<Longrightarrow> Efree a e"
   by (induct e pred: Efree\<eta>') (auto intro: Efree.intros)
+lemma Efree_Efreee_Efree\<eta>_Efree\<eta>': "Efree a e \<Longrightarrow> Efreee a e \<or> Efree\<eta> a e \<or> Efree\<eta>' a e"
+  by (induct e pred: Efree)
+    (force intro: Efreee.intros Efree\<eta>.intros Efree\<eta>'.intros)+
+lemma Efree_eq: "Efree a e \<longleftrightarrow> Efreee a e \<or> Efree\<eta> a e \<or> Efree\<eta>' a e"
+  by (metis Efree\<eta>'_Efree Efree\<eta>_Efree Efree_Efreee_Efree\<eta>_Efree\<eta>' Efreee_Efree)
+lemma EFVars_eq: "EFVars e = (EFVrs e \<union> EFVrs\<eta> e \<union> EFVrs\<eta>' e)"
+  using Efree_alt Efree_eq by blast
+  
 
 lemma Ele_EFVars: "Ele t u \<Longrightarrow> a \<in> EFVars t \<Longrightarrow> a \<in> EFVars u"
   unfolding EFVars_def mem_Collect_eq
@@ -454,6 +462,9 @@ lemma Ele_EFVrs\<eta>: "Ele t u \<Longrightarrow> a \<in> EFVrs\<eta> t \<Longri
 lemma Ele_EFVrs\<eta>': "Ele t u \<Longrightarrow> a \<in> EFVrs\<eta>' t \<Longrightarrow> a \<in> EFVrs\<eta>' u"
   unfolding EFVrs\<eta>'_def mem_Collect_eq
   by (induct u pred: Ele) (auto simp: EFVars_def dest: Efree\<eta>'_Efree elim!: Efree\<eta>'.intros(2,3))
+
+lemma EFVars_Ector: "EFVars (Ector u) = GVrs1 u \<union> ((\<Union>a \<in> GSupp1 u. EFVars a) - GVrs2 u) \<union> (\<Union>a \<in> GSupp2 u. EFVars a)"
+  sorry
 
 lemma EFVrs_Ector: "\<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
   EFVrs (Ector u) = GVrs1 u \<union> ((\<Union>a \<in> GSupp1 u. EFVrs a) - GVrs2 u) \<union> (\<Union>a \<in> GSupp2 u. EFVrs a)"
@@ -509,7 +520,7 @@ lemma
    "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
   shows "\<delta> z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' x)"
   using assms unfolding EFVrs_def mem_Collect_eq
-  apply (induct x rule: Efreee_strong_induct[rotated, consumes 1, where V = "imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>'"])
+  apply (induct x rule: Efreee_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>'"])
      apply (subst Esub_Ector; (simp add: Int_Un_distrib)?)
      apply (rule Efreee.intros)
        apply (simp add: G.Vrs_Sb G.Vrs_Map supp_id_bound)
@@ -541,11 +552,11 @@ lemma "GVrs2 u' \<inter> EFVars e = {} \<Longrightarrow> \<exists>u. e = Ector u
 lemma Esub_inversion:
   assumes 
    "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
-   "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set|"
-   "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
+   "|SSupp (Ector \<circ> \<eta>) (\<rho> :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
+   "|SSupp (Ector \<circ> \<eta>') (\<rho>' :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
   shows
-  "GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>' \<union> EFVars e) = {} \<Longrightarrow>
-  Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap \<rho> \<rho>' u') \<and> GVrs2 u' = GVrs2 u"
+  "GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>') = {} \<Longrightarrow> Enoclash u \<Longrightarrow>
+  Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
   sorry
 
 lemma 
@@ -558,16 +569,49 @@ lemma
     z \<in> \<delta> ` EFVrs e \<union>
     ((\<Union>x\<in>EFVrs\<eta> e. EFVrs (\<rho> x)) \<union>
      (\<Union>x\<in>EFVrs\<eta>' e. EFVrs (\<rho>' x)))"
-  using assms
+  using assms(1)
   unfolding EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq Un_iff UN_iff bex_simps
-  apply (induct "Esub \<delta> \<rho> \<rho>' e" arbitrary: e \<delta> \<rho> \<rho>' rule: Efreee_strong_induct[rotated, consumes 1])
-  subgoal for u e \<delta> \<rho> \<rho>'
+  apply (induct "Esub \<delta> \<rho> \<rho>' e" arbitrary: e rule:
+    Efreee_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>'"])
+  subgoal for u e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-     apply (auto simp: Esub_Ector) []
+     apply (auto simp: Esub_Ector  assms(2-4)) []
     apply (metis Efree\<eta>.intros(1) Efreee.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-     apply (auto simp: Esub_Ector) []
+     apply (auto simp: Esub_Ector assms(2-4)) []
      apply (metis Efree\<eta>'.intros(1) Efreee.intros(1))
+    using assms(2-4)
+    apply -
+    apply (drule (5) Esub_inversion[rotated -1])
+    apply simp
+    apply (erule exE conjE)+
+    apply hypsubst_thin
+    apply (simp add: G.Vrs_Sb supp_id_bound)
+    unfolding G.Vrs_Map
+    using Efreee.intros(1) by fastforce
+  subgoal for e' u e
+    using assms(2-4)
+    apply -
+    apply (drule (5) Esub_inversion[rotated -1])
+    apply (erule exE conjE)+
+    apply hypsubst_thin
+    apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb supp_id_bound
+      EFVars_Ector Int_Un_distrib)
+    unfolding G.Vrs_Map
+    apply (erule imageE)
+    apply hypsubst_thin
+    apply (drule meta_spec, drule meta_mp, rule refl)
+    apply (elim disj_forward ex_forward conj_forward; assumption?)
+    apply (smt (verit, del_insts) Efreee.intros(2)
+        Un_empty image_iff imsupp_empty_IntD1 mem_Collect_eq)
+    apply (erule conjE)+
+     apply (rule Efree\<eta>.intros(2))
+         apply assumption
+    apply assumption
+
+
+
+    oops
     apply (rule Ector_fresh_cases[of "imsupp \<delta> \<union> IImsupp (Ector o \<eta>) EFVrs\<eta> \<rho> \<union> IImsupp (Ector o \<eta>') EFVrs\<eta>' \<rho>'" e])
      apply (auto simp: infinite_UNIV Un_bound imsupp_supp_bound assms) []
      apply (hypsubst_thin)

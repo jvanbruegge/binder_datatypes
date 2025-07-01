@@ -345,29 +345,117 @@ lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x  \<longleftrightarrow> x = \<e
 lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x  \<longleftrightarrow> x = \<eta>' a"
   using Ector_eta'_inj by metis
 
-lemma GVrs_eta[simp]: "GVrs1 (\<eta> a) = {a}" "GVrs2 (\<eta> a) = {}"
-   apply (auto simp: eta_mem)
-  subgoal for b
-    apply (rule ccontr)
-    apply (insert exists_fresh[of "{a,b}"])
-    apply (drule meta_mp)
-     apply (simp add: infinite_UNIV)
-    apply (erule exE)
-    subgoal for c
-    apply (subgoal_tac "b \<in> GVrs1 (\<eta> ((a \<leftrightarrow> c) c))")
-     apply (subst (asm) eta_natural[of "a \<leftrightarrow> c" id id id,symmetric])
-     apply (auto simp: G.Vrs_Sb G.Vrs_Map infinite_UNIV supp_id_bound)
-    apply (auto simp: swap_def split: if_splits) 
-  sorry
+lemma GVrs_eta[simp]:
+  "GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {a}"
+  "GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
+proof safe
+  fix b assume b: "b \<in> GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  { assume "a \<noteq> b"
+    then have *: "\<eta> a = Gsub (b \<leftrightarrow> c) id (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
+      using eta_natural[of "b \<leftrightarrow> c" id id id a, symmetric, simplified] that
+      by (auto simp: G.Map_id)
+    have "c \<in> GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
+      using that b
+      apply (subst (asm) *)
+       apply (simp_all add: G.Vrs_Sb supp_id_bound infinite_UNIV)
+      apply (auto simp: swap_def)
+      done
+    with b have False
+      apply simp
+      by (smt (verit) G.Vrs_bd(1) UNIV_cinfinite UNIV_eq_I
+          cinfinite_imp_infinite eta_mem finite_iff_ordLess_natLeq)
+  }
+  then show "b = a"
+    by blast
+next
+  fix b :: 'a2 assume "b \<in> GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  then have "c \<in> GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" for c :: 'a2
+    by (subst eta_natural[of id "b \<leftrightarrow> c" id id a, symmetric, simplified])
+      (auto simp: G.Vrs_Sb supp_id_bound infinite_UNIV G.Map_id image_iff intro!: bexI[of _ b])
+  then have "GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = UNIV"
+    by blast
+  then show "b \<in> {}"
+    by (metis G.Vrs_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+qed (rule eta_mem)
 
-lemma GVrs_eta'[simp]: "GVrs1 (\<eta>' a) = {a}" "GVrs2 (\<eta>' a) = {}"
-  sorry
+lemma GVrs_eta'[simp]:
+  "GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {a}"
+  "GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
+proof safe
+  fix b assume b: "b \<in> GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  { assume "a \<noteq> b"
+    then have *: "\<eta>' a = Gsub (b \<leftrightarrow> c) id (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
+      using eta'_natural[of "b \<leftrightarrow> c" id id id a, symmetric, simplified] that
+      by (auto simp: G.Map_id)
+    have "c \<in> GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
+      using that b
+      apply (subst (asm) *)
+       apply (simp_all add: G.Vrs_Sb supp_id_bound infinite_UNIV)
+      apply (auto simp: swap_def)
+      done
+    with b have False
+      apply simp
+      by (smt (verit) G.Vrs_bd(1) UNIV_cinfinite UNIV_eq_I
+          cinfinite_imp_infinite eta'_mem finite_iff_ordLess_natLeq)
+  }
+  then show "b = a"
+    by blast
+next
+  fix b :: 'a2 assume "b \<in> GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  then have "c \<in> GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" for c :: 'a2
+    by (subst eta'_natural[of id "b \<leftrightarrow> c" id id a, symmetric, simplified])
+      (auto simp: G.Vrs_Sb supp_id_bound infinite_UNIV G.Map_id image_iff intro!: bexI[of _ b])
+  then have "GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = UNIV"
+    by blast
+  then show "b \<in> {}"
+    by (metis G.Vrs_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+qed (rule eta'_mem)
 
-lemma GSupp_eta[simp]: "GSupp1 (\<eta> a) = {}" "GSupp2 (\<eta> a) = {}"
-  sorry
+lemma GSupp_eta[simp]:
+  "GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
+  "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
+proof safe
+  fix b :: 'x1 assume "b \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  then have "c \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G)" for c :: nat
+    by (subst eta_natural[of id id "\<lambda>x. if x = b then c else 0" id a, symmetric, simplified])
+      (auto simp: G.Supp_Sb supp_id_bound infinite_UNIV G.Supp_Map image_iff intro!: bexI[of _ b])
+  then have "GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G) = UNIV"
+    by blast
+  then show "b \<in> {}"
+    by (metis G.Supp_bd(1) finite_iff_ordLess_natLeq infinite_UNIV)
+next
+  fix b :: 'x2 assume "b \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  then have "c \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G)" for c :: nat
+    by (subst eta_natural[of id id id "\<lambda>x. if x = b then c else 0" a, symmetric, simplified])
+      (auto simp: G.Supp_Sb supp_id_bound infinite_UNIV G.Supp_Map image_iff intro!: bexI[of _ b])
+  then have "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G) = UNIV"
+    by blast
+  then show "b \<in> {}"
+    by (metis G.Supp_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+qed
 
-lemma GSupp_eta'[simp]: "GSupp1 (\<eta>' a) = {}" "GSupp2 (\<eta>' a) = {}"
-  sorry
+lemma GSupp_eta'[simp]:
+  "GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
+  "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
+proof safe
+  fix b :: 'x1 assume "b \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  then have "c \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G)" for c :: nat
+    by (subst eta'_natural[of id id "\<lambda>x. if x = b then c else 0" id a, symmetric, simplified])
+      (auto simp: G.Supp_Sb supp_id_bound infinite_UNIV G.Supp_Map image_iff intro!: bexI[of _ b])
+  then have "GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G) = UNIV"
+    by blast
+  then show "b \<in> {}"
+    by (metis G.Supp_bd(1) finite_iff_ordLess_natLeq infinite_UNIV)
+next
+  fix b :: 'x2 assume "b \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
+  then have "c \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G)" for c :: nat
+    by (subst eta'_natural[of id id id "\<lambda>x. if x = b then c else 0" a, symmetric, simplified])
+      (auto simp: G.Supp_Sb supp_id_bound infinite_UNIV G.Supp_Map image_iff intro!: bexI[of _ b])
+  then have "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G) = UNIV"
+    by blast
+  then show "b \<in> {}"
+    by (metis G.Supp_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+qed
 
 lemma EFVrs\<eta>_Ector_eta: "EFVrs\<eta> (Ector (\<eta> a)) = {a}"
   unfolding EFVrs\<eta>_def

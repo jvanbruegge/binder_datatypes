@@ -60,6 +60,10 @@ let
   (* Step 5: Define recursor locales *)  
   val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I fp_res lthy;
 
+  (*val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [@{binding vvsubst_FTerm}]
+    I fp_res (#QREC_fixed recursor_result) lthy;
+  val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps fp_res))))) rec_mrbnf lthy;
+  *)
 in lthy end
 \<close>
 print_theorems
@@ -235,93 +239,6 @@ lemma IImsupp_permute_commute:
     apply assumption
     done
   done
-
-(*lemma SSupp_natural_FTerm:
-  fixes f1::"'tyvar::var \<Rightarrow> 'tyvar" and f2::"'var::var \<Rightarrow> 'var"
-  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'tyvar set|" "bij f2" "|supp f2| <o |UNIV::'var set|"
-  shows
-    "SSupp_FTerm (permute_FTerm f1 f2 \<circ> y \<circ> inv f2) = f2 ` SSupp_FTerm y"
-  apply (unfold SSupp_FTerm_def)
-  apply (rule set_eqI)
-  apply (rule iffI)
-   apply (unfold mem_Collect_eq comp_def VVr_def image_Collect)
-   apply (erule contrapos_np)
-   apply (drule Meson.not_exD)
-   apply (erule allE)
-   apply (drule iffD1[OF de_Morgan_conj])
-   apply (erule disjE)
-    apply (subst (asm) inv_simp2[of f2])
-     apply (rule assms)
-    apply (erule notE)
-    apply (rule refl)
-   apply (drule notnotD)
-   apply (drule sym)
-   apply (erule subst)
-   apply (rule trans)
-    apply (rule FTerm.permute_ctor)
-       apply (rule assms)+
-   apply (subst fun_cong[OF eta_natural, unfolded comp_def])
-       apply (rule assms)+
-   apply (subst inv_simp2[of f2])
-    apply (rule f_prems)
-   apply (rule refl)
-  apply (erule exE)
-  apply (erule conjE)
-  apply hypsubst
-  apply (subst inv_simp1)
-   apply (rule f_prems)
-  apply (erule contrapos_nn)
-  apply (drule arg_cong[of _ _ "permute_FTerm (inv f1) (inv f2)"])
-  apply (subst (asm) FTerm.permute_comp)
-          apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-  apply (subst (asm) inv_o_simp1, rule assms)+
-  apply (unfold FTerm.permute_id)
-  apply (erule trans)
-  apply (rule trans)
-   apply (rule FTerm.permute_ctor)
-      apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-  apply (subst fun_cong[OF eta_natural, unfolded comp_def])
-      apply (rule assms supp_inv_bound bij_imp_bij_inv)+
-  apply (subst inv_simp1)
-   apply (rule assms)
-  apply (rule refl)
-  done
-lemmas SSupp_naturals = FType.SSupp_natural SSupp_natural_FTerm
-
-lemma IImsupp_natural_FTerm:
-  fixes f1::"'tyvar::var \<Rightarrow> 'tyvar" and f2::"'var::var \<Rightarrow> 'var"
-  assumes f_prems: "bij f1" "|supp f1| <o |UNIV::'tyvar set|" "bij f2" "|supp f2| <o |UNIV::'var set|"
-  shows
-    "IImsupp_FTerm1 (permute_FTerm f1 f2 \<circ> y \<circ> inv f2) = f1 ` IImsupp_FTerm1 y"
-    "IImsupp_FTerm2 (permute_FTerm f1 f2 \<circ> y \<circ> inv f2) = f2 ` IImsupp_FTerm2 y"
-   apply (unfold IImsupp_FTerm1_def IImsupp_FTerm2_def image_UN image_Un)
-   apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
-   apply (subst SSupp_naturals)
-       apply (rule assms)+
-   apply (unfold image_comp comp_assoc)[1]
-   apply (subst inv_o_simp1, rule assms)
-   apply (unfold o_id)
-   apply (unfold comp_def)[1]
-   apply (subst FTerm.FVars_permute, (rule assms)+)
-   apply (rule refl)
-    (* repeated *)
-  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
-   apply (subst SSupp_naturals)
-       apply (rule assms)+
-   apply (rule refl)
-    (* repeated *)
-  apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])?
-  apply (subst SSupp_naturals)
-      apply (rule assms)+
-  apply (unfold image_comp comp_assoc)[1]
-  apply (subst inv_o_simp1, rule assms)
-  apply (unfold o_id)
-  apply (unfold comp_def)[1]
-  apply (subst FTerm.FVars_permute, (rule assms)+)
-  apply (rule refl)
-  done
-lemmas IImsupp_naturals = FType.IImsupp_natural IImsupp_natural_FTerm
-*)
 
 type_synonym ('tv, 'v) U1_pre = "('tv, 'v, 'tv, 'v, ('tv, 'v) FTerm, ('tv, 'v) FTerm) FTerm_pre"
 
@@ -695,7 +612,7 @@ lemma tvsubst_VVr: "tvsubst_FTerm (VVr a) = f1 a"
   apply (rule refl)
   done
 
-lemma tvsubst_FTerm_not_is_VVr:
+lemma tvsubst_not_is_VVr:
   assumes empty_prems: "set3_FTerm_pre x \<inter> (IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar FVars_FType f2)) = {}" "set4_FTerm_pre x \<inter> IImsupp_FTerm2 f1 = {}"
   and noclash: "noclash_FTerm x"
   and VVr_prems: "\<not>isVVr (FTerm_ctor x)"
@@ -709,8 +626,47 @@ lemma tvsubst_FTerm_not_is_VVr:
   apply (rule if_not_P)
   apply (rule assms)
   done
-
 end
+
+pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
+  Sbs: tvsubst_FTerm
+  Injs: VVr TyVar
+  Vrs: FVars FTVars
+  bd: natLeq
+            apply (rule infinite_regular_card_order_natLeq)
+
+           apply (rule ext)
+           apply (rule trans[rotated])
+            apply (rule id_apply[symmetric])
+  subgoal for x
+    apply (rule FTerm.TT_fresh_induct[OF emp_bound emp_bound, of _ x])
+    subgoal for x
+      apply (rule case_split[of "isVVr (FTerm_ctor x)"])
+       apply (unfold isVVr_def)[1]
+       apply (erule exE)
+       apply (rotate_tac -1)
+       apply (erule subst[OF sym])
+       apply (rule tvsubst_VVr)
+        apply (rule SSupp_Inj_bound cmin_greater card_of_Card_order)+
+      apply (rule trans)
+      apply (rule tvsubst_not_is_VVr)
+            apply (rule SSupp_Inj_bound cmin_greater card_of_Card_order)+
+          apply (unfold IImsupp_def SSupp_Inj UN_empty Un_empty_left Un_empty_right noclash_FTerm_def)[3]
+          apply (rule Int_empty_right)+
+        apply assumption+
+      apply (subst FTerm_pre.map_cong0)
+                      apply (assumption | rule supp_id_bound bij_id refl)+
+      apply (unfold id_def[symmetric] FTerm_pre.map_id FTerm_pre.Sb_Inj)
+      apply (unfold id_def)
+      apply (rule refl)
+      done
+    done
+
+          apply (rule ext)
+          apply (rule trans[OF comp_apply])
+          apply (rule tvsubst_VVr)
+            apply (assumption | rule cmin_greater card_of_Card_order)+
+  oops
 
 (* Sugar theorems for substitution *)
 definition Var :: "'v \<Rightarrow> ('tv::var, 'v::var) FTerm" where
@@ -739,7 +695,7 @@ lemma FTerm_subst:
        apply (rule assms)+
 
      apply (rule trans)
-      apply (rule tvsubst_FTerm_not_is_VVr)
+      apply (rule tvsubst_not_is_VVr)
            apply (rule assms)+
          apply (unfold set3_FTerm_pre_def sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right UN_singleton comp_def
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def
@@ -760,7 +716,7 @@ lemma FTerm_subst:
      apply (rule refl)
 
     apply (rule trans)
-     apply (rule tvsubst_FTerm_not_is_VVr)
+     apply (rule tvsubst_not_is_VVr)
           apply (rule assms)+
         apply (unfold set3_FTerm_pre_def sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right UN_singleton comp_def
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def
@@ -782,7 +738,7 @@ lemma FTerm_subst:
     apply (rule refl)
 
    apply (rule trans)
-    apply (rule tvsubst_FTerm_not_is_VVr)
+    apply (rule tvsubst_not_is_VVr)
          apply (rule assms)+
        apply (unfold set2_FTerm_pre_def set6_FTerm_pre_def set3_FTerm_pre_def sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right UN_singleton comp_def
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def prod_set_simps
@@ -804,7 +760,7 @@ lemma FTerm_subst:
    apply (rule refl)
 
   apply (rule trans)
-   apply (rule tvsubst_FTerm_not_is_VVr)
+   apply (rule tvsubst_not_is_VVr)
         apply (rule assms)+
       apply (unfold set2_FTerm_pre_def set6_FTerm_pre_def set3_FTerm_pre_def sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right UN_singleton comp_def
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def prod_set_simps

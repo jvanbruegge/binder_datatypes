@@ -8,7 +8,7 @@ context Bimodel
 begin 
 
 
-definition Ector' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" where 
+definition Ector' :: "('a::var,'a,'a P\<Rightarrow>'a E','a P\<Rightarrow>'a E') G \<Rightarrow> 'a P\<Rightarrow>'a E'" where 
 "Ector' u \<equiv> if \<phi> u then Ector0' u else Ector1' u"
 
 lemma Ector'_\<phi>[simp]: "\<phi> u \<Longrightarrow> Ector' u = Ector0' u"

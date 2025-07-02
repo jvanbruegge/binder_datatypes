@@ -10,6 +10,7 @@ lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightar
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
 
+declare [[mrbnf_internals]]
 local_setup \<open>fn lthy =>
 let
   val (fp_res, lthy) = MRBNF_FP.construct_binder_fp BNF_Util.Greatest_FP

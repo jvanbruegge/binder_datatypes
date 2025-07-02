@@ -349,11 +349,16 @@ fun note_fp_result (fp_res : fp_result) lthy =
       else [])
       @ note_always quot;
 
-    val notes = maps (fn quot => map (fn (thmN, thms) =>
+    fun note_raw (raw : raw_result fp_result_T) =
+      (if Config.get lthy MRBNF_Def.mrbnf_internals then [
+        ("alpha_FVars", #alpha_FVarss (#inner raw))
+      ] else []);
+
+    val notes = flat (map2 (fn quot => fn raw => map (fn (thmN, thms) =>
       ((Binding.qualify true (MRBNF_Util.short_type_name (fst (dest_Type (#T quot)))) (Binding.name thmN), []),
         [(thms, [])]
       )
-    ) (note_quot quot)) (#quotient_fps fp_res);
+    ) (note_quot quot @ note_raw raw)) (#quotient_fps fp_res) (#raw_fps fp_res));
 
     val (_, lthy) = Local_Theory.notes notes lthy;
   in lthy end;

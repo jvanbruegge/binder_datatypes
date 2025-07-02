@@ -208,12 +208,6 @@ definition "EFVrs e = {a. Efreee a e}"
 definition "EFVrs\<eta> e = {a. Efree\<eta> a e}"
 definition "EFVrs\<eta>' e = {a. Efree\<eta>' a e}"
 
-lemma EFVrs_bd:
-  "|EFVrs (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs\<eta> (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs\<eta>' (x :: 'a :: var E)| <o natLeq"
-  sorry
-
 lemma Esub_unique_fresh_relativized:
   assumes
     "|- B| <o |UNIV :: 'a set|"
@@ -261,13 +255,6 @@ lemma Esub_unique_fresh:
               apply (auto intro!: assms)
   done
 
-lemma EFVrs_bound[simp]:
-  "|EFVars (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  "|EFVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  "|EFVrs\<eta> (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  "|EFVrs\<eta>' (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  by (meson EFVars_bd EFVrs_bd FType_pre.var_large ordLess_ordLeq_trans)+
-
 lemma SSupp_comp_Esub_le:
   assumes "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
     "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set|"
@@ -308,18 +295,7 @@ lemma IImsupp_bound[simp]:
   by (auto simp: Un_bound UN_bound)
 
 lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
-  unfolding Ector_inject
-  apply safe
-  subgoal for \<sigma>
-    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
-    apply (auto simp: eta_natural G.Map_comp[THEN fun_cong, simplified]
-        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-        G.Map_id G.Sb_Inj Eperm_comp Eperm_id)
-    done
-  subgoal
-    apply (auto simp: eta_natural)
-    done
-  done
+  by (metis Ector_inject eta_natural supp_id_bound)
 
 lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
   unfolding Ector_inject
@@ -483,6 +459,22 @@ lemma Efree\<eta>_Efree: "Efree\<eta> a e \<Longrightarrow> a \<in> EFVars e"
   by (induct e pred: Efree\<eta>) (auto simp: EFVars_Ector)
 lemma Efree\<eta>'_Efree: "Efree\<eta>' a e \<Longrightarrow> a \<in> EFVars e"
   by (induct e pred: Efree\<eta>') (auto simp: EFVars_Ector)
+
+lemma EFVrs_bd:
+  "|EFVrs (x :: 'a :: var E)| <o natLeq"
+  "|EFVrs\<eta> (x :: 'a :: var E)| <o natLeq"
+  "|EFVrs\<eta>' (x :: 'a :: var E)| <o natLeq"
+  apply (meson EFVars_bd Efree_alt(1) Efreee_Efree card_of_subset_bound subset_eq)
+  apply (meson EFVars_bd Efree_alt(2) Efree\<eta>_Efree card_of_subset_bound subset_eq)
+  apply (meson EFVars_bd Efree_alt(3) Efree\<eta>'_Efree card_of_subset_bound subset_eq)
+  done
+
+lemma EFVrs_bound[simp]:
+  "|EFVars (x :: 'a :: var E)| <o |UNIV :: 'a set|"
+  "|EFVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
+  "|EFVrs\<eta> (x :: 'a :: var E)| <o |UNIV :: 'a set|"
+  "|EFVrs\<eta>' (x :: 'a :: var E)| <o |UNIV :: 'a set|"
+  by (meson EFVars_bd EFVrs_bd FType_pre.var_large ordLess_ordLeq_trans)+
 
 lemma EFVrs_EsubI1:
   assumes

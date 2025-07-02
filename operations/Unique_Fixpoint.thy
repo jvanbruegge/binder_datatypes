@@ -520,27 +520,27 @@ lemma EFVrs_EsubI1:
   shows "\<delta> z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1) unfolding EFVrs_def mem_Collect_eq
   apply (induct e rule: Efreee_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
-  apply (rule Efreee.intros)
-  apply (simp add: G.Vrs_Sb G.Vrs_Map assms(2-4))
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
+     apply (rule Efreee.intros)
+       apply (simp add: G.Vrs_Sb G.Vrs_Map assms(2-4))
   subgoal by (meson eta_inversion assms(2))
   subgoal by (meson eta'_inversion assms(2))
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
-  apply fastforce
-  apply fastforce
-  apply (rule Efreee.intros(2))
-  apply (simp add: G.Supp_Sb G.Supp_Map assms(2-4))
-  apply (erule imageI)
-  apply assumption
-  apply (simp add: G.Vrs_Sb G.Vrs_Map assms(2-4))
-  apply (metis imsupp_empty_IntD1)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
-  apply fastforce
-  apply fastforce
-  apply (rule Efreee.intros(3))
-  apply (simp add: G.Supp_Sb G.Supp_Map assms(2-4))
-  apply (erule imageI)
-  apply assumption
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
+      apply fastforce
+     apply fastforce
+    apply (rule Efreee.intros(2))
+      apply (simp add: G.Supp_Sb G.Supp_Map assms(2-4))
+      apply (erule imageI)
+     apply assumption
+    apply (simp add: G.Vrs_Sb G.Vrs_Map assms(2-4))
+    apply (metis imsupp_empty_IntD1)
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
+     apply fastforce
+    apply fastforce
+   apply (rule Efreee.intros(3))
+    apply (simp add: G.Supp_Sb G.Supp_Map assms(2-4))
+    apply (erule imageI)
+   apply assumption
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -553,20 +553,20 @@ lemma EFVrs_EsubI2:
   shows "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs_def EFVrs\<eta>_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
-  apply (cases "\<rho> a = Ector (\<eta> a)")
-  apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
-  apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
-  apply blast
-  apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efreee.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+      apply force
+     apply force
+    apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+    apply (cases "\<rho> a = Ector (\<eta> a)")
+     apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
+    apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
+     apply blast
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply force
+    apply force
+   apply (rule Efreee.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -579,20 +579,20 @@ lemma EFVrs_EsubI3:
   shows "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
-  apply (cases "\<rho>' a = Ector (\<eta>' a)")
-  apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
-  apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
-  apply blast
-  apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efreee.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+      apply force
+     apply force
+    apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+    apply (cases "\<rho>' a = Ector (\<eta>' a)")
+     apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
+    apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
+     apply blast
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply force
+    apply force
+   apply (rule Efreee.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -612,11 +612,11 @@ lemma EFVrs_EsubD:
       Efreee_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
   subgoal for u e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-    apply (auto simp: Esub_Ector assms(2-4)) []
-    apply (metis Efree\<eta>.intros(1) Efreee.intros(1))
+     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (metis Efree\<eta>.intros(1) Efreee.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-    apply (auto simp: Esub_Ector assms(2-4)) []
-    apply (metis Efree\<eta>'.intros(1) Efreee.intros(1))
+     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (metis Efree\<eta>'.intros(1) Efreee.intros(1))
     using assms(2-4)
     apply -
     apply (drule (5) Esub_inversion[rotated -1])
@@ -639,14 +639,14 @@ lemma EFVrs_EsubD:
     apply (drule meta_spec, drule meta_mp, rule refl)
     subgoal for u' e'
       apply (elim disj_forward ex_forward; assumption?)
-      apply (smt (verit, del_insts) Efreee.intros(2)
+        apply (smt (verit, del_insts) Efreee.intros(2)
           Un_empty image_iff imsupp_empty_IntD1 mem_Collect_eq)
       subgoal for a
         apply (erule conjE)+
         apply (rule conjI[rotated])
-        apply assumption
+         apply assumption
         apply (cases "\<rho> a = Ector (\<eta> a)")
-        apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
+         apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
         apply (metis (mono_tags, lifting) Efree\<eta>.intros(2)
             IntI SSupp_def comp_apply empty_iff
             mem_Collect_eq)
@@ -654,9 +654,9 @@ lemma EFVrs_EsubD:
       subgoal for a
         apply (erule conjE)+
         apply (rule conjI[rotated])
-        apply assumption
+         apply assumption
         apply (cases "\<rho>' a = Ector (\<eta>' a)")
-        apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
+         apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
         apply (metis (mono_tags, lifting) Efree\<eta>'.intros(2)
             IntI SSupp_def comp_apply empty_iff
             mem_Collect_eq)
@@ -664,20 +664,20 @@ lemma EFVrs_EsubD:
       done
     done
   using assms(2-4)
-  apply -
-  apply (drule (5) Esub_inversion[rotated -1])
-  apply (erule exE conjE)+
-  apply hypsubst_thin
-  apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+   apply -
+   apply (drule (5) Esub_inversion[rotated -1])
+   apply (erule exE conjE)+
+   apply hypsubst_thin
+   apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
   unfolding G.Vrs_Map
-  apply (erule imageE)
-  apply hypsubst_thin
-  apply (drule meta_spec, drule meta_mp, rule refl)
-  apply (elim disj_forward ex_forward; assumption?)
-  apply (smt (verit, del_insts) Efreee.intros(3)
+   apply (erule imageE)
+   apply hypsubst_thin
+   apply (drule meta_spec, drule meta_mp, rule refl)
+   apply (elim disj_forward ex_forward; assumption?)
+     apply (smt (verit, del_insts) Efreee.intros(3)
       Un_empty image_iff imsupp_empty_IntD1 mem_Collect_eq)
-  apply (metis Efree\<eta>.intros(3))
-  apply (metis Efree\<eta>'.intros(3))
+    apply (metis Efree\<eta>.intros(3))
+   apply (metis Efree\<eta>'.intros(3))
   apply (auto intro!: Un_bound IImsupp_bound simp: imsupp_supp_bound)
   done
 
@@ -690,20 +690,20 @@ lemma EFVrs\<eta>_EsubI2:
   shows "z \<in> EFVrs\<eta> (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs_def EFVrs\<eta>_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
-  apply (cases "\<rho> a = Ector (\<eta> a)")
-  apply (metis EFVrs\<eta>_Ector_eta assms(2) singletonD)
-  apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
-  apply blast
-  apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+      apply force
+     apply force
+    apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+    apply (cases "\<rho> a = Ector (\<eta> a)")
+     apply (metis EFVrs\<eta>_Ector_eta assms(2) singletonD)
+    apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
+     apply blast
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply force
+    apply force
+   apply (rule Efree\<eta>.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -716,20 +716,20 @@ lemma EFVrs\<eta>_EsubI3:
   shows "z \<in> EFVrs\<eta> (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
-  apply (cases "\<rho>' a = Ector (\<eta>' a)")
-  apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
-  apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
-  apply blast
-  apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+      apply force
+     apply force
+    apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+    apply (cases "\<rho>' a = Ector (\<eta>' a)")
+     apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
+    apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
+     apply blast
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply force
+    apply force
+   apply (rule Efree\<eta>.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -747,16 +747,16 @@ lemma EFVrs\<eta>_EsubD:
       Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
   subgoal for e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-    apply (auto simp: Esub_Ector assms(2-4)) []
-    apply (metis Efree\<eta>.intros(1))
+     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (metis Efree\<eta>.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-    apply (auto simp: Esub_Ector assms(2-4)) []
-    apply (metis Efree\<eta>'.intros(1) Efree\<eta>.intros(1))
+     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (metis Efree\<eta>'.intros(1) Efree\<eta>.intros(1))
     using assms(2-4)
     apply -
     apply (drule (3) Esub_inversion[rotated -1])
-    apply simp
-    apply (simp add: Enoclash_def)
+      apply simp
+     apply (simp add: Enoclash_def)
     apply (erule exE conjE)+
     apply hypsubst_thin
     apply (simp add: G.Vrs_Sb)
@@ -776,15 +776,15 @@ lemma EFVrs\<eta>_EsubD:
     apply (drule meta_spec, drule meta_mp, rule refl)
     subgoal for u' e'
       apply (elim disj_forward ex_forward; assumption?)
-      apply (metis (mono_tags, lifting) EFVrs\<eta>_Ector_eta Efree\<eta>.intros(2)
+       apply (metis (mono_tags, lifting) EFVrs\<eta>_Ector_eta Efree\<eta>.intros(2)
           Efree_alt(3) Int_emptyD SSupp_def comp_apply mem_Collect_eq
           singletonD)
       subgoal for a
         apply (erule conjE)+
         apply (rule conjI[rotated])
-        apply assumption
+         apply assumption
         apply (cases "\<rho>' a = Ector (\<eta>' a)")
-        apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
+         apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
         apply (metis (mono_tags, lifting) Efree\<eta>'.intros(2)
             IntI SSupp_def comp_apply empty_iff
             mem_Collect_eq)
@@ -792,18 +792,18 @@ lemma EFVrs\<eta>_EsubD:
       done
     done
   using assms(2-4)
-  apply -
-  apply (drule (5) Esub_inversion[rotated -1])
-  apply (erule exE conjE)+
-  apply hypsubst_thin
-  apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+   apply -
+   apply (drule (5) Esub_inversion[rotated -1])
+   apply (erule exE conjE)+
+   apply hypsubst_thin
+   apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
   unfolding G.Vrs_Map
-  apply (erule imageE)
-  apply hypsubst_thin
-  apply (drule meta_spec, drule meta_mp, rule refl)
-  apply (elim disj_forward ex_forward; assumption?)
-  apply (metis Efree\<eta>.intros(3))
-  apply (metis Efree\<eta>'.intros(3))
+   apply (erule imageE)
+   apply hypsubst_thin
+   apply (drule meta_spec, drule meta_mp, rule refl)
+   apply (elim disj_forward ex_forward; assumption?)
+    apply (metis Efree\<eta>.intros(3))
+   apply (metis Efree\<eta>'.intros(3))
   apply (auto intro!: Un_bound IImsupp_bound simp: imsupp_supp_bound)
   done
 
@@ -816,20 +816,20 @@ lemma EFVrs\<eta>'_EsubI2:
   shows "z \<in> EFVrs\<eta>' (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
-  apply (cases "\<rho> a = Ector (\<eta> a)")
-  apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
-  apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
-  apply blast
-  apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>'.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+      apply force
+     apply force
+    apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+    apply (cases "\<rho> a = Ector (\<eta> a)")
+     apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
+    apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
+     apply blast
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply force
+    apply force
+   apply (rule Efree\<eta>'.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -842,20 +842,20 @@ lemma EFVrs\<eta>'_EsubI3:
   shows "z \<in> EFVrs\<eta>' (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
-  apply (cases "\<rho>' a = Ector (\<eta>' a)")
-  apply (metis EFVrs\<eta>'_Ector_eta' assms(2) singletonD)
-  apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
-  apply blast
-  apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
-  apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-  apply force
-  apply force
-  apply (rule Efree\<eta>'.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+      apply force
+     apply force
+    apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
+    apply (cases "\<rho>' a = Ector (\<eta>' a)")
+     apply (metis EFVrs\<eta>'_Ector_eta' assms(2) singletonD)
+    apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
+     apply blast
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+   apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply force
+    apply force
+   apply (rule Efree\<eta>'.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
   apply (auto intro!: imsupp_supp_bound[THEN iffD2] assms IImsupp_bound Un_bound EFVrs_bound)
   done
 
@@ -873,16 +873,16 @@ lemma EFVrs\<eta>'_EsubD:
       Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
   subgoal for e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-    apply (auto simp: Esub_Ector assms(2-4)) []
-    apply (metis Efree\<eta>'.intros(1) Efree\<eta>.intros(1))
+     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (metis Efree\<eta>'.intros(1) Efree\<eta>.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-    apply (auto simp: Esub_Ector assms(2-4)) []
-    apply (metis Efree\<eta>'.intros(1))
+     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (metis Efree\<eta>'.intros(1))
     using assms(2-4)
     apply -
     apply (drule (3) Esub_inversion[rotated -1])
-    apply simp
-    apply (simp add: Enoclash_def)
+      apply simp
+     apply (simp add: Enoclash_def)
     apply (erule exE conjE)+
     apply hypsubst_thin
     apply (simp add: G.Vrs_Sb)
@@ -905,9 +905,9 @@ lemma EFVrs\<eta>'_EsubD:
       subgoal for a
         apply (erule conjE)+
         apply (rule conjI[rotated])
-        apply assumption
+         apply assumption
         apply (cases "\<rho> a = Ector (\<eta> a)")
-        apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
+         apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
         apply (metis (mono_tags, lifting) Efree\<eta>.intros(2)
             IntI SSupp_def comp_apply empty_iff mem_Collect_eq)
         done
@@ -917,18 +917,18 @@ lemma EFVrs\<eta>'_EsubD:
       done
     done
   using assms(2-4)
-  apply -
-  apply (drule (5) Esub_inversion[rotated -1])
-  apply (erule exE conjE)+
-  apply hypsubst_thin
-  apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+   apply -
+   apply (drule (5) Esub_inversion[rotated -1])
+   apply (erule exE conjE)+
+   apply hypsubst_thin
+   apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
   unfolding G.Vrs_Map
-  apply (erule imageE)
-  apply hypsubst_thin
-  apply (drule meta_spec, drule meta_mp, rule refl)
-  apply (elim disj_forward ex_forward; assumption?)
-  apply (metis Efree\<eta>.intros(3))
-  apply (metis Efree\<eta>'.intros(3))
+   apply (erule imageE)
+   apply hypsubst_thin
+   apply (drule meta_spec, drule meta_mp, rule refl)
+   apply (elim disj_forward ex_forward; assumption?)
+    apply (metis Efree\<eta>.intros(3))
+   apply (metis Efree\<eta>'.intros(3))
   apply (auto intro!: Un_bound IImsupp_bound simp: imsupp_supp_bound)
   done
 
@@ -942,7 +942,7 @@ pbmv_monad "'a::var E"
     by (rule infinite_regular_card_order_natLeq)
   subgoal
     apply (rule Esub_unique_fresh[symmetric, where A="{}"])
-    apply (simp_all add: G.Sb_Inj G.Map_id)
+          apply (simp_all add: G.Sb_Inj G.Map_id)
     done
   subgoal for \<delta> \<rho> \<rho>'
     by (simp add: fun_eq_iff Esub_Ector)
@@ -952,7 +952,7 @@ pbmv_monad "'a::var E"
     apply (rule Esub_unique_fresh[where A = "imsupp \<delta>1 \<union> imsupp \<delta>2 \<union>
    IImsupp' (Ector o \<eta>) EFVars \<rho>1 \<union> IImsupp' (Ector o \<eta>) EFVars \<rho>2 \<union>
    IImsupp' (Ector o \<eta>') EFVars \<rho>1' \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>2'"])
-    apply (simp_all add: supp_comp_bound Esub_Ector Un_bound
+          apply (simp_all add: supp_comp_bound Esub_Ector Un_bound
         imsupp_supp_bound Int_Un_distrib)
     apply (subst Esub_Ector;
         (simp add: G.Vrs_Sb G.Vrs_Map G.Map_comp[THEN fun_cong, simplified]
@@ -989,17 +989,17 @@ pbmv_monad "'a::var E"
           ])
     subgoal
       apply (rule ordLeq_ordLess_trans[OF card_of_mono1[where B = "supp \<delta>1 \<union> supp \<delta>2"]])
-      apply (auto simp: supp_def) []
+       apply (auto simp: supp_def) []
       apply (auto intro!: Un_bound)
       done
     subgoal
       apply (rule ordLeq_ordLess_trans[OF card_of_mono1[where B = "SSupp (Ector \<circ> \<eta>) \<rho>1 \<union> SSupp (Ector \<circ> \<eta>) \<rho>2"]])
-      apply (auto simp: SSupp_def) []
+       apply (auto simp: SSupp_def) []
       apply (auto intro!: Un_bound)
       done
     subgoal
       apply (rule ordLeq_ordLess_trans[OF card_of_mono1[where B = "SSupp (Ector \<circ> \<eta>') \<rho>1' \<union> SSupp (Ector \<circ> \<eta>') \<rho>2'"]])
-      apply (auto simp: SSupp_def) []
+       apply (auto simp: SSupp_def) []
       apply (auto intro!: Un_bound)
       done
     subgoal
@@ -1021,7 +1021,7 @@ pbmv_monad "'a::var E"
       apply (auto simp: G.Vrs_Map)
       apply (simp add: Collect_mono_iff EFVrs_def Efreee.intros(1))
       done
-    apply auto
+      apply auto
     done
   done
 

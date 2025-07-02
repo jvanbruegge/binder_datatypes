@@ -170,6 +170,10 @@ inductive Efreee for a where
 | "e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efreee a (Ector u)"
 | "e \<in> GSupp2 u \<Longrightarrow> Efreee a e \<Longrightarrow> Efreee a (Ector u)"
 
+(*
+binder_inductive Efreee for perms: Eperm supps: EFVars
+*)
+
 lemma Efreee_strong_induct: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efreee a e \<Longrightarrow>
 (\<And>u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> a \<in> GVrs1 u \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> P (Ector u)) \<Longrightarrow>
 (\<And>e u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> P e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> P (Ector u)) \<Longrightarrow>
@@ -202,30 +206,26 @@ definition "EFVrs e = {a. Efreee a e}"
 definition "EFVrs\<eta> e = {a. Efree\<eta> a e}"
 definition "EFVrs\<eta>' e = {a. Efree\<eta>' a e}"
 
-lemma Esub_unique_fresh_relativized:
-  assumes
-    "|- B| <o |UNIV :: 'a set|"
-    "|- B\<eta>| <o |UNIV :: 'a set|"
-    "|- B\<eta>'| <o |UNIV :: 'a set|"
-    "|A| <o |UNIV::'a set|"
-    "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-    "\<And>a. a \<in> B\<eta> \<Longrightarrow> h (Ector (\<eta> a)) = \<rho> a"
-    "\<And>a. a \<in> B\<eta>' \<Longrightarrow> h (Ector (\<eta>' a)) = \<rho>' a"
-    "\<And>u.
-  EFVrs (Ector u) \<subseteq> B \<Longrightarrow>
-  EFVrs\<eta> (Ector u) \<subseteq> B\<eta> \<Longrightarrow>
-  EFVrs\<eta>' (Ector u) \<subseteq> B\<eta>' \<Longrightarrow>
-  GVrs2 u \<inter> A = {} \<Longrightarrow>
-  GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
-  GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EFVars \<rho> = {} \<Longrightarrow>
-  GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EFVars \<rho>' = {} \<Longrightarrow>
-  \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
-  h (Ector u) = Ector (Gsub \<delta> id (Gmap h h u))"
-  shows
-    "EFVrs e \<subseteq> B \<Longrightarrow> EFVrs\<eta> e \<subseteq> B\<eta> \<Longrightarrow> EFVrs\<eta>' e \<subseteq> B\<eta>' \<Longrightarrow> h e = Esub \<delta> \<rho> \<rho>' e"
-  sorry
+axiomatization where
+  Esub_unique_fresh_relativized:
+    "\<And>B B\<eta> B\<eta>' \<delta> \<rho> \<rho>' A e h.
+     |- B| <o |UNIV :: 'a set| \<Longrightarrow>
+     |- B\<eta>| <o |UNIV :: 'a set| \<Longrightarrow>
+     |- B\<eta>'| <o |UNIV :: 'a set| \<Longrightarrow>
+     |A| <o |UNIV::'a set| \<Longrightarrow>
+     |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
+     |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+     |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+     (\<And>a. a \<in> B\<eta> \<Longrightarrow> h (Ector (\<eta> a)) = \<rho> a) \<Longrightarrow>
+     (\<And>a. a \<in> B\<eta>' \<Longrightarrow> h (Ector (\<eta>' a)) = \<rho>' a) \<Longrightarrow>
+     (\<And>u. EFVrs (Ector u) \<subseteq> B \<Longrightarrow> EFVrs\<eta> (Ector u) \<subseteq> B\<eta> \<Longrightarrow> EFVrs\<eta>' (Ector u) \<subseteq> B\<eta>' \<Longrightarrow>
+        GVrs2 u \<inter> A = {} \<Longrightarrow>
+        GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
+        GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EFVars \<rho> = {} \<Longrightarrow>
+        GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EFVars \<rho>' = {} \<Longrightarrow>
+        \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
+        h (Ector u) = Ector (Gsub \<delta> id (Gmap h h u))) \<Longrightarrow>
+     EFVrs e \<subseteq> B \<Longrightarrow> EFVrs\<eta> e \<subseteq> B\<eta> \<Longrightarrow> EFVrs\<eta>' e \<subseteq> B\<eta>' \<Longrightarrow> h e = Esub \<delta> \<rho> \<rho>' e"
 
 lemma Esub_unique_fresh:
   assumes

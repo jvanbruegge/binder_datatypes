@@ -117,64 +117,58 @@ typedecl 'a E
 consts Ector :: "('a :: var, 'a, 'a E, 'a E) G \<Rightarrow> 'a E"
 consts Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
 consts EFVars :: "'a::var E \<Rightarrow> 'a set"
-
-lemma Eperm_id: "Eperm id = id"
-  sorry
-
-lemma Eperm_comp:
-  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
-   bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
-   Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
-  sorry
-
-lemma Ector_inject: "(Ector x = Ector y) =
-(\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and>
-   |supp \<sigma>| <o |UNIV :: 'a set| \<and>
-   id_on (\<Union> (EFVars ` GSupp1 x) - GVrs2 x) \<sigma> \<and>
-   Gsub id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
-  sorry
-
-lemma EFVars_Ector:
-  "EFVars (Ector u::('a::var) E) = GVrs1 u \<union> \<Union> {EFVars e | e .  e \<in> GSupp2 u} \<union> \<Union> {EFVars e - GVrs2 u | e .  e \<in> GSupp1 u}"
-  sorry
-
 consts Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> 'a E \<Rightarrow> 'a E"
 
-lemma Esub_Ector:
-  assumes
-    "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-  shows
-    "Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
-    "Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
-    "GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
+definition "Enoclash u = (GVrs2 u \<inter> EFVars (Ector u) = {})"
+
+axiomatization where
+    Eperm_id: "Eperm id = id"
+and Eperm_comp:
+  "\<And>\<sigma> \<tau>. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+   bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
+   Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
+and Ector_inject: "\<And>x y. (Ector x = Ector y) =
+   (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
+     id_on (\<Union> (EFVars ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gsub id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+and EFVars_Ector:
+  "\<And>u. EFVars (Ector u::('a::var) E) =
+     GVrs1 u \<union> ((\<Union>e \<in> GSupp1 u. EFVars e) - GVrs2 u) \<union> (\<Union>e \<in> GSupp2 u. EFVars e)"
+and Esub_Ector\<eta>:
+  "\<And>\<delta> \<rho> \<rho>' a u.
+    |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
+and Esub_Ector\<eta>':
+  "\<And>\<delta> \<rho> \<rho>' a u.
+    |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
+and Esub_Ector:
+    "\<And>\<delta> \<rho> \<rho>' a u.
+    |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+  GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
   GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EFVars \<rho> = {} \<Longrightarrow>
   GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EFVars \<rho>' = {} \<Longrightarrow>
   \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
   Esub \<delta> \<rho> \<rho>' (Ector u) = Ector (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u))"
-  sorry
-
-lemma Esub_inversion:
-  assumes 
-    "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
-    "|SSupp (Ector \<circ> \<eta>) (\<rho> :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
-    "|SSupp (Ector \<circ> \<eta>') (\<rho>' :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
-  shows
-    "GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>') = {} \<Longrightarrow> Enoclash u \<Longrightarrow>
- Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
-  sorry
-
-lemma EFVars_bd:
-  "|EFVars (x :: 'a :: var E)| <o natLeq"
-  sorry
+and Esub_inversion:
+  "\<And>\<delta> \<rho> \<rho>' u e.
+    |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+   GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>') = {} \<Longrightarrow> Enoclash u \<Longrightarrow>
+   Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
+and EFVars_bd:
+  "\<And>x. |EFVars (x :: 'a :: var E)| <o natLeq"
 
 inductive Efreee for a where 
   "a \<in> GVrs1 u \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> Efreee a (Ector u)"
 | "e \<in> GSupp1 u \<Longrightarrow> Efreee a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efreee a (Ector u)"
 | "e \<in> GSupp2 u \<Longrightarrow> Efreee a e \<Longrightarrow> Efreee a (Ector u)"
-
-definition "Enoclash u = (GVrs2 u \<inter> EFVars (Ector u) = {})"
 
 lemma Efreee_strong_induct: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> Efreee a e \<Longrightarrow>
 (\<And>u. GVrs2 u \<inter> A = {} \<Longrightarrow> Enoclash u \<Longrightarrow> a \<in> GVrs1 u \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> P (Ector u)) \<Longrightarrow>
@@ -264,7 +258,7 @@ lemma SSupp_comp_Esub_le:
     "SSupp (Ector \<circ> \<eta>') (Esub \<delta> \<rho> \<rho>' \<circ> \<rho>'') \<subseteq>
    SSupp (Ector \<circ> \<eta>') \<rho>'' \<union> SSupp (Ector \<circ> \<eta>') \<rho>'"
   using assms
-  by (auto simp: SSupp_def Esub_Ector)
+  by (auto simp: SSupp_def Esub_Ector\<eta> Esub_Ector\<eta>')
 
 lemma SSupp_comp_bound[simp]:
   "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -518,7 +512,7 @@ lemma EFVrs_EsubI2:
   shows "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs_def EFVrs\<eta>_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
       apply force
      apply force
@@ -544,7 +538,7 @@ lemma EFVrs_EsubI3:
   shows "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
       apply force
      apply force
@@ -577,10 +571,10 @@ lemma EFVrs_EsubD:
       Efreee_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
   subgoal for u e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (auto simp: Esub_Ector\<eta> assms(2-4)) []
      apply (metis Efree\<eta>.intros(1) Efreee.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (auto simp: Esub_Ector\<eta>' assms(2-4)) []
      apply (metis Efree\<eta>'.intros(1) Efreee.intros(1))
     using assms(2-4)
     apply -
@@ -655,7 +649,7 @@ lemma EFVrs\<eta>_EsubI2:
   shows "z \<in> EFVrs\<eta> (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs_def EFVrs\<eta>_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
       apply force
      apply force
@@ -681,7 +675,7 @@ lemma EFVrs\<eta>_EsubI3:
   shows "z \<in> EFVrs\<eta> (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
       apply force
      apply force
@@ -712,10 +706,10 @@ lemma EFVrs\<eta>_EsubD:
       Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
   subgoal for e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (auto simp: Esub_Ector\<eta> assms(2-4)) []
      apply (metis Efree\<eta>.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (auto simp: Esub_Ector\<eta>' assms(2-4)) []
      apply (metis Efree\<eta>'.intros(1) Efree\<eta>.intros(1))
     using assms(2-4)
     apply -
@@ -779,7 +773,7 @@ lemma EFVrs\<eta>'_EsubI2:
   shows "z \<in> EFVrs\<eta>' (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
       apply force
      apply force
@@ -805,7 +799,7 @@ lemma EFVrs\<eta>'_EsubI3:
   shows "z \<in> EFVrs\<eta>' (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (induct e rule: Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
-     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
+     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
       apply force
      apply force
@@ -836,10 +830,10 @@ lemma EFVrs\<eta>'_EsubD:
       Efree\<eta>'_strong_induct[rotated, consumes 1, where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>'"])
   subgoal for e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
-     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (auto simp: Esub_Ector\<eta> assms(2-4)) []
      apply (metis Efree\<eta>'.intros(1) Efree\<eta>.intros(1))
     apply (cases "\<exists>a. e = Ector (\<eta>' a)")
-     apply (auto simp: Esub_Ector assms(2-4)) []
+     apply (auto simp: Esub_Ector\<eta>' assms(2-4)) []
      apply (metis Efree\<eta>'.intros(1))
     using assms(2-4)
     apply -
@@ -908,14 +902,14 @@ pbmv_monad "'a::var E"
           apply (simp_all add: G.Sb_Inj G.Map_id)
     done
   subgoal for \<delta> \<rho> \<rho>'
-    by (simp add: fun_eq_iff Esub_Ector)
+    by (simp add: fun_eq_iff Esub_Ector\<eta>)
   subgoal
-    by (simp add: fun_eq_iff Esub_Ector)
+    by (simp add: fun_eq_iff Esub_Ector\<eta>')
   subgoal for \<delta>1 \<rho>1 \<rho>1' \<delta>2 \<rho>2 \<rho>2'
     apply (rule Esub_unique_fresh[where A = "imsupp \<delta>1 \<union> imsupp \<delta>2 \<union>
    IImsupp' (Ector o \<eta>) EFVars \<rho>1 \<union> IImsupp' (Ector o \<eta>) EFVars \<rho>2 \<union>
    IImsupp' (Ector o \<eta>') EFVars \<rho>1' \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>2'"])
-          apply (simp_all add: supp_comp_bound Esub_Ector Un_bound
+          apply (simp_all add: supp_comp_bound Esub_Ector\<eta> Esub_Ector\<eta>' Esub_Ector Un_bound
         imsupp_supp_bound Int_Un_distrib)
     apply (subst Esub_Ector;
         (simp add: G.Vrs_Sb G.Vrs_Map G.Map_comp[THEN fun_cong, simplified]
@@ -972,10 +966,10 @@ pbmv_monad "'a::var E"
     subgoal by assumption
     subgoal by assumption
     subgoal for a
-      apply (subst Esub_Ector; simp)
+      apply (subst Esub_Ector\<eta>; simp)
       done
     subgoal for a
-      apply (subst Esub_Ector; simp)
+      apply (subst Esub_Ector\<eta>'; simp)
       done
     subgoal for u
       apply (subst Esub_Ector; (simp add: Int_Un_distrib)?)

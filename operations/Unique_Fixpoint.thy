@@ -116,24 +116,15 @@ axiomatization where
 typedecl 'a E
 consts Ector :: "('a :: var, 'a, 'a E, 'a E) G \<Rightarrow> 'a E"
 consts Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
+consts EFVars :: "'a::var E \<Rightarrow> 'a set"
 
 lemma Eperm_id: "Eperm id = id"
   sorry
 
 lemma Eperm_comp:
   "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
-  bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
- Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
-  sorry
-
-inductive Efree for a where 
-  "a \<in> GVrs1 u \<Longrightarrow> Efree a (Ector u)"
-| "e \<in> GSupp1 u \<Longrightarrow> Efree a e \<Longrightarrow> a \<notin> GVrs2 u \<Longrightarrow> Efree a (Ector u)"
-| "e \<in> GSupp2 u \<Longrightarrow> Efree a e \<Longrightarrow> Efree a (Ector u)"
-
-definition "EFVars e = {a. Efree a e}"
-
-lemma Ector_fresh_cases: "|A::'a set| <o |UNIV :: 'a ::var set| \<Longrightarrow> (\<And>u. e = Ector u \<Longrightarrow> GVrs2 u \<inter> A = {} \<Longrightarrow> P) \<Longrightarrow> P"
+   bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
+   Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
   sorry
 
 lemma Ector_inject: "(Ector x = Ector y) =
@@ -141,6 +132,41 @@ lemma Ector_inject: "(Ector x = Ector y) =
    |supp \<sigma>| <o |UNIV :: 'a set| \<and>
    id_on (\<Union> (EFVars ` GSupp1 x) - GVrs2 x) \<sigma> \<and>
    Gsub id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+  sorry
+
+lemma EFVars_Ector:
+  "EFVars (Ector u::('a::var) E) = GVrs1 u \<union> \<Union> {EFVars e | e .  e \<in> GSupp2 u} \<union> \<Union> {EFVars e - GVrs2 u | e .  e \<in> GSupp1 u}"
+  sorry
+
+consts Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> 'a E \<Rightarrow> 'a E"
+
+lemma Esub_Ector:
+  assumes
+    "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set|"
+    "|SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
+    "|SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
+  shows
+    "Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
+    "Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
+    "GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
+  GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EFVars \<rho> = {} \<Longrightarrow>
+  GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EFVars \<rho>' = {} \<Longrightarrow>
+  \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
+  Esub \<delta> \<rho> \<rho>' (Ector u) = Ector (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u))"
+  sorry
+
+lemma Esub_inversion:
+  assumes 
+    "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
+    "|SSupp (Ector \<circ> \<eta>) (\<rho> :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
+    "|SSupp (Ector \<circ> \<eta>') (\<rho>' :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
+  shows
+    "GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>') = {} \<Longrightarrow> Enoclash u \<Longrightarrow>
+ Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
+  sorry
+
+lemma EFVars_bd:
+  "|EFVars (x :: 'a :: var E)| <o natLeq"
   sorry
 
 inductive Efreee for a where 
@@ -182,38 +208,10 @@ definition "EFVrs e = {a. Efreee a e}"
 definition "EFVrs\<eta> e = {a. Efree\<eta> a e}"
 definition "EFVrs\<eta>' e = {a. Efree\<eta>' a e}"
 
-consts Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> 'a E \<Rightarrow> 'a E"
-
-lemma EFVars_Esub:
-  "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
- |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
- |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
- EFVars (Esub \<delta> \<rho> \<rho>' x) \<subseteq> EFVars x \<union> supp \<delta> \<union> SSupp (Ector o \<eta>) \<rho> \<union> SSupp (Ector o \<eta>') \<rho>'"
-  sorry
-
-lemma Esub_Ector:
-  assumes
-    "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-  shows
-    "Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
-    "Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
-    "GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
-  GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EFVars \<rho> = {} \<Longrightarrow>
-  GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EFVars \<rho>' = {} \<Longrightarrow>
-  \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
-  Esub \<delta> \<rho> \<rho>' (Ector u) = Ector (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u))"
-  sorry
-
-lemma Esub_inversion:
-  assumes 
-    "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
-    "|SSupp (Ector \<circ> \<eta>) (\<rho> :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
-    "|SSupp (Ector \<circ> \<eta>') (\<rho>' :: 'a \<Rightarrow> 'a E)| <o |UNIV :: 'a set|"
-  shows
-    "GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EFVars \<rho> \<union> IImsupp' (Ector o \<eta>') EFVars \<rho>') = {} \<Longrightarrow> Enoclash u \<Longrightarrow>
- Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
+lemma EFVrs_bd:
+  "|EFVrs (x :: 'a :: var E)| <o natLeq"
+  "|EFVrs\<eta> (x :: 'a :: var E)| <o natLeq"
+  "|EFVrs\<eta>' (x :: 'a :: var E)| <o natLeq"
   sorry
 
 lemma Esub_unique_fresh_relativized:
@@ -239,13 +237,6 @@ lemma Esub_unique_fresh_relativized:
   h (Ector u) = Ector (Gsub \<delta> id (Gmap h h u))"
   shows
     "EFVrs e \<subseteq> B \<Longrightarrow> EFVrs\<eta> e \<subseteq> B\<eta> \<Longrightarrow> EFVrs\<eta>' e \<subseteq> B\<eta>' \<Longrightarrow> h e = Esub \<delta> \<rho> \<rho>' e"
-  sorry
-
-lemma EFVrs_bd:
-  "|EFVars (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs\<eta> (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs\<eta>' (x :: 'a :: var E)| <o natLeq"
   sorry
 
 lemma Esub_unique_fresh:
@@ -275,7 +266,7 @@ lemma EFVrs_bound[simp]:
   "|EFVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
   "|EFVrs\<eta> (x :: 'a :: var E)| <o |UNIV :: 'a set|"
   "|EFVrs\<eta>' (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  by (meson EFVrs_bd FType_pre.var_large ordLess_ordLeq_trans)+
+  by (meson EFVars_bd EFVrs_bd FType_pre.var_large ordLess_ordLeq_trans)+
 
 lemma SSupp_comp_Esub_le:
   assumes "|supp (\<delta> :: 'a \<Rightarrow> 'a::var)| <o |UNIV :: 'a set|"
@@ -481,35 +472,17 @@ lemma EFVrs\<eta>'_Ector_eta': "EFVrs\<eta>' (Ector (\<eta>' a)) = {a}"
   done
 
 lemma Efree_alt:
-  "Efree a e \<longleftrightarrow> a \<in> EFVars e"
   "Efreee a e \<longleftrightarrow> a \<in> EFVrs e"
   "Efree\<eta> a e \<longleftrightarrow> a \<in> EFVrs\<eta> e"
   "Efree\<eta>' a e \<longleftrightarrow> a \<in> EFVrs\<eta>' e"
-  unfolding EFVars_def EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def by auto
+  unfolding EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def by auto
 
-lemma Efreee_Efree: "Efreee a e \<Longrightarrow> Efree a e"
-  by (induct e pred: Efreee) (auto intro: Efree.intros)
-lemma Efree\<eta>_Efree: "Efree\<eta> a e \<Longrightarrow> Efree a e"
-  by (induct e pred: Efree\<eta>) (auto intro: Efree.intros)
-lemma Efree\<eta>'_Efree: "Efree\<eta>' a e \<Longrightarrow> Efree a e"
-  by (induct e pred: Efree\<eta>') (auto intro: Efree.intros)
-lemma Efree_Efreee_Efree\<eta>_Efree\<eta>': "Efree a e \<Longrightarrow> Efreee a e \<or> Efree\<eta> a e \<or> Efree\<eta>' a e"
-  by (induct e pred: Efree)
-    (force intro: Efreee.intros Efree\<eta>.intros Efree\<eta>'.intros)+
-lemma Efree_eq: "Efree a e \<longleftrightarrow> Efreee a e \<or> Efree\<eta> a e \<or> Efree\<eta>' a e"
-  by (metis Efree\<eta>'_Efree Efree\<eta>_Efree Efree_Efreee_Efree\<eta>_Efree\<eta>' Efreee_Efree)
-lemma EFVars_eq: "EFVars e = (EFVrs e \<union> EFVrs\<eta> e \<union> EFVrs\<eta>' e)"
-  using Efree_alt Efree_eq by blast
-
-lemma G_Sb_cong:
-  fixes f1 f2 g1 g2 :: "'a :: var \<Rightarrow> 'a"
-  shows
-    "|supp f1| <o |UNIV::'a set| \<Longrightarrow> |supp f2| <o |UNIV::'a set| \<Longrightarrow>
-  |supp g1| <o |UNIV::'a set| \<Longrightarrow> |supp g2| <o |UNIV::'a set| \<Longrightarrow>
-  x = y \<Longrightarrow>
-  (\<And>a1. a1 \<in> GVrs1 x \<Longrightarrow> f1 a1 = g1 a1) \<Longrightarrow>
-  (\<And>a2. a2 \<in> GVrs2 x \<Longrightarrow> f2 a2 = g2 a2) \<Longrightarrow> Gsub f1 f2 x = Gsub g1 g2 y"
-  by hypsubst (rule G.Sb_cong)
+lemma Efreee_Efree: "Efreee a e \<Longrightarrow> a \<in> EFVars e"
+  by (induct e pred: Efreee) (auto simp: EFVars_Ector)
+lemma Efree\<eta>_Efree: "Efree\<eta> a e \<Longrightarrow> a \<in> EFVars e"
+  by (induct e pred: Efree\<eta>) (auto simp: EFVars_Ector)
+lemma Efree\<eta>'_Efree: "Efree\<eta>' a e \<Longrightarrow> a \<in> EFVars e"
+  by (induct e pred: Efree\<eta>') (auto simp: EFVars_Ector)
 
 lemma EFVrs_EsubI1:
   assumes
@@ -562,7 +535,7 @@ lemma EFVrs_EsubI2:
      apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
      apply blast
-    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efreee_Efree intro!: exI[of _ a]) []
    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
      apply force
     apply force
@@ -588,7 +561,7 @@ lemma EFVrs_EsubI3:
      apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
      apply blast
-    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efreee_Efree intro!: exI[of _ a]) []
    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
      apply force
     apply force
@@ -699,7 +672,7 @@ lemma EFVrs\<eta>_EsubI2:
      apply (metis EFVrs\<eta>_Ector_eta assms(2) singletonD)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
      apply blast
-    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efree\<eta>_Efree intro!: exI[of _ a]) []
    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
      apply force
     apply force
@@ -725,7 +698,7 @@ lemma EFVrs\<eta>_EsubI3:
      apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
      apply blast
-    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efree\<eta>_Efree intro!: exI[of _ a]) []
    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
      apply force
     apply force
@@ -776,9 +749,8 @@ lemma EFVrs\<eta>_EsubD:
     apply (drule meta_spec, drule meta_mp, rule refl)
     subgoal for u' e'
       apply (elim disj_forward ex_forward; assumption?)
-       apply (metis (mono_tags, lifting) EFVrs\<eta>_Ector_eta Efree\<eta>.intros(2)
-          Efree_alt(3) Int_emptyD SSupp_def comp_apply mem_Collect_eq
-          singletonD)
+      apply (metis (mono_tags, lifting) EFVrs\<eta>_Ector_eta Efree\<eta>.intros(2)
+            Efree_alt(2) Int_emptyD SSupp_def comp_apply empty_iff insert_iff mem_Collect_eq)
       subgoal for a
         apply (erule conjE)+
         apply (rule conjI[rotated])
@@ -786,8 +758,7 @@ lemma EFVrs\<eta>_EsubD:
         apply (cases "\<rho>' a = Ector (\<eta>' a)")
          apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
         apply (metis (mono_tags, lifting) Efree\<eta>'.intros(2)
-            IntI SSupp_def comp_apply empty_iff
-            mem_Collect_eq)
+            IntI SSupp_def comp_apply empty_iff mem_Collect_eq)
         done
       done
     done
@@ -825,7 +796,7 @@ lemma EFVrs\<eta>'_EsubI2:
      apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EFVars \<rho>")
      apply blast
-    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
      apply force
     apply force
@@ -851,7 +822,7 @@ lemma EFVrs\<eta>'_EsubI3:
      apply (metis EFVrs\<eta>'_Ector_eta' assms(2) singletonD)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EFVars \<rho>'")
      apply blast
-    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def EFVars_def Efree_eq intro!: exI[of _ a]) []
+    apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
      apply force
     apply force
@@ -911,9 +882,9 @@ lemma EFVrs\<eta>'_EsubD:
         apply (metis (mono_tags, lifting) Efree\<eta>.intros(2)
             IntI SSupp_def comp_apply empty_iff mem_Collect_eq)
         done
-      apply (smt (verit, ccfv_threshold) Ector_eta'_inj Efree\<eta>'.simps
-          GSupp_eta'(1,2) Int_emptyD SSupp_def comp_apply empty_iff
-          eta'_inj mem_Collect_eq) (*TODO*)
+      apply (metis (mono_tags, lifting) EFVrs\<eta>'_Ector_eta' Efree\<eta>'.intros(2)
+            Efree_alt(3) Int_emptyD SSupp_def comp_apply empty_iff insert_iff
+            mem_Collect_eq)
       done
     done
   using assms(2-4)

@@ -77,9 +77,9 @@ and alpha_Udtor2: "\<And>X X' d. valid_U2 d \<Longrightarrow> {X,X'} \<subseteq>
     (* The dual of the first block of assumptions from Norrish's paper:   *)
     UFVars11_Udtor:
     "\<And> d X. valid_U1 d \<Longrightarrow> X \<in> Udtor1 d \<Longrightarrow>
-  set1_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set8_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set10_T1_pre X) \<union> (set7_T1_pre X
-   \<union> (\<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X))
-   \<union> (\<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X)
+  set1_T1_pre X \<union> (set7_T1_pre X - set5_T1_pre X)
+  \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set8_T1_pre X) \<union> (\<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) - set5_T1_pre X)
+  \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X) - set5_T1_pre X)
    \<subseteq> UFVars11 d"
   and UFVars12_Udtor:
     "\<And> d X. valid_U1 d \<Longrightarrow> X \<in> Udtor1 d \<Longrightarrow>
@@ -310,7 +310,7 @@ proof -
              apply (rule Umap_comp1 Umap_comp2)
                  apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
                         apply (rule trans)
-(* TODO: this "arg_cong3" should be generalized to the number of args Umap* takes
+(* TODO: this "arg_cong3" (vars + 1) should be generalized to the number of args Umap* takes
          in the ML code *)
              apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
              apply (rule inv_o_simp2, rule assms)+
@@ -498,31 +498,19 @@ qed
 
 lemmas Umap_Udtor_strong = Umap_Udtor1_strong Umap_Udtor2_strong
 
-term FVars_T1_1
-term FVars_T1_2
-term set1_T1_pre
-term set8_T1_pre
-term UFVars21
+abbreviation "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
 
-definition FFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
-  "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
 
-definition FFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre \<Rightarrow> 'b set" where
-  "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
+abbreviation "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
 
-definition FFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T2_pre \<Rightarrow> 'a set" where
-  "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
 
-definition FFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T2_pre \<Rightarrow> 'b set" where
-  "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
 
-lemmas FFVarsBD1 = FFVarsBD11_def FFVarsBD12_def
-lemmas FFVarsBD2 = FFVarsBD21_def FFVarsBD22_def
+lemmas Udtor_Umap = alpha_Udtor1 alpha_Udtor2
 
-lemmas Udtor_Umap = alpha_Udtor1[folded FFVarsBD1] alpha_Udtor2[folded FFVarsBD2]
-
-thm UFVars11_Udtor FFVarsBD1
-lemmas FVars_T1_Udtor = UFVars11_Udtor[folded FFVarsBD1]
+lemmas FVars_T1_Udtor = UFVars11_Udtor UFVars12_Udtor
+lemmas FVars_T2_Udtor = UFVars21_Udtor UFVars22_Udtor
 
 (*************************************)
 (* The raw-term-based model infrastructure *)
@@ -553,42 +541,104 @@ abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
 abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
   "raw_UFVars22 \<equiv> UFVars22"
 
-definition raw_UFVarsBD :: "('a::var, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre \<Rightarrow> 'a set" where
-  "raw_UFVarsBD X \<equiv> \<Union>(case_sum FVars_raw_term raw_UFVars ` set3_term_pre X) - set2_term_pre X"
+(* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
+abbreviation "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
 
-lemmas raw_UFVars_def2 = trans[OF meta_eq_to_obj_eq[OF FVars_term_def[of "TT_abs _"]] alpha_FVars[OF TT_rep_abs], symmetric]
+(* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
+abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
+
+(* definition raw_UFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'a set" where *)
+abbreviation "raw_UFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+
+(* definition raw_UFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'b set" where *)
+abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
+
+
+lemmas raw_UFVars_def2_11 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_1_def[of "T1_abs _"]] T1.alpha_FVars(1)[OF T1.rep_abs], symmetric]
+lemmas raw_UFVars_def2_12 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_2_def[of "T1_abs _"]] T1.alpha_FVars(2)[OF T1.rep_abs], symmetric]
+lemmas raw_UFVars_def2_21 = trans[OF meta_eq_to_obj_eq[OF FVars_T2_1_def[of "T2_abs _"]] T2.alpha_FVars(1)[OF T2.rep_abs], symmetric]
+lemmas raw_UFVars_def2_22 = trans[OF meta_eq_to_obj_eq[OF FVars_T2_2_def[of "T2_abs _"]] T2.alpha_FVars(2)[OF T2.rep_abs], symmetric]
+
+lemmas raw_UFVars_def2 = raw_UFVars_def2_11 raw_UFVars_def2_12 raw_UFVars_def2_21 raw_UFVars_def2_22
 
 (* Preterm-based version of the assumptions: *)
 
 (*  *)
 lemmas raw_Umap_id = Umap_id
 
-lemmas raw_Umap_comp = Umap_comp
+lemmas raw_Umap_comp = Umap_comp1 Umap_comp2
 
-lemma FVarsBD_FFVarsBD:
-  "raw_UFVarsBD X = FFVarsBD (map_term_pre id id (map_sum TT_abs id) (map_sum TT_abs id) X)"
-  apply (unfold raw_UFVarsBD_def FFVarsBD_def raw_UFVars_def2)
-  apply (subst term_pre.set_map[OF supp_id_bound bij_id supp_id_bound])+
-  apply (subst image_id)
-  apply (subst image_image)
-  apply (subst case_sum_map_sum)
-  apply (subst comp_id)
-  apply (subst comp_def)
+term map_T2_pre
+
+thm T1_pre.set_map
+
+
+lemma FVarsBD_FFVarsBD1:
+  "raw_UFVarsBD11 X = FFVarsBD11 (map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X)"
+  "raw_UFVarsBD12 X = FFVarsBD12 (map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X)"
+   apply -
+ (* REPEAT_DETERM *)
+  apply (unfold raw_UFVars_def2)[1]
+  apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+  apply (subst image_id)+
+  apply (subst image_image)+
+  apply (subst case_sum_map_sum)+
+  apply (subst comp_id)+
+  apply (subst comp_def)+
+   apply (rule refl)
+(* repeated *)
+  apply (unfold raw_UFVars_def2)[1]
+  apply (subst T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+  apply (subst image_id)+
+  apply (subst image_image)+
+  apply (subst case_sum_map_sum)+
+  apply (subst comp_id)+
+  apply (subst comp_def)+
   apply (rule refl)
+ (* END REPEAT_DETERM *)
   done
+
+lemma FVarsBD_FFVarsBD2:
+  "raw_UFVarsBD21 X = FFVarsBD21 (map_T2_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X)"
+  "raw_UFVarsBD22 X = FFVarsBD22 (map_T2_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X)"
+   apply -
+ (* REPEAT_DETERM *)
+  apply (unfold raw_UFVars_def2)[1]
+  apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+  apply (subst image_id)+
+  apply (subst image_image)+
+  apply (subst case_sum_map_sum)+
+  apply (subst comp_id)+
+  apply (subst comp_def)+
+   apply (rule refl)
+(* repeated *)
+  apply (unfold raw_UFVars_def2)[1]
+  apply (subst T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+  apply (subst image_id)+
+  apply (subst image_image)+
+  apply (subst case_sum_map_sum)+
+  apply (subst comp_id)+
+  apply (subst comp_def)+
+  apply (rule refl)
+ (* END REPEAT_DETERM *)
+  done
+
+lemmas FVarsBD_FFVarsBD = FVarsBD_FFVarsBD1 FVarsBD_FFVarsBD2
 
 lemmas supp_comp_bound = supp_comp_bound[OF _ _ infinite_UNIV]
 
-lemma abs_rep_id: "TT_abs o TT_rep = id"
+lemma abs_rep_id:
+  "T1_abs o T1_rep = id"
+  "T2_abs o T2_rep = id"
   apply (unfold comp_def)
-  apply (subst TT_abs_rep)
+  apply (unfold T1.abs_rep T2.abs_rep)
   apply (fold id_def)
-  apply (rule refl)
+  apply (rule refl)+
   done
 
 lemma DTOR_mapD:
   assumes "valid_U d"
-  shows "{X,X'} \<subseteq> Utor d \<Longrightarrow> \<exists>u. bij (u::'a::var\<Rightarrow>'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD X) u \<and>
+  shows "{X,X'} \<subseteq> Utor d \<Longrightarrow> \<exists>u. bij (u::'a\<Rightarrow>'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD X) u \<and>
      mr_rel_term_pre id u
        (rel_sum (\<lambda> t t'. alpha_term (permute_raw_term u t) t') (\<lambda> d d'. raw_Umap u d = d'))
 (rel_sum alpha_term (=))

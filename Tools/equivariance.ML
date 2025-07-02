@@ -71,7 +71,7 @@ val _ = Theory.local_setup (fn lthy =>
         ) (Option.mapPartial (try HOLogic.dest_eq) (
           try HOLogic.dest_Trueprop (Thm.concl_of thm)
         ));
-        val (thm', commute_opt) = case is_eq of
+        val (thm'_opt, commute_opt) = case is_eq of
           SOME (lhs, rhs) =>
             let
               val prems = Thm.prems_of thm
@@ -82,7 +82,7 @@ val _ = Theory.local_setup (fn lthy =>
               val commute = if inter' (vars_lhs, vars_rhs) andalso inter' (vars_lhs, fs) andalso inter' (vars_rhs, fs) then
                 SOME (thm RS sym)
               else NONE
-            in (thm, commute) end
+            in (SOME thm, commute) end
           | NONE =>
             let
               open MRBNF_Util
@@ -108,7 +108,7 @@ val _ = Theory.local_setup (fn lthy =>
                 | map_id0s_of_mr_bnf (Inr (Inl bnf)) = BNF_Def.map_id0_of_bnf bnf
                 | map_id0s_of_mr_bnf (Inr (Inr quot)) = #permute_id0 quot
 
-              val thm' = Goal.prove_sorry lthy (map fst vars) [] goal (fn {context=ctxt, ...} => EVERY1 [
+              val thm' = try (Goal.prove lthy (map fst vars) [] goal) (fn {context=ctxt, ...} => EVERY1 [
                 rtac ctxt iffI,
                 defer_tac,
                 etac ctxt (Drule.rotate_prems ~1 thm),
@@ -116,15 +116,16 @@ val _ = Theory.local_setup (fn lthy =>
                 dtac ctxt (Drule.rotate_prems ~1 thm),
                 K (prefer_tac (length f_prems + 1)),
                 SELECT_GOAL (REPEAT_DETERM (SOMEGOAL (EVERY' [
-                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ map_comps),
+                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ (map_comps |> map @{print})),
                   REPEAT_DETERM o eq_assume_tac
                 ]))),
+K (print_tac ctxt "1"),
                 K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2 image_inv_f_f[OF bij_is_inj]} @ map map_id0s_of_mr_bnf mr_bnfs)),
                 REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound}),
                 IF_UNSOLVED o (K (print_tac ctxt "strengthening failed:"))
               ])
             in (thm', NONE) end
-        val context = Equiv_Data.map (Item_Net.update (Thm.trim_context thm')) context;
+        val context = the_default context (Option.map (fn thm => Equiv_Data.map (Item_Net.update (Thm.trim_context thm)) context) thm'_opt);
       in the_default context (Option.map (fn thm => Equiv_Sym_Data.map (
         Item_Net.update (Thm.trim_context thm)
       ) context) commute_opt) end);

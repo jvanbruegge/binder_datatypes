@@ -119,10 +119,9 @@ val _ = Theory.local_setup (fn lthy =>
                   EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ (map_comps |> map @{print})),
                   REPEAT_DETERM o eq_assume_tac
                 ]))),
-K (print_tac ctxt "1"),
                 K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2 image_inv_f_f[OF bij_is_inj]} @ map map_id0s_of_mr_bnf mr_bnfs)),
-                REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound}),
-                IF_UNSOLVED o (K (print_tac ctxt "strengthening failed:"))
+                REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_id supp_id_bound bij_imp_bij_inv supp_inv_bound})(*,*)
+                (*IF_UNSOLVED o (K (print_tac ctxt "strengthening failed:"))*)
               ])
             in (thm', NONE) end
         val context = the_default context (Option.map (fn thm => Equiv_Data.map (Item_Net.update (Thm.trim_context thm)) context) thm'_opt);

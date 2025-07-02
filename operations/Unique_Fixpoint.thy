@@ -591,7 +591,7 @@ lemma EFVrs_EsubD:
     apply (drule (5) Esub_inversion[rotated -1])
     apply (erule exE conjE)+
     apply hypsubst_thin
-    apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+    apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
     unfolding G.Vrs_Map
     apply (erule imageE)
     apply hypsubst_thin
@@ -627,7 +627,7 @@ lemma EFVrs_EsubD:
    apply (drule (5) Esub_inversion[rotated -1])
    apply (erule exE conjE)+
    apply hypsubst_thin
-   apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+   apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
   unfolding G.Vrs_Map
    apply (erule imageE)
    apply hypsubst_thin
@@ -728,7 +728,7 @@ lemma EFVrs\<eta>_EsubD:
     apply (drule (5) Esub_inversion[rotated -1])
     apply (erule exE conjE)+
     apply hypsubst_thin
-    apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+    apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
     unfolding G.Vrs_Map
     apply (erule imageE)
     apply hypsubst_thin
@@ -753,7 +753,7 @@ lemma EFVrs\<eta>_EsubD:
    apply (drule (5) Esub_inversion[rotated -1])
    apply (erule exE conjE)+
    apply hypsubst_thin
-   apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+   apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
   unfolding G.Vrs_Map
    apply (erule imageE)
    apply hypsubst_thin
@@ -852,7 +852,7 @@ lemma EFVrs\<eta>'_EsubD:
     apply (drule (5) Esub_inversion[rotated -1])
     apply (erule exE conjE)+
     apply hypsubst_thin
-    apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+    apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
     unfolding G.Vrs_Map
     apply (erule imageE)
     apply hypsubst_thin
@@ -878,7 +878,7 @@ lemma EFVrs\<eta>'_EsubD:
    apply (drule (5) Esub_inversion[rotated -1])
    apply (erule exE conjE)+
    apply hypsubst_thin
-   apply (simp add: Enoclash_def G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
+   apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb Int_Un_distrib)
   unfolding G.Vrs_Map
    apply (erule imageE)
    apply hypsubst_thin

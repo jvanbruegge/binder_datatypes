@@ -2,17 +2,17 @@ theory Comodels
   imports "Expressions"
 begin(* *)
  
-definition dtorNeC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> bool" where 
+definition dtorNeC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> bool" where 
 "dtorNeC dtor \<equiv> \<forall>e U. dtor e = Inl U \<longrightarrow> U \<noteq> {}"
 
-definition dtorPermC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> bool" 
+definition dtorPermC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> bool" 
 where "dtorPermC dtor perm \<equiv> 
 \<forall>\<sigma> e. small \<sigma> \<and> bij \<sigma> \<longrightarrow> 
   (\<forall> U. dtor e = Inl U \<longrightarrow> (\<exists>U'. dtor (perm \<sigma> e) = Inl U' \<and> U' \<subseteq> Gren \<sigma> \<sigma> ` (Gmap (perm \<sigma>) (perm \<sigma>) ` U)))
   \<and> 
   (\<forall>e1. dtor e = Inr e1 \<longrightarrow> (\<exists>e1'. dtor (perm \<sigma> e) = Inr e1' \<and> e1' =  Eperm \<sigma> e1))"
 
-definition dtorVrsGrenC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> ('E' \<Rightarrow> var set) \<Rightarrow> bool" 
+definition dtorVrsGrenC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 
 where
 "dtorVrsGrenC dtor Vrs \<equiv> 
  (\<forall>e U u1 u2. dtor e = Inl U \<and> {u1,u2} \<subseteq> U \<longrightarrow> 
@@ -22,7 +22,7 @@ where
                  (\<Union> {Vrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
         u2 = Gren id \<sigma> u1))"
 
-definition dtorVrsC :: "('E' \<Rightarrow> (('E','E')G) set + E) \<Rightarrow> ('E' \<Rightarrow> var set) \<Rightarrow> bool" 
+definition dtorVrsC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 
 where
 "dtorVrsC dtor Vrs \<equiv> 
  (\<forall>e.  
@@ -39,9 +39,9 @@ where
 (* Full-recursion comodel:   *)
 locale Comodel =
 fixes (* no set V, as we need no Barendregt convention here *)
-Edtor' :: "'E' \<Rightarrow> (('E','E')G) set + E" 
-and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E'" 
-and EVrs' :: "'E' \<Rightarrow> var set" 
+Edtor' :: "'E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E" 
+and Eperm' :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E'" 
+and EVrs' :: "'E' \<Rightarrow> 'a::var set" 
 assumes 
 nom: "nom Eperm' EVrs'" 
 and  
@@ -55,7 +55,7 @@ dtorVrsC: "dtorVrsC Edtor' EVrs'"
 begin 
 
 
-definition corec :: "'E' \<Rightarrow> E" where 
+definition corec :: "'E' \<Rightarrow> 'a E" where 
 "corec = undefined"
 
 lemma corec_Edtor_Inl:

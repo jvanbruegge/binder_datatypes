@@ -2,7 +2,7 @@ theory Bimodels
   imports Expressions
 begin
 
-consts \<phi> :: "('e,'e) G \<Rightarrow> bool"
+consts \<phi> :: "('a::var,'a,'e,'e) G \<Rightarrow> bool"
 axiomatization where \<phi>_Gmap: "\<And> u f g. \<phi> (Gmap f g u) \<longleftrightarrow> \<phi> u"
 and \<phi>_Gren: "\<And> u \<sigma>. small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> \<phi> (Gren \<sigma> \<sigma> u) \<longleftrightarrow> \<phi> u"
 (* this ensures \<phi> always covers base cases only  *)
@@ -12,12 +12,12 @@ lemma \<phi>_Gmap_eq: "\<phi> u \<Longrightarrow> Gmap f1 f2 u = Gmap g1 g2 u"
 apply(rule Gmap_cong) using \<phi>_base by auto
 
 
-type_synonym E' = E 
+type_synonym 'a E' = "'a E" 
 (* Special iteration model, with syntactic domain; 
 I keep E' as an abbreviation for E to avoid confusion: *)
 locale Bimodel = 
-fixes Ector0' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" 
-and Ector1' :: "(P\<Rightarrow>E',P\<Rightarrow>E') G \<Rightarrow> P\<Rightarrow>E'" 
+fixes Ector0' :: "('a::var,'a,'a P\<Rightarrow>'a E','a P\<Rightarrow>'a E') G \<Rightarrow> 'a P\<Rightarrow>'a E'" 
+and Ector1' :: "('a::var,'a,'a P\<Rightarrow>'a E','a P\<Rightarrow>'a E') G \<Rightarrow> 'a P\<Rightarrow>'a E'" 
 (* Eperm and EVrs are the syntactic ones. Eperm and EVrs, 
 so no need to assume nom for them since its known *)
 (* 
@@ -32,7 +32,7 @@ and ctor0VarsM: "\<And>u. \<phi> u \<Longrightarrow> ctorVarsM Ector0' EVrs u" a
     ctor1VarsM: "\<And>u. \<not> \<phi> u \<Longrightarrow> ctorVarsM Ector1' EVrs u"
 (* above just standard model properties, but split in two; next some 
 more specific requirements *)
-assumes Ector_\<phi>_inj: "\<And>u1 u2. \<phi> u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
+assumes Ector_\<phi>_inj: "\<And>u1 u2::('a,'a,'a E, 'a E)G. \<phi> u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
 (* and Eperm_Eperm: "Eperm = Eperm"
 and EVrs_EVrs: "EVrs = EVrs"
 *)
@@ -63,25 +63,25 @@ begin
 
 lemmas Ector1_Ector'_topFree' =  triv_Un4_remove[OF Ector1_Ector'_topFree]
 
-lemma Ector_\<phi>: "Ector u = Ector v \<Longrightarrow> \<phi> u \<longleftrightarrow> \<phi> v"
+lemma Ector_\<phi>: "Ector (u:: ('a, 'a, 'a E, 'a E) G) = Ector v \<Longrightarrow> \<phi> u \<longleftrightarrow> \<phi> v"
 using Ector_\<phi>_inj by metis
 
-lemma \<phi>_Some_Ector: "\<phi> u \<Longrightarrow> (SOME ua. Ector ua = Ector u) = u"
+lemma \<phi>_Some_Ector: "\<phi> (u:: ('a, 'a, 'a E, 'a E) G) \<Longrightarrow> (SOME ua. Ector ua = Ector u) = u"
 by (metis (mono_tags, lifting) Ector_\<phi>_inj tfl_some) 
 
-lemma \<phi>_Some_Ector': "\<phi> (SOME ua. Ector ua = Ector u) \<longleftrightarrow> \<phi> u"
+lemma \<phi>_Some_Ector': "\<phi> (SOME ua. Ector ua = Ector u) \<longleftrightarrow> \<phi> (u:: ('a, 'a, 'a E, 'a E) G)"
 by (metis (mono_tags, lifting) Ector_\<phi>_inj tfl_some) 
 
 (* *)
 
 lemma Ector_Ector1'_Gmap: 
-fixes w u :: "(E, E) G"   
+fixes w u :: "('a, 'a, 'a E, 'a E) G"   
 assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector w = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
        Ector1' (Gmap F F u) p"
 proof-
-  define F' where "F' \<equiv> ((\<lambda>pe::P\<Rightarrow>E. (\<lambda>e. F e p) o pe)) o (\<lambda>e p. e)"
+  define F' where "F' \<equiv> ((\<lambda>pe::'a P\<Rightarrow>'a E. (\<lambda>e. F e p) o pe)) o (\<lambda>e p. e)"
   have F': "F' = (\<lambda>pe p'. pe p) o F" unfolding F'_def o_def fun_eq_iff by simp
   have 1: "Ector1' (Gmap F F u) p = Ector1' (Gmap F' F' u) p"
     unfolding F' Gmap_comp[symmetric]
@@ -100,12 +100,12 @@ proof-
     unfolding Gmap_comp
     apply(rule Gmap_cong) using 00 unfolding GSupp1_Gmap GSupp2_Gmap uncurry_def by auto
 
-  define H' where "H' \<equiv> \<lambda>e (p'::P). H e p"
+  define H' where "H' \<equiv> \<lambda>e (p'::'a P). H e p"
   have H': "H' = (\<lambda>pe p'. pe p) o H" unfolding H'_def o_def fun_eq_iff by simp
   have 2: "Ector1' (Gmap H H u) p = Ector1' (Gmap H' H' u) p"
   unfolding H' Gmap_comp[symmetric]
   apply(rule Ector1'_uniform) using assms unfolding GVrs2_Gmap by auto
-  have 11: "H' = (\<lambda>pe. (\<lambda>e. H e p) o pe) o (\<lambda>e (p::P). e)" 
+  have 11: "H' = (\<lambda>pe. (\<lambda>e. H e p) o pe) o (\<lambda>e (p::'a P). e)" 
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]

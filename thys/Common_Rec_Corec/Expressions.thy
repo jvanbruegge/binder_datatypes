@@ -1,35 +1,9 @@
 theory Expressions
-  imports "HOL-Library.Countable_Set_Type"
+  imports "Binders.MRBNF_Recursor" 
 begin
 
-(* Prelims: *)
 
-term curry
-definition "uncurry f \<equiv> \<lambda>(a,b). f a b" 
-lemma uncorry_apply[simp]: "uncurry f (a,b) = f a b"
-  unfolding uncurry_def by auto
-
-lemma fst_comp_id[simp]: "fst \<circ> (\<lambda>e. (e, p)) = id" by auto
-
-lemma tri_Un1: "A \<subseteq> B \<union> C \<Longrightarrow> A \<union> B \<subseteq> B \<union> C" by auto
-lemma tri_Un3: "A \<union> A' \<union> A'' \<subseteq> B \<union> C \<Longrightarrow> B \<union> A \<union> A' \<union> A'' \<subseteq> B \<union> C" by auto
-
-lemma A_Int_Un_emp: "A \<inter> (B \<union> C) = {} \<longleftrightarrow> A \<inter> B = {} \<and> A \<inter> C = {}" by auto
-
-lemma bij_inv_Un_triv: "bij \<sigma> \<Longrightarrow> \<sigma> ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv \<sigma> ` B = {}"
-  by (metis bij_def empty_is_image image_Int image_inv_f_f surj_imp_inj_inv)
-
-lemma bij_in_inv_Un_triv: "bij \<sigma> \<Longrightarrow> inv \<sigma> a \<in> B \<longleftrightarrow> a \<in> \<sigma> ` B"
-  by (metis bij_inv_eq_iff imageE image_eqI)
-
-lemma incl_Un_triv3: "A1 \<union> A2 \<union> A3 \<subseteq> A \<Longrightarrow> A1 \<subseteq> A \<and> A2 \<subseteq> A \<and> A3 \<subseteq> A" by auto
-
-lemma incl_Un3_triv3: "A1 \<subseteq> B1 \<Longrightarrow> A2 \<subseteq> B2 \<union> P \<Longrightarrow> A3 \<subseteq> B3 \<union> P \<Longrightarrow> A1 \<union> A2 \<union> A3 \<subseteq> B1 \<union> B2 \<union> B3 \<union> P" 
-by auto
-
-lemma triv_Un4_remove: "A1 \<union> A2 \<union> A3 \<subseteq> B1 \<union> B2 \<union> B3 \<union> P \<Longrightarrow> A1 \<union> A2 \<union> A3 \<union> P \<subseteq> B1 \<union> B2 \<union> B3 \<union> P"
-by auto
-
+(* 
 (* For now just grabbed this: *)
 
 typedef var = "{x::nat set. x \<in> Field (cardSuc natLeq)}"
@@ -53,7 +27,7 @@ not_ordLeq_iff_ordLess ordLeq_iff_ordLess_or_ordIso uncountable_infinite uncount
 *)
 
 lemma countable_exists_finite_var:
-assumes "countable (A::var set)"
+assumes "countable (A::'a::var set)"
 shows "\<exists>B. B \<inter> A = {} \<and> finite B \<and> card B = n"
 proof-
   obtain B' where B': "B' \<inter> A = {}" and iB': "infinite B'"
@@ -108,16 +82,47 @@ lemma sw_surj: "\<exists>y. x = sw y z1 z2"
 
 definition supp :: "(var \<Rightarrow> var) \<Rightarrow> var set" where 
 "supp \<sigma> = {a . \<sigma> a \<noteq> a}"
+*)
 
-definition small :: "(var \<Rightarrow> var) \<Rightarrow> bool" where 
+(* Prelims: *)
+
+
+term curry
+definition "uncurry f \<equiv> \<lambda>(a,b). f a b" 
+lemma uncorry_apply[simp]: "uncurry f (a,b) = f a b"
+  unfolding uncurry_def by auto
+
+lemma fst_comp_id[simp]: "fst \<circ> (\<lambda>e. (e, p)) = id" by auto
+
+lemma tri_Un1: "A \<subseteq> B \<union> C \<Longrightarrow> A \<union> B \<subseteq> B \<union> C" by auto
+lemma tri_Un3: "A \<union> A' \<union> A'' \<subseteq> B \<union> C \<Longrightarrow> B \<union> A \<union> A' \<union> A'' \<subseteq> B \<union> C" by auto
+
+lemma A_Int_Un_emp: "A \<inter> (B \<union> C) = {} \<longleftrightarrow> A \<inter> B = {} \<and> A \<inter> C = {}" by auto
+
+lemma bij_inv_Un_triv: "bij \<sigma> \<Longrightarrow> \<sigma> ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv \<sigma> ` B = {}"
+  by (metis bij_def empty_is_image image_Int image_inv_f_f surj_imp_inj_inv)
+
+lemma bij_in_inv_Un_triv: "bij \<sigma> \<Longrightarrow> inv \<sigma> a \<in> B \<longleftrightarrow> a \<in> \<sigma> ` B"
+  by (metis bij_inv_eq_iff imageE image_eqI)
+
+lemma incl_Un_triv3: "A1 \<union> A2 \<union> A3 \<subseteq> A \<Longrightarrow> A1 \<subseteq> A \<and> A2 \<subseteq> A \<and> A3 \<subseteq> A" by auto
+
+lemma incl_Un3_triv3: "A1 \<subseteq> B1 \<Longrightarrow> A2 \<subseteq> B2 \<union> P \<Longrightarrow> A3 \<subseteq> B3 \<union> P \<Longrightarrow> A1 \<union> A2 \<union> A3 \<subseteq> B1 \<union> B2 \<union> B3 \<union> P" 
+by auto
+
+lemma triv_Un4_remove: "A1 \<union> A2 \<union> A3 \<subseteq> B1 \<union> B2 \<union> B3 \<union> P \<Longrightarrow> A1 \<union> A2 \<union> A3 \<union> P \<subseteq> B1 \<union> B2 \<union> B3 \<union> P"
+by auto
+
+definition small :: "('a::var \<Rightarrow> 'a) \<Rightarrow> bool" where 
 "small \<sigma> \<equiv> countable (supp \<sigma>)" 
 
-lemma supp_id[simp,intro]: "supp id = {}" unfolding supp_def by auto
+declare supp_id[simp,intro] (*: "supp id = {}" unfolding supp_def by auto *)
 lemma small_id[simp,intro]: "small id" unfolding small_def by auto
 lemma supp_id'[simp,intro]: "supp (\<lambda>a. a) = {}" unfolding supp_def by auto
 lemma small_id'[simp,intro]: "small (\<lambda>a. a)" unfolding small_def by auto
 
-lemma supp_o: "supp (\<sigma> o \<tau>) \<subseteq> supp \<sigma> \<union> supp \<tau>" unfolding supp_def by auto
+thm supp_o
+(* lemma supp_o: "supp (\<sigma> o \<tau>) \<subseteq> supp \<sigma> \<union> supp \<tau>" unfolding supp_def by auto *)
 lemma small_o[simp]: "small \<sigma> \<Longrightarrow> small \<tau> \<Longrightarrow> small (\<sigma> o \<tau>)" 
 unfolding small_def using supp_o by (metis countable_Un_iff countable_subset)
 
@@ -126,18 +131,19 @@ unfolding supp_def by (metis bij_inv_eq_iff)
 lemma small_inv[simp]: "bij \<sigma> \<Longrightarrow> small (inv \<sigma>) \<longleftrightarrow> small \<sigma>" 
 unfolding small_def by (metis bij_betw_inv_into inv_inv_eq small_def supp_inv)
 
-declare bij_id[intro]
+(* declare bij_id[intro] *)
 lemmas bij_id'[simp,intro]=bij_id[unfolded id_def]
-declare bij_comp[simp]
-declare bij_imp_bij_inv[simp]
-find_theorems bij "_ o inv _"
-lemma bij_inv_id1[simp]: "bij f \<Longrightarrow> f o inv f = id" unfolding fun_eq_iff 
-  by (simp add: bij_def surj_iff)
-lemma bij_inv_id2[simp]: "bij f \<Longrightarrow> inv f o f = id" unfolding fun_eq_iff 
-by (simp add: bij_def surj_iff)
+(* declare bij_comp[simp] *)
+(* declare bij_imp_bij_inv[simp] *)
+
+lemmas bij_inv_id1 = inv_o_simp2 (* [simp] *) (* : "bij f \<Longrightarrow> f o inv f = id" unfolding fun_eq_iff *)
+ (*  by (simp add: bij_def surj_iff) *)
+lemmas bij_inv_id2 = inv_o_simp1 
+(*[simp]: "bij f \<Longrightarrow> inv f o f = id" unfolding fun_eq_iff 
+by (simp add: bij_def surj_iff) *)
 
 (* nominal-like structures: *)
-definition nom :: "((var \<Rightarrow> var) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> var set) \<Rightarrow> bool" where 
+definition nom :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> 'a set) \<Rightarrow> bool" where 
 "nom perm Vrs \<equiv> 
  perm id = id 
  \<and> 
@@ -154,13 +160,13 @@ definition nom :: "((var \<Rightarrow> var) \<Rightarrow> 'E \<Rightarrow> 'E) \
 
 (*****)
 
-typedecl ('x1, 'x2) G
-consts Gren :: "(var \<Rightarrow> var) \<Rightarrow> (var \<Rightarrow> var) \<Rightarrow> ('x1, 'x2) G \<Rightarrow> ('x1, 'x2) G"
-consts GVrs1 :: "('x1, 'x2) G \<Rightarrow> var set"
-consts GVrs2 :: "('x1, 'x2) G \<Rightarrow> var set"
-consts Gmap :: "('x1 \<Rightarrow> 'x1') \<Rightarrow> ('x2 \<Rightarrow> 'x2') \<Rightarrow> ('x1, 'x2) G \<Rightarrow> ('x1', 'x2') G"
-consts GSupp1 :: "('x1, 'x2) G \<Rightarrow> 'x1 set"
-consts GSupp2 :: "('x1, 'x2) G \<Rightarrow> 'x2 set"
+typedecl ('a1, 'a2, 'c1, 'c2) G
+consts Gren :: "('a1::var \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G"
+consts GVrs1 :: "('a1::var, 'a2::var, 'c1, 'c2) G \<Rightarrow> 'a1 set"
+consts GVrs2 :: "('a1::var, 'a2::var, 'c1, 'c2) G \<Rightarrow> 'a2 set"
+consts Gmap :: "('c1 \<Rightarrow> 'c1') \<Rightarrow> ('c2 \<Rightarrow> 'c2') \<Rightarrow> ('a1::var, 'a2::var, 'c1, 'c2) G \<Rightarrow> ('a1, 'a2, 'c1', 'c2') G"
+consts GSupp1 :: "('a1, 'a2, 'c1, 'c2) G \<Rightarrow> 'c1 set"
+consts GSupp2 :: "('a1, 'a2, 'c1, 'c2) G \<Rightarrow> 'c2 set"
 
 axiomatization where 
 Gmap_id[simp]: "Gmap id id = id"
@@ -226,11 +232,11 @@ apply(rule sym) apply(subst snd_single_Gmap[symmetric, of _ p])
     by (meson Gmap_cong case_prod_beta) .
 
 (* *)
-typedecl E
+typedecl 'a E
 
-consts Ector :: "(E,E) G \<Rightarrow> E"
-consts Eperm :: "(var \<Rightarrow> var) \<Rightarrow> E \<Rightarrow> E"
-consts EVrs :: "E \<Rightarrow> var set"
+consts Ector :: "('a, 'a, ('a::var) E,'a E) G \<Rightarrow> 'a E"
+consts Eperm :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
+consts EVrs :: "('a::var) E \<Rightarrow> 'a set"
 
 axiomatization where Ector_surj_fresh: "\<And>e A. countable A \<Longrightarrow> \<exists>u. Ector u = e \<and> GVrs2 u \<inter> A = {}"
 (* Corresponds to ctorPermM *)
@@ -245,11 +251,11 @@ and EVrs_Ector: "\<And>u. EVrs (Ector u) =
 and (* Next three correspond to nom *)
 Eperm_id[simp]: "Eperm id = id"
 and 
-Eperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+Eperm_comp: "\<And>e \<sigma>1 \<sigma>2 p. small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
     Eperm (\<sigma>1 \<circ> \<sigma>2) e = Eperm \<sigma>1 (Eperm \<sigma>2 p)"
 and 
 Eperm_cong: 
-"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+"\<And>e \<sigma>1 \<sigma>2. small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
  (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Eperm \<sigma>1 e = Eperm \<sigma>2 e"
 and 
 Ector_eq_imp: 
@@ -279,10 +285,10 @@ lemma Eperm_inv_iff: "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrighta
 lemma nom: "nom Eperm EVrs"
   unfolding nom_def apply safe 
   apply simp
-  subgoal using Eperm_comp by auto 
+  subgoal using Eperm_comp by fastforce
   subgoal using Eperm_cong by blast .
 
-definition Edtor :: "E \<Rightarrow> ((E,E) G) set" where 
+definition Edtor :: "('a::var) E \<Rightarrow> (('a, 'a, 'a E,'a E) G) set" where 
 "Edtor e = {u . Ector u = e}"
 
 
@@ -305,44 +311,45 @@ sorry
 (****)
 (* Parameters *)
 
-typedecl P 
-consts Pperm :: "(var \<Rightarrow> var) \<Rightarrow> P \<Rightarrow> P" 
-consts PVrs :: "P \<Rightarrow> var set"
+typedecl 'a P 
+consts Pperm :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a P \<Rightarrow> 'a P" 
+consts PVrs :: "('a::var) P \<Rightarrow> 'a set"
 axiomatization where nomP: "nom Pperm PVrs"
 and countable_PVrs: "\<And>p. countable (PVrs p)"
-and PVrs_Pperm: "\<And> \<sigma> p. bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> u) = \<sigma> ` PVrs u"
+and PVrs_Pperm: "\<And> \<sigma> p u. bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> u) = \<sigma> ` PVrs u"
 
 lemma Pperm_id[simp]: "Pperm id = id" 
 using nomP[unfolded nom_def] by auto
 
 lemma Pperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
 Pperm \<sigma>1 (Pperm \<sigma>2 p) = Pperm (\<sigma>1 \<circ> \<sigma>2) p"
-using nomP[unfolded nom_def] by auto
+using nomP[unfolded nom_def] by force
 
 lemma Pperm_cong: 
 "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
  (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Pperm \<sigma>1 p = Pperm \<sigma>2 p"
-  using nomP[unfolded nom_def] by auto
+  using nomP[unfolded nom_def] by force
 
 lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> countable (PVrs p \<union> inv \<sigma> ` PVrs p)"
   by (simp add: countable_PVrs)
 
-definition lift :: "((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> (P\<Rightarrow>'E') \<Rightarrow> (P=>'E'))" where 
+definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('a P\<Rightarrow>'E') \<Rightarrow> ('a P\<Rightarrow>'E'))" where 
 "lift perm \<sigma> pe p \<equiv> perm \<sigma> (pe (Pperm (inv \<sigma>) p))"
 
 lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm \<sigma> o (\<lambda>e p. e)"
   unfolding fun_eq_iff o_def lift_def by simp
 
-definition ctorPermM :: "((P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P \<Rightarrow>'E') \<Rightarrow> ((var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E') 
-\<Rightarrow> (P\<Rightarrow>'E',P\<Rightarrow>'E') G
+definition ctorPermM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow>'E') \<Rightarrow> 
+ (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+\<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
 \<Rightarrow> bool" where 
 "ctorPermM ctor perm u \<equiv> 
 (\<forall>\<sigma> p. small \<sigma> \<and> bij \<sigma>  \<longrightarrow> 
        perm \<sigma> (ctor u p) = 
        ctor (Gren \<sigma> \<sigma> (Gmap (lift perm \<sigma>) (lift perm \<sigma>) u)) (Pperm \<sigma> p))"
 
-definition ctorVarsM :: "((P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P\<Rightarrow>'E') \<Rightarrow> ('E' \<Rightarrow> var set) 
-\<Rightarrow> (P\<Rightarrow>'E',P\<Rightarrow>'E') G
+definition ctorVarsM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> ('E' \<Rightarrow> 'a set) 
+\<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
 \<Rightarrow> bool" where 
 "ctorVarsM ctor Vrs u \<equiv> 
 \<forall>p. Vrs (ctor u p) \<subseteq> PVrs p \<union> 

@@ -5,16 +5,16 @@ begin
 
 (* Iteration dynamic-Barendregt-enriched model (full-recursion not needed): *)
 locale Model =
-fixes Ector' :: "(P\<Rightarrow>'E',P\<Rightarrow>'E') G \<Rightarrow> P \<Rightarrow> 'E'" 
-and Eperm' :: "(var \<Rightarrow> var) \<Rightarrow> 'E' \<Rightarrow> 'E'" 
-and EVrs' ::"'E' \<Rightarrow> var set" 
+fixes Ector' :: "('a, 'a, 'a::var P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow> 'E'" 
+and Eperm' :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E'" 
+and EVrs' ::"'E' \<Rightarrow> 'a::var set" 
 assumes nom: "nom Eperm' EVrs'"
 and ctorPermM: "\<And>u. ctorPermM Ector' Eperm' u"
 and ctorVarsM: "\<And>u. ctorVarsM Ector' EVrs' u"
 begin 
 
 
-definition rec :: "E \<Rightarrow> P\<Rightarrow>'E'" where 
+definition rec :: "'a E \<Rightarrow> 'a P\<Rightarrow>'E'" where 
 "rec = undefined"
 
 lemma rec_Ector:

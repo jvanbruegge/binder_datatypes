@@ -10,7 +10,7 @@ from comodels gives rise to a *recursion* principle for bimodels
 context Bimodel 
 begin 
 
-fun Edtor1' :: "E'\<times>P \<Rightarrow> ((E'\<times>P,E'\<times>P)G) set" where 
+fun Edtor1' :: "'a E'\<times>'a P \<Rightarrow> (('a::var,'a,'a E'\<times>'a P,'a E'\<times>'a P)G) set" where 
 "Edtor1' (e,p) =
 \<Union> { {u1 . Ector (Gmap fst fst u1) = Ector1' u p \<and> 
           GSupp1 (Gmap snd snd u1) \<union>  GSupp2 (Gmap snd snd u1) \<subseteq> {p} \<and> 
@@ -34,7 +34,7 @@ shows "u1 \<in> Edtor1' (Ector u,p) \<longleftrightarrow>
    GSupp1 (Gmap snd snd u1) \<union> GSupp2 (Gmap snd snd u1) \<subseteq> {p} \<and> 
    GVrs2 u1 \<inter> PVrs p = {})"
 proof-
-  define v where v: "v \<equiv> Gmap (\<lambda>e (p::P). e) (\<lambda>e (p::P). e) u"
+  define v where v: "v \<equiv> Gmap (\<lambda>e (p::'a P). e) (\<lambda>e (p::'a P). e) u"
   have u: "u = Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) v"
   unfolding v Gmap_comp o_def by simp
   show ?thesis using assms apply(subst u)  
@@ -50,7 +50,7 @@ shows "Edtor1' (Ector u,p) =
         GVrs2 u1 \<inter> PVrs p = {}}"
 using in_Edtor1'_Ector[OF assms] by auto
 
-fun Edtor' :: "E'\<times>P \<Rightarrow> ((E'\<times>P,E'\<times>P)G)set + E" where 
+fun Edtor' :: "'a E'\<times>'a P \<Rightarrow> (('a::var,'a,'a E'\<times>'a P,'a E'\<times>'a P)G)set + 'a E" where 
 "Edtor' (e,p) = (let u = (SOME u. e = Ector u) in 
   if \<phi> u then Inr (Ector0' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p) else Inl (Edtor1' (e,p)))"
 declare Edtor'.simps[simp del]
@@ -116,7 +116,8 @@ lemma snd_EPerm'[simp]: "snd \<circ> Eperm'' \<sigma> = Pperm \<sigma> o snd"
 unfolding fun_eq_iff by (simp add: Eperm''_def)
 
 lemma Eperm''_id[simp]: "Eperm'' id = id"
-  using Eperm''_def by fastforce 
+  using Eperm''_def  
+  by (metis Eperm_id Pperm_id apfst_convE eq_id_iff)   
 
 lemma Eperm''_o: 
 "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> Eperm'' (\<sigma>1 \<circ> \<sigma>2) = Eperm'' \<sigma>1 \<circ> Eperm'' \<sigma>2"
@@ -125,7 +126,7 @@ apply(rule ext) apply safe subgoal for e p
 
 lemma Eperm''_comp: 
 "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> Eperm'' \<sigma>1 (Eperm'' \<sigma>2 pe) = Eperm'' (\<sigma>1 \<circ> \<sigma>2) pe"
-using Eperm''_o by auto
+using Eperm''_o by fastforce
 
 lemma Eperm''_cong:
 "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow>

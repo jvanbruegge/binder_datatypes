@@ -879,6 +879,22 @@ next
   then show "regularCard (czero +c s2)" using regularCard_ordIso ordIso_symmetric assms by blast
 qed
 
+lemma cminE:
+  assumes "A <o cmin r1 r2" "Card_order r1" "Card_order r2"
+    and "A <o r1 \<Longrightarrow> A <o r2 \<Longrightarrow> R"
+  shows R
+proof (cases "r1 <o r2")
+  case True
+  then have "cmin r1 r2 =o r1" unfolding cmin_def by (simp add: assms(2) csum_czero1)
+  then show ?thesis using assms(1,4) ordLess_transitive ordLess_ordIso_trans ordIso_ordLess_trans True
+    by blast
+next
+  case False
+  then have "cmin r1 r2 =o r2" unfolding cmin_def by (simp add: assms(3) csum_czero2)
+  then show ?thesis using assms ordLess_ordIso_trans
+    by (metis cmin1 ordLess_ordLeq_trans)
+qed
+
 (*  *)
 
 definition natOf :: "nat list \<Rightarrow> nat" where

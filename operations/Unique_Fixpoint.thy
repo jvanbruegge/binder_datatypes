@@ -80,6 +80,28 @@ axiomatization where
   and EVrs_bd:
   "\<And>x. |EVrs (x :: 'a :: var E)| <o natLeq"
 
+datatype ('a1, 'a2, GGSupp1: 'x1, GGSupp2: 'x2) GG = GG 'a1 'a2 'x1 'x2 | GG0
+  for map: GGmap
+binder_datatype 'a EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds x in t
+
+lemma   
+  fixes P and g :: "'a EE \<Rightarrow> 'a::var EE" and h e
+  assumes "(\<And>e. P e \<Longrightarrow> g e = h e \<or>
+       (\<exists>u. g e = EEctor (GGmap id id g g u) \<and> h e = EEctor (GGmap id id h h u) \<and>
+         (\<forall>e \<in> GGSupp1 u. P e) \<and> (\<forall>e \<in> GGSupp2 u. P e)))"
+  shows "P e \<Longrightarrow> g e = h e"
+  apply (binder_induction e avoiding: "g e" "h e" rule: EE.strong_induct)
+  apply (drule assms)
+  apply (erule disjE)
+   apply assumption
+  apply (erule exE conjE)+
+  apply (auto intro!: exI[of _ id] simp: EE.permute_id0 GG.map_id intro: GG.map_cong)
+  apply (rule GG.map_cong)
+      apply auto
+   apply (drule bspec, assumption)
+  try0
+  thm EE.permute_id
+
 axiomatization where E_coinduct:
   "\<And>P (g :: 'a::var E \<Rightarrow> 'a E) h e. (\<And>e. P e \<Longrightarrow> g e = h e \<or>
        (\<exists>u. g e = Ector (Gmap g g u) \<and> h e = Ector (Gmap h h u) \<and>

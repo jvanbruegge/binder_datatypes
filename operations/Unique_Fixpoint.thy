@@ -81,7 +81,7 @@ axiomatization where
   "\<And>x. |EVrs (x :: 'a :: var E)| <o natLeq"
 
 axiomatization where E_coinduct:
-  "\<And>P g h e. (\<And>e. P e \<Longrightarrow> g e = h e \<or>
+  "\<And>P (g :: 'a::var E \<Rightarrow> 'a E) h e. (\<And>e. P e \<Longrightarrow> g e = h e \<or>
        (\<exists>u. g e = Ector (Gmap g g u) \<and> h e = Ector (Gmap h h u) \<and>
          (\<forall>e \<in> GSupp1 u. P e) \<and> (\<forall>e \<in> GSupp2 u. P e))) \<Longrightarrow>
          P e \<Longrightarrow> g e = h e"

@@ -542,7 +542,8 @@ abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
   "raw_UFVars22 \<equiv> UFVars22"
 
 (* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
-abbreviation "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
+  "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
 
 (* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
 abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
@@ -636,21 +637,37 @@ lemma abs_rep_id:
   apply (rule refl)+
   done
 
-term mr_rel_T1_pre
-term map_T1_pre
-term permute_T1_raw
+(*
 
-lemma DTOR_mapD:
+REPEAT_DETERM o FIRST' [
+  rtac ctxt @{thm ballI} THEN' rtac ctxt refl,
+  rtac ctxt @{thm ballI} THEN' rtac ctxt @{thm ballI} THEN' rtac ctxt @{thm imp_refl},
+  EVERY' [
+    REPEAT_DETERM o resolve_tac ctxt @{thms ballI impI},
+    dtac ctxt @{thm sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2]},
+    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms sum.rel_map comp_def id_apply}),
+    etac ctxt @{thm sum.rel_mono_strong},
+    TRY o EVERY' [
+      EqSubst.eqsubst_asm_tac ctxt [0] (map (#permute_abs o #inner) quots),
+      REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt)
+    ],
+    eresolve_tac ctxt (map (#total_abs_eq_iff o #inner) quots),
+    assume_tac ctxt
+  ]
+]
+
+*)
+
+lemma DTOR_mapD1:
   assumes "valid_U1 d"
   shows "{X,X'} \<subseteq> Utor1 d \<Longrightarrow> \<exists>u v. bij (u::'a\<Rightarrow>'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD11 X) u \<and>
    bij (v::'b\<Rightarrow>'b) \<and> |supp v| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD12 X) v \<and>
-     mr_rel_T1_pre id id id (=) u v id
+     mr_rel_T1_pre id id id (=) u v u
+       (rel_sum alpha_T1 (=))
        (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
-(rel_sum alpha_T1 (=))
-(rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d'))
-(rel_sum alpha_T2 (=))
+       (rel_sum alpha_T2 (=))
+       (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u id t) t') (\<lambda> d d'. raw_Umap2 u id d = d'))
      X X'"
-  thm image_mono[of _ _ "map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id)"]
   apply (drule image_mono[of _ _ "map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id)"])
   apply (unfold image_insert image_empty Utor1_def image_comp)
   apply (subst (asm) T1_pre.map_comp0[symmetric], (rule supp_id_bound bij_id)+)
@@ -667,51 +684,132 @@ lemma DTOR_mapD:
   apply (unfold Grp_OO)
   apply (rule exI)+
   apply (rule conjI[rotated])+
-(* TODO: why 12? *)
-     apply (erule T1_pre.mr_rel_mono_strong0[rotated -12])
-              apply (rule ballI, rule refl)+
+        apply (erule T1_pre.mr_rel_mono_strong0[rotated -12]) (* nargs + 1 *)
+                      apply (unfold0 id_apply)?
     (* REPEAT_DETERM *)
-  apply (unfold id_apply)
-                      apply (rule ballI impI)+
-                      apply assumption
-                      apply (rule ballI refl)+
-  defer
-  thm sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2]
-            apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
-            apply (unfold sum.rel_map comp_def id_apply)[1]
-            apply (erule sum.rel_mono_strong)
-             apply (subst (asm) permute_abs, assumption+)?
-             apply (drule TT_total_abs_eq_iffs[THEN iffD1])
-             apply assumption
-            apply assumption
+                      apply (rule ballI, rule refl)+
+                      apply (rule ballI, rule ballI, rule imp_refl)+
+                      apply (rule ballI, rule refl)+
     (* repeated *)
-           apply (rule ballI impI)+
-           apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
-           apply (unfold sum.rel_map comp_def id_apply)[1]
-           apply (erule sum.rel_mono_strong)
-            apply (subst (asm) permute_abs, assumption+)?
-            apply (drule TT_total_abs_eq_iffs[THEN iffD1])
-            apply assumption
-           apply assumption
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T1.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T1.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold0 sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T1.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T1.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold0 sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T1.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T2.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold0 sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T2.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T2.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
     (* END REPEAT_DETERM *)
-          apply (rule supp_id_bound bij_id | assumption)+
-    apply (unfold raw_UFVarsBD_def raw_UFVars_def2 image_comp[unfolded comp_def] case_sum_map_sum o_id)
-    apply (unfold comp_def)
-                      apply assumption+
-  oops
+                      apply (rule supp_id_bound bij_id | assumption)+
+       apply (unfold raw_UFVars_def2 image_comp[unfolded comp_def] case_sum_map_sum o_id)
+       apply (unfold comp_def)
+       apply assumption+
   done
 
-lemma Utor1_ne:
+lemma DTOR_mapD2:
+  assumes "valid_U2 d"
+  shows "{X,X'} \<subseteq> Utor2 d \<Longrightarrow> \<exists>u v. bij (u::'a\<Rightarrow>'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD21 X) u \<and>
+   bij (v::'b\<Rightarrow>'b) \<and> |supp v| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD22 X) v \<and>
+     mr_rel_T2_pre id id id (=) u v u
+       (rel_sum alpha_T1 (=))
+       (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+       (rel_sum alpha_T2 (=))
+       (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u id t) t') (\<lambda> d d'. raw_Umap2 u id d = d'))
+     X X'"
+  apply (drule image_mono[of _ _ "map_T2_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id)"])
+  apply (unfold image_insert image_empty Utor2_def image_comp)
+  apply (subst (asm) T2_pre.map_comp0[symmetric], (rule supp_id_bound bij_id)+)
+  apply (unfold id_o map_sum.comp abs_rep_id map_sum.id T2_pre.map_id0 image_id)
+  apply (drule alpha_Udtor2[OF assms])
+  apply (erule exE conjE)+
+  apply (subst (asm) T2_pre.set_map T2_pre.map_comp, (rule supp_id_bound bij_id | assumption)+)+
+  apply (unfold image_id id_o o_id map_sum.comp)
+  apply (drule T2_pre.mr_rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+  apply (subst (asm) T2_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
+  apply (unfold id_o o_id)
+  apply (subst (asm) T2_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
+  apply (unfold inv_id id_o o_id relcompp_conversep_Grp)
+  apply (unfold Grp_OO)
+  apply (rule exI)+
+  apply (rule conjI[rotated])+
+        apply (erule T2_pre.mr_rel_mono_strong0[rotated -12]) (* nargs + 1 *)
+                      apply (unfold0 id_apply)?
+    (* REPEAT_DETERM *)
+                      apply (rule ballI, rule refl)+
+                      apply (rule ballI, rule ballI, rule imp_refl)+
+                      apply (rule ballI, rule refl)+
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T1.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T1.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold0 sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T1.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T1.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold0 sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T1.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T2.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* repeated *)
+                      apply (rule ballI impI)+
+                      apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
+                      apply (unfold0 sum.rel_map comp_def id_apply)[1]
+                      apply (erule sum.rel_mono_strong)
+                      apply (subst (asm) T2.permute_abs, (rule bij_id supp_id_bound | assumption)+)?
+                      apply (erule T2.total_abs_eq_iff[THEN iffD1])
+                      apply assumption
+    (* END REPEAT_DETERM *)
+                      apply (rule supp_id_bound bij_id | assumption)+
+       apply (unfold raw_UFVars_def2 image_comp[unfolded comp_def] case_sum_map_sum o_id)
+       apply (unfold comp_def)
+       apply assumption+
+  done
+lemmas DTOR_mapD = DTOR_mapD1 DTOR_mapD2
+
+lemma Utor_ne:
   "valid_U1 d \<Longrightarrow> Utor1 d \<noteq> {}"
-  by (unfold Utor1_def arg_cong[OF image_is_empty, of Not])
-    (erule Udtor_ne)
-
-lemma Utor2_ne:
-  "valid_U2 d \<Longrightarrow> Utor2 d \<noteq> {}"
-  by (unfold Utor2_def arg_cong[OF image_is_empty, of Not])
-    (erule Udtor_ne)
-
-lemmas Utor_ne = Utor1_ne Utor2_ne
+  "valid_U2 d2 \<Longrightarrow> Utor2 d2 \<noteq> {}"
+   apply (unfold Utor1_def arg_cong[OF image_is_empty, of Not])
+   apply (erule Udtor_ne)
+  (* repeated *)
+  apply (unfold Utor2_def arg_cong[OF image_is_empty, of Not])
+  apply (erule Udtor_ne)
+  done
 
 lemma Utor_abs_Udtor1: "X \<in> Utor1 d \<Longrightarrow> map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X \<in> Udtor1 d"
   apply (unfold Utor1_def)
@@ -747,32 +845,45 @@ thm FVars_T1_Udtor[OF _ Utor_abs_Udtor(1)]
 
 lemma raw_UFVars_Utor1:
   assumes "valid_U1 d"
-(* TODO: I wonder if the "12 variant" should also be part of this goal, or rather its own lemma? *)
-  shows "X \<in> Utor1 d \<Longrightarrow> set1_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T1_pre X) \<union> raw_UFVarsBD11 X \<subseteq> raw_UFVars11 d"
-  apply (drule FVars_T1_Udtor[OF assms Utor_abs_Udtor(1)])
+  shows "X \<in> Utor1 d \<Longrightarrow> set1_T1_pre X \<union> (set7_T1_pre X - set5_T1_pre X) \<union> \<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T1_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T1_pre X) - set5_T1_pre X)
+ \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T1_pre X) - set5_T1_pre X) \<subseteq> raw_UFVars11 d"
+"X \<in> Utor1 d \<Longrightarrow> set2_T1_pre X \<union> \<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T1_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T1_pre X) - set6_T1_pre X)
+ \<union> \<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre X) - set6_T1_pre X) \<subseteq> raw_UFVars12 d"
+  apply (drule FVars_T1_Udtor(1)[OF assms Utor_abs_Udtor(1)])
   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
   apply (unfold FVarsBD_FFVarsBD comp_def)
-(* TODO: how to best rearrange the unions to do this without blast? *) 
-  by blast
-(*
+   apply assumption
+  (* repeated *)
+  apply (drule FVars_T1_Udtor(2)[OF assms Utor_abs_Udtor(1)])
+  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+  apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
+  apply (unfold FVarsBD_FFVarsBD comp_def)
   apply assumption
   done
-*)
 
 lemma raw_UFVars_Utor2:
   assumes "valid_U2 d"
-  shows "X \<in> Utor2 d \<Longrightarrow> set1_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T2_pre X) \<union> raw_UFVarsBD21 X \<subseteq> raw_UFVars21 d"
-  apply (drule FVars_T2_Udtor[OF assms Utor_abs_Udtor(2)])
+  shows "X \<in> Utor2 d \<Longrightarrow> set1_T2_pre X \<union> (set7_T2_pre X - set5_T2_pre X) \<union> \<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T2_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T2_pre X) - set5_T2_pre X)
+ \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T2_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T2_pre X) - set5_T2_pre X) \<subseteq> raw_UFVars21 d"
+"X \<in> Utor2 d \<Longrightarrow> set2_T2_pre X \<union> \<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T2_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T2_pre X) - set6_T2_pre X)
+ \<union> \<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T2_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T2_pre X)) \<subseteq> raw_UFVars22 d"
+  apply (drule FVars_T2_Udtor(1)[OF assms Utor_abs_Udtor(2)])
   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
   apply (unfold FVarsBD_FFVarsBD comp_def)
-(* TODO: how to best rearrange the unions to do this without blast? *) 
-  by blast
-(*
+   apply assumption
+  (* repeated *)
+  apply (drule FVars_T2_Udtor(2)[OF assms Utor_abs_Udtor(2)])
+  apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+  apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
+  apply (unfold FVarsBD_FFVarsBD comp_def)
   apply assumption
   done
-*)
 
 lemmas raw_UFVars_Utor = raw_UFVars_Utor1 raw_UFVars_Utor2
 

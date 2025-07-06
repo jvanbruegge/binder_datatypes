@@ -81,4 +81,9 @@ using assms proof (binder_induction t avoiding: A "imsupp f" "supp f" t rule: te
   then show ?case using imsupp_supp_bound infinite_UNIV by blast
 qed blast+
 
+(* #92 *)
+datatype (GGVrs1: 'a1, GGVrs2: 'a2, GGSupp1: 'x1, GGSupp2: 'x2) GG = GG 'a1 'a2 'x1 'x2 | GG0
+  for map: GGmap
+binder_datatype (EEVrs: 'a) EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds x in t
+
 end

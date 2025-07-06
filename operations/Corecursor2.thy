@@ -887,48 +887,129 @@ lemma raw_UFVars_Utor2:
 
 lemmas raw_UFVars_Utor = raw_UFVars_Utor1 raw_UFVars_Utor2
 
-lemma raw_Umap_Utor:
-  assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
-    and valid_d: "valid_U d"
+term mr_rel_T1_pre
+
+lemma raw_Umap_Utor1:
+  assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+    and v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+    and valid_d: "valid_U1 d"
   shows
     "rel_set
-  (mr_rel_term_pre u u
-     (rel_sum (\<lambda> t t'. alpha_term (permute_raw_term u t) t') (\<lambda> d d'. raw_Umap u d = d'))
-     (rel_sum (\<lambda> t t'. alpha_term (permute_raw_term u t) t') (\<lambda> d d'. raw_Umap u d = d')))
- (Utor d)
- (Utor (raw_Umap u d))"
-  apply (unfold Utor_def)
-  apply (subst Umap_Udtor_strong[OF u, of d])
+  (mr_rel_T1_pre u v id (=) u v u
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d')))
+ (Utor1 d)
+ (Utor1 (raw_Umap1 u v d))"
+  apply (unfold Utor1_def)
+  apply (subst Umap_Udtor_strong(1)[OF u v, of d])
   apply (rule valid_d)
   apply (subst image_comp)
-  apply (subst term_pre.map_comp0[symmetric])
+  apply (subst T1_pre.map_comp0[symmetric])
       apply (rule assms supp_id_bound bij_id)+
   apply (subst map_sum.comp)+
   apply (subst id_o)+
   apply (subst rel_set_image)+
   apply (rule rel_set_reflI)
-  apply (subst term_pre.mr_rel_map)
-      apply (rule supp_id_bound bij_id u)+
+  apply (subst T1_pre.mr_rel_map)
+      apply (rule supp_id_bound bij_id u v)+
   apply (subst o_id)+
-  apply (subst term_pre.mr_rel_map | rule u)+
-  apply (subst inv_o_simp1 | rule u)+
-  apply (unfold relcompp_conversep_Grp Grp_OO term_pre.mr_rel_id[symmetric])
+  apply (subst T1_pre.mr_rel_map | rule u v supp_id_bound bij_id)+
+  apply (subst inv_o_simp1 | rule u v bij_id)+
+  apply (unfold relcompp_conversep_Grp Grp_OO T1_pre.mr_rel_id[symmetric])
   apply (subst sum.rel_map)+
-  apply (unfold permute_term_def)
-  apply (rule term_pre.rel_refl)
+  apply (unfold permute_T1_def permute_T2_def)
+  apply (rule T1_pre.rel_refl)
+  apply (rule refl)
     (* REPEAT *)
    apply (rule sum.rel_refl)
-    apply (subst comp_apply)
-    apply (rule TT_rep_abs_syms)
+      apply (subst comp_apply)
+    apply (rule T1.rep_abs_sym)
    apply (subst id_apply)
    apply (rule refl)
-    (* REPEAT *)
-  apply (rule sum.rel_refl)
-   apply (subst comp_apply)
-   apply (rule TT_rep_abs_syms)
-  apply (subst id_apply)
+    (* repeated *)
+   apply (rule sum.rel_refl)
+     apply (subst comp_apply)
+    apply (rule T1.rep_abs_sym)
+   apply (subst id_apply)
+    apply (rule refl)
+    (* repeated *)
+   apply (rule sum.rel_refl)
+    apply (subst comp_apply)
+    apply (rule T2.rep_abs_sym)
+   apply (subst id_apply)
+   apply (rule refl)
+    (* repeated *)
+   apply (rule sum.rel_refl)
+    apply (subst comp_apply)
+    apply (rule T2.rep_abs_sym)
+   apply (subst id_apply)
   apply (rule refl)
+(* END REPEAT *)
   done
+
+lemma raw_Umap_Utor2:
+  assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+    and v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+    and valid_d: "valid_U2 d"
+  shows
+    "rel_set
+  (mr_rel_T2_pre u v id (=) u v u
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d')))
+ (Utor2 d)
+ (Utor2 (raw_Umap2 u v d))"
+  apply (unfold Utor2_def)
+  apply (subst Umap_Udtor_strong(2)[OF u v, of d])
+  apply (rule valid_d)
+  apply (subst image_comp)
+  apply (subst T2_pre.map_comp0[symmetric])
+      apply (rule assms supp_id_bound bij_id)+
+  apply (subst map_sum.comp)+
+  apply (subst id_o)+
+  apply (subst rel_set_image)+
+  apply (rule rel_set_reflI)
+  apply (subst T2_pre.mr_rel_map)
+      apply (rule supp_id_bound bij_id u v)+
+  apply (subst o_id)+
+  apply (subst T2_pre.mr_rel_map | rule u v supp_id_bound bij_id)+
+  apply (subst inv_o_simp1 | rule u v bij_id)+
+  apply (unfold relcompp_conversep_Grp Grp_OO T2_pre.mr_rel_id[symmetric])
+  apply (subst sum.rel_map)+
+  apply (unfold permute_T1_def permute_T2_def)
+  apply (rule T2_pre.rel_refl)
+  apply (rule refl)
+    (* REPEAT *)
+   apply (rule sum.rel_refl)
+      apply (subst comp_apply)
+    apply (rule T1.rep_abs_sym)
+   apply (subst id_apply)
+   apply (rule refl)
+    (* repeated *)
+   apply (rule sum.rel_refl)
+     apply (subst comp_apply)
+    apply (rule T1.rep_abs_sym)
+   apply (subst id_apply)
+    apply (rule refl)
+    (* repeated *)
+   apply (rule sum.rel_refl)
+    apply (subst comp_apply)
+    apply (rule T2.rep_abs_sym)
+   apply (subst id_apply)
+   apply (rule refl)
+    (* repeated *)
+   apply (rule sum.rel_refl)
+    apply (subst comp_apply)
+    apply (rule T2.rep_abs_sym)
+   apply (subst id_apply)
+  apply (rule refl)
+(* END REPEAT *)
+  done
+
+lemmas raw_Umap_Utor = raw_Umap_Utor1 raw_Umap_Utor2
 
 definition suitable ::  "('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> bool" where
   "suitable pick \<equiv> \<forall> d. valid_U d \<longrightarrow> pick d \<in> Utor d"

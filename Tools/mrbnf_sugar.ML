@@ -597,12 +597,31 @@ fun create_binder_datatype (spec : spec) lthy =
     val injects = @{map_filter 2} (fn ((ctor, ctor_def), tys) => fn setss => if null tys then NONE else
       let
         val bound_tys = inter (op=) bounds (rev (map TFree (fold Term.add_tfreesT tys [])));
+        val bfree_tys = inter (op=) bfrees (rev (map TFree (fold Term.add_tfreesT tys [])));
+        val ((bound_tys', bfree_tys'), _) = lthy
+          |> fold Variable.declare_typ (map fst replace @ map snd replace)
+          |> mk_TFrees' (replicate (length bound_tys) (MRBNF_Def.class_of_mrbnf mrbnf))
+          ||>> mk_TFrees' (replicate (length bfree_tys) (MRBNF_Def.class_of_mrbnf mrbnf));
+
         val tys' = map (Term.typ_subst_atomic replace) tys;
-        val (((xs, ys), fs), _) = names_lthy
+        val (((xs, ys), fs'), _) = names_lthy
           |> mk_Frees "x" tys'
           ||>> mk_Frees "y" tys'
-          ||>> mk_Frees "f" (map (fn a => a --> a) (map (Term.typ_subst_atomic replace) bound_tys));
+          ||>> mk_Frees "f" (map (fn a => a --> a) bound_tys');
 
+        val replace = map (fn (a, b) => if member (op=) bfrees a then
+          (a, resort_tfree_or_tvar (MRBNF_Def.class_of_mrbnf mrbnf) (
+            Term.typ_subst_atomic (bound_tys ~~ bound_tys') (
+              Term.typ_subst_atomic (map swap (filter (member (op=) bounds o fst) replace)) b
+            )
+          )) else (a, b)
+        ) replace;
+
+        val fresh_subst = (bound_tys ~~ bound_tys') @ (bfree_tys ~~ bfree_tys');
+        val replace = map (map_prod (Term.typ_subst_atomic fresh_subst) I) replace;
+        val tys = map (Term.typ_subst_atomic fresh_subst) tys;
+
+        val fs = map (Term.subst_atomic_types replace) fs';
         val sets = if null bound_tys then [] else map (fn f =>
           the (List.find (fn t => HOLogic.dest_setT (fastype_of t) = body_type (fastype_of f))
             (maps (filter (fn t => case t of
@@ -613,16 +632,18 @@ fun create_binder_datatype (spec : spec) lthy =
         ) fs;
         val id_ons = map2 mk_id_on sets fs;
 
-        val rec_non_bound = subtract (op=) rec_bounds rec_vars;
-        val replace' = filter_out (member (op=) rec_non_bound o fst) replace;
+        val (breplace, replace') = partition (member (op=) (rec_bounds @ bound_tys') o fst) replace;
+        val replace'' = replace' @ map (fn a => (a,
+          Term.typ_subst_atomic (map swap breplace) (Term.typ_subst_atomic replace a)
+        )) rec_bounds;
 
         val (mr_bnfs, permutes) = split_list (map (fn T =>
           let val tfrees = map TFree (Term.add_tfreesT T []);
-          in if null (inter (op=) (bounds @ rec_bounds @ bfrees) tfrees) then (NONE, NONE) else map_prod SOME SOME (
-            build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (Term.typ_subst_atomic replace' T)
+          in if null (inter (op=) (bound_tys' @ rec_bounds @ bfree_tys') tfrees) then (NONE, NONE) else map_prod SOME SOME (
+            build_permute_for lthy fs' bound_tys' (Term.typ_subst_atomic replace'' T)
           ) end
         ) tys);
-        val permutes = map (Option.map (Term.subst_atomic_types (filter (member (op=) rec_non_bound o fst) replace))) permutes;
+        val permutes = map (Option.map (Term.subst_atomic_types breplace)) permutes;
         val mr_bnfs = Library.distinct ((op=) o apply2 fst) (flat (map_filter I mr_bnfs));
 
         val vvsubst_permutes = map_filter (Option.map #vvsubst_permute o MRBNF_VVSubst.vvsubst_result_of lthy o fst) mr_bnfs;
@@ -725,7 +746,7 @@ fun create_binder_datatype (spec : spec) lthy =
         ]);
 
         val binder_xs = @{map_filter 3} (fn T => fn x => fn y =>
-          Option.map (fn b => (b, (x, y))) (List.find (curry (op=) T) bounds)
+          Option.map (fn b => (b, (x, y))) (List.find (curry (op=) T) bound_tys')
         ) tys xs ys;
 
         fun mk_swap (x, y) =
@@ -738,8 +759,8 @@ fun create_binder_datatype (spec : spec) lthy =
               if member (op=) (map (fst o snd) binder_xs) x then NONE else SOME (x, (y, T))
             ) xs ys tys));
             val (mr_bnfs, permutes) = split_list (map2 (fn x => fn T =>
-              if null (inter (op=) (bounds @ rec_bounds @ bfrees) (map TFree (Term.add_tfreesT T []))) then (NONE, NONE)
-              else map_prod SOME SOME (build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (fastype_of x))
+              if null (inter (op=) (bound_tys' @ rec_bounds @ bfree_tys') (map TFree (Term.add_tfreesT T []))) then (NONE, NONE)
+              else map_prod SOME SOME (build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys') (fastype_of x))
             ) xs' Ts');
             val mr_bnfs = map_filter I mr_bnfs;
             val id_on_sets = map_filter (fn id_on =>
@@ -980,6 +1001,10 @@ fun create_binder_datatype (spec : spec) lthy =
 
           val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (map snd (#binding_rel spec)))) rec_vars;
           val free_sets = map (map (Term.subst_atomic_types replace)) (mk_sets frees free_rec_vars (SOME (#FVarss quotient)));
+
+          fun dest_Union (Const (@{const_name sup}, _) $ t1 $ t2) = dest_Union t1 @ [t2]
+            | dest_Union t = [t];
+          val free_sets = map (maps dest_Union) free_sets
 
           val bound_sets' = map (map (Term.subst_atomic_types replace)) bound_sets;
 

@@ -389,7 +389,6 @@ lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
 lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
   by auto
 
-
 lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
   by (auto simp: rel_set_def)
 
@@ -412,6 +411,9 @@ lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Lon
   apply (erule impE, assumption)+
   apply ((rule conjI)?, assumption)+
   done
+
+lemma Un_boundD: "|A \<union> B| <o r \<Longrightarrow> |A| <o r \<and> |B| <o r"
+  using card_of_Un1 card_of_Un2 ordLeq_ordLess_trans by blast
 
 lemma type_copy_Rep_o_Abs_o: "type_definition Rep Abs UNIV \<Longrightarrow> Rep \<circ> (Abs \<circ> f) = f"
   by (metis comp_assoc fun.map_id type_copy_Rep_o_Abs)

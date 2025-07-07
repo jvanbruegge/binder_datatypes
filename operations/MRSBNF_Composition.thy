@@ -9,7 +9,7 @@ consts rel_T1 :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('d \<
 consts map_T2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b => 'b) => ('d \<Rightarrow> 'd) \<Rightarrow> ('a, 'b, 'c, 'd) T2 \<Rightarrow> ('a, 'b, 'c, 'd) T2"
 consts set_1_T2 :: "('a, 'b, 'c, 'd) T2 \<Rightarrow> 'a set"
 
-consts map_T3 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('c \<Rightarrow> 'c) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('f \<Rightarrow> 'f') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) T3 \<Rightarrow> ('a, 'b, 'c, 'd', 'e, 'f') T3"
+consts map_T3 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('c \<Rightarrow> 'c) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e \<Rightarrow> 'e) \<Rightarrow> ('f \<Rightarrow> 'f') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) T3 \<Rightarrow> ('a, 'b, 'c, 'd', 'e, 'f') T3"
 consts set_a_T3 :: "('a, 'b, 'c, 'd, 'e, 'f) T3 \<Rightarrow> 'a set"
 consts rel_T3 :: "('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('f \<Rightarrow> 'f' \<Rightarrow> bool) \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) T3 \<Rightarrow> ('a, 'b, 'c, 'd', 'e, 'f') T3 \<Rightarrow> bool"
 
@@ -47,7 +47,8 @@ mrbnf "('a, 'b, 'c, 'd, 'e, 'f) T3"
     free: Vrs_3_T3
     free: Vrs_4_T3
     live: set_1_T3
-    live: set_2_T3
+    bound: set_2_T3
+    live: set_3_T3
   bd: natLeq
   rel: rel_T3
                    apply (tactic \<open>Skip_Proof.cheat_tac @{context} 1\<close>)+
@@ -57,7 +58,7 @@ local_setup \<open>fn lthy =>
 let
   open MRBNF_Def
   val (mrbnf, (_, lthy)) = MRBNF_Comp.demote_mrbnf I
-    [Free_Var, Bound_Var, Free_Var, Free_Var, Live_Var]
+    [Free_Var, Free_Var, Free_Var, Free_Var, Bound_Var, Live_Var]
     (the (MRBNF_Def.mrbnf_of lthy @{type_name T3}))
     ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy)
   val lthy = MRBNF_Def.register_mrbnf_raw "MRSBNF_Composition.T3'" mrbnf lthy
@@ -97,9 +98,9 @@ let
       the (MRBNF_Def.mrbnf_of lthy "MRSBNF_Composition.T3'")
     ] [@{typ 'f}] [
       [@{typ 'e}],
-      [@{typ "'g::var set"}],
+      [@{typ "'f set"}],
       [@{typ 'e}]
-    ] [NONE, SOME @{typ "'b"}, SOME @{typ "'c"}, NONE, NONE, SOME @{typ "'g::var"}] [
+    ] [NONE, SOME @{typ "'b"}, SOME @{typ "'c"}, NONE, NONE, SOME @{typ "'g"}] [
       [@{typ 'a}, @{typ 'b}, @{typ 'd}],
       [],
       [@{typ 'b}, @{typ 'a}, @{typ 'c}, @{typ 'd}, @{typ 'h}]
@@ -118,6 +119,8 @@ let
   val lthy = MRBNF_Def.register_mrbnf_raw "MRSBNF_Composition.T'" mrbnf lthy;
 in lthy end
 \<close>
+
+print_pbmv_monads
 
 mrsbnf T: "('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) T" and "('a, 'b, 'e, 'd) T2" and T3': "('b, 'a, 'c, 'd, 'e, 'h) T3" and "('a, 'c) T4"
                     apply (unfold comp_defs)

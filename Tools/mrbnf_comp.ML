@@ -511,8 +511,10 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
           ) |> Thm.close_derivation \<^here> end;
       in ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
 
+    val _ = @{print} (binding, qualify binding)
+
     val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME class_thms)
-              Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
+              Binding.empty Binding.empty Binding.empty [] (((((((qualify binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
 
     val phi =
       Morphism.thm_morphism "MRBNF" (unfold_thms lthy' [id_mrbnf_def])

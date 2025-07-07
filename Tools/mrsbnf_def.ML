@@ -13,7 +13,6 @@ signature MRSBNF_DEF = sig
     SSupp_map_subset: thm option list,
     SSupp_map_bound: thm option list,
     map_Inj: thm option list,
-    Sb_comp_right: thm,
     map_Sb_strong: thm,
     Map_map: thm option,
     set_Injs: thm list list
@@ -86,19 +85,17 @@ type mrsbnf_facts = {
   SSupp_map_subset: thm option list,
   SSupp_map_bound: thm option list,
   map_Inj: thm option list,
-  Sb_comp_right: thm,
   map_Sb_strong: thm,
   Map_map: thm option,
   set_Injs: thm list list
 }
 
 fun morph_mrsbnf_facts phi ({
-    SSupp_map_subset, SSupp_map_bound, map_Inj, Sb_comp_right, map_Sb_strong, Map_map, set_Injs
+    SSupp_map_subset, SSupp_map_bound, map_Inj, map_Sb_strong, Map_map, set_Injs
 }: mrsbnf_facts) = {
   SSupp_map_subset = map (Option.map (Morphism.thm phi)) SSupp_map_subset,
   SSupp_map_bound = map (Option.map (Morphism.thm phi)) SSupp_map_bound,
   map_Inj = map (Option.map (Morphism.thm phi)) map_Inj,
-  Sb_comp_right = Morphism.thm phi Sb_comp_right,
   map_Sb_strong = Morphism.thm phi map_Sb_strong,
   Map_map = Option.map (Morphism.thm phi) Map_map,
   set_Injs = map (map (Morphism.thm phi)) set_Injs
@@ -163,7 +160,6 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
          ("SSupp_map_bound", maps (map_filter I o #SSupp_map_bound) facts, []),
          ("map_Inj_raw", maps (the_default [] o #map_Injs) axioms, []),
          ("map_Inj", maps (map_filter I o #map_Inj) facts, []),
-         ("Sb_comp_right", map #Sb_comp_right facts, []),
          ("map_Sb_strong", map #map_Sb_strong facts, []),
          ("Map_map", map_filter #Map_map facts, []),
          ("set_Inj", flat (maps #set_Injs facts), [])
@@ -186,7 +182,7 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
     );
 
     val names = map (fst o dest_Free);
-    val facts' = @{map 11} (fn lives => fn lives' => fn axioms => fn mrbnf => fn bmv_axioms => fn bmv_params => fn bmv_facts => fn Sb => fn Injs => fn RVrs => fn Map_opt =>
+    val facts' = @{map 12} (fn lives => fn lives' => fn axioms => fn mrbnf => fn bmv_axioms => fn bmv_params => fn bmv_facts => fn Sb => fn Injs => fn RVrs => fn Vrs => fn Map_opt =>
       let
         val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
         val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
@@ -220,39 +216,6 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
         val h_fs = map (the o find_f o domain_type o fastype_of) hs;
         val h_fs_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) h_fs;
         val h_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) hs;
-
-        val Sb_comp_right =
-          let
-            val fs' = map (the o find_f o domain_type o fastype_of) gs;
-            val f'_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) fs';
-            val goal = Term.subst_atomic_types (As' ~~ As) (mk_Trueprop_eq (
-              Term.list_comb (Sb, map2 (curry HOLogic.mk_comp) (hs @ gs) (h_fs @ fs')),
-              HOLogic.mk_comp (
-                Term.list_comb (Sb, hs @ gs),
-                Term.list_comb (mapx, map (fn T => case List.find (fn f => (domain_type T) = domain_type (fastype_of f)) (h_fs @ fs') of
-                  SOME f => f | NONE => HOLogic.id_const (domain_type T)
-                ) (fst (split_last (binder_types (fastype_of mapx)))))
-              )
-            ));
-          in Goal.prove_sorry lthy (names (distinct (op=) (h_fs @ fs' @ hs @ gs))) (distinct (op=) (h_fs_prems @ f'_prems @ h_prems @ g_prems)) goal (fn {context=ctxt, prems} => EVERY1 [
-            EqSubst.eqsubst_tac ctxt [0] [#map_is_Sb axioms],
-            REPEAT_DETERM o resolve_tac ctxt prems,
-            K (Local_Defs.unfold0_tac ctxt (@{thms o_id}
-              @ the_default [] (Option.map (single o #Map_id o #axioms) bmv_params)
-            )),
-            TRY o EVERY' [
-              rtac ctxt sym,
-              rtac ctxt trans,
-              rtac ctxt (#Sb_comp bmv_axioms),
-              REPEAT_DETERM o resolve_tac ctxt (@{thms SSupp_comp_bound SSupp_Inj_bound infinite_class.infinite_UNIV} @ prems),
-              K (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
-              REPEAT_DETERM o EVERY' [
-                EqSubst.eqsubst_tac ctxt [0] (maps #Sb_comp_Injs (BMV_Monad_Def.axioms_of_bmv_monad bmv)),
-                REPEAT_DETERM o resolve_tac ctxt prems
-              ]
-            ],
-            rtac ctxt refl
-          ]) end;
 
         val map_Inj = map (fn Inj => if body_type (fastype_of Inj) <> T then NONE else
           let
@@ -294,7 +257,10 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
             ],
             rtac ctxt trans,
             resolve_tac ctxt (map (fn thm => @{thm trans[OF comp_apply[symmetric]]} OF [thm RS fun_cong]) (#Sb_comp_Injs bmv_axioms)),
-            REPEAT_DETERM o resolve_tac ctxt (@{thms SSupp_comp_bound SSupp_Inj_bound infinite_class.infinite_UNIV} @ prems),
+            REPEAT_DETERM o resolve_tac ctxt (
+              @{thms SSupp_comp_bound SSupp_Inj_bound infinite_class.infinite_UNIV card_of_Card_order conjI cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound}
+              @ prems @ maps (flat o #Vrs_Injss) (BMV_Monad_Def.axioms_of_bmv_monad bmv)
+            ),
             rtac ctxt @{thm comp_apply}
           ])) end
         ) Injs;
@@ -358,6 +324,171 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
           ]) end
         ) Map_opt;
 
+        val SSupp_naturals = @{map_filter 2} (fn Inj => fn g => if body_type (fastype_of Inj) <> T then NONE else
+          let
+            val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+            val f = the (List.find (curry (op=) (domain_type (fastype_of Inj)) o domain_type o fastype_of) fs);
+            val fs = map2 (fn MRBNF_Def.Live_Var => HOLogic.id_const o domain_type o fastype_of | _ => I) var_types fs;
+            val map_t = Term.list_comb (Term.subst_atomic_types (As' ~~ As) mapx, fs);
+            val goal = mk_Trueprop_eq (
+              mk_SSupp Inj $ (HOLogic.mk_comp (HOLogic.mk_comp (map_t, g), mk_inv f)),
+              mk_image f $ (mk_SSupp Inj $ g)
+            );
+            val f_prems = flat (map2 (fn MRBNF_Def.Live_Var => K [] | _ => fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) var_types fs);
+          in SOME (Goal.prove_sorry lthy (names (g :: filter_out (fn Const _ => true | _ => false) fs)) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt @{thms SSupp_def}),
+            rtac ctxt @{thm set_eqI},
+            rtac ctxt iffI,
+            K (Local_Defs.unfold0_tac ctxt @{thms mem_Collect_eq comp_apply image_Collect}),
+            etac ctxt @{thm contrapos_np},
+            dtac ctxt @{thm Meson.not_exD},
+            etac ctxt allE,
+            dtac ctxt @{thm iffD1[OF de_Morgan_conj]},
+            etac ctxt disjE,
+            EqSubst.eqsubst_asm_tac ctxt [0] [infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt f)] @{thm inv_simp2}],
+            resolve_tac ctxt prems,
+            etac ctxt notE,
+            rtac ctxt refl,
+            dtac ctxt @{thm notnotD},
+            etac ctxt @{thm subst[OF sym]},
+            rtac ctxt trans,
+            resolve_tac ctxt (map_filter I map_Inj),
+            REPEAT_DETERM o resolve_tac ctxt prems,
+            EqSubst.eqsubst_tac ctxt [0] [infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt f)] @{thm inv_simp2}],
+            resolve_tac ctxt prems,
+            rtac ctxt refl,
+            etac ctxt exE,
+            etac ctxt conjE,
+            hyp_subst_tac ctxt,
+            EqSubst.eqsubst_tac ctxt [0] [infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt f)] @{thm inv_simp1}],
+            resolve_tac ctxt prems,
+            etac ctxt @{thm contrapos_nn},
+            dtac ctxt @{thm trans},
+            resolve_tac ctxt (map_filter (Option.map (fn thm =>
+              (thm RS sym) OF (flat (fst (fold_map (
+                fn MRBNF_Def.Free_Var => apfst tl o chop 2
+                | MRBNF_Def.Bound_Var => chop 2
+                | _ => pair []
+              ) var_types prems)))
+            )) map_Inj),
+            etac ctxt @{thm injD[rotated]},
+            rtac ctxt (MRBNF_Def.inj_map_of_mrbnf mrbnf),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms bij_is_inj bij_id} @ prems)
+          ])) end
+        ) Injs gs;
+
+        val (lsets, bsets, fsets) = MRBNF_Def.deinterlace (MRBNF_Def.sets_of_mrbnf mrbnf) var_types;
+
+        val IImsupp_naturals = @{map_filter 2} (fn Inj => fn g => if body_type (fastype_of Inj) <> T then NONE else SOME (map (fn Vrs =>
+          let
+            val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+            val f = the (List.find (curry (op=) (domain_type (fastype_of Inj)) o domain_type o fastype_of) fs);
+            val f' = the (List.find (curry (op=) (HOLogic.dest_setT (body_type (fastype_of Vrs))) o domain_type o fastype_of) fs);
+            val fs = map2 (fn MRBNF_Def.Live_Var => HOLogic.id_const o domain_type o fastype_of | _ => I) var_types fs;
+            val map_t = Term.list_comb (Term.subst_atomic_types (As' ~~ As) mapx, fs);
+            val goal = mk_Trueprop_eq (
+              mk_IImsupp Inj Vrs $ (HOLogic.mk_comp (HOLogic.mk_comp (map_t, g), mk_inv f)),
+              mk_image f' $ (mk_IImsupp Inj Vrs $ g)
+            );
+            val f_prems = flat (map2 (fn MRBNF_Def.Live_Var => K [] | _ => fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) var_types fs);
+          in Goal.prove_sorry lthy (names (g :: filter_out (fn Const _ => true | _ => false) fs)) f_prems goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt @{thms IImsupp_def image_Un image_UN}),
+            EqSubst.eqsubst_tac ctxt [0] SSupp_naturals,
+            REPEAT_DETERM o resolve_tac ctxt prems,
+            K (Local_Defs.unfold0_tac ctxt @{thms image_comp comp_def}),
+            EqSubst.eqsubst_tac ctxt [0] @{thms inv_simp1},
+            resolve_tac ctxt prems,
+            EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+            REPEAT_DETERM o resolve_tac ctxt prems,
+            rtac ctxt refl
+          ]) end
+        ) fsets)) Injs gs;
+
+        val IImsupp_Map_bound = @{map_filter 3} (fn Inj => fn g => fn g_prem => if body_type (fastype_of Inj) <> T then NONE else Option.map (fn Map => (map (fn Vrs =>
+          let
+            val fs = map (fn f_T => the (List.find (curry (op=) f_T o fastype_of) fs))
+              (fst (split_last (binder_types (fastype_of Map))));
+            val map_t = Term.list_comb (Map, fs);
+            val bT = HOLogic.dest_setT (body_type (fastype_of Vrs));
+            val card = mk_card_of (HOLogic.mk_UNIV bT);
+            val goal = HOLogic.mk_Trueprop (mk_ordLess
+              (mk_card_of (Term.subst_atomic_types (lives ~~ lives') (mk_IImsupp Inj Vrs) $ HOLogic.mk_comp (map_t, g)))
+              card
+            );
+            val g_prem = if bT = domain_type (fastype_of Inj) then g_prem else
+              HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (mk_IImsupp Inj Vrs $ g)) card);
+          in Goal.prove_sorry lthy (names (fs @ [g])) [g_prem] goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold_tac ctxt (@{thms IImsupp_Un} @ no_reflexive (#set_Vrs axioms))),
+            rtac ctxt @{thm card_of_subset_bound},
+            REPEAT_DETERM o rtac ctxt @{thm Un_mono},
+            REPEAT_DETERM o resolve_tac ctxt (flat (the_default [] (#IImsupp_Map_subsets bmv_facts))),
+            K (Local_Defs.unfold_tac ctxt (@{thms IImsupp_Un[symmetric]} @ map (fn thm => thm RS sym) (no_reflexive (#set_Vrs axioms)))),
+            resolve_tac ctxt prems ORELSE' EVERY' [
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms IImsupp_def}),
+              rtac ctxt @{thm var_class.UN_bound},
+              resolve_tac ctxt prems,
+              resolve_tac ctxt (MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf)
+            ]
+          ]) end
+        ) fsets)) Map_opt) Injs gs g_prems;
+
+        val IImsupp_map_bound = @{map_filter 3} (fn Inj => fn g => fn g_prem => if body_type (fastype_of Inj) <> T then NONE else SOME (map (fn Vrs =>
+          let
+            val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
+            val f = the (List.find (curry (op=) (domain_type (fastype_of Inj)) o domain_type o fastype_of) fs);
+            val map_t = Term.list_comb (mapx, fs);
+            val bT = HOLogic.dest_setT (body_type (fastype_of Vrs));
+            val card = mk_card_of (HOLogic.mk_UNIV bT);
+            val goal = HOLogic.mk_Trueprop (mk_ordLess
+              (mk_card_of (Term.subst_atomic_types (lives ~~ lives') (mk_IImsupp Inj Vrs) $ (HOLogic.mk_comp (HOLogic.mk_comp (map_t, g), mk_inv f))))
+              card
+            );
+            val g_prem = if bT = domain_type (fastype_of Inj) then g_prem else
+              HOLogic.mk_Trueprop (mk_ordLess (mk_card_of (mk_IImsupp Inj Vrs $ g)) card);
+            val fs' = @{map_filter 2} (fn MRBNF_Def.Live_Var => K NONE | _ => SOME) var_types fs;
+            val live_fs = subtract (op=) fs' fs;
+            val f_prems = maps (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) fs';
+          in Goal.prove_sorry lthy (names (g :: fs)) (g_prem :: f_prems) goal (fn {context=ctxt, prems} =>
+            let val map_comp = Local_Defs.unfold0 ctxt (@{thms id_o o_id}
+              @ the_default [] (Option.map (fn thm => [thm RS sym]) Map_map)
+            ) (infer_instantiate' ctxt (
+              map (SOME o Thm.cterm_of ctxt) fs'
+              @ map (SOME o Thm.cterm_of ctxt o HOLogic.id_const o domain_type o fastype_of) fs'
+              @ maps (fn f => map (SOME o Thm.cterm_of ctxt) [f, HOLogic.id_const (domain_type (fastype_of f))]) live_fs
+            ) (MRBNF_Def.map_comp0_of_mrbnf mrbnf))
+            in EVERY1 [
+              EqSubst.eqsubst_tac ctxt [0] [map_comp],
+              REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ prems),
+              K (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
+              resolve_tac ctxt (flat IImsupp_Map_bound) ORELSE' EVERY' [
+                K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ [MRBNF_Def.map_id0_of_mrbnf mrbnf]))
+              ],
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
+              EqSubst.eqsubst_tac ctxt [0] (flat IImsupp_naturals @ SSupp_naturals),
+              REPEAT_DETERM o resolve_tac ctxt prems,
+              rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_image]},
+              REPEAT_DETERM o EVERY' [
+                TRY o rtac ctxt @{thm var_class.Un_bound},
+                resolve_tac ctxt prems ORELSE' EVERY' [
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms IImsupp_def}),
+                  rtac ctxt @{thm var_class.UN_bound},
+                  resolve_tac ctxt prems,
+                  rtac ctxt @{thm ordLess_ordLeq_trans},
+                  resolve_tac ctxt (#Vrs_bds bmv_axioms),
+                  rtac ctxt @{thm var_class.large'}
+                ]
+              ]
+            ] end
+          ) end
+        ) fsets)) Injs gs g_prems;
+
+        fun split_Un_bd thm = case try (fn () => thm RS @{thm Un_boundD}) () of
+          NONE => [thm] | SOME thm' => split_Un_bd (thm' RS conjunct1) @ [thm' RS conjunct2]
+
+        val IImsupp_map_bound' = map (maps (fn thm => split_Un_bd (
+          Local_Defs.unfold lthy (@{thms IImsupp_Un} @ no_reflexive (#set_Vrs axioms)) thm
+        ))) IImsupp_map_bound;
+
         val sets = MRBNF_Def.sets_of_mrbnf mrbnf;
         val (_, bound_sets, _) = MRBNF_Def.deinterlace sets var_types;
         
@@ -407,17 +538,18 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
       in {
         SSupp_map_subset = SSupp_map_subset,
         SSupp_map_bound = SSupp_map_bound,
+        IImsupp_map_bound = IImsupp_map_bound,
+        IImsupp_map_bound' = IImsupp_map_bound',
         map_Inj = map_Inj,
-        Sb_comp_right = Sb_comp_right,
         Map_map = Map_map,
         set_Injs = set_Injs
       } end
     ) (BMV_Monad_Def.lives_of_bmv_monad bmv) (BMV_Monad_Def.lives'_of_bmv_monad bmv)
       axioms' mrbnfs (BMV_Monad_Def.axioms_of_bmv_monad bmv) (BMV_Monad_Def.params_of_bmv_monad bmv) (BMV_Monad_Def.facts_of_bmv_monad bmv)
       (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.Injs_of_bmv_monad bmv)
-      (BMV_Monad_Def.RVrs_of_bmv_monad bmv) (BMV_Monad_Def.Maps_of_bmv_monad bmv);
+      (BMV_Monad_Def.RVrs_of_bmv_monad bmv) (BMV_Monad_Def.Vrs_of_bmv_monad bmv) (BMV_Monad_Def.Maps_of_bmv_monad bmv);
 
-    val facts' = @{map 9} (fn axioms => fn facts => fn mrbnf => fn bmv_axioms => fn bmv_params => fn bmv_facts => fn Sb => fn RVrs => fn Injs =>
+    val facts' = @{map 10} (fn i => fn axioms => fn facts => fn mrbnf => fn bmv_axioms => fn bmv_params => fn bmv_facts => fn Sb => fn RVrs => fn Injs =>
       let
         val mapx = MRBNF_Def.map_of_mrbnf mrbnf;
         val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
@@ -437,12 +569,13 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
         val frees = inter (op=) Fs (MRBNF_Def.frees_of_mrbnf mrbnf);
         val free = length frees;
 
-        val g_prems = map2 (fn Inj => fn g => HOLogic.mk_Trueprop (
+        (*val g_prems = map2 (fn Inj => fn g => HOLogic.mk_Trueprop (
           mk_ordLess (mk_card_of (mk_SSupp Inj $ g)) (mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of g))))
-        )) Injs gs;
+        )) Injs gs;*)
+        val small_prems = flat (BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv i hs gs);
 
         fun find_f T = List.find (curry (op=) T o domain_type o fastype_of) fs;
-        val h_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) hs;
+        (*val h_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) hs;*)
         val h_fs = map (the o find_f o domain_type o fastype_of) hs;
 
         val map_Sb_strong =
@@ -474,7 +607,15 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
             val map_is_Sb = filter_out (
               (op=) o HOLogic.dest_eq o HOLogic.dest_Trueprop o snd o Logic.strip_horn o Thm.prop_of
             ) (map #map_is_Sb axioms');
-          in Goal.prove_sorry lthy (names (fs @ hs @ gs)) (f_prems @ h_prems @ g_prems) goal (fn {context=ctxt, prems} => EVERY1 [
+
+            val IImsupp_map_bound' = map (fn thm => Local_Defs.unfold0 lthy @{thms inv_id id_o o_id} (thm OF (@{thm _}::
+              maps (fn MRBNF_Def.Free_Var => @{thms bij_id supp_id_bound}
+                | MRBNF_Def.Bound_Var => @{thms _ _}
+                | _ => []
+              ) (MRBNF_Def.var_types_of_mrbnf mrbnf))
+            )) (flat (#IImsupp_map_bound facts));
+
+          in Goal.prove_sorry lthy (names (fs @ hs @ gs)) (f_prems @ small_prems) goal (fn {context=ctxt, prems} => EVERY1 [
             K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
             rtac ctxt refl
           ] ORELSE EVERY1 [
@@ -520,26 +661,39 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
                 rtac ctxt @{thm trans[OF comp_assoc[symmetric]]},
                 rtac ctxt trans,
                 rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
-                rtac ctxt (#Map_Sb (the bmv_params)),
-                REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound}
-                  @ prems
+                rtac ctxt (#Map_Sb (the bmv_params))
+                THEN_ALL_NEW (SELECT_GOAL (
+                REPEAT_DETERM (HEADGOAL (resolve_tac ctxt (@{thms supp_id_bound}
+                  @ prems @ IImsupp_map_bound'
                   @ maps (map_filter I o #SSupp_map_bound) facts'
-                ),
+                ) ORELSE' (CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @
+                  [MRBNF_Def.map_id0_of_mrbnf mrbnf]
+                ))))))),
                 rtac ctxt @{thm comp_assoc}
               ],
               rtac ctxt @{thm trans[OF comp_assoc[symmetric]]},
               rtac ctxt trans,
               rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]}
             ] ORELSE' rtac ctxt trans,
-            rtac ctxt (#Sb_comp bmv_axioms),
-            REPEAT_DETERM o EVERY' [
-              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
-              resolve_tac ctxt (
-                @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV SSupp_comp_bound SSupp_Inj_bound}
-                @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
-                @ maps (map_filter I o #SSupp_map_bound) facts'
-              )
-            ],
+            rtac ctxt (#Sb_comp bmv_axioms)
+            THEN_ALL_NEW (SELECT_GOAL (REPEAT_DETERM (FIRST1 [
+              EVERY' [
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms comp_assoc id_o o_id} @ [
+                  MRBNF_Def.map_id0_of_mrbnf mrbnf
+                ])),
+                resolve_tac ctxt (
+                  @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV
+                    SSupp_comp_bound SSupp_Inj_bound card_of_Card_order conjI
+                    cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound
+                  }
+                  @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (map_filter I o #SSupp_map_bound) facts'
+                  @ maps (flat o #Vrs_Injss) (BMV_Monad_Def.axioms_of_bmv_monad bmv)
+                  @ IImsupp_map_bound'
+                )
+              ]
+            ]))),
             rtac ctxt sym,
             rtac ctxt trans,
             TRY o EVERY' [
@@ -551,24 +705,55 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
               ]
             ],
             rtac ctxt (#Sb_comp bmv_axioms),
-            REPEAT_DETERM o EVERY' [
-              SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
-              resolve_tac ctxt (
-                @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV SSupp_comp_bound SSupp_Inj_bound}
-                @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
-                @ maps (map_filter I o #SSupp_map_bound) facts'
-              )
+            REPEAT_DETERM o FIRST' [
+              EVERY' [
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
+                resolve_tac ctxt (maps (flat o #IImsupp_map_bound) facts' @ maps (flat o #IImsupp_map_bound') facts')
+              ],
+              EVERY' [
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms comp_assoc id_o o_id} @ [
+                  MRBNF_Def.map_id0_of_mrbnf mrbnf
+                ])),
+                resolve_tac ctxt (
+                  @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV
+                    SSupp_comp_bound SSupp_Inj_bound card_of_Card_order conjI
+                    cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound var_class.Un_bound
+                  }
+                  @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (map_filter I o #SSupp_map_bound) facts'
+                  @ maps (flat o #Vrs_Injss) (BMV_Monad_Def.axioms_of_bmv_monad bmv)
+                  @ IImsupp_map_bound'
+                )
+              ]
             ],
             TRY o rtac ctxt @{thm trans[OF comp_assoc]},
             TRY o rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
             rtac ctxt ext,
             rtac ctxt (#Sb_cong bmv_axioms),
-            REPEAT_DETERM o resolve_tac ctxt (
-              @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV SSupp_comp_bound SSupp_Inj_bound}
-              @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
-              @ maps (map_filter I o #SSupp_map_bound) facts'
-              @ maps #SSupp_Sb_bounds (BMV_Monad_Def.facts_of_bmv_monad bmv)
-            ),
+            REPEAT_DETERM o FIRST' [
+              EVERY' [
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
+                resolve_tac ctxt (maps (flat o #IImsupp_map_bound) facts' @ maps (flat o #IImsupp_map_bound') facts')
+              ],
+              EVERY' [
+                SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms comp_assoc id_o o_id} @ [
+                  MRBNF_Def.map_id0_of_mrbnf mrbnf
+                ])),
+                resolve_tac ctxt (
+                  @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV SSupp_comp_bound
+                  SSupp_Inj_bound card_of_Card_order conjI cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound var_class.Un_bound}
+                  @ flat (#IImsupp_map_bound facts)
+                  @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (map_filter I o #SSupp_map_bound) facts'
+                  @ maps #SSupp_Sb_bounds (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (flat o #IImsupp_Sb_boundss) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                  @ maps (flat o #Vrs_Injss) (BMV_Monad_Def.axioms_of_bmv_monad bmv)
+                  @ IImsupp_map_bound'
+                )
+              ]
+            ],
             (* renaming-only subst functions *)
             REPEAT_DETERM o EVERY' [
               SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
@@ -583,13 +768,27 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
               rtac ctxt trans,
               rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<circ>)"]},
               resolve_tac ctxt (maps #Sb_comp_Injs (BMV_Monad_Def.axioms_of_bmv_monad bmv)),
-              REPEAT_DETERM o EVERY' [
-                SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc}),
-                resolve_tac ctxt (
-                  @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV SSupp_comp_bound SSupp_Inj_bound}
-                  @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
-                  @ maps (map_filter I o #SSupp_map_bound) facts'
-                )
+              REPEAT_DETERM o FIRST' [
+                EVERY' [
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms comp_assoc[symmetric]}),
+                  resolve_tac ctxt (maps (flat o #IImsupp_map_bound) facts' @ maps (flat o #IImsupp_map_bound') facts')
+                ],
+                EVERY' [
+                  SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms comp_assoc id_o o_id} @ [
+                    MRBNF_Def.map_id0_of_mrbnf mrbnf
+                  ])),
+                  resolve_tac ctxt (
+                    @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV
+                      SSupp_comp_bound SSupp_Inj_bound card_of_Card_order conjI
+                      cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound var_class.Un_bound
+                    }
+                    @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                    @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+                    @ maps (map_filter I o #SSupp_map_bound) facts'
+                    @ maps (flat o #Vrs_Injss) (BMV_Monad_Def.axioms_of_bmv_monad bmv)
+                    @ IImsupp_map_bound'
+                  )
+                ]
               ],
               rtac ctxt @{thm trans[OF comp_assoc]},
               rtac ctxt trans,
@@ -623,12 +822,11 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
         SSupp_map_subset = #SSupp_map_subset facts,
         SSupp_map_bound = #SSupp_map_bound facts,
         map_Inj = #map_Inj facts,
-        Sb_comp_right = #Sb_comp_right facts,
         map_Sb_strong = map_Sb_strong,
         Map_map = #Map_map facts,
         set_Injs = #set_Injs facts
       }: mrsbnf_facts end
-    ) axioms' facts' mrbnfs (BMV_Monad_Def.axioms_of_bmv_monad bmv) (BMV_Monad_Def.params_of_bmv_monad bmv) (BMV_Monad_Def.facts_of_bmv_monad bmv)
+    ) (0 upto length axioms' - 1) axioms' facts' mrbnfs (BMV_Monad_Def.axioms_of_bmv_monad bmv) (BMV_Monad_Def.params_of_bmv_monad bmv) (BMV_Monad_Def.facts_of_bmv_monad bmv)
       (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.RVrs_of_bmv_monad bmv)
       (BMV_Monad_Def.Injs_of_bmv_monad bmv);
 
@@ -687,9 +885,12 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
 
         val free = length frees;
         val free_fs = take free free_fs';
-        val free_prems = map (fn f => HOLogic.mk_Trueprop (mk_supp_bound f)) free_fs;
 
-        val live_fs' = filter (member (op=) lives o domain_type o fastype_of) live_fs;
+        val free_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) free_fs;
+        val live_fs' = filter (member (op=) lives o domain_type o fastype_of) live_fs;;
+
+        val _ = @{print} (MRBNF_Def.frees_of_mrbnf mrbnf, MRBNF_Def.bounds_of_mrbnf mrbnf, MRBNF_Def.lives_of_mrbnf mrbnf)
+        val _ = @{print} (Fs, Bs, As)
 
         val map_is_Sb = fold_rev Logic.all (free_fs @ live_fs') (fold_rev (curry Logic.mk_implies) free_prems (mk_Trueprop_eq (
           Term.list_comb (Term.subst_atomic_types (filter_out (member (op=) lives o snd) (As' ~~ As)) mapx, MRBNF_Def.interlace
@@ -712,6 +913,7 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
             ) Injs)
           ) end
         )));
+        val _ = @{print} (Thm.cterm_of lthy map_is_Sb)
 
         val RVrs_aTs = map (HOLogic.dest_setT o body_type o fastype_of) RVrs;
 
@@ -806,7 +1008,8 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
         map_Sb = map_Sb,
         set_Sb = set_Sbs
       }: term mrsbnf_axioms end
-    ) mrbnfs (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.Injs_of_bmv_monad bmv)
+    ) mrbnfs
+      (BMV_Monad_Def.Sbs_of_bmv_monad bmv) (BMV_Monad_Def.Injs_of_bmv_monad bmv)
       (BMV_Monad_Def.RVrs_of_bmv_monad bmv)
       (BMV_Monad_Def.Vrs_of_bmv_monad bmv) (BMV_Monad_Def.Maps_of_bmv_monad bmv) (BMV_Monad_Def.lives_of_bmv_monad bmv);
   in (axioms, (deads, As, As', Bs, Fs, fs), mrbnfs, bmv) end
@@ -844,7 +1047,7 @@ fun mrsbnf_of_mrbnf mrbnf lthy =
       in BMV_Monad_Def.morph_bmv_monad phi bmv end;
   in mrsbnf_def (K BNF_Def.Dont_Note) I NONE [mrbnf] bmv [{
     map_Sb = SOME (fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+      K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ unfolds_of_bmv_monad bmv)),
       rtac ctxt refl ORELSE' EVERY' [
         rtac ctxt (trans OF [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym]),
         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
@@ -856,6 +1059,7 @@ fun mrsbnf_of_mrbnf mrbnf lthy =
       ]
     ]),
     map_is_Sb = fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (unfolds_of_bmv_monad bmv)),
       TRY o EVERY' [
         rtac ctxt sym,
         rtac ctxt trans,
@@ -867,7 +1071,7 @@ fun mrsbnf_of_mrbnf mrbnf lthy =
     ],
     map_Injs = if MRBNF_Def.bound_of_mrbnf mrbnf = 0 then NONE else SOME [],
     set_Sb = replicate n (fn ctxt => EVERY1 [
-      K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
+      K (Local_Defs.unfold0_tac ctxt (@{thms id_apply} @ unfolds_of_bmv_monad bmv)),
       rtac ctxt refl ORELSE' EVERY' [
         rtac ctxt trans,
         resolve_tac ctxt (MRBNF_Def.set_map_of_mrbnf mrbnf),
@@ -875,7 +1079,10 @@ fun mrsbnf_of_mrbnf mrbnf lthy =
         rtac ctxt @{thm image_id}
       ]
     ]),
-    set_Vrs = replicate (MRBNF_Def.free_of_mrbnf mrbnf) (fn ctxt => rtac ctxt refl 1)
+    set_Vrs = replicate (MRBNF_Def.free_of_mrbnf mrbnf) (fn ctxt => EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (unfolds_of_bmv_monad bmv)),
+      rtac ctxt refl
+    ])
   }] lthy end;
 
 fun mrsbnf_cmd b_Ts lthy =

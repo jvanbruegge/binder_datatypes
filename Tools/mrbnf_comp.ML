@@ -1505,11 +1505,12 @@ fun mrbnf_of_typ _ _ qualify _ _ Ds0 var_types (T as TFree T') accum =
           val mrbnf' = MRBNF_Def.morph_mrbnf (MRBNF_Util.subst_typ_morphism
             (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts)
           ) mrbnf;
-          val _ = case inter (op=) (map (TFree o fst) var_types) (MRBNF_Def.deads_of_mrbnf mrbnf') of
-            [] => () | xs => raise TYPE ("Variables declared as not dead, but type forces deadness: " ^ C, xs, [])
-        in if forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
-          andalso Library.inter (fn (a, b) => fst a = fst b andalso snd a <> snd b)
-            (map dest_TFree Ts ~~ var_types_of_mrbnf mrbnf) var_types = []
+          val Ds = MRBNF_Def.deads_of_mrbnf mrbnf';
+          val _ = case inter (op=) (map (TFree o fst) var_types) Ds of
+             [] => () | xs => raise TYPE ("Variables declared as not dead, but type forces deadness: " ^ C, xs, [])
+         in if forall (can Term.dest_TFree) Ts andalso length Ts = length tfrees
+             andalso Library.inter (fn (a, b) => fst a = fst b andalso snd a <> snd b)
+             (map dest_TFree (subtract (op =) Ds Ts) ~~ var_types_of_mrbnf mrbnf) var_types = []
         then
           let
             val T' = T_of_mrbnf mrbnf;

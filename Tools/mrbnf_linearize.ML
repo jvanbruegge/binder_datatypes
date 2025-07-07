@@ -119,20 +119,20 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val tfrees = map (TFree o snd) specs;
     val on_tfree = TFree (on_tvar, @{sort type});
     val lin_pos = find_index (fn x => x = on_tfree) tfrees |> @{print};
-
-    val (F_name, F_vars) = dest_Type repT ||> map dest_TFree |> @{print};  
-
-    val mrbnf = F_name |> MRBNF_Def.mrbnf_of lthy |> the
-
 (*
-    val alpha0s = map TFree F_vars;
+    val (F_name, F_vars) = dest_Type repT ||> map dest_TFree |> @{print};  
+*)
+(*
+    val mrbnf = F_name |> MRBNF_Def.mrbnf_of lthy |> the
+*)
+
     fun flatten_tyargs Ass =
-      map dest_TFree alpha0s
+      map dest_TFree tfrees
       |> filter (fn T => exists (fn Ts => member op= Ts T) Ass);
     val ((mrbnf,(Ds, As)), (_,lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
-      (Binding.prefix_name F_name) flatten_tyargs [] [] [] repT
+      (Binding.prefix_name (Binding.name_of b)) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-*)
+
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
 
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;

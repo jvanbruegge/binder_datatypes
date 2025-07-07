@@ -5,6 +5,9 @@ theory Linearize2
   "lift_bnf_2" :: thy_goal_defn
 begin
 
+definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
+
 lemma sum_insert_Inl_unit: "x \<in> A \<Longrightarrow> (\<And>y. x = Inr y \<Longrightarrow> Inr y \<in> B) \<Longrightarrow> x \<in> insert (Inl ()) B"
   by (cases x) (simp_all)
 
@@ -117,6 +120,13 @@ lemma Quotient_eq_onp_type_copy:
   unfolding Quotient_def eq_onp_def
   by unfold_locales auto
 
+ML \<open>
+fun mk_asSS f =
+  let 
+    val T = fastype_of f;
+  in Const (@{const_name asSS}, T --> T) $ f end;
+\<close>
+
 ML_file "../Tools/bnf_lift.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
@@ -168,9 +178,15 @@ lift_bnf_2 (no_warn_wits, no_warn_transfer) 'a foo
 (*
 binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t
 *)
+ML \<open>BNF_Util.permute_like_unique (op =) [0, 1] [0, ~1, ~1, 1, ~1] [Bound 4, Bound 3, Bound 2, Bound 1, Bound 0]\<close>
+
 
 (*declare [[quick_and_dirty]]*)
 
+(*
+linearize_mrbnf ('a, 'b) dlist = "('a \<times> 'b) list" on 'a
+  sorry
+*)
 
 linearize_mrbnf ('a, F''bset: 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
   sorry
@@ -616,9 +632,6 @@ definition set2_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow>
 definition set3_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a3 set" where "set3_F' = set3_F o Rep_F'"
 definition set4_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a4 set" where "set4_F' = set4_F o Rep_F'"
 definition set5_F' :: "('a1,'a2::var,'a3::var,'a4,'a5::var,'a6) F' \<Rightarrow> 'a5 set" where "set5_F' = set5_F o Rep_F'"
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
 definition map_F' :: "('a1::var \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a3::var \<Rightarrow> 'a3) \<Rightarrow> ('a4 \<Rightarrow> 'a4') \<Rightarrow> ('a5::var \<Rightarrow> 'a5)
   \<Rightarrow> ('a1,'a2,'a3,'a4,'a5,'a6) F' \<Rightarrow> ('a1,'a2,'a3,'a4','a5,'a6) F'"

@@ -79,28 +79,68 @@ axiomatization where
      GVrs1 u \<union> ((\<Union>e \<in> GSupp1 u. EVrs e) - GVrs2 u) \<union> (\<Union>e \<in> GSupp2 u. EVrs e)"
   and EVrs_bd:
   "\<And>x. |EVrs (x :: 'a :: var E)| <o natLeq"
-
-datatype ('a1, 'a2, GGSupp1: 'x1, GGSupp2: 'x2) GG = GG 'a1 'a2 'x1 'x2 | GG0
+ML \<open>Multithreading.parallel_proofs := 1\<close>
+declare [[mrbnf_internals]]
+datatype (GGVrs1: 'a1, GGVrs2: 'a2, GGSupp1: 'x1, GGSupp2: 'x2) GG = GG 'a1 'a2 'x1 'x2 | GG0
   for map: GGmap
-binder_datatype 'a EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds x in t
+binder_datatype (EEVrs: 'a) EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds x in t
+  for permute: EEperm
 
-lemma   
-  fixes P and g :: "'a EE \<Rightarrow> 'a::var EE" and h e
-  assumes "(\<And>e. P e \<Longrightarrow> g e = h e \<or>
-       (\<exists>u. g e = EEctor (GGmap id id g g u) \<and> h e = EEctor (GGmap id id h h u) \<and>
-         (\<forall>e \<in> GGSupp1 u. P e) \<and> (\<forall>e \<in> GGSupp2 u. P e)))"
-  shows "P e \<Longrightarrow> g e = h e"
-  apply (binder_induction e avoiding: "g e" "h e" rule: EE.strong_induct)
+inductive subshape where
+  "e \<in> GGSupp1 u \<union> GGSupp2 u \<Longrightarrow> subshape e (EEctor u)"
+
+lemma wfp_subshape: "wfp (subshape)"
+  apply (rule wfpUNIVI)
+  subgoal premises prems for P e
+    apply (subgoal_tac "\<And>\<sigma> :: 'a \<Rightarrow> 'a. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> P (EEperm \<sigma> e)")
+     apply (drule meta_spec[of _ id])
+     apply (simp add: EE.permute_id)
+    apply (induct e)
+    subgoal for u \<sigma>
+      apply (rule prems[rule_format])
+      apply (auto elim!: subshape.cases simp: GG.set_map EE.permute_comp supp_comp_bound)
+      done
+    done
+  done
+
+lemma subshape_induct: "(\<And>e. (\<And>e'. subshape e' e \<Longrightarrow> P e') \<Longrightarrow> P e) \<Longrightarrow> P e"
+  using wfp_subshape
+  by (metis wfp_induct)
+
+lemma *:
+  fixes P and g :: "'k \<Rightarrow> 'a::var EE" and h e
+  assumes "(\<And>k. P k \<Longrightarrow> g k = h k \<or>
+    (\<exists>u. g k = EEctor (GGmap id id g g u) \<and> h k = EEctor (GGmap id id h h u) \<and>
+    (\<forall>k \<in> GGSupp1 u. P k) \<and> (\<forall>k \<in> GGSupp2 u. P k)))"
+  shows "P k \<Longrightarrow> g k = e \<Longrightarrow> e = h k"
+  apply (induct e arbitrary: k rule: subshape_induct)
   apply (drule assms)
   apply (erule disjE)
-   apply assumption
+   apply simp
   apply (erule exE conjE)+
-  apply (auto intro!: exI[of _ id] simp: EE.permute_id0 GG.map_id intro: GG.map_cong)
-  apply (rule GG.map_cong)
-      apply auto
-   apply (drule bspec, assumption)
-  try0
-  thm EE.permute_id
+  apply (auto simp: GG.map_comp GG.set_map EE.permute_id0 intro!: exI[of _ id] GG.map_cong)
+   apply (drule meta_spec2, drule meta_mp)
+    apply (rule subshape.intros)
+    apply (auto simp: EE.permute_id0 GG.set_map) []
+   apply (drule meta_mp)
+    apply (erule bspec)
+    apply assumption
+   apply simp
+  apply (drule meta_spec2, drule meta_mp)
+   apply (rule subshape.intros)
+   apply (auto simp: EE.permute_id0 GG.set_map) []
+  apply (drule meta_mp)
+   apply (erule (1) bspec)
+  apply simp
+  done
+
+lemma coinduct:
+  fixes P and g :: "'k \<Rightarrow> 'a::var EE" and h e
+  assumes "(\<And>k. P k \<Longrightarrow> g k = h k \<or>
+    (\<exists>u. g k = EEctor (GGmap id id g g u) \<and> h k = EEctor (GGmap id id h h u) \<and>
+    (\<forall>k \<in> GGSupp1 u. P k) \<and> (\<forall>k \<in> GGSupp2 u. P k)))"
+  shows "P k \<Longrightarrow> g k = h k"
+  using *[OF assms] by blast
 
 axiomatization where E_coinduct:
   "\<And>P (g :: 'a::var E \<Rightarrow> 'a E) h e. (\<And>e. P e \<Longrightarrow> g e = h e \<or>

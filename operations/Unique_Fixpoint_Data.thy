@@ -386,8 +386,37 @@ lemma EVrs_Esub: "EVrs (Esub e)
   unfolding Esub_def
   by (rule Esub.REC_FVars)
 
+lemma Eperm_Esub: "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a set| \<Longrightarrow>
+  imsupp f \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
+  Eperm f (Esub t) = Esub (Eperm f t)"
+  unfolding Esub_def
+  by (rule Esub.REC_swap)
+
 end
 
+
+lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
+  by (metis Ector_inject eta_natural supp_id_bound)
+
+lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
+  unfolding Ector_inject
+  apply safe
+  subgoal for \<sigma>
+    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
+    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
+        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
+        G.Map_id G.Sb_Inj Eperm_comp Eperm_id)
+    done
+  subgoal
+    apply (auto simp: eta'_natural)
+    done
+  done
+
+lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
+  using Ector_eta_inj by metis
+
+lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
+  using Ector_eta'_inj by metis
 
 lemma Esub_inversion:
   "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
@@ -398,6 +427,84 @@ lemma Esub_inversion:
    \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a. u \<noteq> \<eta>' a \<Longrightarrow>
    Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
   sorry
+(*
+  apply (insert Ector_fresh_surj[where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs e \<union> EVrs (Ector u)" and e = e])
+  apply (drule meta_mp)
+   apply (auto intro!: Un_bound simp: imsupp_supp_bound E.FVars_bd_UNIVs) []
+  apply (erule exE conjE)+
+  apply (simp add: Int_Un_distrib Ector_eta_inj Ector_eta'_inj)
+  apply (subst (asm) (2) Esub_Ector; (simp add: Int_Un_distrib Ector_eta_inj Ector_eta'_inj)?)
+  apply (drule sym)
+  apply (subst (asm) E.inject)
+  apply (erule exE conjE)+
+  subgoal for u' \<sigma>
+    apply (insert ex_avoiding_bij[of \<sigma> "((\<Union>a\<in>GSupp1 u'. EVrs (Esub \<delta> \<rho> \<rho>' a)) - GVrs2 u')" "GVrs2 u'" "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs (Ector u')"])
+    apply (drule meta_mp)
+     apply simp
+    apply (drule meta_mp)
+     apply simp
+    apply (drule meta_mp)
+     apply simp
+    apply (drule meta_mp)
+     apply (rule card_of_minus_bound)
+     apply (rule UN_bound)
+      apply (rule ordLess_ordLeq_trans[OF G.Supp_bd(1) large'])
+     apply (rule E.FVars_bd_UNIVs)
+    apply (drule meta_mp)
+     apply (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map)
+    apply (drule meta_mp)
+     apply (rule ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'])
+    apply (drule meta_mp)
+    apply auto []
+    apply (drule meta_mp)
+     apply (auto intro!: Un_bound card_of_minus_bound UN_bound simp: ordLess_ordLeq_trans[OF G.Supp_bd(1) large'] ordLess_ordLeq_trans[OF G.Supp_bd(2) large'] ordLess_ordLeq_trans[OF G.Vrs_bd(1) large'] imsupp_supp_bound E.FVars_bd_UNIVs) []
+    apply (erule exE conjE)+
+    subgoal for \<tau>
+      apply (subgoal_tac "GMAP id \<tau> (Eperm \<tau>) id
+     (Gren \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u')) = u")
+      subgoal
+       apply (erule thin_rl[of "GMAP id \<sigma> (Eperm \<sigma>) id (Gren \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u')) = u"])
+       apply (rule exI[where x = "GMAP id \<tau> (Eperm \<tau>) id u'"])
+       apply (auto 0 0 simp: GMAP_def G.Vrs_Map G.Vrs_Sb G.Supp_Map G.Supp_Sb E.inject Int_Un_distrib
+          G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+          intro!: exI[of _ \<tau>])
+        subgoal
+          apply (subgoal_tac "Eperm \<tau> \<circ> Esub \<delta> \<rho> \<rho>' = Esub \<delta> \<rho> \<rho>' \<circ> Eperm \<tau>")
+           apply simp
+          apply (rule ext)
+          apply (subst (1 2) o_apply)
+          apply (rule Eperm_Esub; (simp add: Int_Un_distrib)?)
+          done
+        subgoal
+          apply (rule id_onI)
+          apply (auto 0 0)
+          apply (metis (no_types, lifting) Diff_iff Int_emptyD UN_I not_in_imsupp_same)
+          done
+        done
+      subgoal
+        apply (erule trans[rotated])
+        apply (rule G.map_cong)
+                  apply (auto 0 0 simp: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map Int_Un_distrib intro!: E.permute_cong)
+        subgoal for a
+          apply (cases "\<sigma> a = a")
+           apply (simp add: disjoint_iff)
+          apply (drule spec, erule mp; simp)
+          apply (rule conjI)
+          sorry
+        subgoal for u'' a
+          apply (cases "a \<in> GVrs2 u'")
+          subgoal
+            apply (cases "\<sigma> a = a")
+             apply (simp add: disjoint_iff)
+            apply (cases "\<tau> a = a")
+            sorry
+          apply (smt (verit, ccfv_threshold) Diff_iff UN_iff id_on_eq)
+          done
+        done
+      done
+    done
+  done
+*)
 
 declare GMAP_def[simp]
 
@@ -694,29 +801,6 @@ lemma SSupp_comp_bound'[simp]:
    apply (erule (2) card_of_mono1[OF SSupp_comp_Esub_le(2)])
   apply (auto simp: Un_bound)
   done
-
-lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
-  by (metis Ector_inject eta_natural supp_id_bound)
-
-lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
-  unfolding Ector_inject
-  apply safe
-  subgoal for \<sigma>
-    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
-    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
-        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-        G.Map_id G.Sb_Inj Eperm_comp Eperm_id)
-    done
-  subgoal
-    apply (auto simp: eta'_natural)
-    done
-  done
-
-lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
-  using Ector_eta_inj by metis
-
-lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
-  using Ector_eta'_inj by metis
 
 lemma EFVrs\<eta>_Ector_eta: "EFVrs\<eta> (Ector (\<eta> a)) = {a}"
   unfolding EFVrs\<eta>_def

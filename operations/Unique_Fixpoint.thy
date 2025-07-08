@@ -22,6 +22,14 @@ class var =
   assumes large: "|Field Gbd| \<le>o |UNIV::'a set|"
     and regular: "regularCard |UNIV::'a set|"
 
+instantiation Gbd_type :: var begin
+instance apply standard
+  apply simp
+  by (meson G.infinite_regular_card_order card_of_unique
+      card_order_on_Card_order infinite_regular_card_order_def
+      regularCard_ordIso)
+end
+
 subclass (in covar) var
   apply standard
   apply (meson cardSuc_ordLess_ordLeq card_of_Card_order

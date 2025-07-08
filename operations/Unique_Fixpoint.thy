@@ -20,13 +20,75 @@ consts Gmap :: "('x1 \<Rightarrow> 'x1') \<Rightarrow> ('x2 \<Rightarrow> 'x2') 
 consts GSupp1 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'x1 set"
 consts GSupp2 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'x2 set"
 
+(*
+declare [[goals_limit = 20]]
 pbmv_monad "('a1::var, 'a2::var, 'x1, 'x2) G"
   Sbs: Gsub
   RVrs: GVrs1 GVrs2
   Maps: Gmap
   Supps: GSupp1 GSupp2
   bd: natLeq
-  sorry
+  oops
+*)
+
+setup \<open>Sign.mandatory_path "G"\<close>
+
+axiomatization where
+  infinite_regular_card_order: "infinite_regular_card_order natLeq" and
+  Sb_Inj: "Gsub id id = id" and
+  Sb_comp: "\<And>g1 g2 f1 f2.
+       |supp (f1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       |supp (f2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow>
+       |supp (g1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       |supp (g2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow>
+       Gsub g1 g2 \<circ> Gsub f1 f2 = Gsub (g1 \<circ> f1) (g2 \<circ> f2)" and
+  Vrs1_bd: "(\<And>x. |GVrs1 x| <o natLeq)" and
+  Vrs2_bd: "(\<And>x. |GVrs2 x| <o natLeq)" and
+  Vrs1_Sb: "(\<And>f1 f2 x.
+       |supp (f1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       |supp (f2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow> GVrs1 (Gsub f1 f2 x) = f1 ` GVrs1 x)" and
+  Vrs2_Sb: "(\<And>f1 f2 x.
+       |supp (f1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       |supp (f2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow> GVrs2 (Gsub f1 f2 x) = f2 ` GVrs2 x)" and
+  Sb_cong: "\<And>f1 f2 g1 g2 x.
+       |supp (f1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       |supp (f2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow>
+       |supp (g1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       |supp (g2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow>
+       (\<And>a1. a1 \<in> GVrs1 x \<Longrightarrow> f1 a1 = g1 a1) \<Longrightarrow>
+       (\<And>a2. a2 \<in> GVrs2 x \<Longrightarrow> f2 a2 = g2 a2) \<Longrightarrow>
+       Gsub f1 f2 x = Gsub g1 g2 x" and
+  Map_id: "Gmap id id = id" and
+  Map_comp: "\<And>f1 f2 g1 g2. Gmap g1 g2 \<circ> Gmap f1 f2 = Gmap (g1 \<circ> f1) (g2 \<circ> f2)" and
+  Supp1_Map: "(\<And>f1 f2 x. GSupp1 (Gmap f1 f2 x) = f1 ` GSupp1 x)" and
+  Supp2_Map: "(\<And>f1 f2 x. GSupp2 (Gmap f1 f2 x) = f2 ` GSupp2 x)" and
+  Supp1_bd: "(\<And>x. |GSupp1 x| <o natLeq)" and
+  Supp2_bd:  "(\<And>x. |GSupp2 x| <o natLeq)" and
+  Map_cong: "\<And>f1 f2 g1 g2 x.
+        (\<And>a. a \<in> GSupp1 x \<Longrightarrow> f1 a = g1 a) \<Longrightarrow>
+        (\<And>a. a \<in> GSupp2 x \<Longrightarrow> f2 a = g2 a) \<Longrightarrow>
+        Gmap f1 f2 x = Gmap g1 g2 x" and
+  Map_Sb: "\<And>f1 f2 g1 g2.
+        |supp (g1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+        |supp (g2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow>
+        Gmap f1 f2 \<circ> Gsub g1 g2 = Gsub g1 g2 \<circ> Gmap f1 f2" and
+  Supp1_Sb: "(\<And>g1 g2 x.
+        |supp (g1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+        |supp (g2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow> GSupp1 (Gsub g1 g2 x) = GSupp1 x)" and
+  Supp2_Sb:"(\<And>g1 g2 x.
+        |supp (g1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+        |supp (g2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow> GSupp2 (Gsub g1 g2 x) = GSupp2 x)" and
+  Vrs_Map1: "(\<And>f1 f2 x. GVrs1 (Gmap f1 f2 x) = GVrs1 x)" and
+  Vrs_Map2: "(\<And>f1 f2 x. GVrs2 (Gmap f1 f2 x) = GVrs2 x)"
+
+lemmas Vrs_Sb = G.Vrs1_Sb G.Vrs2_Sb
+lemmas Vrs_bd = G.Vrs1_bd G.Vrs2_bd
+lemmas Supp_Map = G.Supp1_Map G.Supp2_Map
+lemmas Supp_bd = G.Supp1_bd G.Supp2_bd
+lemmas Supp_Sb = G.Supp1_Sb G.Supp2_Sb
+lemmas Vrs_Map = G.Vrs_Map1 G.Vrs_Map2
+
+setup \<open>Sign.parent_path\<close>
 
 (* In this case the flat version, Gren, happens to be the same as Gsub. *)
 abbreviation Gren :: 

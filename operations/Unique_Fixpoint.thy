@@ -6,6 +6,47 @@ declare supp_id_bound[simp] supp_inv_bound[simp] infinite_UNIV[simp]
 
 definition "IImsupp' Inj Vr \<rho> = SSupp Inj \<rho> \<union> IImsupp Inj Vr \<rho>"
 
+typedecl Gbd_type
+consts Gbd :: "Gbd_type rel"
+
+setup \<open>Sign.mandatory_path "G"\<close>
+axiomatization where
+  infinite_regular_card_order: "infinite_regular_card_order Gbd"
+setup \<open>Sign.parent_path\<close>
+
+class covar =
+  assumes large: "cardSuc Gbd \<le>o |UNIV::'a set|"
+    and regular: "regularCard |UNIV::'a set|"
+
+class var =
+  assumes large: "|Field Gbd| \<le>o |UNIV::'a set|"
+    and regular: "regularCard |UNIV::'a set|"
+
+subclass (in covar) var
+  apply standard
+  apply (meson cardSuc_ordLess_ordLeq card_of_Card_order
+      card_of_Field_ordIso G.infinite_regular_card_order
+      infinite_regular_card_order.Card_order local.large
+      ordIso_ordLeq_trans ordLeq_iff_ordLess_or_ordIso)
+  by (rule local.regular)
+
+subclass (in var) infinite
+  apply standard
+  using card_of_ordLeq_finite cinfinite_def
+    G.infinite_regular_card_order
+    infinite_regular_card_order.cinfinite local.large
+  by auto
+
+lemma large': "Gbd \<le>o |UNIV::'a::var set|"
+  using Card_order_iff_ordLeq_card_of var_class.large
+    G.infinite_regular_card_order infinite_regular_card_order.Card_order ordLeq_transitive
+  by blast
+
+lemma (in var) UN_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> |f x| <o |UNIV::'a set| )
+  \<Longrightarrow> |\<Union>(f ` A)| <o |UNIV::'a set|"
+  using card_of_Card_order card_of_UNION_ordLess_infinite_Field local.regular regularCard_stable
+  by (metis Field_card_of infinite_UNIV)
+
 lemma IImsupp_bound[simp]:
   "|SSupp Inj (\<rho> :: 'a::var \<Rightarrow> _)| <o |UNIV :: 'a set| \<Longrightarrow> (\<And>x. |Vr (\<rho> x)| <o |UNIV :: 'a set| ) \<Longrightarrow>
   |IImsupp' Inj (Vr :: _ \<Rightarrow> 'a set) \<rho>| <o |UNIV :: 'a set|"
@@ -20,21 +61,9 @@ consts Gmap :: "('x1 \<Rightarrow> 'x1') \<Rightarrow> ('x2 \<Rightarrow> 'x2') 
 consts GSupp1 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'x1 set"
 consts GSupp2 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'x2 set"
 
-(*
-declare [[goals_limit = 20]]
-pbmv_monad "('a1::var, 'a2::var, 'x1, 'x2) G"
-  Sbs: Gsub
-  RVrs: GVrs1 GVrs2
-  Maps: Gmap
-  Supps: GSupp1 GSupp2
-  bd: natLeq
-  oops
-*)
-
 setup \<open>Sign.mandatory_path "G"\<close>
 
 axiomatization where
-  infinite_regular_card_order: "infinite_regular_card_order natLeq" and
   Sb_Inj: "Gsub id id = id" and
   Sb_comp: "\<And>g1 g2 f1 f2.
        |supp (f1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
@@ -42,8 +71,8 @@ axiomatization where
        |supp (g1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
        |supp (g2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow>
        Gsub g1 g2 \<circ> Gsub f1 f2 = Gsub (g1 \<circ> f1) (g2 \<circ> f2)" and
-  Vrs1_bd: "(\<And>x. |GVrs1 x| <o natLeq)" and
-  Vrs2_bd: "(\<And>x. |GVrs2 x| <o natLeq)" and
+  Vrs1_bd: "(\<And>x. |GVrs1 x| <o Gbd)" and
+  Vrs2_bd: "(\<And>x. |GVrs2 x| <o Gbd)" and
   Vrs1_Sb: "(\<And>f1 f2 x.
        |supp (f1 :: 'a1::var \<Rightarrow> 'a1)| <o |UNIV :: 'a1 set| \<Longrightarrow>
        |supp (f2 :: 'a2::var \<Rightarrow> 'a2)| <o |UNIV :: 'a2 set| \<Longrightarrow> GVrs1 (Gsub f1 f2 x) = f1 ` GVrs1 x)" and
@@ -62,8 +91,8 @@ axiomatization where
   Map_comp: "\<And>f1 f2 g1 g2. Gmap g1 g2 \<circ> Gmap f1 f2 = Gmap (g1 \<circ> f1) (g2 \<circ> f2)" and
   Supp1_Map: "(\<And>f1 f2 x. GSupp1 (Gmap f1 f2 x) = f1 ` GSupp1 x)" and
   Supp2_Map: "(\<And>f1 f2 x. GSupp2 (Gmap f1 f2 x) = f2 ` GSupp2 x)" and
-  Supp1_bd: "(\<And>x. |GSupp1 x| <o natLeq)" and
-  Supp2_bd:  "(\<And>x. |GSupp2 x| <o natLeq)" and
+  Supp1_bd: "(\<And>x. |GSupp1 x| <o Gbd)" and
+  Supp2_bd:  "(\<And>x. |GSupp2 x| <o Gbd)" and
   Map_cong: "\<And>f1 f2 g1 g2 x.
         (\<And>a. a \<in> GSupp1 x \<Longrightarrow> f1 a = g1 a) \<Longrightarrow>
         (\<And>a. a \<in> GSupp2 x \<Longrightarrow> f2 a = g2 a) \<Longrightarrow>
@@ -144,7 +173,7 @@ axiomatization where
   "\<And>u. EVrs (Ector u::('a::var) E) =
      GVrs1 u \<union> ((\<Union>e \<in> GSupp1 u. EVrs e) - GVrs2 u) \<union> (\<Union>e \<in> GSupp2 u. EVrs e)"
   and EVrs_bd:
-  "\<And>x. |EVrs (x :: 'a :: var E)| <o natLeq"
+  "\<And>x. |EVrs (x :: 'a :: var E)| <o Gbd"
 
 axiomatization where
   E_coinduct: "\<And>P (g :: 'a::var E \<Rightarrow> 'a E) h e. (\<And>e. P e \<Longrightarrow> g e = h e \<or>
@@ -223,10 +252,10 @@ lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<
   using Ector_eta'_inj by metis
 
 lemma EVrs_bound[simp]: "|EVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  by (meson EVrs_bd var_class.large' ordLess_ordLeq_trans)
+  by (rule ordLess_ordLeq_trans[OF EVrs_bd large'])
 
 lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: var, 'a, 'a E, 'a E) G)| <o |UNIV :: 'a set|"
-  by (meson G.Vrs_bd var_class.large' ordLess_ordLeq_trans)
+  by (rule ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'])
 
 lemma Ector_fresh_inject:
   assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::var set| <o |UNIV :: 'a set|"
@@ -591,10 +620,13 @@ proof safe
        apply (simp_all add: G.Vrs_Sb)
       apply (auto simp: swap_def)
       done
-    with b have False
-      apply simp
-      by (smt (verit) G.Vrs_bd(1) UNIV_cinfinite UNIV_eq_I
-          cinfinite_imp_infinite eta_mem finite_iff_ordLess_natLeq)
+    with b have "|UNIV - {a}| \<le>o |GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
+      by (intro card_of_mono1) auto
+    then have "|UNIV::'a1 set| \<le>o |GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
+      by (meson infinite_UNIV infinite_card_of_diff_singl ordIso_ordLeq_trans ordIso_symmetric)
+    then have False
+      using G.Vrs_bd(1) large' not_ordLeq_ordLess
+        ordLeq_ordLess_trans by blast
   }
   then show "b = a"
     by blast
@@ -606,7 +638,7 @@ next
   then have "GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = UNIV"
     by blast
   then show "b \<in> {}"
-    by (metis G.Vrs_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+    by (metis G.Vrs_bd(2) large' exists_fresh exists_univ_eq ordLess_ordLeq_trans)
 qed (rule eta_mem)
 
 lemma GVrs_eta'[simp]:
@@ -624,10 +656,13 @@ proof safe
        apply (simp_all add: G.Vrs_Sb)
       apply (auto simp: swap_def)
       done
-    with b have False
-      apply simp
-      by (smt (verit) G.Vrs_bd(1) UNIV_cinfinite UNIV_eq_I
-          cinfinite_imp_infinite eta'_mem finite_iff_ordLess_natLeq)
+    with b have "|UNIV - {a}| \<le>o |GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
+      by (intro card_of_mono1) auto
+    then have "|UNIV::'a1 set| \<le>o |GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
+      by (meson infinite_UNIV infinite_card_of_diff_singl ordIso_ordLeq_trans ordIso_symmetric)
+    then have False
+      using G.Vrs_bd(1) large' not_ordLeq_ordLess
+        ordLeq_ordLess_trans by blast
   }
   then show "b = a"
     by blast
@@ -639,7 +674,7 @@ next
   then have "GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = UNIV"
     by blast
   then show "b \<in> {}"
-    by (metis G.Vrs_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+    by (metis G.Vrs_bd(2) large' exists_fresh exists_univ_eq ordLess_ordLeq_trans)
 qed (rule eta'_mem)
 
 lemma GSupp_eta[simp]:
@@ -647,22 +682,28 @@ lemma GSupp_eta[simp]:
   "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
 proof safe
   fix b :: 'x1 assume "b \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G)" for c :: nat
-    by (subst eta_natural[of id id "\<lambda>x. if x = b then c else 0" id a, symmetric, simplified])
+  then have "c \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G)" for c :: Gbd_type
+    by (subst eta_natural[of id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" id a, symmetric, simplified])
       (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G) = UNIV"
+  then have "GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G) = UNIV"
     by blast
-  then show "b \<in> {}"
-    by (metis G.Supp_bd(1) finite_iff_ordLess_natLeq infinite_UNIV)
+  moreover have "|UNIV :: Gbd_type set| =o Gbd"
+    using card_of_unique G.infinite_regular_card_order
+      infinite_regular_card_order.card_order ordIso_symmetric by blast
+  ultimately show "b \<in> {}"
+    by (metis G.Supp_bd(1) not_ordLess_ordIso)
 next
   fix b :: 'x2 assume "b \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G)" for c :: nat
-    by (subst eta_natural[of id id id "\<lambda>x. if x = b then c else 0" a, symmetric, simplified])
+  then have "c \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G)" for c :: Gbd_type
+    by (subst eta_natural[of id id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" a, symmetric, simplified])
       (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G) = UNIV"
+  then have "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G) = UNIV"
     by blast
-  then show "b \<in> {}"
-    by (metis G.Supp_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+  moreover have "|UNIV :: Gbd_type set| =o Gbd"
+    using card_of_unique G.infinite_regular_card_order
+      infinite_regular_card_order.card_order ordIso_symmetric by blast
+  ultimately show "b \<in> {}"
+    by (metis G.Supp_bd(2) not_ordLess_ordIso)
 qed
 
 lemma GSupp_eta'[simp]:
@@ -670,22 +711,28 @@ lemma GSupp_eta'[simp]:
   "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
 proof safe
   fix b :: 'x1 assume "b \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G)" for c :: nat
-    by (subst eta'_natural[of id id "\<lambda>x. if x = b then c else 0" id a, symmetric, simplified])
+  then have "c \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G)" for c :: Gbd_type
+    by (subst eta'_natural[of id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" id a, symmetric, simplified])
       (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, nat, 'x2) G) = UNIV"
+  then have "GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G) = UNIV"
     by blast
-  then show "b \<in> {}"
-    by (metis G.Supp_bd(1) finite_iff_ordLess_natLeq infinite_UNIV)
+  moreover have "|UNIV :: Gbd_type set| =o Gbd"
+    using card_of_unique G.infinite_regular_card_order
+      infinite_regular_card_order.card_order ordIso_symmetric by blast
+  ultimately show "b \<in> {}"
+    by (metis G.Supp_bd(1) not_ordLess_ordIso)
 next
   fix b :: 'x2 assume "b \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G)" for c :: nat
-    by (subst eta'_natural[of id id id "\<lambda>x. if x = b then c else 0" a, symmetric, simplified])
-      (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, nat) G) = UNIV"
+  then have "c \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G)" for c :: Gbd_type
+    by (subst eta'_natural[of id id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" a, symmetric, simplified])
+      (auto simp: G.Supp_Sb G.Supp_Map image_iff intro!: bexI[of _ b])
+  then have "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G) = UNIV"
     by blast
-  then show "b \<in> {}"
-    by (metis G.Supp_bd(2) finite_iff_ordLess_natLeq infinite_UNIV)
+  moreover have "|UNIV :: Gbd_type set| =o Gbd"
+    using card_of_unique G.infinite_regular_card_order
+      infinite_regular_card_order.card_order ordIso_symmetric by blast
+  ultimately show "b \<in> {}"
+    by (metis G.Supp_bd(2) not_ordLess_ordIso)
 qed
 
 lemma EFVrs\<eta>_Ector_eta: "EFVrs\<eta> (Ector (\<eta> a)) = {a}"
@@ -720,9 +767,9 @@ lemma Efree\<eta>'_Efree: "Efree\<eta>' a e \<Longrightarrow> a \<in> EVrs e"
   by (induct e pred: Efree\<eta>') (auto simp: EVrs_Ector)
 
 lemma EFVrs_bd:
-  "|EFVrs (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs\<eta> (x :: 'a :: var E)| <o natLeq"
-  "|EFVrs\<eta>' (x :: 'a :: var E)| <o natLeq"
+  "|EFVrs (x :: 'a :: var E)| <o Gbd"
+  "|EFVrs\<eta> (x :: 'a :: var E)| <o Gbd"
+  "|EFVrs\<eta>' (x :: 'a :: var E)| <o Gbd"
     apply (meson EVrs_bd Efree_alt(1) Efreee_Efree card_of_subset_bound subset_eq)
    apply (meson EVrs_bd Efree_alt(2) Efree\<eta>_Efree card_of_subset_bound subset_eq)
   apply (meson EVrs_bd Efree_alt(3) Efree\<eta>'_Efree card_of_subset_bound subset_eq)
@@ -732,7 +779,7 @@ lemma EFVrs_bound[simp]:
   "|EFVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
   "|EFVrs\<eta> (x :: 'a :: var E)| <o |UNIV :: 'a set|"
   "|EFVrs\<eta>' (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  by (meson EFVrs_bd FType_pre.var_large ordLess_ordLeq_trans)+
+  using EFVrs_bd large' ordLess_ordLeq_trans by blast+
 
 lemma EFVrs_EsubI1[OF _ _ _ _ refl]:
   assumes
@@ -1274,12 +1321,12 @@ pbmv_monad "'a::var E"
   RVrs: EFVrs
   Injs: "Ector o \<eta>" "Ector o \<eta>'"
   Vrs: EFVrs\<eta> EFVrs\<eta>'
-  bd: natLeq
+  bd: Gbd
   oops
 *)
 
 lemma E_pbmv_axioms:
- "infinite_regular_card_order natLeq"
+ "infinite_regular_card_order Gbd"
  "Esub id (Ector \<circ> \<eta>) (Ector \<circ> \<eta>') = id"
  "\<And>f \<rho>1 \<rho>2.
        |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -1300,9 +1347,9 @@ lemma E_pbmv_axioms:
        |SSupp (Ector \<circ> \<eta>') \<rho>'2| <o |UNIV :: 'a set| \<Longrightarrow>
        Esub g \<rho>'1 \<rho>'2 \<circ> Esub f \<rho>1 \<rho>2 =
        Esub (g \<circ> f) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>1) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>2)"
- "\<And>x. |EFVrs x| <o natLeq"
- "\<And>x. |EFVrs\<eta> x| <o natLeq"
- "\<And>x. |EFVrs\<eta>' x| <o natLeq"
+ "\<And>x. |EFVrs x| <o Gbd"
+ "\<And>x. |EFVrs\<eta> x| <o Gbd"
+ "\<And>x. |EFVrs\<eta>' x| <o Gbd"
  "\<And>a. EFVrs ((Ector \<circ> \<eta>) a) = {}"
  "\<And>a. EFVrs ((Ector \<circ> \<eta>') a) = {}"
  "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>) a) = {a}"
@@ -1340,7 +1387,7 @@ lemma E_pbmv_axioms:
         (\<And>a. a \<in> EFVrs\<eta>' x \<Longrightarrow> \<rho>2 a = \<rho>'2 a) \<Longrightarrow>
         Esub f \<rho>1 \<rho>2 x = Esub g \<rho>'1 \<rho>'2 x"
   subgoal
-    by (rule infinite_regular_card_order_natLeq)
+    by (rule G.infinite_regular_card_order)
   subgoal
     apply (rule Esub_unique_fresh[symmetric, where A="{}"])
           apply (simp_all add: G.Sb_Inj G.Map_id)

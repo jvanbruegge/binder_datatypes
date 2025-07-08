@@ -2223,7 +2223,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         };
 
         val (UNIV_cinfinite, Un_bound, UNION_bound, lthy) = case class of
-          @{sort var} => (@{thm var_class.UNIV_cinfinite}, @{thm var_class.Un_bound}, @{thm var_class.UN_bound}, lthy)
+          @{sort var} => (@{thm var_class.UNIV_cinfinite}, @{thm infinite_class.Un_bound}, @{thm var_class.UN_bound}, lthy)
           | _ =>
           let
             val UNIV_cinfinite =

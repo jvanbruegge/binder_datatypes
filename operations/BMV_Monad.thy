@@ -45,7 +45,7 @@ lemma SSupp_comp_bound_FType[simp]:
   fixes \<rho> \<rho>'::"'tyvar::var \<Rightarrow> 'tyvar FType"
   assumes "|SSupp_FType \<rho>| <o |UNIV::'tyvar set|" "|SSupp_FType \<rho>'| <o |UNIV::'tyvar set|"
   shows "|SSupp_FType (tvsubst_FType \<rho> \<circ> \<rho>')| <o |UNIV::'tyvar set|"
-  using assms SSupp_comp_subset_FType by (metis card_of_subset_bound var_class.Un_bound)
+  using assms SSupp_comp_subset_FType by (metis card_of_subset_bound infinite_class.Un_bound)
 
 lemma Sb_Inj_FType: "Sb_FType Inj_FType_1 = id"
   apply (rule ext)
@@ -177,7 +177,7 @@ axiomatization Sb_LM :: "('a::var \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarr
   and Sb_LM_simp4[simp]: "x \<notin> imsupp f1 \<Longrightarrow> x \<notin> IImsupp_LM f2 \<Longrightarrow> Sb_LM f1 f2 (Lam x t) = Lam x (Sb_LM f1 f2 t)"
 
 ML \<open>
-Multithreading.parallel_proofs := 0
+Multithreading.parallel_proofs := 4
 \<close>
 
 lemma VVr_eq_Var_LM[simp]: "tvVVr_tvsubst_LM = Var"
@@ -186,7 +186,7 @@ lemma VVr_eq_Var_LM[simp]: "tvVVr_tvsubst_LM = Var"
   done
 lemma IImsupp_SSupp_bound[simp]: "( |IImsupp_LM (f::'a::var \<Rightarrow> _)| <o |UNIV::'a set| ) \<longleftrightarrow> ( |SSupp_LM f| <o |UNIV::'a set| )"
   apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM)
-  by (meson LM.set_bd_UNIV UN_bound card_of_Un1 ordLeq_ordLess_trans type_copy_set_bd var_class.Un_bound)
+  by (meson LM.set_bd_UNIV UN_bound card_of_Un1 ordLeq_ordLess_trans type_copy_set_bd infinite_class.Un_bound)
 
 lemma Vrs_Un: "FVars_LM t = Vrs_1 t \<union> Vrs_2 t"
   apply (induction t rule: LM.induct)
@@ -342,7 +342,7 @@ pbmv_monad "'b::var LM"
       apply (rule trans[OF comp_apply])
   subgoal premises prems for g \<rho>' f \<rho> x
     apply (binder_induction x avoiding: "imsupp g" "imsupp f" "IImsupp_LM \<rho>" "IImsupp_LM \<rho>'" rule: LM.strong_induct)
-           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_LM_def LM.set_bd_UNIV intro!: var_class.Un_bound var_class.UN_bound)[7]
+           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_LM_def LM.set_bd_UNIV intro!: infinite_class.Un_bound var_class.UN_bound)[7]
     apply (auto simp: prems)
     apply (subst Sb_LM_simp4)
       apply (rule contra_subsetD[OF imsupp_o])

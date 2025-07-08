@@ -796,7 +796,8 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
       else NONE
     )) (#Injs (#consts model)) (#Vrs (#consts model));
 
-    val Un_bound = MRBNF_Def.get_class_assumption [#var_class model] "Un_bound" lthy;
+    val Un_bound = @{thm infinite_class.Un_bound};
+      (*MRBNF_Def.get_class_assumption [#var_class model] "Un_bound" lthy;*)
 
     val Injss = #Injs (#consts model);
 

@@ -70,8 +70,8 @@ subclass (in var) infinite
 lemma (in var) UNIV_cinfinite: "cinfinite |UNIV::'a set|"
   using Field_natLeq cinfinite_def infinite_iff_card_of_nat local.large by fastforce
 
-lemma (in var) Un_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|"
-  using card_of_Card_order local.UNIV_cinfinite local.regular regularCard_Un by blast
+lemma (in infinite) Un_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|"
+  using card_of_Un_ordLess_infinite local.infinite_UNIV by blast
 
 lemma (in var) UN_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> |f x| <o |UNIV::'a set| )
   \<Longrightarrow> |\<Union>(f ` A)| <o |UNIV::'a set|"

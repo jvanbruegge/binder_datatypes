@@ -518,7 +518,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             let
               val var_class = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) sort;
               fun assm name = MRBNF_Def.get_class_assumption [hd var_class] name lthy;
-            in (assm "Un_bound", assm "UN_bound", assm "large'") end;
+            in (@{thm "infinite_class.Un_bound"}, assm "UN_bound", assm "large'") end;
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr quot)) = #card_of_FVars_bound_UNIVs quot
           | set_bd_UNIVs_of_mr_bnfs x =
@@ -911,9 +911,9 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           etac ctxt @{thm Int_subset_empty2},
           rtac ctxt @{thm Un_upper2},
           assume_tac ctxt,
-          resolve_tac ctxt (@{thm var_class.Un_bound} :: Un_bounds),
+          resolve_tac ctxt (@{thm infinite_class.Un_bound} :: Un_bounds),
           assume_tac ctxt,
-          REPEAT_DETERM o resolve_tac ctxt (@{thm var_class.Un_bound} :: Un_bounds @ flat supp_smallss)
+          REPEAT_DETERM o resolve_tac ctxt (@{thm infinite_class.Un_bound} :: Un_bounds @ flat supp_smallss)
         ])) Bs Ks gs supp_ts;
 
         val perm_comp_inv_ids = map2 (fn (p, _) => fn x => Goal.prove_sorry lthy (names (gs @ [x])) g_prems

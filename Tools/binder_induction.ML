@@ -436,7 +436,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 resolve_tac ctxt (more_facts @ prems @ bound_thms @ set_bds @
                   @{thms allI finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite]
                     ordIso_ordLeq_trans[OF ordIso_symmetric[OF card_of_Field_ordIso]] emp_bound
-                    induct_impliesI induct_forallI var_class.Un_bound
+                    induct_impliesI induct_forallI infinite_class.Un_bound
                   } @ maps repeat_mp prems
                 ),
                 assume_tac ctxt

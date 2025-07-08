@@ -120,9 +120,9 @@ lemmas Vrs_Map = G.Vrs_Map1 G.Vrs_Map2
 setup \<open>Sign.parent_path\<close>
 
 (* In this case the flat version, Gren, happens to be the same as Gsub. *)
-abbreviation Gren :: 
+definition Gren :: 
   "('a1 :: var \<Rightarrow> 'a1) \<Rightarrow> ('a2 :: var \<Rightarrow> 'a2) \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G" where 
-  "Gren \<rho>1 \<rho>2 u \<equiv> Gsub \<rho>1 \<rho>2 u"
+  "Gren \<rho>1 \<rho>2 u = Gsub \<rho>1 \<rho>2 u"
 
 print_theorems
 
@@ -131,14 +131,14 @@ consts \<eta>' :: "'a1 :: var \<Rightarrow> ('a1, 'a2 :: var, 'x1, 'x2) G"
 
 axiomatization where
   eta_inversion: "\<And>\<delta>1 \<delta>2 f1 f2 u a. |supp \<delta>1| <o |UNIV::'a1 set| \<Longrightarrow> |supp \<delta>2| <o |UNIV::'a2 set| \<Longrightarrow>
-   Gren \<delta>1 \<delta>2 (Gmap f1 f2 u) = (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) \<Longrightarrow> \<exists>y. u = \<eta> y"
+   Gsub \<delta>1 \<delta>2 (Gmap f1 f2 u) = (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) \<Longrightarrow> \<exists>y. u = \<eta> y"
   and eta_natural: "\<And>\<delta>1 \<delta>2 f1 f2 a. |supp \<delta>1| <o |UNIV::'a1 set| \<Longrightarrow> |supp \<delta>2| <o |UNIV::'a2 set| \<Longrightarrow>
-   Gren \<delta>1 \<delta>2 (Gmap f1 f2 (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G)) = \<eta> (\<delta>1 a)"
+   Gsub \<delta>1 \<delta>2 (Gmap f1 f2 (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G)) = \<eta> (\<delta>1 a)"
   and eta_mem: "\<And>a. a \<in> GVrs1 (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G)"
   and eta'_inversion: "\<And>\<delta>1 \<delta>2 f1 f2 u a. |supp \<delta>1| <o |UNIV::'a1 set| \<Longrightarrow> |supp \<delta>2| <o |UNIV::'a2 set| \<Longrightarrow>
-   Gren \<delta>1 \<delta>2 (Gmap f1 f2 u) = \<eta>' a \<Longrightarrow> \<exists>y. u = \<eta>' y"
+   Gsub \<delta>1 \<delta>2 (Gmap f1 f2 u) = \<eta>' a \<Longrightarrow> \<exists>y. u = \<eta>' y"
   and eta'_natural: "\<And>\<delta>1 \<delta>2 f1 f2 a. |supp \<delta>1| <o |UNIV::'a1 set| \<Longrightarrow> |supp \<delta>2| <o |UNIV::'a2 set| \<Longrightarrow>
-   Gren \<delta>1 \<delta>2 (Gmap f1 f2 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G)) = \<eta>' (\<delta>1 a)"
+   Gsub \<delta>1 \<delta>2 (Gmap f1 f2 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G)) = \<eta>' (\<delta>1 a)"
   and eta'_mem: "\<And>a. a \<in> GVrs1 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G)"
   and eta_inj: "\<And>a a'. \<eta> a = \<eta> a' \<Longrightarrow> a = a'"
   and eta'_inj: "\<And>a a'. \<eta>' a = \<eta>' a' \<Longrightarrow> a = a'"
@@ -163,10 +163,10 @@ axiomatization where
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
   and Eperm_Ector:
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
-    Eperm \<sigma> (Ector u) = Ector (Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
+    Eperm \<sigma> (Ector u) = Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
   and Ector_inject: "\<And>x y. (Ector x = Ector y) =
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
-     id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gsub id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+     id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
   and Ector_fresh_surj: "\<And>A e. |A::'a set| <o |UNIV :: 'a::var set| \<Longrightarrow> 
     \<exists>u. GVrs2 u \<inter> A = {} \<and> e = Ector u"
   and EVrs_Ector:
@@ -229,7 +229,7 @@ lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow
 
 
 lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
-  by (metis Ector_inject eta_natural supp_id_bound)
+  by (metis Ector_inject eta_natural supp_id_bound Gren_def)
 
 lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
   unfolding Ector_inject
@@ -238,10 +238,10 @@ lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<e
     apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
     apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
         G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-        G.Map_id G.Sb_Inj Eperm_comp Eperm_id)
+        G.Map_id G.Sb_Inj Eperm_comp Eperm_id Gren_def)
     done
   subgoal
-    apply (auto simp: eta'_natural)
+    apply (auto simp: eta'_natural Gren_def)
     done
   done
 
@@ -268,7 +268,7 @@ lemma Ector_fresh_inject:
     apply (drule meta_mp; simp add: UN_bound card_of_minus_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large'] ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'] assms)+
     apply (elim exE conjE)
     subgoal for \<tau>
-      apply (auto simp: G.Vrs_Map intro!: exI[of _ \<tau>] trans[OF G.Sb_cong arg_cong[where f="Gren _ _", OF G.Map_cong]] Eperm_cong)
+      apply (auto simp: G.Vrs_Map Gren_def intro!: exI[of _ \<tau>] trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]] Eperm_cong)
       using G.Vrs_Map(2) G.Vrs_Sb(2) assms(2) imageI supp_id_bound apply blast
       apply (smt (verit, ccfv_threshold) Diff_iff G.Vrs_Map(2) G.Vrs_Sb(2) UN_I assms(2) disjoint_iff_not_equal id_on_eq imageI supp_id_bound)
       done
@@ -301,7 +301,7 @@ lemma Esub_inversion0:
       apply (rule conjI)
        apply (erule trans[OF sym])
        apply (auto 0 0 simp add: Int_Un_distrib G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified] Eperm_Esub Ector_inject
-          G.Vrs_Sb G.Vrs_Map intro!: trans[OF G.Sb_cong arg_cong[where f = "Gren _ _", OF G.Map_cong]] exI[of _ \<sigma>])
+          G.Vrs_Sb G.Vrs_Map Gren_def intro!: trans[OF G.Sb_cong arg_cong[where f = "Gsub _ _", OF G.Map_cong]] exI[of _ \<sigma>])
       apply (meson disjoint_iff_not_equal id_on_def not_in_imsupp_same)
       done
     done
@@ -333,7 +333,7 @@ binder_inductive (no_auto_equiv) Efreee
     subgoal for _ u
       apply (rule exI[of _ "\<sigma> a"])
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
-      apply (auto simp: G.Vrs_Sb G.Vrs_Map image_iff Eperm_Ector
+      apply (auto simp: G.Vrs_Sb G.Vrs_Map image_iff Eperm_Ector Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     subgoal for e' u _
@@ -341,7 +341,7 @@ binder_inductive (no_auto_equiv) Efreee
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
       apply (rule exI[of _ "\<sigma> a"])
       apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map image_iff Eperm_Ector
-          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject
+          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     subgoal for e' u _
@@ -349,7 +349,7 @@ binder_inductive (no_auto_equiv) Efreee
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
       apply (rule exI[of _ "\<sigma> a"])
       apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map image_iff Eperm_Ector
-          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject
+          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     done
@@ -368,7 +368,7 @@ binder_inductive (no_auto_equiv) Efreee
       subgoal for _ u
         apply (rule exI[of _ a])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map Ector_inject EVrs_Ector
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map Ector_inject EVrs_Ector Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
         done
@@ -376,7 +376,7 @@ binder_inductive (no_auto_equiv) Efreee
         apply (rule exI[of _ "Eperm \<sigma> e"])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
         apply (rule exI[of _ a])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector id_onD[of _ \<sigma> a]
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector id_onD[of _ \<sigma> a] Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2] prems(2)[of \<sigma> a e, rotated 2])
         done
@@ -384,7 +384,7 @@ binder_inductive (no_auto_equiv) Efreee
         apply (rule exI[of _ "e"])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
         apply (rule exI[of _ a])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
         done
@@ -405,14 +405,14 @@ binder_inductive (no_auto_equiv) Efree\<eta>
   subgoal for R B \<sigma> a e
     apply (elim disj_forward exE conjE; hypsubst_thin)
     subgoal for _
-      apply (auto simp: Eperm_Ector eta_natural)
+      apply (auto simp: Eperm_Ector eta_natural Gren_def)
       done
     subgoal for e' u _
       apply (rule exI[of _ "Eperm \<sigma> e'"])
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
       apply (rule exI[of _ "\<sigma> a"])
       apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map image_iff Eperm_Ector
-          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject
+          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     subgoal for e' u _
@@ -420,7 +420,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
       apply (rule exI[of _ "\<sigma> a"])
       apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map image_iff Eperm_Ector
-          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject
+          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     done
@@ -443,7 +443,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>
         apply (rule exI[of _ "Eperm \<sigma> e"])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
         apply (rule exI[of _ a])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector id_onD[of _ \<sigma> a]
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector id_onD[of _ \<sigma> a] Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2] prems(2)[of \<sigma> a e, rotated 2])
         done
@@ -451,7 +451,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>
         apply (rule exI[of _ "e"])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
         apply (rule exI[of _ a])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
         done
@@ -472,14 +472,14 @@ binder_inductive (no_auto_equiv) Efree\<eta>'
   subgoal for R B \<sigma> a e
     apply (elim disj_forward exE conjE; hypsubst_thin)
     subgoal for _
-      apply (auto simp: Eperm_Ector eta'_natural)
+      apply (auto simp: Eperm_Ector eta'_natural Gren_def)
       done
     subgoal for e' u _
       apply (rule exI[of _ "Eperm \<sigma> e'"])
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
       apply (rule exI[of _ "\<sigma> a"])
       apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map image_iff Eperm_Ector
-          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject
+          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     subgoal for e' u _
@@ -487,7 +487,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>'
       apply (rule exI[of _ "Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u)"])
       apply (rule exI[of _ "\<sigma> a"])
       apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map image_iff Eperm_Ector
-          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject
+          Eperm_comp[THEN fun_cong, simplified] Eperm_id bij_implies_inject Gren_def
           dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
       done
     done
@@ -510,7 +510,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>'
         apply (rule exI[of _ "Eperm \<sigma> e"])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
         apply (rule exI[of _ a])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector id_onD[of _ \<sigma> a]
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector id_onD[of _ \<sigma> a] Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2] prems(2)[of \<sigma> a e, rotated 2])
         done
@@ -518,7 +518,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>'
         apply (rule exI[of _ "e"])
         apply (rule exI[of _ "Gsub id \<sigma> (Gmap (Eperm \<sigma>) id u)"])
         apply (rule exI[of _ a])
-        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector
+        apply (auto simp: G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Ector_inject EVrs_Ector Gren_def
             intro!: exI[of _ \<sigma>] elim!: id_on_antimono
             dest: eta_inversion[rotated 2] eta'_inversion[rotated 2])
         done
@@ -565,7 +565,7 @@ lemma Esub_unique_fresh:
         apply (cases "\<exists>a. u = \<eta>' a")
          apply (auto simp: Esub_Ector\<eta>' assms) []
         apply (rule disjI2)
-        apply (rule exI[where x="Gren \<delta> id u"])
+        apply (rule exI[where x="Gsub \<delta> id u"])
         apply (auto simp: assms Esub_Ector G.Map_Sb[THEN fun_cong, simplified])
         done
       done
@@ -1457,7 +1457,7 @@ lemma E_pbmv_axioms:
       apply (erule exE conjE)+
       apply hypsubst_thin
       subgoal for u
-        apply (rule exI[where x="Gren \<delta>2 id u"])
+        apply (rule exI[where x="Gsub \<delta>2 id u"])
         apply (simp add: G.Supp_Sb Esub_Ector Ector_eta_inj Ector_eta'_inj
             G.Map_Sb[THEN fun_cong, simplified])
         apply (intro conjI ballI)

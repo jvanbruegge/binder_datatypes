@@ -3892,7 +3892,7 @@ val _ =
          Scan.repeat1 (Scan.unless (Parse.reserved "bd") (parse_var_type -- Parse.term))) []) --|
        (Parse.reserved "bd" -- @{keyword ":"}) -- Parse.term --
        Scan.optional ((Parse.reserved "wits" -- @{keyword ":"}) |--
-         Scan.repeat1 (Scan.unless (Parse.reserved "rel" ||
+         Scan.repeat1 (Scan.unless (Parse.reserved "rel" || Parse.reserved "pred" || Parse.reserved "var_class" || 
            Parse.reserved "plugins") Parse.term)) [] --
        Scan.option ((Parse.reserved "rel" -- @{keyword ":"}) |-- Parse.term) --
        Scan.option ((Parse.reserved "pred" -- @{keyword ":"}) |-- Parse.term) --

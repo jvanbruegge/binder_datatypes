@@ -852,7 +852,7 @@ lemma EFVrs_EsubI2[OF _ _ _ _ _ refl]:
     apply (cases "\<rho> a = Ector (\<eta> a)")
      apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
-     apply blast
+     apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efreee_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
@@ -885,7 +885,7 @@ lemma EFVrs_EsubI3[OF _ _ _ _ _ refl]:
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
      apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
-     apply blast
+     apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efreee_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
@@ -1030,7 +1030,7 @@ lemma EFVrs\<eta>_EsubI2[OF _ _ _ _ _ refl]:
     apply (cases "\<rho> a = Ector (\<eta> a)")
      apply (simp add: EFVrs\<eta>_Ector_eta Efree_alt(2))
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
-     apply blast
+     apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efree\<eta>_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
@@ -1063,7 +1063,7 @@ lemma EFVrs\<eta>_EsubI3[OF _ _ _ _ _ refl]:
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
      apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
-     apply blast
+     apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
@@ -1187,7 +1187,7 @@ lemma EFVrs\<eta>'_EsubI2[OF _ _ _ _ _ refl]:
     apply (cases "\<rho> a = Ector (\<eta> a)")
      apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
-     apply blast
+     apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
@@ -1220,7 +1220,7 @@ lemma EFVrs\<eta>'_EsubI3[OF _ _ _ _ _ refl]:
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
      apply (simp add: EFVrs\<eta>'_Ector_eta' Efree_alt(3))
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
-     apply blast
+     apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a

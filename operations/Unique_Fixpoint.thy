@@ -1254,12 +1254,78 @@ lemma EFVrs\<eta>'_EsubD:
     done
   done
 
+(*
+declare [[goals_limit=18]]
 pbmv_monad "'a::var E"
   Sbs: Esub
   RVrs: EFVrs
   Injs: "Ector o \<eta>" "Ector o \<eta>'"
   Vrs: EFVrs\<eta> EFVrs\<eta>'
   bd: natLeq
+  oops
+*)
+
+lemma E_pbmv_axioms:
+ "infinite_regular_card_order natLeq"
+ "Esub id (Ector \<circ> \<eta>) (Ector \<circ> \<eta>') = id"
+ "\<And>f \<rho>1 \<rho>2.
+       |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+       Esub f \<rho>1 \<rho>2 \<circ> (Ector \<circ> \<eta>) = \<rho>1"
+ "\<And>f \<rho>1 \<rho>2.
+       |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+       Esub f \<rho>1 \<rho>2 \<circ> (Ector \<circ> \<eta>') = \<rho>2"
+ "\<And>g \<rho>'1 \<rho>'2 f \<rho>1 \<rho>2.
+       |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+       |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>) \<rho>'1| <o |UNIV :: 'a set| \<Longrightarrow>
+       |SSupp (Ector \<circ> \<eta>') \<rho>'2| <o |UNIV :: 'a set| \<Longrightarrow>
+       Esub g \<rho>'1 \<rho>'2 \<circ> Esub f \<rho>1 \<rho>2 =
+       Esub (g \<circ> f) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>1) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>2)"
+ "\<And>x. |EFVrs x| <o natLeq"
+ "\<And>x. |EFVrs\<eta> x| <o natLeq"
+ "\<And>x. |EFVrs\<eta>' x| <o natLeq"
+ "\<And>a. EFVrs ((Ector \<circ> \<eta>) a) = {}"
+ "\<And>a. EFVrs ((Ector \<circ> \<eta>') a) = {}"
+ "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>) a) = {a}"
+ "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>') a) = {}"
+ "\<And>a. EFVrs\<eta>' ((Ector \<circ> \<eta>) a) = {}"
+ "\<And>a. EFVrs\<eta>' ((Ector \<circ> \<eta>') a) = {a}"
+ "\<And>f \<rho>1 \<rho>2 x.
+        |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+        EFVrs (Esub f \<rho>1 \<rho>2 x) =
+        f ` EFVrs x \<union>
+        ((\<Union>x\<in>EFVrs\<eta> x. EFVrs (\<rho>1 x)) \<union> (\<Union>x\<in>EFVrs\<eta>' x. EFVrs (\<rho>2 x)))"
+ "\<And>f \<rho>1 \<rho>2 x.
+        |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+        EFVrs\<eta> (Esub f \<rho>1 \<rho>2 x) =
+        (\<Union>x\<in>EFVrs\<eta> x. EFVrs\<eta> (\<rho>1 x)) \<union> (\<Union>x\<in>EFVrs\<eta>' x. EFVrs\<eta> (\<rho>2 x))"
+ "\<And>f \<rho>1 \<rho>2 x.
+        |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+        EFVrs\<eta>' (Esub f \<rho>1 \<rho>2 x) =
+        (\<Union>x\<in>EFVrs\<eta> x. EFVrs\<eta>' (\<rho>1 x)) \<union> (\<Union>x\<in>EFVrs\<eta>' x. EFVrs\<eta>' (\<rho>2 x))"
+ "\<And>f \<rho>1 \<rho>2 g \<rho>'1 \<rho>'2 x.
+        |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
+        |supp g| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>) \<rho>'1| <o |UNIV :: 'a set| \<Longrightarrow>
+        |SSupp (Ector \<circ> \<eta>') \<rho>'2| <o |UNIV :: 'a set| \<Longrightarrow>
+        (\<And>a. a \<in> EFVrs x \<Longrightarrow> f a = g a) \<Longrightarrow>
+        (\<And>a. a \<in> EFVrs\<eta> x \<Longrightarrow> \<rho>1 a = \<rho>'1 a) \<Longrightarrow>
+        (\<And>a. a \<in> EFVrs\<eta>' x \<Longrightarrow> \<rho>2 a = \<rho>'2 a) \<Longrightarrow>
+        Esub f \<rho>1 \<rho>2 x = Esub g \<rho>'1 \<rho>'2 x"
   subgoal
     by (rule infinite_regular_card_order_natLeq)
   subgoal

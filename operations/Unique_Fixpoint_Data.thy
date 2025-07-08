@@ -252,18 +252,16 @@ binder_datatype (EVrs: 'a) E = Ector "('a, x::'a, t::'a E, 'a E) G" binds x in t
 declare E.inject[simp del]
 
 lemma
-  Eperm_id: "Eperm id = id"
-  and Eperm_comp:
+  Eperm_comp:
   "\<And>\<sigma> \<tau>. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
    Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
   and EVrs_Eperm:
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
    EVrs (Eperm \<sigma> u) \<subseteq> \<sigma> ` EVrs u"
-  and Eperm_cong:
-  "\<And>\<sigma> \<tau> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
-         bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
-   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = \<tau> a) \<Longrightarrow> Eperm \<sigma> e = Eperm \<tau> e"
+  and Eperm_cong_id:
+  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
   and Eperm_Ector:
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
     Eperm \<sigma> (Ector u) = Ector (Gsub \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
@@ -278,7 +276,7 @@ lemma
   and EVrs_bd:
   "\<And>x. |EVrs (x :: 'a :: var E)| <o natLeq"
           apply (auto simp: E.inject E.permute_id0 E.permute_comp E.FVars_permute GMAP_def E.FVars_bd
-             intro: E.permute_cong)
+             intro: E.permute_cong_id)
   subgoal for A e
     apply (binder_induction e avoiding: A rule: E.strong_induct)
      apply assumption
@@ -286,6 +284,20 @@ lemma
      apply assumption
     apply (rule refl)
     done
+  done
+
+lemma Eperm_id: "Eperm id = id"
+  apply (rule ext)
+  apply (rule trans[OF Eperm_cong_id id_apply[symmetric]])
+    apply simp_all
+  done
+
+lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+         bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
+   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = \<tau> a) \<Longrightarrow> Eperm \<sigma> e = Eperm \<tau> e"
+  apply (rule trans[OF _ Eperm_cong_id, of _ "\<sigma> o inv \<tau>"])
+     apply (auto simp: Eperm_comp[THEN fun_cong, simplified] supp_comp_bound
+       dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
   done
 
 inductive subshape where

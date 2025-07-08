@@ -135,14 +135,40 @@ definition Gren ::
 
 definition "GMAP = (\<lambda>\<rho>1 \<rho>2 f1 f2 x. Gren \<rho>1 \<rho>2 (Gmap f1 f2 x))"
 
+consts Grel :: "('x1 \<Rightarrow> 'x1' \<Rightarrow> bool) \<Rightarrow> ('x2 \<Rightarrow> 'x2' \<Rightarrow> bool) \<Rightarrow> ('a1, 'a2, 'x1, 'x2) G \<Rightarrow> ('a1, 'a2, 'x1', 'x2') G \<Rightarrow> bool"
+
+setup \<open>Sign.mandatory_path "G"\<close>
+
+axiomatization where
+  rel_compp: "\<And>R1 R2 S1 S2. Grel R1 R2 OO Grel S1 S2 \<le> Grel (R1 OO S1) (R2 OO S2)" and
+  in_rel: "\<And>f1 f2 R1 R2 x y.
+       |supp (f1 :: 'a1 \<Rightarrow> 'a1 :: var)| <o |UNIV :: 'a1 set| \<Longrightarrow>
+       bij f2 \<Longrightarrow>
+       |supp (f2 :: 'a2 \<Rightarrow> 'a2 :: var)| <o |UNIV :: 'a2 set| \<Longrightarrow>
+       Grel R1 R2 (GMAP f1 f2 id id x) y =
+       (\<exists>z. (GSupp1 z \<subseteq> {(x, y). R1 x y} \<and> GSupp2 z \<subseteq> {(x, y). R2 x y}) \<and>
+            GMAP id id fst fst z = x \<and> GMAP f1 f2 snd snd z = y)" and
+  wit1: "GSupp1 Gwit = {}" and
+  wit2: "GSupp2 Gwit = {}"
+lemmas wit = G.wit1 G.wit2
+setup \<open>Sign.parent_path\<close>
+
 declare [[typedef_overloaded]]
 mrbnf "('a1::var, 'a2::var, 'x1, 'x2) G"
   map: GMAP
   sets: free: GVrs1 bound: GVrs2 live: GSupp1 live: GSupp2
   bd: Gbd
   wits: Gwit
+  rel: Grel
   var_class: var
-  sorry
+                 apply (auto simp: GMAP_def Gren_def G.Sb_Inj G.Map_id fun_eq_iff G.infinite_regular_card_order G.wit
+     G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+     G.Vrs_Sb G.Supp_Sb G.Vrs_Map G.Supp_Map G.Vrs_bd G.Supp_bd
+     intro: trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]]) [12]
+     apply (rule G.rel_compp)
+    apply (rule G.in_rel; assumption)
+   apply (simp_all add: G.wit)
+  done
 print_theorems
 
 consts \<eta> :: "'a1 :: var \<Rightarrow> ('a1, 'a2 :: var, 'x1, 'x2) G"
@@ -311,6 +337,10 @@ sublocale var_E_pre < var
   by (rule var_axioms)
 sublocale var < var_E_pre
   by standard
+
+instantiation Gbd_type :: var_E_pre begin
+instance by standard
+end
 
 lemma
   Eperm_comp:

@@ -6,6 +6,12 @@ declare supp_id_bound[simp] supp_inv_bound[simp] infinite_UNIV[simp]
 
 definition "IImsupp' Inj Vr \<rho> = SSupp Inj \<rho> \<union> IImsupp Inj Vr \<rho>"
 
+lemma IImsupp_bound[simp]:
+  "|SSupp Inj (\<rho> :: 'a::var \<Rightarrow> _)| <o |UNIV :: 'a set| \<Longrightarrow> (\<And>x. |Vr (\<rho> x)| <o |UNIV :: 'a set| ) \<Longrightarrow>
+  |IImsupp' Inj (Vr :: _ \<Rightarrow> 'a set) \<rho>| <o |UNIV :: 'a set|"
+  unfolding IImsupp_def IImsupp'_def
+  by (auto simp: Un_bound UN_bound)
+
 typedecl ('a1, 'a2, 'x1, 'x2) G
 consts Gsub :: "('a1 :: var \<Rightarrow> 'a1) \<Rightarrow> ('a2 :: var \<Rightarrow> 'a2) \<Rightarrow> ('a1, 'a2, 'x1, 'x2) G \<Rightarrow> ('a1, 'a2, 'x1, 'x2) G"
 consts GVrs1 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'a1 set"
@@ -111,18 +117,91 @@ axiomatization where
   \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow>
   Esub \<delta> \<rho> \<rho>' (Ector u) = Ector (Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u))"
   and EVrs_Esub: "\<And>\<delta> \<rho> \<rho>' e. |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
-|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV::'a set| \<Longrightarrow>
-|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV::'a set| \<Longrightarrow> EVrs (Esub \<delta> \<rho> \<rho>' e) \<subseteq> EVrs e \<union> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>')"
+    |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV::'a set| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV::'a set| \<Longrightarrow>
+    EVrs (Esub \<delta> \<rho> \<rho>' e) \<subseteq> EVrs e \<union> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>')"
+  and Eperm_Esub: "\<And>\<delta> \<rho> \<rho>' \<sigma> e. |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV :: 'a set| \<Longrightarrow>
+    |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set| \<Longrightarrow>
+    bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> imsupp \<sigma> \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
+    Eperm \<sigma> (Esub \<delta> \<rho> \<rho>' e) = Esub \<delta> \<rho> \<rho>' (Eperm \<sigma> e)"
+
+lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
+  by (metis Ector_inject eta_natural supp_id_bound)
+
+lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
+  unfolding Ector_inject
+  apply safe
+  subgoal for \<sigma>
+    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
+    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
+        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
+        G.Map_id G.Sb_Inj Eperm_comp Eperm_id)
+    done
+  subgoal
+    apply (auto simp: eta'_natural)
+    done
+  done
+
+lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
+  using Ector_eta_inj by metis
+
+lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
+  using Ector_eta'_inj by metis
+
+lemma EVrs_bound[simp]: "|EVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
+  by (meson EVrs_bd var_class.large' ordLess_ordLeq_trans)
+
+lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: var, 'a, 'a E, 'a E) G)| <o |UNIV :: 'a set|"
+  by (meson G.Vrs_bd var_class.large' ordLess_ordLeq_trans)
+
+lemma Ector_fresh_inject:
+  assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::var set| <o |UNIV :: 'a set|"
+  shows "(Ector x = Ector y) = (\<exists>\<sigma>. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and> imsupp \<sigma> \<inter> A = {}
+    \<and> id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+  unfolding Ector_inject
+  apply (rule iffI; elim exE conjE)
+  subgoal for \<sigma>
+    apply (insert ex_avoiding_bij[of \<sigma> "(\<Union> (EVrs ` GSupp1 x) - GVrs2 x)" "GVrs2 x" A])
+    apply (drule meta_mp; simp add: UN_bound card_of_minus_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large'] ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'] assms)+
+    apply (elim exE conjE)
+    subgoal for \<tau>
+      apply (auto simp: G.Vrs_Map intro!: exI[of _ \<tau>] trans[OF G.Sb_cong arg_cong[where f="Gren _ _", OF G.Map_cong]] Eperm_cong)
+      using G.Vrs_Map(2) G.Vrs_Sb(2) assms(2) imageI supp_id_bound apply blast
+      apply (smt (verit, ccfv_threshold) Diff_iff G.Vrs_Map(2) G.Vrs_Sb(2) UN_I assms(2) disjoint_iff_not_equal id_on_eq imageI supp_id_bound)
+      done
+    done
+  apply blast
+  done
 
 lemma Esub_inversion0:
   "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
-   GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs (Ector u) \<union> EVrs e) = {} \<Longrightarrow>
+   GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs e \<union> EVrs (Ector u)) = {} \<Longrightarrow>
    \<forall>a. e \<noteq> Ector (\<eta> a) \<Longrightarrow> \<forall>a. e \<noteq> Ector (\<eta>' a) \<Longrightarrow>
    \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a. u \<noteq> \<eta>' a \<Longrightarrow>
    Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
-  sorry
+  apply (insert Ector_fresh_surj[where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs e \<union> EVrs (Ector u)" and e = e])
+  apply (drule meta_mp)
+   apply (auto intro!: Un_bound simp: imsupp_supp_bound) []
+  apply (erule exE conjE)+
+  apply (simp add: Int_Un_distrib Ector_eta_inj Ector_eta'_inj)
+  apply (subst (asm) (2) Esub_Ector; (simp add: Int_Un_distrib Ector_eta_inj Ector_eta'_inj)?)
+  apply (drule sym)
+  subgoal for u'
+    apply (subst (asm) Ector_fresh_inject[where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> (\<Union> (EVrs ` GSupp1 u') - GVrs2 u')"])
+       apply (simp_all add: Int_Un_distrib G.Vrs_Sb G.Vrs_Map EVrs_Ector) [2]
+      apply (auto intro!: Un_bound UN_bound card_of_minus_bound simp: imsupp_supp_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large']) []
+    apply (erule exE conjE)+
+    subgoal for \<sigma>
+      apply (rule exI[where x = "Gren id \<sigma> (Gmap (Eperm \<sigma>) id u')"])
+      apply (rule conjI)
+       apply (erule trans[OF sym])
+       apply (auto 0 0 simp add: Int_Un_distrib G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified] Eperm_Esub Ector_inject
+          G.Vrs_Sb G.Vrs_Map intro!: trans[OF G.Sb_cong arg_cong[where f = "Gren _ _", OF G.Map_cong]] exI[of _ \<sigma>])
+      apply (meson disjoint_iff_not_equal id_on_def not_in_imsupp_same)
+      done
+    done
+  done
 
 lemma Esub_inversion:
   "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
@@ -133,12 +212,6 @@ lemma Esub_inversion:
    \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a. u \<noteq> \<eta>' a \<Longrightarrow>
    Ector u = Esub \<delta> \<rho> \<rho>' e \<Longrightarrow> \<exists>u'. u = Gsub \<delta> id (Gmap (Esub \<delta> \<rho> \<rho>') (Esub \<delta> \<rho> \<rho>') u') \<and> GVrs2 u' = GVrs2 u \<and> e = Ector u'"
   by (rule Esub_inversion0) (auto dest!: set_mp[OF EVrs_Esub, rotated -1])
-
-lemma EVrs_bound[simp]: "|EVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  by (meson EVrs_bd var_class.large' ordLess_ordLeq_trans)
-
-lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: var, 'a, 'a E, 'a E) G)| <o |UNIV :: 'a set|"
-  by (meson G.Vrs_bd var_class.large' ordLess_ordLeq_trans)
 
 inductive Efreee where 
   GVrs1: "a \<in> GVrs1 u \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> Efreee a (Ector u)"
@@ -353,12 +426,6 @@ definition "EFVrs e = {a. Efreee a e}"
 definition "EFVrs\<eta> e = {a. Efree\<eta> a e}"
 definition "EFVrs\<eta>' e = {a. Efree\<eta>' a e}"
 
-lemma IImsupp_bound[simp]:
-  "|SSupp Inj (\<rho> :: 'a::var \<Rightarrow> _)| <o |UNIV :: 'a set| \<Longrightarrow> (\<And>x. |Vr (\<rho> x)| <o |UNIV :: 'a set| ) \<Longrightarrow>
-  |IImsupp' Inj (Vr :: _ \<Rightarrow> 'a set) \<rho>| <o |UNIV :: 'a set|"
-  unfolding IImsupp_def IImsupp'_def
-  by (auto simp: Un_bound UN_bound)
-
 lemma Esub_unique_fresh:
   assumes
     "|A| <o |UNIV::'a set|"
@@ -433,29 +500,6 @@ lemma SSupp_comp_bound'[simp]:
    apply (erule (2) card_of_mono1[OF SSupp_comp_Esub_le(2)])
   apply (auto simp: Un_bound)
   done
-
-lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
-  by (metis Ector_inject eta_natural supp_id_bound)
-
-lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
-  unfolding Ector_inject
-  apply safe
-  subgoal for \<sigma>
-    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
-    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
-        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-        G.Map_id G.Sb_Inj Eperm_comp Eperm_id)
-    done
-  subgoal
-    apply (auto simp: eta'_natural)
-    done
-  done
-
-lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
-  using Ector_eta_inj by metis
-
-lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
-  using Ector_eta'_inj by metis
 
 lemma GVrs_eta[simp]:
   "GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {a}"

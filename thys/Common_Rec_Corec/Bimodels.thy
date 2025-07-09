@@ -43,8 +43,9 @@ and
 Ector1_Ector'_topFree: "\<And>u uu p. \<not> \<phi> u \<Longrightarrow> 
     GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
-    GVrs1 uu \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp1 uu} \<union> \<Union> {EVrs e' - GVrs2 uu |e'. e' \<in> GSupp1 uu} \<subseteq> 
-    GVrs1 u \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp1 u} \<union> \<Union> {EVrs e' - GVrs2 u |e'. e' \<in> GSupp1 u} \<union> PVrs p"
+    GVrs1 uu \<union> \<Union> {EVrs e' - GVrs2 uu |e'. e' \<in> GSupp1 uu} \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp2 uu}  \<subseteq> 
+    GVrs1 u \<union> \<Union> {EVrs e' - GVrs2 u |e'. e' \<in> GSupp1 u} \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp2 u} 
+  \<union> PVrs p"
 (* This can replace one axiom for ECtor1' (since it makes it redundant *)
 (******)
 and 

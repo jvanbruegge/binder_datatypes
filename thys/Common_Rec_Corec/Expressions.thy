@@ -232,9 +232,12 @@ apply(rule sym) apply(subst snd_single_Gmap[symmetric, of _ p])
     by (meson Gmap_cong case_prod_beta) .
 
 (* *)
+(* The binding assumption will be: In ('a, 'a, 'a E,'a E) G, 
+the first 'a is free, the second 'a binds in the first E. 
+*)
 typedecl 'a E
 
-consts Ector :: "('a, 'a, ('a::var) E,'a E) G \<Rightarrow> 'a E"
+consts Ector :: "('a::var, 'a, 'a E,'a E) G \<Rightarrow> 'a E"
 consts Eperm :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
 consts EVrs :: "('a::var) E \<Rightarrow> 'a set"
 
@@ -245,9 +248,9 @@ and Eperm_Ector: "\<And>\<sigma> u. small \<sigma> \<Longrightarrow> bij \<sigma
        Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
 (* Corresponds to ctorVarsM *)
 and EVrs_Ector: "\<And>u. EVrs (Ector u) =
-     GVrs1 u \<union> 
-     (\<Union> {EVrs e' | e' . e' \<in> GSupp1 u}) \<union> 
-     (\<Union> {EVrs e' - GVrs2 u | e' . e' \<in> GSupp1 u})"
+     GVrs1 u \<union>  
+     (\<Union> {EVrs e' - GVrs2 u | e' . e' \<in> GSupp1 u}) \<union> 
+     (\<Union> {EVrs e' | e' . e' \<in> GSupp2 u})"
 and (* Next three correspond to nom *)
 Eperm_id[simp]: "Eperm id = id"
 and 
@@ -258,30 +261,39 @@ Eperm_cong:
 "\<And>e \<sigma>1 \<sigma>2. small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
  (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Eperm \<sigma>1 e = Eperm \<sigma>2 e"
 and 
+(* 
 Ector_eq_imp: 
 "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
    (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
         GVrs1 u1 \<union> 
         (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
-        (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<subseteq> supp \<sigma> \<and> 
-        u2 = Gren id \<sigma> u1)"
-
+        (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp2 u1}) \<subseteq> supp \<sigma> \<and> 
+        u2 = Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1))"
+and
+*)
+Ector_eq_imp_strong: "\<And>A u1 u2. Ector u1 = Ector u2 \<Longrightarrow> countable A \<Longrightarrow> A \<inter> GVrs2 u1 = {} \<Longrightarrow>
+   (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
+     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> (\<Union> (EVrs ` GSupp2 u1)) \<union> A) \<sigma> \<and> 
+     Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u1) = u2)"
 (* 
-Ector_eq_imp: 
-"\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
-   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-        supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
-                 (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
-                 (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
-        u2 = Gren id \<sigma> u1)"
-and 
-Ector_eq_imp_D_to_A: 
-"\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
-   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-        supp \<sigma> \<inter> (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) = {} \<and> 
-        u2 = Gren id \<sigma> u1)"
+Ector_eq_imp: "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
+   (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
+     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> (\<Union> (EVrs ` GSupp2 u1))) \<sigma> \<and> 
+     Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u1) = u2)"
 *)
 
+
+lemma Ector_eqD: "\<And>x y. Ector x = Ector y \<Longrightarrow>
+   (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
+     id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> 
+      Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+apply(drule Ector_eq_imp_strong) apply auto subgoal for x \<sigma> apply(rule exI[of _ \<sigma>])
+apply auto
+  subgoal unfolding id_on_def by auto
+  subgoal apply(rule arg_cong3[where h = Gren and ?a1.0 = id and ?a2.0 = id and ?b1.0 = \<sigma> and ?b2.0 = \<sigma>])
+  apply auto apply(rule Gmap_cong) unfolding id_on_def apply auto  
+    by (metis Eperm_comp Eperm_id bij_id eq_id_iff small_id) . .
+ 
 
 lemma Ector_surj: "\<exists>u. Ector u = e"
 using Ector_surj_fresh[of "{}"] by auto
@@ -370,13 +382,9 @@ definition ctorVarsM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E
 "ctorVarsM ctor Vrs u \<equiv> 
 \<forall>p. Vrs (ctor u p) \<subseteq> PVrs p \<union> 
      GVrs1 u \<union> 
-     (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp1 u}) \<union> 
-     (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u})"
+     (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u}) \<union> 
+     (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp2 u})"
 
 
-
-
-
- 
 
 end

@@ -214,7 +214,81 @@ unfolding Eperm''_def
                apply(subst Eperm''_o[symmetric]) by auto .
               . . . . . . . . 
 
-lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs''"
+lemma dtorVrsGrenC: "dtorVrsGrenC Edtor' Eperm'' EVrs''"
+unfolding dtorVrsGrenC_def EVrs''_def proof safe 
+  fix e p U u1 u2 
+  assume 0: "Edtor' (e, p) = Inl U" and u12: "{u1, u2} \<subseteq> U"
+  show "\<exists>\<sigma>. small \<sigma> \<and>
+           bij \<sigma> \<and>
+           id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1) \<union> \<Union> (EVrs'' ` GSupp2 u1) ) \<sigma> \<and>
+           Gren id \<sigma> (Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) u1) = u2"
+  proof(rule Ector_exhaust_fresh[OF countable_PVrs, of e p])
+    fix u assume e: "e = Ector u" and g: "GVrs2 u \<inter> PVrs p = {}"
+    show ?thesis proof(cases "\<phi> u")
+      case True
+      show ?thesis using 0 unfolding e Edtor'_\<phi>[OF True] by simp
+    next
+      case False
+      hence U: "Edtor1' (Ector u, p) = U" using 0 unfolding e Edtor'_not\<phi>[OF False] by simp
+      hence U: "U =
+      {u1. Ector (Gmap fst fst u1) = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p \<and>
+           GSupp1 (Gmap snd snd u1) \<subseteq> {p} \<and> GSupp2 (Gmap snd snd u1) \<subseteq> {p} \<and> GVrs2 u1 \<inter> PVrs p = {}}" 
+      unfolding Edtor1'_Ector[OF False g] by auto
+
+      hence u1: "Ector (Gmap fst fst u1) = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
+           "GSupp1 (Gmap snd snd u1) \<subseteq> {p}" "GSupp2 (Gmap snd snd u1) \<subseteq> {p}" "GVrs2 u1 \<inter> PVrs p = {}"
+      and u2: "Ector (Gmap fst fst u2) = Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
+          "GSupp1 (Gmap snd snd u2) \<subseteq> {p}" "GSupp2 (Gmap snd snd u2) \<subseteq> {p}" "GVrs2 u2 \<inter> PVrs p = {}"
+      using u12 by auto
+
+      have 00: "PVrs p \<inter> GVrs2 (Gmap fst fst u1) = {}" using u1 by (auto simp: GVrs2_Gmap)
+      note eq = u1(1)[unfolded u2(1)[symmetric]]
+      
+      obtain \<sigma> where ss: "bij \<sigma> \<and> small \<sigma>"
+        "id_on 
+         ((\<Union> (EVrs ` GSupp1 (Gmap fst fst u1)) - GVrs2 (Gmap fst fst u1)) 
+           \<union> (\<Union> (EVrs ` GSupp2 (Gmap fst fst u1))) \<union> PVrs p )
+         \<sigma>"
+        "Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) (Gmap fst fst u1)) = Gmap fst fst u2"   
+      using Ector_eq_imp_strong[of "Gmap fst fst u1" "Gmap fst fst u2", OF eq countable_PVrs 00] by blast
+      have io: "\<And>e' p' a. (e',p') \<in> GSupp1 u1 \<Longrightarrow> a \<in> EVrs e' \<Longrightarrow> a \<notin> GVrs2 u1 \<Longrightarrow> \<sigma> a = a"
+        "\<And>e' p' a. (e',p') \<in> GSupp2 u1 \<Longrightarrow> a \<in> EVrs e' \<Longrightarrow> \<sigma> a = a" 
+          "\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a" 
+      using ss(2) unfolding id_on_def by (fastforce simp: GSupp1_Gmap GSupp2_Gmap GVrs2_Gmap)+
+
+      show ?thesis proof(rule exI[of _ \<sigma>], safe)
+        show "small \<sigma>" "bij \<sigma>" using ss by auto
+      next
+        show "id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1) \<union> \<Union> (EVrs'' ` GSupp2 u1)) \<sigma>"
+        unfolding id_on_def image_def proof(auto simp: EVrs''_def)
+          fix a e' p' assume "(e', p') \<in> GSupp1 u1" "a \<in> EVrs e'" "a \<notin> GVrs2 u1" 
+          thus "\<sigma> a = a" using io(1) by auto
+        next
+          fix a e' p' assume "(e', p') \<in> GSupp2 u1" "a \<in> EVrs e'"  
+          thus "\<sigma> a = a" using io(2) by auto
+        next
+          fix a e' p' assume aa: "(e', p') \<in> GSupp1 u1" "a \<in> PVrs p'"  "a \<notin> GVrs2 u1"
+          hence "p' = p" using u1(2) unfolding GSupp1_Gmap by auto  
+          thus "\<sigma> a = a" using aa io(3) by auto
+        next
+          fix a e' p' assume aa: "(e', p') \<in> GSupp2 u1" "a \<in> PVrs p'"  
+          hence "p' = p" using u1(3) unfolding GSupp2_Gmap by auto  
+          thus "\<sigma> a = a" using aa io(3) by auto
+        qed
+      next
+        show "Gren id \<sigma> (Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) u1) = u2"
+        using Eperm''_def[of \<sigma>] ss(3) u1(2,3,4) u2(2,3,4) io(3) sorry
+      qed
+    qed
+  qed
+qed
+
+
+
+(*  
+       
+
+
 unfolding dtorVrsGrenC_def EVrs''_def apply safe 
 subgoal for e p U u1 u2   apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e p]) apply safe
   subgoal for u apply(cases "\<phi> u")
@@ -243,9 +317,15 @@ subgoal for e p U u1 u2   apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e
         subgoal unfolding Gmap_comp o_def id_def apply simp  apply (auto simp: GSupp1_Gmap) 
   apply (smt (verit, ccfv_threshold) Union_iff fst_conv in_mono mem_Collect_eq rev_image_eqI)
    unfolding image_def apply auto unfolding subset_eq  apply auto sorry
+   subgoal apply auto
+
+
+
+term term sledgehammerd
+     by (smtd (verit) Eperm_comp Eperm_id Gmap_Gren Gmap_cong_id bij_betw_id_iff eq_id_iff small_id)
   subgoal by argo . (* OK, this helped my morale since I was a bit depressed. *)
   subgoal apply auto 
-    apply (smt (verit, ccfv_threshold) Set.set_insert Union_iff fst_conv image_insert insertCI mem_Collect_eq
+    apply (ssmt (verit, ccfv_threshold) Set.set_insert Union_iff fst_conv image_insert insertCI mem_Collect_eq
         subset_iff)
 unfolding subset_eq  apply auto  sorry
    subgoal apply auto sorry . . . . . 
@@ -262,19 +342,26 @@ unfolding subset_eq  apply auto  sorry
 *)
 
 
+*)  
+
+
 lemma Ector1'_Ector_EVrs: 
 "\<not> \<phi> u \<Longrightarrow> EVrs'' (Ector1' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
 apply(rule subset_trans[OF ctor1VarsM[unfolded ctorVarsM_def, rule_format]])
   subgoal by (simp add: \<phi>_Gmap)
-  subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap by auto . 
+  subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto  
+    apply (metis Diff_iff GVrs2_Gmap)  
+    by (metis GSupp2_Gmap image_iff) .
 
 lemma Ector0'_Ector_EVrs: 
 "\<phi> u \<Longrightarrow> EVrs'' (Ector0' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
 apply(rule subset_trans[OF ctor0VarsM[unfolded ctorVarsM_def, rule_format]])
   subgoal by (simp add: \<phi>_Gmap)
-  subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap by auto . 
+  subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto 
+  apply (simp add: \<phi>_base) 
+    by (simp add: \<phi>_Gmap \<phi>_base) .
 
 lemma dtorVrsC: "dtorVrsC Edtor' EVrs''"
 unfolding EVrs''_def
@@ -284,15 +371,15 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e p]) apply clarify apply (
     subgoal unfolding Edtor'_\<phi> by simp
     subgoal unfolding Edtor'_not\<phi>  
     unfolding Edtor1'_Ector unfolding EVrs_Ector GSupp1_Gmap GSupp2_Gmap apply clarsimp
-    subgoal for ua 
+    subgoal for ua  
     apply(rule incl_Un_triv3)
-    unfolding EVrs''_def EVrs_Ector
+    unfolding EVrs''_def EVrs_Ector 
     apply(rule subset_trans[OF _ Ector1_Ector'_topFree'[of u p "Gmap fst fst ua", unfolded GSupp1_Gmap 
       GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap]]) 
       subgoal apply(rule incl_Un3_triv3)
         subgoal ..
-        subgoal by fastforce
-        subgoal by auto (metis Diff_iff image_eqI fst_conv) .
+        subgoal by auto (metis Diff_iff fst_conv image_eqI)
+        subgoal by auto (metis image_eqI fst_conv) .
       subgoal .
       subgoal .
       subgoal .

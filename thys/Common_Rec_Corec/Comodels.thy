@@ -12,15 +12,21 @@ where "dtorPermC dtor perm \<equiv>
   \<and> 
   (\<forall>e1. dtor e = Inr e1 \<longrightarrow> (\<exists>e1'. dtor (perm \<sigma> e) = Inr e1' \<and> e1' =  Eperm \<sigma> e1))"
 
-definition dtorVrsGrenC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 
+definition dtorVrsGrenC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> 
+  (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 
 where
-"dtorVrsGrenC dtor Vrs \<equiv> 
+"dtorVrsGrenC dtor perm Vrs \<equiv> 
  (\<forall>e U u1 u2. dtor e = Inl U \<and> {u1,u2} \<subseteq> U \<longrightarrow> 
    (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-         GVrs1 u1 \<union> 
-         (\<Union> {Vrs e | e . e \<in> GSupp1 u1}) \<union> 
-         (\<Union> {Vrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<subseteq> supp \<sigma> \<and> 
-        u2 = Gren id \<sigma> u1))"
+        id_on ((\<Union> (Vrs ` GSupp1 u1) - GVrs2 u1) \<union> (\<Union> (Vrs ` GSupp2 u1))) \<sigma> \<and> 
+        Gren id \<sigma> (Gmap (perm \<sigma>) (perm \<sigma>) u1) = u2))"
+
+(* 
+Ector_eqA: "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
+   (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
+     id_on ((\<Union> (EVrs ` GSupp1 u1)) \<union> (\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1)) \<sigma> \<and> 
+     Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u1) = u2)"
+*)
 
 definition dtorVrsC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 
 where
@@ -28,8 +34,8 @@ where
  (\<forall>e.  
   (\<forall>U. dtor e = Inl U \<longrightarrow> 
        (\<forall>u\<in>U. GVrs1 u \<union> 
-              (\<Union> {Vrs e | e . e \<in> GSupp1 u}) \<union> 
-              (\<Union> {Vrs e - GVrs2 u | e . e \<in> GSupp1 u}) 
+              (\<Union> {Vrs e - GVrs2 u | e . e \<in> GSupp1 u}) \<union> 
+              (\<Union> {Vrs e | e . e \<in> GSupp2 u})
               \<subseteq> 
               Vrs e)) 
   \<and>  
@@ -49,7 +55,7 @@ dtorNeC: "dtorNeC Edtor'"
 and 
 dtorPermC: "dtorPermC Edtor' Eperm'"
 and 
-dtorVrsGrenC: "dtorVrsGrenC Edtor' EVrs'"
+dtorVrsGrenC: "dtorVrsGrenC Edtor' Eperm' EVrs'"
 and 
 dtorVrsC: "dtorVrsC Edtor' EVrs'"
 begin 

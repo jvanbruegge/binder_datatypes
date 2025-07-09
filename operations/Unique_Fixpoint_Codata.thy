@@ -68,7 +68,6 @@ consts GVrs2 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'a2 set"
 consts Gmap :: "('x1 \<Rightarrow> 'x1') \<Rightarrow> ('x2 \<Rightarrow> 'x2') \<Rightarrow> ('a1, 'a2, 'x1, 'x2) G \<Rightarrow> ('a1, 'a2, 'x1', 'x2') G"
 consts GSupp1 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'x1 set"
 consts GSupp2 :: "('a1 :: var, 'a2 :: var, 'x1, 'x2) G \<Rightarrow> 'x2 set"
-consts Gwit :: "('a1, 'a2, 'x1, 'x2) G"
 
 setup \<open>Sign.mandatory_path "G"\<close>
 
@@ -147,10 +146,7 @@ axiomatization where
        |supp (f2 :: 'a2 \<Rightarrow> 'a2 :: var)| <o |UNIV :: 'a2 set| \<Longrightarrow>
        Grel R1 R2 (GMAP f1 f2 id id x) y =
        (\<exists>z. (GSupp1 z \<subseteq> {(x, y). R1 x y} \<and> GSupp2 z \<subseteq> {(x, y). R2 x y}) \<and>
-            GMAP id id fst fst z = x \<and> GMAP f1 f2 snd snd z = y)" and
-  wit1: "GSupp1 Gwit = {}" and
-  wit2: "GSupp2 Gwit = {}"
-lemmas wit = G.wit1 G.wit2
+            GMAP id id fst fst z = x \<and> GMAP f1 f2 snd snd z = y)"
 setup \<open>Sign.parent_path\<close>
 
 definition "Gpred \<equiv> \<lambda>P1 P2 x. Ball (GSupp1 x) P1 \<and> Ball (GSupp2 x) P2"
@@ -160,17 +156,16 @@ mrbnf "('a1::var, 'a2::var, 'x1, 'x2) G"
   map: GMAP
   sets: free: GVrs1 bound: GVrs2 live: GSupp1 live: GSupp2
   bd: Gbd
-  wits: Gwit
   rel: Grel
   pred: Gpred
   var_class: var
-                 apply (auto simp: GMAP_def Gren_def G.Sb_Inj G.Map_id fun_eq_iff G.infinite_regular_card_order G.wit
+                 apply (auto simp: GMAP_def Gren_def G.Sb_Inj G.Map_id fun_eq_iff G.infinite_regular_card_order
      G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
      G.Vrs_Sb G.Supp_Sb G.Vrs_Map G.Supp_Map G.Vrs_bd G.Supp_bd
      intro: trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]]) [12]
      apply (rule G.rel_compp)
     apply (rule G.in_rel; assumption)
-    apply (simp_all add: G.wit Gpred_def)
+    apply (simp_all add: Gpred_def)
   done
 print_theorems
 
@@ -359,6 +354,11 @@ sublocale covar_G < covar
 sublocale covar < covar_G
   by standard (simp_all add: large regular)
 
+lemma (in covar_G) UN_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> |f x| <o |UNIV::'a set| )
+  \<Longrightarrow> |\<Union>(f ` A)| <o |UNIV::'a set|"
+  using card_of_Card_order card_of_UNION_ordLess_infinite_Field local.regular regularCard_stable
+  by (metis Field_card_of infinite_UNIV)
+
 typedef wit_covar_G = "UNIV :: Gbd_type suc set"
   by blast
 instantiation wit_covar_G :: covar_G begin
@@ -375,6 +375,9 @@ proof
       regularCard_ordIso by blast
 qed
 end
+
+lemma (in covar_G) large'': "card_suc Gbd \<le>o |UNIV :: 'a set|"
+  by (simp add: G.bd_Card_order G.bd_card_order cardSuc_ordLess_ordLeq card_suc_least local.large)
 
 lemma
   Eperm_comp:
@@ -699,8 +702,6 @@ lemmas EVrs_Udtor = UFVars_Udtor[folded FFVarsBD_def]
 
 (*************************************)
 (* The raw-E-based model infrastructure *)
-term Rep_E
-find_consts "_ \<Rightarrow> _ raw_E"
 
 definition Utor :: "'u \<Rightarrow> ('a::covar_G, 'a, 'a raw_E + 'u, 'a raw_E + 'u) G set" where
   "Utor d \<equiv>  GMAP id id (map_sum E_rep id) (map_sum E_rep id) ` (Udtor d)"
@@ -1734,8 +1735,7 @@ end
 
 lemmas EVrs_bound[simp] = E.FVars_bd_UNIVs
 
-lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: covar_G, 'a, 'a E, 'a E) G)| <o |UNIV :: 'a set|"
-  by (rule ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'])
+lemmas GVrs2_bound[simp] = G.set_bd_UNIV(2)
 
 lemma Ector_fresh_inject:
   assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::covar_G set| <o |UNIV :: 'a set|"
@@ -2446,7 +2446,7 @@ lemma EFVrs_bound[simp]:
   "|EFVrs (x :: 'a :: covar_G E)| <o |UNIV :: 'a set|"
   "|EFVrs\<eta> (x :: 'a :: covar_G E)| <o |UNIV :: 'a set|"
   "|EFVrs\<eta>' (x :: 'a :: covar_G E)| <o |UNIV :: 'a set|"
-  using EFVrs_bd large' ordLess_ordLeq_trans by blast+
+  using EFVrs_bd large'' ordLess_ordLeq_trans by blast+
 
 lemma EFVrs_EsubI1[OF _ _ _ _ refl]:
   assumes
@@ -2509,7 +2509,7 @@ lemma EFVrs_EsubI2[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho> a = Ector (\<eta> a)")
-     apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
+     apply (metis (no_types, lifting) Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efreee_Efree intro!: exI[of _ a]) []
@@ -2542,7 +2542,7 @@ lemma EFVrs_EsubI3[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
-     apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
+     apply (metis (no_types, lifting) Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efreee_Efree intro!: exI[of _ a]) []
@@ -2622,7 +2622,7 @@ lemma EFVrs_EsubD:
         apply (rule conjI[rotated])
          apply assumption
         apply (cases "\<rho> a = Ector (\<eta> a)")
-         apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
+         apply (metis (no_types, lifting) Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
         apply (smt (verit, ccfv_threshold) Efree\<eta>.intros(2) IImsupp'_def SSupp_def Un_iff comp_apply
             disjoint_iff_not_equal mem_Collect_eq)
         done
@@ -2631,7 +2631,7 @@ lemma EFVrs_EsubD:
         apply (rule conjI[rotated])
          apply assumption
         apply (cases "\<rho>' a = Ector (\<eta>' a)")
-         apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
+         apply (metis (no_types, lifting) Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
         apply (smt (verit, ccfv_threshold) Efree\<eta>'.intros(2) IImsupp'_def SSupp_def Un_iff comp_apply
             disjoint_iff_not_equal mem_Collect_eq)
         done
@@ -2720,7 +2720,7 @@ lemma EFVrs\<eta>_EsubI3[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
-     apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
+     apply (metis (no_types, lifting) Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>_Efree intro!: exI[of _ a]) []
@@ -2844,7 +2844,7 @@ lemma EFVrs\<eta>'_EsubI2[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho> a = Ector (\<eta> a)")
-     apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
+     apply (metis (no_types, lifting) Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
@@ -2993,7 +2993,7 @@ pbmv_monad "'a::covar_G E"
 *)
 
 lemma E_pbmv_axioms:
- "infinite_regular_card_order Gbd"
+ "infinite_regular_card_order (card_suc Gbd)"
  "Esub id (Ector \<circ> \<eta>) (Ector \<circ> \<eta>') = id"
  "\<And>f \<rho>1 \<rho>2.
        |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -3014,9 +3014,9 @@ lemma E_pbmv_axioms:
        |SSupp (Ector \<circ> \<eta>') \<rho>'2| <o |UNIV :: 'a set| \<Longrightarrow>
        Esub g \<rho>'1 \<rho>'2 \<circ> Esub f \<rho>1 \<rho>2 =
        Esub (g \<circ> f) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>1) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>2)"
- "\<And>x. |EFVrs x| <o Gbd"
- "\<And>x. |EFVrs\<eta> x| <o Gbd"
- "\<And>x. |EFVrs\<eta>' x| <o Gbd"
+ "\<And>x. |EFVrs x| <o card_suc Gbd"
+ "\<And>x. |EFVrs\<eta> x| <o card_suc Gbd"
+ "\<And>x. |EFVrs\<eta>' x| <o card_suc Gbd"
  "\<And>a. EFVrs ((Ector \<circ> \<eta>) a) = {}"
  "\<And>a. EFVrs ((Ector \<circ> \<eta>') a) = {}"
  "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>) a) = {a}"
@@ -3054,7 +3054,7 @@ lemma E_pbmv_axioms:
         (\<And>a. a \<in> EFVrs\<eta>' x \<Longrightarrow> \<rho>2 a = \<rho>'2 a) \<Longrightarrow>
         Esub f \<rho>1 \<rho>2 x = Esub g \<rho>'1 \<rho>'2 x"
   subgoal
-    by (rule G.infinite_regular_card_order)
+    by (simp add: G.bd_Cinfinite G.bd_card_order infinite_regular_card_order_card_suc)
   subgoal
     apply (rule Esub_unique_fresh[symmetric, where A="{}"])
           apply (simp_all add: G.Sb_Inj G.Map_id)

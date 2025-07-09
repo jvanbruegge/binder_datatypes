@@ -229,7 +229,7 @@ subgoal for e p U u1 u2   apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e
         \<Union> {EVrs e - GVrs2 u1 |e. e \<in> fst ` GSupp1 u1}  
     \<subseteq> \<Union> {EVrs b \<union> PVrs a |b a. (b, a) \<in> GSupp1 u1} \<union>
        \<Union> {EVrs b \<union> PVrs a - GVrs2 u1 |b a. (b, a) \<in> GSupp1 u1}")
-         subgoal by (smt (verit, ccfv_threshold) Diff_iff Un_iff diff_shunt subsetI)
+         subgoal by fastforce
          subgoal by auto blast+ .  
 
  apply(subst (asm) Gmap_Gren[of id \<sigma>,symmetric]) subgoal by auto subgoal by auto
@@ -240,7 +240,17 @@ subgoal for e p U u1 u2   apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e
       subgoal by auto subgoal by auto
       subgoal apply(subgoal_tac "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst u2) = 
           Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst (Gren id \<sigma> u1))")
-        subgoal unfolding Gmap_comp o_def id_def apply simp
+        subgoal unfolding Gmap_comp o_def id_def apply simp  apply (auto simp: GSupp1_Gmap) 
+  apply (smt (verit, ccfv_threshold) Union_iff fst_conv in_mono mem_Collect_eq rev_image_eqI)
+   unfolding image_def apply auto unfolding subset_eq  apply auto sorry
+  subgoal by argo . (* OK, this helped my morale since I was a bit depressed. *)
+  subgoal apply auto 
+    apply (smt (verit, ccfv_threshold) Set.set_insert Union_iff fst_conv image_insert insertCI mem_Collect_eq
+        subset_iff)
+unfolding subset_eq  apply auto  sorry
+   subgoal apply auto sorry . . . . . 
+
+(* 
         apply(rule Gmap_cong_id)
           subgoal apply(subst (asm) GSupp1_Gren) subgoal by auto subgoal by auto
             subgoal by auto subgoal by auto
@@ -249,6 +259,7 @@ subgoal for e p U u1 u2   apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e
             subgoal by auto subgoal by auto
             subgoal by auto . .
         subgoal by simp . . . . . .
+*)
 
 
 lemma Ector1'_Ector_EVrs: 

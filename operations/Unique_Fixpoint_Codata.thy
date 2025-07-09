@@ -1809,6 +1809,20 @@ lemma SSupp_Eperm_comp:
   apply (metis Eperm_Ector Gren_def bij_imp_inv eta'_natural not_in_supp_alt)
   done
 
+lemma IImsupp_comp_image:
+  "bij (\<sigma> :: 'a \<Rightarrow> 'a::covar_G) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> IImsupp' (Ector \<circ> \<eta>) EVrs (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>) = \<sigma> ` IImsupp' (Ector \<circ> \<eta>) EVrs \<rho>"
+  "bij (\<sigma> :: 'a \<Rightarrow> 'a::covar_G) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> IImsupp' (Ector \<circ> \<eta>') EVrs (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>) = \<sigma> ` IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>"
+   apply (auto simp: IImsupp'_def IImsupp_def SSupp_def image_iff)
+         apply (metis (mono_tags, lifting) Eperm_Ector Gren_def Un_iff eta_natural inv_simp2 mem_Collect_eq)
+        apply (smt (verit, del_insts) E.FVars_permute Eperm_Ector Gren_def UN_I Un_iff eta_natural image_in_bij_eq inv_simp2 mem_Collect_eq)
+       apply (metis E.permute_bij Eperm_Ector Gren_def bij_not_equal_iff eta_natural)
+      apply (metis E.FVars_permute E.permute_bij E.permute_inv_simp Eperm_Ector Gren_def eta_natural image_in_bij_eq inv_simp1)
+     apply (metis (mono_tags, lifting) Eperm_Ector Gren_def Un_iff eta'_natural inv_simp2 mem_Collect_eq)
+    apply (smt (verit, del_insts) E.FVars_permute Eperm_Ector Gren_def UN_I Un_iff eta'_natural image_in_bij_eq inv_simp2 mem_Collect_eq)
+   apply (metis E.permute_bij Eperm_Ector Gren_def bij_not_equal_iff eta'_natural)
+  apply (metis E.FVars_permute E.permute_bij E.permute_inv_simp Eperm_Ector Gren_def eta'_natural image_in_bij_eq inv_simp1)
+  done
+
 interpretation Esub: COREC
   "\<lambda>(\<delta>, \<rho>, \<rho>', e). (if \<exists>a. e = Ector (\<eta> a) then GMAP id id Inl Inl ` DTOR \<delta> \<rho> \<rho>' (\<rho> (SOME a. e = Ector (\<eta> a)))
      else if \<exists>a. e = Ector (\<eta>' a) then GMAP id id Inl Inl ` DTOR \<delta> \<rho> \<rho>' (\<rho>' (SOME a. e = Ector (\<eta>' a)))
@@ -1966,10 +1980,49 @@ interpretation Esub: COREC
       G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
       Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
       eta_natural eta'_natural eta_distinct eta_distinct' image_image)
-        apply (rule image_eqI[rotated])
-         apply (rule CollectI)
-         apply (rule conjI)
-    sorry
+    subgoal for \<delta> \<rho> \<rho>' u a
+      apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
+        apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id
+      G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
+      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
+          image_eqI[where x="GMAP (inv \<sigma>) (inv \<sigma>) (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) u"])
+        apply (metis Int_emptyD comp_assoc image_in_bij_eq imsupp_comp_image)
+       apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(1))
+      apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(2))
+      done
+    subgoal for \<delta> \<rho> \<rho>' e a u
+      apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
+      apply (auto simp: Gren_def Eperm_comp[THEN fun_cong, simplified] Eperm_id Eperm_Ector eta_natural)
+      done
+    subgoal for \<delta> \<rho> \<rho>' u a
+      apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
+        apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id
+      G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
+      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
+          image_eqI[where x="GMAP (inv \<sigma>) (inv \<sigma>) (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) u"])
+        apply (metis Int_emptyD comp_assoc image_in_bij_eq imsupp_comp_image)
+       apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(1))
+      apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(2))
+      done
+    subgoal for \<delta> \<rho> \<rho>' e a u
+      apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
+      apply (auto simp: Gren_def Eperm_comp[THEN fun_cong, simplified] Eperm_id Eperm_Ector eta'_natural)
+      done
+    subgoal for \<delta> \<rho> \<rho>' e u
+      apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
+      apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id supp_comp_bound
+          comp_def[of "map_sum _ _"] comp_def[of "\<lambda>x. Inr (_, _, _, Eperm \<sigma> x)"]
+          G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
+          G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+          G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
+          image_eqI[where x="GMAP (inv \<sigma>) (inv \<sigma>) (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) u"])
+        apply (metis Int_emptyD comp_assoc image_in_bij_eq imsupp_comp_image)
+       apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(1))
+      apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(2))
+      done
+    done
   subgoal
     by (auto simp: Eperm_comp[THEN fun_cong, simplified] fun_eq_iff o_inv_distrib)
   subgoal for d \<sigma>

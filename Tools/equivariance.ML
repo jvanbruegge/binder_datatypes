@@ -87,7 +87,7 @@ val _ = Theory.local_setup (fn lthy =>
             let
               open MRBNF_Util
               val lthy = Context.proof_of context;
-              val prop = Logic.unvarify_global (Thm.full_prop_of thm);
+              val prop = Thm.full_prop_of (Variable.import_vars lthy thm);
               val (f_prems, rhs) = split_last (Logic.strip_imp_prems prop);
               val lhs = Logic.strip_imp_concl prop;
               val goal = fold_rev (curry Logic.mk_implies) f_prems (HOLogic.mk_Trueprop (HOLogic.mk_eq (
@@ -116,7 +116,7 @@ val _ = Theory.local_setup (fn lthy =>
                 dtac ctxt (Drule.rotate_prems ~1 thm),
                 K (prefer_tac (length f_prems + 1)),
                 SELECT_GOAL (REPEAT_DETERM (SOMEGOAL (EVERY' [
-                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ (map_comps |> map @{print})),
+                  EqSubst.eqsubst_asm_tac ctxt [0] (@{thms inv_o_simp1 inv_o_simp2 image_inv_f_f[OF bij_is_inj]} @ map_comps),
                   REPEAT_DETERM o eq_assume_tac
                 ]))),
                 K (Local_Defs.unfold0_tac ctxt (@{thms id_apply id_o o_id inv_simp1 inv_simp2 image_inv_f_f[OF bij_is_inj]} @ map map_id0s_of_mr_bnf mr_bnfs)),

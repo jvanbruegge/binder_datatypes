@@ -1,27 +1,27 @@
 theory Expression_Like_Sub
-  imports Expression_Like_Strong
+  imports Expression_Like_Strong Expression_Like_Eta
 begin
 
-consts Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> 'a E \<Rightarrow> 'a E"
-
-axiomatization where
+locale Substitution = Expression_Strong +
+  fixes Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'e) \<Rightarrow> ('a ::var \<Rightarrow> 'e) \<Rightarrow> 'e \<Rightarrow> 'e"
+  assumes
   Esub_Ector\<eta>:
-  "\<And>\<delta> \<rho> \<rho>' a u.
+  "\<And>\<delta> \<rho> \<rho>' a.
     |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
-    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
-    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
     Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
   and Esub_Ector\<eta>':
-  "\<And>\<delta> \<rho> \<rho>' a u.
+  "\<And>\<delta> \<rho> \<rho>' a.
     |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
-    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
-    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
     Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
   and Esub_Ector:
-  "\<And>\<delta> \<rho> \<rho>' a u.
+  "\<And>\<delta> \<rho> \<rho>' u.
     |supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
-    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
-    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
+    |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
   GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
   GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EVrs \<rho> = {} \<Longrightarrow>
   GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EVrs \<rho>' = {} \<Longrightarrow>
@@ -35,74 +35,12 @@ axiomatization where
     |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set| \<Longrightarrow>
     bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> imsupp \<sigma> \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
     Eperm \<sigma> (Esub \<delta> \<rho> \<rho>' e) = Esub \<delta> \<rho> \<rho>' (Eperm \<sigma> e)"
-
-lemma Eperm_id: "Eperm id = id"
-  apply (rule ext)
-  apply (rule trans[OF Eperm_cong_id id_apply[symmetric]])
-    apply simp_all
-  done
-
-lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
-         bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
-   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = \<tau> a) \<Longrightarrow> Eperm \<sigma> e = Eperm \<tau> e"
-  apply (rule trans[OF _ Eperm_cong_id, of _ "\<sigma> o inv \<tau>"])
-     apply (auto simp: Eperm_comp[THEN fun_cong, simplified] supp_comp_bound
-      dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
-  done
-
-
-lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
-  by (metis Ector_inject eta_natural supp_id_bound Gren_def)
-
-lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
-  unfolding Ector_inject
-  apply safe
-  subgoal for \<sigma>
-    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
-    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
-        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-        G.Map_id G.Sb_Inj Eperm_comp Eperm_id Gren_def)
-    done
-  subgoal
-    apply (auto simp: eta'_natural Gren_def)
-    done
-  done
-
-lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
-  using Ector_eta_inj by metis
-
-lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
-  using Ector_eta'_inj by metis
-
-lemma EVrs_bound[simp]: "|EVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  by (rule ordLess_ordLeq_trans[OF EVrs_bd large'])
-
-lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: var, 'a, 'a E, 'a E) G)| <o |UNIV :: 'a set|"
-  by (rule ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'])
-
-lemma Ector_fresh_inject:
-  assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::var set| <o |UNIV :: 'a set|"
-  shows "(Ector x = Ector y) = (\<exists>\<sigma>. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and> imsupp \<sigma> \<inter> A = {}
-    \<and> id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
-  unfolding Ector_inject
-  apply (rule iffI; elim exE conjE)
-  subgoal for \<sigma>
-    apply (insert ex_avoiding_bij[of \<sigma> "(\<Union> (EVrs ` GSupp1 x) - GVrs2 x)" "GVrs2 x" A])
-    apply (drule meta_mp; simp add: UN_bound card_of_minus_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large'] ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'] assms)+
-    apply (elim exE conjE)
-    subgoal for \<tau>
-      apply (auto simp: G.Vrs_Map Gren_def intro!: exI[of _ \<tau>] trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]] Eperm_cong)
-      using G.Vrs_Map(2) G.Vrs_Sb(2) assms(2) imageI supp_id_bound apply blast
-      apply (smt (verit, ccfv_threshold) Diff_iff G.Vrs_Map(2) G.Vrs_Sb(2) UN_I assms(2) disjoint_iff_not_equal id_on_eq imageI supp_id_bound)
-      done
-    done
-  apply blast
-  done
+begin
 
 lemma Esub_inversion0:
   "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
-   |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
-   |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+   |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
+   |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
    GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs e \<union> EVrs (Ector u)) = {} \<Longrightarrow>
    \<forall>a. e \<noteq> Ector (\<eta> a) \<Longrightarrow> \<forall>a. e \<noteq> Ector (\<eta>' a) \<Longrightarrow>
    \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a. u \<noteq> \<eta>' a \<Longrightarrow>
@@ -132,8 +70,8 @@ lemma Esub_inversion0:
 
 lemma Esub_inversion:
   "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set| \<Longrightarrow>
-   |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
-   |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow>
+   |SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
+   |SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set| \<Longrightarrow>
    GVrs2 u \<inter> (imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> EVrs e) = {} \<Longrightarrow>
    \<forall>a. e \<noteq> Ector (\<eta> a) \<Longrightarrow> \<forall>a. e \<noteq> Ector (\<eta>' a) \<Longrightarrow>
    \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a. u \<noteq> \<eta>' a \<Longrightarrow>
@@ -357,8 +295,8 @@ lemma Esub_unique_fresh:
   assumes
     "|A| <o |UNIV::'a set|"
     "|supp (\<delta> :: 'a \<Rightarrow> 'a :: var)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
-    "|SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'a E)| <o |UNIV::'a set|"
+    "|SSupp (Ector o \<eta>) (\<rho>::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set|"
+    "|SSupp (Ector o \<eta>') (\<rho>'::'a::var \<Rightarrow> 'e)| <o |UNIV::'a set|"
     "\<And>a. h (Ector (\<eta> a)) = \<rho> a"
     "\<And>a. h (Ector (\<eta>' a)) = \<rho>' a"
     "\<And>u.
@@ -428,141 +366,11 @@ lemma SSupp_comp_bound'[simp]:
   apply (auto simp: Un_bound)
   done
 
-lemma GVrs_eta[simp]:
-  "GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {a}"
-  "GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
-proof safe
-  fix b assume b: "b \<in> GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  { assume "a \<noteq> b"
-    then have *: "\<eta> a = Gsub (b \<leftrightarrow> c) id (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
-      using eta_natural[of "b \<leftrightarrow> c" id id id a, symmetric, simplified] that
-      by (auto simp: G.Map_id)
-    have "c \<in> GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
-      using that b
-      apply (subst (asm) *)
-       apply (simp_all add: G.Vrs_Sb)
-      apply (auto simp: swap_def)
-      done
-    with b have "|UNIV - {a}| \<le>o |GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
-      by (intro card_of_mono1) auto
-    then have "|UNIV::'a1 set| \<le>o |GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
-      by (meson infinite_UNIV infinite_card_of_diff_singl ordIso_ordLeq_trans ordIso_symmetric)
-    then have False
-      using G.Vrs_bd(1) large' not_ordLeq_ordLess
-        ordLeq_ordLess_trans by blast
-  }
-  then show "b = a"
-    by blast
-next
-  fix b :: 'a2 assume "b \<in> GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" for c :: 'a2
-    by (subst eta_natural[of id "b \<leftrightarrow> c" id id a, symmetric, simplified])
-      (auto simp: G.Vrs_Sb  G.Map_id image_iff intro!: bexI[of _ b])
-  then have "GVrs2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = UNIV"
-    by blast
-  then show "b \<in> {}"
-    by (metis G.Vrs_bd(2) large' exists_fresh exists_univ_eq ordLess_ordLeq_trans)
-qed (rule eta_mem)
-
-lemma GVrs_eta'[simp]:
-  "GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {a}"
-  "GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
-proof safe
-  fix b assume b: "b \<in> GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  { assume "a \<noteq> b"
-    then have *: "\<eta>' a = Gsub (b \<leftrightarrow> c) id (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
-      using eta'_natural[of "b \<leftrightarrow> c" id id id a, symmetric, simplified] that
-      by (auto simp: G.Map_id)
-    have "c \<in> GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" if "c \<notin> {a, b}" for c
-      using that b
-      apply (subst (asm) *)
-       apply (simp_all add: G.Vrs_Sb)
-      apply (auto simp: swap_def)
-      done
-    with b have "|UNIV - {a}| \<le>o |GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
-      by (intro card_of_mono1) auto
-    then have "|UNIV::'a1 set| \<le>o |GVrs1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)|"
-      by (meson infinite_UNIV infinite_card_of_diff_singl ordIso_ordLeq_trans ordIso_symmetric)
-    then have False
-      using G.Vrs_bd(1) large' not_ordLeq_ordLess
-        ordLeq_ordLess_trans by blast
-  }
-  then show "b = a"
-    by blast
-next
-  fix b :: 'a2 assume "b \<in> GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)" for c :: 'a2
-    by (subst eta'_natural[of id "b \<leftrightarrow> c" id id a, symmetric, simplified])
-      (auto simp: G.Vrs_Sb  G.Map_id image_iff intro!: bexI[of _ b])
-  then have "GVrs2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = UNIV"
-    by blast
-  then show "b \<in> {}"
-    by (metis G.Vrs_bd(2) large' exists_fresh exists_univ_eq ordLess_ordLeq_trans)
-qed (rule eta'_mem)
-
-lemma GSupp_eta[simp]:
-  "GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
-  "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
-proof safe
-  fix b :: 'x1 assume "b \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G)" for c :: Gbd_type
-    by (subst eta_natural[of id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" id a, symmetric, simplified])
-      (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp1 (\<eta> a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G) = UNIV"
-    by blast
-  moreover have "|UNIV :: Gbd_type set| =o Gbd"
-    using card_of_unique G.infinite_regular_card_order
-      infinite_regular_card_order.card_order ordIso_symmetric by blast
-  ultimately show "b \<in> {}"
-    by (metis G.Supp_bd(1) not_ordLess_ordIso)
-next
-  fix b :: 'x2 assume "b \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G)" for c :: Gbd_type
-    by (subst eta_natural[of id id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" a, symmetric, simplified])
-      (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp2 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G) = UNIV"
-    by blast
-  moreover have "|UNIV :: Gbd_type set| =o Gbd"
-    using card_of_unique G.infinite_regular_card_order
-      infinite_regular_card_order.card_order ordIso_symmetric by blast
-  ultimately show "b \<in> {}"
-    by (metis G.Supp_bd(2) not_ordLess_ordIso)
-qed
-
-lemma GSupp_eta'[simp]:
-  "GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
-  "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {}"
-proof safe
-  fix b :: 'x1 assume "b \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G)" for c :: Gbd_type
-    by (subst eta'_natural[of id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" id a, symmetric, simplified])
-      (auto simp: G.Supp_Sb  G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp1 (\<eta>' a :: ('a1 ::var, 'a2 :: var, Gbd_type, 'x2) G) = UNIV"
-    by blast
-  moreover have "|UNIV :: Gbd_type set| =o Gbd"
-    using card_of_unique G.infinite_regular_card_order
-      infinite_regular_card_order.card_order ordIso_symmetric by blast
-  ultimately show "b \<in> {}"
-    by (metis G.Supp_bd(1) not_ordLess_ordIso)
-next
-  fix b :: 'x2 assume "b \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G)"
-  then have "c \<in> GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G)" for c :: Gbd_type
-    by (subst eta'_natural[of id id id "\<lambda>x. if x = b then c else (undefined :: Gbd_type)" a, symmetric, simplified])
-      (auto simp: G.Supp_Sb G.Supp_Map image_iff intro!: bexI[of _ b])
-  then have "GSupp2 (\<eta>' a :: ('a1 ::var, 'a2 :: var, 'x1, Gbd_type) G) = UNIV"
-    by blast
-  moreover have "|UNIV :: Gbd_type set| =o Gbd"
-    using card_of_unique G.infinite_regular_card_order
-      infinite_regular_card_order.card_order ordIso_symmetric by blast
-  ultimately show "b \<in> {}"
-    by (metis G.Supp_bd(2) not_ordLess_ordIso)
-qed
-
 lemma EFVrs\<eta>_Ector_eta: "EFVrs\<eta> (Ector (\<eta> a)) = {a}"
   unfolding EFVrs\<eta>_def
   apply (auto intro: Efree\<eta>.intros)
   subgoal for x
-    apply (induct "Ector (\<eta> a)" pred: Efree\<eta>)
+    apply (induct "Ector (\<eta> a)" rule: Efree\<eta>.induct)
       apply (auto simp: Ector_eta_inj dest: eta_inj)
     done
   done
@@ -571,7 +379,7 @@ lemma EFVrs\<eta>'_Ector_eta': "EFVrs\<eta>' (Ector (\<eta>' a)) = {a}"
   unfolding EFVrs\<eta>'_def
   apply (auto intro: Efree\<eta>'.intros)
   subgoal for x
-    apply (induct "Ector (\<eta>' a)" pred: Efree\<eta>')
+    apply (induct "Ector (\<eta>' a)" rule: Efree\<eta>'.induct)
       apply (auto simp: Ector_eta'_inj dest: eta'_inj)
     done
   done
@@ -583,26 +391,26 @@ lemma Efree_alt:
   unfolding EFVrs_def EFVrs\<eta>_def EFVrs\<eta>'_def by auto
 
 lemma Efreee_Efree: "Efreee a e \<Longrightarrow> a \<in> EVrs e"
-  by (induct e pred: Efreee) (auto simp: EVrs_Ector)
+  by (induct e rule: Efreee.induct) (auto simp: EVrs_Ector)
 lemma Efree\<eta>_Efree: "Efree\<eta> a e \<Longrightarrow> a \<in> EVrs e"
-  by (induct e pred: Efree\<eta>) (auto simp: EVrs_Ector)
+  by (induct e rule: Efree\<eta>.induct) (auto simp: EVrs_Ector)
 lemma Efree\<eta>'_Efree: "Efree\<eta>' a e \<Longrightarrow> a \<in> EVrs e"
-  by (induct e pred: Efree\<eta>') (auto simp: EVrs_Ector)
+  by (induct e rule: Efree\<eta>'.induct) (auto simp: EVrs_Ector)
 
 lemma EFVrs_bd:
-  "|EFVrs (x :: 'a :: var E)| <o Gbd"
-  "|EFVrs\<eta> (x :: 'a :: var E)| <o Gbd"
-  "|EFVrs\<eta>' (x :: 'a :: var E)| <o Gbd"
-    apply (meson EVrs_bd Efree_alt(1) Efreee_Efree card_of_subset_bound subset_eq)
-   apply (meson EVrs_bd Efree_alt(2) Efree\<eta>_Efree card_of_subset_bound subset_eq)
-  apply (meson EVrs_bd Efree_alt(3) Efree\<eta>'_Efree card_of_subset_bound subset_eq)
+  "|EFVrs (x :: 'e)| <o Ebd"
+  "|EFVrs\<eta> (x :: 'e)| <o Ebd"
+  "|EFVrs\<eta>' (x :: 'e)| <o Ebd"
+  apply (meson EVrs_bd Efree_alt(1) Efreee_Efree card_of_mono1 ordLeq_ordLess_trans subsetI)
+  apply (meson EVrs_bd Efree_alt(2) Efree\<eta>_Efree card_of_mono1 ordLeq_ordLess_trans subsetI)
+  apply (meson EVrs_bd Efree_alt(3) Efree\<eta>'_Efree card_of_mono1 ordLeq_ordLess_trans subsetI)
   done
 
 lemma EFVrs_bound[simp]:
-  "|EFVrs (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  "|EFVrs\<eta> (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  "|EFVrs\<eta>' (x :: 'a :: var E)| <o |UNIV :: 'a set|"
-  using EFVrs_bd large' ordLess_ordLeq_trans by blast+
+  "|EFVrs (x :: 'e)| <o |UNIV :: 'a set|"
+  "|EFVrs\<eta> (x :: 'e)| <o |UNIV :: 'a set|"
+  "|EFVrs\<eta>' (x :: 'e)| <o |UNIV :: 'a set|"
+  using EFVrs_bd Ebd_le ordLess_ordLeq_trans by blast+
 
 lemma EFVrs_EsubI1[OF _ _ _ _ refl]:
   assumes
@@ -1137,19 +945,8 @@ lemma EFVrs\<eta>'_EsubD:
     done
   done
 
-(*
-declare [[goals_limit=18]]
-pbmv_monad "'a::var E"
-  Sbs: Esub
-  RVrs: EFVrs
-  Injs: "Ector o \<eta>" "Ector o \<eta>'"
-  Vrs: EFVrs\<eta> EFVrs\<eta>'
-  bd: Gbd
-  oops
-*)
-
 lemma E_pbmv_axioms:
-  "infinite_regular_card_order Gbd"
+  "infinite_regular_card_order Ebd"
   "Esub id (Ector \<circ> \<eta>) (Ector \<circ> \<eta>') = id"
   "\<And>f \<rho>1 \<rho>2.
        |supp (f :: 'a :: var \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -1170,9 +967,9 @@ lemma E_pbmv_axioms:
        |SSupp (Ector \<circ> \<eta>') \<rho>'2| <o |UNIV :: 'a set| \<Longrightarrow>
        Esub g \<rho>'1 \<rho>'2 \<circ> Esub f \<rho>1 \<rho>2 =
        Esub (g \<circ> f) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>1) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>2)"
-  "\<And>x. |EFVrs x| <o Gbd"
-  "\<And>x. |EFVrs\<eta> x| <o Gbd"
-  "\<And>x. |EFVrs\<eta>' x| <o Gbd"
+  "\<And>x. |EFVrs x| <o Ebd"
+  "\<And>x. |EFVrs\<eta> x| <o Ebd"
+  "\<And>x. |EFVrs\<eta>' x| <o Ebd"
   "\<And>a. EFVrs ((Ector \<circ> \<eta>) a) = {}"
   "\<And>a. EFVrs ((Ector \<circ> \<eta>') a) = {}"
   "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>) a) = {a}"
@@ -1210,7 +1007,7 @@ lemma E_pbmv_axioms:
         (\<And>a. a \<in> EFVrs\<eta>' x \<Longrightarrow> \<rho>2 a = \<rho>'2 a) \<Longrightarrow>
         Esub f \<rho>1 \<rho>2 x = Esub g \<rho>'1 \<rho>'2 x"
   subgoal
-    by (rule G.infinite_regular_card_order)
+    by (rule Ebd_infinite_regular_card_order)
   subgoal
     apply (rule Esub_unique_fresh[symmetric, where A="{}"])
           apply (simp_all add: G.Sb_Inj G.Map_id)
@@ -1307,5 +1104,7 @@ lemma E_pbmv_axioms:
     done
   done
 unused_thms
+
+end
 
 end

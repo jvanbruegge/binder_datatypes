@@ -134,12 +134,11 @@ definition Gren ::
 
 print_theorems
 
-typedecl 'a E
-consts Ector :: "('a :: var, 'a, 'a E, 'a E) G \<Rightarrow> 'a E"
-consts Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
-consts EVrs :: "'a::var E \<Rightarrow> 'a set"
-
-axiomatization where
+locale Expression =
+  fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"
+  and Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
+  and EVrs :: "'e \<Rightarrow> 'a set"
+  assumes
   Eperm_comp:
   "\<And>\<sigma> \<tau>. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -154,10 +153,27 @@ axiomatization where
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
     Eperm \<sigma> (Ector u) = Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
   and EVrs_Ector:
-  "\<And>u. EVrs (Ector u::('a::var) E) =
+  "\<And>u. EVrs (Ector u) =
      GVrs1 u \<union> ((\<Union>e \<in> GSupp1 u. EVrs e) - GVrs2 u) \<union> (\<Union>e \<in> GSupp2 u. EVrs e)"
   and Ector_eqD: "\<And>x y. Ector x = Ector y \<Longrightarrow>
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
      id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+begin
+
+lemma Eperm_id: "Eperm id = id"
+  apply (rule ext)
+  apply (rule trans[OF Eperm_cong_id id_apply[symmetric]])
+    apply simp_all
+  done
+
+lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+         bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
+   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = \<tau> a) \<Longrightarrow> Eperm \<sigma> e = Eperm \<tau> e"
+  apply (rule trans[OF _ Eperm_cong_id, of _ "\<sigma> o inv \<tau>"])
+     apply (auto simp: Eperm_comp[THEN fun_cong, simplified] supp_comp_bound
+      dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
+  done
+
+end
 
 end

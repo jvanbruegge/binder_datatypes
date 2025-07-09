@@ -1,5 +1,5 @@
 theory Unique_Fixpoint_Codata
-  imports "Binders.MRBNF_Recursor" "../operations/BMV_Monad"
+  imports "Binders.MRBNF_Recursor"
 begin
 
 declare supp_id_bound[simp] supp_inv_bound[simp] infinite_UNIV[simp]
@@ -151,6 +151,7 @@ setup \<open>Sign.parent_path\<close>
 
 definition "Gpred \<equiv> \<lambda>P1 P2 x. Ball (GSupp1 x) P1 \<and> Ball (GSupp2 x) P2"
 
+declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 mrbnf "('a1::var, 'a2::var, 'x1, 'x2) G"
   map: GMAP
@@ -369,15 +370,15 @@ proof
         card_suc_alt ordIso_symmetric type_definition_bij_betw_Abs
         type_definition_wit_covar_G)
   from * show "cardSuc Gbd \<le>o |UNIV :: wit_covar_G set|"
-    by (meson G.bd_card_order cardSuc_ordIso_card_suc ordIso_iff_ordLeq ordIso_ordLeq_trans)
+    using G.infinite_regular_card_order cardSuc_ordIso_card_suc infinite_regular_card_order_def ordIso_iff_ordLeq ordIso_ordLeq_trans by blast
   from * show "regularCard |UNIV :: wit_covar_G set|"
-    using Cinfinite_card_suc G.bd_Cinfinite G.bd_card_order ordIso_symmetric regularCard_card_suc
-      regularCard_ordIso by blast
+    by (meson Cinfinite_card_suc G.infinite_regular_card_order infinite_regular_card_order.Card_order infinite_regular_card_order_def ordIso_symmetric regularCard_card_suc
+        regularCard_ordIso)
 qed
 end
 
 lemma (in covar_G) large'': "card_suc Gbd \<le>o |UNIV :: 'a set|"
-  by (simp add: G.bd_Card_order G.bd_card_order cardSuc_ordLess_ordLeq card_suc_least local.large)
+  by (meson Cnotzero_UNIV G.infinite_regular_card_order cardSuc_ordLess_ordLeq card_order_on_Card_order card_suc_least infinite_regular_card_order_def large)
 
 lemma
   Eperm_comp:
@@ -3203,6 +3204,5 @@ lemma E_pbmv_axioms:
       done
     done
   done
-unused_thms
 
 end

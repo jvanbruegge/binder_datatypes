@@ -1,5 +1,5 @@
 theory Unique_Fixpoint_Data
-  imports "Binders.MRBNF_Recursor" "../operations/BMV_Monad"
+  imports "Binders.MRBNF_Recursor"
 begin
 
 declare supp_id_bound[simp] supp_inv_bound[simp] infinite_UNIV[simp]
@@ -153,6 +153,7 @@ axiomatization where
 lemmas wit = G.wit1 G.wit2
 setup \<open>Sign.parent_path\<close>
 
+declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 mrbnf "('a1::var, 'a2::var, 'x1, 'x2) G"
   map: GMAP
@@ -327,7 +328,6 @@ next
     by (metis G.Supp_bd(2) not_ordLess_ordIso)
 qed
 
-declare [[typedef_overloaded]]
 binder_datatype (EVrs: 'a) E = Ector "('a, x::'a, t::'a E, 'a E) G" binds x in t
   for permute: Eperm
 declare E.inject[simp del]
@@ -1684,6 +1684,5 @@ lemma E_pbmv_axioms:
       done
     done
   done
-unused_thms
 
 end

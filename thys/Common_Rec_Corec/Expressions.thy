@@ -261,10 +261,20 @@ and
 Ector_eq_imp: 
 "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
    (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
+        GVrs1 u1 \<union> 
+        (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
+        (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<subseteq> supp \<sigma> \<and> 
+        u2 = Gren id \<sigma> u1)"
+
+(* 
+Ector_eq_imp: 
+"\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
+   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
         supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
                  (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
                  (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
         u2 = Gren id \<sigma> u1)"
+*)
 
 
 lemma Ector_surj: "\<exists>u. Ector u = e"

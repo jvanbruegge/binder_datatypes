@@ -17,9 +17,9 @@ where
 "dtorVrsGrenC dtor Vrs \<equiv> 
  (\<forall>e U u1 u2. dtor e = Inl U \<and> {u1,u2} \<subseteq> U \<longrightarrow> 
    (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-        supp \<sigma> \<subseteq> GVrs1 u1 \<union> 
-                 (\<Union> {Vrs e | e . e \<in> GSupp1 u1}) \<union> 
-                 (\<Union> {Vrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
+         GVrs1 u1 \<union> 
+         (\<Union> {Vrs e | e . e \<in> GSupp1 u1}) \<union> 
+         (\<Union> {Vrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<subseteq> supp \<sigma> \<and> 
         u2 = Gren id \<sigma> u1))"
 
 definition dtorVrsC :: "('E' \<Rightarrow> (('a::var,'a,'E','E')G) set + 'a E) \<Rightarrow> ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 

@@ -265,6 +265,12 @@ Ector_eq_imp:
                  (\<Union> {EVrs e | e . e \<in> GSupp1 u1}) \<union> 
                  (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) \<and> 
         u2 = Gren id \<sigma> u1)"
+and 
+Ector_eq_imp_D_to_A: 
+"\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
+   (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
+        supp \<sigma> \<inter> (\<Union> {EVrs e - GVrs2 u1 | e . e \<in> GSupp1 u1}) = {} \<and> 
+        u2 = Gren id \<sigma> u1)"
 
 
 lemma Ector_surj: "\<exists>u. Ector u = e"

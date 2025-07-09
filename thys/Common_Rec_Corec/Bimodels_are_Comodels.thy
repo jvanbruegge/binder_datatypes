@@ -276,73 +276,28 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
           thus "\<sigma> a = a" using aa io(3) by auto
         qed
       next
+        have ss3: "Gmap (Eperm \<sigma>) (Eperm \<sigma>) (Gmap fst fst (Gren id \<sigma> u1)) = Gmap fst fst u2"
+        unfolding ss(3)[symmetric] 
+        by (simp add: Gmap_Gren ss(1)) 
+
+        have gg: "Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) (Gren id \<sigma> u1) = u2"
+        apply(subst snd_single_Gmap'[symmetric, where t = u2 and p = p])
+          subgoal by (metis GSupp1_Gmap u2(2))
+          subgoal by (metis GSupp2_Gmap u2(3))
+          subgoal apply(subst snd_single_Gmap'[symmetric, where t = "Gren id \<sigma> u1" and p = p])
+            subgoal by (metis GSupp1_Gmap GSupp1_Gren bij_id small_id ss(1) u1(2))
+            subgoal by (metis GSupp2_Gmap GSupp2_Gren bij_id small_id ss(1) u1(3))
+            subgoal unfolding ss3[symmetric] unfolding Gmap_comp unfolding o_def Eperm''_def
+            apply(rule Gmap_cong)
+              subgoal by (metis Pperm_cong Pperm_id bij_id eq_id_iff io(3) small_id ss(1))
+              subgoal by (metis Pperm_cong Pperm_id bij_id id_apply io(3) small_id ss(1)) . . .
         show "Gren id \<sigma> (Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) u1) = u2"
-        using Eperm''_def[of \<sigma>] ss(3) u1(2,3,4) u2(2,3,4) io(3) sorry
+        unfolding gg[symmetric]  
+        by (simp add: Gmap_Gren ss(1)) 
       qed
     qed
   qed
 qed
-
-
-
-(*  
-       
-
-
-unfolding dtorVrsGrenC_def EVrs''_def apply safe 
-subgoal for e p U u1 u2   apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e p]) apply safe
-  subgoal for u apply(cases "\<phi> u")
-    subgoal unfolding Edtor'_\<phi> by simp
-    subgoal unfolding Edtor'_not\<phi>  apply simp
-    unfolding Edtor1'_Ector apply auto 
-    using Ector_eq_imp[of "Gmap fst fst u1" "Gmap fst fst u2"]
-    unfolding EVrs''_def apply auto subgoal for \<sigma> 
-    apply(rule exI[of _ \<sigma>]) unfolding GVrs1_Gmap  GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap apply(intro conjI)
-      subgoal . subgoal .
-      subgoal apply(subgoal_tac "\<Union> {EVrs e |e. e \<in> fst ` GSupp1 u1} \<union> 
-        \<Union> {EVrs e - GVrs2 u1 |e. e \<in> fst ` GSupp1 u1}  
-    \<subseteq> \<Union> {EVrs b \<union> PVrs a |b a. (b, a) \<in> GSupp1 u1} \<union>
-       \<Union> {EVrs b \<union> PVrs a - GVrs2 u1 |b a. (b, a) \<in> GSupp1 u1}")
-         subgoal by fastforce
-         subgoal by auto blast+ .  
-
- apply(subst (asm) Gmap_Gren[of id \<sigma>,symmetric]) subgoal by auto subgoal by auto
-    subgoal by auto subgoal by auto
-  apply(subst (asm) Gmap_Gren[of id \<sigma>,symmetric]) subgoal by auto subgoal by auto
-    subgoal by auto subgoal by auto
-    apply(subst snd_single_Gmap'[symmetric, of _ p]) 
-      subgoal by auto subgoal by auto
-      subgoal apply(subgoal_tac "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst u2) = 
-          Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst (Gren id \<sigma> u1))")
-        subgoal unfolding Gmap_comp o_def id_def apply simp  apply (auto simp: GSupp1_Gmap) 
-  apply (smt (verit, ccfv_threshold) Union_iff fst_conv in_mono mem_Collect_eq rev_image_eqI)
-   unfolding image_def apply auto unfolding subset_eq  apply auto sorry
-   subgoal apply auto
-
-
-
-term term sledgehammerd
-     by (smtd (verit) Eperm_comp Eperm_id Gmap_Gren Gmap_cong_id bij_betw_id_iff eq_id_iff small_id)
-  subgoal by argo . (* OK, this helped my morale since I was a bit depressed. *)
-  subgoal apply auto 
-    apply (ssmt (verit, ccfv_threshold) Set.set_insert Union_iff fst_conv image_insert insertCI mem_Collect_eq
-        subset_iff)
-unfolding subset_eq  apply auto  sorry
-   subgoal apply auto sorry . . . . . 
-
-(* 
-        apply(rule Gmap_cong_id)
-          subgoal apply(subst (asm) GSupp1_Gren) subgoal by auto subgoal by auto
-            subgoal by auto subgoal by auto
-            subgoal by auto .
-          subgoal apply(subst (asm) GSupp2_Gren) subgoal by auto subgoal by auto
-            subgoal by auto subgoal by auto
-            subgoal by auto . .
-        subgoal by simp . . . . . .
-*)
-
-
-*)  
 
 
 lemma Ector1'_Ector_EVrs: 

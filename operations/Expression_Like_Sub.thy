@@ -2,7 +2,7 @@ theory Expression_Like_Sub
   imports Expression_Like_Strong Expression_Like_Eta
 begin
 
-locale Substitution = Expression_Strong +
+locale Substitution = Expression +
   fixes Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'e) \<Rightarrow> ('a ::var \<Rightarrow> 'e) \<Rightarrow> 'e \<Rightarrow> 'e"
   assumes
   Esub_Ector\<eta>:
@@ -35,6 +35,9 @@ locale Substitution = Expression_Strong +
     |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set| \<Longrightarrow>
     bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> imsupp \<sigma> \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
     Eperm \<sigma> (Esub \<delta> \<rho> \<rho>' e) = Esub \<delta> \<rho> \<rho>' (Eperm \<sigma> e)"
+
+locale Substitution_Strong = Expression_Strong Ector Eperm EVrs Ebd + Substitution Ector Eperm EVrs Esub
+  for Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e" and Eperm EVrs Ebd Esub
 begin
 
 lemma Esub_inversion0:

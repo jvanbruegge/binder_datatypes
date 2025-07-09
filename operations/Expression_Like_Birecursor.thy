@@ -1,6 +1,13 @@
 theory Expression_Like_Birecursor
-  imports Expression_Like
+  imports Expression_Like_Sub
 begin
+
+context Expression begin
+
+(*TODO provide definition and proof *)
+interpretation Substitution undefined
+  apply standard
+  sorry
 
 definition Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> 'a E \<Rightarrow> 'a E" where
   "Esub \<delta> \<rho> \<rho>' x = undefined"

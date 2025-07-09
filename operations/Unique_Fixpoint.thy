@@ -850,7 +850,7 @@ lemma EFVrs_EsubI2[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho> a = Ector (\<eta> a)")
-     apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
+     apply (metis (no_types, lifting) Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efreee_Efree intro!: exI[of _ a]) []
@@ -883,7 +883,7 @@ lemma EFVrs_EsubI3[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
-     apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
+     apply (metis (no_types, lifting) Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efreee_Efree intro!: exI[of _ a]) []
@@ -963,7 +963,7 @@ lemma EFVrs_EsubD:
         apply (rule conjI[rotated])
          apply assumption
         apply (cases "\<rho> a = Ector (\<eta> a)")
-         apply (metis Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
+         apply (metis (no_types, lifting) Ector_eta_inj Efreee.cases GSupp_eta(1,2) empty_iff)
         apply (smt (verit, ccfv_threshold) Efree\<eta>.intros(2) IImsupp'_def SSupp_def Un_iff comp_apply
             disjoint_iff_not_equal mem_Collect_eq)
         done
@@ -972,7 +972,7 @@ lemma EFVrs_EsubD:
         apply (rule conjI[rotated])
          apply assumption
         apply (cases "\<rho>' a = Ector (\<eta>' a)")
-         apply (metis Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
+         apply (metis (no_types, lifting) Ector_eta'_inj Efreee.cases GSupp_eta'(1,2) empty_iff)
         apply (smt (verit, ccfv_threshold) Efree\<eta>'.intros(2) IImsupp'_def SSupp_def Un_iff comp_apply
             disjoint_iff_not_equal mem_Collect_eq)
         done
@@ -1061,7 +1061,7 @@ lemma EFVrs\<eta>_EsubI3[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho>' a = Ector (\<eta>' a)")
-     apply (metis Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
+     apply (metis (no_types, lifting) Ector_eta'_inj Efree\<eta>.cases GSupp_eta'(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>') EVrs \<rho>'")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>_Efree intro!: exI[of _ a]) []
@@ -1099,7 +1099,7 @@ lemma EFVrs\<eta>_EsubD:
     apply (drule meta_mp)
      apply (auto simp: assms imsupp_supp_bound Un_bound) []
     apply (auto simp: Ector_eta_inj Ector_eta'_inj Esub_Ector Int_Un_distrib assms(2-4))
-    apply (metis Ector_eta_inj assms(2) eta_inversion supp_id_bound)
+    apply (metis (no_types, lifting) Ector_eta_inj assms(2) eta_inversion supp_id_bound)
     done
   subgoal for e' u b e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")
@@ -1185,7 +1185,7 @@ lemma EFVrs\<eta>'_EsubI2[OF _ _ _ _ _ refl]:
      apply force
     apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
     apply (cases "\<rho> a = Ector (\<eta> a)")
-     apply (metis Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
+     apply (metis (no_types, lifting) Ector_eta_inj Efree\<eta>'.cases GSupp_eta(1,2) empty_iff eta_distinct)
     apply (subgoal_tac "z \<in> IImsupp (Ector \<circ> \<eta>) EVrs \<rho>")
      apply fast
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
@@ -1256,7 +1256,7 @@ lemma EFVrs\<eta>'_EsubD:
     apply (drule meta_mp)
      apply (auto simp: assms imsupp_supp_bound Un_bound) []
     apply (auto simp: Ector_eta_inj Ector_eta'_inj Esub_Ector Int_Un_distrib assms(2-4))
-    apply (metis Ector_eta'_inj assms(2) eta'_inversion supp_id_bound)
+    apply (metis (no_types, lifting) Ector_eta'_inj assms(2) eta'_inversion supp_id_bound)
     done
   subgoal for e' u b e
     apply (cases "\<exists>a. e = Ector (\<eta> a)")

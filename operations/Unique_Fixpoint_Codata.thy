@@ -24,7 +24,7 @@ class var =
 
 instantiation Gbd_type :: var begin
 instance apply standard
-  apply simp
+   apply simp
   by (meson G.infinite_regular_card_order card_of_unique
       card_order_on_Card_order infinite_regular_card_order_def
       regularCard_ordIso)
@@ -32,7 +32,7 @@ end
 
 subclass (in covar) var
   apply standard
-  apply (meson cardSuc_ordLess_ordLeq card_of_Card_order
+   apply (meson cardSuc_ordLess_ordLeq card_of_Card_order
       card_of_Field_ordIso G.infinite_regular_card_order
       infinite_regular_card_order.Card_order local.large
       ordIso_ordLeq_trans ordLeq_iff_ordLess_or_ordIso)
@@ -159,13 +159,13 @@ mrbnf "('a1::var, 'a2::var, 'x1, 'x2) G"
   rel: Grel
   pred: Gpred
   var_class: var
-                 apply (auto simp: GMAP_def Gren_def G.Sb_Inj G.Map_id fun_eq_iff G.infinite_regular_card_order
-     G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-     G.Vrs_Sb G.Supp_Sb G.Vrs_Map G.Supp_Map G.Vrs_bd G.Supp_bd
-     intro: trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]]) [12]
-     apply (rule G.rel_compp)
-    apply (rule G.in_rel; assumption)
-    apply (simp_all add: Gpred_def)
+                apply (auto simp: GMAP_def Gren_def G.Sb_Inj G.Map_id fun_eq_iff G.infinite_regular_card_order
+      G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+      G.Vrs_Sb G.Supp_Sb G.Vrs_Map G.Supp_Map G.Vrs_bd G.Supp_bd
+      intro: trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]]) [12]
+    apply (rule G.rel_compp)
+   apply (rule G.in_rel; assumption)
+  apply (simp_all add: Gpred_def)
   done
 print_theorems
 
@@ -366,8 +366,8 @@ instance
 proof
   have *: "|UNIV :: wit_covar_G set| =o card_suc Gbd"
     by (metis bij_imp_bij_inv card_of_card_order_on card_of_unique2 card_order_card_suc
-      card_suc_alt ordIso_symmetric type_definition_bij_betw_Abs
-      type_definition_wit_covar_G)
+        card_suc_alt ordIso_symmetric type_definition_bij_betw_Abs
+        type_definition_wit_covar_G)
   from * show "cardSuc Gbd \<le>o |UNIV :: wit_covar_G set|"
     by (meson G.bd_card_order cardSuc_ordIso_card_suc ordIso_iff_ordLeq ordIso_ordLeq_trans)
   from * show "regularCard |UNIV :: wit_covar_G set|"
@@ -403,8 +403,8 @@ lemma
      GVrs1 u \<union> ((\<Union>e \<in> GSupp1 u. EVrs e) - GVrs2 u) \<union> (\<Union>e \<in> GSupp2 u. EVrs e)"
   and EVrs_bd:
   "\<And>x. |EVrs (x :: 'a :: covar_G E)| <o card_suc Gbd"
-          apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
-            E.permute_ctor E.FVars_ctor intro: E.permute_cong_id)
+         apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
+      E.permute_ctor E.FVars_ctor intro: E.permute_cong_id)
   apply (meson E.TT_fresh_cases)
   done
 
@@ -425,7 +425,7 @@ lemma E_coinduct:
     apply (rule exI[where x = "GMAP id id g g u"])
     apply (rule exI[where x = "GMAP id id h h u"])
     apply (intro conjI)
-    apply simp
+      apply simp
      apply simp
     apply (auto simp: G.rel_map intro!: G.rel_refl_strong)
     done
@@ -442,7 +442,7 @@ lemma Eperm_cong: "bij (\<sigma> :: 'a :: covar_G \<Rightarrow> 'a) \<Longrighta
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = \<tau> a) \<Longrightarrow> Eperm \<sigma> e = Eperm \<tau> e"
   apply (rule trans[OF _ Eperm_cong_id, of _ "\<sigma> o inv \<tau>"])
      apply (auto simp: Eperm_comp[THEN fun_cong, simplified] supp_comp_bound
-       dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
+      dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
   done
 
 lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
@@ -555,9 +555,9 @@ lemma Eperm_E_abs:
 
 locale COREC =
   fixes Udtor :: "'u \<Rightarrow> ('a::covar_G, 'a, 'a E + 'u, 'a E + 'u) G set"
-  and Umap :: "('a::covar_G \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
-  and UFVars :: "'u \<Rightarrow> 'a::covar_G set"
-  and valid_U :: "'u \<Rightarrow> bool"
+    and Umap :: "('a::covar_G \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
+    and UFVars :: "'u \<Rightarrow> 'a::covar_G set"
+    and valid_U :: "'u \<Rightarrow> bool"
   assumes Udtor_ne: "\<And>d. valid_U d \<Longrightarrow> Udtor d \<noteq> {}"
     and alpha_Udtor: "\<And>X X' d. valid_U d \<Longrightarrow> {X,X'} \<subseteq> Udtor d \<Longrightarrow>
 \<exists>u. bij (u::'a::covar_G \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on ((\<Union>z \<in> GSupp1 X. case_sum EVrs UFVars z) - GVrs2 X) u \<and>
@@ -587,7 +587,7 @@ begin
 
 lemma Umap_id: "valid_U d \<Longrightarrow> Umap id d = d"
   apply (rule Umap_cong0)
-  apply assumption
+     apply assumption
     apply (rule bij_id supp_id_bound)+
   apply (rule id_apply)
   done
@@ -596,23 +596,23 @@ lemma valid_Udtor': "\<And>x z r. valid_U d \<Longrightarrow> x \<in> Udtor d \<
   apply (drule valid_Udtor)
    apply assumption
   apply (erule UnE)
-  (* REPEAT_DETERM *)
+    (* REPEAT_DETERM *)
    apply (unfold G.pred_set)
    apply (erule conjE)
-  apply (rotate_tac 2)
+   apply (rotate_tac 2)
    apply (drule bspec[rotated])
     apply assumption
    apply (unfold sum.pred_set)
    apply (erule conjE)
    apply (erule bspec)
    apply assumption
-  (* repeated *)
-   apply (erule conjE)
+    (* repeated *)
+  apply (erule conjE)
   apply (rotate_tac 2)
-   apply (drule bspec[rotated])
-    apply assumption
-   apply (erule conjE)
-   apply (erule bspec)
+  apply (drule bspec[rotated])
+   apply assumption
+  apply (erule conjE)
+  apply (erule bspec)
   apply assumption
   done
 
@@ -837,7 +837,7 @@ lemma raw_Umap_Utor:
  (Utor (raw_Umap u d))"
   apply (unfold Utor_def)
   apply (subst Umap_Udtor_strong[OF u, of d])
-  apply (rule valid_d)
+   apply (rule valid_d)
   apply (subst image_comp)
   apply (subst G.map_comp0[symmetric])
       apply (rule assms supp_id_bound bij_id)+
@@ -918,7 +918,7 @@ lemma f_FVarsD_aux:
    apply (insert assms(3))[1]
    apply hypsubst_thin
    apply (subst (asm) pred_sum_inject)
-  apply assumption
+   apply assumption
   apply assumption
   done
 
@@ -926,12 +926,12 @@ lemma valid_pick_set3: "suitable pick \<Longrightarrow> xc \<in> GSupp1 (pick xb
   apply (unfold suitable_def Utor_def)
   apply (erule allE)
   apply (erule impE)
-  apply assumption
+   apply assumption
   apply (erule imageE[of _ _ "Udtor xb"])
   apply (simp only:)
   apply (subst (asm) G.set_map, (rule supp_id_bound bij_id)+)
   apply (cases xc)
-  apply hypsubst_thin
+   apply hypsubst_thin
    apply (subst pred_sum.simps)
    apply simp
   apply hypsubst_thin
@@ -941,11 +941,11 @@ lemma valid_pick_set3: "suitable pick \<Longrightarrow> xc \<in> GSupp1 (pick xb
   apply (rule conjI)
    apply (rule refl)
   apply (rule imageE)
-  prefer 2
-  apply (erule valid_Udtor')
+   prefer 2
+   apply (erule valid_Udtor')
      apply assumption
     prefer 3
-  apply assumption
+    apply assumption
    apply (rule UnI1)
    apply assumption
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
@@ -958,12 +958,12 @@ lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> GSupp2 (pick xb
   apply (unfold suitable_def Utor_def)
   apply (erule allE)
   apply (erule impE)
-  apply assumption
+   apply assumption
   apply (erule imageE[of _ _ "Udtor xb"])
   apply (simp only:)
   apply (subst (asm) G.set_map, (rule supp_id_bound bij_id)+)
   apply (cases xc)
-  apply hypsubst_thin
+   apply hypsubst_thin
    apply (subst pred_sum.simps)
    apply simp
   apply hypsubst_thin
@@ -973,11 +973,11 @@ lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> GSupp2 (pick xb
   apply (rule conjI)
    apply (rule refl)
   apply (rule imageE)
-  prefer 2
-  apply (erule valid_Udtor')
+   prefer 2
+   apply (erule valid_Udtor')
      apply assumption
     prefer 3
-  apply assumption
+    apply assumption
    apply (rule UnI2)
    apply assumption
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
@@ -988,7 +988,7 @@ lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> GSupp2 (pick xb
 
 lemma f_FVarsD:
   assumes p: "suitable pick"
-and valid_d: "valid_U d"
+    and valid_d: "valid_U d"
   shows "EVrs_raw (f pick d) \<subseteq> raw_UFVars d"
   apply (rule subsetI)
   apply (unfold EVrs_raw_def mem_Collect_eq)
@@ -997,82 +997,82 @@ and valid_d: "valid_U d"
      apply (rule valid_d)
 
 
-     apply (rule allI)
+    apply (rule allI)
     apply (rule impI)+
     apply (rule le_supE[OF suitable_FVarsD[OF assms(1), unfolded Un_assoc]])
-  prefer 2
+     prefer 2
      apply (erule subsetD)
-    apply (drule f_ctor)
-    apply hypsubst
-    apply (subst (asm) G.set_map)
-      apply (rule supp_id_bound bij_id)+
-    apply (unfold image_id)
+     apply (drule f_ctor)
+     apply hypsubst
+     apply (subst (asm) G.set_map)
+       apply (rule supp_id_bound bij_id)+
+     apply (unfold image_id)
      apply assumption
 
-  prefer 2
+    prefer 2
 
 (* REPEAT_DETERM *)
-   apply (rule allI)
-   apply (rule impI)+
-   apply (frule f_ctor)
-   apply hypsubst
-   apply (subst (asm) G.set_map, (rule supp_id_bound bij_id)+)+
-   apply (unfold image_id)?
-   apply (erule imageE)
-   apply hypsubst
+    apply (rule allI)
+    apply (rule impI)+
+    apply (frule f_ctor)
+    apply hypsubst
+    apply (subst (asm) G.set_map, (rule supp_id_bound bij_id)+)+
+    apply (unfold image_id)?
+    apply (erule imageE)
+    apply hypsubst
   thm f_FVarsD_aux
-   apply (drule f_FVarsD_aux)
-     apply (erule allE)
-      apply (erule impE)
-       prefer 2
-  apply (erule impE)
-      apply assumption
+    apply (drule f_FVarsD_aux)
+       apply (erule allE)
+       apply (erule impE)
+        prefer 2
+        apply (erule impE)
+         apply assumption
         apply assumption
-  apply assumption
+       apply assumption
+      prefer 2
+      apply (rule refl)
      prefer 2
-  apply (rule refl)
-     prefer 2
-   apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
-  apply assumption
-       apply (unfold Un_assoc)
-    apply (rule UnI2)
-    apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 2] 1\<close>) (* normally: Use goal number here *)
-    apply (rule DiffI[rotated], assumption)?
-    apply (rule UN_I)
-     apply assumption
-    apply assumption
+     apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
+       apply assumption
+      apply (unfold Un_assoc)
+      apply (rule UnI2)
+      apply (unfold Un_assoc[symmetric])?
+      apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 2] 1\<close>) (* normally: Use goal number here *)
+      apply (rule DiffI[rotated], assumption)?
+      apply (rule UN_I)
+       apply assumption
+      apply assumption
      apply (rule assms)
-  prefer 2
+    prefer 2
     apply assumption
    apply (drule valid_pick_set3[OF p])
     apply assumption
-  apply assumption
+   apply assumption
     (* repeated *)
-(* TODO: this not actually a repeat anymore, reorganize the proof
+    (* TODO: this not actually a repeat anymore, reorganize the proof
 to recover that property *)
-   apply (rule allI)
-   apply (rule impI)+
-   apply (frule f_ctor)
-   apply hypsubst
-   apply (subst (asm) G.set_map, (rule supp_id_bound bij_id)+)+
-   apply (unfold image_id)?
-   apply (erule imageE)
-   apply hypsubst
-   apply (drule f_FVarsD_aux)
+  apply (rule allI)
+  apply (rule impI)+
+  apply (frule f_ctor)
+  apply hypsubst
+  apply (subst (asm) G.set_map, (rule supp_id_bound bij_id)+)+
+  apply (unfold image_id)?
+  apply (erule imageE)
+  apply hypsubst
+  apply (drule f_FVarsD_aux)
      apply (erule allE)
+     apply (erule impE)
+      prefer 2
       apply (erule impE)
-       prefer 2
-  apply (erule impE)
+       apply assumption
       apply assumption
-        apply assumption
-  apply assumption
-     prefer 2
-  apply (rule refl)
-     prefer 2
+     apply assumption
+    prefer 2
+    apply (rule refl)
+   prefer 2
    apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
-  apply assumption
-       apply (unfold Un_assoc)
+     apply assumption
+    apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 1] 1\<close>) (* normally: Use goal number here *)
@@ -1082,7 +1082,7 @@ to recover that property *)
     apply assumption
    apply (rule assms)
   apply (rule valid_pick_set4[OF p])
-  prefer 2
+   prefer 2
    apply assumption
   apply assumption
   done
@@ -1090,13 +1090,13 @@ to recover that property *)
 find_theorems Eperm_raw
 lemma OO_permute:
   assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::covar_G set|"
-          "bij (v::'a\<Rightarrow>'a)" "|supp v| <o |UNIV::'a::covar_G set|"
+    "bij (v::'a\<Rightarrow>'a)" "|supp v| <o |UNIV::'a::covar_G set|"
   shows "((\<lambda>t. alpha_E (Eperm_raw v t)) OO (\<lambda>t. alpha_E (Eperm_raw u t))) = (\<lambda>t. alpha_E (Eperm_raw (u \<circ> v) t))"
   apply (unfold Eperm_raw_comp[OF assms, symmetric])
   apply (rule ext)
   apply (rule ext)
   apply (rule iffI)
-  apply (subst (asm) relcompp.simps)
+   apply (subst (asm) relcompp.simps)
    apply (erule exE)+
    apply (erule conjE)+
    apply hypsubst
@@ -1106,7 +1106,7 @@ lemma OO_permute:
   apply (subst relcompp.simps)
   apply (rule exI)+
   apply (rule conjI[rotated])+
-  prefer 2
+     prefer 2
      apply (rule alpha_refls)
     apply assumption
    apply (rule refl)+
@@ -1121,16 +1121,16 @@ lemma OO_comp:
   apply (subst Grp_o[symmetric])
   apply (unfold Grp_UNIV_def)
   apply (subst assms)
-  apply assumption
+   apply assumption
   apply (rule refl)
   done
 
 lemma OO_raw_Umap:
   assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::covar_G set|"
-          "bij (v::'a\<Rightarrow>'a)" "|supp v| <o |UNIV::'a::covar_G set|"
-        shows "valid_U x \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap v d)) OO (\<lambda>d. (=) (raw_Umap u d))) x  = (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)) x"
+    "bij (v::'a\<Rightarrow>'a)" "|supp v| <o |UNIV::'a::covar_G set|"
+  shows "valid_U x \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap v d)) OO (\<lambda>d. (=) (raw_Umap u d))) x  = (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)) x"
   apply (rule OO_comp)
-  apply (subst comp_apply)
+   apply (subst comp_apply)
    apply (rule Umap_comp[OF _ assms])
    apply assumption+
   done
@@ -1141,7 +1141,7 @@ lemma OO_alpha_permute:
   apply (rule ext)
   apply (rule ext)
   apply (rule iffI)
-  prefer 2
+   prefer 2
    apply (rule relcomppI)
     prefer 2
     apply assumption
@@ -1155,9 +1155,9 @@ lemma OO_alpha_permute:
 
 lemma set3_setr_valid:
   assumes "suitable pick"
-and "valid_U d"
-and "z \<in> GSupp1 (pick d)"
-shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U x"
+    and "valid_U d"
+    and "z \<in> GSupp1 (pick d)"
+  shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U x"
   by (rule valid_pick_set3[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
 
 lemma rel_F_suitable_mapD:
@@ -1213,11 +1213,11 @@ lemma rel_F_suitable_mapD:
              apply (erule set3_setr_valid[OF pp'(1) valid_d])
              apply assumption
             apply (rule refl)
-            apply (rule ballI)+
+           apply (rule ballI)+
            apply (rule impI)
            apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
             apply (subst OO_alpha_permute[OF u])
-  apply (rule refl)
+            apply (rule refl)
            apply (subst eq_OO)
            apply (rule iffI)
             apply assumption
@@ -1291,10 +1291,10 @@ lemma l_is_inr:
    apply (rule sumE[of ttdL])
     apply hypsubst_thin
     apply (subst (asm) rel_sum_simps)
-  apply (subst (asm) sum.case)
-   apply (drule cnf.clause2raw_notE)
+    apply (subst (asm) sum.case)
+    apply (drule cnf.clause2raw_notE)
      apply assumption
-  apply (erule FalseE)
+    apply (erule FalseE)
    apply hypsubst_thin
    apply (rule exI)
    apply (rule refl)
@@ -1332,79 +1332,79 @@ lemma f_swap_alpha:
     and valid_d: "valid_U d"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::covar_G set|"
   shows "alpha_E (Eperm_raw u (f pick d)) (f pick' (raw_Umap u d))"
-   apply (rule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
+  apply (rule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
    tL = Eperm_raw u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
-  prefer 2
-  apply (erule exE conjE)+
-  apply (frule rel_F_suitable_mapD[OF _ p p'])
-    apply assumption+
-  apply (erule exE)
-  apply (rule exI)+
-  apply (rule conjI[rotated])+
-     prefer 4
-     apply (rule bij_comp)
-      apply (rule bij_imp_bij_inv)
+   prefer 2
+   apply (erule exE conjE)+
+   apply (frule rel_F_suitable_mapD[OF _ p p'])
+     apply assumption+
+   apply (erule exE)
+   apply (rule exI)+
+   apply (rule conjI[rotated])+
+      prefer 4
+      apply (rule bij_comp)
+       apply (rule bij_imp_bij_inv)
+       apply assumption
+      apply (rule bij_comp)
+       prefer 2
+       apply assumption
+      apply (erule conjE)
+      apply (rotate_tac -2)
       apply assumption
-     apply (rule bij_comp)
+     prefer 3
+     apply (rule supp_comp_bound)
+      apply (rule supp_inv_bound)
+       apply assumption
+      apply assumption
+     apply (rule supp_comp_bound)
+      apply (erule conjE)+
+      apply assumption
+     apply assumption
+    prefer 2
+
+    apply (rule id_on_antimono)
+     apply (unfold id_on_def)
+     apply (rule allI)
+     apply (rule impI)
+     apply (subst comp_assoc)
+     apply (subst comp_apply)
+     apply (subst comp_apply)
+     apply (frule bij_inv_rev[THEN iffD1, THEN sym])
       prefer 2
       apply assumption
-     apply (erule conjE)
-     apply (rotate_tac -2)
-     apply assumption
-    prefer 3
-    apply (rule supp_comp_bound)
-     apply (rule supp_inv_bound)
-      apply assumption
-     apply assumption
-    apply (rule supp_comp_bound)
      apply (erule conjE)+
+     apply (erule allE)
+     apply (erule impE)
+      prefer 2
+      apply assumption
+     apply (rule image_inv_f_f[OF bij_is_inj, THEN arg_cong2[OF refl, of _ _ "(\<in>)"], THEN iffD1])
+      prefer 2
+      apply (erule imageI)
      apply assumption
-    apply assumption
-   prefer 2
-
-   apply (rule id_on_antimono)
-    apply (unfold id_on_def)
-    apply (rule allI)
-    apply (rule impI)
-    apply (subst comp_assoc)
-    apply (subst comp_apply)
-    apply (subst comp_apply)
-    apply (frule bij_inv_rev[THEN iffD1, THEN sym])
-     prefer 2
-     apply assumption
-    apply (erule conjE)+
-    apply (erule allE)
-    apply (erule impE)
-     prefer 2
-     apply assumption
-    apply (rule image_inv_f_f[OF bij_is_inj, THEN arg_cong2[OF refl, of _ _ "(\<in>)"], THEN iffD1])
-     prefer 2
-     apply (erule imageI)
-    apply assumption
-   apply (subst f_swap_alpha_xL[of _ _ "pick"])
-      apply assumption+
-   apply (subst G.set_map, (rule supp_id_bound bij_id | assumption)+)+
-   apply (subst Diff_subset_conv)
-   apply (subst image_comp)
-   apply (subst comp_assoc[symmetric])
+    apply (subst f_swap_alpha_xL[of _ _ "pick"])
+       apply assumption+
+    apply (subst G.set_map, (rule supp_id_bound bij_id | assumption)+)+
+    apply (subst Diff_subset_conv)
+    apply (subst image_comp)
+    apply (subst comp_assoc[symmetric])
     apply (subst comp_def)
-   apply (subst EVrs_raw_Eperm_raw, assumption+)
-  apply (subst comp_def[of _ EVrs_raw, symmetric])
-   apply (subst comp_assoc)
-   apply (subst image_comp[symmetric])
-   apply (subst f_swap_alpha_xL[of _ _ "pick"])
-      apply assumption+
-   apply (subst G.set_map, (rule supp_id_bound bij_id | assumption)+)+
-   apply (subst image_Un[symmetric])
-   apply (subst image_Union[symmetric])
-   apply (rule image_mono)
-   apply (unfold raw_UFVarsBD_def)
-   apply (subst Un_Diff_cancel)
-   apply (rule le_supI2)
-   apply (subst o_case_sum)
-   apply (unfold o_id)
-   apply (rule UN_mono)
-    apply (rule subset_refl)
+    apply (subst EVrs_raw_Eperm_raw, assumption+)
+    apply (subst comp_def[of _ EVrs_raw, symmetric])
+    apply (subst comp_assoc)
+    apply (subst image_comp[symmetric])
+    apply (subst f_swap_alpha_xL[of _ _ "pick"])
+       apply assumption+
+    apply (subst G.set_map, (rule supp_id_bound bij_id | assumption)+)+
+    apply (subst image_Un[symmetric])
+    apply (subst image_Union[symmetric])
+    apply (rule image_mono)
+    apply (unfold raw_UFVarsBD_def)
+    apply (subst Un_Diff_cancel)
+    apply (rule le_supI2)
+    apply (subst o_case_sum)
+    apply (unfold o_id)
+    apply (rule UN_mono)
+     apply (rule subset_refl)
   subgoal for _ _ _ _ _ x
     apply (rule sumE[of x])
      apply hypsubst_thin
@@ -1419,36 +1419,36 @@ lemma f_swap_alpha:
     apply (unfold pred_sum_inject)
     apply assumption
     done
-  apply (erule conjE)+
-  apply (rotate_tac -6)
-  apply (drule f_swap_alpha_xL[of _ _ "pick", rotated -1], assumption+)
-  apply (drule f_ctor)
-  apply hypsubst
-  apply (subst G.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
-  apply (subst G.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound bij_id)+)
-  apply (subst relcompp_conversep_Grp)+
-  apply (subst Grp_OO)+
-  apply (unfold id_o inv_id)
-  apply (subst (2) comp_assoc)
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold o_id)
-  apply (subst comp_apply)+
-  apply (subst Eperm_raw_comp, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
-  apply (erule G.mr_rel_mono_strong0[rotated -5])
+   apply (erule conjE)+
+   apply (rotate_tac -6)
+   apply (drule f_swap_alpha_xL[of _ _ "pick", rotated -1], assumption+)
+   apply (drule f_ctor)
+   apply hypsubst
+   apply (subst G.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
+   apply (subst G.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound bij_id)+)
+   apply (subst relcompp_conversep_Grp)+
+   apply (subst Grp_OO)+
+   apply (unfold id_o inv_id)
+   apply (subst (2) comp_assoc)
+   apply (subst inv_o_simp1, assumption)
+   apply (unfold o_id)
+   apply (subst comp_apply)+
+   apply (subst Eperm_raw_comp, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
+   apply (erule G.mr_rel_mono_strong0[rotated -5])
+            apply (rule ballI)
+            apply (rule refl)
            apply (rule ballI)
            apply (rule refl)
-          apply (rule ballI)
-          apply (rule refl)
-         apply (rule ballI)+
-         apply (rule impI)
-         apply (subst Eperm_raw_comp)
-             prefer 6
+          apply (rule ballI)+
+          apply (rule impI)
+          apply (subst Eperm_raw_comp)
+              prefer 6
 
               apply (rule ballI)+
               apply (rule impI)
               apply (rotate_tac -1)
               apply (subst disj_commute)
-             apply (rule verit_and_neg)
+              apply (rule verit_and_neg)
               apply (frule l_is_inr[of _ _ _ pick "pick'"])
                apply assumption
               apply (erule exE)
@@ -1473,29 +1473,29 @@ lemma f_swap_alpha:
              apply (subst (2) comp_assoc)
              apply (subst (3) comp_assoc)
              apply (unfold inv_o_simp1)
-              apply (unfold o_id)
-              apply (rotate_tac -1)
-              apply (subst disj_commute)
-              apply (rule verit_and_neg)
-              apply (frule l_is_inr[of _ _ _ pick "pick'"])
+             apply (unfold o_id)
+             apply (rotate_tac -1)
+             apply (subst disj_commute)
+             apply (rule verit_and_neg)
+             apply (frule l_is_inr[of _ _ _ pick "pick'"])
+              apply assumption
+             apply (erule exE)
+             apply hypsubst
+             apply (subst sum.case)+
+             apply (rule exI)+
+             apply (drule r_is_Umap)
+              apply (rule refl)
+             apply hypsubst
+             apply (unfold sum.case)
+             apply (rule conjI[rotated])+
+                 apply (rule refl)+
+               prefer 3
+               apply (drule valid_pick_set3[rotated])
+                 apply assumption
+                apply (rule p)
+               apply (unfold pred_sum_inject)
                apply assumption
-              apply (erule exE)
-              apply hypsubst
-              apply (subst sum.case)+
-              apply (rule exI)+
-              apply (drule r_is_Umap)
-               apply (rule refl)
-              apply hypsubst
-              apply (unfold sum.case)
-              apply (rule conjI[rotated])+
-                  apply (rule refl)+
-                prefer 3
-                apply (drule valid_pick_set3[rotated])
-                  apply assumption
-                 apply (rule p)
-                apply (unfold pred_sum_inject)
-                apply assumption
-               apply (rule supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound | assumption)+
+              apply (rule supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound | assumption)+
   apply (rule exI)+
   apply (rule conjI[rotated])+
       apply (rule refl)+
@@ -1528,32 +1528,32 @@ lemma f0_Utor_aux:
   assumes "X \<in> Utor d" and valid_d: "valid_U d"
   shows "alpha_E (f (\<lambda> d'. if d' = d then X else pick0 d') d)
                        (raw_E_ctor (GMAP id id (case_sum id f0) (case_sum id f0) X))"
-    apply(subst f_simps)
-    apply (subst if_P[OF refl])
-    apply(rule alpha_E.intros[of id], (rule bij_id supp_id_bound id_on_id)+)
-    apply (unfold G.mr_rel_id[symmetric] G.rel_map)
-    apply(rule G.rel_refl_strong)
-(* REPEAT *)
-     apply (rule sumE)
-      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
-       apply assumption
-      apply hypsubst
-      apply (unfold sum.simps)
-      apply (unfold Eperm_raw_id id_apply)?
-      apply (rule alpha_refls)
-      apply hypsubst
-     apply (unfold sum.simps)
-     apply (unfold f0_def)?
-     apply (rule f_alpha[OF _ suitable_pick0])
+  apply(subst f_simps)
+  apply (subst if_P[OF refl])
+  apply(rule alpha_E.intros[of id], (rule bij_id supp_id_bound id_on_id)+)
+  apply (unfold G.mr_rel_id[symmetric] G.rel_map)
+  apply(rule G.rel_refl_strong)
+    (* REPEAT *)
+   apply (rule sumE)
+    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+     apply assumption
+    apply hypsubst
+    apply (unfold sum.simps)
+    apply (unfold Eperm_raw_id id_apply)?
+    apply (rule alpha_refls)
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold f0_def)?
+   apply (rule f_alpha[OF _ suitable_pick0])
 
 (* BLOCK: SUITABLE *)
-     apply (unfold suitable_def)
+    apply (unfold suitable_def)
     apply (rule allI)
-  apply (rule impI)
-     apply (rule if_split[THEN iffD2])
-     apply (rule conjI)
-      apply (rule impI)
-      apply hypsubst
+    apply (rule impI)
+    apply (rule if_split[THEN iffD2])
+    apply (rule conjI)
+     apply (rule impI)
+     apply hypsubst
      apply (rule assms)
     apply (rule impI)
     apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
@@ -1564,7 +1564,7 @@ lemma f0_Utor_aux:
      prefer 2
      apply (rule Basic_BNFs.setr.intros)
      apply (rule refl)
-     apply hypsubst_thin
+    apply hypsubst_thin
     apply (subst (asm) G.set_map, (rule bij_id supp_id_bound)+)
     apply (rule UnI1)
     apply (erule imageE)
@@ -1573,76 +1573,76 @@ lemma f0_Utor_aux:
     apply (erule exE)
     apply (erule conjE)
     apply (hypsubst_thin)
-  apply assumption
-  apply (rule assms)
-  
+    apply assumption
+   apply (rule assms)
+
 (* END BLOCK *)
 
 (* REPEATED, except UnI2 instead of UnI1 *)
   apply (rule sumE)
-      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
-       apply assumption
-      apply hypsubst
-      apply (unfold sum.simps)
-      apply (unfold Eperm_raw_id id_apply)?
-      apply (rule alpha_refls)
-      apply hypsubst
-     apply (unfold sum.simps)
-     apply (unfold f0_def)?
-     apply (rule f_alpha[OF _ suitable_pick0])
-
-     apply (unfold suitable_def)
-    apply (rule allI)
-  apply (rule impI)
-     apply (rule if_split[THEN iffD2])
-     apply (rule conjI)
-      apply (rule impI)
-      apply hypsubst
-     apply (rule assms)
-    apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
     apply assumption
-   apply (rule assms(1)[unfolded Utor_def, THEN imageE])
-   apply (rotate_tac -1)
-   apply (erule valid_Udtor'[rotated])
-     prefer 2
-     apply (rule Basic_BNFs.setr.intros)
-     apply (rule refl)
-     apply hypsubst_thin
-    apply (subst (asm) G.set_map, (rule bij_id supp_id_bound)+)
-    apply (rule UnI2)
-    apply (erule imageE)
-    apply (drule setr.intros[OF sym])
-    apply (unfold sum.set_map image_id setr.simps)
-    apply (erule exE)
-    apply (erule conjE)
-    apply (hypsubst_thin)
-  apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold Eperm_raw_id id_apply)?
+   apply (rule alpha_refls)
+  apply hypsubst
+  apply (unfold sum.simps)
+  apply (unfold f0_def)?
+  apply (rule f_alpha[OF _ suitable_pick0])
+
+   apply (unfold suitable_def)
+   apply (rule allI)
+   apply (rule impI)
+   apply (rule if_split[THEN iffD2])
+   apply (rule conjI)
+    apply (rule impI)
+    apply hypsubst
+    apply (rule assms)
+   apply (rule impI)
+   apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
+   apply assumption
+  apply (rule assms(1)[unfolded Utor_def, THEN imageE])
+  apply (rotate_tac -1)
+  apply (erule valid_Udtor'[rotated])
+    prefer 2
+    apply (rule Basic_BNFs.setr.intros)
+    apply (rule refl)
+   apply hypsubst_thin
+   apply (subst (asm) G.set_map, (rule bij_id supp_id_bound)+)
+   apply (rule UnI2)
+   apply (erule imageE)
+   apply (drule setr.intros[OF sym])
+   apply (unfold sum.set_map image_id setr.simps)
+   apply (erule exE)
+   apply (erule conjE)
+   apply (hypsubst_thin)
+   apply assumption
   apply (rule assms)
 
 (* END REPEAT *)
-    done
+  done
 
 lemma f0_Utor:
   assumes "X \<in> Utor d" "valid_U d"
   shows "alpha_E (f0 d) (raw_E_ctor (GMAP id id (case_sum id f0) (case_sum id f0) X))"
-    apply (rule alpha_trans[rotated])
-    apply (rule f0_Utor_aux[OF assms])
-    apply (rule f_alpha[OF suitable_pick0 _ assms(2), unfolded f0_def[symmetric]])
+  apply (rule alpha_trans[rotated])
+   apply (rule f0_Utor_aux[OF assms])
+  apply (rule f_alpha[OF suitable_pick0 _ assms(2), unfolded f0_def[symmetric]])
 
 (* BLOCK: SUITABLE *)
-     apply (unfold suitable_def)
+  apply (unfold suitable_def)
   apply (rule allI)
   apply (rule impI)
-     apply (rule if_split[THEN iffD2])
-     apply (rule conjI)
-      apply (rule impI)
-      apply hypsubst
-     apply (rule assms)
-    apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
-     apply assumption
-(* END BLOCK *)
+  apply (rule if_split[THEN iffD2])
+  apply (rule conjI)
+   apply (rule impI)
+   apply hypsubst
+   apply (rule assms)
+  apply (rule impI)
+  apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
+  apply assumption
+    (* END BLOCK *)
   done
 
 lemma f0_mapD:
@@ -1673,8 +1673,8 @@ theorem COREC_DDTOR:
    apply (rule arg_cong[of _ _ "alpha_E (f0 d)", THEN iffD1])
     prefer 2
     apply (rule f0_Utor)
-    apply (unfold Utor_def)
-    apply (rule imageI)
+     apply (unfold Utor_def)
+     apply (rule imageI)
      apply (rule assms)+
    apply (subst G.map_comp, (rule supp_id_bound bij_id)+)
    apply (unfold case_sum_o_map_sum)
@@ -1765,7 +1765,7 @@ lemma permute_\<rho>:
    apply (rule E.permute_cong_id; simp?)
   subgoal for a'
     apply (subgoal_tac "a' \<in> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho>")
-    apply (meson Int_emptyD not_in_imsupp_same)
+     apply (meson Int_emptyD not_in_imsupp_same)
     apply (auto simp: IImsupp'_def IImsupp_def SSupp_def)
     done
   apply (cases "\<rho> a = Ector (\<eta> a)")
@@ -1782,7 +1782,7 @@ lemma permute_\<rho>':
    apply (rule E.permute_cong_id; simp?)
   subgoal for a'
     apply (subgoal_tac "a' \<in> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>'")
-    apply (meson Int_emptyD not_in_imsupp_same)
+     apply (meson Int_emptyD not_in_imsupp_same)
     apply (auto simp: IImsupp'_def IImsupp_def SSupp_def)
     done
   apply (cases "\<rho>' a = Ector (\<eta>' a)")
@@ -1804,8 +1804,8 @@ abbreviation "DTOR \<equiv> (\<lambda>\<delta> \<rho> \<rho>' e. {u. Ector u = e
 lemma SSupp_Eperm_comp: 
   "bij (\<sigma> :: 'a \<Rightarrow> 'a::covar_G) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> SSupp (Ector \<circ> \<eta>) (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>) \<subseteq> SSupp (Ector \<circ> \<eta>) \<rho> \<union> supp \<sigma>"
   "bij (\<sigma> :: 'a \<Rightarrow> 'a::covar_G) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> SSupp (Ector \<circ> \<eta>') (Eperm \<sigma> \<circ> \<rho>' \<circ> inv \<sigma>) \<subseteq> SSupp (Ector \<circ> \<eta>') \<rho>' \<union> supp \<sigma>"
-  apply (auto simp: SSupp_def imsupp_def image_iff)
-  apply (metis Eperm_Ector Gren_def bij_imp_inv eta_natural not_in_supp_alt)
+   apply (auto simp: SSupp_def imsupp_def image_iff)
+   apply (metis Eperm_Ector Gren_def bij_imp_inv eta_natural not_in_supp_alt)
   apply (metis Eperm_Ector Gren_def bij_imp_inv eta'_natural not_in_supp_alt)
   done
 
@@ -1840,10 +1840,10 @@ interpretation Esub: COREC
     done
   subgoal for X X' d
     apply (auto split: if_splits simp: map_sum_o_inj GMAP_def Gren_def 
-      G.Map_Sb[THEN fun_cong, simplified]
-      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
-      Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject)
+        G.Map_Sb[THEN fun_cong, simplified]
+        G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+        G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
+        Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject)
     subgoal for \<delta> \<rho> \<rho>' a u u'
       apply (subgoal_tac "Ector u' = Ector u")
        apply (subst (asm) Ector_fresh_inject[where A="IMSUPP \<delta> \<rho> \<rho>'"])
@@ -1876,11 +1876,11 @@ interpretation Esub: COREC
       done
     subgoal for \<delta> \<rho> \<rho>' u u'
       apply (drule sym[of "Ector u'"])
-       apply (subst (asm) Ector_fresh_inject[where A="IMSUPP \<delta> \<rho> \<rho>'"])
-          apply blast
+      apply (subst (asm) Ector_fresh_inject[where A="IMSUPP \<delta> \<rho> \<rho>'"])
          apply blast
-        apply (blast intro: small_IMSUPP)
-       apply (erule exE conjE)+
+        apply blast
+       apply (blast intro: small_IMSUPP)
+      apply (erule exE conjE)+
       subgoal for \<sigma>
         apply (rule exI[of _ \<sigma>])
         apply (auto simp: Gren_def comp_def
@@ -1891,11 +1891,11 @@ interpretation Esub: COREC
       done
     subgoal for \<delta> \<rho> \<rho>' u u'
       apply (drule sym[of "Ector u'"])
-       apply (subst (asm) Ector_fresh_inject[where A="IMSUPP \<delta> \<rho> \<rho>'"])
-          apply blast
+      apply (subst (asm) Ector_fresh_inject[where A="IMSUPP \<delta> \<rho> \<rho>'"])
          apply blast
-        apply (blast intro: small_IMSUPP)
-       apply (erule exE conjE)+
+        apply blast
+       apply (blast intro: small_IMSUPP)
+      apply (erule exE conjE)+
       subgoal for \<sigma>
         apply (drule spec[of _ \<sigma>])
         apply (auto simp: Gren_def comp_def G.Vrs_Sb G.Vrs_Map
@@ -1903,7 +1903,7 @@ interpretation Esub: COREC
             G.Map_Sb[THEN fun_cong, simplified]
             G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified])
          apply (erule notE)
-        apply (smt (verit, ccfv_threshold) Diff_iff Int_emptyD Un_iff id_on_def
+         apply (smt (verit, ccfv_threshold) Diff_iff Int_emptyD Un_iff id_on_def
             not_in_imsupp_same)
         apply (meson not_ordLeq_ordLess)
         done
@@ -1911,11 +1911,11 @@ interpretation Esub: COREC
     done
   subgoal for d X
     apply (auto  simp: map_sum_o_inj GMAP_def Gren_def EVrs_Ector
-      G.Map_Sb[THEN fun_cong, simplified]
-      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
-      Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
-      split: if_splits)
+        G.Map_Sb[THEN fun_cong, simplified]
+        G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+        G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
+        Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
+        split: if_splits)
     subgoal for \<delta> \<rho> \<rho>' a b u
       apply (cases "\<rho> b = Ector (\<eta> b)")
        apply (simp add: Ector_eta_inj)
@@ -1975,17 +1975,17 @@ interpretation Esub: COREC
     done
   subgoal for \<sigma> d
     apply (auto split: if_splits simp: map_sum_o_inj GMAP_def Gren_def Eperm_Ector
-      G.Map_Sb[THEN fun_cong, simplified]
-      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
-      Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
-      eta_natural eta'_natural eta_distinct eta_distinct' image_image)
+        G.Map_Sb[THEN fun_cong, simplified]
+        G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+        G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
+        Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
+        eta_natural eta'_natural eta_distinct eta_distinct' image_image)
     subgoal for \<delta> \<rho> \<rho>' u a
       apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
-        apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id
-      G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
-      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
+      apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id
+          G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
+          G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+          G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
           image_eqI[where x="GMAP (inv \<sigma>) (inv \<sigma>) (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) u"])
         apply (metis Int_emptyD comp_assoc image_in_bij_eq imsupp_comp_image)
        apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(1))
@@ -1997,10 +1997,10 @@ interpretation Esub: COREC
       done
     subgoal for \<delta> \<rho> \<rho>' u a
       apply (drule arg_cong[where f="Eperm (inv \<sigma>)"])
-        apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id
-      G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
-      G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
+      apply (auto simp: GMAP_def Gren_def Eperm_Ector Eperm_comp o_assoc[symmetric] Eperm_id
+          G.Map_Sb[THEN fun_cong, simplified] Eperm_comp[THEN fun_cong, simplified]
+          G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+          G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj Int_Un_distrib intro!:
           image_eqI[where x="GMAP (inv \<sigma>) (inv \<sigma>) (Eperm (inv \<sigma>)) (Eperm (inv \<sigma>)) u"])
         apply (metis Int_emptyD comp_assoc image_in_bij_eq imsupp_comp_image)
        apply (metis (no_types, lifting)  Int_emptyD comp_assoc image_in_bij_eq IImsupp_comp_image(1))
@@ -2027,20 +2027,20 @@ interpretation Esub: COREC
     by (auto simp: Eperm_comp[THEN fun_cong, simplified] fun_eq_iff o_inv_distrib)
   subgoal for d \<sigma>
     apply (auto intro!: Eperm_cong_id simp: fun_eq_iff)
-    apply (metis in_imsupp inv_simp1 inv_simp2 not_in_imsupp_same)
-    apply (metis (no_types, lifting) Int_emptyI bij_id_imsupp inv_simp2 permute_\<rho>)
+      apply (metis in_imsupp inv_simp1 inv_simp2 not_in_imsupp_same)
+     apply (metis (no_types, lifting) Int_emptyI bij_id_imsupp inv_simp2 permute_\<rho>)
     apply (metis (no_types, lifting) Int_emptyI bij_id_imsupp inv_simp2 permute_\<rho>')
     done
   subgoal for \<sigma> d
     apply (auto simp: supp_comp_bound Un_bound
-      intro!: ordLeq_ordLess_trans[OF card_of_mono1[OF SSupp_Eperm_comp(1)]]
-              ordLeq_ordLess_trans[OF card_of_mono1[OF SSupp_Eperm_comp(2)]])
+        intro!: ordLeq_ordLess_trans[OF card_of_mono1[OF SSupp_Eperm_comp(1)]]
+        ordLeq_ordLess_trans[OF card_of_mono1[OF SSupp_Eperm_comp(2)]])
     done
   subgoal for d u
     apply (auto simp: map_sum_o_inj GMAP_def Gren_def G.pred_set
-      G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
-      Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
-      split: if_splits)
+        G.Supp_Map G.Supp_Sb G.Vrs_Map G.Vrs_Sb G.Sb_Inj
+        Ector_eta_inj Ector_eta_inj' Ector_eta'_inj Ector_eta'_inj' eta_inject eta'_inject
+        split: if_splits)
     done
   done
 
@@ -2052,10 +2052,10 @@ lemma
     "|SSupp (Ector o \<eta>) (\<rho>::'a::covar_G \<Rightarrow> 'a E)| <o |UNIV::'a set|"
     "|SSupp (Ector o \<eta>') (\<rho>'::'a::covar_G \<Rightarrow> 'a E)| <o |UNIV::'a set|"
   shows
-  Esub_Ector\<eta>: "Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
-  and Esub_Ector\<eta>': "Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
-  and Esub_Ector:
-  "GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
+    Esub_Ector\<eta>: "Esub \<delta> \<rho> \<rho>' (Ector (\<eta> a)) = \<rho> a"
+    and Esub_Ector\<eta>': "Esub \<delta> \<rho> \<rho>' (Ector (\<eta>' a)) = \<rho>' a"
+    and Esub_Ector:
+    "GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
    GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EVrs \<rho> = {} \<Longrightarrow>
    GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EVrs \<rho>' = {} \<Longrightarrow>
    GVrs2 u \<inter> EVrs (Ector u) = {} \<Longrightarrow>
@@ -2069,8 +2069,8 @@ lemma
      apply (simp add: assms small_IMSUPP)
     apply (erule exE)
     subgoal for u
-    apply (subst Esub.COREC_DDTOR[of "GMAP id id Inl Inl u"])
-      apply (auto simp: assms case_sum_o_inj Ector_eta_inj
+      apply (subst Esub.COREC_DDTOR[of "GMAP id id Inl Inl u"])
+        apply (auto simp: assms case_sum_o_inj Ector_eta_inj
           G.Map_Sb[THEN fun_cong, simplified]
           G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
           G.Sb_Inj G.Map_id GMAP_def Gren_def eta_inject)
@@ -2082,8 +2082,8 @@ lemma
      apply (simp add: assms small_IMSUPP)
     apply (erule exE)
     subgoal for u
-    apply (subst Esub.COREC_DDTOR[of "GMAP id id Inl Inl u"])
-      apply (auto simp: assms case_sum_o_inj Ector_eta'_inj'
+      apply (subst Esub.COREC_DDTOR[of "GMAP id id Inl Inl u"])
+        apply (auto simp: assms case_sum_o_inj Ector_eta'_inj'
           G.Map_Sb[THEN fun_cong, simplified]
           G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
           G.Sb_Inj G.Map_id GMAP_def Gren_def eta_distinct eta'_inject)
@@ -2093,9 +2093,9 @@ lemma
     apply (subst Esub.COREC_DDTOR[of "GMAP \<delta> id (\<lambda>e. Inr (\<delta>, \<rho>, \<rho>', e)) (\<lambda>e. Inr (\<delta>, \<rho>, \<rho>', e)) u"])
     using assms
       apply (auto simp: case_sum_o_inj comp_def Ector_eta_inj Ector_eta'_inj
-          G.Map_Sb[THEN fun_cong, simplified]
-          G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
-          G.Sb_Inj G.Map_id GMAP_def Gren_def eta_distinct eta'_inject)
+        G.Map_Sb[THEN fun_cong, simplified]
+        G.Sb_comp[THEN fun_cong, simplified] G.Map_comp[THEN fun_cong, simplified]
+        G.Sb_Inj G.Map_id GMAP_def Gren_def eta_distinct eta'_inject)
     done
   done
 
@@ -2144,7 +2144,7 @@ lemma Esub_inversion0:
   subgoal for u'
     apply (subst (asm) Ector_fresh_inject[where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> (\<Union> (EVrs ` GSupp1 u') - GVrs2 u')"])
        apply (simp_all add: Int_Un_distrib G.Vrs_Sb G.Vrs_Map EVrs_Ector) [2]
-      apply (auto intro!: Un_bound UN_bound card_of_minus_bound simp: imsupp_supp_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large']) []
+     apply (auto intro!: Un_bound UN_bound card_of_minus_bound simp: imsupp_supp_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large']) []
     apply (erule exE conjE)+
     subgoal for \<sigma>
       apply (rule exI[where x = "Gren id \<sigma> (Gmap (Eperm \<sigma>) id u')"])
@@ -2507,12 +2507,12 @@ lemma EFVrs_EsubI1[OF _ _ _ _ refl]:
     "|supp (\<delta> :: 'a \<Rightarrow> 'a::covar_G)| <o |UNIV :: 'a set|"
     "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV :: 'a set|"
     "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV :: 'a set|"
-     "e' = e"
+    "e' = e"
   shows "\<delta> z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,5) unfolding EFVrs_def mem_Collect_eq
   apply (binder_induction z e arbitrary: e' avoiding: "imsupp \<delta>" "IImsupp' (Ector o \<eta>) EVrs \<rho>" "IImsupp' (Ector o \<eta>') EVrs \<rho>'" "EVrs e'" rule: Efreee.strong_induct)
         apply (auto simp: assms imsupp_supp_bound) [4]
-  apply hypsubst_thin
+    apply hypsubst_thin
   subgoal for a u
     apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
     apply (rule Efreee.intros)
@@ -2585,7 +2585,7 @@ lemma EFVrs_EsubI3[OF _ _ _ _ _ refl]:
   shows "z \<in> EFVrs (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2,6) unfolding EFVrs_def EFVrs\<eta>'_def mem_Collect_eq
   apply (binder_induction a e arbitrary: e' avoiding: "imsupp \<delta>" "IImsupp' (Ector o \<eta>) EVrs \<rho>" "IImsupp' (Ector o \<eta>') EVrs \<rho>'" "EVrs e'" rule: Efree\<eta>'.strong_induct)
-       apply (auto simp: assms imsupp_supp_bound) [4]
+        apply (auto simp: assms imsupp_supp_bound) [4]
   subgoal for a
     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     done
@@ -2763,7 +2763,7 @@ lemma EFVrs\<eta>_EsubI3[OF _ _ _ _ _ refl]:
   shows "z \<in> EFVrs\<eta> (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2,6) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (binder_induction a e arbitrary: e' avoiding: "imsupp \<delta>" "IImsupp' (Ector o \<eta>) EVrs \<rho>" "IImsupp' (Ector o \<eta>') EVrs \<rho>'" "EVrs e'" rule: Efree\<eta>'.strong_induct)
-       apply (auto simp: assms imsupp_supp_bound) [4]
+        apply (auto simp: assms imsupp_supp_bound) [4]
   subgoal for a
     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     done
@@ -2887,7 +2887,7 @@ lemma EFVrs\<eta>'_EsubI2[OF _ _ _ _ _ refl]:
   shows "z \<in> EFVrs\<eta>' (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2,6) unfolding EFVrs\<eta>_def EFVrs\<eta>'_def mem_Collect_eq
   apply (binder_induction a e arbitrary: e' avoiding: "imsupp \<delta>" "IImsupp' (Ector o \<eta>) EVrs \<rho>" "IImsupp' (Ector o \<eta>') EVrs \<rho>'" "EVrs e'" rule: Efree\<eta>.strong_induct)
-       apply (auto simp: assms imsupp_supp_bound) [4]
+        apply (auto simp: assms imsupp_supp_bound) [4]
   subgoal for a
     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     done
@@ -2920,7 +2920,7 @@ lemma EFVrs\<eta>'_EsubI3[OF _ _ _ _ _ refl]:
   shows "z \<in> EFVrs\<eta>' (Esub \<delta> \<rho> \<rho>' e)"
   using assms(1,2,6) unfolding EFVrs\<eta>'_def mem_Collect_eq
   apply (binder_induction a e arbitrary: e' avoiding: "imsupp \<delta>" "IImsupp' (Ector o \<eta>) EVrs \<rho>" "IImsupp' (Ector o \<eta>') EVrs \<rho>'" "EVrs e'" rule: Efree\<eta>'.strong_induct)
-       apply (auto simp: assms imsupp_supp_bound) [4]
+        apply (auto simp: assms imsupp_supp_bound) [4]
   subgoal for a
     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     done
@@ -3046,19 +3046,19 @@ pbmv_monad "'a::covar_G E"
 *)
 
 lemma E_pbmv_axioms:
- "infinite_regular_card_order (card_suc Gbd)"
- "Esub id (Ector \<circ> \<eta>) (Ector \<circ> \<eta>') = id"
- "\<And>f \<rho>1 \<rho>2.
+  "infinite_regular_card_order (card_suc Gbd)"
+  "Esub id (Ector \<circ> \<eta>) (Ector \<circ> \<eta>') = id"
+  "\<And>f \<rho>1 \<rho>2.
        |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
        Esub f \<rho>1 \<rho>2 \<circ> (Ector \<circ> \<eta>) = \<rho>1"
- "\<And>f \<rho>1 \<rho>2.
+  "\<And>f \<rho>1 \<rho>2.
        |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
        Esub f \<rho>1 \<rho>2 \<circ> (Ector \<circ> \<eta>') = \<rho>2"
- "\<And>g \<rho>'1 \<rho>'2 f \<rho>1 \<rho>2.
+  "\<And>g \<rho>'1 \<rho>'2 f \<rho>1 \<rho>2.
        |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
        |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
        |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -3067,35 +3067,35 @@ lemma E_pbmv_axioms:
        |SSupp (Ector \<circ> \<eta>') \<rho>'2| <o |UNIV :: 'a set| \<Longrightarrow>
        Esub g \<rho>'1 \<rho>'2 \<circ> Esub f \<rho>1 \<rho>2 =
        Esub (g \<circ> f) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>1) (Esub g \<rho>'1 \<rho>'2 \<circ> \<rho>2)"
- "\<And>x. |EFVrs x| <o card_suc Gbd"
- "\<And>x. |EFVrs\<eta> x| <o card_suc Gbd"
- "\<And>x. |EFVrs\<eta>' x| <o card_suc Gbd"
- "\<And>a. EFVrs ((Ector \<circ> \<eta>) a) = {}"
- "\<And>a. EFVrs ((Ector \<circ> \<eta>') a) = {}"
- "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>) a) = {a}"
- "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>') a) = {}"
- "\<And>a. EFVrs\<eta>' ((Ector \<circ> \<eta>) a) = {}"
- "\<And>a. EFVrs\<eta>' ((Ector \<circ> \<eta>') a) = {a}"
- "\<And>f \<rho>1 \<rho>2 x.
+  "\<And>x. |EFVrs x| <o card_suc Gbd"
+  "\<And>x. |EFVrs\<eta> x| <o card_suc Gbd"
+  "\<And>x. |EFVrs\<eta>' x| <o card_suc Gbd"
+  "\<And>a. EFVrs ((Ector \<circ> \<eta>) a) = {}"
+  "\<And>a. EFVrs ((Ector \<circ> \<eta>') a) = {}"
+  "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>) a) = {a}"
+  "\<And>a. EFVrs\<eta> ((Ector \<circ> \<eta>') a) = {}"
+  "\<And>a. EFVrs\<eta>' ((Ector \<circ> \<eta>) a) = {}"
+  "\<And>a. EFVrs\<eta>' ((Ector \<circ> \<eta>') a) = {a}"
+  "\<And>f \<rho>1 \<rho>2 x.
         |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
         EFVrs (Esub f \<rho>1 \<rho>2 x) =
         f ` EFVrs x \<union>
         ((\<Union>x\<in>EFVrs\<eta> x. EFVrs (\<rho>1 x)) \<union> (\<Union>x\<in>EFVrs\<eta>' x. EFVrs (\<rho>2 x)))"
- "\<And>f \<rho>1 \<rho>2 x.
+  "\<And>f \<rho>1 \<rho>2 x.
         |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
         EFVrs\<eta> (Esub f \<rho>1 \<rho>2 x) =
         (\<Union>x\<in>EFVrs\<eta> x. EFVrs\<eta> (\<rho>1 x)) \<union> (\<Union>x\<in>EFVrs\<eta>' x. EFVrs\<eta> (\<rho>2 x))"
- "\<And>f \<rho>1 \<rho>2 x.
+  "\<And>f \<rho>1 \<rho>2 x.
         |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
         EFVrs\<eta>' (Esub f \<rho>1 \<rho>2 x) =
         (\<Union>x\<in>EFVrs\<eta> x. EFVrs\<eta>' (\<rho>1 x)) \<union> (\<Union>x\<in>EFVrs\<eta>' x. EFVrs\<eta>' (\<rho>2 x))"
- "\<And>f \<rho>1 \<rho>2 g \<rho>'1 \<rho>'2 x.
+  "\<And>f \<rho>1 \<rho>2 g \<rho>'1 \<rho>'2 x.
         |supp (f :: 'a :: covar_G \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>) \<rho>1| <o |UNIV :: 'a set| \<Longrightarrow>
         |SSupp (Ector \<circ> \<eta>') \<rho>2| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -3126,7 +3126,7 @@ lemma E_pbmv_axioms:
         (simp add: EVrs_Ector G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map Int_Un_distrib G.Map_comp[THEN fun_cong, simplified]
           G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified])?)
       apply (rule conjI)
-    apply (metis Int_commute Int_image_imsupp)
+       apply (metis Int_commute Int_image_imsupp)
     subgoal for u
       apply safe
       apply (drule set_mp[OF EVrs_Esub, rotated -1]; simp?)

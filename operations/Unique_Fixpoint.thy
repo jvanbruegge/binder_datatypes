@@ -1,5 +1,5 @@
-theory Expression_Like_Sub
-  imports Expression_Like
+theory Unique_Fixpoint
+  imports Expression_Like_Strong
 begin
 
 consts Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> ('a ::var \<Rightarrow> 'a E) \<Rightarrow> 'a E \<Rightarrow> 'a E"

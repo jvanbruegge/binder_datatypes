@@ -20,30 +20,15 @@ axiomatization where
   and eta'_inj: "\<And>a a'. \<eta>' a = \<eta>' a' \<Longrightarrow> a = a'"
   and eta_distinct: "\<And>a a'. \<eta> a \<noteq> \<eta>' a'"
 
-context Expression_Strong begin
+context Expression begin
 
-lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
-  by (metis Ector_inject eta_natural supp_id_bound Gren_def)
+lemma eta_inject: "\<eta> a = \<eta> a' \<longleftrightarrow> a = a'"
+  using eta_inj by metis
+lemma eta'_inject: "\<eta>' a = \<eta>' a' \<longleftrightarrow> a = a'"
+  using eta'_inj by metis
 
-lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
-  unfolding Ector_inject
-  apply safe
-  subgoal for \<sigma>
-    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
-    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
-        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-        G.Map_id G.Sb_Inj Eperm_comp Eperm_id Gren_def)
-    done
-  subgoal
-    apply (auto simp: eta'_natural Gren_def)
-    done
-  done
-
-lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
-  using Ector_eta_inj by metis
-
-lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
-  using Ector_eta'_inj by metis
+lemma eta_distinct': "\<eta>' a \<noteq> \<eta> a'"
+  using eta_distinct[of a' a] by metis
 
 lemma GVrs_eta[simp]:
   "GVrs1 (\<eta> a :: ('a1 ::var, 'a2 :: var, 'x1, 'x2) G) = {a}"
@@ -175,13 +160,32 @@ next
     by (metis G.Supp_bd(2) not_ordLess_ordIso)
 qed
 
-lemma eta_inject: "\<eta> a = \<eta> a' \<longleftrightarrow> a = a'"
-  using eta_inj by metis
-lemma eta'_inject: "\<eta>' a = \<eta>' a' \<longleftrightarrow> a = a'"
-  using eta'_inj by metis
+end
 
-lemma eta_distinct': "\<eta>' a \<noteq> \<eta> a'"
-  using eta_distinct[of a' a] by metis
+context Expression_Strong begin
+
+lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
+  by (metis Ector_inject eta_natural supp_id_bound Gren_def)
+
+lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<eta>' a"
+  unfolding Ector_inject
+  apply safe
+  subgoal for \<sigma>
+    apply (drule arg_cong[where f = "Gsub id (inv \<sigma>) o Gmap (Eperm (inv \<sigma>)) id"])
+    apply (auto simp: eta'_natural G.Map_comp[THEN fun_cong, simplified]
+        G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
+        G.Map_id G.Sb_Inj Eperm_comp Eperm_id Gren_def)
+    done
+  subgoal
+    apply (auto simp: eta'_natural Gren_def)
+    done
+  done
+
+lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"
+  using Ector_eta_inj by metis
+
+lemma Ector_eta'_inj': "Ector (\<eta>' a) = Ector x \<longleftrightarrow> x = \<eta>' a"
+  using Ector_eta'_inj by metis
 
 end
 

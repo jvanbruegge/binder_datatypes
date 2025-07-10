@@ -1391,7 +1391,7 @@ theorem COREC_FFVarsD:
 end
 
 lemma permute_\<rho>:
-  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> Eperm f (\<rho> a) = \<rho> (f a)"
+  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: covar_G set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> Eperm f (\<rho> a) = \<rho> (f a)"
   apply (cases "f a = a")
    apply (cases "\<rho> a = Ector (\<eta> a)")
     apply (simp add: GMAP_def Gren_def eta_natural Eperm_Ector)
@@ -1408,7 +1408,7 @@ lemma permute_\<rho>:
   done
 
 lemma permute_\<rho>':
-  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> Eperm f (\<rho>' a) = \<rho>' (f a)"
+  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: covar_G set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> Eperm f (\<rho>' a) = \<rho>' (f a)"
   apply (cases "f a = a")
    apply (cases "\<rho>' a = Ector (\<eta>' a)")
     apply (simp add: GMAP_def Gren_def eta'_natural Eperm_Ector)

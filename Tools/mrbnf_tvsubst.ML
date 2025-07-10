@@ -13,10 +13,12 @@ sig
 
   type tvsubst_result = {
     tvsubst: term,
-    SSupps: term list,
-    IImsuppss: term list list,
+    SSupps: (term * thm) list,
+    IImsuppss: (term * thm) list list,
     VVrs: (term * thm) list,
+    eta_defs: thm list,
     isVVrs: thm list,
+    IImsupp_permute_commutes: thm option list,
     tvsubst_VVrs: thm list,
     tvsubst_cctor_not_isVVr: thm,
     tvsubst_permute: thm
@@ -48,10 +50,12 @@ type 'a tvsubst_model = {
 
 type tvsubst_result = {
   tvsubst: term,
-  SSupps: term list,
-  IImsuppss: term list list,
+  SSupps: (term * thm) list,
+  IImsuppss: (term * thm) list list,
   VVrs: (term * thm) list,
+  eta_defs: thm list,
   isVVrs: thm list,
+  IImsupp_permute_commutes: thm option list,
   tvsubst_VVrs: thm list,
   tvsubst_cctor_not_isVVr: thm,
   tvsubst_permute: thm
@@ -1392,16 +1396,18 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
       @{thm meta_eq_to_obj_eq} OF [Local_Defs.unfold0 lthy (@{thms comp_def} @ eta_defs) VVr_def]
     )])) o #VVr))) defss;
 
-    val results = @{map 6} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => fn tvsubst_permute => {
+    val results = @{map 7} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => fn tvsubst_permute => fn IImsupp_commutes => {
       tvsubst = fst tvsubst,
-      SSupps = map_filter (Option.map (fst o #SSupp)) defs,
-      IImsuppss = map_filter (Option.map (map fst o #IImsupps)) defs,
+      SSupps = map_filter (Option.map #SSupp) defs,
+      IImsuppss = map_filter (Option.map #IImsupps) defs,
       VVrs = VVrs',
+      eta_defs = eta_defs,
       isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
+      IImsupp_permute_commutes = IImsupp_commutes,
       tvsubst_VVrs = map_filter I tvsubst_VVrs,
       tvsubst_cctor_not_isVVr = tvsubst_not_isVVr,
       tvsubst_permute = tvsubst_permute
-    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss' tvsubst_permutes;
+    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss' tvsubst_permutes IImsupp_imsupp_permute_commutess;
 
     (* TODO: Remove *)
     val notes =

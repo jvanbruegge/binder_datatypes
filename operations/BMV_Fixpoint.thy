@@ -1465,7 +1465,7 @@ lemma FTerm_subst:
     "tvsubst_FTerm f1 f2 (Var x) = f1 x"
     "tvsubst_FTerm f1 f2 (App t1 t2) = App (tvsubst_FTerm f1 f2 t1) (tvsubst_FTerm f1 f2 t2)"
     "tvsubst_FTerm f1 f2 (TyApp t T) = TyApp (tvsubst_FTerm f1 f2 t) (tvsubst_FType f2 T)"
-    "x \<notin> SSupp VVr f1 \<union> IImsupp_FTerm2 f1 \<Longrightarrow> tvsubst_FTerm f1 f2 (Lam x T t) = Lam x (tvsubst_FType f2 T) (tvsubst_FTerm f1 f2 t)"
+    "x \<notin> IImsupp_FTerm2 f1 \<Longrightarrow> tvsubst_FTerm f1 f2 (Lam x T t) = Lam x (tvsubst_FType f2 T) (tvsubst_FTerm f1 f2 t)"
     "a \<notin> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar FVars_FType f2) \<Longrightarrow> tvsubst_FTerm f1 f2 (TyLam a t) = TyLam a (tvsubst_FTerm f1 f2 t)"
       apply (unfold Var_def App_def TyApp_def Lam_def TyLam_def)
       apply (unfold meta_eq_to_obj_eq[OF VVr_def, THEN fun_cong, unfolded comp_def, symmetric])
@@ -1520,6 +1520,7 @@ lemma FTerm_subst:
          apply (rule assms)+
        apply (unfold set2_FTerm_pre_def set6_FTerm_pre_def set3_FTerm_pre_def sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right UN_singleton comp_def
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def prod_set_simps
+      Un_absorb Un_assoc[symmetric]
       )
        apply (rule Int_empty_left Int_empty_right conjI iffD2[OF disjoint_single] | assumption)+
       apply (unfold isVVr_def VVr_def comp_def FTerm.TT_inject0)[1]
@@ -1543,7 +1544,7 @@ lemma FTerm_subst:
         apply (rule assms)+
       apply (unfold set2_FTerm_pre_def set6_FTerm_pre_def set3_FTerm_pre_def sum.set_map prod.set_map UN_empty2 Un_empty_left Un_empty_right UN_singleton comp_def
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def prod_set_simps
-      set1_FTerm_pre_def
+      set1_FTerm_pre_def Un_absorb Un_assoc[symmetric]
       )
       apply (rule Int_empty_left Int_empty_right conjI iffD2[OF disjoint_single] | assumption)+
    apply (unfold isVVr_def VVr_def comp_def FTerm.TT_inject0)[1]

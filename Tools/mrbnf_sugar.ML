@@ -19,6 +19,7 @@ type binder_sugar = {
   permute_simps: thm list,
   map_permute: thm,
   subst_simps: thm list option,
+  IImsupp_permute_commutes: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
@@ -73,6 +74,7 @@ type binder_sugar = {
   permute_simps: thm list,
   map_permute: thm,
   subst_simps: thm list option,
+  IImsupp_permute_commutes: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
@@ -83,12 +85,13 @@ type binder_sugar = {
 };
 
 fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, subst_simps, mrbnf,
-  strong_induct, distinct, inject, ctors, bsetss, bset_bounds } = {
+  strong_induct, distinct, inject, ctors, bsetss, bset_bounds, IImsupp_permute_commutes } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
   map_permute = Morphism.thm phi map_permute,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
+  IImsupp_permute_commutes = Option.map (map (Morphism.thm phi)) IImsupp_permute_commutes,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
   bset_bounds = map (Morphism.thm phi) bset_bounds,
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
@@ -1107,13 +1110,13 @@ fun create_binder_datatype (spec : spec) lthy =
             val fs = map_filter I (map2 (fn f => Option.map (fn _ => f)) fs (#etas tvsubst_model));
             fun mk_supp h = Option.map (fn t => t $ h) (List.find (fn s =>
               domain_type (domain_type (fastype_of s)) = domain_type (fastype_of h)
-            ) (#SSupps tvsubst_res));
+            ) (map fst (#SSupps tvsubst_res)));
             fun mk_supp_bound h = Option.map (fn s => mk_ordLess (mk_card_of s) cmin_UNIV) (mk_supp h);
             fun mk_imsupp h T = SOME (foldl1 mk_Un (map_filter (fn f => Option.map (fn t => t $ f) (
               List.find (fn s => domain_type (fastype_of s) = fastype_of h
                 andalso domain_type (fastype_of s) = fastype_of f
                 andalso HOLogic.dest_setT (range_type (fastype_of s)) = T
-              ) (flat (#IImsuppss tvsubst_res))
+              ) (map fst (flat (#IImsuppss tvsubst_res)))
             )) fs));
             fun tac ctxt prems = EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (#VVrs tvsubst_res))),
@@ -1162,6 +1165,17 @@ fun create_binder_datatype (spec : spec) lthy =
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
     val equiv = @{attributes [simp, equiv]}
 
+    val IImsupp_permute_commutes = Option.map (fn (res, _) => map_filter (Option.map (
+      Local_Defs.unfold lthy (
+        @{thms SSupp_def[symmetric, THEN meta_eq_to_obj_eq, THEN fun_cong]}
+        @ map snd (flat (#IImsuppss res)) @ map snd (#SSupps res)
+        @ #eta_defs res @ map snd (#VVrs res)
+        @ map (Thm.symmetric o snd) ctors
+        @ [@{lemma "\<Union>((Vrs \<circ> \<rho>) ` SSupp Inj \<rho>) = IImsupp Inj Vrs \<rho>"
+            by (auto simp: IImsupp_def)}]
+      )
+    )) (#IImsupp_permute_commutes res)) tvsubst_opt;
+
     val sugar = {
       map_simps = map_simps,
       set_simpss = set_simpss,
@@ -1169,6 +1183,7 @@ fun create_binder_datatype (spec : spec) lthy =
       map_permute = #vvsubst_permute vvsubst_res,
       strong_induct = strong_induct_opt,
       subst_simps = Option.map snd tvsubst_opt,
+      IImsupp_permute_commutes = IImsupp_permute_commutes,
       bsetss = bset_optss,
       bset_bounds = [],
       mrbnf = mrbnf,

@@ -16,7 +16,6 @@ ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
 
-declare [[mrbnf_internals=false]]
 local_setup \<open>fn lthy =>
 let
   val T = @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"};
@@ -443,25 +442,26 @@ abbreviation (input) "avoiding_set2 f1 \<equiv> SSupp VVr f1 \<union> IImsupp_FT
 
 context
   fixes f1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and f2::"'tyvar \<Rightarrow> 'tyvar FType"
-  assumes f_prems: "|SSupp VVr f1| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-    "|SSupp TyVar f2| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
+  assumes f_prems: "|SSupp VVr f1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars f1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar f2| <o |UNIV::'tyvar set|"
 begin
 
-interpretation tvsubst: QREC_cmin_fixed_FTerm "avoiding_set1 f1 f2"
+interpretation tvsubst: QREC_fixed_FTerm "avoiding_set1 f1 f2"
   "avoiding_set2 f1" "\<lambda>y. if isVVr (FTerm_ctor (map_FTerm_pre id id id id fst fst y)) then
     f1 (asVVr (FTerm_ctor (map_FTerm_pre id id id id fst fst y)))
   else FTerm_ctor (Sb_FTerm_pre id f2 (map_FTerm_pre id id id id snd snd y))"
   apply unfold_locales
 
-      apply (((unfold IImsupp_def)[1]), (rule Un_bound UN_bound f_prems card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs cmin_greater
-        var_class.UN_bound f_prems[THEN ordLess_ordLeq_trans] cmin1 cmin2
-        )+)+
+      apply ((rule var_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
+        FTerm.FVars_bd_UNIVs
+      | (unfold IImsupp_def)[1])+)[2]
 
   subgoal for g1 g2 y
-    apply (subst FTerm_pre.map_comp, (assumption | erule ordLess_ordLeq_trans[OF _ cmin1] ordLess_ordLeq_trans[OF _ cmin2] | rule card_of_Card_order supp_id_bound bij_id)+)+
+    apply (subst FTerm_pre.map_comp, (assumption | rule supp_id_bound bij_id)+)+
     apply (unfold Product_Type.snd_comp_map_prod Product_Type.fst_comp_map_prod id_o_commute[of g1] id_o_commute[of g2])
-    apply (subst FTerm_pre.map_comp[symmetric], (assumption | erule ordLess_ordLeq_trans[OF _ cmin1] ordLess_ordLeq_trans[OF _ cmin2] | rule card_of_Card_order supp_id_bound bij_id)+)+
-    apply (subst FTerm.permute_ctor[symmetric] isVVr_permute, (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+)+
+    apply (subst FTerm_pre.map_comp[symmetric], (assumption | rule supp_id_bound bij_id)+)+
+    apply (subst FTerm.permute_ctor[symmetric] isVVr_permute, assumption+)+
 
     apply (rule case_split)
      apply (subst if_P)
@@ -472,10 +472,10 @@ interpretation tvsubst: QREC_cmin_fixed_FTerm "avoiding_set1 f1 f2"
     apply (rotate_tac -1)
      apply (erule subst[OF sym])
      apply (subst permute_VVr)
-    apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+    apply assumption+
      apply (unfold asVVr_VVr)
      apply (rule IImsupp_permute_commute[THEN fun_cong, unfolded comp_def])
-          apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
+          apply assumption+
       apply (erule Int_subset_empty2)
     apply (rule Un_upper1)
       apply (erule Int_subset_empty2)
@@ -486,15 +486,12 @@ interpretation tvsubst: QREC_cmin_fixed_FTerm "avoiding_set1 f1 f2"
         apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
 
     apply (subst trans[OF comp_apply[symmetric] FTerm_pre.map_Sb_strong(1)[THEN fun_cong]])
-          apply (assumption | erule ordLess_ordLeq_trans[OF _ cmin1] ordLess_ordLeq_trans[OF _ cmin2]
-          | rule card_of_Card_order supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2])+
+          apply (assumption | rule supp_id_bound bij_id f_prems)+
     apply (unfold0 id_o o_id inv_o_simp2 comp_apply)
     apply (rule arg_cong[of _ _ FTerm_ctor])
     apply (rule FTerm_pre.Sb_cong)
-         apply (assumption  | erule ordLess_ordLeq_trans[OF _ cmin1] ordLess_ordLeq_trans[OF _ cmin2]
-        | rule supp_id_bound card_of_Card_order supp_inv_bound SSupp_comp_bound infinite_UNIV FType.SSupp_map_bound
-          f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2]
-           card_of_Card_order conjI cinfinite_iff_infinite[THEN iffD2]
+         apply (assumption | rule supp_id_bound supp_inv_bound SSupp_comp_bound infinite_UNIV FType.SSupp_map_bound
+          f_prems conjI FTerm.UNIV_cinfinite card_of_Card_order
         | (unfold comp_assoc)[1])+
      apply (rule refl)
     apply (subst (asm) FTerm_pre.map_comp, (assumption | erule ordLess_ordLeq_trans[OF _ cmin1] ordLess_ordLeq_trans[OF _ cmin2] | rule card_of_Card_order supp_id_bound bij_id)+)
@@ -542,15 +539,15 @@ interpretation tvsubst: QREC_cmin_fixed_FTerm "avoiding_set1 f1 f2"
 
     apply (erule thin_rl)
     apply (subst FTerm_pre.map_Sb[THEN fun_cong, unfolded comp_def, symmetric])
-         apply (rule supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2] card_of_Card_order)+
+         apply (rule supp_id_bound bij_id f_prems)+
     apply (unfold FTerm.FVars_ctor)
     apply (subst FTerm_pre.set_map, (rule supp_id_bound bij_id)+)+
     apply (unfold image_id image_comp[unfolded comp_def])
-    apply (subst FTerm_pre.set_Sb, (rule supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2] card_of_Card_order)+)+
+    apply (subst FTerm_pre.set_Sb, (rule supp_id_bound bij_id f_prems)+)+
     apply (rule Un_mono')+
 
       apply (unfold FTerm_pre.set_Vrs(1))[1]
-      apply (subst FTerm_pre.Vrs_Sb, (rule supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2] card_of_Card_order)+)
+      apply (subst FTerm_pre.Vrs_Sb, (rule supp_id_bound bij_id f_prems)+)
       apply (rule subsetI)
       apply (erule UN_E)
       apply (rule case_split[of "_ = _", rotated])
@@ -618,15 +615,15 @@ interpretation tvsubst: QREC_cmin_fixed_FTerm "avoiding_set1 f1 f2"
 
     apply (erule thin_rl)
     apply (subst FTerm_pre.map_Sb[THEN fun_cong, unfolded comp_def, symmetric])
-         apply (rule supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2] card_of_Card_order)+
+         apply (rule supp_id_bound bij_id f_prems)+
     apply (unfold FTerm.FVars_ctor)
     apply (subst FTerm_pre.set_map, (rule supp_id_bound bij_id)+)+
     apply (unfold image_id image_comp[unfolded comp_def])
-    apply (subst FTerm_pre.set_Sb, (rule supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2] card_of_Card_order)+)+
+    apply (subst FTerm_pre.set_Sb, (rule supp_id_bound bij_id f_prems)+)+
     apply (rule Un_mono')+
 
       apply (unfold FTerm_pre.set_Vrs(2))[1]
-      apply (subst FTerm_pre.Vrs_Sb, (rule supp_id_bound bij_id f_prems[THEN ordLess_ordLeq_trans, OF cmin1] f_prems[THEN ordLess_ordLeq_trans, OF cmin2] card_of_Card_order)+)
+      apply (subst FTerm_pre.Vrs_Sb, (rule supp_id_bound bij_id f_prems)+)
       apply (unfold image_id)
       apply (rule Un_upper1)
 
@@ -835,14 +832,16 @@ lemma IImsupp_Diff:
 
 lemma FVars_tvsubst1:
   fixes f1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and f2::"'tyvar \<Rightarrow> 'tyvar FType"
-  assumes f_prems: "|SSupp VVr f1| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-    "|SSupp TyVar f2| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
+  assumes f_prems: "|SSupp VVr f1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars f1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar f2| <o |UNIV::'tyvar set|"
   shows "FVars (tvsubst_FTerm f1 f2 t) = (\<Union>a\<in>FVars t. FVars (f1 a))"
   apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 f1 f2" "avoiding_set2 f1" _ t])
-  apply (unfold IImsupp_def)[2]
-    apply (rule var_class.Un_bound var_class.UN_bound cmin1 cmin2 card_of_Card_order FTerm.FVars_bd_UNIVs assms[THEN ordLess_ordLeq_trans]
-      FType.set_bd_UNIV
-    )+
+
+      apply ((rule var_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
+        FTerm.FVars_bd_UNIVs
+        | (unfold IImsupp_def)[1])+)[2]
+
   apply (rule case_split[rotated])
    apply (subst tvsubst_not_is_VVr[rotated -1])
          apply assumption
@@ -930,14 +929,14 @@ lemma Un_cong_FTVars: "A = A1 \<union> A2 \<Longrightarrow> B = B1 \<union> B2 \
 
 lemma FVars_tvsubst2:
   fixes \<rho>1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and \<rho>2::"'tyvar \<Rightarrow> 'tyvar FType"
-  assumes f_prems: "|SSupp VVr \<rho>1| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-    "|SSupp TyVar \<rho>2| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
+  assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
   shows "FTVars (tvsubst_FTerm \<rho>1 \<rho>2 t) = (\<Union>x\<in>FVars t. FTVars (\<rho>1 x)) \<union> (\<Union>x\<in>FTVars t. FVars_FType (\<rho>2 x))"
   apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 \<rho>1 \<rho>2" "avoiding_set2 \<rho>1" _ t])
-  apply (unfold IImsupp_def)[2]
-    apply (rule var_class.Un_bound var_class.UN_bound cmin1 cmin2 card_of_Card_order FTerm.FVars_bd_UNIVs assms[THEN ordLess_ordLeq_trans]
-      FType.set_bd_UNIV 
-    )+
+      apply ((rule var_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
+        FTerm.FVars_bd_UNIVs
+        | (unfold IImsupp_def)[1])+)[2]
 
   apply (rule case_split[rotated])
    apply (subst tvsubst_not_is_VVr[rotated -1])
@@ -995,8 +994,9 @@ lemmas FVars_tvsubst = FVars_tvsubst1 FVars_tvsubst2
 
 lemma SSupp_tvsubst_subset:
   fixes \<rho>1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and \<rho>2::"'tyvar \<Rightarrow> 'tyvar FType"
-  assumes f_prems: "|SSupp VVr \<rho>1| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-    "|SSupp TyVar \<rho>2| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
+  assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
   shows "SSupp VVr (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1') \<subseteq> SSupp VVr \<rho>1 \<union> SSupp VVr \<rho>1'"
   apply (rule subsetI)
   apply (unfold SSupp_def mem_Collect_eq Un_iff de_Morgan_conj[symmetric])
@@ -1009,45 +1009,69 @@ lemma SSupp_tvsubst_subset:
    apply (rule tvsubst_VVr[OF assms])
   apply assumption
   done
-lemma SSupp_Sb_subset:
-  fixes \<rho>2::"'tyvar::var \<Rightarrow> 'tyvar FType"
-  assumes f_prems:
-    "|SSupp TyVar \<rho>2| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-  shows "SSupp TyVar (tvsubst_FType \<rho>2 \<circ> \<rho>1') \<subseteq> SSupp TyVar \<rho>2 \<union> SSupp TyVar \<rho>1'"
-  apply (rule subsetI)
-  apply (unfold SSupp_def mem_Collect_eq Un_iff de_Morgan_conj[symmetric])
-  apply (erule contrapos_nn)
-  apply (erule conjE)
-  apply (rule trans[OF comp_apply])
-  apply (rotate_tac)
-  apply (erule subst[OF sym])
-  apply (rule trans)
-   apply (rule FType.Sb_comp_Inj[THEN fun_cong, unfolded comp_def])
-   apply (rule ordLess_ordLeq_trans)
-    apply (rule assms)
-   apply (rule cmin1 card_of_Card_order)+
-  apply assumption
-  done
 
 lemma SSupp_tvsubst_bound:
   fixes \<rho>1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and \<rho>2::"'tyvar \<Rightarrow> 'tyvar FType"
-  assumes f_prems: "|SSupp VVr \<rho>1| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-    "|SSupp TyVar \<rho>2| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-    "|SSupp VVr \<rho>1'| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-  shows "|SSupp VVr (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1')| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
+  assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|" "|SSupp VVr \<rho>1'| <o |UNIV::'var set|"
+  shows "|SSupp VVr (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1')| <o |UNIV::'var set|"
   apply (rule card_of_subset_bound)
    apply (rule SSupp_tvsubst_subset)
-    apply (rule assms Un_bound)+
+    apply (rule assms var_class.Un_bound)+
   done
-lemma SSupp_Sb_bound:
-  fixes \<rho>2::"'tyvar::var \<Rightarrow> 'tyvar FType"
-  assumes f_prems:
-    "|SSupp TyVar \<rho>2| <o cmin |UNIV::'tyvar set| |UNIV::'var::var set|"
-    "|SSupp TyVar \<rho>1'| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
-  shows "|SSupp TyVar (tvsubst_FType \<rho>2 \<circ> \<rho>1')| <o cmin |UNIV::'tyvar set| |UNIV::'var set|"
+
+lemma IImsupp_tvsubst_subset:
+  fixes \<rho>1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and \<rho>2::"'tyvar \<Rightarrow> 'tyvar FType"
+  assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
+  shows "IImsupp VVr FTVars (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1') \<subseteq> IImsupp VVr FTVars \<rho>1 \<union> IImsupp TyVar FVars_FType \<rho>2 \<union> IImsupp VVr FTVars \<rho>1'"
+  apply (rule subset_trans)
+   apply (unfold IImsupp_def)[1]
+   apply (rule UN_mono[OF _ subset_refl])
+   apply (rule SSupp_tvsubst_subset)
+     apply (rule assms)+
+  apply (unfold comp_def)
+  apply (subst FVars_tvsubst)
+     apply (rule assms)+
+  apply (unfold UN_Un Un_Union_image Un_assoc[symmetric])
+  apply (rule subsetI)
+  apply (erule UnE)+
+     apply (drule IImsupp_chain3[THEN set_mp, rotated -1, of _ FTVars _ _ \<rho>1'])
+      prefer 2
+      apply (erule UnI1 UnI2 | rule UnI1)+
+     apply (rule FVars_VVr)
+    (* repeated *)
+     apply (drule IImsupp_chain3[THEN set_mp, rotated -1, of _ FTVars _ _ \<rho>1'])
+      prefer 2
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    apply (rule FVars_VVr)
+    (* repeated *)
+     apply (drule IImsupp_chain2[THEN set_mp, rotated -1, of _ FVars_FType _ _ \<rho>1'])
+     prefer 3
+  apply (erule UnE)+
+      apply (erule UnI1 UnI2 | rule UnI1)+
+    apply (rule FType.Vrs_Inj FVars_VVr)+
+    (* repeated *)
+     apply (drule IImsupp_chain2[THEN set_mp, rotated -1, of _ FVars_FType _ _ \<rho>1'])
+     prefer 3
+  apply (erule UnE)+
+      apply (erule UnI1 UnI2 | rule UnI1)+
+   apply (rule FType.Vrs_Inj FVars_VVr)+
+  done
+
+lemma IImsupp_tvsubst_bound:
+  fixes \<rho>1::"'var::var \<Rightarrow> ('tyvar::var, 'var) FTerm" and \<rho>2::"'tyvar \<Rightarrow> 'tyvar FType"
+  assumes f_prems: "|SSupp VVr \<rho>1| <o |UNIV::'var set|"
+    "|IImsupp VVr FTVars \<rho>1| <o |UNIV::'tyvar set|"
+    "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
+    "|IImsupp VVr FTVars \<rho>1'| <o |UNIV::'tyvar set|"
+  shows "|IImsupp VVr FTVars (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1')| <o |UNIV::'tyvar set|"
   apply (rule card_of_subset_bound)
-   apply (rule SSupp_Sb_subset)
-    apply (rule assms Un_bound)+
+   apply (rule IImsupp_tvsubst_subset)
+     apply (rule assms)+
+  apply (rule var_class.Un_bound var_class.UN_bound FType.set_bd_UNIV assms | (unfold IImsupp_def)[1])+
   done
 
 pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
@@ -1069,10 +1093,10 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
        apply (rotate_tac -1)
        apply (erule subst[OF sym])
        apply (rule tvsubst_VVr)
-        apply (rule SSupp_Inj_bound cmin_greater card_of_Card_order)+
+        apply (rule SSupp_Inj_bound IImsupp_Inj_bound)+
       apply (rule trans)
       apply (rule tvsubst_not_is_VVr)
-            apply (rule SSupp_Inj_bound cmin_greater card_of_Card_order)+
+            apply (rule SSupp_Inj_bound IImsupp_Inj_bound)+
           apply (unfold IImsupp_def SSupp_Inj UN_empty Un_empty_left Un_empty_right noclash_FTerm_def)[3]
           apply (rule Int_empty_right)+
         apply assumption+
@@ -1087,7 +1111,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
           apply (rule ext)
           apply (rule trans[OF comp_apply])
           apply (rule tvsubst_VVr)
-           apply (assumption | rule cmin_greater card_of_Card_order cmin1 cmin2 | erule ordLess_ordLeq_trans)+
+           apply assumption+
 
          apply (rule ext)
          apply (rule trans[OF comp_apply])
@@ -1097,10 +1121,11 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
       "\<lambda>t. FVars (tvsubst_FTerm \<rho>1 \<rho>2 t) \<union> avoiding_set2 \<rho>1 \<union> avoiding_set2 \<rho>'1 \<union> avoiding_set2 (tvsubst_FTerm \<rho>'1 \<rho>'2 \<circ> \<rho>1)"
       _ x, unfolded ball_UNIV, THEN spec, of "\<lambda>t \<rho>. t = \<rho> \<longrightarrow> _ t", THEN mp[OF _ refl]
     ])
-      apply (((unfold IImsupp_def)[1]), (rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
-        SSupp_Sb_bound SSupp_tvsubst_bound[THEN ordLess_ordLeq_trans] SSupp_Sb_bound[THEN ordLess_ordLeq_trans] ordLeq_refl cmin_Card_order
-        var_class.UN_bound var_class.Un_bound cmin1 cmin2 | erule ordLess_ordLeq_trans
-        )+)+
+
+ apply ((assumption | rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
+        FType.SSupp_Sb_bound var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
+        FType.IImsupp_Sb_bound SSupp_tvsubst_bound | (unfold IImsupp_def)[1])+)[2]
+
     apply (rule impI)
     apply hypsubst
 
@@ -1138,7 +1163,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
         apply (rule UnI2)
         apply (rule UnI2)
         apply assumption
-       apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+)+
+       apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
        apply (unfold image_id)
        apply (erule Int_subset_empty2)
        apply (rule subsetI)
@@ -1146,7 +1171,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
        apply (rule UnI2)
        apply assumption
       apply (subst noclash_FTerm_def)
-      apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+)+
+      apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
       apply (unfold image_id)
       apply (rule conjI)
        apply (rule Int_subset_empty2)
@@ -1169,7 +1194,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
          apply assumption
         apply assumption
     apply (unfold FTerm.FVars_ctor)[1]
-       apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+)+
+       apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
        apply (unfold image_id)
        apply (erule UnE)
         apply (erule UnI1 UnI2 | assumption | rule UnI1)+
@@ -1195,24 +1220,24 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
          apply assumption
         apply assumption
     apply (unfold FTerm.FVars_ctor)[1]
-       apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+)+
+       apply (subst FTerm_pre.set_Sb FTerm_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
        apply (unfold image_id)
        apply (erule UnE)
         apply (erule UnI1 UnI2 | assumption | rule UnI1)+
 
      apply (subst tvsubst_not_is_VVr)
-           apply (assumption | rule SSupp_tvsubst_bound cmin1 cmin2 card_of_Card_order cmin1 SSupp_Sb_bound | erule ordLess_ordLeq_trans)+
+           apply (assumption | rule SSupp_tvsubst_bound IImsupp_tvsubst_bound FType.SSupp_Sb_bound)+
          apply (erule Int_subset_empty2, rule Un_upper2)+
        apply assumption
       apply assumption
      apply (rule arg_cong[of _ _ FTerm_ctor])
      apply (unfold FTerm_pre.Map_map[symmetric])[1]
      apply (subst FTerm_pre.Map_Sb[THEN fun_cong, unfolded comp_def])
-       apply (rule supp_id_bound cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+       apply (rule supp_id_bound | assumption)+
      apply (unfold trans[OF comp_apply[symmetric] FTerm_pre.Map_comp[THEN fun_cong]])[1]
      apply (rule trans)
       apply (rule trans[OF comp_apply[symmetric] FTerm_pre.Sb_comp(1)[THEN fun_cong]])
-         apply (rule supp_id_bound cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+         apply (rule supp_id_bound | assumption)+
      apply (unfold id_o o_id)
      apply (rule arg_cong[of _ _ "Sb_FTerm_pre _ _"])
     apply (unfold FTerm_pre.Map_map)
@@ -1242,7 +1267,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
     apply (erule subst[OF sym])
     apply (unfold tvsubst_VVr)
     apply (subst tvsubst_VVr)
-      apply (rule SSupp_tvsubst_bound SSupp_Sb_bound | assumption)+
+      apply (rule SSupp_tvsubst_bound IImsupp_tvsubst_bound FType.SSupp_Sb_bound | assumption)+
     apply (unfold comp_def)
     apply (rule refl)
     done
@@ -1252,16 +1277,18 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
     apply (rule FVars_tvsubst; assumption)+
 
   subgoal premises prems for \<rho>1 \<rho>2 \<rho>1' \<rho>2' t
-    apply (insert prems(5,6))
+    apply (insert prems(7,8))
     apply (unfold atomize_all atomize_imp)
     apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 \<rho>1 \<rho>2 \<union> avoiding_set1 \<rho>1' \<rho>2'" "avoiding_set2 \<rho>1 \<union> avoiding_set2 \<rho>1'" _ t])
-    apply (insert prems(1-4))[2]
-apply (((unfold IImsupp_def)[1]), (rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs cmin_greater
-        var_class.UN_bound var_class.Un_bound cmin1 cmin2 | erule ordLess_ordLeq_trans
-        )+)+
+      apply (insert prems(1-6))[2]
+
+ apply ((assumption | rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
+        FType.SSupp_Sb_bound var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
+        FType.IImsupp_Sb_bound SSupp_tvsubst_bound | (unfold IImsupp_def)[1])+)[2]
+
     apply (unfold atomize_all[symmetric] atomize_imp[symmetric])
     subgoal premises inner_prems for x
-      apply (insert prems(1-4) inner_prems(3-5))
+      apply (insert prems(1-6) inner_prems(3-5))
     apply (rule case_split[rotated])
      apply (subst tvsubst_not_is_VVr[rotated -1])
            apply assumption+
@@ -1274,9 +1301,9 @@ apply (((unfold IImsupp_def)[1]), (rule Un_bound UN_bound card_of_Card_order FTe
      apply (rule arg_cong[of _ _ FTerm_ctor])
      apply (rule cong'[of _ "map_FTerm_pre id id id id _ _ _" _ "map_FTerm_pre id id id id _ _ _"])
       apply (rule FTerm_pre.Sb_cong)
-           apply (rule supp_id_bound cmin1 cmin2 card_of_Card_order refl | erule ordLess_ordLeq_trans)+
+           apply (rule supp_id_bound refl | assumption)+
         apply (unfold FTerm_pre.Map_map[symmetric] FTerm_pre.Vrs_Map)[1]
-      apply (unfold FTerm_pre.set_Vrs(1-2)[symmetric])[1]
+         apply (unfold FTerm_pre.set_Vrs(1-2)[symmetric])[1]
         apply (rule inner_prems)
         apply (erule FTerm.FVars_intros)
 
@@ -1350,30 +1377,33 @@ mrsbnf "('tv, 'v) FTerm" and "'tv FType"
    apply (rule ext)
   subgoal for f1 f2 t
     apply (rule FTerm.TT_fresh_induct[of "imsupp f1" "imsupp f2" _ t])
-    apply (rule imsupp_supp_bound[THEN iffD2] infinite_UNIV cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+    apply (rule imsupp_supp_bound[THEN iffD2] infinite_UNIV | assumption)+
     apply (rule case_split[rotated])
      apply (rule sym)
      apply (rule trans)
       apply (erule tvsubst_not_is_VVr[rotated -1])
           apply (subst SSupp_Inj_comp, rule injI, erule FTerm.Inj_inj[THEN iffD1])
-          apply (assumption)
-         apply ((subst IImsupp_Inj_comp SSupp_Inj_comp IImsupp_def FVars_VVr UN_empty2 Un_empty_left Un_empty_right comp_apply imsupp_absorb,
-          ((rule injI FTerm.Vrs_Inj | erule FTerm.Inj_inj[THEN iffD1] | assumption
-         )+)?)+)[4]
+           apply assumption
+
+          apply ((assumption | rule IImsupp_Inj_comp_bound2 FVars_VVr FType.Vrs_Inj injI
+        | erule FType.Inj_inj[THEN iffD1] FTerm.Inj_inj[THEN iffD1]
+        | subst IImsupp_Inj_comp SSupp_Inj_comp IImsupp_def comp_apply FVars_VVr UN_empty2 Un_empty_left
+            imsupp_absorb
+        )+)[5]
+
      apply (rule sym)
     apply (rule trans)
      apply (rule FTerm.vvsubst_cctor)
-    apply (rule cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
-        apply assumption+
+    apply assumption+
     apply (rule sym)
      apply (rule arg_cong[of _ _ FTerm_ctor])
      apply (unfold FTerm_pre.Map_map[symmetric])[1]
     apply (rule trans)
       apply (rule trans[OF comp_apply[symmetric] FTerm_pre.map_is_Sb(1)[symmetric, THEN fun_cong]])
-       apply (rule supp_id_bound cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+       apply (rule supp_id_bound | assumption)+
      apply (rule sym)
     apply (rule FTerm_pre.map_cong0)
-                      apply (rule supp_id_bound bij_id cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+                      apply (rule supp_id_bound bij_id | assumption)+
           apply (rule refl)
          apply (unfold FTerm_pre.set_Vrs)[1]
          apply (subst (asm) eta_compl_free)
@@ -1395,19 +1425,26 @@ mrsbnf "('tv, 'v) FTerm" and "'tv FType"
     apply (rule sym)
     apply (rule trans)
      apply (rule tvsubst_VVr)
-      apply (subst SSupp_Inj_comp, rule injI, erule FTerm.Inj_inj[THEN iffD1], assumption+)+
+
+ apply ((assumption | rule IImsupp_Inj_comp_bound2 FVars_VVr FType.Vrs_Inj injI
+        | erule FType.Inj_inj[THEN iffD1] FTerm.Inj_inj[THEN iffD1]
+        | subst IImsupp_Inj_comp SSupp_Inj_comp IImsupp_def comp_apply FVars_VVr UN_empty2 Un_empty_left
+            imsupp_absorb
+        )+)[3]
+
     apply (subst VVr_def comp_apply)+
     apply (rule sym)
     apply (rule trans)
      apply (rule FTerm.vvsubst_cctor)
-         apply (rule cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+         apply assumption+
        apply (unfold eta_set_empties noclash_FTerm_def)
        apply (rule Int_empty_left conjI)+
     apply (rule arg_cong[OF eta_natural'])
-         apply (rule supp_id_bound bij_id cmin1 cmin2 card_of_Card_order | erule ordLess_ordLeq_trans)+
+         apply (rule supp_id_bound bij_id | assumption)+
     done
   apply (rule FType.map_is_Sb; assumption)
   done
+print_theorems
 
 (* Sugar theorems for substitution *)
 definition Var :: "'v \<Rightarrow> ('tv::var, 'v::var) FTerm" where
@@ -1423,12 +1460,12 @@ definition TyLam :: "'tv \<Rightarrow> ('tv, 'v) FTerm \<Rightarrow> ('tv::var, 
 
 lemma FTerm_subst:
   fixes f1::"'v \<Rightarrow> ('tv::var, 'v::var) FTerm" and f2::"'tv \<Rightarrow> 'tv FType"
-  assumes "|SSupp VVr f1| <o cmin |UNIV::'tv set| |UNIV::'v set|" "|SSupp TyVar f2| <o cmin |UNIV::'tv set| |UNIV::'v set|"
+  assumes "|SSupp VVr f1| <o |UNIV::'v set|" "|IImsupp VVr FTVars f1| <o |UNIV::'tv set|" "|SSupp TyVar f2| <o |UNIV::'tv set|"
   shows
     "tvsubst_FTerm f1 f2 (Var x) = f1 x"
     "tvsubst_FTerm f1 f2 (App t1 t2) = App (tvsubst_FTerm f1 f2 t1) (tvsubst_FTerm f1 f2 t2)"
     "tvsubst_FTerm f1 f2 (TyApp t T) = TyApp (tvsubst_FTerm f1 f2 t) (tvsubst_FType f2 T)"
-    "x \<notin> IImsupp_FTerm2 f1 \<Longrightarrow> tvsubst_FTerm f1 f2 (Lam x T t) = Lam x (tvsubst_FType f2 T) (tvsubst_FTerm f1 f2 t)"
+    "x \<notin> SSupp VVr f1 \<union> IImsupp_FTerm2 f1 \<Longrightarrow> tvsubst_FTerm f1 f2 (Lam x T t) = Lam x (tvsubst_FType f2 T) (tvsubst_FTerm f1 f2 t)"
     "a \<notin> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar FVars_FType f2) \<Longrightarrow> tvsubst_FTerm f1 f2 (TyLam a t) = TyLam a (tvsubst_FTerm f1 f2 t)"
       apply (unfold Var_def App_def TyApp_def Lam_def TyLam_def)
       apply (unfold meta_eq_to_obj_eq[OF VVr_def, THEN fun_cong, unfolded comp_def, symmetric])
@@ -1485,7 +1522,8 @@ lemma FTerm_subst:
       Abs_FTerm_pre_inverse[OF UNIV_I] sum_set_simps UN_single UN_empty set4_FTerm_pre_def noclash_FTerm_def prod_set_simps
       )
        apply (rule Int_empty_left Int_empty_right conjI iffD2[OF disjoint_single] | assumption)+
-    apply (unfold isVVr_def VVr_def comp_def FTerm.TT_inject0)[1]
+      apply (unfold isVVr_def VVr_def comp_def FTerm.TT_inject0)[1]
+  
     apply (rule notI)
     apply (erule exE conjE)+
     apply (unfold map_FTerm_pre_def comp_def Abs_FTerm_pre_inverse[OF UNIV_I] map_sum.simps prod.map_id

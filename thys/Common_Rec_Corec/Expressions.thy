@@ -273,8 +273,8 @@ and
 *)
 Ector_eq_imp_strong: "\<And>A u1 u2. Ector u1 = Ector u2 \<Longrightarrow> countable A \<Longrightarrow> A \<inter> GVrs2 u1 = {} \<Longrightarrow>
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
-     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> (\<Union> (EVrs ` GSupp2 u1)) \<union> A) \<sigma> \<and> 
-     Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u1) = u2)"
+     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> A) \<sigma> \<and> 
+     Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1) = u2)"
 (* 
 Ector_eq_imp: "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
@@ -287,13 +287,14 @@ lemma Ector_eqD: "\<And>x y. Ector x = Ector y \<Longrightarrow>
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
      id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> 
       Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
-apply(drule Ector_eq_imp_strong) apply auto subgoal for x \<sigma> apply(rule exI[of _ \<sigma>])
+  apply(drule Ector_eq_imp_strong) by auto
+  (*subgoal for x \<sigma> apply(rule exI[of _ \<sigma>])
 apply auto
   subgoal unfolding id_on_def by auto
   subgoal apply(rule arg_cong3[where h = Gren and ?a1.0 = id and ?a2.0 = id and ?b1.0 = \<sigma> and ?b2.0 = \<sigma>])
   apply auto apply(rule Gmap_cong) unfolding id_on_def apply auto  
     by (metis Eperm_comp Eperm_id bij_id eq_id_iff small_id) . .
- 
+ *)
 
 lemma Ector_surj: "\<exists>u. Ector u = e"
 using Ector_surj_fresh[of "{}"] by auto

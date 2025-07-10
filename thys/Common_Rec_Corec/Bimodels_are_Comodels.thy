@@ -220,8 +220,8 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
   assume 0: "Edtor' (e, p) = Inl U" and u12: "{u1, u2} \<subseteq> U"
   show "\<exists>\<sigma>. small \<sigma> \<and>
            bij \<sigma> \<and>
-           id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1) \<union> \<Union> (EVrs'' ` GSupp2 u1) ) \<sigma> \<and>
-           Gren id \<sigma> (Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) u1) = u2"
+           id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1)) \<sigma> \<and>
+           Gren id \<sigma> (Gmap (Eperm'' \<sigma>) id u1) = u2"
   proof(rule Ector_exhaust_fresh[OF countable_PVrs, of e p])
     fix u assume e: "e = Ector u" and g: "GVrs2 u \<inter> PVrs p = {}"
     show ?thesis proof(cases "\<phi> u")
@@ -246,41 +246,33 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
       
       obtain \<sigma> where ss: "bij \<sigma> \<and> small \<sigma>"
         "id_on 
-         ((\<Union> (EVrs ` GSupp1 (Gmap fst fst u1)) - GVrs2 (Gmap fst fst u1)) 
-           \<union> (\<Union> (EVrs ` GSupp2 (Gmap fst fst u1))) \<union> PVrs p )
+         ((\<Union> (EVrs ` GSupp1 (Gmap fst fst u1)) - GVrs2 (Gmap fst fst u1)) \<union> PVrs p )
          \<sigma>"
-        "Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) (Gmap fst fst u1)) = Gmap fst fst u2"   
-      using Ector_eq_imp_strong[of "Gmap fst fst u1" "Gmap fst fst u2", OF eq countable_PVrs 00] by blast
+        "Gren id \<sigma> (Gmap (Eperm \<sigma>) id (Gmap fst fst u1)) = Gmap fst fst u2"   
+        using Ector_eq_imp_strong[of "Gmap fst fst u1" "Gmap fst fst u2", OF eq countable_PVrs 00]
+        by blast
       have io: "\<And>e' p' a. (e',p') \<in> GSupp1 u1 \<Longrightarrow> a \<in> EVrs e' \<Longrightarrow> a \<notin> GVrs2 u1 \<Longrightarrow> \<sigma> a = a"
-        "\<And>e' p' a. (e',p') \<in> GSupp2 u1 \<Longrightarrow> a \<in> EVrs e' \<Longrightarrow> \<sigma> a = a" 
           "\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a" 
       using ss(2) unfolding id_on_def by (fastforce simp: GSupp1_Gmap GSupp2_Gmap GVrs2_Gmap)+
 
       show ?thesis proof(rule exI[of _ \<sigma>], safe)
         show "small \<sigma>" "bij \<sigma>" using ss by auto
       next
-        show "id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1) \<union> \<Union> (EVrs'' ` GSupp2 u1)) \<sigma>"
+        show "id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1)) \<sigma>"
         unfolding id_on_def image_def proof(auto simp: EVrs''_def)
           fix a e' p' assume "(e', p') \<in> GSupp1 u1" "a \<in> EVrs e'" "a \<notin> GVrs2 u1" 
           thus "\<sigma> a = a" using io(1) by auto
         next
-          fix a e' p' assume "(e', p') \<in> GSupp2 u1" "a \<in> EVrs e'"  
-          thus "\<sigma> a = a" using io(2) by auto
-        next
           fix a e' p' assume aa: "(e', p') \<in> GSupp1 u1" "a \<in> PVrs p'"  "a \<notin> GVrs2 u1"
           hence "p' = p" using u1(2) unfolding GSupp1_Gmap by auto  
-          thus "\<sigma> a = a" using aa io(3) by auto
-        next
-          fix a e' p' assume aa: "(e', p') \<in> GSupp2 u1" "a \<in> PVrs p'"  
-          hence "p' = p" using u1(3) unfolding GSupp2_Gmap by auto  
-          thus "\<sigma> a = a" using aa io(3) by auto
+          thus "\<sigma> a = a" using aa io(2) by auto
         qed
       next
-        have ss3: "Gmap (Eperm \<sigma>) (Eperm \<sigma>) (Gmap fst fst (Gren id \<sigma> u1)) = Gmap fst fst u2"
+        have ss3: "Gmap (Eperm \<sigma>) id (Gmap fst fst (Gren id \<sigma> u1)) = Gmap fst fst u2"
         unfolding ss(3)[symmetric] 
         by (simp add: Gmap_Gren ss(1)) 
 
-        have gg: "Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) (Gren id \<sigma> u1) = u2"
+        have gg: "Gmap (Eperm'' \<sigma>) id (Gren id \<sigma> u1) = u2"
         apply(subst snd_single_Gmap'[symmetric, where t = u2 and p = p])
           subgoal by (metis GSupp1_Gmap u2(2))
           subgoal by (metis GSupp2_Gmap u2(3))
@@ -289,9 +281,9 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
             subgoal by (metis GSupp2_Gmap GSupp2_Gren bij_id small_id ss(1) u1(3))
             subgoal unfolding ss3[symmetric] unfolding Gmap_comp unfolding o_def Eperm''_def
             apply(rule Gmap_cong)
-              subgoal by (metis Pperm_cong Pperm_id bij_id eq_id_iff io(3) small_id ss(1))
-              subgoal by (metis Pperm_cong Pperm_id bij_id id_apply io(3) small_id ss(1)) . . .
-        show "Gren id \<sigma> (Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) u1) = u2"
+              subgoal by (metis Pperm_cong Pperm_id bij_id eq_id_iff io(2) small_id ss(1))
+              subgoal by simp . . .
+        show "Gren id \<sigma> (Gmap (Eperm'' \<sigma>) id u1) = u2"
         unfolding gg[symmetric]  
         by (simp add: Gmap_Gren ss(1)) 
       qed

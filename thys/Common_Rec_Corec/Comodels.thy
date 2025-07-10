@@ -18,8 +18,8 @@ where
 "dtorVrsGrenC dtor perm Vrs \<equiv> 
  (\<forall>e U u1 u2. dtor e = Inl U \<and> {u1,u2} \<subseteq> U \<longrightarrow> 
    (\<exists>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> 
-        id_on ((\<Union> (Vrs ` GSupp1 u1) - GVrs2 u1) \<union> (\<Union> (Vrs ` GSupp2 u1))) \<sigma> \<and> 
-        Gren id \<sigma> (Gmap (perm \<sigma>) (perm \<sigma>) u1) = u2))"
+        id_on ((\<Union> (Vrs ` GSupp1 u1) - GVrs2 u1)) \<sigma> \<and> 
+        Gren id \<sigma> (Gmap (perm \<sigma>) id u1) = u2))"
 
 (* 
 Ector_eqA: "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>

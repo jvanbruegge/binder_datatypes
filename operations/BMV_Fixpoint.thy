@@ -42,6 +42,8 @@ let
     @{binding FTerm_pre} Xs Ds mrsbnf NONE lthy
   val (_, lthy) = MRSBNF_Def.note_mrsbnf_thms (K BNF_Def.Note_Some) I NONE mrsbnf lthy
 
+  val lthy = MRSBNF_Def.register_mrsbnf "BMV_Fixpoint.FTerm_pre" mrsbnf lthy;
+
   val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
   val mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad bmv)
 
@@ -69,8 +71,6 @@ in lthy end
 \<close>
 print_theorems
 
-thm bmv_defs
-
 (* Substitution axioms *)
 abbreviation \<eta> :: "'v::var \<Rightarrow> ('tv::var, 'v::var, 'a::var, 'b::var, 'c, 'd) FTerm_pre" where
   "\<eta> a \<equiv> Abs_FTerm_pre (Inl (Inl a))"
@@ -96,11 +96,11 @@ lemma eta_compl_free: "\<forall>a. x \<noteq> \<eta> a \<Longrightarrow> RVrs_FT
       apply (rule refl)+
   done
 
-
 lemma eta_inj: "\<eta> a = \<eta> b \<Longrightarrow> a = b"
   apply (unfold Abs_FTerm_pre_inject[OF UNIV_I UNIV_I] sum.inject)
   apply assumption
   done
+
 lemma eta_natural:
   fixes f1::"'x1::var \<Rightarrow> 'x1" and f2::"'x2::var \<Rightarrow> 'x2" and f3::"'x3::var \<Rightarrow> 'x3" and f4::"'x4::var \<Rightarrow> 'x4"
   assumes "|supp f1| <o |UNIV::'x1 set|" "|supp f2| <o |UNIV::'x2 set|"
@@ -124,6 +124,9 @@ lemma eta_Sb:
     (* orelse *)
      apply (((unfold sum.inject)[1])?, erule sum.distinct[THEN notE])+
   done
+
+definition Var :: "'v \<Rightarrow> ('tv::var, 'v::var) FTerm" where
+  "Var a \<equiv> FTerm_ctor (Abs_FTerm_pre (Inl (Inl a)))"
 
 (* Construction of substitution *)
 definition VVr :: "'v::var \<Rightarrow> ('tv::var, 'v) FTerm" where
@@ -431,12 +434,6 @@ lemma not_is_VVr_Sb:
     done
   done
 
-lemmas Cinfinite_UNIV = conjI[OF FTerm_pre.UNIV_cinfinite card_of_Card_order]
-lemmas Cinfinite_card = cmin_Cinfinite[OF Cinfinite_UNIV Cinfinite_UNIV]
-lemmas regularCard_card = cmin_regularCard[OF FTerm_pre.var_regular FTerm_pre.var_regular Cinfinite_UNIV Cinfinite_UNIV]
-lemmas Un_bound = regularCard_Un[OF conjunct2[OF Cinfinite_card] conjunct1[OF Cinfinite_card] regularCard_card]
-lemmas UN_bound = regularCard_UNION[OF conjunct2[OF Cinfinite_card] conjunct1[OF Cinfinite_card] regularCard_card]
-
 abbreviation (input) "avoiding_set1 f1 f2 \<equiv> IImsupp_FTerm1 f1 \<union> (SSupp TyVar f2 \<union> IImsupp TyVar FVars_FType f2)"
 abbreviation (input) "avoiding_set2 f1 \<equiv> SSupp VVr f1 \<union> IImsupp_FTerm2 f1"
 
@@ -553,10 +550,8 @@ interpretation tvsubst: QREC_fixed_FTerm "avoiding_set1 f1 f2"
       apply (rule case_split[of "_ = _", rotated])
        apply (unfold IImsupp_def SSupp_def)[1]
        apply (rule UnI2)+
-       apply (rule UN_I)
-        apply (rule CollectI)
-        apply assumption
-       apply assumption
+       apply (erule UN_I[rotated])
+        apply (erule CollectI)
       apply (rule UnI1)
       apply (rotate_tac -2)
       apply (drule iffD1[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated])
@@ -1123,7 +1118,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
     ])
 
  apply ((assumption | rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
-        FType.SSupp_Sb_bound var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
+        FType.SSupp_Sb_bound infinite_UNIV var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
         FType.IImsupp_Sb_bound SSupp_tvsubst_bound | (unfold IImsupp_def)[1])+)[2]
 
     apply (rule impI)
@@ -1282,7 +1277,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
     apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 \<rho>1 \<rho>2 \<union> avoiding_set1 \<rho>1' \<rho>2'" "avoiding_set2 \<rho>1 \<union> avoiding_set2 \<rho>1'" _ t])
       apply (insert prems(1-6))[2]
 
- apply ((assumption | rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
+ apply ((assumption | rule infinite_UNIV Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
         FType.SSupp_Sb_bound var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
         FType.IImsupp_Sb_bound SSupp_tvsubst_bound | (unfold IImsupp_def)[1])+)[2]
 
@@ -1447,8 +1442,6 @@ mrsbnf "('tv, 'v) FTerm" and "'tv FType"
 print_theorems
 
 (* Sugar theorems for substitution *)
-definition Var :: "'v \<Rightarrow> ('tv::var, 'v::var) FTerm" where
-  "Var a \<equiv> FTerm_ctor (Abs_FTerm_pre (Inl (Inl a)))"
 definition App :: "('tv, 'v) FTerm \<Rightarrow> ('tv, 'v) FTerm \<Rightarrow> ('tv::var, 'v::var) FTerm" where
   "App t1 t2 \<equiv> FTerm_ctor (Abs_FTerm_pre (Inl (Inr (t1, t2))))"
 definition TyApp :: "('tv, 'v) FTerm \<Rightarrow> 'tv FType \<Rightarrow> ('tv::var, 'v::var) FTerm" where
@@ -1561,5 +1554,30 @@ lemma FTerm_subst:
       )[1]
   apply (rule refl)
   done
+
+ML_file \<open>../Tools/tvsubst.ML\<close>
+
+local_setup \<open>fn lthy =>
+let
+
+val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of lthy @{type_name FTerm})
+val mrsbnf = the (MRSBNF_Def.mrsbnf_of lthy @{type_name FTerm_pre})
+
+open BNF_Util
+
+val x = TVSubst.create_tvsubst_of_mrsbnf
+  I fp_res mrsbnf @{binding tvsubst_FTerm'} [SOME {
+    eta = @{term "\<eta> :: 'v::var \<Rightarrow> ('tv::var, 'v::var, 'a::var, 'b::var, 'c, 'd) FTerm_pre"},
+    Inj = (@{term "Var :: 'v \<Rightarrow> ('tv::var, 'v::var) FTerm"}, @{thm Var_def}),
+    tacs = {
+      eta_free = fn ctxt => rtac ctxt @{thm eta_free} 1,
+      eta_compl_free = fn ctxt => etac ctxt @{thm eta_compl_free} 1,
+      eta_inj = fn ctxt => etac ctxt @{thm eta_inj} 1,
+      eta_natural = fn ctxt => HEADGOAL (rtac ctxt @{thm eta_natural} THEN_ALL_NEW assume_tac ctxt),
+      eta_Sb = fn ctxt => HEADGOAL (etac ctxt @{thm eta_Sb[rotated -1]} THEN_ALL_NEW assume_tac ctxt)
+    }
+  }] "BMV_Fixpoint.QREC_fixed_FTerm" lthy
+
+in lthy end\<close>
 
 end

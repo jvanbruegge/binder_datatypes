@@ -583,9 +583,11 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_De
               | Inr mrbnf => upgrade_mrbnf mrbnf
             ) inners (mrsbnf_cache, lthy);
 
+            val unfolds' = bmv_unfolds @ maps (BMV_Monad_Def.unfolds_of_bmv_monad o MRSBNF_Def.bmv_monad_of_mrsbnf) (outer' :: inners');
+
             val ((mrsbnf, tys), ((unfolds, accum), lthy)) = compose_mrsbnfs BNF_Def.Smart_Inline const_policy qualify outer' inners'
               oDs Dss oAs Ass Xs' flatten_tyargs ((bmv_unfolds, accum), lthy);
-          in ((Inl mrsbnf, tys), (((mrsbnf_cache, unfolds), accum), lthy)) end
+          in ((Inl mrsbnf, tys), (((mrsbnf_cache, unfolds' @ unfolds), accum), lthy)) end
         else
           (apsnd (apfst (pair (mrsbnf_cache, bmv_unfolds))) (apfst (apfst Inr) (MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline qualify (distinct (op=) o flat)
             mrbnf (map (fn Inr x => x | _ => error "impossible") inners) oDs Dss oAs Ass Xs' (accum, lthy)

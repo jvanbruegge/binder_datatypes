@@ -473,9 +473,11 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
                   SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms IImsupp_def}),
                   rtac ctxt @{thm var_class.UN_bound},
                   resolve_tac ctxt prems,
-                  rtac ctxt @{thm ordLess_ordLeq_trans},
-                  resolve_tac ctxt (#Vrs_bds bmv_axioms),
-                  rtac ctxt @{thm var_class.large'}
+                  resolve_tac ctxt (MRBNF_Def.set_bd_UNIV_of_mrbnf mrbnf) ORELSE'
+                  EVERY' [rtac ctxt @{thm ordLess_ordLeq_trans},
+                    resolve_tac ctxt (#Vrs_bds bmv_axioms),
+                    rtac ctxt @{thm var_class.large'}
+                  ]
                 ]
               ]
             ] end

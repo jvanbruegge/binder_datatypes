@@ -884,9 +884,9 @@ lemma raw_UFVars_Utor2:
   apply (unfold FVarsBD_FFVarsBD comp_def)
   apply assumption
   done
-
+                                     
 lemmas raw_UFVars_Utor = raw_UFVars_Utor1 raw_UFVars_Utor2
-
+                                      
 term mr_rel_T1_pre
 
 lemma raw_Umap_Utor1:
@@ -1011,44 +1011,103 @@ lemma raw_Umap_Utor2:
 
 lemmas raw_Umap_Utor = raw_Umap_Utor1 raw_Umap_Utor2
 
-definition suitable ::  "('u \<Rightarrow> ('a, 'a, 'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> bool" where
-  "suitable pick \<equiv> \<forall> d. valid_U d \<longrightarrow> pick d \<in> Utor d"
-definition f :: "('u \<Rightarrow> ('a::var,'a,'a raw_term + 'u,'a raw_term + 'u) term_pre) \<Rightarrow> 'u => 'a raw_term" where
-  "f pick \<equiv> corec_raw_term pick"
-definition pick0 :: "'u \<Rightarrow> ('a, 'a, 'a raw_term + 'u, 'a raw_term + 'u) term_pre" where
-  "pick0 \<equiv> SOME pick. suitable pick"
-definition f0 :: "'u \<Rightarrow> 'a raw_term" where
-  "f0 \<equiv> f pick0"
-definition COREC :: "'u \<Rightarrow> 'a term" where
-  "COREC d = TT_abs (f0 d)"
+definition suitable1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> bool" where
+  "suitable1 pick \<equiv> \<forall> d. valid_U1 d \<longrightarrow> pick d \<in> Utor1 d"
+definition suitable2 :: "('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> bool" where
+  "suitable2 pick \<equiv> \<forall> d. valid_U2 d \<longrightarrow> pick d \<in> Utor2 d"
 
-lemma f_simps:
-  "f pick d = raw_term_ctor (map_term_pre id id (case_sum id (f pick)) (case_sum id (f pick)) (pick d))"
-  apply(subst raw_term.corec[of pick, unfolded f_def[symmetric]])
+term corec_raw_T1
+term corec_raw_T2
+
+definition f1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u1 => ('a, 'b, 'c, 'd) raw_T1" where
+"f1 pick1 pick2 \<equiv> corec_raw_T1 pick1 pick2"
+definition f2 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u2 => ('a, 'b, 'c, 'd) raw_T2" where
+"f2 pick1 pick2 \<equiv> corec_raw_T2 pick1 pick2"
+
+definition pick0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre" where
+  "pick0_1 \<equiv> SOME pick. suitable1 pick"
+definition pick0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre" where
+  "pick0_2 \<equiv> SOME pick. suitable2 pick"
+
+definition f0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1" where
+  "f0_1 \<equiv> f1 pick0_1 pick0_2"
+definition f0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2" where
+  "f0_2 \<equiv> f2 pick0_1 pick0_2"
+
+definition COREC1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) T1" where
+  "COREC1 d = T1_abs (f0_1 d)"
+definition COREC2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) T2" where
+  "COREC2 d = T2_abs (f0_2 d)"
+
+thm raw_T1.corec
+
+lemma f1_simps:
+  "f1 pick1 pick2 d = raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick1 d))"
+  apply(subst raw_T1.corec[of pick1 pick2, unfolded f1_def[symmetric] f2_def[symmetric]])
   apply (unfold id_def)
   apply (rule refl)
   done
 
-lemma f_ctor:
-  assumes "raw_term_ctor x = f pick d"
-  shows "x = map_term_pre id id (case_sum id (f pick)) (case_sum id (f pick)) (pick d)"
-  by (rule trans[OF assms f_simps, unfolded raw_term.inject])
+lemma f2_simps:
+  "f2 pick1 pick2 d = raw_T2_ctor (map_T2_pre id id id id id id id (case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick2 d))"
+  apply(subst raw_T2.corec[of pick1 pick2, unfolded f1_def[symmetric] f2_def[symmetric]])
+  apply (unfold id_def)
+  apply (rule refl)
+  done
 
-lemma suitable_FVarsD:
-  assumes "suitable pick" "valid_U d"
-  shows "set1_term_pre (pick d) \<union> \<Union>(case_sum FVars_raw_term raw_UFVars ` set4_term_pre (pick d)) \<union> raw_UFVarsBD (pick d)
-       \<subseteq> raw_UFVars d"
-  by (rule raw_UFVars_Utor[OF assms(2) assms(1)[unfolded suitable_def, THEN spec, THEN mp, OF assms(2)]])
+lemmas f_simps = f1_simps f2_simps
+
+lemma f1_ctor:
+  assumes "raw_T1_ctor x = f1 pick1 pick2 d"
+  shows "x = map_T1_pre id id id id id id id(case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick1 d)"
+  by (rule trans[OF assms f_simps(1), unfolded raw_T1.inject])
+
+lemma f2_ctor:
+  assumes "raw_T2_ctor x = f2 pick1 pick2 d"
+  shows "x = map_T2_pre id id id id id id id(case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick2 d)"
+  by (rule trans[OF assms f_simps(2), unfolded raw_T2.inject])
+
+lemmas f_ctor = f1_ctor f2_ctor
+
+lemma suitable1_FVarsD:
+  assumes "suitable1 pick" "valid_U1 d"
+  shows "set1_T1_pre (pick d) \<union> (set7_T1_pre (pick d) - set5_T1_pre (pick d)) \<union> \<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T1_pre (pick d)) - set5_T1_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T1_pre (pick d)) - set5_T1_pre (pick d))
+  \<subseteq> raw_UFVars11 d"
+  "set2_T1_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T1_pre (pick d)) - set6_T1_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre (pick d)) - set6_T1_pre (pick d))
+  \<subseteq> raw_UFVars12 d"
+  by (rule raw_UFVars_Utor(1-2)[OF assms(2) assms(1)[unfolded suitable1_def, THEN spec, THEN mp, OF assms(2)]])+
+
+lemma suitable2_FVarsD:
+  assumes "suitable2 pick" "valid_U2 d"
+  shows "set1_T2_pre (pick d) \<union> (set7_T2_pre (pick d) - set5_T2_pre (pick d)) \<union> \<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T2_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T2_pre (pick d)) - set5_T2_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T2_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T2_pre (pick d)) - set5_T2_pre (pick d))
+  \<subseteq> raw_UFVars21 d"
+    "set2_T2_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T2_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T2_pre (pick d)) - set6_T2_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T2_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T2_pre (pick d))
+  \<subseteq> raw_UFVars22 d"
+  by (rule raw_UFVars_Utor(3-4)[OF assms(2) assms(1)[unfolded suitable2_def, THEN spec, THEN mp, OF assms(2)]])+
+
+lemmas suitable_FVarsD = suitable1_FVarsD suitable2_FVarsD
 
 lemma f_FVarsD_aux:
-  assumes "free_raw_term a t"
-    "(\<And>d. valid_U d \<Longrightarrow> t = f pick d \<Longrightarrow> a \<in> raw_UFVars d)"
+  assumes "is_free_raw_T11 a t"
+    "(\<And>d. valid_U d \<Longrightarrow> t = f pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars d)"
     "pred_sum (\<lambda>_. True) valid_U td"
-  shows "t = case_sum id (f pick) td \<Longrightarrow> a \<in> case_sum FVars_raw_term raw_UFVars td"
+  shows "t = case_sum id (f pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_1_raw raw_UFVars td"
   apply (rule sumE[of td])
    apply hypsubst
    apply (subst sum.case)
-   apply (unfold FVars_raw_term_def mem_Collect_eq)
+   apply (unfold FVars_T1_1_raw_def mem_Collect_eq)
    apply (insert assms(1))[1]
    apply (hypsubst_thin)
    apply (subst (asm) sum.case)
@@ -1065,14 +1124,16 @@ lemma f_FVarsD_aux:
   apply assumption
   done
 
-lemma valid_pick_set3: "suitable pick \<Longrightarrow> xc \<in> set3_term_pre (pick xb) \<Longrightarrow> valid_U xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U xc"
-  apply (unfold suitable_def Utor_def)
+(* TODO: just realized there exists some simp tactics in this proof :') *)
+(* TODO: we probably also need variants of these for T2 *)
+lemma valid_pick_set8: "suitable1 pick \<Longrightarrow> xc \<in> set8_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
+  apply (unfold suitable1_def Utor1_def)
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor xb"])
+  apply (erule imageE[of _ _ "Udtor1 xb"])
   apply (simp only:)
-  apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
   apply (cases xc)
   apply hypsubst_thin
    apply (subst pred_sum.simps)
@@ -1097,14 +1158,14 @@ lemma valid_pick_set3: "suitable pick \<Longrightarrow> xc \<in> set3_term_pre (
   apply assumption
   done
 
-lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> set4_term_pre (pick xb) \<Longrightarrow> valid_U xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U xc"
-  apply (unfold suitable_def Utor_def)
+lemma valid_pick_set9: "suitable1 pick \<Longrightarrow> xc \<in> set9_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
+  apply (unfold suitable1_def Utor1_def)
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor xb"])
+  apply (erule imageE[of _ _ "Udtor1 xb"])
   apply (simp only:)
-  apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
   apply (cases xc)
   apply hypsubst_thin
    apply (subst pred_sum.simps)
@@ -1129,42 +1190,58 @@ lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> set4_term_pre (
   apply assumption
   done
 
+term is_free_raw_T11
+thm is_free_raw_T11_is_free_raw_T21.inducts(1)
+thm mp[OF _ refl]
+
+thm is_free_raw_T11_is_free_raw_T21.inducts(1)[of _ _ "\<lambda>x y. \<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> x \<in> raw_UFVars11 d", THEN spec, THEN mp, THEN mp[OF _ refl]]
+thm is_free_raw_T11_is_free_raw_T21.induct
+thm is_free_raw_T12_is_free_raw_T22.inducts
+
 lemma f_FVarsD:
-  assumes p: "suitable pick"
-and valid_d: "valid_U d"
-  shows "FVars_raw_term (f pick d) \<subseteq> raw_UFVars d"
+  assumes p: "suitable1 pick1" "suitable2 pick"
+and valid_d: "valid_U1 d"
+  shows "FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
   apply (rule subsetI)
-  apply (unfold FVars_raw_term_def mem_Collect_eq)
-  apply (erule free_raw_term.induct[of _ _ "\<lambda>x y. \<forall>d. valid_U d \<longrightarrow> y = f pick d \<longrightarrow> x \<in> raw_UFVars d", THEN spec, THEN mp, THEN mp[OF _ refl]])
-     prefer 4
-     apply (rule valid_d)
+  apply (unfold FVars_T1_1_raw_def mem_Collect_eq)
+  apply (erule is_free_raw_T11_is_free_raw_T21.inducts(1)[of _ _ "\<lambda>x y. \<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> x \<in> raw_UFVars11 d", THEN spec, THEN mp, THEN mp[OF _ refl]])
 
+              apply (rule allI)
+              apply (rule impI)+
+              apply (drule DiffI, assumption)?
+              apply (erule le_supE[OF suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc]])
+              apply (erule subsetD)
+              apply (drule f_ctor)
+              apply hypsubst
+              apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+              apply (unfold image_id)
+              apply (rule UnI1)?
+              apply assumption
 
-     apply (rule allI)
-    apply (rule impI)+
-    apply (rule le_supE[OF suitable_FVarsD[OF assms(1), unfolded Un_assoc]])
-  prefer 2
-     apply (erule subsetD)
-    apply (drule f_ctor)
-    apply hypsubst
-    apply (subst (asm) term_pre.set_map)
-      apply (rule supp_id_bound bij_id)+
-    apply (unfold image_id)
-     apply assumption
-
-  prefer 2
+             (* almost repeated above *)
+             apply (rule allI)
+             apply (rule impI)+
+             apply (drule DiffI, assumption)?
+             apply (erule le_supE[OF suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc, THEN arg_cong2[of _ _ _ _ "(\<subseteq>)", OF _ refl, THEN iffD1, OF Un_commute]]])
+             apply (erule subsetD)
+             apply (drule f_ctor)
+             apply hypsubst
+             apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+             apply (unfold image_id)
+             apply (rule UnI1)?
+             apply assumption
 
 (* REPEAT_DETERM *)
    apply (rule allI)
    apply (rule impI)+
    apply (frule f_ctor)
    apply hypsubst
-   apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
    apply (unfold image_id)?
    apply (erule imageE)
    apply hypsubst
-  thm f_FVarsD_aux
-   apply (drule f_FVarsD_aux)
+  thm f_FVarsD_aux[of _ _ valid_U1 f1 _ _ raw_UFVars11]
+   apply (drule f_FVarsD_aux[of _ _ valid_U1 f1 _ _ raw_UFVars11])
      apply (erule allE)
       apply (erule impE)
        prefer 2
@@ -1172,38 +1249,34 @@ and valid_d: "valid_U d"
       apply assumption
         apply assumption
   apply assumption
-     prefer 2
+              prefer 2
   apply (rule refl)
-     prefer 2
-   apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated]) (* TODO: put union members in correct order *)
   apply assumption
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 2] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 2] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
     apply assumption
      apply (rule assms)
-  prefer 2
+   apply (drule valid_pick_set8[OF p(1)])
     apply assumption
-   apply (drule valid_pick_set3[OF p])
-    apply assumption
-  apply assumption
-    (* repeated *)
-(* TODO: this not actually a repeat anymore, reorganize the proof
-to recover that property *)
+            apply assumption
+(* repeated *)
    apply (rule allI)
    apply (rule impI)+
    apply (frule f_ctor)
    apply hypsubst
-   apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
    apply (unfold image_id)?
    apply (erule imageE)
    apply hypsubst
-  thm f_FVarsD_aux
-   apply (drule f_FVarsD_aux)
+  thm f_FVarsD_aux[of _ _ valid_U1 f1 _ _ raw_UFVars11]
+   apply (drule f_FVarsD_aux[of _ _ valid_U1 f1 pick1 pick2 raw_UFVars11])
      apply (erule allE)
       apply (erule impE)
        prefer 2
@@ -1211,31 +1284,79 @@ to recover that property *)
       apply assumption
         apply assumption
   apply assumption
-     prefer 2
+              prefer 2
   apply (rule refl)
-     prefer 2
-   apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated]) (* TODO: put union members in correct order *)
   apply assumption
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 2 1] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 3] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
     apply assumption
-   apply (rule assms)
-  apply (rule valid_pick_set4[OF p])
-  prefer 2
-   apply assumption
+     apply (rule assms)
+   apply (drule valid_pick_set9[OF p(1)])
+    apply assumption
   apply assumption
+(* repeated *)
+   apply (rule allI)
+          apply (rule impI)+
+(* TODO: I needed to rotate here, otherwise frule matches with the other
+premise. Why do we have that other premise anyway? *)
+  apply (rotate_tac -1)
+   apply (frule f_ctor)
+   apply hypsubst
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (unfold image_id)?
+   apply (erule imageE)
+   apply hypsubst
+  thm f_FVarsD_aux[of _ _ valid_U1 f1 pick1 pick2 raw_UFVars11]
+   apply (drule f_FVarsD_aux[of _ _ valid_U1 f1 pick1 pick2 raw_UFVars11])
+     apply (erule allE)?
+      apply (erule impE)?
+       prefer 2
+             apply (erule impE)?
+  oops
+      apply assumption
+        apply assumption
+  apply assumption
+              prefer 2
+  apply (rule refl)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated]) (* TODO: put union members in correct order *)
+  apply assumption
+       apply (unfold Un_assoc)
+    apply (rule UnI2)
+    apply (unfold Un_assoc[symmetric])?
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 3] 1\<close>) (* normally: Use goal number here *)
+    apply (rule DiffI[rotated], assumption)?
+    apply (rule UN_I)
+     apply assumption
+    apply assumption
+     apply (rule assms)
+   apply (drule valid_pick_set9[OF p(1)])
+    apply assumption
+  apply assumption
+ (* TODO: repeat some more *)
+
   done
     (* END REPEAT_DETERM *)
 
+thm T1.permute_raw_comp0s
+
 lemma OO_permute:
-  assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
-          "bij (v::'a\<Rightarrow>'a)" "|supp v| <o |UNIV::'a::var set|"
-  shows "((\<lambda>t. alpha_term (permute_raw_term v t)) OO (\<lambda>t. alpha_term (permute_raw_term u t))) = (\<lambda>t. alpha_term (permute_raw_term (u \<circ> v) t))"
+  assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+          "bij (u'::'a\<Rightarrow>'a)" "|supp u'| <o |UNIV::'a set|"
+          "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+          "bij (v'::'b\<Rightarrow>'b)" "|supp v'| <o |UNIV::'b set|"
+  shows "((\<lambda>t. alpha_T1 (permute_T1_raw u v t)) OO (\<lambda>t. alpha_T1 (permute_T1_raw u' v' t))) = (\<lambda>t. alpha_T1 (permute_T1_raw (u' \<circ> u) (v' \<circ> v) t))"
+  thm T1.permute_comp0
+(* TODO: what to use instead of "permute_raw_comp0s"?
+mrbnf_fp_def_sugar does not have a corresponding definition
+*)
   apply (unfold permute_raw_comp0s[OF assms, symmetric])
   apply (rule ext)
   apply (rule ext)
@@ -1304,7 +1425,7 @@ lemma set3_setr_valid:
 and "valid_U d"
 and "z \<in> set3_term_pre (pick d)"
 shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U x"
-  by (rule valid_pick_set3[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
+  by (rule valid_pick_set8[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
 
 lemma rel_F_suitable_mapD:
   assumes valid_d: "valid_U d"
@@ -1559,7 +1680,7 @@ lemma f_swap_alpha:
     apply (unfold sum.simps)
     apply (subst comp_apply)
     apply (rule f_FVarsD[OF p])
-    apply (drule valid_pick_set3[OF p])
+    apply (drule valid_pick_set8[OF p])
      apply assumption
     apply (unfold pred_sum_inject)
     apply assumption
@@ -1607,7 +1728,7 @@ lemma f_swap_alpha:
               apply (rule conjI[rotated])+
                   apply (rule refl)+
                 apply assumption+
-              apply (drule valid_pick_set4[rotated])
+              apply (drule valid_pick_set9[rotated])
                 apply assumption
                apply (rule p)
               apply (unfold pred_sum_inject)
@@ -1635,7 +1756,7 @@ lemma f_swap_alpha:
               apply (rule conjI[rotated])+
                   apply (rule refl)+
                 prefer 3
-                apply (drule valid_pick_set3[rotated])
+                apply (drule valid_pick_set8[rotated])
                   apply assumption
                  apply (rule p)
                 apply (unfold pred_sum_inject)

@@ -444,6 +444,13 @@ lemma valid_pick_set4: "suitable pick \<Longrightarrow> xc \<in> set4_term_pre (
   apply assumption
   done
 
+find_theorems name:induct name:raw
+
+thm spec
+thm free_raw_term.induct
+thm  free_raw_term.induct[of _ _ "\<lambda>x y. \<forall>d. valid_U d \<longrightarrow> y = f pick d \<longrightarrow> x \<in> raw_UFVars d", THEN spec, THEN mp]
+thm  free_raw_term.induct[of _ _ "\<lambda>x y. \<forall>d. valid_U d \<longrightarrow> y = f pick d \<longrightarrow> x \<in> raw_UFVars d", THEN spec, THEN mp, THEN mp[OF _ refl]]
+
 lemma f_FVarsD:
   assumes p: "suitable pick"
 and valid_d: "valid_U d"
@@ -457,8 +464,11 @@ and valid_d: "valid_U d"
 
      apply (rule allI)
     apply (rule impI)+
-    apply (rule le_supE[OF suitable_FVarsD[OF assms(1), unfolded Un_assoc]])
-  prefer 2
+  thm le_supE
+  thm suitable_FVarsD[OF assms(1)]
+  thm suitable_FVarsD[OF assms(1), unfolded Un_assoc]
+  thm le_supE[OF suitable_FVarsD[OF assms(1), unfolded Un_assoc]]
+    apply (erule le_supE[OF suitable_FVarsD[OF assms(1), unfolded Un_assoc]])
      apply (erule subsetD)
     apply (drule f_ctor)
     apply hypsubst
@@ -467,15 +477,13 @@ and valid_d: "valid_U d"
     apply (unfold image_id)
      apply assumption
 
-  prefer 2
-
 (* REPEAT_DETERM *)
    apply (rule allI)
    apply (rule impI)+
    apply (frule f_ctor)
    apply hypsubst
    apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id)+)+
-   apply (unfold image_id)?
+    apply (unfold image_id)?
    apply (erule imageE)
    apply hypsubst
   thm f_FVarsD_aux
@@ -489,7 +497,8 @@ and valid_d: "valid_U d"
   apply assumption
      prefer 2
   apply (rule refl)
-     prefer 2
+    prefer 2
+  thm suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]
    apply (rule suitable_FVarsD[THEN subsetD, unfolded raw_UFVarsBD_def, rotated]) (* TODO: put union members in correct order *)
   apply assumption
        apply (unfold Un_assoc)
@@ -501,8 +510,6 @@ and valid_d: "valid_U d"
      apply assumption
     apply assumption
      apply (rule assms)
-  prefer 2
-    apply assumption
    apply (drule valid_pick_set3[OF p])
     apply assumption
   apply assumption

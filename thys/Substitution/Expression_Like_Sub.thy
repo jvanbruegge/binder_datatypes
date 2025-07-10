@@ -36,8 +36,8 @@ locale Substitution = Expression +
     bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> imsupp \<sigma> \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
     Eperm \<sigma> (Esub \<delta> \<rho> \<rho>' e) = Esub \<delta> \<rho> \<rho>' (Eperm \<sigma> e)"
 
-locale Substitution_Strong = Expression_Strong Ector Eperm EVrs Ebd + Substitution Ector Eperm EVrs Esub
-  for Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e" and Eperm EVrs Ebd Esub
+locale Substitution_Strong = Expression_Strong Eperm EVrs Ector Ebd + Substitution Eperm EVrs Ector Esub
+  for Eperm EVrs Ebd and Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e" and Esub
 begin
 
 lemma Esub_inversion0:

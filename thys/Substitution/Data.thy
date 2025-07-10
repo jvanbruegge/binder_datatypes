@@ -108,7 +108,7 @@ lemma E_coinduct_gen:
     done
   done
 
-interpretation Expression_Strong Ector Eperm EVrs Gbd
+interpretation Expression_Strong Eperm EVrs Ector Gbd
   apply unfold_locales
   apply (auto simp: E.inject E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd large'
     G.bd_card_order G.bd_cinfinite G.bd_regularCard intro: E.permute_cong_id)
@@ -240,7 +240,7 @@ lemma Eperm_Esub: "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a set| \<Longri
 
 end
 
-interpretation data: Substitution_Strong Ector Eperm EVrs Gbd Esub
+interpretation data: Substitution_Strong Eperm EVrs Gbd Ector Esub
   by standard (auto simp: Esub_Ector\<eta> Esub_Ector\<eta>' Esub_Ector EVrs_Esub Eperm_Esub)
 
 print_statement data.E_pbmv_axioms

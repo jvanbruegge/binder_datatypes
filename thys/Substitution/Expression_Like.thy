@@ -134,21 +134,33 @@ definition Gren ::
 
 print_theorems
 
-locale Expression =
-  fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"
-  and Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
+locale Nominal = 
+  fixes Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
   and EVrs :: "'e \<Rightarrow> 'a set"
   assumes
   Eperm_comp:
   "\<And>\<sigma> \<tau>. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
    Eperm \<sigma> o Eperm \<tau> = Eperm (\<sigma> o \<tau>)"
-  and EVrs_Eperm:
-  "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
-   EVrs (Eperm \<sigma> u) \<subseteq> \<sigma> ` EVrs u"
   and Eperm_cong_id:
   "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
+begin
+
+
+lemma Eperm_id: "Eperm id = id"
+  apply (rule ext)
+  apply (rule trans[OF Eperm_cong_id id_apply[symmetric]])
+    apply simp_all
+  done
+
+end
+
+locale Expression = Nominal +
+  fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"
+  assumes EVrs_Eperm:
+  "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+   EVrs (Eperm \<sigma> u) \<subseteq> \<sigma> ` EVrs u"
   and Eperm_Ector:
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
     Eperm \<sigma> (Ector u) = Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
@@ -159,12 +171,6 @@ locale Expression =
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
      id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
 begin
-
-lemma Eperm_id: "Eperm id = id"
-  apply (rule ext)
-  apply (rule trans[OF Eperm_cong_id id_apply[symmetric]])
-    apply simp_all
-  done
 
 lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
          bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>

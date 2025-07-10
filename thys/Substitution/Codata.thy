@@ -116,7 +116,7 @@ lemma E_coinduct_gen:
     done
   done
 
-interpretation Expression_Strong Ector Eperm EVrs "card_suc Gbd"
+interpretation Expression_Strong Eperm EVrs Ector "card_suc Gbd"
   apply standard
   apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
     G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
@@ -434,7 +434,6 @@ lemma DTOR_mapD:
             apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
             apply (unfold sum.rel_map comp_def id_apply)[1]
             apply (erule sum.rel_mono_strong)
-  find_theorems Eperm Eperm_raw
              apply (subst (asm) Eperm_E_abs, assumption+)?
              apply (drule E_total_abs_eq_iffs[THEN iffD1])
              apply assumption
@@ -1392,7 +1391,7 @@ theorem COREC_FFVarsD:
 end
 
 lemma permute_\<rho>:
-  "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a set| \<Longrightarrow> |SSupp (Ector o \<eta>) (\<rho>::'a::covar_G \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> Eperm f (\<rho> a) = \<rho> (f a)"
+  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> Eperm f (\<rho> a) = \<rho> (f a)"
   apply (cases "f a = a")
    apply (cases "\<rho> a = Ector (\<eta> a)")
     apply (simp add: GMAP_def Gren_def eta_natural Eperm_Ector)
@@ -1409,7 +1408,7 @@ lemma permute_\<rho>:
   done
 
 lemma permute_\<rho>':
-  "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a set| \<Longrightarrow> |SSupp (Ector o \<eta>') (\<rho>'::'a::covar_G \<Rightarrow> 'a E)| <o |UNIV::'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> Eperm f (\<rho>' a) = \<rho>' (f a)"
+  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> Eperm f (\<rho>' a) = \<rho>' (f a)"
   apply (cases "f a = a")
    apply (cases "\<rho>' a = Ector (\<eta>' a)")
     apply (simp add: GMAP_def Gren_def eta'_natural Eperm_Ector)
@@ -1761,7 +1760,7 @@ lemma Eperm_Esub:
   apply (auto simp add: fun_eq_iff Int_Un_distrib permute_\<rho> permute_\<rho>' imsupp_commute)
   done
 
-interpretation codata: Substitution_Strong Ector Eperm EVrs "card_suc Gbd" Esub
+interpretation codata: Substitution_Strong Eperm EVrs "card_suc Gbd" Ector Esub
   by standard (auto simp: Esub_Ector\<eta> Esub_Ector\<eta>' Esub_Ector EVrs_Esub Eperm_Esub)
 
 print_statement codata.E_pbmv_axioms

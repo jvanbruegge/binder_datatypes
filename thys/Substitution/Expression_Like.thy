@@ -1,5 +1,5 @@
 theory Expression_Like
-  imports "Binders.MRBNF_Recursor" "../operations/BMV_Monad"
+  imports "Binders.MRBNF_Recursor"
 begin
 
 declare supp_id_bound[simp] supp_inv_bound[simp] infinite_UNIV[simp]
@@ -172,6 +172,23 @@ lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow
   apply (rule trans[OF _ Eperm_cong_id, of _ "\<sigma> o inv \<tau>"])
      apply (auto simp: Eperm_comp[THEN fun_cong, simplified] supp_comp_bound
       dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
+  done
+
+lemma Ector_fresh_eqD:
+  assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::var set| <o |UNIV :: 'a set|" "\<And>x. |EVrs x| <o |UNIV :: 'a set|"
+  shows "(Ector x = Ector y) \<Longrightarrow> (\<exists>\<sigma>. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and> imsupp \<sigma> \<inter> A = {}
+    \<and> id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
+  apply (drule Ector_eqD; elim exE conjE)
+  subgoal for \<sigma>
+    apply (insert ex_avoiding_bij[of \<sigma> "(\<Union> (EVrs ` GSupp1 x) - GVrs2 x)" "GVrs2 x" A])
+    apply (drule meta_mp; simp add: UN_bound card_of_minus_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large'] ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'] assms)+
+    apply (elim exE conjE)
+    subgoal for \<tau>
+      apply (auto simp: G.Vrs_Map Gren_def intro!: exI[of _ \<tau>] trans[OF G.Sb_cong arg_cong[where f="Gsub _ _", OF G.Map_cong]] Eperm_cong)
+      using G.Vrs_Map(2) G.Vrs_Sb(2) assms(2) imageI supp_id_bound apply blast
+      apply (smt (verit, ccfv_threshold) Diff_iff G.Vrs_Map(2) G.Vrs_Sb(2) UN_I assms(2) disjoint_iff_not_equal id_on_eq imageI supp_id_bound)
+      done
+    done
   done
 
 end

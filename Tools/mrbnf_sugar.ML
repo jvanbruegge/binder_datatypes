@@ -856,7 +856,11 @@ fun create_binder_datatype (spec : spec) lthy =
         val abs' = Const (s, pre_repT --> Type (n, Ts'));
 
         val etas = map_filter I (map_index (fn (i, (_, tys)) =>
-          if length tys = 1 andalso member (op=) frees (hd tys) then
+          if length tys = 1 andalso member (op=) frees (hd tys) andalso
+            not (member (op=) (@{print}(map TFree (
+              fold Term.add_tfreesT (maps snd (take i (#ctors spec) @ drop (i + 1) (#ctors spec))) []
+            ))) (@{print}(hd tys)))
+          then
             SOME (Term.abs ("a", Term.typ_subst_atomic replace' (hd tys)) (mk_ctor (i + 1) [Bound 0] abs'))
           else NONE
         ) (#ctors spec));

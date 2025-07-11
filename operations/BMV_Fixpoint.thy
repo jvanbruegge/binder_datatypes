@@ -19,12 +19,13 @@ Multithreading.parallel_proofs := 0
 local_setup \<open>fn lthy =>
 let
   val T = @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"};
-  val Xs = [@{typ 'tv}, @{typ 'v}, @{typ 'btv}, @{typ 'bv}, @{typ 'c}, @{typ 'd}];
+  val Xs = map (apfst dest_TFree) [(@{typ 'tv}, MRBNF_Def.Free_Var), (@{typ 'v}, MRBNF_Def.Free_Var),
+      (@{typ 'btv}, MRBNF_Def.Bound_Var), (@{typ 'bv}, MRBNF_Def.Bound_Var),
+      (@{typ 'c}, MRBNF_Def.Live_Var), (@{typ 'd}, MRBNF_Def.Live_Var)];
 
-  val ((mrsbnf, (Ds, tys)), (((_, bmv_unfolds), (_, mrbnf_unfolds)), lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)
-    I [] (map (apfst dest_TFree) [(@{typ 'v}, MRBNF_Def.Free_Var),
-      (@{typ 'btv}, MRBNF_Def.Bound_Var), (@{typ 'bv}, MRBNF_Def.Bound_Var)])
-    (fn xss => inter (op=) (flat xss) (map dest_TFree Xs))
+  val ((mrsbnf, tys), (((_, bmv_unfolds), (_, mrbnf_unfolds)), lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)
+    I [] Xs
+    (fn xss => inter (op=) (flat xss) (map fst Xs))
     T
     (((Symtab.empty, []), (MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds)), lthy);
 
@@ -39,7 +40,7 @@ let
     val (noted, lthy) = Local_Theory.notes notes lthy
 
   val ((mrsbnf, (tys, info)), lthy) = MRSBNF_Comp.seal_mrsbnf I (bmv_unfolds, mrbnf_unfolds)
-    @{binding FTerm_pre} Xs Ds mrsbnf NONE lthy
+    @{binding FTerm_pre} Xs tys mrsbnf NONE lthy
   val (_, lthy) = MRSBNF_Def.note_mrsbnf_thms (K BNF_Def.Note_Some) I NONE mrsbnf lthy
 
   val lthy = MRSBNF_Def.register_mrsbnf "BMV_Fixpoint.FTerm_pre" mrsbnf lthy;

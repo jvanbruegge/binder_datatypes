@@ -1125,7 +1125,6 @@ fun pbmv_monad_of_mrbnf mrbnf lthy =
       ))
     );
     val name = MRBNF_Def.name_of_mrbnf mrbnf;
-    val _ = @{print} ("MRBNF name" , name)
    in apfst fst (bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I (SOME name) {
      ops = [T],
      var_class = var_class,

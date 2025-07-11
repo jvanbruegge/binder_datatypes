@@ -1222,9 +1222,9 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
       apply (rule trans[OF comp_apply[symmetric] FTerm_pre.Sb_comp(1)[THEN fun_cong]])
          apply (rule supp_id_bound | assumption)+
      apply (unfold id_o o_id)
-     apply (rule arg_cong[of _ _ "Sb_FTerm_pre _ _"])
     apply (unfold FTerm_pre.Map_map)
-     apply (rule FTerm_pre.map_cong0)
+
+     apply (rule arg_cong[OF FTerm_pre.map_cong0])
                       apply (rule supp_id_bound bij_id refl)+
       apply (unfold atomize_imp[symmetric])
       apply (rotate_tac -1)
@@ -1281,16 +1281,16 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
            apply assumption+
         apply (erule Int_subset_empty2, rule Un_upper2)+
       apply assumption
-     apply (rule arg_cong[of _ _ FTerm_ctor])
-     apply (rule cong'[of _ "map_FTerm_pre id id id id _ _ _" _ "map_FTerm_pre id id id id _ _ _"])
-      apply (rule FTerm_pre.Sb_cong)
-           apply (rule supp_id_bound refl | assumption)+
+       apply (rule arg_cong[of _ _ FTerm_ctor])
+      apply (rule trans)
+        apply (rule FTerm_pre.Sb_cong[rotated -1])
+        apply (rule inner_prems)
         apply (unfold FTerm_pre.Map_map[symmetric] FTerm_pre.Vrs_Map)[1]
          apply (unfold FTerm_pre.set_Vrs(1-2)[symmetric])[1]
-        apply (rule inner_prems)
-        apply (erule FTerm.FVars_intros)
+             apply (erule FTerm.FVars_intros)
+           apply (rule supp_id_bound refl | assumption)+
 
-       apply (rule FTerm_pre.map_cong0)
+       apply (rule arg_cong[OF FTerm_pre.map_cong0])
                         apply (rule supp_id_bound bij_id refl)+
       apply (rotate_tac -1)
       apply (erule distinct_prems_rl[rotated])

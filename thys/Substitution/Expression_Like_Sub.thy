@@ -36,7 +36,7 @@ locale Substitution = Expression +
     bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> imsupp \<sigma> \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
     Eperm \<sigma> (Esub \<delta> \<rho> \<rho>' e) = Esub \<delta> \<rho> \<rho>' (Eperm \<sigma> e)"
 
-locale Substitution_Strong = Expression_Strong Eperm EVrs Ector Ebd + Substitution Eperm EVrs Ector Esub
+locale Substitution_Strong = Expression_Strong Eperm EVrs Ebd Ector + Substitution Eperm EVrs Ebd Ector Esub
   for Eperm EVrs Ebd and Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e" and Esub
 begin
 
@@ -58,7 +58,7 @@ lemma Esub_inversion0:
   subgoal for u'
     apply (subst (asm) Ector_fresh_inject[where A = "imsupp \<delta> \<union> IImsupp' (Ector o \<eta>) EVrs \<rho> \<union> IImsupp' (Ector o \<eta>') EVrs \<rho>' \<union> (\<Union> (EVrs ` GSupp1 u') - GVrs2 u')"])
        apply (simp_all add: Int_Un_distrib G.Vrs_Sb G.Vrs_Map EVrs_Ector) [2]
-     apply (auto intro!: Un_bound UN_bound card_of_minus_bound simp: imsupp_supp_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large']) []
+      apply (auto intro!: Un_bound UN_bound card_of_minus_bound simp: imsupp_supp_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large']) []
     apply (erule exE conjE)+
     subgoal for \<sigma>
       apply (rule exI[where x = "Gren id \<sigma> (Gmap (Eperm \<sigma>) id u')"])

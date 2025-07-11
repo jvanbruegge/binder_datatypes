@@ -116,7 +116,7 @@ lemma E_coinduct_gen:
     done
   done
 
-interpretation Expression_Strong Eperm EVrs Ector "card_suc Gbd"
+interpretation Expression_Strong Eperm EVrs "card_suc Gbd" Ector
   apply standard
   apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
     G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc

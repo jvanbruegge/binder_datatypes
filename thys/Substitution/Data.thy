@@ -108,7 +108,7 @@ lemma E_coinduct_gen:
     done
   done
 
-interpretation Expression_Strong Eperm EVrs Ector Gbd
+interpretation Expression_Strong Eperm EVrs Gbd Ector
   apply unfold_locales
   apply (auto simp: E.inject E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd large'
     G.bd_card_order G.bd_cinfinite G.bd_regularCard intro: E.permute_cong_id)

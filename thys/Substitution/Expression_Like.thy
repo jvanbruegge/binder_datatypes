@@ -132,11 +132,13 @@ definition Gren ::
   "('a1 :: var \<Rightarrow> 'a1) \<Rightarrow> ('a2 :: var \<Rightarrow> 'a2) \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G \<Rightarrow> ('a1, 'a2, 'c1, 'c2) G" where 
   "Gren \<rho>1 \<rho>2 u = Gsub \<rho>1 \<rho>2 u"
 
-print_theorems
+lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: var, 'a, 'e, 'e) G)| <o |UNIV :: 'a set|"
+  by (rule ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'])
 
 locale Nominal = 
   fixes Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
   and EVrs :: "'e \<Rightarrow> 'a set"
+  and Ebd :: "'bd rel"
   assumes
   Eperm_comp:
   "\<And>\<sigma> \<tau>. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
@@ -145,6 +147,10 @@ locale Nominal =
   and Eperm_cong_id:
   "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
+  and Ebd_infinite_regular_card_order: "infinite_regular_card_order Ebd"
+  and Ebd_le: "Ebd \<le>o |UNIV :: 'a::var set|"
+  and EVrs_bd:
+  "\<And>x. |EVrs (x :: 'e)| <o Ebd"
 begin
 
 lemma Eperm_id: "Eperm id = id"
@@ -153,22 +159,25 @@ lemma Eperm_id: "Eperm id = id"
     apply simp_all
   done
 
+lemma EVrs_bound[simp]: "|EVrs (x :: 'e)| <o |UNIV :: 'a set|"
+  by (rule ordLess_ordLeq_trans[OF EVrs_bd Ebd_le])
+
 end
 
 locale NominalRel = 
-  fixes Evalid :: "'e \<Rightarrow> bool"
-  and Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
-  and EVrs :: "'e \<Rightarrow> 'a set"
+  fixes Pvalid :: "'e \<Rightarrow> bool"
+  and Pperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
+  and PVrs :: "'e \<Rightarrow> 'a set"
   assumes
-  Eperm_Evalid: "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow> Evalid (Eperm \<sigma> e)"
+  Eperm_Evalid: "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid e \<Longrightarrow> Pvalid (Pperm \<sigma> e)"
   and Eperm_comp:
   "\<And>\<sigma> \<tau> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
-   Evalid e \<Longrightarrow>
-   Eperm \<sigma> (Eperm \<tau> e) = Eperm (\<sigma> o \<tau>) e"
+   Pvalid e \<Longrightarrow>
+   Pperm \<sigma> (Pperm \<tau> e) = Pperm (\<sigma> o \<tau>) e"
   and Eperm_cong_id:
-  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow>
-   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
+  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid e \<Longrightarrow>
+   (\<And>a. a \<in> PVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Pperm \<sigma> e = e"
 
 locale Expression = Nominal +
   fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"
@@ -181,7 +190,7 @@ locale Expression = Nominal +
   and EVrs_Ector:
   "\<And>u. EVrs (Ector u) =
      GVrs1 u \<union> ((\<Union>e \<in> GSupp1 u. EVrs e) - GVrs2 u) \<union> (\<Union>e \<in> GSupp2 u. EVrs e)"
-  and Ector_eqD: "\<And>x y. Ector x = Ector y \<Longrightarrow>
+  and Ector_inject: "\<And>x y. Ector x = Ector y \<longleftrightarrow>
    (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
      id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
 begin
@@ -194,11 +203,11 @@ lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow
       dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
   done
 
-lemma Ector_fresh_eqD:
-  assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::var set| <o |UNIV :: 'a set|" "\<And>x. |EVrs x| <o |UNIV :: 'a set|"
-  shows "(Ector x = Ector y) \<Longrightarrow> (\<exists>\<sigma>. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and> imsupp \<sigma> \<inter> A = {}
+lemma Ector_fresh_inject:
+  assumes "GVrs2 x \<inter> A = {}" "GVrs2 y \<inter> A = {}" "|A :: 'a::var set| <o |UNIV :: 'a set|"
+  shows "(Ector x = Ector y) \<longleftrightarrow> (\<exists>\<sigma>. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and> imsupp \<sigma> \<inter> A = {}
     \<and> id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
-  apply (drule Ector_eqD; elim exE conjE)
+  apply (subst Ector_inject; rule iffI; (elim exE conjE)?)
   subgoal for \<sigma>
     apply (insert ex_avoiding_bij[of \<sigma> "(\<Union> (EVrs ` GSupp1 x) - GVrs2 x)" "GVrs2 x" A])
     apply (drule meta_mp; simp add: UN_bound card_of_minus_bound ordLess_ordLeq_trans[OF G.Supp_bd(1) large'] ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'] assms)+
@@ -209,6 +218,7 @@ lemma Ector_fresh_eqD:
       apply (smt (verit, ccfv_threshold) Diff_iff G.Vrs_Map(2) G.Vrs_Sb(2) UN_I assms(2) disjoint_iff_not_equal id_on_eq imageI supp_id_bound)
       done
     done
+  apply blast
   done
 
 end

@@ -164,7 +164,7 @@ sublocale Esub: Bimodel where
       eta'_natural[of id id, unfolded G.Sb_Inj, simplified]
       eta_natural[of _ _ id id, unfolded G.Map_id, simplified]
       eta'_natural[of _ _ id id, unfolded G.Map_id, simplified]
-      dest!: Ector_eqD[of "\<eta> _"] Ector_eqD[of "\<eta>' _"] Ector_eqD[of _ "\<eta> _"] Ector_eqD[of _ "\<eta>' _"]
+      dest!: Ector_inject[THEN iffD1, of "\<eta> _"] Ector_inject[THEN iffD1, of "\<eta>' _"] Ector_inject[THEN iffD1, of _ "\<eta> _"] Ector_inject[THEN iffD1, of _ "\<eta>' _"]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
@@ -180,7 +180,7 @@ sublocale Esub: Bimodel where
       eta_natural[of _ _ id id, unfolded G.Map_id, simplified]
       eta'_natural[of _ _ id id, unfolded G.Map_id, simplified]
       G.Map_comp[THEN fun_cong, simplified] comp_def
-      dest!: Ector_eqD[of "\<eta> _"] Ector_eqD[of "\<eta>' _"] Ector_eqD[of _ "\<eta> _"] Ector_eqD[of _ "\<eta>' _"]
+      dest!: Ector_inject[THEN iffD1, of "\<eta> _"] Ector_inject[THEN iffD1, of "\<eta>' _"] Ector_inject[THEN iffD1, of _ "\<eta> _"] Ector_inject[THEN iffD1, of _ "\<eta>' _"]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
@@ -195,7 +195,7 @@ sublocale Esub: Bimodel where
       eta_natural[of _ _ id id, unfolded G.Map_id, simplified]
       eta'_natural[of _ _ id id, unfolded G.Map_id, simplified]
       G.Map_comp[THEN fun_cong, simplified] comp_def
-      dest!: Ector_eqD[of "\<eta> _"] Ector_eqD[of "\<eta>' _"] Ector_eqD[of _ "\<eta> _"] Ector_eqD[of _ "\<eta>' _"]
+      dest!: Ector_inject[THEN iffD1, of "\<eta> _"] Ector_inject[THEN iffD1, of "\<eta>' _"] Ector_inject[THEN iffD1, of _ "\<eta> _"] Ector_inject[THEN iffD1, of _ "\<eta>' _"]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta_inversion[rotated -1] eta'_inversion[rotated -1]

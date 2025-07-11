@@ -399,7 +399,7 @@ fun mr_mk_comp_wit_tac ctxt set'_eq_sets outer inners =
     unfold_thms_tac ctxt set'_eq_sets THEN
     unfold_thms_tac ctxt @{thms collect_def UN_insert Union_image_empty} THEN
     unfold_thms_tac ctxt set_maps THEN
-    unfold_thms_tac ctxt @{thms Union_Un_distrib} THEN
+    unfold_thms_tac ctxt @{thms Union_Un_distrib id_def} THEN
     REPEAT_DETERM (
       EVERY (map (etac ctxt @{thm UnE}) (1 upto num_olive - 1)) THEN
       EVERY (replicate num_olive (HEADGOAL (EVERY' [

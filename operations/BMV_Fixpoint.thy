@@ -683,15 +683,6 @@ lemma tvsubst_not_is_VVr:
   done
 end
 
-lemma eta_ctor_inj: "FTerm_ctor (\<eta> a) = FTerm_ctor x \<Longrightarrow> x = \<eta> a"
-  apply (unfold FTerm.TT_inject0)
-  apply (erule exE conjE)+
-  apply (subst (asm) eta_natural')
-        apply (rule supp_id_bound bij_id | assumption)+
-  apply (unfold id_apply)
-  apply (erule sym)
-  done
-
 lemma in_IImsupps:
   "f1 a \<noteq> VVr a \<Longrightarrow> z \<in> FVars (f1 a) \<Longrightarrow> z \<in> IImsupp VVr FVars f1"
   "f1 a \<noteq> VVr a \<Longrightarrow> z2 \<in> FTVars (f1 a) \<Longrightarrow> z2 \<in> IImsupp VVr FTVars f1"
@@ -886,9 +877,6 @@ lemma FVars_tvsubst1:
   apply (unfold FVars_VVr UN_single)
   apply (rule refl)
   done
-
-lemma Un_forward: "a \<in> A \<union> B \<Longrightarrow> (a \<in> A \<Longrightarrow> a \<in> C) \<Longrightarrow> (a \<in> B \<Longrightarrow> a \<in> D) \<Longrightarrow> a \<in> C \<union> D"
-  by blast
 
 lemma Un_cong_FTVars: "A = A1 \<union> A2 \<Longrightarrow> B = B1 \<union> B2 \<Longrightarrow> C = C1 \<union> C2 \<Longrightarrow> A \<union> B \<union> C = (A1 \<union> B1 \<union> C1) \<union> (A2 \<union> B2 \<union> C2)"
   apply hypsubst_thin

@@ -983,7 +983,7 @@ fun create_binder_datatype (spec : spec) lthy =
           val gs = map mk_map tys;
           val ts = map2 (fn g => fn x => case g of
             Const ("Fun.id", _) => x
-            | _ => let val T = body_type (fastype_of g)
+            | _ => let val T = domain_type (fastype_of g)
                    in if fastype_of x = T orelse T = qT then g $ x else x end
           ) gs xs;
 

@@ -132,11 +132,11 @@ primal x \<Longrightarrow>
 P x"
   by (rule primal_param_induct[where P = "\<lambda>_. P" and Psupp = "\<lambda>_. A"])
 
-lemma small_IImsupp_SSupp: "small (IImsupp f) \<Longrightarrow> small (SSupp f)"
+lemma small_IImsupp_SSupp: "small (LC.IImsupp f) \<Longrightarrow> small (LC.SSupp f)"
   by (metis IImsupp_def card_of_subset_bound small_def sup_ge1)
 
 lemma primal_tvsubst:
-  "small (IImsupp f) \<Longrightarrow> primal t \<Longrightarrow> (\<forall>x. prime_var x \<longrightarrow> primal (f x)) \<Longrightarrow> primal (tvsubst f t)"
+  "small (LC.IImsupp f) \<Longrightarrow> primal t \<Longrightarrow> (\<forall>x. prime_var x \<longrightarrow> primal (f x)) \<Longrightarrow> primal (tvsubst f t)"
   apply (rule primal_avoid_induct[where P = "\<lambda>t. primal (tvsubst f t)"])
   apply assumption
   apply assumption

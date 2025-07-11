@@ -313,8 +313,6 @@ theorem rec_Ector_not_\<phi>:
 assumes f: "\<not> \<phi> u"  and g : "GVrs2 u \<inter> PVrs p = {}"
 shows "crec (Ector u) p = Ector' (Gmap crec crec u) p"
 proof-
-(*(cases "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}")
-  case True *)
   have "Edtor' (Ector u, p) = Inl (Edtor1' (Ector u, p))" 
   and 1: "Gmap C.corec C.corec ` (Edtor1' (Ector u, p)) \<subseteq> Edtor (C.corec (Ector u, p))"
     using f g  by (auto simp add: C.corec_Edtor_Inl Edtor'_not\<phi>)
@@ -335,14 +333,7 @@ proof-
     subgoal unfolding GSupp2_Gmap by auto
     subgoal using g1 unfolding GVrs2_Gmap by auto
     subgoal unfolding Gmap_comp unfolding curry_def o_def
-    apply(cases "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}")
-      subgoal apply(rule Ector_Ector'_Gmap) using w g g1 by auto 
-      subgoal apply(subst ww) 
-        subgoal by auto subgoal by auto
-        subgoal unfolding w[symmetric]
-next
-  case False hence "GSupp1 u = {}" "GSupp2 u = {}" by auto
-  show ?thesis
+    apply(rule Ector_Ector'_Gmap) using w g g1 by auto .
 qed
       
 theorem crec_Eperm:

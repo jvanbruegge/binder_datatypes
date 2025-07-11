@@ -34,7 +34,7 @@ Ector1_Ector'_topFree: "\<And>u uu p.
 (******)
 and 
 Ector_Ector'_sync:  
-"\<And>w u p g. GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {} \<Longrightarrow> 
+"\<And>w u p g. 
        GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
@@ -50,7 +50,6 @@ lemmas Ector1_Ector'_topFree' =  triv_Un4_remove[OF Ector1_Ector'_topFree[unfold
 
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   
-assumes "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}"
 assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
@@ -67,8 +66,7 @@ proof-
     using assms unfolding GVrs2_Gmap by auto
 qed
 
-lemma Ector_Ector'_Gmap_fst: 
-assumes "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}"
+lemma Ector_Ector'_Gmap_fst:  
 assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
@@ -87,8 +85,7 @@ proof-
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]
-  apply(rule Ector_Ector'_sync) 
-    subgoal using assms unfolding GSupp1_Gmap GSupp2_Gmap by auto
+  apply(rule Ector_Ector'_sync)  
     using assms unfolding GVrs2_Gmap by auto
 qed
 

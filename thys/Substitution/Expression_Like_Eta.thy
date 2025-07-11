@@ -160,6 +160,14 @@ next
     by (metis G.Supp_bd(2) not_ordLess_ordIso)
 qed
 
+lemma SSupp_Eperm_comp: 
+  "bij (\<sigma> :: 'a \<Rightarrow> 'a::var) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> SSupp (Ector \<circ> \<eta>) (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>) \<subseteq> SSupp (Ector \<circ> \<eta>) \<rho> \<union> supp \<sigma>"
+  "bij (\<sigma> :: 'a \<Rightarrow> 'a::var) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> SSupp (Ector \<circ> \<eta>') (Eperm \<sigma> \<circ> \<rho>' \<circ> inv \<sigma>) \<subseteq> SSupp (Ector \<circ> \<eta>') \<rho>' \<union> supp \<sigma>"
+   apply (auto simp: SSupp_def imsupp_def image_iff)
+   apply (metis Eperm_Ector Gren_def bij_imp_inv eta_natural not_in_supp_alt)
+  apply (metis Eperm_Ector Gren_def bij_imp_inv eta'_natural not_in_supp_alt)
+  done
+
 end
 
 context Expression_Strong begin

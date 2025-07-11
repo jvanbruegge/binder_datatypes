@@ -147,7 +147,6 @@ locale Nominal =
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
 begin
 
-
 lemma Eperm_id: "Eperm id = id"
   apply (rule ext)
   apply (rule trans[OF Eperm_cong_id id_apply[symmetric]])
@@ -155,6 +154,21 @@ lemma Eperm_id: "Eperm id = id"
   done
 
 end
+
+locale NominalRel = 
+  fixes Evalid :: "'e \<Rightarrow> bool"
+  and Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
+  and EVrs :: "'e \<Rightarrow> 'a set"
+  assumes
+  Eperm_Evalid: "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow> Evalid (Eperm \<sigma> e)"
+  and Eperm_comp:
+  "\<And>\<sigma> \<tau> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+   bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
+   Evalid e \<Longrightarrow>
+   Eperm \<sigma> (Eperm \<tau> e) = Eperm (\<sigma> o \<tau>) e"
+  and Eperm_cong_id:
+  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow>
+   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
 
 locale Expression = Nominal +
   fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"

@@ -6700,6 +6700,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
      fresh_induct_param = @{thm fresh_induct_param},
      fresh_induct = @{thm fresh_induct}
     }),
+    is_free_inducts = @{thms free1_raw_T1_free1_raw_T2.induct free2_raw_T1_free2_raw_T2.induct},
     quotient_fps = [
       { T = @{typ "('a::var, 'b::var, 'c::var, 'd) T1"},
         ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"},

@@ -1,133 +1,12 @@
 theory Linearize2                                                        
   imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
   keywords
-  "linearize_mrbnf" :: thy_goal_defn and
-  "lift_bnf_2" :: thy_goal_defn
+  "linearize_mrbnf" :: thy_goal_defn
 begin
 
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
-lemma sum_insert_Inl_unit: "x \<in> A \<Longrightarrow> (\<And>y. x = Inr y \<Longrightarrow> Inr y \<in> B) \<Longrightarrow> x \<in> insert (Inl ()) B"
-  by (cases x) (simp_all)
-
-lemma lift_sum_unit_vimage_commute:
-  "insert (Inl ()) (Inr ` f -` A) = map_sum id f -` insert (Inl ()) (Inr ` A)"
-  by (auto simp: map_sum_def split: sum.splits)
-
-lemma insert_Inl_int_map_sum_unit: "insert (Inl ()) A \<inter> range (map_sum id f) \<noteq> {}"
-  by (auto simp: map_sum_def split: sum.splits)
-
-lemma image_map_sum_unit_subset:
-  "A \<subseteq> insert (Inl ()) (Inr ` B) \<Longrightarrow> map_sum id f ` A \<subseteq> insert (Inl ()) (Inr ` f ` B)"
-  by auto
-
-lemma subset_lift_sum_unitD: "A \<subseteq> insert (Inl ()) (Inr ` B) \<Longrightarrow> Inr x \<in> A \<Longrightarrow> x \<in> B"
-  unfolding insert_def by auto
-
-lemma UNIV_sum_unit_conv: "insert (Inl ()) (range Inr) = UNIV"
-  unfolding UNIV_sum UNIV_unit image_insert image_empty Un_insert_left sup_bot.left_neutral..
-
-lemma subset_vimage_image_subset: "A \<subseteq> f -` B \<Longrightarrow> f ` A \<subseteq> B"
-  by auto
-
-lemma relcompp_mem_Grp_neq_bot:
-  "A \<inter> range f \<noteq> {} \<Longrightarrow> (\<lambda>x y. x \<in> A \<and> y \<in> A) OO (BNF_Def.Grp UNIV f)\<inverse>\<inverse> \<noteq> bot"
-  unfolding Grp_def relcompp_apply fun_eq_iff by blast
-
-lemma comp_projr_Inr: "projr \<circ> Inr = id"
-  by auto
-
-lemma in_rel_sum_in_image_projr:
-  "B \<subseteq> {(x,y). rel_sum ((=) :: unit \<Rightarrow> unit \<Rightarrow> bool) A x y} \<Longrightarrow>
-   Inr ` C = fst ` B \<Longrightarrow> snd ` B = Inr ` D \<Longrightarrow> map_prod projr projr ` B \<subseteq> {(x,y). A x y}"
-  by (force simp: projr_def image_iff dest!: spec[of _ "Inl ()"]  split: sum.splits)
-
-lemma subset_rel_sumI: "B \<subseteq> {(x,y). A x y} \<Longrightarrow> rel_sum ((=) :: unit => unit => bool) A
-    (if x \<in> B then Inr (fst x) else Inl ())
-    (if x \<in> B then Inr (snd x) else Inl ())"
-  by auto
-
-lemma relcompp_eq_Grp_neq_bot: "(=) OO (BNF_Def.Grp UNIV f)\<inverse>\<inverse> \<noteq> bot"
-  unfolding Grp_def relcompp_apply fun_eq_iff by blast
-
-lemma rel_fun_rel_OO1: "(rel_fun Q (rel_fun R (=))) A B \<Longrightarrow> conversep Q OO A OO R \<le> B"
-  by (auto simp: rel_fun_def)
-
-lemma rel_fun_rel_OO2: "(rel_fun Q (rel_fun R (=))) A B \<Longrightarrow> Q OO B OO conversep R \<le> A"
-  by (auto simp: rel_fun_def)
-
-lemma rel_sum_eq2_nonempty: "rel_sum (=) A OO rel_sum (=) B \<noteq> bot"
-  by (auto simp: fun_eq_iff relcompp_apply intro!: exI[of _ "Inl _"])
-
-lemma rel_sum_eq3_nonempty: "rel_sum (=) A OO (rel_sum (=) B OO rel_sum (=) C) \<noteq> bot"
-  by (auto simp: fun_eq_iff relcompp_apply intro!: exI[of _ "Inl _"])
-
-lemma hypsubst: "A = B \<Longrightarrow> x \<in> B \<Longrightarrow> (x \<in> A \<Longrightarrow> P) \<Longrightarrow> P" by simp
-
-lemma Quotient_crel_quotient: "Quotient R Abs Rep T \<Longrightarrow> equivp R \<Longrightarrow> T \<equiv> (\<lambda>x y. Abs x = y)"
-  by (drule Quotient_cr_rel) (auto simp: fun_eq_iff equivp_reflp intro!: eq_reflection)
-
-lemma Quotient_crel_typedef: "Quotient (eq_onp P) Abs Rep T \<Longrightarrow> T \<equiv> (\<lambda>x y. x = Rep y)"
-  unfolding Quotient_def
-  by (auto 0 4 simp: fun_eq_iff eq_onp_def intro: sym intro!: eq_reflection)
-
-lemma Quotient_crel_typecopy: "Quotient (=) Abs Rep T \<Longrightarrow> T \<equiv> (\<lambda>x y. x = Rep y)"
-  by (subst (asm) eq_onp_True[symmetric]) (rule Quotient_crel_typedef)
-
-lemma equivp_add_relconj:
-  assumes equiv: "equivp R" "equivp R'" and le: "S OO T OO U \<le> R OO STU OO R'"
-  shows "R OO S OO T OO U OO R' \<le> R OO STU OO R'"
-proof -
-  have trans: "R OO R \<le> R" "R' OO R' \<le> R'"
-    using equiv unfolding equivp_reflp_symp_transp transp_relcompp by blast+
-  have "R OO S OO T OO U OO R' = R OO (S OO T OO U) OO R'"
-    unfolding relcompp_assoc ..
-  also have "\<dots> \<le> R OO (R OO STU OO R') OO R'"
-    by (intro le relcompp_mono order_refl)
-  also have "\<dots> \<le> (R OO R) OO STU OO (R' OO R')"
-    unfolding relcompp_assoc ..
-  also have "\<dots> \<le> R OO STU OO R'"
-    by (intro trans relcompp_mono order_refl)
-  finally show ?thesis .
-qed
-
-lemma Grp_conversep_eq_onp: "((BNF_Def.Grp UNIV f)\<inverse>\<inverse> OO BNF_Def.Grp UNIV f) = eq_onp (\<lambda>x. x \<in> range f)"
-  by (auto simp: fun_eq_iff Grp_def eq_onp_def image_iff)
-
-lemma Grp_conversep_nonempty: "(BNF_Def.Grp UNIV f)\<inverse>\<inverse> OO BNF_Def.Grp UNIV f \<noteq> bot"
-  by (auto simp: fun_eq_iff Grp_def)
-
-lemma relcomppI2: "r a b \<Longrightarrow> s b c \<Longrightarrow> t c d \<Longrightarrow> (r OO s OO t) a d"
-  by (auto)
-
-lemma rel_conj_eq_onp: "equivp R \<Longrightarrow> rel_conj R (eq_onp P) \<le> R"
-  by (auto simp: eq_onp_def transp_def equivp_def)
-
-lemma Quotient_Quotient3: "Quotient R Abs Rep T \<Longrightarrow> Quotient3 R Abs Rep"
-  unfolding Quotient_def Quotient3_def by blast
-
-lemma Quotient_reflp_imp_equivp: "Quotient R Abs Rep T \<Longrightarrow> reflp R \<Longrightarrow> equivp R"
-  using Quotient_symp Quotient_transp equivpI by blast
-
-lemma Quotient_eq_onp_typedef:
-  "Quotient (eq_onp P) Abs Rep cr \<Longrightarrow> type_definition Rep Abs {x. P x}"
-  unfolding Quotient_def eq_onp_def
-  by unfold_locales auto
-
-lemma Quotient_eq_onp_type_copy:
-  "Quotient (=) Abs Rep cr \<Longrightarrow> type_definition Rep Abs UNIV"
-  unfolding Quotient_def eq_onp_def
-  by unfold_locales auto
-
-ML \<open>
-fun mk_asSS f =
-  let 
-    val T = fastype_of f;
-  in Const (@{const_name asSS}, T --> T) $ f end;
-\<close>
-
-ML_file "../Tools/bnf_lift.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
 declare [[mrbnf_internals]]
@@ -173,12 +52,10 @@ mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F"
 typedef 'a foo = "{x::'a \<times> 'a list. snd x = []}"
   by simp
 
-lift_bnf_2 (no_warn_wits, no_warn_transfer) 'a foo
-  by auto
 (*
 binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t
 *)
-ML \<open>BNF_Util.permute_like_unique (op =) [0, 1] [0, ~1, ~1, 1, ~1] [Bound 4, Bound 3, Bound 2, Bound 1, Bound 0]\<close>
+(*ML \<open>BNF_Util.permute_like_unique (op =) [0, 1] [0, ~1, ~1, 1, ~1] [Bound 4, Bound 3, Bound 2, Bound 1, Bound 0]\<close>*)
 
 
 (*declare [[quick_and_dirty]]*)
@@ -191,12 +68,13 @@ linearize_mrbnf ('a, 'b) dlist = "('a \<times> 'b) list" on 'a
 linearize_mrbnf ('a, F''bset: 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
   sorry
 
-thm sameShape_F_def nonrep_F_def
-thm asSS_F''_def (* should this just be globally defined somewhere? it's not connected to F or F'' *)
+thm F.map_comp
 
-thm F.map_id
+thm sameShape_F_def nonrep_F_def
+
+thm F.map_id F.set_map F.set_map0
 find_theorems name: F.map
-find_theorems name: F''.map (* where are the mrbnf theorems? *)
+find_theorems name: F''.map
 find_theorems name: map_comp0
 
 (* we linearize this MRBNF on position 1*)
@@ -530,7 +408,6 @@ lemma nonrep2_map_F_rev:
     @{thm F.mr_rel_flip} @{thm F.mr_rel_mono_strong0} @{thm F.mr_rel_Grp} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
-
 ML\<open>
 open BNF_Util BNF_Tactics
 fun mk_nonrep2_map_bij_tac mrbnf nonrep_def sameShape_def F_mr_rel_map1 F_mr_rel_map3 F_map_id F_map_comp ctxt = 
@@ -593,7 +470,6 @@ lemma nonrep2_mapF_bij:
   by (tactic \<open>mk_nonrep2_map_bij_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm nonrep2_def}
     @{thm sameShape1_def} @{thm F.mr_rel_map(1)} @{thm F.mr_rel_map(3)} @{thm F.map_id} @{thm F.map_comp} @{context}
     THEN print_tac @{context} "done"\<close>)
-
 
 ML \<open>
 open BNF_Util BNF_Tactics
@@ -668,26 +544,26 @@ open BNF_Util BNF_Tactics
 fun mk_map_comp_tac mrbnf map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 F_map_comp0 ctxt =
   HEADGOAL (Subgoal.FOCUS
     (fn {prems = prems, context = ctxt, ...} =>
-    let
-      val var_types = var_types_of_mrbnf mrbnf;
-      val nr_bounds = length (filter (fn v => v = MRBNF_Def.Bound_Var) var_types);
-      val nr_frees = length (filter (fn v => v = MRBNF_Def.Free_Var) var_types);
-    in
-      unfold_thms_tac ctxt (map_F'_def:: @{thms asSS_def asBij_def}) THEN
-      HEADGOAL(EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (1 + 2*nr_bounds)) @{thms bij_comp} THEN_ALL_NEW
-        TRY o resolve_tac ctxt prems) THEN
-      unfold_thms_tac ctxt @{thms if_True} THEN
-      HEADGOAL (EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (nr_bounds + nr_frees)) @{thms supp_comp_bound} THEN_ALL_NEW
-        TRY o resolve_tac ctxt (@{thm infinite_UNIV} ::prems)) THEN
-      unfold_thms_tac ctxt (@{thm if_True} :: map (fn thm => thm RS eqTrueI) prems) THEN
-      HEADGOAL (rtac ctxt ext) THEN
-      HEADGOAL (EqSubst.eqsubst_tac ctxt [1] [F_map_comp0] THEN_ALL_NEW
-        TRY o resolve_tac ctxt prems) THEN
-      unfold_thms_tac ctxt [o_apply] THEN
-      HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
-        rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
-        rtac ctxt refl])
-    end) ctxt)
+      let
+        val var_types = var_types_of_mrbnf mrbnf;
+        val nr_bounds = length (filter (fn v => v = MRBNF_Def.Bound_Var) var_types);
+        val nr_frees = length (filter (fn v => v = MRBNF_Def.Free_Var) var_types);
+      in
+        unfold_thms_tac ctxt (map_F'_def:: @{thms asSS_def asBij_def}) THEN
+        HEADGOAL(EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (1 + 2*nr_bounds)) @{thms bij_comp} THEN_ALL_NEW
+          TRY o resolve_tac ctxt prems) THEN
+        unfold_thms_tac ctxt @{thms if_True} THEN
+        HEADGOAL (EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (nr_bounds + nr_frees)) @{thms supp_comp_bound} THEN_ALL_NEW
+          TRY o resolve_tac ctxt (@{thm infinite_UNIV} ::prems)) THEN
+        unfold_thms_tac ctxt (@{thm if_True} :: map (fn thm => thm RS eqTrueI) prems) THEN
+        HEADGOAL (rtac ctxt ext) THEN
+        HEADGOAL (EqSubst.eqsubst_tac ctxt [1] [F_map_comp0] THEN_ALL_NEW
+          TRY o resolve_tac ctxt prems) THEN
+        unfold_thms_tac ctxt [o_apply] THEN
+        HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
+          rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+          rtac ctxt refl])
+      end) ctxt)
 \<close>
 
 
@@ -713,11 +589,12 @@ open BNF_Util BNF_Tactics
 
 fun mk_set_map_tac set_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_mapF_bij_2 F_set_map ctxt =
   HEADGOAL (Subgoal.FOCUS
-    (fn {prems = prems, context = ctxt, ...} =>
+    (fn {prems, context = ctxt, ...} =>
       unfold_thms_tac ctxt ([set_F'_def, map_F'_def] @ map (fn thm => thm RS eqTrueI) prems @
         @{thms asSS_def asBij_def if_True o_apply}) THEN
       HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
         rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+                  K (print_tac ctxt "state2"),
         rtac ctxt F_set_map THEN_ALL_NEW
           resolve_tac ctxt prems])
     ) ctxt)
@@ -751,6 +628,10 @@ lemma F'_set2_map_:
   using assms apply -
   by (tactic \<open>mk_set_map_tac @{thm set2_F'_def} @{thm map_F'_def} @{thm Abs_F'_inverse[unfolded mem_Collect_eq]}
     @{thm Rep_F'[unfolded mem_Collect_eq]} @{thm nonrep2_mapF_bij_2} @{thm F.set_map(2)} @{context}\<close>)
+
+(*
+ 2. set1_F (map_F f1a f2a f3a f4a f5a (Rep_F'' xa)) = f1a ` set1_F (Rep_F'' xa) 
+*)
 
 lemma F'_set3_map_:
   fixes u1 :: "'a1::var \<Rightarrow> 'a1"
@@ -877,8 +758,8 @@ lemma F'_rel_comp_leq_: "rrel_F' Q OO rrel_F' R \<le> rrel_F' (Q OO R)"
 ML \<open>
 open BNF_Util BNF_Tactics
 
-fun mk_rrel_F_map_F3_tac F_rel_map F_rel_mono_strong Grp_def ctxt =
-    unfold_thms_tac ctxt ([F_rel_map, Grp_def, eqTrueI OF @{thms UNIV_I}] @ @{thms id_apply simp_thms(21)}) THEN
+fun mk_rrel_F_map_F3_tac F_rel_map F_rel_mono_strong ctxt =
+    unfold_thms_tac ctxt ([F_rel_map, eqTrueI OF @{thms UNIV_I}] @ @{thms Grp_def id_apply simp_thms(21)}) THEN
     HEADGOAL (rtac ctxt @{thm iffI}) THEN
     ALLGOALS (etac ctxt F_rel_mono_strong THEN_ALL_NEW
        (assume_tac ctxt ORELSE' etac ctxt sym))
@@ -887,7 +768,7 @@ fun mk_rrel_F_map_F3_tac F_rel_map F_rel_mono_strong Grp_def ctxt =
 lemma rrel_F_map_F3:
   fixes x :: "('a,'b::var,'c::var,'d,'e::var,'f) F"
   shows "rrel_F (Grp (f :: 'a \<Rightarrow> 'a)) R x y = rrel_F (=) R (map_F f id id id id x) y"
-  by (tactic \<open>mk_rrel_F_map_F3_tac @{thm F.rel_map(1)} @{thm F.rel_mono_strong} @{thm Grp_def} @{context} 
+  by (tactic \<open>mk_rrel_F_map_F3_tac @{thm F.rel_map(1)} @{thm F.rel_mono_strong} @{context} 
     THEN print_tac @{context} "done"\<close>)
 
 ML \<open>
@@ -911,24 +792,22 @@ fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_map
   HEADGOAL (Subgoal.FOCUS
     (fn {prems, context = ctxt,...} =>
       let
-        fun mk_sb_prems _ [] _ = []
-        | mk_sb_prems prems (Live_Var::vars) i = if i = lin_pos then (mk_sb_prems (drop 2 prems) vars (i+1)) else (mk_sb_prems prems vars (i+1))
-        | mk_sb_prems (bp::sp::prems) (Bound_Var::vars) i = bp::sp::(mk_sb_prems prems vars (i+1))
-        | mk_sb_prems (sp::prems) (Free_Var::vars) i = sp::(mk_sb_prems prems vars (i+1))
-        | mk_sb_prems prems (Dead_Var::vars) i = (mk_sb_prems prems vars (i+1))
-        | mk_sb_prems _ _ _ = [];
-
         val var_types = var_types_of_mrbnf mrbnf;
-        val id_prems = MRBNF_Comp_Tactics.mk_id_prems mrbnf;
-        val sb_prems = mk_sb_prems prems var_types 1;
         val nr_lives = length (filter (fn v => v = Live_Var) var_types);
       in
         unfold_thms_tac ctxt ([rrel_F'_def, map_F'_def, o_apply] @ set_F'_defs @ @{thms asSS_def asBij_def if_True} @ 
           map (fn thm => thm RS eqTrueI) (prems @ @{thms supp_id_bound bij_id})) THEN
-        HEADGOAL (EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse])THEN
-        HEADGOAL (rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems)) THEN
-        HEADGOAL (EqSubst.eqsubst_tac ctxt [0] [(unfold_thms ctxt ((F_map_comp OF (sb_prems @ id_prems)):: @{thms id_o o_id})
-          (trans OF [rrel_F_map_F3 RS sym, F_in_rel OF sb_prems]))]) THEN
+        HEADGOAL (EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] [Abs_F'_inverse],
+          rtac ctxt nonrep2_mapF_bij_2 THEN_ALL_NEW resolve_tac ctxt (Rep_F' :: prems),
+          EqSubst.eqsubst_tac ctxt (map_range (fn i => 7+2*(i+nr_lives)) (length var_types)) [@{thm id_o} RS sym],
+          EqSubst.eqsubst_tac ctxt [lin_pos] [trans OF [@{thm id_o}, @{thm o_id} RS sym]],
+          EqSubst.eqsubst_tac ctxt [1] [F_map_comp RS sym] THEN_ALL_NEW
+            TRY o resolve_tac ctxt (prems @ @{thms bij_id supp_id_bound}),
+          EqSubst.eqsubst_tac ctxt [1] [rrel_F_map_F3 RS sym],
+          EqSubst.eqsubst_tac ctxt [1] [F_in_rel] THEN_ALL_NEW
+            TRY o resolve_tac ctxt prems
+        ]) THEN
         unfold_thms_tac ctxt ((eqTrueI OF @{thms UNIV_I}):: @{thms Grp_def simp_thms(21)}) THEN
         HEADGOAL (rtac ctxt iffI) THEN
         (* 1st Subgoal *)
@@ -940,9 +819,8 @@ fun mk_in_rel_tac mrbnf rrel_F'_def map_F'_def Abs_F'_inverse Rep_F' nonrep2_map
                 rtac ctxt exI,
                 EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (nr_lives+1)) [Abs_F'_inverse],
                 Method.insert_tac ctxt [unfold_thms ctxt [(nth subprems 0 RS sym)] (infer_instantiate' ctxt [SOME cx] Rep_F')],
-                EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => if i < lin_pos-1 then 4+2*i else 4+2*(i+1)) (length var_types-1)) 
-                  [@{thm o_id} RS sym],
-                EqSubst.eqsubst_asm_tac ctxt [4+6*(lin_pos-1)] [@{thm id_o} RS sym],
+                EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => 4+2*i) (length var_types)) [@{thm o_id} RS sym],
+                EqSubst.eqsubst_asm_tac ctxt [lin_pos] [trans OF [@{thm o_id}, @{thm id_o} RS sym]],
                 EqSubst.eqsubst_asm_tac ctxt [0] [F_map_comp RS sym] THEN_ALL_NEW
                   TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
                 dtac ctxt (rotate_prems ~1 nonrep2_map_F_rev) THEN_ALL_NEW
@@ -1048,6 +926,7 @@ lemma F'_in_rel:
     @{thm F.map_comp} @{thm nonrep2_map_F_rev} @{thm Rep_F'_inverse} @{thm F.map_cong} @{thms set4_F'_def} @{thms F.set_map}
     @{cterm x} @{context}
     THEN print_tac @{context} "done"\<close>)
+
 
 ML \<open>
 open BNF_Util BNF_Tactics

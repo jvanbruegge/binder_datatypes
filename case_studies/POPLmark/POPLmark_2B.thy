@@ -421,7 +421,7 @@ interpretation tvsubst: QREC_cmin_fixed_trm "IImsupp_1_trm \<rho>1 \<union> IIms
         typ.IImsupp_permute_commute[THEN fun_cong, unfolded comp_def] tvsubst_pat_cong)
         apply auto
      apply (auto simp: permute_typ_eq_tvsubst_typ_TyVar o_def vvsubst_typ_tvsubst_typ[unfolded comp_def, symmetric]
-        intro!: tvsubst_pat_cong typ.SSupp_comp_bound[unfolded comp_def])
+        intro!: tvsubst_pat_cong typ.SSupp_comp_bound_old[unfolded comp_def])
     apply (unfold typ.vvsubst_permute)
     apply (auto intro!: typ.IImsupp_permute_commute[THEN fun_cong, unfolded comp_def])
     done
@@ -1179,7 +1179,7 @@ proof-
       subgoal by (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_subset_bound finite.simps finite_ordLess_infinite2 infinite_UNIV)
       subgoal apply(rule tvsubst_typ_cong)
         subgoal by (metis SSupp_typ_TyVar SSupp_typ_fun_upd_le card_of_subset_bound finite.simps finite_ordLess_infinite2 infinite_UNIV)
-        subgoal by (simp add: SSupp_typ_tvsubst_typ_bound \<open>|SSupp_typ (TyVar(f X := T2))| <o |UNIV|\<close> f(2) typ.SSupp_comp_bound)
+        subgoal by (simp add: SSupp_typ_tvsubst_typ_bound \<open>|SSupp_typ (TyVar(f X := T2))| <o |UNIV|\<close> f(2) typ.SSupp_comp_bound_old)
         subgoal apply simp
           subgoal
        using \<open>|SSupp_typ (TyVar(f X := T2))| <o |UNIV|\<close> bij_implies_inject f(1,3) id_onD by fastforce  . . . .

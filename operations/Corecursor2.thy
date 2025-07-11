@@ -1099,11 +1099,11 @@ lemma suitable2_FVarsD:
 
 lemmas suitable_FVarsD = suitable1_FVarsD suitable2_FVarsD
 
-lemma f_FVarsD_aux:
+lemma f_FVarsD_aux1:
   assumes "is_free_raw_T11 a t"
-    "(\<And>d. valid_U d \<Longrightarrow> t = f pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars d)"
-    "pred_sum (\<lambda>_. True) valid_U td"
-  shows "t = case_sum id (f pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_1_raw raw_UFVars td"
+    "(\<And>d. valid_U1 d \<Longrightarrow> t = f1 pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars11 d)"
+    "pred_sum (\<lambda>_. True) valid_U1 td"
+  shows "t = case_sum id (f1 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_1_raw raw_UFVars11 td"
   apply (rule sumE[of td])
    apply hypsubst
    apply (subst sum.case)
@@ -1123,6 +1123,31 @@ lemma f_FVarsD_aux:
   apply assumption
   apply assumption
   done
+lemma f_FVarsD_aux2:
+  assumes "is_free_raw_T21 a t"
+    "(\<And>d. valid_U2 d \<Longrightarrow> t = f2 pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars21 d)"
+    "pred_sum (\<lambda>_. True) valid_U2 td"
+  shows "t = case_sum id (f2 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T2_1_raw raw_UFVars21 td"
+  apply (rule sumE[of td])
+   apply hypsubst
+   apply (subst sum.case)
+   apply (unfold FVars_T2_1_raw_def mem_Collect_eq)
+   apply (insert assms(1))[1]
+   apply (hypsubst_thin)
+   apply (subst (asm) sum.case)
+   apply (subst (asm) id_apply)
+   apply assumption
+  apply hypsubst
+  apply (subst sum.case)
+  apply (rule assms(2))
+   apply (unfold sum.simps)
+   apply (insert assms(3))[1]
+   apply hypsubst_thin
+   apply (subst (asm) pred_sum_inject)
+  apply assumption
+  apply assumption
+  done
+lemmas f_FVarsD_aux = f_FVarsD_aux1 f_FVarsD_aux2
 
 (* TODO: just realized there exists some simp tactics in this proof :') *)
 (* TODO: we probably also need variants of these for T2 *)
@@ -1200,36 +1225,33 @@ thm is_free_raw_T12_is_free_raw_T22.inducts
 
 lemma f_FVarsD:
   assumes p: "suitable1 pick1" "suitable2 pick"
-and valid_d: "valid_U1 d"
-  shows "FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
-  apply (rule subsetI)
-  apply (unfold FVars_T1_1_raw_def mem_Collect_eq)
-  apply (erule is_free_raw_T11_is_free_raw_T21.inducts(1)[of _ _ "\<lambda>x y. \<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> x \<in> raw_UFVars11 d", THEN spec, THEN mp, THEN mp[OF _ refl]])
-
+  shows "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
+proof -
+  have x: "\<And>a y y2. (is_free_raw_T11 a y \<longrightarrow> (\<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> a \<in> raw_UFVars11 d))
+    \<and> (is_free_raw_T21 a y2 \<longrightarrow> (\<forall>d2. valid_U2 d2 \<longrightarrow> y2 = f2 pick1 pick2 d2 \<longrightarrow> a \<in> raw_UFVars21 d2))"
+    apply (rule is_free_raw_T11_is_free_raw_T21.induct)
+          (* REPEAT_DETERM *)
               apply (rule allI)
               apply (rule impI)+
-              apply (drule DiffI, assumption)?
-              apply (erule le_supE[OF suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc]])
-              apply (erule subsetD)
-              apply (drule f_ctor)
+               apply (drule DiffI, assumption)?
+               apply (erule suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc, THEN set_mp])
+               apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
-              apply (unfold image_id)
-              apply (rule UnI1)?
-              apply assumption
-
-             (* almost repeated above *)
-             apply (rule allI)
-             apply (rule impI)+
-             apply (drule DiffI, assumption)?
-             apply (erule le_supE[OF suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc, THEN arg_cong2[of _ _ _ _ "(\<subseteq>)", OF _ refl, THEN iffD1, OF Un_commute]]])
-             apply (erule subsetD)
-             apply (drule f_ctor)
-             apply hypsubst
-             apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
-             apply (unfold image_id)
-             apply (rule UnI1)?
-             apply assumption
+               apply (unfold image_id Un_assoc[symmetric])[1]
+               apply (erule UnI1 UnI2 | rule UnI1)+
+            (* repeated *)
+            apply (rule allI)
+              apply (rule impI)+
+               apply (drule DiffI, assumption)?
+               apply (erule suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc, THEN set_mp])
+               apply (drule f_ctor)
+              apply hypsubst
+              apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+               apply (unfold image_id Un_assoc[symmetric])[1]
+              apply (erule UnI1 UnI2 | rule UnI1)+
+          (* END REPEAT_DETERM *)
 
 (* REPEAT_DETERM *)
    apply (rule allI)
@@ -1240,8 +1262,7 @@ and valid_d: "valid_U1 d"
    apply (unfold image_id)?
    apply (erule imageE)
    apply hypsubst
-  thm f_FVarsD_aux[of _ _ valid_U1 f1 _ _ raw_UFVars11]
-   apply (drule f_FVarsD_aux[of _ _ valid_U1 f1 _ _ raw_UFVars11])
+   apply (drule f_FVarsD_aux)
      apply (erule allE)
       apply (erule impE)
        prefer 2
@@ -1252,7 +1273,7 @@ and valid_d: "valid_U1 d"
               prefer 2
   apply (rule refl)
              prefer 2
-   apply (rule suitable_FVarsD[THEN subsetD, rotated]) (* TODO: put union members in correct order *)
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
   apply assumption
        apply (unfold Un_assoc)
     apply (rule UnI2)
@@ -1275,8 +1296,7 @@ and valid_d: "valid_U1 d"
    apply (unfold image_id)?
    apply (erule imageE)
    apply hypsubst
-  thm f_FVarsD_aux[of _ _ valid_U1 f1 _ _ raw_UFVars11]
-   apply (drule f_FVarsD_aux[of _ _ valid_U1 f1 pick1 pick2 raw_UFVars11])
+   apply (drule f_FVarsD_aux)
      apply (erule allE)
       apply (erule impE)
        prefer 2
@@ -1287,7 +1307,7 @@ and valid_d: "valid_U1 d"
               prefer 2
   apply (rule refl)
              prefer 2
-   apply (rule suitable_FVarsD[THEN subsetD, rotated]) (* TODO: put union members in correct order *)
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
   apply assumption
        apply (unfold Un_assoc)
     apply (rule UnI2)
@@ -1304,22 +1324,17 @@ and valid_d: "valid_U1 d"
 (* repeated *)
    apply (rule allI)
           apply (rule impI)+
-(* TODO: I needed to rotate here, otherwise frule matches with the other
-premise. Why do we have that other premise anyway? *)
-  apply (rotate_tac -1)
    apply (frule f_ctor)
    apply hypsubst
    apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
    apply (unfold image_id)?
    apply (erule imageE)
    apply hypsubst
-  thm f_FVarsD_aux[of _ _ valid_U1 f1 pick1 pick2 raw_UFVars11]
-   apply (drule f_FVarsD_aux[of _ _ valid_U1 f1 pick1 pick2 raw_UFVars11])
-     apply (erule allE)?
-      apply (erule impE)?
+   apply (drule f_FVarsD_aux)
+     apply (erule allE)
+      apply (erule impE)
        prefer 2
-             apply (erule impE)?
-  oops
+             apply (erule impE)
       apply assumption
         apply assumption
   apply assumption
@@ -1331,33 +1346,47 @@ premise. Why do we have that other premise anyway? *)
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 3] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 4] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
     apply assumption
-     apply (rule assms)
+            apply (rule assms)
+  (*
    apply (drule valid_pick_set9[OF p(1)])
     apply assumption
   apply assumption
  (* TODO: repeat some more *)
 
   done
-    (* END REPEAT_DETERM *)
+    (* END REPEAT_DETERM *)*)
+    sorry
+  show "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
+     apply -
+     apply (rule subsetI)
+     apply (erule x[THEN conjunct1, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1] x[THEN conjunct2, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1])
+      apply (rule refl)
+     apply (unfold FVars_T1_1_raw_def mem_Collect_eq)
+     apply assumption
+  (* repeated *)
+     apply (rule subsetI)
+     apply (erule x[THEN conjunct1, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1] x[THEN conjunct2, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1])
+      apply (rule refl)
+     apply (unfold FVars_T2_1_raw_def mem_Collect_eq)
+    apply assumption
+    done
+qed
 
 thm T1.permute_raw_comp0s
 
 lemma OO_permute:
   assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
-          "bij (u'::'a\<Rightarrow>'a)" "|supp u'| <o |UNIV::'a set|"
           "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+          "bij (u'::'a\<Rightarrow>'a)" "|supp u'| <o |UNIV::'a set|"
           "bij (v'::'b\<Rightarrow>'b)" "|supp v'| <o |UNIV::'b set|"
   shows "((\<lambda>t. alpha_T1 (permute_T1_raw u v t)) OO (\<lambda>t. alpha_T1 (permute_T1_raw u' v' t))) = (\<lambda>t. alpha_T1 (permute_T1_raw (u' \<circ> u) (v' \<circ> v) t))"
-  thm T1.permute_comp0
-(* TODO: what to use instead of "permute_raw_comp0s"?
-mrbnf_fp_def_sugar does not have a corresponding definition
-*)
-  apply (unfold permute_raw_comp0s[OF assms, symmetric])
+  apply (unfold T1.permute_raw_comp0s[OF assms, symmetric])
   apply (rule ext)
   apply (rule ext)
   apply (rule iffI)
@@ -1365,7 +1394,7 @@ mrbnf_fp_def_sugar does not have a corresponding definition
    apply (erule exE)+
    apply (erule conjE)+
    apply hypsubst
-   apply (erule alpha_trans[rotated])
+   apply (erule T1.alpha_trans[rotated])
   apply (subst comp_apply)
    apply (subst alpha_bij_eqs, (rule assms)+)
    apply assumption

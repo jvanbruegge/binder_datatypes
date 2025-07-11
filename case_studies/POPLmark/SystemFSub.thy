@@ -314,7 +314,7 @@ proof
   proof (binder_induction T avoiding: "IImsupp_typ (TyVar \<circ> \<sigma>)" T rule: typ.strong_induct)
     case Bound
     then show ?case using assms
-      by (auto simp: IImsupp_typ_def infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.SSupp_comp_bound)
+      by (auto simp: IImsupp_typ_def infinite_UNIV intro!: typ.Un_bound typ.UN_bound typ.SSupp_comp_bound_old)
   next
     case (Forall X T1 T2)
     then show ?case

@@ -9,7 +9,7 @@ begin
 
 (* DATATYPE DECLARTION  *)
 
-(*declare [[mrbnf_internals]]*)
+declare [[mrbnf_internals]]
 binder_datatype 'a "term" =
   Var 'a
 | App "'a term" "'a term"
@@ -29,6 +29,8 @@ apply standard
   subgoal using infinite_var . .
 
 type_synonym trm = "var term"
+
+hide_const IImsupp SSupp
 
 (* Some lighter notations: *)
 abbreviation "VVr \<equiv> tvVVr_tvsubst"
@@ -435,9 +437,9 @@ lemma tvsubst_inv:
   shows "tvsubst (rrename \<sigma> \<circ> (Var(x := e2)) \<circ> inv \<sigma>) (rrename \<sigma> e1) = tvsubst (rrename \<sigma> \<circ> (Var(x := e2))) e1"
 proof -
   have 1: "|SSupp_term (rrename \<sigma> \<circ> (Var(x := e2)))| <o |UNIV::var set|"
-    using term.SSupp_comp_bound SSupp_rrename_update_bound assms(1,2) by blast
+    using term.SSupp_comp_bound_old SSupp_rrename_update_bound assms(1,2) by blast
   then have 2: "|SSupp_term (rrename \<sigma> \<circ> (Var(x := e2)) \<circ> inv \<sigma>)| <o |UNIV::var set|"
-    using term.SSupp_comp_bound assms by force
+    using term.SSupp_comp_bound_old assms by force
   show ?thesis using assms 1 2
   proof (binder_induction e1 avoiding: "imsupp \<sigma>" x e2 e1 rule: term.strong_induct)
     case Bound

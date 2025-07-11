@@ -40,6 +40,7 @@ sig
   val var_type_ord: var_type ord
 
   val interlace: 'a list -> 'a list -> 'a list -> var_type list -> 'a list
+  val deinterlace: 'a list -> var_type list -> 'a list * 'a list * 'a list
 
   val name_of_mrbnf: mrbnf -> binding
   val T_of_mrbnf: mrbnf -> typ
@@ -798,6 +799,11 @@ fun interlace _ _ _ [] = []
   | interlace (a :: als) bs fs (Live_Var::ts) = a :: interlace als bs fs ts
   | interlace als (b::bs) fs (Bound_Var::ts) = b :: interlace als bs fs ts
   | interlace als bs (f::fs) (Free_Var::ts) = f :: interlace als bs fs ts
+
+fun deinterlace [] _ = ([], [], [])
+  | deinterlace (x :: xs) (Live_Var::ts) = let val (a, b, c) = deinterlace xs ts in (x::a, b, c) end
+  | deinterlace (x :: xs) (Bound_Var::ts) = let val (a, b, c) = deinterlace xs ts in (a, x::b, c) end
+  | deinterlace (x :: xs) (Free_Var::ts) = let val (a, b, c) = deinterlace xs ts in (a, b, x::c) end
 
 (*terms*)
 val map_of_mrbnf = #map o rep_mrbnf;
@@ -1659,14 +1665,13 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
       in bs ~~ set_rhss end;
     val bd_bind_def = (fn () => def_qualify (mk_prefix_binding bdN), bd_rhs);
 
-    val ((((mrbnf_map_term, raw_map_def),
+    val (((mrbnf_map_term, raw_map_def),
       (mrbnf_set_terms, raw_set_defs)),
-      _ (* (mrbnf_bd_term, raw_bd_def) *)), (lthy, lthy_old)) =
+      (lthy, lthy_old)) =
         no_defs_lthy
         |> Local_Theory.begin_nested |> snd
         |> maybe_define true map_bind_def
         ||>> apfst split_list o fold_map (maybe_define true) set_binds_defs
-        ||>> (fn lthy => ((bd_rhs, Drule.reflexive_thm), lthy)) (* maybe_define true bd_bind_def*)
         ||> `Local_Theory.end_nested;
 
     val phi = Proof_Context.export_morphism lthy_old lthy;

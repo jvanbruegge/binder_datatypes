@@ -37,6 +37,8 @@ session Binders in "thys" = Prelim +
     Generic_Barendregt_Enhanced_Rule_Induction
     General_Customization
     Urban_Berghofer_Norrish_Rule_Induction
+    Swapping
+    Support
 
 session Operations in "operations" = Untyped_Lambda_Calculus +
   theories
@@ -49,6 +51,8 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     VVSubst
     TVSubst
     Sugar
+    BMV_Monad
+    BMV_Fixpoint
 
 session Tests in "tests" = Binders +
   sessions

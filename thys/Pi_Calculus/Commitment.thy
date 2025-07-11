@@ -112,7 +112,9 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   inject = @{thms commit.inject},
   mrbnf = the (MRBNF_Def.mrbnf_of @{context} "Commitment.commit_pre"),
   set_simpss = [],
-  subst_simps = NONE
+  subst_simps = NONE,
+  IImsupp_Diffs = NONE,
+  IImsupp_permute_commutes = NONE
 }\<close>
 
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"

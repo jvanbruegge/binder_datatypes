@@ -16,19 +16,16 @@ sig
 
   type tvsubst_result = {
     tvsubst: term,
-    SSupps: term list,
-    IImsuppss: term list list,
-    VVrs: (term * thm) list,
-    isVVrs: thm list,
-    tvsubst_VVrs: thm list,
-    tvsubst_cctor_not_isVVr: thm,
-    tvsubst_permute: thm
+    isInjs: (term * thm) list,
+    tvsubst_Injs: thm list,
+    tvsubst_not_isInj: thm,
+    mrsbnf: MRSBNF_Def.mrsbnf
   };
 
   val create_tvsubst_of_mrsbnf: (binding -> binding) -> MRBNF_FP_Def_Sugar.fp_result
     -> MRSBNF_Def.mrsbnf -> MRBNF_Def.mrbnf -> thm -> binding
     -> (Proof.context -> tactic) eta_model option list -> string -> local_theory
-    -> tvsubst_result list * local_theory
+    -> tvsubst_result * local_theory
 end
 
 structure TVSubst : TVSUBST =
@@ -54,13 +51,10 @@ type 'a eta_model = {
 
 type tvsubst_result = {
   tvsubst: term,
-  SSupps: term list,
-  IImsuppss: term list list,
-  VVrs: (term * thm) list,
-  isVVrs: thm list,
-  tvsubst_VVrs: thm list,
-  tvsubst_cctor_not_isVVr: thm,
-  tvsubst_permute: thm
+  isInjs: (term * thm) list,
+  tvsubst_Injs: thm list,
+  tvsubst_not_isInj: thm,
+  mrsbnf: MRSBNF_Def.mrsbnf
 };
 
 val names = map (fst o dest_Free);
@@ -1720,45 +1714,13 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
         set_Vrs = replicate nvars (fn ctxt => rtac ctxt refl 1)
       }) (0 upto length ops - 1)) lthy;
 
-    val _ = @{print} rec_mrsbnf
-
-    (*
-    val results = @{map 6} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => fn tvsubst_permute => {
+    val result = {
       tvsubst = fst tvsubst,
-      SSupps = map_filter (Option.map (fst o #SSupp)) defs,
-      IImsuppss = map_filter (Option.map (map fst o #IImsupps)) defs,
-      VVrs = VVrs',
-      isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
-      tvsubst_VVrs = map_filter I tvsubst_VVrs,
-      tvsubst_cctor_not_isVVr = tvsubst_not_isVVr,
-      tvsubst_permute = tvsubst_permute
-    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss' tvsubst_permutes;
+      isInjs = map_filter (Option.map #isInj) defs,
+      tvsubst_Injs = map_filter I tvsubst_Injs,
+      tvsubst_not_isInj = tvsubst_not_isInj,
+      mrsbnf = rec_mrsbnf
+    }: tvsubst_result;
 
-    (* TODO: Remove *)
-    val notes =
-      [("SSupp_VVr_empty", maps (map_filter I) SSupp_VVr_emptiess),
-       ("SSupp_VVr_bound", maps (map_filter I) SSupp_VVr_boundss),
-       ("in_IImsupp", flat (maps (map_filter I) in_IImsuppsss)),
-       ("is_VVr_rrename", maps (map_filter I) isVVr_renamess),
-       ("rrename_VVr", maps (map_filter I) permute_VVrss),
-       ("SSupp_natural", maps (map_filter I) SSupp_naturalss),
-       ("SSupp_comp_rename_bound", maps (map_filter (Option.map #SSupp_comp_rename_bound)) SSupp_compss),
-       ("SSupp_comp_bound_old", maps (map_filter (Option.map #SSupp_comp_bound)) SSupp_compss),
-       ("eta_set_empties", flat (maps (map_filter I) eta_set_emptiess)),
-       ("FVars_VVr", flat (maps (map_filter I) FVars_VVrss)),
-       ("tvsubst_VVr", maps (map_filter I) tvsubst_VVrss),
-       ("tvsubst_cctor_not_isVVr", tvsubst_not_isVVrs),
-       ("tvsubst_permutes", tvsubst_permutes),
-       ("IImsupp_permute_commute", maps (map_filter I) IImsupp_imsupp_permute_commutess),
-       ("IImsupp_Diff", maps (map_filter I) IImsupp_Diffss),
-       ("IImsupp_natural", flat (maps (map_filter I) IImsupp_naturalsss))
-       (*("FFVars_tvsubst", map_filter I FFVars_tvsubsts)*)
-      ] |> (map (fn (thmN, thms) =>
-        ((Binding.qualify true (short_type_name (fst (dest_Type (#T (hd (#quotient_fps fp_res))))))
-          (Binding.name thmN), []), [(thms, [])])
-      ));
-    val (_, lthy) = Local_Theory.notes notes lthy
-
-  in (results, lthy) end;
-*) in error "tvsubst" end
+  in (result, lthy) end;
 end

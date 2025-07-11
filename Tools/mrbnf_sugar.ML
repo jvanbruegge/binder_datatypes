@@ -42,7 +42,7 @@ val binder_sugar_of: local_theory -> string -> binder_sugar option
 val register_binder_sugar: string -> binder_sugar -> local_theory -> local_theory
 
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
-  -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRBNF_Def.mrbnf * MRBNF_Comp.absT_info) * local_theory
+  -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRSBNF_Def.mrsbnf * MRBNF_Comp.absT_info) * local_theory
 val create_binder_datatype : spec -> local_theory -> binder_sugar * local_theory
 
 end
@@ -136,20 +136,22 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
   let
     val fp_pre_T = BNF_FP_Util.mk_sumprodT_balanced (map snd (#ctors spec));
 
-    val (resBs, Xs) = (*fold_rev (
-      fn (x, Free_Var) => (fn (a, b) => (x::a, b))
-       | (x, _) => (fn (a, b) => (a, x::b))
-    ) (#vars spec) ([], []);*) (map fst (#vars spec), [])
-    fun flatten_tyargs Ass = subtract (op =) Xs (filter (fn T => exists (fn Ts => member (op =) Ts T) Ass) resBs) @ Xs;
+    val Xs = map fst (#vars spec);
+    fun flatten_tyargs Ass = inter (op=) (flat Ass) Xs;
 
     val name = Binding.name_of (#fp_b spec);
     val pre_name = name ^ "_pre" (* ^ name *);
-    val ((mrbnf, tys), (accum, lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
-      (Binding.prefix_name pre_name) flatten_tyargs Xs [] (#vars spec) fp_pre_T ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-    val (_, _, (mrbnfs, (accum, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
-      [] (#vars spec) (K (map fst (#vars spec))) NONE [mrbnf] (accum, lthy);
-    val mrbnf = hd mrbnfs;
-    val ((mrbnf, _, (Ds, absinfo)), lthy) = MRBNF_Comp.seal_mrbnf I (snd accum) (Binding.name pre_name) true (fst tys) [] mrbnf NONE lthy;
+    val ((mrsbnf_opt, tys), (((_, bmv_unfolds), accum), lthy)) = MRSBNF_Comp.mrsbnf_of_typ true (K BNF_Def.Dont_Note)
+      (Binding.prefix_name pre_name) [] (#vars spec) flatten_tyargs fp_pre_T (((Symtab.empty, []), (MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds)), lthy);
+
+    val (mrsbnf, lthy) = case mrsbnf_opt of
+      Inl mrsbnf => (mrsbnf, lthy) | Inr mrbnf => MRSBNF_Def.mrsbnf_of_mrbnf mrbnf lthy
+
+    val ((mrsbnf, (Ds, absinfo)), lthy) = MRSBNF_Comp.seal_mrsbnf I (bmv_unfolds, snd accum)
+      (Binding.name pre_name) (#vars spec) tys mrsbnf NONE lthy;
+    
+    val mrbnf = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
+
     val (bnf, lthy) = MRBNF_Def.register_mrbnf_as_bnf mrbnf lthy
     val (res, lthy) = MRBNF_FP.construct_binder_fp fp [{
       T_name = name,
@@ -158,7 +160,7 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
       permute = Option.map Binding.name_of (#permute_b spec),
       FVars = map (Option.map Binding.name_of) (take (length (#binding_rel spec)) (#FVars_bs spec))
     }] (map single (#binding_rel spec)) lthy;
-  in ((res, fp_pre_T, mrbnf, absinfo), lthy) end
+  in ((res, fp_pre_T, mrsbnf, absinfo), lthy) end
 
 fun mr_bnf_of lthy prefer_quot s =
   let
@@ -256,7 +258,8 @@ fun build_set_for _ aT x (TFree (s, _)) = if s = fst (dest_TFree aT) then SOME (
 
 fun create_binder_datatype (spec : spec) lthy =
   let
-    val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
+    val ((res, fp_pre_T, mrsbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
+    val mrbnf = hd (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
     val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
 
@@ -857,9 +860,9 @@ fun create_binder_datatype (spec : spec) lthy =
 
         val etas = map_filter I (map_index (fn (i, (_, tys)) =>
           if length tys = 1 andalso member (op=) frees (hd tys) andalso
-            not (member (op=) (@{print}(map TFree (
+            not (member (op=) (map TFree (
               fold Term.add_tfreesT (maps snd (take i (#ctors spec) @ drop (i + 1) (#ctors spec))) []
-            ))) (@{print}(hd tys)))
+            )) (hd tys))
           then
             SOME (Term.abs ("a", Term.typ_subst_atomic replace' (hd tys)) (mk_ctor (i + 1) [Bound 0] abs'))
           else NONE

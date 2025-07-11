@@ -15,7 +15,7 @@ signature MRSBNF_COMP = sig
         * (((MRSBNF_Def.mrsbnf Symtab.table * thm list) * (MRBNF_Comp.comp_cache * MRBNF_Comp.unfold_set)) * local_theory)
 
   val seal_mrsbnf: (binding -> binding) -> (thm list * MRBNF_Comp.unfold_set) -> binding
-    -> typ list -> typ list -> MRSBNF_Def.mrsbnf -> (string * Typedef.info) option -> local_theory
+    -> ((string * sort) * MRBNF_Def.var_type) list -> typ list * typ list -> MRSBNF_Def.mrsbnf -> (string * Typedef.info) option -> local_theory
     -> (MRSBNF_Def.mrsbnf * (typ list * MRBNF_Comp.absT_info)) * local_theory
 
 end
@@ -44,23 +44,30 @@ fun morph_info phi ({rep_type, abs_type, Rep_name: string, Abs_name: string, axi
   axiom_name = axiom_name
 }, x)
 
-fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name vars Ds mrsbnf info_opt lthy =
+fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt lthy =
   let
+    val Ds = fst tys;
+    val vars = map (TFree o fst) Xs;
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
-    val mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad bmv);
-    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf;
-    val (lives, bounds, frees) = MRBNF_Def.deinterlace vars var_types;
+    val mrbnf' = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad bmv);
+
+    val (_, _, (mrbnfs', (_, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
+      [] Xs (K (map fst Xs)) NONE [mrbnf'] ((MRBNF_Comp.empty_comp_cache, mrbnf_unfolds), lthy);
+    val mrbnf' = hd mrbnfs';
+    val ((mrbnf, info, (Ds, absT_info)), lthy) = MRBNF_Comp.seal_mrbnf qualify mrbnf_unfolds name true Ds Ds mrbnf' info_opt lthy;
+
+    val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf';
+    val (lives, bounds, frees) = MRBNF_Def.deinterlace (snd tys) var_types;
     val bounds = map (resort_tfree_or_tvar @{sort var}) bounds;
     val frees = map (resort_tfree_or_tvar @{sort var}) frees;
-    val rep_T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf;
-
-    val ((mrbnf, info, (Ds, absT_info)), lthy) = MRBNF_Comp.seal_mrbnf qualify mrbnf_unfolds name true Ds Ds mrbnf info_opt lthy;
+    val rep_T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf';
 
     val (lives', _) = lthy
       |> fold Variable.declare_typ (vars @ map TFree (fold Term.add_tfreesT Ds []))
       |> mk_TFrees (length lives);
 
     val T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf;
+
     val info = map_prod I (morph_info (MRBNF_Util.subst_typ_morphism (
       (op~~) (apply2 (fn T => map TFree (Term.add_tfreesT T [])) (#abs_type (fst (snd info)), T))
     ))) info;
@@ -83,8 +90,8 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name vars Ds mrsbnf info_op
     val mrbnfs = map_index (fn (i, x) => if i = BMV_Monad_Def.leader_of_bmv_monad bmv then mrbnf else x)
       (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
-    val defs = bmv_defs @ [MRBNF_Def.map_def_of_mrbnf mrbnf] @ MRBNF_Def.set_defs_of_mrbnf mrbnf;
     val mrbnf_defs = #map_unfolds mrbnf_unfolds @ flat (#set_unfoldss mrbnf_unfolds);
+    val defs = mrbnf_defs @ bmv_defs @ [MRBNF_Def.map_def_of_mrbnf mrbnf] @ MRBNF_Def.set_defs_of_mrbnf mrbnf;
     val copy = #type_definition (snd (snd info));
 
     val abs = Term.map_types (Logic.incr_tvar_same 1) (
@@ -104,7 +111,7 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name vars Ds mrsbnf info_op
     ) (BMV_Monad_Def.ops_of_bmv_monad bmv) mrbnfs;
 
     val subst = Term.subst_atomic_types (lives ~~ lives');
-    val unfold_defs = Local_Defs.unfold0 lthy mrbnf_defs;
+    val unfold_defs = Local_Defs.unfold lthy mrbnf_defs;
 
     val comp_assocs = [
       infer_instantiate' lthy [SOME (Thm.cterm_of lthy (subst abs))] @{thm comp_assoc},
@@ -145,16 +152,17 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name vars Ds mrsbnf info_op
           K (Local_Defs.unfold0_tac ctxt (comp_assocs @ [@{thm type_copy_Rep_o_Abs_o} OF [copy]])),
           rtac ctxt (unfold_defs (#map_is_Sb axioms)) THEN_ALL_NEW assume_tac ctxt
         ],
-        set_Sb = map (fn thm => fn ctxt => EVERY1 [
+        set_Sb = map (fn _ => fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
           K (Local_Defs.unfold0_tac ctxt (comp_applys @ [#Abs_inverse (snd (snd info)) OF @{thms UNIV_I}])),
           rtac ctxt trans,
-          rtac ctxt (unfold_defs thm) THEN_ALL_NEW assume_tac ctxt,
+          resolve_tac ctxt (map unfold_defs (#set_Sb axioms)),
+          REPEAT_DETERM o assume_tac ctxt,
           K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
           rtac ctxt refl
         ]) (#set_Sb axioms),
         set_Vrs = map (fn thm => fn ctxt => EVERY1 [
-          K (Local_Defs.unfold0_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
+          K (Local_Defs.unfold_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
           rtac ctxt @{thm trans[OF comp_apply]},
           rtac ctxt trans,
           rtac ctxt (unfold_defs thm),
@@ -205,15 +213,12 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
     val outer_mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf outer) leader;
     val inner_mrbnfs = map (fn mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) leader) inners;
 
-    val _ = @{print} ("Ts", map MRBNF_Def.T_of_mrbnf inner_mrbnfs)
-
     val ((mrbnf, tys), (mrbnf_unfolds, lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline
       qualify flatten_tyargs outer_mrbnf inner_mrbnfs oDs Dss oAs Ass Xs (accum, lthy);
 
     val mrbnf =
       let
         val T = hd (BMV_Monad_Def.ops_of_bmv_monad bmv);
-        val _ = @{print} (MRBNF_Def.T_of_mrbnf mrbnf, T)
         val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (MRBNF_Def.T_of_mrbnf mrbnf, T) Vartab.empty;
         val phi = MRBNF_Util.subst_typ_morphism (map (fn (x, (s, T)) => (TVar (x, s), T)) (Vartab.dest tyenv));
       in MRBNF_Def.morph_mrbnf phi mrbnf end

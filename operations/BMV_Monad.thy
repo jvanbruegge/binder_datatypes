@@ -160,6 +160,9 @@ binder_datatype 'a LM =
   | App "'a LM" "'a LM"
   | Lam x::'a t::"'a LM" binds x in t
 
+abbreviation "SSupp_LM \<equiv> SSupp Var"
+abbreviation "IImsupp_LM h \<equiv> SSupp Var h \<union> IImsupp Var FVars_LM h"
+
 axiomatization Vrs_1 :: "'a::var LM \<Rightarrow> 'a set" where
   Vrs_1_simp1[simp]: "Vrs_1 (Var x) = {}"
     and Vrs_1_simp2[simp]: "Vrs_1 (Lst xs) = set xs"
@@ -181,14 +184,6 @@ ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
 
-lemma VVr_eq_Var_LM[simp]: "tvVVr_tvsubst_LM = Var"
-  apply (unfold tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def comp_def Var_def)
-  apply (rule refl)
-  done
-lemma IImsupp_SSupp_bound[simp]: "( |IImsupp_LM (f::'a::var \<Rightarrow> _)| <o |UNIV::'a set| ) \<longleftrightarrow> ( |SSupp_LM f| <o |UNIV::'a set| )"
-  apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM)
-  by (meson LM.set_bd_UNIV UN_bound card_of_Un1 ordLeq_ordLess_trans type_copy_set_bd var_class.Un_bound)
-
 lemma Vrs_Un: "FVars_LM t = Vrs_1 t \<union> Vrs_2 t"
   apply (induction t rule: LM.induct)
      apply auto
@@ -201,13 +196,13 @@ lemma IImsupp_Diff_Vrs_1: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Uni
   apply (erule disjE)
    apply (drule Int_emptyD)
     apply assumption
-   apply (unfold IImsupp_LM_def Un_iff de_Morgan_disj SSupp_LM_def VVr_eq_Var_LM mem_Collect_eq not_not)[1]
+   apply (unfold IImsupp_def Un_iff de_Morgan_disj SSupp_def mem_Collect_eq not_not)[1]
    apply (erule conjE)
    apply assumption
   apply (erule contrapos_np)
   apply (rule trans[OF Int_commute])
   apply (erule Int_subset_empty2)
-  apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM comp_def Vrs_Un)
+  apply (unfold IImsupp_def SSupp_def comp_def Vrs_Un)
   apply (rule subsetI)
   apply (rule UnI2)
   apply (rule UN_I)
@@ -223,13 +218,13 @@ lemma IImsupp_Diff_Vrs_2: "B \<inter> IImsupp_LM h = {} \<Longrightarrow> (\<Uni
   apply (erule disjE)
    apply (drule Int_emptyD)
     apply assumption
-   apply (unfold IImsupp_LM_def Un_iff de_Morgan_disj SSupp_LM_def VVr_eq_Var_LM mem_Collect_eq not_not)[1]
+   apply (unfold IImsupp_def Un_iff de_Morgan_disj SSupp_def mem_Collect_eq not_not)[1]
    apply (erule conjE)
    apply assumption
   apply (erule contrapos_np)
   apply (rule trans[OF Int_commute])
   apply (erule Int_subset_empty2)
-  apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM comp_def Vrs_Un)
+  apply (unfold IImsupp_def SSupp_def comp_def Vrs_Un)
   apply (rule subsetI)
   apply (rule UnI2)
   apply (rule UN_I)
@@ -242,47 +237,39 @@ lemma Vrs_1_Sb_LM:
   fixes f1::"'a::var \<Rightarrow> 'a"
   assumes "|supp f1| <o |UNIV::'a set|" "|SSupp_LM f2| <o |UNIV::'a set|"
   shows "Vrs_1 (Sb_LM f1 f2 t) = f1 ` Vrs_1 t \<union> (\<Union>x\<in>Vrs_2 t. Vrs_1 (f2 x))"
-proof (binder_induction t avoiding: "imsupp f1" "IImsupp_LM f2" rule: LM.strong_induct)
+proof (binder_induction t avoiding: "imsupp f1" "SSupp_LM f2" "IImsupp Var FVars_LM f2" rule: LM.strong_induct)
+  case Bound3
+  then show ?case unfolding IImsupp_def
+    by (meson LM.set_bd_UNIV UN_bound assms(2))
+next
   case (Lam x1 x2)
   then show ?case
-    apply simp
-    apply (unfold Un_Diff)
-    apply (rule arg_cong2[of _ _ _ _ "(\<union>)"])
-     apply (simp add: imsupp_def supp_def)
-     apply fastforce
-    apply (rule sym)
-    apply (rule IImsupp_Diff_Vrs_1)
-    apply blast
-    done
+    apply auto
+    using not_in_imsupp_same apply fastforce
+    using notin_SSupp apply fastforce
+    using imsupp_def supp_def apply fastforce
+    by (metis (mono_tags, lifting) IImsupp_def UN_iff Un_iff Vrs_1_simp1 Vrs_Un insert_iff notin_SSupp singletonD)
 qed (auto simp: assms imsupp_supp_bound infinite_UNIV)
 
 lemma Vrs_2_Sb_LM:
   fixes f1::"'a::var \<Rightarrow> 'a"
   assumes "|supp f1| <o |UNIV::'a set|" "|SSupp_LM f2| <o |UNIV::'a set|"
   shows "Vrs_2 (Sb_LM f1 f2 t) = (\<Union>x\<in>Vrs_2 t. Vrs_2 (f2 x))"
-proof (binder_induction t avoiding: "imsupp f1" "IImsupp_LM f2" rule: LM.strong_induct)
-  case (Lst x)
-  then show ?case by auto
-next
-  case (App x1 x2)
-  then show ?case by simp
+proof (binder_induction t avoiding: "imsupp f1" "SSupp_LM f2" "IImsupp Var FVars_LM f2" rule: LM.strong_induct)
+  case Bound3
+  then show ?case unfolding IImsupp_def
+    by (meson LM.set_bd_UNIV UN_bound assms(2))
 next
   case (Lam x1 x2)
   then show ?case
     apply (subst Sb_LM_simp4)
       apply assumption+
-    apply (unfold Vrs_2_simp4 Lam)
+     apply (unfold Vrs_2_simp4 Lam)
+    using IImsupp_Diff_Vrs_2[symmetric] apply blast
     apply (rule IImsupp_Diff_Vrs_2[symmetric])
     by blast
 qed (auto simp: assms imsupp_supp_bound infinite_UNIV)
 
-(* lemma
-  fixes g::"'a LM \<Rightarrow> 'a LM" and f ::"'a \<Rightarrow> 'a LM"
-  shows "IImsupp_LM (g o f) \<subseteq> IImsupp_LM g \<union> IImsupp_LM f"
-  unfolding IImsupp_LM_def
-*)
-
-(* AtoJ: Proved this first (which is anyway generally useful) *)
 lemma FVars_LM_Sb_LM:
 fixes \<delta>::"'a::var \<Rightarrow> 'a" and \<rho>::"'a::var \<Rightarrow> 'a LM"
 assumes "|supp \<delta>| <o |UNIV::'a set|" "|SSupp_LM \<rho>| <o |UNIV::'a set|"
@@ -299,7 +286,7 @@ lemma IImsupp_o:
 fixes g::"'a::var \<Rightarrow> 'a"
 assumes "|supp g| <o |UNIV::'a set|" "|SSupp_LM \<rho>'| <o |UNIV::'a set|" "|SSupp_LM \<rho>| <o |UNIV::'a set|"
 shows "IImsupp_LM (Sb_LM g \<rho>' \<circ> \<rho>) \<subseteq> imsupp g \<union> IImsupp_LM \<rho>' \<union> IImsupp_LM \<rho>"
-unfolding IImsupp_LM_def SSupp_LM_def imsupp_def supp_def using assms apply safe
+unfolding IImsupp_def SSupp_def imsupp_def supp_def using assms apply safe
   subgoal by auto
   subgoal unfolding o_def apply(subst (asm) FVars_LM_Sb_LM) unfolding image_def
     subgoal by simp
@@ -318,9 +305,11 @@ lemma Sb_LM_cong:
   assumes "|supp g| <o |UNIV::'a set|" "|SSupp_LM \<rho>'| <o |UNIV::'a set|" "|supp f| <o |UNIV::'a set|" "|SSupp_LM \<rho>| <o |UNIV::'a set|"
   and foo: "\<And>a. a \<in> Vrs_1 t \<Longrightarrow> f a = g a" "\<And>a. a \<in> Vrs_2 t \<Longrightarrow> \<rho> a = \<rho>' a"
   shows "Sb_LM f \<rho> t = Sb_LM g \<rho>' t"
-  using foo  apply (binder_induction t avoiding: "imsupp g" "IImsupp_LM \<rho>'" "imsupp f" "IImsupp_LM \<rho>" rule: LM.strong_induct)
-         apply (auto simp: imsupp_supp_bound infinite_UNIV assms LM.permute_id)
-  by (metis (mono_tags, lifting) IImsupp_LM_def SSupp_LM_def Un_iff imsupp_def mem_Collect_eq supp_def)
+  using foo  apply (binder_induction t avoiding: "imsupp g" "SSupp_LM \<rho>'" "IImsupp Var FVars_LM \<rho>'" "imsupp f" "SSupp_LM \<rho>" "IImsupp Var FVars_LM \<rho>" rule: LM.strong_induct)
+           apply (auto simp: imsupp_supp_bound infinite_UNIV assms LM.permute_id IImsupp_def)
+    apply (meson LM.FVars_bd_UNIVs UN_bound assms(2))
+   apply (meson LM.FVars_bd_UNIVs UN_bound assms(4))
+  by (metis not_in_imsupp_same notin_SSupp)
 
 pbmv_monad "'b::var LM"
   Sbs: Sb_LM
@@ -329,21 +318,20 @@ pbmv_monad "'b::var LM"
   Vrs: Vrs_2
   bd: natLeq
           apply (rule infinite_regular_card_order_natLeq)
-  apply (unfold SSupp_def[of Var, unfolded SSupp_LM_def[unfolded tvVVr_tvsubst_LM_def comp_def tv\<eta>_LM_tvsubst_LM_def Var_def[symmetric], symmetric]])
 
          apply (rule ext)
   subgoal for x
     apply (rule LM.induct[of _ x])
        apply auto
     apply (rule trans[OF Sb_LM_simp4])
-    by (auto simp: imsupp_def supp_def IImsupp_LM_def SSupp_LM_def tvVVr_tvsubst_LM_def tv\<eta>_LM_tvsubst_LM_def Var_def)
+    by (auto simp: imsupp_def supp_def IImsupp_def SSupp_def Var_def)
          apply fastforce
 
       apply (rule ext)
       apply (rule trans[OF comp_apply])
   subgoal premises prems for g \<rho>' f \<rho> x
-    apply (binder_induction x avoiding: "imsupp g" "imsupp f" "IImsupp_LM \<rho>" "IImsupp_LM \<rho>'" rule: LM.strong_induct)
-           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_LM_def LM.set_bd_UNIV intro!: var_class.Un_bound var_class.UN_bound)[7]
+    apply (binder_induction x avoiding: "imsupp g" "imsupp f" "SSupp_LM \<rho>" "IImsupp Var FVars_LM \<rho>" "SSupp_LM \<rho>'" "IImsupp Var FVars_LM \<rho>'" rule: LM.strong_induct)
+           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_def LM.set_bd_UNIV intro!: var_class.Un_bound var_class.UN_bound)[7]
     apply (auto simp: prems)
     apply (subst Sb_LM_simp4)
       apply (rule contra_subsetD[OF imsupp_o])
@@ -374,7 +362,7 @@ lemma vvsubst_Sb:
         apply (auto simp: imsupp_supp_bound assms infinite_UNIV)
     apply (subst Sb_LM_simp4)
       apply assumption
-     apply (unfold IImsupp_LM_def SSupp_LM_def VVr_eq_Var_LM comp_def LM.Inj_inj LM.set UN_singleton imsupp_def supp_def)[1]
+     apply (unfold IImsupp_def SSupp_def comp_def LM.Inj_inj LM.set UN_singleton imsupp_def supp_def)[1]
      apply blast
     apply (rule refl)
     done

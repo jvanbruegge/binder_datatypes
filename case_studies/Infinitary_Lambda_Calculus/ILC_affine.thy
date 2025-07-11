@@ -67,11 +67,11 @@ using affine.simps affine_iLam_case by blast
 
 (* *)
 lemma tvsubst_affine':
-assumes f: "|SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
+assumes f: "|ILC.SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
 and fv: "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (f x) \<inter> FFVars (f y) = {}"
 and r: "affine (e::itrm)"
 shows "affine (itvsubst f e)"
-using r proof (binder_induction e avoiding: "IImsupp f" rule: affine.strong_induct)
+using r proof (binder_induction e avoiding: "ILC.IImsupp f" rule: affine.strong_induct)
   case (iLam ea xs)
   show ?case using iLam apply(subst iterm.subst)
       subgoal using f by auto
@@ -89,7 +89,7 @@ qed (auto simp: f ILC.SSupp_IImsupp_bound af)
 (which seems to prevent the above proof by induction), otherwise the result is
 not strong enough to instantiate to imakeSubst... *)
 lemma tvsubst_affine:
-assumes f: "|SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
+assumes f: "|ILC.SSupp f| <o |UNIV::ivar set|" and af: "\<And>x. affine (f x)"
 and fv: "\<And>x y. {x,y} \<subseteq> FFVars e \<Longrightarrow> x \<noteq> y \<Longrightarrow> FFVars (f x) \<inter> FFVars (f y) = {}"
 and r: "affine (e::itrm)"
 shows "affine (itvsubst f e)"
@@ -116,9 +116,9 @@ proof-
   define g where "g \<equiv> \<lambda>x. if x \<in> FFVars e then f x
                                            else if x \<in> \<Union> ((FFVars o f) ` (FFVars e)) then t
                                            else iVar x"
-  have sg: "SSupp g \<subseteq> FFVars e \<union> \<Union> ((FFVars o f) ` (FFVars e))" unfolding g_def SSupp_def by auto
+  have sg: "ILC.SSupp g \<subseteq> FFVars e \<union> \<Union> ((FFVars o f) ` (FFVars e))" unfolding g_def SSupp_def by auto
 
-  have g: "|SSupp g| <o |UNIV::ivar set|" "\<And>x. affine (g x)"
+  have g: "|ILC.SSupp g| <o |UNIV::ivar set|" "\<And>x. affine (g x)"
   "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (g x) \<inter> FFVars (g y) = {}"
      subgoal using sg by (meson card_of_subset_bound ffv fve infinite_class.Un_bound)
      subgoal by (simp add: af affine.iVar g_def t(2))

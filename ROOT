@@ -22,6 +22,8 @@ session Binders in "thys" = Prelim +
     MRBNF_Composition
     MRBNF_FP
     MRBNF_Recursor
+    Swapping
+    Support
 
 session Operations in "operations" = Untyped_Lambda_Calculus +
   theories
@@ -35,6 +37,8 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     VVSubst
     TVSubst
     Sugar
+    BMV_Monad
+    BMV_Fixpoint
 
 session Tests in "tests" = Case_Studies +
   sessions

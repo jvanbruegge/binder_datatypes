@@ -140,6 +140,8 @@ by (meson injD iVariable_inj)
 
 type_synonym itrm = "ivar iterm"
 
+hide_const IImsupp SSupp
+
 (* Some lighter notations: *)
 abbreviation "VVr \<equiv> tvVVr_itvsubst"
 lemmas VVr_def = tvVVr_itvsubst_def

@@ -34,7 +34,8 @@ Ector1_Ector'_topFree: "\<And>u uu p.
 (******)
 and 
 Ector_Ector'_sync:  
-"\<And>w u p g. GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+"\<And>w u p g. GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {} \<Longrightarrow> 
+       GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
 and Ector'_uniform:  
@@ -49,6 +50,7 @@ lemmas Ector1_Ector'_topFree' =  triv_Un4_remove[OF Ector1_Ector'_topFree[unfold
 
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   
+assumes "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}"
 assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
@@ -60,10 +62,13 @@ proof-
     unfolding F' Gmap_comp[symmetric]
     apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms by auto
   show ?thesis unfolding 1 unfolding F'_def apply(subst Gmap_comp[symmetric])
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap by auto
+  apply(rule Ector_Ector'_sync)  
+    subgoal using assms unfolding GSupp1_Gmap GSupp2_Gmap by auto
+    using assms unfolding GVrs2_Gmap by auto
 qed
 
 lemma Ector_Ector'_Gmap_fst: 
+assumes "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}"
 assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
@@ -72,7 +77,7 @@ proof-
   have 1: "Gmap (uncurry H) (uncurry H) w = Gmap (\<lambda>e. H e p) (\<lambda>e. H e p) (Gmap fst fst w)"
     unfolding Gmap_comp
     apply(rule Gmap_cong) using 00 unfolding GSupp1_Gmap GSupp2_Gmap uncurry_def by auto
-
+ 
   define H' where "H' \<equiv> \<lambda>e (p'::'a P). H e p"
   have H': "H' = (\<lambda>pe p'. pe p) o H" unfolding H'_def o_def fun_eq_iff by simp
   have 2: "Ector' (Gmap H H u) p = Ector' (Gmap H' H' u) p"
@@ -82,7 +87,9 @@ proof-
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap by auto
+  apply(rule Ector_Ector'_sync) 
+    subgoal using assms unfolding GSupp1_Gmap GSupp2_Gmap by auto
+    using assms unfolding GVrs2_Gmap by auto
 qed
 
 end (* context Bimodels *)

@@ -313,6 +313,8 @@ theorem rec_Ector_not_\<phi>:
 assumes f: "\<not> \<phi> u"  and g : "GVrs2 u \<inter> PVrs p = {}"
 shows "crec (Ector u) p = Ector' (Gmap crec crec u) p"
 proof-
+(*(cases "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}")
+  case True *)
   have "Edtor' (Ector u, p) = Inl (Edtor1' (Ector u, p))" 
   and 1: "Gmap C.corec C.corec ` (Edtor1' (Ector u, p)) \<subseteq> Edtor (C.corec (Ector u, p))"
     using f g  by (auto simp add: C.corec_Edtor_Inl Edtor'_not\<phi>)
@@ -323,6 +325,9 @@ proof-
     using in_Edtor1'_Ector by fastforce
   obtain w where w: "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p" 
   and g1: "GVrs2 w \<inter> PVrs p = {}" by (meson Ector_surj_fresh countable_PVrs)
+  have ww: "GSupp1 u = {} \<Longrightarrow> GSupp2 u = {} \<Longrightarrow> 
+    Gmap (\<lambda>x y. C.corec (x, y)) (\<lambda>x y. C.corec (x, y)) u = Gmap (\<lambda>e p. e) (\<lambda>e p. e) u"
+  apply(rule Gmap_cong) by auto 
   show ?thesis unfolding crec_def apply simp apply(subst 2[symmetric, of "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) w"])
   apply safe
     subgoal unfolding Gmap_comp apply simp unfolding w ..
@@ -330,7 +335,14 @@ proof-
     subgoal unfolding GSupp2_Gmap by auto
     subgoal using g1 unfolding GVrs2_Gmap by auto
     subgoal unfolding Gmap_comp unfolding curry_def o_def
-      apply(rule Ector_Ector'_Gmap) using w g g1 by auto . 
+    apply(cases "GSupp1 u \<noteq> {} \<or> GSupp2 u \<noteq> {}")
+      subgoal apply(rule Ector_Ector'_Gmap) using w g g1 by auto 
+      subgoal apply(subst ww) 
+        subgoal by auto subgoal by auto
+        subgoal unfolding w[symmetric]
+next
+  case False hence "GSupp1 u = {}" "GSupp2 u = {}" by auto
+  show ?thesis
 qed
       
 theorem crec_Eperm:

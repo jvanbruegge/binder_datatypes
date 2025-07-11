@@ -173,6 +173,8 @@ lemma id_on_comp2: "b z = z \<Longrightarrow> a z = z \<Longrightarrow> (a \<cir
 lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z" by simp
 
 lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by (force simp: bij_implies_inject)
+lemma Un_forward: "a \<in> A \<union> B \<Longrightarrow> (a \<in> A \<Longrightarrow> a \<in> C) \<Longrightarrow> (a \<in> B \<Longrightarrow> a \<in> D) \<Longrightarrow> a \<in> C \<union> D"
+  by blast
 
 (* TODO: Remove *)
 lemma Un_bound:

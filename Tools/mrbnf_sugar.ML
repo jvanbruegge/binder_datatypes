@@ -20,6 +20,7 @@ type binder_sugar = {
   map_permute: thm,
   subst_simps: thm list option,
   IImsupp_permute_commutes: thm list option,
+  IImsupp_Diffs: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
@@ -75,6 +76,7 @@ type binder_sugar = {
   map_permute: thm,
   subst_simps: thm list option,
   IImsupp_permute_commutes: thm list option,
+  IImsupp_Diffs: thm list option,
   bsetss: term option list list,
   bset_bounds: thm list,
   mrbnf: MRBNF_Def.mrbnf,
@@ -85,13 +87,14 @@ type binder_sugar = {
 };
 
 fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, subst_simps, mrbnf,
-  strong_induct, distinct, inject, ctors, bsetss, bset_bounds, IImsupp_permute_commutes } = {
+  strong_induct, distinct, inject, ctors, bsetss, bset_bounds, IImsupp_permute_commutes, IImsupp_Diffs } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
   map_permute = Morphism.thm phi map_permute,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   IImsupp_permute_commutes = Option.map (map (Morphism.thm phi)) IImsupp_permute_commutes,
+  IImsupp_Diffs = Option.map (map (Morphism.thm phi)) IImsupp_Diffs,
   bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
   bset_bounds = map (Morphism.thm phi) bset_bounds,
   mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
@@ -1165,7 +1168,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
     val equiv = @{attributes [simp, equiv]}
 
-    val IImsupp_permute_commutes = Option.map (fn (res, _) => map_filter (Option.map (
+    fun unfold_tvsubst res = map_filter (Option.map (
       Local_Defs.unfold lthy (
         @{thms SSupp_def[symmetric, THEN meta_eq_to_obj_eq, THEN fun_cong]}
         @ map snd (flat (#IImsuppss res)) @ map snd (#SSupps res)
@@ -1174,7 +1177,9 @@ fun create_binder_datatype (spec : spec) lthy =
         @ [@{lemma "\<Union>((Vrs \<circ> \<rho>) ` SSupp Inj \<rho>) = IImsupp Inj Vrs \<rho>"
             by (auto simp: IImsupp_def)}]
       )
-    )) (#IImsupp_permute_commutes res)) tvsubst_opt;
+    ));
+    val IImsupp_permute_commutes = Option.map (fn (res, _) => unfold_tvsubst res (#IImsupp_permute_commutes res)) tvsubst_opt;
+    val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst res (#IImsupp_Diffs res)) tvsubst_opt;
 
     val sugar = {
       map_simps = map_simps,
@@ -1184,6 +1189,7 @@ fun create_binder_datatype (spec : spec) lthy =
       strong_induct = strong_induct_opt,
       subst_simps = Option.map snd tvsubst_opt,
       IImsupp_permute_commutes = IImsupp_permute_commutes,
+      IImsupp_Diffs = IImsupp_Diffs,
       bsetss = bset_optss,
       bset_bounds = [],
       mrbnf = mrbnf,

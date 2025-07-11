@@ -19,6 +19,7 @@ sig
     eta_defs: thm list,
     isVVrs: thm list,
     IImsupp_permute_commutes: thm option list,
+    IImsupp_Diffs: thm option list,
     tvsubst_VVrs: thm list,
     tvsubst_cctor_not_isVVr: thm,
     tvsubst_permute: thm
@@ -56,6 +57,7 @@ type tvsubst_result = {
   eta_defs: thm list,
   isVVrs: thm list,
   IImsupp_permute_commutes: thm option list,
+  IImsupp_Diffs: thm option list,
   tvsubst_VVrs: thm list,
   tvsubst_cctor_not_isVVr: thm,
   tvsubst_permute: thm
@@ -1396,7 +1398,8 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
       @{thm meta_eq_to_obj_eq} OF [Local_Defs.unfold0 lthy (@{thms comp_def} @ eta_defs) VVr_def]
     )])) o #VVr))) defss;
 
-    val results = @{map 7} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr => fn VVrs' => fn tvsubst_permute => fn IImsupp_commutes => {
+    val results = @{map 8} (fn tvsubst => fn defs => fn tvsubst_VVrs => fn tvsubst_not_isVVr =>
+      fn VVrs' => fn tvsubst_permute => fn IImsupp_commutes => fn IImsupp_Diffs => {
       tvsubst = fst tvsubst,
       SSupps = map_filter (Option.map #SSupp) defs,
       IImsuppss = map_filter (Option.map #IImsupps) defs,
@@ -1404,10 +1407,11 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
       eta_defs = eta_defs,
       isVVrs = map_filter (Option.map (snd o #isVVr)) defs,
       IImsupp_permute_commutes = IImsupp_commutes,
+      IImsupp_Diffs = IImsupp_Diffs,
       tvsubst_VVrs = map_filter I tvsubst_VVrs,
       tvsubst_cctor_not_isVVr = tvsubst_not_isVVr,
       tvsubst_permute = tvsubst_permute
-    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss' tvsubst_permutes IImsupp_imsupp_permute_commutess;
+    }: tvsubst_result) tvsubsts defss tvsubst_VVrss tvsubst_not_isVVrs VVrss' tvsubst_permutes IImsupp_imsupp_permute_commutess IImsupp_Diffss;
 
     (* TODO: Remove *)
     val notes =

@@ -119,6 +119,7 @@ lemma map_is_Sb_FType:
 
 declare [[ML_print_depth=1000]]
 
+ML_file \<open>../Tools/bmv_monad_tacs.ML\<close>
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
 local_setup \<open>fold BMV_Monad_Def.register_mrbnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>

@@ -109,6 +109,33 @@ definition "Esub_Ector' \<equiv> \<lambda>u (\<delta>, \<rho>, \<rho>'). if \<ex
    if \<exists>a. u = \<eta>' a then \<rho>' (SOME a. u = \<eta>' a) else Ector (Gsub \<delta> id (Gmap (\<lambda>rec. rec (\<delta>, \<rho>, \<rho>')) (\<lambda>rec. rec (\<delta>, \<rho>, \<rho>')) u))"
 lemmas Esub_defs = Esub_Pvalid_def Esub_Pperm_def Esub_PVrs_def Esub_Ector'_def
 
+thm G.Map_Sb[no_vars]
+
+lemma Gmap_Gsub: 
+"|supp (g1::'a1::var\<Rightarrow>'a1)| <o |UNIV::'a1 set| \<Longrightarrow> |supp (g2::'a2::var\<Rightarrow>'a2)| <o |UNIV::'a2 set| \<Longrightarrow> 
+ Gmap (f1::'c1\<Rightarrow>'c1') (f2::'c2\<Rightarrow>'c2') (Gsub g1 g2 u) = Gsub g1 g2 (Gmap f1 f2 u)"
+using G.Map_Sb[of g1 g2 f1 f2, unfolded o_def fun_eq_iff] by auto 
+
+thm G.Sb_comp[no_vars]
+thm G.Map_comp[no_vars]
+
+lemma Gmap_comp: "Gmap g1 g2 (Gmap f1 f2 u) = Gmap (g1 \<circ> f1) (g2 \<circ> f2) u"
+apply(subst G.Map_comp[symmetric]) by auto
+
+lemma Gsub_comp: "|supp (f1::'a1 \<Rightarrow>'a1)| <o |UNIV::'a1 set| \<Longrightarrow> |supp (f2::'a2::var\<Rightarrow>'a2)| <o |UNIV::'a2 set| \<Longrightarrow>
+       |supp (g1::'a1::var\<Rightarrow>'a1)| <o |UNIV::'a1 set| \<Longrightarrow> |supp (g2::'a2::var\<Rightarrow>'a2)| <o |UNIV::'a2 set| \<Longrightarrow> 
+Gsub g1 g2 (Gsub f1 f2 u) = Gsub (g1 \<circ> f1) (g2 \<circ> f2) u"
+apply(subst G.Sb_comp[symmetric]) by auto
+
+(* 
+lemma ordLeq_ordless_Diff_card: "|A| <o |C| \<Longrightarrow> |A - B| <o |C|"
+using card_of_diff[of A B] sledgehammer
+using find_theorems "| _ - _ | \<le>o | _ |"
+*)
+
+lemma card_image_ordLess: "|A| <o r \<Longrightarrow> |h ` A| <o r"
+by (metis card_of_image ordLeq_ordLess_trans)
+
 sublocale Esub: Bimodel where
   Pvalid = Esub_Pvalid and
   Pperm = Esub_Pperm and
@@ -171,8 +198,24 @@ sublocale Esub: Bimodel where
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])
      apply assumption
-    apply (subst (asm) Ector_fresh_inject[where A = TODO])
-    sorry
+      subgoal for \<delta> \<rho> \<rho>' apply (subst (asm) Ector_fresh_inject
+      [where A = "\<Union> (EVrs ` (\<lambda>rec. rec (\<delta>, \<rho>, \<rho>')) ` (GSupp1 u)) - GVrs2 u - GVrs2 u'"])
+      subgoal by(auto simp add: G.Vrs_Map2)  
+      subgoal by (simp add: G.Vrs_Map2) 
+      subgoal apply(intro card_of_minus_bound UN_bound)
+         subgoal apply(rule card_image_ordLess) using G.Supp1_bd 
+         (* AtoD: need assumption Gbd <o |UNIV::'a| *) sorry
+         subgoal using EVrs_bound . .
+      subgoal  apply (subst Ector_fresh_inject[where A = "{}"])
+        subgoal by auto  subgoal by auto
+        subgoal using emp_bound by blast
+        subgoal apply safe subgoal for \<sigma>
+          apply(rule exI[of _ \<sigma>]) apply safe
+            subgoal unfolding id_on_def   
+            by (auto simp: G.Supp1_Sb G.Supp1_Map imsupp_def supp_def Int_def G.Vrs2_Sb) 
+            subgoal apply(drule sym[where t = "Gmap (\<lambda>pe. pe (\<delta>, \<rho>, \<rho>')) (\<lambda>pe. pe (\<delta>, \<rho>, \<rho>')) u'"]) 
+            by (auto simp: Gmap_Gsub Gren_def Gmap_comp Gsub_comp) . . . . .
+  (* *)
   subgoal for w u p g
     apply (cases p)
     apply (auto split: if_splits simp: eta_distinct eta_distinct'  eta_inject eta'_inject Gren_def

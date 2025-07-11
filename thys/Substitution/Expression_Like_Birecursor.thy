@@ -2,8 +2,8 @@ theory Expression_Like_Birecursor
   imports Expression_Like_Sub
 begin
 
-locale Bimodel = NominalRel Pvalid Pperm "PVrs :: 'p \<Rightarrow> 'a :: var set" + Expression Eperm "EVrs :: 'e \<Rightarrow> 'a set" Ector
-  for Pvalid Pperm PVrs Eperm EVrs Ector +
+locale Bimodel = NominalRel Pvalid Pperm "PVrs :: 'p \<Rightarrow> 'a :: var set" + Expression Eperm "EVrs :: 'e \<Rightarrow> 'a set" Ebd Ector
+  for Pvalid Pperm PVrs Eperm EVrs Ebd Ector +
   fixes Ector' :: "('a::var, 'a, 'p \<Rightarrow> 'e, 'p \<Rightarrow> 'e) G \<Rightarrow> 'p \<Rightarrow> 'e"
   assumes Eperm_Ector': "\<And>\<sigma> p. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow>
     Eperm \<sigma> (Ector' u p) = 
@@ -29,18 +29,18 @@ TODO the below Birecursor locale needs to be interpreted for both datatypes and 
 in the respective theory Data and Codata using the recursor/corecursor
 the existing interpretations in that theory that define substitution directly should be quite close
 *)
-locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Ector
-  for Eperm EVrs Ector +
+locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Ebd Ector
+  for Eperm EVrs Ebd Ector +
   fixes Pdummy :: 'p
   assumes rec: "\<forall>Pvalid Pperm (PVrs :: 'p \<Rightarrow> 'a set) Ector'.
-    Bimodel Pvalid Pperm PVrs Eperm EVrs Ector Ector' \<longrightarrow> (\<exists>rec.
+    Bimodel Pvalid Pperm PVrs Eperm EVrs Ebd Ector Ector' \<longrightarrow> (\<exists>rec.
       ((\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
 begin
 
 context fixes Pvalid Pperm and PVrs :: "'p \<Rightarrow> 'a set" and Ector'
-  assumes BM: "Bimodel Pvalid Pperm PVrs Eperm EVrs Ector Ector'"
+  assumes BM: "Bimodel Pvalid Pperm PVrs Eperm EVrs Ebd Ector Ector'"
 begin
 
 definition rec where
@@ -216,7 +216,7 @@ begin
 
 definition "Esub \<delta> \<rho> \<rho>' e = rec Esub_Pvalid Esub_Pperm Esub_PVrs Esub_Ector' e (\<delta>, \<rho>, \<rho>')"
 
-sublocale Esub: Substitution Eperm EVrs Ector Esub
+sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
   apply standard
       apply (unfold Esub_def)
       apply (subst rec_Ector[OF Esub.Bimodel_axioms]; auto simp add:

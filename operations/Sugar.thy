@@ -812,13 +812,11 @@ val T1_model = {
     SOME (@{term "eta11"}, {
       eta_free = fn ctxt => resolve_tac ctxt @{thms eta_frees} 1,
       eta_inj = fn ctxt => eresolve_tac ctxt @{thms eta_injs} 1,
-      eta_compl_free = fn ctxt => eresolve_tac ctxt @{thms eta_compl_frees} 1,
       eta_natural = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms eta_naturals} THEN_ALL_NEW assume_tac ctxt)
     }),
     SOME (@{term "eta12"}, {
       eta_free = fn ctxt => resolve_tac ctxt @{thms eta_frees} 1,
       eta_inj = fn ctxt => eresolve_tac ctxt @{thms eta_injs} 1,
-      eta_compl_free = fn ctxt => eresolve_tac ctxt @{thms eta_compl_frees} 1,
       eta_natural = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms eta_naturals} THEN_ALL_NEW assume_tac ctxt)
     })
   ]
@@ -829,7 +827,6 @@ val T2_model = {
     SOME (@{term "eta21"}, {
       eta_free = fn ctxt => resolve_tac ctxt @{thms eta_frees} 1,
       eta_inj = fn ctxt => eresolve_tac ctxt @{thms eta_injs} 1,
-      eta_compl_free = fn ctxt => eresolve_tac ctxt @{thms eta_compl_frees} 1,
       eta_natural = fn ctxt => HEADGOAL (resolve_tac ctxt @{thms eta_naturals} THEN_ALL_NEW assume_tac ctxt)
     }),
     NONE

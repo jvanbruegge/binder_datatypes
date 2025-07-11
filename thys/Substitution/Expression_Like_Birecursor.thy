@@ -127,12 +127,6 @@ lemma Gsub_comp: "|supp (f1::'a1 \<Rightarrow>'a1)| <o |UNIV::'a1 set| \<Longrig
 Gsub g1 g2 (Gsub f1 f2 u) = Gsub (g1 \<circ> f1) (g2 \<circ> f2) u"
 apply(subst G.Sb_comp[symmetric]) by auto
 
-(* 
-lemma ordLeq_ordless_Diff_card: "|A| <o |C| \<Longrightarrow> |A - B| <o |C|"
-using card_of_diff[of A B] sledgehammer
-using find_theorems "| _ - _ | \<le>o | _ |"
-*)
-
 lemma card_image_ordLess: "|A| <o r \<Longrightarrow> |h ` A| <o r"
 by (metis card_of_image ordLeq_ordLess_trans)
 

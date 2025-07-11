@@ -171,6 +171,7 @@ sublocale Esub: Bimodel where
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])
      apply assumption
+    apply (subst (asm) Ector_fresh_inject[where A = TODO])
     sorry
   subgoal for w u p g
     apply (cases p)
@@ -209,9 +210,9 @@ end
 (*TODO after the Birecursor instance is there interpret this locale to get the Substitution and 
 its properties for free*)
 locale Birecursor_Sub = Birecursor where
-  Eperm = Eperm and EVrs = "EVrs :: 'e \<Rightarrow> 'a :: var set" and Ector = Ector and
+  Eperm = Eperm and EVrs = "EVrs :: 'e \<Rightarrow> 'a :: var set" and Ebd = Ebd and Ector = Ector and
   Pdummy = "undefined :: ('a \<Rightarrow> 'a) \<times> ('a \<Rightarrow> 'e)  \<times> ('a \<Rightarrow> 'e)"
-  for Eperm EVrs Ector
+  for Eperm EVrs Ebd Ector
 begin
 
 definition "Esub \<delta> \<rho> \<rho>' e = rec Esub_Pvalid Esub_Pperm Esub_PVrs Esub_Ector' e (\<delta>, \<rho>, \<rho>')"
@@ -238,6 +239,12 @@ sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
       supp_inv_bound)
   done
 
+end
+
+locale Birecursor_Sub_Strong = Birecursor_Sub + Expression_Strong
+begin
+sublocale Esub_Strong: Substitution_Strong Eperm EVrs Ebd Ector Esub
+  by standard
 end
 
 end

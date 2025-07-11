@@ -1,5 +1,5 @@
 theory Data
-  imports Expression_Like_Sub
+  imports Expression_Like_Sub Expression_Like_Birecursor "HOL-ex.Sketch_and_Explore"
 begin
 
 consts Gwit :: "('a1, 'a2, 'x1, 'x2) G"
@@ -123,7 +123,7 @@ interpretation Expression_Strong Eperm EVrs Gbd Ector
     apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def G.Sb_Inj)
     done
   done
-
+(*
 lemma permute_\<rho>:
   "bij f \<Longrightarrow> |supp (f :: 'a :: var_E_pre \<Rightarrow> 'a)| <o |UNIV :: 'a set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> Eperm f (\<rho> a) = \<rho> (f a)"
   apply (cases "f a = a")
@@ -157,6 +157,25 @@ lemma permute_\<rho>':
    apply (simp add: GMAP_def Gren_def eta'_natural)
    apply (auto simp: IImsupp'_def IImsupp_def SSupp_def imsupp_def supp_def)
   done
+*)
+
+interpretation Birecursor Eperm EVrs Gbd Ector
+proof (standard, safe)
+  fix Pvalid :: "'p \<Rightarrow> bool"
+  and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
+  and PVrs :: "'p \<Rightarrow> 'a set"
+  and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
+  assume "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
+  interpret rec: REC_E sorry
+  term rec.REC_E
+  show "\<exists>rec. (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and> (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and> (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
+    sorry
+qed
+
+interpretation birec_data: Birecursor_Sub_Strong Eperm EVrs Gbd Ector
+  by standard
+
+print_statement birec_data.Esub_Strong.E_pbmv_axioms
 
 context
   fixes \<delta> :: "'a \<Rightarrow> 'a :: var_E_pre" and \<rho> \<rho>' :: "'a ::var_E_pre \<Rightarrow> 'a E"

@@ -1,5 +1,5 @@
 theory Codata
-  imports Expression_Like_Sub
+  imports Expression_Like_Sub Expression_Like_Birecursor
 begin
 
 definition "GMAP = (\<lambda>\<rho>1 \<rho>2 f1 f2 x. Gren \<rho>1 \<rho>2 (Gmap f1 f2 x))"
@@ -1390,39 +1390,25 @@ theorem COREC_FFVarsD:
 
 end
 
-lemma permute_\<rho>:
-  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: covar_G set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> Eperm f (\<rho> a) = \<rho> (f a)"
-  apply (cases "f a = a")
-   apply (cases "\<rho> a = Ector (\<eta> a)")
-    apply (simp add: GMAP_def Gren_def eta_natural Eperm_Ector)
-   apply simp
-   apply (rule E.permute_cong_id; simp?)
-  subgoal for a'
-    apply (subgoal_tac "a' \<in> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho>")
-     apply (meson Int_emptyD not_in_imsupp_same)
-    apply (auto simp: IImsupp'_def IImsupp_def SSupp_def)
-    done
-  apply (cases "\<rho> a = Ector (\<eta> a)")
-   apply (simp add: GMAP_def Gren_def eta_natural Eperm_Ector)
-   apply (auto simp: IImsupp'_def IImsupp_def SSupp_def imsupp_def supp_def)
-  done
+interpretation Birecursor Eperm EVrs "card_suc Gbd" Ector
+proof (standard, safe)
+  fix Pvalid :: "'p \<Rightarrow> bool"
+  and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
+  and PVrs :: "'p \<Rightarrow> 'a set"
+  and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
+  assume "Bimodel Pvalid Pperm PVrs Eperm EVrs (card_suc Gbd) Ector Ector'"
+  interpret corec: COREC sorry
+  term corec.COREC
+  show "\<exists>rec. (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+    (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
+    (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
+    sorry
+qed
 
-lemma permute_\<rho>':
-  "bij f \<Longrightarrow> |supp (f :: 'a \<Rightarrow> 'a)| <o |UNIV :: 'a :: covar_G set| \<Longrightarrow> imsupp f \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> Eperm f (\<rho>' a) = \<rho>' (f a)"
-  apply (cases "f a = a")
-   apply (cases "\<rho>' a = Ector (\<eta>' a)")
-    apply (simp add: GMAP_def Gren_def eta'_natural Eperm_Ector)
-   apply simp
-   apply (rule E.permute_cong_id; simp?)
-  subgoal for a'
-    apply (subgoal_tac "a' \<in> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>'")
-     apply (meson Int_emptyD not_in_imsupp_same)
-    apply (auto simp: IImsupp'_def IImsupp_def SSupp_def)
-    done
-  apply (cases "\<rho>' a = Ector (\<eta>' a)")
-   apply (simp add: GMAP_def Gren_def eta'_natural Eperm_Ector)
-   apply (auto simp: IImsupp'_def IImsupp_def SSupp_def imsupp_def supp_def)
-  done
+interpretation birec_codata: Birecursor_Sub_Strong Eperm EVrs "card_suc Gbd" Ector
+  by standard
+
+print_statement birec_codata.Esub_Strong.E_pbmv_axioms
 
 abbreviation "IMSUPP \<delta> \<rho> \<rho>' \<equiv> imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>'"
 abbreviation "small_support \<delta> \<rho> \<rho>' \<equiv>

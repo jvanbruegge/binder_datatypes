@@ -6,6 +6,7 @@ theory BMV_Monad
 begin
 
 declare [[mrbnf_internals]]
+declare [[ML_print_depth=1000]]
 binder_datatype 'a FType
   = TyVar 'a
   | TyApp "'a FType" "'a FType"
@@ -119,18 +120,7 @@ lemma map_is_Sb_FType:
 
 declare [[ML_print_depth=1000]]
 
-ML_file \<open>../Tools/bmv_monad_tacs.ML\<close>
-ML_file \<open>../Tools/bmv_monad_def.ML\<close>
-
 local_setup \<open>fold BMV_Monad_Def.register_mrbnf_as_pbmv_monad [@{type_name sum}, @{type_name prod}]\<close>
-
-ML_file \<open>../Tools/mrsbnf_def.ML\<close>
-
-local_setup \<open>fn lthy =>
-let
-  val (mrsbnf, _) = MRSBNF_Def.mrsbnf_of_mrbnf (the (MRBNF_Def.mrbnf_of lthy @{type_name FType_pre})) lthy;
-  val _ = @{print} mrsbnf
-in lthy end\<close>
 
 pbmv_monad "'tv::var FType"
   Sbs: tvsubst_FType

@@ -889,10 +889,7 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
         val free_fs = take free free_fs';
 
         val free_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) free_fs;
-        val live_fs' = filter (member (op=) lives o domain_type o fastype_of) live_fs;;
-
-        val _ = @{print} (MRBNF_Def.frees_of_mrbnf mrbnf, MRBNF_Def.bounds_of_mrbnf mrbnf, MRBNF_Def.lives_of_mrbnf mrbnf)
-        val _ = @{print} (Fs, Bs, As)
+        val live_fs' = filter (member (op=) lives o domain_type o fastype_of) live_fs;
 
         val map_is_Sb = fold_rev Logic.all (free_fs @ live_fs') (fold_rev (curry Logic.mk_implies) free_prems (mk_Trueprop_eq (
           Term.list_comb (Term.subst_atomic_types (filter_out (member (op=) lives o snd) (As' ~~ As)) mapx, MRBNF_Def.interlace
@@ -915,7 +912,6 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
             ) Injs)
           ) end
         )));
-        val _ = @{print} (Thm.cterm_of lthy map_is_Sb)
 
         val RVrs_aTs = map (HOLogic.dest_setT o body_type o fastype_of) RVrs;
 

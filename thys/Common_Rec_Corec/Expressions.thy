@@ -3,90 +3,7 @@ theory Expressions
 begin
 
 
-(* 
-(* For now just grabbed this: *)
-
-typedef var = "{x::nat set. x \<in> Field (cardSuc natLeq)}"
- by simp (metis Field_cardSuc_not_empty Field_natLeq all_not_in_conv natLeq_card_order)
-
-lemma bij_betw_Rep_var: "bij_betw Rep_var (UNIV::var set) (Field (cardSuc natLeq))"
-by (smt (verit, best) Abs_var_inverse Rep_var Rep_var_inject UNIV_I bij_betwI' mem_Collect_eq)
-
-
-lemma infinite_var: "infinite (UNIV::var set)"
-  using Field_natLeq bij_betw_Rep_var bij_betw_finite natLeq_Card_order
-  by (metis cardSuc_finite infinite_UNIV_char_0) 
-
-lemma countable_exists_countable_var:
-assumes "countable (A::var set)"
-shows "\<exists>B. B \<inter> A = {} \<and> infinite B"
-  apply(rule exI[of _ "-A"]) apply simp sorry
-(* 
-by simp (metis Compl_eq_Diff_UNIV assms card_of_Well_order countable_card_var
-not_ordLeq_iff_ordLess ordLeq_iff_ordLess_or_ordIso uncountable_infinite uncountable_minus_countable)
-*)
-
-lemma countable_exists_finite_var:
-assumes "countable (A::'a::var set)"
-shows "\<exists>B. B \<inter> A = {} \<and> finite B \<and> card B = n"
-proof-
-  obtain B' where B': "B' \<inter> A = {}" and iB': "infinite B'"
-  using countable_exists_countable_var[OF assms] by auto
-  obtain B where "B \<subseteq> B' \<and> finite B \<and> card B = n"
-  using iB' by (meson infinite_arbitrarily_large)
-  thus ?thesis using B' by auto
-qed
-
-lemma countable_exists_list_var:
-assumes "countable (A::var set)"
-shows "\<exists>xs. set xs \<inter> A = {} \<and> distinct xs \<and> length xs = n"
-by (metis assms countable_exists_finite_var distinct_remdups finite_list length_remdups_card_conv set_remdups)
-
-lemma exists_var:
-assumes "countable (X::var set)"
-shows "\<exists>x. x \<notin> X"
-by (metis Int_absorb assms countable_exists_countable_var disjoint_iff finite.emptyI)
-
-lemma finite_exists_var:
-assumes "finite X"
-shows "\<exists> x::var. x \<notin> X"
-by (simp add: assms ex_new_if_finite infinite_var)
-
-
-(* *)
-
-definition sw :: "var \<Rightarrow> var \<Rightarrow> var \<Rightarrow> var" where
-"sw x y z \<equiv> if x = y then z else if x = z then y else x"
-
-lemma sw_eqL[simp,intro!]: "\<And> x y z. sw x x y = y"
-and sw_eqR[simp,intro!]: "\<And> x y z. sw x y x = y"
-and sw_diff[simp]: "\<And> x y z. x \<noteq> y \<Longrightarrow> x \<noteq> z \<Longrightarrow> sw x y z = x"
-  unfolding sw_def by auto
-
-lemma sw_sym: "sw x y z = sw x z y"
-and sw_id[simp]: "sw x y y = x"
-and sw_sw: "sw (sw x y z) y1 z1 = sw (sw x y1 z1) (sw y y1 z1) (sw z y1 z1)"
-and sw_invol[simp]: "sw (sw x y z) y z = x"
-  unfolding sw_def by auto
-
-lemma sw_invol2: "sw (sw x y z) z y = x"
-  by (simp add: sw_sym)
-
-lemma sw_inj[iff]: "sw x z1 z2 = sw y z1 z2 \<longleftrightarrow> x = y"
-  unfolding sw_def by auto
-
-lemma sw_surj: "\<exists>y. x = sw y z1 z2"
-  by (metis sw_invol)
-
-(* *)
-
-definition supp :: "(var \<Rightarrow> var) \<Rightarrow> var set" where 
-"supp \<sigma> = {a . \<sigma> a \<noteq> a}"
-*)
-
 (* Prelims: *)
-
-
 term curry
 definition "uncurry f \<equiv> \<lambda>(a,b). f a b" 
 lemma uncorry_apply[simp]: "uncurry f (a,b) = f a b"
@@ -254,8 +171,8 @@ and EVrs_Ector: "\<And>u. EVrs (Ector u) =
 and (* Next three correspond to nom *)
 Eperm_id[simp]: "Eperm id = id"
 and 
-Eperm_comp: "\<And>e \<sigma>1 \<sigma>2 p. small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
-    Eperm (\<sigma>1 \<circ> \<sigma>2) e = Eperm \<sigma>1 (Eperm \<sigma>2 p)"
+Eperm_comp: "\<And>e \<sigma>1 \<sigma>2. small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+    Eperm (\<sigma>1 \<circ> \<sigma>2) e = Eperm \<sigma>1 (Eperm \<sigma>2 e)"
 and 
 Eperm_cong: 
 "\<And>e \<sigma>1 \<sigma>2. small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 

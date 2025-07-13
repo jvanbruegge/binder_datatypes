@@ -40,20 +40,16 @@ and Ector_Ector'_inj_step: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not>
 (* Ector1 is less injective than Ector outside base, and assuming freshness *)
 and 
 (* call the expression FreeVars u, and use it in the other axioms:  *)
-Ector_Ector'_EVrs_step: "\<And>u uu p.
+Ector_Ector'_EVrs_step: "\<And>u p.
     \<not> base u \<Longrightarrow> 
-    GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
-    Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
-    EVrs (Ector uu)  \<subseteq> EVrs (Ector u) \<union> PVrs p"
-(* and 
-(* AtoD: this, which I copied from Expression_like_Corecursor, seems to be 
-something like a 
-converse of the above... *)
+    GVrs2 u \<inter> PVrs p = {}
+    \<Longrightarrow>
+    EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
+(* AtoD: what you assumed in Expression_like_Corecursor 
+is not the above, but a converse of it modulo PVrs p!, namely: 
 EVrs_Ector': "\<And>u p. \<not> base u \<Longrightarrow> 
   EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u))"
 *)
-(* This can replace one axiom for ECtor1' (since it makes it redundant *)
-(******)
 and 
 Ector_Ector'_sync:  
 "\<And>w u p g. GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
@@ -65,8 +61,17 @@ and Ector'_uniform:
 (* only depends on p *) 
 begin
 
+lemma Ector_Ector'_EVrs_stepp: "\<And>u uu p.
+    \<not> base u \<Longrightarrow> 
+    GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
+    Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
+    EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
+subgoal for u uu p using Ector_Ector'_EVrs_step[of u p] 
+by auto .
 
-lemmas Ector_Ector'_EVrs_step' =  triv_Un4_remove[OF Ector_Ector'_EVrs_step[unfolded EVrs_Ector]]
+
+lemmas Ector_Ector'_EVrs_step' =  
+triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]
 
 
 

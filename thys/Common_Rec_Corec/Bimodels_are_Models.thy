@@ -7,21 +7,47 @@ begin
 context Bimodel 
 begin 
 
-lemma ctorPermM: "ctorPermM Ector' Eperm u"
-  unfolding ctorPermM_def apply safe
-  subgoal for \<sigma>
-    apply(subst ctor1PermM[unfolded ctorPermM_def, rule_format])
-    subgoal by blast
-    subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . .
 
-lemma ctorVarsM: "ctorVarsM Ector' EVrs u"
-unfolding ctorVarsM_def  apply(intro allI)
+definition EEctor' :: "('a::var,'a,'a P\<Rightarrow>'a E','a P\<Rightarrow>'a E') G \<Rightarrow> 'a P\<Rightarrow>'a E'" where 
+"EEctor' u \<equiv> if base u then Ector' u else Ector' u"
+
+lemma EEctor'_base[simp]: "base u \<Longrightarrow> EEctor' u = Ector' u"
+unfolding EEctor'_def by auto
+
+lemma EEctor'_step[simp]: "\<not> base u \<Longrightarrow> EEctor' u = Ector' u"
+unfolding EEctor'_def by auto
+
+lemma ctorPermM: "ctorPermM EEctor' Eperm u"
+unfolding ctorPermM_def apply safe
+  subgoal for \<sigma> apply(cases "base u")
+    subgoal unfolding EEctor'_base  
+    apply(subst ctor0PermM[unfolded ctorPermM_def, rule_format])
+      subgoal .
+      subgoal by auto
+      subgoal apply(subst EEctor'_base )
+        subgoal using base_Gmap base_Gren by fastforce
+        subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . .
+    subgoal unfolding EEctor'_step  
+    apply(subst ctor1PermM[unfolded ctorPermM_def, rule_format])
+      subgoal .
+      subgoal using base_Gmap by auto
+      subgoal apply(subst EEctor'_step)
+        subgoal using base_Gmap base_Gren by fastforce
+        subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . . . .
+
+lemma ctorVarsM: "ctorVarsM EEctor' EVrs u"
+unfolding ctorVarsM_def  
+  apply(cases "base u")
+    subgoal unfolding EEctor'_base  apply(intro allI)  
+    apply(rule subset_trans[OF ctor0VarsM[unfolded ctorVarsM_def, rule_format]])
+    by auto 
+    subgoal unfolding EEctor'_step apply(intro allI) 
     apply(rule subset_trans[OF ctor1VarsM[unfolded ctorVarsM_def, rule_format]]) 
-    by auto
+    using base_Gmap by auto . 
 
 
 (* models from special_models: *)
-sublocale M : Model where Ector' = Ector' and Eperm' = Eperm and EVrs' = EVrs 
+sublocale M : Model where Ector' = EEctor' and Eperm' = Eperm and EVrs' = EVrs 
 apply standard 
 using nom ctorPermM ctorVarsM by auto   
 
@@ -36,10 +62,26 @@ and extract the same recursion principle from corecursion/finality.) *)
 thm M.rec_Ector M.rec_Eperm M.rec_unique M.rec_EVrs[no_vars] M.rec_Eperm[no_vars]
 definition "mrec \<equiv> M.rec"
 
-theorem mrec_Ector_\<phi>: 
+theorem mrec_Ector_base:
+assumes "base u"    
 shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> mrec (Ector u) p = Ector' (Gmap mrec mrec u) p"
 unfolding mrec_def
-  apply(rule M.rec_Ector) .
+apply(subst M.rec_Ector) 
+  subgoal using assms by simp
+  subgoal using assms apply(subst EEctor'_base)
+    subgoal using base_Gmap by auto
+    subgoal unfolding Gmap_comp unfolding o_def by simp . .
+
+theorem mrec_Ector_step:
+assumes "\<not> base u"  
+shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> mrec (Ector u) p = Ector' (Gmap mrec mrec u) p"
+unfolding mrec_def
+apply(subst M.rec_Ector)
+  subgoal using assms by simp 
+  subgoal using assms apply(subst EEctor'_step)
+    subgoal using base_Gmap by auto
+    subgoal unfolding Gmap_comp unfolding o_def by simp . .
+
 
 theorem mrec_Eperm: 
 "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> mrec(Eperm \<sigma> e) p = Eperm \<sigma> (mrec e (Pperm (inv \<sigma>) p))"
@@ -50,11 +92,13 @@ unfolding mrec_def using M.rec_EVrs by auto
 
 theorem mrec_unique:
 assumes "\<And>u p. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>
- (H (Ector u) p = Ector' (Gmap H H u) p)"
+ (base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)
+ \<and>
+ (\<not> base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)"
 shows "H = mrec" 
 unfolding mrec_def
 apply(rule M.rec_unique) 
-using assms by blast
+using assms by (simp add: EEctor'_def base_Gmap)  
 
 end (* context Bimodel *)
 

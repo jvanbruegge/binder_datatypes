@@ -2,21 +2,11 @@ theory Bimodels
   imports Expressions
 begin
 
-consts base :: "('a::var,'a,'e,'e) G \<Rightarrow> bool"
-axiomatization where base_Gmap: "\<And> u f g. base (Gmap f g u) \<longleftrightarrow> base u"
-and base_Gren: "\<And> u \<sigma>. small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> base (Gren \<sigma> \<sigma> u) \<longleftrightarrow> base u"
-(* this ensures base always covers base cases only  *)
-and base_base: "\<And>u. base u \<Longrightarrow> GSupp1 u = {} \<and> GSupp2 u = {}"
-
-lemma base_Gmap_eq: "base u \<Longrightarrow> Gmap f1 f2 u = Gmap g1 g2 u"
-apply(rule Gmap_cong) using base_base by auto
-
-
 type_synonym 'a E' = "'a E" 
 (* Special iteration model, with syntactic domain; 
 I keep E' as an abbreviation for E to avoid confusion: *)
 locale Bimodel = 
-fixes Ector' :: "('a::var,'a,'a P\<Rightarrow>'a E','a P\<Rightarrow>'a E') G \<Rightarrow> 'a P \<Rightarrow>'a E'"  
+  fixes Ector' :: "('a::var,'a,'a P\<Rightarrow>'a E','a P\<Rightarrow>'a E') G \<Rightarrow> 'a P\<Rightarrow>'a E'" 
 (* Eperm and EVrs are the syntactic ones. Eperm and EVrs, 
 so no need to assume nom for them since its known *)
 (* 
@@ -25,31 +15,27 @@ and EVrs :: "E' \<Rightarrow> var set"
 assumes nom: "nom Eperm EVrs"
 *)
 assumes
-    ctor0PermM: "\<And>u. base u \<Longrightarrow> ctorPermM Ector' Eperm u" and 
-    ctor1PermM: "\<And>u. \<not> base u \<Longrightarrow> ctorPermM Ector' Eperm u"
-and ctor0VarsM: "\<And>u. base u \<Longrightarrow> ctorVarsM Ector' EVrs u" and 
-    ctor1VarsM: "\<And>u. \<not> base u \<Longrightarrow> ctorVarsM Ector' EVrs u"
+    ctor1PermM: "\<And>u. ctorPermM Ector' Eperm u"
+and ctor1VarsM: "\<And>u. ctorVarsM Ector' EVrs u"
 (* above just standard model properties, but split in two; 
 next some more specific requirements *)
-assumes Ector_base_inj: "\<And>u1 u2::('a,'a,'a E, 'a E)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
-and Ector1_Ector'_inj: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not> base u1 \<Longrightarrow> 
+assumes Ector1_Ector'_inj: "\<And>u u1 p.
    GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u1 \<inter> PVrs p = {} \<Longrightarrow> 
    Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u) = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u1) \<Longrightarrow> 
    Ector' u p = Ector' u1 p"
-(* Ector1 is less injective than Ector outside base, and assuming freshness *)
+(* Ector1 is less injective than Ector outside \<phi>, and assuming freshness *)
 and 
 (* call the expression FreeVars u, and use it in the other axioms:  *)
-Ector1_Ector'_topFree: "\<And>u uu p. \<not> base u \<Longrightarrow> 
+Ector1_Ector'_topFree: "\<And>u uu p.
     GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
-    GVrs1 uu \<union> \<Union> {EVrs e' - GVrs2 uu |e'. e' \<in> GSupp1 uu} \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp2 uu}  \<subseteq> 
-    GVrs1 u \<union> \<Union> {EVrs e' - GVrs2 u |e'. e' \<in> GSupp1 u} \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp2 u} 
-  \<union> PVrs p"
-(* This can replace one axiom for ECtor1' (since it makes it redundant *)
+    EVrs (Ector uu)  \<subseteq> EVrs (Ector u) \<union> PVrs p"
+(* This can replace one axiom for Ector' (since it makes it redundant *)
 (******)
 and 
 Ector_Ector'_sync:  
-"\<And>w u p g. GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+"\<And>w u p g. 
+       GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
 and Ector'_uniform:  
@@ -58,16 +44,7 @@ and Ector'_uniform:
 (* only depends on p *) 
 begin
 
-lemmas Ector1_Ector'_topFree' =  triv_Un4_remove[OF Ector1_Ector'_topFree]
-
-lemma Ector_base: "Ector (u:: ('a, 'a, 'a E, 'a E) G) = Ector v \<Longrightarrow> base u \<longleftrightarrow> base v"
-using Ector_base_inj by metis
-
-lemma base_Some_Ector: "base (u:: ('a, 'a, 'a E, 'a E) G) \<Longrightarrow> (SOME ua. Ector ua = Ector u) = u"
-by (metis (mono_tags, lifting) Ector_base_inj tfl_some) 
-
-lemma base_Some_Ector': "base (SOME ua. Ector ua = Ector u) \<longleftrightarrow> base (u:: ('a, 'a, 'a E, 'a E) G)"
-by (metis (mono_tags, lifting) Ector_base_inj tfl_some) 
+lemmas Ector1_Ector'_topFree' =  triv_Un4_remove[OF Ector1_Ector'_topFree[unfolded EVrs_Ector]]
 
 (* *)
 
@@ -84,10 +61,12 @@ proof-
     unfolding F' Gmap_comp[symmetric]
     apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms by auto
   show ?thesis unfolding 1 unfolding F'_def apply(subst Gmap_comp[symmetric])
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap by auto
+  apply(rule Ector_Ector'_sync)  
+    subgoal using assms unfolding GSupp1_Gmap GSupp2_Gmap by auto
+    using assms unfolding GVrs2_Gmap by auto
 qed
 
-lemma Ector_Ector'_Gmap_fst: 
+lemma Ector_Ector'_Gmap_fst:  
 assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
@@ -96,7 +75,7 @@ proof-
   have 1: "Gmap (uncurry H) (uncurry H) w = Gmap (\<lambda>e. H e p) (\<lambda>e. H e p) (Gmap fst fst w)"
     unfolding Gmap_comp
     apply(rule Gmap_cong) using 00 unfolding GSupp1_Gmap GSupp2_Gmap uncurry_def by auto
-
+ 
   define H' where "H' \<equiv> \<lambda>e (p'::'a P). H e p"
   have H': "H' = (\<lambda>pe p'. pe p) o H" unfolding H'_def o_def fun_eq_iff by simp
   have 2: "Ector' (Gmap H H u) p = Ector' (Gmap H' H' u) p"
@@ -106,7 +85,8 @@ proof-
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap by auto
+  apply(rule Ector_Ector'_sync)  
+    using assms unfolding GVrs2_Gmap by auto
 qed
 
 end (* context Bimodels *)

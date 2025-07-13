@@ -25,7 +25,7 @@ shows "u1 \<in> Edtor1' (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u),
   (Ector (Gmap fst fst u1) = Ector' u p \<and> 
    GSupp1 (Gmap snd snd u1) \<union> GSupp2 (Gmap snd snd u1) \<subseteq> {p} \<and> 
    GVrs2 u1 \<inter> PVrs p = {})"
-using assms unfolding Edtor1'_def apply auto apply(rule Ector1_Ector'_inj) by auto
+using assms unfolding Edtor1'_def apply auto apply(rule Ector_Ector'_inj_step) by auto
 
 lemma in_Edtor1'_Ector: 
 assumes "\<not> base u" "GVrs2 u \<inter> PVrs p = {}" 
@@ -149,7 +149,7 @@ unfolding Eperm''_def
     unfolding Eperm_Ector apply(subst Edtor'_base)
       subgoal using base_Gmap base_Gren by metis
       subgoal apply auto 
-      apply(subst ctor0PermM[unfolded ctorPermM_def, rule_format])
+      apply(subst ctorPermM_base[unfolded ctorPermM_def, rule_format])
         subgoal by (simp add: base_Gmap)
         subgoal by simp
         subgoal unfolding Gmap_comp Gmap_Gren unfolding lift_def o_def .. . .
@@ -182,7 +182,7 @@ unfolding Eperm''_def
                 subgoal 
                 unfolding Gmap_o[symmetric] triv_Eperm_lift unfolding Gmap_o
                 unfolding o_def
-                apply(subst (asm) ctor1PermM[unfolded ctorPermM_def, rule_format,  
+                apply(subst (asm) ctorPermM_step[unfolded ctorPermM_def, rule_format,  
                             symmetric])
                   subgoal by (simp add: base_Gmap)
                   subgoal by simp
@@ -295,7 +295,7 @@ qed
 lemma step_Ector'_Ector_EVrs: 
 "\<not> base u \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
-apply(rule subset_trans[OF ctor1VarsM[unfolded ctorVarsM_def, rule_format]])
+apply(rule subset_trans[OF ctorVarsM_step[unfolded ctorVarsM_def, rule_format]])
   subgoal by (simp add: base_Gmap)
   subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto  
     apply (metis Diff_iff GVrs2_Gmap)  
@@ -304,7 +304,7 @@ apply(rule subset_trans[OF ctor1VarsM[unfolded ctorVarsM_def, rule_format]])
 lemma base_Ector'_Ector_EVrs: 
 "base u \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
-apply(rule subset_trans[OF ctor0VarsM[unfolded ctorVarsM_def, rule_format]])
+apply(rule subset_trans[OF ctorVarsM_base[unfolded ctorVarsM_def, rule_format]])
   subgoal by (simp add: base_Gmap)
   subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto 
   apply (simp add: base_base) 
@@ -321,7 +321,7 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of e p]) apply clarify apply (
     subgoal for ua  
     apply(rule incl_Un_triv3)
     unfolding EVrs''_def EVrs_Ector 
-    apply(rule subset_trans[OF _ Ector1_Ector'_topFree'[of u p "Gmap fst fst ua", unfolded GSupp1_Gmap 
+    apply(rule subset_trans[OF _ Ector_Ector'_EVrs_step'[of u p "Gmap fst fst ua", unfolded GSupp1_Gmap 
       GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap]]) 
       subgoal apply(rule incl_Un3_triv3)
         subgoal ..

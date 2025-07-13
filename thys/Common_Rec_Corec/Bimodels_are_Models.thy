@@ -21,14 +21,14 @@ lemma ctorPermM: "ctorPermM EEctor' Eperm u"
 unfolding ctorPermM_def apply safe
   subgoal for \<sigma> apply(cases "base u")
     subgoal unfolding EEctor'_base  
-    apply(subst ctor0PermM[unfolded ctorPermM_def, rule_format])
+    apply(subst ctorPermM_base[unfolded ctorPermM_def, rule_format])
       subgoal .
       subgoal by auto
       subgoal apply(subst EEctor'_base )
         subgoal using base_Gmap base_Gren by fastforce
         subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . .
     subgoal unfolding EEctor'_step  
-    apply(subst ctor1PermM[unfolded ctorPermM_def, rule_format])
+    apply(subst ctorPermM_step[unfolded ctorPermM_def, rule_format])
       subgoal .
       subgoal using base_Gmap by auto
       subgoal apply(subst EEctor'_step)
@@ -39,10 +39,10 @@ lemma ctorVarsM: "ctorVarsM EEctor' EVrs u"
 unfolding ctorVarsM_def  
   apply(cases "base u")
     subgoal unfolding EEctor'_base  apply(intro allI)  
-    apply(rule subset_trans[OF ctor0VarsM[unfolded ctorVarsM_def, rule_format]])
+    apply(rule subset_trans[OF ctorVarsM_base[unfolded ctorVarsM_def, rule_format]])
     by auto 
     subgoal unfolding EEctor'_step apply(intro allI) 
-    apply(rule subset_trans[OF ctor1VarsM[unfolded ctorVarsM_def, rule_format]]) 
+    apply(rule subset_trans[OF ctorVarsM_step[unfolded ctorVarsM_def, rule_format]]) 
     using base_Gmap by auto . 
 
 

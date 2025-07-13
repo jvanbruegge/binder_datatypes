@@ -24,27 +24,34 @@ and Eperm :: "(var \<Rightarrow> var) \<Rightarrow> E' \<Rightarrow> E'"
 and EVrs :: "E' \<Rightarrow> var set"
 assumes nom: "nom Eperm EVrs"
 *)
+
 assumes
-    ctor0PermM: "\<And>u. base u \<Longrightarrow> ctorPermM Ector' Eperm u" and 
-    ctor1PermM: "\<And>u. \<not> base u \<Longrightarrow> ctorPermM Ector' Eperm u"
-and ctor0VarsM: "\<And>u. base u \<Longrightarrow> ctorVarsM Ector' EVrs u" and 
-    ctor1VarsM: "\<And>u. \<not> base u \<Longrightarrow> ctorVarsM Ector' EVrs u"
+    ctorPermM_base: "\<And>u. base u \<Longrightarrow> ctorPermM Ector' Eperm u" and 
+    ctorPermM_step: "\<And>u. \<not> base u \<Longrightarrow> ctorPermM Ector' Eperm u"
+and ctorVarsM_base: "\<And>u. base u \<Longrightarrow> ctorVarsM Ector' EVrs u" and 
+    ctorVarsM_step: "\<And>u. \<not> base u \<Longrightarrow> ctorVarsM Ector' EVrs u"
 (* above just standard model properties, but split in two; 
 next some more specific requirements *)
 assumes Ector_base_inj: "\<And>u1 u2::('a,'a,'a E, 'a E)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
-and Ector1_Ector'_inj: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not> base u1 \<Longrightarrow> 
+and Ector_Ector'_inj_step: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not> base u1 \<Longrightarrow> 
    GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u1 \<inter> PVrs p = {} \<Longrightarrow> 
    Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u) = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u1) \<Longrightarrow> 
    Ector' u p = Ector' u1 p"
 (* Ector1 is less injective than Ector outside base, and assuming freshness *)
 and 
 (* call the expression FreeVars u, and use it in the other axioms:  *)
-Ector1_Ector'_topFree: "\<And>u uu p. \<not> base u \<Longrightarrow> 
+Ector_Ector'_EVrs_step: "\<And>u uu p.
+    \<not> base u \<Longrightarrow> 
     GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
-    GVrs1 uu \<union> \<Union> {EVrs e' - GVrs2 uu |e'. e' \<in> GSupp1 uu} \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp2 uu}  \<subseteq> 
-    GVrs1 u \<union> \<Union> {EVrs e' - GVrs2 u |e'. e' \<in> GSupp1 u} \<union> \<Union> {EVrs e' |e'. e' \<in> GSupp2 u} 
-  \<union> PVrs p"
+    EVrs (Ector uu)  \<subseteq> EVrs (Ector u) \<union> PVrs p"
+(* and 
+(* AtoD: this, which I copied from Expression_like_Corecursor, seems to be 
+something like a 
+converse of the above... *)
+EVrs_Ector': "\<And>u p. \<not> base u \<Longrightarrow> 
+  EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u))"
+*)
 (* This can replace one axiom for ECtor1' (since it makes it redundant *)
 (******)
 and 
@@ -58,7 +65,10 @@ and Ector'_uniform:
 (* only depends on p *) 
 begin
 
-lemmas Ector1_Ector'_topFree' =  triv_Un4_remove[OF Ector1_Ector'_topFree]
+
+lemmas Ector_Ector'_EVrs_step' =  triv_Un4_remove[OF Ector_Ector'_EVrs_step[unfolded EVrs_Ector]]
+
+
 
 lemma Ector_base: "Ector (u:: ('a, 'a, 'a E, 'a E) G) = Ector v \<Longrightarrow> base u \<longleftrightarrow> base v"
 using Ector_base_inj by metis

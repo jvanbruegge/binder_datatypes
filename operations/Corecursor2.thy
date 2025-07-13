@@ -1151,7 +1151,142 @@ lemmas f_FVarsD_aux = f_FVarsD_aux1 f_FVarsD_aux2
 
 (* TODO: just realized there exists some simp tactics in this proof :') *)
 (* TODO: we probably also need variants of these for T2 *)
-lemma valid_pick_set8: "suitable1 pick \<Longrightarrow> xc \<in> set8_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
+lemma valid_pick_set8:
+  "suitable1 pick \<Longrightarrow> xc \<in> set8_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
+  "suitable2 pick2 \<Longrightarrow> xc2 \<in> set8_T2_pre (pick2 xb2) \<Longrightarrow> valid_U2 xb2 \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc2"
+(* REPEAT_DETERM *)
+  apply (unfold suitable1_def Utor1_def)
+  apply (erule allE)
+  apply (erule impE)
+  apply assumption
+  apply (erule imageE[of _ _ "Udtor1 xb"])
+  apply (simp only:)
+  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (cases xc)
+  apply hypsubst_thin
+   apply (subst pred_sum.simps)
+   apply simp
+  apply hypsubst_thin
+  apply (subst pred_sum.simps)
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI1)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+   apply assumption
+(* repeated *)
+  apply (unfold suitable2_def Utor2_def)
+  apply (erule allE)
+  apply (erule impE)
+  apply assumption
+  apply (erule imageE[of _ _ "Udtor2 xb2"])
+  apply (simp only:)
+  apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (cases xc2)
+  apply hypsubst_thin
+   apply (subst pred_sum.simps)
+   apply simp
+  apply hypsubst_thin
+  apply (subst pred_sum.simps)
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI1)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+    apply assumption
+(* END REPEAT_DETERM *)
+  done
+
+lemma valid_pick_set9:
+  "suitable1 pick \<Longrightarrow> xc \<in> set9_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
+  "suitable2 pick2 \<Longrightarrow> xc2 \<in> set9_T2_pre (pick2 xb2) \<Longrightarrow> valid_U2 xb2 \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc2"
+(* REPEAT_DETERM *)
+  apply (unfold suitable1_def Utor1_def)
+  apply (erule allE)
+  apply (erule impE)
+  apply assumption
+  apply (erule imageE[of _ _ "Udtor1 xb"])
+  apply (simp only:)
+  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (cases xc)
+  apply hypsubst_thin
+   apply (subst pred_sum.simps)
+   apply simp
+  apply hypsubst_thin
+  apply (subst pred_sum.simps)
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI2)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+   apply assumption
+(* repeated *)
+  apply (unfold suitable2_def Utor2_def)
+  apply (erule allE)
+  apply (erule impE)
+  apply assumption
+  apply (erule imageE[of _ _ "Udtor2 xb2"])
+  apply (simp only:)
+  apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (cases xc2)
+  apply hypsubst_thin
+   apply (subst pred_sum.simps)
+   apply simp
+  apply hypsubst_thin
+  apply (subst pred_sum.simps)
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI2)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+    apply assumption
+(* END REPEAT_DETERM *)
+  done
+
+lemma valid_pick_set10:
+  "suitable1 pick \<Longrightarrow> xc \<in> set10_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U2 xc"
+  "suitable2 pick2 \<Longrightarrow> xc2 \<in> set10_T2_pre (pick2 xb2) \<Longrightarrow> valid_U2 xb2 \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U2 xc2"
+(* REPEAT_DETERM *)
   apply (unfold suitable1_def Utor1_def)
   apply (erule allE)
   apply (erule impE)
@@ -1181,9 +1316,43 @@ lemma valid_pick_set8: "suitable1 pick \<Longrightarrow> xc \<in> set8_T1_pre (p
   apply (rule setr.intros)
   apply (rule sym)
   apply assumption
+(* repeated *)
+  apply (unfold suitable2_def Utor2_def)
+  apply (erule allE)
+  apply (erule impE)
+  apply assumption
+  apply (erule imageE[of _ _ "Udtor2 xb2"])
+  apply (simp only:)
+  apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (cases xc2)
+  apply hypsubst_thin
+   apply (subst pred_sum.simps)
+   apply simp
+  apply hypsubst_thin
+  apply (subst pred_sum.simps)
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI1)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+    apply assumption
+(* END REPEAT_DETERM *)
   done
 
-lemma valid_pick_set9: "suitable1 pick \<Longrightarrow> xc \<in> set9_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
+lemma valid_pick_set11:
+  "suitable1 pick \<Longrightarrow> xc \<in> set11_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U2 xc"
+  "suitable2 pick2 \<Longrightarrow> xc2 \<in> set11_T2_pre (pick2 xb2) \<Longrightarrow> valid_U2 xb2 \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U2 xc2"
+(* REPEAT_DETERM *)
   apply (unfold suitable1_def Utor1_def)
   apply (erule allE)
   apply (erule impE)
@@ -1212,19 +1381,42 @@ lemma valid_pick_set9: "suitable1 pick \<Longrightarrow> xc \<in> set9_T1_pre (p
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
+   apply assumption
+(* repeated *)
+  apply (unfold suitable2_def Utor2_def)
+  apply (erule allE)
+  apply (erule impE)
   apply assumption
+  apply (erule imageE[of _ _ "Udtor2 xb2"])
+  apply (simp only:)
+  apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
+  apply (cases xc2)
+  apply hypsubst_thin
+   apply (subst pred_sum.simps)
+   apply simp
+  apply hypsubst_thin
+  apply (subst pred_sum.simps)
+  apply (rule disjI2)
+  apply (rule exI)
+  apply (rule conjI)
+   apply (rule refl)
+  apply (rule imageE)
+  prefer 2
+  apply (erule valid_Udtor')
+     apply assumption
+    prefer 3
+  apply assumption
+   apply (rule UnI2)
+   apply assumption
+  apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
+  apply (rule setr.intros)
+  apply (rule sym)
+    apply assumption
+(* END REPEAT_DETERM *)
   done
 
-term is_free_raw_T11
-thm is_free_raw_T11_is_free_raw_T21.inducts(1)
-thm mp[OF _ refl]
-
-thm is_free_raw_T11_is_free_raw_T21.inducts(1)[of _ _ "\<lambda>x y. \<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> x \<in> raw_UFVars11 d", THEN spec, THEN mp, THEN mp[OF _ refl]]
-thm is_free_raw_T11_is_free_raw_T21.induct
-thm is_free_raw_T12_is_free_raw_T22.inducts
-
 lemma f_FVarsD:
-  assumes p: "suitable1 pick1" "suitable2 pick"
+  assumes p: "suitable1 pick1" "suitable2 pick2"
   shows "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
     "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
 proof -
@@ -1284,7 +1476,7 @@ proof -
      apply assumption
     apply assumption
      apply (rule assms)
-   apply (drule valid_pick_set8[OF p(1)])
+   apply (drule valid_pick_set8(1)[OF p(1)])
     apply assumption
             apply assumption
 (* repeated *)
@@ -1318,7 +1510,7 @@ proof -
      apply assumption
     apply assumption
      apply (rule assms)
-   apply (drule valid_pick_set9[OF p(1)])
+   apply (drule valid_pick_set9(1)[OF p(1)])
     apply assumption
   apply assumption
 (* repeated *)
@@ -1341,7 +1533,7 @@ proof -
               prefer 2
   apply (rule refl)
              prefer 2
-   apply (rule suitable_FVarsD[THEN subsetD, rotated]) (* TODO: put union members in correct order *)
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
   apply assumption
        apply (unfold Un_assoc)
     apply (rule UnI2)
@@ -1352,15 +1544,206 @@ proof -
      apply assumption
     apply assumption
             apply (rule assms)
-  (*
-   apply (drule valid_pick_set9[OF p(1)])
+   apply (drule valid_pick_set10(1)[OF p(1)])
+    apply assumption
+           apply assumption
+(* repeated *)
+   apply (rule allI)
+          apply (rule impI)+
+   apply (frule f_ctor)
+   apply hypsubst
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (unfold image_id)?
+   apply (erule imageE)
+   apply hypsubst
+   apply (drule f_FVarsD_aux)
+     apply (erule allE)
+      apply (erule impE)
+       prefer 2
+             apply (erule impE)
+      apply assumption
+        apply assumption
+  apply assumption
+              prefer 2
+  apply (rule refl)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
+  apply assumption
+       apply (unfold Un_assoc)
+    apply (rule UnI2)
+    apply (unfold Un_assoc[symmetric])?
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 5] 1\<close>) (* normally: Use goal number here *)
+    apply (rule DiffI[rotated], assumption)?
+    apply (rule UN_I)
+     apply assumption
+    apply assumption
+            apply (rule assms)
+   apply (drule valid_pick_set11(1)[OF p(1)])
+    apply assumption
+          apply assumption
+    (* END REPEAT_DETERM *)
+
+          (* REPEAT_DETERM *)
+              apply (rule allI)
+              apply (rule impI)+
+         apply (drule DiffI, assumption)?
+               apply (erule suitable_FVarsD(3)[OF assms(2), unfolded Un_assoc, THEN set_mp])
+               apply (drule f_ctor)
+              apply hypsubst
+              apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+               apply (unfold image_id Un_assoc[symmetric])[1]
+               apply (erule UnI1 UnI2 | rule UnI1)+
+            (* repeated *)
+            apply (rule allI)
+              apply (rule impI)+
+               apply (drule DiffI, assumption)?
+               apply (erule suitable_FVarsD(3)[OF assms(2), unfolded Un_assoc, THEN set_mp])
+               apply (drule f_ctor)
+              apply hypsubst
+              apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+               apply (unfold image_id Un_assoc[symmetric])[1]
+              apply (erule UnI1 UnI2 | rule UnI1)+
+          (* END REPEAT_DETERM *)
+
+(* REPEAT_DETERM *)
+   apply (rule allI)
+   apply (rule impI)+
+   apply (frule f_ctor)
+   apply hypsubst
+   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (unfold image_id)?
+   apply (erule imageE)
+   apply hypsubst
+   apply (drule f_FVarsD_aux)
+     apply (erule allE)
+      apply (erule impE)
+       prefer 2
+  apply (erule impE)
+      apply assumption
+        apply assumption
+  apply assumption
+              prefer 2
+  apply (rule refl)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
+  apply assumption
+       apply (unfold Un_assoc)
+    apply (rule UnI2)
+    apply (unfold Un_assoc[symmetric])?
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 2] 1\<close>) (* normally: Use goal number here *)
+    apply (rule DiffI[rotated], assumption)?
+    apply (rule UN_I)
+     apply assumption
+    apply assumption
+     apply (rule assms)
+   apply (drule valid_pick_set8(2)[OF p(2)])
+    apply assumption
+            apply assumption
+(* repeated *)
+   apply (rule allI)
+   apply (rule impI)+
+   apply (frule f_ctor)
+   apply hypsubst
+   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (unfold image_id)?
+   apply (erule imageE)
+   apply hypsubst
+   apply (drule f_FVarsD_aux)
+     apply (erule allE)
+      apply (erule impE)
+       prefer 2
+  apply (erule impE)
+      apply assumption
+        apply assumption
+  apply assumption
+              prefer 2
+  apply (rule refl)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
+  apply assumption
+       apply (unfold Un_assoc)
+    apply (rule UnI2)
+    apply (unfold Un_assoc[symmetric])?
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 3] 1\<close>) (* normally: Use goal number here *)
+    apply (rule DiffI[rotated], assumption)?
+    apply (rule UN_I)
+     apply assumption
+    apply assumption
+     apply (rule assms)
+   apply (drule valid_pick_set9(2)[OF p(2)])
     apply assumption
   apply assumption
- (* TODO: repeat some more *)
-
-  done
-    (* END REPEAT_DETERM *)*)
-    sorry
+(* repeated *)
+   apply (rule allI)
+          apply (rule impI)+
+   apply (frule f_ctor)
+   apply hypsubst
+   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (unfold image_id)?
+   apply (erule imageE)
+   apply hypsubst
+   apply (drule f_FVarsD_aux)
+     apply (erule allE)
+      apply (erule impE)
+       prefer 2
+             apply (erule impE)
+      apply assumption
+        apply assumption
+  apply assumption
+              prefer 2
+  apply (rule refl)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
+  apply assumption
+       apply (unfold Un_assoc)
+    apply (rule UnI2)
+    apply (unfold Un_assoc[symmetric])?
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 4] 1\<close>) (* normally: Use goal number here *)
+    apply (rule DiffI[rotated], assumption)?
+    apply (rule UN_I)
+     apply assumption
+    apply assumption
+            apply (rule assms)
+   apply (drule valid_pick_set10(2)[OF p(2)])
+    apply assumption
+           apply assumption
+(* repeated *)
+   apply (rule allI)
+          apply (rule impI)+
+   apply (frule f_ctor)
+   apply hypsubst
+   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
+   apply (unfold image_id)?
+   apply (erule imageE)
+   apply hypsubst
+   apply (drule f_FVarsD_aux)
+     apply (erule allE)
+      apply (erule impE)
+       prefer 2
+             apply (erule impE)
+      apply assumption
+        apply assumption
+  apply assumption
+              prefer 2
+  apply (rule refl)
+             prefer 2
+   apply (rule suitable_FVarsD[THEN subsetD, rotated])
+  apply assumption
+       apply (unfold Un_assoc)
+    apply (rule UnI2)
+    apply (unfold Un_assoc[symmetric])?
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 5] 1\<close>) (* normally: Use goal number here *)
+    apply (rule DiffI[rotated], assumption)?
+    apply (rule UN_I)
+     apply assumption
+    apply assumption
+            apply (rule assms)
+   apply (drule valid_pick_set11(2)[OF p(2)])
+    apply assumption
+          apply assumption
+    (* END REPEAT_DETERM *)
+    done
+    
   show "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
     "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
      apply -

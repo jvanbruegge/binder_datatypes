@@ -46,6 +46,9 @@ binder_datatype (EVrs: 'a) E = Ector "('a, x::'a, t::'a E, 'a E) G" binds x in t
   for permute: Eperm
 declare E.inject[simp del]
 
+term Ector
+find_theorems name: REC name: E
+
 (*for technical reasons we now work with var_E_pre but the classes are the same*)
 sublocale var_E_pre < var
   by (rule var_axioms)
@@ -165,8 +168,22 @@ proof (standard, safe)
   and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
   and PVrs :: "'p \<Rightarrow> 'a set"
   and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
+
+typ "('g, 'h, 'c, 'e) E_pre"
+term "Ector :: ('c::var_E_pre, 'c, 'c E, 'c E) G \<Rightarrow> 'c E"
+term Gmap
+
+find_theorems name: E_pre 
   assume "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
-  interpret rec: REC_E sorry
+  interpret rec: REC_E 
+
+
+term term where Pmap = Pperm 
+  and PFVars = PVrs and validP = Pvalid 
+  and avoiding_set = "{}" 
+  and Umap = "\<lambda>\<sigma> e'. Eperm \<sigma>"
+  and UFVars = "\<lambda>e e'. EVrs e" term Gmap
+  (* and Uctor = "\<lambda>uu'. Ector' (Gmap h h uu')" *)
   term rec.REC_E
   show "\<exists>rec. (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and> (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and> (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
     sorry

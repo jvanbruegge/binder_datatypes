@@ -46,8 +46,11 @@ binder_datatype (EVrs: 'a) E = Ector "('a, x::'a, t::'a E, 'a E) G" binds x in t
   for permute: Eperm
 declare E.inject[simp del]
 
+find_theorems Ector
 term Ector
-find_theorems name: REC name: E
+find_theorems name: REC name: E 
+find_theorems E_ctor Ector
+term E_ctor
 
 (*for technical reasons we now work with var_E_pre but the classes are the same*)
 sublocale var_E_pre < var
@@ -175,7 +178,7 @@ term Gmap
 
 find_theorems name: E_pre 
   assume "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
-  interpret rec: REC_E 
+  interpret rec: REC_E find_theorems Ector term Uctor apply standard 
 
 
 term term where Pmap = Pperm 

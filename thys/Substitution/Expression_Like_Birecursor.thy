@@ -29,14 +29,27 @@ TODO the below Birecursor locale needs to be interpreted for both datatypes and 
 in the respective theory Data and Codata using the recursor/corecursor
 the existing interpretations in that theory that define substitution directly should be quite close
 *)
+definition restr2 :: "('a \<Rightarrow> 'p \<Rightarrow> 'b) \<Rightarrow> ('p \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'p \<Rightarrow> 'b" where 
+"restr2 f P \<equiv> \<lambda>a p. if P p then f a p else undefined"
+
+context Expression begin
+(* Non-clashing: Barendregt's convention *)
+definition 
+"noclashE x \<equiv> GVrs2 x \<inter> (GVrs1 x \<union> \<Union> (EVrs ` GSupp2 x)) = {}"
+end
+
+
+
 locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Ebd Ector
   for Eperm EVrs Ebd Ector +
   fixes Pdummy :: 'p
   assumes rec: "\<forall>Pvalid Pperm (PVrs :: 'p \<Rightarrow> 'a set) Ector'.
     Bimodel Pvalid Pperm PVrs Eperm EVrs Ebd Ector Ector' \<longrightarrow> (\<exists>rec.
-      ((\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} 
+      ((\<forall>u p. Pvalid p \<longrightarrow> 
+              noclashE u \<longrightarrow> GVrs2 u \<inter> PVrs p = {} 
               \<longrightarrow> 
-              rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+              rec (Ector u) p = 
+              Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
 begin
@@ -46,11 +59,13 @@ context fixes Pvalid Pperm and PVrs :: "'p \<Rightarrow> 'a set" and Ector'
 begin
 
 definition rec where
-  "rec = (SOME rec. ((\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+  "rec = (SOME rec. ((\<forall>u p. Pvalid p \<longrightarrow> noclashE u \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
+   rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
 
-lemma rec_Ector: "Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p"
+lemma rec_Ector: "Pvalid p \<Longrightarrow> noclashE u \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+  rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p"
   using someI_ex[OF rec[rule_format, OF BM], THEN conjunct1] unfolding rec_def
   by blast
 

@@ -291,6 +291,8 @@ lemma Ector_fresh_inject:
   apply blast
   done
 
+
+
 end
 
 end

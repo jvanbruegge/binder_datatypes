@@ -457,8 +457,7 @@ unfolding REC_E_def2 apply(rule conjI)
 sublocale REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor' validU 
 using REC_E .
 
-definition 
-"noclashE x \<equiv> GVrs2 x \<inter> (GVrs1 x \<union> \<Union> (EVrs ` GSupp2 x)) = {}"
+
 
 lemma noclash_E_noclashE[simp]: "noclash_E (Abs_E_pre x) = noclashE x"
 sorry
@@ -515,12 +514,14 @@ proof (standard, safe)
   using Bimodel_recE[OF b] .
   term rec.recE
   show "\<exists>rec. 
-    (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+    (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
+           rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
     (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow>
        |supp \<sigma>| <o |UNIV::'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
   apply(rule exI[of _ rec.recE]) apply(intro conjI allI)
-    subgoal for u p using rec.rec_ctor[of p u] apply (auto simp: Gmap_comp o_def) 
+    subgoal for u p using rec.rec_ctor[of p u] 
+    apply (auto simp: Gmap_comp o_def restr2_def)  
   
 
 

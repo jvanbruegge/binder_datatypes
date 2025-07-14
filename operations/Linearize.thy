@@ -249,7 +249,7 @@ fun mk_nonrep2_map_F_tac mrbnf nonrep_def sameShape_def F_map_comp F_mr_rel_map 
           K (unfold_thms_tac ctxt @{thms eq_alt}),   
           EqSubst.eqsubst_tac ctxt [0] @{thms Grp_UNIV_id}
         ]) THEN
-        unfold_thms_tac ctxt [mr_rel_F_def, o_id, F_rel_compp, F_rel_Grp, F_map_id] THEN
+        unfold_thms_tac ctxt [mr_rel_F_def, o_id, F_rel_compp, F_rel_Grp] THEN
         unfold_thms_tac ctxt [eqTrueI OF @{thms subset_UNIV}, @{thm simp_thms(21)}, id_o, @{thm UNIV_def} RS sym] THEN
         unfold_thms_tac ctxt ([eqTrueI OF [@{thm UNIV_I}], id_apply] @ @{thms Grp_UNIV_id OO_def Grp_def simp_thms(21)}) THEN
         HEADGOAL (EVERY' [
@@ -326,7 +326,7 @@ lemma nonrep2_map_F:
     apply (subst (asm) (1) trans[OF eq_OO OO_eq [symmetric]])
     apply (unfold eq_alt)
     apply (subst Grp_UNIV_id)
-    apply (unfold mr_rel_F_def o_id F.rel_compp F.rel_Grp F.map_id)
+    apply (unfold mr_rel_F_def o_id F.rel_compp F.rel_Grp)
     apply (unfold eqTrueI[OF subset_UNIV] simp_thms(21) UNIV_def[symmetric] id_o)
     apply (tactic \<open>unfold_thms_tac @{context} @{thms Grp_UNIV_id OO_def Grp_def eqTrueI[OF UNIV_I] simp_thms(21) id_apply}\<close>)
     apply (erule exE)
@@ -1165,8 +1165,8 @@ lemma F'_in_rel:
       apply (rule exI)
       apply (subst (1 2 3) Abs_F'_inverse[unfolded mem_Collect_eq])
        apply (insert Rep_F'[of x, unfolded mem_Collect_eq subprems(1)[symmetric]]) []
-       apply (subst (asm) (4 6 8 10) o_id[symmetric]) (*nth place: 4+2n starting at 0 (all but lin_pos)*)
-       apply (subst (asm) (3) trans[OF o_id id_o[symmetric]])  (*nth place: 4+6n starting at 0 (lin_pos)*)
+       apply (subst (asm) (4 6 8 10) o_id[symmetric]) (*add o_id on all right sides*)
+       apply (subst (asm) (3) trans[OF o_id id_o[symmetric]])  (*move lin_pos to the left*)
        apply (subst (asm) F.map_comp[symmetric]; (rule bij_id supp_id_bound)?)
        apply (drule nonrep2_map_F_rev[rotated -1]; (rule bij_id supp_id_bound)?)
        apply (assumption)

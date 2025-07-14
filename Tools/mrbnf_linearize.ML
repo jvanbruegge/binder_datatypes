@@ -34,6 +34,8 @@ datatype linearize_mrbnf_option =
 (** Util **)
 val mk_Free = yield_singleton o mk_Frees;
 
+fun dest_Type_atomic T = if not (is_Type T) then [T] else dest_Type T |> snd |> map dest_Type_atomic |> flat
+
 (** Term construction **)
 fun mk_asBij f = let val typ_f = fastype_of f; in
   Const (@{const_name asBij}, typ_f --> typ_f) $ f end;
@@ -129,6 +131,8 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
 
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
+
+    val _ = (Ds, As) |> @{print}
 
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
 
@@ -256,7 +260,6 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     fun after_qed ([F_rel_map_set2_strong_thm] :: [ex_nonrep_thm] :: wit_thms) lthy = 
       let
         (* sameShape *)
-        val F_types = dest_Type typ_x |> snd;
         val R = nth var_R_As lin_live_pos;
         val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As Bs Fs mrbnf
         val mr_rel_args = map_index (fn (i, (t, vt)) => if i = lin_pos then R else 
@@ -268,9 +271,10 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val ss_binding = Binding.prefix_name ("sameShape_") (MRBNF_Def.name_of_mrbnf mrbnf);
         val ((_, ss_term, ss_def_thm), lthy) = MRBNF_Util.new_definition ss_binding ss_rhs lthy;
 
-        val ss_arg_types = fastype_of ss_term |> strip_typeN 2 |> fst |> map (snd o dest_Type);
-        val ss_TFree = subst_atomic_types (((nth ss_arg_types 0) ~~ F_types) @ ((nth ss_arg_types 1) ~~ F_types)) ss_term;
-        
+        val x_atomics = dest_Type_atomic typ_x;
+        val ss_arg_atomics = fastype_of ss_term |> domain_type |> dest_Type_atomic;
+        val ss_TFree = subst_atomic_types (ss_arg_atomics ~~ x_atomics) ss_term;
+
         (* nonrep *)
         val f = nth var_f_As lin_live_pos;
         val map_funs = map_index (fn (i, t) => if i = lin_pos then f else HOLogic.id_const t) ABFs;
@@ -284,8 +288,8 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val nrp_binding = Binding.prefix_name ("nonrep_") (MRBNF_Def.name_of_mrbnf mrbnf);
         val ((_, nrp_term, nrp_def_thm), lthy) = MRBNF_Util.new_definition nrp_binding nrp_rhs lthy;
 
-        val nrp_arg_types = fastype_of nrp_term |> domain_type |> dest_Type |> snd
-        val nrp_TFree = subst_atomic_types (nrp_arg_types ~~ F_types) nrp_term
+        val nrp_arg_atomics = fastype_of nrp_term |> domain_type |> dest_Type_atomic
+        val nrp_TFree = subst_atomic_types (nrp_arg_atomics ~~ x_atomics) nrp_term
 
         (* typedef F'*)
         val nrp_x = nrp_TFree $ var_x
@@ -346,9 +350,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val rrel_F'_binding = if Binding.is_empty rel_b then Binding.prefix_name ("rrel_") b else rel_b;
         val ((_, rrel_F'_term, rrel_F'_def_thm), lthy) = MRBNF_Util.new_definition rrel_F'_binding rrel_F'_rhs lthy;
 
-        (* proving lemmas *)
-        fun print_skip ctxt msg = print_tac ctxt msg THEN HEADGOAL (Skip_Proof.cheat_tac ctxt) (*TODO: remove*)
-        
+        (** proving lemmas **)        
         (* make theorems & util *)
         val id_prems = MRBNF_Comp_Tactics.mk_id_prems mrbnf;
 
@@ -486,18 +488,18 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 EqSubst.eqsubst_tac ctxt [0] [F_map_comp] THEN_ALL_NEW
                   TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
                 K (unfold_thms_tac ctxt [switch id_o o_id]),
-                EqSubst.eqsubst_tac ctxt [lin_pos] [switch o_id id_o], (*move all id to the right except for lin_pos*)
+                EqSubst.eqsubst_tac ctxt [lin_pos+1] [switch o_id id_o], (*move all id to the right except for lin_pos*)
                 EqSubst.eqsubst_tac ctxt [0] [F_map_comp RS sym] THEN_ALL_NEW
                   TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
                 dtac ctxt (rotate_prems ~1 (nth F_mr_rel_maps 0 RS iffD1)) THEN_ALL_NEW
                   TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
                 K (unfold_thms_tac ctxt [switch id_o o_id, @{thm Grp_UNIV_id}]),
-                K (unfold_thms_tac ctxt [switch @{thm OO_eq} @{thm eq_OO}]),  
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] [switch @{thm eq_OO} @{thm OO_eq}], (*move all (=) to the left except for lin_live_pos*)
+                K (unfold_thms_tac ctxt [switch @{thm OO_eq} @{thm eq_OO}]),
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos+1] [switch @{thm eq_OO} @{thm OO_eq}], (*move all (=) to the left except for lin_live_pos*)
                 K (unfold_thms_tac ctxt @{thms eq_alt}),   
                 EqSubst.eqsubst_tac ctxt [0] @{thms Grp_UNIV_id}
               ]) THEN
-              unfold_thms_tac ctxt [mr_rel_F_def, o_id, F_rel_compp, F_rel_Grp, F_map_id] THEN
+              unfold_thms_tac ctxt [mr_rel_F_def, o_id, F_rel_compp, F_rel_Grp] THEN
               unfold_thms_tac ctxt [eqTrueI OF @{thms subset_UNIV}, @{thm simp_thms(21)}, id_o, @{thm UNIV_def} RS sym] THEN
               unfold_thms_tac ctxt ([eqTrueI OF [@{thm UNIV_I}], id_apply] @ @{thms Grp_UNIV_id OO_def Grp_def simp_thms(21)}) THEN
               HEADGOAL (EVERY' [
@@ -544,7 +546,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 ) ctxt)
             end)
         
-        (* nonrep_map_F_rev_thm *)
+        (* nonrep_map_F_rev *)
         val map_u = MRBNF_Def.mk_map_comb_of_mrbnf Ds id_f'_As var_u_Bs (map HOLogic.id_const Fs) mrbnf
         val nonrep_map_u_prop = nrp_TFree' $ (map_u $ var_x) |> HOLogic.mk_Trueprop
         val nonrep_map_F_rev_thm = Goal.prove_sorry lthy 
@@ -563,10 +565,10 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                   TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
                 rotate_tac 1,
                 EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => i+1) (nr_bounds + nr_frees)) [switch @{thm o_id} @{thm id_o}],
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] @{thms Grp_UNIV_id},
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos+1] @{thms Grp_UNIV_id},
                 K (unfold_thms_tac ctxt [switch @{thm eq_OO} @{thm OO_eq}]),
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] [switch @{thm OO_eq} @{thm eq_OO}], (*move all (=) to the right and then lin_live_pos back*)
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] @{thms eq_alt},
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos+1] [switch @{thm OO_eq} @{thm eq_OO}], (*move all (=) to the right and then lin_live_pos back*)
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos+1] @{thms eq_alt},
                 EqSubst.eqsubst_asm_tac ctxt [0] [nth F_mr_rel_maps 0 RS sym] THEN_ALL_NEW
                   TRY o resolve_tac ctxt (prems @ @{thms supp_id_bound bij_id}),
                 Method.insert_tac ctxt [unfold_thms ctxt [nrp_def_thm, ss_def_thm] (nth prems (length prems - 1))],
@@ -594,7 +596,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => i+1) (nr_bounds + nr_frees)) @{thms inv_o_simp1} THEN_ALL_NEW
                   TRY o resolve_tac ctxt (@{thm bij_id}::prems),
                 K (unfold_thms_tac ctxt ((eqTrueI OF @{thms UNIV_I}):: @{thms id_apply simp_thms(21)})),
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] @{thms eq_commute},
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos+1] @{thms eq_commute},
                 K (unfold_thms_tac ctxt @{thms eq_OO conversep_def}),
                 etac ctxt (rotate_prems (~1 - (length var_types)) F_mr_rel_mono_strong0) THEN_ALL_NEW
                   TRY o resolve_tac ctxt @{thms supp_id_bound bij_id}
@@ -616,7 +618,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
               ) THEN
               HEADGOAL (EVERY' [
                 etac ctxt thin_rl,
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos] [@{thm Grp_UNIV_def} RS sym],
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos+1] [@{thm Grp_UNIV_def} RS sym],
                 rtac ctxt exI,
                 EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => i+1) (nr_lives -1)) @{thms eq_alt},
                 EqSubst.eqsubst_asm_tac ctxt [0] [F_mr_rel_Grp] THEN_ALL_NEW
@@ -637,7 +639,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
           (fn {context = ctxt, prems} =>
             let
               val id_prems_v = MRBNF_Comp_Tactics.mk_prems mrbnf @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound}
-              val o_id_poses = map_range (fn i => if i < lin_pos-1 then i*2 + 7 else (i+1)*2 + 7) (length var_types-1) |> filter (fn n => n >= 0);
+              val o_id_poses = map_range (fn i => if i < lin_pos then i*2 + 7 else (i+1)*2 + 7) (length var_types-1) |> filter (fn n => n >= 0);
             in
               unfold_thms_tac ctxt [nrp_def_thm, ss_def_thm] THEN
               HEADGOAL (EVERY' [
@@ -647,7 +649,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 dtac ctxt (rotate_prems ~1 ((nth F_mr_rel_maps 0) RS iffD1)) THEN_ALL_NEW
                   TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
                 K (unfold_thms_tac ctxt @{thms o_id Grp_UNIV_id}),
-                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos*3 - 1] [@{thm OO_eq} RS sym],
+                EqSubst.eqsubst_asm_tac ctxt [lin_live_pos*3 + 2] [@{thm OO_eq} RS sym],
                 EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => i+1) (nr_lives*2 -1)) [@{thm conversep_eq} RS sym],
                 EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => i+1) (nr_lives*2 -1)) @{thms eq_alt},
                 EqSubst.eqsubst_asm_tac ctxt [1] [@{thm inv_o_simp2} OF [(nth prems 0)] RS sym],
@@ -667,14 +669,14 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                     EqSubst.eqsubst_tac ctxt [1] [@{thm inv_o_simp2} OF [(nth prems 0)] RS sym],
                     K (unfold_thms_tac ctxt [F_map_comp OF flat (replicate 2 id_prems) RS sym]),
                     EqSubst.eqsubst_tac ctxt [1] subprems,
-                    EqSubst.eqsubst_tac ctxt [2*lin_pos + 6 + 2*(length var_types)] [@{thm o_id} RS sym],
+                    EqSubst.eqsubst_tac ctxt [2*lin_pos + 8 + 2*(length var_types)] [@{thm o_id} RS sym],
                     EqSubst.eqsubst_tac ctxt [1] [@{thm inv_o_simp1} OF [(nth prems 0)] RS sym],
                     K (unfold_thms_tac ctxt [F_map_comp OF flat (replicate 2 id_prems)]),
                     EqSubst.eqsubst_tac ctxt [1, 2] @{thms o_assoc},
                     rtac ctxt exI,
                     rtac ctxt refl
                   ])
-                ) ctxt)
+                ) ctxt) THEN print_tac ctxt "DONE nrp_map_bij"
             end)
 
         (* nonrep2_mapF_bij_2 *)
@@ -702,8 +704,8 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
             HEADGOAL (rtac ctxt @{thm iffI}) THEN
             ALLGOALS (etac ctxt F_rel_mono_strong THEN_ALL_NEW
                (assume_tac ctxt ORELSE' etac ctxt sym))
-            )     
-
+            )
+        
         val _ = nonrep_map_F_bij_2_thm |> @{print} (* why is nonrep yellow? *)
 
         (* register MRBNF *)
@@ -716,7 +718,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
             unfold_thms_tac ctxt [F_map_id, Rep_F'_inverse, @{thm o_apply}] THEN
             unfold_thms_tac ctxt @{thms id_def} THEN
             HEADGOAL (rtac ctxt refl),
-          map_comp0 = fn ctxt =>  
+          map_comp0 = fn ctxt =>
             HEADGOAL (Subgoal.FOCUS (fn {prems = prems, context = ctxt, ...} =>
               unfold_thms_tac ctxt (map_F'_def_thm:: @{thms asSS_def asBij_def}) THEN
               HEADGOAL(EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (1 + 2*nr_bounds)) @{thms bij_comp} THEN_ALL_NEW
@@ -733,7 +735,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 rtac ctxt nonrep_map_F_bij_2_thm THEN_ALL_NEW resolve_tac ctxt (mk_Rep_F' ctxt :: prems),
                 rtac ctxt refl])
               ) ctxt),
-          map_cong0 = fn ctxt => 
+          map_cong0 = fn ctxt =>
             HEADGOAL (Subgoal.FOCUS (fn {prems, context = ctxt, ...} =>
               unfold_thms_tac ctxt ([map_F'_def_thm] @ map (fn thm => thm RS eqTrueI) prems @
                 @{thms asSS_def asBij_def if_True o_apply}) THEN
@@ -745,7 +747,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 HEADGOAL (assume_tac ctxt)) THEN
               HEADGOAL (rtac ctxt refl)
             ) ctxt),
-          set_map0 = map (fn (set_F'_def, set_map_thm) => fn ctxt => 
+          set_map0 = map (fn (set_F'_def, set_map_thm) => fn ctxt =>
             HEADGOAL (rtac ctxt ext) THEN
             unfold_thms_tac ctxt [o_apply] THEN
             HEADGOAL (Subgoal.FOCUS (fn {prems, context = ctxt, ...} =>
@@ -757,13 +759,13 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                   resolve_tac ctxt prems])
             ) ctxt))
             (set_def_thms ~~ (MRBNF_Def.set_map_of_mrbnf mrbnf)),
-          infinite_regular_card_order = fn ctxt => HEADGOAL (rtac ctxt 
-            (MRBNF_Def.bd_infinite_regular_card_order_of_mrbnf mrbnf)),
-          set_bd = map (fn (set_F'_def, set_bd_thm) => fn ctxt => 
+          infinite_regular_card_order = fn ctxt =>
+            HEADGOAL (rtac ctxt (MRBNF_Def.bd_infinite_regular_card_order_of_mrbnf mrbnf)),
+          set_bd = map (fn (set_F'_def, set_bd_thm) => fn ctxt =>
               unfold_thms_tac ctxt [set_F'_def, o_apply] THEN
-              HEADGOAL (rtac ctxt set_bd_thm)) 
+              HEADGOAL (rtac ctxt set_bd_thm))
             (set_def_thms ~~ (MRBNF_Def.set_bd_of_mrbnf mrbnf)),
-          le_rel_OO = fn ctxt =>
+          le_rel_OO = fn ctxt => 
             HEADGOAL (Subgoal.FOCUS (fn {context = ctxt, ...} => 
               HEADGOAL (EVERY' [
                 rtac ctxt @{thm predicate2I},
@@ -775,14 +777,15 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 rtac ctxt @{thm relcomppI} THEN_ALL_NEW assume_tac ctxt
               ])
             ) ctxt),
-          in_rel = fn ctxt => HEADGOAL (Subgoal.FOCUS (fn {prems, context = ctxt,...} =>
+          in_rel = fn ctxt => HEADGOAL (Subgoal.FOCUS (fn {prems, context = ctxt, params, ...} =>
+            unfold_thms_tac ctxt @{thms Grp_def conversep_def relcompp_apply mem_Collect_eq} THEN
             unfold_thms_tac ctxt ([rrel_F'_def_thm, map_F'_def_thm, o_apply] @ set_def_thms @ @{thms asSS_def asBij_def if_True} @ 
               map (fn thm => thm RS eqTrueI) (prems @ @{thms supp_id_bound bij_id})) THEN
             HEADGOAL (EVERY' [
               EqSubst.eqsubst_tac ctxt [0] [mk_Abs_F'_inverse ctxt],
               rtac ctxt nonrep_map_F_bij_2_thm THEN_ALL_NEW resolve_tac ctxt (mk_Rep_F' ctxt :: prems),
               EqSubst.eqsubst_tac ctxt (map_range (fn i => 7+2*(i+nr_lives)) (length var_types)) [@{thm id_o} RS sym],
-              EqSubst.eqsubst_tac ctxt [lin_pos] [trans OF [@{thm id_o}, @{thm o_id} RS sym]],
+              EqSubst.eqsubst_tac ctxt [lin_pos+1] [trans OF [@{thm id_o}, @{thm o_id} RS sym]],
               EqSubst.eqsubst_tac ctxt [1] [F_map_comp RS sym] THEN_ALL_NEW
                 TRY o resolve_tac ctxt (prems @ @{thms bij_id supp_id_bound}),
               EqSubst.eqsubst_tac ctxt [1] [rrel_F_map_F_thm RS sym],
@@ -798,11 +801,11 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                   (* setup *)
                   HEADGOAL (EVERY' [
                     rtac ctxt exI,
-                    EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (nr_lives+1)) [mk_Abs_F'_inverse ctxt],
-                    Method.insert_tac ctxt [unfold_thms ctxt [(nth subprems 0 RS sym)] 
-                      (infer_instantiate' ctxt [SOME (Thm.cterm_of ctxt var_y)] (mk_Rep_F' ctxt))],
+                    EqSubst.eqsubst_tac ctxt (map_range (fn i => i+1) (2*nr_lives)) [mk_Abs_F'_inverse ctxt],
+                    Method.insert_tac ctxt [unfold_thms ctxt [nth subprems 0 RS sym] 
+                      (infer_instantiate' ctxt [SOME (nth params nr_ABFs |> snd)] (mk_Rep_F' ctxt))],
                     EqSubst.eqsubst_asm_tac ctxt (map_range (fn i => 4+2*i) (length var_types)) [@{thm o_id} RS sym],
-                    EqSubst.eqsubst_asm_tac ctxt [lin_pos] [trans OF [@{thm o_id}, @{thm id_o} RS sym]],
+                    EqSubst.eqsubst_asm_tac ctxt [lin_pos+1] [trans OF [@{thm o_id}, @{thm id_o} RS sym]],
                     EqSubst.eqsubst_asm_tac ctxt [0] [F_map_comp RS sym] THEN_ALL_NEW
                       TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
                     dtac ctxt (rotate_prems ~1 nonrep_map_F_rev_thm) THEN_ALL_NEW
@@ -813,7 +816,13 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                   HEADGOAL (EqSubst.eqsubst_tac ctxt [1, 2] [F_map_comp] THEN_ALL_NEW
                       TRY o resolve_tac ctxt (prems @ @{thms bij_id supp_id_bound})) THEN
                   unfold_thms_tac ctxt @{thms id_o o_id} THEN
-                  HEADGOAL (rtac ctxt conjI) THEN
+                  HEADGOAL (EVERY' [
+                    EqSubst.eqsubst_tac ctxt [1, 3] [Rep_F'_inverse RS sym],
+                    rtac ctxt conjI,
+                    rtac ctxt conjI,
+                    EqSubst.eqsubst_tac ctxt [0] [nth subprems 0],
+                    rtac ctxt refl
+                  ]) THEN
                   REPEAT_DETERM_N (nr_lives-1) (HEADGOAL (EVERY' [
                     TRY o rtac ctxt conjI,
                     EqSubst.eqsubst_tac ctxt [0] F_set_maps THEN_ALL_NEW 
@@ -822,25 +831,29 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                     resolve_tac ctxt subprems
                   ])) THEN
                   HEADGOAL (EVERY' [
-                    EqSubst.eqsubst_tac ctxt [2, 4] [Rep_F'_inverse RS sym],
                     rtac ctxt conjI,
-                    rtac ctxt (arg_cong OF [nth subprems 0]),
                     EqSubst.eqsubst_tac ctxt [0] [nth subprems 1 RS sym],
                     rtac ctxt (F_map_cong RS arg_cong) THEN_ALL_NEW
                       TRY o resolve_tac ctxt (refl::prems),
                     dtac ctxt (@{thm rev_subsetD} RS @{thm Collect_case_prodD}),
                     resolve_tac ctxt subprems,
-                    rtac ctxt sym,
                     EqSubst.eqsubst_tac ctxt [0] [o_apply],
                     assume_tac ctxt
-                  ])
+                  ]) THEN
+                  REPEAT_DETERM_N (nr_lives-1) (HEADGOAL (EVERY' [
+                    TRY o rtac ctxt conjI,
+                    EqSubst.eqsubst_tac ctxt [0] F_set_maps THEN_ALL_NEW 
+                      TRY o resolve_tac ctxt @{thms bij_id supp_id_bound},
+                    EqSubst.eqsubst_tac ctxt [0] @{thms image_id},
+                    resolve_tac ctxt subprems
+                  ]))
                 ) 
               ctxt) THEN
             (* 2nd Subgoal *)
-            REPEAT_DETERM_N (1+nr_lives) (HEADGOAL (eresolve_tac ctxt [exE, conjE])) THEN
-            HEADGOAL (hyp_subst_tac_thin true ctxt) THEN
+            REPEAT_DETERM_N (2+nr_lives) (HEADGOAL (eresolve_tac ctxt [exE, conjE])) THEN
             HEADGOAL (Subgoal.FOCUS
               (fn {prems = subprems, context = ctxt, ...} =>
+                unfold_thms_tac ctxt subprems THEN
                 HEADGOAL (EVERY' [
                   rtac ctxt exI,
                   EqSubst.eqsubst_tac ctxt [0] [mk_Abs_F'_inverse ctxt],
@@ -888,7 +901,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
               ctxt) 
             ) ctxt),
           pred_set = fn ctxt => HEADGOAL (rtac ctxt refl),
-          wit = fn ctxt => print_skip ctxt "wit"
+          wit = fn ctxt => print_tac ctxt "wit"
         }
         val var_types_Abs = nth_map lin_pos (fn _ => MRBNF_Def.Bound_Var) var_types;
 

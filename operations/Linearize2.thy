@@ -12,18 +12,19 @@ ML_file "../Tools/mrbnf_linearize.ML"
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) G
-consts map_G :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
-  ('c :: var \<Rightarrow> 'c) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e :: var \<Rightarrow> 'e) \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G \<Rightarrow> ('a', 'b, 'c, 'd', 'e, 'f) G"
-consts set1_G :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) G \<Rightarrow> 'a set"
-consts set2_G :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) G \<Rightarrow> 'b set"
-consts set3_G :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) G \<Rightarrow> 'c set"
-consts set4_G :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) G \<Rightarrow> 'd set"
-consts set5_G :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) G \<Rightarrow> 'e set"
-consts rrel_G :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c :: var, 'd, 'e::var, 'f) G \<Rightarrow> ('a', 'b, 'c, 'd', 'e, 'f) G \<Rightarrow> bool"
+consts map_G :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow>
+  ('c :: var \<Rightarrow> 'c') \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e  \<Rightarrow> 'e') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G"
+consts set1_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'a set"
+consts set2_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'b set"
+consts set3_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'c set"
+consts set4_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'd set"
+consts set5_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'e set"
+consts rrel_G :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> 
+  ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'e' \<Rightarrow> bool) \<Rightarrow> ('a, 'b , 'c , 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G \<Rightarrow> bool"
 
-mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) G"
+mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   map: map_G
-  sets: live: set1_G bound: set2_G free: set3_G live: set4_G bound: set5_G
+  sets: live: set1_G live: set2_G live: set3_G live: set4_G live: set5_G
   bd: natLeq
   rel: rrel_G
   var_class: var
@@ -60,10 +61,9 @@ binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) te
 
 (*declare [[quick_and_dirty]]*)
 
-(*
+
 linearize_mrbnf ('a, 'b) dlist = "('a \<times> 'b) list" on 'a
   sorry
-*)
 
 linearize_mrbnf ('a, F''bset: 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
   sorry
@@ -242,7 +242,7 @@ fun mk_nonrep2_map_F_tac mrbnf nonrep_def sameShape_def F_map_comp F_mr_rel_map 
           K (unfold_thms_tac ctxt @{thms eq_alt}),   
           EqSubst.eqsubst_tac ctxt [0] @{thms Grp_UNIV_id}
         ]) THEN
-        unfold_thms_tac ctxt [mr_rel_F_def, o_id, F_rel_compp, F_rel_Grp, F_map_id] THEN
+        unfold_thms_tac ctxt [mr_rel_F_def, o_id, F_rel_compp, F_rel_Grp] THEN
         unfold_thms_tac ctxt [eqTrueI OF @{thms subset_UNIV}, @{thm simp_thms(21)}, id_o, @{thm UNIV_def} RS sym] THEN
         unfold_thms_tac ctxt ([eqTrueI OF [@{thm UNIV_I}], id_apply] @ @{thms Grp_UNIV_id OO_def Grp_def simp_thms(21)}) THEN
         HEADGOAL (EVERY' [
@@ -926,6 +926,128 @@ lemma F'_in_rel:
     @{thm F.map_comp} @{thm nonrep2_map_F_rev} @{thm Rep_F'_inverse} @{thm F.map_cong} @{thms set4_F'_def} @{thms F.set_map}
     @{cterm x} @{context}
     THEN print_tac @{context} "done"\<close>)
+
+
+lemma F'_in_rel':
+  fixes u1 :: "'a1::var \<Rightarrow> 'a1"
+  fixes u2 :: "'a2::var \<Rightarrow> 'a2"
+  fixes u3 :: "'a3::var \<Rightarrow> 'a3"
+  fixes u5 :: "'a5::var \<Rightarrow> 'a5"
+  assumes u1: "bij u1" "|supp u1| <o |UNIV :: 'a1 set|"
+    and u2: "bij u2" "|supp u2| <o |UNIV :: 'a2 set|" 
+    and u3: "|supp u3| <o |UNIV :: 'a3 set|"
+    and u5: "bij u5" "|supp u5| <o |UNIV :: 'a5 set|"
+  shows "rrel_F' R (map_F' u1 u2 u3 id u5 x) y =
+    ((BNF_Def.Grp {x. set4_F' x \<subseteq> {(x, y). R x y}} (map_F' id id id fst id))\<inverse>\<inverse> OO
+     BNF_Def.Grp {x. set4_F' x \<subseteq> {(x, y). R x y}} (map_F' u1 u2 u3 snd u5)) x y"
+  using assms apply -
+  subgoal premises prems
+    apply (unfold Grp_def conversep_def relcompp_apply mem_Collect_eq)
+  apply (unfold rrel_F'_def set4_F'_def map_F'_def asSS_def asBij_def if_True 
+        eqTrueI[OF prems(1)] eqTrueI[OF prems(2)] eqTrueI[OF prems(3)] eqTrueI[OF prems(4)] 
+        eqTrueI[OF prems(5)] eqTrueI[OF prems(6)] eqTrueI[OF prems(7)]
+        eqTrueI[OF supp_id_bound] eqTrueI[OF bij_id] o_apply)
+    apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+     apply (rule nonrep2_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
+
+    apply (subst (11 13 15 17 19) id_o[THEN sym]) (* 2*nr_lives + 7 *)
+    apply (subst (1) trans[OF id_o o_id[THEN sym]])
+    apply (subst F.map_comp[symmetric]; (rule prems bij_id supp_id_bound)?)
+    apply (subst rrel_F_map_F3[symmetric])
+    apply (subst F.in_rel; (rule prems)?)
+    (*apply (subst trans[OF rrel_F_map_F3[symmetric] F.in_rel[OF prems(1,2,3)], (*need a function to build these prems*)
+          unfolded F.map_comp[OF prems(1,2,3) supp_id_bound bij_id supp_id_bound] id_o o_id])*)
+    apply (unfold Grp_def eqTrueI[OF UNIV_I] simp_thms(21))
+    apply (rule iffI)
+     apply (erule exE)
+     apply (erule conjE)
+     apply (erule conjE)
+     apply (erule CollectE)
+     apply (erule conjE)
+    subgoal premises subprems for z
+      apply (rule exI)
+      apply (subst (1 2 3 4) Abs_F'_inverse[unfolded mem_Collect_eq])
+       apply (insert Rep_F'[of x, unfolded mem_Collect_eq subprems(1)[symmetric]]) []
+       apply (subst (asm) (4 6 8 10 12) o_id[symmetric]) (*nth place: 4+2n starting at 0 (all but lin_pos)*)
+       apply (subst (asm) (1) trans[OF o_id id_o[symmetric]])  (*nth place: 4+6n starting at 0 (lin_pos)*)
+       apply (subst (asm) F.map_comp[symmetric]; (rule bij_id supp_id_bound)?)
+       apply (drule nonrep2_map_F_rev[rotated -1]; (rule bij_id supp_id_bound)?)
+       apply (assumption)
+
+      apply (subst (1 2) F.map_comp; (rule supp_id_bound bij_id prems)?)
+      apply (unfold o_id id_o)
+      apply (subst (1 3) Rep_F'_inverse[symmetric])
+      apply (rule conjI)
+       apply (rule conjI)
+        apply (subst subprems(1))
+        apply (rule refl)
+
+      apply ((rule conjI)?,
+        (subst F.set_map; (rule supp_id_bound bij_id)?),
+        subst image_id,
+        rule subprems)+
+
+       apply (rule conjI)
+      apply (subst subprems(2)[symmetric])
+      apply (rule F.map_cong[THEN arg_cong]; (rule prems refl)?)
+      apply (drule rev_subsetD[THEN Collect_case_prodD])
+       apply (rule subprems)
+      apply (subst o_apply)
+       apply (assumption)
+
+       apply ((rule conjI)?,
+        (subst F.set_map; (rule supp_id_bound bij_id)?),
+        subst image_id,
+        rule subprems)+
+      done
+    apply (erule exE)
+    apply (erule conjE)
+    apply (erule conjE)
+    apply (erule conjE)
+
+(* 1. \<And>b. \<lbrakk>xa = Abs_F'' (map_F id id id fst id (Rep_F'' b)); set4_F (Rep_F'' b) \<subseteq> {(x, y). Ra x y};
+          ya = Abs_F'' (map_F f1a f2a f3a snd f5a (Rep_F'' b)); set4_F (Rep_F'' b) \<subseteq> {(x, y). Ra x y}\<rbrakk>
+         \<Longrightarrow> \<exists>z. z \<in> {x. set1_F x \<subseteq> {(a, b). b = f1a a} \<and> set4_F x \<subseteq> {(x, y). Ra x y}} \<and>
+                 map_F fst id id fst id z = Rep_F'' xa \<and> map_F snd f2a f3a snd f5a z = Rep_F'' ya  *)
+    subgoal premises subprems for z
+      thm subprems
+      apply (unfold subprems)
+      apply (rule exI)
+      apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+       apply (rule nonrep2_mapF_bij_2; (rule supp_id_bound bij_id Rep_F'[unfolded mem_Collect_eq])?)
+      apply (rule conjI; (rule conjI)?)
+
+        prefer 3(* subgoal 3 is solvable without the exI instantiation and it transforms "?z" 
+          so that the other 2 subgoals are solvable as well*)
+        apply (subst Abs_F'_inverse[unfolded mem_Collect_eq])
+         apply (rule nonrep2_mapF_bij_2; (rule prems Rep_F'[unfolded mem_Collect_eq])?)
+        apply (subst F.map_comp; (rule bij_id supp_id_bound prems)?) (*having the id prems before the actual prems is important!*)
+        apply (unfold o_id)
+        apply (unfold o_def)
+        apply (rule F.map_cong; (rule prems refl)?)
+        apply (rule snd_conv)
+
+       apply (rule CollectI)
+       apply (subst F.set_map; (rule bij_id supp_id_bound)?)+
+       apply (unfold image_ident)
+       apply (rule conjI; (rule subprems)?)+
+        apply (rule subsetI)
+        apply (erule imageE)
+        apply (rule CollectI)
+        apply (rule case_prodI2)
+        apply (drule trans[OF sym, THEN iffD1[OF prod.inject]])
+         apply (assumption)
+        apply (erule conjE)
+        apply (rule trans[OF sym])
+         apply (assumption)
+        apply (erule arg_cong)
+
+      apply (subst F.map_comp; (rule supp_id_bound bij_id)?)
+      apply (unfold o_def fst_conv id_def)
+      apply (rule refl)
+      done
+    done
+  done
 
 
 ML \<open>

@@ -169,9 +169,7 @@ begin
 *)
 
 term Rep_E_pre
-term Abs_E_pre
 
-thm Abs_E_pre_inverse
 
 find_theorems Ector
 term Ector
@@ -348,55 +346,162 @@ lemmas U_defs = Umap_comp_def Umap_cong_def
   Umap_Ector_E_pre_def UFVars_EFVars_E_pre_def 
   validU_Umap_def validU_Uctor_def
 
-definition 
-"rec_E Uctor \<equiv> P_axioms \<and> U_axioms Uctor"
-
 
 
 end (* outer context fixing all the parameters *)
 
-thm REC_E.REC_ctor[no_vars]
-thm REC_E.REC_ctor[no_vars]
-thm REC_E.REC_UFVars[no_vars]
-thm REC_E.REC_swap[no_vars]
-thm REC_E.REC_valid[no_vars]
+term Abs_E_pre
+
+thm Abs_E_pre_inverse
+
+context REC_E begin
+
+thm REC_ctor[no_vars]
+thm REC_ctor[no_vars]
+thm REC_UFVars[no_vars]
+thm REC_swap[no_vars]
+thm REC_valid[no_vars]
+end 
+
+(* definition 
+"rec_E Uctor \<equiv> P_axioms \<and> U_axioms Uctor" *)
+
+term "P_axioms Pmap PFVars validP avoiding_set"
+term "U_axioms Umap UFVars validU Uctor"
+
+locale rec_E = 
+  fixes Pmap :: "('a::var_E_pre \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
+    and PFVars :: "'p \<Rightarrow> 'a set"
+    and validP :: "'p \<Rightarrow> bool"
+    and avoiding_set :: "'a set"
+    and Umap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'u \<Rightarrow> 'u"
+    and UFVars :: "'a E \<Rightarrow> 'u \<Rightarrow> 'a set"
+    and Uctor :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) G \<Rightarrow> 'p \<Rightarrow> 'u"
+    and validU :: "'u \<Rightarrow> bool"
+  assumes P: "P_axioms Pmap PFVars validP avoiding_set"
+  and U: "U_axioms Pmap PFVars validP avoiding_set Umap UFVars validU Uctor"
+begin 
+
+definition "Uctor' \<equiv> Uctor o Rep_E_pre"
+
+lemma Abs_Rep_E_pre[simp]: "Abs_E_pre o Rep_E_pre = id"
+sorry
+lemma Abs_Rep_E_pre'[simp]: "Abs_E_pre (Rep_E_pre u) = u"
+sorry
+lemma Rep_Ahs_E_pre[simp]: "Rep_E_pre o Abs_E_pre = id"
+sorry
+lemma Rep_Abs_E_pre'[simp]: "Rep_E_pre (Abs_E_pre u) = u"
+sorry
+
+lemma pred_G_pred_E_pre: "pred_G P1 P2 = pred_E_pre P1 P2 o Abs_E_pre"
+sorry 
+
+lemma pred_E_pre_pred_G: "pred_E_pre P1 P2 = pred_G P1 P2 o Rep_E_pre"
+sorry
+
+lemma Gmap_map_E_pre: "Gmap f1 f2 = Rep_E_pre o map_E_pre id id f1 f2 o Abs_E_pre"
+sorry 
+
+lemma map_E_pre_Gmap: "bij \<sigma>1 \<and> |supp \<sigma>1| <o |UNIV::'a set| \<Longrightarrow> 
+bij \<sigma>2 \<and> |supp \<sigma>2| <o |UNIV::'a set| \<Longrightarrow>  map_E_pre \<sigma>1 \<sigma>2 f1 f2 = 
+Abs_E_pre o Gren \<sigma>1 \<sigma>2 o Gmap f1 f2 o Rep_E_pre"
+sorry
 
 
+lemma [simp]: "bij \<sigma>1 \<and> |supp \<sigma>1| <o |UNIV::'a set| \<Longrightarrow> 
+bij \<sigma>2 \<and> |supp \<sigma>2| <o |UNIV::'a set| \<Longrightarrow> 
+Rep_E_pre (map_E_pre \<sigma>1 \<sigma>2 f1 f2 u) = Gren \<sigma>1 \<sigma>2 (Gmap f1 f2 (Rep_E_pre u))"
+sorry
 
-term noclash_E
-thm noclash_E_def[no_vars]
+lemma Rep_E_pre_surj: "\<exists>y. x = Rep_E_pre y"
+sorry
+
+thm Ector_def
+
+lemma Ector_Ector[simp]: "E_ctor = Ector o Rep_E_pre"
+sorry
+
+lemma Gren_id[simp]: "Gren id id = id"
+sorry
+
+lemma [simp]: "set1_E_pre y = GVrs1 (Rep_E_pre y)"
+sorry
+lemma [simp]: "set2_E_pre y = GVrs2 (Rep_E_pre y)"
+sorry
+lemma [simp]: "set3_E_pre y = GSupp1 (Rep_E_pre y)"
+sorry
+lemma [simp]: "set4_E_pre y = GSupp2 (Rep_E_pre y)"
+sorry
+
+lemma U_axioms_E_pre_Uctor': 
+"U_axioms_E_pre Pmap PFVars validP avoiding_set Umap UFVars validU Uctor'"
+unfolding U_axioms_E_pre_def apply(intro conjI)
+  subgoal using U unfolding U_axioms_def by simp
+  subgoal using U unfolding U_axioms_def by simp
+  subgoal unfolding Umap_Ector_E_pre_def Uctor'_def
+  using U unfolding U_axioms_def Umap_Ector_def 
+  using Rep_E_pre_surj by (auto simp:  pred_E_pre_pred_G)  
+  subgoal unfolding UFVars_EFVars_E_pre_def Uctor'_def
+  using U unfolding U_axioms_def UFVars_EFVars_def 
+  using Rep_E_pre_surj by (simp add: pred_E_pre_pred_G) 
+  subgoal using U unfolding U_axioms_def by simp
+  subgoal unfolding validU_Uctor_E_pre_def Uctor'_def
+  using U unfolding U_axioms_def validU_Uctor_def 
+  using Rep_E_pre_surj by (auto simp:  pred_E_pre_pred_G) . 
+
+lemma REC_E: "REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor' validU" 
+unfolding REC_E_def2 apply(rule conjI)
+  subgoal using P .
+  subgoal using U_axioms_E_pre_Uctor' . .
+
+sublocale REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor' validU 
+using REC_E .
 
 definition 
-"noclash x \<equiv> GVrs2 x \<inter> (GVrs1 x \<union> \<Union> (EVrs ` GSupp2 x)) = {}"
+"noclashE x \<equiv> GVrs2 x \<inter> (GVrs1 x \<union> \<Union> (EVrs ` GSupp2 x)) = {}"
 
-term rec_E
+lemma noclash_E_noclashE[simp]: "noclash_E (Abs_E_pre x) = noclashE x"
+sorry
 
-lemma rec_Ector: 
-"rec_E Pmap PFVars validP avoiding_set Umap UFVars validU Uctor \<Longrightarrow>
-validP p \<Longrightarrow>
-GVrs2 x' \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
-noclash x' \<Longrightarrow>
-rec_E Pmap PFVars validP avoiding_set Umap UFVars validU Uctor (Ector x') p =
-Uctor
- (Gmap 
-   (\<lambda>t. (t, \<lambda>p. 
-if validP p then rec_E Pmap PFVars validP avoiding_set Umap UFVars validU Uctor t p
-                 else undefined))
-   (\<lambda>t. (t, \<lambda>p. 
-if validP p then rec_E Pmap PFVars validP avoiding_set Umap UFVars validU Uctor t p
-                 else undefined))
-   x') 
+definition "recE \<equiv> REC_E"
+
+
+thm REC_ctor[no_vars]
+theorem rec_ctor: 
+"validP p \<Longrightarrow> GVrs2 x \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
+ noclashE x \<Longrightarrow> recE (Ector x) p =
+ Uctor (Gmap (\<lambda>t. (t, \<lambda>p. if validP p then recE t p else undefined))
+             (\<lambda>t. (t, \<lambda>p. if validP p then recE t p else undefined)) x)
  p"
+unfolding recE_def Ector_def
+apply(subst REC_ctor) by (auto simp: Uctor'_def)
 
+thm REC_UFVars[no_vars]
+theorem rec_UFVars: 
+"validP p \<Longrightarrow> UFVars e (recE e p) \<subseteq> EVrs e \<union> PFVars p \<union> avoiding_set"
+unfolding recE_def using REC_UFVars .
 
+thm REC_swap[no_vars]
+theorem rec_Eperm:
+"validP p \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow>
+ imsupp \<sigma> \<inter> avoiding_set = {} \<Longrightarrow>
+ recE (Eperm \<sigma> e) p = Umap \<sigma> e (local.REC_E e (Pmap (inv \<sigma>) p))"
+unfolding recE_def using REC_swap .
+
+thm REC_valid[no_vars]
+theorem rec_valid: 
+"pred_fun validP validU (recE (Ector x))"
+unfolding recE_def Ector_def using REC_valid by blast
+
+end (* context rec_E *)
  
 (* *)
 
-lemma 
+lemma Bimodel_recE: 
 assumes "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
-shows "REC_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) Uctor (\<lambda>x. True)"
-proof-
-  term "(Ector',Uctor)"
+shows "rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 
+   (Ector' o Gmap snd snd) (\<lambda>_ . True)"
+sorry
 
 interpretation Birecursor Eperm EVrs Gbd Ector
 proof (standard, safe)
@@ -404,17 +509,19 @@ proof (standard, safe)
   and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
   and PVrs :: "'p \<Rightarrow> 'a set"
   and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
-
-typ "('g, 'h, 'c, 'e) E_pre"
-term "Ector :: ('c::var_E_pre, 'c, 'c E, 'c E) G \<Rightarrow> 'c E"
-term Gmap
-
-
-
-
-find_theorems name: E_pre 
-  assume "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
-  interpret rec: REC_E find_theorems Ector term Uctor apply standard 
+  assume b: "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
+  interpret rec: rec_E Pperm PVrs Pvalid "{}" "\<lambda>\<sigma> e' e. Eperm \<sigma> e" "\<lambda>e' e. EVrs e"
+   "Ector' o Gmap snd snd" "\<lambda>_ . True"
+  using Bimodel_recE[OF b] .
+  term rec.recE
+  show "\<exists>rec. 
+    (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+    (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow>
+       |supp \<sigma>| <o |UNIV::'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
+       (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
+  apply(rule exI[of _ rec.recE]) apply(intro conjI allI)
+    subgoal for u p using rec.rec_ctor[of p u] apply (auto simp: Gmap_comp o_def) 
+  
 
 
 term term where Pmap = Pperm 

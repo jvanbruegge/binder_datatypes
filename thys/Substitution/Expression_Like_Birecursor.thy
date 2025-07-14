@@ -34,7 +34,9 @@ locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Eb
   fixes Pdummy :: 'p
   assumes rec: "\<forall>Pvalid Pperm (PVrs :: 'p \<Rightarrow> 'a set) Ector'.
     Bimodel Pvalid Pperm PVrs Eperm EVrs Ebd Ector Ector' \<longrightarrow> (\<exists>rec.
-      ((\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+      ((\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} 
+              \<longrightarrow> 
+              rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
 begin

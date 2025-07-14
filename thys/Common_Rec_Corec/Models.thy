@@ -18,7 +18,7 @@ definition rec :: "'a E \<Rightarrow> 'a P\<Rightarrow>'E'" where
 "rec = undefined"
 
 lemma rec_Ector:
-shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>  
+shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
  rec (Ector u) p = Ector' (Gmap rec rec u) p"
 sorry
 

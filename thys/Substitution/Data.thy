@@ -46,12 +46,6 @@ binder_datatype (EVrs: 'a) E = Ector "('a, x::'a, t::'a E, 'a E) G" binds x in t
   for permute: Eperm
 declare E.inject[simp del]
 
-find_theorems Ector
-term Ector
-find_theorems name: REC name: E 
-find_theorems E_ctor Ector
-term E_ctor
-
 (*for technical reasons we now work with var_E_pre but the classes are the same*)
 sublocale var_E_pre < var
   by (rule var_axioms)
@@ -165,6 +159,218 @@ lemma permute_\<rho>':
   done
 *)
 
+
+(*****)
+
+(* thm Birecursor_def Birecursor_axioms_def
+
+context Birecursor  
+begin 
+*)
+
+term Rep_E_pre
+term Abs_E_pre
+
+thm Abs_E_pre_inverse
+
+find_theorems Ector
+term Ector
+find_theorems name: REC name: E 
+thm Ector_def
+find_theorems E_ctor 
+term E_ctor
+
+thm REC_E_def[where avoiding_set = "{}" and validU = "\<lambda>x. True", simplified]
+
+thm REC_E_def[no_vars]
+thm REC_E.REC_ctor[no_vars]
+thm REC_E.REC_ctor[no_vars]
+thm REC_E.REC_UFVars[no_vars]
+thm REC_E.REC_swap[no_vars]
+thm REC_E.REC_valid[no_vars]
+
+context 
+fixes Pmap :: "('a::var_E_pre \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
+and PFVars :: "'p \<Rightarrow> 'a set"
+and validP :: "'p \<Rightarrow> bool"
+and avoiding_set :: "'a set"
+and Umap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'u \<Rightarrow> 'u"
+and UFVars :: "'a E \<Rightarrow> 'u \<Rightarrow> 'a set"
+and Uctor :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) E_pre \<Rightarrow> 'p \<Rightarrow> 'u"
+and validU :: "'u \<Rightarrow> bool"
+begin 
+
+definition "Pmap_comp \<equiv> \<forall>d f g.
+   validP d \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<and>
+   bij g \<and> |supp g| <o |UNIV::'a set| 
+   \<longrightarrow> 
+   Pmap (f \<circ> g) d = (Pmap f \<circ> Pmap g) d"
+
+definition "Pmap_id \<equiv> \<forall>d f. 
+ validP d \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<and> 
+ (\<forall>a. a \<in> PFVars d \<longrightarrow> f a = a) 
+ \<longrightarrow> 
+ Pmap f d = d"
+
+definition "PFVars_Pmap \<equiv> \<forall>d f. 
+  validP d \<and> bij f \<and> |supp f| <o |UNIV::'a set| 
+  \<longrightarrow> 
+  PFVars (Pmap f d) = f ` PFVars d"
+
+definition "PFVars_small \<equiv>  \<forall>p. validP p \<longrightarrow> |PFVars p| <o |UNIV::'a set|"
+
+definition "Pmap_validP \<equiv> \<forall>f p. 
+ validP p \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<longrightarrow> validP (Pmap f p)"
+
+definition "avset_small \<equiv> |avoiding_set| <o |UNIV::'a set|"
+
+definition "P_axioms \<equiv> Pmap_comp \<and> Pmap_id \<and> PFVars_Pmap \<and> 
+  PFVars_small \<and> Pmap_validP \<and> avset_small"
+
+lemmas P_defs = Pmap_comp_def Pmap_id_def PFVars_Pmap_def 
+  PFVars_small_def Pmap_validP_def avset_small_def
+
+definition "Umap_comp \<equiv> \<forall>d f g t.
+  validU d \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<and>
+  bij g \<and> |supp g| <o |UNIV::'a set| 
+  \<longrightarrow> 
+  Umap (f \<circ> g) t d = (Umap f t \<circ> Umap g t) d"
+
+definition "Umap_cong \<equiv> \<forall>d t f.
+  validU d \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<and>  
+  (\<forall>a. a \<in> UFVars t d \<longrightarrow> f a = a) \<longrightarrow> 
+  Umap f t d = d"
+
+definition "Umap_Ector \<equiv> \<forall>f y p.
+   validP p \<and>
+   pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {} 
+   \<longrightarrow>
+   Umap f (E_ctor (map_E_pre id id fst fst y)) (Uctor y p) =
+   Uctor (map_E_pre f f
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+            y)
+          (Pmap f p)"
+
+definition "UFVars_EFVars \<equiv> \<forall>y p. 
+  validP p \<and> 
+  pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+  set2_E_pre y \<inter> (PFVars p \<union> avoiding_set) = {} \<and> 
+  (\<forall>t pu p. validP p \<and>
+            (t, pu) \<in> set3_E_pre y \<union> set4_E_pre y \<longrightarrow> 
+            UFVars t (pu p) \<subseteq> EVrs t \<union> PFVars p \<union> avoiding_set) 
+  \<longrightarrow>
+  UFVars (E_ctor (map_E_pre id id fst fst y)) (Uctor y p)
+  \<subseteq> EVrs (E_ctor (map_E_pre id id fst fst y)) \<union> PFVars p \<union> avoiding_set"
+
+definition "validU_Umap \<equiv> \<forall>f t u. 
+  validU u \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<longrightarrow> validU (Umap f t u)"
+
+definition "validU_Uctor \<equiv> \<forall>y p. 
+  validP p \<and> 
+  pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y 
+  \<longrightarrow>
+  validU (Uctor y p)"
+
+
+definition "U_axioms \<equiv> Umap_comp \<and> Umap_cong \<and> Umap_Ector \<and> UFVars_EFVars \<and> 
+  validU_Umap \<and> validU_Uctor"
+
+lemmas U_defs = Umap_comp_def Umap_cong_def Umap_Ector_def UFVars_EFVars_def 
+  validU_Umap_def validU_Uctor_def
+
+lemma "REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor validU \<longleftrightarrow> 
+  P_axioms \<and> U_axioms"
+unfolding REC_E_def P_axioms_def U_axioms_def P_defs U_defs apply clarsimp
+apply safe subgoal by auto subgoal by auto subgoal by auto subgoal by auto
+subgoal by auto subgoal by auto subgoal by auto subgoal by auto 
+subgoal sorry
+subgoal by auto subgoal by auto subgoal by auto subgoal by auto subgoal by auto
+subgoal by auto subgoal by auto subgoal by auto subgoal by auto 
+subgoal by auto subgoal sorry subgoal by auto subgoal by auto .
+
+term 
+fixes "(('b \<Rightarrow> 'b) \<Rightarrow> 'c \<Rightarrow> 'c)
+     \<Rightarrow> ('c \<Rightarrow> 'b set)
+        \<Rightarrow> ('c \<Rightarrow> bool)
+           \<Rightarrow> 'b set
+              \<Rightarrow> (('b \<Rightarrow> 'b) \<Rightarrow> 'b E \<Rightarrow> 'd \<Rightarrow> 'd)
+                 \<Rightarrow> ('b E \<Rightarrow> 'd \<Rightarrow> 'b set)
+                    \<Rightarrow> (('b, 'b, 'b E \<times> ('c \<Rightarrow> 'd), 'b E \<times> ('c \<Rightarrow> 'd)) E_pre
+                        \<Rightarrow> 'c \<Rightarrow> 'd)
+                       \<Rightarrow> ('d \<Rightarrow> bool) \<Rightarrow> bool"
+begin
+
+definition "REC_EG Pmap PFVars validP avoiding_set Umap UFVars Uctor validU \<equiv>
+(((\<forall>d f g.
+      validP d \<longrightarrow>
+      bij f \<longrightarrow>
+      |supp f| <o |UNIV| \<longrightarrow>
+      bij g \<longrightarrow> |supp g| <o |UNIV| \<longrightarrow> Pmap (f \<circ> g) d = (Pmap f \<circ> Pmap g) d) \<and>
+  (\<forall>d f. validP d \<longrightarrow>
+         bij f \<longrightarrow>
+         |supp f| <o |UNIV| \<longrightarrow> (\<forall>a. a \<in> PFVars d \<longrightarrow> f a = a) \<longrightarrow> Pmap f d = d) \<and>
+  (\<forall>d f. validP d \<longrightarrow>
+         bij f \<longrightarrow> |supp f| <o |UNIV| \<longrightarrow> PFVars (Pmap f d) = f ` PFVars d)) \<and>
+ (\<forall>p. validP p \<longrightarrow> |PFVars p| <o |UNIV| ) \<and>
+ (\<forall>f p. validP p \<longrightarrow> bij f \<longrightarrow> |supp f| <o |UNIV| \<longrightarrow> validP (Pmap f p)) \<and>
+ |avoiding_set| <o |UNIV| ) \<and>
+((\<forall>d f g t.
+     validU d \<longrightarrow>
+     bij f \<longrightarrow>
+     |supp f| <o |UNIV| \<longrightarrow>
+     bij g \<longrightarrow> |supp g| <o |UNIV| \<longrightarrow> Umap (f \<circ> g) t d = (Umap f t \<circ> Umap g t) d) \<and>
+ (\<forall>d t f.
+     validU d \<longrightarrow>
+     bij f \<longrightarrow>
+     |supp f| <o |UNIV| \<longrightarrow> (\<forall>a. a \<in> UFVars t d \<longrightarrow> f a = a) \<longrightarrow> Umap f t d = d) \<and>
+ (\<forall>f y p.
+     validP p \<longrightarrow>
+     pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<longrightarrow>
+     bij f \<longrightarrow>
+     |supp f| <o |UNIV| \<longrightarrow>
+     imsupp f \<inter> avoiding_set = {} \<longrightarrow>
+     Umap f (E_ctor (map_E_pre id id fst fst y)) (Uctor y p) =
+     Uctor
+      (map_E_pre f f
+        (\<lambda>(t, pu).
+            (Eperm f t,
+             \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+        (\<lambda>(t, pu).
+            (Eperm f t,
+             \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+        y)
+      (Pmap f p))) \<and>
+(\<forall>y p. validP p \<longrightarrow>
+       pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<longrightarrow>
+       set2_E_pre y \<inter> (PFVars p \<union> avoiding_set) = {} \<longrightarrow>
+       (\<forall>t pu p.
+           validP p \<longrightarrow>
+           (t, pu) \<in> set3_E_pre y \<union> set4_E_pre y \<longrightarrow>
+           UFVars t (pu p) \<subseteq> EVrs t \<union> PFVars p \<union> avoiding_set) \<longrightarrow>
+       UFVars (E_ctor (map_E_pre id id fst fst y)) (Uctor y p)
+       \<subseteq> EVrs (E_ctor (map_E_pre id id fst fst y)) \<union> PFVars p \<union> avoiding_set) \<and>
+(\<forall>f t u. validU u \<longrightarrow> bij f \<longrightarrow> |supp f| <o |UNIV| \<longrightarrow> validU (Umap f t u)) \<and>
+(\<forall>y p. validP p \<longrightarrow>
+       pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<longrightarrow>
+       validU (Uctor y p))"
+
+
+
+term Gmap
+
+lemma 
+assumes "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
+shows "REC_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) Uctor (\<lambda>x. True)"
+proof-
+  term "(Ector',Uctor)"
+
 interpretation Birecursor Eperm EVrs Gbd Ector
 proof (standard, safe)
   fix Pvalid :: "'p \<Rightarrow> bool"
@@ -175,6 +381,9 @@ proof (standard, safe)
 typ "('g, 'h, 'c, 'e) E_pre"
 term "Ector :: ('c::var_E_pre, 'c, 'c E, 'c E) G \<Rightarrow> 'c E"
 term Gmap
+
+
+
 
 find_theorems name: E_pre 
   assume "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"

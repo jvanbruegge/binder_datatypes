@@ -115,7 +115,8 @@ interpretation Expression_Strong Eperm EVrs Gbd Ector
   subgoal for A e
     apply (binder_induction e avoiding: A rule: E.strong_induct)
      apply assumption
-    apply (rule exI conjI)+
+    apply (intro exI conjI)
+     subgoal sorry
      apply assumption
     apply (rule refl)
     done
@@ -514,27 +515,19 @@ proof (standard, safe)
   using Bimodel_recE[OF b] .
   term rec.recE
   show "\<exists>rec. 
-    (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
+    (\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
            rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
     (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow>
        |supp \<sigma>| <o |UNIV::'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
   apply(rule exI[of _ rec.recE]) apply(intro conjI allI)
     subgoal for u p using rec.rec_ctor[of p u] 
-    apply (auto simp: Gmap_comp o_def restr2_def)  
-  
-
-
-term term where Pmap = Pperm 
-  and PFVars = PVrs and validP = Pvalid 
-  and avoiding_set = "{}" 
-  and Umap = "\<lambda>\<sigma> e'. Eperm \<sigma>"
-  and UFVars = "\<lambda>e e'. EVrs e" term Gmap
-  (* and Uctor = "\<lambda>uu'. Ector' (Gmap h h uu')" *)
-  term rec.REC_E
-  show "\<exists>rec. (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and> (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and> (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
-    sorry
+    apply (auto simp: Gmap_comp o_def restr2_def) 
+      by (metis (no_types, lifting) ext comp_apply)
+    subgoal by (simp add: rec.REC_swap rec.recE_def)
+    subgoal using rec.rec_UFVars by auto . 
 qed
+  
 
 interpretation birec_data: Birecursor_Sub_Strong Eperm EVrs Gbd Ector
   by standard
@@ -578,7 +571,8 @@ lemma
   Esub_Ector\<eta>: "Esub (Ector (\<eta> a)) = \<rho> a"
   and Esub_Ector\<eta>': "Esub (Ector (\<eta>' a)) = \<rho>' a"
   and Esub_Ector:
-  "GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
+  "GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> 
+   GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow>
    GVrs2 u \<inter> IImsupp' (Ector o \<eta>) EVrs \<rho> = {} \<Longrightarrow>
    GVrs2 u \<inter> IImsupp' (Ector o \<eta>') EVrs \<rho>' = {} \<Longrightarrow>
    GVrs2 u \<inter> EVrs (Ector u) = {} \<Longrightarrow>
@@ -607,6 +601,9 @@ lemma
         G.Sb_comp[THEN fun_cong, simplified]
         G.Map_comp[THEN fun_cong, simplified]
         dest: eta_inversion[rotated -1] eta'_inversion[rotated -1])
+      apply (metis (no_types, lifting) Gmap_eta' eta'_inversion eta'_natural
+          small_support(1))
+      subgoal sorry 
     done
   done
 

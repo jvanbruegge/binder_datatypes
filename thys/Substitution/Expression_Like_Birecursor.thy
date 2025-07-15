@@ -35,7 +35,7 @@ definition restr2 :: "('a \<Rightarrow> 'p \<Rightarrow> 'b) \<Rightarrow> ('p \
 context Expression begin
 (* Non-clashing: Barendregt's convention *)
 definition 
-"noclashE x \<equiv> GVrs2 x \<inter> (GVrs1 x \<union> \<Union> (EVrs ` GSupp2 x)) = {}"
+"noclashE x \<equiv> GVrs2 x \<inter> GVrs1 x = {}"
 end
 
 
@@ -45,8 +45,8 @@ locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Eb
   fixes Pdummy :: 'p
   assumes rec: "\<forall>Pvalid Pperm (PVrs :: 'p \<Rightarrow> 'a set) Ector'.
     Bimodel Pvalid Pperm PVrs Eperm EVrs Ebd Ector Ector' \<longrightarrow> (\<exists>rec.
-      ((\<forall>u p. Pvalid p \<longrightarrow> 
-              noclashE u \<longrightarrow> GVrs2 u \<inter> PVrs p = {} 
+      ((\<forall>u p. Pvalid p \<and> 
+              noclashE u \<and> GVrs2 u \<inter> PVrs p = {} 
               \<longrightarrow> 
               rec (Ector u) p = 
               Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
@@ -59,7 +59,7 @@ context fixes Pvalid Pperm and PVrs :: "'p \<Rightarrow> 'a set" and Ector'
 begin
 
 definition rec where
-  "rec = (SOME rec. ((\<forall>u p. Pvalid p \<longrightarrow> noclashE u \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
+  "rec = (SOME rec. ((\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
    rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
@@ -271,12 +271,50 @@ begin
 
 definition "Esub \<delta> \<rho> \<rho>' e = rec Esub_Pvalid Esub_Pperm Esub_PVrs Esub_Ector' e (\<delta>, \<rho>, \<rho>')"
 
+declare eta_inject[simp]
+declare eta'_inject[simp]
+declare eta_distinct[simp]
+
 sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
   apply standard
-      apply (unfold Esub_def)
+    subgoal apply (unfold Esub_def)
+    apply (subst rec_Ector[OF Esub.Bimodel_axioms]) 
+      subgoal unfolding Esub_Pvalid_def by auto
+      subgoal unfolding noclashE_def by auto
+      subgoal by simp
+      subgoal unfolding Esub_Ector'_def by auto .
+    subgoal apply (unfold Esub_def)
+    apply (subst rec_Ector[OF Esub.Bimodel_axioms]) 
+      subgoal unfolding Esub_Pvalid_def by auto
+      subgoal unfolding noclashE_def by auto
+      subgoal by simp
+      subgoal unfolding Esub_Ector'_def using eta_distinct' by auto .
+    subgoal for \<delta> \<rho> \<rho>' u apply (unfold Esub_def)
+    apply (subst rec_Ector[OF Esub.Bimodel_axioms]) 
+      subgoal unfolding Esub_Pvalid_def by auto
+      subgoal unfolding noclashE_def by auto
+      subgoal unfolding Esub_PVrs_def by auto
+      subgoal unfolding Esub_Ector'_def apply (auto simp: Gmap_comp)
+        apply (smt (z3) Gsub_eta' eta'_inversion)
+        apply (metis (no_types, lifting) Gsub_eta eta_inversion)
+        apply(rule arg_cong[where f = Ector]) 
+        apply(rule arg_cong[where f = "Gsub \<delta> id"]) 
+        apply(rule G.Map_cong)
+          subgoal apply (simp add: restr2_def) 
+            using
+              \<open>|supp \<delta>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV| \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> GVrs2 u \<inter> EVrs (Ector u) = {} \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> Esub_Pvalid (\<delta>, \<rho>, \<rho>')\<close>
+            by argo 
+          subgoal apply (simp add: restr2_def) 
+            using
+              \<open>|supp \<delta>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV| \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> GVrs2 u \<inter> EVrs (Ector u) = {} \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> Esub_Pvalid (\<delta>, \<rho>, \<rho>')\<close>
+            by fastforce . .
+      subgoal apply auto sorry
+      subgoal sorry .  
+        
+(* 
       apply (subst rec_Ector[OF Esub.Bimodel_axioms]; auto simp add:
          eta_natural[of id id, unfolded G.Sb_Inj, simplified]
-         eta_inject Esub_defs)
+         eta_inject Esub_defs noclashE_def)
       apply (subst rec_Ector[OF Esub.Bimodel_axioms]; auto simp add:
          eta'_natural[of id id, unfolded G.Sb_Inj, simplified]
          eta_distinct' eta'_inject Esub_defs)
@@ -292,6 +330,7 @@ sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
   apply (smt (verit, best) Int_Un_empty Un_commute bij_betw_inv_into imsupp_inv inv_simp1 permute_\<rho>'
       supp_inv_bound)
   done
+*)
 
 end
 

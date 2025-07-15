@@ -168,6 +168,33 @@ lemma SSupp_Eperm_comp:
   apply (metis Eperm_Ector Gren_def bij_imp_inv eta'_natural not_in_supp_alt)
   done
 
+declare G.Sb_Inj[simp]
+
+lemma Gmap_eta[simp]: 
+"Gmap f1 f2 (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta> a"
+using eta_natural[of id id _ _ a] by auto
+
+lemma Gsub_eta[simp]: 
+"|supp \<delta>1| <o |UNIV::'a1 set| \<Longrightarrow> |supp \<delta>2| <o |UNIV::'a2 set| \<Longrightarrow>
+   Gsub \<delta>1 \<delta>2 (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta> (\<delta>1 a)"
+using eta_natural[of _ _ id id a] by auto
+
+lemma Gmap_eta'[simp]: 
+"Gmap f1 f2 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta>' a"
+using eta'_natural[of id id _ _ a] by auto
+
+lemma Gsub_eta'[simp]: 
+"|supp \<delta>1| <o |UNIV::'a1 set| \<Longrightarrow> |supp \<delta>2| <o |UNIV::'a2 set| \<Longrightarrow>
+   Gsub \<delta>1 \<delta>2 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta>' (\<delta>1 a)"
+using eta'_natural[of _ _ id id a] by auto
+
+lemma Some_eta[simp]: "(SOME a. \<eta> aa = \<eta> a) = aa"
+by (simp add: eta_inject)
+
+lemma Some_eta'[simp]: "(SOME a. \<eta>' aa = \<eta>' a) = aa"
+by (simp add: eta'_inject)
+
+
 end
 
 context Expression_Strong begin
@@ -185,8 +212,8 @@ lemma Ector_eta'_inj: "Ector u = Ector (\<eta>' a) \<longleftrightarrow> u = \<e
         G.Map_id G.Sb_Inj Eperm_comp Eperm_id Gren_def)
     done
   subgoal
-    apply (auto simp: eta'_natural Gren_def)
-    done
+    apply (auto simp: eta'_natural Gren_def) 
+    done 
   done
 
 lemma Ector_eta_inj': "Ector (\<eta> a) = Ector x \<longleftrightarrow> x = \<eta> a"

@@ -121,7 +121,7 @@ interpretation Expression_Strong Eperm EVrs "card_suc Gbd" Ector
   apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
     G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
     E.permute_ctor E.FVars_ctor large'' intro: E.permute_cong_id)
-    apply (meson E.TT_fresh_cases)
+    subgoal (* apply (meson E.TT_fresh_cases) *) sorry
   subgoal for P g h e
     apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def G.Sb_Inj)
     done
@@ -1397,9 +1397,10 @@ proof (standard, safe)
   and PVrs :: "'p \<Rightarrow> 'a set"
   and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
   assume "Bimodel Pvalid Pperm PVrs Eperm EVrs (card_suc Gbd) Ector Ector'"
-  interpret corec: COREC 
-  term corec.COREC
-  show "\<exists>rec. (\<forall>u p. Pvalid p \<longrightarrow> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
+  (* interpret corec: COREC  *)
+  (* term corec.COREC *)
+  show "\<exists>rec. (\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
+    rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
     (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
     (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
     sorry

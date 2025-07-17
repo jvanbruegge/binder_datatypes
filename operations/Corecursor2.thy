@@ -1768,7 +1768,10 @@ lemma OO_permute:
           "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
           "bij (u'::'a\<Rightarrow>'a)" "|supp u'| <o |UNIV::'a set|"
           "bij (v'::'b\<Rightarrow>'b)" "|supp v'| <o |UNIV::'b set|"
-  shows "((\<lambda>t. alpha_T1 (permute_T1_raw u v t)) OO (\<lambda>t. alpha_T1 (permute_T1_raw u' v' t))) = (\<lambda>t. alpha_T1 (permute_T1_raw (u' \<circ> u) (v' \<circ> v) t))"
+  shows
+    "((\<lambda>t. alpha_T1 (permute_T1_raw u v t)) OO (\<lambda>t. alpha_T1 (permute_T1_raw u' v' t))) = (\<lambda>t. alpha_T1 (permute_T1_raw (u' \<circ> u) (v' \<circ> v) t))"
+    "((\<lambda>t. alpha_T2 (permute_T2_raw u v t)) OO (\<lambda>t. alpha_T2 (permute_T2_raw u' v' t))) = (\<lambda>t. alpha_T2 (permute_T2_raw (u' \<circ> u) (v' \<circ> v) t))"
+  (* REPEAT_DETERM *)
   apply (unfold T1.permute_raw_comp0s[OF assms, symmetric])
   apply (rule ext)
   apply (rule ext)
@@ -1778,23 +1781,43 @@ lemma OO_permute:
    apply (erule conjE)+
    apply hypsubst
    apply (erule T1.alpha_trans[rotated])
-  apply (subst comp_apply)
-   apply (subst alpha_bij_eqs, (rule assms)+)
+   apply (subst comp_apply)
+   apply (subst T1.alpha_bij_eq, (rule assms)+)
    apply assumption
   apply (subst (asm) comp_apply)
   apply (subst relcompp.simps)
   apply (rule exI)+
   apply (rule conjI[rotated])+
-  prefer 2
-     apply (rule alpha_refls)
+     prefer 2
+     apply (rule T1.alpha_refl)
+    apply assumption
+    apply (rule refl)+
+(* repeated *)
+  apply (unfold T2.permute_raw_comp0s[OF assms, symmetric])
+  apply (rule ext)
+  apply (rule ext)
+  apply (rule iffI)
+  apply (subst (asm) relcompp.simps)
+   apply (erule exE)+
+   apply (erule conjE)+
+   apply hypsubst
+   apply (erule T2.alpha_trans[rotated])
+   apply (subst comp_apply)
+   apply (subst T2.alpha_bij_eq, (rule assms)+)
+   apply assumption
+  apply (subst (asm) comp_apply)
+  apply (subst relcompp.simps)
+  apply (rule exI)+
+  apply (rule conjI[rotated])+
+     prefer 2
+     apply (rule T2.alpha_refl)
     apply assumption
    apply (rule refl)+
   done
 
-
-lemma OO_comp:
-  assumes "\<And>d. valid_U d \<Longrightarrow> (g u \<circ> g v) d = g (u \<circ> v) d"
-  shows "valid_U x \<Longrightarrow> ((\<lambda>d. (=) (g v d)) OO (\<lambda>d. (=) (g u d))) x = (\<lambda>d. (=) (g (u \<circ> v) d)) x"
+lemma OO_comp1:
+  assumes "\<And>d. valid_U1 d \<Longrightarrow> (g u' v' \<circ> g u v) d = g (u' \<circ> u) (v' \<circ> v) d"
+  shows "valid_U1 x \<Longrightarrow> ((\<lambda>d. (=) (g u v d)) OO (\<lambda>d. (=) (g u' v' d))) x = (\<lambda>d. (=) (g (u' \<circ> u) (v' \<circ> v) d)) x"
   apply (subst (2) Grp_UNIV_def[symmetric])
   apply (subst (2) Grp_UNIV_def[symmetric])
   apply (subst Grp_o[symmetric])
@@ -1804,19 +1827,46 @@ lemma OO_comp:
   apply (rule refl)
   done
 
+lemma OO_comp2:
+  assumes "\<And>d. valid_U2 d \<Longrightarrow> (g u' v' \<circ> g u v) d = g (u' \<circ> u) (v' \<circ> v) d"
+  shows "valid_U2 x \<Longrightarrow> ((\<lambda>d. (=) (g u v d)) OO (\<lambda>d. (=) (g u' v' d))) x = (\<lambda>d. (=) (g (u' \<circ> u) (v' \<circ> v) d)) x"
+  apply (subst (2) Grp_UNIV_def[symmetric])
+  apply (subst (2) Grp_UNIV_def[symmetric])
+  apply (subst Grp_o[symmetric])
+  apply (unfold Grp_UNIV_def)
+  apply (subst assms)
+  apply assumption
+  apply (rule refl)
+  done
+
+lemmas OO_comp = OO_comp1 OO_comp2
+
 lemma OO_raw_Umap:
-  assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
-          "bij (v::'a\<Rightarrow>'a)" "|supp v| <o |UNIV::'a::var set|"
-        shows "valid_U x \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap v d)) OO (\<lambda>d. (=) (raw_Umap u d))) x  = (\<lambda>d. (=) (raw_Umap (u \<circ> v) d)) x"
+  assumes "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+          "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+          "bij (u'::'a\<Rightarrow>'a)" "|supp u'| <o |UNIV::'a set|"
+          "bij (v'::'b\<Rightarrow>'b)" "|supp v'| <o |UNIV::'b set|"
+        shows
+          "valid_U1 x \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap1 u v d)) OO (\<lambda>d. (=) (raw_Umap1 u' v' d))) x  = (\<lambda>d. (=) (raw_Umap1 (u' \<circ> u) (v' \<circ> v) d)) x"
+          "valid_U2 x' \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap2 u v d)) OO (\<lambda>d. (=) (raw_Umap2 u' v' d))) x'  = (\<lambda>d. (=) (raw_Umap2 (u' \<circ> u) (v' \<circ> v) d)) x'"
+ (* REPEAT_DETERM *)
+   apply (rule OO_comp)
+   apply (subst comp_apply)
+    apply (rule Umap_comp1, (assumption | rule assms)+)
+(* repeated *)
   apply (rule OO_comp)
-  apply (subst comp_apply)
-   apply (rule Umap_comp[OF _ assms])
-   apply assumption+
+   apply (subst comp_apply)
+   apply (rule Umap_comp2, (assumption | rule assms)+)
+(* END REPEAT_DETERM *)
   done
 
 lemma OO_alpha_permute:
-  assumes  "bij (g::'a \<Rightarrow> 'a)" "|supp g| <o |UNIV::'a::var set|"
-  shows "alpha_term OO (\<lambda>t. alpha_term (permute_raw_term g t)) = (\<lambda>t. alpha_term (permute_raw_term g t))"
+  assumes  "bij (g::'a \<Rightarrow> 'a)" "|supp g| <o |UNIV::'a set|"
+           "bij (h::'b \<Rightarrow> 'b)" "|supp h| <o |UNIV::'b set|"
+  shows
+    "alpha_T1 OO (\<lambda>t. alpha_T1 (permute_T1_raw g h t)) = (\<lambda>t. alpha_T1 (permute_T1_raw g h t))"
+    "alpha_T2 OO (\<lambda>t. alpha_T2 (permute_T2_raw g h t)) = (\<lambda>t. alpha_T2 (permute_T2_raw g h t))"
+  (* REPEAT_DETERM *)
   apply (rule ext)
   apply (rule ext)
   apply (rule iffI)
@@ -1824,94 +1874,145 @@ lemma OO_alpha_permute:
    apply (rule relcomppI)
     prefer 2
     apply assumption
-   apply (rule alpha_refls)
+   apply (rule T1.alpha_refl)
   apply (erule relcomppE)
-  apply (subst (asm) alpha_bij_eqs[OF assms, symmetric])
-  apply (erule alpha_trans)
+  apply (subst (asm) T1.alpha_bij_eq[OF assms, symmetric])
+  apply (erule T1.alpha_trans)
+   apply assumption
+(* repeated *)
+  apply (rule ext)
+  apply (rule ext)
+  apply (rule iffI)
+  prefer 2
+   apply (rule relcomppI)
+    prefer 2
+    apply assumption
+   apply (rule T2.alpha_refl)
+  apply (erule relcomppE)
+  apply (subst (asm) T2.alpha_bij_eq[OF assms, symmetric])
+  apply (erule T2.alpha_trans)
   apply assumption
+(* END REPEAT_DETERM *)
   done
 
 
-lemma set3_setr_valid:
-  assumes "suitable pick"
-and "valid_U d"
-and "z \<in> set3_term_pre (pick d)"
-shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U x"
-  by (rule valid_pick_set8[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
+lemma set9_setr_valid:
+  assumes "suitable1 pick"
+and "valid_U1 d"
+and "z \<in> set9_T1_pre (pick d)"
+shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U1 x"
+  by (rule valid_pick_set9(1)[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
+
+
+lemma set11_setr_valid:
+  assumes "suitable1 pick"
+and "valid_U1 d"
+and "z \<in> set11_T1_pre (pick d)"
+shows "x \<in> Basic_BNFs.setr z \<Longrightarrow> valid_U2 x"
+  by (rule valid_pick_set11(1)[OF assms(1,3,2), THEN sum.pred_set[THEN fun_cong, THEN iffD1, THEN conjunct2], THEN bspec])
 
 lemma rel_F_suitable_mapD:
-  assumes valid_d: "valid_U d"
-    and pp': "suitable pick" "suitable pick'"
-    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
-  shows "\<exists> v. bij v \<and> |supp v| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD (pick d)) v \<and>
- mr_rel_term_pre u (u o v)
-   (rel_sum (\<lambda>t t'. alpha_term (permute_raw_term (u o v) t) t')
-            (\<lambda>d d'. raw_Umap (u o v) d = d'))
-   (rel_sum (\<lambda>t t'. alpha_term (permute_raw_term u t) t')
-            (\<lambda>t t'. raw_Umap u t = t'))
- (pick d)
- (pick' (raw_Umap u d))"
-  apply (rule raw_Umap_Utor[OF u valid_d, unfolded rel_set_def, THEN conjunct2, THEN bspec, THEN bexE])
+  assumes valid_d: "valid_U1 d"
+    and pp': "suitable1 pick1" "suitable1 pick1'"
+    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+    and v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+  shows "\<exists> u' v'. bij u' \<and> |supp u'| <o |UNIV::'a set| \<and> id_on (raw_UFVarsBD11 (pick1 d)) u' \<and>
+                  bij v' \<and> |supp v'| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD12 (pick1 d)) v' \<and>
+ mr_rel_T1_pre u v id (=) (u o u') (v o v') (u o u')
+   (rel_sum (\<lambda>t t'. alpha_T1 (permute_T1_raw u v t) t')
+            (\<lambda>t t'. raw_Umap1 u v t = t'))
+   (rel_sum (\<lambda>t t'. alpha_T1 (permute_T1_raw (u o u') (v o v') t) t')
+            (\<lambda>d d'. raw_Umap1 (u o u') (v o v') d = d'))
+   (rel_sum (\<lambda>t t'. alpha_T2 (permute_T2_raw u v t) t')
+            (\<lambda>t t'. raw_Umap2 u v t = t'))
+   (rel_sum (\<lambda>t t'. alpha_T2 (permute_T2_raw (u o u') v t) t')
+            (\<lambda>d d'. raw_Umap2 (u o u') v d = d'))
+ (pick1 d)
+ (pick1' (raw_Umap1 u v d))"
+  apply (rule raw_Umap_Utor(1)[OF u v valid_d, unfolded rel_set_def, THEN conjunct2, THEN bspec, THEN bexE])
    apply (rule allE)
-    apply (rule pp'(2)[unfolded suitable_def])
+    apply (rule pp'(2)[unfolded suitable1_def])
    apply (erule impE)
     prefer 2
     apply assumption
-   apply (rule valid_Umap, (rule u valid_d)+)
+   apply (rule valid_Umap1, (rule u v valid_d)+)
   apply (rule exE)
-   apply (rule DTOR_mapD[OF assms(1)])
+   apply (rule DTOR_mapD(1)[OF assms(1)])
    apply (unfold insert_subset)
    apply (rule conjI)
-    apply (rule assms(2)[unfolded suitable_def, THEN spec, THEN mp, OF assms(1)])
+    apply (rule assms(2)[unfolded suitable1_def, THEN spec, THEN mp, OF assms(1)])
    apply (rule conjI)
     apply assumption
    apply (rule empty_subsetI)
+
+  apply (erule exE)
+
   apply (erule conjE)+
-  apply(rule exI)
+  apply(rule exI)+
   apply (rule conjI[rotated])+
-     apply(rule term_pre.mr_rel_mono_strong0[rotated -5])
-               apply (rule term_pre.mr_rel_OO[THEN fun_cong, THEN fun_cong, THEN iffD2, rotated -1, OF relcomppI])
+        apply(rule T1_pre.mr_rel_mono_strong0[rotated -12])
+                      apply (rule T1_pre.mr_rel_OO[THEN fun_cong, THEN fun_cong, THEN iffD2, rotated -1, OF relcomppI])
                       apply assumption+
-                    apply (rule supp_id_bound)
-                   apply assumption+
-                 apply (rule u)+
-              apply (subst o_id)
-              apply (rule ballI)
-              apply (rule refl)
-             apply (rule ballI)
-             apply (rule refl)
-            apply (rule ballI)+
-            apply (rule impI)
-            apply (unfold sum.rel_compp[symmetric])
-            apply (subst OO_permute[OF u, symmetric])
-              apply assumption+
-            apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
-             apply (rule refl)
-            apply (subst OO_raw_Umap[OF u])
-               apply assumption+
-             apply (erule set3_setr_valid[OF pp'(1) valid_d])
-             apply assumption
-            apply (rule refl)
-            apply (rule ballI)+
-           apply (rule impI)
-           apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
-            apply (subst OO_alpha_permute[OF u])
-  apply (rule refl)
-           apply (subst eq_OO)
-           apply (rule iffI)
-            apply assumption
-           apply assumption
-          apply (subst o_id)
-          apply (rule u)
-         apply (rule bij_comp[OF _ u(1)])
-         apply assumption
-        apply (rule supp_comp_bound[OF _ u(2)])
-        apply assumption
-       apply (rule u)
-      apply (rule bij_comp[OF _ u(1)])
-      apply assumption
-     apply (rule supp_comp_bound[OF _ u(2)])
-     apply assumption+
+                      apply (rule supp_id_bound u v | assumption)+
+                      apply (unfold o_id)
+                      apply (rule ballI; rule refl)+
+
+                      apply (rule ballI)+
+                      apply (rule impI)
+                      apply (unfold eq_OO)
+                      apply assumption
+
+                      apply (rule ballI; rule refl)+
+
+                      apply (unfold sum.rel_compp[symmetric])
+
+                      apply (rule ballI)+
+                      apply (rule impI)
+                      apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
+                      apply (subst OO_alpha_permute[OF u v])
+                      apply (rule refl)
+                      apply (subst eq_OO)
+                      apply (rule iffI)
+                      apply assumption+
+
+                      apply (rule ballI)+
+                      apply (rule impI)
+                      apply (subst (asm) OO_permute[OF _ _ _ _ u v]) 
+                      apply assumption+
+                      apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
+                      apply (rule refl)
+                      apply (subst OO_raw_Umap[OF _ _ _ _ u v])
+                      apply assumption+
+                      apply (erule set9_setr_valid[OF pp'(1) valid_d])
+                      apply assumption
+                      apply (rule refl)
+
+                      apply (rule ballI)+
+                      apply (rule impI)
+                      apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
+                      apply (subst OO_alpha_permute[OF u v])
+                      apply (rule refl)
+                      apply (subst eq_OO)
+                      apply (rule iffI)
+                      apply assumption+
+
+                      apply (rule ballI)+
+                      apply (rule impI)
+                      apply (subst (asm) OO_permute[OF _ _  bij_id supp_id_bound u]) 
+                      apply assumption+
+                      apply (rule v)+
+                      apply (unfold o_id)
+                      apply (erule sum.rel_cong[OF refl refl, THEN iffD1, rotated -1])
+                      apply (rule refl)
+                      apply (subst OO_raw_Umap[OF _ _ bij_id supp_id_bound u])
+                      apply assumption+
+                      apply (rule v)+
+                      apply (erule set11_setr_valid[OF pp'(1) valid_d])
+                      apply assumption
+                      apply (unfold o_id)
+                      apply (rule refl)
+                      apply (rule u v supp_id_bound)+
+                    apply (rule bij_comp supp_comp_bound u v supp_id_bound | assumption)+
   done
 
 abbreviation (input) "FVarsB x \<equiv> \<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x"

@@ -357,7 +357,9 @@ fun note_fp_result (fp_res : fp_result) lthy =
       (if Config.get lthy MRBNF_Def.mrbnf_internals then [
         ("alpha_FVars", #alpha_FVarss (#inner raw)),
         ("alpha_trans", [#alpha_trans (#inner raw)]),
-        ("permute_raw_comp0s", [#permute_comp0 raw])
+        ("permute_raw_comp0s", [#permute_comp0 raw]),
+        ("alpha_bij_eq", [#alpha_bij_eq (#inner raw)]),
+        ("alpha_refl", [#alpha_refl (#inner raw)])
       ] else []);
 
     val notes = flat (map2 (fn quot => fn raw => map (fn (thmN, thms) =>

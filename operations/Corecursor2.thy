@@ -2015,30 +2015,52 @@ lemma rel_F_suitable_mapD:
                     apply (rule bij_comp supp_comp_bound u v supp_id_bound | assumption)+
   done
 
-abbreviation (input) "FVarsB x \<equiv> \<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x"
+abbreviation (input) "FVarsB11 X \<equiv> set7_T1_pre X - set5_T1_pre X \<union> (\<Union> (FVars_T1_1_raw ` set9_T1_pre X) - set5_T1_pre X) \<union> (\<Union> (FVars_T2_1_raw ` set11_T1_pre X) - set5_T1_pre X)"
+abbreviation (input) "FVarsB12 X \<equiv> \<Union> (FVars_T1_2_raw ` set9_T1_pre X) - set6_T1_pre X"
 
+thm alpha_T1_alpha_T2.coinduct
 lemma alpha_coinduct2[consumes 1, case_names C]: 
-  fixes t t' :: "'a::var raw_term"
-  assumes 0: "\<phi> t t'" and 1:
-    "\<And>x x' :: ('a,'a,'a raw_term,'a raw_term) term_pre. \<phi> (raw_term_ctor x) (raw_term_ctor x') \<Longrightarrow>
-    \<exists>f. bij f \<and> |supp f| <o |UNIV::'a set| \<and>
-    id_on (FVarsB x) f \<and> 
-    mr_rel_term_pre id f 
- (\<lambda>t t'.  \<phi> (permute_raw_term f t) t' \<or> alpha_term (permute_raw_term f t) t')
- (\<lambda>t t'. \<phi> t t' \<or> alpha_term t t')
+  (* fixes t1 t1' :: "('a, 'b, 'c, 'd) raw_T1"
+    and t2 t2' :: "('a, 'b, 'c, 'd) raw_T2" *)
+  assumes (* 01: "\<phi> t1 t1'"
+      and 02: "\<phi>' t2 t2'"
+      and *) 1:
+    "\<And>x x' :: ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T1, ('a, 'b, 'c, 'd) raw_T2, ('a, 'b, 'c, 'd) raw_T2) T1_pre. \<phi> (raw_T1_ctor x) (raw_T1_ctor x') \<Longrightarrow>
+    \<exists>f g. bij f \<and> |supp f| <o |UNIV::'a set| \<and>
+    bij g \<and> |supp g| <o |UNIV::'b set| \<and>
+    id_on (FVarsB11 x) f \<and> id_on (FVarsB12 x) g \<and>
+
+mr_rel_T1_pre id id id (=) f g f
+       (\<lambda> t t'. \<phi> t t' \<or> alpha_T1 t t')
+       (\<lambda> t t'. \<phi> (permute_T1_raw f g t) t' \<or> alpha_T1 (permute_T1_raw f g t) t')
+       (\<lambda> t t'. \<phi>' t t' \<or> alpha_T2 t t')
+       (\<lambda> t t'. \<phi>' (permute_T2_raw f id t) t' \<or> alpha_T2 (permute_T2_raw f id t) t')
        x x'"
-  shows "alpha_term t t'"
-  apply(rule alpha_term.coinduct[of \<phi>, OF 0])  
+  shows "(\<forall>t1 t1'. \<phi> t1 t1' \<longrightarrow> alpha_T1 t1 t1') \<and> (\<forall>t2 t2'. \<phi>' t2 t2' \<longrightarrow> alpha_T2 t2 t2')"
+  apply(rule alpha_T1_alpha_T2.coinduct)
+(* REPEAT_DETERM *)
   subgoal for x1 x2
-    apply (rule raw_term.exhaust[of x1])
-    apply (rule raw_term.exhaust[of x2])
+    apply (rule raw_T1.exhaust[of x1])
+    apply (rule raw_T1.exhaust[of x2])
     apply hypsubst_thin
     apply (drule 1)
-    apply (erule exE)
+    apply (erule exE)+
     apply (rule exI)+
     apply (rule conjI, rule refl)+
     apply assumption
     done
+(* repeated *)
+  subgoal for x1 x2
+    apply (rule raw_T2.exhaust[of x1])
+    apply (rule raw_T2.exhaust[of x2])
+    apply hypsubst_thin
+    apply (drule 1)
+    apply (erule exE)+
+    apply (rule exI)+
+    apply (rule conjI, rule refl)+
+    apply assumption
+    done
+(* END REPEAT_DETERM *)
   done
 
 (* The "monster lemma": swapping and "pick"-irrelevance covered in one shot: *)

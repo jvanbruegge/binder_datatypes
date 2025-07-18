@@ -240,7 +240,7 @@ sublocale Esub: Bimodel where
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
-        eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])
+        eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
     sorry
   subgoal for u p
     apply (cases p)

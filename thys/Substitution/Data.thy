@@ -1,3 +1,10 @@
+(* AtoD: There are two categories of sorries left:
+*** 1. some immediate properties of E_pre versus G, which 
+I cannot prove since I cannot guess the names of the relevant generated lemmas;
+*** 2. those coming from additionally having to include the "no-clash" assumption, 
+which the recursor wants. 
+*)
+
 theory Data
   imports Expression_Like_Sub Expression_Like_Birecursor "HOL-ex.Sketch_and_Explore"
 begin
@@ -478,19 +485,20 @@ unfolding recE_def Ector_def
 apply(subst REC_ctor) by (auto simp: Uctor'_def)
 
 thm REC_UFVars[no_vars]
-theorem rec_UFVars: 
+theorem recE_UFVars: 
 "validP p \<Longrightarrow> UFVars e (recE e p) \<subseteq> EVrs e \<union> PFVars p \<union> avoiding_set"
 unfolding recE_def using REC_UFVars by auto
 
 thm REC_swap[no_vars]
-theorem rec_Eperm:
+theorem recE_Eperm:
 "validP p \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow>
  imsupp \<sigma> \<inter> avoiding_set = {} \<Longrightarrow>
- recE (Eperm \<sigma> e) p = Umap \<sigma> e (local.REC_E e (Pmap (inv \<sigma>) p))"
-unfolding recE_def using REC_swap by auto
+ recE (Eperm \<sigma> e) p = Umap \<sigma> e (recE e (Pmap (inv \<sigma>) p))"
+unfolding recE_def using REC_swap apply simp
+by (metis P P_axioms_def Pmap_validP_def bij_imp_bij_inv supp_inv_bound)
 
 thm REC_valid[no_vars]
-theorem rec_valid: 
+theorem recE_valid: 
 "pred_fun validP validU (recE (Ector x))"
 unfolding recE_def Ector_def using REC_valid pred_fun_def  
 by simp (metis Rep_Abs_E_pre')
@@ -499,7 +507,7 @@ end (* context rec_E *)
  
 (* *)
 
-lemma Bimodel_recE: 
+theorem Bimodel_recE: 
 assumes "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
 shows "rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 
    (Ector' o Gmap snd snd) (\<lambda>_ . True)"
@@ -518,16 +526,15 @@ proof (standard, safe)
   term rec.recE
   show "\<exists>rec. 
     (\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
-           rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
+           rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
     (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow>
        |supp \<sigma>| <o |UNIV::'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
   apply(rule exI[of _ rec.recE]) apply(intro conjI allI)
     subgoal for u p using rec.rec_ctor[of p u] 
-    apply (auto simp: Gmap_comp o_def restr2_def) 
-      by (metis (no_types, lifting) ext comp_apply)
-    subgoal by (simp add: rec.REC_swap rec.recE_def)
-    subgoal using rec.rec_UFVars by auto . 
+    by (auto simp: Gmap_comp o_def)  
+    subgoal by (auto simp add: rec.recE_Eperm)
+    subgoal using rec.recE_UFVars by auto .  
 qed
   
 

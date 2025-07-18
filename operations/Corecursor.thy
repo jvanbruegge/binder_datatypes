@@ -705,7 +705,7 @@ lemma rel_F_suitable_mapD:
 
 abbreviation (input) "FVarsB x \<equiv> \<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x"
 
-lemma alpha_coinduct2[consumes 1, case_names C]: 
+(*lemma alpha_coinduct2[consumes 1, case_names C]: 
   fixes t t' :: "'a::var raw_term"
   assumes 0: "\<phi> t t'" and 1:
     "\<And>x x' :: ('a,'a,'a raw_term,'a raw_term) term_pre. \<phi> (raw_term_ctor x) (raw_term_ctor x') \<Longrightarrow>
@@ -727,7 +727,7 @@ lemma alpha_coinduct2[consumes 1, case_names C]:
     apply (rule conjI, rule refl)+
     apply assumption
     done
-  done
+  done*)
 
 (* The "monster lemma": swapping and "pick"-irrelevance covered in one shot: *)
 
@@ -799,147 +799,163 @@ lemma f_swap_alpha:
     and valid_d: "valid_U d"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a::var set|"
   shows "alpha_term (permute_raw_term u (f pick d)) (f pick' (raw_Umap u d))"
-   apply (rule alpha_coinduct2[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
+  apply (rule alpha_term.coinduct[of "\<lambda> tL tR. \<exists> u d. valid_U d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
    tL = permute_raw_term u (f pick d) \<and> tR = f pick' (raw_Umap u d)"])
-  prefer 2
-  apply (erule exE conjE)+
-  apply (frule rel_F_suitable_mapD[OF _ p p'])
-    apply assumption+
-  apply (erule exE)
-  apply (rule exI)+
-  apply (rule conjI[rotated])+
-     prefer 4
-     apply (rule bij_comp)
-      apply (rule bij_imp_bij_inv)
-      apply assumption
-     apply (rule bij_comp)
-      prefer 2
-      apply assumption
-     apply (erule conjE)
-     apply (rotate_tac -2)
-     apply assumption
-    prefer 3
-    apply (rule supp_comp_bound)
-     apply (rule supp_inv_bound)
-      apply assumption
-     apply assumption
-    apply (rule supp_comp_bound)
-     apply (erule conjE)+
-     apply assumption
-    apply assumption
    prefer 2
 
-   apply (rule id_on_antimono)
-    apply (unfold id_on_def)
-    apply (rule allI)
-    apply (rule impI)
-    apply (subst comp_assoc)
-    apply (subst comp_apply)
-    apply (subst comp_apply)
-    apply (frule bij_inv_rev[THEN iffD1, THEN sym])
-     prefer 2
+  subgoal for x1 x2
+    apply (erule exE conjE)+
+
+    apply (rule raw_term.exhaust[of x1])
+    apply (drule trans[OF sym])
      apply assumption
-    apply (erule conjE)+
-    apply (erule allE)
-    apply (erule impE)
-     prefer 2
+    apply (rule raw_term.exhaust[of x2])
+    apply (drule trans[OF sym])
      apply assumption
-    apply (rule image_inv_f_f[OF bij_is_inj, THEN arg_cong2[OF refl, of _ _ "(\<in>)"], THEN iffD1])
-     prefer 2
-     apply (erule imageI)
-    apply assumption
-   apply (subst f_swap_alpha_xL[of _ _ "pick"])
-      apply assumption+
-   apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
-   apply (subst Diff_subset_conv)
-   apply (subst image_comp)
-   apply (subst comp_assoc[symmetric])
-   apply (subst comp_def)
-   apply (subst FVars_raw_permutes, assumption+)
-  apply (subst comp_def[of _ FVars_raw_term, symmetric])
-   apply (subst comp_assoc)
-   apply (subst image_comp[symmetric])
-   apply (subst f_swap_alpha_xL[of _ _ "pick"])
-      apply assumption+
-   apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
-   apply (subst image_Un[symmetric])
-   apply (subst image_Union[symmetric])
-   apply (rule image_mono)
-   apply (unfold raw_UFVarsBD_def)
-   apply (subst Un_Diff_cancel)
-   apply (rule le_supI2)
-   apply (subst o_case_sum)
-   apply (unfold o_id)
-   apply (rule UN_mono)
-    apply (rule subset_refl)
-  subgoal for _ _ _ _ _ x
-    apply (rule sumE[of x])
-     apply hypsubst_thin
-     apply (unfold sum.simps)
-     apply (rule subset_refl)
     apply hypsubst_thin
-    apply (unfold sum.simps)
-    apply (subst comp_apply)
-    apply (rule f_FVarsD[OF p])
-    apply (drule valid_pick_set3[OF p])
-     apply assumption
-    apply (unfold pred_sum_inject)
-    apply assumption
-    done
-  apply (erule conjE)+
-  apply (rotate_tac -6)
-  apply (drule f_swap_alpha_xL[of _ _ "pick", rotated -1], assumption+)
-  apply (drule f_ctor)
-  apply hypsubst
-  apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
-  apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound bij_id)+)
-  apply (subst relcompp_conversep_Grp)+
-  apply (subst Grp_OO)+
-  apply (unfold id_o inv_id)
-  apply (subst (2) comp_assoc)
-  apply (subst inv_o_simp1, assumption)
-  apply (unfold o_id)
-  apply (subst comp_apply)+
-  apply (subst permute_raw_comps, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
-  apply (erule term_pre.mr_rel_mono_strong0[rotated -5])
-           apply (rule ballI)
-           apply (rule refl)
-          apply (rule ballI)
-          apply (rule refl)
-         apply (rule ballI)+
-         apply (rule impI)
-         apply (subst permute_raw_comps)
-             prefer 6
 
-              apply (rule ballI)+
-              apply (rule impI)
-              apply (rotate_tac -1)
-              apply (subst disj_commute)
-             apply (rule verit_and_neg)
-              apply (frule l_is_inr[of _ _ _ pick "pick'"])
-               apply assumption
-              apply (erule exE)
-              apply hypsubst
-              apply (subst sum.case)+
-              apply (rule exI)+
-              apply (drule r_is_Umap)
-               apply (rule refl)
-              apply hypsubst
-              apply (unfold sum.case)
-              apply (rule conjI[rotated])+
-                  apply (rule refl)+
-                apply assumption+
-              apply (drule valid_pick_set4[rotated])
+    apply (frule rel_F_suitable_mapD[OF _ p p'])
+      apply assumption+
+    apply (erule exE)
+    apply (rule exI)+
+    apply (rule conjI, rule refl)+
+    apply (rule conjI[rotated])+
+       prefer 4
+       apply (rule bij_comp)
+        apply (rule bij_imp_bij_inv)
+        apply assumption
+       apply (rule bij_comp)
+        prefer 2
+        apply assumption
+       apply (erule conjE)
+       apply (rotate_tac -2)
+       apply assumption
+      prefer 3
+      apply (rule supp_comp_bound)
+       apply (rule supp_inv_bound)
+        apply assumption
+       apply assumption
+      apply (rule supp_comp_bound)
+       apply (erule conjE)+
+       apply assumption
+      apply assumption
+     prefer 2
+
+     apply (rule id_on_antimono)
+      apply (unfold id_on_def)
+      apply (rule allI)
+      apply (rule impI)
+      apply (subst comp_assoc)
+      apply (subst comp_apply)
+      apply (subst comp_apply)
+      apply (frule bij_inv_rev[THEN iffD1, THEN sym])
+       prefer 2
+       apply assumption
+      apply (erule conjE)+
+      apply (erule allE)
+      apply (erule impE)
+       prefer 2
+       apply assumption
+      apply (rule image_inv_f_f[OF bij_is_inj, THEN arg_cong2[OF refl, of _ _ "(\<in>)"], THEN iffD1])
+       prefer 2
+       apply (erule imageI)
+      apply assumption
+     apply (frule f_swap_alpha_xL[rotated -1, OF sym])
+       apply assumption+
+     apply (subst f_swap_alpha_xL[of _ _ "pick"])
+        apply assumption+
+      apply (erule sym)
+     apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
+     apply (subst Diff_subset_conv)
+     apply (subst image_comp)
+     apply (subst comp_assoc[symmetric])
+     apply (subst comp_def)
+     apply (subst FVars_raw_permutes, assumption+)
+     apply (subst comp_def[of _ FVars_raw_term, symmetric])
+     apply (subst comp_assoc)
+     apply (subst image_comp[symmetric])
+     apply (subst f_swap_alpha_xL[of _ _ "pick"])
+        apply assumption+
+      apply (erule sym)
+     apply (subst term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
+     apply (subst image_Un[symmetric])
+     apply (subst image_Union[symmetric])
+     apply (rule image_mono)
+     apply (unfold raw_UFVarsBD_def)
+     apply (subst Un_Diff_cancel)
+     apply (rule le_supI2)
+     apply (subst o_case_sum)
+     apply (unfold o_id)
+     apply (rule UN_mono)
+      apply (rule subset_refl)
+    subgoal for _ _ _ _ _ x
+      apply (rule sumE[of x])
+       apply hypsubst_thin
+       apply (unfold sum.simps)
+       apply (rule subset_refl)
+      apply hypsubst_thin
+      apply (unfold sum.simps)
+      apply (subst comp_apply)
+      apply (rule f_FVarsD[OF p])
+      apply (drule valid_pick_set3[OF p])
+       apply assumption
+      apply (unfold pred_sum_inject)
+      apply assumption
+      done
+    apply (erule conjE)+
+    apply (rotate_tac -6)
+    apply (drule f_swap_alpha_xL[of _ _ "pick", rotated -1, OF sym], assumption+)
+    apply (drule f_ctor[OF sym])
+    apply hypsubst
+    apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
+    apply (subst term_pre.mr_rel_map, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound bij_id)+)
+    apply (subst relcompp_conversep_Grp)+
+    apply (subst Grp_OO)+
+    apply (unfold id_o inv_id)
+    apply (subst (2) comp_assoc)
+    apply (subst inv_o_simp1, assumption)
+    apply (unfold o_id)
+    apply (subst comp_apply)+
+    apply (subst permute_raw_comps, (assumption | rule supp_id_bound bij_comp bij_imp_bij_inv supp_comp_bound supp_inv_bound)+)
+    apply (erule term_pre.mr_rel_mono_strong0[rotated -5])
+             apply (rule ballI)
+             apply (rule refl)
+            apply (rule ballI)
+            apply (rule refl)
+           apply (rule ballI)+
+           apply (rule impI)
+           apply (subst permute_raw_comps)
+               prefer 6
+
+               apply (rule ballI)+
+               apply (rule impI)
+               apply (rotate_tac -1)
+               apply (subst disj_commute)
+               apply (rule verit_and_neg)
+               apply (frule l_is_inr[of _ _ _ pick "pick'"])
                 apply assumption
-               apply (rule p)
-              apply (unfold pred_sum_inject)
-              apply assumption
+               apply (erule exE)
+               apply hypsubst
+               apply (subst sum.case)+
+               apply (rule exI)+
+               apply (drule r_is_Umap)
+                apply (rule refl)
+               apply hypsubst
+               apply (unfold sum.case)
+               apply (rule conjI[rotated])+
+                   apply (rule refl)+
+                 apply assumption+
+               apply (drule valid_pick_set4[rotated])
+                 apply assumption
+                apply (rule p)
+               apply (unfold pred_sum_inject)
+               apply assumption
 
-             prefer 5
+              prefer 5
 
-             apply (subst (2) comp_assoc)
-             apply (subst (3) comp_assoc)
-             apply (unfold inv_o_simp1)
+              apply (subst (2) comp_assoc)
+              apply (subst (3) comp_assoc)
+              apply (unfold inv_o_simp1)
               apply (unfold o_id)
               apply (rotate_tac -1)
               apply (subst disj_commute)
@@ -963,6 +979,7 @@ lemma f_swap_alpha:
                 apply (unfold pred_sum_inject)
                 apply assumption
                apply (rule supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound | assumption)+
+    done
   apply (rule exI)+
   apply (rule conjI[rotated])+
       apply (rule refl)+

@@ -49,7 +49,7 @@ locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Eb
               noclashE u \<and> GVrs2 u \<inter> PVrs p = {} 
               \<longrightarrow> 
               rec (Ector u) p = 
-              Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
+              Ector' (Gmap rec rec u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
 begin
@@ -60,16 +60,16 @@ begin
 
 definition rec where
   "rec = (SOME rec. ((\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
-   rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
+   rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
        (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
        (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)))"
 
 lemma rec_Ector: "Pvalid p \<Longrightarrow> noclashE u \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
-  rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p"
+  rec (Ector u) p = Ector' (Gmap rec rec u) p"
   using someI_ex[OF rec[rule_format, OF BM], THEN conjunct1] unfolding rec_def
   by blast
 
-lemma rec_EPerm: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow>  rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))"
+lemma rec_Eperm: "bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow>  rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))"
   using someI_ex[OF rec[rule_format, OF BM], THEN conjunct2, THEN conjunct1] unfolding rec_def
   by blast
 
@@ -298,41 +298,24 @@ sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
         apply (smt (z3) Gsub_eta' eta'_inversion)
         apply (metis (no_types, lifting) Gsub_eta eta_inversion)
         apply(rule arg_cong[where f = Ector]) 
-        apply(rule arg_cong[where f = "Gsub \<delta> id"]) 
-        apply(rule G.Map_cong)
-          subgoal apply (simp add: restr2_def) 
-            using
-              \<open>|supp \<delta>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV| \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> GVrs2 u \<inter> EVrs (Ector u) = {} \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> Esub_Pvalid (\<delta>, \<rho>, \<rho>')\<close>
-            by argo 
-          subgoal apply (simp add: restr2_def) 
-            using
-              \<open>|supp \<delta>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV| \<Longrightarrow> |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV| \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> GVrs2 u \<inter> imsupp \<delta> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> = {} \<Longrightarrow> GVrs2 u \<inter> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>' = {} \<Longrightarrow> GVrs2 u \<inter> EVrs (Ector u) = {} \<Longrightarrow> \<forall>a. u \<noteq> \<eta> a \<Longrightarrow> \<forall>a'. u \<noteq> \<eta>' a' \<Longrightarrow> Esub_Pvalid (\<delta>, \<rho>, \<rho>')\<close>
-            by fastforce . .
-      subgoal apply auto sorry
-      subgoal sorry .  
-        
-(* 
-      apply (subst rec_Ector[OF Esub.Bimodel_axioms]; auto simp add:
-         eta_natural[of id id, unfolded G.Sb_Inj, simplified]
-         eta_inject Esub_defs noclashE_def)
-      apply (subst rec_Ector[OF Esub.Bimodel_axioms]; auto simp add:
-         eta'_natural[of id id, unfolded G.Sb_Inj, simplified]
-         eta_distinct' eta'_inject Esub_defs)
-      apply (subst rec_Ector[OF Esub.Bimodel_axioms]; auto dest: eta_inversion[of id id, unfolded G.Sb_Inj, simplified] eta'_inversion[of id id, unfolded G.Sb_Inj, simplified] simp add:
-         eta_distinct eta_inject eta_distinct' eta'_inject G.Map_comp[THEN fun_cong, simplified] comp_def Esub_defs)
-   apply (rule order_trans[OF rec_EVrs[OF Esub.Bimodel_axioms]]; simp add: Esub_defs)
-  apply (subst rec_EPerm[OF Esub.Bimodel_axioms]; simp add: Esub_defs)
-  apply (rule arg_cong[where f = "\<lambda>p. Eperm _ (rec _ _ _ _ _ p)"])
-  apply (auto simp: fun_eq_iff)
-  apply (metis Int_Un_empty Int_emptyD bij_inv_rev imsupp_idle2 not_in_imsupp_same)
-  apply (metis (mono_tags, lifting) Int_Un_empty Int_Un_emptyI1 bij_betw_inv_into imsupp_inv inv_simp1
-      permute_\<rho> supp_inv_bound)
-  apply (smt (verit, best) Int_Un_empty Un_commute bij_betw_inv_into imsupp_inv inv_simp1 permute_\<rho>'
-      supp_inv_bound)
-  done
-*)
+        apply(rule arg_cong[where f = "Gsub \<delta> id"])  
+        apply(rule G.Map_cong) by auto .
+      subgoal apply (unfold Esub_def) 
+      apply(rule subset_trans[OF rec_EVrs[OF Esub.Bimodel_axioms]])
+        subgoal unfolding Esub_Pvalid_def by auto
+        subgoal unfolding Esub_PVrs_def by auto .
 
-end
+      subgoal for \<delta> \<rho> \<rho>' \<sigma> e apply (unfold Esub_def)  
+      apply (subst rec_Eperm[OF Esub.Bimodel_axioms]; simp add: Esub_defs)
+      apply (rule arg_cong[where f = "\<lambda>p. Eperm _ (rec _ _ _ _ _ p)"])
+      apply (auto simp: fun_eq_iff)
+        subgoal by (metis Int_Un_empty Int_emptyD bij_inv_rev imsupp_idle2 not_in_imsupp_same)
+        subgoal by (metis (mono_tags, lifting) Int_Un_empty Int_Un_emptyI1 bij_betw_inv_into 
+                   imsupp_inv inv_simp1 permute_\<rho> supp_inv_bound)
+        subgoal by (smt (verit, best) Int_Un_empty Un_commute bij_betw_inv_into imsupp_inv inv_simp1 
+                      permute_\<rho>' supp_inv_bound) . .
+   
+end (* context Birecursor_Sub *)
 
 locale Birecursor_Sub_Strong = Birecursor_Sub + Expression_Strong
 begin

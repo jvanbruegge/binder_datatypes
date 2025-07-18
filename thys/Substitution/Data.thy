@@ -463,15 +463,16 @@ using REC_E .
 lemma noclash_E_noclashE[simp]: "noclash_E (Abs_E_pre x) = noclashE x"
 sorry
 
-definition "recE \<equiv> REC_E"
+(* definition "recE \<equiv> REC_E" *)
+definition "recE \<equiv> \<lambda>t p. if validP p then REC_E t p else undefined"
 
 
 thm REC_ctor[no_vars]
 theorem rec_ctor: 
 "validP p \<Longrightarrow> GVrs2 x \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
  noclashE x \<Longrightarrow> recE (Ector x) p =
- Uctor (Gmap (\<lambda>t. (t, \<lambda>p. if validP p then recE t p else undefined))
-             (\<lambda>t. (t, \<lambda>p. if validP p then recE t p else undefined)) x)
+ Uctor (Gmap (\<lambda>t. (t, recE t))
+             (\<lambda>t. (t, recE t)) x)
  p"
 unfolding recE_def Ector_def
 apply(subst REC_ctor) by (auto simp: Uctor'_def)
@@ -479,19 +480,20 @@ apply(subst REC_ctor) by (auto simp: Uctor'_def)
 thm REC_UFVars[no_vars]
 theorem rec_UFVars: 
 "validP p \<Longrightarrow> UFVars e (recE e p) \<subseteq> EVrs e \<union> PFVars p \<union> avoiding_set"
-unfolding recE_def using REC_UFVars .
+unfolding recE_def using REC_UFVars by auto
 
 thm REC_swap[no_vars]
 theorem rec_Eperm:
 "validP p \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow>
  imsupp \<sigma> \<inter> avoiding_set = {} \<Longrightarrow>
  recE (Eperm \<sigma> e) p = Umap \<sigma> e (local.REC_E e (Pmap (inv \<sigma>) p))"
-unfolding recE_def using REC_swap .
+unfolding recE_def using REC_swap by auto
 
 thm REC_valid[no_vars]
 theorem rec_valid: 
 "pred_fun validP validU (recE (Ector x))"
-unfolding recE_def Ector_def using REC_valid by blast
+unfolding recE_def Ector_def using REC_valid pred_fun_def  
+by simp (metis Rep_Abs_E_pre')
 
 end (* context rec_E *)
  

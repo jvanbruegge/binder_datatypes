@@ -321,7 +321,6 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
   qed
 qed
 
-
 lemma step_Ector'_Ector_EVrs: 
 "\<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
@@ -348,9 +347,9 @@ unfolding dtorVrsC_def Evalid'_def apply (intro allI impI) subgoal for pe apply(
 apply clarsimp
 apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (intro conjI allI)
   subgoal for u apply(cases "base u")
-    subgoal unfolding Edtor'_base  using Edtor'_Inl_step by auto
-    subgoal unfolding Edtor'_step  
-    unfolding Edtor1'_Ector unfolding EVrs_Ector GSupp1_Gmap GSupp2_Gmap apply clarsimp
+    subgoal unfolding Edtor'_base using Edtor'_Inl_step by auto
+    subgoal apply clarify unfolding Edtor'_step  
+    unfolding Edtor1'_Ector unfolding EVrs_Ector GSupp1_Gmap GSupp2_Gmap apply clarify
     subgoal for ua  
     apply(rule incl_Un_triv3)
     unfolding EVrs''_def EVrs_Ector 
@@ -358,9 +357,8 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (
       GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap]]) 
       subgoal apply(rule incl_Un3_triv3)
         subgoal ..
-        subgoal apply auto apply(metis Diff_iff fst_conv image_eqI) 
-        sorry
-        subgoal apply auto apply (metis image_eqI fst_conv) sorry .
+        subgoal by auto (metis (lifting) DiffI fst_conv image_eqI)   
+        subgoal by auto fastforce .
       subgoal .
       subgoal .
       subgoal .
@@ -373,10 +371,18 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (
 
 
 lemma presDV_Evalid'_Edtor': "presDV Evalid' Edtor'"
-unfolding presDV_def apply safe sorry
-
+unfolding presDV_def apply clarify
+  subgoal for e p U u' e' p'
+  unfolding Evalid'_def snd_conv apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e])
+    subgoal .
+    subgoal for u apply(cases "base u")
+      subgoal apply clarify unfolding Edtor'_base by auto
+      subgoal apply clarify unfolding Edtor'_step Edtor1'_Ector 
+      by (auto simp: GSupp1_Gmap GSupp2_Gmap) . . .
+       
 lemma presPV_Evalid'_Eperm'': "presPV Evalid' Eperm''"
-unfolding presPV_def apply safe sorry
+unfolding presPV_def apply clarify subgoal for \<sigma> e p 
+unfolding Eperm''_def Evalid'_def by simp .
 
 
 (* Borrowing the corecursion from comodels, under the assumptions that E 
@@ -386,7 +392,8 @@ from models under the assumption that E is initial)!  *)
 
 sublocale C: Comodel where Evalid' = Evalid' and Edtor' = Edtor' 
 and Eperm' = Eperm'' and EVrs' = EVrs'' 
-apply standard using nomC dtorNeC dtorPermC dtorVrsGrenC dtorVrsC apply auto sorry
+apply standard using nomC dtorNeC dtorPermC dtorVrsGrenC dtorVrsC 
+presDV_Evalid'_Edtor' presPV_Evalid'_Eperm'' by auto
 
 thm C.corec_Edtor_Inl C.corec_Edtor_Inr C.corec_Eperm  C.corec_EVrs C.corec_unique 
 
@@ -403,7 +410,7 @@ using assms apply - unfolding Edtor'_base  apply simp unfolding crec_def
 apply simp by (metis Evalid'_def base_Gmap_eq snd_conv) 
 
 theorem rec_Ector_not_base:
-assumes f: "\<not> base u" and p: "Pvalid p"  and g : "GVrs2 u \<inter> PVrs p = {}"
+assumes f: "\<not> base u" and p: "Pvalid p"  and g : "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
 shows "crec (Ector u) p = Ector' (Gmap crec crec u) p"
 proof-
   have "Edtor' (Ector u, p) = Inl (Edtor1' (Ector u, p))" 
@@ -415,8 +422,8 @@ proof-
           GVrs2 v \<inter> PVrs p = {} \<and> GVrs2 v \<inter> GVrs1 v = {}
    \<Longrightarrow> Ector (Gmap C.corec C.corec v) = C.corec (Ector u, p)" 
   using f p g unfolding Edtor_def Edtor1'_Ector  
-  using in_Edtor1'_Ector apply (auto simp: GSupp1_Gmap GSupp2_Gmap image_def ) 
-  sorry
+  using in_Edtor1'_Ector unfolding GSupp1_Gmap GSupp2_Gmap image_def 
+  unfolding subset_iff by safe blast
   obtain w where w: "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p" 
   and g1: "GVrs2 w \<inter> PVrs p = {}" "GVrs2 w \<inter> GVrs1 w = {}" by (meson p Ector_surj_fresh countable_PVrs)
   show ?thesis unfolding crec_def apply simp apply(subst 2[symmetric, of "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) w"])
@@ -426,7 +433,7 @@ proof-
     subgoal unfolding GSupp2_Gmap by auto
     subgoal using g1 unfolding GVrs2_Gmap by auto
     subgoal using g1 unfolding GVrs1_Gmap GVrs2_Gmap by auto
-    subgoal unfolding Gmap_comp unfolding curry_def o_def
+    subgoal using f unfolding Gmap_comp unfolding curry_def o_def
       apply(rule Ector_Ector'_Gmap) using w p g g1 by auto . 
 qed
       
@@ -452,47 +459,52 @@ proof-
 qed
 
 (* TODO: see if I can lose some bimodel axioms, if there were some used in 
-uniqueness only: *)
-(* Not needed: 
+uniqueness only: -- DONE *)
+(* Not needed: *)
 theorem rec_unique':
-assumes "Pvalid p" and "\<And>u p. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>
+assumes "Pvalid p" and "\<And>u p. 
+  Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow>
  (base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)
  \<and>
  (\<not> base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)"
-shows "H = crec" 
+shows "H e p = crec e p" 
 proof-
-  have "uncurry H = C.corec" 
-  proof(rule C.corec_unique, safe)
-    fix e p U w
-    assume 1: "Edtor' (e, p) = Inl U" and w: "w \<in> U"
-    obtain u where e: "e = Ector u" and 2: "GVrs2 u \<inter> PVrs p = {}"  
-      by (metis Ector_surj_fresh countable_PVrs)
+  have ep: "Evalid' (e, p)" using assms unfolding Evalid'_def by auto
+  have "uncurry H (e,p) = C.corec (e,p)" 
+  proof(rule C.corec_unique[OF _ _ ep], safe)
+    fix e p U x w
+    assume "Evalid' (e, p)" and 
+    1: "Edtor' (e, p) = Inl U" and w: "w \<in> U"
+    hence p: "Pvalid p" unfolding Evalid'_def by auto
+    obtain u where e: "e = Ector u" and 2: "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"   
+      using Ector_surj_fresh[OF countable_PVrs[OF p], of e] by auto 
     have f: "\<not> base u" using 1 using Edtor'_Inl_step e by auto
     from 1 f 2 w have "w \<in> Edtor1' (Ector u, p)" apply - unfolding e Edtor'_step by auto
     hence 0: "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
     and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}" and ww: "GVrs2 w \<inter> PVrs p = {}"
-      using 2 f apply- unfolding Edtor1'_Ector by auto
-    from 1 2 f assms have H: "H (Ector u) p = Ector' (Gmap H H u) p" by auto
+      using 2 f p apply- unfolding Edtor1'_Ector by auto
+    from 1 2 f p assms have H: "H (Ector u) p = Ector' (Gmap H H u) p" by auto
     show "Gmap (uncurry H) (uncurry H) w \<in> Edtor ((uncurry H) (e, p))"
       unfolding Edtor_def apply simp unfolding e
       unfolding H using 0 apply- apply(rule Ector_Ector'_Gmap_fst)
-      using 00 ww 2 by auto
+      using 00 ww 2 f p by auto
   next 
-    fix e p  e1 assume 1: "Edtor' (e, p) = Inr e1" 
-    obtain u where e: "e = Ector u" and 2: "GVrs2 u \<inter> PVrs p = {}"  
-    by (metis Ector_surj_fresh countable_PVrs)
+    fix e p  e1 assume "Evalid' (e, p)" and 1: "Edtor' (e, p) = Inr e1" 
+    hence p: "Pvalid p" unfolding Evalid'_def by auto
+    obtain u where e: "e = Ector u" and 2: "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
+    using Ector_surj_fresh[OF countable_PVrs[OF p], of e] by auto 
     have f: "base u" using 1 using Edtor'_Inr_base e by auto
     from 1 f 2 have e1: "e1 = Ector' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p" 
     apply - unfolding e Edtor'_base by auto
     have 00: "H (Ector u) p = Ector' (Gmap H H u) p"
-    using f assms 2 by auto
+    using f assms 2 p by auto
     show "uncurry H (e, p) = e1"
     unfolding e uncurry_def e1  apply simp unfolding 00
     using base_Gmap_eq[OF f] by metis
   qed
   thus ?thesis unfolding crec_def curry_def uncurry_def fun_eq_iff by auto
 qed
-*)
+
 
 end (* locale Bimodel *)
 

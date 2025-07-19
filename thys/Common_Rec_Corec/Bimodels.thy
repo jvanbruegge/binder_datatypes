@@ -50,9 +50,9 @@ is not the above, but a converse of it modulo PVrs p!, namely:
 EVrs_Ector': "\<And>u p. \<not> base u \<Longrightarrow> 
   EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u))"
 *)
-and 
+and
 Ector_Ector'_sync:  
-"\<And>w u p g. Pvalid p \<Longrightarrow> GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+"\<And>w u p g. \<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
 and Ector'_uniform:  
@@ -89,7 +89,7 @@ by (metis (mono_tags, lifting) Ector_base_inj tfl_some)
 
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   
-assumes "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
        Ector' (Gmap F F u) p"
@@ -100,11 +100,12 @@ proof-
     unfolding F' Gmap_comp[symmetric]
     apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms by auto
   show ?thesis unfolding 1 unfolding F'_def apply(subst Gmap_comp[symmetric])
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap by auto
+    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap by auto
 qed
 
+(* only needed for uniqueness: *)
 lemma Ector_Ector'_Gmap_fst: 
-assumes "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
 shows "Ector (Gmap (uncurry H) (uncurry H) w) = Ector' (Gmap H H u) p"
@@ -122,8 +123,10 @@ proof-
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap by auto
+    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap 
+    by auto
 qed
+
 
 end (* context Bimodels *)
  

@@ -38,10 +38,10 @@ unfolding ctorPermM_def apply safe
 lemma ctorVarsM: "ctorVarsM EEctor' EVrs u"
 unfolding ctorVarsM_def  
   apply(cases "base u")
-    subgoal unfolding EEctor'_base  apply(intro allI)  
+    subgoal unfolding EEctor'_base  apply(intro allI impI)  
     apply(rule subset_trans[OF ctorVarsM_base[unfolded ctorVarsM_def, rule_format]])
     by auto 
-    subgoal unfolding EEctor'_step apply(intro allI) 
+    subgoal unfolding EEctor'_step apply(intro allI impI) 
     apply(rule subset_trans[OF ctorVarsM_step[unfolded ctorVarsM_def, rule_format]]) 
     using base_Gmap by auto . 
 
@@ -64,34 +64,39 @@ definition "mrec \<equiv> M.rec"
 
 theorem mrec_Ector_base:
 assumes "base u"    
-shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> mrec (Ector u) p = Ector' (Gmap mrec mrec u) p"
+and "Pvalid p" and "GVrs2 u \<inter> PVrs p = {}" and "GVrs2 u \<inter> GVrs1 u = {}"
+shows "mrec (Ector u) p = Ector' (Gmap mrec mrec u) p" 
 unfolding mrec_def
 apply(subst M.rec_Ector) 
   subgoal using assms by simp
+  subgoal using assms by simp
+  subgoal using assms by simp
   subgoal using assms apply(subst EEctor'_base)
-    subgoal using base_Gmap by auto
+    subgoal using base_Gmap by blast
     subgoal unfolding Gmap_comp unfolding o_def by simp . .
 
 theorem mrec_Ector_step:
-assumes "\<not> base u"  
-shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> mrec (Ector u) p = Ector' (Gmap mrec mrec u) p"
+assumes "\<not> base u" 
+and "Pvalid p" and "GVrs2 u \<inter> PVrs p = {}" and "GVrs2 u \<inter> GVrs1 u = {}"
+shows "mrec (Ector u) p = Ector' (Gmap mrec mrec u) p"
 unfolding mrec_def
 apply(subst M.rec_Ector)
-  subgoal using assms by simp 
+  subgoal using assms by simp subgoal using assms by simp subgoal using assms by simp 
   subgoal using assms apply(subst EEctor'_step)
-    subgoal using base_Gmap by auto
+    subgoal using base_Gmap by blast
     subgoal unfolding Gmap_comp unfolding o_def by simp . .
 
 
 theorem mrec_Eperm: 
-"small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> mrec(Eperm \<sigma> e) p = Eperm \<sigma> (mrec e (Pperm (inv \<sigma>) p))"
+"Pvalid p \<Longrightarrow> small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> 
+ mrec(Eperm \<sigma> e) p = Eperm \<sigma> (mrec e (Pperm (inv \<sigma>) p))"
 unfolding mrec_def using M.rec_Eperm by auto
 
-theorem mrec_EVrs: "EVrs (mrec e p) \<subseteq> PVrs p \<union> EVrs e"
+theorem mrec_EVrs: "Pvalid p \<Longrightarrow> EVrs (mrec e p) \<subseteq> PVrs p \<union> EVrs e"
 unfolding mrec_def using M.rec_EVrs by auto
 
 theorem mrec_unique:
-assumes "\<And>u p. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow>
+assumes "\<And>u p. Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow>
  (base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)
  \<and>
  (\<not> base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)"

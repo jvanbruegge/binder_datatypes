@@ -60,17 +60,19 @@ lemmas bij_inv_id2 = inv_o_simp1
 by (simp add: bij_def surj_iff) *)
 
 (* nominal-like structures: *)
-definition nom :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> 'a set) \<Rightarrow> bool" where 
-"nom perm Vrs \<equiv> 
+definition nom :: "('E \<Rightarrow> bool) \<Rightarrow> (('a::var \<Rightarrow> 'a) \<Rightarrow> 'E \<Rightarrow> 'E) \<Rightarrow> ('E \<Rightarrow> 'a set) \<Rightarrow> bool" where 
+"nom valid perm Vrs \<equiv> 
+ (\<forall>\<sigma> e. valid e \<and> small \<sigma> \<and> bij \<sigma> \<longrightarrow> valid (perm \<sigma> e))
+ \<and> 
  perm id = id 
  \<and> 
- (\<forall>\<sigma>1 \<sigma>2. small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
- perm (\<sigma>1 o \<sigma>2) = perm \<sigma>1 o perm \<sigma>2) 
+ (\<forall>\<sigma>1 \<sigma>2 e. valid e \<and> small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
+ perm (\<sigma>1 o \<sigma>2) e = perm \<sigma>1 (perm \<sigma>2 e)) 
  \<and>
- (\<forall>\<sigma>1 \<sigma>2 e'. 
-  small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<and>  
-  (\<forall>a\<in>Vrs e'. \<sigma>1 a = \<sigma>2 a) \<longrightarrow> 
-  perm \<sigma>1 e' = perm \<sigma>2 e')"
+ (\<forall>\<sigma>1 \<sigma>2 e. 
+  valid e \<and> small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<and>  
+  (\<forall>a\<in>Vrs e. \<sigma>1 a = \<sigma>2 a) \<longrightarrow> 
+  perm \<sigma>1 e = perm \<sigma>2 e)"
 (* NB: Only if functiins are constrained to be bijective: identity 
  and congruence can be replaced by id_congruence. *)
 
@@ -158,7 +160,8 @@ consts Ector :: "('a::var, 'a, 'a E,'a E) G \<Rightarrow> 'a E"
 consts Eperm :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'a E"
 consts EVrs :: "('a::var) E \<Rightarrow> 'a set"
 
-axiomatization where Ector_surj_fresh: "\<And>e A. countable A \<Longrightarrow> \<exists>u. Ector u = e \<and> GVrs2 u \<inter> A = {}"
+axiomatization where Ector_surj_fresh: 
+"\<And>e A. countable A \<Longrightarrow> \<exists>u. Ector u = e \<and> GVrs2 u \<inter> GVrs1 u = {} \<and> GVrs2 u \<inter> A = {}"
 (* Corresponds to ctorPermM *)
 and Eperm_Ector: "\<And>\<sigma> u. small \<sigma> \<Longrightarrow> bij \<sigma>  \<Longrightarrow> 
        Eperm \<sigma> (Ector u) = 
@@ -222,13 +225,14 @@ by (metis Ector_surj)
 lemma Ector_exhaust': "(\<And>u. e = Ector u \<Longrightarrow> P e) \<Longrightarrow> P e"
   by (metis Ector_surj)
 
-lemma Ector_exhaust_fresh: "countable A \<Longrightarrow> (\<And>u. e = Ector u \<Longrightarrow> GVrs2 u \<inter> A = {} \<Longrightarrow> P e) \<Longrightarrow> P e"
+lemma Ector_exhaust_fresh: "countable A \<Longrightarrow> 
+   (\<And>u. e = Ector u \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> GVrs2 u \<inter> A = {} \<Longrightarrow> P e) \<Longrightarrow> P e"
   by (metis Ector_surj_fresh)
 
 lemma Eperm_inv_iff: "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
   sorry
 
-lemma nom: "nom Eperm EVrs"
+lemma nom: "nom (\<lambda>e. True) Eperm EVrs"
   unfolding nom_def apply safe 
   apply simp
   subgoal using Eperm_comp by fastforce
@@ -258,25 +262,26 @@ sorry
 (* Parameters *)
 
 typedecl 'a P 
+consts Pvalid :: "'a::var P \<Rightarrow> bool" 
 consts Pperm :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a P \<Rightarrow> 'a P" 
 consts PVrs :: "('a::var) P \<Rightarrow> 'a set"
-axiomatization where nomP: "nom Pperm PVrs"
-and countable_PVrs: "\<And>p. countable (PVrs p)"
-and PVrs_Pperm: "\<And> \<sigma> p u. bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> u) = \<sigma> ` PVrs u"
+axiomatization where nomP: "nom Pvalid Pperm PVrs"
+and countable_PVrs: "\<And>p. Pvalid p \<Longrightarrow> countable (PVrs p)"
+and PVrs_Pperm: "\<And> \<sigma> p. Pvalid p \<Longrightarrow> bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> p) = \<sigma> ` PVrs p" 
 
 lemma Pperm_id[simp]: "Pperm id = id" 
 using nomP[unfolded nom_def] by auto
 
-lemma Pperm_comp: "small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+lemma Pperm_comp: "Pvalid p \<Longrightarrow> small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
 Pperm \<sigma>1 (Pperm \<sigma>2 p) = Pperm (\<sigma>1 \<circ> \<sigma>2) p"
 using nomP[unfolded nom_def] by force
 
 lemma Pperm_cong: 
-"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
+"small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> Pvalid p \<Longrightarrow> 
  (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Pperm \<sigma>1 p = Pperm \<sigma>2 p"
   using nomP[unfolded nom_def] by force
 
-lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> countable (PVrs p \<union> inv \<sigma> ` PVrs p)"
+lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> countable (PVrs p \<union> inv \<sigma> ` PVrs p)"
   by (simp add: countable_PVrs)
 
 definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('a P\<Rightarrow>'E') \<Rightarrow> ('a P\<Rightarrow>'E'))" where 
@@ -290,7 +295,7 @@ definition ctorPermM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E
 \<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
 \<Rightarrow> bool" where 
 "ctorPermM ctor perm u \<equiv> 
-(\<forall>\<sigma> p. small \<sigma> \<and> bij \<sigma>  \<longrightarrow> 
+(\<forall>\<sigma> p. Pvalid p \<and> small \<sigma> \<and> bij \<sigma>  \<longrightarrow> 
        perm \<sigma> (ctor u p) = 
        ctor (Gren \<sigma> \<sigma> (Gmap (lift perm \<sigma>) (lift perm \<sigma>) u)) (Pperm \<sigma> p))"
 
@@ -298,7 +303,8 @@ definition ctorVarsM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E
 \<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
 \<Rightarrow> bool" where 
 "ctorVarsM ctor Vrs u \<equiv> 
-\<forall>p. Vrs (ctor u p) \<subseteq> PVrs p \<union> 
+\<forall>p. Pvalid p \<longrightarrow> 
+    Vrs (ctor u p) \<subseteq> PVrs p \<union> 
      GVrs1 u \<union> 
      (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u}) \<union> 
      (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp2 u})"

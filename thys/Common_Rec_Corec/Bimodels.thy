@@ -34,7 +34,7 @@ and ctorVarsM_base: "\<And>u. base u \<Longrightarrow> ctorVarsM Ector' EVrs u" 
 next some more specific requirements *)
 assumes Ector_base_inj: "\<And>u1 u2::('a,'a,'a E, 'a E)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
 and Ector_Ector'_inj_step: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not> base u1 \<Longrightarrow> 
-   GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u1 \<inter> PVrs p = {} \<Longrightarrow> 
+   Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u1 \<inter> PVrs p = {} \<Longrightarrow> 
    Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u) = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u1) \<Longrightarrow> 
    Ector' u p = Ector' u1 p"
 (* Ector1 is less injective than Ector outside base, and assuming freshness *)
@@ -42,7 +42,7 @@ and
 (* call the expression FreeVars u, and use it in the other axioms:  *)
 Ector_Ector'_EVrs_step: "\<And>u p.
     \<not> base u \<Longrightarrow> 
-    GVrs2 u \<inter> PVrs p = {}
+    Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {}
     \<Longrightarrow>
     EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
 (* AtoD: what you assumed in Expression_like_Corecursor 
@@ -52,22 +52,23 @@ EVrs_Ector': "\<And>u p. \<not> base u \<Longrightarrow>
 *)
 and 
 Ector_Ector'_sync:  
-"\<And>w u p g. GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+"\<And>w u p g. Pvalid p \<Longrightarrow> GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
 and Ector'_uniform:  
-"\<And>u p. GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+"\<And>u p. Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector' u p = Ector' (Gmap (\<lambda>pe p'. pe p) (\<lambda>pe p'. pe p) u) p" 
-(* only depends on p *) 
+(* thus, uniforminty means that Ector' u p only depends on the values 
+of the items in u on p.  *) 
 begin
 
-lemma Ector_Ector'_EVrs_stepp: "\<And>u uu p.
-    \<not> base u \<Longrightarrow> 
-    GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
+lemma Ector_Ector'_EVrs_stepp: 
+"\<not> base u \<Longrightarrow> 
+    Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
-subgoal for u uu p using Ector_Ector'_EVrs_step[of u p] 
-by auto .
+using Ector_Ector'_EVrs_step[of u p] 
+by auto 
 
 
 lemmas Ector_Ector'_EVrs_step' =  
@@ -88,7 +89,7 @@ by (metis (mono_tags, lifting) Ector_base_inj tfl_some)
 
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   
-assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+assumes "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
        Ector' (Gmap F F u) p"
@@ -103,7 +104,7 @@ proof-
 qed
 
 lemma Ector_Ector'_Gmap_fst: 
-assumes "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+assumes "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
 shows "Ector (Gmap (uncurry H) (uncurry H) w) = Ector' (Gmap H H u) p"

@@ -2,6 +2,7 @@ theory Expression_Like_Birecursor
   imports Expression_Like_Sub
 begin
 
+
 locale Bimodel = NominalRel Pvalid Pperm "PVrs :: 'p \<Rightarrow> 'a :: var set" + Expression Eperm "EVrs :: 'e \<Rightarrow> 'a set" Ebd Ector
   for Pvalid Pperm PVrs Eperm EVrs Ebd Ector +
   fixes Ector' :: "('a::var, 'a, 'p \<Rightarrow> 'e, 'p \<Rightarrow> 'e) G \<Rightarrow> 'p \<Rightarrow> 'e"

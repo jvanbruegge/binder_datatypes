@@ -458,9 +458,9 @@ proof-
   thus ?thesis unfolding EVrs''_def crec_def curry_def by auto
 qed
 
-(* TODO: see if I can lose some bimodel axioms, if there were some used in 
-uniqueness only: -- DONE *)
-(* Not needed: *)
+(* NB. UNiqueness is not needed for the syntax with bindings development; 
+however, it does not use any axioms that are not used in the rest of 
+the development.  *)
 theorem rec_unique':
 assumes "Pvalid p" and "\<And>u p. 
   Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow>

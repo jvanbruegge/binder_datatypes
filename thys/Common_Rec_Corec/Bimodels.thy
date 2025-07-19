@@ -74,8 +74,6 @@ by auto
 lemmas Ector_Ector'_EVrs_step' =  
 triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]
 
-
-
 lemma Ector_base: "Ector (u:: ('a, 'a, 'a E, 'a E) G) = Ector v \<Longrightarrow> base u \<longleftrightarrow> base v"
 using Ector_base_inj by metis
 
@@ -103,7 +101,8 @@ proof-
     apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap by auto
 qed
 
-(* only needed for uniqueness: *)
+(* NB: The following is only needed for uniqueness, so is not needed 
+for the syntax with bindings development. *)
 lemma Ector_Ector'_Gmap_fst: 
 assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"

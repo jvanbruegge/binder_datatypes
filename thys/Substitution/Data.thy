@@ -1,8 +1,6 @@
-(* AtoD: There are two categories of sorries left:
-*** 1. some immediate properties of E_pre versus G, which 
-I cannot prove since I cannot guess the names of the relevant generated lemmas;
-*** 2. those coming from additionally having to include the "no-clash" assumption, 
-which the recursor wants. 
+(* AtoD: The sorries left for you are some immediate properties of E_pre 
+versus G, which I cannot prove since I cannot guess the names of the 
+relevant generated lemmas.
 *)
 
 theory Data
@@ -123,7 +121,6 @@ interpretation Expression_Strong Eperm EVrs Gbd Ector
     apply (binder_induction e avoiding: A rule: E.strong_induct)
      apply assumption
     apply (intro exI conjI)
-     subgoal sorry
      apply assumption
     apply (rule refl)
     done
@@ -477,10 +474,10 @@ definition "recE \<equiv> \<lambda>t p. if validP p then REC_E t p else undefine
 thm REC_ctor[no_vars]
 theorem rec_ctor: 
 "validP p \<Longrightarrow> GVrs2 x \<inter> (PFVars p \<union> avoiding_set) = {} \<Longrightarrow>
- noclashE x \<Longrightarrow> recE (Ector x) p =
+ noclashE x \<Longrightarrow> 
+ recE (Ector x) p =
  Uctor (Gmap (\<lambda>t. (t, recE t))
-             (\<lambda>t. (t, recE t)) x)
- p"
+             (\<lambda>t. (t, recE t)) x) p"
 unfolding recE_def Ector_def
 apply(subst REC_ctor) by (auto simp: Uctor'_def)
 
@@ -612,7 +609,7 @@ lemma
         dest: eta_inversion[rotated -1] eta'_inversion[rotated -1])
       apply (metis (no_types, lifting) Gmap_eta' eta'_inversion eta'_natural
           small_support(1))
-      subgoal sorry 
+      subgoal by (metis (lifting) Gmap_eta eta_inversion eta_natural small_support(1))  
     done
   done
 

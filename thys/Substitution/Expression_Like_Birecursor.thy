@@ -30,8 +30,10 @@ TODO the below Birecursor locale needs to be interpreted for both datatypes and 
 in the respective theory Data and Codata using the recursor/corecursor
 the existing interpretations in that theory that define substitution directly should be quite close
 *)
+(* 
 definition restr2 :: "('a \<Rightarrow> 'p \<Rightarrow> 'b) \<Rightarrow> ('p \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'p \<Rightarrow> 'b" where 
 "restr2 f P \<equiv> \<lambda>a p. if P p then f a p else undefined"
+*)
 
 context Expression begin
 (* Non-clashing: Barendregt's convention *)

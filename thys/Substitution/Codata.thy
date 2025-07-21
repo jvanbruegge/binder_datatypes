@@ -1,3 +1,5 @@
+(* AtoD: I need the relativized corecursor 
+for the same reason why we needed the parameter-relativized recursor.  *)
 theory Codata
   imports Expression_Like_Sub Expression_Like_Birecursor
 begin
@@ -1400,7 +1402,7 @@ proof (standard, safe)
   (* interpret corec: COREC  *)
   (* term corec.COREC *)
   show "\<exists>rec. (\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
-    rec (Ector u) p = Ector' (Gmap (restr2 rec Pvalid) (restr2 rec Pvalid) u) p) \<and>
+    rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
     (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
     (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
     sorry
@@ -1677,7 +1679,7 @@ lemma
     apply -
   unfolding Esub_def
   subgoal
-    apply (insert Ector_fresh_surj[of "IMSUPP \<delta> \<rho> \<rho>'" "\<rho> a"])
+    apply (insert Ector_fresh_surj'[of "IMSUPP \<delta> \<rho> \<rho>'" "\<rho> a"])
     apply (drule meta_mp)
      apply (simp add: assms small_IMSUPP)
     apply (erule exE)
@@ -1690,7 +1692,7 @@ lemma
       done
     done
   subgoal
-    apply (insert Ector_fresh_surj[of "IMSUPP \<delta> \<rho> \<rho>'" "\<rho>' a"])
+    apply (insert Ector_fresh_surj'[of "IMSUPP \<delta> \<rho> \<rho>'" "\<rho>' a"])
     apply (drule meta_mp)
      apply (simp add: assms small_IMSUPP)
     apply (erule exE)

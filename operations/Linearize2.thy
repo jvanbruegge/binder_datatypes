@@ -9,8 +9,26 @@ definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" whe
 
 ML_file "../Tools/mrbnf_linearize.ML"
 
+
+
+
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
+
+typedecl ('a, 'b) L
+consts map_L :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow> ('a, 'b) L \<Rightarrow> ('a', 'b') L"
+consts set1_L :: "('a, 'b) L \<Rightarrow> 'a set"
+consts set2_L :: "('a, 'b) L \<Rightarrow> 'b set"
+consts rrel_L :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('a, 'b) L \<Rightarrow> ('a', 'b') L \<Rightarrow> bool"
+
+mrbnf "('a, 'b) L"
+  map: map_L
+  sets: live: set1_L live: set2_L
+  bd: natLeq
+  rel: rrel_L
+  var_class: var
+  sorry
+
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) G
 consts map_G :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow>
   ('c :: var \<Rightarrow> 'c') \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e  \<Rightarrow> 'e') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G"
@@ -53,6 +71,7 @@ mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F"
 typedef 'a foo = "{x::'a \<times> 'a list. snd x = []}"
   by simp
 
+
 (*
 binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t
 *)
@@ -60,17 +79,23 @@ binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) te
 
 
 (*declare [[quick_and_dirty]]*)
+(*
+linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
+  sorry
+*)
 
 
-linearize_mrbnf ('a, 'b) dlist = "('a \<times> 'b) list" on 'a
+linearize_mrbnf ('a, 'b) L' = "('a, 'b) L" on 'a
   sorry
 
-linearize_mrbnf ('a, F''bset: 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
+
+linearize_mrbnf ('a, F''bset: 'b , 'c , 'd, 'e , 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
   sorry
 
-thm F.map_comp
 
-thm sameShape_F_def nonrep_F_def
+thm F.map_comp F''bset_def
+term sameShape'_F
+thm sameShape'_F_def nonrep'_F_def 
 
 thm F.map_id F.set_map F.set_map0
 find_theorems name: F.map
@@ -105,7 +130,6 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
     val var_types = var_types_of_mrbnf mrbnf;
     val nr_lives = length (filter (fn v => v = MRBNF_Def.Live_Var) var_types);
   in
-    print_tac ctxt "Start" THEN
     HEADGOAL (
       forward_tac ctxt ([F_mr_rel_mono_strong0 OF flat (replicate 2 id_prems)] |> @{print}) THEN_ALL_NEW (
         TRY o (rtac ctxt ballI THEN_ALL_NEW 

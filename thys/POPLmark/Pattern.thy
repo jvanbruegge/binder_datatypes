@@ -7,7 +7,7 @@ datatype ('tv::var, PPVars: 'v) prepat = PPVar 'v "'tv typ" | PPRec "(label, ('t
 lemma finite_PPVars: "finite (PPVars P)"
   by (induct P) auto
 
-definition nonrep_prepat :: "('tv::var, 'v::var) prepat \<Rightarrow> bool" where
+definition nonrep_prepat :: "('tv::var, 'v) prepat \<Rightarrow> bool" where
   "nonrep_prepat P = (\<forall>Q :: ('tv, 'v) prepat. rel_prepat top P Q \<longrightarrow> (\<exists>f. Q = map_prepat f P))"
 
 lemma nonrep_prepat_PPVar[simp]: "nonrep_prepat (PPVar x T)"
@@ -180,6 +180,33 @@ lemma nonrep_prepat_PRec[simp]: "nonrep_prepat (PPRec X :: ('tv::var, 'v::var) p
   unfolding nonrep_PPRec_def
   using nonrep_prepat_PRecI[of X] nonrep_prepat_PRecD1[of X] nonrep_prepat_PRecD2[of X] by blast
 
+lemma rel_prepat_alt: "(\<exists>R. rel_prepat R x x') = rel_prepat top x x'"
+  apply (rule iffI)
+   apply (erule exE)
+   apply (rule prepat.rel_mono_strong)
+    apply (assumption)
+   apply (unfold top_apply top_bool_def)
+   apply (rule TrueI)
+  apply (rule exI)
+  apply (assumption)
+  done
+
+lemma ex_nonrep_prepat: "\<exists>x. nonrep_prepat x"
+  apply (unfold nonrep_prepat_def)
+  by (auto intro!: exI[of _ "PPVar undefined undefined"] simp add: nonrep_prepat_def[symmetric])
+
+
+linearize_mrbnf ('tv::var, 'v) prepat' = "('tv::var, 'v) prepat" on 'v
+  subgoal
+    sorry
+  subgoal
+    apply (subst rel_prepat_alt)
+    apply (rule ex_nonrep_prepat[unfolded nonrep_prepat_def])
+  done
+  done
+
+thm set1_prepat'_def
+
 typedef ('tv::var, 'v::var) pat = "{p :: ('tv, 'v) prepat. nonrep_prepat p}"
   by (auto intro!: exI[of _ "PPVar undefined undefined"])
 
@@ -187,6 +214,8 @@ setup_lifting type_definition_pat
 
 lift_definition PVar :: "'v \<Rightarrow> 'tv typ \<Rightarrow> ('tv::var, 'v::var) pat" is PPVar
   by auto
+
+thm PVar_def
 
 lemma PVar_inject[simp]: "PVar X T = PVar Y U \<longleftrightarrow> X = Y \<and> T = U"
   by transfer auto
@@ -236,7 +265,7 @@ lemma PPTVars_tvsubst_prepat[simp]:
   by (induct P) (auto simp: lfset.set_map FVars_tvsubst_typ)
 
 lemma nonrep_prepat_vvsubst_prepat:
-  "bij \<sigma> \<Longrightarrow> nonrep_prepat P \<Longrightarrow> nonrep_prepat (vvsubst_prepat \<tau> \<sigma> P)"
+  "bij \<sigma> \<Longrightarrow> nonrep_prepat (P::('tv::var,'v::var) prepat) \<Longrightarrow> nonrep_prepat (vvsubst_prepat \<tau> \<sigma> P::('tv::var,'v::var) prepat)"
   apply (induct P)
    apply (auto simp: lfin_map_lfset lfin_values nonrep_PPRec_def)
   apply (metis Int_emptyD bij_implies_inject)
@@ -247,7 +276,7 @@ lift_definition vvsubst_pat :: "('tv \<Rightarrow> 'tv) \<Rightarrow> ('v \<Righ
   by (auto simp: nonrep_prepat_vvsubst_prepat)
 
 lemma nonrep_prepat_tvsubst_prepat:
-  "bij \<sigma> \<Longrightarrow> nonrep_prepat P \<Longrightarrow> nonrep_prepat (tvsubst_prepat \<tau> \<sigma> P)"
+  "bij \<sigma> \<Longrightarrow> nonrep_prepat (P::('tv::var,'v::var) prepat) \<Longrightarrow> nonrep_prepat (tvsubst_prepat \<tau> \<sigma> P::('tv::var,'v::var) prepat)"
   apply (induct P)
    apply (auto simp: lfin_map_lfset lfin_values nonrep_PPRec_def)
   apply (metis Int_emptyD bij_implies_inject)
@@ -329,7 +358,7 @@ mrbnf "('tv :: var, 'v :: var) pat"
   map: vvsubst_pat
   sets:
     free: PTVars
-    bound: "PVars"
+    bound: PVars
   bd: "natLeq"
   rel: "(=)"
   subgoal

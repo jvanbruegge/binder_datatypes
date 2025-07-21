@@ -669,20 +669,27 @@ lemma F'_set6_bd: "\<And>b. |set6_F' b| <o natLeq"
 ML \<open>
 open BNF_Util BNF_Tactics
 
-fun mk_rel_comp_leq_tac rrel_F'_def F_rel_compp ctxt =
-  HEADGOAL (EVERY' [
-    rtac ctxt @{thm predicate2I},
-    etac ctxt @{thm relcomppE},
-    K (unfold_thms_tac ctxt [rrel_F'_def]),
-    EqSubst.eqsubst_tac ctxt [1] (@{thms eq_OO[symmetric]}),
-    EqSubst.eqsubst_tac ctxt [1] ([F_rel_compp]),
-    K (unfold_thms_tac ctxt [rrel_F'_def]),
-    rtac ctxt @{thm relcomppI} THEN_ALL_NEW assume_tac ctxt
-  ])
+fun mk_rel_comp_leq_tac mrbnf rrel_F'_def F_rel_compp ctxt =
+  let
+    val var_types = var_types_of_mrbnf mrbnf;
+    val lin_live_pos = fold_index (fn (i, v) => fn b => 
+      if (v = MRBNF_Def.Live_Var andalso i+1 < lin_pos) then b+1 else b) var_types 1;
+  in
+    HEADGOAL (EVERY' [
+      rtac ctxt @{thm predicate2I},
+      etac ctxt @{thm relcomppE},
+      K (unfold_thms_tac ctxt [rrel_F'_def]),
+      EqSubst.eqsubst_tac ctxt [5] (@{thms eq_OO[symmetric]}),
+      K (print_tac ctxt "no?"),
+      EqSubst.eqsubst_tac ctxt [1] ([F_rel_compp]),
+      K (unfold_thms_tac ctxt [rrel_F'_def]),
+      rtac ctxt @{thm relcomppI} THEN_ALL_NEW assume_tac ctxt
+    ])
+  end
 \<close>
 
 lemma F'_rel_comp_leq_: "rrel_F' Q Q' OO rrel_F' R R' \<le> rrel_F' (Q OO R) (Q' OO R')"
-  by (tactic \<open>mk_rel_comp_leq_tac @{thm rrel_F'_def} @{thm F.rel_compp} @{context}
+  by (tactic \<open>mk_rel_comp_leq_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm rrel_F'_def} @{thm F.rel_compp} @{context}
     THEN print_tac @{context} "done"\<close>)
 
 ML \<open>

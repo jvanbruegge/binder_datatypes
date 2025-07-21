@@ -2262,12 +2262,21 @@ lemma r_is_Umap:
   apply (rule refl)
   done
 
+lemma conj_spec: "(\<forall>x. P x) \<and> (\<forall>y. Q y) \<Longrightarrow> P x \<and> Q y"
+  by simp
+lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Longrightarrow> P1 \<Longrightarrow> P2 \<Longrightarrow> Q1 \<and> Q2"
+  by simp
+lemma comp_inv_aux: "bij u \<Longrightarrow> u \<circ> u' = u \<circ> u' \<circ> inv u \<circ> u"
+  by auto
+
 lemma f_swap_alpha:
   assumes p: "suitable1 pick1" "suitable2 pick2" and p': "suitable1 pick1'" "suitable2 pick2'"
     and valid_d: "valid_U1 d"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
     and  v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
-  shows "alpha_T1 (permute_T1_raw u v (f1 pick1 pick2 d)) (f1 pick1' pick2' (raw_Umap1 u v d))"
+  shows "alpha_T1 (permute_T1_raw u v (f1 pick1 pick2 d)) (f1 pick1' pick2' (raw_Umap1 u v d))
+    \<and> alpha_T2 (permute_T2_raw u v (f2 pick1 pick2 d2)) (f2 pick1' pick2' (raw_Umap2 u v d2))
+  "
   
   thm alpha_T1_alpha_T2.coinduct[of
     "\<lambda> tL tR. \<exists> u v d. valid_U1 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
@@ -2278,8 +2287,7 @@ lemma f_swap_alpha:
     "\<lambda> tL tR. \<exists> u v d. valid_U2 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>
      tL = permute_T2_raw u v (f2 pick1 pick2 d) \<and>
-     tR = f2 pick1' pick2' (raw_Umap2 u v d)",
-     THEN conjunct1, THEN spec, THEN spec, THEN mp
+     tR = f2 pick1' pick2' (raw_Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
 ]
   apply (rule alpha_T1_alpha_T2.coinduct[of
     "\<lambda> tL tR. \<exists> u v d. valid_U1 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
@@ -2290,8 +2298,7 @@ lemma f_swap_alpha:
     "\<lambda> tL tR. \<exists> u v d. valid_U2 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>
      tL = permute_T2_raw u v (f2 pick1 pick2 d) \<and>
-     tR = f2 pick1' pick2' (raw_Umap2 u v d)",
-     THEN conjunct1, THEN spec, THEN spec, THEN mp
+     tR = f2 pick1' pick2' (raw_Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
 ])
 
   subgoal for x1 x2
@@ -2305,13 +2312,38 @@ lemma f_swap_alpha:
      apply assumption
     apply hypsubst_thin
 
+
+  (* this is new *)
+    apply (unfold0 f1_simps)
+    apply (subst (asm) T1.permute_raw_ctor)
+    apply assumption+
+    apply (drule iffD1[OF raw_T1.inject])+
+    apply (subst (asm) T1_pre.map_comp)
+             apply (rule supp_id_bound bij_id | assumption)+
+    apply (unfold id_o o_id)
+    apply hypsubst
+
     thm rel_F_suitable_mapD(1)[OF _ p(1) p'(1)]
     apply (frule rel_F_suitable_mapD(1)[OF _ p(1) p'(1)])
       apply assumption+
-    apply (erule exE)+
+    apply (erule exE conjE)+
     apply (rule exI)+
     apply (rule conjI, rule refl)+
     apply (rule conjI[rotated])+
+
+  (* new, move map into relator args *)
+          apply (rule T1_pre.mr_rel_map(1)[THEN iffD2, rotated -1])
+                        apply (unfold id_o o_id Grp_UNIV_id eq_OO)
+          apply (rule T1_pre.mr_rel_map(3)[THEN iffD2, rotated -1])
+                        apply (unfold inv_id id_o o_id Grp_UNIV_id eq_OO conversep_eq)
+                        apply (erule T1_pre.mr_rel_mono_strong0[rotated -12]) (* use monotonicity to fix all variables *)
+                        apply ((rule ballI)+, rule refl imp_refl)+
+                        apply (rule ballI, rule comp_inv_aux[THEN fun_cong], assumption)+
+                      (* at this point there are no more schematic variables *)
+                        defer defer defer defer (* nrec times *)
+                        apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
+
+  (* this is too brittle, prone to wrong instantiations
        (* REPEAT_DETERM *)
        prefer 7
        apply (rule bij_comp)
@@ -2357,7 +2389,7 @@ lemma f_swap_alpha:
        apply assumption
       apply assumption
       (* END REPEAT_DETERM *)
-
+*)
     (*
     apply (erule conjE)+
     apply (rotate_tac -9)

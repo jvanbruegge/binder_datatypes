@@ -85,7 +85,7 @@ and alpha_Udtor2: "\<And>X X' d. valid_U2 d \<Longrightarrow> {X,X'} \<subseteq>
     "\<And> d X. valid_U1 d \<Longrightarrow> X \<in> Udtor1 d \<Longrightarrow>
   set2_T1_pre X
   \<union> \<Union>(case_sum FVars_T1_2 UFVars12 ` set8_T1_pre X) \<union> (\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) - set6_T1_pre X)
-  \<union> \<Union>(case_sum FVars_T2_2 UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X) - set6_T1_pre X)
+  \<union> \<Union>(case_sum FVars_T2_2 UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X))
    \<subseteq> UFVars12 d"
   and UFVars21_Udtor:
     "\<And> d X. valid_U2 d \<Longrightarrow> X \<in> Udtor2 d \<Longrightarrow>
@@ -850,7 +850,7 @@ lemma raw_UFVars_Utor1:
  \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T1_pre X) - set5_T1_pre X) \<subseteq> raw_UFVars11 d"
 "X \<in> Utor1 d \<Longrightarrow> set2_T1_pre X \<union> \<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T1_pre X)
      \<union> (\<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T1_pre X) - set6_T1_pre X)
- \<union> \<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre X) - set6_T1_pre X) \<subseteq> raw_UFVars12 d"
+ \<union> \<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre X)) \<subseteq> raw_UFVars12 d"
   apply (drule FVars_T1_Udtor(1)[OF assms Utor_abs_Udtor(1)])
   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
@@ -1079,7 +1079,7 @@ lemma suitable1_FVarsD:
   "set2_T1_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T1_pre (pick d)) \<union>
   (\<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T1_pre (pick d)) - set6_T1_pre (pick d)) \<union>
   \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre (pick d)) - set6_T1_pre (pick d))
+  (\<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre (pick d)))
   \<subseteq> raw_UFVars12 d"
   by (rule raw_UFVars_Utor(1-2)[OF assms(2) assms(1)[unfolded suitable1_def, THEN spec, THEN mp, OF assms(2)]])+
 
@@ -1976,23 +1976,13 @@ proof -
               apply (rule allI)
               apply (rule impI)+
          apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(3)[OF assms(2), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(4)[OF assms(2), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
                apply (unfold image_id Un_assoc[symmetric])[1]
                apply (erule UnI1 UnI2 | rule UnI1)+
-            (* repeated *)
-            apply (rule allI)
-              apply (rule impI)+
-               apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(3)[OF assms(2), unfolded Un_assoc, THEN set_mp])
-               apply (drule f_ctor)
-              apply hypsubst
-              apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
-               apply (unfold image_id Un_assoc[symmetric])[1]
-              apply (erule UnI1 UnI2 | rule UnI1)+
-          (* END REPEAT_DETERM *)
+            (* END REPEAT_DETERM *)
 
 (* REPEAT_DETERM *)
    apply (rule allI)
@@ -2019,7 +2009,7 @@ proof -
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 2] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 1] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
@@ -2053,7 +2043,7 @@ proof -
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 3] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 2] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
@@ -2087,7 +2077,7 @@ proof -
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 4] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 3] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
@@ -2121,7 +2111,7 @@ proof -
        apply (unfold Un_assoc)
     apply (rule UnI2)
     apply (unfold Un_assoc[symmetric])?
-    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 5] 1\<close>) (* normally: Use goal number here *)
+    apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 4 4] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
      apply assumption
@@ -2133,19 +2123,19 @@ proof -
     (* END REPEAT_DETERM *)
     done
     
-  show "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
-    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
+  show "valid_U1 d \<Longrightarrow> FVars_T1_2_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars12 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_2_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars22 d2"
      apply -
      apply (rule subsetI)
      apply (erule x[THEN conjunct1, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1] x[THEN conjunct2, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1])
       apply (rule refl)
-     apply (unfold FVars_T1_1_raw_def mem_Collect_eq)
+     apply (unfold FVars_T1_2_raw_def mem_Collect_eq)
      apply assumption
   (* repeated *)
      apply (rule subsetI)
      apply (erule x[THEN conjunct1, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1] x[THEN conjunct2, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1])
       apply (rule refl)
-     apply (unfold FVars_T2_1_raw_def mem_Collect_eq)
+     apply (unfold FVars_T2_2_raw_def mem_Collect_eq)
     apply assumption
     done
 qed
@@ -2660,6 +2650,9 @@ lemma conj_mp: "(P1 \<longrightarrow> Q1) \<and> (P2 \<longrightarrow> Q2) \<Lon
 lemma comp_inv_aux: "bij u \<Longrightarrow> u \<circ> u' = u \<circ> u' \<circ> inv u \<circ> u"
   by auto
 
+lemma id_on_f_inv_f: "bij f \<Longrightarrow> id_on (inv f ` A) g \<Longrightarrow> id_on A (f \<circ> g \<circ> inv f)"
+  unfolding id_on_def by simp
+
 lemma f_swap_alpha:
   assumes p: "suitable1 pick1" "suitable2 pick2" and p': "suitable1 pick1'" "suitable2 pick2'"
     and valid_d: "valid_U1 d"
@@ -2734,6 +2727,106 @@ lemma f_swap_alpha:
                         defer defer defer defer (* nrec times *)
                         apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
 
+             apply (rule id_on_f_inv_f)
+              apply assumption
+             apply (subst T1_pre.set_map, (assumption | rule supp_id_bound bij_id)+)+
+             apply (erule id_on_antimono)
+             apply (unfold0 image_comp[unfolded comp_def] comp_apply)[1]
+    apply (subst T1.FVars_raw_permute, (assumption | rule supp_id_bound bij_id)+)
+             apply (unfold image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric])[1]
+    apply (rule Diff_mono[OF _ subset_refl])
+             apply (rule subsetI)
+             apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+     subgoal for u v d _ xa u' v' xb x
+      apply (rule sumE[of x])
+       apply hypsubst_thin
+       apply (unfold0 sum.simps id_apply)
+       apply (rule subset_refl)
+      apply hypsubst_thin
+      apply (unfold sum.simps)
+      apply (rule f_FVarsD[OF p]) thm valid_pick_set9
+      apply (drule valid_pick_set9[rotated])
+         apply assumption
+       apply (rule p)
+      apply (unfold pred_sum_inject)
+      apply assumption
+       done
+
+             apply (rule id_on_f_inv_f)
+              apply assumption
+             apply (subst T1_pre.set_map, (assumption | rule supp_id_bound bij_id)+)+
+             apply (erule id_on_antimono)
+             apply (unfold0 image_comp[unfolded comp_def] comp_apply image_Un)[1]
+    apply (subst T1.FVars_raw_permute T2.FVars_raw_permute, (assumption | rule supp_id_bound bij_id)+)+
+             apply (unfold image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric] Un_Diff[symmetric])[1]
+             apply (rule Diff_mono[OF _ subset_refl])
+             apply (rule subsetI)
+             apply (erule UnE)+
+        (* REPEAT_DETERM *)
+               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+     apply assumption
+    (* orelse *)
+               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+     subgoal for u v d _ xa u' v' xb x
+      apply (rule sumE[of x])
+       apply hypsubst_thin
+       apply (unfold0 sum.simps id_apply)
+       apply (rule subset_refl)
+      apply hypsubst_thin
+      apply (unfold sum.simps)
+      apply (rule f_FVarsD[OF p])
+      apply (drule valid_pick_set9[rotated])
+         apply assumption
+       apply (rule p)
+      apply (unfold pred_sum_inject)
+      apply assumption
+       done
+(* repeated *)
+               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+     subgoal for u v d _ xa u' v' xb x
+      apply (rule sumE[of x])
+       apply hypsubst_thin
+       apply (unfold0 sum.simps id_apply)
+       apply (rule subset_refl)
+      apply hypsubst_thin
+      apply (unfold sum.simps)
+      apply (rule f_FVarsD[OF p])
+      apply (drule valid_pick_set11[rotated])
+         apply assumption
+       apply (rule p)
+      apply (unfold pred_sum_inject)
+      apply assumption
+       done
+
+            apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
+        apply (rule ballI impI)+
+        apply (unfold relcompp_conversep_Grp)[1]
+        apply (unfold Grp_OO)[1]
+        apply (rule disjI1)
+        apply (frule l_is_inr)
+         prefer 2
+     apply (erule exE)
+         apply hypsubst
+         apply (rule exI)+
+         apply (rule conjI)
+          apply (drule valid_pick_set8[rotated])
+            apply assumption
+           apply (rule p)
+          apply (unfold pred_sum_inject)
+          apply (rotate_tac -1)
+          apply assumption
+     apply (rule conjI | assumption)+
+         apply (rule trans[OF comp_apply])
+         apply (rule arg_cong[of "case_sum _ _ _"])
+         apply (unfold f1_simps[symmetric])
+          apply (unfold sum.case)
+     apply (rule refl)
+         apply (drule r_is_Umap)
+          apply (rule refl)
+         apply hypsubst
+         apply (unfold sum.case)
+     apply (rule refl)
+(*
      apply (rule id_on_antimono)
       apply (unfold id_on_def)
       apply (rule allI)
@@ -2772,7 +2865,7 @@ apply (frule f_swap_alpha_xL[rotated -1, OF sym])
      apply (subst comp_def[of _ FVars_T1_2_raw, symmetric])
      apply (subst comp_assoc)
      apply (subst image_comp[symmetric])
-             apply (subst f_swap_alpha_xL[of _ _ _ pick1 pick2])
+             apply (subst f_swa_alpha_xL[of _ _ _ pick1 pick2])
     thm f_swap_alpha_xL[of _ _ _ pick1 pick2]
         apply assumption+
       apply (erule sym)
@@ -2803,7 +2896,7 @@ apply (rule le_supI1)
       apply (unfold pred_sum_inject)
       apply assumption
       done
-
+*)
   (* this is too brittle, prone to wrong instantiations
        (* REPEAT_DETERM *)
        prefer 7

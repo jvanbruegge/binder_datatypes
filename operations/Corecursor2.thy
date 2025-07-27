@@ -3302,30 +3302,33 @@ apply (unfold pick0_2_def)
 
 lemmas f0_low_level_simps = f_simps[of pick0_1 pick0_2, unfolded f0_1_def[symmetric] f0_2_def[symmetric]]
 
-lemma f0_Utor_aux:
-  assumes "X \<in> Utor d" and valid_d: "valid_U d"
-  shows "alpha_term (f (\<lambda> d'. if d' = d then X else pick0 d') d)
-                       (raw_term_ctor (map_term_pre id id (case_sum id f0) (case_sum id f0) X))"
+lemma f0_Utor_aux1:
+  assumes "X \<in> Utor1 d" "X' \<in> Utor2 d2" and valid_d: "valid_U1 d" "valid_U2 d2"
+  shows "alpha_T1 (f1 (\<lambda> d'. if d' = d then X else pick0_1 d') (\<lambda> d'. if d' = d2 then X' else pick0_2 d') d)
+                       (raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id f0_1) (case_sum id f0_1) (case_sum id f0_2) (case_sum id f0_2) X))"
     apply(subst f_simps)
-    apply (subst if_P[OF refl])
-    apply(rule alpha_term.intros[of id], (rule bij_id supp_id_bound id_on_id)+)
-    apply (unfold term_pre.mr_rel_id[symmetric] term_pre.rel_map)
-    apply(rule term_pre.rel_refl_strong)
+  apply (subst if_P[OF refl])
+    apply(rule alpha_T1_alpha_T2.intros[of id id], (rule bij_id supp_id_bound id_on_id)+)
+    apply (unfold T1_pre.mr_rel_id[symmetric] T1_pre.rel_map)
+  apply(rule T1_pre.rel_refl_strong)
+  apply (rule refl)
 (* REPEAT *)
      apply (rule sumE)
       apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
        apply assumption
       apply hypsubst
       apply (unfold sum.simps)
-      apply (unfold permute_raw_ids id_apply)?
-      apply (rule alpha_refls)
-      apply hypsubst
+      apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)[1]
+      apply (rule T1.alpha_refl)
+  apply hypsubst
      apply (unfold sum.simps)
-     apply (unfold f0_def)?
-     apply (rule f_alpha[OF _ suitable_pick0])
+     apply (unfold f0_1_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct1])
 
 (* BLOCK: SUITABLE *)
-     apply (unfold suitable_def)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
     apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
@@ -3334,16 +3337,30 @@ lemma f0_Utor_aux:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
-    apply assumption
-   apply (rule assms(1)[unfolded Utor_def, THEN imageE])
-   apply (rotate_tac -1)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+   apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
+       apply (rotate_tac -1)
    apply (erule valid_Udtor'[rotated])
      prefer 2
      apply (rule Basic_BNFs.setr.intros)
      apply (rule refl)
      apply hypsubst_thin
-    apply (subst (asm) term_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
     apply (rule UnI1)
     apply (erule imageE)
     apply (drule setr.intros[OF sym])
@@ -3352,24 +3369,26 @@ lemma f0_Utor_aux:
     apply (erule conjE)
     apply (hypsubst_thin)
   apply assumption
-  apply (rule assms)
-  
+      apply (rule assms)+
+
 (* END BLOCK *)
 
-(* REPEATED, except UnI2 instead of UnI1 *)
-  apply (rule sumE)
+     apply (rule sumE)
       apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
        apply assumption
       apply hypsubst
-      apply (unfold sum.simps)
-      apply (unfold permute_raw_ids id_apply)?
-      apply (rule alpha_refls)
-      apply hypsubst
      apply (unfold sum.simps)
-     apply (unfold f0_def)?
-     apply (rule f_alpha[OF _ suitable_pick0])
+     apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)?
+      apply (rule T1.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_1_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct1])
 
-     apply (unfold suitable_def)
+(* BLOCK: SUITABLE *)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
     apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
@@ -3378,16 +3397,30 @@ lemma f0_Utor_aux:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
-    apply assumption
-   apply (rule assms(1)[unfolded Utor_def, THEN imageE])
-   apply (rotate_tac -1)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+   apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
+       apply (rotate_tac -1)
    apply (erule valid_Udtor'[rotated])
      prefer 2
      apply (rule Basic_BNFs.setr.intros)
      apply (rule refl)
      apply hypsubst_thin
-    apply (subst (asm) term_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
     apply (rule UnI2)
     apply (erule imageE)
     apply (drule setr.intros[OF sym])
@@ -3396,21 +3429,29 @@ lemma f0_Utor_aux:
     apply (erule conjE)
     apply (hypsubst_thin)
   apply assumption
-  apply (rule assms)
+      apply (rule assms)+
 
+(* END BLOCK *)
 (* END REPEAT *)
-    done
 
-lemma f0_Utor:
-  assumes "X \<in> Utor d" "valid_U d"
-  shows "alpha_term (f0 d) (raw_term_ctor (map_term_pre id id (case_sum id f0) (case_sum id f0) X))"
-    apply (rule alpha_trans[rotated])
-    apply (rule f0_Utor_aux[OF assms])
-    apply (rule f_alpha[OF suitable_pick0 _ assms(2), unfolded f0_def[symmetric]])
+(* REPEAT *)
+     apply (rule sumE)
+      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+       apply assumption
+      apply hypsubst
+      apply (unfold sum.simps)
+      apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)?
+      apply (rule T2.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_2_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct2])
 
 (* BLOCK: SUITABLE *)
-     apply (unfold suitable_def)
-  apply (rule allI)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+    apply (rule allI)
   apply (rule impI)
      apply (rule if_split[THEN iffD2])
      apply (rule conjI)
@@ -3418,17 +3459,456 @@ lemma f0_Utor:
       apply hypsubst
      apply (rule assms)
     apply (rule impI)
-    apply (insert suitable_pick0[unfolded suitable_def, THEN spec, THEN mp])
-     apply assumption
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+  apply (rule assms)
+   apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
+    apply (rotate_tac -1)
+   apply (erule valid_Udtor'[rotated])
+     prefer 2
+     apply (rule Basic_BNFs.setr.intros)
+     apply (rule refl)
+     apply hypsubst_thin
+    apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (rule UnI1)
+    apply (erule imageE)
+    apply (drule setr.intros[OF sym])
+    apply (unfold sum.set_map image_id setr.simps)
+    apply (erule exE)
+    apply (erule conjE)
+    apply (hypsubst_thin)
+  apply assumption
+      apply (rule assms)+
+
 (* END BLOCK *)
+
+     apply (rule sumE)
+      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+       apply assumption
+      apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)?
+      apply (rule T2.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_2_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct2])
+
+(* BLOCK: SUITABLE *)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+  apply (rule assms)
+   apply (rule assms(1)[unfolded Utor1_def, THEN imageE])
+       apply (rotate_tac -1)
+   apply (erule valid_Udtor'[rotated])
+     prefer 2
+     apply (rule Basic_BNFs.setr.intros)
+     apply (rule refl)
+     apply hypsubst_thin
+    apply (subst (asm) T1_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (rule UnI2)
+    apply (erule imageE)
+    apply (drule setr.intros[OF sym])
+    apply (unfold sum.set_map image_id setr.simps)
+    apply (erule exE)
+    apply (erule conjE)
+    apply (hypsubst_thin)
+  apply assumption
+      apply (rule assms)+
+
+(* END BLOCK *)
+(* END REPEAT *)
   done
 
-lemma f0_mapD:
-  assumes "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a::var set|" "valid_U d"
-  shows "alpha_term (f0 (raw_Umap u d)) (permute_raw_term u (f0 d))"
-  by (rule alpha_syms[OF f_swap_alpha[OF suitable_pick0 suitable_pick0 assms(3,1,2), unfolded f0_def[symmetric]]])
+lemma f0_Utor_aux2:
+  assumes "X \<in> Utor1 d" "X' \<in> Utor2 d2" and valid_d: "valid_U1 d" "valid_U2 d2"
+  shows "alpha_T2 (f2 (\<lambda> d'. if d' = d then X else pick0_1 d') (\<lambda> d'. if d' = d2 then X' else pick0_2 d') d2)
+                       (raw_T2_ctor (map_T2_pre id id id id id id id (case_sum id f0_1) (case_sum id f0_1) (case_sum id f0_2) (case_sum id f0_2) X'))"
+    apply(subst f_simps)
+  apply (subst if_P[OF refl])
+    apply(rule alpha_T1_alpha_T2.intros[of id id], (rule bij_id supp_id_bound id_on_id)+)
+    apply (unfold T2_pre.mr_rel_id[symmetric] T2_pre.rel_map)
+  apply(rule T2_pre.rel_refl_strong)
+  apply (rule refl)
+(* REPEAT *)
+     apply (rule sumE)
+      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+       apply assumption
+      apply hypsubst
+      apply (unfold sum.simps)
+      apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)[1]
+      apply (rule T1.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_1_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct1])
 
-lemmas f0_FVarsD = f_FVarsD[OF suitable_pick0, unfolded f0_def[symmetric]]
+(* BLOCK: SUITABLE *)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+   apply (rule assms(2)[unfolded Utor2_def, THEN imageE])
+       apply (rotate_tac -1)
+   apply (erule valid_Udtor'[rotated])
+     prefer 2
+     apply (rule Basic_BNFs.setr.intros)
+     apply (rule refl)
+     apply hypsubst_thin
+    apply (subst (asm) T2_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (rule UnI1)
+    apply (erule imageE)
+    apply (drule setr.intros[OF sym])
+    apply (unfold sum.set_map image_id setr.simps)
+    apply (erule exE)
+    apply (erule conjE)
+    apply (hypsubst_thin)
+  apply assumption
+      apply (rule assms)+
+
+(* END BLOCK *)
+
+     apply (rule sumE)
+      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+       apply assumption
+      apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)?
+      apply (rule T1.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_1_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct1])
+
+(* BLOCK: SUITABLE *)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+   apply (rule assms(2)[unfolded Utor2_def, THEN imageE])
+       apply (rotate_tac -1)
+   apply (erule valid_Udtor'[rotated])
+     prefer 2
+     apply (rule Basic_BNFs.setr.intros)
+     apply (rule refl)
+     apply hypsubst_thin
+    apply (subst (asm) T2_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (rule UnI2)
+    apply (erule imageE)
+    apply (drule setr.intros[OF sym])
+    apply (unfold sum.set_map image_id setr.simps)
+    apply (erule exE)
+    apply (erule conjE)
+    apply (hypsubst_thin)
+  apply assumption
+      apply (rule assms)+
+
+(* END BLOCK *)
+(* END REPEAT *)
+
+(* REPEAT *)
+     apply (rule sumE)
+      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+       apply assumption
+      apply hypsubst
+      apply (unfold sum.simps)
+      apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)?
+      apply (rule T2.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_2_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct2])
+
+(* BLOCK: SUITABLE *)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+  apply (rule assms)
+   apply (rule assms(2)[unfolded Utor2_def, THEN imageE])
+    apply (rotate_tac -1)
+   apply (erule valid_Udtor'[rotated])
+     prefer 2
+     apply (rule Basic_BNFs.setr.intros)
+     apply (rule refl)
+     apply hypsubst_thin
+    apply (subst (asm) T2_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (rule UnI1)
+    apply (erule imageE)
+    apply (drule setr.intros[OF sym])
+    apply (unfold sum.set_map image_id setr.simps)
+    apply (erule exE)
+    apply (erule conjE)
+    apply (hypsubst_thin)
+  apply assumption
+      apply (rule assms)+
+
+(* END BLOCK *)
+
+     apply (rule sumE)
+      apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+       apply assumption
+      apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold T1.permute_raw_id T2.permute_raw_id id_apply)?
+      apply (rule T2.alpha_refl)
+  apply hypsubst
+     apply (unfold sum.simps)
+     apply (unfold f0_2_def)?
+     apply (rule f_alpha[OF _ _ suitable_pick0, THEN conjunct2])
+
+(* BLOCK: SUITABLE *)
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+    apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+    apply (rule impI)
+    apply (insert suitable_pick0[unfolded suitable1_def suitable2_def, THEN spec, THEN mp])[1]
+        apply assumption
+(* END REPEAT_DETERM *)
+
+  apply (rule assms)
+   apply (rule assms(2)[unfolded Utor2_def, THEN imageE])
+       apply (rotate_tac -1)
+   apply (erule valid_Udtor'[rotated])
+     prefer 2
+     apply (rule Basic_BNFs.setr.intros)
+     apply (rule refl)
+     apply hypsubst_thin
+    apply (subst (asm) T2_pre.set_map, (rule bij_id supp_id_bound)+)
+    apply (rule UnI2)
+    apply (erule imageE)
+    apply (drule setr.intros[OF sym])
+    apply (unfold sum.set_map image_id setr.simps)
+    apply (erule exE)
+    apply (erule conjE)
+    apply (hypsubst_thin)
+  apply assumption
+      apply (rule assms)+
+
+(* END BLOCK *)
+(* END REPEAT *)
+  done
+
+lemmas f0_Utor_aux = f0_Utor_aux1 f0_Utor_aux2
+
+lemma f0_Utor1:
+  assumes "X \<in> Utor1 d" "X' \<in> Utor2 d2" and valid_d: "valid_U1 d" "valid_U2 d2"
+  shows "alpha_T1 (f0_1 d) (raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id f0_1) (case_sum id f0_1) (case_sum id f0_2) (case_sum id f0_2) X))"
+  apply (rule T1.alpha_trans[rotated])
+  thm f0_Utor_aux[OF assms]
+   apply (rule f0_Utor_aux[OF assms])
+  thm f_alpha[OF suitable_pick0 _ _ valid_d, unfolded f0_1_def[symmetric] f0_2_def[symmetric]]
+    apply (rule f_alpha[OF suitable_pick0 _ _ valid_d, unfolded f0_1_def[symmetric] f0_2_def[symmetric], THEN conjunct1])
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+  apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+  apply (rule impI)
+    apply (insert suitable_pick0(1)[unfolded suitable1_def, THEN spec, THEN mp])[1]
+   apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+  apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+  apply (rule impI)
+    apply (insert suitable_pick0(2)[unfolded suitable2_def, THEN spec, THEN mp])[1]
+   apply assumption
+(* END REPEAT_DETERM *)
+  done
+
+lemma f0_Utor2:
+  assumes "X \<in> Utor1 d" "X' \<in> Utor2 d2" and valid_d: "valid_U1 d" "valid_U2 d2"
+  shows "alpha_T2 (f0_2 d2) (raw_T2_ctor (map_T2_pre id id id id id id id (case_sum id f0_1) (case_sum id f0_1) (case_sum id f0_2) (case_sum id f0_2) X'))"
+  apply (rule T2.alpha_trans[rotated])
+  thm f0_Utor_aux[OF assms]
+   apply (rule f0_Utor_aux[OF assms])
+  thm f_alpha[OF suitable_pick0 _ _ valid_d, unfolded f0_1_def[symmetric] f0_2_def[symmetric], THEN conjunct2]
+    apply (rule f_alpha[OF suitable_pick0 _ _ valid_d, unfolded f0_1_def[symmetric] f0_2_def[symmetric], THEN conjunct2])
+
+(* REPEAT_DETERM *)
+     apply (unfold suitable1_def)
+  apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+  apply (rule impI)
+    apply (insert suitable_pick0(1)[unfolded suitable1_def, THEN spec, THEN mp])[1]
+   apply assumption
+(* repeated *)
+     apply (unfold suitable2_def)
+  apply (rule allI)
+  apply (rule impI)
+     apply (rule if_split[THEN iffD2])
+     apply (rule conjI)
+      apply (rule impI)
+      apply hypsubst
+     apply (rule assms)
+  apply (rule impI)
+    apply (insert suitable_pick0(2)[unfolded suitable2_def, THEN spec, THEN mp])[1]
+   apply assumption
+(* END REPEAT_DETERM *)
+  done
+
+lemmas f0_Utor = f0_Utor1 f0_Utor2
+
+lemma f0_mapD1:
+  assumes "valid_U1 d" "valid_U2 d2"
+      and "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a set|"
+      and "bij (v::'b\<Rightarrow>'b)" and "|supp v| <o |UNIV::'b set|"
+  shows "alpha_T1 (f0_1 (raw_Umap1 u v d)) (permute_T1_raw u v (f0_1 d))"
+  by (rule f_swap_alpha[OF suitable_pick0 suitable_pick0 assms, THEN conjunct1, THEN T1.alpha_sym, unfolded f0_1_def[symmetric]])
+
+lemma f0_mapD2:
+  assumes "valid_U1 d" "valid_U2 d2"
+      and "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a set|"
+      and "bij (v::'b\<Rightarrow>'b)" and "|supp v| <o |UNIV::'b set|"
+    shows "alpha_T2 (f0_2 (raw_Umap2 u v d2)) (permute_T2_raw u v (f0_2 d2))"
+  by (rule f_swap_alpha[OF suitable_pick0 suitable_pick0 assms, THEN conjunct2, THEN T2.alpha_sym, unfolded f0_2_def[symmetric]])
+
+lemmas f0_mapD = f0_mapD1 f0_mapD2 
+
+lemmas f0_FVarsD = f_FVarsD[OF suitable_pick0, unfolded f0_1_def[symmetric] f0_2_def[symmetric]]
 
 
 (* The following theorems for raw theorems will now be lifted to quotiented terms: *)
@@ -3438,75 +3918,238 @@ thm f0_Utor f0_mapD f0_FVarsD
 (*******************)
 (* End product: *)
 
-theorem COREC_DDTOR:
-  assumes "X \<in> Udtor d" "valid_U d"
-  shows "COREC d = term_ctor (map_term_pre id id (case_sum id COREC) (case_sum id COREC) X)"
-  apply (unfold COREC_def term_ctor_def)
+term T1_ctor
+thm COREC1_def
+thm T1.total_abs_eq_iff
+
+theorem COREC_DDTOR1:
+  assumes "X \<in> Udtor1 d" "X' \<in> Udtor2 d2" "valid_U1 d" "valid_U2 d2"
+  shows "COREC1 d = T1_ctor (map_T1_pre id id id id id id id (case_sum id COREC1) (case_sum id COREC1) (case_sum id COREC2) (case_sum id COREC2) X)"
+  apply (unfold COREC1_def COREC2_def T1_ctor_def)
   apply (unfold o_def[symmetric])
-  apply (subst term_pre.map_comp, (rule supp_id_bound bij_id)+)
-  apply (unfold TT_total_abs_eq_iffs)
+  apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)
+  apply (unfold T1.total_abs_eq_iff)
   apply (unfold o_case_sum)
   apply (unfold id_comp comp_id)
-  apply (rule alpha_trans)
-   apply (rule arg_cong[of _ _ "alpha_term (f0 d)", THEN iffD1])
+  apply (rule T1.alpha_trans)
+  thm arg_cong[of _ _ "alpha_T1 (f0_1 d)", THEN iffD1]
+   apply (rule arg_cong[of _ _ "alpha_T1 (f0_1 d)", THEN iffD1])
     prefer 2
     apply (rule f0_Utor)
-    apply (unfold Utor_def)
+    apply (unfold Utor1_def Utor2_def)
+    apply (rule imageI)
+       apply (rule assms)+
     apply (rule imageI)
      apply (rule assms)+
-   apply (subst term_pre.map_comp, (rule supp_id_bound bij_id)+)
+   apply (subst T1_pre.map_comp, (rule supp_id_bound bij_id)+)
    apply (unfold case_sum_o_map_sum)
    apply (unfold id_comp comp_id)
    apply (rule refl)
-  apply(rule alpha_term.intros[of id], (rule bij_id supp_id_bound)+)
-   apply (rule id_on_id)
-  apply (unfold term_pre.mr_rel_id[symmetric] term_pre.rel_map)
-  apply(rule term_pre.rel_refl_strong)
-   prefer 2
+  apply(rule alpha_T1_alpha_T2.intros[of id id], (rule bij_id supp_id_bound)+)
+   apply (rule id_on_id)+
+  apply (unfold T1_pre.mr_rel_id[symmetric] T1_pre.rel_map)
+  apply(rule T1_pre.rel_refl_strong)
+  apply (rule refl)?
+
    apply (rule sumE)
     apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
      apply assumption
     apply hypsubst
     apply (unfold sum.simps)
-    apply (rule alpha_refls)
+    apply (rule T1.alpha_refl)
    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
     apply assumption
    apply hypsubst
    apply (unfold sum.simps)
-   apply (unfold comp_apply)
-   apply (rule TT_rep_abs_syms)
+   apply (unfold comp_apply)[1]
+   apply (rule T1.rep_abs_sym)
 
   apply (rule sumE)
    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
     apply assumption
    apply hypsubst
    apply (unfold sum.simps)
-   apply (unfold permute_raw_ids)
-   apply (rule alpha_refls)
+   apply (unfold T1.permute_raw_id)
+   apply (rule T1.alpha_refl)
+  apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+   apply assumption
+  apply hypsubst
+    apply (unfold sum.simps)
+    apply (unfold comp_apply)[1]
+    apply (rule T1.rep_abs_sym)
+
+   apply (rule sumE)
+    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+     apply assumption
+    apply hypsubst
+    apply (unfold sum.simps)
+    apply (rule T2.alpha_refl)
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+    apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold comp_apply)[1]
+   apply (rule T2.rep_abs_sym)
+
+  apply (rule sumE)
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+    apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold T2.permute_raw_id)
+   apply (rule T2.alpha_refl)
   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
    apply assumption
   apply hypsubst
   apply (unfold sum.simps)
-  apply (rule TT_rep_abs_syms)
+  apply (unfold comp_apply)[1]
+  apply (rule T2.rep_abs_sym)
   done
 
-lemma COREC_mmapD:
-  assumes "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a::var set|" and "valid_U d"
-  shows "COREC (Umap u d) = permute_term u (COREC d)"
-  apply (unfold COREC_def permute_term_def)
-  apply (unfold TT_total_abs_eq_iffs)
-  apply (rule alpha_trans)
+theorem COREC_DDTOR2:
+  assumes "X \<in> Udtor1 d" "X' \<in> Udtor2 d2" "valid_U1 d" "valid_U2 d2"
+  shows "COREC2 d2 = T2_ctor (map_T2_pre id id id id id id id (case_sum id COREC1) (case_sum id COREC1) (case_sum id COREC2) (case_sum id COREC2) X')"
+  apply (unfold COREC1_def COREC2_def T2_ctor_def)
+  apply (unfold o_def[symmetric])
+  apply (subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)
+  apply (unfold T2.total_abs_eq_iff)
+  apply (unfold o_case_sum)
+  apply (unfold id_comp comp_id)
+  apply (rule T2.alpha_trans)
+  thm arg_cong[of _ _ "alpha_T1 (f0_1 d)", THEN iffD1]
+   apply (rule arg_cong[of _ _ "alpha_T2 (f0_2 d2)", THEN iffD1])
+    prefer 2
+    apply (rule f0_Utor)
+    apply (unfold Utor1_def Utor2_def)
+    apply (rule imageI)
+       apply (rule assms)+
+    apply (rule imageI)
+     apply (rule assms)+
+   apply (subst T2_pre.map_comp, (rule supp_id_bound bij_id)+)
+   apply (unfold case_sum_o_map_sum)
+   apply (unfold id_comp comp_id)
+   apply (rule refl)
+  apply(rule alpha_T1_alpha_T2.intros[of id id], (rule bij_id supp_id_bound)+)
+   apply (rule id_on_id)+
+  apply (unfold T2_pre.mr_rel_id[symmetric] T2_pre.rel_map)
+  apply(rule T2_pre.rel_refl_strong)
+  apply (rule refl)?
+
+   apply (rule sumE)
+    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+     apply assumption
+    apply hypsubst
+    apply (unfold sum.simps)
+    apply (rule T1.alpha_refl)
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+    apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold comp_apply)[1]
+   apply (rule T1.rep_abs_sym)
+
+  apply (rule sumE)
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+    apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold T1.permute_raw_id)
+   apply (rule T1.alpha_refl)
+  apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+   apply assumption
+  apply hypsubst
+    apply (unfold sum.simps)
+    apply (unfold comp_apply)[1]
+    apply (rule T1.rep_abs_sym)
+
+   apply (rule sumE)
+    apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+     apply assumption
+    apply hypsubst
+    apply (unfold sum.simps)
+    apply (rule T2.alpha_refl)
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+    apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold comp_apply)[1]
+   apply (rule T2.rep_abs_sym)
+
+  apply (rule sumE)
+   apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+    apply assumption
+   apply hypsubst
+   apply (unfold sum.simps)
+   apply (unfold T2.permute_raw_id)
+   apply (rule T2.alpha_refl)
+  apply (frule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD1])
+   apply assumption
+  apply hypsubst
+  apply (unfold sum.simps)
+  apply (unfold comp_apply)[1]
+  apply (rule T2.rep_abs_sym)
+  done
+
+lemmas COREC_DDTOR = COREC_DDTOR1 COREC_DDTOR2
+
+lemma COREC_mmapD1:
+  assumes "valid_U1 d" "valid_U2 d2"
+    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+    and v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+  shows "COREC1 (Umap1 u v d) = permute_T1 u v (COREC1 d)"
+  apply (unfold COREC1_def permute_T1_def)
+  apply (unfold T1.total_abs_eq_iff)
+  apply (rule T1.alpha_trans)
    apply (rule f0_mapD[OF assms])
-  apply (unfold alpha_bij_eqs[OF assms(1,2)])
-  apply (rule alpha_syms)
-  apply (rule TT_rep_abs)
+  apply (unfold T1.alpha_bij_eq[OF u v])
+  apply (rule T1.alpha_sym)
+  apply (rule T1.rep_abs)
   done
 
-theorem COREC_FFVarsD:
-  "valid_U d \<Longrightarrow> FVars_term (COREC d) \<subseteq> UFVars d"
-  apply (unfold COREC_def FVars_term_def alpha_FVars[OF TT_rep_abs])
-  apply (erule f0_FVarsD)
+lemma COREC_mmapD2:
+  assumes "valid_U1 d" "valid_U2 d2"
+    and u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
+    and v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
+  shows "COREC2 (Umap2 u v d2) = permute_T2 u v (COREC2 d2)"
+  apply (unfold COREC2_def permute_T2_def)
+  apply (unfold T2.total_abs_eq_iff)
+  apply (rule T2.alpha_trans)
+   apply (rule f0_mapD[OF assms])
+  apply (unfold T2.alpha_bij_eq[OF u v])
+  apply (rule T2.alpha_sym)
+  apply (rule T2.rep_abs)
   done
+
+lemmas COREC_mmapD = COREC_mmapD1 COREC_mmapD2
+
+term FVars_T1_1
+thm T1.alpha_FVars[OF T1.rep_abs]
+
+theorem COREC_FFVarsD1:
+  "valid_U1 d \<Longrightarrow> FVars_T1_1 (COREC1 d) \<subseteq> UFVars11 d"
+  "valid_U1 d \<Longrightarrow> FVars_T1_2 (COREC1 d) \<subseteq> UFVars12 d"
+(* REPEAT_DETERM *)
+   apply (unfold COREC1_def FVars_T1_1_def T1.alpha_FVars[OF T1.rep_abs])
+   apply (erule f0_FVarsD)
+(* repeated *)
+  apply (unfold COREC1_def FVars_T1_2_def T1.alpha_FVars[OF T1.rep_abs])
+  apply (erule f0_FVarsD)
+(* END REPEAT_DETERM *)
+  done
+
+theorem COREC_FFVarsD2:
+  "valid_U2 d \<Longrightarrow> FVars_T2_1 (COREC2 d) \<subseteq> UFVars21 d"
+  "valid_U2 d \<Longrightarrow> FVars_T2_2 (COREC2 d) \<subseteq> UFVars22 d"
+(* REPEAT_DETERM *)
+   apply (unfold COREC2_def FVars_T2_1_def T2.alpha_FVars[OF T2.rep_abs])
+   apply (erule f0_FVarsD)
+(* repeated *)
+  apply (unfold COREC2_def FVars_T2_2_def T2.alpha_FVars[OF T2.rep_abs])
+  apply (erule f0_FVarsD)
+(* END REPEAT_DETERM *)
+  done
+
+lemmas COREC_FFVarsD = COREC_FFVarsD1 COREC_FFVarsD2
 
 end
 

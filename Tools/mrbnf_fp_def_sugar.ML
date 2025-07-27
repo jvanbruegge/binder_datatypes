@@ -362,7 +362,8 @@ fun note_fp_result (fp_res : fp_result) lthy =
         ("permute_raw_comps", [#permute_comp raw]),
         ("alpha_bij_eq", [#alpha_bij_eq (#inner raw)]),
         ("alpha_refl", [#alpha_refl (#inner raw)]),
-        ("FVars_raw_permute", #FVars_permutes raw)
+        ("FVars_raw_permute", #FVars_permutes raw),
+        ("permute_raw_id", [#permute_id raw])
       ] else []);
 
     val notes = flat (map2 (fn quot => fn raw => map (fn (thmN, thms) =>

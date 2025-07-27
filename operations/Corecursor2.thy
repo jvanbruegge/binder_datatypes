@@ -3262,29 +3262,45 @@ apply (erule exE)
       apply (rule refl)+
        apply (rule assms)+
 (* END REPEAT_DETERM *)
-  done
+   done
 
 lemma f_alpha:
-  assumes p: "suitable pick" and p': "suitable pick'" and valid_d: "valid_U d"
-  shows "alpha_term (f pick d) (f pick' d)"
-  by (rule f_swap_alpha[OF assms bij_id supp_id_bound, unfolded permute_raw_ids raw_Umap_id[OF valid_d]])
+  assumes "suitable1 pick1" "suitable2 pick2" "suitable1 pick1'" "suitable2 pick2'"
+    and valid_d: "valid_U1 d" "valid_U2 d2"
+  shows "alpha_T1 (f1 pick1 pick2 d) (f1 pick1' pick2' d) \<and>
+         alpha_T2 (f2 pick1 pick2 d2) (f2 pick1' pick2' d2)"
+  by (rule f_swap_alpha[OF assms bij_id supp_id_bound bij_id supp_id_bound, unfolded T1.permute_raw_id T2.permute_raw_id raw_Umap_id(1)[OF valid_d(1)] raw_Umap_id(2)[OF valid_d(2)]])
 
 lemma exists_suitable:
-  "\<exists> pick. suitable pick"
-  apply (unfold suitable_def)
+  "\<exists> pick. suitable1 pick" "\<exists> pick. suitable2 pick"
+(* REPEAT_DETERM *)
+  apply (unfold suitable1_def)
   apply (rule choice)
   apply (rule allI)
   apply (subst ex_simps)
   apply (rule impI)
-  apply (erule ex_in_conv[THEN iffD2, OF Utor_ne])
+   apply (erule ex_in_conv[THEN iffD2, OF Utor_ne(1)])
+(* repeated *)
+  apply (unfold suitable2_def)
+  apply (rule choice)
+  apply (rule allI)
+  apply (subst ex_simps)
+  apply (rule impI)
+  apply (erule ex_in_conv[THEN iffD2, OF Utor_ne(2)])
   done
 
 lemma suitable_pick0:
-  "suitable pick0"
-  apply (unfold pick0_def)
-  apply (rule someI_ex[OF exists_suitable])
+  "suitable1 pick0_1" "suitable2 pick0_2"
+(* REPEAT_DETERM *)
+  apply (unfold pick0_1_def)
+   apply (rule someI_ex[OF exists_suitable(1)])
+(* repeated *)
+apply (unfold pick0_2_def)
+  apply (rule someI_ex[OF exists_suitable(2)])
+(* END REPEAT_DETERM *)
   done
-lemmas f0_low_level_simps = f_simps[of pick0, unfolded f0_def[symmetric]]
+
+lemmas f0_low_level_simps = f_simps[of pick0_1 pick0_2, unfolded f0_1_def[symmetric] f0_2_def[symmetric]]
 
 lemma f0_Utor_aux:
   assumes "X \<in> Utor d" and valid_d: "valid_U d"

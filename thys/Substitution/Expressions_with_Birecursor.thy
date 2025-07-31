@@ -177,6 +177,24 @@ sublocale Esub: Bimodel where
      apply (metis (no_types, lifting) Int_emptyI bij_id_imsupp inv_simp2 permute_\<rho>)
     apply (metis (no_types, lifting) Int_emptyI bij_id_imsupp inv_simp2 permute_\<rho>')
     done
+  subgoal for \<sigma> p
+    apply (cases p)
+    apply (auto simp: fun_eq_iff) 
+    subgoal by (simp add: image_in_bij_eq imsupp_comp_image)
+    subgoal for \<delta> \<rho> \<rho>' a unfolding IImsupp'_def IImsupp_def SSupp_def imsupp_def image_def 
+    supp_def apply (auto intro!: bexI[of _ "inv \<sigma> a"]) 
+    apply (simp add: Eperm_Ector Gren_def supp_def)
+    sorry
+    subgoal for \<delta> \<rho> \<rho>' a  unfolding IImsupp'_def IImsupp_def SSupp_def imsupp_def image_def 
+    supp_def apply (auto intro!: bexI[of _ "inv \<sigma> a"]) 
+    apply (simp add: Eperm_Ector Gren_def supp_def)
+    sorry 
+    subgoal for \<delta> \<rho> \<rho>' a 
+      by (simp add: imsupp_comp_image)
+    subgoal for \<delta> \<rho> \<rho>' a unfolding IImsupp'_def IImsupp_def SSupp_def imsupp_def image_def 
+    supp_def apply auto   
+    sorry 
+    sorry
   subgoal for u \<sigma> p
     apply (cases p)
     apply (auto simp: eta_distinct eta_distinct' Gren_def eta_inject eta'_inject eta_natural eta'_natural

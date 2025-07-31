@@ -136,7 +136,19 @@ theorem Bimodel_recE:
 assumes "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
 shows "rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 
    (Ector' o Gmap snd snd) (\<lambda>_ . True)"
-sorry
+unfolding rec_E_def proof safe
+  show "P_axioms Pperm PVrs Pvalid {}"
+  unfolding P_axioms_def
+  using assms unfolding Bimodel_def
+  NominalRel_def apply safe
+    subgoal unfolding Pmap_comp_def by auto
+    subgoal unfolding Pmap_id_def by auto
+    subgoal unfolding PFVars_Pmap_def
+next
+  show "U_axioms Pperm PVrs Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>e'. EVrs) (\<lambda>_. True)
+     (Ector' \<circ> Gmap snd snd)"
+  sorry
+qed
 
 interpretation Expression_with_Birecursor Eperm EVrs Gbd Ector
 proof (standard, safe)

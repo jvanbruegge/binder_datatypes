@@ -17,6 +17,9 @@ locale Nominal =
   and Eperm_cong_id:
   "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e"
+  (* and Eperm_Evrs: 
+   "\<And>e \<sigma>. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+   EVrs (Eperm \<sigma> e) = \<sigma> ` EVrs e" *)
   and Ebd_infinite_regular_card_order: "infinite_regular_card_order Ebd"
   and Ebd_le: "Ebd \<le>o |UNIV :: 'a::var set|"
   and EVrs_bd:
@@ -36,20 +39,22 @@ end
 
 (* Relativized nominal :*)
 locale NominalRel = 
-  fixes Pvalid :: "'e \<Rightarrow> bool"
-  and Pperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
-  and PVrs :: "'e \<Rightarrow> 'a set"
+  fixes Evalid :: "'e \<Rightarrow> bool"
+  and Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
+  and EVrs :: "'e \<Rightarrow> 'a set"
   assumes
-  Eperm_Evalid: "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid e \<Longrightarrow> Pvalid (Pperm \<sigma> e)"
+  Eperm_Evalid: "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow> Evalid (Eperm \<sigma> e)"
   and Eperm_comp:
   "\<And>\<sigma> \<tau> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
-   Pvalid e \<Longrightarrow>
-   Pperm \<sigma> (Pperm \<tau> e) = Pperm (\<sigma> o \<tau>) e"
+   Evalid e \<Longrightarrow>
+   Eperm \<sigma> (Eperm \<tau> e) = Eperm (\<sigma> o \<tau>) e"
   and Eperm_cong_id:
-  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid e \<Longrightarrow>
-   (\<And>a. a \<in> PVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Pperm \<sigma> e = e" 
-
+  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow>
+   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e" 
+  and Eperm_Evrs: 
+   "\<And>\<sigma> e. Evalid e \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+   EVrs (Eperm \<sigma> e) = \<sigma> ` EVrs e"
 
 (**************************)
 (* 2. Expression-Like Entities *)

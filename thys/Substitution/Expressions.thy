@@ -1,4 +1,4 @@
-theory Expression_Like
+theory Expressions
   imports Underlying_MN_Monad
 begin
 

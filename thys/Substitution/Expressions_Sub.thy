@@ -3,8 +3,8 @@
 binder_induct to also avoid the free variables of the arguments. 
 *)
 
-theory Expression_Like_Sub
-  imports Expression_Like_Strong Expression_Like_Eta
+theory Expressions_Sub
+  imports Expressions_Strong Expressions_Eta
 begin
 
 locale Expression_with_Subst = Expression +

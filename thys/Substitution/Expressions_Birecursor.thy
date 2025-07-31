@@ -1,5 +1,5 @@
-theory Expression_Like_Birecursor
-  imports Expression_Like_Sub
+theory Expressions_Birecursor
+  imports Expressions_Sub
 begin
 
 
@@ -264,9 +264,12 @@ sublocale Esub: Bimodel where
 
 end
 
-(*TODO after the Expression_with_Birecursor instance is there interpret this locale to get the Expression_with_Subst and 
-its properties for free*)
-locale Expression_with_Birecursor_Sub = Expression_with_Birecursor where
+(* Instance of the Expression_with_Birecursor locale by 
+instantiating the parameter type 'p to to ('a \<Rightarrow> 'a) \<times> ('a \<Rightarrow> 'e)  \<times> ('a \<Rightarrow> 'e), 
+so that parameters consist of triples (\<delta>,\<rho>,\<rho>') as required 
+for the definition of substitution. *)
+
+locale Expression_with_Birecursor_for_Subst = Expression_with_Birecursor where
   Eperm = Eperm and EVrs = "EVrs :: 'e \<Rightarrow> 'a :: var set" and Ebd = Ebd and Ector = Ector and
   Pdummy = "undefined :: ('a \<Rightarrow> 'a) \<times> ('a \<Rightarrow> 'e)  \<times> ('a \<Rightarrow> 'e)"
   for Eperm EVrs Ebd Ector
@@ -318,9 +321,9 @@ sublocale Esub: Expression_with_Subst Eperm EVrs Ebd Ector Esub
         subgoal by (smt (verit, best) Int_Un_empty Un_commute bij_betw_inv_into imsupp_inv inv_simp1 
                       permute_\<rho>' supp_inv_bound) . .
    
-end (* context Expression_with_Birecursor_Sub *)
+end (* context Expression_with_Birecursor_for_Subst *)
 
-locale Expression_with_Birecursor_Sub_Strong = Expression_with_Birecursor_Sub + Expression_with_Surj_and_Coinduct
+locale Expression_with_Birecursor_for_Subst_Strong = Expression_with_Birecursor_for_Subst + Expression_with_Surj_and_Coinduct
 begin
 sublocale Esub_Strong: Expression_with_Subst_Strong Eperm EVrs Ebd Ector Esub
   by standard

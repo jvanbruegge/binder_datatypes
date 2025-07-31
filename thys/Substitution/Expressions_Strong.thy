@@ -1,5 +1,5 @@
-theory Expression_Like_Strong
-  imports Expression_Like
+theory Expressions_Strong
+  imports Expressions
 begin
 
 locale Expression_with_Surj_and_Coinduct = Expression +

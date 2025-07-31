@@ -4,12 +4,15 @@ relevant generated lemmas.
 *)
 
 (* This theory sets up a high-level recursor from the low-level 
-one. This is not just for convenienceI need it 
+one. This is not just for convenience -- I need it 
 in order to refer to G rather than E_pre. *)
 
 theory Data_Customization
-  imports Expression_Like_Sub Expression_Like_Birecursor "HOL-ex.Sketch_and_Explore"
+  imports Expressions_Sub Expressions_Birecursor "HOL-ex.Sketch_and_Explore"
 begin
+
+(*******************************)
+(* 1. Pre-datatype assumptions about G: *)
 
 consts Gwit :: "('a1, 'a2, 'c1, 'c2) G"
 
@@ -27,9 +30,11 @@ axiomatization where
        |supp (f2 :: 'a2 \<Rightarrow> 'a2 :: var)| <o |UNIV :: 'a2 set| \<Longrightarrow>
        Grel R1 R2 (GMAP f1 f2 id id x) y =
        (\<exists>z. (GSupp1 z \<subseteq> {(x, y). R1 x y} \<and> GSupp2 z \<subseteq> {(x, y). R2 x y}) \<and>
-            GMAP id id fst fst z = x \<and> GMAP f1 f2 snd snd z = y)" and
-  wit1: "GSupp1 Gwit = {}" and
-  wit2: "GSupp2 Gwit = {}"
+            GMAP id id fst fst z = x \<and> GMAP f1 f2 snd snd z = y)" 
+  
+axiomatization where 
+wit1: "GSupp1 Gwit = {}" and
+wit2: "GSupp2 Gwit = {}"
 lemmas wit = G.wit1 G.wit2
 setup \<open>Sign.parent_path\<close>
 
@@ -50,6 +55,11 @@ mrbnf "('a1::var, 'a2::var, 'c1, 'c2) G"
     apply (rule G.in_rel; assumption)
    apply (simp_all add: G.wit)
   done
+
+
+(*******************************)
+(* 2. The binding-aware dataype command, 
+yielding the datatype E and its theorems *)
 
 binder_datatype (EVrs: 'a) E = Ector "('a, x::'a, t::'a E, 'a E) G" binds x in t
   for permute: Eperm

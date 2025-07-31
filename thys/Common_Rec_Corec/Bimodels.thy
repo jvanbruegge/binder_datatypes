@@ -12,6 +12,7 @@ lemma base_Gmap_eq: "base u \<Longrightarrow> Gmap f1 f2 u = Gmap g1 g2 u"
 apply(rule Gmap_cong) using base_base by auto
 
 
+
 type_synonym 'a E' = "'a E" 
 (* Special iteration model, with syntactic domain; 
 I keep E' as an abbreviation for E to avoid confusion: *)
@@ -26,11 +27,9 @@ assumes nom: "nom Eperm EVrs"
 *)
 
 assumes
-    ctorPermM_base: "\<And>u. base u \<Longrightarrow> ctorPermM Ector' Eperm u" and 
-    ctorPermM_step: "\<And>u. \<not> base u \<Longrightarrow> ctorPermM Ector' Eperm u"
-and ctorVarsM_base: "\<And>u. base u \<Longrightarrow> ctorVarsM Ector' EVrs u" and 
-    ctorVarsM_step: "\<And>u. \<not> base u \<Longrightarrow> ctorVarsM Ector' EVrs u"
-(* above just standard model properties, but split in two; 
+    ctorPermM_Ector': "\<And>u. ctorPermM Ector' Eperm u"
+and ctorVarsM_Ector': "\<And>u. ctorVarsM Ector' EVrs u"
+(* above just standard model properties; 
 next some more specific requirements *)
 assumes Ector_base_inj: "\<And>u1 u2::('a,'a,'a E, 'a E)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
 and Ector_Ector'_inj_step: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not> base u1 \<Longrightarrow> 
@@ -56,7 +55,7 @@ Ector_Ector'_sync:
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
 and Ector'_uniform:  
-"\<And>u p. Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+"\<And>u p. \<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector' u p = Ector' (Gmap (\<lambda>pe p'. pe p) (\<lambda>pe p'. pe p) u) p" 
 (* thus, uniforminty means that Ector' u p only depends on the values 
 of the items in u on p.  *) 
@@ -96,7 +95,8 @@ proof-
   have F': "F' = (\<lambda>pe p'. pe p) o F" unfolding F'_def o_def fun_eq_iff by simp
   have 1: "Ector' (Gmap F F u) p = Ector' (Gmap F' F' u) p"
     unfolding F' Gmap_comp[symmetric]
-    apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms by auto
+    apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms  
+    by (auto simp add: base_Gmap) 
   show ?thesis unfolding 1 unfolding F'_def apply(subst Gmap_comp[symmetric])
     apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap by auto
 qed
@@ -117,7 +117,7 @@ proof-
   have H': "H' = (\<lambda>pe p'. pe p) o H" unfolding H'_def o_def fun_eq_iff by simp
   have 2: "Ector' (Gmap H H u) p = Ector' (Gmap H' H' u) p"
   unfolding H' Gmap_comp[symmetric]
-  apply(rule Ector'_uniform) using assms unfolding GVrs2_Gmap by auto
+  apply(rule Ector'_uniform) using assms unfolding GVrs2_Gmap by (auto simp add: base_Gmap)
   have 11: "H' = (\<lambda>pe. (\<lambda>e. H e p) o pe) o (\<lambda>e (p::'a P). e)" 
     unfolding H'_def fun_eq_iff by auto
 

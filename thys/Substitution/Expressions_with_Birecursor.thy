@@ -6,6 +6,11 @@ begin
 locale Bimodel = NominalRel Pvalid Pperm "PVrs :: 'p \<Rightarrow> 'a :: var set" + Expression Eperm "EVrs :: 'e \<Rightarrow> 'a set" Ebd Ector
   for Pvalid Pperm PVrs Eperm EVrs Ebd Ector +
   fixes Ector' :: "('a::var, 'a, 'p \<Rightarrow> 'e, 'p \<Rightarrow> 'e) G \<Rightarrow> 'p \<Rightarrow> 'e"
+  and base :: "('a::var, 'a, 'p \<Rightarrow> 'e, 'p \<Rightarrow> 'e) G \<Rightarrow> bool"
+  assumes base_Gren: 
+  "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+                  base (Gren \<sigma> \<sigma> u) \<longleftrightarrow> base u"
+  and base_GVrs: "\<And>u. base u \<Longrightarrow> GVrs1 u = {} \<and> GVrs2 u = {}"
   assumes Eperm_Ector': "\<And>\<sigma> p. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow>
     Eperm \<sigma> (Ector' u p) = 
     Ector' (Gren \<sigma> \<sigma> (Gmap (\<lambda>pe p. Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))) (\<lambda>pe p. Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))) u)) (Pperm \<sigma> p)"
@@ -277,6 +282,19 @@ sublocale Esub: Bimodel where
   subgoal for \<sigma> p
     apply (cases p)
     using image_imsupp_IImsupp' by (simp add: fun_eq_iff) 
+  subgoal for p apply(cases p) 
+  apply simp apply(intro infinite_class.Un_bound)
+    subgoal unfolding imsupp_def apply(intro infinite_class.Un_bound)
+      subgoal by simp
+      subgoal using card_image_ordLess by blast .
+    subgoal unfolding IImsupp'_def apply(intro infinite_class.Un_bound)
+      subgoal by simp
+      subgoal unfolding IImsupp_def  
+        by (meson EVrs_bound var_class.UN_bound) .
+    subgoal unfolding IImsupp'_def apply(intro infinite_class.Un_bound)
+      subgoal by simp
+      subgoal unfolding IImsupp_def  
+        by (meson EVrs_bound var_class.UN_bound) . .
   subgoal for u \<sigma> p
     apply (cases p)
     apply (auto simp: eta_distinct eta_distinct' Gren_def eta_inject eta'_inject eta_natural eta'_natural
@@ -299,6 +317,7 @@ sublocale Esub: Bimodel where
     apply (metis in_imsupp not_in_imsupp_same)
     apply (metis in_imsupp not_in_imsupp_same)
     done
+  (* *)
   subgoal for u u' p
     apply (auto simp: eta_distinct eta_distinct' eta_inject eta'_inject Gren_def
       eta_natural[of id id, unfolded G.Sb_Inj, simplified]
@@ -344,6 +363,7 @@ sublocale Esub: Bimodel where
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
+     sledgehammer
     sorry
   subgoal for u p
     apply (cases p)

@@ -23,7 +23,7 @@ locale Nominal =
   and Ebd_infinite_regular_card_order: "infinite_regular_card_order Ebd"
   and Ebd_le: "Ebd \<le>o |UNIV :: 'a::var set|"
   and EVrs_bd:
-  "\<And>x. |EVrs (x :: 'e)| <o Ebd"
+  "\<And>e. |EVrs (e :: 'e)| <o Ebd"
 begin
 
 lemma Eperm_id: "Eperm id = id"
@@ -62,6 +62,8 @@ locale NominalRel =
   and Eperm_Evrs: 
    "\<And>\<sigma> e. Evalid e \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
    EVrs (Eperm \<sigma> e) = \<sigma> ` EVrs e"
+  and EVrs_bd:
+  "\<And>e. Evalid e \<Longrightarrow> |EVrs (e :: 'e)| <o |UNIV :: 'a::var set|"
 
 (**************************)
 (* 2. Expression-Like Entities *)

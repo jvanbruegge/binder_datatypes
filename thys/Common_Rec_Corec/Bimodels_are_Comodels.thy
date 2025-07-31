@@ -165,8 +165,7 @@ unfolding Eperm''_def Evalid'_def
     unfolding Eperm_Ector apply(subst Edtor'_base)
       subgoal using base_Gmap base_Gren by metis
       subgoal apply auto 
-      apply(subst ctorPermM_base[unfolded ctorPermM_def, rule_format])
-        subgoal by (simp add: base_Gmap)
+      apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
         subgoal by simp
         subgoal unfolding Gmap_comp Gmap_Gren unfolding lift_def o_def .. . .
      subgoal 
@@ -201,9 +200,8 @@ unfolding Eperm''_def Evalid'_def
                 subgoal 
                 unfolding Gmap_o[symmetric] triv_Eperm_lift unfolding Gmap_o
                 unfolding o_def
-                apply(subst (asm) ctorPermM_step[unfolded ctorPermM_def, rule_format,  
-                            symmetric])
-                  subgoal by (simp add: base_Gmap)
+                apply(subst (asm) ctorPermM_Ector'[unfolded ctorPermM_def, rule_format,  
+                            symmetric]) 
                   subgoal by simp
                   subgoal apply(subst Eperm_inv_iff) by auto . . .
               subgoal for e' unfolding GSupp1_Gmap apply auto subgoal for b apply(subst (asm) GSupp1_Gren)
@@ -324,8 +322,7 @@ qed
 lemma step_Ector'_Ector_EVrs: 
 "\<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
-apply(rule subset_trans[OF ctorVarsM_step[unfolded ctorVarsM_def, rule_format]])
-  subgoal by (simp add: base_Gmap)
+apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]])
   subgoal .
   subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto  
     apply (metis Diff_iff GVrs2_Gmap)  
@@ -334,8 +331,7 @@ apply(rule subset_trans[OF ctorVarsM_step[unfolded ctorVarsM_def, rule_format]])
 lemma base_Ector'_Ector_EVrs: 
 "base u \<Longrightarrow> Pvalid p \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
-apply(rule subset_trans[OF ctorVarsM_base[unfolded ctorVarsM_def, rule_format]])
-  subgoal by (simp add: base_Gmap)
+apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]])
   subgoal .
   subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto 
   apply (simp add: base_base) 

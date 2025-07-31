@@ -143,7 +143,8 @@ unfolding rec_E_def proof safe
   NominalRel_def apply safe
     subgoal unfolding Pmap_comp_def by auto
     subgoal unfolding Pmap_id_def by auto
-    subgoal unfolding PFVars_Pmap_def
+    subgoal unfolding PFVars_Pmap_def by auto
+    subgoal unfolding PFVars_small_def 
 next
   show "U_axioms Pperm PVrs Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>e'. EVrs) (\<lambda>_. True)
      (Ector' \<circ> Gmap snd snd)"

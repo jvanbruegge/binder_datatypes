@@ -32,6 +32,13 @@ lemma Eperm_id: "Eperm id = id"
     apply simp_all
   done
 
+lemma Eperm_comp':
+  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+   bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
+   Eperm (\<sigma> o \<tau>) e = Eperm \<sigma> (Eperm \<tau> e)"
+by (metis Eperm_comp comp_apply)
+
+
 lemma EVrs_bound[simp]: "|EVrs (x :: 'e)| <o |UNIV :: 'a set|"
   by (rule ordLess_ordLeq_trans[OF EVrs_bd Ebd_le])
 
@@ -84,7 +91,7 @@ locale Expression = Nominal +
   fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"
   assumes EVrs_Eperm:
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
-   EVrs (Eperm \<sigma> u) \<subseteq> \<sigma> ` EVrs u"
+   EVrs (Eperm \<sigma> u) = \<sigma> ` EVrs u"
   and Eperm_Ector:
   "\<And>\<sigma> u. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
     Eperm \<sigma> (Ector u) = Ector (Gren \<sigma> \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u))"
@@ -96,12 +103,18 @@ locale Expression = Nominal +
      id_on (\<Union> (EVrs ` GSupp1 x) - GVrs2 x) \<sigma> \<and> Gren id \<sigma> (Gmap (Eperm \<sigma>) id x) = y)"
 begin
 
+lemma EVrs_Eperm_su:
+  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+   EVrs (Eperm \<sigma> u) \<subseteq> \<sigma> ` EVrs u"
+using EVrs_Eperm by auto
+
+
 lemma Eperm_cong: "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
          bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
    (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = \<tau> a) \<Longrightarrow> Eperm \<sigma> e = Eperm \<tau> e"
   apply (rule trans[OF _ Eperm_cong_id, of _ "\<sigma> o inv \<tau>"])
      apply (auto simp: Eperm_comp[THEN fun_cong, simplified] supp_comp_bound
-      dest: EVrs_Eperm[THEN set_mp, rotated -1] simp flip: o_assoc)
+      dest: EVrs_Eperm_su[THEN set_mp, rotated -1] simp flip: o_assoc)
   done
 
 lemma Ector_fresh_inject:

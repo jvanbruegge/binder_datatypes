@@ -150,6 +150,103 @@ apply(subst G.Sb_comp[symmetric]) by auto
 lemma card_image_ordLess: "|A| <o r \<Longrightarrow> |h ` A| <o r"
 by (metis card_of_image ordLeq_ordLess_trans)
 
+lemma eq_Un3_image: "A1 = f ` B1 \<Longrightarrow> A2 = f ` B2 \<Longrightarrow> A3 = f ` B3 \<Longrightarrow> 
+ A1 \<union> A2 \<union> A3 = f ` (B1 \<union> B2 \<union> B3)"
+by auto
+
+lemma in_Un2: "(a \<in> A1 \<Longrightarrow> f a \<in> B1) \<Longrightarrow> (a \<in> A2 \<Longrightarrow> f a \<in> B2) \<Longrightarrow> 
+ a \<in> A1 \<union> A2 \<Longrightarrow> f a \<in> B1 \<union> B2"
+by auto
+
+(*
+lemma in_Un2': "(a \<in> A1 \<Longrightarrow> f a \<in> B2) \<Longrightarrow> (a \<in> A2 \<Longrightarrow> f a \<in> B1) \<Longrightarrow> 
+ a \<in> A1 \<union> A2 \<Longrightarrow> f a \<in> B1 \<union> B2"
+by auto
+*)
+
+lemma Eperm_eq_Ector_eta_imp: 
+assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a::var set|"
+and "Eperm \<sigma> e = Ector (\<eta> (\<sigma> a))"
+shows "e = Ector (\<eta> a)"
+proof-
+  have "e = Eperm (inv \<sigma>) (Eperm \<sigma> e)" 
+  apply(subst Eperm_comp'[symmetric])
+  using assms by (auto simp: Eperm_id)
+  also have "\<dots> = Eperm (inv \<sigma>) (Ector (\<eta> (\<sigma> a)))"
+  using assms by simp
+  also have "\<dots> = Ector (\<eta> a)" 
+    by (simp add: Eperm_Ector Gren_def assms)
+  finally show ?thesis .
+qed
+
+lemma Eperm_eq_Ector_eta'_imp: 
+assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a::var set|"
+and "Eperm \<sigma> e = Ector (\<eta>' (\<sigma> a))"
+shows "e = Ector (\<eta>' a)"
+proof-
+  have "e = Eperm (inv \<sigma>) (Eperm \<sigma> e)" 
+  apply(subst Eperm_comp'[symmetric])
+  using assms by (auto simp: Eperm_id)
+  also have "\<dots> = Eperm (inv \<sigma>) (Ector (\<eta>' (\<sigma> a)))"
+  using assms by simp
+  also have "\<dots> = Ector (\<eta>' a)" 
+    by (simp add: Eperm_Ector Gren_def assms)
+  finally show ?thesis .
+qed
+
+lemma image_imsupp_IImsupp': 
+assumes "|supp \<delta>| <o |UNIV::'a::var set|"
+and "|SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV::'a set|" 
+and "|SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV::'a set|"
+and [simp]: "bij \<sigma>" "|supp \<sigma>| <o |UNIV:: 'a set|"
+shows 
+"imsupp (\<sigma> \<circ> \<delta> \<circ> inv \<sigma>) \<union> 
+ IImsupp' (Ector \<circ> \<eta>) EVrs (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>) \<union>
+ IImsupp' (Ector \<circ> \<eta>') EVrs (Eperm \<sigma> \<circ> \<rho>' \<circ> inv \<sigma>) =
+ \<sigma> ` (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>')"
+proof(rule eq_Un3_image)
+  show "imsupp (\<sigma> \<circ> \<delta> \<circ> inv \<sigma>) = \<sigma> ` imsupp \<delta>"
+  unfolding image_def apply safe
+    subgoal for a
+    apply(rule bexI[of _ "inv \<sigma> a"])
+      subgoal by simp
+      subgoal by (simp add: image_in_bij_eq imsupp_comp_image) .
+    subgoal by (simp add: imsupp_comp_image) . 
+  show "IImsupp' (Ector \<circ> \<eta>) EVrs (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>) = \<sigma> ` IImsupp' (Ector \<circ> \<eta>) EVrs \<rho>"
+  unfolding image_def apply safe
+    subgoal for a
+    apply(rule bexI[of _ "inv \<sigma> a"])
+      subgoal by simp
+      subgoal unfolding IImsupp'_def 
+      apply(rule in_Un2[where f = "inv \<sigma>" 
+       and ?A1.0 = "SSupp (Ector \<circ> \<eta>) (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>)"
+       and ?A2.0 = "IImsupp (Ector \<circ> \<eta>) EVrs (Eperm \<sigma> \<circ> \<rho> \<circ> inv \<sigma>)"])
+        subgoal by (auto simp: SSupp_def Eperm_Ector Gren_def)
+        subgoal apply (auto simp: EVrs_Eperm IImsupp_def SSupp_def Eperm_Ector Gren_def)
+        by (metis Eperm_Ector Gmap_eta Gren_def Gsub_eta assms(4,5) inv_simp2)
+        subgoal . . .
+      subgoal unfolding IImsupp'_def  IImsupp_def SSupp_def  
+      by simp (metis EVrs_Eperm Eperm_eq_Ector_eta_imp assms(4,5) bijection.intro
+            bijection.inv_left image_eqI) . 
+  show "IImsupp' (Ector \<circ> \<eta>') EVrs (Eperm \<sigma> \<circ> \<rho>' \<circ> inv \<sigma>) = \<sigma> ` IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>'"
+  unfolding image_def apply safe
+    subgoal for a
+    apply(rule bexI[of _ "inv \<sigma> a"])
+      subgoal by simp
+      subgoal unfolding IImsupp'_def 
+      apply(rule in_Un2[where f = "inv \<sigma>" 
+       and ?A1.0 = "SSupp (Ector \<circ> \<eta>') (Eperm \<sigma> \<circ> \<rho>' \<circ> inv \<sigma>)"
+       and ?A2.0 = "IImsupp (Ector \<circ> \<eta>') EVrs (Eperm \<sigma> \<circ> \<rho>' \<circ> inv \<sigma>)"])
+        subgoal by (auto simp: SSupp_def Eperm_Ector Gren_def)
+        subgoal apply (auto simp: EVrs_Eperm IImsupp_def SSupp_def Eperm_Ector Gren_def)
+        by (metis Eperm_Ector Gmap_eta' Gren_def Gsub_eta' assms(4,5) inv_simp2)
+        subgoal . . .
+      subgoal unfolding IImsupp'_def  IImsupp_def SSupp_def  
+      by simp (metis EVrs_Eperm Eperm_eq_Ector_eta'_imp assms(4,5) bijection.intro
+            bijection.inv_left image_eqI) . 
+qed
+
+
 sublocale Esub: Bimodel where
   Pvalid = Esub_Pvalid and
   Pperm = Esub_Pperm and
@@ -179,22 +276,7 @@ sublocale Esub: Bimodel where
     done
   subgoal for \<sigma> p
     apply (cases p)
-    apply (auto simp: fun_eq_iff) 
-    subgoal by (simp add: image_in_bij_eq imsupp_comp_image)
-    subgoal for \<delta> \<rho> \<rho>' a unfolding IImsupp'_def IImsupp_def SSupp_def imsupp_def image_def 
-    supp_def apply (auto intro!: bexI[of _ "inv \<sigma> a"]) 
-    apply (simp add: Eperm_Ector Gren_def supp_def)
-    sorry
-    subgoal for \<delta> \<rho> \<rho>' a  unfolding IImsupp'_def IImsupp_def SSupp_def imsupp_def image_def 
-    supp_def apply (auto intro!: bexI[of _ "inv \<sigma> a"]) 
-    apply (simp add: Eperm_Ector Gren_def supp_def)
-    sorry 
-    subgoal for \<delta> \<rho> \<rho>' a 
-      by (simp add: imsupp_comp_image)
-    subgoal for \<delta> \<rho> \<rho>' a unfolding IImsupp'_def IImsupp_def SSupp_def imsupp_def image_def 
-    supp_def apply auto   
-    sorry 
-    sorry
+    using image_imsupp_IImsupp' by (simp add: fun_eq_iff) 
   subgoal for u \<sigma> p
     apply (cases p)
     apply (auto simp: eta_distinct eta_distinct' Gren_def eta_inject eta'_inject eta_natural eta'_natural

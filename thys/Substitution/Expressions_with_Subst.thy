@@ -135,7 +135,7 @@ binder_inductive (no_auto_equiv) Efreee
   | GSupp1 binds "GVrs2 u"
   | GSupp2 binds "GVrs2 u"
   for perms: _ Eperm | supps: _ and EVrs
-           apply (auto simp: Eperm_id Eperm_comp[THEN fun_cong, simplified] EVrs_Eperm Eperm_cong[where \<tau>=id] G.Vrs_bd) [8]
+           apply (auto simp: Eperm_id Eperm_comp[THEN fun_cong, simplified] EVrs_Eperm_su Eperm_cong[where \<tau>=id] G.Vrs_bd) [8]
   subgoal for R B \<sigma> a e
     apply (elim disj_forward exE conjE; hypsubst_thin)
     subgoal for _ u
@@ -209,7 +209,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>
   where GSupp1 binds "GVrs2 u"
   | GSupp2 binds "GVrs2 u"
   for perms: _ Eperm | supps: _ and EVrs
-          apply (auto simp: Eperm_id Eperm_comp[THEN fun_cong, simplified] EVrs_Eperm Eperm_cong[where \<tau>=id] G.Vrs_bd Eperm_Ector eta_natural) [7]
+          apply (auto simp: Eperm_id Eperm_comp[THEN fun_cong, simplified] EVrs_Eperm_su Eperm_cong[where \<tau>=id] G.Vrs_bd Eperm_Ector eta_natural) [7]
   subgoal for R B \<sigma> a e
     apply (elim disj_forward exE conjE; hypsubst_thin)
     subgoal for _
@@ -276,7 +276,7 @@ binder_inductive (no_auto_equiv) Efree\<eta>'
   where GSupp1 binds "GVrs2 u"
   | GSupp2 binds "GVrs2 u"
   for perms: _ Eperm | supps: _ and EVrs
-          apply (auto simp: Eperm_id Eperm_comp[THEN fun_cong, simplified] EVrs_Eperm Eperm_cong[where \<tau>=id] G.Vrs_bd Eperm_Ector eta_natural) [7]
+          apply (auto simp: Eperm_id Eperm_comp[THEN fun_cong, simplified] EVrs_Eperm_su Eperm_cong[where \<tau>=id] G.Vrs_bd Eperm_Ector eta_natural) [7]
   subgoal for R B \<sigma> a e
     apply (elim disj_forward exE conjE; hypsubst_thin)
     subgoal for _

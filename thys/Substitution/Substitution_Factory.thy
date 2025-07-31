@@ -169,6 +169,8 @@ lemma Gsub_eta[simp]:
    Gsub \<delta>1 \<delta>2 (\<eta> a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta> (\<delta>1 a)"
 using eta_natural[of _ _ id id a] by auto
 
+lemmas Gren_eta = Gsub_eta[unfolded Gren_def[symmetric], simp]
+
 lemma Gmap_eta'[simp]: 
 "Gmap f1 f2 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta>' a"
 using eta'_natural[of id id _ _ a] by auto
@@ -178,11 +180,60 @@ lemma Gsub_eta'[simp]:
    Gsub \<delta>1 \<delta>2 (\<eta>' a :: ('a1::var, 'a2 :: var, 'x1, 'x2) G) = \<eta>' (\<delta>1 a)"
 using eta'_natural[of _ _ id id a] by auto
 
+lemmas Gren_eta' = Gsub_eta'[unfolded Gren_def[symmetric], simp]
+
 lemma Some_eta[simp]: "(SOME a. \<eta> aa = \<eta> a) = aa"
 by (simp add: eta_inject)
 
 lemma Some_eta'[simp]: "(SOME a. \<eta>' aa = \<eta>' a) = aa"
 by (simp add: eta'_inject)
+
+lemma Gmap_eq_eta: "Gmap f1 f2 u = \<eta> a \<longleftrightarrow> u = \<eta> a"
+by (metis Gmap_eta Gsub_eta eta_inversion supp_id_bound)
+
+lemma Gmap_eq_eta': "Gmap f1 f2 u = \<eta>' a \<longleftrightarrow> u = \<eta>' a"
+by (metis Gmap_eta' Gsub_eta' eta'_inversion supp_id_bound)
+
+lemma Gren_eq_eta: 
+assumes [simp]: "bij \<delta>1" "|supp \<delta>1| <o |UNIV::'a1 set|"
+"bij \<delta>2" "|supp \<delta>2| <o |UNIV::'a2::var set|"
+shows "Gren \<delta>1 \<delta>2 u = \<eta> (a::'a1::var) \<longleftrightarrow> 
+   (u::('a1, 'a2, 'c1, 'c2) G) = \<eta> (inv \<delta>1 a)"
+proof safe
+  assume 0: "Gren \<delta>1 \<delta>2 u = \<eta> a"
+  have "u = Gren (inv \<delta>1) (inv \<delta>2) (Gren \<delta>1 \<delta>2 u)"
+  apply(subst Gren_comp'[symmetric])
+  by (auto simp: Gren_id) 
+  also have "\<dots>  = Gren (inv \<delta>1) (inv \<delta>2) (\<eta> a)"
+  using 0 by simp
+  also have "\<dots> = \<eta> (inv \<delta>1 a)" 
+  by auto
+  finally show "u = \<eta> (inv \<delta>1 a)" .
+next
+  show "Gren \<delta>1 \<delta>2 (\<eta> (inv \<delta>1 a)) = \<eta> a"
+  by simp
+qed
+
+lemma Gren_eq_eta':  
+assumes [simp]: "bij \<delta>1" "|supp \<delta>1| <o |UNIV::'a1 set|"
+"bij \<delta>2" "|supp \<delta>2| <o |UNIV::'a2::var set|"
+shows "Gren \<delta>1 \<delta>2 u = \<eta>' (a::'a1::var) \<longleftrightarrow> 
+   (u::('a1, 'a2, 'c1, 'c2) G) = \<eta>' (inv \<delta>1 a)"
+proof safe
+  assume 0: "Gren \<delta>1 \<delta>2 u = \<eta>' a"
+  have "u = Gren (inv \<delta>1) (inv \<delta>2) (Gren \<delta>1 \<delta>2 u)"
+  apply(subst Gren_comp'[symmetric])
+  by (auto simp: Gren_id) 
+  also have "\<dots>  = Gren (inv \<delta>1) (inv \<delta>2) (\<eta>' a)"
+  using 0 by simp
+  also have "\<dots> = \<eta>' (inv \<delta>1 a)" 
+  by auto
+  finally show "u = \<eta>' (inv \<delta>1 a)" .
+next
+  show "Gren \<delta>1 \<delta>2 (\<eta>' (inv \<delta>1 a)) = \<eta>' a"
+  by simp
+qed
+
 
 
 end 

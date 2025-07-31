@@ -38,7 +38,6 @@ and Ector_Ector'_inj_step: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not>
    Ector' u p = Ector' u1 p"
 (* Ector1 is less injective than Ector outside base, and assuming freshness *)
 and 
-(* call the expression FreeVars u, and use it in the other axioms:  *)
 Ector_Ector'_EVrs_step: "\<And>u p.
     \<not> base u \<Longrightarrow> 
     Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {}
@@ -84,6 +83,8 @@ by (metis (mono_tags, lifting) Ector_base_inj tfl_some)
 
 (* *)
 
+thm Gmap_comp
+
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   
 assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
@@ -127,7 +128,7 @@ proof-
 qed
 
 
-end (* context Bimodels *)
+end (* context Bimodel *)
  
 
 end

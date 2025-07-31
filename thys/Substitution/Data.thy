@@ -144,7 +144,9 @@ unfolding rec_E_def proof safe
     subgoal unfolding Pmap_comp_def by auto
     subgoal unfolding Pmap_id_def by auto
     subgoal unfolding PFVars_Pmap_def by auto
-    subgoal unfolding PFVars_small_def 
+    subgoal unfolding PFVars_small_def by auto
+    subgoal unfolding Pmap_validP_def by auto
+    subgoal unfolding avset_small_def by auto .
 next
   show "U_axioms Pperm PVrs Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>e'. EVrs) (\<lambda>_. True)
      (Ector' \<circ> Gmap snd snd)"

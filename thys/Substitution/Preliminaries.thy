@@ -38,6 +38,7 @@ by auto
 definition small :: "('a::var \<Rightarrow> 'a) \<Rightarrow> bool" where 
 "small \<sigma> \<equiv> countable (supp \<sigma>)" 
 
+thm supp_id
 declare supp_id[simp,intro] (*: "supp id = {}" unfolding supp_def by auto *)
 lemma small_id[simp,intro]: "small id" unfolding small_def by auto
 lemma supp_id'[simp,intro]: "supp (\<lambda>a. a) = {}" unfolding supp_def by auto

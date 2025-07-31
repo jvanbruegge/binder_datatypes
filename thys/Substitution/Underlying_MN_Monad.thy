@@ -141,4 +141,29 @@ definition Gren ::
 lemma GVrs2_bound[simp]: "|GVrs2 (u::('a :: var, 'a, 'e, 'e) G)| <o |UNIV :: 'a set|"
   by (rule ordLess_ordLeq_trans[OF G.Vrs_bd(2) large'])
 
+lemma Gmap_comp: 
+"Gmap g1 g2 (Gmap f1 f2 u) = Gmap (g1 \<circ> f1) (g2 \<circ> f2) u"
+by (metis G.Map_comp comp_apply)
+
+lemmas GVrs1_Gmap = G.Vrs_Map2
+lemmas GVrs2_Gmap = G.Vrs_Map2
+lemmas GSupp1_Gmap = G.Supp1_Map
+lemmas GSupp2_Gmap = G.Supp2_Map
+lemmas Gmap_cong = G.Map_cong
+lemmas Gsub_cong = G.Sb_cong
+lemmas Gsub_id = G.Sb_Inj
+lemmas Gsub_comp = G.Sb_comp
+lemmas Gsub_comp' = Gsub_comp[symmetric, unfolded fun_eq_iff, 
+rule_format, simplified]
+
+lemmas Gsub_cong_id = Gsub_cong[of _ _ id id, 
+unfolded Gsub_id, 
+simplified]
+
+lemmas Gren_cong = Gsub_cong[unfolded Gren_def[symmetric]]
+lemmas Gren_cong_id = Gsub_cong_id[unfolded Gren_def[symmetric]]
+lemmas Gren_comp = Gsub_comp[unfolded Gren_def[symmetric]]
+lemmas Gren_comp' = Gsub_comp'[unfolded Gren_def[symmetric]]
+lemmas Gren_id = Gsub_id[unfolded Gren_def[symmetric]]
+
 end 

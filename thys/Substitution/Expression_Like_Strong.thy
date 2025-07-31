@@ -2,7 +2,7 @@ theory Expression_Like_Strong
   imports Expression_Like
 begin
 
-locale Expression_Strong = Expression +
+locale Expression_with_Surj_and_Coinduct = Expression +
   assumes (* AtoD: I added the "no-clash condition: GVrs2 u \<inter> GVrs1 u = {} *)
   Ector_fresh_surj: "\<And>A e. |A::'a set| <o |UNIV :: 'a::var set| \<Longrightarrow> 
     \<exists>u. GVrs2 u \<inter> A = {} \<and> e = Ector u" and
@@ -33,6 +33,6 @@ proof-
   using Ector_eq_GVrs1 e by blast
 qed
 
-end (* context Expression_Strong *)
+end (* context Expression_with_Surj_and_Coinduct *)
 
 end

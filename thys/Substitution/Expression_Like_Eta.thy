@@ -197,7 +197,7 @@ by (simp add: eta'_inject)
 
 end
 
-context Expression_Strong begin
+context Expression_with_Surj_and_Coinduct begin
 
 lemma Ector_eta_inj: "Ector u = Ector (\<eta> a) \<longleftrightarrow> u = \<eta> a"
   by (metis Ector_inject eta_natural supp_id_bound Gren_def)

@@ -1,4 +1,7 @@
-
+(* This theory proves that a a binder-datatype satisfies:
+-- the Expression_with_Surj_and_Coinduct axioms
+-- and in fact 
+*)
 
 theory Data
 imports 
@@ -62,7 +65,7 @@ lemma E_coinduct_gen:
 (**************) 
 (* Binder datatypes satisfy the 
 strong-expression axiomatization: *)
-interpretation Expression_Strong Eperm EVrs Gbd Ector
+interpretation Expression_with_Surj_and_Coinduct Eperm EVrs Gbd Ector
   apply unfold_locales
   apply (auto simp: E.inject E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd large'
     G.bd_card_order G.bd_cinfinite G.bd_regularCard intro: E.permute_cong_id)
@@ -116,9 +119,9 @@ lemma permute_\<rho>':
 
 (*****)
 
-(* thm Birecursor_def Birecursor_axioms_def
+(* thm Expression_with_Birecursor_def Expression_with_Birecursor_axioms_def
 
-context Birecursor  
+context Expression_with_Birecursor  
 begin 
 *)
 
@@ -128,7 +131,7 @@ shows "rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<
    (Ector' o Gmap snd snd) (\<lambda>_ . True)"
 sorry
 
-interpretation Birecursor Eperm EVrs Gbd Ector
+interpretation Expression_with_Birecursor Eperm EVrs Gbd Ector
 proof (standard, safe)
   fix Pvalid :: "'p \<Rightarrow> bool"
   and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
@@ -153,7 +156,7 @@ proof (standard, safe)
 qed
   
 
-interpretation birec_data: Birecursor_Sub_Strong Eperm EVrs Gbd Ector
+interpretation birec_data: Expression_with_Birecursor_Sub_Strong Eperm EVrs Gbd Ector
   by standard
 
 print_statement birec_data.Esub_Strong.E_pbmv_axioms
@@ -244,7 +247,7 @@ lemma Eperm_Esub: "bij f \<Longrightarrow> |supp f| <o |UNIV :: 'a set| \<Longri
 
 end
 
-interpretation data: Substitution_Strong Eperm EVrs Gbd Ector Esub
+interpretation data: Expression_with_Subst_Strong Eperm EVrs Gbd Ector Esub
   by standard (auto simp: Esub_Ector\<eta> Esub_Ector\<eta>' Esub_Ector EVrs_Esub Eperm_Esub)
 
 print_statement data.E_pbmv_axioms

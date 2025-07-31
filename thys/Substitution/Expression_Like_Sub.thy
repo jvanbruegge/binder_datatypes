@@ -7,7 +7,7 @@ theory Expression_Like_Sub
   imports Expression_Like_Strong Expression_Like_Eta
 begin
 
-locale Substitution = Expression +
+locale Expression_with_Subst = Expression +
   fixes Esub :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a ::var \<Rightarrow> 'e) \<Rightarrow> ('a ::var \<Rightarrow> 'e) \<Rightarrow> 'e \<Rightarrow> 'e"
   assumes
   Esub_Ector\<eta>:
@@ -42,7 +42,7 @@ locale Substitution = Expression +
     bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> imsupp \<sigma> \<inter> (imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>') = {} \<Longrightarrow>
     Eperm \<sigma> (Esub \<delta> \<rho> \<rho>' e) = Esub \<delta> \<rho> \<rho>' (Eperm \<sigma> e)"
 
-locale Substitution_Strong = Expression_Strong Eperm EVrs Ebd Ector + Substitution Eperm EVrs Ebd Ector Esub
+locale Expression_with_Subst_Strong = Expression_with_Surj_and_Coinduct Eperm EVrs Ebd Ector + Expression_with_Subst Eperm EVrs Ebd Ector Esub
   for Eperm EVrs Ebd and Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e" and Esub
 begin
 

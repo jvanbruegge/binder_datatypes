@@ -118,7 +118,7 @@ lemma E_coinduct_gen:
     done
   done
 
-interpretation Expression_Strong Eperm EVrs "card_suc Gbd" Ector
+interpretation Expression_with_Surj_and_Coinduct Eperm EVrs "card_suc Gbd" Ector
   apply standard
   apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
     G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
@@ -1392,7 +1392,7 @@ theorem COREC_FFVarsD:
 
 end
 
-interpretation Birecursor Eperm EVrs "card_suc Gbd" Ector
+interpretation Expression_with_Birecursor Eperm EVrs "card_suc Gbd" Ector
 proof (standard, safe)
   fix Pvalid :: "'p \<Rightarrow> bool"
   and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
@@ -1408,7 +1408,7 @@ proof (standard, safe)
     sorry
 qed
 
-interpretation birec_codata: Birecursor_Sub_Strong Eperm EVrs "card_suc Gbd" Ector
+interpretation birec_codata: Expression_with_Birecursor_Sub_Strong Eperm EVrs "card_suc Gbd" Ector
   by standard
 
 print_statement birec_codata.Esub_Strong.E_pbmv_axioms
@@ -1741,7 +1741,7 @@ lemma Eperm_Esub:
   apply (auto simp add: fun_eq_iff Int_Un_distrib permute_\<rho> permute_\<rho>' imsupp_commute)
   done
 
-interpretation codata: Substitution_Strong Eperm EVrs "card_suc Gbd" Ector Esub
+interpretation codata: Expression_with_Subst_Strong Eperm EVrs "card_suc Gbd" Ector Esub
   by standard (auto simp: Esub_Ector\<eta> Esub_Ector\<eta>' Esub_Ector EVrs_Esub Eperm_Esub)
 
 print_statement codata.E_pbmv_axioms

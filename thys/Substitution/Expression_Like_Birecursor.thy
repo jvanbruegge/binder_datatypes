@@ -26,7 +26,7 @@ begin
 end
 
 (*
-TODO the below Birecursor locale needs to be interpreted for both datatypes and codatatypes
+TODO the below Expression_with_Birecursor locale needs to be interpreted for both datatypes and codatatypes
 in the respective theory Data and Codata using the recursor/corecursor
 the existing interpretations in that theory that define substitution directly should be quite close
 *)
@@ -43,7 +43,7 @@ end
 
 
 
-locale Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Ebd Ector
+locale Expression_with_Birecursor = Expression Eperm "EVrs :: 'e \<Rightarrow> 'a :: var set" Ebd Ector
   for Eperm EVrs Ebd Ector +
   fixes Pdummy :: 'p
   assumes rec: "\<forall>Pvalid Pperm (PVrs :: 'p \<Rightarrow> 'a set) Ector'.
@@ -264,9 +264,9 @@ sublocale Esub: Bimodel where
 
 end
 
-(*TODO after the Birecursor instance is there interpret this locale to get the Substitution and 
+(*TODO after the Expression_with_Birecursor instance is there interpret this locale to get the Expression_with_Subst and 
 its properties for free*)
-locale Birecursor_Sub = Birecursor where
+locale Expression_with_Birecursor_Sub = Expression_with_Birecursor where
   Eperm = Eperm and EVrs = "EVrs :: 'e \<Rightarrow> 'a :: var set" and Ebd = Ebd and Ector = Ector and
   Pdummy = "undefined :: ('a \<Rightarrow> 'a) \<times> ('a \<Rightarrow> 'e)  \<times> ('a \<Rightarrow> 'e)"
   for Eperm EVrs Ebd Ector
@@ -278,7 +278,7 @@ declare eta_inject[simp]
 declare eta'_inject[simp]
 declare eta_distinct[simp]
 
-sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
+sublocale Esub: Expression_with_Subst Eperm EVrs Ebd Ector Esub
   apply standard
     subgoal apply (unfold Esub_def)
     apply (subst rec_Ector[OF Esub.Bimodel_axioms]) 
@@ -318,11 +318,11 @@ sublocale Esub: Substitution Eperm EVrs Ebd Ector Esub
         subgoal by (smt (verit, best) Int_Un_empty Un_commute bij_betw_inv_into imsupp_inv inv_simp1 
                       permute_\<rho>' supp_inv_bound) . .
    
-end (* context Birecursor_Sub *)
+end (* context Expression_with_Birecursor_Sub *)
 
-locale Birecursor_Sub_Strong = Birecursor_Sub + Expression_Strong
+locale Expression_with_Birecursor_Sub_Strong = Expression_with_Birecursor_Sub + Expression_with_Surj_and_Coinduct
 begin
-sublocale Esub_Strong: Substitution_Strong Eperm EVrs Ebd Ector Esub
+sublocale Esub_Strong: Expression_with_Subst_Strong Eperm EVrs Ebd Ector Esub
   by standard
 end
 

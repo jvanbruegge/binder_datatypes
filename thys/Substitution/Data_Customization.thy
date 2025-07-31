@@ -4,7 +4,7 @@ relevant generated lemmas.
 *)
 
 (* This theory sets up a high-level recursor from the low-level 
-one. This is not just for convenience -- I need it 
+one. This is not just for convenienceI need it 
 in order to refer to G rather than E_pre. *)
 
 theory Data_Customization

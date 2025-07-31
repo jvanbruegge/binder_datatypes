@@ -1,4 +1,4 @@
-theory Expressions_Strong
+theory Expressions_with_Surj_and_Coinduct
   imports Expressions
 begin
 

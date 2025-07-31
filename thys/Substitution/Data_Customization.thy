@@ -8,7 +8,7 @@ one. This is not just for convenience -- I need it
 in order to refer to G rather than E_pre. *)
 
 theory Data_Customization
-  imports Expressions_Sub Expressions_Birecursor "HOL-ex.Sketch_and_Explore"
+  imports Expressions_with_Subst Expressions_with_Birecursor "HOL-ex.Sketch_and_Explore"
 begin
 
 (*******************************)

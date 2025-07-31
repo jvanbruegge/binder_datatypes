@@ -1,5 +1,5 @@
-theory Expressions_Birecursor
-  imports Expressions_Sub
+theory Expressions_with_Birecursor
+  imports Expressions_with_Subst
 begin
 
 

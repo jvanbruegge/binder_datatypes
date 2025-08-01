@@ -46,6 +46,7 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     Greatest_Fixpoint
     Recursor
     Corecursor
+    Corecursor2
     VVSubst
     TVSubst
     Sugar

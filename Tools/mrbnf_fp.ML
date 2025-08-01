@@ -2936,7 +2936,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
           permute_cong = nth permute_congs i,
           permute_cong_id = nth permute_cong_ids i,
           permute_bij = nth permute_bijs i,
-          permute_inv_simp = nth permute_inv_simps i
+          permute_inv_simp = nth permute_inv_simps i,
+          permute_abs = nth permute_abss i
         }
       } : MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T end
     ) (0 upto n - 1);

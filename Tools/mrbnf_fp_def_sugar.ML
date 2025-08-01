@@ -53,6 +53,7 @@ sig
     rep_abs_sym: thm,
     abs_ctor: thm,
 
+    permute_abs: thm,
     permute_cong: thm,
     permute_cong_id: thm,
     permute_bij: thm,
@@ -193,6 +194,7 @@ type quotient_result = {
   rep_abs_sym: thm,
   abs_ctor: thm,
 
+  permute_abs: thm,
   permute_cong: thm,
   permute_cong_id: thm,
   permute_bij: thm,
@@ -201,7 +203,7 @@ type quotient_result = {
 
 fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nnoclash_noclash,
   total_abs_eq_iff, abs_rep, rep_abs, rep_abs_sym, abs_ctor, permute_cong, permute_cong_id,
-  permute_bij, permute_inv_simp, noclash_permute, fresh_cases } = {
+  permute_bij, permute_inv_simp, noclash_permute, fresh_cases, permute_abs } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
@@ -218,7 +220,8 @@ fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nno
   permute_cong = Morphism.thm phi permute_cong,
   permute_cong_id = Morphism.thm phi permute_cong_id,
   permute_bij = Morphism.thm phi permute_bij,
-  permute_inv_simp = Morphism.thm phi permute_inv_simp
+  permute_inv_simp = Morphism.thm phi permute_inv_simp,
+  permute_abs = Morphism.thm phi permute_abs
 } : quotient_result;
 
 type least_fp_thms = {
@@ -304,6 +307,7 @@ fun note_fp_result (fp_res : fp_result) lthy =
   let
     fun note_internals (quot : quotient_result fp_result_T) = [
       ("permute_ctor", [#permute_ctor quot]),
+      ("permute_abs", [#permute_abs (#inner quot)]),
       ("FVars_ctor", #FVars_ctors quot),
       ("FVars_intros", flat (#FVars_intross quot)),
       ("FVars_bd", #card_of_FVars_bounds quot),
@@ -349,11 +353,25 @@ fun note_fp_result (fp_res : fp_result) lthy =
       else [])
       @ note_always quot;
 
-    val notes = maps (fn quot => map (fn (thmN, thms) =>
+    fun note_raw (raw : raw_result fp_result_T) =
+      (if Config.get lthy MRBNF_Def.mrbnf_internals then [
+        ("alpha_FVars", #alpha_FVarss (#inner raw)),
+        ("alpha_trans", [#alpha_trans (#inner raw)]),
+        ("alpha_sym", [#alpha_sym (#inner raw)]),
+        ("permute_raw_ctor", [#permute_ctor raw]),
+        ("permute_raw_comp0s", [#permute_comp0 raw]),
+        ("permute_raw_comps", [#permute_comp raw]),
+        ("alpha_bij_eq", [#alpha_bij_eq (#inner raw)]),
+        ("alpha_refl", [#alpha_refl (#inner raw)]),
+        ("FVars_raw_permute", #FVars_permutes raw),
+        ("permute_raw_id", [#permute_id raw])
+      ] else []);
+
+    val notes = flat (map2 (fn quot => fn raw => map (fn (thmN, thms) =>
       ((Binding.qualify true (MRBNF_Util.short_type_name (fst (dest_Type (#T quot)))) (Binding.name thmN), []),
         [(thms, [])]
       )
-    ) (note_quot quot)) (#quotient_fps fp_res);
+    ) (note_quot quot @ note_raw raw)) (#quotient_fps fp_res) (#raw_fps fp_res));
 
     val (_, lthy) = Local_Theory.notes notes lthy;
   in lthy end;

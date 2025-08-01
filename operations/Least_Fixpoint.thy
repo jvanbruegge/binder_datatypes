@@ -6739,6 +6739,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
          abs_ctor = @{thm TT_abs_ctors(1)},
          permute_cong = @{thm permute_congs(1)},
          permute_cong_id = @{thm permute_cong_ids(1)},
+         permute_abs = @{thm permute_abs(1)},
          permute_bij = @{thm permute_bijs(1)},
          permute_inv_simp = @{thm permute_inv_simps(1)}
        }
@@ -6782,6 +6783,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
         permute_cong = @{thm permute_congs(2)},
         permute_cong_id = @{thm permute_cong_ids(2)},
         permute_bij = @{thm permute_bijs(2)},
+        permute_abs = @{thm permute_abs(2)},
         permute_inv_simp = @{thm permute_inv_simps(2)}
      }
    }

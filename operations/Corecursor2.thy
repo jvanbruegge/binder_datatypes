@@ -2760,8 +2760,6 @@ lemma f_swap_alpha:
      apply assumption
     apply hypsubst_thin
 
-
-  (* this is new *)
     apply (unfold0 f1_simps)
     apply (subst (asm) T1.permute_raw_ctor)
     apply assumption+
@@ -2779,18 +2777,17 @@ lemma f_swap_alpha:
     apply (rule conjI, rule refl)+
     apply (rule conjI[rotated])+
 
-  (* new, move map into relator args *)
           apply (rule T1_pre.mr_rel_map(1)[THEN iffD2, rotated -1])
                         apply (unfold id_o o_id Grp_UNIV_id eq_OO)
           apply (rule T1_pre.mr_rel_map(3)[THEN iffD2, rotated -1])
                         apply (unfold inv_id id_o o_id Grp_UNIV_id eq_OO conversep_eq)
-                        apply (erule T1_pre.mr_rel_mono_strong0[rotated -12]) (* use monotonicity to fix all variables *)
+                        apply (erule T1_pre.mr_rel_mono_strong0[rotated -12])
                         apply ((rule ballI)+, rule refl imp_refl)+
                         apply (rule ballI, rule comp_inv_aux[THEN fun_cong], assumption)+
-                      (* at this point there are no more schematic variables *)
                         defer defer defer defer (* nrec times *)
                         apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
 
+          (* REPEAT_DETERM *)
              apply (rule id_on_f_inv_f)
               apply assumption
              apply (subst T1_pre.set_map, (assumption | rule supp_id_bound bij_id)+)+
@@ -2800,7 +2797,9 @@ lemma f_swap_alpha:
              apply (unfold image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric])[1]
     apply (rule Diff_mono[OF _ subset_refl])
              apply (rule subsetI)
-             apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+             apply ((erule UnE)+)?
+          (* REPEAT_DETERM *)
+               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1 | assumption)+
      subgoal for u v d _ xa u' v' xb x
       apply (rule sumE[of x])
        apply hypsubst_thin
@@ -2808,14 +2807,15 @@ lemma f_swap_alpha:
        apply (rule subset_refl)
       apply hypsubst_thin
       apply (unfold sum.simps)
-      apply (rule f_FVarsD[OF p]) thm valid_pick_set9
+      apply (rule f_FVarsD[OF p])
       apply (drule valid_pick_set9[rotated])
          apply assumption
        apply (rule p)
       apply (unfold pred_sum_inject)
       apply assumption
        done
-
+      (* END REPEAT_DETERM *)
+      (* repeated *)
              apply (rule id_on_f_inv_f)
               apply assumption
              apply (subst T1_pre.set_map, (assumption | rule supp_id_bound bij_id)+)+
@@ -2825,12 +2825,9 @@ lemma f_swap_alpha:
              apply (unfold image_set_diff[OF bij_is_inj[OF bij_imp_bij_inv]] image_comp inv_o_simp1 image_id image_UN[symmetric] Un_Diff[symmetric])[1]
              apply (rule Diff_mono[OF _ subset_refl])
              apply (rule subsetI)
-             apply (erule UnE)+
-        (* REPEAT_DETERM *)
-               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
-     apply assumption
-    (* orelse *)
-               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1)+
+             apply ((erule UnE)+)?
+          (* REPEAT_DETERM *)
+               apply (((rule UnI2)?, erule UN_mono[THEN subsetD, OF subset_refl, rotated -1]) | rule UnI1 | assumption)+
      subgoal for u v d _ xa u' v' xb x
       apply (rule sumE[of x])
        apply hypsubst_thin
@@ -2861,15 +2858,15 @@ lemma f_swap_alpha:
        apply (unfold pred_sum_inject)
        apply assumption
        done
-
+      (* END REPEAT_DETERM *)
+      (* END REPEAT_DETERM *)
             apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
 (* REPEAT_DETERM *)
         apply (rule ballI impI)+
         apply (unfold relcompp_conversep_Grp)[1]
         apply (unfold Grp_OO)[1]
         apply (rule disjCI)
-     thm l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2']
-        apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+        apply (frule l_is_inr)
          apply (unfold comp_apply)[1]
          apply assumption
         apply (erule exE)
@@ -2898,7 +2895,7 @@ lemma f_swap_alpha:
         apply (unfold relcompp_conversep_Grp)[1]
        apply (unfold Grp_OO)[1]
        apply (rule disjCI)
-       apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+       apply (frule l_is_inr)
         apply (erule contrapos_nn)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T1, THEN iffD1, rotated])
         apply (subst comp_apply)
@@ -2935,8 +2932,7 @@ apply (erule exE)
         apply (unfold relcompp_conversep_Grp)[1]
         apply (unfold Grp_OO)[1]
         apply (rule disjCI)
-     thm l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2']
-        apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+        apply (frule l_is_inr)
          apply (unfold comp_apply)[1]
          apply assumption
         apply (erule exE)
@@ -2965,7 +2961,7 @@ apply (erule exE)
         apply (unfold relcompp_conversep_Grp)[1]
        apply (unfold Grp_OO)[1]
       apply (rule disjCI)
-       apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+       apply (frule l_is_inr)
         apply (erule contrapos_nn)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T2, THEN iffD1, rotated])
         apply (subst comp_apply)
@@ -3000,6 +2996,7 @@ apply (erule exE)
 (* END REPEAT_DETERM *)
      done
 
+  (* second type *)
   subgoal for x1 x2
     apply (erule exE conjE)+
 
@@ -3011,8 +3008,6 @@ apply (erule exE)
      apply assumption
     apply hypsubst_thin
 
-
-  (* this is new *)
     apply (unfold0 f_simps)
     apply (subst (asm) T2.permute_raw_ctor)
     apply assumption+
@@ -3030,15 +3025,13 @@ apply (erule exE)
     apply (rule conjI, rule refl)+
     apply (rule conjI[rotated])+
 
-  (* new, move map into relator args *)
           apply (rule T2_pre.mr_rel_map(1)[THEN iffD2, rotated -1])
                         apply (unfold id_o o_id Grp_UNIV_id eq_OO)
           apply (rule T2_pre.mr_rel_map(3)[THEN iffD2, rotated -1])
                         apply (unfold inv_id id_o o_id Grp_UNIV_id eq_OO conversep_eq)
-                        apply (erule T2_pre.mr_rel_mono_strong0[rotated -12]) (* use monotonicity to fix all variables *)
+                        apply (erule T2_pre.mr_rel_mono_strong0[rotated -12])
                         apply ((rule ballI)+, rule refl imp_refl)+
                         apply (rule ballI, rule comp_inv_aux[THEN fun_cong], assumption)+
-                      (* at this point there are no more schematic variables *)
                         defer defer defer defer (* nrec times *)
                         apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
 
@@ -3059,7 +3052,7 @@ apply (erule exE)
        apply (rule subset_refl)
       apply hypsubst_thin
       apply (unfold sum.simps)
-      apply (rule f_FVarsD[OF p]) thm valid_pick_set9
+      apply (rule f_FVarsD[OF p])
       apply (drule valid_pick_set9[rotated])
          apply assumption
        apply (rule p)
@@ -3119,8 +3112,7 @@ apply (erule exE)
         apply (unfold relcompp_conversep_Grp)[1]
         apply (unfold Grp_OO)[1]
         apply (rule disjCI)
-     thm l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2']
-        apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+        apply (frule l_is_inr)
          apply (unfold comp_apply)[1]
          apply assumption
         apply (erule exE)
@@ -3149,7 +3141,7 @@ apply (erule exE)
         apply (unfold relcompp_conversep_Grp)[1]
        apply (unfold Grp_OO)[1]
        apply (rule disjCI)
-       apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+       apply (frule l_is_inr)
         apply (erule contrapos_nn)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T1, THEN iffD1, rotated])
         apply (subst comp_apply)
@@ -3186,8 +3178,7 @@ apply (erule exE)
         apply (unfold relcompp_conversep_Grp)[1]
         apply (unfold Grp_OO)[1]
         apply (rule disjCI)
-     thm l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2']
-        apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+        apply (frule l_is_inr)
          apply (unfold comp_apply)[1]
          apply assumption
         apply (erule exE)
@@ -3216,7 +3207,7 @@ apply (erule exE)
         apply (unfold relcompp_conversep_Grp)[1]
        apply (unfold Grp_OO)[1]
       apply (rule disjCI)
-       apply (frule l_is_inr[of _ _ _ _ pick1 pick2 pick1' pick2'])
+       apply (frule l_is_inr)
         apply (erule contrapos_nn)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T2, THEN iffD1, rotated])
         apply (subst comp_apply)
@@ -3918,10 +3909,6 @@ thm f0_Utor f0_mapD f0_FVarsD
 (*******************)
 (* End product: *)
 
-term T1_ctor
-thm COREC1_def
-thm T1.total_abs_eq_iff
-
 theorem COREC_DDTOR1:
   assumes "X \<in> Udtor1 d" "X' \<in> Udtor2 d2" "valid_U1 d" "valid_U2 d2"
   shows "COREC1 d = T1_ctor (map_T1_pre id id id id id id id (case_sum id COREC1) (case_sum id COREC1) (case_sum id COREC2) (case_sum id COREC2) X)"
@@ -3932,7 +3919,6 @@ theorem COREC_DDTOR1:
   apply (unfold o_case_sum)
   apply (unfold id_comp comp_id)
   apply (rule T1.alpha_trans)
-  thm arg_cong[of _ _ "alpha_T1 (f0_1 d)", THEN iffD1]
    apply (rule arg_cong[of _ _ "alpha_T1 (f0_1 d)", THEN iffD1])
     prefer 2
     apply (rule f0_Utor)
@@ -4121,9 +4107,6 @@ lemma COREC_mmapD2:
   done
 
 lemmas COREC_mmapD = COREC_mmapD1 COREC_mmapD2
-
-term FVars_T1_1
-thm T1.alpha_FVars[OF T1.rep_abs]
 
 theorem COREC_FFVarsD1:
   "valid_U1 d \<Longrightarrow> FVars_T1_1 (COREC1 d) \<subseteq> UFVars11 d"

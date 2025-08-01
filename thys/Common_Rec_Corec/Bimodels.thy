@@ -26,9 +26,11 @@ and EVrs :: "E' \<Rightarrow> var set"
 assumes nom: "nom Eperm EVrs"
 *)
 
-assumes
-    ctorPermM_Ector': "\<And>u. ctorPermM Ector' Eperm u"
-and ctorVarsM_Ector': "\<And>u. ctorVarsM Ector' EVrs u"
+assumes ctor_compat_Pvalid_step_Ector': "ctor_compat_Pvalid_step Ector' base" 
+and ctorPermM_base_Ector': "\<And>u. ctorPermM_base Ector' Eperm base u"
+and ctorPermM_step_Ector': "\<And>u. ctorPermM_step Ector' Eperm base u"
+and ctorVarsM_base_Ector': "\<And>u. ctorVarsM_base Ector' EVrs base u"
+and ctorVarsM_step_Ector': "\<And>u. ctorVarsM_step Ector' EVrs base u"
 (* above just standard model properties; 
 next some more specific requirements *)
 assumes Ector_base_inj: "\<And>u1 u2::('a,'a,'a E, 'a E)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
@@ -60,6 +62,25 @@ and Ector'_uniform:
 of the items in u on p.  *) 
 begin
 
+(* In the axiomatization of bimodels I use the weaker 
+hypotheses, but the general ones are inferrable: *)
+
+lemma ctor_compat_Pvalid_Ector': "ctor_compat_Pvalid Ector'" 
+using ctor_compat_Pvalid_step_Ector' 
+unfolding ctor_compat_Pvalid_step_def ctor_compat_Pvalid_def
+by (metis (no_types, lifting) base_Gmap_eq)
+
+lemma ctorPermM_Ector': "ctorPermM Ector' Eperm u"
+using ctorPermM_base_Ector' ctorPermM_step_Ector'
+unfolding ctorPermM_def ctorPermM_base_def ctorPermM_step_def
+by (metis Gmap_cong_id base_base empty_iff)
+
+lemma ctorVarsM_Ector': "\<And>u. ctorVarsM Ector' EVrs u"
+using ctorVarsM_base_Ector' ctorVarsM_base_Ector'
+unfolding ctorVarsM_def ctorVarsM_base_def ctorVarsM_step_def 
+by (smt (verit, del_insts) Un_iff Union_iff ctorVarsM_step_Ector' 
+  ctorVarsM_step_def mem_Collect_eq subset_iff)
+
 lemma Ector_Ector'_EVrs_stepp: 
 "\<not> base u \<Longrightarrow> 
     Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
@@ -67,7 +88,6 @@ lemma Ector_Ector'_EVrs_stepp:
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
 using Ector_Ector'_EVrs_step[of u p] 
 by auto 
-
 
 lemmas Ector_Ector'_EVrs_step' =  
 triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]

@@ -282,13 +282,15 @@ lemma Pperm_cong:
   using nomP[unfolded nom_def] by force
 
 lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> countable (PVrs p \<union> inv \<sigma> ` PVrs p)"
-  by (simp add: countable_PVrs)
+  by (simp add: countable_PVrs)  
 
 definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('a P\<Rightarrow>'E') \<Rightarrow> ('a P\<Rightarrow>'E'))" where 
 "lift perm \<sigma> pe p \<equiv> perm \<sigma> (pe (Pperm (inv \<sigma>) p))"
 
+(* 
 lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm \<sigma> o (\<lambda>e p. e)"
   unfolding fun_eq_iff o_def lift_def by simp
+*)
 
 definition ctorPermM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow>'E') \<Rightarrow> 
  (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') 
@@ -299,6 +301,27 @@ definition ctorPermM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E
        perm \<sigma> (ctor u p) = 
        ctor (Gren \<sigma> \<sigma> (Gmap (lift perm \<sigma>) (lift perm \<sigma>) u)) (Pperm \<sigma> p))"
 
+definition ctorPermM_step :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow>'E') \<Rightarrow> 
+ (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+\<Rightarrow> (('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> bool)
+\<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G 
+\<Rightarrow> bool" where 
+"ctorPermM_step ctor perm base u \<equiv> 
+(\<forall>\<sigma> p. \<not> base u \<and> Pvalid p \<and> small \<sigma> \<and> bij \<sigma>  \<longrightarrow> 
+       perm \<sigma> (ctor u p) = 
+       ctor (Gren \<sigma> \<sigma> (Gmap (lift perm \<sigma>) (lift perm \<sigma>) u)) (Pperm \<sigma> p))"
+
+definition ctorPermM_base :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow>'E') \<Rightarrow> 
+ (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') 
+\<Rightarrow> (('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> bool)
+\<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G 
+\<Rightarrow> bool" where 
+"ctorPermM_base ctor perm base u \<equiv> 
+(\<forall>\<sigma> p. base u \<and> Pvalid p \<and> small \<sigma> \<and> bij \<sigma>  \<longrightarrow> 
+       perm \<sigma> (ctor u p) = 
+       ctor (Gren \<sigma> \<sigma> u) (Pperm \<sigma> p))"
+
+
 definition ctorVarsM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> ('E' \<Rightarrow> 'a set) 
 \<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
 \<Rightarrow> bool" where 
@@ -308,6 +331,48 @@ definition ctorVarsM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E
      GVrs1 u \<union> 
      (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u}) \<union> 
      (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp2 u})"
+
+definition ctorVarsM_step :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> ('E' \<Rightarrow> 'a set) 
+\<Rightarrow> (('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> bool)
+\<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
+\<Rightarrow> bool" where 
+"ctorVarsM_step ctor Vrs base u \<equiv> 
+\<forall>p. \<not> base u \<and> Pvalid p \<longrightarrow> 
+    Vrs (ctor u p) \<subseteq> PVrs p \<union> 
+     GVrs1 u \<union> 
+     (\<Union> {Vrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u}) \<union> 
+     (\<Union> {Vrs (pe p) | pe . pe \<in> GSupp2 u})"
+
+definition ctorVarsM_base :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> ('E' \<Rightarrow> 'a set) 
+\<Rightarrow> (('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> bool)
+\<Rightarrow> ('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G
+\<Rightarrow> bool" where 
+"ctorVarsM_base ctor Vrs base u \<equiv> 
+\<forall>p. base u \<and> Pvalid p \<longrightarrow> 
+    Vrs (ctor u p) \<subseteq> PVrs p \<union> GVrs1 u"
+
+
+definition ctor_compat_Pvalid :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> bool"
+where 
+"ctor_compat_Pvalid ctor \<equiv> 
+ \<forall> (u::('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G) f1 f2 g1 g2. 
+   (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<and>  
+   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p)  
+   \<longrightarrow>
+   ctor (Gmap f1 f2 u) = ctor (Gmap g1 g2 u)"
+
+(* The version relativized to (the negation of) a base predicate: *)
+definition ctor_compat_Pvalid_step :: 
+"(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> 
+ (('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> bool) \<Rightarrow> bool"
+where 
+"ctor_compat_Pvalid_step ctor base \<equiv> 
+ \<forall> (u::('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G) f1 f2 g1 g2. 
+   \<not> base u \<and> 
+   (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<and>  
+   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p)  
+   \<longrightarrow>
+   ctor (Gmap f1 f2 u) = ctor (Gmap g1 g2 u)"
 
 
 

@@ -229,6 +229,54 @@ definition "Umap_Ector Uctor \<equiv> \<forall>f y p.
             y))
           (Pmap f p)"
 
+
+lemma Umap_Ector_def2: "Umap_Ector Uctor \<longleftrightarrow> (\<forall>f y p.
+   validP p \<and>
+   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {} 
+   \<longrightarrow>
+   Umap f (Ector (Gmap fst fst y)) (Uctor y p) =
+   Uctor (Gren f f (Gmap
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            y))
+          (Pmap f p))"
+proof-
+  {fix f :: "'a \<Rightarrow> 'a" 
+   and y :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) G" 
+   and p :: 'p
+   assume 0: "validP p \<and>
+   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {}"
+   have 
+   "Gmap (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+            y =  
+    Gmap (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            y"
+    apply(rule Gmap_cong) using 0 
+    unfolding pred_G_def apply auto apply (auto simp: fun_eq_iff)  sorry
+   }
+   thus ?thesis 
+   unfolding Umap_Ector_def apply fastsforce
+
+
+
 definition "UFVars_EFVars Uctor \<equiv> \<forall>y p. 
   validP p \<and> 
   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 

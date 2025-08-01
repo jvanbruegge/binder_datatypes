@@ -132,14 +132,59 @@ context Expression_with_Birecursor
 begin 
 *)
 
+context 
+fixes Pvalid :: "'p \<Rightarrow> bool" 
+and Pperm :: "('a::var_E_pre \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p" 
+and PVrs :: "'p \<Rightarrow> 'a set" and 
+Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
+assumes bimodel: "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
+begin 
+
+
+definition EEctor' :: "('a,'a,'p\<Rightarrow>'a E,'p\<Rightarrow>'a E) G \<Rightarrow> 'p\<Rightarrow>'a E" where 
+"EEctor' u \<equiv> if base u then Ector' u else Ector' u"
+
+lemma EEctor'_base[simp]: "base u \<Longrightarrow> EEctor' u = Ector' u"
+unfolding EEctor'_def by auto
+
+lemma EEctor'_step[simp]: "\<not> base u \<Longrightarrow> EEctor' u = Ector' u"
+unfolding EEctor'_def by auto
+
+(*
+lemma ctorPermM: "ctorPermM EEctor' Eperm u"
+unfolding ctorPermM_def apply safe
+  subgoal for \<sigma> apply(cases "base u")
+    subgoal unfolding EEctor'_base  
+    apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
+      subgoal by auto
+      subgoal apply(subst EEctor'_base )
+        subgoal using base_Gmap base_Gren by fastforce
+        subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . .
+    subgoal unfolding EEctor'_step  
+    apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
+      subgoal using base_Gmap by auto
+      subgoal apply(subst EEctor'_step)
+        subgoal using base_Gmap base_Gren by fastforce
+        subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . . . .
+
+lemma ctorVarsM: "ctorVarsM EEctor' EVrs u"
+unfolding ctorVarsM_def  
+  apply(cases "base u")
+    subgoal unfolding EEctor'_base  apply(intro allI impI)  
+    apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]])
+    by auto 
+    subgoal unfolding EEctor'_step apply(intro allI impI) 
+    apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]]) 
+    using base_Gmap by auto .
+*)
+
 theorem Bimodel_recE: 
-assumes "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
-shows "rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 
-   (Ector' o Gmap snd snd) (\<lambda>_ . True)"
+"rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 
+   (EEctor' o Gmap snd snd) (\<lambda>_ . True)"
 unfolding rec_E_def proof safe
   show "P_axioms Pperm PVrs Pvalid {}"
   unfolding P_axioms_def
-  using assms unfolding Bimodel_def
+  using bimodel unfolding Bimodel_def
   NominalRel_def apply safe
     subgoal unfolding Pmap_comp_def by auto
     subgoal unfolding Pmap_id_def by auto
@@ -149,9 +194,14 @@ unfolding rec_E_def proof safe
     subgoal unfolding avset_small_def by auto .
 next
   show "U_axioms Pperm PVrs Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>e'. EVrs) (\<lambda>_. True)
-     (Ector' \<circ> Gmap snd snd)"
-  sorry
+     (EEctor' \<circ> Gmap snd snd)"
+  unfolding U_axioms_def apply safe
+    subgoal by (simp add: E.permute_comp0 Umap_comp_def)
+    subgoal by (simp add: E.permute_cong_id Umap_cong_def)
+    subgoal unfolding Umap_Ector_def 
 qed
+
+end (* context *)
 
 interpretation Expression_with_Birecursor Eperm EVrs Gbd Ector
 proof (standard, safe)

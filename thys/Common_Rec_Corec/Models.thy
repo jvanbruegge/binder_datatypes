@@ -8,7 +8,8 @@ locale Model =
 fixes Ector' :: "('a, 'a, 'a::var P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow> 'E'" 
 and Eperm' :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E'" 
 and EVrs' ::"'E' \<Rightarrow> 'a::var set" 
-assumes nom: "nom (\<lambda>e. True) Eperm' EVrs'"
+assumes ctor_compat_Pvalid: "ctor_compat_Pvalid Ector'" 
+and nom: "nom (\<lambda>e. True) Eperm' EVrs'"
 and ctorPermM: "\<And>u. ctorPermM Ector' Eperm' u"
 and ctorVarsM: "\<And>u. ctorVarsM Ector' EVrs' u"
 begin 

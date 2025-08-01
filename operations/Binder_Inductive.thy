@@ -61,7 +61,6 @@ lemma G_equiv:
   using assms apply -
   unfolding G_def
   apply (elim disj_forward) apply (auto simp: term.permute_comp rrename_tvsubst_comp)
-  sledgehammer
   by (metis inv_simp1 term.permute_bij term.permute_inv_simp)
 
 abbreviation "supp_T x1 x2 \<equiv> FFVars x1 \<union> FFVars x2"

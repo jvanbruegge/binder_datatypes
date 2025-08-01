@@ -911,7 +911,7 @@ lemma raw_refreshs:
           "A \<union> set2_term_pre x \<union> ((\<Union>(FVars_raw_term ` set3_term_pre x)) - set2_term_pre x)"
           "(\<Union>(FVars_raw_term ` set3_term_pre x)) - set2_term_pre x"
           ]])
-       apply (rule var_class.Un_bound term_pre.set_bd_UNIV assms ordLeq_ordLess_trans[OF card_of_diff]
+       apply (rule infinite_class.Un_bound term_pre.set_bd_UNIV assms ordLeq_ordLess_trans[OF card_of_diff]
       term_pre.set_bd[THEN ordLess_ordLeq_trans] var_class.UN_bound var_class.large' FVars_raw_bd_UNIVs infinite_UNIV
       )+
     apply (rule Un_upper2)

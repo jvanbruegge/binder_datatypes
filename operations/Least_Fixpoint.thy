@@ -4335,10 +4335,10 @@ lemma raw_refreshs:
     "\<exists>y. set5_T2_pre y \<inter> A = {} \<and> set6_T2_pre y \<inter> B = {} \<and> alpha_T2 (raw_T2_ctor x2) (raw_T2_ctor y)"
    apply (rule exE[OF eextend_fresh[of "set5_T1_pre x" "A \<union> ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x))" "(set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x)"]])
         apply (rule T1_pre.set_bd_UNIV)
-       apply (rule var_class.Un_bound)
+       apply (rule infinite_class.Un_bound)
         apply (rule assms)
     (* REPEAT_DETERM *)
-       apply (rule var_class.Un_bound)+
+       apply (rule infinite_class.Un_bound)+
         apply (rule ordLeq_ordLess_trans[OF card_of_diff])
         apply (rule var_class.UN_bound)?
          apply (rule ordLess_ordLeq_trans)
@@ -4370,10 +4370,10 @@ lemma raw_refreshs:
     (* repeated *)
    apply (rule exE[OF eextend_fresh[of "set6_T1_pre x" "B \<union> (\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x)" "(\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x)"]])
         apply (rule T1_pre.set_bd_UNIV)
-       apply (rule var_class.Un_bound)
+       apply (rule infinite_class.Un_bound)
         apply (rule assms)
     (* REPEAT_DETERM *)
-       apply (rule var_class.Un_bound)?
+       apply (rule infinite_class.Un_bound)?
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
        apply (rule var_class.UN_bound)
         apply (rule ordLess_ordLeq_trans)
@@ -4415,9 +4415,9 @@ lemma raw_refreshs:
 (* second goal, same tactic *)
   apply (rule exE[OF eextend_fresh[of "set5_T2_pre x2" "A \<union> ((set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T21 ` set11_T2_pre x2) - set5_T2_pre x2))" "(set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T21 ` set11_T2_pre x2) - set5_T2_pre x2)"]])
        apply (rule T2_pre.set_bd_UNIV)
-      apply (rule var_class.Un_bound)
+      apply (rule infinite_class.Un_bound)
        apply (rule assms)
-      apply (rule var_class.Un_bound)+
+      apply (rule infinite_class.Un_bound)+
     (* REPEAT_DETERM *)
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
        apply (rule var_class.UN_bound)?
@@ -4448,10 +4448,10 @@ lemma raw_refreshs:
     (* repeated *)
   apply (rule exE[OF eextend_fresh[of "set6_T2_pre x2" "B \<union> (\<Union>(FVars_raw_T12 ` set9_T2_pre x2) - set6_T2_pre x2)" "(\<Union>(FVars_raw_T12 ` set9_T2_pre x2) - set6_T2_pre x2)"]])
        apply (rule T2_pre.set_bd_UNIV)
-      apply (rule var_class.Un_bound)
+      apply (rule infinite_class.Un_bound)
        apply (rule assms)
     (* REPEAT_DETERM *)
-      apply (rule var_class.Un_bound)?
+      apply (rule infinite_class.Un_bound)?
       apply (rule ordLeq_ordLess_trans[OF card_of_diff])
       apply (rule var_class.UN_bound)
        apply (rule ordLess_ordLeq_trans)

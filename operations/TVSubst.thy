@@ -2479,7 +2479,7 @@ proof -
     subgoal for t1 t2
       apply (rule fresh_induct[of "IImsupp11_1 g11 \<union> IImsupp12_1 g12 \<union> IImsupp21_1 g21" "IImsupp11_2 g11 \<union> IImsupp12_2 g12 \<union> IImsupp21_2 g21" _ _ t1 t2])
          apply (unfold IImsupp_defs comp_def)[2]
-         apply (rule var_class.Un_bound var_class.UN_bound infinite_UNIV g_prems[THEN ordLess_ordLeq_trans]
+         apply (rule infinite_class.Un_bound var_class.UN_bound infinite_UNIV g_prems[THEN ordLess_ordLeq_trans]
           FVars_bd_UNIVs cmin1 cmin2 card_of_Card_order)+
       subgoal premises IHs for v
         (* EVERY for VVrs of T1 *)

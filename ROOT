@@ -1,9 +1,8 @@
 chapter Binders
 
-session Isabelle_Prelim = "HOL-Cardinals" +
+session Prelim in "thys/Prelim" = "HOL-Cardinals" +
   sessions
     "HOL-Library"
-    "HOL-Computational_Algebra"
   theories [document = false]
     "HOL-Library.Old_Datatype"
     "HOL-Library.Nat_Bijection"
@@ -11,21 +10,10 @@ session Isabelle_Prelim = "HOL-Cardinals" +
     "HOL-Library.Infinite_Set"
     "HOL-Library.Countable_Set"
     "HOL-Library.Countable_Set_Type"
-    "HOL-Library.Stream"
-    "HOL-Library.FSet"
-    "HOL-Library.Multiset"
-    "HOL-Computational_Algebra.Primes"
-
-session Prelim in "thys/Prelim" = Isabelle_Prelim +
+    "HOL-Library.Infinite_Typeclass"
   theories
     Prelim
     Card_Prelim
-    More_List
-    More_Stream
-    Curry_LFP
-    FixedCountableVars
-    FixedUncountableVars
-    Swapping_vs_Permutation
 
 session Binders in "thys" = Prelim +
   directories
@@ -34,9 +22,6 @@ session Binders in "thys" = Prelim +
     MRBNF_Composition
     MRBNF_FP
     MRBNF_Recursor
-    Generic_Barendregt_Enhanced_Rule_Induction
-    General_Customization
-    Urban_Berghofer_Norrish_Rule_Induction
 
 session Operations in "operations" = Untyped_Lambda_Calculus +
   theories
@@ -51,7 +36,7 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     TVSubst
     Sugar
 
-session Tests in "tests" = Binders +
+session Tests in "tests" = Case_Studies +
   sessions
     System_Fsub
     Operations
@@ -63,16 +48,33 @@ session Tests in "tests" = Binders +
     Fixpoint_Tests
     Binder_Datatype_Tests
 
-session Untyped_Lambda_Calculus in "thys/Untyped_Lambda_Calculus" = Binders +
+session Case_Studies in "case_studies" = Binders +
+  sessions
+    "HOL-Library"
+    "HOL-Computational_Algebra"
+  theories [document = false]
+    "HOL-Library.Stream"
+    "HOL-Library.FSet"
+    "HOL-Library.Multiset"
+    "HOL-Computational_Algebra.Primes"
+  theories
+    FixedCountableVars
+    FixedUncountableVars
+    Swapping_vs_Permutation
+    General_Customization
+    Generic_Barendregt_Enhanced_Rule_Induction
+    More_List
+    More_Stream
+
+session Untyped_Lambda_Calculus in "case_studies/Untyped_Lambda_Calculus" = Case_Studies +
   theories
     LC
     LC_Beta
     LC_Beta_depth
     LC_Head_Reduction
     LC_Parallel_Beta
-    LC_Primal
 
-session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untyped_Lambda_Calculus +
+session Infinitary_Lambda_Calculus in "case_studies/Infinitary_Lambda_Calculus" = Untyped_Lambda_Calculus +
   theories
     ILC
     ILC2
@@ -92,11 +94,11 @@ session Infinitary_Lambda_Calculus in "thys/Infinitary_Lambda_Calculus" = Untype
     Translation_ILC_to_LC
     Iso_LC_ILC
 
-session Infinitary_FOL in "thys/Infinitary_FOL" = Binders +
+session Infinitary_FOL in "case_studies/Infinitary_FOL" = Case_Studies +
   theories
     InfFOL
 
-session Process_Calculus in "thys/Pi_Calculus" = Binders +
+session Process_Calculus in "case_studies/Pi_Calculus" = Case_Studies +
   theories
     Pi
 	  Commitment
@@ -105,7 +107,7 @@ session Process_Calculus in "thys/Pi_Calculus" = Binders +
     Pi_Transition_Late
     Pi_cong
 
-session System_Fsub in "thys/POPLmark" = Binders +
+session System_Fsub in "case_studies/POPLmark" = Case_Studies +
   theories
     SystemFSub
     Labeled_FSet

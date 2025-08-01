@@ -287,10 +287,8 @@ lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrighta
 definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('a P\<Rightarrow>'E') \<Rightarrow> ('a P\<Rightarrow>'E'))" where 
 "lift perm \<sigma> pe p \<equiv> perm \<sigma> (pe (Pperm (inv \<sigma>) p))"
 
-(* 
 lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm \<sigma> o (\<lambda>e p. e)"
   unfolding fun_eq_iff o_def lift_def by simp
-*)
 
 definition ctorPermM :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P \<Rightarrow>'E') \<Rightarrow> 
  (('a \<Rightarrow> 'a) \<Rightarrow> 'E' \<Rightarrow> 'E') 
@@ -349,7 +347,9 @@ definition ctorVarsM_base :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarr
 \<Rightarrow> bool" where 
 "ctorVarsM_base ctor Vrs base u \<equiv> 
 \<forall>p. base u \<and> Pvalid p \<longrightarrow> 
-    Vrs (ctor u p) \<subseteq> PVrs p \<union> GVrs1 u"
+    Vrs (ctor u p) \<subseteq> PVrs p \<union> 
+     GVrs1 u"
+
 
 
 definition ctor_compat_Pvalid :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> bool"

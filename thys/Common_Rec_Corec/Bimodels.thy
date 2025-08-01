@@ -63,7 +63,7 @@ of the items in u on p.  *)
 begin
 
 (* In the axiomatization of bimodels I use the weaker 
-hypotheses, but the general ones are inferrable: *)
+hypotheses, but the general ones are inferable: *)
 
 lemma ctor_compat_Pvalid_Ector': "ctor_compat_Pvalid Ector'" 
 using ctor_compat_Pvalid_step_Ector' 
@@ -88,6 +88,7 @@ lemma Ector_Ector'_EVrs_stepp:
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
 using Ector_Ector'_EVrs_step[of u p] 
 by auto 
+
 
 lemmas Ector_Ector'_EVrs_step' =  
 triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]

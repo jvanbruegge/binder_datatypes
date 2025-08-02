@@ -154,79 +154,59 @@ thm Ector'_uniform
 
 (* *)
 
-thm Expression.lift_def 
-
-lemma Umap_Ector_def2: "Umap_Ector Pperm Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>_. True) (EEctor' \<circ> Gmap snd snd) 
-  \<longleftrightarrow> (\<forall>f y p.
-   validP p \<and>
-   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
-   bij f \<and> |supp f| <o |UNIV:: 'a set|  
-   \<longrightarrow>
-   Umap f (Ector (Gmap fst fst y)) (Uctor y p) =
-   Uctor (Gren f f (Gmap
-            (\<lambda>(t, pu).
-                (Eperm f t,
-                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
-            (\<lambda>(t, pu).
-                (Eperm f t,
-                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
-            y))
-          (Pmap f p))"
-proof-
-  {fix f :: "'a \<Rightarrow> 'a" 
-   and y :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) G" 
-   and p :: 'p
-   assume 0: "validP p \<and>
-   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
-   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
-   imsupp f \<inter> avoiding_set = {}"
-   have 
-   "Gmap (\<lambda>(t, pu).
-                (Eperm f t,
-                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
-            (\<lambda>(t, pu).
-                (Eperm f t,
-                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
-            y =  
-    Gmap (\<lambda>(t, pu).
-                (Eperm f t,
-                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
-            (\<lambda>(t, pu).
-                (Eperm f t,
-                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
-            y"
-    apply(rule Gmap_cong) using 0 
-    unfolding pred_G_def apply auto apply (auto simp: fun_eq_iff)  sorry
-   }
-   thus ?thesis 
-   unfolding Umap_Ector_def apply fastsforce
 
 
 
 (* *)
 
+lemma snd_pair_comp: "snd \<circ> (\<lambda>(e, pu). (h e, f2 pu)) = (f2 o snd)"
+unfolding fun_eq_iff by auto
+
 theorem Bimodel_recE: 
-"rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 
-   (EEctor' o Gmap snd snd) (\<lambda>_ . True)"
+"rec_E Pperm PVrs Pvalid {} Eperm EVrs
+   (Ector' o Gmap snd snd) (\<lambda>_ . True)"
 unfolding rec_E_def proof safe
-  show "P_axioms Pperm PVrs Pvalid {}"
+
+  show 00: "P_axioms Pperm PVrs Pvalid {}"
   unfolding P_axioms_def
-  using bimodel unfolding Bimodel_def
-  NominalRel_def apply safe
+  using bimodel unfolding Bimodel_def NominalRel_def apply safe
     subgoal unfolding Pmap_comp_def by auto
     subgoal unfolding Pmap_id_def by auto
     subgoal unfolding PFVars_Pmap_def by auto
     subgoal unfolding PFVars_small_def by auto
     subgoal unfolding Pmap_validP_def by auto
     subgoal unfolding avset_small_def by auto .
-next
-  show "U_axioms Pperm PVrs Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>e'. EVrs) (\<lambda>_. True)
-     (EEctor' \<circ> Gmap snd snd)"
+
+  have 11: "Uctor_compat_validP Pvalid (Ector' \<circ> Gmap snd snd)"
+  unfolding Uctor_compat_validP_def apply (auto simp: Gmap_comp snd_pair_comp) 
+    unfolding Gmap_comp[symmetric]
+    apply(rule Ector'_compat_Pvalid)
+    by (auto simp: GSupp1_Gmap GSupp2_Gmap)
+
+  show "U_axioms Pperm PVrs Pvalid {} Eperm EVrs (\<lambda>_. True)
+     (Ector' \<circ> Gmap snd snd)"
   unfolding U_axioms_def apply safe
+    subgoal using 11 .
     subgoal by (simp add: E.permute_comp0 Umap_comp_def)
     subgoal by (simp add: E.permute_cong_id Umap_cong_def)
-    subgoal unfolding Umap_Ector_def 
+    subgoal unfolding  Umap_Ector_def2[OF 11 00] apply auto 
+    apply(subst Gmap_Gren'[symmetric])
+      subgoal .  
+      subgoal for f y p unfolding Gmap_comp unfolding snd_pair_comp
+      unfolding Gmap_comp[symmetric]  
+      apply(subst ctorPermM_Ector') by auto .
+    subgoal unfolding UFVars_EFVars_def o_def apply(intro impI allI)
+    apply(rule subset_trans[OF ctorVarsM_Ector'])  
+      subgoal by simp
+      subgoal for y p unfolding EVrs_Ector 
+      by (fastforce simp: GVrs1_Gmap GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap) .
+    subgoal unfolding validU_Umap_def by simp
+    subgoal unfolding validU_Uctor_def by simp .
 qed
+
+(* NB: The above proof, which is essentially a proof that 
+a bimodel is a model, has some complexity solely because 
+the recursor is super-parameterized, it is a full recursor etc. *)
 
 end (* context *)
 
@@ -237,7 +217,7 @@ proof (standard, safe)
   and PVrs :: "'p \<Rightarrow> 'a set"
   and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
   assume b: "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
-  interpret rec: rec_E Pperm PVrs Pvalid "{}" "\<lambda>\<sigma> e' e. Eperm \<sigma> e" "\<lambda>e' e. EVrs e"
+  interpret rec: rec_E Pperm PVrs Pvalid "{}" Eperm EVrs
    "Ector' o Gmap snd snd" "\<lambda>_ . True"
   using Bimodel_recE[OF b] .
   term rec.recE

@@ -111,7 +111,7 @@ lemma Ector_Ector'_EVrs_stepp:
     Pvalid p \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
-using Ector_Ector'_EVrs_step[of p u] 
+using Ector_Ector'_EVrs[of p u] 
 by auto 
 
 lemmas Ector_Ector'_EVrs_step' =  

@@ -155,6 +155,9 @@ lemmas Gsub_id = G.Sb_Inj
 lemmas Gsub_comp = G.Sb_comp
 lemmas Gsub_comp' = Gsub_comp[symmetric, unfolded fun_eq_iff, 
 rule_format, simplified]
+lemmas Gmap_Gsub = G.Map_Sb
+lemmas Gmap_Gsub' = Gmap_Gsub[symmetric, unfolded fun_eq_iff, 
+rule_format, simplified]
 
 lemmas Gsub_cong_id = Gsub_cong[of _ _ id id, 
 unfolded Gsub_id, 
@@ -165,5 +168,7 @@ lemmas Gren_cong_id = Gsub_cong_id[unfolded Gren_def[symmetric]]
 lemmas Gren_comp = Gsub_comp[unfolded Gren_def[symmetric]]
 lemmas Gren_comp' = Gsub_comp'[unfolded Gren_def[symmetric]]
 lemmas Gren_id = Gsub_id[unfolded Gren_def[symmetric]]
+lemmas Gmap_Gren = Gmap_Gsub[unfolded Gren_def[symmetric]]
+lemmas Gmap_Gren' = Gmap_Gsub'[unfolded Gren_def[symmetric]]
 
 end 

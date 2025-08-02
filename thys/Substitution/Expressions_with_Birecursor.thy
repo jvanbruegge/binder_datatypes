@@ -30,17 +30,10 @@ apply-
 lemma base_Gmap_eq: "base u \<Longrightarrow> Gmap f1 f2 u = Gmap g1 g2 u"
 by (metis G.Map_cong base_GSupp empty_iff)
 
-context Expression 
-begin
-
-definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p) \<Rightarrow>  
+definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e) \<Rightarrow> 
+ (('a::var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p) \<Rightarrow>  
 (('a \<Rightarrow> 'a) \<Rightarrow> ('p\<Rightarrow>'e) \<Rightarrow> ('p\<Rightarrow>'e))" where 
-"lift Pperm \<sigma> pe p \<equiv> Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))"
-
-
-end 
-
-
+"lift Eperm Pperm \<sigma> pe p \<equiv> Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))"
 
 locale Bimodel = 
   (* nominal-style binding-recursor assumptions, 
@@ -56,7 +49,7 @@ locale Bimodel =
    Ector' (Gmap f1 f2 u) p = Ector' (Gmap g1 g2 u) p"
   and Eperm_Ector': "\<And>\<sigma> p. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow> 
     Eperm \<sigma> (Ector' u p) = 
-    Ector' (Gren \<sigma> \<sigma> (Gmap (lift Pperm \<sigma>) (lift Pperm \<sigma>) u)) (Pperm \<sigma> p)"
+    Ector' (Gren \<sigma> \<sigma> (Gmap (lift Eperm Pperm \<sigma>) (lift Eperm Pperm \<sigma>) u)) (Pperm \<sigma> p)"
   (* NB: The following is part of the usual binding-aware model 
     repertoire, just that its *formulation* of 
     this takes advanatage of the fact that the domain is 

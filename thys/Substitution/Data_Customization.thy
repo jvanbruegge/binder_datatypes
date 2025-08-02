@@ -95,8 +95,8 @@ fixes Pmap :: "('a::var_E_pre \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> '
 and PFVars :: "'p \<Rightarrow> 'a set"
 and validP :: "'p \<Rightarrow> bool"
 and avoiding_set :: "'a set"
-and Umap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'u \<Rightarrow> 'u"
-and UFVars :: "'a E \<Rightarrow> 'u \<Rightarrow> 'a set"
+and Umap :: "('a \<Rightarrow> 'a) \<comment> \<open>\<Rightarrow> 'a E \<close> \<Rightarrow> 'u \<Rightarrow> 'u"
+and UFVars :: "\<comment> \<open> 'a E \<Rightarrow> \<close> 'u \<Rightarrow> 'a set"
 and validU :: "'u \<Rightarrow> bool"
 begin 
 
@@ -134,16 +134,17 @@ definition "P_axioms \<equiv> Pmap_comp \<and> Pmap_id \<and> PFVars_Pmap \<and>
 lemmas P_defs = Pmap_comp_def Pmap_id_def PFVars_Pmap_def 
   PFVars_small_def Pmap_validP_def avset_small_def
 
-definition "Umap_comp \<equiv> \<forall>d f g t.
+
+definition "Umap_comp \<equiv> \<forall>d f g.
   validU d \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<and>
   bij g \<and> |supp g| <o |UNIV::'a set| 
   \<longrightarrow> 
-  Umap (f \<circ> g) t d = (Umap f t \<circ> Umap g t) d"
+  Umap (f \<circ> g) d = (Umap f \<circ> Umap g) d"
 
-definition "Umap_cong \<equiv> \<forall>d t f.
+definition "Umap_cong \<equiv> \<forall>d f.
   validU d \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<and>  
-  (\<forall>a. a \<in> UFVars t d \<longrightarrow> f a = a) \<longrightarrow> 
-  Umap f t d = d"
+  (\<forall>a. a \<in> UFVars d \<longrightarrow> f a = a) \<longrightarrow> 
+  Umap f d = d"
 
 definition "Umap_Ector_E_pre \<equiv> \<forall>f y p.
    validP p \<and>
@@ -151,14 +152,14 @@ definition "Umap_Ector_E_pre \<equiv> \<forall>f y p.
    bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
    imsupp f \<inter> avoiding_set = {} 
    \<longrightarrow>
-   Umap f (E_ctor (map_E_pre id id fst fst y)) (Uctor_E_pre y p) =
+   Umap f (Uctor_E_pre y p) =
    Uctor_E_pre (map_E_pre f f
             (\<lambda>(t, pu).
                 (Eperm f t,
-                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+                 \<lambda>p. if validP p then Umap f (pu (Pmap (inv f) p)) else undefined))
             (\<lambda>(t, pu).
                 (Eperm f t,
-                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+                 \<lambda>p. if validP p then Umap f (pu (Pmap (inv f) p)) else undefined))
             y)
           (Pmap f p)"
 
@@ -166,15 +167,16 @@ definition "UFVars_EFVars_E_pre \<equiv> \<forall>y p.
   validP p \<and> 
   pred_E_pre (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
   set2_E_pre y \<inter> (PFVars p \<union> avoiding_set) = {} \<and> 
-  (\<forall>t pu p. validP p \<and>
+  (\<forall>pu p t. validP p \<and>
             (t, pu) \<in> set3_E_pre y \<union> set4_E_pre y \<longrightarrow> 
-            UFVars t (pu p) \<subseteq> EVrs t \<union> PFVars p \<union> avoiding_set) 
+            UFVars (pu p) \<subseteq> EVrs t \<union> PFVars p \<union> avoiding_set) 
   \<longrightarrow>
-  UFVars (E_ctor (map_E_pre id id fst fst y)) (Uctor_E_pre y p)
+  UFVars (Uctor_E_pre y p)
   \<subseteq> EVrs (E_ctor (map_E_pre id id fst fst y)) \<union> PFVars p \<union> avoiding_set"
 
-definition "validU_Umap \<equiv> \<forall>f t u. 
-  validU u \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<longrightarrow> validU (Umap f t u)"
+
+definition "validU_Umap \<equiv> \<forall>f u. 
+  validU u \<and> bij f \<and> |supp f| <o |UNIV::'a set| \<longrightarrow> validU (Umap f u)"
 
 definition "validU_Uctor_E_pre \<equiv> \<forall>y p. 
   validP p \<and> 
@@ -190,15 +192,17 @@ lemmas U_E_pre_defs = Umap_comp_def Umap_cong_def
   Umap_Ector_E_pre_def UFVars_EFVars_E_pre_def 
   validU_Umap_def validU_Uctor_E_pre_def
 
+term REC_E
+
 lemma REC_E_def2: 
-"REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor_E_pre validU \<longleftrightarrow> 
+"REC_E Pmap PFVars validP avoiding_set (\<lambda>f e. Umap f) (\<lambda>_. UFVars) Uctor_E_pre validU \<longleftrightarrow> 
  P_axioms \<and> U_axioms_E_pre"
 unfolding REC_E_def P_axioms_def U_axioms_E_pre_def P_defs U_E_pre_defs apply clarsimp
 apply(rule iffI)
   subgoal apply (intro conjI) 
     subgoal by auto subgoal by auto subgoal by auto subgoal by auto
     subgoal by auto subgoal by auto subgoal by auto subgoal by auto 
-    subgoal by auto  subgoal by auto  subgoal by auto subgoal by auto .
+    subgoal by auto  subgoal by auto subgoal by auto subgoal by auto .
   subgoal apply (intro conjI) 
     subgoal by auto subgoal by auto subgoal by auto subgoal by auto
     subgoal by auto subgoal by auto subgoal by auto subgoal by auto 
@@ -212,22 +216,100 @@ end (* inner context that fixed Uctor_E_pre *)
 (* Shifting from E_pre to G (filling low-to-high level gap 
 in the current binder_datatype implementation): *)
 
+(*
+definition "Uctor_compat_validP Uctor \<equiv> 
+ \<forall> x::('a, 'a, 'a E \<times> ('p\<Rightarrow>'u), 'a E \<times> ('p\<Rightarrow>'u)) G.  
+ \<forall> f1 f2 g1 g2 :: ('a E \<times> ('p\<Rightarrow>'u)) \<Rightarrow> ('a E \<times> ('p\<Rightarrow>'u)). \<forall> p. 
+   (\<forall>e_pe \<in> GSupp1 x. fst (f1 e_pe) = fst (g1 e_pe) \<and> 
+                      (\<forall>p. validP p \<longrightarrow> snd (f1 e_pe) p = snd (g1 e_pe) p)) \<and> 
+   (\<forall>e_pe \<in> GSupp2 x. fst (f2 e_pe) = fst (g2 e_pe) \<and> 
+                      (\<forall>p. validP p \<longrightarrow> snd (f2 e_pe) p = snd (g2 e_pe) p)) \<and> 
+   validP p 
+   \<longrightarrow>
+   Uctor (Gmap f1 f2 x) p = Uctor (Gmap g1 g2 x) p"
+*)
+
+
+definition "Uctor_compat_validP Uctor \<equiv> 
+ \<forall> x::('a, 'a, 'a E \<times> ('p\<Rightarrow>'u), 'a E \<times> ('p\<Rightarrow>'u)) G. 
+ \<forall> h :: 'a E \<Rightarrow> 'a E.  
+ \<forall> f1 f2 g1 g2 :: ('p\<Rightarrow>'u) \<Rightarrow> ('p\<Rightarrow>'u). \<forall> p::'p. 
+   (\<forall>(e,pu) \<in> GSupp1 x. \<forall>p. validP p \<longrightarrow> f1 pu p = g1 pu p) \<and> 
+   (\<forall>(e,pu) \<in> GSupp2 x. \<forall>p. validP p \<longrightarrow> f2 pu p = g2 pu p) \<and> 
+   validP p 
+   \<longrightarrow>
+   Uctor (Gmap (\<lambda>(e, pu). (h e, f1 pu)) (\<lambda>(e, pu). (h e, f2 pu)) x) p = 
+   Uctor (Gmap (\<lambda>(e, pu). (h e, g1 pu)) (\<lambda>(e, pu). (h e, g2 pu)) x) p"
+
+
 definition "Umap_Ector Uctor \<equiv> \<forall>f y p.
    validP p \<and>
    pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
    bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
    imsupp f \<inter> avoiding_set = {} 
    \<longrightarrow>
-   Umap f (Ector (Gmap fst fst y)) (Uctor y p) =
+   Umap f (Uctor y p) =
    Uctor (Gren f f (Gmap
             (\<lambda>(t, pu).
                 (Eperm f t,
-                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+                 \<lambda>p. if validP p then Umap f (pu (Pmap (inv f) p)) else undefined))
             (\<lambda>(t, pu).
                 (Eperm f t,
-                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+                 \<lambda>p. if validP p then Umap f (pu (Pmap (inv f) p)) else undefined))
             y))
           (Pmap f p)"
+
+thm lift_def[of "Umap" Pmap f pu]
+
+(* In the presence of compatibility, can get rid of the undefined... *)
+lemma Umap_Ector_def2: 
+assumes 1: "Uctor_compat_validP Uctor"
+and 2: "P_axioms"
+shows "Umap_Ector Uctor \<longleftrightarrow> (\<forall>f y p.
+   validP p \<and>
+   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {} 
+   \<longrightarrow>
+   Umap f (Uctor y p) =
+   Uctor (Gren f f (Gmap
+            (\<lambda>(t, pu).
+                (Eperm f t, 
+                 lift Umap Pmap f pu))
+            (\<lambda>(t, pu). 
+                (Eperm f t,
+                 lift Umap Pmap f pu))
+            y)) 
+          (Pmap f p))"
+proof-
+  {fix f::"'a\<Rightarrow>'a" and  y :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) G" and p::'p
+   assume 0: "validP p \<and>
+   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {}"
+   have 
+   "Uctor (Gren f f
+           (Gmap (\<lambda>(t, pu). (Eperm f t, \<lambda>p. if validP p then Umap f (pu (Pmap (inv f) p)) else undefined))
+             (\<lambda>(t, pu). (Eperm f t, \<lambda>p. if validP p then Umap f (pu (Pmap (inv f) p)) else undefined)) y))
+         (Pmap f p) =
+    Uctor (Gren f f (Gmap
+            (\<lambda>(t, pu).
+                (Eperm f t, 
+                 lift Umap Pmap f pu))
+            (\<lambda>(t, pu). 
+                (Eperm f t,
+                 lift Umap Pmap f pu))
+            y)) 
+          (Pmap f p)"  
+   apply(subst Gmap_Gren') 
+     subgoal using 0 by simp
+     apply(subst Gmap_Gren')
+       subgoal using 0 by simp
+       subgoal apply(rule 1[unfolded Uctor_compat_validP_def, rule_format])       
+       using 0 2 unfolding lift_def P_axioms_def Pmap_validP_def by auto .
+  }
+  thus ?thesis unfolding Umap_Ector_def by auto
+qed
 
 definition "UFVars_EFVars Uctor \<equiv> \<forall>y p. 
   validP p \<and> 
@@ -235,9 +317,9 @@ definition "UFVars_EFVars Uctor \<equiv> \<forall>y p.
   GVrs2 y \<inter> (PFVars p \<union> avoiding_set) = {} \<and> 
   (\<forall>t pu p. validP p \<and>
             (t, pu) \<in> GSupp1 y \<union> GSupp2  y \<longrightarrow> 
-            UFVars t (pu p) \<subseteq> EVrs t \<union> PFVars p \<union> avoiding_set) 
+            UFVars (pu p) \<subseteq> EVrs t \<union> PFVars p \<union> avoiding_set) 
   \<longrightarrow>
-  UFVars (Ector (Gmap fst fst y)) (Uctor y p)
+  UFVars (Uctor y p)
   \<subseteq> EVrs (Ector (Gmap fst fst y)) \<union> PFVars p \<union> avoiding_set"
 
 
@@ -247,11 +329,13 @@ definition "validU_Uctor Uctor \<equiv> \<forall>y p.
   \<longrightarrow>
   validU (Uctor y p)"
 
-definition "U_axioms Uctor \<equiv> Umap_comp \<and> Umap_cong \<and> Umap_Ector Uctor \<and> 
+definition "U_axioms Uctor \<equiv> Uctor_compat_validP Uctor \<and> 
+  Umap_comp \<and> Umap_cong \<and> Umap_Ector Uctor \<and> 
   UFVars_EFVars Uctor \<and> 
   validU_Umap \<and> validU_Uctor Uctor"
 
-lemmas U_defs = Umap_comp_def Umap_cong_def 
+lemmas U_defs = Uctor_compat_validP_def (* added compatibility *)
+  Umap_comp_def Umap_cong_def 
   Umap_Ector_E_pre_def UFVars_EFVars_E_pre_def 
   validU_Umap_def validU_Uctor_def
 
@@ -270,9 +354,6 @@ thm REC_swap[no_vars]
 thm REC_valid[no_vars]
 end 
 
-(* definition 
-"rec_E Uctor \<equiv> P_axioms \<and> U_axioms Uctor" *)
-
 term "P_axioms Pmap PFVars validP avoiding_set"
 term "U_axioms Umap UFVars validU Uctor"
 
@@ -283,8 +364,8 @@ locale rec_E =
     and PFVars :: "'p \<Rightarrow> 'a set"
     and validP :: "'p \<Rightarrow> bool"
     and avoiding_set :: "'a set"
-    and Umap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a E \<Rightarrow> 'u \<Rightarrow> 'u"
-    and UFVars :: "'a E \<Rightarrow> 'u \<Rightarrow> 'a set"
+    and Umap :: "('a \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
+    and UFVars :: "'u \<Rightarrow> 'a set"
     and Uctor :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) G \<Rightarrow> 'p \<Rightarrow> 'u"
     and validU :: "'u \<Rightarrow> bool"
   assumes P: "P_axioms Pmap PFVars validP avoiding_set"
@@ -358,12 +439,12 @@ unfolding U_axioms_E_pre_def apply(intro conjI)
   using U unfolding U_axioms_def validU_Uctor_def 
   using Rep_E_pre_surj by (auto simp:  pred_E_pre_pred_G) . 
 
-lemma REC_E: "REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor' validU" 
+lemma REC_E: "REC_E Pmap PFVars validP avoiding_set (\<lambda>f _. Umap f) (\<lambda> _ . UFVars) Uctor' validU" 
 unfolding REC_E_def2 apply(rule conjI)
   subgoal using P .
   subgoal using U_axioms_E_pre_Uctor' . .
 
-sublocale REC_E Pmap PFVars validP avoiding_set Umap UFVars Uctor' validU 
+sublocale REC_E Pmap PFVars validP avoiding_set "(\<lambda>f _. Umap f)" "(\<lambda> _ . UFVars)" Uctor' validU 
 using REC_E .
 
 lemma noclash_E_noclashE[simp]: "noclash_E (Abs_E_pre x) = noclashE x"
@@ -388,14 +469,14 @@ using noclash_E_noclashE by blast
 
 thm REC_UFVars[no_vars]
 theorem recE_UFVars: 
-"validP p \<Longrightarrow> UFVars e (recE e p) \<subseteq> EVrs e \<union> PFVars p \<union> avoiding_set"
+"validP p \<Longrightarrow> UFVars (recE e p) \<subseteq> EVrs e \<union> PFVars p \<union> avoiding_set"
 unfolding recE_def using REC_UFVars by auto
 
 thm REC_swap[no_vars]
 theorem recE_Eperm:
 "validP p \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow>
  imsupp \<sigma> \<inter> avoiding_set = {} \<Longrightarrow>
- recE (Eperm \<sigma> e) p = Umap \<sigma> e (recE e (Pmap (inv \<sigma>) p))"
+ recE (Eperm \<sigma> e) p = Umap \<sigma> (recE e (Pmap (inv \<sigma>) p))"
 unfolding recE_def using REC_swap apply simp
 by (metis P P_axioms_def Pmap_validP_def bij_imp_bij_inv supp_inv_bound)
 

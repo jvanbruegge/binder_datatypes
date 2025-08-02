@@ -21,8 +21,11 @@ lemma tri_Un3: "A \<union> A' \<union> A'' \<subseteq> B \<union> C \<Longrighta
 
 lemma A_Int_Un_emp: "A \<inter> (B \<union> C) = {} \<longleftrightarrow> A \<inter> B = {} \<and> A \<inter> C = {}" by auto
 
-lemma bij_inv_Un_triv: "bij \<sigma> \<Longrightarrow> \<sigma> ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv \<sigma> ` B = {}"
+lemmas bij_inv_Un_triv = image_Int_empty_inv
+(* 
+: "bij \<sigma> \<Longrightarrow> \<sigma> ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv \<sigma> ` B = {}"
   by (metis bij_def empty_is_image image_Int image_inv_f_f surj_imp_inj_inv)
+*)
 
 lemma bij_in_inv_Un_triv: "bij \<sigma> \<Longrightarrow> inv \<sigma> a \<in> B \<longleftrightarrow> a \<in> \<sigma> ` B"
   by (metis bij_inv_eq_iff imageE image_eqI)
@@ -64,5 +67,6 @@ lemmas bij_inv_id1 = inv_o_simp2 (* [simp] *) (* : "bij f \<Longrightarrow> f o 
 lemmas bij_inv_id2 = inv_o_simp1 
 (*[simp]: "bij f \<Longrightarrow> inv f o f = id" unfolding fun_eq_iff 
 by (simp add: bij_def surj_iff) *)
+
 
 end 

@@ -156,11 +156,11 @@ thm Ector'_uniform
 
 thm Expression.lift_def 
 
-lemma Umap_Ector_def2: "Umap_Ector Uctor \<longleftrightarrow> (\<forall>f y p.
+lemma Umap_Ector_def2: "Umap_Ector Pperm Pvalid {} (\<lambda>\<sigma> e'. Eperm \<sigma>) (\<lambda>_. True) (EEctor' \<circ> Gmap snd snd) 
+  \<longleftrightarrow> (\<forall>f y p.
    validP p \<and>
    pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
-   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
-   imsupp f \<inter> avoiding_set = {} 
+   bij f \<and> |supp f| <o |UNIV:: 'a set|  
    \<longrightarrow>
    Umap f (Ector (Gmap fst fst y)) (Uctor y p) =
    Uctor (Gren f f (Gmap

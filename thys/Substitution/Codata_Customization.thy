@@ -1,5 +1,7 @@
 (* AtoD: We need the relativized corecursor 
-for the same reason why we needed the parameter-relativized recursor.  *)
+for the same reason why we needed the parameter-relativized recursor. 
+AtoD: Oh, I see it is already relativized. :-)
+ *)
 theory Codata_Customization
   imports Expressions_with_Subst Expressions_with_Birecursor
 begin
@@ -1329,6 +1331,8 @@ thm f0_Utor f0_mapD f0_FVarsD
 (*******************)
 (* End product: *)
 
+term COREC
+
 theorem COREC_DDTOR:
   assumes "X \<in> Udtor d" "valid_U d"
   shows "COREC d = E_ctor (GMAP id id (case_sum id COREC) (case_sum id COREC) X)"
@@ -1400,6 +1404,7 @@ theorem COREC_FFVarsD:
   done
 
 end (* context COREC *)
+
 
 
 end

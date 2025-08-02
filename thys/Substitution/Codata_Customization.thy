@@ -1,7 +1,3 @@
-(* AtoD: We need the relativized corecursor 
-for the same reason why we needed the parameter-relativized recursor. 
-AtoD: Oh, I see it is already relativized. :-)
- *)
 theory Codata_Customization
   imports Expressions_with_Subst Expressions_with_Birecursor
 begin

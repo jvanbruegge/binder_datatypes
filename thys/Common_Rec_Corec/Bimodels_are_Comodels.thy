@@ -454,7 +454,7 @@ proof-
   thus ?thesis unfolding EVrs''_def crec_def curry_def by auto
 qed
 
-(* NB. UNiqueness is not needed for the syntax with bindings development; 
+(* NB. Uniqueness is not needed for the syntax with bindings development; 
 however, it does not use any axioms that are not used in the rest of 
 the development.  *)
 theorem rec_unique':

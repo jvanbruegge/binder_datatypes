@@ -145,7 +145,7 @@ lemma Gmap_comp:
 "Gmap g1 g2 (Gmap f1 f2 u) = Gmap (g1 \<circ> f1) (g2 \<circ> f2) u"
 by (metis G.Map_comp comp_apply)
 
-lemmas GVrs1_Gmap = G.Vrs_Map2
+lemmas GVrs1_Gmap = G.Vrs_Map1
 lemmas GVrs2_Gmap = G.Vrs_Map2
 lemmas GSupp1_Gmap = G.Supp1_Map
 lemmas GSupp2_Gmap = G.Supp2_Map

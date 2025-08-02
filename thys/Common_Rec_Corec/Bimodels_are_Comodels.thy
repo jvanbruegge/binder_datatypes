@@ -349,7 +349,7 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (
     subgoal for ua  
     apply(rule incl_Un_triv3)
     unfolding EVrs''_def EVrs_Ector 
-    apply(rule subset_trans[OF _ Ector_Ector'_EVrs_step'[of u p "Gmap fst fst ua", unfolded GSupp1_Gmap 
+    apply(rule subset_trans[OF _ Ector_Ector'_EVrs_step'[of p "Gmap fst fst ua", unfolded GSupp1_Gmap 
       GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap]]) 
       subgoal apply(rule incl_Un3_triv3)
         subgoal ..
@@ -357,8 +357,6 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (
         subgoal by auto fastforce .
       subgoal .
       subgoal .
-      subgoal .
-    subgoal using Edtor'_step in_Edtor1'_Ector by auto
     subgoal using Edtor'_step in_Edtor1'_Ector by auto . . .
   subgoal for u apply(cases "base u")
     subgoal using base_Ector'_Ector_EVrs unfolding Edtor'_base EVrs''_def 

@@ -2,6 +2,7 @@ theory Expressions_with_Surj_and_Coinduct
   imports Expressions
 begin
 
+
 locale Expression_with_Surj_and_Coinduct = Expression +
   assumes (* AtoD: I added the "no-clash condition: GVrs2 u \<inter> GVrs1 u = {} *)
   Ector_fresh_surj: "\<And>A e. |A::'a set| <o |UNIV :: 'a::var set| \<Longrightarrow> 

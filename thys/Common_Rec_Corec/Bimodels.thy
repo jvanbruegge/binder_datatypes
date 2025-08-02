@@ -35,8 +35,9 @@ and Ector_Ector'_inj_step: "\<And>u u1 p. \<not> base u \<Longrightarrow> \<not>
    Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u1 \<inter> PVrs p = {} \<Longrightarrow> 
    Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u) = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u1) \<Longrightarrow> 
    Ector' u p = Ector' u1 p"
-(* Ector1 is less injective than Ector outside base, and assuming freshness *)
+(* Ector' is less injective than Ector outside base, and assuming freshness *)
 and 
+(* 
 Ector_Ector'_EVrs_step: "\<And>u p.
     \<not> base u \<Longrightarrow> 
     Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {}
@@ -47,7 +48,9 @@ is not the above, but a converse of it modulo PVrs p!, namely:
 EVrs_Ector': "\<And>u p. \<not> base u \<Longrightarrow> 
   EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u))"
 *)
+(* AtoD: Now I got rid of it! *)
 and
+*)
 Ector_Ector'_sync:  
 "\<And>w u p g. \<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
@@ -95,14 +98,21 @@ by (smt (verit, del_insts) Un_iff Union_iff ctorVarsM_step_Ector'
 
 *)
 
+lemma Ector_Ector'_EVrs: 
+assumes (*b: "\<not> base u"
+and *) p: "Pvalid p"  (*and v: "GVrs2 u \<inter> PVrs p = {}" *)
+shows "EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
+apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format, OF p]])
+unfolding GVrs1_Gmap GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap 
+unfolding EVrs_Ector by auto 
+
 lemma Ector_Ector'_EVrs_stepp: 
-"\<not> base u \<Longrightarrow> 
-    Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
+" \<comment> \<open> \<not> base u \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> \<close>
+    Pvalid p \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
-using Ector_Ector'_EVrs_step[of u p] 
+using Ector_Ector'_EVrs_step[of p u] 
 by auto 
-
 
 lemmas Ector_Ector'_EVrs_step' =  
 triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]
@@ -117,8 +127,6 @@ lemma base_Some_Ector': "base (SOME ua. Ector ua = Ector u) \<longleftrightarrow
 by (metis (mono_tags, lifting) Ector_base_inj tfl_some) 
 
 (* *)
-
-thm Gmap_comp
 
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   

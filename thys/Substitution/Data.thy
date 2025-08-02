@@ -84,7 +84,7 @@ interpretation Expression_with_Surj_and_Coinduct Eperm EVrs Gbd Ector
     apply (rule refl)
     done
   subgoal for P g h e
-    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def G.Sb_Inj)
+    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def)
     done
   done
 (*
@@ -132,6 +132,7 @@ context Expression_with_Birecursor
 begin 
 *)
 
+
 context 
 fixes Pvalid :: "'p \<Rightarrow> bool" 
 and Pperm :: "('a::var_E_pre \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p" 
@@ -140,43 +141,69 @@ Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow
 assumes bimodel: "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
 begin 
 
+(* Just getting all the Bomodel theorems *)
+interpretation Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'
+using bimodel .
+lemmas ctor_compat_Pvalid_step_Ector' = Ector'_compat_Pvalid
+lemmas ctorPermM_Ector' = Eperm_Ector'
+thm Ector_base_inj
+thm Ector_Ector'_inj_step 
+thm Ector_Ector'_sync
+thm Ector'_uniform 
 
-definition EEctor' :: "('a,'a,'p\<Rightarrow>'a E,'p\<Rightarrow>'a E) G \<Rightarrow> 'p\<Rightarrow>'a E" where 
-"EEctor' u \<equiv> if base u then Ector' u else Ector' u"
 
-lemma EEctor'_base[simp]: "base u \<Longrightarrow> EEctor' u = Ector' u"
-unfolding EEctor'_def by auto
+(* *)
 
-lemma EEctor'_step[simp]: "\<not> base u \<Longrightarrow> EEctor' u = Ector' u"
-unfolding EEctor'_def by auto
+thm Expression.lift_def 
 
-(*
-lemma ctorPermM: "ctorPermM EEctor' Eperm u"
-unfolding ctorPermM_def apply safe
-  subgoal for \<sigma> apply(cases "base u")
-    subgoal unfolding EEctor'_base  
-    apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
-      subgoal by auto
-      subgoal apply(subst EEctor'_base )
-        subgoal using base_Gmap base_Gren by fastforce
-        subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . .
-    subgoal unfolding EEctor'_step  
-    apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
-      subgoal using base_Gmap by auto
-      subgoal apply(subst EEctor'_step)
-        subgoal using base_Gmap base_Gren by fastforce
-        subgoal unfolding Gmap_comp Gmap_Gren unfolding o_def by simp . . . .
+lemma Umap_Ector_def2: "Umap_Ector Uctor \<longleftrightarrow> (\<forall>f y p.
+   validP p \<and>
+   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {} 
+   \<longrightarrow>
+   Umap f (Ector (Gmap fst fst y)) (Uctor y p) =
+   Uctor (Gren f f (Gmap
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            y))
+          (Pmap f p))"
+proof-
+  {fix f :: "'a \<Rightarrow> 'a" 
+   and y :: "('a, 'a, 'a E \<times> ('p \<Rightarrow> 'u), 'a E \<times> ('p \<Rightarrow> 'u)) G" 
+   and p :: 'p
+   assume 0: "validP p \<and>
+   pred_G (pred_fun validP validU \<circ> snd) (pred_fun validP validU \<circ> snd) y \<and> 
+   bij f \<and> |supp f| <o |UNIV:: 'a set| \<and> 
+   imsupp f \<inter> avoiding_set = {}"
+   have 
+   "Gmap (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. if validP p then Umap f t (pu (Pmap (inv f) p)) else undefined))
+            y =  
+    Gmap (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            (\<lambda>(t, pu).
+                (Eperm f t,
+                 \<lambda>p. Umap f t (pu (Pmap (inv f) p))))
+            y"
+    apply(rule Gmap_cong) using 0 
+    unfolding pred_G_def apply auto apply (auto simp: fun_eq_iff)  sorry
+   }
+   thus ?thesis 
+   unfolding Umap_Ector_def apply fastsforce
 
-lemma ctorVarsM: "ctorVarsM EEctor' EVrs u"
-unfolding ctorVarsM_def  
-  apply(cases "base u")
-    subgoal unfolding EEctor'_base  apply(intro allI impI)  
-    apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]])
-    by auto 
-    subgoal unfolding EEctor'_step apply(intro allI impI) 
-    apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]]) 
-    using base_Gmap by auto .
-*)
+
+
+(* *)
 
 theorem Bimodel_recE: 
 "rec_E Pperm PVrs Pvalid {} (\<lambda>\<sigma> e' e. Eperm \<sigma> e) (\<lambda>e' e. EVrs e) 

@@ -355,11 +355,12 @@ definition ctorVarsM_base :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarr
 definition ctor_compat_Pvalid :: "(('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> 'a P\<Rightarrow>'E') \<Rightarrow> bool"
 where 
 "ctor_compat_Pvalid ctor \<equiv> 
- \<forall> (u::('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G) f1 f2 g1 g2. 
+ \<forall> (u::('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G) f1 f2 g1 g2 p. 
    (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<and>  
-   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p)  
+   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p) \<and> 
+   Pvalid p
    \<longrightarrow>
-   ctor (Gmap f1 f2 u) = ctor (Gmap g1 g2 u)"
+   ctor (Gmap f1 f2 u) p = ctor (Gmap g1 g2 u) p"
 
 (* The version relativized to (the negation of) a base predicate: *)
 definition ctor_compat_Pvalid_step :: 
@@ -367,12 +368,13 @@ definition ctor_compat_Pvalid_step ::
  (('a::var, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G \<Rightarrow> bool) \<Rightarrow> bool"
 where 
 "ctor_compat_Pvalid_step ctor base \<equiv> 
- \<forall> (u::('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G) f1 f2 g1 g2. 
+ \<forall> (u::('a, 'a, 'a P\<Rightarrow>'E','a P\<Rightarrow>'E') G) f1 f2 g1 g2 p. 
    \<not> base u \<and> 
    (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<and>  
-   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p)  
+   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p) \<and> 
+   Pvalid p 
    \<longrightarrow>
-   ctor (Gmap f1 f2 u) = ctor (Gmap g1 g2 u)"
+   ctor (Gmap f1 f2 u) p = ctor (Gmap g1 g2 u) p"
 
 
 

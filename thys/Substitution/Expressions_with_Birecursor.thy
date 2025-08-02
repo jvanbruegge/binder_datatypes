@@ -30,22 +30,54 @@ apply-
 lemma base_Gmap_eq: "base u \<Longrightarrow> Gmap f1 f2 u = Gmap g1 g2 u"
 by (metis G.Map_cong base_GSupp empty_iff)
 
+context Expression 
+begin
+
+definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p) \<Rightarrow>  
+(('a \<Rightarrow> 'a) \<Rightarrow> ('p\<Rightarrow>'e) \<Rightarrow> ('p\<Rightarrow>'e))" where 
+"lift Pperm \<sigma> pe p \<equiv> Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))"
+
+
+end 
+
+
+
 locale Bimodel = 
   (* nominal-style binding-recursor assumptions, 
   including equivariance of Ector': *)
   NominalRel Pvalid Pperm "PVrs :: 'p \<Rightarrow> 'a :: var set" + Expression Eperm "EVrs :: 'e \<Rightarrow> 'a set" Ebd Ector
   for Pvalid Pperm PVrs Eperm EVrs Ebd Ector +
   fixes Ector' :: "('a::var, 'a, 'p \<Rightarrow> 'e, 'p \<Rightarrow> 'e) G \<Rightarrow> 'p \<Rightarrow> 'e"
-  assumes Eperm_Ector': "\<And>\<sigma> p. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow> 
+  assumes Ector'_compat_Pvalid: "\<And>(u::('a, 'a, 'p\<Rightarrow>'e,'p\<Rightarrow>'e) G) f1 f2 g1 g2 p. 
+   (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<Longrightarrow> 
+   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p) \<Longrightarrow>
+   Pvalid p 
+   \<Longrightarrow> 
+   Ector' (Gmap f1 f2 u) p = Ector' (Gmap g1 g2 u) p"
+  and Eperm_Ector': "\<And>\<sigma> p. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow> 
     Eperm \<sigma> (Ector' u p) = 
-    Ector' (Gren \<sigma> \<sigma> (Gmap (\<lambda>pe p. Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))) (\<lambda>pe p. Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))) u)) (Pperm \<sigma> p)"
+    Ector' (Gren \<sigma> \<sigma> (Gmap (lift Pperm \<sigma>) (lift Pperm \<sigma>) u)) (Pperm \<sigma> p)"
+  (* NB: The following is part of the usual binding-aware model 
+    repertoire, just that its *formulation* of 
+    this takes advanatage of the fact that the domain is 
+    syntactic and the variable-operator is the syntactic one
+   and uses a known property of Ector
+  (perhaps we should revert back to the Ector-free formulation) *)
+  and ctorVarsM_Ector': 
+  "Pvalid p \<Longrightarrow>  
+    EVrs (Ector' u p) \<subseteq> PVrs p \<union> 
+     GVrs1 u \<union> 
+     (\<Union> {EVrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u}) \<union> 
+     (\<Union> {EVrs (pe p) | pe . pe \<in> GSupp2 u})"
+
+ (*and Ector_Ector'_EVrs: 
+   "\<And>u p. Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+     \<comment> \<open>EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)) \<close> 
+    EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
+  *)
   (* birecursion-specific assumptions 
     (taking advantage of the domain-codomain coincidence): *)
   and Ector_base_inj: "\<And>u1 u2::('a,'a,'e,'e)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"
-  and Ector_Ector'_EVrs_step: 
-  "\<And>u p. \<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
-     \<comment> \<open>EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)) \<close> 
-    EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
   and Ector_Ector'_inj_step: "\<And>u u' p. Pvalid p \<Longrightarrow> 
    \<not> base u \<Longrightarrow> \<not> base u' \<Longrightarrow> 
    GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u' \<inter> PVrs p = {} \<Longrightarrow>
@@ -60,17 +92,25 @@ locale Bimodel =
        Ector' u p = Ector' (Gmap (\<lambda>pe p'. pe p) (\<lambda>pe p'. pe p) u) p" 
 begin
 
-lemma Ector_Ector'_EVrs_stepp: 
+
+lemma Ector_Ector'_EVrs: 
+assumes (*b: "\<not> base u"
+and *) p: "Pvalid p"  (*and v: "GVrs2 u \<inter> PVrs p = {}" *)
+shows "EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
+apply(rule subset_trans[OF ctorVarsM_Ector'[rule_format, OF p]])
+unfolding GVrs1_Gmap GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap 
+unfolding EVrs_Ector by auto 
+
+lemma Ector_Ector'_EVrsp: 
 "\<not> base u \<Longrightarrow> 
     Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
-using Ector_Ector'_EVrs_step[of u p] 
+using Ector_Ector'_EVrs[of p u] 
 by auto 
 
-
-lemmas Ector_Ector'_EVrs_step' =  
-triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]
+lemmas Ector_Ector'_EVrs' =  
+triv_Un4_remove[OF Ector_Ector'_EVrsp[unfolded EVrs_Ector]]
 
 lemma Ector_base: "Ector (u:: ('a, 'a, 'e, 'e) G) = Ector v \<Longrightarrow> base u \<longleftrightarrow> base v"
 using Ector_base_inj by metis
@@ -226,9 +266,9 @@ lemmas Esub_defs = Esub_Pvalid_def Esub_Pperm_def Esub_PVrs_def Esub_Ector'_def
 thm G.Map_Sb[no_vars]
 
 lemma Gmap_Gsub: 
-"|supp (g1::'a1::var\<Rightarrow>'a1)| <o |UNIV::'a1 set| \<Longrightarrow> |supp (g2::'a2::var\<Rightarrow>'a2)| <o |UNIV::'a2 set| \<Longrightarrow> 
- Gmap (f1::'c1\<Rightarrow>'c1') (f2::'c2\<Rightarrow>'c2') (Gsub g1 g2 u) = Gsub g1 g2 (Gmap f1 f2 u)"
-using G.Map_Sb[of g1 g2 f1 f2, unfolded o_def fun_eq_iff] by auto 
+"|supp (\<delta>1::'a1::var\<Rightarrow>'a1)| <o |UNIV::'a1 set| \<Longrightarrow> |supp (\<delta>2::'a2::var\<Rightarrow>'a2)| <o |UNIV::'a2 set| \<Longrightarrow> 
+ Gmap (f1::'c1\<Rightarrow>'c1') (f2::'c2\<Rightarrow>'c2') (Gsub \<delta>1 \<delta>2 u) = Gsub \<delta>1 \<delta>2 (Gmap f1 f2 u)"
+using G.Map_Sb[of \<delta>1 \<delta>2 f1 f2, unfolded o_def fun_eq_iff] by auto 
 
 thm G.Sb_comp[no_vars]
 thm G.Map_comp[no_vars]
@@ -381,6 +421,19 @@ sublocale Esub: Bimodel where
       subgoal by simp
       subgoal unfolding IImsupp_def  
         by (meson EVrs_bound var_class.UN_bound) . .
+  subgoal for u f1 f2 g1 g2 unfolding fun_eq_iff apply clarsimp apply safe
+  apply (auto simp: eta_distinct eta_distinct' Gren_def eta_inject eta'_inject eta_natural eta'_natural
+      Eperm_Ector G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
+      G.Map_comp[THEN fun_cong, simplified] supp_comp_bound o_assoc[symmetric]
+      Gmap_eq_eta eta_inject Gmap_eq_eta' eta'_inject
+      dest: eta_inversion eta'_inversion)
+   apply(subst Gmap_Gsub[symmetric])
+     subgoal by simp subgoal by simp
+     apply(subst Gmap_Gsub[symmetric])
+       subgoal by simp subgoal by simp  
+       apply(rule arg_cong[of _ _ Ector])
+       apply(rule Gmap_cong)
+       by (auto simp: G.Supp1_Sb G.Supp2_Sb) 
   subgoal for u \<sigma> p
     apply (cases p)
     apply (auto simp: eta_distinct eta_distinct' Gren_def eta_inject eta'_inject eta_natural eta'_natural
@@ -388,10 +441,8 @@ sublocale Esub: Bimodel where
       G.Map_comp[THEN fun_cong, simplified] supp_comp_bound o_assoc[symmetric]
       dest: eta_inversion eta'_inversion)
     apply (intro arg_cong[where f=Ector] arg_cong[where f="Gsub _ _"] G.Map_cong)
-     apply (auto simp: o_def Eperm_comp[THEN fun_cong, simplified]  id_def[symmetric] Eperm_id)
+     apply (auto simp: lift_def o_def Eperm_comp[THEN fun_cong, simplified]  id_def[symmetric] Eperm_id)
     done
-  subgoal for u1 u2 unfolding base_def 
-    using Ector_inject by auto
   subgoal for u p
     apply (auto simp: EVrs_Ector G.Vrs_Sb G.Supp_Sb G.Vrs_Map G.Supp_Map eta_inject eta'_inject eta_distinct eta_distinct' split: if_splits)
     subgoal for \<delta> \<rho> \<rho>' x a
@@ -403,10 +454,11 @@ sublocale Esub: Bimodel where
        apply (auto simp: IImsupp'_def SSupp_def IImsupp_def EVrs_Ector Gmap_eq_eta')
       done
     apply (metis in_imsupp not_in_imsupp_same)
-    using base_Gmap base_def apply blast
-    using base_Gmap base_def apply blast
-    apply (metis in_imsupp not_in_imsupp_same)
-    done
+    apply blast 
+    by blast 
+  (* *)
+  subgoal for u1 u2 unfolding base_def 
+  using Ector_inject by auto
   (* *)
   subgoal for u u' p
     apply (auto simp: eta_distinct eta_distinct' eta_inject eta'_inject Gren_def
@@ -439,7 +491,7 @@ sublocale Esub: Bimodel where
             subgoal apply(drule sym[where t = "Gmap (\<lambda>pe. pe (\<delta>, \<rho>, \<rho>')) (\<lambda>pe. pe (\<delta>, \<rho>, \<rho>')) u'"]) 
             by (auto simp: Gmap_Gsub Gren_def Gmap_comp Gsub_comp) . . . . .
   (* *)
-  subgoal for w u p g
+  subgoal for w u p g (* AtoD; Note sure what happened to this; I believe you proved it before. *)
     apply (cases p)
     apply (auto split: if_splits simp: eta_distinct eta_distinct'  eta_inject eta'_inject Gren_def
       eta_natural[of id id, unfolded G.Sb_Inj, simplified]
@@ -453,8 +505,14 @@ sublocale Esub: Bimodel where
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
-     using base_def apply auto
-    sorry
+     using base_def apply auto subgoal for \<delta> \<rho> \<rho>'
+     apply(subst (asm) Ector_fresh_inject[where A = A])
+     unfolding Ector_inject apply safe
+       subgoal sorry subgoal sorry subgoal sorry
+       subgoal for \<sigma>
+       apply(rule exI[of _ \<sigma>]) apply auto
+         subgoal unfolding id_on_def apply auto sorry
+         subgoal sorry . . .
   subgoal for u p
     apply (cases p)
     apply (auto split: if_splits simp: eta_distinct eta_distinct'  eta_inject eta'_inject Gren_def
@@ -471,7 +529,6 @@ sublocale Esub: Bimodel where
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])
     done
   done
-
 end
 
 (* Instance of the Expression_with_Birecursor locale by 

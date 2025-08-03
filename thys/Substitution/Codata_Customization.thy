@@ -1454,7 +1454,7 @@ locale Corec =
      {x,x'} \<subseteq> X \<Longrightarrow>
      \<exists>f. bij (f::'a::covar_G \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> 
          id_on ((\<Union>d' \<in> GSupp1 x. UFVars d') - GVrs2 x) f \<and>
-         GMAP id f (Umap f) id x = x'"
+         Gren id f (Gmap (Umap f) id x) = x'" 
     and 
     (* The dual of the first block of assumptions from Norrish's paper:   *)
     UFVars_Udtor_Inl:
@@ -1474,15 +1474,20 @@ locale Corec =
     Umap_Udtor_Inr: "\<And>f d X. valid_U d \<Longrightarrow> Udtor d = Inr X \<Longrightarrow> 
       bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
       \<exists>X'. Udtor (Umap f d) = Inr X' \<and> 
-           X' \<subseteq> image (GMAP f f (Umap f) (Umap f)) X"
+           X' \<subseteq> Gren f f ` (Gmap (Umap f) (Umap f) `  X)"
     and 
     Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
     and Umap_cong0: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
     and valid_Umap: "bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> valid_U d \<Longrightarrow> valid_U (Umap f d)"
-    and valid_Udtor: "\<And>x X. valid_U d \<Longrightarrow> Udtor d = Inr X \<Longrightarrow> x \<in> X  \<Longrightarrow> Gpred valid_U valid_U x"
+    and valid_Udtor: "\<And>x X. valid_U d \<Longrightarrow> Udtor d = Inr X \<Longrightarrow> x \<in> X \<Longrightarrow> 
+                                 \<forall>d' \<in> GSupp1 x \<union> GSupp2 x. valid_U d'"
 begin
+
+thm alpha_Udtor[unfolded GMAP_def,no_vars]
+thm Umap_Udtor_Inr[unfolded GMAP_def,no_vars]
+thm valid_Udtor[no_vars, unfolded Gpred_def Ball_def]
 
 
 definition Udtor' :: 

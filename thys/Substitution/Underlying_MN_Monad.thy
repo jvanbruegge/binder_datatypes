@@ -167,6 +167,8 @@ lemmas Gsub_cong_id = Gsub_cong[of _ _ id id,
 unfolded Gsub_id, 
 simplified]
 
+
+
 lemmas Gren_cong = Gsub_cong[unfolded Gren_def[symmetric]]
 lemmas Gren_cong_id = Gsub_cong_id[unfolded Gren_def[symmetric]]
 lemmas Gren_comp = Gsub_comp[unfolded Gren_def[symmetric]]
@@ -178,5 +180,10 @@ lemmas GSupp1_Gren = GSupp1_Gsub[unfolded Gren_def[symmetric]]
 lemmas GSupp2_Gren = GSupp2_Gsub[unfolded Gren_def[symmetric]]
 lemmas GVrs1_Gren = GVrs1_Gsub[unfolded Gren_def[symmetric]]
 lemmas GVrs2_Gren = GVrs2_Gsub[unfolded Gren_def[symmetric]]
+
+lemmas Gmap_id = G.Map_id
+lemmas Gmap_cong_id = Gmap_cong[of _ _ id _ id, 
+unfolded Gmap_id, 
+simplified]
 
 end 

@@ -12,7 +12,7 @@ where "dtorPermC valid dtor perm \<equiv>
 \<forall>\<sigma> e. valid e \<and> small \<sigma> \<and> bij \<sigma> \<longrightarrow> 
   (\<forall> U. dtor e = Inr U \<longrightarrow> (\<exists>U'. dtor (perm \<sigma> e) = Inr U' \<and> U' \<subseteq> Gren \<sigma> \<sigma> ` (Gmap (perm \<sigma>) (perm \<sigma>) ` U)))
   \<and> 
-  (\<forall>e1. dtor e = Inl e1 \<longrightarrow> (\<exists>e1'. dtor (perm \<sigma> e) = Inl e1' \<and> e1' =  Eperm \<sigma> e1))"
+  (\<forall>e1. dtor e = Inl e1 \<longrightarrow> dtor (perm \<sigma> e) = Inl (Eperm \<sigma> e1))"
 
 definition dtorVrsGrenC :: "('E' \<Rightarrow> bool) \<Rightarrow> 
 ('E' \<Rightarrow> 'a E + ('a::var,'a,'E','E')G set) \<Rightarrow> 

@@ -227,23 +227,24 @@ locale COREC =
     and UFVars :: "'u \<Rightarrow> 'a::covar_G set"
     and valid_U :: "'u \<Rightarrow> bool"
   assumes Udtor_ne: "\<And>d. valid_U d \<Longrightarrow> Udtor d \<noteq> {}"
-    and alpha_Udtor: "\<And>X X' d. valid_U d \<Longrightarrow> {X,X'} \<subseteq> Udtor d \<Longrightarrow>
-\<exists>u. bij (u::'a::covar_G \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> id_on ((\<Union>z \<in> GSupp1 X. case_sum EVrs UFVars z) - GVrs2 X) u \<and>
-     GMAP id u (map_sum (Eperm u) (Umap u)) id X = X'"
-    and
+    and alpha_Udtor: "\<And>x x' d. valid_U d \<Longrightarrow> {x,x'} \<subseteq> Udtor d \<Longrightarrow>
+  \<exists>f. bij (f::'a::covar_G \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> 
+     id_on ((\<Union>d' \<in> GSupp1 x. case_sum EVrs UFVars d') - GVrs2 x) f \<and>
+     GMAP id f (map_sum (Eperm f) (Umap f)) id x = x'"
+    and 
     (* The dual of the first block of assumptions from Norrish's paper:   *)
     UFVars_Udtor:
-    "\<And> d X. valid_U d \<Longrightarrow> X \<in> Udtor d \<Longrightarrow>
-  GVrs1 X \<union> (\<Union>z \<in> GSupp2 X. case_sum EVrs UFVars z) \<union>
-   ((\<Union>z \<in> GSupp1 X. case_sum EVrs UFVars z) - GVrs2 X) \<subseteq>
+    "\<And> d x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow>
+  GVrs1 x \<union> (\<Union>z \<in> GSupp2 x. case_sum EVrs UFVars z) \<union>
+   ((\<Union>z \<in> GSupp1 x. case_sum EVrs UFVars z) - GVrs2 x) \<subseteq>
   UFVars d"
     and
     (* The dual of the third block: *)
-    Umap_Udtor: "\<And>u d. valid_U d \<Longrightarrow>
-  bij (u::'a\<Rightarrow>'a) \<Longrightarrow> |supp u| <o |UNIV::'a::covar_G set| \<Longrightarrow>
-  Udtor (Umap u d) \<subseteq>
+    Umap_Udtor: "\<And>f d. valid_U d \<Longrightarrow>
+  bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
+  Udtor (Umap f d) \<subseteq>
   image
-    (GMAP u u (map_sum (Eperm u) (Umap u)) (map_sum (Eperm u) (Umap u)))
+    (GMAP f f (map_sum (Eperm f) (Umap f)) (map_sum (Eperm f) (Umap f)))
     (Udtor d)"
     and Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
@@ -1313,8 +1314,8 @@ lemma f0_Utor:
   done
 
 lemma f0_mapD:
-  assumes "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a::covar_G set|" "valid_U d"
-  shows "alpha_E (f0 (raw_Umap u d)) (Eperm_raw u (f0 d))"
+  assumes "bij (g::'a\<Rightarrow>'a)" and "|supp g| <o |UNIV::'a::covar_G set|" "valid_U d"
+  shows "alpha_E (f0 (raw_Umap g d)) (Eperm_raw g (f0 d))"
   by (rule alpha_syms[OF f_swap_alpha[OF suitable_pick0 suitable_pick0 assms(3,1,2), unfolded f0_def[symmetric]]])
 
 lemmas f0_FVarsD = f_FVarsD[OF suitable_pick0, unfolded f0_def[symmetric]]
@@ -1330,8 +1331,8 @@ thm f0_Utor f0_mapD f0_FVarsD
 term COREC
 
 theorem COREC_DDTOR:
-  assumes "X \<in> Udtor d" "valid_U d"
-  shows "COREC d = E_ctor (GMAP id id (case_sum id COREC) (case_sum id COREC) X)"
+  assumes "x \<in> Udtor d" "valid_U d"
+  shows "COREC d = E_ctor (GMAP id id (case_sum id COREC) (case_sum id COREC) x)"
   apply (unfold COREC_def E_ctor_def)
   apply (unfold o_def[symmetric])
   apply (subst G.map_comp, (rule supp_id_bound bij_id)+)
@@ -1381,7 +1382,7 @@ theorem COREC_DDTOR:
   apply (rule E_rep_abs_syms)
   done
 
-lemma COREC_mmapD:
+theorem COREC_mmapD:
   assumes "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a::covar_G set|" and "valid_U d"
   shows "COREC (Umap u d) = Eperm u (COREC d)"
   apply (unfold COREC_def Eperm_def)
@@ -1401,6 +1402,148 @@ theorem COREC_FFVarsD:
 
 end (* context COREC *)
 
+(**************************************)
+(* Simpler version of the COREC locale, where 
+the full-corecursion base case is a direct return *)
+
+(*
+locale COREC =
+  fixes Udtor :: "'u \<Rightarrow> ('a::covar_G, 'a, 'a E + 'u, 'a E + 'u) G set"
+    and Umap :: "('a::covar_G \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
+    and UFVars :: "'u \<Rightarrow> 'a::covar_G set"
+    and valid_U :: "'u \<Rightarrow> bool"
+  assumes Udtor_ne: "\<And>d. valid_U d \<Longrightarrow> Udtor d \<noteq> {}"
+    and alpha_Udtor: "\<And>x x' d. valid_U d \<Longrightarrow> {x,x'} \<subseteq> Udtor d \<Longrightarrow>
+  \<exists>f. bij (f::'a::covar_G \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> 
+     id_on ((\<Union>d' \<in> GSupp1 x. case_sum EVrs UFVars d') - GVrs2 x) f \<and>
+     GMAP id f (map_sum (Eperm f) (Umap f)) id x = x'"
+    and 
+    (* The dual of the first block of assumptions from Norrish's paper:   *)
+    UFVars_Udtor:
+    "\<And> d x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow>
+  GVrs1 x \<union> (\<Union>z \<in> GSupp2 x. case_sum EVrs UFVars z) \<union>
+   ((\<Union>z \<in> GSupp1 x. case_sum EVrs UFVars z) - GVrs2 x) \<subseteq>
+  UFVars d"
+    and
+    (* The dual of the third block: *)
+    Umap_Udtor: "\<And>f d. valid_U d \<Longrightarrow>
+  bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
+  Udtor (Umap f d) \<subseteq>
+  image
+    (GMAP f f (map_sum (Eperm f) (Umap f)) (map_sum (Eperm f) (Umap f)))
+    (Udtor d)"
+    and Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
+    and Umap_cong0: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
+    and valid_Umap: "bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> valid_U d \<Longrightarrow> valid_U (Umap f d)"
+    and valid_Udtor: "\<And>x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow> Gpred (pred_sum (\<lambda>_. True) valid_U)  (pred_sum (\<lambda>_. True) valid_U) x"
+begin
+*)
+
+lemma Ector_surj: "\<exists>x. e = Ector x"
+by (meson E.TT_fresh_cases supp_id_bound)
+
+locale Corec =
+  fixes Udtor :: "'u \<Rightarrow> ('a::covar_G, 'a, 'u, 'u) G set + 'a E"
+    and Umap :: "('a::covar_G \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
+    and UFVars :: "'u \<Rightarrow> 'a::covar_G set"
+    and valid_U :: "'u \<Rightarrow> bool"
+  assumes Udtor_ne: "\<And>d X. valid_U d \<Longrightarrow> Udtor d = Inl X \<Longrightarrow> X \<noteq> {}"
+    and alpha_Udtor: "\<And>x x' d X. valid_U d \<Longrightarrow> Udtor d = Inl X \<Longrightarrow> 
+     {x,x'} \<subseteq> X \<Longrightarrow>
+     \<exists>f. bij (f::'a::covar_G \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> 
+         id_on ((\<Union>d' \<in> GSupp1 x. UFVars d') - GVrs2 x) f \<and>
+         GMAP id f (Umap f) id x = x'"
+    and 
+    (* The dual of the first block of assumptions from Norrish's paper:   *)
+    UFVars_Udtor_Inl:
+    "\<And> d x X. valid_U d \<Longrightarrow> Udtor d = Inl X \<Longrightarrow> x \<in> X \<Longrightarrow>
+         GVrs1 x \<union> (\<Union>z \<in> GSupp2 x. UFVars z) \<union>
+         ((\<Union>z \<in> GSupp1 x. UFVars z) - GVrs2 x) \<subseteq>
+         UFVars d"
+    and
+    UFVars_Udtor_Inr:
+    "\<And> d e. valid_U d \<Longrightarrow> Udtor d = Inr e \<Longrightarrow> EVrs e \<subseteq> UFVrs d"
+    and 
+    (* The dual of the third block: *)
+    Umap_Udtor_Inl: "\<And>f d X. valid_U d \<Longrightarrow> Udtor d = Inl X \<Longrightarrow> 
+      bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
+      \<exists>X'. Udtor (Umap f d) = Inl X' \<and> 
+           X' \<subseteq> image (GMAP f f (Umap f) (Umap f)) X"
+    and 
+    Umap_Udtor_Inr: "\<And>f d e. valid_U d \<Longrightarrow> Udtor d = Inr e \<Longrightarrow> 
+        bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
+        \<exists>e'. Udtor (Umap f d) = Inr e' \<and> 
+       e' = Eperm f e"
+    and Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
+    and Umap_cong0: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
+  \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
+    and valid_Umap: "bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> valid_U d \<Longrightarrow> valid_U (Umap f d)"
+    and valid_Udtor: "\<And>x X. valid_U d \<Longrightarrow> Udtor d = Inl X \<Longrightarrow> x \<in> X  \<Longrightarrow> Gpred valid_U valid_U x"
+begin
+
+
+definition Udtor' :: 
+"'u \<Rightarrow> ('a::covar_G, 'a, 'a E + 'u, 'a E + 'u) G set"
+where 
+"Udtor' d \<equiv> case Udtor d of 
+   Inl X \<Rightarrow> {GMAP id id Inr Inr x | x . x \<in> X}
+  |Inr e \<Rightarrow> {GMAP id id Inl Inl x | x . Ector x = e}"
+
+declare GMAP_def[simp]
+
+declare map_sum_o_inj[simp]
+
+lemma Gmap_comp_id: "Gmap (f o g) f x = Gmap f f (Gmap g id x)"
+by (simp add: Gmap_comp)
+
+declare 
+GVrs1_Gren GVrs1_Gmap 
+GSupp1_Gren GSupp1_Gmap
+GVrs2_Gren GVrs2_Gmap 
+GSupp2_Gren GSupp2_Gmap
+Gren_id [simp]
+
+interpretation COREC where Udtor = Udtor'
+apply standard
+  subgoal for d 
+  using Udtor_ne unfolding Udtor'_def 
+  apply (simp split: sum.splits)  
+  by (metis Ector_surj) 
+  (* *) 
+  subgoal for x x' d
+  unfolding Udtor'_def  
+  apply (clarsimp split: sum.splits 
+  simp: Gmap_comp)
+    subgoal for X xx xx'
+    using alpha_Udtor [of d X xx xx'] apply clarsimp
+      subgoal for f apply(rule exI[of _ f]) apply auto
+      apply(subst Gmap_comp_id) 
+      apply(subst Gmap_Gren')
+        subgoal by simp subgoal by simp
+        subgoal sledgehammer by (simp add: GVrs2_Gmap) . .
+    subgoal for xx xx' unfolding Ector_inject apply safe
+      subgoal for f apply(rule exI[of _ "inv f"]) apply auto
+      unfolding id_on_def apply (auto simp: 
+      GVrs2_Gmap GVrs2_Gren GSupp1_Gren GSupp1_Gmap)
+        subgoal by (metis E.FVars_permute image_in_bij_eq inv_simp2)
+        subgoal by(auto simp: Gmap_Gren' Gmap_comp Gren_comp'[symmetric] 
+          Gren_id E.permute_comp0 Eperm_id comp_assoc) . . .
+  (* *) 
+  subgoal for d x
+  unfolding Udtor'_def 
+  apply (clarsimp split: sum.splits simp: Gren_id) 
+    subgoal for X xx using UFVars_Udtor_Inl[of d X xx]
+      
+
+term   
+          by (smst (verit) E.permute_comp0 Eperm_id G.Map_id Gmap_Gren' Gmap_comp Gren_comp' Gren_id bij_imp_bij_inv
+              bij_inv_id1 comp_assoc comp_id supp_id_bound supp_inv_bound)
+    
+find_theorems map_sum Inr
+    subgoal for x1 xa xaa
 
 
 end

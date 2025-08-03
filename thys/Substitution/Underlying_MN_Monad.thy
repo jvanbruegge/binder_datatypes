@@ -158,6 +158,10 @@ rule_format, simplified]
 lemmas Gmap_Gsub = G.Map_Sb
 lemmas Gmap_Gsub' = Gmap_Gsub[symmetric, unfolded fun_eq_iff, 
 rule_format, simplified]
+lemmas GSupp1_Gsub = G.Supp1_Sb
+lemmas GSupp2_Gsub = G.Supp2_Sb
+lemmas GVrs1_Gsub = G.Vrs1_Sb
+lemmas GVrs2_Gsub = G.Vrs2_Sb
 
 lemmas Gsub_cong_id = Gsub_cong[of _ _ id id, 
 unfolded Gsub_id, 
@@ -170,5 +174,9 @@ lemmas Gren_comp' = Gsub_comp'[unfolded Gren_def[symmetric]]
 lemmas Gren_id = Gsub_id[unfolded Gren_def[symmetric]]
 lemmas Gmap_Gren = Gmap_Gsub[unfolded Gren_def[symmetric]]
 lemmas Gmap_Gren' = Gmap_Gsub'[unfolded Gren_def[symmetric]]
+lemmas GSupp1_Gren = GSupp1_Gsub[unfolded Gren_def[symmetric]]
+lemmas GSupp2_Gren = GSupp2_Gsub[unfolded Gren_def[symmetric]]
+lemmas GVrs1_Gren = GVrs1_Gsub[unfolded Gren_def[symmetric]]
+lemmas GVrs2_Gren = GVrs2_Gsub[unfolded Gren_def[symmetric]]
 
 end 

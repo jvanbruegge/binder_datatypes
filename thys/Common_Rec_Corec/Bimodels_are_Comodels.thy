@@ -55,30 +55,30 @@ shows "Edtor1' (Ector u,p) =
         GVrs2 u1 \<inter> PVrs p = {} \<and> GVrs2 u1 \<inter> GVrs1 u1 = {}}"
 using in_Edtor1'_Ector[OF assms] by auto
 
-fun Edtor' :: "'a E'\<times>'a P \<Rightarrow> (('a::var,'a,'a E'\<times>'a P,'a E'\<times>'a P)G)set + 'a E" where 
+fun Edtor' :: "'a E'\<times>'a P \<Rightarrow> 'a E + (('a::var,'a,'a E'\<times>'a P,'a E'\<times>'a P)G)set" where 
 "Edtor' (e,p) = (let u = (SOME u. e = Ector u) in 
-  if base u then Inr (Ector' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p) else Inl (Edtor1' (e,p)))"
+  if base u then Inl (Ector' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p) else Inr (Edtor1' (e,p)))"
 declare Edtor'.simps[simp del]
 lemmas Edtor'_def = Edtor'.simps
 
 lemma Edtor'_base: 
 assumes "base u"
-shows "Edtor' (Ector u, p) = Inr (Ector' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p)"
+shows "Edtor' (Ector u, p) = Inl (Ector' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p)"
 using assms unfolding Edtor'_def 
 by (smt (verit, ccfv_threshold) Eps_cong base_Some_Ector)
 
 
 lemma Edtor'_step: 
 assumes "\<not> base u"
-shows "Edtor' (Ector u, p) = Inl (Edtor1' (Ector u, p))"
+shows "Edtor' (Ector u, p) = Inr (Edtor1' (Ector u, p))"
 using assms unfolding Edtor'_def 
 by (smt (verit) Ector_base tfl_some) 
 
-lemma Edtor'_Inl_step: "Edtor' (Ector u, p) = Inl U \<Longrightarrow> \<not> base u"
-  using Edtor'_base by force
-
-lemma Edtor'_Inr_base: "Edtor' (Ector u, p) = Inr U \<Longrightarrow> base u"
+lemma Edtor'_Inl_base: "Edtor' (Ector u, p) = Inl U \<Longrightarrow> base u"
   using Edtor'_step by force 
+
+lemma Edtor'_Inr_step: "Edtor' (Ector u, p) = Inr U \<Longrightarrow> \<not> base u"
+  using Edtor'_base by force
 
 (* *)
 lemma Edtor1'_NE: 
@@ -243,7 +243,7 @@ lemma dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''"
 unfolding dtorVrsGrenC_def EVrs''_def proof safe 
   fix e p U u1 u2 
   assume "Evalid' (e, p)"
-  and 0: "Edtor' (e, p) = Inl U" and u12: "{u1, u2} \<subseteq> U"
+  and 0: "Edtor' (e, p) = Inr U" and u12: "{u1, u2} \<subseteq> U"
   hence P: "Pvalid p" unfolding Evalid'_def by simp
   show "\<exists>\<sigma>. small \<sigma> \<and>
            bij \<sigma> \<and>
@@ -343,7 +343,7 @@ unfolding dtorVrsC_def Evalid'_def apply (intro allI impI) subgoal for pe apply(
 apply clarsimp
 apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (intro conjI allI)
   subgoal for u apply(cases "base u")
-    subgoal unfolding Edtor'_base using Edtor'_Inl_step by auto
+    subgoal unfolding Edtor'_base using Edtor'_Inr_step by auto
     subgoal apply clarify unfolding Edtor'_step  
     unfolding Edtor1'_Ector unfolding EVrs_Ector GSupp1_Gmap GSupp2_Gmap apply clarify
     subgoal for ua  
@@ -360,8 +360,8 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (
     subgoal using Edtor'_step in_Edtor1'_Ector by auto . . .
   subgoal for u apply(cases "base u")
     subgoal using base_Ector'_Ector_EVrs unfolding Edtor'_base EVrs''_def 
-      by (metis Edtor'_base Un_commute Un_subset_iff old.sum.inject(2))
-    subgoal unfolding Edtor'_step using Edtor'_Inr_base by blast . . . .
+      by (metis Edtor'_base Un_commute Un_subset_iff old.sum.inject(1))
+    subgoal unfolding Edtor'_step using Edtor'_Inl_base by blast . . . .
 
 
 lemma presDV_Evalid'_Edtor': "presDV Evalid' Edtor'"
@@ -407,7 +407,7 @@ theorem rec_Ector_not_base:
 assumes f: "\<not> base u" and p: "Pvalid p"  and g : "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
 shows "crec (Ector u) p = Ector' (Gmap crec crec u) p"
 proof-
-  have "Edtor' (Ector u, p) = Inl (Edtor1' (Ector u, p))" 
+  have "Edtor' (Ector u, p) = Inr (Edtor1' (Ector u, p))" 
   and 1: "Gmap C.corec C.corec ` (Edtor1' (Ector u, p)) \<subseteq> Edtor (C.corec (Ector u, p))"
     using f p g apply(auto simp add: C.corec_Edtor_Inl Edtor'_step)  
     using C.corec_Edtor_Inl Edtor'_step Evalid'_def by fastforce
@@ -468,11 +468,11 @@ proof-
   proof(rule C.corec_unique[OF _ _ ep], safe)
     fix e p U x w
     assume "Evalid' (e, p)" and 
-    1: "Edtor' (e, p) = Inl U" and w: "w \<in> U"
+    1: "Edtor' (e, p) = Inr U" and w: "w \<in> U"
     hence p: "Pvalid p" unfolding Evalid'_def by auto
     obtain u where e: "e = Ector u" and 2: "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"   
       using Ector_surj_fresh[OF countable_PVrs[OF p], of e] by auto 
-    have f: "\<not> base u" using 1 using Edtor'_Inl_step e by auto
+    have f: "\<not> base u" using 1 using Edtor'_Inr_step e by auto
     from 1 f 2 w have "w \<in> Edtor1' (Ector u, p)" apply - unfolding e Edtor'_step by auto
     hence 0: "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
     and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}" and ww: "GVrs2 w \<inter> PVrs p = {}"
@@ -483,11 +483,11 @@ proof-
       unfolding H using 0 apply- apply(rule Ector_Ector'_Gmap_fst)
       using 00 ww 2 f p by auto
   next 
-    fix e p  e1 assume "Evalid' (e, p)" and 1: "Edtor' (e, p) = Inr e1" 
+    fix e p  e1 assume "Evalid' (e, p)" and 1: "Edtor' (e, p) = Inl e1" 
     hence p: "Pvalid p" unfolding Evalid'_def by auto
     obtain u where e: "e = Ector u" and 2: "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
     using Ector_surj_fresh[OF countable_PVrs[OF p], of e] by auto 
-    have f: "base u" using 1 using Edtor'_Inr_base e by auto
+    have f: "base u" using 1 using Edtor'_Inl_base e by auto
     from 1 f 2 have e1: "e1 = Ector' (Gmap (\<lambda>a p. a) (\<lambda>a p. a) u) p" 
     apply - unfolding e Edtor'_base by auto
     have 00: "H (Ector u) p = Ector' (Gmap H H u) p"

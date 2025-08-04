@@ -511,19 +511,22 @@ lemma Eperm''_cong:
 unfolding Eperm''_def EVrs''_def    
 by (metis Eperm_cong Pperm_cong UnCI)    
 
-(* HERE *)
-term term 
-(* 
-lemma nomC: "nom Evalid' Eperm'' EVrs''"
-unfolding nom_def apply safe
- unfolding Evalid'_def Eperm''_def using nomP unfolding nom_def apply simp  
-apply auto  
-  apply (auto simp add: EVrs''_def Eperm_comp Pperm_comp)
-  apply (metis Eperm_cong Un_iff) 
-  by (metis Pperm_cong Un_iff) 
+lemma EVrs_Un_PVrs_small:
+"Pvalid p \<Longrightarrow> |EVrs e \<union> PVrs p| <o |UNIV::'a::covar_G set|"
+by (simp add: G.Un_bound PVrs_small)
 
+lemma nomC: "NominalRel Evalid' Eperm'' EVrs''"
+using NominalRel_axioms unfolding NominalRel_def 
+apply safe
+unfolding Evalid'_def Eperm''_def 
+unfolding NominalRel_def    
+by (auto simp add: EVrs''_def Eperm_comp' Pperm_comp Eperm_cong_id 
+   Pperm_cong_id EVrs_Eperm PVrs_Pperm EVrs_Un_PVrs_small) 
+
+(*
 lemma Pvalid_Pperm[simp]: "Pvalid p \<Longrightarrow> small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Pvalid (Pperm \<sigma> p)"
 using nomP unfolding nom_def by blast
+*)
 
 lemma dtorPermC: "dtorPermC Evalid' Edtor' Eperm''"
 unfolding dtorPermC_def apply clarify subgoal for \<sigma> e p

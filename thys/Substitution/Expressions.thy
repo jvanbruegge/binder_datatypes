@@ -44,7 +44,7 @@ lemma EVrs_bound[simp]: "|EVrs (x :: 'e)| <o |UNIV :: 'a set|"
 
 end
 
-(* Relativized nominal (used for parameters only) :*)
+(* Relativized nominal (used mostly for parameters) :*)
 locale NominalRel = 
   fixes Pvalid :: "'p \<Rightarrow> bool"
   and Pperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
@@ -59,7 +59,7 @@ locale NominalRel =
   and Pperm_cong_id:
   "\<And>\<sigma> p. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow>
    (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Pperm \<sigma> p = p" 
-  and Pperm_Pvrs: 
+  and PVrs_Pperm: 
    "\<And>\<sigma> p. Pvalid p \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
    PVrs (Pperm \<sigma> p) = \<sigma> ` PVrs p"
   and PVrs_bd:
@@ -71,13 +71,43 @@ lemma Pperm_id[simp]: "Pvalid p \<Longrightarrow> Pperm id p = p"
 by (simp add: Pperm_cong_id)
 
 
+lemma Pperm_bij:
+assumes "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a)" "|supp \<sigma>| <o |UNIV :: 'a set|"
+shows "bij_betw (Pperm \<sigma>) (Collect Pvalid) (Collect Pvalid)"
+proof-
+  {fix p assume p: "Pvalid p"
+   have "Pperm \<sigma> (Pperm (inv \<sigma>) p) = p \<and> Pperm (inv \<sigma>) (Pperm \<sigma> p) = p"
+   by (simp add: Pperm_comp assms p)
+  }
+  thus ?thesis   
+  by (smt (verit) Pperm_Pvalid assms(1,2) bij_betwI' bij_bij_betw_inv 
+       mem_Collect_eq supp_inv_bound) 
+qed
+
+lemma Pperm_inv_into:
+"bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+ Pvalid p \<Longrightarrow> Pperm (inv \<sigma>) p = inv_into (Collect Pvalid) (Pperm \<sigma>) p" 
+by (smt (verit) Pperm_Pvalid Pperm_bij Pperm_comp Pperm_id bij_betw_inv_into_left
+      bij_imp_bij_inv bij_inv_id1 mem_Collect_eq supp_inv_bound)
+
+find_theorems "bij (inv _)"
+
+find_theorems "|supp (_ o _)|"
+
 lemma Pperm_cong:
-  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
-  bij (\<sigma>' :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>'| <o |UNIV :: 'a set| \<Longrightarrow>
-  Pvalid p \<Longrightarrow>
-   (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = \<sigma>' a) 
- \<Longrightarrow> Pperm \<sigma> p = Pperm \<sigma>' p"
-sorry
+assumes "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a)" "|supp \<sigma>| <o |UNIV :: 'a set|" 
+"bij (\<sigma>' :: 'a :: var \<Rightarrow> 'a)" "|supp \<sigma>'| <o |UNIV :: 'a set|"
+"Pvalid p"
+"\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = \<sigma>' a"
+shows "Pperm \<sigma> p = Pperm \<sigma>' p" 
+proof-
+  have "Pperm (inv \<sigma>' o \<sigma>) p = p" 
+  apply(rule Pperm_cong_id)
+  using assms by (auto intro: supp_comp_bound)  
+  thus ?thesis  
+  by (metis (no_types, lifting) Pperm_Pvalid Pperm_comp Pperm_id assms(1-5)
+        bij_betw_inv_into bij_inv_id1 supp_inv_bound)
+qed
 
 
 end (* context  NominalRel *)

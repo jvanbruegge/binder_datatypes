@@ -162,7 +162,7 @@ unfolding Eperm''_def Evalid'_def
     subgoal unfolding Edtor'_base apply safe 
     unfolding Eperm_Ector apply(subst Edtor'_base)
       subgoal using base_Gmap base_Gren by metis
-      subgoal apply auto 
+      subgoal apply auto  
       apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
         subgoal by simp
         subgoal unfolding Gmap_comp Gmap_Gren unfolding lift_def o_def .. . .

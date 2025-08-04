@@ -145,6 +145,10 @@ lemma Gmap_comp:
 "Gmap g1 g2 (Gmap f1 f2 u) = Gmap (g1 \<circ> f1) (g2 \<circ> f2) u"
 by (metis G.Map_comp comp_apply)
 
+lemma Gmap_o: 
+"Gmap (g1 \<circ> f1) (g2 \<circ> f2) = Gmap g1 g2 o Gmap f1 f2"
+by (simp add: G.Map_comp) 
+
 lemmas GVrs1_Gmap = G.Vrs_Map1
 lemmas GVrs2_Gmap = G.Vrs_Map2
 lemmas GSupp1_Gmap = G.Supp1_Map
@@ -173,7 +177,7 @@ lemmas Gren_cong = Gsub_cong[unfolded Gren_def[symmetric]]
 lemmas Gren_cong_id = Gsub_cong_id[unfolded Gren_def[symmetric]]
 lemmas Gren_comp = Gsub_comp[unfolded Gren_def[symmetric]]
 lemmas Gren_comp' = Gsub_comp'[unfolded Gren_def[symmetric]]
-lemmas Gren_id = Gsub_id[unfolded Gren_def[symmetric]]
+lemmas Gren_id = Gsub_id[unfolded Gren_def[symmetric],simp]
 lemmas Gmap_Gren = Gmap_Gsub[unfolded Gren_def[symmetric]]
 lemmas Gmap_Gren' = Gmap_Gsub'[unfolded Gren_def[symmetric]]
 lemmas GSupp1_Gren = GSupp1_Gsub[unfolded Gren_def[symmetric]]

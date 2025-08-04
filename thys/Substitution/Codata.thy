@@ -528,20 +528,44 @@ lemma Pvalid_Pperm[simp]: "Pvalid p \<Longrightarrow> small \<sigma> \<Longright
 using nomP unfolding nom_def by blast
 *)
 
-lemma dtorPermC: "dtorPermC Evalid' Edtor' Eperm''"
-unfolding dtorPermC_def apply clarify subgoal for \<sigma> e p
+lemma small_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> |PVrs p \<union> inv \<sigma> ` PVrs p| <o |UNIV::'a::covar_G set|"
+using PVrs_small card_image_ordLess infinite_class.Un_bound by blast
+
+(* "lemma dtorPermC: dtorPermC Evalid' Edtor' Eperm''" *)
+lemma dtorPermC_Inl: 
+"bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> Evalid' ep \<Longrightarrow> Edtor' ep = Inl e1 \<Longrightarrow> Edtor' (Eperm'' \<sigma> ep) = Inl (Eperm \<sigma> e1)" 
+apply (cases ep) apply clarify subgoal for e p
 unfolding Eperm''_def Evalid'_def 
-  apply(rule Ector_exhaust_fresh[OF "countable_PVrs_im", of \<sigma> p e], simp_all)
+  apply(rule Ector_exhaust_fresh[OF small_PVrs_im, of \<sigma> p e], simp_all)
   unfolding A_Int_Un_emp apply(erule conjE) apply simp
   subgoal for u apply(cases "base u")
-    subgoal unfolding Edtor'_base apply safe 
+    subgoal unfolding Edtor'_base    
     unfolding Eperm_Ector apply(subst Edtor'_base)
       subgoal using base_Gmap base_Gren by metis
       subgoal apply auto 
-      apply(subst ctorPermM_Ector'[unfolded ctorPermM_def, rule_format])
-        subgoal by simp
-        subgoal unfolding Gmap_comp Gmap_Gren unfolding lift_def o_def .. . .
-     subgoal 
+      apply(subst ctorPermM_Ector')
+        subgoal by simp  subgoal by simp subgoal by simp
+        subgoal unfolding Gmap_comp Gmap_Gren'
+         unfolding lift_def o_def .. . .
+     subgoal using Edtor'_step by auto . . .
+
+lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm Pperm \<sigma> o (\<lambda>e p. e)"
+  unfolding fun_eq_iff o_def lift_def by simp
+
+lemma Eperm_inv_iff: "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
+by (metis E.permute_bij E.permute_inv_simp inv_simp1 inv_simp2)
+
+lemma dtorPermC_Inr: 
+"bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> Evalid' ep \<Longrightarrow> Edtor' ep = Inr U 
+ \<Longrightarrow> \<exists>U'. Edtor' (Eperm'' \<sigma> ep) = Inr U' \<and> 
+          U' \<subseteq> Gren \<sigma> \<sigma> ` (Gmap (Eperm'' \<sigma>) (Eperm'' \<sigma>) ` U)" 
+apply (cases ep) apply clarify subgoal for e p
+unfolding Eperm''_def Evalid'_def 
+  apply(rule Ector_exhaust_fresh[OF small_PVrs_im, of \<sigma> p e], simp_all)
+  unfolding A_Int_Un_emp apply(erule conjE) apply simp
+  subgoal for u apply(cases "base u")
+    subgoal by (simp add: Edtor'_Inr_step)
+    subgoal 
      apply(subgoal_tac "\<sigma> ` GVrs2 u \<inter> PVrs p = {}") 
      prefer 2 subgoal unfolding bij_inv_Un_triv by auto
      unfolding Edtor'_step apply safe 
@@ -550,7 +574,7 @@ unfolding Eperm''_def Evalid'_def
       subgoal apply simp  
       apply(subst Edtor1'_Ector)
         subgoal using base_Gmap base_Gren by metis
-        subgoal by auto
+        subgoal using Pperm_Pvalid by presburger
         subgoal unfolding GVrs2_Gmap GVrs2_Gren PVrs_Pperm  
           by (metis bij_is_inj image_Int image_empty)
         subgoal unfolding GVrs2_Gmap GVrs2_Gren GVrs1_Gmap GVrs1_Gren PVrs_Pperm  
@@ -558,65 +582,59 @@ unfolding Eperm''_def Evalid'_def
         subgoal unfolding image_def apply auto apply(subst Edtor1'_Ector)
         apply auto subgoal for u0
         apply(rule exI[of _ "Gren (inv \<sigma>) (inv \<sigma>) u0"]) apply safe
-          prefer 2 subgoal apply(subst Gren_comp) by auto
+          prefer 2 subgoal apply(subst Gren_comp'[symmetric]) by auto 
           subgoal 
           apply(rule exI[of _ "Gren (inv \<sigma>) (inv \<sigma>) (Gmap (Eperm'' (inv \<sigma>)) (Eperm'' (inv \<sigma>)) u0)"])
           apply safe
-            subgoal unfolding Gmap_comp Gmap_Gren apply(subst Gmap_Gren)
-              subgoal by auto
-              subgoal by auto
+            subgoal unfolding Gmap_comp Gmap_Gren'[symmetric] apply(subst Gmap_Gren'[symmetric])
+              subgoal by auto 
               subgoal unfolding Gmap_comp apply simp 
               unfolding Gmap_o apply(subst o_def)
               apply(subst Eperm_Ector[symmetric])
                 subgoal by auto
                 subgoal by auto
                 subgoal 
-                unfolding Gmap_o[symmetric] triv_Eperm_lift unfolding Gmap_o
+                unfolding Gmap_o[symmetric] 
+                unfolding triv_Eperm_lift 
+                unfolding Gmap_o
                 unfolding o_def
-                apply(subst (asm) ctorPermM_Ector'[unfolded ctorPermM_def, rule_format,  
-                            symmetric]) 
-                  subgoal by simp
+                apply(subst (asm) ctorPermM_Ector'[symmetric]) 
+                  subgoal by simp subgoal by simp subgoal by simp
                   subgoal apply(subst Eperm_inv_iff) by auto . . .
               subgoal for e' unfolding GSupp1_Gmap apply auto subgoal for b apply(subst (asm) GSupp1_Gren)
-                subgoal by auto
-                subgoal by auto
+                subgoal by auto 
                 subgoal unfolding GSupp1_Gmap apply(auto simp: Eperm''_def) subgoal for ee pp 
                 apply(subgoal_tac "pp = Pperm \<sigma> p")
                   subgoal apply simp apply(subst Pperm_comp) by auto
                   subgoal by auto . . . .
               subgoal for pp unfolding GSupp2_Gmap apply auto apply(subst (asm) GSupp2_Gren)
-                subgoal by auto
-                subgoal by auto
+                subgoal by auto 
                 subgoal for ee unfolding GSupp2_Gmap apply(auto simp: Eperm''_def) subgoal for e' p'
                 apply(subgoal_tac "p' = Pperm \<sigma> p")
                   subgoal apply simp apply(subst Pperm_comp) by auto
                   subgoal by auto . . . 
               subgoal for a apply(subst (asm) GVrs2_Gren)
-                subgoal by auto subgoal by auto
+                subgoal by auto  
                 subgoal unfolding GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap apply auto  
                 subgoal for a
                 apply(subgoal_tac "a \<in> \<sigma> ` PVrs p") 
                   subgoal by (metis IntI PVrs_Pperm empty_iff)
                   subgoal unfolding bij_in_inv_Un_triv . . . .
-              subgoal by (metis (no_types, lifting) GVrs1_Gmap GVrs1_Gren GVrs2_Gmap 
-                    GVrs2_Gren bij_betw_inv_into bij_in_inv_Un_triv disjoint_iff small_inv)
-              subgoal apply(subst Gmap_Gren[symmetric])
-               subgoal by auto subgoal by auto
+               subgoal apply (auto simp: GVrs1_Gren GVrs2_Gren GVrs1_Gmap GVrs2_Gmap)
+               by (metis (lifting) disjoint_iff inv_simp2)
+               subgoal apply(subst Gmap_Gren')
+               subgoal by auto subgoal  
                subgoal unfolding Gmap_comp  
                apply(rule sym) apply(rule Gmap_cong_id)
                  subgoal for ea unfolding o_def
                  apply(subst Eperm''_o[symmetric]) apply (cases ea) apply auto 
-                 subgoal  
-                   by (metis (no_types, opaque_lifting) GSupp1_Gmap GSupp1_Gren Pvalid_Pperm
-                       bij_betw_inv_into insert_image insert_subset singletonD small_inv snd_conv) 
-                 apply(subst (asm) GSupp1_Gren) 
-                 by (auto simp: GSupp1_Gmap subset_iff) 
+                 subgoal using Pperm_Pvalid by (auto simp: GSupp1_Gren GSupp1_Gmap GSupp2_Gmap)    
+                 subgoal using Pperm_Pvalid by (auto simp: GSupp1_Gmap GSupp1_Gren subset_iff) . 
                  subgoal for ea unfolding o_def
-                 apply(subst Eperm''_o[symmetric]) apply (cases ea)  apply auto 
-                 apply(subst (asm) GSupp2_Gren) apply (auto simp: GSupp2_Gmap subset_iff)
-                 by (metis (no_types, opaque_lifting) Eperm''_id GSupp2_Gren Pvalid_Pperm
-                     bij_betw_inv_into imageI small_inv)
- . . . . . . . . . .
+                 apply(subst Eperm''_o[symmetric]) apply (cases ea)  
+                 apply (auto simp: GSupp2_Gren GSupp2_Gmap subset_iff)
+                   using Pperm_Pvalid apply auto  
+  . . . . . . . . . . . .
                
 
 lemma dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''"

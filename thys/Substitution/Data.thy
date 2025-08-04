@@ -67,7 +67,7 @@ lemma E_coinduct_gen:
 
 (**************) 
 (* Binder datatypes satisfy the 
-strong-expression axiomatization: *)
+strong expression axiomatization: *)
 interpretation Expression Eperm EVrs Gbd Ector
   apply unfold_locales
   apply (auto simp: E.inject E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd large'
@@ -132,6 +132,10 @@ context Expression_with_Birecursor
 begin 
 *)
 
+(**************)
+(* Starting to prove that binder datatypes validate 
+the birecursion principle: *)
+
 
 context 
 fixes Pvalid :: "'p \<Rightarrow> bool" 
@@ -144,18 +148,6 @@ begin
 (* Just getting all the Bomodel theorems *)
 interpretation Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'
 using bimodel .
-lemmas ctor_compat_Pvalid_step_Ector' = Ector'_compat_Pvalid
-lemmas ctorPermM_Ector' = Eperm_Ector'
-thm Ector_base_inj
-thm Ector_Ector'_inj_step 
-thm Ector_Ector'_sync
-thm Ector'_uniform 
-
-
-(* *)
-
-
-
 
 (* *)
 
@@ -209,6 +201,11 @@ a bimodel is a model, has some complexity solely because
 the recursor is super-parameterized, it is a full recursor etc. *)
 
 end (* context *)
+
+
+(**************) 
+(* Binder datatypes validate the 
+birecursion principle: *)
 
 interpretation Expression_with_Birecursor Eperm EVrs Gbd Ector
 proof (standard, safe)

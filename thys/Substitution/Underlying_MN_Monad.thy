@@ -185,5 +185,6 @@ lemmas Gmap_id = G.Map_id
 lemmas Gmap_cong_id = Gmap_cong[of _ _ id _ id, 
 unfolded Gmap_id, 
 simplified]
+lemmas Gmap_id'[simp] = G.Map_id[unfolded id_def, simplified]
 
 end 

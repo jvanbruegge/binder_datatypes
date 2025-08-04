@@ -41,7 +41,10 @@ locale Bimodel =
   NominalRel Pvalid Pperm "PVrs :: 'p \<Rightarrow> 'a :: var set" + Expression Eperm "EVrs :: 'e \<Rightarrow> 'a set" Ebd Ector
   for Pvalid Pperm PVrs Eperm EVrs Ebd Ector +
   fixes Ector' :: "('a::var, 'a, 'p \<Rightarrow> 'e, 'p \<Rightarrow> 'e) G \<Rightarrow> 'p \<Rightarrow> 'e"
-  assumes Ector'_compat_Pvalid: "\<And>(u::('a, 'a, 'p\<Rightarrow>'e,'p\<Rightarrow>'e) G) f1 f2 g1 g2 p. 
+  assumes 
+  PVrs_small: "\<And>p. Pvalid p \<Longrightarrow> |PVrs p| <o |UNIV::'a set|"
+  and Ector'_compat_Pvalid_step: "\<And>(u::('a, 'a, 'p\<Rightarrow>'e,'p\<Rightarrow>'e) G) f1 f2 g1 g2 p. 
+   \<not> base u \<Longrightarrow> 
    (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<Longrightarrow> 
    (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p) \<Longrightarrow>
    Pvalid p 
@@ -85,6 +88,27 @@ locale Bimodel =
        Ector' u p = Ector' (Gmap (\<lambda>pe p'. pe p) (\<lambda>pe p'. pe p) u) p" 
 begin
 
+lemmas ctor_compat_Pvalid_step_Ector' = Ector'_compat_Pvalid_step
+lemmas ctorPermM_Ector' = Eperm_Ector'
+thm Ector_base_inj
+thm Ector_Ector'_inj_step 
+thm Ector_Ector'_sync
+thm Ector'_uniform 
+
+
+lemma Ector'_compat_Pvalid: 
+"\<And>(u::('a, 'a, 'p\<Rightarrow>'e,'p\<Rightarrow>'e) G) f1 f2 g1 g2 p. 
+   (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<Longrightarrow> 
+   (\<forall>pe \<in> GSupp2 u. \<forall>p. Pvalid p \<longrightarrow> f2 pe p = g2 pe p) \<Longrightarrow>
+   Pvalid p 
+   \<Longrightarrow> 
+   Ector' (Gmap f1 f2 u) p = Ector' (Gmap g1 g2 u) p"
+using ctor_compat_Pvalid_step_Ector'
+by (smt (verit, best) base_Gmap_eq)  
+
+
+lemmas ctor_compat_Pvalid_Ector' = Ector'_compat_Pvalid 
+
 
 lemma Ector_Ector'_EVrs: 
 assumes (*b: "\<not> base u"
@@ -94,16 +118,16 @@ apply(rule subset_trans[OF ctorVarsM_Ector'[rule_format, OF p]])
 unfolding GVrs1_Gmap GVrs2_Gmap GSupp1_Gmap GSupp2_Gmap 
 unfolding EVrs_Ector by auto 
 
-lemma Ector_Ector'_EVrsp: 
-"\<not> base u \<Longrightarrow> 
-    Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
+lemma Ector_Ector'_EVrs_stepp: 
+"\<comment> \<open> \<not> base u \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> \<close>
+    Pvalid p \<Longrightarrow> GVrs2 uu \<inter> PVrs p = {} \<Longrightarrow>
     Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p = Ector uu \<Longrightarrow>
     EVrs (Ector uu) \<subseteq> EVrs (Ector u) \<union> PVrs p"
 using Ector_Ector'_EVrs[of p u] 
 by auto 
 
 lemmas Ector_Ector'_EVrs' =  
-triv_Un4_remove[OF Ector_Ector'_EVrsp[unfolded EVrs_Ector]]
+triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]
 
 lemma Ector_base: "Ector (u:: ('a, 'a, 'e, 'e) G) = Ector v \<Longrightarrow> base u \<longleftrightarrow> base v"
 using Ector_base_inj by metis

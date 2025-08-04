@@ -64,7 +64,7 @@ definition nom :: "('E \<Rightarrow> bool) \<Rightarrow> (('a::var \<Rightarrow>
 "nom valid perm Vrs \<equiv> 
  (\<forall>\<sigma> e. valid e \<and> small \<sigma> \<and> bij \<sigma> \<longrightarrow> valid (perm \<sigma> e))
  \<and> 
- perm id = id 
+ (\<forall>e. valid e \<longrightarrow> perm id e = e)  
  \<and> 
  (\<forall>\<sigma>1 \<sigma>2 e. valid e \<and> small \<sigma>1 \<and> bij \<sigma>1 \<and> small \<sigma>2 \<and> bij \<sigma>2 \<longrightarrow>  
  perm (\<sigma>1 o \<sigma>2) e = perm \<sigma>1 (perm \<sigma>2 e)) 
@@ -269,7 +269,7 @@ axiomatization where nomP: "nom Pvalid Pperm PVrs"
 and countable_PVrs: "\<And>p. Pvalid p \<Longrightarrow> countable (PVrs p)"
 and PVrs_Pperm: "\<And> \<sigma> p. Pvalid p \<Longrightarrow> bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> PVrs (Pperm \<sigma> p) = \<sigma> ` PVrs p" 
 
-lemma Pperm_id[simp]: "Pperm id = id" 
+lemma Pperm_id[simp]: "Pvalid p \<Longrightarrow> Pperm id p = p" 
 using nomP[unfolded nom_def] by auto
 
 lemma Pperm_comp: "Pvalid p \<Longrightarrow> small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 

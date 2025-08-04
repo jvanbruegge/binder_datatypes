@@ -34,6 +34,19 @@ proof-
   using Ector_eq_GVrs1 e by blast
 qed
 
+lemma Ector_surj: "\<exists>x. e = Ector x"
+by (meson Ector_fresh_surj emp_bound) 
+
+lemma Ector_exhaust: "(\<And>u. P (Ector u)) \<Longrightarrow> (\<forall>e. P e)"
+by (metis Ector_surj)
+
+lemma Ector_exhaust': "(\<And>u. e = Ector u \<Longrightarrow> P e) \<Longrightarrow> P e"
+  by (metis Ector_surj)
+
+lemma Ector_exhaust_fresh: "|A| <o |UNIV::'a::var set| \<Longrightarrow> 
+   (\<And>u. e = Ector u \<Longrightarrow> GVrs2 u \<inter> GVrs1 u = {} \<Longrightarrow> GVrs2 u \<inter> A = {} \<Longrightarrow> P e) \<Longrightarrow> P e"
+using Ector_fresh_surj' by blast
+
 end (* context Expression_with_Surj_and_Coinduct *)
 
 end

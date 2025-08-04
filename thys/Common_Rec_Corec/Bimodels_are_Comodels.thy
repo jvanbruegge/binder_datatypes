@@ -46,7 +46,6 @@ proof-
   by (auto simp add: GVrs1_Gmap GVrs2_Gmap base_Gmap in_Edtor1'_Ector_aux v) 
 qed
 
-
 lemma Edtor1'_Ector: 
 assumes "\<not> base u" "Pvalid p" "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}" 
 shows "Edtor1' (Ector u,p) = 
@@ -123,15 +122,14 @@ unfolding fun_eq_iff by (simp add: Eperm''_def)
 lemma snd_EPerm'[simp]: "snd \<circ> Eperm'' \<sigma> = Pperm \<sigma> o snd"
 unfolding fun_eq_iff by (simp add: Eperm''_def)
 
-lemma Eperm''_id[simp]: "Eperm'' id = id"
+lemma Eperm''_id[simp]: "Pvalid (snd pe) \<Longrightarrow> Eperm'' id pe = pe"
   using Eperm''_def  
-  by (metis Eperm_id Pperm_id apfst_convE eq_id_iff)   
+  by (metis Eperm_id Pperm_id id_apply snd_conv surj_pair)    
 
 lemma Eperm''_o: 
 "Pvalid (snd ep) \<Longrightarrow> small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
 Eperm'' (\<sigma>1 \<circ> \<sigma>2) ep = Eperm'' \<sigma>1 (Eperm'' \<sigma>2 ep)"
 apply(cases ep) by (simp add: Eperm''_def Eperm_comp Pperm_comp) 
-
 
 lemma Eperm''_comp: 
 "Pvalid p \<Longrightarrow> small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
@@ -231,12 +229,19 @@ unfolding Eperm''_def Evalid'_def
                subgoal by auto subgoal by auto
                subgoal unfolding Gmap_comp  
                apply(rule sym) apply(rule Gmap_cong_id)
-                 subgoal unfolding o_def
-                 apply(subst Eperm''_o[symmetric]) apply auto 
-                 apply(subst (asm) GSupp1_Gren) by (auto simp: GSupp1_Gmap subset_iff) 
-                 subgoal unfolding o_def
-                 apply(subst Eperm''_o[symmetric]) apply auto 
-                 apply(subst (asm) GSupp2_Gren) by (auto simp: GSupp2_Gmap subset_iff) . . . . . . . . . .
+                 subgoal for ea unfolding o_def
+                 apply(subst Eperm''_o[symmetric]) apply (cases ea) apply auto 
+                 subgoal  
+                   by (metis (no_types, opaque_lifting) GSupp1_Gmap GSupp1_Gren Pvalid_Pperm
+                       bij_betw_inv_into insert_image insert_subset singletonD small_inv snd_conv) 
+                 apply(subst (asm) GSupp1_Gren) 
+                 by (auto simp: GSupp1_Gmap subset_iff) 
+                 subgoal for ea unfolding o_def
+                 apply(subst Eperm''_o[symmetric]) apply (cases ea)  apply auto 
+                 apply(subst (asm) GSupp2_Gren) apply (auto simp: GSupp2_Gmap subset_iff)
+                 by (metis (no_types, opaque_lifting) Eperm''_id GSupp2_Gren Pvalid_Pperm
+                     bij_betw_inv_into imageI small_inv)
+ . . . . . . . . . .
                
 
 lemma dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''"

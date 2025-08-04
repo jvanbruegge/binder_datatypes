@@ -44,26 +44,43 @@ lemma EVrs_bound[simp]: "|EVrs (x :: 'e)| <o |UNIV :: 'a set|"
 
 end
 
-(* Relativized nominal :*)
+(* Relativized nominal (used for parameters only) :*)
 locale NominalRel = 
-  fixes Evalid :: "'e \<Rightarrow> bool"
-  and Eperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e"
-  and EVrs :: "'e \<Rightarrow> 'a set"
+  fixes Pvalid :: "'p \<Rightarrow> bool"
+  and Pperm :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
+  and PVrs :: "'p \<Rightarrow> 'a set"
   assumes
-  Eperm_Evalid: "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow> Evalid (Eperm \<sigma> e)"
-  and Eperm_comp:
-  "\<And>\<sigma> \<tau> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
+  Pperm_Pvalid: "\<And>\<sigma> p. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow> Pvalid (Pperm \<sigma> p)"
+  and Pperm_comp:
+  "\<And>\<sigma> \<tau> p. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow>
    bij (\<tau> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<tau>| <o |UNIV :: 'a set| \<Longrightarrow>
-   Evalid e \<Longrightarrow>
-   Eperm \<sigma> (Eperm \<tau> e) = Eperm (\<sigma> o \<tau>) e"
-  and Eperm_cong_id:
-  "\<And>\<sigma> e. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Evalid e \<Longrightarrow>
-   (\<And>a. a \<in> EVrs e \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Eperm \<sigma> e = e" 
-  and Eperm_Evrs: 
-   "\<And>\<sigma> e. Evalid e \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
-   EVrs (Eperm \<sigma> e) = \<sigma> ` EVrs e"
-  and EVrs_bd:
-  "\<And>e. Evalid e \<Longrightarrow> |EVrs (e :: 'e)| <o |UNIV :: 'a::var set|"
+   Pvalid p \<Longrightarrow>
+   Pperm \<sigma> (Pperm \<tau> p) = Pperm (\<sigma> o \<tau>) p"
+  and Pperm_cong_id:
+  "\<And>\<sigma> p. bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> Pvalid p \<Longrightarrow>
+   (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Pperm \<sigma> p = p" 
+  and Pperm_Pvrs: 
+   "\<And>\<sigma> p. Pvalid p \<Longrightarrow> bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+   PVrs (Pperm \<sigma> p) = \<sigma> ` PVrs p"
+  and PVrs_bd:
+  "\<And>p. Pvalid p \<Longrightarrow> |PVrs (p :: 'p)| <o |UNIV :: 'a::var set|"
+begin 
+
+
+lemma Pperm_id[simp]: "Pvalid p \<Longrightarrow> Pperm id p = p"
+by (simp add: Pperm_cong_id)
+
+
+lemma Pperm_cong:
+  "bij (\<sigma> :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> 
+  bij (\<sigma>' :: 'a :: var \<Rightarrow> 'a) \<Longrightarrow> |supp \<sigma>'| <o |UNIV :: 'a set| \<Longrightarrow>
+  Pvalid p \<Longrightarrow>
+   (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = \<sigma>' a) 
+ \<Longrightarrow> Pperm \<sigma> p = Pperm \<sigma>' p"
+sorry
+
+
+end (* context  NominalRel *)
 
 (**************************)
 (* 2. Expression-Like Entities *)

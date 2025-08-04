@@ -125,17 +125,6 @@ lemma E_coinduct_gen:
     done
   done
 
-interpretation Expression_with_Surj_and_Coinduct Eperm EVrs "card_suc Gbd" Ector
-  apply standard
-  apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
-    G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
-    E.permute_ctor E.FVars_ctor large'' intro: E.permute_cong_id)
-    subgoal (* apply (meson E.TT_fresh_cases) *) sorry
-  subgoal for P g h e
-    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def G.Sb_Inj)
-    done
-  done
-
 lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
   by (auto simp: rel_set_def)
 
@@ -1402,6 +1391,26 @@ theorem COREC_FFVarsD:
 
 end (* context COREC *)
 
+
+(* Binder codatatypes satisfy the 
+strong expression axiomatization: *)
+
+interpretation Expression Eperm EVrs "card_suc Gbd" Ector
+  apply standard
+  apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
+    G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
+    E.permute_ctor E.FVars_ctor large'' intro: E.permute_cong_id)
+  done
+
+interpretation Expression_with_Surj_and_Coinduct Eperm EVrs "card_suc Gbd" Ector
+  apply standard
+  subgoal by (meson E.TT_fresh_cases)
+  subgoal for P g h e
+    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def)
+    done
+  done
+
+
 (**************************************)
 (* Simpler version of the COREC locale, where 
 the full-corecursion base case is a direct return *)
@@ -1440,9 +1449,6 @@ locale COREC =
     and valid_Udtor: "\<And>x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow> Gpred (pred_sum (\<lambda>_. True) valid_U)  (pred_sum (\<lambda>_. True) valid_U) x"
 begin
 *)
-
-lemma Ector_surj: "\<exists>x. e = Ector x"
-by (meson E.TT_fresh_cases supp_id_bound)
 
 locale Corec =
   fixes Udtor :: "'u \<Rightarrow> 'a E + ('a::covar_G, 'a, 'u, 'u) G set"

@@ -325,7 +325,7 @@ proof-
     subgoal using u bsmall_def touchedSuperT_def uniform_finite_touchedUponT by fastforce .
   hence BB: "finite (touchedSuper B)" unfolding bsmall_def by auto
   have BBB: "|B| <o |UNIV::ivar set|"  
-    by (metis B small_def assms(2) card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (metis B small_def assms(2) card_dsset_ivar iterm.set_bd_UNIV infinite_class.Un_bound)
   obtain xs'' where xxs'': "super xs''" "B \<inter> dsset xs'' = {}" 
     by (smt (verit) Collect_cong Int_commute bsB bsmall_def super_infinite touchedSuper_def)
   obtain f where xs'': "xs'' = dsmap f xs'" and f: "bij_betw f (dsset xs') (dsset xs'')" "id_on (- dsset xs') f" 

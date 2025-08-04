@@ -500,7 +500,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             ]
         ])) (0 upto length supps)) end);
 
-        val (UN_bound, var_large) = case map_filter (try Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs of
+        val var_large = case map_filter (try Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs of
           [] =>
             let
               val (context, facts) = (Proof_Context.theory_of #>
@@ -508,12 +508,13 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
               fun lookup name = the_single (#thms (the (
                 Facts.lookup context facts (Facts.intern facts name)
               )));
-            in (lookup "UN_bound", lookup "large'") end
+            in lookup "large'" end
           | sort =>
             let
               val var_class = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) sort;
-              fun assm name = MRBNF_Def.get_class_assumption [hd var_class] name lthy;
-            in (assm "UN_bound", assm "large'") end;
+              fun assm name = Var_Classes.get_class_assumption (hd var_class) name lthy;
+            in assm "large'" end;
+        val UN_bound = @{thm var_class.UN_bound}
         val Un_bound = @{thm infinite_class.Un_bound}
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr quot)) = #card_of_FVars_bound_UNIVs quot

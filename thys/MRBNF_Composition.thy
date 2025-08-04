@@ -5,7 +5,6 @@ theory MRBNF_Composition
     "mrbnf" :: thy_goal
 begin
 
-ML_file \<open>../Tools/mrbnf_util.ML\<close>
 ML_file \<open>../Tools/mrbnf_def_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_def.ML\<close>
 

@@ -296,7 +296,7 @@ proof-
     subgoal using f g unfolding bij_def inj_def surj_def bij_betw_def inj_on_def apply auto 
       apply (smt (verit, ccfv_SIG) Int_emptyD ys(1) \<rho>_def image_iff super_disj xs)
       apply (smt (verit, del_insts) Int_emptyD \<rho>_def bij_betw_iff_bijections f(1) g(1) super_disj xs ys(1)) .
-    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound var_stream_class.Un_bound)
+    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound infinite_class.Un_bound)
     subgoal using ss by (simp add: finite_subset xs ys)
     subgoal unfolding presSuper_def apply clarify subgoal for zs  
     apply(cases "zs \<in> {xs,ys}")
@@ -356,7 +356,7 @@ proof-
     subgoal using f g unfolding bij_def inj_def surj_def bij_betw_def inj_on_def apply auto 
       apply (smt (verit, ccfv_SIG) Int_emptyD ys(1) \<rho>_def image_iff super_disj xs)
       apply (smt (verit, del_insts) Int_emptyD \<rho>_def bij_betw_iff_bijections f(1) g(1) super_disj xs ys(1)) .
-    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound var_stream_class.Un_bound)
+    subgoal using s by (simp add: card_dsset_ivar card_of_subset_bound infinite_class.Un_bound)
     subgoal unfolding presSuper_def apply clarify subgoal for zs  
     apply(cases "zs \<in> {xs,ys}")
       subgoal using 0 ys(1) xs by auto

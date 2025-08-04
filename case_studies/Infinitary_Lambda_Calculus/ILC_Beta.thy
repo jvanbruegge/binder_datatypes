@@ -13,7 +13,7 @@ abbreviation Tsupp :: "itrm \<Rightarrow> itrm \<Rightarrow> ivar set" where
 
 lemma small_Tsupp: "small (Tsupp t1 t2)"
   unfolding small_def
-  by (auto intro!: var_iterm_pre_class.Un_bound iterm.set_bd_UNIV)
+  by (auto intro!: infinite_class.Un_bound iterm.set_bd_UNIV)
 
 lemma Tvars_dsset: "(Tsupp t1 t2 - dsset xs) \<inter> dsset xs = {}" "|Tsupp t1 t2 - dsset xs| <o |UNIV::ivar set|"
 apply auto by (meson card_of_minus_bound small_Tsupp small_def)

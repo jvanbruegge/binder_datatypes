@@ -166,11 +166,12 @@ binder_datatype 'a ifol'
   | Conj "'a ifol' set\<^sub>k\<^sub>1"
   | All "(xs::'a) set\<^sub>k\<^sub>2" t::"'a ifol'" binds xs in t
 
-definition Bot :: "'a::var_ifol'_pre ifol'" ("\<bottom>") where
+
+definition Bot :: "'a::var_ifol' ifol'" ("\<bottom>") where
   "Bot \<equiv> Neg (Conj (Abs_set\<^sub>k\<^sub>1 bempty))"
 
 lemma permute_bot[simp, equiv]:
-  fixes \<sigma>::"'a::var_ifol'_pre \<Rightarrow> 'a"
+  fixes \<sigma>::"'a::var_ifol' \<Rightarrow> 'a"
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|"
   shows "permute_ifol' \<sigma> Bot = Bot"
   unfolding Bot_def using assms by (auto simp: map_set\<^sub>k\<^sub>1.abs_eq)
@@ -195,15 +196,24 @@ apply (rule card_of_Card_order)
 apply (rule kregular)
 done
 
-instance k::var_ifol'_pre
-apply standard
-apply (rule ordIso_ordLeq_trans[OF card_of_Field_natLeq])
-apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF kmax]])
-apply (rule natLeq_ordLeq_cinfinite)
-apply (rule Cinfinite_csum1)
-apply (rule k1_Cinfinite)
-apply (rule kregular)
-done
+lemma k_large: "natLeq \<le>o |UNIV::k1 set| +c |UNIV::k2 set|"
+  using kmax ordLeq_ordIso_trans var_class.large' by blast
+
+instance k::var_ifol'
+  apply standard
+   apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
+    apply (rule ifol'_pre.bd_Card_order)
+   apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF kmax]])
+   apply (unfold bd_ifol'_pre_def)
+   apply (rule ordIso_ordLeq_trans)
+    apply (rule ordIso_symmetric[OF type_copy_ordLeq_dir_image])
+     apply (rule Card_order_cprod)
+    apply (rule type_definition_ifol'_pre_bdT)
+   apply (rule cprod_cinfinite_bound csum_cinfinite_bound k_large ordLeq_csum1 ordLeq_csum2 card_of_Card_order
+      natLeq_Card_order Cinfinite_csum[OF disjI1] k1_Cinfinite Card_order_cprod Card_order_csum
+      )+
+  apply (rule kregular)
+  done
 
 type_synonym var = k
 type_synonym ifol = "var ifol'"
@@ -218,7 +228,7 @@ lift_definition k2member :: "'a \<Rightarrow> 'a set\<^sub>k\<^sub>2 \<Rightarro
 lift_definition kinsert :: "'a set\<^sub>k \<Rightarrow> 'a \<Rightarrow> 'a set\<^sub>k" (infixl "," 600) is "\<lambda>xs x. binsert x xs" .
 
 lemma in_k_equiv'[equiv]:
-  fixes \<sigma>::"'a::var_ifol'_pre \<Rightarrow> 'a"
+  fixes \<sigma>::"'a::var_ifol' \<Rightarrow> 'a"
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|"
   shows "f \<in>\<^sub>k \<Delta> \<Longrightarrow> permute_ifol' \<sigma> f \<in>\<^sub>k map_set\<^sub>k (permute_ifol' \<sigma>) \<Delta>"
 unfolding kmember_def map_fun_def id_o o_id map_set\<^sub>k_def
@@ -228,7 +238,7 @@ unfolding comp_def Abs_set\<^sub>k_inverse[OF UNIV_I]
 lemmas in_k_equiv = equiv(5)
 
 lemma in_k1_equiv'[equiv]:
-  fixes \<sigma>::"'a::var_ifol'_pre \<Rightarrow> 'a"
+  fixes \<sigma>::"'a::var_ifol' \<Rightarrow> 'a"
   assumes "bij \<sigma>" "|supp \<sigma>| <o |UNIV::'a set|"
   shows "f \<in>\<^sub>k\<^sub>1 F \<Longrightarrow> permute_ifol' \<sigma> f \<in>\<^sub>k\<^sub>1 map_set\<^sub>k\<^sub>1 (permute_ifol' \<sigma>) F"
 apply (unfold k1member_def map_fun_def comp_def id_def map_set\<^sub>k\<^sub>1_def Abs_set\<^sub>k\<^sub>1_inverse[OF UNIV_I])
@@ -269,7 +279,7 @@ proof-
   apply (rule set\<^sub>k\<^sub>2.set_bd)
   using var_set\<^sub>k\<^sub>2_class.large by auto
   hence ss1: "|set\<^sub>k\<^sub>2 xs \<union> V| <o |UNIV::var set|"
-  by (meson assms(2) var_ifol'_pre_class.Un_bound)
+  by (meson assms(2) infinite_class.Un_bound)
   obtain f xs' where f: "bij_betw f (set\<^sub>k\<^sub>2 xs) (set\<^sub>k\<^sub>2 xs')"
   "set\<^sub>k\<^sub>2 xs \<inter> set\<^sub>k\<^sub>2 xs' = {}" "V \<inter> set\<^sub>k\<^sub>2 xs' = {}" "map_set\<^sub>k\<^sub>2 f xs = xs'"
   using bij_betw_snth[OF ss1, of xs] by fastforce
@@ -357,7 +367,7 @@ binder_inductive deduct
               Un_Diff Diff_idemp
               ]])
         apply blast
-      apply (metis (no_types, lifting) ifol'.set(4) ifol'.set_bd_UNIV set\<^sub>k.set_bd var_ifol'_pre_class.UN_bound var_ifol'_pre_class.Un_bound)
+      apply (metis (no_types, lifting) ifol'.set(4) ifol'.set_bd_UNIV set\<^sub>k.set_bd var_class.UN_bound infinite_class.Un_bound)
       apply (erule exE conjE)+
       subgoal for g VV
         apply (rule exI[of _ "map_set\<^sub>k (permute_ifol' g) \<Delta>"])
@@ -424,11 +434,11 @@ binder_inductive deduct
       define X where "X \<equiv> set\<^sub>k\<^sub>2 V"
       let ?O = "\<Union> (FVars_ifol' ` set\<^sub>k \<Delta>) \<union> \<rho> ` FVars_ifol' f \<union> imsupp \<rho> \<union> X \<union> (FVars_ifol' f - set\<^sub>k\<^sub>2 V)"
       have osmall: "|?O| <o |UNIV::var set|"
-        apply (intro var_ifol'_pre_class.Un_bound)
-        apply (meson ifol'.set_bd_UNIV set\<^sub>k.set_bd var_ifol'_pre_class.UN_bound)
+        apply (intro infinite_class.Un_bound)
+        apply (meson ifol'.set_bd_UNIV set\<^sub>k.set_bd var_class.UN_bound)
         using ifol'.set_bd_UNIV card_of_image ordLeq_ordLess_trans apply blast
         unfolding imsupp_def using ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd]
-          apply (meson card_of_image card_of_mono1 ordLeq_ordLess_trans prems(3) var_ifol'_pre_class.Un_bound var_set\<^sub>k\<^sub>2_class.large')
+          apply (meson card_of_image card_of_mono1 ordLeq_ordLess_trans prems(3) infinite_class.Un_bound var_set\<^sub>k\<^sub>2_class.large')
         using X_def \<open>\<And>x r''. |UNIV| \<le>o r'' \<Longrightarrow> |set\<^sub>k\<^sub>2 x| <o r''\<close> var_set\<^sub>k\<^sub>2_class.large' apply blast
         using card_of_minus_bound ifol'.set_bd_UNIV by blast
 
@@ -461,7 +471,7 @@ binder_inductive deduct
 
       have "|X \<union> W'| <o |UNIV::var set|" unfolding X_def using W'
         using ordLess_ordLeq_trans[OF set\<^sub>k\<^sub>2.set_bd] var_set\<^sub>k\<^sub>2_class.large'
-        by (metis X_def bij_betw_def card_of_image ordLeq_ordLess_trans var_ifol'_pre_class.Un_bound)
+        by (metis X_def bij_betw_def card_of_image ordLeq_ordLess_trans infinite_class.Un_bound)
       moreover have "supp \<sigma> \<subseteq> X \<union> W'" using \<sigma>(2) unfolding id_on_def by (meson UnI1 UnI2 \<sigma>_def not_in_supp_alt subsetI)
       ultimately have \<sigma>_small: "|supp \<sigma>| <o |UNIV::var set|" using card_of_subset_bound by blast
 

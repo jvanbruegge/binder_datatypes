@@ -1,5 +1,5 @@
 theory More_Stream
-imports "HOL-Library.Stream" "Prelim.Prelim"
+imports "HOL-Library.Stream" "Binders.Classes"
 begin 
 
 (* More on streams: *)
@@ -256,6 +256,11 @@ lemma infinite: "infinite (UNIV :: 'a ::uncountable_regular set)"
 
 instance uncountable_regular \<subseteq> infinite
   by standard (rule infinite)
+
+local_setup \<open>Var_Classes.prove_class_theorems true true @{class uncountable_regular}
+  @{thm Cinfinite_card_suc[OF natLeq_Cinfinite natLeq_card_order]}
+  @{thm cset.bd_regularCard}
+\<close>
 
 lemma infinite_ex_inj: "\<exists>f :: nat \<Rightarrow> 'a :: uncountable_regular. inj f"
   by (rule infinite_countable_subset[OF infinite, simplified])

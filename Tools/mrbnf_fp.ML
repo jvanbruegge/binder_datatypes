@@ -1038,7 +1038,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
     val FVars_raw_bd_UNIVs = map (map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm,
       @{thm ordIso_ordLeq_trans} OF (if co then [
         @{thm ordIso_symmetric[OF cardSuc_ordIso_card_suc]} OF [MRBNF_Def.bd_card_order_of_mrbnf (hd mrbnfs)],
-        #covar_large (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))
+        #covar_large' (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))
       ] else [
         @{thm ordIso_symmetric[OF card_of_Field_ordIso]} OF [MRBNF_Def.bd_Card_order_of_mrbnf (hd mrbnfs)],
         #var_large (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))

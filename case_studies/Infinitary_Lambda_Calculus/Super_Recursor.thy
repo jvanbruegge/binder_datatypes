@@ -644,7 +644,7 @@ next
     using 0(1,3) R_B by auto
 
     have "|dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'| <o |UNIV::ivar set|"
-    by (meson card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (meson card_dsset_ivar iterm.set_bd_UNIV infinite_class.Un_bound)
   
     (* then obtain zs where zs: 
     "dsset zs \<inter> (dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t') = {}" 

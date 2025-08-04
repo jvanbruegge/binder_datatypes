@@ -408,7 +408,7 @@ lemma FVars_raw_bds: "|FVars_raw_term x| <o card_suc natLeq"
 lemmas FVars_raw_bd_UNIVs = FVars_raw_bds[THEN ordLess_ordLeq_trans,
     OF ordIso_ordLeq_trans[OF ordIso_symmetric[OF
         cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]]
-      covar_class.large
+      covar_class.large'
       ]]
 
 lemma alpha_refls:
@@ -1107,7 +1107,7 @@ lemma FVars_bds: "|FVars_term x| <o card_suc natLeq"
   done
 
 lemmas FVars_bd_UNIVs = ordLess_ordLeq_trans[OF FVars_bds ordIso_ordLeq_trans[OF
-      ordIso_symmetric[OF cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]] covar_class.large]]
+      ordIso_symmetric[OF cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]] covar_class.large']]
 
 lemma FVars_permutes:
   fixes f::"'a::var \<Rightarrow> 'a"

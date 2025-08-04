@@ -120,7 +120,7 @@ proof-
 
   have g: "|SSupp g| <o |UNIV::ivar set|" "\<And>x. affine (g x)"
   "\<And>x y. x \<noteq> y \<Longrightarrow> FFVars (g x) \<inter> FFVars (g y) = {}"
-     subgoal using sg by (meson card_of_subset_bound ffv fve var_stream_class.Un_bound)
+     subgoal using sg by (meson card_of_subset_bound ffv fve infinite_class.Un_bound)
      subgoal by (simp add: af affine.iVar g_def t(2))
      subgoal using fv unfolding g_def by (simp add: fv t(1)) .
 

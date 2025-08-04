@@ -53,23 +53,23 @@ for
   vvsubst: ivvsubst
   tvsubst: itvsubst
 
-lemma ex_inj_infinite_regular_var_iterm_pre:
-  "\<exists>f :: 'a :: countable \<Rightarrow> 'b :: var_iterm_pre. inj f"
+lemma ex_inj_infinite_regular_var_iterm:
+  "\<exists>f :: 'a :: countable \<Rightarrow> 'b :: var_iterm. inj f"
   unfolding card_of_ordLeq[of UNIV UNIV, simplified]
-  apply (rule ordLeq_transitive[OF _ var_iterm_pre_class.large])
+  apply (rule ordLeq_transitive[OF _ var_iterm_class.large])
   apply (rule ordLeq_transitive[OF countable_card_le_natLeq[THEN iffD1]])
   apply simp
   apply (rule natLeq_ordLeq_cinfinite)
   using cinfinite_def cinfinite_iff_infinite iterm_pre.bd_Cinfinite apply blast
   done
 
-definition embed :: "'a :: countable \<Rightarrow> 'b :: var_iterm_pre"
+definition embed :: "'a :: countable \<Rightarrow> 'b :: var_iterm"
   ("{{_}}" [999] 1000)  where
   "embed = (SOME f. inj f)"
 
 lemma inj_embed: "inj embed"
   unfolding embed_def
-  by (rule someI_ex[OF ex_inj_infinite_regular_var_iterm_pre[where 'a='a]])
+  by (rule someI_ex[OF ex_inj_infinite_regular_var_iterm[where 'a='a]])
 
 
 (****************************)
@@ -77,10 +77,9 @@ lemma inj_embed: "inj embed"
 
 
 (* Monomorphising: *)
-
 lemma bd_iterm_pre_ordIso: "bd_iterm_pre =o card_suc natLeq"
   apply (rule ordIso_symmetric)
-  apply (tactic \<open>unfold_tac @{context} [Thm.axiom @{theory} "ILC.iterm_pre.bd_iterm_pre_def"]\<close>)
+  apply (unfold bd_iterm_pre_def)
   apply (rule ordIso_transitive[OF _ dir_image_ordIso])
     apply (rule ordIso_symmetric)
     apply (rule ordIso_transitive)
@@ -113,26 +112,22 @@ lemma bd_iterm_pre_ordIso: "bd_iterm_pre =o card_suc natLeq"
   apply simp
   done
 
-lemma natLeq_less_UNIV: "natLeq <o |UNIV :: 'a :: var_iterm_pre set|"
+lemma natLeq_less_UNIV: "natLeq <o |UNIV :: 'a :: var_iterm set|"
   apply (rule ordLess_ordLeq_trans[OF _ iterm.var_large])
   apply (rule ordLess_ordIso_trans[OF card_suc_greater[OF natLeq_card_order]])
   apply (rule ordIso_symmetric[OF bd_iterm_pre_ordIso])
   done
 
-instantiation ivar :: var_iterm_pre begin
+instantiation ivar :: var_iterm begin
 instance
   apply standard
      apply (rule ordLeq_ordIso_trans[OF _ ordIso_symmetric[OF card_ivar]])
-     apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
-      apply (rule natLeq_Card_order)
-  using le_card_ivar ordLess_imp_ordLeq apply blast
-  using regularCard_ivar apply auto[1]
    apply (rule ordIso_ordLeq_trans[OF card_of_Field_ordIso])
-    apply (tactic \<open>resolve_tac @{context} [BNF_Def.bnf_of @{context} @{type_name stream} |> the |> BNF_Def.bd_Card_order_of_bnf] 1\<close>)
-   apply (simp add: bd_stream_def card_suc_least le_card_ivar natLeq_Cinfinite natLeq_card_order)
-   apply (metis card_of_Card_order card_of_card_order_on card_suc_alt card_suc_least countable_card_ivar countable_card_of_nat ordLeq_refl)
-  apply (metis Field_card_of card_of_UNIV card_of_card_order_on card_of_mono2 card_suc_alt card_suc_least countable_card_ivar countable_card_of_nat)
-  done
+    apply (rule iterm_pre.bd_Card_order)
+   apply (rule ordIso_ordLeq_trans)
+    apply (rule bd_iterm_pre_ordIso)
+   apply (simp add: card_suc_least le_card_ivar natLeq_Card_order natLeq_card_order)
+  using regularCard_ivar by auto
 end
 
 definition iVariable :: "nat \<Rightarrow> ivar" where "iVariable \<equiv> ILC.embed"
@@ -164,7 +159,7 @@ lemma FFVars_itvsubst[simp]:
   shows "FFVars (itvsubst \<sigma> t) = (\<Union> {FFVars (\<sigma> x) | x . x \<in> FFVars t})"
   apply (binder_induction t avoiding: "IImsupp \<sigma>" rule: iterm.strong_induct)
   apply (rule iterm.fresh_induct[of "IImsupp \<sigma>"])
-     apply (auto simp: IImsupp_def assms intro!: Un_bound UN_bound iterm.set_bd_UNIV)
+     apply (auto simp: IImsupp_def assms intro!: infinite_class.Un_bound var_class.UN_bound iterm.set_bd_UNIV)
   using iterm.FVars_VVr apply (fastforce simp add: SSupp_def)
   using iterm.FVars_VVr apply (auto simp add: SSupp_def Int_Un_distrib)
    apply (smt (verit) disjoint_insert(1) empty_iff insertE insert_absorb iterm.FVars_VVr mem_Collect_eq)
@@ -275,7 +270,7 @@ lemma bij_map_term_pre: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> iv
   done
 
 lemma map_term_pre_inv_simp: "bij f \<Longrightarrow> |supp (f::ivar \<Rightarrow> ivar)| <o |UNIV::ivar set| \<Longrightarrow>
-   inv (map_iterm_pre (id::_::var_iterm_pre \<Rightarrow> _) f (irrename f) id) = map_iterm_pre id (inv f) (irrename (inv f)) id"
+   inv (map_iterm_pre (id::_::var_iterm \<Rightarrow> _) f (irrename f) id) = map_iterm_pre id (inv f) (irrename (inv f)) id"
   apply (frule bij_imp_bij_inv)
   apply (frule supp_inv_bound)
   apply assumption
@@ -364,7 +359,7 @@ using SSupp_upd_VVr_bound by auto
 
 lemma SSupp_IImsupp_bound: "|SSupp \<sigma>| <o |UNIV:: ivar set| \<Longrightarrow> |IImsupp \<sigma>| <o |UNIV:: ivar set|"
 unfolding IImsupp_def
-by (simp add: iterm.Un_bound iterm.set_bd_UNIV var_iterm_pre_class.UN_bound)
+by (simp add: iterm.Un_bound iterm.set_bd_UNIV var_class.UN_bound)
 
 (* *)
 
@@ -383,7 +378,7 @@ lemma IImsupp_itvsubst_bound:
 assumes s: "|SSupp \<sigma>| <o |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
 shows "|IImsupp (itvsubst (\<sigma>::ivar\<Rightarrow>itrm) o \<tau>)| <o |UNIV:: ivar set|"
 using IImsupp_itvsubst_su[OF s(1)] s
-by (meson Un_bound SSupp_IImsupp_bound card_of_subset_bound)
+by (meson infinite_class.Un_bound SSupp_IImsupp_bound card_of_subset_bound)
 
 lemma SSupp_itvsubst_bound:
 assumes s: "|SSupp \<sigma>| <o |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
@@ -412,7 +407,7 @@ lemma IImsupp_irrename_bound:
 assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
 shows "|IImsupp (irrename (\<sigma>::ivar\<Rightarrow>ivar) o \<tau>)| <o |UNIV:: ivar set|"
 using IImsupp_irrename_su[OF s(1,2)] s
-by (meson SSupp_IImsupp_bound card_of_subset_bound imsupp_supp_bound infinite_ivar var_stream_class.Un_bound)
+by (meson SSupp_IImsupp_bound card_of_subset_bound imsupp_supp_bound infinite_ivar infinite_class.Un_bound)
 
 lemma SSupp_irrename_bound:
 assumes s: "bij (\<sigma>::ivar\<Rightarrow>ivar)" "|supp \<sigma>| <o  |UNIV:: ivar set|" "|SSupp \<tau>| <o |UNIV:: ivar set|"
@@ -471,7 +466,7 @@ proof-
   note SSupp_itvsubst_bound'[OF s, simp]
   show ?thesis
   apply(induct e rule: iterm.fresh_induct[where A = "IImsupp \<sigma> \<union> IImsupp \<tau>"])
-    subgoal using Un_bound[OF s]
+    subgoal using infinite_class.Un_bound[OF s]
       using iterm.Un_bound SSupp_IImsupp_bound s(1) s(2) by blast
     subgoal by simp
     subgoal by simp (metis (mono_tags, lifting) comp_apply stream.map_comp stream.map_cong)
@@ -548,7 +543,7 @@ shows "itvsubst (iVar((x::ivar) := e2)) e1 = itvsubst (iVar(xx := e2)) (irrename
 proof-
   show ?thesis using xx
   apply(induct e1 rule: iterm.fresh_induct[where A = "{x,xx} \<union> FFVars e2"])
-    subgoal by (metis insert_is_Un iterm.set_bd_UNIV singl_bound var_iterm_pre_class.Un_bound)
+    subgoal by (metis insert_is_Un iterm.set_bd_UNIV singl_bound infinite_class.Un_bound)
     subgoal by simp
     subgoal by simp (smt (verit, best) comp_apply stream.map_comp stream.map_cong)
     subgoal for ys t apply simp apply(subgoal_tac
@@ -623,9 +618,9 @@ shows "\<exists>f xs'. bij (f::ivar\<Rightarrow>ivar) \<and> |supp f| <o |UNIV::
                dsmap f xs = xs' \<and> id_on V f"
 proof-
   have ss: "|dsset xs| <o |UNIV::ivar set|"
-  by (auto simp: countable_card_ivar dsset_range V(2) var_stream_class.Un_bound)
+  by (auto simp: countable_card_ivar dsset_range V(2) infinite_class.Un_bound)
   hence ss1: "|dsset xs \<union> V| <o |UNIV::ivar set|"
-  by (meson assms(2) var_stream_class.Un_bound)
+  by (meson assms(2) infinite_class.Un_bound)
   obtain f xs' where f: "bij_betw f (dsset xs) (dsset xs')"
   "dsset xs \<inter> dsset xs' = {}" "V \<inter> dsset xs' = {}" "dsmap f xs = xs'"
   using bij_betw_snth[OF ss1, of xs] by fastforce
@@ -855,7 +850,7 @@ proof
   using f unfolding bij_betw_def bij_def inj_on_def
   using dstream.set_map f by blast
   have 0: " |dsset xs \<union> dsset xs'| <o |UNIV::ivar set|"
-    by (meson card_dsset_ivar var_stream_class.Un_bound)
+    by (meson card_dsset_ivar infinite_class.Un_bound)
   have 1: "(dsset xs \<union> dsset xs') \<inter> X = {}"
     by (simp add: Int_commute assms(2) assms(3) boolean_algebra.conj_disj_distrib)
   show "\<exists>f. bij f \<and> |supp f| <o |UNIV::ivar set| \<and> id_on (FFVars (iLam xs e)) f \<and> id_on X f \<and> dsmap f xs = xs' \<and> irrename f e = e'"
@@ -929,7 +924,7 @@ proof-
         apply (metis (no_types, lifting) Int_Collect Int_ac(3) Int_emptyD bf
           bij_betw_apply ds f(1) inv_simp1)
         by (metis bif bij_betw_apply f(1) inv_simp2) .
-      subgoal by (meson card_dsset_ivar card_of_subset_bound sg var_stream_class.Un_bound)
+      subgoal by (meson card_dsset_ivar card_of_subset_bound sg infinite_class.Un_bound)
       subgoal unfolding id_on_def g_def by auto
       subgoal unfolding g_def id_on_def
         by (metis f(1) ff(1) id_onD inv_simp1)
@@ -979,7 +974,7 @@ proof-
      apply (metis (no_types, lifting) Int_Collect Int_ac(3) Int_emptyD bf
           bij_betw_apply ds f(1) inv_simp1)
         by (metis bif bij_betw_apply f(1) inv_simp2) .
-   subgoal by (meson card_dsset_ivar card_of_subset_bound sg var_stream_class.Un_bound)
+   subgoal by (meson card_dsset_ivar card_of_subset_bound sg infinite_class.Un_bound)
    subgoal unfolding id_on_def g_def by auto
    subgoal unfolding g_def id_on_def using Int_Un_emptyI1 zs by auto
    subgoal using  zs unfolding id_on_def apply auto
@@ -1012,7 +1007,7 @@ proof-
      apply (metis (no_types, lifting) Int_Collect Int_ac(3) Int_emptyD bf'
           bij_betw_apply ds' f'(1) inv_simp1)
         by (metis bif bij_betw_apply f'(1) inv_simp2) .
-   subgoal by (meson card_dsset_ivar card_of_subset_bound sg var_stream_class.Un_bound)
+   subgoal by (meson card_dsset_ivar card_of_subset_bound sg infinite_class.Un_bound)
    subgoal unfolding id_on_def g'_def by auto
    subgoal unfolding g'_def id_on_def using Int_Un_emptyI1 zs by auto
    subgoal using zs unfolding id_on_def apply auto
@@ -1318,7 +1313,7 @@ next
     using 1(1,3) 2(1,3) R_B by auto
 
     have "|dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2'| <o |UNIV::ivar set|"
-    by (meson card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (meson card_dsset_ivar iterm.set_bd_UNIV infinite_class.Un_bound)
     then obtain zs where zs:
     "dsset zs \<inter> (dsset xs \<union> dsset xs1' \<union> dsset xs2' \<union> FFVars t \<union> FFVars t1' \<union> FFVars t2') = {}"
     by (meson iLam_avoid)
@@ -1450,7 +1445,7 @@ next
     using FVarsB_iLamB[OF b'] by auto
 
     have "|dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'| <o |UNIV::ivar set|"
-    by (simp add: card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (simp add: card_dsset_ivar iterm.set_bd_UNIV infinite_class.Un_bound)
     then obtain z where z:
     "z \<notin> dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'"
     by (meson exists_fresh)
@@ -1480,7 +1475,7 @@ next
     using 0(1,3) R_B by auto
 
     have "|dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t'| <o |UNIV::ivar set|"
-    by (meson card_dsset_ivar iterm.set_bd_UNIV var_stream_class.Un_bound)
+    by (meson card_dsset_ivar iterm.set_bd_UNIV infinite_class.Un_bound)
 
     then obtain zs where zs:
     "dsset zs \<inter> (dsset xs \<union> dsset xs' \<union> FFVars t \<union> FFVars t') = {}"

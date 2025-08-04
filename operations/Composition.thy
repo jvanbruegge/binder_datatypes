@@ -87,6 +87,4 @@ print_mrbnfs
 
 declare [[quick_and_dirty=false]]
 
-lemmas infinite_UNIV = cinfinite_imp_infinite[OF T1_pre.UNIV_cinfinite]
-
 end

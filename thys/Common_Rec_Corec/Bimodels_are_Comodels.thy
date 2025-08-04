@@ -245,7 +245,7 @@ unfolding Eperm''_def Evalid'_def
                
 
 lemma dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''"
-unfolding dtorVrsGrenC_def EVrs''_def proof safe 
+unfolding dtorVrsGrenC_def  proof safe 
   fix e p U u1 u2 
   assume "Evalid' (e, p)"
   and 0: "Edtor' (e, p) = Inr U" and u12: "{u1, u2} \<subseteq> U"
@@ -348,6 +348,10 @@ unfolding dtorVrsC_def Evalid'_def apply (intro allI impI) subgoal for pe apply(
 apply clarsimp
 apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (intro conjI allI)
   subgoal for u apply(cases "base u")
+    subgoal using base_Ector'_Ector_EVrs unfolding Edtor'_base EVrs''_def 
+      by (metis Edtor'_base Un_commute Un_subset_iff old.sum.inject(1))
+    subgoal unfolding Edtor'_step using Edtor'_Inl_base by blast . 
+  subgoal for u apply(cases "base u")
     subgoal unfolding Edtor'_base using Edtor'_Inr_step by auto
     subgoal apply clarify unfolding Edtor'_step  
     unfolding Edtor1'_Ector unfolding EVrs_Ector GSupp1_Gmap GSupp2_Gmap apply clarify
@@ -362,12 +366,7 @@ apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (
         subgoal by auto fastforce .
       subgoal .
       subgoal .
-    subgoal using Edtor'_step in_Edtor1'_Ector by auto . . .
-  subgoal for u apply(cases "base u")
-    subgoal using base_Ector'_Ector_EVrs unfolding Edtor'_base EVrs''_def 
-      by (metis Edtor'_base Un_commute Un_subset_iff old.sum.inject(1))
-    subgoal unfolding Edtor'_step using Edtor'_Inl_base by blast . . . .
-
+    subgoal using Edtor'_step in_Edtor1'_Ector by auto . . . . . .
 
 lemma presDV_Evalid'_Edtor': "presDV Evalid' Edtor'"
 unfolding presDV_def apply clarify
@@ -404,7 +403,7 @@ theorem rec_Ector_base:
 assumes "base u" "Pvalid p"   
 shows "GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
    crec (Ector u) p = Ector' (Gmap crec crec u) p"
-using C.corec_Edtor_Inr[of "(Ector u,p)"]
+using C.corec_Edtor_Inl[of "(Ector u,p)"]
 using assms apply - unfolding Edtor'_base  apply simp unfolding crec_def 
 apply simp by (metis Evalid'_def base_Gmap_eq snd_conv) 
 
@@ -414,8 +413,8 @@ shows "crec (Ector u) p = Ector' (Gmap crec crec u) p"
 proof-
   have "Edtor' (Ector u, p) = Inr (Edtor1' (Ector u, p))" 
   and 1: "Gmap C.corec C.corec ` (Edtor1' (Ector u, p)) \<subseteq> Edtor (C.corec (Ector u, p))"
-    using f p g apply(auto simp add: C.corec_Edtor_Inl Edtor'_step)  
-    using C.corec_Edtor_Inl Edtor'_step Evalid'_def by fastforce
+    using f p g apply(auto simp add: Edtor'_step)  
+    using C.corec_Edtor_Inr Edtor'_step Evalid'_def by fastforce
   hence 2: "\<And>v. Ector (Gmap fst fst v) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p \<and>
           GSupp1 (Gmap snd snd v) \<union> GSupp2 (Gmap snd snd v) \<subseteq> {p} \<and> 
           GVrs2 v \<inter> PVrs p = {} \<and> GVrs2 v \<inter> GVrs1 v = {}
@@ -447,6 +446,7 @@ proof-
   thus ?thesis unfolding Eperm''_def crec_def curry_def using assms 
     apply- apply(subst (asm) Pperm_comp) by auto
 qed
+
 
 theorem rec_EVrs: 
 assumes "Pvalid p"

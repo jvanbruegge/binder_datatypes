@@ -37,14 +37,14 @@ definition dtorVrsC :: "('E' \<Rightarrow> bool) \<Rightarrow>
 where
 "dtorVrsC valid dtor Vrs \<equiv> 
  (\<forall>e. valid e \<longrightarrow>   
-  (\<forall>U. dtor e = Inr U \<longrightarrow> 
+   (\<forall>e1. dtor e = Inl e1 \<longrightarrow> EVrs e1 \<subseteq> Vrs e)
+   \<and> 
+   (\<forall>U. dtor e = Inr U \<longrightarrow> 
        (\<forall>u\<in>U. GVrs1 u \<union> 
               (\<Union> {Vrs e - GVrs2 u | e . e \<in> GSupp1 u}) \<union> 
               (\<Union> {Vrs e | e . e \<in> GSupp2 u})
               \<subseteq> 
               Vrs e)) 
-  \<and>  
-  (\<forall>e1. dtor e = Inl e1 \<longrightarrow> EVrs e1 \<subseteq> Vrs e)
 )"
 
 (* destructor preserves validity *)
@@ -87,11 +87,11 @@ definition corec :: "'E' \<Rightarrow> 'a E" where
 "corec = undefined"
 
 lemma corec_Edtor_Inl:
-"Evalid' e \<Longrightarrow> Edtor' e = Inr U \<Longrightarrow> Gmap corec corec ` U  \<subseteq> Edtor (corec e)"
+"Evalid' e \<Longrightarrow> Edtor' e = Inl e1 \<Longrightarrow> corec e = e1"
 sorry
 
 lemma corec_Edtor_Inr:
-"Evalid' e \<Longrightarrow> Edtor' e = Inl e1 \<Longrightarrow> corec e = e1"
+"Evalid' e \<Longrightarrow> Edtor' e = Inr U \<Longrightarrow> Gmap corec corec ` U  \<subseteq> Edtor (corec e)"
 sorry
 
 lemma corec_Eperm:

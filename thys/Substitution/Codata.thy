@@ -363,14 +363,16 @@ fixes Pvalid :: "'p \<Rightarrow> bool"
 and Pperm :: "('a::covar_G \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p" 
 and PVrs :: "'p \<Rightarrow> 'a set" and 
 Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
-assumes bimodel: "Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"
+assumes bimodel: 
+"Bimodel Pvalid Pperm PVrs Eperm EVrs (card_suc Gbd) Ector Ector'"
+(*"Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"  *)
 begin 
 
 (* Just getting all the Bomodel theorems *)
-interpretation Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'
+interpretation Bimodel Pvalid Pperm PVrs Eperm EVrs "card_suc Gbd" Ector Ector'
 using bimodel .
 
-(* HERE1 *)
+(* *)
 
 definition Evalid' :: "'a E\<times>'p \<Rightarrow> bool" where 
 "Evalid' ep \<equiv> Pvalid (snd ep)"  
@@ -528,6 +530,7 @@ lemma Pvalid_Pperm[simp]: "Pvalid p \<Longrightarrow> small \<sigma> \<Longright
 using nomP unfolding nom_def by blast
 *)
 
+lemmas PVrs_small
 lemma small_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> |PVrs p \<union> inv \<sigma> ` PVrs p| <o |UNIV::'a::covar_G set|"
 using PVrs_small card_image_ordLess infinite_class.Un_bound by blast
 
@@ -637,17 +640,44 @@ unfolding Eperm''_def Evalid'_def
   . . . . . . . . . . . .
                
 
-lemma dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''"
-unfolding dtorVrsGrenC_def EVrs''_def proof safe 
-  fix e p U u1 u2 
+lemma Ector_eq_imp_strong: 
+"Ector u1 = Ector u2 \<Longrightarrow> |A| <o |UNIV::'a set| \<Longrightarrow> A \<inter> GVrs2 u1 = {} \<Longrightarrow>
+   (\<exists>\<sigma> :: 'a :: covar_G \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
+     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> A) \<sigma> \<and> 
+     Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1) = u2)"
+sorry (* AtoD: Do we have a proof of this for datatypes? 
+The one for codata should be identical. *)
+
+lemma snd_single_Gmap: "snd ` GSupp1 u \<subseteq> {p} \<Longrightarrow> snd ` GSupp2 u \<subseteq> {p}
+\<Longrightarrow> Gmap (\<lambda>(e,p'). (e,p)) (\<lambda>(e,p'). (e,p)) u = u"
+apply(rule Gmap_cong_id) by auto
+
+lemma snd_single_Gmap': 
+assumes "snd ` GSupp1 u \<subseteq> {p}" "snd ` GSupp2 u \<subseteq> {p}"
+shows "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst u) = u"
+apply(rule sym) apply(subst snd_single_Gmap[symmetric, of _ p])
+  subgoal by fact subgoal by fact
+  subgoal unfolding Gmap_comp o_def  
+    by (meson Gmap_cong case_prod_beta) .
+
+
+lemma 
+(* dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''" *)
+dtorVrsGrenC: "Evalid' ep \<Longrightarrow> Edtor' ep = Inr U \<Longrightarrow> 
+     {u1,u2} \<subseteq> U \<Longrightarrow>
+     \<exists>\<sigma>. bij (\<sigma>::'a::covar_G \<Rightarrow> 'a) \<and> |supp \<sigma>| <o |UNIV::'a set| \<and> 
+         id_on ((\<Union>d' \<in> GSupp1 u1. EVrs'' d') - GVrs2 u1) \<sigma> \<and>
+         Gren id \<sigma> (Gmap (Eperm'' \<sigma>) id u1) = u2"
+apply (cases ep)
+proof safe 
+  fix e p 
   assume "Evalid' (e, p)"
   and 0: "Edtor' (e, p) = Inr U" and u12: "{u1, u2} \<subseteq> U"
   hence P: "Pvalid p" unfolding Evalid'_def by simp
-  show "\<exists>\<sigma>. small \<sigma> \<and>
-           bij \<sigma> \<and>
-           id_on ((\<Union> (EVrs'' ` GSupp1 u1) - GVrs2 u1)) \<sigma> \<and>
+  show "\<exists>\<sigma>. bij (\<sigma>::'a::covar_G \<Rightarrow> 'a) \<and> |supp \<sigma>| <o |UNIV::'a set| \<and> 
+           id_on ((\<Union>d' \<in> GSupp1 u1. EVrs'' d') - GVrs2 u1) \<sigma> \<and>
            Gren id \<sigma> (Gmap (Eperm'' \<sigma>) id u1) = u2"
-  proof(rule Ector_exhaust_fresh[OF countable_PVrs, of p e, OF P])
+  proof(rule Ector_exhaust_fresh[OF PVrs_small, of p e, OF P])
     fix u assume e: "e = Ector u" and g: "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
     show ?thesis proof(cases "base u")
       case True
@@ -675,7 +705,7 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
          ((\<Union> (EVrs ` GSupp1 (Gmap fst fst u1)) - GVrs2 (Gmap fst fst u1)) \<union> PVrs p )
          \<sigma>"
         "Gren id \<sigma> (Gmap (Eperm \<sigma>) id (Gmap fst fst u1)) = Gmap fst fst u2"   
-        using Ector_eq_imp_strong[of "Gmap fst fst u1" "Gmap fst fst u2", OF eq countable_PVrs 00, OF P]
+        using Ector_eq_imp_strong[of "Gmap fst fst u1" "Gmap fst fst u2", OF eq PVrs_small 00, OF P]
         by blast
       have io: "\<And>e' p' a. (e',p') \<in> GSupp1 u1 \<Longrightarrow> a \<in> EVrs e' \<Longrightarrow> a \<notin> GVrs2 u1 \<Longrightarrow> \<sigma> a = a"
           "\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a" 
@@ -696,22 +726,22 @@ unfolding dtorVrsGrenC_def EVrs''_def proof safe
       next
         have ss3: "Gmap (Eperm \<sigma>) id (Gmap fst fst (Gren id \<sigma> u1)) = Gmap fst fst u2"
         unfolding ss(3)[symmetric] 
-        by (simp add: Gmap_Gren ss(1)) 
+        by (simp add: Gmap_Gren'[symmetric] ss(1)) 
 
         have gg: "Gmap (Eperm'' \<sigma>) id (Gren id \<sigma> u1) = u2"
         apply(subst snd_single_Gmap'[symmetric, where t = u2 and p = p])
           subgoal by (metis GSupp1_Gmap u2(2))
           subgoal by (metis GSupp2_Gmap u2(3))
           subgoal apply(subst snd_single_Gmap'[symmetric, where t = "Gren id \<sigma> u1" and p = p])
-            subgoal by (metis GSupp1_Gmap GSupp1_Gren bij_id small_id ss(1) u1(2))
-            subgoal by (metis GSupp2_Gmap GSupp2_Gren bij_id small_id ss(1) u1(3))
-            subgoal unfolding ss3[symmetric] unfolding Gmap_comp unfolding o_def Eperm''_def
+            subgoal by (metis (no_types, opaque_lifting) GSupp1_Gmap GSupp1_Gren ss(1) supp_id_bound u1(2)) 
+            subgoal  by (metis (no_types, lifting) GSupp2_Gmap GSupp2_Gren ss(1) supp_id_bound u1(3))
+             subgoal unfolding ss3[symmetric] unfolding Gmap_comp unfolding o_def Eperm''_def
             apply(rule Gmap_cong)
-              subgoal by (metis P Pperm_cong Pperm_id bij_id eq_id_iff io(2) small_id ss(1))
+              subgoal  by (simp add: P Pperm_cong_id io(2) ss(1))
               subgoal by simp . . .
         show "Gren id \<sigma> (Gmap (Eperm'' \<sigma>) id u1) = u2"
         unfolding gg[symmetric]  
-        by (simp add: Gmap_Gren ss(1)) 
+        by (simp add: Gmap_Gren'[symmetric] ss(1)) 
       qed
     qed
   qed
@@ -720,69 +750,95 @@ qed
 lemma step_Ector'_Ector_EVrs: 
 "\<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
-apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]])
+apply(rule subset_trans[OF ctorVarsM_Ector'])
   subgoal .
-  subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto  
-    apply (metis Diff_iff GVrs2_Gmap)  
-    by (metis GSupp2_Gmap image_iff) .
+  subgoal apply(rule tri_Un3) 
+  by (auto simp: GVrs2_Gmap GSupp2_Gmap EVrs_Ector GSupp1_Gmap GVrs1_Gmap)
+.
 
 lemma base_Ector'_Ector_EVrs: 
 "base u \<Longrightarrow> Pvalid p \<Longrightarrow> EVrs'' (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p, p) \<subseteq> PVrs p \<union> EVrs (Ector u)"
 unfolding EVrs''_def apply(rule tri_Un1) 
-apply(rule subset_trans[OF ctorVarsM_Ector'[unfolded ctorVarsM_def, rule_format]])
+apply(rule subset_trans[OF ctorVarsM_Ector'])
   subgoal .
   subgoal apply(rule tri_Un3) unfolding EVrs_Ector GSupp1_Gmap GVrs1_Gmap apply auto 
-  apply (simp add: base_base) 
-    by (simp add: base_Gmap base_base) .
+  by (auto simp: GVrs2_Gmap GSupp2_Gmap EVrs_Ector GSupp1_Gmap GVrs1_Gmap)
+.
 
-lemma dtorVrsC: "dtorVrsC Evalid' Edtor' EVrs''"
+term Evalid'
+(* lemma dtorVrsC: "dtorVrsC Evalid' Edtor' EVrs''" *)
+lemma dtorVrsC_Inl: "Evalid' pe \<Longrightarrow>   
+   Edtor' pe = Inl e1 \<Longrightarrow> EVrs e1 \<subseteq> EVrs'' pe"
 unfolding EVrs''_def
-unfolding dtorVrsC_def Evalid'_def apply (intro allI impI) subgoal for pe apply(cases pe) subgoal for e p 
-apply clarsimp
-apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e]) apply clarify apply (intro conjI allI)
+unfolding Evalid'_def apply(cases pe) subgoal for e p apply simp 
+apply(rule Ector_exhaust_fresh[OF PVrs_small, of p e])
+  subgoal by simp  
   subgoal for u apply(cases "base u")
+    subgoal using base_Ector'_Ector_EVrs unfolding Edtor'_base EVrs''_def 
+    by (metis Edtor'_base Un_commute Un_subset_iff old.sum.inject(1))
+    subgoal unfolding Edtor'_step using Edtor'_Inl_base by blast . . .
+
+lemma dtorVrsC_Inr: "Evalid' pe \<Longrightarrow>   
+   Edtor' pe = Inr U \<Longrightarrow> u\<in>U \<Longrightarrow> 
+   GVrs1 u \<union> 
+   (\<Union> {EVrs'' e - GVrs2 u | e . e \<in> GSupp1 u}) \<union> 
+   (\<Union> {EVrs'' e | e . e \<in> GSupp2 u})
+   \<subseteq> 
+   EVrs'' pe"
+unfolding EVrs''_def
+unfolding Evalid'_def apply(cases pe) subgoal for e p apply simp 
+apply(rule Ector_exhaust_fresh[OF PVrs_small, of p e])
+  subgoal by simp  
+  subgoal for v apply(cases "base v")
     subgoal unfolding Edtor'_base using Edtor'_Inr_step by auto
     subgoal apply clarify unfolding Edtor'_step  
     unfolding Edtor1'_Ector unfolding EVrs_Ector GSupp1_Gmap GSupp2_Gmap apply clarify
-    subgoal for ua  
     apply(rule incl_Un_triv3)
     unfolding EVrs''_def EVrs_Ector 
-    apply(rule subset_trans[OF _ Ector_Ector'_EVrs_step'[of p "Gmap fst fst ua", unfolded GSupp1_Gmap 
+    apply(rule subset_trans[OF _ Ector_Ector'_EVrs_step'[of p "Gmap fst fst u", unfolded GSupp1_Gmap 
       GSupp2_Gmap GVrs1_Gmap GVrs2_Gmap]]) 
       subgoal apply(rule incl_Un3_triv3)
-        subgoal ..
-        subgoal by auto (metis (lifting) DiffI fst_conv image_eqI)   
-        subgoal by auto fastforce .
+        subgoal .. subgoal by auto subgoal by auto .
       subgoal .
       subgoal .
-    subgoal using Edtor'_step in_Edtor1'_Ector by auto . . .
-  subgoal for u apply(cases "base u")
-    subgoal using base_Ector'_Ector_EVrs unfolding Edtor'_base EVrs''_def 
-      by (metis Edtor'_base Un_commute Un_subset_iff old.sum.inject(1))
-    subgoal unfolding Edtor'_step using Edtor'_Inl_base by blast . . . .
+    subgoal using Edtor'_step in_Edtor1'_Ector by auto . . . .
 
-
-lemma presDV_Evalid'_Edtor': "presDV Evalid' Edtor'"
-unfolding presDV_def apply clarify
-  subgoal for e p U u' e' p'
-  unfolding Evalid'_def snd_conv apply(rule Ector_exhaust_fresh[OF countable_PVrs, of p e])
+(* lemma presDV_Evalid'_Edtor': "presDV Evalid' Edtor'" *)
+lemma presDV_Evalid'_Edtor': "Evalid' ep \<Longrightarrow> Edtor' ep = Inr U \<Longrightarrow> u \<in> U \<Longrightarrow> 
+  ep' \<in> GSupp1 u \<union> GSupp2 u 
+   \<Longrightarrow> Evalid' ep'"
+apply (cases ep) subgoal for e p apply simp
+  unfolding Evalid'_def snd_conv apply(rule Ector_exhaust_fresh[OF PVrs_small, of p e])
     subgoal .
     subgoal for u apply(cases "base u")
       subgoal apply clarify unfolding Edtor'_base by auto
       subgoal apply clarify unfolding Edtor'_step Edtor1'_Ector 
       by (auto simp: GSupp1_Gmap GSupp2_Gmap) . . .
-       
-lemma presPV_Evalid'_Eperm'': "presPV Evalid' Eperm''"
-unfolding presPV_def apply clarify subgoal for \<sigma> e p 
-unfolding Eperm''_def Evalid'_def by simp .
+    
+(* lemma presPV_Evalid'_Eperm'': "presPV Evalid' Eperm''" *)   
+lemma presPV_Evalid'_Eperm'': 
+"Evalid' ep \<Longrightarrow> small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Evalid' (Eperm'' \<sigma> ep)"
+apply (cases ep) subgoal for e p apply simp
+unfolding Eperm''_def Evalid'_def by (simp add: Pperm_Pvalid) .
 
+(*  *)
 
+term "Corec Edtor' Eperm'' EVrs'' Evalid'"
 
-
-(* HERE2 *)
-
-
-
+theorem Bimodel_Corec: 
+"Corec Edtor' Eperm'' EVrs'' Evalid'"
+unfolding Corec_def apply(intro conjI)
+  subgoal using Udtor_ne by blast
+  subgoal using dtorVrsGrenC by blast
+  subgoal using dtorPermC_Inl by blast
+  subgoal using dtorPermC_Inr by blast
+  subgoal using dtorVrsC_Inl by blast
+  subgoal using dtorVrsC_Inr by blast
+  subgoal using Eperm''_o Evalid'_def by auto
+  subgoal by (metis NominalRel.Pperm_cong_id nomC)
+  subgoal using presPV_Evalid'_Eperm'' by blast
+  subgoal using presDV_Evalid'_Edtor' by blast .
+  
 end (* context *)
 
 
@@ -790,22 +846,104 @@ end (* context *)
 (* Binder codatatypes validate the 
 birecursion principle: *)
 
+term Corec
+term Edtor'
+term Eperm''
+term EVrs''
+term Evalid'
+
+definition Edtor :: "('a::covar_G) E \<Rightarrow> (('a, 'a, 'a E,'a E) G) set" where 
+"Edtor e = {u . Ector u = e}"
+
 interpretation Expression_with_Birecursor Eperm EVrs "card_suc Gbd" Ector
 proof (standard, safe)
   fix Pvalid :: "'p \<Rightarrow> bool"
-  and Pperm :: "('a \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
+  and Pperm :: "('a:: covar_G \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p"
   and PVrs :: "'p \<Rightarrow> 'a set"
   and Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
-  assume "Bimodel Pvalid Pperm PVrs Eperm EVrs (card_suc Gbd) Ector Ector'"
-  (* interpret corec: COREC  *)
-  (* term corec.COREC *)
+  assume b: "Bimodel Pvalid Pperm PVrs Eperm EVrs (card_suc Gbd) Ector Ector'"
+
+  define EEdtor' where "EEdtor' \<equiv> Edtor' PVrs Ector'"
+  define EEdtor1' where "EEdtor1' \<equiv> Edtor1' PVrs Ector'"
+  define EEperm'' where "EEperm'' \<equiv> Eperm'' Pperm"
+  define EEVrs'' where "EEVrs'' \<equiv> EVrs'' PVrs"
+  define EEvalid' :: "'a E \<times> 'p \<Rightarrow> bool" where "EEvalid' \<equiv> Evalid' Pvalid" 
+  note EE_defs = EEdtor'_def EEdtor1'_def EEperm''_def EEVrs''_def EEvalid'_def
+  note EE_rdefs = EE_defs[symmetric]
+
+
+  interpret ccor: Corec EEdtor' EEperm'' EEVrs'' EEvalid'
+  using Bimodel_Corec[OF b] unfolding EE_defs .
+  find_theorems name: ccor name: COREC 
+  define corec where "corec \<equiv> COREC.COREC ccor.Udtor' (Evalid' Pvalid)"
+  note c = corec_def[symmetric]
+  define crec where "crec \<equiv> curry corec"
+  
   show "\<exists>rec. (\<forall>u p. Pvalid p \<and> noclashE u \<and> GVrs2 u \<inter> PVrs p = {} \<longrightarrow> 
     rec (Ector u) p = Ector' (Gmap rec rec u) p) \<and>
-    (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
+    (\<forall>e p \<sigma>. bij \<sigma> \<longrightarrow> |supp \<sigma>| <o |UNIV::'a::covar_G set| \<longrightarrow> Pvalid p \<longrightarrow> rec (Eperm \<sigma> e) p = Eperm \<sigma> (rec e (Pperm (inv \<sigma>) p))) \<and>
     (\<forall>e p. Pvalid p \<longrightarrow> EVrs (rec e p) \<subseteq> PVrs p \<union> EVrs e)"
-    sorry
+  apply(rule exI[of _ crec], unfold noclashE_def, intro allI impI conjI)
+    subgoal for u p apply(elim conjE) apply(cases "base u")
+      subgoal 
+      using ccor.COREC_DDTOR_Inl[of "(Ector u,p)", unfolded c]
+      apply - unfolding EE_defs Edtor'_base[OF b] apply simp unfolding crec_def 
+      apply simp 
+      by (metis EEdtor'_def Evalid'_def b base_Gmap_eq corec_def snd_conv) 
+      (* *)
+      subgoal proof-
+      assume f: "\<not> base u" and p: "Pvalid p"  and g : "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
+      show "crec (Ector u) p = Ector' (Gmap crec crec u) p"
+      proof-
+         have "EEdtor' (Ector u, p) = Inr (EEdtor1' (Ector u, p))" 
+         and 1: "Gmap corec corec ` (EEdtor1' (Ector u, p)) \<subseteq> Edtor (corec (Ector u, p))"
+         using f p g apply(auto simp add: EE_defs Edtor'_step[OF b])  
+         using EEdtor'_def EEvalid'_def Edtor'_step Edtor_def Evalid'_def b ccor.COREC_DDTOR_Inr corec_def
+         by fastforce 
+         hence 2: "\<And>v. Ector (Gmap fst fst v) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p \<and>
+          GSupp1 (Gmap snd snd v) \<union> GSupp2 (Gmap snd snd v) \<subseteq> {p} \<and> 
+          GVrs2 v \<inter> PVrs p = {} \<and> GVrs2 v \<inter> GVrs1 v = {}
+          \<Longrightarrow> Ector (Gmap corec corec v) = corec (Ector u, p)" 
+         using f p g unfolding EE_defs Edtor_def Edtor1'_Ector  
+         using in_Edtor1'_Ector[OF b] unfolding GSupp1_Gmap GSupp2_Gmap image_def 
+         unfolding subset_iff by safe blast
+         obtain w where w: "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p" 
+         and g1: "GVrs2 w \<inter> PVrs p = {}" "GVrs2 w \<inter> GVrs1 w = {}" 
+         using Ector_fresh_surj'[OF Bimodel.PVrs_small[OF b p]] by metis
+         show ?thesis unfolding crec_def apply simp apply(subst 2[symmetric, of "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) w"])
+         apply safe
+           subgoal unfolding Gmap_comp apply simp unfolding w ..
+           subgoal unfolding GSupp1_Gmap by auto
+           subgoal unfolding GSupp2_Gmap by auto
+           subgoal using g1 unfolding GVrs2_Gmap by auto
+           subgoal using g1 unfolding GVrs1_Gmap GVrs2_Gmap by auto
+           subgoal using f unfolding Gmap_comp unfolding curry_def o_def
+           apply(rule Bimodel.Ector_Ector'_Gmap[OF b]) using w p g g1 by auto . 
+         qed 
+       qed .
+    subgoal for e p \<sigma> proof-
+      assume assms : "Pvalid p" "small \<sigma>" "bij \<sigma>"
+      show "crec (Eperm \<sigma> e) p = Eperm \<sigma> (crec e (Pperm (inv \<sigma>) p))"
+      proof-
+         have e: "EEvalid' (e,p)" using assms unfolding EE_defs Evalid'_def[OF b] by auto
+         have "corec (EEperm'' \<sigma> (e,Pperm (inv \<sigma>) p)) = Eperm \<sigma> (corec (e,Pperm (inv \<sigma>) p))" 
+         unfolding EE_defs using ccor.COREC_mmapD[OF assms(3,2) e] 
+         unfolding corec_def
+         unfolding EE_defs  
+         by (metis EE_rdefs(3) EEdtor'_def EEvalid'_def Eperm''_def Evalid'_def assms(1,2,3) b bij_betw_inv_into
+             ccor.COREC_mmapD ccor.valid_Umap snd_eqD supp_inv_bound) 
+         thus ?thesis unfolding Eperm''_def crec_def curry_def using assms 
+         by (smt (verit, del_insts) EEperm''_def EEvalid'_def Eperm''_def Evalid'_def b bij_betw_inv_into
+               ccor.COREC_mmapD ccor.eq_Eperm_inv corec_def snd_conv supp_inv_bound) 
+       qed
+     qed 
+   (* *)
+   subgoal for e p  
+   by (metis EEVrs''_def EE_rdefs(5) EVrs''_def 
+        Evalid'_def Un_commute b c ccor.COREC_FFVarsD crec_def curry_def
+         snd_conv) . 
 qed
-
+    
 interpretation birec_codata: Expression_with_Birecursor_for_Subst_Strong Eperm EVrs "card_suc Gbd" Ector
   by standard
 

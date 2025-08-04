@@ -126,7 +126,7 @@ lemma Ector_Ector'_EVrs_stepp:
 using Ector_Ector'_EVrs[of p u] 
 by auto 
 
-lemmas Ector_Ector'_EVrs' =  
+lemmas Ector_Ector'_EVrs_step' =  
 triv_Un4_remove[OF Ector_Ector'_EVrs_stepp[unfolded EVrs_Ector]]
 
 lemma Ector_base: "Ector (u:: ('a, 'a, 'e, 'e) G) = Ector v \<Longrightarrow> base u \<longleftrightarrow> base v"

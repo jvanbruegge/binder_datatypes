@@ -1462,17 +1462,7 @@ locale Corec =
          id_on ((\<Union>d' \<in> GSupp1 x. UFVars d') - GVrs2 x) f \<and>
          Gren id f (Gmap (Umap f) id x) = x'" 
     and 
-    (* The dual of the first block of assumptions from Norrish's paper:   *)
-    UFVars_Udtor_Inl:
-    "\<And> d e. valid_U d \<Longrightarrow> Udtor d = Inl e \<Longrightarrow> EVrs e \<subseteq> UFVars d"
-    and 
-    UFVars_Udtor_Inr:
-    "\<And> d x X. valid_U d \<Longrightarrow> Udtor d = Inr X \<Longrightarrow> x \<in> X \<Longrightarrow>
-         GVrs1 x \<union> (\<Union>z \<in> GSupp2 x. UFVars z) \<union>
-         ((\<Union>z \<in> GSupp1 x. UFVars z) - GVrs2 x) \<subseteq>
-         UFVars d"
-    and
-    (* The dual of the third block: *)
+    (* *)
     Umap_Udtor_Inl: "\<And>f d e. valid_U d \<Longrightarrow> Udtor d = Inl e \<Longrightarrow> 
         bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
         Udtor (Umap f d) = Inl (Eperm f e)"
@@ -1481,6 +1471,15 @@ locale Corec =
       bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
       \<exists>X'. Udtor (Umap f d) = Inr X' \<and> 
            X' \<subseteq> Gren f f ` (Gmap (Umap f) (Umap f) `  X)"
+    and
+    UFVars_Udtor_Inl:
+    "\<And> d e. valid_U d \<Longrightarrow> Udtor d = Inl e \<Longrightarrow> EVrs e \<subseteq> UFVars d"
+    and 
+    UFVars_Udtor_Inr:
+    "\<And> d x X. valid_U d \<Longrightarrow> Udtor d = Inr X \<Longrightarrow> x \<in> X \<Longrightarrow>
+         GVrs1 x \<union> (\<Union>z \<in> GSupp2 x. UFVars z) \<union>
+         ((\<Union>z \<in> GSupp1 x. UFVars z) - GVrs2 x) \<subseteq>
+         UFVars d"
     and 
     Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
@@ -1636,6 +1635,18 @@ theorem COREC_DDTOR_Inr:
  COREC d = Ector (Gmap COREC COREC x)"
 using COREC_DDTOR[unfolded GMAP_def, simplified, of "GMAP id id Inr Inr x" d]
 by (auto simp: Udtor'_def Gmap_comp) 
+
+thm COREC_mmapD[no_vars]
+
+theorem COREC_mmapD: 
+"bij u \<Longrightarrow> |supp u| <o |UNIV::'a::covar_G set| \<Longrightarrow> valid_U d \<Longrightarrow> 
+ COREC (Umap u d) = Eperm u (local.COREC d)"
+using COREC_mmapD .
+
+thm COREC_FFVarsD[no_vars]
+
+theorem COREC_FFVarsD: "valid_U d \<Longrightarrow> EVrs (local.COREC d) \<subseteq> UFVars d"
+using COREC_FFVarsD .
 
 (* End product: *)
 thm COREC_DDTOR_Inl COREC_DDTOR_Inr COREC_mmapD COREC_FFVarsD

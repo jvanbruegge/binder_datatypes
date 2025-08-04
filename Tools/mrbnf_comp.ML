@@ -189,47 +189,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     val is_ilive = map (equal Live_Var) ivar_types;
     val is_olive = map (equal Live_Var) ovar_types;
 
-    val sort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map class_of_mrbnf inners) (class_of_mrbnf outer);
-    val cosort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map coclass_of_mrbnf inners) (coclass_of_mrbnf outer);
-
-    fun try_unprefix prfx s = case try (unprefix prfx) s of
-      SOME x => x
-      | NONE => s
-    fun mk_class prfx xs lthy =
-      let
-        val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs)
-      in
-        Local_Theory.background_theory_result (fn thy =>
-          let val (class, lthy) = Class_Declaration.class (Binding.concealed (qualify (Binding.name name))) [] xs [] thy
-          in ([class], Local_Theory.exit_global lthy) end
-        ) lthy
-      end;
-    val ((class, coclass), lthy) = case sort of
-      @{sort var} => ((@{sort var}, @{sort covar}), lthy)
-      | _ => lthy
-        |> mk_class "var_" sort
-        ||>> mk_class "covar_" cosort;
-
-    val ((((((oDs, iDss), As), As'), Fs), Bs), names_lthy) = lthy
-      |> mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf outer))
-      ||>> fold_map mk_TFrees' (map (map Type.sort_of_atyp o deads_of_mrbnf) inners)
-      ||>> mk_TFrees num_ilives
-      ||>> mk_TFrees num_ilives
-      ||>> mk_TFrees' (replicate (free_of_mrbnf outer) class)
-      ||>> mk_TFrees' (replicate (bound_of_mrbnf outer) class);
-
-    (* Create the types of the inners, the only thing that is not the same by invariant are the dead variables.
-     * This is dones once for the As and once for the As' of the live variables *)
-    val iTs = map2 (fn deads => mk_T_of_mrbnf deads As Bs Fs) iDss inners;
-    val iTs' = map2 (fn deads => mk_T_of_mrbnf deads As' Bs Fs) iDss inners;
-
-    (* Create the type of the outer, this will replace the live variables of the outer with the types of the inners *)
-    val oT = mk_T_of_mrbnf oDs iTs Bs Fs outer;
-
-    (* Create the composed bound (bd) for the new MRBNF: bd = (inner_1.bd +c inner_2.bd +c ... +c inner_m.bd) *c outer.bd *)
     val bd = BNF_Util.mk_cprod (foldr1 (uncurry BNF_Util.mk_csum) (map bd_of_mrbnf inners)) (bd_of_mrbnf outer)
-
-    (* In case the composed bound only consists of sums and products of "natLeq", simplify the bound to just "natLeq" *)
     val (bd', bd_ordIso_natLeq_thm_opt) =
       if is_sum_prod_natLeq bd then
         let
@@ -240,6 +200,33 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         in (bd', SOME (Goal.prove_sorry lthy [] [] goal (BNF_Comp_Tactics.bd_ordIso_natLeq_tac o #context) |> Thm.close_derivation \<^here>))
         end
       else (bd, NONE);
+      
+    val sort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map class_of_mrbnf inners) (class_of_mrbnf outer);
+    val cosort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map coclass_of_mrbnf inners) (coclass_of_mrbnf outer);
+
+    fun try_unprefix prfx s = case try (unprefix prfx) s of
+      SOME x => x
+      | NONE => s
+    fun mk_name prfx xs =
+      let
+        val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs);
+      in Binding.concealed (qualify (Binding.name name)) end;
+    val (class, lthy) = apfst single (Var_Classes.mk_comp_class (mk_name "" sort) bd' (map bd_Cinfinite_of_mrbnf (outer :: inners)) sort lthy);
+    val (coclass, lthy) = if length cosort = 1 then (cosort, lthy) else
+      apfst single (Var_Classes.mk_class_for_bound (mk_name "" cosort) (BNF_LFP_Util.mk_cardSuc bd') lthy);
+
+    val ((((((oDs, iDss), As), As'), Fs), Bs), names_lthy) = lthy
+      |> mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf outer))
+      ||>> fold_map mk_TFrees' (map (map Type.sort_of_atyp o deads_of_mrbnf) inners)
+      ||>> mk_TFrees num_ilives
+      ||>> mk_TFrees num_ilives
+      ||>> mk_TFrees' (replicate (free_of_mrbnf outer) class)
+      ||>> mk_TFrees' (replicate (bound_of_mrbnf outer) class);
+
+    val iTs = map2 (fn deads => mk_T_of_mrbnf deads As Bs Fs) iDss inners;
+    val iTs' = map2 (fn deads => mk_T_of_mrbnf deads As' Bs Fs) iDss inners;
+
+    val oT = mk_T_of_mrbnf oDs iTs Bs Fs outer;
 
     fun map_id0_tac ctxt =
       mr_mk_comp_map_id0_tac ctxt (map_id0_of_mrbnf outer) (map_cong0_of_mrbnf outer) (map map_id0_of_mrbnf inners);
@@ -477,38 +464,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       wit = wit_tac
     };
 
-    val class_thms = case bd' of
-      Const (@{const_name natLeq}, _) =>
-        ((@{sort var}, @{thm var_class.large}, @{thm var_class.regular}), (@{sort covar}, K @{thm covar_class.large}))
-      | _ =>
-      let
-        val ifco = bd_infinite_regular_card_order_of_mrbnf
-
-        val var_goal = HOLogic.mk_UNIV (TFree (Name.aT, class))
-          |> mk_card_of
-          |> mk_ordLeq (mk_card_of (mk_Field bd'))
-          |> HOLogic.mk_Trueprop;
-        val large = #var_large o class_thms_of_mrbnf
-        val var_thm = Goal.prove_sorry lthy [] [] var_goal (fn {context,...} =>
-          mr_mk_bd_card_leq_UNIV_tac context (ifco outer) (map ifco inners)
-            (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
-        ) |> Thm.close_derivation \<^here>;
-        val (zs, _) = mk_Frees "z" (Fs @ Bs) lthy
-
-        fun mk_covar_thm (coclass, lthy) =
-          let
-            val covar_goal = HOLogic.mk_UNIV (TFree (Name.aT, coclass))
-              |> mk_card_of
-              |> mk_ordLeq (BNF_LFP_Util.mk_cardSuc bd')
-              |> HOLogic.mk_Trueprop;
-            val large = #covar_large  o class_thms_of_mrbnf
-          in Goal.prove_sorry lthy [] [] covar_goal (*(fold_rev Logic.all zs covar_goal)*) (fn {context,...} =>
-            mr_mk_bd_cardSuc_leq_UNIV_tac context (ifco outer) (map ifco inners)
-              (large outer) (map large inners) bd_ordIso_natLeq_thm_opt
-          ) |> Thm.close_derivation \<^here> end;
-      in ((class, var_thm, var_regular_of_mrbnf outer), (coclass, mk_covar_thm)) end;
-
-    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME class_thms)
+    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME (class, coclass))
               Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
 
     val phi =
@@ -520,15 +476,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     (mrbnf', (add_mrbnf_to_unfolds mrbnf' unfold_set, lthy'))
   end;
 
-fun mk_simple_class_opt mrbnf =
-  let
-    val class_thms = class_thms_of_mrbnf mrbnf;
-  in
-    SOME (
-      (class_of_mrbnf mrbnf, #var_large class_thms, #var_regular class_thms),
-      (coclass_of_mrbnf mrbnf, K (#covar_large class_thms))
-    )
-  end;
+fun mk_simple_class_opt mrbnf = SOME (class_of_mrbnf mrbnf, coclass_of_mrbnf mrbnf);
 
 (* Changing the order of live, free and bound variables *)
 fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
@@ -1310,7 +1258,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val bdT_bind = qualify (Binding.suffix_name ("_" ^ bdTN) b);
     val params = Term.add_tfreesT bd_repT [];
     val all_deads = map TFree (fold_rev Term.add_tfreesT all_Ds []);
-    val ((bdT, (_, Abs_bd_name, _, _, Abs_bdT_inject, Abs_bdT_cases)), lthy) =
+    val ((bdT, (_, Abs_bd_name, type_definition_bdT, _, Abs_bdT_inject, Abs_bdT_cases)), lthy) =
       maybe_typedef false (bdT_bind, params, NoSyn) (HOLogic.mk_UNIV bd_repT) NONE
         (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt UNIV_I] 1) lthy;
     val (mrbnf_bd', bd_ordIso, bd_infinite_regular_card_order) =
@@ -1333,6 +1281,15 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
         in
           (mrbnf_bd', bd_ordIso, bd_infinite_regular_card_order)
         end;
+
+    val (_, lthy) = Local_Theory.begin_nested lthy;
+    val ((mrbnf_bd', mrbnf_bd_def), lthy) = maybe_define false Note_Some Hardly_Inline
+      true (fn () => Binding.prefix_name "bd_" b, mrbnf_bd') lthy;
+    val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+    val phi = Proof_Context.export_morphism old_lthy lthy;
+    val mrbnf_bd' = Morphism.term phi mrbnf_bd';
+    val mrbnf_bd_def = Morphism.thm phi mrbnf_bd_def;
+
     fun map_id0_tac ctxt =
       rtac ctxt (@{thm type_copy_map_id0} OF [type_definition, map_id0_of_mrbnf mrbnf]) 1;
     fun map_comp0_tac ctxt = HEADGOAL (
@@ -1348,6 +1305,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       rtac ctxt (@{thm type_copy_set_map0} OF [type_definition, thm]) THEN_ALL_NEW
         (assume_tac ctxt));
     val set_bd_tacs = map (fn thm => fn ctxt =>
+      Local_Defs.unfold0_tac ctxt (no_reflexive [mrbnf_bd_def]) THEN
       rtac ctxt (@{thm ordLess_ordIso_trans} OF [thm, bd_ordIso] RS @{thm type_copy_set_bd}) 1
     ) (set_bd_of_mrbnf mrbnf);
     fun le_rel_OO_tac ctxt =
@@ -1389,11 +1347,15 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
         rtac ctxt refl
       ]
     ];
+
     val mrbnf_wits = map (fn (I, t) =>
       fold Term.absdummy (map (nth As) I)
         (AbsA $ Term.list_comb (t, map Bound (0 upto length I - 1))))
       (mk_wits_of_mrbnf (replicate nwits Ds) (replicate nwits As) (replicate nwits Bs) (replicate nwits Fs) mrbnf);
-    fun bd_infinite_regular_card_order_tac ctxt = rtac ctxt bd_infinite_regular_card_order 1
+    fun bd_infinite_regular_card_order_tac ctxt = EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (no_reflexive [mrbnf_bd_def])),
+      rtac ctxt bd_infinite_regular_card_order
+    ];
     fun wit_tac ctxt =
       ALLGOALS (dtac ctxt (type_definition RS @{thm type_copy_wit})) THEN
       mk_simple_wit_tac ctxt (wit_thms_of_mrbnf mrbnf);
@@ -1411,36 +1373,31 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       wit = wit_tac
     };
 
-    val (class_thms, lthy) = case mrbnf_bd' of
-      Const (@{const_name natLeq}, _) =>
-        (((@{sort var}, @{thm var_class.large}, @{thm var_class.regular}), (@{sort covar}, K @{thm covar_class.large})), lthy)
-      | _ =>
-      let
-        fun mk_class prfx xs f lthy =
-          (Class_Declaration.class (qualify (Binding.name (prfx ^ Binding.name_of b))) [] xs [] #>> single ##> f ##> Local_Theory.exit_global |> Local_Theory.background_theory_result) lthy
-        val (class, lthy3) = mk_class "var_" (class_of_mrbnf mrbnf) I lthy;
+    val class_name = Binding.prefix_name "var_" (Binding.map_name (fn s =>
+      the_default s (try (unsuffix "_pre") s)
+    ) b);
+    val (class, lthy) = Var_Classes.mk_class_for_bound class_name mrbnf_bd' lthy;
+    val (coclass, lthy) = Var_Classes.mk_class_for_bound (Binding.prefix_name "co" class_name) (BNF_LFP_Util.mk_cardSuc mrbnf_bd') lthy;
 
-        val class_thms = class_thms_of_mrbnf mrbnf;
-        val covar_large' = @{thm ordIso_ordLeq_trans} OF [
-          @{thm cardSuc_invar_ordIso[THEN iffD2]} OF [
-            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order],
-            @{thm infinite_regular_card_order.Card_order} OF [bd_infinite_regular_card_order_of_mrbnf mrbnf],
-            @{thm ordIso_symmetric} OF [bd_ordIso]
-          ],
-          #covar_large class_thms
-        ]
-        val (coclass, lthy) = mk_class "covar_" (coclass_of_mrbnf mrbnf) (fn ctxt =>
-          let val subclass_tac = Locale.intro_locales_tac {strict = true, eager = true} ctxt []
-          in Class_Declaration.prove_subclass subclass_tac (the_single class) ctxt end
-        ) lthy3;
-        val var_large' = @{thm ordIso_ordLeq_trans} OF [
-          @{thm card_of_cong} OF [@{thm ordIso_symmetric} OF [bd_ordIso]],
-          #var_large class_thms
-        ]
-      in (((class, var_large', #var_regular class_thms), (coclass, K covar_large')), lthy) end
+    fun subclass_tac ctxt = EVERY1 [
+      K (Local_Defs.unfold0_tac ctxt (no_reflexive [mrbnf_bd_def])),
+      TRY o EVERY' [
+        rtac ctxt @{thm cardSuc_mono_ordLeq[THEN iffD2]},
+        rtac ctxt (bd_Card_order_of_mrbnf mrbnf),
+        rtac ctxt @{thm Card_order_dir_image},
+        rtac ctxt (bd_Card_order_of_mrbnf mrbnf),
+        rtac ctxt type_definition_bdT
+      ],
+      rtac ctxt @{thm ordIso_imp_ordLeq},
+      rtac ctxt @{thm type_copy_ordLeq_dir_image},
+      rtac ctxt (bd_Card_order_of_mrbnf mrbnf),
+      rtac ctxt type_definition_bdT
+    ];
+    val lthy = Var_Classes.prove_subclass_of (SOME class) (hd (class_of_mrbnf mrbnf)) subclass_tac lthy;
+    val lthy = Var_Classes.prove_subclass_of (SOME coclass) (hd (coclass_of_mrbnf mrbnf)) subclass_tac lthy;
 
     val (mrbnf', lthy') =
-      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) (SOME class_thms)
+      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) (SOME ([class], [coclass]))
         Binding.empty Binding.empty Binding.empty []
         (((((((b, TA), mrbnf_map), mrbnf_sets), mrbnf_bd'), mrbnf_wits), SOME mrbnf_rel), SOME mrbnf_pred) lthy;
     val unfolds = @{thm id_bnf_apply} ::

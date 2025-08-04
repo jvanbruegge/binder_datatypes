@@ -1,11 +1,10 @@
 theory MRBNF_Composition
-  imports "Prelim.Prelim"
+  imports "Prelim.Prelim" "Classes"
   keywords
     "print_mrbnfs" :: diag and
     "mrbnf" :: thy_goal
 begin
 
-ML_file \<open>../Tools/mrbnf_util.ML\<close>
 ML_file \<open>../Tools/mrbnf_def_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_def.ML\<close>
 

@@ -408,7 +408,7 @@ lemma FVars_raw_bds: "|FVars_raw_term x| <o card_suc natLeq"
 lemmas FVars_raw_bd_UNIVs = FVars_raw_bds[THEN ordLess_ordLeq_trans,
     OF ordIso_ordLeq_trans[OF ordIso_symmetric[OF
         cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]]
-      covar_class.large
+      covar_class.large'
       ]]
 
 lemma alpha_refls:
@@ -911,7 +911,7 @@ lemma raw_refreshs:
           "A \<union> set2_term_pre x \<union> ((\<Union>(FVars_raw_term ` set3_term_pre x)) - set2_term_pre x)"
           "(\<Union>(FVars_raw_term ` set3_term_pre x)) - set2_term_pre x"
           ]])
-       apply (rule var_class.Un_bound term_pre.set_bd_UNIV assms ordLeq_ordLess_trans[OF card_of_diff]
+       apply (rule infinite_class.Un_bound term_pre.set_bd_UNIV assms ordLeq_ordLess_trans[OF card_of_diff]
       term_pre.set_bd[THEN ordLess_ordLeq_trans] var_class.UN_bound var_class.large' FVars_raw_bd_UNIVs infinite_UNIV
       )+
     apply (rule Un_upper2)
@@ -1107,7 +1107,7 @@ lemma FVars_bds: "|FVars_term x| <o card_suc natLeq"
   done
 
 lemmas FVars_bd_UNIVs = ordLess_ordLeq_trans[OF FVars_bds ordIso_ordLeq_trans[OF
-      ordIso_symmetric[OF cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]] covar_class.large]]
+      ordIso_symmetric[OF cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]] covar_class.large']]
 
 lemma FVars_permutes:
   fixes f::"'a::var \<Rightarrow> 'a"

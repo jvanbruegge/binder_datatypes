@@ -451,7 +451,7 @@ interpretation tvsubst: QREC_fixed_FTerm "avoiding_set1 f1 f2"
   else FTerm_ctor (Sb_FTerm_pre id f2 (map_FTerm_pre id id id id snd snd y))"
   apply unfold_locales
 
-      apply ((rule var_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
+      apply ((rule infinite_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
         FTerm.FVars_bd_UNIVs
       | (unfold IImsupp_def)[1])+)[2]
 
@@ -825,7 +825,7 @@ lemma FVars_tvsubst1:
   shows "FVars (tvsubst_FTerm f1 f2 t) = (\<Union>a\<in>FVars t. FVars (f1 a))"
   apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 f1 f2" "avoiding_set2 f1" _ t])
 
-      apply ((rule var_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
+      apply ((rule infinite_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
         FTerm.FVars_bd_UNIVs
         | (unfold IImsupp_def)[1])+)[2]
 
@@ -918,7 +918,7 @@ lemma FVars_tvsubst2:
     "|SSupp TyVar \<rho>2| <o |UNIV::'tyvar set|"
   shows "FTVars (tvsubst_FTerm \<rho>1 \<rho>2 t) = (\<Union>x\<in>FVars t. FTVars (\<rho>1 x)) \<union> (\<Union>x\<in>FTVars t. FVars_FType (\<rho>2 x))"
   apply (rule FTerm.TT_fresh_induct[of "avoiding_set1 \<rho>1 \<rho>2" "avoiding_set2 \<rho>1" _ t])
-      apply ((rule var_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
+      apply ((rule infinite_class.Un_bound var_class.UN_bound f_prems FType.set_bd_UNIV
         FTerm.FVars_bd_UNIVs
         | (unfold IImsupp_def)[1])+)[2]
 
@@ -1002,7 +1002,7 @@ lemma SSupp_tvsubst_bound:
   shows "|SSupp VVr (tvsubst_FTerm \<rho>1 \<rho>2 \<circ> \<rho>1')| <o |UNIV::'var set|"
   apply (rule card_of_subset_bound)
    apply (rule SSupp_tvsubst_subset)
-    apply (rule assms var_class.Un_bound)+
+    apply (rule assms infinite_class.Un_bound)+
   done
 
 lemma IImsupp_tvsubst_subset:
@@ -1055,7 +1055,7 @@ lemma IImsupp_tvsubst_bound:
   apply (rule card_of_subset_bound)
    apply (rule IImsupp_tvsubst_subset)
      apply (rule assms)+
-  apply (rule var_class.Un_bound var_class.UN_bound FType.set_bd_UNIV assms | (unfold IImsupp_def)[1])+
+  apply (rule infinite_class.Un_bound var_class.UN_bound FType.set_bd_UNIV assms | (unfold IImsupp_def)[1])+
   done
 
 pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
@@ -1107,7 +1107,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
     ])
 
  apply ((assumption | rule Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
-        FType.SSupp_Sb_bound infinite_UNIV var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
+        FType.SSupp_Sb_bound infinite_UNIV var_class.UN_bound infinite_class.Un_bound IImsupp_tvsubst_bound
         FType.IImsupp_Sb_bound SSupp_tvsubst_bound | (unfold IImsupp_def)[1])+)[2]
 
     apply (rule impI)
@@ -1267,7 +1267,7 @@ pbmv_monad "('tv, 'v) FTerm" and "'tv FType"
       apply (insert prems(1-6))[2]
 
  apply ((assumption | rule infinite_UNIV Un_bound UN_bound card_of_Card_order FTerm.FVars_bd_UNIVs FType.FVars_bd_UNIVs
-        FType.SSupp_Sb_bound var_class.UN_bound var_class.Un_bound IImsupp_tvsubst_bound
+        FType.SSupp_Sb_bound var_class.UN_bound infinite_class.Un_bound IImsupp_tvsubst_bound
         FType.IImsupp_Sb_bound SSupp_tvsubst_bound | (unfold IImsupp_def)[1])+)[2]
 
     apply (unfold atomize_all[symmetric] atomize_imp[symmetric])

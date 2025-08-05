@@ -148,9 +148,11 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
         ])) (#map_Injs axioms),
         map_is_Sb = fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
-          resolve_tac ctxt @{thms type_copy_map_comp0 type_copy_map_cong0},
-          rtac ctxt copy,
-          K (Local_Defs.unfold0_tac ctxt (comp_assocs @ [@{thm type_copy_Rep_o_Abs_o} OF [copy]])),
+          resolve_tac ctxt @{thms type_copy_map_comp0 type_copy_map_cong0 arg_cong[of _ _ "\<lambda>x. _ \<circ> x \<circ> _"]},
+          TRY o EVERY' [
+            rtac ctxt copy,
+            K (Local_Defs.unfold0_tac ctxt (comp_assocs @ [@{thm type_copy_Rep_o_Abs_o} OF [copy]]))
+          ],
           rtac ctxt (unfold_defs (#map_is_Sb axioms)) THEN_ALL_NEW assume_tac ctxt
         ],
         set_Sb = map (fn _ => fn ctxt => EVERY1 [

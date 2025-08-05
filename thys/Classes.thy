@@ -1,5 +1,5 @@
 theory Classes
-  imports "Prelim.Prelim"
+  imports "Prelim.Prelim" Support
 begin
 
 ML_file \<open>../Tools/mrbnf_util.ML\<close>
@@ -97,10 +97,20 @@ local_setup \<open>
 \<close>
 
 (* Theorems *)
-
 lemma supp_comp_bound_var:
   assumes bound: "|supp f| <o |UNIV::'a::infinite set|" "|supp g| <o |UNIV::'a set|"
   shows "|supp (g \<circ> f)| <o |UNIV::'a set|"
   using supp_comp_bound[OF assms] infinite_UNIV by blast
+
+lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
+   (\<And>a. Vrs (Inj a) = {a}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
+  apply (unfold IImsupp_def SSupp_Inj_comp comp_apply)
+  apply (rule var_class.UN_bound)
+   apply assumption
+  by (simp add: infinite_UNIV)
+
+lemma IImsupp_Inj_comp_bound2: "(\<And>a. Vrs (Inj a) = {}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
+  by (auto simp: IImsupp_def)
+lemmas IImsupp_Inj_comp_bound = IImsupp_Inj_comp_bound1 IImsupp_Inj_comp_bound2
 
 end

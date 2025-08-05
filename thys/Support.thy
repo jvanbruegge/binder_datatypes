@@ -166,15 +166,4 @@ lemma IImsupp_chain4:
     apply (unfold imsupp_def supp_def) by blast
   done
 
-lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
-   (\<And>a. Vrs (Inj a) = {a}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
-  apply (unfold IImsupp_def SSupp_Inj_comp comp_apply)
-  apply (rule var_class.UN_bound)
-   apply assumption
-  by (simp add: infinite_UNIV)
-
-lemma IImsupp_Inj_comp_bound2: "(\<And>a. Vrs (Inj a) = {}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
-  by (auto simp: IImsupp_def)
-lemmas IImsupp_Inj_comp_bound = IImsupp_Inj_comp_bound1 IImsupp_Inj_comp_bound2
-
 end

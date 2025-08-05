@@ -56,10 +56,11 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
     val mrbnf' = hd mrbnfs';
     val ((mrbnf, info, (Ds, absT_info)), lthy) = MRBNF_Comp.seal_mrbnf qualify mrbnf_unfolds name true Ds Ds mrbnf' info_opt lthy;
 
+    val var_class = MRBNF_Def.class_of_mrbnf mrbnf;
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf';
     val (lives, bounds, frees) = MRBNF_Def.deinterlace (snd tys) var_types;
-    val bounds = map (resort_tfree_or_tvar @{sort var}) bounds;
-    val frees = map (resort_tfree_or_tvar @{sort var}) frees;
+    val bounds = map (resort_tfree_or_tvar var_class) bounds;
+    val frees = map (resort_tfree_or_tvar var_class) frees;
     val rep_T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf';
 
     val (lives', _) = lthy

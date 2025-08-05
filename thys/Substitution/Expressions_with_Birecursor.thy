@@ -30,10 +30,15 @@ apply-
 lemma base_Gmap_eq: "base u \<Longrightarrow> Gmap f1 f2 u = Gmap g1 g2 u"
 by (metis G.Map_cong base_GSupp empty_iff)
 
+
 definition lift :: "(('a::var \<Rightarrow> 'a) \<Rightarrow> 'e \<Rightarrow> 'e) \<Rightarrow> 
  (('a::var \<Rightarrow> 'a) \<Rightarrow> 'p \<Rightarrow> 'p) \<Rightarrow>  
 (('a \<Rightarrow> 'a) \<Rightarrow> ('p\<Rightarrow>'e) \<Rightarrow> ('p\<Rightarrow>'e))" where 
 "lift Eperm Pperm \<sigma> pe p \<equiv> Eperm \<sigma> (pe (Pperm (inv \<sigma>) p))"
+
+lemma triv_perm_lift: "(\<lambda>e p. e) \<circ> perm \<sigma> = lift perm pperm \<sigma> o (\<lambda>e p. e)"
+  unfolding fun_eq_iff o_def lift_def by simp
+
 
 locale Bimodel = 
   (* nominal-style binding-recursor assumptions, 
@@ -191,6 +196,10 @@ context Expression begin
 (* Non-clashing: Barendregt's convention *)
 definition 
 "noclashE x \<equiv> GVrs2 x \<inter> GVrs1 x = {}"
+
+lemma Eperm_inv_iff: "|supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
+by (metis Eperm_comp' Eperm_id bij_betw_inv_into bij_inv_id1 id_apply inv_inv_eq supp_inv_bound)
+
 end
 
 

@@ -217,7 +217,9 @@ lemma Ector_eq_imp_strong:
      id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> A) \<sigma> \<and> 
      Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1) = u2)"
 sorry (* AtoD: Do we have a proof of this for datatypes? 
-The one for codata should be identical. *)
+The one for codata should be identical. 
+In fact, I think it should already work abstractly for Expresions? 
+*)
 
 (* Definitions *)
 

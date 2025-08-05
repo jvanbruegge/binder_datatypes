@@ -135,7 +135,6 @@ So in the binding-spec B = (J0,Q0,\<xi>,\<theta>) where:
 (the binding happens in the first recursve component).   
 *)
 
-
 locale Expression = Nominal +
   fixes Ector :: "('a :: var, 'a, 'e, 'e) G \<Rightarrow> 'e"
   assumes EVrs_Eperm:
@@ -183,6 +182,9 @@ lemma Ector_fresh_inject:
     done
   apply blast
   done
+
+
+
 
 
 end

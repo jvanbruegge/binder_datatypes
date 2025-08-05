@@ -24,13 +24,6 @@ where
         id_on ((\<Union> (Vrs ` GSupp1 u1) - GVrs2 u1)) \<sigma> \<and> 
         Gren id \<sigma> (Gmap (perm \<sigma>) id u1) = u2))"
 
-(* 
-Ector_eqA: "\<And>u1 u2. Ector u1 = Ector u2 \<Longrightarrow>
-   (\<exists>\<sigma> :: 'a :: var \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV :: 'a set| \<and>
-     id_on ((\<Union> (EVrs ` GSupp1 u1)) \<union> (\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1)) \<sigma> \<and> 
-     Gren id \<sigma> (Gmap (Eperm \<sigma>) (Eperm \<sigma>) u1) = u2)"
-*)
-
 definition dtorVrsC :: "('E' \<Rightarrow> bool) \<Rightarrow> 
 ('E' \<Rightarrow> 'a E + ('a::var,'a,'E','E')G set) \<Rightarrow> 
 ('E' \<Rightarrow> 'a set) \<Rightarrow> bool" 

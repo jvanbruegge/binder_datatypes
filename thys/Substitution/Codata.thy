@@ -13,8 +13,6 @@ theory Codata
 begin
 
 
-
-
 abbreviation "IMSUPP \<delta> \<rho> \<rho>' \<equiv> imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>'"
 abbreviation "small_support \<delta> \<rho> \<rho>' \<equiv>
   |supp (\<delta> :: 'a \<Rightarrow> 'a :: covar_G)| <o |UNIV::'a set| \<and>
@@ -367,12 +365,14 @@ and PVrs :: "'p \<Rightarrow> 'a set" and
 Ector' :: "('a, 'a, 'p \<Rightarrow> 'a E, 'p \<Rightarrow> 'a E) G \<Rightarrow> 'p \<Rightarrow> 'a E"
 assumes bimodel: 
 "Bimodel Pvalid Pperm PVrs Eperm EVrs (card_suc Gbd) Ector Ector'"
-(*"Bimodel Pvalid Pperm PVrs Eperm EVrs Gbd Ector Ector'"  *)
 begin 
 
 (* Just getting all the Bomodel theorems *)
 interpretation Bimodel Pvalid Pperm PVrs Eperm EVrs "card_suc Gbd" Ector Ector'
 using bimodel .
+
+lemma small_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> |PVrs p \<union> inv \<sigma> ` PVrs p| <o |UNIV::'a::covar_G set|"
+using PVrs_small card_image_ordLess infinite_class.Un_bound by blast
 
 lemma EVrs_Un_PVrs_small:
 "Pvalid p \<Longrightarrow> |EVrs e \<union> PVrs p| <o |UNIV::'a::covar_G set|"
@@ -450,7 +450,6 @@ lemma Edtor'_Inr_step: "Edtor' (Ector u, p) = Inr U \<Longrightarrow> \<not> bas
 
 find_theorems Ector name: surj
 
-
 (* *)
 lemma Edtor1'_NE: 
 assumes base: "\<not> base u" and p: "Pvalid p"
@@ -524,15 +523,6 @@ unfolding NominalRel_def
 by (auto simp add: EVrs''_def Eperm_comp' Pperm_comp Eperm_cong_id 
    Pperm_cong_id EVrs_Eperm PVrs_Pperm EVrs_Un_PVrs_small) 
 
-(*
-lemma Pvalid_Pperm[simp]: "Pvalid p \<Longrightarrow> small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Pvalid (Pperm \<sigma> p)"
-using nomP unfolding nom_def by blast
-*)
-
-lemmas PVrs_small
-lemma small_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> |PVrs p \<union> inv \<sigma> ` PVrs p| <o |UNIV::'a::covar_G set|"
-using PVrs_small card_image_ordLess infinite_class.Un_bound by blast
-
 (* "lemma dtorPermC: dtorPermC Evalid' Edtor' Eperm''" *)
 lemma dtorPermC_Inl: 
 "bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> Evalid' ep \<Longrightarrow> Edtor' ep = Inl e1 \<Longrightarrow> Edtor' (Eperm'' \<sigma> ep) = Inl (Eperm \<sigma> e1)" 
@@ -550,12 +540,6 @@ unfolding Eperm''_def Evalid'_def
         subgoal unfolding Gmap_comp Gmap_Gren'
          unfolding lift_def o_def .. . .
      subgoal using Edtor'_step by auto . . .
-
-lemma triv_Eperm_lift: "(\<lambda>e p. e) \<circ> Eperm \<sigma> = lift Eperm Pperm \<sigma> o (\<lambda>e p. e)"
-  unfolding fun_eq_iff o_def lift_def by simp
-
-lemma Eperm_inv_iff: "small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
-by (metis E.permute_bij E.permute_inv_simp inv_simp1 inv_simp2)
 
 lemma dtorPermC_Inr: 
 "bij \<sigma> \<Longrightarrow> small \<sigma> \<Longrightarrow> Evalid' ep \<Longrightarrow> Edtor' ep = Inr U 
@@ -597,7 +581,7 @@ unfolding Eperm''_def Evalid'_def
                 subgoal by auto
                 subgoal 
                 unfolding Gmap_o[symmetric] 
-                unfolding triv_Eperm_lift 
+                unfolding triv_perm_lift[of Eperm _ Pperm]
                 unfolding Gmap_o
                 unfolding o_def
                 apply(subst (asm) ctorPermM_Ector'[symmetric]) 
@@ -639,12 +623,8 @@ unfolding Eperm''_def Evalid'_def
   . . . . . . . . . . . .
                
 
-
-
-
-lemma 
-(* dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''" *)
-dtorVrsGrenC: "Evalid' ep \<Longrightarrow> Edtor' ep = Inr U \<Longrightarrow> 
+(* lemma dtorVrsGrenC: "dtorVrsGrenC Evalid' Edtor' Eperm'' EVrs''" *)
+lemma dtorVrsGrenC: "Evalid' ep \<Longrightarrow> Edtor' ep = Inr U \<Longrightarrow> 
      {u1,u2} \<subseteq> U \<Longrightarrow>
      \<exists>\<sigma>. bij (\<sigma>::'a::covar_G \<Rightarrow> 'a) \<and> |supp \<sigma>| <o |UNIV::'a set| \<and> 
          id_on ((\<Union>d' \<in> GSupp1 u1. EVrs'' d') - GVrs2 u1) \<sigma> \<and>
@@ -746,7 +726,6 @@ apply(rule subset_trans[OF ctorVarsM_Ector'])
   by (auto simp: GVrs2_Gmap GSupp2_Gmap EVrs_Ector GSupp1_Gmap GVrs1_Gmap)
 .
 
-term Evalid'
 (* lemma dtorVrsC: "dtorVrsC Evalid' Edtor' EVrs''" *)
 lemma dtorVrsC_Inl: "Evalid' pe \<Longrightarrow>   
    Edtor' pe = Inl e1 \<Longrightarrow> EVrs e1 \<subseteq> EVrs'' pe"

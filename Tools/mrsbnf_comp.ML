@@ -67,7 +67,7 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
       |> fold Variable.declare_typ (vars @ map TFree (fold Term.add_tfreesT Ds []))
       |> mk_TFrees (length lives);
 
-    val T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf;
+    val T = MRBNF_Def.mk_T_of_mrbnf (map TFree (rev (fold_rev Term.add_tfreesT Ds []))) lives bounds frees mrbnf;
 
     val info = map_prod I (morph_info (MRBNF_Util.subst_typ_morphism (
       (op~~) (apply2 (fn T => map TFree (Term.add_tfreesT T [])) (#abs_type (fst (snd info)), T))

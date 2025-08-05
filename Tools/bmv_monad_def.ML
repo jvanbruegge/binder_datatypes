@@ -861,9 +861,7 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
       else NONE
     )) (#Injs (#consts model)) (#Vrs (#consts model));
 
-    val Un_bound = MRBNF_Def.get_class_assumption [#var_class model] "Un_bound" lthy;
-    val UN_bound = MRBNF_Def.get_class_assumption [#var_class model] "UN_bound" lthy;
-    val UNIV_cinfinite = MRBNF_Def.get_class_assumption [#var_class model] "UNIV_cinfinite" lthy;
+    val UNIV_cinfinite = @{thm var_class.UNIV_cinfinite};
 
     val Injss = #Injs (#consts model);
 
@@ -1105,9 +1103,8 @@ fun pbmv_monad_of_mrbnf mrbnf lthy =
       ||>> mk_Frees "g" (map2 (curry (op-->)) lives lives');
     val T = MRBNF_Def.mk_T_of_mrbnf deads lives bounds frees mrbnf;
     val n = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf;
-    val var_class = case MRBNF_Def.bd_of_mrbnf mrbnf of
-      @{term natLeq} => @{class var}
-      | _ => error "TODO: other var classes"
+    val (var_class, lthy) = Var_Classes.mk_class_for_bound
+      (Binding.prefix_name "var_" (MRBNF_Def.name_of_mrbnf mrbnf)) (MRBNF_Def.bd_of_mrbnf mrbnf) lthy
 
     val (lsets, _, fsets) = MRBNF_Def.deinterlace (MRBNF_Def.mk_sets_of_mrbnf
       (replicate n deads) (replicate n lives) (replicate n bounds) (replicate n frees) mrbnf

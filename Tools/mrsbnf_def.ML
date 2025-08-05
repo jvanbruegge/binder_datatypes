@@ -294,7 +294,7 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
           end
         ) Injs gs g_prems;
 
-        val Un_bound = MRBNF_Def.get_class_assumption [BMV_Monad_Def.var_class_of_bmv_monad bmv] "Un_bound" lthy;
+        val Un_bound = @{thm infinite_class.Un_bound};
 
         val SSupp_map_bound = @{map 4} (fn Inj => fn g => fn g_prem => Option.map (fn thm =>
           let val goal = HOLogic.mk_Trueprop (uncurry mk_ordLess (
@@ -468,7 +468,7 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
               REPEAT_DETERM o resolve_tac ctxt prems,
               rtac ctxt @{thm ordLeq_ordLess_trans[OF card_of_image]},
               REPEAT_DETERM o EVERY' [
-                TRY o rtac ctxt @{thm var_class.Un_bound},
+                TRY o rtac ctxt @{thm infinite_class.Un_bound},
                 resolve_tac ctxt prems ORELSE' EVERY' [
                   SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms IImsupp_def}),
                   rtac ctxt @{thm var_class.UN_bound},
@@ -719,7 +719,7 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
                 resolve_tac ctxt (
                   @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV
                     SSupp_comp_bound SSupp_Inj_bound card_of_Card_order conjI
-                    cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound var_class.Un_bound
+                    cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound infinite_class.Un_bound
                   }
                   @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
                   @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
@@ -744,7 +744,7 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
                 ])),
                 resolve_tac ctxt (
                   @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV SSupp_comp_bound
-                  SSupp_Inj_bound card_of_Card_order conjI cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound var_class.Un_bound}
+                  SSupp_Inj_bound card_of_Card_order conjI cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound infinite_class.Un_bound}
                   @ flat (#IImsupp_map_bound facts)
                   @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
                   @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
@@ -782,7 +782,7 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
                   resolve_tac ctxt (
                     @{thms supp_id_bound supp_comp_bound supp_inv_bound infinite_class.infinite_UNIV
                       SSupp_comp_bound SSupp_Inj_bound card_of_Card_order conjI
-                      cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound var_class.Un_bound
+                      cinfinite_iff_infinite[THEN iffD2] IImsupp_Inj_comp_bound infinite_class.Un_bound
                     }
                     @ prems @ maps (the_default [] o #SSupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)
                     @ maps (flat o the_default [] o #IImsupp_Map_bounds) (BMV_Monad_Def.facts_of_bmv_monad bmv)

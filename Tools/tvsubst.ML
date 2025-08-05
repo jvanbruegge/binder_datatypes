@@ -713,7 +713,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
     val lthy = Proof.global_terminal_proof ((Method.Basic (fn ctxt => SIMPLE_METHOD (EVERY1 [
       rtac ctxt (the (fst (Locale.intros_of (Proof_Context.theory_of lthy) QREC_fixed_name))),
       REPEAT_DETERM_N nvars o SELECT_GOAL (REPEAT_DETERM (FIRST1 [
-        resolve_tac ctxt (@{thms var_class.Un_bound var_class.UN_bound} @ rho_prems
+        resolve_tac ctxt (@{thms infinite_class.Un_bound var_class.UN_bound} @ rho_prems
           @ maps (MRBNF_Def.set_bd_UNIV_of_mrbnf) (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf)
           @ #card_of_FVars_bound_UNIVs quot
         ),
@@ -1152,7 +1152,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
       in Goal.prove_sorry lthy (names (map_filter I rhos @ [t])) rho_prems' goal (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) avoiding_sets) fresh_induct),
         REPEAT_DETERM_N nvars o SELECT_GOAL (REPEAT_DETERM (FIRST1 [
-          resolve_tac ctxt (@{thms var_class.Un_bound var_class.UN_bound} @ prems
+          resolve_tac ctxt (@{thms infinite_class.Un_bound var_class.UN_bound} @ prems
             @ maps MRBNF_Def.set_bd_UNIV_of_mrbnf (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf)
             @ #card_of_FVars_bound_UNIVs quot
           ),
@@ -1357,7 +1357,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
             ) ctxt,
             REPEAT_DETERM_N nvars o SELECT_GOAL (REPEAT_DETERM (FIRST1 [
               assume_tac ctxt,
-              resolve_tac ctxt (@{thms var_class.Un_bound var_class.UN_bound}
+              resolve_tac ctxt (@{thms infinite_class.Un_bound var_class.UN_bound}
                 @ #card_of_FVars_bound_UNIVs quot @ maps MRBNF_Def.set_bd_UNIV_of_mrbnf (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf)
                 @ maps #SSupp_Sb_bounds (BMV_Monad_Def.facts_of_bmv_monad bmv)
                 @ SSupp_tvsubst_bounds @ flat IImsupp_Sb_boundss
@@ -1515,7 +1515,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
               ) fresh_induct),
               REPEAT_DETERM_N nvars o SELECT_GOAL (REPEAT_DETERM (FIRST1 [
                 assume_tac ctxt,
-                resolve_tac ctxt (@{thms var_class.Un_bound var_class.UN_bound}
+                resolve_tac ctxt (@{thms infinite_class.Un_bound var_class.UN_bound}
                   @ #card_of_FVars_bound_UNIVs quot @ maps MRBNF_Def.set_bd_UNIV_of_mrbnf (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf)
                   @ prems
                 ),

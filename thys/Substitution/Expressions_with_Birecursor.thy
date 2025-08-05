@@ -88,6 +88,7 @@ locale Bimodel =
        Ector' u p = Ector' (Gmap (\<lambda>pe p'. pe p) (\<lambda>pe p'. pe p) u) p" 
 begin
 
+
 lemmas ctor_compat_Pvalid_step_Ector' = Ector'_compat_Pvalid_step
 lemmas ctorPermM_Ector' = Eperm_Ector'
 thm Ector_base_inj

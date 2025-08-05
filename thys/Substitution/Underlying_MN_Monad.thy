@@ -191,4 +191,16 @@ unfolded Gmap_id,
 simplified]
 lemmas Gmap_id'[simp] = G.Map_id[unfolded id_def, simplified]
 
+lemma snd_single_Gmap: "snd ` GSupp1 u \<subseteq> {p} \<Longrightarrow> snd ` GSupp2 u \<subseteq> {p}
+\<Longrightarrow> Gmap (\<lambda>(e,p'). (e,p)) (\<lambda>(e,p'). (e,p)) u = u"
+apply(rule Gmap_cong_id) by auto
+
+lemma snd_single_Gmap': 
+assumes "snd ` GSupp1 u \<subseteq> {p}" "snd ` GSupp2 u \<subseteq> {p}"
+shows "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst u) = u"
+apply(rule sym) apply(subst snd_single_Gmap[symmetric, of _ p])
+  subgoal by fact subgoal by fact
+  subgoal unfolding Gmap_comp o_def  
+    by (meson Gmap_cong case_prod_beta) .
+
 end 

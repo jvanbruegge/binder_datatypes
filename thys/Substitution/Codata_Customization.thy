@@ -42,6 +42,9 @@ mrbnf "('a1::var, 'a2::var, 'x1, 'x2) G"
   apply (simp_all add: Gpred_def)
   done
 
+abbreviation small :: "('a::covar_G \<Rightarrow>'a) \<Rightarrow> bool"  
+where "small \<sigma> \<equiv> |supp \<sigma>| <o |UNIV::'a set|"
+
 
 (*******************************)
 (* 2. The bindiong-aware codataype command, 
@@ -207,6 +210,14 @@ lemma Eperm_E_abs:
   apply (rule alpha_bij_eqs[THEN iffD2, OF assms])
   apply (rule E_rep_abs)
   done
+
+lemma Ector_eq_imp_strong: 
+"Ector u1 = Ector u2 \<Longrightarrow> |A| <o |UNIV::'a set| \<Longrightarrow> A \<inter> GVrs2 u1 = {} \<Longrightarrow>
+   (\<exists>\<sigma> :: 'a :: covar_G \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'a set| \<and>
+     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> A) \<sigma> \<and> 
+     Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1) = u2)"
+sorry (* AtoD: Do we have a proof of this for datatypes? 
+The one for codata should be identical. *)
 
 (* Definitions *)
 
@@ -1413,42 +1424,8 @@ interpretation Expression_with_Surj_and_Coinduct Eperm EVrs "card_suc Gbd" Ector
 
 (**************************************)
 (* Simpler version of the COREC locale, where 
-the full-corecursion base case is a direct return *)
-
-(*
-locale COREC =
-  fixes Udtor :: "'u \<Rightarrow> ('a::covar_G, 'a, 'a E + 'u, 'a E + 'u) G set"
-    and Umap :: "('a::covar_G \<Rightarrow> 'a) \<Rightarrow> 'u \<Rightarrow> 'u"
-    and UFVars :: "'u \<Rightarrow> 'a::covar_G set"
-    and valid_U :: "'u \<Rightarrow> bool"
-  assumes Udtor_ne: "\<And>d. valid_U d \<Longrightarrow> Udtor d \<noteq> {}"
-    and alpha_Udtor: "\<And>x x' d. valid_U d \<Longrightarrow> {x,x'} \<subseteq> Udtor d \<Longrightarrow>
-  \<exists>f. bij (f::'a::covar_G \<Rightarrow> 'a) \<and> |supp f| <o |UNIV::'a set| \<and> 
-     id_on ((\<Union>d' \<in> GSupp1 x. case_sum EVrs UFVars d') - GVrs2 x) f \<and>
-     GMAP id f (map_sum (Eperm f) (Umap f)) id x = x'"
-    and 
-    (* The dual of the first block of assumptions from Norrish's paper:   *)
-    UFVars_Udtor:
-    "\<And> d x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow>
-  GVrs1 x \<union> (\<Union>z \<in> GSupp2 x. case_sum EVrs UFVars z) \<union>
-   ((\<Union>z \<in> GSupp1 x. case_sum EVrs UFVars z) - GVrs2 x) \<subseteq>
-  UFVars d"
-    and
-    (* The dual of the third block: *)
-    Umap_Udtor: "\<And>f d. valid_U d \<Longrightarrow>
-  bij (f::'a\<Rightarrow>'a) \<Longrightarrow> |supp f| <o |UNIV::'a::covar_G set| \<Longrightarrow>
-  Udtor (Umap f d) \<subseteq>
-  image
-    (GMAP f f (map_sum (Eperm f) (Umap f)) (map_sum (Eperm f) (Umap f)))
-    (Udtor d)"
-    and Umap_comp: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij g \<Longrightarrow> |supp (g::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
-  \<Longrightarrow> Umap f (Umap g d) = Umap (f \<circ> g) d"
-    and Umap_cong0: "valid_U d \<Longrightarrow> bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set|
-  \<Longrightarrow> (\<And>a. a \<in> UFVars d \<Longrightarrow> f a = a) \<Longrightarrow> Umap f d = d"
-    and valid_Umap: "bij f \<Longrightarrow> |supp (f::'a::covar_G \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> valid_U d \<Longrightarrow> valid_U (Umap f d)"
-    and valid_Udtor: "\<And>x. valid_U d \<Longrightarrow> x \<in> Udtor d \<Longrightarrow> Gpred (pred_sum (\<lambda>_. True) valid_U)  (pred_sum (\<lambda>_. True) valid_U) x"
-begin
-*)
+the full-corecursion base case is a direct return 
+(so sum with 'a E outside not inside G set). *)
 
 locale Corec =
   fixes Udtor :: "'u \<Rightarrow> 'a E + ('a::covar_G, 'a, 'u, 'u) G set"

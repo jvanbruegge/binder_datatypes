@@ -13,6 +13,8 @@ theory Codata
 begin
 
 
+
+
 abbreviation "IMSUPP \<delta> \<rho> \<rho>' \<equiv> imsupp \<delta> \<union> IImsupp' (Ector \<circ> \<eta>) EVrs \<rho> \<union> IImsupp' (Ector \<circ> \<eta>') EVrs \<rho>'"
 abbreviation "small_support \<delta> \<rho> \<rho>' \<equiv>
   |supp (\<delta> :: 'a \<Rightarrow> 'a :: covar_G)| <o |UNIV::'a set| \<and>
@@ -372,6 +374,10 @@ begin
 interpretation Bimodel Pvalid Pperm PVrs Eperm EVrs "card_suc Gbd" Ector Ector'
 using bimodel .
 
+lemma EVrs_Un_PVrs_small:
+"Pvalid p \<Longrightarrow> |EVrs e \<union> PVrs p| <o |UNIV::'a::covar_G set|"
+by (simp add: G.Un_bound PVrs_small)
+
 (* *)
 
 definition Evalid' :: "'a E\<times>'p \<Rightarrow> bool" where 
@@ -493,9 +499,6 @@ lemma Eperm''_id[simp]: "Pvalid (snd pe) \<Longrightarrow> Eperm'' id pe = pe"
   using Eperm''_def  
   by (metis Eperm_id Pperm_id id_apply snd_conv surj_pair)   
 
-abbreviation small :: "('a::covar_G \<Rightarrow>'a) \<Rightarrow> bool"  
-where "small \<sigma> \<equiv> |supp \<sigma>| <o |UNIV::'a set|"
-
 lemma Eperm''_o: 
 "Pvalid (snd ep) \<Longrightarrow> small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow> small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> 
 Eperm'' (\<sigma>1 \<circ> \<sigma>2) ep = Eperm'' \<sigma>1 (Eperm'' \<sigma>2 ep)"
@@ -511,11 +514,7 @@ lemma Eperm''_cong:
 "Pvalid p \<Longrightarrow> small \<sigma>1 \<Longrightarrow> bij \<sigma>1 \<Longrightarrow>
  small \<sigma>2 \<Longrightarrow> bij \<sigma>2 \<Longrightarrow> \<forall>a\<in>EVrs'' (e,p). \<sigma>1 a = \<sigma>2 a \<Longrightarrow> Eperm'' \<sigma>1 (e,p) = Eperm'' \<sigma>2 (e,p)"
 unfolding Eperm''_def EVrs''_def    
-by (metis Eperm_cong Pperm_cong UnCI)    
-
-lemma EVrs_Un_PVrs_small:
-"Pvalid p \<Longrightarrow> |EVrs e \<union> PVrs p| <o |UNIV::'a::covar_G set|"
-by (simp add: G.Un_bound PVrs_small)
+by (metis Eperm_cong Pperm_cong UnCI)   
 
 lemma nomC: "NominalRel Evalid' Eperm'' EVrs''"
 using NominalRel_axioms unfolding NominalRel_def 
@@ -640,25 +639,7 @@ unfolding Eperm''_def Evalid'_def
   . . . . . . . . . . . .
                
 
-lemma Ector_eq_imp_strong: 
-"Ector u1 = Ector u2 \<Longrightarrow> |A| <o |UNIV::'a set| \<Longrightarrow> A \<inter> GVrs2 u1 = {} \<Longrightarrow>
-   (\<exists>\<sigma> :: 'a :: covar_G \<Rightarrow> 'a. bij \<sigma> \<and> small \<sigma> \<and>
-     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> A) \<sigma> \<and> 
-     Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1) = u2)"
-sorry (* AtoD: Do we have a proof of this for datatypes? 
-The one for codata should be identical. *)
 
-lemma snd_single_Gmap: "snd ` GSupp1 u \<subseteq> {p} \<Longrightarrow> snd ` GSupp2 u \<subseteq> {p}
-\<Longrightarrow> Gmap (\<lambda>(e,p'). (e,p)) (\<lambda>(e,p'). (e,p)) u = u"
-apply(rule Gmap_cong_id) by auto
-
-lemma snd_single_Gmap': 
-assumes "snd ` GSupp1 u \<subseteq> {p}" "snd ` GSupp2 u \<subseteq> {p}"
-shows "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) (Gmap fst fst u) = u"
-apply(rule sym) apply(subst snd_single_Gmap[symmetric, of _ p])
-  subgoal by fact subgoal by fact
-  subgoal unfolding Gmap_comp o_def  
-    by (meson Gmap_cong case_prod_beta) .
 
 
 lemma 

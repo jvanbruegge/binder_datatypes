@@ -1432,7 +1432,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       |> Local_Theory.notes notes
       ||> (if repTA = TA then I else register_mrbnf_raw (fst (dest_Type TA)) mrbnf'')
   in
-    ((morph_mrbnf (substitute_noted_thm noted) mrbnf'', the info_opt, (all_deads, absT_info)), lthy'')
+    ((morph_mrbnf (substitute_noted_thm noted) mrbnf'', the info_opt, (all_Ds, absT_info)), lthy'')
   end;
 
 exception BAD_DEAD of typ * typ;

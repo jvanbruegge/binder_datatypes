@@ -46,7 +46,7 @@ lemma SSupp_comp_bound_FType[simp]:
   fixes \<rho> \<rho>'::"'tyvar::var \<Rightarrow> 'tyvar FType"
   assumes "|SSupp_FType \<rho>| <o |UNIV::'tyvar set|" "|SSupp_FType \<rho>'| <o |UNIV::'tyvar set|"
   shows "|SSupp_FType (tvsubst_FType \<rho> \<circ> \<rho>')| <o |UNIV::'tyvar set|"
-  using assms SSupp_comp_subset_FType by (metis card_of_subset_bound var_class.Un_bound)
+  using assms SSupp_comp_subset_FType by (metis card_of_subset_bound infinite_class.Un_bound)
 
 lemma Sb_Inj_FType: "Sb_FType Inj_FType_1 = id"
   apply (rule ext)
@@ -321,7 +321,7 @@ pbmv_monad "'b::var LM"
       apply (rule trans[OF comp_apply])
   subgoal premises prems for g \<rho>' f \<rho> x
     apply (binder_induction x avoiding: "imsupp g" "imsupp f" "SSupp_LM \<rho>" "IImsupp Var FVars_LM \<rho>" "SSupp_LM \<rho>'" "IImsupp Var FVars_LM \<rho>'" rule: LM.strong_induct)
-           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_def LM.set_bd_UNIV intro!: var_class.Un_bound var_class.UN_bound)[7]
+           apply (auto simp: imsupp_supp_bound infinite_UNIV prems IImsupp_def LM.set_bd_UNIV intro!: infinite_class.Un_bound var_class.UN_bound)[7]
     apply (auto simp: prems)
     apply (subst Sb_LM_simp4)
       apply (rule contra_subsetD[OF imsupp_o])

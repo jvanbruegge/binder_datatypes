@@ -404,6 +404,33 @@ proof(rule eq_Un3_image)
             bijection.inv_left image_eqI) . 
 qed
 
+term Ector
+
+thm Ector_inject
+
+term Gmap
+
+lemma blah:
+"Gmap (\<lambda>pe. g (pe p)) (\<lambda>pe. g (pe p)) u = Gmap g g (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)"
+unfolding Gmap_comp o_def ..
+
+lemma 
+assumes "Ector u = Ector v"
+shows "Ector (Gmap g g u) = Ector (Gmap g g v)"
+using assms unfolding Ector_inject apply safe
+subgoal for \<sigma> apply(rule exI[of _ \<sigma>])
+unfolding id_on_def apply (auto simp: Gmap_Gren GVrs2_Gmap GSupp1_Gmap)
+  subgoal sorry
+  subgoal  apply (auto simp: Gmap_comp Gmap_Gren')  
+  apply(rule Gmap_cong)
+    subgoal for a apply(auto simp: GSupp1_Gren)
+
+
+lemma 
+assumes "Ector w = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)" 
+shows "Ector (Gmap g g w) = Ector (Gmap (\<lambda>pe. g (pe p)) (\<lambda>pe. g (pe p)) u)"
+unfolding blah
+
 sublocale Esub: Bimodel where
   Pvalid = Esub_Pvalid and
   Pperm = Esub_Pperm and
@@ -533,12 +560,19 @@ sublocale Esub: Bimodel where
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
     subgoal for \<delta> \<rho> \<rho>'
       apply (drule sym[of "Ector w"])
-      apply(subst (asm) Ector_fresh_inject[where A = "TODO_pick_something_meaningful_here"])
+      apply(subst Gmap_comp[symmetric])
+      apply(simp add: Gmap_Gsub[symmetric])
+      apply(subst Gmap_comp)
+      unfolding o_def find_theorems Ector Gmap
+term Ector term "Gsub \<delta> id u"
+      apply (drule sym[of _ "Ector w"])
+
+      apply(subst (asm) Ector_fresh_inject[where A = "(\<Union>x\<in>GSupp1 u. EVrs (g (x (\<delta>, \<rho>, \<rho>')))) - GVrs2 u - GVrs2 w"])
+      subgoal apply (auto simp: GVrs2_Gmap GVrs2_Gsub) sorry
+      subgoal by auto  
       subgoal sorry
-      subgoal sorry
-      subgoal sorry
-      apply (elim exE conjE)
-      subgoal for \<sigma>
+      subgoal apply (elim exE conjE)
+        subgoal for \<sigma>
         apply hypsubst_thin
         apply (rule sym)
         apply (unfold Ector_inject)
@@ -546,12 +580,16 @@ sublocale Esub: Bimodel where
         apply (auto simp: Gren_def G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
           G.Map_comp[THEN fun_cong, simplified] G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map)
          apply (auto simp: comp_def)
-        subgoal sorry
-        subgoal (* DtoA: this is the goal which needs to permute Eperm \<sigma> and g
+          subgoal unfolding id_on_def apply auto sledgehammer
+          subgoal (* DtoA: this is the goal which needs to permute Eperm \<sigma> and g
           Alternative that might work is if \<sigma> does not touch the free variables of g and the free variables
             of the input to g, which ultimately comes from u. But I think the issue is that these
             must be able to contain GVrs2 u (the bound variables).
-          *) sorry
+          *)  
+          apply(rule arg_cong[of _ _"Gsub \<delta> \<sigma>"]) 
+          apply(rule Gmap_cong)
+            subgoal for k sorry
+            subgoal .. . . 
         done
       done
     done

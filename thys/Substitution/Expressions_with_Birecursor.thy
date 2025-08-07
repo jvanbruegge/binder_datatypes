@@ -404,7 +404,6 @@ proof(rule eq_Un3_image)
             bijection.inv_left image_eqI) . 
 qed
 
-
 sublocale Esub: Bimodel where
   Pvalid = Esub_Pvalid and
   Pperm = Esub_Pperm and
@@ -532,14 +531,30 @@ sublocale Esub: Bimodel where
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
-     subgoal for \<delta> \<rho> \<rho>'
-     apply(subst (asm) Ector_fresh_inject[where A = "A"])
-     unfolding Ector_inject apply safe
-       subgoal sorry subgoal sorry subgoal sorry
-       subgoal for \<sigma>
-       apply(rule exI[of _ \<sigma>]) apply auto
-         subgoal unfolding id_on_def apply auto sorry
-         subgoal sorry . . .
+    subgoal for \<delta> \<rho> \<rho>'
+      apply (drule sym[of "Ector w"])
+      apply(subst (asm) Ector_fresh_inject[where A = "TODO_pick_something_meaningful_here"])
+      subgoal sorry
+      subgoal sorry
+      subgoal sorry
+      apply (elim exE conjE)
+      subgoal for \<sigma>
+        apply hypsubst_thin
+        apply (rule sym)
+        apply (unfold Ector_inject)
+        apply (rule exI[of _ \<sigma>])
+        apply (auto simp: Gren_def G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
+          G.Map_comp[THEN fun_cong, simplified] G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map)
+         apply (auto simp: comp_def)
+        subgoal sorry
+        subgoal (* DtoA: this is the goal which needs to permute Eperm \<sigma> and g
+          Alternative that might work is if \<sigma> does not touch the free variables of g and the free variables
+            of the input to g, which ultimately comes from u. But I think the issue is that these
+            must be able to contain GVrs2 u (the bound variables).
+          *) sorry
+        done
+      done
+    done
   subgoal for u p
     apply (cases p)
     apply (auto split: if_splits simp: eta_distinct eta_distinct'  eta_inject eta'_inject Gren_def

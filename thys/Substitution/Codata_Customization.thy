@@ -211,15 +211,23 @@ lemma Eperm_E_abs:
   apply (rule E_rep_abs)
   done
 
-lemma Ector_eq_imp_strong: 
-"Ector u1 = Ector u2 \<Longrightarrow> |A| <o |UNIV::'a set| \<Longrightarrow> A \<inter> GVrs2 u1 = {} \<Longrightarrow>
-   (\<exists>\<sigma> :: 'a :: covar_G \<Rightarrow> 'a. bij \<sigma> \<and> |supp \<sigma>| <o |UNIV::'a set| \<and>
-     id_on ((\<Union> (EVrs ` GSupp1 u1) - GVrs2 u1) \<union> A) \<sigma> \<and> 
-     Gren id \<sigma> (Gmap (Eperm \<sigma>) id u1) = u2)"
-sorry (* AtoD: Do we have a proof of this for datatypes? 
-The one for codata should be identical. 
-In fact, I think it should already work abstractly for Expresions? 
-*)
+(* Binder codatatypes satisfy the 
+strong expression axiomatization: *)
+
+interpretation Expression Eperm EVrs "card_suc Gbd" Ector
+  apply standard
+  apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
+    G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
+    E.permute_ctor E.FVars_ctor large'' intro: E.permute_cong_id)
+  done
+
+interpretation Expression_with_Surj_and_Coinduct Eperm EVrs "card_suc Gbd" Ector
+  apply standard
+  subgoal by (meson E.TT_fresh_cases)
+  subgoal for P g h e
+    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def)
+    done
+  done
 
 (* Definitions *)
 
@@ -1403,25 +1411,6 @@ theorem COREC_FFVarsD:
   done
 
 end (* context COREC *)
-
-
-(* Binder codatatypes satisfy the 
-strong expression axiomatization: *)
-
-interpretation Expression Eperm EVrs "card_suc Gbd" Ector
-  apply standard
-  apply (auto simp: E.TT_inject0 E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd
-    G.bd_card_order G.bd_Cinfinite G.bd_regularCard card_order_card_suc Cinfinite_card_suc regularCard_card_suc
-    E.permute_ctor E.FVars_ctor large'' intro: E.permute_cong_id)
-  done
-
-interpretation Expression_with_Surj_and_Coinduct Eperm EVrs "card_suc Gbd" Ector
-  apply standard
-  subgoal by (meson E.TT_fresh_cases)
-  subgoal for P g h e
-    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def)
-    done
-  done
 
 
 (**************************************)

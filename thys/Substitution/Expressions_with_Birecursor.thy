@@ -195,7 +195,7 @@ end (* context Bimodel *)
 context Expression begin
 (* Non-clashing: Barendregt's convention *)
 definition 
-"noclashE x \<equiv> GVrs2 x \<inter> GVrs1 x = {}"
+"noclashE x \<equiv> GVrs2 x \<inter> (GVrs1 x \<union> (\<Union>e \<in> GSupp2 x. EVrs e)) = {}"
 
 lemma Eperm_inv_iff: "|supp \<sigma>| <o |UNIV::'a set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> Eperm (inv \<sigma>) e1 = e \<longleftrightarrow> e1 = Eperm \<sigma> e"
 by (metis Eperm_comp' Eperm_id bij_betw_inv_into bij_inv_id1 id_apply inv_inv_eq supp_inv_bound)
@@ -503,10 +503,10 @@ sublocale Esub: Bimodel where
       subgoal for \<delta> \<rho> \<rho>' apply (subst (asm) Ector_fresh_inject
       [where A = "\<Union> (EVrs ` (\<lambda>rec. rec (\<delta>, \<rho>, \<rho>')) ` (GSupp1 u)) - GVrs2 u - GVrs2 u'"])
       subgoal by(auto simp add: G.Vrs_Map2)  
-      subgoal by (simp add: G.Vrs_Map2) 
+      subgoal by (simp add: G.Vrs_Map2)
       subgoal apply(intro card_of_minus_bound UN_bound)
-         subgoal apply(rule card_image_ordLess) using G.Supp1_bd 
-         (* AtoD: need assumption Gbd <o |UNIV::'a| *) sorry
+        subgoal apply(rule card_image_ordLess)
+          by (rule ordLess_ordLeq_trans[OF G.Supp1_bd large'])
          subgoal using EVrs_bound . .
       subgoal  apply (subst Ector_fresh_inject[where A = "{}"])
         subgoal by auto  subgoal by auto
@@ -525,15 +525,15 @@ sublocale Esub: Bimodel where
       eta'_natural[of id id, unfolded G.Sb_Inj, simplified]
       eta_natural[of _ _ id id, unfolded G.Map_id, simplified]
       eta'_natural[of _ _ id id, unfolded G.Map_id, simplified]
-      G.Map_comp[THEN fun_cong, simplified] comp_def
+      G.Map_comp[THEN fun_cong, simplified] base_def
       dest!: Ector_inject[THEN iffD1, of "\<eta> _"] Ector_inject[THEN iffD1, of "\<eta>' _"] Ector_inject[THEN iffD1, of _ "\<eta> _"] Ector_inject[THEN iffD1, of _ "\<eta>' _"]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified, OF sym]
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
-     using base_def apply auto subgoal for \<delta> \<rho> \<rho>'
-     apply(subst (asm) Ector_fresh_inject[where A = A])
+     subgoal for \<delta> \<rho> \<rho>'
+     apply(subst (asm) Ector_fresh_inject[where A = "A"])
      unfolding Ector_inject apply safe
        subgoal sorry subgoal sorry subgoal sorry
        subgoal for \<sigma>
@@ -592,7 +592,7 @@ sublocale Esub: Expression_with_Subst Eperm EVrs Ebd Ector Esub
     subgoal for \<delta> \<rho> \<rho>' u apply (unfold Esub_def)
     apply (subst rec_Ector[OF Esub.Bimodel_axioms]) 
       subgoal unfolding Esub_Pvalid_def by auto
-      subgoal unfolding noclashE_def by auto
+      subgoal unfolding noclashE_def by (auto simp: EVrs_Ector)
       subgoal unfolding Esub_PVrs_def by auto
       subgoal unfolding Esub_Ector'_def apply (auto simp: Gmap_comp)
         apply (smt (z3) Gsub_eta' eta'_inversion)

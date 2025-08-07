@@ -472,16 +472,14 @@ lemma EFVrs_EsubI1[OF _ _ _ _ refl]:
         apply (auto simp: assms imsupp_supp_bound) [4]
     apply hypsubst_thin
   subgoal for a u
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
-    subgoal sorry (* AtoD (here and elsewhere): need to ensure no-clash too *)
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4) EVrs_Ector)?)
     apply (rule Efreee.intros)
       apply (simp add: G.Vrs_Sb G.Vrs_Map assms(2-4))
     subgoal by (meson eta_inversion assms(2) supp_id_bound)
     subgoal by (meson eta'_inversion assms(2) supp_id_bound)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4) EVrs_Ector)?)
       apply fastforce
      apply fastforce
     apply (rule Efreee.intros(2))
@@ -492,8 +490,7 @@ lemma EFVrs_EsubI1[OF _ _ _ _ refl]:
     apply (metis imsupp_empty_IntD1)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(2-4) EVrs_Ector)?)
       apply fastforce
      apply fastforce
     apply (rule Efreee.intros(3))
@@ -518,8 +515,7 @@ lemma EFVrs_EsubI2[OF _ _ _ _ _ refl]:
     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def)?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -530,8 +526,7 @@ lemma EFVrs_EsubI2[OF _ _ _ _ _ refl]:
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efreee_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efreee.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -553,8 +548,7 @@ lemma EFVrs_EsubI3[OF _ _ _ _ _ refl]:
     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def)?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efreee.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -565,8 +559,7 @@ lemma EFVrs_EsubI3[OF _ _ _ _ _ refl]:
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efreee_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efreee.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -700,8 +693,7 @@ lemma EFVrs\<eta>_EsubI2[OF _ _ _ _ _ refl]:
     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def)?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -712,8 +704,7 @@ lemma EFVrs\<eta>_EsubI2[OF _ _ _ _ _ refl]:
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>_def Efree\<eta>_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -735,8 +726,7 @@ lemma EFVrs\<eta>_EsubI3[OF _ _ _ _ _ refl]:
     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def)?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -747,8 +737,7 @@ lemma EFVrs\<eta>_EsubI3[OF _ _ _ _ _ refl]:
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -861,8 +850,7 @@ lemma EFVrs\<eta>'_EsubI2[OF _ _ _ _ _ refl]:
     apply (subst Esub_Ector\<eta>; (simp add: Int_Un_distrib assms(3-5))?)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def)?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -873,8 +861,7 @@ lemma EFVrs\<eta>'_EsubI2[OF _ _ _ _ _ refl]:
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>'.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -896,8 +883,7 @@ lemma EFVrs\<eta>'_EsubI3[OF _ _ _ _ _ refl]:
     apply (subst Esub_Ector\<eta>'; (simp add: Int_Un_distrib assms(3-5))?)
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def)?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) IImsupp'_def EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>'.intros(2); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)
@@ -908,8 +894,7 @@ lemma EFVrs\<eta>'_EsubI3[OF _ _ _ _ _ refl]:
     apply (auto simp: IImsupp_def SSupp_def EFVrs\<eta>'_def Efree\<eta>'_Efree intro!: exI[of _ a]) []
     done
   subgoal for e' u a
-    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5))?)
-    subgoal sorry
+    apply (subst Esub_Ector; (simp add: Int_Un_distrib assms(3-5) EVrs_Ector)?)
       apply force
      apply force
     apply (rule Efree\<eta>'.intros(3); (simp add: G.Supp_Sb G.Supp_Map G.Vrs_Sb G.Vrs_Map assms(3-5))?)

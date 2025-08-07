@@ -1,8 +1,3 @@
-(* AtoD: The sorries left for you are some immediate properties of E_pre 
-versus G, which I cannot prove since I cannot guess the names of the 
-relevant generated lemmas.
-*)
-
 (* This theory sets up a high-level recursor from the low-level 
 one. This is not just for convenience -- I need it 
 in order to refer to G rather than E_pre. *)
@@ -74,17 +69,6 @@ sublocale var < var_E_pre
 instantiation Gbd_type :: var_E_pre begin
 instance by standard
 end
-
-
-term Rep_E_pre
-
-
-find_theorems Ector
-term Ector
-find_theorems name: REC name: E 
-thm Ector_def
-find_theorems E_ctor 
-term E_ctor
 
 thm REC_E_def[where avoiding_set = "{}" and validU = "\<lambda>x. True", simplified]
 
@@ -357,6 +341,83 @@ end
 term "P_axioms Pmap PFVars validP avoiding_set"
 term "U_axioms Umap UFVars validU Uctor"
 
+(* *)
+
+inductive subshape where
+  "e \<in> GSupp1 u \<union> GSupp2 u \<Longrightarrow> subshape e (Ector u)"
+
+lemma wfp_subshape: "wfp (subshape)"
+  apply (rule wfpUNIVI)
+  subgoal premises prems for P e
+    apply (subgoal_tac "\<And>\<sigma> :: 'a \<Rightarrow> 'a. bij \<sigma> \<Longrightarrow> |supp \<sigma>| <o |UNIV :: 'a set| \<Longrightarrow> P (Eperm \<sigma> e)")
+     apply (drule meta_spec[of _ id])
+     apply (simp add: E.permute_id)
+    apply (induct e)
+    subgoal for u \<sigma>
+      apply (rule prems[rule_format])
+      apply (auto elim!: subshape.cases simp: G.set_map E.permute_comp  E.inject supp_comp_bound)
+      done
+    done
+  done
+
+lemma subshape_induct: "(\<And>e. (\<And>e'. subshape e' e \<Longrightarrow> P e') \<Longrightarrow> P e) \<Longrightarrow> P e"
+  using wfp_subshape
+  by (metis wfp_induct)
+
+lemma E_coinduct_gen:
+  fixes P and g :: "'k \<Rightarrow> 'a::var_E_pre E" and h e
+  assumes "(\<And>k. P k \<Longrightarrow> g k = h k \<or>
+    (\<exists>u. g k = Ector (GMAP id id g g u) \<and> h k = Ector (GMAP id id h h u) \<and>
+    (\<forall>k \<in> GSupp1 u. P k) \<and> (\<forall>k \<in> GSupp2 u. P k)))"
+  shows "P k \<Longrightarrow> g k = h k"
+  apply (subgoal_tac "\<And>e. g k = e \<Longrightarrow> e = h k")
+   apply blast
+  subgoal for e
+    apply (induct e arbitrary: k rule: subshape_induct)
+    apply (drule assms)
+    apply (erule disjE)
+     apply simp
+    apply (erule exE conjE)+
+    apply (auto simp: G.map_comp G.set_map E.permute_id0  E.inject intro!: exI[of _ id] G.map_cong)
+     apply (drule meta_spec2, drule meta_mp)
+      apply (rule subshape.intros)
+      apply (auto simp: E.permute_id0 G.set_map) []
+     apply (drule meta_mp)
+      apply (erule bspec)
+      apply assumption
+     apply simp
+    apply (drule meta_spec2, drule meta_mp)
+     apply (rule subshape.intros)
+     apply (auto simp: E.permute_id0 G.set_map) []
+    apply (drule meta_mp)
+     apply (erule (1) bspec)
+    apply simp
+    done
+  done
+
+(**************) 
+(* Binder datatypes satisfy the 
+strong expression axiomatization: *)
+interpretation Expression Eperm EVrs Gbd Ector
+  apply unfold_locales
+  apply (auto simp: E.inject E.permute_id0 E.permute_comp E.FVars_permute GMAP_def Gren_def E.FVars_bd large'
+    G.bd_card_order G.bd_cinfinite G.bd_regularCard intro: E.permute_cong_id)
+done
+
+interpretation Expression_with_Surj_and_Coinduct Eperm EVrs Gbd Ector
+  apply unfold_locales
+  subgoal for A e
+    apply (binder_induction e avoiding: A rule: E.strong_induct)
+     apply assumption
+    apply (intro exI conjI)
+     apply assumption
+    apply (rule refl)
+    done
+  subgoal for P g h e
+    apply (rule E_coinduct_gen[of P g h e]; simp add: GMAP_def Gren_def)
+    done
+  done
+
 (* rec_E is the proper "high-level" locale for 
 binder-aware recursion: *)
 locale rec_E = 
@@ -375,53 +436,51 @@ begin
 definition "Uctor' \<equiv> Uctor o Rep_E_pre"
 
 lemma Abs_Rep_E_pre[simp]: "Abs_E_pre o Rep_E_pre = id"
-sorry
+  by (auto simp: fun_eq_iff Rep_E_pre_inverse)
 lemma Abs_Rep_E_pre'[simp]: "Abs_E_pre (Rep_E_pre u) = u"
-sorry
-lemma Rep_Ahs_E_pre[simp]: "Rep_E_pre o Abs_E_pre = id"
-sorry
+  by (auto simp: fun_eq_iff Rep_E_pre_inverse)
+lemma Rep_Abs_E_pre[simp]: "Rep_E_pre o Abs_E_pre = id"
+  by (auto simp: fun_eq_iff Abs_E_pre_inverse)
 lemma Rep_Abs_E_pre'[simp]: "Rep_E_pre (Abs_E_pre u) = u"
-sorry
+  by (auto simp: fun_eq_iff Abs_E_pre_inverse)
 
 lemma pred_G_pred_E_pre: "pred_G P1 P2 = pred_E_pre P1 P2 o Abs_E_pre"
-sorry 
+  by (auto simp: pred_E_pre_def)
 
 lemma pred_E_pre_pred_G: "pred_E_pre P1 P2 = pred_G P1 P2 o Rep_E_pre"
-sorry
+  by (auto simp: pred_E_pre_def)
 
 lemma Gmap_map_E_pre: "Gmap f1 f2 = Rep_E_pre o map_E_pre id id f1 f2 o Abs_E_pre"
-sorry 
+  by (auto simp: map_E_pre_def GMAP_def)
 
 lemma map_E_pre_Gmap: "bij \<sigma>1 \<and> |supp \<sigma>1| <o |UNIV::'a set| \<Longrightarrow> 
 bij \<sigma>2 \<and> |supp \<sigma>2| <o |UNIV::'a set| \<Longrightarrow>  map_E_pre \<sigma>1 \<sigma>2 f1 f2 = 
 Abs_E_pre o Gren \<sigma>1 \<sigma>2 o Gmap f1 f2 o Rep_E_pre"
-sorry
+  by (auto simp: map_E_pre_def GMAP_def)
 
 
 lemma [simp]: "bij \<sigma>1 \<and> |supp \<sigma>1| <o |UNIV::'a set| \<Longrightarrow> 
 bij \<sigma>2 \<and> |supp \<sigma>2| <o |UNIV::'a set| \<Longrightarrow> 
 Rep_E_pre (map_E_pre \<sigma>1 \<sigma>2 f1 f2 u) = Gren \<sigma>1 \<sigma>2 (Gmap f1 f2 (Rep_E_pre u))"
-sorry
+  by (auto simp: map_E_pre_def GMAP_def)
 
 lemma Rep_E_pre_surj: "\<exists>y. x = Rep_E_pre y"
-sorry
+  by (metis Rep_Abs_E_pre')
 
 thm Ector_def
 
 lemma Ector_Ector[simp]: "E_ctor = Ector o Rep_E_pre"
-sorry
+  by (auto simp: Ector_def)
 
 lemma Gren_id[simp]: "Gren id id = id"
-sorry
+  by simp
 
-lemma [simp]: "set1_E_pre y = GVrs1 (Rep_E_pre y)"
-sorry
-lemma [simp]: "set2_E_pre y = GVrs2 (Rep_E_pre y)"
-sorry
-lemma [simp]: "set3_E_pre y = GSupp1 (Rep_E_pre y)"
-sorry
-lemma [simp]: "set4_E_pre y = GSupp2 (Rep_E_pre y)"
-sorry
+lemma set1_E_pre_alt[simp]:
+  "set1_E_pre y = GVrs1 (Rep_E_pre y)"
+  "set2_E_pre y = GVrs2 (Rep_E_pre y)"
+  "set3_E_pre y = GSupp1 (Rep_E_pre y)"
+  "set4_E_pre y = GSupp2 (Rep_E_pre y)"
+  by (auto simp: set1_E_pre_def set2_E_pre_def set3_E_pre_def set4_E_pre_def)
 
 lemma U_axioms_E_pre_Uctor': 
 "U_axioms_E_pre Pmap PFVars validP avoiding_set Umap UFVars validU Uctor'"
@@ -445,10 +504,10 @@ unfolding REC_E_def2 apply(rule conjI)
   subgoal using U_axioms_E_pre_Uctor' . .
 
 sublocale REC_E Pmap PFVars validP avoiding_set "(\<lambda>f _. Umap f)" "(\<lambda> _ . UFVars)" Uctor' validU 
-using REC_E .
+  using REC_E .
 
 lemma noclash_E_noclashE[simp]: "noclash_E (Abs_E_pre x) = noclashE x"
-sorry
+  unfolding noclashE_def noclash_E_def by simp
 
 (* I also get rid of the awkward lambda-embedded test for validP 
 in the recursor's characteristic equation *)
@@ -462,10 +521,10 @@ theorem rec_ctor:
  recE (Ector x) p =
  Uctor (Gmap (\<lambda>t. (t, recE t))
              (\<lambda>t. (t, recE t)) x) p"
-unfolding recE_def Ector_def
-apply(subst REC_ctor) 
-apply (auto simp: Uctor'_def)+
-using noclash_E_noclashE by blast
+  unfolding recE_def Ector_def
+  apply(subst REC_ctor) 
+     apply (auto simp: Uctor'_def)+
+  done
 
 thm REC_UFVars[no_vars]
 theorem recE_UFVars: 

@@ -659,15 +659,16 @@ proof safe
       using u12 by auto
 
       have 00: "PVrs p \<inter> GVrs2 (Gmap fst fst u1) = {}" using u1 by (auto simp: GVrs2_Gmap)
+      have 01: "PVrs p \<inter> GVrs2 (Gmap fst fst u2) = {}" using u2 by (auto simp: GVrs2_Gmap)
       note eq = u1(1)[unfolded u2(1)[symmetric]]
       
       obtain \<sigma> where ss: "bij \<sigma> \<and> small \<sigma>"
         "id_on 
          ((\<Union> (EVrs ` GSupp1 (Gmap fst fst u1)) - GVrs2 (Gmap fst fst u1)) \<union> PVrs p )
          \<sigma>"
-        "Gren id \<sigma> (Gmap (Eperm \<sigma>) id (Gmap fst fst u1)) = Gmap fst fst u2"   
-        using Ector_eq_imp_strong[of "Gmap fst fst u1" "Gmap fst fst u2", OF eq PVrs_small 00, OF P]
-        by blast
+        "Gren id \<sigma> (Gmap (Eperm \<sigma>) id (Gmap fst fst u1)) = Gmap fst fst u2"
+        using Ector_fresh_inject[of "Gmap fst fst u1" "PVrs p" "Gmap fst fst u2", THEN iffD1]
+          eq PVrs_small[of p] 00 01 P imsupp_id_on[of _ "PVrs p"] by (auto simp: Int_commute id_on_Un)
       have io: "\<And>e' p' a. (e',p') \<in> GSupp1 u1 \<Longrightarrow> a \<in> EVrs e' \<Longrightarrow> a \<notin> GVrs2 u1 \<Longrightarrow> \<sigma> a = a"
           "\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a" 
       using ss(2) unfolding id_on_def by (fastforce simp: GSupp1_Gmap GSupp2_Gmap GVrs2_Gmap)+
@@ -852,7 +853,7 @@ proof (standard, safe)
       by (metis EEdtor'_def Evalid'_def b base_Gmap_eq corec_def snd_conv) 
       (* *)
       subgoal proof-
-      assume f: "\<not> base u" and p: "Pvalid p"  and g : "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> GVrs1 u = {}"
+      assume f: "\<not> base u" and p: "Pvalid p"  and g : "GVrs2 u \<inter> PVrs p = {}" "GVrs2 u \<inter> (GVrs1 u \<union> \<Union> (EVrs ` GSupp2 u)) = {}"
       show "crec (Ector u) p = Ector' (Gmap crec crec u) p"
       proof-
          have "EEdtor' (Ector u, p) = Inr (EEdtor1' (Ector u, p))" 
@@ -865,10 +866,10 @@ proof (standard, safe)
           GVrs2 v \<inter> PVrs p = {} \<and> GVrs2 v \<inter> GVrs1 v = {}
           \<Longrightarrow> Ector (Gmap corec corec v) = corec (Ector u, p)" 
          using f p g unfolding EE_defs Edtor_def Edtor1'_Ector  
-         using in_Edtor1'_Ector[OF b] unfolding GSupp1_Gmap GSupp2_Gmap image_def 
+         using in_Edtor1'_Ector[OF b] unfolding GSupp1_Gmap GSupp2_Gmap image_def Int_Un_distrib
          unfolding subset_iff by safe blast
          obtain w where w: "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p" 
-         and g1: "GVrs2 w \<inter> PVrs p = {}" "GVrs2 w \<inter> GVrs1 w = {}" 
+         and g1: "GVrs2 w \<inter> PVrs p = {}" "GVrs2 w \<inter> GVrs1 w = {}"
          using Ector_fresh_surj'[OF Bimodel.PVrs_small[OF b p]] by metis
          show ?thesis unfolding crec_def apply simp apply(subst 2[symmetric, of "Gmap (\<lambda>e. (e,p)) (\<lambda>e. (e,p)) w"])
          apply safe

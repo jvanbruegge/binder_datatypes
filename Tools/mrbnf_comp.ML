@@ -1461,15 +1461,17 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val map_def = map_def_of_mrbnf mrbnf'';
     val set_defs = set_defs_of_mrbnf mrbnf'';
     val rel_def = rel_def_of_mrbnf mrbnf'';
+    val pred_def = pred_def_of_mrbnf mrbnf'';
     val mrbnf_b = qualify b;
     val def_qualify =
       Thm.def_binding o Binding.concealed o Binding.qualify false (Binding.name_of mrbnf_b);
     fun mk_prefix_binding pre = Binding.prefix_name (pre ^ "_") mrbnf_b;
     val map_b = def_qualify (mk_prefix_binding mapN);
     val rel_b = def_qualify (mk_prefix_binding relN);
+    val pred_b = def_qualify (mk_prefix_binding predN);
     val set_bs = if nondead = 1 then [def_qualify (mk_prefix_binding setN)]
       else map (def_qualify o mk_prefix_binding o mk_setN) (1 upto nondead);
-    val notes = (map_b, map_def) :: (rel_b, rel_def) :: (set_bs ~~ set_defs)
+    val notes = (map_b, map_def) :: (rel_b, rel_def) :: (pred_b, pred_def) :: (set_bs ~~ set_defs)
       |> map (fn (b, def) => ((b, []), [([def], [])]))
     val (noted, lthy'') = lthy'
       |> Local_Theory.notes notes

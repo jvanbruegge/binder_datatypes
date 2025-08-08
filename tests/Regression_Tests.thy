@@ -14,6 +14,7 @@ binder_datatype 'a LLC =
   | Abs x::'a t::"'a LLC" binds x in t
   | Let "(x::'a, t::'a LLC) alist" u::"'a LLC" binds x in t u
 
+declare [[ML_print_depth=1000]]
 (* #70 *)
 datatype ('tv, 'ev, 'rv) type = Type 'tv 'ev 'rv
 binder_datatype ('tv, 'ev, 'rv) type_scheme =

@@ -2,6 +2,7 @@ theory POPLmark_2B
   imports Pattern "HOL-Library.List_Lexorder" "HOL-Library.Char_ord"
 begin
 
+declare [[ML_print_depth=1000]]
 binder_datatype (FTVars: 'tv, FVars: 'v) trm =
     Var 'v
   | Abs x::'v "'tv typ" t::"('tv, 'v) trm" binds x in t

@@ -860,18 +860,27 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
     val (fs, names_lthy) = names_lthy
       |> mk_Frees "f" (MRBNF_Def.interlace (map2 (curry (op-->)) As As') (map (fn a => a --> a) Bs) (map (fn a => a --> a) Fs) (MRBNF_Def.var_types_of_mrbnf lmrbnf));
 
+    val subst =
+      (MRBNF_Def.frees_of_mrbnf lmrbnf ~~ Fs)
+      @ (MRBNF_Def.bounds_of_mrbnf lmrbnf ~~ Bs)
+      @ (MRBNF_Def.lives_of_mrbnf lmrbnf ~~ As)
+      @ (MRBNF_Def.lives'_of_mrbnf lmrbnf ~~ As')
+      @ (ldeads ~~ deads)
+    val subst_phi = MRBNF_Util.subst_typ_morphism subst;
+    val mrbnfs = map (MRBNF_Def.morph_mrbnf subst_phi) mrbnfs;
+
     local
-      val subst =
-        (MRBNF_Def.frees_of_mrbnf lmrbnf ~~ Fs)
-        @ (MRBNF_Def.bounds_of_mrbnf lmrbnf ~~ Bs)
-        @ (MRBNF_Def.lives_of_mrbnf lmrbnf ~~ As)
-        @ (MRBNF_Def.lives'_of_mrbnf lmrbnf ~~ As')
-        @ (ldeads ~~ deads)
-      val phi = MRBNF_Util.subst_typ_morphism subst;
+      val T = fastype_of (MRBNF_Def.map_of_mrbnf (hd mrbnfs));
+      val T' = case BMV_Monad_Def.leader BMV_Monad_Def.Maps_of_bmv_monad bmv of
+        SOME Map => fastype_of Map
+        | NONE => fastype_of (BMV_Monad_Def.leader BMV_Monad_Def.Sbs_of_bmv_monad bmv)
+      val tyenv = try (Sign.typ_match (Proof_Context.theory_of lthy)
+        (snd (split_last (binder_types T')) --> body_type T', snd (split_last (binder_types T)) --> body_type T)
+      ) Vartab.empty;
+      val phi = Option.map (fn tyenv => MRBNF_Util.subst_typ_morphism (map (fn (n, (s, T)) => (TVar (n, s), T)) (Vartab.dest tyenv))) tyenv;
     in
-      val mrbnfs = map (MRBNF_Def.morph_mrbnf phi) mrbnfs;
-      val bmv = BMV_Monad_Def.morph_bmv_monad phi bmv;
-    end;
+      val bmv = BMV_Monad_Def.morph_bmv_monad (the_default subst_phi phi) bmv;
+    end
 
     val axioms = @{map 7} (fn mrbnf => fn Sb => fn Injs => fn RVrs => fn Vrs => fn Map_opt => fn lives =>
       let
@@ -888,14 +897,15 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
         val free = length frees;
         val free_fs = take free free_fs';
 
+        val free_prems' = map (HOLogic.mk_Trueprop o mk_supp_bound) free_fs';
         val free_prems = map (HOLogic.mk_Trueprop o mk_supp_bound) free_fs;
         val live_fs' = filter (member (op=) lives o domain_type o fastype_of) live_fs;
 
-        val map_is_Sb = fold_rev Logic.all (free_fs @ live_fs') (fold_rev (curry Logic.mk_implies) free_prems (mk_Trueprop_eq (
+        val map_is_Sb = fold_rev Logic.all (free_fs' @ live_fs') (fold_rev (curry Logic.mk_implies) free_prems' (mk_Trueprop_eq (
           Term.list_comb (Term.subst_atomic_types (filter_out (member (op=) lives o snd) (As' ~~ As)) mapx, MRBNF_Def.interlace
             (map (fn a => the_default (HOLogic.id_const a) (
               List.find (curry (op=) a o domain_type o fastype_of) live_fs'
-            )) As) (map HOLogic.id_const Bs) (free_fs @ map HOLogic.id_const (drop (length frees) Fs))
+            )) As) (map HOLogic.id_const Bs) free_fs'
             (MRBNF_Def.var_types_of_mrbnf mrbnf)
           ),
           let val add_Map = case Map_opt of
@@ -905,9 +915,11 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
                 the (List.find (curry (op=) T o fastype_of) live_fs')
               ) (fst (split_last (binder_types (fastype_of Map)))))
             )
-          in add_Map (Term.list_comb (Sb, map (fn RVr => the (List.find (fn f =>
-              HOLogic.dest_setT (body_type (fastype_of RVr)) = domain_type (fastype_of f)
-            ) fs)) RVrs @ map (fn Inj =>
+          in add_Map (Term.list_comb (Sb, map (fn RVr =>
+            let val T = HOLogic.dest_setT (body_type (fastype_of RVr));
+            in the_default (HOLogic.id_const T) (List.find (fn f =>
+              T = domain_type (fastype_of f)
+            ) free_fs') end) RVrs @ map (fn Inj =>
               HOLogic.mk_comp (Inj, the (List.find (fn f => (op=) (apply2 (domain_type o fastype_of) (Inj, f))) fs))
             ) Injs)
           ) end
@@ -921,14 +933,13 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
           ||>> apfst hd o mk_Frees "x" [body_type (fastype_of Sb)];
 
         val live = MRBNF_Def.live_of_mrbnf mrbnf;
-        val pfree_fs = drop free free_fs';
         val other_prems = flat (MRBNF_Def.interlace (replicate live [])
           (map (fn f => map HOLogic.mk_Trueprop [mk_bij f, mk_supp_bound f]) bound_fs)
-          (replicate free [] @ map (fn f => [HOLogic.mk_Trueprop (mk_supp_bound f)]) pfree_fs)
+          (replicate (length free_fs') [])
           var_types
         );
         val other_fs = flat (MRBNF_Def.interlace (map single live_fs) (map single bound_fs)
-          (replicate free [] @ map single pfree_fs) var_types);
+          (replicate (length free_fs') []) var_types);
 
         val g_prems = map2 (fn Inj => fn g => HOLogic.mk_Trueprop (uncurry mk_ordLess (
           mk_card_of (mk_SSupp Inj $ g), mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of g)))
@@ -938,7 +949,7 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
         val count = live + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;
         val map_Sb = if count - free = 0 then NONE else
           let
-            val map_t = Term.list_comb (mapx, MRBNF_Def.interlace live_fs bound_fs (map HOLogic.id_const frees @ pfree_fs) var_types);
+            val map_t = Term.list_comb (mapx, MRBNF_Def.interlace live_fs bound_fs (map (HOLogic.id_const o domain_type o fastype_of) free_fs') var_types);
             val Sb_t = Term.list_comb (Sb, hs @ gs);
           in SOME (fold_rev Logic.all (other_fs @ hs @ gs) (fold_rev (curry Logic.mk_implies) (other_prems @ h_prems @ g_prems) (mk_Trueprop_eq (
             HOLogic.mk_comp (map_t, Sb_t),
@@ -966,7 +977,7 @@ fun mk_mrsbnf_axioms mrbnfs bmv lthy =
         val set_Sbs =
           let
             val sets' = flat (MRBNF_Def.interlace (map single live_sets) (map single bound_sets)
-              (replicate free [] @ map single (drop free free_sets)) var_types);
+              (replicate (length free_fs') []) var_types);
           in map (fn set => fold_rev Logic.all (hs @ gs @ [x]) (fold_rev (curry Logic.mk_implies) (h_prems @ g_prems) (
             mk_Trueprop_eq (set $ (Term.list_comb (Sb, hs @ gs) $ x), foldl1 mk_Un ((set $ x) ::
               @{map_filter 2} (fn Vrs => fn g => Option.mapPartial (fn mrbnf => Option.map (fn set =>

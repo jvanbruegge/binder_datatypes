@@ -170,10 +170,6 @@ axiomatization Sb_LM :: "('a::var \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarr
   and Sb_LM_simp3[simp]: "Sb_LM f1 f2 (App t1 t2) = App (Sb_LM f1 f2 t1) (Sb_LM f1 f2 t2)"
   and Sb_LM_simp4[simp]: "x \<notin> imsupp f1 \<Longrightarrow> x \<notin> IImsupp_LM f2 \<Longrightarrow> Sb_LM f1 f2 (Lam x t) = Lam x (Sb_LM f1 f2 t)"
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
 lemma Vrs_Un: "FVars_LM t = Vrs_1 t \<union> Vrs_2 t"
   apply (induction t rule: LM.induct)
      apply auto

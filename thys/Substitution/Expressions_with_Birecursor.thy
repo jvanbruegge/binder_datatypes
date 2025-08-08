@@ -70,12 +70,6 @@ locale Bimodel =
      GVrs1 u \<union> 
      (\<Union> {EVrs (pe p) - GVrs2 u | pe . pe \<in> GSupp1 u}) \<union> 
      (\<Union> {EVrs (pe p) | pe . pe \<in> GSupp2 u})"
-
- (*and Ector_Ector'_EVrs: 
-   "\<And>u p. Pvalid p \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
-     \<comment> \<open>EVrs (Ector' u p) \<subseteq> PVrs p \<union> EVrs (Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)) \<close> 
-    EVrs (Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p) \<subseteq> EVrs (Ector u) \<union> PVrs p"
-  *)
   (* birecursion-specific assumptions 
     (taking advantage of the domain-codomain coincidence): *)
   and Ector_base_inj: "\<And>u1 u2::('a,'a,'e,'e)G. base u1 \<Longrightarrow> Ector u1 = Ector u2 \<Longrightarrow> u1 = u2"

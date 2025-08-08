@@ -521,7 +521,9 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_De
 
           val var_types = map (AList.lookup (op=) var_types o dest_TFree) Ts';
           val var_types = @{map 3} (fn req => fn var_type => fn T => if member (op=) Ds0 (dest_TFree T) then
-            MRBNF_Def.Dead_Var else the_default var_type req
+            MRBNF_Def.Dead_Var else
+              let val x = the_default var_type req;
+              in if MRBNF_Def.var_type_ord (x, var_type) = LESS then x else var_type end
           ) var_types (MRBNF_Def.var_types_of_mrbnf mrbnf) Ts';
 
           val (mrsbnf, accum) = if MRBNF_Def.var_types_of_mrbnf mrbnf = var_types then

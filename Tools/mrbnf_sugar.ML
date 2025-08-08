@@ -1103,7 +1103,7 @@ fun create_binder_datatype (spec : spec) lthy =
           ])),
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (@{print}(map #map_permute nesting_binder_sugars)),
+            EqSubst.eqsubst_tac ctxt [0] (map #map_permute nesting_binder_sugars),
             REPEAT_DETERM o resolve_tac ctxt prems
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),

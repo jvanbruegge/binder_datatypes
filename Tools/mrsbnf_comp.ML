@@ -51,16 +51,17 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
     val mrbnf' = nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) (BMV_Monad_Def.leader_of_bmv_monad bmv);
 
-    val (_, _, (mrbnfs', (_, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
+    val ((_, _, new_tys), _, (mrbnfs', (_, lthy))) = MRBNF_Comp.normalize_mrbnfs (K I) [] [map dest_TFree (snd tys)]
       [] Xs (K (map fst Xs)) NONE [mrbnf'] ((MRBNF_Comp.empty_comp_cache, mrbnf_unfolds), lthy);
     val mrbnf' = hd mrbnfs';
     val ((mrbnf, info, (Ds, absT_info)), lthy) = MRBNF_Comp.seal_mrbnf qualify mrbnf_unfolds name true Ds Ds mrbnf' info_opt lthy;
 
     val var_class = MRBNF_Def.class_of_mrbnf mrbnf;
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf';
-    val (lives, bounds, frees) = MRBNF_Def.deinterlace (snd tys) var_types;
+    val (lives, bounds, frees) = MRBNF_Def.deinterlace (map TFree new_tys) var_types;
     val bounds = map (resort_tfree_or_tvar var_class) bounds;
     val frees = map (resort_tfree_or_tvar var_class) frees;
+
     val rep_T = MRBNF_Def.mk_T_of_mrbnf Ds lives bounds frees mrbnf';
 
     val (lives', _) = lthy
@@ -137,7 +138,8 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
           rtac ctxt copy,
           rtac ctxt copy,
           K (Local_Defs.unfold0_tac ctxt (comp_assocs @ [@{thm type_copy_Rep_o_Abs_o} OF [copy]])),
-          rtac ctxt (unfold_defs thm) THEN_ALL_NEW assume_tac ctxt
+          rtac ctxt (unfold_defs thm),
+          REPEAT_DETERM o assume_tac ctxt
         ]) (#map_Sb axioms),  
         map_Injs = Option.map (map (fn thm => fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt defs),
@@ -153,7 +155,8 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
             rtac ctxt copy,
             K (Local_Defs.unfold0_tac ctxt (comp_assocs @ [@{thm type_copy_Rep_o_Abs_o} OF [copy]]))
           ],
-          rtac ctxt (unfold_defs (#map_is_Sb axioms)) THEN_ALL_NEW assume_tac ctxt
+          rtac ctxt (unfold_defs (#map_is_Sb axioms)),
+          REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
         ],
         set_Sb = map (fn _ => fn ctxt => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
@@ -163,15 +166,17 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
           REPEAT_DETERM o assume_tac ctxt,
           K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
           rtac ctxt refl
-        ]) (#set_Sb axioms),
-        set_Vrs = map (fn thm => fn ctxt => EVERY1 [
+        ]) (bounds @ lives),
+        set_Vrs = map (K (fn ctxt => EVERY1 [
           K (Local_Defs.unfold_tac ctxt (defs @ [@{thm SSupp_type_copy} OF [copy]])),
           rtac ctxt @{thm trans[OF comp_apply]},
-          rtac ctxt trans,
-          rtac ctxt (unfold_defs thm),
-          K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
-          rtac ctxt refl
-        ]) (#set_Vrs axioms)
+          rtac ctxt refl ORELSE' EVERY' [
+            rtac ctxt trans,
+            resolve_tac ctxt (map unfold_defs (#set_Vrs axioms)),
+            K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+            rtac ctxt refl
+          ]
+        ])) (#set_Vrs axioms)
       }
     ) (MRSBNF_Def.axioms_of_mrsbnf mrsbnf)) lthy;
   in ((mrsbnf, (snd (dest_Type T), absT_info)), lthy) end
@@ -216,8 +221,10 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
     val outer_mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf outer) leader;
     val inner_mrbnfs = map (fn mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) leader) inners;
 
+    val _ = @{print} "wat"
     val ((mrbnf, tys), (mrbnf_unfolds, lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline
       qualify flatten_tyargs outer_mrbnf inner_mrbnfs oDs Dss oAs Ass Xs (accum, lthy);
+    val _ = @{print} (tys, MRBNF_Def.T_of_mrbnf mrbnf)
 
     val mrbnf =
       let

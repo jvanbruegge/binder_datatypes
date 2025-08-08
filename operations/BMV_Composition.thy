@@ -49,12 +49,7 @@ consts Inj_2_T4 :: "'b \<Rightarrow> ('a::var, 'b::var) T4"
 
 ML_file \<open>../Tools/bmv_monad_def.ML\<close>
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
 declare [[goals_limit=1000]]
-
 declare [[ML_print_depth=1000]]
 
 pbmv_monad "('a, 'b, 'c, 'd, 'e, 'f, 'g) T1"

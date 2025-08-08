@@ -12,10 +12,6 @@ type_synonym ('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre' =
 
 ML_file \<open>../Tools/mrsbnf_comp.ML\<close>
 
-ML \<open>
-Multithreading.parallel_proofs := 0
-\<close>
-
 local_setup \<open>fn lthy =>
 let
   val T = @{typ "('tv, 'v, 'btv, 'bv, 'c, 'd) FTerm_pre'"};

@@ -3622,7 +3622,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       rec_vars = rec_vars,
       bfree_vars = map (fn bfree => find_index (curry (op=) bfree) frees) bfrees,
       raw_fps = raw_results,
-      quotient_fps = quotient_results,
+      quotient_fps = quotient_results,      
+      is_free_inducts = map #induct is_freess,
       fp_thms = case least_fp_thms of
        SOME x => SOME (Inl x)
        | NONE => Option.map Inr greatest_fp_thms,

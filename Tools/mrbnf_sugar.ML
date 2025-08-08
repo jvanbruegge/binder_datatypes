@@ -603,6 +603,14 @@ fun create_binder_datatype (spec : spec) lthy =
       ])] end
     ) ctors_tys) ctors_tys));
 
+    fun find_bnfs lthy (Type (n, Ts)) xs =
+      let
+        val insert = case BNF_Def.bnf_of lthy n of
+          SOME bnf => insert ((op=) o apply2 fst) (n, bnf) | NONE => I
+      in insert (fold (find_bnfs lthy) Ts xs) end
+      | find_bnfs _ _ xs = xs
+    val bnfs = fold (find_bnfs lthy) (maps (map (Term.typ_subst_atomic replace) o snd) ctors_tys) [];
+
     val injects = @{map_filter 2} (fn ((ctor, ctor_def), tys) => fn setss => if null tys then NONE else
       let
         val bound_tys = inter (op=) bounds (rev (map TFree (fold Term.add_tfreesT tys [])));
@@ -677,6 +685,7 @@ fun create_binder_datatype (spec : spec) lthy =
           K (Local_Defs.unfold0_tac ctxt (
             @{thms map_sum.simps map_prod_simp sum.inject prod.inject id_apply}
             @ set_simp_thms
+            @ map (BNF_Def.map_id_of_bnf o snd) bnfs
             @ maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs
             @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
             @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
@@ -1052,7 +1061,8 @@ fun create_binder_datatype (spec : spec) lthy =
         ) (MRBNF_Def.map_of_mrbnf rec_mrbnf);
         fun tac ctxt prems = EVERY1 [
           rtac ctxt (trans OF [#vvsubst_ctor vvsubst_res]),
-          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
+          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+            @ map (BNF_Def.map_id_of_bnf o snd) bnfs @ [
             MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
             #Abs_inverse (snd info) OF @{thms UNIV_I},
             snd (#noclash (hd (#quotient_fps res)))
@@ -1086,13 +1096,14 @@ fun create_binder_datatype (spec : spec) lthy =
         val mapx = Term.subst_atomic_types (Ts' ~~ (vars @ passives)) (#permute quotient);
         fun tac ctxt prems = EVERY1 [
           rtac ctxt (trans OF [#permute_ctor quotient]),
-          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf @ [
+          K (Local_Defs.unfold0_tac ctxt (thms @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+            @ map (BNF_Def.map_id_of_bnf o snd) bnfs @ [
             MRBNF_Def.map_def_of_mrbnf pre_mrbnf,
             #Abs_inverse (snd info) OF @{thms UNIV_I}
           ])),
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
-            EqSubst.eqsubst_tac ctxt [0] (map #map_permute nesting_binder_sugars),
+            EqSubst.eqsubst_tac ctxt [0] (@{print}(map #map_permute nesting_binder_sugars)),
             REPEAT_DETERM o resolve_tac ctxt prems
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
@@ -1139,6 +1150,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 REPEAT_DETERM o resolve_tac ctxt prems,
                 K (Local_Defs.unfold0_tac ctxt (thms
                   @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+                  @ map (BNF_Def.map_id_of_bnf o snd) bnfs
                   @ #isVVrs tvsubst_res @ map snd (#VVrs tvsubst_res)
                   @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, snd (#noclash quotient)]
                 )),
@@ -1162,7 +1174,9 @@ fun create_binder_datatype (spec : spec) lthy =
                   ])),
                   eresolve_tac ctxt @{thms sum.distinct[THEN notE]}
                 ],
-                K (Local_Defs.unfold0_tac ctxt (map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs)),
+                K (Local_Defs.unfold0_tac ctxt (map MRBNF_Def.map_id0_of_mrbnf fp_nesting_mrbnfs
+                  @ map (BNF_Def.map_id_of_bnf o snd) bnfs
+                )),
                 K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
                 rtac ctxt refl
               ]

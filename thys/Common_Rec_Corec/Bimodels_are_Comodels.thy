@@ -432,7 +432,15 @@ proof-
     subgoal using g1 unfolding GVrs2_Gmap by auto
     subgoal using g1 unfolding GVrs1_Gmap GVrs2_Gmap by auto
     subgoal using f unfolding Gmap_comp unfolding curry_def o_def
-      apply(rule Ector_Ector'_Gmap) using w p g g1 by auto . 
+      apply(rule Ector_Ector'_Gmap) using w p g g1 apply safe     
+        subgoal for e a using C.corec_EVrs[of "(e,p)"]
+        unfolding EVrs''_def Evalid'_def by auto  
+        subgoal for e \<sigma> apply(rule sym) apply(subst Pperm_cong_id[symmetric, of \<sigma>])
+          subgoal by simp subgoal by simp subgoal by simp 
+          subgoal by (meson Int_emptyD not_in_imsupp_same)
+          subgoal unfolding Eperm''_def[symmetric] 
+          apply(subst C.corec_Eperm) by (auto simp: Evalid'_def) 
+    . . . 
 qed
       
 theorem crec_Eperm:
@@ -466,6 +474,9 @@ assumes "Pvalid p" and "\<And>u p.
  (base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)
  \<and>
  (\<not> base u \<longrightarrow> H (Ector u) p = Ector' (Gmap H H u) p)"
+(* NB: 1 and 2 are needed! *)
+and 1: "\<And>e p. Pvalid p \<Longrightarrow> EVrs (H e p) \<subseteq> PVrs p \<union> EVrs e"
+and 2: "\<And>p \<sigma> e. Pvalid p \<Longrightarrow> small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> H (Eperm \<sigma> e) p = Eperm \<sigma> (H e (Pperm (inv \<sigma>) p))"
 shows "H e p = crec e p" 
 proof-
   have ep: "Evalid' (e, p)" using assms unfolding Evalid'_def by auto
@@ -486,7 +497,12 @@ proof-
     show "Gmap (uncurry H) (uncurry H) w \<in> Edtor ((uncurry H) (e, p))"
       unfolding Edtor_def apply simp unfolding e
       unfolding H using 0 apply- apply(rule Ector_Ector'_Gmap_fst)
-      using 00 ww 2 f p by auto
+      using 00 ww 2 f p  apply (auto simp: GSupp1_Gmap GSupp2_Gmap)
+        subgoal by (meson UnE assms(3) subsetD)
+        subgoal for e p' \<sigma> apply(rule sym) apply(subst Pperm_cong_id[symmetric, of \<sigma>]) 
+        apply (auto simp: imsupp_def supp_def) 
+        by (smt (verit, ccfv_SIG) Eperm_inv_iff assms(4) bij_betw_inv_into inv_inv_eq
+            small_inv) .
   next 
     fix e p  e1 assume "Evalid' (e, p)" and 1: "Edtor' (e, p) = Inl e1" 
     hence p: "Pvalid p" unfolding Evalid'_def by auto

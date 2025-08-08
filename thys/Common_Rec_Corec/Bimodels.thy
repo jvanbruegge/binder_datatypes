@@ -53,6 +53,9 @@ and
 *)
 Ector_Ector'_sync:  
 "\<And>w u p g. \<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+       (\<forall>e \<in> GSupp1 w. EVrs (g e) \<subseteq> EVrs e \<union> PVrs p) \<Longrightarrow> 
+       (\<forall>e \<in> GSupp1 w. \<forall>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (g e) = g (Eperm \<sigma> e)) \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
 and Ector'_uniform:  
@@ -132,6 +135,9 @@ lemma Ector_Ector'_Gmap:
 fixes w u :: "('a, 'a, 'a E, 'a E) G"   
 assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
 and "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
+and 0: "\<forall>e \<in> GSupp1 w. EVrs (F e p) \<subseteq> EVrs e \<union> PVrs p"
+       "\<forall>e \<in> GSupp1 w. \<forall>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (F e p) = F (Eperm \<sigma> e) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
        Ector' (Gmap F F u) p"
 proof-
@@ -142,13 +148,17 @@ proof-
     apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms  
     by (auto simp add: base_Gmap) 
   show ?thesis unfolding 1 unfolding F'_def apply(subst Gmap_comp[symmetric])
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap by auto
+    apply(rule Ector_Ector'_sync) using assms 
+    unfolding GVrs2_Gmap base_Gmap by auto
 qed
 
 (* NB: The following is only needed for uniqueness, so is not needed 
 for the syntax with bindings development. *)
 lemma Ector_Ector'_Gmap_fst: 
 assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+and 0: "\<forall>e \<in> fst ` GSupp1 w. EVrs (H e p) \<subseteq> EVrs e \<union> PVrs p"
+       "\<forall>e \<in> fst ` GSupp1 w. \<forall>\<sigma>. small \<sigma> \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (H e p) = H (Eperm \<sigma> e) p"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
 shows "Ector (Gmap (uncurry H) (uncurry H) w) = Ector' (Gmap H H u) p"
@@ -166,8 +176,9 @@ proof-
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap 
-    by auto
+    apply(rule Ector_Ector'_sync) using assms 
+     unfolding GVrs2_Gmap base_Gmap GSupp1_Gmap GSupp2_Gmap
+  by auto
 qed
 
 

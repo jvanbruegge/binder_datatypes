@@ -832,6 +832,9 @@ proof (standard, safe)
   note EE_defs = EEdtor'_def EEdtor1'_def EEperm''_def EEVrs''_def EEvalid'_def
   note EE_rdefs = EE_defs[symmetric]
 
+  interpret Bimodel Pvalid Pperm PVrs Eperm EVrs "card_suc Gbd" Ector Ector'
+  using b .
+
 
   interpret ccor: Corec EEdtor' EEperm'' EEVrs'' EEvalid'
   using Bimodel_Corec[OF b] unfolding EE_defs .
@@ -879,7 +882,17 @@ proof (standard, safe)
            subgoal using g1 unfolding GVrs2_Gmap by auto
            subgoal using g1 unfolding GVrs1_Gmap GVrs2_Gmap by auto
            subgoal using f unfolding Gmap_comp unfolding curry_def o_def
-           apply(rule Bimodel.Ector_Ector'_Gmap[OF b]) using w p g g1 by auto . 
+           apply(rule Bimodel.Ector_Ector'_Gmap[OF b]) using w p g g1 apply safe
+             subgoal for e a using ccor.COREC_FFVarsD[of "(e,p)"]
+             unfolding EEvalid'_def EE_defs corec_def Evalid'_def[OF b] 
+             EVrs''_def[OF b] by auto   
+             subgoal for e \<sigma> apply(rule sym) apply(subst Pperm_cong_id[symmetric, of \<sigma>])
+          subgoal by simp subgoal by simp subgoal by simp 
+          subgoal by (meson Int_emptyD not_in_imsupp_same)
+          subgoal unfolding Eperm''_def[OF b, symmetric] 
+          unfolding corec_def 
+          apply(subst ccor.COREC_mmapD[unfolded EEvalid'_def EEperm''_def])
+          by (auto simp: Evalid'_def[OF b]) . . .  
          qed 
        qed .
     subgoal for e p \<sigma> proof-

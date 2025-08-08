@@ -281,6 +281,12 @@ lemma Pperm_cong:
  (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma>1 a = \<sigma>2 a) \<Longrightarrow> Pperm \<sigma>1 p = Pperm \<sigma>2 p"
   using nomP[unfolded nom_def] by force
 
+lemma Pperm_cong_id: 
+"small \<sigma> \<Longrightarrow> bij \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> 
+ (\<And>a. a \<in> PVrs p \<Longrightarrow> \<sigma> a = a) \<Longrightarrow> Pperm \<sigma> p = p"
+by (metis Pperm_cong Pperm_id bij_betw_id id_apply small_id)
+ 
+
 lemma countable_PVrs_im: "small \<sigma> \<Longrightarrow> Pvalid p \<Longrightarrow> countable (PVrs p \<union> inv \<sigma> ` PVrs p)"
   by (simp add: countable_PVrs)  
 

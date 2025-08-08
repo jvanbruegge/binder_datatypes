@@ -86,6 +86,9 @@ locale Bimodel =
    Ector' u p = Ector' u' p"
   and Ector_Ector'_sync:  
     "\<And>w u p g. \<not> base u \<Longrightarrow> Pvalid p \<Longrightarrow> GVrs2 w \<inter> PVrs p = {} \<Longrightarrow> GVrs2 u \<inter> PVrs p = {} \<Longrightarrow> 
+       (\<forall>e \<in> GSupp1 w. EVrs (g e) \<subseteq> EVrs e \<union> PVrs p) \<Longrightarrow> 
+       (\<forall>e \<in> GSupp1 w. \<forall>\<sigma>. |supp \<sigma>| <o |UNIV::'a set| \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (g e) = g (Eperm \<sigma> e)) \<Longrightarrow> 
        Ector w = Ector' u p \<Longrightarrow> 
        Ector (Gmap g g w) = Ector' (Gmap (\<lambda>pe. g o pe) (\<lambda>pe. g o pe) u) p"
   and Ector'_uniform:  
@@ -100,6 +103,10 @@ thm Ector_base_inj
 thm Ector_Ector'_inj_step 
 thm Ector_Ector'_sync
 thm Ector'_uniform 
+
+
+
+lemmas Pperm_cong_id = Pperm_cong_id
 
 
 lemma Ector'_compat_Pvalid: 
@@ -149,6 +156,9 @@ by (metis (mono_tags, lifting) Ector_base_inj tfl_some)
 lemma Ector_Ector'_Gmap: 
 fixes w u :: "('a, 'a, 'e, 'e) G"   
 assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+and 0: "\<forall>e \<in> GSupp1 w. EVrs (F e p) \<subseteq> EVrs e \<union> PVrs p"
+       "\<forall>e \<in> GSupp1 w. \<forall>\<sigma>. |supp \<sigma>| <o |UNIV::'a set| \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (F e p) = F (Eperm \<sigma> e) p" 
 and "Ector w = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 shows "Ector (Gmap (\<lambda>e. F e p) (\<lambda>e. F e p) w) =
        Ector' (Gmap F F u) p"
@@ -160,13 +170,17 @@ proof-
     apply(rule Ector'_uniform) unfolding GVrs2_Gmap using assms  
     by (auto simp add: base_Gmap) 
   show ?thesis unfolding 1 unfolding F'_def apply(subst Gmap_comp[symmetric])
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap by auto
+    apply(rule Ector_Ector'_sync) using assms 
+    unfolding GVrs2_Gmap base_Gmap by auto
 qed
 
 (* NB: The following is only needed for uniqueness, so is not needed 
 for the syntax with bindings development. *)
 lemma Ector_Ector'_Gmap_fst: 
 assumes "\<not> base u" "Pvalid p" "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}"
+and 0: "\<forall>e \<in> fst ` GSupp1 w. EVrs (H e p) \<subseteq> EVrs e \<union> PVrs p"
+       "\<forall>e \<in> fst ` GSupp1 w. \<forall>\<sigma>. |supp \<sigma>| <o |UNIV::'a set| \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (H e p) = H (Eperm \<sigma> e) p"
 and "Ector (Gmap fst fst w) = Ector' (Gmap (\<lambda>e p. e) (\<lambda>e p. e) u) p"
 and 00: "GSupp1 (Gmap snd snd w) \<union> GSupp2 (Gmap snd snd w) \<subseteq> {p}"
 shows "Ector (Gmap (uncurry H) (uncurry H) w) = Ector' (Gmap H H u) p"
@@ -184,7 +198,7 @@ proof-
     unfolding H'_def fun_eq_iff by auto
 
   show ?thesis unfolding 2 unfolding 11 unfolding 1 Gmap_comp[symmetric]
-    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap 
+    apply(rule Ector_Ector'_sync) using assms unfolding GVrs2_Gmap base_Gmap GSupp1_Gmap GSupp2_Gmap
     by auto
 qed
 
@@ -404,32 +418,46 @@ proof(rule eq_Un3_image)
             bijection.inv_left image_eqI) . 
 qed
 
+
 term Ector
 
 thm Ector_inject
 
 term Gmap
 
-lemma blah:
+lemma Gmap_o_aux:
 "Gmap (\<lambda>pe. g (pe p)) (\<lambda>pe. g (pe p)) u = Gmap g g (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)"
 unfolding Gmap_comp o_def ..
 
-lemma 
-assumes "Ector u = Ector v"
-shows "Ector (Gmap g g u) = Ector (Gmap g g v)"
-using assms unfolding Ector_inject apply safe
-subgoal for \<sigma> apply(rule exI[of _ \<sigma>])
-unfolding id_on_def apply (auto simp: Gmap_Gren GVrs2_Gmap GSupp1_Gmap)
-  subgoal sorry
-  subgoal  apply (auto simp: Gmap_comp Gmap_Gren')  
-  apply(rule Gmap_cong)
-    subgoal for a apply(auto simp: GSupp1_Gren)
-
-
-lemma 
-assumes "Ector w = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)" 
+lemma Ector_Gmap_eq_aux: 
+assumes p: "|PVrs p| <o |UNIV::'a set|" and 
+1: "GVrs2 w \<inter> PVrs p = {}" "GVrs2 u \<inter> PVrs p = {}" and 
+0: "\<forall>e \<in> GSupp1 w. EVrs (g e) \<subseteq> EVrs e \<union> PVrs p"
+   "\<forall>e \<in> GSupp1 w. \<forall>\<sigma>. |supp \<sigma>| <o |UNIV :: 'a set| \<and> bij \<sigma> \<and> imsupp \<sigma> \<inter> PVrs p = {} \<longrightarrow> 
+                Eperm \<sigma> (g e) = g (Eperm \<sigma> e)"
+and 2: "Ector w = Ector (Gmap (\<lambda>pe. pe p) (\<lambda>pe. pe p) u)" 
 shows "Ector (Gmap g g w) = Ector (Gmap (\<lambda>pe. g (pe p)) (\<lambda>pe. g (pe p)) u)"
-unfolding blah
+unfolding Gmap_o_aux
+using assms 
+apply(subst (asm) Ector_fresh_inject[where A = "PVrs p"])
+apply (auto simp: GVrs2_Gmap)
+subgoal for \<sigma> unfolding Ector_inject apply(rule exI[of _ \<sigma>])
+unfolding id_on_def apply (auto simp: Gmap_Gren GVrs2_Gmap GSupp1_Gmap)
+  subgoal by (metis IntI UnE empty_iff not_in_imsupp_same subsetD)
+  subgoal  apply (auto simp: Gmap_comp Gmap_Gren')
+  unfolding Gmap_comp[symmetric] apply(drule sym[of "Gmap _ _ _"])
+  apply simp unfolding Gmap_comp
+  apply(rule Gmap_cong)
+  by (auto simp: GSupp1_Gren) . .
+
+lemma Esub_PVrs_small:  
+"|supp \<delta>| <o |UNIV::'a set| \<Longrightarrow>
+ |SSupp (Ector \<circ> \<eta>) \<rho>| <o |UNIV::'a set| \<Longrightarrow>
+ |SSupp (Ector \<circ> \<eta>') \<rho>'| <o |UNIV::'a set| \<Longrightarrow>
+ |Esub_PVrs (\<delta>, \<rho>, \<rho>')| <o |UNIV::'a set|"
+unfolding Esub_PVrs_def 
+by (simp add: imsupp_supp_bound infinite_class.Un_bound)
+
 
 sublocale Esub: Bimodel where
   Pvalid = Esub_Pvalid and
@@ -544,7 +572,7 @@ sublocale Esub: Bimodel where
             subgoal apply(drule sym[where t = "Gmap (\<lambda>pe. pe (\<delta>, \<rho>, \<rho>')) (\<lambda>pe. pe (\<delta>, \<rho>, \<rho>')) u'"]) 
             by (auto simp: Gmap_Gsub Gren_def Gmap_comp Gsub_comp) . . . . .
   (* *)
-  subgoal for w u p g (* AtoD; Note sure what happened to this; I believe you proved it before. *)
+  subgoal for w u p g  
     apply (cases p)
     apply (auto split: if_splits simp: eta_distinct eta_distinct'  eta_inject eta'_inject Gren_def
       eta_natural[of id id, unfolded G.Sb_Inj, simplified]
@@ -558,41 +586,15 @@ sublocale Esub: Bimodel where
         eta_inversion[rotated -1] eta'_inversion[rotated -1]
         eta_inversion[of id id, unfolded G.Sb_Inj, simplified]
         eta'_inversion[of id id, unfolded G.Sb_Inj, simplified])  
-    subgoal for \<delta> \<rho> \<rho>'
+    subgoal for \<delta> \<rho> \<rho>' 
       apply (drule sym[of "Ector w"])
       apply(subst Gmap_comp[symmetric])
       apply(simp add: Gmap_Gsub[symmetric])
-      apply(subst Gmap_comp)
-      unfolding o_def find_theorems Ector Gmap
-term Ector term "Gsub \<delta> id u"
-      apply (drule sym[of _ "Ector w"])
-
-      apply(subst (asm) Ector_fresh_inject[where A = "(\<Union>x\<in>GSupp1 u. EVrs (g (x (\<delta>, \<rho>, \<rho>')))) - GVrs2 u - GVrs2 w"])
-      subgoal apply (auto simp: GVrs2_Gmap GVrs2_Gsub) sorry
-      subgoal by auto  
-      subgoal sorry
-      subgoal apply (elim exE conjE)
-        subgoal for \<sigma>
-        apply hypsubst_thin
-        apply (rule sym)
-        apply (unfold Ector_inject)
-        apply (rule exI[of _ \<sigma>])
-        apply (auto simp: Gren_def G.Map_Sb[THEN fun_cong, simplified] G.Sb_comp[THEN fun_cong, simplified]
-          G.Map_comp[THEN fun_cong, simplified] G.Vrs_Sb G.Vrs_Map G.Supp_Sb G.Supp_Map)
-         apply (auto simp: comp_def)
-          subgoal unfolding id_on_def apply auto sledgehammer
-          subgoal (* DtoA: this is the goal which needs to permute Eperm \<sigma> and g
-          Alternative that might work is if \<sigma> does not touch the free variables of g and the free variables
-            of the input to g, which ultimately comes from u. But I think the issue is that these
-            must be able to contain GVrs2 u (the bound variables).
-          *)  
-          apply(rule arg_cong[of _ _"Gsub \<delta> \<sigma>"]) 
-          apply(rule Gmap_cong)
-            subgoal for k sorry
-            subgoal .. . . 
-        done
-      done
-    done
+      apply(subst Gmap_comp) apply (drule sym[of _ "Ector w"])
+      apply(subst o_def)+
+      apply(rule Ector_Gmap_eq_aux[of Esub_PVrs "(\<delta>, \<rho>, \<rho>')" w _ g]) 
+      using Esub_PVrs_small by (auto simp: Esub_PVrs_def GVrs2_Gsub) . 
+  (* *)
   subgoal for u p
     apply (cases p)
     apply (auto split: if_splits simp: eta_distinct eta_distinct'  eta_inject eta'_inject Gren_def

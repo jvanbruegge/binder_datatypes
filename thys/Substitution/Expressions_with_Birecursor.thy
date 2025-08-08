@@ -99,10 +99,6 @@ thm Ector_Ector'_sync
 thm Ector'_uniform 
 
 
-
-lemmas Pperm_cong_id = Pperm_cong_id
-
-
 lemma Ector'_compat_Pvalid: 
 "\<And>(u::('a, 'a, 'p\<Rightarrow>'e,'p\<Rightarrow>'e) G) f1 f2 g1 g2 p. 
    (\<forall>pe \<in> GSupp1 u. \<forall>p. Pvalid p \<longrightarrow> f1 pe p = g1 pe p) \<Longrightarrow> 

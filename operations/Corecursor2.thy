@@ -51,6 +51,8 @@ term "T1_ctor"
 
 thm alpha_T1_alpha_T2.intros
 
+thm T1.FVars_ctor
+
 locale COREC =
   fixes Udtor1 :: "'u1 \<Rightarrow> ('a::covar, 'b::covar, 'c::covar, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre set"
   and Udtor2 :: "'u2 \<Rightarrow> ('a::covar, 'b::covar, 'c::covar, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T2_pre set"
@@ -66,12 +68,12 @@ locale COREC =
     and alpha_Udtor1: "\<And>X X' d. valid_U1 d \<Longrightarrow> {X,X'} \<subseteq> Udtor1 d \<Longrightarrow>
   \<exists>u v. bij (u::'a \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> bij (v::'b \<Rightarrow> 'b) \<and> |supp v| <o |UNIV::'b set|
   \<and> id_on ((set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X) u
-  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X)) - set6_T1_pre X) v
+  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X)) - set6_T1_pre X) v
   \<and> map_T1_pre id id id id u v u id (map_sum (permute_T1 u v) (Umap1 u v)) id (map_sum (permute_T2 u id) (Umap2 u id)) X = X'"
 and alpha_Udtor2: "\<And>X X' d. valid_U2 d \<Longrightarrow> {X,X'} \<subseteq> Udtor2 d \<Longrightarrow>
   \<exists>u v. bij (u::'a \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> bij (v::'b \<Rightarrow> 'b) \<and> |supp v| <o |UNIV::'b set|
   \<and> id_on ((set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X) u
-  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X)) - set6_T2_pre X) v
+  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X)) - set6_T2_pre X) v
   \<and> map_T2_pre id id id id u v u id (map_sum (permute_T1 u v) (Umap1 u v)) id (map_sum (permute_T2 u id) (Umap2 u id)) X = X'"
     and
     (* The dual of the first block of assumptions from Norrish's paper:   *)
@@ -500,11 +502,11 @@ lemmas Umap_Udtor_strong = Umap_Udtor1_strong Umap_Udtor2_strong
 
 abbreviation "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
 
-abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
+abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
 
 abbreviation "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
 
-abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
+abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
 
 
 lemmas Udtor_Umap = alpha_Udtor1 alpha_Udtor2
@@ -546,13 +548,13 @@ abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) ra
   "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
 
 (* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
-abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
+abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
 
 (* definition raw_UFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'a set" where *)
 abbreviation "raw_UFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
 
 (* definition raw_UFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'b set" where *)
-abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
+abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
 
 
 lemmas raw_UFVars_def2_11 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_1_def[of "T1_abs _"]] T1.alpha_FVars(1)[OF T1.rep_abs], symmetric]
@@ -4135,5 +4137,21 @@ theorem COREC_FFVarsD2:
 lemmas COREC_FFVarsD = COREC_FFVarsD1 COREC_FFVarsD2
 
 end
+
+ML \<open>
+val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Corecursor2.T1")
+\<close>
+
+ML_file \<open>../Tools/mrbnf_corecursor.ML\<close>
+local_setup \<open>fn lthy =>
+let
+  val lthy = MRBNF_Corecursor.create_binding_corecursor I fp_res lthy;
+in lthy end
+\<close>
+
+print_locale COREC_T1_T2
+
+interpretation COREC_T1_T2
+  apply unfold_locales
 
 end

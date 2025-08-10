@@ -129,7 +129,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
     val mk_map_sum = mk_bin_map @{const_name map_sum} BNF_Util.mk_sumT
 
     val goals = @{map 11} (fn name => fn mrbnf => fn d => fn X => fn X' => fn Umap => fn UFVarss => fn Udtor
-      => fn validU => fn (lsets, bsets, fsets) => fn quot =>
+      => fn validU => fn (rec_sets, bsets, fsets) => fn quot =>
       let
         val Udtor_ne = Logic.all d (Logic.mk_implies (
           HOLogic.mk_Trueprop (validU $ d),
@@ -138,12 +138,15 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           )
         ));
 
+
         val bfree_sets = flat (map (fn i => if member (op=) (#bfree_vars fp_res) i then
           [nth (drop nvars fsets) i] else []
         ) (0 upto nvars - 1));
         val bfree_setss = map (fn i => if member (op=) (#bfree_vars fp_res) i then
           [nth (drop nvars fsets) i $ X] else []
         ) (0 upto nvars - 1);
+
+        val fsets = take nvars fsets;
 
 (*
         val _ = @{print} (map (Thm.cterm_of lthy) lsets);
@@ -158,13 +161,21 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           (* let val _ = @{print} ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss)); in *)
           mk_id_on (mk_minus (foldl1 mk_Un (
             bfree_sets @ map_filter (fn (i, (FVars, UFVars)) => 
-              if member (op=) (flat rel) i then SOME (mk_UNION (nth lsets i $ X)
+              if member (op=) (flat rel) i then SOME (mk_UNION (nth rec_sets i $ X)
                  (BNF_FP_Util.mk_case_sum (FVars, UFVars))
               ) else NONE
             ) ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss))
           ), bset $ X)) f (* end *)
         ) fs bfree_setss bsets (#binding_relation fp_res) (transpose (map #FVarss (#quotient_fps fp_res)))
           (transpose UFVarsss);
+
+        val binding_rel = map flat (#binding_relation fp_res);
+
+        val rec_boundss = map (fn i =>
+          @{map_filter 2} (fn j => fn rel =>
+            if member (op=) rel i then SOME j else NONE
+          ) (0 upto length binding_rel - 1) binding_rel
+        ) (0 upto nrecs - 1);
 
 (*
         val _ = @{print} (#binding_relation fp_res);
@@ -179,14 +190,14 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         ) (HOLogic.mk_Trueprop (fold_rev (mk_ex o dest_Free) fs (foldr1 HOLogic.mk_conj (
           f_prems' @ id_ons @ [HOLogic.mk_eq (
             MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
-              (map HOLogic.id_const plives @ @{map 3} (fn i => fn permute => fn Umap =>
-                let val fs' = map2 (fn rel => fn f => if member (op=) (flat rel) i
-                  then f else HOLogic.id_const (domain_type (fastype_of f))
-                ) (#binding_relation fp_res) fs;
+              (map HOLogic.id_const plives @ @{map 3} (fn bounds => fn permute => fn Umap =>
+                let val fs' = map_index (fn (i, f) => if member (op=) bounds i then f
+                  else HOLogic.id_const (domain_type (fastype_of f))
+                ) fs
                 in if forall (fn Const (@{const_name id}, _) => true | _ => false) fs' then
                   HOLogic.id_const (mk_sumT (body_type (fastype_of permute), body_type (fastype_of Umap)))
                 else mk_map_sum (Term.list_comb (permute, fs')) (Term.list_comb (Umap, fs')) end
-              ) (0 upto nrecs - 1) (replicate_rec (map #permute (#quotient_fps fp_res))) (replicate_rec Umaps))
+              ) rec_boundss (replicate_rec (map #permute (#quotient_fps fp_res))) (replicate_rec Umaps))
               (map HOLogic.id_const pbounds @ fs) (map HOLogic.id_const (vars @ pfrees) @ bfree_fs) mrbnf $ X,
             X'
           )]
@@ -194,14 +205,23 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         (*
         val _ = @{print} (map (Thm.cterm_of lthy) UFVarss);
         val _ = @{print} (map (map (Thm.cterm_of lthy)) UFVarsss); *)
-        val ufvars_Udtor = fn UFVars => fold_rev Logic.all [d, X] (fold_rev (curry Logic.mk_implies)
-          (map HOLogic.mk_Trueprop [
-              validU $ d,
-              HOLogic.mk_mem (X, Udtor $ d)
-              ])
-          (HOLogic.mk_Trueprop (mk_leq (UFVars $ d) (UFVars $ d))));
+        val ufvars_Udtors = @{map 5} (fn i => fn UFVars => fn fset => fn bset => fn bfrees =>
+          let
+            val recs = @{map 4} (fn set => fn bounds => fn FVarss => fn UFVarss =>
+              let val rec_set = mk_UNION (set $ X) (
+                let val filter = the o List.find (fn set => body_type (fastype_of set) = body_type (fastype_of fset))
+                in BNF_FP_Util.mk_case_sum (filter FVarss, filter UFVarss) end
+              ) in if member (op=) bounds i then mk_minus (rec_set, bset $ X) else rec_set end
+            ) rec_sets rec_boundss (replicate_rec (map #FVarss (#quotient_fps fp_res))) (replicate_rec UFVarsss);
+          in fold_rev Logic.all [d, X] (fold_rev (curry Logic.mk_implies)
+            (map HOLogic.mk_Trueprop [ validU $ d, HOLogic.mk_mem (X, Udtor $ d)])
+            (HOLogic.mk_Trueprop (mk_leq (foldl1 mk_Un ((fset $ X) ::
+              map (fn bfree => mk_minus (bfree, bset $ X)) bfrees @ recs
+            )) (UFVars $ d)))
+          ) end
+         ) (0 upto nvars - 1) UFVarss fsets bsets bfree_setss;
         (* val _ = @{print} (map (Thm.cterm_of lthy) id_ons); *)
-        val ufvars_Udtors = map ufvars_Udtor UFVarss;
+
         val _ = @{print} (map (Thm.cterm_of lthy) ufvars_Udtors);
         (* val _ = @{print} (map (Thm.cterm_of lthy) ufvars_Udtors);
         val _ = @{print} (  Thm.cterm_of lthy (ufvars_Udtor Udtor)) *)
@@ -225,6 +245,20 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             flat goals
           ))
         ] thy;
+
+        val names = map (fst o dest_Free);
+        val valid_prems = map2 (HOLogic.mk_Trueprop oo curry (op$)) validUs ds;
+
+        val Umap_ids = @{map 4} (fn valid_prem => fn d => fn Umap => fn Umap_cong0 =>
+          let val goal = mk_Trueprop_eq (Term.list_comb (Umap, map HOLogic.id_const vars) $ d, d)
+          in Goal.prove_sorry lthy (names [d]) [valid_prem] goal (fn {context=ctxt, prems} => EVERY1 [
+            (* rtac ctxt Umap_cong0,
+               resolve_tac ctxt prems,
+               REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound id_apply},
+            *)
+            K (@{print} prems ; print_tac ctxt "1")
+          ]) end
+        ) valid_prems ds Umaps (* TODO: Umap_cong0s *) [(), ()];
 
         val _ = @{print} name
 

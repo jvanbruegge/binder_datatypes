@@ -470,28 +470,32 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 ],
                 Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
                   DETERM o resolve_tac ctxt (IH :: repeat_mp IH),
-                  EVERY' (map (fn inner_prem => EVERY' (map (fn tac => DETERM o tac) [
-                    let val x = length (fst (Logic.strip_horn (Thm.prop_of inner_prem)));
-                    in REPEAT_DETERM_N x o rtac ctxt @{thm induct_impliesI} end,
-                    REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
-                    rtac ctxt inner_prem ORELSE'
-                    EVERY' [
-                      Method.insert_tac ctxt [inner_prem],
-                      let
-                        val simpset = Simplifier.add_cong @{thm imp_cong} (
-                          (BNF_Util.ss_only @{thms
-                            split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
-                            disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single]
-                          } ctxt)
-                          addsimprocs [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
-                        )
-                      in Simplifier.asm_full_simp_tac simpset end
-                    ],
-                    REPEAT_DETERM o assume_tac ctxt
-                  ])) (map (fn thm => case try (fn () => repeat_spec thm RS @{thm induct_mp[OF _ induct_equal_refl]}) () of
-                    SOME thm' => thm'
-                    | NONE => thm
-                  ) inner_prems))
+                  IF_UNSOLVED o EVERY' [
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
+                    EVERY' (map (fn inner_prem => EVERY' (map (fn tac => DETERM o tac) [
+                      TRY o rtac ctxt conjI,
+                      let val x = length (fst (Logic.strip_horn (Thm.prop_of inner_prem)));
+                      in REPEAT_DETERM_N x o rtac ctxt @{thm induct_impliesI} end,
+                      REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
+                      rtac ctxt inner_prem ORELSE'
+                      EVERY' [
+                        Method.insert_tac ctxt [inner_prem],
+                        let
+                          val simpset = Simplifier.add_cong @{thm imp_cong} (
+                            (BNF_Util.ss_only @{thms
+                              split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
+                              disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single]
+                            } ctxt)
+                            addsimprocs [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
+                          )
+                        in Simplifier.asm_full_simp_tac simpset end
+                      ],
+                      REPEAT_DETERM o assume_tac ctxt
+                    ])) (map (fn thm => case try (fn () => repeat_spec thm RS @{thm induct_mp[OF _ induct_equal_refl]}) () of
+                      SOME thm' => thm'
+                      | NONE => thm
+                    ) inner_prems))
+                  ]
                 ]) ctxt
               ]) (let val xs = drop (nmajor + length bound_prems) prems
                   in take (length xs - length other_assms) xs end)),

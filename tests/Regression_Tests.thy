@@ -86,4 +86,10 @@ datatype (GGVrs1: 'a1, GGVrs2: 'a2, GGSupp1: 'x1, GGSupp2: 'x2) GG = GG 'a1 'a2 
   for map: GGmap
 binder_datatype (EEVrs: 'a) EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds x in t
 
+(* #91 *)
+lemma
+  fixes x y::"'a::var" and e::"'a term"
+  shows "e = e"
+  by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) (auto simp: infinite_UNIV)
+
 end

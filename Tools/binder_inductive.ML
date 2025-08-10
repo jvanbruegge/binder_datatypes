@@ -61,7 +61,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
     (* TODO: Nested sugars? *)
     val param_sugars = map (fn T => Option.mapPartial (fn s =>
-      MRBNF_Sugar.binder_sugar_of no_defs_lthy s
+      Binder_Sugar.binder_sugar_of no_defs_lthy s
     ) (try (fn () => fst (dest_Type T)) ())) param_Ts;
 
     val param_frees = map_filter (fn T => Option.map MRBNF_Def.frees_of_mrbnf (
@@ -82,7 +82,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
       | collect_binders (Abs (_, _, t)) = collect_binders t
       | collect_binders (t as (t1 $ t2)) = case try (dest_Type o Term.body_type o fastype_of) t of
         NONE => map2 (curry (op@)) (collect_binders t1) (collect_binders t2)
-        | SOME (s, _) => (case MRBNF_Sugar.binder_sugar_of no_defs_lthy s of
+        | SOME (s, _) => (case Binder_Sugar.binder_sugar_of no_defs_lthy s of
             NONE => map2 (curry (op@)) (collect_binders t1) (collect_binders t2)
             | SOME sugar =>
               let
@@ -544,7 +544,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           map_filter (try dest_Type o snd) (fold Term.add_frees (flat bind_ts) [])
         );
 
-        val bset_bounds = maps (fn Type (s, _) => (case MRBNF_Sugar.binder_sugar_of lthy s of
+        val bset_bounds = maps (fn Type (s, _) => (case Binder_Sugar.binder_sugar_of lthy s of
           SOME sugar => #bset_bounds sugar
           | NONE => [])
         | _ => []) param_Ts;

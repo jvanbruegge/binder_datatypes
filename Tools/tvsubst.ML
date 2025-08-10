@@ -19,6 +19,8 @@ sig
     isInjs: (term * thm) list,
     tvsubst_Injs: thm list,
     tvsubst_not_isInj: thm,
+    IImsupp_Diffs: thm list,
+    IImsupp_permute_commutes: thm list,
     mrsbnf: MRSBNF_Def.mrsbnf
   };
 
@@ -54,6 +56,8 @@ type tvsubst_result = {
   isInjs: (term * thm) list,
   tvsubst_Injs: thm list,
   tvsubst_not_isInj: thm,
+  IImsupp_Diffs: thm list,
+  IImsupp_permute_commutes: thm list,
   mrsbnf: MRSBNF_Def.mrsbnf
 };
 
@@ -122,13 +126,13 @@ fun prove_model_axioms fp_res' mrsbnf' (models : (Proof.context -> tactic) eta_m
         val eta_free_goal = mk_Trueprop_eq (Vrs $ (eta $ a), mk_singleton a);
         val eta_free = prove [a] eta_free_goal (#eta_free tacs);
 
-        val eta_compl_free_goal = Logic.mk_implies (
+        val eta_compl_free_goal = Logic.all x (Logic.mk_implies (
           HOLogic.mk_Trueprop (mk_all (dest_Free a) (HOLogic.mk_not (
             HOLogic.mk_eq (x, eta $ a)
           ))),
           mk_Trueprop_eq (Vrs $ x, mk_bot (fastype_of a))
-        );
-        val eta_compl_free = prove [x] eta_compl_free_goal (#eta_compl_free tacs);
+        ));
+        val eta_compl_free = prove [] eta_compl_free_goal (#eta_compl_free tacs);
 
         val eta_inj_goal = Logic.mk_implies (
           mk_Trueprop_eq (eta $ a, eta $ b), mk_Trueprop_eq (a, b)
@@ -143,11 +147,11 @@ fun prove_model_axioms fp_res' mrsbnf' (models : (Proof.context -> tactic) eta_m
 
         val subst = MRBNF_Def.lives_of_mrbnf mrbnf ~~ MRBNF_Def.lives'_of_mrbnf mrbnf;
 
-        val eta_natural_goal = fold_rev (curry Logic.mk_implies) f_prems (mk_Trueprop_eq (
+        val eta_natural_goal = fold_rev Logic.all fs (fold_rev (curry Logic.mk_implies) f_prems (mk_Trueprop_eq (
           HOLogic.mk_comp (Term.list_comb (MRBNF_Def.map_of_mrbnf mrbnf, fs), eta),
           HOLogic.mk_comp (Term.subst_atomic_types subst eta, the (List.find (curry (op=) (domain_type (fastype_of eta)) o domain_type o fastype_of) fs)
-        )));
-        val eta_natural = prove fs eta_natural_goal (#eta_natural tacs);
+        ))));
+        val eta_natural = prove [] eta_natural_goal (#eta_natural tacs);
 
         val g_prems = flat (
           BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv (BMV_Monad_Def.leader_of_bmv_monad bmv) gs rhos
@@ -156,7 +160,7 @@ fun prove_model_axioms fp_res' mrsbnf' (models : (Proof.context -> tactic) eta_m
           BMV_Monad_Def.leader BMV_Monad_Def.lives_of_bmv_monad bmv
         );
         
-        val eta_Sb_goal = fold_rev (curry Logic.mk_implies) g_prems (Logic.mk_implies (
+        val eta_Sb_goal = fold_rev Logic.all (gs @ rhos @ live_fs @ [a, x]) (fold_rev (curry Logic.mk_implies) g_prems (Logic.mk_implies (
           mk_Trueprop_eq (
             Term.subst_atomic_types subst (Term.list_comb (BMV_Monad_Def.leader BMV_Monad_Def.Sbs_of_bmv_monad bmv, gs @ rhos))
               $ the_default I (Option.map (fn Map => fn t => Term.list_comb (Map, live_fs) $ t)
@@ -165,8 +169,8 @@ fun prove_model_axioms fp_res' mrsbnf' (models : (Proof.context -> tactic) eta_m
             Term.subst_atomic_types subst eta $ a
           ),
           HOLogic.mk_Trueprop (mk_ex (dest_Free a) (HOLogic.mk_eq (x, eta $ a)))
-        ))
-        val eta_Sb = prove (gs @ rhos @ live_fs @ [x, a]) eta_Sb_goal (#eta_Sb tacs);
+        )));
+        val eta_Sb = prove [] eta_Sb_goal (#eta_Sb tacs);
       in ({
         eta = eta,
         Inj = Inj,
@@ -282,7 +286,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
     val quot = hd (#quotient_fps fp_res);
     val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf;
 
-    val frees = MRBNF_Def.frees_of_mrbnf (hd (#pre_mrbnfs fp_res));
+    val frees = map (HOLogic.dest_setT o body_type o fastype_of) (#FVarss (hd (#quotient_fps fp_res)));
     val defs = map (fn a => Option.map (fn (eta, def) => {
       aT = #aT def,
       eta = #eta eta,
@@ -702,7 +706,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
       )), []))
     )], []) lthy;
 
-    val sugars = map_filter (fn mrbnf => MRBNF_Sugar.binder_sugar_of lthy
+    val sugars = map_filter (fn mrbnf => Binder_Sugar.binder_sugar_of lthy
       (fst (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)))
     ) (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
 
@@ -785,9 +789,9 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
         rtac ctxt @{thm trans[OF comp_apply]},
         EqSubst.eqsubst_tac ctxt [0] (map #map_permute sugars),
         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
-        resolve_tac ctxt (map (fn thm => Local_Defs.unfold ctxt @{thms comp_def} (thm RS fun_cong))
+        (*resolve_tac ctxt (map (fn thm => Local_Defs.unfold ctxt @{thms comp_def} (thm RS fun_cong))
           (maps (the_default [] o #IImsupp_permute_commutes) sugars)
-        ),
+        ),*)
         REPEAT_DETERM o assume_tac ctxt,
         REPEAT_DETERM o EVERY' [
           etac ctxt @{thm Int_subset_empty2},
@@ -1194,7 +1198,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
         rtac ctxt @{thm UN_cong},
         Goal.assume_rule_tac ctxt,
         REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] (maps (the_default []) IImsupp_Diffs @ maps (the_default [] o #IImsupp_Diffs) sugars),
+          EqSubst.eqsubst_tac ctxt [0] (maps (the_default []) IImsupp_Diffs (* @ maps (the_default [] o #IImsupp_Diffs) sugars *)),
           REPEAT_DETERM o (assume_tac ctxt ORELSE' EVERY' [
             etac ctxt @{thm Int_subset_empty2},
             rtac ctxt @{thm subsetI},
@@ -1719,6 +1723,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor tvsubs
       isInjs = map_filter (Option.map #isInj) defs,
       tvsubst_Injs = map_filter I tvsubst_Injs,
       tvsubst_not_isInj = tvsubst_not_isInj,
+      IImsupp_Diffs = flat (map_filter I IImsupp_Diffs),
+      IImsupp_permute_commutes = map_filter I IImsupp_imsupp_permute_commutes,
       mrsbnf = rec_mrsbnf
     }: tvsubst_result;
 

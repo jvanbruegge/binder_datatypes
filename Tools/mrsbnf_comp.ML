@@ -87,7 +87,9 @@ fun seal_mrsbnf qualify (bmv_unfolds, mrbnf_unfolds) name Xs tys mrsbnf info_opt
           (BMV_Monad_Def.leader BMV_Monad_Def.lives'_of_bmv_monad bmv);
       in BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism subst) bmv end;
 
-    val ((bmv, _, bmv_defs, _), lthy) = BMV_Monad_Def.seal_bmv_monad qualify bmv_unfolds name [] bmv (SOME info) lthy;
+    val ((bmv, _, bmv_defs, _), lthy) = BMV_Monad_Def.seal_bmv_monad qualify (
+      bmv_unfolds @ #map_unfolds mrbnf_unfolds @ flat (#set_unfoldss mrbnf_unfolds)
+    ) name [] bmv (SOME info) lthy;
 
     val mrbnfs = map_index (fn (i, x) => if i = BMV_Monad_Def.leader_of_bmv_monad bmv then mrbnf else x)
       (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf);
@@ -559,7 +561,7 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_De
           ) oAs)
           val Ts' = map (nth Ts) (subtract (op =) (oDs_pos @ ofree_bound_pos) (0 upto length Ts - 1));
 
-          val ((inners, (Dss, Ass)), (((mrsbnf_cache, bmv_unfolds:thm list), accum), lthy)) =
+          val ((inners, (Dss, Ass)), (((mrsbnf_cache, bmv_unfolds), accum), lthy)) =
             apfst (apsnd split_list o split_list) (@{fold_map 2}
               (fn i => mrsbnf_of_typ optim const_policy (qualify i) Ds0 var_types flatten_tyargs)
               (1 upto length Ts') Ts' (((mrsbnf_cache, bmv_unfolds), accum), lthy));

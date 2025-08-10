@@ -12,6 +12,8 @@ signature MRSBNF_DEF = sig
   type mrsbnf_facts = {
     SSupp_map_subset: thm option list,
     SSupp_map_bound: thm option list,
+    SSupp_naturals: thm list,
+    IImsupp_naturals: thm list list,
     map_Inj: thm option list,
     map_Sb_strong: thm,
     Map_map: thm option,
@@ -84,6 +86,8 @@ in {
 type mrsbnf_facts = {
   SSupp_map_subset: thm option list,
   SSupp_map_bound: thm option list,
+  SSupp_naturals: thm list,
+  IImsupp_naturals: thm list list,
   map_Inj: thm option list,
   map_Sb_strong: thm,
   Map_map: thm option,
@@ -91,10 +95,13 @@ type mrsbnf_facts = {
 }
 
 fun morph_mrsbnf_facts phi ({
-    SSupp_map_subset, SSupp_map_bound, map_Inj, map_Sb_strong, Map_map, set_Injs
+  SSupp_map_subset, SSupp_map_bound, map_Inj, map_Sb_strong, Map_map, set_Injs, SSupp_naturals,
+  IImsupp_naturals
 }: mrsbnf_facts) = {
   SSupp_map_subset = map (Option.map (Morphism.thm phi)) SSupp_map_subset,
   SSupp_map_bound = map (Option.map (Morphism.thm phi)) SSupp_map_bound,
+  SSupp_naturals = map (Morphism.thm phi) SSupp_naturals,
+  IImsupp_naturals = map (map (Morphism.thm phi)) IImsupp_naturals,
   map_Inj = map (Option.map (Morphism.thm phi)) map_Inj,
   map_Sb_strong = Morphism.thm phi map_Sb_strong,
   Map_map = Option.map (Morphism.thm phi) Map_map,
@@ -158,6 +165,8 @@ fun note_mrsbnf_thms fact_policy qualify name_opt mrsbnf lthy =
          ("map_Sb", maps (the_default [] o Option.map single o #map_Sb) axioms, []),
          ("SSupp_map_subset", maps (map_filter I o #SSupp_map_subset) facts, []),
          ("SSupp_map_bound", maps (map_filter I o #SSupp_map_bound) facts, []),
+         ("SSupp_natural", maps #SSupp_naturals facts, []),
+         ("IImsupp_natural", flat (maps #IImsupp_naturals facts), []),
          ("map_Inj_raw", maps (the_default [] o #map_Injs) axioms, []),
          ("map_Inj", maps (map_filter I o #map_Inj) facts, []),
          ("map_Sb_strong", map #map_Sb_strong facts, []),
@@ -540,6 +549,8 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
       in {
         SSupp_map_subset = SSupp_map_subset,
         SSupp_map_bound = SSupp_map_bound,
+        SSupp_naturals = SSupp_naturals,
+        IImsupp_naturals = IImsupp_naturals,
         IImsupp_map_bound = IImsupp_map_bound,
         IImsupp_map_bound' = IImsupp_map_bound',
         map_Inj = map_Inj,
@@ -823,6 +834,8 @@ fun mk_mrsbnf fact_policy qualify (deads, As, As', Bs, Fs, fs) name_opt mrbnfs b
       in {
         SSupp_map_subset = #SSupp_map_subset facts,
         SSupp_map_bound = #SSupp_map_bound facts,
+        SSupp_naturals = #SSupp_naturals facts,
+        IImsupp_naturals = #IImsupp_naturals facts,
         map_Inj = #map_Inj facts,
         map_Sb_strong = map_Sb_strong,
         Map_map = #Map_map facts,

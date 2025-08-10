@@ -455,6 +455,10 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     rotate_tac ~1
                   ],
                   SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
+                  REPEAT_DETERM o CHANGED o EVERY' [
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms conj_assoc}),
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms conj_assoc[symmetric]})
+                  ],
                   REPEAT_DETERM o EVERY' [
                     etac ctxt conjE,
                     rotate_tac ~2
@@ -463,9 +467,9 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
                   DETERM o resolve_tac ctxt (IH :: repeat_mp IH),
                   IF_UNSOLVED o EVERY' [
-                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
+                    K (Local_Defs.unfold0_tac ctxt @{thms notin_Un Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
                     EVERY' (map (fn inner_prem => EVERY' (map (fn tac => DETERM o tac) [
-                      TRY o rtac ctxt conjI,
+                      REPEAT_DETERM o rtac ctxt conjI,
                       let val x = length (fst (Logic.strip_horn (Thm.prop_of inner_prem)));
                       in REPEAT_DETERM_N x o rtac ctxt @{thm induct_impliesI} end,
                       REPEAT_DETERM o rtac ctxt @{thm induct_forallI},

@@ -1096,7 +1096,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val (lthy, tvsubst_opt) = if not (null (map_filter I eta_models)) then
       let
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
-          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#tvsubst_b spec) eta_models (#QREC_fixed recursor_result) lthy;
+          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#tvsubst_b spec) eta_models (#QREC_fixed recursor_result) lthy;
 
         val lthy = MRSBNF_Def.register_mrsbnf (fst (dest_Type qT)) (#mrsbnf tvsubst_res) lthy;
         val (_, lthy) = MRSBNF_Def.note_mrsbnf_thms (K BNF_Def.Note_Some)
@@ -1201,6 +1201,7 @@ fun create_binder_datatype (spec : spec) lthy =
       subst_simps = Option.map snd tvsubst_opt,
       IImsupp_Diffs = Option.map (#IImsupp_Diffs o fst) tvsubst_opt,
       IImsupp_permute_commutes = Option.map (#IImsupp_permute_commutes o fst) tvsubst_opt,
+      tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
       bsetss = bset_optss,
       bset_bounds = [],
       mrbnf = mrbnf,
@@ -1223,8 +1224,10 @@ fun create_binder_datatype (spec : spec) lthy =
         ("permute", permute_simps, equiv),
         ("distinct", distinct, simp),
         ("inject", injects, simp)
-      ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)
-      ) |> (map (fn (thmN, thms, attrs) =>
+      ] @ the_default [] (Option.map (fn (res, tvsubst_simps) => [
+        ("subst", tvsubst_simps, simp),
+        ("tvsubst_permute", [#tvsubst_permute res], [])
+      ]) tvsubst_opt)) |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])
       ))
     val (_, lthy) = Local_Theory.notes notes lthy

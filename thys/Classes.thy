@@ -93,19 +93,6 @@ local_setup \<open>
 #> Var_Classes.register_class_for_bound @{class covar} @{term "cardSuc natLeq"}
 \<close>
 
-typedecl bdT
-axiomatization bd :: "(bdT \<times> bdT) set" where
-  Cinf: "Cinfinite bd"
-  and regular: "regularCard bd"
-
-local_setup \<open>fn lthy =>
-let
-  val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_bd} @{term bd} lthy;
-
-  val lthy = Var_Classes.prove_class_theorems true true class @{thm Cinf} @{thm regular} lthy;
-in lthy end
-\<close>
-
 lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
    (\<And>a. Vrs (Inj a) = {a}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
   apply (unfold IImsupp_def SSupp_Inj_comp comp_apply)
@@ -116,5 +103,8 @@ lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Ri
 lemma IImsupp_Inj_comp_bound2: "(\<And>a. Vrs (Inj a) = {}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
   by (auto simp: IImsupp_def)
 lemmas IImsupp_Inj_comp_bound = IImsupp_Inj_comp_bound1 IImsupp_Inj_comp_bound2
+
+lemma SSupp_fun_upd_bound_UNIV[simp]: "|SSupp Inj (f(x := t))| <o |UNIV::'a::var set| \<longleftrightarrow> |SSupp Inj f| <o |UNIV::'a set|"
+  by (simp add: UNIV_cinfinite)
 
 end

@@ -31,6 +31,14 @@ lemma SSupp_Inj_bound[simp]: "|SSupp Inj Inj| <o |UNIV::'a set|"
 lemma SSupp_Inj_bound'[simp]: "Cinfinite r \<Longrightarrow> |SSupp Inj Inj| <o r"
   by (simp add: Cinfinite_gt_empty)
 
+lemma SSupp_fun_upd_subset:
+  "SSupp Inj (f(x := t)) \<subseteq> insert x (SSupp Inj f)"
+  by (simp add: SSupp_def subset_eq)
+
+lemma SSupp_fun_upd_bound[simp]: "Cinfinite r \<Longrightarrow> |SSupp Inj (f(x := t))| <o r \<longleftrightarrow> |SSupp Inj f| <o r"
+  using SSupp_fun_upd_subset card_of_subset_bound
+  by (metis fun_upd_idem_iff fun_upd_upd insert_bound)
+
 lemma IImsupp_Inj_bound[simp]: "|IImsupp Inj FVars Inj| <o |UNIV::'a set|"
   by simp
 

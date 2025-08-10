@@ -2178,7 +2178,7 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
       frees = [leader frees_of_bmv_monad bmv],
       lives = [leader lives_of_bmv_monad bmv],
       lives' = [leader lives'_of_bmv_monad bmv],
-      deads = [leader deads_of_bmv_monad bmv],
+      deads = [map TFree (rev (fold Term.add_tfreesT (leader deads_of_bmv_monad bmv) []))],
       consts = consts,
       leader = 0,
       params = [Option.map (fn Supps => {

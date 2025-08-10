@@ -220,7 +220,8 @@ using SSupp_tvsubst_bound[OF assms] unfolding o_def .
 lemma IImsupp_Var: "IImsupp (Var(x := e)) \<subseteq> FFVars e \<union> {x}"
   unfolding IImsupp_def by auto
 
-lemma IImsupp_Var': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> IImsupp (Var(x := e))"
+lemma IImsupp_Var': "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> IImsupp' Var FFVars (Var(x := e))"
+  "y \<noteq> x \<and> y \<notin> FFVars e \<Longrightarrow> y \<notin> SSupp (Var(x := e))"
 using IImsupp_Var by auto
 
 lemma IImsupp_rrename_su:

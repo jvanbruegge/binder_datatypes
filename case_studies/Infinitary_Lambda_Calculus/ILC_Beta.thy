@@ -25,7 +25,7 @@ inductive istep :: "itrm \<Rightarrow> itrm \<Rightarrow> bool" where
 | Xi: "istep e e' \<Longrightarrow> istep (iLam xs e) (iLam xs e')"
 
 lemmas [equiv] =
-  iterm.tvsubst_permutes[THEN fun_cong, unfolded comp_def]
+  iterm.tvsubst_permute[THEN fun_cong, unfolded comp_def]
   imkSubst_smap_irrename[symmetric, THEN fun_cong, unfolded comp_def]
 
 binder_inductive istep
@@ -98,9 +98,9 @@ thm istep.equiv
 
 lemma SSupp_If_small[simp]: "|A :: ivar set| <o |UNIV :: ivar set| \<Longrightarrow>
   |ILC.SSupp (\<lambda>x. if x \<in> A then f x else iVar x)| <o |UNIV :: ivar set|"
-  by (smt (verit, del_insts) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq subsetI)
+  by (smt (verit, del_insts) SSupp_def card_of_subset_bound mem_Collect_eq subsetI)
 
 lemma istep_FFVars: "istep e e' \<Longrightarrow> ILC.FFVars e' \<subseteq> ILC.FFVars e"
-  by(induct rule: istep.induct) (auto simp: imkSubst_def card_dsset_ivar)
+  by (induct rule: istep.induct) (auto simp: imkSubst_def card_dsset_ivar split: if_splits)
 
 end

@@ -1169,6 +1169,7 @@ fun create_binder_datatype (spec : spec) lthy =
                   @ map #Sb_Inj (BMV_Monad_Def.axioms_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf))
                 )),
                 K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
+                  @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
                   @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
                     #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
                 ])),

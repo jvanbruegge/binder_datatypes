@@ -1260,7 +1260,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
       (#FVarss quot) Injs [] some_rhos SSupp_tvsubst_subsets
       FVars_tvsubsts Vrs_Injs' lthy;
 
-    val IImsupp_Sb_boundss = BMV_Monad_Tactics.mk_IImsupp_Sb_boundss (#T quot)
+    val IImsupp_Sb_boundss = BMV_Monad_Tactics.mk_IImsupp_Sb_boundss (hd (MRBNF_Def.class_of_mrbnf mrbnf)) (#T quot)
       (fst tvsubst) Injs (#FVarss quot) [] some_rhos rho_prems' IImsupp_Sb_subsetss
       (#card_of_FVars_bounds quot @ maps #Vrs_bds (BMV_Monad_Def.axioms_of_bmv_monad bmv)) lthy;
 

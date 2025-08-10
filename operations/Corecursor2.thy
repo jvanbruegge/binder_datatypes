@@ -4139,10 +4139,15 @@ lemmas COREC_FFVarsD = COREC_FFVarsD1 COREC_FFVarsD2
 end
 
 ML \<open>
-val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Corecursor2.T1")
+val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Corecursor2.T1");
 \<close>
 
 ML_file \<open>../Tools/mrbnf_corecursor.ML\<close>
+
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
 local_setup \<open>fn lthy =>
 let
   val lthy = MRBNF_Corecursor.create_binding_corecursor I fp_res lthy;

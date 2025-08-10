@@ -2329,8 +2329,18 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
       }]
     } : (Proof.context -> tactic) bmv_monad_model;
 
+    fun set_unfolds thms (BMV {
+      ops, var_class, leader: int, frees, lives, lives', deads, consts, params, bd_infinite_regular_card_order,
+      axioms, facts, ...
+    }) = BMV {
+      ops = ops, var_class = var_class, leader = leader, frees = frees, lives = lives, lives' = lives',
+      deads = deads, consts = consts, params = params, bd_infinite_regular_card_order = bd_infinite_regular_card_order,
+      axioms = axioms, facts = facts, unfolds = thms
+    }
+
     val ((bmv, _), lthy) = bmv_monad_def BNF_Def.Hardly_Inline (K BNF_Def.Note_Some) qualify NONE model lthy;
-    val new_unfolds = map (Local_Defs.unfold0 lthy unfolds) defs;
+    val new_unfolds = map (Local_Defs.unfold lthy unfolds) defs;
+    val bmv = set_unfolds new_unfolds bmv;
 
   in ((bmv, new_unfolds, defs, (T_name, info)), lthy) end
 

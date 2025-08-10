@@ -1180,7 +1180,7 @@ fun create_binder_datatype co (spec : spec) lthy =
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
         val recursor_result = #recursor_result (the vvsubst_res_opt);
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
-          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#tvsubst_b spec) eta_models (#QREC_fixed recursor_result) lthy;
+          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#tvsubst_b spec) eta_models (#QREC_fixed recursor_result) lthy;
 
         val lthy = MRSBNF_Def.register_mrsbnf (fst (dest_Type qT)) (#mrsbnf tvsubst_res) lthy;
         val (_, lthy) = MRSBNF_Def.note_mrsbnf_thms (K BNF_Def.Note_Some)
@@ -1277,6 +1277,7 @@ fun create_binder_datatype co (spec : spec) lthy =
             by (auto simp: IImsupp_def)}]
       )
     ));*)
+<<<<<<< HEAD
 
     val IImsupp_permute_commutes = Option.map (fn (res, _) => unfold_tvsubst res (#IImsupp_permute_commutes res)) tvsubst_opt;
     val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst res (#IImsupp_Diffs res)) tvsubst_opt;
@@ -1293,6 +1294,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           subst_simps = NONE,
           IImsupp_permute_commutes = IImsupp_permute_commutes,
           IImsupp_Diffs = IImsupp_Diffs,
+          tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
           bsetss = [],
           bset_bounds = [],
           mrbnf = mrbnf,
@@ -1312,6 +1314,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           subst_simps = Option.map snd tvsubst_opt,
           IImsupp_permute_commutes = IImsupp_permute_commutes,
           IImsupp_Diffs = IImsupp_Diffs,
+          tvsubst_permute = Option.map (#tvsubst_permute o fst) tvsubst_opt,
           bsetss = bset_optss,
           bset_bounds = [],
           mrbnf = mrbnf,
@@ -1335,8 +1338,10 @@ fun create_binder_datatype co (spec : spec) lthy =
         ("permute", permute_simps, equiv),
         ("distinct", distinct, simp),
         ("inject", injects, simp)
-      ] @ the_default [] (Option.map (fn (_, tvsubst_simps) => [("subst", tvsubst_simps, simp)]) tvsubst_opt)
-      )
+      ] @ the_default [] (Option.map (fn (res, tvsubst_simps) => [
+        ("subst", tvsubst_simps, simp),
+        ("tvsubst_permute", [#tvsubst_permute res], [])
+      ]) tvsubst_opt))
         |> filter_out (null o #2)
         |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])

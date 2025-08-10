@@ -10,7 +10,7 @@ begin
 (* DATATYPE DECLARTION  *)
 
 declare [[mrbnf_internals]]
-binder_datatype 'a "term" =
+binder_datatype (FFVars: 'a) "term" =
   Var 'a
 | App "'a term" "'a term"
 | Lam x::'a t::"'a term" binds x in t
@@ -30,18 +30,14 @@ apply standard
 
 type_synonym trm = "var term"
 
+(* Some lighter notations: *)
+abbreviation "IImsupp' \<equiv> IImsupp"
+abbreviation "SSupp' \<equiv> SSupp"
 hide_const IImsupp SSupp
 
-(* Some lighter notations: *)
-abbreviation "VVr \<equiv> tvVVr_tvsubst"
-lemmas VVr_def = tvVVr_tvsubst_def
-abbreviation "isVVr \<equiv> tvisVVr_tvsubst"
-lemmas isVVr_def = tvisVVr_tvsubst_def
-abbreviation "IImsupp \<equiv> IImsupp_term"
-lemmas IImsupp_def = IImsupp_term_def
-abbreviation "SSupp \<equiv> SSupp_term"
-lemmas SSupp_def = SSupp_term_def
-abbreviation "FFVars \<equiv> FVars_term"
+abbreviation "SSupp \<equiv> SSupp' Var"
+abbreviation "IImsupp f \<equiv> SSupp f \<union> IImsupp' Var FFVars f"
+lemmas IImsupp_def = SSupp_def IImsupp_def
 
 abbreviation "rrename \<equiv> permute_term"
 (* *)

@@ -86,7 +86,7 @@ abbreviation "fvars \<equiv> fns"
 lemma bns_bound: "|bns \<alpha>| <o |UNIV::'a::var set|"
   by (cases \<alpha>) (auto simp: emp_bound infinite_UNIV)
 
-local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
+local_setup \<open>Binder_Sugar.register_binder_sugar "Commitment.commit" {
   ctors = [
     (@{term Finp}, @{thm Finp_def}),
     (@{term Fout}, @{thm Fout_def}),
@@ -114,7 +114,8 @@ local_setup \<open>MRBNF_Sugar.register_binder_sugar "Commitment.commit" {
   set_simpss = [],
   subst_simps = NONE,
   IImsupp_Diffs = NONE,
-  IImsupp_permute_commutes = NONE
+  IImsupp_permute_commutes = NONE,
+  tvsubst_permute = NONE
 }\<close>
 
 abbreviation "swapa act x y \<equiv> map_action (id(x:=y,y:=x)) act"

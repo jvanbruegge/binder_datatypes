@@ -475,12 +475,12 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                       REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
                       rtac ctxt inner_prem ORELSE'
                       EVERY' [
-                        Method.insert_tac ctxt inner_prems,
+                        Method.insert_tac ctxt [inner_prem],
                         let
                           val simpset = Simplifier.add_cong @{thm imp_cong} (
                             (BNF_Util.ss_only @{thms
                               split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
-                              disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single]
+                              disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single] conj_assoc
                             } ctxt)
                             addsimprocs [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
                           )

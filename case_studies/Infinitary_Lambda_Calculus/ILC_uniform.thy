@@ -163,7 +163,9 @@ next
   then show ?case using iLam apply(subst iterm.subst)
     subgoal using s by auto
     subgoal using s by auto
+    subgoal using s by auto
     apply(subst iterm.subst)
+    subgoal using s by auto
     subgoal using s by auto
     subgoal using s by auto
     subgoal apply(rule reneqv.iLam) by auto .

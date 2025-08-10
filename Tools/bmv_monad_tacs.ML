@@ -131,7 +131,7 @@ fun mk_IImsupp_Sb_subsetss T ops Sb SSupp_prems RVrss Vrss Vrs Injs hs rhos SSup
     ]) end
   ) Vrs)) Injs;
 
-fun mk_IImsupp_Sb_boundss T Sb Injs Vrs hs rhos SSupp_prems IImsupp_Sb_subsetss Vrs_bds lthy =
+fun mk_IImsupp_Sb_boundss var_class T Sb Injs Vrs hs rhos SSupp_prems IImsupp_Sb_subsetss Vrs_bds lthy =
   map_filter (fn Inj =>
     if body_type (fastype_of Inj) <> T then NONE else SOME (map (fn Vr =>
     let
@@ -156,8 +156,9 @@ fun mk_IImsupp_Sb_boundss T Sb Injs Vrs hs rhos SSupp_prems IImsupp_Sb_subsetss 
       rtac ctxt @{thm card_of_subset_bound},
       resolve_tac ctxt (flat IImsupp_Sb_subsetss),
       REPEAT_DETERM o FIRST' [
-        resolve_tac ctxt (prems @ map (fn thm => thm RS @{thm ordLess_ordLeq_trans}) Vrs_bds @
-          @{thms infinite_class.Un_bound var_class.UN_bound imsupp_supp_bound[THEN iffD2] infinite_class.infinite_UNIV var_class.large'}
+        resolve_tac ctxt (prems @ map (fn thm => thm RS @{thm ordLess_ordLeq_trans}) Vrs_bds
+          @ [Var_Classes.get_class_assumption var_class "large'" lthy] @
+          @{thms infinite_class.Un_bound var_class.UN_bound imsupp_supp_bound[THEN iffD2] infinite_class.infinite_UNIV}
         ),
         CHANGED o SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms IImsupp_def})
       ]

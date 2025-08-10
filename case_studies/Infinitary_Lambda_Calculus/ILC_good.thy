@@ -304,6 +304,7 @@ using r proof (binder_induction e avoiding: "ILC.IImsupp f" rule: strong_induct_
   show ?case using iLam apply(subst iterm.subst)
       subgoal using s by blast
       subgoal using s by auto 
+      subgoal using s by auto
       subgoal apply(rule good.iLam) by auto .
 next
   case (iApp e1 es2)

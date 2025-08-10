@@ -76,6 +76,7 @@ using r proof (binder_induction e avoiding: "ILC.IImsupp f" rule: affine.strong_
   show ?case using iLam apply(subst iterm.subst)
       subgoal using f by auto
       subgoal by auto
+      subgoal by auto
       subgoal apply(rule affine.iLam) by auto .
 next
   case (iApp e1 es2)

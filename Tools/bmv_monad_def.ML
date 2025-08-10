@@ -964,7 +964,7 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
           Sb SSupp_prems (#RVrs consts) (#Vrs consts) (RVrs @ Vrs) Injs hs rhos SSupp_Sb_subsets
           (#Vrs_Sbs axioms) Vrs_Injs' lthy;
 
-        val IImsupp_Sb_boundss = BMV_Monad_Tactics.mk_IImsupp_Sb_boundss T Sb Injs (RVrs @ Vrs)
+        val IImsupp_Sb_boundss = BMV_Monad_Tactics.mk_IImsupp_Sb_boundss (#var_class model) T Sb Injs (RVrs @ Vrs)
           hs rhos SSupp_prems IImsupp_Sb_subsetss (maps #Vrs_bds axioms') lthy;
       in {
         SSupp_Map_subsets = SSupp_Map_subsets,

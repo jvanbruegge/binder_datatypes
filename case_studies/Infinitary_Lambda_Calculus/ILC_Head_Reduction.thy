@@ -17,7 +17,7 @@ unfolding hred_def apply(elim exE) subgoal for xs e1 es2
   apply(subst irrename_eq_itvsubst_iVar'[of _ e1]) unfolding isPerm_def apply auto
   apply(subst itvsubst_comp) 
     subgoal by (metis SSupp_imkSubst imkSubst_smap_irrename_inv)
-    subgoal by (smt (verit, best) SSupp_def VVr_eq_Var card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
+    subgoal by (smt (verit, best) SSupp_def card_of_subset_bound mem_Collect_eq not_in_supp_alt o_apply subsetI) 
     subgoal apply(rule itvsubst_cong)
       subgoal using SSupp_irrename_bound by blast
       subgoal using card_SSupp_itvsubst_imkSubst_irrename_inv isPerm_def by auto

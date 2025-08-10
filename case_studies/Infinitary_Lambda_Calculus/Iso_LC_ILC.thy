@@ -73,8 +73,16 @@ next
   then show ?case apply(subst term.subst(3))
       subgoal by auto
       subgoal using IImsupp_Var by fastforce
+      subgoal using IImsupp_Var by fastforce
       subgoal unfolding tr_Lam apply (subst iterm.subst(3))
         subgoal by auto
+        subgoal using uniformS_touchedSuper_IImsupp_imkSubst 
+        subgoal apply(subgoal_tac "superOf y \<notin> touchedSuper (ILC.IImsupp (imkSubst (superOf x) (smap (tr e) ps)))")
+          subgoal unfolding touchedSuper_def by auto
+          subgoal  apply(rule uniformS_touchedSuper_IImsupp_imkSubst'[where e = "tr e (shd ps)"]) 
+            subgoal by auto   subgoal by auto
+            subgoal apply auto  by (meson image_eqI shd_sset)
+            subgoal by simp  subgoal by (metis FFVars_tr UnI2 image_eqI subOf_superOf subset_eq) . . .
         subgoal using uniformS_touchedSuper_IImsupp_imkSubst 
         subgoal apply(subgoal_tac "superOf y \<notin> touchedSuper (ILC.IImsupp (imkSubst (superOf x) (smap (tr e) ps)))")
           subgoal unfolding touchedSuper_def by auto
@@ -195,12 +203,20 @@ proof-
     then show ?case apply(subst tr'_iLam)
       apply auto apply(subst iterm.subst(3))
         subgoal by auto 
-        subgoal apply(rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
+        subgoal apply (rule Int_subset_empty2[OF _ Un_upper1])
+            apply (rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
+          using shd_sset super_touchedSuper_dsset by fastforce+
+        subgoal apply (rule Int_subset_empty2[OF _ Un_upper2])
+            apply (rule uniformS_touchedSuper_IImsupp_imkSubst''[where e = "shd ts"])
           using shd_sset super_touchedSuper_dsset by fastforce+
         subgoal apply(subst term.subst(3))
-          subgoal by auto subgoal apply(rule IImsupp_Var') 
-          apply simp by (metis (no_types, lifting) FFVars_tr' Int_Un_emptyI1 
-           Int_Un_emptyI2 Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
+          subgoal by auto subgoal apply (rule IImsupp_Var')
+          apply simp by (metis (no_types, lifting) FFVars_tr' 
+           Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
+           superOf_subOf super_touchedSuper_dsset touchedSuper_emp uniformS_good)  
+          subgoal apply (rule IImsupp_Var')
+          apply simp by (metis (no_types, lifting) FFVars_tr'
+           Int_absorb UN_I disjoint_iff empty_not_insert shd_sset 
            superOf_subOf super_touchedSuper_dsset touchedSuper_emp uniformS_good)      
           subgoal apply(subst tr'_iLam) 
             subgoal by auto

@@ -270,16 +270,35 @@ mrbnf "('tv :: var, 'v) prepat"
         done
     next
       case (PPRec X)
-      then show ?case 
-        apply (cases Q)
-         apply (auto simp add: lfset.rel_map)
-        apply (auto simp add: lfset_in_rel lfset.set_map)
-        sorry
+      then show ?case
+      proof (cases Q)
+        case Q: (PPRec Y)
+        with PPRec(3) obtain Z where Z: "values Z \<subseteq> {(x, y). rel_prepat R (vvsubst_prepat f id x) y}"
+          "X = map_lfset id fst Z" "Y = map_lfset id snd Z"
+          by (auto simp add: lfset.rel_map lfset_in_rel[of _ _ X Y] id_def[symmetric])
+        define pick where "pick = (\<lambda>(P, Q). SOME z. PPVars z \<subseteq> {(x, y). R x y} \<and>
+          vvsubst_prepat id fst z = P \<and> vvsubst_prepat f snd z = Q)"
+        have "PPVars (pick PQ) \<subseteq> {(x, y). R x y} \<and> vvsubst_prepat id fst (pick PQ) = fst PQ \<and>
+          vvsubst_prepat f snd (pick PQ) = snd PQ" if "PQ \<in> values Z" for PQ
+          using that Z(1) PPRec(1)[unfolded Z(2), of "fst PQ" "snd PQ"] PPRec(2)
+          unfolding pick_def split_beta
+          by (intro someI_ex[where P = "\<lambda>z. PPVars z \<subseteq> {xy. R (fst xy) (snd xy)} \<and>
+            vvsubst_prepat id fst z = fst PQ \<and> vvsubst_prepat f snd z = snd PQ"])
+            (auto simp: lfset.set_map id_def[symmetric])
+        with Z Q show ?thesis
+          by (intro exI[of _ "PPRec (map_lfset id pick Z)"])
+            (auto simp: lfset.set_map lfset.map_comp id_def[symmetric] intro!: lfset.map_cong)
+      qed simp
     qed
     subgoal
-      sorry
+      apply (erule exE conjE)
+      subgoal for Z
+        apply (induct Z arbitrary: P Q)
+         apply (auto simp: typ.map_comp lfset.map_comp lfset.rel_map intro!: lfset.rel_refl_strong)
+        done
+      done
+    done
   done
-done
 
 linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" on 'v
   subgoal for R x y

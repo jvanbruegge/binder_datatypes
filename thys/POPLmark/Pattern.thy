@@ -2,7 +2,20 @@ theory Pattern
   imports POPLmark_1B
 begin
 
+setup \<open>Sign.qualified_path false (Binding.name "P")\<close>
+
 datatype ('tv::var, PPVars: 'v) prepat = PPVar 'v "'tv typ" | PPRec "(label, ('tv, 'v) prepat) lfset"
+
+setup \<open>Sign.parent_path\<close>
+
+fun vvsubst_prepat where
+  "vvsubst_prepat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (vvsubst_typ \<tau> T)"
+| "vvsubst_prepat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (vvsubst_prepat \<tau> \<sigma>) X)"
+
+fun PPTVars where
+  "PPTVars (PPVar v T) = FVars_typ T"
+| "PPTVars (PPRec X) = (\<Union>P \<in> values X. PPTVars P)"
+
 
 lemma finite_PPVars: "finite (PPVars P)"
   by (induct P) auto
@@ -195,17 +208,115 @@ lemma ex_nonrep_prepat: "\<exists>x. nonrep_prepat x"
   apply (unfold nonrep_prepat_def)
   by (auto intro!: exI[of _ "PPVar undefined undefined"] simp add: nonrep_prepat_def[symmetric])
 
-
-linearize_mrbnf ('tv::var, 'v) prepat' = "('tv::var, 'v) prepat" on 'v
-  subgoal
-    sorry
-  subgoal
-    apply (subst rel_prepat_alt)
-    apply (rule ex_nonrep_prepat[unfolded nonrep_prepat_def])
-  done
+lemma map_vvsubst_equiv: "map_prepat f x = vvsubst_prepat id f x"
+  apply (induction x)
+   apply (auto simp add: lfset.map_cong_id typ.map_ident)
   done
 
-thm set1_prepat'_def
+mrbnf "('tv :: var, 'v) prepat"
+  map: vvsubst_prepat
+  sets:
+    free: PPTVars
+    live: PPVars
+  bd: "natLeq"
+  rel: "rel_prepat"
+  subgoal
+    apply (rule prepat.map_id0[unfolded map_vvsubst_equiv])
+    done
+          apply (rule ext)
+  subgoal for f f' g g' P
+    apply (induction P)
+     apply (force simp: typ.map_comp lfset.map_comp values_lfin_iff intro!: lfset.map_cong)+
+    done
+  subgoal for P f f' g g'
+    apply (induction P)
+     apply (fastforce simp: values_lfin_iff Bex_def intro!: typ.map_cong lfset.map_cong)+
+    done
+        apply (rule ext)
+  subgoal for f f' P
+    apply (induction P)
+     apply (fastforce simp: typ.set_map lfset.set_map values_lfin_iff)+
+    done
+       apply (rule ext)
+  subgoal for f f' P
+    apply (induction P)
+     apply (fastforce simp: typ.set_map lfset.set_map values_lfin_iff)+
+    done
+  subgoal
+    apply (rule infinite_regular_card_order_natLeq)
+    done
+  subgoal for P
+    apply (induction P)
+       apply (force simp: typ.FVars_bd lfset.set_bd values_lfin_iff intro!: stable_UNION[OF stable_natLeq])+
+    done
+  subgoal for P
+    apply (rule prepat.set_bd)
+    done
+  subgoal for R S
+    apply (simp add: prepat.rel_compp)
+    done
+  subgoal for f R P Q 
+    apply (rule iffI)
+    subgoal 
+    proof (induction P arbitrary: Q)
+      case (PPVar x T)
+      then show ?case 
+        apply (cases Q)
+         apply (auto)
+        subgoal for y
+          apply (rule exI[of _ "PPVar (x, y) T"])
+          apply (auto simp add: typ.map_ident)
+          done
+        done
+    next
+      case (PPRec X)
+      then show ?case 
+        apply (cases Q)
+         apply (auto simp add: lfset.rel_map)
+        apply (auto simp add: lfset_in_rel lfset.set_map)
+        sorry
+    qed
+    subgoal
+      sorry
+  done
+done
+
+linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" on 'v
+  subgoal for R x y
+    apply (unfold P.Pattern.P.prepat.in_rel mem_Collect_eq map_vvsubst_equiv)
+    apply (rule iffI)
+      apply (auto)
+    subgoal for b P Q
+      apply (hypsubst_thin)
+      apply (drule trans)
+      apply (rule sym)
+      apply (assumption)
+      apply (drule trans)
+      apply (rule sym)
+       apply (assumption)
+      apply (erule thin_rl)
+      apply (rotate_tac 2)
+      apply (erule thin_rl)
+      apply (erule thin_rl)
+      proof (induction P arbitrary: Q)
+      case (PPVar x T)
+      then show ?case 
+        apply (cases Q)
+         apply (auto)
+        sorry
+    next
+      case (PPRec X)
+      then show ?case 
+        apply (cases Q)
+         apply (auto simp add: lfset.rel_map)
+        sorry
+    qed
+    done
+  subgoal
+    apply (unfold rel_prepat_alt)
+    apply (rule ex_nonrep_prepat[unfolded nonrep_prepat_def map_vvsubst_equiv])
+    done
+  done
 
 typedef ('tv::var, 'v::var) pat = "{p :: ('tv, 'v) prepat. nonrep_prepat p}"
   by (auto intro!: exI[of _ "PPVar undefined undefined"])
@@ -214,8 +325,6 @@ setup_lifting type_definition_pat
 
 lift_definition PVar :: "'v \<Rightarrow> 'tv typ \<Rightarrow> ('tv::var, 'v::var) pat" is PPVar
   by auto
-
-thm PVar_def
 
 lemma PVar_inject[simp]: "PVar X T = PVar Y U \<longleftrightarrow> X = Y \<and> T = U"
   by transfer auto
@@ -232,19 +341,19 @@ lemma PRec_transfer[transfer_rule]: "rel_fun (rel_lfset id cr_pat) cr_pat (\<lam
   using Rep_pat apply blast
   apply (simp_all add: lfset.map_cong_id)
   done
-
+(*
 fun vvsubst_prepat where
   "vvsubst_prepat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (vvsubst_typ \<tau> T)"
 | "vvsubst_prepat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (vvsubst_prepat \<tau> \<sigma>) X)"
-
+*)
 fun tvsubst_prepat where
   "tvsubst_prepat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (tvsubst_typ \<tau> T)"
 | "tvsubst_prepat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (tvsubst_prepat \<tau> \<sigma>) X)"
-
+(*
 fun PPTVars where
   "PPTVars (PPVar v T) = FVars_typ T"
 | "PPTVars (PPRec X) = (\<Union>P \<in> values X. PPTVars P)"
-
+*)
 lemma finite_PPTVars: "finite (PPTVars P)"
   by (induct P) auto
 

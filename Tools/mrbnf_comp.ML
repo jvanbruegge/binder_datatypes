@@ -218,13 +218,16 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     val (coclass, lthy) = if length cosort = 1 then (cosort, lthy) else
       apfst single (Var_Classes.mk_class_for_bound (mk_name "" cosort) (BNF_LFP_Util.mk_cardSuc bd') lthy);
 
-    val ((((((oDs, iDss), As), As'), Fs), Bs), names_lthy) = lthy
-      |> mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf outer))
-      ||>> fold_map mk_TFrees' (map (map Type.sort_of_atyp o deads_of_mrbnf) inners)
+    val ((((((oDs', iDss'), As), As'), Fs), Bs), names_lthy) = lthy
+      |> mk_TFrees' (map_filter (try Type.sort_of_atyp) (deads_of_mrbnf outer))
+      ||>> fold_map mk_TFrees' (map (map_filter (try Type.sort_of_atyp) o deads_of_mrbnf) inners)
       ||>> mk_TFrees num_ilives
       ||>> mk_TFrees num_ilives
       ||>> mk_TFrees' (replicate (free_of_mrbnf outer) class)
       ||>> mk_TFrees' (replicate (bound_of_mrbnf outer) class);
+
+    val oDs = fst (fold_map (fn x as Type _ => (fn xs => (x, xs)) | _ => fn xs => (hd xs, tl xs)) (deads_of_mrbnf outer) oDs');
+    val iDss = map2 (fn inner => fst o fold_map (fn x as Type _ => (fn xs => (x, xs)) | _ => fn xs => (hd xs, tl xs)) (deads_of_mrbnf inner)) inners iDss';
 
     val iTs = map2 (fn deads => mk_T_of_mrbnf deads As Bs Fs) iDss inners;
     val iTs' = map2 (fn deads => mk_T_of_mrbnf deads As' Bs Fs) iDss inners;
@@ -511,12 +514,14 @@ fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
     fun permute_live xs = permute_like_unique (op =) src_live dest_live xs;
     fun unpermute_live xs = permute_like_unique (op =) dest_live src_live xs;
 
-    val (((((Ds, As), As'), Fs), Bs), _) = lthy
-      |> mk_TFrees' (map Type.sort_of_atyp deads)
+    val (((((Ds', As), As'), Fs), Bs), _) = lthy
+      |> mk_TFrees' (map_filter (try Type.sort_of_atyp) deads)
       ||>> mk_TFrees live
       ||>> mk_TFrees live
       ||>> mk_TFrees' (map Type.sort_of_atyp frees)
       ||>> mk_TFrees' (map Type.sort_of_atyp bounds);
+
+    val Ds = fst (fold_map (fn x as Type _ => (fn xs => (x, xs)) | _ => fn xs => (hd xs, tl xs)) deads Ds');
 
     val T = mk_T_of_mrbnf Ds As Bs Fs mrbnf;
 
@@ -914,12 +919,14 @@ fun raw_lift_mrbnf qualify (n1, n2, n3) mrbnf (accum as (unfold_set, lthy)) =
 
     (* TODO: check 0 < n, m < 0, l < 0 *)
 
-    val (((((Ds, (newAs, As)), (newAs', As')), (newFs, Fs)), (newBs, Bs)), _) = lthy
-      |> mk_TFrees' (map Type.sort_of_atyp deads)
+    val (((((Ds', (newAs, As)), (newAs', As')), (newFs, Fs)), (newBs, Bs)), _) = lthy
+      |> mk_TFrees' (map_filter (try Type.sort_of_atyp) deads)
       ||>> apfst (chop n1) o mk_TFrees (n1 + live)
       ||>> apfst (chop n1) o mk_TFrees (n1 + live)
       ||>> apfst (chop n2) o mk_TFrees' (replicate n2 class @ map Type.sort_of_atyp frees)
       ||>> apfst (chop n3) o mk_TFrees' (replicate n3 class @ map Type.sort_of_atyp bounds);
+
+    val Ds = fst (fold_map (fn x as Type _ => (fn xs => (x, xs)) | _ => fn xs => (hd xs, tl xs)) deads Ds');
 
     val newVars = newAs @ newFs @ newBs
     val newVars' = newAs' @ newFs @ newBs

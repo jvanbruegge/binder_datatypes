@@ -73,7 +73,7 @@ fun create_binder_type (fp : MRBNF_Util.fp_kind) (spec : spec) lthy =
       (Binding.prefix_name pre_name) [] (#vars spec) flatten_tyargs fp_pre_T (((Symtab.empty, []), (MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds)), lthy);
 
     val (mrsbnf, lthy) = case mrsbnf_opt of
-      Inl mrsbnf => (mrsbnf, lthy) | Inr mrbnf => MRSBNF_Def.mrsbnf_of_mrbnf mrbnf lthy
+      Inl mrsbnf => (mrsbnf, lthy) | Inr mrbnf => MRSBNF_Def.mrsbnf_of_mrbnf I mrbnf lthy
 
     val ((mrsbnf, (Ds, absinfo)), lthy) = MRSBNF_Comp.seal_mrsbnf I (bmv_unfolds
       @ BMV_Monad_Def.unfolds_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf), snd accum)
@@ -813,8 +813,9 @@ fun create_binder_datatype (spec : spec) lthy =
 
     fun eta_free_tac ctxt = EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (
-        @{thms map_sum.simps map_prod_simp comp_def sum_set_simps cSup_singleton Union_empty Un_empty_left Un_empty_right}
-        @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+        @{thms map_sum.simps map_prod_simp comp_def sum_set_simps cSup_singleton
+          Union_empty Un_empty_left Un_empty_right UN_single UN_singleton Un_absorb
+        } @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
         @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
         @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
       )),
@@ -826,8 +827,9 @@ fun create_binder_datatype (spec : spec) lthy =
     ];
     fun eta_compl_free_tac ctxt = EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (
-        @{thms comp_def sum.set_map UN_empty2 Un_empty_right Un_empty_left UN_singleton}
-        @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
+        @{thms comp_def sum.set_map UN_empty2 Un_empty_right Un_empty_left UN_singleton
+          Un_absorb
+        } @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
         @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
       )),
       Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
@@ -887,14 +889,14 @@ fun create_binder_datatype (spec : spec) lthy =
       UN_single Int_Un_distrib Int_Un_distrib2 Un_empty notin_Un
     };
     val nvars = length vars;
-    fun mk_map_simps lthy do_permute do_noclash plives' fs mk_supp_bound_opt mk_imsupp_opt mk_extra_prems extra_apply_args mapx tac =
+    fun mk_map_simps lthy do_permute do_noclash leaf_maps plives' fs mk_supp_bound_opt mk_imsupp_opt mk_extra_prems extra_apply_args mapx tac =
       let
         val mapx = Term.list_comb (mapx, fs);
         val (prem_fs, prems) = split_list (@{map_filter 2} (fn var_type => fn f =>
           if var_type = MRBNF_Def.Live_Var then NONE else case mk_supp_bound_opt f of
           NONE => NONE
-          | SOME t => SOME (f, map HOLogic.mk_Trueprop (if var_type = MRBNF_Def.Bound_Var then
-              [mk_bij f, t] else [t]
+          | SOME ts => SOME (f, map HOLogic.mk_Trueprop (if var_type = MRBNF_Def.Bound_Var then
+              (mk_bij f::ts) else ts
             ))
         ) (take (length fs) (MRBNF_Def.var_types_of_mrbnf rec_mrbnf)) fs);
 
@@ -910,6 +912,18 @@ fun create_binder_datatype (spec : spec) lthy =
                   ) (MRBNF_Def.map_of_mrbnf mrbnf);
                 in if forall (fn Const ("Fun.id", _) => true | _ => false) gs then
                   HOLogic.id_const T
+                else if exists (fn t => fst (dest_Type (snd (split_last (binder_types (fastype_of t))))) = fst (dest_Type T)) leaf_maps then
+                  let val subst = the (List.find (fn t => fst (dest_Type (snd (split_last (binder_types (fastype_of t))))) = fst (dest_Type T)) leaf_maps);
+                  in Term.list_comb (subst, gs) end
+                else if not (null leaf_maps) andalso Option.isSome (BMV_Monad_Def.pbmv_monad_of lthy n) then
+                  let
+                    val Sb = hd (BMV_Monad_Def.Sbs_of_bmv_monad (the (BMV_Monad_Def.pbmv_monad_of lthy n)));
+                    val tyenv = Sign.typ_match (Proof_Context.theory_of lthy)
+                      (body_type (fastype_of Sb), body_type (fastype_of inner_map)) Vartab.empty;
+                    val Sb = Envir.subst_term (tyenv, Vartab.empty) Sb;
+                  in Term.list_comb (Sb, map (fn T =>
+                    the (List.find (curry (op=) T o fastype_of) gs)
+                  ) (fst (split_last (binder_types (fastype_of Sb))))) end
                 else if do_permute andalso forall (fn Const ("Fun.id", _) => true | Free _ => true | _ => false) gs then
                   case MRBNF_FP_Def_Sugar.fp_result_of lthy n of
                     NONE => Term.list_comb (inner_map, gs)
@@ -982,16 +996,16 @@ fun create_binder_datatype (spec : spec) lthy =
               | NONE => replicate nvars NONE
             in map2 (fn b => fn FVars => map_filter I (map2 (mk_set (b::recs) FVars) tys xs)) vars FVars end;
           val bound_sets = mk_sets bounds [] NONE;
-          fun get_fs T = filter (fn t' => case mk_imsupp_opt t' T of
-            NONE => false
-            | SOME ts => HOLogic.dest_setT (fastype_of (hd ts)) = T
-          ) fs;
+          fun mk_imsupp_prems t mk T = flat (map_filter (fn f =>
+            let val aT = the_default (fastype_of t) (try HOLogic.dest_setT (fastype_of t))
+            in Option.map (fn prems =>
+              let val prems = filter (curry (op=) aT o HOLogic.dest_setT o fastype_of) prems;
+              in map (HOLogic.mk_Trueprop o mk o pair t) prems end
+            ) (mk_imsupp_opt f T) end
+          ) fs);
           val imsupp_prems = maps (maps (fn t => case Term.subst_atomic_types replace t of
-              (Const (@{const_name Set.insert}, _) $ (t as Free (_, T)) $ _) =>
-                maps (fn f => map (HOLogic.mk_Trueprop o HOLogic.mk_not o HOLogic.mk_mem o pair t) (the (mk_imsupp_opt f T))) (get_fs T)
-              | t =>
-                let val T = HOLogic.dest_setT (fastype_of t);
-                in maps (fn f => map (HOLogic.mk_Trueprop o mk_int_empty o pair t) (the (mk_imsupp_opt f T))) (get_fs T) end
+              (Const (@{const_name Set.insert}, _) $ (t as Free (_, T)) $ _) => mk_imsupp_prems t (HOLogic.mk_not o HOLogic.mk_mem) T
+              | t => mk_imsupp_prems t mk_int_empty (HOLogic.dest_setT (fastype_of t))
           )) bound_sets;
 
           val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (map snd (#binding_rel spec)))) rec_vars;
@@ -1055,7 +1069,7 @@ fun create_binder_datatype (spec : spec) lthy =
           K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
           rtac ctxt refl
         ];
-      in mk_map_simps lthy false true plives' fs (SOME o MRBNF_Util.mk_supp_bound) (fn t => fn _ => SOME [mk_imsupp t]) (K []) [] mapx tac end;
+      in mk_map_simps lthy false true [] plives' fs (SOME o single o MRBNF_Util.mk_supp_bound) (fn t => fn _ => SOME [mk_imsupp t]) (K []) [] mapx tac end;
 
     val nesting_binder_sugars = map_filter (fn mrbnf => Binder_Sugar.binder_sugar_of lthy
       (fst (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)))
@@ -1082,7 +1096,7 @@ fun create_binder_datatype (spec : spec) lthy =
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
           rtac ctxt refl
         ];
-      in mk_map_simps lthy true false plives fs (SOME o MRBNF_Recursor.mk_supp_bound) (K (K NONE))
+      in mk_map_simps lthy true false [] plives fs (SOME o single o MRBNF_Recursor.mk_supp_bound) (K (K NONE))
         (single o HOLogic.mk_Trueprop o mk_bij) bounds mapx tac
       end;
 
@@ -1098,6 +1112,8 @@ fun create_binder_datatype (spec : spec) lthy =
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
           rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#tvsubst_b spec) eta_models (#QREC_fixed recursor_result) lthy;
 
+        val lthy = BMV_Monad_Def.register_pbmv_monad (fst (dest_Type qT))
+          (MRSBNF_Def.bmv_monad_of_mrsbnf (#mrsbnf tvsubst_res)) lthy;
         val lthy = MRSBNF_Def.register_mrsbnf (fst (dest_Type qT)) (#mrsbnf tvsubst_res) lthy;
         val (_, lthy) = MRSBNF_Def.note_mrsbnf_thms (K BNF_Def.Note_Some)
           I NONE (#mrsbnf tvsubst_res) lthy;
@@ -1107,10 +1123,6 @@ fun create_binder_datatype (spec : spec) lthy =
 
         val tvsubst_simps =
           let
-            val (fs, _) = lthy
-              |> mk_Frees "f" (map (fn a => a --> range_type (fastype_of quotient_ctor)) vars);
-            val fs = map_filter I (map2 (fn f => Option.map (fn _ => f)) fs (map (Option.map #eta) eta_models));
-
             val T = range_type (fastype_of quotient_ctor);
             val bmv =
               let
@@ -1120,18 +1132,31 @@ fun create_binder_datatype (spec : spec) lthy =
                 val phi = MRBNF_Util.subst_typ_morphism (map (fn (n, (s, T)) => (TVar (n, s), T)) (Vartab.dest tyenv));
               in BMV_Monad_Def.morph_bmv_monad phi bmv end
             val Injs = hd (BMV_Monad_Def.Injs_of_bmv_monad bmv);
-            
-            fun mk_supp_bound f = if Term.is_TFree (body_type (fastype_of f)) then SOME (MRBNF_Util.mk_supp_bound f) else
-              Option.map (fn Inj => mk_ordLess
-                (mk_card_of (mk_SSupp Inj $ f)) (mk_card_of (HOLogic.mk_UNIV (domain_type (fastype_of f))))
-              ) (List.find (fn Inj => fastype_of Inj = fastype_of f) Injs);
+
+            val (fs, _) = lthy
+              |> mk_Frees "f" (map fastype_of Injs);
+            val Sbs = BMV_Monad_Def.Sbs_of_bmv_monad bmv;
+
+            val small_premss = map (map HOLogic.dest_Trueprop) (
+              BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv 0 [] fs
+            );
+
+            fun mk_supp_bound f = if Term.is_TFree (body_type (fastype_of f)) then SOME [MRBNF_Util.mk_supp_bound f] else
+              List.find (fn xs => Term.exists_subterm (curry (op=) f) (hd xs)) small_premss;
             fun mk_imsupp h _ =
               let
                 val Inj = the (List.find (fn Inj => fastype_of Inj = fastype_of h) Injs);
                 val Vrs = nth (BMV_Monad_Def.Vrs_of_bmv_monad bmv) (
                   find_index (curry (op=) (body_type (fastype_of Inj))) (BMV_Monad_Def.ops_of_bmv_monad bmv)
                 );
-              in SOME ((mk_SSupp Inj $ h) :: map (fn Vrs => mk_IImsupp Inj Vrs $ h) Vrs) end
+                val IImsupps = (mk_SSupp Inj $ h) :: map (fn Vrs => mk_IImsupp Inj Vrs $ h) Vrs;
+              in SOME IImsupps end
+
+            fun collect_bmvs (Type (n, Ts)) = map_filter I [BMV_Monad_Def.pbmv_monad_of lthy n] @ maps collect_bmvs Ts
+              | collect_bmvs _ = []
+            val bmvs = maps (maps collect_bmvs o snd) ctors_tys;
+
+            val bmv_unfolds = maps BMV_Monad_Def.unfolds_of_bmv_monad bmvs;
 
             fun tac ctxt prems = EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (map_filter (Option.map #Inj) eta_models))),
@@ -1170,14 +1195,19 @@ fun create_binder_datatype (spec : spec) lthy =
                 )),
                 K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
                   @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
+                  @ BMV_Monad_Def.unfolds_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf)
+                  @ map (BNF_Def.map_id_of_bnf o snd) bnfs
                   @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
                     #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}
                 ])),
-                K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
+                K (Local_Defs.unfold0_tac ctxt bmv_unfolds),
+                K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
                 rtac ctxt refl
               ]
             ];
-          in mk_map_simps lthy false true plives fs mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac end;
+          in map (Local_Defs.unfold0 lthy bmv_unfolds) (
+            mk_map_simps lthy false true Sbs plives fs mk_supp_bound mk_imsupp (K []) [] (#tvsubst tvsubst_res) tac
+          ) end;
         in (lthy, SOME (tvsubst_res, tvsubst_simps)) end
       else (lthy, NONE);
 

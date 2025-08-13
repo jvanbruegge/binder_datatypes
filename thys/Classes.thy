@@ -93,6 +93,8 @@ local_setup \<open>
 #> Var_Classes.register_class_for_bound @{class covar} @{term "cardSuc natLeq"}
 \<close>
 
+lemmas SSupp_comp_bound_UNIV[simp, intro!] = SSupp_comp_bound[OF conjI[OF var_class.UNIV_cinfinite card_of_Card_order]] 
+
 lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
    (\<And>a. Vrs (Inj a) = {a}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
   apply (unfold IImsupp_def SSupp_Inj_comp comp_apply)
@@ -106,5 +108,10 @@ lemmas IImsupp_Inj_comp_bound = IImsupp_Inj_comp_bound1 IImsupp_Inj_comp_bound2
 
 lemma SSupp_fun_upd_bound_UNIV[simp]: "|SSupp Inj (f(x := t))| <o |UNIV::'a::var set| \<longleftrightarrow> |SSupp Inj f| <o |UNIV::'a set|"
   by (simp add: UNIV_cinfinite)
+
+lemma SSupp_fun_upd_Inj_bound[simp]: "|SSupp Inj (Inj(x := t))| <o |UNIV::'a::var set|"
+  by simp
+lemma IImsupp_fun_upd_Inj_bound[simp, intro!]: "(\<And>x. |Vrs x| <o |UNIV::'a::var set| ) \<Longrightarrow> |IImsupp Inj Vrs (Inj(x := t))| <o |UNIV::'a::var set|"
+  unfolding IImsupp_def by (meson SSupp_fun_upd_Inj_bound UN_bound)
 
 end

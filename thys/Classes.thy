@@ -93,6 +93,9 @@ local_setup \<open>
 #> Var_Classes.register_class_for_bound @{class covar} @{term "cardSuc natLeq"}
 \<close>
 
+lemma insert_bound[simp]: "|insert x A| <o |UNIV::'a::infinite set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
+  using card_of_Un_singl_ordLess_infinite infinite_UNIV by fastforce
+
 lemmas SSupp_comp_bound_UNIV[simp, intro!] = SSupp_comp_bound[OF conjI[OF var_class.UNIV_cinfinite card_of_Card_order]] 
 
 lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>

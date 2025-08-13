@@ -31,7 +31,7 @@ signature MRSBNF_DEF = sig
     -> MRBNF_Def.mrbnf list -> BMV_Monad_Def.bmv_monad -> (Proof.context -> tactic) mrsbnf_axioms list
     -> local_theory -> mrsbnf * local_theory;
 
-  val mrsbnf_of_mrbnf: MRBNF_Def.mrbnf -> local_theory -> mrsbnf * local_theory;
+  val mrsbnf_of_mrbnf: (binding -> binding) -> MRBNF_Def.mrbnf -> local_theory -> mrsbnf * local_theory;
 
   val note_mrsbnf_thms: (theory -> BNF_Def.fact_policy) -> (binding -> binding) -> string option -> mrsbnf
     -> local_theory -> (string * thm list) list * local_theory
@@ -1049,9 +1049,9 @@ fun mrsbnf_def fact_policy qualify name_opt mrbnfs bmv tacs lthy =
     val (axioms, vars, mrbnfs, bmv) = prove_axioms mrbnfs bmv tacs lthy;
   in mk_mrsbnf fact_policy qualify vars name_opt mrbnfs bmv axioms lthy end
 
-fun mrsbnf_of_mrbnf mrbnf lthy =
+fun mrsbnf_of_mrbnf qualify mrbnf lthy =
   let
-    val (bmv, lthy) = BMV_Monad_Def.pbmv_monad_of_mrbnf mrbnf lthy;
+    val (bmv, lthy) = BMV_Monad_Def.pbmv_monad_of_mrbnf qualify mrbnf lthy;
     val bmv_vars = BMV_Monad_Def.lives_of_bmv_monad bmv @ BMV_Monad_Def.lives'_of_bmv_monad bmv
         @ BMV_Monad_Def.frees_of_bmv_monad bmv @ BMV_Monad_Def.deads_of_bmv_monad bmv;
     val bmv = BMV_Monad_Def.morph_bmv_monad (MRBNF_Util.subst_typ_morphism (map (fn a => (a, Logic.varifyT_global a)) (flat bmv_vars))) bmv;
@@ -1067,7 +1067,7 @@ fun mrsbnf_of_mrbnf mrbnf lthy =
         )) Vartab.empty;
         val phi = MRBNF_Util.subst_typ_morphism (map (fn (x, (s, T)) => (TVar (x, s), T)) (Vartab.dest tyenv))
       in BMV_Monad_Def.morph_bmv_monad phi bmv end;
-  in mrsbnf_def (K BNF_Def.Dont_Note) I NONE [mrbnf] bmv [{
+  in mrsbnf_def (K BNF_Def.Dont_Note) qualify NONE [mrbnf] bmv [{
     map_Sb = SOME (fn ctxt => EVERY1 [
       K (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ unfolds_of_bmv_monad bmv)),
       rtac ctxt refl ORELSE' EVERY' [

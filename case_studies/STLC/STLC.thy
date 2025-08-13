@@ -16,60 +16,6 @@ for
 
 print_theorems
 
-(* unary substitution *)
-lemma IImsupp_terms_VVr_empty: "IImsupp_terms tvVVr_tvsubst = {}"
-  unfolding IImsupp_terms_def terms.SSupp_VVr_empty UN_empty Un_empty_left
-  apply (rule refl)
-  done
-
-lemma tvsubst_VVr_func: "tvsubst tvVVr_tvsubst t = t"
-  apply (rule terms.TT_fresh_induct)
-  apply (rule emp_bound)
-  subgoal for x
-    apply (rule case_split[of "tvisVVr_tvsubst (terms_ctor x)"])
-     apply (unfold tvisVVr_tvsubst_def)[1]
-     apply (erule exE)
-    subgoal premises prems for a
-      unfolding prems
-      apply (rule terms.tvsubst_VVr)
-      apply (rule terms.SSupp_VVr_bound)
-        done
-      apply (rule trans)
-       apply (rule terms.tvsubst_cctor_not_isVVr)
-          apply (rule terms.SSupp_VVr_bound)
-      unfolding IImsupp_terms_VVr_empty
-         apply (rule Int_empty_right)
-        apply assumption+
-      apply (rule arg_cong[of _ _ terms_ctor])
-      apply (rule trans)
-      apply (rule terms_pre.map_cong)
-                 apply (rule supp_id_bound bij_id)+
-           apply (assumption | rule refl)+
-      unfolding id_def[symmetric] terms_pre.map_id
-      apply (rule refl)
-      done
-    done
-
-lemma finite_singleton: "finite {x}" by blast
-lemma singl_bound: "|{a}| <o |UNIV::'a::var set|"
-  by (rule finite_ordLess_infinite2[OF finite_singleton cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite]])
-
-lemma SSupp_upd_bound:
-  fixes f::"'a::var \<Rightarrow> 'a terms"
-  shows "|SSupp_terms (f (a:=t))| <o |UNIV::'a set| \<longleftrightarrow> |SSupp_terms f| <o |UNIV::'a set|"
-  unfolding SSupp_terms_def
-  by (auto simp only: fun_upd_apply fset_simps singl_bound ordLeq_refl split: if_splits
-      elim!: ordLeq_ordLess_trans[OF card_of_mono1 ordLess_ordLeq_trans[OF terms_pre.Un_bound], rotated]
-      intro: card_of_mono1)
-
-corollary SSupp_upd_VVr_bound: "|SSupp_terms (tvVVr_tvsubst(a:=(t::'a::var terms)))| <o |UNIV::'a set|"
-  apply (rule iffD2[OF SSupp_upd_bound])
-  apply (rule terms.SSupp_VVr_bound)
-  done
-
-lemma supp_subset_id_on: "supp f \<subseteq> A \<Longrightarrow> id_on (B - A) f"
-  unfolding supp_def id_on_def by blast
-
 lemma Abs_inject: "(Abs x \<tau> e = Abs x' \<tau>' e') = (\<exists>f. bij f \<and> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set|
   \<and> id_on (FVars_terms (Abs x \<tau> e)) f \<and> f x = x' \<and> \<tau> = \<tau>' \<and> permute_terms f e = e')"
   unfolding terms.set
@@ -165,10 +111,6 @@ lemma Abs_avoid: "|A::'a::var set| <o |UNIV::'a set| \<Longrightarrow> \<exists>
   apply assumption
   done
 
-lemma VVr_eq_Var: "tvVVr_tvsubst a = Var a"
-  unfolding tvVVr_tvsubst_def Var_def comp_def tv\<eta>_terms_tvsubst_def
-  by (rule refl)
-
 (* small step semantics *)
 no_notation Set.member  ("(_/ : _)" [51, 51] 50)
 
@@ -182,7 +124,7 @@ abbreviation extend :: "('a * \<tau>) fset \<Rightarrow> 'a::var \<Rightarrow> \
   "extend \<Gamma> a \<tau> \<equiv> finsert (a, \<tau>) \<Gamma>"
 
 inductive Step :: "'a::var terms \<Rightarrow> 'a terms \<Rightarrow> bool" (infixr "\<^bold>\<longrightarrow>" 25) where
-  ST_Beta: "App (Abs x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (tvVVr_tvsubst(x:=e2)) e"
+  ST_Beta: "App (Abs x \<tau> e) e2 \<^bold>\<longrightarrow> tvsubst (Var(x:=e2)) e"
 | ST_App: "e1 \<^bold>\<longrightarrow> e1' \<Longrightarrow> App e1 e2 \<^bold>\<longrightarrow> App e1' e2"
 
 inductive Ty :: "('a::var * \<tau>) fset \<Rightarrow> 'a terms \<Rightarrow> \<tau> \<Rightarrow> bool" ("_ \<turnstile>\<^sub>t\<^sub>y _ : _" [25, 25, 25] 26) where
@@ -331,7 +273,8 @@ shows "P"
         apply (rule cinfinite_imp_infinite[OF terms_pre.UNIV_cinfinite])
        apply (rule terms.set_bd_UNIV)
       apply assumption
-     apply (rule singl_bound)
+     apply (rule insert_bound[THEN iffD2])
+     apply (rule emp_bound)
     apply (rule iffD2[OF disjoint_single])
   apply (rule assms(2))
 apply (rule terms_pre.UN_bound)
@@ -450,38 +393,42 @@ next
   ultimately show ?case using Ty_Abs by (auto intro: Ty.Ty_Abs)
 qed
 
-lemma substitution: "\<lbrakk> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x:=v)) e : \<tau>"
+lemma substitution: "\<lbrakk> \<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e : \<tau> ; x \<sharp> \<Gamma> ; {||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>' \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (Var(x:=v)) e : \<tau>"
 proof (binder_induction e arbitrary: \<Gamma> \<tau> avoiding: \<Gamma> x v rule: terms.strong_induct)
   case (Var a \<Gamma> \<tau>)
   then have 2: "(a, \<tau>) |\<in>| \<Gamma>,x:\<tau>'" by blast
   from \<open>{||} \<turnstile>\<^sub>t\<^sub>y v : \<tau>'\<close> have 3: "\<Gamma> \<turnstile>\<^sub>t\<^sub>y v : \<tau>'" using context_invariance by blast
-  then show ?case unfolding terms.subst[OF SSupp_upd_VVr_bound] unfolding fun_upd_def
+  then show ?case unfolding fun_upd_def apply (subst terms.subst)
+    apply (smt (verit, ccfv_threshold) Field_card_of Prelim.insert_bound SSupp_def UNIV_cinfinite card_of_card_order_on
+        card_of_subset_bound emp_bound insert_iff mem_Collect_eq subsetI)
   proof (cases "a = x")
     case True
     then have "\<tau> = \<tau>'" using 2 Var(1) unfolding fresh_def
       by (metis Var(2) Pair_inject finsertE fresh_def fst_eqD rev_fimage_eqI)
-    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y (if a = x then v else tvVVr_tvsubst a) : \<tau>" using True 3 by simp
+    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y (if a = x then v else Var a) : \<tau>" using True 3 by simp
   next
     case False
     then have "(a, \<tau>) |\<in>| \<Gamma>" using 2 by blast
-    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y (if a = x then v else tvVVr_tvsubst a) : \<tau>" unfolding VVr_eq_Var using False Ty.Ty_Var by auto
+    then show "\<Gamma> \<turnstile>\<^sub>t\<^sub>y (if a = x then v else Var a) : \<tau>" using False Ty.Ty_Var by auto
   qed
 next
   case (App e1 e2 \<Gamma> \<tau>)
   from App(3) obtain \<tau>\<^sub>1 where "\<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>" "\<Gamma>,x:\<tau>' \<turnstile>\<^sub>t\<^sub>y e2 : \<tau>\<^sub>1" by blast
-  then have "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := v)) e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>" "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := v)) e2 : \<tau>\<^sub>1" using App by blast+
-  then have "\<Gamma> \<turnstile>\<^sub>t\<^sub>y App (tvsubst (tvVVr_tvsubst(x := v)) e1) (tvsubst (tvVVr_tvsubst(x := v)) e2) : \<tau>" using Ty_App by blast
-  then show ?case unfolding terms.subst(2)[OF SSupp_upd_VVr_bound, symmetric] .
+  then have "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (Var(x := v)) e1 : \<tau>\<^sub>1 \<rightarrow> \<tau>" "\<Gamma> \<turnstile>\<^sub>t\<^sub>y tvsubst (Var(x := v)) e2 : \<tau>\<^sub>1" using App by blast+
+  then have "\<Gamma> \<turnstile>\<^sub>t\<^sub>y App (tvsubst (Var(x := v)) e1) (tvsubst (Var(x := v)) e2) : \<tau>" using Ty_App by blast
+  then show ?case by auto
 next
   case (Abs y \<tau>\<^sub>1 e \<Gamma> \<tau>)
-  then have 1: "y \<notin> IImsupp_terms (tvVVr_tvsubst(x:=v))" by (simp add: IImsupp_terms_def SSupp_terms_def)
+  then have 1: "y \<notin> IImsupp Var FVars_terms (Var(x:=v))" by (simp add: IImsupp_def SSupp_def)
   have "y \<notin> fst ` fset (\<Gamma>,x:\<tau>')" using Abs(1,2) unfolding fresh_def by auto
   then obtain \<tau>\<^sub>2 where 2: "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" "\<tau> = (\<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2)" using Abs(5) Ty_AbsE' by metis
   moreover have "(\<Gamma>,x:\<tau>'),y:\<tau>\<^sub>1 = (\<Gamma>,y:\<tau>\<^sub>1),x:\<tau>'" by blast
   moreover have "x \<sharp> \<Gamma>,y:\<tau>\<^sub>1" using Abs(1,2,6) unfolding fresh_def by auto
-  ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := v)) e : \<tau>\<^sub>2" using Abs(4,7) by metis
+  ultimately have "\<Gamma>,y:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y tvsubst (Var(x := v)) e : \<tau>\<^sub>2" using Abs(4,7) by metis
   moreover have "y \<sharp> \<Gamma>" using Abs(1) unfolding fresh_def by auto
-  ultimately show ?case unfolding terms.subst(3)[OF SSupp_upd_VVr_bound 1] using Ty_Abs 2(2) by blast
+  ultimately show ?case
+    by (smt (verit, del_insts) "1" "2"(2) Abs.fresh(2) SSupp_def SSupp_fun_upd_Inj_bound Ty_Abs fun_upd_def mem_Collect_eq
+        terms.subst(3))
 qed
 
 theorem progress: "{||} \<turnstile>\<^sub>t\<^sub>y e : \<tau> \<Longrightarrow> (\<exists>x \<tau> e'. e = Abs x \<tau> e') \<or> (\<exists>e'. e \<^bold>\<longrightarrow> e')"
@@ -500,7 +447,7 @@ proof (induction "{||} :: ('a::var * \<tau>) fset" e \<tau> arbitrary: e' rule: 
     have "{||} \<turnstile>\<^sub>t\<^sub>y Abs x \<tau>\<^sub>1 e : \<tau>\<^sub>1 \<rightarrow> \<tau>\<^sub>2" using Ty_App ST_Beta
       by (metis Ty_AbsE' \<tau>.inject all_not_fin_conv bot_fset.rep_eq image_is_empty terms.inject(2))
     then have "{||},x:\<tau>\<^sub>1 \<turnstile>\<^sub>t\<^sub>y e : \<tau>\<^sub>2" by (auto elim: Ty_AbsE')
-    then have "{||} \<turnstile>\<^sub>t\<^sub>y tvsubst (tvVVr_tvsubst(x := e2')) e : \<tau>\<^sub>2" using substitution ST_Beta(1) Ty_App(3) unfolding fresh_def by fastforce
+    then have "{||} \<turnstile>\<^sub>t\<^sub>y tvsubst (Var(x := e2')) e : \<tau>\<^sub>2" using substitution ST_Beta(1) Ty_App(3) unfolding fresh_def by fastforce
     then show ?thesis using ST_Beta by simp
   next
     case (ST_App e e1' e2')

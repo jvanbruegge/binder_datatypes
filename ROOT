@@ -118,3 +118,7 @@ session System_Fsub in "case_studies/POPLmark" = Case_Studies +
     Pattern
     POPLmark_1B
     POPLmark_2B
+
+session STLC in "case_studies/STLC" = Binders +
+  theories
+    STLC

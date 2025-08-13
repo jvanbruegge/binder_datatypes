@@ -223,10 +223,8 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
     val outer_mrbnf = nth (MRSBNF_Def.mrbnfs_of_mrsbnf outer) leader;
     val inner_mrbnfs = map (fn mrsbnf => nth (MRSBNF_Def.mrbnfs_of_mrsbnf mrsbnf) leader) inners;
 
-    val _ = @{print} "wat"
     val ((mrbnf, tys), (mrbnf_unfolds, lthy)) = MRBNF_Comp.compose_mrbnf MRBNF_Def.Smart_Inline
       qualify flatten_tyargs outer_mrbnf inner_mrbnfs oDs Dss oAs Ass Xs (accum, lthy);
-    val _ = @{print} (tys, MRBNF_Def.T_of_mrbnf mrbnf)
 
     val mrbnf =
       let
@@ -484,6 +482,17 @@ fun compose_mrsbnfs inline_policy fact_policy qualify outer inners oDs Dss oAs A
               flat (#set_unfoldss (snd mrbnf_unfolds))
             )) (flat (maps (map #set_Vrs o MRSBNF_Def.axioms_of_mrsbnf) inners)))
           )),
+          EVERY' (map_filter (fn inner =>
+            let
+              val bmv = MRSBNF_Def.bmv_monad_of_mrsbnf inner;
+              val T = hd (BMV_Monad_Def.ops_of_bmv_monad bmv);
+            in if Term.is_TFree T orelse Term.is_TVar T then SOME (EVERY' [
+              SELECT_GOAL (Local_Defs.unfold0_tac ctxt (
+                @{thms id_bnf_apply UN_singleton Un_absorb}
+                @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
+              ))
+            ]) else NONE end
+          ) inners),
           rtac ctxt refl
         ])
       }) axioms') lthy;
@@ -580,7 +589,7 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_De
                 val name = Binding.name_of (MRBNF_Def.name_of_mrbnf mrbnf);
               in if not (is_leaf T) then
                  let
-                    val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_of_mrbnf mrbnf lthy;
+                    val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_of_mrbnf (qualify 0) mrbnf lthy;
                     val mrsbnf_cache = Symtab.insert (K true) (name, mrsbnf) mrsbnf_cache;
                   in (mrsbnf, (mrsbnf_cache, lthy)) end
                 else case MRSBNF_Def.mrsbnf_of lthy name of
@@ -589,7 +598,7 @@ fun mrsbnf_of_typ _ _ qualify Ds0 var_types _ (T as TFree T') (accum:((MRSBNF_De
                   SOME mrsbnf => (mrsbnf, (mrsbnf_cache, lthy))
                   | NONE =>
                     let
-                      val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_of_mrbnf mrbnf lthy;
+                      val (mrsbnf, lthy) = MRSBNF_Def.mrsbnf_of_mrbnf I mrbnf lthy;
                       val mrsbnf_cache = Symtab.insert (K true) (name, mrsbnf) mrsbnf_cache;
                     in (mrsbnf, (mrsbnf_cache, lthy)) end
                   )

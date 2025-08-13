@@ -1729,7 +1729,10 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
       |-> mk_TFree_betas var_types I
       ||>> mk_TFrees (length deads);
 
-    val Ds = map2 (resort_tfree_or_tvar o Type.sort_of_atyp) deads unsorted_Ds;
+    val Ds = map2 (fn d => fn D => case try (resort_tfree_or_tvar o Type.sort_of_atyp) d of
+      SOME f => f D
+      | NONE => D
+    ) deads unsorted_Ds;
     val (lAs, lBs) = apply2 filter_lives (As, Bs);
     val mrbnf_lsets = filter_lives mrbnf_sets;
 
@@ -1909,7 +1912,10 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
       ||> the_single
       ||> `(replicate non_dead);
 
-    val Ds = map2 (resort_tfree_or_tvar o Type.sort_of_atyp) deads unsorted_Ds;
+    val Ds = map2 (fn d => fn D => case try (resort_tfree_or_tvar o Type.sort_of_atyp) d of
+      SOME f => f D
+      | NONE => D
+    ) deads unsorted_Ds;
     val Ts' = map_VT I (K T) As';
     val (lAs', lBs', lCs, lEs, lB1Ts, lB2Ts) = @{apply 6} filter_lives
       (As', Bs', Cs, Es, B1Ts, B2Ts);

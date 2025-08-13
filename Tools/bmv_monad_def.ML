@@ -97,7 +97,7 @@ signature BMV_MONAD_DEF = sig
   val pbmv_monad_of_generic: Context.generic -> string -> bmv_monad option;
   val pbmv_monad_of: Proof.context -> string -> bmv_monad option;
 
-  val pbmv_monad_of_mrbnf: MRBNF_Def.mrbnf -> local_theory -> bmv_monad * local_theory
+  val pbmv_monad_of_mrbnf: (binding -> binding) -> MRBNF_Def.mrbnf -> local_theory -> bmv_monad * local_theory
   val register_mrbnf_as_pbmv_monad: string -> local_theory -> local_theory
   val note_bmv_monad_thms: (Proof.context -> BNF_Def.fact_policy) -> (binding -> binding)
     -> binding option -> bmv_monad -> local_theory -> (string * thm list) list * local_theory
@@ -699,7 +699,7 @@ fun define_bmv_monad_consts bmv_b_opt const_policy fact_policy qualify leader op
     val maybe_define' = maybe_define (*const_policy*) BNF_Def.Hardly_Inline fact_policy o qualify;
 
     val suffixes = map_index (fn (i, T) => if i = leader andalso Option.isSome bmv_b_opt then
-      fn b => Binding.prefix_name (Binding.name_of b ^ "_") (the bmv_b_opt)
+      fn b => Binding.prefix_name (Binding.name_of b ^ "_") (Binding.name (short_type_name (Binding.name_of (the bmv_b_opt))))
     else Binding.suffix_name ("_" ^ (case T of
       Type (n, Ts) => if forall Term.is_TFree Ts then short_type_name n else string_of_int i
       | _ => string_of_int i
@@ -1089,7 +1089,7 @@ fun bmv_monad_def const_policy fact_policy qualify bmv_b_opt (model: (Proof.cont
     val model = mk_thm_model model params axioms bd_irco;
   in apfst (rpair unfold_set) (mk_bmv_monad const_policy fact_policy qualify bmv_b_opt model unfold_set lthy) end
 
-fun pbmv_monad_of_mrbnf mrbnf lthy =
+fun pbmv_monad_of_mrbnf qualify mrbnf lthy =
   let
     val (((((lives, lives'), frees), bounds), deads), names_lthy) = lthy
       |> mk_TFrees (MRBNF_Def.live_of_mrbnf mrbnf)
@@ -1122,7 +1122,7 @@ fun pbmv_monad_of_mrbnf mrbnf lthy =
       ))
     );
     val name = MRBNF_Def.name_of_mrbnf mrbnf;
-   in apfst fst (bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) I (SOME name) {
+   in apfst fst (bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) qualify (SOME name) {
      ops = [T],
      var_class = var_class,
      leader = 0,
@@ -1221,7 +1221,7 @@ fun pbmv_monad_of_mrbnf mrbnf lthy =
 fun register_mrbnf_as_pbmv_monad name lthy =
   let
     val mrbnf = the (MRBNF_Def.mrbnf_of lthy name);
-    val (bmv, lthy) = pbmv_monad_of_mrbnf mrbnf lthy;
+    val (bmv, lthy) = pbmv_monad_of_mrbnf I mrbnf lthy;
     val lthy = register_pbmv_monad name bmv lthy;
   in lthy end
 
@@ -1529,7 +1529,9 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
 
     fun leader f bmv = nth (f bmv) (leader_of_bmv_monad bmv)
 
-    val eq_name = (op=) o apply2 (fst o dest_TFree)
+    fun eq_name (a, b) = case try (apply2 (fst o dest_TFree)) (a, b) of
+      SOME (x, y) => x = y
+      | NONE => a = b
     val deads = distinct eq_name (
       #deads oAs @ flat (map2 (fn SOME { deads, ...} => K deads |
         NONE => fn Inr T => map TFree (rev (Term.add_tfreesT T []))
@@ -2027,6 +2029,9 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms SSupp_Inj_bound IImsupp_Inj_bound})
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms image_single image_Un Union_UN_swap image_UN UN_empty2 Un_empty_left Un_empty_right UN_UN_flatten UN_Un_distrib Un_assoc[symmetric]}),
+          EVERY' (map_filter (fn inner => if Term.is_TFree (hd (ops_of_bmv_monad inner)) then SOME (EVERY' [
+            SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms id_bnf_apply} @ unfolds_of_bmv_monad inner))
+          ]) else NONE) inners'),
           rtac ctxt refl ORELSE' EVERY' [
             rtac ctxt @{thm set_eqI},
             K (Local_Defs.unfold0_tac ctxt @{thms Un_iff}),

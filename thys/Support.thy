@@ -35,6 +35,13 @@ lemma SSupp_fun_upd_subset:
   "SSupp Inj (f(x := t)) \<subseteq> insert x (SSupp Inj f)"
   by (simp add: SSupp_def subset_eq)
 
+lemma IImsupp_fun_upd_subset:
+  "IImsupp Inj (Vrs::_ \<Rightarrow> 'a set) (f(x := t)) \<subseteq> insert x (Vrs t \<union> IImsupp Inj Vrs f)"
+  "IImsupp Inj (Vrs2:: _ \<Rightarrow> 'b set) (g(x := t)) \<subseteq> Vrs2 t \<union> IImsupp Inj Vrs2 g"
+  unfolding IImsupp_def
+   apply (smt (verit) SSupp_fun_upd_subset UN_iff UnCI fun_upd_apply insert_iff subset_eq)
+  by (smt (verit, ccfv_threshold) SSupp_fun_upd_subset UN_iff UnCI fun_upd_apply insert_iff subset_eq)
+
 lemma SSupp_fun_upd_bound[simp]: "Cinfinite r \<Longrightarrow> |SSupp Inj (f(x := t))| <o r \<longleftrightarrow> |SSupp Inj f| <o r"
   using SSupp_fun_upd_subset card_of_subset_bound
   by (metis fun_upd_idem_iff fun_upd_upd insert_bound)

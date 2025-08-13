@@ -1,5 +1,5 @@
 theory Classes
-  imports "Prelim.Prelim"
+  imports "Prelim.Prelim" Support
 begin
 
 ML_file \<open>../Tools/mrbnf_util.ML\<close>
@@ -91,17 +91,28 @@ local_setup \<open>
 #> Var_Classes.register_class_for_bound @{class covar} @{term "cardSuc natLeq"}
 \<close>
 
-typedecl bdT
-axiomatization bd :: "(bdT \<times> bdT) set" where
-  Cinf: "Cinfinite bd"
-  and regular: "regularCard bd"
+lemma insert_bound[simp]: "|insert x A| <o |UNIV::'a::infinite set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
+  using card_of_Un_singl_ordLess_infinite infinite_UNIV by fastforce
 
-local_setup \<open>fn lthy =>
-let
-  val (class, lthy) = Var_Classes.mk_class_for_bound @{binding var_bd} @{term bd} lthy;
+lemmas SSupp_comp_bound_UNIV[simp, intro!] = SSupp_comp_bound[OF conjI[OF var_class.UNIV_cinfinite card_of_Card_order]] 
 
-  val lthy = Var_Classes.prove_class_theorems true true class @{thm Cinf} @{thm regular} lthy;
-in lthy end
-\<close>
+lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
+   (\<And>a. Vrs (Inj a) = {a}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
+  apply (unfold IImsupp_def SSupp_Inj_comp comp_apply)
+  apply (rule var_class.UN_bound)
+   apply assumption
+  by (simp add: infinite_UNIV)
+
+lemma IImsupp_Inj_comp_bound2: "(\<And>a. Vrs (Inj a) = {}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
+  by (auto simp: IImsupp_def)
+lemmas IImsupp_Inj_comp_bound = IImsupp_Inj_comp_bound1 IImsupp_Inj_comp_bound2
+
+lemma SSupp_fun_upd_bound_UNIV[simp]: "|SSupp Inj (f(x := t))| <o |UNIV::'a::var set| \<longleftrightarrow> |SSupp Inj f| <o |UNIV::'a set|"
+  by (simp add: UNIV_cinfinite)
+
+lemma SSupp_fun_upd_Inj_bound[simp]: "|SSupp Inj (Inj(x := t))| <o |UNIV::'a::var set|"
+  by simp
+lemma IImsupp_fun_upd_Inj_bound[simp, intro!]: "(\<And>x. |Vrs x| <o |UNIV::'a::var set| ) \<Longrightarrow> |IImsupp Inj Vrs (Inj(x := t))| <o |UNIV::'a::var set|"
+  unfolding IImsupp_def by (meson SSupp_fun_upd_Inj_bound UN_bound)
 
 end

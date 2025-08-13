@@ -262,7 +262,7 @@ unfolding Tperm_def isPerm_def presBnd_presSuper by auto
 (* Other properties: *)
 
 
-lemma touchedSuperT_itvsubst: "|SSupp f| <o |UNIV :: ivar set| \<Longrightarrow> touchedSuperT (itvsubst f t) = \<Union> ((touchedSuperT o f) ` (FFVars t))"
+lemma touchedSuperT_itvsubst: "|ILC.SSupp f| <o |UNIV :: ivar set| \<Longrightarrow> touchedSuperT (itvsubst f t) = \<Union> ((touchedSuperT o f) ` (FFVars t))"
 unfolding touchedSuperT_def by (auto simp: touchedSuper_UN )
 
 lemma good_FFVars_RSuper: "good e \<Longrightarrow> FFVars e \<subseteq> RSuper"
@@ -296,14 +296,15 @@ assumes r: "good e" and rr:
     "\<And>xs x. super xs \<Longrightarrow> x \<in> dsset xs \<Longrightarrow> good (f x)"
     "\<And>xs x x'. super xs \<Longrightarrow> {x,x'} \<subseteq> dsset xs \<Longrightarrow> 
      touchedSuperT (f x) = touchedSuperT (f x')" 
-and s: "|SSupp f| <o |UNIV::ivar set|"  
-and f: "finite (touchedSuper (IImsupp f))"  
+and s: "|ILC.SSupp f| <o |UNIV::ivar set|"  
+and f: "finite (touchedSuper (ILC.IImsupp f))"  
 shows "good (itvsubst f e)"
-using r proof (binder_induction e avoiding: "IImsupp f" rule: strong_induct_good')
+using r proof (binder_induction e avoiding: "ILC.IImsupp f" rule: strong_induct_good')
   case (iLam ea xs)
   show ?case using iLam apply(subst iterm.subst)
       subgoal using s by blast
       subgoal using s by auto 
+      subgoal using s by auto
       subgoal apply(rule good.iLam) by auto .
 next
   case (iApp e1 es2)
@@ -327,14 +328,14 @@ unfolding touchedSuper_UN using touchedSuperT_def by blast
 
 lemma touchedSuper_IImsupp_imkSubst: 
 "super xs \<Longrightarrow> (\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e') \<Longrightarrow> e \<in> sset es \<Longrightarrow> 
- touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> 
+ touchedSuper (ILC.IImsupp (imkSubst xs es)) \<subseteq> 
  {xs} \<union> touchedSuper (FFVars e)"
 using touchedSuper_IImsupp_imkSubst good_sset_touchedSuper by blast
 
 
 lemma super_good_finite_touchedSuper_imkSubst: 
 "super xs \<Longrightarrow> (\<And>e e'. {e,e'} \<subseteq> sset es \<Longrightarrow> good e \<and> touchedSuperT e =  touchedSuperT e') 
- \<Longrightarrow> finite (touchedSuper (IImsupp (imkSubst xs es)))"
+ \<Longrightarrow> finite (touchedSuper (ILC.IImsupp (imkSubst xs es)))"
 by (metis Supervariables.touchedSuper_IImsupp_imkSubst bot.extremum finite.insertI 
 finite_Un good_finite_touchedSuperT insert_subset rev_finite_subset snth_sset touchedSuperT_def good_sset_touchedSuper)
         

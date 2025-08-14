@@ -120,15 +120,18 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         in (f plives a, f pbounds b, f pfrees c) end
       );
     val pre_setss = mk_pre_setss (map (HOLogic.dest_setT o body_type) pre_Ts);
-
-    val f_prems' = maps (fn f => [mk_bij f, mk_supp_bound f]) fs;
+    
+    val mk_prems = maps (fn f => [mk_bij f, mk_supp_bound f]);
+    val f_prems' = mk_prems fs;
     val f_prems = map HOLogic.mk_Trueprop f_prems';
+    val g_prems' = mk_prems gs;
+    val g_prems = map HOLogic.mk_Trueprop g_prems';
     val nvars = length vars;
     val nrecs = foldr1 (op+) (#rec_vars fp_res);
 
     val mk_map_sum = mk_bin_map @{const_name map_sum} BNF_Util.mk_sumT
 
-    val goals = @{map 11} (fn name => fn mrbnf => fn d => fn X => fn X' => fn Umap => fn UFVarss => fn Udtor
+    val goals = @{map 12} (fn i => fn name => fn mrbnf => fn d => fn X => fn X' => fn Umap => fn UFVarss => fn Udtor
       => fn validU => fn (rec_sets, bsets, fsets) => fn quot =>
       let
         val Udtor_ne = Logic.all d (Logic.mk_implies (
@@ -223,13 +226,27 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         (* val _ = @{print} (map (Thm.cterm_of lthy) id_ons); *)
 
         val _ = @{print} (map (Thm.cterm_of lthy) ufvars_Udtors);
-        (* val _ = @{print} (map (Thm.cterm_of lthy) ufvars_Udtors);
-        val _ = @{print} (  Thm.cterm_of lthy (ufvars_Udtor Udtor)) *)
+
+        val Umap_comp =
+          let
+            val flip = fn f => fn a => fn b => f b a;
+            val ap_Umap = flip (fold (flip (curry op$))) Umap;
+            val Umap_comp_body_lhs = ap_Umap (fs @ [ap_Umap (gs @ [d])]);
+            val Umap_comp_body_rhs = ap_Umap (map2 (curry HOLogic.mk_comp) fs gs) $ d;
+          in
+            fold_rev Logic.all (fs @ gs @ [d]) (fold_rev (curry Logic.mk_implies)
+              (HOLogic.mk_Trueprop (validU $ d) :: f_prems @ g_prems)
+              (HOLogic.mk_Trueprop (HOLogic.mk_eq (Umap_comp_body_lhs, Umap_comp_body_rhs)))       
+            )
+          end
+
+        val _ = @{print} (Thm.cterm_of lthy Umap_comp);
       in [
         (name ^ "_ne", [Udtor_ne]),
-        ("alpha_" ^ name, [alpha_Udtor])
+        ("alpha_" ^ name, [alpha_Udtor]),
+        ("Umap_comp" ^ string_of_int i, [Umap_comp])
       ] end
-    ) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
+    ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
 
     val (corecursor_result, lthy) = Local_Theory.background_theory_result (fn thy =>
       let
@@ -249,6 +266,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val names = map (fst o dest_Free);
         val valid_prems = map2 (HOLogic.mk_Trueprop oo curry (op$)) validUs ds;
 
+(*
         val Umap_ids = @{map 4} (fn valid_prem => fn d => fn Umap => fn Umap_cong0 =>
           let val goal = mk_Trueprop_eq (Term.list_comb (Umap, map HOLogic.id_const vars) $ d, d)
           in Goal.prove_sorry lthy (names [d]) [valid_prem] goal (fn {context=ctxt, prems} => EVERY1 [
@@ -259,7 +277,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             K (@{print} prems ; print_tac ctxt "1")
           ]) end
         ) valid_prems ds Umaps (* TODO: Umap_cong0s *) [(), ()];
-
+*)
         val _ = @{print} name
 
       in (name, Local_Theory.exit_global lthy) end

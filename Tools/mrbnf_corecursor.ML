@@ -262,11 +262,24 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           end
 
           val _ = @{print} (Thm.cterm_of lthy Umap_cong);
+
+        val valid_Umap =
+          let
+            val flip = fn f => fn a => fn b => f b a;
+            val ap_Umap = flip (fold (flip (curry op$))) Umap;
+            val valid_Umap_body = ap_Umap (fs @ [d]);
+          in
+            fold_rev Logic.all (fs @ [d]) (fold_rev (curry Logic.mk_implies)
+              (f_prems @ [HOLogic.mk_Trueprop (validU $ d)])
+              (HOLogic.mk_Trueprop (validU $ valid_Umap_body))
+            )
+          end
       in [
         (name ^ "_ne", [Udtor_ne]),
         ("alpha_" ^ name, [alpha_Udtor]),
         ("Umap_comp" ^ string_of_int i, [Umap_comp]),
-        ("Umap_cong" ^ string_of_int i, [Umap_cong])
+        ("Umap_cong" ^ string_of_int i, [Umap_cong]),
+        ("valid_Umap" ^ string_of_int i, [valid_Umap])
       ] end
     ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
 

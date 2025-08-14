@@ -89,12 +89,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val (((((ds, fs), gs), Xs), Xs'), names_lthy) = names_lthy
+    val ((((((ds, fs), gs), Xs), Xs'), xs), names_lthy) = names_lthy
       |> mk_Frees "d" uTs
       ||>> mk_Frees "f" fTs
       ||>> mk_Frees "g" fTs
       ||>> mk_Frees "X" (map (HOLogic.dest_setT o body_type) pre_Ts)
-      ||>> mk_Frees "X'" (map (HOLogic.dest_setT o body_type) pre_Ts);
+      ||>> mk_Frees "X'" (map (HOLogic.dest_setT o body_type) pre_Ts)
+      ||>> mk_Frees "a" vars;
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
 
     val lthy = no_defs_lthy;
@@ -241,10 +242,31 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           end
 
         val _ = @{print} (Thm.cterm_of lthy Umap_comp);
+
+        val Umap_cong =
+          let
+            val flip = fn f => fn a => fn b => f b a;
+            val ap_Umap = flip (fold (flip (curry op$))) Umap;
+            val Umap_cong_body_lhs = ap_Umap (fs @ [d]);
+            val Umap_cong_body_rhs = d;
+            val Ufvars_prems = @{map 3} (fn UFVars => fn f => fn a =>
+              Logic.all a (Logic.mk_implies
+                (HOLogic.mk_Trueprop (HOLogic.mk_mem (a, UFVars $ d)),
+                  HOLogic.mk_Trueprop (HOLogic.mk_eq (f $ a, a))
+                  ))) UFVarss fs xs
+          in
+            fold_rev Logic.all (fs @ [d]) (fold_rev (curry Logic.mk_implies)
+              (HOLogic.mk_Trueprop (validU $ d) :: f_prems @ Ufvars_prems)
+              (HOLogic.mk_Trueprop (HOLogic.mk_eq (Umap_cong_body_lhs, Umap_cong_body_rhs)))
+            )
+          end
+
+          val _ = @{print} (Thm.cterm_of lthy Umap_cong);
       in [
         (name ^ "_ne", [Udtor_ne]),
         ("alpha_" ^ name, [alpha_Udtor]),
-        ("Umap_comp" ^ string_of_int i, [Umap_comp])
+        ("Umap_comp" ^ string_of_int i, [Umap_comp]),
+        ("Umap_cong" ^ string_of_int i, [Umap_cong])
       ] end
     ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
 

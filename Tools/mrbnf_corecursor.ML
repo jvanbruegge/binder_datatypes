@@ -274,12 +274,41 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               (HOLogic.mk_Trueprop (validU $ valid_Umap_body))
             )
           end
+
+          val valid_Udtor =
+            let
+              val As = flat (@{map 3} (fn T => fn uT => fn n =>
+                replicate n (mk_sumT (T, uT))
+                ) qTs uTs (#rec_vars fp_res));
+              fun pred_True T = Term.abs ("_", T) @{term True};
+              fun mk_pred_sum P Q =
+                let
+                  val PT = fastype_of P;
+                  val QT = fastype_of Q;
+                  val fT = mk_sumT (domain_type PT, domain_type QT);
+                in Const (@{const_name pred_sum}, PT --> QT --> fT --> @{typ bool}) $ P $ Q end;
+              fun mk_UPred validUs deads plives As bounds frees mrbnf =
+              Term.list_comb (
+                MRBNF_Def.mk_pred_of_mrbnf deads (plives @ As) bounds frees mrbnf,
+                map pred_True plives @ map2 (fn pred => fn T =>
+                  mk_pred_sum (pred_True T) pred
+                  ) (replicate_rec validUs) (replicate_rec qTs)
+                  );
+              val uPred = mk_UPred validUs (MRBNF_Def.deads_of_mrbnf mrbnf) plives As bounds frees mrbnf
+            in
+              fold_rev Logic.all [d, X] (fold_rev (curry Logic.mk_implies)
+                (map HOLogic.mk_Trueprop [ validU $ d, HOLogic.mk_mem (X, Udtor $ d)])
+                (HOLogic.mk_Trueprop (uPred $ X))
+              )
+            end;
+
       in [
         (name ^ "_ne", [Udtor_ne]),
         ("alpha_" ^ name, [alpha_Udtor]),
         ("Umap_comp" ^ string_of_int i, [Umap_comp]),
         ("Umap_cong" ^ string_of_int i, [Umap_cong]),
-        ("valid_Umap" ^ string_of_int i, [valid_Umap])
+        ("valid_Umap" ^ string_of_int i, [valid_Umap]),
+        ("valid_" ^ name, [valid_Udtor])
       ] end
     ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
 

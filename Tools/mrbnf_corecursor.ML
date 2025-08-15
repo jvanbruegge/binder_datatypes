@@ -230,10 +230,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val Umap_comp =
           let
-            val flip = fn f => fn a => fn b => f b a;
-            val ap_Umap = flip (fold (flip (curry op$))) Umap;
-            val Umap_comp_body_lhs = ap_Umap (fs @ [ap_Umap (gs @ [d])]);
-            val Umap_comp_body_rhs = ap_Umap (map2 (curry HOLogic.mk_comp) fs gs) $ d;
+            val Umap_comp_body_lhs = Term.list_comb (Umap ,(fs @ [Term.list_comb (Umap, (gs @ [d]))]));
+            val Umap_comp_body_rhs = Term.list_comb (Umap, (map2 (curry HOLogic.mk_comp) fs gs)) $ d;
           in
             fold_rev Logic.all (fs @ gs @ [d]) (fold_rev (curry Logic.mk_implies)
               (HOLogic.mk_Trueprop (validU $ d) :: f_prems @ g_prems)
@@ -241,13 +239,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             )
           end
 
-        val _ = @{print} (Thm.cterm_of lthy Umap_comp);
-
         val Umap_cong =
           let
-            val flip = fn f => fn a => fn b => f b a;
-            val ap_Umap = flip (fold (flip (curry op$))) Umap;
-            val Umap_cong_body_lhs = ap_Umap (fs @ [d]);
+            val Umap_cong_body_lhs = Term.list_comb (Umap, (fs @ [d]));
             val Umap_cong_body_rhs = d;
             val Ufvars_prems = @{map 3} (fn UFVars => fn f => fn a =>
               Logic.all a (Logic.mk_implies
@@ -261,19 +255,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             )
           end
 
-          val _ = @{print} (Thm.cterm_of lthy Umap_cong);
-
         val valid_Umap =
-          let
-            val flip = fn f => fn a => fn b => f b a;
-            val ap_Umap = flip (fold (flip (curry op$))) Umap;
-            val valid_Umap_body = ap_Umap (fs @ [d]);
-          in
-            fold_rev Logic.all (fs @ [d]) (fold_rev (curry Logic.mk_implies)
-              (f_prems @ [HOLogic.mk_Trueprop (validU $ d)])
-              (HOLogic.mk_Trueprop (validU $ valid_Umap_body))
-            )
-          end
+          fold_rev Logic.all (fs @ [d]) (fold_rev (curry Logic.mk_implies)
+            (f_prems @ [HOLogic.mk_Trueprop (validU $ d)])
+            (HOLogic.mk_Trueprop (validU $ Term.list_comb (Umap, (fs @ [d]))))
+          )
 
           val valid_Udtor =
             let
@@ -300,7 +286,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 (map HOLogic.mk_Trueprop [ validU $ d, HOLogic.mk_mem (X, Udtor $ d)])
                 (HOLogic.mk_Trueprop (uPred $ X))
               )
-            end;
+            end
 
       in [
         (name ^ "_ne", [Udtor_ne]),

@@ -75,6 +75,7 @@ sig
   type greatest_fp_thms = {
     existential_coinduct: thm,
     fresh_coinduct_param: thm
+    (* TODO: add corec constant here *)
   };
 
   type fp_result = {

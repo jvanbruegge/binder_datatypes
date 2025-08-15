@@ -127,6 +127,7 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
           val tsubst = Term.typ_subst_atomic subst;
           val subst = Term.subst_atomic_types subst;
           val ctr_sugar = #ctr_sugar (#fp_ctr_sugar sugar);
+          (* TODO: save corec constant *)
         in {
           T = tsubst (#T sugar),
           ctor = subst (hd (#ctrs ctr_sugar)),
@@ -3611,6 +3612,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             REPEAT_DETERM o eresolve_tac ctxt prems
           ]) ctors mrbnfs fresh_cases Rs)
         ]);
+    (* TODO: Add corec constant here *)
       in SOME {
         existential_coinduct = existential_coinduct,
         fresh_coinduct_param = fresh_coinduct_param

@@ -143,6 +143,79 @@ lemmas valid_Udtor = valid_Udtor1 valid_Udtor2
 
 lemmas T1_T2_pred_set = T1_pre.pred_set T2_pre.pred_set
 
+abbreviation "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+
+abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
+
+abbreviation "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+
+abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
+
+abbreviation "T1_abs \<equiv> quot_type.abs alpha_T1 Abs_T1"
+abbreviation "T1_rep \<equiv> quot_type.rep Rep_T1"
+abbreviation "T2_abs \<equiv> quot_type.abs alpha_T2 Abs_T2"
+abbreviation "T2_rep \<equiv> quot_type.rep Rep_T2"
+
+abbreviation raw_Umap1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
+  "raw_Umap1 \<equiv> Umap1"
+
+abbreviation raw_Umap2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
+  "raw_Umap2 \<equiv> Umap2"
+
+abbreviation raw_UFVars11 :: "'u1 \<Rightarrow> 'a set" where
+  "raw_UFVars11 \<equiv> UFVars11"
+abbreviation raw_UFVars12 :: "'u1 \<Rightarrow> 'b set" where
+  "raw_UFVars12 \<equiv> UFVars12"
+abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
+  "raw_UFVars21 \<equiv> UFVars21"
+abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
+  "raw_UFVars22 \<equiv> UFVars22"
+
+(* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
+abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
+  "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+
+(* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
+abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
+
+(* definition raw_UFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'a set" where *)
+abbreviation "raw_UFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+
+(* definition raw_UFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'b set" where *)
+abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
+
+
+definition Utor1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre set" where
+  "Utor1 d \<equiv>  map_T1_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor1 d)"
+
+definition Utor2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre set" where
+  "Utor2 d \<equiv>  map_T2_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor2 d)"
+
+definition suitable1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> bool" where
+  "suitable1 pick \<equiv> \<forall> d. valid_U1 d \<longrightarrow> pick d \<in> Utor1 d"
+definition suitable2 :: "('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> bool" where
+  "suitable2 pick \<equiv> \<forall> d. valid_U2 d \<longrightarrow> pick d \<in> Utor2 d"
+
+definition f1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u1 => ('a, 'b, 'c, 'd) raw_T1" where
+"f1 pick1 pick2 \<equiv> corec_raw_T1 pick1 pick2"
+definition f2 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u2 => ('a, 'b, 'c, 'd) raw_T2" where
+"f2 pick1 pick2 \<equiv> corec_raw_T2 pick1 pick2"
+
+definition pick0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre" where
+  "pick0_1 \<equiv> SOME pick. suitable1 pick"
+definition pick0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre" where
+  "pick0_2 \<equiv> SOME pick. suitable2 pick"
+
+definition f0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1" where
+  "f0_1 \<equiv> f1 pick0_1 pick0_2"
+definition f0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2" where
+  "f0_2 \<equiv> f2 pick0_1 pick0_2"
+
+definition COREC1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) T1" where
+  "COREC1 d = T1_abs (f0_1 d)"
+definition COREC2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) T2" where
+  "COREC2 d = T2_abs (f0_2 d)"
+
 lemma Umap_id:
   "valid_U1 d1 \<Longrightarrow> Umap1 id id d1 = d1"
   "valid_U2 d2 \<Longrightarrow> Umap2 id id d2 = d2"
@@ -164,7 +237,7 @@ lemma valid_Udtor':
   apply -
   apply (drule valid_Udtor)
    apply assumption
-  apply (erule UnE)
+  apply (erule UnE)?
    apply (unfold T1_T2_pred_set sum.pred_set)
   (* REPEAT_DETERM *)
    apply (erule conjE)+
@@ -500,13 +573,6 @@ qed
 
 lemmas Umap_Udtor_strong = Umap_Udtor1_strong Umap_Udtor2_strong
 
-abbreviation "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
-
-abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
-
-abbreviation "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
-
-abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
 
 
 lemmas Udtor_Umap = alpha_Udtor1 alpha_Udtor2
@@ -516,46 +582,6 @@ lemmas FVars_T2_Udtor = UFVars21_Udtor UFVars22_Udtor
 
 (*************************************)
 (* The raw-term-based model infrastructure *)
-
-abbreviation "T1_abs \<equiv> quot_type.abs alpha_T1 Abs_T1"
-abbreviation "T1_rep \<equiv> quot_type.rep Rep_T1"
-abbreviation "T2_abs \<equiv> quot_type.abs alpha_T2 Abs_T2"
-abbreviation "T2_rep \<equiv> quot_type.rep Rep_T2"
-
-definition Utor1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre set" where
-  "Utor1 d \<equiv>  map_T1_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor1 d)"
-
-definition Utor2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre set" where
-  "Utor2 d \<equiv>  map_T2_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor2 d)"
-
-abbreviation raw_Umap1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
-  "raw_Umap1 \<equiv> Umap1"
-
-abbreviation raw_Umap2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
-  "raw_Umap2 \<equiv> Umap2"
-
-abbreviation raw_UFVars11 :: "'u1 \<Rightarrow> 'a set" where
-  "raw_UFVars11 \<equiv> UFVars11"
-abbreviation raw_UFVars12 :: "'u1 \<Rightarrow> 'b set" where
-  "raw_UFVars12 \<equiv> UFVars12"
-abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
-  "raw_UFVars21 \<equiv> UFVars21"
-abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
-  "raw_UFVars22 \<equiv> UFVars22"
-
-(* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
-abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
-  "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
-
-(* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
-abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
-
-(* definition raw_UFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'a set" where *)
-abbreviation "raw_UFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
-
-(* definition raw_UFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'b set" where *)
-abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
-
 
 lemmas raw_UFVars_def2_11 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_1_def[of "T1_abs _"]] T1.alpha_FVars(1)[OF T1.rep_abs], symmetric]
 lemmas raw_UFVars_def2_12 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_2_def[of "T1_abs _"]] T1.alpha_FVars(2)[OF T1.rep_abs], symmetric]
@@ -1012,34 +1038,6 @@ lemma raw_Umap_Utor2:
   done
 
 lemmas raw_Umap_Utor = raw_Umap_Utor1 raw_Umap_Utor2
-
-definition suitable1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> bool" where
-  "suitable1 pick \<equiv> \<forall> d. valid_U1 d \<longrightarrow> pick d \<in> Utor1 d"
-definition suitable2 :: "('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> bool" where
-  "suitable2 pick \<equiv> \<forall> d. valid_U2 d \<longrightarrow> pick d \<in> Utor2 d"
-
-term corec_raw_T1
-term corec_raw_T2
-
-definition f1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u1 => ('a, 'b, 'c, 'd) raw_T1" where
-"f1 pick1 pick2 \<equiv> corec_raw_T1 pick1 pick2"
-definition f2 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u2 => ('a, 'b, 'c, 'd) raw_T2" where
-"f2 pick1 pick2 \<equiv> corec_raw_T2 pick1 pick2"
-
-definition pick0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre" where
-  "pick0_1 \<equiv> SOME pick. suitable1 pick"
-definition pick0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre" where
-  "pick0_2 \<equiv> SOME pick. suitable2 pick"
-
-definition f0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1" where
-  "f0_1 \<equiv> f1 pick0_1 pick0_2"
-definition f0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2" where
-  "f0_2 \<equiv> f2 pick0_1 pick0_2"
-
-definition COREC1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) T1" where
-  "COREC1 d = T1_abs (f0_1 d)"
-definition COREC2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) T2" where
-  "COREC2 d = T2_abs (f0_2 d)"
 
 thm raw_T1.corec
 
@@ -4148,6 +4146,7 @@ ML \<open>
 Multithreading.parallel_proofs := 0
 \<close>
 
+declare [[ML_print_depth=10000]]
 local_setup \<open>fn lthy =>
 let
   val lthy = MRBNF_Corecursor.create_binding_corecursor I fp_res lthy;
@@ -4156,6 +4155,7 @@ in lthy end
 
 print_locale COREC_T1_T2
 
+declare [[goals_limit=20]]
 interpretation COREC_T1_T2
   apply unfold_locales
 

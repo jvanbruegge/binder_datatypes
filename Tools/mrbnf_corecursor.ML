@@ -283,11 +283,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       in [
         (name ^ "_ne", [Udtor_ne]),
         ("alpha_" ^ name, [alpha_Udtor]),
+        ("UFVars_" ^ name, ufvars_Udtors),
+        ("Umap_" ^ name, [umap_Udtor]),
         ("Umap_comp" ^ string_of_int i, [Umap_comp]),
         ("Umap_cong" ^ string_of_int i, [Umap_cong]),
         ("valid_Umap" ^ string_of_int i, [valid_Umap]),
-        ("valid_" ^ name, [valid_Udtor]),
-        ("Umap_" ^ name, [umap_Udtor])
+        ("valid_" ^ name, [valid_Udtor])
       ] end
     ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
 
@@ -306,22 +307,105 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ))
         ] thy;
 
+        fun get_axioms goalss lthy = map (fn [Udtor_ne, alpha_Udtor, UFVars_Udtor, Umap_Udtor, Umap_comp, Umap_cong, valid_Umap, valid_Udtor] => {
+          Udtor_ne = Proof_Context.get_thms lthy (fst Udtor_ne),
+          alpha_Udtor = Proof_Context.get_thms lthy (fst alpha_Udtor),
+          UFVars_Udtor = Proof_Context.get_thms lthy (fst UFVars_Udtor),
+          Umap_comp = Proof_Context.get_thms lthy (fst Umap_comp),
+          Umap_cong = Proof_Context.get_thms lthy (fst Umap_cong),
+          valid_Umap = Proof_Context.get_thms lthy (fst valid_Umap),
+          valid_Udtor = Proof_Context.get_thms lthy (fst valid_Udtor),
+          Umap_Udtor = Proof_Context.get_thms lthy (fst Umap_Udtor)
+        } | _ => error "impossible") goalss;
+
+        val axiomss = get_axioms goals lthy;
+
+        val Udtor_nes = map (hd o #Udtor_ne) axiomss;
+        val alpha_Udtors = map (hd o #alpha_Udtor) axiomss;
+        val UFVars_Udtorss = map #UFVars_Udtor axiomss;
+        val Umap_comps = map (hd o #Umap_comp) axiomss;
+        val Umap_cong_ids = map (hd o #Umap_cong) axiomss;
+        val valid_Umaps = map (hd o #valid_Umap) axiomss;
+        val valid_Udtors = map (hd o #valid_Udtor) axiomss;
+        val Umap_Udtors = map (hd o #Umap_Udtor) axiomss;
+
         val names = map (fst o dest_Free);
         val valid_prems = map2 (HOLogic.mk_Trueprop oo curry (op$)) validUs ds;
 
-(*
         val Umap_ids = @{map 4} (fn valid_prem => fn d => fn Umap => fn Umap_cong0 =>
           let val goal = mk_Trueprop_eq (Term.list_comb (Umap, map HOLogic.id_const vars) $ d, d)
           in Goal.prove_sorry lthy (names [d]) [valid_prem] goal (fn {context=ctxt, prems} => EVERY1 [
-            (* rtac ctxt Umap_cong0,
-               resolve_tac ctxt prems,
-               REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound id_apply},
-            *)
-            K (@{print} prems ; print_tac ctxt "1")
+            rtac ctxt Umap_cong0,
+            resolve_tac ctxt prems,
+            REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound id_apply}
           ]) end
-        ) valid_prems ds Umaps (* TODO: Umap_cong0s *) [(), ()];
-*)
-        val _ = @{print} name
+        ) valid_prems ds Umaps Umap_cong_ids;
+
+        fun split_recs sets = fst (fold_map chop (#rec_vars fp_res) sets)
+
+        val ((zs, rs), names_lthy) = names_lthy
+          |> mk_Frees "z" (map2 (curry mk_sumT) qTs uTs)
+          ||>> mk_Frees "r" uTs;
+
+        val mrbnfs = #pre_mrbnfs fp_res;
+
+        val (_, lthy) = Local_Theory.begin_nested lthy;
+
+        val mk_defs_t = mk_defs_t false (Binding.conglomerate (map Binding.name T_names)) qualify
+
+        (* Step 1: Introduce definition *)
+        val (Utors, lthy) = mk_defs_t "Utor" 1 (@{map 3} (fn mrbnf => fn d => fn Udtor =>
+          Term.absfree (dest_Free d) @{term True} (* TODO *)
+        ) mrbnfs ds Udtors) lthy;
+
+        (* TODO: next definition *)
+
+        val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
+        val phi = Proof_Context.export_morphism old_lthy lthy;
+
+        val morph =
+          let
+            val tyenv = Sign.typ_match (Proof_Context.theory_of lthy) (apply2 fastype_of (
+              Morphism.term phi (fst (hd Utors)), (fst (hd Utors))
+            )) Vartab.empty;
+          in map_prod (Envir.subst_term (tyenv, Vartab.empty) o Morphism.term phi) (Morphism.thm phi) end;
+
+        (* Step 2: Export it as constant *)
+        val Utors = map morph Utors;
+        (* TODO: more morph *)
+
+        val _ = @{print} Utors
+
+        fun mk_setr x =
+          let val T = fastype_of x;
+          in Const (@{const_name Basic_BNFs.setr}, T --> HOLogic.mk_setT (snd (BNF_FP_Util.dest_sumT T))) $ x end
+
+        val valid_Udtor' = @{map 7} (fn mrbnf => fn valid_Udtor => fn d => fn x => fn Udtor => fn valid_U => fn (rec_sets, _, _) =>
+          @{map 4} (fn inner_valid => fn rec_sets => fn z => fn r =>
+            let
+              val goal = fold_rev Logic.all [x, z, r] (fold_rev (curry Logic.mk_implies) (map HOLogic.mk_Trueprop [
+                valid_U $ d, HOLogic.mk_mem (x, Udtor $ d), HOLogic.mk_mem (z, foldl1 mk_Un (map (fn s => s $ x) rec_sets)),
+                HOLogic.mk_mem (r, mk_setr z)
+              ]) (HOLogic.mk_Trueprop (inner_valid $ r)));
+            in Goal.prove_sorry lthy (names [d]) [] goal (fn {context=ctxt, ...} => EVERY1 [
+              dtac ctxt valid_Udtor,
+              assume_tac ctxt,
+              TRY o etac ctxt UnE,
+              K (Local_Defs.unfold0_tac ctxt (@{thms sum.pred_set} @ [MRBNF_Def.pred_set_of_mrbnf mrbnf])),
+              REPEAT_DETERM o EVERY' [
+                REPEAT_DETERM o etac ctxt conjE,
+                rotate_tac 2,
+                dtac ctxt @{thm bspec[rotated]},
+                assume_tac ctxt,
+                etac ctxt conjE,
+                etac ctxt bspec,
+                assume_tac ctxt
+              ]
+            ]) end
+          ) validUs (split_recs rec_sets) zs rs
+        ) mrbnfs valid_Udtors ds Xs Udtors validUs pre_setss;
+
+        val _ = @{print} valid_Udtor'
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

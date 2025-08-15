@@ -44,8 +44,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
     val vars = take (length (#binding_relation fp_res)) vars';
 
-    (* val _ = @{print} vars; *)
-
     val (fp_res, passives as (pfrees, pbounds, plives)) =
       let
         val fp_res = MRBNF_FP_Def_Sugar.morph_fp_result (MRBNF_Util.subst_typ_morphism (
@@ -100,7 +98,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
     val lthy = no_defs_lthy;
 
-    (* val _ = @{print} (#rec_vars fp_res); *)
     fun replicate_rec xs = flat (map2 replicate (#rec_vars fp_res) xs);
 
     val mk_pre_setss = (map2 (fn mrbnf => fn T =>
@@ -142,34 +139,20 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           )
         ));
 
-
-        val bfree_sets = flat (map (fn i => if member (op=) (#bfree_vars fp_res) i then
-          [nth (drop nvars fsets) i] else []
-        ) (0 upto nvars - 1));
         val bfree_setss = map (fn i => if member (op=) (#bfree_vars fp_res) i then
           [nth (drop nvars fsets) i $ X] else []
         ) (0 upto nvars - 1);
 
         val fsets = take nvars fsets;
 
-(*
-        val _ = @{print} (map (Thm.cterm_of lthy) lsets);
-        val _ = @{print} (map (Thm.cterm_of lthy) bsets);
-        val _ = @{print} (map (Thm.cterm_of lthy) fsets);
-        val _ = @{print} ((map (Thm.cterm_of lthy)) bfree_sets);
-*)
-        val purefsets = filter (fn x => not (member (op=) bfree_sets x)) fsets;
-        (* val _ = @{print} ((map (Thm.cterm_of lthy)) purefsets); *)
-
         val id_ons = @{map 6} (fn f => fn bfree_sets => fn bset => fn rel => fn FVarss => fn UFVarss =>
-          (* let val _ = @{print} ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss)); in *)
           mk_id_on (mk_minus (foldl1 mk_Un (
             bfree_sets @ map_filter (fn (i, (FVars, UFVars)) => 
               if member (op=) (flat rel) i then SOME (mk_UNION (nth rec_sets i $ X)
                  (BNF_FP_Util.mk_case_sum (FVars, UFVars))
               ) else NONE
             ) ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss))
-          ), bset $ X)) f (* end *)
+          ), bset $ X)) f
         ) fs bfree_setss bsets (#binding_relation fp_res) (transpose (map #FVarss (#quotient_fps fp_res)))
           (transpose UFVarsss);
 
@@ -180,12 +163,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             if member (op=) rel i then SOME j else NONE
           ) (0 upto length binding_rel - 1) binding_rel
         ) (0 upto nrecs - 1);
-
-(*
-        val _ = @{print} (#binding_relation fp_res);
-        val _ = @{print} (UFVarsss);
-
-        val _ = @{print} (map (Thm.cterm_of lthy) fsets); *)
 
         val alpha_Udtor = fold_rev Logic.all [X, X', d] (fold_rev (curry Logic.mk_implies) (
           [HOLogic.mk_Trueprop (validU $ d), HOLogic.mk_Trueprop (mk_leq
@@ -206,9 +183,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             X'
           )]
         )))));
-        (*
-        val _ = @{print} (map (Thm.cterm_of lthy) UFVarss);
-        val _ = @{print} (map (map (Thm.cterm_of lthy)) UFVarsss); *)
+
         val ufvars_Udtors = @{map 5} (fn i => fn UFVars => fn fset => fn bset => fn bfrees =>
           let
             val recs = @{map 4} (fn set => fn bounds => fn FVarss => fn UFVarss =>
@@ -224,9 +199,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             )) (UFVars $ d)))
           ) end
          ) (0 upto nvars - 1) UFVarss fsets bsets bfree_setss;
-        (* val _ = @{print} (map (Thm.cterm_of lthy) id_ons); *)
-
-        val _ = @{print} (map (Thm.cterm_of lthy) ufvars_Udtors);
 
         val Umap_comp =
           let
@@ -288,13 +260,34 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               )
             end
 
+        val umap_Udtor =
+          let
+            val map_sum_args = map2 (fn permute => fn Umap =>
+                mk_map_sum (Term.list_comb (permute, fs)) (Term.list_comb (Umap, fs)))
+              (replicate_rec (map #permute (#quotient_fps fp_res))) (replicate_rec Umaps);
+  
+            val image_arg = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ map_sum_args)
+              (map HOLogic.id_const pbounds @ fs) (fs @ map HOLogic.id_const (pfrees) @ bfree_fs) mrbnf;
+  
+            val umap_Udtor_body_lhs = Udtor $ Term.list_comb (Umap, fs @ [d]);
+            val umap_Udtor_body_rhs = mk_image image_arg $ (Udtor $ d);
+            val umap_Udtor_body = mk_leq umap_Udtor_body_lhs umap_Udtor_body_rhs;
+          in
+            fold_rev Logic.all (fs @ [d]) (fold_rev (curry Logic.mk_implies)
+              (HOLogic.mk_Trueprop (validU $ d) :: f_prems)
+              (HOLogic.mk_Trueprop umap_Udtor_body)
+            )
+          end
+
       in [
         (name ^ "_ne", [Udtor_ne]),
         ("alpha_" ^ name, [alpha_Udtor]),
         ("Umap_comp" ^ string_of_int i, [Umap_comp]),
         ("Umap_cong" ^ string_of_int i, [Umap_cong]),
         ("valid_Umap" ^ string_of_int i, [valid_Umap]),
-        ("valid_" ^ name, [valid_Udtor])
+        ("valid_" ^ name, [valid_Udtor]),
+        ("Umap_" ^ name, [umap_Udtor])
       ] end
     ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
 

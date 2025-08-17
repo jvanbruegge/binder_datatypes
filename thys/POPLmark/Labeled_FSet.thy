@@ -1,13 +1,6 @@
 theory Labeled_FSet
   imports Binders.MRBNF_Composition "HOL-Library.FSet"
-  keywords
-  "linearize_mrbnf" :: thy_goal_defn
 begin
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-
-ML_file "../../Tools/mrbnf_linearize.ML"
 
 abbreviation nonrep_pair :: "'a \<times> 'b \<Rightarrow> bool" where "nonrep_pair _ \<equiv> True"
 abbreviation nonrep_fset :: "'a fset \<Rightarrow> bool" where "nonrep_fset _ \<equiv> True"
@@ -18,27 +11,6 @@ definition nonrep_lfset :: "('a \<times> 'b) fset \<Rightarrow> bool" where
 lemma nonrep_lfset_alt:
   "nonrep_lfset X = (\<forall>a b c. (a, b) |\<in>| X \<longrightarrow>  (a, c) |\<in>| X \<longrightarrow> b = c)"
   unfolding nonrep_lfset_def prod_set_defs by fastforce
-thm rel_fset_def[unfolded map_fun_def o_apply id_def] fimage_def[unfolded map_fun_def o_apply id_def]
-
-lemma R_imp_ex_f: "R a b \<Longrightarrow> \<exists>f. f a = b"
-  by auto
-
-lemma nonrep_lfset_alt2:
-  "nonrep_lfset X = (\<forall>X'. (\<exists>R. (rel_fset (rel_prod R (=))) X X') \<longrightarrow> (\<exists>f. X' = (map_prod f id) |`| X))"
-  apply (unfold nonrep_lfset_alt)
-  apply (unfold nonrep_lfset_alt prod_set_defs rel_fset_def[unfolded map_fun_def o_apply id_def] 
-    rel_set_def Set.Bex_def Set.Ball_def map_prod_def rel_prod_sel)
-  apply (safe)
-   apply (frule fset_choice)
-   apply (erule exE conjE)+
-  subgoal for X' R f
-    apply (rule exI[where x = "fst o (\<lambda>x. f (x, undefined))"])
-    apply (auto simp add: split_beta)
-    sorry
-  subgoal for a b c
-    apply (auto elim!: allE)
-    sorry
-  done
 
 typedef ('a, 'b) G = "UNIV :: ('a \<times> 'b) fset set" by auto
 
@@ -46,7 +18,6 @@ setup_lifting type_definition_G
 context notes [[bnf_internals]] begin
 copy_bnf ('a, 'b) G
 end
-
 
 lift_definition nonrep_G :: "('a, 'b) G \<Rightarrow> bool" is nonrep_lfset .
 
@@ -67,33 +38,9 @@ lemma nonrep_G_map_fst_snd_bij:
   apply (auto simp: nonrep_lfset_alt map_prod_def image_iff split_beta)
   by (metis fst_conv snd_conv)+
 
-linearize_mrbnf (labels':'a, values':'b) lfset' = "('a, 'b) G" on 'a
-  apply transfer
-  subgoal for R S x y
-apply (unfold nonrep_lfset_alt prod_set_defs rel_fset_def[unfolded map_fun_def o_apply id_def] 
-    rel_set_def Set.Bex_def Set.Ball_def map_prod_def rel_prod_sel)
-    apply (rule iffI)
-    subgoal
-      apply (auto)
-      sorry
-    subgoal
-      apply (auto)
-      sorry
-    done
-    apply transfer
-  subgoal
-    apply (unfold nonrep_lfset_alt2[symmetric] nonrep_lfset_alt)
-    apply (auto)
-    done
-  done
-
-
 typedef ('a, 'b) lfset = "{x :: ('a, 'b) G . nonrep_G x}"
-  apply (unfold mem_Collect_eq)
-  apply transfer
-  apply (unfold nonrep_lfset_alt)
-  apply (auto)
-  done
+  unfolding mem_Collect_eq
+  by transfer (auto simp: nonrep_lfset_alt)
 
 definition map_lfset :: "('a :: var \<Rightarrow> 'a :: var) \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow> ('a, 'b) lfset \<Rightarrow> ('a, 'b') lfset" where
   "map_lfset f g = Abs_lfset o map_G f g o Rep_lfset"
@@ -154,8 +101,6 @@ theorem lfset_in_rel:
     apply (subgoal_tac "nonrep_G (map_G fst id z)")
      apply (rule exI[of _ "Abs_lfset (map_G fst id z)"])
      apply (cases x; cases y)
-     apply (unfold map_lfset_def)
-     apply (auto)
      apply (auto simp: map_lfset_def values_def Grp_def
         Abs_lfset_inverse Rep_lfset[simplified] nonrep_G_map G.set_map G.map_comp
         G.map_comp[of "inv f" id snd snd, simplified, symmetric]
@@ -165,7 +110,6 @@ theorem lfset_in_rel:
     done
   subgoal for z
     apply (rule exI[of _ "map_G (\<lambda>x. (x, f x)) id (Rep_lfset z)"])
-    apply (auto)
     apply (auto simp: G.set_map G.map_comp Grp_def values_def map_lfset_def Abs_lfset_inverse Rep_lfset[simplified] nonrep_G_map
       intro!: G.map_cong)
     done

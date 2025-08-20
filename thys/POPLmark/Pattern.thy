@@ -1,6 +1,13 @@
 theory Pattern
   imports POPLmark_1B
+  keywords
+  "linearize_mrbnf" :: thy_goal_defn
 begin
+
+definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
+
+ML_file "../../Tools/mrbnf_linearize.ML"
 
 setup \<open>Sign.qualified_path false (Binding.name "P")\<close>
 
@@ -198,7 +205,7 @@ lemma rel_prepat_alt: "(\<exists>R. rel_prepat R x x') = rel_prepat top x x'"
    apply (erule exE)
    apply (rule prepat.rel_mono_strong)
     apply (assumption)
-   apply (unfold top_apply top_bool_def)
+   apply (unfold top_apply top_bool_def) []
    apply (rule TrueI)
   apply (rule exI)
   apply (assumption)
@@ -219,6 +226,7 @@ mrbnf "('tv :: var, 'v) prepat"
     free: PPTVars
     live: PPVars
   bd: "natLeq"
+  wits: "PPRec lfempty"
   rel: "rel_prepat"
   subgoal
     apply (rule prepat.map_id0[unfolded map_vvsubst_equiv])
@@ -298,9 +306,55 @@ mrbnf "('tv :: var, 'v) prepat"
         done
       done
     done
+  subgoal by (auto)
   done
 
-linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" on 'v
+
+lemma lfset_values_strong: 
+  "\<And>R (x :: ('a :: var,'b) lfset) y.
+    rel_lfset id R x y =
+      (\<exists>!z. values z \<subseteq> {(x, y). R x y} \<and> map_lfset id fst z = x \<and> map_lfset id snd z = y)"
+  apply (subst lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id mem_Collect_eq])
+  apply (auto simp add: lfset_strong)
+  done
+
+lemma lfset_strong: "rel_lfset id R x y \<Longrightarrow> 
+    rel_lfset id Q x y
+    \<Longrightarrow> rel_lfset id (inf R Q) x y"
+  apply (frule lfset.mr_rel_mono_strong0[OF bij_id supp_id_bound bij_id supp_id_bound,
+    of _ _ _ top, unfolded mr_rel_lfset_def lfset.map_id]; auto?)
+  apply (drule lfset_values_strong[THEN iffD1, of top])
+  apply (unfold lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id OO_Grp_alt])
+  apply (clarsimp)
+  subgoal for z l r
+    apply (frule spec2[of _ l z])
+    apply (drule spec2[of _ r z])
+    apply auto
+    done
+  done
+
+lemma lfset_inj_map_strong2:
+  "(\<And>p q.
+    p \<in> values P \<Longrightarrow>
+    q \<in> values Q \<Longrightarrow> f p = g q \<Longrightarrow> f' p = g' q \<Longrightarrow> p = q)
+  \<Longrightarrow> map_lfset id f P = map_lfset id g Q 
+  \<Longrightarrow> map_lfset id f' P = map_lfset id g' Q \<Longrightarrow> P = Q"
+  apply (drule lfset.rel_eq[THEN predicate2_eqD, THEN iffD2])
+  apply (drule lfset.rel_eq[THEN predicate2_eqD, THEN iffD2])
+  apply (rule lfset.rel_eq[THEN predicate2_eqD, THEN iffD1])
+  apply (drule lfset.rel_map(1)[THEN iffD1])
+  apply (drule lfset.rel_map(2)[THEN iffD1])
+  apply (drule lfset.rel_map(1)[THEN iffD1])
+  apply (drule lfset.rel_map(2)[THEN iffD1])
+  apply (drule lfset_strong; assumption?)
+  apply (drule lfset_strong; assumption?)
+  apply (unfold inf_bool_def inf_fun_def)
+  apply (erule lfset.rel_mono_strong)
+  apply (erule conjE)
+  apply (assumption)
+  done
+
+linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" (*[wits:"PPRec lfempty"]*) on 'v
   subgoal for R x y
     apply (unfold P.Pattern.P.prepat.in_rel mem_Collect_eq map_vvsubst_equiv)
     apply (rule iffI)
@@ -319,16 +373,24 @@ linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" on 'v
       apply (erule thin_rl)
       proof (induction P arbitrary: Q)
       case (PPVar x T)
-      then show ?case 
+      then show ?case
         apply (cases Q)
-         apply (auto)
-        sorry
+         apply (auto simp add: typ.map_ident)
+        done
     next
       case (PPRec X)
       then show ?case 
         apply (cases Q)
-         apply (auto simp add: lfset.rel_map)
-        sorry
+         apply (auto)
+        apply (unfold map_vvsubst_equiv[symmetric] id_def[symmetric])
+        thm lfset.inj_map_strong
+        subgoal for X'
+        apply (rule lfset_inj_map_strong2[of X X' "(map_prepat fst)" "(map_prepat fst)"
+              "(map_prepat snd)" "(map_prepat snd)"])
+            apply (auto)
+          apply (blast)
+          done
+        done
     qed
     done
   subgoal

@@ -413,6 +413,13 @@ lemma lfrlookup_eq:
   "(a::_::var, b) \<in>\<in> X \<Longrightarrow> P b \<Longrightarrow> (\<And>c d. (c, d) \<in>\<in> X \<Longrightarrow> P d \<Longrightarrow> a = c \<and> b = d) \<Longrightarrow> lfrlookup X P = a"
   unfolding lfrlookup_def by blast
 
+lemma lfset_strong: "map_lfset id fst x = map_lfset id fst y \<Longrightarrow> map_lfset id snd x = map_lfset id snd y \<Longrightarrow> x = y"
+  apply transfer
+  apply (auto simp: fset_eq_iff fimage_iff image_iff nonrep_lfset_alt map_prod_def split_beta)
+  apply (metis eq_snd_iff fst_conv)
+  apply (metis eq_snd_iff fst_conv)
+  done
+
 lifting_update lfset.lifting
 lifting_forget lfset.lifting
 declare fun_cong[OF lfset_size_o_map,

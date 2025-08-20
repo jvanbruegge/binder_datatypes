@@ -49,9 +49,21 @@ axiomatization where
             set4_F z \<subseteq> {(x, y). S x y} \<and> map_F id id fst fst z = x \<and> map_F id id snd snd z = y)"
   and
   (* The next property assumes that nonrepetitive elements exist: *)
-  ex_nonrep: "\<exists>x. \<forall>x'. (\<exists> R. rrel_F R (=) x x') \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
+  ex_nonrep: "\<exists>x. \<forall>x'. rrel_F top (=) x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
 
 abbreviation "rel_F \<equiv> mr_rel_F"
+
+lemma rrel_F_alt: "rrel_F top (=) x y = (\<exists>R. rrel_F R (=) x y)"
+  apply (rule iffI)
+  apply (rule exI)
+  apply (assumption)
+  apply (erule exE)
+  apply (rule F.rel_mono_strong)
+    apply (unfold top_apply top_bool_def)
+   apply (assumption?; rule TrueI)+
+  done
+
+ML \<open>@{term "rrel_F top (=) x y = (\<exists>R. rrel_F R (=) x y)"} |> @{print}\<close>
 
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 
 The relator is closed under intersections. *)
@@ -647,7 +659,7 @@ lemma nonrep2_mapF_bij_2:
 
 typedef ('a1::var,'a2::var,'a3::var,'a4) F' = "{x :: ('a1,'a2,'a3,'a4) F. nonrep2 x}"
   apply (unfold mem_Collect_eq nonrep2_def sameShape1_def mr_rel_F_def F.map_id)
-  by (rule ex_nonrep)
+  by (rule ex_nonrep[unfolded rrel_F_alt])
 
 definition set1_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a1 set" where "set1_F' = set1_F o Rep_F'"
 definition set2_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a2 set" where "set2_F' = set2_F o Rep_F'"

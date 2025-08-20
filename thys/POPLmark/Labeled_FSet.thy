@@ -413,11 +413,35 @@ lemma lfrlookup_eq:
   "(a::_::var, b) \<in>\<in> X \<Longrightarrow> P b \<Longrightarrow> (\<And>c d. (c, d) \<in>\<in> X \<Longrightarrow> P d \<Longrightarrow> a = c \<and> b = d) \<Longrightarrow> lfrlookup X P = a"
   unfolding lfrlookup_def by blast
 
-lemma lfset_strong: "map_lfset id fst x = map_lfset id fst y \<Longrightarrow> map_lfset id snd x = map_lfset id snd y \<Longrightarrow> x = y"
-  apply transfer
-  apply (auto simp: fset_eq_iff fimage_iff image_iff nonrep_lfset_alt map_prod_def split_beta)
-  apply (metis eq_snd_iff fst_conv)
-  apply (metis eq_snd_iff fst_conv)
+lemma lfset_rel_map_values_strong: 
+  "\<And>R (x :: ('a :: var,'b) lfset) y.
+    rel_lfset id R x y =
+      (\<exists>!z. values z \<subseteq> {(x, y). R x y} \<and> map_lfset id fst z = x \<and> map_lfset id snd z = y)"
+  apply (unfold lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id mem_Collect_eq])
+  apply (auto)
+  (* this subgoal is just there to remove unecessary prems speeding up the auto*)
+  subgoal premises prems for R z x y
+    apply (insert trans[OF prems(4) prems(6)[THEN sym]] trans[OF prems(5) prems(7)[THEN sym]])
+    apply (transfer)
+    apply (auto simp: fset_eq_iff fimage_iff image_iff nonrep_lfset_alt map_prod_def split_beta)
+     apply (metis eq_snd_iff fst_conv)
+    apply (metis eq_snd_iff fst_conv)
+    done
+  done
+
+lemma lfset_strong: "rel_lfset id R x y \<Longrightarrow> 
+    rel_lfset id Q x y
+    \<Longrightarrow> rel_lfset id (inf R Q) x y"
+  apply (frule lfset.mr_rel_mono_strong0[OF bij_id supp_id_bound bij_id supp_id_bound,
+    of _ _ _ top, unfolded mr_rel_lfset_def lfset.map_id]; auto?)
+  apply (drule lfset_rel_map_values_strong[THEN iffD1, of top])
+  apply (unfold lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id OO_Grp_alt])
+  apply (clarsimp)
+  subgoal for z l r
+    apply (frule spec2[of _ l z])
+    apply (drule spec2[of _ r z])
+    apply auto
+    done
   done
 
 lifting_update lfset.lifting

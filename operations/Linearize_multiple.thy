@@ -53,6 +53,16 @@ axiomatization where
   (* The next property assumes that nonrepetitive elements exist: *)
   ex_nonrep: "\<exists>x. \<forall>x'. (\<exists> R1 R2. rrel_F R1 (=) R2 x x') \<longrightarrow> (\<exists> f1 f2 . x' = map_F id id f1 id f2 x)"
 
+lemma rrel_F_alt: "rrel_F top (=) top x y = (\<exists>R1 R2. rrel_F R1 (=) R2 x y)"
+  (*pluses for the exE/exI*)
+  apply (rule iffI)
+  apply (rule exI)+
+  apply (assumption)
+   apply (erule exE)+
+   apply (rule F.rel_mono_strong; 
+      ((subst top_apply, subst top_apply, subst top_bool_def, rule TrueI)?, assumption?))
+  done
+
 abbreviation "rel_F \<equiv> mr_rel_F"
 
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 

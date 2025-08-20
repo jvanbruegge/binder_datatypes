@@ -112,6 +112,7 @@ fun prepare_wits is_quotient RepT wits opts alphas wits_F var_as var_as' sets lt
 (** linearize **)
 fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
   let
+    val _ = wits |> @{print}
     val set_bs = map fst specs;
     val tfrees = map (TFree o snd) specs |> @{print};
     val on_tfree = TFree (on_tvar, @{sort type}) |> @{print};
@@ -168,6 +169,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val As_pair = map (fn (A, A') => HOLogic.mk_prodT (A, A')) (As ~~ As');
 
     val typ_x = MRBNF_Def.mk_T_of_mrbnf Ds As Bs Fs mrbnf;
+    val typ_xl' = MRBNF_Def.mk_T_of_mrbnf Ds (select_one As As' lin_live_pos) Bs Fs mrbnf; (* lin_pos changes typ *)
     val typ_x'l = MRBNF_Def.mk_T_of_mrbnf Ds (select_one As' As lin_live_pos) Bs Fs mrbnf; (* other lives change typ *)
     val typ_x' = MRBNF_Def.mk_T_of_mrbnf Ds As' Bs Fs mrbnf;
     val typ_z = MRBNF_Def.mk_T_of_mrbnf Ds As_pair Bs Fs mrbnf; (* z: F with (A, A') as lives *)
@@ -182,6 +184,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val (var_bs, n_lthy) = mk_Frees "b" As' n_lthy;
     val (var_x, n_lthy) = mk_Free "x" typ_x n_lthy;
     val (var_x2, n_lthy) = mk_Free "x" typ_x n_lthy;
+    val (var_xl', n_lthy) = mk_Free "xl'" typ_xl' n_lthy;
     val (var_x'l, n_lthy) = mk_Free "x'l" typ_x'l n_lthy;
     val (var_x', n_lthy) = mk_Free "x'" typ_x' n_lthy;
     val (var_z, n_lthy) = mk_Free "z" typ_z n_lthy;
@@ -200,14 +203,15 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val map_f_x = Term.list_comb (map_F, map_funs @ [var_x]);
 
     val rrel_F = MRBNF_Def.mk_rel_of_mrbnf Ds As As Bs Fs mrbnf;
+    val eqs = map HOLogic.eq_const As;
     val R = nth var_R_As lin_live_pos;
-    val Rs = map_index (fn (i, t) => if i = lin_live_pos then R else HOLogic.eq_const t) As;
-    val rrel_R_x_xl' = Term.list_comb (rrel_F, Rs @ [var_x, var_x2]);
+    val Rs = map_index (fn (i, eq) => if i = lin_live_pos then R else eq) eqs;
+    val rrel_R_x_x' = Term.list_comb (rrel_F, Rs @ [var_x, var_x2]);
 
     val ex_f = HOLogic.mk_exists (dest_Free f |> fst, dest_Free f |> snd, 
       HOLogic.mk_eq (var_x2, map_f_x));
-    val ex_R = HOLogic.mk_exists (dest_Free R |> fst, dest_Free R |> snd, rrel_R_x_xl');
-    val ex_R_imp_ex_f = HOLogic.mk_imp (ex_R, ex_f);
+    val ex_R_rrel = HOLogic.mk_exists (dest_Free R |> fst, dest_Free R |> snd, rrel_R_x_x');
+    val ex_R_imp_ex_f = HOLogic.mk_imp (ex_R_rrel, ex_f);
     val ex_nonrep = HOLogic.mk_exists (dest_Free var_x |> fst, dest_Free var_x |> snd,
       HOLogic.mk_all (dest_Free var_x2 |> fst, dest_Free var_x2 |> snd, ex_R_imp_ex_f));
     val Tp_ex_nonrep = HOLogic.mk_Trueprop ex_nonrep;
@@ -377,6 +381,30 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         fun mk_Rep_F' ctxt = #Rep td_info2 |> unfold_thms ctxt [@{thm mem_Collect_eq}];
         fun mk_Abs_F'_inverse ctxt = #Abs_inverse td_info2 |> unfold_thms ctxt [@{thm mem_Collect_eq}];
         
+        (* rrel_F_alt *) (*not used yet*)
+        val rrel_F_l' = MRBNF_Def.mk_rel_of_mrbnf Ds As (select_one As As' lin_live_pos) Bs Fs mrbnf;
+        val R = nth var_R'_As lin_live_pos;
+        val Rtop = Const ("Orderings.top_class.top", dest_Free R |> snd)
+        val R_eqs = map_index (fn (i, eq) => if i = lin_live_pos then R else eq) eqs;
+        val top_eqs = map_index (fn (i, eq) => if i = lin_live_pos then Rtop else eq) eqs;
+        val rrel_R = Term.list_comb (rrel_F_l', R_eqs @ [var_x, var_xl']);
+        val ex_R = HOLogic.mk_exists (dest_Free R |> fst, dest_Free R |> snd, rrel_R);
+        val rrel_top = Term.list_comb (rrel_F_l', top_eqs @ [var_x, var_xl'])
+        val rrel_top_eq_ex_R = HOLogic.mk_eq (rrel_top, ex_R) |> HOLogic.mk_Trueprop;
+        val rrel_F_alt_thm = Goal.prove_sorry lthy (map (fst o dest_Free) [var_x, var_xl'])
+          [] rrel_top_eq_ex_R
+          (fn {context = ctxt, prems = _} => 
+            HEADGOAL (EVERY' [
+                rtac ctxt iffI,
+                rtac ctxt exI,
+                assume_tac ctxt,
+                etac ctxt exE,
+                rtac ctxt F_rel_mono_strong
+            ]) THEN
+            unfold_thms_tac ctxt @{thms top_apply top_bool_def} THEN
+            REPEAT_DETERM_N (nr_lives+1) (
+              HEADGOAL (assume_tac ctxt ORELSE' rtac ctxt TrueI)));
+
         (* F_strong *)
         val mr_rel = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As' Bs Fs mrbnf;
         val id_Bs = (map HOLogic.id_const Bs);
@@ -438,7 +466,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
                 assume_tac ctxt,
                 assume_tac ctxt])) THEN
                 HEADGOAL (rtac ctxt conjI THEN_ALL_NEW resolve_tac ctxt prems)
-              ) ctxt))
+              ) ctxt));
 
         (* mr_rel_F_exchange *)
         val RQ_args = select_one Q_args R_args lin_pos;
@@ -457,7 +485,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
               (rtac ctxt ballI THEN' 
               rtac ctxt ballI THEN'
               rtac ctxt impI THEN'
-              eresolve_tac ctxt [conjunct1, conjunct2]))) 
+              eresolve_tac ctxt [conjunct1, conjunct2])));
         
         (* nonrep_map_F *)
         val u_props_raw = map (fn u => [MRBNF_Util.mk_bij u |> HOLogic.mk_Trueprop, 

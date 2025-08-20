@@ -42,6 +42,15 @@ axiomatization where
 
 abbreviation "rel_F \<equiv> mr_rel_F"
 
+lemma rrel_F_alt: "rrel_F (=) top (=) x y = (\<exists>R. rrel_F (=) R (=) x y)"
+  apply (rule iffI)
+  apply (rule exI)
+  apply (assumption)
+   apply (erule exE)
+   apply (rule F.rel_mono_strong; 
+      ((subst top_apply, subst top_apply, subst top_bool_def, rule TrueI)?, assumption?))
+  done
+
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 
 The relator is closed under intersections. *)
 

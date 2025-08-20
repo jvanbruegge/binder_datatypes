@@ -309,30 +309,6 @@ mrbnf "('tv :: var, 'v) prepat"
   subgoal by (auto)
   done
 
-
-lemma lfset_values_strong: 
-  "\<And>R (x :: ('a :: var,'b) lfset) y.
-    rel_lfset id R x y =
-      (\<exists>!z. values z \<subseteq> {(x, y). R x y} \<and> map_lfset id fst z = x \<and> map_lfset id snd z = y)"
-  apply (subst lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id mem_Collect_eq])
-  apply (auto simp add: lfset_strong)
-  done
-
-lemma lfset_strong: "rel_lfset id R x y \<Longrightarrow> 
-    rel_lfset id Q x y
-    \<Longrightarrow> rel_lfset id (inf R Q) x y"
-  apply (frule lfset.mr_rel_mono_strong0[OF bij_id supp_id_bound bij_id supp_id_bound,
-    of _ _ _ top, unfolded mr_rel_lfset_def lfset.map_id]; auto?)
-  apply (drule lfset_values_strong[THEN iffD1, of top])
-  apply (unfold lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id OO_Grp_alt])
-  apply (clarsimp)
-  subgoal for z l r
-    apply (frule spec2[of _ l z])
-    apply (drule spec2[of _ r z])
-    apply auto
-    done
-  done
-
 lemma lfset_inj_map_strong2:
   "(\<And>p q.
     p \<in> values P \<Longrightarrow>

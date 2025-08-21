@@ -355,7 +355,18 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         (* Step 1: Introduce definition *)
         val (Utors, lthy) = mk_defs_t "Utor" 1 (@{map 3} (fn mrbnf => fn d => fn Udtor =>
-          Term.absfree (dest_Free d) @{term True} (* TODO *)
+          let
+            val map_sum_args = map2 (fn rep => fn uT =>
+              mk_map_sum rep (HOLogic.id_const uT))
+            (replicate_rec (map (#rep o #inner) (#quotient_fps fp_res))) (replicate_rec uTs);
+            val image_arg = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ map_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+            val body = mk_image image_arg $ (Udtor $ d);
+          in
+          Term.absfree (dest_Free d) body
+          end
         ) mrbnfs ds Udtors) lthy;
 
         (* TODO: next definition *)

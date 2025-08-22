@@ -67,6 +67,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
     val (uTs, _) = Name.make_context (map (fst o dest_TFree) (vars @ plives'))
       |> apfst (map (TFree o rpair @{sort type})) o fold_map Name.variant (mk_names "'u" (replicate (length (#quotient_fps fp_res)) ()));
 
+    val rawTs = map #T (#raw_fps fp_res);
     val qTs = map #T (#quotient_fps fp_res);
     val fTs = map (fn a => a --> a) vars;
 
@@ -81,19 +82,27 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
     )) (#pre_mrbnfs fp_res) uTs;
     val pre_Ts = mk_pre_Ts qTs;
 
+    fun mk_raw_pre_Ts Ts = map2 (fn mrbnf => fn uT => uT --> (MRBNF_Def.mk_T_of_mrbnf
+      (MRBNF_Def.deads_of_mrbnf mrbnf) (plives @ flat (@{map 3} (fn T => fn uT => fn n =>
+        replicate n (mk_sumT (T, uT))
+      ) Ts uTs (#rec_vars fp_res))) bounds frees mrbnf
+    )) (#pre_mrbnfs fp_res) uTs;
+    val raw_pre_Ts = mk_raw_pre_Ts rawTs;
+
     val ((((Umaps, UFVarsss), Udtors), validUs), names_lthy) = names_lthy
       |> mk_Frees "Umap" (map (fn uT => fTs ---> uT --> uT) uTs)
       ||>> mk_Freess "UFVars" (map (fn uT => map (fn a => uT --> HOLogic.mk_setT a) vars) uTs)
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val ((((((ds, fs), gs), Xs), Xs'), xs), names_lthy) = names_lthy
+    val (((((((ds, fs), gs), Xs), Xs'), xs), picks), names_lthy) = names_lthy
       |> mk_Frees "d" uTs
       ||>> mk_Frees "f" fTs
       ||>> mk_Frees "g" fTs
       ||>> mk_Frees "X" (map (HOLogic.dest_setT o body_type) pre_Ts)
       ||>> mk_Frees "X'" (map (HOLogic.dest_setT o body_type) pre_Ts)
-      ||>> mk_Frees "a" vars;
+      ||>> mk_Frees "a" vars
+      ||>> mk_Frees "pick" raw_pre_Ts;
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
 
     val lthy = no_defs_lthy;
@@ -369,6 +378,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           end
         ) mrbnfs ds Udtors) lthy;
 
+        val (suitables, lthy) = mk_defs_t "suitable" 1
+          (@{map 4} (fn pick => fn d => fn Utor => fn validU =>
+            Term.absfree (dest_Free pick)
+              ((mk_all o dest_Free) d (HOLogic.mk_imp
+                (validU $ d, HOLogic.mk_mem (pick $ d, Utor $ d)))))
+            picks ds (map fst Utors) validUs) lthy;
+
         (* TODO: next definition *)
 
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
@@ -383,9 +399,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         (* Step 2: Export it as constant *)
         val Utors = map morph Utors;
+        val suitables = map morph suitables;
         (* TODO: more morph *)
 
-        val _ = @{print} Utors
+        val _ = @{print} Utors;
+        val _ = @{print} suitables;
 
         fun mk_setr x =
           let val T = fastype_of x;

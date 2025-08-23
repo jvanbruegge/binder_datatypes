@@ -391,6 +391,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             (Term.absfree (dest_Free pick) (suitable $ pick)))
             picks (map fst suitables)) lthy;
 
+          val corecs = (either (fn _ => []) #corec o the o #fp_thms) fp_res;
+          val _ = @{print} (map (Thm.cterm_of lthy) corecs);
+
         (* TODO: next definition *)
 
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;

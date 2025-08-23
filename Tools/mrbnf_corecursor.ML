@@ -407,6 +407,19 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             (Term.absfree (dest_Free pick) (suitable $ pick)))
             picks (map fst suitables)) lthy;
 
+        val (f0Defns, lthy) = mk_defs_t "f0_" 1
+          (map (fn fDefn =>
+            let
+              val body = Term.list_comb (fDefn, (map fst pick0s));
+            in
+              body
+            end) (map fst fDefns)) lthy;
+
+        val (corecDefns, lthy) = mk_defs_t "COREC" 1
+          (@{map 3} (fn d => fn abs => fn f0 =>
+            (Term.absfree (dest_Free d) (abs $ (f0 $ d))))
+            ds (map (#abs o #inner) (#quotient_fps fp_res)) (map fst f0Defns)) lthy;
+
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;
 
@@ -422,11 +435,15 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val suitables = map morph suitables;
         val fDefns = map morph fDefns;
         val pick0s = map morph pick0s;
+        val f0Defns = map morph f0Defns;
+        val corecDefns = map morph corecDefns;
 
         val _ = @{print} Utors;
         val _ = @{print} suitables;
         val _ = @{print} fDefns;
         val _ = @{print} pick0s;
+        val _ = @{print} f0Defns;
+        val _ = @{print} corecDefns;
 
         fun mk_setr x =
           let val T = fastype_of x;

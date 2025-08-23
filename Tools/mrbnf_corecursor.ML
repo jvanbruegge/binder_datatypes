@@ -385,6 +385,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 (validU $ d, HOLogic.mk_mem (pick $ d, Utor $ d)))))
             picks ds (map fst Utors) validUs) lthy;
 
+        (* TODO: is this the way to do this definition? *)
+        val (pick0s, lthy) = mk_defs_t "pick0_" 1
+          (map2 (fn pick => fn suitable => HOLogic.choice_const (fastype_of pick) $
+            (Term.absfree (dest_Free pick) (suitable $ pick)))
+            picks (map fst suitables)) lthy;
+
         (* TODO: next definition *)
 
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
@@ -404,6 +410,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val _ = @{print} Utors;
         val _ = @{print} suitables;
+        val _ = @{print} pick0s;
 
         fun mk_setr x =
           let val T = fastype_of x;

@@ -127,18 +127,19 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
           val tsubst = Term.typ_subst_atomic subst;
           val subst = Term.subst_atomic_types subst;
           val ctr_sugar = #ctr_sugar (#fp_ctr_sugar sugar);
-          (* TODO: save corec constant *)
+          val coinduct_sugar = the (#fp_co_induct_sugar sugar);
         in {
           T = tsubst (#T sugar),
           ctor = subst (hd (#ctrs ctr_sugar)),
           dtor = Option.map subst (try (hd o hd) (#selss ctr_sugar)),
-          induct = hd (#common_co_inducts (the (#fp_co_induct_sugar sugar))),
+          induct = hd (#common_co_inducts coinduct_sugar),
           inject = hd (#injects ctr_sugar),
           expand = try hd (#expands ctr_sugar),
           sel = try (hd o hd) (#sel_thmss ctr_sugar),
           exhaust = #exhaust ctr_sugar,
           case_t = subst (#casex ctr_sugar),
-          case_thm = hd (#case_thms ctr_sugar)
+          case_thm = hd (#case_thms ctr_sugar),
+          corec = #co_rec coinduct_sugar
         } end
       ) T_sugars, lthy) end;
 
@@ -3612,10 +3613,10 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             REPEAT_DETERM o eresolve_tac ctxt prems
           ]) ctors mrbnfs fresh_cases Rs)
         ]);
-    (* TODO: Add corec constant here *)
       in SOME {
         existential_coinduct = existential_coinduct,
-        fresh_coinduct_param = fresh_coinduct_param
+        fresh_coinduct_param = fresh_coinduct_param,
+        corec = map #corec raw_Ts
       } end
 
     val fp_result = {

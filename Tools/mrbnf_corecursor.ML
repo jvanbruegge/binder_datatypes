@@ -385,16 +385,27 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                 (validU $ d, HOLogic.mk_mem (pick $ d, Utor $ d)))))
             picks ds (map fst Utors) validUs) lthy;
 
+        val corecs = (either (fn _ => []) #corec o the o #fp_thms) fp_res;
+        val _ = @{print} (map (Thm.cterm_of lthy) corecs);
+
+        val (fDefns, lthy) = mk_defs_t "f" 1
+          (map (fn corec =>
+            let
+              val tyenv = Sign.typ_match
+              (Proof_Context.theory_of lthy)
+                (domain_type (fastype_of corec), fastype_of (hd picks)) Vartab.empty;
+              val subst = Envir.subst_term (tyenv, Vartab.empty);
+              val body = Term.list_comb (corec, picks);
+              val body = subst body;
+            in
+              fold_rev (Term.absfree o dest_Free) picks body
+            end) corecs) lthy;
+
         (* TODO: is this the way to do this definition? *)
         val (pick0s, lthy) = mk_defs_t "pick0_" 1
           (map2 (fn pick => fn suitable => HOLogic.choice_const (fastype_of pick) $
             (Term.absfree (dest_Free pick) (suitable $ pick)))
             picks (map fst suitables)) lthy;
-
-          val corecs = (either (fn _ => []) #corec o the o #fp_thms) fp_res;
-          val _ = @{print} (map (Thm.cterm_of lthy) corecs);
-
-        (* TODO: next definition *)
 
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;
@@ -409,10 +420,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         (* Step 2: Export it as constant *)
         val Utors = map morph Utors;
         val suitables = map morph suitables;
-        (* TODO: more morph *)
+        val fDefns = map morph fDefns;
+        val pick0s = map morph pick0s;
 
         val _ = @{print} Utors;
         val _ = @{print} suitables;
+        val _ = @{print} fDefns;
         val _ = @{print} pick0s;
 
         fun mk_setr x =

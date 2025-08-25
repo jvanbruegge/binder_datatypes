@@ -592,10 +592,10 @@ lemma nonrep2_mapF_bij:
     @{thm sameShape1_def} @{thm F.mr_rel_map(1)} @{thm F.mr_rel_map(3)} @{thm F.map_id} @{thm F.map_comp} @{context}
     THEN print_tac @{context} "done" THEN no_tac\<close>) *)
   subgoal premises prems
-    apply (unfold nonrep2_def sameShape1_def)
+    apply (unfold nonrep2_def sameShape1_def mr_rel_F_def rrel_F_alt[symmetric])
+    apply (subst mr_rel_F_def[THEN meta_eq_to_obj_eq, THEN fun_cong, THEN fun_cong, THEN fun_cong, THEN fun_cong, THEN fun_cong, symmetric])
     apply (rule allI)
     apply (rule impI)
-    apply (erule exE)
     apply (drule F.mr_rel_map(1)[THEN iffD1, rotated -1]; (rule supp_id_bound bij_id)?)
     apply (unfold o_id Grp_UNIV_id)
     apply (subst (asm) (2) OO_eq[symmetric]) (*lin_live_pos * 3 - 1*)

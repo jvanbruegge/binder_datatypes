@@ -1,5 +1,5 @@
 theory Labeled_FSet
-  imports Binders.MRBNF_Composition "HOL-Library.FSet"
+  imports Binders.MRBNF_Composition "HOL-Library.FSet" "HOL-ex.Sketch_and_Explore"
 begin
 
 abbreviation nonrep_pair :: "'a \<times> 'b \<Rightarrow> bool" where "nonrep_pair _ \<equiv> True"
@@ -414,20 +414,24 @@ lemma lfrlookup_eq:
   unfolding lfrlookup_def by blast
 
 lemma lfset_rel_map_values_strong: 
-  "\<And>R (x :: ('a :: var,'b) lfset) y.
-    rel_lfset id R x y =
-      (\<exists>!z. values z \<subseteq> {(x, y). R x y} \<and> map_lfset id fst z = x \<and> map_lfset id snd z = y)"
-  apply (unfold lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id mem_Collect_eq])
-  apply (auto)
-  (* this subgoal is just there to remove unecessary prems speeding up the auto*)
-  subgoal premises prems for R z x y
-    apply (insert trans[OF prems(4) prems(6)[THEN sym]] trans[OF prems(5) prems(7)[THEN sym]])
-    apply (transfer)
-    apply (auto simp: fset_eq_iff fimage_iff image_iff nonrep_lfset_alt map_prod_def split_beta)
-     apply (metis eq_snd_iff fst_conv)
-    apply (metis eq_snd_iff fst_conv)
-    done
-  done
+  "rel_lfset id R x y = (\<exists>!z. values z \<subseteq> {(x, y). R x y} \<and> map_lfset id fst z = x \<and> map_lfset id snd z = y)"
+proof -
+  have "z = z'"
+    if "map_lfset id fst z = map_lfset id fst z'" and "map_lfset id snd z = map_lfset id snd z'"
+    for z z' :: "('a, 'b \<times> 'c) lfset"
+    using that
+  proof (transfer)
+    fix z z' :: "('a \<times> 'b \<times> 'c) fset"
+    assume z: "nonrep_lfset z" and zz':
+      "map_prod id fst |`| z = map_prod id fst |`| z'"
+      "map_prod id snd |`| z = map_prod id snd |`| z'"
+    then show "z = z'"
+      unfolding fset_eq_iff nonrep_lfset_alt
+      by (smt (verit, ccfv_threshold) fimageE fimageI fst_map_prod id_def prod.collapse snd_map_prod zz')
+  qed
+  then show ?thesis
+    by (auto simp: lfset.in_rel [OF bij_id supp_id_bound, unfolded lfset.map_id mem_Collect_eq])
+qed
 
 lemma lfset_strong: "rel_lfset id R x y \<Longrightarrow> 
     rel_lfset id Q x y

@@ -85,6 +85,8 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 linearize_mrbnf ('a, 'b) L' = "('a, 'b) L" on 'a
   sorry
 
+thm L'.map_comp
+
 
 linearize_mrbnf ('a, F''bset: 'b , 'c , 'd, 'e , 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
   sorry

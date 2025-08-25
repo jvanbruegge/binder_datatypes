@@ -315,6 +315,8 @@ lemma lfset_inj_map_strong2:
     q \<in> values Q \<Longrightarrow> f p = g q \<Longrightarrow> f' p = g' q \<Longrightarrow> p = q)
   \<Longrightarrow> map_lfset id f P = map_lfset id g Q 
   \<Longrightarrow> map_lfset id f' P = map_lfset id g' Q \<Longrightarrow> P = Q"
+  by (force simp: lfset.rel_eq[symmetric] lfset.rel_map dest: lfset_strong elim: lfset.rel_mono_strong)
+  (*
   apply (drule lfset.rel_eq[THEN predicate2_eqD, THEN iffD2])
   apply (drule lfset.rel_eq[THEN predicate2_eqD, THEN iffD2])
   apply (rule lfset.rel_eq[THEN predicate2_eqD, THEN iffD1])
@@ -329,6 +331,7 @@ lemma lfset_inj_map_strong2:
   apply (erule conjE)
   apply (assumption)
   done
+  *)
 
 linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" (*[wits:"PPRec lfempty"]*) on 'v
   subgoal for R x y

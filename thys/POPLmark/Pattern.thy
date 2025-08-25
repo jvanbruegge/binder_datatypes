@@ -1,5 +1,5 @@
 theory Pattern
-  imports POPLmark_1B
+  imports POPLmark_1B "HOL-ex.Sketch_and_Explore"
   keywords
   "linearize_mrbnf" :: thy_goal_defn
 begin
@@ -69,21 +69,24 @@ lemma map_prepat_swapD: "map_prepat f Q = map_prepat (id(z := z', z' := z)) Q \<
 lemma nonrep_prepat_PRecD1: "nonrep_prepat (PPRec X :: ('tv::var, 'v::var) prepat) \<Longrightarrow> (x, P) \<in>\<in> X \<Longrightarrow>
   nonrep_prepat P"
   unfolding nonrep_prepat_def
-  apply safe
-  subgoal for Q
-    apply (drule spec[where x="PPRec (X\<lbrace>x := Q\<rbrace>)"])
-    apply (drule mp)
-     apply (auto simp: lfset.in_rel[of id, simplified, unfolded lfset.map_id]
+proof safe
+  fix Q :: "('tv, 'v) prepat"
+  assume shape: "\<forall>Q. rel_prepat top (PPRec X) (Q::('tv, 'v) prepat) \<longrightarrow> (\<exists>f. Q = map_prepat f (PPRec X))"
+    and PQ: "(x, P) \<in>\<in> X" "rel_prepat top P Q"
+  then have "rel_prepat top (PPRec X) (PPRec (X\<lbrace>x := Q\<rbrace>))"
+    by (auto simp: lfset.in_rel[of id, simplified, unfolded lfset.map_id]
       map_lfset_lfupdate lfset.set_map lfset.map_comp o_def lfset.map_ident prepat.rel_refl lfupdate_idle
       dest!: set_mp[OF values_lfupdate]
-       intro!: exI[of _ "lfupdate (map_lfset id (\<lambda>P. (P, P)) X) x (P, Q)"]) []
-    apply (erule exE)
-    subgoal for f
-      apply (rule exI[of _ f])
-      apply (auto)
-      by (metis lfin_lfupdate lfin_map_lfset)
-    done
-  done
+      intro!: exI[of _ "lfupdate (map_lfset id (\<lambda>P. (P, P)) X) x (P, Q)"]) []
+  from shape[rule_format, OF this] show "\<exists>f. Q = map_prepat f P"
+  proof (elim ex_reg[rotated], intro allI impI)
+    fix f :: "'v \<Rightarrow> 'v"
+    assume "PPRec (X\<lbrace>x := Q\<rbrace>) =  map_prepat f (PPRec X)"
+    with PQ show "Q = map_prepat f P"
+      by (metis (mono_tags, lifting) lfin_lfupdate lfin_map_lfset prepat.inject(2)
+          prepat.simps(10))
+  qed
+qed
 
 lemma nonrep_prepat_PRecD2: "nonrep_prepat (PPRec X :: ('tv::var, 'v::var) prepat) \<Longrightarrow>
   (\<forall>x y P Q. x \<noteq> y \<longrightarrow> (x, P) \<in>\<in> X \<longrightarrow> (y, Q) \<in>\<in> X \<longrightarrow> PPVars P \<inter> PPVars Q = {})"

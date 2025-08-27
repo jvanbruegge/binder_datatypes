@@ -53,18 +53,6 @@ axiomatization where
 
 abbreviation "rel_F \<equiv> mr_rel_F"
 
-lemma rrel_F_alt: "rrel_F top (=) x y = (\<exists>R. rrel_F R (=) x y)"
-  apply (rule iffI)
-  apply (rule exI)
-  apply (assumption)
-  apply (erule exE)
-  apply (rule F.rel_mono_strong)
-    apply (unfold top_apply top_bool_def)
-   apply (assumption?; rule TrueI)+
-  done
-
-ML \<open>@{term "rrel_F top (=) x y = (\<exists>R. rrel_F R (=) x y)"} |> @{print}\<close>
-
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 
 The relator is closed under intersections. *)
 
@@ -133,7 +121,8 @@ lemma F_strong:
 
   apply (frule F.mr_rel_mono_strong0[OF supp_id_bound bij_id supp_id_bound supp_id_bound bij_id supp_id_bound];
       ((rule ballI, rule ballI refl)?, 
-        (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?))
+        (rule impI, rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]])?)) 
+  thm trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def]]
   apply(rotate_tac 2)
   apply (unfold F.map_id mr_rel_F_def eq_True)
   thm F_rel_map_set2_strong
@@ -220,7 +209,7 @@ lemma rel_F_exchange:
 (* Then notion of two items having the same shape (w.r.t. the 3rd position): *)
 (* these definitions are lin_pos dependent *)
 definition sameShape1 :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> ('a1,'a2,'a3,'a4) F \<Rightarrow> bool" where 
-  "sameShape1 x x' \<equiv> \<exists> R. rel_F id id R (=) x x'"
+  "sameShape1 x x' \<equiv> rel_F id id top (=) x x'"
 
 definition nonrep2 :: "('a1::var,'a2::var,'a3,'a4) F \<Rightarrow> bool" where 
   "nonrep2 x \<equiv> \<forall> x'. sameShape1 x x' \<longrightarrow> (\<exists> f. x' = map_F id id f id x)"
@@ -328,7 +317,7 @@ lemma nonrep2_map_F:
     apply (unfold nonrep2_def sameShape1_def)
     apply (rule allI)
     apply (rule impI)
-    apply (elim exE)
+    (* apply (elim exE) *) (* rm EX *)
     apply (subst F.map_comp; (rule prems bij_id supp_id_bound)?)
     apply (unfold o_id id_o)
     apply (subst F.map_comp[of id id _ _ id _ _ id, unfolded o_id id_o, symmetric]; (rule prems bij_id supp_id_bound)?)
@@ -355,12 +344,12 @@ lemma nonrep2_map_F:
     apply (erule conjE)
     apply (erule conjE)
     apply (hypsubst_thin)
-    subgoal premises subprems for x' R y z
+    subgoal premises subprems for x' (* R *) y z (* rm EX *)
       apply (insert subprems(1))
       apply (erule allE)
       apply (erule impE)
 (* this instantiation of R is not really necessary, but it feels better to have it concretely *)
-       apply (rule exI[of _ R])
+      (*apply (rule exI[of _ R])*) (* rm EX *)
       apply (subst F.rel_map)
        apply (subst F.rel_map)
        apply (rule F.rel_refl_strong)
@@ -482,7 +471,7 @@ lemma nonrep2_map_F_rev:
     apply (unfold nonrep2_def sameShape1_def)
     apply (rule allI)
     apply (rule impI)
-    apply (erule exE)
+    (*apply (erule exE)*) (* rm EX *)
     apply (frule F.mr_rel_map(2)[rotated -1]; (rule prems supp_id_bound bij_id)?)
     apply (rotate_tac)
     apply (subst (asm) (1 2) trans[OF o_id id_o[symmetric]]) (*1..nr_non_lives*)
@@ -493,7 +482,7 @@ lemma nonrep2_map_F_rev:
     apply (subst (asm) F.mr_rel_map(1)[symmetric]; (rule prems supp_id_bound bij_id)?)
     apply (insert prems(3)[unfolded nonrep2_def sameShape1_def]) (*lastprem*)
     apply (elim allE impE)
-     apply (rule exI)
+     (*apply (rule exI)*) (* rm EX *)
      apply (assumption)
 
     apply (erule thin_rl)
@@ -592,10 +581,10 @@ lemma nonrep2_mapF_bij:
     @{thm sameShape1_def} @{thm F.mr_rel_map(1)} @{thm F.mr_rel_map(3)} @{thm F.map_id} @{thm F.map_comp} @{context}
     THEN print_tac @{context} "done" THEN no_tac\<close>) *)
   subgoal premises prems
-    apply (unfold nonrep2_def sameShape1_def mr_rel_F_def rrel_F_alt[symmetric])
-    apply (subst mr_rel_F_def[THEN meta_eq_to_obj_eq, THEN fun_cong, THEN fun_cong, THEN fun_cong, THEN fun_cong, THEN fun_cong, symmetric])
+    apply (unfold nonrep2_def sameShape1_def)
     apply (rule allI)
     apply (rule impI)
+    (* apply (erule exE) *) (* rm EX *)
     apply (drule F.mr_rel_map(1)[THEN iffD1, rotated -1]; (rule supp_id_bound bij_id)?)
     apply (unfold o_id Grp_UNIV_id)
     apply (subst (asm) (2) OO_eq[symmetric]) (*lin_live_pos * 3 - 1*)
@@ -606,10 +595,15 @@ lemma nonrep2_mapF_bij:
     apply (subst (asm) (1) relcompp_assoc[symmetric]) (* 1 should be fine here, there should only be one chain of OO *)
     apply (drule F.mr_rel_map(3)[THEN iffD2, OF supp_id_bound bij_id supp_id_bound bij_id
           supp_id_bound bij_id supp_id_bound, unfolded inv_id o_id])  (*bij and supp for bounds only supp for frees; THEN bij and supp for both *)
-    apply (unfold Grp_UNIV_id conversep_eq)
-    apply (drule x[unfolded nonrep2_def sameShape1_def, rule_format, OF exI])
+    apply (unfold Grp_UNIV_id conversep_eq mr_rel_F_def) (* added EX *)
+    apply (drule F.rel_mono_strong) (* added EX *)
+    apply (rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def], THEN iffD2]) (* added EX *)
+  apply (rule TrueI) (* added EX *)
+  apply (rule DEADID.rel_mono_strong) (* added EX *)
+     apply (assumption) (* added EX *)
+    apply (drule x[unfolded nonrep2_def sameShape1_def mr_rel_F_def, rule_format(*, OF exI *)]) (* rm/added EX *)
     apply (erule exE)
-    subgoal premises subprems for y' R' f
+    subgoal premises subprems for y' (* R' *) f (* rm EX *)
       apply (subst (1) F.map_id[symmetric]) (*1 constant*)
       apply (subst (7 9 13) o_id[symmetric]) (*target nth id by 2n + 7 starting at n=0  for all idx but lin_pos*)
       apply (subst (1) inv_o_simp2[OF g, symmetric]) (*1 constant*)
@@ -659,7 +653,7 @@ lemma nonrep2_mapF_bij_2:
 
 typedef ('a1::var,'a2::var,'a3::var,'a4) F' = "{x :: ('a1,'a2,'a3,'a4) F. nonrep2 x}"
   apply (unfold mem_Collect_eq nonrep2_def sameShape1_def mr_rel_F_def F.map_id)
-  by (rule ex_nonrep[unfolded rrel_F_alt])
+  by (rule ex_nonrep)
 
 definition set1_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a1 set" where "set1_F' = set1_F o Rep_F'"
 definition set2_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a2 set" where "set2_F' = set2_F o Rep_F'"

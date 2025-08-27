@@ -7,6 +7,7 @@ begin
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
+ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../../Tools/mrbnf_linearize.ML"
 
 setup \<open>Sign.qualified_path false (Binding.name "P")\<close>
@@ -312,30 +313,6 @@ mrbnf "('tv :: var, 'v) prepat"
   subgoal by (auto)
   done
 
-lemma lfset_inj_map_strong2:
-  "(\<And>p q.
-    p \<in> values P \<Longrightarrow>
-    q \<in> values Q \<Longrightarrow> f p = g q \<Longrightarrow> f' p = g' q \<Longrightarrow> p = q)
-  \<Longrightarrow> map_lfset id f P = map_lfset id g Q 
-  \<Longrightarrow> map_lfset id f' P = map_lfset id g' Q \<Longrightarrow> P = Q"
-  by (force simp: lfset.rel_eq[symmetric] lfset.rel_map dest: lfset_strong elim: lfset.rel_mono_strong)
-  (*
-  apply (drule lfset.rel_eq[THEN predicate2_eqD, THEN iffD2])
-  apply (drule lfset.rel_eq[THEN predicate2_eqD, THEN iffD2])
-  apply (rule lfset.rel_eq[THEN predicate2_eqD, THEN iffD1])
-  apply (drule lfset.rel_map(1)[THEN iffD1])
-  apply (drule lfset.rel_map(2)[THEN iffD1])
-  apply (drule lfset.rel_map(1)[THEN iffD1])
-  apply (drule lfset.rel_map(2)[THEN iffD1])
-  apply (drule lfset_strong; assumption?)
-  apply (drule lfset_strong; assumption?)
-  apply (unfold inf_bool_def inf_fun_def)
-  apply (erule lfset.rel_mono_strong)
-  apply (erule conjE)
-  apply (assumption)
-  done
-  *)
-
 linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" (*[wits:"PPRec lfempty"]*) on 'v
   subgoal for R x y
     apply (unfold P.Pattern.P.prepat.in_rel mem_Collect_eq map_vvsubst_equiv)
@@ -376,7 +353,6 @@ linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" (*[wits:"PPRec lfe
     qed
     done
   subgoal
-    apply (unfold rel_prepat_alt)
     apply (rule ex_nonrep_prepat[unfolded nonrep_prepat_def map_vvsubst_equiv])
     done
   done

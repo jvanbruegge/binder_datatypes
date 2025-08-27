@@ -448,6 +448,14 @@ lemma lfset_strong: "rel_lfset id R x y \<Longrightarrow>
     done
   done
 
+lemma lfset_inj_map_strong2:
+  "(\<And>p q.
+    p \<in> values P \<Longrightarrow>
+    q \<in> values Q \<Longrightarrow> f p = g q \<Longrightarrow> f' p = g' q \<Longrightarrow> p = q)
+  \<Longrightarrow> map_lfset id f P = map_lfset id g Q 
+  \<Longrightarrow> map_lfset id f' P = map_lfset id g' Q \<Longrightarrow> P = Q"
+  by (force simp: lfset.rel_eq[symmetric] lfset.rel_map dest: lfset_strong elim: lfset.rel_mono_strong)
+
 lifting_update lfset.lifting
 lifting_forget lfset.lifting
 declare fun_cong[OF lfset_size_o_map,

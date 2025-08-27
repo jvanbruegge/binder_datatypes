@@ -7,6 +7,7 @@ begin
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
+ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
 declare [[mrbnf_internals]]
@@ -85,12 +86,10 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 linearize_mrbnf ('a, 'b) L' = "('a, 'b) L" on 'a
   sorry
 
-thm L'.map_comp
 
 
-linearize_mrbnf ('a, F''bset: 'b , 'c , 'd, 'e , 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'a
+linearize_mrbnf ('a, F''bset: 'b , 'c , 'd, 'e , 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'd
   sorry
-
 
 thm F.map_comp F''bset_def
 term sameShape'_F
@@ -146,7 +145,7 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
           rtac ctxt (trans OF [@{thm top_apply} RS fun_cong, trans OF @{thms top_apply top_bool_def}])))) THEN
     unfold_thms_tac ctxt [F_map_id, mr_rel_F_def, @{thm eq_True}] THEN
     HEADGOAL (rotate_tac 2) THEN
-    HEADGOAL (dtac ctxt (iffD1 OF [F_rel_map_set2_strong])) THEN
+    HEADGOAL (dtac ctxt (iffD1 OF [F_rel_map_set2_strong])) THEN                                         
     unfold_thms_tac ctxt ([eqTrueI OF [subset_UNIV]] @ @{thms top_apply top_bool_def 
       Collect_const_case_prod if_True simp_thms(22)}) THEN
     unfold_thms_tac ctxt ([unfold_thms ctxt [id_apply, F_map_id, @{thm OO_Grp_alt}] (F_in_rel OF 

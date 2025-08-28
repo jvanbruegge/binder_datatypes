@@ -487,6 +487,51 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val _ = @{print} valid_Udtor'
 
+        val mk_FVarsBDs = fn FVarsss => fn (rec_sets, bsets, fsets) => fn X =>
+          let
+            val bfree_setss = map (fn i => if member (op=) (#bfree_vars fp_res) i then
+              [nth (drop nvars fsets) i $ X] else []
+              ) (0 upto nvars - 1);
+
+            val fsets = take nvars fsets;
+          in
+            @{map 5} (fn bfree_sets => fn bset => fn rel => fn FVarss => fn UFVarss =>
+
+            mk_minus (foldl1 mk_Un (
+              bfree_sets @ map_filter (fn (i, (FVars, UFVars)) => 
+                if member (op=) (flat rel) i then SOME (mk_UNION (nth rec_sets i $ X)
+                   (BNF_FP_Util.mk_case_sum (FVars, UFVars))
+                ) else NONE
+              ) ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss))
+            ), bset $ X)) bfree_setss bsets (#binding_relation fp_res) FVarsss (transpose UFVarsss)
+          end;
+
+        val FVarsBD_FFVarsBDs = @{map 4} (fn mrbnf => fn rawX => fn raw_pre_sets => fn pre_sets =>
+          let
+            val mk_FFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#quotient_fps fp_res))) pre_sets;
+            val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_pre_sets rawX;
+            val map_sum_args = map2 (fn rep => fn uT =>
+              mk_map_sum rep (HOLogic.id_const uT))
+              (replicate_rec (map (#abs o #inner) (#quotient_fps fp_res))) (replicate_rec uTs);
+            val map_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ map_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+            val rhss = mk_FFVarsBDs (map_fun $ rawX);
+          in
+            map2 (fn raw_UFVarsBD => fn rhs =>
+              let
+                val goal = mk_Trueprop_eq (raw_UFVarsBD, rhs)
+              in Goal.prove_sorry lthy (names [rawX]) [] goal (fn {context=ctxt, prems} => EVERY1 [
+                  (* K (Local_Defs.unfold0_tac ctxt <raw_UFVars_def2>) *)
+              ])
+              end
+            ) raw_UFVarsBDs rhss
+          end
+        ) mrbnfs rawXs raw_pre_setss pre_setss;
+
+        val _ = @{print} FVarsBD_FFVarsBDs;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

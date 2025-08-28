@@ -95,14 +95,15 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val (((((((ds, fs), gs), Xs), Xs'), xs), picks), names_lthy) = names_lthy
+    val ((((((((ds, fs), gs), Xs), Xs'), xs), picks), rawXs) , names_lthy) = names_lthy
       |> mk_Frees "d" uTs
       ||>> mk_Frees "f" fTs
       ||>> mk_Frees "g" fTs
       ||>> mk_Frees "X" (map (HOLogic.dest_setT o body_type) pre_Ts)
       ||>> mk_Frees "X'" (map (HOLogic.dest_setT o body_type) pre_Ts)
       ||>> mk_Frees "a" vars
-      ||>> mk_Frees "pick" raw_pre_Ts;
+      ||>> mk_Frees "pick" raw_pre_Ts
+      ||>> mk_Frees "rawX" (map body_type raw_pre_Ts);
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
 
     val lthy = no_defs_lthy;
@@ -127,6 +128,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         in (f plives a, f pbounds b, f pfrees c) end
       );
     val pre_setss = mk_pre_setss (map (HOLogic.dest_setT o body_type) pre_Ts);
+    val raw_pre_setss = mk_pre_setss (map body_type raw_pre_Ts);
     
     val mk_prems = maps (fn f => [mk_bij f, mk_supp_bound f]);
     val f_prems' = mk_prems fs;
@@ -138,8 +140,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
     val mk_map_sum = mk_bin_map @{const_name map_sum} BNF_Util.mk_sumT
 
-    val goals = @{map 12} (fn i => fn name => fn mrbnf => fn d => fn X => fn X' => fn Umap => fn UFVarss => fn Udtor
-      => fn validU => fn (rec_sets, bsets, fsets) => fn quot =>
+    val goals = @{map 14} (fn i => fn name => fn mrbnf => fn d => fn X => fn X' => fn rawX => fn Umap => fn UFVarss => fn Udtor
+      => fn validU => fn (rec_sets, bsets, fsets) => fn (raw_rec_sets, raw_bsets, raw_fsets) => fn quot =>
       let
         val Udtor_ne = Logic.all d (Logic.mk_implies (
           HOLogic.mk_Trueprop (validU $ d),
@@ -154,16 +156,25 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val fsets = take nvars fsets;
 
-        val id_ons = @{map 6} (fn f => fn bfree_sets => fn bset => fn rel => fn FVarss => fn UFVarss =>
-          mk_id_on (mk_minus (foldl1 mk_Un (
+        val mk_FVarsBDs = fn FVarsss => fn bsets => fn rec_sets => fn X => @{map 5} (fn bfree_sets => fn bset => fn rel => fn FVarss => fn UFVarss =>
+          mk_minus (foldl1 mk_Un (
             bfree_sets @ map_filter (fn (i, (FVars, UFVars)) => 
               if member (op=) (flat rel) i then SOME (mk_UNION (nth rec_sets i $ X)
                  (BNF_FP_Util.mk_case_sum (FVars, UFVars))
               ) else NONE
             ) ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss))
-          ), bset $ X)) f
-        ) fs bfree_setss bsets (#binding_relation fp_res) (transpose (map #FVarss (#quotient_fps fp_res)))
-          (transpose UFVarsss);
+          ), bset $ X)
+        ) bfree_setss bsets (#binding_relation fp_res) FVarsss (transpose UFVarsss);
+
+        val FFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#quotient_fps fp_res))) bsets rec_sets;
+        val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_bsets raw_rec_sets;
+
+        val _ = @{print} (map (Thm.cterm_of lthy) (FFVarsBDs X));
+        val _ = @{print} (map (Thm.cterm_of lthy) (raw_UFVarsBDs rawX));
+
+        val id_ons = map2 (fn f => fn fvar_union =>
+          mk_id_on fvar_union f
+        ) fs (FFVarsBDs X);
 
         val binding_rel = map flat (#binding_relation fp_res);
 
@@ -299,7 +310,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         ("valid_Umap" ^ string_of_int i, [valid_Umap]),
         ("valid_" ^ name, [valid_Udtor])
       ] end
-    ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' Umaps UFVarsss Udtors validUs pre_setss (#quotient_fps fp_res);
+    ) (1 upto length uTs) (mk_names "Udtor" (1 upto length uTs)) (#pre_mrbnfs fp_res) ds Xs Xs' rawXs Umaps UFVarsss Udtors validUs pre_setss raw_pre_setss (#quotient_fps fp_res);
 
     val (corecursor_result, lthy) = Local_Theory.background_theory_result (fn thy =>
       let

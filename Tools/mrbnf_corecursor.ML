@@ -169,9 +169,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val FFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#quotient_fps fp_res))) bsets rec_sets;
         val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_bsets raw_rec_sets;
 
-        val _ = @{print} (map (Thm.cterm_of lthy) (FFVarsBDs X));
-        val _ = @{print} (map (Thm.cterm_of lthy) (raw_UFVarsBDs rawX));
-
         val id_ons = map2 (fn f => fn fvar_union =>
           mk_id_on fvar_union f
         ) fs (FFVarsBDs X);
@@ -399,7 +396,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val corecs = (either (fn _ => []) #corec o the o #fp_thms) fp_res;
         val _ = @{print} (map (Thm.cterm_of lthy) corecs);
 
-        val (fDefns, lthy) = mk_defs_t "f" 1
+        val (fDefns, lthy) = mk_defs_t "f" (length picks)
           (map (fn corec =>
             let
               val tyenv = Sign.typ_match
@@ -412,13 +409,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               fold_rev (Term.absfree o dest_Free) picks body
             end) corecs) lthy;
 
-        (* TODO: is this the way to do this definition? *)
-        val (pick0s, lthy) = mk_defs_t "pick0_" 1
+        val (pick0s, lthy) = mk_defs_t "pick0_" 0
           (map2 (fn pick => fn suitable => HOLogic.choice_const (fastype_of pick) $
             (Term.absfree (dest_Free pick) (suitable $ pick)))
             picks (map fst suitables)) lthy;
 
-        val (f0Defns, lthy) = mk_defs_t "f0_" 1
+        val (f0Defns, lthy) = mk_defs_t "f0_" 0
           (map (fn fDefn =>
             let
               val body = Term.list_comb (fDefn, (map fst pick0s));
@@ -449,13 +445,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val f0Defns = map morph f0Defns;
         val corecDefns = map morph corecDefns;
 
-        val _ = @{print} Utors;
-        val _ = @{print} suitables;
-        val _ = @{print} fDefns;
-        val _ = @{print} pick0s;
-        val _ = @{print} f0Defns;
-        val _ = @{print} corecDefns;
-
         fun mk_setr x =
           let val T = fastype_of x;
           in Const (@{const_name Basic_BNFs.setr}, T --> HOLogic.mk_setT (snd (BNF_FP_Util.dest_sumT T))) $ x end
@@ -485,8 +474,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ) validUs (split_recs rec_sets) zs rs
         ) mrbnfs valid_Udtors ds Xs Udtors validUs pre_setss;
 
-        val _ = @{print} valid_Udtor'
-
         val mk_FVarsBDs = fn FVarsss => fn (rec_sets, bsets, fsets) => fn X =>
           let
             val bfree_setss = map (fn i => if member (op=) (#bfree_vars fp_res) i then
@@ -505,6 +492,10 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               ) ((0 upto nrecs - 1) ~~ replicate_rec (FVarss ~~ UFVarss))
             ), bset $ X)) bfree_setss bsets (#binding_relation fp_res) FVarsss (transpose UFVarsss)
           end;
+          
+        val FVars_raw_defs2 = @{map 3} (fn rep_abs => map2 (fn thm => fn alpha_FVars => @{thm trans[OF meta_eq_to_obj_eq]} OF [thm,
+          alpha_FVars OF [rep_abs]
+        ] RS sym)) (map (#rep_abs o #inner) (#quotient_fps fp_res)) (map (#FVars_defs o #inner) (#quotient_fps fp_res)) (map (#alpha_FVarss o #inner) (#raw_fps fp_res));
 
         val FVarsBD_FFVarsBDs = @{map 4} (fn mrbnf => fn rawX => fn raw_pre_sets => fn pre_sets =>
           let
@@ -523,7 +514,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               let
                 val goal = mk_Trueprop_eq (raw_UFVarsBD, rhs)
               in Goal.prove_sorry lthy (names [rawX]) [] goal (fn {context=ctxt, prems} => EVERY1 [
-                  (* K (Local_Defs.unfold0_tac ctxt <raw_UFVars_def2>) *)
+                K (Local_Defs.unfold0_tac ctxt (flat FVars_raw_defs2)),
+                K (print_tac ctxt "foo")
               ])
               end
             ) raw_UFVarsBDs rhss

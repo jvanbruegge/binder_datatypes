@@ -327,6 +327,34 @@ lemma valid_Udtor':
   (* END REPEAT_DETERM *)
   done
 
+lemma Umap_inv1:
+   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
+    and v: "bij v" "|supp v| <o |UNIV::'b set|"
+    and valid2: "valid_U1 d"
+  shows "Umap1 (inv u) (inv v) (Umap1 u v d) = d"
+    apply (rule trans[OF Umap_comp1])
+         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id(1)])
+     apply (rule assms)
+    apply (rule refl)
+  done
+
+lemma Umap_inv2:
+   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
+    and v: "bij v" "|supp v| <o |UNIV::'b set|"
+    and valid2: "valid_U2 d"
+  shows "Umap2 (inv u) (inv v) (Umap2 u v d) = d"
+    apply (rule trans[OF Umap_comp2])
+         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id(2)])
+     apply (rule assms)
+    apply (rule refl)
+  done
+
+lemmas Umap_inv = Umap_inv1 Umap_inv2
+
 lemma Umap_Udtor1_strong:
   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
     and v: "bij v" "|supp v| <o |UNIV::'b set|"
@@ -337,20 +365,9 @@ lemma Umap_Udtor1_strong:
 (map_T1_pre u v id id u v u (map_sum (permute_T1 u v) (Umap1 u v)) (map_sum (permute_T1 u v) (Umap1 u v))
       (map_sum (permute_T2 u v) (Umap2 u v)) (map_sum (permute_T2 u v) (Umap2 u v)))
    (Udtor1 d)"
-proof -
-  have x: "d = Umap1 (inv u) (inv v) (Umap1 u v d)"
-    apply (rule sym)
-    apply (rule trans[OF Umap_comp1])
-         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
-    apply (subst inv_o_simp1, rule assms)+
-    apply (rule trans[OF Umap_id(1)])
-     apply (rule assms)
-    apply (rule refl)
-    done
-  show ?thesis
     apply (rule subset_antisym)
      apply (rule Umap_Udtor1[OF valid1 u v])
-    apply (subst x)
+  apply (subst Umap_inv(1)[symmetric, OF assms])
     apply (rule image_subsetI)
     apply (drule Umap_Udtor1[THEN subsetD, rotated -1])
        apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap1)+
@@ -446,21 +463,7 @@ can we rewrite this so that it wouldn't be necessary? *)
                       apply (rule supp_id_bound bij_id)+
       apply (unfold Umap_id T1.permute_id0 map_sum.id T1_pre.map_id id_def[symmetric])
     apply assumption
-    done
-qed
-
-lemma Umap_inv:
-   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
-    and v: "bij v" "|supp v| <o |UNIV::'b set|"
-    and valid2: "valid_U2 d"
-  shows "Umap2 (inv u) (inv v) (Umap2 u v d) = d"
-    apply (rule trans[OF Umap_comp2])
-         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
-    apply (subst inv_o_simp1, rule assms)+
-    apply (rule trans[OF Umap_id(2)])
-     apply (rule assms)
-    apply (rule refl)
-    done
+  done
 
 lemma Umap_Udtor2_strong:
   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
@@ -474,7 +477,7 @@ lemma Umap_Udtor2_strong:
    (Udtor2 d)"
   apply (rule subset_antisym)
    apply (rule Umap_Udtor2[OF valid2 u v])
-  apply (subst Umap_inv[symmetric, OF assms])
+  apply (subst Umap_inv(2)[symmetric, OF assms])
   apply (rule image_subsetI)
   apply (drule Umap_Udtor2[THEN subsetD, rotated -1])
        apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap2)+

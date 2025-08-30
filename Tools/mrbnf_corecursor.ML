@@ -497,6 +497,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           alpha_FVars OF [rep_abs]
         ] RS sym)) (map (#rep_abs o #inner) (#quotient_fps fp_res)) (map (#FVars_defs o #inner) (#quotient_fps fp_res)) (map (#alpha_FVarss o #inner) (#raw_fps fp_res));
 
+        val _ = @{print} FVars_raw_defs2;
+
         val FVarsBD_FFVarsBDs = @{map 4} (fn mrbnf => fn rawX => fn raw_pre_sets => fn pre_sets =>
           let
             val mk_FFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#quotient_fps fp_res))) pre_sets;
@@ -514,8 +516,17 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               let
                 val goal = mk_Trueprop_eq (raw_UFVarsBD, rhs)
               in Goal.prove_sorry lthy (names [rawX]) [] goal (fn {context=ctxt, prems} => EVERY1 [
-                K (Local_Defs.unfold0_tac ctxt (flat FVars_raw_defs2)),
-                K (print_tac ctxt "foo")
+                K (Local_Defs.unfold_tac ctxt (flat FVars_raw_defs2)),
+                REPEAT_DETERM o EVERY' [
+                  EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+                  REPEAT_DETERM o resolve_tac ctxt @{thms bij_id supp_id_bound}
+                ],
+                REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms image_id}),
+                REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms image_image}),
+                REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms case_sum_map_sum}),
+                REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms comp_id}),
+                REPEAT_DETERM o (EqSubst.eqsubst_tac ctxt [0] @{thms comp_def}),
+                rtac ctxt refl
               ])
               end
             ) raw_UFVarsBDs rhss

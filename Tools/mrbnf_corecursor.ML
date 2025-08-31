@@ -535,6 +535,27 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val _ = @{print} FVarsBD_FFVarsBDs;
 
+        val Umap_invs = @{map 5} (fn valid_prem => fn d => fn Umap => fn Umap_comp => fn Umap_id =>
+          let
+            val goal = mk_Trueprop_eq
+                  ( Term.list_comb (Umap, (map mk_inv fs)
+                                          @ [Term.list_comb (Umap, fs @ [d])])
+                  , d
+                  );
+            val prems = f_prems @ [valid_prem];
+          in Goal.prove_sorry lthy (names (fs @ [d])) prems goal (fn {context=ctxt, prems} => EVERY1 [
+            rtac ctxt (trans OF [Umap_comp]),
+            REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
+            REPEAT_DETERM o EVERY' [
+              EqSubst.eqsubst_tac ctxt [0] @{thms inv_o_simp1},
+              resolve_tac ctxt prems
+            ],
+            rtac ctxt (trans OF [Umap_id]),
+            resolve_tac ctxt prems,
+            rtac ctxt refl
+          ]) end
+        ) valid_prems ds Umaps Umap_comps Umap_ids;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

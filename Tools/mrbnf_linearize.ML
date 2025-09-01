@@ -112,7 +112,6 @@ fun prepare_wits is_quotient RepT wits opts alphas wits_F var_as var_as' sets lt
 (** linearize **)
 fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
   let
-    val _ = wits |> @{print}
     val set_bs = map fst specs;
     val tfrees = map (TFree o snd) specs |> @{print};
     val on_tfree = TFree (on_tvar, @{sort type}) |> @{print};
@@ -135,8 +134,14 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val _ = (orig_Ds, orig_ABFs) |> @{print}
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
     val lin_pos = find_index (fn x => x = on_tfree) orig_ABFs |> @{print};
-    val orig_As = map_filter (fn (v, vt) => if vt = MRBNF_Def.Live_Var then SOME v else NONE) 
-      (orig_ABFs ~~ var_types) |> @{print};
+    val (orig_As, orig_Bs, orig_Fs) = fold_rev (fn (T, vt) => (fn (acc_As, acc_Bs, acc_Fs) => 
+      case vt of
+        MRBNF_Def.Live_Var => (T::acc_As, acc_Bs, acc_Fs)
+      | MRBNF_Def.Bound_Var => (acc_As, T::acc_Bs, acc_Fs)
+      | MRBNF_Def.Free_Var => (acc_As, acc_Bs, T::acc_Fs)
+      | _ => error "Dead_Var!" ))
+      (orig_ABFs ~~ var_types) ([], [], []) |> @{print};
+
     val lin_live_pos = find_index (fn x => x = on_tfree) orig_As |> @{print};
 
     val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
@@ -165,6 +170,33 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
               the b_opt else
               Binding.prefix_name ("set" ^ (Int.toString (i+1)) ^ "_") b) set_bs_non_dead
 
+    (* wits *)
+    val nwits = MRBNF_Def.nwits_of_mrbnf mrbnf;
+    val wits_F = MRBNF_Def.mk_wits_of_mrbnf (replicate nwits orig_Ds) (replicate nwits orig_As) 
+      (replicate nwits orig_Bs) (replicate nwits orig_Fs) mrbnf;
+
+    fun binder_types_until_eq V T =
+      let
+        fun strip (TU as Type ("fun", [T, U])) = if V = TU then [] else T :: strip U
+          | strip T = if V = T then [] else
+              error ("Bad type for witness: " ^ quote (Syntax.string_of_typ lthy T));
+      in strip T end;
+
+
+    val Iwits = the_default wits_F (Option.map (map (`(map (fn T =>
+      find_index (fn U => T = U) orig_ABFs) o binder_types_until_eq repT o fastype_of))) wits) |> @{print};
+
+    (* TODO: Actually only lives relevant? *)
+    val sets = MRBNF_Def.mk_sets_of_mrbnf (replicate nr_ABFs orig_Ds) (replicate nr_ABFs orig_As) 
+      (replicate nr_ABFs orig_Bs) (replicate nr_ABFs orig_Fs) mrbnf;
+    val (var_orig_as, n_lthy) = mk_Frees "a" orig_As n_lthy;
+    val (var_orig_as', n_lthy) = mk_Frees "a'" orig_As n_lthy;
+
+    val set_As = map_filter (fn (vt, set) => if vt = MRBNF_Def.Live_Var then SOME set else NONE) (var_types ~~ sets)
+
+
+    val wit_goals = maps (mk_wit_goals var_orig_as var_orig_as' set_As) Iwits |> @{print}; 
+
     (* make Frees*)
     val As_pair = map (fn (A, A') => HOLogic.mk_prodT (A, A')) (As ~~ As');
 
@@ -179,7 +211,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val typ_R'_As = map (fn (A, A') => [A, A'] ---> HOLogic.boolT) (As ~~ As');
     
     val (var_as, n_lthy) = mk_Frees "a" As n_lthy;
-    val (var_bs, n_lthy) = mk_Frees "b" As' n_lthy;
+    val (var_as', n_lthy) = mk_Frees "a'" As' n_lthy;
     val (var_x, n_lthy) = mk_Free "x" typ_x n_lthy;
     val (var_x2, n_lthy) = mk_Free "x" typ_x n_lthy;
     val (var_x'l, n_lthy) = mk_Free "x'l" typ_x'l n_lthy;
@@ -191,6 +223,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
     val (var_v_Fs, n_lthy) = mk_Frees "v" typ_v_Fs n_lthy;
     val (var_R'_As, n_lthy) = mk_Frees "R'" typ_R'_As n_lthy;
     val (var_R'_As2, n_lthy) = mk_Frees "R'" typ_R'_As n_lthy;
+   
 
     (* ex_nonrep *)
     val map_F = MRBNF_Def.mk_map_of_mrbnf Ds As As Bs Fs mrbnf;
@@ -234,7 +267,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val set_leq_collect = mk_leq set_z collect_set;
       in
         HOLogic.mk_conj (set_leq_collect, conj)
-      end)) (rev (set_Fs_live ~~ (var_R'_As ~~ (var_as ~~ var_bs)))) map_eq_conj;
+      end)) (rev (set_Fs_live ~~ (var_R'_As ~~ (var_as ~~ var_as')))) map_eq_conj;
 
     val ex1_z = Const ("HOL.Ex1", (typ_z --> HOLogic.boolT) --> HOLogic.boolT) $ 
       absfree (dest_Free var_z) set_map_conj;
@@ -251,10 +284,10 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
       get_first (fn Plugins_Option f => SOME (f lthy) | _ => NONE) (rev opts)
         |> the_default Plugin_Name.default_filter;
 
+    (* TODO: wits closed thm? *)
+    val goals = [F_rel_map_set_live_strong, Tp_ex_nonrep] @ wit_goals;
 
-    val goals = [F_rel_map_set_live_strong, Tp_ex_nonrep];
-
-    fun after_qed ([F_rel_map_set_live_strong_thm] :: [ex_nonrep_thm] :: wit_thms) lthy = 
+    fun after_qed ([F_rel_map_set_live_strong_thm] :: [ex_nonrep_thm] :: wit_thmss) lthy = 
       let
         (* sameShape *)
         val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As Bs Fs mrbnf
@@ -297,13 +330,23 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         fun mk_typedef_tac ctxt = 
           unfold_thms_tac ctxt [nrp_def_thm, ss_def_thm, @{thm mem_Collect_eq}, mr_rel_F_def, F_map_id] THEN
           HEADGOAL (rtac ctxt ex_nonrep_thm)
-        val ((_, (td_info1, td_info2)), lthy) = MRBNF_Util.new_typedef b td_term mk_typedef_tac lthy;
+          
+        val _ = td_term |> @{print}
+        val _ = (x_atomics ~~ (dest_Type_args repT)) |> @{print}
+
+        val td_term_spec = subst_atomic_types (x_atomics ~~ (dest_Type_args repT)) td_term |> @{print}
+        val _ = Term.add_tfreesT (fastype_of td_term_spec) [] |> rev |> @{print}
+        val _ = map (snd) specs |> @{print}
+
+        val ((_, (td_info1, td_info2)), lthy) = typedef (b, map (snd) specs, 
+          Mixfix.NoSyn) td_term_spec NONE mk_typedef_tac lthy |> @{print};
+
 
         (* mk F' Frees *)
         val typ_y = #abs_type td_info1;
         val typ_y' = typ_subst_atomic (nth_drop lin_live_pos (As ~~ As')) typ_y;
         val (var_y, n_lthy) = mk_Free "y" typ_y n_lthy;
-        val (var_y', _) = mk_Free "y'" typ_y' n_lthy;
+        val (var_y', n_lthy) = mk_Free "y'" typ_y' n_lthy;
 
         (* F' definitions *)
         (* set_F's *)
@@ -312,7 +355,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val (set_defs, lthy) = fold (fn (set, set_binding) => (fn (acc, lthy) =>
           let
             val Rep_const = Const (#Rep_name td_info1, (typ_y) --> (typ_x));
-            val set_rhs = HOLogic.mk_comp (set, Rep_const);
+            val set_rhs = HOLogic.mk_comp (set, Rep_const) |> @{print};
             val ((_, set_term, set_def_thm), lthy) = MRBNF_Util.new_definition set_binding set_rhs lthy;
           in
             ((set_term, set_def_thm)::acc, lthy)
@@ -474,15 +517,34 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         }
         val var_types_Abs = nth_map lin_pos (fn _ => MRBNF_Def.Bound_Var) var_types;
 
+        (* make F' wits *)
+        val (var_as, _) = mk_Frees "a" orig_As n_lthy;
+
+        val absT = #abs_type td_info1 |> typ_subst_atomic (x_atomics ~~ tfrees)
+        val Abs_const = Const (#Abs_name td_info1, (repT) --> (absT));
+
+        val wits_F' =
+          map (fn (I, wit_F) =>
+            let
+              val vs = map (nth var_as) I;
+            in fold_rev absfree (map dest_Free vs) (Abs_const $ (list_comb (wit_F, vs))) end)
+          Iwits;
+        
+        val _ = wit_thmss |> @{print}
+        val _ = wits_F |> @{print}
+        val _ = wits_F' |> @{print}
+
+        (*TODO: ISSUE*)
+        val wits_F' = []
+
         val (mrbnf', lthy) = MRBNF_Def.mrbnf_def MRBNF_Def.Do_Inline (MRBNF_Def.user_policy MRBNF_Def.Note_Some) 
           false I tacs (SOME Ds) NONE map_F'_binding rrel_F'_binding pred_b set_bs_non_dead 
           (((((((b, typ_y), map_F'_term), (var_types_Abs ~~ set_terms)),
             MRBNF_Def.mk_bd_of_mrbnf Ds Bs Fs mrbnf),
-            []),
+            wits_F'),
             SOME rrel_F'_term),
             NONE)
           lthy
-        val _ = @{print} mrbnf'
 
       in
         lthy

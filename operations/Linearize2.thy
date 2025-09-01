@@ -1,14 +1,155 @@
 theory Linearize2                                                        
   imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
   keywords
-  "linearize_mrbnf" :: thy_goal_defn
+  "linearize_mrbnf" "lift_bnf2" "copy_bnf2" :: thy_goal_defn
 begin
 
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
+lemma sum_insert_Inl_unit: "x \<in> A \<Longrightarrow> (\<And>y. x = Inr y \<Longrightarrow> Inr y \<in> B) \<Longrightarrow> x \<in> insert (Inl ()) B"
+  by (cases x) (simp_all)
+
+lemma lift_sum_unit_vimage_commute:
+  "insert (Inl ()) (Inr ` f -` A) = map_sum id f -` insert (Inl ()) (Inr ` A)"
+  by (auto simp: map_sum_def split: sum.splits)
+
+lemma insert_Inl_int_map_sum_unit: "insert (Inl ()) A \<inter> range (map_sum id f) \<noteq> {}"
+  by (auto simp: map_sum_def split: sum.splits)
+
+lemma image_map_sum_unit_subset:
+  "A \<subseteq> insert (Inl ()) (Inr ` B) \<Longrightarrow> map_sum id f ` A \<subseteq> insert (Inl ()) (Inr ` f ` B)"
+  by auto
+
+lemma subset_lift_sum_unitD: "A \<subseteq> insert (Inl ()) (Inr ` B) \<Longrightarrow> Inr x \<in> A \<Longrightarrow> x \<in> B"
+  unfolding insert_def by auto
+
+lemma UNIV_sum_unit_conv: "insert (Inl ()) (range Inr) = UNIV"
+  unfolding UNIV_sum UNIV_unit image_insert image_empty Un_insert_left sup_bot.left_neutral..
+
+lemma subset_vimage_image_subset: "A \<subseteq> f -` B \<Longrightarrow> f ` A \<subseteq> B"
+  by auto
+
+lemma relcompp_mem_Grp_neq_bot:
+  "A \<inter> range f \<noteq> {} \<Longrightarrow> (\<lambda>x y. x \<in> A \<and> y \<in> A) OO (BNF_Def.Grp UNIV f)\<inverse>\<inverse> \<noteq> bot"
+  unfolding Grp_def relcompp_apply fun_eq_iff by blast
+
+lemma comp_projr_Inr: "projr \<circ> Inr = id"
+  by auto
+
+lemma in_rel_sum_in_image_projr:
+  "B \<subseteq> {(x,y). rel_sum ((=) :: unit \<Rightarrow> unit \<Rightarrow> bool) A x y} \<Longrightarrow>
+   Inr ` C = fst ` B \<Longrightarrow> snd ` B = Inr ` D \<Longrightarrow> map_prod projr projr ` B \<subseteq> {(x,y). A x y}"
+  by (force simp: projr_def image_iff dest!: spec[of _ "Inl ()"]  split: sum.splits)
+
+lemma subset_rel_sumI: "B \<subseteq> {(x,y). A x y} \<Longrightarrow> rel_sum ((=) :: unit => unit => bool) A
+    (if x \<in> B then Inr (fst x) else Inl ())
+    (if x \<in> B then Inr (snd x) else Inl ())"
+  by auto
+
+lemma relcompp_eq_Grp_neq_bot: "(=) OO (BNF_Def.Grp UNIV f)\<inverse>\<inverse> \<noteq> bot"
+  unfolding Grp_def relcompp_apply fun_eq_iff by blast
+
+lemma rel_fun_rel_OO1: "(rel_fun Q (rel_fun R (=))) A B \<Longrightarrow> conversep Q OO A OO R \<le> B"
+  by (auto simp: rel_fun_def)
+
+lemma rel_fun_rel_OO2: "(rel_fun Q (rel_fun R (=))) A B \<Longrightarrow> Q OO B OO conversep R \<le> A"
+  by (auto simp: rel_fun_def)
+
+lemma rel_sum_eq2_nonempty: "rel_sum (=) A OO rel_sum (=) B \<noteq> bot"
+  by (auto simp: fun_eq_iff relcompp_apply intro!: exI[of _ "Inl _"])
+
+lemma rel_sum_eq3_nonempty: "rel_sum (=) A OO (rel_sum (=) B OO rel_sum (=) C) \<noteq> bot"
+  by (auto simp: fun_eq_iff relcompp_apply intro!: exI[of _ "Inl _"])
+
+lemma hypsubst: "A = B \<Longrightarrow> x \<in> B \<Longrightarrow> (x \<in> A \<Longrightarrow> P) \<Longrightarrow> P" by simp
+
+lemma Quotient_crel_quotient: "Quotient R Abs Rep T \<Longrightarrow> equivp R \<Longrightarrow> T \<equiv> (\<lambda>x y. Abs x = y)"
+  by (drule Quotient_cr_rel) (auto simp: fun_eq_iff equivp_reflp intro!: eq_reflection)
+
+lemma Quotient_crel_typedef: "Quotient (eq_onp P) Abs Rep T \<Longrightarrow> T \<equiv> (\<lambda>x y. x = Rep y)"
+  unfolding Quotient_def
+  by (auto 0 4 simp: fun_eq_iff eq_onp_def intro: sym intro!: eq_reflection)
+
+lemma Quotient_crel_typecopy: "Quotient (=) Abs Rep T \<Longrightarrow> T \<equiv> (\<lambda>x y. x = Rep y)"
+  by (subst (asm) eq_onp_True[symmetric]) (rule Quotient_crel_typedef)
+
+lemma equivp_add_relconj:
+  assumes equiv: "equivp R" "equivp R'" and le: "S OO T OO U \<le> R OO STU OO R'"
+  shows "R OO S OO T OO U OO R' \<le> R OO STU OO R'"
+proof -
+  have trans: "R OO R \<le> R" "R' OO R' \<le> R'"
+    using equiv unfolding equivp_reflp_symp_transp transp_relcompp by blast+
+  have "R OO S OO T OO U OO R' = R OO (S OO T OO U) OO R'"
+    unfolding relcompp_assoc ..
+  also have "\<dots> \<le> R OO (R OO STU OO R') OO R'"
+    by (intro le relcompp_mono order_refl)
+  also have "\<dots> \<le> (R OO R) OO STU OO (R' OO R')"
+    unfolding relcompp_assoc ..
+  also have "\<dots> \<le> R OO STU OO R'"
+    by (intro trans relcompp_mono order_refl)
+  finally show ?thesis .
+qed
+
+lemma Grp_conversep_eq_onp: "((BNF_Def.Grp UNIV f)\<inverse>\<inverse> OO BNF_Def.Grp UNIV f) = eq_onp (\<lambda>x. x \<in> range f)"
+  by (auto simp: fun_eq_iff Grp_def eq_onp_def image_iff)
+
+lemma Grp_conversep_nonempty: "(BNF_Def.Grp UNIV f)\<inverse>\<inverse> OO BNF_Def.Grp UNIV f \<noteq> bot"
+  by (auto simp: fun_eq_iff Grp_def)
+
+lemma relcomppI2: "r a b \<Longrightarrow> s b c \<Longrightarrow> t c d \<Longrightarrow> (r OO s OO t) a d"
+  by (auto)
+
+lemma rel_conj_eq_onp: "equivp R \<Longrightarrow> rel_conj R (eq_onp P) \<le> R"
+  by (auto simp: eq_onp_def transp_def equivp_def)
+
+lemma Quotient_Quotient3: "Quotient R Abs Rep T \<Longrightarrow> Quotient3 R Abs Rep"
+  unfolding Quotient_def Quotient3_def by blast
+
+lemma Quotient_reflp_imp_equivp: "Quotient R Abs Rep T \<Longrightarrow> reflp R \<Longrightarrow> equivp R"
+  using Quotient_symp Quotient_transp equivpI by blast
+
+lemma Quotient_eq_onp_typedef:
+  "Quotient (eq_onp P) Abs Rep cr \<Longrightarrow> type_definition Rep Abs {x. P x}"
+  unfolding Quotient_def eq_onp_def
+  by unfold_locales auto
+
+lemma Quotient_eq_onp_type_copy:
+  "Quotient (=) Abs Rep cr \<Longrightarrow> type_definition Rep Abs UNIV"
+  unfolding Quotient_def eq_onp_def
+  by unfold_locales auto
+
+ML_file "../Tools/bnf_lift.ML"
 
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
+
+type_synonym 'a seq = "nat \<Rightarrow> 'a"
+
+abbreviation finite_range :: "('a \<Rightarrow> 'b) \<Rightarrow> bool" where "finite_range f \<equiv> finite (range f)"
+
+lemma finite_range_pair:
+  assumes 1: "finite_range (\<lambda>x. fst (f x))" and 2: "finite_range (\<lambda>x. snd (f x))"
+  shows "finite_range f"
+proof -
+  have "range f \<subseteq> range (\<lambda>x. fst (f x)) \<times> range (\<lambda>x. snd (f x))"
+    by(auto 4 3 intro: rev_image_eqI dest: sym)
+  then show ?thesis by(rule finite_subset)(use assms in simp)
+qed
+
+definition seq_at :: "'a seq \<Rightarrow> 'a \<Rightarrow> nat set" where "seq_at f x = f -` {x}"
+
+typedef 'a fseq = "{f :: 'a seq. finite_range f}" 
+  by(rule exI[where x="\<lambda>_. undefined"]) simp
+
+
+setup_lifting type_definition_fseq
+
+lift_bnf2 'fa fseq [wits: "\<lambda>(x :: 'fa). (\<lambda>_ :: nat. x)"]
+  subgoal by(metis finite_imageI fun.set_map mem_Collect_eq)
+  subgoal by(auto intro: finite_range_pair)
+  subgoal by auto
+  subgoal by auto
+  done
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
@@ -46,21 +187,21 @@ mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   var_class: var
   sorry
 
-typedecl ('a, 'b, 'c, 'd, 'e, 'f) F
+typedecl ('a, 'b, 'c, 'f, 'e, 'd) F
 consts map_F :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
-  ('c :: var \<Rightarrow> 'c) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e :: var \<Rightarrow> 'e) \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) F \<Rightarrow> ('a', 'b, 'c, 'd', 'e, 'f) F"
-consts set1_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'a set"
-consts set2_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'b set"
-consts set3_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'c set"
-consts set4_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'd set"
-consts set5_F :: "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F \<Rightarrow> 'e set"
-consts rrel_F :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c :: var, 'd, 'e::var, 'f) F \<Rightarrow> ('a', 'b, 'c, 'd', 'e, 'f) F \<Rightarrow> bool"
+  ('c :: var \<Rightarrow> 'c) \<Rightarrow> ('e :: var \<Rightarrow> 'e) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('a, 'b, 'c, 'f, 'e, 'd) F \<Rightarrow> ('a', 'b, 'c, 'f, 'e, 'd') F"
+consts set1_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'a set"
+consts set2_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'b set"
+consts set3_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'c set"
+consts set4_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'd set"
+consts set5_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'e set"
+consts rrel_F :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c :: var, 'f, 'e::var, 'd) F \<Rightarrow> ('a', 'b, 'c, 'f, 'e, 'd') F \<Rightarrow> bool"
 
 
 declare [[ML_print_depth=1000]]
-mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e :: var, 'f) F"
+mrbnf "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F"
   map: map_F
-  sets: live: set1_F bound: set2_F free: set3_F live: set4_F bound: set5_F
+  sets: live: set1_F bound: set2_F free: set3_F bound: set5_F live: set4_F 
   bd: natLeq
   rel: rrel_F
   var_class: var
@@ -83,15 +224,30 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 *)
 
 
-linearize_mrbnf ('a, 'b) L' = "('a, 'b) L" on 'a
+
+
+linearize_mrbnf ('a, 'b) L' = "('a, 'b) L" [wits:"x :: ('a, 'b) L"] on 'a
   sorry
 
-
-
-linearize_mrbnf ('a, F''bset: 'b , 'c , 'd, 'e , 'f) F'' = "('a, 'b, 'c, 'd, 'e, 'f) F" on 'd
+linearize_mrbnf ('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F'' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F" 
+  [wits:"x :: ('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F"] on 'd
   sorry
 
-thm F.map_comp F''bset_def
+(*
+linearize_mrbnf (st1:'b::var, st2:'d , st3:'c::var , 'f, st4:'a , st5:'e::var) F''' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F" on 'd
+  sorry*)
+
+term Abs_F''
+
+thm st1_def
+thm st2_def
+thm st3_def
+thm st4_def
+thm set4_F''_def
+thm map_F''_def
+
+
+thm F.map_comp
 term sameShape'_F
 thm sameShape'_F_def nonrep'_F_def 
 

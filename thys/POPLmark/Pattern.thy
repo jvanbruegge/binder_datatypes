@@ -7,7 +7,7 @@ begin
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
-ML_file "../Tools/mrbnf_linearize_tactics.ML"
+ML_file "../../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../../Tools/mrbnf_linearize.ML"
 
 setup \<open>Sign.qualified_path false (Binding.name "P")\<close>
@@ -313,8 +313,8 @@ mrbnf "('tv :: var, 'v) prepat"
   subgoal by (auto)
   done
 
-linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" (*[wits:"PPRec lfempty"]*) on 'v
-  subgoal for R x y
+linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" [wits:"(PPRec lfempty) :: ('tv::var, 'v) prepat"] on 'v
+subgoal for R x y
     apply (unfold P.Pattern.P.prepat.in_rel mem_Collect_eq map_vvsubst_equiv)
     apply (rule iffI)
       apply (auto)
@@ -355,15 +355,23 @@ linearize_mrbnf ('tv::var, 'v) pat' = "('tv::var, 'v) prepat" (*[wits:"PPRec lfe
   subgoal
     apply (rule ex_nonrep_prepat[unfolded nonrep_prepat_def map_vvsubst_equiv])
     done
+  apply auto?
   done
 
-typedef ('tv::var, 'v::var) pat = "{p :: ('tv, 'v) prepat. nonrep_prepat p}"
-  by (auto intro!: exI[of _ "PPVar undefined undefined"])
 
 setup_lifting type_definition_pat
 
+thm prepat.map_id
+
+lemma nonrep_prepat_alt: "nonrep'_prepat x \<equiv> nonrep_prepat x"
+  apply (unfold nonrep'_prepat_def sameShape'_prepat_def nonrep_prepat_def rel_prepat_alt[symmetric] prepat.map_id
+      mr_rel_prepat_def map_vvsubst_equiv)
+  apply (assumption)
+  done
+
 lift_definition PVar :: "'v \<Rightarrow> 'tv typ \<Rightarrow> ('tv::var, 'v::var) pat" is PPVar
-  by auto
+  apply (unfold nonrep_prepat_alt)
+  by (rule nonrep_prepat_PPVar)
 
 lemma PVar_inject[simp]: "PVar X T = PVar Y U \<longleftrightarrow> X = Y \<and> T = U"
   by transfer auto
@@ -375,9 +383,9 @@ lemma PRec_transfer[transfer_rule]: "rel_fun (rel_lfset id cr_pat) cr_pat (\<lam
   apply (auto simp: PRec_def rel_fun_def cr_pat_def lfset.map_comp Abs_pat_inverse
     lfset.in_rel[of id, simplified, unfolded lfset.map_id])
   apply (subst Abs_pat_inverse)
-     apply (auto simp: Abs_pat_inverse lfin_map_lfset Rep_pat Collect_prod_beta subset_eq
+     apply (auto simp: Abs_pat_inverse lfin_map_lfset Rep_pat Collect_prod_beta subset_eq nonrep_prepat_alt
        intro!: lfset.map_cong)
-  using Rep_pat apply blast
+  using Rep_pat[unfolded nonrep_prepat_alt] apply blast
   apply (simp_all add: lfset.map_cong_id)
   done
 (*
@@ -421,7 +429,7 @@ lemma nonrep_prepat_vvsubst_prepat:
 
 lift_definition vvsubst_pat :: "('tv \<Rightarrow> 'tv) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
   "\<lambda>\<tau> \<sigma>. if bij \<sigma> then vvsubst_prepat \<tau> \<sigma> else id"
-  by (auto simp: nonrep_prepat_vvsubst_prepat)
+  by (auto simp: nonrep_prepat_vvsubst_prepat nonrep_prepat_alt)
 
 lemma nonrep_prepat_tvsubst_prepat:
   "bij \<sigma> \<Longrightarrow> nonrep_prepat (P::('tv::var,'v::var) prepat) \<Longrightarrow> nonrep_prepat (tvsubst_prepat \<tau> \<sigma> P::('tv::var,'v::var) prepat)"
@@ -432,7 +440,7 @@ lemma nonrep_prepat_tvsubst_prepat:
 
 lift_definition tvsubst_pat :: "('tv \<Rightarrow> 'tv typ) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
   "\<lambda>\<tau> \<sigma>. if bij \<sigma> then tvsubst_prepat \<tau> \<sigma> else id"
-  by (auto simp: nonrep_prepat_tvsubst_prepat)
+  by (auto simp: nonrep_prepat_tvsubst_prepat nonrep_prepat_alt)
 
 lift_definition PVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'v set" is
   "PPVars" .
@@ -498,11 +506,11 @@ lemma vvsubst_pat_id[simp]: "vvsubst_pat id id P = P"
   apply transfer
   subgoal for P
     apply (induct P)
-     apply (force simp: typ.map_id values_lfin_iff intro!: trans[OF lfset.map_cong_id lfset.map_id])+
+     apply (force simp: typ.map_id values_lfin_iff nonrep_prepat_alt intro!: trans[OF lfset.map_cong_id lfset.map_id])+
     done
   done
 
-mrbnf "('tv :: var, 'v :: var) pat"
+(*mrbnf "('tv :: var, 'v :: var) pat"
   map: vvsubst_pat
   sets:
     free: PTVars
@@ -518,14 +526,14 @@ mrbnf "('tv :: var, 'v :: var) pat"
     apply (transfer fixing: f1 f2 g1 g2)
     subgoal for P
       apply (induct P)
-       apply (force simp: typ.map_comp lfset.map_comp values_lfin_iff intro!: lfset.map_cong)+
+       apply (force simp: typ.map_comp lfset.map_comp values_lfin_iff nonrep_prepat_alt intro!: lfset.map_cong)+
       done
     done
   subgoal for P f1 f2 g1 g2
     apply (transfer fixing: f1 f2 g1 g2)
     subgoal for P
       apply (induct P)
-       apply (fastforce simp: values_lfin_iff Bex_def intro!: typ.map_cong lfset.map_cong)+
+       apply (fastforce simp: values_lfin_iff Bex_def nonrep_prepat_alt intro!: typ.map_cong lfset.map_cong)+
       done
     done
   subgoal for f g
@@ -549,19 +557,19 @@ mrbnf "('tv :: var, 'v :: var) pat"
     apply transfer
     subgoal for P
     apply (induct P)
-       apply (force simp: typ.FVars_bd lfset.set_bd values_lfin_iff intro!: stable_UNION[OF stable_natLeq])+
+       apply (force simp: typ.FVars_bd lfset.set_bd values_lfin_iff nonrep_prepat_alt intro!: stable_UNION[OF stable_natLeq])+
       done
     done
   subgoal for P
     apply transfer
     subgoal for P
     apply (induct P)
-       apply (force simp: typ.FVars_bd lfset.set_bd ID.set_bd values_lfin_iff intro!: stable_UNION[OF stable_natLeq])+
+       apply (force simp: typ.FVars_bd lfset.set_bd ID.set_bd values_lfin_iff nonrep_prepat_alt intro!: stable_UNION[OF stable_natLeq])+
       done
     done
   subgoal by simp
   subgoal by simp
-  done
+  done*)
 
 lemma vvsubst_pat_PVar[simp]:
   "bij g \<Longrightarrow> vvsubst_pat f g (PVar x T) = PVar (g x) (vvsubst_typ f T)"
@@ -583,9 +591,9 @@ lemma PRec_inject[simp]: "nonrep_PRec PP \<Longrightarrow> nonrep_PRec UU \<Long
   unfolding PRec_def
   apply (auto simp: nonrep_PRec_alt)
   apply (subst (asm) Abs_pat_inject)
-    apply (auto simp: Rep_pat_inject elim!: lfset.inj_map_strong[rotated])
-  apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
-  apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
+    apply (auto simp: Rep_pat_inject nonrep_prepat_alt elim!: lfset.inj_map_strong[rotated])
+  apply (metis Rep_pat nonrep_prepat_alt lfin_map_lfset mem_Collect_eq)
+  apply (metis Rep_pat nonrep_prepat_alt lfin_map_lfset mem_Collect_eq)
   done
 
 lemma vvsubst_pat_PRec[simp]:
@@ -593,18 +601,18 @@ lemma vvsubst_pat_PRec[simp]:
   unfolding PRec_def vvsubst_pat_def nonrep_PRec_alt
   apply (auto simp: lfset.map_comp o_def map_fun_def id_def[symmetric])
      apply (subst (1 2) Abs_pat_inverse)
-  using Rep_pat nonrep_prepat_vvsubst_prepat apply blast
-  apply (auto) []
-      apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
+  using Rep_pat nonrep_prepat_vvsubst_prepat nonrep_prepat_alt apply blast
+    apply (auto simp: nonrep_prepat_alt) []
+      apply (metis Rep_pat lfin_map_lfset mem_Collect_eq nonrep_prepat_alt)
      apply (subst Abs_pat_inject)
   apply (metis (mono_tags, lifting) Rep_pat lfin_map_lfset mem_Collect_eq nonrep_prepat_PRec
-      nonrep_prepat_vvsubst_prepat)
+      nonrep_prepat_vvsubst_prepat nonrep_prepat_alt)
   apply (smt (verit, best) Abs_pat_inverse Rep_pat lfin_map_lfset lfset.map_cong_id
-      mem_Collect_eq nonrep_prepat_PRec nonrep_prepat_vvsubst_prepat)
+      mem_Collect_eq nonrep_prepat_PRec nonrep_prepat_vvsubst_prepat nonrep_prepat_alt)
      apply (auto simp: lfset.map_comp intro!: lfset.map_cong) []
   apply (smt (z3) Abs_pat_inverse Rep_pat lfin_map_lfset mem_Collect_eq nonrep_PPRec_def
       nonrep_prepat_PRec nonrep_prepat_vvsubst_prepat
-      vvsubst_prepat.simps(2))
+      vvsubst_prepat.simps(2) nonrep_prepat_alt)
   done
 
 lemma tvsubst_pat_PRec[simp]:
@@ -612,33 +620,35 @@ lemma tvsubst_pat_PRec[simp]:
   unfolding PRec_def tvsubst_pat_def nonrep_PRec_alt
   apply (auto simp: lfset.map_comp o_def map_fun_def id_def[symmetric])
      apply (subst (1 2) Abs_pat_inverse)
-  using Rep_pat nonrep_prepat_tvsubst_prepat apply blast
-  apply (auto) []
-      apply (metis Rep_pat lfin_map_lfset mem_Collect_eq)
+  using Rep_pat nonrep_prepat_tvsubst_prepat nonrep_prepat_alt apply blast
+  apply (auto simp: nonrep_prepat_alt) []
+      apply (metis Rep_pat lfin_map_lfset mem_Collect_eq nonrep_prepat_alt)
      apply (subst Abs_pat_inject)
   apply (metis (mono_tags, lifting) Rep_pat lfin_map_lfset mem_Collect_eq nonrep_prepat_PRec
-      nonrep_prepat_tvsubst_prepat)
+      nonrep_prepat_tvsubst_prepat nonrep_prepat_alt)
   apply (smt (verit, best) Abs_pat_inverse Rep_pat lfin_map_lfset lfset.map_cong_id
-      mem_Collect_eq nonrep_prepat_PRec nonrep_prepat_tvsubst_prepat)
+      mem_Collect_eq nonrep_prepat_PRec nonrep_prepat_tvsubst_prepat nonrep_prepat_alt)
      apply (auto simp: lfset.map_comp intro!: lfset.map_cong) []
   apply (smt (z3) Abs_pat_inverse Rep_pat lfin_map_lfset mem_Collect_eq nonrep_PPRec_def
       nonrep_prepat_PRec nonrep_prepat_tvsubst_prepat
-      tvsubst_prepat.simps(2))
+      tvsubst_prepat.simps(2) nonrep_prepat_alt)
   done
 
 lemma PVars_PVar[simp]: "PVars (PVar x T) = {x}"
-  by (auto simp: PVars_def PVar_def Abs_pat_inverse)
+  by (auto simp: PVars_def PVar_def Abs_pat_inverse nonrep_prepat_alt)
 lemma PVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PVars (PRec P) = (\<Union>x \<in> values P. PVars x)"
+  thm Rep_pat[simplified, unfolded nonrep_prepat_alt]
   apply (auto simp: PVars_def PRec_def Abs_pat_inverse nonrep_PRec_alt lfin_map_lfset lfset.set_map Rep_pat[simplified])
-   apply (subst (asm) Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
-   apply (subst Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
+   apply (subst (asm) Abs_pat_inverse[unfolded nonrep_prepat_alt]; auto simp: lfin_map_lfset Rep_pat[simplified, unfolded nonrep_prepat_alt] lfset.set_map)
+   apply (subst Abs_pat_inverse[unfolded nonrep_prepat_alt]; auto simp: lfin_map_lfset Rep_pat[simplified, unfolded nonrep_prepat_alt] lfset.set_map)
   done
+
 lemma PTVars_PVar[simp]: "PTVars (PVar x T) = FVars_typ T"
-  by (auto simp: PTVars_def PVar_def Abs_pat_inverse)
+  by (auto simp: PTVars_def PVar_def Abs_pat_inverse nonrep_prepat_alt)
 lemma PTVars_PRec[simp]: "nonrep_PRec P \<Longrightarrow> PTVars (PRec P) = (\<Union>x \<in> values P. PTVars x)"
   apply (auto simp: PTVars_def PRec_def Abs_pat_inverse nonrep_PRec_alt lfin_map_lfset lfset.set_map Rep_pat[simplified])
-   apply (subst (asm) Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
-   apply (subst Abs_pat_inverse; auto simp: lfin_map_lfset Rep_pat[simplified] lfset.set_map)
+   apply (subst (asm) Abs_pat_inverse[unfolded nonrep_prepat_alt]; auto simp: lfin_map_lfset Rep_pat[simplified, unfolded nonrep_prepat_alt] lfset.set_map)
+   apply (subst Abs_pat_inverse[unfolded nonrep_prepat_alt]; auto simp: lfin_map_lfset Rep_pat[simplified, unfolded nonrep_prepat_alt] lfset.set_map)
   done
 
 lemma finite_PVars[simp]: "finite (PVars P)"

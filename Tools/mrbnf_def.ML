@@ -1067,11 +1067,12 @@ fun normalize_pred ctxt instTs instA pred =
 
 fun normalize_wit insts CA As wit =
   let
+    val _ = (insts, CA, As) |> @{print}
     fun strip_param (Ts, T as Type (@{type_name fun}, [T1, T2])) =
         if Type.raw_instance (CA, T) then (Ts, T) else strip_param (T1 :: Ts, T2)
       | strip_param x = x;
-    val (Ts, T) = strip_param ([], fastype_of wit);
-    val subst = Term.add_tvar_namesT T [] ~~ insts;
+    val (Ts, T) = strip_param ([], fastype_of wit)|> @{print};
+    val subst = (Term.add_tvar_namesT T [] |> @{print}) ~~ insts |> @{print};
     fun find y = find_index (fn x => x = y) As;
   in
     (map (find o Term.typ_subst_TVars subst) (rev Ts), Term.subst_TVars subst wit)
@@ -1892,8 +1893,10 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
       normalize_pred lthy (map mk_pred1T lAs') (mk_mrbnf_T Ds As' Calpha) mrbnf_pred;
 
     val mrbnf_wit_defs = map (Morphism.thm phi) raw_wit_defs;
+    val _ = mrbnf_wit_terms |> @{print}
+    val _ = map (fastype_of o Morphism.term phi) mrbnf_wit_terms |> @{print}
     val mrbnf_wits = map (normalize_wit
-      Calpha_params Calpha (filter_lives alphas) o Morphism.term phi) mrbnf_wit_terms;
+      Calpha_params Calpha (filter_lives alphas) o Morphism.term phi) mrbnf_wit_terms |> @{print};
 
     fun mk_rel_spec Ds' fs =
       let
@@ -1964,6 +1967,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
        define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map_b rel_b pred_b set_bs
          ((((((((mrbnf_b, T_rhs), map_rhs), (var_types ~~ set_rhss)), bd_rhs), wit_rhss), rel_rhs_opt),
            pred_rhs_opt), sort_opt) no_defs_lthy;
+    val _ = mrbnf_wits |> @{print}
 
     val dead = length deads;
 

@@ -178,14 +178,49 @@ consts set4_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'd set"
 consts set5_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'e set"
 consts rrel_G :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> 
   ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'e' \<Rightarrow> bool) \<Rightarrow> ('a, 'b , 'c , 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G \<Rightarrow> bool"
+consts wit1_G :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+consts wit2_G :: "'d \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+consts wit3_G :: "'b \<Rightarrow> 'e \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 
 mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   map: map_G
   sets: live: set1_G live: set2_G live: set3_G live: set4_G live: set5_G
   bd: natLeq
+  wits:
+    "wit1_G :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+    "wit2_G :: 'd \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+    "wit3_G :: 'b \<Rightarrow> 'e \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
   rel: rrel_G
   var_class: var
   sorry
+
+linearize_mrbnf ('a, 'b, 'c, 'd, 'e::var, 'f) lG = "('a, 'b, 'c, 'd, 'e::var, 'f) G" on 'e
+  sorry
+
+lemma nonrep'_G_wit1: "nonrep'_G (wit1_G a b)"
+  unfolding nonrep'_G_def sameShape'_G_def mr_rel_G_def G.in_rel
+  apply (auto intro!: exI[of _ id] simp: G.map_id)
+  apply (rule trans[OF sym, rotated])
+  apply assumption
+  apply (rule G.map_cong)
+       apply (auto dest!: arg_cong[where f=set5_G] simp: G.set_map set_eq_iff image_iff)
+  apply (drule spec)
+  apply (drule iffD1)
+   apply (rule bexI[rotated])
+    apply assumption
+   apply (rule fst_conv[symmetric])
+  apply (drule G.wit1)
+  apply (erule FalseE)
+  done
+
+lemma "x \<in> set1_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = a"
+      "x \<in> set2_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = b"
+      "x \<in> set3_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> False"
+      "x \<in> set4_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> False"
+  apply (unfold set1_lG_def set2_lG_def set3_lG_def set4_lG_def o_apply)
+  apply (simp_all only: Abs_lG_inverse[unfolded mem_Collect_eq] nonrep'_G_wit1)
+  apply (erule G.wit1)+
+  done
 
 typedecl ('a, 'b, 'c, 'f, 'e, 'd) F
 consts map_F :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
@@ -226,11 +261,11 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 
 
 
-linearize_mrbnf ('a, 'b) L' = "('a, 'b) L" [wits:"x :: ('a, 'b) L"] on 'a
+linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"x :: ('a::var, 'b) L"] on 'a
   sorry
 
-linearize_mrbnf ('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F'' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F" 
-  [wits:"x :: ('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F"] on 'd
+linearize_mrbnf ('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F'' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F" 
+  [wits:"x :: ('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F"] on 'd
   sorry
 
 (*

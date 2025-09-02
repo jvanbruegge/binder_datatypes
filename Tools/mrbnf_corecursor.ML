@@ -346,6 +346,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val valid_Udtors = map (hd o #valid_Udtor) axiomss;
         val Umap_Udtors = map (hd o #Umap_Udtor) axiomss;
 
+        val permute_comp0s = (map #permute_comp0 o #quotient_fps) fp_res;
+        val permute_id0s = (map #permute_id0 o #quotient_fps) fp_res;
+
         val names = map (fst o dest_Free);
         val valid_prems = map2 (HOLogic.mk_Trueprop oo curry (op$)) validUs ds;
 
@@ -497,8 +500,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           alpha_FVars OF [rep_abs]
         ] RS sym)) (map (#rep_abs o #inner) (#quotient_fps fp_res)) (map (#FVars_defs o #inner) (#quotient_fps fp_res)) (map (#alpha_FVarss o #inner) (#raw_fps fp_res));
 
-        val _ = @{print} FVars_raw_defs2;
-
         val FVarsBD_FFVarsBDs = @{map 4} (fn mrbnf => fn rawX => fn raw_pre_sets => fn pre_sets =>
           let
             val mk_FFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#quotient_fps fp_res))) pre_sets;
@@ -533,8 +534,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           end
         ) mrbnfs rawXs raw_pre_setss pre_setss;
 
-        val _ = @{print} FVarsBD_FFVarsBDs;
-
         val Umap_invs = @{map 5} (fn valid_prem => fn d => fn Umap => fn Umap_comp => fn Umap_id =>
           let
             val goal = mk_Trueprop_eq
@@ -555,6 +554,80 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             rtac ctxt refl
           ]) end
         ) valid_prems ds Umaps Umap_comps Umap_ids;
+
+        val Umap_Udtor_strong = @{map 10} (fn mrbnf => fn valid_prem => fn d => fn Udtor =>
+                                          fn Umap => fn Umap_Udtor => fn Umap_inv => fn valid_Umap =>
+                                          fn Umap_id => fn valid_Udtor'' =>
+          let
+            val lhs = Udtor $ Term.list_comb (Umap, fs @ [d]);
+            val map_sum_args = map2 (fn permute => fn Umap =>
+                mk_map_sum (Term.list_comb (permute, fs)) (Term.list_comb (Umap, fs)))
+              (replicate_rec (map #permute (#quotient_fps fp_res))) (replicate_rec Umaps);
+  
+            val image_arg = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ map_sum_args)
+              (map HOLogic.id_const pbounds @ fs) (fs @ map HOLogic.id_const (pfrees) @ bfree_fs) mrbnf;
+  
+            val rhs = mk_image image_arg $ (Udtor $ d);
+            val goal = mk_Trueprop_eq (lhs, rhs);
+            val prems = f_prems @ [valid_prem];
+          in Goal.prove_sorry lthy (names (fs @ [d])) prems goal (fn {context=ctxt, prems} =>
+               let
+                 val (f_prems, valid_prem) = prems
+                      |> chop (length f_prems);
+                 val nargs = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;
+                 (* TODO: is this a fine way to calculate this? *)
+                 val n_nonrecs = nargs - nrecs;
+               in EVERY1 ([  
+                 rtac ctxt @{thm subset_antisym},
+                 rtac ctxt (Umap_Udtor OF (valid_prem @ f_prems)),
+                 EqSubst.eqsubst_tac ctxt [0] [Umap_inv RS sym OF prems],
+                 rtac ctxt @{thm image_subsetI},
+                 dtac ctxt (Drule.rotate_prems ~1 (Umap_Udtor RS subsetD)),
+                 REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ valid_Umap :: prems),
+                 etac ctxt imageE,
+                 hyp_subst_tac ctxt,
+                 rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
+                 rtac ctxt (MRBNF_Def.map_comp_of_mrbnf mrbnf),
+                 REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound supp_id_bound} @  prems),
+                 K (Local_Defs.unfold0_tac ctxt @{thms map_sum.comp}),
+                 REPEAT_DETERM o EVERY' [
+                   EqSubst.eqsubst_tac ctxt [0] (@{thm inv_o_simp2} :: permute_comp0s),
+                   REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems)
+                 ],
+                 TRY o (K (Local_Defs.unfold0_tac ctxt @{thms comp_id})),
+                 K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+                 K (Local_Defs.unfold0_tac ctxt (@{thm map_sum.id} :: Umap_id :: permute_id0s)),
+                 rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
+                 rtac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.map_cong_of_mrbnf mrbnf))
+               ] @ replicate (n_nonrecs + 1) (rtac ctxt refl) @ flat (map2 (fn valid_Udtor' => fn Umap => [
+                 (* TODO: ^ any better way to do the same without splitting
+                            the tactic list? Also, is looping manually with map (like I did here)
+                            rather than REPEAT_DETERM fine? *)
+                   rtac ctxt @{thm sum.map_cong0[OF refl]},
+                   dtac ctxt (Drule.rotate_prems 1 valid_Udtor'),
+                   eresolve_tac ctxt @{thms UnI2 UnI1},
+                   assume_tac ctxt,
+                   rtac ctxt valid_Umap,
+                   REPEAT_DETERM o (resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems) ORELSE' assume_tac ctxt),
+                   rtac ctxt trans,
+                   resolve_tac ctxt Umap_comps,
+                   REPEAT_DETERM o (resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems) ORELSE' assume_tac ctxt),
+                   rtac ctxt trans,
+                   rtac ctxt (mk_arg_cong lthy (nvars + 1) Umap OF (replicate nvars @{thm _} @ [refl])),
+                   REPEAT_DETERM o EVERY' [
+                     rtac ctxt @{thm inv_o_simp2},
+                     resolve_tac ctxt prems
+                   ],
+                   resolve_tac ctxt Umap_ids,
+                   assume_tac ctxt
+               ]) (replicate_rec valid_Udtor'') (replicate_rec Umaps)) @ [
+                   REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id})),
+                   K (Local_Defs.unfold0_tac ctxt (MRBNF_Def.map_id_of_mrbnf mrbnf :: permute_id0s @ Umap_ids @ @{thms map_sum.id id_def[symmetric]})),
+                   assume_tac ctxt
+               ])
+               end) end
+        ) mrbnfs valid_prems ds Udtors Umaps Umap_Udtors Umap_invs valid_Umaps Umap_ids valid_Udtor';
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

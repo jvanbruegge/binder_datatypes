@@ -140,6 +140,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
     val mk_map_sum = mk_bin_map @{const_name map_sum} BNF_Util.mk_sumT
 
+    val reps = map (#rep o #inner) (#quotient_fps fp_res);
+    val abss = map (#abs o #inner) (#quotient_fps fp_res);
+
     val goals = @{map 14} (fn i => fn name => fn mrbnf => fn d => fn X => fn X' => fn rawX => fn Umap => fn UFVarss => fn Udtor
       => fn validU => fn (rec_sets, bsets, fsets) => fn (raw_rec_sets, raw_bsets, raw_fsets) => fn quot =>
       let
@@ -348,6 +351,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
         val permute_comp0s = (map #permute_comp0 o #quotient_fps) fp_res;
         val permute_id0s = (map #permute_id0 o #quotient_fps) fp_res;
+        val abs_reps = (map (#abs_rep o #inner) o #quotient_fps) fp_res;
 
         val names = map (fst o dest_Free);
         val valid_prems = map2 (HOLogic.mk_Trueprop oo curry (op$)) validUs ds;
@@ -378,7 +382,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           let
             val map_sum_args = map2 (fn rep => fn uT =>
               mk_map_sum rep (HOLogic.id_const uT))
-            (replicate_rec (map (#rep o #inner) (#quotient_fps fp_res))) (replicate_rec uTs);
+            (replicate_rec reps) (replicate_rec uTs);
             val image_arg = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
               (map HOLogic.id_const plives @ map_sum_args)
               (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
@@ -428,7 +432,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val (corecDefns, lthy) = mk_defs_t "COREC" 1
           (@{map 3} (fn d => fn abs => fn f0 =>
             (Term.absfree (dest_Free d) (abs $ (f0 $ d))))
-            ds (map (#abs o #inner) (#quotient_fps fp_res)) (map fst f0Defns)) lthy;
+            ds abss (map fst f0Defns)) lthy;
 
         val (lthy, old_lthy) = `Local_Theory.end_nested lthy;
         val phi = Proof_Context.export_morphism old_lthy lthy;
@@ -504,9 +508,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           let
             val mk_FFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#quotient_fps fp_res))) pre_sets;
             val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_pre_sets rawX;
-            val map_sum_args = map2 (fn rep => fn uT =>
-              mk_map_sum rep (HOLogic.id_const uT))
-              (replicate_rec (map (#abs o #inner) (#quotient_fps fp_res))) (replicate_rec uTs);
+            val map_sum_args = map2 (fn abs => fn uT =>
+              mk_map_sum abs (HOLogic.id_const uT))
+              (replicate_rec abss) (replicate_rec uTs);
             val map_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
               (map HOLogic.id_const plives @ map_sum_args)
               (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
@@ -628,6 +632,18 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                ])
                end) end
         ) mrbnfs valid_prems ds Udtors Umaps Umap_Udtors Umap_invs valid_Umaps Umap_ids valid_Udtor';
+
+       val abs_rep_ids = map2 (fn abs => fn rep =>
+          let
+            val lhs = HOLogic.mk_comp (abs, rep);
+            val goal = mk_Trueprop_eq (lhs, HOLogic.id_const (domain_type (fastype_of lhs)));
+          in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+            K (Local_Defs.unfold0_tac ctxt abs_reps),
+            K (Local_Defs.fold_tac ctxt @{thms id_def}),
+            rtac ctxt refl
+          ]) end
+        ) abss reps;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

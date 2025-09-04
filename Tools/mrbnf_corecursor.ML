@@ -35,6 +35,32 @@ fun mk_bin_map name mk_T f g =
     val (ga, gb) = dest_funT g_T
   in Const (name, f_T --> g_T --> mk_T (fa, ga) --> mk_T (fb, gb)) $ f $ g end;
 
+fun mk_rel_sum (L, R) =
+  let
+    val LT = fastype_of L;
+    val RT = fastype_of R;
+    val (LdomT, LrangeT) = dest_pred2T LT;
+    val (RdomT, RrangeT) = dest_pred2T RT;
+    val sumT = mk_pred2T (mk_sumT (LdomT, RdomT)) (mk_sumT (LrangeT, RrangeT));
+  in Const (\<^const_name>\<open>rel_sum\<close>, LT --> RT --> sumT) $ L $ R end;
+
+fun alternate l r xs ys =
+  case (xs, ys) of
+    ([], ys') => ys'
+    | (xs', []) => xs'
+    | (xs', ys') =>
+        let
+          val (xInit, xRest) = chop l xs';
+          val (yInit, yRest) = chop r ys';
+        in
+          xInit @ yInit @ alternate l r xRest yRest
+        end;
+
+fun everyother xs = case xs of
+  [] => []
+  | [x] => []
+  | (x1::x2::xs') => x2 :: everyother xs';
+
 fun create_binding_corecursor qualify fp_res no_defs_lthy =
   let
     val tvars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps fp_res))) []))
@@ -95,15 +121,19 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val ((((((((ds, fs), gs), Xs), Xs'), xs), picks), rawXs) , names_lthy) = names_lthy
+    val ((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), rawXs), rawXs') , ts), ts'), names_lthy) = names_lthy
       |> mk_Frees "d" uTs
+      ||>> mk_Frees "d'" uTs
       ||>> mk_Frees "f" fTs
       ||>> mk_Frees "g" fTs
       ||>> mk_Frees "X" (map (HOLogic.dest_setT o body_type) pre_Ts)
       ||>> mk_Frees "X'" (map (HOLogic.dest_setT o body_type) pre_Ts)
       ||>> mk_Frees "a" vars
       ||>> mk_Frees "pick" raw_pre_Ts
-      ||>> mk_Frees "rawX" (map body_type raw_pre_Ts);
+      ||>> mk_Frees "rawX" (map body_type raw_pre_Ts)
+      ||>> mk_Frees "rawX'" (map body_type raw_pre_Ts)
+      ||>> mk_Frees "t" rawTs
+      ||>> mk_Frees "t'" rawTs;
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
 
     val lthy = no_defs_lthy;
@@ -142,6 +172,15 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
 
     val reps = map (#rep o #inner) (#quotient_fps fp_res);
     val abss = map (#abs o #inner) (#quotient_fps fp_res);
+    val alphas = map (#alpha o #inner) (#raw_fps fp_res);
+
+    val binding_rel = map flat (#binding_relation fp_res);
+
+    val rec_boundss = map (fn i =>
+      @{map_filter 2} (fn j => fn rel =>
+        if member (op=) rel i then SOME j else NONE
+      ) (0 upto length binding_rel - 1) binding_rel
+    ) (0 upto nrecs - 1);
 
     val goals = @{map 14} (fn i => fn name => fn mrbnf => fn d => fn X => fn X' => fn rawX => fn Umap => fn UFVarss => fn Udtor
       => fn validU => fn (rec_sets, bsets, fsets) => fn (raw_rec_sets, raw_bsets, raw_fsets) => fn quot =>
@@ -175,14 +214,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
         val id_ons = map2 (fn f => fn fvar_union =>
           mk_id_on fvar_union f
         ) fs (FFVarsBDs X);
-
-        val binding_rel = map flat (#binding_relation fp_res);
-
-        val rec_boundss = map (fn i =>
-          @{map_filter 2} (fn j => fn rel =>
-            if member (op=) rel i then SOME j else NONE
-          ) (0 upto length binding_rel - 1) binding_rel
-        ) (0 upto nrecs - 1);
 
         val alpha_Udtor = fold_rev Logic.all [X, X', d] (fold_rev (curry Logic.mk_implies) (
           [HOLogic.mk_Trueprop (validU $ d), HOLogic.mk_Trueprop (mk_leq
@@ -401,7 +432,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             picks ds (map fst Utors) validUs) lthy;
 
         val corecs = (either (fn _ => []) #corec o the o #fp_thms) fp_res;
-        val _ = @{print} (map (Thm.cterm_of lthy) corecs);
 
         val (fDefns, lthy) = mk_defs_t "f" (length picks)
           (map (fn corec =>
@@ -644,6 +674,76 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             rtac ctxt refl
           ]) end
         ) abss reps;
+
+       val DTOR_mapD = @{map 9} (fn mrbnf => fn abs => fn rep => fn rawX => fn rawX' =>
+                                 fn raw_pre_sets => fn Utor => fn d => fn valid_prem =>
+         let
+           val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_pre_sets rawX;
+           val id_ons = map2 (fn f => fn fvar_union =>
+             mk_id_on fvar_union f
+           ) fs raw_UFVarsBDs;
+
+           fun mk_mr_rel deads mrbnf =
+             let
+               val live_Ts = plives @ replicate_rec (map2 (fn uT => fn T => (mk_sumT (T, uT))) uTs rawTs);
+             in
+               MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf  
+           end;
+  
+           val rel_sum_recs = map2 (fn alpha => fn uT => mk_rel_sum (alpha, (HOLogic.eq_const uT))) alphas uTs;
+  
+           val rel_sum_brecs = @{map 8} (fn bounds => fn alpha => fn t => fn t' => fn d => fn d' => fn raw_permute => fn Umap =>
+             let
+               val fs' = map_index (fn (i, f) => if member (op=) bounds i then f
+                     else HOLogic.id_const (domain_type (fastype_of f))
+                   ) fs
+  
+               val (tName, tT) = dest_Free t;
+               val (tName', tT') = dest_Free t';
+               val L = Abs (tName, tT, Abs (tName', tT',
+                 Term.list_comb (alpha, [Term.list_comb (raw_permute, fs' @ [Bound 1]), Bound 0])));
+              
+               val (dName, dT) = dest_Free d;
+               val (dName', dT') = dest_Free d';
+               val R = Abs (dName, dT, Abs (dName', dT',
+                 HOLogic.mk_eq
+                   ( Term.list_comb (Umap, fs' @ [Bound 1])
+                   , Bound 0
+                   )));
+             in
+               mk_rel_sum (L, R)
+             end
+            (* TODO: does this "everyother" idea scale for other/bigger types?
+                     it is based on the assumption that the sets are always ordered like:
+                     rec brec rec brec ... *)
+           ) (everyother rec_boundss) alphas ts ts' ds ds' (map #permute (#raw_fps fp_res)) Umaps;
+
+           val rel_sums = alternate 1 1 rel_sum_recs rel_sum_brecs;
+
+           val lives = map HOLogic.eq_const plives @ rel_sums;
+           val bounds = map HOLogic.id_const pbounds @ fs;
+           val frees = map HOLogic.id_const (vars @ pfrees) @ bfree_fs;
+
+           val mr_rel_term = Term.list_comb (
+               mk_mr_rel (MRBNF_Def.deads_of_mrbnf mrbnf) mrbnf,
+               MRBNF_Def.interlace lives bounds frees (MRBNF_Def.var_types_of_mrbnf mrbnf)
+             ) $ rawX $ rawX';
+
+           val _ = @{print} (Thm.cterm_of lthy mr_rel_term);
+
+           val Utor_prem = HOLogic.mk_Trueprop (mk_leq
+               (mk_insert rawX (mk_insert rawX' (mk_bot (fastype_of rawX)))) (Utor $ d));
+
+           val goal = Logic.mk_implies
+                 ( Utor_prem
+                 , HOLogic.mk_Trueprop (fold_rev (mk_ex o dest_Free) fs
+                     (foldr1 HOLogic.mk_conj (alternate 2 1 f_prems' id_ons @ [mr_rel_term])))
+                 );
+
+         in Goal.prove_sorry lthy (names [d, rawX, rawX']) [valid_prem] goal (fn {context=ctxt, prems} => EVERY1 [
+           K (print_tac ctxt "foo")
+         ]) end
+       ) mrbnfs abss reps rawXs rawXs' raw_pre_setss (map fst Utors) ds valid_prems;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

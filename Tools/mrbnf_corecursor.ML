@@ -675,8 +675,11 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ]) end
         ) abss reps;
 
-       val DTOR_mapD = @{map 9} (fn mrbnf => fn abs => fn rep => fn rawX => fn rawX' =>
-                                 fn raw_pre_sets => fn Utor => fn d => fn valid_prem =>
+       val permute_abss = map (#permute_abs o #inner) (#quotient_fps fp_res);
+       val total_abs_eq_iffs = map (#total_abs_eq_iff o #inner) (#quotient_fps fp_res);
+
+       val DTOR_mapD = @{map 8} (fn mrbnf => fn rawX => fn rawX' => fn raw_pre_sets => fn Utor =>
+                                 fn d => fn valid_prem => fn alpha_Udtor =>
          let
            val raw_UFVarsBDs = mk_FVarsBDs (transpose (map #FVarss (#raw_fps fp_res))) raw_pre_sets rawX;
            val id_ons = map2 (fn f => fn fvar_union =>
@@ -721,18 +724,16 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            val rel_sums = alternate 1 1 rel_sum_recs rel_sum_brecs;
 
            val lives = map HOLogic.eq_const plives @ rel_sums;
-           val bounds = map HOLogic.id_const pbounds @ fs;
-           val frees = map HOLogic.id_const (vars @ pfrees) @ bfree_fs;
+           val bounds' = map HOLogic.id_const pbounds @ fs;
+           val frees' = map HOLogic.id_const (vars @ pfrees) @ bfree_fs;
 
            val mr_rel_term = Term.list_comb (
                mk_mr_rel (MRBNF_Def.deads_of_mrbnf mrbnf) mrbnf,
-               MRBNF_Def.interlace lives bounds frees (MRBNF_Def.var_types_of_mrbnf mrbnf)
+               MRBNF_Def.interlace lives bounds' frees' (MRBNF_Def.var_types_of_mrbnf mrbnf)
              ) $ rawX $ rawX';
 
-           val _ = @{print} (Thm.cterm_of lthy mr_rel_term);
-
            val Utor_prem = HOLogic.mk_Trueprop (mk_leq
-               (mk_insert rawX (mk_insert rawX' (mk_bot (fastype_of rawX)))) (Utor $ d));
+               (mk_insert rawX (mk_insert rawX' (mk_bot (fastype_of rawX)))) (fst Utor $ d));
 
            val goal = Logic.mk_implies
                  ( Utor_prem
@@ -740,10 +741,80 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                      (foldr1 HOLogic.mk_conj (alternate 2 1 f_prems' id_ons @ [mr_rel_term])))
                  );
 
+           (* used in image_mono instantiation in the proof *)
+           val map_sum_args = map2 (fn abs => fn uT =>
+             mk_map_sum abs (HOLogic.id_const uT))
+             (replicate_rec abss) (replicate_rec uTs);
+           val map_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+             (map HOLogic.id_const plives @ map_sum_args)
+             (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+             mrbnf;
+
+           val nargs = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;
+
          in Goal.prove_sorry lthy (names [d, rawX, rawX']) [valid_prem] goal (fn {context=ctxt, prems} => EVERY1 [
-           K (print_tac ctxt "foo")
+           dtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of lthy map_fun)] @{thm image_mono}),
+           K (Local_Defs.unfold0_tac ctxt (snd Utor :: @{thms image_insert image_empty image_comp})),
+           EVERY' [
+             EqSubst.eqsubst_asm_tac ctxt [0] [MRBNF_Def.map_comp0_of_mrbnf mrbnf RS sym],
+             REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
+           ],
+           K (Local_Defs.unfold0_tac ctxt (MRBNF_Def.map_id0_of_mrbnf mrbnf :: abs_rep_ids @ @{thms id_o map_sum.comp map_sum.id image_id})),
+           dtac ctxt (alpha_Udtor OF prems),
+           REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],
+           REPEAT_DETERM o EVERY' [
+             EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.map_comp_of_mrbnf mrbnf :: MRBNF_Def.set_map_of_mrbnf mrbnf),
+             REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}) ORELSE' assume_tac ctxt)
+           ],
+           K (Local_Defs.unfold0_tac ctxt @{thms image_id id_o o_id map_sum.comp}),
+           dtac ctxt (MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf RS fun_cong RS fun_cong RS iffD2),
+           EVERY' [
+             EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf),
+             REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}) ORELSE' assume_tac ctxt)
+           ],
+           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
+           EVERY' [
+             EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.mr_rel_map_of_mrbnf mrbnf),
+             REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}) ORELSE' assume_tac ctxt)
+           ],
+           K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id inv_id relcompp_conversep_Grp Grp_OO}),
+           REPEAT_DETERM o rtac ctxt exI,
+           REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
+           etac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
+           TRY o (K (Local_Defs.unfold0_tac ctxt [id_apply])),
+           (* TODO: the REPEAT_DETERM comment in the operation theory is strange;
+                    is this what I am supposed to do? *)
+           REPEAT_DETERM o EVERY' [
+             rtac ctxt ballI,
+             rtac ctxt refl
+           ],
+           REPEAT_DETERM o EVERY' [
+             rtac ctxt ballI,
+             rtac ctxt ballI,
+             rtac ctxt @{thm imp_refl}
+           ],
+           REPEAT_DETERM o EVERY' [
+             rtac ctxt ballI,
+             rtac ctxt refl
+           ],
+           REPEAT_DETERM o EVERY' [
+             REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+             dtac ctxt @{thm sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2]},
+             SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms sum.rel_map comp_def id_apply}),
+             etac ctxt @{thm sum.rel_mono_strong},
+             TRY o EVERY' [
+               EqSubst.eqsubst_asm_tac ctxt [0] permute_abss,
+               REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}) ORELSE' assume_tac ctxt)
+             ],
+             eresolve_tac ctxt (map (fn thm => thm RS iffD1) total_abs_eq_iffs),
+             assume_tac ctxt
+           ],
+           REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}) ORELSE' assume_tac ctxt),
+           K (Local_Defs.unfold_tac ctxt (flat FVars_raw_defs2 @ @{thms image_comp[unfolded comp_def] case_sum_map_sum o_id})),
+           K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
+           REPEAT_DETERM o assume_tac ctxt
          ]) end
-       ) mrbnfs abss reps rawXs rawXs' raw_pre_setss (map fst Utors) ds valid_prems;
+       ) mrbnfs rawXs rawXs' raw_pre_setss Utors ds valid_prems alpha_Udtors;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

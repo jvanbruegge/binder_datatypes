@@ -710,8 +710,7 @@ lemma DTOR_mapD1:
   apply (subst (asm) T1_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
   apply (unfold id_o o_id)
   apply (subst (asm) T1_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
-  apply (unfold inv_id id_o o_id relcompp_conversep_Grp)
-  apply (unfold Grp_OO)
+  apply (unfold inv_id id_o o_id relcompp_conversep_Grp Grp_OO)
   apply (rule exI)+
   apply (rule conjI[rotated])+
         apply (erule T1_pre.mr_rel_mono_strong0[rotated -12]) (* nargs + 1 *)

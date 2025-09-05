@@ -382,15 +382,7 @@ lemma Umap_Udtor1_strong:
     apply (unfold comp_def)
     apply (unfold Umap_id T1.permute_id0 T2.permute_id0 map_sum.id)
     apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
-     apply (rule T1_pre.map_cong[rotated -12])
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
+     apply (rule T1_pre.map_cong[rotated -4])
       (* REPEAT_DETERM *)
             apply (rule sum.map_cong0[OF refl])
             apply (drule valid_Udtor'[rotated])
@@ -460,7 +452,7 @@ can we rewrite this so that it wouldn't be necessary? *)
             apply (rule Umap_id)
             apply assumption
       (* END REPEAT_DETERM *)
-                      apply (rule supp_id_bound bij_id)+
+                      apply (rule supp_id_bound bij_id refl)+
       apply (unfold Umap_id T1.permute_id0 map_sum.id T1_pre.map_id id_def[symmetric])
     apply assumption
   done
@@ -715,11 +707,8 @@ lemma DTOR_mapD1:
   apply (rule conjI[rotated])+
         apply (erule T1_pre.mr_rel_mono_strong0[rotated -12]) (* nargs + 1 *)
                       apply (unfold0 id_apply)?
+                      apply (rule ballI, (rule refl | (rule ballI, rule imp_refl)))+
     (* REPEAT_DETERM *)
-                      apply (rule ballI, rule refl)+
-                      apply (rule ballI, rule ballI, rule imp_refl)+
-                      apply (rule ballI, rule refl)+
-    (* repeated *)
                       apply (rule ballI impI)+
                       apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
                       apply (unfold sum.rel_map comp_def id_apply)[1]

@@ -56,11 +56,6 @@ fun alternate l r xs ys =
           xInit @ yInit @ alternate l r xRest yRest
         end;
 
-fun everyother xs = case xs of
-  [] => []
-  | [x] => []
-  | (x1::x2::xs') => x2 :: everyother xs';
-
 fun create_binding_corecursor qualify fp_res no_defs_lthy =
   let
     val tvars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps fp_res))) []))
@@ -609,9 +604,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                let
                  val (f_prems, valid_prem) = prems
                       |> chop (length f_prems);
-                 val nargs = MRBNF_Def.live_of_mrbnf mrbnf + MRBNF_Def.free_of_mrbnf mrbnf + MRBNF_Def.bound_of_mrbnf mrbnf;
-                 (* TODO: is this a fine way to calculate this? *)
-                 val n_nonrecs = nargs - nrecs;
                in EVERY1 ([  
                  rtac ctxt @{thm subset_antisym},
                  rtac ctxt (Umap_Udtor OF (valid_prem @ f_prems)),
@@ -633,11 +625,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                  K (Local_Defs.unfold0_tac ctxt @{thms comp_def}),
                  K (Local_Defs.unfold0_tac ctxt (@{thm map_sum.id} :: Umap_id :: permute_id0s)),
                  rtac ctxt @{thm iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]]},
-                 rtac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.map_cong_of_mrbnf mrbnf))
-               ] @ replicate (n_nonrecs + 1) (rtac ctxt refl) @ flat (map2 (fn valid_Udtor' => fn Umap => [
-                 (* TODO: ^ any better way to do the same without splitting
-                            the tactic list? Also, is looping manually with map (like I did here)
-                            rather than REPEAT_DETERM fine? *)
+                 rtac ctxt (Drule.rotate_prems (~nrecs) (MRBNF_Def.map_cong_of_mrbnf mrbnf)),
+                 EVERY' (map2 (fn valid_Udtor' => fn Umap => EVERY' [
                    rtac ctxt @{thm sum.map_cong0[OF refl]},
                    dtac ctxt (Drule.rotate_prems 1 valid_Udtor'),
                    eresolve_tac ctxt @{thms UnI2 UnI1},
@@ -655,12 +644,13 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
                    ],
                    resolve_tac ctxt Umap_ids,
                    assume_tac ctxt
-               ]) (replicate_rec valid_Udtor'') (replicate_rec Umaps)) @ [
-                   REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id})),
-                   K (Local_Defs.unfold0_tac ctxt (MRBNF_Def.map_id_of_mrbnf mrbnf :: permute_id0s @ Umap_ids @ @{thms map_sum.id id_def[symmetric]})),
-                   assume_tac ctxt
+                 ]) (replicate_rec valid_Udtor'') (replicate_rec Umaps)),
+                 REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id refl})),
+                 K (Local_Defs.unfold0_tac ctxt (MRBNF_Def.map_id_of_mrbnf mrbnf :: permute_id0s @ Umap_ids @ @{thms map_sum.id id_def[symmetric]})),
+                 assume_tac ctxt
                ])
-               end) end
+             end
+           ) end
         ) mrbnfs valid_prems ds Udtors Umaps Umap_Udtors Umap_invs valid_Umaps Umap_ids valid_Udtor';
 
        val abs_rep_ids = map2 (fn abs => fn rep =>
@@ -692,12 +682,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              in
                MRBNF_Def.mk_mr_rel_of_mrbnf deads live_Ts live_Ts (pbounds @ vars) (vars @ pfrees @ bfrees) mrbnf  
            end;
-  
-           val rel_sum_recs = map2 (fn alpha => fn uT => mk_rel_sum (alpha, (HOLogic.eq_const uT))) alphas uTs;
-  
-           val rel_sum_brecs = @{map 8} (fn bounds => fn alpha => fn t => fn t' => fn d => fn d' => fn raw_permute => fn Umap =>
-             let
-               val fs' = map_index (fn (i, f) => if member (op=) bounds i then f
+
+           val rel_sums = @{map 9} (fn rec_bounds => fn alpha => fn t => fn t' => fn d => fn d' => fn uT => fn raw_permute => fn Umap =>
+             if null rec_bounds then
+               mk_rel_sum (alpha, (HOLogic.eq_const uT))
+             else let
+               val fs' = map_index (fn (i, f) => if member (op=) rec_bounds i then f
                      else HOLogic.id_const (domain_type (fastype_of f))
                    ) fs
   
@@ -716,12 +706,9 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
              in
                mk_rel_sum (L, R)
              end
-            (* TODO: does this "everyother" idea scale for other/bigger types?
-                     it is based on the assumption that the sets are always ordered like:
-                     rec brec rec brec ... *)
-           ) (everyother rec_boundss) alphas ts ts' ds ds' (map #permute (#raw_fps fp_res)) Umaps;
-
-           val rel_sums = alternate 1 1 rel_sum_recs rel_sum_brecs;
+           ) rec_boundss (replicate_rec alphas) (replicate_rec ts) (replicate_rec ts')
+             (replicate_rec ds) (replicate_rec ds') (replicate_rec uTs)
+             (replicate_rec (map #permute (#raw_fps fp_res))) (replicate_rec Umaps);
 
            val lives = map HOLogic.eq_const plives @ rel_sums;
            val bounds' = map HOLogic.id_const pbounds @ fs;
@@ -782,20 +769,12 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
            REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
            etac ctxt (Drule.rotate_prems (~(nargs + 1)) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
            TRY o (K (Local_Defs.unfold0_tac ctxt [id_apply])),
-           (* TODO: the REPEAT_DETERM comment in the operation theory is strange;
-                    is this what I am supposed to do? *)
            REPEAT_DETERM o EVERY' [
              rtac ctxt ballI,
-             rtac ctxt refl
-           ],
-           REPEAT_DETERM o EVERY' [
-             rtac ctxt ballI,
-             rtac ctxt ballI,
-             rtac ctxt @{thm imp_refl}
-           ],
-           REPEAT_DETERM o EVERY' [
-             rtac ctxt ballI,
-             rtac ctxt refl
+             rtac ctxt refl ORELSE' EVERY' [
+               rtac ctxt ballI,
+               rtac ctxt @{thm imp_refl}
+             ]
            ],
            REPEAT_DETERM o EVERY' [
              REPEAT_DETERM o resolve_tac ctxt [ballI, impI],

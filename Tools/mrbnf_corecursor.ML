@@ -809,6 +809,35 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ]) end
         ) valid_prems ds Utors;
 
+       val Utor_abs_Udtor = @{map 5} (fn rawX => fn d => fn Utor => fn Udtor => fn mrbnf =>
+          let
+            val map_sum_args = map2 (fn abs => fn uT =>
+              mk_map_sum abs (HOLogic.id_const uT))
+              (replicate_rec abss) (replicate_rec uTs);
+            val map_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ map_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+
+            val goal = Logic.mk_implies
+              ( HOLogic.mk_Trueprop (HOLogic.mk_mem (rawX, fst Utor $ d))
+              , HOLogic.mk_Trueprop (HOLogic.mk_mem (map_fun $ rawX, Udtor $ d))
+              );
+          in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt [snd Utor]),
+            etac ctxt imageE,
+            hyp_subst_tac_thin true ctxt,
+            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_comp_of_mrbnf mrbnf],
+            REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id},
+            REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] @{thms map_sum.comp},
+            REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] @{thms id_o},
+            REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] abs_rep_ids,
+            REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] @{thms map_sum.id},
+            EqSubst.eqsubst_tac ctxt [0] [MRBNF_Def.map_id_of_mrbnf mrbnf],
+            assume_tac ctxt
+          ]) end
+        ) rawXs ds Utors Udtors mrbnfs;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

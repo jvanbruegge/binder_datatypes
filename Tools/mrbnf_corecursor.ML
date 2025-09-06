@@ -795,6 +795,20 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          ]) end
        ) mrbnfs rawXs rawXs' raw_pre_setss Utors ds valid_prems alpha_Udtors;
 
+       val Utor_ne = @{map 3} (fn valid_prem => fn d => fn Utor =>
+          let
+            val lhs = fst Utor $ d;
+            val setT = HOLogic.dest_setT (fastype_of lhs);
+            val goal = Logic.mk_implies
+              ( valid_prem
+              , HOLogic.mk_Trueprop (HOLogic.mk_not (HOLogic.mk_eq (lhs, mk_bot setT)))
+              );
+          in Goal.prove_sorry lthy [] [] goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt (snd Utor :: @{thms arg_cong[OF image_is_empty, of Not]})),
+            eresolve_tac ctxt Udtor_nes
+          ]) end
+        ) valid_prems ds Utors;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

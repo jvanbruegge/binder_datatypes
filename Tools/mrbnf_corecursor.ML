@@ -837,6 +837,42 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             assume_tac ctxt
           ]) end
         ) rawXs ds Utors Udtors mrbnfs;
+      
+        val raw_UFVars_Utor = @{map 9} (fn mrbnf => fn UFVarss => fn rawX => fn d => fn (rec_sets, bsets, fsets) =>
+                                        fn Utor => fn valid_prem => fn UFVars_Udtors => fn Utor_abs_Udtor' =>
+          let
+          val bfree_setss = map (fn i => if member (op=) (#bfree_vars fp_res) i then
+            [nth (drop nvars fsets) i $ rawX] else []
+          ) (0 upto nvars - 1);
+
+          val fsets = take nvars fsets;
+          val goals = @{map 5} (fn i => fn UFVars => fn fset => fn bset => fn bfrees =>
+            let
+              val recs = @{map 4} (fn set => fn bounds => fn FVarss => fn UFVarss =>
+                let val rec_set = mk_UNION (set $ rawX) (
+                  let val filter = the o List.find (fn set => body_type (fastype_of set) = body_type (fastype_of fset))
+                  in BNF_FP_Util.mk_case_sum (filter FVarss, filter UFVarss) end
+                ) in if member (op=) bounds i then mk_minus (rec_set, bset $ rawX) else rec_set end
+              ) rec_sets rec_boundss (replicate_rec (map #FVarss (#raw_fps fp_res))) (replicate_rec UFVarsss);
+            in Logic.mk_implies
+                ( HOLogic.mk_Trueprop (HOLogic.mk_mem (rawX, Utor $ d))
+                , HOLogic.mk_Trueprop (mk_leq (foldl1 mk_Un ((fset $ rawX) ::
+                    map (fn bfree => mk_minus (bfree, bset $ rawX)) bfrees @ recs)) (UFVars $ d))
+                )
+             end
+           ) (0 upto nvars - 1) UFVarss fsets bsets bfree_setss
+          in map2 (fn goal => fn UFVars_Udtor =>
+            Goal.prove_sorry lthy (names [rawX, d]) [valid_prem] goal (fn {context=ctxt, prems} => EVERY1 [
+            dtac ctxt (UFVars_Udtor OF (prems @ [Utor_abs_Udtor'])),
+            REPEAT_DETERM o EVERY' [
+             EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+             REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
+            ],
+            K (Local_Defs.unfold_tac ctxt (flat FVars_raw_defs2 @ @{thms image_comp case_sum_o_map_sum o_id image_id})),
+            K (Local_Defs.unfold0_tac ctxt (flat FVarsBD_FFVarsBDs @ @{thms comp_def})),
+            assume_tac ctxt
+          ])) goals UFVars_Udtors
+          end) mrbnfs UFVarsss rawXs ds raw_pre_setss (map fst Utors) valid_prems UFVars_Udtorss Utor_abs_Udtor;
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

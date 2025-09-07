@@ -110,13 +110,20 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
     )) (#pre_mrbnfs fp_res) uTs;
     val raw_pre_Ts = mk_raw_pre_Ts rawTs;
 
+    fun mk_un_ctor_Ts Ts = map (fn mrbnf => (MRBNF_Def.mk_T_of_mrbnf
+      (MRBNF_Def.deads_of_mrbnf mrbnf) (plives @ flat (map2 (fn T => fn n =>
+        replicate n T
+      ) Ts (#rec_vars fp_res))) bounds frees mrbnf
+    )) (#pre_mrbnfs fp_res);
+    val un_ctor_Ts = mk_un_ctor_Ts rawTs;
+
     val ((((Umaps, UFVarsss), Udtors), validUs), names_lthy) = names_lthy
       |> mk_Frees "Umap" (map (fn uT => fTs ---> uT --> uT) uTs)
       ||>> mk_Freess "UFVars" (map (fn uT => map (fn a => uT --> HOLogic.mk_setT a) vars) uTs)
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val ((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), rawXs), rawXs') , ts), ts'), names_lthy) = names_lthy
+    val (((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), rawXs), rawXs') , ts), ts'), un_ctors), names_lthy) = names_lthy
       |> mk_Frees "d" uTs
       ||>> mk_Frees "d'" uTs
       ||>> mk_Frees "f" fTs
@@ -128,7 +135,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "rawX" (map body_type raw_pre_Ts)
       ||>> mk_Frees "rawX'" (map body_type raw_pre_Ts)
       ||>> mk_Frees "t" rawTs
-      ||>> mk_Frees "t'" rawTs;
+      ||>> mk_Frees "t'" rawTs
+      ||>> mk_Frees "x" un_ctor_Ts;
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
 
     val lthy = no_defs_lthy;
@@ -983,6 +991,28 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
             rtac ctxt refl
           ]) end
         )  ds mrbnfs fDefns (map #ctor (#raw_fps fp_res)) picks corecThms;
+
+        val f_ctor = @{map 8} (fn d => fn mrbnf => fn fFun => fn raw_ctor => fn pick => fn un_ctor => fn f_simp => fn inject =>
+          let
+            val case_sum_args = map2 (fn rawT => fn f =>
+              BNF_FP_Util.mk_case_sum ((HOLogic.id_const rawT), (Term.list_comb (f, picks))))
+              (replicate_rec rawTs) (replicate_rec (map fst fDefns));
+            val case_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ case_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+
+            val assm = mk_Trueprop_eq (raw_ctor $ un_ctor, Term.list_comb (fst fFun, picks @ [d]));
+
+            val goal = mk_Trueprop_eq
+              ( un_ctor
+              , case_fun $ (pick $ d)
+              );
+
+          in Goal.prove_sorry lthy (names (picks @ [d, un_ctor])) [assm] goal (fn {context=ctxt, prems} => EVERY1 [
+              rtac ctxt (Local_Defs.unfold0 lthy [inject] (trans OF (prems @ [f_simp])))
+          ]) end
+        )  ds mrbnfs fDefns (map #ctor (#raw_fps fp_res)) picks un_ctors f_simps (map #inject (#raw_fps fp_res));
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

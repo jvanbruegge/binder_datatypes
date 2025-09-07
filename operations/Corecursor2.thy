@@ -921,7 +921,7 @@ lemma raw_Umap_Utor1:
  (Utor1 d)
  (Utor1 (raw_Umap1 u v d))"
   apply (unfold Utor1_def)
-  apply (subst Umap_Udtor_strong(1)[OF u v, of d])
+  apply (subst Umap_Udtor_strong(1)[OF u v])
   apply (rule valid_d)
   apply (subst image_comp)
   apply (subst T1_pre.map_comp0[symmetric])
@@ -981,7 +981,7 @@ lemma raw_Umap_Utor2:
  (Utor2 d)
  (Utor2 (raw_Umap2 u v d))"
   apply (unfold Utor2_def)
-  apply (subst Umap_Udtor_strong(2)[OF u v, of d])
+  apply (subst Umap_Udtor_strong(2)[OF u v])
   apply (rule valid_d)
   apply (subst image_comp)
   apply (subst T2_pre.map_comp0[symmetric])

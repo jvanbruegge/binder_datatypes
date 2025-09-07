@@ -1033,15 +1033,19 @@ thm raw_T1.corec
 
 lemma f1_simps:
   "f1 pick1 pick2 d = raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick1 d))"
-  apply(subst raw_T1.corec[of pick1 pick2, unfolded f1_def[symmetric] f2_def[symmetric]])
-  apply (unfold id_def)
+  apply (unfold0 f1_def)
+  apply (subst raw_T1.corec)
+  apply (fold f1_def f2_def)
+  apply (unfold0 id_def)
   apply (rule refl)
   done
 
 lemma f2_simps:
   "f2 pick1 pick2 d = raw_T2_ctor (map_T2_pre id id id id id id id (case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick2 d))"
-  apply(subst raw_T2.corec[of pick1 pick2, unfolded f1_def[symmetric] f2_def[symmetric]])
-  apply (unfold id_def)
+  apply (unfold0 f2_def)
+  apply (subst raw_T2.corec)
+  apply (fold f1_def f2_def)
+  apply (unfold0 id_def)
   apply (rule refl)
   done
 

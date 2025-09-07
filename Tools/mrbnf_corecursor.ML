@@ -958,6 +958,32 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
          ]) end
        ) mrbnfs rawXs rawXs' Utors ds valid_prems Umaps Umap_Udtor_strong;
 
+       val corecThms = (either (fn _ => []) #corec_def o the o #fp_thms) fp_res;
+
+       val f_simps = @{map 6} (fn d => fn mrbnf => fn fFun => fn raw_ctor => fn pick => fn corec =>
+          let
+            val case_sum_args = map2 (fn rawT => fn f =>
+              BNF_FP_Util.mk_case_sum ((HOLogic.id_const rawT), (Term.list_comb (f, picks))))
+              (replicate_rec rawTs) (replicate_rec (map fst fDefns));
+            val case_fun = MRBNF_Def.mk_map_comb_of_mrbnf (MRBNF_Def.deads_of_mrbnf mrbnf)
+              (map HOLogic.id_const plives @ case_sum_args)
+              (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
+              mrbnf;
+
+            val goal = mk_Trueprop_eq
+              ( Term.list_comb (fst fFun, picks @ [d])
+              , raw_ctor $ (case_fun $ (pick $ d))
+              );
+
+          in Goal.prove_sorry lthy (names (picks @ [d])) [] goal (fn {context=ctxt, prems} => EVERY1 [
+            K (Local_Defs.unfold0_tac ctxt [snd fFun]),
+            EqSubst.eqsubst_tac ctxt [0] [corec],
+            K (Local_Defs.fold_tac ctxt (map snd fDefns)),
+            K (Local_Defs.unfold0_tac ctxt @{thms id_def}),
+            rtac ctxt refl
+          ]) end
+        )  ds mrbnfs fDefns (map #ctor (#raw_fps fp_res)) picks corecThms;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

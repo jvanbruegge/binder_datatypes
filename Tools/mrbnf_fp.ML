@@ -139,7 +139,8 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
           exhaust = #exhaust ctr_sugar,
           case_t = subst (#casex ctr_sugar),
           case_thm = hd (#case_thms ctr_sugar),
-          corec = #co_rec coinduct_sugar
+          corec = #co_rec coinduct_sugar,
+          corec_def = #co_rec_thms coinduct_sugar
         } end
       ) T_sugars, lthy) end;
 
@@ -3616,7 +3617,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       in SOME {
         existential_coinduct = existential_coinduct,
         fresh_coinduct_param = fresh_coinduct_param,
-        corec = map #corec raw_Ts
+        corec = map #corec raw_Ts,
+        corec_def = flat (map #corec_def raw_Ts)
       } end
 
     val fp_result = {

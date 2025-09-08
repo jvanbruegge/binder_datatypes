@@ -56,6 +56,15 @@ fun alternate l r xs ys =
           xInit @ yInit @ alternate l r xRest yRest
         end;
 
+fun pred_True T = Term.abs ("_", T) @{term True};
+
+fun mk_pred_sum P Q =
+  let
+    val PT = fastype_of P;
+    val QT = fastype_of Q;
+    val fT = mk_sumT (domain_type PT, domain_type QT);
+  in Const (@{const_name pred_sum}, PT --> QT --> fT --> @{typ bool}) $ P $ Q end;
+
 fun create_binding_corecursor qualify fp_res no_defs_lthy =
   let
     val tvars = map TVar (rev (Term.add_tvarsT (#T (hd (#quotient_fps fp_res))) []))
@@ -110,6 +119,8 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
     )) (#pre_mrbnfs fp_res) uTs;
     val raw_pre_Ts = mk_raw_pre_Ts rawTs;
 
+    val raw_or_uTs = map2 (fn T => fn uT => mk_sumT (T, uT)) rawTs uTs;
+
     fun mk_un_ctor_Ts Ts = map (fn mrbnf => (MRBNF_Def.mk_T_of_mrbnf
       (MRBNF_Def.deads_of_mrbnf mrbnf) (plives @ flat (map2 (fn T => fn n =>
         replicate n T
@@ -123,7 +134,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "Udtor" pre_Ts
       ||>> mk_Frees "validU" (map (fn uT => uT --> @{typ bool}) uTs);
 
-    val (((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), rawXs), rawXs') , ts), ts'), un_ctors), names_lthy) = names_lthy
+    val ((((((((((((((ds, ds'), fs), gs), Xs), Xs'), xs), picks), rawXs), rawXs') , ts), ts'), tds), un_ctors), names_lthy) = names_lthy
       |> mk_Frees "d" uTs
       ||>> mk_Frees "d'" uTs
       ||>> mk_Frees "f" fTs
@@ -136,6 +147,7 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
       ||>> mk_Frees "rawX'" (map body_type raw_pre_Ts)
       ||>> mk_Frees "t" rawTs
       ||>> mk_Frees "t'" rawTs
+      ||>> mk_Frees "td" raw_or_uTs
       ||>> mk_Frees "x" un_ctor_Ts;
     val bfree_fs = map (nth fs) (#bfree_vars fp_res);
 
@@ -292,13 +304,6 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
               val As = flat (@{map 3} (fn T => fn uT => fn n =>
                 replicate n (mk_sumT (T, uT))
                 ) qTs uTs (#rec_vars fp_res));
-              fun pred_True T = Term.abs ("_", T) @{term True};
-              fun mk_pred_sum P Q =
-                let
-                  val PT = fastype_of P;
-                  val QT = fastype_of Q;
-                  val fT = mk_sumT (domain_type PT, domain_type QT);
-                in Const (@{const_name pred_sum}, PT --> QT --> fT --> @{typ bool}) $ P $ Q end;
               fun mk_UPred validUs deads plives As bounds frees mrbnf =
               Term.list_comb (
                 MRBNF_Def.mk_pred_of_mrbnf deads (plives @ As) bounds frees mrbnf,
@@ -1052,7 +1057,59 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ] end)) goals UFVars_Udtors
           end) UFVarsss ds raw_pre_setss valid_prems UFVars_Udtorss picks suitables raw_UFVars_Utor;
 
-        val _ = @{print} suitable_FVarsD;
+        val is_freess = (either (fn _ => []) #is_frees o the o #fp_thms) fp_res;
+        val FVars_raw_defss  = (either (fn _ => []) #FVars_raw_defs o the o #fp_thms) fp_res;
+
+        val f_FVarsD_aux = @{map 9} (fn d => fn t => fn td => fn fFun => fn FVarss =>
+                                     fn FVars_raw_defs => fn UFVarss => fn validU => fn is_frees =>
+          let
+            val goals = @{map 3} (fn FVars => fn UFVars => fn is_free =>
+              let
+                val filter = the o List.find (fn var => fastype_of var = HOLogic.dest_setT (body_type (fastype_of UFVars)))
+                val a = filter xs;
+
+                val assms1 = HOLogic.mk_Trueprop (is_free $ a $ t);
+    
+                val assms2 = Logic.all d (fold_rev (curry Logic.mk_implies)
+                  (map HOLogic.mk_Trueprop [validU $ d, HOLogic.mk_eq (t, (Term.list_comb (fst fFun, picks)) $ d)])
+                  (HOLogic.mk_Trueprop (HOLogic.mk_mem (a, UFVars $ d))));
+    
+                val assms3 = HOLogic.mk_Trueprop (mk_pred_sum (pred_True (fastype_of t)) validU $ td);
+    
+                val assms = [assms1, assms2, assms3];
+    
+                val assm = mk_Trueprop_eq
+                  ( t
+                  , BNF_FP_Util.mk_case_sum ((HOLogic.id_const (fastype_of t)), (Term.list_comb (fst fFun, picks))) $ td
+                  );
+                
+                val goal = HOLogic.mk_Trueprop (HOLogic.mk_mem (filter xs, BNF_FP_Util.mk_case_sum (FVars, UFVars) $ td));
+              in
+                (a, assms, Logic.mk_implies (assm, goal))
+              end)
+              FVarss UFVarss is_frees;
+
+          in map (fn (a, assms, goal) => Goal.prove_sorry lthy (names (picks @ [a, t, td])) assms goal (fn {context=ctxt, prems as (is_free_prem :: prem2 :: pred_sum_prem :: _)} => EVERY1 [
+              rtac ctxt (infer_instantiate' ctxt [SOME (Thm.cterm_of lthy td)] @{thm sumE}),
+              hyp_subst_tac ctxt,
+              EqSubst.eqsubst_tac ctxt [0] @{thms sum.case},
+              K (Local_Defs.unfold0_tac ctxt (@{thm mem_Collect_eq} :: FVars_raw_defs)),
+              Method.insert_tac ctxt [is_free_prem],
+              hyp_subst_tac_thin true ctxt,
+              EqSubst.eqsubst_asm_tac ctxt [0] @{thms sum.case},
+              EqSubst.eqsubst_asm_tac ctxt [0] [id_apply],
+              assume_tac ctxt,
+              hyp_subst_tac ctxt,
+              EqSubst.eqsubst_tac ctxt [0] @{thms sum.case},
+              rtac ctxt prem2,
+              K (Local_Defs.unfold0_tac ctxt @{thms sum.simps}),
+              Method.insert_tac ctxt [pred_sum_prem],
+              hyp_subst_tac_thin true ctxt,
+              EqSubst.eqsubst_asm_tac ctxt [0] @{thms pred_sum_inject},
+              assume_tac ctxt,
+              assume_tac ctxt
+          ])) goals end
+        )  ds ts tds  fDefns (map #FVarss (#raw_fps fp_res)) FVars_raw_defss UFVarsss validUs (transpose is_freess);
 
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;

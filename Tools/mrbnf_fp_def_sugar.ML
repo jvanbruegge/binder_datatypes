@@ -76,7 +76,9 @@ sig
     existential_coinduct: thm,
     fresh_coinduct_param: thm,
     corec: term list,
-    corec_def: thm list
+    corec_def: thm list,
+    is_frees: term list list,
+    FVars_raw_defs: thm list list
   };
 
   type fp_result = {
@@ -255,14 +257,18 @@ type greatest_fp_thms = {
   existential_coinduct: thm,
   fresh_coinduct_param: thm,
   corec: term list,
-  corec_def: thm list
+  corec_def: thm list,
+  is_frees: term list list,
+  FVars_raw_defs: thm list list
 };
 
-fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param, corec, corec_def } = {
+fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param, corec, corec_def, is_frees, FVars_raw_defs } = {
   existential_coinduct = Morphism.thm phi existential_coinduct,
   fresh_coinduct_param = Morphism.thm phi fresh_coinduct_param,
   corec = corec,
-  corec_def = corec_def
+  corec_def = corec_def,
+  is_frees = is_frees,
+  FVars_raw_defs = FVars_raw_defs
 }: greatest_fp_thms;
 
 type fp_result = {

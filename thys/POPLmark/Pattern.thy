@@ -131,7 +131,9 @@ mrbnf "('tv :: var, 'v) prepat"
 
 declare [[ML_print_depth=1000]]
 
-linearize_mrbnf ('tv::var, 'v::var) pat = "('tv::var, 'v::var) prepat" [wits:"(PPRec lfempty) :: ('tv::var, 'v::var) prepat"] on 'v
+linearize_mrbnf (PTVars: 'tv::var, PVars: 'v::var) pat = "('tv::var, 'v::var) prepat"
+  [wits:"(PPRec lfempty) :: ('tv::var, 'v::var) prepat"] on 'v
+  for map: vvsubst_pat
 subgoal for R x y
     apply (unfold P.Pattern.P.prepat.in_rel mem_Collect_eq map_vvsubst_equiv)
     apply (rule iffI)
@@ -389,19 +391,11 @@ lemma PRec_transfer[transfer_rule]: "rel_fun (rel_lfset id cr_pat) cr_pat (\<lam
   using Rep_pat apply blast
   apply (simp_all add: lfset.map_cong_id)
   done
-(*
-fun vvsubst_prepat where
-  "vvsubst_prepat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (vvsubst_typ \<tau> T)"
-| "vvsubst_prepat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (vvsubst_prepat \<tau> \<sigma>) X)"
-*)
+
 fun tvsubst_prepat where
   "tvsubst_prepat \<tau> \<sigma> (PPVar v T) = PPVar (\<sigma> v) (tvsubst_typ \<tau> T)"
 | "tvsubst_prepat \<tau> \<sigma> (PPRec X) = PPRec (map_lfset id (tvsubst_prepat \<tau> \<sigma>) X)"
-(*
-fun PPTVars where
-  "PPTVars (PPVar v T) = FVars_typ T"
-| "PPTVars (PPRec X) = (\<Union>P \<in> values X. PPTVars P)"
-*)
+
 lemma finite_PPTVars: "finite (PPTVars P)"
   by (induct P) auto
 
@@ -437,10 +431,6 @@ lemma nonrep_prepat_vvsubst_prepat:
   apply (metis Int_emptyD bij_implies_inject)
   done
 
-lift_definition vvsubst_pat :: "('tv \<Rightarrow> 'tv) \<Rightarrow> ('v \<Rightarrow> 'v) \<Rightarrow> ('tv::var, 'v::var) pat \<Rightarrow> ('tv::var, 'v::var) pat" is
-  "\<lambda>\<tau> \<sigma>. if bij \<sigma> then vvsubst_prepat \<tau> \<sigma> else id"
-  by (auto simp: nonrep_prepat_vvsubst_prepat)
-
 lemma nonrep_prepat_tvsubst_prepat:
   "bij \<sigma> \<Longrightarrow> nonrep_prepat (P::('tv::var,'v::var) prepat) \<Longrightarrow> nonrep_prepat (tvsubst_prepat \<tau> \<sigma> P::('tv::var,'v::var) prepat)"
   apply (induct P)
@@ -452,26 +442,24 @@ lift_definition tvsubst_pat :: "('tv \<Rightarrow> 'tv typ) \<Rightarrow> ('v \<
   "\<lambda>\<tau> \<sigma>. if bij \<sigma> then tvsubst_prepat \<tau> \<sigma> else id"
   by (auto simp: nonrep_prepat_tvsubst_prepat)
 
-lift_definition PVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'v set" is
-  "PPVars" .
-
-lift_definition PTVars :: "('tv::var, 'v::var) pat \<Rightarrow> 'tv set" is
-  "PPTVars" .
-
 lemma PVars_vvsubst_pat: "bij \<sigma> \<Longrightarrow> PVars (vvsubst_pat \<tau> \<sigma> P) = \<sigma> ` PVars P"
-  by transfer auto
+  unfolding PVars_def vvsubst_pat_def
+  by (auto simp: Abs_pat_inverse Rep_pat[simplified] nonrep_prepat_vvsubst_prepat)
 
 lemma PVars_tvsubst_pat: "bij \<sigma> \<Longrightarrow> PVars (tvsubst_pat \<tau> \<sigma> P) = \<sigma> ` PVars P"
+  unfolding PVars_def
   by transfer auto
 
 lemma PTVars_vvsubst_pat:
   fixes P :: "('tv::var, 'v::var) pat"
   shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> PTVars (vvsubst_pat \<tau> \<sigma> P) = \<tau> ` PTVars P"
-  by transfer auto
+  unfolding PTVars_def vvsubst_pat_def
+  by (auto simp: Abs_pat_inverse Rep_pat[simplified] nonrep_prepat_vvsubst_prepat asSS_def)
 
 lemma PTVars_tvsubst_pat:
   fixes P :: "('tv::var, 'v::var) pat"
   shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> PTVars (tvsubst_pat \<tau> \<sigma> P) = (\<Union>x \<in> PTVars P. FVars_typ (\<tau> x))"
+  unfolding PTVars_def
   by transfer auto
 
 lemma vvsubst_prepat_tvsubst_prepat:
@@ -482,9 +470,11 @@ lemma vvsubst_prepat_tvsubst_prepat:
 
 lemma vvsubst_pat_tvsubst_pat:
   fixes P :: "('tv::var, 'v::var) pat"
-  shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow>
+  shows "|supp \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow>
     vvsubst_pat \<tau> \<sigma> P = tvsubst_pat (TyVar o \<tau>) \<sigma> P"
-  by transfer (auto simp: vvsubst_prepat_tvsubst_prepat)
+  unfolding vvsubst_pat_def tvsubst_pat_def map_fun_def o_apply
+  by (auto simp: vvsubst_prepat_tvsubst_prepat Abs_pat_inject Rep_pat[simplified]
+    nonrep_prepat_vvsubst_prepat nonrep_prepat_tvsubst_prepat asSS_def asBij_def comp_def)
 
 lemma tvsubst_prepat_comp:
   fixes P :: "('tv::var, 'v::var) prepat"
@@ -510,19 +500,14 @@ lemma tvsubst_pat_cong:
   shows "|SSupp_typ \<tau>| <o |UNIV :: 'tv::var set| \<Longrightarrow> |SSupp_typ \<tau>'| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij \<sigma> \<Longrightarrow> bij \<sigma>' \<Longrightarrow>
   (\<forall>x \<in> PTVars P. \<tau> x = \<tau>' x) \<Longrightarrow> (\<forall>x \<in> PVars P. \<sigma> x = \<sigma>' x) \<Longrightarrow>  
   tvsubst_pat \<tau> \<sigma> P = tvsubst_pat \<tau>' \<sigma>' P"
+  unfolding PTVars_def PVars_def
   by transfer (auto simp: tvsubst_prepat_cong)
 
-lemma vvsubst_pat_id[simp]: "vvsubst_pat id id P = P"
-  apply transfer
-  subgoal for P
-    apply (induct P)
-     apply (force simp: typ.map_id values_lfin_iff intro!: trans[OF lfset.map_cong_id lfset.map_id])+
-    done
-  done
+declare pat.map_id[simp]
 
 lemma vvsubst_pat_PVar[simp]:
-  "bij g \<Longrightarrow> vvsubst_pat f g (PVar x T) = PVar (g x) (vvsubst_typ f T)"
-  by transfer auto
+  "|supp f| <o |UNIV :: 'tv::var set| \<Longrightarrow> bij g \<Longrightarrow> vvsubst_pat f g (PVar x (T :: 'tv typ)) = PVar (g x) (vvsubst_typ f T)"
+  unfolding vvsubst_pat_def o_apply PVar.rep_eq by (auto simp: PVar.abs_eq Abs_pat_inject asSS_def)
 lemma tvsubst_pat_PVar[simp]:
   "bij g \<Longrightarrow> tvsubst_pat f g (PVar x T) = PVar (g x) (tvsubst_typ f T)"
   by transfer auto

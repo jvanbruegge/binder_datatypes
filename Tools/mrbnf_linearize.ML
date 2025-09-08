@@ -519,7 +519,7 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
       val _ = mrbnf' |> @{print}
 
       in
-        lthy
+        lthy |> MRBNF_Def.register_mrbnf Plugin_Name.default_filter (Local_Theory.full_name lthy b) mrbnf'
       end
       | after_qed _ _ = raise Match;
   in

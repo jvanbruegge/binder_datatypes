@@ -1255,12 +1255,20 @@ lemma vvsubst_tvsubst_pat: "
   bij f1 \<Longrightarrow> |supp (f1::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow> bij f2 \<Longrightarrow> |supp (f2::'b::var \<Rightarrow> 'b)| <o |UNIV::'b set| \<Longrightarrow>
   |SSupp_typ g1| <o |UNIV::'a set| \<Longrightarrow>
 vvsubst_pat f1 f2 (tvsubst_pat g1 id x1) = tvsubst_pat (permute_typ f1 \<circ> g1 \<circ> inv f1) id (vvsubst_pat f1 f2 x1)"
-  apply transfer
-  apply auto
-  subgoal premises prems for f1 f2 g1 x
-    apply (induction x)
-    using typ.tvsubst_permutes[THEN fun_cong, OF prems(1,2,5), unfolded comp_def]
-    by (auto simp: typ.vvsubst_permute[OF prems(1-2)] lfset.map_comp lfset.map_cong)
+  unfolding vvsubst_pat_def o_apply tvsubst_pat_def map_fun_def
+  apply (auto simp: asSS_def Abs_pat_inject Abs_pat_inverse Rep_pat[simplified] nonrep_prepat_vvsubst_prepat nonrep_prepat_tvsubst_prepat)
+  subgoal premises prems
+    apply (subgoal_tac "\<And>x. nonrep_prepat x \<Longrightarrow> vvsubst_prepat f1 f2
+     (tvsubst_prepat g1 id x) =
+    tvsubst_prepat (\<lambda>x. permute_typ f1 (g1 (inv f1 x))) id
+     (vvsubst_prepat f1 f2 x)")
+    using Rep_pat apply blast
+    subgoal for x
+      apply (induction x)
+      using typ.tvsubst_permutes[THEN fun_cong, OF prems(1,2,5), unfolded comp_def]
+       apply (fastforce simp: typ.vvsubst_permute[OF prems(1-2)] lfset.map_comp values_lfin_iff intro!: lfset.map_cong)+
+      done
+    done
   done
 
 lemma permute_tvsubst:
@@ -2293,7 +2301,7 @@ lemma tvsubst_pat_id[simp]: "tvsubst_pat TyVar id x = x"
   apply (rule trans)
      apply (rule arg_cong3[OF _ refl refl, of _ _ tvsubst_pat])
      apply (rule o_id[symmetric])
-  apply (unfold vvsubst_pat_tvsubst_pat[symmetric, OF supp_id_bound] pat.map_id)
+  apply (unfold vvsubst_pat_tvsubst_pat[symmetric, OF supp_id_bound bij_id] pat.map_id)
   apply (rule refl)
   done
 
@@ -2466,7 +2474,8 @@ lemma restrict_equiv:
 fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"
   shows "permute_trm f1 f2 (restrict \<sigma> (PVars p) Var x) = restrict (permute_trm f1 f2 \<circ> \<sigma> \<circ> inv f2) (PVars (vvsubst_pat f1 f2 p)) Var (f2 x)"
-  using assms by transfer (auto simp: restrict_def bij_implies_inject)
+  using assms unfolding vvsubst_pat_def o_apply PVars_def
+  by (auto simp: restrict_def bij_implies_inject Abs_pat_inverse Rep_pat[simplified] nonrep_prepat_vvsubst_prepat)
 lemma match_equiv_aux:
 fixes f1::"'a::var \<Rightarrow> 'a" and f2::"'b::var \<Rightarrow> 'b"
   assumes "bij f1" "|supp f1| <o |UNIV::'a set|" "bij f2" "|supp f2| <o |UNIV::'b set|"

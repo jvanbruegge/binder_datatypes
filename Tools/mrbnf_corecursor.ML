@@ -1014,6 +1014,46 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ]) end
         )  ds mrbnfs fDefns (map #ctor (#raw_fps fp_res)) picks un_ctors f_simps (map #inject (#raw_fps fp_res));
 
+        val suitable_FVarsD = @{map 8} (fn UFVarss => fn d => fn (rec_sets, bsets, fsets) =>
+                                        fn valid_prem => fn UFVars_Udtors => fn pick => fn suitable =>
+                                        fn raw_UFVars_Utor' =>
+          let
+          val pickd = pick $ d;
+          val bfree_setss = map (fn i => if member (op=) (#bfree_vars fp_res) i then
+            [nth (drop nvars fsets) i $ pickd] else []
+          ) (0 upto nvars - 1);
+
+          val fsets = take nvars fsets;
+          val goals = @{map 5} (fn i => fn UFVars => fn fset => fn bset => fn bfrees =>
+            let
+              val recs = @{map 4} (fn set => fn bounds => fn FVarss => fn UFVarss =>
+                let val rec_set = mk_UNION (set $ pickd) (
+                  let val filter = the o List.find (fn set => body_type (fastype_of set) = body_type (fastype_of fset))
+                  in BNF_FP_Util.mk_case_sum (filter FVarss, filter UFVarss) end
+                ) in if member (op=) bounds i then mk_minus (rec_set, bset $ pickd) else rec_set end
+              ) rec_sets rec_boundss (replicate_rec (map #FVarss (#raw_fps fp_res))) (replicate_rec UFVarsss);
+            in 
+              HOLogic.mk_Trueprop (mk_leq (foldl1 mk_Un ((fset $ pickd) ::
+                map (fn bfree => mk_minus (bfree, bset $ pickd)) bfrees @ recs)) (UFVars $ d))
+             end
+           ) (0 upto nvars - 1) UFVarss fsets bsets bfree_setss
+
+           val suitable_prem = HOLogic.mk_Trueprop (fst suitable $ pick);
+           val prems = [suitable_prem, valid_prem];
+
+          in map2 (fn goal => fn UFVars_Udtor =>
+            Goal.prove_sorry lthy (names [pick, d]) prems goal (fn {context=ctxt, prems as (suitable_prem :: valid_prem ::  _)} =>
+              let
+                val sndOFarg' = Local_Defs.unfold0 lthy [snd suitable] suitable_prem;
+                val sndOFarg = sndOFarg' RS spec RS mp OF [valid_prem];
+                val theRule = map (fn t => t OF [valid_prem, sndOFarg]) raw_UFVars_Utor';
+              in EVERY1 [
+                resolve_tac ctxt theRule
+          ] end)) goals UFVars_Udtors
+          end) UFVarsss ds raw_pre_setss valid_prems UFVars_Udtorss picks suitables raw_UFVars_Utor;
+
+        val _ = @{print} suitable_FVarsD;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

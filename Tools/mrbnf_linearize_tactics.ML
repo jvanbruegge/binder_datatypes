@@ -24,7 +24,7 @@ sig
 
   val mk_F'_map_cong0_tac: thm -> thm list -> thm -> Proof.context -> tactic
 
-  val mk_F'_set_map0_tac: thm -> thm -> thm -> thm -> (Proof.context -> thm) -> (Proof.context -> thm) ->
+  val mk_F'_set_map0_tac: thm -> thm -> thm -> thm list -> (Proof.context -> thm) -> (Proof.context -> thm) ->
     Proof.context -> tactic
 
   val mk_F'_le_rel_OO_tac: int -> int -> thm -> thm -> Proof.context -> tactic
@@ -360,7 +360,7 @@ fun mk_F'_map_cong0_tac map_F'_def set_defs F_map_cong ctxt =
     HEADGOAL (rtac ctxt refl)
   ) ctxt);
 
-fun mk_F'_set_map0_tac set_F'_def map_F'_def nonrep_map_F_bij_2 set_map mk_Rep_F' mk_Abs_F'_inverse ctxt =
+fun mk_F'_set_map0_tac set_F'_def map_F'_def nonrep_map_F_bij_2 F_set_maps mk_Rep_F' mk_Abs_F'_inverse ctxt =
   HEADGOAL (rtac ctxt ext) THEN
   unfold_thms_tac ctxt [o_apply] THEN
   HEADGOAL (Subgoal.FOCUS (fn {prems, context = ctxt, ...} =>
@@ -368,7 +368,7 @@ fun mk_F'_set_map0_tac set_F'_def map_F'_def nonrep_map_F_bij_2 set_map mk_Rep_F
       @{thms asSS_def asBij_def if_True o_apply}) THEN
     HEADGOAL (EVERY' [EqSubst.eqsubst_tac ctxt [0] [mk_Abs_F'_inverse ctxt],
       rtac ctxt nonrep_map_F_bij_2 THEN_ALL_NEW resolve_tac ctxt (mk_Rep_F' ctxt :: prems),
-      rtac ctxt set_map THEN_ALL_NEW
+      resolve_tac ctxt F_set_maps THEN_ALL_NEW
         resolve_tac ctxt prems])
   ) ctxt);
 

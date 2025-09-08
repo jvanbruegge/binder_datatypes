@@ -12,6 +12,11 @@ to be pullback-preserving), we transform it into an MRBNF F' that has the same c
 as F except that the 3rd position becomes map-constrained to small-support endobijections.  
 *)
 
+definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
+
+ML_file "../Tools/mrbnf_linearize_tactics.ML"
+
 typedecl ('a, 'b, 'c, 'd) F
 consts map_F :: "('a :: var \<Rightarrow> 'a) \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
   ('c \<Rightarrow> 'c') \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('a, 'b, 'c, 'd) F \<Rightarrow> ('a, 'b, 'c', 'd') F"
@@ -307,12 +312,10 @@ lemma nonrep2_map_F:
   assumes v: "|supp v| <o |UNIV :: 'a1 set|"  and u: "bij u" "|supp u| <o |UNIV :: 'a2 set|" 
   assumes "nonrep2 x"
   shows "nonrep2 (map_F v u id g x)"
+  apply (tactic \<open>MRBNF_Linearize_Tactics.mk_nonrep_map_F_tac @{context} @{thms assms} 2 1 1 (lin_pos-1) 0 @{thm nonrep2_def} @{thm sameShape1_def} @{thm mr_rel_F_def}
+  @{thm F.map_comp} @{thms F.mr_rel_map} @{thm F.rel_compp} @{thm F.rel_Grp} @{thm F.in_rel} @{thm F.map_id} @{thms F.rel_map} @{thm F.rel_refl_strong} 
+  THEN print_tac @{context} "success" THEN no_tac\<close>)
   using assms apply -
-  apply (tactic \<open>mk_nonrep2_map_F_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm nonrep2_def} @{thm sameShape1_def} @{thm F.map_comp} 
-    @{thm F.mr_rel_map(1)} @{thm mr_rel_F_def} @{thm F.rel_compp} @{thm F.rel_Grp} @{thm F.map_id}
-    @{thm F.in_rel} @{thms F.rel_map} @{thm F.rel_refl_strong}
-    @{context}
-    THEN print_tac @{context} "done" THEN no_tac\<close>)
   subgoal premises prems
     apply (unfold nonrep2_def sameShape1_def)
     apply (rule allI)
@@ -659,9 +662,6 @@ definition set1_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a1 set
 definition set2_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a2 set" where "set2_F' = set2_F o Rep_F'"
 definition set3_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a3 set" where "set3_F' = set3_F o Rep_F'"
 definition set4_F' :: "('a1::var,'a2::var,'a3::var,'a4) F' \<Rightarrow> 'a4 set" where "set4_F' = set4_F o Rep_F'"
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
 definition map_F' :: "('a1::var \<Rightarrow> 'a1) \<Rightarrow> ('a2::var \<Rightarrow> 'a2) \<Rightarrow> ('a3::var \<Rightarrow> 'a3) \<Rightarrow> ('a4 \<Rightarrow> 'a4') 
   \<Rightarrow> ('a1,'a2,'a3,'a4) F' \<Rightarrow> ('a1,'a2,'a3,'a4') F'"

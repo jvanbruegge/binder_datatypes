@@ -141,7 +141,6 @@ definition seq_at :: "'a seq \<Rightarrow> 'a \<Rightarrow> nat set" where "seq_
 typedef 'a fseq = "{f :: 'a seq. finite_range f}" 
   by(rule exI[where x="\<lambda>_. undefined"]) simp
 
-
 setup_lifting type_definition_fseq
 
 lift_bnf2 'fa fseq [wits: "\<lambda>(x :: 'fa). (\<lambda>_ :: nat. x)"]
@@ -179,8 +178,11 @@ consts set5_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'e set"
 consts rrel_G :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'b' \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> 
   ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'e' \<Rightarrow> bool) \<Rightarrow> ('a, 'b , 'c , 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G \<Rightarrow> bool"
 consts wit1_G :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
-consts wit2_G :: "'d \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+consts wit2_G :: "'c \<Rightarrow> 'd \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit3_G :: "'b \<Rightarrow> 'e \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+consts wit1_lG :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G" 
+consts wit2_lG :: "'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G"
+consts wit3_lG :: "('a, 'b, 'c, 'd, 'e::var, 'f) G"
 
 mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   map: map_G
@@ -188,22 +190,41 @@ mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   bd: natLeq
   wits:
     "wit1_G :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
-    "wit2_G :: 'd \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+    "wit2_G :: 'c \<Rightarrow> 'd \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
     "wit3_G :: 'b \<Rightarrow> 'e \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
   rel: rrel_G
   var_class: var
   sorry
 
-linearize_mrbnf ('a, 'b, 'c, 'd, 'e::var, 'f) lG = "('a, 'b, 'c, 'd, 'e::var, 'f) G" on 'e
+linearize_mrbnf ('a, 'b, 'c, 'd, 'e::var, 'f) lG = "('a, 'b, 'c, 'd, 'e::var, 'f) G" 
+  [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G" 
+    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G"
+    "wit3_lG :: ('a, 'b, 'c, 'd, 'e::var, 'f) G"] on 'e
   sorry
 
-lemma nonrep'_G_wit1: "nonrep'_G (wit1_G a b)"
-  unfolding nonrep'_G_def sameShape'_G_def mr_rel_G_def G.in_rel
-  apply (auto intro!: exI[of _ id] simp: G.map_id)
+lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
+  apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.in_rel)
+  apply (intro allI impI exI[of _ id])
+  apply (subst G.map_id)
+  apply (unfold mem_Collect_eq)
+  apply (elim exE conjE)
+  apply (hypsubst_thin)
+  apply (unfold triv_forall_equality) (*?*)
   apply (rule trans[OF sym, rotated])
-  apply assumption
-  apply (rule G.map_cong)
-       apply (auto dest!: arg_cong[where f=set5_G] simp: G.set_map set_eq_iff image_iff)
+   apply assumption
+  apply (rule G.map_cong; (rule refl)?)
+      apply (unfold split_paired_all fst_conv snd_conv)
+
+      apply (drule rev_subsetD, 
+            assumption, 
+            drule Set.CollectD, 
+            subst (asm) case_prod_conv, 
+            assumption)+
+
+  apply (drule arg_cong[where f=set5_G])
+  apply (subst (asm) G.set_map)
+  apply (subst (asm) set_eq_iff)
+  apply (subst (asm) image_iff)
   apply (drule spec)
   apply (drule iffD1)
    apply (rule bexI[rotated])
@@ -217,8 +238,8 @@ lemma "x \<in> set1_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = a"
       "x \<in> set2_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = b"
       "x \<in> set3_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> False"
       "x \<in> set4_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> False"
-  apply (unfold set1_lG_def set2_lG_def set3_lG_def set4_lG_def o_apply)
-  apply (simp_all only: Abs_lG_inverse[unfolded mem_Collect_eq] nonrep'_G_wit1)
+     apply (unfold set1_lG_def set2_lG_def set3_lG_def set4_lG_def o_apply)
+  apply (unfold Abs_lG_inverse[unfolded mem_Collect_eq, OF nonrep_G_wit1])
   apply (erule G.wit1)+
   done
 
@@ -242,9 +263,6 @@ mrbnf "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F"
   var_class: var
   sorry
 
-typedef 'a foo = "{x::'a \<times> 'a list. snd x = []}"
-  by simp
-
 
 (*
 binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t
@@ -264,27 +282,26 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"x :: ('a::var, 'b) L"] on 'a
   sorry
 
-linearize_mrbnf ('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F'' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F" 
-  [wits:"x :: ('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F"] on 'd
-  sorry
 
 (*
-linearize_mrbnf (st1:'b::var, st2:'d , st3:'c::var , 'f, st4:'a , st5:'e::var) F''' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd) F" on 'd
-  sorry*)
+linearize_mrbnf (sttt_a:'a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F'' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F" 
+  [wits:"x :: ('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F"] on 'd
+  sorry
+*)
+
+linearize_mrbnf (st1:'b::var, st2:'d::var , st3:'c::var , 'f, st4:'a , st5:'e::var) F'' = 
+  "('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F" on 'd
+  sorry
 
 term Abs_F''
 
-thm st1_def
-thm st2_def
-thm st3_def
-thm st4_def
-thm set4_F''_def
 thm map_F''_def
+thm st1_def
 
 
 thm F.map_comp
-term sameShape'_F
-thm sameShape'_F_def nonrep'_F_def 
+term sameShape_F
+thm sameShape_F_def nonrep_F_def 
 
 thm F.map_id F.set_map F.set_map0
 find_theorems name: F.map

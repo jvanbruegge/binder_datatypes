@@ -1882,7 +1882,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
 
     val phi = Proof_Context.export_morphism lthy_old lthy;
     val mrbnf_rel_def = Morphism.thm phi raw_rel_def;
-    val mrbnf_rel = Morphism.term phi mrbnf_rel_term;
+    val mrbnf_rel = Morphism.term phi mrbnf_rel_term |> @{print};
     fun mk_mrbnf_rel Ds (As', lAs') (Bs', lBs') =
       normalize_rel lthy (map2 mk_pred2T lAs' lBs') (mk_mrbnf_T Ds As' Calpha)
         (mk_mrbnf_T Ds Bs' Calpha) mrbnf_rel;

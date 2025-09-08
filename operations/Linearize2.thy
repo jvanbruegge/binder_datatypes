@@ -277,7 +277,7 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 *)
 
 
-
+consts x :: "('a::var, 'b) L"
 
 linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"x :: ('a::var, 'b) L"] on 'a
   sorry

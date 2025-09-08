@@ -504,9 +504,10 @@ fun linearize b repT on_tvar wits specs map_b rel_b pred_b opts lthy =
         val _ = Iwits |> @{print}
         val _ = wits_F' |> @{print}
 
+(*
         (*TODO: ISSUE*)
         val wits_F' = []
-
+*)
         val (mrbnf', lthy) = MRBNF_Def.mrbnf_def MRBNF_Def.Do_Inline (MRBNF_Def.user_policy MRBNF_Def.Note_Some) 
           false I tacs (SOME l_Ds) NONE map_F'_binding rrel_F'_binding pred_b set_bs_non_dead 
           (((((((b, typ_y), map_F'_term), (var_types_Abs ~~ set_terms)),

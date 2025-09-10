@@ -51,6 +51,8 @@ term "T1_ctor"
 
 thm alpha_T1_alpha_T2.intros
 
+thm T1.FVars_ctor
+
 locale COREC =
   fixes Udtor1 :: "'u1 \<Rightarrow> ('a::covar, 'b::covar, 'c::covar, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T1_pre set"
   and Udtor2 :: "'u2 \<Rightarrow> ('a::covar, 'b::covar, 'c::covar, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T1 + 'u1, ('a, 'b, 'c, 'd) T2 + 'u2, ('a, 'b, 'c, 'd) T2 + 'u2) T2_pre set"
@@ -66,12 +68,12 @@ locale COREC =
     and alpha_Udtor1: "\<And>X X' d. valid_U1 d \<Longrightarrow> {X,X'} \<subseteq> Udtor1 d \<Longrightarrow>
   \<exists>u v. bij (u::'a \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> bij (v::'b \<Rightarrow> 'b) \<and> |supp v| <o |UNIV::'b set|
   \<and> id_on ((set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X) u
-  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X)) - set6_T1_pre X) v
+  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X)) - set6_T1_pre X) v
   \<and> map_T1_pre id id id id u v u id (map_sum (permute_T1 u v) (Umap1 u v)) id (map_sum (permute_T2 u id) (Umap2 u id)) X = X'"
 and alpha_Udtor2: "\<And>X X' d. valid_U2 d \<Longrightarrow> {X,X'} \<subseteq> Udtor2 d \<Longrightarrow>
   \<exists>u v. bij (u::'a \<Rightarrow> 'a) \<and> |supp u| <o |UNIV::'a set| \<and> bij (v::'b \<Rightarrow> 'b) \<and> |supp v| <o |UNIV::'b set|
   \<and> id_on ((set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X) u
-  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X)) - set6_T2_pre X) v
+  \<and> id_on ((\<Union>(case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X)) - set6_T2_pre X) v
   \<and> map_T2_pre id id id id u v u id (map_sum (permute_T1 u v) (Umap1 u v)) id (map_sum (permute_T2 u id) (Umap2 u id)) X = X'"
     and
     (* The dual of the first block of assumptions from Norrish's paper:   *)
@@ -141,6 +143,79 @@ lemmas valid_Udtor = valid_Udtor1 valid_Udtor2
 
 lemmas T1_T2_pred_set = T1_pre.pred_set T2_pre.pred_set
 
+abbreviation "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+
+abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
+
+abbreviation "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+
+abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
+
+abbreviation "T1_abs \<equiv> quot_type.abs alpha_T1 Abs_T1"
+abbreviation "T1_rep \<equiv> quot_type.rep Rep_T1"
+abbreviation "T2_abs \<equiv> quot_type.abs alpha_T2 Abs_T2"
+abbreviation "T2_rep \<equiv> quot_type.rep Rep_T2"
+
+abbreviation raw_Umap1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
+  "raw_Umap1 \<equiv> Umap1"
+
+abbreviation raw_Umap2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
+  "raw_Umap2 \<equiv> Umap2"
+
+abbreviation raw_UFVars11 :: "'u1 \<Rightarrow> 'a set" where
+  "raw_UFVars11 \<equiv> UFVars11"
+abbreviation raw_UFVars12 :: "'u1 \<Rightarrow> 'b set" where
+  "raw_UFVars12 \<equiv> UFVars12"
+abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
+  "raw_UFVars21 \<equiv> UFVars21"
+abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
+  "raw_UFVars22 \<equiv> UFVars22"
+
+(* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
+abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
+  "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
+
+(* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
+abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) - set6_T1_pre X)"
+
+(* definition raw_UFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'a set" where *)
+abbreviation "raw_UFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
+
+(* definition raw_UFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'b set" where *)
+abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) - set6_T2_pre X)"
+
+
+definition Utor1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre set" where
+  "Utor1 d \<equiv>  map_T1_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor1 d)"
+
+definition Utor2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre set" where
+  "Utor2 d \<equiv>  map_T2_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor2 d)"
+
+definition suitable1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> bool" where
+  "suitable1 pick \<equiv> \<forall> d. valid_U1 d \<longrightarrow> pick d \<in> Utor1 d"
+definition suitable2 :: "('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> bool" where
+  "suitable2 pick \<equiv> \<forall> d. valid_U2 d \<longrightarrow> pick d \<in> Utor2 d"
+
+definition f1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u1 => ('a, 'b, 'c, 'd) raw_T1" where
+"f1 pick1 pick2 \<equiv> corec_raw_T1 pick1 pick2"
+definition f2 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u2 => ('a, 'b, 'c, 'd) raw_T2" where
+"f2 pick1 pick2 \<equiv> corec_raw_T2 pick1 pick2"
+
+definition pick0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre" where
+  "pick0_1 \<equiv> SOME pick. suitable1 pick"
+definition pick0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre" where
+  "pick0_2 \<equiv> SOME pick. suitable2 pick"
+
+definition f0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1" where
+  "f0_1 \<equiv> f1 pick0_1 pick0_2"
+definition f0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2" where
+  "f0_2 \<equiv> f2 pick0_1 pick0_2"
+
+definition COREC1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) T1" where
+  "COREC1 d = T1_abs (f0_1 d)"
+definition COREC2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) T2" where
+  "COREC2 d = T2_abs (f0_2 d)"
+
 lemma Umap_id:
   "valid_U1 d1 \<Longrightarrow> Umap1 id id d1 = d1"
   "valid_U2 d2 \<Longrightarrow> Umap2 id id d2 = d2"
@@ -162,7 +237,7 @@ lemma valid_Udtor':
   apply -
   apply (drule valid_Udtor)
    apply assumption
-  apply (erule UnE)
+  apply (erule UnE)?
    apply (unfold T1_T2_pred_set sum.pred_set)
   (* REPEAT_DETERM *)
    apply (erule conjE)+
@@ -252,6 +327,34 @@ lemma valid_Udtor':
   (* END REPEAT_DETERM *)
   done
 
+lemma Umap_inv1:
+   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
+    and v: "bij v" "|supp v| <o |UNIV::'b set|"
+    and valid2: "valid_U1 d"
+  shows "Umap1 (inv u) (inv v) (Umap1 u v d) = d"
+    apply (rule trans[OF Umap_comp1])
+         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id(1)])
+     apply (rule assms)
+    apply (rule refl)
+  done
+
+lemma Umap_inv2:
+   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
+    and v: "bij v" "|supp v| <o |UNIV::'b set|"
+    and valid2: "valid_U2 d"
+  shows "Umap2 (inv u) (inv v) (Umap2 u v d) = d"
+    apply (rule trans[OF Umap_comp2])
+         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
+    apply (subst inv_o_simp1, rule assms)+
+    apply (rule trans[OF Umap_id(2)])
+     apply (rule assms)
+    apply (rule refl)
+  done
+
+lemmas Umap_inv = Umap_inv1 Umap_inv2
+
 lemma Umap_Udtor1_strong:
   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
     and v: "bij v" "|supp v| <o |UNIV::'b set|"
@@ -262,20 +365,9 @@ lemma Umap_Udtor1_strong:
 (map_T1_pre u v id id u v u (map_sum (permute_T1 u v) (Umap1 u v)) (map_sum (permute_T1 u v) (Umap1 u v))
       (map_sum (permute_T2 u v) (Umap2 u v)) (map_sum (permute_T2 u v) (Umap2 u v)))
    (Udtor1 d)"
-proof -
-  have x: "d = Umap1 (inv u) (inv v) (Umap1 u v d)"
-    apply (rule sym)
-    apply (rule trans[OF Umap_comp1])
-         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
-    apply (subst inv_o_simp1, rule assms)+
-    apply (rule trans[OF Umap_id(1)])
-     apply (rule assms)
-    apply (rule refl)
-    done
-  show ?thesis
     apply (rule subset_antisym)
      apply (rule Umap_Udtor1[OF valid1 u v])
-    apply (subst x)
+  apply (subst Umap_inv(1)[symmetric, OF assms])
     apply (rule image_subsetI)
     apply (drule Umap_Udtor1[THEN subsetD, rotated -1])
        apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap1)+
@@ -290,15 +382,7 @@ proof -
     apply (unfold comp_def)
     apply (unfold Umap_id T1.permute_id0 T2.permute_id0 map_sum.id)
     apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
-     apply (rule T1_pre.map_cong[rotated -12])
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
+     apply (rule T1_pre.map_cong[rotated -4])
       (* REPEAT_DETERM *)
             apply (rule sum.map_cong0[OF refl])
             apply (drule valid_Udtor'[rotated])
@@ -368,11 +452,10 @@ can we rewrite this so that it wouldn't be necessary? *)
             apply (rule Umap_id)
             apply assumption
       (* END REPEAT_DETERM *)
-                      apply (rule supp_id_bound bij_id)+
+                      apply (rule supp_id_bound bij_id refl)+
       apply (unfold Umap_id T1.permute_id0 map_sum.id T1_pre.map_id id_def[symmetric])
     apply assumption
-    done
-qed
+  done
 
 lemma Umap_Udtor2_strong:
   assumes u: "bij u" "|supp u| <o |UNIV::'a set|"
@@ -384,127 +467,108 @@ lemma Umap_Udtor2_strong:
 (map_T2_pre u v id id u v u (map_sum (permute_T1 u v) (Umap1 u v)) (map_sum (permute_T1 u v) (Umap1 u v))
       (map_sum (permute_T2 u v) (Umap2 u v)) (map_sum (permute_T2 u v) (Umap2 u v)))
    (Udtor2 d)"
-proof -
-  have x: "d = Umap2 (inv u) (inv v) (Umap2 u v d)"
-    apply (rule sym)
-    apply (rule trans[OF Umap_comp2])
-         apply (rule bij_imp_bij_inv supp_inv_bound assms)+
-    apply (subst inv_o_simp1, rule assms)+
-    apply (rule trans[OF Umap_id(2)])
-     apply (rule assms)
-    apply (rule refl)
-    done
-  show ?thesis
-    apply (rule subset_antisym)
-     apply (rule Umap_Udtor2[OF valid2 u v])
-    apply (subst x)
-    apply (rule image_subsetI)
-    apply (drule Umap_Udtor2[THEN subsetD, rotated -1])
+  apply (rule subset_antisym)
+   apply (rule Umap_Udtor2[OF valid2 u v])
+  apply (subst Umap_inv(2)[symmetric, OF assms])
+  apply (rule image_subsetI)
+  apply (drule Umap_Udtor2[THEN subsetD, rotated -1])
        apply (rule bij_imp_bij_inv supp_inv_bound assms valid_Umap2)+
-    apply (erule imageE)
-    apply hypsubst
-    apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
-     apply (rule T2_pre.map_comp)
-          apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound assms)+
-                  apply (unfold map_sum.comp)
-    apply (subst inv_o_simp2 T1.permute_comp0 T2.permute_comp0, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
-    apply (unfold comp_id)?
-    apply (unfold comp_def)
-    apply (unfold Umap_id T1.permute_id0 T2.permute_id0 map_sum.id)
-    apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
-     apply (rule T2_pre.map_cong[rotated -12])
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-                        apply (rule refl)
-      (* REPEAT_DETERM *)
-            apply (rule sum.map_cong0[OF refl])
-            apply (drule valid_Udtor'[rotated])
-               apply (erule UnI2 UnI1)
-              apply assumption
-             apply (rule valid_Umap2)
-               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-            apply (rule trans)
-             apply (rule Umap_comp1 Umap_comp2)
-                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-                        apply (rule trans)
-(* TODO: this "arg_cong3" should be generalized to the number of args Umap* takes
-         in the ML code *)
-             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
-             apply (rule inv_o_simp2, rule assms)+
-            apply (rule Umap_id)
-            apply assumption
-      (* repeated *)
-            apply (rule sum.map_cong0[OF refl])
-            apply (drule valid_Udtor'[rotated])
-               apply (erule UnI2 UnI1)
-              apply assumption
-             apply (rule valid_Umap2)
-               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-            apply (rule trans)
-             apply (rule Umap_comp1 Umap_comp2)
-                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-                       apply (rule trans)
-             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
-             apply (rule inv_o_simp2, rule assms)+
-            apply (rule Umap_id)
-                       apply assumption
-      (* repeated *)
+  apply (erule imageE)
+  apply hypsubst
+  apply (rule iffD2[OF arg_cong2[OF _ refl, of _ _ "(\<in>)"]])
+   apply (rule T2_pre.map_comp)
+                  apply (rule bij_imp_bij_inv supp_inv_bound supp_id_bound assms)+
+  apply (unfold map_sum.comp)
+  apply (subst inv_o_simp2 T1.permute_comp0 T2.permute_comp0, (rule bij_imp_bij_inv supp_inv_bound assms)+)+
+  apply (unfold comp_id)?
+  apply (unfold comp_def)
+  apply (unfold Umap_id T1.permute_id0 T2.permute_id0 map_sum.id)
+  apply (rule arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2])
+   apply (rule T2_pre.map_cong[rotated -12])
+                      apply (rule refl)
+                      apply (rule refl)
+                      apply (rule refl)
+                      apply (rule refl)
+                      apply (rule refl)
+                      apply (rule refl)
+                      apply (rule refl)
+                      apply (rule refl)
+    (* REPEAT_DETERM *)
                       apply (rule sum.map_cong0[OF refl])
-(* TODO: we need to explicitly pick the 4th lemma here in valid_Udtor',
+                      apply (drule valid_Udtor'[rotated])
+                      apply (erule UnI2 UnI1)
+                      apply assumption
+                      apply (rule valid_Umap2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                      apply (rule trans)
+                      apply (rule Umap_comp1 Umap_comp2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                      apply (rule trans)
+    (* TODO: this "arg_cong3" should be generalized to the number of args Umap* takes
+         in the ML code *)
+                      apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
+                      apply (rule inv_o_simp2, rule assms)+
+                      apply (rule Umap_id)
+                      apply assumption
+    (* repeated *)
+                     apply (rule sum.map_cong0[OF refl])
+                     apply (drule valid_Udtor'[rotated])
+                      apply (erule UnI2 UnI1)
+                      apply assumption
+                      apply (rule valid_Umap2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                     apply (rule trans)
+                      apply (rule Umap_comp1 Umap_comp2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                     apply (rule trans)
+                      apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap1])
+                      apply (rule inv_o_simp2, rule assms)+
+                     apply (rule Umap_id)
+                     apply assumption
+    (* repeated *)
+                    apply (rule sum.map_cong0[OF refl])
+    (* TODO: we need to explicitly pick the 4th lemma here in valid_Udtor',
          because the 3rd one also matches but leads to a dead end.
          Can we somehow make it so that it wouldn't be necessary to explicitly
          pick here? *)
-            apply (drule valid_Udtor'(4)[rotated])
-               apply (erule UnI2 UnI1)
-              apply assumption
-             apply (rule valid_Umap2)
-               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-            apply (rule trans)
-             apply (rule Umap_comp1 Umap_comp2)
-                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-                      apply (rule trans)
-(* TODO: we need to alternate between Umap1 and Umap2 here between repeats,
-can we rewrite this so that it wouldn't be necessary? *)
-             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
-             apply (rule inv_o_simp2, rule assms)+
-            apply (rule Umap_id)
+                    apply (drule valid_Udtor'(4)[rotated])
+                      apply (erule UnI2 UnI1)
                       apply assumption
-      (* repeated *)
-                      apply (rule sum.map_cong0[OF refl])
-            apply (drule valid_Udtor'(4)[rotated])
-               apply (erule UnI2 UnI1)
-              apply assumption
-             apply (rule valid_Umap2)
-               apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-            apply (rule trans)
-             apply (rule Umap_comp1 Umap_comp2)
-                 apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
-                     apply (rule trans)
-             apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
-             apply (rule inv_o_simp2, rule assms)+
-            apply (rule Umap_id)
-            apply assumption
-      (* END REPEAT_DETERM *)
-                      apply (rule supp_id_bound bij_id)+
-      apply (unfold Umap_id T1.permute_id0 map_sum.id T2_pre.map_id id_def[symmetric])
-    apply assumption
-    done
-qed
+                     apply (rule valid_Umap2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                    apply (rule trans)
+                     apply (rule Umap_comp1 Umap_comp2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                    apply (rule trans)
+    (* TODO: we need to alternate between Umap1 and Umap2 here between repeats,
+can we rewrite this so that it wouldn't be necessary? *)
+                     apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
+                      apply (rule inv_o_simp2, rule assms)+
+                    apply (rule Umap_id)
+                    apply assumption
+    (* repeated *)
+                   apply (rule sum.map_cong0[OF refl])
+                   apply (drule valid_Udtor'(4)[rotated])
+                      apply (erule UnI2 UnI1)
+                     apply assumption
+                    apply (rule valid_Umap2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                   apply (rule trans)
+                    apply (rule Umap_comp1 Umap_comp2)
+                      apply (rule assms bij_imp_bij_inv supp_inv_bound | assumption)+
+                   apply (rule trans)
+                    apply (rule arg_cong3[OF _ _ refl, of _ _ _ _ Umap2])
+                     apply (rule inv_o_simp2, rule assms)+
+                   apply (rule Umap_id)
+                   apply assumption
+    (* END REPEAT_DETERM *)
+                  apply (rule supp_id_bound bij_id)+
+  apply (unfold Umap_id T1.permute_id0 map_sum.id T2_pre.map_id id_def[symmetric])
+  apply assumption
+  done
 
 lemmas Umap_Udtor_strong = Umap_Udtor1_strong Umap_Udtor2_strong
 
-abbreviation "FFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
-
-abbreviation "FFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
-
-abbreviation "FFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1 UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1 UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
-
-abbreviation "FFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2 UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2 UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
 
 
 lemmas Udtor_Umap = alpha_Udtor1 alpha_Udtor2
@@ -515,50 +579,10 @@ lemmas FVars_T2_Udtor = UFVars21_Udtor UFVars22_Udtor
 (*************************************)
 (* The raw-term-based model infrastructure *)
 
-abbreviation "T1_abs \<equiv> quot_type.abs alpha_T1 Abs_T1"
-abbreviation "T1_rep \<equiv> quot_type.rep Rep_T1"
-abbreviation "T2_abs \<equiv> quot_type.abs alpha_T2 Abs_T2"
-abbreviation "T2_rep \<equiv> quot_type.rep Rep_T2"
-
-definition Utor1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre set" where
-  "Utor1 d \<equiv>  map_T1_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor1 d)"
-
-definition Utor2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre set" where
-  "Utor2 d \<equiv>  map_T2_pre id id id id id id id (map_sum T1_rep id) (map_sum T1_rep id) (map_sum T2_rep id) (map_sum T2_rep id) ` (Udtor2 d)"
-
-abbreviation raw_Umap1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
-  "raw_Umap1 \<equiv> Umap1"
-
-abbreviation raw_Umap2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
-  "raw_Umap2 \<equiv> Umap2"
-
-abbreviation raw_UFVars11 :: "'u1 \<Rightarrow> 'a set" where
-  "raw_UFVars11 \<equiv> UFVars11"
-abbreviation raw_UFVars12 :: "'u1 \<Rightarrow> 'b set" where
-  "raw_UFVars12 \<equiv> UFVars12"
-abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
-  "raw_UFVars21 \<equiv> UFVars21"
-abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
-  "raw_UFVars22 \<equiv> UFVars22"
-
-(* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
-abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
-  "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
-
-(* definition raw_UFVarsBD12 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow>'b set" where *)
-abbreviation "raw_UFVarsBD12 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T1_pre X) - set6_T1_pre X)"
-
-(* definition raw_UFVarsBD21 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'a set" where *)
-abbreviation "raw_UFVarsBD21 X \<equiv> (set7_T2_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X)) - set5_T2_pre X"
-
-(* definition raw_UFVarsBD22 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre \<Rightarrow> 'b set" where *)
-abbreviation "raw_UFVarsBD22 X \<equiv> (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) \<union> \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T2_pre X) - set6_T2_pre X)"
-
-
-lemmas raw_UFVars_def2_11 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_1_def[of "T1_abs _"]] T1.alpha_FVars(1)[OF T1.rep_abs], symmetric]
-lemmas raw_UFVars_def2_12 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_2_def[of "T1_abs _"]] T1.alpha_FVars(2)[OF T1.rep_abs], symmetric]
-lemmas raw_UFVars_def2_21 = trans[OF meta_eq_to_obj_eq[OF FVars_T2_1_def[of "T2_abs _"]] T2.alpha_FVars(1)[OF T2.rep_abs], symmetric]
-lemmas raw_UFVars_def2_22 = trans[OF meta_eq_to_obj_eq[OF FVars_T2_2_def[of "T2_abs _"]] T2.alpha_FVars(2)[OF T2.rep_abs], symmetric]
+lemmas raw_UFVars_def2_11 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_1_def] T1.alpha_FVars(1)[OF T1.rep_abs], THEN sym]
+lemmas raw_UFVars_def2_12 = trans[OF meta_eq_to_obj_eq[OF FVars_T1_2_def] T1.alpha_FVars(2)[OF T1.rep_abs], symmetric]
+lemmas raw_UFVars_def2_21 = trans[OF meta_eq_to_obj_eq[OF FVars_T2_1_def] T2.alpha_FVars(1)[OF T2.rep_abs], symmetric]
+lemmas raw_UFVars_def2_22 = trans[OF meta_eq_to_obj_eq[OF FVars_T2_2_def] T2.alpha_FVars(2)[OF T2.rep_abs], symmetric]
 
 lemmas raw_UFVars_def2 = raw_UFVars_def2_11 raw_UFVars_def2_12 raw_UFVars_def2_21 raw_UFVars_def2_22
 
@@ -626,8 +650,6 @@ lemma FVarsBD_FFVarsBD2:
 
 lemmas FVarsBD_FFVarsBD = FVarsBD_FFVarsBD1 FVarsBD_FFVarsBD2
 
-lemmas supp_comp_bound = supp_comp_bound[OF _ _ infinite_UNIV]
-
 lemma abs_rep_id:
   "T1_abs o T1_rep = id"
   "T2_abs o T2_rep = id"
@@ -680,17 +702,13 @@ lemma DTOR_mapD1:
   apply (subst (asm) T1_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
   apply (unfold id_o o_id)
   apply (subst (asm) T1_pre.mr_rel_map, (rule supp_id_bound bij_id | assumption)+)
-  apply (unfold inv_id id_o o_id relcompp_conversep_Grp)
-  apply (unfold Grp_OO)
+  apply (unfold inv_id id_o o_id relcompp_conversep_Grp Grp_OO)
   apply (rule exI)+
   apply (rule conjI[rotated])+
         apply (erule T1_pre.mr_rel_mono_strong0[rotated -12]) (* nargs + 1 *)
                       apply (unfold0 id_apply)?
+                      apply (rule ballI, (rule refl | (rule ballI, rule imp_refl)))+
     (* REPEAT_DETERM *)
-                      apply (rule ballI, rule refl)+
-                      apply (rule ballI, rule ballI, rule imp_refl)+
-                      apply (rule ballI, rule refl)+
-    (* repeated *)
                       apply (rule ballI impI)+
                       apply (drule sum.rel_eq[THEN fun_cong, THEN fun_cong, THEN iffD2])
                       apply (unfold sum.rel_map comp_def id_apply)[1]
@@ -903,7 +921,7 @@ lemma raw_Umap_Utor1:
  (Utor1 d)
  (Utor1 (raw_Umap1 u v d))"
   apply (unfold Utor1_def)
-  apply (subst Umap_Udtor_strong(1)[OF u v, of d])
+  apply (subst Umap_Udtor_strong(1)[OF u v])
   apply (rule valid_d)
   apply (subst image_comp)
   apply (subst T1_pre.map_comp0[symmetric])
@@ -963,7 +981,7 @@ lemma raw_Umap_Utor2:
  (Utor2 d)
  (Utor2 (raw_Umap2 u v d))"
   apply (unfold Utor2_def)
-  apply (subst Umap_Udtor_strong(2)[OF u v, of d])
+  apply (subst Umap_Udtor_strong(2)[OF u v])
   apply (rule valid_d)
   apply (subst image_comp)
   apply (subst T2_pre.map_comp0[symmetric])
@@ -1011,47 +1029,23 @@ lemma raw_Umap_Utor2:
 
 lemmas raw_Umap_Utor = raw_Umap_Utor1 raw_Umap_Utor2
 
-definition suitable1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> bool" where
-  "suitable1 pick \<equiv> \<forall> d. valid_U1 d \<longrightarrow> pick d \<in> Utor1 d"
-definition suitable2 :: "('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> bool" where
-  "suitable2 pick \<equiv> \<forall> d. valid_U2 d \<longrightarrow> pick d \<in> Utor2 d"
-
-term corec_raw_T1
-term corec_raw_T2
-
-definition f1 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u1 => ('a, 'b, 'c, 'd) raw_T1" where
-"f1 pick1 pick2 \<equiv> corec_raw_T1 pick1 pick2"
-definition f2 :: "('u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre) \<Rightarrow> ('u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre) \<Rightarrow> 'u2 => ('a, 'b, 'c, 'd) raw_T2" where
-"f2 pick1 pick2 \<equiv> corec_raw_T2 pick1 pick2"
-
-definition pick0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre" where
-  "pick0_1 \<equiv> SOME pick. suitable1 pick"
-definition pick0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T2_pre" where
-  "pick0_2 \<equiv> SOME pick. suitable2 pick"
-
-definition f0_1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T1" where
-  "f0_1 \<equiv> f1 pick0_1 pick0_2"
-definition f0_2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) raw_T2" where
-  "f0_2 \<equiv> f2 pick0_1 pick0_2"
-
-definition COREC1 :: "'u1 \<Rightarrow> ('a, 'b, 'c, 'd) T1" where
-  "COREC1 d = T1_abs (f0_1 d)"
-definition COREC2 :: "'u2 \<Rightarrow> ('a, 'b, 'c, 'd) T2" where
-  "COREC2 d = T2_abs (f0_2 d)"
-
 thm raw_T1.corec
 
 lemma f1_simps:
   "f1 pick1 pick2 d = raw_T1_ctor (map_T1_pre id id id id id id id (case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick1 d))"
-  apply(subst raw_T1.corec[of pick1 pick2, unfolded f1_def[symmetric] f2_def[symmetric]])
-  apply (unfold id_def)
+  apply (unfold0 f1_def)
+  apply (subst raw_T1.corec)
+  apply (fold f1_def f2_def)
+  apply (unfold0 id_def)
   apply (rule refl)
   done
 
 lemma f2_simps:
   "f2 pick1 pick2 d = raw_T2_ctor (map_T2_pre id id id id id id id (case_sum id (f1 pick1 pick2)) (case_sum id (f1 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (case_sum id (f2 pick1 pick2)) (pick2 d))"
-  apply(subst raw_T2.corec[of pick1 pick2, unfolded f1_def[symmetric] f2_def[symmetric]])
-  apply (unfold id_def)
+  apply (unfold0 f2_def)
+  apply (subst raw_T2.corec)
+  apply (fold f1_def f2_def)
+  apply (unfold0 id_def)
   apply (rule refl)
   done
 
@@ -2401,7 +2395,7 @@ lemma rel_F_suitable_mapD1:
                       apply assumption
                     (* END REPEAT_DETERM *)
                       apply (rule u v supp_id_bound)+
-                    apply (rule bij_comp supp_comp_bound u v supp_id_bound | assumption)+
+                    apply (rule bij_comp supp_comp_bound_var u v supp_id_bound | assumption)+
   done
 
 lemma rel_F_suitable_mapD2:
@@ -2496,7 +2490,7 @@ lemma rel_F_suitable_mapD2:
                       apply assumption
                     (* END REPEAT_DETERM *)
                       apply (rule u v supp_id_bound)+
-                    apply (rule bij_comp supp_comp_bound u v supp_id_bound | assumption)+
+                    apply (rule bij_comp supp_comp_bound_var u v supp_id_bound | assumption)+
   done
 
 lemmas rel_F_suitable_mapD = rel_F_suitable_mapD1 rel_F_suitable_mapD2
@@ -2785,7 +2779,7 @@ lemma f_swap_alpha:
                         apply ((rule ballI)+, rule refl imp_refl)+
                         apply (rule ballI, rule comp_inv_aux[THEN fun_cong], assumption)+
                         defer defer defer defer (* nrec times *)
-                        apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
+                        apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound_var bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
 
           (* REPEAT_DETERM *)
              apply (rule id_on_f_inv_f)
@@ -2860,7 +2854,7 @@ lemma f_swap_alpha:
        done
       (* END REPEAT_DETERM *)
       (* END REPEAT_DETERM *)
-            apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
+            apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
 (* REPEAT_DETERM *)
         apply (rule ballI impI)+
         apply (unfold relcompp_conversep_Grp)[1]
@@ -2900,7 +2894,7 @@ lemma f_swap_alpha:
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T1, THEN iffD1, rotated])
         apply (subst comp_apply)
         apply (subst T1.permute_raw_comps)
-                apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
         apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
         apply (unfold0 o_id id_o)?
         apply (rule refl)
@@ -2916,11 +2910,11 @@ apply (erule exE)
               apply (rule conjI[rotated])+
              apply (rule refl)+
             apply (subst T1.permute_raw_comps)
-                    apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                    apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
             apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
             apply (unfold0 o_id id_o)?
             apply (rule refl)
-           apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
+           apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
          apply (drule valid_pick_set9[rotated])
            apply assumption
           apply (rule p)
@@ -2966,7 +2960,7 @@ apply (erule exE)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T2, THEN iffD1, rotated])
         apply (subst comp_apply)
         apply (subst T2.permute_raw_comps)
-                apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
       apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
      apply (unfold0 o_id id_o)?
         apply (rule refl)
@@ -2982,11 +2976,11 @@ apply (erule exE)
               apply (rule conjI[rotated])+
              apply (rule refl)+
             apply (subst T2.permute_raw_comps)
-                    apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                    apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
           apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
     apply (unfold0 o_id id_o)?
             apply (rule refl)
-           apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
+           apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
          apply (drule valid_pick_set11[rotated])
            apply assumption
           apply (rule p)
@@ -3033,7 +3027,7 @@ apply (erule exE)
                         apply ((rule ballI)+, rule refl imp_refl)+
                         apply (rule ballI, rule comp_inv_aux[THEN fun_cong], assumption)+
                         defer defer defer defer (* nrec times *)
-                        apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
+                        apply (assumption | rule supp_id_bound bij_id bij_comp supp_comp_bound_var bij_imp_bij_inv supp_inv_bound)+ (* minimize proof state *)
 
              apply (rule id_on_f_inv_f)
               apply assumption
@@ -3106,7 +3100,7 @@ apply (erule exE)
        apply assumption
        done
 
-            apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
+            apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv infinite_UNIV | assumption)+
 (* REPEAT_DETERM *)
         apply (rule ballI impI)+
         apply (unfold relcompp_conversep_Grp)[1]
@@ -3146,7 +3140,7 @@ apply (erule exE)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T1, THEN iffD1, rotated])
         apply (subst comp_apply)
         apply (subst T1.permute_raw_comps)
-                apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
         apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
         apply (unfold0 o_id id_o)?
         apply (rule refl)
@@ -3162,11 +3156,11 @@ apply (erule exE)
               apply (rule conjI[rotated])+
              apply (rule refl)+
             apply (subst T1.permute_raw_comps)
-                    apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                    apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
             apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
             apply (unfold0 o_id id_o)?
             apply (rule refl)
-           apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
+           apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
          apply (drule valid_pick_set9[rotated])
            apply assumption
           apply (rule p)
@@ -3212,7 +3206,7 @@ apply (erule exE)
         apply (erule arg_cong2[OF _ refl, of _ _ alpha_T2, THEN iffD1, rotated])
         apply (subst comp_apply)
         apply (subst T2.permute_raw_comps)
-                apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
       apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
      apply (unfold0 o_id id_o)?
         apply (rule refl)
@@ -3228,11 +3222,11 @@ apply (erule exE)
               apply (rule conjI[rotated])+
              apply (rule refl)+
             apply (subst T2.permute_raw_comps)
-                    apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
+                    apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv bij_id supp_id_bound | assumption)+
           apply (unfold o_inv_o_cancel[OF bij_is_inj])[1]
     apply (unfold0 o_id id_o)?
             apply (rule refl)
-           apply (rule supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
+           apply (rule supp_comp_bound_var supp_inv_bound bij_comp bij_imp_bij_inv | assumption)+
          apply (drule valid_pick_set11[rotated])
            apply assumption
           apply (rule p)
@@ -4135,5 +4129,28 @@ theorem COREC_FFVarsD2:
 lemmas COREC_FFVarsD = COREC_FFVarsD1 COREC_FFVarsD2
 
 end
+
+ML \<open>
+val fp_res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Corecursor2.T1");
+\<close>
+
+ML_file \<open>../Tools/mrbnf_corecursor.ML\<close>
+
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
+
+declare [[ML_print_depth=10000]]
+local_setup \<open>fn lthy =>
+let
+  val lthy = MRBNF_Corecursor.create_binding_corecursor I fp_res lthy;
+in lthy end
+\<close>
+
+print_locale COREC_T1_T2
+
+declare [[goals_limit=20]]
+interpretation COREC_T1_T2
+  apply unfold_locales
 
 end

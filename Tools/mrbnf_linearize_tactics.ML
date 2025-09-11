@@ -17,6 +17,12 @@ sig
 
   val mk_rrel_F_map_onVar_tac: Proof.context -> thm list -> thm -> tactic
 
+  val mk_nonrep_wit_F_tac: Proof.context -> int -> int -> term -> term -> thm -> thm -> thm -> thm -> thm -> 
+    thm -> thm list -> thm list -> tactic
+
+  val mk_nonrep_wit_new_tac: Proof.context -> thm -> thm -> thm -> thm -> thm -> tactic
+
+  (* MRBNF tactics *)
   val mk_F'_map_id0_tac: thm -> thm -> thm -> Proof.context -> tactic
 
   val mk_F'_map_comp0_tac: int -> int -> thm -> thm -> thm -> (Proof.context -> thm) -> (Proof.context -> thm) ->
@@ -29,8 +35,10 @@ sig
 
   val mk_F'_le_rel_OO_tac: int -> int -> thm -> thm -> Proof.context -> tactic
 
-  val mk_F'_in_rel_tactic: int -> int -> int -> int -> int -> thm -> thm -> thm list -> thm -> thm -> thm -> thm -> 
-    thm -> thm list -> thm -> thm -> (Proof.context -> thm) -> (Proof.context -> thm) -> Proof.context -> tactic    
+  val mk_F'_in_rel_tac: int -> int -> int -> int -> int -> thm -> thm -> thm list -> thm -> thm -> thm -> thm -> 
+    thm -> thm list -> thm -> thm -> (Proof.context -> thm) -> (Proof.context -> thm) -> Proof.context -> tactic 
+
+  val mk_F'_wit_tac: thm list -> thm list -> thm list -> (Proof.context -> thm) -> Proof.context -> tactic
 end;
 
 structure MRBNF_Linearize_Tactics : MRBNF_LINEARIZE_TACTICS =
@@ -319,6 +327,50 @@ fun mk_rrel_F_map_onVar_tac ctxt F_rel_maps F_rel_mono_strong =
   ALLGOALS (etac ctxt F_rel_mono_strong THEN_ALL_NEW
      (assume_tac ctxt ORELSE' etac ctxt sym));
 
+fun mk_nonrep_wit_F_tac ctxt nr_As lin_live_pos id_term set_term nonrep_def sameShape_def mr_rel_F_def F_map_id F_in_rel F_map_cong 
+  F_set_maps wit_thms = 
+  unfold_thms_tac ctxt [nonrep_def, sameShape_def, mr_rel_F_def, F_in_rel, @{thm mem_Collect_eq}] THEN
+  HEADGOAL (EVERY' [
+    rtac ctxt allI,
+    rtac ctxt impI,
+    etac ctxt exE,
+    rtac ctxt (infer_instantiate' ctxt [NONE, SOME (Thm.cterm_of ctxt id_term)] exI),
+    EqSubst.eqsubst_tac ctxt [0] [F_map_id]
+  ]) THEN
+  REPEAT_DETERM_N (nr_As+1) (HEADGOAL (etac ctxt conjE)) THEN
+  HEADGOAL (EVERY' [
+    hyp_subst_tac_thin true ctxt,
+    rtac ctxt (rotate_prems 1 (trans OF [sym])),
+    assume_tac ctxt,
+    rtac ctxt F_map_cong THEN_ALL_NEW (TRY o rtac ctxt refl)
+  ]) THEN
+  unfold_thms_tac ctxt @{thms split_paired_all fst_conv snd_conv} THEN
+  defer_tac (lin_live_pos+1) THEN
+  REPEAT_DETERM_N (nr_As-1) (HEADGOAL (EVERY' [
+    dtac ctxt @{thm rev_subsetD},
+    assume_tac ctxt,
+    dtac ctxt @{thm CollectD},
+    EqSubst.eqsubst_asm_tac ctxt [0] @{thms case_prod_conv},
+    assume_tac ctxt
+  ])) THEN
+  HEADGOAL (EVERY' [
+    dtac ctxt (infer_instantiate' ctxt [NONE, NONE, SOME (Thm.cterm_of ctxt set_term)] arg_cong),
+    EqSubst.eqsubst_asm_tac ctxt [0] F_set_maps,
+    EqSubst.eqsubst_asm_tac ctxt [0] @{thms set_eq_iff},
+    EqSubst.eqsubst_asm_tac ctxt [0] @{thms image_iff},
+    dtac ctxt spec,
+    dtac ctxt iffD1,
+    rtac ctxt (rotate_prems 1 bexI),
+    assume_tac ctxt,
+    rtac ctxt @{thm fst_conv},
+    dresolve_tac ctxt wit_thms,
+    etac ctxt FalseE
+  ]);
+
+fun mk_nonrep_wit_new_tac ctxt nonrep_def sameShape_def mr_rel_F_def F_map_id raw_nonrep_thm =
+  unfold_thms_tac ctxt [nonrep_def, sameShape_def, mr_rel_F_def, F_map_id] THEN
+  HEADGOAL (rtac ctxt raw_nonrep_thm);
+
 (* MRBNF tacs *)
 fun mk_F'_map_id0_tac map_F'_def F_map_id Rep_F'_inverse ctxt = 
   unfold_thms_tac ctxt ([map_F'_def, 
@@ -390,7 +442,7 @@ fun mk_F'_le_rel_OO_tac nr_As lin_live_pos rrel_F'_def F_rel_compp ctxt =
     ) ctxt) 
   end;
 
-fun mk_F'_in_rel_tactic nr_As nr_Bs nr_Fs lin_pos lin_live_pos rrel_F'_def map_F'_def set_defs nonrep_map_F_bij_2 F_map_comp 
+fun mk_F'_in_rel_tac nr_As nr_Bs nr_Fs lin_pos lin_live_pos rrel_F'_def map_F'_def set_defs nonrep_map_F_bij_2 F_map_comp 
   rrel_F_map_onVar F_in_rel nonrep_map_F_rev F_set_maps F_map_cong Rep_F'_inverse mk_Rep_F' mk_Abs_F'_inverse ctxt =
   let
     val nr_ABFs = nr_As + nr_Bs + nr_Fs;
@@ -524,5 +576,10 @@ fun mk_F'_in_rel_tactic nr_As nr_Bs nr_Fs lin_pos lin_live_pos rrel_F'_def map_F
         ctxt) 
     ) ctxt)
   end;
+
+fun mk_F'_wit_tac set_def_thms nonrep_wit_thms wit_thms mk_Abs_F'_inverse ctxt = 
+  unfold_thms_tac ctxt (set_def_thms @ [o_apply]) THEN
+  unfold_thms_tac ctxt (map (fn nrp_wit => mk_Abs_F'_inverse ctxt OF [nrp_wit]) (nonrep_wit_thms)) THEN
+  HEADGOAL (RANGE (map (fn wit_thm => etac ctxt wit_thm) wit_thms))
 
 end;

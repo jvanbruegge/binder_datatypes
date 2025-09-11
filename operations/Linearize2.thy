@@ -1,154 +1,16 @@
 theory Linearize2                                                        
   imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
   keywords
-  "linearize_mrbnf" "lift_bnf2" "copy_bnf2" :: thy_goal_defn
+  "linearize_mrbnf" :: thy_goal_defn
 begin
 
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-lemma sum_insert_Inl_unit: "x \<in> A \<Longrightarrow> (\<And>y. x = Inr y \<Longrightarrow> Inr y \<in> B) \<Longrightarrow> x \<in> insert (Inl ()) B"
-  by (cases x) (simp_all)
-
-lemma lift_sum_unit_vimage_commute:
-  "insert (Inl ()) (Inr ` f -` A) = map_sum id f -` insert (Inl ()) (Inr ` A)"
-  by (auto simp: map_sum_def split: sum.splits)
-
-lemma insert_Inl_int_map_sum_unit: "insert (Inl ()) A \<inter> range (map_sum id f) \<noteq> {}"
-  by (auto simp: map_sum_def split: sum.splits)
-
-lemma image_map_sum_unit_subset:
-  "A \<subseteq> insert (Inl ()) (Inr ` B) \<Longrightarrow> map_sum id f ` A \<subseteq> insert (Inl ()) (Inr ` f ` B)"
-  by auto
-
-lemma subset_lift_sum_unitD: "A \<subseteq> insert (Inl ()) (Inr ` B) \<Longrightarrow> Inr x \<in> A \<Longrightarrow> x \<in> B"
-  unfolding insert_def by auto
-
-lemma UNIV_sum_unit_conv: "insert (Inl ()) (range Inr) = UNIV"
-  unfolding UNIV_sum UNIV_unit image_insert image_empty Un_insert_left sup_bot.left_neutral..
-
-lemma subset_vimage_image_subset: "A \<subseteq> f -` B \<Longrightarrow> f ` A \<subseteq> B"
-  by auto
-
-lemma relcompp_mem_Grp_neq_bot:
-  "A \<inter> range f \<noteq> {} \<Longrightarrow> (\<lambda>x y. x \<in> A \<and> y \<in> A) OO (BNF_Def.Grp UNIV f)\<inverse>\<inverse> \<noteq> bot"
-  unfolding Grp_def relcompp_apply fun_eq_iff by blast
-
-lemma comp_projr_Inr: "projr \<circ> Inr = id"
-  by auto
-
-lemma in_rel_sum_in_image_projr:
-  "B \<subseteq> {(x,y). rel_sum ((=) :: unit \<Rightarrow> unit \<Rightarrow> bool) A x y} \<Longrightarrow>
-   Inr ` C = fst ` B \<Longrightarrow> snd ` B = Inr ` D \<Longrightarrow> map_prod projr projr ` B \<subseteq> {(x,y). A x y}"
-  by (force simp: projr_def image_iff dest!: spec[of _ "Inl ()"]  split: sum.splits)
-
-lemma subset_rel_sumI: "B \<subseteq> {(x,y). A x y} \<Longrightarrow> rel_sum ((=) :: unit => unit => bool) A
-    (if x \<in> B then Inr (fst x) else Inl ())
-    (if x \<in> B then Inr (snd x) else Inl ())"
-  by auto
-
-lemma relcompp_eq_Grp_neq_bot: "(=) OO (BNF_Def.Grp UNIV f)\<inverse>\<inverse> \<noteq> bot"
-  unfolding Grp_def relcompp_apply fun_eq_iff by blast
-
-lemma rel_fun_rel_OO1: "(rel_fun Q (rel_fun R (=))) A B \<Longrightarrow> conversep Q OO A OO R \<le> B"
-  by (auto simp: rel_fun_def)
-
-lemma rel_fun_rel_OO2: "(rel_fun Q (rel_fun R (=))) A B \<Longrightarrow> Q OO B OO conversep R \<le> A"
-  by (auto simp: rel_fun_def)
-
-lemma rel_sum_eq2_nonempty: "rel_sum (=) A OO rel_sum (=) B \<noteq> bot"
-  by (auto simp: fun_eq_iff relcompp_apply intro!: exI[of _ "Inl _"])
-
-lemma rel_sum_eq3_nonempty: "rel_sum (=) A OO (rel_sum (=) B OO rel_sum (=) C) \<noteq> bot"
-  by (auto simp: fun_eq_iff relcompp_apply intro!: exI[of _ "Inl _"])
-
-lemma hypsubst: "A = B \<Longrightarrow> x \<in> B \<Longrightarrow> (x \<in> A \<Longrightarrow> P) \<Longrightarrow> P" by simp
-
-lemma Quotient_crel_quotient: "Quotient R Abs Rep T \<Longrightarrow> equivp R \<Longrightarrow> T \<equiv> (\<lambda>x y. Abs x = y)"
-  by (drule Quotient_cr_rel) (auto simp: fun_eq_iff equivp_reflp intro!: eq_reflection)
-
-lemma Quotient_crel_typedef: "Quotient (eq_onp P) Abs Rep T \<Longrightarrow> T \<equiv> (\<lambda>x y. x = Rep y)"
-  unfolding Quotient_def
-  by (auto 0 4 simp: fun_eq_iff eq_onp_def intro: sym intro!: eq_reflection)
-
-lemma Quotient_crel_typecopy: "Quotient (=) Abs Rep T \<Longrightarrow> T \<equiv> (\<lambda>x y. x = Rep y)"
-  by (subst (asm) eq_onp_True[symmetric]) (rule Quotient_crel_typedef)
-
-lemma equivp_add_relconj:
-  assumes equiv: "equivp R" "equivp R'" and le: "S OO T OO U \<le> R OO STU OO R'"
-  shows "R OO S OO T OO U OO R' \<le> R OO STU OO R'"
-proof -
-  have trans: "R OO R \<le> R" "R' OO R' \<le> R'"
-    using equiv unfolding equivp_reflp_symp_transp transp_relcompp by blast+
-  have "R OO S OO T OO U OO R' = R OO (S OO T OO U) OO R'"
-    unfolding relcompp_assoc ..
-  also have "\<dots> \<le> R OO (R OO STU OO R') OO R'"
-    by (intro le relcompp_mono order_refl)
-  also have "\<dots> \<le> (R OO R) OO STU OO (R' OO R')"
-    unfolding relcompp_assoc ..
-  also have "\<dots> \<le> R OO STU OO R'"
-    by (intro trans relcompp_mono order_refl)
-  finally show ?thesis .
-qed
-
-lemma Grp_conversep_eq_onp: "((BNF_Def.Grp UNIV f)\<inverse>\<inverse> OO BNF_Def.Grp UNIV f) = eq_onp (\<lambda>x. x \<in> range f)"
-  by (auto simp: fun_eq_iff Grp_def eq_onp_def image_iff)
-
-lemma Grp_conversep_nonempty: "(BNF_Def.Grp UNIV f)\<inverse>\<inverse> OO BNF_Def.Grp UNIV f \<noteq> bot"
-  by (auto simp: fun_eq_iff Grp_def)
-
-lemma relcomppI2: "r a b \<Longrightarrow> s b c \<Longrightarrow> t c d \<Longrightarrow> (r OO s OO t) a d"
-  by (auto)
-
-lemma rel_conj_eq_onp: "equivp R \<Longrightarrow> rel_conj R (eq_onp P) \<le> R"
-  by (auto simp: eq_onp_def transp_def equivp_def)
-
-lemma Quotient_Quotient3: "Quotient R Abs Rep T \<Longrightarrow> Quotient3 R Abs Rep"
-  unfolding Quotient_def Quotient3_def by blast
-
-lemma Quotient_reflp_imp_equivp: "Quotient R Abs Rep T \<Longrightarrow> reflp R \<Longrightarrow> equivp R"
-  using Quotient_symp Quotient_transp equivpI by blast
-
-lemma Quotient_eq_onp_typedef:
-  "Quotient (eq_onp P) Abs Rep cr \<Longrightarrow> type_definition Rep Abs {x. P x}"
-  unfolding Quotient_def eq_onp_def
-  by unfold_locales auto
-
-lemma Quotient_eq_onp_type_copy:
-  "Quotient (=) Abs Rep cr \<Longrightarrow> type_definition Rep Abs UNIV"
-  unfolding Quotient_def eq_onp_def
-  by unfold_locales auto
-
-ML_file "../Tools/bnf_lift.ML"
 
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
-type_synonym 'a seq = "nat \<Rightarrow> 'a"
 
-abbreviation finite_range :: "('a \<Rightarrow> 'b) \<Rightarrow> bool" where "finite_range f \<equiv> finite (range f)"
-
-lemma finite_range_pair:
-  assumes 1: "finite_range (\<lambda>x. fst (f x))" and 2: "finite_range (\<lambda>x. snd (f x))"
-  shows "finite_range f"
-proof -
-  have "range f \<subseteq> range (\<lambda>x. fst (f x)) \<times> range (\<lambda>x. snd (f x))"
-    by(auto 4 3 intro: rev_image_eqI dest: sym)
-  then show ?thesis by(rule finite_subset)(use assms in simp)
-qed
-
-definition seq_at :: "'a seq \<Rightarrow> 'a \<Rightarrow> nat set" where "seq_at f x = f -` {x}"
-
-typedef 'a fseq = "{f :: 'a seq. finite_range f}" 
-  by(rule exI[where x="\<lambda>_. undefined"]) simp
-
-setup_lifting type_definition_fseq
-
-lift_bnf2 'fa fseq [wits: "\<lambda>(x :: 'fa). (\<lambda>_ :: nat. x)"]
-  subgoal by(metis finite_imageI fun.set_map mem_Collect_eq)
-  subgoal by(auto intro: finite_range_pair)
-  subgoal by auto
-  subgoal by auto
-  done
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
@@ -169,7 +31,7 @@ mrbnf "('a, 'b) L"
 
 typedecl ('a, 'b, 'c, 'd, 'e, 'f) G
 consts map_G :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b \<Rightarrow> 'b') \<Rightarrow>
-  ('c :: var \<Rightarrow> 'c') \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e  \<Rightarrow> 'e') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G"
+  ('c \<Rightarrow> 'c') \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('e  \<Rightarrow> 'e') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G \<Rightarrow> ('a', 'b', 'c', 'd', 'e', 'f) G"
 consts set1_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'a set"
 consts set2_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'b set"
 consts set3_G :: "('a, 'b , 'c , 'd, 'e , 'f) G \<Rightarrow> 'c set"
@@ -180,9 +42,6 @@ consts rrel_G :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('b \<
 consts wit1_G :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit2_G :: "'c \<Rightarrow> 'd \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit3_G :: "'b \<Rightarrow> 'e \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
-consts wit1_lG :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G" 
-consts wit2_lG :: "'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G"
-consts wit3_lG :: "('a, 'b, 'c, 'd, 'e::var, 'f) G"
 
 mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   map: map_G
@@ -196,32 +55,53 @@ mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
   var_class: var
   sorry
 
-linearize_mrbnf ('a, 'b, 'c, 'd, 'e::var, 'f) lG = "('a, 'b, 'c, 'd, 'e::var, 'f) G" 
-  [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G" 
-    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e::var, 'f) G"
-    "wit3_lG :: ('a, 'b, 'c, 'd, 'e::var, 'f) G"] on 'e
+consts wit1_lG :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G" 
+consts wit2_lG :: "'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
+consts wit3_lG :: "('a, 'b, 'c, 'd, 'e, 'f) G"
+
+(*declare [[quick_and_dirty]]*)
+
+
+
+axiomatization where known: "\<forall>(x :: ('a, 'b, 'c, 'd, 'e, 'f) G). rrel_G (=) (=) (=) top (=) (wit3_lG :: ('a, 'b, 'c, 'd, 'e, 'f) G) x \<longrightarrow>
+      (\<exists>f4. x = map_G id id id f4 id wit3_lG)"
+
+linearize_mrbnf ('a, 'b, 'c, 'd::var, 'e, 'f) lG = "('a, 'b, 'c, 'd::var, 'e, 'f) G" 
+  [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd::var, 'e, 'f) G" 
+    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c, 'd::var, 'e, 'f) G"
+    "wit3_lG :: ('a, 'b, 'c, 'd::var, 'e, 'f) G"] on 'd
   sorry
 
+lemma "nonrep_G (wit3_lG)"
+  defer 1
+  apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.map_id)
+  by (rule known)
+  
+
+thm nonrep_G_def sameShape_G_def
+thm mr_rel_G_def[symmetric]
+
 lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
-  apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.in_rel)
-  apply (intro allI impI exI[of _ id])
+  apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.in_rel mem_Collect_eq)
+  apply (intro allI impI)
+  apply (erule exE)
+  apply (rule exI[of _ id])
   apply (subst G.map_id)
-  apply (unfold mem_Collect_eq)
-  apply (elim exE conjE)
+  apply (elim conjE)
   apply (hypsubst_thin)
   apply (unfold triv_forall_equality) (*?*)
   apply (rule trans[OF sym, rotated])
    apply assumption
   apply (rule G.map_cong; (rule refl)?)
       apply (unfold split_paired_all fst_conv snd_conv)
+      defer 4
 
       apply (drule rev_subsetD, 
-            assumption, 
-            drule Set.CollectD, 
-            subst (asm) case_prod_conv, 
-            assumption)+
-
-  apply (drule arg_cong[where f=set5_G])
+      assumption, 
+      drule Set.CollectD, 
+      subst (asm) case_prod_conv, 
+      assumption)+
+  apply (drule arg_cong[of _ _ set4_G])
   apply (subst (asm) G.set_map)
   apply (subst (asm) set_eq_iff)
   apply (subst (asm) image_iff)
@@ -262,7 +142,6 @@ mrbnf "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F"
   rel: rrel_F
   var_class: var
   sorry
-
 
 (*
 binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) test" binds x in t

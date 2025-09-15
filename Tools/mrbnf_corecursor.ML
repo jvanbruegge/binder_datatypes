@@ -1111,6 +1111,50 @@ fun create_binding_corecursor qualify fp_res no_defs_lthy =
           ])) goals end
         )  ds ts tds  fDefns (map #FVarss (#raw_fps fp_res)) FVars_raw_defss UFVarsss validUs (transpose is_freess);
 
+        val valid_pick_set = @{map 8} (fn mrbnf => fn d => fn r => fn valid_U => fn pick =>
+                                       fn suitable => fn Utor => fn (rec_sets, _, _) =>
+          @{map 4} (fn inner_valid => fn rec_sets => fn td => fn rawT =>
+            let
+            val goals = map (fn rec_set =>
+              let val set_prem = HOLogic.mk_mem (td, rec_set $ (pick $ r));
+                  val valid_prem = valid_U $ r;
+                  val suitable_prem = fst suitable $ pick;
+                  val res = HOLogic.mk_Trueprop (mk_pred_sum (pred_True rawT) inner_valid $ td);
+               in fold_rev (curry Logic.mk_implies o HOLogic.mk_Trueprop)
+                    [suitable_prem, set_prem, valid_prem] res
+               end
+              ) rec_sets
+            in map (fn goal => Goal.prove_sorry lthy (names [pick, td, r, d]) [] goal (fn {context=ctxt, ...} => EVERY1 [
+              K (Local_Defs.unfold0_tac ctxt [snd suitable, snd Utor]),
+              etac ctxt allE,
+              etac ctxt impE,
+              assume_tac ctxt,
+              etac ctxt imageE,
+              dtac ctxt @{thm arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1]},
+              etac ctxt arg_cong,
+              EVERY' [
+                EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+                REPEAT_DETERM o (resolve_tac ctxt (@{thms supp_id_bound bij_id}))
+              ],
+              rtac ctxt @{thm pred_sumE[OF TrueI]},
+              hyp_subst_tac_thin true ctxt,
+              rtac ctxt imageE,
+              K (prefer_tac 2),
+              eresolve_tac ctxt (flat valid_Udtor'),
+              assume_tac ctxt,
+              K (prefer_tac 3),
+              assume_tac ctxt,
+              eresolve_tac ctxt [UnI2, UnI1],
+              EqSubst.eqsubst_tac ctxt [0] @{thms sum.set_map[of _ id, unfolded image_id, symmetric]},
+              rtac ctxt @{thm setr.intros},
+              rtac ctxt @{thm sym},
+              assume_tac ctxt
+            ])) goals end
+          ) validUs (split_recs rec_sets) tds rawTs
+        ) mrbnfs ds rs validUs picks suitables Utors raw_pre_setss;
+
+      val _ = @{print} valid_pick_set;
+
       in (name, Local_Theory.exit_global lthy) end
     ) lthy;
     

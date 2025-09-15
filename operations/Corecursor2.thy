@@ -7,6 +7,9 @@ begin
 lemma rel_set_reflI: "(\<And>a. a \<in> A \<Longrightarrow> r a a) \<Longrightarrow> rel_set r A A"
   by (auto simp: rel_set_def)
 
+lemma pred_sumE: "(\<And>a. x = Inl a \<Longrightarrow> P1 a) \<Longrightarrow> (\<And>b. x = Inr b \<Longrightarrow> P2 b) \<Longrightarrow> pred_sum P1 P2 x"
+  by (metis pred_sum.simps sum.collapse(1,2))
+
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV::'a set| then f else id"
 
@@ -1194,8 +1197,6 @@ lemmas f_FVarsD_aux1 = f_FVarsD_aux11 f_FVarsD_aux21
 lemmas f_FVarsD_aux2 = f_FVarsD_aux12 f_FVarsD_aux22
 lemmas f_FVarsD_aux = f_FVarsD_aux1 f_FVarsD_aux2
 
-(* TODO: just realized there exists some simp tactics in this proof :') *)
-(* TODO: we probably also need variants of these for T2 *)
 lemma valid_pick_set8:
   "suitable1 pick \<Longrightarrow> xc \<in> set8_T1_pre (pick xb) \<Longrightarrow> valid_U1 xb \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc"
   "suitable2 pick2 \<Longrightarrow> xc2 \<in> set8_T2_pre (pick2 xb2) \<Longrightarrow> valid_U2 xb2 \<Longrightarrow> pred_sum (\<lambda>_. True) valid_U1 xc2"
@@ -1204,27 +1205,19 @@ lemma valid_pick_set8:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor1 xb"])
-  apply (simp only:)
-  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc)
+   apply (erule imageE)
+   apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI1)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
@@ -1234,27 +1227,19 @@ lemma valid_pick_set8:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor2 xb2"])
-  apply (simp only:)
+  apply (erule imageE)
+  apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc2)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI1)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
@@ -1270,27 +1255,19 @@ lemma valid_pick_set9:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor1 xb"])
-  apply (simp only:)
-  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc)
+   apply (erule imageE)
+   apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI2)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
@@ -1300,27 +1277,19 @@ lemma valid_pick_set9:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor2 xb2"])
-  apply (simp only:)
+  apply (erule imageE)
+  apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc2)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI2)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
@@ -1336,57 +1305,41 @@ lemma valid_pick_set10:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor1 xb"])
-  apply (simp only:)
-  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc)
+   apply (erule imageE)
+   apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI1)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
-  apply assumption
+   apply assumption
 (* repeated *)
   apply (unfold suitable2_def Utor2_def)
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor2 xb2"])
-  apply (simp only:)
+  apply (erule imageE)
+  apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc2)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI1)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
@@ -1402,27 +1355,19 @@ lemma valid_pick_set11:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor1 xb"])
-  apply (simp only:)
-  apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc)
+   apply (erule imageE)
+   apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
+   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI2)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)
@@ -1432,27 +1377,19 @@ lemma valid_pick_set11:
   apply (erule allE)
   apply (erule impE)
   apply assumption
-  apply (erule imageE[of _ _ "Udtor2 xb2"])
-  apply (simp only:)
+  apply (erule imageE)
+  apply (drule arg_cong2[OF refl, of _ _ "(\<in>)", THEN iffD1, rotated -1])
+    apply (erule arg_cong)
   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)
-  apply (cases xc2)
+   apply (rule pred_sumE[OF TrueI])
   apply hypsubst_thin
-   apply (subst pred_sum.simps)
-   apply simp
-  apply hypsubst_thin
-  apply (subst pred_sum.simps)
-  apply (rule disjI2)
-  apply (rule exI)
-  apply (rule conjI)
-   apply (rule refl)
   apply (rule imageE)
   prefer 2
   apply (erule valid_Udtor')
      apply assumption
     prefer 3
   apply assumption
-   apply (rule UnI2)
-   apply assumption
+   apply (erule UnI2 UnI1)
   apply (subst sum.set_map[of _ id, unfolded image_id, symmetric])
   apply (rule setr.intros)
   apply (rule sym)

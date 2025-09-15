@@ -2,7 +2,8 @@ theory MRBNF_Composition
   imports "Prelim.Prelim"
   keywords
     "print_mrbnfs" :: diag and
-    "mrbnf" :: thy_goal
+    "mrbnf" :: thy_goal and
+    "linearize_mrbnf" :: thy_goal
 begin
 
 ML_file \<open>../Tools/mrbnf_util.ML\<close>
@@ -47,5 +48,13 @@ lemma Grp_OO: "(Grp f OO R) x y = R (f x) y"
 
 ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_comp.ML\<close>
+
+
+(* linearize_mrbnf command *)
+definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
+
+ML_file "../Tools/mrbnf_linearize_tactics.ML"
+ML_file "../Tools/mrbnf_linearize.ML"
 
 end

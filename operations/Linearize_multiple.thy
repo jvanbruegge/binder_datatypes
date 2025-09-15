@@ -63,8 +63,6 @@ lemma rrel_F_alt: "rrel_F top (=) top x y = (\<exists>R1 R2. rrel_F R1 (=) R2 x 
       ((subst top_apply, subst top_apply, subst top_bool_def, rule TrueI)?, assumption?))
   done
 
-abbreviation "rel_F \<equiv> mr_rel_F"
-
 (* Important consequence of preservation of pullbacks (which is actually equivalent to it): 
 The relator is closed under intersections. *)
 
@@ -125,7 +123,7 @@ fun mk_F_strong_tac mrbnf F_map_id mr_rel_F_def F_mr_rel_mono_strong0 F_rel_map_
 \<close>
 
 lemma F_strong:
-  "rel_F id id R3 R4 R5 x y \<Longrightarrow> rel_F id id Q3 Q4 Q5 x y \<Longrightarrow> rel_F id id (inf R3 Q3) (inf R4 Q4) (inf R5 Q5) x y"
+  "mr_rel_F id id R3 R4 R5 x y \<Longrightarrow> mr_rel_F id id Q3 Q4 Q5 x y \<Longrightarrow> mr_rel_F id id (inf R3 Q3) (inf R4 Q4) (inf R5 Q5) x y"
   by (tactic \<open>mk_F_strong_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) @{thm F.map_id} 
     @{thm mr_rel_F_def} @{thm F.mr_rel_mono_strong0} @{thm F_rel_map_set2_strong} @{thm F.in_rel} @{context} 
     THEN print_tac @{context} "done"\<close>)
@@ -160,8 +158,8 @@ fun mk_rel_F_exchange_tac mrbnf F_mr_rel_mono_strong0 F_strong ctxt =
 Since the atoms have a fixed position, we can permute the relations: *)
 lemma rel_F_exchange: 
   fixes x :: "('a1::var,'a2::var,'a3,'a4,'a5) F" and x' :: "('a1,'a2,'a3','a4','a5') F"
-  assumes "rel_F id id R3 R4 R5 x x'" and "rel_F id id Q3 Q4 Q5 x x'"
-  shows "rel_F id id R3 Q4 R5 x x'" 
+  assumes "mr_rel_F id id R3 R4 R5 x x'" and "mr_rel_F id id Q3 Q4 Q5 x x'"
+  shows "mr_rel_F id id R3 Q4 R5 x x'" 
   using assms apply -
   by (tactic \<open>mk_rel_F_exchange_tac (MRBNF_Def.mrbnf_of @{context} @{type_name F} |> the) 
     @{thm F.mr_rel_mono_strong0} @{thm F_strong} @{context} 
@@ -170,7 +168,7 @@ lemma rel_F_exchange:
 (* Then notion of two items having the same shape (w.r.t. the 3rd position): *)
 (* these definitions are lin_pos dependent *)
 definition sameShape1 :: "('a1::var,'a2::var,'a3,'a4,'a5) F \<Rightarrow> ('a1,'a2,'a3,'a4,'a5) F \<Rightarrow> bool" where 
-  "sameShape1 x x' \<equiv> rel_F id id top (=) top x x'"
+  "sameShape1 x x' \<equiv> mr_rel_F id id top (=) top x x'"
 
 definition nonrep2 :: "('a1::var,'a2::var,'a3,'a4,'a5) F \<Rightarrow> bool" where 
   "nonrep2 x \<equiv> \<forall> x'. sameShape1 x x' \<longrightarrow> (\<exists> f1 f2. x' = map_F id id f1 id f2 x)"
@@ -225,8 +223,8 @@ lemma nonrep2_map_F:
                 (assumption)?; (rule sym; assumption)?)+
       apply (elim exE)
       apply (subst F.map_comp; (rule prems bij_id supp_id_bound)?)
-      apply (subst (1 2) trans[OF id_o o_id[symmetric]])
-      apply (subst F.map_comp[THEN sym]; (rule prems bij_id supp_id_bound)?)
+      apply (subst F.map_comp[OF supp_id_bound bij_id supp_id_bound, THEN sym, unfolded trans[OF o_id id_o[symmetric]]];
+          (rule prems)?)
       apply (rule exI)
       apply (rule exI) (*repeat for each lin_pos*)
       apply (drule arg_cong)
@@ -260,27 +258,28 @@ lemma nonrep2_map_F_rev:
 
     apply (erule thin_rl)
     apply (erule exE)
-    apply (erule exE)
+    apply (erule exE) (*repeat for each lin_pos*)
     apply (subst (asm) F.map_comp; (rule prems supp_id_bound bij_id)?)
-    apply (unfold o_id id_o)
+    apply (unfold o_id id_o) 
     apply (subst (asm) F.rel_eq[symmetric])
     apply (unfold F.mr_rel_id)
     apply (drule iffD1[OF F.mr_rel_map(1), rotated -1]; (rule prems supp_id_bound bij_id)?)
     apply (unfold id_o OO_eq)
 
-    apply (drule rel_F_exchange[rotated])
+    apply (drule rel_F_exchange[rotated]) 
      apply (rule iffD1[OF F.mr_rel_flip]; (rule supp_id_bound bij_id)?)
     apply (unfold inv_id)
-    apply (subst (asm) F.mr_rel_map(3); (rule prems supp_id_bound bij_id)?)
+     apply (subst (asm) F.mr_rel_map(3); (rule prems supp_id_bound bij_id)?)
     apply (subst (asm) (1 2 3 4 5 6) Grp_def) (*TWICE for all lives *)
-    apply (subst (asm) (1 2) inv_o_simp1; (rule prems bij_id)?) (*for all frees and bounds*)
+     apply (subst (asm) (1 2) inv_o_simp1; (rule prems bij_id)?) (*for all frees and bounds*)
+
      apply (tactic \<open>unfold_thms_tac @{context} @{thms eqTrueI[OF UNIV_I] simp_thms(21) id_apply}\<close>) (*for all frees*)
-     apply (subst (asm) (1 5) eq_commute) (*some function of lin_live_pos*)
+     apply (subst (asm) (1 5) eq_commute) (* 2*p + 1 for each live *)
      apply (unfold eq_OO conversep_def)
      apply (elim F.mr_rel_mono_strong0[rotated -6]; (rule supp_id_bound bij_id)?) (*- len vartypes - 1*)
       (*left subtactic is for frees and bounds, right subtactic for lives*)
-    apply ((rule ballI,rule refl)?; (rule ballI,rule ballI,rule impI,rotate_tac 2,subst (asm) eq_commute,assumption))+
 
+    apply ((rule ballI,rule refl)?; (rule ballI,rule ballI,rule impI,rotate_tac 2,subst (asm) eq_commute,assumption))+
     apply (erule thin_rl)
     apply (subst (asm) (1 4) Grp_UNIV_def[symmetric]) (*some function of lin_live_pos*)
     apply (rule exI)
@@ -306,14 +305,13 @@ lemma nonrep2_mapF_bij:
     apply (subst (asm) (2 9) OO_eq[symmetric]) (*lin_live_pos * 3 - 1 (needs to be adjusted)*)
     apply (subst (asm) (1 2 3 4) conversep_eq[symmetric]) (* every pos (nr_lives * 2 - 1) *)
     apply (subst (asm) (1 2 3 4) eq_alt) (* every pos (nr_lives * 2 - 1) *)
-    apply (subst (asm) (1) inv_o_simp2[OF prems(1), symmetric]) (* second to last prem *)
-    apply (subst (asm) (1) inv_o_simp2[OF prems(2), symmetric]) (*repeat for each lin_pos*)
-    apply (unfold Grp_o converse_relcompp)
-    apply (subst (asm) (1 2) relcompp_assoc[symmetric]) (*repeat for each lin_pos*)
+    apply (unfold inv_o_simp2[OF prems(1), symmetric] inv_o_simp2[OF prems(2), symmetric]) (*one prem for each lin_pos*)
+    apply (unfold Grp_o converse_relcompp relcompp_assoc[symmetric])
     apply (drule F.mr_rel_map(3)[THEN iffD2, OF supp_id_bound bij_id supp_id_bound bij_id 
           supp_id_bound bij_id supp_id_bound, unfolded inv_id o_id])  (*bij and supp for bounds only supp for frees; THEN bij and supp for both *)
     apply (unfold Grp_UNIV_id conversep_eq mr_rel_F_def)
     apply (drule F.rel_mono_strong)
+
       (*for lin lives*)
        apply (rule trans[OF top_apply[THEN fun_cong] trans[OF top_apply top_bool_def], THEN iffD2])
        apply (rule TrueI)
@@ -331,15 +329,13 @@ lemma nonrep2_mapF_bij:
     subgoal premises subprems for y' f1 f2
       apply (subst (1) F.map_id[symmetric]) (*1 constant*)
       apply (subst (9 11 15) o_id[symmetric]) (*target nth id by <some function> starting at n=0 for all idx but lin_pos*)
-      apply (subst (1) inv_o_simp2[OF prems(1), symmetric])
-      apply (subst (1) inv_o_simp2[OF prems(2), symmetric]) (*repeat for each lin_pos*)
+      apply (unfold inv_o_simp2[OF prems(1), symmetric] inv_o_simp2[OF prems(2), symmetric]) (*one prem for each lin_pos*)
       apply (subst (1) F.map_comp[symmetric]; (rule bij_id supp_id_bound)?)
       apply (subst (1) subprems) (*1 constant*)
       apply (subst (24 28) o_id[symmetric]) (*target nth id by <some function> starting at n=1 only for lin_pos*)
-      apply (subst (1) inv_o_simp1[OF prems(1), symmetric])
-      apply (subst (1) inv_o_simp1[OF prems(2), symmetric]) (*repeat for each lin_pos*)
+      apply (unfold inv_o_simp1[OF prems(1), symmetric] inv_o_simp1[OF prems(2), symmetric]) (*one prem for each lin_pos*)
       apply (subst (1 2) F.map_comp; (rule bij_id supp_id_bound)?) (*1 2 constant*)
-      apply (subst (1 2 3 4) o_assoc) (*1 2 constant - 2 times for each lin_pos*)
+      apply (unfold o_assoc) (*1 2 constant - 2 times for each lin_pos*)
       apply (rule exI)
       apply (rule exI)
       apply (rule refl)
@@ -451,6 +447,7 @@ lemma F'_map_comp1_:
     THEN print_tac @{context} "done" THEN no_tac\<close>)
   subgoal premises prems
     apply (unfold map_F'_def asBij_def asSS_def)
+    thm bij_comp
     apply (subst (1 2 3 4) bij_comp; (rule prems)?) (* 1*(lin_poses) + 2*bounds *)
     apply (unfold if_True)
     apply (subst (1 2) supp_comp_bound; (rule prems infinite_UNIV)?) (* bounds + frees *)
@@ -890,11 +887,14 @@ lemma F'_in_rel:
         apply (unfold o_def)
         apply (rule F.map_cong; (rule prems refl)?)
         apply (rule snd_conv)+ (*repeat for each lin_pos*)
-
        apply (rule CollectI)
+
        apply (subst F.set_map; (rule bij_id supp_id_bound)?)+
+
        apply (unfold image_ident)
+
        apply (rule conjI; (rule subprems)?)+
+
         apply (rule subsetI)
         apply (erule imageE)
         apply (rule CollectI)

@@ -1,14 +1,6 @@
 theory Pattern
   imports POPLmark_1B "HOL-ex.Sketch_and_Explore"
-  keywords
-  "linearize_mrbnf" :: thy_goal_defn
 begin
-
-definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
-  "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
-
-ML_file "../../Tools/mrbnf_linearize_tactics.ML"
-ML_file "../../Tools/mrbnf_linearize.ML"
 
 setup \<open>Sign.qualified_path false (Binding.name "P")\<close>
 

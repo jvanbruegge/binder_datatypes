@@ -1,16 +1,14 @@
 theory Linearize2                                                        
   imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
-  keywords
-  "linearize_mrbnf" :: thy_goal_defn
+  (*keywords "linearize_mrbnf" :: thy_goal*)
 begin
 
+(*
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
-ML_file "../Tools/mrbnf_linearize.ML"
-
-
+ML_file "../Tools/mrbnf_linearize.ML"*)
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
@@ -62,29 +60,17 @@ consts wit3_lG :: "('a, 'b, 'c, 'd, 'e, 'f) G"
 (*declare [[quick_and_dirty]]*)
 
 
-
-axiomatization where known: "\<forall>(x :: ('a, 'b, 'c, 'd, 'e, 'f) G). rrel_G (=) (=) (=) top (=) (wit3_lG :: ('a, 'b, 'c, 'd, 'e, 'f) G) x \<longrightarrow>
-      (\<exists>f4. x = map_G id id id f4 id wit3_lG)"
-
-linearize_mrbnf ('a, 'b, 'c, 'd::var, 'e, 'f) lG = "('a, 'b, 'c, 'd::var, 'e, 'f) G" 
-  [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd::var, 'e, 'f) G" 
-    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c, 'd::var, 'e, 'f) G"
-    "wit3_lG :: ('a, 'b, 'c, 'd::var, 'e, 'f) G"] on 'd
+linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
+  [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
+    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"
+    (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
   sorry
-
-lemma "nonrep_G (wit3_lG)"
-  defer 1
-  apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.map_id)
-  by (rule known)
-  
-
-thm nonrep_G_def sameShape_G_def
-thm mr_rel_G_def[symmetric]
 
 lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
   apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.in_rel mem_Collect_eq)
   apply (intro allI impI)
   apply (erule exE)
+  apply (rule exI[of _ id])
   apply (rule exI[of _ id])
   apply (subst G.map_id)
   apply (elim conjE)
@@ -94,13 +80,28 @@ lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
    apply assumption
   apply (rule G.map_cong; (rule refl)?)
       apply (unfold split_paired_all fst_conv snd_conv)
-      defer 4
+
+      defer 3 (* lin_pos - idx *)
+      defer 3
 
       apply (drule rev_subsetD, 
       assumption, 
       drule Set.CollectD, 
       subst (asm) case_prod_conv, 
       assumption)+
+
+  apply (drule arg_cong[of _ _ set3_G])
+  apply (subst (asm) G.set_map)
+  apply (subst (asm) set_eq_iff)
+  apply (subst (asm) image_iff)
+  apply (drule spec)
+  apply (drule iffD1)
+   apply (rule bexI[rotated])
+    apply assumption
+   apply (rule fst_conv[symmetric])
+  apply (drule G.wit1)
+   apply (erule FalseE)
+
   apply (drule arg_cong[of _ _ set4_G])
   apply (subst (asm) G.set_map)
   apply (subst (asm) set_eq_iff)
@@ -123,21 +124,21 @@ lemma "x \<in> set1_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = a"
   apply (erule G.wit1)+
   done
 
-typedecl ('a, 'b, 'c, 'f, 'e, 'd) F
+typedecl ('a, 'b, 'c, 'd, 'e, 'f) F
 consts map_F :: "('a \<Rightarrow> 'a') \<Rightarrow> ('b :: var \<Rightarrow> 'b) \<Rightarrow>
-  ('c :: var \<Rightarrow> 'c) \<Rightarrow> ('e :: var \<Rightarrow> 'e) \<Rightarrow> ('d \<Rightarrow> 'd') \<Rightarrow> ('a, 'b, 'c, 'f, 'e, 'd) F \<Rightarrow> ('a', 'b, 'c, 'f, 'e, 'd') F"
-consts set1_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'a set"
-consts set2_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'b set"
-consts set3_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'c set"
-consts set4_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'd set"
-consts set5_F :: "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F \<Rightarrow> 'e set"
-consts rrel_F :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c :: var, 'f, 'e::var, 'd) F \<Rightarrow> ('a', 'b, 'c, 'f, 'e, 'd') F \<Rightarrow> bool"
+  ('c :: var \<Rightarrow> 'c) \<Rightarrow> ('e \<Rightarrow> 'e') \<Rightarrow> ('f \<Rightarrow> 'f') \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) F \<Rightarrow> ('a', 'b, 'c, 'd, 'e', 'f') F"
+consts set1_F :: "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F \<Rightarrow> 'a set"
+consts set2_F :: "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F \<Rightarrow> 'b set"
+consts set3_F :: "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F \<Rightarrow> 'c set"
+consts set4_F :: "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F \<Rightarrow> 'e set"
+consts set5_F :: "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F \<Rightarrow> 'f set"
+consts rrel_F :: "('a \<Rightarrow> 'a' \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 'e' \<Rightarrow> bool) \<Rightarrow> ('f \<Rightarrow> 'f' \<Rightarrow> bool) \<Rightarrow> ('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F \<Rightarrow> ('a', 'b, 'c, 'd, 'e', 'f') F \<Rightarrow> bool"
 
 
 declare [[ML_print_depth=1000]]
-mrbnf "('a, 'b :: var, 'c :: var, 'f, 'e :: var, 'd) F"
+mrbnf "('a, 'b :: var, 'c :: var, 'd, 'e, 'f) F"
   map: map_F
-  sets: live: set1_F bound: set2_F free: set3_F bound: set5_F live: set4_F 
+  sets: live: set1_F bound: set2_F free: set3_F live: set4_F live: set5_F 
   bd: natLeq
   rel: rrel_F
   var_class: var
@@ -149,28 +150,32 @@ binder_datatype ('a, 'b::var) test = V 'b | B "'a set" | C x::'b t::"('a, 'b) te
 (*ML \<open>BNF_Util.permute_like_unique (op =) [0, 1] [0, ~1, ~1, 1, ~1] [Bound 4, Bound 3, Bound 2, Bound 1, Bound 0]\<close>*)
 
 
-(*declare [[quick_and_dirty]]*)
+
 (*
 linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
   sorry
 *)
 
+(*declare [[quick_and_dirty]]*)
 
-consts x :: "('a::var, 'b) L"
+consts witL :: "('a::var, 'b) L"
+(*
+linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"witL :: ('a::var, 'b) L"] on 'a
+  sorry*)
 
-linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"x :: ('a::var, 'b) L"] on 'a
+linearize_mrbnf ('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F'' = "('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F" on 'f and 'e
+  sorry
+
+
+linearize_mrbnf ('a, 'b::var) L' = "('a, 'b::var) L" on 'b
   sorry
 
 
 (*
-linearize_mrbnf (sttt_a:'a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F'' = "('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F" 
-  [wits:"x :: ('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F"] on 'd
+linearize_mrbnf (st1:'b::var, st2:'f::var , st3:'c::var , 'd, st4:'a , st5:'e::var) F'' = 
+  "('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F" on 'f
   sorry
 *)
-
-linearize_mrbnf (st1:'b::var, st2:'d::var , st3:'c::var , 'f, st4:'a , st5:'e::var) F'' = 
-  "('a, 'b::var, 'c::var, 'f, 'e::var, 'd::var) F" on 'd
-  sorry
 
 term Abs_F''
 

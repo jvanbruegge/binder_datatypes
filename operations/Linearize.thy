@@ -588,6 +588,8 @@ fun mk_nonrep2_map_bij_tac mrbnf nonrep_def sameShape_def F_mr_rel_map1 F_mr_rel
   ctxt)
 \<close>
 
+lemma Grp_OO_top: "(Grp g OO top) = top"
+  by (auto simp: fun_eq_iff Grp_def)
 
 lemma nonrep2_mapF_bij:
   fixes x :: "('a1::var,'a2::var,'a3,'a4) F" and g::"'a3\<Rightarrow>'a3"
@@ -603,7 +605,23 @@ lemma nonrep2_mapF_bij:
     apply (rule impI)
     (* apply (erule exE) *) (* rm EX *)
     apply (drule F.mr_rel_map(1)[THEN iffD1, rotated -1]; (rule supp_id_bound bij_id)?)
-    apply (unfold o_id Grp_UNIV_id)
+    apply (unfold o_id Grp_UNIV_id eq_OO Grp_OO_top)
+    apply (drule x[unfolded nonrep2_def sameShape1_def, rule_format])
+    apply (erule exE conjE)+
+    apply hypsubst_thin
+    subgoal for _ f
+      apply (rule exI[of _ "f o inv g"])
+      apply (rule sym)
+      apply (rule trans)
+       apply (rule F.map_comp; (rule supp_id_bound bij_id)?)
+      apply (unfold id_o o_id inv_o_simp1[OF g] o_assoc[symmetric])
+      apply (rule refl)
+      done
+    done
+
+(*
+    thm F.mr_rel_map(3)[THEN iffD2, OF supp_id_bound bij_id supp_id_bound bij_id
+          supp_id_bound bij_id supp_id_bound, unfolded inv_id o_id]
     apply (subst (asm) (2) OO_eq[symmetric]) (*lin_live_pos * 3 - 1*)
     apply (subst (asm) (1 2 3) conversep_eq[symmetric]) (* every pos (nr_lives * 2 - 1) *)
     apply (unfold eq_alt)
@@ -640,6 +658,7 @@ lemma nonrep2_mapF_bij:
       done
     done
   done
+*)
 
 ML \<open>
 open BNF_Util BNF_Tactics

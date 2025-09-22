@@ -1,14 +1,14 @@
 theory Linearize2                                                        
   imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
-  (*keywords "linearize_mrbnf" :: thy_goal*)
+  keywords "linearize_mrbnf" :: thy_goal
 begin
 
-(*
+
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
-ML_file "../Tools/mrbnf_linearize.ML"*)
+ML_file "../Tools/mrbnf_linearize.ML"
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
@@ -56,15 +56,81 @@ mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit1_lG :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G" 
 consts wit2_lG :: "'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit3_lG :: "('a, 'b, 'c, 'd, 'e, 'f) G"
+consts wit4_lG :: "'c \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 
 (*declare [[quick_and_dirty]]*)
+declare [[bnf_internals]]
 
+setup \<open>Sign.qualified_path false (Binding.name "foo")\<close>
+
+codatatype ('a, 'b) foo = Foo "'a" | Bar 'b "('a, 'b) foo"
+
+setup \<open>Sign.parent_path\<close>
+
+mrbnf "('a, 'b) foo"
+  map: map_foo
+  sets: live: set1_foo live: set2_foo
+  bd: "card_suc natLeq"
+  wits:
+    "wit1_foo" "wit2_foo"
+  sorry
+
+print_mrbnfs
+
+primcorec mywit where
+  "mywit X = (let y = SOME x. x\<notin>X in Bar y (mywit (insert y X)))"
+
+linearize_mrbnf ('a, 'b::var_foo) foo'' = "('a, 'b::var_foo) foo" 
+  [wits: "(mywit {}) :: ('a, 'b::var_foo) foo"] on 'b
+  subgoal
+    sorry
+  subgoal
+    sorry
+  subgoal
+    apply (safe)
+    
+    thm foo.in_rel[unfolded foo.map_id]
+    apply (unfold foo.in_rel[unfolded foo.map_id])
+    apply (safe)
+    sorry
+  subgoal
+    sorry
+  done
+
+(*
+TODO:
+- filter supplied wits
+- if wit is specified, the existance of a nonrepetitive element can easily be proven without user input
+*)
+declare [[quick_and_dirty=false]]
+
+linearize_mrbnf ('b, 'a::var) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
+  sorry
+
+declare [[quick_and_dirty=false]]
+
+
+thm prod.nonrep_pairprod_def[unfolded prod.sameShape_pairprod_def]
+
+definition map_prod': "map_prod' f \<equiv> map_prod f f"
+thm prod.mr_rel_pairprod_def
+thm rrel_pair_def
+thm set1_pair_def
+thm prod.set_map(1)
+thm prod.set_map(2)
+
+
+thm Abs_pair_inverse
 
 linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
   [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
     "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"
     (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
   sorry
+
+thm nonrep_G_def
+thm Abs_lG_inverse
+
 
 lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
   apply (unfold nonrep_G_def sameShape_G_def mr_rel_G_def G.in_rel mem_Collect_eq)
@@ -161,8 +227,8 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 consts witL :: "('a::var, 'b) L"
 (*
 linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"witL :: ('a::var, 'b) L"] on 'a
-  sorry*)
-
+  sorry
+*)
 linearize_mrbnf ('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F'' = "('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F" on 'f and 'e
   sorry
 
@@ -171,11 +237,11 @@ linearize_mrbnf ('a, 'b::var) L' = "('a, 'b::var) L" on 'b
   sorry
 
 
-(*
-linearize_mrbnf (st1:'b::var, st2:'f::var , st3:'c::var , 'd, st4:'a , st5:'e::var) F'' = 
-  "('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F" on 'f
+
+linearize_mrbnf (st1:'b::var, st2:'f , st3:'c::var , 'd, st4:'a::var , st5:'e) F'' = 
+  "('a::var, 'b::var, 'c::var, 'd, 'e, 'f) F" on 'a
   sorry
-*)
+
 
 term Abs_F''
 

@@ -37,7 +37,8 @@ val mk_Free = yield_singleton o mk_Frees;
 fun select_n xs xs' poses = map_index (fn (i, (x, x')) => if member (op =) poses i then x' else x) (xs ~~ xs');
 fun nths_drop is xs = fold_rev (fn i => (fn xs => nth_drop i xs)) is xs;
 
-fun dest_Type_atomic T = if not (is_Type T) then [T] else dest_Type T |> snd |> map dest_Type_atomic |> flat;
+(* TODO replace with the version from tactics*)
+val dest_Type_atomic = MRBNF_Linearize_Tactics.dest_Type_atomic;
 
 (** Term construction **)
 fun top_rel T = Const ("Orderings.top_class.top", [T, T] ---> HOLogic.boolT);
@@ -48,18 +49,22 @@ fun mk_asBij f = let val typ_f = fastype_of f; in
 fun mk_asSS f = let val typ_f = fastype_of f; in 
   Const (@{const_name asSS}, typ_f --> typ_f) $ f end;
 
-
 (** linearize **)
 fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
   let
     val tfrees = map (TFree o snd) specs |> @{print};
-
+(*
+    val _ = MRBNF_Def.mrbnf_of lthy (dest_Type_name repT) |> @{print}
+    val _ = BNF_Def.bnf_of lthy (dest_Type_name repT) |> @{print}
+*)
     fun flatten_tyargs Ass =
-      map dest_TFree tfrees
-      |> filter (fn T => exists (fn Ts => member op= Ts T) Ass);
+      (map dest_TFree tfrees
+      |> filter (fn T => exists (fn Ts => member op= Ts T) Ass));
+    
     val ((mrbnf,(Ds, ABFs)), (_,lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name (Binding.name_of b)) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
+
 
     val _ = (Ds, ABFs) |> @{print}
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
@@ -77,25 +82,33 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val nr_ABFs = nr_As + nr_Fs + nr_Bs;
     val class = MRBNF_Def.class_of_mrbnf mrbnf;
 
-    val on_tfrees = map (fn tv => TFree (tv, class)) on_tvars |> distinct (op =) |> @{print tracing};
-
     val names_lthy = fold Variable.declare_typ (Ds @ ABFs) lthy;
     val (As', names_lthy) = mk_TFrees nr_As names_lthy;
+    val (As'', names_lthy) = mk_TFrees nr_As names_lthy;
+
+    val on_tfrees = map (fn tv => TFree (tv, class)) on_tvars |> distinct (op =) |> @{print tracing};
 
     val l_ABFs = subtract (op =) Ds tfrees;
     val l_Ds = subtract (op =) ABFs tfrees;
-    val l_As = subtract (op =) (Bs @ Fs) l_ABFs;
-    val l_Bs = subtract (op =) (As @ Fs) l_ABFs;
-    val l_Fs = subtract (op =) (As @ Bs) l_ABFs;
+    val l_As = subtract (op =) (Bs @ Fs @ on_tfrees) l_ABFs |> @{print};
+    val l_Bs = subtract (op =) (l_As @ Fs) l_ABFs |> @{print};
+    val l_Fs = subtract (op =) (As @ Bs) l_ABFs |> @{print};
 
+    val nr_lin = length on_tfrees;
+    val l_nr_As = nr_As - nr_lin;
+    val l_nr_Bs = nr_Bs + nr_lin;
     val lin_poses = map (fn tv => find_index (fn x => x = tv) ABFs) on_tfrees |> (sort int_ord) |> @{print tracing};
-    val l_lin_poses = map (fn tv => find_index (fn x => x = tv) l_ABFs) on_tfrees |> (sort int_ord) |> @{print tracing};
     val lin_live_poses = map (fn tv => find_index (fn x => x = tv) As) on_tfrees |> (sort int_ord) |> @{print tracing};
+    val l_lin_poses = map (fn tv => find_index (fn x => x = tv) l_ABFs) on_tfrees |> (sort int_ord) |> @{print tracing};
+    val l_lin_bound_poses = map (fn tv => find_index (fn x => x = tv) l_Bs) on_tfrees |> (sort int_ord) |> @{print tracing};
+
+    val l_var_types = map (fn l_T => find_first (fn (T, _) => T = l_T) (ABFs ~~ var_types) |> the) l_ABFs |> map snd;
+    val l_var_types = select_n l_var_types (replicate nr_ABFs MRBNF_Def.Bound_Var) l_lin_poses;
 
     val specs_non_dead = subtract (fn (d, (_, x)) => d = TFree x) Ds specs |> @{print}
     val set_bs_non_dead = map_index (fn (i, (b_opt, _)) => if Option.getOpt (b_opt, Binding.empty) |> Binding.is_empty |> not then
               the b_opt else
-              Binding.prefix_name ("set" ^ (Int.toString (i+1)) ^ "_") b) specs_non_dead |> @{print};
+              Binding.prefix_name ("set" ^ (Int.toString (i+1)) ^ "_") b) specs_non_dead;
 
 
     (* make Frees*)
@@ -303,8 +316,10 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         (* mk F' Frees *)
         val typ_y = #abs_type td_info1;
         val typ_y' = typ_subst_atomic (nths_drop lin_live_poses (As ~~ As')) typ_y;
+        val typ_y'' = typ_subst_atomic (nths_drop lin_live_poses (As ~~ As'')) typ_y;
         val (var_y, names_lthy) = mk_Free "y" typ_y names_lthy;
-        val (var_y', _) = mk_Free "y'" typ_y' names_lthy;
+        val (var_y', names_lthy) = mk_Free "y'" typ_y' names_lthy;
+        val (var_y'', names_lthy) = mk_Free "y''" typ_y' names_lthy;
 
         (* F' definitions *)
         (* set_F's *)
@@ -333,9 +348,12 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val map_F'_binding = if Binding.is_empty map_b then Binding.prefix_name ("map_") b else map_b;
         val ((_, map_F'_term, map_F'_def_thm), lthy) = MRBNF_Util.new_definition map_F'_binding map_F'_rhs lthy;
 
+        val map_atomics = fastype_of map_F'_term |> dest_Type_atomic |> drop (2*nr_ABFs);
+        fun mk_map_F' T T' = subst_atomic_types (map_atomics ~~ ((dest_Type_atomic T) @ (dest_Type_atomic T'))) map_F'_term;
+
         (* rrel_F' *)
         val eq_Rs = select_n var_R'_As (map HOLogic.eq_const As) lin_live_poses
-        val l_Rs = map (fn T => find_first (fn f => (fastype_of f |> domain_type) = T) var_R'_As |> the) (subtract (op =) on_tfrees l_As);
+        val l_Rs = map (fn T => find_first (fn f => (fastype_of f |> domain_type) = T) var_R'_As |> the) l_As;
 
         val Rep_x = Const (#Rep_name td_info1, (typ_y) --> (typ_x)) $ var_y;
         val Rep_x' = Const (#Rep_name td_info1, (typ_y') --> (typ_x'l)) $ var_y';
@@ -413,8 +431,8 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val nonrep_map_F_thm = Goal.prove_sorry lthy
           (map (fst o dest_Free) (var_x :: var_u_Bs @ var_v_Fs @ (nths_drop lin_live_poses var_f'_As))) 
           (uv_props @ [nrp_x_prop]) nonrep_map_uv_prop
-          (fn {context = ctxt, prems} => mk_nonrep_map_F_tac ctxt prems id_prems nr_As lin_poses lin_live_poses nrp_def_thm 
-            ss_def_thm mr_rel_F_def F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong);
+          (fn {context = ctxt, prems} => mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As (map top_rel on_tfrees) 
+            nrp_def_thm ss_def_thm mr_rel_F_def F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong);
         
         (* nonrep_map_F_rev *)
         val map_u = MRBNF_Def.mk_map_comb_of_mrbnf Ds id_f'_As var_u_Bs (map HOLogic.id_const Fs) mrbnf;
@@ -442,7 +460,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val nonrep_map_fuv_prop = nrp_TFree' $ (map_fuv $ var_x) |> HOLogic.mk_Trueprop;
         val nonrep_map_F_bij_2_thm = Goal.prove_sorry lthy
           (map (fst o dest_Free) (ff'_As @ var_u_Bs @ var_v_Fs @[var_x])) (uv_props @ bij_f_props @ [nrp_x_prop]) nonrep_map_fuv_prop
-          (fn {context = ctxt, prems} => mk_nonrep2_mapF_bij_2_tac ctxt prems id_prems (length lin_poses) F_map_comp 
+          (fn {context = ctxt, prems} => mk_nonrep2_mapF_bij_2_tac ctxt prems id_prems nr_lin F_map_comp 
             nonrep_map_F_bij_thm nonrep_map_F_thm);
 
         (* rrel_F_map_onVar *) 
@@ -455,10 +473,41 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
           ((select_n eq_Rs var_f_As lin_live_poses) @ [var_x, var_x'l])) [] rrel_F_map_onVar_prop
           (fn {context = ctxt, ...} => mk_rrel_F_map_onVar_tac ctxt F_rel_maps F_rel_mono_strong);
 
+        (* F'_map_cong *)
+        
+        val l_var_u_Bs = map (fn T => find_first (fn u => (fastype_of u |> domain_type) = T) (var_u_Bs @ var_f_As) |> the) l_Bs
+        val (l_var_u2_Bs, names_lthy) = mk_Frees "u" (map (fastype_of) l_var_u_Bs) names_lthy
+        val l_var_v_Fs = map (fn T => find_first (fn v => (fastype_of v |> domain_type) = T) var_v_Fs |> the) l_Fs
+        val (l_var_v2_Fs, names_lthy) = mk_Frees "v" (map (fastype_of) l_var_v_Fs) names_lthy
+
+        val l_var_f'_As = map (fn T => find_first (fn f => (fastype_of f |> domain_type) = T) var_f'_As |> the) l_As
+        val l_As' = map (fn f => fastype_of f |> range_type) l_var_f'_As
+        val l_As'' = map (fn T => find_first (fn (A, _) => T = A) (As ~~ As'') |> the |> snd) l_As
+
+        val l_typ_f''_As = map (fn (T', T'') => T' --> T'') (l_As' ~~ l_As'')
+        val (var_f''_As, names_lthy) = mk_Frees "lf''" l_typ_f''_As names_lthy;
+
+        val l_fs = MRBNF_Def.interlace l_var_f'_As l_var_u_Bs l_var_v_Fs l_var_types;
+        val l_f2s = MRBNF_Def.interlace var_f''_As l_var_u2_Bs l_var_v2_Fs l_var_types;
+
+        val map_comp_f = Term.list_comb (mk_map_F' typ_y typ_y'', (map HOLogic.mk_comp (l_f2s ~~ l_fs)));
+        val map_inner_f = Term.list_comb (mk_map_F' typ_y typ_y', l_fs);
+        val map_outer_f = Term.list_comb (mk_map_F' typ_y' typ_y'', l_f2s);
+        val F'_map_cong_prop = HOLogic.mk_eq (map_comp_f, HOLogic.mk_comp (map_outer_f, map_inner_f)) |> HOLogic.mk_Trueprop;
+        
+        val bij_props = map (fn f => MRBNF_Util.mk_bij f |> HOLogic.mk_Trueprop) (l_var_u_Bs @ l_var_u2_Bs);
+        val supp_props = map (fn f => MRBNF_Util.mk_supp_bound f |> HOLogic.mk_Trueprop) 
+          ((nths_drop l_lin_bound_poses l_var_u_Bs) @ l_var_v_Fs @ (nths_drop l_lin_bound_poses l_var_u2_Bs) @ l_var_v2_Fs);
+
+        val F'_map_cong_thm = Goal.prove_sorry lthy (map (fst o dest_Free) (l_fs @ l_f2s)) (bij_props @ supp_props)
+          F'_map_cong_prop (fn {context = ctxt, prems} => mk_F'_map_comp0_tac ctxt prems nr_lin l_nr_Bs nr_Fs map_F'_def_thm F_map_comp0 
+            nonrep_map_F_bij_2_thm mk_Rep_F' mk_Abs_F'_inverse);
+          
+
         (* wit thms *)
         val wits_new_thms = map the_single wit_new_thmss;
         val (raw_nonrep_thms, wit_new_thms) = chop (length Iwits_new) wits_new_thms;
-        val wits_new_thmss = chop_groups (nr_As-1) wit_new_thms;
+        val wits_new_thmss = chop_groups l_nr_As wit_new_thms;
 
         (* nonrep_wits *)
         fun mk_nonrep_wit_prop_args (I, wit) =
@@ -492,8 +541,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         (* register MRBNF *)
         val tacs = {
           map_id0 = mk_F'_map_id0_tac map_F'_def_thm F_map_id Rep_F'_inverse,
-          map_comp0 = mk_F'_map_comp0_tac (length lin_poses) nr_Bs nr_Fs map_F'_def_thm F_map_comp0 
-            nonrep_map_F_bij_2_thm mk_Rep_F' mk_Abs_F'_inverse,
+          map_comp0 = (fn ctxt => HEADGOAL (rtac ctxt F'_map_cong_thm THEN_ALL_NEW assume_tac ctxt)),
           map_cong0 = mk_F'_map_cong0_tac map_F'_def_thm set_F'_def_thms F_map_cong,
           set_map0 = map (fn set_F'_def => mk_F'_set_map0_tac set_F'_def map_F'_def_thm 
               nonrep_map_F_bij_2_thm F_set_maps mk_Rep_F' mk_Abs_F'_inverse) set_F'_def_thms,
@@ -502,7 +550,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
           set_bd = map (fn set_F'_def => fn ctxt =>
               unfold_thms_tac ctxt [set_F'_def, o_apply] THEN HEADGOAL (resolve_tac ctxt F_set_bds))
             set_F'_def_thms,
-          le_rel_OO = mk_F'_le_rel_OO_tac nr_As lin_live_poses rrel_F'_def_thm F_rel_compp,
+          le_rel_OO = mk_F'_le_rel_OO_tac l_nr_As rrel_F'_def_thm F_rel_compp Rep_const,
           in_rel = mk_F'_in_rel_tac nr_As nr_Bs nr_Fs lin_poses rrel_F'_def_thm map_F'_def_thm set_F'_def_thms 
             nonrep_map_F_bij_2_thm F_map_comp rrel_F_map_onVar_thm F_in_rel nonrep_map_F_rev_thm F_set_maps F_map_cong 
             Rep_F'_inverse mk_Rep_F' mk_Abs_F'_inverse,
@@ -510,9 +558,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
           wit = mk_F'_wit_tac set_F'_def_thms (nonrep_wit_F_thms @ nonrep_wit_new_thms) 
             (flat (wits_F_thmss @ wits_new_thmss)) mk_Abs_F'_inverse
         }
-
-        val l_var_types = map (fn l_T => find_first (fn (T, _) => T = l_T) (ABFs ~~ var_types) |> the) l_ABFs |> map snd;
-        val var_types_Abs = select_n l_var_types (replicate (length var_types) MRBNF_Def.Bound_Var) l_lin_poses;
 
         (* make F' wits *)
         val Abs_const = Const (#Abs_name td_info1, (repT) --> (typ_y));
@@ -524,10 +569,22 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
             in fold_rev absfree (map dest_Free vs) (Abs_const $ (list_comb (wit_F, vs))) end)
           (Iwits_F @ Iwits_new);
 
+        fun mk_simple_class_opt mrbnf =
+          let
+            val class_thms = MRBNF_Def.class_thms_of_mrbnf mrbnf;
+          in
+            SOME (
+              (MRBNF_Def.class_of_mrbnf mrbnf, #var_large class_thms, #var_regular class_thms),
+              (MRBNF_Def.coclass_of_mrbnf mrbnf, K (#covar_large class_thms))
+            )
+          end;
+                                           
+          
+
         val (mrbnf', lthy) = MRBNF_Def.mrbnf_def MRBNF_Def.Do_Inline (MRBNF_Def.user_policy MRBNF_Def.Note_Some) 
-          false I tacs (SOME l_Ds) NONE map_F'_binding rrel_F'_binding pred_b set_bs_non_dead 
-          (((((((b, typ_y), map_F'_term), (var_types_Abs ~~ set_F'_terms)),
-            MRBNF_Def.mk_bd_of_mrbnf l_Ds l_Bs l_Fs mrbnf),
+          false I tacs (SOME l_Ds) (mk_simple_class_opt mrbnf) map_F'_binding rrel_F'_binding pred_b set_bs_non_dead 
+          (((((((b, typ_y), map_F'_term), (l_var_types ~~ set_F'_terms)),
+            MRBNF_Def.mk_bd_of_mrbnf Ds Bs Fs mrbnf),
             wits_F'),
             SOME rrel_F'_term),
             NONE)
@@ -606,9 +663,6 @@ fun parse_common_opts p =
 val parse_lift_opts = Parse.reserved "no_warn_wits" >> K No_Warn_Wits |> parse_common_opts;
 
 val parse_on_clause = apfst (fn (h, t) => h::t) o Parse.reserved "on" |-- Parse.type_ident -- Scan.repeat (@{keyword "and"} |-- Parse.type_ident);
-
-val parse_on_clause_list = apfst (fn (h, t) => h::t) o Parse.reserved "on" |-- @{keyword "["} |-- Parse.type_ident -- Scan.repeat (@{keyword ","} 
-  |-- Parse.type_ident) --| @{keyword "]"};
 
 in
 

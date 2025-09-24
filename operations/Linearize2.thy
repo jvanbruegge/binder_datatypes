@@ -102,17 +102,18 @@ TODO:
 - filter supplied wits
 - if wit is specified, the existance of a nonrepetitive element can easily be proven without user input
 *)
+
 declare [[quick_and_dirty=false]]
 
-linearize_mrbnf ('b, 'a::var) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
+linearize_mrbnf ('a::var, 'b) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
   sorry
+
 
 declare [[quick_and_dirty=false]]
 
 
 thm prod.nonrep_pairprod_def[unfolded prod.sameShape_pairprod_def]
 
-definition map_prod': "map_prod' f \<equiv> map_prod f f"
 thm prod.mr_rel_pairprod_def
 thm rrel_pair_def
 thm set1_pair_def
@@ -124,8 +125,9 @@ thm Abs_pair_inverse
 
 linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
   [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
-    "wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"
+    (*"wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)
     (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
+  
   sorry
 
 thm nonrep_G_def
@@ -164,7 +166,7 @@ lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
   apply (drule iffD1)
    apply (rule bexI[rotated])
     apply assumption
-   apply (rule fst_conv[symmetric])
+    apply (rule fst_conv[symmetric])
   apply (drule G.wit1)
    apply (erule FalseE)
 
@@ -180,6 +182,8 @@ lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
   apply (drule G.wit1)
   apply (erule FalseE)
   done
+
+
 
 lemma "x \<in> set1_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = a"
       "x \<in> set2_lG (Abs_lG (wit1_G a b)) \<Longrightarrow> x = b"
@@ -229,8 +233,10 @@ consts witL :: "('a::var, 'b) L"
 linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"witL :: ('a::var, 'b) L"] on 'a
   sorry
 *)
+(*
 linearize_mrbnf ('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F'' = "('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F" on 'f and 'e
   sorry
+*)
 
 
 linearize_mrbnf ('a, 'b::var) L' = "('a, 'b::var) L" on 'b

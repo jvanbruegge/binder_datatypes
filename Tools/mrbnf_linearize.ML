@@ -53,10 +53,7 @@ fun mk_asSS f = let val typ_f = fastype_of f; in
 fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
   let
     val tfrees = map (TFree o snd) specs |> @{print};
-(*
-    val _ = MRBNF_Def.mrbnf_of lthy (dest_Type_name repT) |> @{print}
-    val _ = BNF_Def.bnf_of lthy (dest_Type_name repT) |> @{print}
-*)
+
     fun flatten_tyargs Ass =
       (map dest_TFree tfrees
       |> filter (fn T => exists (fn Ts => member op= Ts T) Ass));
@@ -64,7 +61,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val ((mrbnf,(Ds, ABFs)), (_,lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name (Binding.name_of b)) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-
 
     val _ = (Ds, ABFs) |> @{print}
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
@@ -75,6 +71,13 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
       | MRBNF_Def.Free_Var => (acc_As, acc_Bs, T::acc_Fs)
       | _ => error "Dead_Var!" ))
       (ABFs ~~ var_types) ([], [], []) |> @{print};
+
+    val deads = MRBNF_Def.deads_of_mrbnf mrbnf;
+    val lives = MRBNF_Def.lives_of_mrbnf mrbnf;
+    val bounds = MRBNF_Def.bounds_of_mrbnf mrbnf;
+    val frees = MRBNF_Def.frees_of_mrbnf mrbnf;
+
+    val mrbnf_subst = ((Ds @ As @ Bs @ Fs) ~~ (deads @ lives @ bounds @ frees)) |> @{print}
 
     val nr_As = MRBNF_Def.live_of_mrbnf mrbnf;
     val nr_Fs = MRBNF_Def.free_of_mrbnf mrbnf;
@@ -161,21 +164,21 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val Iwits_new = the_default [] (Option.map (map (`(map (fn T =>
       find_index (fn U => T = U) ABFs) o binder_types_until_eq repT o fastype_of))) wits);
     
-    (* filter and warn user for specified, but subsumed Iwits *)
-    val subsumed_Iwits =
+    (* filter and warn user for new wits subsumed by F wits *)
+    val subsumed_Iwits_new =
       filter (fn (J, _) => exists (fn ((I, _),_) => subset (op =) (I, J)) Iwits_F_thms) Iwits_new;
-    val _ =  if null subsumed_Iwits orelse exists (fn No_Warn_Wits => true | _ => false) opts
+    val _ =  if null subsumed_Iwits_new orelse exists (fn No_Warn_Wits => true | _ => false) opts
       then ()
       else
         let
           val (suffix1, suffix2, be, this) =
-            (if length subsumed_Iwits = 1 then ("", "", "is", "this") else ("s", "es", "are", "these"))
+            (if length subsumed_Iwits_new = 1 then ("", "", "is", "this") else ("s", "es", "are", "these"))
         in
-          subsumed_Iwits
+          subsumed_Iwits_new
           |> map (Syntax.pretty_typ lthy o fastype_of o snd)
           |> Pretty.big_list
             ("The following type" ^ suffix1 ^ " of nonemptiness witness" ^ suffix2 ^
-              " of the raw type's BNF " ^ be ^ " subsumed by the existing raw witnesses:")
+              be ^ " subsumed by the existing witnesses of the MRBNF:")
           |> (fn pt => Pretty.chunks [pt,
             Pretty.para ("You do not need to lift " ^ this ^ " subsumed witness" ^ suffix2 ^ ".")])
           |> Pretty.string_of
@@ -183,10 +186,48 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         end;
     val Iwits_new = filter_out (fn (J, _) => exists (fn ((I, _),_) => subset (op =) (I, J)) Iwits_F_thms) Iwits_new
 
-    (* Filter subsumed F witnesses? *)
-    
+    (* filter and warn user for new wits subsumed by other new wits *)
+    val subsumed_Iwits_F =
+      filter (fn ((J, _)) => exists (fn (I, _) => (subset (op =) (I, J)) 
+      andalso (not (subset (op =) (J, I)))) Iwits_new) Iwits_new;
+    val _ =  if null subsumed_Iwits_F orelse exists (fn No_Warn_Wits => true | _ => false) opts
+      then ()
+      else
+        let
+          val (suffix1, suffix2, be, this) =
+            (if length subsumed_Iwits_F = 1 then ("", "", "is", "this") else ("s", "es", "are", "these"))
+        in
+          subsumed_Iwits_F
+          |> map (Syntax.pretty_typ lthy o fastype_of o snd)
+          |> Pretty.big_list
+            ("The following type" ^ suffix1 ^ " of specified nonemptiness witness" ^ suffix2 ^
+              be ^ " subsumed by other specified witnesses:")
+          |> (fn pt => Pretty.chunks [pt,
+            Pretty.para ("You do not need to lift " ^ this ^ " subsumed witness" ^ suffix2 ^ ".")])
+          |> Pretty.string_of
+          |> warning
+        end;
+    val Iwits_new = filter_out (fn ((J, _)) => exists (fn (I, _) => (subset (op =) (I, J)) 
+      andalso (not (subset (op =) (J, I)))) Iwits_new) Iwits_new;
+
+    (* remove subsumed F witnesses and inform user about automatically lifted wits from F *)
     val (Iwits_F, wits_F_thmss) = filter_out (fn ((J, _), _) => exists (fn (I, _) => (subset (op =) (I, J)) 
       andalso (not (subset (op =) (J, I)))) Iwits_new) Iwits_F_thms |> split_list;
+
+    val _ =  if null Iwits_F then ()
+      else
+        let
+          val (suffix1, suffix2, be) =
+            (if length Iwits_F = 1 then ("", "", "is") else ("s", "es", "are"))
+        in
+          Iwits_F
+          |> map (Syntax.pretty_typ lthy o fastype_of o snd)
+          |> Pretty.big_list
+            ("The following type" ^ suffix1 ^ " of existing nonemptiness witness" ^ suffix2 ^
+              " of the MRBNF " ^ be ^ " independent of the linearized variables and " ^ be ^ " automatically lifted.")
+          |> Pretty.string_of
+          |> Output.information
+        end;
 
     val set_Fs = MRBNF_Def.mk_sets_of_mrbnf (replicate nr_ABFs Ds) (replicate nr_ABFs As) 
       (replicate nr_ABFs Bs) (replicate nr_ABFs Fs) mrbnf;
@@ -212,7 +253,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val ex_nonrep = HOLogic.mk_exists (dest_Free var_x |> fst, dest_Free var_x |> snd,
       HOLogic.mk_all (dest_Free var_x2 |> fst, dest_Free var_x2 |> snd, rrel_top_imp_ex_f));
     val Tp_ex_nonrep = HOLogic.mk_Trueprop ex_nonrep;
-
 
     (* nonrep_wits *)
     fun mk_nonrep_wit (I, wit_term) = 
@@ -270,10 +310,12 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_x_x', ex1_z);
     val all_x_x' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_x' |> Logic.all var_x;
     val F_rel_map_set_live_strong = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
-
+    
     val goals = [F_rel_map_set_live_strong, Tp_ex_nonrep] @ nonrep_wit_goals @ wit_goals;
 
     fun after_qed ([F_rel_map_set_live_strong_thm] :: [ex_nonrep_thm] :: wit_new_thmss) lthy = 
+      
+
       let
         (* sameShape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? *)
         val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As Bs Fs mrbnf;
@@ -367,7 +409,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         (** proving lemmas **)        
         (* make theorems & util (mr_rel_F_def and F_map_id made for typedef already) *)
         val id_prems = MRBNF_Comp_Tactics.mk_id_prems mrbnf;
-        val id_prems_bij_As = MRBNF_Comp_Tactics.mk_prems mrbnf @{thms bij_id supp_id_bound} @{thms bij_id supp_id_bound};
 
         val F_in_rel = MRBNF_Def.in_rel_of_mrbnf mrbnf;
         val F_map_cong = MRBNF_Def.map_cong_of_mrbnf mrbnf;  
@@ -431,16 +472,17 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val nonrep_map_F_thm = Goal.prove_sorry lthy
           (map (fst o dest_Free) (var_x :: var_u_Bs @ var_v_Fs @ (nths_drop lin_live_poses var_f'_As))) 
           (uv_props @ [nrp_x_prop]) nonrep_map_uv_prop
-          (fn {context = ctxt, prems} => mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As (map top_rel on_tfrees) 
+          (fn {context = ctxt, prems} => mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As (map top_rel on_tfrees)
             nrp_def_thm ss_def_thm mr_rel_F_def F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong);
         
         (* nonrep_map_F_rev *)
+        val inst_ids = (map_index (fn (i, A) => if member (op=) lin_live_poses i then SOME (HOLogic.id_const A) else NONE) As)
         val map_u = MRBNF_Def.mk_map_comb_of_mrbnf Ds id_f'_As var_u_Bs (map HOLogic.id_const Fs) mrbnf;
         val nonrep_map_u_prop = nrp_TFree' $ (map_u $ var_x) |> HOLogic.mk_Trueprop;
         val nonrep_map_F_rev_thm = Goal.prove_sorry lthy 
           (map (fst o dest_Free) (var_x :: var_u_Bs @ (nths_drop lin_live_poses var_f'_As))) 
           ((flat u_props_raw) @ [nonrep_map_u_prop]) nrp_x_prop
-          (fn {context = ctxt, prems} => mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses nrp_def_thm ss_def_thm
+          (fn {context = ctxt, prems} => mk_nonrep_map_F_rev_tac ctxt prems nr_As nr_Bs nr_Fs lin_live_poses inst_ids nrp_def_thm ss_def_thm
             F_mr_rel_maps F_map_comp F_rel_eq F_mr_rel_id F_mr_rel_flip F_mr_rel_mono_strong0 F_mr_rel_Grp mr_rel_F_exchange_thm);
 
         (* nonrep_map_F_bij *)
@@ -451,8 +493,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val nonrep_map_f_prop = nrp_TFree $ (map_f $ var_x) |> HOLogic.mk_Trueprop;
         val nonrep_map_F_bij_thm = Goal.prove_sorry lthy 
           (map (fst o dest_Free) ([var_x] @ l_f_As)) (bij_f_props @ [nrp_x_prop]) nonrep_map_f_prop
-          (fn {context = ctxt, prems} => mk_nonrep_map_F_bij_tac ctxt prems nr_As nr_Bs nr_Fs lin_poses lin_live_poses 
-            id_prems id_prems_bij_As nrp_def_thm ss_def_thm mr_rel_F_def F_mr_rel_maps F_rel_mono_strong F_map_id F_map_comp);
+          (fn {context = ctxt, prems} => mk_nonrep_map_F_bij_tac ctxt prems nr_lin l_f_As nrp_def_thm ss_def_thm F_mr_rel_maps F_map_comp);
 
         (* nonrep2_mapF_bij_2 *)
         val ff'_As = select_n var_f'_As var_f_As lin_live_poses;
@@ -474,7 +515,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
           (fn {context = ctxt, ...} => mk_rrel_F_map_onVar_tac ctxt F_rel_maps F_rel_mono_strong);
 
         (* F'_map_cong *)
-        
         val l_var_u_Bs = map (fn T => find_first (fn u => (fastype_of u |> domain_type) = T) (var_u_Bs @ var_f_As) |> the) l_Bs
         val (l_var_u2_Bs, names_lthy) = mk_Frees "u" (map (fastype_of) l_var_u_Bs) names_lthy
         val l_var_v_Fs = map (fn T => find_first (fn v => (fastype_of v |> domain_type) = T) var_v_Fs |> the) l_Fs
@@ -536,9 +576,11 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val nonrep_wit_F_thms = map (prove_nonrep_wit_F o (apfst mk_nonrep_wit_prop_args)) (Iwits_F ~~ wits_F_thmss);
         val nonrep_wit_new_thms = map (prove_nonrep_wit_new o (apfst mk_nonrep_wit_prop_args)) (Iwits_new ~~ raw_nonrep_thms);
 
-        val wits_F_thmss = map (nths_drop lin_live_poses) wits_F_thmss;
+        val wits_F_thmss = map (nths_drop lin_live_poses) wits_F_thmss;   
 
         (* register MRBNF *)
+        val Abs_const = Const (#Abs_name td_info1, (repT) --> (typ_y));
+        val Abs_mrbnf = subst_atomic_types mrbnf_subst Abs_const;
         val tacs = {
           map_id0 = mk_F'_map_id0_tac map_F'_def_thm F_map_id Rep_F'_inverse,
           map_comp0 = (fn ctxt => HEADGOAL (rtac ctxt F'_map_cong_thm THEN_ALL_NEW assume_tac ctxt)),
@@ -551,9 +593,10 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
               unfold_thms_tac ctxt [set_F'_def, o_apply] THEN HEADGOAL (resolve_tac ctxt F_set_bds))
             set_F'_def_thms,
           le_rel_OO = mk_F'_le_rel_OO_tac l_nr_As rrel_F'_def_thm F_rel_compp Rep_const,
-          in_rel = mk_F'_in_rel_tac nr_As nr_Bs nr_Fs lin_poses rrel_F'_def_thm map_F'_def_thm set_F'_def_thms 
-            nonrep_map_F_bij_2_thm F_map_comp rrel_F_map_onVar_thm F_in_rel nonrep_map_F_rev_thm F_set_maps F_map_cong 
-            Rep_F'_inverse mk_Rep_F' mk_Abs_F'_inverse,
+          in_rel = mk_F'_in_rel_tac mrbnf lives bounds frees lin_poses rrel_F'_def_thm 
+            map_F'_def_thm set_F'_def_thms nonrep_map_F_bij_2_thm F_map_comp rrel_F_map_onVar_thm F_in_rel 
+            nonrep_map_F_rev_thm F_set_maps F_map_cong Rep_F'_inverse mk_Rep_F' mk_Abs_F'_inverse 
+            Abs_mrbnf,
           pred_set = fn ctxt => HEADGOAL (rtac ctxt refl),
           wit = mk_F'_wit_tac set_F'_def_thms (nonrep_wit_F_thms @ nonrep_wit_new_thms) 
             (flat (wits_F_thmss @ wits_new_thmss)) mk_Abs_F'_inverse

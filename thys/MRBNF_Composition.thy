@@ -46,6 +46,9 @@ lemma image_single: "{f x} = f ` {x}"
 lemma Grp_OO: "(Grp f OO R) x y = R (f x) y"
   unfolding OO_def Grp_UNIV_def by blast
 
+lemma Grp_OO_top: "(Grp g OO top) = top"
+  by (auto simp: Grp_def)
+
 ML_file \<open>../Tools/mrbnf_comp_tactics.ML\<close>
 ML_file \<open>../Tools/mrbnf_comp.ML\<close>
 

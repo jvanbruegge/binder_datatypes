@@ -1,5 +1,3 @@
-
-
 signature MRBNF_LINEARIZE =
 sig
   datatype linearize_mrbnf_option =
@@ -142,7 +140,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val (var_R'_As, names_lthy) = mk_Frees "R'" typ_R'_As names_lthy;
     val (var_R'_As2, names_lthy) = mk_Frees "R'" typ_R'_As names_lthy;
    
-
     (* wits *)
     (*TODO: messages for
       - lost wits due to lin_pos dependency?
@@ -217,14 +214,16 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val _ =  if null Iwits_F then ()
       else
         let
-          val (suffix1, suffix2, be) =
-            (if length Iwits_F = 1 then ("", "", "is") else ("s", "es", "are"))
+          val (suffix1, suffix2, be, this) =
+            (if length Iwits_F = 1 then ("", "", "is", "this") else ("s", "es", "are", "these"))
         in
           Iwits_F
           |> map (Syntax.pretty_typ lthy o fastype_of o snd)
           |> Pretty.big_list
             ("The following type" ^ suffix1 ^ " of existing nonemptiness witness" ^ suffix2 ^
               " of the MRBNF " ^ be ^ " independent of the linearized variables and " ^ be ^ " automatically lifted.")
+          |> (fn pt => Pretty.chunks [pt,
+            Pretty.para ("The existance of a nonrepetitive element is proven with " ^ this ^ " existing witness" ^ suffix2 ^ ".")])
           |> Pretty.string_of
           |> Output.information
         end;
@@ -310,13 +309,43 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
     val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_x_x', ex1_z);
     val all_x_x' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_x' |> Logic.all var_x;
     val F_rel_map_set_live_strong = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
-    
-    val goals = [F_rel_map_set_live_strong, Tp_ex_nonrep] @ nonrep_wit_goals @ wit_goals;
 
-    fun after_qed ([F_rel_map_set_live_strong_thm] :: [ex_nonrep_thm] :: wit_new_thmss) lthy = 
-      
+    val goals = 
+      if null (Iwits_new @ Iwits_F) then
+        [F_rel_map_set_live_strong, Tp_ex_nonrep] @ nonrep_wit_goals @ wit_goals
+      else
+        [F_rel_map_set_live_strong] @ nonrep_wit_goals @ wit_goals;
 
+    fun after_qed thmss lthy = 
       let
+        (* prepare thms *)
+        val (F_rel_map_set_live_strong_thm, thmss) = chop 1 thmss |> apfst (the_single o the_single);
+        val (ex_nonrep_opt, wit_new_thmss) = if null (Iwits_new @ Iwits_F) then chop 1 thmss |> apfst (SOME o the_single o the_single) else (NONE, thmss);
+        val wits_new_thms = map the_single wit_new_thmss;
+        val (raw_nonrep_thms, wit_new_thms) = chop (length Iwits_new) wits_new_thms;
+        val wits_new_thmss = chop_groups l_nr_As wit_new_thms;
+
+        (* F thms used in proofs *)
+        val mr_rel_F_def = MRBNF_Def.rel_def_of_mrbnf mrbnf;
+        val F_map_id = MRBNF_Def.map_id_of_mrbnf mrbnf;
+        val F_in_rel = MRBNF_Def.in_rel_of_mrbnf mrbnf;
+        val F_map_cong = MRBNF_Def.map_cong_of_mrbnf mrbnf;  
+        val F_map_comp = MRBNF_Def.map_comp_of_mrbnf mrbnf;
+        val F_map_comp0 = MRBNF_Def.map_comp0_of_mrbnf mrbnf;
+        val F_set_maps = MRBNF_Def.set_map_of_mrbnf mrbnf;
+        val F_set_bds = MRBNF_Def.set_bd_of_mrbnf mrbnf;
+        val F_rel_eq = MRBNF_Def.rel_eq_of_mrbnf mrbnf;
+        val F_rel_compp = MRBNF_Def.rel_OO_of_mrbnf mrbnf;
+        val F_rel_Grp = MRBNF_Def.rel_Grp_of_mrbnf mrbnf;
+        val F_rel_maps = MRBNF_Def.rel_map_of_mrbnf mrbnf;
+        val F_rel_refl_strong = MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf;
+        val F_rel_mono_strong = MRBNF_Def.rel_mono_strong_of_mrbnf mrbnf;
+        val F_mr_rel_id = MRBNF_Def.mr_rel_id_of_mrbnf mrbnf;
+        val F_mr_rel_Grp = MRBNF_Def.mr_rel_Grp_of_mrbnf mrbnf;
+        val F_mr_rel_flip = MRBNF_Def.mr_rel_flip_of_mrbnf mrbnf;
+        val F_mr_rel_maps = MRBNF_Def.mr_rel_map_of_mrbnf mrbnf;
+        val F_mr_rel_mono_strong0 = MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf;
+
         (* sameShape *) (* why use mr_rel_F here, when we use rrel_F in ex_nonrep? *)
         val mr_rel_F = MRBNF_Def.mk_mr_rel_of_mrbnf Ds As As Bs Fs mrbnf;
         val mr_rel_args = MRBNF_Def.interlace top_eqs (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) var_types;
@@ -340,12 +369,43 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val nrp_arg_atomics = fastype_of nrp_term |> domain_type |> dest_Type_atomic
         val nrp_TFree = subst_atomic_types (nrp_arg_atomics ~~ x_atomics) nrp_term
 
+        (* nonrep_wits *)
+        fun mk_nonrep_wit_prop_args (I, wit) =
+          let
+            fun mk_args [] args = args
+              | mk_args (pos::I) args = (nth var_as pos)::(mk_args I args)
+    
+            val wit_args = mk_args I [];
+            val wit_F = Term.list_comb (wit, wit_args);
+          in
+            (nrp_TFree $ wit_F |> HOLogic.mk_Trueprop, wit_args)
+          end;
+
+        val inst_ids = map (HOLogic.id_const o (nth As)) lin_live_poses;
+        val inst_sets = map (nth set_Fs) lin_poses;
+
+        fun prove_nonrep_wit_F ((prop, args), wit_thms) = 
+          Goal.prove_sorry lthy (map (fst o dest_Free) args) [] prop
+            (fn {context = ctxt, ...} => mk_nonrep_wit_F_tac ctxt nr_As lin_live_poses inst_ids inst_sets nrp_def_thm 
+              ss_def_thm mr_rel_F_def F_map_id F_in_rel F_map_cong F_set_maps wit_thms);
+
+        fun prove_nonrep_wit_new ((prop, args), raw_nonrep_thm) = 
+          Goal.prove_sorry lthy (map (fst o dest_Free) args) [] prop
+            (fn {context = ctxt, ...} => mk_nonrep_wit_new_tac ctxt nrp_def_thm ss_def_thm mr_rel_F_def F_map_id raw_nonrep_thm)
+
+        val nonrep_wit_F_thms = map (prove_nonrep_wit_F o (apfst mk_nonrep_wit_prop_args)) (Iwits_F ~~ wits_F_thmss);
+        val nonrep_wit_new_thms = map (prove_nonrep_wit_new o (apfst mk_nonrep_wit_prop_args)) (Iwits_new ~~ raw_nonrep_thms);
+
+        val ex_nonrep_thm = if null (Iwits_new @ Iwits_F) then the ex_nonrep_opt else
+          Goal.prove_sorry lthy [] [] Tp_ex_nonrep
+            (fn {context = ctxt, ...} => 
+              HEADGOAL (rtac ctxt exI) THEN
+              HEADGOAL (resolve_tac ctxt (map (unfold_thms ctxt [nrp_def_thm, ss_def_thm, mr_rel_F_def, F_map_id]) 
+                nonrep_wit_F_thms @ nonrep_wit_new_thms)));
+
         (* typedef F'*)
         val nrp_x = nrp_TFree $ var_x
         val td_term = HOLogic.mk_Collect (dest_Free var_x |> fst, dest_Free var_x |> snd, nrp_x)
-
-        val mr_rel_F_def = MRBNF_Def.rel_def_of_mrbnf mrbnf;
-        val F_map_id = MRBNF_Def.map_id_of_mrbnf mrbnf;
 
         fun mk_typedef_tac ctxt = 
           unfold_thms_tac ctxt [nrp_def_thm, ss_def_thm, @{thm mem_Collect_eq}, mr_rel_F_def, F_map_id] THEN
@@ -406,28 +466,8 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val rrel_F'_binding = if Binding.is_empty rel_b then Binding.prefix_name ("rrel_") b else rel_b;
         val ((_, rrel_F'_term, rrel_F'_def_thm), lthy) = MRBNF_Util.new_definition rrel_F'_binding rrel_F'_rhs lthy;
 
-        (** proving lemmas **)        
-        (* make theorems & util (mr_rel_F_def and F_map_id made for typedef already) *)
+        (** proving lemmas **)
         val id_prems = MRBNF_Comp_Tactics.mk_id_prems mrbnf;
-
-        val F_in_rel = MRBNF_Def.in_rel_of_mrbnf mrbnf;
-        val F_map_cong = MRBNF_Def.map_cong_of_mrbnf mrbnf;  
-        val F_map_comp = MRBNF_Def.map_comp_of_mrbnf mrbnf;
-        val F_map_comp0 = MRBNF_Def.map_comp0_of_mrbnf mrbnf;
-        val F_set_maps = MRBNF_Def.set_map_of_mrbnf mrbnf;
-        val F_set_bds = MRBNF_Def.set_bd_of_mrbnf mrbnf;
-        val F_rel_eq = MRBNF_Def.rel_eq_of_mrbnf mrbnf;
-        val F_rel_compp = MRBNF_Def.rel_OO_of_mrbnf mrbnf;
-        val F_rel_Grp = MRBNF_Def.rel_Grp_of_mrbnf mrbnf;
-        val F_rel_maps = MRBNF_Def.rel_map_of_mrbnf mrbnf;
-        val F_rel_refl_strong = MRBNF_Def.rel_refl_strong_of_mrbnf mrbnf;
-        val F_rel_mono_strong = MRBNF_Def.rel_mono_strong_of_mrbnf mrbnf;
-        val F_mr_rel_id = MRBNF_Def.mr_rel_id_of_mrbnf mrbnf;
-        val F_mr_rel_Grp = MRBNF_Def.mr_rel_Grp_of_mrbnf mrbnf;
-        val F_mr_rel_flip = MRBNF_Def.mr_rel_flip_of_mrbnf mrbnf;
-        val F_mr_rel_maps = MRBNF_Def.mr_rel_map_of_mrbnf mrbnf;
-        val F_mr_rel_mono_strong0 = MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf;
-
         val Rep_F'_inverse = #Rep_inverse td_info2;
         fun mk_Rep_F' ctxt = #Rep td_info2 |> unfold_thms ctxt [@{thm mem_Collect_eq}];
         fun mk_Abs_F'_inverse ctxt = #Abs_inverse td_info2 |> unfold_thms ctxt [@{thm mem_Collect_eq}];
@@ -542,41 +582,8 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val F'_map_cong_thm = Goal.prove_sorry lthy (map (fst o dest_Free) (l_fs @ l_f2s)) (bij_props @ supp_props)
           F'_map_cong_prop (fn {context = ctxt, prems} => mk_F'_map_comp0_tac ctxt prems nr_lin l_nr_Bs nr_Fs map_F'_def_thm F_map_comp0 
             nonrep_map_F_bij_2_thm mk_Rep_F' mk_Abs_F'_inverse);
-          
 
-        (* wit thms *)
-        val wits_new_thms = map the_single wit_new_thmss;
-        val (raw_nonrep_thms, wit_new_thms) = chop (length Iwits_new) wits_new_thms;
-        val wits_new_thmss = chop_groups l_nr_As wit_new_thms;
-
-        (* nonrep_wits *)
-        fun mk_nonrep_wit_prop_args (I, wit) =
-          let
-            fun mk_args [] args = args
-              | mk_args (pos::I) args = (nth var_as pos)::(mk_args I args)
-    
-            val wit_args = mk_args I [];
-            val wit_F = Term.list_comb (wit, wit_args);
-          in
-            (nrp_TFree $ wit_F |> HOLogic.mk_Trueprop, wit_args)
-          end;
-
-        val inst_ids = map (HOLogic.id_const o (nth As)) lin_live_poses;
-        val inst_sets = map (nth set_Fs) lin_poses;
-
-        fun prove_nonrep_wit_F ((prop, args), wit_thms) = 
-          Goal.prove_sorry lthy (map (fst o dest_Free) args) [] prop
-            (fn {context = ctxt, ...} => mk_nonrep_wit_F_tac ctxt nr_As lin_live_poses inst_ids inst_sets nrp_def_thm 
-              ss_def_thm mr_rel_F_def F_map_id F_in_rel F_map_cong F_set_maps wit_thms);
-
-        fun prove_nonrep_wit_new ((prop, args), raw_nonrep_thm) = 
-          Goal.prove_sorry lthy (map (fst o dest_Free) args) [] prop
-            (fn {context = ctxt, ...} => mk_nonrep_wit_new_tac ctxt nrp_def_thm ss_def_thm mr_rel_F_def F_map_id raw_nonrep_thm)
-
-        val nonrep_wit_F_thms = map (prove_nonrep_wit_F o (apfst mk_nonrep_wit_prop_args)) (Iwits_F ~~ wits_F_thmss);
-        val nonrep_wit_new_thms = map (prove_nonrep_wit_new o (apfst mk_nonrep_wit_prop_args)) (Iwits_new ~~ raw_nonrep_thms);
-
-        val wits_F_thmss = map (nths_drop lin_live_poses) wits_F_thmss;   
+        val wits_F_thmss = map (nths_drop lin_live_poses) wits_F_thmss;
 
         (* register MRBNF *)
         val Abs_const = Const (#Abs_name td_info1, (repT) --> (typ_y));
@@ -637,8 +644,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
 
       in
         lthy |> MRBNF_Def.register_mrbnf Plugin_Name.default_filter (Local_Theory.full_name lthy b) mrbnf'
-      end
-      | after_qed _ _ = raise Match;
+      end;
   in
     (goals, after_qed, [], lthy)
   end;

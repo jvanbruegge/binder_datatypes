@@ -87,21 +87,9 @@ linearize_mrbnf ('a, 'b::var_foo) foo'' = "('a, 'b::var_foo) foo"
   subgoal
     sorry
   subgoal
-    apply (safe)
-    
-    thm foo.in_rel[unfolded foo.map_id]
-    apply (unfold foo.in_rel[unfolded foo.map_id])
-    apply (safe)
-    sorry
-  subgoal
     sorry
   done
 
-(*
-TODO:
-- filter supplied wits
-- if wit is specified, the existance of a nonrepetitive element can easily be proven without user input
-*)
 
 declare [[quick_and_dirty=false]]
 
@@ -123,11 +111,12 @@ thm prod.set_map(2)
 
 thm Abs_pair_inverse
 
+thm mr_rel_G_def
+
 linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
   [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
     (*"wit2_lG :: 'a \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)
     (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
-  
   sorry
 
 thm nonrep_G_def

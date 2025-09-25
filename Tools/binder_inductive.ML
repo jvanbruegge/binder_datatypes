@@ -59,20 +59,16 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
     val param_Ts = map (Term.typ_subst_TVars subst) param_Ts;
 
-    (* TODO: Nested sugars? *)
-    val param_sugars = map (fn T => Option.mapPartial (fn s =>
-      MRBNF_Sugar.binder_sugar_of no_defs_lthy s
-    ) (try (fn () => fst (dest_Type T)) ())) param_Ts;
-
-    val param_frees = map_filter (fn T => Option.map MRBNF_Def.frees_of_mrbnf (
-        Option.map (fn mrbnf => MRBNF_Def.morph_mrbnf
-          (MRBNF_Util.subst_typ_morphism (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ snd (dest_Type T)))
-          mrbnf
-      ) (Option.mapPartial (MRBNF_Def.mrbnf_of no_defs_lthy o fst) (try dest_Type T)))
-    ) param_Ts;
+    fun collect_params (Type (s, Ts)) = fold (union (op=)) (map collect_params Ts)
+        (case MRBNF_Def.mrbnf_of no_defs_lthy s of
+          NONE => []
+        | SOME mrbnf => MRBNF_Def.frees_of_mrbnf (MRBNF_Def.morph_mrbnf
+          (MRBNF_Util.subst_typ_morphism (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts))
+          mrbnf))
+      | collect_params _ = [];
     val pot_bind_Ts = foldl1 (fn (xs, ys) => if
       subset (op=) (xs, ys) then ys else union (op=) ys xs
-    ) param_frees;
+    ) (map collect_params param_Ts);
     val npot = length pot_bind_Ts;
 
     fun collect_binders (Free _) = replicate npot []

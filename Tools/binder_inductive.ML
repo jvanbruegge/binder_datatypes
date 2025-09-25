@@ -568,12 +568,14 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val perm_ids = map (fn thm => thm RS fun_cong RS @{thm trans[OF _ id_apply]}) perm_id0s;
 
-        fun mk_induct mono = Drule.rotate_prems ~1 (
-          apply_n @{thm le_funD} n (@{thm lfp_induct} OF [mono])
+        fun mk_induct induct mono = Drule.rotate_prems ~1 (
+          apply_n @{thm le_funD} n (induct OF [mono])
             RS @{thm le_boolD}
             RS @{thm mp}
         );
-        val II_induct = mk_induct G_mmono;
+        val II_induct = mk_induct @{thm lfp_induct} G_mmono;
+        val II_induct_lfp = mk_induct @{thm lfp_induct[where P="lfp _"]} G_mmono;
+        val I_induct_lfp = mk_induct @{thm lfp_induct[where P="lfp _"]} mono;
 
         val pred_names = names;
         val names = map (fst o dest_Free);
@@ -593,7 +595,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           K (Local_Defs.unfold0_tac ctxt [snd II, def]),
           REPEAT_DETERM o rtac ctxt ext,
           rtac ctxt iffI,
-          etac ctxt II_induct,
+          etac ctxt II_induct_lfp,
           focus_IH_tac ctxt,
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt [snd G]),
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [mono]],
@@ -604,16 +606,15 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             REPEAT_DETERM o rtac ctxt exI,
             assume_tac ctxt
           ],
-          etac ctxt (Drule.rotate_prems 1 (apply_n @{thm le_funD} n (
-            @{thm lfp_induct} OF [mono]
-          ) RS @{thm le_boolD} RS @{thm mp})),
+          etac ctxt I_induct_lfp,
+          REPEAT_DETERM o rtac ctxt @{thm le_funI},
+          rtac ctxt @{thm le_boolI},
+          dtac ctxt ((@{thm asm_rl[of "inf (lfp _) (lfp _) \<le> lfp _"]} RSN (2, mono'))),
           REPEAT_DETERM o rtac ctxt @{thm le_funI},
           rtac ctxt @{thm le_boolI},
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inf_apply inf_bool_def}),
-          dtac ctxt mono',
-          REPEAT_DETERM o rtac ctxt @{thm le_funI},
-          rtac ctxt @{thm le_boolI},
           etac ctxt conjunct2,
+          SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inf_apply inf_bool_def}),
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono]],
           K (Local_Defs.unfold0_tac ctxt [snd G, @{thm ex_disj_distrib}]),
           REPEAT_DETERM o EVERY' [
@@ -797,14 +798,15 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           REPEAT_DETERM o etac ctxt conjE,
           REPEAT_DETERM o etac ctxt conjI
         ]);
-        val II'_induct = mk_induct G_mmono';
+        val II'_induct = mk_induct @{thm lfp_induct} G_mmono';
+        val II'_induct_lfp = mk_induct @{thm lfp_induct[where P="lfp _"]} G_mmono';
 
         val II'_imp_II = Goal.prove_sorry lthy (names xs) [] (Logic.mk_implies (
           HOLogic.mk_Trueprop (Term.list_comb (fst II', xs)),
           HOLogic.mk_Trueprop (Term.list_comb (fst II, xs))
         )) (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt [snd II', snd II]),
-          etac ctxt II'_induct,
+          etac ctxt II'_induct_lfp,
           REPEAT_DETERM o rtac ctxt @{thm le_funI},
           rtac ctxt @{thm le_boolI},
           REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],

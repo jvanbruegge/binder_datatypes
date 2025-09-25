@@ -100,15 +100,6 @@ linearize_mrbnf ('a::var, 'b) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
 declare [[quick_and_dirty=false]]
 
 
-thm prod.nonrep_pairprod_def[unfolded prod.sameShape_pairprod_def]
-
-thm prod.mr_rel_pairprod_def
-thm rrel_pair_def
-thm set1_pair_def
-thm prod.set_map(1)
-thm prod.set_map(2)
-
-
 thm Abs_pair_inverse
 
 thm mr_rel_G_def

@@ -401,7 +401,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
             (fn {context = ctxt, ...} => 
               HEADGOAL (rtac ctxt exI) THEN
               HEADGOAL (resolve_tac ctxt (map (unfold_thms ctxt [nrp_def_thm, ss_def_thm, mr_rel_F_def, F_map_id]) 
-                nonrep_wit_F_thms @ nonrep_wit_new_thms)));
+                (nonrep_wit_F_thms @ nonrep_wit_new_thms))));
 
         (* typedef F'*)
         val nrp_x = nrp_TFree $ var_x

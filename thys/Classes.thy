@@ -20,6 +20,8 @@ lemma Card_order_dir_image: "Card_order r \<Longrightarrow> type_definition Rep 
 lemma (in infinite) Un_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|"
   using card_of_Un_ordLess_infinite local.infinite_UNIV by blast
 
+lemmas [simp] = infinite_UNIV
+
 (********* var class ****************)
 class var =
   assumes large: "|Field natLeq| \<le>o |UNIV::'a set|"
@@ -48,7 +50,7 @@ lemma list_countable: "|UNIV::('a::finite) list set| =o natLeq"
 instantiation list :: (finite) var begin
 instance
   apply standard
-  using Field_natLeq infinite_UNIV infinite_iff_card_of_nat apply auto[1]
+  apply (simp add: Cinfinite_ordLeq_natLeq cinfinite_iff_infinite)
   using list_countable natLeq_Cinfinite ordIso_symmetric regularCard_natLeq regularCard_ordIso by blast
 end
 

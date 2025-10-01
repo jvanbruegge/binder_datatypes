@@ -446,7 +446,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
             (fst (#SSupp def) $ HOLogic.mk_comp (Term.list_comb (#permute quotient, fs), g))
             (mk_Un (fst (#SSupp def) $ g, mk_supp f))
           )) (fn {context=ctxt, prems} => EVERY1 [
-            rtac ctxt subsetI,
+            rtac ctxt @{thm subsetI},
             K (unfold_thms_tac ctxt (@{thms supp_def mem_Collect_eq Un_iff comp_def} @ [snd (#SSupp def)])),
             Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
               let val x = Thm.term_of (snd (hd params))
@@ -568,8 +568,8 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
         dtac ctxt @{thm iffD1[OF disjoint_iff]},
         etac ctxt allE,
         etac ctxt impE,
-        rtac ctxt UnI1,
-        rtac ctxt CollectI,
+        rtac ctxt @{thm UnI1},
+        rtac ctxt @{thm CollectI},
         assume_tac ctxt,
         K (unfold_thms_tac ctxt @{thms Un_iff de_Morgan_disj mem_Collect_eq not_not}),
         etac ctxt conjE,
@@ -623,8 +623,8 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
           rtac ctxt @{thm Int_subset_empty2},
           resolve_tac ctxt prems,
           SELECT_GOAL (unfold_thms_tac ctxt (snd (#SSupp def) :: map snd (#IImsupps def))),
-          rtac ctxt subsetI,
-          TRY o rtac ctxt UnI2,
+          rtac ctxt @{thm subsetI},
+          TRY o rtac ctxt @{thm UnI2},
           rtac ctxt @{thm UN_I[rotated]},
           K (unfold_thms_tac ctxt @{thms comp_def}),
           assume_tac ctxt,
@@ -921,7 +921,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt (snd (#SSupp def) :: map snd (#IImsupps def))),
           TRY o rtac ctxt @{thm UnI2},
           rtac ctxt @{thm UN_I},
-          rtac ctxt CollectI,
+          rtac ctxt @{thm CollectI},
           assume_tac ctxt,
           rtac ctxt @{thm iffD2[OF arg_cong2[OF refl comp_apply, of "(\<in>)"]]},
           assume_tac ctxt,
@@ -1114,9 +1114,9 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
         K (unfold_thms_tac ctxt (@{thms comp_def} @ [snd (#SSupp def), snd IImsupp])),
         TRY o rtac ctxt @{thm UnI2},
         rtac ctxt @{thm iffD2[OF UN_iff]},
-        rtac ctxt bexI,
+        rtac ctxt @{thm bexI},
         assume_tac ctxt,
-        rtac ctxt CollectI,
+        rtac ctxt @{thm CollectI},
         assume_tac ctxt
       ]) end
     ) (#FVarss quotient) (#IImsupps def)))) (#quotient_fps fp_res) defss;
@@ -1169,7 +1169,7 @@ fun create_tvsubst_of_mrbnf qualify fp_res models QREC_cmin_fixed_name no_defs_l
             helper_tac true
           ] end,
           REPEAT_DETERM o EqSubst.eqsubst_tac ctxt [0] (snd (#SSupp def) :: map snd (#IImsupps def)),
-          rtac ctxt UnI1,
+          rtac ctxt @{thm UnI1},
           rtac ctxt @{thm iffD2[OF mem_Collect_eq]},
           assume_tac ctxt,
           assume_tac ctxt

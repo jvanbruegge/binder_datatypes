@@ -1234,11 +1234,11 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             assume_tac ctxt,
             K (unfold_thms_tac ctxt @{thms case_prod_beta Grp_UNIV_def prod.inject}),
             REPEAT_DETERM o EVERY' [
-              REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+              REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
               assume_tac ctxt
             ],
             REPEAT_DETERM o EVERY' [
-              REPEAT_DETERM1 o resolve_tac ctxt [ballI, impI],
+              REPEAT_DETERM1 o resolve_tac ctxt [@{thm ballI}, impI],
               REPEAT_DETERM o etac ctxt conjE,
               rtac ctxt conjI,
               assume_tac ctxt,
@@ -1327,7 +1327,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp supp_inv_bound bij_imp_bij_inv} @ [infinite_UNIV] @ prems @ card_thms),
             assume_tac ctxt,
             REPEAT_DETERM o EVERY' [
-              REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+              REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
               assume_tac ctxt ORELSE' EVERY' [
                 SELECT_GOAL (unfold_thms_tac ctxt (@{thms case_prod_beta fst_map_prod snd_map_prod} @ map (#permute_def o #inner) (#quotient_fps fp_res))),
                 etac ctxt conjE,
@@ -1740,8 +1740,8 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                           REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ card_thms)
                         ],
                         REPEAT_DETERM1 o EVERY' [
-                          TRY o etac ctxt UnE,
-                          etac ctxt imageE,
+                          TRY o etac ctxt @{thm UnE},
+                          etac ctxt @{thm imageE},
                           dtac ctxt @{thm iffD1[OF prod.inject]},
                           etac ctxt conjE,
                           hyp_subst_tac ctxt,
@@ -1810,7 +1810,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                     ],
                     REPEAT_DETERM o EVERY' [
                       TRY o etac ctxt @{thm UnE},
-                      etac ctxt imageE,
+                      etac ctxt @{thm imageE},
                       dtac ctxt @{thm iffD1[OF prod.inject]},
                       etac ctxt conjE,
                       hyp_subst_tac_thin true ctxt,
@@ -1960,7 +1960,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
               rtac ctxt (MRBNF_Def.pred_mono_strong0_of_mrbnf mrbnf),
               rtac ctxt (iffD2 OF [fun_cong OF [MRBNF_Def.pred_True_of_mrbnf mrbnf], @{thm TrueI}]),
               REPEAT_DETERM o EVERY' [
-                rtac ctxt ballI,
+                rtac ctxt @{thm ballI},
                 rtac ctxt impI,
                 rtac ctxt @{thm TrueI} ORELSE' EVERY' [
                   rtac ctxt @{thm pred_fun_If},
@@ -2298,14 +2298,14 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         ) imsupp_id_on_XXls),
                         REPEAT_DETERM o etac ctxt conjE,
                         etac ctxt @{thm id_onD},
-                        rtac ctxt imageI,
+                        rtac ctxt @{thm imageI},
                         assume_tac ctxt,
                         REPEAT_DETERM o dresolve_tac ctxt (map (fn thm =>
                           Drule.rotate_prems ~1 (thm OF (valid_prems @ suitable_prems @ f_prems))
                         ) imsupp_id_on_XXrs),
                         REPEAT_DETERM o etac ctxt conjE,
                         etac ctxt @{thm id_onD[OF id_on_inv, rotated]},
-                        rtac ctxt imageI,
+                        rtac ctxt @{thm imageI},
                         assume_tac ctxt,
                         assume_tac ctxt
                       ],
@@ -2367,7 +2367,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         etac ctxt @{thm id_onD[rotated, OF imageI]},
                         assume_tac ctxt,
                         eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                          @{thm id_onD} OF [thm OF (f_prems @ [p] @ valid_prems), imageI]
+                          @{thm id_onD} OF [thm OF (f_prems @ [p] @ valid_prems), @{thm imageI}]
                         )) (nth suitable_premss (i - 1)) pick_id_on_image'ss))
                       ] end
                     ],
@@ -2387,7 +2387,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                             rtac ctxt @{thm eq_onI},
                             EqSubst.eqsubst_asm_tac ctxt [0] (maps #FVars_permutes (#raw_fps fp_res)),
                             REPEAT_DETERM o resolve_tac ctxt (f_prems @ card_thms),
-                            etac ctxt imageE,
+                            etac ctxt @{thm imageE},
                             hyp_subst_tac ctxt,
                             SELECT_GOAL (unfold_thms_tac ctxt @{thms eq_bij_betw_refl_def}),
                             REPEAT_DETERM o etac ctxt conjE,
@@ -2488,7 +2488,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                               ]
                             ],
                             eresolve_tac ctxt (flat (map2 (fn p => map (fn thm =>
-                              @{thm id_onD} OF [thm OF (f_prems @ [p] @ valid_prems), imageI]
+                              @{thm id_onD} OF [thm OF (f_prems @ [p] @ valid_prems), @{thm imageI}]
                             )) (nth suitable_premss (i - 1)) pick_id_on_image'ss))
                           ]
                         ]
@@ -2678,8 +2678,8 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ pick_prems @ pick'_prems @ card_thms)
                           ],
                           REPEAT_DETERM1 o EVERY' [
-                            TRY o etac ctxt UnE,
-                            etac ctxt imageE,
+                            TRY o etac ctxt @{thm UnE},
+                            etac ctxt @{thm imageE},
                             dtac ctxt @{thm iffD1[OF prod.inject]},
                             etac ctxt conjE,
                             hyp_subst_tac ctxt,
@@ -2720,7 +2720,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         ],
                         (* comp = id for free position *)
                         REPEAT_DETERM_N nvars o EVERY' [
-                          rtac ctxt ballI,
+                          rtac ctxt @{thm ballI},
                           rtac ctxt trans,
                           rtac ctxt @{thm id_apply},
                           rtac ctxt sym,
@@ -2736,12 +2736,12 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                           rtac ctxt trans,
                           rtac ctxt @{thm arg_cong[of _ _ "inv _"]},
                           etac ctxt @{thm id_onD},
-                          rtac ctxt UnI1,
-                          rtac ctxt UnI1,
+                          rtac ctxt @{thm UnI1},
+                          rtac ctxt @{thm UnI1},
                           eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
                           etac ctxt @{thm id_onD[OF id_on_inv, rotated]},
-                          rtac ctxt UnI1,
-                          rtac ctxt UnI1,
+                          rtac ctxt @{thm UnI1},
+                          rtac ctxt @{thm UnI1},
                           EqSubst.eqsubst_asm_tac ctxt [0] (map (fn thm => thm RS sym) mr_rel_sets),
                           REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id} @ h_prems),
                           eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
@@ -2749,11 +2749,11 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         ],
                         REPEAT_DETERM o FIRST' [
                           (* passive bound/free position *)
-                          rtac ctxt ballI THEN' rtac ctxt refl,
+                          rtac ctxt @{thm ballI} THEN' rtac ctxt refl,
                           (* passive live position *)
                           EVERY' [
-                            rtac ctxt ballI,
-                            rtac ctxt ballI,
+                            rtac ctxt @{thm ballI},
+                            rtac ctxt @{thm ballI},
                             rtac ctxt impI,
                             assume_tac ctxt
                           ]
@@ -2780,7 +2780,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                           rtac ctxt refl
                         ] in EVERY' [
                           (* comp = id for bound position *)
-                          REPEAT_DETERM_N nvars o (rtac ctxt ballI THEN' bound_tac), (* TODO: fix for multiple bounds *)
+                          REPEAT_DETERM_N nvars o (rtac ctxt @{thm ballI} THEN' bound_tac), (* TODO: fix for multiple bounds *)
                           (* comp = id for bound free position *)
                           REPEAT_DETERM_N (length bfrees) o EVERY' [
                             rtac ctxt @{thm ballI},
@@ -2857,7 +2857,7 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                         ] end,
                         (* rec sets *)
                         REPEAT_DETERM o the_default (K no_tac) (Option.map (fn fp_thms => EVERY' [
-                          REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+                          REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
                           rtac ctxt @{thm relcomppI},
                           SELECT_GOAL (unfold_thms_tac ctxt @{thms Grp_UNIV_def}),
                           rtac ctxt refl,
@@ -2879,14 +2879,14 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                                 REPEAT_DETERM o dtac ctxt @{thm imsupp_id_on},
                                 rtac ctxt trans,
                                 etac ctxt @{thm id_onD},
-                                rtac ctxt UnI1,
-                                rtac ctxt UnI1,
+                                rtac ctxt @{thm UnI1},
+                                rtac ctxt @{thm UnI1},
                                 eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
                                 assume_tac ctxt,
                                 rtac ctxt sym,
                                 etac ctxt @{thm id_onD},
-                                rtac ctxt UnI1,
-                                rtac ctxt UnI1,
+                                rtac ctxt @{thm UnI1},
+                                rtac ctxt @{thm UnI1},
                                 eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
                                 rtac ctxt @{thm iffD2[OF arg_cong2[OF refl, of _ _ "(\<in>)"], rotated]},
                                 assume_tac ctxt,
@@ -2927,8 +2927,8 @@ fun create_binding_recursor qualify fp_res no_defs_lthy =
                                   resolve_tac ctxt (map (Drule.rotate_prems ~1 o #alpha_intro o #inner) (#raw_fps fp_res)),
                                   rtac ctxt mr_rel_prem,
                                   REPEAT_DETERM o resolve_tac ctxt (h_prems @ h_id_ons),
-                                  rtac ctxt UnI1,
-                                  rtac ctxt UnI1,
+                                  rtac ctxt @{thm UnI1},
+                                  rtac ctxt @{thm UnI1},
                                   eresolve_tac ctxt (flat (maps #FVars_intross (#raw_fps fp_res))),
                                   assume_tac ctxt
                                 ],

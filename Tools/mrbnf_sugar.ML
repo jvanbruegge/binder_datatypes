@@ -442,7 +442,7 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o rtac ctxt allI,
             TRY o rtac ctxt @{thm Int_subset_empty1},
             rtac ctxt IH,
-            TRY o rtac ctxt subsetI,
+            TRY o rtac ctxt @{thm subsetI},
             K (Local_Defs.unfold0_tac ctxt @{thms Un_iff singleton_iff HOL.simp_thms(6,29,30)}),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms UNIV_I UN_I singletonI TrueI}),
             IF_UNSOLVED o EVERY' [

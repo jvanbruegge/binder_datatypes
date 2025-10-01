@@ -826,8 +826,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         in Goal.prove_sorry lthy (names [x]) [] goal (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold_tac ctxt (map snd FVarss)),
           rtac ctxt @{thm subset_antisym},
-          rtac ctxt subsetI,
-          etac ctxt CollectE,
+          rtac ctxt @{thm subsetI},
+          etac ctxt @{thm CollectE},
           eresolve_tac ctxt (#elims is_frees),
           EVERY' (map (fn i => EVERY' [
             dtac ctxt (iffD1 OF [#inject raw]),
@@ -840,16 +840,16 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             TRY o EVERY' [
               rtac ctxt @{thm UN_I},
               assume_tac ctxt,
-              rtac ctxt CollectI
+              rtac ctxt @{thm CollectI}
             ],
             assume_tac ctxt
           ]) (1 upto m)),
-          rtac ctxt subsetI,
-          REPEAT_DETERM o etac ctxt UnE,
+          rtac ctxt @{thm subsetI},
+          REPEAT_DETERM o etac ctxt @{thm UnE},
           REPEAT_DETERM o EVERY' [
-            rtac ctxt CollectI,
+            rtac ctxt @{thm CollectI},
             TRY o etac ctxt @{thm DiffE},
-            TRY o (etac ctxt @{thm UN_E} THEN' etac ctxt CollectE),
+            TRY o (etac ctxt @{thm UN_E} THEN' etac ctxt @{thm CollectE}),
             eresolve_tac ctxt (#intrs is_frees),
             REPEAT_DETERM o assume_tac ctxt
           ]
@@ -880,7 +880,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
           K (Local_Defs.unfold0_tac ctxt @{thms image_comp}),
           rtac ctxt (BNF_Util.mk_UnIN m i),
           TRY o rtac ctxt @{thm DiffI},
-          rtac ctxt imageI ORELSE' EVERY' [
+          rtac ctxt @{thm imageI} ORELSE' EVERY' [
             rtac ctxt @{thm UN_I},
             assume_tac ctxt,
             EqSubst.eqsubst_tac ctxt [0] @{thms comp_apply}
@@ -904,7 +904,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         mk_image f $ (fst FVars $ z)
       )) (fn {context=ctxt, prems} => EVERY1 [
         rtac ctxt @{thm subset_antisym},
-        rtac ctxt subsetI,
+        rtac ctxt @{thm subsetI},
         EqSubst.eqsubst_asm_tac ctxt [0] [snd FVars],
         dtac ctxt @{thm iffD1[OF mem_Collect_eq]},
         dtac ctxt (Drule.rotate_prems ~1 thm),
@@ -918,8 +918,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         K (Local_Defs.unfold0_tac ctxt permute_raw_ids),
         etac ctxt @{thm iffD2[OF image_in_bij_eq, rotated]},
         REPEAT_DETERM o resolve_tac ctxt (@{thms bij_imp_bij_inv supp_inv_bound} @ prems),
-        rtac ctxt subsetI,
-        etac ctxt imageE,
+        rtac ctxt @{thm subsetI},
+        etac ctxt @{thm imageE},
         hyp_subst_tac ctxt,
         EqSubst.eqsubst_asm_tac ctxt [0] [snd FVars],
         dtac ctxt @{thm iffD1[OF mem_Collect_eq]},
@@ -1148,7 +1148,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                 EVERY' (map (fn g => REPEAT_DETERM o EVERY' [
                   rtac ctxt conjI,
                   rtac ctxt @{thm id_onI},
-                  etac ctxt imageE,
+                  etac ctxt @{thm imageE},
                   hyp_subst_tac ctxt,
                   rtac ctxt @{thm trans[OF comp_apply]},
                   rtac ctxt @{thm trans[OF arg_cong[OF inv_simp1]]},
@@ -1160,7 +1160,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                   assume_tac ctxt,
                   rtac ctxt sym,
                   etac ctxt @{thm eq_onD},
-                  REPEAT_DETERM o etac ctxt UnE,
+                  REPEAT_DETERM o etac ctxt @{thm UnE},
                   REPEAT_DETERM o EVERY' [
                     etac ctxt @{thm DiffE},
                     TRY o etac ctxt @{thm UN_E},
@@ -1199,7 +1199,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                 K (Local_Defs.unfold0_tac ctxt @{thms id_o o_id}),
                 etac ctxt (Drule.rotate_prems (~nargs - 1) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
                 REPEAT_DETERM o EVERY' [
-                  rtac ctxt ballI,
+                  rtac ctxt @{thm ballI},
                   rtac ctxt @{thm trans[OF id_apply]},
                   rtac ctxt sym,
                   rtac ctxt @{thm trans[OF comp_apply]},
@@ -1210,12 +1210,12 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                   eresolve_tac ctxt (flat FVars_intross)
                 ],
                 REPEAT_DETERM o FIRST' [
-                  rtac ctxt ballI THEN' rtac ctxt refl,
-                  rtac ctxt ballI THEN' rtac ctxt ballI THEN' rtac ctxt impI THEN' assume_tac ctxt
+                  rtac ctxt @{thm ballI} THEN' rtac ctxt refl,
+                  rtac ctxt @{thm ballI} THEN' rtac ctxt @{thm ballI} THEN' rtac ctxt impI THEN' assume_tac ctxt
                 ],
                 EVERY' (map (fn rec_boundss => EVERY' [
-                  rtac ctxt ballI,
-                  rtac ctxt ballI,
+                  rtac ctxt @{thm ballI},
+                  rtac ctxt @{thm ballI},
                   rtac ctxt impI,
                   rtac ctxt disjI1,
                   rtac ctxt exI,
@@ -1251,7 +1251,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                     TRY o rtac ctxt conjI,
                     rtac ctxt @{thm eq_on_refl} ORELSE' EVERY' [
                       etac ctxt @{thm eq_on_mono[rotated]},
-                      rtac ctxt subsetI,
+                      rtac ctxt @{thm subsetI},
                       eresolve_tac ctxt (flat FVars_intross),
                       TRY o EVERY' [
                         EqSubst.eqsubst_asm_tac ctxt [0] (flat FVars_permute_raws),
@@ -1323,7 +1323,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
 
     fun id_on_tac ctxt = EVERY' [
       etac ctxt @{thm id_on_antimono},
-      rtac ctxt subsetI,
+      rtac ctxt @{thm subsetI},
       rotate_tac ~1,
       etac ctxt @{thm contrapos_pp},
       SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj}),
@@ -1444,7 +1444,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
               )) mr_set_transfer_lives),
               assume_tac ctxt,
               REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt),
-              etac ctxt bexE,
+              etac ctxt @{thm bexE},
               if flipped then K all_tac else TRY o EVERY' [
                 dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (iffD1 OF [thm])) alpha_bij_eq_invs),
                 REPEAT_DETERM o (resolve_tac ctxt @{thms bij_id supp_id_bound} ORELSE' assume_tac ctxt),
@@ -1462,7 +1462,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                 K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
                 TRY o EVERY' [
                   if not flipped then K all_tac else EVERY' [
-                    etac ctxt imageE,
+                    etac ctxt @{thm imageE},
                     hyp_subst_tac ctxt
                   ],
                   forward_tac ctxt @{thms arg_cong2[OF refl, of _ _ "(\<notin>)", THEN iffD1, rotated -1]},
@@ -1518,7 +1518,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                     REPEAT_DETERM o (resolve_tac ctxt @{thms bij_comp bij_imp_bij_inv} ORELSE' assume_tac ctxt),
                     EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_inv_eq},
                     REPEAT_DETERM o (resolve_tac ctxt @{thms bij_comp bij_imp_bij_inv} ORELSE' assume_tac ctxt),
-                    etac ctxt imageE,
+                    etac ctxt @{thm imageE},
                     hyp_subst_tac ctxt,
                     K (Local_Defs.unfold0_tac ctxt @{thms inv_simp1 inv_simp2}),
                     rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2]},
@@ -1612,8 +1612,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         Drule.rotate_prems (~live - 1) (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf)
       ]) (MRBNF_Def.mr_set_transfer_of_mrbnf mrbnf)),
       REPEAT_DETERM o EVERY' [
-        rtac ctxt ballI,
-        rtac ctxt ballI,
+        rtac ctxt @{thm ballI},
+        rtac ctxt @{thm ballI},
         rtac ctxt @{thm imp_refl} ORELSE' EVERY' [
           rtac ctxt impI,
           rtac ctxt @{thm trans[rotated]},
@@ -1644,21 +1644,21 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         K (Local_Defs.unfold0_tac ctxt @{thms inv_id conversep_eq}),
         etac ctxt (Drule.rotate_prems (~nargs - 1) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
         REPEAT_DETERM o FIRST' [
-          rtac ctxt ballI THEN' rtac ctxt refl,
+          rtac ctxt @{thm ballI} THEN' rtac ctxt refl,
           EVERY' [
-            rtac ctxt ballI,
-            rtac ctxt ballI,
+            rtac ctxt @{thm ballI},
+            rtac ctxt @{thm ballI},
             rtac ctxt @{thm imp_refl}
           ]
         ],
         REPEAT_DETERM o EVERY' [
-          rtac ctxt ballI,
+          rtac ctxt @{thm ballI},
           rtac ctxt @{thm inv_inv_eq[THEN fun_cong, symmetric]},
           assume_tac ctxt
         ],
         REPEAT_DETERM o EVERY' [
-          rtac ctxt ballI,
-          rtac ctxt ballI,
+          rtac ctxt @{thm ballI},
+          rtac ctxt @{thm ballI},
           rtac ctxt impI,
           rtac ctxt @{thm conversepI},
           rtac ctxt disjI1,
@@ -1684,7 +1684,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
           assume_tac ctxt,
           rtac ctxt @{thm id_on_antimono},
           assume_tac ctxt,
-          rtac ctxt equalityD1,
+          rtac ctxt @{thm equalityD1},
           REPEAT_DETERM o rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]},
           REPEAT_DETERM o id_on_bound_free_tac ctxt mrbnf,
           REPEAT_DETERM o (rtac ctxt sym THEN' id_on_rec_bound_tac ctxt mrbnf)
@@ -1743,8 +1743,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                 REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
                 etac ctxt (Drule.rotate_prems (~live - 1) (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf)),
                 REPEAT_DETERM o EVERY' [
-                  rtac ctxt ballI,
-                  rtac ctxt ballI,
+                  rtac ctxt @{thm ballI},
+                  rtac ctxt @{thm ballI},
                   rtac ctxt impI,
                   assume_tac ctxt ORELSE' EVERY' [
                     rtac ctxt disjI1,
@@ -1787,7 +1787,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                   ],
                   rtac ctxt @{thm id_on_comp},
                   etac ctxt @{thm id_on_antimono},
-                  rtac ctxt equalityD1,
+                  rtac ctxt @{thm equalityD1},
                   REPEAT_DETERM o rtac ctxt @{thm arg_cong2[of _ _ _ _ "(\<union>)"]},
                   REPEAT_DETERM o (rtac ctxt sym THEN' id_on_bound_free_tac ctxt mrbnf),
                   REPEAT_DETERM o (id_on_rec_bound_tac ctxt mrbnf THEN' TRY o assume_tac ctxt)
@@ -2186,7 +2186,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
           REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
         ],
         K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
-        TRY o etac ctxt imageI,
+        TRY o etac ctxt @{thm imageI},
         rtac ctxt refl
       ])
     ))) mrbnfs FVars_raw_introsss (mk_FVars_intro_goalsss rec_setss (map fst ctors) xs zs fsetss bound_setsss bfree_setsss FVarsss);
@@ -2278,8 +2278,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         K (Local_Defs.unfold_tac ctxt @{thms id_o o_id Grp_UNIV_id eq_OO Grp_OO}),
         etac ctxt (Drule.rotate_prems (~1 - live) (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf)),
         REPEAT_DETERM o EVERY' [
-          rtac ctxt ballI,
-          rtac ctxt ballI,
+          rtac ctxt @{thm ballI},
+          rtac ctxt @{thm ballI},
           rtac ctxt @{thm imp_refl} ORELSE' EVERY' [
             rtac ctxt impI,
             dresolve_tac ctxt (TT_total_abs_eq_iffs RSS iffD2),
@@ -2386,8 +2386,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             SELECT_GOAL (Local_Defs.unfold0_tac ctxt (
               flat FVars_raw_ctorss @ flat (map2 (fn rep_abs => map (fn thm => thm OF [rep_abs])) TT_rep_abss alpha_FVarss)
             )),
-            rtac ctxt subsetI,
-            REPEAT_DETERM o etac ctxt UnE,
+            rtac ctxt @{thm subsetI},
+            REPEAT_DETERM o etac ctxt @{thm UnE},
             REPEAT_DETERM o EVERY' [
               rotate_tac ~1,
               etac ctxt @{thm contrapos_pp},
@@ -2431,13 +2431,13 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             hyp_subst_tac ctxt,
             dtac ctxt (#inject raw RS iffD1),
             hyp_subst_tac ctxt,
-            REPEAT_DETERM o etac ctxt UnE,
+            REPEAT_DETERM o etac ctxt @{thm UnE},
             REPEAT_DETERM o EVERY' [
               dresolve_tac ctxt (map (Drule.rotate_prems ~1) (drop (nargs - nrecs) (MRBNF_Def.mr_rel_set_of_mrbnf mrbnf))),
               K (prefer_tac (MRBNF_Def.free_of_mrbnf mrbnf + 2 * MRBNF_Def.bound_of_mrbnf mrbnf + 1)),
               assume_tac ctxt,
               REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt),
-              etac ctxt bexE,
+              etac ctxt @{thm bexE},
               forward_tac ctxt IHs,
               etac ctxt allE,
               etac ctxt impE,
@@ -2506,13 +2506,13 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
               REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id})
             ],
             K (Local_Defs.unfold0_tac ctxt @{thms image_Un[symmetric]}),
-            etac ctxt imageE,
+            etac ctxt @{thm imageE},
             hyp_subst_tac ctxt,
             dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (thm RS iffD1)) alpha_bij_eq_invs),
             REPEAT_DETERM o assume_tac ctxt,
             EqSubst.eqsubst_asm_tac ctxt [0] permute_raw_comps,
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms bij_imp_bij_inv supp_inv_bound}),
-            REPEAT_DETERM o etac ctxt UnE,
+            REPEAT_DETERM o etac ctxt @{thm UnE},
             REPEAT_DETERM o EVERY' [
               dresolve_tac ctxt IHs,
               REPEAT_DETERM o etac ctxt allE,
@@ -2651,7 +2651,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
           ) raw_zs TT_abss Ps @ map2 (curry (op$)) TT_reps zs)) (the subshape_induct_opt)
         )),
         EVERY' (@{map 5} (fn mrbnf => fn raw => fn P => fn abs_eq_iff => fn IH => EVERY' [
-          rtac ctxt ballI,
+          rtac ctxt @{thm ballI},
           Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
             rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#exhaust raw)) 1
           ) ctxt,
@@ -2697,7 +2697,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             ],
             K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
             K (Local_Defs.unfold0_tac ctxt @{thms image_comp[unfolded comp_def]}),
-            etac ctxt imageE,
+            etac ctxt @{thm imageE},
             hyp_subst_tac ctxt,
             TRY o EVERY' [
               EqSubst.eqsubst_tac ctxt [0] permute_abss,
@@ -2754,7 +2754,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             etac ctxt allE,
             etac ctxt impE,
             assume_tac ctxt,
-            etac ctxt ballE,
+            etac ctxt @{thm ballE},
             assume_tac ctxt,
             rotate_tac ~1,
             etac ctxt @{thm contrapos_np},
@@ -2977,7 +2977,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                 rtac ctxt @{thm trans[OF inv_id[THEN fun_cong] id_apply]}
               ],
               EVERY' [
-                rtac ctxt ballI,
+                rtac ctxt @{thm ballI},
                 rtac ctxt @{thm imp_refl}
               ]
             ]),
@@ -3070,7 +3070,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             REPEAT_DETERM o (rtac ctxt @{thm ballI} THEN' FIRST' [
               rtac ctxt refl,
               EVERY' [
-                rtac ctxt ballI,
+                rtac ctxt @{thm ballI},
                 rtac ctxt @{thm imp_refl}
               ],
               EVERY' [
@@ -3207,7 +3207,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                   resolve_tac ctxt (@{thms supp_id_bound bij_id supp_comp_bound bij_comp bij_imp_bij_inv supp_inv_bound} @ [infinite_UNIV]),
                   assume_tac ctxt
                 ],
-                etac ctxt bexE,
+                etac ctxt @{thm bexE},
                 TRY o EVERY' [
                   dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (thm RS iffD1)) alpha'_bij_eq_invs),
                   REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt)
@@ -3239,7 +3239,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                     REPEAT_DETERM o (resolve_tac ctxt @{thms bij_comp bij_imp_bij_inv} ORELSE' assume_tac ctxt),
                     EqSubst.eqsubst_asm_tac ctxt [0] @{thms inv_inv_eq},
                     REPEAT_DETERM o (resolve_tac ctxt @{thms bij_comp bij_imp_bij_inv} ORELSE' assume_tac ctxt),
-                    etac ctxt imageE,
+                    etac ctxt @{thm imageE},
                     hyp_subst_tac ctxt,
                     K (Local_Defs.unfold0_tac ctxt @{thms comp_apply inv_simp1 inv_simp2}),
                     rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "(\<in>)", THEN iffD2]},
@@ -3291,8 +3291,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
             REPEAT_DETERM o rtac ctxt @{thm conjI[rotated]},
             etac ctxt (Drule.rotate_prems (~(length plives + nrecs) - 1) (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf)),
             REPEAT_DETERM o EVERY' [
-              rtac ctxt ballI,
-              rtac ctxt ballI,
+              rtac ctxt @{thm ballI},
+              rtac ctxt @{thm ballI},
               rtac ctxt @{thm imp_refl} ORELSE' EVERY' [
                 rtac ctxt impI,
                 rtac ctxt disjI1,
@@ -3359,7 +3359,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
                     resolve_tac ctxt (@{thms supp_id_bound bij_id bij_imp_bij_inv bij_comp supp_comp_bound supp_inv_bound} @ [infinite_UNIV]),
                     assume_tac ctxt
                   ],
-                  etac ctxt bexE,
+                  etac ctxt @{thm bexE},
                   rtac ctxt @{thm UN_I},
                   assume_tac ctxt,
                   dresolve_tac ctxt (map (fn thm => Drule.rotate_prems ~1 (thm RS spec RS mp)) (flat alpha'_FVars_leqss)),
@@ -3494,8 +3494,8 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
               etac ctxt (Drule.rotate_prems (~nrecs - length plives - 1) (MRBNF_Def.mr_rel_mono_strong_of_mrbnf mrbnf)),
               K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
               REPEAT_DETERM o EVERY' [
-                rtac ctxt ballI,
-                rtac ctxt ballI,
+                rtac ctxt @{thm ballI},
+                rtac ctxt @{thm ballI},
                 rtac ctxt @{thm imp_refl} ORELSE' EVERY' [
                   rtac ctxt impI,
                   etac ctxt @{thm disj_forward},
@@ -3596,7 +3596,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         ) (fn {context=ctxt, prems} => EVERY1 [
           rtac ctxt ((if mutual then Drule.rotate_prems (~n) (coinduct RS conj_mp) else coinduct) OF (take n prems)),
           EVERY' (@{map 4} (fn ctor => fn mrbnf => fn fresh_case => fn R => EVERY' [
-            etac ctxt bexE,
+            etac ctxt @{thm bexE},
             Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} => EVERY1 (map (fn p =>
               rtac ctxt (Drule.rotate_prems ~1 (
                 infer_instantiate' ctxt (replicate nvars NONE @ [SOME (Thm.cterm_of ctxt (fst ctor $ Thm.term_of (snd p)))]) fresh_case

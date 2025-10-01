@@ -875,10 +875,10 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound bij_id bij_imp_bij_inv supp_inv_bound} @ prems),
             K (unfold_thms_tac ctxt @{thms id_o o_id Grp_UNIV_id eq_OO OO_eq}),
             REPEAT_DETERM o FIRST' [
-              rtac ctxt ballI THEN' rtac ctxt refl,
+              rtac ctxt @{thm ballI} THEN' rtac ctxt refl,
               EVERY' [
-                rtac ctxt ballI,
-                rtac ctxt ballI,
+                rtac ctxt @{thm ballI},
+                rtac ctxt @{thm ballI},
                 rtac ctxt impI,
                 assume_tac ctxt ORELSE' EVERY' [
                   rtac ctxt @{thm iffD2[OF Grp_OO]},
@@ -1463,7 +1463,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             etac ctxt (Drule.rotate_prems (~total_vars - 1) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms ballI refl impI}),
             REPEAT_DETERM o EVERY' [
-              REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+              REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
               TRY o rtac ctxt @{thm iffD2[OF Grp_OO]},
               rtac ctxt disjI1,
               rtac ctxt conjI,
@@ -1580,7 +1580,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
           ))) goals ts ts'
           @ ts
         )) (#fresh_induct_param (the fp_thms));
-        val induct = Drule.rotate_prems (~1 - length mrbnfs) (apply_n conj_spec (nvars + 1) (induct RS bspec) RS conj_mp);
+        val induct = Drule.rotate_prems (~1 - length mrbnfs) (apply_n conj_spec (nvars + 1) (induct RS @{thm bspec}) RS conj_mp);
 
         val in_rel1 = Goal.prove_sorry lthy (names (Rs @ free_fs @ pbound_fs @ ts @ ts')) f_prems goal (fn {context=ctxt, prems=f_prems} => EVERY1 [
           DETERM o rtac ctxt induct,
@@ -1638,15 +1638,15 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
             K (unfold_thms_tac ctxt @{thms id_o o_id}),
             dtac ctxt (Drule.rotate_prems (~1 - total_vars) (MRBNF_Def.mr_rel_mono_strong0_of_mrbnf mrbnf)),
             REPEAT_DETERM_N (total_vars - nrecs) o FIRST' [
-              rtac ctxt ballI THEN' rtac ctxt refl,
+              rtac ctxt @{thm ballI} THEN' rtac ctxt refl,
               EVERY' [
-                rtac ctxt ballI,
-                rtac ctxt ballI,
+                rtac ctxt @{thm ballI},
+                rtac ctxt @{thm ballI},
                 rtac ctxt @{thm imp_refl}
               ]
             ],
             DETERM o EVERY' (map (fn i => EVERY' [
-              REPEAT_DETERM o rtac ctxt ballI,
+              REPEAT_DETERM o rtac ctxt @{thm ballI},
               rtac ctxt impI,
               dtac ctxt @{thm iffD1[OF Grp_OO]},
               rotate_tac i,
@@ -1718,7 +1718,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
               assume_tac ctxt,
               REPEAT_DETERM o EVERY' [
                 rtac ctxt @{thm UN_least},
-                etac ctxt imageE,
+                etac ctxt @{thm imageE},
                 hyp_subst_tac ctxt,
                 rotate_tac ~1,
                 dtac ctxt @{thm set_mp[rotated]},

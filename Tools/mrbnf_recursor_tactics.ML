@@ -56,7 +56,7 @@ fun mk_f_termination_tac mk_relation wf_subshape set_subshape_images set_subshap
     resolve_tac ctxt (@{thms bij_id supp_id_bound} @ map (fn thm => @{thm ordLess_ordLeq_trans} OF [@{thm _}, thm]) r_ordLeqs)
   ],
   K (unfold_thms_tac ctxt @{thms image_id}),
-  TRY o (etac ctxt imageE THEN' hyp_subst_tac ctxt),
+  TRY o (etac ctxt @{thm imageE} THEN' hyp_subst_tac ctxt),
   eresolve_tac ctxt (map (Drule.rotate_prems ~1) set_subshape_images @ set_subshapes),
   REPEAT_DETERM o FIRST' [
     assume_tac ctxt,
@@ -165,7 +165,7 @@ let
     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
-      REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+      REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
       K (unfold_thms_tac ctxt @{thms case_prod_beta Grp_UNIV_def prod.inject}),
       etac ctxt conjE,
       rtac ctxt conjI,
@@ -237,7 +237,7 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
       rtac ctxt (@{thm iffD2[OF fun_cong[OF fun_cong]]} OF [MRBNF_Def.mr_rel_eq_of_mrbnf mrbnf]),
       rtac ctxt refl,
       REPEAT_DETERM o EVERY' [
-        REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+        REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
         rtac ctxt @{thm relcomppI},
         rtac ctxt refl,
         hyp_subst_tac ctxt,
@@ -256,7 +256,7 @@ UFVars'_defs PUmap'_def PUmap_def Umap'_def ctxt prems =
     REPEAT_DETERM o resolve_tac ctxt (@{thms supp_comp_bound supp_inv_bound bij_comp bij_imp_bij_inv} @ f_prems @ g_prems @ [infinite_UNIV] @ @{thms ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order}),
     rtac ctxt mr_rel_prem,
     REPEAT_DETERM o EVERY' [
-      REPEAT_DETERM o resolve_tac ctxt [ballI, impI],
+      REPEAT_DETERM o resolve_tac ctxt [@{thm ballI}, impI],
       Subgoal.FOCUS_PARAMS (fn {context, params, ...} =>
         let val [thm1, thm2] = map ((fn ct => infer_instantiate' context [SOME ct] @{thm prod.exhaust}) o snd) params
         in rtac context thm1 1 THEN rtac context thm2 1 end
@@ -343,8 +343,8 @@ fun mk_f_UFVars'_tac mrbnf P_t t pick_prems subshape_induct set_subshape_images 
           REPEAT_DETERM o (resolve_tac ctxt @{thms supp_id_bound bij_id} ORELSE' assume_tac ctxt ORELSE' resolve_tac ctxt @{thms cmin1 cmin2 card_of_Card_order ordLess_ordLeq_trans})
         ],
         REPEAT_DETERM o EVERY' [
-          TRY o etac ctxt UnE,
-          etac ctxt imageE,
+          TRY o etac ctxt @{thm UnE},
+          etac ctxt @{thm imageE},
           dtac ctxt @{thm iffD1[OF prod.inject]},
           etac ctxt conjE,
           hyp_subst_tac ctxt,

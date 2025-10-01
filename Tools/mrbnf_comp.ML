@@ -789,7 +789,7 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
       (rtac ctxt subset_UNIV ORELSE' assume_tac ctxt) 1 THEN
       REPEAT_DETERM (CHANGED (etac ctxt conjE 1)) THEN
       REPEAT_DETERM (CHANGED ((etac ctxt conjI ORELSE' assume_tac ctxt) 1))) ORELSE
-      ((rtac ctxt @{thm UNIV_eq_I} THEN' rtac ctxt CollectI) 1 THEN
+      ((rtac ctxt @{thm UNIV_eq_I} THEN' rtac ctxt @{thm CollectI}) 1 THEN
         REPEAT_DETERM (TRY (rtac ctxt conjI 1) THEN rtac ctxt subset_UNIV 1)));
 
     val in_alt_thm =
@@ -1233,7 +1233,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
        else inter (op =) repTA_tfrees all_TA_params_in_order);
     val ((TA, (Rep_name, Abs_name, type_definition, Abs_inverse, Abs_inject, _)), lthy) =
       maybe_typedef force_out_of_line (T_bind, TA_params, NoSyn) (HOLogic.mk_UNIV repTA) NONE
-        (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt UNIV_I] 1) lthy;
+        (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt @{thm UNIV_I}] 1) lthy;
     val repTB = mk_T_of_mrbnf Ds Xs Bs Fs mrbnf;
     val TB = Term.typ_subst_atomic (As ~~ Xs) TA;
     val RepA = Const (Rep_name, TA --> repTA);
@@ -1260,7 +1260,7 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
     val all_deads = map TFree (fold_rev Term.add_tfreesT all_Ds []);
     val ((bdT, (_, Abs_bd_name, type_definition_bdT, _, Abs_bdT_inject, Abs_bdT_cases)), lthy) =
       maybe_typedef false (bdT_bind, params, NoSyn) (HOLogic.mk_UNIV bd_repT) NONE
-        (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt UNIV_I] 1) lthy;
+        (fn ctxt => EVERY' [rtac ctxt exI, rtac ctxt @{thm UNIV_I}] 1) lthy;
     val (mrbnf_bd', bd_ordIso, bd_infinite_regular_card_order) =
       if bdT = bd_repT then (mrbnf_bd, bd_Card_order_of_mrbnf mrbnf RS @{thm ordIso_refl},
         bd_infinite_regular_card_order_of_mrbnf mrbnf)

@@ -43,6 +43,12 @@ open MRBNF_Util
 open BNF_Tactics
 open BNF_Def_Tactics
 
+val CollectE = @{thm CollectE}
+val mem_Collect_eq = @{thm mem_Collect_eq}
+val UNIV_I = @{thm UNIV_I}
+val subset_trans = @{thm subset_trans}
+val ballI = @{thm ballI}
+
 fun mk_mr_typedef_tac ctxt = unfold_tac ctxt @{thms ex_in_conv} THEN
   (rtac ctxt @{thm Field_cardSuc_not_empty[OF Card_order_csum]} |> HEADGOAL);
 

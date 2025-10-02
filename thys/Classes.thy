@@ -94,16 +94,13 @@ local_setup \<open>
 \<close>
 
 lemma insert_bound[simp]: "|insert x A| <o |UNIV::'a::infinite set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
-  using card_of_Un_singl_ordLess_infinite infinite_UNIV by fastforce
+  by (metis card_of_Un_singl_ordLess_infinite infinite_UNIV insert_is_Un)
 
 lemmas SSupp_comp_bound_UNIV[simp, intro!] = SSupp_comp_bound[OF conjI[OF var_class.UNIV_cinfinite card_of_Card_order]] 
 
 lemma IImsupp_Inj_comp_bound1: "inj Inj \<Longrightarrow> |supp (f::'a::var \<Rightarrow> 'a)| <o |UNIV::'a set| \<Longrightarrow>
    (\<And>a. Vrs (Inj a) = {a}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
-  apply (unfold IImsupp_def SSupp_Inj_comp comp_apply)
-  apply (rule var_class.UN_bound)
-   apply assumption
-  by (simp add: infinite_UNIV)
+  by (simp add: IImsupp_def UN_bound)
 
 lemma IImsupp_Inj_comp_bound2: "(\<And>a. Vrs (Inj a) = {}) \<Longrightarrow> |IImsupp Inj Vrs (Inj \<circ> f)| <o |UNIV::'a set|"
   by (auto simp: IImsupp_def)

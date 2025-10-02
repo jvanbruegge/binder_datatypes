@@ -477,8 +477,8 @@ interpretation tvsubst: QREC_fixed_FTerm "avoiding_set1 f1 f2"
 
     apply (rule trans)
     apply (rule FTerm.permute_ctor)
-        apply (assumption | rule ordLess_ordLeq_trans cmin1 cmin2 card_of_Card_order)+
-
+        apply (assumption)+
+    thm trans[OF comp_apply[symmetric] FTerm_pre.map_Sb_strong(1)[THEN fun_cong]]
     apply (subst trans[OF comp_apply[symmetric] FTerm_pre.map_Sb_strong(1)[THEN fun_cong]])
           apply (assumption | rule supp_id_bound bij_id f_prems)+
     apply (unfold0 id_o o_id inv_o_simp2 comp_apply)
@@ -502,9 +502,6 @@ interpretation tvsubst: QREC_fixed_FTerm "avoiding_set1 f1 f2"
     apply (erule Int_subset_empty2)
     apply (rule subsetI)
     apply (rule UnI2)
-    apply (unfold IImsupp_FType_def comp_def SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def
-      IImsupp_def SSupp_def VVr_def TyVar_def
-    )[1]
     apply assumption
     done
 
@@ -947,11 +944,6 @@ lemma FVars_tvsubst2:
     apply (subst IImsupp_Diff, assumption+)
     apply (subst FType.IImsupp_Diff)
      apply (erule Int_subset_empty2)
-  (* This is only because FType does not use BMVs yet, not part of the tactic *)
-     apply (unfold IImsupp_FType_def SSupp_FType_def tvVVr_tvsubst_FType_def tv\<eta>_FType_tvsubst_FType_def
-      TyVar_def[symmetric] SSupp_def[of TyVar, symmetric, THEN meta_eq_to_obj_eq, THEN fun_cong] 
-      comp_def IImsupp_def[of TyVar FVars_FType, symmetric, THEN meta_eq_to_obj_eq, THEN fun_cong]
-    )[1]
      apply (rule Un_upper2)
     apply (unfold Un_Diff[symmetric])
     apply (rule arg_cong2[OF _ refl, of _ _ "minus"])
@@ -1552,7 +1544,7 @@ val mrbnf = the (MRBNF_Def.mrbnf_of lthy @{type_name FTerm});
 open BNF_Util
 
 val x = TVSubst.create_tvsubst_of_mrsbnf
-  I fp_res mrsbnf mrbnf @{thm FTerm.vvsubst_cctor} @{binding tvsubst_FTerm'} [SOME {
+  I fp_res mrsbnf mrbnf @{thm FTerm.vvsubst_cctor} @{thm FTerm.vvsubst_permute} @{binding tvsubst_FTerm'} [SOME {
     eta = @{term "\<eta> :: 'v::var \<Rightarrow> ('tv::var, 'v::var, 'a::var, 'b::var, 'c, 'd) FTerm_pre"},
     Inj = (@{term "Var :: 'v \<Rightarrow> ('tv::var, 'v::var) FTerm"}, @{thm Var_def}),
     tacs = {

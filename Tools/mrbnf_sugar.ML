@@ -1257,6 +1257,8 @@ fun create_binder_datatype (spec : spec) lthy =
         ("inject", injects, simp)
       ] @ the_default [] (Option.map (fn (res, tvsubst_simps) => [
         ("subst", tvsubst_simps, simp),
+        ("IImsupp_permute_commute", #IImsupp_permute_commutes res, []),
+        ("IImsupp_Diff", #IImsupp_Diffs res, []),
         ("tvsubst_permute", [#tvsubst_permute res], [])
       ]) tvsubst_opt)) |> (map (fn (thmN, thms, attrs) =>
         ((Binding.qualify true (Binding.name_of (#fp_b spec)) (Binding.name thmN), attrs), [(thms, [])])

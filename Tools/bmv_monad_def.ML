@@ -945,7 +945,7 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
             rtac ctxt @{thm UN_mono},
             resolve_tac ctxt (the SSupp_Map_subsets),
             K (Local_Defs.unfold0_tac ctxt (@{thms comp_apply} @ #Vrs_Map (the params))),
-            rtac ctxt subset_refl
+            rtac ctxt @{thm subset_refl}
           ]) end
         ) (RVrs @ Vrs))) Injs rhos) (Option.map #Map param_consts);
 
@@ -2061,8 +2061,8 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
                 assume_tac ctxt,
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
-                  eresolve_tac ctxt [UnI1, UnI2],
-                  rtac ctxt UnI1
+                  eresolve_tac ctxt @{thms UnI1 UnI2},
+                  rtac ctxt @{thm UnI1}
                 ]
               ]
             ]) inners),
@@ -2072,8 +2072,8 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
               REPEAT_DETERM o FIRST' [
                 assume_tac ctxt,
                 resolve_tac ctxt (refl :: @{thms SSupp_Inj_bound IImsupp_Inj_bound} @ prems),
-                eresolve_tac ctxt [UnI1, UnI2],
-                rtac ctxt UnI1
+                eresolve_tac ctxt @{thms UnI1 UnI2},
+                rtac ctxt @{thm UnI1}
               ]
             ]
           ]) ctxt

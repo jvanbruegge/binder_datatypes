@@ -653,7 +653,7 @@ assumes \<sigma>: "bij \<sigma>" "|supp \<sigma>| <o |UNIV::ivar set|"
 shows "irrename \<sigma> (usub t u (x::ivar)) = usub (irrename \<sigma> t) (\<sigma> u) (\<sigma> x)"
 using assms
 apply(induct t rule: iterm.fresh_induct[where A = "{x,u} \<union> supp \<sigma>"])
-  subgoal using assms by simp (meson le_UNIV_insert)
+  subgoal using assms by simp
   subgoal by (auto simp: sb_def bij_implies_inject)
   subgoal using assms apply simp unfolding stream.map_comp apply(rule stream.map_cong0) by auto
   subgoal using assms apply(subst usub_iLam) apply auto apply(subst usub_iLam) by (auto simp: bij_implies_inject) .

@@ -17,7 +17,7 @@ fun mk_SSupp_Sb_subsets T Injs SSupp_prems Sb hs rhos Sb_Injs lthy =
         (mk_Un (mk_SSupp Inj $ rho, mk_SSupp Inj $ rho'))
       );
     in SOME (Goal.prove_sorry lthy (names (rho' :: hs @ rhos)) SSupp_prems goal (fn {context=ctxt, prems} => EVERY1 [
-      rtac ctxt subsetI,
+      rtac ctxt @{thm subsetI},
       K (Local_Defs.unfold0_tac ctxt @{thms SSupp_def mem_Collect_eq Un_iff de_Morgan_conj[symmetric]}),
       etac ctxt @{thm contrapos_nn},
       etac ctxt conjE,

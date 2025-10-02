@@ -953,28 +953,8 @@ proof -
       apply (auto simp: pat.Sb_cong restrict_def)
      apply (rule trm.Sb_cong)
             apply (auto simp: IImsupp_def SSupp_def restrict_def pat.set_bd_UNIV)
-        apply (metis (no_types, lifting) card_of_subset_bound mem_Collect_eq subsetI trm.set_bd_UNIV(1))
-       apply (metis (no_types, lifting) card_of_subset_bound mem_Collect_eq subsetI trm.set_bd_UNIV(2))
-    subgoal for x1 x2 x3
-      apply (rule card_of_subset_bound[of _ "PTVars x1 \<union> FTVars x2 \<union> FTVars x3"])
-       apply blast
-      using pat.set_bd_UNIV trm.set_bd_UNIV infinite_class.Un_bound by meson
-    subgoal for x1 x2 x3
-      apply (rule card_of_subset_bound[of _ "FVars x2 \<union> FVars x3"])
-       apply blast
-      using pat.set_bd_UNIV trm.set_bd_UNIV infinite_class.Un_bound by meson
     apply (rule trm.Sb_cong)
             apply (auto simp: IImsupp_def SSupp_def restrict_def pat.set_bd_UNIV)
-        apply (metis (no_types, lifting) card_of_subset_bound mem_Collect_eq subsetI trm.set_bd_UNIV(1))
-       apply (metis (no_types, lifting) card_of_subset_bound mem_Collect_eq subsetI trm.set_bd_UNIV(2))
-    subgoal for x1 x2 x3
-      apply (rule card_of_subset_bound[of _ "PTVars x1 \<union> FTVars x2 \<union> FTVars x3"])
-       apply blast
-      using pat.set_bd_UNIV trm.set_bd_UNIV infinite_class.Un_bound by meson
-    subgoal for x1 x2 x3
-      apply (rule card_of_subset_bound[of _ "FVars x2 \<union> FVars x3"])
-       apply blast
-      using pat.set_bd_UNIV trm.set_bd_UNIV infinite_class.Un_bound by meson
     by (meson disjoint_iff_not_equal not_in_supp_alt)
 qed
 
@@ -1205,15 +1185,14 @@ binder_inductive step
             apply (auto)
         apply (subst tvsubst_comp)
           apply (auto simp: supp_def[symmetric] intro!: var_class.UN_bound)
-        apply (auto simp: ordLeq_ordLess_trans[OF card_of_image] pat.set_bd_UNIV)
         apply (rule trm.Sb_cong)
-             apply (auto  simp: infinite_UNIV SSupp_trm_restrict restrict_def intro!: trm.SSupp_Sb_bound trm.IImsupp_Sb_bound)
+             apply (auto simp: SSupp_trm_restrict restrict_def intro!: trm.SSupp_Sb_bound trm.IImsupp_Sb_bound)
         apply (subst trm.subst)
-           apply (auto simp: infinite_UNIV SSupp_trm_restrict restrict_def)
+           apply (auto simp: SSupp_trm_restrict restrict_def)
         apply (subst trm.subst)
-          apply (auto simp: infinite_UNIV SSupp_trm_restrict restrict_def)
+          apply (auto simp: SSupp_trm_restrict restrict_def)
         done
-        apply (auto simp: infinite_UNIV intro!: trm.Un_bound trm.set_bd_UNIV)
+        apply (auto intro!: trm.Un_bound trm.set_bd_UNIV)
       done
     subgoal for VV l v
       by auto
@@ -1540,21 +1519,16 @@ next
         apply (subst (asm) tvsubst_comp)
            apply (auto 0 0 intro!: cmin_greater) [3]
           apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
-         apply auto
-        apply (metis PVars_PRec nonrep_PRec_lfdelete pat.set_bd_UNIV(2))
+        apply (auto simp: IImsupp_restrict_bound)
         apply (erule arg_cong[where f="\<lambda>t. typing _ t _", THEN iffD1, rotated])
         apply (rule trm.Sb_cong)
                apply (auto 0 0 intro!: trm.SSupp_Sb_bound trm.IImsupp_Sb_bound pat.set_bd_UNIV) [5]
-               apply (metis PVars_PRec nonrep_PRec_lfdelete pat.set_bd_UNIV(2))+
           apply (metis IImsupp_restrict_bound PVars_PRec pat.set_bd_UNIV(2) trm.set_bd_UNIV(1))
          apply (rule refl)
         apply (auto simp: restrict_def nonrep_PRec_def values_lfin_iff)
         subgoal for x P' l'
           apply (rule trans[OF trm.Sb_cong(1) tvsubst_id])
                apply (auto 0 0 simp: restrict_def intro!: cmin_greater)
-          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
-          apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
           apply (cases "l = l'")
            apply simp
           using match_FVars[of \<sigma> P v x]
@@ -1563,10 +1537,7 @@ next
           done
         subgoal for x P' l'
           apply (subst trm.subst)
-            apply (auto 0 0) [2]
-            apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
-          apply (metis IImsupp_restrict_bound PVars_PRec nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6)
-              trm.set_bd_UNIV(1))
+            apply (auto 0 0) [3]
           apply (auto simp: restrict_def)
           apply (cases "l = l'")
           apply (metis lfin_label_inject)
@@ -1574,10 +1545,7 @@ next
           done
         subgoal for x
           apply (subst trm.subst)
-            apply (auto 0 0) [2]
-            apply (metis Int_bound2 PVars_PRec SSupp_trm_restrict nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6))
-          apply (metis IImsupp_restrict_bound PVars_PRec nonrep_PRec_lfdelete pat.set_bd_UNIV(2) prems(6)
-              trm.set_bd_UNIV(1))
+            apply (auto 0 0) [3]
           apply (auto simp: restrict_def)
           apply (metis lfin_lfdelete values_lfin_iff)
           done

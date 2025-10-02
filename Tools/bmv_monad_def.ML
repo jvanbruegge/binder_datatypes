@@ -905,7 +905,7 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
 
     val SSupp_premss = @{map 4} (mk_small_prems ops (#RVrs consts) (#Vrs consts) (#extra_Vrs consts))
       hss rhoss Injss (#extra_Vrs (#consts model));
-    
+
     fun split_Uns thm = case try (fn () => thm RS @{thm Un_empty[THEN iffD1]}) () of
       NONE => [thm]
       | SOME thm' => split_Uns (thm' RS conjunct1) @ [thm' RS conjunct2]
@@ -921,7 +921,7 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
               mk_SSupp Inj
             ) $ HOLogic.mk_comp (Term.list_comb (Map, fs), rho)) (mk_SSupp Inj $ rho)
           ) in SOME (Goal.prove_sorry lthy (names (fs @ [rho])) [] goal (fn {context=ctxt, ...} => EVERY1 [
-            rtac ctxt subsetI,
+            rtac ctxt @{thm subsetI},
             K (Local_Defs.unfold0_tac ctxt @{thms SSupp_def mem_Collect_eq}),
             etac ctxt @{thm contrapos_nn},
             rtac ctxt @{thm trans[OF comp_apply]},

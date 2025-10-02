@@ -1,16 +1,6 @@
 name: Build thys in Isabelle Devel
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 4 * * 5'
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
-  push:
-    branches: [ master ]
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -1,0 +1,20 @@
+name: Build thys in Isabelle Devel
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Clone isabelle repo
+        run: hg clone https://isabelle.sketis.net/repos/isabelle
+
+      - name: Init isabelle
+        run: ./isabelle/Admin/init
+
+      - name: Build
+        run: ./isabelle/bin/isabelle build -vD .

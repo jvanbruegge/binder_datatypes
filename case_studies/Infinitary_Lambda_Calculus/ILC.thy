@@ -108,7 +108,7 @@ lemma bd_iterm_pre_ordIso: "bd_iterm_pre =o card_suc natLeq"
     apply (simp add: csum_absorb1 infinite_regular_card_order.Card_order infinite_regular_card_order.cinfinite infinite_regular_card_order_card_suc natLeq_Cinfinite natLeq_card_order natLeq_ordLeq_cinfinite)
   using Card_order_cprod card_order_on_well_order_on apply blast
   unfolding inj_on_def
-  apply (tactic \<open>unfold_tac @{context} [Typedef.get_info @{context} @{type_name iterm_pre_bdT} |> hd |> snd |> #Abs_inject OF [UNIV_I, UNIV_I]]\<close>)
+  apply (tactic \<open>unfold_tac @{context} [Typedef.get_info @{context} @{type_name iterm_pre_bdT} |> hd |> snd |> #Abs_inject OF [@{thm UNIV_I}, @{thm UNIV_I}]]\<close>)
   apply simp
   done
 

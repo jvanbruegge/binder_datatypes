@@ -431,8 +431,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         dtac ctxt @{thm iffD1[OF disjoint_iff]},
         etac ctxt allE,
         etac ctxt impE,
-        rtac ctxt UnI1,
-        rtac ctxt CollectI,
+        rtac ctxt @{thm UnI1},
+        rtac ctxt @{thm CollectI},
         assume_tac ctxt,
         K (unfold_thms_tac ctxt @{thms Un_iff de_Morgan_disj mem_Collect_eq not_not}),
         etac ctxt conjE,
@@ -483,8 +483,8 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
           rtac ctxt @{thm imsupp_id_on},
           etac ctxt @{thm Int_subset_empty2},
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms SSupp_def IImsupp_def}),
-          rtac ctxt subsetI,
-          TRY o rtac ctxt UnI2,
+          rtac ctxt @{thm subsetI},
+          TRY o rtac ctxt @{thm UnI2},
           rtac ctxt @{thm UN_I[rotated]},
           assume_tac ctxt,
           rtac ctxt @{thm CollectI},
@@ -788,7 +788,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms id_o o_id} @ map (fn thm => thm RS sym) (no_reflexive (maps #set_Vrs (MRSBNF_Def.axioms_of_mrsbnf mrsbnf))))),
         EqSubst.eqsubst_asm_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
-        etac ctxt imageE,
+        etac ctxt @{thm imageE},
         hyp_subst_tac ctxt,
         rtac ctxt @{thm trans[OF comp_apply]},
         K (Local_Defs.unfold0_tac ctxt @{thms inv_simp1}),
@@ -1123,15 +1123,15 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         hyp_subst_tac_thin true ctxt,
         rtac ctxt @{thm set_eqI},
         rtac ctxt iffI,
-        REPEAT_DETERM_N (i - 1) o etac ctxt UnE,
+        REPEAT_DETERM_N (i - 1) o etac ctxt @{thm UnE},
         EVERY' (map (fn i' => EVERY' [
-          REPEAT_DETERM_N (j - 1) o etac ctxt UnE,
+          REPEAT_DETERM_N (j - 1) o etac ctxt @{thm UnE},
           EVERY' (map (fn j' => EVERY' [
             rtac ctxt (mk_UnIN j j'),
             etac ctxt (mk_UnIN i i')
           ]) (1 upto j))
         ]) (1 upto i)),
-        REPEAT_DETERM_N (j - 1) o etac ctxt UnE,
+        REPEAT_DETERM_N (j - 1) o etac ctxt @{thm UnE},
         EVERY' (map (fn j' => EVERY' [
           REPEAT_DETERM o etac ctxt @{thm Un_forward},
           REPEAT_DETERM o etac ctxt (mk_UnIN j j')
@@ -1209,7 +1209,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
             etac ctxt @{thm Int_subset_empty2},
             rtac ctxt @{thm subsetI},
             SELECT_GOAL (EVERY1 [
-              REPEAT_DETERM o etac ctxt UnE,
+              REPEAT_DETERM o etac ctxt @{thm UnE},
               REPEAT_DETERM o FIRST' [
                 assume_tac ctxt,
                 eresolve_tac ctxt @{thms UnI1 UnI2},
@@ -1440,7 +1440,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
               ],
               K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
               SELECT_GOAL (EVERY1 [
-                REPEAT_DETERM o etac ctxt UnE,
+                REPEAT_DETERM o etac ctxt @{thm UnE},
                 REPEAT_DETERM o FIRST' [
                   assume_tac ctxt,
                   eresolve_tac ctxt @{thms UnI1 UnI2},

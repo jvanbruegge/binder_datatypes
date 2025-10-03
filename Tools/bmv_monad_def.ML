@@ -84,6 +84,7 @@ signature BMV_MONAD_DEF = sig
   val facts_of_bmv_monad: bmv_monad -> bmv_monad_facts list;
   val params_of_bmv_monad: bmv_monad -> thm bmv_monad_param option list;
   val unfolds_of_bmv_monad: bmv_monad -> thm list;
+  val defs_of_bmv_monad: bmv_monad -> thm list;
 
   val mk_small_prems_of_bmv_monad: bmv_monad -> int -> term list -> term list -> term list list;
 
@@ -102,7 +103,8 @@ signature BMV_MONAD_DEF = sig
   val note_bmv_monad_thms: (Proof.context -> BNF_Def.fact_policy) -> (binding -> binding)
     -> binding option -> bmv_monad -> local_theory -> (string * thm list) list * local_theory
   val bmv_monad_def: BNF_Def.inline_policy -> (Proof.context -> BNF_Def.fact_policy)
-    -> (binding -> binding) -> binding option -> (Proof.context -> tactic) bmv_monad_model -> local_theory -> (bmv_monad * thm list) * local_theory
+    -> (binding -> binding) -> binding option -> (Proof.context -> tactic) bmv_monad_model
+    -> thm list -> local_theory -> (bmv_monad * thm list) * local_theory
 
   val unsafe_slice_bmv_monad: int -> bmv_monad -> bmv_monad;
 
@@ -274,12 +276,13 @@ datatype bmv_monad = BMV of {
   bd_infinite_regular_card_order: thm,
   axioms: thm bmv_monad_axioms list,
   facts: bmv_monad_facts list,
-  unfolds: thm list
+  unfolds: thm list,
+  defs: thm list
 }
 
 fun morph_bmv_monad phi (BMV {
   ops, var_class, leader, frees, lives, lives', deads, consts, params, axioms, bd_infinite_regular_card_order,
-  facts, unfolds
+  facts, unfolds, defs
 }) = BMV {
   ops = map (Morphism.typ phi) ops,
   leader = leader,
@@ -293,7 +296,8 @@ fun morph_bmv_monad phi (BMV {
   axioms = map (morph_bmv_monad_axioms phi) axioms,
   facts = map (morph_bmv_monad_facts phi) facts,
   bd_infinite_regular_card_order = Morphism.thm phi bd_infinite_regular_card_order,
-  unfolds = map (Morphism.thm phi) unfolds
+  unfolds = map (Morphism.thm phi) unfolds,
+  defs = map (Morphism.thm phi) defs
 }
 
 fun Rep_bmv (BMV x) = x
@@ -319,6 +323,7 @@ val facts_of_bmv_monad = #facts o Rep_bmv
 val params_of_bmv_monad = #params o Rep_bmv
 val bd_infinite_regular_card_order_of_bmv_monad = #bd_infinite_regular_card_order o Rep_bmv
 val unfolds_of_bmv_monad = #unfolds o Rep_bmv
+val defs_of_bmv_monad = #defs o Rep_bmv
 
 fun leader f bmv = nth (f bmv) (leader_of_bmv_monad bmv)
 
@@ -832,7 +837,7 @@ fun note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy =
     |> fact_policy <> BNF_Def.Dont_Note ? note_unless_dont_note
   end
 
-fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_monad_model) unfolds lthy =
+fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_monad_model) unfolds defs lthy =
   let
     val consts = {
       bd = #bd (#consts model),
@@ -1006,7 +1011,8 @@ fun mk_bmv_monad const_policy fact_policy qualify bmv_b_opt (model: thm bmv_mona
       axioms = axioms',
       facts = facts @ maps facts_of_bmv_monad (#bmv_ops model),
       bd_infinite_regular_card_order = #bd_infinite_regular_card_order model,
-      unfolds = unfolds
+      unfolds = unfolds,
+      defs = defs
     } : bmv_monad;
 
     val (_, lthy) = note_bmv_monad_thms fact_policy qualify bmv_b_opt bmv lthy;
@@ -1067,7 +1073,7 @@ fun mk_thm_model (model: 'a bmv_monad_model) params axioms bd_irco = {
   tacs = axioms
 } : thm bmv_monad_model;
 
-fun bmv_monad_def const_policy fact_policy qualify bmv_b_opt (model: (Proof.context -> tactic) bmv_monad_model) lthy =
+fun bmv_monad_def const_policy fact_policy qualify bmv_b_opt (model: (Proof.context -> tactic) bmv_monad_model) defs lthy =
   let
     val frees = map (fn T => TFree (apsnd (
       Sign.minimize_sort (Proof_Context.theory_of lthy) o cons (#var_class model)
@@ -1087,7 +1093,7 @@ fun bmv_monad_def const_policy fact_policy qualify bmv_b_opt (model: (Proof.cont
     )) (fn {context=ctxt, ...} => Local_Defs.unfold0_tac ctxt unfold_set THEN #bd_infinite_regular_card_order model ctxt);
 
     val model = mk_thm_model model params axioms bd_irco;
-  in apfst (rpair unfold_set) (mk_bmv_monad const_policy fact_policy qualify bmv_b_opt model unfold_set lthy) end
+  in apfst (rpair unfold_set) (mk_bmv_monad const_policy fact_policy qualify bmv_b_opt model unfold_set defs lthy) end
 
 fun pbmv_monad_of_mrbnf qualify mrbnf lthy =
   let
@@ -1216,7 +1222,7 @@ fun pbmv_monad_of_mrbnf qualify mrbnf lthy =
          REPEAT_DETERM o (rtac ctxt refl ORELSE' Goal.assume_rule_tac ctxt)
        ]
      }]
-   } lthy) end;
+   } [] lthy) end;
 
 fun register_mrbnf_as_pbmv_monad name lthy =
   let
@@ -1252,7 +1258,8 @@ fun unsafe_slice_bmv_monad n bmv =
     bd_infinite_regular_card_order = bd_infinite_regular_card_order_of_bmv_monad bmv,
     axioms = [f (axioms_of_bmv_monad bmv)],
     facts = [f (facts_of_bmv_monad bmv)],
-    unfolds = unfolds_of_bmv_monad bmv
+    unfolds = unfolds_of_bmv_monad bmv,
+    defs = defs_of_bmv_monad bmv
   } end;
 
 fun demote_bmv_monad inline_policy const_policy qualify b_opt bmv { lives=dlives, frees=dfrees } lthy =
@@ -1519,7 +1526,7 @@ fun demote_bmv_monad inline_policy const_policy qualify b_opt bmv { lives=dlives
       }) new_ops new_Injss new_RVrss extra_Vrs (map (hd o axioms_of_bmv_monad) demoted_bmvs)
         (map (hd o params_of_bmv_monad) demoted_bmvs) (map (hd o facts_of_bmv_monad) demoted_bmvs)
     }: (Proof.context -> tactic) bmv_monad_model;
-  in bmv_monad_def inline_policy const_policy qualify b_opt model lthy end
+  in bmv_monad_def inline_policy const_policy qualify b_opt model [] lthy end
 
 fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) either list)
   (oAs: { frees: typ list, deads: typ list }) (Ass : ({ frees: typ list, lives: typ list, deads: typ list }) option list) lthy =
@@ -2090,7 +2097,8 @@ fun compose_bmv_monad qualify (outer : bmv_monad) (inners : (bmv_monad, typ) eit
     val name = qualify (Binding.conglomerate (map_filter (
       try (Binding.name o short_type_name o fst o dest_Type) o leader ops_of_bmv_monad
     ) (outer :: inners')));
-    val (res, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) qualify (SOME name) model lthy
+    val (res, lthy) = bmv_monad_def BNF_Def.Smart_Inline (K BNF_Def.Dont_Note) qualify (SOME name) model
+      (maps defs_of_bmv_monad (outer :: inners')) lthy
   in (res, lthy) end;
 
 fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
@@ -2334,20 +2342,10 @@ fun seal_bmv_monad qualify unfolds name tys bmv info_opt lthy =
       }]
     } : (Proof.context -> tactic) bmv_monad_model;
 
-    fun set_unfolds thms (BMV {
-      ops, var_class, leader: int, frees, lives, lives', deads, consts, params, bd_infinite_regular_card_order,
-      axioms, facts, ...
-    }) = BMV {
-      ops = ops, var_class = var_class, leader = leader, frees = frees, lives = lives, lives' = lives',
-      deads = deads, consts = consts, params = params, bd_infinite_regular_card_order = bd_infinite_regular_card_order,
-      axioms = axioms, facts = facts, unfolds = thms
-    }
+    val new_defs = map (Local_Defs.unfold lthy unfolds) defs;
+    val ((bmv, _), lthy) = bmv_monad_def BNF_Def.Hardly_Inline (K BNF_Def.Note_Some) qualify NONE model new_defs lthy;
 
-    val ((bmv, _), lthy) = bmv_monad_def BNF_Def.Hardly_Inline (K BNF_Def.Note_Some) qualify NONE model lthy;
-    val new_unfolds = map (Local_Defs.unfold lthy unfolds) defs;
-    val bmv = set_unfolds new_unfolds bmv;
-
-  in ((bmv, new_unfolds, defs, (T_name, info)), lthy) end
+  in ((bmv, new_defs, defs, (T_name, info)), lthy) end
 
 fun pbmv_monad_cmd (((((((b_ops, Sbs), RVrs), Injs), Vrs), param_opt), bd), extra_Vrs) lthy =
   let
@@ -2610,7 +2608,7 @@ fun pbmv_monad_cmd (((((((b_ops, Sbs), RVrs), Injs), Vrs), param_opt), bd), extr
           tacs = axioms
         } : thm bmv_monad_model;
 
-        val (bmv, lthy) = mk_bmv_monad BNF_Def.Smart_Inline (K BNF_Def.Note_Some) I (SOME (Binding.name b)) model (bmv_defs @ maps unfolds_of_bmv_monad bmv_ops) lthy;
+        val (bmv, lthy) = mk_bmv_monad BNF_Def.Smart_Inline (K BNF_Def.Note_Some) I (SOME (Binding.name b)) model (bmv_defs @ maps unfolds_of_bmv_monad bmv_ops) [] lthy;
 
         val lthy = register_pbmv_monad b bmv lthy;
       in lthy end;

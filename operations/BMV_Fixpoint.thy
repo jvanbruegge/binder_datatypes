@@ -478,7 +478,6 @@ interpretation tvsubst: QREC_fixed_FTerm "avoiding_set1 f1 f2"
     apply (rule trans)
     apply (rule FTerm.permute_ctor)
         apply (assumption)+
-    thm trans[OF comp_apply[symmetric] FTerm_pre.map_Sb_strong(1)[THEN fun_cong]]
     apply (subst trans[OF comp_apply[symmetric] FTerm_pre.map_Sb_strong(1)[THEN fun_cong]])
           apply (assumption | rule supp_id_bound bij_id f_prems)+
     apply (unfold0 id_o o_id inv_o_simp2 comp_apply)

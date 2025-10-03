@@ -817,6 +817,7 @@ fun create_binder_datatype (spec : spec) lthy =
           Union_empty Un_empty_left Un_empty_right UN_single UN_singleton Un_absorb
         } @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
         @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
+        @ BMV_Monad_Def.defs_of_bmv_monad bmv
         @ [#Abs_inverse (snd info) OF @{thms UNIV_I}]
       )),
       rtac ctxt refl
@@ -831,6 +832,7 @@ fun create_binder_datatype (spec : spec) lthy =
           Un_absorb
         } @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
         @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
+        @ BMV_Monad_Def.defs_of_bmv_monad bmv
       )),
       Subgoal.FOCUS_PARAMS (fn {context=ctxt, params, ...} =>
         rtac ctxt (infer_instantiate' ctxt [SOME (snd (hd params))] (#Abs_cases (snd info))) 1
@@ -865,6 +867,7 @@ fun create_binder_datatype (spec : spec) lthy =
         @{thms comp_def sum.set_map UN_empty2 Un_empty_right Un_empty_left UN_singleton map_sum.simps map_prod_simp id_apply sum.inject}
         @ MRBNF_Def.set_defs_of_mrbnf pre_mrbnf
         @ BMV_Monad_Def.unfolds_of_bmv_monad bmv
+        @ BMV_Monad_Def.defs_of_bmv_monad bmv
         @ [#Abs_inverse (snd info) OF @{thms UNIV_I}, #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}]
       )),
       REPEAT_DETERM o FIRST' [
@@ -1100,13 +1103,6 @@ fun create_binder_datatype (spec : spec) lthy =
         (single o HOLogic.mk_Trueprop o mk_bij) bounds mapx tac
       end;
 
-    val cmin_UNIV = foldl1 mk_cmin (map (mk_card_of o HOLogic.mk_UNIV) vars);
-    val Cinfinite_card = Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (HOLogic.mk_conj (
-      mk_cinfinite cmin_UNIV, mk_Card_order cmin_UNIV
-    ))) (fn {context=ctxt, ...} => EVERY1 [
-      REPEAT_DETERM o resolve_tac ctxt (MRBNF_Def.UNIV_cinfinite_of_mrbnf mrbnf :: @{thms cmin_Cinfinite conjI card_of_Card_order})
-    ]);
-
     val (lthy, tvsubst_opt) = if not (null (map_filter I eta_models)) then
       let
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
@@ -1157,7 +1153,6 @@ fun create_binder_datatype (spec : spec) lthy =
             val bmvs = maps (maps collect_bmvs o snd) ctors_tys;
 
             val bmv_unfolds = maps BMV_Monad_Def.unfolds_of_bmv_monad bmvs;
-
             fun tac ctxt prems = EVERY1 [
               K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (map_filter (Option.map #Inj) eta_models))),
               EVERY' [
@@ -1175,7 +1170,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 )),
                 K (TRYALL (REPEAT_DETERM o EVERY' [
                   EqSubst.eqsubst_tac ctxt [0] (maps MRBNF_Def.set_map_of_mrbnf fp_nesting_mrbnfs),
-                  REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound} @ [@{thm supp_id_bound'} OF [Cinfinite_card]]),
+                  REPEAT_DETERM o resolve_tac ctxt (@{thms bij_id supp_id_bound}),
                   K (Local_Defs.unfold0_tac ctxt thms)
                 ])),
                 REPEAT_DETERM o resolve_tac ctxt (
@@ -1196,6 +1191,7 @@ fun create_binder_datatype (spec : spec) lthy =
                 K (Local_Defs.unfold0_tac ctxt (@{thms comp_def map_sum.simps map_prod_simp sum.inject}
                   @ map MRBNF_Def.map_id_of_mrbnf fp_nesting_mrbnfs
                   @ BMV_Monad_Def.unfolds_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf)
+                  @ BMV_Monad_Def.defs_of_bmv_monad (MRSBNF_Def.bmv_monad_of_mrsbnf mrsbnf)
                   @ map (BNF_Def.map_id_of_bnf o snd) bnfs
                   @ [MRBNF_Def.map_def_of_mrbnf pre_mrbnf, #Abs_inverse (snd info) OF @{thms UNIV_I},
                     #Abs_inject (snd info) OF @{thms UNIV_I UNIV_I}

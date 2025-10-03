@@ -1599,7 +1599,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
             ] end
           ) ctxt 1
         }]
-      } lthy;
+      } [] (*TODO: Put definitions here *) lthy;
 
     val rec_mrbnf =
       let

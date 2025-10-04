@@ -121,14 +121,6 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
       | NONE => error "Automatic detection of induction rule is not supported yet, please specify with rule:"
       );
 
-      fun dest_ordLess t =
-        let val t' = case HOLogic.dest_mem t of
-          (t', Const (@{const_name ordLess}, _)) => t'
-          | _ => raise TERM ("dest_ordLess", [t])
-        in HOLogic.dest_prod t' end
-      fun dest_card_of (Const (@{const_name card_of}, _) $ t) = t
-        | dest_card_of t = raise TERM ("dest_card_of", [t])
-
       fun strip_all (Const (@{const_name HOL.All}, _) $ t) = (case t of
         Abs (x, T, t) => let val a = Free (x, T)
           in apfst (curry (op::) a) (strip_all (Term.subst_bound (a, t))) end
@@ -153,8 +145,8 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
           val vars_prems = map (try (
             HOLogic.dest_Trueprop
             #> snd o strip_all
-            #> fst o dest_ordLess
-            #> dest_card_of
+            #> fst o MRBNF_Util.dest_ordLess
+            #> MRBNF_Util.dest_card_of
             #> fst o Term.strip_comb
             #> snd o Term.dest_Var
             #> HOLogic.dest_setT o range_type
@@ -463,6 +455,10 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                     rotate_tac ~1
                   ],
                   SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
+                  REPEAT_DETERM o CHANGED o EVERY' [
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms conj_assoc}),
+                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms conj_assoc[symmetric]})
+                  ],
                   REPEAT_DETERM o EVERY' [
                     etac ctxt conjE,
                     rotate_tac ~2
@@ -471,9 +467,9 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                 Subgoal.FOCUS_PREMS (fn {context=ctxt, prems=inner_prems, ...} => EVERY1 [
                   DETERM o resolve_tac ctxt (IH :: repeat_mp IH),
                   IF_UNSOLVED o EVERY' [
-                    SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
+                    K (Local_Defs.unfold0_tac ctxt @{thms notin_Un Un_iff de_Morgan_disj singleton_iff Int_Un_distrib Un_empty}),
                     EVERY' (map (fn inner_prem => EVERY' (map (fn tac => DETERM o tac) [
-                      TRY o rtac ctxt conjI,
+                      REPEAT_DETERM o rtac ctxt conjI,
                       let val x = length (fst (Logic.strip_horn (Thm.prop_of inner_prem)));
                       in REPEAT_DETERM_N x o rtac ctxt @{thm induct_impliesI} end,
                       REPEAT_DETERM o rtac ctxt @{thm induct_forallI},
@@ -484,7 +480,7 @@ fun gen_binder_context_tactic mod_cases simp def_insts arbitrary avoiding taking
                           val simpset = Simplifier.add_cong @{thm imp_cong} (
                             (BNF_Util.ss_only @{thms
                               split_paired_All HOL.simp_thms all_simps HOL.induct_forall_def prod.inject induct_implies_equal_eq
-                              disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single]
+                              disjoint_single trans[OF arg_cong2[OF Int_commute refl, of "(=)"] disjoint_single] conj_assoc
                             } ctxt)
                             addsimprocs [@{simproc HOL.defined_All}, @{simproc HOL.defined_Ex}]
                           )

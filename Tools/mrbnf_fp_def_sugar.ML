@@ -84,6 +84,7 @@ sig
     bfree_vars: int list,
     raw_fps: raw_result fp_result_T list,
     quotient_fps: quotient_result fp_result_T list,
+    is_free_inducts: thm list,
     fp_thms: (least_fp_thms, greatest_fp_thms) MRBNF_Util.either option,
     pre_mrbnfs: MRBNF_Def.mrbnf list
   };
@@ -266,14 +267,16 @@ type fp_result = {
   bfree_vars: int list,
   raw_fps: raw_result fp_result_T list,
   quotient_fps: quotient_result fp_result_T list,
+  is_free_inducts: thm list,
   fp_thms: (least_fp_thms, greatest_fp_thms) MRBNF_Util.either option,
   pre_mrbnfs: MRBNF_Def.mrbnf list
 };
 
-fun morph_fp_result phi ({ fp, binding_relation, rec_vars, bfree_vars, raw_fps, quotient_fps, fp_thms, pre_mrbnfs }) = {
+fun morph_fp_result phi ({ fp, binding_relation, rec_vars, bfree_vars, raw_fps, quotient_fps, fp_thms, pre_mrbnfs, is_free_inducts }) = {
   fp = fp, binding_relation = binding_relation, rec_vars = rec_vars, bfree_vars = bfree_vars,
   raw_fps = map (morph_fp_result_T morph_raw_result phi) raw_fps,
   quotient_fps = map (morph_fp_result_T morph_quotient_result phi) quotient_fps,
+  is_free_inducts = map (Morphism.thm phi) is_free_inducts,
   fp_thms = Option.map (MRBNF_Util.map_sum (morph_least_fp_thms phi) (morph_greatest_fp_thms phi)) fp_thms,
   pre_mrbnfs = map (MRBNF_Def.morph_mrbnf phi) pre_mrbnfs
 } : fp_result;

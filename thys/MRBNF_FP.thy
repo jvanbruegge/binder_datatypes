@@ -173,7 +173,10 @@ lemma id_on_comp2: "b z = z \<Longrightarrow> a z = z \<Longrightarrow> (a \<cir
 lemma id_on_both: "a z = z \<Longrightarrow> b z = z \<Longrightarrow> a z = b z" by simp
 
 lemma not_imageI: "bij f \<Longrightarrow> a \<notin> A \<Longrightarrow> f a \<notin> f ` A" by (force simp: bij_implies_inject)
+lemma Un_forward: "a \<in> A \<union> B \<Longrightarrow> (a \<in> A \<Longrightarrow> a \<in> C) \<Longrightarrow> (a \<in> B \<Longrightarrow> a \<in> D) \<Longrightarrow> a \<in> C \<union> D"
+  by blast
 
+(* TODO: Remove *)
 lemma Un_bound:
   assumes inf: "infinite (UNIV :: 'a set)"
     and "|A1| <o |UNIV::'a set|" and "|A2| <o |UNIV::'a set|"
@@ -274,6 +277,19 @@ lemma disjoint_single: "{x} \<inter> A = {} \<longleftrightarrow> x \<notin> A"
 
 lemma finite_singleton: "finite {x}" by blast
 
+lemma UN_Diff_distrib:
+assumes "(\<forall>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<longrightarrow> V (h a) \<subseteq> {a})"
+shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+using assms apply safe
+  apply blast
+  apply (metis Int_emptyD singletonD subset_eq)
+  by fastforce
+
+lemma UN_Diff_distrib':
+  assumes "\<And>a. V (g a) \<subseteq> {a}" "\<And>a. a \<in> B \<or> V (h a) \<inter> B \<noteq> {} \<Longrightarrow> h a = g a"
+  shows "(\<Union>a\<in>A - B. V (h a)) = (\<Union>a\<in>A. V (h a)) - B"
+apply(rule UN_Diff_distrib) using assms by metis
+
 lemma ex_avoiding_bij:
   fixes f :: "'a \<Rightarrow> 'a" and I D A :: "'a set"
   assumes  "|supp f| <o |UNIV :: 'a set|" "bij f" "infinite (UNIV :: 'a set)"
@@ -284,6 +300,26 @@ lemma ex_avoiding_bij:
   apply (rule exI[of _ "avoiding_bij f I D A"])
   apply (rule conjI avoiding_bij assms)+
   done
+
+lemma ex_distinct_bijs: "A \<noteq> {} \<Longrightarrow> |A| <o |UNIV::'a set| \<Longrightarrow> \<exists>(f::'a::infinite \<Rightarrow> 'a) g. bij f \<and> |supp f| <o |UNIV::'a set| \<and> bij g \<and> |supp g| <o |UNIV::'a set| \<and> f ` A \<noteq> g ` A"
+proof -
+  assume a: "A \<noteq> {}" "|A| <o |UNIV::'a set|"
+  then obtain x where "x \<in> A" by blast
+  obtain y where "x \<noteq> y" "y \<notin> A" by (metis \<open>x \<in> A\<close> a(2) exists_fresh)
+  obtain z where "z \<noteq> y" "z \<notin> A"
+    by (metis UNIV_eq_I Un_empty_left Un_insert_left a(2) card_of_Un_singl_ordLess_infinite infinite_UNIV insertCI ordLess_irreflexive)
+
+  let ?f = "x \<leftrightarrow> y"
+  let ?g = "x \<leftrightarrow> z"
+
+  have "?f ` A \<noteq> ?g ` A"
+    by (metis Swapping.bij_swap \<open>x \<in> A\<close> \<open>z \<noteq> y\<close> \<open>z \<notin> A\<close> imageI image_in_bij_eq swap_fresh swap_inv swap_simps(3))
+  then show ?thesis
+    apply -
+    apply (rule exI[of _ ?f])
+    apply (rule exI[of _ ?g])
+    by (simp add: infinite_UNIV)
+qed
 
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
@@ -306,9 +342,6 @@ lemma eq_bij_betw_prems:
   using assms unfolding eq_bij_betw_def by auto
 lemma id_on_eq: "id_on A f \<Longrightarrow> id_on B g \<Longrightarrow> A = B \<Longrightarrow> x \<in> A \<Longrightarrow> f x = g x"
   unfolding id_on_def by simp
-
-lemma notin_supp: "x \<notin> supp f \<Longrightarrow> f x = x"
-  unfolding supp_def by blast
 
 lemmas imsupp_id_empty = trans[OF arg_cong2[OF imsupp_id refl, of "(\<inter>)"] Int_empty_left]
 
@@ -346,7 +379,7 @@ lemma induct_implies_equal_eq: "HOL.induct_implies (HOL.induct_equal x y) P = (x
 lemma large_imp_infinite: "natLeq \<le>o |UNIV::'a set| \<Longrightarrow> infinite (UNIV::'a set)"
   using infinite_iff_natLeq_ordLeq by blast
 
-lemma insert_bound: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
+lemma insert_bound_UNIV: "infinite (UNIV::'a set) \<Longrightarrow> |insert x A| <o |UNIV::'a set| \<longleftrightarrow> |A| <o |UNIV::'a set|"
   by (metis card_of_Un_singl_ordLess_infinite insert_is_Un)
 
 lemma id_on_comp: "id_on A f \<Longrightarrow> id_on A g \<Longrightarrow> id_on A (f \<circ> g)"
@@ -357,6 +390,17 @@ lemma id_on_image_same: "id_on A f \<Longrightarrow> id_on (f ` A) f"
 
 lemma rel_refl_eq: "(\<And>x. R x x) \<Longrightarrow> x = y \<Longrightarrow> R x y"
   by auto
+
+lemma Un_boundD: "|A \<union> B| <o r \<Longrightarrow> |A| <o r \<and> |B| <o r"
+  using card_of_Un1 card_of_Un2 ordLeq_ordLess_trans by blast
+
+lemma type_copy_Rep_o_Abs_o: "type_definition Rep Abs UNIV \<Longrightarrow> Rep \<circ> (Abs \<circ> f) = f"
+  by (metis comp_assoc fun.map_id type_copy_Rep_o_Abs)
+lemma type_copy_Abs_o_Rep_o: "type_definition Rep Abs UNIV \<Longrightarrow> Abs \<circ> (Rep \<circ> f) = f"
+  by (simp add: type_definition_def type_copy_Rep_o_Abs_o)
+
+lemma type_copy_Map_Sb: "type_definition Rep Abs UNIV \<Longrightarrow> type_definition Rep' Abs' UNIV \<Longrightarrow> Map \<circ> Sb = Sb' \<circ> Map \<Longrightarrow> Abs' \<circ> Map \<circ> Rep \<circ> (Abs \<circ> Sb \<circ> Rep) = Abs' \<circ> Sb' \<circ> Rep' \<circ> (Abs' \<circ> Map \<circ> Rep)"
+  by (metis (no_types, lifting) rewriteR_comp_comp type_copy_Rep_o_Abs_o)
 
 ML_file \<open>../Tools/mrbnf_fp_def_sugar.ML\<close>
 ML_file \<open>../Tools/mrbnf_fp.ML\<close>

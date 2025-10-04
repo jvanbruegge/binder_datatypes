@@ -143,10 +143,10 @@ thm strong_induct_reneqv' strong_induct_reneqv''
 (* *)  (* requires strong induction: *)
 lemma reneqv_itvsubst:
   assumes r: "reneqv e e'" and rr: "\<And>xs x x'. super xs \<Longrightarrow> {x, x'} \<subseteq> dsset xs \<longrightarrow> reneqv (f x) (f' x')"
-    and s: "|SSupp f| <o |UNIV::ivar set|" "|SSupp f'| <o |UNIV::ivar set|"
-    and f: "finite (touchedSuper (IImsupp f))" "finite (touchedSuper (IImsupp f'))"
+    and s: "|ILC.SSupp f| <o |UNIV::ivar set|" "|ILC.SSupp f'| <o |UNIV::ivar set|"
+    and f: "finite (touchedSuper (ILC.IImsupp f))" "finite (touchedSuper (ILC.IImsupp f'))"
   shows "reneqv (itvsubst f e) (itvsubst f' e')"
-using r proof (binder_induction e e' avoiding: "IImsupp f" "IImsupp f'" rule: strong_induct_reneqv'')
+using r proof (binder_induction e e' avoiding: "ILC.IImsupp f" "ILC.IImsupp f'" rule: strong_induct_reneqv'')
   case bsmall
   then show ?case using f unfolding bsmall_def by (simp add: touchedSuper_Un)
 next
@@ -163,7 +163,9 @@ next
   then show ?case using iLam apply(subst iterm.subst)
     subgoal using s by auto
     subgoal using s by auto
+    subgoal using s by auto
     apply(subst iterm.subst)
+    subgoal using s by auto
     subgoal using s by auto
     subgoal using s by auto
     subgoal apply(rule reneqv.iLam) by auto .
@@ -236,7 +238,7 @@ by auto (metis empty_subsetI insert_subset touchedSuperT_def uniformS_touchedSup
 (* *)
 
 lemma uniformS_touchedSuper_IImsupp_imkSubst: 
-"super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> touchedSuper (IImsupp (imkSubst xs es)) \<subseteq> 
+"super xs \<Longrightarrow> uniformS es \<Longrightarrow> e \<in> sset es \<Longrightarrow> touchedSuper (ILC.IImsupp (imkSubst xs es)) \<subseteq> 
  {xs} \<union> touchedSuper (FFVars e)"
 using touchedSuper_IImsupp_imkSubst uniformS_touchedSuper by blast
 
@@ -253,7 +255,7 @@ lemma uniformS_touchedSuper_IImsupp_imkSubst'':
 using uniformS_touchedSuper_IImsupp_imkSubst' unfolding touchedSuper_def by blast
 
 lemma super_uniformS_finite_touchedSuper_imkSubst: 
-"super xs \<Longrightarrow> uniformS es \<Longrightarrow> finite (touchedSuper (IImsupp (imkSubst xs es)))"
+"super xs \<Longrightarrow> uniformS es \<Longrightarrow> finite (touchedSuper (ILC.IImsupp (imkSubst xs es)))"
 by (metis finite_insert insert_is_Un rev_finite_subset snth_sset touchedSuperT_def 
 touchedSuper_IImsupp_imkSubst uniformS_sset_uniform uniformS_touchedSuper uniform_finite_touchedUponT)
 

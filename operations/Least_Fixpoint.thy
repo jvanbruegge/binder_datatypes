@@ -4335,10 +4335,10 @@ lemma raw_refreshs:
     "\<exists>y. set5_T2_pre y \<inter> A = {} \<and> set6_T2_pre y \<inter> B = {} \<and> alpha_T2 (raw_T2_ctor x2) (raw_T2_ctor y)"
    apply (rule exE[OF eextend_fresh[of "set5_T1_pre x" "A \<union> ((set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x))" "(set7_T1_pre x - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T11 ` set9_T1_pre x) - set5_T1_pre x) \<union> (\<Union>(FVars_raw_T21 ` set11_T1_pre x) - set5_T1_pre x)"]])
         apply (rule T1_pre.set_bd_UNIV)
-       apply (rule var_class.Un_bound)
+       apply (rule infinite_class.Un_bound)
         apply (rule assms)
     (* REPEAT_DETERM *)
-       apply (rule var_class.Un_bound)+
+       apply (rule infinite_class.Un_bound)+
         apply (rule ordLeq_ordLess_trans[OF card_of_diff])
         apply (rule var_class.UN_bound)?
          apply (rule ordLess_ordLeq_trans)
@@ -4370,10 +4370,10 @@ lemma raw_refreshs:
     (* repeated *)
    apply (rule exE[OF eextend_fresh[of "set6_T1_pre x" "B \<union> (\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x)" "(\<Union>(FVars_raw_T12 ` set9_T1_pre x) - set6_T1_pre x)"]])
         apply (rule T1_pre.set_bd_UNIV)
-       apply (rule var_class.Un_bound)
+       apply (rule infinite_class.Un_bound)
         apply (rule assms)
     (* REPEAT_DETERM *)
-       apply (rule var_class.Un_bound)?
+       apply (rule infinite_class.Un_bound)?
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
        apply (rule var_class.UN_bound)
         apply (rule ordLess_ordLeq_trans)
@@ -4415,9 +4415,9 @@ lemma raw_refreshs:
 (* second goal, same tactic *)
   apply (rule exE[OF eextend_fresh[of "set5_T2_pre x2" "A \<union> ((set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T21 ` set11_T2_pre x2) - set5_T2_pre x2))" "(set7_T2_pre x2 - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T11 ` set9_T2_pre x2) - set5_T2_pre x2) \<union> (\<Union>(FVars_raw_T21 ` set11_T2_pre x2) - set5_T2_pre x2)"]])
        apply (rule T2_pre.set_bd_UNIV)
-      apply (rule var_class.Un_bound)
+      apply (rule infinite_class.Un_bound)
        apply (rule assms)
-      apply (rule var_class.Un_bound)+
+      apply (rule infinite_class.Un_bound)+
     (* REPEAT_DETERM *)
        apply (rule ordLeq_ordLess_trans[OF card_of_diff])
        apply (rule var_class.UN_bound)?
@@ -4448,10 +4448,10 @@ lemma raw_refreshs:
     (* repeated *)
   apply (rule exE[OF eextend_fresh[of "set6_T2_pre x2" "B \<union> (\<Union>(FVars_raw_T12 ` set9_T2_pre x2) - set6_T2_pre x2)" "(\<Union>(FVars_raw_T12 ` set9_T2_pre x2) - set6_T2_pre x2)"]])
        apply (rule T2_pre.set_bd_UNIV)
-      apply (rule var_class.Un_bound)
+      apply (rule infinite_class.Un_bound)
        apply (rule assms)
     (* REPEAT_DETERM *)
-      apply (rule var_class.Un_bound)?
+      apply (rule infinite_class.Un_bound)?
       apply (rule ordLeq_ordLess_trans[OF card_of_diff])
       apply (rule var_class.UN_bound)
        apply (rule ordLess_ordLeq_trans)
@@ -6679,7 +6679,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
     binding_relation = [[[1, 3]], [[1]]],
     rec_vars = [2, 2],
     bfree_vars = [0],
-    fp_thms = SOME {
+    fp_thms = SOME (MRBNF_Util.Inl {
       subshape_rel = @{term "{(x, y). case x of
         Inl t1 \<Rightarrow> (case y of Inl t1' \<Rightarrow> subshape_T1_T1 t1 t1' | Inr t2 \<Rightarrow> subshape_T1_T2 t1 t2)
       | Inr t2 \<Rightarrow> (case y of Inl t1 \<Rightarrow> subshape_T2_T1 t2 t1 | Inr t2' \<Rightarrow> subshape_T2_T2 t2 t2')
@@ -6699,7 +6699,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
      existential_induct = @{thm existential_induct},
      fresh_induct_param = @{thm fresh_induct_param},
      fresh_induct = @{thm fresh_induct}
-    },
+    }),
     quotient_fps = [
       { T = @{typ "('a::var, 'b::var, 'c::var, 'd) T1"},
         ctor = @{term "T1_ctor :: _ \<Rightarrow> ('a::var, 'b::var, 'c::var, 'd) T1"},
@@ -6739,6 +6739,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
          abs_ctor = @{thm TT_abs_ctors(1)},
          permute_cong = @{thm permute_congs(1)},
          permute_cong_id = @{thm permute_cong_ids(1)},
+         permute_abs = @{thm permute_abs(1)},
          permute_bij = @{thm permute_bijs(1)},
          permute_inv_simp = @{thm permute_inv_simps(1)}
        }
@@ -6782,6 +6783,7 @@ val fp_res = { fp = BNF_Util.Least_FP,
         permute_cong = @{thm permute_congs(2)},
         permute_cong_id = @{thm permute_cong_ids(2)},
         permute_bij = @{thm permute_bijs(2)},
+        permute_abs = @{thm permute_abs(2)},
         permute_inv_simp = @{thm permute_inv_simps(2)}
      }
    }
@@ -6866,7 +6868,6 @@ val fp_res = { fp = BNF_Util.Least_FP,
 local_setup \<open>MRBNF_FP_Def_Sugar.register_fp_results [fp_res]\<close>
 
 (* Test of automation, discarding result *)
-ML_file \<open>../Tools/mrbnf_fp.ML\<close>
 local_setup \<open>fn lthy =>
 let
   val (fp_res, _) = MRBNF_FP.construct_binder_fp BNF_Util.Least_FP

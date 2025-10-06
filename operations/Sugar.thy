@@ -1,27 +1,10 @@
 theory Sugar
-  imports Least_Fixpoint "Binders.Swapping"
+  imports VVSubst "Binders.Swapping"
 begin
 
 ML \<open>
 val res = the (MRBNF_FP_Def_Sugar.fp_result_of @{context} "Least_Fixpoint.T1")
 \<close>
-
-ML_file \<open>../Tools/mrbnf_recursor_tactics.ML\<close>
-ML_file \<open>../Tools/mrbnf_recursor.ML\<close>
-ML_file \<open>../Tools/mrbnf_vvsubst.ML\<close>
-
-local_setup \<open>fn lthy =>
-let
-  val (ress, lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint
-    [@{binding vvsubst_T1}, @{binding vvsubst_T2}] I res lthy;
-  val lthy = @{fold 2} (fn (mrbnf, _) => fn quot =>
-    MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T quot))) mrbnf
-  ) ress (#quotient_fps res) lthy;
-  val _ = @{print} ress
-in lthy end
-\<close>
-print_theorems
-print_mrbnfs
 
 definition Var_T1 :: "'var \<Rightarrow> ('var::var, 'tyvar::var, 'a::var, 'b) T1" where
   "Var_T1 x \<equiv> T1_ctor (Abs_T1_pre (Inl (Inl (Inl x))))"
@@ -366,7 +349,7 @@ lemma set_T1_simps[simp]:
   "set4_T1 (Ext_T1 a) = {}"
   apply (unfold set_simp_thms T1_ctors_defs FVars_ctors
       T1_pre_set_defs Abs_T1_pre_inverse[OF UNIV_I]
-      T1.set_ctor_simps list.set_map
+      set_simps list.set_map
   )
   apply (rule refl
     | (unfold prod_sets_simps)[1])+
@@ -402,7 +385,7 @@ lemma set_T2_simps[simp]:
   "set4_T2 (Ext_T2 b t1) = {b} \<union> set4_T1 t1"
 apply (unfold set_simp_thms T2_ctors_defs FVars_ctors
       T2_pre_set_defs Abs_T2_pre_inverse[OF UNIV_I]
-      T2.set_ctor_simps
+      set_simps
   )
                       apply (rule refl)+
   done
@@ -858,7 +841,7 @@ ML_file \<open>../Tools/mrbnf_tvsubst.ML\<close>
 
 local_setup \<open>fn lthy =>
 let
-  val (res', lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf I res [T1_model, T2_model] lthy;
+  val (res', lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf I res [T1_model, T2_model] "Recursor.QREC_cmin_fixed" lthy;
 
   val notes = [
     ("VVr_defs", maps (map snd o #VVrs) res'),
@@ -898,7 +881,7 @@ lemma map_simps[simp]:
     "vvsubst_T2 f1 f2 f3 f4 (Ext_T2 d x1) = Ext_T2 (f4 d) (vvsubst_T1 f1 f2 f3 f4 x1)"
                apply (unfold T1_ctors_defs T2_ctors_defs)
 
-               apply (rule trans[OF T1.vvsubst_cctor])
+               apply (rule trans[OF vvsubst_cctor_1])
                      apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                      apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -907,7 +890,7 @@ lemma map_simps[simp]:
                apply ((unfold id_def)[1])?
                apply (rule refl)
     (* repeated *)
-              apply (rule trans[OF T1.vvsubst_cctor])
+              apply (rule trans[OF vvsubst_cctor_1])
                     apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                     apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -916,7 +899,7 @@ lemma map_simps[simp]:
               apply ((unfold id_def)[1])?
               apply (rule refl)
     (* repeated *)
-             apply (rule trans[OF T1.vvsubst_cctor])
+             apply (rule trans[OF vvsubst_cctor_1])
                    apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                    apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -925,7 +908,7 @@ lemma map_simps[simp]:
              apply ((unfold id_def)[1])?
              apply (rule refl)
     (* repeated *)
-            apply (rule trans[OF T1.vvsubst_cctor])
+            apply (rule trans[OF vvsubst_cctor_1])
                   apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                   apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -934,7 +917,7 @@ lemma map_simps[simp]:
             apply ((unfold id_def)[1])?
             apply (rule refl)
     (* repeated *)
-           apply (rule trans[OF T1.vvsubst_cctor])
+           apply (rule trans[OF vvsubst_cctor_1])
                  apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                  apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -943,7 +926,7 @@ lemma map_simps[simp]:
            apply ((unfold id_def)[1])?
            apply (rule refl)
     (* repeated *)
-          apply (rule trans[OF T1.vvsubst_cctor])
+          apply (rule trans[OF vvsubst_cctor_1])
                 apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                 apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -952,7 +935,7 @@ lemma map_simps[simp]:
           apply ((unfold id_def)[1])?
           apply (rule refl)
     (* repeated *)
-         apply (rule trans[OF T1.vvsubst_cctor])
+         apply (rule trans[OF vvsubst_cctor_1])
                apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
                apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -961,7 +944,7 @@ lemma map_simps[simp]:
          apply ((unfold id_def)[1])?
          apply (rule refl)
     (* repeated *)
-        apply (rule trans[OF T1.vvsubst_cctor])
+        apply (rule trans[OF vvsubst_cctor_1])
               apply (unfold prod_sum_simps T1_pre_set_defs map_T1_pre_def Abs_T1_pre_inverse[OF UNIV_I] noclash_T1_def)
               apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -970,7 +953,7 @@ lemma map_simps[simp]:
         apply ((unfold id_def)[1])?
         apply (rule refl)
     (* repeated for second type *)
-       apply (rule trans[OF T2.vvsubst_cctor])
+       apply (rule trans[OF vvsubst_cctor_2])
              apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
              apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -979,7 +962,7 @@ lemma map_simps[simp]:
        apply ((unfold id_def)[1])?
        apply (rule refl)
     (* repeated *)
-      apply (rule trans[OF T2.vvsubst_cctor])
+      apply (rule trans[OF vvsubst_cctor_2])
             apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
             apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -988,7 +971,7 @@ lemma map_simps[simp]:
       apply ((unfold id_def)[1])?
       apply (rule refl)
     (* repeated *)
-     apply (rule trans[OF T2.vvsubst_cctor])
+     apply (rule trans[OF vvsubst_cctor_2])
            apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
            apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -997,7 +980,7 @@ lemma map_simps[simp]:
      apply ((unfold id_def)[1])?
      apply (rule refl)
     (* repeated *)
-    apply (rule trans[OF T2.vvsubst_cctor])
+    apply (rule trans[OF vvsubst_cctor_2])
           apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
           apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -1006,7 +989,7 @@ lemma map_simps[simp]:
     apply ((unfold id_def)[1])?
     apply (rule refl)
     (* repeated *)
-   apply (rule trans[OF T2.vvsubst_cctor])
+   apply (rule trans[OF vvsubst_cctor_2])
          apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
          apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]
@@ -1015,7 +998,7 @@ lemma map_simps[simp]:
    apply ((unfold id_def)[1])?
    apply (rule refl)
     (* repeated *)
-  apply (rule trans[OF T2.vvsubst_cctor])
+  apply (rule trans[OF vvsubst_cctor_2])
         apply (unfold prod_sum_simps T2_pre_set_defs map_T2_pre_def Abs_T2_pre_inverse[OF UNIV_I] noclash_T2_def)
         apply (rule Int_empty_left Int_empty_right iffD2[OF disjoint_single]
       supp_id_bound bij_id conjI iffD2[OF arg_cong[OF singleton_iff, of Not]]

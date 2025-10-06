@@ -1,6 +1,5 @@
 theory Regression_Tests
   imports "Binders.MRBNF_Recursor" "../thys/LetRec/DAList_MRBNF" "HOL-Library.FSet"
-     "System_Fsub.Pattern"
 begin
 
 (* #68 *)
@@ -25,11 +24,6 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme =
 binder_datatype ('tv, 'ev, 'rv) type_scheme2 =
   TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme2" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type" binds \<epsilon> \<rho> in T
-
-(* #72 *)
-binder_datatype (FVars: 'v, FTVars: 'tv) trm2 =
-    Var 'v
-  | Let "('tv, p::'v) pat" "('v, 'tv) trm2" t::"('v, 'tv) trm2" binds p in t
 
 (* #75 *)
 binder_datatype ('a, 'b, 'c, 'd) trm3 =
@@ -67,5 +61,35 @@ binder_datatype ('v, 'tv, 'ev, 'rv) expr =
   | Assert "('ev, 'rv) constraint"  "('v, 'tv, 'ev, 'rv) expr"
   | Let x::'v "('v, 'tv, 'ev, 'rv) expr"  e::"('v, 'tv, 'ev, 'rv) expr" binds x in e
   | RApp "('v, 'tv, 'ev, 'rv) expr" "'rv list"  "('v, 'tv, 'ev, 'rv) expr"
+
+(* #86 *)
+binder_datatype 'a "term" =
+  Var 'a
+| App "'a term" "'a term"
+| Lam x::'a t::"'a term" binds x in t
+| Let "(xs::'a, 'a term) alist" t::"'a term" binds xs in t
+
+(* #84 *)
+lemma
+  fixes f::"'a::var \<Rightarrow> 'a" and t::"'a term"
+  assumes "|A::'a set| <o |UNIV::'a set|"
+  shows "True \<Longrightarrow> |supp f| <o |UNIV::'a set| \<Longrightarrow> (\<exists>a. t = Var a) \<or> (\<exists>t1 t2. t = App t1 t2)
+  \<or> (\<exists>x t1. t = Lam x t1) \<or> (\<exists>xs t1. t = Let xs t1)"
+using assms proof (binder_induction t avoiding: A "imsupp f" "supp f" t rule: term.strong_induct)
+(* this case used to not provide "|supp f| <o |UNIV|" as fact, making it impossible to prove the goal *)
+  case Bound2
+  then show ?case using imsupp_supp_bound infinite_UNIV by blast
+qed blast+
+
+(* #92 *)
+datatype (GGVrs1: 'a1, GGVrs2: 'a2, GGSupp1: 'x1, GGSupp2: 'x2) GG = GG 'a1 'a2 'x1 'x2 | GG0
+  for map: GGmap
+binder_datatype (EEVrs: 'a) EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds x in t
+
+(* #91 *)
+lemma
+  fixes x y::"'a::var" and e::"'a term"
+  shows "e = e"
+  by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) (auto simp: infinite_UNIV)
 
 end

@@ -251,15 +251,15 @@ fun mk_mr_rel_map_non_lives_tac ctxt live assms id_thms rel_OO_Grp rel_OO_Grp_id
       dtac ctxt (mk_unabs_def 2 rel_OO_Grp_id RS iffD1)
     ]
     THEN unfold_tac ctxt [@{thm OO_Grp_alt}, @{thm id_def[symmetric]}]
-    THEN (REPEAT_DETERM (HEADGOAL (eresolve_tac ctxt [exE, CollectE, conjE])))
+    THEN (REPEAT_DETERM (HEADGOAL (eresolve_tac ctxt [exE, @{thm CollectE}, conjE])))
     THEN EVERY1 [
       Subgoal.FOCUS_PARAMS subgoal_tac ctxt,
       rtac ctxt conjI,
       if live > 0 then
-        rtac ctxt (mem_Collect_eq RS iffD2)
+        rtac ctxt (@{thm mem_Collect_eq} RS iffD2)
         THEN' CONJ_WRAP' (K (assume_tac ctxt)) (replicate live ())
       else
-        rtac ctxt UNIV_I,
+        rtac ctxt @{thm UNIV_I},
       rtac ctxt conjI,
       assume_tac ctxt
     ]
@@ -293,7 +293,7 @@ fun mk_mr_rel_map_right_bij_tac ctxt assms mr_rel_OO map_comp mr_rel_conversep m
 fun mk_mr_rel_mono_tac ctxt (assms1, assms2) mr_rel_OO_Grp_alt =
   EVERY1 [rtac ctxt @{thm predicate2I}, K (unfold_tac ctxt [mr_rel_OO_Grp_alt OF assms1]),
     simp_only_plus ctxt assms2 [eresolve_tac ctxt [exE, conjE],
-      resolve_tac ctxt [exI, conjI, @{thm Collect_case_prod_mono}, subset_trans]]];
+      resolve_tac ctxt [exI, conjI, @{thm Collect_case_prod_mono}, @{thm subset_trans}]]];
 
 fun mk_mr_rel_conversep_tac ctxt assms prems id_prems inv_prems mr_rel_OO_Grp_alt supp_comp_bound map_comp set_map map_cong0
   exI_z1 exI_z2 =
@@ -592,7 +592,7 @@ fun mk_mr_set_transfer_tac ctxt assms id_prems mr_rel_OO_Grp_alt set_map =
           hyp_subst_tac ctxt,
           SELECT_GOAL (unfold_thms_tac ctxt (@{thm image_id}::set_map')),
           rtac ctxt refl ORELSE' (EVERY' [
-            rtac ctxt ballI,
+            rtac ctxt @{thm ballI},
             rtac ctxt @{thm rel_ex_snd},
             assume_tac ctxt,
             assume_tac ctxt
@@ -601,7 +601,7 @@ fun mk_mr_set_transfer_tac ctxt assms id_prems mr_rel_OO_Grp_alt set_map =
       ],
       TRY o rtac ctxt @{thm UNIV_I},
       IF_UNSOLVED o EVERY' [
-        rtac ctxt ballI,
+        rtac ctxt @{thm ballI},
         hyp_subst_tac ctxt,
         SELECT_GOAL (unfold_thms_tac ctxt (@{thm image_id}::set_map')),
         rtac ctxt @{thm rel_ex_fst},

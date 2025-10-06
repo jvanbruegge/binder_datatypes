@@ -251,7 +251,10 @@ fun build_set_for _ aT x (TFree (s, _)) = if s = fst (dest_TFree aT) then SOME (
 fun create_binder_datatype (spec : spec) lthy =
   let
     val ((res, fp_pre_T, mrbnf, absinfo), lthy) = create_binder_type MRBNF_Util.Least_FP spec lthy;
-    val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res lthy;
+
+    val (recursor_result, lthy) = MRBNF_Recursor.create_binding_recursor I res lthy;
+
+    val ([(rec_mrbnf, vvsubst_res)], lthy) = MRBNF_VVSubst.mrbnf_of_quotient_fixpoint [#map_b spec] I res (#QREC_fixed recursor_result) lthy;
     val lthy = MRBNF_Def.register_mrbnf_raw (fst (dest_Type (#T (hd (#quotient_fps res))))) rec_mrbnf lthy;
 
     val nrecs = fold (curry (op+)) (#rec_vars res) 0;
@@ -336,7 +339,7 @@ fun create_binder_datatype (spec : spec) lthy =
     val pre_mrbnf = hd (#pre_mrbnfs res);
     val info = hd (Typedef.get_info lthy (fst (dest_Type (MRBNF_Def.T_of_mrbnf pre_mrbnf))));
 
-    val strong_induct_opt = Option.map (fn fp_thms =>
+    val strong_induct_opt = Option.mapPartial (fn Inr _ => NONE | Inl fp_thms =>
       let
         val (P, names_lthy) = names_lthy
           |> apfst hd o mk_Frees "P" [qT --> b --> @{typ bool}];
@@ -412,7 +415,7 @@ fun create_binder_datatype (spec : spec) lthy =
         ) (#fresh_induct_param fp_thms);
 
         val absumprodE = BNF_FP_Util.mk_absumprodE (#type_definition (snd info)) (map (length o snd) (#ctors spec))
-      in Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
+      in SOME (Goal.prove_sorry lthy (names ([P, t] @ Ks)) (bound_prems @ rules) goal (fn {context=ctxt, prems} => EVERY1 [
         K (Local_Defs.unfold0_tac ctxt @{thms ball_UNIV[symmetric]}),
         rtac ctxt thm,
         EVERY' (map (fn p => rtac ctxt (@{thm spec} OF [p])) (take n prems)),
@@ -439,7 +442,7 @@ fun create_binder_datatype (spec : spec) lthy =
             REPEAT_DETERM o rtac ctxt allI,
             TRY o rtac ctxt @{thm Int_subset_empty1},
             rtac ctxt IH,
-            TRY o rtac ctxt subsetI,
+            TRY o rtac ctxt @{thm subsetI},
             K (Local_Defs.unfold0_tac ctxt @{thms Un_iff singleton_iff HOL.simp_thms(6,29,30)}),
             REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms UNIV_I UN_I singletonI TrueI}),
             IF_UNSOLVED o EVERY' [
@@ -452,7 +455,7 @@ fun create_binder_datatype (spec : spec) lthy =
             IF_UNSOLVED o K no_tac
           ])) prems)
         ]) ctxt) (drop n prems))
-      ]) |> Rule_Cases.name (bound_names @ ctor_names) end
+      ]) |> Rule_Cases.name (bound_names @ ctor_names)) end
     ) (#fp_thms res);
 
     val fresh_induct_opt = Option.map (fn strong_induct =>
@@ -594,12 +597,31 @@ fun create_binder_datatype (spec : spec) lthy =
     val injects = @{map_filter 2} (fn ((ctor, ctor_def), tys) => fn setss => if null tys then NONE else
       let
         val bound_tys = inter (op=) bounds (rev (map TFree (fold Term.add_tfreesT tys [])));
+        val bfree_tys = inter (op=) bfrees (rev (map TFree (fold Term.add_tfreesT tys [])));
+        val ((bound_tys', bfree_tys'), _) = lthy
+          |> fold Variable.declare_typ (map fst replace @ map snd replace)
+          |> mk_TFrees' (replicate (length bound_tys) (MRBNF_Def.class_of_mrbnf mrbnf))
+          ||>> mk_TFrees' (replicate (length bfree_tys) (MRBNF_Def.class_of_mrbnf mrbnf));
+
         val tys' = map (Term.typ_subst_atomic replace) tys;
-        val (((xs, ys), fs), _) = names_lthy
+        val (((xs, ys), fs'), _) = names_lthy
           |> mk_Frees "x" tys'
           ||>> mk_Frees "y" tys'
-          ||>> mk_Frees "f" (map (fn a => a --> a) (map (Term.typ_subst_atomic replace) bound_tys));
+          ||>> mk_Frees "f" (map (fn a => a --> a) bound_tys');
 
+        val replace = map (fn (a, b) => if member (op=) bfrees a then
+          (a, resort_tfree_or_tvar (MRBNF_Def.class_of_mrbnf mrbnf) (
+            Term.typ_subst_atomic (bound_tys ~~ bound_tys') (
+              Term.typ_subst_atomic (map swap (filter (member (op=) bounds o fst) replace)) b
+            )
+          )) else (a, b)
+        ) replace;
+
+        val fresh_subst = (bound_tys ~~ bound_tys') @ (bfree_tys ~~ bfree_tys');
+        val replace = map (map_prod (Term.typ_subst_atomic fresh_subst) I) replace;
+        val tys = map (Term.typ_subst_atomic fresh_subst) tys;
+
+        val fs = map (Term.subst_atomic_types replace) fs';
         val sets = if null bound_tys then [] else map (fn f =>
           the (List.find (fn t => HOLogic.dest_setT (fastype_of t) = body_type (fastype_of f))
             (maps (filter (fn t => case t of
@@ -610,12 +632,18 @@ fun create_binder_datatype (spec : spec) lthy =
         ) fs;
         val id_ons = map2 mk_id_on sets fs;
 
+        val (breplace, replace') = partition (member (op=) (rec_bounds @ bound_tys') o fst) replace;
+        val replace'' = replace' @ map (fn a => (a,
+          Term.typ_subst_atomic (map swap breplace) (Term.typ_subst_atomic replace a)
+        )) rec_bounds;
+
         val (mr_bnfs, permutes) = split_list (map (fn T =>
           let val tfrees = map TFree (Term.add_tfreesT T []);
-          in if null (inter (op=) (bounds @ rec_bounds @ bfrees) tfrees) then (NONE, NONE) else map_prod SOME SOME (
-            build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (Term.typ_subst_atomic replace T)
+          in if null (inter (op=) (bound_tys' @ rec_bounds @ bfree_tys') tfrees) then (NONE, NONE) else map_prod SOME SOME (
+            build_permute_for lthy fs' bound_tys' (Term.typ_subst_atomic replace'' T)
           ) end
         ) tys);
+        val permutes = map (Option.map (Term.subst_atomic_types breplace)) permutes;
         val mr_bnfs = Library.distinct ((op=) o apply2 fst) (flat (map_filter I mr_bnfs));
 
         val vvsubst_permutes = map_filter (Option.map #vvsubst_permute o MRBNF_VVSubst.vvsubst_result_of lthy o fst) mr_bnfs;
@@ -718,7 +746,7 @@ fun create_binder_datatype (spec : spec) lthy =
         ]);
 
         val binder_xs = @{map_filter 3} (fn T => fn x => fn y =>
-          Option.map (fn b => (b, (x, y))) (List.find (curry (op=) T) bounds)
+          Option.map (fn b => (b, (x, y))) (List.find (curry (op=) T) bound_tys')
         ) tys xs ys;
 
         fun mk_swap (x, y) =
@@ -731,8 +759,8 @@ fun create_binder_datatype (spec : spec) lthy =
               if member (op=) (map (fst o snd) binder_xs) x then NONE else SOME (x, (y, T))
             ) xs ys tys));
             val (mr_bnfs, permutes) = split_list (map2 (fn x => fn T =>
-              if null (inter (op=) (bounds @ rec_bounds @ bfrees) (map TFree (Term.add_tfreesT T []))) then (NONE, NONE)
-              else map_prod SOME SOME (build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys) (fastype_of x))
+              if null (inter (op=) (bound_tys' @ rec_bounds @ bfree_tys') (map TFree (Term.add_tfreesT T []))) then (NONE, NONE)
+              else map_prod SOME SOME (build_permute_for lthy fs (map (Term.typ_subst_atomic replace) bound_tys') (fastype_of x))
             ) xs' Ts');
             val mr_bnfs = map_filter I mr_bnfs;
             val id_on_sets = map_filter (fn id_on =>
@@ -995,6 +1023,10 @@ fun create_binder_datatype (spec : spec) lthy =
           val free_rec_vars = subtract (op=) (map (nth rec_vars) (flat (map snd (#binding_rel spec)))) rec_vars;
           val free_sets = map (map (Term.subst_atomic_types replace)) (mk_sets frees free_rec_vars (SOME (#FVarss quotient)));
 
+          fun dest_Union (Const (@{const_name sup}, _) $ t1 $ t2) = dest_Union t1 @ [t2]
+            | dest_Union t = [t];
+          val free_sets = map (maps dest_Union) free_sets
+
           val bound_sets' = map (map (Term.subst_atomic_types replace)) bound_sets;
 
           val noclash_prems = if do_noclash then
@@ -1087,7 +1119,7 @@ fun create_binder_datatype (spec : spec) lthy =
 
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) then
       let
-        val (tvsubst_ress, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (Binding.prefix_name "tv") res [tvsubst_model] lthy;
+        val (tvsubst_ress, lthy) = MRBNF_TVSubst.create_tvsubst_of_mrbnf (Binding.prefix_name "tv") res [tvsubst_model] (#QREC_cmin_fixed recursor_result) lthy;
         val tvsubst_res = hd tvsubst_ress;
         val tvsubst_simps =
           let

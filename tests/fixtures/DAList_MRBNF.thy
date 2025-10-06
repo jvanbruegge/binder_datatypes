@@ -45,7 +45,7 @@ mrbnf "('k, 'v) alist"
        apply (auto simp: o_def prod.map_comp distinct_map intro!: inj_on_imageI dest!: arg_cong[where f="map (map_prod (inv f) id)" and x="map (map_prod id fst) z"])
         apply fastforce
       apply (meson bij_betw_imp_inj_on bij_betw_inv_into inj_on_id prod.inj_map subset_UNIV
-          subset_inj_on)
+          inj_on_subset)
       apply (meson bij_betw_inv_into inj_on_def neq_equiv)
       done
     subgoal for f R x y z

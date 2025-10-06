@@ -53,6 +53,7 @@ sig
     rep_abs_sym: thm,
     abs_ctor: thm,
 
+    permute_abs: thm,
     permute_cong: thm,
     permute_cong_id: thm,
     permute_bij: thm,
@@ -71,6 +72,11 @@ sig
     fresh_induct: thm
   };
 
+  type greatest_fp_thms = {
+    existential_coinduct: thm,
+    fresh_coinduct_param: thm
+  };
+
   type fp_result = {
     fp: BNF_Util.fp_kind,
     binding_relation: int list list list,
@@ -78,7 +84,7 @@ sig
     bfree_vars: int list,
     raw_fps: raw_result fp_result_T list,
     quotient_fps: quotient_result fp_result_T list,
-    fp_thms: least_fp_thms option,
+    fp_thms: (least_fp_thms, greatest_fp_thms) MRBNF_Util.either option,
     pre_mrbnfs: MRBNF_Def.mrbnf list
   };
 
@@ -188,6 +194,7 @@ type quotient_result = {
   rep_abs_sym: thm,
   abs_ctor: thm,
 
+  permute_abs: thm,
   permute_cong: thm,
   permute_cong_id: thm,
   permute_bij: thm,
@@ -196,7 +203,7 @@ type quotient_result = {
 
 fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nnoclash_noclash,
   total_abs_eq_iff, abs_rep, rep_abs, rep_abs_sym, abs_ctor, permute_cong, permute_cong_id,
-  permute_bij, permute_inv_simp, noclash_permute, fresh_cases } = {
+  permute_bij, permute_inv_simp, noclash_permute, fresh_cases, permute_abs } = {
   abs = Morphism.term phi abs,
   rep = Morphism.term phi rep,
   ctor_def = Morphism.thm phi ctor_def,
@@ -213,7 +220,8 @@ fun morph_quotient_result phi { abs, rep, ctor_def, permute_def, FVars_defs, nno
   permute_cong = Morphism.thm phi permute_cong,
   permute_cong_id = Morphism.thm phi permute_cong_id,
   permute_bij = Morphism.thm phi permute_bij,
-  permute_inv_simp = Morphism.thm phi permute_inv_simp
+  permute_inv_simp = Morphism.thm phi permute_inv_simp,
+  permute_abs = Morphism.thm phi permute_abs
 } : quotient_result;
 
 type least_fp_thms = {
@@ -241,6 +249,16 @@ fun morph_least_fp_thms phi ({ subshape_rel, subshapess, wf_subshape, set_subsha
   fresh_induct = Morphism.thm phi fresh_induct
 } : least_fp_thms;
 
+type greatest_fp_thms = {
+  existential_coinduct: thm,
+  fresh_coinduct_param: thm
+};
+
+fun morph_greatest_fp_thms phi { existential_coinduct, fresh_coinduct_param } = {
+  existential_coinduct = Morphism.thm phi existential_coinduct,
+  fresh_coinduct_param = Morphism.thm phi fresh_coinduct_param
+}: greatest_fp_thms;
+
 type fp_result = {
   fp: BNF_Util.fp_kind,
   binding_relation: int list list list,
@@ -248,7 +266,7 @@ type fp_result = {
   bfree_vars: int list,
   raw_fps: raw_result fp_result_T list,
   quotient_fps: quotient_result fp_result_T list,
-  fp_thms: least_fp_thms option,
+  fp_thms: (least_fp_thms, greatest_fp_thms) MRBNF_Util.either option,
   pre_mrbnfs: MRBNF_Def.mrbnf list
 };
 
@@ -256,7 +274,7 @@ fun morph_fp_result phi ({ fp, binding_relation, rec_vars, bfree_vars, raw_fps, 
   fp = fp, binding_relation = binding_relation, rec_vars = rec_vars, bfree_vars = bfree_vars,
   raw_fps = map (morph_fp_result_T morph_raw_result phi) raw_fps,
   quotient_fps = map (morph_fp_result_T morph_quotient_result phi) quotient_fps,
-  fp_thms = Option.map (morph_least_fp_thms phi) fp_thms,
+  fp_thms = Option.map (MRBNF_Util.map_sum (morph_least_fp_thms phi) (morph_greatest_fp_thms phi)) fp_thms,
   pre_mrbnfs = map (MRBNF_Def.morph_mrbnf phi) pre_mrbnfs
 } : fp_result;
 
@@ -289,6 +307,7 @@ fun note_fp_result (fp_res : fp_result) lthy =
   let
     fun note_internals (quot : quotient_result fp_result_T) = [
       ("permute_ctor", [#permute_ctor quot]),
+      ("permute_abs", [#permute_abs (#inner quot)]),
       ("FVars_ctor", #FVars_ctors quot),
       ("FVars_intros", flat (#FVars_intross quot)),
       ("FVars_bd", #card_of_FVars_bounds quot),
@@ -319,7 +338,7 @@ fun note_fp_result (fp_res : fp_result) lthy =
     fun note_quot (quot : quotient_result fp_result_T) =
       (if Config.get lthy MRBNF_Def.mrbnf_internals then
         note_internals quot
-        @ the_default [] (Option.map (fn fp_thms => [
+        @ the_default [] (Option.map (MRBNF_Util.either (fn fp_thms => [
           ("wf_subshape", [#wf_subshape fp_thms]),
           ("set_subshapes", flat (#set_subshapess fp_thms)),
           ("set_subshape_permutes", flat (#set_subshape_permutess fp_thms)),
@@ -327,15 +346,32 @@ fun note_fp_result (fp_res : fp_result) lthy =
           ("existential_induct", [#existential_induct fp_thms]),
           ("fresh_induct_param", [#fresh_induct_param fp_thms]),
           ("TT_fresh_induct", [#fresh_induct fp_thms])
-        ]) (#fp_thms fp_res))
+        ]) (fn gfp_thms => [
+          ("existential_coinduct", [#existential_coinduct gfp_thms]),
+          ("fresh_coinduct_param", [#fresh_coinduct_param gfp_thms])
+        ])) (#fp_thms fp_res))
       else [])
       @ note_always quot;
 
-    val notes = maps (fn quot => map (fn (thmN, thms) =>
+    fun note_raw (raw : raw_result fp_result_T) =
+      (if Config.get lthy MRBNF_Def.mrbnf_internals then [
+        ("alpha_FVars", #alpha_FVarss (#inner raw)),
+        ("alpha_trans", [#alpha_trans (#inner raw)]),
+        ("alpha_sym", [#alpha_sym (#inner raw)]),
+        ("permute_raw_ctor", [#permute_ctor raw]),
+        ("permute_raw_comp0s", [#permute_comp0 raw]),
+        ("permute_raw_comps", [#permute_comp raw]),
+        ("alpha_bij_eq", [#alpha_bij_eq (#inner raw)]),
+        ("alpha_refl", [#alpha_refl (#inner raw)]),
+        ("FVars_raw_permute", #FVars_permutes raw),
+        ("permute_raw_id", [#permute_id raw])
+      ] else []);
+
+    val notes = flat (map2 (fn quot => fn raw => map (fn (thmN, thms) =>
       ((Binding.qualify true (MRBNF_Util.short_type_name (fst (dest_Type (#T quot)))) (Binding.name thmN), []),
         [(thms, [])]
       )
-    ) (note_quot quot)) (#quotient_fps fp_res);
+    ) (note_quot quot @ note_raw raw)) (#quotient_fps fp_res) (#raw_fps fp_res));
 
     val (_, lthy) = Local_Theory.notes notes lthy;
   in lthy end;

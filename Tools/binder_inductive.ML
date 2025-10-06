@@ -59,20 +59,16 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
     val param_Ts = map (Term.typ_subst_TVars subst) param_Ts;
 
-    (* TODO: Nested sugars? *)
-    val param_sugars = map (fn T => Option.mapPartial (fn s =>
-      MRBNF_Sugar.binder_sugar_of no_defs_lthy s
-    ) (try (fn () => fst (dest_Type T)) ())) param_Ts;
-
-    val param_frees = map_filter (fn T => Option.map MRBNF_Def.frees_of_mrbnf (
-        Option.map (fn mrbnf => MRBNF_Def.morph_mrbnf
-          (MRBNF_Util.subst_typ_morphism (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ snd (dest_Type T)))
-          mrbnf
-      ) (Option.mapPartial (MRBNF_Def.mrbnf_of no_defs_lthy o fst) (try dest_Type T)))
-    ) param_Ts;
+    fun collect_params (Type (s, Ts)) = fold (union (op=)) (map collect_params Ts)
+        (case MRBNF_Def.mrbnf_of no_defs_lthy s of
+          NONE => []
+        | SOME mrbnf => MRBNF_Def.frees_of_mrbnf (MRBNF_Def.morph_mrbnf
+          (MRBNF_Util.subst_typ_morphism (snd (dest_Type (MRBNF_Def.T_of_mrbnf mrbnf)) ~~ Ts))
+          mrbnf))
+      | collect_params _ = [];
     val pot_bind_Ts = foldl1 (fn (xs, ys) => if
       subset (op=) (xs, ys) then ys else union (op=) ys xs
-    ) param_frees;
+    ) (map collect_params param_Ts);
     val npot = length pot_bind_Ts;
 
     fun collect_binders (Free _) = replicate npot []
@@ -500,7 +496,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             ]
         ])) (0 upto length supps)) end);
 
-        val (Un_bound, UN_bound, var_large) = case map_filter (try Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs of
+        val var_large = case map_filter (try Type.sort_of_atyp o HOLogic.dest_setT o fastype_of) Bs of
           [] =>
             let
               val (context, facts) = (Proof_Context.theory_of #>
@@ -508,12 +504,14 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
               fun lookup name = the_single (#thms (the (
                 Facts.lookup context facts (Facts.intern facts name)
               )));
-            in (lookup "Un_bound", lookup "UN_bound", lookup "large'") end
+            in lookup "large'" end
           | sort =>
             let
               val var_class = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) sort;
-              fun assm name = MRBNF_Def.get_class_assumption [hd var_class] name lthy;
-            in (assm "Un_bound", assm "UN_bound", assm "large'") end;
+              fun assm name = Var_Classes.get_class_assumption (hd var_class) name lthy;
+            in assm "large'" end;
+        val UN_bound = @{thm var_class.UN_bound}
+        val Un_bound = @{thm infinite_class.Un_bound}
 
         fun set_bd_UNIVs_of_mr_bnfs (Inr (Inr quot)) = #card_of_FVars_bound_UNIVs quot
           | set_bd_UNIVs_of_mr_bnfs x =
@@ -570,12 +568,14 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
 
         val perm_ids = map (fn thm => thm RS fun_cong RS @{thm trans[OF _ id_apply]}) perm_id0s;
 
-        fun mk_induct mono = Drule.rotate_prems ~1 (
-          apply_n @{thm le_funD} n (@{thm lfp_induct} OF [mono])
+        fun mk_induct induct mono = Drule.rotate_prems ~1 (
+          apply_n @{thm le_funD} n (induct OF [mono])
             RS @{thm le_boolD}
             RS @{thm mp}
         );
-        val II_induct = mk_induct G_mmono;
+        val II_induct = mk_induct @{thm lfp_induct} G_mmono;
+        val II_induct_lfp = mk_induct @{thm lfp_induct[where P="lfp _"]} G_mmono;
+        val I_induct_lfp = mk_induct @{thm lfp_induct[where P="lfp _"]} mono;
 
         val pred_names = names;
         val names = map (fst o dest_Free);
@@ -595,7 +595,7 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           K (Local_Defs.unfold0_tac ctxt [snd II, def]),
           REPEAT_DETERM o rtac ctxt ext,
           rtac ctxt iffI,
-          etac ctxt II_induct,
+          etac ctxt II_induct_lfp,
           focus_IH_tac ctxt,
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt [snd G]),
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [mono]],
@@ -606,16 +606,15 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
             REPEAT_DETERM o rtac ctxt exI,
             assume_tac ctxt
           ],
-          etac ctxt (Drule.rotate_prems 1 (apply_n @{thm le_funD} n (
-            @{thm lfp_induct} OF [mono]
-          ) RS @{thm le_boolD} RS @{thm mp})),
+          etac ctxt I_induct_lfp,
+          REPEAT_DETERM o rtac ctxt @{thm le_funI},
+          rtac ctxt @{thm le_boolI},
+          dtac ctxt ((@{thm asm_rl[of "inf (lfp _) (lfp _) \<le> lfp _"]} RSN (2, mono'))),
           REPEAT_DETERM o rtac ctxt @{thm le_funI},
           rtac ctxt @{thm le_boolI},
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inf_apply inf_bool_def}),
-          dtac ctxt mono',
-          REPEAT_DETERM o rtac ctxt @{thm le_funI},
-          rtac ctxt @{thm le_boolI},
           etac ctxt conjunct2,
+          SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms inf_apply inf_bool_def}),
           EqSubst.eqsubst_tac ctxt [0] [@{thm lfp_unfold} OF [G_mmono]],
           K (Local_Defs.unfold0_tac ctxt [snd G, @{thm ex_disj_distrib}]),
           REPEAT_DETERM o EVERY' [
@@ -799,14 +798,15 @@ fun binder_inductive_cmd (((options, pred_name), binds_opt: (string * string lis
           REPEAT_DETERM o etac ctxt conjE,
           REPEAT_DETERM o etac ctxt conjI
         ]);
-        val II'_induct = mk_induct G_mmono';
+        val II'_induct = mk_induct @{thm lfp_induct} G_mmono';
+        val II'_induct_lfp = mk_induct @{thm lfp_induct[where P="lfp _"]} G_mmono';
 
         val II'_imp_II = Goal.prove_sorry lthy (names xs) [] (Logic.mk_implies (
           HOLogic.mk_Trueprop (Term.list_comb (fst II', xs)),
           HOLogic.mk_Trueprop (Term.list_comb (fst II, xs))
         )) (fn {context=ctxt, ...} => EVERY1 [
           K (Local_Defs.unfold0_tac ctxt [snd II', snd II]),
-          etac ctxt II'_induct,
+          etac ctxt II'_induct_lfp,
           REPEAT_DETERM o rtac ctxt @{thm le_funI},
           rtac ctxt @{thm le_boolI},
           REPEAT_DETERM o eresolve_tac ctxt [exE, conjE],

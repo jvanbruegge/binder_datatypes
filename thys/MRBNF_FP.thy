@@ -207,6 +207,9 @@ lemma notin_Un: "x \<notin> A \<union> B \<longleftrightarrow> x \<notin> A \<an
 definition compSS :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'a)" where
   "compSS f g \<equiv> f \<circ> g \<circ> inv f"
 
+lemma compSS_id0: "compSS id = id"
+  unfolding compSS_def by auto
+
 lemma compSS_comp0:
   fixes f g h::"'a \<Rightarrow> 'a"
   assumes "infinite (UNIV::'a set)" "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|" "|supp h| <o |UNIV::'a set|"
@@ -285,7 +288,7 @@ lemma ex_avoiding_bij:
 lemma id_on_empty: "id_on {} f"
   unfolding id_on_def by simp
 
-lemma image_Int_empty: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
+lemma image_Int_empty_inv: "bij f \<Longrightarrow> f ` A \<inter> B = {} \<longleftrightarrow> A \<inter> inv f ` B = {}"
   by force
 lemma eq_bij_betw_refl_prems:
   assumes "eq_bij_betw_refl r u w g A B x y f1 f2 L R"
@@ -446,5 +449,18 @@ val _ = extra_assms |> map (Thm.pretty_thm ctxt #> verbose ? @{print tracing});
 
 end;
 \<close>
+
+context begin
+ML \<open>
+local
+  fun unfold_meth ths ctxt = SIMPLE_METHOD (CHANGED_PROP (Local_Defs.unfold0_tac ctxt ths));
+in
+  val _ = Theory.local_setup (
+    Method.local_setup @{binding unfold0} (Attrib.thms >> unfold_meth)
+     "unfolding without eta-expansion"
+   )
+end
+\<close>
+end
 
 end

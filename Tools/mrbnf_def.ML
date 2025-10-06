@@ -16,8 +16,10 @@ sig
   }
   type class_thms = {
     var_large: thm,
+    var_large': thm,
     var_regular: thm,
-    covar_large: thm
+    covar_large: thm,
+    covar_large': thm
   }
 
   val morph_mrbnf: morphism -> mrbnf -> mrbnf
@@ -82,8 +84,6 @@ sig
     term list
   val mk_wits_of_mrbnf: typ list list -> typ list list -> typ list list -> typ list list -> mrbnf ->
     (int list * term) list
-
-  val mk_map_comb_of_mrbnf: typ list -> term list -> term list -> term list -> mrbnf -> term
 
   val bd_infinite_regular_card_order_of_mrbnf: mrbnf -> thm
   val bd_Card_order_of_mrbnf: mrbnf -> thm
@@ -218,6 +218,10 @@ sig
     mrbnf * local_theory
   val note_mrbnf_defs: mrbnf -> local_theory -> mrbnf * local_theory
 
+  val mk_map_comb_of_mrbnf: typ list -> term list -> term list -> term list -> mrbnf -> term
+  val maybe_define: bool -> fact_policy -> inline_policy
+    -> bool -> (unit -> binding) * term -> local_theory -> (term * thm) * local_theory
+
  (*val mk_lab_sets_of_mrbnf: typ list list -> typ list list -> typ list list -> typ list list -> mrbnf ->
     (var_type *term) list
  *)
@@ -225,19 +229,17 @@ sig
   val print_mrbnfs: Proof.context -> unit
   val prepare_def: inline_policy -> (Proof.context -> fact_policy) -> bool ->
     (binding -> binding) -> (Proof.context -> 'a -> typ) -> (Proof.context -> 'b -> term) -> (Proof.context -> 'c -> sort) ->
-    typ list option -> ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
+    typ list option -> (sort * sort) option -> binding -> binding -> binding -> binding list ->
     (((((((binding * 'a) * 'b) * (var_type * 'b) list) * 'b) * 'b list) * 'b option) * 'b option) * 'c option ->
     Proof.context ->
     string * term list * ((Proof.context -> thm list -> tactic) option * term list list) *
     ((thm list -> thm list list) -> thm list list -> Proof.context -> mrbnf * local_theory) *
     local_theory * thm list
   val define_mrbnf_consts: inline_policy -> fact_policy -> bool -> typ list option ->
-    ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
+    (sort * sort) option -> binding -> binding -> binding -> binding list ->
     (((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option)
     * term option) * sort option -> local_theory ->
-      ((typ list * typ list * typ list * typ *
-        (string list * thm * thm) *
-         ((thm -> local_theory -> string list * local_theory) * (string list * local_theory -> thm))) *
+      ((typ list * typ list * typ list * typ * string list * string list) *
        (term * term list * term * (int list * term) list * term * term) *
        (thm * thm list * thm * thm list * thm * thm) *
        ((typ list -> typ list -> typ list -> term) *
@@ -248,11 +250,9 @@ sig
         (typ list -> term list -> term) *
         (typ list -> typ list -> term))) * local_theory
 
-  val get_class_assumption: sort -> string -> local_theory -> thm
-
   val mrbnf_def: inline_policy -> (Proof.context -> fact_policy) -> bool -> (binding -> binding) ->
     mrbnf_def_tactics -> typ list option ->
-    ((sort * thm * thm) * (sort * (sort * local_theory -> thm))) option -> binding -> binding -> binding -> binding list ->
+    (sort * sort) option -> binding -> binding -> binding -> binding list ->
     ((((((binding * typ) * term) * (var_type * term) list) * term) * term list) * term option) * term option ->
     local_theory -> mrbnf * local_theory
   val mrbnf_cmd: ((((((((binding * string) * string) * (var_type * string) list) * string)
@@ -333,8 +333,10 @@ val morph_axioms = map_axioms o Morphism.thm;
 
 type class_thms = {
   var_large: thm,
+  var_large': thm,
   var_regular: thm,
-  covar_large: thm
+  covar_large: thm,
+  covar_large': thm
 }
 
 type defs = {
@@ -1008,13 +1010,21 @@ fun map_mrbnf f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13 f14 f15 f16 f17 f18 f19
        axioms = f18 axioms, defs = f19 defs, facts = f20 facts, mr_facts = f21 mr_facts,
        nwits = f22 nwits, wits = f23 wits, rel = f24 rel, mr_rel = f25 mr_rel, pred = f26 pred};
 
+fun morph_class_thms phi { var_large, var_large', var_regular, covar_large, covar_large' } = {
+  var_large = Morphism.thm phi var_large,
+  var_large' = Morphism.thm phi var_large',
+  var_regular = Morphism.thm phi var_regular,
+  covar_large = Morphism.thm phi covar_large,
+  covar_large' = Morphism.thm phi covar_large'
+};
+
 fun morph_mrbnf phi =
   let
     val Tphi = Morphism.typ phi;
     val tphi = Morphism.term phi;
   in
     map_mrbnf (Morphism.binding phi) Tphi I (map Tphi) I (map Tphi) I (map Tphi) (map Tphi) I
-      (map Tphi) tphi (map tphi) tphi I I I (morph_axioms phi) (morph_defs phi) (morph_facts phi)
+      (map Tphi) tphi (map tphi) tphi I (morph_class_thms phi) I (morph_axioms phi) (morph_defs phi) (morph_facts phi)
       (morph_mr_facts phi) I (map (morph_witness phi)) tphi tphi tphi
   end;
 
@@ -1054,7 +1064,11 @@ fun normalize_rel ctxt instTs instA instB rel =
       Sign.typ_match thy (fastype_of rel, Library.foldr (op -->) (instTs, mk_pred2T instA instB))
         Vartab.empty;
   in Envir.subst_term (tyenv, Vartab.empty) rel end
-  handle Type.TYPE_MATCH => error "Bad relator";
+  handle Type.TYPE_MATCH =>
+    let
+      val _ = @{print} (fastype_of rel, Library.foldr (op -->) (instTs, mk_pred2T instA instB))
+      (*val _ = Class.print_classes ctxt*)
+    in error "Bad relator" end;
 
 fun normalize_pred ctxt instTs instA pred =
   let
@@ -1486,61 +1500,6 @@ fun mk_wit_goals zs bs sets (I, wit) =
 
 (* Define new MRBNFs *)
 
-fun check_bd_termT bd_term =
-  if (bd_term |> fastype_of |> Term.add_tfreesT) [] |> null then bd_term
-  else error "Can't have type variables in the type of the bound!";
-
-fun var_assumpt_terms bd_term =
-  let
-    fun mk_assumption name term = ((Binding.name name, []), single (term, []));
-    val large = HOLogic.mk_UNIV undefT
-      |> mk_card_of
-      |> mk_ordLeq bd_term
-      |> HOLogic.mk_Trueprop
-      |> mk_assumption var_type_class_ass1N;
-    val regular = HOLogic.mk_UNIV undefT
-      |> mk_card_of
-      |> mk_regularCard
-      |> HOLogic.mk_Trueprop
-      |> mk_assumption var_type_class_ass2N;
-  in
-    Element.Assumes [large, regular]
-  end;
-
-fun get_class_assumption class assN lthy =
-  let
-    val local_class = null class;
-    val thmN = if local_class then assN else short_type_name (the_single class) ^ "_class." ^ assN;
-    val (context, facts) = (if local_class then `Context.Proof else Proof_Context.theory_of #>
-      `Context.Theory ##> Proof_Context.init_global) lthy ||> Proof_Context.facts_of;
-  in
-    Facts.intern facts thmN
-      |> Facts.lookup context facts
-      |> the
-      |> #thms
-      |> the_single
-      |> Thm.transfer' lthy
-  end;
-val get_local_class_assumption = get_class_assumption [];
-
-fun prove_instantiation name class tac = Class.instantiation ([name], [], class)
-  #> Class.prove_instantiation_exit tac |> Local_Theory.background_theory;
-
-fun as_subclass_of super_class subclass_tac ctxt =
-  Class_Declaration.prove_subclass (subclass_tac ctxt) (the_single super_class) ctxt;
-
-fun define_var_type_class var_binding bd_term =
-  Local_Theory.background_theory_result (
-    Class_Declaration.class var_binding [] [] [
-      check_bd_termT bd_term |> mk_Field |> mk_card_of |> var_assumpt_terms
-    ] #> apfst single #> apsnd Local_Theory.exit_global
-  )
-
-fun define_covar_type_class bd_term var_binding class subclass_tac =
-  Class_Declaration.class var_binding [] [] [check_bd_termT bd_term |> BNF_LFP_Util.mk_cardSuc
-    |> var_assumpt_terms] #>> single ##> as_subclass_of class subclass_tac
-  ##> Local_Theory.exit_global |> Local_Theory.background_theory_result;
-
 val is_live = curry (op =) Live_Var;
 val is_bound = curry (op =) Bound_Var;
 val is_free = curry (op =) Free_Var;
@@ -1606,6 +1565,26 @@ val (add_prems, add_map_transfer_prems, mk_prem_terms) =
     flat oo map2 mk_fun_map)
   end;
 
+fun maybe_define internal fact_policy const_policy user_specified (b, rhs) lthy =
+  let
+    val inline =
+      (user_specified orelse fact_policy = Dont_Note) andalso
+      (case const_policy of
+        Dont_Inline => false
+      | Hardly_Inline => Term.is_Free rhs orelse Term.is_Const rhs
+      | Smart_Inline => Term.size_of_term rhs <= smart_max_inline_term_size
+      | Do_Inline => true);
+  in
+    if inline then
+      ((rhs, Drule.reflexive_thm), lthy)
+    else
+      let val b = b () in
+        apfst (apsnd snd)
+          ((if internal then Local_Theory.define_internal else Local_Theory.define)
+            ((b, NoSyn), ((Binding.concealed (Thm.def_binding b), []), rhs)) lthy)
+      end
+  end;
+
 fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map_b rel_b pred_b set_bs
     ((((((((mrbnf_b, T_rhs), map_rhs), var_set_rhss), bd_rhs), wit_rhss), rel_rhs_opt),
     pred_rhs_opt), sort_opt) no_defs_lthy =
@@ -1623,27 +1602,9 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
 
     val def_qualify = Binding.qualify false (Binding.name_of mrbnf_b);
 
-    fun mk_prefix_binding pre = Binding.prefix_name (pre ^ "_") mrbnf_b;
+    val maybe_define = maybe_define internal fact_policy const_policy;
 
-    fun maybe_define user_specified (b, rhs) lthy =
-      let
-        val inline =
-          (user_specified orelse fact_policy = Dont_Note) andalso
-          (case const_policy of
-            Dont_Inline => false
-          | Hardly_Inline => Term.is_Free rhs orelse Term.is_Const rhs
-          | Smart_Inline => Term.size_of_term rhs <= smart_max_inline_term_size
-          | Do_Inline => true);
-      in
-        if inline then
-          ((rhs, Drule.reflexive_thm), lthy)
-        else
-          let val b = b () in
-            apfst (apsnd snd)
-              ((if internal then Local_Theory.define_internal else Local_Theory.define)
-                ((b, NoSyn), ((Binding.concealed (Thm.def_binding b), []), rhs)) lthy)
-          end
-      end;
+    fun mk_prefix_binding pre = Binding.prefix_name (pre ^ "_") mrbnf_b;
 
     val map_bind_def =
       (fn () => def_qualify (if Binding.is_empty map_b then mk_prefix_binding mapN else map_b),
@@ -1705,52 +1666,16 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
         (Morphism.term phi' mrbnf_bd_term);
     val mrbnf_bd_raw =  mk_mrbnf_bd Calpha_params_raw;
 
-    fun unfold_bd_def' lthy = Local_Defs.unfold0 lthy (
-      (map (fn thm => @{thm symmetric} OF [thm]) (no_reflexive [mrbnf_bd_def]))
-    );
-    val unfold_bd_def = unfold_bd_def' lthy;
-    val ((class, var_large, var_regular), (mk_covar_type_class, mk_covar_large), lthy) = case classes_opt of
-        SOME ((class, var_large, var_regular), (coclass, mk_covar_large)) =>
-          ((class, unfold_bd_def var_large, var_regular), (K (pair coclass), fn (sort, lthy) => unfold_bd_def' lthy (mk_covar_large (sort, lthy))), lthy)
-      | NONE => case mrbnf_bd_raw of
-        Const (@{const_name natLeq}, _) =>
-          ((@{sort var}, @{thm var_class.large}, @{thm var_class.regular}), (K (pair @{sort covar}), K @{thm covar_class.large}), lthy)
-        | _ =>
+    val (class, coclass, lthy) = case classes_opt of
+        SOME (class, coclass) => (class, coclass, lthy)
+      | NONE =>
         let
           val (class, lthy) = case sort_opt of
             SOME class => (class, lthy)
-            | NONE => define_var_type_class (mk_prefix_binding var_typeN) mrbnf_bd_raw lthy;
-          val var_large = get_class_assumption class var_type_class_ass1N lthy
-          val var_regular = get_class_assumption class var_type_class_ass2N lthy
-          val mk_covar_large = fn (coclass, lthy) => get_class_assumption coclass var_type_class_ass1N lthy
-
-          val ((wit_covar_name, wit_covar_def), lthy) =
-            let
-              val term = mk_csum (mk_Field mrbnf_bd_raw
-                |> mk_card_of) @{term natLeq} |> BNF_LFP_Util.mk_cardSuc |> mk_Field;
-            in
-              new_typedef (mk_prefix_binding covar_witN) term mk_mr_typedef_tac lthy
-                |>> apsnd (snd #> #type_definition)
-            end;
-          val lthy = prove_instantiation wit_covar_name class
-            (mk_mr_instance_proof_tac wit_covar_def NONE) lthy;
-
-          fun mk_covar_type_class bd_Card_order lthy =
-            let
-              fun subclass_tac ctxt =
-                let
-                  val colarge = get_local_class_assumption var_type_class_ass1N ctxt;
-                  val coregular = get_local_class_assumption var_type_class_ass2N ctxt;
-                in
-                  mk_mr_subclass_tac ctxt bd_Card_order colarge coregular
-                end;
-              val (coclass, lthy) = define_covar_type_class mrbnf_bd_raw
-                (mk_prefix_binding covar_typeN) class subclass_tac lthy;
-              val lthy = prove_instantiation wit_covar_name coclass
-                (mk_mr_instance_proof_tac wit_covar_def (SOME bd_Card_order)) lthy;
-            in (coclass, lthy) end;
+            | NONE => apfst single (Var_Classes.mk_class_for_bound (mk_prefix_binding var_typeN) mrbnf_bd_raw lthy);
+          val (coclass, lthy) = Var_Classes.mk_class_for_bound (mk_prefix_binding covar_typeN) (BNF_LFP_Util.mk_cardSuc mrbnf_bd_raw) lthy;
         in
-          ((class, var_large, var_regular), (mk_covar_type_class, mk_covar_large), lthy)
+          (class, [coclass], lthy)
         end;
 
     val (alphas, betas, deads, Calpha, Calpha_params, mrbnf_map) =
@@ -1905,7 +1830,7 @@ fun define_mrbnf_consts const_policy fact_policy internal Ds_opt classes_opt map
     fun mk_pred_spec Ds' As' =
       Term.subst_atomic_types ((Ds ~~ Ds') @ (As ~~ As')) pred_spec;
   in
-    (((alphas, betas, deads, Calpha, (class, var_large, var_regular), (mk_covar_type_class, mk_covar_large)),
+    (((alphas, betas, deads, Calpha, class, coclass),
      (mrbnf_map, mrbnf_sets, mrbnf_bd, mrbnf_wits, mrbnf_rel, mrbnf_pred),
      (mrbnf_map_def, mrbnf_set_defs, mrbnf_bd_def, mrbnf_wit_defs, mrbnf_rel_def, mrbnf_pred_def),
      (mk_mrbnf_map, mk_mrbnf_t, mk_mrbnf_T, mk_mrbnf_rel, mk_mrbnf_pred, mk_rel_spec,
@@ -1957,7 +1882,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
       else
         (mrbnf_b, Local_Theory.full_name no_defs_lthy mrbnf_b);
 
-    val (((alphas, betas, deads, Calpha, (class, var_large_raw, var_regular), (mk_covar_type_class, mk_covar_large)),
+    val (((alphas, betas, deads, Calpha, class, coclass),
      (mrbnf_map, mrbnf_sets, mrbnf_bd, mrbnf_wits, mrbnf_rel, mrbnf_pred),
      (mrbnf_map_def, mrbnf_set_defs, mrbnf_bd_def, mrbnf_wit_defs, mrbnf_rel_def, mrbnf_pred_def),
      (mk_mrbnf_map_Ds, mk_mrbnf_t_Ds, mk_mrbnf_T_Ds, _, _, mk_rel_spec, mk_pred_spec)), lthy) =
@@ -2199,118 +2124,34 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
         val bd_Card_order = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.Card_order};
         val bd_Cinfinite = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.Cinfinite};
         val bd_Cnotzero = bd_infinite_regular_card_order RS @{thm infinite_regular_card_order.Cnotzero};
-        val (coclass, lthy) = mk_covar_type_class bd_Card_order lthy;
 
-        val var_large =
-            @{thm ordIso_ordLeq_trans} OF [@{thm ordIso_symmetric} OF
-              [@{thm card_of_Field_ordIso} OF [bd_Card_order]], var_large_raw];
+        val lthy = Var_Classes.prove_class_theorems false true (hd class) bd_Cinfinite bd_regularCard lthy;
+        val lthy = Var_Classes.prove_class_theorems true false (hd coclass)
+          (@{thm Cinfinite_cardSuc} OF [bd_Cinfinite]) (@{thm regularCard_cardSuc} OF [bd_Cinfinite]) lthy;
+        val lthy = Var_Classes.prove_subclass_of (SOME (hd coclass)) (hd class) (fn ctxt => EVERY1 [
+          rtac ctxt @{thm cardSuc_ordLeq},
+          rtac ctxt bd_Card_order
+        ]) lthy;
 
-        val covar_large = mk_covar_large (coclass, lthy)
+        val var_large = Var_Classes.get_class_assumption (hd class) "large'" lthy;
+        val var_regular = Var_Classes.get_class_assumption (hd class) "regular" lthy;
+        val covar_large = Var_Classes.get_class_assumption (hd coclass) "large'" lthy
 
         val natLeq_bound = @{thm ordLeq_ordLess_trans} OF [@{thm natLeq_ordLeq_cinfinite} OF
           [conjI OF [bd_cinfinite, bd_Card_order]]] OF [@{thm ordLess_ordLeq_trans} OF
           [@{thm cardSuc_greater} OF [bd_Card_order], covar_large]];
 
         val class_thms = {
-          var_large = var_large_raw,
+          var_large = Var_Classes.get_class_assumption (hd class) "large" lthy,
+          var_large' = var_large,
           var_regular = var_regular,
-          covar_large = covar_large
-        };
+          covar_large = Var_Classes.get_class_assumption (hd coclass) "large" lthy,
+          covar_large' = covar_large
+        }: class_thms;
 
-        val (UNIV_cinfinite, Un_bound, UNION_bound, lthy) = case class of
-          @{sort var} => (@{thm var_class.UNIV_cinfinite}, @{thm var_class.Un_bound}, @{thm var_class.UN_bound}, lthy)
-          | _ =>
-          let
-            val UNIV_cinfinite =
-              let
-                val goal = TFree (Name.aT, class)
-                  |> HOLogic.mk_UNIV
-                  |> mk_card_of
-                  |> mk_cinfinite
-                  |> HOLogic.mk_Trueprop;
-              in
-                prove_sorry "UNIV_cinfinite" lthy [] [] goal (fn {context = ctxt, prems = _} =>
-                  EVERY1 [rtac ctxt @{thm cinfinite_mono}, rtac ctxt var_large, rtac ctxt conjunct1,
-                    rtac ctxt bd_Cinfinite])
-                |> Thm.close_derivation \<^here>
-              end;
-
-            val Un_bound =
-              let
-                val (T, Tc) = lthy |> mk_TFrees 1 ||> fst o mk_TFrees' [class] |> apply2 hd;
-                val (A1, A2) = mk_Frees "A" (map HOLogic.mk_setT [T, T]) lthy |> dest_cons o fst ||> hd;
-                fun mk_card_bound t = Tc
-                  |> HOLogic.mk_UNIV
-                  |> mk_card_of
-                  |> mk_ordLess (mk_card_of t)
-                  |> HOLogic.mk_Trueprop;
-                val goal = [A1, A2, mk_union (A1, A2)]
-                  |> map mk_card_bound
-                  |> foldr1 Logic.mk_implies
-                  |> fold_rev Logic.all [A1, A2];
-              in
-                prove_sorry "Un_bound" lthy [] [] goal (fn {context = ctxt, prems = _} =>
-                  EVERY1 [rtac ctxt @{thm card_of_Un_ordLess_infinite},
-                    rtac ctxt (unfold_thms ctxt @{thms cinfinite_def Field_card_of} UNIV_cinfinite),
-                    REPEAT_DETERM_N 2 o assume_tac ctxt])
-                |> Thm.close_derivation \<^here>
-              end;
-
-            val UNION_bound =
-              let
-                val ((Ta, Tb), Tc) = lthy
-                  |> mk_TFrees 2
-                  |>> apsnd hd o dest_cons
-                  ||> hd o fst o mk_TFrees' [class];
-                val ((I, A), i) = lthy
-                  |> yield_singleton (mk_Frees "I") (HOLogic.mk_setT Ta)
-                  ||>> yield_singleton (mk_Frees "A") (Ta --> HOLogic.mk_setT Tb)
-                  ||> fst o yield_singleton (mk_Frees "i") Ta;
-                fun mk_card_bound t = Tc
-                  |> HOLogic.mk_UNIV
-                  |> mk_card_of
-                  |> mk_ordLess (mk_card_of t)
-                  |> HOLogic.mk_Trueprop;
-                val goal = [mk_card_bound I,
-                    (HOLogic.mk_mem (i, I) |> HOLogic.mk_Trueprop, A $ i |> mk_card_bound)
-                      |> Logic.mk_implies |> Logic.all i,
-                    mk_UNION I (A $ i |> Term.absfree (dest_Free i)) |> mk_card_bound]
-                  |> foldr1 Logic.mk_implies
-                  |> fold_rev Logic.all [I, A];
-                val bound_Card_order = thm_instantiate_terms lthy [SOME (HOLogic.mk_UNIV Tc)]
-                  @{thm card_of_Card_order};
-              in
-                prove_sorry "UN_bound" lthy [] [] goal (fn {context = ctxt, prems = _} =>
-                  EVERY1 [rtac ctxt @{thm regularCard_UNION}, rtac ctxt bound_Card_order,
-                    rtac ctxt UNIV_cinfinite, rtac ctxt var_regular, assume_tac ctxt,
-                    Goal.assume_rule_tac ctxt])
-                |> Thm.close_derivation \<^here>
-              end;
-
-            val lthy = Local_Theory.background_theory (fn thy =>
-              let
-                val lthy = Named_Target.init [] (hd coclass) thy;
-                val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
-                  ("large", covar_large)
-                ]) lthy) handle ERROR _ => lthy;
-              in Local_Theory.exit_global lthy end
-            ) lthy;
-            val lthy = Local_Theory.background_theory (fn thy =>
-              let
-                val lthy = Named_Target.init [] (hd class) thy;
-                val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
-                  ("Un_bound", Un_bound),
-                  ("UN_bound", UNION_bound),
-                  ("UNIV_cinfinite", UNIV_cinfinite),
-                  ("large'", var_large)
-                ]) lthy) handle ERROR _ => lthy;
-                val lthy = snd (Local_Theory.notes (map (fn (thmN, thm) => ((Binding.name thmN, []), [([thm], [])])) [
-                  ("large", var_large_raw),
-                  ("regular", var_regular)
-                ]) lthy) handle ERROR _ => lthy;
-              in Local_Theory.exit_global lthy end
-            ) lthy;
-          in (UNIV_cinfinite, Un_bound, UNION_bound, lthy) end;
+        val UNIV_cinfinite = @{thm var_class.UNIV_cinfinite}
+        val Un_bound = @{thm infinite_class.Un_bound}
+        val UN_bound = @{thm var_class.UN_bound}
 
         val supp_the_inv_bound = @{thm supp_the_inv_bound_gen} OF
             [conjI OF [UNIV_cinfinite, @{thm card_of_Card_order}]];
@@ -3562,7 +3403,7 @@ fun prepare_def const_policy mk_fact_policy internal qualify prep_typ prep_term 
           pred_cong pred_cong_simp;
 
         val mr_facts = mk_mr_facts var_large var_regular natLeq_bound UNIV_cinfinite supp_comp_bound
-          Un_bound UNION_bound mr_rel_cong0 mr_rel_cong mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip
+          Un_bound UN_bound mr_rel_cong0 mr_rel_cong mr_in_rel mr_le_rel_OO mr_map_transfer mr_rel_eq mr_rel_flip
           mr_rel_map mr_rel_mono mr_rel_mono_strong0 mr_rel_mono_strong mr_set_transfer mr_rel_Grp
           mr_rel_conversep mr_rel_OO mr_rel_OO_Grp mr_rel_transfer mr_rel_id mr_rel_set;
 

@@ -421,7 +421,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val typ_y'' = typ_subst_atomic (nths_drop lin_live_poses (As ~~ As'')) typ_y;
         val (var_y, names_lthy) = mk_Free "y" typ_y names_lthy;
         val (var_y', names_lthy) = mk_Free "y'" typ_y' names_lthy;
-        val (var_y'', names_lthy) = mk_Free "y''" typ_y' names_lthy;
 
         (* F' definitions *)
         (* set_F's *)
@@ -565,7 +564,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
         val l_As'' = map (fn T => find_first (fn (A, _) => T = A) (As ~~ As'') |> the |> snd) l_As
 
         val l_typ_f''_As = map (fn (T', T'') => T' --> T'') (l_As' ~~ l_As'')
-        val (var_f''_As, names_lthy) = mk_Frees "lf''" l_typ_f''_As names_lthy;
+        val (var_f''_As, _) = mk_Frees "lf''" l_typ_f''_As names_lthy;
 
         val l_fs = MRBNF_Def.interlace l_var_f'_As l_var_u_Bs l_var_v_Fs l_var_types;
         val l_f2s = MRBNF_Def.interlace var_f''_As l_var_u2_Bs l_var_v2_Fs l_var_types;
@@ -619,28 +618,11 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b opts lthy =
             in fold_rev absfree (map dest_Free vs) (Abs_const $ (list_comb (wit_F, vs))) end)
           (Iwits_F @ Iwits_new);
 
-        fun mk_simple_class_opt mrbnf =
-          let
-            val class_thms = MRBNF_Def.class_thms_of_mrbnf mrbnf;
-          in
-            SOME (
-              (MRBNF_Def.class_of_mrbnf mrbnf, #var_large class_thms, #var_regular class_thms),
-              (MRBNF_Def.coclass_of_mrbnf mrbnf, K (#covar_large class_thms))
-            )
-          end;
-                                           
-          
-
         val (mrbnf', lthy) = MRBNF_Def.mrbnf_def MRBNF_Def.Do_Inline (MRBNF_Def.user_policy MRBNF_Def.Note_Some) 
-          false I tacs (SOME l_Ds) (mk_simple_class_opt mrbnf) map_F'_binding rrel_F'_binding pred_b set_bs_non_dead 
-          (((((((b, typ_y), map_F'_term), (l_var_types ~~ set_F'_terms)),
-            MRBNF_Def.mk_bd_of_mrbnf Ds Bs Fs mrbnf),
-            wits_F'),
-            SOME rrel_F'_term),
-            NONE)
+          false I tacs (SOME l_Ds) (SOME (MRBNF_Def.class_of_mrbnf mrbnf, MRBNF_Def.coclass_of_mrbnf mrbnf)) 
+          map_F'_binding rrel_F'_binding pred_b set_bs_non_dead (((((((b, typ_y), map_F'_term), 
+          (l_var_types ~~ set_F'_terms)), MRBNF_Def.mk_bd_of_mrbnf Ds Bs Fs mrbnf), wits_F'), SOME rrel_F'_term), NONE)
           lthy
-
-      val _ = mrbnf' |> @{print}
 
       in
         lthy |> MRBNF_Def.register_mrbnf Plugin_Name.default_filter (Local_Theory.full_name lthy b) mrbnf'

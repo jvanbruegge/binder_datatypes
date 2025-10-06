@@ -29,7 +29,7 @@ linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k
   done
 
 binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
-  | Let "(fs::'a, ts::'a lc) alist" u::"'a lc" binds fs in ts u
+  | Let "(fs::'a, 'a lc) alist" u::"'a lc" binds fs in u
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
@@ -248,7 +248,6 @@ linearize_mrbnf ('a, 'b::var) L' = "('a, 'b::var) L" on 'b
 linearize_mrbnf (st1:'b::var, st2:'f , st3:'c::var , 'd, st4:'a::var , st5:'e) F'' = 
   "('a::var, 'b::var, 'c::var, 'd, 'e, 'f) F" on 'a
   sorry
-
 
 term Abs_F''
 

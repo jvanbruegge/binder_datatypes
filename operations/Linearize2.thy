@@ -10,6 +10,27 @@ definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" whe
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
+linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k
+  unfolding list.in_rel
+  subgoal for S R l r
+    apply safe
+    subgoal for z
+      apply (rule exI[of _ "map (\<lambda>((a,b),(c,d)). ((a,c),(b,d))) z"])
+      apply auto
+      done
+    subgoal for z z1 z2
+      apply (auto simp: list_eq_iff_nth_eq map_prod_def split_beta prod_eq_iff)
+      done
+    subgoal for z
+      apply (rule exI[of _ "map (\<lambda>((a,b),(c,d)). ((a,c),(b,d))) z"])
+      apply (auto simp: subset_eq split_beta)
+      done
+    done
+  done
+
+binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
+  | Let "(fs::'a, ts::'a lc) alist" u::"'a lc" binds fs in ts u
+
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 

@@ -10,7 +10,7 @@ definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" whe
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
-linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k
+linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for suffix: list_k
   unfolding list.in_rel
   subgoal for S R l r
     apply safe

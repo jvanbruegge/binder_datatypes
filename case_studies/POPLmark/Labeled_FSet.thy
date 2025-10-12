@@ -1,5 +1,5 @@
 theory Labeled_FSet
-  imports Binders.MRBNF_Composition "HOL-Library.FSet" "HOL-ex.Sketch_and_Explore"
+  imports Binders.MRBNF_Composition "HOL-Library.FSet"
 begin
 
 abbreviation nonrep_pair :: "'a \<times> 'b \<Rightarrow> bool" where "nonrep_pair _ \<equiv> True"

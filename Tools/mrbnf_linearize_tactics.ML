@@ -87,13 +87,14 @@ fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0
   (fn {prems, context = ctxt, params, ...} => 
     HEADGOAL (Method.insert_tac ctxt [
       infer_instantiate' ctxt [SOME (snd (nth params 1)), SOME (snd (nth params 0))] (@{thm spec2} OF [nth prems 0]),
-      infer_instantiate' ctxt [SOME (snd (nth params 2)), SOME (snd (nth params 0))] (@{thm spec2} OF [nth prems 0])] THEN_ALL_NEW
-      etac ctxt impE THEN_ALL_NEW
-      etac ctxt impE) THEN
-    REPEAT_DETERM_N 3 (HEADGOAL (
-      rtac ctxt conjI THEN_ALL_NEW
-      rtac ctxt conjI THEN_ALL_NEW
-      resolve_tac ctxt prems)) THEN
+      infer_instantiate' ctxt [SOME (snd (nth params 2)), SOME (snd (nth params 0))] (@{thm spec2} OF [nth prems 0])]) THEN
+    REPEAT_DETERM_N 2 (
+      HEADGOAL (etac ctxt impE) THEN
+      HEADGOAL (
+        rtac ctxt conjI THEN_ALL_NEW
+        rtac ctxt conjI THEN_ALL_NEW
+        resolve_tac ctxt prems)
+      ) THEN
     HEADGOAL (rtac ctxt exI) THEN
     unfold_thms_tac ctxt @{thms inf_fun_def inf_bool_def} THEN
     HEADGOAL (rtac ctxt conjI) THEN
@@ -455,7 +456,8 @@ fun mk_F'_le_rel_OO_tac l_nr_As rrel_F'_def F_rel_compp Rep_const ctxt =
         assume_tac ctxt
       ])
     end) ctxt);
-fun mk_F'_in_rel_tac mrbnf lives bounds frees lin_poses rrel_F'_def map_F'_def set_defs nonrep_map_F_bij_2 F_map_comp 
+
+fun mk_F'_in_rel_tac mrbnf lives bounds frees lin_live_poses rrel_F'_def map_F'_def set_defs nonrep_map_F_bij_2 F_map_comp 
   rrel_F_map_onVar F_in_rel nonrep_map_F_rev F_set_maps F_map_cong Rep_F'_inverse mk_Rep_F' mk_Abs_F'_inverse Abs_const ctxt =
   HEADGOAL (Subgoal.FOCUS (fn {prems, context = ctxt, params, ...} =>
     let
@@ -465,7 +467,7 @@ fun mk_F'_in_rel_tac mrbnf lives bounds frees lin_poses rrel_F'_def map_F'_def s
       val nr_As = length lives;
       val nr_Bs = length bounds;
       val nr_Fs = length frees;
-      val nr_lin = length lin_poses;
+      val nr_lin = length lin_live_poses;
 
       val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf
 
@@ -485,7 +487,7 @@ fun mk_F'_in_rel_tac mrbnf lives bounds frees lin_poses rrel_F'_def map_F'_def s
         val bounds = MRBNF_Def.bounds_of_mrbnf mrbnf |> map (Envir.subst_type subst);
         val lives = MRBNF_Def.lives_of_mrbnf mrbnf |> map (Envir.subst_type subst);
         val map_F = MRBNF_Def.mk_map_comb_of_mrbnf deads
-          (map_index (uncurry (fn i => if member (op=) lin_poses i then BNF_Util.fst_const else HOLogic.id_const)) lives)
+          (map_index (uncurry (fn i => if member (op=) lin_live_poses i then BNF_Util.fst_const else HOLogic.id_const)) lives)
           (map HOLogic.id_const bounds) (map HOLogic.id_const frees)
           mrbnf $ z;
         val (Abs_n, Abs_T) = dest_Const Abs_const;

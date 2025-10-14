@@ -1,5 +1,5 @@
 theory Greatest_Fixpoint
-  imports "Binders.MRBNF_Composition" "Binders.MRBNF_FP"
+  imports "Binders.MRBNF_Composition" "Binders.MRBNF_FP" "HOL-Library.Stream"
 begin
 
 declare [[mrbnf_internals]]
@@ -136,9 +136,6 @@ coinductive alpha_term' :: "'a::covar raw_term \<Rightarrow> 'a raw_term \<Right
 
 type_synonym 'a raw_term_pre = "('a, 'a, 'a raw_term, 'a raw_term) term_pre"
 
-definition avoid_raw_term :: "'a::covar raw_term_pre \<Rightarrow> 'a set \<Rightarrow> 'a raw_term_pre" where
-  "avoid_raw_term x A \<equiv> SOME y. set2_term_pre y \<inter> A = {} \<and> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
-
 typedef ('a::covar) "term" = "(UNIV::'a raw_term set) // { (x, y). alpha_term x y }"
   apply (rule exI)
   apply (rule quotientI)
@@ -162,10 +159,6 @@ definition permute_term :: "('a::covar \<Rightarrow> 'a) \<Rightarrow> 'a term \
 
 definition FVars_term :: "'a::covar term \<Rightarrow> 'a set" where
   "FVars_term x \<equiv> FVars_raw_term (TT_rep x)"
-
-definition avoid_term :: "'a::covar term_pre' \<Rightarrow> 'a set \<Rightarrow> 'a term_pre'" where
-  "avoid_term x A \<equiv> map_term_pre id id TT_abs TT_abs (
-avoid_raw_term (map_term_pre id id TT_rep TT_rep x) A)"
 
 definition noclash_raw_term :: "'a::covar raw_term_pre \<Rightarrow> bool" where
   "noclash_raw_term x \<equiv> set2_term_pre x \<inter> (set1_term_pre x \<union> \<Union>(FVars_raw_term ` set4_term_pre x)) = {}"
@@ -936,18 +929,6 @@ lemma raw_refreshs:
       done
     done
 
-lemma avoid_raw_freshs:
-  fixes x::"'a::covar raw_term_pre"
-  assumes "|A| <o |UNIV::'a set|"
-  shows "set2_term_pre (avoid_raw_term x A) \<inter> A = {}"
-   apply (unfold avoid_raw_term_def)
-    (* REPEAT_DETERM *)
-   apply (rule someI2_ex)
-    apply (rule raw_refreshs[OF assms])
-   apply (erule conjE)+
-  apply assumption
-  done
-
 lemma TT_Quotients: "Quotient alpha_term TT_abs TT_rep (\<lambda>x. (=) (TT_abs x))"
   apply (subgoal_tac "Quotient3 alpha_term TT_abs TT_rep")
    prefer 2
@@ -1235,71 +1216,71 @@ map_term_pre id g (permute_term g) id x = y)"
     (* END REPEAT_DETERM *)
   done
 
-lemma avoid_freshs:
-  fixes x::"'a::covar term_pre'"
-  assumes "|A| <o |UNIV::'a set|"
-  shows "set2_term_pre (avoid_term x A) \<inter> A = {}"
-   apply (unfold avoid_term_def)
-    (* REPEAT_DETERM *)
-   apply (subst term_pre.set_map, (rule supp_id_bound bij_id)+)+
-   apply (unfold image_id)
-   apply (rule avoid_raw_freshs[OF assms])
-    (* END REPEAT_DETERM *)
-  done
-
-lemma alpha_avoids:
-  fixes x::"'a::covar term_pre'"
-  assumes "|A| <o |UNIV::'a set|"
-  shows "term_ctor (avoid_term x A) = term_ctor x"
-  apply (unfold avoid_term_def avoid_raw_term_def)
-  apply (rule someI2_ex)
-   apply (rule raw_refreshs[OF assms])
-  apply (erule conjE)+
-  apply (unfold term_ctor_def)
-  apply (subst term_pre.map_comp)
-    apply (rule supp_id_bound bij_id)+
-  apply (unfold id_o o_id)
-  apply (drule TT_total_abs_eq_iffs[THEN iffD2])
-  apply (rule trans[rotated])
-   apply (erule sym)
-  apply (rule TT_total_abs_eq_iffs[THEN iffD2])
-  apply (rule alpha_term.intros)
-         apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
-  apply (rule iffD2[OF term_pre.mr_rel_map(1), rotated -1])
-            apply (unfold id_o o_id Grp_OO permute_raw_ids)
-            apply (unfold comp_def term_pre.mr_rel_id[symmetric])
-            apply (rule term_pre.rel_refl_strong)
-              apply (rule TT_rep_abs)+
-           apply (rule supp_id_bound bij_id)+
-  done
-
 lemma fresh_cases:
   fixes y::"'a::covar term"
   assumes "|A| <o |UNIV::'a set|"
-    and "\<And>(x::'a term_pre'). y = term_ctor x \<Longrightarrow> set2_term_pre x \<inter> A = {} \<Longrightarrow> P"
+    and "\<And>(x::'a term_pre'). y = term_ctor x \<Longrightarrow> set2_term_pre x \<inter> A = {} \<Longrightarrow> noclash_term x \<Longrightarrow> P"
   shows P
   apply (rule raw_term.exhaust[of "TT_rep y"])
-  apply (rule assms)
-    defer
-    apply (rule avoid_freshs[OF assms(1)])+
-  apply (rule trans[rotated])
-   apply (rule sym)
-   apply (rule alpha_avoids[OF assms(1)])
-  apply (unfold term_ctor_def)
-  apply (rule TT_Quotients[THEN Quotient_rel_abs2])
-  apply (rule arg_cong2[OF _ refl, of _ _ alpha_term, THEN iffD2])
-   apply assumption
-  apply (rule alpha_term.intros)
-         apply (rule supp_id_bound bij_id id_on_id eq_on_refl)+
-  apply (subst term_pre.map_comp)
-         apply (rule supp_id_bound bij_id)+
-  apply (unfold id_o o_id)
-  apply (rule iffD2[OF term_pre.mr_rel_map(3), rotated -1])
-             apply (unfold inv_id id_o o_id Grp_OO relcompp_conversep_Grp)
-             apply (unfold comp_def term_pre.mr_rel_id[symmetric] permute_raw_ids)
-             apply (rule term_pre.rel_refl_strong)
-               apply (rule TT_rep_abs_syms)+
-            apply (rule supp_id_bound bij_id)+
+  subgoal for x
+    apply (rule exE[OF raw_refreshs[of "A \<union> FVars_term y" x]])
+     apply (rule infinite_class.Un_bound)
+      apply (rule assms)
+     apply (rule FVars_bd_UNIVs)
+    apply (erule conjE)
+    subgoal for x'
+      apply (rule assms(2)[of "map_term_pre id id TT_abs TT_abs x'"])
+        apply (drule arg_cong[of _ _ TT_abs])
+        apply (unfold TT_abs_rep)
+        apply hypsubst_thin
+        apply (unfold term_ctor_def)[1]
+        apply (subst term_pre.map_comp)
+          apply (rule supp_id_bound bij_id)+
+        apply (unfold id_o o_id TT_total_abs_eq_iffs)
+        apply (erule alpha_trans)
+        apply (rule alpha_term.intros)
+           apply (rule supp_id_bound bij_id id_on_id)+
+        apply (unfold term_pre.mr_rel_id[symmetric] term_pre.rel_map permute_raw_ids comp_def)
+        apply (rule term_pre.rel_refl_strong)
+         apply (rule TT_rep_abs_syms)+
+
+       apply (subst term_pre.set_map, (rule supp_id_bound bij_id)+)
+       apply (unfold image_id)
+       apply (erule Int_subset_empty2)
+       apply (rule Un_upper1)
+
+      apply (unfold noclash_term_def Int_Un_distrib Un_empty)
+      apply (subst term_pre.set_map, (rule supp_id_bound bij_id)+)+
+      apply (unfold image_id image_comp[unfolded comp_def])
+      apply (erule conjE)
+      apply (rotate_tac -2)
+      apply (erule thin_rl)
+
+     apply (rule conjI)
+       apply (erule Int_subset_empty2)
+       apply (unfold FVars_term_def)[1]
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+        apply (rule trans)
+         apply (erule arg_cong)
+        apply (erule alpha_FVars)
+       apply (rule subsetI)
+       apply (erule FVars_raw_intros)
+
+
+       apply (erule Int_subset_empty2)
+       apply (unfold FVars_term_def)[1]
+       apply (rule iffD2[OF arg_cong2[OF refl, of _ _ "(\<subseteq>)"]])
+        apply (rule trans)
+         apply (erule arg_cong)
+        apply (erule alpha_FVars)
+      apply (rule subsetI)
+      apply (erule UN_E)
+      apply (erule FVars_raw_intros)
+      apply (subst (asm) alpha_FVars)
+       apply (rule TT_rep_abs)
+      apply assumption
+      done
+    done
   done
 
 lemma permute_abs:
@@ -1623,7 +1604,11 @@ lemma existential_coinduct[THEN mp, rotated -1]:
     rel_term_pre (\<lambda>x y. R x y \<or> x = y) (\<lambda>x y. R x y \<or> x = y) z w"
   shows "R x y \<longrightarrow> x = y"
   apply (rule fresh_cases[OF emp_bound, of x])
+  apply (rotate_tac -1)
+  apply (erule thin_rl)
   apply (rule fresh_cases[OF emp_bound, of y])
+  apply (rotate_tac -1)
+  apply (erule thin_rl)
   apply hypsubst_thin
   apply (erule thin_rl[of "_ = _"])+
   apply (unfold term_ctor_def TT_total_abs_eq_iffs)

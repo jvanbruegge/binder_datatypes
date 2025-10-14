@@ -33,6 +33,7 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     Corecursor
     Corecursor2
     VVSubst
+    VVSubst_Corec
     TVSubst
     Sugar
 

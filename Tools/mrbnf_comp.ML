@@ -202,7 +202,6 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       else (bd, NONE);
       
     val sort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map class_of_mrbnf inners) (class_of_mrbnf outer);
-    val cosort = fold (curry (Sign.inter_sort (Proof_Context.theory_of lthy))) (map coclass_of_mrbnf inners) (coclass_of_mrbnf outer);
 
     fun try_unprefix prfx s = case try (unprefix prfx) s of
       SOME x => x
@@ -212,8 +211,6 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
         val name = prfx ^ space_implode "" (map (try_unprefix prfx o short_type_name) xs);
       in Binding.concealed (qualify (Binding.name name)) end;
     val (class, lthy) = apfst single (Var_Classes.mk_comp_class (mk_name "" sort) bd' (map bd_Cinfinite_of_mrbnf (outer :: inners)) sort lthy);
-    val (coclass, lthy) = if length cosort = 1 then (cosort, lthy) else
-      apfst single (Var_Classes.mk_class_for_bound (mk_name "" cosort) (BNF_LFP_Util.mk_cardSuc bd') lthy);
 
     val ((((((oDs, iDss), As), As'), Fs), Bs), names_lthy) = lthy
       |> mk_TFrees' (map Type.sort_of_atyp (deads_of_mrbnf outer))
@@ -464,8 +461,8 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
       wit = wit_tac
     };
 
-    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME (class, coclass))
-              Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
+    val (mrbnf, lthy') = mrbnf_def const_policy (K Dont_Note) true qualify tacs (SOME (oDs @ flat iDss)) (SOME class)
+      Binding.empty Binding.empty Binding.empty [] (((((((binding, oT), mapx), ivar_types ~~ sets'), bd'), wits), SOME rel), SOME pred) lthy
 
     val phi =
       Morphism.thm_morphism "MRBNF" (unfold_thms lthy' [id_mrbnf_def])
@@ -476,7 +473,7 @@ fun clean_compose_mrbnf const_policy qualify binding outer inners (unfold_set, l
     (mrbnf', (add_mrbnf_to_unfolds mrbnf' unfold_set, lthy'))
   end;
 
-fun mk_simple_class_opt mrbnf = SOME (class_of_mrbnf mrbnf, coclass_of_mrbnf mrbnf);
+fun mk_simple_class_opt mrbnf = SOME (class_of_mrbnf mrbnf);
 
 (* Changing the order of live, free and bound variables *)
 fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
@@ -493,7 +490,7 @@ fun raw_permute_mrbnf qualify src dest mrbnf (accum as (unfold_set, lthy)) =
     val frees = frees_of_mrbnf mrbnf;
     val var_types = var_types_of_mrbnf mrbnf;
     val nwits = nwits_of_mrbnf mrbnf;
-    val (class, coclass) = (class_of_mrbnf mrbnf, coclass_of_mrbnf mrbnf)
+    val class = class_of_mrbnf mrbnf;
 
     (*create permutation shorthands*)
     fun permute xs = permute_like_unique (op =) src dest xs;
@@ -643,7 +640,7 @@ fun raw_demote_mrbnf qualify targetTs mrbnf (accum as (unfold_set, lthy)) =
     val deads = deads_of_mrbnf mrbnf;
     val nwits = nwits_of_mrbnf mrbnf;
     val var_types = var_types_of_mrbnf mrbnf;
-    val (class, coclass) = (class_of_mrbnf mrbnf, coclass_of_mrbnf mrbnf);
+    val class = class_of_mrbnf mrbnf;
 
     (*Helper functions*)
     fun  cond_interlace _ _ [] = []
@@ -905,7 +902,6 @@ fun raw_lift_mrbnf qualify (n1, n2, n3) mrbnf (accum as (unfold_set, lthy)) =
     val bounds = bounds_of_mrbnf mrbnf;
     val nwits = nwits_of_mrbnf mrbnf;
     val class  = class_of_mrbnf mrbnf;
-    val coclass = coclass_of_mrbnf mrbnf;
     val count = live + bound + free;
     val newcount = n1 + n2 + n3;
 
@@ -1394,10 +1390,9 @@ fun seal_mrbnf qualify (unfold_set : unfold_set) b force_out_of_line Ds all_Ds m
       rtac ctxt type_definition_bdT
     ];
     val lthy = Var_Classes.prove_subclass_of (SOME class) (hd (class_of_mrbnf mrbnf)) subclass_tac lthy;
-    val lthy = Var_Classes.prove_subclass_of (SOME coclass) (hd (coclass_of_mrbnf mrbnf)) subclass_tac lthy;
 
     val (mrbnf', lthy') =
-      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) (SOME ([class], [coclass]))
+      mrbnf_def Hardly_Inline (user_policy Note_Some) true qualify tacs (SOME all_deads) (SOME [class])
         Binding.empty Binding.empty Binding.empty []
         (((((((b, TA), mrbnf_map), mrbnf_sets), mrbnf_bd'), mrbnf_wits), SOME mrbnf_rel), SOME mrbnf_pred) lthy;
     val unfolds = @{thm id_bnf_apply} ::

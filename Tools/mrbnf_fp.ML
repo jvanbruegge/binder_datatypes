@@ -84,8 +84,27 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
     (* TODO: error handling *)
 
     val npre_args = MRBNF_Def.live_of_mrbnf (hd mrbnfs) + MRBNF_Def.free_of_mrbnf (hd mrbnfs) + MRBNF_Def.bound_of_mrbnf (hd mrbnfs);
-    val sort = foldl1 (Sign.inter_sort (Proof_Context.theory_of lthy)) (map
-      (if co then MRBNF_Def.coclass_of_mrbnf else MRBNF_Def.class_of_mrbnf) mrbnfs)
+
+    val (sort, lthy) = if co then
+      let
+        val (class, lthy) = Var_Classes.mk_class_for_bound (Binding.prefix_name "covar_" (Binding.name (hd T_names)))
+          (mk_card_suc (MRBNF_Def.bd_of_mrbnf (hd mrbnfs))) lthy
+        val lthy = Var_Classes.prove_class_theorems true false class
+          (@{thm Cinfinite_card_suc} OF [
+            MRBNF_Def.bd_Cinfinite_of_mrbnf (hd mrbnfs),
+            MRBNF_Def.bd_card_order_of_mrbnf (hd mrbnfs)
+          ])
+          (@{thm regularCard_card_suc} OF [
+            MRBNF_Def.bd_card_order_of_mrbnf (hd mrbnfs),
+            MRBNF_Def.bd_Cinfinite_of_mrbnf (hd mrbnfs)
+          ]) lthy;
+        val lthy = Var_Classes.prove_subclass_of (SOME class) (hd (MRBNF_Def.class_of_mrbnf (hd mrbnfs))) (fn ctxt => EVERY1 [
+          rtac ctxt @{thm ordLess_imp_ordLeq},
+          rtac ctxt @{thm card_suc_greater},
+          rtac ctxt (MRBNF_Def.bd_card_order_of_mrbnf (hd mrbnfs))
+        ]) lthy;
+      in ([class], lthy) end
+      else (MRBNF_Def.class_of_mrbnf (hd mrbnfs), lthy)
     val (tvars as ((((frees, pfrees), plives), pbounds), deadss), _) = lthy
       |> mk_TFrees' (replicate nvars sort)
       ||>> mk_TFrees' (replicate (free - nvars) sort)
@@ -586,7 +605,7 @@ fun define_fp_consts fp_kind (models: mrbnf_fp_model list) (binding_relation : (
     permute_raws, is_freess, FVars_rawss, alphas, quots, raw_Ts,
     TT_abss, TT_reps, map morph ctors, map morph permutes, map (map morph) FVarsss,
     Option.map (morph_result phi tyenv) subshapes_opt, map morph raw_noclashs, map morph noclashs,
-    raw_sels, set_level_opt, alphas'_opt,
+    raw_sels, set_level_opt, alphas'_opt, sort,
     lthy) end
 
 fun construct_binder_fp fp_kind models binding_relation lthy =
@@ -595,7 +614,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
       (bounds, bfrees, bound_fs, bfree_fs), bfree_boundsss,
       permute_raws, is_freess, FVars_rawss, alphas, quots, raw_Ts,
       TT_abss, TT_reps, ctors, permutes, FVarsss, subshapes_opt, raw_noclashs, noclashs,
-      raw_sels, set_levels_opt, alphas'_opt,
+      raw_sels, set_levels_opt, alphas'_opt, sort,
       lthy) = define_fp_consts fp_kind models binding_relation lthy;
 
     val co = (fp_kind = Greatest_FP);
@@ -1012,8 +1031,11 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
         ),
         rtac ctxt @{thm ordIso_ordLess_trans},
         rtac ctxt @{thm card_of_nat},
+        rtac ctxt @{thm ordLeq_ordLess_trans[rotated]},
         rtac ctxt @{thm card_suc_greater},
         rtac ctxt (MRBNF_Def.bd_card_order_of_mrbnf (hd mrbnfs)),
+        rtac ctxt @{thm natLeq_ordLeq_cinfinite},
+        rtac ctxt (MRBNF_Def.bd_Cinfinite_of_mrbnf (hd mrbnfs)),
         rtac ctxt @{thm ordLess_transitive},
         resolve_tac ctxt set_level_bds,
         rtac ctxt @{thm card_suc_greater},
@@ -1036,13 +1058,7 @@ fun construct_binder_fp fp_kind models binding_relation lthy =
     )) (transpose FVars_rawss));
 
     val FVars_raw_bd_UNIVs = map (map (fn thm => @{thm ordLess_ordLeq_trans} OF [thm,
-      @{thm ordIso_ordLeq_trans} OF (if co then [
-        @{thm ordIso_symmetric[OF cardSuc_ordIso_card_suc]} OF [MRBNF_Def.bd_card_order_of_mrbnf (hd mrbnfs)],
-        #covar_large' (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))
-      ] else [
-        @{thm ordIso_symmetric[OF card_of_Field_ordIso]} OF [MRBNF_Def.bd_Card_order_of_mrbnf (hd mrbnfs)],
-        #var_large (MRBNF_Def.class_thms_of_mrbnf (hd mrbnfs))
-      ])
+      Var_Classes.get_class_assumption (hd sort) "large'" lthy
     ])) FVars_raw_bds;
 
     val alpha_refls = split_conj (Goal.prove_sorry lthy [] [] (HOLogic.mk_Trueprop (foldr1 HOLogic.mk_conj (

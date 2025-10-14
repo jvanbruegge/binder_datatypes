@@ -2059,7 +2059,7 @@ fun mrbnf_of_quotient_fixpoint vvsubst_bs qualify (fp_result : MRBNF_FP_Def_Suga
       ) end
     ) mrbnfs (#quotient_fps fp_res) deadss;
 
-    val class_thms = SOME (maps class_of_mrbnf mrbnfs, maps coclass_of_mrbnf mrbnfs);
+    val class_thms = SOME (maps class_of_mrbnf mrbnfs);
 
     val (xs, lthy) = @{fold_map 8} (fn i => fn vvsubst => fn quot => fn psets => fn mrbnf => fn deads => fn tacs => fn wits =>
       let

@@ -20,6 +20,9 @@ lemma Card_order_dir_image: "Card_order r \<Longrightarrow> type_definition Rep 
 lemma (in infinite) Un_bound: "|A| <o |UNIV::'a set| \<Longrightarrow> |B| <o |UNIV::'a set| \<Longrightarrow> |A \<union> B| <o |UNIV::'a set|"
   using card_of_Un_ordLess_infinite local.infinite_UNIV by blast
 
+lemma (in infinite) single_bound: "|{x}| <o |UNIV::'a set|"
+  by (simp add: local.infinite_UNIV)
+
 lemmas [simp] = infinite_UNIV
 
 (********* var class ****************)
@@ -56,22 +59,22 @@ end
 
 (********* covar class **************)
 class covar =
-  assumes large: "|Field (cardSuc natLeq)| \<le>o |UNIV::'a set|"
+  assumes large: "|Field (card_suc natLeq)| \<le>o |UNIV::'a set|"
     and regular: "regularCard |UNIV::'a set|"
 
-lemma (in covar) large': "cardSuc natLeq \<le>o |UNIV::'a set|"
-  using Card_order_iff_ordLeq_card_of cardSuc_Card_order local.large natLeq_Card_order ordLeq_transitive by blast
+lemma (in covar) large': "card_suc natLeq \<le>o |UNIV::'a set|"
+  by (metis Card_order_iff_ordLeq_card_of Field_card_suc cset.bd_card_order local.large ordLeq_transitive)
 
 subclass (in covar) var
   apply standard
-  apply (metis Cinfinite_ordLeq_natLeq Field_card_of cardSuc_ordLeq card_of_card_order_on cinfinite_mono local.large' natLeq_Cinfinite)
+  using Cinfinite_ordLeq_natLeq cinfinite_mono cset.bd_cinfinite local.large' apply blast
   by (rule local.regular)
 
 lemma cinfinite_wit: "cinfinite r \<Longrightarrow> \<exists>x. x \<in> Field r"
   by (metis cinfinite_def equals0I finite.emptyI)
 
-typedef wit_covar = "Field (cardSuc natLeq)"
-  by (simp add: cinfinite_wit Cinfinite_cardSuc natLeq_Cinfinite)
+typedef wit_covar = "Field (card_suc natLeq)"
+  by (simp add: Field_card_suc)
 
 instantiation wit_covar :: covar
 begin
@@ -81,16 +84,16 @@ instance
    apply (rule ordLeq_refl)
    apply (rule card_of_Card_order)
   apply (rule regularCard_ordIso[OF ordIso_transitive[OF ordIso_symmetric[OF card_of_Field_ordIso] type_definition_card_UNIV[OF type_definition_wit_covar]]])
-    apply (simp add: natLeq_Cinfinite)
-  using Cinfinite_cardSuc natLeq_Cinfinite apply blast
-  by (simp add: natLeq_Cinfinite regularCard_cardSuc)
+    apply (simp add: Field_card_suc cset.bd_card_order)
+   apply (simp add: Field_card_suc cset.bd_card_order cset.bd_cinfinite)
+  by (simp add: cset.bd_regularCard)
 end
 
 ML_file \<open>../Tools/var_classes.ML\<close>
 
 local_setup \<open>
    Var_Classes.register_class_for_bound @{class var} @{term natLeq}
-#> Var_Classes.register_class_for_bound @{class covar} @{term "cardSuc natLeq"}
+#> Var_Classes.register_class_for_bound @{class covar} @{term "card_suc natLeq"}
 \<close>
 
 typedecl bdT

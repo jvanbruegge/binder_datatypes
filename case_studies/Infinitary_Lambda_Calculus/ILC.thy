@@ -7,11 +7,10 @@ theory ILC
 begin
 
 (* We register distinct streams: *)
-mrbnf "'a ::uncountable_regular dstream"
+mrbnf "'a ::covar dstream"
   map: dsmap
   sets: bound: dsset
   bd: "card_suc natLeq"
-  var_class: uncountable_regular
   subgoal by (rule ext, transfer) simp
   subgoal apply (rule ext, transfer) by (simp add: stream.map_comp inj_on_def bij_implies_inject)
   subgoal apply transfer by (simp cong: stream.map_cong inj_on_cong)
@@ -27,7 +26,7 @@ mrbnf "'a ::uncountable_regular dstream"
   done
 
 lemma dstream_map_comp:
-"bij f \<Longrightarrow> |supp (f::'a\<Rightarrow>'a)| <o |UNIV::('a ::uncountable_regular) set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV::('a ::uncountable_regular) set| \<Longrightarrow>
+"bij f \<Longrightarrow> |supp (f::'a\<Rightarrow>'a)| <o |UNIV::('a ::covar) set| \<Longrightarrow> bij g \<Longrightarrow> |supp g| <o |UNIV::('a ::covar) set| \<Longrightarrow>
  dsmap g o dsmap f = dsmap (g \<circ> f)"
 apply(rule ext)
 using dstream.map_comp[of f g] by auto

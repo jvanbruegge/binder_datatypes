@@ -70,17 +70,17 @@ lemmas infinite_UNIV = cinfinite_imp_infinite[OF term_pre.UNIV_cinfinite]
 
 typ "('a, 'b, 'brec, 'rec) term_pre"
 
-codatatype ('a::var) raw_term = raw_term_ctor "('a, 'a, 'a raw_term, 'a raw_term) term_pre"
+codatatype ('a::covar) raw_term = raw_term_ctor "('a, 'a, 'a raw_term, 'a raw_term) term_pre"
 
 (* this definition is specific for codatatypes *)
-primcorec permute_raw_term :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a raw_term \<Rightarrow> 'a raw_term" where
+primcorec permute_raw_term :: "('a::covar \<Rightarrow> 'a) \<Rightarrow> 'a raw_term \<Rightarrow> 'a raw_term" where
   "permute_raw_term f x = raw_term_ctor (map_term_pre id id (permute_raw_term f) (permute_raw_term f) (
     map_term_pre f f id id (un_raw_term_ctor x)
     ))"
 print_theorems
 (* this lemma is specific to codatatype *)
 lemma permute_raw_sels:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "un_raw_term_ctor (permute_raw_term f x) = map_term_pre f f (permute_raw_term f) (permute_raw_term f) (un_raw_term_ctor x)"
   apply (rule trans)
@@ -93,7 +93,7 @@ lemma permute_raw_sels:
 
 (* this proof is specific to codatatypes *)
 lemma permute_raw_simps:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "permute_raw_term f (raw_term_ctor x) = raw_term_ctor (map_term_pre f f (permute_raw_term f) (permute_raw_term f) x)"
   apply (rule raw_term.expand)
@@ -103,21 +103,21 @@ lemma permute_raw_simps:
   apply (rule refl)
   done
 
-inductive free_raw_term :: "'a::var \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
+inductive free_raw_term :: "'a::covar \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "a \<in> set1_term_pre x \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
 | "z \<in> set3_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> a \<notin> set2_term_pre x \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
 | "z \<in> set4_term_pre x \<Longrightarrow> free_raw_term a z \<Longrightarrow> free_raw_term a (raw_term_ctor x)"
 
-definition FVars_raw_term :: "'a::var raw_term \<Rightarrow> 'a set" where
+definition FVars_raw_term :: "'a::covar raw_term \<Rightarrow> 'a set" where
   "FVars_raw_term x \<equiv> { a. free_raw_term a x }"
 
 (* this definition is specific to codatatypes *)
-primrec set_term_level :: "nat \<Rightarrow> 'a::var raw_term \<Rightarrow> 'a set" where
+primrec set_term_level :: "nat \<Rightarrow> 'a::covar raw_term \<Rightarrow> 'a set" where
   "set_term_level 0 t = {}"
 | "set_term_level (Suc n) t = (case t of raw_term_ctor x \<Rightarrow>
 set1_term_pre x \<union> (\<Union>y\<in>set3_term_pre x. set_term_level n y) \<union> (\<Union>y\<in>set4_term_pre x. set_term_level n y))"
 
-coinductive alpha_term :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
+coinductive alpha_term :: "'a::covar raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "\<lbrakk> bij g ; |supp g| <o |UNIV::'a set| ;
     id_on (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x) g ;
     mr_rel_term_pre id g (\<lambda>x. alpha_term (permute_raw_term g x)) alpha_term x y
@@ -125,7 +125,7 @@ coinductive alpha_term :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightarr
   monos conj_context_mono term_pre.mr_rel_mono[OF supp_id_bound]
 
 (* this definition is specific to codatatypes *)
-coinductive alpha_term' :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
+coinductive alpha_term' :: "'a::covar raw_term \<Rightarrow> 'a raw_term \<Rightarrow> bool" where
   "\<lbrakk> bij g ; |supp g| <o |UNIV::'a set| ;
     id_on (\<Union>(FVars_raw_term ` set3_term_pre x) - set2_term_pre x) g ;
     bij g' ; |supp g'| <o |UNIV::'a set| ;
@@ -136,10 +136,10 @@ coinductive alpha_term' :: "'a::var raw_term \<Rightarrow> 'a raw_term \<Rightar
 
 type_synonym 'a raw_term_pre = "('a, 'a, 'a raw_term, 'a raw_term) term_pre"
 
-definition avoid_raw_term :: "'a::var raw_term_pre \<Rightarrow> 'a set \<Rightarrow> 'a raw_term_pre" where
+definition avoid_raw_term :: "'a::covar raw_term_pre \<Rightarrow> 'a set \<Rightarrow> 'a raw_term_pre" where
   "avoid_raw_term x A \<equiv> SOME y. set2_term_pre y \<inter> A = {} \<and> alpha_term (raw_term_ctor x) (raw_term_ctor y)"
 
-typedef ('a::var) "term" = "(UNIV::'a raw_term set) // { (x, y). alpha_term x y }"
+typedef ('a::covar) "term" = "(UNIV::'a raw_term set) // { (x, y). alpha_term x y }"
   apply (rule exI)
   apply (rule quotientI)
   apply (rule UNIV_I)
@@ -151,33 +151,33 @@ abbreviation "TT_rep \<equiv> quot_type.rep Rep_term"
 type_synonym 'a term_pre' = "('a, 'a, 'a term, 'a term) term_pre"
 
 (* this definition is specific to codatatypes *)
-definition un_term_ctor :: "'a::var term \<Rightarrow> 'a term_pre'" where
+definition un_term_ctor :: "'a::covar term \<Rightarrow> 'a term_pre'" where
   "un_term_ctor x \<equiv> map_term_pre id id TT_abs TT_abs (un_raw_term_ctor (TT_rep x))"
 
-definition term_ctor :: "'a::var term_pre' \<Rightarrow> 'a term" where
+definition term_ctor :: "'a::covar term_pre' \<Rightarrow> 'a term" where
   "term_ctor x \<equiv> TT_abs (raw_term_ctor (map_term_pre id id TT_rep TT_rep x))"
 
-definition permute_term :: "('a::var \<Rightarrow> 'a) \<Rightarrow> 'a term \<Rightarrow> 'a term" where
+definition permute_term :: "('a::covar \<Rightarrow> 'a) \<Rightarrow> 'a term \<Rightarrow> 'a term" where
   "permute_term f x \<equiv> TT_abs (permute_raw_term f (TT_rep x))"
 
-definition FVars_term :: "'a::var term \<Rightarrow> 'a set" where
+definition FVars_term :: "'a::covar term \<Rightarrow> 'a set" where
   "FVars_term x \<equiv> FVars_raw_term (TT_rep x)"
 
-definition avoid_term :: "'a::var term_pre' \<Rightarrow> 'a set \<Rightarrow> 'a term_pre'" where
+definition avoid_term :: "'a::covar term_pre' \<Rightarrow> 'a set \<Rightarrow> 'a term_pre'" where
   "avoid_term x A \<equiv> map_term_pre id id TT_abs TT_abs (
 avoid_raw_term (map_term_pre id id TT_rep TT_rep x) A)"
 
-definition noclash_raw_term :: "'a::var raw_term_pre \<Rightarrow> bool" where
+definition noclash_raw_term :: "'a::covar raw_term_pre \<Rightarrow> bool" where
   "noclash_raw_term x \<equiv> set2_term_pre x \<inter> (set1_term_pre x \<union> \<Union>(FVars_raw_term ` set4_term_pre x)) = {}"
 
-definition noclash_term :: "'a::var term_pre' \<Rightarrow> bool" where
+definition noclash_term :: "'a::covar term_pre' \<Rightarrow> bool" where
   "noclash_term x \<equiv> set2_term_pre x \<inter> (set1_term_pre x \<union> \<Union>(FVars_term ` set4_term_pre x)) = {}"
 
 (****************** PROOFS ******************)
 
 (* this lemma is specific to codatatypes *)
 lemma raw_term_coinduct:
-  fixes lhs rhs::"'a::var raw_term \<Rightarrow> 'a raw_term"
+  fixes lhs rhs::"'a::covar raw_term \<Rightarrow> 'a raw_term"
   assumes
     "\<And>z. rel_term_pre (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z) (\<lambda>l r. \<exists>z. l = lhs z \<and> r = rhs z)
 (un_raw_term_ctor (lhs z)) (un_raw_term_ctor (rhs z))"
@@ -204,7 +204,7 @@ lemmas permute_raw_id0s = permute_raw_ids[abs_def, unfolded id_def[symmetric], T
 
 (* this proof is specific to codatatypes *)
 lemma permute_raw_comps:
-  fixes f::"'a::var \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
     and g_prems: "bij g" "|supp g| <o |UNIV::'a set|"
   shows "permute_raw_term f (permute_raw_term g x) = permute_raw_term (f \<circ> g) x"
@@ -223,7 +223,7 @@ lemma permute_raw_comps:
   done
 
 lemma permute_raw_comp0s:
-  fixes f::"'a::var \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
     and g_prems: "bij g" "|supp g| <o |UNIV::'a set|"
   shows "permute_raw_term f \<circ> permute_raw_term g = permute_raw_term (f \<circ> g)"
@@ -276,7 +276,7 @@ lemma FVars_raw_ctors:
   done
 
 lemma FVars_raw_permute_leq:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
   shows "free_raw_term a x \<Longrightarrow> f a \<in> FVars_raw_term (permute_raw_term f x)"
   apply (erule free_raw_term.induct[of _ x])
@@ -312,7 +312,7 @@ lemma FVars_raw_permute_leq:
   done
 
 lemma FVars_raw_permutes:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
   shows "FVars_raw_term (permute_raw_term f x) = f ` FVars_raw_term x"
   apply (rule subset_antisym)
@@ -406,13 +406,11 @@ lemma FVars_raw_bds: "|FVars_raw_term x| <o card_suc natLeq"
 
 (* this instantiation is specific to codatatypes *)
 lemmas FVars_raw_bd_UNIVs = FVars_raw_bds[THEN ordLess_ordLeq_trans,
-    OF ordIso_ordLeq_trans[OF ordIso_symmetric[OF
-        cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]]
-      covar_class.large'
-      ]]
+    OF covar_class.large'
+  ]
 
 lemma alpha_refls:
-  fixes x::"'a::var raw_term"
+  fixes x::"'a::covar raw_term"
   shows "alpha_term x x"
 proof -
   have x: "\<forall>(x::'a raw_term) y. x = y \<longrightarrow> alpha_term x y"
@@ -435,7 +433,7 @@ proof -
 qed
 
 lemma alpha_bijs:
-  fixes f::"'a::var \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
     and g_prems: "bij g" "|supp g| <o |UNIV::'a set|"
   shows "eq_on (FVars_raw_term x) f g \<Longrightarrow> alpha_term x y \<Longrightarrow> alpha_term (permute_raw_term f x) (permute_raw_term g y)"
@@ -554,7 +552,7 @@ proof -
 qed
 
 lemma alpha_bij_eqs:
-  fixes f::"'a::var \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
   shows "alpha_term (permute_raw_term f x) (permute_raw_term f y) = alpha_term x y"
   apply (rule iffI)
@@ -578,7 +576,7 @@ lemma alpha_bij_eqs:
   done
 
 lemma alpha_bij_eq_invs:
-  fixes f::"'a::var \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a" and g::"'a \<Rightarrow> 'a"
   assumes f_prems: "bij f" "|supp f| <o |UNIV::'a set|"
   shows "alpha_term (permute_raw_term f x) y = alpha_term x (permute_raw_term (inv f) y)"
   apply (rule trans)
@@ -743,7 +741,7 @@ lemma alpha_FVars: "alpha_term x y \<Longrightarrow> FVars_raw_term x = FVars_ra
   done
 
 lemma alpha_syms:
-  fixes x::"'a::var raw_term"
+  fixes x::"'a::covar raw_term"
   shows "alpha_term x y \<Longrightarrow> alpha_term y x"
   apply (erule alpha_term.coinduct)
   apply (erule alpha_term.cases)
@@ -999,7 +997,7 @@ lemma TT_abs_ctors: "TT_abs (raw_term_ctor x) = term_ctor (map_term_pre id id TT
   done
 
 lemma permute_simps:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "permute_term f (term_ctor x) = term_ctor (map_term_pre f f (permute_term f) (permute_term f) x)"
   apply (unfold term_ctor_def permute_term_def)
@@ -1043,7 +1041,7 @@ lemma permute_ids: "permute_term id x = x"
 lemmas permute_id0s = permute_ids[THEN trans[OF _ id_apply[symmetric]], abs_def, THEN meta_eq_to_obj_eq]
 
 lemma permute_comps:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
   shows "permute_term g (permute_term f x) = permute_term (g \<circ> f) x"
   apply (unfold permute_term_def)
@@ -1056,7 +1054,7 @@ lemma permute_comps:
   done
 
 lemma permute_comp0s:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
   shows "permute_term g \<circ> permute_term f = permute_term (g \<circ> f)"
   apply (rule ext)
@@ -1065,7 +1063,7 @@ lemma permute_comp0s:
   done
 
 lemma permute_bijs:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "bij (permute_term f)"
   apply (rule o_bij)
@@ -1083,7 +1081,7 @@ lemma permute_bijs:
   done
 
 lemma permute_inv_simps:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "inv (permute_term f) = permute_term (inv f)"
   apply (rule inv_unique_comp)
@@ -1106,11 +1104,10 @@ lemma FVars_bds: "|FVars_term x| <o card_suc natLeq"
   apply (rule FVars_raw_bds)
   done
 
-lemmas FVars_bd_UNIVs = ordLess_ordLeq_trans[OF FVars_bds ordIso_ordLeq_trans[OF
-      ordIso_symmetric[OF cardSuc_ordIso_card_suc[OF term_pre.bd_card_order]] covar_class.large']]
+lemmas FVars_bd_UNIVs = ordLess_ordLeq_trans[OF FVars_bds covar_class.large']
 
 lemma FVars_permutes:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "FVars_term (permute_term f x) = f ` FVars_term x"
   apply (unfold FVars_term_def permute_term_def)
@@ -1174,7 +1171,7 @@ lemma FVars_intros:
   done
 
 lemma TT_inject0s:
-  "(term_ctor x = term_ctor y) \<longleftrightarrow> (\<exists>(g::'a::var \<Rightarrow> 'a).
+  "(term_ctor x = term_ctor y) \<longleftrightarrow> (\<exists>(g::'a::covar \<Rightarrow> 'a).
 bij g \<and> |supp g| <o |UNIV::'a set| \<and>
 id_on (\<Union>(FVars_term ` set3_term_pre x) - set2_term_pre x) g \<and>
 map_term_pre id g (permute_term g) id x = y)"
@@ -1306,7 +1303,7 @@ lemma fresh_cases:
   done
 
 lemma permute_abs:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "permute_term f (TT_abs x) = TT_abs (permute_raw_term f x)"
   apply (unfold permute_term_def)
@@ -1316,7 +1313,7 @@ lemma permute_abs:
   done
 
 lemma permute_congs:
-  fixes f g::"'a::var \<Rightarrow> 'a"
+  fixes f g::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|" "bij g" "|supp g| <o |UNIV::'a set|"
   shows "(\<And>a. a \<in> FVars_term x \<Longrightarrow> f a = g a) \<Longrightarrow> permute_term f x = permute_term g x"
   apply (unfold permute_term_def atomize_all atomize_imp eq_on_def[symmetric] FVars_term_def)
@@ -1365,7 +1362,7 @@ lemma alpha_imp_alpha': "alpha_term x y \<Longrightarrow> alpha_term' x y"
   done
 
 lemma alpha'_bij_eqs:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "alpha_term' (permute_raw_term f x) (permute_raw_term f y) \<Longrightarrow> alpha_term' x y"
   apply (erule alpha_term'.coinduct)
@@ -1437,7 +1434,7 @@ lemma alpha'_bij_eqs:
   done
 
 lemma alpha'_bij_eq_invs:
-  fixes f::"'a::var \<Rightarrow> 'a"
+  fixes f::"'a::covar \<Rightarrow> 'a"
   assumes "bij f" "|supp f| <o |UNIV::'a set|"
   shows "alpha_term' (permute_raw_term f x) y = alpha_term' x (permute_raw_term (inv f) y)"
   apply (rule iffI)

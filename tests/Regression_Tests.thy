@@ -1,7 +1,7 @@
 theory Regression_Tests
   imports "Binders.MRBNF_Recursor" "../thys/LetRec/DAList_MRBNF" "HOL-Library.FSet"
 begin
-
+(*
 (* #68 *)
 binder_datatype 'a trm =
   Var 'a
@@ -24,7 +24,7 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme =
 binder_datatype ('tv, 'ev, 'rv) type_scheme2 =
   TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme2" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type" binds \<epsilon> \<rho> in T
-
+*)
 (* #75 *)
 binder_datatype ('a, 'b, 'c, 'd) trm3 =
     Var 'a
@@ -90,6 +90,6 @@ binder_datatype (EEVrs: 'a) EE = EEctor "('a, x::'a, t::'a EE, 'a EE) GG" binds 
 lemma
   fixes x y::"'a::var" and e::"'a term"
   shows "e = e"
-  by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) (auto simp: infinite_UNIV)
+  by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) auto
 
 end

@@ -10,7 +10,7 @@ definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" whe
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
-linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for suffix: list_k
+linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct
   unfolding list.in_rel
   subgoal for S R l r
     apply safe
@@ -27,6 +27,11 @@ linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for suff
       done
     done
   done
+
+
+thm list_distinct_def
+thm Rep_alist[unfolded list_distinct_def]
+print_mrbnfs
 
 binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
   | Let "(fs::'a, 'a lc) alist" u::"'a lc" binds fs in u
@@ -62,7 +67,7 @@ consts wit1_G :: "'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit2_G :: "'c \<Rightarrow> 'd \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit3_G :: "'b \<Rightarrow> 'e \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 
-mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G"
+mrbnf "('a, 'b, 'c, 'd, 'e, 'f) G" 
   map: map_G
   sets: live: set1_G live: set2_G live: set3_G live: set4_G live: set5_G
   bd: natLeq
@@ -111,15 +116,8 @@ linearize_mrbnf ('a, 'b::var_foo) foo'' = "('a, 'b::var_foo) foo"
     sorry
   done
 
-
-declare [[quick_and_dirty=false]]
-
 linearize_mrbnf ('a::var, 'b) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
   sorry
-
-
-declare [[quick_and_dirty=false]]
-
 
 thm Abs_pair_inverse
 
@@ -227,7 +225,6 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
   sorry
 *)
 
-(*declare [[quick_and_dirty]]*)
 
 consts witL :: "('a::var, 'b) L"
 (*

@@ -48,7 +48,7 @@ fun mk_asSS f = let val typ_f = fastype_of f; in
   Const (@{const_name asSS}, typ_f --> typ_f) $ f end;
 
 (** linearize **)
-fun linearize b repT on_tvars wits specs map_b rel_b pred_b suff_b opts lthy =
+fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy =
   let
     val tfrees = map (TFree o snd) specs |> @{print};
 
@@ -59,8 +59,6 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b suff_b opts lthy =
     val ((mrbnf,(Ds, ABFs)), (_,lthy)) = MRBNF_Comp.mrbnf_of_typ true MRBNF_Def.Smart_Inline
       (Binding.prefix_name (Binding.name_of b ^ "_")) flatten_tyargs [] [] [] repT
       ((MRBNF_Comp.empty_comp_cache, MRBNF_Comp.empty_unfolds), lthy);
-
-    val suff_b = if Binding.is_empty suff_b then (MRBNF_Def.name_of_mrbnf mrbnf) else suff_b;
 
     val var_types = MRBNF_Def.var_types_of_mrbnf mrbnf |> @{print};
     val (As, Bs, Fs) = fold_rev (fn (T, vt) => (fn (acc_As, acc_Bs, acc_Fs) => 
@@ -347,18 +345,20 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b suff_b opts lthy =
         val mr_rel_F_top_x_x' = Term.list_comb (mr_rel_F, mr_rel_args @ [var_x, var_x2]);
         val ss_rhs = mr_rel_F_top_x_x' |> absfree (dest_Free var_x2) |>
           absfree (dest_Free var_x);
-        val ss_binding = Binding.prefix_name ("sameShape_") suff_b ;
+        val ss_binding = if Binding.is_empty ss_b then
+          Binding.prefix_name "sameShape_" (MRBNF_Def.name_of_mrbnf mrbnf) else ss_b;
         val ((_, ss_term, ss_def_thm), lthy) = MRBNF_Util.new_definition ss_binding ss_rhs lthy;
 
         val x_atomics = dest_Type_atomic typ_x;
         val ss_arg_atomics = fastype_of ss_term |> domain_type |> dest_Type_atomic;
         val ss_TFree = subst_atomic_types (ss_arg_atomics ~~ x_atomics) ss_term;
 
-        (* nonrep *) (* map_funs used from previously *)
+        (* nonrep *)
         val forall_x' = HOLogic.mk_all (dest_Free var_x2 |> fst, dest_Free var_x2 |> snd,
           HOLogic.mk_imp (ss_TFree $ var_x $ var_x2, ex_fs));
         val nrp_rhs = absfree (dest_Free var_x) forall_x';
-        val nrp_binding = Binding.prefix_name ("nonrep_") suff_b;
+        val nrp_binding = if Binding.is_empty nrp_b then
+          Binding.prefix_name "nonrep_" (MRBNF_Def.name_of_mrbnf mrbnf) else nrp_b;
         val ((_, nrp_term, nrp_def_thm), lthy) = MRBNF_Util.new_definition nrp_binding nrp_rhs lthy;
 
         val nrp_arg_atomics = fastype_of nrp_term |> domain_type |> dest_Type_atomic
@@ -632,13 +632,13 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b suff_b opts lthy =
 local
 
 fun prepare_common prepare_sort prepare_typ prepare_term
-    ((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvars), (map_b, rel_b, pred_b, suff_b)) lthy =
+    ((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvars), (map_b, rel_b, pred_b, ss_b, nrp_b)) lthy =
   let
     val repT = prepare_typ lthy raw_repT
     val wits = (Option.map o map) (prepare_term lthy) raw_wits;
     val specs = map (apsnd (apsnd (the_default @{sort type} o Option.map (prepare_sort lthy)))) raw_specs;
   in
-    linearize b repT on_tvars wits specs map_b rel_b pred_b suff_b plugins lthy
+    linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b plugins lthy
   end;
 
 fun prepare_linearize_mrbnf prepare_sort prepare_typ prepare_term =
@@ -694,7 +694,7 @@ fun extract_map_rel_pred_suff ("map", m) = (fn (_, r, p, ss, n) => (m, r, p, ss,
   | extract_map_rel_pred_suff ("rel", r) = (fn (m, _, p, ss, n) => (m, r, p, ss, n))
   | extract_map_rel_pred_suff ("pred", p) = (fn (m, r, _, ss, n) => (m, r, p, ss, n))
   | extract_map_rel_pred_suff ("sameShape", ss) = (fn (m, r, p , _, n) => (m, r, p, ss, n))
-  | extract_map_rel_pred_suff ("nonrep", n) = (fn (m, r, p , ss, n) => (m, r, p, ss, n))
+  | extract_map_rel_pred_suff ("nonrep", n) = (fn (m, r, p , ss, _) => (m, r, p, ss, n))
   | extract_map_rel_pred_suff (s, _) = error ("Unknown label " ^ quote s ^ " (expected \"map\", \"rel\", \"pred\", \"sameShape\" or \"nonrep\")");
 
 val binding_empty_5 = (Binding.empty, Binding.empty, Binding.empty, Binding.empty, Binding.empty);

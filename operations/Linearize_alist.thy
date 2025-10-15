@@ -1,5 +1,5 @@
 theory Linearize_alist
-  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor"
+  imports "Binders.MRBNF_Composition" "Binders.MRBNF_Recursor" "HOL-Library.FSet"
 begin
 
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
@@ -78,6 +78,63 @@ bnf "'a list"
           apply(auto simp add: infinite_regular_card_order_natLeq[unfolded infinite_regular_card_order_def]  list.set_bd)
   sorry
 print_theorems
+
+lemma set_in_rel: "rel_set R a b = (\<exists>z. z \<subseteq> {(x, y). R x y} \<and> fst ` z = a \<and> snd ` z = b)"
+  sorry
+  
+
+lemma "\<exists>z. z \<subseteq> {(x, y). top x y} \<and> fst ` z = {1, 2} \<and> snd ` z = {1, 2}"
+  by (rule exI[of _ "{(1, 1), (2, 2)}"]) auto
+
+lemma "\<exists>z. z \<subseteq> {(x, y). top x y} \<and> fst ` z = {1, 2} \<and> snd ` z = {1, 2}"
+  by (rule exI[of _ "{(1, 2), (2, 1)}"]) auto
+ (* \<Longrightarrow> NOT \<exists>!z *)
+
+lemma "rel_fset top (Abs_fset {1, 2}) (Abs_fset {1, 2})"
+  unfolding fset.in_rel[unfolded mem_Collect_eq] 
+  apply (rule exI[of _ "(Abs_fset {(1, 2), (2, 1)})"], auto)
+  apply (subst Abs_fset_inverse[unfolded mem_Collect_eq], simp,
+    subst (asm) Abs_fset_inverse[unfolded mem_Collect_eq], auto)+
+  done
+
+linearize_mrbnf 'a lin_fset = "'a fset" on 'a
+  subgoal for R x y
+    apply (subst fset.in_rel[unfolded mem_Collect_eq])
+    apply (rule iffI)
+    prefer 2
+     apply (erule ex1_implies_ex)
+    apply (erule ex_ex1I)
+    thm ex_ex1I
+    apply (elim conjE)
+    apply (hypsubst_thin)
+    apply (rule pair_list_eqI[THEN sym]; assumption)
+    done
+  apply (rule exI[of _ "[]"])
+  by auto
+  
+
+lemma "list_all2 ((<):: nat \<Rightarrow> nat \<Rightarrow> bool) [1, 1, 3] [4, 6, 4]"
+  apply (subst list.in_rel[unfolded mem_Collect_eq])
+  apply (rule exI[of _ "[(1, 4), (1, 6), (3, 4)]"])
+  apply (simp)
+  done
+
+linearize_mrbnf 'a lin_list = "'a list" on 'a
+  subgoal for R x y
+    apply (subst list.in_rel[unfolded mem_Collect_eq])
+    apply (rule iffI)
+    prefer 2
+     apply (erule ex1_implies_ex)
+    apply (erule ex_ex1I)
+    thm ex_ex1I
+    apply (elim conjE)
+    apply (hypsubst_thin)
+    apply (rule pair_list_eqI[THEN sym]; assumption)
+    done
+  apply (rule exI[of _ "[]"])
+  by auto
+  
+
 
 local_setup \<open>
 fn ctxt => 

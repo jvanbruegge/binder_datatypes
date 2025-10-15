@@ -217,19 +217,7 @@ interpretation vvsubst: COREC Udtor_vvsubst Umap_vvsubst UFVars_vvsubst valid_U_
     apply (unfold Int_Un_distrib Un_empty)
     apply (erule conjE)+
 
-    apply (frule iffD1[OF TT_fresh_inject, rotated -1, of _ _ "imsupp (u \<circ> snd d \<circ> inv u)"])
-       apply (rule iffD2[OF imsupp_supp_bound])
-        apply (rule infinite_UNIV supp_comp_bound infinite_UNIV supp_inv_bound | assumption)+
-      apply (subst term_pre.set_map, assumption+)
-      apply (subst id_on_image)
-       apply (rule imsupp_id_on)
-         apply (erule trans[OF Int_commute])
-        apply (subst imsupp_comp_image)
-         apply assumption
-        apply (rule Int_image_imsupp[THEN iffD2])
-         apply (erule trans[OF Int_commute])
-    apply assumption+
-
+      apply (unfold TT_inject0s)
     apply (erule exE conjE)+
     apply (subst (asm) term_pre.set_map, (rule supp_id_bound bij_id | assumption)+)+
     apply (unfold image_comp[unfolded comp_def])

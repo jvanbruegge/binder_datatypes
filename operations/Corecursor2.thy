@@ -159,21 +159,6 @@ abbreviation "T1_rep \<equiv> quot_type.rep Rep_T1"
 abbreviation "T2_abs \<equiv> quot_type.abs alpha_T2 Abs_T2"
 abbreviation "T2_rep \<equiv> quot_type.rep Rep_T2"
 
-abbreviation raw_Umap1 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u1 \<Rightarrow> 'u1" where
-  "raw_Umap1 \<equiv> Umap1"
-
-abbreviation raw_Umap2 :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> 'u2 \<Rightarrow> 'u2" where
-  "raw_Umap2 \<equiv> Umap2"
-
-abbreviation raw_UFVars11 :: "'u1 \<Rightarrow> 'a set" where
-  "raw_UFVars11 \<equiv> UFVars11"
-abbreviation raw_UFVars12 :: "'u1 \<Rightarrow> 'b set" where
-  "raw_UFVars12 \<equiv> UFVars12"
-abbreviation raw_UFVars21 :: "'u2 \<Rightarrow> 'a set" where
-  "raw_UFVars21 \<equiv> UFVars21"
-abbreviation raw_UFVars22 :: "'u2 \<Rightarrow> 'b set" where
-  "raw_UFVars22 \<equiv> UFVars22"
-
 (* definition raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where *)
 abbreviation raw_UFVarsBD11 :: "('a, 'b, 'c, 'd, 'a, 'b, 'a, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T1 + 'u1, ('a, 'b, 'c, 'd) raw_T2 + 'u2, ('a, 'b, 'c, 'd) raw_T2 + 'u2) T1_pre \<Rightarrow> 'a set" where
   "raw_UFVarsBD11 X \<equiv> (set7_T1_pre X \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X)) - set5_T1_pre X"
@@ -596,11 +581,6 @@ lemmas raw_Umap_id = Umap_id
 
 lemmas raw_Umap_comp = Umap_comp1 Umap_comp2
 
-term map_T2_pre
-
-thm T1_pre.set_map
-
-
 lemma FVarsBD_FFVarsBD1:
   "raw_UFVarsBD11 X = FFVarsBD11 (map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X)"
   "raw_UFVarsBD12 X = FFVarsBD12 (map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id) X)"
@@ -689,9 +669,9 @@ lemma DTOR_mapD1:
    bij (v::'b\<Rightarrow>'b) \<and> |supp v| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD12 X) v \<and>
      mr_rel_T1_pre id id id (=) u v u
        (rel_sum alpha_T1 (=))
-       (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+       (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. Umap1 u v d = d'))
        (rel_sum alpha_T2 (=))
-       (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u id t) t') (\<lambda> d d'. raw_Umap2 u id d = d'))
+       (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u id t) t') (\<lambda> d d'. Umap2 u id d = d'))
      X X'"
   apply (drule image_mono[of _ _ "map_T1_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id)"])
   apply (unfold image_insert image_empty Utor1_def image_comp)
@@ -756,9 +736,9 @@ lemma DTOR_mapD2:
    bij (v::'b\<Rightarrow>'b) \<and> |supp v| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD22 X) v \<and>
      mr_rel_T2_pre id id id (=) u v u
        (rel_sum alpha_T1 (=))
-       (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
+       (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. Umap1 u v d = d'))
        (rel_sum alpha_T2 (=))
-       (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u id t) t') (\<lambda> d d'. raw_Umap2 u id d = d'))
+       (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u id t) t') (\<lambda> d d'. Umap2 u id d = d'))
      X X'"
   apply (drule image_mono[of _ _ "map_T2_pre id id id id id id id (map_sum T1_abs id) (map_sum T1_abs id) (map_sum T2_abs id) (map_sum T2_abs id)"])
   apply (unfold image_insert image_empty Utor2_def image_comp)
@@ -866,12 +846,12 @@ thm FVars_T1_Udtor[OF _ Utor_abs_Udtor(1)]
 
 lemma raw_UFVars_Utor1:
   assumes "valid_U1 d"
-  shows "X \<in> Utor1 d \<Longrightarrow> set1_T1_pre X \<union> (set7_T1_pre X - set5_T1_pre X) \<union> \<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T1_pre X)
-     \<union> (\<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T1_pre X) - set5_T1_pre X)
- \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T1_pre X) - set5_T1_pre X) \<subseteq> raw_UFVars11 d"
-"X \<in> Utor1 d \<Longrightarrow> set2_T1_pre X \<union> \<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T1_pre X)
-     \<union> (\<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T1_pre X) - set6_T1_pre X)
- \<union> \<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre X)) \<subseteq> raw_UFVars12 d"
+  shows "X \<in> Utor1 d \<Longrightarrow> set1_T1_pre X \<union> (set7_T1_pre X - set5_T1_pre X) \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set8_T1_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre X) - set5_T1_pre X)
+ \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre X) - set5_T1_pre X) \<subseteq> UFVars11 d"
+"X \<in> Utor1 d \<Longrightarrow> set2_T1_pre X \<union> \<Union>(case_sum FVars_T1_2_raw UFVars12 ` set8_T1_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre X) - set6_T1_pre X)
+ \<union> \<Union>(case_sum FVars_T2_2_raw UFVars22 ` set10_T1_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw UFVars22 ` set11_T1_pre X)) \<subseteq> UFVars12 d"
   apply (drule FVars_T1_Udtor(1)[OF assms Utor_abs_Udtor(1)])
   apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
@@ -887,12 +867,12 @@ lemma raw_UFVars_Utor1:
 
 lemma raw_UFVars_Utor2:
   assumes "valid_U2 d"
-  shows "X \<in> Utor2 d \<Longrightarrow> set1_T2_pre X \<union> (set7_T2_pre X - set5_T2_pre X) \<union> \<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T2_pre X)
-     \<union> (\<Union>(case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T2_pre X) - set5_T2_pre X)
- \<union> \<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T2_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T2_pre X) - set5_T2_pre X) \<subseteq> raw_UFVars21 d"
-"X \<in> Utor2 d \<Longrightarrow> set2_T2_pre X \<union> \<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T2_pre X)
-     \<union> (\<Union>(case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T2_pre X) - set6_T2_pre X)
- \<union> \<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T2_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T2_pre X)) \<subseteq> raw_UFVars22 d"
+  shows "X \<in> Utor2 d \<Longrightarrow> set1_T2_pre X \<union> (set7_T2_pre X - set5_T2_pre X) \<union> \<Union>(case_sum FVars_T1_1_raw UFVars11 ` set8_T2_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre X) - set5_T2_pre X)
+ \<union> \<Union>(case_sum FVars_T2_1_raw UFVars21 ` set10_T2_pre X) \<union> (\<Union>(case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre X) - set5_T2_pre X) \<subseteq> UFVars21 d"
+"X \<in> Utor2 d \<Longrightarrow> set2_T2_pre X \<union> \<Union>(case_sum FVars_T1_2_raw UFVars12 ` set8_T2_pre X)
+     \<union> (\<Union>(case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre X) - set6_T2_pre X)
+ \<union> \<Union>(case_sum FVars_T2_2_raw UFVars22 ` set10_T2_pre X) \<union> (\<Union>(case_sum FVars_T2_2_raw UFVars22 ` set11_T2_pre X)) \<subseteq> UFVars22 d"
   apply (drule FVars_T2_Udtor(1)[OF assms Utor_abs_Udtor(2)])
   apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
   apply (unfold image_comp case_sum_o_map_sum o_id image_id raw_UFVars_def2)
@@ -917,12 +897,12 @@ lemma raw_Umap_Utor1:
   shows
     "rel_set
   (mr_rel_T1_pre u v id (=) u v u
-     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
-     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
-     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d'))
-     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d')))
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. Umap2 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. Umap2 u v d = d')))
  (Utor1 d)
- (Utor1 (raw_Umap1 u v d))"
+ (Utor1 (Umap1 u v d))"
   apply (unfold Utor1_def)
   apply (subst Umap_Udtor_strong(1)[OF u v])
   apply (rule valid_d)
@@ -977,12 +957,12 @@ lemma raw_Umap_Utor2:
   shows
     "rel_set
   (mr_rel_T2_pre u v id (=) u v u
-     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
-     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. raw_Umap1 u v d = d'))
-     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d'))
-     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. raw_Umap2 u v d = d')))
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T1 (permute_T1_raw u v t) t') (\<lambda> d d'. Umap1 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. Umap2 u v d = d'))
+     (rel_sum (\<lambda> t t'. alpha_T2 (permute_T2_raw u v t) t') (\<lambda> d d'. Umap2 u v d = d')))
  (Utor2 d)
- (Utor2 (raw_Umap2 u v d))"
+ (Utor2 (Umap2 u v d))"
   apply (unfold Utor2_def)
   apply (subst Umap_Udtor_strong(2)[OF u v])
   apply (rule valid_d)
@@ -1068,39 +1048,39 @@ lemmas f_ctor = f1_ctor f2_ctor
 
 lemma suitable1_FVarsD:
   assumes "suitable1 pick" "valid_U1 d"
-  shows "set1_T1_pre (pick d) \<union> (set7_T1_pre (pick d) - set5_T1_pre (pick d)) \<union> \<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T1_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T1_pre (pick d)) - set5_T1_pre (pick d)) \<union>
-  \<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T1_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T1_pre (pick d)) - set5_T1_pre (pick d))
-  \<subseteq> raw_UFVars11 d"
-  "set2_T1_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T1_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T1_pre (pick d)) - set6_T1_pre (pick d)) \<union>
-  \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T1_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T1_pre (pick d)))
-  \<subseteq> raw_UFVars12 d"
+  shows "set1_T1_pre (pick d) \<union> (set7_T1_pre (pick d) - set5_T1_pre (pick d)) \<union> \<Union> (case_sum FVars_T1_1_raw UFVars11 ` set8_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_1_raw UFVars11 ` set9_T1_pre (pick d)) - set5_T1_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_1_raw UFVars21 ` set10_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T2_1_raw UFVars21 ` set11_T1_pre (pick d)) - set5_T1_pre (pick d))
+  \<subseteq> UFVars11 d"
+  "set2_T1_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw UFVars12 ` set8_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T1_pre (pick d)) - set6_T1_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set10_T1_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T1_pre (pick d)))
+  \<subseteq> UFVars12 d"
   by (rule raw_UFVars_Utor(1-2)[OF assms(2) assms(1)[unfolded suitable1_def, THEN spec, THEN mp, OF assms(2)]])+
 
 lemma suitable2_FVarsD:
   assumes "suitable2 pick" "valid_U2 d"
-  shows "set1_T2_pre (pick d) \<union> (set7_T2_pre (pick d) - set5_T2_pre (pick d)) \<union> \<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set8_T2_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T1_1_raw raw_UFVars11 ` set9_T2_pre (pick d)) - set5_T2_pre (pick d)) \<union>
-  \<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set10_T2_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T2_1_raw raw_UFVars21 ` set11_T2_pre (pick d)) - set5_T2_pre (pick d))
-  \<subseteq> raw_UFVars21 d"
-    "set2_T2_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set8_T2_pre (pick d)) \<union>
-  (\<Union> (case_sum FVars_T1_2_raw raw_UFVars12 ` set9_T2_pre (pick d)) - set6_T2_pre (pick d)) \<union>
-  \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set10_T2_pre (pick d)) \<union>
-  \<Union> (case_sum FVars_T2_2_raw raw_UFVars22 ` set11_T2_pre (pick d))
-  \<subseteq> raw_UFVars22 d"
+  shows "set1_T2_pre (pick d) \<union> (set7_T2_pre (pick d) - set5_T2_pre (pick d)) \<union> \<Union> (case_sum FVars_T1_1_raw UFVars11 ` set8_T2_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_1_raw UFVars11 ` set9_T2_pre (pick d)) - set5_T2_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_1_raw UFVars21 ` set10_T2_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T2_1_raw UFVars21 ` set11_T2_pre (pick d)) - set5_T2_pre (pick d))
+  \<subseteq> UFVars21 d"
+    "set2_T2_pre (pick d) \<union> \<Union> (case_sum FVars_T1_2_raw UFVars12 ` set8_T2_pre (pick d)) \<union>
+  (\<Union> (case_sum FVars_T1_2_raw UFVars12 ` set9_T2_pre (pick d)) - set6_T2_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set10_T2_pre (pick d)) \<union>
+  \<Union> (case_sum FVars_T2_2_raw UFVars22 ` set11_T2_pre (pick d))
+  \<subseteq> UFVars22 d"
   by (rule raw_UFVars_Utor(3-4)[OF assms(2) assms(1)[unfolded suitable2_def, THEN spec, THEN mp, OF assms(2)]])+
 
 lemmas suitable_FVarsD = suitable1_FVarsD suitable2_FVarsD
 
 lemma f_FVarsD_aux11:
   assumes "is_free_raw_T11 a t"
-    "(\<And>d. valid_U1 d \<Longrightarrow> t = f1 pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars11 d)"
+    "(\<And>d. valid_U1 d \<Longrightarrow> t = f1 pick1 pick2 d \<Longrightarrow> a \<in> UFVars11 d)"
     "pred_sum (\<lambda>_. True) valid_U1 td"
-  shows "t = case_sum id (f1 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_1_raw raw_UFVars11 td"
+  shows "t = case_sum id (f1 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_1_raw UFVars11 td"
   apply (rule sumE[of td])
    apply hypsubst
    apply (subst sum.case)
@@ -1122,9 +1102,9 @@ lemma f_FVarsD_aux11:
   done
 lemma f_FVarsD_aux21:
   assumes "is_free_raw_T21 a t"
-    "(\<And>d. valid_U2 d \<Longrightarrow> t = f2 pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars21 d)"
+    "(\<And>d. valid_U2 d \<Longrightarrow> t = f2 pick1 pick2 d \<Longrightarrow> a \<in> UFVars21 d)"
     "pred_sum (\<lambda>_. True) valid_U2 td"
-  shows "t = case_sum id (f2 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T2_1_raw raw_UFVars21 td"
+  shows "t = case_sum id (f2 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T2_1_raw UFVars21 td"
   apply (rule sumE[of td])
    apply hypsubst
    apply (subst sum.case)
@@ -1146,9 +1126,9 @@ lemma f_FVarsD_aux21:
   done
 lemma f_FVarsD_aux12:
   assumes "is_free_raw_T12 a t"
-    "(\<And>d. valid_U1 d \<Longrightarrow> t = f1 pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars12 d)"
+    "(\<And>d. valid_U1 d \<Longrightarrow> t = f1 pick1 pick2 d \<Longrightarrow> a \<in> UFVars12 d)"
     "pred_sum (\<lambda>_. True) valid_U1 td"
-  shows "t = case_sum id (f1 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_2_raw raw_UFVars12 td"
+  shows "t = case_sum id (f1 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T1_2_raw UFVars12 td"
   apply (rule sumE[of td])
    apply hypsubst
    apply (subst sum.case)
@@ -1170,9 +1150,9 @@ lemma f_FVarsD_aux12:
   done
 lemma f_FVarsD_aux22:
   assumes "is_free_raw_T22 a t"
-    "(\<And>d. valid_U2 d \<Longrightarrow> t = f2 pick1 pick2 d \<Longrightarrow> a \<in> raw_UFVars22 d)"
+    "(\<And>d. valid_U2 d \<Longrightarrow> t = f2 pick1 pick2 d \<Longrightarrow> a \<in> UFVars22 d)"
     "pred_sum (\<lambda>_. True) valid_U2 td"
-  shows "t = case_sum id (f2 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T2_2_raw raw_UFVars22 td"
+  shows "t = case_sum id (f2 pick1 pick2) td \<Longrightarrow> a \<in> case_sum FVars_T2_2_raw UFVars22 td"
   apply (rule sumE[of td])
    apply hypsubst
    apply (subst sum.case)
@@ -1399,11 +1379,11 @@ lemma valid_pick_set11:
 
 lemma f_FVarsD1:
   assumes p: "suitable1 pick1" "suitable2 pick2"
-  shows "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
-    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
+  shows "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> UFVars11 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> UFVars21 d2"
 proof -
-  have x: "\<And>a y y2. (is_free_raw_T11 a y \<longrightarrow> (\<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> a \<in> raw_UFVars11 d))
-    \<and> (is_free_raw_T21 a y2 \<longrightarrow> (\<forall>d2. valid_U2 d2 \<longrightarrow> y2 = f2 pick1 pick2 d2 \<longrightarrow> a \<in> raw_UFVars21 d2))"
+  have x: "\<And>a y y2. (is_free_raw_T11 a y \<longrightarrow> (\<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> a \<in> UFVars11 d))
+    \<and> (is_free_raw_T21 a y2 \<longrightarrow> (\<forall>d2. valid_U2 d2 \<longrightarrow> y2 = f2 pick1 pick2 d2 \<longrightarrow> a \<in> UFVars21 d2))"
     apply (rule is_free_raw_T11_is_free_raw_T21.induct)
           (* REPEAT_DETERM *)
               apply (rule allI)
@@ -1726,8 +1706,8 @@ proof -
     (* END REPEAT_DETERM *)
     done
     
-  show "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars11 d"
-    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars21 d2"
+  show "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> UFVars11 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_1_raw (f2 pick1 pick2 d2) \<subseteq> UFVars21 d2"
      apply -
      apply (rule subsetI)
      apply (erule x[THEN conjunct1, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1] x[THEN conjunct2, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1])
@@ -1747,11 +1727,11 @@ thm is_free_raw_T11_is_free_raw_T21.induct is_free_raw_T12_is_free_raw_T22.induc
 
 lemma f_FVarsD2:
   assumes p: "suitable1 pick1" "suitable2 pick2"
-  shows "valid_U1 d \<Longrightarrow> FVars_T1_2_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars12 d"
-    "valid_U2 d2 \<Longrightarrow> FVars_T2_2_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars22 d2"
+  shows "valid_U1 d \<Longrightarrow> FVars_T1_2_raw (f1 pick1 pick2 d) \<subseteq> UFVars12 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_2_raw (f2 pick1 pick2 d2) \<subseteq> UFVars22 d2"
 proof -
-  have x: "\<And>a y y2. (is_free_raw_T12 a y \<longrightarrow> (\<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> a \<in> raw_UFVars12 d))
-    \<and> (is_free_raw_T22 a y2 \<longrightarrow> (\<forall>d2. valid_U2 d2 \<longrightarrow> y2 = f2 pick1 pick2 d2 \<longrightarrow> a \<in> raw_UFVars22 d2))"
+  have x: "\<And>a y y2. (is_free_raw_T12 a y \<longrightarrow> (\<forall>d. valid_U1 d \<longrightarrow> y = f1 pick1 pick2 d \<longrightarrow> a \<in> UFVars12 d))
+    \<and> (is_free_raw_T22 a y2 \<longrightarrow> (\<forall>d2. valid_U2 d2 \<longrightarrow> y2 = f2 pick1 pick2 d2 \<longrightarrow> a \<in> UFVars22 d2))"
     apply (rule is_free_raw_T12_is_free_raw_T22.induct)
               apply (rule allI)
               apply (rule impI)+
@@ -2054,8 +2034,8 @@ proof -
     (* END REPEAT_DETERM *)
     done
     
-  show "valid_U1 d \<Longrightarrow> FVars_T1_2_raw (f1 pick1 pick2 d) \<subseteq> raw_UFVars12 d"
-    "valid_U2 d2 \<Longrightarrow> FVars_T2_2_raw (f2 pick1 pick2 d2) \<subseteq> raw_UFVars22 d2"
+  show "valid_U1 d \<Longrightarrow> FVars_T1_2_raw (f1 pick1 pick2 d) \<subseteq> UFVars12 d"
+    "valid_U2 d2 \<Longrightarrow> FVars_T2_2_raw (f2 pick1 pick2 d2) \<subseteq> UFVars22 d2"
      apply -
      apply (rule subsetI)
      apply (erule x[THEN conjunct1, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1] x[THEN conjunct2, THEN mp, THEN spec, THEN mp, THEN mp, rotated 1])
@@ -2159,8 +2139,8 @@ lemma OO_raw_Umap:
           "bij (u'::'a\<Rightarrow>'a)" "|supp u'| <o |UNIV::'a set|"
           "bij (v'::'b\<Rightarrow>'b)" "|supp v'| <o |UNIV::'b set|"
         shows
-          "valid_U1 x \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap1 u v d)) OO (\<lambda>d. (=) (raw_Umap1 u' v' d))) x  = (\<lambda>d. (=) (raw_Umap1 (u' \<circ> u) (v' \<circ> v) d)) x"
-          "valid_U2 x' \<Longrightarrow> ((\<lambda>d. (=) (raw_Umap2 u v d)) OO (\<lambda>d. (=) (raw_Umap2 u' v' d))) x'  = (\<lambda>d. (=) (raw_Umap2 (u' \<circ> u) (v' \<circ> v) d)) x'"
+          "valid_U1 x \<Longrightarrow> ((\<lambda>d. (=) (Umap1 u v d)) OO (\<lambda>d. (=) (Umap1 u' v' d))) x  = (\<lambda>d. (=) (Umap1 (u' \<circ> u) (v' \<circ> v) d)) x"
+          "valid_U2 x' \<Longrightarrow> ((\<lambda>d. (=) (Umap2 u v d)) OO (\<lambda>d. (=) (Umap2 u' v' d))) x'  = (\<lambda>d. (=) (Umap2 (u' \<circ> u) (v' \<circ> v) d)) x'"
  (* REPEAT_DETERM *)
    apply (rule OO_comp)
    apply (subst comp_apply)
@@ -2249,15 +2229,15 @@ lemma rel_F_suitable_mapD1:
                   bij v' \<and> |supp v'| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD12 (pick1 d)) v' \<and>
  mr_rel_T1_pre u v id (=) (u o u') (v o v') (u o u')
    (rel_sum (\<lambda>t t'. alpha_T1 (permute_T1_raw u v t) t')
-            (\<lambda>t t'. raw_Umap1 u v t = t'))
+            (\<lambda>t t'. Umap1 u v t = t'))
    (rel_sum (\<lambda>t t'. alpha_T1 (permute_T1_raw (u o u') (v o v') t) t')
-            (\<lambda>d d'. raw_Umap1 (u o u') (v o v') d = d'))
+            (\<lambda>d d'. Umap1 (u o u') (v o v') d = d'))
    (rel_sum (\<lambda>t t'. alpha_T2 (permute_T2_raw u v t) t')
-            (\<lambda>t t'. raw_Umap2 u v t = t'))
+            (\<lambda>t t'. Umap2 u v t = t'))
    (rel_sum (\<lambda>t t'. alpha_T2 (permute_T2_raw (u o u') v t) t')
-            (\<lambda>d d'. raw_Umap2 (u o u') v d = d'))
+            (\<lambda>d d'. Umap2 (u o u') v d = d'))
  (pick1 d)
- (pick1' (raw_Umap1 u v d))"
+ (pick1' (Umap1 u v d))"
   apply (rule raw_Umap_Utor(1)[OF u v valid_d, unfolded rel_set_def, THEN conjunct2, THEN bspec, THEN bexE])
    apply (rule allE)
     apply (rule pp'(2)[unfolded suitable1_def])
@@ -2344,15 +2324,15 @@ lemma rel_F_suitable_mapD2:
                   bij v' \<and> |supp v'| <o |UNIV::'b set| \<and> id_on (raw_UFVarsBD22 (pick1 d)) v' \<and>
  mr_rel_T2_pre u v id (=) (u o u') (v o v') (u o u')
    (rel_sum (\<lambda>t t'. alpha_T1 (permute_T1_raw u v t) t')
-            (\<lambda>t t'. raw_Umap1 u v t = t'))
+            (\<lambda>t t'. Umap1 u v t = t'))
    (rel_sum (\<lambda>t t'. alpha_T1 (permute_T1_raw (u o u') (v o v') t) t')
-            (\<lambda>d d'. raw_Umap1 (u o u') (v o v') d = d'))
+            (\<lambda>d d'. Umap1 (u o u') (v o v') d = d'))
    (rel_sum (\<lambda>t t'. alpha_T2 (permute_T2_raw u v t) t')
-            (\<lambda>t t'. raw_Umap2 u v t = t'))
+            (\<lambda>t t'. Umap2 u v t = t'))
    (rel_sum (\<lambda>t t'. alpha_T2 (permute_T2_raw (u o u') v t) t')
-            (\<lambda>d d'. raw_Umap2 (u o u') v d = d'))
+            (\<lambda>d d'. Umap2 (u o u') v d = d'))
  (pick1 d)
- (pick1' (raw_Umap2 u v d))"
+ (pick1' (Umap2 u v d))"
   apply (rule raw_Umap_Utor(2)[OF u v valid_d, unfolded rel_set_def, THEN conjunct2, THEN bspec, THEN bexE])
    apply (rule allE)
     apply (rule pp'(2)[unfolded suitable2_def])
@@ -2527,7 +2507,7 @@ term alpha_T1
 
 lemma l_is_inr1:
   assumes
-    r: "rel_sum (\<lambda>t. alpha_T1 (permute_T1_raw u v t)) (\<lambda>d d'. raw_Umap1 u v d = d') ttdL ttdR"
+    r: "rel_sum (\<lambda>t. alpha_T1 (permute_T1_raw u v t)) (\<lambda>d d'. Umap1 u v d = d') ttdL ttdR"
     and na: "\<not> alpha_T1 (permute_T1_raw u v (case_sum id (f1 pick1 pick2) ttdL)) (case_sum id (f1 pick1' pick2') ttdR)"
   shows "\<exists>tL. ttdL = Inr tL"
   apply (rule sumE[of ttdR])
@@ -2556,7 +2536,7 @@ lemma l_is_inr1:
 
 lemma l_is_inr2:
   assumes
-    r: "rel_sum (\<lambda>t. alpha_T2 (permute_T2_raw u v t)) (\<lambda>d d'. raw_Umap2 u v d = d') ttdL ttdR"
+    r: "rel_sum (\<lambda>t. alpha_T2 (permute_T2_raw u v t)) (\<lambda>d d'. Umap2 u v d = d') ttdL ttdR"
     and na: "\<not> alpha_T2 (permute_T2_raw u v (case_sum id (f2 pick1 pick2) ttdL)) (case_sum id (f2 pick1' pick2') ttdR)"
   shows "\<exists>tL. ttdL = Inr tL"
   apply (rule sumE[of ttdR])
@@ -2587,9 +2567,9 @@ lemmas l_is_inr = l_is_inr1 l_is_inr2
 
 lemma r_is_Umap1:
   assumes
-    r: "rel_sum (\<lambda>t. alpha_T1 (permute_T1_raw u v t)) (\<lambda>d d'. raw_Umap1 u v d = d') ttdL ttdR"
+    r: "rel_sum (\<lambda>t. alpha_T1 (permute_T1_raw u v t)) (\<lambda>d d'. Umap1 u v d = d') ttdL ttdR"
     and ttdL: "ttdL = Inr x"
-  shows "ttdR = Inr (raw_Umap1 u v x)"
+  shows "ttdR = Inr (Umap1 u v x)"
   apply (insert r ttdL)
   apply hypsubst_thin
   apply (unfold rel_sum.simps)
@@ -2607,9 +2587,9 @@ lemma r_is_Umap1:
 
 lemma r_is_Umap2:
   assumes
-    r: "rel_sum (\<lambda>t. alpha_T2 (permute_T2_raw u v t)) (\<lambda>d d'. raw_Umap2 u v d = d') ttdL ttdR"
+    r: "rel_sum (\<lambda>t. alpha_T2 (permute_T2_raw u v t)) (\<lambda>d d'. Umap2 u v d = d') ttdL ttdR"
     and ttdL: "ttdL = Inr x"
-  shows "ttdR = Inr (raw_Umap2 u v x)"
+  shows "ttdR = Inr (Umap2 u v x)"
   apply (insert r ttdL)
   apply hypsubst_thin
   apply (unfold rel_sum.simps)
@@ -2653,31 +2633,31 @@ lemma f_swap_alpha:
     and valid_d: "valid_U1 d" "valid_U2 d2"
   assumes u: "bij (u::'a\<Rightarrow>'a)" "|supp u| <o |UNIV::'a set|"
     and  v: "bij (v::'b\<Rightarrow>'b)" "|supp v| <o |UNIV::'b set|"
-  shows "alpha_T1 (permute_T1_raw u v (f1 pick1 pick2 d)) (f1 pick1' pick2' (raw_Umap1 u v d))
-    \<and> alpha_T2 (permute_T2_raw u v (f2 pick1 pick2 d2)) (f2 pick1' pick2' (raw_Umap2 u v d2))
+  shows "alpha_T1 (permute_T1_raw u v (f1 pick1 pick2 d)) (f1 pick1' pick2' (Umap1 u v d))
+    \<and> alpha_T2 (permute_T2_raw u v (f2 pick1 pick2 d2)) (f2 pick1' pick2' (Umap2 u v d2))
   "
   
   thm alpha_T1_alpha_T2.coinduct[of
     "\<lambda> tL tR. \<exists> u v d. valid_U1 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>
      tL = permute_T1_raw u v (f1 pick1 pick2 d) \<and>
-     tR = f1 pick1' pick2' (raw_Umap1 u v d)"
+     tR = f1 pick1' pick2' (Umap1 u v d)"
 
     "\<lambda> tL tR. \<exists> u v d. valid_U2 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>
      tL = permute_T2_raw u v (f2 pick1 pick2 d) \<and>
-     tR = f2 pick1' pick2' (raw_Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
+     tR = f2 pick1' pick2' (Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
 ]
   apply (rule alpha_T1_alpha_T2.coinduct[of
     "\<lambda> tL tR. \<exists> u v d. valid_U1 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>
      tL = permute_T1_raw u v (f1 pick1 pick2 d) \<and>
-     tR = f1 pick1' pick2' (raw_Umap1 u v d)"
+     tR = f1 pick1' pick2' (Umap1 u v d)"
 
     "\<lambda> tL tR. \<exists> u v d. valid_U2 d \<and> bij u \<and> |supp u| <o |UNIV::'a set| \<and>
      bij v \<and> |supp v| <o |UNIV::'b set| \<and>
      tL = permute_T2_raw u v (f2 pick1 pick2 d) \<and>
-     tR = f2 pick1' pick2' (raw_Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
+     tR = f2 pick1' pick2' (Umap2 u v d)", THEN conj_spec, THEN conj_spec, THEN conj_mp
 ])
 
   subgoal for x1 x2
@@ -3818,14 +3798,14 @@ lemma f0_mapD1:
   assumes "valid_U1 d" "valid_U2 d2"
       and "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a set|"
       and "bij (v::'b\<Rightarrow>'b)" and "|supp v| <o |UNIV::'b set|"
-  shows "alpha_T1 (f0_1 (raw_Umap1 u v d)) (permute_T1_raw u v (f0_1 d))"
+  shows "alpha_T1 (f0_1 (Umap1 u v d)) (permute_T1_raw u v (f0_1 d))"
   by (rule f_swap_alpha[OF suitable_pick0 suitable_pick0 assms, THEN conjunct1, THEN T1.alpha_sym, unfolded f0_1_def[symmetric]])
 
 lemma f0_mapD2:
   assumes "valid_U1 d" "valid_U2 d2"
       and "bij (u::'a\<Rightarrow>'a)" and "|supp u| <o |UNIV::'a set|"
       and "bij (v::'b\<Rightarrow>'b)" and "|supp v| <o |UNIV::'b set|"
-    shows "alpha_T2 (f0_2 (raw_Umap2 u v d2)) (permute_T2_raw u v (f0_2 d2))"
+    shows "alpha_T2 (f0_2 (Umap2 u v d2)) (permute_T2_raw u v (f0_2 d2))"
   by (rule f_swap_alpha[OF suitable_pick0 suitable_pick0 assms, THEN conjunct2, THEN T2.alpha_sym, unfolded f0_2_def[symmetric]])
 
 lemmas f0_mapD = f0_mapD1 f0_mapD2 

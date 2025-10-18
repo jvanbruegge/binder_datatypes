@@ -1377,6 +1377,10 @@ lemma valid_pick_set11:
 (* END REPEAT_DETERM *)
   done
 
+lemmas valid_pick_set = valid_pick_set8 valid_pick_set9 valid_pick_set10 valid_pick_set11
+
+thm suitable_FVarsD
+thm is_free_raw_T11_is_free_raw_T21.induct
 lemma f_FVarsD1:
   assumes p: "suitable1 pick1" "suitable2 pick2"
   shows "valid_U1 d \<Longrightarrow> FVars_T1_1_raw (f1 pick1 pick2 d) \<subseteq> UFVars11 d"
@@ -1389,7 +1393,7 @@ proof -
               apply (rule allI)
               apply (rule impI)+
                apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(1-2)[OF assms(1), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1399,7 +1403,7 @@ proof -
             apply (rule allI)
               apply (rule impI)+
                apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(1)[OF assms(1), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(1-2)[OF assms(1), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1421,9 +1425,8 @@ proof -
       apply (erule impE)
        prefer 2
   apply (erule impE)
-      apply assumption
-        apply assumption
-  apply assumption
+      apply assumption+
+        
               prefer 2
   apply (rule refl)
              prefer 2
@@ -1438,7 +1441,7 @@ proof -
      apply assumption
     apply assumption
      apply (rule assms)
-   apply (drule valid_pick_set8(1)[OF p(1)])
+   apply (drule valid_pick_set(1)[OF p(1)])
     apply assumption
             apply assumption
 (* repeated *)
@@ -1455,9 +1458,7 @@ proof -
       apply (erule impE)
        prefer 2
   apply (erule impE)
-      apply assumption
-        apply assumption
-  apply assumption
+      apply assumption+
               prefer 2
   apply (rule refl)
              prefer 2
@@ -1472,7 +1473,7 @@ proof -
      apply assumption
     apply assumption
      apply (rule assms)
-   apply (drule valid_pick_set9(1)[OF p(1)])
+   apply (drule valid_pick_set(3)[OF p(1)])
     apply assumption
   apply assumption
 (* repeated *)
@@ -1489,9 +1490,7 @@ proof -
       apply (erule impE)
        prefer 2
              apply (erule impE)
-      apply assumption
-        apply assumption
-  apply assumption
+      apply assumption+
               prefer 2
   apply (rule refl)
              prefer 2
@@ -1503,10 +1502,9 @@ proof -
     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 4] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
-     apply assumption
-    apply assumption
+     apply assumption+
             apply (rule assms)
-   apply (drule valid_pick_set10(1)[OF p(1)])
+   apply (drule valid_pick_set(5)[OF p(1)])
     apply assumption
            apply assumption
 (* repeated *)
@@ -1523,9 +1521,7 @@ proof -
       apply (erule impE)
        prefer 2
              apply (erule impE)
-      apply assumption
-        apply assumption
-  apply assumption
+      apply assumption+
               prefer 2
   apply (rule refl)
              prefer 2
@@ -1537,10 +1533,9 @@ proof -
     apply (tactic \<open>resolve_tac @{context} [BNF_Util.mk_UnIN 5 5] 1\<close>) (* normally: Use goal number here *)
     apply (rule DiffI[rotated], assumption)?
     apply (rule UN_I)
-     apply assumption
-    apply assumption
+     apply assumption+
             apply (rule assms)
-   apply (drule valid_pick_set11(1)[OF p(1)])
+   apply (drule valid_pick_set(7)[OF p(1)])
     apply assumption
           apply assumption
     (* END REPEAT_DETERM *)
@@ -1549,7 +1544,7 @@ proof -
               apply (rule allI)
               apply (rule impI)+
          apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(3)[OF assms(2), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(3-4)[OF assms(2), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1559,7 +1554,7 @@ proof -
             apply (rule allI)
               apply (rule impI)+
                apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(3)[OF assms(2), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(3-4)[OF assms(2), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1736,7 +1731,7 @@ proof -
               apply (rule allI)
               apply (rule impI)+
              apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(2)[OF assms(1), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(1-2)[OF assms(1), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T1_pre.set_map, (rule supp_id_bound bij_id)+)+
@@ -1887,7 +1882,7 @@ proof -
               apply (rule allI)
               apply (rule impI)+
          apply (drule DiffI, assumption)?
-               apply (erule suitable_FVarsD(4)[OF assms(2), unfolded Un_assoc, THEN set_mp])
+               apply (erule suitable_FVarsD(3-4)[OF assms(2), unfolded Un_assoc, THEN set_mp])
                apply (drule f_ctor)
               apply hypsubst
               apply (subst (asm) T2_pre.set_map, (rule supp_id_bound bij_id)+)+

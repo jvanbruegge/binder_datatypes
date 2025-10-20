@@ -377,8 +377,10 @@ fun note_fp_result (fp_res : fp_result) lthy =
         ("permute_raw_comp0s", [#permute_comp0 raw]),
         ("permute_raw_comps", [#permute_comp raw]),
         ("alpha_bij_eq", [#alpha_bij_eq (#inner raw)]),
+        ("alpha_bij_eq_inv", [#alpha_bij_eq_inv (#inner raw)]),
         ("alpha_refl", [#alpha_refl (#inner raw)]),
         ("FVars_raw_permute", #FVars_permutes raw),
+        ("permute_raw_simp", [#permute_ctor raw]),
         ("permute_raw_id", [#permute_id raw])
       ] else []);
 

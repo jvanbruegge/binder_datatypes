@@ -925,7 +925,7 @@ lemma permute_trm_eq_tvsubst':
 proof -
   have [simp]: "|SSupp Var (restrict (Var o \<sigma>) (FVars t) Var)| <o |UNIV::'v set|"
     "|SSupp TyVar (restrict (TyVar o \<tau>) (FTVars t) TyVar)| <o |UNIV::'tv set|"
-    by (auto simp: restrict_def SSupp_def infinite_UNIV)
+    by (auto simp: restrict_def SSupp_def)
   show ?thesis
     apply (binder_induction t avoiding: "supp \<sigma>" "supp \<tau>" t rule: trm.strong_induct)
           apply (auto simp: lfset.set_map intro!: lfset.map_cong0)
@@ -934,13 +934,13 @@ proof -
            apply (auto simp: IImsupp_def SSupp_def restrict_def)[1]
     apply (subst trm.subst)
          apply (auto simp: IImsupp_def not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>] trm.permute_id)
-              apply (auto simp: SSupp_def IImsupp_def typ.vvsubst_permute[symmetric] typ.map_is_Sb restrict_def infinite_UNIV bij_implies_inject supp_def[symmetric] split: if_splits intro!: trm.Sb_cong lfset.map_cong)
+              apply (auto simp: SSupp_def IImsupp_def typ.vvsubst_permute[symmetric] typ.map_is_Sb restrict_def bij_implies_inject supp_def[symmetric] split: if_splits intro!: trm.Sb_cong lfset.map_cong)
     apply (subst trm.subst)
          apply (auto simp: IImsupp_def not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>] trm.permute_id)
-              apply (auto simp: SSupp_def IImsupp_def typ.vvsubst_permute[symmetric] typ.map_is_Sb restrict_def infinite_UNIV bij_implies_inject supp_def[symmetric] split: if_splits intro!: trm.Sb_cong lfset.map_cong)
+              apply (auto simp: SSupp_def IImsupp_def typ.vvsubst_permute[symmetric] typ.map_is_Sb restrict_def bij_implies_inject supp_def[symmetric] split: if_splits intro!: trm.Sb_cong lfset.map_cong)
     apply (subst trm.subst)
          apply (auto simp: IImsupp_def not_in_supp_alt bij_implies_inject[OF \<open>bij \<tau>\<close>] trm.permute_id)
-              apply (auto simp: SSupp_def IImsupp_def typ.vvsubst_permute[symmetric] typ.map_is_Sb restrict_def infinite_UNIV bij_implies_inject supp_def[symmetric] split: if_splits intro!: trm.Sb_cong lfset.map_cong)
+              apply (auto simp: SSupp_def IImsupp_def typ.vvsubst_permute[symmetric] typ.map_is_Sb restrict_def bij_implies_inject supp_def[symmetric] split: if_splits intro!: trm.Sb_cong lfset.map_cong)
     apply (metis DiffD2 Diff_triv assms(1) bij_implies_inject not_in_supp_alt)
      apply (metis DiffD2 Diff_triv assms(1) bij_implies_inject not_in_supp_alt)
 

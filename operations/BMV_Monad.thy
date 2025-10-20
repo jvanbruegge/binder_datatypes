@@ -112,7 +112,7 @@ next
     using notin_SSupp apply fastforce
     using imsupp_def supp_def apply fastforce
     by (metis (mono_tags, lifting) IImsupp_def UN_iff Un_iff Vrs_1_simp1 Vrs_Un insert_iff notin_SSupp singletonD)
-qed (auto simp: assms imsupp_supp_bound infinite_UNIV)
+qed (auto simp: assms imsupp_supp_bound)
 
 lemma Vrs_2_Sb_LM:
   fixes f1::"'a::var \<Rightarrow> 'a"
@@ -161,7 +161,7 @@ lemma Vrs_1_bd: "|Vrs_1 t::'a::var set| <o natLeq"
   by (auto simp: list.set_bd natLeq_Cinfinite Cinfinite_gt_empty intro!: Un_Cinfinite_ordLess ordLeq_ordLess_trans[OF card_of_diff])
 lemma Vrs_2_bd: "|Vrs_2 t::'a::var set| <o natLeq"
   apply (induction t)
-  by (auto simp: list.set_bd natLeq_Cinfinite Cinfinite_gt_empty single_bound intro!: Un_Cinfinite_ordLess ordLeq_ordLess_trans[OF card_of_diff])
+  by (auto simp: list.set_bd natLeq_Cinfinite Cinfinite_gt_empty ID.set_bd intro!: Un_Cinfinite_ordLess ordLeq_ordLess_trans[OF card_of_diff])
 
 lemma Sb_LM_cong:
   fixes f g::"'a::var \<Rightarrow> 'a"
@@ -222,7 +222,7 @@ lemma vvsubst_Sb:
   apply (rule ext)
   subgoal for x
     apply (binder_induction x avoiding: "imsupp f" rule: LM.strong_induct)
-        apply (auto simp: imsupp_supp_bound assms infinite_UNIV)
+        apply (auto simp: imsupp_supp_bound assms)
     apply (subst Sb_LM_simp4)
       apply assumption
      apply (unfold IImsupp_def SSupp_def comp_def LM.Inj_inj LM.set UN_singleton imsupp_def supp_def)[1]

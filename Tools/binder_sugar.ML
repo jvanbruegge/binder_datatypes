@@ -4,7 +4,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
-  map_permute: thm,
+  map_permute: thm option,
   subst_simps: thm list option,
   IImsupp_permute_commutes: thm list option,
   IImsupp_Diffs: thm list option,
@@ -20,7 +20,6 @@ type binder_sugar = {
 
 val morph_binder_sugar: morphism -> binder_sugar -> binder_sugar;
 
-
 val binder_sugar_of: local_theory -> string -> binder_sugar option
 val register_binder_sugar: string -> binder_sugar -> local_theory -> local_theory
 
@@ -32,7 +31,7 @@ type binder_sugar = {
   map_simps: thm list,
   set_simpss: thm list list,
   permute_simps: thm list,
-  map_permute: thm,
+  map_permute: thm option,
   subst_simps: thm list option,
   IImsupp_permute_commutes: thm list option,
   IImsupp_Diffs: thm list option,
@@ -52,7 +51,7 @@ fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, 
 } = {
   map_simps = map (Morphism.thm phi) map_simps,
   permute_simps = map (Morphism.thm phi) permute_simps,
-  map_permute = Morphism.thm phi map_permute,
+  map_permute = Option.map (Morphism.thm phi) map_permute,
   set_simpss = map (map (Morphism.thm phi)) set_simpss,
   subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
   IImsupp_permute_commutes = Option.map (map (Morphism.thm phi)) IImsupp_permute_commutes,

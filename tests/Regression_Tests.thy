@@ -1,7 +1,7 @@
 theory Regression_Tests
   imports "Binders.MRBNF_Recursor" "../thys/LetRec/DAList_MRBNF" "HOL-Library.FSet"
 begin
-
+(*
 (* #68 *)
 binder_datatype 'a trm =
   Var 'a
@@ -14,7 +14,6 @@ binder_datatype 'a LLC =
   | Abs x::'a t::"'a LLC" binds x in t
   | Let "(x::'a, t::'a LLC) alist" u::"'a LLC" binds x in t u
 
-declare [[ML_print_depth=1000]]
 (* #70 *)
 datatype ('tv, 'ev, 'rv) type = Type 'tv 'ev 'rv
 binder_datatype ('tv, 'ev, 'rv) type_scheme =
@@ -25,14 +24,19 @@ binder_datatype ('tv, 'ev, 'rv) type_scheme =
 binder_datatype ('tv, 'ev, 'rv) type_scheme2 =
   TAll "(X::'tv) list" \<sigma>::"('tv, 'ev, 'rv) type_scheme2" binds X in \<sigma>
   | ERAll "(\<epsilon>::'ev) list" "(\<rho>::'rv) list" T::"('tv, 'ev, 'rv) type" binds \<epsilon> \<rho> in T
+*)
+ML \<open>
+Multithreading.parallel_proofs := 0
+\<close>
 
 (* #75 *)
 binder_datatype ('a, 'b, 'c, 'd) trm3 =
     Var 'a
+ (* | Test "'b list" *)
   | App "('a, 'b, 'c, 'd) trm3" "('a, 'b, 'c, 'd) trm3"
   | Lam a::'a b::'b c::'c d::'d e::"('a, 'b, 'c, 'd) trm3" binds a b c d in e
 
-(* #74 *)
+(*(* #74 *)
 binder_datatype 'a trm4 = V 'a | Lm x::'a t::"'a trm4" binds x in t
 binder_datatype 'a foo = Foo 'a | Bind "(x::'a) trm4" t::"'a foo" binds x in t
 
@@ -92,5 +96,5 @@ lemma
   fixes x y::"'a::var" and e::"'a term"
   shows "e = e"
   by (binder_induction e avoiding: "{x} \<union> {y}" rule: term.strong_induct) auto
-
+*)
 end

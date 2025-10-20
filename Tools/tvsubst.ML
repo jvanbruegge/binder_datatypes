@@ -603,7 +603,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         val ((((fs, rhos), hs), x), _) = lthy
           |> mk_Frees "f" (map ((fn a => a --> a) o HOLogic.dest_setT o body_type o fastype_of) (BMV_Monad_Def.leader BMV_Monad_Def.RVrs_of_bmv_monad bmv))
           ||>> mk_Frees "\<rho>" (map fastype_of (BMV_Monad_Def.leader BMV_Monad_Def.Injs_of_bmv_monad bmv))
-          ||>> mk_Frees "h" (replicate 2 (#T quot --> #T quot))
+          ||>> mk_Frees "h" (replicate nrecs (#T quot --> #T quot))
           ||>> apfst hd o mk_Frees "x" [domain_type (fastype_of (#ctor quot))];
 
         val prems = flat (BMV_Monad_Def.mk_small_prems_of_bmv_monad bmv
@@ -671,8 +671,11 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
 
     val rho_prems = Proof_Context.get_thms lthy "f_prems";
 
-    val avoiding_sets = map (foldl1 mk_Un o map_filter I) (transpose IImsuppss);
+    val avoiding_sets = map2 (fn free =>
+      the_default (mk_bot free) o try (foldl1 mk_Un) o map_filter I
+    ) frees (transpose (filter_out null IImsuppss));
 
+    val _ = @{print} "3"
     val Uctor =
       let
         val ctor = #ctor quot;
@@ -793,7 +796,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         rtac ctxt @{thm trans[OF comp_apply]},
         K (Local_Defs.unfold0_tac ctxt @{thms inv_simp1}),
         rtac ctxt @{thm trans[OF comp_apply]},
-        EqSubst.eqsubst_tac ctxt [0] (map #map_permute sugars),
+        EqSubst.eqsubst_tac ctxt [0] (map (the o #map_permute) sugars),
         REPEAT_DETERM o (assume_tac ctxt ORELSE' resolve_tac ctxt @{thms supp_id_bound bij_id}),
         resolve_tac ctxt (map (fn thm => Local_Defs.unfold ctxt @{thms comp_def} (thm RS fun_cong))
           (maps (the_default [] o #IImsupp_permute_commutes) sugars)
@@ -855,9 +858,9 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         ],
         REPEAT_DETERM o rtac ctxt @{thm Un_mono'},
         SELECT_GOAL (Local_Defs.unfold0_tac ctxt (no_reflexive (#set_Vrs mrsbnf_axioms))),
-        EqSubst.eqsubst_tac ctxt [0] (#Vrs_Sbs bmv_axioms),
+        EqSubst.eqsubst_tac ctxt [0] (#Sb_Inj bmv_axioms :: #Vrs_Sbs bmv_axioms),
         REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound} @ rho_prems),
-        K (Local_Defs.unfold0_tac ctxt @{thms image_id}),
+        K (Local_Defs.unfold0_tac ctxt @{thms image_id id_apply}),
         rtac ctxt @{thm Un_upper1} ORELSE' EVERY' [
           rtac ctxt @{thm subsetI},
           etac ctxt @{thm UN_E},
@@ -893,7 +896,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
           rtac ctxt @{thm UN_mono[OF subset_refl]},
           resolve_tac ctxt prems,
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt @{thms prod.collapse}),
-          eresolve_tac ctxt @{thms UnI1 UnI2}
+          eresolve_tac ctxt @{thms UnI1 UnI2} ORELSE' assume_tac ctxt
         ]
       ]) ctxt
     ])), Position.no_range), NONE) state;
@@ -901,6 +904,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
     val (tvsubst, lthy) = mk_def_t true Binding.empty I (Binding.name_of tvsubst_b) 0
       (hd (MRBNF_Recursor.get_RECs true "tvsubst" lthy)) lthy;
 
+    val _ = @{print} "4"
     val tvsubst_not_isInj =
       let
         val x = Free ("x", domain_type (fastype_of (#ctor quot)));
@@ -1143,6 +1147,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
       | _ => error "only works for datatypes"
     val fresh_induct = #fresh_induct fp_thms;
 
+    (* needs to account for vars that are not injections on RHS *)
     val FVars_tvsubsts = map (fn FVars =>
       let
         val t = Free ("t", domain_type (fastype_of FVars));
@@ -1159,6 +1164,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
           FVars $ (Term.list_comb (fst tvsubst, map_filter I rhos) $ t),
           foldl1 mk_Un rhss
         );
+        val _ = @{print} (Thm.cterm_of lthy goal)
       in Goal.prove_sorry lthy (names (map_filter I rhos @ [t])) rho_prems' goal (fn {context=ctxt, prems} => EVERY1 [
         DETERM o rtac ctxt (infer_instantiate' ctxt (map (SOME o Thm.cterm_of ctxt) avoiding_sets) fresh_induct),
         REPEAT_DETERM_N nvars o SELECT_GOAL (REPEAT_DETERM (FIRST1 [
@@ -1184,25 +1190,42 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
           EqSubst.eqsubst_tac ctxt [0] (#Vrs_Sbs bmv_axioms),
           REPEAT_DETERM o resolve_tac ctxt (@{thms supp_id_bound} @ prems)
         ],
-        K (Local_Defs.unfold0_tac ctxt (@{thms image_id UN_Un} @ #Vrs_Map (the (BMV_Monad_Def.leader BMV_Monad_Def.params_of_bmv_monad bmv)))),
+        K (Local_Defs.unfold0_tac ctxt (@{thms image_id UN_Un id_apply}
+          @ #Vrs_Map (the (BMV_Monad_Def.leader BMV_Monad_Def.params_of_bmv_monad bmv))
+          @ [#Sb_Inj bmv_axioms]
+        )),
+        K (print_tac ctxt "1"),
         rtac ctxt (mk_Un_cong (nrecs + 1) (length rhss)),
         REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] (map_filter (Option.map (#eta_compl_free o #axioms)) defs),
+          EqSubst.eqsubst_tac ctxt [0] (@{print}(map_filter (Option.map (#eta_compl_free o #axioms)) defs)),
+          K (print_tac ctxt "1.1"),
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt (map_filter (Option.map (snd o #isInj)) defs)),
           rotate_tac ~1,
           etac ctxt @{thm contrapos_np},
+          K (print_tac ctxt "1.2"),
           SELECT_GOAL (Local_Defs.unfold0_tac ctxt (@{thms not_all not_not comp_def} @ map_filter (Option.map (snd o #Inj)) defs)),
           etac ctxt exE,
           hyp_subst_tac ctxt,
+          K (print_tac ctxt "1.3"),
           rtac ctxt exI,
-          rtac ctxt refl
+          rtac ctxt refl,
+          K (print_tac ctxt "1.35")
         ],
-        K (Local_Defs.unfold0_tac ctxt @{thms UN_empty Un_empty_left Un_empty_right}),
+        K (Local_Defs.unfold0_tac ctxt (@{thms UN_empty Un_empty_left Un_empty_right image_id}
+          @ the_default [] (Option.map single (#Map_map mrsbnf_facts))
+        )),
+        TRY o EVERY' [
+          EqSubst.eqsubst_tac ctxt [0] (MRBNF_Def.set_map_of_mrbnf mrbnf),
+          REPEAT_DETERM o resolve_tac ctxt @{thms supp_id_bound bij_id}
+        ],
+        K (Local_Defs.unfold0_tac ctxt (@{thms image_id})),
+        K (print_tac ctxt "1.4"),
         rtac ctxt refl,
         rtac ctxt trans,
         rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "minus"]},
         rtac ctxt @{thm UN_cong},
         Goal.assume_rule_tac ctxt,
+        K (print_tac ctxt "2"),
         REPEAT_DETERM o EVERY' [
           EqSubst.eqsubst_tac ctxt [0] (maps (the_default []) IImsupp_Diffs @ maps (the_default [] o #IImsupp_Diffs) sugars),
           REPEAT_DETERM o (assume_tac ctxt ORELSE' EVERY' [
@@ -1218,12 +1241,16 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
             ])
           ])
         ],
+        K (print_tac ctxt "3"),
         K (Local_Defs.unfold0_tac ctxt @{thms Un_Diff[symmetric]}),
         rtac ctxt @{thm arg_cong2[OF _ refl, of _ _ "minus"]},
         K (Local_Defs.unfold0_tac ctxt @{thms UN_UN_flatten UN_Un_distrib[symmetric]}),
         rtac ctxt refl,
-        rtac ctxt @{thm UN_cong},
-        Goal.assume_rule_tac ctxt,
+        TRY o EVERY' [
+          rtac ctxt @{thm UN_cong},
+          Goal.assume_rule_tac ctxt
+        ],
+        K (print_tac ctxt "4"),
         EVERY' (map_filter (Option.map (fn def => EVERY' [
           K (Local_Defs.unfold0_tac ctxt [snd (#isInj def)]),
           etac ctxt exE,
@@ -1234,8 +1261,10 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
           K (Local_Defs.unfold0_tac ctxt (@{thms UN_single UN_empty Un_empty_left Un_empty_right}
             @ maps (the_default []) FVars_Injs
           )),
+          K (print_tac ctxt "5"),
           rtac ctxt refl
-        ])) (rev defs))
+        ])) (rev defs)),
+        K (print_tac ctxt "end")
       ]) end
     ) (#FVarss quot);
 
@@ -1752,7 +1781,7 @@ fun create_tvsubst_of_mrsbnf qualify fp_res mrsbnf rec_mrbnf vvsubst_ctor map_pe
         );
       in Goal.prove_sorry lthy (names (fs @ map_filter I rhos)) (f_prems @ rho_prems') goal (fn {context=ctxt, prems} => EVERY1 [
         REPEAT_DETERM o EVERY' [
-          EqSubst.eqsubst_tac ctxt [0] (map (fn thm => thm RS sym) (map_permute :: map #map_permute sugars)),
+          EqSubst.eqsubst_tac ctxt [0] (map (fn thm => thm RS sym) (map_permute :: map (the o #map_permute) sugars)),
           REPEAT_DETERM o resolve_tac ctxt prems
         ],
         rtac ctxt (#map_Sb_strong (hd (MRSBNF_Def.facts_of_mrsbnf rec_mrsbnf))),

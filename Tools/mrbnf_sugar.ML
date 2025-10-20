@@ -13,25 +13,6 @@ type spec = {
   FVars_bs: binding option list
 };
 
-type binder_sugar = {
-  map_simps: thm list,
-  set_simpss: thm list list,
-  permute_simps: thm list,
-  map_permute: thm option,
-  subst_simps: thm list option,
-  IImsupp_permute_commutes: thm list option,
-  IImsupp_Diffs: thm list option,
-  bsetss: term option list list,
-  bset_bounds: thm list,
-  mrbnf: MRBNF_Def.mrbnf,
-  strong_induct: thm option,
-  distinct: thm list,
-  inject: thm list,
-  ctors: (term * thm) list
-};
-
-val morph_binder_sugar: morphism -> binder_sugar -> binder_sugar;
-
 type mr_bnf = (MRBNF_Def.mrbnf, (BNF_Def.bnf, MRBNF_FP_Def_Sugar.quotient_result MRBNF_FP_Def_Sugar.fp_result_T) MRBNF_Util.either) MRBNF_Util.either
 
 val mr_bnf_of: local_theory -> bool -> string -> mr_bnf option;
@@ -41,7 +22,7 @@ val build_permute_for: Proof.context -> term list -> typ list -> typ -> (string 
 val create_binder_type : MRBNF_Util.fp_kind -> spec -> local_theory
   -> (MRBNF_FP_Def_Sugar.fp_result * typ * MRSBNF_Def.mrsbnf * MRBNF_Comp.absT_info) * local_theory
 
-val create_binder_datatype : bool -> spec -> local_theory -> binder_sugar * local_theory
+val create_binder_datatype : bool -> spec -> local_theory -> Binder_Sugar.binder_sugar * local_theory
 end
 
 structure MRBNF_Sugar : MRBNF_SUGAR =
@@ -65,57 +46,6 @@ type spec = {
   permute_b: binding option,
   FVars_bs: binding option list
 };
-
-type binder_sugar = {
-  map_simps: thm list,
-  set_simpss: thm list list,
-  permute_simps: thm list,
-  map_permute: thm option,
-  subst_simps: thm list option,
-  IImsupp_permute_commutes: thm list option,
-  IImsupp_Diffs: thm list option,
-  bsetss: term option list list,
-  bset_bounds: thm list,
-  mrbnf: MRBNF_Def.mrbnf,
-  strong_induct: thm option,
-  distinct: thm list,
-  inject: thm list,
-  ctors: (term * thm) list
-};
-
-fun morph_binder_sugar phi { map_simps, permute_simps, map_permute, set_simpss, subst_simps, mrbnf,
-  strong_induct, distinct, inject, ctors, bsetss, bset_bounds, IImsupp_permute_commutes, IImsupp_Diffs } = {
-  map_simps = map (Morphism.thm phi) map_simps,
-  permute_simps = map (Morphism.thm phi) permute_simps,
-  map_permute = Option.map (Morphism.thm phi) map_permute,
-  set_simpss = map (map (Morphism.thm phi)) set_simpss,
-  subst_simps = Option.map (map (Morphism.thm phi)) subst_simps,
-  IImsupp_permute_commutes = Option.map (map (Morphism.thm phi)) IImsupp_permute_commutes,
-  IImsupp_Diffs = Option.map (map (Morphism.thm phi)) IImsupp_Diffs,
-  bsetss = map (map (Option.map (Morphism.term phi))) bsetss,
-  bset_bounds = map (Morphism.thm phi) bset_bounds,
-  mrbnf = MRBNF_Def.morph_mrbnf phi mrbnf,
-  strong_induct = Option.map (Morphism.thm phi) strong_induct,
-  distinct = map (Morphism.thm phi) distinct,
-  inject = map (Morphism.thm phi) inject,
-  ctors = map (map_prod (Morphism.term phi) (Morphism.thm phi)) ctors
-} : binder_sugar;
-
-structure Data = Generic_Data (
-  type T = binder_sugar Symtab.table;
-  val empty = Symtab.empty;
-  fun merge data : T = Symtab.merge (K true) data;
-);
-
-fun register_binder_sugar name sugar =
-  Local_Theory.declaration {syntax = false, pervasive = true, pos = Position.none}
-    (fn phi => Data.map (Symtab.update (name, morph_binder_sugar phi sugar)));
-
-fun binder_sugar_of_generic context =
-  Option.map (morph_binder_sugar (Morphism.transfer_morphism (Context.theory_of context)))
-  o Symtab.lookup (Data.get context);
-
-val binder_sugar_of = binder_sugar_of_generic o Context.Proof;
 
 fun add_nesting_mrbnf_names Us =
   let
@@ -963,9 +893,12 @@ fun create_binder_datatype co (spec : spec) lthy =
       eta_compl_free = eta_compl_free_tac,
       eta_natural = eta_natural_tac
     };
-    val eta_models = map (fn a => Option.map (fn { eta, Inj } => { eta = eta, Inj = Inj, tacs = tvsubst_axioms }) (
-      List.find (fn { eta, ...} => domain_type (fastype_of eta) = a) etas
-    )) vars;
+    val tvsubst_model = {
+      binding = #tvsubst_b spec,
+      etas = map (fn a => Option.map (fn { Inj, eta } => { Inj = Inj, eta = eta, tacs = tvsubst_axioms }) (
+        List.find (fn t => domain_type (fastype_of (#eta t)) = a) etas
+      )) vars
+    };
 
     val thms = @{thms prod.set_map sum.set_map prod_set_simps sum_set_simps UN_empty UN_empty2
       Un_empty_left Un_empty_right UN_singleton comp_def map_sum.simps map_prod_simp
@@ -1177,7 +1110,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           REPEAT_DETERM o resolve_tac ctxt prems,
           REPEAT_DETERM o EVERY' [
             EqSubst.eqsubst_tac ctxt [0] (map (the o #map_permute) nesting_binder_sugars),
-            REPEAT_DETERM o resolve_tac ctxt prems
+            REPEAT_DETERM o resolve_tac ctxt prems                        
           ],
           K (Local_Defs.unfold0_tac ctxt @{thms id_apply}),
           rtac ctxt refl
@@ -1189,8 +1122,12 @@ fun create_binder_datatype co (spec : spec) lthy =
     val (lthy, tvsubst_opt) = if not (null (map_filter I (#etas tvsubst_model))) andalso not co then
       let
         val recursor_result = #recursor_result (the vvsubst_res_opt);
+        val rec_mrbnf = #rec_mrbnf (the vvsubst_res_opt);
+        val vvsubst_res = #vvsubst_res (the vvsubst_res_opt);
+
         val (tvsubst_res, lthy) = TVSubst.create_tvsubst_of_mrsbnf (Binding.prefix_name "tv") res mrsbnf
-          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#tvsubst_b spec) eta_models (#QREC_fixed recursor_result) lthy;
+          rec_mrbnf (#vvsubst_ctor vvsubst_res) (#vvsubst_permute vvsubst_res) (#tvsubst_b spec)
+          (#etas tvsubst_model) (#QREC_fixed recursor_result) lthy;
 
         val lthy = BMV_Monad_Def.register_pbmv_monad (fst (dest_Type qT))
           (MRSBNF_Def.bmv_monad_of_mrsbnf (#mrsbnf tvsubst_res)) lthy;
@@ -1240,7 +1177,7 @@ fun create_binder_datatype co (spec : spec) lthy =
 
             val bmv_unfolds = maps BMV_Monad_Def.unfolds_of_bmv_monad bmvs;
             fun tac ctxt prems = EVERY1 [
-              K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (map_filter (Option.map #Inj) eta_models))),
+              K (Local_Defs.unfold0_tac ctxt (map (Thm.symmetric o snd) (map_filter (Option.map #Inj) (#etas tvsubst_model)))),
               EVERY' [
                 resolve_tac ctxt (#tvsubst_Injs tvsubst_res),
                 REPEAT_DETERM o resolve_tac ctxt prems
@@ -1297,18 +1234,17 @@ fun create_binder_datatype co (spec : spec) lthy =
     val induct_attrib = Attrib.internal Position.none (K (Induct.induct_type (fst (dest_Type qT))))
     val equiv = @{attributes [simp, equiv]}
 
-    (*fun unfold_tvsubst res = map_filter (Option.map (
+    val unfold_tvsubst = map (
       Local_Defs.unfold lthy (
         @{thms SSupp_def[symmetric, THEN meta_eq_to_obj_eq, THEN fun_cong]}
         @ map (Thm.symmetric o snd) ctors
         @ [@{lemma "\<Union>((Vrs \<circ> \<rho>) ` SSupp Inj \<rho>) = IImsupp Inj Vrs \<rho>"
             by (auto simp: IImsupp_def)}]
       )
-    ));*)
-<<<<<<< HEAD
+    );
 
-    val IImsupp_permute_commutes = Option.map (fn (res, _) => unfold_tvsubst res (#IImsupp_permute_commutes res)) tvsubst_opt;
-    val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst res (#IImsupp_Diffs res)) tvsubst_opt;
+    val IImsupp_permute_commutes = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_permute_commutes res)) tvsubst_opt;
+    val IImsupp_Diffs = Option.map (fn (res, _) => unfold_tvsubst (#IImsupp_Diffs res)) tvsubst_opt;
 
     val (sugar, lthy) = if co then
       let
@@ -1329,7 +1265,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           distinct = [],
           inject = [],
           ctors = []
-        } : binder_sugar;
+        } : Binder_Sugar.binder_sugar;
       in (sugar, lthy) end
     else
       let
@@ -1349,7 +1285,7 @@ fun create_binder_datatype co (spec : spec) lthy =
           distinct = distinct,
           inject = injects,
           ctors = ctors
-        } : binder_sugar;
+        } : Binder_Sugar.binder_sugar;
       in (sugar, lthy) end
 
     val lthy = Binder_Sugar.register_binder_sugar (fst (dest_Type qT)) sugar lthy;

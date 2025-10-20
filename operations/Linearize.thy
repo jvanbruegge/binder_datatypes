@@ -12,10 +12,13 @@ to be pullback-preserving), we transform it into an MRBNF F' that has the same c
 as F except that the 3rd position becomes map-constrained to small-support endobijections.  
 *)
 
+ML_file \<open>~~/src/Doc/antiquote_setup.ML\<close>
+
 text \<open>
 
-rail\<open>
-  @@{command linearize_mrbnf} @{syntax spec} name '=' term @{syntax wits}? @'on' @{syntax on_vars} @{syntax bindings}? @{syntax morphisms}?
+\<^rail>\<open>
+  @@{command linearize_mrbnf} @{syntax spec} name '=' term @{syntax wits}? \<newline>
+    @'on' @{syntax on_vars} @{syntax bindings}? @{syntax "morphisms"}?
   ;
   @{syntax_def spec}: @{syntax tfree} | '(' (((name ':')? @{syntax tfree}) + ',') ')'
   ;
@@ -27,7 +30,7 @@ rail\<open>
   ;
   @{syntax_def bindings}: @'for' ((('map' | 'rel' | 'pred' | 'nonrep' | 'sameShape') ':' name) +)
   ;
-  @{syntax_def morphisms}: @'morphisms' name name
+  @{syntax_def "morphisms"}: @'morphisms' name name
 \<close>
 
 \<close>
@@ -44,7 +47,7 @@ consts set2_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'b set"
 consts set3_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'c set"
 consts set4_F :: "('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> 'd set"
 consts rrel_F :: "('c \<Rightarrow> 'c' \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd' \<Rightarrow> bool) \<Rightarrow> ('a :: var, 'b :: var, 'c, 'd) F \<Rightarrow> ('a, 'b, 'c', 'd') F \<Rightarrow> bool"
-
+(*
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
 mrbnf "('a :: var, 'b :: var, 'c, 'd) F"
@@ -741,5 +744,5 @@ mrbnf "('a::var, 'b::var, 'c::var, 'd) F'"
   subgoal by (rule F'_rel_comp_leq_)
   subgoal premises prems by (rule F'_in_rel[OF prems])
   done        
-
+*)
 end

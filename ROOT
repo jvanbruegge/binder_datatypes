@@ -29,12 +29,19 @@ session Operations in "operations" = Untyped_Lambda_Calculus +
     Least_Fixpoint
     Least_Fixpoint2
     Greatest_Fixpoint
+    Linearize
     Recursor
     Corecursor
     Corecursor2
     VVSubst
     TVSubst
     Sugar
+  document_files
+    "root.tex"
+    "style.sty"
+    "isar.sty"
+    "iman.sty"
+    "extra.sty"
 
 session Tests in "tests" = Case_Studies +
   sessions

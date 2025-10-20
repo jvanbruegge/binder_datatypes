@@ -1,0 +1,74 @@
+\documentclass[12pt,a4paper]{article} % fleqn
+\usepackage[T1]{fontenc}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{enumitem}
+\usepackage{footmisc}
+\usepackage{graphicx}
+\usepackage{iman}
+\usepackage{extra}
+\usepackage{isar}
+\usepackage{isabelle}
+\usepackage{isabellesym}
+\usepackage{style}
+\usepackage{pdfsetup}
+\usepackage{railsetup}
+\usepackage{framed}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\renewcommand\_{\hbox{\textunderscore\kern-.05ex}}
+
+\newbox\boxA
+\setbox\boxA=\hbox{\ }
+\parindent=4\wd\boxA
+
+\newcommand\blankline{\vskip-.25\baselineskip}
+
+\newenvironment{indentblock}{\list{}{\setlength{\leftmargin}{\parindent}}\item[]}{\endlist}
+
+\newcommand{\keyw}[1]{\textbf{#1}}
+\newcommand{\synt}[1]{\textit{#1}}
+\newcommand{\hthm}[1]{\textbf{\textit{#1}}}
+
+%\renewcommand{\isactrlsub}[1]{\/$\sb{\mathrm{#1}}$}
+\renewcommand\isactrlsub[1]{\/$\sb{#1}$}
+\renewcommand\isadigit[1]{\/\ensuremath{\mathrm{#1}}}
+\renewcommand\isacharprime{\isamath{{'}\mskip-2mu}}
+\renewcommand\isacharunderscore{\mbox{\_}}
+\renewcommand\isacharunderscorekeyword{\mbox{\_}}
+\renewcommand\isachardoublequote{\mbox{\upshape{``}}}
+\renewcommand\isachardoublequoteopen{\mbox{\upshape{``}\kern.1ex}}
+\renewcommand\isachardoublequoteclose{\/\kern.15ex\mbox{\upshape{''}}}
+\renewcommand{\isasyminverse}{\isamath{{}^{-}}}
+
+\hyphenation{isa-belle}
+
+\isadroptag{theory}
+
+\begin{document}
+
+\title{Operations}
+\author{kfx532}
+\maketitle
+
+\tableofcontents
+
+% sane default for proof documents
+\parindent 0pt\parskip 0.5ex
+
+% generated text of all theories
+\input{session}
+
+% optional bibliography
+%\bibliographystyle{abbrv}
+%\bibliography{root}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

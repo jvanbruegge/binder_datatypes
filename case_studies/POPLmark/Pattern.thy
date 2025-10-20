@@ -134,43 +134,6 @@ declare [[ML_print_depth=1000]]
 linearize_mrbnf (PTVars: 'tv::var, PVars: 'v::var) pat = "('tv::var, 'v::var) prepat"
   [wits:"(PPRec lfempty) :: ('tv::var, 'v::var) prepat"] on 'v
   for map: vvsubst_pat
-  subgoal for R x y
-    apply (unfold P.Pattern.P.prepat.in_rel mem_Collect_eq map_vvsubst_equiv)
-    apply (rule iffI)
-     apply (auto)
-    subgoal for b P Q
-      apply (hypsubst_thin)
-      apply (drule trans)
-       apply (rule sym)
-       apply (assumption)
-      apply (drule trans)
-       apply (rule sym)
-       apply (assumption)
-      apply (erule thin_rl)
-      apply (rotate_tac 2)
-      apply (erule thin_rl)
-      apply (erule thin_rl)
-    proof (induction P arbitrary: Q)
-      case (PPVar x T)
-      then show ?case
-        apply (cases Q)
-         apply (auto simp add: typ.map_ident)
-        done
-    next
-      case (PPRec X)
-      then show ?case 
-        apply (cases Q)
-         apply (auto)
-        apply (unfold map_vvsubst_equiv[symmetric] id_def[symmetric])
-        subgoal for X'
-          apply (rule lfset_inj_map_strong2[of X X' "(map_prepat fst)" "(map_prepat fst)"
-                "(map_prepat snd)" "(map_prepat snd)"])
-            apply (auto)
-          apply (blast)
-          done
-        done
-    qed
-    done
   subgoal
     apply (unfold prepat.in_rel[OF supp_id_bound, unfolded prepat.map_id])
     apply (intro allI impI exI[of _ id])

@@ -3,14 +3,13 @@ theory Linearize2
   keywords "linearize_mrbnf" :: thy_goal
 begin
 
-
 definition asSS :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a" where
   "asSS f \<equiv> if |supp f| <o |UNIV :: 'a set| then f else id"
 
 ML_file "../Tools/mrbnf_linearize_tactics.ML"
 ML_file "../Tools/mrbnf_linearize.ML"
 
-linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct
+linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonrep: list_distinct sameShape: same_length morphisms to_alist of_alist
   unfolding list.in_rel
   subgoal for S R l r
     apply safe
@@ -28,13 +27,16 @@ linearize_mrbnf ('k::var,'v) alist = "('k::var \<times> 'v) list" on 'k for nonr
     done
   done
 
+thm of_alist_inverse[unfolded list_distinct_def]
+thm to_alist
 
-thm list_distinct_def
-thm Rep_alist[unfolded list_distinct_def]
-print_mrbnfs
+linearize_mrbnf 'a :: var list = "('a ::var) list" on 'a
+  done
 
 binder_datatype 'a lc = Var 'a | Abs x::'a t::"'a lc" binds x in t | App "'a lc" "'a lc"
   | Let "(fs::'a, 'a lc) alist" u::"'a lc" binds fs in u
+
+print_mrbnfs
 
 declare [[mrbnf_internals]]
 declare [[typedef_overloaded]]
@@ -84,7 +86,7 @@ consts wit2_lG :: "'a \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit3_lG :: "('a, 'b, 'c, 'd, 'e, 'f) G"
 consts wit4_lG :: "'c \<Rightarrow> ('a, 'b, 'c, 'd, 'e, 'f) G"
 
-(*declare [[quick_and_dirty]]*)
+
 declare [[bnf_internals]]
 
 setup \<open>Sign.qualified_path false (Binding.name "foo")\<close>
@@ -119,9 +121,6 @@ linearize_mrbnf ('a, 'b::var_foo) foo'' = "('a, 'b::var_foo) foo"
 linearize_mrbnf ('a::var, 'b) pair = "('a \<times> 'b) \<times> ('a::var)" on 'a
   sorry
 
-thm Abs_pair_inverse
-
-thm mr_rel_G_def
 
 linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
   [wits:"wit1_lG :: 'a \<Rightarrow> 'b \<Rightarrow> ('a, 'b, 'c::var, 'd::var, 'e, 'f) G" 
@@ -129,8 +128,6 @@ linearize_mrbnf ('a, 'b, 'c::var, 'd::var, 'e, 'f) lG = "('a, 'b, 'c::var, 'd::v
     (*"wit3_lG :: ('a, 'b, 'c::var, 'd::var, 'e, 'f) G"*)] on 'd and 'c
   sorry
 
-thm nonrep_G_def
-thm Abs_lG_inverse
 
 
 lemma nonrep_G_wit1: "nonrep_G (wit1_G a b)"
@@ -227,39 +224,31 @@ linearize_mrbnf ('b, 'a) dlist = "('a \<times> 'b) list" on 'b
 
 
 consts witL :: "('a::var, 'b) L"
-(*
+
 linearize_mrbnf ('a::var, 'b) L' = "('a::var, 'b) L" [wits:"witL :: ('a::var, 'b) L"] on 'a
   sorry
-*)
-(*
+
+
 linearize_mrbnf ('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F'' = "('a, 'b::var, 'c::var, 'd, 'e::var, 'f::var) F" on 'f and 'e
   sorry
-*)
 
 
-linearize_mrbnf ('a, 'b::var) L' = "('a, 'b::var) L" on 'b
+
+linearize_mrbnf ('a, 'b::var) L'' = "('a, 'b::var) L" on 'b for sameShape: sm_shp_L2 nonrep: nrp_shp_L2
   sorry
 
 
 
-linearize_mrbnf (st1:'b::var, st2:'f , st3:'c::var , 'd, st4:'a::var , st5:'e) F'' = 
-  "('a::var, 'b::var, 'c::var, 'd, 'e, 'f) F" on 'a
+linearize_mrbnf (st1:'b::var, st2:'f , st3:'c::var , 'd, st4:'a::var , st5:'e) F''' = 
+  "('a::var, 'b::var, 'c::var, 'd, 'e, 'f) F" on 'a for sameShape: sm_shp_F3 nonrep: nrp_shp_F3
   sorry
 
-term Abs_F''
 
 thm map_F''_def
 thm st1_def
 
-
 thm F.map_comp
-term sameShape_F
-thm sameShape_F_def nonrep_F_def 
-
-thm F.map_id F.set_map F.set_map0
-find_theorems name: F.map
-find_theorems name: F''.map
-find_theorems name: map_comp0
+thm sm_shp_F3_def 
 
 (* we linearize this MRBNF on position 1*)
 ML \<open>val lin_pos = 1\<close>
@@ -269,15 +258,15 @@ axiomatization where
    NB: All MRBNFs already preserve _weak_ pullbacks, i.e., they satisfy the following property 
    without uniqueness.  *)
   F_rel_map_set2_strong: 
-  "\<And> R S (x :: ('a,'b :: var,'c :: var,'d,'e::var,'f) F) y.
-    rrel_F R S x y =
-      (\<exists>!z. set1_F z \<subseteq> {(x, y). R x y} \<and>
-            set4_F z \<subseteq> {(x, y). S x y} \<and> map_F fst id id fst id z = x \<and> map_F snd id id snd id z = y)"
+  "\<And> R S T (x :: ('a,'b :: var,'c :: var,'d,'e::var,'f) F) y.
+    rrel_F R S T x y =
+      (\<exists>!z. set1_F z \<subseteq> {(x, y). R x y} \<and> set4_F z \<subseteq> {(x, y). S x y} \<and> 
+            set5_F z \<subseteq> {(x, y). T x y} \<and> map_F fst id id fst fst z = x \<and> map_F snd id id snd snd z = y)"
   and
   (* The next property assumes that nonrepetitive elements exist: *)
-  ex_nonrep: "\<exists>x. \<forall>x'. (\<exists> R. rrel_F R (=) x x') \<longrightarrow> (\<exists> f. x' = map_F f id id id id x)"
+  ex_nonrep: "\<exists>x. \<forall>x'. (\<exists> R. rrel_F R (=) (=) x x') \<longrightarrow> (\<exists> f. x' = map_F f id id id id x)"
 
-lemma rrel_F_alt: "rrel_F top (=) x y = (\<exists>R. rrel_F R (=) x y)"
+lemma rrel_F_alt: "rrel_F top (=) (=) x y = (\<exists>R. rrel_F R (=) (=) x y)"
   apply (rule iffI)
   apply (rule exI)
   apply (assumption)

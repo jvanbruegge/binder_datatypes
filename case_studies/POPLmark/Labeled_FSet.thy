@@ -437,14 +437,14 @@ lemma lfset_strong: "rel_lfset id R x y \<Longrightarrow>
     rel_lfset id Q x y
     \<Longrightarrow> rel_lfset id (inf R Q) x y"
   apply (frule lfset.mr_rel_mono_strong0[OF bij_id supp_id_bound bij_id supp_id_bound,
-    of _ _ _ top, unfolded mr_rel_lfset_def lfset.map_id]; auto?)
+        of _ _ _ top, unfolded mr_rel_lfset_def lfset.map_id]; auto?)
   apply (drule lfset_rel_map_values_strong[THEN iffD1, of top])
   apply (unfold lfset.in_rel[OF bij_id supp_id_bound, unfolded lfset.map_id OO_Grp_alt])
   apply (clarsimp)
   subgoal for z l r
-    apply (frule spec2[of _ l z])
-    apply (drule spec2[of _ r z])
-    apply auto
+    apply (hypsubst_thin)
+    apply (rule exI[of _ z])
+    apply (auto)
     done
   done
 

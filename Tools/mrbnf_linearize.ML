@@ -5,14 +5,14 @@ sig
   | No_Warn_Wits
   | No_Warn_Transfer
   val linearize_mrbnf:
-    (((((linearize_mrbnf_option list * (binding option * (string * sort option)) list) *
-      binding) * typ) * term list option) * string list) * (binding * binding * binding * binding * binding) ->
+    ((((((linearize_mrbnf_option list * (binding option * (string * sort option)) list) *
+      binding) * typ) * term list option) * string list) * (binding * binding * binding * binding * binding)) * (binding * binding) option ->
       ({context: Proof.context, prems: thm list} -> tactic) list ->
       local_theory -> local_theory
   val linearize_mrbnf_cmd:
-     (((((linearize_mrbnf_option list * (binding option * (string * string option)) list) *
+     ((((((linearize_mrbnf_option list * (binding option * (string * string option)) list) *
        binding) * string) * string list) * string list) *
-       (binding * binding * binding * binding * binding) -> local_theory -> Proof.state
+       (binding * binding * binding * binding * binding)) * (binding * binding) option -> local_theory -> Proof.state
 end
 
 structure MRBNF_Linearize : MRBNF_LINEARIZE =
@@ -48,7 +48,7 @@ fun mk_asSS f = let val typ_f = fastype_of f; in
   Const (@{const_name asSS}, typ_f --> typ_f) $ f end;
 
 (** linearize **)
-fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy =
+fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs opts lthy =
   let
     val tfrees = map (TFree o snd) specs |> @{print};
 
@@ -265,7 +265,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy
 
     val nonrep_wit_goals = map (mk_nonrep_wit) Iwits_new;
 
-    (*F_rel_map_set_live_strong *)
+    (*F_pullback_perservation *)
     val map_fst_z = MRBNF_Def.mk_map_comb_of_mrbnf Ds (map BNF_Util.fst_const As_pair) 
       (map HOLogic.id_const Bs) (map HOLogic.id_const Fs) mrbnf $ var_z;
     val map_eq_x = HOLogic.mk_eq (map_fst_z, var_x);
@@ -301,18 +301,21 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy
     val rrel_R_x_x' = Term.list_comb (rrel_F_R, var_R'_As @ [var_x, var_x']);
     val rrel_eq_ex1 = HOLogic.mk_eq (rrel_R_x_x', ex1_z);
     val all_x_x' = HOLogic.mk_Trueprop rrel_eq_ex1 |> Logic.all var_x' |> Logic.all var_x;
-    val F_rel_map_set_live_strong = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
+    val F_pullback_perservation = fold (fn R => (fn all => Logic.all R all)) var_R'_As all_x_x';
+
+    val goals = if null l_As then [] else [F_pullback_perservation];
 
     val goals = 
       if null (Iwits_new @ Iwits_F) then
-        [F_rel_map_set_live_strong, Tp_ex_nonrep] @ nonrep_wit_goals @ wit_goals
+        goals @ [Tp_ex_nonrep] @ nonrep_wit_goals @ wit_goals
       else
-        [F_rel_map_set_live_strong] @ nonrep_wit_goals @ wit_goals;
+        goals @ nonrep_wit_goals @ wit_goals;
 
     fun after_qed thmss lthy = 
       let
         (* prepare thms *)
-        val (F_rel_map_set_live_strong_thm, thmss) = chop 1 thmss |> apfst (the_single o the_single);
+        val (F_pullback_perservation_thm_opt, thmss) = if null l_As then (NONE, thmss) else
+          chop 1 thmss |> apfst (SOME o the_single o the_single);
         val (ex_nonrep_opt, wit_new_thmss) = if null (Iwits_new @ Iwits_F) then chop 1 thmss |> apfst (SOME o the_single o the_single) else (NONE, thmss);
         val wits_new_thms = map the_single wit_new_thmss;
         val (raw_nonrep_thms, wit_new_thms) = chop (length Iwits_new) wits_new_thms;
@@ -407,7 +410,7 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy
           HEADGOAL (rtac ctxt ex_nonrep_thm)
 
         val ((_, (td_info1, td_info2)), lthy) = typedef (b, map (snd) specs, 
-          Mixfix.NoSyn) td_term NONE mk_typedef_tac lthy;
+          Mixfix.NoSyn) td_term morphs mk_typedef_tac lthy;
 
 
         (* mk F' Frees *)
@@ -479,17 +482,18 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy
         val mr_rel_Q = Term.list_comb (mr_rel, Q_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
         val mr_rel_inf = Term.list_comb (mr_rel, inf_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
 
-        val F_strong_thm = Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
+        val F_strong_thm_opt = if null l_As then NONE else SOME (
+          Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
           [mr_rel_R, mr_rel_Q] mr_rel_inf
           (fn {context = ctxt, prems} => mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0 
-            F_map_id F_in_rel F_rel_map_set_live_strong_thm);
+            F_map_id F_in_rel (the F_pullback_perservation_thm_opt)));
 
         (* mr_rel_F_exchange *)
         val RQ_args = select_n Q_args R_args lin_poses;
         val mr_rel_RQ = Term.list_comb (mr_rel, RQ_args @ [var_x, var_x']) |> HOLogic.mk_Trueprop;
         val mr_rel_F_exchange_thm = Goal.prove_sorry lthy (map (fst o dest_Free) (var_R'_As @ var_R'_As2 @ [var_x, var_x'])) 
           [mr_rel_R, mr_rel_Q] mr_rel_RQ
-          (fn {context = ctxt, prems} => mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_thm);
+          (fn {context = ctxt, prems} => mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_thm_opt);
         
         (* nonrep_map_F *)
         val u_props_raw = map (fn u => [MRBNF_Util.mk_bij u |> HOLogic.mk_Trueprop, 
@@ -632,13 +636,13 @@ fun linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b opts lthy
 local
 
 fun prepare_common prepare_sort prepare_typ prepare_term
-    ((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvars), (map_b, rel_b, pred_b, ss_b, nrp_b)) lthy =
+    (((((((plugins, raw_specs), b), raw_repT), raw_wits), on_tvars), (map_b, rel_b, pred_b, ss_b, nrp_b)), morphs) lthy =
   let
     val repT = prepare_typ lthy raw_repT
     val wits = (Option.map o map) (prepare_term lthy) raw_wits;
     val specs = map (apsnd (apsnd (the_default @{sort type} o Option.map (prepare_sort lthy)))) raw_specs;
   in
-    linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b plugins lthy
+    linearize b repT on_tvars wits specs map_b rel_b pred_b ss_b nrp_b morphs plugins lthy
   end;
 
 fun prepare_linearize_mrbnf prepare_sort prepare_typ prepare_term =
@@ -648,7 +652,7 @@ fun prepare_linearize_mrbnf prepare_sort prepare_typ prepare_term =
     |> Proof.refine_singleton
         (Method.Basic (fn ctxt => SIMPLE_METHOD (unfold_thms_tac ctxt definitions)))
     |> Proof.refine_singleton (Method.primitive_text (K I))) oo
-  prepare_common prepare_sort prepare_typ prepare_term o apfst (apfst (apsnd SOME));
+  prepare_common prepare_sort prepare_typ prepare_term o apfst (apfst (apfst (apsnd SOME)));
 
 fun prepare_solve prepare_sort prepare_typ prepare_term tacs =
   (fn (goals, after_qed, definitions, lthy) =>
@@ -672,7 +676,6 @@ end;
 local
 
 (* parsers *)
-
 val parse_wits =
   @{keyword "["} |-- (Parse.name --| @{keyword ":"} -- Scan.repeat Parse.term >>
     (fn ("wits", Ts) => Ts
@@ -704,6 +707,8 @@ val parse_map_rel_pred_suff_bindings =
     >> (fn ps => fold extract_map_rel_pred_suff ps binding_empty_5)
   || Scan.succeed binding_empty_5;
 
+val parse_morphisms = Scan.option (\<^keyword>\<open>morphisms\<close> |-- Parse.!!! (Parse.binding -- Parse.binding))
+
 in
 
 (* exposed commands *)
@@ -712,8 +717,8 @@ val _ =
   Outer_Syntax.local_theory_to_proof @{command_keyword linearize_mrbnf}
     "linearize an existing MRBNF on a list of live variables"
     ((parse_lift_opts -- parse_type_args_named_constrained -- Parse.binding --
-      (\<^keyword>\<open>=\<close> |-- Parse.typ) -- 
-      parse_wits -- parse_on_clause -- parse_map_rel_pred_suff_bindings) >> linearize_mrbnf_cmd);
+      (\<^keyword>\<open>=\<close> |-- Parse.typ) -- parse_wits -- parse_on_clause -- 
+      parse_map_rel_pred_suff_bindings -- parse_morphisms) >> linearize_mrbnf_cmd);
 
 end;
 

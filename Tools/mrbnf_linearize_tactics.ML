@@ -6,7 +6,7 @@ sig
   (* helping lemmas *)
   val mk_F_strong_tac: Proof.context -> thm list -> int -> thm list -> thm -> thm -> thm -> thm -> thm -> tactic
 
-  val mk_mr_rel_F_exchange_tac: Proof.context -> thm list -> thm list -> thm -> thm -> tactic
+  val mk_mr_rel_F_exchange_tac: Proof.context -> thm list -> thm list -> thm -> thm option -> tactic
 
   val mk_nonrep_map_F_tac: Proof.context -> thm list -> thm list -> int -> int -> term list -> thm -> thm -> thm -> thm ->
     thm list -> thm -> thm -> thm-> thm -> thm list -> thm -> tactic
@@ -112,19 +112,22 @@ fun mk_F_strong_tac ctxt prems nr_As id_prems mr_rel_F_def F_mr_rel_mono_strong0
     HEADGOAL (rtac ctxt conjI THEN_ALL_NEW resolve_tac ctxt prems)
   ) ctxt);
 
-fun mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_thm = 
-  HEADGOAL (EVERY' [
-    rtac ctxt ((F_mr_rel_mono_strong0 OF flat (replicate 2 id_prems))),
-    rtac ctxt (F_strong_thm OF prems),
-    K (unfold_thms_tac ctxt ([id_apply, eqTrueI OF [refl]] @ @{thms ball_triv inf_apply inf_bool_def}))
-  ]) THEN
-  ALLGOALS (
-    (rtac ctxt impI THEN' 
-    rtac ctxt TrueI) ORELSE'
-    (rtac ctxt ballI THEN' 
-    rtac ctxt ballI THEN'
-    rtac ctxt impI THEN'
-    eresolve_tac ctxt [conjunct1, conjunct2]));
+fun mk_mr_rel_F_exchange_tac ctxt prems id_prems F_mr_rel_mono_strong0 F_strong_thm_opt =
+  case F_strong_thm_opt of
+    NONE => HEADGOAL (resolve_tac ctxt prems)
+  | SOME F_strong_thm =>
+      HEADGOAL (EVERY' [
+        rtac ctxt ((F_mr_rel_mono_strong0 OF flat (replicate 2 id_prems))),
+        rtac ctxt (F_strong_thm OF prems),
+        K (unfold_thms_tac ctxt ([id_apply, eqTrueI OF [refl]] @ @{thms ball_triv inf_apply inf_bool_def}))
+      ]) THEN
+      ALLGOALS (
+        (rtac ctxt impI THEN' 
+        rtac ctxt TrueI) ORELSE'
+        (rtac ctxt ballI THEN' 
+        rtac ctxt ballI THEN'
+        rtac ctxt impI THEN'
+        eresolve_tac ctxt [conjunct1, conjunct2]));
 
 fun mk_nonrep_map_F_tac ctxt prems id_prems nr_lin nr_As inst_tops nonrep_def sameShape_def mr_rel_F_def 
   F_map_comp F_mr_rel_maps F_rel_compp F_rel_Grp F_in_rel F_map_id F_rel_maps F_rel_refl_strong =
